@@ -20,7 +20,7 @@ import scipy.sparse
 
 import pymc
 
-from pymc.aesaraf import floatX
+from pymc.pytensorf import floatX
 from pymc.step_methods.hmc import quadpotential
 
 

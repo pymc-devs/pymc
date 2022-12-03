@@ -36,16 +36,16 @@
 
 from typing import List, Optional
 
-import aesara.tensor as at
+import pytensor.tensor as at
 import numpy as np
 
-from aesara.graph.basic import Node
-from aesara.graph.fg import FunctionGraph
-from aesara.graph.rewriting.basic import node_rewriter
-from aesara.scalar.basic import Ceil, Clip, Floor, RoundHalfToEven
-from aesara.scalar.basic import clip as scalar_clip
-from aesara.tensor.elemwise import Elemwise
-from aesara.tensor.var import TensorConstant
+from pytensor.graph.basic import Node
+from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.scalar.basic import Ceil, Clip, Floor, RoundHalfToEven
+from pytensor.scalar.basic import clip as scalar_clip
+from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.var import TensorConstant
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,

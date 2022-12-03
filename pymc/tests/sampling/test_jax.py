@@ -3,15 +3,15 @@ import warnings
 from typing import Any, Callable, Dict, Optional
 from unittest import mock
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import arviz as az
 import jax
 import numpy as np
 import pytest
 
-from aesara.compile import SharedVariable
-from aesara.graph import graph_inputs
+from pytensor.compile import SharedVariable
+from pytensor.graph import graph_inputs
 from numpyro.infer import MCMC
 
 import pymc as pm
@@ -56,11 +56,11 @@ with pytest.warns(UserWarning, match="module is experimental"):
     ],
 )
 def test_transform_samples(sampler, postprocessing_backend, chains):
-    aesara.config.on_opt_error = "raise"
+    pytensor.config.on_opt_error = "raise"
     np.random.seed(13244)
 
     obs = np.random.normal(10, 2, size=100)
-    obs_at = aesara.shared(obs, borrow=True, name="obs")
+    obs_at = pytensor.shared(obs, borrow=True, name="obs")
     with pm.Model() as model:
         a = pm.Uniform("a", -20, 20)
         sigma = pm.HalfNormal("sigma", shape=(2,))
@@ -103,11 +103,11 @@ def test_transform_samples(sampler, postprocessing_backend, chains):
 )
 @pytest.mark.skipif(len(jax.devices()) < 2, reason="not enough devices")
 def test_deterministic_samples(sampler):
-    aesara.config.on_opt_error = "raise"
+    pytensor.config.on_opt_error = "raise"
     np.random.seed(13244)
 
     obs = np.random.normal(10, 2, size=100)
-    obs_at = aesara.shared(obs, borrow=True, name="obs")
+    obs_at = pytensor.shared(obs, borrow=True, name="obs")
     with pm.Model() as model:
         a = pm.Uniform("a", -20, 20)
         b = pm.Deterministic("b", a / 2.0)
@@ -121,7 +121,7 @@ def test_deterministic_samples(sampler):
 
 def test_get_jaxified_graph():
     # Check that jaxifying a graph does not emmit the Supervisor Warning. This test can
-    # be removed once https://github.com/aesara-devs/aesara/issues/637 is sorted.
+    # be removed once https://github.com/pytensor-devs/pytensor/issues/637 is sorted.
     x = at.scalar("x")
     y = at.exp(x)
     with warnings.catch_warnings():
@@ -132,7 +132,7 @@ def test_get_jaxified_graph():
 
 def test_get_log_likelihood():
     obs = np.random.normal(10, 2, size=100)
-    obs_at = aesara.shared(obs, borrow=True, name="obs")
+    obs_at = pytensor.shared(obs, borrow=True, name="obs")
     with pm.Model() as model:
         a = pm.Normal("a", 0, 2)
         sigma = pm.HalfNormal("sigma")
@@ -151,7 +151,7 @@ def test_get_log_likelihood():
 
 
 def test_replace_shared_variables():
-    x = aesara.shared(5, name="shared_x")
+    x = pytensor.shared(5, name="shared_x")
 
     new_x = _replace_shared_variables([x])
     shared_variables = [var for var in graph_inputs(new_x) if isinstance(var, SharedVariable)]

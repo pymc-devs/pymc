@@ -3,21 +3,21 @@
 ..
     _href from docs/source/index.rst
 
-===============
-PyMC and Aesara
-===============
+=================
+PyMC and PyTensor
+=================
 
-What is Aesara
-==============
+What is PyTensor
+================
 
-Aesara is a package that allows us to define functions involving array
+PyTensor is a package that allows us to define functions involving array
 operations and linear algebra. When we define a PyMC model, we implicitly
-build up an Aesara function from the space of our parameters to
+build up an PyTensor function from the space of our parameters to
 their posterior probability density up to a constant factor. We then use
 symbolic manipulations of this function to also get access to its gradient.
 
-For a thorough introduction to Aesara see the
-:doc:`aesara docs <aesara:index>`,
+For a thorough introduction to PyTensor see the
+:doc:`pytensor docs <pytensor:index>`,
 but for the most part you don't need detailed knowledge about it as long
 as you are not trying to define new distributions or other extensions
 of PyMC. But let's look at a simple example to get a rough
@@ -33,8 +33,8 @@ arbitrarily chosen) function
 First, we need to define symbolic variables for our inputs (this
 is similar to eg SymPy's `Symbol`)::
 
-    import aesara
-    import aesara.tensor as at
+    import pytensor
+    import pytensor.tensor as at
     # We don't specify the dtype of our input variables, so it
     # defaults to using float64 without any special config.
     a = at.scalar('a')
@@ -56,16 +56,16 @@ do to compute the output::
    of the exponential of `inner`. Somewhat surprisingly, it
    would also have worked if we used `np.exp`. This is because numpy
    gives objects it operates on a chance to define the results of
-   operations themselves. Aesara variables do this for a large number
-   of operations. We usually still prefer the Aesara
+   operations themselves. PyTensor variables do this for a large number
+   of operations. We usually still prefer the PyTensor
    functions instead of the numpy versions, as that makes it clear that
    we are working with symbolic input instead of plain arrays.
 
-Now we can tell Aesara to build a function that does this computation.
-With a typical configuration, Aesara generates C code, compiles it,
+Now we can tell PyTensor to build a function that does this computation.
+With a typical configuration, PyTensor generates C code, compiles it,
 and creates a python function which wraps the C function::
 
-    func = aesara.function([a, x, y], [out])
+    func = pytensor.function([a, x, y], [out])
 
 We can call this function with actual arrays as many times as we want::
 
@@ -75,15 +75,15 @@ We can call this function with actual arrays as many times as we want::
 
     out = func(a_val, x_vals, y_vals)
 
-For the most part the symbolic Aesara variables can be operated on
-like NumPy arrays. Most NumPy functions are available in `aesara.tensor`
+For the most part the symbolic PyTensor variables can be operated on
+like NumPy arrays. Most NumPy functions are available in `pytensor.tensor`
 (which is typically imported as `at`). A lot of linear algebra operations
 can be found in `at.nlinalg` and `at.slinalg` (the NumPy and SciPy
 operations respectively). Some support for sparse matrices is available
-in `aesara.sparse`. For a detailed overview of available operations,
-see :mod:`the aesara api docs <aesara.tensor>`.
+in `pytensor.sparse`. For a detailed overview of available operations,
+see :mod:`the pytensor api docs <pytensor.tensor>`.
 
-A notable exception where Aesara variables do *not* behave like
+A notable exception where PyTensor variables do *not* behave like
 NumPy arrays are operations involving conditional execution.
 
 Code like this won't work as expected::
@@ -123,16 +123,16 @@ Changing elements of an array is possible using `at.set_subtensor`::
     a = at.vector('a')
     b = at.set_subtensor(a[:10], 1)
 
-    # is roughly equivalent to this (although aesara avoids
+    # is roughly equivalent to this (although pytensor avoids
     # the copy if `a` isn't used anymore)
     a = np.random.randn(10)
     b = a.copy()
     b[:10] = 1
 
-How PyMC uses Aesara
+How PyMC uses PyTensor
 ====================
 
-Now that we have a basic understanding of Aesara we can look at what
+Now that we have a basic understanding of PyTensor we can look at what
 happens if we define a PyMC model. Let's look at a simple example::
 
     true_mu = 0.1
@@ -159,7 +159,7 @@ where with the normal likelihood :math:`N(x|μ,σ^2)`
 
 To build that function we need to keep track of two things: The parameter
 space (the *free variables*) and the logp function. For each free variable
-we generate an Aesara variable. And for each variable (observed or otherwise)
+we generate an PyTensor variable. And for each variable (observed or otherwise)
 we add a term to the global logp. In the background something similar to
 this is happening::
 
@@ -177,7 +177,7 @@ So calling `pm.Normal()` modifies the model: It changes the logp function
 of the model. If the `observed` keyword isn't set it also creates a new
 free variable. In contrast, `pm.Normal.dist()` doesn't care about the model,
 it just creates an object that represents the normal distribution. Calling
-`logp` on this object creates an Aesara variable for the logp probability
+`logp` on this object creates an PyTensor variable for the logp probability
 or log probability density of the distribution, but again without changing
 the model in any way.
 
@@ -209,8 +209,8 @@ is roughly equivalent to this::
     model.add_logp_term(pm.Normal.dist(mu, sigma).logp(data))
 
 The return values of the variable constructors are subclasses
-of Aesara variables, so when we define a variable we can use any
-Aesara operation on them::
+of PyTensor variables, so when we define a variable we can use any
+PyTensor operation on them::
 
     design_matrix = np.array([[...]])
     with pm.Model() as model:

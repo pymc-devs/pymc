@@ -26,17 +26,17 @@ from typing import (
     Union,
 )
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import pandas as pd
 import scipy.sparse as sps
 
-from aesara import scalar
-from aesara.compile import Function, Mode, get_mode
-from aesara.gradient import grad
-from aesara.graph import node_rewriter, rewrite_graph
-from aesara.graph.basic import (
+from pytensor import scalar
+from pytensor.compile import Function, Mode, get_mode
+from pytensor.gradient import grad
+from pytensor.graph import node_rewriter, rewrite_graph
+from pytensor.graph.basic import (
     Apply,
     Constant,
     Variable,
@@ -45,22 +45,22 @@ from aesara.graph.basic import (
     vars_between,
     walk,
 )
-from aesara.graph.fg import FunctionGraph
-from aesara.graph.op import Op
-from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
-from aesara.scalar.basic import Cast
-from aesara.tensor.basic import _as_tensor_variable
-from aesara.tensor.elemwise import Elemwise
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.random.var import (
+from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.op import Op
+from pytensor.sandbox.rng_mrg import MRG_RandomStream as RandomStream
+from pytensor.scalar.basic import Cast
+from pytensor.tensor.basic import _as_tensor_variable
+from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.var import (
     RandomGeneratorSharedVariable,
     RandomStateSharedVariable,
 )
-from aesara.tensor.rewriting.basic import topo_constant_folding
-from aesara.tensor.rewriting.shape import ShapeFeature
-from aesara.tensor.sharedvar import SharedVariable, TensorSharedVariable
-from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
-from aesara.tensor.var import TensorConstant, TensorVariable
+from pytensor.tensor.rewriting.basic import topo_constant_folding
+from pytensor.tensor.rewriting.shape import ShapeFeature
+from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
+from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
+from pytensor.tensor.var import TensorConstant, TensorVariable
 
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.transforms import RVTransform
@@ -397,11 +397,11 @@ def replace_rvs_by_values(
 
 def inputvars(a):
     """
-    Get the inputs into Aesara variables
+    Get the inputs into PyTensor variables
 
     Parameters
     ----------
-        a: Aesara variable
+        a: PyTensor variable
 
     Returns
     -------
@@ -416,11 +416,11 @@ def inputvars(a):
 
 def cont_inputs(a):
     """
-    Get the continuous inputs into Aesara variables
+    Get the continuous inputs into PyTensor variables
 
     Parameters
     ----------
-        a: Aesara variable
+        a: PyTensor variable
 
     Returns
     -------
@@ -431,13 +431,13 @@ def cont_inputs(a):
 
 def floatX(X):
     """
-    Convert an Aesara tensor or numpy array to aesara.config.floatX type.
+    Convert an PyTensor tensor or numpy array to pytensor.config.floatX type.
     """
     try:
-        return X.astype(aesara.config.floatX)
+        return X.astype(pytensor.config.floatX)
     except AttributeError:
         # Scalar passed
-        return np.asarray(X, dtype=aesara.config.floatX)
+        return np.asarray(X, dtype=pytensor.config.floatX)
 
 
 _conversion_map = {"float64": "int32", "float32": "int16", "float16": "int8", "float8": "int8"}
@@ -445,9 +445,9 @@ _conversion_map = {"float64": "int32", "float32": "int16", "float16": "int8", "f
 
 def intX(X):
     """
-    Convert a aesara tensor or numpy array to aesara.tensor.int32 type.
+    Convert a pytensor tensor or numpy array to pytensor.tensor.int32 type.
     """
-    intX = _conversion_map[aesara.config.floatX]
+    intX = _conversion_map[pytensor.config.floatX]
     try:
         return X.astype(intX)
     except AttributeError:
@@ -465,7 +465,7 @@ def smartfloatX(x):
 
 
 """
-Aesara derivative functions
+PyTensor derivative functions
 """
 
 
@@ -495,7 +495,7 @@ def jacobian1(f, v):
     def grad_i(i):
         return gradient1(f[i], v)
 
-    return aesara.map(grad_i, idx)[0]
+    return pytensor.map(grad_i, idx)[0]
 
 
 def jacobian(f, vars=None):
@@ -514,17 +514,17 @@ def jacobian_diag(f, x):
     def grad_ii(i, f, x):
         return grad(f[i], x)[i]
 
-    return aesara.scan(
+    return pytensor.scan(
         grad_ii, sequences=[idx], n_steps=f.shape[0], non_sequences=[f, x], name="jacobian_diag"
     )[0]
 
 
-@aesara.config.change_flags(compute_test_value="ignore")
+@pytensor.config.change_flags(compute_test_value="ignore")
 def hessian(f, vars=None):
     return -jacobian(gradient(f, vars), vars)
 
 
-@aesara.config.change_flags(compute_test_value="ignore")
+@pytensor.config.change_flags(compute_test_value="ignore")
 def hessian_diag1(f, v):
     g = gradient1(f, v)
     idx = at.arange(g.shape[0], dtype="int32")
@@ -532,10 +532,10 @@ def hessian_diag1(f, v):
     def hess_ii(i):
         return gradient1(g[i], v)[i]
 
-    return aesara.map(hess_ii, idx)[0]
+    return pytensor.map(hess_ii, idx)[0]
 
 
-@aesara.config.change_flags(compute_test_value="ignore")
+@pytensor.config.change_flags(compute_test_value="ignore")
 def hessian_diag(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)
@@ -597,7 +597,7 @@ def make_shared_replacements(point, vars, model):
     """
     othervars = set(model.value_vars) - set(vars)
     return {
-        var: aesara.shared(point[var.name], var.name + "_shared", shape=var.type.shape)
+        var: pytensor.shared(point[var.name], var.name + "_shared", shape=var.type.shape)
         for var in othervars
     }
 
@@ -640,14 +640,14 @@ def join_nonshared_inputs(
 
     Examples
     --------
-    Join the inputs of a simple Aesara graph.
+    Join the inputs of a simple PyTensor graph.
 
     .. code-block:: python
 
-        import aesara.tensor as at
+        import pytensor.tensor as at
         import numpy as np
 
-        from pymc.aesaraf import join_nonshared_inputs
+        from pymc.pytensorf import join_nonshared_inputs
 
         # Original non-shared inputs
         x = at.scalar("x")
@@ -705,7 +705,7 @@ def join_nonshared_inputs(
 
     .. code-block:: python
 
-        from aesara import shared
+        from pytensor import shared
 
         mu_pop_input, *other_inputs = inputs
         shared_mu_pop_input = shared(0.0)
@@ -733,9 +733,9 @@ def join_nonshared_inputs(
         joined_inputs = tensor_type("joined_inputs")
     else:
         joined_values = np.concatenate([point[var.name].ravel() for var in inputs])
-        joined_inputs = aesara.shared(joined_values, "joined_inputs")
+        joined_inputs = pytensor.shared(joined_values, "joined_inputs")
 
-    if aesara.config.compute_test_value != "off":
+    if pytensor.config.compute_test_value != "off":
         joined_inputs.tag.test_value = raveled_inputs.tag.test_value
 
     replace: Dict[TensorVariable, TensorVariable] = {}
@@ -750,7 +750,7 @@ def join_nonshared_inputs(
         replace.update(shared_inputs)
 
     new_outputs = [
-        aesara.clone_replace(output, replace, rebuild_strict=False) for output in outputs
+        pytensor.clone_replace(output, replace, rebuild_strict=False) for output in outputs
     ]
     return new_outputs, joined_inputs
 
@@ -781,12 +781,12 @@ class CallableTensor:
         input: TensorVariable
         """
         (oldinput,) = inputvars(self.tensor)
-        return aesara.clone_replace(self.tensor, {oldinput: input}, rebuild_strict=False)
+        return pytensor.clone_replace(self.tensor, {oldinput: input}, rebuild_strict=False)
 
 
 class GeneratorOp(Op):
     """
-    Generator Op is designed for storing python generators inside aesara graph.
+    Generator Op is designed for storing python generators inside pytensor graph.
 
     __call__ creates TensorVariable
         It has 2 new methods
@@ -827,7 +827,7 @@ class GeneratorOp(Op):
     def do_constant_folding(self, fgraph, node):
         return False
 
-    __call__ = aesara.config.change_flags(compute_test_value="off")(Op.__call__)
+    __call__ = pytensor.config.change_flags(compute_test_value="off")(Op.__call__)
 
     def set_gen(self, gen):
         from pymc.data import GeneratorAdapter
@@ -883,12 +883,12 @@ def at_rng(random_seed=None):
     ----------
     random_seed: int
         If not None
-        returns *new* aesara random generator without replacing package global one
+        returns *new* pytensor random generator without replacing package global one
 
     Returns
     -------
-    `aesara.tensor.random.utils.RandomStream` instance
-        `aesara.tensor.random.utils.RandomStream`
+    `pytensor.tensor.random.utils.RandomStream` instance
+        `pytensor.tensor.random.utils.RandomStream`
         instance passed to the most recent call of `set_at_rng`
     """
     if random_seed is None:
@@ -904,7 +904,7 @@ def set_at_rng(new_rng):
 
     Parameters
     ----------
-    new_rng: `aesara.tensor.random.utils.RandomStream` instance
+    new_rng: `pytensor.tensor.random.utils.RandomStream` instance
         The random number generator to use.
     """
     # pylint: disable=global-statement
@@ -921,7 +921,7 @@ def floatX_array(x):
 
 def ix_(*args):
     """
-    Aesara np.ix_ analog
+    PyTensor np.ix_ analog
 
     See numpy.lib.index_tricks.ix_ for reference
     """
@@ -972,13 +972,13 @@ def local_check_parameter_to_ninf_switch(fgraph, node):
         return [out]
 
 
-aesara.compile.optdb["canonicalize"].register(
+pytensor.compile.optdb["canonicalize"].register(
     "local_remove_check_parameter",
     local_remove_check_parameter,
     use_db_name_as_tag=False,
 )
 
-aesara.compile.optdb["canonicalize"].register(
+pytensor.compile.optdb["canonicalize"].register(
     "local_check_parameter_to_ninf_switch",
     local_check_parameter_to_ninf_switch,
     use_db_name_as_tag=False,
@@ -1016,7 +1016,7 @@ def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVaria
             rng_cls = np.random.RandomState
         else:
             rng_cls = np.random.Generator
-        new_rng_nodes.append(aesara.shared(rng_cls(np.random.PCG64())))
+        new_rng_nodes.append(pytensor.shared(rng_cls(np.random.PCG64())))
     graph.replace_all(zip(rng_nodes, new_rng_nodes), import_missing=True)
     return graph.outputs
 
@@ -1048,7 +1048,7 @@ def compile_pymc(
     mode=None,
     **kwargs,
 ) -> Function:
-    """Use ``aesara.function`` with specialized pymc rewrites always enabled.
+    """Use ``pytensor.function`` with specialized pymc rewrites always enabled.
 
     This function also ensures shared RandomState/Generator used by RandomVariables
     in the graph are updated across calls, to ensure independent draws.
@@ -1056,14 +1056,14 @@ def compile_pymc(
     Parameters
     ----------
     inputs: list of TensorVariables, optional
-        Inputs of the compiled Aesara function
+        Inputs of the compiled PyTensor function
     outputs: list of TensorVariables, optional
-        Outputs of the compiled Aesara function
+        Outputs of the compiled PyTensor function
     random_seed: int, array-like of int or SeedSequence, optional
         Seed used to override any RandomState/Generator shared variables in the graph.
         If not specified, the value of original shared variables will still be overwritten.
     mode: optional
-        Aesara mode used to compile the function
+        PyTensor mode used to compile the function
 
     Included rewrites
     -----------------
@@ -1136,14 +1136,14 @@ def compile_pymc(
     mode = get_mode(mode)
     opt_qry = mode.provided_optimizer.including("random_make_inplace", check_parameter_opt)
     mode = Mode(linker=mode.linker, optimizer=opt_qry)
-    aesara_function = aesara.function(
+    pytensor_function = pytensor.function(
         inputs,
         outputs,
         updates={**rng_updates, **kwargs.pop("updates", {})},
         mode=mode,
         **kwargs,
     )
-    return aesara_function
+    return pytensor_function
 
 
 def constant_fold(

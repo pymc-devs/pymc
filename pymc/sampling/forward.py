@@ -34,8 +34,8 @@ from typing import (
 import numpy as np
 import xarray
 
-from aesara import tensor as at
-from aesara.graph.basic import (
+from pytensor import tensor as at
+from pytensor.graph.basic import (
     Apply,
     Constant,
     Variable,
@@ -43,19 +43,19 @@ from aesara.graph.basic import (
     general_toposort,
     walk,
 )
-from aesara.graph.fg import FunctionGraph
-from aesara.tensor.random.var import (
+from pytensor.graph.fg import FunctionGraph
+from pytensor.tensor.random.var import (
     RandomGeneratorSharedVariable,
     RandomStateSharedVariable,
 )
-from aesara.tensor.sharedvar import SharedVariable
+from pytensor.tensor.sharedvar import SharedVariable
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
 from typing_extensions import TypeAlias
 
 import pymc as pm
 
-from pymc.aesaraf import compile_pymc
+from pymc.pytensorf import compile_pymc
 from pymc.backends.arviz import _DefaultTrace
 from pymc.backends.base import MultiTrace
 from pymc.blocking import PointType
@@ -104,7 +104,7 @@ def compile_forward_sampling_function(
 ) -> Tuple[Callable[..., Union[np.ndarray, List[np.ndarray]]], Set[Variable]]:
     """Compile a function to draw samples, conditioned on the values of some variables.
 
-    The goal of this function is to walk the aesara computational graph from the list
+    The goal of this function is to walk the pytensor computational graph from the list
     of output nodes down to the root nodes, and then compile a function that will produce
     values for these output nodes. The compiled function will take as inputs the subset of
     variables in the ``vars_in_trace`` that are deemed to not be **volatile**.
@@ -128,7 +128,7 @@ def compile_forward_sampling_function(
 
     This function also enables a way to impute values for any variable in the computational
     graph that produces the desired outputs: the ``givens_dict``. This dictionary can be used
-    to set the ``givens`` argument of the aesara function compilation. This will essentially
+    to set the ``givens`` argument of the pytensor function compilation. This will essentially
     replace a node in the computational graph with any other expression that has the same
     type as the desired node. Passing variables in the givens_dict is considered an intervention
     that might lead to different variable values from those that could have been seen during
@@ -137,17 +137,17 @@ def compile_forward_sampling_function(
 
     Parameters
     ----------
-    outputs : List[aesara.graph.basic.Variable]
+    outputs : List[pytensor.graph.basic.Variable]
         The list of variables that will be returned by the compiled function
-    vars_in_trace : List[aesara.graph.basic.Variable]
+    vars_in_trace : List[pytensor.graph.basic.Variable]
         The list of variables that are assumed to have values stored in the trace
-    basic_rvs : Optional[List[aesara.graph.basic.Variable]]
+    basic_rvs : Optional[List[pytensor.graph.basic.Variable]]
         A list of random variables that are defined in the model. This list (which could be the
         output of ``model.basic_RVs``) should have a reference to the variables that should
         be considered as random variable instances. This includes variables that have
         a ``RandomVariable`` owner op, but also unpure random variables like Mixtures, or
         Censored distributions.
-    givens_dict : Optional[Dict[aesara.graph.basic.Variable, Any]]
+    givens_dict : Optional[Dict[pytensor.graph.basic.Variable, Any]]
         A dictionary that maps tensor variables to the values that should be used to replace them
         in the compiled function. The types of the key and value should match or an error will be
         raised during compilation.
@@ -174,7 +174,7 @@ def compile_forward_sampling_function(
     Returns
     -------
     function: Callable
-        Compiled forward sampling Aesara function
+        Compiled forward sampling PyTensor function
     volatile_basic_rvs: Set of Variable
         Set of all basic_rvs that were considered volatile and will be resampled when
         the function is evaluated
@@ -281,7 +281,7 @@ def draw(
     random_seed : int, RandomState or numpy_Generator, optional
         Seed for the random number generator.
     **kwargs : dict, optional
-        Keyword arguments for :func:`pymc.aesaraf.compile_pymc`.
+        Keyword arguments for :func:`pymc.pytensorf.compile_pymc`.
 
     Returns
     -------
@@ -371,7 +371,7 @@ def sample_prior_predictive(
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
     compile_kwargs: dict, optional
-        Keyword arguments for :func:`pymc.aesaraf.compile_pymc`.
+        Keyword arguments for :func:`pymc.pytensorf.compile_pymc`.
 
     Returns
     -------
@@ -487,7 +487,7 @@ def sample_posterior_predictive(
         Keyword arguments for :func:`pymc.to_inference_data` if ``predictions=False`` or to
         :func:`pymc.predictions_to_inference_data` otherwise.
     compile_kwargs: dict, optional
-        Keyword arguments for :func:`pymc.aesaraf.compile_pymc`.
+        Keyword arguments for :func:`pymc.pytensorf.compile_pymc`.
 
     Returns
     -------

@@ -11,7 +11,7 @@ These fixtures are used to configure test functions.
 .. autosummary::
   :toctree: generated/
 
-  aesara_config
+  pytensor_config
   exception_verbosity
   strict_float32
   seeded_test

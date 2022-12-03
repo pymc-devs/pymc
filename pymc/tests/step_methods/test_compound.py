@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara
+import pytensor
 import pytest
 
 import pymc as pm
@@ -34,14 +34,14 @@ class TestCompoundStep:
 
     def test_non_blocked(self):
         """Test that samplers correctly create non-blocked compound steps."""
-        with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+        with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
             _, model = simple_2model_continuous()
             with model:
                 for sampler in self.samplers:
                     assert isinstance(sampler(blocked=False), CompoundStep)
 
     def test_blocked(self):
-        with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+        with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
             _, model = simple_2model_continuous()
             with model:
                 for sampler in self.samplers:
@@ -86,7 +86,7 @@ class TestRVsAssignmentCompound:
             c1 = pm.HalfNormal("c1")
             c2 = pm.HalfNormal("c2")
 
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 step1 = NUTS([c1])
                 step2 = NUTS([c2])
                 step = CompoundStep([step1, step2])

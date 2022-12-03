@@ -28,7 +28,7 @@ import numpy as np
 
 from fastprogress.fastprogress import progress_bar
 
-from pymc import aesaraf
+from pymc import pytensorf
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.util import RandomSeed
@@ -155,7 +155,7 @@ class _Process:
 
     def _start_loop(self):
         np.random.seed(self._seed)
-        aesaraf.set_at_rng(self._at_seed)
+        pytensorf.set_at_rng(self._at_seed)
 
         draw = 0
         tuning = True

@@ -14,7 +14,7 @@
 
 import functools as ft
 
-import aesara.tensor as at
+import pytensor.tensor as at
 import numpy as np
 import pytest
 

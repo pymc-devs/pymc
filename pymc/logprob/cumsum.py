@@ -36,10 +36,10 @@
 
 from typing import List, Optional
 
-import aesara.tensor as at
+import pytensor.tensor as at
 
-from aesara.graph.rewriting.basic import node_rewriter
-from aesara.tensor.extra_ops import CumOp
+from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.tensor.extra_ops import CumOp
 
 from pymc.logprob.abstract import (
     MeasurableVariable,

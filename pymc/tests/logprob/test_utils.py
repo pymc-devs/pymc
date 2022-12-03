@@ -34,14 +34,14 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import pytest
 
-from aesara import function
-from aesara.compile import get_default_mode
-from aesara.tensor.random.basic import normal, uniform
+from pytensor import function
+from pytensor.compile import get_default_mode
+from pytensor.tensor.random.basic import normal, uniform
 
 from pymc.logprob.abstract import MeasurableVariable, logprob
 from pymc.logprob.utils import (
@@ -51,7 +51,7 @@ from pymc.logprob.utils import (
     walk_model,
 )
 from pymc.tests.helpers import assert_no_rvs
-from pymc.tests.logprob.utils import create_aesara_params, scipy_logprob_tester
+from pymc.tests.logprob.utils import create_pytensor_params, scipy_logprob_tester
 
 
 def test_walk_model():
@@ -165,7 +165,7 @@ def test_CheckParameter():
 
 
 def test_dirac_delta():
-    fn = aesara.function(
+    fn = pytensor.function(
         [], dirac_delta(at.as_tensor(1)), mode=get_default_mode().excluding("useless")
     )
     with pytest.warns(UserWarning, match=".*DiracDelta.*"):
@@ -181,7 +181,7 @@ def test_dirac_delta():
 )
 def test_dirac_delta_logprob(dist_params, obs):
 
-    dist_params_at, obs_at, _ = create_aesara_params(dist_params, obs, ())
+    dist_params_at, obs_at, _ = create_pytensor_params(dist_params, obs, ())
     dist_params = dict(zip(dist_params_at, dist_params))
 
     x = dirac_delta(*dist_params_at)

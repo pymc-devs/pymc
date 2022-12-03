@@ -11,20 +11,20 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import numpy.testing as npt
 import pytest
 import scipy.special
 
-from aesara import config, function
-from aesara.tensor.random.basic import multinomial
+from pytensor import config, function
+from pytensor.tensor.random.basic import multinomial
 from scipy import interpolate, stats
 
 import pymc as pm
 
-from pymc.aesaraf import floatX
+from pymc.pytensorf import floatX
 from pymc.distributions import Discrete
 from pymc.distributions.dist_math import (
     MvNormalLogp,
@@ -138,11 +138,11 @@ class TestMvNormalLogp:
         expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
         expect = expect.logpdf(delta_val).sum()
         logp = MvNormalLogp()(cov, delta)
-        logp_f = aesara.function([cov, delta], logp)
+        logp_f = pytensor.function([cov, delta], logp)
         logp = logp_f(cov_val, delta_val)
         npt.assert_allclose(logp, expect)
 
-    @aesara.config.change_flags(compute_test_value="ignore")
+    @pytensor.config.change_flags(compute_test_value="ignore")
     def test_grad(self):
         np.random.seed(42)
 
@@ -164,7 +164,7 @@ class TestMvNormalLogp:
         delta_val = floatX(np.random.randn(5, 2))
         verify_grad(func, [chol_vec_val, delta_val])
 
-    @aesara.config.change_flags(compute_test_value="ignore")
+    @pytensor.config.change_flags(compute_test_value="ignore")
     def test_hessian(self):
         chol_vec = at.vector("chol_vec")
         chol_vec.tag.test_value = floatX(np.array([0.1, 2, 3]))
@@ -184,14 +184,14 @@ class TestMvNormalLogp:
 
 
 class TestSplineWrapper:
-    @aesara.config.change_flags(compute_test_value="ignore")
+    @pytensor.config.change_flags(compute_test_value="ignore")
     def test_grad(self):
         x = np.linspace(0, 1, 100)
         y = x * x
         spline = SplineWrapper(interpolate.InterpolatedUnivariateSpline(x, y, k=1))
         verify_grad(spline, [0.5])
 
-    @aesara.config.change_flags(compute_test_value="ignore")
+    @pytensor.config.change_flags(compute_test_value="ignore")
     def test_hessian(self):
         x = np.linspace(0, 1, 100)
         y = x * x
@@ -203,7 +203,7 @@ class TestSplineWrapper:
 
 
 class TestI0e:
-    @aesara.config.change_flags(compute_test_value="ignore")
+    @pytensor.config.change_flags(compute_test_value="ignore")
     def test_grad(self):
         verify_grad(i0e, [0.5])
         verify_grad(i0e, [-2.0])

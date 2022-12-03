@@ -13,23 +13,23 @@
 #   limitations under the License.
 import warnings
 
-import aesara
+import pytensor
 import numpy as np
 import pytest
 import scipy.stats as st
 
-from aesara.graph import ancestors
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.random.var import (
+from pytensor.graph import ancestors
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.var import (
     RandomGeneratorSharedVariable,
     RandomStateSharedVariable,
 )
-from aesara.tensor.sort import SortOp
+from pytensor.tensor.sort import SortOp
 
 import pymc as pm
 
 from pymc import floatX
-from pymc.aesaraf import compile_pymc
+from pymc.pytensorf import compile_pymc
 from pymc.initial_point import make_initial_point_fn
 from pymc.smc.kernels import IMH
 from pymc.tests.helpers import SeededTest
@@ -95,7 +95,7 @@ class TestSimulator(SeededTest):
 
     @pytest.mark.parametrize("floatX", ["float32", "float64"])
     def test_custom_dist_sum_stat(self, floatX):
-        with aesara.config.change_flags(floatX=floatX):
+        with pytensor.config.change_flags(floatX=floatX):
             with pm.Model() as m:
                 a = pm.Normal("a", mu=0, sigma=1)
                 b = pm.HalfNormal("b", sigma=1)
@@ -123,7 +123,7 @@ class TestSimulator(SeededTest):
         """
         scalar_data = 5
 
-        with aesara.config.change_flags(floatX=floatX):
+        with pytensor.config.change_flags(floatX=floatX):
             with pm.Model() as m:
                 s = pm.Simulator(
                     "s",

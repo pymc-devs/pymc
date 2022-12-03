@@ -125,10 +125,10 @@ Hierarchical Ordinary Differential Equation
   Markov chain Monte Carlo (MCMC) methods comprise a class of algorithms for sampling from a probability distribution. By constructing a {term}`Markov Chain` that has the desired distribution as its equilibrium distribution, one can obtain a sample of the desired distribution by recording states from the chain.  Various algorithms exist for constructing chains, including the Metropolis–Hastings algorithm.
 
 tensor_like
-  Any scalar or sequence that can be interpreted as a {class}`~aesara.tensor.TensorVariable`. In addition to TensorVariables, this includes NumPy ndarrays, scalars, lists and tuples (possibly nested). Any argument accepted by `aesara.tensor.as_tensor_variable` is tensor_like.
+  Any scalar or sequence that can be interpreted as a {class}`~pytensor.tensor.TensorVariable`. In addition to TensorVariables, this includes NumPy ndarrays, scalars, lists and tuples (possibly nested). Any argument accepted by `pytensor.tensor.as_tensor_variable` is tensor_like.
 
   ```{jupyter-execute}
-  import aesara.tensor as at
+  import pytensor.tensor as at
 
   at.as_tensor_variable([[1, 2.0], [0, 0]])
   ```

@@ -13,13 +13,13 @@
 #   limitations under the License.
 import warnings
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 
-from aesara.graph.basic import Node, equal_computations
-from aesara.tensor import TensorVariable
-from aesara.tensor.random.op import RandomVariable
+from pytensor.graph.basic import Node, equal_computations
+from pytensor.tensor import TensorVariable
+from pytensor.tensor.random.op import RandomVariable
 
 from pymc.distributions import transforms
 from pymc.distributions.continuous import Normal, get_tau_sigma
@@ -210,7 +210,7 @@ class Mixture(Distribution):
     @classmethod
     def rv_op(cls, weights, *components, size=None):
         # Create new rng for the mix_indexes internal RV
-        mix_indexes_rng = aesara.shared(np.random.default_rng())
+        mix_indexes_rng = pytensor.shared(np.random.default_rng())
 
         single_component = len(components) == 1
         ndim_supp = components[0].owner.op.ndim_supp

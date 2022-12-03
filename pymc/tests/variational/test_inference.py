@@ -15,8 +15,8 @@
 import io
 import operator
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import pytest
 
@@ -24,7 +24,7 @@ import pymc as pm
 import pymc.tests.models as models
 import pymc.variational.opvi as opvi
 
-from pymc.aesaraf import intX
+from pymc.pytensorf import intX
 from pymc.variational.inference import ADVI, ASVGD, SVGD, FullRankADVI
 
 pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test")
@@ -237,7 +237,7 @@ def binomial_model_inference(binomial_model, inference_spec):
         return inference_spec()
 
 
-@pytest.mark.xfail("aesara.config.warn_float64 == 'raise'", reason="too strict float32")
+@pytest.mark.xfail("pytensor.config.warn_float64 == 'raise'", reason="too strict float32")
 def test_replacements(binomial_model_inference):
     d = at.bscalar()
     d.tag.test_value = 1
@@ -246,11 +246,11 @@ def test_replacements(binomial_model_inference):
     p_t = p**3
     p_s = approx.sample_node(p_t)
     assert not any(
-        isinstance(n.owner.op, aesara.tensor.random.basic.BetaRV)
-        for n in aesara.graph.ancestors([p_s])
+        isinstance(n.owner.op, pytensor.tensor.random.basic.BetaRV)
+        for n in pytensor.graph.ancestors([p_s])
         if n.owner
     ), "p should be replaced"
-    if aesara.config.compute_test_value != "off":
+    if pytensor.config.compute_test_value != "off":
         assert p_s.tag.test_value.shape == p_t.tag.test_value.shape
     sampled = [p_s.eval() for _ in range(100)]
     assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
@@ -283,7 +283,7 @@ def test_sample_replacements(binomial_model_inference):
     p = approx.model.p
     p_t = p**3
     p_s = approx.sample_node(p_t, size=100)
-    if aesara.config.compute_test_value != "off":
+    if pytensor.config.compute_test_value != "off":
         assert p_s.tag.test_value.shape == (100,) + p_t.tag.test_value.shape
     sampled = p_s.eval()
     assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
@@ -303,14 +303,14 @@ def test_remove_scan_op():
         inference = ADVI()
         buff = io.StringIO()
         inference.run_profiling(n=10).summary(buff)
-        assert "aesara.scan.op.Scan" not in buff.getvalue()
+        assert "pytensor.scan.op.Scan" not in buff.getvalue()
         buff.close()
 
 
 def test_var_replacement():
     X_mean = pm.floatX(np.linspace(0, 10, 10))
     y = pm.floatX(np.random.normal(X_mean * 4, 0.05))
-    inp_size = aesara.shared(np.array(10, dtype="int64"), name="inp_size")
+    inp_size = pytensor.shared(np.array(10, dtype="int64"), name="inp_size")
     with pm.Model():
         inp = pm.Normal("X", X_mean, size=(inp_size,))
         coef = pm.Normal("b", 4.0)

@@ -18,7 +18,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from pymc.aesaraf import floatX
+from pymc.pytensorf import floatX
 from pymc.math import logbern
 from pymc.stats.convergence import SamplerWarning
 from pymc.step_methods.arraystep import Competence

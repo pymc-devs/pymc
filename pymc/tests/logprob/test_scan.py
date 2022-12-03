@@ -34,14 +34,14 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import pytest
 
-from aesara import Mode
-from aesara.raise_op import assert_op
-from aesara.scan.utils import ScanArgs
+from pytensor import Mode
+from pytensor.raise_op import assert_op
+from pytensor.scan.utils import ScanArgs
 
 from pymc.logprob.abstract import logprob
 from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
@@ -76,7 +76,7 @@ def test_convert_outer_out_to_in_sit_sot():
     """
 
     rng_state = np.random.RandomState(np.random.MT19937(np.random.SeedSequence(1234)))
-    rng_tt = aesara.shared(rng_state, name="rng", borrow=True)
+    rng_tt = pytensor.shared(rng_state, name="rng", borrow=True)
     rng_tt.tag.is_rng = True
     rng_tt.default_update = rng_tt
 
@@ -93,15 +93,15 @@ def test_convert_outer_out_to_in_sit_sot():
         mu.name = "mu_t"
         return mu, at.random.normal(mu, 1.0, rng=rng, name="Y_t")
 
-    (mu_tt, Y_rv), _ = aesara.scan(
+    (mu_tt, Y_rv), _ = pytensor.scan(
         fn=input_step_fn,
         outputs_info=[
             {
-                "initial": at.as_tensor_variable(0.0, dtype=aesara.config.floatX),
+                "initial": at.as_tensor_variable(0.0, dtype=pytensor.config.floatX),
                 "taps": [-1],
             },
             {
-                "initial": at.as_tensor_variable(0.0, dtype=aesara.config.floatX),
+                "initial": at.as_tensor_variable(0.0, dtype=pytensor.config.floatX),
                 "taps": [-1],
             },
         ],
@@ -136,12 +136,12 @@ def test_convert_outer_out_to_in_sit_sot():
         logp.name = "logp"
         return mu, logp
 
-    (mu_tt, Y_logp), _ = aesara.scan(
+    (mu_tt, Y_logp), _ = pytensor.scan(
         fn=output_step_fn,
         sequences=[{"input": Y_obs, "taps": [0, -1]}],
         outputs_info=[
             {
-                "initial": at.as_tensor_variable(0.0, dtype=aesara.config.floatX),
+                "initial": at.as_tensor_variable(0.0, dtype=pytensor.config.floatX),
                 "taps": [-1],
             },
             {},
@@ -190,7 +190,7 @@ def test_convert_outer_out_to_in_mit_sot():
     """
 
     rng_state = np.random.default_rng(1234)
-    rng_tt = aesara.shared(rng_state, name="rng", borrow=True)
+    rng_tt = pytensor.shared(rng_state, name="rng", borrow=True)
     rng_tt.tag.is_rng = True
     rng_tt.default_update = rng_tt
 
@@ -203,7 +203,7 @@ def test_convert_outer_out_to_in_mit_sot():
         y_tm2.name = "y_tm2"
         return at.random.normal(y_tm1 + y_tm2, 1.0, rng=rng, name="Y_t")
 
-    Y_rv, _ = aesara.scan(
+    Y_rv, _ = pytensor.scan(
         fn=input_step_fn,
         outputs_info=[
             {"initial": at.as_tensor_variable(np.r_[-1.0, 0.0]), "taps": [-1, -2]},
@@ -235,7 +235,7 @@ def test_convert_outer_out_to_in_mit_sot():
         logp.name = "logp(y_t)"
         return logp
 
-    Y_logp, _ = aesara.scan(
+    Y_logp, _ = pytensor.scan(
         fn=output_step_fn,
         sequences=[{"input": Y_obs, "taps": [0, -1, -2]}],
         outputs_info=[{}],
@@ -294,7 +294,7 @@ def test_scan_joint_logprob(require_inner_rewrites):
     mus_tt = at.matrix("mus_t")
 
     mus_val = np.stack([np.arange(0.0, 10), np.arange(0.0, -10, -1)], axis=-1).astype(
-        aesara.config.floatX
+        pytensor.config.floatX
     )
     mus_tt.tag.test_value = mus_val
 
@@ -317,7 +317,7 @@ def test_scan_joint_logprob(require_inner_rewrites):
 
         return Y_t, S_t
 
-    (Y_rv, S_rv), _ = aesara.scan(
+    (Y_rv, S_rv), _ = pytensor.scan(
         fn=scan_fn,
         sequences=[mus_tt, sigmas_tt],
         non_sequences=[Gamma_rv],
@@ -348,7 +348,7 @@ def test_scan_joint_logprob(require_inner_rewrites):
         Gamma_vv: Gamma_val,
     }
 
-    y_logp_fn = aesara.function(list(test_point.keys()), y_logp)
+    y_logp_fn = pytensor.function(list(test_point.keys()), y_logp)
 
     assert_no_rvs(y_logp_fn.maker.fgraph.outputs[0])
 
@@ -362,7 +362,7 @@ def test_scan_joint_logprob(require_inner_rewrites):
         S_t_logp.name = "log(S_t=s_t)"
         return Y_t_logp, S_t_logp
 
-    (Y_rv_logp, S_rv_logp), _ = aesara.scan(
+    (Y_rv_logp, S_rv_logp), _ = pytensor.scan(
         fn=scan_fn,
         sequences=[mus_tt, sigmas_tt, y_vv, s_vv],
         non_sequences=[Gamma_vv],
@@ -387,7 +387,7 @@ def test_scan_joint_logprob(require_inner_rewrites):
 
 
 @pytest.mark.xfail(reason="see #148")
-@aesara.config.change_flags(compute_test_value="raise")
+@pytensor.config.change_flags(compute_test_value="raise")
 @pytest.mark.xfail(reason="see #148")
 def test_initial_values():
     srng = at.random.RandomStream(seed=2320)
@@ -406,7 +406,7 @@ def test_initial_values():
         S_t = srng.categorical(Gamma[S_tm1], name="S_t")
         return S_t
 
-    S_1T_rv, _ = aesara.scan(
+    S_1T_rv, _ = pytensor.scan(
         fn=step_fn,
         outputs_info=[{"initial": S_0_rv, "taps": [-1]}],
         non_sequences=[Gamma_at],
@@ -432,7 +432,7 @@ def test_initial_values():
         s_prev = s
 
     S_0T_logp = sum(v.sum() for v in logp_parts.values())
-    S_0T_logp_fn = aesara.function([s_0_vv, s_1T_vv, Gamma_at], S_0T_logp)
+    S_0T_logp_fn = pytensor.function([s_0_vv, s_1T_vv, Gamma_at], S_0T_logp)
     res = S_0T_logp_fn(s_0_val, s_1T_val, Gamma_val)
 
     assert res == pytest.approx(exp_res)
@@ -441,7 +441,7 @@ def test_initial_values():
 @pytest.mark.parametrize("remove_asserts", (True, False))
 def test_mode_is_kept(remove_asserts):
     mode = Mode().including("local_remove_all_assert") if remove_asserts else None
-    x, _ = aesara.scan(
+    x, _ = pytensor.scan(
         fn=lambda x: at.random.normal(assert_op(x, x > 0)),
         outputs_info=[at.ones(())],
         n_steps=10,
@@ -449,7 +449,7 @@ def test_mode_is_kept(remove_asserts):
     )
     x.name = "x"
     x_vv = x.clone()
-    x_logp = aesara.function([x_vv], joint_logprob({x: x_vv}))
+    x_logp = pytensor.function([x_vv], joint_logprob({x: x_vv}))
 
     x_test_val = np.full((10,), -1)
     if remove_asserts:

@@ -14,13 +14,13 @@
 
 import warnings
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import numpy.testing as npt
 import pytest
 
-from pymc.aesaraf import floatX
+from pymc.pytensorf import floatX
 from pymc.math import (
     LogDet,
     cartesian,
@@ -211,10 +211,10 @@ class TestLogDet(SeededTest):
         self.op_class = LogDet
         self.op = logdet
 
-    @aesara.config.change_flags(compute_test_value="ignore")
+    @pytensor.config.change_flags(compute_test_value="ignore")
     def validate(self, input_mat):
-        x = aesara.tensor.matrix()
-        f = aesara.function([x], self.op(x))
+        x = pytensor.tensor.matrix()
+        f = pytensor.function([x], self.op(x))
         out = f(input_mat)
         svd_diag = np.linalg.svd(input_mat, compute_uv=False)
         numpy_out = np.sum(np.log(np.abs(svd_diag)))
@@ -226,21 +226,21 @@ class TestLogDet(SeededTest):
         verify_grad(self.op, [input_mat])
 
     @pytest.mark.skipif(
-        aesara.config.device in ["cuda", "gpu"],
+        pytensor.config.device in ["cuda", "gpu"],
         reason="No logDet implementation on GPU.",
     )
     def test_basic(self):
         # Calls validate with different params
         test_case_1 = np.random.randn(3, 3) / np.sqrt(3)
         test_case_2 = np.random.randn(10, 10) / np.sqrt(10)
-        self.validate(test_case_1.astype(aesara.config.floatX))
-        self.validate(test_case_2.astype(aesara.config.floatX))
+        self.validate(test_case_1.astype(pytensor.config.floatX))
+        self.validate(test_case_2.astype(pytensor.config.floatX))
 
 
 def test_expand_packed_triangular():
     with pytest.raises(ValueError):
         x = at.matrix("x")
-        x.tag.test_value = np.array([[1.0]], dtype=aesara.config.floatX)
+        x.tag.test_value = np.array([[1.0]], dtype=pytensor.config.floatX)
         expand_packed_triangular(5, x)
     N = 5
     packed = at.vector("packed")
@@ -278,18 +278,18 @@ def test_invlogit_deprecation_warning():
 
 
 @pytest.mark.parametrize(
-    "aesara_function, pymc_wrapper",
+    "pytensor_function, pymc_wrapper",
     [
         (at.special.softmax, softmax),
         (at.special.log_softmax, log_softmax),
     ],
 )
-def test_softmax_logsoftmax_no_warnings(aesara_function, pymc_wrapper):
-    """Test that wrappers for aesara functions do not issue Warnings"""
+def test_softmax_logsoftmax_no_warnings(pytensor_function, pymc_wrapper):
+    """Test that wrappers for pytensor functions do not issue Warnings"""
 
     vector = at.vector("vector")
     with pytest.warns(Warning) as record:
-        aesara_function(vector)
+        pytensor_function(vector)
     assert {w.category for w in record.list} == {UserWarning, FutureWarning}
 
     with warnings.catch_warnings():

@@ -12,10 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 
-from pymc.aesaraf import floatX
+from pymc.pytensorf import floatX
 from pymc.util import WithMemoization, locally_cachedmethod
 from pymc.variational.opvi import node_property
 from pymc.variational.test_functions import rbf
@@ -84,7 +84,7 @@ class Stein(WithMemoization):
     def logp_norm(self):
         sized_symbolic_logp = self.approx.sized_symbolic_logp
         if self.use_histogram:
-            sized_symbolic_logp = aesara.clone_replace(
+            sized_symbolic_logp = pytensor.clone_replace(
                 sized_symbolic_logp,
                 dict(zip(self.approx.symbolic_randoms, self.approx.collect("histogram"))),
             )

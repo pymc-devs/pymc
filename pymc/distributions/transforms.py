@@ -13,11 +13,11 @@
 #   limitations under the License.
 from functools import singledispatch
 
-import aesara.tensor as at
+import pytensor.tensor as at
 import numpy as np
 
-from aesara.graph import Op
-from aesara.tensor import TensorVariable
+from pytensor.graph import Op
+from pytensor.tensor import TensorVariable
 
 # ignore mypy error because it somehow considers that
 # "numpy.core.numeric has no attribute normalize_axis_tuple"

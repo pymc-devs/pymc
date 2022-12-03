@@ -16,8 +16,8 @@ import functools as ft
 import re
 import warnings
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
@@ -25,12 +25,12 @@ import pytest
 import scipy.special as sp
 import scipy.stats as st
 
-from aesara.tensor import TensorVariable
-from aesara.tensor.random.utils import broadcast_params
+from pytensor.tensor import TensorVariable
+from pytensor.tensor.random.utils import broadcast_params
 
 import pymc as pm
 
-from pymc.aesaraf import compile_pymc, floatX, intX
+from pymc.pytensorf import compile_pymc, floatX, intX
 from pymc.distributions import logp
 from pymc.distributions.multivariate import (
     _LKJCholeskyCov,
@@ -292,7 +292,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.skipif(
-        condition=(aesara.config.floatX == "float32"),
+        condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
     def test_mvnormal_indef(self):
@@ -303,19 +303,19 @@ class TestMatchesScipy:
         x = at.vector("x")
         x.tag.test_value = np.zeros(2)
         mvn_logp = logp(pm.MvNormal.dist(mu=mu, cov=cov), x)
-        f_logp = aesara.function([cov, x], mvn_logp)
+        f_logp = pytensor.function([cov, x], mvn_logp)
         with pytest.raises(ParameterValueError):
             f_logp(cov_val, np.ones(2))
         dlogp = at.grad(mvn_logp, cov)
-        f_dlogp = aesara.function([cov, x], dlogp)
+        f_dlogp = pytensor.function([cov, x], dlogp)
         assert not np.all(np.isfinite(f_dlogp(cov_val, np.ones(2))))
 
         mvn_logp = logp(pm.MvNormal.dist(mu=mu, tau=cov), x)
-        f_logp = aesara.function([cov, x], mvn_logp)
+        f_logp = pytensor.function([cov, x], mvn_logp)
         with pytest.raises(ParameterValueError):
             f_logp(cov_val, np.ones(2))
         dlogp = at.grad(mvn_logp, cov)
-        f_dlogp = aesara.function([cov, x], dlogp)
+        f_dlogp = pytensor.function([cov, x], dlogp)
         assert not np.all(np.isfinite(f_dlogp(cov_val, np.ones(2))))
 
     def test_mvnormal_init_fail(self):
@@ -775,9 +775,9 @@ class TestMatchesScipy:
         cov = np.linalg.inv(prec)
         scipy_logp = st.multivariate_normal.logpdf(xs, mu, cov)
 
-        W = aesara.tensor.as_tensor_variable(W)
+        W = pytensor.tensor.as_tensor_variable(W)
         if sparse:
-            W = aesara.sparse.csr_from_dense(W)
+            W = pytensor.sparse.csr_from_dense(W)
 
         car_dist = pm.CAR.dist(mu, W, alpha, tau, size=size)
         car_logp = logp(car_dist, xs).eval()
@@ -788,7 +788,7 @@ class TestMatchesScipy:
 
         # Check to make sure all the delta values are identical.
         tol = 1e-08
-        if aesara.config.floatX == "float32":
+        if pytensor.config.floatX == "float32":
             tol = 1e-5
         assert np.allclose(delta_logp - delta_logp[0], 0.0, atol=tol)
 
@@ -812,9 +812,9 @@ def test_car_matrix_check(sparse):
     W = np.array(
         [[0.0, 1.0, 2.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
     )
-    W = aesara.tensor.as_tensor_variable(W)
+    W = pytensor.tensor.as_tensor_variable(W)
     if sparse:
-        W = aesara.sparse.csr_from_dense(W)
+        W = pytensor.sparse.csr_from_dense(W)
 
     car_dist = pm.CAR.dist(mu, W, alpha, tau)
     with pytest.raises(AssertionError, match="W must be a symmetric adjacency matrix"):
@@ -823,7 +823,7 @@ def test_car_matrix_check(sparse):
     # W.ndim != 2
     if not sparse:
         W = np.array([0.0, 1.0, 2.0, 0.0])
-        W = aesara.tensor.as_tensor_variable(W)
+        W = pytensor.tensor.as_tensor_variable(W)
         with pytest.raises(ValueError, match="W must be a matrix"):
             car_dist = pm.CAR.dist(mu, W, alpha, tau)
 
@@ -1740,7 +1740,7 @@ class TestDirichletMultinomial(BaseTestDistributionRandom):
     ]
 
     def check_random_draws(self):
-        default_rng = aesara.shared(np.random.default_rng(1234))
+        default_rng = pytensor.shared(np.random.default_rng(1234))
         draws = pm.DirichletMultinomial.dist(
             n=np.array([5, 100]),
             a=np.array([[0.001, 0.001, 0.001, 1000], [1000, 1000, 0.001, 0.001]]),
@@ -1787,7 +1787,7 @@ class TestStickBreakingWeights(BaseTestDistributionRandom):
     ]
 
     def check_basic_properties(self):
-        default_rng = aesara.shared(np.random.default_rng(1234))
+        default_rng = pytensor.shared(np.random.default_rng(1234))
         draws = pm.StickBreakingWeights.dist(
             alpha=3.5,
             K=19,
@@ -1917,7 +1917,7 @@ class TestMatrixNormal(BaseTestDistributionRandom):
                 colcov=np.eye(3),
             )
             with pytest.raises(ValueError):
-                logp(matrixnormal, aesara.tensor.ones((3, 3, 3)))
+                logp(matrixnormal, pytensor.tensor.ones((3, 3, 3)))
 
     def check_random_variable_prior(self):
         """
@@ -2082,9 +2082,9 @@ def test_car_rng_fn(sparse):
     D = W.sum(axis=0)
     prec = tau * (np.diag(D) - alpha * W)
     cov = np.linalg.inv(prec)
-    W = aesara.tensor.as_tensor_variable(W)
+    W = pytensor.tensor.as_tensor_variable(W)
     if sparse:
-        W = aesara.sparse.csr_from_dense(W)
+        W = pytensor.sparse.csr_from_dense(W)
 
     with pm.Model():
         car = pm.CAR("car", mu, W, alpha, tau, size=size)
@@ -2119,5 +2119,5 @@ def test_posdef_symmetric(matrix, result):
 
     Is this correct?
     """
-    data = np.array(matrix, dtype=aesara.config.floatX)
+    data = np.array(matrix, dtype=pytensor.config.floatX)
     assert posdef(data) == result

@@ -44,7 +44,7 @@
 # SOFTWARE.
 
 """
-Functions to generate Aesara update dictionaries for training.
+Functions to generate PyTensor update dictionaries for training.
 
 The update functions implement different methods to control the learning
 rate for use with stochastic gradient descent.
@@ -88,7 +88,7 @@ This is often used when training recurrent neural networks.
 Examples
 --------
 >>> import lasagne
->>> import aesara
+>>> import pytensor
 >>> from lasagne.nonlinearities import softmax
 >>> from lasagne.layers import InputLayer, DenseLayer, get_output
 >>> from lasagne.updates import sgd, apply_momentum
@@ -101,7 +101,7 @@ Examples
 >>> loss = at.mean(at.nnet.categorical_crossentropy(l_out, y))
 >>> updates_sgd = sgd(loss, params, learning_rate=0.0001)
 >>> updates = apply_momentum(updates_sgd, params, momentum=0.9)
->>> train_function = aesara.function([x, y], updates=updates)
+>>> train_function = pytensor.function([x, y], updates=updates)
 
 Notes
 -----
@@ -111,8 +111,8 @@ Taken from the Lasagne project: http://lasagne.readthedocs.io/en/latest/
 from collections import OrderedDict
 from functools import partial
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 
 import pymc as pm
@@ -151,7 +151,7 @@ def get_or_compute_grads(loss_or_grads, params):
         gradients and returned as is, unless it does not match the length
         of `params`, in which case a `ValueError` is raised.
         Otherwise, `loss_or_grads` is assumed to be a cost expression and
-        the function returns `aesara.grad(loss_or_grads, params)`.
+        the function returns `pytensor.grad(loss_or_grads, params)`.
 
     Raises
     ------
@@ -160,7 +160,7 @@ def get_or_compute_grads(loss_or_grads, params):
         any element of `params` is not a shared variable (while we could still
         compute its gradient, we can never update it and want to fail early).
     """
-    if any(not isinstance(p, aesara.compile.SharedVariable) for p in params):
+    if any(not isinstance(p, pytensor.compile.SharedVariable) for p in params):
         raise ValueError(
             "params must contain shared variables only. If it "
             "contains arbitrary parameter expressions, then "
@@ -173,7 +173,7 @@ def get_or_compute_grads(loss_or_grads, params):
             )
         return loss_or_grads
     else:
-        return aesara.grad(loss_or_grads, params)
+        return pytensor.grad(loss_or_grads, params)
 
 
 def _get_call_kwargs(_locals_):
@@ -211,7 +211,7 @@ def sgd(loss_or_grads=None, params=None, learning_rate=1e-3):
 
     Examples
     --------
-    >>> a = aesara.shared(1.)
+    >>> a = pytensor.shared(1.)
     >>> b = a*2
     >>> updates = sgd(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -275,7 +275,7 @@ def apply_momentum(updates, params=None, momentum=0.9):
 
     for param in params:
         value = param.get_value(borrow=True)
-        velocity = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
+        velocity = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
         x = momentum * velocity + updates[param]
         updates[velocity] = x - param
         updates[param] = x
@@ -323,7 +323,7 @@ def momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
 
     Examples
     --------
-    >>> a = aesara.shared(1.)
+    >>> a = pytensor.shared(1.)
     >>> b = a*2
     >>> updates = momentum(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -388,7 +388,7 @@ def apply_nesterov_momentum(updates, params=None, momentum=0.9):
 
     for param in params:
         value = param.get_value(borrow=True)
-        velocity = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
+        velocity = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
         x = momentum * velocity + updates[param] - param
         updates[velocity] = x
         updates[param] = momentum * x + updates[param]
@@ -441,7 +441,7 @@ def nesterov_momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momen
 
     Examples
     --------
-    >>> a = aesara.shared(1.)
+    >>> a = pytensor.shared(1.)
     >>> b = a*2
     >>> updates = nesterov_momentum(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -509,7 +509,7 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
 
     Examples
     --------
-    >>> a = aesara.shared(1.)
+    >>> a = pytensor.shared(1.)
     >>> b = a*2
     >>> updates = adagrad(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -530,7 +530,7 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
-        accu = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
+        accu = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
         accu_new = accu + grad**2
         updates[accu] = accu_new
         updates[param] = param - (learning_rate * grad / at.sqrt(accu_new + epsilon))
@@ -567,10 +567,10 @@ def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
     for param, grad in zip(params, grads):
-        i = aesara.shared(pm.floatX(0))
+        i = pytensor.shared(pm.floatX(0))
         i_int = i.astype("int32")
         value = param.get_value(borrow=True)
-        accu = aesara.shared(np.zeros(value.shape + (n_win,), dtype=value.dtype))
+        accu = pytensor.shared(np.zeros(value.shape + (n_win,), dtype=value.dtype))
 
         # Append squared gradient vector to accu_new
         accu_new = at.set_subtensor(accu[..., i_int], grad**2)
@@ -632,7 +632,7 @@ def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon
 
     Examples
     --------
-    >>> a = aesara.shared(1.)
+    >>> a = pytensor.shared(1.)
     >>> b = a*2
     >>> updates = rmsprop(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -651,12 +651,12 @@ def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
-    # Using aesara constant to prevent upcasting of float32
+    # Using pytensor constant to prevent upcasting of float32
     one = at.constant(1)
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
-        accu = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
+        accu = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
         accu_new = rho * accu + (one - rho) * grad**2
         updates[accu] = accu_new
         updates[param] = param - (learning_rate * grad / at.sqrt(accu_new + epsilon))
@@ -722,7 +722,7 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
 
     Examples
     --------
-    >>> a = aesara.shared(1.)
+    >>> a = pytensor.shared(1.)
     >>> b = a*2
     >>> updates = adadelta(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -741,15 +741,15 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
 
-    # Using aesara constant to prevent upcasting of float32
+    # Using pytensor constant to prevent upcasting of float32
     one = at.constant(1)
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
         # accu: accumulate gradient magnitudes
-        accu = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
+        accu = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
         # delta_accu: accumulate update magnitudes (recursively!)
-        delta_accu = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
+        delta_accu = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
 
         # update accu (as in rmsprop)
         accu_new = rho * accu + (one - rho) * grad**2
@@ -810,7 +810,7 @@ def adam(
 
     Examples
     --------
-    >>> a = aesara.shared(1.)
+    >>> a = pytensor.shared(1.)
     >>> b = a*2
     >>> updates = adam(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -827,10 +827,10 @@ def adam(
     elif loss_or_grads is None or params is None:
         raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     all_grads = get_or_compute_grads(loss_or_grads, params)
-    t_prev = aesara.shared(pm.aesaraf.floatX(0.0))
+    t_prev = pytensor.shared(pm.pytensorf.floatX(0.0))
     updates = OrderedDict()
 
-    # Using aesara constant to prevent upcasting of float32
+    # Using pytensor constant to prevent upcasting of float32
     one = at.constant(1)
 
     t = t_prev + 1
@@ -838,8 +838,8 @@ def adam(
 
     for param, g_t in zip(params, all_grads):
         value = param.get_value(borrow=True)
-        m_prev = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
-        v_prev = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
+        m_prev = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
+        v_prev = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
 
         m_t = beta1 * m_prev + (one - beta1) * g_t
         v_t = beta2 * v_prev + (one - beta2) * g_t**2
@@ -894,7 +894,7 @@ def adamax(
 
     Examples
     --------
-    >>> a = aesara.shared(1.)
+    >>> a = pytensor.shared(1.)
     >>> b = a*2
     >>> updates = adamax(b, [a], learning_rate=.01)
     >>> isinstance(updates, dict)
@@ -911,10 +911,10 @@ def adamax(
     elif loss_or_grads is None or params is None:
         raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     all_grads = get_or_compute_grads(loss_or_grads, params)
-    t_prev = aesara.shared(pm.aesaraf.floatX(0.0))
+    t_prev = pytensor.shared(pm.pytensorf.floatX(0.0))
     updates = OrderedDict()
 
-    # Using aesara constant to prevent upcasting of float32
+    # Using pytensor constant to prevent upcasting of float32
     one = at.constant(1)
 
     t = t_prev + 1
@@ -922,8 +922,8 @@ def adamax(
 
     for param, g_t in zip(params, all_grads):
         value = param.get_value(borrow=True)
-        m_prev = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
-        u_prev = aesara.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
+        m_prev = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
+        u_prev = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
 
         m_t = beta1 * m_prev + (one - beta1) * g_t
         u_t = at.maximum(beta2 * u_prev, abs(g_t))
@@ -947,7 +947,7 @@ def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
     Parameters
     ----------
     tensor_var: TensorVariable
-        Aesara expression for update, gradient, or other quantity.
+        PyTensor expression for update, gradient, or other quantity.
     max_norm: scalar
         This value sets the maximum allowed value of any norm in
         `tensor_var`.
@@ -972,11 +972,11 @@ def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
 
     Examples
     --------
-    >>> param = aesara.shared(
-    ...     np.random.randn(100, 200).astype(aesara.config.floatX))
+    >>> param = pytensor.shared(
+    ...     np.random.randn(100, 200).astype(pytensor.config.floatX))
     >>> update = param + 100
     >>> update = norm_constraint(update, 10)
-    >>> func = aesara.function([], [], updates=[(param, update)])
+    >>> func = pytensor.function([], [], updates=[(param, update)])
     >>> # Apply constrained update
     >>> _ = func()
     >>> from lasagne.utils import compute_norms
@@ -1007,7 +1007,7 @@ def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
             "Unsupported tensor dimensionality {}." "Must specify `norm_axes`".format(ndim)
         )
 
-    dtype = np.dtype(aesara.config.floatX).type
+    dtype = np.dtype(pytensor.config.floatX).type
     norms = at.sqrt(at.sum(at.sqr(tensor_var), axis=sum_over, keepdims=True))
     target_norms = at.clip(norms, 0, dtype(max_norm))
     constrained_output = tensor_var * (target_norms / (dtype(epsilon) + norms))
@@ -1040,7 +1040,7 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7, return_norm=False
     -------
     tensor_vars_scaled: list of TensorVariables
         The scaled tensor variables.
-    norm: Aesara scalar
+    norm: PyTensor scalar
         The combined norms of the input variables prior to rescaling,
         only returned if ``return_norms=True``.
 
@@ -1071,7 +1071,7 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7, return_norm=False
        Processing Systems (pp. 3104-3112).
     """
     norm = at.sqrt(sum(at.sum(tensor**2) for tensor in tensor_vars))
-    dtype = np.dtype(aesara.config.floatX).type
+    dtype = np.dtype(pytensor.config.floatX).type
     target_norm = at.clip(norm, 0, dtype(max_norm))
     multiplier = target_norm / (dtype(epsilon) + norm)
     tensor_vars_scaled = [step * multiplier for step in tensor_vars]

@@ -17,19 +17,19 @@ import platform
 import sys
 import warnings
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import cloudpickle
 import numpy as np
 import pytest
 
-from aesara.compile.ops import as_op
-from aesara.tensor.type import TensorType
+from pytensor.compile.ops import as_op
+from pytensor.tensor.type import TensorType
 
 import pymc as pm
 import pymc.sampling.parallel as ps
 
-from pymc.aesaraf import floatX
+from pymc.pytensorf import floatX
 
 
 def test_context():
@@ -69,7 +69,7 @@ def test_bad_unpickle():
         assert "could not be unpickled" in str(exc_info.getrepr(style="short"))
 
 
-at_vector = TensorType(aesara.config.floatX, [False])
+at_vector = TensorType(pytensor.config.floatX, [False])
 
 
 @as_op([at_vector, at.iscalar], [at_vector])

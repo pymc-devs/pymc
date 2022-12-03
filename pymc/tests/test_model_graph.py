@@ -13,13 +13,13 @@
 #   limitations under the License.
 import warnings
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import pytest
 
-from aesara.compile.sharedvalue import SharedVariable
-from aesara.tensor.var import TensorConstant
+from pytensor.compile.sharedvalue import SharedVariable
+from pytensor.tensor.var import TensorConstant
 
 import pymc as pm
 
@@ -102,7 +102,7 @@ def radon_model():
         sigma_y = pm.Uniform("sigma_y", lower=0, upper=100)
 
         # Anonymous SharedVariables don't show up
-        floor_measure = aesara.shared(floor_measure)
+        floor_measure = pytensor.shared(floor_measure)
         floor_measure_offset = pm.MutableData("floor_measure_offset", 1)
         y_hat = a + b * floor_measure + floor_measure_offset
         log_radon = pm.MutableData("log_radon", np.random.normal(1, 1, size=n_homes))

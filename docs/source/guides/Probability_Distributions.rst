@@ -27,7 +27,7 @@ A variable requires at least a ``name`` argument, and zero or more model paramet
 
         p = pm.Beta('p', 1, 1, shape=(3, 3))
 
-Probability distributions are all subclasses of ``Distribution``, which in turn has two major subclasses: ``Discrete`` and ``Continuous``. In terms of data types, a ``Continuous`` random variable is given whichever floating point type is defined by ``aesara.config.floatX``, while ``Discrete`` variables are given ``int16`` types when ``aesara.config.floatX`` is ``float32``, and ``int64`` otherwise.
+Probability distributions are all subclasses of ``Distribution``, which in turn has two major subclasses: ``Discrete`` and ``Continuous``. In terms of data types, a ``Continuous`` random variable is given whichever floating point type is defined by ``pytensor.config.floatX``, while ``Discrete`` variables are given ``int16`` types when ``pytensor.config.floatX`` is ``float32``, and ``int64`` otherwise.
 
 All distributions in ``pm.distributions`` will have two important methods: ``random()`` and ``logp()`` with the following signatures:
 

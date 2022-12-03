@@ -14,20 +14,20 @@
 
 import logging
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import scipy
 
-from aesara.graph.basic import Apply
-from aesara.graph.op import Op, get_test_value
-from aesara.tensor.type import TensorType
+from pytensor.graph.basic import Apply
+from pytensor.graph.op import Op, get_test_value
+from pytensor.tensor.type import TensorType
 
 from pymc.exceptions import DtypeError, ShapeError
 from pymc.ode import utils
 
 _log = logging.getLogger("pymc")
-floatX = aesara.config.floatX
+floatX = pytensor.config.floatX
 
 
 class DifferentialEquation(Op):
@@ -170,7 +170,7 @@ class DifferentialEquation(Op):
         # use default implementation to prepare symbolic outputs (via make_node)
         states, sens = super().__call__(y0, theta, **kwargs)
 
-        if aesara.config.compute_test_value != "off":
+        if pytensor.config.compute_test_value != "off":
             # compute test values from input test values
             test_states, test_sens = self._simulate(
                 y0=get_test_value(y0), theta=get_test_value(theta)

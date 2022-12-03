@@ -17,19 +17,19 @@ import warnings
 
 from functools import partial, reduce
 
-import aesara
-import aesara.sparse
-import aesara.tensor as at
-import aesara.tensor.slinalg  # pylint: disable=unused-import
+import pytensor
+import pytensor.sparse
+import pytensor.tensor as at
+import pytensor.tensor.slinalg  # pylint: disable=unused-import
 import numpy as np
 import scipy as sp
 import scipy.sparse  # pylint: disable=unused-import
 
-from aesara.graph.basic import Apply
-from aesara.graph.op import Op
+from pytensor.graph.basic import Apply
+from pytensor.graph.op import Op
 
 # pylint: disable=unused-import
-from aesara.tensor import (
+from pytensor.tensor import (
     abs,
     and_,
     ceil,
@@ -77,15 +77,15 @@ from aesara.tensor import (
 )
 
 try:
-    from aesara.tensor.basic import extract_diag
+    from pytensor.tensor.basic import extract_diag
 except ImportError:
-    from aesara.tensor.nlinalg import extract_diag
+    from pytensor.tensor.nlinalg import extract_diag
 
 
-from aesara.tensor.nlinalg import det, matrix_dot, matrix_inverse, trace
+from pytensor.tensor.nlinalg import det, matrix_dot, matrix_inverse, trace
 from scipy.linalg import block_diag as scipy_block_diag
 
-from pymc.aesaraf import floatX, ix_, largest_common_dtype
+from pymc.pytensorf import floatX, ix_, largest_common_dtype
 
 # pylint: enable=unused-import
 
@@ -251,7 +251,7 @@ def kron_diag(*diags):
 
 def tround(*args, **kwargs):
     """
-    Temporary function to silence round warning in Aesara. Please remove
+    Temporary function to silence round warning in PyTensor. Please remove
     when the warning disappears.
     """
     kwargs["mode"] = "half_to_even"
@@ -280,7 +280,7 @@ def invlogit(x, eps=None):
 
 
 def softmax(x, axis=None):
-    # Ignore vector case UserWarning issued by Aesara. This can be removed once Aesara
+    # Ignore vector case UserWarning issued by PyTensor. This can be removed once PyTensor
     # drops that warning
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
@@ -288,7 +288,7 @@ def softmax(x, axis=None):
 
 
 def log_softmax(x, axis=None):
-    # Ignore vector case UserWarning issued by Aesara. This can be removed once Aesara
+    # Ignore vector case UserWarning issued by PyTensor. This can be removed once PyTensor
     # drops that warning
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
@@ -372,8 +372,8 @@ class LogDet(Op):
     """
 
     def make_node(self, x):
-        x = aesara.tensor.as_tensor_variable(x)
-        o = aesara.tensor.scalar(dtype=x.dtype)
+        x = pytensor.tensor.as_tensor_variable(x)
+        o = pytensor.tensor.scalar(dtype=x.dtype)
         return Apply(self, [x], [o])
 
     def perform(self, node, inputs, outputs, params=None):
@@ -423,7 +423,7 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
     ----------
     n: int
         The number of rows of the triangular matrix.
-    packed: aesara.vector
+    packed: pytensor.vector
         The matrix in packed format.
     lower: bool, default=True
         If true, assume that the matrix is lower triangular.
@@ -442,11 +442,11 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
         diag_idxs = np.arange(2, n + 2)[::-1].cumsum() - n - 1
         return packed[diag_idxs]
     elif lower:
-        out = at.zeros((n, n), dtype=aesara.config.floatX)
+        out = at.zeros((n, n), dtype=pytensor.config.floatX)
         idxs = np.tril_indices(n)
         return at.set_subtensor(out[idxs], packed)
     elif not lower:
-        out = at.zeros((n, n), dtype=aesara.config.floatX)
+        out = at.zeros((n, n), dtype=pytensor.config.floatX)
         idxs = np.triu_indices(n)
         return at.set_subtensor(out[idxs], packed)
 
@@ -516,9 +516,9 @@ class BlockDiagonalMatrix(Op):
         if any(mat.type.ndim != 2 for mat in matrices):
             raise TypeError("all data arguments must be matrices")
         if self.sparse:
-            out_type = aesara.sparse.matrix(self.format, dtype=largest_common_dtype(matrices))
+            out_type = pytensor.sparse.matrix(self.format, dtype=largest_common_dtype(matrices))
         else:
-            out_type = aesara.tensor.matrix(dtype=largest_common_dtype(matrices))
+            out_type = pytensor.tensor.matrix(dtype=largest_common_dtype(matrices))
         return Apply(self, matrices, [out_type])
 
     def perform(self, node, inputs, output_storage, params=None):

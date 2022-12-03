@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara
+import pytensor
 import numpy as np
 import pytest
 
@@ -25,7 +25,7 @@ def test_callbacks_convergence(diff, ord):
     cb = pm.variational.callbacks.CheckParametersConvergence(every=1, diff=diff, ord=ord)
 
     class _approx:
-        params = (aesara.shared(np.asarray([1, 2, 3])),)
+        params = (pytensor.shared(np.asarray([1, 2, 3])),)
 
     approx = _approx()
 

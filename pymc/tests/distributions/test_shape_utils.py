@@ -14,16 +14,16 @@
 import re
 import warnings
 
-import aesara
+import pytensor
 import numpy as np
 import pytest
 
-from aesara import tensor as at
-from aesara.compile.mode import Mode
-from aesara.graph import Constant, ancestors
-from aesara.tensor import TensorVariable
-from aesara.tensor.random import normal
-from aesara.tensor.shape import SpecifyShape
+from pytensor import tensor as at
+from pytensor.compile.mode import Mode
+from pytensor.graph import Constant, ancestors
+from pytensor.tensor import TensorVariable
+from pytensor.tensor.random import normal
+from pytensor.tensor.shape import SpecifyShape
 
 import pymc as pm
 
@@ -251,7 +251,7 @@ class TestSizeShapeDimsObserved:
         assert len(batch_dims) == len(batch_shape)
 
         with pm.Model(coords=coords) as pmodel:
-            mu = aesara.shared(np.random.normal(size=param_shape))
+            mu = pytensor.shared(np.random.normal(size=param_shape))
 
             with warnings.catch_warnings():
                 warnings.simplefilter("error")
@@ -348,14 +348,14 @@ class TestSizeShapeDimsObserved:
         assert rv.broadcastable == (True, False)
 
     def test_observed_with_column_vector(self):
-        """This test is related to https://github.com/pymc-devs/aesara/issues/390 which breaks
+        """This test is related to https://github.com/pymc-devs/pytensor/issues/390 which breaks
         broadcastability of column-vector RVs. This unexpected change in type can lead to
         incompatibilities during graph rewriting for model.logp evaluation.
         """
         with pm.Model() as model:
             # The `observed` is a broadcastable column vector
             obs = [
-                at.as_tensor_variable(np.ones((3, 1), dtype=aesara.config.floatX)) for _ in range(4)
+                at.as_tensor_variable(np.ones((3, 1), dtype=pytensor.config.floatX)) for _ in range(4)
             ]
             assert all(obs_.broadcastable == (False, True) for obs_ in obs)
 
@@ -373,7 +373,7 @@ class TestSizeShapeDimsObserved:
             assert model.compile_logp()({})
 
     def test_dist_api_works(self):
-        mu = aesara.shared(np.array([1, 2, 3]))
+        mu = pytensor.shared(np.array([1, 2, 3]))
         with pytest.raises(NotImplementedError, match="API is not supported"):
             pm.Normal.dist(mu=mu, dims=("town",))
         assert pm.Normal.dist(mu=mu, shape=(3,)).eval().shape == (3,)
@@ -442,7 +442,7 @@ class TestSizeShapeDimsObserved:
         with pm.Model(coords=dict(x_dim=range(2))):
             x = pm.Normal("x", dims=("x_dim",))
 
-        fn = pm.aesaraf.compile_pymc([], x)
+        fn = pm.pytensorf.compile_pymc([], x)
         # Check that both function outputs (rng and draws) come from the same Apply node
         assert fn.maker.fgraph.outputs[0].owner is fn.maker.fgraph.outputs[1].owner
 
@@ -457,7 +457,7 @@ class TestSizeShapeDimsObserved:
         with pm.Model():
             x = pm.Normal("x", observed=[0, 1])
 
-        fn = pm.aesaraf.compile_pymc([], x)
+        fn = pm.pytensorf.compile_pymc([], x)
         # Check that both function outputs (rng and draws) come from the same Apply node
         assert fn.maker.fgraph.outputs[0].owner is fn.maker.fgraph.outputs[1].owner
 
@@ -494,7 +494,7 @@ def test_rv_size_is_none():
 
 def test_change_rv_size():
     loc = at.as_tensor_variable([1, 2])
-    rng = aesara.shared(np.random.default_rng())
+    rng = pytensor.shared(np.random.default_rng())
     rv = normal(loc=loc, rng=rng)
     assert rv.ndim == 1
     assert tuple(rv.shape.eval()) == (2,)
@@ -544,7 +544,7 @@ def test_change_rv_size():
 
 
 def test_change_rv_size_default_update():
-    rng = aesara.shared(np.random.default_rng(0))
+    rng = pytensor.shared(np.random.default_rng(0))
     x = normal(rng=rng)
 
     # Test that "traditional" default_update is translated to the new rng
@@ -555,7 +555,7 @@ def test_change_rv_size_default_update():
     assert new_rng.default_update is new_x.owner.outputs[0]
 
     # Test that "non-traditional" default_update raises UserWarning
-    next_rng = aesara.shared(np.random.default_rng(1))
+    next_rng = pytensor.shared(np.random.default_rng(1))
     rng.default_update = next_rng
     with pytest.warns(UserWarning, match="could not be replicated in resized variable"):
         new_x = change_dist_size(x, new_size=(2,))
@@ -571,7 +571,7 @@ def test_change_rv_size_default_update():
 
 
 def test_change_specify_shape_size_univariate():
-    with aesara.config.change_flags(mode=Mode("py")):
+    with pytensor.config.change_flags(mode=Mode("py")):
         s1, s2 = at.iscalars("s1", "s2")
         x = at.random.normal(size=(s1, s2))
         x = at.specify_shape(x, (5, 3))
@@ -591,7 +591,7 @@ def test_change_specify_shape_size_univariate():
 
 
 def test_change_specify_shape_size_multivariate():
-    with aesara.config.change_flags(mode=Mode("py")):
+    with pytensor.config.change_flags(mode=Mode("py")):
         batch, supp = at.iscalars("batch", "supp")
         x = at.random.multivariate_normal(at.zeros(supp), at.eye(supp), size=(batch,))
         x = at.specify_shape(x, (5, 3))
@@ -666,7 +666,7 @@ def test_get_support_shape_1d(
             assert inferred_support_shape.eval() == expected_support_shape
         else:
             # check that inferred steps is still correct by ignoring the assert
-            f = aesara.function(
+            f = pytensor.function(
                 [], inferred_support_shape, mode=Mode().including("local_remove_all_assert")
             )
             assert f() == expected_support_shape
@@ -742,7 +742,7 @@ def test_get_support_shape(
             assert (inferred_support_shape.eval() == expected_support_shape).all()
         else:
             # check that inferred support shape is still correct by ignoring the assert
-            f = aesara.function(
+            f = pytensor.function(
                 [], inferred_support_shape, mode=Mode().including("local_remove_all_assert")
             )
             assert (f() == expected_support_shape).all()

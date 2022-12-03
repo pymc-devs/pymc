@@ -5,7 +5,6 @@ channels:
 - defaults
 dependencies:
 # Base dependencies (see install guide for Windows)
-- aesara=2.8.8
 - arviz>=0.13.0
 - blas
 - cachetools>=4.2.1
@@ -18,6 +17,7 @@ dependencies:
 - numpy>=1.15.0
 - pandas>=0.24.0
 - pip
+- pytensor=2.8.10
 - python-graphviz
 - networkx
 - scipy>=1.4.1

@@ -23,19 +23,19 @@ from typing import Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from aesara import tensor as at
-from aesara.compile.builders import OpFromGraph
-from aesara.graph import node_rewriter
-from aesara.graph.basic import Node, clone_replace
-from aesara.graph.rewriting.basic import in2out
-from aesara.graph.utils import MetaType
-from aesara.tensor.basic import as_tensor_variable
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.random.type import RandomType
-from aesara.tensor.var import TensorVariable
+from pytensor import tensor as at
+from pytensor.compile.builders import OpFromGraph
+from pytensor.graph import node_rewriter
+from pytensor.graph.basic import Node, clone_replace
+from pytensor.graph.rewriting.basic import in2out
+from pytensor.graph.utils import MetaType
+from pytensor.tensor.basic import as_tensor_variable
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.type import RandomType
+from pytensor.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
-from pymc.aesaraf import convert_observed_data
+from pymc.pytensorf import convert_observed_data
 from pymc.distributions.shape_utils import (
     Dims,
     Shape,
@@ -150,7 +150,7 @@ class DistributionMeta(ABCMeta):
                 def moment(op, rv, rng, size, dtype, *dist_params):
                     return class_moment(rv, size, *dist_params)
 
-            # Register the Aesara `RandomVariable` type as a subclass of this
+            # Register the PyTensor `RandomVariable` type as a subclass of this
             # `Distribution` type.
             new_cls.register(rv_type)
 
@@ -203,7 +203,7 @@ class SymbolicRandomVariable(OpFromGraph):
 
         Returns a dictionary with the symbolic expressions required for correct updating
         of random state input variables repeated function evaluations. This is used by
-        `aesaraf.compile_pymc`.
+        `pytensorf.compile_pymc`.
         """
         return {}
 
@@ -256,7 +256,7 @@ class Distribution(metaclass=DistributionMeta):
         transform : optional
             See ``Model.register_rv``.
         **kwargs
-            Keyword arguments that will be forwarded to ``.dist()`` or the Aesara RV Op.
+            Keyword arguments that will be forwarded to ``.dist()`` or the PyTensor RV Op.
             Most prominently: ``shape`` for ``.dist()`` or ``dtype`` for the Op.
 
         Returns
@@ -340,7 +340,7 @@ class Distribution(metaclass=DistributionMeta):
         shape : int, tuple, Variable, optional
             A tuple of sizes for each dimension of the new RV.
         **kwargs
-            Keyword arguments that will be forwarded to the Aesara RV Op.
+            Keyword arguments that will be forwarded to the PyTensor RV Op.
             Most prominently: ``size`` or ``dtype``.
 
         Returns
@@ -353,7 +353,7 @@ class Distribution(metaclass=DistributionMeta):
             warnings.warn(
                 "The `.dist(testval=...)` argument is deprecated and has no effect. "
                 "Initial values for sampling/optimization can be specified with `initval` in a modelcontext. "
-                "For using Aesara's test value features, you must assign the `.tag.test_value` yourself.",
+                "For using PyTensor's test value features, you must assign the `.tag.test_value` yourself.",
                 FutureWarning,
                 stacklevel=2,
             )
@@ -486,7 +486,7 @@ class DensityDist(Distribution):
     name : str
     dist_params : Tuple
         A sequence of the distribution's parameter. These will be converted into
-        Aesara tensors internally. These parameters could be other ``TensorVariable``
+        PyTensor tensors internally. These parameters could be other ``TensorVariable``
         instances created from , optionally created via ``RandomVariable`` ``Op``s.
     class_name : str
         Name for the RandomVariable class which will wrap the DensityDist methods.
@@ -501,17 +501,17 @@ class DensityDist(Distribution):
         A callable that calculates the log density of some given observed ``value``
         conditioned on certain distribution parameter values. It must have the
         following signature: ``logp(value, *dist_params)``, where ``value`` is
-        an Aesara tensor that represents the observed value, and ``dist_params``
+        an PyTensor tensor that represents the observed value, and ``dist_params``
         are the tensors that hold the values of the distribution parameters.
-        This function must return an Aesara tensor. If ``None``, a ``NotImplemented``
+        This function must return an PyTensor tensor. If ``None``, a ``NotImplemented``
         error will be raised when trying to compute the distribution's logp.
     logcdf : Optional[Callable]
         A callable that calculates the log cummulative probability of some given observed
         ``value`` conditioned on certain distribution parameter values. It must have the
         following signature: ``logcdf(value, *dist_params)``, where ``value`` is
-        an Aesara tensor that represents the observed value, and ``dist_params``
+        an PyTensor tensor that represents the observed value, and ``dist_params``
         are the tensors that hold the values of the distribution parameters.
-        This function must return an Aesara tensor. If ``None``, a ``NotImplemented``
+        This function must return an PyTensor tensor. If ``None``, a ``NotImplemented``
         error will be raised when trying to compute the distribution's logcdf.
     random : Optional[Callable]
         A callable that can be used to generate random draws from the distribution.
@@ -526,7 +526,7 @@ class DensityDist(Distribution):
     moment : Optional[Callable]
         A callable that can be used to compute the moments of the distribution.
         It must have the following signature: ``moment(rv, size, *rv_inputs)``.
-        The distribution's :class:`~aesara.tensor.random.op.RandomVariable` is passed
+        The distribution's :class:`~pytensor.tensor.random.op.RandomVariable` is passed
         as the first argument ``rv``. ``size`` is the random variable's size implied
         by the ``dims``, ``size`` and parameters supplied to the distribution. Finally,
         ``rv_inputs`` is the sequence of the distribution parameters, in the same order

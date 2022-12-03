@@ -13,14 +13,14 @@
 #   limitations under the License.
 import warnings
 
-import aesara.tensor as at
+import pytensor.tensor as at
 import numpy as np
 
-from aesara.tensor import as_tensor_variable
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.var import TensorVariable
+from pytensor.tensor import as_tensor_variable
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.var import TensorVariable
 
-from pymc.aesaraf import floatX, intX
+from pymc.pytensorf import floatX, intX
 from pymc.distributions.continuous import BoundedContinuous, bounded_cont_transform
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import Continuous, Discrete

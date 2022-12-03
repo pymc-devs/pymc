@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara.tensor as at
+import pytensor.tensor as at
 
 __all__ = ["Zero", "Constant", "Linear"]
 

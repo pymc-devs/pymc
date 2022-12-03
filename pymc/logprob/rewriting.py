@@ -36,20 +36,20 @@
 
 from typing import Dict, Optional, Tuple
 
-import aesara.tensor as at
+import pytensor.tensor as at
 
-from aesara.compile.mode import optdb
-from aesara.graph.basic import Variable
-from aesara.graph.features import Feature
-from aesara.graph.fg import FunctionGraph
-from aesara.graph.rewriting.basic import GraphRewriter, node_rewriter
-from aesara.graph.rewriting.db import EquilibriumDB, RewriteDatabaseQuery, SequenceDB
-from aesara.tensor.elemwise import DimShuffle, Elemwise
-from aesara.tensor.extra_ops import BroadcastTo
-from aesara.tensor.random.rewriting import local_subtensor_rv_lift
-from aesara.tensor.rewriting.basic import register_canonicalize, register_useless
-from aesara.tensor.rewriting.shape import ShapeFeature
-from aesara.tensor.subtensor import (
+from pytensor.compile.mode import optdb
+from pytensor.graph.basic import Variable
+from pytensor.graph.features import Feature
+from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.rewriting.basic import GraphRewriter, node_rewriter
+from pytensor.graph.rewriting.db import EquilibriumDB, RewriteDatabaseQuery, SequenceDB
+from pytensor.tensor.elemwise import DimShuffle, Elemwise
+from pytensor.tensor.extra_ops import BroadcastTo
+from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
+from pytensor.tensor.rewriting.basic import register_canonicalize, register_useless
+from pytensor.tensor.rewriting.shape import ShapeFeature
+from pytensor.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
     AdvancedSubtensor,
@@ -57,7 +57,7 @@ from aesara.tensor.subtensor import (
     IncSubtensor,
     Subtensor,
 )
-from aesara.tensor.var import TensorVariable
+from pytensor.tensor.var import TensorVariable
 
 from pymc.logprob.abstract import MeasurableVariable
 from pymc.logprob.utils import DiracDelta, indices_from_subtensor
@@ -280,8 +280,8 @@ def construct_ir_fgraph(
     A custom IR rewriter can be specified. By default,
     `logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"]))` is used.
 
-    Our measurable IR takes the form of an Aesara graph that is more-or-less
-    equivalent to a given Aesara graph (i.e. the keys of `rv_values`) but
+    Our measurable IR takes the form of an PyTensor graph that is more-or-less
+    equivalent to a given PyTensor graph (i.e. the keys of `rv_values`) but
     contains `Op`s that are subclasses of the `MeasurableVariable` type in
     place of ones that do not inherit from `MeasurableVariable` in the original
     graph but are nevertheless measurable.
@@ -302,7 +302,7 @@ def construct_ir_fgraph(
     For instance, some `Op`s will be lifted through `MeasurableVariable`\s in
     this IR, and the resulting graphs will not be computationally sound,
     because they wouldn't produce independent samples when the original graph
-    would.  See https://github.com/aesara-devs/aeppl/pull/78.
+    would.  See https://github.com/pytensor-devs/aeppl/pull/78.
 
     Returns
     -------

@@ -36,11 +36,11 @@
 
 import re
 
-import aesara.tensor as at
+import pytensor.tensor as at
 import pytest
 
-from aesara.scalar import Exp, exp
-from aesara.tensor.random.basic import NormalRV
+from pytensor.scalar import Exp, exp
+from pytensor.tensor.random.basic import NormalRV
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,

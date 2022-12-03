@@ -63,8 +63,8 @@ numpydoc_xref_ignore = {
 }
 # fmt: on
 numpydoc_xref_aliases = {
-    "TensorVariable": ":class:`~aesara.tensor.TensorVariable`",
-    "RandomVariable": ":class:`~aesara.tensor.random.RandomVariable`",
+    "TensorVariable": ":class:`~pytensor.tensor.TensorVariable`",
+    "RandomVariable": ":class:`~pytensor.tensor.random.RandomVariable`",
     "ndarray": ":class:`~numpy.ndarray`",
     "Covariance": ":mod:`Covariance <pymc.gp.cov>`",
     "Mean": ":mod:`Mean <pymc.gp.mean>`",
@@ -74,7 +74,7 @@ numpydoc_xref_aliases = {
     "Point": ":class:`~pymc.Point`",
     "Model": ":class:`~pymc.Model`",
     "SMC_kernel": ":ref:`SMC Kernel <smc_kernels>`",
-    "Aesara_Op": ":class:`Aesara Op <aesara.graph.op.Op>`",
+    "PyTensor_Op": ":class:`PyTensor Op <pytensor.graph.op.Op>`",
     "tensor_like": ":term:`tensor_like`",
     "numpy_Generator": ":class:`~numpy.random.Generator`",
     "Distribution": ":ref:`Distribution <api_distributions>`",
@@ -187,7 +187,7 @@ todo_include_todos = False
 # intersphinx configuration to ease linking arviz docs
 intersphinx_mapping = {
     "arviz": ("https://python.arviz.org/en/latest/", None),
-    "aesara": ("https://aesara.readthedocs.io/en/latest/", None),
+    "pytensor": ("https://pytensor.readthedocs.io/en/latest/", None),
     "home": ("https://www.pymc.io", None),
     "pmx": ("https://www.pymc.io/projects/experimental/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable/", None),

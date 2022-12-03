@@ -45,7 +45,7 @@ needs to be updated too.
 
 A PR that aims to update everything about a notebook
 could easily have 3 or more reviewers, each covering different aspects of the
-example like Aesara usage, writing and explanation of the concepts used,
+example like PyTensor usage, writing and explanation of the concepts used,
 ArviZ usage, styling with MyST+Sphinx, or structuring and scope of the notebook.
 
 Unless you plan to review everything, start your review mentioning what your
@@ -99,7 +99,7 @@ and doesn't mean:
 For the time being (while we rerun the notebooks with v4 and update the docs to new formatting)
 please ensure all of the following:
 
-* There are **NO** URLs pointing to PyMC/ArviZ/Aesara docs
+* There are **NO** URLs pointing to PyMC/ArviZ/PyTensor docs
 * There is a post directive and MyST target at the top of the notebook.
 * The notebook is being checked by pre-commit (it should not appear in any exclude section in `.pre-commit-config.yaml`)
 * No watermark (this is already CI breaking but is still included here for full context)
@@ -121,7 +121,7 @@ This might be moved to a comment added by a bot to every new PR, see [pymc-examp
 * Check code, outputs and supporting text in ReviewNB
 * Check styling and rendering in readthedocs preview and MyST notebook representation
 * Check there are:
-  - **No** URLs pointing to PyMC/Aesara/ArviZ docs
+  - **No** URLs pointing to PyMC/PyTensor/ArviZ docs
   - A post directive with tags and categories and MyST target at the top of the notebook
   - A watermark with all relevant libraries for reproducibility at the bottom of the notebook
 * Check CI is passing and the notebook is being checked by pre-commit

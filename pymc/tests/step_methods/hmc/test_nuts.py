@@ -16,13 +16,13 @@ import logging
 import sys
 import warnings
 
-import aesara.tensor as at
+import pytensor.tensor as at
 import numpy as np
 import pytest
 
 import pymc as pm
 
-from pymc.aesaraf import floatX
+from pymc.pytensorf import floatX
 from pymc.exceptions import SamplingError
 from pymc.step_methods.hmc import NUTS
 from pymc.tests import sampler_fixtures as sf

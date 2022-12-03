@@ -18,15 +18,15 @@ import warnings
 from contextlib import ExitStack as does_not_raise
 from copy import copy
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 import numpy.testing as npt
 import pytest
 import scipy.special
 
-from aesara import shared
-from aesara.compile.ops import as_op
+from pytensor import shared
+from pytensor.compile.ops import as_op
 from arviz import InferenceData
 
 import pymc as pm
@@ -491,7 +491,7 @@ def test_partial_trace_unsupported():
             pm.sample(trace=[a])
 
 
-@pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+@pytest.mark.xfail(condition=(pytensor.config.floatX == "float32"), reason="Fails on float32")
 class TestNamedSampling(SeededTest):
     def test_shared_named(self):
         G_var = shared(value=np.atleast_2d(1.0), shape=(1, None), name="G")
@@ -755,7 +755,7 @@ class TestAssignStepMethods:
         """Test bernoulli distribution is assigned binary gibbs metropolis method"""
         with pm.Model() as model:
             pm.Bernoulli("x", 0.5)
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 steps = assign_step_methods(model, [])
         assert isinstance(steps, BinaryGibbsMetropolis)
 
@@ -763,7 +763,7 @@ class TestAssignStepMethods:
         """Test normal distribution is assigned NUTS method"""
         with pm.Model() as model:
             pm.Normal("x", 0, 1)
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 steps = assign_step_methods(model, [])
         assert isinstance(steps, NUTS)
 
@@ -771,12 +771,12 @@ class TestAssignStepMethods:
         """Test categorical distribution is assigned categorical gibbs metropolis method"""
         with pm.Model() as model:
             pm.Categorical("x", np.array([0.25, 0.75]))
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 steps = assign_step_methods(model, [])
         assert isinstance(steps, BinaryGibbsMetropolis)
         with pm.Model() as model:
             pm.Categorical("y", np.array([0.25, 0.70, 0.05]))
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 steps = assign_step_methods(model, [])
         assert isinstance(steps, CategoricalGibbsMetropolis)
 
@@ -784,7 +784,7 @@ class TestAssignStepMethods:
         """Test binomial distribution is assigned metropolis method."""
         with pm.Model() as model:
             pm.Binomial("x", 10, 0.5)
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 steps = assign_step_methods(model, [])
         assert isinstance(steps, Metropolis)
 
@@ -793,8 +793,8 @@ class TestAssignStepMethods:
         with pm.Model() as model:
             x = pm.Normal("x", 0, 1)
 
-            # a custom Aesara Op that does not have a grad:
-            is_64 = aesara.config.floatX == "float64"
+            # a custom PyTensor Op that does not have a grad:
+            is_64 = pytensor.config.floatX == "float64"
             itypes = [at.dscalar] if is_64 else [at.fscalar]
             otypes = [at.dscalar] if is_64 else [at.fscalar]
 
@@ -803,9 +803,9 @@ class TestAssignStepMethods:
                 return x
 
             data = np.random.normal(size=(100,))
-            pm.Normal("y", mu=kill_grad(x), sigma=1, observed=data.astype(aesara.config.floatX))
+            pm.Normal("y", mu=kill_grad(x), sigma=1, observed=data.astype(pytensor.config.floatX))
 
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 steps = assign_step_methods(model, [])
         assert isinstance(steps, Slice)
 
@@ -818,7 +818,7 @@ class TestAssignStepMethods:
 
         with pm.Model() as model:
             pm.Normal("x", 0, 1)
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 steps = assign_step_methods(model, [])
         assert not isinstance(steps, NUTS)
 
@@ -827,7 +827,7 @@ class TestAssignStepMethods:
 
         with pm.Model() as model:
             pm.Normal("x", 0, 1)
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 steps = assign_step_methods(model, [])
         assert isinstance(steps, NUTS)
 
@@ -836,14 +836,14 @@ class TestType:
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
 
     def setup_method(self):
-        # save Aesara config object
-        self.aesara_config = copy(aesara.config)
+        # save PyTensor config object
+        self.pytensor_config = copy(pytensor.config)
 
     def teardown_method(self):
-        # restore aesara config
-        aesara.config = self.aesara_config
+        # restore pytensor config
+        pytensor.config = self.pytensor_config
 
-    @aesara.config.change_flags({"floatX": "float64", "warn_float64": "ignore"})
+    @pytensor.config.change_flags({"floatX": "float64", "warn_float64": "ignore"})
     def test_float64(self):
         with pm.Model() as model:
             x = pm.Normal("x", initval=np.array(1.0, dtype="float64"))
@@ -858,7 +858,7 @@ class TestType:
                     warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                     pm.sample(draws=10, tune=10, chains=1, step=sampler())
 
-    @aesara.config.change_flags({"floatX": "float32", "warn_float64": "warn"})
+    @pytensor.config.change_flags({"floatX": "float32", "warn_float64": "warn"})
     def test_float32(self):
         with pm.Model() as model:
             x = pm.Normal("x", initval=np.array(1.0, dtype="float32"))
@@ -881,7 +881,7 @@ class TestShared(SeededTest):
 
         x_pred = np.linspace(-3, 3, 200)
 
-        x_shared = aesara.shared(x)
+        x_shared = pytensor.shared(x)
 
         with pm.Model() as model:
             b = pm.Normal("b", 0.0, 10.0)

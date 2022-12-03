@@ -13,10 +13,10 @@
 #   limitations under the License.
 from typing import Callable, Dict, Optional, Union
 
-import aesara.tensor as aet
+import pytensor.tensor as aet
 import numpy as np
 
-from aesara.gradient import NullTypeGradError
+from pytensor.gradient import NullTypeGradError
 from scipy import optimize
 
 import pymc as pm
@@ -160,19 +160,19 @@ def find_constrained_prior(
         )
 
     target = (aet.exp(logcdf_lower) - mass_below_lower) ** 2
-    target_fn = pm.aesaraf.compile_pymc([dist_params], target, allow_input_downcast=True)
+    target_fn = pm.pytensorf.compile_pymc([dist_params], target, allow_input_downcast=True)
 
     constraint = aet.exp(logcdf_upper) - aet.exp(logcdf_lower)
-    constraint_fn = pm.aesaraf.compile_pymc([dist_params], constraint, allow_input_downcast=True)
+    constraint_fn = pm.pytensorf.compile_pymc([dist_params], constraint, allow_input_downcast=True)
 
     jac: Union[str, Callable]
     constraint_jac: Union[str, Callable]
     try:
-        aesara_jac = pm.gradient(target, [dist_params])
-        jac = pm.aesaraf.compile_pymc([dist_params], aesara_jac, allow_input_downcast=True)
-        aesara_constraint_jac = pm.gradient(constraint, [dist_params])
-        constraint_jac = pm.aesaraf.compile_pymc(
-            [dist_params], aesara_constraint_jac, allow_input_downcast=True
+        pytensor_jac = pm.gradient(target, [dist_params])
+        jac = pm.pytensorf.compile_pymc([dist_params], pytensor_jac, allow_input_downcast=True)
+        pytensor_constraint_jac = pm.gradient(constraint, [dist_params])
+        constraint_jac = pm.pytensorf.compile_pymc(
+            [dist_params], pytensor_constraint_jac, allow_input_downcast=True
         )
     # when PyMC cannot compute the gradient
     except (NotImplementedError, NullTypeGradError):

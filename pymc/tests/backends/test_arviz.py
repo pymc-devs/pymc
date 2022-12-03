@@ -3,11 +3,11 @@ import warnings
 
 from typing import Dict, Tuple
 
-import aesara.tensor as at
+import pytensor.tensor as at
 import numpy as np
 import pytest
 
-from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
+from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from arviz import InferenceData
 from arviz.tests.helpers import check_multiple_attrs
 from numpy import ma

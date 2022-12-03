@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-# Contains code from Aeppl, Copyright (c) 2021-2022, Aesara Developers.
+# Contains code from Aeppl, Copyright (c) 2021-2022, PyTensor Developers.
 
 # coding: utf-8
 """
@@ -24,17 +24,17 @@ import warnings
 
 from typing import List, Optional, Union
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 
-from aesara.graph.basic import Apply, Variable
-from aesara.graph.op import Op
-from aesara.raise_op import Assert
-from aesara.tensor import gammaln
-from aesara.tensor.extra_ops import broadcast_shape
-from aesara.tensor.math import tanh
-from aesara.tensor.random.basic import (
+from pytensor.graph.basic import Apply, Variable
+from pytensor.graph.op import Op
+from pytensor.raise_op import Assert
+from pytensor.tensor import gammaln
+from pytensor.tensor.extra_ops import broadcast_shape
+from pytensor.tensor.math import tanh
+from pytensor.tensor.random.basic import (
     BetaRV,
     cauchy,
     chisquare,
@@ -53,8 +53,8 @@ from aesara.tensor.random.basic import (
     uniform,
     vonmises,
 )
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.var import TensorConstant
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.var import TensorConstant
 
 from pymc.logprob.abstract import _logprob, logcdf, logprob
 
@@ -76,7 +76,7 @@ from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.special import expit
 
-from pymc.aesaraf import floatX
+from pymc.pytensorf import floatX
 from pymc.distributions import transforms
 from pymc.distributions.dist_math import (
     SplineWrapper,
@@ -1089,7 +1089,7 @@ class Beta(UnitContinuous):
     the binomial distribution.
     """
 
-    rv_op = aesara.tensor.random.beta
+    rv_op = pytensor.tensor.random.beta
 
     @classmethod
     def dist(cls, alpha=None, beta=None, mu=None, sigma=None, *args, **kwargs):
@@ -1305,7 +1305,7 @@ class Exponential(PositiveContinuous):
     def dist(cls, lam, *args, **kwargs):
         lam = at.as_tensor_variable(floatX(lam))
 
-        # Aesara exponential op is parametrized in terms of mu (1/lam)
+        # PyTensor exponential op is parametrized in terms of mu (1/lam)
         return super().dist([at.reciprocal(lam)], **kwargs)
 
     def moment(rv, size, mu):
@@ -2098,7 +2098,7 @@ class Gamma(PositiveContinuous):
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
 
-        # The Aesara `GammaRV` `Op` will invert the `beta` parameter itself
+        # The PyTensor `GammaRV` `Op` will invert the `beta` parameter itself
         return super().dist([alpha, beta], **kwargs)
 
     @classmethod
@@ -2122,7 +2122,7 @@ class Gamma(PositiveContinuous):
         return alpha, beta
 
     def moment(rv, size, alpha, inv_beta):
-        # The Aesara `GammaRV` `Op` inverts the `beta` parameter itself
+        # The PyTensor `GammaRV` `Op` inverts the `beta` parameter itself
         mean = alpha * inv_beta
         if not rv_size_is_none(size):
             mean = at.full(size, mean)
@@ -3657,7 +3657,7 @@ class PolyaGammaRV(RandomVariable):
         # handle the kind of rng passed to the sampler
         bg = rng._bit_generator if isinstance(rng, np.random.RandomState) else rng
         return np.asarray(
-            random_polyagamma(h, z, size=size, random_state=bg).astype(aesara.config.floatX)
+            random_polyagamma(h, z, size=size, random_state=bg).astype(pytensor.config.floatX)
         )
 
 
@@ -3676,7 +3676,7 @@ class _PolyaGammaLogDistFunc(Op):
         z = at.as_tensor_variable(floatX(z))
         bshape = broadcast_shape(x, h, z)
         shape = [None] * len(bshape)
-        return Apply(self, [x, h, z], [at.TensorType(aesara.config.floatX, shape)()])
+        return Apply(self, [x, h, z], [at.TensorType(pytensor.config.floatX, shape)()])
 
     def perform(self, node, ins, outs):
         x, h, z = ins[0], ins[1], ins[2]
@@ -3684,7 +3684,7 @@ class _PolyaGammaLogDistFunc(Op):
             polyagamma_pdf(x, h, z, return_log=True)
             if self.get_pdf
             else polyagamma_cdf(x, h, z, return_log=True)
-        ).astype(aesara.config.floatX)
+        ).astype(pytensor.config.floatX)
 
 
 class PolyaGamma(PositiveContinuous):

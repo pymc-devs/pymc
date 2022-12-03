@@ -34,13 +34,13 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 
-from aesara.graph.rewriting.basic import in2out
-from aesara.graph.rewriting.utils import rewrite_graph
-from aesara.tensor.elemwise import DimShuffle, Elemwise
-from aesara.tensor.subtensor import Subtensor
+from pytensor.graph.rewriting.basic import in2out
+from pytensor.graph.rewriting.utils import rewrite_graph
+from pytensor.tensor.elemwise import DimShuffle, Elemwise
+from pytensor.tensor.subtensor import Subtensor
 
 from pymc.logprob.rewriting import local_lift_DiracDelta
 from pymc.logprob.utils import DiracDelta, dirac_delta
@@ -81,5 +81,5 @@ def test_local_remove_DiracDelta():
     c_at = at.vector()
     dd_at = dirac_delta(c_at)
 
-    fn = aesara.function([c_at], dd_at)
+    fn = pytensor.function([c_at], dd_at)
     assert not any(isinstance(node.op, DiracDelta) for node in fn.maker.fgraph.toposort())

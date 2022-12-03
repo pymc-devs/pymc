@@ -18,13 +18,13 @@ from functools import reduce
 from numbers import Number
 from operator import add, mul
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 import numpy as np
 
-from aesara.graph.basic import Variable
-from aesara.tensor.sharedvar import TensorSharedVariable
-from aesara.tensor.var import TensorConstant, TensorVariable
+from pytensor.graph.basic import Variable
+from pytensor.tensor.sharedvar import TensorSharedVariable
+from pytensor.tensor.var import TensorConstant, TensorVariable
 
 __all__ = [
     "Constant",
@@ -122,7 +122,7 @@ class Covariance:
 
     def __pow__(self, other):
         if (
-            isinstance(other, aesara.compile.SharedVariable)
+            isinstance(other, pytensor.compile.SharedVariable)
             and other.get_value().squeeze().shape == ()
         ):
             other = at.squeeze(other)
@@ -606,7 +606,7 @@ class Polynomial(Linear):
 class WarpedInput(Covariance):
     r"""
     Warp the inputs of any kernel using an arbitrary function
-    defined using Aesara.
+    defined using PyTensor.
 
     .. math::
        k(x, x') = k(w(x), w(x'))
@@ -615,7 +615,7 @@ class WarpedInput(Covariance):
     ----------
     cov_func: Covariance
     warp_func: callable
-        Aesara function of X and additional optional arguments.
+        PyTensor function of X and additional optional arguments.
     args: optional, tuple or list of scalars or PyMC variables
         Additional inputs (besides X or Xs) to warp_func.
     """
@@ -645,7 +645,7 @@ class WarpedInput(Covariance):
 class Gibbs(Covariance):
     r"""
     The Gibbs kernel.  Use an arbitrary lengthscale function defined
-    using Aesara.  Only tested in one dimension.
+    using PyTensor.  Only tested in one dimension.
 
     .. math::
        k(x, x') = \sqrt{\frac{2\ell(x)\ell(x')}{\ell^2(x) + \ell^2(x')}}
@@ -655,7 +655,7 @@ class Gibbs(Covariance):
     Parameters
     ----------
     lengthscale_func: callable
-        Aesara function of X and additional optional arguments.
+        PyTensor function of X and additional optional arguments.
     args: optional, tuple or list of scalars or PyMC variables
         Additional inputs (besides X or Xs) to lengthscale_func.
     """
@@ -706,7 +706,7 @@ class Gibbs(Covariance):
 class ScaledCov(Covariance):
     r"""
     Construct a kernel by multiplying a base kernel with a scaling
-    function defined using Aesara.  The scaling function is
+    function defined using PyTensor.  The scaling function is
     non-negative, and can be parameterized.
 
     .. math::
@@ -717,7 +717,7 @@ class ScaledCov(Covariance):
     cov_func: Covariance
         Base kernel or covariance function
     scaling_func: callable
-        Aesara function of X and additional optional arguments.
+        PyTensor function of X and additional optional arguments.
     args: optional, tuple or list of scalars or PyMC variables
         Additional inputs (besides X or Xs) to lengthscale_func.
     """

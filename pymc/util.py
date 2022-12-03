@@ -22,9 +22,9 @@ import cloudpickle
 import numpy as np
 import xarray
 
-from aesara import Variable
-from aesara.compile import SharedVariable
-from aesara.graph.utils import ValidatingScratchpad
+from pytensor import Variable
+from pytensor.compile import SharedVariable
+from pytensor.graph.utils import ValidatingScratchpad
 from cachetools import LRUCache, cachedmethod
 
 
@@ -380,7 +380,7 @@ def check_dist_not_registered(dist, model=None):
 
 
 def point_wrapper(core_function):
-    """Wrap an aesara compiled function to be able to ingest point dictionaries whilst
+    """Wrap an pytensor compiled function to be able to ingest point dictionaries whilst
     ignoring the keys that are not valid inputs to the core function.
     """
     ins = [i.name for i in core_function.maker.fgraph.inputs if not isinstance(i, SharedVariable)]
