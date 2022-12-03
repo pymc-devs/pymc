@@ -433,6 +433,13 @@ def test_autonaming():
 
 def test_autonaming_noname():
     """Test that autonaming fails if no assignment can be found"""
-    with pytest.raises(TypeError, match="Name could not be inferred for variable"):
+    with pytest.raises(
+        TypeError,
+        match=(
+            "Name could not be inferred for variable from surrounding "
+            "context. Pass a name explicitly as the first argument to "
+            "the Distribution."
+        ),
+    ):
         with pm.Model():
             pm.Normal()

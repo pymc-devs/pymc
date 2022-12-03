@@ -322,7 +322,11 @@ class Distribution(metaclass=DistributionMeta):
         else:
             name = _extract_target_of_assignment(2)
             if name is None:
-                raise TypeError("Name could not be inferred for variable")
+                raise TypeError(
+                    "Name could not be inferred for variable from surrounding "
+                    "context. Pass a name explicitly as the first argument to "
+                    "the Distribution."
+                )
 
         if not isinstance(name, string_types):
             raise TypeError(f"Name needs to be a string but got: {name}")
