@@ -76,6 +76,7 @@ class TestMarginalApproxSigmaParams(TestSigmaParams):
 
     gp_implementation = pm.gp.MarginalApprox
 
+    @pytest.mark.xfail(reason="Possible shape problem, see #6366")
     def test_catch_warnings(self):
         """Warning from using the old noise parameter."""
         with self.model:

@@ -26,7 +26,7 @@ def test_gradients():
         return np.exp(-t) - p[0] * y[0]
 
     # Computation of graidients with PyTensor
-    augmented_ode_func = augment_system(ode_func, 1, 1 + 1)
+    augmented_ode_func = augment_system(ode_func, n_states=1, n_theta=1)
 
     # This is the new system, ODE + Sensitivities, which will be integrated
     def augmented_system(Y, t, p):
