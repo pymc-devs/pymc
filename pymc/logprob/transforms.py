@@ -373,7 +373,6 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
 measurable_ir_rewrites_db.register(
     "find_measurable_transforms",
     find_measurable_transforms,
-    0,
     "basic",
     "transform",
 )

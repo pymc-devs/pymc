@@ -47,6 +47,7 @@ pymc/gp/mean.py
 pymc/gp/util.py
 pymc/logprob/__init__.py
 pymc/logprob/abstract.py
+pymc/logprob/cumsum.py
 pymc/math.py
 pymc/ode/__init__.py
 pymc/ode/ode.py

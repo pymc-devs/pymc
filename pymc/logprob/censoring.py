@@ -110,7 +110,6 @@ def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[List[Me
 measurable_ir_rewrites_db.register(
     "find_measurable_clips",
     find_measurable_clips,
-    0,
     "basic",
     "censoring",
 )
@@ -220,7 +219,6 @@ def find_measurable_roundings(fgraph: FunctionGraph, node: Node) -> Optional[Lis
 measurable_ir_rewrites_db.register(
     "find_measurable_roundings",
     find_measurable_roundings,
-    0,
     "basic",
     "censoring",
 )

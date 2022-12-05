@@ -252,7 +252,7 @@ def incsubtensor_rv_replace(fgraph, node):
 
 logprob_rewrites_db = SequenceDB()
 logprob_rewrites_db.name = "logprob_rewrites_db"
-logprob_rewrites_db.register("pre-canonicalize", optdb.query("+canonicalize"), -10, "basic")
+logprob_rewrites_db.register("pre-canonicalize", optdb.query("+canonicalize"), "basic")
 
 # These rewrites convert un-measurable variables into their measurable forms,
 # but they need to be reapplied, because some of the measurable forms require
@@ -260,15 +260,15 @@ logprob_rewrites_db.register("pre-canonicalize", optdb.query("+canonicalize"), -
 measurable_ir_rewrites_db = NoCallbackEquilibriumDB()
 measurable_ir_rewrites_db.name = "measurable_ir_rewrites_db"
 
-logprob_rewrites_db.register("measurable_ir_rewrites", measurable_ir_rewrites_db, -10, "basic")
+logprob_rewrites_db.register("measurable_ir_rewrites", measurable_ir_rewrites_db, "basic")
 
 # These rewrites push random/measurable variables "down", making them closer to
 # (or eventually) the graph outputs.  Often this is done by lifting other `Op`s
 # "up" through the random/measurable variables and into their inputs.
-measurable_ir_rewrites_db.register("subtensor_lift", local_subtensor_rv_lift, -5, "basic")
-measurable_ir_rewrites_db.register("incsubtensor_lift", incsubtensor_rv_replace, -5, "basic")
+measurable_ir_rewrites_db.register("subtensor_lift", local_subtensor_rv_lift, "basic")
+measurable_ir_rewrites_db.register("incsubtensor_lift", incsubtensor_rv_replace, "basic")
 
-logprob_rewrites_db.register("post-canonicalize", optdb.query("+canonicalize"), 10, "basic")
+logprob_rewrites_db.register("post-canonicalize", optdb.query("+canonicalize"), "basic")
 
 
 def construct_ir_fgraph(

@@ -122,7 +122,6 @@ def find_measurable_cumsums(fgraph, node) -> Optional[List[MeasurableCumsum]]:
 measurable_ir_rewrites_db.register(
     "find_measurable_cumsums",
     find_measurable_cumsums,
-    0,
     "basic",
     "cumsum",
 )
