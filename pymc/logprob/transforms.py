@@ -37,7 +37,6 @@
 import abc
 
 from copy import copy
-from functools import partial, singledispatch
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import pytensor.tensor as at
@@ -67,21 +66,6 @@ from pymc.logprob.abstract import (
 )
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import walk_model
-
-
-@singledispatch
-def _default_transformed_rv(
-    op: Op,
-    node: Node,
-) -> Optional[Apply]:
-    """Create a node for a transformed log-probability of a `MeasurableVariable`.
-
-    This function dispatches on the type of `op`.  If you want to implement
-    new transforms for a `MeasurableVariable`, register a function on this
-    dispatcher.
-
-    """
-    return None
 
 
 class TransformedVariable(Op):
@@ -136,13 +120,6 @@ class RVTransform(abc.ABC):
         return at.log(at.abs(at.nlinalg.det(at.atleast_2d(jacobian(phi_inv, [value])[0]))))
 
 
-class DefaultTransformSentinel:
-    pass
-
-
-DEFAULT_TRANSFORM = DefaultTransformSentinel()
-
-
 @node_rewriter(tracks=None)
 def transform_values(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Apply transforms to value variables.
@@ -176,17 +153,12 @@ def transform_values(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
 
     if transform is None:
         return None
-    elif transform is DEFAULT_TRANSFORM:
-        trans_node = _default_transformed_rv(node.op, node)
-        if trans_node is None:
-            return None
-        transform = trans_node.op.transform
-    else:
-        new_op = _create_transformed_rv_op(node.op, transform)
-        # Create a new `Apply` node and outputs
-        trans_node = node.clone()
-        trans_node.op = new_op
-        trans_node.outputs[rv_var_out_idx].name = node.outputs[rv_var_out_idx].name
+
+    new_op = _create_transformed_rv_op(node.op, transform)
+    # Create a new `Apply` node and outputs
+    trans_node = node.clone()
+    trans_node.op = new_op
+    trans_node.outputs[rv_var_out_idx].name = node.outputs[rv_var_out_idx].name
 
     # We now assume that the old value variable represents the *transformed space*.
     # This means that we need to replace all instance of the old value variable
@@ -216,24 +188,22 @@ class TransformValuesMapping(Feature):
 
 
 class TransformValuesRewrite(GraphRewriter):
-    r"""Transforms value variables according to a map and/or per-`RandomVariable` defaults."""
+    r"""Transforms value variables according to a map."""
 
-    default_transform_rewrite = in2out(transform_values, ignore_newtrees=True)
+    transform_rewrite = in2out(transform_values, ignore_newtrees=True)
 
     def __init__(
         self,
-        values_to_transforms: Dict[
-            TensorVariable, Union[RVTransform, DefaultTransformSentinel, None]
-        ],
+        values_to_transforms: Dict[TensorVariable, Union[RVTransform, None]],
     ):
         """
         Parameters
         ==========
         values_to_transforms
             Mapping between value variables and their transformations.  Each
-            value variable can be assigned one of `RVTransform`,
-            ``DEFAULT_TRANSFORM``, or ``None``. If a transform is not specified
-            for a specific value variable it will not be transformed.
+            value variable can be assigned one of `RVTransform`, or ``None``.
+            If a transform is not specified for a specific value variable it will
+            not be transformed.
 
         """
 
@@ -244,7 +214,7 @@ class TransformValuesRewrite(GraphRewriter):
         fgraph.attach_feature(values_transforms_feature)
 
     def apply(self, fgraph: FunctionGraph):
-        return self.default_transform_rewrite.rewrite(fgraph)
+        return self.transform_rewrite.rewrite(fgraph)
 
 
 class MeasurableTransform(MeasurableElemwise):
@@ -583,7 +553,6 @@ def _create_transformed_rv_op(
     rv_op: Op,
     transform: RVTransform,
     *,
-    default: bool = False,
     cls_dict_extra: Optional[Dict] = None,
 ) -> Op:
     """Create a new transformed variable instance given a base `RandomVariable` `Op`.
@@ -600,8 +569,6 @@ def _create_transformed_rv_op(
         The `RandomVariable` for which we want to construct a `TransformedRV`.
     transform
         The `RVTransform` for `rv_op`.
-    default
-        If ``False`` do not make `transform` the default transform for `rv_op`.
     cls_dict_extra
         Additional class members to add to the constructed `TransformedRV`.
 
@@ -642,85 +609,7 @@ def _create_transformed_rv_op(
 
         return logprob
 
-    transform_op = rv_op_type if default else new_op_type
-
-    @_default_transformed_rv.register(transform_op)
-    def class_transformed_rv(op, node):
-        new_op = new_op_type()
-        res = new_op.make_node(*node.inputs)
-        res.outputs[1].name = node.outputs[1].name
-        return res
-
     new_op = copy(rv_op)
     new_op.__class__ = new_op_type
 
     return new_op
-
-
-create_default_transformed_rv_op = partial(_create_transformed_rv_op, default=True)
-
-
-TransformedUniformRV = create_default_transformed_rv_op(
-    at.random.uniform,
-    # inputs[3] = lower; inputs[4] = upper
-    IntervalTransform(lambda *inputs: (inputs[3], inputs[4])),
-)
-TransformedParetoRV = create_default_transformed_rv_op(
-    at.random.pareto,
-    # inputs[3] = alpha
-    IntervalTransform(lambda *inputs: (inputs[3], None)),
-)
-TransformedTriangularRV = create_default_transformed_rv_op(
-    at.random.triangular,
-    # inputs[3] = lower; inputs[5] = upper
-    IntervalTransform(lambda *inputs: (inputs[3], inputs[5])),
-)
-TransformedHalfNormalRV = create_default_transformed_rv_op(
-    at.random.halfnormal,
-    # inputs[3] = loc
-    IntervalTransform(lambda *inputs: (inputs[3], None)),
-)
-TransformedWaldRV = create_default_transformed_rv_op(
-    at.random.wald,
-    LogTransform(),
-)
-TransformedExponentialRV = create_default_transformed_rv_op(
-    at.random.exponential,
-    LogTransform(),
-)
-TransformedLognormalRV = create_default_transformed_rv_op(
-    at.random.lognormal,
-    LogTransform(),
-)
-TransformedHalfCauchyRV = create_default_transformed_rv_op(
-    at.random.halfcauchy,
-    LogTransform(),
-)
-TransformedGammaRV = create_default_transformed_rv_op(
-    at.random.gamma,
-    LogTransform(),
-)
-TransformedInvGammaRV = create_default_transformed_rv_op(
-    at.random.invgamma,
-    LogTransform(),
-)
-TransformedChiSquareRV = create_default_transformed_rv_op(
-    at.random.chisquare,
-    LogTransform(),
-)
-TransformedWeibullRV = create_default_transformed_rv_op(
-    at.random.weibull,
-    LogTransform(),
-)
-TransformedBetaRV = create_default_transformed_rv_op(
-    at.random.beta,
-    LogOddsTransform(),
-)
-TransformedVonMisesRV = create_default_transformed_rv_op(
-    at.random.vonmises,
-    CircularTransform(),
-)
-TransformedDirichletRV = create_default_transformed_rv_op(
-    at.random.dirichlet,
-    SimplexTransform(),
-)

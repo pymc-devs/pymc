@@ -45,9 +45,9 @@ from numdifftools import Jacobian
 from pytensor.graph.basic import equal_computations
 from pytensor.graph.fg import FunctionGraph
 
+from pymc.distributions.transforms import _default_transform, log, logodds
 from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
 from pymc.logprob.transforms import (
-    DEFAULT_TRANSFORM,
     ChainedTransform,
     ExpTransform,
     IntervalTransform,
@@ -58,7 +58,6 @@ from pymc.logprob.transforms import (
     ScaleTransform,
     TransformValuesMapping,
     TransformValuesRewrite,
-    _default_transformed_rv,
     transformed_variable,
 )
 from pymc.tests.helpers import assert_no_rvs
@@ -216,6 +215,8 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
     elsewhere in the graph (i.e. in ``b``), by comparing the graph for the
     transformed log-probability with the SciPy-derived log-probability--using a
     numeric approximation to the Jacobian term.
+
+    TODO: This test is rather redundant with those in tess/distributions/test_transform.py
     """
 
     a = at_dist(*dist_params, size=size)
@@ -228,15 +229,13 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
     b_value_var = b.clone()
     b_value_var.name = "b_value"
 
-    transform_rewrite = TransformValuesRewrite({a_value_var: DEFAULT_TRANSFORM})
+    transform = _default_transform(a.owner.op, a)
+    transform_rewrite = TransformValuesRewrite({a_value_var: transform})
     res = joint_logprob({a: a_value_var, b: b_value_var}, extra_rewrites=transform_rewrite)
 
     test_val_rng = np.random.RandomState(3238)
 
     logp_vals_fn = pytensor.function([a_value_var, b_value_var], res)
-
-    a_trans_op = _default_transformed_rv(a.owner.op, a.owner).op
-    transform = a_trans_op.transform
 
     a_forward_fn = pytensor.function([a_value_var], transform.forward(a_value_var, *a.owner.inputs))
     a_backward_fn = pytensor.function(
@@ -305,7 +304,7 @@ def test_simple_transformed_logprob_nojac(use_jacobian):
     x_vv = X_rv.clone()
     x_vv.name = "x"
 
-    transform_rewrite = TransformValuesRewrite({x_vv: DEFAULT_TRANSFORM})
+    transform_rewrite = TransformValuesRewrite({x_vv: log})
     tr_logp = joint_logprob(
         {X_rv: x_vv}, extra_rewrites=transform_rewrite, use_jacobian=use_jacobian
     )
@@ -359,9 +358,9 @@ def test_hierarchical_uniform_transform():
 
     transform_rewrite = TransformValuesRewrite(
         {
-            lower: DEFAULT_TRANSFORM,
-            upper: DEFAULT_TRANSFORM,
-            x: DEFAULT_TRANSFORM,
+            lower: _default_transform(lower_rv.owner.op, lower_rv),
+            upper: _default_transform(upper_rv.owner.op, upper_rv),
+            x: _default_transform(x_rv.owner.op, x_rv),
         }
     )
     logp = joint_logprob(
@@ -425,28 +424,7 @@ def test_default_transform_multiout():
     x_rv = at.random.normal(0, sd, name="x")
     x = x_rv.clone()
 
-    transform_rewrite = TransformValuesRewrite({x: DEFAULT_TRANSFORM})
-
-    logp = joint_logprob(
-        {x_rv: x},
-        extra_rewrites=transform_rewrite,
-    )
-
-    assert np.isclose(
-        logp.eval({x: 1}),
-        sp.stats.norm(0, 1).logpdf(1),
-    )
-
-
-def test_nonexistent_default_transform():
-    """
-    Test that setting `DEFAULT_TRANSFORM` to a variable that has no default
-    transform does not fail
-    """
-    x_rv = at.random.normal(name="x")
-    x = x_rv.clone()
-
-    transform_rewrite = TransformValuesRewrite({x: DEFAULT_TRANSFORM})
+    transform_rewrite = TransformValuesRewrite({x: None})
 
     logp = joint_logprob(
         {x_rv: x},
@@ -480,7 +458,7 @@ def test_original_values_output_dict():
     p_rv = at.random.beta(1, 1, name="p")
     p_vv = p_rv.clone()
 
-    tr = TransformValuesRewrite({p_vv: DEFAULT_TRANSFORM})
+    tr = TransformValuesRewrite({p_vv: logodds})
     logp_dict = factorized_joint_logprob({p_rv: p_vv}, extra_rewrites=tr)
 
     assert p_vv in logp_dict
