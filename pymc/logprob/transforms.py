@@ -47,9 +47,10 @@ from pytensor.graph.features import AlreadyThere, Feature
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
 from pytensor.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
-from pytensor.scalar import Add, Exp, Log, Mul
+from pytensor.scalar import Add, Exp, Log, Mul, Reciprocal
 from pytensor.scan.op import Scan
-from pytensor.tensor.math import add, exp, log, mul
+from pytensor.tensor.exceptions import NotScalarConstantError
+from pytensor.tensor.math import add, exp, log, mul, reciprocal, true_div
 from pytensor.tensor.rewriting.basic import (
     register_specialize,
     register_stabilize,
@@ -318,7 +319,7 @@ class TransformValuesRewrite(GraphRewriter):
 class MeasurableTransform(MeasurableElemwise):
     """A placeholder used to specify a log-likelihood for a transformed measurable variable"""
 
-    valid_scalar_types = (Exp, Log, Add, Mul)
+    valid_scalar_types = (Exp, Log, Add, Mul, Reciprocal)
 
     # Cannot use `transform` as name because it would clash with the property added by
     # the `TransformValuesRewrite`
@@ -354,7 +355,36 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
     return input_logprob + jacobian
 
 
-@node_rewriter([exp, log, add, mul])
+@node_rewriter([true_div])
+def measurable_div_to_reciprocal_product(fgraph, node):
+    """Convert divisions involving `MeasurableVariable`s to product with reciprocal."""
+
+    measurable_vars = [
+        var for var in node.inputs if (var.owner and isinstance(var.owner.op, MeasurableVariable))
+    ]
+    if not measurable_vars:
+        return None  # pragma: no cover
+
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    # Only apply this rewrite if there is one unvalued MeasurableVariable involved
+    if all(measurable_var in rv_map_feature.rv_values for measurable_var in measurable_vars):
+        return None  # pragma: no cover
+
+    numerator, denominator = node.inputs
+
+    # Check if numerator is 1
+    try:
+        if at.get_scalar_constant_value(numerator) == 1:
+            return [at.reciprocal(denominator)]
+    except NotScalarConstantError:
+        pass
+    return [at.mul(numerator, at.reciprocal(denominator))]
+
+
+@node_rewriter([exp, log, add, mul, reciprocal])
 def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
 
@@ -414,6 +444,8 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         transform = ExpTransform()
     elif isinstance(scalar_op, Log):
         transform = LogTransform()
+    elif isinstance(scalar_op, Reciprocal):
+        transform = ReciprocalTransform()
     elif isinstance(scalar_op, Add):
         transform_inputs = (measurable_input, at.add(*other_inputs))
         transform = LocTransform(
@@ -434,6 +466,14 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
     transform_out.name = node.outputs[0].name
 
     return [transform_out]
+
+
+measurable_ir_rewrites_db.register(
+    "measurable_div_to_reciprocal_product",
+    measurable_div_to_reciprocal_product,
+    "basic",
+    "transform",
+)
 
 
 measurable_ir_rewrites_db.register(
@@ -505,6 +545,19 @@ class ExpTransform(RVTransform):
 
     def log_jac_det(self, value, *inputs):
         return -at.log(value)
+
+
+class ReciprocalTransform(RVTransform):
+    name = "reciprocal"
+
+    def forward(self, value, *inputs):
+        return at.reciprocal(value)
+
+    def backward(self, value, *inputs):
+        return at.reciprocal(value)
+
+    def log_jac_det(self, value, *inputs):
+        return -2 * at.log(value)
 
 
 class IntervalTransform(RVTransform):
