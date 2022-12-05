@@ -37,7 +37,7 @@
 import abc
 
 from copy import copy
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import pytensor.tensor as at
 
@@ -133,43 +133,55 @@ def transform_values(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     ``Y`` on the natural scale.
     """
 
-    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
-    values_to_transforms = getattr(fgraph, "values_to_transforms", None)
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    values_to_transforms: Optional[TransformValuesMapping] = getattr(
+        fgraph, "values_to_transforms", None
+    )
 
     if rv_map_feature is None or values_to_transforms is None:
         return None  # pragma: no cover
 
-    try:
-        rv_var = node.default_output()
-        rv_var_out_idx = node.outputs.index(rv_var)
-    except ValueError:
+    rv_vars = []
+    value_vars = []
+
+    for out in node.outputs:
+        value = rv_map_feature.rv_values.get(out, None)
+        if value is None:
+            continue
+        rv_vars.append(out)
+        value_vars.append(value)
+
+    if not value_vars:
         return None
 
-    value_var = rv_map_feature.rv_values.get(rv_var, None)
-    if value_var is None:
+    transforms = [values_to_transforms.get(value_var, None) for value_var in value_vars]
+
+    if all(transform is None for transform in transforms):
         return None
 
-    transform = values_to_transforms.get(value_var, None)
-
-    if transform is None:
-        return None
-
-    new_op = _create_transformed_rv_op(node.op, transform)
+    new_op = _create_transformed_rv_op(node.op, transforms)
     # Create a new `Apply` node and outputs
     trans_node = node.clone()
     trans_node.op = new_op
-    trans_node.outputs[rv_var_out_idx].name = node.outputs[rv_var_out_idx].name
 
     # We now assume that the old value variable represents the *transformed space*.
     # This means that we need to replace all instance of the old value variable
     # with "inversely/un-" transformed versions of itself.
-    new_value_var = transformed_variable(
-        transform.backward(value_var, *trans_node.inputs), value_var
-    )
-    if value_var.name and getattr(transform, "name", None):
-        new_value_var.name = f"{value_var.name}_{transform.name}"
+    for rv_var, value_var, transform in zip(rv_vars, value_vars, transforms):
+        rv_var_out_idx = node.outputs.index(rv_var)
+        trans_node.outputs[rv_var_out_idx].name = rv_var.name
 
-    rv_map_feature.update_rv_maps(rv_var, new_value_var, trans_node.outputs[rv_var_out_idx])
+        if transform is None:
+            continue
+
+        new_value_var = transformed_variable(
+            transform.backward(value_var, *trans_node.inputs), value_var
+        )
+
+        if value_var.name and getattr(transform, "name", None):
+            new_value_var.name = f"{value_var.name}_{transform.name}"
+
+        rv_map_feature.update_rv_maps(rv_var, new_value_var, trans_node.outputs[rv_var_out_idx])
 
     return trans_node.outputs
 
@@ -549,7 +561,7 @@ class ChainedTransform(RVTransform):
 
 def _create_transformed_rv_op(
     rv_op: Op,
-    transform: RVTransform,
+    transforms: Union[RVTransform, Sequence[Union[None, RVTransform]]],
     *,
     cls_dict_extra: Optional[Dict] = None,
 ) -> Op:
@@ -572,14 +584,20 @@ def _create_transformed_rv_op(
 
     """
 
-    trans_name = getattr(transform, "name", "transformed")
+    if not isinstance(transforms, Sequence):
+        transforms = (transforms,)
+
+    trans_names = [
+        getattr(transform, "name", "transformed") if transform is not None else "None"
+        for transform in transforms
+    ]
     rv_op_type = type(rv_op)
     rv_type_name = rv_op_type.__name__
     cls_dict = rv_op_type.__dict__.copy()
     rv_name = cls_dict.get("name", "")
     if rv_name:
-        cls_dict["name"] = f"{rv_name}_{trans_name}"
-    cls_dict["transform"] = transform
+        cls_dict["name"] = f"{rv_name}_{'_'.join(trans_names)}"
+    cls_dict["transforms"] = transforms
 
     if cls_dict_extra is not None:
         cls_dict.update(cls_dict_extra)
@@ -595,17 +613,27 @@ def _create_transformed_rv_op(
         We assume that the value variable was back-transformed to be on the natural
         support of the respective random variable.
         """
-        (value,) = values
+        logprobs = _logprob(rv_op, values, *inputs, **kwargs)
 
-        logprob = _logprob(rv_op, values, *inputs, **kwargs)
+        if not isinstance(logprobs, Sequence):
+            logprobs = [logprobs]
 
         if use_jacobian:
-            assert isinstance(value.owner.op, TransformedVariable)
-            original_forward_value = value.owner.inputs[1]
-            jacobian = op.transform.log_jac_det(original_forward_value, *inputs)
-            logprob += jacobian
+            assert len(values) == len(logprobs) == len(op.transforms)
+            logprobs_jac = []
+            for value, transform, logprob in zip(values, op.transforms, logprobs):
+                if transform is None:
+                    logprobs_jac.append(logprob)
+                    continue
+                assert isinstance(value.owner.op, TransformedVariable)
+                original_forward_value = value.owner.inputs[1]
+                jacobian = transform.log_jac_det(original_forward_value, *inputs).copy()
+                if value.name:
+                    jacobian.name = f"{value.name}_jacobian"
+                logprobs_jac.append(logprob + jacobian)
+            logprobs = logprobs_jac
 
-        return logprob
+        return logprobs
 
     new_op = copy(rv_op)
     new_op.__class__ = new_op_type

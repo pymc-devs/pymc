@@ -42,10 +42,12 @@ import scipy as sp
 import scipy.special
 
 from numdifftools import Jacobian
+from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import equal_computations
 from pytensor.graph.fg import FunctionGraph
 
 from pymc.distributions.transforms import _default_transform, log, logodds
+from pymc.logprob.abstract import MeasurableVariable, _get_measurable_outputs, _logprob
 from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
 from pymc.logprob.transforms import (
     ChainedTransform,
@@ -435,6 +437,66 @@ def test_default_transform_multiout():
         logp.eval({x: 1}),
         sp.stats.norm(0, 1).logpdf(1),
     )
+
+
+@pytest.fixture(scope="module")
+def multiout_measurable_op():
+    # Create a dummy Op that just returns the two inputs
+    mu1, mu2 = at.scalars("mu1", "mu2")
+
+    class TestOpFromGraph(OpFromGraph):
+        def do_constant_folding(self, fgraph, node):
+            False
+
+    multiout_op = TestOpFromGraph([mu1, mu2], [mu1 + 0.0, mu2 + 0.0])
+
+    MeasurableVariable.register(TestOpFromGraph)
+
+    @_logprob.register(TestOpFromGraph)
+    def logp_multiout(op, values, mu1, mu2):
+        value1, value2 = values
+        return value1 + mu1, value2 + mu2
+
+    @_get_measurable_outputs.register(TestOpFromGraph)
+    def measurable_multiout_op_outputs(op, node):
+        return node.outputs
+
+    return multiout_op
+
+
+@pytest.mark.parametrize("transform_x", (True, False))
+@pytest.mark.parametrize("transform_y", (True, False))
+def test_nondefault_transform_multiout(transform_x, transform_y, multiout_measurable_op):
+    x, y = multiout_measurable_op(1, 2)
+    x.name = "x"
+    y.name = "y"
+    x_vv = x.clone()
+    y_vv = y.clone()
+
+    transform_rewrite = TransformValuesRewrite(
+        {
+            x_vv: LogTransform() if transform_x else None,
+            y_vv: ExpTransform() if transform_y else None,
+        }
+    )
+
+    logp = joint_logprob({x: x_vv, y: y_vv}, extra_rewrites=transform_rewrite)
+
+    x_vv_test = np.random.normal()
+    y_vv_test = np.abs(np.random.normal())
+
+    expected_logp = 0
+    if not transform_x:
+        expected_logp += x_vv_test + 1
+    else:
+        expected_logp += np.exp(x_vv_test) + 1 + x_vv_test
+    # y logp
+    if not transform_y:
+        expected_logp += y_vv_test + 2
+    else:
+        expected_logp += np.log(y_vv_test) + 2 - np.log(y_vv_test)
+
+    np.testing.assert_almost_equal(logp.eval({x_vv: x_vv_test, y_vv: y_vv_test}), expected_logp)
 
 
 def test_TransformValuesMapping():
