@@ -461,7 +461,6 @@ logprob_rewrites_db.register(
         [mixture_replace, switch_mixture_replace],
         max_use_ratio=pytensor.config.optdb__max_use_ratio,
     ),
-    0,
     "basic",
     "mixture",
 )

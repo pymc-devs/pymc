@@ -311,24 +311,21 @@ def find_measurable_dimshuffles(fgraph, node) -> Optional[List[MeasurableDimShuf
     return [measurable_dimshuffle]
 
 
-measurable_ir_rewrites_db.register(
-    "dimshuffle_lift", local_dimshuffle_rv_lift, -5, "basic", "tensor"
-)
+measurable_ir_rewrites_db.register("dimshuffle_lift", local_dimshuffle_rv_lift, "basic", "tensor")
 
 
 # We register this later than `dimshuffle_lift` so that it is only applied as a fallback
 measurable_ir_rewrites_db.register(
-    "find_measurable_dimshuffles", find_measurable_dimshuffles, 0, "basic", "tensor"
+    "find_measurable_dimshuffles", find_measurable_dimshuffles, "basic", "tensor"
 )
 
 
-measurable_ir_rewrites_db.register("broadcast_to_lift", naive_bcast_rv_lift, -5, "basic", "tensor")
+measurable_ir_rewrites_db.register("broadcast_to_lift", naive_bcast_rv_lift, "basic", "tensor")
 
 
 measurable_ir_rewrites_db.register(
     "find_measurable_stacks",
     find_measurable_stacks,
-    0,
     "basic",
     "tensor",
 )

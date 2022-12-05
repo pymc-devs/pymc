@@ -530,7 +530,6 @@ measurable_ir_rewrites_db.register(
     # out2in(
     #     add_opts_to_inner_graphs, name="add_opts_to_inner_graphs", ignore_newtrees=True
     # ),
-    -100,
     "basic",
     "scan",
 )
@@ -538,11 +537,10 @@ measurable_ir_rewrites_db.register(
 measurable_ir_rewrites_db.register(
     "find_measurable_scans",
     find_measurable_scans,
-    0,
     "basic",
     "scan",
 )
 
 # Add scan canonicalizations that aren't in the canonicalization DB
-logprob_rewrites_db.register("scan_eqopt1", scan_eqopt1, -9, "basic", "scan")
-logprob_rewrites_db.register("scan_eqopt2", scan_eqopt2, -9, "basic", "scan")
+logprob_rewrites_db.register("scan_eqopt1", scan_eqopt1, "basic", "scan")
+logprob_rewrites_db.register("scan_eqopt2", scan_eqopt2, "basic", "scan")
