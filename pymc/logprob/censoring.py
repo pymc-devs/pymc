@@ -44,7 +44,7 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scalar.basic import Ceil, Clip, Floor, RoundHalfToEven
 from pytensor.scalar.basic import clip as scalar_clip
-from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.math import ceil, clip, floor, round_half_to_even
 from pytensor.tensor.var import TensorConstant
 
 from pymc.logprob.abstract import (
@@ -67,7 +67,7 @@ class MeasurableClip(MeasurableElemwise):
 measurable_clip = MeasurableClip(scalar_clip)
 
 
-@node_rewriter(tracks=[Elemwise])
+@node_rewriter(tracks=[clip])
 def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableClip]]:
     # TODO: Canonicalize x[x>ub] = ub -> clip(x, x, ub)
 
@@ -77,9 +77,6 @@ def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[List[Me
 
     if isinstance(node.op, MeasurableClip):
         return None  # pragma: no cover
-
-    if not (isinstance(node.op, Elemwise) and isinstance(node.op.scalar_op, Clip)):
-        return None
 
     clipped_var = node.outputs[0]
     base_var, lower_bound, upper_bound = node.inputs
@@ -179,7 +176,7 @@ class MeasurableRound(MeasurableElemwise):
     valid_scalar_types = (RoundHalfToEven, Floor, Ceil)
 
 
-@node_rewriter(tracks=[Elemwise])
+@node_rewriter(tracks=[ceil, floor, round_half_to_even])
 def find_measurable_roundings(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableRound]]:
 
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
@@ -188,12 +185,6 @@ def find_measurable_roundings(fgraph: FunctionGraph, node: Node) -> Optional[Lis
 
     if isinstance(node.op, MeasurableRound):
         return None  # pragma: no cover
-
-    if not (
-        isinstance(node.op, Elemwise)
-        and isinstance(node.op.scalar_op, MeasurableRound.valid_scalar_types)
-    ):
-        return None
 
     (rounded_var,) = node.outputs
     (base_var,) = node.inputs

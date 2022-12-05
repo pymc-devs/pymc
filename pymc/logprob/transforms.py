@@ -48,7 +48,7 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
 from pytensor.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
 from pytensor.scalar import Add, Exp, Log, Mul
-from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.math import add, exp, log, mul
 from pytensor.tensor.rewriting.basic import (
     register_specialize,
     register_stabilize,
@@ -256,12 +256,9 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
     return input_logprob + jacobian
 
 
-@node_rewriter([Elemwise])
+@node_rewriter([exp, log, add, mul])
 def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
-    scalar_op = node.op.scalar_op
-    if not isinstance(scalar_op, MeasurableTransform.valid_scalar_types):
-        return None
 
     # Node was already converted
     if isinstance(node.op, MeasurableVariable):
@@ -311,6 +308,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
     # This seems to be the only thing preventing nested rewrites from being erased
     measurable_input = assign_custom_measurable_outputs(measurable_input.owner)
 
+    scalar_op = node.op.scalar_op
     measurable_input_idx = 0
     transform_inputs: Tuple[TensorVariable, ...] = (measurable_input,)
     transform: RVTransform
