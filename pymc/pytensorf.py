@@ -333,7 +333,7 @@ def replace_rvs_by_values(
     graphs: Sequence[TensorVariable],
     *,
     rvs_to_values: Dict[TensorVariable, TensorVariable],
-    rvs_to_transforms: Dict[TensorVariable, RVTransform],
+    rvs_to_transforms: Optional[Dict[TensorVariable, RVTransform]] = None,
     **kwargs,
 ) -> List[TensorVariable]:
     """Clone and replace random variables in graphs with their value variables.
@@ -346,7 +346,7 @@ def replace_rvs_by_values(
         The graphs in which to perform the replacements.
     rvs_to_values
         Mapping between the original graph RVs and respective value variables
-    rvs_to_transforms
+    rvs_to_transforms, optional
         Mapping between the original graph RVs and respective value transforms
     """
 
@@ -361,7 +361,8 @@ def replace_rvs_by_values(
     for rv, value in rvs_to_values.items():
         equiv_rv = equiv.get(rv, rv)
         equiv_rvs_to_values[equiv_rv] = equiv.get(value, value)
-        equiv_rvs_to_transforms[equiv_rv] = rvs_to_transforms[rv]
+        if rvs_to_transforms is not None:
+            equiv_rvs_to_transforms[equiv_rv] = rvs_to_transforms[rv]
 
     def poulate_replacements(rv, replacements):
         # Populate replacements dict with {rv: value} pairs indicating which graph
@@ -372,14 +373,15 @@ def replace_rvs_by_values(
         if value is None:
             return []
 
-        transform = equiv_rvs_to_transforms.get(rv, None)
-        if transform is not None:
-            # We want to replace uses of the RV by the back-transformation of its value
-            value = transform.backward(value, *rv.owner.inputs)
-            # The value may have a less precise type than the rv. In this case
-            # filter_variable will add a SpecifyShape to ensure they are consistent
-            value = rv.type.filter_variable(value, allow_convert=True)
-            value.name = rv.name
+        if rvs_to_transforms is not None:
+            transform = equiv_rvs_to_transforms.get(rv, None)
+            if transform is not None:
+                # We want to replace uses of the RV by the back-transformation of its value
+                value = transform.backward(value, *rv.owner.inputs)
+                # The value may have a less precise type than the rv. In this case
+                # filter_variable will add a SpecifyShape to ensure they are consistent
+                value = rv.type.filter_variable(value, allow_convert=True)
+                value.name = rv.name
 
         replacements[rv] = value
         # Also walk the graph of the value variable to make any additional
