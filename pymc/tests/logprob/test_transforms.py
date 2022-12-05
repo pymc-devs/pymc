@@ -778,16 +778,16 @@ def test_discrete_rv_multinary_transform_fails():
         joint_logprob({y_rv: y_rv.clone()})
 
 
-@pytest.mark.xfail(reason="Check not implemented yet, see #51")
+@pytest.mark.xfail(reason="Check not implemented yet")
 def test_invalid_broadcasted_transform_rv_fails():
     loc = at.vector("loc")
-    y_rv = loc + at.random.normal(0, 1, size=2, name="base_rv")
+    y_rv = loc + at.random.normal(0, 1, size=1, name="base_rv")
     y_rv.name = "y"
     y_vv = y_rv.clone()
 
-    logp = joint_logprob({y_rv: y_vv})
-    logp.eval({y_vv: [0, 0, 0, 0], loc: [0, 0, 0, 0]})
-    assert False, "Should have failed before"
+    # This logp derivation should fail or count only once the values that are broadcasted
+    logp = joint_logprob({y_rv: y_vv}, sum=False)
+    assert logp.eval({y_vv: [0, 0, 0, 0], loc: [0, 0, 0, 0]}).shape == ()
 
 
 @pytest.mark.parametrize("numerator", (1.0, 2.0))
