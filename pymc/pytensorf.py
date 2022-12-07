@@ -92,6 +92,23 @@ __all__ = [
 ]
 
 
+# Temporarily add an Aesara dispatch for PyTensor TensorVariable to inform users
+# of incorrect mixing of libraries
+try:
+    from aesara.tensor import _as_tensor_variable as _as_tensor_variable_aesara
+
+    @_as_tensor_variable_aesara.register(TensorVariable)
+    def raise_informative_error(*args, **kwargs):
+        raise TypeError(
+            "You are calling an Aesara function with PyTensor variables.\n"
+            "Starting with PyMC 5.0, Aesara was replaced by PyTensor (see https://www.pymc.io/blog/pytensor_announcement.html).\n"
+            "Replace your import of aesara.tensor with pytensor.tensor.",
+        )
+
+except ImportError:
+    pass
+
+
 def convert_observed_data(data):
     """Convert user provided dataset to accepted formats."""
 
