@@ -37,7 +37,6 @@ __all__ = [
     "logodds",
     "Interval",
     "log_exp_m1",
-    "ordered",
     "univariate_ordered",
     "multivariate_ordered",
     "log",
@@ -369,14 +368,6 @@ multivariate_ordered = Ordered(ndim_supp=1)
 multivariate_ordered.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.Ordered`
 for use in the ``transform`` argument of a multivariate random variable."""
-
-# backwards compatibility
-ordered = Ordered(ndim_supp=1)
-ordered.__doc__ = """
-Instantiation of :class:`pymc.distributions.transforms.Ordered`
-for use in the ``transform`` argument of a random variable.
-This instantiation is for backwards compatibility only.
-Please use `univariate_ordererd` or `multivariate_ordered` instead."""
 
 log = LogTransform()
 log.__doc__ = """
