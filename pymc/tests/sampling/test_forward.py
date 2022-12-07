@@ -741,7 +741,6 @@ class TestSamplePPC(SeededTest):
         base_test_dict = {
             "posterior": ["mu", "~a"],
             "sample_stats": ["diverging", "lp"],
-            "log_likelihood": ["a"],
             "observed_data": ["a"],
         }
         test_dict = {"~posterior_predictive": [], "~predictions": [], **base_test_dict}

@@ -21,7 +21,6 @@ from arviz import InferenceData, concat, rcParams
 from arviz.data.base import CoordSpec, DimSpec, dict_to_dataset, requires
 from pytensor.graph.basic import Constant
 from pytensor.tensor.sharedvar import SharedVariable
-from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 
 import pymc
 
@@ -153,7 +152,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         trace=None,
         prior=None,
         posterior_predictive=None,
-        log_likelihood=True,
+        log_likelihood=False,
         predictions=None,
         coords: Optional[CoordSpec] = None,
         dims: Optional[DimSpec] = None,
@@ -246,68 +245,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             trace_posterior = self.trace[self.ntune :]
         return trace_posterior, trace_warmup
 
-    def log_likelihood_vals_point(self, point, var, log_like_fun):
-        """Compute log likelihood for each observed point."""
-        # TODO: This is a cheap hack; we should filter-out the correct
-        # variables some other way
-        point = {i.name: point[i.name] for i in log_like_fun.f.maker.inputs if i.name in point}
-        log_like_val = np.atleast_1d(log_like_fun(point))
-
-        if isinstance(var.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1)):
-            try:
-                obs_data = extract_obs_data(self.model.rvs_to_values[var])
-            except TypeError:
-                warnings.warn(f"Could not extract data from symbolic observation {var}")
-
-            mask = obs_data.mask
-            if np.ndim(mask) > np.ndim(log_like_val):
-                mask = np.any(mask, axis=-1)
-            log_like_val = np.where(mask, np.nan, log_like_val)
-        return log_like_val
-
-    def _extract_log_likelihood(self, trace):
-        """Compute log likelihood of each observation."""
-        if self.trace is None:
-            return None
-        if self.model is None:
-            return None
-
-        # TODO: We no longer need one function per observed variable
-        if self.log_likelihood is True:
-            cached = [
-                (
-                    var,
-                    self.model.compile_fn(
-                        self.model.logp(var, sum=False)[0],
-                        inputs=self.model.value_vars,
-                        on_unused_input="ignore",
-                    ),
-                )
-                for var in self.model.observed_RVs
-            ]
-        else:
-            cached = [
-                (
-                    var,
-                    self.model.compile_fn(
-                        self.model.logp(var, sum=False)[0],
-                        inputs=self.model.value_vars,
-                        on_unused_input="ignore",
-                    ),
-                )
-                for var in self.model.observed_RVs
-                if var.name in self.log_likelihood
-            ]
-        log_likelihood_dict = _DefaultTrace(len(trace.chains))
-        for var, log_like_fun in cached:
-            for k, chain in enumerate(trace.chains):
-                log_like_chain = [
-                    self.log_likelihood_vals_point(point, var, log_like_fun)
-                    for point in trace.points([chain])
-                ]
-                log_likelihood_dict.insert(var.name, np.stack(log_like_chain), k)
-        return log_likelihood_dict.trace_dict
-
     @requires("trace")
     def posterior_to_xarray(self):
         """Convert the posterior to an xarray dataset."""
@@ -380,49 +317,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 coords=self.coords,
                 attrs=self.attrs,
             ),
-        )
-
-    @requires("trace")
-    @requires("model")
-    def log_likelihood_to_xarray(self):
-        """Extract log likelihood and log_p data from PyMC trace."""
-        if self.predictions or not self.log_likelihood:
-            return None
-        data_warmup = {}
-        data = {}
-        warn_msg = (
-            "Could not compute log_likelihood, it will be omitted. "
-            "Check your model object or set log_likelihood=False"
-        )
-        if self.posterior_trace:
-            try:
-                data = self._extract_log_likelihood(self.posterior_trace)
-            except TypeError:
-                warnings.warn(warn_msg)
-        if self.warmup_trace:
-            try:
-                data_warmup = self._extract_log_likelihood(self.warmup_trace)
-            except TypeError:
-                warnings.warn(warn_msg)
-        return (
-            dict_to_dataset(
-                data,
-                library=pymc,
-                dims=self.dims,
-                coords=self.coords,
-                skip_event_dims=True,
-            ),
-            dict_to_dataset(
-                data_warmup,
-                library=pymc,
-                dims=self.dims,
-                coords=self.coords,
-                skip_event_dims=True,
-            ),
-        )
-
-        return dict_to_dataset(
-            data, library=pymc, coords=self.coords, dims=self.dims, default_dims=self.sample_dims
         )
 
     @requires(["posterior_predictive"])
@@ -509,7 +403,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         id_dict = {
             "posterior": self.posterior_to_xarray(),
             "sample_stats": self.sample_stats_to_xarray(),
-            "log_likelihood": self.log_likelihood_to_xarray(),
             "posterior_predictive": self.posterior_predictive_to_xarray(),
             "predictions": self.predictions_to_xarray(),
             **self.priors_to_xarray(),
@@ -519,7 +412,19 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
             id_dict["predictions_constant_data"] = self.constant_data_to_xarray()
         else:
             id_dict["constant_data"] = self.constant_data_to_xarray()
-        return InferenceData(save_warmup=self.save_warmup, **id_dict)
+        idata = InferenceData(save_warmup=self.save_warmup, **id_dict)
+        if self.log_likelihood:
+            from pymc.stats.log_likelihood import compute_log_likelihood
+
+            idata = compute_log_likelihood(
+                idata,
+                var_names=None if self.log_likelihood is True else self.log_likelihood,
+                extend_inferencedata=True,
+                model=self.model,
+                sample_dims=self.sample_dims,
+                progressbar=False,
+            )
+        return idata
 
 
 def to_inference_data(
@@ -527,7 +432,7 @@ def to_inference_data(
     *,
     prior: Optional[Mapping[str, Any]] = None,
     posterior_predictive: Optional[Mapping[str, Any]] = None,
-    log_likelihood: Union[bool, Iterable[str]] = True,
+    log_likelihood: Union[bool, Iterable[str]] = False,
     coords: Optional[CoordSpec] = None,
     dims: Optional[DimSpec] = None,
     sample_dims: Optional[List] = None,

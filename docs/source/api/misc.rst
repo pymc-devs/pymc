@@ -6,6 +6,7 @@ Other utils
 .. autosummary::
    :toctree: generated/
 
+   compute_log_likelihood
    find_constrained_prior
    DictToArrayBijection
 

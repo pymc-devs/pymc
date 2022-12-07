@@ -63,6 +63,7 @@ jobs:
             pymc/tests/sampling/test_forward.py
             pymc/tests/sampling/test_population.py
             pymc/tests/stats/test_convergence.py
+            pymc/tests/stats/test_log_likelihood.py
 
           - |
             pymc/tests/tuning/test_scaling.py

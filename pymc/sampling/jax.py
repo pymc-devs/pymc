@@ -412,7 +412,7 @@ def sample_blackjax_nuts(
     else:
         idata_kwargs = idata_kwargs.copy()
 
-    if idata_kwargs.pop("log_likelihood", bool(model.observed_RVs)):
+    if idata_kwargs.pop("log_likelihood", False):
         tic5 = datetime.now()
         print("Computing Log Likelihood...", file=sys.stdout)
         log_likelihood = _get_log_likelihood(
@@ -634,7 +634,7 @@ def sample_numpyro_nuts(
     else:
         idata_kwargs = idata_kwargs.copy()
 
-    if idata_kwargs.pop("log_likelihood", bool(model.observed_RVs)):
+    if idata_kwargs.pop("log_likelihood", False):
         tic5 = datetime.now()
         print("Computing Log Likelihood...", file=sys.stdout)
         log_likelihood = _get_log_likelihood(

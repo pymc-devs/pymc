@@ -140,7 +140,13 @@ def test_get_log_likelihood():
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-            trace = pm.sample(tune=10, draws=10, chains=2, random_seed=1322)
+            trace = pm.sample(
+                tune=10,
+                draws=10,
+                chains=2,
+                random_seed=1322,
+                idata_kwargs=dict(log_likelihood=True),
+            )
 
     b_true = trace.log_likelihood.b.values
     a = np.array(trace.posterior.a)
@@ -197,7 +203,7 @@ def model_test_idata_kwargs() -> pm.Model:
     "idata_kwargs",
     [
         dict(),
-        dict(log_likelihood=False),
+        dict(log_likelihood=True),
         # Overwrite models coords
         dict(coords={"x_coord": ["x1", "x2"]}),
         # Overwrite dims from dist specification in model
@@ -228,7 +234,7 @@ def test_idata_kwargs(
     assert "constantdata" in const_data
     assert "mutabledata" in const_data
 
-    if idata_kwargs.get("log_likelihood", True):
+    if idata_kwargs.get("log_likelihood", False):
         assert "log_likelihood" in idata
     else:
         assert "log_likelihood" not in idata
