@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+
 import numpy as np
 import pytensor
 
@@ -24,11 +25,13 @@ import pymc as pm
 
 from pymc.blocking import DictToArrayBijection
 from pymc.distributions.dist_math import rho2sigma
+from pymc.pytensorf import makeiter
 from pymc.variational import opvi
 from pymc.variational.opvi import (
     Approximation,
     Group,
     NotImplementedInference,
+    _known_scan_ignored_inputs,
     node_property,
 )
 
@@ -248,9 +251,12 @@ class EmpiricalGroup(Group):
                 pass
         else:
             size = tuple(np.atleast_1d(size))
-        return self._rng.uniform(
-            size=size, low=pm.floatX(0), high=pm.floatX(self.histogram.shape[0]) - pm.floatX(1e-16)
-        ).astype("int32")
+        return at.random.integers(
+            size=size,
+            low=0,
+            high=self.histogram.shape[0],
+            rng=pytensor.shared(np.random.default_rng()),
+        )
 
     def _new_initial(self, size, deterministic, more_replacements=None):
         pytensor_condition_is_here = isinstance(deterministic, Variable)
@@ -383,8 +389,10 @@ class Empirical(SingleGroupApproximation):
         """
         node = self.to_flat_input(node)
 
-        def sample(post, node):
+        def sample(post, *_):
             return pytensor.clone_replace(node, {self.input: post})
 
-        nodes, _ = pytensor.scan(sample, self.histogram, non_sequences=[node])
+        nodes, _ = pytensor.scan(
+            sample, self.histogram, non_sequences=_known_scan_ignored_inputs(makeiter(node))
+        )
         return nodes

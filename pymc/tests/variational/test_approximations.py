@@ -168,3 +168,15 @@ def test_elbo_beta_kl(aux_total_size):
         np.testing.assert_allclose(
             elbo_via_total_size_scaled.eval(), elbo_via_beta_kl.eval(), rtol=0, atol=1e-1
         )
+
+
+def test_seeding_advi_fit():
+    with pm.Model():
+        x = pm.Normal("x", 0, 10, initval="prior")
+        approx1 = pm.fit(
+            random_seed=42, n=10, method="advi", obj_optimizer=pm.adagrad_window, progressbar=False
+        )
+        approx2 = pm.fit(
+            random_seed=42, n=10, method="advi", obj_optimizer=pm.adagrad_window, progressbar=False
+        )
+        np.testing.assert_allclose(approx1.mean.eval(), approx2.mean.eval())
