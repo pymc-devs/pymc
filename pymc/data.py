@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import collections
 import io
 import os
 import pkgutil
@@ -20,14 +19,19 @@ import urllib.request
 import warnings
 
 from copy import copy
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
+from typing import Dict, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 import pytensor
 import pytensor.tensor as at
 
 from pytensor.compile.sharedvalue import SharedVariable
-from pytensor.graph.basic import Apply
+from pytensor.raise_op import Assert
+from pytensor.scalar import Cast
+from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.random import RandomStream
+from pytensor.tensor.random.basic import IntegersRV
+from pytensor.tensor.subtensor import AdvancedSubtensor
 from pytensor.tensor.type import TensorType
 from pytensor.tensor.var import TensorConstant, TensorVariable
 
@@ -39,7 +43,6 @@ __all__ = [
     "get_data",
     "GeneratorAdapter",
     "Minibatch",
-    "align_minibatches",
     "Data",
     "ConstantData",
     "MutableData",
@@ -126,351 +129,74 @@ class GeneratorAdapter:
         return hash(id(self))
 
 
-class Minibatch(TensorVariable):
-    """Multidimensional minibatch that is pure TensorVariable
+class MinibatchIndexRV(IntegersRV):
+    _print_name = ("minibatch_index", r"\operatorname{minibatch\_index}")
+
+
+minibatch_index = MinibatchIndexRV()
+
+
+def is_minibatch(v: TensorVariable) -> bool:
+    return (
+        isinstance(v.owner.op, AdvancedSubtensor)
+        and isinstance(v.owner.inputs[1].owner.op, MinibatchIndexRV)
+        and valid_for_minibatch(v.owner.inputs[0])
+    )
+
+
+def valid_for_minibatch(v: TensorVariable) -> bool:
+    return (
+        v.owner is None
+        # The only PyTensor operation we allow on observed data is type casting
+        # Although we could allow for any graph that does not depend on other RVs
+        or (
+            isinstance(v.owner.op, Elemwise)
+            and v.owner.inputs[0].owner is None
+            and isinstance(v.owner.op.scalar_op, Cast)
+        )
+    )
+
+
+def assert_all_scalars_equal(scalar, *scalars):
+    if len(scalars) == 0:
+        return scalar
+    else:
+        return Assert(
+            "All variables shape[0] in Minibatch should be equal, check your Minibatch(data1, data2, ...) code"
+        )(scalar, at.all([scalar == s for s in scalars]))
+
+
+def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: int):
+    """
+    Get random slices from variables from the leading dimension.
+
 
     Parameters
     ----------
-    data: np.ndarray
-        initial data
-    batch_size: ``int`` or ``List[int|tuple(size, random_seed)]``
-        batch size for inference, random seed is needed
-        for child random generators
-    dtype: ``str``
-        cast data to specific type
-    broadcastable: tuple[bool]
-        change broadcastable pattern that defaults to ``(False, ) * ndim``
-    name: ``str``
-        name for tensor, defaults to "Minibatch"
-    random_seed: ``int``
-        random seed that is used by default
-    update_shared_f: ``callable``
-        returns :class:`ndarray` that will be carefully
-        stored to underlying shared variable
-        you can use it to change source of
-        minibatches programmatically
-    in_memory_size: ``int`` or ``List[int|slice|Ellipsis]``
-        data size for storing in ``pytensor.shared``
-
-    Attributes
-    ----------
-    shared: shared tensor
-        Used for storing data
-    minibatch: minibatch tensor
-        Used for training
-
-    Notes
-    -----
-    Below is a common use case of Minibatch with variational inference.
-    Importantly, we need to make PyMC "aware" that a minibatch is being used in inference.
-    Otherwise, we will get the wrong :math:`logp` for the model.
-    the density of the model ``logp`` that is affected by Minibatch. See more in the examples below.
-    To do so, we need to pass the ``total_size`` parameter to the observed node, which correctly scales
-    the density of the model ``logp`` that is affected by Minibatch. See more in the examples below.
+    variable: TensorVariable
+    variables: TensorVariable
+    batch_size: int
 
     Examples
     --------
-    Consider we have `data` as follows:
-
-    >>> data = np.random.rand(100, 100)
-
-    if we want a 1d slice of size 10 we do
-
-    >>> x = Minibatch(data, batch_size=10)
-
-    Note that your data is cast to ``floatX`` if it is not integer type
-    But you still can add the ``dtype`` kwarg for :class:`Minibatch`
-    if you need more control.
-
-    If we want 10 sampled rows and columns
-    ``[(size, seed), (size, seed)]`` we can use
-
-    >>> x = Minibatch(data, batch_size=[(10, 42), (10, 42)], dtype='int32')
-    >>> assert str(x.dtype) == 'int32'
-
-
-    Or, more simply, we can use the default random seed = 42
-    ``[size, size]``
-
-    >>> x = Minibatch(data, batch_size=[10, 10])
-
-
-    In the above, `x` is a regular :class:`TensorVariable` that supports any math operations:
-
-
-    >>> assert x.eval().shape == (10, 10)
-
-
-    You can pass the Minibatch `x` to your desired model:
-
-    >>> with pm.Model() as model:
-    ...     mu = pm.Flat('mu')
-    ...     sigma = pm.HalfNormal('sigma')
-    ...     lik = pm.Normal('lik', mu, sigma, observed=x, total_size=(100, 100))
-
-
-    Then you can perform regular Variational Inference out of the box
-
-
-    >>> with model:
-    ...     approx = pm.fit()
-
-
-    Important note: :class:``Minibatch`` has ``shared``, and ``minibatch`` attributes
-    you can call later:
-
-    >>> x.set_value(np.random.laplace(size=(100, 100)))
-
-    and minibatches will be then from new storage
-    it directly affects ``x.shared``.
-    A less convenient convenient, but more explicit, way to achieve the same
-    thing:
-
-    >>> x.shared.set_value(pm.floatX(np.random.laplace(size=(100, 100))))
-
-    The programmatic way to change storage is as follows
-    I import ``partial`` for simplicity
-    >>> from functools import partial
-    >>> datagen = partial(np.random.laplace, size=(100, 100))
-    >>> x = Minibatch(datagen(), batch_size=10, update_shared_f=datagen)
-    >>> x.update_shared()
-
-    To be more concrete about how we create a minibatch, here is a demo:
-    1. create a shared variable
-
-        >>> shared = pytensor.shared(data)
-
-    2. take a random slice of size 10:
-
-        >>> ridx = pm.at_rng().uniform(size=(10,), low=0, high=data.shape[0]-1e-10).astype('int64')
-
-    3) take the resulting slice:
-
-        >>> minibatch = shared[ridx]
-
-    That's done. Now you can use this minibatch somewhere else.
-    You can see that the implementation does not require a fixed shape
-    for the shared variable. Feel free to use that if needed.
-    *FIXME: What is "that" which we can use here?  A fixed shape?  Should this say
-    "but feel free to put a fixed shape on the shared variable, if appropriate?"*
-
-    Suppose you need to make some replacements in the graph, e.g. change the minibatch to testdata
-
-    >>> node = x ** 2  # arbitrary expressions on minibatch `x`
-    >>> testdata = pm.floatX(np.random.laplace(size=(1000, 10)))
-
-    Then you should create a `dict` with replacements:
-
-    >>> replacements = {x: testdata}
-    >>> rnode = pytensor.clone_replace(node, replacements)
-    >>> assert (testdata ** 2 == rnode.eval()).all()
-
-    *FIXME: In the following, what is the **reason** to replace the Minibatch variable with
-    its shared variable?  And in the following, the `rnode` is a **new** node, not a modification
-    of a previously existing node, correct?*
-    To replace a minibatch with its shared variable you should do
-    the same things. The Minibatch variable is accessible through the `minibatch` attribute.
-    For example
-
-    >>> replacements = {x.minibatch: x.shared}
-    >>> rnode = pytensor.clone_replace(node, replacements)
-
-    For more complex slices some more code is needed that can seem not so clear
-
-    >>> moredata = np.random.rand(10, 20, 30, 40, 50)
-
-    The default ``total_size`` that can be passed to PyMC random node
-    is then ``(10, 20, 30, 40, 50)`` but can be less verbose in some cases
-
-    1. Advanced indexing, ``total_size = (10, Ellipsis, 50)``
-
-        >>> x = Minibatch(moredata, [2, Ellipsis, 10])
-
-        We take the slice only for the first and last dimension
-
-        >>> assert x.eval().shape == (2, 20, 30, 40, 10)
-
-    2. Skipping a particular dimension, ``total_size = (10, None, 30)``:
-
-        >>> x = Minibatch(moredata, [2, None, 20])
-        >>> assert x.eval().shape == (2, 20, 20, 40, 50)
-
-    3. Mixing both of these together, ``total_size = (10, None, 30, Ellipsis, 50)``:
-
-        >>> x = Minibatch(moredata, [2, None, 20, Ellipsis, 10])
-        >>> assert x.eval().shape == (2, 20, 20, 40, 10)
+    >>> data1 = np.random.randn(100, 10)
+    >>> data2 = np.random.randn(100, 20)
+    >>> mdata1, mdata2 = Minibatch(data1, data2, batch_size=10)
     """
 
-    RNG: Dict[str, List[Any]] = collections.defaultdict(list)
-
-    @pytensor.config.change_flags(compute_test_value="raise")
-    def __init__(
-        self,
-        data,
-        batch_size=128,
-        dtype=None,
-        broadcastable=None,
-        shape=None,
-        name="Minibatch",
-        random_seed=42,
-        update_shared_f=None,
-        in_memory_size=None,
-    ):
-        if dtype is None:
-            data = pm.smartfloatX(np.asarray(data))
-        else:
-            data = np.asarray(data, dtype)
-        in_memory_slc = self.make_static_slices(in_memory_size)
-        self.shared = pytensor.shared(data[tuple(in_memory_slc)])
-        self.update_shared_f = update_shared_f
-        self.random_slc = self.make_random_slices(self.shared.shape, batch_size, random_seed)
-        minibatch = self.shared[self.random_slc]
-        if broadcastable is not None:
-            warnings.warn(
-                "Minibatch `broadcastable` argument is deprecated. Use `shape` instead",
-                FutureWarning,
+    rng = RandomStream()
+    tensor, *tensors = tuple(map(at.as_tensor, (variable, *variables)))
+    upper = assert_all_scalars_equal(*[t.shape[0] for t in (tensor, *tensors)])
+    slc = rng.gen(minibatch_index, 0, upper, size=batch_size)
+    for i, v in enumerate((tensor, *tensors)):
+        if not valid_for_minibatch(v):
+            raise ValueError(
+                f"{i}: {v} is not valid for Minibatch, only constants or constants.astype(dtype) are allowed"
             )
-            assert shape is None
-            shape = [1 if b else None for b in broadcastable]
-        if shape is not None:
-            minibatch = at.specify_shape(minibatch, shape)
-        self.minibatch = minibatch
-        super().__init__(self.minibatch.type, None, None, name=name)
-        Apply(pytensor.compile.view_op, inputs=[self.minibatch], outputs=[self])
-        self.tag.test_value = copy(self.minibatch.tag.test_value)
-
-    def rslice(self, total, size, seed):
-        if size is None:
-            return slice(None)
-        elif isinstance(size, int):
-            rng = pm.at_rng(seed)
-            Minibatch.RNG[id(self)].append(rng)
-            return rng.uniform(size=(size,), low=0.0, high=pm.floatX(total) - 1e-16).astype("int64")
-        else:
-            raise TypeError("Unrecognized size type, %r" % size)
-
-    def __del__(self):
-        del Minibatch.RNG[id(self)]
-
-    @staticmethod
-    def make_static_slices(user_size):
-        if user_size is None:
-            return [Ellipsis]
-        elif isinstance(user_size, int):
-            return slice(None, user_size)
-        elif isinstance(user_size, (list, tuple)):
-            slc = list()
-            for i in user_size:
-                if isinstance(i, int):
-                    slc.append(i)
-                elif i is None:
-                    slc.append(slice(None))
-                elif i is Ellipsis:
-                    slc.append(Ellipsis)
-                elif isinstance(i, slice):
-                    slc.append(i)
-                else:
-                    raise TypeError("Unrecognized size type, %r" % user_size)
-            return slc
-        else:
-            raise TypeError("Unrecognized size type, %r" % user_size)
-
-    def make_random_slices(self, in_memory_shape, batch_size, default_random_seed):
-        if batch_size is None:
-            return [Ellipsis]
-        elif isinstance(batch_size, int):
-            slc = [self.rslice(in_memory_shape[0], batch_size, default_random_seed)]
-        elif isinstance(batch_size, (list, tuple)):
-
-            def check(t):
-                if t is Ellipsis or t is None:
-                    return True
-                else:
-                    if isinstance(t, (tuple, list)):
-                        if not len(t) == 2:
-                            return False
-                        else:
-                            return isinstance(t[0], int) and isinstance(t[1], int)
-                    elif isinstance(t, int):
-                        return True
-                    else:
-                        return False
-
-            # end check definition
-            if not all(check(t) for t in batch_size):
-                raise TypeError(
-                    "Unrecognized `batch_size` type, expected "
-                    "int or List[int|tuple(size, random_seed)] where "
-                    "size and random seed are both ints, got %r" % batch_size
-                )
-            batch_size = [(i, default_random_seed) if isinstance(i, int) else i for i in batch_size]
-            shape = in_memory_shape
-            if Ellipsis in batch_size:
-                sep = batch_size.index(Ellipsis)
-                begin = batch_size[:sep]
-                end = batch_size[sep + 1 :]
-                if Ellipsis in end:
-                    raise ValueError(
-                        "Double Ellipsis in `batch_size` is restricted, got %r" % batch_size
-                    )
-                if len(end) > 0:
-                    shp_mid = shape[sep : -len(end)]
-                    mid = [at.arange(s) for s in shp_mid]
-                else:
-                    mid = []
-            else:
-                begin = batch_size
-                end = []
-                mid = []
-            if (len(begin) + len(end)) > len(in_memory_shape.eval()):
-                raise ValueError(
-                    "Length of `batch_size` is too big, "
-                    "number of ints is bigger that ndim, got %r" % batch_size
-                )
-            if len(end) > 0:
-                shp_end = shape[-len(end) :]
-            else:
-                shp_end = np.asarray([])
-            shp_begin = shape[: len(begin)]
-            slc_begin = [
-                self.rslice(shp_begin[i], t[0], t[1]) if t is not None else at.arange(shp_begin[i])
-                for i, t in enumerate(begin)
-            ]
-            slc_end = [
-                self.rslice(shp_end[i], t[0], t[1]) if t is not None else at.arange(shp_end[i])
-                for i, t in enumerate(end)
-            ]
-            slc = slc_begin + mid + slc_end
-        else:
-            raise TypeError("Unrecognized size type, %r" % batch_size)
-        return pm.pytensorf.ix_(*slc)
-
-    def update_shared(self):
-        if self.update_shared_f is None:
-            raise NotImplementedError("No `update_shared_f` was provided to `__init__`")
-        self.set_value(np.asarray(self.update_shared_f(), self.dtype))
-
-    def set_value(self, value):
-        self.shared.set_value(np.asarray(value, self.dtype))
-
-    def clone(self):
-        ret = self.type()
-        ret.name = self.name
-        ret.tag = copy(self.tag)
-        return ret
-
-
-def align_minibatches(batches=None):
-    if batches is None:
-        for rngs in Minibatch.RNG.values():
-            for rng in rngs:
-                rng.seed()
-    else:
-        for b in batches:
-            if not isinstance(b, Minibatch):
-                raise TypeError(f"{b} is not a Minibatch")
-            for rng in Minibatch.RNG[id(b)]:
-                rng.seed()
+    result = tuple([v[slc] for v in (tensor, *tensors)])
+    for i, r in enumerate(result):
+        r.name = f"minibatch.{i}"
+    return result if tensors else result[0]
 
 
 def determine_coords(

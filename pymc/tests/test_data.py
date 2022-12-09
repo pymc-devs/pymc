@@ -27,6 +27,7 @@ from pytensor.tensor.var import TensorVariable
 
 import pymc as pm
 
+from pymc.data import is_minibatch
 from pymc.pytensorf import GeneratorOp, floatX
 from pymc.tests.helpers import SeededTest, select_by_precision
 
@@ -696,15 +697,10 @@ class TestScaling:
 
     def test_mixed1(self):
         with pm.Model():
-            data = np.random.rand(10, 20, 30, 40, 50)
-            mb = pm.Minibatch(data, [2, None, 20, Ellipsis, 10])
-            pm.Normal("n", observed=mb, total_size=(10, None, 30, Ellipsis, 50))
-
-    def test_mixed2(self):
-        with pm.Model():
-            data = np.random.rand(10, 20, 30, 40, 50)
-            mb = pm.Minibatch(data, [2, None, 20])
-            pm.Normal("n", observed=mb, total_size=(10, None, 30))
+            data = np.random.rand(10, 20)
+            mb = pm.Minibatch(data, batch_size=5)
+            v = pm.Normal("n", observed=mb, total_size=10)
+            assert pm.logp(v, 1) is not None, "Check index is allowed in graph"
 
     def test_free_rv(self):
         with pm.Model() as model4:
@@ -719,51 +715,28 @@ class TestScaling:
 
 @pytest.mark.usefixtures("strict_float32")
 class TestMinibatch:
-    data = np.random.rand(30, 10, 40, 10, 50)
+    data = np.random.rand(30, 10)
 
     def test_1d(self):
-        mb = pm.Minibatch(self.data, 20)
-        assert mb.eval().shape == (20, 10, 40, 10, 50)
+        mb = pm.Minibatch(self.data, batch_size=20)
+        assert is_minibatch(mb)
+        assert mb.eval().shape == (20, 10)
 
-    def test_2d(self):
-        mb = pm.Minibatch(self.data, [(10, 42), (4, 42)])
-        assert mb.eval().shape == (10, 4, 40, 10, 50)
+    def test_allowed(self):
+        mb = pm.Minibatch(at.as_tensor(self.data).astype(int), batch_size=20)
+        assert is_minibatch(mb)
 
-    @pytest.mark.parametrize(
-        "batch_size, expected",
-        [
-            ([(10, 42), None, (4, 42)], (10, 10, 4, 10, 50)),
-            ([(10, 42), Ellipsis, (4, 42)], (10, 10, 40, 10, 4)),
-            ([(10, 42), None, Ellipsis, (4, 42)], (10, 10, 40, 10, 4)),
-            ([10, None, Ellipsis, (4, 42)], (10, 10, 40, 10, 4)),
-        ],
-    )
-    def test_special_batch_size(self, batch_size, expected):
-        mb = pm.Minibatch(self.data, batch_size)
-        assert mb.eval().shape == expected
+    def test_not_allowed(self):
+        with pytest.raises(ValueError, match="not valid for Minibatch"):
+            mb = pm.Minibatch(at.as_tensor(self.data) * 2, batch_size=20)
 
-    def test_cloning_available(self):
-        gop = pm.Minibatch(np.arange(100), 1)
-        res = gop**2
-        shared = pytensor.shared(np.array([10]))
-        res1 = pytensor.clone_replace(res, {gop: shared})
-        f = pytensor.function([], res1)
-        assert f() == np.array([100])
+    def test_not_allowed2(self):
+        with pytest.raises(ValueError, match="not valid for Minibatch"):
+            mb = pm.Minibatch(self.data, at.as_tensor(self.data) * 2, batch_size=20)
 
-    def test_align(self):
-        m = pm.Minibatch(np.arange(1000), 1, random_seed=1)
-        n = pm.Minibatch(np.arange(1000), 1, random_seed=1)
-        f = pytensor.function([], [m, n])
-        n.eval()  # not aligned
-        a, b = zip(*(f() for _ in range(1000)))
-        assert a != b
-        pm.align_minibatches()
-        a, b = zip(*(f() for _ in range(1000)))
-        assert a == b
-        n.eval()  # not aligned
-        pm.align_minibatches([m])
-        a, b = zip(*(f() for _ in range(1000)))
-        assert a != b
-        pm.align_minibatches([m, n])
-        a, b = zip(*(f() for _ in range(1000)))
-        assert a == b
+    def test_assert(self):
+        with pytest.raises(
+            AssertionError, match=r"All variables shape\[0\] in Minibatch should be equal"
+        ):
+            d1, d2 = pm.Minibatch(self.data, self.data[::2], batch_size=20)
+            d1.eval()

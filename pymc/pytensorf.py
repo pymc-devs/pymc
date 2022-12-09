@@ -47,10 +47,10 @@ from pytensor.graph.basic import (
 )
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
-from pytensor.sandbox.rng_mrg import MRG_RandomStream as RandomStream
 from pytensor.scalar.basic import Cast
 from pytensor.tensor.basic import _as_tensor_variable
 from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.random import RandomStream
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.var import (
     RandomGeneratorSharedVariable,

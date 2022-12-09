@@ -50,7 +50,7 @@ from pytensor.tensor.sharedvar import ScalarSharedVariable
 from pytensor.tensor.var import TensorConstant, TensorVariable
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
-from pymc.data import GenTensorVariable, Minibatch
+from pymc.data import GenTensorVariable, is_minibatch
 from pymc.distributions.logprob import _joint_logp
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import (
@@ -1329,7 +1329,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         else:
             if (
                 isinstance(observed, Variable)
-                and not isinstance(observed, (GenTensorVariable, Minibatch))
+                and not isinstance(observed, GenTensorVariable)
                 and observed.owner is not None
                 # The only PyTensor operation we allow on observed data is type casting
                 # Although we could allow for any graph that does not depend on other RVs
@@ -1337,6 +1337,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     isinstance(observed.owner.op, Elemwise)
                     and isinstance(observed.owner.op.scalar_op, Cast)
                 )
+                and not is_minibatch(observed)
             ):
                 raise TypeError(
                     "Variables that depend on other nodes cannot be used for observed data."

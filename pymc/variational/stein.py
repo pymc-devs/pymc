@@ -46,7 +46,8 @@ class Stein(WithMemoization):
 
     @node_property
     def dlogp(self):
-        grad = at.grad(self.logp_norm.sum(), self.approx_symbolic_matrices)
+        logp = self.logp_norm.sum()
+        grad = at.grad(logp, self.approx_symbolic_matrices)
 
         def flatten2(tensor):
             return tensor.flatten(2)
