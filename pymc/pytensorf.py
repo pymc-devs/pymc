@@ -203,7 +203,7 @@ def walk_model(
     """Walk model graphs and yield their nodes.
 
     Parameters
-    ==========
+    ----------
     graphs
         The graphs to walk.
     stop_at_vars
@@ -235,12 +235,12 @@ def _replace_rvs_in_graphs(
     This will *not* recompute test values.
 
     Parameters
-    ==========
+    ----------
     graphs
         The graphs in which random variables are to be replaced.
 
     Returns
-    =======
+    -------
     Tuple containing the transformed graphs and a ``dict`` of the replacements
     that were made.
     """
@@ -296,7 +296,7 @@ def rvs_to_value_vars(
     This will *not* recompute test values in the resulting graphs.
 
     Parameters
-    ==========
+    ----------
     graphs
         The graphs in which to perform the replacements.
     apply_transforms

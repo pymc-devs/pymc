@@ -593,7 +593,6 @@ class Group(WithMemoization):
 
     Examples
     --------
-
     **Basic Initialization**
 
     :class:`Group` is a factory class. You do not need to call every ApproximationGroup explicitly.

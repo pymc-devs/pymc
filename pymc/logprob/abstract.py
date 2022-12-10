@@ -194,7 +194,7 @@ def assign_custom_measurable_outputs(
     `factorized_joint_logprob`.
 
     Parameters
-    ==========
+    ----------
     node
         The node to recreate with a new cloned `Op`.
     measurable_outputs_fn
