@@ -12,31 +12,31 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara
 import numpy as np
+import pytensor
 import pytest
 
 import pymc as pm
 
 
 @pytest.fixture(scope="function", autouse=True)
-def aesara_config():
-    config = aesara.config.change_flags(on_opt_error="raise")
+def pytensor_config():
+    config = pytensor.config.change_flags(on_opt_error="raise")
     with config:
         yield
 
 
 @pytest.fixture(scope="function", autouse=True)
 def exception_verbosity():
-    config = aesara.config.change_flags(exception_verbosity="high")
+    config = pytensor.config.change_flags(exception_verbosity="high")
     with config:
         yield
 
 
 @pytest.fixture(scope="function", autouse=False)
 def strict_float32():
-    if aesara.config.floatX == "float32":
-        config = aesara.config.change_flags(warn_float64="raise")
+    if pytensor.config.floatX == "float32":
+        config = pytensor.config.change_flags(warn_float64="raise")
         with config:
             yield
     else:

@@ -11,13 +11,13 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import aesara
-import aesara.tensor as at
 import cloudpickle
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import pytest
 
-from aesara.tensor.random.op import RandomVariable
+from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
 
@@ -118,7 +118,7 @@ class TestInitvalEvaluation:
 
     def test_initval_resizing(self):
         with pm.Model() as pmodel:
-            data = aesara.shared(np.arange(4))
+            data = pytensor.shared(np.arange(4))
             rv = pm.Uniform("u", lower=data, upper=10, initval="prior")
 
             ip = pmodel.initial_point(random_seed=0)
@@ -167,7 +167,7 @@ class TestInitvalEvaluation:
         assert b_transformed != 0
         assert -1 < b_transformed < 1
         # C is centered on 0 + untransformed initval of B
-        assert np.isclose(iv["C"], np.array(0 + b_untransformed, dtype=aesara.config.floatX))
+        assert np.isclose(iv["C"], np.array(0 + b_untransformed, dtype=pytensor.config.floatX))
         # Test jitter respects seeding.
         assert fn(0) == fn(0)
         assert fn(0) != fn(1)

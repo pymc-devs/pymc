@@ -39,13 +39,13 @@ import warnings
 from collections import deque
 from typing import Dict, Optional, Union
 
-import aesara.tensor as at
+import pytensor.tensor as at
 
-from aesara import config
-from aesara.graph.basic import graph_inputs, io_toposort
-from aesara.graph.op import compute_test_value
-from aesara.graph.rewriting.basic import GraphRewriter, NodeRewriter
-from aesara.tensor.var import TensorVariable
+from pytensor import config
+from pytensor.graph.basic import graph_inputs, io_toposort
+from pytensor.graph.op import compute_test_value
+from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
+from pytensor.tensor.var import TensorVariable
 
 from pymc.logprob.abstract import _logprob, get_measurable_outputs
 from pymc.logprob.rewriting import construct_ir_fgraph
@@ -69,7 +69,7 @@ def factorized_joint_logprob(
 
     .. code-block:: python
 
-        import aesara.tensor as at
+        import pytensor.tensor as at
 
         sigma2_rv = at.random.invgamma(0.5, 0.5)
         Y_rv = at.random.normal(0, at.sqrt(sigma2_rv))

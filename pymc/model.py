@@ -33,23 +33,35 @@ from typing import (
     cast,
 )
 
-import aesara
-import aesara.sparse as sparse
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.sparse as sparse
+import pytensor.tensor as at
 import scipy.sparse as sps
 
-from aesara.compile.sharedvalue import SharedVariable
-from aesara.graph.basic import Constant, Variable, graph_inputs
-from aesara.graph.fg import FunctionGraph
-from aesara.scalar import Cast
-from aesara.tensor.elemwise import Elemwise
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.random.rewriting import local_subtensor_rv_lift
-from aesara.tensor.sharedvar import ScalarSharedVariable
-from aesara.tensor.var import TensorConstant, TensorVariable
+from pytensor.compile.sharedvalue import SharedVariable
+from pytensor.graph.basic import Constant, Variable, graph_inputs
+from pytensor.graph.fg import FunctionGraph
+from pytensor.scalar import Cast
+from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
+from pytensor.tensor.sharedvar import ScalarSharedVariable
+from pytensor.tensor.var import TensorConstant, TensorVariable
 
-from pymc.aesaraf import (
+from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.data import GenTensorVariable, Minibatch
+from pymc.distributions.logprob import _joint_logp
+from pymc.distributions.transforms import _default_transform
+from pymc.exceptions import (
+    BlockModelAccessError,
+    ImputationWarning,
+    SamplingError,
+    ShapeError,
+    ShapeWarning,
+)
+from pymc.initial_point import make_initial_point_fn
+from pymc.pytensorf import (
     PointFunc,
     SeedSequenceSeed,
     compile_pymc,
@@ -59,12 +71,6 @@ from pymc.aesaraf import (
     inputvars,
     replace_rvs_by_values,
 )
-from pymc.blocking import DictToArrayBijection, RaveledVars
-from pymc.data import GenTensorVariable, Minibatch
-from pymc.distributions.logprob import _joint_logp
-from pymc.distributions.transforms import _default_transform
-from pymc.exceptions import ImputationWarning, SamplingError, ShapeError, ShapeWarning
-from pymc.initial_point import make_initial_point_fn
 from pymc.util import (
     UNSET,
     WithMemoization,
@@ -151,16 +157,16 @@ class ContextMeta(type):
 
         def __enter__(self):
             self.__class__.context_class.get_contexts().append(self)
-            # self._aesara_config is set in Model.__new__
+            # self._pytensor_config is set in Model.__new__
             self._config_context = None
-            if hasattr(self, "_aesara_config"):
-                self._config_context = aesara.config.change_flags(**self._aesara_config)
+            if hasattr(self, "_pytensor_config"):
+                self._config_context = pytensor.config.change_flags(**self._pytensor_config)
                 self._config_context.__enter__()
             return self
 
         def __exit__(self, typ, value, traceback):  # pylint: disable=unused-argument
             self.__class__.context_class.get_contexts().pop()
-            # self._aesara_config is set in Model.__new__
+            # self._pytensor_config is set in Model.__new__
             if self._config_context:
                 self._config_context.__exit__(typ, value, traceback)
 
@@ -195,6 +201,8 @@ class ContextMeta(type):
             if error_if_none:
                 raise TypeError(f"No {cls} on context stack")
             return None
+        if isinstance(candidate, BlockModelAccess):
+            raise BlockModelAccessError(candidate.error_msg_on_access)
         return candidate
 
     def get_contexts(cls) -> List[T]:
@@ -273,20 +281,20 @@ def modelcontext(model: Optional["Model"]) -> "Model":
 
 
 class ValueGradFunction:
-    """Create an Aesara function that computes a value and its gradient.
+    """Create an PyTensor function that computes a value and its gradient.
 
     Parameters
     ----------
-    costs: list of Aesara variables
-        We compute the weighted sum of the specified Aesara values, and the gradient
+    costs: list of PyTensor variables
+        We compute the weighted sum of the specified PyTensor values, and the gradient
         of that sum. The weights can be specified with `ValueGradFunction.set_weights`.
-    grad_vars: list of named Aesara variables or None
+    grad_vars: list of named PyTensor variables or None
         The arguments with respect to which the gradient is computed.
-    extra_vars_and_values: dict of Aesara variables and their initial values
+    extra_vars_and_values: dict of PyTensor variables and their initial values
         Other arguments of the function that are assumed constant and their
         values. They are stored in shared variables and can be set using
         `set_extra_values`.
-    dtype: str, default=aesara.config.floatX
+    dtype: str, default=pytensor.config.floatX
         The dtype of the arrays.
     casting: {'no', 'equiv', 'save', 'same_kind', 'unsafe'}, default='no'
         Casting rule for casting `grad_args` to the array dtype.
@@ -296,12 +304,12 @@ class ValueGradFunction:
     compute_grads: bool, default=True
         If False, return only the logp, not the gradient.
     kwargs
-        Extra arguments are passed on to `aesara.function`.
+        Extra arguments are passed on to `pytensor.function`.
 
     Attributes
     ----------
-    profile: Aesara profiling object or None
-        The profiling object of the Aesara function that computes value and
+    profile: PyTensor profiling object or None
+        The profiling object of the PyTensor function that computes value and
         gradient. This is None unless `profile=True` was set in the
         kwargs.
     """
@@ -331,14 +339,14 @@ class ValueGradFunction:
         self._extra_var_names = {var.name for var in extra_vars_and_values.keys()}
 
         if dtype is None:
-            dtype = aesara.config.floatX
+            dtype = pytensor.config.floatX
         self.dtype = dtype
 
         self._n_costs = len(costs)
         if self._n_costs == 0:
             raise ValueError("At least one cost is required.")
         weights = np.ones(self._n_costs - 1, dtype=self.dtype)
-        self._weights = aesara.shared(weights, "__weights")
+        self._weights = pytensor.shared(weights, "__weights")
 
         cost = costs[0]
         for i, val in enumerate(costs[1:]):
@@ -362,14 +370,14 @@ class ValueGradFunction:
         givens = []
         self._extra_vars_shared = {}
         for var, value in extra_vars_and_values.items():
-            shared = aesara.shared(
+            shared = pytensor.shared(
                 value, var.name + "_shared__", shape=[1 if s == 1 else None for s in value.shape]
             )
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
 
         if compute_grads:
-            grads = aesara.grad(cost, grad_vars, disconnected_inputs="ignore")
+            grads = pytensor.grad(cost, grad_vars, disconnected_inputs="ignore")
             for grad_wrt, var in zip(grads, grad_vars):
                 grad_wrt.name = f"{var.name}_grad"
             outputs = [cost] + grads
@@ -378,7 +386,7 @@ class ValueGradFunction:
 
         inputs = grad_vars
 
-        self._aesara_function = compile_pymc(inputs, outputs, givens=givens, **kwargs)
+        self._pytensor_function = compile_pymc(inputs, outputs, givens=givens, **kwargs)
 
     def set_weights(self, values):
         if values.shape != (self._n_costs - 1,):
@@ -406,7 +414,7 @@ class ValueGradFunction:
         if isinstance(grad_vars, RaveledVars):
             grad_vars = list(DictToArrayBijection.rmap(grad_vars).values())
 
-        cost, *grads = self._aesara_function(*grad_vars)
+        cost, *grads = self._pytensor_function(*grad_vars)
 
         if grads:
             grads_raveled = DictToArrayBijection.map(
@@ -423,8 +431,8 @@ class ValueGradFunction:
 
     @property
     def profile(self):
-        """Profiling information of the underlying Aesara function."""
-        return self._aesara_function.profile
+        """Profiling information of the underlying PyTensor function."""
+        return self._pytensor_function.profile
 
 
 class Model(WithMemoization, metaclass=ContextMeta):
@@ -528,7 +536,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             instance._parent = kwargs.get("model")
         else:
             instance._parent = cls.get_context(error_if_none=False)
-        instance._aesara_config = kwargs.get("aesara_config", {})
+        instance._pytensor_config = kwargs.get("pytensor_config", {})
         return instance
 
     @staticmethod
@@ -543,10 +551,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         coords=None,
         check_bounds=True,
         *,
-        aesara_config=None,
+        pytensor_config=None,
         model=None,
     ):
-        del aesara_config, model  # used in __new__
+        del pytensor_config, model  # used in __new__
         self.name = self._validate_name(name)
         self.check_bounds = check_bounds
 
@@ -607,7 +615,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self.parent is None
 
     def logp_dlogp_function(self, grad_vars=None, tempered=False, **kwargs):
-        """Compile an Aesara function that computes logp and gradient.
+        """Compile an PyTensor function that computes logp and gradient.
 
         Parameters
         ----------
@@ -853,30 +861,30 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     @property
     def datalogp(self) -> Variable:
-        """Aesara scalar of log-probability of the observed variables and
+        """PyTensor scalar of log-probability of the observed variables and
         potential terms"""
         return self.observedlogp + self.potentiallogp
 
     @property
     def varlogp(self) -> Variable:
-        """Aesara scalar of log-probability of the unobserved random variables
+        """PyTensor scalar of log-probability of the unobserved random variables
         (excluding deterministic)."""
         return self.logp(vars=self.free_RVs)
 
     @property
     def varlogp_nojac(self) -> Variable:
-        """Aesara scalar of log-probability of the unobserved random variables
+        """PyTensor scalar of log-probability of the unobserved random variables
         (excluding deterministic) without jacobian term."""
         return self.logp(vars=self.free_RVs, jacobian=False)
 
     @property
     def observedlogp(self) -> Variable:
-        """Aesara scalar of log-probability of the observed variables"""
+        """PyTensor scalar of log-probability of the observed variables"""
         return self.logp(vars=self.observed_RVs)
 
     @property
     def potentiallogp(self) -> Variable:
-        """Aesara scalar of log-probability of the Potential terms"""
+        """PyTensor scalar of log-probability of the Potential terms"""
         # Convert random variables in Potential expression into their log-likelihood
         # inputs and apply their transforms, if any
         potentials = self.replace_rvs_by_values(self.potentials)
@@ -948,7 +956,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         These are the actual random variable terms that make up the
         "sample-space" graph (i.e. you can sample these graphs by compiling them
-        with `aesara.function`).  If you want the corresponding log-likelihood terms,
+        with `pytensor.function`).  If you want the corresponding log-likelihood terms,
         use `model.value_vars` instead.
         """
         return self.free_RVs + self.observed_RVs
@@ -959,7 +967,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         These are the actual random variable terms that make up the
         "sample-space" graph (i.e. you can sample these graphs by compiling them
-        with `aesara.function`).  If you want the corresponding log-likelihood terms,
+        with `pytensor.function`).  If you want the corresponding log-likelihood terms,
         use `var.unobserved_value_vars` instead.
         """
         return self.free_RVs + self.deterministics
@@ -1027,7 +1035,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Default is False.
         length : optional, scalar
             A scalar of the dimensions length.
-            Defaults to ``aesara.tensor.constant(len(values))``.
+            Defaults to ``pytensor.tensor.constant(len(values))``.
         """
         if name in {"draw", "chain", "__sample__"}:
             raise ValueError(
@@ -1047,15 +1055,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
         if length is not None and not isinstance(length, (int, Variable)):
             raise ValueError(
-                f"The `length` passed for the '{name}' coord must be an int, Aesara Variable or None."
+                f"The `length` passed for the '{name}' coord must be an int, PyTensor Variable or None."
             )
         if length is None:
             length = len(values)
         if not isinstance(length, Variable):
             if mutable:
-                length = aesara.shared(length, name=name)
+                length = pytensor.shared(length, name=name)
             else:
-                length = aesara.tensor.constant(length)
+                length = pytensor.tensor.constant(length)
         self._dim_lengths[name] = length
         self._coords[name] = values
 
@@ -1109,7 +1117,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         Parameters
         ----------
         random_seed : SeedSequenceSeed, default None
-            Seed(s) for generating initial point from the model. Passed into :func:`pymc.aesaraf.reseed_rngs`
+            Seed(s) for generating initial point from the model. Passed into :func:`pymc.pytensorf.reseed_rngs`
 
         Returns
         -------
@@ -1323,7 +1331,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 isinstance(observed, Variable)
                 and not isinstance(observed, (GenTensorVariable, Minibatch))
                 and observed.owner is not None
-                # The only Aesara operation we allow on observed data is type casting
+                # The only PyTensor operation we allow on observed data is type casting
                 # Although we could allow for any graph that does not depend on other RVs
                 and not (
                     isinstance(observed.owner.op, Elemwise)
@@ -1367,7 +1375,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 "Dimensionality of data and RV don't match.", actual=data.ndim, expected=rv_var.ndim
             )
 
-        if aesara.config.compute_test_value != "off":
+        if pytensor.config.compute_test_value != "off":
             test_value = getattr(rv_var.tag, "test_value", None)
 
             if test_value is not None:
@@ -1436,7 +1444,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             )
             (observed_rv_var,) = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
             # Make a clone of the RV, but let it create a new rng so that observed and
-            # missing are not treated as equivalent nodes by aesara. This would happen
+            # missing are not treated as equivalent nodes by pytensor. This would happen
             # if the size of the masked and unmasked array happened to coincide
             _, size, _, *inps = observed_rv_var.owner.inputs
             observed_rv_var = observed_rv_var.owner.op(*inps, size=size, name=f"{name}_observed")
@@ -1494,14 +1502,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # Create value variable with the same type as the RV
             value_var = rv_var.type()
             value_var.name = rv_var.name
-            if aesara.config.compute_test_value != "off":
+            if pytensor.config.compute_test_value != "off":
                 value_var.tag.test_value = rv_var.tag.test_value
         else:
             # Create value variable with the same type as the transformed RV
             value_var = transform.forward(rv_var, *rv_var.owner.inputs).type()
             value_var.name = f"{rv_var.name}_{transform.name}__"
             value_var.tag.transform = transform
-            if aesara.config.compute_test_value != "off":
+            if pytensor.config.compute_test_value != "off":
                 value_var.tag.test_value = transform.forward(
                     rv_var, *rv_var.owner.inputs
                 ).tag.test_value
@@ -1610,23 +1618,23 @@ class Model(WithMemoization, metaclass=ContextMeta):
         point_fn: bool = True,
         **kwargs,
     ) -> Union[PointFunc, Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]]:
-        """Compiles an Aesara function
+        """Compiles an PyTensor function
 
         Parameters
         ----------
         outs
-            Aesara variable or iterable of Aesara variables.
+            PyTensor variable or iterable of PyTensor variables.
         inputs
-            Aesara input variables, defaults to aesaraf.inputvars(outs).
+            PyTensor input variables, defaults to pytensorf.inputvars(outs).
         mode
-            Aesara compilation mode, default=None.
+            PyTensor compilation mode, default=None.
         point_fn : bool
             Whether to wrap the compiled function in a PointFunc, which takes a Point
             dictionary with model variable names and values as input.
 
         Returns
         -------
-        Compiled Aesara function
+        Compiled PyTensor function
         """
         if inputs is None:
             inputs = inputvars(outs)
@@ -1646,12 +1654,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return fn
 
     def profile(self, outs, *, n=1000, point=None, profile=True, **kwargs):
-        """Compiles and profiles an Aesara function which returns ``outs`` and
+        """Compiles and profiles an PyTensor function which returns ``outs`` and
         takes values of model vars as a dict as an argument.
 
         Parameters
         ----------
-        outs: Aesara variable or iterable of Aesara variables
+        outs: PyTensor variable or iterable of PyTensor variables
         n: int, default 1000
             Number of iterations to run
         point: point
@@ -1704,11 +1712,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 outputs.append(transform.forward(rv, *rv.owner.inputs).shape)
             names.append(rv.name)
             outputs.append(rv.shape)
-        f = aesara.function(
+        f = pytensor.function(
             inputs=[],
             outputs=outputs,
             givens=[(obs, self.rvs_to_values[obs]) for obs in self.observed_RVs],
-            mode=aesara.compile.mode.FAST_COMPILE,
+            mode=pytensor.compile.mode.FAST_COMPILE,
             on_unused_input="ignore",
         )
         return {name: tuple(shape) for name, shape in zip(names, f())}
@@ -1798,6 +1806,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
 Model._context_class = Model
 
 
+class BlockModelAccess(Model):
+    """This class can be used to prevent user access to Model contexts"""
+
+    def __init__(self, *args, error_msg_on_access="Model access is blocked", **kwargs):
+        self.error_msg_on_access = error_msg_on_access
+
+
 def set_data(new_data, model=None, *, coords=None):
     """Sets the value of one or more data container variables.  Note that the shape is also
     dynamic, it is updated when the value is changed.  See the examples below for two common
@@ -1880,16 +1895,16 @@ def compile_fn(
     model: Optional[Model] = None,
     **kwargs,
 ) -> Union[PointFunc, Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]]:
-    """Compiles an Aesara function
+    """Compiles an PyTensor function
 
     Parameters
     ----------
     outs
-        Aesara variable or iterable of Aesara variables.
+        PyTensor variable or iterable of PyTensor variables.
     inputs
-        Aesara input variables, defaults to aesaraf.inputvars(outs).
+        PyTensor input variables, defaults to pytensorf.inputvars(outs).
     mode
-        Aesara compilation mode, default=None.
+        PyTensor compilation mode, default=None.
     point_fn : bool
         Whether to wrap the compiled function in a PointFunc, which takes a Point
         dictionary with model variable names and values as input.
@@ -1898,7 +1913,7 @@ def compile_fn(
 
     Returns
     -------
-    Compiled Aesara function
+    Compiled PyTensor function
     """
 
     model = modelcontext(model)
@@ -1986,7 +2001,7 @@ def Deterministic(name, var, model=None, dims=None):
     Parameters
     ----------
     name: str
-    var: Aesara variables
+    var: PyTensor variables
     auto: bool
         Add automatically created deterministics (e.g., when imputing missing values)
         to a separate model.auto_deterministics list for filtering during sampling.
@@ -2022,7 +2037,7 @@ def Potential(name, var, model=None):
     Parameters
     ----------
     name: str
-    var: Aesara variables
+    var: PyTensor variables
 
     Returns
     -------

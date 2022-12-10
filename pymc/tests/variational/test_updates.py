@@ -12,8 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara
 import numpy as np
+import pytensor
 import pytest
 
 from pymc.variational.updates import (
@@ -28,12 +28,12 @@ from pymc.variational.updates import (
     sgd,
 )
 
-_a = aesara.shared(1.0)
+_a = pytensor.shared(1.0)
 _b = _a * 2
 
-_m = aesara.shared(np.empty((10,), aesara.config.floatX))
+_m = pytensor.shared(np.empty((10,), pytensor.config.floatX))
 _n = _m.sum()
-_m2 = aesara.shared(np.empty((10, 10, 10), aesara.config.floatX))
+_m2 = pytensor.shared(np.empty((10, 10, 10), pytensor.config.floatX))
 _n2 = _b + _n + _m2.sum()
 
 
@@ -71,7 +71,7 @@ _n2 = _b + _n + _m2.sum()
     ids=["scalar", "matrix", "mixed"],
 )
 def test_updates_fast(opt, loss_and_params, kwargs, getter):
-    with aesara.config.change_flags(compute_test_value="ignore"):
+    with pytensor.config.change_flags(compute_test_value="ignore"):
         loss, param = getter(loss_and_params)
         args = dict()
         args.update(**kwargs)

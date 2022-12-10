@@ -36,10 +36,10 @@
 
 from typing import List, Optional
 
-import aesara.tensor as at
+import pytensor.tensor as at
 
-from aesara.graph.rewriting.basic import node_rewriter
-from aesara.tensor.extra_ops import CumOp
+from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.tensor.extra_ops import CumOp
 
 from pymc.logprob.abstract import (
     MeasurableVariable,
@@ -122,7 +122,6 @@ def find_measurable_cumsums(fgraph, node) -> Optional[List[MeasurableCumsum]]:
 measurable_ir_rewrites_db.register(
     "find_measurable_cumsums",
     find_measurable_cumsums,
-    0,
     "basic",
     "cumsum",
 )

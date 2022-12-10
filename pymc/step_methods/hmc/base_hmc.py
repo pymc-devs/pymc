@@ -22,10 +22,10 @@ from typing import Any, NamedTuple
 
 import numpy as np
 
-from pymc.aesaraf import floatX
 from pymc.blocking import DictToArrayBijection, RaveledVars, StatsType
 from pymc.exceptions import SamplingError
 from pymc.model import Point, modelcontext
+from pymc.pytensorf import floatX
 from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods import step_sizes
 from pymc.step_methods.arraystep import GradientSharedStep
@@ -75,14 +75,14 @@ class BaseHMC(GradientSharedStep):
         t0=10,
         adapt_step_size=True,
         step_rand=None,
-        **aesara_kwargs,
+        **pytensor_kwargs,
     ):
         """Set up Hamiltonian samplers with common structures.
 
         Parameters
         ----------
         vars: list, default=None
-            List of Aesara variables. If None, all continuous RVs from the
+            List of PyTensor variables. If None, all continuous RVs from the
             model are included.
         scaling: array_like, ndim={1,2}
             Scaling for momentum distribution. 1d arrays interpreted matrix
@@ -98,7 +98,7 @@ class BaseHMC(GradientSharedStep):
         potential: Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods.
-        **aesara_kwargs: passed to Aesara functions
+        **pytensor_kwargs: passed to PyTensor functions
         """
         self._model = modelcontext(model)
 
@@ -106,7 +106,7 @@ class BaseHMC(GradientSharedStep):
             vars = self._model.continuous_value_vars
         else:
             vars = get_value_vars_from_user_vars(vars, self._model)
-        super().__init__(vars, blocked=blocked, model=self._model, dtype=dtype, **aesara_kwargs)
+        super().__init__(vars, blocked=blocked, model=self._model, dtype=dtype, **pytensor_kwargs)
 
         self.adapt_step_size = adapt_step_size
         self.Emax = Emax

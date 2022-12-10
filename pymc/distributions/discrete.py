@@ -13,11 +13,11 @@
 #   limitations under the License.
 import warnings
 
-import aesara.tensor as at
 import numpy as np
+import pytensor.tensor as at
 
-from aesara.tensor import TensorConstant
-from aesara.tensor.random.basic import (
+from pytensor.tensor import TensorConstant
+from pytensor.tensor.random.basic import (
     RandomVariable,
     ScipyRandomVariable,
     bernoulli,
@@ -33,7 +33,6 @@ from scipy import stats
 
 import pymc as pm
 
-from pymc.aesaraf import floatX, intX
 from pymc.distributions.dist_math import (
     betaln,
     binomln,
@@ -49,6 +48,7 @@ from pymc.distributions.logprob import logp
 from pymc.distributions.mixture import Mixture
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.math import sigmoid
+from pymc.pytensorf import floatX, intX
 from pymc.vartypes import continuous_types
 
 __all__ = [

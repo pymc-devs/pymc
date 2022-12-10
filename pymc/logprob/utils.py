@@ -40,13 +40,13 @@ from typing import Callable, Dict, Generator, Iterable, List, Optional, Set, Tup
 
 import numpy as np
 
-from aesara import tensor as at
-from aesara.graph import Apply, Op
-from aesara.graph.basic import Constant, clone_get_equiv, graph_inputs, walk
-from aesara.graph.fg import FunctionGraph
-from aesara.link.c.type import CType
-from aesara.raise_op import CheckAndRaise
-from aesara.tensor.var import TensorVariable
+from pytensor import tensor as at
+from pytensor.graph import Apply, Op
+from pytensor.graph.basic import Constant, clone_get_equiv, graph_inputs, walk
+from pytensor.graph.fg import FunctionGraph
+from pytensor.link.c.type import CType
+from pytensor.raise_op import CheckAndRaise
+from pytensor.tensor.var import TensorVariable
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob
 

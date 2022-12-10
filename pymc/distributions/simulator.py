@@ -14,18 +14,18 @@
 
 import logging
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 
-from aesara.graph.op import Apply, Op
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.var import TensorVariable
+from pytensor.graph.op import Apply, Op
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.var import TensorVariable
 from scipy.spatial import cKDTree
 
-from pymc.aesaraf import floatX
 from pymc.distributions.distribution import Distribution, _moment
 from pymc.logprob.abstract import _logprob
+from pymc.pytensorf import floatX
 
 __all__ = ["Simulator"]
 
@@ -95,9 +95,9 @@ class Simulator(Distribution):
             different methods across separate models, be sure to use distinct
             class_names.
 
-    distance : Aesara_Op, callable or str, default "gaussian"
+    distance : PyTensor_Op, callable or str, default "gaussian"
         Distance function. Available options are ``"gaussian"``, ``"laplace"``,
-        ``"kullback_leibler"`` or a user defined function (or Aesara_Op) that takes
+        ``"kullback_leibler"`` or a user defined function (or PyTensor_Op) that takes
         ``epsilon``, the summary statistics of observed_data and the summary statistics
         of simulated_data as input.
 
@@ -110,10 +110,10 @@ class Simulator(Distribution):
         ``distance="gaussian"`` + ``sum_stat="sort"`` is equivalent to the 1D 2-wasserstein distance
 
         ``distance="laplace"`` + ``sum_stat="sort"`` is equivalent to the the 1D 1-wasserstein distance
-    sum_stat : Aesara_Op, callable or str, default "identity"
+    sum_stat : PyTensor_Op, callable or str, default "identity"
         Summary statistic function. Available options are ``"identity"``,
-        ``"sort"``, ``"mean"``, ``"median"``. If a callable (or Aesara_Op) is defined,
-        it should return a 1d numpy array (or Aesara vector).
+        ``"sort"``, ``"mean"``, ``"median"``. If a callable (or PyTensor_Op) is defined,
+        it should return a 1d numpy array (or PyTensor vector).
     epsilon : tensor_like of float, default 1.0
         Scaling parameter for the distance functions. It should be a float or
         an array of the same size of the output of ``sum_stat``.
@@ -175,7 +175,7 @@ class Simulator(Distribution):
                 distance = laplace
             elif distance == "kullback_leibler":
                 raise NotImplementedError("KL not refactored yet")
-                # TODO: Wrap KL in aesara OP
+                # TODO: Wrap KL in pytensor OP
                 # distance = KullbackLeibler(observed)
                 # if sum_stat != "identity":
                 #     _log.info(f"Automatically setting sum_stat to identity as expected by {distance}")
@@ -193,7 +193,7 @@ class Simulator(Distribution):
             elif sum_stat == "mean":
                 sum_stat = at.mean
             elif sum_stat == "median":
-                # Missing in Aesara, see aesara/issues/525
+                # Missing in PyTensor, see pytensor/issues/525
                 sum_stat = create_sum_stat_op_from_fn(np.median)
             elif callable(sum_stat):
                 sum_stat = create_sum_stat_op_from_fn(sum_stat)
@@ -273,7 +273,7 @@ def simulator_logp(op, values, *inputs, **kwargs):
     # TODO: Model rngs should be updated prior to multiprocessing split,
     #  in which case this would not be needed. However, that would have to be
     #  done for every sampler that may accomodate Simulators
-    rng = aesara.shared(np.random.default_rng(), name="simulator_rng")
+    rng = pytensor.shared(np.random.default_rng(), name="simulator_rng")
     # Create a new simulatorRV with identical inputs as the original one
     sim_value = op.make_node(rng, *inputs[1:]).default_output()
     sim_value.name = "simulator_value"
@@ -321,7 +321,7 @@ class KullbackLeibler:
 
 
 def create_sum_stat_op_from_fn(fn):
-    vectorX = at.dvector if aesara.config.floatX == "float64" else at.fvector
+    vectorX = at.dvector if pytensor.config.floatX == "float64" else at.fvector
 
     # Check if callable returns TensorVariable with dummy inputs
     try:
@@ -331,7 +331,7 @@ def create_sum_stat_op_from_fn(fn):
     except Exception:
         pass
 
-    # Otherwise, automatically wrap in Aesara Op
+    # Otherwise, automatically wrap in PyTensor Op
     class SumStat(Op):
         def make_node(self, x):
             x = at.as_tensor_variable(x)
@@ -339,14 +339,14 @@ def create_sum_stat_op_from_fn(fn):
 
         def perform(self, node, inputs, outputs):
             (x,) = inputs
-            outputs[0][0] = np.atleast_1d(fn(x)).astype(aesara.config.floatX)
+            outputs[0][0] = np.atleast_1d(fn(x)).astype(pytensor.config.floatX)
 
     return SumStat()
 
 
 def create_distance_op_from_fn(fn):
-    scalarX = at.dscalar if aesara.config.floatX == "float64" else at.fscalar
-    vectorX = at.dvector if aesara.config.floatX == "float64" else at.fvector
+    scalarX = at.dscalar if pytensor.config.floatX == "float64" else at.fscalar
+    vectorX = at.dvector if pytensor.config.floatX == "float64" else at.fvector
 
     # Check if callable returns TensorVariable with dummy inputs
     try:
@@ -356,7 +356,7 @@ def create_distance_op_from_fn(fn):
     except Exception:
         pass
 
-    # Otherwise, automatically wrap in Aesara Op
+    # Otherwise, automatically wrap in PyTensor Op
     class Distance(Op):
         def make_node(self, epsilon, obs_data, sim_data):
             epsilon = at.as_tensor_variable(epsilon)
@@ -366,6 +366,8 @@ def create_distance_op_from_fn(fn):
 
         def perform(self, node, inputs, outputs):
             eps, obs_data, sim_data = inputs
-            outputs[0][0] = np.atleast_1d(fn(eps, obs_data, sim_data)).astype(aesara.config.floatX)
+            outputs[0][0] = np.atleast_1d(fn(eps, obs_data, sim_data)).astype(
+                pytensor.config.floatX
+            )
 
     return Distance()

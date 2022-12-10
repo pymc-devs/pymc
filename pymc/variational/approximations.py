@@ -12,13 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara
 import numpy as np
+import pytensor
 
-from aesara import tensor as at
-from aesara.graph.basic import Variable
-from aesara.tensor.var import TensorVariable
 from arviz import InferenceData
+from pytensor import tensor as at
+from pytensor.graph.basic import Variable
+from pytensor.tensor.var import TensorVariable
 
 import pymc as pm
 
@@ -63,7 +63,7 @@ class MeanFieldGroup(Group):
     def std(self):
         return rho2sigma(self.rho)
 
-    @aesara.config.change_flags(compute_test_value="off")
+    @pytensor.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         if not self._check_user_params():
@@ -89,8 +89,8 @@ class MeanFieldGroup(Group):
         rho = rho1
 
         return {
-            "mu": aesara.shared(pm.floatX(start), "mu"),
-            "rho": aesara.shared(pm.floatX(rho), "rho"),
+            "mu": pytensor.shared(pm.floatX(start), "mu"),
+            "rho": pytensor.shared(pm.floatX(rho), "rho"),
         }
 
     @node_property
@@ -122,7 +122,7 @@ class FullRankGroup(Group):
     short_name = "full_rank"
     alias_names = frozenset(["fr"])
 
-    @aesara.config.change_flags(compute_test_value="off")
+    @pytensor.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         if not self._check_user_params():
@@ -132,8 +132,8 @@ class FullRankGroup(Group):
     def create_shared_params(self, start=None):
         start = self._prepare_start(start)
         n = self.ddim
-        L_tril = np.eye(n)[np.tril_indices(n)].astype(aesara.config.floatX)
-        return {"mu": aesara.shared(start, "mu"), "L_tril": aesara.shared(L_tril, "L_tril")}
+        L_tril = np.eye(n)[np.tril_indices(n)].astype(pytensor.config.floatX)
+        return {"mu": pytensor.shared(start, "mu"), "L_tril": pytensor.shared(L_tril, "L_tril")}
 
     @node_property
     def L(self):
@@ -192,7 +192,7 @@ class EmpiricalGroup(Group):
     __param_spec__ = dict(histogram=("s", "d"))
     short_name = "empirical"
 
-    @aesara.config.change_flags(compute_test_value="off")
+    @pytensor.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         self._check_trace()
@@ -221,7 +221,7 @@ class EmpiricalGroup(Group):
                 for j in range(len(trace)):
                     histogram[i] = DictToArrayBijection.map(trace.point(j, t)).data
                     i += 1
-        return dict(histogram=aesara.shared(pm.floatX(histogram), "histogram"))
+        return dict(histogram=pytensor.shared(pm.floatX(histogram), "histogram"))
 
     def _check_trace(self):
         trace = self._kwargs.get("trace", None)
@@ -253,11 +253,11 @@ class EmpiricalGroup(Group):
         ).astype("int32")
 
     def _new_initial(self, size, deterministic, more_replacements=None):
-        aesara_condition_is_here = isinstance(deterministic, Variable)
+        pytensor_condition_is_here = isinstance(deterministic, Variable)
         if size is None:
             size = 1
         size = at.as_tensor(size)
-        if aesara_condition_is_here:
+        if pytensor_condition_is_here:
             return at.switch(
                 deterministic,
                 at.repeat(self.mean.reshape((1, -1)), size, -1),
@@ -294,7 +294,7 @@ class EmpiricalGroup(Group):
         return at.sqrt(at.diag(self.cov))
 
     def __str__(self):
-        if isinstance(self.histogram, aesara.compile.SharedVariable):
+        if isinstance(self.histogram, pytensor.compile.SharedVariable):
             shp = ", ".join(map(str, self.histogram.shape.eval()))
         else:
             shp = "None, " + str(self.ddim)
@@ -375,7 +375,7 @@ class Empirical(SingleGroupApproximation):
 
         Parameters
         ----------
-        node: Aesara Variables (or Aesara expressions)
+        node: PyTensor Variables (or PyTensor expressions)
 
         Returns
         -------
@@ -384,7 +384,7 @@ class Empirical(SingleGroupApproximation):
         node = self.to_flat_input(node)
 
         def sample(post, node):
-            return aesara.clone_replace(node, {self.input: post})
+            return pytensor.clone_replace(node, {self.input: post})
 
-        nodes, _ = aesara.scan(sample, self.histogram, non_sequences=[node])
+        nodes, _ = pytensor.scan(sample, self.histogram, non_sequences=[node])
         return nodes

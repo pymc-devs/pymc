@@ -16,18 +16,17 @@ import warnings
 
 from contextlib import ExitStack as does_not_raise
 
-import aesara
 import numpy as np
+import pytensor
 import pytest
 import scipy.stats as st
 
-from aesara import tensor as at
-from aesara.tensor import TensorVariable
-from aesara.tensor.random.op import RandomVariable
 from numpy.testing import assert_allclose
+from pytensor import tensor as at
+from pytensor.tensor import TensorVariable
+from pytensor.tensor.random.op import RandomVariable
 from scipy.special import logsumexp
 
-from pymc.aesaraf import floatX
 from pymc.distributions import (
     Categorical,
     Dirichlet,
@@ -55,6 +54,7 @@ from pymc.distributions.transforms import _default_transform
 from pymc.logprob.transforms import IntervalTransform, LogTransform, SimplexTransform
 from pymc.math import expand_packed_triangular
 from pymc.model import Model
+from pymc.pytensorf import floatX
 from pymc.sampling.forward import (
     draw,
     sample_posterior_predictive,
@@ -607,7 +607,7 @@ class TestMixture(SeededTest):
         assert prior["chol_cov_0"].shape == (n_samples, D * (D + 1) // 2)
 
     def test_nested_mixture(self):
-        if aesara.config.floatX == "float32":
+        if pytensor.config.floatX == "float32":
             rtol = 1e-4
         else:
             rtol = 1e-7
@@ -638,7 +638,7 @@ class TestMixture(SeededTest):
         test_point = model.initial_point()
 
         def mixmixlogp(value, point):
-            floatX = aesara.config.floatX
+            floatX = pytensor.config.floatX
             priorlogp = (
                 st.dirichlet.logpdf(
                     x=point["g_w"],
@@ -698,7 +698,7 @@ class TestMixture(SeededTest):
 
     @pytest.mark.parametrize("floatX", ["float32", "float64"])
     def test_mixture_dtype(self, floatX):
-        with aesara.config.change_flags(floatX=floatX):
+        with pytensor.config.change_flags(floatX=floatX):
             mix_dtype = Mixture.dist(
                 w=[0.5, 0.5],
                 comp_dists=[
@@ -966,7 +966,7 @@ class TestMixtureVsLatent(SeededTest):
                 on_unused_input="ignore",
             )
 
-        if aesara.config.floatX == "float32":
+        if pytensor.config.floatX == "float32":
             rtol = 1e-4
         else:
             rtol = 1e-7
@@ -1026,7 +1026,7 @@ class TestMixtureSameFamily(SeededTest):
         assert prior["mixture"].shape == (self.n_samples, *batch_shape, 3)
         assert draw(mixture, draws=self.size).shape == (self.size, *batch_shape, 3)
 
-        if aesara.config.floatX == "float32":
+        if pytensor.config.floatX == "float32":
             rtol = 1e-4
         else:
             rtol = 1e-7
@@ -1058,7 +1058,7 @@ class TestMixtureSameFamily(SeededTest):
         assert prior["mixture"].shape == (self.n_samples, 3)
         assert draw(mixture, draws=self.size).shape == (self.size, 3)
 
-        if aesara.config.floatX == "float32":
+        if pytensor.config.floatX == "float32":
             rtol = 1e-4
         else:
             rtol = 1e-7

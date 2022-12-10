@@ -22,12 +22,12 @@ import warnings
 
 from typing import Optional, Sequence
 
-import aesara.gradient as tg
 import numpy as np
+import pytensor.gradient as tg
 
-from aesara import Variable
 from fastprogress.fastprogress import ProgressBar, progress_bar
 from numpy import isfinite
+from pytensor import Variable
 from scipy.optimize import minimize
 
 import pymc as pm

@@ -13,26 +13,31 @@
 #   limitations under the License.
 from unittest import mock
 
-import aesara
-import aesara.tensor as at
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
 import pandas as pd
+import pytensor
+import pytensor.tensor as at
 import pytest
 import scipy.sparse as sps
 
-from aesara.compile.builders import OpFromGraph
-from aesara.graph.basic import Variable, equal_computations
-from aesara.tensor.random.basic import normal, uniform
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.random.var import RandomStateSharedVariable
-from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
-from aesara.tensor.var import TensorVariable
+from pytensor.compile.builders import OpFromGraph
+from pytensor.graph.basic import Variable, equal_computations
+from pytensor.tensor.random.basic import normal, uniform
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.var import RandomStateSharedVariable
+from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
+from pytensor.tensor.var import TensorVariable
 
 import pymc as pm
 
-from pymc.aesaraf import (
+from pymc.distributions.dist_math import check_parameters
+from pymc.distributions.distribution import SymbolicRandomVariable
+from pymc.distributions.transforms import Interval
+from pymc.exceptions import NotConstantValueError
+from pymc.logprob.utils import ParameterValueError
+from pymc.pytensorf import (
     compile_pymc,
     constant_fold,
     convert_observed_data,
@@ -43,11 +48,6 @@ from pymc.aesaraf import (
     rvs_to_value_vars,
     walk_model,
 )
-from pymc.distributions.dist_math import check_parameters
-from pymc.distributions.distribution import SymbolicRandomVariable
-from pymc.distributions.transforms import Interval
-from pymc.exceptions import NotConstantValueError
-from pymc.logprob.utils import ParameterValueError
 from pymc.tests.helpers import assert_no_rvs
 from pymc.vartypes import int_types
 
@@ -143,7 +143,7 @@ def test_extract_obs_data():
     data_at = at.as_tensor(data)
     mask = np.random.binomial(1, 0.5, size=(2, 3)).astype(bool)
 
-    for val_at in (data_at, aesara.shared(data)):
+    for val_at in (data_at, pytensor.shared(data)):
         res = extract_obs_data(val_at)
 
         assert isinstance(res, np.ndarray)
@@ -199,7 +199,7 @@ def test_convert_observed_data(input_dtype):
     dense_input = np.arange(9).reshape((3, 3)).astype(input_dtype)
 
     input_name = "input_variable"
-    aesara_graph_input = at.as_tensor(dense_input, name=input_name)
+    pytensor_graph_input = at.as_tensor(dense_input, name=input_name)
     pandas_input = pd.DataFrame(dense_input)
 
     # All the even numbers are replaced with NaN
@@ -239,22 +239,22 @@ def test_convert_observed_data(input_dtype):
         assert func_output.shape == input_value.shape
         npt.assert_allclose(func_output, masked_array_input)
 
-    # Check function behavior with Aesara graph variable
-    aesara_output = func(aesara_graph_input)
-    assert isinstance(aesara_output, Variable)
-    npt.assert_allclose(aesara_output.eval(), aesara_graph_input.eval())
-    intX = pm.aesaraf._conversion_map[aesara.config.floatX]
-    if dense_input.dtype == intX or dense_input.dtype == aesara.config.floatX:
-        assert aesara_output.owner is None  # func should not have added new nodes
-        assert aesara_output.name == input_name
+    # Check function behavior with PyTensor graph variable
+    pytensor_output = func(pytensor_graph_input)
+    assert isinstance(pytensor_output, Variable)
+    npt.assert_allclose(pytensor_output.eval(), pytensor_graph_input.eval())
+    intX = pm.pytensorf._conversion_map[pytensor.config.floatX]
+    if dense_input.dtype == intX or dense_input.dtype == pytensor.config.floatX:
+        assert pytensor_output.owner is None  # func should not have added new nodes
+        assert pytensor_output.name == input_name
     else:
-        assert aesara_output.owner is not None  # func should have casted
-        assert aesara_output.owner.inputs[0].name == input_name
+        assert pytensor_output.owner is not None  # func should have casted
+        assert pytensor_output.owner.inputs[0].name == input_name
 
     if "float" in input_dtype:
-        assert aesara_output.dtype == aesara.config.floatX
+        assert pytensor_output.dtype == pytensor.config.floatX
     else:
-        assert aesara_output.dtype == intX
+        assert pytensor_output.dtype == intX
 
     # Check function behavior with generator data
     generator_output = func(square_generator)
@@ -264,7 +264,7 @@ def test_convert_observed_data(input_dtype):
     # Make sure the returned object has .set_gen and .set_default methods
     assert hasattr(wrapped, "set_gen")
     assert hasattr(wrapped, "set_default")
-    # Make sure the returned object is an Aesara TensorVariable
+    # Make sure the returned object is an PyTensor TensorVariable
     assert isinstance(wrapped, TensorVariable)
 
 
@@ -318,7 +318,7 @@ class TestCompilePyMC:
             pass
 
         with pytest.raises(ParameterValueError):
-            aesara.function([], bound)()
+            pytensor.function([], bound)()
 
         m.check_bounds = False
         with m:
@@ -329,7 +329,7 @@ class TestCompilePyMC:
             assert np.all(compile_pymc([], bound)() == -np.inf)
 
     def test_compile_pymc_sets_rng_updates(self):
-        rng = aesara.shared(np.random.default_rng(0))
+        rng = pytensor.shared(np.random.default_rng(0))
         x = pm.Normal.dist(rng=rng)
         assert x.owner.inputs[0] is rng
         f = compile_pymc([], x)
@@ -337,24 +337,24 @@ class TestCompilePyMC:
 
         # Check that update was not done inplace
         assert not hasattr(rng, "default_update")
-        f = aesara.function([], x)
+        f = pytensor.function([], x)
         assert f() == f()
 
     def test_compile_pymc_with_updates(self):
-        x = aesara.shared(0)
+        x = pytensor.shared(0)
         f = compile_pymc([], x, updates={x: x + 1})
         assert f() == 0
         assert f() == 1
 
     def test_compile_pymc_missing_default_explicit_updates(self):
-        rng = aesara.shared(np.random.default_rng(0))
+        rng = pytensor.shared(np.random.default_rng(0))
         x = pm.Normal.dist(rng=rng)
 
         # By default, compile_pymc should update the rng of x
         f = compile_pymc([], x)
         assert f() != f()
 
-        # An explicit update should override the default_update, like aesara.function does
+        # An explicit update should override the default_update, like pytensor.function does
         # For testing purposes, we use an update that leaves the rng unchanged
         f = compile_pymc([], x, updates={rng: rng})
         assert f() == f()
@@ -394,7 +394,7 @@ class TestCompilePyMC:
             assert len(fn_fgraph.outputs) == 1 + rvs_in_graph
 
     # Disable `reseed_rngs` so that we can test with simpler update rule
-    @mock.patch("pymc.aesaraf.reseed_rngs")
+    @mock.patch("pymc.pytensorf.reseed_rngs")
     def test_compile_pymc_custom_update_op(self, _):
         """Test that custom MeasurableVariable Op updates are used by compile_pymc"""
 
@@ -404,7 +404,7 @@ class TestCompilePyMC:
 
         dummy_inputs = [at.scalar(), at.scalar()]
         dummy_outputs = [at.add(*dummy_inputs)]
-        dummy_x = NonSymbolicRV(dummy_inputs, dummy_outputs)(aesara.shared(1.0), 1.0)
+        dummy_x = NonSymbolicRV(dummy_inputs, dummy_outputs)(pytensor.shared(1.0), 1.0)
 
         # Check that there are no updates at first
         fn = compile_pymc(inputs=[], outputs=dummy_x)
@@ -417,13 +417,13 @@ class TestCompilePyMC:
         assert fn() == 3.0
 
     def test_random_seed(self):
-        seedx = aesara.shared(np.random.default_rng(1))
-        seedy = aesara.shared(np.random.default_rng(1))
+        seedx = pytensor.shared(np.random.default_rng(1))
+        seedy = pytensor.shared(np.random.default_rng(1))
         x = at.random.normal(rng=seedx)
         y = at.random.normal(rng=seedy)
 
         # Shared variables are the same, so outputs will be identical
-        f0 = aesara.function([], [x, y])
+        f0 = pytensor.function([], [x, y])
         x0_eval, y0_eval = f0()
         assert x0_eval == y0_eval
 
@@ -444,7 +444,7 @@ class TestCompilePyMC:
         assert y3_eval == y2_eval
 
     def test_multiple_updates_same_variable(self):
-        rng = aesara.shared(np.random.default_rng(), name="rng")
+        rng = pytensor.shared(np.random.default_rng(), name="rng")
         x = at.random.normal(rng=rng)
         y = at.random.normal(rng=rng)
 
@@ -456,7 +456,7 @@ class TestCompilePyMC:
 
 
 def test_replace_rng_nodes():
-    rng = aesara.shared(np.random.default_rng())
+    rng = pytensor.shared(np.random.default_rng())
     x = at.random.normal(rng=rng)
     x_rng, *x_non_rng_inputs = x.owner.inputs
 
@@ -495,7 +495,7 @@ def test_reseed_rngs():
     bit_generators = [default_rng(sub_seed) for sub_seed in np.random.SeedSequence(seed).spawn(2)]
 
     rngs = [
-        aesara.shared(rng_type(default_rng()))
+        pytensor.shared(rng_type(default_rng()))
         for rng_type in (np.random.Generator, np.random.RandomState)
     ]
     for rng, bit_generator in zip(rngs, bit_generators):
@@ -522,7 +522,7 @@ def test_constant_fold():
 
 
 def test_constant_fold_raises():
-    size = aesara.shared(5)
+    size = pytensor.shared(5)
     x = at.random.normal(size=(size,))
     y = at.arange(x.size)
 
@@ -647,7 +647,7 @@ class TestReplaceRVsByValues:
             pm.Potential("two_pot", two)
             pm.Potential("one_pot", one)
 
-        before = aesara.clone_replace(m.free_RVs)
+        before = pytensor.clone_replace(m.free_RVs)
 
         # This call would change the model free_RVs in place in #5172
         if test_deprecated_fn:
@@ -660,7 +660,7 @@ class TestReplaceRVsByValues:
                 rvs_to_transforms=m.rvs_to_transforms,
             )
 
-        after = aesara.clone_replace(m.free_RVs)
+        after = pytensor.clone_replace(m.free_RVs)
         assert equal_computations(before, after)
 
     @pytest.mark.parametrize("test_deprecated_fn", (True, False))

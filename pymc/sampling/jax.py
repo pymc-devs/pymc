@@ -15,19 +15,19 @@ os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={10
 
 from datetime import datetime
 
-import aesara.tensor as at
 import arviz as az
 import jax
 import numpy as np
+import pytensor.tensor as at
 
-from aesara.compile import SharedVariable, Supervisor, mode
-from aesara.graph.basic import clone_replace, graph_inputs
-from aesara.graph.fg import FunctionGraph
-from aesara.link.jax.dispatch import jax_funcify
-from aesara.raise_op import Assert
-from aesara.tensor import TensorVariable
-from aesara.tensor.shape import SpecifyShape
 from arviz.data.base import make_attrs
+from pytensor.compile import SharedVariable, Supervisor, mode
+from pytensor.graph.basic import clone_replace, graph_inputs
+from pytensor.graph.fg import FunctionGraph
+from pytensor.link.jax.dispatch import jax_funcify
+from pytensor.raise_op import Assert
+from pytensor.tensor import TensorVariable
+from pytensor.tensor.shape import SpecifyShape
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_constants, find_observations
@@ -86,7 +86,7 @@ def get_jaxified_graph(
     inputs: Optional[List[TensorVariable]] = None,
     outputs: Optional[List[TensorVariable]] = None,
 ) -> List[TensorVariable]:
-    """Compile an Aesara graph into an optimized JAX function"""
+    """Compile an PyTensor graph into an optimized JAX function"""
 
     graph = _replace_shared_variables(outputs)
 
@@ -94,8 +94,8 @@ def get_jaxified_graph(
     # We need to add a Supervisor to the fgraph to be able to run the
     # JAX sequential optimizer without warnings. We made sure there
     # are no mutable input variables, so we only need to check for
-    # "destroyers". This should be automatically handled by Aesara
-    # once https://github.com/aesara-devs/aesara/issues/637 is fixed.
+    # "destroyers". This should be automatically handled by PyTensor
+    # once https://github.com/pytensor-devs/pytensor/issues/637 is fixed.
     fgraph.attach_feature(
         Supervisor(
             input
@@ -412,7 +412,7 @@ def sample_blackjax_nuts(
     else:
         idata_kwargs = idata_kwargs.copy()
 
-    if idata_kwargs.pop("log_likelihood", bool(model.observed_RVs)):
+    if idata_kwargs.pop("log_likelihood", False):
         tic5 = datetime.now()
         print("Computing Log Likelihood...", file=sys.stdout)
         log_likelihood = _get_log_likelihood(
@@ -634,7 +634,7 @@ def sample_numpyro_nuts(
     else:
         idata_kwargs = idata_kwargs.copy()
 
-    if idata_kwargs.pop("log_likelihood", bool(model.observed_RVs)):
+    if idata_kwargs.pop("log_likelihood", False):
         tic5 = datetime.now()
         print("Computing Log Likelihood...", file=sys.stdout)
         log_likelihood = _get_log_likelihood(

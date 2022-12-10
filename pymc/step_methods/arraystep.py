@@ -18,8 +18,8 @@ from typing import Callable, Dict, List, Tuple, Union, cast
 
 import numpy as np
 
-from aesara.graph.basic import Variable
 from numpy.random import uniform
+from pytensor.graph.basic import Variable
 
 from pymc.blocking import DictToArrayBijection, PointType, RaveledVars, StatsType
 from pymc.model import modelcontext
@@ -132,7 +132,7 @@ class ArrayStep(BlockedStep):
     ----------
     vars: list
         List of value variables for sampler.
-    fs: list of logp Aesara functions
+    fs: list of logp PyTensor functions
     allvars: Boolean (default False)
     blocked: Boolean (default True)
     """
@@ -181,7 +181,7 @@ class ArrayStepShared(BlockedStep):
         Parameters
         ----------
         vars: list of sampling value variables
-        shared: dict of Aesara variable -> shared variable
+        shared: dict of PyTensor variable -> shared variable
         blocked: Boolean (default True)
         """
         self.vars = vars
@@ -223,7 +223,7 @@ class PopulationArrayStepShared(ArrayStepShared):
         Parameters
         ----------
         vars: list of sampling value variables
-        shared: dict of Aesara variable -> shared variable
+        shared: dict of PyTensor variable -> shared variable
         blocked: Boolean (default True)
         """
         self.population = None
@@ -255,12 +255,12 @@ class PopulationArrayStepShared(ArrayStepShared):
 
 class GradientSharedStep(ArrayStepShared):
     def __init__(
-        self, vars, model=None, blocked=True, dtype=None, logp_dlogp_func=None, **aesara_kwargs
+        self, vars, model=None, blocked=True, dtype=None, logp_dlogp_func=None, **pytensor_kwargs
     ):
         model = modelcontext(model)
 
         if logp_dlogp_func is None:
-            func = model.logp_dlogp_function(vars, dtype=dtype, **aesara_kwargs)
+            func = model.logp_dlogp_function(vars, dtype=dtype, **pytensor_kwargs)
         else:
             func = logp_dlogp_func
 

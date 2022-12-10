@@ -12,9 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from aesara import tensor as at
+from pytensor import tensor as at
 
-from pymc.aesaraf import floatX
+from pymc.pytensorf import floatX
 from pymc.variational.opvi import TestFunction
 
 __all__ = ["rbf"]

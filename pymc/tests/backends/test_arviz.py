@@ -3,14 +3,14 @@ import warnings
 
 from typing import Dict, Tuple
 
-import aesara.tensor as at
 import numpy as np
+import pytensor.tensor as at
 import pytest
 
-from aesara.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from arviz import InferenceData
 from arviz.tests.helpers import check_multiple_attrs
 from numpy import ma
+from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 
 import pymc as pm
 
@@ -63,7 +63,11 @@ class TestDataPyMC:
                 sigma=eight_schools_params["sigma"],
                 observed=eight_schools_params["y"],
             )
-            trace = pm.sample(draws, chains=chains, return_inferencedata=False)
+            trace = pm.sample(
+                draws,
+                chains=chains,
+                return_inferencedata=False,
+            )
 
         return self.Data(model, trace)
 
@@ -78,6 +82,7 @@ class TestDataPyMC:
             trace=data.obj,
             prior=prior,
             posterior_predictive=posterior_predictive,
+            log_likelihood=True,
             coords={"school": np.arange(eight_schools_params["J"])},
             dims={"theta": ["school"], "eta": ["school"]},
             model=data.model,
@@ -145,7 +150,6 @@ class TestDataPyMC:
         test_dict = {
             "posterior": ["mu", "tau", "eta", "theta"],
             "sample_stats": ["diverging", "lp"],
-            "log_likelihood": ["obs"],
             "predictions": ["obs"],
             "prior": ["mu", "tau", "eta", "theta"],
             "observed_data": ["obs"],
@@ -216,7 +220,6 @@ class TestDataPyMC:
         test_dict = {
             "posterior": ["mu", "tau", "eta", "theta"],
             "sample_stats": ["diverging", "lp", "~log_likelihood"],
-            "log_likelihood": ["obs"],
             "posterior_predictive": ["obs"],
             "observed_data": ["obs"],
         }
@@ -314,7 +317,9 @@ class TestDataPyMC:
             x = pm.Normal("x", 1, 1)
             with pytest.warns(ImputationWarning):
                 y = pm.Normal("y", x, 1, observed=data)
-            inference_data = pm.sample(100, chains=2, return_inferencedata=True)
+            inference_data = pm.sample(
+                100, chains=2, return_inferencedata=True, idata_kwargs=dict(log_likelihood=True)
+            )
 
         # make sure that data is really missing
         assert "y_missing" in model.named_vars
@@ -393,8 +398,10 @@ class TestDataPyMC:
     def test_single_observation(self):
         with pm.Model():
             p = pm.Uniform("p", 0, 1)
-            pm.Binomial("w", p=p, n=2, observed=1)
-            inference_data = pm.sample(500, chains=2, return_inferencedata=True)
+            pm.Binomial("w", p=p, n=2, observed=[1])
+            inference_data = pm.sample(
+                500, chains=2, return_inferencedata=True, idata_kwargs=dict(log_likelihood=True)
+            )
 
         assert inference_data
         assert inference_data.log_likelihood["w"].shape == (2, 500, 1)
@@ -417,10 +424,10 @@ class TestDataPyMC:
             obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
             trace = pm.sample(100, chains=2, tune=100, return_inferencedata=False)
             if use_context:
-                inference_data = to_inference_data(trace=trace)
+                inference_data = to_inference_data(trace=trace, log_likelihood=True)
 
         if not use_context:
-            inference_data = to_inference_data(trace=trace, model=model)
+            inference_data = to_inference_data(trace=trace, model=model, log_likelihood=True)
         test_dict = {"posterior": ["beta"], "observed_data": ["obs"], "constant_data": ["x"]}
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
@@ -542,7 +549,13 @@ class TestDataPyMC:
             pm.Multinomial("y", 20, p, dims=("experiment", "direction"), observed=data)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                idata = pm.sample(draws=50, chains=2, tune=100, return_inferencedata=True)
+                idata = pm.sample(
+                    draws=50,
+                    chains=2,
+                    tune=100,
+                    return_inferencedata=True,
+                    idata_kwargs=dict(log_likelihood=True),
+                )
         test_dict = {
             "posterior": ["p"],
             "sample_stats": ["lp"],

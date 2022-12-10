@@ -13,15 +13,15 @@
 #   limitations under the License.
 import warnings
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import pytest
 import scipy.stats.distributions as sp
 
-from aesara.graph.basic import ancestors
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.subtensor import (
+from pytensor.graph.basic import ancestors
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
     AdvancedSubtensor,
@@ -32,8 +32,7 @@ from aesara.tensor.subtensor import (
 
 import pymc as pm
 
-from pymc import DensityDist
-from pymc.aesaraf import floatX, walk_model
+from pymc.distributions import CustomDist
 from pymc.distributions.continuous import (
     HalfFlat,
     LogNormal,
@@ -51,6 +50,7 @@ from pymc.distributions.logprob import (
 )
 from pymc.logprob.abstract import get_measurable_outputs
 from pymc.model import Model, Potential
+from pymc.pytensorf import floatX, walk_model
 from pymc.tests.helpers import assert_no_rvs, select_by_precision
 
 
@@ -150,9 +150,9 @@ def test_joint_logp_incsubtensor(indices, size):
     data = mu[indices]
     sigma = 0.001
     rng = np.random.RandomState(232)
-    a_val = rng.normal(mu, sigma, size=size).astype(aesara.config.floatX)
+    a_val = rng.normal(mu, sigma, size=size).astype(pytensor.config.floatX)
 
-    rng = aesara.shared(rng, borrow=False)
+    rng = pytensor.shared(rng, borrow=False)
     a = Normal.dist(mu, sigma, size=size, rng=rng)
     a_value_var = a.type()
     a.name = "a"
@@ -191,7 +191,7 @@ def test_joint_logp_subtensor():
     mu_base = floatX(np.power(10, np.arange(np.prod(size)))).reshape(size)
     mu = np.stack([mu_base, -mu_base])
     sigma = 0.001
-    rng = aesara.shared(np.random.RandomState(232), borrow=True)
+    rng = pytensor.shared(np.random.RandomState(232), borrow=True)
 
     A_rv = Normal.dist(mu, sigma, rng=rng)
     A_rv.name = "A"
@@ -219,7 +219,7 @@ def test_joint_logp_subtensor():
     )
     A_idx_logp = at.add(*A_idx_logps)
 
-    logp_vals_fn = aesara.function([A_idx_value_var, I_value_var], A_idx_logp)
+    logp_vals_fn = pytensor.function([A_idx_value_var, I_value_var], A_idx_logp)
 
     # The compiled graph should not contain any `RandomVariables`
     assert_no_rvs(logp_vals_fn.maker.fgraph.outputs[0])
@@ -299,17 +299,17 @@ def test_model_unchanged_logprob_access():
         a = Normal("a")
         c = Uniform("c", lower=a - 1, upper=1)
 
-    original_inputs = set(aesara.graph.graph_inputs([c]))
+    original_inputs = set(pytensor.graph.graph_inputs([c]))
     # Extract model.logp
     model.logp()
-    new_inputs = set(aesara.graph.graph_inputs([c]))
+    new_inputs = set(pytensor.graph.graph_inputs([c]))
     assert original_inputs == new_inputs
 
 
 def test_unexpected_rvs():
     with Model() as model:
         x = Normal("x")
-        y = DensityDist("y", logp=lambda *args: x)
+        y = CustomDist("y", logp=lambda *args: x)
 
     with pytest.raises(ValueError, match="^Random variables detected in the logp graph"):
         model.logp()
@@ -339,7 +339,7 @@ def test_ignore_logprob_model():
 
     with Model() as m:
         x = Normal.dist()
-        y = DensityDist("y", x, logp=logp)
+        y = CustomDist("y", x, logp=logp)
     with pytest.warns(
         UserWarning,
         match="Found a random variable that was neither among the observations "
@@ -355,7 +355,7 @@ def test_ignore_logprob_model():
     # The above warning should go away with ignore_logprob.
     with Model() as m:
         x = ignore_logprob(Normal.dist())
-        y = DensityDist("y", x, logp=logp)
+        y = CustomDist("y", x, logp=logp)
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         assert _joint_logp(
@@ -403,5 +403,5 @@ def test_logprob_join_constant_shapes():
     # This is what Aeppl does not do!
     assert_no_rvs(xy_logp)
 
-    f = aesara.function([xy_vv], xy_logp)
+    f = pytensor.function([xy_vv], xy_logp)
     np.testing.assert_array_equal(f(np.zeros(8)), sp.norm.logpdf(np.zeros(8)))

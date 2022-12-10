@@ -13,9 +13,9 @@
 #   limitations under the License.
 import warnings
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import pytest
 
 from scipy.stats import norm
@@ -323,7 +323,7 @@ class TestDiffEqModel:
             forward = ode_model(theta=[alpha], y0=[y0])
             y = pm.LogNormal("y", mu=pm.math.log(forward), sigma=sigma, observed=yobs)
 
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                     warnings.filterwarnings(
@@ -359,7 +359,7 @@ class TestDiffEqModel:
             forward = ode_model(theta=[alpha, beta], y0=[y0])
             y = pm.LogNormal("y", mu=pm.math.log(forward), sigma=sigma, observed=yobs)
 
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                     warnings.filterwarnings(
@@ -406,7 +406,7 @@ class TestDiffEqModel:
             forward = ode_model(theta=[R], y0=[0.99, 0.01])
             y = pm.LogNormal("y", mu=pm.math.log(forward), sigma=sigma, observed=yobs)
 
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                     warnings.filterwarnings(
@@ -452,7 +452,7 @@ class TestDiffEqModel:
             forward = ode_model(theta=[beta, gamma], y0=[0.99, 0.01])
             y = pm.LogNormal("y", mu=pm.math.log(forward), sigma=sigma, observed=yobs)
 
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                     warnings.filterwarnings(

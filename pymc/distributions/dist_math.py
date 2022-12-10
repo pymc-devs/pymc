@@ -21,23 +21,23 @@ import warnings
 
 from typing import Iterable
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import scipy.linalg
 import scipy.stats
 
-from aesara.compile.builders import OpFromGraph
-from aesara.graph.basic import Apply, Variable
-from aesara.graph.op import Op
-from aesara.scalar import UnaryScalarOp, upgrade_to_float_no_complex
-from aesara.tensor import gammaln
-from aesara.tensor.elemwise import Elemwise
-from aesara.tensor.slinalg import Cholesky, SolveTriangular
+from pytensor.compile.builders import OpFromGraph
+from pytensor.graph.basic import Apply, Variable
+from pytensor.graph.op import Op
+from pytensor.scalar import UnaryScalarOp, upgrade_to_float_no_complex
+from pytensor.tensor import gammaln
+from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.slinalg import Cholesky, SolveTriangular
 
-from pymc.aesaraf import floatX
 from pymc.distributions.shape_utils import to_tuple
 from pymc.logprob.utils import CheckParameterValue
+from pymc.pytensorf import floatX
 
 solve_lower = SolveTriangular(lower=True)
 solve_upper = SolveTriangular(lower=False)
@@ -156,14 +156,14 @@ def log_diff_normal_cdf(mu, sigma, x, y):
 
 def sigma2rho(sigma):
     """
-    `sigma -> rho` Aesara converter
+    `sigma -> rho` PyTensor converter
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
     return at.log(at.exp(at.abs(sigma)) - 1.0)
 
 
 def rho2sigma(rho):
     """
-    `rho -> sigma` Aesara converter
+    `rho -> sigma` PyTensor converter
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
     return at.softplus(rho)
 
@@ -282,7 +282,7 @@ def MvNormalLogp():
 
 class SplineWrapper(Op):
     """
-    Creates an Aesara operation from scipy.interpolate.UnivariateSpline
+    Creates an PyTensor operation from scipy.interpolate.UnivariateSpline
     """
 
     __props__ = ("spline",)
@@ -345,7 +345,7 @@ class I0e(UnaryScalarOp):
     def grad(self, inp, grads):
         (x,) = inp
         (gz,) = grads
-        return (gz * (i1e_scalar(x) - aesara.scalar.sgn(x) * i0e_scalar(x)),)
+        return (gz * (i1e_scalar(x) - pytensor.scalar.sgn(x) * i0e_scalar(x)),)
 
 
 i0e_scalar = I0e(upgrade_to_float_no_complex, name="i0e")
@@ -476,7 +476,7 @@ def log_i0(x):
 
 def incomplete_beta(a, b, value):
     warnings.warn(
-        "incomplete_beta has been deprecated. Use aesara.tensor.betainc instead.",
+        "incomplete_beta has been deprecated. Use pytensor.tensor.betainc instead.",
         FutureWarning,
         stacklevel=2,
     )

@@ -12,10 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara
-import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
+import pytensor
+import pytensor.tensor as at
 import pytest
 
 import pymc as pm
@@ -204,7 +204,7 @@ class TestCovExponentiation:
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
-    def test_covexp_aesara(self):
+    def test_covexp_pytensor(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
             a = at.alloc(2.0, 1, 1)
@@ -218,7 +218,7 @@ class TestCovExponentiation:
     def test_covexp_shared(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
-            a = aesara.shared(2.0)
+            a = pytensor.shared(2.0)
             cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
         K = cov(X).eval()
         npt.assert_allclose(K[0, 1], 0.53940**2, atol=1e-3)

@@ -34,16 +34,16 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import pytest
 import scipy.stats.distributions as sp
 
-from aesara.graph.basic import Variable, equal_computations
-from aesara.tensor.random.basic import CategoricalRV
-from aesara.tensor.shape import shape_tuple
-from aesara.tensor.subtensor import as_index_constant
+from pytensor.graph.basic import Variable, equal_computations
+from pytensor.tensor.random.basic import CategoricalRV
+from pytensor.tensor.shape import shape_tuple
+from pytensor.tensor.subtensor import as_index_constant
 
 from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
 from pymc.logprob.mixture import MixtureRV, expand_indices
@@ -102,7 +102,7 @@ def test_mixture_basics():
         joint_logprob({M_rv: m_vv, I_rv: i_vv})
 
 
-@aesara.config.change_flags(compute_test_value="warn")
+@pytensor.config.change_flags(compute_test_value="warn")
 @pytest.mark.parametrize(
     "op_constructor",
     [
@@ -141,12 +141,12 @@ def test_compute_test_value(op_constructor):
 @pytest.mark.parametrize(
     "p_val, size",
     [
-        (np.array(0.0, dtype=aesara.config.floatX), ()),
-        (np.array(1.0, dtype=aesara.config.floatX), ()),
-        (np.array(0.0, dtype=aesara.config.floatX), (2,)),
-        (np.array(1.0, dtype=aesara.config.floatX), (2, 1)),
-        (np.array(1.0, dtype=aesara.config.floatX), (2, 3)),
-        (np.array([0.1, 0.9], dtype=aesara.config.floatX), (2, 3)),
+        (np.array(0.0, dtype=pytensor.config.floatX), ()),
+        (np.array(1.0, dtype=pytensor.config.floatX), ()),
+        (np.array(0.0, dtype=pytensor.config.floatX), (2,)),
+        (np.array(1.0, dtype=pytensor.config.floatX), (2, 1)),
+        (np.array(1.0, dtype=pytensor.config.floatX), (2, 3)),
+        (np.array([0.1, 0.9], dtype=pytensor.config.floatX), (2, 3)),
     ],
 )
 def test_hetero_mixture_binomial(p_val, size):
@@ -162,7 +162,7 @@ def test_hetero_mixture_binomial(p_val, size):
         p_val_1 = p_val
     else:
         p_at = at.vector("p")
-        p_at.tag.test_value = np.array(p_val, dtype=aesara.config.floatX)
+        p_at.tag.test_value = np.array(p_val, dtype=pytensor.config.floatX)
         I_rv = srng.categorical(p_at, size=size, name="I")
         p_val_1 = p_val[1]
 
@@ -177,11 +177,11 @@ def test_hetero_mixture_binomial(p_val, size):
 
     M_logp = joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
 
-    M_logp_fn = aesara.function([p_at, m_vv, i_vv], M_logp)
+    M_logp_fn = pytensor.function([p_at, m_vv, i_vv], M_logp)
 
     assert_no_rvs(M_logp_fn.maker.fgraph.outputs[0])
 
-    decimals = 6 if aesara.config.floatX == "float64" else 4
+    decimals = 6 if pytensor.config.floatX == "float64" else 4
 
     test_val_rng = np.random.RandomState(3238)
 
@@ -209,18 +209,18 @@ def test_hetero_mixture_binomial(p_val, size):
         # Scalar mixture components, scalar index
         (
             (
-                np.array(0, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(0.5, dtype=aesara.config.floatX),
-                np.array(0.5, dtype=aesara.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(100, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
-            np.array([0.1, 0.5, 0.4], dtype=aesara.config.floatX),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
             (),
             (),
             (),
@@ -229,18 +229,18 @@ def test_hetero_mixture_binomial(p_val, size):
         # Scalar mixture components, vector index
         (
             (
-                np.array(0, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(0.5, dtype=aesara.config.floatX),
-                np.array(0.5, dtype=aesara.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(100, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
-            np.array([0.1, 0.5, 0.4], dtype=aesara.config.floatX),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
             (),
             (6,),
             (),
@@ -248,18 +248,18 @@ def test_hetero_mixture_binomial(p_val, size):
         ),
         (
             (
-                np.array([0, -100], dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array([0, -100], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
             (
-                np.array([0.5, 1], dtype=aesara.config.floatX),
-                np.array([0.5, 1], dtype=aesara.config.floatX),
+                np.array([0.5, 1], dtype=pytensor.config.floatX),
+                np.array([0.5, 1], dtype=pytensor.config.floatX),
             ),
             (
-                np.array([100, 1000], dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array([100, 1000], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
-            np.array([[0.1, 0.5, 0.4], [0.4, 0.1, 0.5]], dtype=aesara.config.floatX),
+            np.array([[0.1, 0.5, 0.4], [0.4, 0.1, 0.5]], dtype=pytensor.config.floatX),
             (2,),
             (2,),
             (),
@@ -267,18 +267,18 @@ def test_hetero_mixture_binomial(p_val, size):
         ),
         (
             (
-                np.array([0, -100], dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array([0, -100], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
             (
-                np.array([0.5, 1], dtype=aesara.config.floatX),
-                np.array([0.5, 1], dtype=aesara.config.floatX),
+                np.array([0.5, 1], dtype=pytensor.config.floatX),
+                np.array([0.5, 1], dtype=pytensor.config.floatX),
             ),
             (
-                np.array([100, 1000], dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array([100, 1000], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
-            np.array([[0.1, 0.5, 0.4], [0.4, 0.1, 0.5]], dtype=aesara.config.floatX),
+            np.array([[0.1, 0.5, 0.4], [0.4, 0.1, 0.5]], dtype=pytensor.config.floatX),
             None,
             None,
             (),
@@ -286,18 +286,18 @@ def test_hetero_mixture_binomial(p_val, size):
         ),
         (
             (
-                np.array(0, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(0.5, dtype=aesara.config.floatX),
-                np.array(0.5, dtype=aesara.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(100, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
-            np.array([0.1, 0.5, 0.4], dtype=aesara.config.floatX),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
             (),
             (),
             (),
@@ -305,18 +305,18 @@ def test_hetero_mixture_binomial(p_val, size):
         ),
         (
             (
-                np.array(0, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(0.5, dtype=aesara.config.floatX),
-                np.array(0.5, dtype=aesara.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(100, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
-            np.array([0.1, 0.5, 0.4], dtype=aesara.config.floatX),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
             (2,),
             (2,),
             (),
@@ -324,18 +324,18 @@ def test_hetero_mixture_binomial(p_val, size):
         ),
         (
             (
-                np.array(0, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(0.5, dtype=aesara.config.floatX),
-                np.array(0.5, dtype=aesara.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(100, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
-            np.array([0.1, 0.5, 0.4], dtype=aesara.config.floatX),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
             (2, 3),
             (2, 3),
             (),
@@ -343,18 +343,18 @@ def test_hetero_mixture_binomial(p_val, size):
         ),
         (
             (
-                np.array(0, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(0.5, dtype=aesara.config.floatX),
-                np.array(0.5, dtype=aesara.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(100, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
-            np.array([0.1, 0.5, 0.4], dtype=aesara.config.floatX),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
             (2, 3),
             (),
             (),
@@ -362,18 +362,18 @@ def test_hetero_mixture_binomial(p_val, size):
         ),
         (
             (
-                np.array(0, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(0.5, dtype=aesara.config.floatX),
-                np.array(0.5, dtype=aesara.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(100, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
-            np.array([0.1, 0.5, 0.4], dtype=aesara.config.floatX),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
             (3,),
             (3,),
             (slice(None),),
@@ -381,18 +381,18 @@ def test_hetero_mixture_binomial(p_val, size):
         ),
         (
             (
-                np.array(0, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(0.5, dtype=aesara.config.floatX),
-                np.array(0.5, dtype=aesara.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(100, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
-            np.array([0.1, 0.5, 0.4], dtype=aesara.config.floatX),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
             (5,),
             (5,),
             (np.arange(5),),
@@ -400,18 +400,18 @@ def test_hetero_mixture_binomial(p_val, size):
         ),
         (
             (
-                np.array(0, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(0.5, dtype=aesara.config.floatX),
-                np.array(0.5, dtype=aesara.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
             ),
             (
-                np.array(100, dtype=aesara.config.floatX),
-                np.array(1, dtype=aesara.config.floatX),
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
             ),
-            np.array([0.1, 0.5, 0.4], dtype=aesara.config.floatX),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
             (5,),
             (5,),
             (np.arange(5), None),
@@ -430,7 +430,7 @@ def test_hetero_mixture_categorical(
 
     p_at = at.as_tensor(p_val).type()
     p_at.name = "p"
-    p_at.tag.test_value = np.array(p_val, dtype=aesara.config.floatX)
+    p_at.tag.test_value = np.array(p_val, dtype=pytensor.config.floatX)
     I_rv = srng.categorical(p_at, size=idx_size, name="I")
 
     i_vv = I_rv.clone()
@@ -448,13 +448,13 @@ def test_hetero_mixture_categorical(
 
     logp_parts = factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
 
-    I_logp_fn = aesara.function([p_at, i_vv], logp_parts[i_vv])
-    M_logp_fn = aesara.function([m_vv, i_vv], logp_parts[m_vv])
+    I_logp_fn = pytensor.function([p_at, i_vv], logp_parts[i_vv])
+    M_logp_fn = pytensor.function([m_vv, i_vv], logp_parts[m_vv])
 
     assert_no_rvs(I_logp_fn.maker.fgraph.outputs[0])
     assert_no_rvs(M_logp_fn.maker.fgraph.outputs[0])
 
-    decimals = 6 if aesara.config.floatX == "float64" else 4
+    decimals = 6 if pytensor.config.floatX == "float64" else 4
 
     test_val_rng = np.random.RandomState(3238)
 
@@ -765,7 +765,7 @@ def test_switch_mixture():
     assert isinstance(fgraph.outputs[0].owner.op, MixtureRV)
     assert not hasattr(
         fgraph.outputs[0].tag, "test_value"
-    )  # aesara.config.compute_test_value == "off"
+    )  # pytensor.config.compute_test_value == "off"
     assert fgraph.outputs[0].name is None
 
     Z1_rv.name = "Z1"

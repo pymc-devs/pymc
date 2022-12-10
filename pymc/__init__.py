@@ -26,10 +26,10 @@ if not logging.root.handlers:
 
 
 def __set_compiler_flags():
-    # Workarounds for Aesara compiler problems on various platforms
-    import aesara
+    # Workarounds for PyTensor compiler problems on various platforms
+    import pytensor
 
-    current = aesara.config.gcc__cxxflags
+    current = pytensor.config.gcc__cxxflags
     augmented = f"{current} -Wno-c++11-narrowing"
 
     # Work around compiler bug in GCC < 8.4 related to structured exception
@@ -41,13 +41,12 @@ def __set_compiler_flags():
     # Now disable the generation of stack unwinding tables.
     augmented = f"{augmented} -fno-unwind-tables -fno-asynchronous-unwind-tables"
 
-    aesara.config.gcc__cxxflags = augmented
+    pytensor.config.gcc__cxxflags = augmented
 
 
 __set_compiler_flags()
 
 from pymc import _version, gp, ode, sampling
-from pymc.aesaraf import *
 from pymc.backends import *
 from pymc.blocking import *
 from pymc.data import *
@@ -68,6 +67,7 @@ from pymc.model import *
 from pymc.model_graph import model_to_graphviz, model_to_networkx
 from pymc.plots import *
 from pymc.printing import *
+from pymc.pytensorf import *
 from pymc.sampling import *
 from pymc.smc import *
 from pymc.stats import *

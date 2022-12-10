@@ -14,10 +14,10 @@
 
 import warnings
 
-import aesara
 import arviz as az
 import numpy as np
 import numpy.testing as npt
+import pytensor
 import pytest
 
 import pymc as pm
@@ -52,7 +52,7 @@ class TestMetropolisUniform(sf.MetropolisFixture, sf.UniformFixture):
 
 class TestMetropolis:
     def test_proposal_choice(self):
-        with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+        with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
             _, model, _ = mv_simple()
             with model:
                 initial_point = model.initial_point()
@@ -126,7 +126,7 @@ class TestMetropolis:
     def test_multinomial_no_elemwise_update(self):
         with pm.Model() as m:
             batched_dist = pm.Multinomial("batched_dist", n=5, p=np.ones(4) / 4, shape=(10, 4))
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 step = pm.Metropolis([batched_dist])
                 assert not step.elemwise_update
 
@@ -343,7 +343,7 @@ class TestRVsAssignmentMetropolis(RVsAssignmentStepsTester):
             d1 = pm.Bernoulli("d1", p=0.5)
             d2 = pm.Bernoulli("d2", p=0.5)
 
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 assert [m.rvs_to_values[d1]] == step([d1], **step_kwargs).vars
             assert {m.rvs_to_values[d1], m.rvs_to_values[d2]} == set(
                 step([d1, d2], **step_kwargs).vars

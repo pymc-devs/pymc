@@ -4,25 +4,25 @@ import itertools as it
 from contextlib import ExitStack as does_not_raise
 from typing import Callable, List, Optional
 
-import aesara
-import aesara.tensor as at
 import numpy as np
 import numpy.random as nr
 import numpy.testing as npt
+import pytensor
+import pytensor.tensor as at
 import pytest
 import scipy.special as sp
 import scipy.stats as st
 
-from aesara.compile.mode import Mode
+from pytensor.compile.mode import Mode
 
 import pymc as pm
 
-from pymc.aesaraf import compile_pymc, floatX, intX
 from pymc.distributions import logcdf, logp
 from pymc.distributions.logprob import _joint_logp
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.initial_point import make_initial_point_fn
 from pymc.logprob.utils import ParameterValueError
+from pymc.pytensorf import compile_pymc, floatX, intX
 from pymc.tests.helpers import SeededTest, select_by_precision
 
 
@@ -48,7 +48,7 @@ def product(domains, n_samples=-1):
 
 
 class Domain:
-    def __init__(self, vals, dtype=aesara.config.floatX, edges=None, shape=None):
+    def __init__(self, vals, dtype=pytensor.config.floatX, edges=None, shape=None):
         # Infinity values must be kept as floats
         vals = [np.array(v, dtype=dtype) if np.all(np.isfinite(v)) else floatX(v) for v in vals]
 
@@ -215,7 +215,7 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
     with pm.Model() as m:
         param_vars = {}
         for v, dom in vardomains.items():
-            v_at = aesara.shared(np.asarray(dom.vals[0]))
+            v_at = pytensor.shared(np.asarray(dom.vals[0]))
             v_at.name = v
             param_vars[v] = v_at
         param_vars.update(extra_args)
@@ -351,9 +351,9 @@ def check_logp(
                 # We need to remove `Assert`s introduced by checks like
                 # `assert_negative_support` and disable test values;
                 # otherwise, we won't be able to create the `RandomVariable`
-                with aesara.config.change_flags(compute_test_value="off"):
+                with pytensor.config.change_flags(compute_test_value="off"):
                     invalid_dist = pymc_dist.dist(**test_params, **extra_args)
-                with aesara.config.change_flags(mode=Mode("py")):
+                with pytensor.config.change_flags(mode=Mode("py")):
                     with pytest.raises(ParameterValueError):
                         logp(invalid_dist, valid_value).eval()
                         pytest.fail(f"test_params={test_params}, valid_value={valid_value}")
@@ -370,7 +370,7 @@ def check_logp(
     for invalid_value in invalid_values:
         if invalid_value is None:
             continue
-        with aesara.config.change_flags(mode=Mode("py")):
+        with pytensor.config.change_flags(mode=Mode("py")):
             npt.assert_equal(
                 logp(valid_dist, invalid_value).eval(),
                 -np.inf,
@@ -488,16 +488,16 @@ def check_logcdf(
                     # `assert_negative_support` and disable test values;
                     # otherwise, we won't be able to create the
                     # `RandomVariable`
-                    with aesara.config.change_flags(compute_test_value="off"):
+                    with pytensor.config.change_flags(compute_test_value="off"):
                         invalid_dist = pymc_dist.dist(**test_params)
-                    with aesara.config.change_flags(mode=Mode("py")):
+                    with pytensor.config.change_flags(mode=Mode("py")):
                         with pytest.raises(ParameterValueError):
                             logcdf(invalid_dist, valid_value).eval()
 
     # Test that values below domain edge evaluate to -np.inf
     if np.isfinite(domain.lower):
         below_domain = domain.lower - 1
-        with aesara.config.change_flags(mode=Mode("py")):
+        with pytensor.config.change_flags(mode=Mode("py")):
             npt.assert_equal(
                 logcdf(valid_dist, below_domain).eval(),
                 -np.inf,
@@ -507,7 +507,7 @@ def check_logcdf(
     # Test that values above domain edge evaluate to 0
     if np.isfinite(domain.upper):
         above_domain = domain.upper + 1
-        with aesara.config.change_flags(mode=Mode("py")):
+        with pytensor.config.change_flags(mode=Mode("py")):
             npt.assert_equal(
                 logcdf(valid_dist, above_domain).eval(),
                 0,
@@ -516,7 +516,7 @@ def check_logcdf(
 
     # Test that method works with multiple values or raises informative TypeError
     valid_dist = pymc_dist.dist(**valid_params, size=2)
-    with aesara.config.change_flags(mode=Mode("py")):
+    with pytensor.config.change_flags(mode=Mode("py")):
         try:
             logcdf(valid_dist, np.array([valid_value, valid_value])).eval()
         except TypeError as err:
@@ -555,7 +555,7 @@ def check_selfconsistency_discrete_logcdf(
         for param_name, param_value in params.items():
             param_vars[param_name].set_value(param_value)
 
-        with aesara.config.change_flags(mode=Mode("py")):
+        with pytensor.config.change_flags(mode=Mode("py")):
             npt.assert_almost_equal(
                 dist_logcdf({"value": value}),
                 sp.logsumexp([dist_logp({"value": value}) for value in values]),
@@ -783,7 +783,7 @@ class BaseTestDistributionRandom(SeededTest):
     def _instantiate_pymc_rv(self, dist_params=None):
         params = dist_params if dist_params else self.pymc_dist_params
         self.pymc_rv = self.pymc_dist.dist(
-            **params, size=self.size, rng=aesara.shared(self.get_random_state(reset=True))
+            **params, size=self.size, rng=pytensor.shared(self.get_random_state(reset=True))
         )
 
     def check_pymc_draws_match_reference(self):
@@ -794,14 +794,14 @@ class BaseTestDistributionRandom(SeededTest):
         )
 
     def check_pymc_params_match_rv_op(self):
-        aesara_dist_inputs = self.pymc_rv.get_parents()[0].inputs[3:]
-        assert len(self.expected_rv_op_params) == len(aesara_dist_inputs)
+        pytensor_dist_inputs = self.pymc_rv.get_parents()[0].inputs[3:]
+        assert len(self.expected_rv_op_params) == len(pytensor_dist_inputs)
         for (expected_name, expected_value), actual_variable in zip(
-            self.expected_rv_op_params.items(), aesara_dist_inputs
+            self.expected_rv_op_params.items(), pytensor_dist_inputs
         ):
 
             # Add additional line to evaluate symbolic inputs to distributions
-            if isinstance(expected_value, aesara.tensor.Variable):
+            if isinstance(expected_value, pytensor.tensor.Variable):
                 expected_value = expected_value.eval()
 
             npt.assert_almost_equal(expected_value, actual_variable.eval(), decimal=self.decimal)

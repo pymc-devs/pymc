@@ -11,11 +11,11 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import aesara.tensor as at
 import numpy as np
+import pytensor.tensor as at
 
-from aesara.tensor import TensorVariable
-from aesara.tensor.random.op import RandomVariable
+from pytensor.tensor import TensorVariable
+from pytensor.tensor.random.op import RandomVariable
 
 from pymc.distributions.distribution import (
     Distribution,

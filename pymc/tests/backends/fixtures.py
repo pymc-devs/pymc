@@ -16,9 +16,9 @@ import collections
 import os
 import shutil
 
-import aesara
 import numpy as np
 import numpy.testing as npt
+import pytensor
 import pytest
 
 from pymc.backends import base
@@ -506,7 +506,7 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
         assert self.mtrace0.nchains == self.mtrace1.nchains
         assert len(self.mtrace0) == len(self.mtrace1)
 
-    @pytest.mark.xfail(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.xfail(condition=(pytensor.config.floatX == "float32"), reason="Fails on float32")
     def test_dtype(self):
         for varname in self.test_point.keys():
             assert (

@@ -14,10 +14,10 @@
 
 import warnings
 
-import aesara.tensor as at
 import numpy as np
+import pytensor.tensor as at
 
-from aesara.tensor.nlinalg import eigh
+from pytensor.tensor.nlinalg import eigh
 
 import pymc as pm
 

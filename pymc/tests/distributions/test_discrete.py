@@ -16,22 +16,22 @@ import functools as ft
 import sys
 import warnings
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import pytest
 import scipy.special as sp
 import scipy.stats as st
 
-from aesara.compile.mode import Mode
-from aesara.tensor import TensorVariable
+from pytensor.compile.mode import Mode
+from pytensor.tensor import TensorVariable
 
 import pymc as pm
 
-from pymc.aesaraf import floatX
 from pymc.distributions import logcdf, logp
 from pymc.distributions.discrete import Geometric, _OrderedLogistic, _OrderedProbit
 from pymc.logprob.utils import ParameterValueError
+from pymc.pytensorf import floatX
 from pymc.tests.distributions.util import (
     BaseTestDistributionRandom,
     Bool,
@@ -56,7 +56,7 @@ from pymc.tests.distributions.util import (
     seeded_numpy_distribution_builder,
     seeded_scipy_distribution_builder,
 )
-from pymc.tests.logprob.utils import create_aesara_params, scipy_logprob_tester
+from pymc.tests.logprob.utils import create_pytensor_params, scipy_logprob_tester
 from pymc.vartypes import discrete_types
 
 
@@ -118,7 +118,7 @@ class TestMatchesScipy:
         )
         # Custom logp / logcdf check for invalid parameters
         invalid_dist = pm.DiscreteUniform.dist(lower=1, upper=0)
-        with aesara.config.change_flags(mode=Mode("py")):
+        with pytensor.config.change_flags(mode=Mode("py")):
             with pytest.raises(ParameterValueError):
                 logp(invalid_dist, 0.5).eval()
             with pytest.raises(ParameterValueError):
@@ -180,7 +180,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.xfail(
-        condition=(aesara.config.floatX == "float32"),
+        condition=(pytensor.config.floatX == "float32"),
         reason="SciPy log CDF stopped working after un-pinning NumPy version.",
     )
     def test_negative_binomial(self):
@@ -479,14 +479,14 @@ class TestMatchesScipy:
             lambda value, p: categorical_logpdf(value, p),
         )
 
-    @aesara.config.change_flags(compute_test_value="raise")
+    @pytensor.config.change_flags(compute_test_value="raise")
     def test_categorical_bounds(self):
         with pm.Model():
             x = pm.Categorical("x", p=np.array([0.2, 0.3, 0.5]))
             assert np.isinf(logp(x, -1).eval())
             assert np.isinf(logp(x, 3).eval())
 
-    @aesara.config.change_flags(compute_test_value="raise")
+    @pytensor.config.change_flags(compute_test_value="raise")
     @pytest.mark.parametrize(
         "p",
         [
@@ -849,7 +849,7 @@ class TestMoments:
                 np.arange(1, 5),
                 np.arange(2, 6),
                 None,
-                np.array([0, 1, 1, 2] if aesara.config.floatX == "float64" else [0, 0, 1, 1]),
+                np.array([0, 1, 1, 2] if pytensor.config.floatX == "float64" else [0, 0, 1, 1]),
             ),
             (
                 np.linspace(0.2, 0.6, 3),
@@ -1074,10 +1074,10 @@ class TestDiracDelta(BaseTestDistributionRandom):
 
     @pytest.mark.parametrize("floatX", ["float32", "float64"])
     @pytest.mark.xfail(
-        sys.platform == "win32", reason="https://github.com/aesara-devs/aesara/issues/871"
+        sys.platform == "win32", reason="https://github.com/pytensor-devs/pytensor/issues/871"
     )
     def test_dtype(self, floatX):
-        with aesara.config.change_flags(floatX=floatX):
+        with pytensor.config.change_flags(floatX=floatX):
             assert pm.DiracDelta.dist(2**4).dtype == "int8"
             assert pm.DiracDelta.dist(2**16).dtype == "int32"
             assert pm.DiracDelta.dist(2**32).dtype == "int64"
@@ -1165,7 +1165,7 @@ class TestICDF:
     )
     def test_geometric_icdf(self, dist_params, obs, size):
 
-        dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+        dist_params_at, obs_at, size_at = create_pytensor_params(dist_params, obs, size)
         dist_params = dict(zip(dist_params_at, dist_params))
 
         x = Geometric.dist(*dist_params_at, size=size_at)

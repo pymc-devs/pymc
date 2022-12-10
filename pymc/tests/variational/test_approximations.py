@@ -12,8 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara
 import numpy as np
+import pytensor
 import pytest
 
 import pymc as pm
@@ -46,8 +46,8 @@ def test_elbo():
     sigma = 1.0
     y_obs = np.array([1.6, 1.4])
 
-    post_mu = np.array([1.88], dtype=aesara.config.floatX)
-    post_sigma = np.array([1], dtype=aesara.config.floatX)
+    post_mu = np.array([1.88], dtype=pytensor.config.floatX)
+    post_sigma = np.array([1], dtype=pytensor.config.floatX)
     # Create a model for test
     with pm.Model() as model:
         mu = pm.Normal("mu", mu=mu0, sigma=sigma)
@@ -55,13 +55,13 @@ def test_elbo():
 
     # Create variational gradient tensor
     mean_field = MeanField(model=model)
-    with aesara.config.change_flags(compute_test_value="off"):
+    with pytensor.config.change_flags(compute_test_value="off"):
         elbo = -pm.operators.KL(mean_field)()(10000)
 
     mean_field.shared_params["mu"].set_value(post_mu)
     mean_field.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
 
-    f = aesara.function([], elbo)
+    f = pytensor.function([], elbo)
     elbo_mc = f()
 
     # Exact value
@@ -84,17 +84,17 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
     y_obs = np.array([1.6, 1.4])
     beta = len(y_obs) / float(aux_total_size)
 
-    # TODO: aesara_config
-    # with pm.Model(aesara_config=dict(floatX='float64')):
+    # TODO: pytensor_config
+    # with pm.Model(pytensor_config=dict(floatX='float64')):
     # did not not work as expected
     # there were some numeric problems, so float64 is forced
-    with aesara.config.change_flags(floatX="float64", warn_float64="ignore"):
+    with pytensor.config.change_flags(floatX="float64", warn_float64="ignore"):
 
-        assert aesara.config.floatX == "float64"
-        assert aesara.config.warn_float64 == "ignore"
+        assert pytensor.config.floatX == "float64"
+        assert pytensor.config.warn_float64 == "ignore"
 
-        post_mu = np.array([1.88], dtype=aesara.config.floatX)
-        post_sigma = np.array([1], dtype=aesara.config.floatX)
+        post_mu = np.array([1.88], dtype=pytensor.config.floatX)
+        post_sigma = np.array([1], dtype=pytensor.config.floatX)
 
         with pm.Model():
             mu = pm.Normal("mu", mu=mu0, sigma=sigma)
@@ -105,7 +105,7 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
             mean_field_1.shared_params["mu"].set_value(post_mu)
             mean_field_1.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
 
-            with aesara.config.change_flags(compute_test_value="off"):
+            with pytensor.config.change_flags(compute_test_value="off"):
                 elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
 
         with pm.Model():
@@ -119,7 +119,7 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
             mean_field_2.shared_params["mu"].set_value(post_mu)
             mean_field_2.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
 
-        with aesara.config.change_flags(compute_test_value="off"):
+        with pytensor.config.change_flags(compute_test_value="off"):
             elbo_via_total_size_unscaled = -pm.operators.KL(mean_field_2)()(10000)
 
         np.testing.assert_allclose(
@@ -137,10 +137,10 @@ def test_elbo_beta_kl(aux_total_size):
     y_obs = np.array([1.6, 1.4])
     beta = len(y_obs) / float(aux_total_size)
 
-    with aesara.config.change_flags(floatX="float64", warn_float64="ignore"):
+    with pytensor.config.change_flags(floatX="float64", warn_float64="ignore"):
 
-        post_mu = np.array([1.88], dtype=aesara.config.floatX)
-        post_sigma = np.array([1], dtype=aesara.config.floatX)
+        post_mu = np.array([1.88], dtype=pytensor.config.floatX)
+        post_sigma = np.array([1], dtype=pytensor.config.floatX)
 
         with pm.Model():
             mu = pm.Normal("mu", mu=mu0, sigma=sigma)
@@ -151,7 +151,7 @@ def test_elbo_beta_kl(aux_total_size):
             mean_field_1.shared_params["mu"].set_value(post_mu)
             mean_field_1.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
 
-            with aesara.config.change_flags(compute_test_value="off"):
+            with pytensor.config.change_flags(compute_test_value="off"):
                 elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
 
         with pm.Model():
@@ -162,7 +162,7 @@ def test_elbo_beta_kl(aux_total_size):
             mean_field_3.shared_params["mu"].set_value(post_mu)
             mean_field_3.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
 
-            with aesara.config.change_flags(compute_test_value="off"):
+            with pytensor.config.change_flags(compute_test_value="off"):
                 elbo_via_beta_kl = -pm.operators.KL(mean_field_3, beta=beta)()(10000)
 
         np.testing.assert_allclose(

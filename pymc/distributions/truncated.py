@@ -1,17 +1,17 @@
 from functools import singledispatch
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 
-from aesara import scan
-from aesara.graph import Op
-from aesara.graph.basic import Node
-from aesara.raise_op import CheckAndRaise
-from aesara.scan import until
-from aesara.tensor import TensorConstant, TensorVariable
-from aesara.tensor.random.basic import NormalRV
-from aesara.tensor.random.op import RandomVariable
+from pytensor import scan
+from pytensor.graph import Op
+from pytensor.graph.basic import Node
+from pytensor.raise_op import CheckAndRaise
+from pytensor.scan import until
+from pytensor.tensor import TensorConstant, TensorVariable
+from pytensor.tensor.random.basic import NormalRV
+from pytensor.tensor.random.op import RandomVariable
 
 from pymc.distributions.continuous import TruncatedNormal, bounded_cont_transform
 from pymc.distributions.dist_math import check_parameters
@@ -30,7 +30,7 @@ from pymc.util import check_dist_not_registered
 
 
 class TruncatedRV(SymbolicRandomVariable):
-    """An `Op` constructed from an Aesara graph that represents a truncated univariate
+    """An `Op` constructed from an PyTensor graph that represents a truncated univariate
     random variable."""
 
     default_output = 1
@@ -167,7 +167,7 @@ class Truncated(Distribution):
 
         # We will use a Shared RNG variable because Scan demands it, even though it
         # would not be necessary for the OpFromGraph inverse cdf.
-        rng = aesara.shared(np.random.default_rng())
+        rng = pytensor.shared(np.random.default_rng())
         rv_ = dist.owner.op.make_node(rng, *rv_inputs_).default_output()
 
         # Try to use inverted cdf sampling

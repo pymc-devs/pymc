@@ -36,35 +36,35 @@
 
 from typing import List, Optional, Tuple, Union, cast
 
-import aesara
-import aesara.tensor as at
+import pytensor
+import pytensor.tensor as at
 
-from aesara.graph.basic import Apply, Variable
-from aesara.graph.fg import FunctionGraph
-from aesara.graph.op import Op, compute_test_value
-from aesara.graph.rewriting.basic import (
+from pytensor.graph.basic import Apply, Variable
+from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.op import Op, compute_test_value
+from pytensor.graph.rewriting.basic import (
     EquilibriumGraphRewriter,
     node_rewriter,
     pre_greedy_node_rewriter,
 )
-from aesara.ifelse import ifelse
-from aesara.scalar.basic import Switch
-from aesara.tensor.basic import Join, MakeVector
-from aesara.tensor.elemwise import Elemwise
-from aesara.tensor.random.rewriting import (
+from pytensor.ifelse import ifelse
+from pytensor.scalar.basic import Switch
+from pytensor.tensor.basic import Join, MakeVector
+from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.random.rewriting import (
     local_dimshuffle_rv_lift,
     local_subtensor_rv_lift,
 )
-from aesara.tensor.shape import shape_tuple
-from aesara.tensor.subtensor import (
+from pytensor.tensor.shape import shape_tuple
+from pytensor.tensor.subtensor import (
     as_index_literal,
     as_nontensor_scalar,
     get_canonical_form_slice,
     is_basic_idx,
 )
-from aesara.tensor.type import TensorType
-from aesara.tensor.type_other import NoneConst, NoneTypeT, SliceType
-from aesara.tensor.var import TensorVariable
+from pytensor.tensor.type import TensorType
+from pytensor.tensor.type_other import NoneConst, NoneTypeT, SliceType
+from pytensor.tensor.var import TensorVariable
 
 from pymc.logprob.abstract import (
     MeasurableVariable,
@@ -263,7 +263,7 @@ def get_stack_mixture_vars(
         join_axis = joined_rvs.owner.inputs[0]
         try:
             # TODO: Find better solution to avoid this circular dependency
-            from pymc.aesaraf import constant_fold
+            from pymc.pytensorf import constant_fold
 
             join_axis = int(constant_fold((join_axis,))[0])
         except ValueError:
@@ -330,7 +330,7 @@ def mixture_replace(fgraph, node):
 
     new_mixture_rv = new_node.default_output()
 
-    if aesara.config.compute_test_value != "off":
+    if pytensor.config.compute_test_value != "off":
         # We can't use `MixtureRV` to compute a test value; instead, we'll use
         # the original node's test value.
         if not hasattr(old_mixture_rv.tag, "test_value"):
@@ -380,7 +380,7 @@ def switch_mixture_replace(fgraph, node):
 
     new_mixture_rv = new_node.default_output()
 
-    if aesara.config.compute_test_value != "off":
+    if pytensor.config.compute_test_value != "off":
         if not hasattr(old_mixture_rv.tag, "test_value"):
             compute_test_value(node)
 
@@ -417,7 +417,7 @@ def logprob_MixtureRV(
             original_shape = (len(comp_rvs),)
         else:
             # TODO: Find better solution to avoid this circular dependency
-            from pymc.aesaraf import constant_fold
+            from pymc.pytensorf import constant_fold
 
             join_axis_val = constant_fold((join_axis,))[0].item()
             original_shape = shape_tuple(comp_rvs[0])
@@ -459,9 +459,8 @@ logprob_rewrites_db.register(
     "mixture_replace",
     EquilibriumGraphRewriter(
         [mixture_replace, switch_mixture_replace],
-        max_use_ratio=aesara.config.optdb__max_use_ratio,
+        max_use_ratio=pytensor.config.optdb__max_use_ratio,
     ),
-    0,
     "basic",
     "mixture",
 )

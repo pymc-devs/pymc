@@ -12,9 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
+import pytensor.tensor as at
 import pytest
 
 import pymc as pm

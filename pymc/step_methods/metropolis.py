@@ -13,26 +13,26 @@
 #   limitations under the License.
 from typing import Callable, Dict, List, Optional, Tuple
 
-import aesara
 import numpy as np
 import numpy.random as nr
+import pytensor
 import scipy.linalg
 import scipy.special
 
-from aesara import tensor as at
-from aesara.graph.fg import MissingInputError
-from aesara.tensor.random.basic import BernoulliRV, CategoricalRV
+from pytensor import tensor as at
+from pytensor.graph.fg import MissingInputError
+from pytensor.tensor.random.basic import BernoulliRV, CategoricalRV
 
 import pymc as pm
 
-from pymc.aesaraf import (
+from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.pytensorf import (
     CallableTensor,
     compile_pymc,
     floatX,
     join_nonshared_inputs,
     replace_rng_nodes,
 )
-from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.step_methods.arraystep import (
     ArrayStep,
     ArrayStepShared,
@@ -158,7 +158,7 @@ class Metropolis(ArrayStepShared):
         model: PyMC Model
             Optional model for sampling step. Defaults to None (taken from context).
         mode: string or `Mode` instance.
-            compilation mode passed to Aesara functions
+            compilation mode passed to PyTensor functions
         """
 
         model = pm.modelcontext(model)
@@ -717,7 +717,7 @@ class DEMetropolis(PopulationArrayStepShared):
     model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
     mode:  string or `Mode` instance.
-        compilation mode passed to Aesara functions
+        compilation mode passed to PyTensor functions
 
     References
     ----------
@@ -865,7 +865,7 @@ class DEMetropolisZ(ArrayStepShared):
     model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
     mode:  string or `Mode` instance.
-        compilation mode passed to Aesara functions
+        compilation mode passed to PyTensor functions
 
     References
     ----------
@@ -1037,7 +1037,7 @@ def delta_logp(
     logp: at.TensorVariable,
     vars: List[at.TensorVariable],
     shared: Dict[at.TensorVariable, at.sharedvar.TensorSharedVariable],
-) -> aesara.compile.Function:
+) -> pytensor.compile.Function:
     [logp0], inarray0 = join_nonshared_inputs(
         point=point, outputs=[logp], inputs=vars, shared_inputs=shared
     )

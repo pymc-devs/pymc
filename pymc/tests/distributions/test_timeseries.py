@@ -11,17 +11,16 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import aesara
 import numpy as np
+import pytensor
 import pytest
 import scipy.stats as st
 
-from aesara.tensor.random.op import RandomVariable
+from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
 
 from pymc import MutableData
-from pymc.aesaraf import floatX
 from pymc.distributions.continuous import Exponential, Flat, HalfNormal, Normal, Uniform
 from pymc.distributions.discrete import DiracDelta
 from pymc.distributions.logprob import logp
@@ -42,6 +41,7 @@ from pymc.distributions.timeseries import (
     RandomWalk,
 )
 from pymc.model import Model
+from pymc.pytensorf import floatX
 from pymc.sampling.forward import draw, sample_posterior_predictive
 from pymc.sampling.mcmc import sample
 from pymc.tests.distributions.util import assert_moment_is_expected
@@ -575,7 +575,7 @@ class TestAR:
         ar_order, steps, batch_size = 4, 100, (7, 5)
         # AR order cannot be inferred from beta_tp because it is not fixed.
         # We specify it manually below
-        beta_tp = aesara.shared(np.random.randn(ar_order))
+        beta_tp = pytensor.shared(np.random.randn(ar_order))
         sigma_tp = np.abs(np.random.randn(*batch_size))
         y_tp = np.random.randn(*batch_size, steps)
         with Model() as t0:
@@ -621,7 +621,7 @@ class TestAR:
 
     def test_batched_init_dist(self):
         ar_order, steps, batch_size = 3, 100, 5
-        beta_tp = aesara.shared(np.random.randn(ar_order), shape=(3,))
+        beta_tp = pytensor.shared(np.random.randn(ar_order), shape=(3,))
         y_tp = np.random.randn(batch_size, steps)
         with Model() as t0:
             init_dist = Normal.dist(0.0, 100.0, size=(batch_size, ar_order))

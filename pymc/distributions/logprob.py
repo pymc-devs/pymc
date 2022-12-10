@@ -15,19 +15,19 @@
 
 from typing import Dict, List, Sequence, Union
 
-import aesara
 import numpy as np
+import pytensor
 
-from aesara import tensor as at
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.var import TensorVariable
+from pytensor import tensor as at
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.var import TensorVariable
 
-from pymc.aesaraf import floatX
 from pymc.logprob.abstract import assign_custom_measurable_outputs
 from pymc.logprob.abstract import logcdf as logcdf_logprob
 from pymc.logprob.abstract import logprob as logp_logprob
 from pymc.logprob.joint_logprob import factorized_joint_logprob
 from pymc.logprob.transforms import RVTransform, TransformValuesRewrite
+from pymc.pytensorf import floatX
 
 TOTAL_SIZE = Union[int, Sequence[int], None]
 
@@ -97,7 +97,7 @@ def _get_scaling(total_size: TOTAL_SIZE, shape, ndim: int) -> TensorVariable:
         raise TypeError(
             "Unrecognized `total_size` type, expected int or list of ints, got %r" % total_size
         )
-    return at.as_tensor(coef, dtype=aesara.config.floatX)
+    return at.as_tensor(coef, dtype=pytensor.config.floatX)
 
 
 def _check_no_rvs(logp_terms: Sequence[TensorVariable]):
@@ -107,7 +107,7 @@ def _check_no_rvs(logp_terms: Sequence[TensorVariable]):
 
     unexpected_rv_nodes = [
         node
-        for node in aesara.graph.ancestors(logp_terms)
+        for node in pytensor.graph.ancestors(logp_terms)
         if (
             node.owner
             and isinstance(node.owner.op, RandomVariable)

@@ -22,18 +22,18 @@ import warnings
 from copy import copy
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 
-from aesara.compile.sharedvalue import SharedVariable
-from aesara.graph.basic import Apply
-from aesara.tensor.type import TensorType
-from aesara.tensor.var import TensorConstant, TensorVariable
+from pytensor.compile.sharedvalue import SharedVariable
+from pytensor.graph.basic import Apply
+from pytensor.tensor.type import TensorType
+from pytensor.tensor.var import TensorConstant, TensorVariable
 
 import pymc as pm
 
-from pymc.aesaraf import convert_observed_data
+from pymc.pytensorf import convert_observed_data
 
 __all__ = [
     "get_data",
@@ -150,7 +150,7 @@ class Minibatch(TensorVariable):
         you can use it to change source of
         minibatches programmatically
     in_memory_size: ``int`` or ``List[int|slice|Ellipsis]``
-        data size for storing in ``aesara.shared``
+        data size for storing in ``pytensor.shared``
 
     Attributes
     ----------
@@ -238,7 +238,7 @@ class Minibatch(TensorVariable):
     To be more concrete about how we create a minibatch, here is a demo:
     1. create a shared variable
 
-        >>> shared = aesara.shared(data)
+        >>> shared = pytensor.shared(data)
 
     2. take a random slice of size 10:
 
@@ -262,7 +262,7 @@ class Minibatch(TensorVariable):
     Then you should create a `dict` with replacements:
 
     >>> replacements = {x: testdata}
-    >>> rnode = aesara.clone_replace(node, replacements)
+    >>> rnode = pytensor.clone_replace(node, replacements)
     >>> assert (testdata ** 2 == rnode.eval()).all()
 
     *FIXME: In the following, what is the **reason** to replace the Minibatch variable with
@@ -273,7 +273,7 @@ class Minibatch(TensorVariable):
     For example
 
     >>> replacements = {x.minibatch: x.shared}
-    >>> rnode = aesara.clone_replace(node, replacements)
+    >>> rnode = pytensor.clone_replace(node, replacements)
 
     For more complex slices some more code is needed that can seem not so clear
 
@@ -303,7 +303,7 @@ class Minibatch(TensorVariable):
 
     RNG: Dict[str, List[Any]] = collections.defaultdict(list)
 
-    @aesara.config.change_flags(compute_test_value="raise")
+    @pytensor.config.change_flags(compute_test_value="raise")
     def __init__(
         self,
         data,
@@ -321,7 +321,7 @@ class Minibatch(TensorVariable):
         else:
             data = np.asarray(data, dtype)
         in_memory_slc = self.make_static_slices(in_memory_size)
-        self.shared = aesara.shared(data[tuple(in_memory_slc)])
+        self.shared = pytensor.shared(data[tuple(in_memory_slc)])
         self.update_shared_f = update_shared_f
         self.random_slc = self.make_random_slices(self.shared.shape, batch_size, random_seed)
         minibatch = self.shared[self.random_slc]
@@ -336,7 +336,7 @@ class Minibatch(TensorVariable):
             minibatch = at.specify_shape(minibatch, shape)
         self.minibatch = minibatch
         super().__init__(self.minibatch.type, None, None, name=name)
-        Apply(aesara.compile.view_op, inputs=[self.minibatch], outputs=[self])
+        Apply(pytensor.compile.view_op, inputs=[self.minibatch], outputs=[self])
         self.tag.test_value = copy(self.minibatch.tag.test_value)
 
     def rslice(self, total, size, seed):
@@ -443,7 +443,7 @@ class Minibatch(TensorVariable):
             slc = slc_begin + mid + slc_end
         else:
             raise TypeError("Unrecognized size type, %r" % batch_size)
-        return pm.aesaraf.ix_(*slc)
+        return pm.pytensorf.ix_(*slc)
 
     def update_shared(self):
         if self.update_shared_f is None:
@@ -533,7 +533,7 @@ def ConstantData(
 ) -> TensorConstant:
     """Alias for ``pm.Data(..., mutable=False)``.
 
-    Registers the ``value`` as a :class:`~aesara.tensor.TensorConstant` with the model.
+    Registers the ``value`` as a :class:`~pytensor.tensor.TensorConstant` with the model.
     For more information, please reference :class:`pymc.Data`.
     """
     var = Data(
@@ -559,7 +559,7 @@ def MutableData(
 ) -> SharedVariable:
     """Alias for ``pm.Data(..., mutable=True)``.
 
-    Registers the ``value`` as a :class:`~aesara.compile.sharedvalue.SharedVariable`
+    Registers the ``value`` as a :class:`~pytensor.compile.sharedvalue.SharedVariable`
     with the model. For more information, please reference :class:`pymc.Data`.
     """
     var = Data(
@@ -587,7 +587,7 @@ def Data(
     """Data container that registers a data variable with the model.
 
     Depending on the ``mutable`` setting (default: True), the variable
-    is registered as a :class:`~aesara.compile.sharedvalue.SharedVariable`,
+    is registered as a :class:`~pytensor.compile.sharedvalue.SharedVariable`,
     enabling it to be altered in value and shape, but NOT in dimensionality using
     :func:`pymc.set_data`.
 
@@ -596,7 +596,7 @@ def Data(
 
     When making predictions or doing posterior predictive sampling, the shape of the
     registered data variable will most likely need to be changed.  If you encounter an
-    Aesara shape mismatch error, refer to the documentation for
+    PyTensor shape mismatch error, refer to the documentation for
     :meth:`pymc.model.set_data`.
 
     For more information, read the notebook :ref:`nb:data_container`.
@@ -621,8 +621,8 @@ def Data(
         If True, the ``Data`` container will try to infer what the coordinates
         and dimension names should be if there is an index in ``value``.
     mutable : bool, optional
-        Switches between creating a :class:`~aesara.compile.sharedvalue.SharedVariable`
-        (``mutable=True``) vs. creating a :class:`~aesara.tensor.TensorConstant`
+        Switches between creating a :class:`~pytensor.compile.sharedvalue.SharedVariable`
+        (``mutable=True``) vs. creating a :class:`~pytensor.tensor.TensorConstant`
         (``mutable=False``).
         Consider using :class:`pymc.ConstantData` or :class:`pymc.MutableData` as less
         verbose alternatives to ``pm.Data(..., mutable=...)``.
@@ -630,7 +630,7 @@ def Data(
         version of the package. Since ``v4.1.0`` the default value is
         ``mutable=False``, with previous versions having ``mutable=True``.
     **kwargs : dict, optional
-        Extra arguments passed to :func:`aesara.shared`.
+        Extra arguments passed to :func:`pytensor.shared`.
 
     Examples
     --------
@@ -669,7 +669,7 @@ def Data(
     name = model.name_for(name)
 
     # `convert_observed_data` takes care of parameter `value` and
-    # transforms it to something digestible for Aesara.
+    # transforms it to something digestible for PyTensor.
     arr = convert_observed_data(value)
 
     if mutable is None:
@@ -682,7 +682,7 @@ def Data(
         )
         mutable = False
     if mutable:
-        x = aesara.shared(arr, name, **kwargs)
+        x = pytensor.shared(arr, name, **kwargs)
     else:
         x = at.as_tensor_variable(arr, name, **kwargs)
 

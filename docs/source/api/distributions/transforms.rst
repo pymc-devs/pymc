@@ -16,7 +16,8 @@ Transform instances are the entities that should be used in the
     simplex
     logodds
     log_exp_m1
-    ordered
+    ordered_univariate
+    ordered_multivariate
     log
     sum_to_1
     circular

@@ -19,14 +19,14 @@ from pymc.ode.utils import augment_system
 
 
 def test_gradients():
-    """Tests the computation of the sensitivities from the Aesara computation graph"""
+    """Tests the computation of the sensitivities from the PyTensor computation graph"""
 
     # ODE system for which to compute gradients
     def ode_func(y, t, p):
         return np.exp(-t) - p[0] * y[0]
 
-    # Computation of graidients with Aesara
-    augmented_ode_func = augment_system(ode_func, 1, 1 + 1)
+    # Computation of graidients with PyTensor
+    augmented_ode_func = augment_system(ode_func, n_states=1, n_theta=1)
 
     # This is the new system, ODE + Sensitivities, which will be integrated
     def augmented_system(Y, t, p):

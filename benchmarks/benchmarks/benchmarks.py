@@ -14,11 +14,11 @@
 import time
 import timeit
 
-import aesara
-import aesara.tensor as at
 import arviz as az
 import numpy as np
 import pandas as pd
+import pytensor
+import pytensor.tensor as at
 
 import pymc as pm
 
@@ -27,7 +27,7 @@ def glm_hierarchical_model(random_seed=123):
     """Sample glm hierarchical model to use in benchmarks"""
     np.random.seed(random_seed)
     data = pd.read_csv(pm.get_data("radon.csv"))
-    data["log_radon"] = data["log_radon"].astype(aesara.config.floatX)
+    data["log_radon"] = data["log_radon"].astype(pytensor.config.floatX)
     county_idx = data.county_code.values
 
     n_counties = len(data.county.unique())

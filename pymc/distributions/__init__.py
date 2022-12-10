@@ -76,6 +76,7 @@ from pymc.distributions.discrete import (
 )
 from pymc.distributions.distribution import (
     Continuous,
+    CustomDist,
     DensityDist,
     Discrete,
     Distribution,
@@ -154,6 +155,7 @@ __all__ = [
     "OrderedLogistic",
     "OrderedProbit",
     "DensityDist",
+    "CustomDist",
     "Distribution",
     "SymbolicRandomVariable",
     "Continuous",

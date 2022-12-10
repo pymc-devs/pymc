@@ -14,16 +14,16 @@
 
 from itertools import product
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 
-from aesara.compile.ops import as_op
+from pytensor.compile.ops import as_op
 
 import pymc as pm
 
 from pymc import Categorical, Metropolis, Model, Normal
-from pymc.aesaraf import floatX_array
+from pymc.pytensorf import floatX_array
 
 
 def simple_model():
@@ -63,7 +63,7 @@ def multidimensional_model():
 
 
 def simple_arbitrary_det():
-    scalar_type = at.dscalar if aesara.config.floatX == "float64" else at.fscalar
+    scalar_type = at.dscalar if pytensor.config.floatX == "float64" else at.fscalar
 
     @as_op(itypes=[scalar_type], otypes=[scalar_type])
     def arbitrary_det(value):

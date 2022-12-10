@@ -16,16 +16,16 @@ import warnings
 
 from typing import Callable, Dict, List, Optional, Sequence, Set, Union
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 
-from aesara.graph.basic import Variable
-from aesara.graph.fg import FunctionGraph
-from aesara.tensor.var import TensorVariable
+from pytensor.graph.basic import Variable
+from pytensor.graph.fg import FunctionGraph
+from pytensor.tensor.var import TensorVariable
 
-from pymc.aesaraf import compile_pymc, find_rng_nodes, replace_rng_nodes, reseed_rngs
 from pymc.logprob.transforms import RVTransform
+from pymc.pytensorf import compile_pymc, find_rng_nodes, replace_rng_nodes, reseed_rngs
 from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
 
 StartDict = Dict[Union[Variable, str], Union[np.ndarray, Variable, str]]
@@ -149,7 +149,7 @@ def make_initial_point_fn(
     # Replace original rng shared variables so that we don't mess with them
     # when calling the final seeded function
     initial_values = replace_rng_nodes(initial_values)
-    func = compile_pymc(inputs=[], outputs=initial_values, mode=aesara.compile.mode.FAST_COMPILE)
+    func = compile_pymc(inputs=[], outputs=initial_values, mode=pytensor.compile.mode.FAST_COMPILE)
 
     varnames = []
     for var in model.free_RVs:
@@ -206,7 +206,7 @@ def make_initial_point_expression(
     Returns
     -------
     initial_points : list of TensorVariable
-        Aesara expressions for initial values of the free random variables.
+        PyTensor expressions for initial values of the free random variables.
     """
     from pymc.distributions.distribution import moment
 

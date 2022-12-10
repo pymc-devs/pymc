@@ -1,9 +1,9 @@
-aesara==2.8.8
 arviz>=0.13.0
 cachetools>=4.2.1
 cloudpickle
 fastprogress>=0.2.0
 numpy>=1.15.0
 pandas>=0.24.0
+pytensor==2.8.10
 scipy>=1.4.1
 typing-extensions>=3.7.4

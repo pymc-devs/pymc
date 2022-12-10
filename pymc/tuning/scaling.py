@@ -16,9 +16,9 @@ import numpy as np
 
 from numpy import exp, log, sqrt
 
-from pymc.aesaraf import hessian_diag
 from pymc.blocking import DictToArrayBijection
 from pymc.model import Point, modelcontext
+from pymc.pytensorf import hessian_diag
 from pymc.util import get_var_name
 
 __all__ = ["find_hessian", "trace_cov", "guess_scaling"]

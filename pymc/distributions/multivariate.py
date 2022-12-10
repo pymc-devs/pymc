@@ -20,27 +20,26 @@ import warnings
 from functools import reduce
 from typing import Optional
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import scipy
 
-from aesara.graph.basic import Apply, Constant, Variable
-from aesara.graph.op import Op
-from aesara.raise_op import Assert
-from aesara.sparse.basic import sp_sum
-from aesara.tensor import TensorConstant, gammaln, sigmoid
-from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
-from aesara.tensor.random.basic import dirichlet, multinomial, multivariate_normal
-from aesara.tensor.random.op import RandomVariable, default_supp_shape_from_params
-from aesara.tensor.random.utils import broadcast_params
-from aesara.tensor.slinalg import Cholesky, SolveTriangular
-from aesara.tensor.type import TensorType
+from pytensor.graph.basic import Apply, Constant, Variable
+from pytensor.graph.op import Op
+from pytensor.raise_op import Assert
+from pytensor.sparse.basic import sp_sum
+from pytensor.tensor import TensorConstant, gammaln, sigmoid
+from pytensor.tensor.nlinalg import det, eigh, matrix_inverse, trace
+from pytensor.tensor.random.basic import dirichlet, multinomial, multivariate_normal
+from pytensor.tensor.random.op import RandomVariable, default_supp_shape_from_params
+from pytensor.tensor.random.utils import broadcast_params
+from pytensor.tensor.slinalg import Cholesky, SolveTriangular
+from pytensor.tensor.type import TensorType
 from scipy import linalg, stats
 
 import pymc as pm
 
-from pymc.aesaraf import floatX, intX
 from pymc.distributions import transforms
 from pymc.distributions.continuous import BoundedContinuous, ChiSquared, Normal
 from pymc.distributions.dist_math import (
@@ -70,6 +69,7 @@ from pymc.distributions.shape_utils import (
 from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
 from pymc.logprob.abstract import _logprob
 from pymc.math import kron_diag, kron_dot
+from pymc.pytensorf import floatX, intX
 from pymc.util import check_dist_not_registered
 
 __all__ = [
@@ -126,7 +126,7 @@ def quaddist_matrix(cov=None, chol=None, tau=None, lower=True, *args, **kwargs):
         if tau.ndim != 2:
             raise ValueError("tau must be two dimensional.")
         # TODO: What's the correct order/approach (in the non-square case)?
-        # `aesara.tensor.nlinalg.tensorinv`?
+        # `pytensor.tensor.nlinalg.tensorinv`?
         cov = matrix_inverse(tau)
     else:
         # TODO: What's the correct order/approach (in the non-square case)?
@@ -260,7 +260,7 @@ class MvNormal(Continuous):
     def dist(cls, mu, cov=None, tau=None, chol=None, lower=True, **kwargs):
         mu = at.as_tensor_variable(mu)
         cov = quaddist_matrix(cov, chol, tau, lower)
-        # Aesara is stricter about the shape of mu, than PyMC used to be
+        # PyTensor is stricter about the shape of mu, than PyMC used to be
         mu = at.broadcast_arrays(mu, cov[..., -1])[0]
         return super().dist([mu, cov], **kwargs)
 
@@ -311,7 +311,7 @@ class MvStudentTRV(RandomVariable):
 
     def __call__(self, nu, mu=None, cov=None, size=None, **kwargs):
 
-        dtype = aesara.config.floatX if self.dtype == "floatX" else self.dtype
+        dtype = pytensor.config.floatX if self.dtype == "floatX" else self.dtype
 
         if mu is None:
             mu = np.array([0.0], dtype=dtype)
@@ -400,7 +400,7 @@ class MvStudentT(Continuous):
         nu = at.as_tensor_variable(floatX(nu))
         mu = at.as_tensor_variable(floatX(mu))
         scale = quaddist_matrix(scale, chol, tau, lower)
-        # Aesara is stricter about the shape of mu, than PyMC used to be
+        # PyTensor is stricter about the shape of mu, than PyMC used to be
         mu = at.broadcast_arrays(mu, scale[..., -1])[0]
 
         return super().dist([nu, mu, scale], **kwargs)
@@ -880,7 +880,7 @@ class PosDefMatrix(Op):
 
     def grad(self, inp, grads):
         (x,) = inp
-        return [x.zeros_like(aesara.config.floatX)]
+        return [x.zeros_like(pytensor.config.floatX)]
 
     def __str__(self):
         return "MatrixIsPositiveDefinite"
@@ -1219,7 +1219,7 @@ class _LKJCholeskyCov(Distribution):
             sd_dist = change_dist_size(sd_dist, shape[:-1])
 
         # Create new rng for the _lkjcholeskycov internal RV
-        rng = aesara.shared(np.random.default_rng())
+        rng = pytensor.shared(np.random.default_rng())
 
         rng_, n_, eta_, sd_dist_ = rng.type(), n.type(), eta.type(), sd_dist.type()
         next_rng_, lkjcov_ = _ljk_cholesky_cov_base(n_, eta_, sd_dist_, rng=rng_).owner.outputs
@@ -1605,7 +1605,7 @@ class LKJCorr(BoundedContinuous):
         TensorVariable
         """
 
-        # TODO: Aesara does not have a `triu_indices`, so we can only work with constant
+        # TODO: PyTensor does not have a `triu_indices`, so we can only work with constant
         #  n (or else find a different expression)
         if not isinstance(n, Constant):
             raise NotImplementedError("logp only implemented for constant `n`")
@@ -2059,15 +2059,15 @@ class CARRV(RandomVariable):
     def make_node(self, rng, size, dtype, mu, W, alpha, tau):
         mu = at.as_tensor_variable(floatX(mu))
 
-        W = aesara.sparse.as_sparse_or_tensor_variable(floatX(W))
+        W = pytensor.sparse.as_sparse_or_tensor_variable(floatX(W))
         if not W.ndim == 2:
             raise ValueError("W must be a matrix (ndim=2).")
 
-        sparse = isinstance(W, aesara.sparse.SparseVariable)
+        sparse = isinstance(W, pytensor.sparse.SparseVariable)
         msg = "W must be a symmetric adjacency matrix."
         if sparse:
-            abs_diff = aesara.sparse.basic.mul(aesara.sparse.basic.sgn(W - W.T), W - W.T)
-            W = Assert(msg)(W, at.isclose(aesara.sparse.basic.sp_sum(abs_diff), 0))
+            abs_diff = pytensor.sparse.basic.mul(pytensor.sparse.basic.sgn(W - W.T), W - W.T)
+            W = Assert(msg)(W, at.isclose(pytensor.sparse.basic.sp_sum(abs_diff), 0))
         else:
             W = Assert(msg)(W, at.allclose(W, W.T))
 
@@ -2151,7 +2151,7 @@ class CAR(Continuous):
         Symmetric adjacency matrix of 1s and 0s indicating
         adjacency between elements. If possible, *W* is converted
         to a sparse matrix, falling back to a dense variable.
-        :func:`~aesara.sparse.basic.as_sparse_or_tensor_variable` is
+        :func:`~pytensor.sparse.basic.as_sparse_or_tensor_variable` is
         used for this sparse or tensorvariable conversion.
     alpha : tensor_like of float
         Autoregression parameter taking values between -1 and 1. Values closer to 0 indicate weaker
@@ -2192,12 +2192,12 @@ class CAR(Continuous):
         TensorVariable
         """
 
-        sparse = isinstance(W, (aesara.sparse.SparseConstant, aesara.sparse.SparseVariable))
+        sparse = isinstance(W, (pytensor.sparse.SparseConstant, pytensor.sparse.SparseVariable))
 
         if sparse:
             D = sp_sum(W, axis=0)
             Dinv_sqrt = at.diag(1 / at.sqrt(D))
-            DWD = at.dot(aesara.sparse.dot(Dinv_sqrt, W), Dinv_sqrt)
+            DWD = at.dot(pytensor.sparse.dot(Dinv_sqrt, W), Dinv_sqrt)
         else:
             D = W.sum(axis=0)
             Dinv_sqrt = at.diag(1 / at.sqrt(D))
@@ -2214,7 +2214,7 @@ class CAR(Continuous):
         delta = value - mu
 
         if sparse:
-            Wdelta = aesara.sparse.dot(delta, W)
+            Wdelta = pytensor.sparse.dot(delta, W)
         else:
             Wdelta = at.dot(delta, W)
 

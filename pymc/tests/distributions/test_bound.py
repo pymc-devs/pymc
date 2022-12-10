@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 import scipy.stats as st
 
-from aesara.tensor.random.op import RandomVariable
+from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
 

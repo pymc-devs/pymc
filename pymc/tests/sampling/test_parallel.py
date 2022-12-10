@@ -17,19 +17,19 @@ import platform
 import sys
 import warnings
 
-import aesara
-import aesara.tensor as at
 import cloudpickle
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import pytest
 
-from aesara.compile.ops import as_op
-from aesara.tensor.type import TensorType
+from pytensor.compile.ops import as_op
+from pytensor.tensor.type import TensorType
 
 import pymc as pm
 import pymc.sampling.parallel as ps
 
-from pymc.aesaraf import floatX
+from pymc.pytensorf import floatX
 
 
 def test_context():
@@ -69,7 +69,7 @@ def test_bad_unpickle():
         assert "could not be unpickled" in str(exc_info.getrepr(style="short"))
 
 
-at_vector = TensorType(aesara.config.floatX, [False])
+at_vector = TensorType(pytensor.config.floatX, [False])
 
 
 @as_op([at_vector, at.iscalar], [at_vector])
@@ -206,7 +206,7 @@ def test_spawn_densitydist_function():
         def func(x):
             return -2 * (x**2).sum()
 
-        obs = pm.DensityDist("density_dist", logp=func, observed=np.random.randn(100))
+        obs = pm.CustomDist("density_dist", logp=func, observed=np.random.randn(100))
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
             pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
@@ -222,7 +222,7 @@ def test_spawn_densitydist_bound_method():
             out = pm.logp(normal_dist, x)
             return out
 
-        obs = pm.DensityDist("density_dist", mu, logp=logp, observed=np.random.randn(N), size=N)
+        obs = pm.CustomDist("density_dist", mu, logp=logp, observed=np.random.randn(N), size=N)
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
             pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")

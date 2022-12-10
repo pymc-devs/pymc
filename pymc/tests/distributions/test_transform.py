@@ -15,18 +15,18 @@
 
 from typing import Union
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import pytest
 
-from aesara.tensor.var import TensorConstant
+from pytensor.tensor.var import TensorConstant
 
 import pymc as pm
 import pymc.distributions.transforms as tr
 
-from pymc.aesaraf import floatX, jacobian
 from pymc.distributions.logprob import _joint_logp
+from pymc.pytensorf import floatX, jacobian
 from pymc.tests.checks import close_to, close_to_logical
 from pymc.tests.distributions.util import (
     Circ,
@@ -44,7 +44,7 @@ from pymc.tests.helpers import SeededTest
 
 # some transforms (stick breaking) require additon of small slack in order to be numerically
 # stable. The minimal addable slack for float32 is higher thus we need to be less strict
-tol = 1e-7 if aesara.config.floatX == "float64" else 1e-6
+tol = 1e-7 if pytensor.config.floatX == "float64" else 1e-6
 
 
 def check_transform(transform, domain, constructor=at.dscalar, test=0, rv_var=None):
@@ -55,9 +55,9 @@ def check_transform(transform, domain, constructor=at.dscalar, test=0, rv_var=No
     rv_inputs = rv_var.owner.inputs if rv_var.owner else []
     # test forward and forward_val
     # FIXME: What's being tested here?  That the transformed graph can compile?
-    forward_f = aesara.function([x], transform.forward(x, *rv_inputs))
+    forward_f = pytensor.function([x], transform.forward(x, *rv_inputs))
     # test transform identity
-    identity_f = aesara.function(
+    identity_f = pytensor.function(
         [x], transform.backward(transform.forward(x, *rv_inputs), *rv_inputs)
     )
     for val in domain.vals:
@@ -74,7 +74,7 @@ def get_values(transform, domain=R, constructor=at.dscalar, test=0, rv_var=None)
     if rv_var is None:
         rv_var = x
     rv_inputs = rv_var.owner.inputs if rv_var.owner else []
-    f = aesara.function([x], transform.backward(x, *rv_inputs))
+    f = pytensor.function([x], transform.backward(x, *rv_inputs))
     return np.array([f(val) for val in domain.vals])
 
 
@@ -105,9 +105,9 @@ def check_jacobian_det(
         jac = at.log(at.abs(at.diag(jacobian(x, [y]))))
 
     # ljd = log jacobian det
-    actual_ljd = aesara.function([y], jac)
+    actual_ljd = pytensor.function([y], jac)
 
-    computed_ljd = aesara.function(
+    computed_ljd = pytensor.function(
         [y], at.as_tensor_variable(transform.log_jac_det(y, *rv_inputs)), on_unused_input="ignore"
     )
 
@@ -136,7 +136,7 @@ def test_simplex_accuracy():
     val = np.array([-30])
     x = at.dvector("x")
     x.tag.test_value = val
-    identity_f = aesara.function([x], tr.simplex.forward(x, tr.simplex.backward(x, x)))
+    identity_f = pytensor.function([x], tr.simplex.forward(x, tr.simplex.backward(x, x)))
     close_to(val, identity_f(val), tol)
 
 
@@ -223,7 +223,7 @@ def test_interval():
 
 
 @pytest.mark.skipif(
-    aesara.config.floatX == "float32", reason="Test is designed for 64bit precision"
+    pytensor.config.floatX == "float32", reason="Test is designed for 64bit precision"
 )
 def test_interval_near_boundary():
     lb = -1.0

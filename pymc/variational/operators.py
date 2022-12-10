@@ -13,9 +13,9 @@
 #   limitations under the License.
 from __future__ import annotations
 
-import aesara
+import pytensor
 
-from aesara.graph.basic import Variable
+from pytensor.graph.basic import Variable
 
 import pymc as pm
 
@@ -79,7 +79,7 @@ class KSDObjective(ObjectiveFunction):
             raise opvi.ParametrizationError("Op should be KSD")
         super().__init__(op, tf)
 
-    @aesara.config.change_flags(compute_test_value="off")
+    @pytensor.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs) -> list[Variable]:
         op: KSD = self.op
         grad = op.apply(self.tf)
@@ -92,7 +92,7 @@ class KSDObjective(ObjectiveFunction):
         else:
             params = self.test_params + kwargs["more_tf_params"]
             grad *= pm.floatX(-1)
-        grads = aesara.grad(None, params, known_grads={z: grad})
+        grads = pytensor.grad(None, params, known_grads={z: grad})
         return self.approx.set_size_and_deterministic(
             grads, nmc, 0, kwargs.get("more_replacements")
         )

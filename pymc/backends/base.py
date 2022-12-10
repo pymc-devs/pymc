@@ -23,8 +23,8 @@ import warnings
 from abc import ABC
 from typing import List, Sequence, Tuple, cast
 
-import aesara.tensor as at
 import numpy as np
+import pytensor.tensor as at
 
 from pymc.backends.report import SamplerReport
 from pymc.model import modelcontext

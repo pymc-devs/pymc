@@ -52,7 +52,7 @@ body:
     label: "PyMC version information:"
     description: >
       PyMC/PyMC3 Version:
-      Aesara/Theano Version:
+      PyTensor/Aesara Version:
       Python Version:
       Operating system:
       How did you install PyMC/PyMC3: (conda/pip)

@@ -20,8 +20,8 @@ import pytest
 
 import pymc as pm
 
-from pymc.aesaraf import floatX
 from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.pytensorf import floatX
 from pymc.step_methods.hmc import HamiltonianMC
 from pymc.step_methods.hmc.base_hmc import BaseHMC
 from pymc.tests import models

@@ -18,23 +18,23 @@ import warnings
 from abc import ABC
 from typing import Dict, cast
 
-import aesara.tensor as at
 import numpy as np
+import pytensor.tensor as at
 
-from aesara.graph.basic import clone_replace
+from pytensor.graph.basic import clone_replace
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 
-from pymc.aesaraf import (
+from pymc.backends.ndarray import NDArray
+from pymc.blocking import DictToArrayBijection
+from pymc.initial_point import make_initial_point_expression
+from pymc.model import Point, modelcontext
+from pymc.pytensorf import (
     compile_pymc,
     floatX,
     join_nonshared_inputs,
     make_shared_replacements,
 )
-from pymc.backends.ndarray import NDArray
-from pymc.blocking import DictToArrayBijection
-from pymc.initial_point import make_initial_point_expression
-from pymc.model import Point, modelcontext
 from pymc.sampling.forward import draw
 from pymc.step_methods.metropolis import MultivariateNormalProposal
 from pymc.vartypes import discrete_types
@@ -595,7 +595,7 @@ def systematic_resampling(weights, rng):
 
 
 def _logp_forw(point, out_vars, in_vars, shared):
-    """Compile Aesara function of the model and the input and output variables.
+    """Compile PyTensor function of the model and the input and output variables.
 
     Parameters
     ----------

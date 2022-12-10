@@ -19,7 +19,7 @@ repos:
     - id: isort
       name: isort
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.2.2
+  rev: v3.3.0
   hooks:
     - id: pyupgrade
       args: [--py37-plus]
@@ -29,7 +29,7 @@ repos:
     - id: black
     - id: black-jupyter
 - repo: https://github.com/PyCQA/pylint
-  rev: v2.15.6
+  rev: v2.15.7
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]
@@ -84,7 +84,7 @@ repos:
       entry: >
           (?x)(arviz-devs.github.io|
                python.arviz.org|
-               aesara.readthedocs.io|
+               pytensor.readthedocs.io|
                pymc-experimental.readthedocs.io|
                docs.pymc.io|
                www.pymc.io|

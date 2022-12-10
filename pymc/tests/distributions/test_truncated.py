@@ -1,10 +1,10 @@
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import pytest
 import scipy
 
-from aesara.tensor.random.basic import GeometricRV, NormalRV
+from pytensor.tensor.random.basic import GeometricRV, NormalRV
 
 from pymc import Censored, Model, draw, find_MAP, logp
 from pymc.distributions.continuous import Exponential, TruncatedNormalRV
@@ -56,7 +56,7 @@ def _icdf_not_implemented(*args, **kwargs):
 
 @pytest.mark.parametrize("shape_info", ("shape", "dims", "observed"))
 def test_truncation_specialized_op(shape_info):
-    rng = aesara.shared(np.random.default_rng())
+    rng = pytensor.shared(np.random.default_rng())
     x = at.random.normal(0, 10, rng=rng, name="x")
 
     with Model(coords={"dim": range(100)}) as m:
@@ -137,7 +137,7 @@ def test_truncation_continuous_logp(op_type, lower, upper):
     assert isinstance(xt.owner.op, TruncatedRV)
 
     xt_vv = xt.clone()
-    xt_logp_fn = aesara.function([xt_vv], logp(xt, xt_vv))
+    xt_logp_fn = pytensor.function([xt_vv], logp(xt, xt_vv))
 
     ref_xt = scipy.stats.truncnorm(
         (lower - loc) / scale,
@@ -199,7 +199,7 @@ def test_truncation_discrete_logp(op_type, lower, upper):
     assert isinstance(xt.owner.op, TruncatedRV)
 
     xt_vv = xt.clone()
-    xt_logp_fn = aesara.function([xt_vv], logp(xt, xt_vv))
+    xt_logp_fn = pytensor.function([xt_vv], logp(xt, xt_vv))
 
     ref_xt = scipy.stats.geom(p)
     log_norm = np.log(ref_xt.cdf(upper) - ref_xt.cdf(lower - 1))

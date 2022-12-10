@@ -19,19 +19,19 @@ import warnings
 
 from logging.handlers import BufferingHandler
 
-import aesara
 import numpy as np
 import numpy.random as nr
+import pytensor
 
-from aesara.gradient import verify_grad as at_verify_grad
-from aesara.graph import ancestors
-from aesara.graph.rewriting.basic import in2out
-from aesara.sandbox.rng_mrg import MRG_RandomStream as RandomStream
-from aesara.tensor.random.op import RandomVariable
+from pytensor.gradient import verify_grad as at_verify_grad
+from pytensor.graph import ancestors
+from pytensor.graph.rewriting.basic import in2out
+from pytensor.sandbox.rng_mrg import MRG_RandomStream as RandomStream
+from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
 
-from pymc.aesaraf import at_rng, local_check_parameter_to_ninf_switch, set_at_rng
+from pymc.pytensorf import at_rng, local_check_parameter_to_ninf_switch, set_at_rng
 from pymc.tests.checks import close_to
 from pymc.tests.models import mv_simple, mv_simple_coarse
 
@@ -121,7 +121,7 @@ class Matcher:
 
 def select_by_precision(float64, float32):
     """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
-    decimal = float64 if aesara.config.floatX == "float64" else float32
+    decimal = float64 if pytensor.config.floatX == "float64" else float32
     return decimal
 
 
@@ -149,7 +149,7 @@ def assert_random_state_equal(state1, state2):
 # all that matters are the shape of the draws or deterministic values of observed data).
 # DO NOT USE UNLESS YOU HAVE A GOOD REASON TO!
 fast_unstable_sampling_mode = (
-    aesara.compile.mode.FAST_COMPILE
+    pytensor.compile.mode.FAST_COMPILE
     # Remove slow rewrite phases
     .excluding("canonicalize", "specialize")
     # Include necessary rewrites for proper logp handling
@@ -215,7 +215,7 @@ class RVsAssignmentStepsTester:
             c1 = pm.HalfNormal("c1")
             c2 = pm.HalfNormal("c2")
 
-            with aesara.config.change_flags(mode=fast_unstable_sampling_mode):
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 assert [m.rvs_to_values[c1]] == step([c1], **step_kwargs).vars
             assert {m.rvs_to_values[c1], m.rvs_to_values[c2]} == set(
                 step([c1, c2], **step_kwargs).vars

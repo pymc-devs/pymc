@@ -16,12 +16,12 @@ import itertools
 
 from typing import Union
 
-from aesara.compile import SharedVariable
-from aesara.graph.basic import Constant, walk
-from aesara.tensor.basic import TensorVariable, Variable
-from aesara.tensor.elemwise import DimShuffle
-from aesara.tensor.random.basic import RandomVariable
-from aesara.tensor.random.var import (
+from pytensor.compile import SharedVariable
+from pytensor.graph.basic import Constant, walk
+from pytensor.tensor.basic import TensorVariable, Variable
+from pytensor.tensor.elemwise import DimShuffle
+from pytensor.tensor.random.basic import RandomVariable
+from pytensor.tensor.random.var import (
     RandomGeneratorSharedVariable,
     RandomStateSharedVariable,
 )

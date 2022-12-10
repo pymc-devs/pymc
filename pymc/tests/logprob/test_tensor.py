@@ -34,20 +34,21 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import aesara
 import numpy as np
+import pytensor
 import pytest
 
-from aesara import tensor as at
-from aesara.graph import RewriteDatabaseQuery
-from aesara.graph.rewriting.basic import in2out
-from aesara.graph.rewriting.utils import rewrite_graph
-from aesara.tensor.extra_ops import BroadcastTo
+from pytensor import tensor as at
+from pytensor.graph import RewriteDatabaseQuery
+from pytensor.graph.rewriting.basic import in2out
+from pytensor.graph.rewriting.utils import rewrite_graph
+from pytensor.tensor.extra_ops import BroadcastTo
 from scipy import stats as st
 
 from pymc.logprob import factorized_joint_logprob, joint_logprob
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.logprob.tensor import naive_bcast_rv_lift
+from pymc.tests.helpers import assert_no_rvs
 
 
 def test_naive_bcast_rv_lift():
@@ -107,6 +108,91 @@ def test_measurable_make_vector():
 
     assert make_vector_logp_eval.shape == y_testval.shape
     assert np.isclose(make_vector_logp_eval.sum(), ref_logp_eval_eval)
+
+
+@pytest.mark.parametrize("reverse", (False, True))
+def test_measurable_make_vector_interdependent(reverse):
+    """Test that we can obtain a proper graph when stacked RVs depend on each other"""
+    x = at.random.normal(name="x")
+    y_rvs = []
+    prev_rv = x
+    for i in range(3):
+        next_rv = at.random.normal(prev_rv + 1, name=f"y{i}")
+        y_rvs.append(next_rv)
+        prev_rv = next_rv
+
+    if reverse:
+        y_rvs = y_rvs[::-1]
+
+    ys = at.stack(y_rvs)
+    ys.name = "ys"
+
+    x_vv = x.clone()
+    ys_vv = ys.clone()
+
+    logp = joint_logprob({x: x_vv, ys: ys_vv})
+    assert_no_rvs(logp)
+
+    y0_vv = y_rvs[0].clone()
+    y1_vv = y_rvs[1].clone()
+    y2_vv = y_rvs[2].clone()
+
+    ref_logp = joint_logprob({x: x_vv, y_rvs[0]: y0_vv, y_rvs[1]: y1_vv, y_rvs[2]: y2_vv})
+
+    rng = np.random.default_rng()
+    x_vv_test = rng.normal()
+    ys_vv_test = rng.normal(size=3)
+    np.testing.assert_allclose(
+        logp.eval({x_vv: x_vv_test, ys_vv: ys_vv_test}),
+        ref_logp.eval(
+            {x_vv: x_vv_test, y0_vv: ys_vv_test[0], y1_vv: ys_vv_test[1], y2_vv: ys_vv_test[2]}
+        ),
+    )
+
+
+@pytest.mark.parametrize("reverse", (False, True))
+def test_measurable_join_interdependent(reverse):
+    """Test that we can obtain a proper graph when stacked RVs depend on each other"""
+    x = at.random.normal(name="x")
+    y_rvs = []
+    prev_rv = x
+    for i in range(3):
+        next_rv = at.random.normal(prev_rv + 1, name=f"y{i}", size=(1, 2))
+        y_rvs.append(next_rv)
+        prev_rv = next_rv
+
+    if reverse:
+        y_rvs = y_rvs[::-1]
+
+    ys = at.concatenate(y_rvs, axis=0)
+    ys.name = "ys"
+
+    x_vv = x.clone()
+    ys_vv = ys.clone()
+
+    logp = joint_logprob({x: x_vv, ys: ys_vv})
+    assert_no_rvs(logp)
+
+    y0_vv = y_rvs[0].clone()
+    y1_vv = y_rvs[1].clone()
+    y2_vv = y_rvs[2].clone()
+
+    ref_logp = joint_logprob({x: x_vv, y_rvs[0]: y0_vv, y_rvs[1]: y1_vv, y_rvs[2]: y2_vv})
+
+    rng = np.random.default_rng()
+    x_vv_test = rng.normal()
+    ys_vv_test = rng.normal(size=(3, 2))
+    np.testing.assert_allclose(
+        logp.eval({x_vv: x_vv_test, ys_vv: ys_vv_test}),
+        ref_logp.eval(
+            {
+                x_vv: x_vv_test,
+                y0_vv: ys_vv_test[0:1],
+                y1_vv: ys_vv_test[1:2],
+                y2_vv: ys_vv_test[2:3],
+            }
+        ),
+    )
 
 
 @pytest.mark.parametrize(
@@ -230,7 +316,7 @@ def test_join_mixed_ndim_supp():
         joint_logprob({y_rv: y_vv})
 
 
-@aesara.config.change_flags(cxx="")
+@pytensor.config.change_flags(cxx="")
 @pytest.mark.parametrize(
     "ds_order",
     [
@@ -275,8 +361,8 @@ def test_measurable_dimshuffle(ds_order, multivariate):
     ds_logp = joint_logprob({ds_rv: ds_vv}, sum=False, ir_rewriter=ir_rewriter)
     assert ds_logp is not None
 
-    ref_logp_fn = aesara.function([base_vv], ref_logp)
-    ds_logp_fn = aesara.function([ds_vv], ds_logp)
+    ref_logp_fn = pytensor.function([base_vv], ref_logp)
+    ds_logp_fn = pytensor.function([ds_vv], ds_logp)
 
     base_test_value = base_rv.eval()
     ds_test_value = at.constant(base_test_value).dimshuffle(ds_order).eval()

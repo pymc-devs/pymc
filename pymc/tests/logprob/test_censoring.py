@@ -34,9 +34,9 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 import pytest
 import scipy as sp
 import scipy.stats as st
@@ -46,7 +46,7 @@ from pymc.logprob.transforms import LogTransform, TransformValuesRewrite
 from pymc.tests.helpers import assert_no_rvs
 
 
-@aesara.config.change_flags(compute_test_value="raise")
+@pytensor.config.change_flags(compute_test_value="raise")
 def test_continuous_rv_clip():
     x_rv = at.random.normal(0.5, 1)
     cens_x_rv = at.clip(x_rv, -2, 2)
@@ -57,7 +57,7 @@ def test_continuous_rv_clip():
     logp = joint_logprob({cens_x_rv: cens_x_vv})
     assert_no_rvs(logp)
 
-    logp_fn = aesara.function([cens_x_vv], logp)
+    logp_fn = pytensor.function([cens_x_vv], logp)
     ref_scipy = st.norm(0.5, 1)
 
     assert logp_fn(-3) == -np.inf
@@ -77,7 +77,7 @@ def test_discrete_rv_clip():
     logp = joint_logprob({cens_x_rv: cens_x_vv})
     assert_no_rvs(logp)
 
-    logp_fn = aesara.function([cens_x_vv], logp)
+    logp_fn = pytensor.function([cens_x_vv], logp)
     ref_scipy = st.poisson(2)
 
     assert logp_fn(0) == -np.inf
@@ -101,7 +101,7 @@ def test_one_sided_clip():
     assert_no_rvs(lb_logp)
     assert_no_rvs(ub_logp)
 
-    logp_fn = aesara.function([lb_cens_x_vv, ub_cens_x_vv], [lb_logp, ub_logp])
+    logp_fn = pytensor.function([lb_cens_x_vv, ub_cens_x_vv], [lb_logp, ub_logp])
     ref_scipy = st.norm(0, 1)
 
     assert np.all(np.array(logp_fn(-2, 2)) == -np.inf)
@@ -119,7 +119,7 @@ def test_useless_clip():
     logp = joint_logprob({cens_x_rv: cens_x_vv}, sum=False)
     assert_no_rvs(logp)
 
-    logp_fn = aesara.function([cens_x_vv], logp)
+    logp_fn = pytensor.function([cens_x_vv], logp)
     ref_scipy = st.norm(0.5, 1)
 
     np.testing.assert_allclose(logp_fn([-2, 0, 2]), ref_scipy.logpdf([-2, 0, 2]))
@@ -135,7 +135,7 @@ def test_random_clip():
     logp = joint_logprob({cens_x_rv: cens_x_vv, lb_rv: lb_vv}, sum=False)
     assert_no_rvs(logp)
 
-    logp_fn = aesara.function([lb_vv, cens_x_vv], logp)
+    logp_fn = pytensor.function([lb_vv, cens_x_vv], logp)
     res = logp_fn([0, -1], [-1, -1])
     assert res[0] == -np.inf
     assert res[1] != -np.inf
@@ -201,7 +201,7 @@ def test_deterministic_clipping():
     logp = joint_logprob({x_rv: x_vv, y_rv: y_vv})
     assert_no_rvs(logp)
 
-    logp_fn = aesara.function([x_vv, y_vv], logp)
+    logp_fn = pytensor.function([x_vv, y_vv], logp)
     assert np.isclose(
         logp_fn(-1, 1),
         st.norm(0, 1).logpdf(-1) + st.norm(0, 1).logpdf(1),

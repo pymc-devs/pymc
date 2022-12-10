@@ -12,9 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as at
 
 
 def make_sens_ic(n_states, n_theta, floatX):
@@ -127,7 +127,7 @@ def augment_system(ode_func, n_states, n_theta):
     # This is the time derivative of dydp
     ddt_dydp = (Jdfdy + grad_f).flatten()
 
-    system = aesara.function(
+    system = pytensor.function(
         inputs=[t_y, t_t, t_p, dydp_vec], outputs=[t_yhat, ddt_dydp], on_unused_input="ignore"
     )
 

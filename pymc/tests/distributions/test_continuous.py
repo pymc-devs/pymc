@@ -14,23 +14,23 @@
 
 import functools as ft
 
-import aesara
-import aesara.tensor as at
 import numpy as np
 import numpy.testing as npt
+import pytensor
+import pytensor.tensor as at
 import pytest
 import scipy.special as sp
 import scipy.stats as st
 
-from aesara.compile.mode import Mode
+from pytensor.compile.mode import Mode
 
 import pymc as pm
 
-from pymc.aesaraf import floatX
 from pymc.distributions import logcdf, logp
 from pymc.distributions.continuous import Normal, get_tau_sigma, interpolated
 from pymc.distributions.dist_math import clipped_beta_rvs
 from pymc.logprob.utils import ParameterValueError
+from pymc.pytensorf import floatX
 from pymc.tests.distributions.util import (
     BaseTestDistributionRandom,
     Circ,
@@ -49,7 +49,7 @@ from pymc.tests.distributions.util import (
     seeded_scipy_distribution_builder,
 )
 from pymc.tests.helpers import select_by_precision
-from pymc.tests.logprob.utils import create_aesara_params, scipy_logprob_tester
+from pymc.tests.logprob.utils import create_pytensor_params, scipy_logprob_tester
 
 try:
     from polyagamma import polyagamma_cdf, polyagamma_pdf, random_polyagamma
@@ -184,7 +184,7 @@ class TestMatchesScipy:
         )
         # Custom logp / logcdf check for invalid parameters
         invalid_dist = pm.Uniform.dist(lower=1, upper=0)
-        with aesara.config.change_flags(mode=Mode("py")):
+        with pytensor.config.change_flags(mode=Mode("py")):
             with pytest.raises(ParameterValueError):
                 logp(invalid_dist, np.array(0.5)).eval()
             with pytest.raises(ParameterValueError):
@@ -208,19 +208,19 @@ class TestMatchesScipy:
 
         # Custom logp/logcdf check for values outside of domain
         valid_dist = pm.Triangular.dist(lower=0, upper=1, c=0.9, size=2)
-        with aesara.config.change_flags(mode=Mode("py")):
+        with pytensor.config.change_flags(mode=Mode("py")):
             assert np.all(logp(valid_dist, np.array([-1, 2])).eval() == -np.inf)
             assert np.all(logcdf(valid_dist, np.array([-1, 2])).eval() == [-np.inf, 0])
 
         # Custom logcdf check for invalid parameters.
         # Invalid logp checks for triangular are being done in aeppl
         invalid_dist = pm.Triangular.dist(lower=1, upper=0, c=0.1)
-        with aesara.config.change_flags(mode=Mode("py")):
+        with pytensor.config.change_flags(mode=Mode("py")):
             with pytest.raises(ParameterValueError):
                 logcdf(invalid_dist, 2).eval()
 
         invalid_dist = pm.Triangular.dist(lower=0, upper=1, c=2.0)
-        with aesara.config.change_flags(mode=Mode("py")):
+        with pytensor.config.change_flags(mode=Mode("py")):
             with pytest.raises(ParameterValueError):
                 logcdf(invalid_dist, 2).eval()
 
@@ -302,7 +302,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.skipif(
-        condition=(aesara.config.floatX == "float32"),
+        condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
     def test_chisquared_logcdf(self):
@@ -374,7 +374,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.skipif(
-        condition=(aesara.config.floatX == "float32"),
+        condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
     def test_beta_logcdf(self):
@@ -486,7 +486,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.skipif(
-        condition=(aesara.config.floatX == "float32"),
+        condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
     def test_studentt_logcdf(self):
@@ -550,7 +550,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.skipif(
-        condition=(aesara.config.floatX == "float32"),
+        condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
     def test_gamma_logcdf(self):
@@ -570,7 +570,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.skipif(
-        condition=(aesara.config.floatX == "float32"),
+        condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
     def test_inverse_gamma_logcdf(self):
@@ -582,7 +582,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.skipif(
-        condition=(aesara.config.floatX == "float32"),
+        condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to scaling issues",
     )
     def test_inverse_gamma_alt_params(self):
@@ -613,7 +613,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.skipif(
-        condition=(aesara.config.floatX == "float32"),
+        condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
     )
     def test_weibull_logp(self):
@@ -625,7 +625,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.skipif(
-        condition=(aesara.config.floatX == "float32"),
+        condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to inf issues",
     )
     def test_weibull_logcdf(self):
@@ -690,7 +690,7 @@ class TestMatchesScipy:
             skip_paramdomain_inside_edge_test=True,  # Valid values are tested above
         )
 
-    @pytest.mark.skipif(condition=(aesara.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.skipif(condition=(pytensor.config.floatX == "float32"), reason="Fails on float32")
     def test_vonmises(self):
         check_logp(
             pm.VonMises,
@@ -741,7 +741,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.skipif(
-        condition=(aesara.config.floatX == "float32"),
+        condition=(pytensor.config.floatX == "float32"),
         reason="Some combinations underflow to -inf in float32 in pymc version",
     )
     def test_rice(self):
@@ -751,7 +751,7 @@ class TestMatchesScipy:
             {"b": Rplus, "sigma": Rplusbig},
             lambda value, b, sigma: st.rice.logpdf(value, b=b, loc=0, scale=sigma),
         )
-        if aesara.config.floatX == "float32":
+        if pytensor.config.floatX == "float32":
             raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
 
     def test_rice_nu(self):
@@ -773,7 +773,7 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.skipif(
-        condition=(aesara.config.floatX == "float32"),
+        condition=(pytensor.config.floatX == "float32"),
         reason="PyMC underflows earlier than scipy on float32",
     )
     def test_moyal_logcdf(self):
@@ -783,7 +783,7 @@ class TestMatchesScipy:
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: floatX(st.moyal.logcdf(value, mu, sigma)),
         )
-        if aesara.config.floatX == "float32":
+        if pytensor.config.floatX == "float32":
             raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
 
     def test_interpolated(self):
@@ -2255,7 +2255,7 @@ class TestInterpolated(BaseTestDistributionRandom):
                 pymc_random(
                     TestedInterpolated,
                     {},
-                    extra_args={"rng": aesara.shared(rng)},
+                    extra_args={"rng": pytensor.shared(rng)},
                     ref_rand=ref_rand,
                 )
 
@@ -2271,7 +2271,7 @@ class TestICDF:
     )
     def test_normal_icdf(self, dist_params, obs, size):
 
-        dist_params_at, obs_at, size_at = create_aesara_params(dist_params, obs, size)
+        dist_params_at, obs_at, size_at = create_pytensor_params(dist_params, obs, size)
         dist_params = dict(zip(dist_params_at, dist_params))
 
         x = Normal.dist(*dist_params_at, size=size_at)
