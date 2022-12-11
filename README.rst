@@ -112,7 +112,7 @@ Domain specific
 
 - `Exoplanet <https://github.com/dfm/exoplanet>`__: a toolkit for modeling of transit and/or radial velocity observations of exoplanets and other astronomical time series.
 - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
-- `CasualPy <https://github.com/pymc-labs/CausalPy>`__: A package focussing on causal inference in quasi-experimental settings.
+- `CausalPy <https://github.com/pymc-labs/CausalPy>`__: A package focussing on causal inference in quasi-experimental settings.
 
 Please contact us if your software is not listed here.
 
