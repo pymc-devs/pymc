@@ -778,10 +778,13 @@ class TestMatchesScipy:
         reason="PyMC underflows earlier than scipy on float32",
     )
     def test_moyal_logcdf(self):
+        # SciPy has new (?) precision issues at {mu=-2.1, sigma=0.5, x=2.1}
+        # We circumvent it by skipping sigma=0.5:
+        rplusbig = Domain([0, 0.9, 0.99, 1, 1.5, 2, 20, np.inf])
         check_logcdf(
             pm.Moyal,
             R,
-            {"mu": R, "sigma": Rplusbig},
+            {"mu": R, "sigma": rplusbig},
             lambda value, mu, sigma: floatX(st.moyal.logcdf(value, mu, sigma)),
         )
         if pytensor.config.floatX == "float32":
