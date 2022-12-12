@@ -199,6 +199,7 @@ class ModelGraph:
 
         Just groups by the shape of the underlying distribution.  Will be wrong
         if there are two plates with the same shape.
+
         Returns
         -------
         dict

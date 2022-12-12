@@ -32,7 +32,7 @@ LOOP_ERR_MSG = "max slicer iters %d exceeded"
 
 class Slice(ArrayStep):
     """
-    Univariate slice sampler step method
+    Univariate slice sampler step method.
 
     Parameters
     ----------

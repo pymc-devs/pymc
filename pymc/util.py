@@ -449,7 +449,7 @@ def _get_seeds_per_chain(
 def get_value_vars_from_user_vars(
     vars: Union[Variable, Sequence[Variable]], model
 ) -> List[Variable]:
-    """This function converts user "vars" input into value variables
+    """Converts user "vars" input into value variables.
 
     More often than not, users will pass random variables, and we will extract the
     respective value variables, but we also allow for the input to already be value

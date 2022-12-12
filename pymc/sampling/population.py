@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""This module specializes on running MCMCs with population step methods."""
+"""Specializes on running MCMCs with population step methods."""
 
 import logging
 
@@ -187,7 +187,7 @@ class PopulationStepper:
 
     @staticmethod
     def _run_secondary(c, stepper_dumps, secondary_end):
-        """This method is started on a separate process to perform stepping of a chain.
+        """The method is started on a separate process to perform stepping of a chain.
 
         Parameters
         ----------

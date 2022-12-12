@@ -95,7 +95,7 @@ def factorized_joint_logprob(
 
 
     Parameters
-    ==========
+    ----------
     rv_values
         A ``dict`` of variables that maps stochastic elements
         (e.g. `RandomVariable`\s) to symbolic `Variable`\s representing their
@@ -111,7 +111,7 @@ def factorized_joint_logprob(
         etc.)
 
     Returns
-    =======
+    -------
     A ``dict`` that maps each value variable to the log-probability factor derived
     from the respective `RandomVariable`.
 
