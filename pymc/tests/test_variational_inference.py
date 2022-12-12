@@ -1,0 +1,901 @@
+#   Copyright 2020 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+import functools
+import io
+import operator
+
+import numpy as np
+import pytensor
+import pytensor.tensor as at
+import pytest
+
+import pymc as pm
+
+from pymc.pytensorf import intX
+from pymc.tests import models
+from pymc.tests.helpers import not_raises
+from pymc.variational import opvi
+from pymc.variational.approximations import (
+    Empirical,
+    EmpiricalGroup,
+    FullRank,
+    FullRankGroup,
+    MeanField,
+    MeanFieldGroup,
+)
+from pymc.variational.inference import ADVI, ASVGD, SVGD, FullRankADVI, fit
+from pymc.variational.opvi import Approximation, Group, NotImplementedInference
+
+pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test")
+
+
+@pytest.mark.parametrize("diff", ["relative", "absolute"])
+@pytest.mark.parametrize("ord", [1, 2, np.inf])
+def test_callbacks_convergence(diff, ord):
+    cb = pm.variational.callbacks.CheckParametersConvergence(every=1, diff=diff, ord=ord)
+
+    class _approx:
+        params = (pytensor.shared(np.asarray([1, 2, 3])),)
+
+    approx = _approx()
+
+    with pytest.raises(StopIteration):
+        cb(approx, None, 1)
+        cb(approx, None, 10)
+
+
+def test_tracker_callback():
+    import time
+
+    tracker = pm.callbacks.Tracker(
+        ints=lambda *t: t[-1],
+        ints2=lambda ap, h, j: j,
+        time=time.time,
+    )
+    for i in range(10):
+        tracker(None, None, i)
+    assert "time" in tracker.hist
+    assert "ints" in tracker.hist
+    assert "ints2" in tracker.hist
+    assert len(tracker["ints"]) == len(tracker["ints2"]) == len(tracker["time"]) == 10
+    assert tracker["ints"] == tracker["ints2"] == list(range(10))
+    tracker = pm.callbacks.Tracker(bad=lambda t: t)  # bad signature
+    with pytest.raises(TypeError):
+        tracker(None, None, 1)
+
+
+@pytest.fixture(scope="module")
+def three_var_model():
+    with pm.Model() as model:
+        pm.HalfNormal("one", size=(10, 2), total_size=100)
+        pm.Normal("two", size=(10,))
+        pm.Normal("three", size=(10, 1, 2))
+    return model
+
+
+@pytest.mark.parametrize(
+    ["raises", "grouping"],
+    [
+        (not_raises(), [(MeanFieldGroup, None)]),
+        (not_raises(), [(FullRankGroup, None), (MeanFieldGroup, ["one"])]),
+        (
+            pytest.raises(TypeError, match="No approximation is specified"),
+            [(MeanFieldGroup, ["one", "two"])],
+        ),
+        (not_raises(), [(MeanFieldGroup, ["one"]), (FullRankGroup, ["two", "three"])]),
+        (
+            not_raises(),
+            [(MeanFieldGroup, ["one"]), (FullRankGroup, ["two"]), (MeanFieldGroup, ["three"])],
+        ),
+        (
+            pytest.raises(TypeError, match="Found duplicates"),
+            [
+                (MeanFieldGroup, ["one"]),
+                (FullRankGroup, ["two", "one"]),
+                (MeanFieldGroup, ["three"]),
+            ],
+        ),
+    ],
+)
+def test_init_groups(three_var_model, raises, grouping):
+    with raises, three_var_model:
+        approxes, groups = zip(*grouping)
+        groups = [
+            list(map(functools.partial(getattr, three_var_model), g)) if g is not None else None
+            for g in groups
+        ]
+        inited_groups = [a(group=g) for a, g in zip(approxes, groups)]
+        approx = Approximation(inited_groups)
+        for ig, g in zip(inited_groups, groups):
+            if g is None:
+                pass
+            else:
+                assert {pm.util.get_transformed(z) for z in g} == set(ig.group)
+        else:
+            model_dim = sum(v.size for v in three_var_model.initial_point(0).values())
+            assert approx.ndim == model_dim
+        trace = approx.sample(100)
+
+
+@pytest.fixture(
+    params=[
+        ({}, {MeanFieldGroup: (None, {})}),
+        ({}, {FullRankGroup: (None, {}), MeanFieldGroup: (["one"], {})}),
+        ({}, {MeanFieldGroup: (["one"], {}), FullRankGroup: (["two", "three"], {})}),
+        ({}, {MeanFieldGroup: (["one"], {}), EmpiricalGroup: (["two", "three"], {"size": 100})}),
+    ],
+    ids=lambda t: ", ".join(f"{k.__name__}: {v[0]}" for k, v in t[1].items()),
+)
+def three_var_groups(request, three_var_model):
+    kw, grouping = request.param
+    approxes, groups = zip(*grouping.items())
+    groups, gkwargs = zip(*groups)
+    groups = [
+        list(map(functools.partial(getattr, three_var_model), g)) if g is not None else None
+        for g in groups
+    ]
+    inited_groups = [
+        a(group=g, model=three_var_model, **gk) for a, g, gk in zip(approxes, groups, gkwargs)
+    ]
+    return inited_groups
+
+
+@pytest.fixture
+def three_var_approx(three_var_model, three_var_groups):
+    approx = Approximation(three_var_groups, model=three_var_model)
+    return approx
+
+
+@pytest.fixture
+def three_var_approx_single_group_mf(three_var_model):
+    return MeanField(model=three_var_model)
+
+
+@pytest.fixture
+def test_sample_simple(three_var_approx, request):
+    backend, name = request.param
+    trace = three_var_approx.sample(100, name=name, return_inferencedata=False)
+    assert set(trace.varnames) == {"one", "one_log__", "three", "two"}
+    assert len(trace) == 100
+    assert trace[0]["one"].shape == (10, 2)
+    assert trace[0]["two"].shape == (10,)
+    assert trace[0]["three"].shape == (10, 1, 2)
+
+
+@pytest.fixture
+def aevb_initial():
+    return pytensor.shared(np.random.rand(3, 7).astype("float32"))
+
+
+@pytest.fixture(
+    params=[
+        (MeanFieldGroup, {}),
+        (FullRankGroup, {}),
+    ],
+    ids=lambda t: f"{t[0].__name__}: {t[1]}",
+)
+def parametric_grouped_approxes(request):
+    return request.param
+
+
+@pytest.fixture
+def three_var_aevb_groups(parametric_grouped_approxes, three_var_model, aevb_initial):
+    one_initial_value = three_var_model.initial_point(0)[three_var_model.one.tag.value_var.name]
+    dsize = np.prod(one_initial_value.shape[1:])
+    cls, kw = parametric_grouped_approxes
+    spec = cls.get_param_spec_for(d=dsize, **kw)
+    params = dict()
+    for k, v in spec.items():
+        if isinstance(k, int):
+            params[k] = dict()
+            for k_i, v_i in v.items():
+                params[k][k_i] = aevb_initial.dot(np.random.rand(7, *v_i).astype("float32"))
+        else:
+            params[k] = aevb_initial.dot(np.random.rand(7, *v).astype("float32"))
+    aevb_g = cls([three_var_model.one], params=params, model=three_var_model, local=True)
+    return [aevb_g, MeanFieldGroup(None, model=three_var_model)]
+
+
+@pytest.fixture
+def three_var_aevb_approx(three_var_model, three_var_aevb_groups):
+    approx = Approximation(three_var_aevb_groups, model=three_var_model)
+    return approx
+
+
+def test_logq_mini_1_sample_1_var(parametric_grouped_approxes, three_var_model):
+    cls, kw = parametric_grouped_approxes
+    approx = cls([three_var_model.one], model=three_var_model, **kw)
+    logq = approx.logq
+    logq = approx.set_size_and_deterministic(logq, 1, 0)
+    logq.eval()
+
+
+def test_logq_mini_2_sample_2_var(parametric_grouped_approxes, three_var_model):
+    cls, kw = parametric_grouped_approxes
+    approx = cls([three_var_model.one, three_var_model.two], model=three_var_model, **kw)
+    logq = approx.logq
+    logq = approx.set_size_and_deterministic(logq, 2, 0)
+    logq.eval()
+
+
+def test_logq_globals(three_var_approx):
+    if not three_var_approx.has_logq:
+        pytest.skip("%s does not implement logq" % three_var_approx)
+    approx = three_var_approx
+    logq, symbolic_logq = approx.set_size_and_deterministic(
+        [approx.logq, approx.symbolic_logq], 1, 0
+    )
+    e = logq.eval()
+    es = symbolic_logq.eval()
+    assert e.shape == ()
+    assert es.shape == (1,)
+
+    logq, symbolic_logq = approx.set_size_and_deterministic(
+        [approx.logq, approx.symbolic_logq], 2, 0
+    )
+    e = logq.eval()
+    es = symbolic_logq.eval()
+    assert e.shape == ()
+    assert es.shape == (2,)
+
+
+@pytest.mark.parametrize(
+    "raises, vfam, type_, kw",
+    [
+        (not_raises(), "mean_field", MeanFieldGroup, {}),
+        (not_raises(), "mf", MeanFieldGroup, {}),
+        (not_raises(), "full_rank", FullRankGroup, {}),
+        (not_raises(), "fr", FullRankGroup, {}),
+        (not_raises(), "FR", FullRankGroup, {}),
+        (
+            pytest.raises(ValueError, match="Need `trace` or `size`"),
+            "empirical",
+            EmpiricalGroup,
+            {},
+        ),
+        (not_raises(), "empirical", EmpiricalGroup, {"size": 100}),
+    ],
+)
+def test_group_api_vfam(three_var_model, raises, vfam, type_, kw):
+    with three_var_model, raises:
+        g = Group([three_var_model.one], vfam, **kw)
+        assert isinstance(g, type_)
+        assert not hasattr(g, "_kwargs")
+
+
+@pytest.mark.parametrize(
+    "raises, params, type_, kw, formula",
+    [
+        (
+            not_raises(),
+            dict(mu=np.ones((10, 2), "float32"), rho=np.ones((10, 2), "float32")),
+            MeanFieldGroup,
+            {},
+            None,
+        ),
+        (
+            not_raises(),
+            dict(
+                mu=np.ones((10, 2), "float32"),
+                L_tril=np.ones(
+                    FullRankGroup.get_param_spec_for(d=np.prod((10, 2)))["L_tril"], "float32"
+                ),
+            ),
+            FullRankGroup,
+            {},
+            None,
+        ),
+    ],
+)
+def test_group_api_params(three_var_model, raises, params, type_, kw, formula):
+    with three_var_model, raises:
+        g = Group([three_var_model.one], params=params, **kw)
+        assert isinstance(g, type_)
+        if g.has_logq:
+            # should work as well
+            logq = g.logq
+            logq = g.set_size_and_deterministic(logq, 1, 0)
+            logq.eval()
+
+
+@pytest.mark.parametrize(
+    "gcls, approx, kw",
+    [
+        (MeanFieldGroup, MeanField, {}),
+        (FullRankGroup, FullRank, {}),
+        (EmpiricalGroup, Empirical, {"size": 100}),
+    ],
+)
+def test_single_group_shortcuts(three_var_model, approx, kw, gcls):
+    with three_var_model:
+        a = approx(**kw)
+    assert isinstance(a, Approximation)
+    assert len(a.groups) == 1
+    assert isinstance(a.groups[0], gcls)
+
+
+def test_elbo():
+    mu0 = 1.5
+    sigma = 1.0
+    y_obs = np.array([1.6, 1.4])
+
+    post_mu = np.array([1.88], dtype=pytensor.config.floatX)
+    post_sigma = np.array([1], dtype=pytensor.config.floatX)
+    # Create a model for test
+    with pm.Model() as model:
+        mu = pm.Normal("mu", mu=mu0, sigma=sigma)
+        pm.Normal("y", mu=mu, sigma=1, observed=y_obs)
+
+    # Create variational gradient tensor
+    mean_field = MeanField(model=model)
+    with pytensor.config.change_flags(compute_test_value="off"):
+        elbo = -pm.operators.KL(mean_field)()(10000)
+
+    mean_field.shared_params["mu"].set_value(post_mu)
+    mean_field.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
+
+    f = pytensor.function([], elbo)
+    elbo_mc = f()
+
+    # Exact value
+    elbo_true = -0.5 * (
+        3
+        + 3 * post_mu**2
+        - 2 * (y_obs[0] + y_obs[1] + mu0) * post_mu
+        + y_obs[0] ** 2
+        + y_obs[1] ** 2
+        + mu0**2
+        + 3 * np.log(2 * np.pi)
+    ) + 0.5 * (np.log(2 * np.pi) + 1)
+    np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)
+
+
+@pytest.mark.parametrize("aux_total_size", range(2, 10, 3))
+def test_scale_cost_to_minibatch_works(aux_total_size):
+    mu0 = 1.5
+    sigma = 1.0
+    y_obs = np.array([1.6, 1.4])
+    beta = len(y_obs) / float(aux_total_size)
+
+    # TODO: pytensor_config
+    # with pm.Model(pytensor_config=dict(floatX='float64')):
+    # did not not work as expected
+    # there were some numeric problems, so float64 is forced
+    with pytensor.config.change_flags(floatX="float64", warn_float64="ignore"):
+
+        assert pytensor.config.floatX == "float64"
+        assert pytensor.config.warn_float64 == "ignore"
+
+        post_mu = np.array([1.88], dtype=pytensor.config.floatX)
+        post_sigma = np.array([1], dtype=pytensor.config.floatX)
+
+        with pm.Model():
+            mu = pm.Normal("mu", mu=mu0, sigma=sigma)
+            pm.Normal("y", mu=mu, sigma=1, observed=y_obs, total_size=aux_total_size)
+            # Create variational gradient tensor
+            mean_field_1 = MeanField()
+            assert mean_field_1.scale_cost_to_minibatch
+            mean_field_1.shared_params["mu"].set_value(post_mu)
+            mean_field_1.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
+
+            with pytensor.config.change_flags(compute_test_value="off"):
+                elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
+
+        with pm.Model():
+            mu = pm.Normal("mu", mu=mu0, sigma=sigma)
+            pm.Normal("y", mu=mu, sigma=1, observed=y_obs, total_size=aux_total_size)
+            # Create variational gradient tensor
+            mean_field_2 = MeanField()
+            assert mean_field_1.scale_cost_to_minibatch
+            mean_field_2.scale_cost_to_minibatch = False
+            assert not mean_field_2.scale_cost_to_minibatch
+            mean_field_2.shared_params["mu"].set_value(post_mu)
+            mean_field_2.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
+
+        with pytensor.config.change_flags(compute_test_value="off"):
+            elbo_via_total_size_unscaled = -pm.operators.KL(mean_field_2)()(10000)
+
+        np.testing.assert_allclose(
+            elbo_via_total_size_unscaled.eval(),
+            elbo_via_total_size_scaled.eval() * pm.floatX(1 / beta),
+            rtol=0.02,
+            atol=1e-1,
+        )
+
+
+@pytest.mark.parametrize("aux_total_size", range(2, 10, 3))
+def test_elbo_beta_kl(aux_total_size):
+    mu0 = 1.5
+    sigma = 1.0
+    y_obs = np.array([1.6, 1.4])
+    beta = len(y_obs) / float(aux_total_size)
+
+    with pytensor.config.change_flags(floatX="float64", warn_float64="ignore"):
+
+        post_mu = np.array([1.88], dtype=pytensor.config.floatX)
+        post_sigma = np.array([1], dtype=pytensor.config.floatX)
+
+        with pm.Model():
+            mu = pm.Normal("mu", mu=mu0, sigma=sigma)
+            pm.Normal("y", mu=mu, sigma=1, observed=y_obs, total_size=aux_total_size)
+            # Create variational gradient tensor
+            mean_field_1 = MeanField()
+            mean_field_1.scale_cost_to_minibatch = True
+            mean_field_1.shared_params["mu"].set_value(post_mu)
+            mean_field_1.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
+
+            with pytensor.config.change_flags(compute_test_value="off"):
+                elbo_via_total_size_scaled = -pm.operators.KL(mean_field_1)()(10000)
+
+        with pm.Model():
+            mu = pm.Normal("mu", mu=mu0, sigma=sigma)
+            pm.Normal("y", mu=mu, sigma=1, observed=y_obs)
+            # Create variational gradient tensor
+            mean_field_3 = MeanField()
+            mean_field_3.shared_params["mu"].set_value(post_mu)
+            mean_field_3.shared_params["rho"].set_value(np.log(np.exp(post_sigma) - 1))
+
+            with pytensor.config.change_flags(compute_test_value="off"):
+                elbo_via_beta_kl = -pm.operators.KL(mean_field_3, beta=beta)()(10000)
+
+        np.testing.assert_allclose(
+            elbo_via_total_size_scaled.eval(), elbo_via_beta_kl.eval(), rtol=0, atol=1e-1
+        )
+
+
+@pytest.fixture(scope="module", params=[True, False], ids=["mini", "full"])
+def use_minibatch(request):
+    return request.param
+
+
+@pytest.fixture
+def simple_model_data(use_minibatch):
+    n = 1000
+    sigma0 = 2.0
+    mu0 = 4.0
+    sigma = 3.0
+    mu = -5.0
+
+    data = sigma * np.random.randn(n) + mu
+    d = n / sigma**2 + 1 / sigma0**2
+    mu_post = (n * np.mean(data) / sigma**2 + mu0 / sigma0**2) / d
+    if use_minibatch:
+        data = pm.Minibatch(data)
+    return dict(
+        n=n,
+        data=data,
+        mu_post=mu_post,
+        d=d,
+        mu0=mu0,
+        sigma0=sigma0,
+        sigma=sigma,
+    )
+
+
+@pytest.fixture
+def simple_model(simple_model_data):
+    with pm.Model() as model:
+        mu_ = pm.Normal(
+            "mu", mu=simple_model_data["mu0"], sigma=simple_model_data["sigma0"], initval=0
+        )
+        pm.Normal(
+            "x",
+            mu=mu_,
+            sigma=simple_model_data["sigma"],
+            observed=simple_model_data["data"],
+            total_size=simple_model_data["n"],
+        )
+    return model
+
+
+@pytest.fixture
+def hierarchical_model_data():
+    group_coords = {
+        "group_d1": np.arange(3),
+        "group_d2": np.arange(7),
+    }
+    group_shape = tuple(len(d) for d in group_coords.values())
+    data_coords = {"data_d": np.arange(11)} | group_coords
+
+    data_shape = tuple(len(d) for d in data_coords.values())
+
+    mu = -5.0
+
+    sigma_group_mu = 3
+    group_mu = sigma_group_mu * np.random.randn(*group_shape)
+
+    sigma = 3.0
+
+    data = sigma * np.random.randn(*data_shape) + group_mu + mu
+
+    return dict(
+        group_coords=group_coords,
+        group_shape=group_shape,
+        data_coords=data_coords,
+        data_shape=data_shape,
+        mu=mu,
+        sigma_group_mu=sigma_group_mu,
+        sigma=sigma,
+        group_mu=group_mu,
+        data=data,
+    )
+
+
+@pytest.fixture
+def hierarchical_model(hierarchical_model_data):
+    with pm.Model(coords=hierarchical_model_data["data_coords"]) as model:
+        mu = pm.Normal("mu", mu=0, sigma=10)
+        sigma_group_mu = pm.HalfNormal("sigma_group_mu", sigma=5)
+
+        group_mu = pm.Normal(
+            "group_mu",
+            mu=0,
+            sigma=sigma_group_mu,
+            dims=list(hierarchical_model_data["group_coords"].keys()),
+        )
+
+        sigma = pm.HalfNormal("sigma", sigma=3)
+
+        pm.Normal(
+            "data",
+            mu=(mu + group_mu),
+            sigma=sigma,
+            observed=hierarchical_model_data["data"],
+        )
+    return model
+
+
+@pytest.fixture(
+    scope="module",
+    params=[
+        dict(cls=ADVI, init=dict()),
+        dict(cls=FullRankADVI, init=dict()),
+        dict(cls=SVGD, init=dict(n_particles=500, jitter=1)),
+        dict(cls=ASVGD, init=dict(temperature=1.0)),
+    ],
+    ids=["ADVI", "FullRankADVI", "SVGD", "ASVGD"],
+)
+def inference_spec(request):
+    cls = request.param["cls"]
+    init = request.param["init"]
+
+    def init_(**kw):
+        k = init.copy()
+        k.update(kw)
+        if cls == ASVGD:
+            with pytest.warns(UserWarning, match="experimental inference Operator"):
+                return cls(**k)
+        else:
+            return cls(**k)
+
+    init_.cls = cls
+    return init_
+
+
+@pytest.fixture(scope="function")
+def inference(inference_spec, simple_model):
+    with simple_model:
+        return inference_spec()
+
+
+@pytest.fixture(scope="function")
+def fit_kwargs(inference, use_minibatch):
+    _select = {
+        (ADVI, "full"): dict(obj_optimizer=pm.adagrad_window(learning_rate=0.02, n_win=50), n=5000),
+        (ADVI, "mini"): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=12000
+        ),
+        (FullRankADVI, "full"): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=6000
+        ),
+        (FullRankADVI, "mini"): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.007, n_win=50), n=12000
+        ),
+        (SVGD, "full"): dict(obj_optimizer=pm.adagrad_window(learning_rate=0.075, n_win=7), n=300),
+        (SVGD, "mini"): dict(obj_optimizer=pm.adagrad_window(learning_rate=0.075, n_win=7), n=300),
+        (ASVGD, "full"): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=10), n=500, obj_n_mc=300
+        ),
+        (ASVGD, "mini"): dict(
+            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=10), n=500, obj_n_mc=300
+        ),
+    }
+    if use_minibatch:
+        key = "mini"
+        # backward compat for PR#3071
+        inference.approx.scale_cost_to_minibatch = False
+    else:
+        key = "full"
+    return _select[(type(inference), key)]
+
+
+def test_fit_oo(inference, fit_kwargs, simple_model_data):
+    trace = inference.fit(**fit_kwargs).sample(10000)
+    mu_post = simple_model_data["mu_post"]
+    d = simple_model_data["d"]
+    np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_post, rtol=0.05)
+    np.testing.assert_allclose(np.std(trace.posterior["mu"]), np.sqrt(1.0 / d), rtol=0.2)
+
+
+def test_fit_data(inference, fit_kwargs, simple_model_data):
+    fitted = inference.fit(**fit_kwargs)
+    mu_post = simple_model_data["mu_post"]
+    d = simple_model_data["d"]
+    np.testing.assert_allclose(fitted.mean_data["mu"].values, mu_post, rtol=0.05)
+    np.testing.assert_allclose(fitted.std_data["mu"], np.sqrt(1.0 / d), rtol=0.2)
+
+
+def test_fit_data_coords(hierarchical_model, hierarchical_model_data):
+    with hierarchical_model:
+        fitted = pm.fit(1)
+
+    for data in [fitted.mean_data, fitted.std_data]:
+        assert set(data.keys()) == {"sigma_group_mu_log__", "sigma_log__", "group_mu", "mu"}
+        assert data["group_mu"].shape == hierarchical_model_data["group_shape"]
+        assert list(data["group_mu"].coords.keys()) == list(
+            hierarchical_model_data["group_coords"].keys()
+        )
+        assert data["mu"].shape == tuple()
+
+
+def test_profile(inference):
+    inference.run_profiling(n=100).summary()
+
+
+def test_remove_scan_op():
+    with pm.Model():
+        pm.Normal("n", 0, 1)
+        inference = ADVI()
+        buff = io.StringIO()
+        inference.run_profiling(n=10).summary(buff)
+        assert "pytensor.scan.op.Scan" not in buff.getvalue()
+        buff.close()
+
+
+def test_clear_cache():
+    import cloudpickle
+
+    with pm.Model():
+        pm.Normal("n", 0, 1)
+        inference = ADVI()
+        inference.fit(n=10)
+        assert any(len(c) != 0 for c in inference.approx._cache.values())
+        inference.approx._cache.clear()
+        # should not be cleared at this call
+        assert all(len(c) == 0 for c in inference.approx._cache.values())
+        new_a = cloudpickle.loads(cloudpickle.dumps(inference.approx))
+        assert not hasattr(new_a, "_cache")
+        inference_new = pm.KLqp(new_a)
+        inference_new.fit(n=10)
+        assert any(len(c) != 0 for c in inference_new.approx._cache.values())
+        inference_new.approx._cache.clear()
+        assert all(len(c) == 0 for c in inference_new.approx._cache.values())
+
+
+@pytest.fixture(scope="module")
+def another_simple_model():
+    _model = models.simple_model()[1]
+    with _model:
+        pm.Potential("pot", at.ones((10, 10)))
+    return _model
+
+
+@pytest.fixture(
+    params=[
+        dict(name="advi", kw=dict(start={})),
+        dict(name="fullrank_advi", kw=dict(start={})),
+        dict(name="svgd", kw=dict(start={})),
+    ],
+    ids=lambda d: d["name"],
+)
+def fit_method_with_object(request, another_simple_model):
+    _select = dict(advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD)
+    with another_simple_model:
+        return _select[request.param["name"]](**request.param["kw"])
+
+
+@pytest.mark.parametrize(
+    ["method", "kwargs", "error"],
+    [
+        ("undefined", dict(), KeyError),
+        (1, dict(), TypeError),
+        ("advi", dict(total_grad_norm_constraint=10), None),
+        ("fullrank_advi", dict(), None),
+        ("svgd", dict(total_grad_norm_constraint=10), None),
+        ("svgd", dict(start={}), None),
+        # start argument is not allowed for ASVGD
+        ("asvgd", dict(start={}, total_grad_norm_constraint=10), TypeError),
+        ("asvgd", dict(total_grad_norm_constraint=10), None),
+        ("nfvi=bad-formula", dict(start={}), KeyError),
+    ],
+)
+def test_fit_fn_text(method, kwargs, error, another_simple_model):
+    with another_simple_model:
+        if method == "asvgd":
+            with pytest.warns(UserWarning, match="experimental inference Operator"):
+                if error is not None:
+                    with pytest.raises(error):
+                        fit(10, method=method, **kwargs)
+                else:
+                    fit(10, method=method, **kwargs)
+        else:
+            if error is not None:
+                with pytest.raises(error):
+                    fit(10, method=method, **kwargs)
+            else:
+                fit(10, method=method, **kwargs)
+
+
+@pytest.fixture(scope="module")
+def aevb_model():
+    with pm.Model() as model:
+        pm.HalfNormal("x", size=(2,), total_size=5)
+        pm.Normal("y", size=(2,))
+    x = model.x
+    y = model.y
+    xr = model.initial_point(0)[model.rvs_to_values[x].name]
+    mu = pytensor.shared(xr)
+    rho = pytensor.shared(np.zeros_like(xr))
+    return {"model": model, "y": y, "x": x, "replace": dict(mu=mu, rho=rho)}
+
+
+def test_pickle_approx(three_var_approx):
+    import cloudpickle
+
+    dump = cloudpickle.dumps(three_var_approx)
+    new = cloudpickle.loads(dump)
+    assert new.sample(1)
+
+
+def test_pickle_single_group(three_var_approx_single_group_mf):
+    import cloudpickle
+
+    dump = cloudpickle.dumps(three_var_approx_single_group_mf)
+    new = cloudpickle.loads(dump)
+    assert new.sample(1)
+
+
+@pytest.fixture(scope="module")
+def binomial_model():
+    n_samples = 100
+    xs = intX(np.random.binomial(n=1, p=0.2, size=n_samples))
+    with pm.Model() as model:
+        p = pm.Beta("p", alpha=1, beta=1)
+        pm.Binomial("xs", n=1, p=p, observed=xs)
+    return model
+
+
+@pytest.fixture(scope="module")
+def binomial_model_inference(binomial_model, inference_spec):
+    with binomial_model:
+        return inference_spec()
+
+
+@pytest.mark.xfail("pytensor.config.warn_float64 == 'raise'", reason="too strict float32")
+def test_replacements(binomial_model_inference):
+    d = at.bscalar()
+    d.tag.test_value = 1
+    approx = binomial_model_inference.approx
+    p = approx.model.p
+    p_t = p**3
+    p_s = approx.sample_node(p_t)
+    assert not any(
+        isinstance(n.owner.op, pytensor.tensor.random.basic.BetaRV)
+        for n in pytensor.graph.ancestors([p_s])
+        if n.owner
+    ), "p should be replaced"
+    if pytensor.config.compute_test_value != "off":
+        assert p_s.tag.test_value.shape == p_t.tag.test_value.shape
+    sampled = [p_s.eval() for _ in range(100)]
+    assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
+    p_z = approx.sample_node(p_t, deterministic=False, size=10)
+    assert p_z.shape.eval() == (10,)
+    try:
+        p_z = approx.sample_node(p_t, deterministic=True, size=10)
+        assert p_z.shape.eval() == (10,)
+    except NotImplementedInference:
+        pass
+
+    try:
+        p_d = approx.sample_node(p_t, deterministic=True)
+        sampled = [p_d.eval() for _ in range(100)]
+        assert all(map(operator.eq, sampled[1:], sampled[:-1]))  # deterministic
+    except NotImplementedInference:
+        pass
+
+    p_r = approx.sample_node(p_t, deterministic=d)
+    sampled = [p_r.eval({d: 1}) for _ in range(100)]
+    assert all(map(operator.eq, sampled[1:], sampled[:-1]))  # deterministic
+    sampled = [p_r.eval({d: 0}) for _ in range(100)]
+    assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
+
+
+def test_sample_replacements(binomial_model_inference):
+    i = at.iscalar()
+    i.tag.test_value = 1
+    approx = binomial_model_inference.approx
+    p = approx.model.p
+    p_t = p**3
+    p_s = approx.sample_node(p_t, size=100)
+    if pytensor.config.compute_test_value != "off":
+        assert p_s.tag.test_value.shape == (100,) + p_t.tag.test_value.shape
+    sampled = p_s.eval()
+    assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
+    assert sampled.shape[0] == 100
+
+    p_d = approx.sample_node(p_t, size=i)
+    sampled = p_d.eval({i: 100})
+    assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # deterministic
+    assert sampled.shape[0] == 100
+    sampled = p_d.eval({i: 101})
+    assert sampled.shape[0] == 101
+
+
+def test_discrete_not_allowed():
+    mu_true = np.array([-2, 0, 2])
+    z_true = np.random.randint(len(mu_true), size=100)
+    y = np.random.normal(mu_true[z_true], np.ones_like(z_true))
+
+    with pm.Model():
+        mu = pm.Normal("mu", mu=0, sigma=10, size=3)
+        z = pm.Categorical("z", p=at.ones(3) / 3, size=len(y))
+        pm.Normal("y_obs", mu=mu[z], sigma=1.0, observed=y)
+        with pytest.raises(opvi.ParametrizationError):
+            pm.fit(n=1)  # fails
+
+
+def test_var_replacement():
+    X_mean = pm.floatX(np.linspace(0, 10, 10))
+    y = pm.floatX(np.random.normal(X_mean * 4, 0.05))
+    with pm.Model():
+        inp = pm.Normal("X", X_mean, size=X_mean.shape)
+        coef = pm.Normal("b", 4.0)
+        mean = inp * coef
+        pm.Normal("y", mean, 0.1, observed=y)
+        advi = pm.fit(100)
+        assert advi.sample_node(mean).eval().shape == (10,)
+        x_new = pm.floatX(np.linspace(0, 10, 11))
+        assert advi.sample_node(mean, more_replacements={inp: x_new}).eval().shape == (11,)
+
+
+def test_empirical_from_trace(another_simple_model):
+    with another_simple_model:
+        step = pm.Metropolis()
+        trace = pm.sample(100, step=step, chains=1, tune=0, return_inferencedata=False)
+        emp = Empirical(trace)
+        assert emp.histogram.shape[0].eval() == 100
+        trace = pm.sample(100, step=step, chains=4, tune=0, return_inferencedata=False)
+        emp = Empirical(trace)
+        assert emp.histogram.shape[0].eval() == 400
+
+
+def test_empirical_does_not_support_inference_data(another_simple_model):
+    with another_simple_model:
+        step = pm.Metropolis()
+        trace = pm.sample(100, step=step, chains=1, tune=0, return_inferencedata=True)
+        with pytest.raises(NotImplementedError, match="return_inferencedata=False"):
+            Empirical(trace)
+
+
+@pytest.mark.parametrize("score", [True, False])
+def test_fit_with_nans(score):
+    X_mean = pm.floatX(np.linspace(0, 10, 10))
+    y = pm.floatX(np.random.normal(X_mean * 4, 0.05))
+    with pm.Model():
+        inp = pm.Normal("X", X_mean, size=X_mean.shape)
+        coef = pm.Normal("b", 4.0)
+        mean = inp * coef
+        pm.Normal("y", mean, 0.1, observed=y)
+        with pytest.raises(FloatingPointError) as e:
+            advi = pm.fit(100, score=score, obj_optimizer=pm.adam(learning_rate=float("nan")))
