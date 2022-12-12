@@ -21,6 +21,7 @@ import numpy as np
 import pytensor.tensor as at
 
 from arviz.data.base import make_attrs
+from jax.experimental.maps import SerialLoop, xmap
 from pytensor.compile import SharedVariable, Supervisor, mode
 from pytensor.graph.basic import clone_replace, graph_inputs
 from pytensor.graph.fg import FunctionGraph
@@ -140,6 +141,22 @@ def _sample_stats_to_xarray(posterior):
         if stat == "num_steps":
             data["tree_depth"] = np.log2(value).astype(int) + 1
     return data
+
+
+def _postprocess_samples(
+    jax_fn: List[TensorVariable],
+    raw_mcmc_samples: List[TensorVariable],
+    postprocessing_backend: str,
+    num_chunks: int = 1,
+) -> List[TensorVariable]:
+    loop = xmap(
+        jax_fn,
+        in_axes=["chain", "samples", ...],
+        out_axes=["chain", "samples", ...],
+        axis_resources={"samples": SerialLoop(num_chunks)},
+    )
+    f = xmap(loop, in_axes=[...], out_axes=[...])
+    return f(*jax.device_put(raw_mcmc_samples, jax.devices(postprocessing_backend)[0]))
 
 
 def _blackjax_stats_to_dict(sample_stats, potential_energy) -> Dict:
@@ -274,6 +291,7 @@ def sample_blackjax_nuts(
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
     postprocessing_backend: Optional[str] = None,
+    postprocessing_chunks: int = 1,
     idata_kwargs: Optional[Dict[str, Any]] = None,
 ) -> az.InferenceData:
     """
@@ -313,6 +331,9 @@ def sample_blackjax_nuts(
         "vectorized".
     postprocessing_backend : str, optional
         Specify how postprocessing should be computed. gpu or cpu
+    postprocessing_chunks: int, default 1
+        Specify the number of chunks the postprocessing should be computed in. More
+        chunks reduces memory usage at the cost of losing some vectorization
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
         value for the ``log_likelihood`` key to indicate that the pointwise log
@@ -399,8 +420,8 @@ def sample_blackjax_nuts(
 
     print("Transforming variables...", file=sys.stdout)
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
-    result = jax.vmap(jax.vmap(jax_fn))(
-        *jax.device_put(raw_mcmc_samples, jax.devices(postprocessing_backend)[0])
+    result = _postprocess_samples(
+        jax_fn, raw_mcmc_samples, postprocessing_backend, num_chunks=postprocessing_chunks
     )
     mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
     mcmc_stats = _blackjax_stats_to_dict(stats, potential_energy)
@@ -477,6 +498,7 @@ def sample_numpyro_nuts(
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
     postprocessing_backend: Optional[str] = None,
+    postprocessing_chunks: int = 1,
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
 ) -> az.InferenceData:
@@ -521,6 +543,9 @@ def sample_numpyro_nuts(
         "parallel", and "vectorized".
     postprocessing_backend : Optional[str]
         Specify how postprocessing should be computed. gpu or cpu
+    postprocessing_chunks: int, default 1
+        Specify the number of chunks the postprocessing should be computed in. More
+        chunks reduces memory usage at the cost of losing some vectorization
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
         value for the ``log_likelihood`` key to indicate that the pointwise log
@@ -621,8 +646,8 @@ def sample_numpyro_nuts(
 
     print("Transforming variables...", file=sys.stdout)
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
-    result = jax.vmap(jax.vmap(jax_fn))(
-        *jax.device_put(raw_mcmc_samples, jax.devices(postprocessing_backend)[0])
+    result = _postprocess_samples(
+        jax_fn, raw_mcmc_samples, postprocessing_backend, num_chunks=postprocessing_chunks
     )
     mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
 
