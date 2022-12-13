@@ -13,8 +13,14 @@
 ## Major / Breaking Changes
 - ...
 
-## Bugfixes / New features
+## New features
 - ...
 
-## Docs / Maintenance
+## Bugfixes
+- ...
+
+## Documentation
+- ...
+
+## Maintenance
 - ...
