@@ -1,4 +1,4 @@
-import os
+#6377import os
 import re
 import sys
 import warnings
@@ -473,7 +473,7 @@ def sample_numpyro_nuts(
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     model: Optional[Model] = None,
     var_names: Optional[Sequence[str]] = None,
-    progress_bar: bool = True,
+    progressbar: bool = True,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
     postprocessing_backend: Optional[str] = None,
@@ -510,7 +510,7 @@ def sample_numpyro_nuts(
     var_names : sequence of str, optional
         Names of variables for which to compute the posterior samples. Defaults to all
         variables in the posterior.
-    progress_bar : bool, default True
+    progressbar : bool, default True
         Whether or not to display a progress bar in the command line. The bar shows the
         percentage of completion, the sampling speed in samples per second (SPS), and
         the estimated remaining time until completion ("expected time of arrival"; ETA).
@@ -589,7 +589,7 @@ def sample_numpyro_nuts(
         num_chains=chains,
         postprocess_fn=None,
         chain_method=chain_method,
-        progress_bar=progress_bar,
+        progressbar=progressbar,
     )
 
     tic2 = datetime.now()
