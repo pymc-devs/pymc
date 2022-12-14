@@ -1593,7 +1593,6 @@ class LogNormal(PositiveContinuous):
 
     Examples
     --------
-
     .. code-block:: python
 
         # Example to show that we pass in only ``sigma`` or ``tau`` but not both.

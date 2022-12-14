@@ -188,7 +188,7 @@ def plot_gp_dist(
 ):
     """A helper function for plotting 1D GP posteriors from trace
 
-        Parameters
+    Parameters
     ----------
     ax: axes
         Matplotlib axes.
@@ -213,7 +213,6 @@ def plot_gp_dist(
 
     Returns
     -------
-
     ax: Matplotlib axes
     """
     import matplotlib.pyplot as plt

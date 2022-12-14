@@ -196,7 +196,7 @@ def kron_matrix_op(krons, m, op):
     r"""Apply op to krons and m in a way that reproduces ``op(kronecker(*krons), m)``
 
     Parameters
-    -----------
+    ----------
     krons : list of square 2D array-like objects
         D square matrices :math:`[A_1, A_2, ..., A_D]` to be Kronecker'ed
         :math:`A = A_1 \otimes A_2 \otimes ... \otimes A_D`

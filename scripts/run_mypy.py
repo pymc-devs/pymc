@@ -1,6 +1,6 @@
 """
 Invokes mypy and compare the reults with files in /pymc except tests
-and a list of files that are expected to pass without mypy errors.
+and a list of files that are knwon to fail.
 
 Exit code 0 indicates that there are no unexpected results.
 
@@ -20,74 +20,31 @@ from typing import Iterator
 import pandas
 
 DP_ROOT = pathlib.Path(__file__).absolute().parent.parent
-PASSING = """
-pymc/__init__.py
-pymc/_version.py
-pymc/backends/__init__.py
-pymc/backends/arviz.py
-pymc/backends/base.py
-pymc/backends/ndarray.py
-pymc/backends/report.py
-pymc/blocking.py
-pymc/data.py
-pymc/distributions/__init__.py
-pymc/distributions/bound.py
-pymc/distributions/censored.py
-pymc/distributions/discrete.py
-pymc/distributions/logprob.py
-pymc/distributions/shape_utils.py
-pymc/distributions/simulator.py
-pymc/distributions/transforms.py
-pymc/exceptions.py
-pymc/func_utils.py
-pymc/gp/__init__.py
-pymc/gp/cov.py
-pymc/gp/gp.py
-pymc/gp/mean.py
-pymc/gp/util.py
-pymc/logprob/__init__.py
-pymc/logprob/abstract.py
-pymc/logprob/cumsum.py
-pymc/math.py
-pymc/ode/__init__.py
-pymc/ode/ode.py
-pymc/ode/utils.py
-pymc/plots/__init__.py
-pymc/sampling_jax.py
-pymc/sampling/__init__.py
-pymc/sampling/forward.py
-pymc/sampling/mcmc.py
-pymc/sampling/parallel.py
-pymc/sampling/population.py
-pymc/smc/__init__.py
-pymc/smc/sampling.py
-pymc/smc/kernels.py
-pymc/stats/__init__.py
-pymc/stats/convergence.py
-pymc/step_methods/__init__.py
-pymc/step_methods/arraystep.py
-pymc/step_methods/compound.py
-pymc/step_methods/metropolis.py
-pymc/step_methods/hmc/__init__.py
-pymc/step_methods/hmc/base_hmc.py
-pymc/step_methods/hmc/hmc.py
-pymc/step_methods/hmc/integration.py
-pymc/step_methods/hmc/nuts.py
-pymc/step_methods/hmc/quadpotential.py
-pymc/step_methods/slicer.py
-pymc/step_methods/step_sizes.py
-pymc/tuning/__init__.py
-pymc/tuning/scaling.py
-pymc/tuning/starting.py
-pymc/util.py
-pymc/variational/__init__.py
-pymc/variational/callbacks.py
-pymc/variational/inference.py
-pymc/variational/operators.py
-pymc/variational/stein.py
-pymc/variational/test_functions.py
-pymc/variational/updates.py
-pymc/vartypes.py
+FAILING = """
+pymc/distributions/continuous.py
+pymc/distributions/dist_math.py
+pymc/distributions/distribution.py
+pymc/distributions/mixture.py
+pymc/distributions/multivariate.py
+pymc/distributions/timeseries.py
+pymc/distributions/truncated.py
+pymc/initial_point.py
+pymc/logprob/censoring.py
+pymc/logprob/joint_logprob.py
+pymc/logprob/mixture.py
+pymc/logprob/rewriting.py
+pymc/logprob/scan.py
+pymc/logprob/tensor.py
+pymc/logprob/transforms.py
+pymc/logprob/utils.py
+pymc/model.py
+pymc/model_graph.py
+pymc/printing.py
+pymc/pytensorf.py
+pymc/sampling/jax.py
+pymc/stats/log_likelihood.py
+pymc/variational/approximations.py
+pymc/variational/opvi.py
 """
 
 
@@ -140,7 +97,7 @@ def mypy_to_pandas(input_lines: Iterator[str]) -> pandas.DataFrame:
 
 
 def check_no_unexpected_results(mypy_lines: Iterator[str]):
-    """Compares mypy results with list of known PASSING files.
+    """Compares mypy results with list of known FAILING files.
 
     Exits the process with non-zero exit code upon unexpected results.
     """
@@ -158,9 +115,9 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
             + "\n".join(sorted(map(str, failing - all_files)))
         )
     passing = all_files - failing
-    expected_passing = set(PASSING.strip().split("\n")) - {""}
-    unexpected_failing = expected_passing - passing
-    unexpected_passing = passing - expected_passing
+    expected_failing = set(FAILING.strip().split("\n")) - {""}
+    unexpected_failing = failing - expected_failing
+    unexpected_passing = passing.intersection(expected_failing)
 
     if not unexpected_failing:
         print(f"{len(passing)}/{len(all_files)} files pass as expected.")
@@ -175,15 +132,13 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
         print("You can run `python scripts/run_mypy.py --verbose` to reproduce this test locally.")
         sys.exit(1)
 
-    if unexpected_passing == {"pymc/sampling/jax.py"}:
-        print("Letting you know that 'pymc/sampling/jax.py' unexpectedly passed.")
-        print("But this file is known to sometimes pass and sometimes not.")
-        print("Unless you tried to resolve problems in sampling/jax.py just ignore this message.")
-    elif unexpected_passing:
+    if unexpected_passing:
         print("!!!!!!!!!")
         print(f"{len(unexpected_passing)} files unexpectedly passed the type checks:")
         print("\n".join(sorted(map(str, unexpected_passing))))
-        print("This is good news! Go to scripts/run_mypy.py and add them to the list.")
+        print(
+            "This is good news! Go to scripts/run_mypy.py and remove them from the `FAILING` list."
+        )
         if all_files.issubset(passing):
             print("WOW! All files are passing the mypy type checks!")
             print("scripts\\run_mypy.py may no longer be needed.")

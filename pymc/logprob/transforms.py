@@ -295,7 +295,7 @@ class TransformValuesRewrite(GraphRewriter):
     ):
         """
         Parameters
-        ==========
+        ----------
         values_to_transforms
             Mapping between value variables and their transformations.  Each
             value variable can be assigned one of `RVTransform`, or ``None``.
@@ -514,7 +514,7 @@ class IntervalTransform(RVTransform):
         """
 
         Parameters
-        ==========
+        ----------
         args_fn
             Function that expects inputs of RandomVariable and returns the lower
             and upper bounds for the interval transformation. If one of these is
@@ -660,7 +660,7 @@ def _create_transformed_rv_op(
     also behaving exactly as it did before.
 
     Parameters
-    ==========
+    ----------
     rv_op
         The `RandomVariable` for which we want to construct a `TransformedRV`.
     transform

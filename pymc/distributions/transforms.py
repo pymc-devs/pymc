@@ -240,7 +240,6 @@ class Interval(IntervalTransform):
 
     Examples
     --------
-
     Create an interval transform between -1 and +1
 
     .. code-block:: python

@@ -79,7 +79,7 @@ class DictToArrayBijection:
         """Map 1D concatenated array to a dictionary of variables in their original spaces.
 
         Parameters
-        ==========
+        ----------
         array
             The array to map.
         start_point

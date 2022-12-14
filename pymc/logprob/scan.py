@@ -79,7 +79,7 @@ def convert_outer_out_to_in(
     r"""Convert outer-graph outputs into outer-graph inputs.
 
     Parameters
-    ==========
+    ----------
     input_scan_args:
         The source `Scan` arguments.
     outer_out_vars:
@@ -253,7 +253,7 @@ def get_random_outer_outputs(
     """Get the `MeasurableVariable` outputs of a `Scan` (well, its `ScanArgs`).
 
     Returns
-    =======
+    -------
     A tuple of tuples containing the index of each outer-output variable, the
     outer-output variable itself, and the inner-output variable that
     is an instance of `MeasurableVariable`.
@@ -329,7 +329,7 @@ def logprob_ScanRV(op, values, *inputs, name=None, **kwargs):
 
 @node_rewriter([Scan])
 def find_measurable_scans(fgraph, node):
-    r"""Finds `Scan`\s for which a `logprob` can be computed.
+    r"""Find `Scan`\s for which a `logprob` can be computed.
 
     This will convert said `Scan`\s into `MeasurableScan`\s.  It also updates
     random variable and value variable mappings that have been specified for

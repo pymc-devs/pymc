@@ -42,7 +42,6 @@ class DifferentialEquation(Op):
 
     Parameters
     ----------
-
     func : callable
         Function specifying the differential equation. Must take arguments y (n_states,), t (scalar), p (n_theta,)
     times : array
@@ -57,7 +56,6 @@ class DifferentialEquation(Op):
 
     Examples
     --------
-
     .. code-block:: python
 
         def odefunc(y, t, p):
@@ -108,7 +106,7 @@ class DifferentialEquation(Op):
         self._output_sensitivities = {}
 
     def _system(self, Y, t, p):
-        r"""This is the function that will be passed to odeint. Solves both ODE and sensitivities.
+        r"""The function that will be passed to odeint. Solves both ODE and sensitivities.
 
         Parameters
         ----------

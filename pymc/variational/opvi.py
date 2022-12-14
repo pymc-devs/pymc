@@ -67,10 +67,10 @@ from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
 from pymc.pytensorf import (
     SeedSequenceSeed,
-    at_rng,
     compile_pymc,
     find_rng_nodes,
     identity,
+    makeiter,
     reseed_rngs,
 )
 from pymc.util import (
@@ -107,6 +107,18 @@ class ParametrizationError(VariationalInferenceError, ValueError):
 
 class GroupError(VariationalInferenceError, TypeError):
     """Error related to VI groups"""
+
+
+def _known_scan_ignored_inputs(terms):
+    # TODO: remove when scan issue with grads is fixed
+    from pymc.data import MinibatchIndexRV
+    from pymc.distributions.simulator import SimulatorRV
+
+    return [
+        n.owner.inputs[0]
+        for n in pytensor.graph.ancestors(terms)
+        if n.owner is not None and isinstance(n.owner.op, (MinibatchIndexRV, SimulatorRV))
+    ]
 
 
 def append_name(name):
@@ -370,10 +382,11 @@ class ObjectiveFunction:
             more_replacements=more_replacements,
             total_grad_norm_constraint=total_grad_norm_constraint,
         )
+        seed = self.approx.rng.randint(2**30, dtype=np.int64)
         if score:
-            step_fn = compile_pymc([], updates.loss, updates=updates, **fn_kwargs)
+            step_fn = compile_pymc([], updates.loss, updates=updates, random_seed=seed, **fn_kwargs)
         else:
-            step_fn = compile_pymc([], [], updates=updates, **fn_kwargs)
+            step_fn = compile_pymc([], [], updates=updates, random_seed=seed, **fn_kwargs)
         return step_fn
 
     @pytensor.config.change_flags(compute_test_value="off")
@@ -402,7 +415,8 @@ class ObjectiveFunction:
         if more_replacements is None:
             more_replacements = {}
         loss = self(sc_n_mc, more_replacements=more_replacements)
-        return compile_pymc([], loss, **fn_kwargs)
+        seed = self.approx.rng.randint(2**30, dtype=np.int64)
+        return compile_pymc([], loss, random_seed=seed, **fn_kwargs)
 
     @pytensor.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
@@ -579,7 +593,6 @@ class Group(WithMemoization):
 
     Examples
     --------
-
     **Basic Initialization**
 
     :class:`Group` is a factory class. You do not need to call every ApproximationGroup explicitly.
@@ -725,8 +738,7 @@ class Group(WithMemoization):
             options = dict()
         self.options = options
         self._vfam = vfam
-        self.rng = np.random.default_rng(random_seed)
-        self._rng = at_rng(random_seed)
+        self.rng = np.random.RandomState(random_seed)
         model = modelcontext(model)
         self.model = model
         self.group = group
@@ -747,7 +759,7 @@ class Group(WithMemoization):
             jitter_rvs={},
             return_transformed=True,
         )
-        start = ipfn(self.rng.integers(2**30, dtype=np.int64))
+        start = ipfn(self.rng.randint(2**30, dtype=np.int64))
         group_vars = {self.model.rvs_to_values[v].name for v in self.group}
         start = {k: v for k, v in start.items() if k in group_vars}
         start = DictToArrayBijection.map(start).data
@@ -943,9 +955,9 @@ class Group(WithMemoization):
             if deterministic:
                 return at.ones(shape, dtype) * dist_map
             else:
-                return getattr(self._rng, dist_name)(size=shape)
+                return getattr(at.random, dist_name)(size=shape)
         else:
-            sample = getattr(self._rng, dist_name)(size=shape)
+            sample = getattr(at.random, dist_name)(size=shape)
             initial = at.switch(deterministic, at.ones(shape, dtype) * dist_map, sample)
             return initial
 
@@ -985,9 +997,14 @@ class Group(WithMemoization):
         -------
         :class:`Variable` with applied replacements, ready to use
         """
+
         flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
         node_out = pytensor.clone_replace(node, flat2rand)
+        assert not (
+            set(makeiter(self.input)) & set(pytensor.graph.graph_inputs(makeiter(node_out)))
+        )
         try_to_set_test_value(node, node_out, s)
+        assert self.symbolic_random not in set(pytensor.graph.graph_inputs(makeiter(node_out)))
         return node_out
 
     def to_flat_input(self, node):
@@ -1002,10 +1019,13 @@ class Group(WithMemoization):
         random = self.symbolic_random.astype(self.symbolic_initial.dtype)
         random = at.specify_shape(random, self.symbolic_initial.type.shape)
 
-        def sample(post, node):
+        def sample(post, *_):
             return pytensor.clone_replace(node, {self.input: post})
 
-        nodes, _ = pytensor.scan(sample, random, non_sequences=[node])
+        nodes, _ = pytensor.scan(
+            sample, random, non_sequences=_known_scan_ignored_inputs(makeiter(random))
+        )
+        assert self.input not in set(pytensor.graph.graph_inputs(makeiter(nodes)))
         return nodes
 
     def symbolic_single_sample(self, node):
@@ -1343,6 +1363,7 @@ class Approximation(WithMemoization):
         flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
         node = pytensor.clone_replace(node, optimizations)
         node = pytensor.clone_replace(node, flat2rand)
+        assert not (set(self.symbolic_randoms) & set(pytensor.graph.graph_inputs(makeiter(node))))
         try_to_set_test_value(_node, node, s)
         return node
 
@@ -1356,12 +1377,15 @@ class Approximation(WithMemoization):
         """*Dev* - performs sampling of node applying independent samples from posterior each time.
         Note that it is done symbolically and this node needs :func:`set_size_and_deterministic` call
         """
-        node = self.to_flat_input(node, more_replacements=more_replacements)
+        node = self.to_flat_input(node)
 
         def sample(*post):
             return pytensor.clone_replace(node, dict(zip(self.inputs, post)))
 
-        nodes, _ = pytensor.scan(sample, self.symbolic_randoms)
+        nodes, _ = pytensor.scan(
+            sample, self.symbolic_randoms, non_sequences=_known_scan_ignored_inputs(makeiter(node))
+        )
+        assert not (set(self.inputs) & set(pytensor.graph.graph_inputs(makeiter(nodes))))
         return nodes
 
     def symbolic_single_sample(self, node, more_replacements=None):

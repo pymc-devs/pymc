@@ -9,16 +9,15 @@ changelog:
     - title: Major Changes 🛠
       labels:
         - major
-    - title: New Features & Bugfixes 🎉
+    - title: New Features 🎉
       labels:
-        - defects
         - enhancements
-        - feature-request
-    - title: Docs & Maintenance 🔧
+        - feature request
+    - title: Bugfixes 🪲
       labels:
+        - bug
+    - title: Documentation 📖
         - docs
-        - installation
-        - maintenance
-        - pre-commit
-        - tests
+    - title: Maintenance 🔧
+      labels:
         - "*"

@@ -796,7 +796,6 @@ class OrderedMultinomial:
 
     Examples
     --------
-
     .. code-block:: python
 
         # Generate data for a simple 1 dimensional example problem

@@ -62,7 +62,8 @@ class HamiltonianMC(BaseHMC):
     ]
 
     def __init__(self, vars=None, path_length=2.0, max_steps=1024, **kwargs):
-        """Set up the Hamiltonian Monte Carlo sampler.
+        """
+        Set up the Hamiltonian Monte Carlo sampler.
 
         Parameters
         ----------

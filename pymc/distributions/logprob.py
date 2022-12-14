@@ -102,7 +102,8 @@ def _get_scaling(total_size: TOTAL_SIZE, shape, ndim: int) -> TensorVariable:
 
 def _check_no_rvs(logp_terms: Sequence[TensorVariable]):
     # Raise if there are unexpected RandomVariables in the logp graph
-    # Only SimulatorRVs are allowed
+    # Only SimulatorRVs MinibatchIndexRVs are allowed
+    from pymc.data import MinibatchIndexRV
     from pymc.distributions.simulator import SimulatorRV
 
     unexpected_rv_nodes = [
@@ -111,7 +112,7 @@ def _check_no_rvs(logp_terms: Sequence[TensorVariable]):
         if (
             node.owner
             and isinstance(node.owner.op, RandomVariable)
-            and not isinstance(node.owner.op, SimulatorRV)
+            and not isinstance(node.owner.op, (SimulatorRV, MinibatchIndexRV))
         )
     ]
     if unexpected_rv_nodes:

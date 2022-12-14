@@ -102,17 +102,17 @@ General purpose
 ---------------
 
 - `Bambi <https://github.com/bambinos/bambi>`__: BAyesian Model-Building Interface (BAMBI) in Python.
+- `calibr8 <https://calibr8.readthedocs.io>`__: A toolbox for constructing detailed observation models to be used as likelihoods in PyMC.
+- `gumbi <https://github.com/JohnGoertz/Gumbi>`__: A high-level interface for building GP models.
 - `SunODE <https://github.com/aseyboldt/sunode>`__: Fast ODE solver, much faster than the one that comes with PyMC.
 - `pymc-learn <https://github.com/pymc-learn/pymc-learn>`__: Custom PyMC models built on top of pymc3_models/scikit-learn API
-- `fenics-pymc3 <https://github.com/IvanYashchuk/fenics-pymc3>`__: Differentiable interface to FEniCS, a library for solving partial differential equations.
 
 Domain specific
 ---------------
 
 - `Exoplanet <https://github.com/dfm/exoplanet>`__: a toolkit for modeling of transit and/or radial velocity observations of exoplanets and other astronomical time series.
-- `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python.
 - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
-- `cell2location <https://github.com/BayraktarLab/cell2location>`__: Comprehensive mapping of tissue cell architecture via integrated single cell and spatial transcriptomics.
+- `CausalPy <https://github.com/pymc-labs/CausalPy>`__: A package focussing on causal inference in quasi-experimental settings.
 
 Please contact us if your software is not listed here.
 

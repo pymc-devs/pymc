@@ -30,8 +30,10 @@ from pymc.util import check_dist_not_registered
 
 
 class TruncatedRV(SymbolicRandomVariable):
-    """An `Op` constructed from an PyTensor graph that represents a truncated univariate
-    random variable."""
+    """
+    An `Op` constructed from an PyTensor graph
+    that represents a truncated univariate random variable.
+    """
 
     default_output = 1
     base_rv_op = None

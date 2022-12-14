@@ -26,7 +26,7 @@ import pytensor
 from pytensor.gradient import verify_grad as at_verify_grad
 from pytensor.graph import ancestors
 from pytensor.graph.rewriting.basic import in2out
-from pytensor.sandbox.rng_mrg import MRG_RandomStream as RandomStream
+from pytensor.tensor.random import RandomStream
 from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
