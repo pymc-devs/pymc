@@ -238,7 +238,7 @@ class TestMoment:
 
     @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
     def test_symbolic_moment_shape(self, rv_cls):
-        s = at.scalar()
+        s = at.scalar(dtype="int64")
         rv = rv_cls.dist(shape=(s,))
         assert not hasattr(rv.tag, "test_value")
         assert tuple(moment(rv).shape.eval({s: 4})) == (4,)

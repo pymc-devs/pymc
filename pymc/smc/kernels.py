@@ -21,7 +21,7 @@ from typing import Dict, cast
 import numpy as np
 import pytensor.tensor as at
 
-from pytensor.graph.basic import clone_replace
+from pytensor.graph.replace import clone_replace
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 

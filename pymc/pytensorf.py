@@ -1082,7 +1082,7 @@ def collect_default_updates(
         assert random_var.owner.op is not None
         if isinstance(random_var.owner.op, RandomVariable):
             rng = random_var.owner.inputs[0]
-            if hasattr(rng, "default_update"):
+            if getattr(rng, "default_update", None) is not None:
                 update_map = {rng: rng.default_update}
             else:
                 update_map = {rng: random_var.owner.outputs[0]}

@@ -42,10 +42,11 @@ from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 import pytensor.tensor as at
 
 from pytensor.gradient import DisconnectedType, jacobian
-from pytensor.graph.basic import Apply, Node, Variable, clone_replace
+from pytensor.graph.basic import Apply, Node, Variable
 from pytensor.graph.features import AlreadyThere, Feature
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
+from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
 from pytensor.scalar import Add, Exp, Log, Mul
 from pytensor.scan.op import Scan
