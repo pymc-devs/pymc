@@ -17,7 +17,7 @@ numpydoc
 pandas>=0.24.0
 polyagamma
 pre-commit>=2.8.0
-pytensor==2.8.10
+pytensor==2.8.11
 pytest-cov>=2.5
 pytest>=3.0
 scipy>=1.4.1

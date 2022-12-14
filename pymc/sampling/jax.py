@@ -22,8 +22,9 @@ import pytensor.tensor as at
 
 from arviz.data.base import make_attrs
 from pytensor.compile import SharedVariable, Supervisor, mode
-from pytensor.graph.basic import clone_replace, graph_inputs
+from pytensor.graph.basic import graph_inputs
 from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.replace import clone_replace
 from pytensor.link.jax.dispatch import jax_funcify
 from pytensor.raise_op import Assert
 from pytensor.tensor import TensorVariable
@@ -70,7 +71,7 @@ def _replace_shared_variables(graph: List[TensorVariable]) -> List[TensorVariabl
 
     shared_variables = [var for var in graph_inputs(graph) if isinstance(var, SharedVariable)]
 
-    if any(hasattr(var, "default_update") for var in shared_variables):
+    if any(var.default_update is not None for var in shared_variables):
         raise ValueError(
             "Graph contains shared variables with default_update which cannot "
             "be safely replaced."

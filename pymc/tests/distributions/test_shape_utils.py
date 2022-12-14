@@ -562,13 +562,13 @@ def test_change_rv_size_default_update():
         new_x = change_dist_size(x, new_size=(2,))
     new_rng = new_x.owner.inputs[0]
     assert rng.default_update is next_rng
-    assert not hasattr(new_rng, "default_update")
+    assert new_rng.default_update is None
 
-    # Test that default_update is not set if there was none before
-    del rng.default_update
+    # Test that default_update is not set if it was None before
+    rng.default_update = None
     new_x = change_dist_size(x, new_size=(2,))
     new_rng = new_x.owner.inputs[0]
-    assert not hasattr(new_rng, "default_update")
+    assert new_rng.default_update is None
 
 
 def test_change_specify_shape_size_univariate():
