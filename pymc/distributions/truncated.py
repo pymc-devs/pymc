@@ -75,7 +75,7 @@ class Truncated(Distribution):
     r"""
     Truncated distribution
 
-    The pdf of a censored distribution is
+    The pdf of a Truncated distribution is
 
     .. math::
 
