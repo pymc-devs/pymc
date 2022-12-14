@@ -279,7 +279,7 @@ def check_logp(
         rtol = select_by_precision()
 
     if atol is None:
-        atol = 1e-10
+        atol = select_by_precision(float64=1e-10, float32=1e-8)
 
     if extra_args is None:
         extra_args = {}
@@ -463,7 +463,7 @@ def check_logcdf(
             rtol = select_by_precision()
 
         if atol is None:
-            atol = 1e-10
+            atol = select_by_precision(float64=1e-10, float32=1e-8)
 
         for pt in product(domains, n_samples=n_samples):
             params = dict(pt)
@@ -563,7 +563,7 @@ def check_selfconsistency_discrete_logcdf(
         rtol = select_by_precision(float64=1e-8, float32=1e-5)
 
     if atol is None:
-        atol = 0.0
+        atol = select_by_precision(float64=1e-10, float32=1e-8)
 
     model, param_vars = build_model(distribution, domain, paramdomains)
     rv = model["value"]
