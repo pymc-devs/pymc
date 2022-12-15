@@ -226,6 +226,26 @@ def test_hetero_mixture_binomial(p_val, size):
             (),
             0,
         ),
+        # Degenerate vector mixture components, scalar index
+        (
+            (
+                np.array([0], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([0.5], dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([100], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            None,
+            (),
+            (),
+            0,
+        ),
         # Scalar mixture components, vector index
         (
             (
@@ -443,6 +463,9 @@ def test_hetero_mixture_categorical(
     gamma_sp = sp.gamma(Y_args[0], scale=1 / Y_args[1])
     norm_2_sp = sp.norm(loc=Z_args[0], scale=Z_args[1])
 
+    # Handle scipy annoying squeeze of random draws
+    real_comp_size = tuple(X_rv.shape.eval())
+
     for i in range(10):
         i_val = CategoricalRV.rng_fn(test_val_rng, p_val, idx_size)
 
@@ -450,9 +473,15 @@ def test_hetero_mixture_categorical(
         indices_val.insert(join_axis, i_val)
         indices_val = tuple(indices_val)
 
-        x_val = norm_1_sp.rvs(size=comp_size, random_state=test_val_rng)
-        y_val = gamma_sp.rvs(size=comp_size, random_state=test_val_rng)
-        z_val = norm_2_sp.rvs(size=comp_size, random_state=test_val_rng)
+        x_val = np.broadcast_to(
+            norm_1_sp.rvs(size=comp_size, random_state=test_val_rng), real_comp_size
+        )
+        y_val = np.broadcast_to(
+            gamma_sp.rvs(size=comp_size, random_state=test_val_rng), real_comp_size
+        )
+        z_val = np.broadcast_to(
+            norm_2_sp.rvs(size=comp_size, random_state=test_val_rng), real_comp_size
+        )
 
         component_logps = np.stack(
             [norm_1_sp.logpdf(x_val), gamma_sp.logpdf(y_val), norm_2_sp.logpdf(z_val)],
