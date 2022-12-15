@@ -226,7 +226,7 @@ def test_hetero_mixture_binomial(p_val, size):
             (),
             0,
         ),
-        # Degenerate vector mixture components, scalar index
+        # Degenerate vector mixture components, scalar index along join axis
         (
             (
                 np.array([0], dtype=pytensor.config.floatX),
@@ -246,7 +246,87 @@ def test_hetero_mixture_binomial(p_val, size):
             (),
             0,
         ),
-        # Scalar mixture components, vector index
+        # Degenerate vector mixture components, scalar index along join axis (axis=1)
+        (
+            (
+                np.array([0], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([0.5], dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([100], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            None,
+            (),
+            (slice(None),),
+            1,
+        ),
+        # Vector mixture components, scalar index along the join axis
+        (
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (4,),
+            (),
+            (),
+            0,
+        ),
+        # Vector mixture components, scalar index along the join axis (axis=1)
+        (
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (4,),
+            (),
+            (slice(None),),
+            1,
+        ),
+        # Matrix components, scalar index along first axis
+        (
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (2, 3),
+            (),
+            (),
+            0,
+        ),
+        # Scalar mixture components, vector index along first axis
         (
             (
                 np.array(0, dtype=pytensor.config.floatX),
@@ -266,44 +346,7 @@ def test_hetero_mixture_binomial(p_val, size):
             (),
             0,
         ),
-        (
-            (
-                np.array([0, -100], dtype=pytensor.config.floatX),
-                np.array(1, dtype=pytensor.config.floatX),
-            ),
-            (
-                np.array([0.5, 1], dtype=pytensor.config.floatX),
-                np.array([0.5, 1], dtype=pytensor.config.floatX),
-            ),
-            (
-                np.array([100, 1000], dtype=pytensor.config.floatX),
-                np.array(1, dtype=pytensor.config.floatX),
-            ),
-            np.array([[0.1, 0.5, 0.4], [0.4, 0.1, 0.5]], dtype=pytensor.config.floatX),
-            (2,),
-            (2,),
-            (),
-            0,
-        ),
-        (
-            (
-                np.array([0, -100], dtype=pytensor.config.floatX),
-                np.array(1, dtype=pytensor.config.floatX),
-            ),
-            (
-                np.array([0.5, 1], dtype=pytensor.config.floatX),
-                np.array([0.5, 1], dtype=pytensor.config.floatX),
-            ),
-            (
-                np.array([100, 1000], dtype=pytensor.config.floatX),
-                np.array(1, dtype=pytensor.config.floatX),
-            ),
-            np.array([[0.1, 0.5, 0.4], [0.4, 0.1, 0.5]], dtype=pytensor.config.floatX),
-            None,
-            None,
-            (),
-            0,
-        ),
+        # Vector mixture components, vector index along first axis
         (
             (
                 np.array(0, dtype=pytensor.config.floatX),
@@ -320,10 +363,31 @@ def test_hetero_mixture_binomial(p_val, size):
             np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
             (2,),
             (2,),
-            (),
+            (slice(None),),
             0,
         ),
-        # Same as before but with degenerate vector parameters
+        # Vector mixture components, vector index along last axis
+        pytest.param(
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (2,),
+            (4,),
+            (slice(None),),
+            1,
+            marks=pytest.mark.xfail(IndexError, reason="Bug in AdvancedIndex Mixture logprob"),
+        ),
+        # Vector mixture components (with degenerate vector parameters), vector index along first axis
         (
             (
                 np.array([0], dtype=pytensor.config.floatX),
@@ -343,6 +407,47 @@ def test_hetero_mixture_binomial(p_val, size):
             (),
             0,
         ),
+        # Vector mixture components (with vector parameters), vector index along first axis
+        (
+            (
+                np.array([0, -100], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([0.5, 1], dtype=pytensor.config.floatX),
+                np.array([0.5, 1], dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([100, 1000], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([[0.1, 0.5, 0.4], [0.4, 0.1, 0.5]], dtype=pytensor.config.floatX),
+            (2,),
+            (2,),
+            (),
+            0,
+        ),
+        # Vector mixture components (with vector parameters), vector index along first axis, implicit sizes
+        (
+            (
+                np.array([0, -100], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([0.5, 1], dtype=pytensor.config.floatX),
+                np.array([0.5, 1], dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([100, 1000], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([[0.1, 0.5, 0.4], [0.4, 0.1, 0.5]], dtype=pytensor.config.floatX),
+            None,
+            None,
+            (),
+            0,
+        ),
+        # Matrix mixture components, matrix index
         (
             (
                 np.array(0, dtype=pytensor.config.floatX),
@@ -362,45 +467,7 @@ def test_hetero_mixture_binomial(p_val, size):
             (),
             0,
         ),
-        (
-            (
-                np.array(0, dtype=pytensor.config.floatX),
-                np.array(1, dtype=pytensor.config.floatX),
-            ),
-            (
-                np.array(0.5, dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
-            ),
-            (
-                np.array(100, dtype=pytensor.config.floatX),
-                np.array(1, dtype=pytensor.config.floatX),
-            ),
-            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
-            (2, 3),
-            (),
-            (),
-            0,
-        ),
-        pytest.param(
-            (
-                np.array(0, dtype=pytensor.config.floatX),
-                np.array(1, dtype=pytensor.config.floatX),
-            ),
-            (
-                np.array(0.5, dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
-            ),
-            (
-                np.array(100, dtype=pytensor.config.floatX),
-                np.array(1, dtype=pytensor.config.floatX),
-            ),
-            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
-            (3,),
-            (3,),
-            (slice(None),),
-            1,
-            marks=pytest.mark.xfail(IndexError, reason="Bug in AdvancedIndex Mixture logprob"),
-        ),
+        # Vector components, matrix indexing (constant along first dimension, then random)
         (
             (
                 np.array(0, dtype=pytensor.config.floatX),
@@ -420,6 +487,7 @@ def test_hetero_mixture_binomial(p_val, size):
             (np.arange(5),),
             0,
         ),
+        # Vector mixture components, tensor3 indexing (constant along first dimension, then degenerate, then random)
         (
             (
                 np.array(0, dtype=pytensor.config.floatX),
