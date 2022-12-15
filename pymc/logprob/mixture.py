@@ -443,13 +443,23 @@ def logprob_MixtureRV(
             logp_val = at.set_subtensor(logp_val[idx_m_on_axis], logp_m)
 
     else:
+        # If the stacking operation expands the component RVs, we have
+        # to expand the value and later squeeze the logprob for everything
+        # to work correctly
+        join_axis_val = None if isinstance(join_axis.type, NoneTypeT) else join_axis.data
+
+        if join_axis_val is not None:
+            value = at.expand_dims(value, axis=join_axis_val)
+
         logp_val = 0.0
         for i, comp_rv in enumerate(comp_rvs):
             comp_logp = logprob(comp_rv, value)
+            if join_axis_val is not None:
+                comp_logp = at.squeeze(comp_logp, axis=join_axis_val)
             logp_val += ifelse(
                 at.eq(indices[0], i),
                 comp_logp,
-                at.zeros_like(value),
+                at.zeros_like(comp_logp),
             )
 
     return logp_val
