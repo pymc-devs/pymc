@@ -298,25 +298,6 @@ def test_hetero_mixture_binomial(p_val, size):
                 np.array(1, dtype=pytensor.config.floatX),
             ),
             np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
-            (),
-            (),
-            (),
-            0,
-        ),
-        (
-            (
-                np.array(0, dtype=pytensor.config.floatX),
-                np.array(1, dtype=pytensor.config.floatX),
-            ),
-            (
-                np.array(0.5, dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
-            ),
-            (
-                np.array(100, dtype=pytensor.config.floatX),
-                np.array(1, dtype=pytensor.config.floatX),
-            ),
-            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
             (2,),
             (2,),
             (),
