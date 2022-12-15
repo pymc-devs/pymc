@@ -58,13 +58,15 @@ from pytensor.tensor.random.rewriting import (
 )
 from pytensor.tensor.shape import shape_tuple
 from pytensor.tensor.subtensor import (
+    AdvancedSubtensor,
+    AdvancedSubtensor1,
     as_index_literal,
     as_nontensor_scalar,
     get_canonical_form_slice,
     is_basic_idx,
 )
 from pytensor.tensor.type import TensorType
-from pytensor.tensor.type_other import NoneConst, NoneTypeT, SliceType
+from pytensor.tensor.type_other import NoneConst, NoneTypeT, SliceConstant, SliceType
 from pytensor.tensor.var import TensorVariable
 
 from pymc.logprob.abstract import (
@@ -308,6 +310,17 @@ def mixture_replace(fgraph, node):
         return None  # pragma: no cover
 
     mixing_indices = node.inputs[1:]
+
+    # TODO: Add check / test case for Advanced Boolean indexing
+    if isinstance(node.op, (AdvancedSubtensor, AdvancedSubtensor1)):
+        # We don't support (non-scalar) integer array indexing as it can pick repeated values,
+        # but the Mixture logprob assumes all mixture values are independent
+        if any(
+            indices.dtype.startswith("int") and sum(1 - b for b in indices.type.broadcastable) > 0
+            for indices in mixing_indices
+            if not isinstance(indices, SliceConstant)
+        ):
+            return None
 
     # We loop through mixture components and collect all the array elements
     # that belong to each one (by way of their indices).
