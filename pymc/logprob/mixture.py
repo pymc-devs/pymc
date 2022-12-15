@@ -445,6 +445,10 @@ def logprob_MixtureRV(
             logp_val = at.set_subtensor(logp_val[idx_m_on_axis], logp_m)
 
     else:
+        # FIXME: This logprob implementation does not support mixing across distinct components,
+        # but we sometimes use it, because MixtureRV does not keep information about at which
+        # dimension scalar indexing actually starts
+
         # If the stacking operation expands the component RVs, we have
         # to expand the value and later squeeze the logprob for everything
         # to work correctly
