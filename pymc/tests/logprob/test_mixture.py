@@ -323,6 +323,27 @@ def test_hetero_mixture_binomial(p_val, size):
             (),
             0,
         ),
+        # Same as before but with degenerate vector parameters
+        pytest.param(
+            (
+                np.array([0], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([0.5], dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([100], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (2,),
+            (2,),
+            (),
+            0,
+            marks=pytest.mark.xfail(IndexError, reason="Bug in AdvancedIndexing Mixture logprob"),
+        ),
         (
             (
                 np.array(0, dtype=pytensor.config.floatX),
