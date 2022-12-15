@@ -53,6 +53,7 @@ from pytensor.tensor.basic import Join, MakeVector
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.rewriting import (
     local_dimshuffle_rv_lift,
+    local_rv_size_lift,
     local_subtensor_rv_lift,
 )
 from pytensor.tensor.shape import shape_tuple
@@ -210,6 +211,7 @@ def rv_pull_down(x: TensorVariable, dont_touch_vars=None) -> TensorVariable:
     return pre_greedy_node_rewriter(
         fgraph,
         [
+            local_rv_size_lift,
             local_dimshuffle_rv_lift,
             local_subtensor_rv_lift,
             naive_bcast_rv_lift,
