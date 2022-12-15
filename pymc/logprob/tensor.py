@@ -357,10 +357,6 @@ measurable_ir_rewrites_db.register(
     "find_measurable_dimshuffles", find_measurable_dimshuffles, "basic", "tensor"
 )
 
-
-measurable_ir_rewrites_db.register("broadcast_to_lift", naive_bcast_rv_lift, "basic", "tensor")
-
-
 measurable_ir_rewrites_db.register(
     "find_measurable_stacks",
     find_measurable_stacks,

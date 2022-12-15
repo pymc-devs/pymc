@@ -81,6 +81,26 @@ def test_naive_bcast_rv_lift_valued_var():
     assert np.allclose(logp_map[y_vv].eval({x_vv: 0, y_vv: [0, 0]}), st.norm(0).logpdf([0, 0]))
 
 
+@pytest.mark.xfail(RuntimeError, reason="logprob for broadcasted RVs not implemented")
+def test_bcast_rv_logp():
+    """Test that derived logp for broadcasted RV is correct"""
+
+    x_rv = at.random.normal(name="x")
+    broadcasted_x_rv = at.broadcast_to(x_rv, (2,))
+    broadcasted_x_rv.name = "broadcasted_x"
+    broadcasted_x_vv = broadcasted_x_rv.clone()
+
+    logp = joint_logprob({broadcasted_x_rv: broadcasted_x_vv}, sum=False)
+    valid_logp = logp.eval({broadcasted_x_vv: [0, 0]})
+    assert valid_logp.shape == ()
+    assert np.isclose(valid_logp, st.norm.logpdf(0))
+
+    # It's not possible for broadcasted dimensions to have different values
+    # This shoud either raise or return -inf
+    invalid_logp = logp.eval({broadcasted_x_vv: [0, 1]})
+    assert invalid_logp == -np.inf
+
+
 def test_measurable_make_vector():
     base1_rv = at.random.normal(name="base1")
     base2_rv = at.random.halfnormal(name="base2")
