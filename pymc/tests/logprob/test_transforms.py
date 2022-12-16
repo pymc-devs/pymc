@@ -224,7 +224,7 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
 
     a = at_dist(*dist_params, size=size)
     a.name = "a"
-    a_value_var = at.tensor(a.dtype, shape=(None,) * a.ndim)
+    a_value_var = at.tensor(dtype=a.dtype, shape=(None,) * a.ndim)
     a_value_var.name = "a_value"
 
     b = at.random.normal(a, 1.0)
@@ -804,6 +804,36 @@ def test_reciprocal_rv_transform(numerator):
     assert np.isclose(
         x_logp_fn(x_test_val),
         sp.stats.invgamma(shape, scale=scale * numerator).logpdf(x_test_val),
+    )
+
+
+def test_sqr_transform():
+    # The square of a unit normal is a chi-square with 1 df
+    x_rv = at.random.normal(0, 1, size=(3,)) ** 2
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}, sum=False))
+
+    x_test_val = np.r_[0.5, 1, 2.5]
+    assert np.allclose(
+        x_logp_fn(x_test_val),
+        sp.stats.chi2(df=1).logpdf(x_test_val),
+    )
+
+
+def test_sqrt_transform():
+    # The sqrt of a chisquare with n df is a chi distribution with n df
+    x_rv = at.sqrt(at.random.chisquare(df=3, size=(3,)))
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}, sum=False))
+
+    x_test_val = np.r_[0.5, 1, 2.5]
+    assert np.allclose(
+        x_logp_fn(x_test_val),
+        sp.stats.chi(df=3).logpdf(x_test_val),
     )
 
 
