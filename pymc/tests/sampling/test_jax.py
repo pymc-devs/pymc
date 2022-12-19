@@ -72,7 +72,7 @@ def test_transform_samples(sampler, postprocessing_backend, chains, postprocessi
             random_seed=1322,
             keep_untransformed=True,
             postprocessing_backend=postprocessing_backend,
-            postprocessing_chunks=postprocessing_chunks
+            postprocessing_chunks=postprocessing_chunks,
         )
 
     log_vals = trace.posterior["sigma_log__"].values
