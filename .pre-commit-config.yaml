@@ -14,7 +14,7 @@ repos:
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
 - repo: https://github.com/PyCQA/isort
-  rev: 5.10.1
+  rev: v5.11.3
   hooks:
     - id: isort
       name: isort
@@ -29,7 +29,7 @@ repos:
     - id: black
     - id: black-jupyter
 - repo: https://github.com/PyCQA/pylint
-  rev: v2.15.8
+  rev: v2.15.9
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]
