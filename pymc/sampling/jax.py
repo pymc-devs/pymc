@@ -147,16 +147,21 @@ def _postprocess_samples(
     jax_fn: List[TensorVariable],
     raw_mcmc_samples: List[TensorVariable],
     postprocessing_backend: str,
-    num_chunks: int = 1,
+    num_chunks: Optional[int] = None,
 ) -> List[TensorVariable]:
-    loop = xmap(
-        jax_fn,
-        in_axes=["chain", "samples", ...],
-        out_axes=["chain", "samples", ...],
-        axis_resources={"samples": SerialLoop(num_chunks)},
-    )
-    f = xmap(loop, in_axes=[...], out_axes=[...])
-    return f(*jax.device_put(raw_mcmc_samples, jax.devices(postprocessing_backend)[0]))
+    if num_chunks is not None:
+        loop = xmap(
+            jax_fn,
+            in_axes=["chain", "samples", ...],
+            out_axes=["chain", "samples", ...],
+            axis_resources={"samples": SerialLoop(num_chunks)},
+        )
+        f = xmap(loop, in_axes=[...], out_axes=[...])
+        return f(*jax.device_put(raw_mcmc_samples, jax.devices(postprocessing_backend)[0]))
+    else:
+        return jax.vmap(jax.vmap(jax_fn))(
+            *jax.device_put(raw_mcmc_samples, jax.devices(postprocessing_backend)[0])
+        )
 
 
 def _blackjax_stats_to_dict(sample_stats, potential_energy) -> Dict:
@@ -193,11 +198,13 @@ def _blackjax_stats_to_dict(sample_stats, potential_energy) -> Dict:
     return converted_stats
 
 
-def _get_log_likelihood(model: Model, samples, backend=None) -> Dict:
+def _get_log_likelihood(
+    model: Model, samples, backend=None, num_chunks: Optional[int] = None
+) -> Dict:
     """Compute log-likelihood for all observations"""
     elemwise_logp = model.logp(model.observed_RVs, sum=False)
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=elemwise_logp)
-    result = jax.vmap(jax.vmap(jax_fn))(*jax.device_put(samples, jax.devices(backend)[0]))
+    result = _postprocess_samples(jax_fn, samples, backend, num_chunks=num_chunks)
     return {v.name: r for v, r in zip(model.observed_RVs, result)}
 
 
@@ -291,7 +298,7 @@ def sample_blackjax_nuts(
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
     postprocessing_backend: Optional[str] = None,
-    postprocessing_chunks: int = 1,
+    postprocessing_chunks: Optional[int] = None,
     idata_kwargs: Optional[Dict[str, Any]] = None,
 ) -> az.InferenceData:
     """
@@ -437,7 +444,10 @@ def sample_blackjax_nuts(
         tic5 = datetime.now()
         print("Computing Log Likelihood...", file=sys.stdout)
         log_likelihood = _get_log_likelihood(
-            model, raw_mcmc_samples, backend=postprocessing_backend
+            model,
+            raw_mcmc_samples,
+            backend=postprocessing_backend,
+            num_chunks=postprocessing_chunks,
         )
         tic6 = datetime.now()
         print("Log Likelihood time = ", tic6 - tic5, file=sys.stdout)
@@ -498,7 +508,7 @@ def sample_numpyro_nuts(
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
     postprocessing_backend: Optional[str] = None,
-    postprocessing_chunks: int = 1,
+    postprocessing_chunks: Optional[int] = None,
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
 ) -> az.InferenceData:
@@ -663,7 +673,10 @@ def sample_numpyro_nuts(
         tic5 = datetime.now()
         print("Computing Log Likelihood...", file=sys.stdout)
         log_likelihood = _get_log_likelihood(
-            model, raw_mcmc_samples, backend=postprocessing_backend
+            model,
+            raw_mcmc_samples,
+            backend=postprocessing_backend,
+            num_chunks=postprocessing_chunks,
         )
         tic6 = datetime.now()
         print("Log Likelihood time = ", tic6 - tic5, file=sys.stdout)
