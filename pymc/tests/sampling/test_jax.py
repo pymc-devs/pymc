@@ -55,7 +55,8 @@ with pytest.warns(UserWarning, match="module is experimental"):
         ),
     ],
 )
-def test_transform_samples(sampler, postprocessing_backend, chains):
+@pytest.mark.parametrize("postprocessing_chunks", [None, 10])
+def test_transform_samples(sampler, postprocessing_backend, chains, postprocessing_chunks):
     pytensor.config.on_opt_error = "raise"
     np.random.seed(13244)
 
@@ -71,6 +72,7 @@ def test_transform_samples(sampler, postprocessing_backend, chains):
             random_seed=1322,
             keep_untransformed=True,
             postprocessing_backend=postprocessing_backend,
+            postprocessing_chunks=postprocessing_chunks
         )
 
     log_vals = trace.posterior["sigma_log__"].values
