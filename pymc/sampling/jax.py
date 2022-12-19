@@ -338,9 +338,10 @@ def sample_blackjax_nuts(
         "vectorized".
     postprocessing_backend : str, optional
         Specify how postprocessing should be computed. gpu or cpu
-    postprocessing_chunks: int, default 1
+    postprocessing_chunks: Optional[int], default None
         Specify the number of chunks the postprocessing should be computed in. More
-        chunks reduces memory usage at the cost of losing some vectorization
+        chunks reduces memory usage at the cost of losing some vectorization, None
+        uses jax.vmap
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
         value for the ``log_likelihood`` key to indicate that the pointwise log
@@ -553,9 +554,10 @@ def sample_numpyro_nuts(
         "parallel", and "vectorized".
     postprocessing_backend : Optional[str]
         Specify how postprocessing should be computed. gpu or cpu
-    postprocessing_chunks: int, default 1
+    postprocessing_chunks: Optional[int], default None
         Specify the number of chunks the postprocessing should be computed in. More
-        chunks reduces memory usage at the cost of losing some vectorization
+        chunks reduces memory usage at the cost of losing some vectorization, None
+        uses jax.vmap
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
         value for the ``log_likelihood`` key to indicate that the pointwise log
