@@ -47,6 +47,10 @@ from pymc.sampling.mcmc import sample
 from pymc.tests.distributions.util import assert_moment_is_expected
 from pymc.tests.helpers import select_by_precision
 
+# Turn all warnings into errors for this module
+# Ignoring NumPy deprecation warning tracked in https://github.com/pymc-devs/pytensor/issues/146
+pytestmark = pytest.mark.filterwarnings("error", "ignore: NumPy will stop allowing conversion")
+
 
 class TestRandomWalk:
     def test_dists_types(self):
@@ -91,6 +95,14 @@ class TestRandomWalk:
                 match="The dist innovation was already registered in the current model",
             ):
                 RandomWalk("rw", init_dist=init_dist, innovation_dist=innovation, steps=5)
+
+    def test_dists_independent_check(self):
+        init_dist = Normal.dist()
+        innovation_dist = Normal.dist(init_dist)
+        with pytest.raises(
+            ValueError, match="init_dist and innovation_dist must be completely independent"
+        ):
+            RandomWalk.dist(init_dist=init_dist, innovation_dist=innovation_dist)
 
     @pytest.mark.parametrize(
         "init_dist, innovation_dist, steps, size, shape, "
@@ -423,15 +435,18 @@ class TestPredefinedRandomWalk:
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
             # pylint: enable=unpacking-non-sequence
-            if param == "chol":
-                mv = MvGaussianRandomWalk("mv", mu, chol=chol, shape=(10, 7, 3))
-            elif param == "cov":
-                mv = MvGaussianRandomWalk("mv", mu, cov=pm.math.dot(chol, chol.T), shape=(10, 7, 3))
-            else:
-                raise ValueError
+            with pytest.warns(UserWarning, match="Initial distribution not specified"):
+                if param == "chol":
+                    mv = MvGaussianRandomWalk("mv", mu, chol=chol, shape=(10, 7, 3))
+                elif param == "cov":
+                    mv = MvGaussianRandomWalk(
+                        "mv", mu, cov=pm.math.dot(chol, chol.T), shape=(10, 7, 3)
+                    )
+                else:
+                    raise ValueError
         assert draw(mv, draws=5).shape == (5, 10, 7, 3)
 
-    @pytest.mark.parametrize("param", ["cov", "chol", "tau"])
+    @pytest.mark.parametrize("param", ["scale", "chol", "tau"])
     def test_mvstudentt(self, param):
         x = MvStudentTRandomWalk.dist(
             nu=4,
@@ -853,7 +868,13 @@ class TestEulerMaruyama:
         with Model() as t0:
             init_dist = pm.Normal.dist(0, 10, shape=(batch_size,))
             y = EulerMaruyama(
-                "y", dt=0.02, sde_fn=sde_fn, sde_pars=sde_pars, init_dist=init_dist, **kwargs
+                "y",
+                dt=0.02,
+                sde_fn=sde_fn,
+                sde_pars=sde_pars,
+                init_dist=init_dist,
+                initval="prior",
+                **kwargs,
             )
 
         y_eval = draw(y, draws=2, random_seed=numpy_rng)
@@ -873,6 +894,7 @@ class TestEulerMaruyama:
                     sde_fn=sde_fn,
                     sde_pars=sde_pars_slice,
                     init_dist=init_dist,
+                    initval="prior",
                     **kwargs,
                 )
 
