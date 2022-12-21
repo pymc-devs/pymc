@@ -297,10 +297,12 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 continue
             if self.warmup_trace:
                 data_warmup[name] = np.array(
-                    self.warmup_trace.get_sampler_stats(stat, combine=False)
+                    self.warmup_trace.get_sampler_stats(stat, combine=False, squeeze=False)
                 )
             if self.posterior_trace:
-                data[name] = np.array(self.posterior_trace.get_sampler_stats(stat, combine=False))
+                data[name] = np.array(
+                    self.posterior_trace.get_sampler_stats(stat, combine=False, squeeze=False)
+                )
 
         return (
             dict_to_dataset(

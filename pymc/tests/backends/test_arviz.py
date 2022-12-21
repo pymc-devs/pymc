@@ -21,6 +21,9 @@ from pymc.backends.arviz import (
 )
 from pymc.exceptions import ImputationWarning
 
+# Turn all warnings into errors for this module
+pytestmark = pytest.mark.filterwarnings("error")
+
 
 @pytest.fixture(scope="module")
 def eight_schools_params():
@@ -635,7 +638,9 @@ class TestDataPyMC:
             pm.Uniform("p", 0, 1)
 
             # First check that the default is to exclude the transformed variables
-            sample_kwargs = dict(tune=5, draws=7, chains=2, cores=1)
+            sample_kwargs = dict(
+                tune=5, draws=7, chains=2, cores=1, compute_convergence_checks=False
+            )
             inference_data = pm.sample(**sample_kwargs, step=pm.Metropolis())
             assert "p_interval__" not in inference_data.posterior
 
@@ -646,6 +651,17 @@ class TestDataPyMC:
                 idata_kwargs={"include_transformed": True},
             )
             assert "p_interval__" in inference_data.posterior
+
+    @pytest.mark.parametrize("chains", (1, 2))
+    def test_single_chain(self, chains):
+        # Test that no UserWarning is raised when sampling with NUTS defaults
+
+        # When this test was added, a `UserWarning: More chains (500) than draws (1)` used to be issued
+        # when sampling with a single chain
+        warnings.simplefilter("error")
+        with pm.Model():
+            pm.Normal("x")
+            pm.sample(chains=chains, return_inferencedata=True)
 
 
 class TestPyMCWarmupHandling:
