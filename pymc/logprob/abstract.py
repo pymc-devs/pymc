@@ -220,6 +220,7 @@ def assign_custom_measurable_outputs(
 
     new_op_dict = op_type.__dict__.copy()
     new_op_dict["id_obj"] = (new_node.op, measurable_outputs_fn)
+    new_op_dict.setdefault("original_op_type", op_type)
 
     new_op_type = type(
         f"{type_prefix}{op_type.__name__}", (op_type, UnmeasurableVariable), new_op_dict

@@ -47,6 +47,7 @@ from pymc.distributions.logprob import (
     ignore_logprob,
     logcdf,
     logp,
+    reconsider_logprob,
 )
 from pymc.logprob.abstract import get_measurable_outputs
 from pymc.model import Model, Potential
@@ -315,7 +316,7 @@ def test_unexpected_rvs():
         model.logp()
 
 
-def test_ignore_logprob_basic():
+def test_ignore_reconsider_logprob_basic():
     x = Normal.dist()
     (measurable_x_out,) = get_measurable_outputs(x.owner.op, x.owner)
     assert measurable_x_out is x.owner.outputs[1]
@@ -328,18 +329,34 @@ def test_ignore_logprob_basic():
     assert get_measurable_outputs(new_x.owner.op, new_x.owner) == []
 
     # Test that it will not clone a variable that is already unmeasurable
-    new_new_x = ignore_logprob(new_x)
-    assert new_new_x is new_x
+    assert ignore_logprob(new_x) is new_x
+
+    orig_x = reconsider_logprob(new_x)
+    assert orig_x is not new_x
+    assert isinstance(orig_x.owner.op, Normal)
+    assert type(orig_x.owner.op).__name__ == "NormalRV"
+    # Confirm that it has measurable outputs again
+    assert get_measurable_outputs(orig_x.owner.op, orig_x.owner) == [orig_x.owner.outputs[1]]
+
+    # Test that will not clone a variable that is already measurable
+    assert reconsider_logprob(x) is x
+    assert reconsider_logprob(orig_x) is orig_x
 
 
-def test_ignore_logprob_model():
-    # logp that does not depend on input
-    def logp(value, x):
-        return value
+def test_ignore_reconsider_logprob_model():
+    def custom_logp(value, x):
+        # custom_logp is just the logp of x at value
+        x = reconsider_logprob(x)
+        return _joint_logp(
+            [x],
+            rvs_to_values={x: value},
+            rvs_to_transforms={},
+            rvs_to_total_sizes={},
+        )
 
     with Model() as m:
         x = Normal.dist()
-        y = CustomDist("y", x, logp=logp)
+        y = CustomDist("y", x, logp=custom_logp)
     with pytest.warns(
         UserWarning,
         match="Found a random variable that was neither among the observations "
@@ -355,7 +372,7 @@ def test_ignore_logprob_model():
     # The above warning should go away with ignore_logprob.
     with Model() as m:
         x = ignore_logprob(Normal.dist())
-        y = CustomDist("y", x, logp=logp)
+        y = CustomDist("y", x, logp=custom_logp)
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         assert _joint_logp(
