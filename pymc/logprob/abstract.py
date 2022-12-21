@@ -174,7 +174,7 @@ def _get_measurable_outputs_RandomVariable(op, node):
 
 
 def noop_measurable_outputs_fn(*args, **kwargs):
-    return None
+    return []
 
 
 def assign_custom_measurable_outputs(

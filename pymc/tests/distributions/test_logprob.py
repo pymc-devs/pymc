@@ -325,7 +325,7 @@ def test_ignore_logprob_basic():
     assert isinstance(new_x.owner.op, Normal)
     assert type(new_x.owner.op).__name__ == "UnmeasurableNormalRV"
     # Confirm that it does not have measurable output
-    assert get_measurable_outputs(new_x.owner.op, new_x.owner) is None
+    assert get_measurable_outputs(new_x.owner.op, new_x.owner) == []
 
     # Test that it will not clone a variable that is already unmeasurable
     new_new_x = ignore_logprob(new_x)
