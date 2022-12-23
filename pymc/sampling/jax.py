@@ -589,7 +589,7 @@ def sample_numpyro_nuts(
         num_chains=chains,
         postprocess_fn=None,
         chain_method=chain_method,
-        progressbar=progressbar,
+        progress_bar=progressbar,
     )
 
     tic2 = datetime.now()
