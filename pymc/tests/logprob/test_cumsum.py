@@ -40,8 +40,8 @@ import pytensor.tensor as at
 import pytest
 import scipy.stats as st
 
-from pymc.logprob import joint_logprob
 from pymc.tests.helpers import assert_no_rvs
+from pymc.tests.logprob.utils import joint_logprob
 
 
 @pytest.mark.parametrize(
