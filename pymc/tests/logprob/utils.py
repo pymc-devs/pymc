@@ -34,14 +34,45 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
+from typing import Optional
+
 import numpy as np
 
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.graph.basic import walk
 from pytensor.graph.op import HasInnerGraph
+from pytensor.tensor.var import TensorVariable
 from scipy import stats as stats
 
+from pymc.logprob import factorized_joint_logprob
 from pymc.logprob.abstract import MeasurableVariable, icdf, logcdf, logprob
+
+
+def joint_logprob(*args, sum: bool = True, **kwargs) -> Optional[TensorVariable]:
+    """Create a graph representing the joint log-probability/measure of a graph.
+
+    This function calls `factorized_joint_logprob` and returns the combined
+    log-probability factors as a single graph.
+
+    Parameters
+    ----------
+    sum: bool
+        If ``True`` each factor is collapsed to a scalar via ``sum`` before
+        being joined with the remaining factors. This may be necessary to
+        avoid incorrect broadcasting among independent factors.
+
+    """
+    logprob = factorized_joint_logprob(*args, **kwargs)
+    if not logprob:
+        return None
+    if len(logprob) == 1:
+        logprob = tuple(logprob.values())[0]
+        if sum:
+            return pt.sum(logprob)
+        return logprob
+    if sum:
+        return pt.sum([pt.sum(factor) for factor in logprob.values()])
+    return pt.add(*logprob.values())
 
 
 def assert_no_rvs(var):
@@ -119,17 +150,17 @@ def scipy_logprob(obs, p):
 def create_pytensor_params(dist_params, obs, size):
     dist_params_at = []
     for p in dist_params:
-        p_aet = at.as_tensor(p).type()
+        p_aet = pt.as_tensor(p).type()
         p_aet.tag.test_value = p
         dist_params_at.append(p_aet)
 
     size_at = []
     for s in size:
-        s_aet = at.iscalar()
+        s_aet = pt.iscalar()
         s_aet.tag.test_value = s
         size_at.append(s_aet)
 
-    obs_at = at.as_tensor(obs).type()
+    obs_at = pt.as_tensor(obs).type()
     obs_at.tag.test_value = obs
 
     return dist_params_at, obs_at, size_at
@@ -150,11 +181,11 @@ def scipy_logprob_tester(
         test_fn = getattr(stats, name)
 
     if test == "logprob":
-        pytensor_res = logprob(rv_var, at.as_tensor(obs))
+        pytensor_res = logprob(rv_var, pt.as_tensor(obs))
     elif test == "logcdf":
-        pytensor_res = logcdf(rv_var, at.as_tensor(obs))
+        pytensor_res = logcdf(rv_var, pt.as_tensor(obs))
     elif test == "icdf":
-        pytensor_res = icdf(rv_var, at.as_tensor(obs))
+        pytensor_res = icdf(rv_var, pt.as_tensor(obs))
     else:
         raise ValueError(f"test must be one of (logprob, logcdf, icdf), got {test}")
 

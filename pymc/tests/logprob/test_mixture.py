@@ -45,12 +45,12 @@ from pytensor.tensor.random.basic import CategoricalRV
 from pytensor.tensor.shape import shape_tuple
 from pytensor.tensor.subtensor import as_index_constant
 
-from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
+from pymc.logprob.joint_logprob import factorized_joint_logprob
 from pymc.logprob.mixture import MixtureRV, expand_indices
 from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.logprob.utils import dirac_delta
 from pymc.tests.helpers import assert_no_rvs
-from pymc.tests.logprob.utils import scipy_logprob
+from pymc.tests.logprob.utils import joint_logprob, scipy_logprob
 
 
 def test_mixture_basics():

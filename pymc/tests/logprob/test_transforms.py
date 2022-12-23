@@ -49,7 +49,7 @@ from pytensor.scan import scan
 
 from pymc.distributions.transforms import _default_transform, log, logodds
 from pymc.logprob.abstract import MeasurableVariable, _get_measurable_outputs, _logprob
-from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
+from pymc.logprob.joint_logprob import factorized_joint_logprob
 from pymc.logprob.transforms import (
     ChainedTransform,
     ExpTransform,
@@ -64,6 +64,7 @@ from pymc.logprob.transforms import (
     transformed_variable,
 )
 from pymc.tests.helpers import assert_no_rvs
+from pymc.tests.logprob.utils import joint_logprob
 
 
 class DirichletScipyDist:

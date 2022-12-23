@@ -39,8 +39,6 @@ import warnings
 from collections import deque
 from typing import Dict, Optional, Union
 
-import pytensor.tensor as at
-
 from pytensor import config
 from pytensor.graph.basic import graph_inputs, io_toposort
 from pytensor.graph.op import compute_test_value
@@ -221,33 +219,3 @@ def factorized_joint_logprob(
         )
 
     return logprob_vars
-
-
-def joint_logprob(*args, sum: bool = True, **kwargs) -> Optional[TensorVariable]:
-    """Create a graph representing the joint log-probability/measure of a graph.
-
-    This function calls `factorized_joint_logprob` and returns the combined
-    log-probability factors as a single graph.
-
-    Parameters
-    ----------
-    sum: bool
-        If ``True`` each factor is collapsed to a scalar via ``sum`` before
-        being joined with the remaining factors. This may be necessary to
-        avoid incorrect broadcasting among independent factors.
-
-    """
-    logprob = factorized_joint_logprob(*args, **kwargs)
-    if not logprob:
-        return None
-    elif len(logprob) == 1:
-        logprob = tuple(logprob.values())[0]
-        if sum:
-            return at.sum(logprob)
-        else:
-            return logprob
-    else:
-        if sum:
-            return at.sum([at.sum(factor) for factor in logprob.values()])
-        else:
-            return at.add(*logprob.values())

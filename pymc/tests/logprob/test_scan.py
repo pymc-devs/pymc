@@ -44,13 +44,14 @@ from pytensor.raise_op import assert_op
 from pytensor.scan.utils import ScanArgs
 
 from pymc.logprob.abstract import logprob
-from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
+from pymc.logprob.joint_logprob import factorized_joint_logprob
 from pymc.logprob.scan import (
     construct_scan,
     convert_outer_out_to_in,
     get_random_outer_outputs,
 )
 from pymc.tests.helpers import assert_no_rvs
+from pymc.tests.logprob.utils import joint_logprob
 
 
 def create_inner_out_logp(value_map):

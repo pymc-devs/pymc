@@ -43,19 +43,14 @@ import pytest
 import scipy.stats.distributions as sp
 
 from pytensor.graph.basic import ancestors, equal_computations
-from pytensor.tensor.subtensor import (
-    AdvancedIncSubtensor,
-    AdvancedIncSubtensor1,
-    AdvancedSubtensor,
-    AdvancedSubtensor1,
-    IncSubtensor,
-    Subtensor,
-)
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.subtensor import AdvancedSubtensor, AdvancedSubtensor1, Subtensor
 
 from pymc.logprob.abstract import logprob
-from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
+from pymc.logprob.joint_logprob import factorized_joint_logprob
 from pymc.logprob.utils import rvs_to_value_vars, walk_model
 from pymc.tests.helpers import assert_no_rvs
+from pymc.tests.logprob.utils import joint_logprob
 
 
 def test_joint_logprob_basic():
@@ -158,43 +153,6 @@ def test_joint_logprob_diff_dims():
         sp.norm.logpdf(x_val, 0, 1).sum() + sp.norm.logpdf(y_val, M_val.dot(x_val), 1).sum()
     )
     assert exp_logp_val == pytest.approx(logp_val)
-
-
-@pytest.mark.parametrize(
-    "indices, size",
-    [
-        (slice(0, 2), 5),
-        (np.r_[True, True, False, False, True], 5),
-        (np.r_[0, 1, 4], 5),
-        ((np.array([0, 1, 4]), np.array([0, 1, 4])), (5, 5)),
-    ],
-)
-def test_joint_logprob_incsubtensor(indices, size):
-    """Make sure we can compute a joint log-probability for ``Y[idx] = data`` where ``Y`` is univariate."""
-
-    rng = np.random.RandomState(232)
-    mu = np.power(10, np.arange(np.prod(size))).reshape(size)
-    sigma = 0.001
-    data = rng.normal(mu[indices], 1.0)
-    y_val = rng.normal(mu, sigma, size=size)
-
-    Y_base_rv = at.random.normal(mu, sigma, size=size)
-    Y_rv = at.set_subtensor(Y_base_rv[indices], data)
-    Y_rv.name = "Y"
-    y_value_var = Y_rv.clone()
-    y_value_var.name = "y"
-
-    assert isinstance(Y_rv.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1))
-
-    Y_rv_logp = joint_logprob({Y_rv: y_value_var}, sum=False)
-
-    obs_logps = Y_rv_logp.eval({y_value_var: y_val})
-
-    y_val_idx = y_val.copy()
-    y_val_idx[indices] = data
-    exp_obs_logps = sp.norm.logpdf(y_val_idx, mu, sigma)
-
-    np.testing.assert_almost_equal(obs_logps, exp_obs_logps)
 
 
 def test_incsubtensor_original_values_output_dict():
@@ -308,3 +266,230 @@ def test_multiple_rvs_to_same_value_raises():
     msg = "More than one logprob factor was assigned to the value var x"
     with pytest.raises(ValueError, match=msg):
         joint_logprob({x_rv1: x, x_rv2: x})
+
+
+def test_get_scaling():
+
+    assert _get_scaling(None, (2, 3), 2).eval() == 1
+    # ndim >=1 & ndim<1
+    assert _get_scaling(45, (2, 3), 1).eval() == 22.5
+    assert _get_scaling(45, (2, 3), 0).eval() == 45
+
+    # list or tuple tests
+    # total_size contains other than Ellipsis, None and Int
+    with pytest.raises(TypeError, match="Unrecognized `total_size` type"):
+        _get_scaling([2, 4, 5, 9, 11.5], (2, 3), 2)
+    # check with Ellipsis
+    with pytest.raises(ValueError, match="Double Ellipsis in `total_size` is restricted"):
+        _get_scaling([1, 2, 5, Ellipsis, Ellipsis], (2, 3), 2)
+    with pytest.raises(
+        ValueError,
+        match="Length of `total_size` is too big, number of scalings is bigger that ndim",
+    ):
+        _get_scaling([1, 2, 5, Ellipsis], (2, 3), 2)
+
+    assert _get_scaling([Ellipsis], (2, 3), 2).eval() == 1
+
+    assert _get_scaling([4, 5, 9, Ellipsis, 32, 12], (2, 3, 2), 5).eval() == 960
+    assert _get_scaling([4, 5, 9, Ellipsis], (2, 3, 2), 5).eval() == 15
+    # total_size with no Ellipsis (end = [ ])
+    with pytest.raises(
+        ValueError,
+        match="Length of `total_size` is too big, number of scalings is bigger that ndim",
+    ):
+        _get_scaling([1, 2, 5], (2, 3), 2)
+
+    assert _get_scaling([], (2, 3), 2).eval() == 1
+    assert _get_scaling((), (2, 3), 2).eval() == 1
+    # total_size invalid type
+    with pytest.raises(
+        TypeError,
+        match="Unrecognized `total_size` type, expected int or list of ints, got {1, 2, 5}",
+    ):
+        _get_scaling({1, 2, 5}, (2, 3), 2)
+
+    # test with rvar from model graph
+    with pm.Model() as m2:
+        rv_var = pm.Uniform("a", 0.0, 1.0)
+    total_size = []
+    assert _get_scaling(total_size, shape=rv_var.shape, ndim=rv_var.ndim).eval() == 1.0
+
+
+def test_joint_logp_basic():
+    """Make sure we can compute a log-likelihood for a hierarchical model with transforms."""
+
+    with pm.Model() as m:
+        a = pm.Uniform("a", 0.0, 1.0)
+        c = pm.Normal("c")
+        b_l = c * a + 2.0
+        b = pm.Uniform("b", b_l, b_l + 1.0)
+
+    a_value_var = m.rvs_to_values[a]
+    assert m.rvs_to_transforms[a]
+
+    b_value_var = m.rvs_to_values[b]
+    assert m.rvs_to_transforms[b]
+
+    c_value_var = m.rvs_to_values[c]
+
+    (b_logp,) = joint_logp(
+        (b,),
+        rvs_to_values=m.rvs_to_values,
+        rvs_to_transforms=m.rvs_to_transforms,
+        rvs_to_total_sizes={},
+    )
+
+    # There shouldn't be any `RandomVariable`s in the resulting graph
+    assert_no_rvs(b_logp)
+
+    res_ancestors = list(walk_model((b_logp,)))
+    assert b_value_var in res_ancestors
+    assert c_value_var in res_ancestors
+    assert a_value_var in res_ancestors
+
+
+def test_joint_logp_subtensor():
+    """Make sure we can compute a log-likelihood for ``Y[I]`` where ``Y`` and ``I`` are random variables."""
+
+    size = 5
+
+    mu_base = pm.floatX(np.power(10, np.arange(np.prod(size)))).reshape(size)
+    mu = np.stack([mu_base, -mu_base])
+    sigma = 0.001
+    rng = pytensor.shared(np.random.RandomState(232), borrow=True)
+
+    A_rv = pm.Normal.dist(mu, sigma, rng=rng)
+    A_rv.name = "A"
+
+    p = 0.5
+
+    I_rv = pm.Bernoulli.dist(p, size=size, rng=rng)
+    I_rv.name = "I"
+
+    A_idx = A_rv[I_rv, at.ogrid[A_rv.shape[-1] :]]
+
+    assert isinstance(A_idx.owner.op, (Subtensor, AdvancedSubtensor, AdvancedSubtensor1))
+
+    A_idx_value_var = A_idx.type()
+    A_idx_value_var.name = "A_idx_value"
+
+    I_value_var = I_rv.type()
+    I_value_var.name = "I_value"
+
+    A_idx_logps = joint_logp(
+        (A_idx, I_rv),
+        rvs_to_values={A_idx: A_idx_value_var, I_rv: I_value_var},
+        rvs_to_transforms={},
+        rvs_to_total_sizes={},
+    )
+    A_idx_logp = at.add(*A_idx_logps)
+
+    logp_vals_fn = pytensor.function([A_idx_value_var, I_value_var], A_idx_logp)
+
+    # The compiled graph should not contain any `RandomVariables`
+    assert_no_rvs(logp_vals_fn.maker.fgraph.outputs[0])
+
+    decimals = select_by_precision(float64=6, float32=4)
+
+    for i in range(10):
+        bern_sp = sp.bernoulli(p)
+        I_value = bern_sp.rvs(size=size).astype(I_rv.dtype)
+
+        norm_sp = sp.norm(mu[I_value, np.ogrid[mu.shape[1] :]], sigma)
+        A_idx_value = norm_sp.rvs().astype(A_idx.dtype)
+
+        exp_obs_logps = norm_sp.logpdf(A_idx_value)
+        exp_obs_logps += bern_sp.logpmf(I_value)
+
+        logp_vals = logp_vals_fn(A_idx_value, I_value)
+
+        np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)
+
+
+def test_logp_helper():
+    value = at.vector("value")
+    x = pm.Normal.dist(0, 1)
+
+    x_logp = pm.logp(x, value)
+    np.testing.assert_almost_equal(x_logp.eval({value: [0, 1]}), sp.norm(0, 1).logpdf([0, 1]))
+
+    x_logp = pm.logp(x, [0, 1])
+    np.testing.assert_almost_equal(x_logp.eval(), sp.norm(0, 1).logpdf([0, 1]))
+
+
+def test_logp_helper_derived_rv():
+    assert np.isclose(
+        pm.logp(at.exp(pm.Normal.dist()), 5).eval(),
+        pm.logp(pm.LogNormal.dist(), 5).eval(),
+    )
+
+
+def test_logp_helper_exceptions():
+    with pytest.raises(TypeError, match="When RV is not a pure distribution"):
+        pm.logp(at.exp(pm.Normal.dist()), [1, 2])
+
+    with pytest.raises(NotImplementedError, match="PyMC could not infer logp of input variable"):
+        pm.logp(at.cos(pm.Normal.dist()), 1)
+
+
+def test_model_unchanged_logprob_access():
+    # Issue #5007
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        c = pm.Uniform("c", lower=a - 1, upper=1)
+
+    original_inputs = set(pytensor.graph.graph_inputs([c]))
+    # Extract model.logp
+    model.logp()
+    new_inputs = set(pytensor.graph.graph_inputs([c]))
+    assert original_inputs == new_inputs
+
+
+def test_unexpected_rvs():
+    with pm.Model() as model:
+        x = pm.Normal("x")
+        y = pm.CustomDist("y", logp=lambda *args: x)
+
+    with pytest.raises(ValueError, match="^Random variables detected in the logp graph"):
+        model.logp()
+
+
+def test_hierarchical_logp():
+    """Make sure there are no random variables in a model's log-likelihood graph."""
+    with pm.Model() as m:
+        x = pm.Uniform("x", lower=0, upper=1)
+        y = pm.Uniform("y", lower=0, upper=x)
+
+    logp_ancestors = list(ancestors([m.logp()]))
+    ops = {a.owner.op for a in logp_ancestors if a.owner}
+    assert len(ops) > 0
+    assert not any(isinstance(o, RandomVariable) for o in ops)
+    assert m.rvs_to_values[x] in logp_ancestors
+    assert m.rvs_to_values[y] in logp_ancestors
+
+
+def test_hierarchical_obs_logp():
+    obs = np.array([0.5, 0.4, 5, 2])
+
+    with pm.Model() as model:
+        x = pm.Uniform("x", 0, 1, observed=obs)
+        pm.Uniform("y", x, 2, observed=obs)
+
+    logp_ancestors = list(ancestors([model.logp()]))
+    ops = {a.owner.op for a in logp_ancestors if a.owner}
+    assert len(ops) > 0
+    assert not any(isinstance(o, RandomVariable) for o in ops)
+
+
+def test_logprob_join_constant_shapes():
+    x = at.random.normal(size=5)
+    y = at.random.normal(size=3)
+    xy = at.join(x, y)
+    xy_vv = at.vector("xy_vv")
+
+    xy_logp = pm.logp(xy, xy_vv)
+    # This is what Aeppl does not do!
+    assert_no_rvs(xy_logp)
+
+    f = pytensor.function([xy_vv], xy_logp)
+    np.testing.assert_array_equal(f(np.zeros(8)), sp.norm.logpdf(np.zeros(8)))
