@@ -336,7 +336,7 @@ class TestCompilePyMC:
         assert not np.isclose(f(), f())
 
         # Check that update was not done inplace
-        assert not hasattr(rng, "default_update")
+        assert rng.default_update is None
         f = pytensor.function([], x)
         assert f() == f()
 

@@ -16,8 +16,6 @@ import numpy as np
 import pytensor
 import pytest
 
-import pymc as pm
-
 
 @pytest.fixture(scope="function", autouse=True)
 def pytensor_config():
@@ -47,4 +45,3 @@ def strict_float32():
 def seeded_test():
     # TODO: use this instead of SeededTest
     np.random.seed(42)
-    pm.set_at_rng(42)

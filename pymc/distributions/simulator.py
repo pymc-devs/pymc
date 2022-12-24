@@ -76,7 +76,7 @@ class Simulator(Distribution):
     ----------
     fn : callable
         Python random simulator function. Should expect the following signature
-        ``(rng, arg1, arg2, ... argn, size)``, where rng is a ``numpy.random.RandomStream()``
+        ``(rng, arg1, arg2, ... argn, size)``, where rng is a ``numpy.random.Generator``
         and ``size`` defines the size of the desired sample.
     *unnamed_params : list of TensorVariable
         Parameters used by the Simulator random function. Each parameter can be passed

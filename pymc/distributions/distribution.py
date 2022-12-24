@@ -26,7 +26,8 @@ import numpy as np
 from pytensor import tensor as at
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph import node_rewriter
-from pytensor.graph.basic import Node, Variable, clone_replace
+from pytensor.graph.basic import Node, Variable
+from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.utils import MetaType
 from pytensor.tensor.basic import as_tensor_variable

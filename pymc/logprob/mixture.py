@@ -39,7 +39,7 @@ from typing import List, Optional, Tuple, Union, cast
 import pytensor
 import pytensor.tensor as at
 
-from pytensor.graph.basic import Apply, Variable
+from pytensor.graph.basic import Apply, Constant, Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op, compute_test_value
 from pytensor.graph.rewriting.basic import (
@@ -53,17 +53,20 @@ from pytensor.tensor.basic import Join, MakeVector
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.rewriting import (
     local_dimshuffle_rv_lift,
+    local_rv_size_lift,
     local_subtensor_rv_lift,
 )
 from pytensor.tensor.shape import shape_tuple
 from pytensor.tensor.subtensor import (
+    AdvancedSubtensor,
+    AdvancedSubtensor1,
     as_index_literal,
     as_nontensor_scalar,
     get_canonical_form_slice,
     is_basic_idx,
 )
 from pytensor.tensor.type import TensorType
-from pytensor.tensor.type_other import NoneConst, NoneTypeT, SliceType
+from pytensor.tensor.type_other import NoneConst, NoneTypeT, SliceConstant, SliceType
 from pytensor.tensor.var import TensorVariable
 
 from pymc.logprob.abstract import (
@@ -210,6 +213,7 @@ def rv_pull_down(x: TensorVariable, dont_touch_vars=None) -> TensorVariable:
     return pre_greedy_node_rewriter(
         fgraph,
         [
+            local_rv_size_lift,
             local_dimshuffle_rv_lift,
             local_subtensor_rv_lift,
             naive_bcast_rv_lift,
@@ -244,41 +248,29 @@ def get_stack_mixture_vars(
     node: Apply,
 ) -> Tuple[Optional[List[TensorVariable]], Optional[int]]:
     r"""Extract the mixture terms from a `*Subtensor*` applied to stacked `MeasurableVariable`\s."""
-    if not isinstance(node.op, subtensor_ops):
-        return None, None  # pragma: no cover
 
-    join_axis = NoneConst
+    assert isinstance(node.op, subtensor_ops)
+
     joined_rvs = node.inputs[0]
 
     # First, make sure that it's some sort of concatenation
     if not (joined_rvs.owner and isinstance(joined_rvs.owner.op, (MakeVector, Join))):
-        # Node is not a compatible join `Op`
-        return None, join_axis  # pragma: no cover
+        return None, None
 
     if isinstance(joined_rvs.owner.op, MakeVector):
+        join_axis = NoneConst
         mixture_rvs = joined_rvs.owner.inputs
 
     elif isinstance(joined_rvs.owner.op, Join):
-        mixture_rvs = joined_rvs.owner.inputs[1:]
+        # TODO: Find better solution to avoid this circular dependency
+        from pymc.pytensorf import constant_fold
+
         join_axis = joined_rvs.owner.inputs[0]
-        try:
-            # TODO: Find better solution to avoid this circular dependency
-            from pymc.pytensorf import constant_fold
+        # TODO: Support symbolic join axes. This will raise ValueError if it's not a constant
+        (join_axis,) = constant_fold((join_axis,), raise_not_constant=False)
+        join_axis = at.as_tensor(join_axis, dtype="int64")
 
-            join_axis = int(constant_fold((join_axis,))[0])
-        except ValueError:
-            # TODO: Support symbolic join axes
-            raise NotImplementedError("Symbolic `Join` axes are not supported in mixtures")
-
-        join_axis = at.as_tensor(join_axis)
-
-    if not all(rv.owner and isinstance(rv.owner.op, MeasurableVariable) for rv in mixture_rvs):
-        # Currently, all mixture components must be `MeasurableVariable` outputs
-        # TODO: Allow constants and make them Dirac-deltas
-        # raise NotImplementedError(
-        #     "All mixture components must be `MeasurableVariable` outputs"
-        # )
-        return None, join_axis
+        mixture_rvs = joined_rvs.owner.inputs[1:]
 
     return mixture_rvs, join_axis
 
@@ -300,17 +292,40 @@ def mixture_replace(fgraph, node):
 
     old_mixture_rv = node.default_output()
 
-    mixture_res, join_axis = get_stack_mixture_vars(node)
+    mixture_rvs, join_axis = get_stack_mixture_vars(node)
 
-    if mixture_res is None or any(rv in rv_map_feature.rv_values for rv in mixture_res):
+    # We don't support symbolic join axis
+    if mixture_rvs is None or not isinstance(join_axis, (NoneTypeT, Constant)):
+        return None
+
+    # Check that all components are MeasurableVariables and none is already conditioned on
+    if not all(
+        (
+            rv.owner is not None
+            and isinstance(rv.owner.op, MeasurableVariable)
+            and rv not in rv_map_feature.rv_values
+        )
+        for rv in mixture_rvs
+    ):
         return None  # pragma: no cover
 
     mixing_indices = node.inputs[1:]
 
+    # TODO: Add check / test case for Advanced Boolean indexing
+    if isinstance(node.op, (AdvancedSubtensor, AdvancedSubtensor1)):
+        # We don't support (non-scalar) integer array indexing as it can pick repeated values,
+        # but the Mixture logprob assumes all mixture values are independent
+        if any(
+            indices.dtype.startswith("int") and sum(1 - b for b in indices.type.broadcastable) > 0
+            for indices in mixing_indices
+            if not isinstance(indices, SliceConstant)
+        ):
+            return None
+
     # We loop through mixture components and collect all the array elements
     # that belong to each one (by way of their indices).
-    mixture_rvs = []
-    for i, component_rv in enumerate(mixture_res):
+    new_mixture_rvs = []
+    for i, component_rv in enumerate(mixture_rvs):
 
         # We create custom types for the mixture components and assign them
         # null `get_measurable_outputs` dispatches so that they aren't
@@ -318,7 +333,7 @@ def mixture_replace(fgraph, node):
         new_node = assign_custom_measurable_outputs(component_rv.owner)
         out_idx = component_rv.owner.outputs.index(component_rv)
         new_comp_rv = new_node.outputs[out_idx]
-        mixture_rvs.append(new_comp_rv)
+        new_mixture_rvs.append(new_comp_rv)
 
     # Replace this sub-graph with a `MixtureRV`
     mix_op = MixtureRV(
@@ -326,7 +341,7 @@ def mixture_replace(fgraph, node):
         old_mixture_rv.dtype,
         old_mixture_rv.broadcastable,
     )
-    new_node = mix_op.make_node(*([join_axis] + mixing_indices + mixture_rvs))
+    new_node = mix_op.make_node(*([join_axis] + mixing_indices + new_mixture_rvs))
 
     new_mixture_rv = new_node.default_output()
 
@@ -443,13 +458,27 @@ def logprob_MixtureRV(
             logp_val = at.set_subtensor(logp_val[idx_m_on_axis], logp_m)
 
     else:
+        # FIXME: This logprob implementation does not support mixing across distinct components,
+        # but we sometimes use it, because MixtureRV does not keep information about at which
+        # dimension scalar indexing actually starts
+
+        # If the stacking operation expands the component RVs, we have
+        # to expand the value and later squeeze the logprob for everything
+        # to work correctly
+        join_axis_val = None if isinstance(join_axis.type, NoneTypeT) else join_axis.data
+
+        if join_axis_val is not None:
+            value = at.expand_dims(value, axis=join_axis_val)
+
         logp_val = 0.0
         for i, comp_rv in enumerate(comp_rvs):
             comp_logp = logprob(comp_rv, value)
+            if join_axis_val is not None:
+                comp_logp = at.squeeze(comp_logp, axis=join_axis_val)
             logp_val += ifelse(
                 at.eq(indices[0], i),
                 comp_logp,
-                at.zeros_like(value),
+                at.zeros_like(comp_logp),
             )
 
     return logp_val

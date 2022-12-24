@@ -26,12 +26,11 @@ import pytensor
 from pytensor.gradient import verify_grad as at_verify_grad
 from pytensor.graph import ancestors
 from pytensor.graph.rewriting.basic import in2out
-from pytensor.tensor.random import RandomStream
 from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
 
-from pymc.pytensorf import at_rng, local_check_parameter_to_ninf_switch, set_at_rng
+from pymc.pytensorf import local_check_parameter_to_ninf_switch
 from pymc.tests.checks import close_to
 from pymc.tests.models import mv_simple, mv_simple_coarse
 
@@ -46,11 +45,6 @@ class SeededTest:
 
     def setup_method(self):
         nr.seed(self.random_seed)
-        self.old_at_rng = at_rng()
-        set_at_rng(RandomStream(self.random_seed))
-
-    def teardown_method(self):
-        set_at_rng(self.old_at_rng)
 
     def get_random_state(self, reset=False):
         if self.random_state is None or reset:

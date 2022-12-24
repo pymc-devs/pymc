@@ -29,7 +29,6 @@ from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.raise_op import Assert
 from pytensor.scalar import Cast
 from pytensor.tensor.elemwise import Elemwise
-from pytensor.tensor.random import RandomStream
 from pytensor.tensor.random.basic import IntegersRV
 from pytensor.tensor.subtensor import AdvancedSubtensor
 from pytensor.tensor.type import TensorType
@@ -132,6 +131,12 @@ class GeneratorAdapter:
 class MinibatchIndexRV(IntegersRV):
     _print_name = ("minibatch_index", r"\operatorname{minibatch\_index}")
 
+    # Work-around for https://github.com/pymc-devs/pytensor/issues/97
+    def make_node(self, rng, *args, **kwargs):
+        if rng is None:
+            rng = pytensor.shared(np.random.default_rng())
+        return super().make_node(rng, *args, **kwargs)
+
 
 minibatch_index = MinibatchIndexRV()
 
@@ -184,10 +189,9 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
     >>> mdata1, mdata2 = Minibatch(data1, data2, batch_size=10)
     """
 
-    rng = RandomStream()
     tensor, *tensors = tuple(map(at.as_tensor, (variable, *variables)))
     upper = assert_all_scalars_equal(*[t.shape[0] for t in (tensor, *tensors)])
-    slc = rng.gen(minibatch_index, 0, upper, size=batch_size)
+    slc = minibatch_index(0, upper, size=batch_size)
     for i, v in enumerate((tensor, *tensors)):
         if not valid_for_minibatch(v):
             raise ValueError(

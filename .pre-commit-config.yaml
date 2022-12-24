@@ -14,22 +14,22 @@ repos:
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
 - repo: https://github.com/PyCQA/isort
-  rev: 5.10.1
+  rev: v5.11.3
   hooks:
     - id: isort
       name: isort
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.3.0
+  rev: v3.3.1
   hooks:
     - id: pyupgrade
       args: [--py37-plus]
 - repo: https://github.com/psf/black
-  rev: 22.10.0
+  rev: 22.12.0
   hooks:
     - id: black
     - id: black-jupyter
 - repo: https://github.com/PyCQA/pylint
-  rev: v2.15.7
+  rev: v2.15.9
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]

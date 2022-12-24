@@ -224,7 +224,7 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
 
     a = at_dist(*dist_params, size=size)
     a.name = "a"
-    a_value_var = at.tensor(a.dtype, shape=(None,) * a.ndim)
+    a_value_var = at.tensor(dtype=a.dtype, shape=(None,) * a.ndim)
     a_value_var.name = "a_value"
 
     b = at.random.normal(a, 1.0)
@@ -664,17 +664,20 @@ def test_log_transform_rv():
 
 
 @pytest.mark.parametrize(
-    "rv_size, loc_type",
+    "rv_size, loc_type, addition",
     [
-        (None, at.scalar),
-        (2, at.vector),
-        ((2, 1), at.col),
+        (None, at.scalar, True),
+        (2, at.vector, False),
+        ((2, 1), at.col, True),
     ],
 )
-def test_loc_transform_rv(rv_size, loc_type):
+def test_loc_transform_rv(rv_size, loc_type, addition):
 
     loc = loc_type("loc")
-    y_rv = loc + at.random.normal(0, 1, size=rv_size, name="base_rv")
+    if addition:
+        y_rv = loc + at.random.normal(0, 1, size=rv_size, name="base_rv")
+    else:
+        y_rv = at.random.normal(0, 1, size=rv_size, name="base_rv") - at.neg(loc)
     y_rv.name = "y"
     y_vv = y_rv.clone()
 
@@ -692,17 +695,20 @@ def test_loc_transform_rv(rv_size, loc_type):
 
 
 @pytest.mark.parametrize(
-    "rv_size, scale_type",
+    "rv_size, scale_type, product",
     [
-        (None, at.scalar),
-        (1, at.TensorType("floatX", (True,))),
-        ((2, 3), at.matrix),
+        (None, at.scalar, True),
+        (1, at.TensorType("floatX", (True,)), True),
+        ((2, 3), at.matrix, False),
     ],
 )
-def test_scale_transform_rv(rv_size, scale_type):
+def test_scale_transform_rv(rv_size, scale_type, product):
 
     scale = scale_type("scale")
-    y_rv = at.random.normal(0, 1, size=rv_size, name="base_rv") * scale
+    if product:
+        y_rv = at.random.normal(0, 1, size=rv_size, name="base_rv") * scale
+    else:
+        y_rv = at.random.normal(0, 1, size=rv_size, name="base_rv") / at.reciprocal(scale)
     y_rv.name = "y"
     y_vv = y_rv.clone()
 
@@ -772,16 +778,84 @@ def test_discrete_rv_multinary_transform_fails():
         joint_logprob({y_rv: y_rv.clone()})
 
 
-@pytest.mark.xfail(reason="Check not implemented yet, see #51")
+@pytest.mark.xfail(reason="Check not implemented yet")
 def test_invalid_broadcasted_transform_rv_fails():
     loc = at.vector("loc")
-    y_rv = loc + at.random.normal(0, 1, size=2, name="base_rv")
+    y_rv = loc + at.random.normal(0, 1, size=1, name="base_rv")
     y_rv.name = "y"
     y_vv = y_rv.clone()
 
-    logp = joint_logprob({y_rv: y_vv})
-    logp.eval({y_vv: [0, 0, 0, 0], loc: [0, 0, 0, 0]})
-    assert False, "Should have failed before"
+    # This logp derivation should fail or count only once the values that are broadcasted
+    logp = joint_logprob({y_rv: y_vv}, sum=False)
+    assert logp.eval({y_vv: [0, 0, 0, 0], loc: [0, 0, 0, 0]}).shape == ()
+
+
+@pytest.mark.parametrize("numerator", (1.0, 2.0))
+def test_reciprocal_rv_transform(numerator):
+    shape = 3
+    scale = 5
+    x_rv = numerator / at.random.gamma(shape, scale)
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}))
+
+    x_test_val = 1.5
+    assert np.isclose(
+        x_logp_fn(x_test_val),
+        sp.stats.invgamma(shape, scale=scale * numerator).logpdf(x_test_val),
+    )
+
+
+def test_sqr_transform():
+    # The square of a unit normal is a chi-square with 1 df
+    x_rv = at.random.normal(0, 1, size=(3,)) ** 2
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}, sum=False))
+
+    x_test_val = np.r_[0.5, 1, 2.5]
+    assert np.allclose(
+        x_logp_fn(x_test_val),
+        sp.stats.chi2(df=1).logpdf(x_test_val),
+    )
+
+
+def test_sqrt_transform():
+    # The sqrt of a chisquare with n df is a chi distribution with n df
+    x_rv = at.sqrt(at.random.chisquare(df=3, size=(3,)))
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}, sum=False))
+
+    x_test_val = np.r_[0.5, 1, 2.5]
+    assert np.allclose(
+        x_logp_fn(x_test_val),
+        sp.stats.chi(df=3).logpdf(x_test_val),
+    )
+
+
+def test_negated_rv_transform():
+    x_rv = -at.random.halfnormal()
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}))
+
+    assert np.isclose(x_logp_fn(-1.5), sp.stats.halfnorm.logpdf(1.5))
+
+
+def test_subtracted_rv_transform():
+    # Choose base RV that is assymetric around zero
+    x_rv = 5.0 - at.random.normal(1.0)
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}))
+
+    assert np.isclose(x_logp_fn(7.3), sp.stats.norm.logpdf(5.0 - 7.3, 1.0))
 
 
 def test_scan_transform():
