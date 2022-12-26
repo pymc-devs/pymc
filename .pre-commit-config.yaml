@@ -14,7 +14,7 @@ repos:
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
 - repo: https://github.com/PyCQA/isort
-  rev: v5.11.3
+  rev: 5.11.4
   hooks:
     - id: isort
       name: isort
@@ -44,7 +44,7 @@ repos:
       files: ^pymc/
       exclude: ^pymc/tests/
 - repo: https://github.com/MarcoGorelli/madforhooks
-  rev: 0.3.0
+  rev: 0.4.1
   hooks:
     - id: no-print-statements
       files: ^pymc/
