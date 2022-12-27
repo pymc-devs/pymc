@@ -183,6 +183,7 @@ Contributors don't need to be part of any dedicated team.
 * Fernando Irarrazaval (community)
 * George Ho (dev)
 * Junpeng Lao (dev, community)
+* Larry Dong (dev)
 * Luciano Paz (dev - PyMC Labs)
 * Martina Cantaro (docs)
 * Maxim Kochurov (dev - PyMC Labs)
@@ -194,8 +195,11 @@ Contributors don't need to be part of any dedicated team.
 * Reshama Shaikh (community - PyMC Labs)
 * Ricardo Vieira (dev, community)
 * Robert P. Goldman (dev)
+* Rob Zinkov (dev, community)
+* Sandra Meneses (community)
 * Sayam Kumar (dev, docs)
 * Thomas Wiecki (dev, community - PyMC Labs)
+* Virgile Andreani  (dev)
 
 ## Steering Council
 
