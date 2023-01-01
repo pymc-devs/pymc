@@ -48,7 +48,12 @@ from pytensor.tensor.shape import SpecifyShape
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_constants, find_observations
 from pymc.logprob.utils import CheckParameterValue
-from pymc.util import RandomSeed, _get_seeds_per_chain, get_default_varnames
+from pymc.util import (
+    RandomSeed,
+    RandomState,
+    _get_seeds_per_chain,
+    get_default_varnames,
+)
 
 __all__ = (
     "get_jaxified_graph",
@@ -308,7 +313,7 @@ def sample_blackjax_nuts(
     tune: int = 1000,
     chains: int = 4,
     target_accept: float = 0.8,
-    random_seed: Optional[RandomSeed] = None,
+    random_seed: Optional[RandomState] = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     model: Optional[Model] = None,
     var_names: Optional[Sequence[str]] = None,
@@ -518,7 +523,7 @@ def sample_numpyro_nuts(
     tune: int = 1000,
     chains: int = 4,
     target_accept: float = 0.8,
-    random_seed: Optional[RandomSeed] = None,
+    random_seed: Optional[RandomState] = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     model: Optional[Model] = None,
     var_names: Optional[Sequence[str]] = None,

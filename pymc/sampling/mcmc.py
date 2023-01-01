@@ -221,6 +221,94 @@ def all_continuous(vars):
         return True
 
 
+def _sample_external_nuts(
+    sampler: str,
+    draws: int,
+    tune: int,
+    chains: int,
+    target_accept: float,
+    random_seed: Union[RandomState, None],
+    initvals: Union[StartDict, Sequence[Optional[StartDict]], None],
+    model: Model,
+    progressbar: bool,
+    idata_kwargs: Optional[Dict],
+    **kwargs,
+):
+    warnings.warn("Use of external NUTS sampler is still experimental", UserWarning)
+
+    if sampler == "nutpie":
+        try:
+            import nutpie
+        except ImportError as err:
+            raise ImportError(
+                "nutpie not found. Install it with conda install -c conda-forge nutpie"
+            ) from err
+
+        if initvals is not None:
+            warnings.warn(
+                "`initvals` are currently not passed to nutpie sampler. "
+                "Use `init_mean` kwarg following nutpie specification instead.",
+                UserWarning,
+            )
+
+        if idata_kwargs is not None:
+            warnings.warn(
+                "`idata_kwargs` are currently ignored by the nutpie sampler",
+                UserWarning,
+            )
+
+        compiled_model = nutpie.compile_pymc_model(model)
+        idata = nutpie.sample(
+            compiled_model,
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            target_accept=target_accept,
+            seed=_get_seeds_per_chain(random_seed, 1)[0],
+            progress_bar=progressbar,
+            **kwargs,
+        )
+        return idata
+
+    elif sampler == "numpyro":
+        import pymc.sampling.jax as pymc_jax
+
+        idata = pymc_jax.sample_numpyro_nuts(
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            target_accept=target_accept,
+            random_seed=random_seed,
+            initvals=initvals,
+            model=model,
+            progressbar=progressbar,
+            idata_kwargs=idata_kwargs,
+            **kwargs,
+        )
+        return idata
+
+    elif sampler == "blackjax":
+        import pymc.sampling.jax as pymc_jax
+
+        idata = pymc_jax.sample_blackjax_nuts(
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            target_accept=target_accept,
+            random_seed=random_seed,
+            initvals=initvals,
+            model=model,
+            idata_kwargs=idata_kwargs,
+            **kwargs,
+        )
+        return idata
+
+    else:
+        raise ValueError(
+            f"Sampler {sampler} not found. Choose one of ['nutpie', 'numpyro', 'blackjax', 'pymc']."
+        )
+
+
 def sample(
     draws: int = 1000,
     step=None,
@@ -239,6 +327,7 @@ def sample(
     callback=None,
     jitter_max_retries: int = 10,
     *,
+    nuts_sampler: str = "pymc",
     return_inferencedata: bool = True,
     keep_warning_stat: bool = False,
     idata_kwargs: dict = None,
@@ -257,6 +346,7 @@ def sample(
     init : str
         Initialization method to use for auto-assigned NUTS samplers. See `pm.init_nuts` for a list
         of all options. This argument is ignored when manually passing the NUTS step method.
+        Only applicable to the pymc nuts sampler.
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically. By default the NUTS step
@@ -306,6 +396,10 @@ def sample(
         Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform
         jitter that yields a finite probability. This applies to ``jitter+adapt_diag`` and
         ``jitter+adapt_full`` init methods.
+    nuts_sampler : str
+        Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"].
+        This requires the chosen sampler to be installed.
+        All samplers, except "pymc", require the full model to be continuous.
     return_inferencedata : bool
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a
         `MultiTrace` (False). Defaults to `True`.
@@ -401,7 +495,7 @@ def sample(
         if "nuts" in kwargs:
             kwargs["nuts"]["target_accept"] = kwargs.pop("target_accept")
         else:
-            kwargs = {"nuts": {"target_accept": kwargs.pop("target_accept")}}
+            kwargs["nuts"] = {"target_accept": kwargs.pop("target_accept")}
     if isinstance(trace, list):
         raise DeprecationWarning(
             "We have removed support for partial traces because it simplified things."
@@ -441,8 +535,6 @@ def sample(
         msg = "Only %s samples in chain." % draws
         _log.warning(msg)
 
-    draws += tune
-
     auto_nuts_init = True
     if step is not None:
         if isinstance(step, CompoundStep):
@@ -454,6 +546,25 @@ def sample(
 
     initial_points = None
     step = assign_step_methods(model, step, methods=pm.STEP_METHODS, step_kwargs=kwargs)
+
+    if nuts_sampler != "pymc":
+        if not isinstance(step, NUTS):
+            raise ValueError(
+                "Model can not be sampled with NUTS alone. Your model is probably not continuous."
+            )
+        return _sample_external_nuts(
+            sampler=nuts_sampler,
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            target_accept=kwargs.pop("nuts", {}).get("target_accept", 0.8),
+            random_seed=random_seed,
+            initvals=initvals,
+            model=model,
+            progressbar=progressbar,
+            idata_kwargs=idata_kwargs,
+            **kwargs,
+        )
 
     if isinstance(step, list):
         step = CompoundStep(step)
@@ -503,7 +614,7 @@ def sample(
     )
 
     sample_args = {
-        "draws": draws,
+        "draws": draws + tune,  # FIXME: Why is tune added to draws?
         "step": step,
         "start": initial_points,
         "traces": traces,

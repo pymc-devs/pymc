@@ -305,14 +305,14 @@ jobs:
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
-  jax:
+  external_samplers:
     strategy:
       matrix:
         os: [ubuntu-20.04]
         floatx: [float64]
         python-version: ["3.9"]
         test-subset:
-          - pymc/tests/sampling/test_jax.py
+          - pymc/tests/sampling/test_jax.py pymc/tests/sampling/test_mcmc_external.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
@@ -360,9 +360,10 @@ jobs:
           conda activate pymc-test
           pip install -e .
           python --version
-      - name: Install jax specific dependencies
+      - name: Install external samplers
         run: |
           conda activate pymc-test
+          conda install -c conda-forge nutpie
           pip install "numpyro>=0.8.0"
           pip install git+https://github.com/blackjax-devs/blackjax.git@0.7.0
       - name: Run tests
