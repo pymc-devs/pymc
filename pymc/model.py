@@ -1456,7 +1456,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             # Create deterministic that combines observed and missing
             # Note: This can widely increase memory consumption during sampling for large datasets
-            rv_var = at.zeros(data.shape)
+            rv_var = at.zeros(data.shape, dtype=observed_rv_var.type.dtype)
             rv_var = at.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
             rv_var = at.set_subtensor(rv_var[antimask_idx], observed_rv_var)
             rv_var = Deterministic(name, rv_var, self, dims)
