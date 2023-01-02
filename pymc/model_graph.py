@@ -62,8 +62,11 @@ class ModelGraph:
                 # Otherwise return all inputs
                 return node.inputs
 
+        blockers = set(self.model.named_vars)
+
         def _expand(x):
-            if x.name:
+            nonlocal blockers
+            if x.name in blockers:
                 return [x]
             if isinstance(x.owner, Apply):
                 return reversed(_filter_non_parameter_inputs(x))
