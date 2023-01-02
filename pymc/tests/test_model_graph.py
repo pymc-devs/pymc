@@ -407,3 +407,18 @@ class TestVariableSelection:
 
 class TestModelNonRandomVariableRVs(BaseModelGraphTest):
     model_func = model_non_random_variable_rvs
+
+
+def test_model_graph_with_intermediate_named_variables():
+    # Issue 6421
+    with pm.Model() as m1:
+        a = pm.Normal("a", 0, 1, shape=3)
+        pm.Normal("b", a.mean(axis=-1), 1)
+    assert dict(ModelGraph(m1).make_compute_graph()) == {"a": set(), "b": {"a"}}
+
+    with pm.Model() as m2:
+        a = pm.Normal("a", 0, 1)
+        b = a + 1
+        b.name = "b"
+        pm.Normal("c", b, 1)
+    assert dict(ModelGraph(m2).make_compute_graph()) == {"a": set(), "c": {"a"}}
