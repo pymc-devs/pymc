@@ -553,7 +553,7 @@ class TestGenerator:
 
     def test_gen_cloning_with_shape_change(self, datagen):
         gen = pm.generator(datagen)
-        gen_r = pm.at_rng().normal(size=gen.shape).T
+        gen_r = at.random.normal(size=gen.shape).T
         X = gen.dot(gen_r)
         res, _ = pytensor.scan(lambda x: x.sum(), X, n_steps=X.shape[0])
         assert res.eval().shape == (50,)

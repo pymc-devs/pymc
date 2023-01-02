@@ -1593,7 +1593,6 @@ class LogNormal(PositiveContinuous):
 
     Examples
     --------
-
     .. code-block:: python
 
         # Example to show that we pass in only ``sigma`` or ``tau`` but not both.
@@ -2728,16 +2727,16 @@ class VonMises(CircularContinuous):
 
     Parameters
     ----------
-    mu : tensor_like of float, default 0
+    mu : tensor_like of float, default 0.0
         Mean.
-    kappa : tensor_like of float
-        Concentration (\frac{1}{kappa} is analogous to \sigma^2).
+    kappa : tensor_like of float, default 1.0
+        Concentration (:math:`\frac{1}{\kappa}` is analogous to :math:`\sigma^2`).
     """
 
     rv_op = vonmises
 
     @classmethod
-    def dist(cls, mu=0.0, kappa=None, *args, **kwargs):
+    def dist(cls, mu=0.0, kappa=1.0, *args, **kwargs):
         mu = at.as_tensor_variable(floatX(mu))
         kappa = at.as_tensor_variable(floatX(kappa))
         return super().dist([mu, kappa], *args, **kwargs)

@@ -67,7 +67,7 @@ subtensor_ops = (AdvancedSubtensor, AdvancedSubtensor1, Subtensor)
 
 
 class NoCallbackEquilibriumDB(EquilibriumDB):
-    r"""This `EquilibriumDB` doesn't hide its exceptions.
+    r"""An `EquilibriumDB` that doesn't hide its exceptions.
 
     By setting `failure_callback` to ``None`` in the `EquilibriumGraphRewriter`\s
     that `EquilibriumDB` generates, we're able to directly emit the desired
@@ -102,7 +102,7 @@ class PreserveRVMappings(Feature):
     def __init__(self, rv_values: Dict[TensorVariable, TensorVariable]):
         """
         Parameters
-        ==========
+        ----------
         rv_values
             Mappings between random variables and their value variables.
             The keys of this map are what this `Feature` keeps updated.
@@ -130,7 +130,7 @@ class PreserveRVMappings(Feature):
         original value variables.
 
         Parameters
-        ==========
+        ----------
         old_rv
             The random variable whose mappings will be updated.
         new_value

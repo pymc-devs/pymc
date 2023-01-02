@@ -433,8 +433,6 @@ class ADVI(KLqp):
     model: :class:`pymc.Model`
         PyMC model for inference
     random_seed: None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
     start: `dict[str, np.ndarray]` or `StartDict`
         starting point for inference
     start_sigma: `dict[str, np.ndarray]`
@@ -466,8 +464,6 @@ class FullRankADVI(KLqp):
     model: :class:`pymc.Model`
         PyMC model for inference
     random_seed: None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
     start: `dict[str, np.ndarray]` or `StartDict`
         starting point for inference
 
@@ -539,8 +535,6 @@ class SVGD(ImplicitGradient):
     start: `dict[str, np.ndarray]` or `StartDict`
         initial point for inference
     random_seed: None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
     kwargs: other keyword arguments passed to estimator
 
     References
@@ -685,8 +679,6 @@ def fit(
     model: :class:`Model`
         PyMC model for inference
     random_seed: None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
     inf_kwargs: dict
         additional kwargs passed to :class:`Inference`
     start: `dict[str, np.ndarray]` or `StartDict`

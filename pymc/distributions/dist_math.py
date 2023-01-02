@@ -355,17 +355,19 @@ i0e = Elemwise(i0e_scalar, name="Elemwise{i0e,no_inplace}")
 def random_choice(p, size):
     """Return draws from categorical probability functions
 
-    Args:
-        p: array
-           Probability of each class. If p.ndim > 1, the last axis is
-           interpreted as the probability of each class, and numpy.random.choice
-           is iterated for every other axis element.
-        size: int or tuple
-            Shape of the desired output array. If p is multidimensional, size
-            should broadcast with p.shape[:-1].
+    Parameters
+    ----------
+    p : array
+        Probability of each class. If p.ndim > 1, the last axis is
+        interpreted as the probability of each class, and numpy.random.choice
+        is iterated for every other axis element.
+    size : int or tuple
+        Shape of the desired output array. If p is multidimensional, size
+        should broadcast with p.shape[:-1].
 
-    Returns:
-        random sample: array
+    Returns
+    -------
+    random_sample : array
 
     """
     k = p.shape[-1]

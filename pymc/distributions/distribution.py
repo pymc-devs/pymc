@@ -26,7 +26,8 @@ import numpy as np
 from pytensor import tensor as at
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph import node_rewriter
-from pytensor.graph.basic import Node, Variable, clone_replace
+from pytensor.graph.basic import Node, Variable
+from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.utils import MetaType
 from pytensor.tensor.basic import as_tensor_variable
@@ -413,7 +414,7 @@ def _get_measurable_outputs_symbolic_random_variable(op, node):
 @node_rewriter([SymbolicRandomVariable])
 def inline_symbolic_random_variable(fgraph, node):
     """
-    This optimization expands the internal graph of a SymbolicRV when obtaining the logp
+    Optimization that expands the internal graph of a SymbolicRV when obtaining the logp
     graph, if the flag `inline_logprob` is True.
     """
     op = node.op
@@ -828,7 +829,6 @@ class CustomDist:
 
     Examples
     --------
-
     Create a CustomDist that wraps a black-box logp function. This variable cannot be
     used in prior or posterior predictive sampling because no random function was provided
 

@@ -14,29 +14,37 @@ repos:
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
 - repo: https://github.com/PyCQA/isort
-  rev: 5.10.1
+  rev: 5.11.4
   hooks:
     - id: isort
       name: isort
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.3.0
+  rev: v3.3.1
   hooks:
     - id: pyupgrade
       args: [--py37-plus]
 - repo: https://github.com/psf/black
-  rev: 22.10.0
+  rev: 22.12.0
   hooks:
     - id: black
     - id: black-jupyter
 - repo: https://github.com/PyCQA/pylint
-  rev: v2.15.7
+  rev: v2.15.9
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]
       files: ^pymc/
       exclude: (?x)(pymc/_version.py)
+- repo: https://github.com/PyCQA/pydocstyle
+  rev: 6.1.1
+  hooks:
+    - id: pydocstyle
+      args:
+      - --ignore=D100,D101,D102,D103,D104,D105,D107,D200,D202,D203,D204,D205,D209,D212,D213,D301,D400,D401,D403,D413,D415,D417
+      files: ^pymc/
+      exclude: ^pymc/tests/
 - repo: https://github.com/MarcoGorelli/madforhooks
-  rev: 0.3.0
+  rev: 0.4.1
   hooks:
     - id: no-print-statements
       files: ^pymc/

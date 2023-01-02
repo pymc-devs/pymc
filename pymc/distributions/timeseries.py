@@ -21,7 +21,8 @@ import numpy as np
 import pytensor
 import pytensor.tensor as at
 
-from pytensor.graph.basic import Node, clone_replace
+from pytensor.graph.basic import Node
+from pytensor.graph.replace import clone_replace
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 

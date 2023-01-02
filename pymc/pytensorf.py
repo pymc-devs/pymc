@@ -50,7 +50,6 @@ from pytensor.graph.op import Op
 from pytensor.scalar.basic import Cast
 from pytensor.tensor.basic import _as_tensor_variable
 from pytensor.tensor.elemwise import Elemwise
-from pytensor.tensor.random import RandomStream
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.var import (
     RandomGeneratorSharedVariable,
@@ -84,8 +83,6 @@ __all__ = [
     "join_nonshared_inputs",
     "make_shared_replacements",
     "generator",
-    "set_at_rng",
-    "at_rng",
     "convert_observed_data",
     "compile_pymc",
     "constant_fold",
@@ -203,7 +200,7 @@ def walk_model(
     """Walk model graphs and yield their nodes.
 
     Parameters
-    ==========
+    ----------
     graphs
         The graphs to walk.
     stop_at_vars
@@ -235,12 +232,12 @@ def _replace_rvs_in_graphs(
     This will *not* recompute test values.
 
     Parameters
-    ==========
+    ----------
     graphs
         The graphs in which random variables are to be replaced.
 
     Returns
-    =======
+    -------
     Tuple containing the transformed graphs and a ``dict`` of the replacements
     that were made.
     """
@@ -296,7 +293,7 @@ def rvs_to_value_vars(
     This will *not* recompute test values in the resulting graphs.
 
     Parameters
-    ==========
+    ----------
     graphs
         The graphs in which to perform the replacements.
     apply_transforms
@@ -891,49 +888,6 @@ def generator(gen, default=None):
     return GeneratorOp(gen, default)()
 
 
-_at_rng = RandomStream()
-
-
-def at_rng(random_seed=None):
-    """
-    Get the package-level random number generator or new with specified seed.
-
-    Parameters
-    ----------
-    random_seed: int
-        If not None
-        returns *new* pytensor random generator without replacing package global one
-
-    Returns
-    -------
-    `pytensor.tensor.random.utils.RandomStream` instance
-        `pytensor.tensor.random.utils.RandomStream`
-        instance passed to the most recent call of `set_at_rng`
-    """
-    if random_seed is None:
-        return _at_rng
-    else:
-        ret = RandomStream(random_seed)
-        return ret
-
-
-def set_at_rng(new_rng):
-    """
-    Set the package-level random number generator.
-
-    Parameters
-    ----------
-    new_rng: `pytensor.tensor.random.utils.RandomStream` instance
-        The random number generator to use.
-    """
-    # pylint: disable=global-statement
-    global _at_rng
-    # pylint: enable=global-statement
-    if isinstance(new_rng, int):
-        new_rng = RandomStream(new_rng)
-    _at_rng = new_rng
-
-
 def floatX_array(x):
     return floatX(np.array(x))
 
@@ -1082,7 +1036,7 @@ def collect_default_updates(
         assert random_var.owner.op is not None
         if isinstance(random_var.owner.op, RandomVariable):
             rng = random_var.owner.inputs[0]
-            if hasattr(rng, "default_update"):
+            if getattr(rng, "default_update", None) is not None:
                 update_map = {rng: rng.default_update}
             else:
                 update_map = {rng: random_var.owner.outputs[0]}

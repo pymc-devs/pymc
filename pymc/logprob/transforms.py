@@ -39,17 +39,32 @@ import abc
 from copy import copy
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
+import numpy as np
 import pytensor.tensor as at
 
 from pytensor.gradient import DisconnectedType, jacobian
-from pytensor.graph.basic import Apply, Node, Variable, clone_replace
+from pytensor.graph.basic import Apply, Node, Variable
 from pytensor.graph.features import AlreadyThere, Feature
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
+from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
-from pytensor.scalar import Add, Exp, Log, Mul
+from pytensor.scalar import Add, Exp, Log, Mul, Pow, Sqr, Sqrt
 from pytensor.scan.op import Scan
-from pytensor.tensor.math import add, exp, log, mul
+from pytensor.tensor.exceptions import NotScalarConstantError
+from pytensor.tensor.math import (
+    add,
+    exp,
+    log,
+    mul,
+    neg,
+    pow,
+    reciprocal,
+    sqr,
+    sqrt,
+    sub,
+    true_div,
+)
 from pytensor.tensor.rewriting.basic import (
     register_specialize,
     register_stabilize,
@@ -108,8 +123,11 @@ class RVTransform(abc.ABC):
         """Apply the transformation."""
 
     @abc.abstractmethod
-    def backward(self, value: TensorVariable, *inputs: Variable) -> TensorVariable:
-        """Invert the transformation."""
+    def backward(
+        self, value: TensorVariable, *inputs: Variable
+    ) -> Union[TensorVariable, Tuple[TensorVariable, ...]]:
+        """Invert the transformation. Multiple values may be returned when the
+        transformation is not 1-to-1"""
 
     def log_jac_det(self, value: TensorVariable, *inputs) -> TensorVariable:
         """Construct the log of the absolute value of the Jacobian determinant."""
@@ -295,7 +313,7 @@ class TransformValuesRewrite(GraphRewriter):
     ):
         """
         Parameters
-        ==========
+        ----------
         values_to_transforms
             Mapping between value variables and their transformations.  Each
             value variable can be assigned one of `RVTransform`, or ``None``.
@@ -318,7 +336,7 @@ class TransformValuesRewrite(GraphRewriter):
 class MeasurableTransform(MeasurableElemwise):
     """A placeholder used to specify a log-likelihood for a transformed measurable variable"""
 
-    valid_scalar_types = (Exp, Log, Add, Mul)
+    valid_scalar_types = (Exp, Log, Add, Mul, Pow)
 
     # Cannot use `transform` as name because it would clash with the property added by
     # the `TransformValuesRewrite`
@@ -347,14 +365,135 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
     # The value variable must still be back-transformed to be on the natural support of
     # the respective measurable input.
     backward_value = op.transform_elemwise.backward(value, *other_inputs)
-    input_logprob = logprob(measurable_input, backward_value, **kwargs)
+
+    # Some transformations, like squaring may produce multiple backward values
+    if isinstance(backward_value, tuple):
+        input_logprob = at.logaddexp(
+            *(logprob(measurable_input, backward_val, **kwargs) for backward_val in backward_value)
+        )
+    else:
+        input_logprob = logprob(measurable_input, backward_value)
 
     jacobian = op.transform_elemwise.log_jac_det(value, *other_inputs)
 
     return input_logprob + jacobian
 
 
-@node_rewriter([exp, log, add, mul])
+@node_rewriter([reciprocal])
+def measurable_reciprocal_to_power(fgraph, node):
+    """Convert reciprocal of `MeasurableVariable`s to power."""
+    inp = node.inputs[0]
+    if not (inp.owner and isinstance(inp.owner.op, MeasurableVariable)):
+        return None
+
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    # Only apply this rewrite if the variable is unvalued
+    if inp in rv_map_feature.rv_values:
+        return None  # pragma: no cover
+
+    return [at.pow(inp, -1.0)]
+
+
+@node_rewriter([sqr, sqrt])
+def measurable_sqrt_sqr_to_power(fgraph, node):
+    """Convert square root or square of `MeasurableVariable`s to power form."""
+
+    inp = node.inputs[0]
+    if not (inp.owner and isinstance(inp.owner.op, MeasurableVariable)):
+        return None
+
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    # Only apply this rewrite if the variable is unvalued
+    if inp in rv_map_feature.rv_values:
+        return None  # pragma: no cover
+
+    if isinstance(node.op.scalar_op, Sqr):
+        return [at.pow(inp, 2)]
+
+    if isinstance(node.op.scalar_op, Sqrt):
+        return [at.pow(inp, 1 / 2)]
+
+
+@node_rewriter([true_div])
+def measurable_div_to_product(fgraph, node):
+    """Convert divisions involving `MeasurableVariable`s to products."""
+
+    measurable_vars = [
+        var for var in node.inputs if (var.owner and isinstance(var.owner.op, MeasurableVariable))
+    ]
+    if not measurable_vars:
+        return None  # pragma: no cover
+
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    # Only apply this rewrite if there is one unvalued MeasurableVariable involved
+    if all(measurable_var in rv_map_feature.rv_values for measurable_var in measurable_vars):
+        return None  # pragma: no cover
+
+    numerator, denominator = node.inputs
+
+    # Check if numerator is 1
+    try:
+        if at.get_scalar_constant_value(numerator) == 1:
+            # We convert the denominator directly to a power transform as this
+            # must be the measurable input
+            return [at.pow(denominator, -1)]
+    except NotScalarConstantError:
+        pass
+    # We don't convert the denominator directly to a power transform as
+    # it might not be measurable (and therefore not needed)
+    return [at.mul(numerator, at.reciprocal(denominator))]
+
+
+@node_rewriter([neg])
+def measurable_neg_to_product(fgraph, node):
+    """Convert negation of `MeasurableVariable`s to product with `-1`."""
+
+    inp = node.inputs[0]
+    if not (inp.owner and isinstance(inp.owner.op, MeasurableVariable)):
+        return None
+
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    # Only apply this rewrite if the variable is unvalued
+    if inp in rv_map_feature.rv_values:
+        return None  # pragma: no cover
+
+    return [at.mul(inp, -1.0)]
+
+
+@node_rewriter([sub])
+def measurable_sub_to_neg(fgraph, node):
+    """Convert subtraction involving `MeasurableVariable`s to addition with neg"""
+    measurable_vars = [
+        var for var in node.inputs if (var.owner and isinstance(var.owner.op, MeasurableVariable))
+    ]
+    if not measurable_vars:
+        return None  # pragma: no cover
+
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    # Only apply this rewrite if there is one unvalued MeasurableVariable involved
+    if all(measurable_var in rv_map_feature.rv_values for measurable_var in measurable_vars):
+        return None  # pragma: no cover
+
+    minuend, subtrahend = node.inputs
+    return [at.add(minuend, at.neg(subtrahend))]
+
+
+@node_rewriter([exp, log, add, mul, pow])
 def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
 
@@ -414,6 +553,18 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         transform = ExpTransform()
     elif isinstance(scalar_op, Log):
         transform = LogTransform()
+    elif isinstance(scalar_op, Pow):
+        # We only allow for the base to be measurable
+        if measurable_input_idx != 0:
+            return None
+        try:
+            (power,) = other_inputs
+            power = at.get_scalar_constant_value(power).item()
+        # Power needs to be a constant
+        except NotScalarConstantError:
+            return None
+        transform_inputs = (measurable_input, power)
+        transform = PowerTransform(power=power)
     elif isinstance(scalar_op, Add):
         transform_inputs = (measurable_input, at.add(*other_inputs))
         transform = LocTransform(
@@ -435,6 +586,44 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
 
     return [transform_out]
 
+
+measurable_ir_rewrites_db.register(
+    "measurable_reciprocal_to_power",
+    measurable_reciprocal_to_power,
+    "basic",
+    "transform",
+)
+
+
+measurable_ir_rewrites_db.register(
+    "measurable_sqrt_sqr_to_power",
+    measurable_sqrt_sqr_to_power,
+    "basic",
+    "transform",
+)
+
+
+measurable_ir_rewrites_db.register(
+    "measurable_div_to_product",
+    measurable_div_to_product,
+    "basic",
+    "transform",
+)
+
+
+measurable_ir_rewrites_db.register(
+    "measurable_neg_to_product",
+    measurable_neg_to_product,
+    "basic",
+    "transform",
+)
+
+measurable_ir_rewrites_db.register(
+    "measurable_sub_to_neg",
+    measurable_sub_to_neg,
+    "basic",
+    "transform",
+)
 
 measurable_ir_rewrites_db.register(
     "find_measurable_transforms",
@@ -507,6 +696,35 @@ class ExpTransform(RVTransform):
         return -at.log(value)
 
 
+class PowerTransform(RVTransform):
+    name = "power"
+
+    def __init__(self, power=None):
+        if not isinstance(power, (int, float)):
+            raise TypeError(f"Power must be integer or float, got {type(power)}")
+        if power == 0:
+            raise ValueError("Power cannot be 0")
+        self.power = power
+        super().__init__()
+
+    def forward(self, value, *inputs):
+        at.power(value, self.power)
+
+    def backward(self, value, *inputs):
+        backward_value = at.power(value, (1 / self.power))
+
+        # In this case the transform is not 1-to-1
+        if (self.power > 1) and (self.power % 2 == 0):
+            return -backward_value, backward_value
+        else:
+            return backward_value
+
+    def log_jac_det(self, value, *inputs):
+        inv_power = 1 / self.power
+        # Note: This fails for value==0
+        return np.log(np.abs(inv_power)) + (inv_power - 1) * at.log(value)
+
+
 class IntervalTransform(RVTransform):
     name = "interval"
 
@@ -514,7 +732,7 @@ class IntervalTransform(RVTransform):
         """
 
         Parameters
-        ==========
+        ----------
         args_fn
             Function that expects inputs of RandomVariable and returns the lower
             and upper bounds for the interval transformation. If one of these is
@@ -660,7 +878,7 @@ def _create_transformed_rv_op(
     also behaving exactly as it did before.
 
     Parameters
-    ==========
+    ----------
     rv_op
         The `RandomVariable` for which we want to construct a `TransformedRV`.
     transform
