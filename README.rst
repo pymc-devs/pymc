@@ -91,7 +91,7 @@ To ask a question regarding modeling or usage of PyMC we encourage posting to ou
 
 To report an issue with PyMC please use the `issue tracker <https://github.com/pymc-devs/pymc/issues>`__.
 
-Finally, if you need to get in touch for non-technical information about the project, `send us an e-mail <pymc.devs@gmail.com>`__.
+Finally, if you need to get in touch for non-technical information about the project, `send us an e-mail <info@pymc-devs.org>`__.
 
 License
 =======
