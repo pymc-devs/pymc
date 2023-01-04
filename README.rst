@@ -89,6 +89,11 @@ You can also follow us on these social media platforms for updates and other ann
 
 To ask a question regarding modeling or usage of PyMC we encourage posting to our Discourse forum under the `“Questions” Category <https://discourse.pymc.io/c/questions>`__. You can also suggest feature in the `“Development” Category <https://discourse.pymc.io/c/development>`__.
 
+You can also follow us on these social media platforms for updates and other announcements:
+- `LinkedIn @pymc <https://www.linkedin.com/company/pymc/>`__
+- `YouTube @PyMCDevelopers <https://www.youtube.com/c/PyMCDevelopers>`__
+- `Twitter @pymc_devs <https://twitter.com/pymc_devs>`__
+- `Mastodon @pymc@bayes.club <https://bayes.club/@pymc>`__
 To report an issue with PyMC please use the `issue tracker <https://github.com/pymc-devs/pymc/issues>`__.
 
 Finally, if you need to get in touch for non-technical information about the project, `send us an e-mail <info@pymc-devs.org>`__.
