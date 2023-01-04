@@ -517,7 +517,7 @@ class Matern12(Stationary):
     The Matern kernel with nu = 1/2
 
     .. math::
-    
+
         k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell} \right]
     """
 
