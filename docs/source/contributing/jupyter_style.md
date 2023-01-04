@@ -13,6 +13,9 @@ to parse the notebooks.
 There is a webinar available on [contributing to the PyMC example gallery](https://pymc-data-umbrella.xyz/en/latest/webinars/contributing_to_documentation/index.html)
 :::
 
+## Template Notebook
+There is a [template Jupyter notebook](https://github.com/pymc-devs/pymc-examples/blob/main/template_notebook.ipynb) to be used for new notebooks.
+
 ## General guidelines
 
 * Don't use abbreviations or acronyms whenever you can use complete words. For example, write "random variables" instead of "RVs".
