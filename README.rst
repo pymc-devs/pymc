@@ -81,7 +81,11 @@ Contact
 =======
 
 We are using `discourse.pymc.io <https://discourse.pymc.io/>`__ as our main communication channel.
-You can also follow us on `Mastodon @pymc@bayes.club <https://bayes.club/@pymc>`__ and `Twitter @pymc_devs <https://twitter.com/pymc_devs>`__ for updates and other announcements.
+You can also follow us on these social media platforms for updates and other announcements:    
+- `LinkedIn @pymc <https://www.linkedin.com/company/pymc/>`__ 
+- `YouTube @PyMCDevelopers <https://www.youtube.com/c/PyMCDevelopers>`__
+- `Twitter @pymc_devs <https://twitter.com/pymc_devs>`__ 
+- `Mastodon @pymc@bayes.club <https://bayes.club/@pymc>`__ 
 
 To ask a question regarding modeling or usage of PyMC we encourage posting to our Discourse forum under the `“Questions” Category <https://discourse.pymc.io/c/questions>`__. You can also suggest feature in the `“Development” Category <https://discourse.pymc.io/c/development>`__.
 
