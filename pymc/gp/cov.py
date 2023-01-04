@@ -34,6 +34,7 @@ __all__ = [
     "Exponential",
     "Matern52",
     "Matern32",
+    "Matern12",
     "Linear",
     "Polynomial",
     "Cosine",
@@ -515,7 +516,9 @@ class Matern12(Stationary):
     r"""
     The Matern kernel with nu = 1/2
 
-    k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell} \right]
+    .. math::
+    
+        k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell} \right]
     """
 
     def full(self, X, Xs=None):
