@@ -11,7 +11,7 @@ jobs:
     env:
       PYPI_TOKEN: ${{ secrets.PYPI_TOKEN_PYMC }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
       uses: actions/setup-python@v1
       with:

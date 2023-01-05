@@ -108,7 +108,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Cache conda
         uses: actions/cache@v3
         env:
@@ -179,7 +179,7 @@ jobs:
       run:
         shell: cmd
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Cache conda
         uses: actions/cache@v3
         env:
@@ -258,7 +258,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Cache conda
         uses: actions/cache@v3
         env:
@@ -323,7 +323,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Cache conda
         uses: actions/cache@v3
         env:
@@ -393,7 +393,7 @@ jobs:
       run:
         shell: cmd
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Cache conda
         uses: actions/cache@v3
         env:
