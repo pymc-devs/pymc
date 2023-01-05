@@ -1249,9 +1249,13 @@ def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):
         nonzero_dist,
     ]
     if name is not None:
-        return Mixture(name, weights, comp_dists, **kwargs)
+        out_rv = Mixture(name, weights, comp_dists, **kwargs)
     else:
-        return Mixture.dist(weights, comp_dists, **kwargs)
+        out_rv = Mixture.dist(weights, comp_dists, **kwargs)
+
+    out_rv.is_zero_inflated = True
+
+    return out_rv
 
 
 class ZeroInflatedPoisson:

@@ -14,7 +14,6 @@
 import contextvars
 import functools
 import sys
-import types
 import warnings
 
 from abc import ABCMeta
@@ -57,7 +56,6 @@ from pymc.logprob.abstract import (
 )
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.model import BlockModelAccess
-from pymc.printing import str_for_dist
 from pymc.pytensorf import collect_default_updates, convert_observed_data
 from pymc.util import UNSET, _add_future_warning_tag
 from pymc.vartypes import string_types
@@ -315,12 +313,6 @@ class Distribution(metaclass=DistributionMeta):
             dims=dims,
             transform=transform,
             initval=initval,
-        )
-
-        # add in pretty-printing support
-        rv_out.str_repr = types.MethodType(str_for_dist, rv_out)
-        rv_out._repr_latex_ = types.MethodType(
-            functools.partial(str_for_dist, formatting="latex"), rv_out
         )
 
         rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")

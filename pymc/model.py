@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import functools
+import itertools
 import threading
 import types
 import warnings
@@ -589,10 +589,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         from pymc.printing import str_for_model
 
-        self.str_repr = types.MethodType(str_for_model, self)
-        self._repr_latex_ = types.MethodType(
-            functools.partial(str_for_model, formatting="latex"), self
-        )
+        self._repr_latex_ = types.MethodType(str_for_model, self)
 
     @property
     def model(self):
@@ -2015,17 +2012,17 @@ def Deterministic(name, var, model=None, dims=None):
     model.deterministics.append(var)
     model.add_named_variable(var, dims)
 
-    from pymc.printing import str_for_potential_or_deterministic
+    # from pymc.printing import str_for_potential_or_deterministic
 
-    var.str_repr = types.MethodType(
-        functools.partial(str_for_potential_or_deterministic, dist_name="Deterministic"), var
-    )
-    var._repr_latex_ = types.MethodType(
-        functools.partial(
-            str_for_potential_or_deterministic, dist_name="Deterministic", formatting="latex"
-        ),
-        var,
-    )
+    # var.str_repr = types.MethodType(
+    #     functools.partial(str_for_potential_or_deterministic, dist_name="Deterministic"), var
+    # )
+    # var._repr_latex_ = types.MethodType(
+    #     functools.partial(
+    #         str_for_potential_or_deterministic, dist_name="Deterministic", formatting="latex"
+    #     ),
+    #     var,
+    # )
 
     return var
 
@@ -2047,16 +2044,16 @@ def Potential(name, var, model=None):
     model.potentials.append(var)
     model.add_named_variable(var)
 
-    from pymc.printing import str_for_potential_or_deterministic
+    # from pymc.printing import str_for_potential_or_deterministic
 
-    var.str_repr = types.MethodType(
-        functools.partial(str_for_potential_or_deterministic, dist_name="Potential"), var
-    )
-    var._repr_latex_ = types.MethodType(
-        functools.partial(
-            str_for_potential_or_deterministic, dist_name="Potential", formatting="latex"
-        ),
-        var,
-    )
+    # var.str_repr = types.MethodType(
+    #     functools.partial(str_for_potential_or_deterministic, dist_name="Potential"), var
+    # )
+    # var._repr_latex_ = types.MethodType(
+    #     functools.partial(
+    #         str_for_potential_or_deterministic, dist_name="Potential", formatting="latex"
+    #     ),
+    #     var,
+    # )
 
     return var

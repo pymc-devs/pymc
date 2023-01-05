@@ -162,6 +162,7 @@ class Mixture(Distribution):
     """
 
     rv_type = MarginalMixtureRV
+    is_zero_inflated = False
 
     @classmethod
     def dist(cls, w, comp_dists, **kwargs):
