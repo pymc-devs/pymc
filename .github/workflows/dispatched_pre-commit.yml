@@ -19,7 +19,7 @@ jobs:
             ~/.cache/pre-commit
             ~/.cache/pip
           key: pre-commit-dispatched-${{ runner.os }}-build
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.8
       - name: install-pre-commit
