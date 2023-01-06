@@ -350,3 +350,24 @@ def test_clear_cache():
         assert any(len(c) != 0 for c in inference_new.approx._cache.values())
         inference_new.approx._cache.clear()
         assert all(len(c) == 0 for c in inference_new.approx._cache.values())
+
+
+def test_fit_data(inference, fit_kwargs, simple_model_data):
+    fitted = inference.fit(**fit_kwargs)
+    mu_post = simple_model_data["mu_post"]
+    d = simple_model_data["d"]
+    np.testing.assert_allclose(fitted.mean_data["mu"].values, mu_post, rtol=0.05)
+    np.testing.assert_allclose(fitted.std_data["mu"], np.sqrt(1.0 / d), rtol=0.2)
+
+
+def test_fit_data_coords(hierarchical_model, hierarchical_model_data):
+    with hierarchical_model:
+        fitted = pm.fit(1)
+
+    for data in [fitted.mean_data, fitted.std_data]:
+        assert set(data.keys()) == {"sigma_group_mu_log__", "sigma_log__", "group_mu", "mu"}
+        assert data["group_mu"].shape == hierarchical_model_data["group_shape"]
+        assert list(data["group_mu"].coords.keys()) == list(
+            hierarchical_model_data["group_coords"].keys()
+        )
+        assert data["mu"].shape == tuple()

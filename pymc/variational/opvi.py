@@ -54,6 +54,7 @@ import warnings
 import numpy as np
 import pytensor
 import pytensor.tensor as at
+import xarray
 
 from pytensor.graph.basic import Variable
 
@@ -1106,15 +1107,46 @@ class Group(WithMemoization):
 
     @node_property
     def std(self):
+        """Standard deviation of the latent variables as an unstructured 1-dimensional Aesara variable"""
         raise NotImplementedError
 
     @node_property
     def cov(self):
+        """Covariance between the latent variables as an unstructured 2-dimensional Aesara variable"""
         raise NotImplementedError
 
     @node_property
     def mean(self):
+        """Mean of the latent variables as an unstructured 1-dimensional Aesara variable"""
         raise NotImplementedError
+
+    def var_to_data(self, shared):
+        """Takes a flat 1-dimensional Aesara variable and maps it to an xarray data set based on the information in
+        `self.ordering`.
+        """
+        # This is somewhat similar to `DictToArrayBijection.rmap`, which doesn't work here since we don't have
+        # `RaveledVars` and need to take the information from `self.ordering` instead
+        shared = shared.eval()
+        result = dict()
+        for name, s, shape, dtype in self.ordering.values():
+            dims = self.model.RV_dims.get(name, None)
+            if dims is not None:
+                coords = {d: np.array(self.model.coords[d]) for d in dims}
+            else:
+                coords = None
+            values = np.array(shared[s]).reshape(shape).astype(dtype)
+            result[name] = xarray.DataArray(values, coords=coords, dims=dims, name=name)
+        return xarray.Dataset(result)
+
+    @property
+    def mean_data(self):
+        """Mean of the latent variables as an xarray Dataset"""
+        return self.var_to_data(self.mean)
+
+    @property
+    def std_data(self):
+        """Standard deviation of the latent variables as an xarray Dataset"""
+        return self.var_to_data(self.std)
 
 
 group_for_params = Group.group_for_params
