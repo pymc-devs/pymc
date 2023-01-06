@@ -374,9 +374,14 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
     else:
         input_logprob = logprob(measurable_input, backward_value)
 
+    if input_logprob.ndim < value.ndim:
+        # Do we just need to sum the jacobian terms across the support dims?
+        raise NotImplementedError("Transform of multivariate RVs not implemented")
+
     jacobian = op.transform_elemwise.log_jac_det(value, *other_inputs)
 
-    return input_logprob + jacobian
+    # The jacobian is used to ensure a value in the supported domain was provided
+    return at.switch(at.isnan(jacobian), -np.inf, input_logprob + jacobian)
 
 
 @node_rewriter([reciprocal])
@@ -711,18 +716,32 @@ class PowerTransform(RVTransform):
         at.power(value, self.power)
 
     def backward(self, value, *inputs):
-        backward_value = at.power(value, (1 / self.power))
+        inv_power = 1 / self.power
+
+        # Powers that don't admit negative values
+        if (np.abs(self.power) < 1) or (self.power % 2 == 0):
+            backward_value = at.switch(value >= 0, at.power(value, inv_power), np.nan)
+        # Powers that admit negative values require special logic, because (-1)**(1/3) returns `nan` in PyTensor
+        else:
+            backward_value = at.power(at.abs(value), inv_power) * at.switch(value >= 0, 1, -1)
 
         # In this case the transform is not 1-to-1
-        if (self.power > 1) and (self.power % 2 == 0):
+        if self.power % 2 == 0:
             return -backward_value, backward_value
         else:
             return backward_value
 
     def log_jac_det(self, value, *inputs):
         inv_power = 1 / self.power
+
         # Note: This fails for value==0
-        return np.log(np.abs(inv_power)) + (inv_power - 1) * at.log(value)
+        res = np.log(np.abs(inv_power)) + (inv_power - 1) * at.log(at.abs(value))
+
+        # Powers that don't admit negative values
+        if (np.abs(self.power) < 1) or (self.power % 2 == 0):
+            res = at.switch(value >= 0, res, np.nan)
+
+        return res
 
 
 class IntervalTransform(RVTransform):
