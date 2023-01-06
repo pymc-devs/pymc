@@ -876,6 +876,19 @@ def test_negative_value_frac_power_transform(power):
     assert np.isneginf(x_logp_fn(-2.5))
 
 
+@pytest.mark.parametrize("test_val", (2.5, -2.5))
+def test_absolute_transform(test_val):
+    x_rv = at.abs(at.random.normal())
+    y_rv = at.random.halfnormal()
+
+    x_vv = x_rv.clone()
+    y_vv = y_rv.clone()
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}, sum=False))
+    y_logp_fn = pytensor.function([y_vv], joint_logprob({y_rv: y_vv}, sum=False))
+
+    assert np.allclose(x_logp_fn(test_val), y_logp_fn(test_val))
+
+
 def test_negated_rv_transform():
     x_rv = -at.random.halfnormal()
     x_rv.name = "x"

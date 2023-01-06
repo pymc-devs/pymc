@@ -49,10 +49,11 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
 from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
-from pytensor.scalar import Add, Exp, Log, Mul, Pow, Sqr, Sqrt
+from pytensor.scalar import Abs, Add, Exp, Log, Mul, Pow, Sqr, Sqrt
 from pytensor.scan.op import Scan
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.math import (
+    abs,
     add,
     exp,
     log,
@@ -336,7 +337,7 @@ class TransformValuesRewrite(GraphRewriter):
 class MeasurableTransform(MeasurableElemwise):
     """A placeholder used to specify a log-likelihood for a transformed measurable variable"""
 
-    valid_scalar_types = (Exp, Log, Add, Mul, Pow)
+    valid_scalar_types = (Exp, Log, Add, Mul, Pow, Abs)
 
     # Cannot use `transform` as name because it would clash with the property added by
     # the `TransformValuesRewrite`
@@ -498,7 +499,7 @@ def measurable_sub_to_neg(fgraph, node):
     return [at.add(minuend, at.neg(subtrahend))]
 
 
-@node_rewriter([exp, log, add, mul, pow])
+@node_rewriter([exp, log, add, mul, pow, abs])
 def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
 
@@ -558,6 +559,8 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         transform = ExpTransform()
     elif isinstance(scalar_op, Log):
         transform = LogTransform()
+    elif isinstance(scalar_op, Abs):
+        transform = AbsTransform()
     elif isinstance(scalar_op, Pow):
         # We only allow for the base to be measurable
         if measurable_input_idx != 0:
@@ -699,6 +702,20 @@ class ExpTransform(RVTransform):
 
     def log_jac_det(self, value, *inputs):
         return -at.log(value)
+
+
+class AbsTransform(RVTransform):
+    name = "abs"
+
+    def forward(self, value, *inputs):
+        return at.abs(value)
+
+    def backward(self, value, *inputs):
+        value = at.switch(value >= 0, value, np.nan)
+        return -value, value
+
+    def log_jac_det(self, value, *inputs):
+        return at.switch(value >= 0, 0, np.nan)
 
 
 class PowerTransform(RVTransform):
