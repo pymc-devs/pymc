@@ -49,10 +49,11 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
 from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
-from pytensor.scalar import Add, Exp, Log, Mul, Pow, Sqr, Sqrt
+from pytensor.scalar import Abs, Add, Exp, Log, Mul, Pow, Sqr, Sqrt
 from pytensor.scan.op import Scan
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.math import (
+    abs,
     add,
     exp,
     log,
@@ -336,7 +337,7 @@ class TransformValuesRewrite(GraphRewriter):
 class MeasurableTransform(MeasurableElemwise):
     """A placeholder used to specify a log-likelihood for a transformed measurable variable"""
 
-    valid_scalar_types = (Exp, Log, Add, Mul, Pow)
+    valid_scalar_types = (Exp, Log, Add, Mul, Pow, Abs)
 
     # Cannot use `transform` as name because it would clash with the property added by
     # the `TransformValuesRewrite`
@@ -374,9 +375,14 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
     else:
         input_logprob = logprob(measurable_input, backward_value)
 
+    if input_logprob.ndim < value.ndim:
+        # Do we just need to sum the jacobian terms across the support dims?
+        raise NotImplementedError("Transform of multivariate RVs not implemented")
+
     jacobian = op.transform_elemwise.log_jac_det(value, *other_inputs)
 
-    return input_logprob + jacobian
+    # The jacobian is used to ensure a value in the supported domain was provided
+    return at.switch(at.isnan(jacobian), -np.inf, input_logprob + jacobian)
 
 
 @node_rewriter([reciprocal])
@@ -493,7 +499,7 @@ def measurable_sub_to_neg(fgraph, node):
     return [at.add(minuend, at.neg(subtrahend))]
 
 
-@node_rewriter([exp, log, add, mul, pow])
+@node_rewriter([exp, log, add, mul, pow, abs])
 def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
 
@@ -553,6 +559,8 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         transform = ExpTransform()
     elif isinstance(scalar_op, Log):
         transform = LogTransform()
+    elif isinstance(scalar_op, Abs):
+        transform = AbsTransform()
     elif isinstance(scalar_op, Pow):
         # We only allow for the base to be measurable
         if measurable_input_idx != 0:
@@ -696,6 +704,20 @@ class ExpTransform(RVTransform):
         return -at.log(value)
 
 
+class AbsTransform(RVTransform):
+    name = "abs"
+
+    def forward(self, value, *inputs):
+        return at.abs(value)
+
+    def backward(self, value, *inputs):
+        value = at.switch(value >= 0, value, np.nan)
+        return -value, value
+
+    def log_jac_det(self, value, *inputs):
+        return at.switch(value >= 0, 0, np.nan)
+
+
 class PowerTransform(RVTransform):
     name = "power"
 
@@ -711,18 +733,32 @@ class PowerTransform(RVTransform):
         at.power(value, self.power)
 
     def backward(self, value, *inputs):
-        backward_value = at.power(value, (1 / self.power))
+        inv_power = 1 / self.power
+
+        # Powers that don't admit negative values
+        if (np.abs(self.power) < 1) or (self.power % 2 == 0):
+            backward_value = at.switch(value >= 0, at.power(value, inv_power), np.nan)
+        # Powers that admit negative values require special logic, because (-1)**(1/3) returns `nan` in PyTensor
+        else:
+            backward_value = at.power(at.abs(value), inv_power) * at.switch(value >= 0, 1, -1)
 
         # In this case the transform is not 1-to-1
-        if (self.power > 1) and (self.power % 2 == 0):
+        if self.power % 2 == 0:
             return -backward_value, backward_value
         else:
             return backward_value
 
     def log_jac_det(self, value, *inputs):
         inv_power = 1 / self.power
+
         # Note: This fails for value==0
-        return np.log(np.abs(inv_power)) + (inv_power - 1) * at.log(value)
+        res = np.log(np.abs(inv_power)) + (inv_power - 1) * at.log(at.abs(value))
+
+        # Powers that don't admit negative values
+        if (np.abs(self.power) < 1) or (self.power % 2 == 0):
+            res = at.switch(value >= 0, res, np.nan)
+
+        return res
 
 
 class IntervalTransform(RVTransform):

@@ -632,7 +632,7 @@ def test_chained_transform():
 
 
 def test_exp_transform_rv():
-    base_rv = at.random.normal(0, 1, size=2, name="base_rv")
+    base_rv = at.random.normal(0, 1, size=3, name="base_rv")
     y_rv = at.exp(base_rv)
     y_rv.name = "y"
 
@@ -640,7 +640,7 @@ def test_exp_transform_rv():
     logp = joint_logprob({y_rv: y_vv}, sum=False)
     logp_fn = pytensor.function([y_vv], logp)
 
-    y_val = [0.1, 0.3]
+    y_val = [-2.0, 0.1, 0.3]
     np.testing.assert_allclose(
         logp_fn(y_val),
         sp.stats.lognorm(s=1).logpdf(y_val),
@@ -794,14 +794,14 @@ def test_invalid_broadcasted_transform_rv_fails():
 def test_reciprocal_rv_transform(numerator):
     shape = 3
     scale = 5
-    x_rv = numerator / at.random.gamma(shape, scale)
+    x_rv = numerator / at.random.gamma(shape, scale, size=(2,))
     x_rv.name = "x"
 
     x_vv = x_rv.clone()
-    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}))
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}, sum=False))
 
-    x_test_val = 1.5
-    assert np.isclose(
+    x_test_val = np.r_[-0.5, 1.5]
+    assert np.allclose(
         x_logp_fn(x_test_val),
         sp.stats.invgamma(shape, scale=scale * numerator).logpdf(x_test_val),
     )
@@ -809,13 +809,13 @@ def test_reciprocal_rv_transform(numerator):
 
 def test_sqr_transform():
     # The square of a unit normal is a chi-square with 1 df
-    x_rv = at.random.normal(0, 1, size=(3,)) ** 2
+    x_rv = at.random.normal(0, 1, size=(4,)) ** 2
     x_rv.name = "x"
 
     x_vv = x_rv.clone()
     x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}, sum=False))
 
-    x_test_val = np.r_[0.5, 1, 2.5]
+    x_test_val = np.r_[-0.5, 0.5, 1, 2.5]
     assert np.allclose(
         x_logp_fn(x_test_val),
         sp.stats.chi2(df=1).logpdf(x_test_val),
@@ -824,17 +824,69 @@ def test_sqr_transform():
 
 def test_sqrt_transform():
     # The sqrt of a chisquare with n df is a chi distribution with n df
-    x_rv = at.sqrt(at.random.chisquare(df=3, size=(3,)))
+    x_rv = at.sqrt(at.random.chisquare(df=3, size=(4,)))
     x_rv.name = "x"
 
     x_vv = x_rv.clone()
     x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}, sum=False))
 
-    x_test_val = np.r_[0.5, 1, 2.5]
+    x_test_val = np.r_[-2.5, 0.5, 1, 2.5]
     assert np.allclose(
         x_logp_fn(x_test_val),
         sp.stats.chi(df=3).logpdf(x_test_val),
     )
+
+
+@pytest.mark.parametrize("power", (-3, -1, 1, 5, 7))
+def test_negative_value_odd_power_transform(power):
+    # check that negative values and odd powers evaluate to a finite logp
+    x_rv = at.random.normal() ** power
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}, sum=False))
+
+    assert np.isfinite(x_logp_fn(1))
+    assert np.isfinite(x_logp_fn(-1))
+
+
+@pytest.mark.parametrize("power", (-2, 2, 4, 6, 8))
+def test_negative_value_even_power_transform(power):
+    # check that negative values and odd powers evaluate to -inf logp
+    x_rv = at.random.normal() ** power
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}, sum=False))
+
+    assert np.isfinite(x_logp_fn(1))
+    assert np.isneginf(x_logp_fn(-1))
+
+
+@pytest.mark.parametrize("power", (-1 / 3, -1 / 2, 1 / 2, 1 / 3))
+def test_negative_value_frac_power_transform(power):
+    # check that negative values and fractional powers evaluate to -inf logp
+    x_rv = at.random.normal() ** power
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}, sum=False))
+
+    assert np.isfinite(x_logp_fn(2.5))
+    assert np.isneginf(x_logp_fn(-2.5))
+
+
+@pytest.mark.parametrize("test_val", (2.5, -2.5))
+def test_absolute_transform(test_val):
+    x_rv = at.abs(at.random.normal())
+    y_rv = at.random.halfnormal()
+
+    x_vv = x_rv.clone()
+    y_vv = y_rv.clone()
+    x_logp_fn = pytensor.function([x_vv], joint_logprob({x_rv: x_vv}, sum=False))
+    y_logp_fn = pytensor.function([y_vv], joint_logprob({y_rv: y_vv}, sum=False))
+
+    assert np.allclose(x_logp_fn(test_val), y_logp_fn(test_val))
 
 
 def test_negated_rv_transform():
