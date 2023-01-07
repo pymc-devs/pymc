@@ -28,8 +28,9 @@ from pytensor.tensor import TensorVariable
 
 import pymc as pm
 
-from pymc.distributions import logcdf, logp
 from pymc.distributions.discrete import Geometric, _OrderedLogistic, _OrderedProbit
+from pymc.logprob.abstract import logcdf
+from pymc.logprob.joint_logprob import logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
 from pymc.tests.distributions.util import (

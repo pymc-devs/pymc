@@ -34,7 +34,6 @@ from pymc.distributions import (
     MvNormal,
     MvStudentT,
     Normal,
-    logp,
 )
 from pymc.distributions.distribution import (
     CustomDist,
@@ -48,6 +47,7 @@ from pymc.distributions.shape_utils import change_dist_size, rv_size_is_none, to
 from pymc.distributions.transforms import log
 from pymc.exceptions import BlockModelAccessError
 from pymc.logprob.abstract import get_measurable_outputs, logcdf
+from pymc.logprob.joint_logprob import logp
 from pymc.model import Model
 from pymc.sampling import draw, sample
 from pymc.tests.distributions.util import assert_moment_is_expected

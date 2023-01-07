@@ -36,11 +36,12 @@
 
 import warnings
 
+from copy import copy
 from typing import Callable, Dict, Generator, Iterable, List, Optional, Set, Tuple
 
 import numpy as np
 
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.graph import Apply, Op
 from pytensor.graph.basic import Constant, clone_get_equiv, graph_inputs, walk
 from pytensor.graph.fg import FunctionGraph
@@ -48,7 +49,11 @@ from pytensor.link.c.type import CType
 from pytensor.raise_op import CheckAndRaise
 from pytensor.tensor.var import TensorVariable
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    _logprob,
+    assign_custom_measurable_outputs,
+)
 
 
 def walk_model(
@@ -222,7 +227,7 @@ class DiracDelta(Op):
         self.atol = atol
 
     def make_node(self, x):
-        x = at.as_tensor(x)
+        x = pt.as_tensor(x)
         return Apply(self, [x], [x.type()])
 
     def do_constant_folding(self, fgraph, node):
@@ -250,5 +255,42 @@ dirac_delta = DiracDelta()
 def diracdelta_logprob(op, values, *inputs, **kwargs):
     (values,) = values
     (const_value,) = inputs
-    values, const_value = at.broadcast_arrays(values, const_value)
-    return at.switch(at.isclose(values, const_value, rtol=op.rtol, atol=op.atol), 0.0, -np.inf)
+    values, const_value = pt.broadcast_arrays(values, const_value)
+    return pt.switch(pt.isclose(values, const_value, rtol=op.rtol, atol=op.atol), 0.0, -np.inf)
+
+
+def ignore_logprob(rv: TensorVariable) -> TensorVariable:
+    """Return a duplicated variable that is ignored when creating logprob graphs
+
+    This is used in SymbolicDistributions that use other RVs as inputs but account
+    for their logp terms explicitly.
+
+    If the variable is already ignored, it is returned directly.
+    """
+    prefix = "Unmeasurable"
+    node = rv.owner
+    op_type = type(node.op)
+    if op_type.__name__.startswith(prefix):
+        return rv
+    new_node = assign_custom_measurable_outputs(node, type_prefix=prefix)
+    return new_node.outputs[node.outputs.index(rv)]
+
+
+def reconsider_logprob(rv: TensorVariable) -> TensorVariable:
+    """Return a duplicated variable that is considered when creating logprob graphs
+
+    This undoes the effect of `ignore_logprob`.
+
+    If a variable was not ignored, it is returned directly.
+    """
+    prefix = "Unmeasurable"
+    node = rv.owner
+    op_type = type(node.op)
+    if not op_type.__name__.startswith(prefix):
+        return rv
+
+    new_node = node.clone()
+    original_op_type = new_node.op.original_op_type
+    new_node.op = copy(new_node.op)
+    new_node.op.__class__ = original_op_type
+    return new_node.outputs[node.outputs.index(rv)]

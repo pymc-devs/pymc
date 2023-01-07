@@ -34,9 +34,9 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from pymc.logprob.abstract import logprob  # isort: split
+from pymc.logprob.abstract import logprob, logcdf  # isort: split
 
-from pymc.logprob.joint_logprob import factorized_joint_logprob
+from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logp, logp
 
 # isort: off
 # Add rewrites to the DBs
@@ -49,4 +49,4 @@ import pymc.logprob.transforms
 
 # isort: on
 
-__all__ = ()
+__all__ = ("logp", "logcdf")

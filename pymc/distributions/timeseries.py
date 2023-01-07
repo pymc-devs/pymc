@@ -33,7 +33,6 @@ from pymc.distributions.distribution import (
     _moment,
     moment,
 )
-from pymc.distributions.logprob import ignore_logprob, logp, reconsider_logprob
 from pymc.distributions.multivariate import MvNormal, MvStudentT
 from pymc.distributions.shape_utils import (
     _change_dist_size,
@@ -43,6 +42,8 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.abstract import _logprob
+from pymc.logprob.joint_logprob import logp
+from pymc.logprob.utils import ignore_logprob, reconsider_logprob
 from pymc.pytensorf import constant_fold, floatX, intX
 from pymc.util import check_dist_not_registered
 
