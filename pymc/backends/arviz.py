@@ -522,7 +522,7 @@ def predictions_to_inference_data(
         a deterministic function of the shape of any predictor (explanatory, independent, etc.)
         variables must be *removed* from this trace.
     model: Model
-        The pymc model. It can be ommited if within a model context.
+        The pymc model. It can be omitted if within a model context.
     coords: Dict[str, array-like[Any]]
         Coordinates for the variables.  Map from coordinate names to coordinate values.
     dims: Dict[str, array-like[str]]

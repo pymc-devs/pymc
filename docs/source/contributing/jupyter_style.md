@@ -136,7 +136,7 @@ In case it helps, the dropdown below has some suggestions so you can focus on wr
   is needed instead of one change per matplotlib function call.
 
 * It is often useful to make a numpy linspace into an {class}`~xarray.DataArray`
-  for xarray to handle aligning and broadcasing automatically and ease computation.
+  for xarray to handle aligning and broadcasting automatically and ease computation.
   * If a dimension name is needed, use `x_plot`
   * If a variable name is needed for the original array and DataArray to coexist, add `_da` suffix
 
@@ -317,7 +317,7 @@ Thus, notebooks with extra dependencies should:
       }
       ```
 
-      The pip and conda spcific keys overwrite the `extra_installs` one, so it doesn't make
+      The pip and conda specific keys overwrite the `extra_installs` one, so it doesn't make
       sense to use `extra_installs` if using them. Either both pip and conda substitutions
       are defined or none of them is.
       :::

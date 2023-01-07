@@ -330,13 +330,13 @@ class SMC_KERNEL(ABC):
 
         This method should not be overwritten.
         """
-        lenght_pos = len(self.tempered_posterior)
+        length_pos = len(self.tempered_posterior)
         varnames = [v.name for v in self.variables]
 
         with self.model:
             strace = NDArray(name=self.model.name)
-            strace.setup(lenght_pos, chain)
-        for i in range(lenght_pos):
+            strace.setup(length_pos, chain)
+        for i in range(length_pos):
             value = []
             size = 0
             for var in self.variables:

@@ -119,7 +119,7 @@ def radon_model():
         "sigma_y": set(),
         "y_like": {"a", "b", "sigma_y", "floor_measure_offset"},
         "floor_measure_offset": set(),
-        # observed data don't have parents in the model graph, but are shown as decendants
+        # observed data don't have parents in the model graph, but are shown as descendants
         # of the model variables that the observations belong to:
         "log_radon": {"y_like"},
     }
@@ -277,7 +277,7 @@ class BaseModelGraphTest(SeededTest):
             parents_in_graph = self.model_graph.get_parent_names(var)
             if isinstance(var, (SharedVariable, TensorConstant)):
                 # observed data also doesn't have parents in the compute graph!
-                # But for the visualization we like them to become decendants of the
+                # But for the visualization we like them to become descendants of the
                 # RVs that these observations belong to.
                 assert not parents_in_graph
             else:

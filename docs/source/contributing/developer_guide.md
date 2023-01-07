@@ -277,7 +277,7 @@ as for ``FreeRV`` and ``ObservedRV``, they are ``TensorVariable``\s with
 
 ``Factor`` basically `enable and assign the
 logp <https://github.com/pymc-devs/pymc/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc/model.py#L195-L276>`__
-(representated as a tensor also) property to an PyTensor tensor (thus
+(represented as a tensor also) property to an PyTensor tensor (thus
 making it a random variable). For a ``TransformedRV``, it transforms the
 distribution into a ``TransformedDistribution``, and then ``model.Var`` is
 called again to added the RV associated with the
@@ -290,7 +290,7 @@ called again to added the RV associated with the
                     transformed_name, transform.apply(distribution), total_size=total_size)
 
 note: after ``transform.apply(distribution)`` its ``.transform``
-porperty is set to ``None``, thus making sure that the above call will
+property is set to ``None``, thus making sure that the above call will
 only add one ``FreeRV``. In another word, you *cannot* do chain
 transformation by nested applying multiple transforms to a Distribution
 (however, you can use ``Chain`` transformation.
@@ -404,7 +404,7 @@ def logp_dlogp_function(self, grad_vars=None, **kwargs):
         grad_vars = list(typefilter(self.free_RVs, continuous_types))
     else:
         ...
-    varnames = [var.name for var in grad_vars]  # In a simple case with only continous RVs,
+    varnames = [var.name for var in grad_vars]  # In a simple case with only continuous RVs,
                                                 # this is all the free_RVs
     extra_vars = [var for var in self.free_RVs if var.name not in varnames]
     return ValueGradFunction(self.logpt, grad_vars, extra_vars, **kwargs)
@@ -522,7 +522,7 @@ That is the reason we often see no advantage in using GPU, because the data is c
 Also, ``pytensor.clone_replace`` is too convenient (PyMC internal joke is that it is like a drug - very addictive).
 If all the operation happens in the graph (including the conditioning and setting value), I see no need to isolate part of the graph (via graph copying or graph rewriting) for building model and running inference.
 
-Moreover, if we are limiting to the problem that we can solved most confidently - model with all continous unknown parameters that could be sampled with dynamic HMC, there is even less need to think about graph cloning/rewriting.
+Moreover, if we are limiting to the problem that we can solved most confidently - model with all continuous unknown parameters that could be sampled with dynamic HMC, there is even less need to think about graph cloning/rewriting.
 
 ## Inference
 
@@ -531,7 +531,7 @@ The ability for model instance to generate conditional logp and dlogp function e
 On a conceptual level it is a Metropolis-within-Gibbs sampler.
 Users can specify different sampler for different RVs.
 Alternatively, it is implemented as yet another interceptor:
-The ``pm.sample(...)`` call will try to [assign the best step methods to different free\_RVs](https://github.com/pymc-devs/pymc/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc/sampling.py#L86-L152) (e.g., NUTS if all free\_RVs are continous).
+The ``pm.sample(...)`` call will try to [assign the best step methods to different free\_RVs](https://github.com/pymc-devs/pymc/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc/sampling.py#L86-L152) (e.g., NUTS if all free\_RVs are continuous).
 Then, (conditional) logp function(s) are compiled, and the sampler called each sampler within the list of CompoundStep in a for-loop for one sample circle.
 
 For each sampler, it implements a ``step.step`` method to perform MH updates.
@@ -560,7 +560,7 @@ Moreover, transition kernels in TFP do not flatten the tensors, see eg docstring
 #### Dynamic HMC
 We love NUTS, or to be more precise Dynamic HMC with complex stopping rules.
 This part is actually all done outside of PyTensor, for NUTS, it includes:
-The leapfrog, dual averaging, tunning of mass matrix and step size, the tree building, sampler related statistics like divergence and energy checking.
+The leapfrog, dual averaging, tuning of mass matrix and step size, the tree building, sampler related statistics like divergence and energy checking.
 We actually have an PyTensor version of HMC, but it has never been used, and has been removed from the main repository.
 It can still be found in the [git history](https://github.com/pymc-devs/pymc/pull/3734/commits/0fdae8207fd14f66635f3673ef267b2b8817aa68), though.
 
@@ -627,7 +627,7 @@ As for the [`logq`` since it is a Gaussian `it is pretty straightforward to eval
    TensorFlow has graph utils for that that could potentially help in doing this.
    On the other hand graph management in Tensorflow seemed to more tricky than expected.
    The high level reason is that graph is an add only container.
--  There were few fixed bugs not obvoius in the first place.
+-  There were few fixed bugs not obvious in the first place.
    PyTensor has a tool to manipulate the graph (``pytensor.clone_replace``) and this tool requires extremely careful treatment when doing a lot of graph replacements at different level.
 -  We coined a term ``pytensor.clone_replace`` curse.
    We got extremely dependent on this feature.

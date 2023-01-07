@@ -96,7 +96,7 @@ def test_bcast_rv_logp():
     assert np.isclose(valid_logp, st.norm.logpdf(0))
 
     # It's not possible for broadcasted dimensions to have different values
-    # This shoud either raise or return -inf
+    # This should either raise or return -inf
     invalid_logp = logp.eval({broadcasted_x_vv: [0, 1]})
     assert invalid_logp == -np.inf
 

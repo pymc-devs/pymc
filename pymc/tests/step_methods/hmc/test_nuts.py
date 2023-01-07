@@ -167,7 +167,7 @@ class TestNutsCheckTrace:
         for varname in trace.stat_names:
             if varname == "warning":
                 # Warnings don't squeeze reliably.
-                # But once we stop squeezing alltogether that's going to be OK.
+                # But once we stop squeezing altogether that's going to be OK.
                 # See https://github.com/pymc-devs/pymc/issues/6207
                 continue
             assert trace.get_sampler_stats(varname).shape == (10,)

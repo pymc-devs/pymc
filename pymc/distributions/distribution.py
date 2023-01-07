@@ -557,7 +557,7 @@ class _CustomDist(Distribution):
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
                 dtype=dtype,
-                # Specifc to CustomDist
+                # Specific to CustomDist
                 _random_fn=random,
             ),
         )

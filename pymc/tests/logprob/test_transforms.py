@@ -900,7 +900,7 @@ def test_negated_rv_transform():
 
 
 def test_subtracted_rv_transform():
-    # Choose base RV that is assymetric around zero
+    # Choose base RV that is asymmetric around zero
     x_rv = 5.0 - at.random.normal(1.0)
     x_rv.name = "x"
 

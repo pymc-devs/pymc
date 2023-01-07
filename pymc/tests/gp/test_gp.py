@@ -355,7 +355,7 @@ class TestMarginalVsLatent:
 
 class TestTP:
     R"""
-    Compare TP with high degress of freedom to GP
+    Compare TP with high degrees of freedom to GP
     """
 
     def setup_method(self):

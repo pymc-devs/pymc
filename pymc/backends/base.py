@@ -332,7 +332,7 @@ class MultiTrace:
         if var in self.varnames:
             if var in self.stat_names:
                 warnings.warn(
-                    "Attribute access on a trace object is ambigous. "
+                    "Attribute access on a trace object is ambiguous. "
                     "Sampler statistic and model variable share a name. Use "
                     "trace.get_values or trace.get_sampler_stats."
                 )
@@ -353,7 +353,7 @@ class MultiTrace:
         if name in self.varnames:
             if name in self.stat_names:
                 warnings.warn(
-                    "Attribute access on a trace object is ambigous. "
+                    "Attribute access on a trace object is ambiguous. "
                     "Sampler statistic and model variable share a name. Use "
                     "trace.get_values or trace.get_sampler_stats."
                 )
@@ -545,7 +545,7 @@ class MultiTrace:
         Parameters
         ----------
         chains: list of int or N
-            The chains whose points should be inlcuded in the iterator.  If
+            The chains whose points should be included in the iterator.  If
             chains is not given, include points from all chains.
         """
         if chains is None:

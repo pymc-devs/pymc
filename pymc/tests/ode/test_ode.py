@@ -156,7 +156,7 @@ def test_logp_scalar_ode():
     def system_1(y, t, p):
         return np.exp(-t) - p[0] * y[0]
 
-    # Parameters and inital condition
+    # Parameters and initial condition
     alpha = 0.4
     y0 = 0.0
     times = np.arange(0.5, 8, 0.5)

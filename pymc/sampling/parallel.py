@@ -274,7 +274,7 @@ class ProcessAdapter:
         try:
             self._msg_pipe.send((msg, *args))
         except Exception:
-            # try to recive an error message
+            # try to receive an error message
             message = None
             try:
                 message = self._msg_pipe.recv()

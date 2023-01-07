@@ -143,7 +143,7 @@ class TestSMC(SeededTest):
                 a = pm.Beta("a", alpha, beta)
                 y = pm.Bernoulli("y", a, observed=data)
                 trace = pm.sample_smc(2000, chains=2, return_inferencedata=False)
-            # log_marignal_likelihood is found in the last value of each chain
+            # log_marginal_likelihood is found in the last value of each chain
             lml = np.mean([chain[-1] for chain in trace.report.log_marginal_likelihood])
             marginals.append(lml)
 

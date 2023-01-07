@@ -212,7 +212,7 @@ class ModelGraph:
 
         # TODO: Evaluate all RV shapes and dim_length at once.
         #       This should help to find discrepancies, and
-        #       avoids unncessary function compiles for deetermining labels.
+        #       avoids unnecessary function compiles for deetermining labels.
 
         for var_name in self.vars_to_plot(var_names):
             v = self.model[var_name]
@@ -266,7 +266,7 @@ class ModelGraph:
                     self._make_node(var_name, graph, formatting=formatting)
 
         for child, parents in self.make_compute_graph(var_names=var_names).items():
-            # parents is a set of rv names that preceed child rv nodes
+            # parents is a set of rv names that precede child rv nodes
             for parent in parents:
                 graph.edge(parent.replace(":", "&"), child.replace(":", "&"))
 
@@ -323,7 +323,7 @@ class ModelGraph:
                     self._make_node(var_name, graphnetwork, nx=True, formatting=formatting)
 
         for child, parents in self.make_compute_graph(var_names=var_names).items():
-            # parents is a set of rv names that preceed child rv nodes
+            # parents is a set of rv names that precede child rv nodes
             for parent in parents:
                 graphnetwork.add_edge(parent.replace(":", "&"), child.replace(":", "&"))
         return graphnetwork
