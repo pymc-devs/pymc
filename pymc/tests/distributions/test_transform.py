@@ -25,7 +25,7 @@ from pytensor.tensor.var import TensorConstant
 import pymc as pm
 import pymc.distributions.transforms as tr
 
-from pymc.distributions.logprob import _joint_logp
+from pymc.logprob.joint_logprob import joint_logp
 from pymc.pytensorf import floatX, jacobian
 from pymc.tests.checks import close_to, close_to_logical
 from pymc.tests.distributions.util import (
@@ -308,7 +308,7 @@ class TestElementWiseLogp(SeededTest):
         assert model.logp(x, sum=False)[0].ndim == x.ndim == jacob_det.ndim
 
         v1 = (
-            _joint_logp(
+            joint_logp(
                 (x,),
                 rvs_to_values={x: x_val_transf},
                 rvs_to_transforms={x: transform},
@@ -319,7 +319,7 @@ class TestElementWiseLogp(SeededTest):
             .eval({x_val_transf: test_array_transf})
         )
         v2 = (
-            _joint_logp(
+            joint_logp(
                 (x,),
                 rvs_to_values={x: x_val_untransf},
                 rvs_to_transforms={},
@@ -358,7 +358,7 @@ class TestElementWiseLogp(SeededTest):
             assert model.logp(x, sum=False)[0].ndim == (x.ndim - 1) == jacob_det.ndim
 
         a = (
-            _joint_logp(
+            joint_logp(
                 (x,),
                 rvs_to_values={x: x_val_transf},
                 rvs_to_transforms={x: transform},
@@ -369,7 +369,7 @@ class TestElementWiseLogp(SeededTest):
             .eval({x_val_transf: test_array_transf})
         )
         b = (
-            _joint_logp(
+            joint_logp(
                 (x,),
                 rvs_to_values={x: x_val_untransf},
                 rvs_to_transforms={},

@@ -30,10 +30,10 @@ from pytensor.compile.mode import Mode
 
 import pymc as pm
 
-from pymc.distributions import logcdf, logp
-from pymc.distributions.logprob import _joint_logp
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.initial_point import make_initial_point_fn
+from pymc.logprob.abstract import logcdf
+from pymc.logprob.joint_logprob import joint_logp, logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import compile_pymc, floatX, intX
 from pymc.tests.helpers import SeededTest, select_by_precision
@@ -596,7 +596,7 @@ def assert_moment_is_expected(model, expected, check_finite_logp=True):
 
     if check_finite_logp:
         logp_moment = (
-            _joint_logp(
+            joint_logp(
                 (model["x"],),
                 rvs_to_values={model["x"]: at.constant(moment)},
                 rvs_to_transforms={},

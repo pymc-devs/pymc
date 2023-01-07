@@ -44,12 +44,25 @@ import scipy.stats.distributions as sp
 
 from pytensor.graph.basic import ancestors, equal_computations
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.subtensor import AdvancedSubtensor, AdvancedSubtensor1, Subtensor
+from pytensor.tensor.subtensor import (
+    AdvancedIncSubtensor,
+    AdvancedIncSubtensor1,
+    AdvancedSubtensor,
+    AdvancedSubtensor1,
+    IncSubtensor,
+    Subtensor,
+)
+
+import pymc as pm
 
 from pymc.logprob.abstract import logprob
-from pymc.logprob.joint_logprob import factorized_joint_logprob
+from pymc.logprob.joint_logprob import (
+    _get_scaling,
+    factorized_joint_logprob,
+    joint_logp,
+)
 from pymc.logprob.utils import rvs_to_value_vars, walk_model
-from pymc.tests.helpers import assert_no_rvs
+from pymc.tests.helpers import assert_no_rvs, select_by_precision
 from pymc.tests.logprob.utils import joint_logprob
 
 
@@ -269,7 +282,6 @@ def test_multiple_rvs_to_same_value_raises():
 
 
 def test_get_scaling():
-
     assert _get_scaling(None, (2, 3), 2).eval() == 1
     # ndim >=1 & ndim<1
     assert _get_scaling(45, (2, 3), 1).eval() == 22.5
@@ -346,6 +358,55 @@ def test_joint_logp_basic():
     assert b_value_var in res_ancestors
     assert c_value_var in res_ancestors
     assert a_value_var in res_ancestors
+
+
+@pytest.mark.parametrize(
+    "indices, size",
+    [
+        (slice(0, 2), 5),
+        (np.r_[True, True, False, False, True], 5),
+        (np.r_[0, 1, 4], 5),
+        ((np.array([0, 1, 4]), np.array([0, 1, 4])), (5, 5)),
+    ],
+)
+def test_joint_logp_incsubtensor(indices, size):
+    """Make sure we can compute a log-likelihood for ``Y[idx] = data`` where ``Y`` is univariate."""
+
+    mu = pm.floatX(np.power(10, np.arange(np.prod(size)))).reshape(size)
+    data = mu[indices]
+    sigma = 0.001
+    rng = np.random.RandomState(232)
+    a_val = rng.normal(mu, sigma, size=size).astype(pytensor.config.floatX)
+
+    rng = pytensor.shared(rng, borrow=False)
+    a = pm.Normal.dist(mu, sigma, size=size, rng=rng)
+    a_value_var = a.type()
+    a.name = "a"
+
+    a_idx = at.set_subtensor(a[indices], data)
+
+    assert isinstance(a_idx.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1))
+
+    a_idx_value_var = a_idx.type()
+    a_idx_value_var.name = "a_idx_value"
+
+    a_idx_logp = joint_logp(
+        (a_idx,),
+        rvs_to_values={a_idx: a_value_var},
+        rvs_to_transforms={},
+        rvs_to_total_sizes={},
+    )
+
+    logp_vals = a_idx_logp[0].eval({a_value_var: a_val})
+
+    # The indices that were set should all have the same log-likelihood values,
+    # because the values they were set to correspond to the unique means along
+    # that dimension.  This helps us confirm that the log-likelihood is
+    # associating the assigned values with their correct parameters.
+    a_val_idx = a_val.copy()
+    a_val_idx[indices] = data
+    exp_obs_logps = sp.norm.logpdf(a_val_idx, mu, sigma)
+    np.testing.assert_almost_equal(logp_vals, exp_obs_logps)
 
 
 def test_joint_logp_subtensor():

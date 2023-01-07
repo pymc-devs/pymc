@@ -57,7 +57,6 @@ from pymc.distributions.distribution import (
     _moment,
     moment,
 )
-from pymc.distributions.logprob import ignore_logprob
 from pymc.distributions.shape_utils import (
     _change_dist_size,
     broadcast_dist_samples_to,
@@ -68,6 +67,7 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
 from pymc.logprob.abstract import _logprob
+from pymc.logprob.utils import ignore_logprob
 from pymc.math import kron_diag, kron_dot
 from pymc.pytensorf import floatX, intX
 from pymc.util import check_dist_not_registered

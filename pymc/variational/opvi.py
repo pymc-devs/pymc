@@ -63,8 +63,8 @@ import pymc as pm
 from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
-from pymc.distributions.logprob import _get_scaling
 from pymc.initial_point import make_initial_point_fn
+from pymc.logprob.joint_logprob import _get_scaling
 from pymc.model import modelcontext
 from pymc.pytensorf import (
     SeedSequenceSeed,

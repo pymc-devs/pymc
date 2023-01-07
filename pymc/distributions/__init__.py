@@ -12,11 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc.distributions.logprob import (  # isort:skip
-    logcdf,
-    logp,
-)
-
 from pymc.distributions.bound import Bound
 from pymc.distributions.censored import Censored
 from pymc.distributions.continuous import (
@@ -199,6 +194,4 @@ __all__ = [
     "Censored",
     "CAR",
     "PolyaGamma",
-    "logp",
-    "logcdf",
 ]

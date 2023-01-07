@@ -36,11 +36,15 @@
 
 import re
 
+import numpy as np
 import pytensor.tensor as at
 import pytest
+import scipy.stats.distributions as sp
 
 from pytensor.scalar import Exp, exp
 from pytensor.tensor.random.basic import NormalRV
+
+import pymc as pm
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,
@@ -48,6 +52,7 @@ from pymc.logprob.abstract import (
     UnmeasurableVariable,
     _get_measurable_outputs,
     assign_custom_measurable_outputs,
+    logcdf,
     noop_measurable_outputs_fn,
 )
 
@@ -147,3 +152,31 @@ def test_measurable_elemwise():
     measurable_exp_op = TestMeasurableElemwise(scalar_op=exp)
     measurable_exp = measurable_exp_op(0.0)
     assert isinstance(measurable_exp.owner.op, MeasurableVariable)
+
+
+def test_logcdf_helper():
+    value = at.vector("value")
+    x = pm.Normal.dist(0, 1)
+
+    x_logcdf = logcdf(x, value)
+    np.testing.assert_almost_equal(x_logcdf.eval({value: [0, 1]}), sp.norm(0, 1).logcdf([0, 1]))
+
+    x_logcdf = logcdf(x, [0, 1])
+    np.testing.assert_almost_equal(x_logcdf.eval(), sp.norm(0, 1).logcdf([0, 1]))
+
+
+def test_logcdf_transformed_argument():
+    with pm.Model() as m:
+        sigma = pm.HalfFlat("sigma")
+        x = pm.Normal("x", 0, sigma)
+        pm.Potential("norm_term", -logcdf(x, 1.0))
+
+    sigma_value_log = -1.0
+    sigma_value = np.exp(sigma_value_log)
+    x_value = 0.5
+
+    observed = m.compile_logp(jacobian=False)({"sigma_log__": sigma_value_log, "x": x_value})
+    expected = pm.logp(
+        pm.TruncatedNormal.dist(0, sigma_value, lower=None, upper=1.0), x_value
+    ).eval()
+    assert np.isclose(observed, expected)
