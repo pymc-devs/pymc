@@ -315,7 +315,7 @@ def _prepare_iter_population(
     # 2. Set up the steppers
     steppers: List[Step] = []
     for c in range(nchains):
-        # need indepenent samplers for each chain
+        # need independent samplers for each chain
         # it is important to copy the actual steppers (but not the delta_logp)
         if isinstance(step, CompoundStep):
             chainstep = CompoundStep([copy(m) for m in step.methods])

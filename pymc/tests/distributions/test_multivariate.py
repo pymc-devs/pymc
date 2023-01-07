@@ -1069,7 +1069,7 @@ class TestMoments:
         with pm.Model() as model:
             x = pm.MvStudentT("x", nu=nu, mu=mu, scale=cov, size=size)
 
-        # MvStudentT logp is only impemented for up to 2D variables
+        # MvStudentT logp is only implemented for up to 2D variables
         assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
 
     @pytest.mark.parametrize(
@@ -1285,7 +1285,7 @@ class TestMvNormalCov(BaseTestDistributionRandom):
         mu = x.owner.inputs[3]
         assert mu.eval().shape == (10, 3)
 
-        # Cov is artificually limited to being 2D
+        # Cov is artificially limited to being 2D
         # x = pm.MvNormal.dist(mu=np.ones((10, 1)), cov=np.full((2, 3, 3), np.eye(3)))
         # mu = x.owner.inputs[3]
         # assert mu.eval().shape == (10, 2, 3)
@@ -1658,7 +1658,7 @@ class TestMvStudentTCov(BaseTestDistributionRandom):
         mu = x.owner.inputs[4]
         assert mu.eval().shape == (10, 3)
 
-        # Cov is artificually limited to being 2D
+        # Cov is artificially limited to being 2D
         # x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), scale=np.full((2, 3, 3), np.eye(3)))
         # mu = x.owner.inputs[4]
         # assert mu.eval().shape == (10, 2, 3)

@@ -221,7 +221,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
 def get_broadcastable_dist_samples(
     samples, size=None, must_bcast_with=None, return_out_shape=False
 ):
-    """Get a view of the samples drawn from distributions which adds new axises
+    """Get a view of the samples drawn from distributions which adds new axes
     in between the `size` prepend and the distribution's `shape`. These views
     should be able to broadcast the samples from the distrubtions taking into
     account the `size` (i.e. the number of samples) of the draw, which is
@@ -546,7 +546,7 @@ def find_size(
 
 
 def rv_size_is_none(size: Variable) -> bool:
-    """Check wether an rv size is None (ie., at.Constant([]))"""
+    """Check whether an rv size is None (ie., at.Constant([]))"""
     return size.type.shape == (0,)  # type: ignore [attr-defined]
 
 

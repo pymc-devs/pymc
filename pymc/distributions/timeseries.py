@@ -586,7 +586,7 @@ class AR(Distribution):
             except NotConstantValueError:
                 raise ValueError(
                     "Could not infer ar_order from last dimension of rho. Pass it "
-                    "explictily or make sure rho have a static shape"
+                    "explicitly or make sure rho have a static shape"
                 )
             ar_order = int(folded_shape) - int(constant)
             if ar_order < 1:

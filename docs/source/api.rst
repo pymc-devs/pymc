@@ -25,7 +25,7 @@ API
 ------------------
 Dimensionality
 ------------------
-PyMC provides numerous methods, and syntatic sugar, to easily specify the dimensionality of
+PyMC provides numerous methods, and syntactic sugar, to easily specify the dimensionality of
 Random Variables in modeling. Refer to :ref:`dimensionality` notebook to see examples
 demonstrating the functionality.
 

@@ -812,7 +812,7 @@ def test_add_coord_mutable_kwarg():
 
 
 def test_set_dim():
-    """Test the concious re-sizing of dims created through add_coord()."""
+    """Test the conscious re-sizing of dims created through add_coord()."""
     with pm.Model() as pmodel:
         pmodel.add_coord("fdim", mutable=False, length=1)
         pmodel.add_coord("mdim", mutable=True, length=2)
@@ -1081,7 +1081,7 @@ class TestModelContext:
 
         This test creates two threads that attempt to construct two
         unrelated models at the same time.
-        For repeatable testing, the two threads are syncronised such
+        For repeatable testing, the two threads are synchronised such
         that thread A enters the context manager first, then B,
         then A attempts to declare a variable while B is still in the context manager.
         """
@@ -1473,7 +1473,7 @@ def test_tag_future_warning_model():
         x.tag.test_value = 0
         assert not isinstance(x.tag, _FutureWarningValidatingScratchpad)
 
-        # Test that model changes the tag type, but copies exsiting contents
+        # Test that model changes the tag type, but copies existing contents
         x = model.register_rv(x, name="x", transform=log)
         assert isinstance(x.tag, _FutureWarningValidatingScratchpad)
         assert x.tag.something_else == "5"

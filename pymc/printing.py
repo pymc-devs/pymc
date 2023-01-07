@@ -156,7 +156,7 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
     # Avoid circular import
     from pymc.distributions.distribution import SymbolicRandomVariable
 
-    def _is_potential_or_determinstic(var: Variable) -> bool:
+    def _is_potential_or_deterministic(var: Variable) -> bool:
         try:
             return var.str_repr.__func__.func is str_for_potential_or_deterministic
         except AttributeError:
@@ -167,7 +167,7 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
         return _str_for_constant(var, formatting)
     elif isinstance(
         var.owner.op, (RandomVariable, SymbolicRandomVariable)
-    ) or _is_potential_or_determinstic(var):
+    ) or _is_potential_or_deterministic(var):
         # show the names for RandomVariables, Deterministics, and Potentials, rather
         # than the full expression
         return _str_for_input_rv(var, formatting)

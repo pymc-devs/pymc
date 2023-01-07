@@ -272,7 +272,7 @@ def simulator_logp(op, values, *inputs, **kwargs):
     # Use a new rng to avoid non-randomness in parallel sampling
     # TODO: Model rngs should be updated prior to multiprocessing split,
     #  in which case this would not be needed. However, that would have to be
-    #  done for every sampler that may accomodate Simulators
+    #  done for every sampler that may accommodate Simulators
     rng = pytensor.shared(np.random.default_rng(), name="simulator_rng")
     # Create a new simulatorRV with identical inputs as the original one
     sim_value = op.make_node(rng, *inputs[1:]).default_output()

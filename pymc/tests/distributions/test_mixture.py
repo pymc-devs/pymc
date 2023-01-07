@@ -96,7 +96,7 @@ def generate_poisson_mixture_data(w, mu, size=1000):
 
 
 class TestMixture(SeededTest):
-    def get_inital_point(self, model):
+    def get_initial_point(self, model):
         """Get initial point with untransformed variables for posterior predictive sampling"""
         return {
             var.name: initial_point
@@ -546,7 +546,7 @@ class TestMixture(SeededTest):
         with model:
             prior = sample_prior_predictive(samples=n_samples, return_inferencedata=False)
             ppc = sample_posterior_predictive(
-                n_samples * [self.get_inital_point(model)], return_inferencedata=False
+                n_samples * [self.get_initial_point(model)], return_inferencedata=False
             )
 
         assert prior["like0"].shape == (n_samples, 20)
@@ -592,7 +592,7 @@ class TestMixture(SeededTest):
         with model:
             prior = sample_prior_predictive(samples=n_samples, return_inferencedata=False)
             ppc = sample_posterior_predictive(
-                n_samples * [self.get_inital_point(model)], return_inferencedata=False
+                n_samples * [self.get_initial_point(model)], return_inferencedata=False
             )
         assert (
             ppc["x_obs"].shape

@@ -764,7 +764,7 @@ class TestMatchesScipy:
         )
 
     def test_moyal_logp(self):
-        # Using a custom domain, because the standard `R` domain undeflows with scipy in float64
+        # Using a custom domain, because the standard `R` domain underflows with scipy in float64
         value_domain = Domain([-np.inf, -1.5, -1, -0.01, 0.0, 0.01, 1, 1.5, np.inf])
         check_logp(
             pm.Moyal,
