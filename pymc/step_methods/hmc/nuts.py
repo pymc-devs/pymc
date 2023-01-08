@@ -21,7 +21,7 @@ import numpy as np
 from pymc.math import logbern
 from pymc.pytensorf import floatX
 from pymc.stats.convergence import SamplerWarning
-from pymc.step_methods.arraystep import Competence
+from pymc.step_methods.compound import Competence
 from pymc.step_methods.hmc import integration
 from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
 from pymc.step_methods.hmc.integration import IntegrationError, State
