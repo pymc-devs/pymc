@@ -31,7 +31,8 @@ __all__ = ["DictToArrayBijection"]
 
 T = TypeVar("T")
 PointType: TypeAlias = Dict[str, np.ndarray]
-StatsType: TypeAlias = List[Dict[str, Any]]
+StatsDict: TypeAlias = Dict[str, Any]
+StatsType: TypeAlias = List[StatsDict]
 
 # `point_map_info` is a tuple of tuples containing `(name, shape, dtype)` for
 # each of the raveled variables.

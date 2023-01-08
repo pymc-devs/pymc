@@ -25,6 +25,7 @@ from pymc.step_methods import (
     Metropolis,
     Slice,
 )
+from pymc.step_methods.compound import StatsBijection, flatten_steps
 from pymc.tests.helpers import StepMethodTester, fast_unstable_sampling_mode
 from pymc.tests.models import simple_2model_continuous
 
@@ -91,3 +92,41 @@ class TestRVsAssignmentCompound:
                 step2 = NUTS([c2])
                 step = CompoundStep([step1, step2])
             assert {m.rvs_to_values[c1], m.rvs_to_values[c2]} == set(step.vars)
+
+
+class TestStatsBijection:
+    def test_flatten_steps(self):
+        with pm.Model():
+            a = pm.Normal("a")
+            b = pm.Normal("b")
+            c = pm.Normal("c")
+            s1 = Metropolis([a])
+            s2 = Metropolis([b])
+            c1 = CompoundStep([s1, s2])
+            s3 = NUTS([c])
+            c2 = CompoundStep([c1, s3])
+        assert flatten_steps(s1) == [s1]
+        assert flatten_steps(c2) == [s1, s2, s3]
+        with pytest.raises(ValueError, match="Unexpected type"):
+            flatten_steps("not a step")
+
+    def test_stats_bijection(self):
+        step_stats_dtypes = [
+            {"a": float, "b": int},
+            {"a": float, "c": int},
+        ]
+        bij = StatsBijection(step_stats_dtypes)
+        stats_l = [
+            dict(a=1.5, b=3),
+            dict(a=2.5, c=4),
+        ]
+        stats_d = bij.map(stats_l)
+        assert isinstance(stats_d, dict)
+        assert stats_d["sampler_0__a"] == 1.5
+        assert stats_d["sampler_0__b"] == 3
+        assert stats_d["sampler_1__a"] == 2.5
+        assert stats_d["sampler_1__c"] == 4
+        rev = bij.rmap(stats_d)
+        assert isinstance(rev, list)
+        assert len(rev) == len(stats_l)
+        assert rev == stats_l
