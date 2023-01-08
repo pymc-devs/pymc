@@ -41,7 +41,7 @@ from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import Draw, _cpu_count
 from pymc.sampling.population import _sample_population
 from pymc.stats.convergence import log_warning_stats, run_convergence_checks
-from pymc.step_methods import NUTS, CompoundStep, DEMetropolis
+from pymc.step_methods import NUTS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
@@ -538,32 +538,11 @@ def sample(
             parallel = False
     if not parallel:
         if has_population_samplers:
-            has_demcmc = np.any(
-                [
-                    isinstance(m, DEMetropolis)
-                    for m in (step.methods if isinstance(step, CompoundStep) else [step])
-                ]
-            )
             _log.info(f"Population sampling ({chains} chains)")
-
-            initial_point_model_size = sum(initial_points[0][n.name].size for n in model.value_vars)
-
-            if has_demcmc and chains < 3:
-                raise ValueError(
-                    "DEMetropolis requires at least 3 chains. "
-                    "For this {}-dimensional model you should use ≥{} chains".format(
-                        initial_point_model_size, initial_point_model_size + 1
-                    )
-                )
-            if has_demcmc and chains <= initial_point_model_size:
-                warnings.warn(
-                    "DEMetropolis should be used with more chains than dimensions! "
-                    "(The model has {} dimensions.)".format(initial_point_model_size),
-                    UserWarning,
-                    stacklevel=2,
-                )
             _print_step_hierarchy(step)
-            mtrace = _sample_population(parallelize=cores > 1, **sample_args)
+            mtrace = _sample_population(
+                initial_points=initial_points, parallelize=cores > 1, **sample_args
+            )
         else:
             _log.info(f"Sequential sampling ({chains} chains in 1 job)")
             _print_step_hierarchy(step)
