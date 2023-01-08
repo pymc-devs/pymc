@@ -21,7 +21,6 @@ import time
 import warnings
 
 from collections import defaultdict
-from copy import copy
 from typing import Iterator, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -654,6 +653,7 @@ def _check_start_shape(model, start: PointType):
 
 
 def _sample_many(
+    *,
     draws: int,
     chains: int,
     start: Sequence[PointType],
@@ -754,10 +754,16 @@ def _sample(
     """
     skip_first = kwargs.get("skip_first", 0)
 
-    trace = copy(trace)
-
     sampling_gen = _iter_sample(
-        draws, step, start, trace, chain, tune, model, random_seed, callback
+        draws=draws,
+        step=step,
+        start=start,
+        trace=trace,
+        chain=chain,
+        tune=tune,
+        model=model,
+        random_seed=random_seed,
+        callback=callback,
     )
     _pbar_data = {"chain": chain, "divergences": 0}
     _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
@@ -832,12 +838,23 @@ def iter_sample(
         for trace in iter_sample(500, step):
             ...
     """
-    sampling = _iter_sample(draws, step, start, trace, chain, tune, model, random_seed, callback)
+    sampling = _iter_sample(
+        draws=draws,
+        step=step,
+        start=start,
+        trace=trace,
+        chain=chain,
+        tune=tune,
+        model=model,
+        random_seed=random_seed,
+        callback=callback,
+    )
     for i, (strace, _) in enumerate(sampling):
         yield MultiTrace([strace[: i + 1]])
 
 
 def _iter_sample(
+    *,
     draws: int,
     step,
     start: PointType,
@@ -934,6 +951,7 @@ def _iter_sample(
 
 
 def _mp_sample(
+    *,
     draws: int,
     tune: int,
     step,
