@@ -58,7 +58,6 @@ sys.setrecursionlimit(10000)
 
 __all__ = [
     "sample",
-    "iter_sample",
     "init_nuts",
 ]
 
@@ -768,73 +767,6 @@ def _sample(
     if strace is None:
         raise Exception("KeyboardInterrupt happened before the base trace was created.")
     return strace
-
-
-def iter_sample(
-    draws: int,
-    step,
-    start: PointType,
-    trace=None,
-    chain: int = 0,
-    tune: int = 0,
-    model: Optional[Model] = None,
-    random_seed: RandomSeed = None,
-    callback=None,
-) -> Iterator[MultiTrace]:
-    """Generate a trace on each iteration using the given step method.
-
-    Multiple step methods ared supported via compound step methods.  Returns the
-    amount of time taken.
-
-    Parameters
-    ----------
-    draws : int
-        The number of samples to draw
-    step : function
-        Step function
-    start : dict
-        Starting point in parameter space (or partial point).
-    trace : backend or list
-        This should be a backend instance, or a list of variables to track.
-        If None or a list of variables, the NDArray backend is used.
-    chain : int, optional
-        Chain number used to store sample in backend.
-    tune : int, optional
-        Number of iterations to tune (defaults to 0).
-    model : Model (optional if in ``with`` context)
-    random_seed : single random seed, optional
-    callback :
-        A function which gets called for every sample from the trace of a chain. The function is
-        called with the trace and the current draw and will contain all samples for a single trace.
-        the ``draw.chain`` argument can be used to determine which of the active chains the sample
-        is drawn from.
-        Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
-
-    Yields
-    ------
-    trace : MultiTrace
-        Contains all samples up to the current iteration
-
-    Examples
-    --------
-    ::
-
-        for trace in iter_sample(500, step):
-            ...
-    """
-    sampling = _iter_sample(
-        draws=draws,
-        step=step,
-        start=start,
-        trace=trace,
-        chain=chain,
-        tune=tune,
-        model=model,
-        random_seed=random_seed,
-        callback=callback,
-    )
-    for i, (strace, _) in enumerate(sampling):
-        yield MultiTrace([strace[: i + 1]])
 
 
 def _iter_sample(
