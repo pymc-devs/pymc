@@ -18,16 +18,15 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 """
 
-
 from abc import ABC, abstractmethod
 from enum import IntEnum, unique
-from typing import Dict, List, Tuple
+from typing import Dict, List, Sequence, Tuple, Union
 
 import numpy as np
 
 from pytensor.graph.basic import Variable
 
-from pymc.blocking import PointType, StatsType
+from pymc.blocking import PointType, StatsDict, StatsType
 from pymc.model import modelcontext
 
 __all__ = ("Competence", "CompoundStep")
@@ -164,3 +163,43 @@ class CompoundStep:
     @property
     def vars(self):
         return [var for method in self.methods for var in method.vars]
+
+
+def flatten_steps(step: Union[BlockedStep, CompoundStep]) -> List[BlockedStep]:
+    """Flatten a hierarchy of step methods to a list."""
+    if isinstance(step, BlockedStep):
+        return [step]
+    steps = []
+    if not isinstance(step, CompoundStep):
+        raise ValueError(f"Unexpected type of step method: {step}")
+    for sm in step.methods:
+        steps += flatten_steps(sm)
+    return steps
+
+
+class StatsBijection:
+    """Map between a `list` of stats to `dict` of stats."""
+
+    def __init__(self, sampler_stats_dtypes: Sequence[Dict[str, type]]) -> None:
+        # Keep a list of flat vs. original stat names
+        self._stat_groups: List[List[Tuple[str, str]]] = [
+            [(f"sampler_{s}__{statname}", statname) for statname, _ in names_dtypes.items()]
+            for s, names_dtypes in enumerate(sampler_stats_dtypes)
+        ]
+
+    def map(self, stats_list: StatsType) -> StatsDict:
+        """Combine stats dicts of multiple samplers into one dict."""
+        stats_dict = {}
+        for s, sts in enumerate(stats_list):
+            for statname, sval in sts.items():
+                sname = f"sampler_{s}__{statname}"
+                stats_dict[sname] = sval
+        return stats_dict
+
+    def rmap(self, stats_dict: StatsDict) -> StatsType:
+        """Split a global stats dict into a list of sampler-wise stats dicts."""
+        stats_list = []
+        for namemap in self._stat_groups:
+            d = {statname: stats_dict[sname] for sname, statname in namemap}
+            stats_list.append(d)
+        return stats_list
