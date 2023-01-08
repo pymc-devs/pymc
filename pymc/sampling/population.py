@@ -15,6 +15,7 @@
 """Specializes on running MCMCs with population step methods."""
 
 import logging
+import warnings
 
 from copy import copy
 from typing import Iterator, List, Sequence, Tuple, Union
@@ -36,6 +37,7 @@ from pymc.step_methods.arraystep import (
     PopulationArrayStepShared,
     StatsType,
 )
+from pymc.step_methods.metropolis import DEMetropolis
 from pymc.util import RandomSeed
 
 __all__ = ()
@@ -49,6 +51,7 @@ _log = logging.getLogger("pymc")
 
 def _sample_population(
     *,
+    initial_points,
     draws: int,
     chains: int,
     start: Sequence[PointType],
@@ -86,6 +89,13 @@ def _sample_population(
     trace : MultiTrace
         Contains samples of all chains
     """
+    warn_population_size(
+        step=step,
+        initial_points=initial_points,
+        model=model,
+        chains=chains,
+    )
+
     sampling = _prepare_iter_population(
         draws=draws,
         step=step,
@@ -104,6 +114,33 @@ def _sample_population(
     for it, traces in enumerate(sampling):
         latest_traces = traces
     return MultiTrace(latest_traces)
+
+
+def warn_population_size(*, step: CompoundStep, initial_points, model, chains: int):
+    has_demcmc = np.any(
+        [
+            isinstance(m, DEMetropolis)
+            for m in (step.methods if isinstance(step, CompoundStep) else [step])
+        ]
+    )
+
+    initial_point_model_size = sum(initial_points[0][n.name].size for n in model.value_vars)
+
+    if has_demcmc and chains < 3:
+        raise ValueError(
+            "DEMetropolis requires at least 3 chains. "
+            "For this {}-dimensional model you should use ≥{} chains".format(
+                initial_point_model_size, initial_point_model_size + 1
+            )
+        )
+    if has_demcmc and chains <= initial_point_model_size:
+        warnings.warn(
+            "DEMetropolis should be used with more chains than dimensions! "
+            "(The model has {} dimensions.)".format(initial_point_model_size),
+            UserWarning,
+            stacklevel=2,
+        )
+    return
 
 
 class PopulationStepper:
