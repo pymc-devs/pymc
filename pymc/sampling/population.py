@@ -26,8 +26,7 @@ import numpy as np
 from fastprogress.fastprogress import progress_bar
 from typing_extensions import TypeAlias
 
-from pymc.backends import _init_trace
-from pymc.backends.base import BaseTrace, MultiTrace
+from pymc.backends.base import BaseTrace
 from pymc.initial_point import PointType
 from pymc.model import modelcontext
 from pymc.stats.convergence import log_warning_stats
@@ -53,7 +52,6 @@ def _sample_population(
     *,
     initial_points,
     draws: int,
-    chains: int,
     start: Sequence[PointType],
     random_seed: RandomSeed,
     step,
@@ -61,16 +59,15 @@ def _sample_population(
     model,
     progressbar: bool = True,
     parallelize: bool = False,
+    traces: Sequence[BaseTrace],
     **kwargs,
-) -> MultiTrace:
+):
     """Performs sampling of a population of chains using the ``PopulationStepper``.
 
     Parameters
     ----------
     draws : int
         The number of samples to draw
-    chains : int
-        The total number of chains in the population
     start : list
         Start points for each chain
     random_seed : single random seed, optional
@@ -83,17 +80,12 @@ def _sample_population(
         Show progress bars? (defaults to True)
     parallelize : bool
         Setting for multiprocess parallelization
-
-    Returns
-    -------
-    trace : MultiTrace
-        Contains samples of all chains
     """
     warn_population_size(
         step=step,
         initial_points=initial_points,
         model=model,
-        chains=chains,
+        chains=len(traces),
     )
 
     sampling = _prepare_iter_population(
@@ -101,6 +93,7 @@ def _sample_population(
         step=step,
         start=start,
         parallelize=parallelize,
+        traces=traces,
         tune=tune,
         model=model,
         random_seed=random_seed,
@@ -110,10 +103,9 @@ def _sample_population(
     if progressbar:
         sampling = progress_bar(sampling, total=draws, display=progressbar)
 
-    latest_traces = None
-    for it, traces in enumerate(sampling):
-        latest_traces = traces
-    return MultiTrace(latest_traces)
+    for i in sampling:
+        pass
+    return
 
 
 def warn_population_size(*, step: CompoundStep, initial_points, model, chains: int):
@@ -302,11 +294,12 @@ def _prepare_iter_population(
     step,
     start: Sequence[PointType],
     parallelize: bool,
+    traces: Sequence[BaseTrace],
     tune: int,
     model=None,
     random_seed: RandomSeed = None,
     progressbar=True,
-) -> Iterator[Sequence[BaseTrace]]:
+) -> Iterator[int]:
     """Prepare a PopulationStepper and traces for population sampling.
 
     Parameters
@@ -329,7 +322,7 @@ def _prepare_iter_population(
     Returns
     -------
     _iter_population : generator
-        Yields traces of all chains at the same time
+        Main sampling iterator yieling the iteration number.
     """
     nchains = len(start)
     model = modelcontext(model)
@@ -344,8 +337,7 @@ def _prepare_iter_population(
     # The initialization of traces, samplers and points must happen in the right order:
     # 1. population of points is created
     # 2. steppers are initialized and linked to the points object
-    # 3. traces are initialized
-    # 4. a PopulationStepper is configured for parallelized stepping
+    # 3. a PopulationStepper is configured for parallelized stepping
 
     # 1. create a population (points) that tracks each chain
     # it is updated as the chains are advanced
@@ -366,19 +358,7 @@ def _prepare_iter_population(
                 sm.link_population(population, c)
         steppers.append(chainstep)
 
-    # 3. Initialize a BaseTrace for each chain
-    traces: List[BaseTrace] = [
-        _init_trace(
-            expected_length=draws + tune,
-            stats_dtypes=steppers[c].stats_dtypes,
-            chain_number=c,
-            trace=None,
-            model=model,
-        )
-        for c in range(nchains)
-    ]
-
-    # 4. configure the PopulationStepper (expensive call)
+    # 3. configure the PopulationStepper (expensive call)
     popstep = PopulationStepper(steppers, parallelize, progressbar=progressbar)
 
     # Because the preparations above are expensive, the actual iterator is
@@ -396,7 +376,7 @@ def _iter_population(
     steppers,
     traces: Sequence[BaseTrace],
     points,
-) -> Iterator[Sequence[BaseTrace]]:
+) -> Iterator[int]:
     """Iterate a ``PopulationStepper``.
 
     Parameters
@@ -416,8 +396,8 @@ def _iter_population(
 
     Yields
     ------
-    traces : list
-        List of trace objects of the individual chains
+    i
+        Iteration number.
     """
     try:
         with popstep:
@@ -433,7 +413,7 @@ def _iter_population(
                     strace.record(points[c], stats)
                     log_warning_stats(stats)
                 # yield the state of all chains in parallel
-                yield traces
+                yield i
     except KeyboardInterrupt:
         for c, strace in enumerate(traces):
             strace.close()
