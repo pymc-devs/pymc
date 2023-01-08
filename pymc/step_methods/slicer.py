@@ -21,7 +21,8 @@ import numpy.random as nr
 
 from pymc.blocking import RaveledVars, StatsType
 from pymc.model import modelcontext
-from pymc.step_methods.arraystep import ArrayStep, Competence
+from pymc.step_methods.arraystep import ArrayStep
+from pymc.step_methods.compound import Competence
 from pymc.util import get_value_vars_from_user_vars
 from pymc.vartypes import continuous_types
 

@@ -36,11 +36,11 @@ from pymc.pytensorf import (
 from pymc.step_methods.arraystep import (
     ArrayStep,
     ArrayStepShared,
-    Competence,
     PopulationArrayStepShared,
     StatsType,
     metrop_select,
 )
+from pymc.step_methods.compound import Competence
 
 __all__ = [
     "Metropolis",

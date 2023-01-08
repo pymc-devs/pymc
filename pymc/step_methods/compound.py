@@ -19,9 +19,113 @@ Created on Mar 7, 2011
 """
 
 
-from typing import Tuple
+from abc import ABC, abstractmethod
+from enum import IntEnum, unique
+from typing import Dict, List, Tuple
+
+import numpy as np
+
+from pytensor.graph.basic import Variable
 
 from pymc.blocking import PointType, StatsType
+from pymc.model import modelcontext
+
+__all__ = ("Competence", "CompoundStep")
+
+
+@unique
+class Competence(IntEnum):
+    """Enum for characterizing competence classes of step methods.
+    Values include:
+    0: INCOMPATIBLE
+    1: COMPATIBLE
+    2: PREFERRED
+    3: IDEAL
+    """
+
+    INCOMPATIBLE = 0
+    COMPATIBLE = 1
+    PREFERRED = 2
+    IDEAL = 3
+
+
+class BlockedStep(ABC):
+
+    stats_dtypes: List[Dict[str, type]] = []
+    vars: List[Variable] = []
+
+    def __new__(cls, *args, **kwargs):
+        blocked = kwargs.get("blocked")
+        if blocked is None:
+            # Try to look up default value from class
+            blocked = getattr(cls, "default_blocked", True)
+            kwargs["blocked"] = blocked
+
+        model = modelcontext(kwargs.get("model"))
+        kwargs.update({"model": model})
+
+        # vars can either be first arg or a kwarg
+        if "vars" not in kwargs and len(args) >= 1:
+            vars = args[0]
+            args = args[1:]
+        elif "vars" in kwargs:
+            vars = kwargs.pop("vars")
+        else:  # Assume all model variables
+            vars = model.value_vars
+
+        if not isinstance(vars, (tuple, list)):
+            vars = [vars]
+
+        if len(vars) == 0:
+            raise ValueError("No free random variables to sample.")
+
+        if not blocked and len(vars) > 1:
+            # In this case we create a separate sampler for each var
+            # and append them to a CompoundStep
+            steps = []
+            for var in vars:
+                step = super().__new__(cls)
+                # If we don't return the instance we have to manually
+                # call __init__
+                step.__init__([var], *args, **kwargs)
+                # Hack for creating the class correctly when unpickling.
+                step.__newargs = ([var],) + args, kwargs
+                steps.append(step)
+
+            return CompoundStep(steps)
+        else:
+            step = super().__new__(cls)
+            # Hack for creating the class correctly when unpickling.
+            step.__newargs = (vars,) + args, kwargs
+            return step
+
+    # Hack for creating the class correctly when unpickling.
+    def __getnewargs_ex__(self):
+        return self.__newargs
+
+    @abstractmethod
+    def step(self, point: PointType) -> Tuple[PointType, StatsType]:
+        """Perform a single step of the sampler."""
+
+    @staticmethod
+    def competence(var, has_grad):
+        return Competence.INCOMPATIBLE
+
+    @classmethod
+    def _competence(cls, vars, have_grad):
+        vars = np.atleast_1d(vars)
+        have_grad = np.atleast_1d(have_grad)
+        competences = []
+        for var, has_grad in zip(vars, have_grad):
+            try:
+                competences.append(cls.competence(var, has_grad))
+            except TypeError:
+                competences.append(cls.competence(var))
+        return competences
+
+    def stop_tuning(self):
+        if hasattr(self, "tune"):
+            self.tune = False
 
 
 class CompoundStep:
