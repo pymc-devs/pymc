@@ -479,11 +479,23 @@ def sample(
         model.check_start_vals(ip)
         _check_start_shape(model, ip)
 
+    # Create trace backends for each chain
+    traces = [
+        _init_trace(
+            expected_length=draws + tune,
+            stats_dtypes=step.stats_dtypes,
+            chain_number=chain_number,
+            trace=trace,
+            model=model,
+        )
+        for chain_number in range(chains)
+    ]
+
     sample_args = {
         "draws": draws,
         "step": step,
         "start": initial_points,
-        "trace": trace,
+        "traces": traces,
         "chains": chains,
         "tune": tune,
         "progressbar": progressbar,
@@ -524,12 +536,7 @@ def sample(
         _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
         _print_step_hierarchy(step)
         try:
-            traces = _mp_sample(**sample_args, **parallel_args)
-            if discard_tuned_samples:
-                traces, length = _choose_chains(traces, tune)
-            else:
-                traces, length = _choose_chains(traces, 0)
-            mtrace = MultiTrace(traces)[:length]
+            _mp_sample(**sample_args, **parallel_args)
         except pickle.PickleError:
             _log.warning("Could not pickle model, sampling singlethreaded.")
             _log.debug("Pickling error:", exc_info=True)
@@ -544,15 +551,21 @@ def sample(
         if has_population_samplers:
             _log.info(f"Population sampling ({chains} chains)")
             _print_step_hierarchy(step)
-            mtrace = _sample_population(
-                initial_points=initial_points, parallelize=cores > 1, **sample_args
-            )
+            _sample_population(initial_points=initial_points, parallelize=cores > 1, **sample_args)
         else:
             _log.info(f"Sequential sampling ({chains} chains in 1 job)")
             _print_step_hierarchy(step)
-            mtrace = _sample_many(**sample_args)
+            _sample_many(**sample_args)
 
     t_sampling = time.time() - t_start
+
+    # Wrap chain traces in a MultiTrace
+    if discard_tuned_samples:
+        traces, length = _choose_chains(traces, tune)
+    else:
+        traces, length = _choose_chains(traces, 0)
+    mtrace = MultiTrace(traces)[:length]
+
     # count the number of tune/draw iterations that happened
     # ideally via the "tune" statistic, but not all samplers record it!
     if "tune" in mtrace.stat_names:
@@ -639,12 +652,13 @@ def _sample_many(
     *,
     draws: int,
     chains: int,
+    traces: Sequence[BaseTrace],
     start: Sequence[PointType],
     random_seed: Optional[Sequence[RandomSeed]],
     step,
     callback=None,
     **kwargs,
-) -> MultiTrace:
+):
     """Samples all chains sequentially.
 
     Parameters
@@ -659,35 +673,19 @@ def _sample_many(
         A list of seeds, one for each chain
     step: function
         Step function
-
-    Returns
-    -------
-    mtrace: MultiTrace
-        Contains samples of all chains
     """
-    traces: List[BaseTrace] = []
     for i in range(chains):
-        trace = _sample(
+        _sample(
             draws=draws,
             chain=i,
             start=start[i],
             step=step,
+            trace=traces[i],
             random_seed=None if random_seed is None else random_seed[i],
             callback=callback,
             **kwargs,
         )
-        if trace is None:
-            if len(traces) == 0:
-                raise ValueError("Sampling stopped before a sample was created.")
-            else:
-                break
-        elif len(trace) < draws:
-            if len(traces) == 0:
-                traces.append(trace)
-            break
-        else:
-            traces.append(trace)
-    return MultiTrace(traces)
+    return
 
 
 def _sample(
@@ -698,12 +696,12 @@ def _sample(
     start: PointType,
     draws: int,
     step=None,
-    trace: Optional[BaseTrace] = None,
+    trace: BaseTrace,
     tune: int,
     model: Optional[Model] = None,
     callback=None,
     **kwargs,
-) -> BaseTrace:
+) -> None:
     """Main iteration for singleprocess sampling.
 
     Multiple step methods are supported via compound step methods.
@@ -724,16 +722,10 @@ def _sample(
     step : function
         Step function
     trace : backend, optional
-        A backend instance or None.
-        If None, the NDArray backend is used.
+        A backend instance.
     tune : int
         Number of iterations to tune.
     model : Model (optional if in ``with`` context)
-
-    Returns
-    -------
-    strace : BaseTrace
-        A ``BaseTrace`` object that contains the samples for this chain.
     """
     skip_first = kwargs.get("skip_first", 0)
 
@@ -756,17 +748,13 @@ def _sample(
     else:
         sampling = sampling_gen
     try:
-        strace = None
-        for it, (strace, diverging) in enumerate(sampling):
+        for it, diverging in enumerate(sampling):
             if it >= skip_first and diverging:
                 _pbar_data["divergences"] += 1
                 if progressbar:
                     sampling.comment = _desc.format(**_pbar_data)
     except KeyboardInterrupt:
         pass
-    if strace is None:
-        raise Exception("KeyboardInterrupt happened before the base trace was created.")
-    return strace
 
 
 def _iter_sample(
@@ -774,13 +762,13 @@ def _iter_sample(
     draws: int,
     step,
     start: PointType,
-    trace: Optional[BaseTrace] = None,
+    trace: BaseTrace,
     chain: int = 0,
     tune: int = 0,
     model=None,
     random_seed: RandomSeed = None,
     callback=None,
-) -> Iterator[Tuple[BaseTrace, bool]]:
+) -> Iterator[bool]:
     """Generator for sampling one chain. (Used in singleprocess sampling.)
 
     Parameters
@@ -792,9 +780,8 @@ def _iter_sample(
     start : dict
         Starting point in parameter space (or partial point).
         Must contain numeric (transformed) initial values for all (transformed) free variables.
-    trace : backend, optional
-        A backend instance or None.
-        If None, the NDArray backend is used.
+    trace : backend
+        A backend instance.
     chain : int, optional
         Chain number used to store sample in backend.
     tune : int, optional
@@ -804,8 +791,6 @@ def _iter_sample(
 
     Yields
     ------
-    strace : BaseTrace
-        The trace object containing the samples for this chain
     diverging : bool
         Indicates if the draw is divergent. Only available with some samplers.
     """
@@ -825,14 +810,6 @@ def _iter_sample(
 
     point = start
 
-    strace: BaseTrace = _init_trace(
-        expected_length=draws + tune,
-        stats_dtypes=step.stats_dtypes,
-        chain_number=chain,
-        trace=trace,
-        model=model,
-    )
-
     try:
         step.tune = bool(tune)
         if hasattr(step, "reset_tuning"):
@@ -846,24 +823,24 @@ def _iter_sample(
             if i == tune:
                 step.stop_tuning()
             point, stats = step.step(point)
-            strace.record(point, stats)
+            trace.record(point, stats)
             log_warning_stats(stats)
             diverging = i > tune and stats and stats[0].get("diverging")
             if callback is not None:
                 callback(
-                    trace=strace,
+                    trace=trace,
                     draw=Draw(chain, i == draws, i, i < tune, stats, point),
                 )
 
-            yield strace, diverging
+            yield diverging
     except KeyboardInterrupt:
-        strace.close()
+        trace.close()
         raise
     except BaseException:
-        strace.close()
+        trace.close()
         raise
     else:
-        strace.close()
+        trace.close()
 
 
 def _mp_sample(
@@ -876,12 +853,12 @@ def _mp_sample(
     random_seed: Sequence[RandomSeed],
     start: Sequence[PointType],
     progressbar: bool = True,
-    trace: Optional[BaseTrace] = None,
+    traces: Sequence[BaseTrace],
     model=None,
     callback=None,
     mp_ctx=None,
     **kwargs,
-) -> List[BaseTrace]:
+) -> None:
     """Main iteration for multiprocess sampling.
 
     Parameters
@@ -913,27 +890,11 @@ def _mp_sample(
         the ``draw.chain`` argument can be used to determine which of the active chains the sample
         is drawn from.
         Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
-
-    Returns
-    -------
-    traces
-        All chains.
     """
     import pymc.sampling.parallel as ps
 
     # We did draws += tune in pm.sample
     draws -= tune
-
-    traces = [
-        _init_trace(
-            expected_length=draws + tune,
-            stats_dtypes=step.stats_dtypes,
-            chain_number=chain_number,
-            trace=trace,
-            model=model,
-        )
-        for chain_number in range(chains)
-    ]
 
     sampler = ps.ParallelSampler(
         draws=draws,
@@ -957,7 +918,7 @@ def _mp_sample(
                         strace.close()
 
                     if callback is not None:
-                        callback(trace=trace, draw=draw)
+                        callback(trace=strace, draw=draw)
 
         except ps.ParallelSamplingError as error:
             strace = traces[error._chain]
@@ -967,9 +928,8 @@ def _mp_sample(
             multitrace = MultiTrace(traces)
             multitrace._report._log_summary()
             raise
-        return traces
     except KeyboardInterrupt:
-        return traces
+        pass
     finally:
         for strace in traces:
             strace.close()
