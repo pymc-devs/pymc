@@ -525,7 +525,12 @@ def sample(
         _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
         _print_step_hierarchy(step)
         try:
-            mtrace = _mp_sample(**sample_args, **parallel_args)
+            traces = _mp_sample(**sample_args, **parallel_args)
+            if discard_tuned_samples:
+                traces, length = _choose_chains(traces, tune)
+            else:
+                traces, length = _choose_chains(traces, 0)
+            mtrace = MultiTrace(traces)[:length]
         except pickle.PickleError:
             _log.warning("Could not pickle model, sampling singlethreaded.")
             _log.debug("Pickling error:", exc_info=True)
@@ -942,10 +947,9 @@ def _mp_sample(
     trace: Optional[BaseTrace] = None,
     model=None,
     callback=None,
-    discard_tuned_samples: bool = True,
     mp_ctx=None,
     **kwargs,
-) -> MultiTrace:
+) -> List[BaseTrace]:
     """Main iteration for multiprocess sampling.
 
     Parameters
@@ -980,8 +984,8 @@ def _mp_sample(
 
     Returns
     -------
-    mtrace : pymc.backends.base.MultiTrace
-        A ``MultiTrace`` object that contains the samples for all chains.
+    traces
+        All chains.
     """
     import pymc.sampling.parallel as ps
 
@@ -1031,13 +1035,9 @@ def _mp_sample(
             multitrace = MultiTrace(traces)
             multitrace._report._log_summary()
             raise
-        return MultiTrace(traces)
+        return traces
     except KeyboardInterrupt:
-        if discard_tuned_samples:
-            traces, length = _choose_chains(traces, tune)
-        else:
-            traces, length = _choose_chains(traces, 0)
-        return MultiTrace(traces)[:length]
+        return traces
     finally:
         for strace in traces:
             strace.close()
