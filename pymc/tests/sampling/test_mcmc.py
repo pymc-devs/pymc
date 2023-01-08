@@ -205,18 +205,6 @@ class TestSample(SeededTest):
                 pm.sample(50, tune=0, foo={})
             assert "foo" in str(excinfo.value)
 
-    def test_iter_sample(self):
-        with self.model:
-            samps = pm.sampling.mcmc.iter_sample(
-                draws=5,
-                step=self.step,
-                start=self.start,
-                tune=0,
-                random_seed=self.random_seed,
-            )
-            for i, trace in enumerate(samps):
-                assert i == len(trace) - 1, "Trace does not have correct length."
-
     def test_parallel_start(self):
         with self.model:
             with warnings.catch_warnings():
