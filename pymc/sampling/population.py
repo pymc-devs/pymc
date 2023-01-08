@@ -48,6 +48,7 @@ _log = logging.getLogger("pymc")
 
 
 def _sample_population(
+    *,
     draws: int,
     chains: int,
     start: Sequence[PointType],
@@ -86,10 +87,10 @@ def _sample_population(
         Contains samples of all chains
     """
     sampling = _prepare_iter_population(
-        draws,
-        step,
-        start,
-        parallelize,
+        draws=draws,
+        step=step,
+        start=start,
+        parallelize=parallelize,
         tune=tune,
         model=model,
         random_seed=random_seed,
@@ -259,6 +260,7 @@ class PopulationStepper:
 
 
 def _prepare_iter_population(
+    *,
     draws: int,
     step,
     start: Sequence[PointType],
@@ -344,11 +346,19 @@ def _prepare_iter_population(
 
     # Because the preparations above are expensive, the actual iterator is
     # in another method. This way the progbar will not be disturbed.
-    return _iter_population(draws, tune, popstep, steppers, traces, population)
+    return _iter_population(
+        draws=draws, tune=tune, popstep=popstep, steppers=steppers, traces=traces, points=population
+    )
 
 
 def _iter_population(
-    draws: int, tune: int, popstep: PopulationStepper, steppers, traces: Sequence[BaseTrace], points
+    *,
+    draws: int,
+    tune: int,
+    popstep: PopulationStepper,
+    steppers,
+    traces: Sequence[BaseTrace],
+    points,
 ) -> Iterator[Sequence[BaseTrace]]:
     """Iterate a ``PopulationStepper``.
 
