@@ -36,7 +36,7 @@ repos:
       files: ^pymc/
       exclude: (?x)(pymc/_version.py)
 - repo: https://github.com/PyCQA/pydocstyle
-  rev: 6.1.1
+  rev: 6.2.3
   hooks:
     - id: pydocstyle
       args:
