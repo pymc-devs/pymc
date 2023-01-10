@@ -28,7 +28,7 @@ from typing_extensions import TypeAlias
 
 from pymc.backends.base import BaseTrace
 from pymc.initial_point import PointType
-from pymc.model import modelcontext
+from pymc.model import Model, modelcontext
 from pymc.stats.convergence import log_warning_stats
 from pymc.step_methods import CompoundStep
 from pymc.step_methods.arraystep import (
@@ -50,13 +50,13 @@ _log = logging.getLogger("pymc")
 
 def _sample_population(
     *,
-    initial_points,
+    initial_points: Sequence[PointType],
     draws: int,
     start: Sequence[PointType],
     random_seed: RandomSeed,
-    step,
+    step: Union[BlockedStep, CompoundStep],
     tune: int,
-    model,
+    model: Model,
     progressbar: bool = True,
     parallelize: bool = False,
     traces: Sequence[BaseTrace],
@@ -108,7 +108,14 @@ def _sample_population(
     return
 
 
-def warn_population_size(*, step: CompoundStep, initial_points, model, chains: int):
+def warn_population_size(
+    *,
+    step: Union[BlockedStep, CompoundStep],
+    initial_points: Sequence[PointType],
+    model: Model,
+    chains: int,
+):
+    """Emit informative errors/warnings for dangerously small population size."""
     has_demcmc = np.any(
         [
             isinstance(m, DEMetropolis)
