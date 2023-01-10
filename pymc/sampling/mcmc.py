@@ -21,14 +21,14 @@ import time
 import warnings
 
 from collections import defaultdict
-from typing import Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pytensor.gradient as tg
 
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
-from typing_extensions import TypeAlias
+from typing_extensions import Protocol, TypeAlias
 
 import pymc as pm
 
@@ -62,6 +62,13 @@ __all__ = [
 ]
 
 Step: TypeAlias = Union[BlockedStep, CompoundStep]
+
+
+class SamplingIteratorCallback(Protocol):
+    """Signature of the callable that may be passed to `pm.sample(callable=...)`."""
+
+    def __call__(self, trace: BaseTrace, draw: Draw):
+        pass
 
 
 _log = logging.getLogger("pymc")
@@ -221,7 +228,7 @@ def sample(
     cores: Optional[int] = None,
     tune: int = 1000,
     progressbar: bool = True,
-    model=None,
+    model: Optional[Model] = None,
     random_seed: RandomState = None,
     discard_tuned_samples: bool = True,
     compute_convergence_checks: bool = True,
@@ -599,7 +606,7 @@ def sample(
 
     idata = None
     if compute_convergence_checks or return_inferencedata:
-        ikwargs = dict(model=model, save_warmup=not discard_tuned_samples)
+        ikwargs: Dict[str, Any] = dict(model=model, save_warmup=not discard_tuned_samples)
         if idata_kwargs:
             ikwargs.update(idata_kwargs)
         idata = pm.to_inference_data(mtrace, **ikwargs)
@@ -655,8 +662,8 @@ def _sample_many(
     traces: Sequence[BaseTrace],
     start: Sequence[PointType],
     random_seed: Optional[Sequence[RandomSeed]],
-    step,
-    callback=None,
+    step: Step,
+    callback: Optional[SamplingIteratorCallback] = None,
     **kwargs,
 ):
     """Samples all chains sequentially.
@@ -695,7 +702,7 @@ def _sample(
     random_seed: RandomSeed,
     start: PointType,
     draws: int,
-    step=None,
+    step: Step,
     trace: BaseTrace,
     tune: int,
     model: Optional[Model] = None,
@@ -760,14 +767,14 @@ def _sample(
 def _iter_sample(
     *,
     draws: int,
-    step,
+    step: Step,
     start: PointType,
     trace: BaseTrace,
     chain: int = 0,
     tune: int = 0,
-    model=None,
+    model: Optional[Model] = None,
     random_seed: RandomSeed = None,
-    callback=None,
+    callback: Optional[SamplingIteratorCallback] = None,
 ) -> Iterator[bool]:
     """Generator for sampling one chain. (Used in singleprocess sampling.)
 
@@ -803,11 +810,6 @@ def _iter_sample(
     if random_seed is not None:
         np.random.seed(random_seed)
 
-    try:
-        step = CompoundStep(step)
-    except TypeError:
-        pass
-
     point = start
 
     try:
@@ -815,7 +817,6 @@ def _iter_sample(
         if hasattr(step, "reset_tuning"):
             step.reset_tuning()
         for i in range(draws):
-            stats = None
             diverging = False
 
             if i == 0 and hasattr(step, "iter_count"):
@@ -825,7 +826,7 @@ def _iter_sample(
             point, stats = step.step(point)
             trace.record(point, stats)
             log_warning_stats(stats)
-            diverging = i > tune and stats and stats[0].get("diverging")
+            diverging = i > tune and len(stats) > 0 and (stats[0].get("diverging") == True)
             if callback is not None:
                 callback(
                     trace=trace,
@@ -854,8 +855,8 @@ def _mp_sample(
     start: Sequence[PointType],
     progressbar: bool = True,
     traces: Sequence[BaseTrace],
-    model=None,
-    callback=None,
+    model: Optional[Model] = None,
+    callback: Optional[SamplingIteratorCallback] = None,
     mp_ctx=None,
     **kwargs,
 ) -> None:
@@ -884,7 +885,7 @@ def _mp_sample(
         A backend instance, or None.
         If None, the NDArray backend is used.
     model : Model (optional if in ``with`` context)
-    callback : Callable
+    callback
         A function which gets called for every sample from the trace of a chain. The function is
         called with the trace and the current draw and will contain all samples for a single trace.
         the ``draw.chain`` argument can be used to determine which of the active chains the sample
@@ -994,7 +995,7 @@ def init_nuts(
     init: str = "auto",
     chains: int = 1,
     n_init: int = 500_000,
-    model=None,
+    model: Optional[Model] = None,
     random_seed: RandomSeed = None,
     progressbar=True,
     jitter_max_retries: int = 10,

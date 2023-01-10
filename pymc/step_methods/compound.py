@@ -36,6 +36,7 @@ class CompoundStep:
         self.name = (
             f"Compound[{', '.join(getattr(m, 'name', 'UNNAMED_STEP') for m in self.methods)}]"
         )
+        self.tune = True
 
     def step(self, point) -> Tuple[PointType, StatsType]:
         stats = []

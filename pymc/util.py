@@ -235,7 +235,7 @@ def biwrap(wrapper):
 
 
 def dataset_to_point_list(
-    ds: xarray.Dataset, sample_dims: List
+    ds: xarray.Dataset, sample_dims: Sequence[str]
 ) -> Tuple[List[Dict[str, np.ndarray]], Dict[str, Any]]:
     # All keys of the dataset must be a str
     var_names = list(ds.keys())
