@@ -156,7 +156,7 @@ class NDArray(base.BaseTrace):
         """
         return self.samples[varname][burn::thin]
 
-    def _slice(self, idx):
+    def _slice(self, idx: slice):
         # Slicing directly instead of using _slice_as_ndarray to
         # support stop value in slice (which is needed by
         # iter_sample).
@@ -174,7 +174,7 @@ class NDArray(base.BaseTrace):
             return sliced
         sliced._stats = []
         for vars in self._stats:
-            var_sliced = {}
+            var_sliced: Dict[str, np.ndarray] = {}
             sliced._stats.append(var_sliced)
             for key, vals in vars.items():
                 var_sliced[key] = vals[idx]

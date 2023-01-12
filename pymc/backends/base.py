@@ -22,8 +22,10 @@ import warnings
 
 from abc import ABC
 from typing import (
+    Any,
     Dict,
     List,
+    Mapping,
     Optional,
     Sequence,
     Set,
@@ -47,7 +49,87 @@ class BackendError(Exception):
     pass
 
 
-class BaseTrace(ABC):
+class IBaseTrace(ABC, Sized):
+    """Minimal interface needed to record and access draws and stats for one MCMC chain."""
+
+    chain: int
+    """Chain number."""
+
+    varnames: List[str]
+    """Names of tracked variables."""
+
+    sampler_vars: List[Dict[str, type]]
+    """Sampler stats for each sampler."""
+
+    def __len__(self):
+        raise NotImplementedError()
+
+    def get_values(self, varname: str, burn=0, thin=1) -> np.ndarray:
+        """Get values from trace.
+
+        Parameters
+        ----------
+        varname: str
+        burn: int
+        thin: int
+
+        Returns
+        -------
+        A NumPy array
+        """
+        raise NotImplementedError()
+
+    def get_sampler_stats(self, stat_name: str, sampler_idx: Optional[int] = None, burn=0, thin=1):
+        """Get sampler statistics from the trace.
+
+        Parameters
+        ----------
+        stat_name: str
+        sampler_idx: int or None
+        burn: int
+        thin: int
+
+        Returns
+        -------
+        If the `sampler_idx` is specified, return the statistic with
+        the given name in a numpy array. If it is not specified and there
+        is more than one sampler that provides this statistic, return
+        a numpy array of shape (m, n), where `m` is the number of
+        such samplers, and `n` is the number of samples.
+        """
+        raise NotImplementedError()
+
+    def _slice(self, idx: slice) -> "IBaseTrace":
+        """Slice trace object."""
+        raise NotImplementedError()
+
+    def point(self, idx: int) -> Dict[str, np.ndarray]:
+        """Return dictionary of point values at `idx` for current chain
+        with variables names as keys.
+        """
+        raise NotImplementedError()
+
+    def record(self, draw: Mapping[str, np.ndarray], stats: Sequence[Mapping[str, Any]]):
+        """Record results of a sampling iteration.
+
+        Parameters
+        ----------
+        draw: dict
+            Values mapped to variable names
+        stats: list of dicts
+            The diagnostic values for each sampler
+        """
+        raise NotImplementedError()
+
+    def close(self):
+        """Close the backend.
+
+        This is called after sampling has finished.
+        """
+        pass
+
+
+class BaseTrace(IBaseTrace):
     """Base trace object
 
     Parameters
@@ -127,25 +209,6 @@ class BaseTrace(ABC):
         self._set_sampler_vars(sampler_vars)
         self._is_base_setup = True
 
-    def record(self, point, sampler_states=None):
-        """Record results of a sampling iteration.
-
-        Parameters
-        ----------
-        point: dict
-            Values mapped to variable names
-        sampler_states: list of dicts
-            The diagnostic values for each sampler
-        """
-        raise NotImplementedError
-
-    def close(self):
-        """Close the database backend.
-
-        This is called after sampling has finished.
-        """
-        pass
-
     # Selection methods
 
     def __getitem__(self, idx):
@@ -156,24 +219,6 @@ class BaseTrace(ABC):
             return self.point(int(idx))
         except (ValueError, TypeError):  # Passed variable or variable name.
             raise ValueError("Can only index with slice or integer")
-
-    def __len__(self):
-        raise NotImplementedError
-
-    def get_values(self, varname, burn=0, thin=1):
-        """Get values from trace.
-
-        Parameters
-        ----------
-        varname: str
-        burn: int
-        thin: int
-
-        Returns
-        -------
-        A NumPy array
-        """
-        raise NotImplementedError
 
     def get_sampler_stats(self, stat_name, sampler_idx=None, burn=0, thin=1):
         """Get sampler statistics from the trace.
@@ -220,19 +265,9 @@ class BaseTrace(ABC):
         """Get sampler statistics."""
         raise NotImplementedError()
 
-    def _slice(self, idx: Union[int, slice]):
-        """Slice trace object."""
-        raise NotImplementedError()
-
-    def point(self, idx: int) -> Dict[str, np.ndarray]:
-        """Return dictionary of point values at `idx` for current chain
-        with variables names as keys.
-        """
-        raise NotImplementedError()
-
     @property
     def stat_names(self) -> Set[str]:
-        names = set()
+        names: Set[str] = set()
         for vars in self.sampler_vars or []:
             names.update(vars.keys())
 
@@ -290,7 +325,7 @@ class MultiTrace:
         List of variable names in the trace(s)
     """
 
-    def __init__(self, straces: Sequence[BaseTrace]):
+    def __init__(self, straces: Sequence[IBaseTrace]):
         if len({t.chain for t in straces}) != len(straces):
             raise ValueError("Chains are not unique.")
         self._straces = {t.chain: t for t in straces}
@@ -386,7 +421,7 @@ class MultiTrace:
         sampler_vars = [s.sampler_vars for s in self._straces.values()]
         if not all(svars == sampler_vars[0] for svars in sampler_vars):
             raise ValueError("Inividual chains contain different sampler stats")
-        names = set()
+        names: Set[str] = set()
         for trace in self._straces.values():
             if trace.sampler_vars is None:
                 continue
@@ -472,7 +507,7 @@ class MultiTrace:
         ]
         return _squeeze_cat(results, combine, squeeze)
 
-    def _slice(self, slice):
+    def _slice(self, slice: slice):
         """Return a new MultiTrace object sliced according to `slice`."""
         new_traces = [trace._slice(slice) for trace in self._straces.values()]
         trace = MultiTrace(new_traces)
