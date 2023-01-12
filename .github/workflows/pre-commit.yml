@@ -52,7 +52,7 @@ jobs:
           environment-file: conda-envs/environment-test.yml
           python-version: 3.9
           use-mamba: true
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
       - name: Install-pymc and mypy dependencies
         run: |
           conda activate pymc-test
