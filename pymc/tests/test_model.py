@@ -356,6 +356,9 @@ class TestValueGradFunction(unittest.TestCase):
 
         assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
 
+        # The dtype of the merged observed/missing deterministic should match the RV dtype
+        assert m.deterministics[0].type.dtype == x2.type.dtype
+
         pnt = m.initial_point(random_seed=None).copy()
         del pnt["x2_missing"]
 
