@@ -65,7 +65,8 @@ from typing import Dict, List, Optional
 
 from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
 from pymc.backends.base import BaseTrace
-from pymc.backends.ndarray import NDArray, point_list_to_multitrace
+from pymc.backends.ndarray import NDArray
+from pymc.model import Model
 
 __all__ = ["to_inference_data", "predictions_to_inference_data"]
 
@@ -76,7 +77,7 @@ def _init_trace(
     chain_number: int,
     stats_dtypes: List[Dict[str, type]],
     trace: Optional[BaseTrace],
-    model,
+    model: Model,
 ) -> BaseTrace:
     """Initializes a trace backend for a chain."""
     strace: BaseTrace
