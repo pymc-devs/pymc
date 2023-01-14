@@ -32,7 +32,7 @@ from typing_extensions import Protocol, TypeAlias
 
 import pymc as pm
 
-from pymc.backends import _init_trace
+from pymc.backends import init_traces
 from pymc.backends.base import BaseTrace, IBaseTrace, MultiTrace, _choose_chains
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
@@ -486,21 +486,21 @@ def sample(
         initial_points = [ipfn(seed) for ipfn, seed in zip(ipfns, random_seed_list)]
 
     # One final check that shapes and logps at the starting points are okay.
+    ip: Dict[str, np.ndarray]
     for ip in initial_points:
         model.check_start_vals(ip)
         _check_start_shape(model, ip)
 
     # Create trace backends for each chain
-    traces = [
-        _init_trace(
-            expected_length=draws + tune,
-            stats_dtypes=step.stats_dtypes,
-            chain_number=chain_number,
-            trace=trace,
-            model=model,
-        )
-        for chain_number in range(chains)
-    ]
+    traces = init_traces(
+        backend=trace,
+        chains=chains,
+        expected_length=draws + tune,
+        step=step,
+        var_dtypes={vn: v.dtype for vn, v in ip.items()},
+        var_shapes={vn: v.shape for vn, v in ip.items()},
+        model=model,
+    )
 
     sample_args = {
         "draws": draws,
