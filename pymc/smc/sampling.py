@@ -34,6 +34,7 @@ from pymc.backends.base import MultiTrace
 from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import _cpu_count
 from pymc.smc.kernels import IMH
+from pymc.stats.convergence import log_warnings, run_convergence_checks
 from pymc.util import RandomState, _get_seeds_per_chain
 
 
@@ -237,7 +238,11 @@ def sample_smc(
     )
 
     if compute_convergence_checks:
-        _compute_convergence_checks(idata, draws, model, trace)
+        if idata is None:
+            idata = to_inference_data(trace, log_likelihood=False)
+        warns = run_convergence_checks(idata, model)
+        trace.report._add_warnings(warns)
+        log_warnings(warns)
 
     if return_inferencedata:
         assert idata is not None
@@ -296,21 +301,6 @@ def _save_sample_stats(
         idata = InferenceData(**idata, sample_stats=sample_stats)
 
     return sample_stats, idata
-
-
-def _compute_convergence_checks(
-    idata: Optional[InferenceData], draws: int, model: Model, trace: MultiTrace
-):
-    if draws < 100:
-        warnings.warn(
-            "The number of samples is too small to check convergence reliably.",
-            stacklevel=2,
-        )
-    else:
-        if idata is None:
-            idata = to_inference_data(trace, log_likelihood=False)
-        trace.report._run_convergence_checks(idata, model)
-    trace.report._log_summary()
 
 
 def _sample_smc_int(
