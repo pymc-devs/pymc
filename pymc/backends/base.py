@@ -21,7 +21,18 @@ import logging
 import warnings
 
 from abc import ABC
-from typing import Dict, List, Optional, Sequence, Set, Tuple, Union, cast
+from typing import (
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Sized,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import numpy as np
 
@@ -510,7 +521,10 @@ def _squeeze_cat(results, combine, squeeze):
     return results
 
 
-def _choose_chains(traces: Sequence[BaseTrace], tune: int) -> Tuple[List[BaseTrace], int]:
+S = TypeVar("S", bound=Sized)
+
+
+def _choose_chains(traces: Sequence[S], tune: int) -> Tuple[List[S], int]:
     """
     Filter and slice traces such that (n_traces * len(shortest_trace)) is maximized.
 

@@ -20,7 +20,7 @@ Created on Mar 7, 2011
 
 from abc import ABC, abstractmethod
 from enum import IntEnum, unique
-from typing import Dict, List, Sequence, Tuple, Union
+from typing import Any, Dict, List, Mapping, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -181,14 +181,14 @@ def flatten_steps(step: Union[BlockedStep, CompoundStep]) -> List[BlockedStep]:
 class StatsBijection:
     """Map between a `list` of stats to `dict` of stats."""
 
-    def __init__(self, sampler_stats_dtypes: Sequence[Dict[str, type]]) -> None:
+    def __init__(self, sampler_stats_dtypes: Sequence[Mapping[str, type]]) -> None:
         # Keep a list of flat vs. original stat names
         self._stat_groups: List[List[Tuple[str, str]]] = [
             [(f"sampler_{s}__{statname}", statname) for statname, _ in names_dtypes.items()]
             for s, names_dtypes in enumerate(sampler_stats_dtypes)
         ]
 
-    def map(self, stats_list: StatsType) -> StatsDict:
+    def map(self, stats_list: Sequence[Mapping[str, Any]]) -> StatsDict:
         """Combine stats dicts of multiple samplers into one dict."""
         stats_dict = {}
         for s, sts in enumerate(stats_list):
@@ -197,7 +197,7 @@ class StatsBijection:
                 stats_dict[sname] = sval
         return stats_dict
 
-    def rmap(self, stats_dict: StatsDict) -> StatsType:
+    def rmap(self, stats_dict: Mapping[str, Any]) -> StatsType:
         """Split a global stats dict into a list of sampler-wise stats dicts."""
         stats_list = []
         for namemap in self._stat_groups:
