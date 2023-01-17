@@ -537,56 +537,83 @@ class TestMarginalKron:
 
 
 class TestHSGP:
-    def setup_method(self):
-        rng = np.random.RandomState(10)
-        self.X = rng.randn(100, 1)
-        self.Y = rng.randn(100)
-        self.X1 = rng.randn(52, 1)
-        with pm.Model() as model:
-            cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
-            self.gp = pm.gp.HSGP(m=[500], c=4.0, cov_func=cov_func)
-            # Place a GP prior over the function f.
-        self.model = model
+    @pytest.fixture
+    def rng(self):
+        return np.random.RandomState(10)
 
-    def test_shapes(self):
-        with self.model:
-            ka = self.gp.approx_K(self.X)
-            kf = self.gp.cov_func(self.X)
+    @pytest.fixture
+    def data(self, rng):
+        X = rng.randn(100, 1)
+        X1 = rng.randn(52, 1)
+        return X, X1
+
+    @pytest.fixture
+    def X(self, data):
+        return data[0]
+
+    @pytest.fixture
+    def X1(self, data):
+        return data[1]
+
+    @pytest.fixture
+    def model(self):
+        return pm.Model()
+
+    @pytest.fixture
+    def cov_func(self):
+        return pm.gp.cov.ExpQuad(1, ls=0.1)
+
+    @pytest.fixture
+    def gp(self, cov_func):
+        gp = pm.gp.HSGP(m=[500], c=4.0, cov_func=cov_func)
+        return gp
+
+    def test_shapes(self, model, gp, X):
+        with model:
+            ka = gp.approx_K(X)
+            kf = gp.cov_func(X)
         # NOTE: relative difference is still high
         np.testing.assert_allclose(ka.eval(), kf.eval(), atol=1e-10)
 
-    def test_prior(self):
+    def test_prior(self, model, gp, X):
         # TODO: improve mathematical side of tests
         # So far I just check interfaces are the same for latent and HSGP
-        with self.model:
-            f1 = self.gp.prior("f1", self.X)
-            assert pm.draw(f1).shape == (100,)
+        with model:
+            f1 = gp.prior("f1", X)
+            assert pm.draw(f1).shape == (X.shape[0],)
             assert ~np.isnan(pm.draw(f1)).any()
 
-    def test_conditional(self):
+    def test_conditional(self, model, gp, X, X1):
         # TODO: improve mathematical side of tests
         # So far I just check interfaces are the same for latent and HSGP
-        with self.model:
+        with model:
             with pytest.raises(ValueError, match="Prior is not set"):
-                f1 = self.gp.conditional("f1", self.X1)
-            f1 = self.gp.prior("f1", self.X)
-            f2 = self.gp.conditional("f2", self.X1)
+                gp.conditional("f1", X1)
+            gp.prior("f1", X)
+            gp.conditional("f2", X1)
 
     def test_parametrization_m(self):
         cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
         with pytest.raises(
             ValueError, match="must be sequences, with one element per active dimension"
         ):
-            gp = pm.gp.HSGP(m=500, c=4.0, cov_func=cov_func)
+            pm.gp.HSGP(m=500, c=4.0, cov_func=cov_func)
 
         with pytest.raises(
             ValueError, match="must be sequences, with one element per active dimension"
         ):
-            gp = pm.gp.HSGP(m=[500, 12], c=4.0, cov_func=cov_func)
+            pm.gp.HSGP(m=[500, 12], c=4.0, cov_func=cov_func)
 
     def test_parametrization_L(self):
         cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
         with pytest.raises(
             ValueError, match="must be sequences, with one element per active dimension"
         ):
-            gp = pm.gp.HSGP(m=[500], L=[12, 12], cov_func=cov_func)
+            pm.gp.HSGP(m=[500], L=[12, 12], cov_func=cov_func)
+
+    @pytest.mark.parametrize("drop_first", [True, False])
+    def test_parametrization_drop_first(self, model, cov_func, X, drop_first):
+        with model:
+            gp = pm.gp.HSGP(m=[500], c=4.0, cov_func=cov_func, drop_first=drop_first)
+            gp.prior("f1", X)
+            assert model.f1_coeffs_.type.shape == (500 - drop_first,)
