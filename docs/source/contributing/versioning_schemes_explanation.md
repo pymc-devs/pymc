@@ -5,7 +5,7 @@ PyMC library. These exist in addition to more specific websites like PyMCon, spr
 This guide explains their relation and what type of content should go on each of the websites.
 
 :::{attention}
-All 3 websites share the same nabvar to give the appeareance of
+All 3 websites share the same nabvar to give the appearance of
 a single website to users, but their generation process is completely independent from one another.
 :::
 

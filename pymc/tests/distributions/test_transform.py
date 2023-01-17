@@ -42,7 +42,7 @@ from pymc.tests.distributions.util import (
 )
 from pymc.tests.helpers import SeededTest
 
-# some transforms (stick breaking) require additon of small slack in order to be numerically
+# some transforms (stick breaking) require addition of small slack in order to be numerically
 # stable. The minimal addable slack for float32 is higher thus we need to be less strict
 tol = 1e-7 if pytensor.config.floatX == "float64" else 1e-6
 

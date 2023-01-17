@@ -474,7 +474,7 @@ class DumpLoadTestCase(ModelBackendSampledTestCase):
 
 
 class BackendEqualityTestCase(ModelBackendSampledTestCase):
-    """Test equality of attirbutes from two backends.
+    """Test equality of attributes from two backends.
 
     Children must define
     - backend0

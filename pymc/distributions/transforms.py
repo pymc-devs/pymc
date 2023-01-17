@@ -256,7 +256,7 @@ class Interval(IntervalTransform):
             return 0, None
 
         with pm.Model():
-            interval = pm.distributions.transforms.Interval(bouns_fn=get_bounds)
+            interval = pm.distributions.transforms.Interval(bounds_fn=get_bounds)
             x = pm.Normal("x", transform=interval)
 
     Create a lower-bounded interval transform that depends on a distribution parameter

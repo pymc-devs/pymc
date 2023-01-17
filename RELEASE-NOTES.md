@@ -37,7 +37,7 @@ Feel free to read it, print it out, and give it to people on the street -- becau
   - Added a `logcdf` implementation for the Kumaraswamy distribution (see [#4706](https://github.com/pymc-devs/pymc/pull/4706)).
   - The `OrderedMultinomial` distribution has been added for use on ordinal data which are _aggregated_ by trial, like multinomial observations, whereas `OrderedLogistic` only accepts ordinal data in a _disaggregated_ format, like categorical observations (see [#4773](https://github.com/pymc-devs/pymc/pull/4773)).
   - The `Polya-Gamma` distribution has been added (see [#4531](https://github.com/pymc-devs/pymc/pull/4531)). To make use of this distribution, the [`polyagamma>=1.3.1`](https://pypi.org/project/polyagamma/) library must be installed and available in the user's environment.
-  - `pm.DensityDist` can now accept an optional `logcdf` keyword argument to pass in a function to compute the cummulative density function of the distribution (see [5026](https://github.com/pymc-devs/pymc/pull/5026)).
+  - `pm.DensityDist` can now accept an optional `logcdf` keyword argument to pass in a function to compute the cumulative density function of the distribution (see [5026](https://github.com/pymc-devs/pymc/pull/5026)).
   - `pm.DensityDist` can now accept an optional `moment` keyword argument to pass in a function to compute the moment of the distribution (see [5026](https://github.com/pymc-devs/pymc/pull/5026)).
 
   - Added an alternative parametrization, `logit_p` to `pm.Binomial` and `pm.Categorical` distributions (see [5637](https://github.com/pymc-devs/pymc/pull/5637)).
@@ -136,7 +136,7 @@ _Read on if you're a developer. Or curious. Or both._
     - The `gp.prior(..., shape=...)` kwarg was renamed to `size`.
     - Multiple methods including `gp.prior` now require explicit kwargs.
     - For all implementations, `gp.Latent`, `gp.Marginal` etc., `cov_func` and `mean_func` are required kwargs.
-    - In Windows test conda environment the `mkl` version is fixed to verison 2020.4, and `mkl-service` is fixed to `2.3.0`.  This was required for `gp.MarginalKron` to function properly.
+    - In Windows test conda environment the `mkl` version is fixed to version 2020.4, and `mkl-service` is fixed to `2.3.0`.  This was required for `gp.MarginalKron` to function properly.
     - `gp.MvStudentT` uses rotated samples from `StudentT` directly now, instead of sampling from `pm.Chi2` and then from `pm.Normal`.
     - The "jitter" parameter, or the diagonal noise term added to Gram matrices such that the Cholesky is numerically stable, is now exposed to the user instead of hard-coded.  See the function `gp.util.stabilize`.
     - The `is_observed` arguement for `gp.Marginal*` implementations has been deprecated.
@@ -223,7 +223,7 @@ This release breaks some APIs w.r.t. `3.10.0`. It also brings some dreadfully aw
 
 
 ### New Features
-- Option to set `check_bounds=False` when instantiating `pymc.Model()`. This turns off bounds checks that ensure that input parameters of distributions are valid. For correctly specified models, this is unneccessary as all parameters get automatically transformed so that all values are valid. Turning this off should lead to faster sampling (see [#4377](https://github.com/pymc-devs/pymc/pull/4377)).
+- Option to set `check_bounds=False` when instantiating `pymc.Model()`. This turns off bounds checks that ensure that input parameters of distributions are valid. For correctly specified models, this is unnecessary as all parameters get automatically transformed so that all values are valid. Turning this off should lead to faster sampling (see [#4377](https://github.com/pymc-devs/pymc/pull/4377)).
 - `OrderedProbit` distribution added (see [#4232](https://github.com/pymc-devs/pymc/pull/4232)).
 - `plot_posterior_predictive_glm` now works with `arviz.InferenceData` as well (see [#4234](https://github.com/pymc-devs/pymc/pull/4234))
 - Add `logcdf` method to all univariate discrete distributions (see [#4387](https://github.com/pymc-devs/pymc/pull/4387)).
@@ -439,7 +439,7 @@ Though we had to temporarily remove the `docs/*` folder from the tarball due to 
 
 ### Maintenance
 
-- All occurances of `sd` as a parameter name have been renamed to `sigma`. `sd` will continue to function for backwards compatibility.
+- All occurrences of `sd` as a parameter name have been renamed to `sigma`. `sd` will continue to function for backwards compatibility.
 - `HamiltonianMC` was ignoring certain arguments like `target_accept`, and not using the custom step size jitter function with expectation 1.
 - Made `BrokenPipeError` for parallel sampling more verbose on Windows.
 - Added the `broadcast_distribution_samples` function that helps broadcasting arrays of drawn samples, taking into account the requested `size` and the inferred distribution shape. This sometimes is needed by distributions that call several `rvs` separately within their `random` method, such as the `ZeroInflatedPoisson` (fixes issue [#3310](https://github.com/pymc-devs/pymc/issues/3310)).
@@ -676,7 +676,7 @@ This will be the last release to support Python 2.
 This version includes two major contributions from our Google Summer of Code 2017 students:
 
 * Maxim Kochurov extended and refactored the variational inference module. This primarily adds two important classes, representing operator variational inference (`OPVI`) objects and `Approximation` objects. These make it easier to extend existing `variational` classes, and to derive inference from `variational` optimizations, respectively. The `variational` module now also includes normalizing flows (`NFVI`).
-* Bill Engels added an extensive new Gaussian processes (`gp`) module. Standard GPs can be specified using either `Latent` or `Marginal` classes, depending on the nature of the underlying function. A Student-T process `TP` has been added. In order to accomodate larger datasets, approximate marginal Gaussian processes (`MarginalSparse`) have been added.
+* Bill Engels added an extensive new Gaussian processes (`gp`) module. Standard GPs can be specified using either `Latent` or `Marginal` classes, depending on the nature of the underlying function. A Student-T process `TP` has been added. In order to accommodate larger datasets, approximate marginal Gaussian processes (`MarginalSparse`) have been added.
 
 Documentation has been improved as the result of the project's monthly "docathons".
 

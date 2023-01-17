@@ -1300,7 +1300,7 @@ class LKJCholeskyCov:
 
     This defines a distribution over Cholesky decomposed covariance
     matrices, such that the underlying correlation matrices follow an
-    LKJ distribution [1] and the standard deviations follow an arbitray
+    LKJ distribution [1] and the standard deviations follow an arbitrary
     distribution specified by the user.
 
     Parameters
@@ -1391,7 +1391,7 @@ class LKJCholeskyCov:
     we use a log-transform to restrict them to positive values.
 
     To correctly compute log-likelihoods for the standard deviations
-    and the correlation matrix seperatly, we need to consider a
+    and the correlation matrix separately, we need to consider a
     second transformation: Given a cholesky factorization
     :math:`LL^T = \Sigma` of a covariance matrix we can recover the
     standard deviations :math:`\sigma` as the euclidean lengths of
@@ -1930,7 +1930,7 @@ class KroneckerNormal(Continuous):
         with pm.Model() as model:
             vals = pm.KroneckerNormal('vals', mu=mu, covs=covs, shape=N)
 
-    Effeciency gains are made by cholesky decomposing :math:`K_1` and
+    Efficiency gains are made by cholesky decomposing :math:`K_1` and
     :math:`K_2` individually rather than the larger :math:`K` matrix. Although
     only two matrices :math:`K_1` and :math:`K_2` are shown here, an arbitrary
     number of submatrices can be combined in this way. Choleskys and
@@ -2433,7 +2433,7 @@ class ZeroSumNormal(Distribution):
     Warnings
     --------
     ``sigma`` has to be a scalar, to ensure the zero-sum constraint.
-    The ability to specifiy a vector of ``sigma`` may be added in future versions.
+    The ability to specify a vector of ``sigma`` may be added in future versions.
 
     ``zerosum_axes`` has to be > 0. If you want the behavior of ``zerosum_axes = 0``,
     just use ``pm.Normal``.
@@ -2532,7 +2532,7 @@ class ZeroSumNormal(Distribution):
             support_shape.type(),
         )
 
-        # Zerosum-normaling is achieved by substracting the mean along the given zerosum_axes
+        # Zerosum-normaling is achieved by subtracting the mean along the given zerosum_axes
         zerosum_rv_ = normal_dist_
         for axis in range(zerosum_axes):
             zerosum_rv_ -= zerosum_rv_.mean(axis=-axis - 1, keepdims=True)

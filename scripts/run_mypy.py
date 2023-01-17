@@ -1,6 +1,6 @@
 """
 Invokes mypy and compare the reults with files in /pymc except tests
-and a list of files that are knwon to fail.
+and a list of files that are known to fail.
 
 Exit code 0 indicates that there are no unexpected results.
 
@@ -42,7 +42,6 @@ pymc/model_graph.py
 pymc/printing.py
 pymc/pytensorf.py
 pymc/sampling/jax.py
-pymc/stats/log_likelihood.py
 pymc/variational/approximations.py
 pymc/variational/opvi.py
 """

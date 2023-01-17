@@ -221,7 +221,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
 def get_broadcastable_dist_samples(
     samples, size=None, must_bcast_with=None, return_out_shape=False
 ):
-    """Get a view of the samples drawn from distributions which adds new axises
+    """Get a view of the samples drawn from distributions which adds new axes
     in between the `size` prepend and the distribution's `shape`. These views
     should be able to broadcast the samples from the distrubtions taking into
     account the `size` (i.e. the number of samples) of the draw, which is
@@ -546,7 +546,7 @@ def find_size(
 
 
 def rv_size_is_none(size: Variable) -> bool:
-    """Check wether an rv size is None (ie., at.Constant([]))"""
+    """Check whether an rv size is None (ie., at.Constant([]))"""
     return size.type.shape == (0,)  # type: ignore [attr-defined]
 
 
@@ -740,14 +740,15 @@ def get_support_shape(
             observed.shape[i] - support_shape_offset[i] for i in np.arange(-ndim_supp, 0)
         ]
 
-    # We did not learn anything
-    if inferred_support_shape is None and support_shape is None:
-        return None
-    # Only source of information was the originally provided support_shape
-    elif inferred_support_shape is None:
-        inferred_support_shape = support_shape
-    # There were two sources of support_shape, make sure they are consistent
+    if inferred_support_shape is None:
+        if support_shape is not None:
+            # Only source of information was the originally provided support_shape
+            inferred_support_shape = support_shape
+        else:
+            # We did not learn anything
+            return None
     elif support_shape is not None:
+        # There were two sources of support_shape, make sure they are consistent
         inferred_support_shape = [
             cast(
                 Variable,
@@ -758,6 +759,8 @@ def get_support_shape(
             for inferred, explicit in zip(inferred_support_shape, support_shape)
         ]
 
+    # Workaround https://github.com/pymc-devs/pytensor/issues/193 typing bug in stack signature
+    inferred_support_shape = cast(Sequence[TensorVariable], inferred_support_shape)
     return at.stack(inferred_support_shape)
 
 

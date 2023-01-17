@@ -492,7 +492,7 @@ class TestCustomSymbolicDist:
                 CustomDist("custom_dist", random=random)
 
 
-class TestSymbolicRandomVarible:
+class TestSymbolicRandomVariable:
     def test_inline(self):
         class TestSymbolicRV(SymbolicRandomVariable):
             pass

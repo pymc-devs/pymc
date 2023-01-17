@@ -89,7 +89,7 @@ def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[List[Me
         return None
 
     # Replace bounds by `+-inf` if `y = clip(x, x, ?)` or `y=clip(x, ?, x)`
-    # This is used in `clip_logprob` to generate a more succint logprob graph
+    # This is used in `clip_logprob` to generate a more succinct logprob graph
     # for one-sided clipped random variables
     lower_bound = lower_bound if (lower_bound is not base_var) else at.constant(-np.inf)
     upper_bound = upper_bound if (upper_bound is not base_var) else at.constant(np.inf)

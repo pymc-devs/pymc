@@ -122,7 +122,7 @@ def test_deterministic_samples(sampler):
 
 
 def test_get_jaxified_graph():
-    # Check that jaxifying a graph does not emmit the Supervisor Warning. This test can
+    # Check that jaxifying a graph does not emit the Supervisor Warning. This test can
     # be removed once https://github.com/pytensor-devs/pytensor/issues/637 is sorted.
     x = at.scalar("x")
     y = at.exp(x)

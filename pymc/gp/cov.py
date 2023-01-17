@@ -445,7 +445,7 @@ class Periodic(Stationary):
 
 class ExpQuad(Stationary):
     r"""
-    The Exponentiated Quadratic kernel.  Also refered to as the Squared
+    The Exponentiated Quadratic kernel.  Also referred to as the Squared
     Exponential, or Radial Basis Function kernel.
 
     .. math::

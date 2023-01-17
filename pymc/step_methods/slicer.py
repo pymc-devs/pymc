@@ -21,7 +21,8 @@ import numpy.random as nr
 
 from pymc.blocking import RaveledVars, StatsType
 from pymc.model import modelcontext
-from pymc.step_methods.arraystep import ArrayStep, Competence
+from pymc.step_methods.arraystep import ArrayStep
+from pymc.step_methods.compound import Competence
 from pymc.util import get_value_vars_from_user_vars
 from pymc.vartypes import continuous_types
 
@@ -80,7 +81,7 @@ class Slice(ArrayStep):
 
         q = np.copy(q0_val)
         ql = np.copy(q0_val)  # l for left boundary
-        qr = np.copy(q0_val)  # r for right boudary
+        qr = np.copy(q0_val)  # r for right boundary
 
         # The points are not copied, so it's fine to update them inplace in the
         # loop below
@@ -115,7 +116,7 @@ class Slice(ArrayStep):
 
             cnt = 0
             q[i] = nr.uniform(ql[i], qr[i])
-            while y > logp(q_ra):  # Changed leq to lt, to accomodate for locally flat posteriors
+            while y > logp(q_ra):  # Changed leq to lt, to accommodate for locally flat posteriors
                 # Sample uniformly from slice
                 if q[i] > q0_val[i]:
                     qr[i] = q[i]

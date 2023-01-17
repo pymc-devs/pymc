@@ -103,7 +103,7 @@ def find_MAP(
         try:
             vars = get_value_vars_from_user_vars(vars, model)
         except ValueError as exc:
-            # Accomodate case where user passed non-pure RV nodes
+            # Accommodate case where user passed non-pure RV nodes
             vars = pm.inputvars(model.replace_rvs_by_values(vars))
             if vars:
                 warnings.warn(
