@@ -49,7 +49,10 @@ __all__ = [
 
 
 def _verify_scalar(value):
-    if isinstance(value, pytensor.compile.SharedVariable) and value.get_value().squeeze().shape == ():
+    if (
+        isinstance(value, pytensor.compile.SharedVariable)
+        and value.get_value().squeeze().shape == ()
+    ):
         return at.squeeze(value)
     elif np.asarray(value).squeeze().shape == ():
         return np.squeeze(value)
