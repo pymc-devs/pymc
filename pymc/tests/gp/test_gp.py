@@ -534,3 +534,59 @@ class TestMarginalKron:
             gp2 = pm.gp.MarginalKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
         with pytest.raises(TypeError):
             gp1 + gp2
+
+
+class TestHSGP:
+    def setup_method(self):
+        rng = np.random.RandomState(10)
+        self.X = rng.randn(100, 1)
+        self.Y = rng.randn(100)
+        self.X1 = rng.randn(52, 1)
+        with pm.Model() as model:
+            cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
+            self.gp = pm.gp.HSGP(m=[500], c=4.0, cov_func=cov_func)
+            # Place a GP prior over the function f.
+        self.model = model
+
+    def test_shapes(self):
+        with self.model:
+            ka = self.gp.approx_K(self.X)
+            kf = self.gp.cov_func(self.X)
+        # NOTE: relative difference is still high
+        np.testing.assert_allclose(ka.eval(), kf.eval(), atol=1e-10)
+
+    def test_prior(self):
+        # TODO: improve mathematical side of tests
+        # So far I just check interfaces are the same for latent and HSGP
+        with self.model:
+            f1 = self.gp.prior("f1", self.X)
+            assert pm.draw(f1).shape == (100,)
+            assert ~np.isnan(pm.draw(f1)).any()
+
+    def test_conditional(self):
+        # TODO: improve mathematical side of tests
+        # So far I just check interfaces are the same for latent and HSGP
+        with self.model:
+            with pytest.raises(ValueError, match="Prior is not set"):
+                f1 = self.gp.conditional("f1", self.X1)
+            f1 = self.gp.prior("f1", self.X)
+            f2 = self.gp.conditional("f2", self.X1)
+
+    def test_parametrization_m(self):
+        cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
+        with pytest.raises(
+            ValueError, match="must be sequences, with one element per active dimension"
+        ):
+            gp = pm.gp.HSGP(m=500, c=4.0, cov_func=cov_func)
+
+        with pytest.raises(
+            ValueError, match="must be sequences, with one element per active dimension"
+        ):
+            gp = pm.gp.HSGP(m=[500, 12], c=4.0, cov_func=cov_func)
+
+    def test_parametrization_L(self):
+        cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
+        with pytest.raises(
+            ValueError, match="must be sequences, with one element per active dimension"
+        ):
+            gp = pm.gp.HSGP(m=[500], L=[12, 12], cov_func=cov_func)

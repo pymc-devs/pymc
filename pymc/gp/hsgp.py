@@ -109,20 +109,21 @@ class HSGP(Base):
         drop_first=False,
         *,
         mean_func: Mean = Zero(),
-        cov_func: Optional[Covariance] = None,
+        cov_func: Covariance,
     ):
         arg_err_msg = (
-            "`m` and L, if provided, must be lists or tuples, with one element per active "
+            "`m` and L, if provided, must be sequences, with one element per active "
             "dimension of the kernel or covariance function."
         )
-        try:
-            if len(m) != cov_func.D:
-                raise ValueError(arg_err_msg)
-        except TypeError as e:
-            raise ValueError(arg_err_msg) from e
-
-        if L is not None and len(L) != cov_func.D:
+        if not isinstance(m, Sequence):
             raise ValueError(arg_err_msg)
+        if len(m) != cov_func.D:
+            raise ValueError(arg_err_msg)
+        m = tuple(m)
+        if L is not None and (not isinstance(L, Sequence) or len(L) != cov_func.D):
+            raise ValueError(arg_err_msg)
+        elif L is not None:
+            L = tuple(L)
 
         if L is None and c < 1.2:
             warnings.warn(
@@ -165,11 +166,12 @@ class HSGP(Base):
         omega = at.sqrt(eigvals)
         return omega, phi, m_star
 
-    def approx_K(self, X, L, m):
+    def approx_K(self, X):
         """A helper function which gives the approximate kernel or covariance matrix K. This can be
         helpful when trying to see how well an approximation may work.
         """
         X, _ = self.cov_func._slice(X)
+        self._set_boundary(X)
         omega, phi, _ = self._eigendecomposition(X, self.L, self.m, self.cov_func.D)
         psd = self.cov_func.psd(omega)
         return at.dot(phi * psd, at.transpose(phi))
@@ -209,7 +211,11 @@ class HSGP(Base):
             )
         return self.f
 
-    def _build_conditional(self, name, Xnew):
+    def _build_conditional(self, Xnew):
+        if getattr(self, "beta", None) is None:
+            raise ValueError(
+                "Prior is not set, can't create a conditional. Call `.prior(name, X)` first."
+            )
         Xnew, _ = self.cov_func._slice(Xnew)
         omega, phi, _ = self._eigendecomposition(Xnew, self.L, self.m, self.D)
         psd = self.cov_func.psd(omega)
@@ -229,5 +235,5 @@ class HSGP(Base):
         dims: None
             Dimension name for the GP random variable.
         """
-        fnew = self._build_conditional(name, Xnew)
+        fnew = self._build_conditional(Xnew)
         return pm.Deterministic(name, fnew, dims=dims)
