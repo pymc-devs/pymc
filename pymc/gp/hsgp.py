@@ -30,13 +30,13 @@ class HSGP(Base):
     R"""
     Hilbert Space Gaussian process
 
-    The `gp.HSGP` class is an implementation of the Hilbert Space Gaussian process.  This
-    approximation is a linear model that uses a fixed set of basis vectors, whose coeficients are
-    random functions of a stationary covariance function's power spectral density.  Like
-    `gp.Latent`, it does not assume a Gaussian noise model and can be used with any likelihood or as
-    a component anywhere within a model.  Also like `gp.Latent`, it has `prior` and `conditional`
-    methods.  It additonally has an `approx_K` method which returns the approximate covariance
-    matrix.  It supports a limited subset of additive covariances.
+    The `gp.HSGP` class is an implementation of the Hilbert Space Gaussian process.  It is a
+    reduced rank GP approximation that uses a fixed set of basis vectors whose coefficients are
+    random functions of a stationary covariance function's power spectral density.  It's usage
+    is largely similar to `gp.Latent`.  Like `gp.Latent`, it does not assume a Gaussian noise model
+    and can be used with any likelihood, or as a component anywhere within a model.  Also like 
+    `gp.Latent`, it has `prior` and `conditional` methods.  It supports a limited subset of 
+    additive covariances.  
 
     For information on choosing appropriate `m`, `L`, and `c`, refer Ruitort-Mayol et. al. or to the
     pymc examples documentation.
@@ -77,7 +77,7 @@ class HSGP(Base):
 
             # Specify the HSGP.  Use 50 basis vectors across each active dimension, [1, 2]  for a
             # total of 50 * 50 = 2500.  The range of the data is inferred from X, and the boundary
-            # condition multiplier `c` uses 4 * half range.
+            # condition multiplier `c` uses 4 * half range of the data, `L`.
             gp = pm.gp.HSGP(m=[50, 50], c=4.0, cov_func=cov_func)
 
             # Place a GP prior over the function f.
