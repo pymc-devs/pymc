@@ -181,6 +181,61 @@ class TestCovProd:
             cov = M + pm.gp.cov.ExpQuad(1, 1.0)
 
 
+class TestCovPSD:
+    def test_covpsd_add(self):
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov1 = 2 * pm.gp.cov.ExpQuad(1, 0.1)
+            cov2 = 5 * pm.gp.cov.ExpQuad(1, 1.0)
+            cov = cov1 + cov2
+        psd1 = cov1.psd(omega[:, None]).eval()
+        psd2 = cov2.psd(omega[:, None]).eval()
+        psd = cov.psd(omega[:, None]).eval()
+        npt.assert_allclose(psd, psd1 + psd2)
+
+    def test_copsd_multiply(self):
+        # This could be implemented via convolution
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov1 = 2 * pm.gp.cov.ExpQuad(1, ls=1)
+            cov2 = pm.gp.cov.ExpQuad(1, ls=1)
+
+        with pytest.raises(NotImplementedError):
+            psd = (cov1 * cov2).psd(omega[:, None]).eval()
+
+    def test_covpsd_nonstationary1(self):
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov = 2 * pm.gp.cov.Linear(1, c=5)
+
+        with pytest.raises(ValueError):
+            psd = cov.psd(omega[:, None]).eval()
+
+    def test_covpsd_nonstationary2(self):
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov = 2 * pm.gp.cov.ExpQuad(1, ls=1) + 10.0
+
+        with pytest.raises(ValueError):
+            psd = cov.psd(omega[:, None]).eval()
+
+    def test_covpsd_notimplemented(self):
+        class NewStationaryCov(pm.gp.cov.Stationary):
+            pass
+
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov = 2 * NewStationaryCov(1, ls=1)
+
+        with pytest.raises(NotImplementedError):
+            psd = cov.psd(omega[:, None]).eval()
+
+
 class TestCovExponentiation:
     def test_symexp_cov(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -228,7 +283,7 @@ class TestCovExponentiation:
 
     def test_invalid_covexp(self):
         X = np.linspace(0, 1, 10)[:, None]
-        with pytest.raises(ValueError, match=r"can only be exponentiated by a scalar value"):
+        with pytest.raises(ValueError, match=r"scalar value is required"):
             with pm.Model() as model:
                 a = np.array([[1.0, 2.0]])
                 cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
@@ -262,7 +317,7 @@ class TestCovKron:
                 + pm.gp.cov.ExpQuad(1, 0.1)
                 + pm.gp.cov.ExpQuad(1, 0.1) * pm.gp.cov.ExpQuad(1, 0.1)
             )
-            cov2 = pm.gp.cov.ExpQuad(1, 0.1) * pm.gp.cov.ExpQuad(2, 0.1)
+            cov2 = pm.gp.cov.ExpQuad(2, 0.1) * pm.gp.cov.ExpQuad(2, 0.1)
             cov = pm.gp.cov.Kron([cov1, cov2])
         K_true = kronecker(cov1(X1).eval(), cov2(X2).eval()).eval()
         K = cov(X).eval()
@@ -373,6 +428,15 @@ class TestExpQuad:
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
+    def test_psd(self):
+        # compare to simple 1d formula
+        X = np.linspace(0, 1, 10)[:, None]
+        omega = np.linspace(0, 2, 50)
+        ell = 2.0
+        true_1d_psd = np.sqrt(2 * np.pi * np.square(ell)) * np.exp(-0.5 * np.square(ell * omega))
+        test_1d_psd = pm.gp.cov.ExpQuad(1, ls=ell).psd(omega[:, None]).flatten().eval()
+        npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
+
 
 class TestWhiteNoise:
     def test_1d(self):
@@ -449,6 +513,16 @@ class TestMatern52:
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
+    def test_psd(self):
+        # compare to simple 1d formula
+        X = np.linspace(0, 1, 10)[:, None]
+        omega = np.linspace(0, 2, 50)
+        ell = 2.0
+        lamda = np.sqrt(5) / ell
+        true_1d_psd = (16.0 / 3.0) * np.power(lamda, 5) * np.power(lamda**2 + omega**2, -3)
+        test_1d_psd = pm.gp.cov.Matern52(1, ls=ell).psd(omega[:, None]).flatten().eval()
+        npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
+
 
 class TestMatern32:
     def test_1d(self):
@@ -462,6 +536,16 @@ class TestMatern32:
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_psd(self):
+        # compare to simple 1d formula
+        X = np.linspace(0, 1, 10)[:, None]
+        omega = np.linspace(0, 2, 50)
+        ell = 2.0
+        lamda = np.sqrt(3) / ell
+        true_1d_psd = 4 * np.power(lamda, 3) * np.power(lamda**2 + omega**2, -2)
+        test_1d_psd = pm.gp.cov.Matern32(1, ls=ell).psd(omega[:, None]).flatten().eval()
+        npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
 
 
 class TestMatern12:
