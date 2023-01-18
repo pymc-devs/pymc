@@ -34,9 +34,9 @@ class HSGP(Base):
     reduced rank GP approximation that uses a fixed set of basis vectors whose coefficients are
     random functions of a stationary covariance function's power spectral density.  It's usage
     is largely similar to `gp.Latent`.  Like `gp.Latent`, it does not assume a Gaussian noise model
-    and can be used with any likelihood, or as a component anywhere within a model.  Also like 
-    `gp.Latent`, it has `prior` and `conditional` methods.  It supports a limited subset of 
-    additive covariances.  
+    and can be used with any likelihood, or as a component anywhere within a model.  Also like
+    `gp.Latent`, it has `prior` and `conditional` methods.  It supports a limited subset of
+    additive covariances.
 
     For information on choosing appropriate `m`, `L`, and `c`, refer Ruitort-Mayol et. al. or to the
     pymc examples documentation.
