@@ -368,7 +368,7 @@ class TestCustomDist:
 
 class TestCustomSymbolicDist:
     def test_basic(self):
-        def custom_random(mu, sigma, size):
+        def custom_dist(mu, sigma, size):
             return at.exp(pm.Normal.dist(mu, sigma, size=size))
 
         with Model() as m:
@@ -379,7 +379,7 @@ class TestCustomSymbolicDist:
                     "lognormal",
                     mu,
                     sigma,
-                    random=custom_random,
+                    dist=custom_dist,
                     size=(10,),
                     transform=log,
                     initval=np.ones(10),
@@ -401,7 +401,7 @@ class TestCustomSymbolicDist:
         np.testing.assert_allclose(m.compile_logp()(ip), ref_m.compile_logp()(ip))
 
     def test_random_multiple_rngs(self):
-        def custom_random(p, sigma, size):
+        def custom_dist(p, sigma, size):
             idx = pm.Bernoulli.dist(p=p)
             comps = pm.Normal.dist([-sigma, sigma], 1e-1, size=(*size, 2)).T
             return comps[idx]
@@ -411,7 +411,7 @@ class TestCustomSymbolicDist:
                 0.5,
                 10.0,
                 class_name="customdist",
-                random=custom_random,
+                dist=custom_dist,
                 size=(10,),
             )
 
@@ -426,7 +426,7 @@ class TestCustomSymbolicDist:
         assert np.unique(draws).size == 20
 
     def test_custom_methods(self):
-        def custom_random(mu, size):
+        def custom_dist(mu, size):
             if rv_size_is_none(size):
                 return mu
             return at.full(size, mu)
@@ -444,7 +444,7 @@ class TestCustomSymbolicDist:
             customdist = CustomDist.dist(
                 [np.e, np.e],
                 class_name="customdist",
-                random=custom_random,
+                dist=custom_dist,
                 moment=custom_moment,
                 logp=custom_logp,
                 logcdf=custom_logcdf,
@@ -458,7 +458,7 @@ class TestCustomSymbolicDist:
         np.testing.assert_allclose(logcdf(customdist, [0, 0]).eval(), [np.e + 3, np.e + 3])
 
     def test_change_size(self):
-        def custom_random(mu, sigma, size):
+        def custom_dist(mu, sigma, size):
             return at.exp(pm.Normal.dist(mu, sigma, size=size))
 
         with pytest.warns(UserWarning, match="experimental"):
@@ -466,7 +466,7 @@ class TestCustomSymbolicDist:
                 0,
                 1,
                 class_name="lognormal",
-                random=custom_random,
+                dist=custom_dist,
                 size=(10,),
             )
         assert isinstance(lognormal.owner.op, CustomSymbolicDistRV)
@@ -481,15 +481,26 @@ class TestCustomSymbolicDist:
         assert tuple(new_lognormal.shape.eval()) == (2, 5, 10)
 
     def test_error_model_access(self):
-        def random(size):
+        def custom_dist(size):
             return pm.Flat("Flat", size=size)
 
         with pm.Model() as m:
             with pytest.raises(
                 BlockModelAccessError,
-                match="Model variables cannot be created in the random function",
+                match="Model variables cannot be created in the dist function",
             ):
-                CustomDist("custom_dist", random=random)
+                CustomDist("custom_dist", dist=custom_dist)
+
+    def test_api_change_error(self):
+        def old_random(size):
+            return pm.Flat.dist(size=size)
+
+        # Old API raises
+        with pytest.raises(TypeError, match="API change: function passed to `random` argument"):
+            pm.CustomDist.dist(random=old_random, class_name="custom_dist")
+
+        # New API is fine
+        pm.CustomDist.dist(dist=old_random, class_name="custom_dist")
 
 
 class TestSymbolicRandomVariable:
