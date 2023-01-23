@@ -1317,6 +1317,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         # the length of the corresponding RV dimension.
         if dims is not None:
             for d, dname in enumerate(dims):
+                if not isinstance(dname, str):
+                    raise TypeError(f"Dims must be string. Got {dname} of type {type(dname)}")
                 if dname not in self.dim_lengths:
                     self.add_coord(dname, values=None, length=rv_var.shape[d])
 
