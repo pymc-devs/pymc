@@ -871,6 +871,23 @@ def test_add_named_variable_checks_dim_name():
         pmodel.add_named_variable(rv2, dims=("nomnom", None))
 
 
+def test_dims_type_check():
+    with pm.Model(coords={"a": range(5)}) as m:
+        with pytest.raises(TypeError, match="Dims must be string"):
+            x = pm.Normal("x", shape=(10, 5), dims=(None, "a"))
+
+
+def test_none_coords_autonumbering():
+    with pm.Model() as m:
+        m.add_coord(name="a", values=None, length=3)
+        m.add_coord(name="b", values=range(5))
+        x = pm.Normal("x", dims=("a", "b"))
+        prior = pm.sample_prior_predictive(samples=2).prior
+    assert prior["x"].shape == (1, 2, 3, 5)
+    assert list(prior.coords["a"].values) == list(range(3))
+    assert list(prior.coords["b"].values) == list(range(5))
+
+
 def test_set_data_indirect_resize():
     with pm.Model() as pmodel:
         pmodel.add_coord("mdim", mutable=True, length=2)
