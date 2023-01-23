@@ -2985,7 +2985,9 @@ def triangular_default_transform(op, rv):
 
 class Gumbel(Continuous):
     r"""
-    Univariate Gumbel log-likelihood.
+    Univariate Gumbel right Skew log-likelihood. This parameterization will provide the extrem maximum value. 
+    Those looking to find the extrem minimum provided by the left skew Gumbel should 
+    invert the sign to all X and Y values (positive to negative and negative to positive).
 
     The pdf of this distribution is
 
