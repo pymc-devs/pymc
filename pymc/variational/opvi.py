@@ -978,7 +978,7 @@ class Group(WithMemoization):
 
     @pytensor.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(
-        self, node: Variable, s, d: bool, more_replacements: dict | None = None
+        self, node: Variable, s, d: bool, more_replacements: dict = None
     ) -> list[Variable]:
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
         :func:`symbolic_single_sample` new random generator can be allocated and applied to node
@@ -1129,7 +1129,7 @@ class Group(WithMemoization):
         shared = shared.eval()
         result = dict()
         for name, s, shape, dtype in self.ordering.values():
-            dims = self.model.RV_dims.get(name, None)
+            dims = self.model.named_vars_to_dims.get(name, None)
             if dims is not None:
                 coords = {d: np.array(self.model.coords[d]) for d in dims}
             else:
