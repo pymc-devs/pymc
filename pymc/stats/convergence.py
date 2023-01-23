@@ -53,10 +53,13 @@ def run_convergence_checks(idata: arviz.InferenceData, model) -> List[SamplerWar
         warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info", None, None, None)
         return [warn]
 
+    if idata["posterior"].sizes["draw"] < 100:
+        msg = "The number of samples is too small to check convergence reliably."
+        warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info", None, None, None)
+        return [warn]
+
     if idata["posterior"].sizes["chain"] == 1:
-        msg = (
-            "Only one chain was sampled, this makes it impossible to " "run some convergence checks"
-        )
+        msg = "Only one chain was sampled, this makes it impossible to run some convergence checks"
         warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info")
         return [warn]
 

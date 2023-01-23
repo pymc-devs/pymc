@@ -11,8 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
-
+from copy import copy
 from typing import Dict, List, Sequence, Union
 
 import numpy as np
@@ -209,4 +208,24 @@ def ignore_logprob(rv: TensorVariable) -> TensorVariable:
     if op_type.__name__.startswith(prefix):
         return rv
     new_node = assign_custom_measurable_outputs(node, type_prefix=prefix)
+    return new_node.outputs[node.outputs.index(rv)]
+
+
+def reconsider_logprob(rv: TensorVariable) -> TensorVariable:
+    """Return a duplicated variable that is considered when creating logprob graphs
+
+    This undoes the effect of `ignore_logprob`.
+
+    If a variable was not ignored, it is returned directly.
+    """
+    prefix = "Unmeasurable"
+    node = rv.owner
+    op_type = type(node.op)
+    if not op_type.__name__.startswith(prefix):
+        return rv
+
+    new_node = node.clone()
+    original_op_type = new_node.op.original_op_type
+    new_node.op = copy(new_node.op)
+    new_node.op.__class__ = original_op_type
     return new_node.outputs[node.outputs.index(rv)]

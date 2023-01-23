@@ -40,7 +40,11 @@ from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_
 from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import Draw, _cpu_count
 from pymc.sampling.population import _sample_population
-from pymc.stats.convergence import log_warning_stats, run_convergence_checks
+from pymc.stats.convergence import (
+    log_warning_stats,
+    log_warnings,
+    run_convergence_checks,
+)
 from pymc.step_methods import NUTS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
@@ -602,7 +606,6 @@ def sample(
         f"({n_tune*n_chains:_d} + {n_draws*n_chains:_d} draws total) "
         f"took {t_sampling:.0f} seconds."
     )
-    mtrace.report._log_summary()
 
     idata = None
     if compute_convergence_checks or return_inferencedata:
@@ -612,14 +615,9 @@ def sample(
         idata = pm.to_inference_data(mtrace, **ikwargs)
 
         if compute_convergence_checks:
-            if draws - tune < 100:
-                warnings.warn(
-                    "The number of samples is too small to check convergence reliably.",
-                    stacklevel=2,
-                )
-            else:
-                convergence_warnings = run_convergence_checks(idata, model)
-                mtrace.report._add_warnings(convergence_warnings)
+            warns = run_convergence_checks(idata, model)
+            mtrace.report._add_warnings(warns)
+            log_warnings(warns)
 
         if return_inferencedata:
             # By default we drop the "warning" stat which contains `SamplerWarning`
@@ -925,9 +923,6 @@ def _mp_sample(
             strace = traces[error._chain]
             for strace in traces:
                 strace.close()
-
-            multitrace = MultiTrace(traces)
-            multitrace._report._log_summary()
             raise
     except KeyboardInterrupt:
         pass

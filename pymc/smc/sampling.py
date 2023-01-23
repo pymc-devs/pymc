@@ -19,6 +19,7 @@ import warnings
 
 from collections import defaultdict
 from itertools import repeat
+from typing import Any, Dict, Optional, Tuple, Union
 
 import cloudpickle
 import numpy as np
@@ -30,9 +31,10 @@ import pymc
 
 from pymc.backends.arviz import dict_to_dataset, to_inference_data
 from pymc.backends.base import MultiTrace
-from pymc.model import modelcontext
+from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import _cpu_count
 from pymc.smc.kernels import IMH
+from pymc.stats.convergence import log_warnings, run_convergence_checks
 from pymc.util import RandomState, _get_seeds_per_chain
 
 
@@ -50,7 +52,7 @@ def sample_smc(
     idata_kwargs=None,
     progressbar=True,
     **kernel_kwargs,
-):
+) -> Union[InferenceData, MultiTrace]:
     r"""
     Sequential Monte Carlo based sampling.
 
@@ -236,20 +238,28 @@ def sample_smc(
     )
 
     if compute_convergence_checks:
-        _compute_convergence_checks(idata, draws, model, trace)
-    return idata if return_inferencedata else trace
+        if idata is None:
+            idata = to_inference_data(trace, log_likelihood=False)
+        warns = run_convergence_checks(idata, model)
+        trace.report._add_warnings(warns)
+        log_warnings(warns)
+
+    if return_inferencedata:
+        assert idata is not None
+        return idata
+    return trace
 
 
 def _save_sample_stats(
     sample_settings,
     sample_stats,
     chains,
-    trace,
-    return_inferencedata,
+    trace: MultiTrace,
+    return_inferencedata: bool,
     _t_sampling,
     idata_kwargs,
-    model,
-):
+    model: Model,
+) -> Tuple[Optional[Any], Optional[InferenceData]]:
     sample_settings_dict = sample_settings[0]
     sample_settings_dict["_t_sampling"] = _t_sampling
     sample_stats_dict = sample_stats[0]
@@ -262,12 +272,12 @@ def _save_sample_stats(
                 value_list.append(chain_sample_stats[stat])
             sample_stats_dict[stat] = value_list
 
+    idata: Optional[InferenceData] = None
     if not return_inferencedata:
         for stat, value in sample_stats_dict.items():
             setattr(trace.report, stat, value)
         for stat, value in sample_settings_dict.items():
             setattr(trace.report, stat, value)
-        idata = None
     else:
         for stat, value in sample_stats_dict.items():
             if chains > 1:
@@ -284,26 +294,13 @@ def _save_sample_stats(
             library=pymc,
         )
 
-        ikwargs = dict(model=model)
+        ikwargs: Dict[str, Any] = dict(model=model)
         if idata_kwargs is not None:
             ikwargs.update(idata_kwargs)
         idata = to_inference_data(trace, **ikwargs)
         idata = InferenceData(**idata, sample_stats=sample_stats)
 
     return sample_stats, idata
-
-
-def _compute_convergence_checks(idata, draws, model, trace):
-    if draws < 100:
-        warnings.warn(
-            "The number of samples is too small to check convergence reliably.",
-            stacklevel=2,
-        )
-    else:
-        if idata is None:
-            idata = to_inference_data(trace, log_likelihood=False)
-        trace.report._run_convergence_checks(idata, model)
-    trace.report._log_summary()
 
 
 def _sample_smc_int(
