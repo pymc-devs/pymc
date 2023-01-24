@@ -50,7 +50,6 @@ from __future__ import annotations
 import collections
 import itertools
 import warnings
-from typing import Optional
 
 import numpy as np
 import pytensor
@@ -979,7 +978,7 @@ class Group(WithMemoization):
 
     @pytensor.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(
-        self, node: Variable, s, d: bool, more_replacements: Optional[dict] = None
+        self, node: Variable, s, d: bool, more_replacements: dict = None
     ) -> list[Variable]:
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
         :func:`symbolic_single_sample` new random generator can be allocated and applied to node
