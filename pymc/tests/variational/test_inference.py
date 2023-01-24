@@ -367,7 +367,7 @@ def hierarchical_model_data():
         "group_d2": np.arange(7),
     }
     group_shape = tuple(len(d) for d in group_coords.values())
-    data_coords = {"data_d": np.arange(11)} | group_coords
+    data_coords = {"data_d": np.arange(11), **group_coords}
 
     data_shape = tuple(len(d) for d in data_coords.values())
 
