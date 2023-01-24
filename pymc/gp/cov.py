@@ -160,7 +160,7 @@ class Covariance(BaseCovariance):
         function operates on.
     """
 
-    def __init__(self, input_dim, active_dims=None):
+    def __init__(self, input_dim: int, active_dims: Optional[Sequence[int]]=None):
         self.input_dim = input_dim
         if active_dims is None:
             self.active_dims = np.arange(input_dim)
