@@ -106,7 +106,7 @@ class HSGP(Base):
         m: Sequence[int],
         L: Optional[Sequence[float]] = None,
         c: float = 1.5,
-        drop_first=False,
+        drop_first: bool = False,
         *,
         mean_func: Mean = Zero(),
         cov_func: Covariance,
@@ -117,17 +117,17 @@ class HSGP(Base):
         )
         if not isinstance(m, Sequence):
             raise ValueError(arg_err_msg)
-        if len(m) != cov_func.D:
+        if len(m) != cov_func.n_dims:
             raise ValueError(arg_err_msg)
         m = tuple(m)
-        if L is not None and (not isinstance(L, Sequence) or len(L) != cov_func.D):
+        if L is not None and (not isinstance(L, Sequence) or len(L) != cov_func.n_dims):
             raise ValueError(arg_err_msg)
         elif L is not None:
             L = tuple(L)
 
         if L is None and c < 1.2:
             warnings.warn(
-                "Most applications will require a `c >= 1.2` for accuracy at the boundaries of the "
+                "Most applications will require `c >= 1.2` for accuracy at the boundaries of the "
                 "domain."
             )
 
@@ -135,11 +135,11 @@ class HSGP(Base):
         self.m = m
         self.L = L
         self.c = c
-        self.D = cov_func.D
+        self.n_dims = cov_func.n_dims
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
-    def __add__(self, other):
+    def __add__(self, other: HSGP):
         raise NotImplementedError("Additive HSGPs aren't supported ")
 
     def _set_boundary(self, X):
@@ -153,14 +153,14 @@ class HSGP(Base):
             self.L = at.as_tensor_variable(self.L)
 
     @staticmethod
-    def _eigendecomposition(X, L, m, D):
+    def _eigendecomposition(X, L, m, n_dims):
         """Construct the eigenvalues and eigenfunctions of the Laplace operator."""
         m_star = at.prod(m)
-        S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(D)])
+        S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(n_dims)])
         S = np.vstack([s.flatten() for s in S]).T
         eigvals = at.square((np.pi * S) / (2 * L))
         phi = at.ones((X.shape[0], m_star))
-        for d in range(D):
+        for d in range(n_dims):
             c = 1.0 / np.sqrt(L[d])
             phi *= c * at.sin(at.sqrt(eigvals[:, d]) * (at.tile(X[:, d][:, None], m_star) + L[d]))
         omega = at.sqrt(eigvals)
@@ -172,8 +172,8 @@ class HSGP(Base):
         """
         X, _ = self.cov_func._slice(X)
         self._set_boundary(X)
-        omega, phi, _ = self._eigendecomposition(X, self.L, self.m, self.cov_func.D)
-        psd = self.cov_func.psd(omega)
+        omega, phi, _ = self._eigendecomposition(X, self.L, self.m, self.cov_func.n_dims)
+        psd = self.cov_func.power_spectral_density(omega)
         return at.dot(phi * psd, at.transpose(phi))
 
     def prior(self, name, X, dims=None):
@@ -192,23 +192,16 @@ class HSGP(Base):
 
         X, _ = self.cov_func._slice(X)
         self._set_boundary(X)
-        omega, phi, m_star = self._eigendecomposition(X, self.L, self.m, self.D)
-        psd = self.cov_func.psd(omega)
+        omega, phi, m_star = self._eigendecomposition(X, self.L, self.m, self.n_dims)
+        psd = self.cov_func.power_spectral_density(omega)
 
-        if self.drop_first:
-            self.beta = pm.Normal(f"{name}_coeffs_", size=m_star - 1)
-            self.f = pm.Deterministic(
-                name,
-                self.mean_func(X) + at.squeeze(at.dot(phi[:, 1:], self.beta * psd[1:])),
-                dims=dims,
-            )
-        else:
-            self.beta = pm.Normal(f"{name}_coeffs_", size=m_star)
-            self.f = pm.Deterministic(
-                name,
-                self.mean_func(X) + at.squeeze(at.dot(phi, self.beta * at.sqrt(psd))),
-                dims=dims,
-            )
+        i = int(self.drop_first==True)
+        self.beta = pm.Normal(f"{name}_coeffs_", size=m_star - i)
+        self.f = pm.Deterministic(
+            name,
+            self.mean_func(X) + at.squeeze(at.dot(phi[:, i:], self.beta * psd[i:])),
+            dims=dims,
+        )
         return self.f
 
     def _build_conditional(self, Xnew):
@@ -217,8 +210,8 @@ class HSGP(Base):
                 "Prior is not set, can't create a conditional. Call `.prior(name, X)` first."
             )
         Xnew, _ = self.cov_func._slice(Xnew)
-        omega, phi, _ = self._eigendecomposition(Xnew, self.L, self.m, self.D)
-        psd = self.cov_func.psd(omega)
+        omega, phi, _ = self._eigendecomposition(Xnew, self.L, self.m, self.n_dims)
+        psd = self.cov_func.power_spectral_density(omega)
         return self.mean_func(Xnew) + at.squeeze(at.dot(phi, self.beta * psd))
 
     def conditional(self, name, Xnew, dims=None):

@@ -171,7 +171,7 @@ class Covariance(BaseCovariance):
             raise ValueError("Values in `active_dims` can't be larger than `input_dim`.")
 
     @property
-    def D(self):
+    def n_dims(self):
         """The dimensionality of the input, as taken from the
         `active_dims`.
         """
@@ -288,7 +288,7 @@ class Combination(Covariance):
 
                 # If it's a covariance try to calculate the psd
                 try:
-                    factor_list.append(factor.psd(omega))
+                    factor_list.append(factor.power_spectral_density(omega))
 
                 except (AttributeError, NotImplementedError) as e:
 
@@ -299,7 +299,7 @@ class Combination(Covariance):
 
                     else:
                         raise ValueError(
-                            "Power spectral densities, `.psd(omega)`, can only be calculated for "
+                            "Power spectral densities, `.power_spectral_density(omega)`, can only be calculated for "
                             f"`Stationary` covariance functions.  {factor} is non-stationary."
                         ) from e
 
@@ -314,7 +314,7 @@ class Add(Combination):
     def __call__(self, X, Xs=None, diag=False):
         return reduce(add, self._merge_factors_cov(X, Xs, diag))
 
-    def psd(self, omega):
+    def power_spectral_density(self, omega):
         return reduce(add, self._merge_factors_psd(omega))
 
 
@@ -322,7 +322,7 @@ class Prod(Combination):
     def __call__(self, X, Xs=None, diag=False):
         return reduce(mul, self._merge_factors_cov(X, Xs, diag))
 
-    def psd(self, omega):
+    def power_spectral_density(self, omega):
         check = Counter([isinstance(factor, Covariance) for factor in self._factor_list])
         if check.get(True) >= 2:
             raise NotImplementedError(
@@ -526,7 +526,7 @@ class Stationary(Covariance):
     def full(self, X, Xs=None):
         raise NotImplementedError
 
-    def psd(self, omega):
+    def power_spectral_density(self, omega):
         raise NotImplementedError
 
 
@@ -573,7 +573,7 @@ class ExpQuad(Stationary):
 
        k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{2 \ell^2} \right]
 
-    The power spectral density (`psd`) is:
+    The power spectral density (`power_spectral_density`) is:
 
     .. math::
 
@@ -586,9 +586,9 @@ class ExpQuad(Stationary):
         X, Xs = self._slice(X, Xs)
         return at.exp(-0.5 * self.square_dist(X, Xs))
 
-    def psd(self, omega):
-        ls = at.ones(self.D) * self.ls
-        c = at.power(at.sqrt(2.0 * np.pi), self.D)
+    def power_spectral_density(self, omega):
+        ls = at.ones(self.n_dims) * self.ls
+        c = at.power(at.sqrt(2.0 * np.pi), self.n_dims)
         exp = at.exp(-0.5 * at.dot(at.square(omega), at.square(ls)))
         return c * at.prod(ls) * exp
 
@@ -640,10 +640,10 @@ class Matern52(Stationary):
         r = self.euclidean_dist(X, Xs)
         return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * at.square(r)) * at.exp(-1.0 * np.sqrt(5.0) * r)
 
-    def psd(self, omega):
-        ls = at.ones(self.D) * self.ls
-        D52 = (self.D + 5) / 2
-        num = at.power(2, self.D) * at.power(np.pi, self.D / 2) * at.gamma(D52) * at.power(5, 5 / 2)
+    def power_spectral_density(self, omega):
+        ls = at.ones(self.n_dims) * self.ls
+        D52 = (self.n_dims + 5) / 2
+        num = at.power(2, self.n_dims) * at.power(np.pi, self.n_dims / 2) * at.gamma(D52) * at.power(5, 5 / 2)
         den = 0.75 * at.sqrt(np.pi)
         pow = at.power(5.0 + at.dot(at.square(omega), at.square(ls)), -1 * D52)
         return (num / den) * at.prod(ls) * pow
@@ -674,10 +674,10 @@ class Matern32(Stationary):
         r = self.euclidean_dist(X, Xs)
         return (1.0 + np.sqrt(3.0) * r) * at.exp(-np.sqrt(3.0) * r)
 
-    def psd(self, omega):
-        ls = at.ones(self.D) * self.ls
-        D32 = (self.D + 3) / 2
-        num = at.power(2, self.D) * at.power(np.pi, self.D / 2) * at.gamma(D32) * at.power(3, 3 / 2)
+    def power_spectral_density(self, omega):
+        ls = at.ones(self.n_dims) * self.ls
+        D32 = (self.n_dims + 3) / 2
+        num = at.power(2, self.n_dims) * at.power(np.pi, self.n_dims / 2) * at.gamma(D32) * at.power(3, 3 / 2)
         den = 0.5 * at.sqrt(np.pi)
         pow = at.power(3.0 + at.dot(at.square(omega), at.square(ls)), -1 * D32)
         return (num / den) * at.prod(ls) * pow
