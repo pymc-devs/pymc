@@ -1,5 +1,3 @@
-#   Copyright 2022 The PyMC Developers
-#
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -14,13 +12,14 @@
 
 import warnings
 
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 import pymc as pm
 
+from pymc.distributions.shape_utils import Dims
 from pymc.gp.cov import Covariance
 from pymc.gp.gp import Base
 from pymc.gp.mean import Mean, Zero
@@ -105,21 +104,24 @@ class HSGP(Base):
         self,
         m: Sequence[int],
         L: Optional[Sequence[float]] = None,
-        c: float = 1.5,
+        c: Optional[float] = 1.5,
         drop_first: bool = False,
         *,
         mean_func: Mean = Zero(),
         cov_func: Covariance,
     ):
         arg_err_msg = (
-            "`m` and L, if provided, must be sequences, with one element per active "
+            "`m` and L, if provided, must be sequences with one element per active "
             "dimension of the kernel or covariance function."
         )
+
         if not isinstance(m, Sequence):
             raise ValueError(arg_err_msg)
+
         if len(m) != cov_func.n_dims:
             raise ValueError(arg_err_msg)
         m = tuple(m)
+
         if L is not None and (not isinstance(L, Sequence) or len(L) != cov_func.n_dims):
             raise ValueError(arg_err_msg)
         elif L is not None:
@@ -132,51 +134,57 @@ class HSGP(Base):
             )
 
         self.drop_first = drop_first
-        self.m = m
         self.L = L
+        self.m = m
         self.c = c
         self.n_dims = cov_func.n_dims
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
-    def __add__(self, other: HSGP):
+    def __add__(self, other):
         raise NotImplementedError("Additive HSGPs aren't supported ")
 
     def _set_boundary(self, X):
         """Make L from X and c if L is not passed in."""
         if self.L is None:
             # Define new L based on c and X range
-            La = at.abs(at.min(X, axis=0))
-            Lb = at.abs(at.max(X, axis=0))
-            self.L = self.c * at.max(at.stack((La, Lb)), axis=0)
+            La = pt.abs(pt.min(X, axis=0))
+            Lb = pt.abs(pt.max(X, axis=0))
+            self.L = self.c * pt.max(pt.stack((La, Lb)), axis=0)
         else:
-            self.L = at.as_tensor_variable(self.L)
+            self.L = pt.as_tensor_variable(self.L)
+
+    def prior_components(self, X: Union[np.ndarray, pt.TensorVariable]):
+        """Return the basis and coefficient priors, whose product is the HSGP.  It can be useful
+        to bypass the GP API and work with the basis and coefficients directly for models with i.e.
+        multiple GPs.
+        """
+        X, _ = self.cov_func._slice(X)
+        self._set_boundary(X)
+
+        omega, phi, m_star = self._eigendecomposition(X, self.L, self.m, self.n_dims)
+        psd = self.cov_func.power_spectral_density(omega)
+
+        i = int(self.drop_first == True)
+        return phi[:, i:], psd[i:], m_star - i
 
     @staticmethod
     def _eigendecomposition(X, L, m, n_dims):
         """Construct the eigenvalues and eigenfunctions of the Laplace operator."""
-        m_star = at.prod(m)
+        m_star = pt.prod(m)
         S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(n_dims)])
         S = np.vstack([s.flatten() for s in S]).T
-        eigvals = at.square((np.pi * S) / (2 * L))
-        phi = at.ones((X.shape[0], m_star))
+        eigvals = pt.square((np.pi * S) / (2 * L))
+        phi = pt.ones((X.shape[0], m_star))
         for d in range(n_dims):
             c = 1.0 / np.sqrt(L[d])
-            phi *= c * at.sin(at.sqrt(eigvals[:, d]) * (at.tile(X[:, d][:, None], m_star) + L[d]))
-        omega = at.sqrt(eigvals)
+            phi *= c * pt.sin(pt.sqrt(eigvals[:, d]) * (pt.tile(X[:, d][:, None], m_star) + L[d]))
+        omega = pt.sqrt(eigvals)
         return omega, phi, m_star
 
-    def approx_K(self, X):
-        """A helper function which gives the approximate kernel or covariance matrix K. This can be
-        helpful when trying to see how well an approximation may work.
-        """
-        X, _ = self.cov_func._slice(X)
-        self._set_boundary(X)
-        omega, phi, _ = self._eigendecomposition(X, self.L, self.m, self.cov_func.n_dims)
-        psd = self.cov_func.power_spectral_density(omega)
-        return at.dot(phi * psd, at.transpose(phi))
-
-    def prior(self, name, X, dims=None):
+    def prior(
+        self, name: str, X: Union[np.ndarray, pt.TensorVariable], dims: Optional[Dims] = None
+    ):
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
 
@@ -190,31 +198,34 @@ class HSGP(Base):
             Dimension name for the GP random variable.
         """
 
-        X, _ = self.cov_func._slice(X)
-        self._set_boundary(X)
-        omega, phi, m_star = self._eigendecomposition(X, self.L, self.m, self.n_dims)
-        psd = self.cov_func.power_spectral_density(omega)
+        phi, psd, m_star = self.prior_components(X)
+        self.beta = pm.Normal(f"{name}_hsgp_coeffs_", size=m_star)
 
-        i = int(self.drop_first==True)
-        self.beta = pm.Normal(f"{name}_coeffs_", size=m_star - i)
         self.f = pm.Deterministic(
             name,
-            self.mean_func(X) + at.squeeze(at.dot(phi[:, i:], self.beta * psd[i:])),
+            self.mean_func(X) + pt.squeeze(pt.dot(phi, self.beta * psd)),
             dims=dims,
         )
         return self.f
 
-    def _build_conditional(self, Xnew):
-        if getattr(self, "beta", None) is None:
-            raise ValueError(
-                "Prior is not set, can't create a conditional. Call `.prior(name, X)` first."
-            )
+    def _build_conditional(self, Xnew, beta=None):
+        if beta is None:
+            try:
+                beta = self.beta
+            except AttributeError:
+                raise ValueError(
+                    "Prior is not set, can't create a conditional. Either pass in the HSGP beta "
+                    "coefficients or call `.prior(name, X)` first."
+                )
+
         Xnew, _ = self.cov_func._slice(Xnew)
         omega, phi, _ = self._eigendecomposition(Xnew, self.L, self.m, self.n_dims)
         psd = self.cov_func.power_spectral_density(omega)
-        return self.mean_func(Xnew) + at.squeeze(at.dot(phi, self.beta * psd))
+        return self.mean_func(Xnew) + pt.squeeze(pt.dot(phi, beta * psd))
 
-    def conditional(self, name, Xnew, dims=None):
+    def conditional(
+        self, name: str, Xnew: Union[np.ndarray, pt.TensorVariable], dims: Optional[Dims] = None
+    ):
         R"""
         Returns the (approximate) conditional distribution evaluated over new input locations
         `Xnew`.
