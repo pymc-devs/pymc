@@ -1,4 +1,4 @@
-image: ghcr.io/maresb/pymc:git-ebd893b
+image: ghcr.io/maresb/pymc-devcontainer:latest
 tasks:
   - name: initialize
     init: |
@@ -25,7 +25,7 @@ tasks:
       # Reinitialize devcontainer for good measure
       _dev-init.sh
 
-      # Install the hooks in the background if not already installed
+      # Install the pre-commit hooks in the background if not already installed
       [ -f ~/.cache/pre-commit/README ] || cp -R /opt/.pre-commit-cache-prebuilt/* ~/.cache/pre-commit/
 
 vscode:
