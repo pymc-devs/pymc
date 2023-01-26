@@ -157,7 +157,13 @@ class HSGP(Base):
     def prior_components(self, X: Union[np.ndarray, pt.TensorVariable]):
         """Return the basis and coefficient priors, whose product is the HSGP.  It can be useful
         to bypass the GP API and work with the basis and coefficients directly for models with i.e.
-        multiple GPs.
+        multiple GPs.  It returns the basis `phi` and the power spectral density, `psd`.  The GP
+        `f` can be formed by `f = phi @ (pm.Normal("hsgp_coeffs", size=psd.size) * psd)`.
+
+        Parameters
+        ----------
+        X: array-like
+            Function input values.
         """
         X, _ = self.cov_func._slice(X)
         self._set_boundary(X)
@@ -166,7 +172,7 @@ class HSGP(Base):
         psd = self.cov_func.power_spectral_density(omega)
 
         i = int(self.drop_first == True)
-        return phi[:, i:], psd[i:], m_star - i
+        return phi[:, i:], psd[i:]
 
     @staticmethod
     def _eigendecomposition(X, L, m, n_dims):
@@ -198,12 +204,12 @@ class HSGP(Base):
             Dimension name for the GP random variable.
         """
 
-        phi, psd, m_star = self.prior_components(X)
-        self.beta = pm.Normal(f"{name}_hsgp_coeffs_", size=m_star)
+        phi, psd = self.prior_components(X)
+        self.beta = pm.Normal(f"{name}_hsgp_coeffs_", size=psd.size)
 
         self.f = pm.Deterministic(
             name,
-            self.mean_func(X) + pt.squeeze(pt.dot(phi, self.beta * psd)),
+            self.mean_func(X) + phi @ (self.beta * psd),
             dims=dims,
         )
         return self.f
@@ -221,7 +227,7 @@ class HSGP(Base):
         Xnew, _ = self.cov_func._slice(Xnew)
         omega, phi, _ = self._eigendecomposition(Xnew, self.L, self.m, self.n_dims)
         psd = self.cov_func.power_spectral_density(omega)
-        return self.mean_func(Xnew) + pt.squeeze(pt.dot(phi, beta * psd))
+        return self.mean_func(Xnew) + phi @ (beta * psd)
 
     def conditional(
         self,
