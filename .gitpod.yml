@@ -1,4 +1,4 @@
-image: ghcr.io/maresb/pymc-devcontainer:latest
+image: ghcr.io/pymc-devs/pymc-devcontainer:latest
 tasks:
   - name: initialize
     init: |
