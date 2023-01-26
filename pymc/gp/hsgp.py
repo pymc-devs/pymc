@@ -19,7 +19,6 @@ import pytensor.tensor as pt
 
 import pymc as pm
 
-from pymc.distributions.shape_utils import Dims
 from pymc.gp.cov import Covariance
 from pymc.gp.gp import Base
 from pymc.gp.mean import Mean, Zero
@@ -37,8 +36,8 @@ class HSGP(Base):
     `gp.Latent`, it has `prior` and `conditional` methods.  It supports a limited subset of
     additive covariances.
 
-    For information on choosing appropriate `m`, `L`, and `c`, refer Ruitort-Mayol et. al. or to the
-    pymc examples documentation.
+    For information on choosing appropriate `m`, `L`, and `c`, refer Ruitort-Mayol et. al. or to
+    the pymc examples documentation.
 
     Parameters
     ----------
@@ -122,6 +121,9 @@ class HSGP(Base):
             raise ValueError(arg_err_msg)
         m = tuple(m)
 
+        if (L is None and c is None) or (L is not None and c is not None):
+            raise ValueError("Provide one of `c` or `L`.")
+
         if L is not None and (not isinstance(L, Sequence) or len(L) != cov_func.n_dims):
             raise ValueError(arg_err_msg)
         elif L is not None:
@@ -188,9 +190,7 @@ class HSGP(Base):
         omega = pt.sqrt(eigvals)
         return omega, phi, m_star
 
-    def prior(
-        self, name: str, X: Union[np.ndarray, pt.TensorVariable], dims: Optional[Dims] = None
-    ):
+    def prior(self, name: str, X: Union[np.ndarray, pt.TensorVariable], *args, **kwargs):
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
 
@@ -210,9 +210,17 @@ class HSGP(Base):
         self.f = pm.Deterministic(
             name,
             self.mean_func(X) + phi @ (self.beta * psd),
-            dims=dims,
+            dims=kwargs.get("dims"),
         )
         return self.f
+
+    def conditional_components(self, Xnew: Union[np.ndarray, pt.TensorVariable]):
+        Xnew, _ = self.cov_func._slice(Xnew)
+        omega, phi, _ = self._eigendecomposition(Xnew, self.L, self.m, self.n_dims)
+        psd = self.cov_func.power_spectral_density(omega)
+
+        i = int(self.drop_first == True)
+        return phi[:, i:], psd[i:]
 
     def _build_conditional(self, Xnew, beta=None):
         if beta is None:
@@ -224,21 +232,13 @@ class HSGP(Base):
                     "coefficients or call `.prior(name, X)` first."
                 )
 
-        Xnew, _ = self.cov_func._slice(Xnew)
-        omega, phi, _ = self._eigendecomposition(Xnew, self.L, self.m, self.n_dims)
-        psd = self.cov_func.power_spectral_density(omega)
+        phi, psd = self.conditional_components(Xnew)
         return self.mean_func(Xnew) + phi @ (beta * psd)
 
-    def conditional(
-        self,
-        name: str,
-        Xnew: Union[np.ndarray, pt.TensorVariable],
-        dims: Optional[Dims] = None,
-        beta: Optional[pt.TensorVariable] = None,
-    ):
+    def conditional(self, name: str, Xnew: Union[np.ndarray, pt.TensorVariable], *args, **kwargs):
         R"""
         Returns the (approximate) conditional distribution evaluated over new input locations
-        `Xnew`.
+        `Xnew`.  If using the
 
         Parameters
         ----------
@@ -246,8 +246,8 @@ class HSGP(Base):
             Name of the random variable
         Xnew: array-like
             Function input values.
-        dims: None
-            Dimension name for the GP random variable.
+        kwargs: dict-like
+            Optional arguments such as `dims`, or the coefficients `beta`.
         """
-        fnew = self._build_conditional(Xnew, beta=beta)
-        return pm.Deterministic(name, fnew, dims=dims)
+        fnew = self._build_conditional(Xnew, beta=kwargs.get("beta"))
+        return pm.Deterministic(name, fnew, dims=kwargs.get("dims"))
