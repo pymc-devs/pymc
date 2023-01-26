@@ -189,9 +189,9 @@ class TestCovPSD:
             cov1 = 2 * pm.gp.cov.ExpQuad(1, 0.1)
             cov2 = 5 * pm.gp.cov.ExpQuad(1, 1.0)
             cov = cov1 + cov2
-        psd1 = cov1.psd(omega[:, None]).eval()
-        psd2 = cov2.psd(omega[:, None]).eval()
-        psd = cov.psd(omega[:, None]).eval()
+        psd1 = cov1.power_spectral_density(omega[:, None]).eval()
+        psd2 = cov2.power_spectral_density(omega[:, None]).eval()
+        psd = cov.power_spectral_density(omega[:, None]).eval()
         npt.assert_allclose(psd, psd1 + psd2)
 
     def test_copsd_multiply(self):
@@ -203,7 +203,7 @@ class TestCovPSD:
             cov2 = pm.gp.cov.ExpQuad(1, ls=1)
 
         with pytest.raises(NotImplementedError):
-            psd = (cov1 * cov2).psd(omega[:, None]).eval()
+            psd = (cov1 * cov2).power_spectral_density(omega[:, None]).eval()
 
     def test_covpsd_nonstationary1(self):
         L = 10.0
@@ -212,7 +212,7 @@ class TestCovPSD:
             cov = 2 * pm.gp.cov.Linear(1, c=5)
 
         with pytest.raises(ValueError):
-            psd = cov.psd(omega[:, None]).eval()
+            psd = cov.power_spectral_density(omega[:, None]).eval()
 
     def test_covpsd_nonstationary2(self):
         L = 10.0
@@ -221,7 +221,7 @@ class TestCovPSD:
             cov = 2 * pm.gp.cov.ExpQuad(1, ls=1) + 10.0
 
         with pytest.raises(ValueError):
-            psd = cov.psd(omega[:, None]).eval()
+            psd = cov.power_spectral_density(omega[:, None]).eval()
 
     def test_covpsd_notimplemented(self):
         class NewStationaryCov(pm.gp.cov.Stationary):
@@ -233,7 +233,7 @@ class TestCovPSD:
             cov = 2 * NewStationaryCov(1, ls=1)
 
         with pytest.raises(NotImplementedError):
-            psd = cov.psd(omega[:, None]).eval()
+            psd = cov.power_spectral_density(omega[:, None]).eval()
 
 
 class TestCovExponentiation:
@@ -434,7 +434,9 @@ class TestExpQuad:
         omega = np.linspace(0, 2, 50)
         ell = 2.0
         true_1d_psd = np.sqrt(2 * np.pi * np.square(ell)) * np.exp(-0.5 * np.square(ell * omega))
-        test_1d_psd = pm.gp.cov.ExpQuad(1, ls=ell).psd(omega[:, None]).flatten().eval()
+        test_1d_psd = (
+            pm.gp.cov.ExpQuad(1, ls=ell).power_spectral_density(omega[:, None]).flatten().eval()
+        )
         npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
 
 
@@ -520,7 +522,9 @@ class TestMatern52:
         ell = 2.0
         lamda = np.sqrt(5) / ell
         true_1d_psd = (16.0 / 3.0) * np.power(lamda, 5) * np.power(lamda**2 + omega**2, -3)
-        test_1d_psd = pm.gp.cov.Matern52(1, ls=ell).psd(omega[:, None]).flatten().eval()
+        test_1d_psd = (
+            pm.gp.cov.Matern52(1, ls=ell).power_spectral_density(omega[:, None]).flatten().eval()
+        )
         npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
 
 
@@ -544,7 +548,9 @@ class TestMatern32:
         ell = 2.0
         lamda = np.sqrt(3) / ell
         true_1d_psd = 4 * np.power(lamda, 3) * np.power(lamda**2 + omega**2, -2)
-        test_1d_psd = pm.gp.cov.Matern32(1, ls=ell).psd(omega[:, None]).flatten().eval()
+        test_1d_psd = (
+            pm.gp.cov.Matern32(1, ls=ell).power_spectral_density(omega[:, None]).flatten().eval()
+        )
         npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
 
 
