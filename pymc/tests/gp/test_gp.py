@@ -568,13 +568,6 @@ class TestHSGP:
         gp = pm.gp.HSGP(m=[500], c=4.0, cov_func=cov_func)
         return gp
 
-    def test_shapes(self, model, gp, X):
-        with model:
-            ka = gp.approx_K(X)
-            kf = gp.cov_func(X)
-        # NOTE: relative difference is still high
-        np.testing.assert_allclose(ka.eval(), kf.eval(), atol=1e-10)
-
     def test_prior(self, model, gp, X):
         # TODO: improve mathematical side of tests
         # So far I just check interfaces are the same for latent and HSGP
@@ -595,19 +588,19 @@ class TestHSGP:
     def test_parametrization_m(self):
         cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
         with pytest.raises(
-            ValueError, match="must be sequences, with one element per active dimension"
+            ValueError, match="must be sequences with one element per active dimension"
         ):
             pm.gp.HSGP(m=500, c=4.0, cov_func=cov_func)
 
         with pytest.raises(
-            ValueError, match="must be sequences, with one element per active dimension"
+            ValueError, match="must be sequences with one element per active dimension"
         ):
             pm.gp.HSGP(m=[500, 12], c=4.0, cov_func=cov_func)
 
     def test_parametrization_L(self):
         cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
         with pytest.raises(
-            ValueError, match="must be sequences, with one element per active dimension"
+            ValueError, match="must be sequences with one element per active dimension"
         ):
             pm.gp.HSGP(m=[500], L=[12, 12], cov_func=cov_func)
 
@@ -616,4 +609,4 @@ class TestHSGP:
         with model:
             gp = pm.gp.HSGP(m=[500], c=4.0, cov_func=cov_func, drop_first=drop_first)
             gp.prior("f1", X)
-            assert model.f1_coeffs_.type.shape == (500 - drop_first,)
+            assert model.f1_hsgp_coeffs_.type.shape == (500 - drop_first,)

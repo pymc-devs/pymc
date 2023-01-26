@@ -224,7 +224,11 @@ class HSGP(Base):
         return self.mean_func(Xnew) + pt.squeeze(pt.dot(phi, beta * psd))
 
     def conditional(
-        self, name: str, Xnew: Union[np.ndarray, pt.TensorVariable], dims: Optional[Dims] = None
+        self,
+        name: str,
+        Xnew: Union[np.ndarray, pt.TensorVariable],
+        dims: Optional[Dims] = None,
+        beta: Optional[pt.TensorVariable] = None,
     ):
         R"""
         Returns the (approximate) conditional distribution evaluated over new input locations
@@ -239,5 +243,5 @@ class HSGP(Base):
         dims: None
             Dimension name for the GP random variable.
         """
-        fnew = self._build_conditional(Xnew)
+        fnew = self._build_conditional(Xnew, beta=beta)
         return pm.Deterministic(name, fnew, dims=dims)
