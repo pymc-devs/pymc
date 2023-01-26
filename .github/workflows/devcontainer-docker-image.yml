@@ -5,7 +5,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}  # user/reponame
+  IMAGE_NAME: ${{ github.repository }}-devcontainer  # pymc-devs/pymc-devcontainer
 
 jobs:
   build-container:
