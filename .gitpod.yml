@@ -26,7 +26,7 @@ tasks:
       _dev-init.sh
 
       # Install the pre-commit hooks in the background if not already installed
-      [ -f ~/.cache/pre-commit/README ] || cp -R /opt/.pre-commit-cache-prebuilt/* ~/.cache/pre-commit/
+      pre-commit install --install-hooks
 
 vscode:
   extensions:
