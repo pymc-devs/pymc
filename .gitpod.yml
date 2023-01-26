@@ -9,9 +9,15 @@ tasks:
       mkdir -p .vscode
       [ -f .vscode/settings.json ] || echo "{}" > .vscode/settings.json
 
-      # Set the default interpreter path
+      # Add vscode settings
       jq '
             .["python.defaultInterpreterPath"] = "/opt/conda/bin/python"
+      ' .vscode/settings.json | sponge .vscode/settings.json
+      jq '
+            .["terminal.integrated.defaultProfile.linux"] = "bash"
+      ' .vscode/settings.json | sponge .vscode/settings.json
+      jq '
+            .["git.autofetch"] = true
       ' .vscode/settings.json | sponge .vscode/settings.json
 
       # Install dependencies
