@@ -103,8 +103,9 @@ class HSGP(Base):
         self,
         m: Sequence[int],
         L: Optional[Sequence[float]] = None,
-        c: Optional[float] = 1.5,
+        c: Optional[float] = None,
         drop_first: bool = False,
+        parameterization="noncentered",
         *,
         mean_func: Mean = Zero(),
         cov_func: Covariance,
@@ -122,7 +123,7 @@ class HSGP(Base):
         m = tuple(m)
 
         if (L is None and c is None) or (L is not None and c is not None):
-            raise ValueError("Provide one of `c` or `L`.")
+            raise ValueError("Provide one of `c` or `L`")
 
         if L is not None and (not isinstance(L, Sequence) or len(L) != cov_func.n_dims):
             raise ValueError(arg_err_msg)
@@ -134,6 +135,12 @@ class HSGP(Base):
                 "Most applications will require `c >= 1.2` for accuracy at the boundaries of the "
                 "domain."
             )
+
+        parameterization = parameterization.lower().replace("-", "")
+        if parameterization not in ["centered", "noncentered"]:
+            raise ValueError("`parameterization` must be either 'centered' or 'noncentered'.")
+        else:
+            self.parameterization = parameterization
 
         self.drop_first = drop_first
         self.L = L
@@ -174,7 +181,7 @@ class HSGP(Base):
         psd = self.cov_func.power_spectral_density(omega)
 
         i = int(self.drop_first == True)
-        return phi[:, i:], psd[i:]
+        return phi[:, i:], pt.sqrt(psd[i:])
 
     @staticmethod
     def _eigendecomposition(X, L, m, n_dims):
@@ -204,14 +211,17 @@ class HSGP(Base):
             Dimension name for the GP random variable.
         """
 
-        phi, psd = self.prior_components(X)
-        self.beta = pm.Normal(f"{name}_hsgp_coeffs_", size=psd.size)
+        phi, sqrt_psd = self.prior_components(X)
 
-        self.f = pm.Deterministic(
-            name,
-            self.mean_func(X) + phi @ (self.beta * psd),
-            dims=kwargs.get("dims"),
-        )
+        if self.parameterization == "noncentered":
+            self.beta = pm.Normal(f"{name}_hsgp_coeffs_", size=sqrt_psd.size)
+            f = self.mean_func(X) + phi @ (self.beta * sqrt_psd)
+
+        elif self.parameterization == "centered":
+            self.beta = pm.Normal(f"{name}_hsgp_coeffs_", sigma=sqrt_psd, size=sqrt_psd.size)
+            f = self.mean_func(X) + phi @ self.beta
+
+        self.f = pm.Deterministic(name, f, dims=kwargs.get("dims"))
         return self.f
 
     def conditional_components(self, Xnew: Union[np.ndarray, pt.TensorVariable]):
@@ -220,20 +230,22 @@ class HSGP(Base):
         psd = self.cov_func.power_spectral_density(omega)
 
         i = int(self.drop_first == True)
-        return phi[:, i:], psd[i:]
+        return phi[:, i:], pt.sqrt(psd[i:])
 
-    def _build_conditional(self, Xnew, beta=None):
-        if beta is None:
-            try:
-                beta = self.beta
-            except AttributeError:
-                raise ValueError(
-                    "Prior is not set, can't create a conditional. Either pass in the HSGP beta "
-                    "coefficients or call `.prior(name, X)` first."
-                )
+    def _build_conditional(self, Xnew):
+        try:
+            beta = self.beta
+        except AttributeError:
+            raise ValueError(
+                "Prior is not set, can't create a conditional.  Call `.prior(name, X)` first."
+            )
 
-        phi, psd = self.conditional_components(Xnew)
-        return self.mean_func(Xnew) + phi @ (beta * psd)
+        if self.parameterization == "noncentered":
+            phi, sqrt_psd = self.conditional_components(Xnew)
+            return self.mean_func(Xnew) + phi @ (beta * sqrt_psd)
+        elif self.parameterization == "centered":
+            phi, _ = self.conditional_components(Xnew)
+            return self.mean_func(Xnew) + phi @ beta
 
     def conditional(self, name: str, Xnew: Union[np.ndarray, pt.TensorVariable], *args, **kwargs):
         R"""
@@ -247,7 +259,7 @@ class HSGP(Base):
         Xnew: array-like
             Function input values.
         kwargs: dict-like
-            Optional arguments such as `dims`, or the coefficients `beta`.
+            Optional arguments such as `dims`.
         """
-        fnew = self._build_conditional(Xnew, beta=kwargs.get("beta"))
+        fnew = self._build_conditional(Xnew)
         return pm.Deterministic(name, fnew, dims=kwargs.get("dims"))
