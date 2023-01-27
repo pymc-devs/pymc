@@ -130,7 +130,7 @@ class HSGP(Base):
         elif L is not None:
             L = tuple(L)
 
-        if L is None and c < 1.2:
+        if L is None and c is not None and c < 1.2:
             warnings.warn(
                 "Most applications will require `c >= 1.2` for accuracy at the boundaries of the "
                 "domain."
