@@ -707,7 +707,7 @@ class DEMetropolis(PopulationArrayStepShared):
         Some measure of variance to parameterize proposal distribution
     proposal_dist: function
         Function that returns zero-mean deviates when parameterized with
-        S (and n). Defaults to NormalProposal().
+        S (and n). Defaults to NormalProposal(S).
     scaling: scalar or array
         Initial scale factor for epsilon. Defaults to 0.001
     tune: str
@@ -748,7 +748,7 @@ class DEMetropolis(PopulationArrayStepShared):
         proposal_dist=None,
         lamb=None,
         scaling=0.001,
-        tune='scaling',
+        tune: Optional[str]="scaling",
         tune_interval=100,
         model=None,
         mode=None,
@@ -851,7 +851,7 @@ class DEMetropolisZ(ArrayStepShared):
         Some measure of variance to parameterize proposal distribution
     proposal_dist: function
         Function that returns zero-mean deviates when parameterized with
-        S (and n). Defaults to NormalProposal.
+        S (and n). Defaults to NormalProposal(S).
     scaling: scalar or array
         Initial scale factor for epsilon. Defaults to 0.001
     tune: str
@@ -895,7 +895,7 @@ class DEMetropolisZ(ArrayStepShared):
         proposal_dist=None,
         lamb=None,
         scaling=0.001,
-        tune="scaling",
+        tune: Optional[str]="scaling",
         tune_interval=100,
         tune_drop_fraction: float = 0.9,
         model=None,
