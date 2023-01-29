@@ -3,12 +3,11 @@ License
 =======
 
 PyMC is distributed under the Apache License, Version 2.0
+Contains code from AePPL, which is distributed under the MIT License
 
 Copyright (c) 2006 Christopher J. Fonnesbeck (Academic Free License)
 Copyright (c) 2007-2008 Christopher J. Fonnesbeck, Anand Prabhakar Patil, David Huard (Academic Free License)
 Copyright (c) 2009-2022 The PyMC developers (see contributors to pymc-devs on GitHub)
-
-Contains code from Aeppl, Copyright (c) 2021-2022, Aesara Developers
 
 All rights reserved.
 
@@ -213,3 +212,26 @@ All rights reserved.
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+
+MIT License
+
+Copyright (c) 2021-2023 aesara-devs
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

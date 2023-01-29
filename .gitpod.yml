@@ -1,20 +1,45 @@
-image: ghcr.io/conda/conda-ci:main-linux-python3.9
+image: ghcr.io/pymc-devs/pymc-devcontainer:latest
 tasks:
   - name: initialize
     init: |
+      # General devcontainer initialization, e.g. pre-commit
+      _dev-init.sh
+
+      # Create an empty object for .vscode/settings.json if the file doesn't exist
       mkdir -p .vscode
-      echo '{"python.defaultInterpreterPath": "/workspace/pymc/env/bin/python"}' > .vscode/settings.json
-      conda init bash && source ~/.bashrc
-      conda env update -f conda-envs/environment-dev.yml -p /workspace/pymc/env
-      conda activate /workspace/pymc/env
+      [ -f .vscode/settings.json ] || echo "{}" > .vscode/settings.json
+
+      # Add vscode settings
+      jq '
+            .["python.defaultInterpreterPath"] = "/opt/conda/bin/python"
+      ' .vscode/settings.json | sponge .vscode/settings.json
+      jq '
+            .["terminal.integrated.defaultProfile.linux"] = "bash"
+      ' .vscode/settings.json | sponge .vscode/settings.json
+      jq '
+            .["git.autofetch"] = true
+      ' .vscode/settings.json | sponge .vscode/settings.json
+
+      # Install dependencies
+      sudo chown "$(id -u):$(id -g)" /opt/conda/conda-meta/history
+      micromamba install --yes --name base --file conda-envs/environment-dev.yml
+
+      # Install PyMC
       pip install -e .
+
     command: |
-      conda init bash && echo "conda activate /workspace/pymc/env" >> ~/.bashrc && source ~/.bashrc
+      # Reinitialize devcontainer for good measure
+      _dev-init.sh
+
+      # Install the pre-commit hooks in the background if not already installed
+      pre-commit install --install-hooks
 
 vscode:
   extensions:
     - eamodio.gitlens
     - ms-python.python
+    - ms-pyright.pyright
+    - donjayamanne.githistory
 
 github:
   prebuilds:
