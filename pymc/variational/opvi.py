@@ -54,6 +54,7 @@ import warnings
 import numpy as np
 import pytensor
 import pytensor.tensor as at
+import xarray
 
 from pytensor.graph.basic import Variable
 
@@ -977,7 +978,7 @@ class Group(WithMemoization):
 
     @pytensor.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(
-        self, node: Variable, s, d: bool, more_replacements: dict | None = None
+        self, node: Variable, s, d: bool, more_replacements: dict = None
     ) -> list[Variable]:
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
         :func:`symbolic_single_sample` new random generator can be allocated and applied to node
@@ -1105,16 +1106,47 @@ class Group(WithMemoization):
         return f"{self.__class__.__name__}[{shp}]"
 
     @node_property
-    def std(self):
-        raise NotImplementedError
+    def std(self) -> at.TensorVariable:
+        """Standard deviation of the latent variables as an unstructured 1-dimensional tensor variable"""
+        raise NotImplementedError()
 
     @node_property
-    def cov(self):
-        raise NotImplementedError
+    def cov(self) -> at.TensorVariable:
+        """Covariance between the latent variables as an unstructured 2-dimensional tensor variable"""
+        raise NotImplementedError()
 
     @node_property
-    def mean(self):
-        raise NotImplementedError
+    def mean(self) -> at.TensorVariable:
+        """Mean of the latent variables as an unstructured 1-dimensional tensor variable"""
+        raise NotImplementedError()
+
+    def var_to_data(self, shared: at.TensorVariable) -> xarray.Dataset:
+        """Takes a flat 1-dimensional tensor variable and maps it to an xarray data set based on the information in
+        `self.ordering`.
+        """
+        # This is somewhat similar to `DictToArrayBijection.rmap`, which doesn't work here since we don't have
+        # `RaveledVars` and need to take the information from `self.ordering` instead
+        shared_nda = shared.eval()
+        result = dict()
+        for name, s, shape, dtype in self.ordering.values():
+            dims = self.model.named_vars_to_dims.get(name, None)
+            if dims is not None:
+                coords = {d: np.array(self.model.coords[d]) for d in dims}
+            else:
+                coords = None
+            values = shared_nda[s].reshape(shape).astype(dtype)
+            result[name] = xarray.DataArray(values, coords=coords, dims=dims, name=name)
+        return xarray.Dataset(result)
+
+    @property
+    def mean_data(self) -> xarray.Dataset:
+        """Mean of the latent variables as an xarray Dataset"""
+        return self.var_to_data(self.mean)
+
+    @property
+    def std_data(self) -> xarray.Dataset:
+        """Standard deviation of the latent variables as an xarray Dataset"""
+        return self.var_to_data(self.std)
 
 
 group_for_params = Group.group_for_params
