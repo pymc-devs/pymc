@@ -147,6 +147,7 @@ class HSGP(Base):
         self.m = m
         self.c = c
         self.n_dims = cov_func.n_dims
+        self._boundary_set = False
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
@@ -155,13 +156,16 @@ class HSGP(Base):
 
     def _set_boundary(self, X):
         """Make L from X and c if L is not passed in."""
-        if self.L is None:
-            # Define new L based on c and X range
-            La = pt.abs(pt.min(X, axis=0))
-            Lb = pt.abs(pt.max(X, axis=0))
-            self.L = self.c * pt.max(pt.stack((La, Lb)), axis=0)
-        else:
-            self.L = pt.as_tensor_variable(self.L)
+        if not self._boundary_set:
+            if self.L is None:
+                # Define new L based on c and X range
+                La = pt.abs(pt.min(X, axis=0))
+                Lb = pt.abs(pt.max(X, axis=0))
+                self.L = self.c * pt.max(pt.stack((La, Lb)), axis=0)
+            else:
+                self.L = pt.as_tensor_variable(self.L)
+
+            self._boundary_set = True
 
     def prior_components(self, X: Union[np.ndarray, pt.TensorVariable]):
         """Return the basis and coefficient priors, whose product is the HSGP.  It can be useful
@@ -224,14 +228,6 @@ class HSGP(Base):
         self.f = pm.Deterministic(name, f, dims=kwargs.get("dims"))
         return self.f
 
-    def conditional_components(self, Xnew: Union[np.ndarray, pt.TensorVariable]):
-        Xnew, _ = self.cov_func._slice(Xnew)
-        omega, phi, _ = self._eigendecomposition(Xnew, self.L, self.m, self.n_dims)
-        psd = self.cov_func.power_spectral_density(omega)
-
-        i = int(self.drop_first == True)
-        return phi[:, i:], pt.sqrt(psd[i:])
-
     def _build_conditional(self, Xnew):
         try:
             beta = self.beta
@@ -240,12 +236,16 @@ class HSGP(Base):
                 "Prior is not set, can't create a conditional.  Call `.prior(name, X)` first."
             )
 
+        Xnew, _ = self.cov_func._slice(Xnew)
+        omega, phi, _ = self._eigendecomposition(Xnew, self.L, self.m, self.n_dims)
+        i = int(self.drop_first == True)
+
         if self.parameterization == "noncentered":
-            phi, sqrt_psd = self.conditional_components(Xnew)
-            return self.mean_func(Xnew) + phi @ (beta * sqrt_psd)
+            psd = self.cov_func.power_spectral_density(omega)
+            return self.mean_func(Xnew) + phi[:, i:] @ (beta * pt.sqrt(psd[i:]))
+
         elif self.parameterization == "centered":
-            phi, _ = self.conditional_components(Xnew)
-            return self.mean_func(Xnew) + phi @ beta
+            return self.mean_func(Xnew) + phi[:, i:] @ beta
 
     def conditional(self, name: str, Xnew: Union[np.ndarray, pt.TensorVariable], *args, **kwargs):
         R"""
