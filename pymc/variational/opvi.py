@@ -1126,7 +1126,7 @@ class Group(WithMemoization):
         """
         # This is somewhat similar to `DictToArrayBijection.rmap`, which doesn't work here since we don't have
         # `RaveledVars` and need to take the information from `self.ordering` instead
-        shared = shared.eval()
+        shared_nda = shared.eval()
         result = dict()
         for name, s, shape, dtype in self.ordering.values():
             dims = self.model.named_vars_to_dims.get(name, None)
@@ -1134,7 +1134,7 @@ class Group(WithMemoization):
                 coords = {d: np.array(self.model.coords[d]) for d in dims}
             else:
                 coords = None
-            values = np.array(shared[s]).reshape(shape).astype(dtype)
+            values = shared_nda[s].reshape(shape).astype(dtype)
             result[name] = xarray.DataArray(values, coords=coords, dims=dims, name=name)
         return xarray.Dataset(result)
 
