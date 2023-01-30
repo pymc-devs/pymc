@@ -26,6 +26,7 @@ from pytensor.tensor import TensorVariable
 import pymc as pm
 
 from pymc.distributions import (
+    Censored,
     DiracDelta,
     Flat,
     HalfNormal,
@@ -569,3 +570,9 @@ def test_tag_future_warning_dist():
         with pytest.warns(FutureWarning, match="Use model.rvs_to_values"):
             value_var = new_x.tag.value_var
         assert value_var == "1"
+
+
+def test_distribution_op_registered():
+    """Test that returned Ops are registered as virtual subclasses of the respective PyMC distributions."""
+    assert isinstance(Normal.dist().owner.op, Normal)
+    assert isinstance(Censored.dist(Normal.dist(), lower=None, upper=None).owner.op, Censored)
