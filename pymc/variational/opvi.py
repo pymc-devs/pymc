@@ -1139,12 +1139,12 @@ class Group(WithMemoization):
         return xarray.Dataset(result)
 
     @property
-    def mean_data(self):
+    def mean_data(self) -> xarray.Dataset:
         """Mean of the latent variables as an xarray Dataset"""
         return self.var_to_data(self.mean)
 
     @property
-    def std_data(self):
+    def std_data(self) -> xarray.Dataset:
         """Standard deviation of the latent variables as an xarray Dataset"""
         return self.var_to_data(self.std)
 
