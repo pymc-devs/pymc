@@ -1120,8 +1120,8 @@ class Group(WithMemoization):
         """Mean of the latent variables as an unstructured 1-dimensional tensor variable"""
         raise NotImplementedError()
 
-    def var_to_data(self, shared):
-        """Takes a flat 1-dimensional Aesara variable and maps it to an xarray data set based on the information in
+    def var_to_data(self, shared: at.TensorVariable) -> xarray.Dataset:
+        """Takes a flat 1-dimensional tensor variable and maps it to an xarray data set based on the information in
         `self.ordering`.
         """
         # This is somewhat similar to `DictToArrayBijection.rmap`, which doesn't work here since we don't have
