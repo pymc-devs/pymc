@@ -112,11 +112,14 @@ class DistributionMeta(ABCMeta):
             clsdict["random"] = _random
 
         rv_op = clsdict.setdefault("rv_op", None)
-        rv_type = None
+        rv_type = clsdict.setdefault("rv_type", None)
 
         if isinstance(rv_op, RandomVariable):
-            rv_type = type(rv_op)
-            clsdict["rv_type"] = rv_type
+            if rv_type is not None:
+                assert isinstance(rv_op, rv_type)
+            else:
+                rv_type = type(rv_op)
+                clsdict["rv_type"] = rv_type
 
         new_cls = super().__new__(cls, name, bases, clsdict)
 
@@ -155,8 +158,8 @@ class DistributionMeta(ABCMeta):
                 def moment(op, rv, rng, size, dtype, *dist_params):
                     return class_moment(rv, size, *dist_params)
 
-            # Register the PyTensor `RandomVariable` type as a subclass of this
-            # `Distribution` type.
+            # Register the PyTensor rv_type as a subclass of this
+            # PyMC Distribution type.
             new_cls.register(rv_type)
 
         return new_cls
