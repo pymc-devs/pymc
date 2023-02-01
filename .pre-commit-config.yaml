@@ -13,6 +13,16 @@ repos:
     -   id: requirements-txt-fixer
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
+- repo: https://github.com/lucianopaz/head_of_apache
+  rev: "0.0.3"
+  hooks:
+    - id: head_of_apache
+      args:
+        - --author=The PyMC Developers
+        - --exclude=docs/
+        - --exclude=scripts/
+        - --exclude=binder/
+        - --exclude=versioneer.py
 - repo: https://github.com/PyCQA/isort
   rev: 5.12.0
   hooks:
