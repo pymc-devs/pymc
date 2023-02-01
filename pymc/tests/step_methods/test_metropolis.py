@@ -138,6 +138,9 @@ class TestDEMetropolis:
             pm.Normal("n", mu=0, sigma=1, size=(2, 3))
 
             step = DEMetropolis()
+            assert step.tune == "scaling"
+
+            step = DEMetropolis(tune=None)
             assert step.tune is None
 
             step = DEMetropolis(tune="scaling")

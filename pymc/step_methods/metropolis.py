@@ -707,11 +707,11 @@ class DEMetropolis(PopulationArrayStepShared):
         Some measure of variance to parameterize proposal distribution
     proposal_dist: function
         Function that returns zero-mean deviates when parameterized with
-        S (and n). Defaults to Uniform(-S,+S).
+        S (and n). Defaults to NormalProposal(S).
     scaling: scalar or array
         Initial scale factor for epsilon. Defaults to 0.001
     tune: str
-        Which hyperparameter to tune. Defaults to None, but can also be 'scaling' or 'lambda'.
+        Which hyperparameter to tune. Defaults to 'scaling', but can also be 'lambda' or None.
     tune_interval: int
         The frequency of tuning. Defaults to 100 iterations.
     model: PyMC Model
@@ -748,7 +748,7 @@ class DEMetropolis(PopulationArrayStepShared):
         proposal_dist=None,
         lamb=None,
         scaling=0.001,
-        tune=None,
+        tune: Optional[str] = "scaling",
         tune_interval=100,
         model=None,
         mode=None,
@@ -770,7 +770,7 @@ class DEMetropolis(PopulationArrayStepShared):
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
         else:
-            self.proposal_dist = UniformProposal(S)
+            self.proposal_dist = NormalProposal(S)
 
         self.scaling = np.atleast_1d(scaling).astype("d")
         if lamb is None:
@@ -851,11 +851,11 @@ class DEMetropolisZ(ArrayStepShared):
         Some measure of variance to parameterize proposal distribution
     proposal_dist: function
         Function that returns zero-mean deviates when parameterized with
-        S (and n). Defaults to Uniform(-S,+S).
+        S (and n). Defaults to NormalProposal(S).
     scaling: scalar or array
         Initial scale factor for epsilon. Defaults to 0.001
     tune: str
-        Which hyperparameter to tune. Defaults to 'lambda', but can also be 'scaling' or None.
+        Which hyperparameter to tune. Defaults to 'scaling', but can also be 'lambda' or None.
     tune_interval: int
         The frequency of tuning. Defaults to 100 iterations.
     tune_drop_fraction: float
@@ -869,7 +869,7 @@ class DEMetropolisZ(ArrayStepShared):
 
     References
     ----------
-    .. [Braak2006] Cajo C.F. ter Braak (2006).
+    .. [Braak2008] Cajo C.F. ter Braak (2008).
         Differential Evolution Markov Chain with snooker updater and fewer chains.
         Statistics and Computing
         `link <https://doi.org/10.1007/s11222-008-9104-9>`__
@@ -895,7 +895,7 @@ class DEMetropolisZ(ArrayStepShared):
         proposal_dist=None,
         lamb=None,
         scaling=0.001,
-        tune="lambda",
+        tune: Optional[str] = "scaling",
         tune_interval=100,
         tune_drop_fraction: float = 0.9,
         model=None,
@@ -917,7 +917,7 @@ class DEMetropolisZ(ArrayStepShared):
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
         else:
-            self.proposal_dist = UniformProposal(S)
+            self.proposal_dist = NormalProposal(S)
 
         self.scaling = np.atleast_1d(scaling).astype("d")
         if lamb is None:
