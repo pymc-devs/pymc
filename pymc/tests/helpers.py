@@ -113,10 +113,10 @@ class Matcher:
         return result
 
 
-def select_by_precision(float64, float32):
-    """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
-    decimal = float64 if pytensor.config.floatX == "float64" else float32
-    return decimal
+def select_by_precision(float64=1e-6, float32=1e-3):
+    """Helper function to choose a precision tolerance for different floatX modes."""
+    tol = float64 if pytensor.config.floatX == "float64" else float32
+    return tol
 
 
 @contextlib.contextmanager

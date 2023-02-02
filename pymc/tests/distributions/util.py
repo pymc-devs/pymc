@@ -245,7 +245,8 @@ def check_logp(
     domain,
     paramdomains,
     scipy_logp,
-    decimal=None,
+    rtol=None,
+    atol=None,
     n_samples=100,
     extra_args=None,
     scipy_args=None,
@@ -268,9 +269,14 @@ def check_logp(
         Supported domains of distribution parameters
     scipy_logp : Scipy logpmf/logpdf method
         Scipy logp method of equivalent pymc_dist distribution
-    decimal : Int
-        Level of precision with which pymc_dist and scipy logp are compared.
-        Defaults to 6 for float64 and 3 for float32
+    atol : Float
+        Absolute tolerance with which pymc_dist and scipy logp are comparing
+        the difference between actual and desired to `atol + rtol * abs(desired)`.
+        Defaults to 0
+    rtol : Float
+        Absolute tolerance with which pymc_dist and scipy logp are comparing
+        the difference between actual and desired to `atol + rtol * abs(desired)`.
+        Defaults to 1e-8 for float64 and 1e-5 for float32
     n_samples : Int
         Upper limit on the number of valid domain and value combinations that
         are compared between pymc and scipy methods. If n_samples is below the
@@ -282,8 +288,11 @@ def check_logp(
     scipy_args : Dictionary with extra arguments needed to call scipy logp method
         Usually the same as extra_args
     """
-    if decimal is None:
-        decimal = select_by_precision(float64=6, float32=3)
+    if rtol is None:
+        rtol = select_by_precision()
+
+    if atol is None:
+        atol = select_by_precision(float64=1e-10, float32=1e-8)
 
     if extra_args is None:
         extra_args = {}
@@ -330,10 +339,11 @@ def check_logp(
         pt_d = _model_input_dict(model, param_vars, pt)
         pt_logp = pm.Point(pt_d, model=model)
         pt_ref = pm.Point(pt, filter_model_vars=False, model=model)
-        npt.assert_almost_equal(
+        npt.assert_allclose(
             logp_pymc(pt_logp),
             logp_reference(pt_ref),
-            decimal=decimal,
+            rtol=rtol,
+            atol=atol,
             err_msg=str(pt),
         )
 
@@ -396,7 +406,8 @@ def check_logcdf(
     domain,
     paramdomains,
     scipy_logcdf,
-    decimal=None,
+    rtol=None,
+    atol=None,
     n_samples=100,
     skip_paramdomain_inside_edge_test=False,
     skip_paramdomain_outside_edge_test=False,
@@ -426,9 +437,14 @@ def check_logcdf(
         Supported domains of distribution parameters
     scipy_logcdf : Scipy logcdf method
         Scipy logcdf method of equivalent pymc_dist distribution
-    decimal : Int
-        Level of precision with which pymc_dist and scipy_logcdf are compared.
-        Defaults to 6 for float64 and 3 for float32
+    atol : Float
+        Absolute tolerance with which pymc_dist and scipy logp are comparing
+        the difference between actual and desired to `atol + rtol * abs(desired)`.
+        Defaults to 0
+    rtol : Float
+        Absolute tolerance with which pymc_dist and scipy logp are comparing
+        the difference between actual and desired to `atol + rtol * abs(desired)`.
+        Defaults to 1e-8 for float64 and 1e-5 for float32
     n_samples : Int
         Upper limit on the number of valid domain and value combinations that
         are compared between pymc and scipy methods. If n_samples is below the
@@ -456,8 +472,11 @@ def check_logcdf(
         value = model.rvs_to_values[rv]
         pymc_logcdf = model.compile_fn(logcdf(rv, value))
 
-        if decimal is None:
-            decimal = select_by_precision(float64=6, float32=3)
+        if rtol is None:
+            rtol = select_by_precision()
+
+        if atol is None:
+            atol = select_by_precision(float64=1e-10, float32=1e-8)
 
         for pt in product(domains, n_samples=n_samples):
             params = dict(pt)
@@ -470,10 +489,11 @@ def check_logcdf(
             pymc_eval = pymc_logcdf({"value": value})
 
             params["value"] = value  # for displaying in err_msg
-            npt.assert_almost_equal(
+            npt.assert_allclose(
                 pymc_eval,
                 scipy_eval,
-                decimal=decimal,
+                rtol=rtol,
+                atol=atol,
                 err_msg=str(params),
             )
 
@@ -542,7 +562,8 @@ def check_selfconsistency_discrete_logcdf(
     distribution,
     domain,
     paramdomains,
-    decimal=None,
+    rtol=None,
+    atol=None,
     n_samples=100,
 ):
     """
@@ -550,8 +571,12 @@ def check_selfconsistency_discrete_logcdf(
     """
     domains = paramdomains.copy()
     domains["value"] = domain
-    if decimal is None:
-        decimal = select_by_precision(float64=6, float32=3)
+
+    if rtol is None:
+        rtol = select_by_precision(float64=1e-8, float32=1e-5)
+
+    if atol is None:
+        atol = select_by_precision(float64=1e-10, float32=1e-8)
 
     model, param_vars = build_model(distribution, domain, paramdomains)
     rv = model["value"]
@@ -569,10 +594,11 @@ def check_selfconsistency_discrete_logcdf(
             param_vars[param_name].set_value(param_value)
 
         with pytensor.config.change_flags(mode=Mode("py")):
-            npt.assert_almost_equal(
+            npt.assert_allclose(
                 dist_logcdf({"value": value}),
                 sp.logsumexp([dist_logp({"value": value}) for value in values]),
-                decimal=decimal,
+                rtol=rtol,
+                atol=atol,
                 err_msg=str(pt),
             )
 

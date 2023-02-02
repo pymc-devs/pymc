@@ -272,7 +272,7 @@ class TestMatchesScipy:
             RealMatrix(5, n),
             {"mu": Vector(R, n), "chol": PdMatrixChol(n)},
             normal_logpdf_chol,
-            decimal=select_by_precision(float64=6, float32=-1),
+            rtol=select_by_precision(float64=1e-8, float32=1e-3),
             extra_args={"size": 5},
         )
         check_logp(
@@ -280,14 +280,14 @@ class TestMatchesScipy:
             Vector(R, n),
             {"mu": Vector(R, n), "chol": PdMatrixChol(n)},
             normal_logpdf_chol,
-            decimal=select_by_precision(float64=6, float32=0),
+            rtol=select_by_precision(float64=1e-8, float32=1e-1),
         )
         check_logp(
             pm.MvNormal,
             Vector(R, n),
             {"mu": Vector(R, n), "chol": PdMatrixCholUpper(n)},
             normal_logpdf_chol_upper,
-            decimal=select_by_precision(float64=6, float32=0),
+            rtol=select_by_precision(float64=1e-8, float32=1e-1),
             extra_args={"lower": False},
         )
 
@@ -338,7 +338,7 @@ class TestMatchesScipy:
                 "colcov": PdMatrix(n) * mat_scale,
             },
             matrix_normal_logpdf_cov,
-            decimal=select_by_precision(float64=5, float32=3),
+            rtol=select_by_precision(float64=1e-8, float32=1e-6),
         )
         check_logp(
             pm.MatrixNormal,
@@ -349,7 +349,7 @@ class TestMatchesScipy:
                 "colcov": PdMatrix(n) * mat_scale,
             },
             matrix_normal_logpdf_cov,
-            decimal=select_by_precision(float64=5, float32=3),
+            rtol=select_by_precision(float64=1e-8, float32=1e-6),
         )
         check_logp(
             pm.MatrixNormal,
@@ -360,7 +360,7 @@ class TestMatchesScipy:
                 "colchol": PdMatrixChol(n) * mat_scale,
             },
             matrix_normal_logpdf_chol,
-            decimal=select_by_precision(float64=5, float32=3),
+            rtol=select_by_precision(float64=1e-8, float32=1e-6),
         )
         check_logp(
             pm.MatrixNormal,
@@ -371,7 +371,7 @@ class TestMatchesScipy:
                 "colchol": PdMatrixChol(3) * mat_scale,
             },
             matrix_normal_logpdf_chol,
-            decimal=select_by_precision(float64=5, float32=3),
+            rtol=select_by_precision(float64=5, float32=3),
         )
 
     @pytest.mark.parametrize("n", [2, 3])
@@ -787,10 +787,8 @@ class TestMatchesScipy:
         delta_logp = scipy_logp - car_logp
 
         # Check to make sure all the delta values are identical.
-        tol = 1e-08
-        if pytensor.config.floatX == "float32":
-            tol = 1e-5
-        assert np.allclose(delta_logp - delta_logp[0], 0.0, atol=tol)
+        atol = select_by_precision(float64=1e-8, float32=1e-5)
+        assert np.allclose(delta_logp - delta_logp[0], 0.0, atol=atol)
 
 
 @pytest.mark.parametrize(

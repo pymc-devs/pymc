@@ -225,7 +225,7 @@ def test_joint_logp_subtensor():
     # The compiled graph should not contain any `RandomVariables`
     assert_no_rvs(logp_vals_fn.maker.fgraph.outputs[0])
 
-    decimals = select_by_precision(float64=6, float32=4)
+    atol = select_by_precision(float64=1e-8, float32=1e-5)
 
     for i in range(10):
         bern_sp = sp.bernoulli(p)
@@ -239,7 +239,7 @@ def test_joint_logp_subtensor():
 
         logp_vals = logp_vals_fn(A_idx_value, I_value)
 
-        np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)
+        np.testing.assert_allclose(logp_vals, exp_obs_logps, atol=atol)
 
 
 def test_logp_helper():
