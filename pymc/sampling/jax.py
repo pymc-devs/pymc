@@ -18,6 +18,8 @@ import sys
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
+from pytensor.tensor.random.type import RandomType
+
 from pymc.initial_point import StartDict
 from pymc.sampling.mcmc import _init_jitter
 
@@ -80,6 +82,11 @@ def _replace_shared_variables(graph: List[TensorVariable]) -> List[TensorVariabl
     """
 
     shared_variables = [var for var in graph_inputs(graph) if isinstance(var, SharedVariable)]
+
+    if any(isinstance(var.type, RandomType) for var in shared_variables):
+        raise ValueError(
+            "Graph contains shared RandomType variables which cannot be safely replaced"
+        )
 
     if any(var.default_update is not None for var in shared_variables):
         raise ValueError(
