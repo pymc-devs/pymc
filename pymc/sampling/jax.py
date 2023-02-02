@@ -14,7 +14,6 @@
 import os
 import re
 import sys
-import warnings
 
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union
@@ -48,9 +47,6 @@ from pymc import Model, modelcontext
 from pymc.backends.arviz import find_constants, find_observations
 from pymc.logprob.utils import CheckParameterValue
 from pymc.util import RandomSeed, _get_seeds_per_chain, get_default_varnames
-
-warnings.warn("This module is experimental.")
-
 
 __all__ = (
     "get_jaxified_graph",
