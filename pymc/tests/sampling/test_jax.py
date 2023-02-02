@@ -29,26 +29,24 @@ from pytensor.graph import graph_inputs
 
 import pymc as pm
 
+from pymc.sampling.jax import (
+    _get_batched_jittered_initial_points,
+    _get_log_likelihood,
+    _numpyro_nuts_defaults,
+    _replace_shared_variables,
+    _update_numpyro_nuts_kwargs,
+    get_jaxified_graph,
+    get_jaxified_logp,
+    sample_blackjax_nuts,
+    sample_numpyro_nuts,
+)
+
 
 def test_old_import_route():
     import pymc.sampling.jax as new_sj
     import pymc.sampling_jax as old_sj
 
     assert set(new_sj.__all__) <= set(dir(old_sj))
-
-
-with pytest.warns(UserWarning, match="module is experimental"):
-    from pymc.sampling.jax import (
-        _get_batched_jittered_initial_points,
-        _get_log_likelihood,
-        _numpyro_nuts_defaults,
-        _replace_shared_variables,
-        _update_numpyro_nuts_kwargs,
-        get_jaxified_graph,
-        get_jaxified_logp,
-        sample_blackjax_nuts,
-        sample_numpyro_nuts,
-    )
 
 
 @pytest.mark.parametrize(
@@ -180,6 +178,11 @@ def test_replace_shared_variables():
 
     x.default_update = x + 1
     with pytest.raises(ValueError, match="shared variables with default_update"):
+        _replace_shared_variables([x])
+
+    shared_rng = pytensor.shared(np.random.default_rng(), name="shared_rng")
+    x = pytensor.tensor.random.normal(rng=shared_rng)
+    with pytest.raises(ValueError, match="Graph contains shared RandomType variables"):
         _replace_shared_variables([x])
 
 
