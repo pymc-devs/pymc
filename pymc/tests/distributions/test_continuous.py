@@ -2026,6 +2026,16 @@ class TestBetaMuSigma(BaseTestDistributionRandom):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
+class TestBetaMuNu(BaseTestDistributionRandom):
+    pymc_dist = pm.Beta
+    pymc_dist_params = {"mu": 0.5, "nu": 3}
+    expected_alpha, expected_beta = pm.Beta.get_alpha_beta(
+        mu=pymc_dist_params["mu"], nu=pymc_dist_params["nu"]
+    )
+    expected_rv_op_params = {"alpha": expected_alpha, "beta": expected_beta}
+    checks_to_run = ["check_pymc_params_match_rv_op"]
+
+
 class TestExponential(BaseTestDistributionRandom):
     pymc_dist = pm.Exponential
     pymc_dist_params = {"lam": 10.0}
