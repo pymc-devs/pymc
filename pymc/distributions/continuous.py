@@ -1062,7 +1062,7 @@ class Beta(UnitContinuous):
     ========  ==============================================================
 
     Beta distribution can be parameterized either in terms of alpha and
-    beta or mean and standard deviation. The link between the two
+    beta, mean and standard deviation or mean and sample size. The link between the three
     parametrizations is given by
 
     .. math::
@@ -1071,6 +1071,9 @@ class Beta(UnitContinuous):
        \beta  &= (1 - \mu) \kappa
 
        \text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1
+
+       \alpha = \mu * \nu
+       \beta = (1 - \mu) * \nu
 
     Parameters
     ----------
@@ -1081,7 +1084,9 @@ class Beta(UnitContinuous):
     mu : tensor_like of float, optional
         Alternative mean (0 < ``mu`` < 1).
     sigma : tensor_like of float, optional
-        Alternative standard deviation (1 < ``sigma`` < sqrt(``mu`` * (1 - ``mu``))).
+        Alternative standard deviation (0 < ``sigma`` < sqrt(``mu`` * (1 - ``mu``))).
+    nu : tensor_like of float, optional
+        Alternative "sample size" of a Beta distribution (``nu`` > 0).
 
     Notes
     -----
@@ -1092,8 +1097,8 @@ class Beta(UnitContinuous):
     rv_op = pytensor.tensor.random.beta
 
     @classmethod
-    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, *args, **kwargs):
-        alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma)
+    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, nu=None, *args, **kwargs):
+        alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma, nu)
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))
 
@@ -1106,17 +1111,21 @@ class Beta(UnitContinuous):
         return mean
 
     @classmethod
-    def get_alpha_beta(self, alpha=None, beta=None, mu=None, sigma=None):
+    def get_alpha_beta(self, alpha=None, beta=None, mu=None, sigma=None, nu=None):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sigma is not None):
             kappa = mu * (1 - mu) / sigma**2 - 1
             alpha = mu * kappa
             beta = (1 - mu) * kappa
+        elif (mu is not None) and (nu is not None):
+            alpha = mu * nu
+            beta = (1 - mu) * nu
         else:
             raise ValueError(
                 "Incompatible parameterization. Either use alpha "
-                "and beta, or mu and sigma to specify distribution."
+                "and beta, mu and sigma or mu and nu to specify "
+                "distribution."
             )
 
         return alpha, beta
