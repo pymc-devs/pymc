@@ -2332,25 +2332,6 @@ class ChiSquared(PositiveContinuous):
         return logcdf(Gamma.dist(alpha=nu / 2, beta=0.5), value)
 
 
-# TODO: Remove this once logp for multiplication is working!
-class WeibullBetaRV(RandomVariable):
-    name = "weibull"
-    ndim_supp = 0
-    ndims_params = [0, 0]
-    dtype = "floatX"
-    _print_name = ("Weibull", "\\operatorname{Weibull}")
-
-    def __call__(self, alpha, beta, size=None, **kwargs):
-        return super().__call__(alpha, beta, size=size, **kwargs)
-
-    @classmethod
-    def rng_fn(cls, rng, alpha, beta, size) -> np.ndarray:
-        return np.asarray(beta * rng.weibull(alpha, size=size))
-
-
-weibull_beta = WeibullBetaRV()
-
-
 class Weibull(PositiveContinuous):
     r"""
     Weibull log-likelihood.
