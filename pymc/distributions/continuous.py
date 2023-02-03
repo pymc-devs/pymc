@@ -835,22 +835,7 @@ class HalfNormal(PositiveContinuous):
             sigma > 0,
             msg="sigma > 0",
         )
-
-
-class WaldRV(RandomVariable):
-    name = "wald"
-    ndim_supp = 0
-    ndims_params = [0, 0, 0]
-    dtype = "floatX"
-    _print_name = ("Wald", "\\operatorname{Wald}")
-
-    @classmethod
-    def rng_fn(cls, rng, mu, lam, alpha, size) -> np.ndarray:
-        return np.asarray(rng.wald(mu, lam, size=size) + alpha)
-
-
-wald = WaldRV()
-
+        
 
 class Wald(PositiveContinuous):
     r"""
@@ -1013,15 +998,6 @@ class Wald(PositiveContinuous):
             alpha >= 0,
             msg="mu > 0, lam > 0, alpha >= 0",
         )
-
-
-class BetaClippedRV(BetaRV):
-    @classmethod
-    def rng_fn(cls, rng, alpha, beta, size) -> np.ndarray:
-        return np.asarray(clipped_beta_rvs(alpha, beta, size=size, random_state=rng))
-
-
-beta = BetaClippedRV()
 
 
 class Beta(UnitContinuous):
@@ -1658,21 +1634,6 @@ class LogNormal(PositiveContinuous):
 
 
 Lognormal = LogNormal
-
-
-class StudentTRV(RandomVariable):
-    name = "studentt"
-    ndim_supp = 0
-    ndims_params = [0, 0, 0]
-    dtype = "floatX"
-    _print_name = ("StudentT", "\\operatorname{StudentT}")
-
-    @classmethod
-    def rng_fn(cls, rng, nu, mu, sigma, size=None) -> np.ndarray:
-        return np.asarray(stats.t.rvs(nu, mu, sigma, size=size, random_state=rng))
-
-
-studentt = StudentTRV()
 
 
 class StudentT(Continuous):
@@ -2330,25 +2291,6 @@ class ChiSquared(PositiveContinuous):
 
     def logcdf(value, nu):
         return logcdf(Gamma.dist(alpha=nu / 2, beta=0.5), value)
-
-
-# TODO: Remove this once logp for multiplication is working!
-class WeibullBetaRV(RandomVariable):
-    name = "weibull"
-    ndim_supp = 0
-    ndims_params = [0, 0]
-    dtype = "floatX"
-    _print_name = ("Weibull", "\\operatorname{Weibull}")
-
-    def __call__(self, alpha, beta, size=None, **kwargs):
-        return super().__call__(alpha, beta, size=size, **kwargs)
-
-    @classmethod
-    def rng_fn(cls, rng, alpha, beta, size) -> np.ndarray:
-        return np.asarray(beta * rng.weibull(alpha, size=size))
-
-
-weibull_beta = WeibullBetaRV()
 
 
 class Weibull(PositiveContinuous):
