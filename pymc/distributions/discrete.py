@@ -220,7 +220,7 @@ class BetaBinomial(Discrete):
     ========  =================================================================
     Support   :math:`x \in \{0, 1, \ldots, n\}`
     Mean      :math:`n \dfrac{\alpha}{\alpha + \beta}`
-    Variance  :math:`n \dfrac{\alpha \beta}{(\alpha+\beta)^2 (\alpha+\beta+1)}`
+    Variance  :math:`\dfrac{n \alpha \beta (\alpha+\beta+n)}{(\alpha+\beta)^2 (\alpha+\beta+1)}
     ========  =================================================================
 
     Parameters
