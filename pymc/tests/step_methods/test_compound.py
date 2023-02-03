@@ -130,3 +130,8 @@ class TestStatsBijection:
         assert isinstance(rev, list)
         assert len(rev) == len(stats_l)
         assert rev == stats_l
+        # Also rmap incomplete dicts
+        rev2 = bij.rmap({"sampler_1__a": 0})
+        assert len(rev2) == 2
+        assert len(rev2[0]) == 0
+        assert len(rev2[1]) == 1

@@ -198,9 +198,12 @@ class StatsBijection:
         return stats_dict
 
     def rmap(self, stats_dict: Mapping[str, Any]) -> StatsType:
-        """Split a global stats dict into a list of sampler-wise stats dicts."""
+        """Split a global stats dict into a list of sampler-wise stats dicts.
+
+        The ``stats_dict`` can be a subset of all sampler stats.
+        """
         stats_list = []
         for namemap in self._stat_groups:
-            d = {statname: stats_dict[sname] for sname, statname in namemap}
+            d = {statname: stats_dict[sname] for sname, statname in namemap if sname in stats_dict}
             stats_list.append(d)
         return stats_list
