@@ -1097,9 +1097,7 @@ class Beta(UnitContinuous):
     rv_op = pytensor.tensor.random.beta
 
     @classmethod
-    def dist(cls, alpha=None, beta=None, mu=None, sigma=None,nu=None, 
-            *args, **kwargs):
-
+    def dist(cls, alpha=None, beta=None, mu=None, sigma=None,nu=None, *args, **kwargs):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma, nu)
         alpha = at.as_tensor_variable(floatX(alpha))
         beta = at.as_tensor_variable(floatX(beta))

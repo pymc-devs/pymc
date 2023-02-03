@@ -166,6 +166,7 @@ def beta_mu_sigma(value, mu, sigma):
     else:
         return -np.inf
 
+
 class TestMatchesScipy:
     def test_uniform(self):
         check_logp(
