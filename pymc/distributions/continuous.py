@@ -837,19 +837,7 @@ class HalfNormal(PositiveContinuous):
         )
 
 
-class WaldRV(RandomVariable):
-    name = "wald"
-    ndim_supp = 0
-    ndims_params = [0, 0, 0]
-    dtype = "floatX"
-    _print_name = ("Wald", "\\operatorname{Wald}")
 
-    @classmethod
-    def rng_fn(cls, rng, mu, lam, alpha, size) -> np.ndarray:
-        return np.asarray(rng.wald(mu, lam, size=size) + alpha)
-
-
-wald = WaldRV()
 
 
 class Wald(PositiveContinuous):
