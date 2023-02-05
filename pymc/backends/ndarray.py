@@ -119,7 +119,9 @@ class NDArray(base.BaseTrace):
                     data[key][self.draw_idx] = val
         self.draw_idx += 1
 
-    def _get_sampler_stats(self, varname, sampler_idx, burn, thin):
+    def _get_sampler_stats(
+        self, varname: str, sampler_idx: int, burn: int, thin: int
+    ) -> np.ndarray:
         return self._stats[sampler_idx][varname][burn::thin]
 
     def close(self):

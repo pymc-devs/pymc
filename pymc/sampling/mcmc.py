@@ -580,10 +580,8 @@ def sample(
     # count the number of tune/draw iterations that happened
     # ideally via the "tune" statistic, but not all samplers record it!
     if "tune" in mtrace.stat_names:
-        stat = mtrace.get_sampler_stats("tune", chains=0)
-        # when CompoundStep is used, the stat is 2 dimensional!
-        if len(stat.shape) == 2:
-            stat = stat[:, 0]
+        # Get the tune stat directly from chain 0, sampler 0
+        stat = mtrace._straces[0].get_sampler_stats("tune", sampler_idx=0)
         stat = tuple(stat)
         n_tune = stat.count(True)
         n_draws = stat.count(False)
