@@ -69,7 +69,19 @@ from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
 from pymc.backends.base import BaseTrace, IBaseTrace
 from pymc.backends.ndarray import NDArray
 from pymc.model import Model
-from pymc.step_methods.compound import BlockedStep, CompoundStep
+from pymc.step_methods.compound import BlockedStep, CompoundStep, StatsBijection
+
+HAS_MCB = False
+try:
+    from mcbackend import Backend
+
+    from pymc.backends.mcbackend import ChainRecordAdapter, make_runmeta
+
+    TraceOrBackend = Union[BaseTrace, Backend]
+    HAS_MCB = True
+except ImportError:
+    TraceOrBackend = BaseTrace  # type: ignore
+
 
 __all__ = ["to_inference_data", "predictions_to_inference_data"]
 
@@ -99,7 +111,7 @@ def _init_trace(
 
 def init_traces(
     *,
-    backend: Optional[BaseTrace],
+    backend: Optional[TraceOrBackend],
     chains: int,
     expected_length: int,
     step: Union[BlockedStep, CompoundStep],
@@ -108,6 +120,25 @@ def init_traces(
     model: Model,
 ) -> Sequence[IBaseTrace]:
     """Initializes a trace recorder for each chain."""
+    if HAS_MCB and isinstance(backend, Backend):
+        run = backend.init_run(
+            make_runmeta(
+                var_dtypes=var_dtypes,
+                var_shapes=var_shapes,
+                step=step,
+                model=model,
+            )
+        )
+        statsbj = StatsBijection(step.stats_dtypes)
+        return [
+            ChainRecordAdapter(
+                chain=run.init_chain(chain_number=chain_number),
+                stats_bijection=statsbj,
+            )
+            for chain_number in range(chains)
+        ]
+
+    assert backend is None or isinstance(backend, BaseTrace)
     return [
         _init_trace(
             expected_length=expected_length,

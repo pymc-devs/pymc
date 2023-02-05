@@ -32,8 +32,8 @@ from typing_extensions import Protocol, TypeAlias
 
 import pymc as pm
 
-from pymc.backends import init_traces
-from pymc.backends.base import BaseTrace, IBaseTrace, MultiTrace, _choose_chains
+from pymc.backends import TraceOrBackend, init_traces
+from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
@@ -227,7 +227,7 @@ def sample(
     init: str = "auto",
     n_init: int = 200_000,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
-    trace: Optional[BaseTrace] = None,
+    trace: Optional[TraceOrBackend] = None,
     chains: Optional[int] = None,
     cores: Optional[int] = None,
     tune: int = 1000,
