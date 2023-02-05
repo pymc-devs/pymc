@@ -41,3 +41,4 @@ dependencies:
 - pip:
   - git+https://github.com/pymc-devs/pymc-sphinx-theme
   - numdifftools>=0.9.40
+  - mcbackend>=0.4.0
