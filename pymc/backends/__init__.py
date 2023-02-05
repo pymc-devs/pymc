@@ -75,7 +75,7 @@ from pymc.step_methods.compound import BlockedStep, CompoundStep
 
 HAS_MCB = False
 try:
-    from mcbackend import Backend, Run
+    from mcbackend import Backend, NumPyBackend, Run
 
     from pymc.backends.mcbackend import init_chain_adapters
 
@@ -123,6 +123,8 @@ def init_traces(
     model: Model,
 ) -> Tuple[Optional[RunType], Sequence[IBaseTrace]]:
     """Initializes a trace recorder for each chain."""
+    if HAS_MCB and backend is None:
+        backend = NumPyBackend(preallocate=expected_length)
     if HAS_MCB and isinstance(backend, Backend):
         return init_chain_adapters(
             backend=backend,
