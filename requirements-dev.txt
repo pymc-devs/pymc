@@ -9,6 +9,7 @@ git+https://github.com/pymc-devs/pymc-sphinx-theme
 h5py>=2.7
 ipython>=7.16
 jupyter-sphinx
+mcbackend>=0.3.0
 mypy==0.990
 myst-nb
 numdifftools>=0.9.40

@@ -31,3 +31,4 @@ dependencies:
 - types-cachetools
 - pip:
   - numdifftools>=0.9.40
+  - mcbackend>=0.3.0
