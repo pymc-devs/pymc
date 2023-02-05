@@ -85,6 +85,7 @@ jobs:
             tests/step_methods/hmc/test_quadpotential.py
 
           - |
+            tests/backends/test_mcbackend.py
             tests/distributions/test_truncated.py
             tests/logprob/test_abstract.py
             tests/logprob/test_censoring.py
