@@ -350,7 +350,6 @@ class WithMemoization:
 
 
 def locally_cachedmethod(f):
-
     from collections import defaultdict
 
     def self_cache_fn(f_name):

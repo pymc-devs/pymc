@@ -112,7 +112,6 @@ def test_joint_logprob_basic():
 
 
 def test_joint_logprob_multi_obs():
-
     a = at.random.uniform(0.0, 1.0)
     b = at.random.normal(0.0, 1.0)
 

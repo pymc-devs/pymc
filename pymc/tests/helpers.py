@@ -80,7 +80,6 @@ class LoggingHandler(BufferingHandler):
 
 
 class Matcher:
-
     _partial_matches = ("msg", "message")
 
     def matches(self, d, **kwargs):
@@ -162,7 +161,7 @@ class StepMethodTester:
 
     def check_stat(self, check, idata, name):
         group = idata.posterior
-        for (var, stat, value, bound) in check:
+        for var, stat, value, bound in check:
             s = stat(group[var].sel(chain=0), axis=0)
             close_to(s, value, bound, name)
 

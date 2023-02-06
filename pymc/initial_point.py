@@ -161,7 +161,6 @@ def make_initial_point_fn(
         varnames.append(name)
 
     def make_seeded_function(func):
-
         rngs = find_rng_nodes(func.maker.fgraph.outputs)
 
         @functools.wraps(func)

@@ -1164,7 +1164,6 @@ class TestICDF:
         ],
     )
     def test_geometric_icdf(self, dist_params, obs, size):
-
         dist_params_at, obs_at, size_at = create_pytensor_params(dist_params, obs, size)
         dist_params = dict(zip(dist_params_at, dist_params))
 

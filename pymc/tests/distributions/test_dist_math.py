@@ -107,7 +107,6 @@ class MultinomialB(Discrete):
 
 
 def test_multinomial_check_parameters():
-
     x = np.array([1, 5])
     n = x.sum()
 

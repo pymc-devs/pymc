@@ -178,7 +178,6 @@ class MeasurableRound(MeasurableElemwise):
 
 @node_rewriter(tracks=[ceil, floor, round_half_to_even])
 def find_measurable_roundings(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableRound]]:
-
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover

@@ -310,7 +310,6 @@ class MvStudentTRV(RandomVariable):
         return super().make_node(rng, size, dtype, nu, mu, cov)
 
     def __call__(self, nu, mu=None, cov=None, size=None, **kwargs):
-
         dtype = pytensor.config.floatX if self.dtype == "floatX" else self.dtype
 
         if mu is None:
@@ -326,7 +325,6 @@ class MvStudentTRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, nu, mu, cov, size):
-
         mv_samples = multivariate_normal.rng_fn(rng=rng, mean=np.zeros_like(mu), cov=cov, size=size)
 
         # Take chi2 draws and add an axis of length 1 to the right for correct broadcasting below
@@ -618,7 +616,6 @@ class DirichletMultinomialRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, n, a, size):
-
         if n.ndim > 0 or a.ndim > 1:
             n, a = broadcast_params([n, a], cls.ndims_params)
             size = tuple(size or ())
@@ -865,7 +862,6 @@ class PosDefMatrix(Op):
 
     # Python implementation:
     def perform(self, node, inputs, outputs):
-
         (x,) = inputs
         (z,) = outputs
         try:
@@ -1494,7 +1490,6 @@ class LKJCorrRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, n, eta, size):
-
         # We flatten the size to make operations easier, and then rebuild it
         if size is None:
             flat_size = 1
@@ -1651,7 +1646,6 @@ class MatrixNormalRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, mu, rowchol, colchol, size=None):
-
         size = to_tuple(size)
         dist_shape = to_tuple([rowchol.shape[0], colchol.shape[0]])
         output_shape = size + dist_shape
@@ -1773,7 +1767,6 @@ class MatrixNormal(Continuous):
         *args,
         **kwargs,
     ):
-
         cholesky = Cholesky(lower=True, on_error="raise")
 
         # Among-row matrices
@@ -1971,7 +1964,6 @@ class KroneckerNormal(Continuous):
 
     @classmethod
     def dist(cls, mu, covs=None, chols=None, evds=None, sigma=None, *args, **kwargs):
-
         if len([i for i in [covs, chols, evds] if i is not None]) != 1:
             raise ValueError(
                 "Incompatible parameterization. Specify exactly one of covs, chols, or evds."
@@ -2236,7 +2228,6 @@ class StickBreakingWeightsRV(RandomVariable):
     _print_name = ("StickBreakingWeights", "\\operatorname{StickBreakingWeights}")
 
     def make_node(self, rng, size, dtype, alpha, K):
-
         alpha = at.as_tensor_variable(alpha)
         K = at.as_tensor_variable(intX(K))
 
@@ -2519,7 +2510,6 @@ class ZeroSumNormal(Distribution):
 
     @classmethod
     def rv_op(cls, sigma, zerosum_axes, support_shape, size=None):
-
         shape = to_tuple(size) + tuple(support_shape)
         normal_dist = ignore_logprob(pm.Normal.dist(sigma=sigma, shape=shape))
 
@@ -2546,7 +2536,6 @@ class ZeroSumNormal(Distribution):
 
 @_change_dist_size.register(ZeroSumNormalRV)
 def change_zerosum_size(op, normal_dist, new_size, expand=False):
-
     normal_dist, sigma, support_shape = normal_dist.owner.inputs
 
     if expand:

@@ -56,7 +56,6 @@ from pymc.tests.helpers import assert_no_rvs, select_by_precision
 
 
 def test_get_scaling():
-
     assert _get_scaling(None, (2, 3), 2).eval() == 1
     # ndim >=1 & ndim<1
     assert _get_scaling(45, (2, 3), 1).eval() == 22.5

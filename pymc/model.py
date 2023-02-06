@@ -1388,7 +1388,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         mask = getattr(data, "mask", None)
         if mask is not None:
-
             if mask.all():
                 # If there are no observed values, this variable isn't really
                 # observed.
@@ -1752,7 +1751,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         value_names_to_dtypes = {value.name: value.dtype for value in self.value_vars}
         value_names_set = set(value_names_to_dtypes.keys())
         for elem in start_points:
-
             for k, v in elem.items():
                 elem[k] = np.asarray(v, dtype=value_names_to_dtypes[k])
 

@@ -167,7 +167,6 @@ class Simulator(Distribution):
         dtype="floatX",
         **kwargs,
     ):
-
         if not isinstance(distance, Op):
             if distance == "gaussian":
                 distance = gaussian

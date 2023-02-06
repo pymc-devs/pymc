@@ -49,7 +49,6 @@ class Competence(IntEnum):
 
 
 class BlockedStep(ABC):
-
     stats_dtypes: List[Dict[str, type]] = []
     vars: List[Variable] = []
 

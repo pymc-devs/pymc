@@ -75,7 +75,6 @@ def test_pd_series_as_tensor_variable(np_array: np.ndarray) -> None:
 
 
 def test_pd_as_tensor_variable_multiindex() -> None:
-
     tuples = [("L", "Q"), ("L", "I"), ("O", "L"), ("O", "I")]
 
     index = pd.MultiIndex.from_tuples(tuples, names=["Id1", "Id2"])
@@ -135,7 +134,6 @@ def _make_along_axis_idx(arr_shape, indices, axis):
 
 
 def test_extract_obs_data():
-
     with pytest.raises(TypeError):
         extract_obs_data(at.matrix())
 
@@ -538,7 +536,6 @@ class TestReplaceRVsByValues:
     @pytest.mark.parametrize("apply_transforms", (True, False))
     @pytest.mark.parametrize("test_deprecated_fn", (True, False))
     def test_basic(self, symbolic_rv, apply_transforms, test_deprecated_fn):
-
         # Interval transform between last two arguments
         interval = (
             Interval(bounds_fn=lambda *args: (args[-2], args[-1])) if apply_transforms else None

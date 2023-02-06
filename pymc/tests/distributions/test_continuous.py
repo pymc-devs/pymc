@@ -56,7 +56,6 @@ try:
 
     _polyagamma_not_installed = False
 except ImportError:  # pragma: no cover
-
     _polyagamma_not_installed = True
 
     def polyagamma_pdf(*args, **kwargs):
@@ -2277,7 +2276,6 @@ class TestICDF:
         ],
     )
     def test_normal_icdf(self, dist_params, obs, size):
-
         dist_params_at, obs_at, size_at = create_pytensor_params(dist_params, obs, size)
         dist_params = dict(zip(dist_params_at, dist_params))
 

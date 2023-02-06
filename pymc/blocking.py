@@ -34,6 +34,7 @@ PointType: TypeAlias = Dict[str, np.ndarray]
 StatsDict: TypeAlias = Dict[str, Any]
 StatsType: TypeAlias = List[StatsDict]
 
+
 # `point_map_info` is a tuple of tuples containing `(name, shape, dtype)` for
 # each of the raveled variables.
 class RaveledVars(NamedTuple):

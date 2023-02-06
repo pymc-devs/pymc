@@ -161,7 +161,6 @@ class Truncated(Distribution):
 
     @classmethod
     def rv_op(cls, dist, lower, upper, max_n_steps, size=None):
-
         # Try to use specialized Op
         try:
             return _truncated(dist.owner.op, lower, upper, size, *dist.owner.inputs)

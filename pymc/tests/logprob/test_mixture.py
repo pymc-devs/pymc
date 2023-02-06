@@ -111,7 +111,6 @@ def test_mixture_basics():
     ],
 )
 def test_compute_test_value(op_constructor):
-
     srng = at.random.RandomStream(29833)
 
     X_rv = srng.normal(0, 1, name="X")

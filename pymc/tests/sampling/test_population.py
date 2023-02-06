@@ -20,7 +20,6 @@ from pymc.step_methods.metropolis import DEMetropolis
 
 
 class TestPopulationSamplers:
-
     steppers = [DEMetropolis]
 
     def test_checks_population_size(self):
