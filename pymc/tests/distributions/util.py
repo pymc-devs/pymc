@@ -812,7 +812,6 @@ class BaseTestDistributionRandom(SeededTest):
         for (expected_name, expected_value), actual_variable in zip(
             self.expected_rv_op_params.items(), pytensor_dist_inputs
         ):
-
             # Add additional line to evaluate symbolic inputs to distributions
             if isinstance(expected_value, pytensor.tensor.Variable):
                 expected_value = expected_value.eval()

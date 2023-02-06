@@ -182,7 +182,6 @@ class Bound:
         dims=None,
         **kwargs,
     ):
-
         warnings.warn(
             "Bound has been deprecated in favor of Truncated, and will be removed in a "
             "future release. If Truncated is not an option, Bound can be implemented by"
@@ -234,7 +233,6 @@ class Bound:
         shape=None,
         **kwargs,
     ):
-
         cls._argument_checks(dist, **kwargs)
         lower, upper, initval = cls._set_values(lower, upper, size, shape, initval=None)
         dist = ignore_logprob(dist)

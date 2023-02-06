@@ -71,6 +71,7 @@ def find_observations(model: "Model") -> Dict[str, Var]:
 
 def find_constants(model: "Model") -> Dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
+
     # The constant data vars must be either pm.Data or TensorConstant or SharedVariable
     def is_data(name, var, model) -> bool:
         observations = find_observations(model)
@@ -174,7 +175,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         save_warmup: Optional[bool] = None,
         include_transformed: bool = False,
     ):
-
         self.save_warmup = rcParams["data.save_warmup"] if save_warmup is None else save_warmup
         self.include_transformed = include_transformed
         self.trace = trace

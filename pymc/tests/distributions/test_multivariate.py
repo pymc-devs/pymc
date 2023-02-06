@@ -1542,7 +1542,6 @@ class TestZeroSumNormal:
         ],
     )
     def test_zsn_variance(self, sigma, n):
-
         dist = pm.ZeroSumNormal.dist(sigma=sigma, shape=(100_000, n))
         random_samples = pm.draw(dist)
 
@@ -1854,7 +1853,6 @@ class TestWishart(BaseTestDistributionRandom):
 
 
 class TestMatrixNormal(BaseTestDistributionRandom):
-
     pymc_dist = pm.MatrixNormal
 
     mu = np.random.random((3, 3))

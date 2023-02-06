@@ -196,7 +196,6 @@ def factorized_joint_logprob(
             q_logprob_vars = [q_logprob_vars]
 
         for q_value_var, q_logprob_var in zip(q_value_vars, q_logprob_vars):
-
             q_value_var = original_values[q_value_var]
 
             if q_value_var.name:

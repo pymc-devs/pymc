@@ -128,7 +128,6 @@ class ModelGraph:
                 # loop created so that the elif block can go through this again
                 # and remove any intermediate ops, notably dtype casting, to observations
                 while True:
-
                     obs_name = obs_node.name
                     if obs_name and obs_name != var_name:
                         input_map[var_name] = input_map[var_name].difference({obs_name})
@@ -319,7 +318,6 @@ class ModelGraph:
                 graphnetwork.graph["name"] = self.model.name
             else:
                 for var_name in all_var_names:
-
                     self._make_node(var_name, graphnetwork, nx=True, formatting=formatting)
 
         for child, parents in self.make_compute_graph(var_names=var_names).items():
@@ -382,7 +380,6 @@ def model_to_networkx(
         model_to_networkx(schools)
     """
     if "plain" not in formatting:
-
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
 
     if formatting != "plain":

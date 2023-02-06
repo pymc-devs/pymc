@@ -89,7 +89,6 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
     # did not not work as expected
     # there were some numeric problems, so float64 is forced
     with pytensor.config.change_flags(floatX="float64", warn_float64="ignore"):
-
         assert pytensor.config.floatX == "float64"
         assert pytensor.config.warn_float64 == "ignore"
 
@@ -138,7 +137,6 @@ def test_elbo_beta_kl(aux_total_size):
     beta = len(y_obs) / float(aux_total_size)
 
     with pytensor.config.change_flags(floatX="float64", warn_float64="ignore"):
-
         post_mu = np.array([1.88], dtype=pytensor.config.floatX)
         post_sigma = np.array([1], dtype=pytensor.config.floatX)
 

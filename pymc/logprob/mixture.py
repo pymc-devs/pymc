@@ -138,7 +138,6 @@ def expand_indices(
     shape_copy = list(shape)
     n_preceding_basics = 0
     for d, idx in enumerate(full_indices):
-
         if not is_basic_idx(idx):
             s = shape_copy.pop(0)
 
@@ -326,7 +325,6 @@ def mixture_replace(fgraph, node):
     # that belong to each one (by way of their indices).
     new_mixture_rvs = []
     for i, component_rv in enumerate(mixture_rvs):
-
         # We create custom types for the mixture components and assign them
         # null `get_measurable_outputs` dispatches so that they aren't
         # erroneously encountered in places like `factorized_joint_logprob`.

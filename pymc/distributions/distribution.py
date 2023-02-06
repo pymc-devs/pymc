@@ -97,7 +97,6 @@ class DistributionMeta(ABCMeta):
     """
 
     def __new__(cls, name, bases, clsdict):
-
         # Forcefully deprecate old v3 `Distribution`s
         if "random" in clsdict:
 
@@ -453,7 +452,6 @@ class Discrete(Distribution):
     """Base class for discrete distributions"""
 
     def __new__(cls, name, *args, **kwargs):
-
         if kwargs.get("transform", None):
             raise ValueError("Transformations for discrete distributions")
 
@@ -500,7 +498,6 @@ class _CustomDist(Distribution):
         dtype: str = "floatX",
         **kwargs,
     ):
-
         dist_params = [as_tensor_variable(param) for param in dist_params]
 
         # Assume scalar ndims_params
@@ -608,7 +605,6 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
 
 
 class _CustomSymbolicDist(Distribution):
-
     rv_type = CustomSymbolicDistRV
 
     @classmethod

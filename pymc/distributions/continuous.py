@@ -171,7 +171,6 @@ def bounded_cont_transform(op, rv, bound_args_indices=None):
         raise ValueError(f"Must specify bound_args_indices for {op} bounded distribution")
 
     def transform_params(*args):
-
         lower, upper = None, None
         if bound_args_indices[0] is not None:
             lower = args[bound_args_indices[0]]
@@ -3474,7 +3473,6 @@ class Interpolated(BoundedContinuous):
 
     @classmethod
     def dist(cls, x_points, pdf_points, *args, **kwargs):
-
         interp = InterpolatedUnivariateSpline(x_points, pdf_points, k=1, ext="zeros")
 
         Z = interp.integral(x_points[0], x_points[-1])

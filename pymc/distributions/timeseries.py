@@ -677,7 +677,6 @@ class AR(Distribution):
 
 @_change_dist_size.register(AutoRegressiveRV)
 def change_ar_size(op, dist, new_size, expand=False):
-
     if expand:
         old_size = dist.shape[:-1]
         new_size = tuple(new_size) + tuple(old_size)
@@ -850,7 +849,6 @@ class GARCH11(Distribution):
 
 @_change_dist_size.register(GARCH11RV)
 def change_garch11_size(op, dist, new_size, expand=False):
-
     if expand:
         old_size = dist.shape[:-1]
         new_size = tuple(new_size) + tuple(old_size)
@@ -1035,7 +1033,6 @@ class EulerMaruyama(Distribution):
 
 @_change_dist_size.register(EulerMaruyamaRV)
 def change_eulermaruyama_size(op, dist, new_size, expand=False):
-
     if expand:
         old_size = dist.shape[:-1]
         new_size = tuple(new_size) + tuple(old_size)

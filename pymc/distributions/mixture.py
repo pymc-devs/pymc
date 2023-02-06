@@ -358,7 +358,6 @@ def marginal_mixture_logprob(op, values, rng, weights, *components, **kwargs):
 
 @_logcdf.register(MarginalMixtureRV)
 def marginal_mixture_logcdf(op, value, rng, weights, *components, **kwargs):
-
     # single component
     if len(components) == 1:
         # Need to broadcast value across mixture axis

@@ -572,7 +572,6 @@ def test_make_obs_var():
 
 
 def test_initial_point():
-
     with pm.Model() as model:
         a = pm.Uniform("a")
         x = pm.Normal("x", a)
@@ -597,7 +596,6 @@ def test_initial_point():
 
 
 def test_point_logps():
-
     with pm.Model() as model:
         a = pm.Uniform("a")
         pm.Normal("x", a)

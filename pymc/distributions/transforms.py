@@ -164,7 +164,6 @@ class CholeskyCovPacked(RVTransform):
 
 
 class Chain(RVTransform):
-
     __slots__ = ("param_extract_fn", "transform_list", "name")
 
     def __init__(self, transform_list):
