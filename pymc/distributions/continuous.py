@@ -838,6 +838,9 @@ class HalfNormal(PositiveContinuous):
         )
 
 
+wald = WaldRV()
+
+
 class Wald(PositiveContinuous):
     r"""
     Wald log-likelihood.
@@ -1644,6 +1647,9 @@ class LogNormal(PositiveContinuous):
 
 
 Lognormal = LogNormal
+
+
+studentt = StudentTRV()
 
 
 class StudentT(Continuous):
