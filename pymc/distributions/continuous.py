@@ -36,6 +36,8 @@ from pytensor.tensor.extra_ops import broadcast_shape
 from pytensor.tensor.math import tanh
 from pytensor.tensor.random.basic import (
     BetaRV,
+    StudentTRV,
+    WaldRV,
     cauchy,
     chisquare,
     exponential,
@@ -52,8 +54,6 @@ from pytensor.tensor.random.basic import (
     triangular,
     uniform,
     vonmises,
-    WaldRV,
-    StudentTRV,
 )
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorConstant
@@ -173,7 +173,6 @@ def bounded_cont_transform(op, rv, bound_args_indices=None):
         raise ValueError(f"Must specify bound_args_indices for {op} bounded distribution")
 
     def transform_params(*args):
-
         lower, upper = None, None
         if bound_args_indices[0] is not None:
             lower = args[bound_args_indices[0]]
@@ -837,7 +836,7 @@ class HalfNormal(PositiveContinuous):
             sigma > 0,
             msg="sigma > 0",
         )
-        
+
 
 class Wald(PositiveContinuous):
     r"""
@@ -1000,6 +999,15 @@ class Wald(PositiveContinuous):
             alpha >= 0,
             msg="mu > 0, lam > 0, alpha >= 0",
         )
+
+
+class BetaClippedRV(BetaRV):
+    @classmethod
+    def rng_fn(cls, rng, alpha, beta, size) -> np.ndarray:
+        return np.asarray(clipped_beta_rvs(alpha, beta, size=size, random_state=rng))
+
+
+beta = BetaClippedRV()
 
 
 class Beta(UnitContinuous):
@@ -2295,6 +2303,25 @@ class ChiSquared(PositiveContinuous):
         return logcdf(Gamma.dist(alpha=nu / 2, beta=0.5), value)
 
 
+# TODO: Remove this once logp for multiplication is working!
+class WeibullBetaRV(RandomVariable):
+    name = "weibull"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "floatX"
+    _print_name = ("Weibull", "\\operatorname{Weibull}")
+
+    def __call__(self, alpha, beta, size=None, **kwargs):
+        return super().__call__(alpha, beta, size=size, **kwargs)
+
+    @classmethod
+    def rng_fn(cls, rng, alpha, beta, size) -> np.ndarray:
+        return np.asarray(beta * rng.weibull(alpha, size=size))
+
+
+weibull_beta = WeibullBetaRV()
+
+
 class Weibull(PositiveContinuous):
     r"""
     Weibull log-likelihood.
@@ -3418,7 +3445,6 @@ class Interpolated(BoundedContinuous):
 
     @classmethod
     def dist(cls, x_points, pdf_points, *args, **kwargs):
-
         interp = InterpolatedUnivariateSpline(x_points, pdf_points, k=1, ext="zeros")
 
         Z = interp.integral(x_points[0], x_points[-1])
