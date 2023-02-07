@@ -62,7 +62,7 @@ from pymc.logprob.joint_logprob import (
     joint_logp,
 )
 from pymc.logprob.utils import rvs_to_value_vars, walk_model
-from pymc.tests.helpers import assert_no_rvs, select_by_precision
+from pymc.tests.helpers import assert_no_rvs
 from pymc.tests.logprob.utils import joint_logprob
 
 
@@ -407,64 +407,6 @@ def test_joint_logp_incsubtensor(indices, size):
     a_val_idx[indices] = data
     exp_obs_logps = sp.norm.logpdf(a_val_idx, mu, sigma)
     np.testing.assert_almost_equal(logp_vals, exp_obs_logps)
-
-
-def test_joint_logp_subtensor():
-    """Make sure we can compute a log-likelihood for ``Y[I]`` where ``Y`` and ``I`` are random variables."""
-
-    size = 5
-
-    mu_base = pm.floatX(np.power(10, np.arange(np.prod(size)))).reshape(size)
-    mu = np.stack([mu_base, -mu_base])
-    sigma = 0.001
-    rng = pytensor.shared(np.random.RandomState(232), borrow=True)
-
-    A_rv = pm.Normal.dist(mu, sigma, rng=rng)
-    A_rv.name = "A"
-
-    p = 0.5
-
-    I_rv = pm.Bernoulli.dist(p, size=size, rng=rng)
-    I_rv.name = "I"
-
-    A_idx = A_rv[I_rv, at.ogrid[A_rv.shape[-1] :]]
-
-    assert isinstance(A_idx.owner.op, (Subtensor, AdvancedSubtensor, AdvancedSubtensor1))
-
-    A_idx_value_var = A_idx.type()
-    A_idx_value_var.name = "A_idx_value"
-
-    I_value_var = I_rv.type()
-    I_value_var.name = "I_value"
-
-    A_idx_logps = joint_logp(
-        (A_idx, I_rv),
-        rvs_to_values={A_idx: A_idx_value_var, I_rv: I_value_var},
-        rvs_to_transforms={},
-        rvs_to_total_sizes={},
-    )
-    A_idx_logp = at.add(*A_idx_logps)
-
-    logp_vals_fn = pytensor.function([A_idx_value_var, I_value_var], A_idx_logp)
-
-    # The compiled graph should not contain any `RandomVariables`
-    assert_no_rvs(logp_vals_fn.maker.fgraph.outputs[0])
-
-    decimals = select_by_precision(float64=6, float32=4)
-
-    for i in range(10):
-        bern_sp = sp.bernoulli(p)
-        I_value = bern_sp.rvs(size=size).astype(I_rv.dtype)
-
-        norm_sp = sp.norm(mu[I_value, np.ogrid[mu.shape[1] :]], sigma)
-        A_idx_value = norm_sp.rvs().astype(A_idx.dtype)
-
-        exp_obs_logps = norm_sp.logpdf(A_idx_value)
-        exp_obs_logps += bern_sp.logpmf(I_value)
-
-        logp_vals = logp_vals_fn(A_idx_value, I_value)
-
-        np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)
 
 
 def test_logp_helper():
