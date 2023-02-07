@@ -58,7 +58,7 @@ class IBaseTrace(ABC, Sized):
     varnames: List[str]
     """Names of tracked variables."""
 
-    sampler_vars: List[Dict[str, type]]
+    sampler_vars: List[Dict[str, Union[type, np.dtype]]]
     """Sampler stats for each sampler."""
 
     def __len__(self):
@@ -79,23 +79,27 @@ class IBaseTrace(ABC, Sized):
         """
         raise NotImplementedError()
 
-    def get_sampler_stats(self, stat_name: str, sampler_idx: Optional[int] = None, burn=0, thin=1):
+    def get_sampler_stats(
+        self, stat_name: str, sampler_idx: Optional[int] = None, burn=0, thin=1
+    ) -> np.ndarray:
         """Get sampler statistics from the trace.
 
         Parameters
         ----------
-        stat_name: str
-        sampler_idx: int or None
-        burn: int
-        thin: int
+        stat_name : str
+            Name of the stat to fetch.
+        sampler_idx : int or None
+            Index of the sampler to get the stat from.
+        burn : int
+            Draws to skip from the start.
+        thin : int
+            Stepsize for the slice.
 
         Returns
         -------
-        If the `sampler_idx` is specified, return the statistic with
-        the given name in a numpy array. If it is not specified and there
-        is more than one sampler that provides this statistic, return
-        a numpy array of shape (m, n), where `m` is the number of
-        such samplers, and `n` is the number of samples.
+        stats : np.ndarray
+            If `sampler_idx` was specified, the shape should be `(draws,)`.
+            Otherwise, the shape should be `(draws, samplers)`.
         """
         raise NotImplementedError()
 
@@ -220,7 +224,9 @@ class BaseTrace(IBaseTrace):
         except (ValueError, TypeError):  # Passed variable or variable name.
             raise ValueError("Can only index with slice or integer")
 
-    def get_sampler_stats(self, stat_name, sampler_idx=None, burn=0, thin=1):
+    def get_sampler_stats(
+        self, stat_name: str, sampler_idx: Optional[int] = None, burn=0, thin=1
+    ) -> np.ndarray:
         """Get sampler statistics from the trace.
 
         Parameters
