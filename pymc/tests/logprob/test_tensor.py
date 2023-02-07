@@ -247,6 +247,7 @@ def test_measurable_join_univariate(size1, size2, axis, concatenate):
     else:
         base_logps = at.stack(base_logps, axis=axis)
     y_logp = joint_logprob({y_rv: y_vv}, sum=False)
+    assert_no_rvs(y_logp)
 
     base1_testval = base1_rv.eval()
     base2_testval = base2_rv.eval()
@@ -314,6 +315,7 @@ def test_measurable_join_multivariate(size1, supp_size1, size2, supp_size2, axis
         axis_norm = np.core.numeric.normalize_axis_index(axis, base1_rv.ndim + 1)
         base_logps = at.stack(base_logps, axis=axis_norm - 1)
     y_logp = joint_logprob({y_rv: y_vv}, sum=False)
+    assert_no_rvs(y_logp)
 
     base1_testval = base1_rv.eval()
     base2_testval = base2_rv.eval()
