@@ -35,7 +35,7 @@ string_types = str
 
 
 def typefilter(vars, types):
-    # Returns variables of type `types` from `vars`
+    # Return variables of type `types` from `vars`
     return [v for v in vars if v.dtype in types]
 
 
