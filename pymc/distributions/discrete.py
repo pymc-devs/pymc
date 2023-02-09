@@ -847,9 +847,7 @@ class HyperGeometric(Discrete):
         k = 10
         for n in [20, 25]:
             pmf = st.hypergeom.pmf(x, N, k, n)
-            plt.plot(x, pmf, '-o', label='n = {}'.format(n))
-        plt.plot(x, pmf, '-o', label='N = {}'.format(N))
-        plt.plot(x, pmf, '-o', label='k = {}'.format(k))
+            plt.plot(x, pmf, '-o', label='N = {}, k = {}, n = {}'.format(N, k, n))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
