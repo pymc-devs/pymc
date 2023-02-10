@@ -22,8 +22,10 @@ from copy import copy
 from typing import Dict, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
+import pandas as pd
 import pytensor
 import pytensor.tensor as at
+import xarray as xr
 
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.raise_op import Assert
@@ -205,7 +207,7 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
 
 def determine_coords(
     model,
-    value,
+    value: Union[pd.DataFrame, pd.Series, xr.DataArray],
     dims: Optional[Sequence[Optional[str]]] = None,
     coords: Optional[Dict[str, Sequence]] = None,
 ) -> Tuple[Dict[str, Sequence], Sequence[Optional[str]]]:
@@ -213,9 +215,9 @@ def determine_coords(
     if coords is None:
         coords = {}
 
+    dim_name = None
     # If value is a df or a series, we interpret the index as coords:
     if hasattr(value, "index"):
-        dim_name = None
         if dims is not None:
             dim_name = dims[0]
         if dim_name is None and value.index.name is not None:
@@ -225,13 +227,18 @@ def determine_coords(
 
     # If value is a df, we also interpret the columns as coords:
     if hasattr(value, "columns"):
-        dim_name = None
         if dims is not None:
             dim_name = dims[1]
         if dim_name is None and value.columns.name is not None:
             dim_name = value.columns.name
         if dim_name is not None:
             coords[dim_name] = value.columns
+
+    if isinstance(value, xr.DataArray):
+        if dims is not None:
+            for dim in dims:
+                dim_name = dim
+                coords[dim_name] = value["dim"]
 
     if isinstance(value, np.ndarray) and dims is not None:
         if len(dims) != value.ndim:
@@ -259,6 +266,7 @@ def ConstantData(
     dims: Optional[Sequence[str]] = None,
     coords: Optional[Dict[str, Sequence]] = None,
     export_index_as_coords=False,
+    infer_dims_and_coords=False,
     **kwargs,
 ) -> TensorConstant:
     """Alias for ``pm.Data(..., mutable=False)``.
@@ -266,12 +274,19 @@ def ConstantData(
     Registers the ``value`` as a :class:`~pytensor.tensor.TensorConstant` with the model.
     For more information, please reference :class:`pymc.Data`.
     """
+    if export_index_as_coords:
+        infer_dims_and_coords = export_index_as_coords
+        warnings.warn(
+            "Deprecation warning: 'export_index_as_coords; is deprecated adn will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
+            DeprecationWarning,
+        )
+
     var = Data(
         name,
         value,
         dims=dims,
         coords=coords,
-        export_index_as_coords=export_index_as_coords,
+        infer_dims_and_coords=infer_dims_and_coords,
         mutable=False,
         **kwargs,
     )
@@ -285,6 +300,7 @@ def MutableData(
     dims: Optional[Sequence[str]] = None,
     coords: Optional[Dict[str, Sequence]] = None,
     export_index_as_coords=False,
+    infer_dims_and_coords=False,
     **kwargs,
 ) -> SharedVariable:
     """Alias for ``pm.Data(..., mutable=True)``.
@@ -292,12 +308,19 @@ def MutableData(
     Registers the ``value`` as a :class:`~pytensor.compile.sharedvalue.SharedVariable`
     with the model. For more information, please reference :class:`pymc.Data`.
     """
+    if export_index_as_coords:
+        infer_dims_and_coords = export_index_as_coords
+        warnings.warn(
+            "Deprecation warning: 'export_index_as_coords; is deprecated adn will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
+            DeprecationWarning,
+        )
+
     var = Data(
         name,
         value,
         dims=dims,
         coords=coords,
-        export_index_as_coords=export_index_as_coords,
+        infer_dims_and_coords=infer_dims_and_coords,
         mutable=True,
         **kwargs,
     )
@@ -311,6 +334,7 @@ def Data(
     dims: Optional[Sequence[str]] = None,
     coords: Optional[Dict[str, Sequence]] = None,
     export_index_as_coords=False,
+    infer_dims_and_coords=False,
     mutable: Optional[bool] = None,
     **kwargs,
 ) -> Union[SharedVariable, TensorConstant]:
@@ -347,7 +371,8 @@ def Data(
         names.
     coords : dict, optional
         Coordinate values to set for new dimensions introduced by this ``Data`` variable.
-    export_index_as_coords : bool, default=False
+    export_index_as_coords : deprecated, previous version of "infer_dims_and_coords"
+    infer_dims_and_coords : bool, default=False
         If True, the ``Data`` container will try to infer what the coordinates
         and dimension names should be if there is an index in ``value``.
     mutable : bool, optional
@@ -426,7 +451,15 @@ def Data(
         )
 
     # Optionally infer coords and dims from the input value.
+
     if export_index_as_coords:
+        infer_dims_and_coords = export_index_as_coords
+        warnings.warn(
+            "Deprecation warning: 'export_index_as_coords; is deprecated adn will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
+            DeprecationWarning,
+        )
+
+    if infer_dims_and_coords:
         coords, dims = determine_coords(model, value, dims)
 
     if dims:
