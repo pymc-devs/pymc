@@ -51,6 +51,7 @@ from pytensor.tensor.var import TensorConstant, TensorVariable
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, is_minibatch
+from pymc.distributions.logprob import _joint_logp
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import (
     BlockModelAccessError,
@@ -60,7 +61,6 @@ from pymc.exceptions import (
     ShapeWarning,
 )
 from pymc.initial_point import make_initial_point_fn
-from pymc.logprob.joint_logprob import joint_logp
 from pymc.pytensorf import (
     PointFunc,
     SeedSequenceSeed,
@@ -586,6 +586,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self._coords = {}
             self._dim_lengths = {}
         self.add_coords(coords)
+        self.add_mutable_coords(coords)
 
         from pymc.printing import str_for_model
 
@@ -754,7 +755,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         rv_logps: List[TensorVariable] = []
         if rvs:
-            rv_logps = joint_logp(
+            rv_logps = _joint_logp(
                 rvs=rvs,
                 rvs_to_values=self.rvs_to_values,
                 rvs_to_transforms=self.rvs_to_transforms,
@@ -1079,6 +1080,20 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         for name, values in coords.items():
             self.add_coord(name, values, length=lengths.get(name, None))
+
+    def add_mutable_coords(
+        self,
+        coords: Dict[str, Optional[Sequence]],
+        *,
+        lengths: Optional[Dict[str, Optional[Union[int, Variable]]]] = None,
+    ):
+        """Registers a mutable dimension coordinate with the model"""
+        if coords is None:
+            return
+        lengths = lengths or {}
+
+        for name, values in coords.items():
+            self.add_coord(name, values, mutable=True, length=lengths.get(name, None))
 
     def set_dim(self, name: str, new_length: int, coord_values: Optional[Sequence] = None):
         """Update a mutable dimension.
