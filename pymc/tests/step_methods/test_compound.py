@@ -25,7 +25,12 @@ from pymc.step_methods import (
     Metropolis,
     Slice,
 )
-from pymc.step_methods.compound import StatsBijection, flatten_steps
+from pymc.step_methods.compound import (
+    StatsBijection,
+    flatten_steps,
+    get_stats_dtypes_shapes_from_steps,
+    infer_warn_stats_info,
+)
 from pymc.tests.helpers import StepMethodTester, fast_unstable_sampling_mode
 from pymc.tests.models import simple_2model_continuous
 
@@ -92,6 +97,52 @@ class TestRVsAssignmentCompound:
                 step2 = NUTS([c2])
                 step = CompoundStep([step1, step2])
             assert {m.rvs_to_values[c1], m.rvs_to_values[c2]} == set(step.vars)
+
+
+class TestStatsMetadata:
+    def test_infer_warn_stats_info(self):
+        """
+        Until `BlockedStep.stats_dtypes` is removed, the new `stats_dtypes_shapes`
+        attributed is inferred from `stats_dtypes`, or vice versa.
+        """
+        # Infer new
+        with pytest.warns(DeprecationWarning, match="to specify"):
+            old, new = infer_warn_stats_info([{"a": int, "b": object}], {}, "bla")
+        assert isinstance(old, list)
+        assert len(old) == 1
+        assert old[0] == {"a": int, "b": object}
+        assert isinstance(new, dict)
+        assert new["a"] == (int, None)
+        assert new["b"] == (object, None)
+
+        # Infer old
+        old, new = infer_warn_stats_info([], {"a": (int, []), "b": (float, [2])}, "bla")
+        assert isinstance(old, list)
+        assert len(old) == 1
+        assert old[0] == {"a": int, "b": float}
+        assert isinstance(new, dict)
+        assert new["a"] == (int, [])
+        assert new["b"] == (float, [2])
+
+        # Disallow specifying both (single source of truth problem)
+        with pytest.raises(TypeError, match="Only one of"):
+            infer_warn_stats_info([{"a": float}], {"b": (int, [])}, "bla")
+
+    def test_stats_from_steps(self):
+        with pm.Model():
+            s1 = pm.NUTS(pm.Normal("n"))
+            s2 = pm.Metropolis(pm.Bernoulli("b", 0.5))
+            cs = pm.CompoundStep([s1, s2])
+        # Make sure that sampler initialization does not modify the
+        # class-level default values of the attributes.
+        assert pm.NUTS.stats_dtypes_shapes == {}
+        assert pm.Metropolis.stats_dtypes_shapes == {}
+
+        sds = get_stats_dtypes_shapes_from_steps([s1, s2])
+        assert "sampler_0__step_size" in sds
+        assert "sampler_1__accepted" in sds
+        assert len(cs.stats_dtypes) == 2
+        assert cs.stats_dtypes_shapes == sds
 
 
 class TestStatsBijection:
