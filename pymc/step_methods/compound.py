@@ -187,6 +187,10 @@ class StatsBijection:
             for s, names_dtypes in enumerate(sampler_stats_dtypes)
         ]
 
+    @property
+    def n_samplers(self) -> int:
+        return len(self._stat_groups)
+
     def map(self, stats_list: Sequence[Mapping[str, Any]]) -> StatsDict:
         """Combine stats dicts of multiple samplers into one dict."""
         stats_dict = {}

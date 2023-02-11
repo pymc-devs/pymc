@@ -116,6 +116,7 @@ class TestStatsBijection:
             {"a": float, "c": int},
         ]
         bij = StatsBijection(step_stats_dtypes)
+        assert bij.n_samplers == 2
         stats_l = [
             dict(a=1.5, b=3),
             dict(a=2.5, c=4),
