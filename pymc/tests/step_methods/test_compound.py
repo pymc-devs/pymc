@@ -135,8 +135,8 @@ class TestStatsMetadata:
             cs = pm.CompoundStep([s1, s2])
         # Make sure that sampler initialization does not modify the
         # class-level default values of the attributes.
-        assert pm.NUTS.stats_dtypes_shapes == {}
-        assert pm.Metropolis.stats_dtypes_shapes == {}
+        assert pm.NUTS.stats_dtypes == []
+        assert pm.Metropolis.stats_dtypes == []
 
         sds = get_stats_dtypes_shapes_from_steps([s1, s2])
         assert "sampler_0__step_size" in sds
