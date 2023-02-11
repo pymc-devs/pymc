@@ -633,12 +633,10 @@ def test_step_args():
 class ApocalypticMetropolis(pm.Metropolis):
     """A stepper that warns in every iteration."""
 
-    stats_dtypes = [
-        {
-            **pm.Metropolis.stats_dtypes[0],
-            "warning": SamplerWarning,
-        }
-    ]
+    stats_dtypes_shapes = {
+        **pm.Metropolis.stats_dtypes_shapes,
+        "warning": (SamplerWarning, None),
+    }
 
     def astep(self, q0):
         draw, stats = super().astep(q0)
