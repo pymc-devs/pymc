@@ -277,7 +277,7 @@ def ConstantData(
     if export_index_as_coords:
         infer_dims_and_coords = export_index_as_coords
         warnings.warn(
-            "Deprecation warning: 'export_index_as_coords; is deprecated adn will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
+            "Deprecation warning: 'export_index_as_coords; is deprecated and will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
             DeprecationWarning,
         )
 
@@ -311,7 +311,7 @@ def MutableData(
     if export_index_as_coords:
         infer_dims_and_coords = export_index_as_coords
         warnings.warn(
-            "Deprecation warning: 'export_index_as_coords; is deprecated adn will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
+            "Deprecation warning: 'export_index_as_coords; is deprecated and will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
             DeprecationWarning,
         )
 
@@ -455,7 +455,7 @@ def Data(
     if export_index_as_coords:
         infer_dims_and_coords = export_index_as_coords
         warnings.warn(
-            "Deprecation warning: 'export_index_as_coords; is deprecated adn will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
+            "Deprecation warning: 'export_index_as_coords; is deprecated and will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
             DeprecationWarning,
         )
 
