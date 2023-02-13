@@ -15,19 +15,9 @@ import os
 import re
 import sys
 
+from datetime import datetime
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union
-
-from pytensor.tensor.random.type import RandomType
-
-from pymc.initial_point import StartDict
-from pymc.sampling.mcmc import _init_jitter
-
-xla_flags = os.getenv("XLA_FLAGS", "")
-xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
-os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"] + xla_flags)
-
-from datetime import datetime
 
 import arviz as az
 import jax
@@ -43,17 +33,24 @@ from pytensor.graph.replace import clone_replace
 from pytensor.link.jax.dispatch import jax_funcify
 from pytensor.raise_op import Assert
 from pytensor.tensor import TensorVariable
+from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.shape import SpecifyShape
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_constants, find_observations
+from pymc.initial_point import StartDict
 from pymc.logprob.utils import CheckParameterValue
+from pymc.sampling.mcmc import _init_jitter
 from pymc.util import (
     RandomSeed,
     RandomState,
     _get_seeds_per_chain,
     get_default_varnames,
 )
+
+xla_flags = os.getenv("XLA_FLAGS", "")
+xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
+os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"] + xla_flags)
 
 __all__ = (
     "get_jaxified_graph",
