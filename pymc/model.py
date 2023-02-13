@@ -548,9 +548,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         name="",
         coords=None,
-        coords_mutable=None,
         check_bounds=True,
         *,
+        coords_mutable=None,
         pytensor_config=None,
         model=None,
     ):
