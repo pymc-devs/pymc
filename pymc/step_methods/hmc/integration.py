@@ -82,7 +82,7 @@ class CpuLeapfrogIntegrator:
             return self._step(epsilon, state)
         except linalg.LinAlgError as err:
             msg = "LinAlgError during leapfrog step."
-            raise IntegrationError(msg)
+            raise IntegrationError(msg) from err
         except ValueError as err:
             # Raised by many scipy.linalg functions
             scipy_msg = "array must not contain infs or nans"
