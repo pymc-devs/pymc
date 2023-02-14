@@ -84,9 +84,7 @@ def test_truncation_specialized_op(shape_info):
                 dist=x,
                 lower=5,
                 upper=15,
-                observed=np.empty(
-                    100,
-                ),
+                observed=np.zeros(100),
             )
         else:
             raise ValueError(f"Not a valid shape_info parametrization: {shape_info}")
