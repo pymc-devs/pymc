@@ -246,7 +246,6 @@ def test_ignore_logprob_model():
             [y],
             rvs_to_values={y: y.type()},
             rvs_to_transforms={},
-            rvs_to_total_sizes={},
         )
 
     # The above warning should go away with ignore_logprob.
@@ -259,5 +258,4 @@ def test_ignore_logprob_model():
             [y],
             rvs_to_values={y: y.type()},
             rvs_to_transforms={},
-            rvs_to_total_sizes={},
         )

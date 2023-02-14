@@ -56,11 +56,7 @@ from pytensor.tensor.subtensor import (
 import pymc as pm
 
 from pymc.logprob.abstract import logprob
-from pymc.logprob.joint_logprob import (
-    _get_scaling,
-    factorized_joint_logprob,
-    joint_logp,
-)
+from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logp
 from pymc.logprob.utils import rvs_to_value_vars, walk_model
 from tests.helpers import assert_no_rvs
 from tests.logprob.utils import joint_logprob
@@ -281,52 +277,6 @@ def test_multiple_rvs_to_same_value_raises():
         joint_logprob({x_rv1: x, x_rv2: x})
 
 
-def test_get_scaling():
-    assert _get_scaling(None, (2, 3), 2).eval() == 1
-    # ndim >=1 & ndim<1
-    assert _get_scaling(45, (2, 3), 1).eval() == 22.5
-    assert _get_scaling(45, (2, 3), 0).eval() == 45
-
-    # list or tuple tests
-    # total_size contains other than Ellipsis, None and Int
-    with pytest.raises(TypeError, match="Unrecognized `total_size` type"):
-        _get_scaling([2, 4, 5, 9, 11.5], (2, 3), 2)
-    # check with Ellipsis
-    with pytest.raises(ValueError, match="Double Ellipsis in `total_size` is restricted"):
-        _get_scaling([1, 2, 5, Ellipsis, Ellipsis], (2, 3), 2)
-    with pytest.raises(
-        ValueError,
-        match="Length of `total_size` is too big, number of scalings is bigger that ndim",
-    ):
-        _get_scaling([1, 2, 5, Ellipsis], (2, 3), 2)
-
-    assert _get_scaling([Ellipsis], (2, 3), 2).eval() == 1
-
-    assert _get_scaling([4, 5, 9, Ellipsis, 32, 12], (2, 3, 2), 5).eval() == 960
-    assert _get_scaling([4, 5, 9, Ellipsis], (2, 3, 2), 5).eval() == 15
-    # total_size with no Ellipsis (end = [ ])
-    with pytest.raises(
-        ValueError,
-        match="Length of `total_size` is too big, number of scalings is bigger that ndim",
-    ):
-        _get_scaling([1, 2, 5], (2, 3), 2)
-
-    assert _get_scaling([], (2, 3), 2).eval() == 1
-    assert _get_scaling((), (2, 3), 2).eval() == 1
-    # total_size invalid type
-    with pytest.raises(
-        TypeError,
-        match="Unrecognized `total_size` type, expected int or list of ints, got {1, 2, 5}",
-    ):
-        _get_scaling({1, 2, 5}, (2, 3), 2)
-
-    # test with rvar from model graph
-    with pm.Model() as m2:
-        rv_var = pm.Uniform("a", 0.0, 1.0)
-    total_size = []
-    assert _get_scaling(total_size, shape=rv_var.shape, ndim=rv_var.ndim).eval() == 1.0
-
-
 def test_joint_logp_basic():
     """Make sure we can compute a log-likelihood for a hierarchical model with transforms."""
 
@@ -348,7 +298,6 @@ def test_joint_logp_basic():
         (b,),
         rvs_to_values=m.rvs_to_values,
         rvs_to_transforms=m.rvs_to_transforms,
-        rvs_to_total_sizes={},
     )
 
     # There shouldn't be any `RandomVariable`s in the resulting graph
@@ -394,7 +343,6 @@ def test_joint_logp_incsubtensor(indices, size):
         (a_idx,),
         rvs_to_values={a_idx: a_value_var},
         rvs_to_transforms={},
-        rvs_to_total_sizes={},
     )
 
     logp_vals = a_idx_logp[0].eval({a_value_var: a_val})

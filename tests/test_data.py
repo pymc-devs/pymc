@@ -20,7 +20,6 @@ import numpy as np
 import pytensor
 import pytensor.tensor as at
 import pytest
-import scipy.stats as st
 
 from pytensor import shared
 from pytensor.tensor.var import TensorVariable
@@ -29,7 +28,7 @@ import pymc as pm
 
 from pymc.data import is_minibatch
 from pymc.pytensorf import GeneratorOp, floatX
-from tests.helpers import SeededTest, select_by_precision
+from tests.helpers import SeededTest
 
 
 class TestData(SeededTest):
@@ -586,143 +585,6 @@ def gen2():
     while True:
         yield np.ones((20, 100)) * i
         i += 1
-
-
-class TestScaling:
-    """
-    Related to minibatch training
-    """
-
-    def test_density_scaling(self):
-        with pm.Model() as model1:
-            pm.Normal("n", observed=[[1]], total_size=1)
-            p1 = pytensor.function([], model1.logp())
-
-        with pm.Model() as model2:
-            pm.Normal("n", observed=[[1]], total_size=2)
-            p2 = pytensor.function([], model2.logp())
-        assert p1() * 2 == p2()
-
-    def test_density_scaling_with_generator(self):
-        # We have different size generators
-
-        def true_dens():
-            g = gen1()
-            for i, point in enumerate(g):
-                yield st.norm.logpdf(point).sum() * 10
-
-        t = true_dens()
-        # We have same size models
-        with pm.Model() as model1:
-            pm.Normal("n", observed=gen1(), total_size=100)
-            p1 = pytensor.function([], model1.logp())
-
-        with pm.Model() as model2:
-            gen_var = pm.generator(gen2())
-            pm.Normal("n", observed=gen_var, total_size=100)
-            p2 = pytensor.function([], model2.logp())
-
-        for i in range(10):
-            _1, _2, _t = p1(), p2(), next(t)
-            decimals = select_by_precision(float64=7, float32=1)
-            np.testing.assert_almost_equal(_1, _t, decimal=decimals)  # Value O(-50,000)
-            np.testing.assert_almost_equal(_1, _2)
-        # Done
-
-    def test_gradient_with_scaling(self):
-        with pm.Model() as model1:
-            genvar = pm.generator(gen1())
-            m = pm.Normal("m")
-            pm.Normal("n", observed=genvar, total_size=1000)
-            grad1 = model1.compile_fn(model1.dlogp(vars=m), point_fn=False)
-        with pm.Model() as model2:
-            m = pm.Normal("m")
-            shavar = pytensor.shared(np.ones((1000, 100)))
-            pm.Normal("n", observed=shavar)
-            grad2 = model2.compile_fn(model2.dlogp(vars=m), point_fn=False)
-
-        for i in range(10):
-            shavar.set_value(np.ones((100, 100)) * i)
-            g1 = grad1(1)
-            g2 = grad2(1)
-            np.testing.assert_almost_equal(g1, g2)
-
-    def test_multidim_scaling(self):
-        with pm.Model() as model0:
-            pm.Normal("n", observed=[[1, 1], [1, 1]], total_size=[])
-            p0 = pytensor.function([], model0.logp())
-
-        with pm.Model() as model1:
-            pm.Normal("n", observed=[[1, 1], [1, 1]], total_size=[2, 2])
-            p1 = pytensor.function([], model1.logp())
-
-        with pm.Model() as model2:
-            pm.Normal("n", observed=[[1], [1]], total_size=[2, 2])
-            p2 = pytensor.function([], model2.logp())
-
-        with pm.Model() as model3:
-            pm.Normal("n", observed=[[1, 1]], total_size=[2, 2])
-            p3 = pytensor.function([], model3.logp())
-
-        with pm.Model() as model4:
-            pm.Normal("n", observed=[[1]], total_size=[2, 2])
-            p4 = pytensor.function([], model4.logp())
-
-        with pm.Model() as model5:
-            pm.Normal("n", observed=[[1]], total_size=[2, Ellipsis, 2])
-            p5 = pytensor.function([], model5.logp())
-        _p0 = p0()
-        assert (
-            np.allclose(_p0, p1())
-            and np.allclose(_p0, p2())
-            and np.allclose(_p0, p3())
-            and np.allclose(_p0, p4())
-            and np.allclose(_p0, p5())
-        )
-
-    def test_common_errors(self):
-        with pytest.raises(ValueError) as e:
-            with pm.Model() as m:
-                pm.Normal("n", observed=[[1]], total_size=[2, Ellipsis, 2, 2])
-                m.logp()
-        assert "Length of" in str(e.value)
-        with pytest.raises(ValueError) as e:
-            with pm.Model() as m:
-                pm.Normal("n", observed=[[1]], total_size=[2, 2, 2])
-                m.logp()
-        assert "Length of" in str(e.value)
-        with pytest.raises(TypeError) as e:
-            with pm.Model() as m:
-                pm.Normal("n", observed=[[1]], total_size="foo")
-                m.logp()
-        assert "Unrecognized" in str(e.value)
-        with pytest.raises(TypeError) as e:
-            with pm.Model() as m:
-                pm.Normal("n", observed=[[1]], total_size=["foo"])
-                m.logp()
-        assert "Unrecognized" in str(e.value)
-        with pytest.raises(ValueError) as e:
-            with pm.Model() as m:
-                pm.Normal("n", observed=[[1]], total_size=[Ellipsis, Ellipsis])
-                m.logp()
-        assert "Double Ellipsis" in str(e.value)
-
-    def test_mixed1(self):
-        with pm.Model():
-            data = np.random.rand(10, 20)
-            mb = pm.Minibatch(data, batch_size=5)
-            v = pm.Normal("n", observed=mb, total_size=10)
-            assert pm.logp(v, 1) is not None, "Check index is allowed in graph"
-
-    def test_free_rv(self):
-        with pm.Model() as model4:
-            pm.Normal("n", observed=[[1, 1], [1, 1]], total_size=[2, 2])
-            p4 = model4.compile_fn(model4.logp(), point_fn=False)
-
-        with pm.Model() as model5:
-            n = pm.Normal("n", total_size=[2, Ellipsis, 2], size=(2, 2))
-            p5 = model5.compile_fn(model5.logp(), point_fn=False)
-        assert p4() == p5(pm.floatX([[1, 1], [1, 1]]))
 
 
 @pytest.mark.usefixtures("strict_float32")

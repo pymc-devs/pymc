@@ -46,6 +46,7 @@ from pymc.logprob.joint_logprob import joint_logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
 from pymc.util import _FutureWarningValidatingScratchpad
+from pymc.variational.minibatch_rv import MinibatchRandomVariable
 from tests.helpers import SeededTest
 from tests.models import simple_model
 
@@ -503,7 +504,7 @@ def test_model_value_vars():
 def test_model_var_maps():
     with pm.Model() as model:
         a = pm.Uniform("a")
-        x = pm.Normal("x", a, total_size=5)
+        x = pm.Normal("x", a)
 
     assert set(model.rvs_to_values.keys()) == {a, x}
     a_value = model.rvs_to_values[a]
@@ -515,10 +516,6 @@ def test_model_var_maps():
     assert set(model.rvs_to_transforms.keys()) == {a, x}
     assert isinstance(model.rvs_to_transforms[a], IntervalTransform)
     assert model.rvs_to_transforms[x] is None
-
-    assert set(model.rvs_to_total_sizes.keys()) == {a, x}
-    assert model.rvs_to_total_sizes[a] is None
-    assert model.rvs_to_total_sizes[x] == 5
 
 
 def test_make_obs_var():
@@ -543,25 +540,27 @@ def test_make_obs_var():
 
     # The function requires data and RV dimensionality to be compatible
     with pytest.raises(ShapeError, match="Dimensionality of data and RV don't match."):
-        fake_model.make_obs_var(fake_distribution, np.ones((3, 3, 1)), None, None)
+        fake_model.make_obs_var(fake_distribution, np.ones((3, 3, 1)), None, None, None)
 
     # Check function behavior using the various inputs
     # dense, sparse: Ensure that the missing values are appropriately set to None
     # masked: a deterministic variable is returned
 
-    dense_output = fake_model.make_obs_var(fake_distribution, dense_input, None, None)
+    dense_output = fake_model.make_obs_var(fake_distribution, dense_input, None, None, None)
     assert dense_output == fake_distribution
     assert isinstance(fake_model.rvs_to_values[dense_output], TensorConstant)
     del fake_model.named_vars[fake_distribution.name]
 
-    sparse_output = fake_model.make_obs_var(fake_distribution, sparse_input, None, None)
+    sparse_output = fake_model.make_obs_var(fake_distribution, sparse_input, None, None, None)
     assert sparse_output == fake_distribution
     assert sparse.basic._is_sparse_variable(fake_model.rvs_to_values[sparse_output])
     del fake_model.named_vars[fake_distribution.name]
 
     # Here the RandomVariable is split into observed/imputed and a Deterministic is returned
     with pytest.warns(ImputationWarning):
-        masked_output = fake_model.make_obs_var(fake_distribution, masked_array_input, None, None)
+        masked_output = fake_model.make_obs_var(
+            fake_distribution, masked_array_input, None, None, None
+        )
     assert masked_output != fake_distribution
     assert not isinstance(masked_output, RandomVariable)
     # Ensure it has missing values
@@ -569,6 +568,15 @@ def test_make_obs_var():
     assert {"testing_inputs", "testing_inputs_observed"} == {
         v.name for v in fake_model.observed_RVs
     }
+    del fake_model.named_vars[fake_distribution.name]
+
+    # Test that setting total_size returns a MinibatchRandomVariable
+    scaled_outputs = fake_model.make_obs_var(
+        fake_distribution, dense_input, None, None, total_size=100
+    )
+    assert scaled_outputs != fake_distribution
+    assert isinstance(scaled_outputs.owner.op, MinibatchRandomVariable)
+    del fake_model.named_vars[fake_distribution.name]
 
 
 def test_initial_point():
@@ -1436,7 +1444,6 @@ class TestImputationMissingData:
             [x_obs_rv, x_unobs_rv],
             rvs_to_values={x_obs_rv: x_obs_vv, x_unobs_rv: x_unobs_vv},
             rvs_to_transforms={},
-            rvs_to_total_sizes={},
         )
         logp_inputs = list(graph_inputs(logp))
         assert x_obs_vv in logp_inputs
@@ -1509,10 +1516,6 @@ def test_tag_future_warning_model():
         with pytest.raises(AttributeError):
             x.tag.observations
 
-        with pytest.warns(FutureWarning, match="model.rvs_to_total_sizes"):
-            total_size = x.tag.total_size
-        assert total_size is None
-
         # Cloning a node will keep the same tag type and contents
         y = x.owner.clone().default_output()
         assert y is not x
@@ -1530,6 +1533,3 @@ def test_tag_future_warning_model():
         assert y_value.eval() == 5
 
         assert isinstance(y_value.tag, _FutureWarningValidatingScratchpad)
-        with pytest.warns(FutureWarning, match="model.rvs_to_total_sizes"):
-            total_size = y.tag.total_size
-        assert total_size is None
