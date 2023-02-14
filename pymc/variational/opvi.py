@@ -66,7 +66,6 @@ from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
 from pymc.initial_point import make_initial_point_fn
-from pymc.logprob.joint_logprob import _get_scaling
 from pymc.model import modelcontext
 from pymc.pytensorf import (
     SeedSequenceSeed,
@@ -82,6 +81,7 @@ from pymc.util import (
     _get_seeds_per_chain,
     locally_cachedmethod,
 )
+from pymc.variational.minibatch_rv import MinibatchRandomVariable, get_scaling
 from pymc.variational.updates import adagrad_window
 from pymc.vartypes import discrete_types
 
@@ -1069,9 +1069,11 @@ class Group(WithMemoization):
         t = self.to_flat_input(
             at.max(
                 [
-                    _get_scaling(self.model.rvs_to_total_sizes.get(v, None), v.shape, v.ndim)
+                    get_scaling(v.owner.inputs[1:], v.shape)
                     for v in self.group
+                    if isinstance(v.owner.op, MinibatchRandomVariable)
                 ]
+                + [1.0]  # To avoid empty max
             )
         )
         t = self.symbolic_single_sample(t)
@@ -1237,12 +1239,9 @@ class Approximation(WithMemoization):
         t = at.max(
             self.collect("symbolic_normalizing_constant")
             + [
-                _get_scaling(
-                    self.model.rvs_to_total_sizes.get(obs, None),
-                    obs.shape,
-                    obs.ndim,
-                )
+                get_scaling(obs.owner.inputs[1:], obs.shape)
                 for obs in self.model.observed_RVs
+                if isinstance(obs.owner.op, MinibatchRandomVariable)
             ]
         )
         t = at.switch(self._scale_cost_to_minibatch, t, at.constant(1, dtype=t.dtype))

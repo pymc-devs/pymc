@@ -312,7 +312,6 @@ class TestElementWiseLogp(SeededTest):
                 (x,),
                 rvs_to_values={x: x_val_transf},
                 rvs_to_transforms={x: transform},
-                rvs_to_total_sizes={},
                 jacobian=False,
             )[0]
             .sum()
@@ -323,7 +322,6 @@ class TestElementWiseLogp(SeededTest):
                 (x,),
                 rvs_to_values={x: x_val_untransf},
                 rvs_to_transforms={},
-                rvs_to_total_sizes={},
             )[0]
             .sum()
             .eval({x_val_untransf: test_array_untransf})
@@ -362,7 +360,6 @@ class TestElementWiseLogp(SeededTest):
                 (x,),
                 rvs_to_values={x: x_val_transf},
                 rvs_to_transforms={x: transform},
-                rvs_to_total_sizes={},
                 jacobian=False,
             )[0]
             .sum()
@@ -373,7 +370,6 @@ class TestElementWiseLogp(SeededTest):
                 (x,),
                 rvs_to_values={x: x_val_untransf},
                 rvs_to_transforms={},
-                rvs_to_total_sizes={},
             )[0]
             .sum()
             .eval({x_val_untransf: test_array_untransf})

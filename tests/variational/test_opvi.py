@@ -48,7 +48,7 @@ def test_discrete_not_allowed():
 @pytest.fixture(scope="module")
 def three_var_model():
     with pm.Model() as model:
-        pm.HalfNormal("one", size=(10, 2), total_size=100)
+        pm.HalfNormal("one", size=(10, 2))
         pm.Normal("two", size=(10,))
         pm.Normal("three", size=(10, 1, 2))
     return model

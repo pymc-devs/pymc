@@ -233,7 +233,6 @@ def test_ignore_reconsider_logprob_model():
             [x],
             rvs_to_values={x: value},
             rvs_to_transforms={},
-            rvs_to_total_sizes={},
         )
 
     with pm.Model():
@@ -248,7 +247,6 @@ def test_ignore_reconsider_logprob_model():
             [y],
             rvs_to_values={y: y.type()},
             rvs_to_transforms={},
-            rvs_to_total_sizes={},
         )
 
     # The above warning should go away with ignore_logprob.
@@ -261,5 +259,4 @@ def test_ignore_reconsider_logprob_model():
             [y],
             rvs_to_values={y: y.type()},
             rvs_to_transforms={},
-            rvs_to_total_sizes={},
         )

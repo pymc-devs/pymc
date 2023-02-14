@@ -240,6 +240,7 @@ jobs:
           - |
             tests/sampling/test_parallel.py
             tests/test_data.py
+            tests/variational/test_minibatch_rv.py
             tests/test_model.py
 
           - |
