@@ -37,7 +37,7 @@ class HSGP(Base):
     additive covariances.
 
     For information on choosing appropriate `m`, `L`, and `c`, refer Ruitort-Mayol et. al. or to
-    the pymc examples documentation.
+    the pymc examples that use HSGP.
 
     Parameters
     ----------
@@ -77,7 +77,7 @@ class HSGP(Base):
             # total of 25 * 25 = 625.  The value `c = 4` means the boundary of the approximation
             # lies at four times the half width of the data.  In this example the data lie between
             # zero and  one, so the boundaries occur at -1.5 and 2.5.  The data, both for training
-            # and prediction should reside well within that boundary..  
+            # and prediction should reside well within that boundary..
             gp = pm.gp.HSGP(m=[25, 25], c=4.0, cov_func=cov_func)
 
             # Place a GP prior over the function f.
@@ -154,7 +154,7 @@ class HSGP(Base):
 
         # Record whether or not L instead of c was passed on construction.
         self.L_given = self.L is not None
-        
+
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def __add__(self, other):
@@ -163,12 +163,12 @@ class HSGP(Base):
     def _set_boundary(self, Xs):
         """Make L from X and c if L is not passed in."""
         if not self._boundary_set:
-            
+
             self.S = pt.max(pt.abs(Xs), axis=0)
-            
+
             if self.L is None:
                 self.L = self.c * self.S
-            
+
             else:
                 self.c = self.L / self.S
                 self.L = pt.as_tensor_variable(self.L)
@@ -191,24 +191,24 @@ class HSGP(Base):
         return phi
 
     def prior_linearized(self, X: Union[np.ndarray, pt.TensorVariable]):
-        """ Returns the linearized version of the HSGP, the Laplace eigenfunctions and the square
+        """Returns the linearized version of the HSGP, the Laplace eigenfunctions and the square
         root of the power spectral density needed to create the GP.  This function allows the user
-        to bypass the GP interface and work directly with the basis and coefficients directly.  
-        This format allows the user to create predictions using `pm.set_data` similarly to a 
+        to bypass the GP interface and work directly with the basis and coefficients directly.
+        This format allows the user to create predictions using `pm.set_data` similarly to a
         linear model.  It also enables computational speed ups in multi-GP models since they may
-        share the same basis.  The return values are the Laplace eigenfunctions `phi`, and the 
+        share the same basis.  The return values are the Laplace eigenfunctions `phi`, and the
         square root of the power spectral density.
 
-        Correct results when using `prior_linearized` in tandem with `pm.set_data` and 
+        Correct results when using `prior_linearized` in tandem with `pm.set_data` and
         `pm.MutableData` require two conditions.  First, one must specify `L` instead of `c` when
-        the GP is constructed.  If not, a RuntimeError is raised.  Second, the `X` needs to be 
-        zero centered, so it's mean must be subtracted.  An example is given below. 
+        the GP is constructed.  If not, a RuntimeError is raised.  Second, the `X` needs to be
+        zero centered, so it's mean must be subtracted.  An example is given below.
 
         Parameters
         ----------
         X: array-like
             Function input values.
-    
+
         Examples
         --------
         .. code:: python
@@ -226,7 +226,7 @@ class HSGP(Base):
                 gp = pm.gp.HSGP(m=[200], L=[10], cov_func=cov_func)
 
                 # Order is important.  First calculate the mean, then make X a shared variable,
-                # then subtract the mean.  When X is mutated later, the correct mean will be 
+                # then subtract the mean.  When X is mutated later, the correct mean will be
                 # subtracted.
                 X_mu = np.mean(X, axis=0)
                 X = pm.MutableData("X", X)
@@ -240,7 +240,7 @@ class HSGP(Base):
                 # as m_star.
                 beta = pm.Normal("beta", size=gp.m_star)
 
-                # The (non-centered) GP approximation is given by 
+                # The (non-centered) GP approximation is given by
                 f = pm.Deterministic("f", phi @ (beta * sqrt_psd))
 
                 ...
@@ -265,13 +265,13 @@ class HSGP(Base):
             )
 
         X, _ = self.cov_func._slice(X)
-        
+
         self._set_boundary(X)
 
         phi = self._eigenvectors(X)
         omega = pt.sqrt(self._eigenvalues)
         psd = self.cov_func.power_spectral_density(omega)
-        
+
         i = int(self.drop_first == True)
         return phi[:, i:], pt.sqrt(psd[i:])
 
@@ -310,7 +310,7 @@ class HSGP(Base):
             raise ValueError(
                 "Prior is not set, can't create a conditional.  Call `.prior(name, X)` first."
             )
-        
+
         Xnew, _ = self.cov_func._slice(Xnew)
         phi = self._eigenvectors(Xnew - X_mu)
         i = int(self.drop_first == True)
