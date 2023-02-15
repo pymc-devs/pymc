@@ -456,7 +456,7 @@ class TestMixture(SeededTest):
                 warnings.filterwarnings("ignore", "overflow encountered in exp", RuntimeWarning)
                 trace = sample(
                     5000,
-                    step,
+                    step=step,
                     random_seed=self.random_seed,
                     progressbar=False,
                     chains=1,
@@ -783,7 +783,7 @@ class TestNormalMixture(SeededTest):
                 warnings.filterwarnings("ignore", "overflow encountered in exp", RuntimeWarning)
                 trace = sample(
                     5000,
-                    step,
+                    step=step,
                     random_seed=self.random_seed,
                     progressbar=False,
                     chains=1,
