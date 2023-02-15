@@ -238,7 +238,7 @@ def determine_coords(
         if dims is not None:
             for dim in dims:
                 dim_name = dim
-                coords[dim_name] = value["dim"]
+                coords[dim_name] = value[dim]
 
     if isinstance(value, np.ndarray) and dims is not None:
         if len(dims) != value.ndim:
