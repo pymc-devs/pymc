@@ -587,8 +587,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self._coords = {}
             self._dim_lengths = {}
         self.add_coords(coords)
-        for name, values in coords_mutable.items():
-            self.add_coord(name, values, mutable=True)
+        if coords_mutable is not None:
+            for name, values in coords_mutable.items():
+                self.add_coord(name, values, mutable=True)
 
         from pymc.printing import str_for_model
 
