@@ -50,13 +50,9 @@ from pytensor.tensor.random.rewriting import (
     local_rv_size_lift,
 )
 
-from pymc.logprob.abstract import (
-    MeasurableVariable,
-    _logprob,
-    assign_custom_measurable_outputs,
-    logprob,
-)
+from pymc.logprob.abstract import MeasurableVariable, _logprob, logprob
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
+from pymc.logprob.utils import ignore_logprob
 
 
 @node_rewriter([BroadcastTo])
@@ -233,12 +229,7 @@ def find_measurable_stacks(
         return None  # pragma: no cover
 
     # Make base_vars unmeasurable
-    base_to_unmeasurable_vars = {
-        base_var: assign_custom_measurable_outputs(base_var.owner).outputs[
-            base_var.owner.outputs.index(base_var)
-        ]
-        for base_var in base_vars
-    }
+    base_to_unmeasurable_vars = {base_var: ignore_logprob(base_var) for base_var in base_vars}
 
     def replacement_fn(var, replacements):
         if var in base_to_unmeasurable_vars:
@@ -339,7 +330,7 @@ def find_measurable_dimshuffles(fgraph, node) -> Optional[List[MeasurableDimShuf
         return None  # pragma: no cover
 
     # Make base_vars unmeasurable
-    base_var = assign_custom_measurable_outputs(base_var.owner)
+    base_var = ignore_logprob(base_var)
 
     measurable_dimshuffle = MeasurableDimShuffle(node.op.input_broadcastable, node.op.new_order)(
         base_var

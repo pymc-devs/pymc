@@ -275,6 +275,7 @@ def ignore_logprob(rv: TensorVariable) -> TensorVariable:
     op_type = type(node.op)
     if op_type.__name__.startswith(prefix):
         return rv
+    # By default `assign_custom_measurable_outputs` makes all outputs unmeasurable
     new_node = assign_custom_measurable_outputs(node, type_prefix=prefix)
     return new_node.outputs[node.outputs.index(rv)]
 

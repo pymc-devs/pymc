@@ -69,18 +69,14 @@ from pytensor.tensor.type import TensorType
 from pytensor.tensor.type_other import NoneConst, NoneTypeT, SliceConstant, SliceType
 from pytensor.tensor.var import TensorVariable
 
-from pymc.logprob.abstract import (
-    MeasurableVariable,
-    _logprob,
-    assign_custom_measurable_outputs,
-    logprob,
-)
+from pymc.logprob.abstract import MeasurableVariable, _logprob, logprob
 from pymc.logprob.rewriting import (
     local_lift_DiracDelta,
     logprob_rewrites_db,
     subtensor_ops,
 )
 from pymc.logprob.tensor import naive_bcast_rv_lift
+from pymc.logprob.utils import ignore_logprob
 
 
 def is_newaxis(x):
@@ -328,9 +324,7 @@ def mixture_replace(fgraph, node):
         # We create custom types for the mixture components and assign them
         # null `get_measurable_outputs` dispatches so that they aren't
         # erroneously encountered in places like `factorized_joint_logprob`.
-        new_node = assign_custom_measurable_outputs(component_rv.owner)
-        out_idx = component_rv.owner.outputs.index(component_rv)
-        new_comp_rv = new_node.outputs[out_idx]
+        new_comp_rv = ignore_logprob(component_rv)
         new_mixture_rvs.append(new_comp_rv)
 
     # Replace this sub-graph with a `MixtureRV`
@@ -379,9 +373,7 @@ def switch_mixture_replace(fgraph, node):
             and component_rv not in rv_map_feature.rv_values
         ):
             return None
-        new_node = assign_custom_measurable_outputs(component_rv.owner)
-        out_idx = component_rv.owner.outputs.index(component_rv)
-        new_comp_rv = new_node.outputs[out_idx]
+        new_comp_rv = ignore_logprob(component_rv)
         mixture_rvs.append(new_comp_rv)
 
     mix_op = MixtureRV(

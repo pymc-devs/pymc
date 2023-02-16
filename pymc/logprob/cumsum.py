@@ -41,13 +41,9 @@ import pytensor.tensor as pt
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor.extra_ops import CumOp
 
-from pymc.logprob.abstract import (
-    MeasurableVariable,
-    _logprob,
-    assign_custom_measurable_outputs,
-    logprob,
-)
+from pymc.logprob.abstract import MeasurableVariable, _logprob, logprob
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
+from pymc.logprob.utils import ignore_logprob
 
 
 class MeasurableCumsum(CumOp):
@@ -112,7 +108,7 @@ def find_measurable_cumsums(fgraph, node) -> Optional[List[MeasurableCumsum]]:
 
     new_op = MeasurableCumsum(axis=node.op.axis or 0, mode="add")
     # Make base_var unmeasurable
-    unmeasurable_base_rv = assign_custom_measurable_outputs(base_rv.owner)
+    unmeasurable_base_rv = ignore_logprob(base_rv)
     new_rv = new_op.make_node(unmeasurable_base_rv).default_output()
     new_rv.name = rv.name
 
