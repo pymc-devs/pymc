@@ -550,6 +550,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         coords=None,
         check_bounds=True,
         *,
+        coords_mutable=None,
         pytensor_config=None,
         model=None,
     ):
@@ -586,6 +587,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self._coords = {}
             self._dim_lengths = {}
         self.add_coords(coords)
+        if coords_mutable is not None:
+            for name, values in coords_mutable.items():
+                self.add_coord(name, values, mutable=True)
 
         from pymc.printing import str_for_model
 
