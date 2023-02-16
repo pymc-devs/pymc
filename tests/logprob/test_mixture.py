@@ -40,7 +40,9 @@ import pytensor.tensor as pt
 import pytest
 import scipy.stats.distributions as sp
 
+from pytensor import function
 from pytensor.graph.basic import Variable, equal_computations
+from pytensor.ifelse import ifelse
 from pytensor.tensor.random.basic import CategoricalRV
 from pytensor.tensor.shape import shape_tuple
 from pytensor.tensor.subtensor import as_index_constant
@@ -942,3 +944,109 @@ def test_switch_mixture():
 
     np.testing.assert_almost_equal(0.69049938, z1_logp.eval({z_vv: -10, i_vv: 0}))
     np.testing.assert_almost_equal(0.69049938, z2_logp.eval({z_vv: -10, i_vv: 0}))
+
+
+def test_ifelse_mixture_one_component():
+    if_rv = pt.random.bernoulli(0.5, name="if")
+    scale_rv = pt.random.halfnormal(name="scale")
+    comp_then = pt.random.normal(0, scale_rv, size=(2,), name="comp_then")
+    comp_else = pt.random.halfnormal(0, scale_rv, size=(4,), name="comp_else")
+    mix_rv = ifelse(if_rv, comp_then, comp_else, name="mix")
+
+    if_vv = if_rv.clone()
+    scale_vv = scale_rv.clone()
+    mix_vv = mix_rv.clone()
+    mix_logp = factorized_joint_logprob({if_rv: if_vv, scale_rv: scale_vv, mix_rv: mix_vv})[mix_vv]
+    assert_no_rvs(mix_logp)
+
+    fn = function([if_vv, scale_vv, mix_vv], mix_logp)
+    scale_vv_test = 0.75
+    mix_vv_test = np.r_[1.0, 2.5]
+    np.testing.assert_array_almost_equal(
+        fn(1, scale_vv_test, mix_vv_test),
+        sp.norm(0, scale_vv_test).logpdf(mix_vv_test),
+    )
+    mix_vv_test = np.r_[1.0, 2.5, 3.5, 4.0]
+    np.testing.assert_array_almost_equal(
+        fn(0, scale_vv_test, mix_vv_test), sp.halfnorm(0, scale_vv_test).logpdf(mix_vv_test)
+    )
+
+
+def test_ifelse_mixture_multiple_components():
+    rng = np.random.default_rng(968)
+
+    if_var = pt.scalar("if_var", dtype="bool")
+    comp_then1 = pt.random.normal(size=(2,), name="comp_true1")
+    comp_then2 = pt.random.normal(comp_then1, size=(2, 2), name="comp_then2")
+    comp_else1 = pt.random.halfnormal(size=(4,), name="comp_else1")
+    comp_else2 = pt.random.halfnormal(size=(4, 4), name="comp_else2")
+
+    mix_rv1, mix_rv2 = ifelse(
+        if_var, [comp_then1, comp_then2], [comp_else1, comp_else2], name="mix"
+    )
+    mix_vv1 = mix_rv1.clone()
+    mix_vv2 = mix_rv2.clone()
+    mix_logp1, mix_logp2 = factorized_joint_logprob({mix_rv1: mix_vv1, mix_rv2: mix_vv2}).values()
+    assert_no_rvs(mix_logp1)
+    assert_no_rvs(mix_logp2)
+
+    fn = function([if_var, mix_vv1, mix_vv2], mix_logp1.sum() + mix_logp2.sum())
+    mix_vv1_test = np.abs(rng.normal(size=(2,)))
+    mix_vv2_test = np.abs(rng.normal(size=(2, 2)))
+    np.testing.assert_almost_equal(
+        fn(True, mix_vv1_test, mix_vv2_test),
+        sp.norm(0, 1).logpdf(mix_vv1_test).sum()
+        + sp.norm(mix_vv1_test, 1).logpdf(mix_vv2_test).sum(),
+    )
+    mix_vv1_test = np.abs(rng.normal(size=(4,)))
+    mix_vv2_test = np.abs(rng.normal(size=(4, 4)))
+    np.testing.assert_almost_equal(
+        fn(False, mix_vv1_test, mix_vv2_test),
+        sp.halfnorm(0, 1).logpdf(mix_vv1_test).sum() + sp.halfnorm(0, 1).logpdf(mix_vv2_test).sum(),
+    )
+
+
+def test_ifelse_mixture_shared_component():
+    rng = np.random.default_rng(1009)
+
+    if_var = pt.scalar("if_var", dtype="bool")
+    outer_rv = pt.random.normal(name="outer")
+    # comp_shared need not be an output of ifelse at all,
+    # but since we allow arbitrary graphs we test it works as expected.
+    comp_shared = pt.random.normal(size=(2,), name="comp_shared")
+    comp_then = outer_rv + pt.random.normal(comp_shared, 1, size=(4, 2), name="comp_then")
+    comp_else = outer_rv + pt.random.normal(comp_shared, 10, size=(8, 2), name="comp_else")
+    shared_rv, mix_rv = ifelse(
+        if_var, [comp_shared, comp_then], [comp_shared, comp_else], name="mix"
+    )
+
+    outer_vv = outer_rv.clone()
+    shared_vv = shared_rv.clone()
+    mix_vv = mix_rv.clone()
+    outer_logp, mix_logp1, mix_logp2 = factorized_joint_logprob(
+        {outer_rv: outer_vv, shared_rv: shared_vv, mix_rv: mix_vv}
+    ).values()
+    assert_no_rvs(outer_logp)
+    assert_no_rvs(mix_logp1)
+    assert_no_rvs(mix_logp2)
+
+    fn = function([if_var, outer_vv, shared_vv, mix_vv], mix_logp1.sum() + mix_logp2.sum())
+    outer_vv_test = rng.normal()
+    shared_vv_test = rng.normal(size=(2,))
+    mix_vv_test = rng.normal(size=(4, 2))
+    np.testing.assert_almost_equal(
+        fn(True, outer_vv_test, shared_vv_test, mix_vv_test),
+        (
+            sp.norm(0, 1).logpdf(shared_vv_test).sum()
+            + sp.norm(outer_vv_test + shared_vv_test, 1).logpdf(mix_vv_test).sum()
+        ),
+    )
+    mix_vv_test = rng.normal(size=(8, 2))
+    np.testing.assert_almost_equal(
+        fn(False, outer_vv_test, shared_vv_test, mix_vv_test),
+        (
+            sp.norm(0, 1).logpdf(shared_vv_test).sum()
+            + sp.norm(outer_vv_test + shared_vv_test, 10).logpdf(mix_vv_test).sum()
+        ),
+        decimal=6,
+    )
