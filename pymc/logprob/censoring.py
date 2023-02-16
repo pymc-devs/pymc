@@ -52,10 +52,9 @@ from pymc.logprob.abstract import (
     MeasurableVariable,
     _logcdf,
     _logprob,
-    assign_custom_measurable_outputs,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
-from pymc.logprob.utils import CheckParameterValue
+from pymc.logprob.utils import CheckParameterValue, ignore_logprob
 
 
 class MeasurableClip(MeasurableElemwise):
@@ -95,7 +94,7 @@ def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[List[Me
     upper_bound = upper_bound if (upper_bound is not base_var) else at.constant(np.inf)
 
     # Make base_var unmeasurable
-    unmeasurable_base_var = assign_custom_measurable_outputs(base_var.owner)
+    unmeasurable_base_var = ignore_logprob(base_var)
     clipped_rv_node = measurable_clip.make_node(unmeasurable_base_var, lower_bound, upper_bound)
     clipped_rv = clipped_rv_node.outputs[0]
 
@@ -198,7 +197,7 @@ def find_measurable_roundings(fgraph: FunctionGraph, node: Node) -> Optional[Lis
         return None
 
     # Make base_var unmeasurable
-    unmeasurable_base_var = assign_custom_measurable_outputs(base_var.owner)
+    unmeasurable_base_var = ignore_logprob(base_var)
 
     rounded_op = MeasurableRound(node.op.scalar_op)
     rounded_rv = rounded_op.make_node(unmeasurable_base_var).default_output()

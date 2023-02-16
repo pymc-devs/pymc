@@ -78,11 +78,10 @@ from pymc.logprob.abstract import (
     MeasurableVariable,
     _get_measurable_outputs,
     _logprob,
-    assign_custom_measurable_outputs,
     logprob,
 )
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
-from pymc.logprob.utils import walk_model
+from pymc.logprob.utils import ignore_logprob, walk_model
 
 
 class TransformedVariable(Op):
@@ -549,7 +548,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
 
     # Make base_measure outputs unmeasurable
     # This seems to be the only thing preventing nested rewrites from being erased
-    measurable_input = assign_custom_measurable_outputs(measurable_input.owner)
+    measurable_input = ignore_logprob(measurable_input)
 
     scalar_op = node.op.scalar_op
     measurable_input_idx = 0
