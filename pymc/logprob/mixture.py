@@ -47,7 +47,7 @@ from pytensor.graph.rewriting.basic import (
     node_rewriter,
     pre_greedy_node_rewriter,
 )
-from pytensor.ifelse import ifelse
+from pytensor.ifelse import IfElse, ifelse
 from pytensor.scalar.basic import Switch
 from pytensor.tensor.basic import Join, MakeVector
 from pytensor.tensor.elemwise import Elemwise
@@ -73,10 +73,11 @@ from pymc.logprob.abstract import MeasurableVariable, _logprob, logprob
 from pymc.logprob.rewriting import (
     local_lift_DiracDelta,
     logprob_rewrites_db,
+    measurable_ir_rewrites_db,
     subtensor_ops,
 )
 from pymc.logprob.tensor import naive_bcast_rv_lift
-from pymc.logprob.utils import ignore_logprob
+from pymc.logprob.utils import ignore_logprob, ignore_logprob_multiple_vars
 
 
 def is_newaxis(x):
@@ -483,3 +484,71 @@ logprob_rewrites_db.register(
     "basic",
     "mixture",
 )
+
+
+class MeasurableIfElse(IfElse):
+    """Measurable subclass of IfElse operator."""
+
+
+MeasurableVariable.register(MeasurableIfElse)
+
+
+@node_rewriter([IfElse])
+def find_measurable_ifelse_mixture(fgraph, node):
+    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
+
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    if isinstance(node.op, MeasurableIfElse):
+        return None
+
+    # Check if all components are unvalued measuarable variables
+    if_var, *base_rvs = node.inputs
+
+    if not all(
+        (
+            rv.owner is not None
+            and isinstance(rv.owner.op, MeasurableVariable)
+            and rv not in rv_map_feature.rv_values
+        )
+        for rv in base_rvs
+    ):
+        return None  # pragma: no cover
+
+    unmeasurable_base_rvs = ignore_logprob_multiple_vars(base_rvs, rv_map_feature.rv_values)
+
+    return MeasurableIfElse(n_outs=node.op.n_outs).make_node(if_var, *unmeasurable_base_rvs).outputs
+
+
+measurable_ir_rewrites_db.register(
+    "find_measurable_ifelse_mixture",
+    find_measurable_ifelse_mixture,
+    "basic",
+    "mixture",
+)
+
+
+@_logprob.register(MeasurableIfElse)
+def logprob_ifelse(op, values, if_var, *base_rvs, **kwargs):
+    """Compute the log-likelihood graph for an `IfElse`."""
+    from pymc.pytensorf import replace_rvs_by_values
+
+    assert len(values) * 2 == len(base_rvs)
+
+    rvs_to_values_then = {then_rv: value for then_rv, value in zip(base_rvs[: len(values)], values)}
+    rvs_to_values_else = {else_rv: value for else_rv, value in zip(base_rvs[len(values) :], values)}
+
+    logps_then = [
+        logprob(rv_then, value, **kwargs) for rv_then, value in rvs_to_values_then.items()
+    ]
+    logps_else = [
+        logprob(rv_else, value, **kwargs) for rv_else, value in rvs_to_values_else.items()
+    ]
+
+    # If the multiple variables depend on each other, we have to replace them
+    # by the respective values
+    logps_then = replace_rvs_by_values(logps_then, rvs_to_values=rvs_to_values_then)
+    logps_else = replace_rvs_by_values(logps_else, rvs_to_values=rvs_to_values_else)
+
+    return ifelse(if_var, logps_then, logps_else)
