@@ -52,7 +52,7 @@ from pytensor.tensor.random.rewriting import (
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob, logprob
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
-from pymc.logprob.utils import ignore_logprob
+from pymc.logprob.utils import ignore_logprob, ignore_logprob_multiple_vars
 
 
 @node_rewriter([BroadcastTo])
@@ -228,25 +228,7 @@ def find_measurable_stacks(
     ):
         return None  # pragma: no cover
 
-    # Make base_vars unmeasurable
-    base_to_unmeasurable_vars = {base_var: ignore_logprob(base_var) for base_var in base_vars}
-
-    def replacement_fn(var, replacements):
-        if var in base_to_unmeasurable_vars:
-            replacements[var] = base_to_unmeasurable_vars[var]
-        # We don't want to clone valued nodes. Assigning a var to itself in the
-        # replacements prevents this
-        elif var in rvs_to_values:
-            replacements[var] = var
-
-        return []
-
-    # TODO: Fix this import circularity!
-    from pymc.pytensorf import _replace_rvs_in_graphs
-
-    unmeasurable_base_vars, _ = _replace_rvs_in_graphs(
-        graphs=base_vars, replacement_fn=replacement_fn
-    )
+    unmeasurable_base_vars = ignore_logprob_multiple_vars(base_vars, rvs_to_values)
 
     if is_join:
         measurable_stack = MeasurableJoin()(axis, *unmeasurable_base_vars)
