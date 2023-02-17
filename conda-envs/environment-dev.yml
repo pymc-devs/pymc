@@ -14,7 +14,7 @@ dependencies:
 - numpy>=1.15.0
 - pandas>=0.24.0
 - pip
-- pytensor=2.9.1
+- pytensor=2.10.1
 - python-graphviz
 - networkx
 - scipy>=1.4.1
