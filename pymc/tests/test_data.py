@@ -414,8 +414,8 @@ class TestData(SeededTest):
         assert "x" in pmodel.coords
         assert "y" in pmodel.coords
         assert pmodel.named_vars_to_dims == {"observations": ("x", "y")}
-        assert tuple(pmodel.coords["x"]) == (data.coords["x"])
-        assert tuple(pmodel.coords["y"]) == (data.coords["y"])
+        assert tuple(pmodel.coords["x"]) == tuple(data.coords["x"].to_numpy())
+        assert tuple(pmodel.coords["y"]) == tuple(data.coords["y"].to_numpy())
 
     def test_data_kwargs(self):
         strict_value = True
