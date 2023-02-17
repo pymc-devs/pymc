@@ -26,7 +26,14 @@ from pytensor.compile.mode import Mode
 
 import pymc as pm
 
-from pymc.distributions.continuous import Normal, get_tau_sigma, interpolated
+from pymc.distributions.continuous import (
+    Normal,
+    TruncatedNormal,
+    Uniform,
+    Wald,
+    get_tau_sigma,
+    interpolated,
+)
 from pymc.distributions.dist_math import clipped_beta_rvs
 from pymc.logprob.abstract import logcdf
 from pymc.logprob.joint_logprob import logp
@@ -2281,5 +2288,25 @@ class TestICDF:
         dist_params = dict(zip(dist_params_at, dist_params))
 
         x = Normal.dist(*dist_params_at, size=size_at)
-
         scipy_logprob_tester(x, obs, dist_params, test_fn=st.norm.ppf, test="icdf")
+
+    def test_uniform_icdf(self, dist_params, obs, size):
+        dist_params_at, obs_at, size_at = create_pytensor_params(dist_params, obs, size)
+        dist_params = dict(zip(dist_params_at, dist_params))
+
+        x = Uniform.dist(*dist_params_at, size=size_at)
+        scipy_logprob_tester(x, obs, dist_params, test_fn=st.uniform.ppf, test="icdf")
+
+    def test_truncated_normal_icdf(self, dist_params, obs, size):
+        dist_params_at, obs_at, size_at = create_pytensor_params(dist_params, obs, size)
+        dist_params = dict(zip(dist_params_at, dist_params))
+
+        x = TruncatedNormal.dist(*dist_params_at, size=size_at)
+        scipy_logprob_tester(x, obs, dist_params, test_fn=st.truncnorm.ppf, test="icdf")
+
+    def test_wald_icdf(self, *dist_params, obs, size):
+        dist_params_at, obs_at, size_at = create_pytensor_params(dist_params, obs, size)
+        dist_params = dict(zip(dist_params_at, dist_params))
+
+        x = Wald.dist(*dist_params_at, size=size_at)
+        scipy_logprob_tester(x, obs, dist_params, test_fn=st.wald.ppf, test="icdf")

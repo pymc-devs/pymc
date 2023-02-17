@@ -343,6 +343,9 @@ class Uniform(BoundedContinuous):
             msg="lower <= upper",
         )
 
+    def icdf(value, lower, upper):
+        return lower + (upper - lower) * value
+
 
 @_default_transform.register(Uniform)
 def uniform_default_transform(op, rv):
@@ -835,6 +838,9 @@ class HalfNormal(PositiveContinuous):
             msg="sigma > 0",
         )
 
+    def icdf(value, lower, upper, loc, sigma):
+        return stats.truncnorm.ppf(q=value, a=lower, b=upper, loc=loc, scale=sigma)
+
 
 class WaldRV(RandomVariable):
     name = "wald"
@@ -1012,6 +1018,9 @@ class Wald(PositiveContinuous):
             alpha >= 0,
             msg="mu > 0, lam > 0, alpha >= 0",
         )
+
+    def icdf(mu, lam):
+        return stats.invgauss(mu=mu, scale=lam)
 
 
 class BetaClippedRV(BetaRV):
