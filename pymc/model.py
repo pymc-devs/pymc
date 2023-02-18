@@ -2015,15 +2015,13 @@ def Deterministic(name, var, model=None, dims=None):
     model.deterministics.append(var)
     model.add_named_variable(var, dims)
 
-    from pymc.printing import str_for_potential_or_deterministic
+    from pymc.printing import str_for_model_var
 
     var.str_repr = types.MethodType(
-        functools.partial(str_for_potential_or_deterministic, dist_name="Deterministic"), var
+        functools.partial(str_for_model_var, dist_name="Deterministic"), var
     )
     var._repr_latex_ = types.MethodType(
-        functools.partial(
-            str_for_potential_or_deterministic, dist_name="Deterministic", formatting="latex"
-        ),
+        functools.partial(str_for_model_var, dist_name="Deterministic", formatting="latex"),
         var,
     )
 
@@ -2047,15 +2045,13 @@ def Potential(name, var, model=None):
     model.potentials.append(var)
     model.add_named_variable(var)
 
-    from pymc.printing import str_for_potential_or_deterministic
+    from pymc.printing import str_for_model_var
 
     var.str_repr = types.MethodType(
-        functools.partial(str_for_potential_or_deterministic, dist_name="Potential"), var
+        functools.partial(str_for_model_var, dist_name="Potential"), var
     )
     var._repr_latex_ = types.MethodType(
-        functools.partial(
-            str_for_potential_or_deterministic, dist_name="Potential", formatting="latex"
-        ),
+        functools.partial(str_for_model_var, dist_name="Potential", formatting="latex"),
         var,
     )
 
