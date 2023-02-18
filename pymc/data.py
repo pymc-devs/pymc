@@ -238,7 +238,9 @@ def determine_coords(
         if dims is not None:
             for dim in dims:
                 dim_name = dim
-                coords[dim_name] = value[dim]
+                # because coord is expected to be a sequence, we need to convert xarray
+                # using 'tolist()' function
+                coords[str(dim_name)] = value[dim].tolist()
 
     if isinstance(value, np.ndarray) and dims is not None:
         if len(dims) != value.ndim:
