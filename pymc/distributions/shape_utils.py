@@ -759,8 +759,6 @@ def get_support_shape(
             for inferred, explicit in zip(inferred_support_shape, support_shape)
         ]
 
-    # Workaround https://github.com/pymc-devs/pytensor/issues/193 typing bug in stack signature
-    inferred_support_shape = cast(Sequence[TensorVariable], inferred_support_shape)
     return at.stack(inferred_support_shape)
 
 
