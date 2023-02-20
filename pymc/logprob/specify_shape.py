@@ -67,7 +67,7 @@ def logprob_specify_shape(op, values, inner_rv, *shapes, **kwargs):
 def find_measurable_specify_shapes(fgraph, node):
     r"""Finds `SpecifyShapeOp`\s for which a `logprob` can be computed."""
 
-    if not (isinstance(node.op, SpecifyShape) and node.op.mode == "add"):
+    if not (isinstance(node.op, SpecifyShape)):
         return None  # pragma: no cover
 
     if isinstance(node.op, MeasurableSpecifyShape):
