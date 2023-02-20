@@ -2427,13 +2427,13 @@ class ZeroSumNormal(Distribution):
     ``sigma`` has to be a scalar, to ensure the zero-sum constraint.
     The ability to specify a vector of ``sigma`` may be added in future versions.
 
-    ``zerosum_axes`` has to be > 0. If you want the behavior of ``zerosum_axes = 0``,
+    ``n_zerosum_axes`` has to be > 0. If you want the behavior of ``n_zerosum_axes = 0``,
     just use ``pm.Normal``.
 
     Examples
     --------
     Define a `ZeroSumNormal` variable, with `sigma=1` and
-    `zerosum_axes=1`  by default::
+    `n_zerosum_axes=1`  by default::
 
         COORDS = {
             "regions": ["a", "b", "c"],
@@ -2445,11 +2445,11 @@ class ZeroSumNormal(Distribution):
 
         with pm.Model(coords=COORDS) as m:
             # the zero sum axes will be 'answers' and 'regions'
-            v = pm.ZeroSumNormal("v", dims=("regions", "answers"), zerosum_axes=2)
+            v = pm.ZeroSumNormal("v", dims=("regions", "answers"), n_zerosum_axes=2)
 
         with pm.Model(coords=COORDS) as m:
             # the zero sum axes will be the last two
-            v = pm.ZeroSumNormal("v", shape=(3, 4, 5), zerosum_axes=2)
+            v = pm.ZeroSumNormal("v", shape=(3, 4, 5), n_zerosum_axes=2)
     """
     rv_type = ZeroSumNormalRV
 
@@ -2457,7 +2457,7 @@ class ZeroSumNormal(Distribution):
         cls, *args, zerosum_axes=None, n_zerosum_axes=None, support_shape=None, dims=None, **kwargs
     ):
         if zerosum_axes is not None:
-            n_nezosum_axes = zerosum_axes
+            n_zerosum_axes = zerosum_axes
             warnings.warn(
                 "The 'zerosum_axes' parameter is deprecated. Use 'n_zerosum_axes' instead.",
                 DeprecationWarning,
