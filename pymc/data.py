@@ -209,8 +209,8 @@ def determine_coords(
     model,
     value: Union[pd.DataFrame, pd.Series, xr.DataArray],
     dims: Optional[Sequence[Optional[str]]] = None,
-    coords: Optional[Dict[str, Sequence]] = None,
-) -> Tuple[Dict[str, Sequence], Sequence[Optional[str]]]:
+    coords: Optional[Dict[str, Union[Sequence, np.ndarray]]] = None,
+) -> Tuple[Dict[str, Union[Sequence, np.ndarray]], Sequence[Optional[str]]]:
     """Determines coordinate values from data or the model (via ``dims``)."""
     if coords is None:
         coords = {}
@@ -240,7 +240,7 @@ def determine_coords(
                 dim_name = dim
                 # because coord is expected to be a sequence, we need to convert xarray
                 # using 'tolist()' function
-                coords[dim_name] = value[dim].to_numpy()
+                coords[str(dim_name)] = value[dim].to_numpy()
 
     if isinstance(value, np.ndarray) and dims is not None:
         if len(dims) != value.ndim:
@@ -266,7 +266,7 @@ def ConstantData(
     value,
     *,
     dims: Optional[Sequence[str]] = None,
-    coords: Optional[Dict[str, Sequence]] = None,
+    coords: Optional[Dict[str, Union[Sequence, np.ndarray]]] = None,
     export_index_as_coords=False,
     infer_dims_and_coords=False,
     **kwargs,
@@ -300,7 +300,7 @@ def MutableData(
     value,
     *,
     dims: Optional[Sequence[str]] = None,
-    coords: Optional[Dict[str, Sequence]] = None,
+    coords: Optional[Dict[str, Union[Sequence, np.ndarray]]] = None,
     export_index_as_coords=False,
     infer_dims_and_coords=False,
     **kwargs,
@@ -334,7 +334,7 @@ def Data(
     value,
     *,
     dims: Optional[Sequence[str]] = None,
-    coords: Optional[Dict[str, Sequence]] = None,
+    coords: Optional[Dict[str, Union[Sequence, np.ndarray]]] = None,
     export_index_as_coords=False,
     infer_dims_and_coords=False,
     mutable: Optional[bool] = None,
