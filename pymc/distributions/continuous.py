@@ -1019,24 +1019,7 @@ class Wald(PositiveContinuous):
             msg="mu > 0, lam > 0, alpha >= 0",
         )
 
-    def icdf(value, mu, lam, alpha=0):
-        """Calculate the inverse cumulative distribution function (icdf) of the Wald distribution.
-
-        Args
-        ----
-            value (float): Probability value between 0 and 1.
-            mu (float): Mean of the distribution.
-            lam (float): Scale of the distribution.
-
-        Returns
-        -------
-            float: The value x such that P(W <= x) = p, where W is the Wald distribution with given mu and lam.
-
-        Raises
-        ------
-            ValueError: If value is not between 0 and 1.
-            ValueError: If lam is not positive.
-        """
+    def icdf(value, mu, lam, alpha):
         # Compute standard deviation and location parameter
         std = at.sqrt(lam)
         loc = alpha + mu
@@ -1052,7 +1035,7 @@ class Wald(PositiveContinuous):
             0 <= value <= 1,
             lam > 0,
             alpha >= 0,
-            msg="0<=val<=1, lam > 0, alpha >= 0",
+            msg="0 <= val <= 1, lam > 0, alpha >= 0",
         )
 
 
