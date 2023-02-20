@@ -1,0 +1,34 @@
+# "dev" conda envs are to be used by devs in setting their local environments
+name: pymc-docs
+channels:
+- conda-forge
+- defaults
+dependencies:
+# Base dependencies
+- arviz>=0.13.0
+- cachetools>=4.2.1
+- cloudpickle
+- fastprogress>=0.2.0
+- numpy>=1.15.0
+- pandas>=0.24.0
+- pip
+- pytensor=2.9.1
+- python-graphviz
+- scipy>=1.4.1
+- typing-extensions>=3.7.4
+# Extra dependencies for dev, testing and docs build
+- ipython>=7.16
+- jupyter-sphinx
+- myst-nb
+- numpydoc
+- pre-commit>=2.8.0
+- sphinx-copybutton
+- sphinx-design
+- sphinx-notfound-page
+- sphinx>=1.5
+- sphinxext-rediraffe
+- watermark
+- sphinx-remove-toctrees
+- pip:
+  - git+https://github.com/pymc-devs/pymc-sphinx-theme
+  - numdifftools>=0.9.40
