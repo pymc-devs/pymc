@@ -240,7 +240,7 @@ def determine_coords(
                 dim_name = dim
                 # because coord is expected to be a sequence, we need to convert xarray
                 # using 'tolist()' function
-                coords[str(dim_name)] = value[dim].to_numpy()
+                coords[dim_name] = value[dim].to_numpy()
 
     if isinstance(value, np.ndarray) and dims is not None:
         if len(dims) != value.ndim:
