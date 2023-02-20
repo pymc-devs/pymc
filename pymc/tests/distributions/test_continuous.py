@@ -38,6 +38,7 @@ from pymc.distributions.dist_math import clipped_beta_rvs
 from pymc.logprob.abstract import logcdf
 from pymc.logprob.joint_logprob import logp
 from pymc.logprob.utils import ParameterValueError
+from pymc.pymc.distributions.continuous import HalfNormal
 from pymc.pytensorf import floatX
 from pymc.tests.distributions.util import (
     BaseTestDistributionRandom,
@@ -2309,4 +2310,11 @@ class TestICDF:
         dist_params = dict(zip(dist_params_at, dist_params))
 
         x = Wald.dist(*dist_params_at, size=size_at)
+        scipy_logprob_tester(x, obs, dist_params, test_fn=st.wald.ppf, test="icdf")
+
+    def test_half_normal_icdf(self, *dist_params, obs, size):
+        dist_params_at, obs_at, size_at = create_pytensor_params(dist_params, obs, size)
+        dist_params = dict(zip(dist_params_at, dist_params))
+
+        x = HalfNormal.dist(*dist_params_at, size=size_at)
         scipy_logprob_tester(x, obs, dist_params, test_fn=st.wald.ppf, test="icdf")

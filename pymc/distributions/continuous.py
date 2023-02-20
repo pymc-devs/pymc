@@ -729,6 +729,27 @@ class TruncatedNormal(BoundedContinuous):
 
         return logp
 
+    def icdf(value, mu, sigma, lower, upper):
+        value = np.asarray(value)
+        eps = np.finfo(float).eps
+
+        # Standardize the lower and upper bounds
+        lower_std = (lower - mu) / sigma
+        upper_std = (upper - mu) / sigma
+
+        # Compute the cdf of the standard normal distribution at the bounds
+        Phi_a = 0.5 * (1 + np.math.erf(lower_std / np.sqrt(2)))
+        Phi_b = 0.5 * (1 + np.math.erf(upper_std / np.sqrt(2)))
+
+        # Compute the cdf of the truncated normal distribution at the quantiles
+        Phi_q = Phi_a + value * (Phi_b - Phi_a)
+
+        # Invert the cdf of the standard normal distribution at the quantiles
+        z = at.erfinv(2 * Phi_q - 1) * np.sqrt(2)
+
+        # Transform the samples back to the truncated normal distribution
+        return mu + sigma * at.clip(z, lower_std + eps, upper_std - eps)
+
 
 @_default_transform.register(TruncatedNormal)
 def truncated_normal_default_transform(op, rv):
@@ -838,8 +859,8 @@ class HalfNormal(PositiveContinuous):
             msg="sigma > 0",
         )
 
-    def icdf(value, lower, upper, loc, sigma):
-        return stats.truncnorm.ppf(q=value, a=lower, b=upper, loc=loc, scale=sigma)
+    def icdf(value, sigma):
+        return at.sqrt(2 * sigma**2) * at.erfinv(2 * value - 1)
 
 
 class WaldRV(RandomVariable):
