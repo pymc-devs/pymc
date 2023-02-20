@@ -16,8 +16,9 @@ dependencies:
 - python-graphviz
 - scipy>=1.4.1
 - typing-extensions>=3.7.4
-# Extra dependencies for dev, testing and docs build
+# Extra dependencies for docs build
 - ipython>=7.16
+- jax
 - jupyter-sphinx
 - myst-nb
 - numpydoc

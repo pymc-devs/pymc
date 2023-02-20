@@ -18,6 +18,5 @@ Internal structures
    :toctree: generated/
 
    NDArray
-   point_list_to_multitrace
    base.BaseTrace
    base.MultiTrace
