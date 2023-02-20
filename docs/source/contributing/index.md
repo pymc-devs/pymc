@@ -101,7 +101,6 @@ review_pr_pymc_examples
 :maxdepth: 1
 :caption: Reference content
 
-private_api/index
 python_style
 jupyter_style
 pr_checklist

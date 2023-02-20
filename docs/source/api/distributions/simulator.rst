@@ -6,6 +6,4 @@ Simulator
 .. autosummary::
    :toctree: generated
 
-   SimulatorRV
    Simulator
-   KullbackLiebler

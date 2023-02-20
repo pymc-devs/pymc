@@ -12,4 +12,3 @@ Data
    Data
    GeneratorAdapter
    Minibatch
-   align_minibatches

@@ -21,6 +21,4 @@ PyTensor utils
    join_nonshared_inputs
    make_shared_replacements
    generator
-   set_at_rng
-   at_rng
-   pandas_to_array
+   convert_observed_data
