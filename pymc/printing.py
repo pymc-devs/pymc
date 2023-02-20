@@ -148,7 +148,7 @@ def _get_varname_distname_args(
         dist_args = _walk_expression_args(var)
     args_str = _str_for_args_list(dist_args, formatting=formatting)
     if _is_potential_or_deterministic(var):
-        args_str = f"f({args_str})"  # TODO do we still want to do this?
+        args_str = f"f({args_str})"
 
     # These three strings are now formatted according to `formatting`. If latex, they
     # just ultimately need to be wrapped in $.
