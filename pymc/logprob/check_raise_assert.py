@@ -65,7 +65,7 @@ def logprob_assert(op, values, inner_rv, *assertion, **kwargs):
 def find_measurable_asserts(fgraph, node):
     r"""Finds `AssertOp`\s for which a `logprob` can be computed."""
 
-    if not (isinstance(node.op, CheckAndRaise) and node.op.mode == "add"):
+    if not (isinstance(node.op, CheckAndRaise)):
         return None  # pragma: no cover
 
     if isinstance(node.op, MeasurableAssert):
