@@ -34,16 +34,18 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from typing import List, Optional
-
-import pytensor.tensor as pt
+import pytensor.tensor as at
 
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor.shape import SpecifyShape
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob, logprob
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    _logprob,
+    assign_custom_measurable_outputs,
+    logprob,
+)
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
-from pymc.logprob.utils import ignore_logprob
 
 
 class MeasurableSpecifyShape(SpecifyShape):
@@ -57,15 +59,15 @@ MeasurableVariable.register(MeasurableSpecifyShape)
 def logprob_specify_shape(op, values, inner_rv, *shapes, **kwargs):
     (value,) = values
     # transfer specify_shape from rv to value
-    value = pt.specify_shape(value, shapes)
+    value = at.specify_shape(value, shapes)
     return logprob(inner_rv, value)
 
 
 @node_rewriter([SpecifyShape])
-def find_measurable_specify_shapes(fgraph, node) -> Optional[List[MeasurableSpecifyShape]]:
+def find_measurable_specify_shapes(fgraph, node):
     r"""Finds `SpecifyShapeOp`\s for which a `logprob` can be computed."""
 
-    if not (isinstance(node.op, SpecifyShape)):
+    if not (isinstance(node.op, SpecifyShape) and node.op.mode == "add"):
         return None  # pragma: no cover
 
     if isinstance(node.op, MeasurableSpecifyShape):
@@ -78,8 +80,7 @@ def find_measurable_specify_shapes(fgraph, node) -> Optional[List[MeasurableSpec
 
     rv = node.outputs[0]
 
-    base_rv, *shape = node.inputs
-
+    base_rv = node.inputs[0]
     if not (
         base_rv.owner
         and isinstance(base_rv.owner.op, MeasurableVariable)
@@ -87,15 +88,18 @@ def find_measurable_specify_shapes(fgraph, node) -> Optional[List[MeasurableSpec
     ):
         return None  # pragma: no cover
 
-    new_op = MeasurableSpecifyShape()
+    new_op = MeasurableSpecifyShape(node.input_shapes)
     # Make base_var unmeasurable
-    unmeasurable_base_rv = ignore_logprob(base_rv)
-    new_rv = new_op.make_node(unmeasurable_base_rv, *shape).default_output()
+    unmeasurable_base_rv = assign_custom_measurable_outputs(base_rv.owner)
+    new_rv = new_op.make_node(unmeasurable_base_rv).default_output()
     new_rv.name = rv.name
 
     return [new_rv]
 
 
 measurable_ir_rewrites_db.register(
-    "find_measurable_specify_shapes", find_measurable_specify_shapes, "basic", "specify_shape"
+    "find_measurable_specify_shapes",
+    find_measurable_specify_shapes,
+    "basic",
+    "specify_shape",
 )
