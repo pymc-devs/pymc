@@ -67,7 +67,7 @@ def logprob_specify_shape(op, values, inner_rv, *shapes, **kwargs):
 def find_measurable_specify_shapes(fgraph, node):
     r"""Finds `SpecifyShapeOp`\s for which a `logprob` can be computed."""
 
-    if not (isinstance(node.op, SpecifyShape)):
+    if not (isinstance(node.op, SpecifyShape) and node.op.mode == "add"):
         return None  # pragma: no cover
 
     if isinstance(node.op, MeasurableSpecifyShape):
@@ -80,8 +80,7 @@ def find_measurable_specify_shapes(fgraph, node):
 
     rv = node.outputs[0]
 
-    base_rv, *shape = node.inputs
-
+    base_rv = node.inputs[0]
     if not (
         base_rv.owner
         and isinstance(base_rv.owner.op, MeasurableVariable)
@@ -89,10 +88,10 @@ def find_measurable_specify_shapes(fgraph, node):
     ):
         return None  # pragma: no cover
 
-    new_op = MeasurableSpecifyShape()
+    new_op = MeasurableSpecifyShape(node.input_shapes)
     # Make base_var unmeasurable
     unmeasurable_base_rv = assign_custom_measurable_outputs(base_rv.owner)
-    new_rv = new_op.make_node(unmeasurable_base_rv, *shape).default_output()
+    new_rv = new_op.make_node(unmeasurable_base_rv).default_output()
     new_rv.name = rv.name
 
     return [new_rv]
