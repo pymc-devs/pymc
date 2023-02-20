@@ -197,7 +197,7 @@ class SymbolicRandomVariable(OpFromGraph):
     """
 
     _print_name: Tuple[str, str] = ("Unknown", "\\operatorname{Unknown}")
-    """Tuple of (name, latex name) used for for pretty-printing variables of this type"""
+    "Tuple of (name, latex name) used for for pretty-printing variables of this type"
 
     def __init__(self, *args, ndim_supp, **kwargs):
         self.ndim_supp = ndim_supp

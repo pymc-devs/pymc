@@ -41,6 +41,12 @@ def str_for_model_var(
 
     Intended for Distribution, Deterministic, and Potential.
     """
+    if not (
+        _has_owner(var) and isinstance(var.owner.op, (RandomVariable, SymbolicRandomVariable))
+    ) and not _is_potential_or_deterministic(var):
+        raise ValueError(
+            f"Variable for pretty-printing must be a model variable or the output of .dist(). Received unsupported variable {var}"
+        )
     var_name, dist_name, args_str = _get_varname_distname_args(
         var, formatting=formatting, dist_name=dist_name
     )
@@ -56,6 +62,9 @@ def str_for_model_var(
     if formatting == "latex":
         out = rf"${var_name} \sim {dist_name}({args_str})$"
     elif formatting == "plain":
+        var_name = var_name.replace("~", "-")
+        dist_name = dist_name.replace("~", "-")
+        args_str = args_str.replace("~", "-")
         out = f"{var_name} ~ {dist_name}({args_str})"
     else:
         raise ValueError(
@@ -72,7 +81,7 @@ def str_for_model(model: Model, formatting: str = "plain", **kwargs) -> str:
     rv_reprs = [rv.str_repr(formatting=formatting, **kwargs) for rv in all_rv]
     if not rv_reprs:
         return ""
-    if "latex" in formatting:
+    if formatting == "latex":
         rv_reprs = [rv_repr.replace(r"\sim", r"&\sim &").strip("$") for rv_repr in rv_reprs]
         return r"""$$
             \begin{{array}}{{rcl}}
@@ -98,36 +107,45 @@ def _get_varname_distname_args(
 ) -> Tuple[str, str, str]:
     """Generate formatted strings for the name, distribution name, and
     arguments list of a Model variable.
+
+    For Distribution, Potential, Deterministic, or .dist().
     """
     # Name and distribution name
-    name = var.name if var.name is not None else "<unnamed>"
-    if not dist_name and hasattr(var.owner.op, "_print_name"):
+    name = var.name if var.name is not None else "<unnamed>"  # May be missing if from a dist()
+    if (
+        not dist_name
+        and _has_owner(var)
+        and hasattr(var.owner.op, "_print_name")
+        and var.owner.op._print_name
+    ):
         # The _print_name tuple is necessary for maximum prettiness because a few RVs
         # use special formatting (e.g. superscripts) for their latex print name
         dist_name = (
             var.owner.op._print_name[1] if formatting == "latex" else var.owner.op._print_name[0]
         )
     elif not dist_name:
-        dist_name = "Unknown"
+        raise ValueError(
+            f"Missing distribution name for model variable: {var}. Provide one via the"
+            " _print_name attribute of your RandomVariable."
+        )
     if formatting == "latex":
         name = _latex_clean_command(name, command="text")
         dist_name = _latex_clean_command(dist_name, command="operatorname")
+
     # Arguments passed to the distribution or expression
-    if isinstance(var.owner.op, RandomVariable):
-        # var is the RV from a Distribution.
+    if _has_owner(var) and isinstance(var.owner.op, RandomVariable):
+        # var is the RV or dist() from a Distribution.
         dist_args = var.owner.inputs[3:]  # First 3 inputs are always rng, size, dtype
-    elif isinstance(var.owner.op, SymbolicRandomVariable):
+    elif _has_owner(var) and isinstance(var.owner.op, SymbolicRandomVariable):
         # var is a symbolic RV from a Distribution.
         dist_args = [
             x
             for x in var.owner.inputs
             if not isinstance(x, (RandomStateSharedVariable, RandomGeneratorSharedVariable))
         ]
-    elif _is_potential_or_deterministic(var):
-        # var is a Deterministic or a Potential.
-        dist_args = _walk_expression_args(var)
     else:
-        raise ValueError(f"Unable to parse arguments for variable")
+        # Assume that var is a Deterministic or a Potential.
+        dist_args = _walk_expression_args(var)
     args_str = _str_for_args_list(dist_args, formatting=formatting)
     if _is_potential_or_deterministic(var):
         args_str = f"f({args_str})"  # TODO do we still want to do this?
@@ -153,32 +171,37 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
         if var_data.size == 1:
             return f"{var_data.flatten()[0]:.3g}"
         else:
-            return f"<{var_type} {var_data.shape}>"  # TODO shape info or nah?
-    elif isinstance(var.owner.op, DimShuffle):
-        # Recurse
-        return _str_for_input_var(var.owner.inputs[0], formatting=formatting)
-    elif _is_potential_or_deterministic(var) or isinstance(
-        var.owner.op, (RandomVariable, SymbolicRandomVariable)
-    ):
-        if var.name:
+            return f"<{var_type} {var_data.shape}>"
+    elif _has_owner(var):
+        if isinstance(var.owner.op, DimShuffle):
+            # Recurse
+            return _str_for_input_var(var.owner.inputs[0], formatting=formatting)
+        elif _is_potential_or_deterministic(var) or isinstance(
+            var.owner.op, (RandomVariable, SymbolicRandomVariable)
+        ):
             # Give the name of the RV/Potential/Deterministic if available
-            return var.name
-        else:
+            if var.name:
+                return var.name
             # But if rv comes from .dist() we print the distribution with its args
-            _, dist_name, args_str = _get_varname_distname_args(var, formatting=formatting)
-            return f"{dist_name}({args_str})"
-    elif hasattr(var, "owner") and var.owner:
-        # Return an "expression" i.e. indicate that this variable is a function of other
-        # variables. Looks like f(arg1, ..., argN). Previously _str_for_expression()
-        args = _walk_expression_args(var)
-        args_str = _str_for_args_list(args, formatting=formatting)
-        return f"f({args_str})"
+            else:
+                _, dist_name, args_str = _get_varname_distname_args(var, formatting=formatting)
+                return f"{dist_name}({args_str})"
+        else:
+            # Return an "expression" i.e. indicate that this variable is a function of other
+            # variables. Looks like f(arg1, ..., argN). Previously _str_for_expression()
+            args = _walk_expression_args(var)
+            args_str = _str_for_args_list(args, formatting=formatting)
+            return f"f({args_str})"
     else:
-        raise ValueError("Unidentified variable in dist or expression args")
+        raise ValueError(
+            f"Unidentified variable in dist or expression args: {var}. If you think this is a bug, please create an issue in the project Github."
+        )
 
 
 def _walk_expression_args(var: Variable) -> List[Variable]:
     """Find all arguments of an expression"""
+    if not var.owner:
+        return []
 
     def _expand(x):
         if x.owner and (not isinstance(x.owner.op, (RandomVariable, SymbolicRandomVariable))):
@@ -210,7 +233,10 @@ def _str_for_args_list(args: List[Variable], formatting: str) -> str:
 
 def _latex_clean_command(text: str, command: str) -> str:
     r"""Prepare text for LaTeX and maybe wrap it in a \command{}."""
-    text = text.replace("$", r"\$")  # TODO do we want to keep dollar signs or strip them?
+    text = text.replace("$", r"\$")
+    # str_for_model() uses \sim to format the array, and properly
+    # tilde in latex is hard. So we replace for simplicity
+    text = text.replace("~", "-")
     if not text.startswith(rf"\{command}"):
         # The printing module is designed such that text never passes through this
         # function more than once. However, in some cases the text may have already
@@ -225,14 +251,11 @@ def _latex_clean_command(text: str, command: str) -> str:
     # command itself, writing the character, then continuing on with the same command.
     if command == "text":
         text = text.replace("_", rf"}}\_\{command}{{")
-        text = text.replace("~", rf"}}~\{command}{{")
     return text
 
 
 def _is_potential_or_deterministic(var: Variable) -> bool:
-    # This is a bit hacky but seems like the best we got. We should write
-    # a test to make sure that Deterministic and Potential don't get updated
-    # without also modifying this function.
+    # This is a bit hacky but seems like the best we got
     if (
         hasattr(var, "str_repr")
         and callable(var.str_repr)
@@ -241,6 +264,10 @@ def _is_potential_or_deterministic(var: Variable) -> bool:
         args = [*var.str_repr.__func__.args, *var.str_repr.__func__.keywords.values()]
         return "Deterministic" in args or "Potential" in args
     return False
+
+
+def _has_owner(var: Variable):
+    return hasattr(var, "owner") and var.owner
 
 
 def _pymc_pprint(obj: Union[TensorVariable, Model], *args, **kwargs):

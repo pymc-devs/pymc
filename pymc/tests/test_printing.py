@@ -12,9 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import numpy as np
+import pytensor.tensor as pt
 import pytest
 
 from pymc import Bernoulli, Censored, HalfCauchy, Mixture, StudentT
+from pymc.data import ConstantData, MutableData
 from pymc.distributions import (
     Dirichlet,
     DirichletMultinomial,
@@ -28,6 +30,7 @@ from pymc.distributions import (
 )
 from pymc.math import dot
 from pymc.model import Deterministic, Model, Potential
+from pymc.printing import _is_potential_or_deterministic, str_for_model_var
 from pymc.pytensorf import floatX
 
 
@@ -47,6 +50,13 @@ class BaseTestStrAndLatexRepr:
                 expected = expected.replace(r"\sim", r"&\sim &").strip("$")
             assert expected in model_str
 
+    def test_var_repr_latex(self):
+        for dist in self.distributions:
+            assert dist._repr_latex_() == dist.str_repr(formatting="latex")
+
+    def test_model_repr_latex(self):
+        assert self.model._repr_latex_() == self.model.str_repr(formatting="latex")
+
 
 class TestMonolith(BaseTestStrAndLatexRepr):
     def setup_class(self):
@@ -64,9 +74,8 @@ class TestMonolith(BaseTestStrAndLatexRepr):
 
             # Priors for unknown model parameters
             alpha = Normal("alpha", mu=0, sigma=10)
-            beta = Normal(
-                "beta", mu=0, sigma=10, size=(2,), observed=beta0
-            )  # TODO why is this observed?
+            # TODO why is this observed?
+            beta = Normal("beta", mu=0, sigma=10, size=(2,), observed=beta0)
             sigma = HalfNormal("sigma", sigma=1)
 
             # Test Cholesky parameterization
@@ -200,13 +209,10 @@ class TestMonolith(BaseTestStrAndLatexRepr):
 class TestData(BaseTestStrAndLatexRepr):
     def setup_class(self):
         with Model() as self.model:
-            import pymc as pm
-
-            with pm.Model() as model:
-                a = pm.Normal("a", pm.MutableData("a_data", (2,)))
-                b = pm.Normal("b", pm.MutableData("b_data", (2, 3)))
-                c = pm.Normal("c", pm.ConstantData("c_data", (2,)))
-                d = pm.Normal("d", pm.ConstantData("d_data", (2, 3)))
+            a = Normal("a", MutableData("a_data", (2,)))
+            b = Normal("b", MutableData("b_data", (2, 3)))
+            c = Normal("c", ConstantData("c_data", (2,)))
+            d = Normal("d", ConstantData("d_data", (2, 3)))
 
         self.distributions = [a, b, c, d]
         # tuples of (formatting, include_params)
@@ -236,6 +242,52 @@ class TestData(BaseTestStrAndLatexRepr):
             #     r"$\text{c} \sim \operatorname{N}$",
             #     r"$\text{d} \sim \operatorname{N}$",
             # ],
+        }
+
+
+class TestNestedModel(BaseTestStrAndLatexRepr):
+    def setup_class(self):
+        with Model("m1") as self.model:
+            n1 = Normal("n1")
+            with Model("m2") as self.m2:
+                n2 = Normal("n2")
+        self.distributions = [n1, n2]
+        self.expected = {
+            "plain": ["m1::n1 ~ N(0, 1)", "m1::m2::n2 ~ N(0, 1)"],
+            "latex": [
+                r"$\text{m1::n1} \sim \operatorname{N}(0,~1)$",
+                r"$\text{m1::m2::n2} \sim \operatorname{N}(0,~1)$",
+            ],
+        }
+
+    def test_nested_model_str_repr_plain(self):
+        assert self.m2.str_repr(formatting="plain") == self.expected["plain"][-1]
+
+
+class TestEdgeCharacters(BaseTestStrAndLatexRepr):
+    def setup_class(self):
+        with Model("model_with_under$cores__and~stuff") as self.model:
+            n = Normal("n")
+            u_dollar = Uniform("u$")
+            hn_tilde = HalfNormal("h~n")
+            n_offset = Deterministic("n_offset", n + 1)
+            d = Deterministic("d", n_offset + u_dollar + hn_tilde)
+        self.distributions = [n, u_dollar, hn_tilde, n_offset, d]
+        self.expected = {
+            "plain": [
+                "model_with_under$cores__and-stuff::n ~ N(0, 1)",
+                "model_with_under$cores__and-stuff::u$ ~ U(0, 1)",
+                "model_with_under$cores__and-stuff::h-n ~ N**+(0, 1)",
+                "model_with_under$cores__and-stuff::n_offset ~ Deterministic(f(model_with_under$cores__and-stuff::n))",
+                "model_with_under$cores__and-stuff::d ~ Deterministic(f(model_with_under$cores__and-stuff::h-n, model_with_under$cores__and-stuff::u$, model_with_under$cores__and-stuff::n))",
+            ],
+            "latex": [
+                r"$\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::n} \sim \operatorname{N}(0,~1)$",
+                r"$\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::u\$} \sim \operatorname{U}(0,~1)$",
+                r"$\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::h-n} \sim \operatorname{N^{+}}(0,~1)$",
+                r"$\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::n}\_\text{offset} \sim \operatorname{Deterministic}(f(\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::n}))$",
+                r"$\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::d} \sim \operatorname{Deterministic}(f(\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::h-n},~\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::u\$},~\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::n}))$",
+            ],
         }
 
 
@@ -276,3 +328,81 @@ def test_model_latex_repr_mixture_model():
         "$$",
     ]
     assert [line.strip() for line in latex_repr.split("\n")] == expected
+
+
+def test_potential_input_no_owner():
+    with Model():
+        p = Potential("p", pt.constant(1))
+    assert p.str_repr(formatting="plain") == "p ~ Potential(f())"
+    assert p.str_repr(formatting="latex") == "$\\text{p} \\sim \\operatorname{Potential}(f())$"
+
+
+def test_var_unnamed():
+    v = Normal.dist()
+    assert str_for_model_var(v, formatting="plain") == "<unnamed> ~ N(0, 1)"
+    assert (
+        str_for_model_var(v, formatting="latex")
+        == "$\\text{<unnamed>} \\sim \\operatorname{N}(0,~1)$"
+    )
+
+
+def test_unsupported_var():
+    """Not a model variable or dist() output"""
+    with pytest.raises(ValueError, match="must be a model variable or the output of .dist()"):
+        str_for_model_var(pt.constant(1), dist_name="_")
+
+
+def test_unsupported_input_var():
+    """Model variable has bad input"""
+    with Model():
+        # This fails in model_to_graphviz() due to MissingInputError But using
+        # pt.scalar() rather than vector works in graphviz, but not pretty-print.
+        x = Normal("x", mu=pt.vector())
+    with pytest.raises(ValueError, match="Unidentified variable in dist or expression args"):
+        x.str_repr()
+
+
+def test_missing_dist_name():
+    _print_name_temp = Normal.rv_op._print_name
+    try:
+        with Model() as m:
+            n = Normal("n")
+        n.owner.op._print_name = None  # delattr fails for some reason
+        with pytest.raises(ValueError, match="Missing distribution name"):
+            n.str_repr()
+        with pytest.raises(ValueError, match="Missing distribution name"):
+            m.str_repr()
+    finally:
+        Normal.rv_op._print_name = _print_name_temp
+
+
+def test_include_params_warning():
+    with Model() as m:
+        n = Normal("n")
+    with pytest.warns(FutureWarning, match="`include_params` argument has been deprecated"):
+        n.str_repr(include_params="True")
+    with pytest.warns(FutureWarning, match="`include_params` argument has been deprecated"):
+        m.str_repr(include_params="True")
+
+
+@pytest.mark.parametrize("formatting", ["plainblah", "latexblah", "aaa"])
+def test_unsupported_formatting(formatting):
+    with Model() as m:
+        n = Normal("n")
+    with pytest.raises(ValueError, match="Formatting method not recognized"):
+        n.str_repr(formatting=formatting)
+    with pytest.raises(ValueError, match="Formatting method not recognized"):
+        m.str_repr(formatting=formatting)
+
+
+def test_is_potential_or_deterministic():
+    # Ensure printing.py is kept in line with model.py
+    with Model():
+        n = Normal("n")
+        x = ConstantData("data", 1)
+        p = Potential("p", x + 1)
+        d = Deterministic("d", x + 1)
+    assert not _is_potential_or_deterministic(n)
+    assert not _is_potential_or_deterministic(x)
+    assert _is_potential_or_deterministic(p)
+    assert _is_potential_or_deterministic(d)
