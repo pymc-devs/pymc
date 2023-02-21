@@ -159,7 +159,7 @@ if __name__ == "__main__":
     args, _ = parser.parse_known_args()
 
     cp = subprocess.run(
-        ["mypy", "--show-error-codes", "--exclude", "pymc/tests", "pymc"],
+        ["mypy", "--show-error-codes", "--exclude", "tests", "pymc"],
         capture_output=True,
     )
     output = cp.stdout.decode()

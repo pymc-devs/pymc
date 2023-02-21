@@ -63,7 +63,7 @@ def get_data(filename):
     -------
     BytesIO of the data
     """
-    data_pkg = "pymc.tests"
+    data_pkg = "tests"
     try:
         content = pkgutil.get_data(data_pkg, os.path.join("data", filename))
     except FileNotFoundError:
