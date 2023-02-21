@@ -344,7 +344,7 @@ class Uniform(BoundedContinuous):
         )
 
     def icdf(value, lower, upper):
-        return lower + (upper - lower) * value
+        return (upper * value) + lower
 
 
 @_default_transform.register(Uniform)
@@ -653,9 +653,9 @@ class TruncatedNormal(BoundedContinuous):
         cls,
         mu: Optional[DIST_PARAMETER_TYPES] = None,
         sigma: Optional[DIST_PARAMETER_TYPES] = None,
-        tau: Optional[DIST_PARAMETER_TYPES] = None,
         lower: Optional[DIST_PARAMETER_TYPES] = None,
         upper: Optional[DIST_PARAMETER_TYPES] = None,
+        tau: Optional[DIST_PARAMETER_TYPES] = None,
         *args,
         **kwargs,
     ) -> RandomVariable:
@@ -738,8 +738,8 @@ class TruncatedNormal(BoundedContinuous):
         upper_std = (upper - mu) / sigma
 
         # Compute the cdf of the standard normal distribution at the bounds
-        Phi_a = 0.5 * (1 + np.math.erf(lower_std / np.sqrt(2)))
-        Phi_b = 0.5 * (1 + np.math.erf(upper_std / np.sqrt(2)))
+        Phi_a = 0.5 * (1 + at.erf(lower_std / at.sqrt(2)))
+        Phi_b = 0.5 * (1 + at.erf(upper_std / at.sqrt(2)))
 
         # Compute the cdf of the truncated normal distribution at the quantiles
         Phi_q = Phi_a + value * (Phi_b - Phi_a)
