@@ -44,6 +44,7 @@ from pymc.step_methods import (
     Metropolis,
     Slice,
 )
+from step_methods.compound import CompoundStep
 from tests.helpers import SeededTest, fast_unstable_sampling_mode
 from tests.models import simple_init
 
@@ -816,6 +817,22 @@ class TestAssignStepMethods:
             with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 steps = assign_step_methods(model, [])
         assert isinstance(steps, NUTS)
+
+    def test_step_vars_in_model(self):
+        """Test if error is raised if step variable is not found in model.value_vars"""
+        with pm.Model() as model:
+            c1 = pm.HalfNormal("c1")
+            c2 = pm.HalfNormal("c2")
+
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
+                step1 = NUTS([c1])
+                step2 = NUTS([c2])
+                step2.vars = [
+                    at.dscalar("x"),
+                ]
+                step = CompoundStep([step1, step2])
+                with pytest.raises(ValueError):
+                    assign_step_methods(model, step)
 
 
 class TestType:
