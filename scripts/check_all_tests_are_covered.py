@@ -23,7 +23,7 @@ def find_testfiles():
     dp_repo = Path(__file__).parent.parent
     all_tests = {
         str(fp.relative_to(dp_repo)).replace(os.sep, "/")
-        for fp in (dp_repo / "pymc" / "tests").glob("**/test_*.py")
+        for fp in (dp_repo / "tests").glob("**/test_*.py")
     }
     _log.info("Found %i tests in total.", len(all_tests))
     return all_tests

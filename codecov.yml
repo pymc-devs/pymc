@@ -20,7 +20,7 @@ coverage:
         base: auto
 
 ignore:
-  - "pymc/tests/*"
+  - "tests/*"
   - "pymc/_version.py"
 
 comment:
