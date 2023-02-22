@@ -238,8 +238,7 @@ def determine_coords(
         if dims is not None:
             for dim in dims:
                 dim_name = dim
-                # because coord is expected to be a sequence, we need to convert xarray
-                # using 'tolist()' function
+                # str is applied because dim entries may be None
                 coords[str(dim_name)] = value[dim].to_numpy()
 
     if isinstance(value, np.ndarray) and dims is not None:
@@ -373,7 +372,8 @@ def Data(
         names.
     coords : dict, optional
         Coordinate values to set for new dimensions introduced by this ``Data`` variable.
-    export_index_as_coords : deprecated, previous version of "infer_dims_and_coords"
+    export_index_as_coords : bool
+        Deprecated, previous version of "infer_dims_and_coords"
     infer_dims_and_coords : bool, default=False
         If True, the ``Data`` container will try to infer what the coordinates
         and dimension names should be if there is an index in ``value``.
@@ -453,7 +453,6 @@ def Data(
         )
 
     # Optionally infer coords and dims from the input value.
-
     if export_index_as_coords:
         infer_dims_and_coords = export_index_as_coords
         warnings.warn(
