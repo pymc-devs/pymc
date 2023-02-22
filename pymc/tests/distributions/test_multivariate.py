@@ -1014,16 +1014,16 @@ class TestMoments:
         assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
 
     @pytest.mark.parametrize(
-        "shape, zerosum_axes, expected",
+        "shape, n_zerosum_axes, expected",
         [
             ((2, 5), None, np.zeros((2, 5))),
             ((2, 5, 6), 2, np.zeros((2, 5, 6))),
             ((2, 5, 6), 3, np.zeros((2, 5, 6))),
         ],
     )
-    def test_zerosum_normal_moment(self, shape, zerosum_axes, expected):
+    def test_zerosum_normal_moment(self, shape, n_zerosum_axes, expected):
         with pm.Model() as model:
-            pm.ZeroSumNormal("x", shape=shape, zerosum_axes=zerosum_axes)
+            pm.ZeroSumNormal("x", shape=shape, n_zerosum_axes=n_zerosum_axes)
         assert_moment_is_expected(model, expected)
 
     @pytest.mark.parametrize(
@@ -1405,16 +1405,16 @@ class TestZeroSumNormal:
                 ).all(), f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
 
     @pytest.mark.parametrize(
-        "dims, zerosum_axes",
+        "dims, n_zerosum_axes",
         [
             (("regions", "answers"), None),
             (("regions", "answers"), 1),
             (("regions", "answers"), 2),
         ],
     )
-    def test_zsn_dims(self, dims, zerosum_axes):
+    def test_zsn_dims(self, dims, n_zerosum_axes):
         with pm.Model(coords=self.coords) as m:
-            v = pm.ZeroSumNormal("v", dims=dims, zerosum_axes=zerosum_axes)
+            v = pm.ZeroSumNormal("v", dims=dims, n_zerosum_axes=n_zerosum_axes)
             s = pm.sample(10, chains=1, tune=100)
 
         # to test forward graph
@@ -1428,24 +1428,24 @@ class TestZeroSumNormal:
         )
 
         ndim_supp = v.owner.op.ndim_supp
-        zerosum_axes = np.arange(-ndim_supp, 0)
+        n_zerosum_axes = np.arange(-ndim_supp, 0)
         nonzero_axes = np.arange(v.ndim - ndim_supp)
         for samples in [
             s.posterior.v,
             random_samples,
         ]:
-            self.assert_zerosum_axes(samples, zerosum_axes)
+            self.assert_zerosum_axes(samples, n_zerosum_axes)
             self.assert_zerosum_axes(samples, nonzero_axes, check_zerosum_axes=False)
 
     @pytest.mark.parametrize(
-        "zerosum_axes",
+        "n_zerosum_axes",
         (None, 1, 2),
     )
-    def test_zsn_shape(self, zerosum_axes):
+    def test_zsn_shape(self, n_zerosum_axes):
         shape = (len(self.coords["regions"]), len(self.coords["answers"]))
 
         with pm.Model(coords=self.coords) as m:
-            v = pm.ZeroSumNormal("v", shape=shape, zerosum_axes=zerosum_axes)
+            v = pm.ZeroSumNormal("v", shape=shape, n_zerosum_axes=n_zerosum_axes)
             s = pm.sample(10, chains=1, tune=100)
 
         # to test forward graph
@@ -1459,17 +1459,17 @@ class TestZeroSumNormal:
         )
 
         ndim_supp = v.owner.op.ndim_supp
-        zerosum_axes = np.arange(-ndim_supp, 0)
+        n_zerosum_axes = np.arange(-ndim_supp, 0)
         nonzero_axes = np.arange(v.ndim - ndim_supp)
         for samples in [
             s.posterior.v,
             random_samples,
         ]:
-            self.assert_zerosum_axes(samples, zerosum_axes)
+            self.assert_zerosum_axes(samples, n_zerosum_axes)
             self.assert_zerosum_axes(samples, nonzero_axes, check_zerosum_axes=False)
 
     @pytest.mark.parametrize(
-        "error, match, shape, support_shape, zerosum_axes",
+        "error, match, shape, support_shape, n_zerosum_axes",
         [
             (
                 ValueError,
@@ -1485,14 +1485,14 @@ class TestZeroSumNormal:
                 (3, 4),
                 (3, 4),
                 None,
-            ),  # doesn't work because zerosum_axes = 1 by default
+            ),  # doesn't work because n_zerosum_axes = 1 by default
         ],
     )
-    def test_zsn_fail_axis(self, error, match, shape, support_shape, zerosum_axes):
+    def test_zsn_fail_axis(self, error, match, shape, support_shape, n_zerosum_axes):
         with pytest.raises(error, match=match):
             with pm.Model() as m:
                 _ = pm.ZeroSumNormal(
-                    "v", shape=shape, support_shape=support_shape, zerosum_axes=zerosum_axes
+                    "v", shape=shape, support_shape=support_shape, n_zerosum_axes=n_zerosum_axes
                 )
 
     @pytest.mark.parametrize(
@@ -1504,22 +1504,22 @@ class TestZeroSumNormal:
     )
     def test_zsn_support_shape(self, shape, support_shape):
         with pm.Model() as m:
-            v = pm.ZeroSumNormal("v", shape=shape, support_shape=support_shape, zerosum_axes=2)
+            v = pm.ZeroSumNormal("v", shape=shape, support_shape=support_shape, n_zerosum_axes=2)
 
         random_samples = pm.draw(v, draws=10)
-        zerosum_axes = np.arange(-2, 0)
-        self.assert_zerosum_axes(random_samples, zerosum_axes)
+        n_zerosum_axes = np.arange(-2, 0)
+        self.assert_zerosum_axes(random_samples, n_zerosum_axes)
 
     @pytest.mark.parametrize(
-        "zerosum_axes",
+        "n_zerosum_axes",
         [1, 2],
     )
-    def test_zsn_change_dist_size(self, zerosum_axes):
-        base_dist = pm.ZeroSumNormal.dist(shape=(4, 9), zerosum_axes=zerosum_axes)
+    def test_zsn_change_dist_size(self, n_zerosum_axes):
+        base_dist = pm.ZeroSumNormal.dist(shape=(4, 9), n_zerosum_axes=n_zerosum_axes)
         random_samples = pm.draw(base_dist, draws=100)
 
-        zerosum_axes = np.arange(-zerosum_axes, 0)
-        self.assert_zerosum_axes(random_samples, zerosum_axes)
+        n_zerosum_axes = np.arange(-n_zerosum_axes, 0)
+        self.assert_zerosum_axes(random_samples, n_zerosum_axes)
 
         new_dist = change_dist_size(base_dist, new_size=(5, 3), expand=False)
         try:
@@ -1527,12 +1527,12 @@ class TestZeroSumNormal:
         except AssertionError:
             assert new_dist.eval().shape == (5, 3, 4, 9)
         random_samples = pm.draw(new_dist, draws=100)
-        self.assert_zerosum_axes(random_samples, zerosum_axes)
+        self.assert_zerosum_axes(random_samples, n_zerosum_axes)
 
         new_dist = change_dist_size(base_dist, new_size=(5, 3), expand=True)
         assert new_dist.eval().shape == (5, 3, 4, 9)
         random_samples = pm.draw(new_dist, draws=100)
-        self.assert_zerosum_axes(random_samples, zerosum_axes)
+        self.assert_zerosum_axes(random_samples, n_zerosum_axes)
 
     @pytest.mark.parametrize(
         "sigma, n",
@@ -1551,7 +1551,7 @@ class TestZeroSumNormal:
         np.testing.assert_allclose(empirical_var, theoretical_var, atol=0.4)
 
     @pytest.mark.parametrize(
-        "sigma, shape, zerosum_axes, mvn_axes",
+        "sigma, shape, n_zerosum_axes, mvn_axes",
         [
             (5, 3, None, [-1]),
             (2, 6, None, [-1]),
@@ -1559,7 +1559,7 @@ class TestZeroSumNormal:
             (5, (2, 7, 3), 2, [1, 2]),
         ],
     )
-    def test_zsn_logp(self, sigma, shape, zerosum_axes, mvn_axes):
+    def test_zsn_logp(self, sigma, shape, n_zerosum_axes, mvn_axes):
         def logp_norm(value, sigma, axes):
             """
             Special case of the MvNormal, that's equivalent to the ZSN.
@@ -1588,7 +1588,7 @@ class TestZeroSumNormal:
 
             return np.where(inds, np.sum(-psdet - exp, axis=-1), -np.inf)
 
-        zsn_dist = pm.ZeroSumNormal.dist(sigma=sigma, shape=shape, zerosum_axes=zerosum_axes)
+        zsn_dist = pm.ZeroSumNormal.dist(sigma=sigma, shape=shape, n_zerosum_axes=n_zerosum_axes)
         zsn_logp = pm.logp(zsn_dist, value=np.zeros(shape)).eval()
         mvn_logp = logp_norm(value=np.zeros(shape), sigma=sigma, axes=mvn_axes)
 
