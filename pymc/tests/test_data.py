@@ -405,6 +405,18 @@ class TestData(SeededTest):
         assert "columns" in pmodel.coords
         assert pmodel.named_vars_to_dims == {"observations": ("rows", "columns")}
 
+    def test_implicit_coords_xarray(self):
+        xr = pytest.importorskip("xarray")
+        data = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("y", "x"))
+        with pm.Model() as pmodel:
+            with pytest.warns(DeprecationWarning):
+                pm.ConstantData("observations", data, dims=("x", "y"), export_index_as_coords=True)
+        assert "x" in pmodel.coords
+        assert "y" in pmodel.coords
+        assert pmodel.named_vars_to_dims == {"observations": ("x", "y")}
+        assert tuple(pmodel.coords["x"]) == tuple(data.coords["x"].to_numpy())
+        assert tuple(pmodel.coords["y"]) == tuple(data.coords["y"].to_numpy())
+
     def test_data_kwargs(self):
         strict_value = True
         allow_downcast_value = False
