@@ -1116,7 +1116,7 @@ class _LKJCholeskyCovBaseRV(RandomVariable):
     ndim_supp = 1
     ndims_params = [0, 0, 1]
     dtype = "floatX"
-    _print_name = ("_lkjcholeskycovbase", "\\operatorname{_lkjcholeskycovbase}")
+    _print_name = ("_lkjcholeskycovbase", r"\operatorname{\_lkjcholeskycovbase}")
 
     def make_node(self, rng, size, dtype, n, eta, D):
         n = at.as_tensor_variable(n)
@@ -1164,7 +1164,7 @@ _ljk_cholesky_cov_base = _LKJCholeskyCovBaseRV()
 # be safely resized. Because of this, we add the thin SymbolicRandomVariable wrapper
 class _LKJCholeskyCovRV(SymbolicRandomVariable):
     default_output = 1
-    _print_name = ("_lkjcholeskycov", "\\operatorname{_lkjcholeskycov}")
+    _print_name = ("_lkjcholeskycov", r"\operatorname{\_lkjcholeskycov}")
 
     def update(self, node):
         return {node.inputs[0]: node.outputs[0]}

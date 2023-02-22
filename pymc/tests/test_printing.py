@@ -12,8 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import numpy as np
+import pytensor.tensor as pt
+import pytest
 
 from pymc import Bernoulli, Censored, HalfCauchy, Mixture, StudentT
+from pymc.data import ConstantData, MutableData
 from pymc.distributions import (
     Dirichlet,
     DirichletMultinomial,
@@ -27,56 +30,52 @@ from pymc.distributions import (
 )
 from pymc.math import dot
 from pymc.model import Deterministic, Model, Potential
+from pymc.printing import _is_potential_or_deterministic, str_for_model_var
 from pymc.pytensorf import floatX
 
 
 class BaseTestStrAndLatexRepr:
-    def test__repr_latex_(self):
-        for distribution, tex in zip(self.distributions, self.expected[("latex", True)]):
-            assert distribution._repr_latex_() == tex
+    @pytest.mark.parametrize("formatting", ["plain", "latex"])
+    def test_var_str_repr(self, formatting):
+        for dist, expected in zip(self.distributions, self.expected[formatting]):
+            assert dist.str_repr(formatting) == expected
 
-        model_tex = self.model._repr_latex_()
+    @pytest.mark.parametrize("formatting", ["plain", "latex"])
+    def test_model_str_repr(self, formatting):
+        # Tests that each printed variable is in the model string, but
+        # does not test for ordering
+        model_str = self.model.str_repr(formatting)
+        for expected in self.expected[formatting]:
+            if formatting == "latex":
+                expected = expected.replace(r"\sim", r"&\sim &").strip("$")
+            assert expected in model_str
 
-        # make sure each variable is in the model
-        for tex in self.expected[("latex", True)]:
-            for segment in tex.strip("$").split(r"\sim"):
-                assert segment in model_tex
+    def test_var_repr_latex(self):
+        for dist in self.distributions:
+            assert dist._repr_latex_() == dist.str_repr(formatting="latex")
 
-    def test_str_repr(self):
-        for str_format in self.formats:
-            for dist, text in zip(self.distributions, self.expected[str_format]):
-                assert dist.str_repr(*str_format) == text
-
-            model_text = self.model.str_repr(*str_format)
-            for text in self.expected[str_format]:
-                if str_format[0] == "latex":
-                    for segment in text.strip("$").split(r"\sim"):
-                        assert segment in model_text
-                else:
-                    assert text in model_text
+    def test_model_repr_latex(self):
+        assert self.model._repr_latex_() == self.model.str_repr(formatting="latex")
 
 
 class TestMonolith(BaseTestStrAndLatexRepr):
     def setup_class(self):
         # True parameter values
-        alpha, sigma = 1, 1
-        beta = [1, 2.5]
-
+        alpha0, sigma0, beta0 = 1, 1, [1, 2.5]
         # Size of dataset
         size = 100
-
         # Predictor variable
         X = np.random.normal(size=(size, 2)).dot(np.array([[1, 0], [0, 0.2]]))
-
         # Simulate outcome variable
-        Y = alpha + X.dot(beta) + np.random.randn(size) * sigma
+        Y = alpha0 + X.dot(beta0) + np.random.randn(size) * sigma0
         with Model() as self.model:
             # TODO: some variables commented out here as they're not working properly
             # in v4 yet (9-jul-2021), so doesn't make sense to test str/latex for them
 
             # Priors for unknown model parameters
             alpha = Normal("alpha", mu=0, sigma=10)
-            b = Normal("beta", mu=0, sigma=10, size=(2,), observed=beta)
+            # TODO why is this observed?
+            beta = Normal("beta", mu=0, sigma=10, size=(2,), observed=beta0)
             sigma = HalfNormal("sigma", sigma=1)
 
             # Test Cholesky parameterization
@@ -86,7 +85,8 @@ class TestMonolith(BaseTestStrAndLatexRepr):
             # nb1 = pm.NegativeBinomial(
             #     "nb_with_mu_alpha", mu=pm.Normal("nbmu"), alpha=pm.Gamma("nbalpha", mu=6, sigma=1)
             # )
-            nb2 = NegativeBinomial("nb_with_p_n", p=Uniform("nbp"), n=10)
+            nbp = Uniform("nbp")
+            nb_with_p_n = NegativeBinomial("nb_with_p_n", p=nbp, n=10)
 
             # SymbolicRV
             zip = ZeroInflatedPoisson("zip", 0.5, 5)
@@ -98,7 +98,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
             nested_mix = Mixture("nested_mix", w, [comp_1, comp_2])
 
             # Expected value of outcome
-            mu = Deterministic("mu", floatX(alpha + dot(X, b)))
+            mu = Deterministic("mu", floatX(alpha + dot(X, beta)))
 
             # add a bounded variable as well
             # bound_var = Bound(Normal, lower=1.0)("bound_var", mu=0, sigma=10)
@@ -126,112 +126,167 @@ class TestMonolith(BaseTestStrAndLatexRepr):
             # add a potential as well
             pot = Potential("pot", mu**2)
 
-        self.distributions = [alpha, sigma, mu, b, Z, nb2, zip, w, nested_mix, Y_obs, pot]
-        self.deterministics_or_potentials = [mu, pot]
+        self.distributions = [
+            alpha,
+            sigma,
+            Z,
+            nbp,
+            nb_with_p_n,
+            zip,
+            w,
+            nested_mix,
+            kron_normal,
+            dm,
+            mu,
+            beta,
+            Y_obs,
+            pot,
+        ]
         # tuples of (formatting, include_params)
-        self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
+        # self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
         self.expected = {
-            ("plain", True): [
-                r"alpha ~ N(0, 10)",
-                r"sigma ~ N**+(0, 1)",
-                r"mu ~ Deterministic(f(beta, alpha))",
-                r"beta ~ N(0, 10)",
-                r"Z ~ N(f(), f())",
-                r"nb_with_p_n ~ NB(10, nbp)",
-                r"zip ~ MarginalMixture(f(), DiracDelta(0), Pois(5))",
-                r"w ~ Dir(<constant>)",
-                (
-                    r"nested_mix ~ MarginalMixture(w, "
-                    r"MarginalMixture(f(), DiracDelta(0), Pois(5)), "
-                    r"Censored(Bern(0.5), -1, 1))"
-                ),
-                r"Y_obs ~ N(mu, sigma)",
-                r"pot ~ Potential(f(beta, alpha))",
+            "plain": [
+                "alpha ~ N(0, 10)",
+                "sigma ~ N**+(0, 1)",
+                "Z ~ N(f(), f())",
+                "nbp ~ U(0, 1)",
+                "nb_with_p_n ~ NB(10, nbp)",
+                "zip ~ MarginalMixture(f(), DiracDelta(0), Pois(5))",
+                "w ~ Dir(<constant (2,)>)",
+                "nested_mix ~ MarginalMixture(w, MarginalMixture(f(), DiracDelta(0), Pois(5)), Censored(Bern(0.5), -1, 1))",
+                "kron_normal ~ KroneckerNormal(<constant (12,)>, 0, <constant (3, 3)>, <constant (4, 4)>)",
+                "dm ~ DirichletMN(5, <constant (3,)>)",
+                "mu ~ Deterministic(f(beta, alpha))",
+                "beta ~ N(0, 10)",
+                "Y_obs ~ N(mu, sigma)",
+                "pot ~ Potential(f(beta, alpha))",
             ],
-            ("plain", False): [
-                r"alpha ~ N",
-                r"sigma ~ N**+",
-                r"mu ~ Deterministic",
-                r"beta ~ N",
-                r"Z ~ N",
-                r"nb_with_p_n ~ NB",
-                r"zip ~ MarginalMixture",
-                r"w ~ Dir",
-                r"nested_mix ~ MarginalMixture",
-                r"Y_obs ~ N",
-                r"pot ~ Potential",
-            ],
-            ("latex", True): [
+            # ("plain", False): [
+            #     r"alpha ~ N",
+            #     r"sigma ~ N**+",
+            #     r"mu ~ Deterministic",
+            #     r"beta ~ N",
+            #     r"Z ~ N",
+            #     r"nb_with_p_n ~ NB",
+            #     r"zip ~ MarginalMixture",
+            #     r"w ~ Dir",
+            #     r"nested_mix ~ MarginalMixture",
+            #     r"Y_obs ~ N",
+            #     r"pot ~ Potential",
+            # ],
+            "latex": [
                 r"$\text{alpha} \sim \operatorname{N}(0,~10)$",
                 r"$\text{sigma} \sim \operatorname{N^{+}}(0,~1)$",
+                r"$\text{Z} \sim \operatorname{N}(f(),~f())$",
+                r"$\text{nbp} \sim \operatorname{U}(0,~1)$",
+                r"$\text{nb}\_\text{with}\_\text{p}\_\text{n} \sim \operatorname{NB}(10,~\text{nbp})$",
+                r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Pois}(5))$",
+                r"$\text{w} \sim \operatorname{Dir}(\text{<constant (2,)>})$",
+                r"$\text{nested}\_\text{mix} \sim \operatorname{MarginalMixture}(\text{w},~\operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Pois}(5)),~\operatorname{Censored}(\operatorname{Bern}(0.5),~\text{-1},~1))$",
+                r"$\text{kron}\_\text{normal} \sim \operatorname{KroneckerNormal}(\text{<constant (12,)>},~0,~\text{<constant (3, 3)>},~\text{<constant (4, 4)>})$",
+                r"$\text{dm} \sim \operatorname{DirichletMN}(5,~\text{<constant (3,)>})$",
                 r"$\text{mu} \sim \operatorname{Deterministic}(f(\text{beta},~\text{alpha}))$",
                 r"$\text{beta} \sim \operatorname{N}(0,~10)$",
-                r"$\text{Z} \sim \operatorname{N}(f(),~f())$",
-                r"$\text{nb_with_p_n} \sim \operatorname{NB}(10,~\text{nbp})$",
-                r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Pois}(5))$",
-                r"$\text{w} \sim \operatorname{Dir}(\text{<constant>})$",
-                (
-                    r"$\text{nested_mix} \sim \operatorname{MarginalMixture}(\text{w},"
-                    r"~\operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Pois}(5)),"
-                    r"~\operatorname{Censored}(\operatorname{Bern}(0.5),~-1,~1))$"
-                ),
-                r"$\text{Y_obs} \sim \operatorname{N}(\text{mu},~\text{sigma})$",
+                r"$\text{Y}\_\text{obs} \sim \operatorname{N}(\text{mu},~\text{sigma})$",
                 r"$\text{pot} \sim \operatorname{Potential}(f(\text{beta},~\text{alpha}))$",
             ],
-            ("latex", False): [
-                r"$\text{alpha} \sim \operatorname{N}$",
-                r"$\text{sigma} \sim \operatorname{N^{+}}$",
-                r"$\text{mu} \sim \operatorname{Deterministic}$",
-                r"$\text{beta} \sim \operatorname{N}$",
-                r"$\text{Z} \sim \operatorname{N}$",
-                r"$\text{nb_with_p_n} \sim \operatorname{NB}$",
-                r"$\text{zip} \sim \operatorname{MarginalMixture}$",
-                r"$\text{w} \sim \operatorname{Dir}$",
-                r"$\text{nested_mix} \sim \operatorname{MarginalMixture}$",
-                r"$\text{Y_obs} \sim \operatorname{N}$",
-                r"$\text{pot} \sim \operatorname{Potential}$",
-            ],
+            # ("latex", False): [
+            #     r"$\text{alpha} \sim \operatorname{N}$",
+            #     r"$\text{sigma} \sim \operatorname{N^{+}}$",
+            #     r"$\text{mu} \sim \operatorname{Deterministic}$",
+            #     r"$\text{beta} \sim \operatorname{N}$",
+            #     r"$\text{Z} \sim \operatorname{N}$",
+            #     r"$\text{nb_with_p_n} \sim \operatorname{NB}$",
+            #     r"$\text{zip} \sim \operatorname{MarginalMixture}$",
+            #     r"$\text{w} \sim \operatorname{Dir}$",
+            #     r"$\text{nested_mix} \sim \operatorname{MarginalMixture}$",
+            #     r"$\text{Y_obs} \sim \operatorname{N}$",
+            #     r"$\text{pot} \sim \operatorname{Potential}$",
+            # ],
         }
 
 
 class TestData(BaseTestStrAndLatexRepr):
     def setup_class(self):
         with Model() as self.model:
-            import pymc as pm
-
-            with pm.Model() as model:
-                a = pm.Normal("a", pm.MutableData("a_data", (2,)))
-                b = pm.Normal("b", pm.MutableData("b_data", (2, 3)))
-                c = pm.Normal("c", pm.ConstantData("c_data", (2,)))
-                d = pm.Normal("d", pm.ConstantData("d_data", (2, 3)))
+            a = Normal("a", MutableData("a_data", (2,)))
+            b = Normal("b", MutableData("b_data", (2, 3)))
+            c = Normal("c", ConstantData("c_data", (2,)))
+            d = Normal("d", ConstantData("d_data", (2, 3)))
 
         self.distributions = [a, b, c, d]
         # tuples of (formatting, include_params)
-        self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
+        # self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
         self.expected = {
-            ("plain", True): [
+            "plain": [
                 r"a ~ N(2, 1)",
-                r"b ~ N(<shared>, 1)",
+                r"b ~ N(<shared (2,)>, 1)",
                 r"c ~ N(2, 1)",
-                r"d ~ N(<constant>, 1)",
+                r"d ~ N(<constant (2,)>, 1)",
             ],
-            ("plain", False): [
-                r"a ~ N",
-                r"b ~ N",
-                r"c ~ N",
-                r"d ~ N",
-            ],
-            ("latex", True): [
+            # ("plain", False): [
+            #     r"a ~ N",
+            #     r"b ~ N",
+            #     r"c ~ N",
+            #     r"d ~ N",
+            # ],
+            "latex": [
                 r"$\text{a} \sim \operatorname{N}(2,~1)$",
-                r"$\text{b} \sim \operatorname{N}(\text{<shared>},~1)$",
+                r"$\text{b} \sim \operatorname{N}(\text{<shared (2,)>},~1)$",
                 r"$\text{c} \sim \operatorname{N}(2,~1)$",
-                r"$\text{d} \sim \operatorname{N}(\text{<constant>},~1)$",
+                r"$\text{d} \sim \operatorname{N}(\text{<constant (2,)>},~1)$",
             ],
-            ("latex", False): [
-                r"$\text{a} \sim \operatorname{N}$",
-                r"$\text{b} \sim \operatorname{N}$",
-                r"$\text{c} \sim \operatorname{N}$",
-                r"$\text{d} \sim \operatorname{N}$",
+            # ("latex", False): [
+            #     r"$\text{a} \sim \operatorname{N}$",
+            #     r"$\text{b} \sim \operatorname{N}$",
+            #     r"$\text{c} \sim \operatorname{N}$",
+            #     r"$\text{d} \sim \operatorname{N}$",
+            # ],
+        }
+
+
+class TestNestedModel(BaseTestStrAndLatexRepr):
+    def setup_class(self):
+        with Model("m1") as self.model:
+            n1 = Normal("n1")
+            with Model("m2") as self.m2:
+                n2 = Normal("n2")
+        self.distributions = [n1, n2]
+        self.expected = {
+            "plain": ["m1::n1 ~ N(0, 1)", "m1::m2::n2 ~ N(0, 1)"],
+            "latex": [
+                r"$\text{m1::n1} \sim \operatorname{N}(0,~1)$",
+                r"$\text{m1::m2::n2} \sim \operatorname{N}(0,~1)$",
+            ],
+        }
+
+    def test_nested_model_str_repr_plain(self):
+        assert self.m2.str_repr(formatting="plain") == self.expected["plain"][-1]
+
+
+class TestEdgeCharacters(BaseTestStrAndLatexRepr):
+    def setup_class(self):
+        with Model("model_with_under$cores__and~stuff") as self.model:
+            n = Normal("n")
+            u_dollar = Uniform("u$")
+            hn_tilde = HalfNormal("h~n")
+            n_offset = Deterministic("n_offset", n + 1)
+            d = Deterministic("d", n_offset + u_dollar + hn_tilde)
+        self.distributions = [n, u_dollar, hn_tilde, n_offset, d]
+        self.expected = {
+            "plain": [
+                "model_with_under$cores__and-stuff::n ~ N(0, 1)",
+                "model_with_under$cores__and-stuff::u$ ~ U(0, 1)",
+                "model_with_under$cores__and-stuff::h-n ~ N**+(0, 1)",
+                "model_with_under$cores__and-stuff::n_offset ~ Deterministic(f(model_with_under$cores__and-stuff::n))",
+                "model_with_under$cores__and-stuff::d ~ Deterministic(f(model_with_under$cores__and-stuff::h-n, model_with_under$cores__and-stuff::u$, model_with_under$cores__and-stuff::n))",
+            ],
+            "latex": [
+                r"$\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::n} \sim \operatorname{N}(0,~1)$",
+                r"$\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::u\$} \sim \operatorname{U}(0,~1)$",
+                r"$\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::h-n} \sim \operatorname{N^{+}}(0,~1)$",
+                r"$\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::n}\_\text{offset} \sim \operatorname{Deterministic}(f(\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::n}))$",
+                r"$\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::d} \sim \operatorname{Deterministic}(f(\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::h-n},~\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::u\$},~\text{model}\_\text{with}\_\text{under\$cores}\_\text{}\_\text{and-stuff::n}))$",
             ],
         }
 
@@ -248,11 +303,11 @@ def test_model_latex_repr_three_levels_model():
     latex_repr = censored_model.str_repr(formatting="latex")
     expected = [
         "$$",
-        "\\begin{array}{rcl}",
-        "\\text{mu} &\\sim & \\operatorname{N}(0,~5)\\\\\\text{sigma} &\\sim & "
-        "\\operatorname{C^{+}}(0,~2.5)\\\\\\text{censored_normal} &\\sim & "
-        "\\operatorname{Censored}(\\operatorname{N}(\\text{mu},~\\text{sigma}),~-2,~2)",
-        "\\end{array}",
+        r"\begin{array}{rcl}",
+        r"\text{mu} &\sim & \operatorname{N}(0,~5)\\\text{sigma} &\sim & "
+        r"\operatorname{C^{+}}(0,~2.5)\\\text{censored}\_\text{normal} &\sim & "
+        r"\operatorname{Censored}(\operatorname{N}(\text{mu},~\text{sigma}),~\text{-2},~2)",
+        r"\end{array}",
         "$$",
     ]
     assert [line.strip() for line in latex_repr.split("\n")] == expected
@@ -266,11 +321,88 @@ def test_model_latex_repr_mixture_model():
     latex_repr = mix_model.str_repr(formatting="latex")
     expected = [
         "$$",
-        "\\begin{array}{rcl}",
-        "\\text{w} &\\sim & "
-        "\\operatorname{Dir}(\\text{<constant>})\\\\\\text{mix} &\\sim & "
-        "\\operatorname{MarginalMixture}(\\text{w},~\\operatorname{N}(0,~5),~\\operatorname{StudentT}(7,~0,~1))",
-        "\\end{array}",
+        r"\begin{array}{rcl}",
+        r"\text{w} &\sim & \operatorname{Dir}(\text{<constant (2,)>})\\\text{mix} &\sim & "
+        r"\operatorname{MarginalMixture}(\text{w},~\operatorname{N}(0,~5),~\operatorname{StudentT}(7,~0,~1))",
+        r"\end{array}",
         "$$",
     ]
     assert [line.strip() for line in latex_repr.split("\n")] == expected
+
+
+def test_potential_input_no_owner():
+    with Model():
+        p = Potential("p", pt.constant(1))
+    assert p.str_repr(formatting="plain") == "p ~ Potential(f())"
+    assert p.str_repr(formatting="latex") == "$\\text{p} \\sim \\operatorname{Potential}(f())$"
+
+
+def test_var_unnamed():
+    v = Normal.dist()
+    assert str_for_model_var(v, formatting="plain") == "<unnamed> ~ N(0, 1)"
+    assert (
+        str_for_model_var(v, formatting="latex")
+        == "$\\text{<unnamed>} \\sim \\operatorname{N}(0,~1)$"
+    )
+
+
+def test_unsupported_var():
+    """Not a model variable or dist() output"""
+    with pytest.raises(ValueError, match="must be a model variable or the output of .dist()"):
+        str_for_model_var(pt.constant(1), dist_name="_")
+
+
+def test_unsupported_input_var():
+    """Model variable has bad input"""
+    with Model():
+        # This fails in model_to_graphviz() due to MissingInputError But using
+        # pt.scalar() rather than vector works in graphviz, but not pretty-print.
+        x = Normal("x", mu=pt.vector())
+    with pytest.raises(ValueError, match="Unidentified variable in dist or expression args"):
+        x.str_repr()
+
+
+def test_missing_dist_name():
+    _print_name_temp = Normal.rv_op._print_name
+    try:
+        with Model() as m:
+            n = Normal("n")
+        n.owner.op._print_name = None  # delattr fails for some reason
+        with pytest.raises(ValueError, match="Missing distribution name"):
+            n.str_repr()
+        with pytest.raises(ValueError, match="Missing distribution name"):
+            m.str_repr()
+    finally:
+        Normal.rv_op._print_name = _print_name_temp
+
+
+def test_include_params_warning():
+    with Model() as m:
+        n = Normal("n")
+    with pytest.warns(FutureWarning, match="`include_params` argument has been deprecated"):
+        n.str_repr(include_params="True")
+    with pytest.warns(FutureWarning, match="`include_params` argument has been deprecated"):
+        m.str_repr(include_params="True")
+
+
+@pytest.mark.parametrize("formatting", ["plainblah", "latexblah", "aaa"])
+def test_unsupported_formatting(formatting):
+    with Model() as m:
+        n = Normal("n")
+    with pytest.raises(ValueError, match="Formatting method not recognized"):
+        n.str_repr(formatting=formatting)
+    with pytest.raises(ValueError, match="Formatting method not recognized"):
+        m.str_repr(formatting=formatting)
+
+
+def test_is_potential_or_deterministic():
+    # Ensure printing.py is kept in line with model.py
+    with Model():
+        n = Normal("n")
+        x = ConstantData("data", 1)
+        p = Potential("p", x + 1)
+        d = Deterministic("d", x + 1)
+    assert not _is_potential_or_deterministic(n)
+    assert not _is_potential_or_deterministic(x)
+    assert _is_potential_or_deterministic(p)
+    assert _is_potential_or_deterministic(d)

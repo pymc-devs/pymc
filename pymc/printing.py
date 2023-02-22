@@ -12,9 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import functools
 import itertools
+import warnings
 
-from typing import Union
+from typing import List, Optional, Tuple, Union
 
 from pytensor.compile import SharedVariable
 from pytensor.graph.basic import Constant, walk
@@ -26,91 +28,61 @@ from pytensor.tensor.random.var import (
     RandomStateSharedVariable,
 )
 
+from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.model import Model
 
-__all__ = [
-    "str_for_dist",
-    "str_for_model",
-    "str_for_potential_or_deterministic",
-]
+__all__ = ["str_for_model", "str_for_model_var"]
 
 
-def str_for_dist(
-    dist: TensorVariable, formatting: str = "plain", include_params: bool = True
+def str_for_model_var(
+    var: TensorVariable, formatting: str = "plain", dist_name: Optional[str] = None, **kwargs
 ) -> str:
-    """Make a human-readable string representation of a Distribution in a model, either
-    LaTeX or plain, optionally with distribution parameter values included."""
+    """Make a human-readable string representation of a Model variable.
 
-    if include_params:
-        # first 3 args are always (rng, size, dtype), rest is relevant for distribution
-        if isinstance(dist.owner.op, RandomVariable):
-            dist_args = [
-                _str_for_input_var(x, formatting=formatting) for x in dist.owner.inputs[3:]
-            ]
-        else:
-            dist_args = [
-                _str_for_input_var(x, formatting=formatting)
-                for x in dist.owner.inputs
-                if not isinstance(x, (RandomStateSharedVariable, RandomGeneratorSharedVariable))
-            ]
-
-    print_name = dist.name
-
-    if "latex" in formatting:
-        if print_name is not None:
-            print_name = r"\text{" + _latex_escape(dist.name.strip("$")) + "}"
-
-        op_name = (
-            dist.owner.op._print_name[1]
-            if hasattr(dist.owner.op, "_print_name")
-            else r"\\operatorname{Unknown}"
+    Intended for Distribution, Deterministic, and Potential.
+    """
+    if not (
+        _has_owner(var) and isinstance(var.owner.op, (RandomVariable, SymbolicRandomVariable))
+    ) and not _is_potential_or_deterministic(var):
+        raise ValueError(
+            f"Variable for pretty-printing must be a model variable or the output of .dist(). Received unsupported variable {var}"
         )
-        if include_params:
-            if print_name:
-                return r"${} \sim {}({})$".format(
-                    print_name, op_name, ",~".join([d.strip("$") for d in dist_args])
-                )
-            else:
-                return r"${}({})$".format(op_name, ",~".join([d.strip("$") for d in dist_args]))
-
-        else:
-            if print_name:
-                return rf"${print_name} \sim {op_name}$"
-            else:
-                return rf"${op_name}$"
-
-    else:  # plain
-        dist_name = (
-            dist.owner.op._print_name[0] if hasattr(dist.owner.op, "_print_name") else "Unknown"
+    var_name, dist_name, args_str = _get_varname_distname_args(
+        var, formatting=formatting, dist_name=dist_name
+    )
+    if "include_params" in kwargs:
+        warnings.warn(
+            "The `include_params` argument has been deprecated. Future versions will always include parameter values.",
+            FutureWarning,
+            stacklevel=2,
         )
-        if include_params:
-            if print_name:
-                return r"{} ~ {}({})".format(print_name, dist_name, ", ".join(dist_args))
-            else:
-                return r"{}({})".format(dist_name, ", ".join(dist_args))
-        else:
-            if print_name:
-                return rf"{print_name} ~ {dist_name}"
-            else:
-                return dist_name
+        # When removing, remove **kwargs from here and str_for_model().
+        if not kwargs["include_params"]:
+            args_str = ""
+    if formatting == "latex":
+        out = rf"${var_name} \sim {dist_name}({args_str})$"
+    elif formatting == "plain":
+        var_name = var_name.replace("~", "-")
+        dist_name = dist_name.replace("~", "-")
+        args_str = args_str.replace("~", "-")
+        out = f"{var_name} ~ {dist_name}({args_str})"
+    else:
+        raise ValueError(
+            f"Formatting method not recognized: {formatting}. Supported formatting: [latex, plain]."
+        )
+    return out
 
 
-def str_for_model(model: Model, formatting: str = "plain", include_params: bool = True) -> str:
-    """Make a human-readable string representation of Model, listing all random variables
-    and their distributions, optionally including parameter values."""
+def str_for_model(model: Model, formatting: str = "plain", **kwargs) -> str:
+    """Make a human-readable string representation of Model including all random
+    variables and their distributions.
+    """
     all_rv = itertools.chain(model.unobserved_RVs, model.observed_RVs, model.potentials)
-
-    rv_reprs = [rv.str_repr(formatting=formatting, include_params=include_params) for rv in all_rv]
-    rv_reprs = [rv_repr for rv_repr in rv_reprs if "TransformedDistribution()" not in rv_repr]
-
+    rv_reprs = [rv.str_repr(formatting=formatting, **kwargs) for rv in all_rv]
     if not rv_reprs:
         return ""
-    if "latex" in formatting:
-        rv_reprs = [
-            rv_repr.replace(r"\sim", r"&\sim &").strip("$")
-            for rv_repr in rv_reprs
-            if rv_repr is not None
-        ]
+    if formatting == "latex":
+        rv_reprs = [rv_repr.replace(r"\sim", r"&\sim &").strip("$") for rv_repr in rv_reprs]
         return r"""$$
             \begin{{array}}{{rcl}}
             {}
@@ -130,148 +102,194 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
         return "\n".join(rv_reprs)
 
 
-def str_for_potential_or_deterministic(
-    var: TensorVariable,
-    formatting: str = "plain",
-    include_params: bool = True,
-    dist_name: str = "Deterministic",
-) -> str:
-    """Make a human-readable string representation of a Deterministic or Potential in a model, either
-    LaTeX or plain, optionally with distribution parameter values included."""
-    print_name = var.name if var.name is not None else "<unnamed>"
-    if "latex" in formatting:
-        print_name = r"\text{" + _latex_escape(print_name.strip("$")) + "}"
-        if include_params:
-            return rf"${print_name} \sim \operatorname{{{dist_name}}}({_str_for_expression(var, formatting=formatting)})$"
-        else:
-            return rf"${print_name} \sim \operatorname{{{dist_name}}}$"
-    else:  # plain
-        if include_params:
-            return rf"{print_name} ~ {dist_name}({_str_for_expression(var, formatting=formatting)})"
-        else:
-            return rf"{print_name} ~ {dist_name}"
+def _get_varname_distname_args(
+    var: TensorVariable, formatting: str, dist_name: Optional[str] = None
+) -> Tuple[str, str, str]:
+    """Generate formatted strings for the name, distribution name, and
+    arguments list of a Model variable.
+
+    For Distribution, Potential, Deterministic, or .dist().
+    """
+    # Name and distribution name
+    name = var.name if var.name is not None else "<unnamed>"  # May be missing if from a dist()
+    if (
+        not dist_name
+        and _has_owner(var)
+        and hasattr(var.owner.op, "_print_name")
+        and var.owner.op._print_name
+    ):
+        # The _print_name tuple is necessary for maximum prettiness because a few RVs
+        # use special formatting (e.g. superscripts) for their latex print name
+        dist_name = (
+            var.owner.op._print_name[1] if formatting == "latex" else var.owner.op._print_name[0]
+        )
+    elif not dist_name:
+        raise ValueError(
+            f"Missing distribution name for model variable: {var}. Provide one via the"
+            " _print_name attribute of your RandomVariable."
+        )
+    if formatting == "latex":
+        name = _latex_clean_command(name, command="text")
+        dist_name = _latex_clean_command(dist_name, command="operatorname")
+
+    # Arguments passed to the distribution or expression
+    if _has_owner(var) and isinstance(var.owner.op, RandomVariable):
+        # var is the RV or dist() from a Distribution.
+        dist_args = var.owner.inputs[3:]  # First 3 inputs are always rng, size, dtype
+    elif _has_owner(var) and isinstance(var.owner.op, SymbolicRandomVariable):
+        # var is a symbolic RV from a Distribution.
+        dist_args = [
+            x
+            for x in var.owner.inputs
+            if not isinstance(x, (RandomStateSharedVariable, RandomGeneratorSharedVariable))
+        ]
+    else:
+        # Assume that var is a Deterministic or a Potential.
+        dist_args = _walk_expression_args(var)
+    args_str = _str_for_args_list(dist_args, formatting=formatting)
+    if _is_potential_or_deterministic(var):
+        args_str = f"f({args_str})"
+
+    # These three strings are now formatted according to `formatting`. If latex, they
+    # just ultimately need to be wrapped in $.
+    return name, dist_name, args_str
 
 
 def _str_for_input_var(var: Variable, formatting: str) -> str:
-    # Avoid circular import
-    from pymc.distributions.distribution import SymbolicRandomVariable
-
-    def _is_potential_or_deterministic(var: Variable) -> bool:
-        try:
-            return var.str_repr.__func__.func is str_for_potential_or_deterministic
-        except AttributeError:
-            # in case other code overrides str_repr, fallback
-            return False
-
+    """Make a human-readable string representation for a variable that
+    serves as input to another variable."""
+    # Check for constants first, because they won't have var.owner
     if isinstance(var, (Constant, SharedVariable)):
-        return _str_for_constant(var, formatting)
-    elif isinstance(
-        var.owner.op, (RandomVariable, SymbolicRandomVariable)
-    ) or _is_potential_or_deterministic(var):
-        # show the names for RandomVariables, Deterministics, and Potentials, rather
-        # than the full expression
-        return _str_for_input_rv(var, formatting)
-    elif isinstance(var.owner.op, DimShuffle):
-        return _str_for_input_var(var.owner.inputs[0], formatting)
+        # Give the constant value if it's small enough, else basic type info.
+        # Previously _str_for_constant()
+        if isinstance(var, Constant):
+            var_data = var.data
+            var_type = "constant"
+        else:
+            var_data = var.get_value()
+            var_type = "shared"
+        if var_data.size == 1:
+            return f"{var_data.flatten()[0]:.3g}"
+        else:
+            return f"<{var_type} {var_data.shape}>"
+    elif _has_owner(var):
+        if isinstance(var.owner.op, DimShuffle):
+            # Recurse
+            return _str_for_input_var(var.owner.inputs[0], formatting=formatting)
+        elif _is_potential_or_deterministic(var) or isinstance(
+            var.owner.op, (RandomVariable, SymbolicRandomVariable)
+        ):
+            # Give the name of the RV/Potential/Deterministic if available
+            if var.name:
+                return var.name
+            # But if rv comes from .dist() we print the distribution with its args
+            else:
+                _, dist_name, args_str = _get_varname_distname_args(var, formatting=formatting)
+                return f"{dist_name}({args_str})"
+        else:
+            # Return an "expression" i.e. indicate that this variable is a function of other
+            # variables. Looks like f(arg1, ..., argN). Previously _str_for_expression()
+            args = _walk_expression_args(var)
+            args_str = _str_for_args_list(args, formatting=formatting)
+            return f"f({args_str})"
     else:
-        return _str_for_expression(var, formatting)
+        raise ValueError(
+            f"Unidentified variable in dist or expression args: {var}. If you think this is a bug, please create an issue in the project Github."
+        )
 
 
-def _str_for_input_rv(var: Variable, formatting: str) -> str:
-    _str = (
-        var.name
-        if var.name is not None
-        else str_for_dist(var, formatting=formatting, include_params=True)
-    )
-    if "latex" in formatting:
-        return _latex_text_format(_latex_escape(_str.strip("$")))
-    else:
-        return _str
+def _walk_expression_args(var: Variable) -> List[Variable]:
+    """Find all arguments of an expression"""
+    if not var.owner:
+        return []
 
-
-def _str_for_constant(var: Union[Constant, SharedVariable], formatting: str) -> str:
-    if isinstance(var, Constant):
-        var_data = var.data
-        var_type = "constant"
-    else:
-        var_data = var.get_value()
-        var_type = "shared"
-
-    if len(var_data.shape) == 0:
-        return f"{var_data:.3g}"
-    elif len(var_data.shape) == 1 and var_data.shape[0] == 1:
-        return f"{var_data[0]:.3g}"
-    elif "latex" in formatting:
-        return rf"\text{{<{var_type}>}}"
-    else:
-        return rf"<{var_type}>"
-
-
-def _str_for_expression(var: Variable, formatting: str) -> str:
-    # Avoid circular import
-    from pymc.distributions.distribution import SymbolicRandomVariable
-
-    # construct a string like f(a1, ..., aN) listing all random variables a as arguments
     def _expand(x):
         if x.owner and (not isinstance(x.owner.op, (RandomVariable, SymbolicRandomVariable))):
             return reversed(x.owner.inputs)
 
-    parents = [
+    return [
         x
         for x in walk(nodes=var.owner.inputs, expand=_expand)
         if x.owner and isinstance(x.owner.op, (RandomVariable, SymbolicRandomVariable))
     ]
-    names = [x.name for x in parents]
 
-    if "latex" in formatting:
-        return (
-            r"f("
-            + ",~".join([_latex_text_format(_latex_escape(n.strip("$"))) for n in names])
-            + ")"
-        )
+
+def _str_for_args_list(args: List[Variable], formatting: str) -> str:
+    """Create a human-readable string representation for the list of inputs
+    to a distribution or expression."""
+    strs = [_str_for_input_var(x, formatting=formatting) for x in args]
+    if formatting == "latex":
+        # Format the str as \text{} only if it hasn't been formatted yet and it isn't numeric
+        strs_formatted = [
+            s
+            if r"\text" in s or r"\operatorname" in s or s == "f()" or s.replace(".", "").isdigit()
+            else _latex_clean_command(s, command="text")
+            for s in strs
+        ]
+        return ",~".join(strs_formatted)
     else:
-        return r"f(" + ", ".join([n.strip("$") for n in names]) + ")"
+        return ", ".join(strs)
 
 
-def _latex_text_format(text: str) -> str:
-    if r"\operatorname{" in text:
-        return text
+def _latex_clean_command(text: str, command: str) -> str:
+    r"""Prepare text for LaTeX and maybe wrap it in a \command{}."""
+    text = text.replace("$", r"\$")
+    # str_for_model() uses \sim to format the array, and properly
+    # tilde in latex is hard. So we replace for simplicity
+    text = text.replace("~", "-")
+    if not text.startswith(rf"\{command}"):
+        # The printing module is designed such that text never passes through this
+        # function more than once. However, in some cases the text may have already
+        # been formatted for LaTeX -- such as when accessing a RandomVariable's
+        # pre-specified _print_name. In these cases we avoid the double wrap.
+        text = rf"\{command}{{{text}}}"
+    # This escape is a workaround for pymc#6508. MathJax is the latex engine in Jupyter
+    # notebooks, but its behavior in \text commands deviates from canonical LaTeX: stuff
+    # in the \text block will be rendered more or less verbatim. Meanwhile, other
+    # engines such as KaTeX behave differently and expect certain characters to be
+    # escaped to be typeset as desired. We work around this by escaping out of the
+    # command itself, writing the character, then continuing on with the same command.
+    if command == "text":
+        text = text.replace("_", rf"}}\_\{command}{{")
+    return text
+
+
+def _is_potential_or_deterministic(var: Variable) -> bool:
+    # This is a bit hacky but seems like the best we got
+    if (
+        hasattr(var, "str_repr")
+        and callable(var.str_repr)
+        and isinstance(var.str_repr.__func__, functools.partial)
+    ):
+        args = [*var.str_repr.__func__.args, *var.str_repr.__func__.keywords.values()]
+        return "Deterministic" in args or "Potential" in args
+    return False
+
+
+def _has_owner(var: Variable):
+    return hasattr(var, "owner") and var.owner
+
+
+def _pymc_pprint(obj: Union[TensorVariable, Model], *args, **kwargs):
+    """Pretty-print method that instructs IPython to use our `str_repr()`.
+
+    Note that `str_repr()` is assigned in the initialization functions for
+    the objects of interest, i.e. Distribution and Model.
+    """
+    if hasattr(obj, "str_repr") and callable(obj.str_repr):
+        s = obj.str_repr()
     else:
-        return r"\text{" + text + "}"
-
-
-def _latex_escape(text: str) -> str:
-    # Note that this is *NOT* a proper LaTeX escaper, on purpose. _repr_latex_ is
-    # primarily used in the context of Jupyter notebooks, which render using MathJax.
-    # MathJax is a subset of LaTeX proper, which expects only $ to be escaped. If we were
-    # to also escape e.g. _ (replace with \_), then "\_" will show up in the output, etc.
-    return text.replace("$", r"\$")
-
-
-def _default_repr_pretty(obj: Union[TensorVariable, Model], p, cycle):
-    """Handy plug-in method to instruct IPython-like REPLs to use our str_repr above."""
-    # we know that our str_repr does not recurse, so we can ignore cycle
-    try:
-        output = obj.str_repr()
-        # Find newlines and replace them with p.break_()
-        # (see IPython.lib.pretty._repr_pprint)
-        lines = output.splitlines()
-        with p.group():
-            for idx, output_line in enumerate(lines):
-                if idx:
-                    p.break_()
-                p.text(output_line)
-    except AttributeError:
-        # the default fallback option (no str_repr method)
-        IPython.lib.pretty._repr_pprint(obj, p, cycle)
+        s = repr(obj)
+    # Allow IPython to deal with newlines and the actual printing to shell
+    IPython.lib.pretty._repr_pprint(s, *args, **kwargs)
 
 
 try:
     # register our custom pretty printer in ipython shells
     import IPython
 
-    IPython.lib.pretty.for_type(TensorVariable, _default_repr_pretty)
-    IPython.lib.pretty.for_type(Model, _default_repr_pretty)
+    IPython.lib.pretty.for_type(TensorVariable, _pymc_pprint)
+    IPython.lib.pretty.for_type(Model, _pymc_pprint)
 except (ModuleNotFoundError, AttributeError):
     # no ipython shell
     pass
