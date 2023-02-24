@@ -210,7 +210,6 @@ class NUTS(BaseHMC):
     def competence(var, has_grad):
         """Check how appropriate this class is for sampling a random variable."""
 
-        dist = getattr(var.owner, "op", None)
         if var.dtype in continuous_types and has_grad:
             return Competence.PREFERRED
         return Competence.INCOMPATIBLE
