@@ -42,7 +42,6 @@ pymc/model_graph.py
 pymc/printing.py
 pymc/pytensorf.py
 pymc/sampling/jax.py
-pymc/variational/approximations.py
 pymc/variational/opvi.py
 """
 
