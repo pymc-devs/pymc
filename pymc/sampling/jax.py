@@ -48,8 +48,8 @@ from pymc.util import (
     get_default_varnames,
 )
 
-xla_flags = os.getenv("XLA_FLAGS", "")
-xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
+xla_flags_env = os.getenv("XLA_FLAGS", "")
+xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags_env).split()
 os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"] + xla_flags)
 
 __all__ = (
@@ -108,7 +108,7 @@ def get_jaxified_graph(
 ) -> List[TensorVariable]:
     """Compile an PyTensor graph into an optimized JAX function"""
 
-    graph = _replace_shared_variables(outputs)
+    graph = _replace_shared_variables(outputs) if outputs is not None else None
 
     fgraph = FunctionGraph(inputs=inputs, outputs=graph, clone=True)
     # We need to add a Supervisor to the fgraph to be able to run the
@@ -251,12 +251,10 @@ def _get_batched_jittered_initial_points(
         jitter=jitter,
         jitter_max_retries=jitter_max_retries,
     )
-    initial_points = [list(initial_point.values()) for initial_point in initial_points]
+    initial_points_values = [list(initial_point.values()) for initial_point in initial_points]
     if chains == 1:
-        initial_points = initial_points[0]
-    else:
-        initial_points = [np.stack(init_state) for init_state in zip(*initial_points)]
-    return initial_points
+        return initial_points_values[0]
+    return [np.stack(init_state) for init_state in zip(*initial_points_values)]
 
 
 def _update_coords_and_dims(
