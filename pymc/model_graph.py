@@ -73,7 +73,7 @@ class ModelGraph:
             return []
 
         parents = {
-            get_var_name(x)
+            VarName(get_var_name(x))
             for x in walk(nodes=_filter_non_parameter_inputs(var), expand=_expand)
             # Only consider nodes that are in the named model variables.
             if x.name and x.name in self._all_var_names
@@ -109,7 +109,7 @@ class ModelGraph:
                 selected_ancestors.add(self.model.rvs_to_values[var])
 
         # ordering of self._all_var_names is important
-        return [var.name for var in selected_ancestors]
+        return [VarName(var.name) for var in selected_ancestors]
 
     def make_compute_graph(
         self, var_names: Optional[Iterable[VarName]] = None
@@ -230,7 +230,7 @@ class ModelGraph:
                 plate_label = " x ".join(dim_labels)
             else:
                 # The RV has no `dims` information.
-                dim_labels = map(str, shape)
+                dim_labels = [str(x) for x in shape]
                 plate_label = " x ".join(map(str, shape))
             plates[plate_label].add(var_name)
 

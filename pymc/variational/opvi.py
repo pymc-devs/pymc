@@ -51,6 +51,8 @@ import collections
 import itertools
 import warnings
 
+from typing import Any
+
 import numpy as np
 import pytensor
 import pytensor.tensor as at
@@ -673,11 +675,11 @@ class Group(WithMemoization):
     initial_dist_map = 0.0
 
     # for handy access using class methods
-    __param_spec__ = dict()
+    __param_spec__: dict = dict()
     short_name = ""
-    alias_names = frozenset()
-    __param_registry = dict()
-    __name_registry = dict()
+    alias_names: frozenset[str] = frozenset()
+    __param_registry: dict[frozenset, Any] = dict()
+    __name_registry: dict[str, Any] = dict()
 
     @classmethod
     def register(cls, sbcls):
@@ -1552,11 +1554,11 @@ class Approximation(WithMemoization):
         finally:
             trace.close()
 
-        trace = MultiTrace([trace])
+        multi_trace = MultiTrace([trace])
         if not return_inferencedata:
-            return trace
+            return multi_trace
         else:
-            return pm.to_inference_data(trace, model=self.model, **kwargs)
+            return pm.to_inference_data(multi_trace, model=self.model, **kwargs)
 
     @property
     def ndim(self):

@@ -195,7 +195,7 @@ class ContextMeta(type):
         raise a ``TypeError`` instead of returning ``None``."""
         try:
             candidate: Optional[T] = cls.get_contexts()[-1]
-        except IndexError as e:
+        except IndexError:
             # Calling code expects to get a TypeError if the entity
             # is unfound, and there's too much to fix.
             if error_if_none:

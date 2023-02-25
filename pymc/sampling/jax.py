@@ -15,19 +15,9 @@ import os
 import re
 import sys
 
+from datetime import datetime
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union
-
-from pytensor.tensor.random.type import RandomType
-
-from pymc.initial_point import StartDict
-from pymc.sampling.mcmc import _init_jitter
-
-xla_flags = os.getenv("XLA_FLAGS", "")
-xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
-os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"] + xla_flags)
-
-from datetime import datetime
 
 import arviz as az
 import jax
@@ -43,17 +33,24 @@ from pytensor.graph.replace import clone_replace
 from pytensor.link.jax.dispatch import jax_funcify
 from pytensor.raise_op import Assert
 from pytensor.tensor import TensorVariable
+from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.shape import SpecifyShape
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_constants, find_observations
+from pymc.initial_point import StartDict
 from pymc.logprob.utils import CheckParameterValue
+from pymc.sampling.mcmc import _init_jitter
 from pymc.util import (
     RandomSeed,
     RandomState,
     _get_seeds_per_chain,
     get_default_varnames,
 )
+
+xla_flags_env = os.getenv("XLA_FLAGS", "")
+xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags_env).split()
+os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"] + xla_flags)
 
 __all__ = (
     "get_jaxified_graph",
@@ -111,7 +108,7 @@ def get_jaxified_graph(
 ) -> List[TensorVariable]:
     """Compile an PyTensor graph into an optimized JAX function"""
 
-    graph = _replace_shared_variables(outputs)
+    graph = _replace_shared_variables(outputs) if outputs is not None else None
 
     fgraph = FunctionGraph(inputs=inputs, outputs=graph, clone=True)
     # We need to add a Supervisor to the fgraph to be able to run the
@@ -254,12 +251,10 @@ def _get_batched_jittered_initial_points(
         jitter=jitter,
         jitter_max_retries=jitter_max_retries,
     )
-    initial_points = [list(initial_point.values()) for initial_point in initial_points]
+    initial_points_values = [list(initial_point.values()) for initial_point in initial_points]
     if chains == 1:
-        initial_points = initial_points[0]
-    else:
-        initial_points = [np.stack(init_state) for init_state in zip(*initial_points)]
-    return initial_points
+        return initial_points_values[0]
+    return [np.stack(init_state) for init_state in zip(*initial_points_values)]
 
 
 def _update_coords_and_dims(
