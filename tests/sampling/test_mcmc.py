@@ -40,11 +40,11 @@ from pymc.step_methods import (
     NUTS,
     BinaryGibbsMetropolis,
     CategoricalGibbsMetropolis,
+    CompoundStep,
     HamiltonianMC,
     Metropolis,
     Slice,
 )
-from step_methods.compound import CompoundStep
 from tests.helpers import SeededTest, fast_unstable_sampling_mode
 from tests.models import simple_init
 
