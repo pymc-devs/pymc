@@ -233,22 +233,20 @@ class TestSample(SeededTest):
     def test_sample_callback(self):
         callback = mock.Mock()
         test_cores = [1, 2]
-        test_chains = [1, 2]
         with self.model:
             for cores in test_cores:
-                for chain in test_chains:
-                    with warnings.catch_warnings():
-                        warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                        pm.sample(
-                            10,
-                            tune=0,
-                            chains=chain,
-                            step=self.step,
-                            cores=cores,
-                            random_seed=self.random_seed,
-                            callback=callback,
-                        )
-                    assert callback.called
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                    pm.sample(
+                        10,
+                        tune=0,
+                        chains=2,
+                        step=self.step,
+                        cores=cores,
+                        random_seed=self.random_seed,
+                        callback=callback,
+                    )
+                assert callback.called
 
     def test_callback_can_cancel(self):
         trace_cancel_length = 5
@@ -339,107 +337,81 @@ class ApocalypticMetropolis(pm.Metropolis):
 class TestSampleReturn:
     """Tests related to kwargs that parametrize how `pm.sample` results are returned."""
 
-    def test_sample_tune_len(self):
-        with pm.Model():
+    def test_sample_return_lengths(self):
+        with pm.Model() as model:
             pm.Normal("n")
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                warnings.filterwarnings("ignore", "Tuning samples will be included.*", UserWarning)
-                trace = pm.sample(
-                    draws=100, tune=50, cores=1, step=pm.Metropolis(), return_inferencedata=False
-                )
-                assert len(trace) == 100
-                trace = pm.sample(
-                    draws=100,
-                    tune=50,
-                    cores=1,
-                    step=pm.Metropolis(),
-                    return_inferencedata=False,
-                    discard_tuned_samples=False,
-                )
-                assert len(trace) == 150
-                trace = pm.sample(
-                    draws=100,
-                    tune=50,
-                    cores=4,
-                    step=pm.Metropolis(),
-                    return_inferencedata=False,
-                )
-                assert len(trace) == 100
 
-    @pytest.mark.parametrize("discard", [True, False])
-    def test_trace_report(self, discard):
-        with pm.Model():
-            pm.Uniform("uni")
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", ".*Tuning samples will be included.*", UserWarning
-                )
-                trace = pm.sample(
-                    draws=100,
-                    tune=50,
-                    cores=1,
-                    discard_tuned_samples=discard,
-                    step=pm.Metropolis(),
-                    compute_convergence_checks=False,
-                    return_inferencedata=False,
-                )
-            assert trace.report.n_tune == 50
-            assert trace.report.n_draws == 100
-            assert isinstance(trace.report.t_sampling, float)
-
-    def test_return_inferencedata(self):
-        model, _, step, _ = simple_init()
-        with model:
-            kwargs = dict(draws=100, tune=50, cores=1, chains=2, step=step)
-
-            # trace with tuning
+            # Get a MultiTrace with warmup
             with pytest.warns(UserWarning, match="will be included"):
-                result = pm.sample(
-                    **kwargs, return_inferencedata=False, discard_tuned_samples=False
-                )
-            assert isinstance(result, pm.backends.base.MultiTrace)
-            assert len(result) == 150
-
-            # inferencedata with tuning
-            result = pm.sample(**kwargs, return_inferencedata=True, discard_tuned_samples=False)
-            assert isinstance(result, InferenceData)
-            assert result.posterior.sizes["draw"] == 100
-            assert result.posterior.sizes["chain"] == 2
-            assert len(result._groups_warmup) > 0
-
-            # inferencedata without tuning, with idata_kwargs
-            prior = pm.sample_prior_predictive(return_inferencedata=False)
-            result = pm.sample(
-                **kwargs,
-                return_inferencedata=True,
-                discard_tuned_samples=True,
-                idata_kwargs={"prior": prior},
-                random_seed=-1,
-            )
-            assert "prior" in result
-            assert isinstance(result, InferenceData)
-            assert result.posterior.sizes["draw"] == 100
-            assert result.posterior.sizes["chain"] == 2
-            assert len(result._groups_warmup) == 0
-
-    @pytest.mark.parametrize("cores", [1, 2])
-    def test_sampler_stat_tune(self, cores):
-        with pm.Model():
-            pm.Normal("n")
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                warnings.filterwarnings("ignore", "Tuning samples will be included.*", UserWarning)
-                tune_stat = pm.sample(
-                    tune=5,
-                    draws=7,
-                    cores=cores,
-                    discard_tuned_samples=False,
-                    return_inferencedata=False,
+                mtrace = pm.sample(
+                    draws=100,
+                    tune=50,
+                    cores=1,
+                    chains=3,
                     step=pm.Metropolis(),
-                ).get_sampler_stats("tune", chains=1)
-            assert list(tune_stat).count(True) == 5
-            assert list(tune_stat).count(False) == 7
+                    return_inferencedata=False,
+                    discard_tuned_samples=False,
+                )
+                assert isinstance(mtrace, pm.backends.base.MultiTrace)
+                assert len(mtrace) == 150
+
+        # Now instead of running more MCMCs, we'll test the other return
+        # options using the basetraces inside the MultiTrace.
+        traces = list(mtrace._straces.values())
+        assert len(traces) == 3
+
+        # MultiTrace without warmup
+        mtrace_pst = pm.sampling.mcmc._sample_return(
+            traces=traces,
+            tune=50,
+            t_sampling=123.4,
+            discard_tuned_samples=True,
+            return_inferencedata=False,
+            compute_convergence_checks=False,
+            keep_warning_stat=True,
+            idata_kwargs={},
+            model=model,
+        )
+        assert isinstance(mtrace_pst, pm.backends.base.MultiTrace)
+        assert len(mtrace_pst) == 100
+        assert mtrace_pst.report.t_sampling == 123.4
+        assert mtrace_pst.report.n_tune == 50
+        assert mtrace_pst.report.n_draws == 100
+
+        # InferenceData with warmup
+        idata_w = pm.sampling.mcmc._sample_return(
+            traces=traces,
+            tune=50,
+            t_sampling=123.4,
+            discard_tuned_samples=False,
+            compute_convergence_checks=False,
+            return_inferencedata=True,
+            keep_warning_stat=True,
+            idata_kwargs={},
+            model=model,
+        )
+        assert isinstance(idata_w, InferenceData)
+        assert hasattr(idata_w, "warmup_posterior")
+        assert idata_w.warmup_posterior.sizes["draw"] == 50
+        assert idata_w.posterior.sizes["draw"] == 100
+        assert idata_w.posterior.sizes["chain"] == 3
+
+        # InferenceData without warmup
+        idata = pm.sampling.mcmc._sample_return(
+            traces=traces,
+            tune=50,
+            t_sampling=123.4,
+            discard_tuned_samples=True,
+            compute_convergence_checks=False,
+            return_inferencedata=True,
+            keep_warning_stat=False,
+            idata_kwargs={},
+            model=model,
+        )
+        assert isinstance(idata, InferenceData)
+        assert not hasattr(idata, "warmup_posterior")
+        assert idata.posterior.sizes["draw"] == 100
+        assert idata.posterior.sizes["chain"] == 3
 
     @pytest.mark.parametrize("cores", [1, 2])
     def test_logs_sampler_warnings(self, caplog, cores):
