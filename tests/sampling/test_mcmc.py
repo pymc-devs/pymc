@@ -203,25 +203,6 @@ class TestSample(SeededTest):
         assert idata.warmup_posterior["x"].sel(chain=0, draw=0).values[0] > 0
         assert idata.warmup_posterior["x"].sel(chain=1, draw=0).values[0] < 0
 
-    def test_sample_tune_len(self):
-        with self.model:
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                warnings.filterwarnings("ignore", "Tuning samples will be included.*", UserWarning)
-                trace = pm.sample(draws=100, tune=50, cores=1, return_inferencedata=False)
-                assert len(trace) == 100
-                trace = pm.sample(
-                    draws=100,
-                    tune=50,
-                    cores=1,
-                    step=pm.Metropolis(),
-                    return_inferencedata=False,
-                    discard_tuned_samples=False,
-                )
-                assert len(trace) == 150
-                trace = pm.sample(draws=100, tune=50, cores=4, return_inferencedata=False)
-                assert len(trace) == 100
-
     def test_reset_tuning(self):
         with self.model:
             tune = 50
@@ -232,80 +213,6 @@ class TestSample(SeededTest):
                 pm.sample(draws=2, tune=tune, chains=chains, step=step, initvals=start, cores=1)
             assert step.potential._n_samples == tune
             assert step.step_adapt._count == tune + 1
-
-    @pytest.mark.parametrize("step_cls", [pm.NUTS, pm.Metropolis, pm.Slice])
-    @pytest.mark.parametrize("discard", [True, False])
-    def test_trace_report(self, step_cls, discard):
-        with self.model:
-            # add more variables, because stats are 2D with CompoundStep!
-            pm.Uniform("uni")
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", ".*Tuning samples will be included.*", UserWarning
-                )
-                trace = pm.sample(
-                    draws=100,
-                    tune=50,
-                    cores=1,
-                    discard_tuned_samples=discard,
-                    step=step_cls(),
-                    compute_convergence_checks=False,
-                    return_inferencedata=False,
-                )
-            assert trace.report.n_tune == 50
-            assert trace.report.n_draws == 100
-            assert isinstance(trace.report.t_sampling, float)
-
-    def test_return_inferencedata(self):
-        with self.model:
-            kwargs = dict(draws=100, tune=50, cores=1, chains=2, step=pm.Metropolis())
-
-            # trace with tuning
-            with pytest.warns(UserWarning, match="will be included"):
-                result = pm.sample(
-                    **kwargs, return_inferencedata=False, discard_tuned_samples=False
-                )
-            assert isinstance(result, pm.backends.base.MultiTrace)
-            assert len(result) == 150
-
-            # inferencedata with tuning
-            result = pm.sample(**kwargs, return_inferencedata=True, discard_tuned_samples=False)
-            assert isinstance(result, InferenceData)
-            assert result.posterior.sizes["draw"] == 100
-            assert result.posterior.sizes["chain"] == 2
-            assert len(result._groups_warmup) > 0
-
-            # inferencedata without tuning, with idata_kwargs
-            prior = pm.sample_prior_predictive(return_inferencedata=False)
-            result = pm.sample(
-                **kwargs,
-                return_inferencedata=True,
-                discard_tuned_samples=True,
-                idata_kwargs={"prior": prior},
-                random_seed=-1,
-            )
-            assert "prior" in result
-            assert isinstance(result, InferenceData)
-            assert result.posterior.sizes["draw"] == 100
-            assert result.posterior.sizes["chain"] == 2
-            assert len(result._groups_warmup) == 0
-
-    @pytest.mark.parametrize("cores", [1, 2])
-    def test_sampler_stat_tune(self, cores):
-        with self.model:
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                warnings.filterwarnings("ignore", "Tuning samples will be included.*", UserWarning)
-                tune_stat = pm.sample(
-                    tune=5,
-                    draws=7,
-                    cores=cores,
-                    discard_tuned_samples=False,
-                    return_inferencedata=False,
-                    step=pm.Metropolis(),
-                ).get_sampler_stats("tune", chains=1)
-            assert list(tune_stat).count(True) == 5
-            assert list(tune_stat).count(False) == 7
 
     @pytest.mark.parametrize(
         "start, error",
@@ -409,6 +316,188 @@ class TestSample(SeededTest):
                 trace = pm.sample(tune=10, draws=50, return_inferencedata=False, random_seed=336)
 
         assert np.allclose(scipy.special.expit(trace["y_interval__"]), trace["y"])
+
+
+class ApocalypticMetropolis(pm.Metropolis):
+    """A stepper that warns in every iteration."""
+
+    stats_dtypes_shapes = {
+        **pm.Metropolis.stats_dtypes_shapes,
+        "warning": (SamplerWarning, None),
+    }
+
+    def astep(self, q0):
+        draw, stats = super().astep(q0)
+        stats[0]["warning"] = SamplerWarning(
+            WarningType.BAD_ENERGY,
+            "Asteroid incoming!",
+            "warn",
+        )
+        return draw, stats
+
+
+class TestSampleReturn:
+    """Tests related to kwargs that parametrize how `pm.sample` results are returned."""
+
+    def test_sample_tune_len(self):
+        with pm.Model():
+            pm.Normal("n")
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                warnings.filterwarnings("ignore", "Tuning samples will be included.*", UserWarning)
+                trace = pm.sample(
+                    draws=100, tune=50, cores=1, step=pm.Metropolis(), return_inferencedata=False
+                )
+                assert len(trace) == 100
+                trace = pm.sample(
+                    draws=100,
+                    tune=50,
+                    cores=1,
+                    step=pm.Metropolis(),
+                    return_inferencedata=False,
+                    discard_tuned_samples=False,
+                )
+                assert len(trace) == 150
+                trace = pm.sample(
+                    draws=100,
+                    tune=50,
+                    cores=4,
+                    step=pm.Metropolis(),
+                    return_inferencedata=False,
+                )
+                assert len(trace) == 100
+
+    @pytest.mark.parametrize("discard", [True, False])
+    def test_trace_report(self, discard):
+        with pm.Model():
+            pm.Uniform("uni")
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", ".*Tuning samples will be included.*", UserWarning
+                )
+                trace = pm.sample(
+                    draws=100,
+                    tune=50,
+                    cores=1,
+                    discard_tuned_samples=discard,
+                    step=pm.Metropolis(),
+                    compute_convergence_checks=False,
+                    return_inferencedata=False,
+                )
+            assert trace.report.n_tune == 50
+            assert trace.report.n_draws == 100
+            assert isinstance(trace.report.t_sampling, float)
+
+    def test_return_inferencedata(self):
+        model, _, step, _ = simple_init()
+        with model:
+            kwargs = dict(draws=100, tune=50, cores=1, chains=2, step=step)
+
+            # trace with tuning
+            with pytest.warns(UserWarning, match="will be included"):
+                result = pm.sample(
+                    **kwargs, return_inferencedata=False, discard_tuned_samples=False
+                )
+            assert isinstance(result, pm.backends.base.MultiTrace)
+            assert len(result) == 150
+
+            # inferencedata with tuning
+            result = pm.sample(**kwargs, return_inferencedata=True, discard_tuned_samples=False)
+            assert isinstance(result, InferenceData)
+            assert result.posterior.sizes["draw"] == 100
+            assert result.posterior.sizes["chain"] == 2
+            assert len(result._groups_warmup) > 0
+
+            # inferencedata without tuning, with idata_kwargs
+            prior = pm.sample_prior_predictive(return_inferencedata=False)
+            result = pm.sample(
+                **kwargs,
+                return_inferencedata=True,
+                discard_tuned_samples=True,
+                idata_kwargs={"prior": prior},
+                random_seed=-1,
+            )
+            assert "prior" in result
+            assert isinstance(result, InferenceData)
+            assert result.posterior.sizes["draw"] == 100
+            assert result.posterior.sizes["chain"] == 2
+            assert len(result._groups_warmup) == 0
+
+    @pytest.mark.parametrize("cores", [1, 2])
+    def test_sampler_stat_tune(self, cores):
+        with pm.Model():
+            pm.Normal("n")
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                warnings.filterwarnings("ignore", "Tuning samples will be included.*", UserWarning)
+                tune_stat = pm.sample(
+                    tune=5,
+                    draws=7,
+                    cores=cores,
+                    discard_tuned_samples=False,
+                    return_inferencedata=False,
+                    step=pm.Metropolis(),
+                ).get_sampler_stats("tune", chains=1)
+            assert list(tune_stat).count(True) == 5
+            assert list(tune_stat).count(False) == 7
+
+    @pytest.mark.parametrize("cores", [1, 2])
+    def test_logs_sampler_warnings(self, caplog, cores):
+        """Asserts that "warning" sampler stats are logged during sampling."""
+        with pm.Model():
+            pm.Normal("n")
+            with caplog.at_level(logging.WARNING):
+                idata = pm.sample(
+                    tune=2,
+                    draws=3,
+                    cores=cores,
+                    chains=cores,
+                    step=ApocalypticMetropolis(),
+                    compute_convergence_checks=False,
+                    discard_tuned_samples=False,
+                    keep_warning_stat=True,
+                )
+
+        # Sampler warnings should be logged
+        nwarns = sum("Asteroid" in rec.message for rec in caplog.records)
+        assert nwarns == (2 + 3) * cores
+
+    @pytest.mark.parametrize("keep_warning_stat", [None, True])
+    def test_keep_warning_stat_setting(self, keep_warning_stat):
+        """The ``keep_warning_stat`` stat (aka "Adrian's kwarg) enables users
+        to keep the ``SamplerWarning`` objects from the ``sample_stats.warning`` group.
+        This breaks ``idata.to_netcdf()`` which is why it defaults to ``False``.
+        """
+        sample_kwargs = dict(
+            tune=2,
+            draws=3,
+            chains=1,
+            compute_convergence_checks=False,
+            discard_tuned_samples=False,
+            keep_warning_stat=keep_warning_stat,
+        )
+        if keep_warning_stat:
+            sample_kwargs["keep_warning_stat"] = True
+        with pm.Model():
+            pm.Normal("n")
+            idata = pm.sample(step=ApocalypticMetropolis(), **sample_kwargs)
+
+        if keep_warning_stat:
+            assert "warning" in idata.warmup_sample_stats
+            assert "warning" in idata.sample_stats
+            # And end up in the InferenceData
+            assert "warning" in idata.sample_stats
+            # NOTE: The stats are squeezed by default but this does not always work.
+            #       This tests flattens so we don't have to be exact in accessing (non-)squeezed items.
+            #       Also see https://github.com/pymc-devs/pymc/issues/6207.
+            warn_objs = list(idata.sample_stats.warning.sel(chain=0).values.flatten())
+            assert any(isinstance(w, SamplerWarning) for w in warn_objs)
+            assert any("Asteroid" in w.message for w in warn_objs)
+        else:
+            assert "warning" not in idata.warmup_sample_stats
+            assert "warning" not in idata.sample_stats
+            assert "warning_dim_0" not in idata.warmup_sample_stats
+            assert "warning_dim_0" not in idata.sample_stats
 
 
 def test_sample_find_MAP_does_not_modify_start():
@@ -601,84 +690,6 @@ def test_step_args():
     npt.assert_almost_equal(idata0.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
     npt.assert_almost_equal(idata1.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
     npt.assert_allclose(idata1.sample_stats.scaling, 0)
-
-
-class ApocalypticMetropolis(pm.Metropolis):
-    """A stepper that warns in every iteration."""
-
-    stats_dtypes_shapes = {
-        **pm.Metropolis.stats_dtypes_shapes,
-        "warning": (SamplerWarning, None),
-    }
-
-    def astep(self, q0):
-        draw, stats = super().astep(q0)
-        stats[0]["warning"] = SamplerWarning(
-            WarningType.BAD_ENERGY,
-            "Asteroid incoming!",
-            "warn",
-        )
-        return draw, stats
-
-
-@pytest.mark.parametrize("cores", [1, 2])
-def test_logs_sampler_warnings(caplog, cores):
-    """Asserts that "warning" sampler stats are logged during sampling."""
-    with pm.Model():
-        pm.Normal("n")
-        with caplog.at_level(logging.WARNING):
-            idata = pm.sample(
-                tune=2,
-                draws=3,
-                cores=cores,
-                chains=cores,
-                step=ApocalypticMetropolis(),
-                compute_convergence_checks=False,
-                discard_tuned_samples=False,
-                keep_warning_stat=True,
-            )
-
-    # Sampler warnings should be logged
-    nwarns = sum("Asteroid" in rec.message for rec in caplog.records)
-    assert nwarns == (2 + 3) * cores
-
-
-@pytest.mark.parametrize("keep_warning_stat", [None, True])
-def test_keep_warning_stat_setting(keep_warning_stat):
-    """The ``keep_warning_stat`` stat (aka "Adrian's kwarg) enables users
-    to keep the ``SamplerWarning`` objects from the ``sample_stats.warning`` group.
-    This breaks ``idata.to_netcdf()`` which is why it defaults to ``False``.
-    """
-    sample_kwargs = dict(
-        tune=2,
-        draws=3,
-        chains=1,
-        compute_convergence_checks=False,
-        discard_tuned_samples=False,
-        keep_warning_stat=keep_warning_stat,
-    )
-    if keep_warning_stat:
-        sample_kwargs["keep_warning_stat"] = True
-    with pm.Model():
-        pm.Normal("n")
-        idata = pm.sample(step=ApocalypticMetropolis(), **sample_kwargs)
-
-    if keep_warning_stat:
-        assert "warning" in idata.warmup_sample_stats
-        assert "warning" in idata.sample_stats
-        # And end up in the InferenceData
-        assert "warning" in idata.sample_stats
-        # NOTE: The stats are squeezed by default but this does not always work.
-        #       This tests flattens so we don't have to be exact in accessing (non-)squeezed items.
-        #       Also see https://github.com/pymc-devs/pymc/issues/6207.
-        warn_objs = list(idata.sample_stats.warning.sel(chain=0).values.flatten())
-        assert any(isinstance(w, SamplerWarning) for w in warn_objs)
-        assert any("Asteroid" in w.message for w in warn_objs)
-    else:
-        assert "warning" not in idata.warmup_sample_stats
-        assert "warning" not in idata.sample_stats
-        assert "warning_dim_0" not in idata.warmup_sample_stats
-        assert "warning_dim_0" not in idata.sample_stats
 
 
 def test_init_nuts(caplog):
