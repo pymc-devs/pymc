@@ -168,6 +168,11 @@ def assign_step_methods(model, step=None, methods=None, step_kwargs=None):
         except TypeError:
             steps.append(step)
         for step in steps:
+            for var in step.vars:
+                if var not in model.value_vars:
+                    raise ValueError(
+                        f"{var} assigned to {step} sampler is not a value variable in the model. You can use `util.get_value_vars_from_user_vars` to parse user provided variables."
+                    )
             assigned_vars = assigned_vars.union(set(step.vars))
 
     # Use competence classmethods to select step methods for remaining

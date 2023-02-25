@@ -40,6 +40,7 @@ from pymc.step_methods import (
     NUTS,
     BinaryGibbsMetropolis,
     CategoricalGibbsMetropolis,
+    CompoundStep,
     HamiltonianMC,
     Metropolis,
     Slice,
@@ -816,6 +817,23 @@ class TestAssignStepMethods:
             with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 steps = assign_step_methods(model, [])
         assert isinstance(steps, NUTS)
+
+    def test_step_vars_in_model(self):
+        """Test if error is raised if step variable is not found in model.value_vars"""
+        with pm.Model() as model:
+            c1 = pm.HalfNormal("c1")
+            c2 = pm.HalfNormal("c2")
+
+            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
+                step1 = NUTS([c1])
+                step2 = NUTS([c2])
+                step2.vars = [c2]
+                step = CompoundStep([step1, step2])
+                with pytest.raises(
+                    ValueError,
+                    match=r".* assigned to .* sampler is not a value variable in the model. You can use `util.get_value_vars_from_user_vars` to parse user provided variables.",
+                ):
+                    assign_step_methods(model, step)
 
 
 class TestType:
