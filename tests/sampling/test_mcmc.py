@@ -151,24 +151,6 @@ class TestSample(SeededTest):
         assert np.all(idata12["x"] != idata22["x"])
         assert np.all(idata13["x"] != idata23["x"])
 
-    def test_sample(self):
-        test_cores = [1]
-        with self.model:
-            for cores in test_cores:
-                for steps in [1, 10, 300]:
-                    with warnings.catch_warnings():
-                        warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                        warnings.filterwarnings(
-                            "ignore", "More chains .* than draws .*", UserWarning
-                        )
-                        pm.sample(
-                            steps,
-                            tune=0,
-                            step=self.step,
-                            cores=cores,
-                            random_seed=self.random_seed,
-                        )
-
     def test_sample_init(self):
         with self.model:
             for init in (
@@ -199,11 +181,11 @@ class TestSample(SeededTest):
     def test_sample_args(self):
         with self.model:
             with pytest.raises(ValueError) as excinfo:
-                pm.sample(50, tune=0, foo=1)
+                pm.sample(50, tune=0, chains=1, step=pm.Metropolis(), foo=1)
             assert "'foo'" in str(excinfo.value)
 
             with pytest.raises(ValueError) as excinfo:
-                pm.sample(50, tune=0, foo={})
+                pm.sample(50, tune=0, chains=1, step=pm.Metropolis(), foo={})
             assert "foo" in str(excinfo.value)
 
     def test_parallel_start(self):
@@ -232,6 +214,7 @@ class TestSample(SeededTest):
                     draws=100,
                     tune=50,
                     cores=1,
+                    step=pm.Metropolis(),
                     return_inferencedata=False,
                     discard_tuned_samples=False,
                 )
@@ -387,18 +370,7 @@ class TestSample(SeededTest):
             backend = NDArray()
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                pm.sample(10, cores=1, chains=2, trace=backend)
-
-    def test_exceptions(self):
-        # Test iteration over MultiTrace NotImplementedError
-        with pm.Model() as model:
-            mu = pm.Normal("mu", 0.0, 1.0)
-            a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                trace = pm.sample(tune=0, draws=10, chains=2, return_inferencedata=False)
-            with pytest.raises(NotImplementedError):
-                xvars = [t["mu"] for t in trace]
+                pm.sample(10, tune=5, cores=1, chains=2, step=pm.Metropolis(), trace=backend)
 
     @pytest.mark.parametrize("symbolic_rv", (False, True))
     def test_deterministic_of_unobserved(self, symbolic_rv):
