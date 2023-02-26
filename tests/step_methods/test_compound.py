@@ -164,20 +164,22 @@ class TestStatsBijection:
     def test_stats_bijection(self):
         step_stats_dtypes = [
             {"a": float, "b": int},
-            {"a": float, "c": int},
+            {"a": float, "c": Warning},
         ]
         bij = StatsBijection(step_stats_dtypes)
+        assert bij.object_stats == {"sampler_1__c": (1, "c")}
         assert bij.n_samplers == 2
+        w = Warning("hmm")
         stats_l = [
             dict(a=1.5, b=3),
-            dict(a=2.5, c=4),
+            dict(a=2.5, c=w),
         ]
         stats_d = bij.map(stats_l)
         assert isinstance(stats_d, dict)
         assert stats_d["sampler_0__a"] == 1.5
         assert stats_d["sampler_0__b"] == 3
         assert stats_d["sampler_1__a"] == 2.5
-        assert stats_d["sampler_1__c"] == 4
+        assert stats_d["sampler_1__c"] == w
         rev = bij.rmap(stats_d)
         assert isinstance(rev, list)
         assert len(rev) == len(stats_l)

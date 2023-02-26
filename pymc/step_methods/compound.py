@@ -191,6 +191,11 @@ class BlockedStep(ABC):
             self.tune = False
 
 
+def flat_statname(sampler_idx: int, sname: str) -> str:
+    """Get the flat-stats name for a samplers stat."""
+    return f"sampler_{sampler_idx}__{sname}"
+
+
 def get_stats_dtypes_shapes_from_steps(
     steps: Iterable[BlockedStep],
 ) -> Dict[str, Tuple[StatDtype, StatShape]]:
@@ -201,7 +206,7 @@ def get_stats_dtypes_shapes_from_steps(
     result = {}
     for s, step in enumerate(steps):
         for sname, (dtype, shape) in step.stats_dtypes_shapes.items():
-            result[f"sampler_{s}__{sname}"] = (dtype, shape)
+            result[flat_statname(s, sname)] = (dtype, shape)
     return result
 
 
@@ -262,10 +267,21 @@ class StatsBijection:
 
     def __init__(self, sampler_stats_dtypes: Sequence[Mapping[str, type]]) -> None:
         # Keep a list of flat vs. original stat names
-        self._stat_groups: List[List[Tuple[str, str]]] = [
-            [(f"sampler_{s}__{statname}", statname) for statname, _ in names_dtypes.items()]
-            for s, names_dtypes in enumerate(sampler_stats_dtypes)
-        ]
+        stat_groups = []
+        for s, names_dtypes in enumerate(sampler_stats_dtypes):
+            group = []
+            for statname, dtype in names_dtypes.items():
+                flatname = flat_statname(s, statname)
+                is_obj = np.dtype(dtype) == np.dtype(object)
+                group.append((flatname, statname, is_obj))
+            stat_groups.append(group)
+        self._stat_groups: List[List[Tuple[str, str, bool]]] = stat_groups
+        self.object_stats = {
+            fname: (s, sname)
+            for s, group in enumerate(self._stat_groups)
+            for fname, sname, is_obj in group
+            if is_obj
+        }
 
     @property
     def n_samplers(self) -> int:
@@ -275,9 +291,10 @@ class StatsBijection:
         """Combine stats dicts of multiple samplers into one dict."""
         stats_dict = {}
         for s, sts in enumerate(stats_list):
-            for statname, sval in sts.items():
-                sname = f"sampler_{s}__{statname}"
-                stats_dict[sname] = sval
+            for fname, sname, is_obj in self._stat_groups[s]:
+                if sname not in sts:
+                    continue
+                stats_dict[fname] = sts[sname]
         return stats_dict
 
     def rmap(self, stats_dict: Mapping[str, Any]) -> StatsType:
@@ -286,7 +303,11 @@ class StatsBijection:
         The ``stats_dict`` can be a subset of all sampler stats.
         """
         stats_list = []
-        for namemap in self._stat_groups:
-            d = {statname: stats_dict[sname] for sname, statname in namemap if sname in stats_dict}
+        for group in self._stat_groups:
+            d = {}
+            for fname, sname, is_obj in group:
+                if fname not in stats_dict:
+                    continue
+                d[sname] = stats_dict[fname]
             stats_list.append(d)
         return stats_list
