@@ -333,7 +333,7 @@ def sample(
     compute_convergence_checks: bool = True,
     keep_warning_stat: bool = False,
     return_inferencedata: bool = True,
-    idata_kwargs: dict = None,
+    idata_kwargs: Optional[Dict[str, Any]] = None,
     callback=None,
     mp_ctx=None,
     model: Optional[Model] = None,
@@ -687,7 +687,36 @@ def sample(
 
     t_sampling = time.time() - t_start
 
-    # Wrap chain traces in a MultiTrace
+    # Packaging, validating and returning the result was extracted
+    # into a function to make it easier to test and refactor.
+    return _sample_return(
+        traces=traces,
+        tune=tune,
+        t_sampling=t_sampling,
+        discard_tuned_samples=discard_tuned_samples,
+        compute_convergence_checks=compute_convergence_checks,
+        return_inferencedata=return_inferencedata,
+        keep_warning_stat=keep_warning_stat,
+        idata_kwargs=idata_kwargs or {},
+        model=model,
+    )
+
+
+def _sample_return(
+    *,
+    traces: Sequence[IBaseTrace],
+    tune: int,
+    t_sampling: float,
+    discard_tuned_samples: bool,
+    compute_convergence_checks: bool,
+    return_inferencedata: bool,
+    keep_warning_stat: bool,
+    idata_kwargs: Dict[str, Any],
+    model: Model,
+) -> Union[InferenceData, MultiTrace]:
+    """Final step of `pm.sampler` that picks/slices chains,
+    runs diagnostics and converts to the desired return type."""
+    # Pick and slice chains to keep the maximum number of samples
     if discard_tuned_samples:
         traces, length = _choose_chains(traces, tune)
     else:
@@ -725,8 +754,7 @@ def sample(
     idata = None
     if compute_convergence_checks or return_inferencedata:
         ikwargs: Dict[str, Any] = dict(model=model, save_warmup=not discard_tuned_samples)
-        if idata_kwargs:
-            ikwargs.update(idata_kwargs)
+        ikwargs.update(idata_kwargs)
         idata = pm.to_inference_data(mtrace, **ikwargs)
 
         if compute_convergence_checks:

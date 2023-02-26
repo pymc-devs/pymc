@@ -123,6 +123,12 @@ class TestMultiTrace(bf.ModelBackendSetupTestCase):
         with pytest.raises(ValueError):
             base.MultiTrace([self.strace0, self.strace1])
 
+    def test_multitrace_iter_notimplemented(self):
+        mtrace = base.MultiTrace([self.strace0])
+        with pytest.raises(NotImplementedError):
+            for _ in mtrace:
+                pass
+
 
 class TestSqueezeCat:
     def setup_method(self):
