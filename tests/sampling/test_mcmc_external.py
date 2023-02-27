@@ -17,16 +17,15 @@ import pytest
 
 from pymc import Model, Normal, sample
 
-pytest.importorskip("nutpie")
-pytest.importorskip("blackjax")
-pytest.importorskip("numpyro")
-
 # turns all warnings into errors for this module
 pytestmark = pytest.mark.filterwarnings("error")
 
 
 @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
 def test_external_nuts_sampler(recwarn, nuts_sampler):
+    if nuts_sampler != "pymc":
+        pytest.importorskip(nuts_sampler)
+
     with Model():
         Normal("x")
 

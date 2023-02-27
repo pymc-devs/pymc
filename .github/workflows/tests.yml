@@ -364,7 +364,6 @@ jobs:
       - name: Install external samplers
         run: |
           conda activate pymc-test
-          conda install -c conda-forge nutpie
           pip install "numpyro>=0.8.0"
           pip install git+https://github.com/blackjax-devs/blackjax.git@0.7.0
       - name: Run tests
