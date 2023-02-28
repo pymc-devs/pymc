@@ -438,7 +438,8 @@ def sample_blackjax_nuts(
         )
 
     states, stats = map_fn(get_posterior_samples)(keys, init_params)
-    raw_mcmc_samples = states.position
+    # block to allow accurate sampling time calculation
+    raw_mcmc_samples = jax.block_until_ready(states.position)
     potential_energy = states.potential_energy
     tic3 = datetime.now()
     print("Sampling time = ", tic3 - tic2, file=sys.stdout)
