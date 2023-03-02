@@ -59,7 +59,6 @@ from pymc.distributions.distribution import (
 )
 from pymc.distributions.shape_utils import (
     _change_dist_size,
-    broadcast_dist_samples_to,
     change_dist_size,
     get_support_shape,
     rv_size_is_none,
@@ -1651,7 +1650,9 @@ class MatrixNormalRV(RandomVariable):
         output_shape = size + dist_shape
 
         # Broadcasting all parameters
-        (mu,) = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)
+        shapes = [mu.shape, output_shape]
+        sp_shapes = [s[len(size) :] if size == s[: min([len(size), len(s)])] else s for s in shapes]
+        mu = np.broadcast_to(mu, shape=np.broadcast_shapes(*sp_shapes))
         rowchol = np.broadcast_to(rowchol, shape=size + rowchol.shape[-2:])
 
         colchol = np.broadcast_to(colchol, shape=size + colchol.shape[-2:])
