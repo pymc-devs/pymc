@@ -53,7 +53,7 @@ origin  https://github.com/reshamas/pymc.git (fetch)
 origin  https://github.com/reshamas/pymc.git (push)
 upstream        https://github.com/pymc-devs/pymc.git (fetch)
 upstream        https://github.com/pymc-devs/pymc.git (push)
-(base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$ 
+(base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$
 ```
 
 ### Reminders
