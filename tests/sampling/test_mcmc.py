@@ -362,6 +362,7 @@ class TestSampleReturn:
 
         # MultiTrace without warmup
         mtrace_pst = pm.sampling.mcmc._sample_return(
+            run=None,
             traces=traces,
             tune=50,
             t_sampling=123.4,
@@ -380,6 +381,7 @@ class TestSampleReturn:
 
         # InferenceData with warmup
         idata_w = pm.sampling.mcmc._sample_return(
+            run=None,
             traces=traces,
             tune=50,
             t_sampling=123.4,
@@ -398,6 +400,7 @@ class TestSampleReturn:
 
         # InferenceData without warmup
         idata = pm.sampling.mcmc._sample_return(
+            run=None,
             traces=traces,
             tune=50,
             t_sampling=123.4,
@@ -463,6 +466,10 @@ class TestSampleReturn:
             #       This tests flattens so we don't have to be exact in accessing (non-)squeezed items.
             #       Also see https://github.com/pymc-devs/pymc/issues/6207.
             warn_objs = list(idata.sample_stats.warning.sel(chain=0).values.flatten())
+            assert warn_objs
+            if isinstance(warn_objs[0], np.ndarray):
+                # Squeeze warning stats. See https://github.com/pymc-devs/pymc/issues/6207
+                warn_objs = [a.tolist() for a in warn_objs]
             assert any(isinstance(w, SamplerWarning) for w in warn_objs)
             assert any("Asteroid" in w.message for w in warn_objs)
         else:

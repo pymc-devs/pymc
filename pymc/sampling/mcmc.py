@@ -32,8 +32,8 @@ from typing_extensions import Protocol, TypeAlias
 
 import pymc as pm
 
-from pymc.backends import init_traces
-from pymc.backends.base import BaseTrace, IBaseTrace, MultiTrace, _choose_chains
+from pymc.backends import RunType, TraceOrBackend, init_traces
+from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
@@ -328,7 +328,7 @@ def sample(
     init: str = "auto",
     jitter_max_retries: int = 10,
     n_init: int = 200_000,
-    trace: Optional[BaseTrace] = None,
+    trace: Optional[TraceOrBackend] = None,
     discard_tuned_samples: bool = True,
     compute_convergence_checks: bool = True,
     keep_warning_stat: bool = False,
@@ -609,13 +609,12 @@ def sample(
         _check_start_shape(model, ip)
 
     # Create trace backends for each chain
-    traces = init_traces(
+    run, traces = init_traces(
         backend=trace,
         chains=chains,
         expected_length=draws + tune,
         step=step,
-        var_dtypes={vn: v.dtype for vn, v in ip.items()},
-        var_shapes={vn: v.shape for vn, v in ip.items()},
+        initial_point=ip,
         model=model,
     )
 
@@ -690,6 +689,7 @@ def sample(
     # Packaging, validating and returning the result was extracted
     # into a function to make it easier to test and refactor.
     return _sample_return(
+        run=run,
         traces=traces,
         tune=tune,
         t_sampling=t_sampling,
@@ -704,6 +704,7 @@ def sample(
 
 def _sample_return(
     *,
+    run: Optional[RunType],
     traces: Sequence[IBaseTrace],
     tune: int,
     t_sampling: float,

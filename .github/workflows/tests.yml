@@ -85,6 +85,7 @@ jobs:
             tests/step_methods/hmc/test_quadpotential.py
 
           - |
+            tests/backends/test_mcbackend.py
             tests/distributions/test_truncated.py
             tests/logprob/test_abstract.py
             tests/logprob/test_censoring.py
@@ -240,6 +241,7 @@ jobs:
           - |
             tests/sampling/test_parallel.py
             tests/test_data.py
+            tests/variational/test_minibatch_rv.py
             tests/test_model.py
 
           - |
@@ -363,7 +365,6 @@ jobs:
       - name: Install external samplers
         run: |
           conda activate pymc-test
-          conda install -c conda-forge nutpie
           pip install "numpyro>=0.8.0"
           pip install git+https://github.com/blackjax-devs/blackjax.git@0.7.0
       - name: Run tests

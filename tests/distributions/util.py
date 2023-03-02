@@ -600,7 +600,6 @@ def assert_moment_is_expected(model, expected, check_finite_logp=True):
                 (model["x"],),
                 rvs_to_values={model["x"]: at.constant(moment)},
                 rvs_to_transforms={},
-                rvs_to_total_sizes={},
             )[0]
             .sum()
             .eval()

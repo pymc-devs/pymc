@@ -564,7 +564,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.values_to_rvs = treedict(parent=self.parent.values_to_rvs)
             self.rvs_to_values = treedict(parent=self.parent.rvs_to_values)
             self.rvs_to_transforms = treedict(parent=self.parent.rvs_to_transforms)
-            self.rvs_to_total_sizes = treedict(parent=self.parent.rvs_to_total_sizes)
             self.rvs_to_initial_values = treedict(parent=self.parent.rvs_to_initial_values)
             self.free_RVs = treelist(parent=self.parent.free_RVs)
             self.observed_RVs = treelist(parent=self.parent.observed_RVs)
@@ -578,7 +577,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.values_to_rvs = treedict()
             self.rvs_to_values = treedict()
             self.rvs_to_transforms = treedict()
-            self.rvs_to_total_sizes = treedict()
             self.rvs_to_initial_values = treedict()
             self.free_RVs = treelist()
             self.observed_RVs = treelist()
@@ -762,7 +760,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 rvs=rvs,
                 rvs_to_values=self.rvs_to_values,
                 rvs_to_transforms=self.rvs_to_transforms,
-                rvs_to_total_sizes=self.rvs_to_total_sizes,
                 jacobian=jacobian,
             )
             assert isinstance(rv_logps, list)
@@ -1314,8 +1311,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         name = self.name_for(name)
         rv_var.name = name
         _add_future_warning_tag(rv_var)
-        rv_var.tag.total_size = total_size
-        self.rvs_to_total_sizes[rv_var] = total_size
 
         # Associate previously unknown dimension names with
         # the length of the corresponding RV dimension.
@@ -1327,6 +1322,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     self.add_coord(dname, values=None, length=rv_var.shape[d])
 
         if observed is None:
+            if total_size is not None:
+                raise ValueError("total_size can only be passed to observed RVs")
             self.free_RVs.append(rv_var)
             self.create_value_var(rv_var, transform)
             self.add_named_variable(rv_var, dims)
@@ -1351,12 +1348,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             # `rv_var` is potentially changed by `make_obs_var`,
             # for example into a new graph for imputation of missing data.
-            rv_var = self.make_obs_var(rv_var, observed, dims, transform)
+            rv_var = self.make_obs_var(rv_var, observed, dims, transform, total_size)
 
         return rv_var
 
     def make_obs_var(
-        self, rv_var: TensorVariable, data: np.ndarray, dims, transform: Optional[Any]
+        self,
+        rv_var: TensorVariable,
+        data: np.ndarray,
+        dims,
+        transform: Union[Any, None],
+        total_size: Union[int, None],
     ) -> TensorVariable:
         """Create a `TensorVariable` for an observed random variable.
 
@@ -1392,17 +1394,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         mask = getattr(data, "mask", None)
         if mask is not None:
-            if mask.all():
-                # If there are no observed values, this variable isn't really
-                # observed.
-                return rv_var
-
             impute_message = (
                 f"Data in {rv_var} contains missing values and"
                 " will be automatically imputed from the"
                 " sampling distribution."
             )
             warnings.warn(impute_message, ImputationWarning)
+
+            if total_size is not None:
+                raise ValueError("total_size is not compatible with imputed variables")
 
             if not isinstance(rv_var.owner.op, RandomVariable):
                 raise NotImplementedError(
@@ -1471,6 +1471,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 data = sparse.basic.as_sparse(data, name=name)
             else:
                 data = at.as_tensor_variable(data, name=name)
+
+            if total_size:
+                from pymc.variational.minibatch_rv import create_minibatch_rv
+
+                rv_var = create_minibatch_rv(rv_var, total_size)
+                rv_var.name = name
+
             rv_var.tag.observations = data
             self.create_value_var(rv_var, transform=None, value_var=data)
             self.add_named_variable(rv_var, dims)
