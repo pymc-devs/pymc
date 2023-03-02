@@ -2,7 +2,7 @@
 # Using Gitpod
 
 ## About Gitpod
-[Gitpod](https://www.gitpod.io/) is a browser-based development environment. 
+[Gitpod](https://www.gitpod.io/) is a browser-based development environment.
 
 These are some benefits to using Gitpod:  
 - Bypass local computer configuration and technical issues
@@ -35,13 +35,15 @@ c) Select these permission: user:email, public_repo, repo, workflow
 NOTE: Gitpod will pull a container and set up the workspace.  It will take a few minutes for the container to build..
 
 5. Once Gitpod is up and running, the interface is similar to a Visual Studio Code (VSC) interface, which will appear in your browser. You will observe installation notices in the terminal window.  This can take 5-10 minutes. Once that is complete, the terminal will indicate you are on the "(base)" environment on gitpod with your forked repo. 
-Here is an example:  
+Here is an example:
+
 ```bash
 (base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$
 ```
 
 6. Check that your git remotes are correct with `git remote -v` at the terminal.  
 Example:
+
 ```bash
 (base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$ git remote -v
 origin  https://github.com/reshamas/pymc.git (fetch)
