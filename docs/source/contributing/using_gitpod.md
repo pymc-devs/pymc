@@ -2,7 +2,7 @@
 # Using Gitpod
 
 ## About Gitpod
-[Gitpod](https://www.gitpod.io/) is a browser-based developement environment.
+[Gitpod](https://www.gitpod.io/) is a browser-based development environment.
 
 ## Using Gitpod to Contribute to PyMC
 
