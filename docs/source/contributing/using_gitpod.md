@@ -29,8 +29,15 @@ b) Select GitHub and then "edit permissions"
 c) Select these permission: user:email, public_repo, repo, workflow
 
 <!-- ![gitpod-integration](gitpod/gitpod_integration.png) -->
-<img src="gitpod/gitpod_integration.png" width="50%" height="50%">
+<!-- <img src="gitpod/gitpod_integration.png" width="50%" height="50%">
+->  
 
+:::{figure-md} gitpod_integration
+
+![gitpod integration options](gitpod/gitpod_integration.png)
+
+[Gitpod integration settings](https://gitpod.io/user/integrations)
+:::
 4. Within Gitpod, create a "New Workspace".  Here you will want to select the forked pymc repo. If you don't see it, you can paste into the "Context URL" your forked repo path.  For example:  https://github.com/reshamas/pymc.  Then select "New Workspace".
 
 NOTE: Gitpod will pull a container and set up the workspace.  It will take a few minutes for the container to build.
