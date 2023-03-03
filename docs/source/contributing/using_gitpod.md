@@ -22,7 +22,7 @@ NOTE: Gitpod will show up as an authorized application in your account here:  [h
 
 3. Grant GitHub / Gitpod integration permissions.
 
-a) Go to: https://gitpod.io/user/integrations
+a) Go to: [https://gitpod.io/user/integrations](https://gitpod.io/user/integrations)
 
 b) Select GitHub and then "edit permissions"
 
