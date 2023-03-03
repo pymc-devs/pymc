@@ -14,7 +14,7 @@ These are some benefits to using Gitpod:
 ## Using Gitpod to Contribute to PyMC
 
 ### Gitpod Workflow
-1. Fork the pymc repo: https://github.com/pymc-devs/pymc
+1. Fork the pymc repo: [https://github.com/pymc-devs/pymc](https://github.com/pymc-devs/pymc)
 
 2. Create a Gitpod account. You can login and authorize access via your GitHub account:  https://gitpod.io/
 
