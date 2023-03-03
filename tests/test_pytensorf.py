@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 from unittest import mock
 
 import numpy as np
@@ -38,6 +40,7 @@ from pymc.distributions.transforms import Interval
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
+    collect_default_updates,
     compile_pymc,
     constant_fold,
     convert_observed_data,
@@ -406,28 +409,63 @@ class TestCompilePyMC:
             # Each RV adds a shared output for its rng
             assert len(fn_fgraph.outputs) == 1 + rvs_in_graph
 
-    # Disable `reseed_rngs` so that we can test with simpler update rule
-    @mock.patch("pymc.pytensorf.reseed_rngs")
-    def test_compile_pymc_custom_update_op(self, _):
-        """Test that custom MeasurableVariable Op updates are used by compile_pymc"""
+    def test_compile_pymc_symbolic_rv_update(self):
+        """Test that SymbolicRandomVariable Op update methods are used by compile_pymc"""
 
         class NonSymbolicRV(OpFromGraph):
             def update(self, node):
-                return {node.inputs[0]: node.inputs[0] + 1}
+                return {node.inputs[0]: node.outputs[0]}
 
-        dummy_inputs = [pt.scalar(), pt.scalar()]
-        dummy_outputs = [pt.add(*dummy_inputs)]
-        dummy_x = NonSymbolicRV(dummy_inputs, dummy_outputs)(pytensor.shared(1.0), 1.0)
+        rng = pytensor.shared(np.random.default_rng())
+        dummy_rng = rng.type()
+        dummy_next_rng, dummy_x = NonSymbolicRV(
+            [dummy_rng], pt.random.normal(rng=dummy_rng).owner.outputs
+        )(rng)
 
         # Check that there are no updates at first
         fn = compile_pymc(inputs=[], outputs=dummy_x)
-        assert fn() == fn() == 2.0
+        assert fn() == fn()
 
         # And they are enabled once the Op is registered as a SymbolicRV
         SymbolicRandomVariable.register(NonSymbolicRV)
-        fn = compile_pymc(inputs=[], outputs=dummy_x)
-        assert fn() == 2.0
-        assert fn() == 3.0
+        fn = compile_pymc(inputs=[], outputs=dummy_x, random_seed=431)
+        assert fn() != fn()
+
+    def test_compile_pymc_symbolic_rv_missing_update(self):
+        """Test that error is raised if SymbolicRandomVariable Op does not
+        provide rule for updating RNG"""
+
+        class SymbolicRV(OpFromGraph):
+            def update(self, node):
+                # Update is provided for rng1 but not rng2
+                return {node.inputs[0]: node.outputs[0]}
+
+        SymbolicRandomVariable.register(SymbolicRV)
+
+        # No problems at first, as the one RNG is given the update rule
+        rng1 = pytensor.shared(np.random.default_rng())
+        dummy_rng1 = rng1.type()
+        dummy_next_rng1, dummy_x1 = SymbolicRV(
+            [dummy_rng1],
+            pt.random.normal(rng=dummy_rng1).owner.outputs,
+        )(rng1)
+        fn = compile_pymc(inputs=[], outputs=dummy_x1, random_seed=433)
+        assert fn() != fn()
+
+        # Now there's a problem as there is no update rule for rng2
+        rng2 = pytensor.shared(np.random.default_rng())
+        dummy_rng2 = rng2.type()
+        dummy_next_rng1, dummy_x1, dummy_next_rng2, dummy_x2 = SymbolicRV(
+            [dummy_rng1, dummy_rng2],
+            [
+                *pt.random.normal(rng=dummy_rng1).owner.outputs,
+                *pt.random.normal(rng=dummy_rng2).owner.outputs,
+            ],
+        )(rng1, rng2)
+        with pytest.raises(
+            ValueError, match="No update mapping found for RNG used in SymbolicRandomVariable"
+        ):
+            compile_pymc(inputs=[], outputs=[dummy_x1, dummy_x2])
 
     def test_random_seed(self):
         seedx = pytensor.shared(np.random.default_rng(1))
@@ -457,15 +495,62 @@ class TestCompilePyMC:
         assert y3_eval == y2_eval
 
     def test_multiple_updates_same_variable(self):
-        rng = pytensor.shared(np.random.default_rng(), name="rng")
-        x = pt.random.normal(rng=rng)
-        y = pt.random.normal(rng=rng)
+        # Raise if unexpected warning is issued
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
 
-        assert compile_pymc([], [x])
-        assert compile_pymc([], [y])
-        msg = "Multiple update expressions found for the variable rng"
-        with pytest.raises(ValueError, match=msg):
-            compile_pymc([], [x, y])
+            rng = pytensor.shared(np.random.default_rng(), name="rng")
+            x = pt.random.normal(rng=rng)
+            y = pt.random.normal(rng=rng)
+
+            # No warnings if only one variable is used
+            assert compile_pymc([], [x])
+            assert compile_pymc([], [y])
+
+            user_warn_msg = "RNG Variable rng has multiple clients"
+            with pytest.warns(UserWarning, match=user_warn_msg):
+                f = compile_pymc([], [x, y], random_seed=456)
+            assert f() == f()
+
+            # The user can provide an explicit update, but we will still issue a warning
+            with pytest.warns(UserWarning, match=user_warn_msg):
+                f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
+            assert f() != f()
+
+            # Same with default update
+            rng.default_update = x.owner.outputs[0]
+            with pytest.warns(UserWarning, match=user_warn_msg):
+                f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
+            assert f() != f()
+
+    def test_nested_updates(self):
+        rng = pytensor.shared(np.random.default_rng())
+        next_rng1, x = pt.random.normal(rng=rng).owner.outputs
+        next_rng2, y = pt.random.normal(rng=next_rng1).owner.outputs
+        next_rng3, z = pt.random.normal(rng=next_rng2).owner.outputs
+
+        collect_default_updates([], [x, y, z]) == {rng: next_rng3}
+
+        fn = compile_pymc([], [x, y, z], random_seed=514)
+        assert not set(list(np.array(fn()))) & set(list(np.array(fn())))
+
+        # A local myopic rule (as PyMC used before, would not work properly)
+        fn = pytensor.function([], [x, y, z], updates={rng: next_rng1})
+        assert set(list(np.array(fn()))) & set(list(np.array(fn())))
+
+
+def test_collect_default_updates_must_be_shared():
+    shared_rng = pytensor.shared(np.random.default_rng())
+    nonshared_rng = shared_rng.type()
+
+    next_rng_of_shared, x = pt.random.normal(rng=shared_rng).owner.outputs
+    next_rng_of_nonshared, y = pt.random.normal(rng=nonshared_rng).owner.outputs
+
+    res = collect_default_updates(inputs=[nonshared_rng], outputs=[x, y])
+    assert res == {shared_rng: next_rng_of_shared}
+
+    res = collect_default_updates(inputs=[nonshared_rng], outputs=[x, y], must_be_shared=False)
+    assert res == {shared_rng: next_rng_of_shared, nonshared_rng: next_rng_of_nonshared}
 
 
 def test_replace_rng_nodes():

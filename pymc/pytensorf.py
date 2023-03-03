@@ -42,7 +42,6 @@ from pytensor.graph.basic import (
     Variable,
     clone_get_equiv,
     graph_inputs,
-    vars_between,
     walk,
 )
 from pytensor.graph.fg import FunctionGraph
@@ -51,6 +50,7 @@ from pytensor.scalar.basic import Cast
 from pytensor.tensor.basic import _as_tensor_variable
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.random.var import (
     RandomGeneratorSharedVariable,
     RandomStateSharedVariable,
@@ -1000,42 +1000,85 @@ def reseed_rngs(
 
 
 def collect_default_updates(
-    inputs: Sequence[Variable], outputs: Sequence[Variable]
+    inputs: Sequence[Variable],
+    outputs: Sequence[Variable],
+    must_be_shared: bool = True,
 ) -> Dict[Variable, Variable]:
-    """Collect default update expression of RVs between inputs and outputs"""
+    """Collect default update expression for shared-variable RNGs used by RVs between inputs and outputs.
+
+    If `must_be_shared` is False, update expressions will also be returned for non-shared input RNGs.
+    This can be useful to obtain the symbolic update expressions from inner graphs.
+    """
 
     # Avoid circular import
     from pymc.distributions.distribution import SymbolicRandomVariable
 
-    rng_updates = {}
-    output_to_list = outputs if isinstance(outputs, (list, tuple)) else [outputs]
-    for random_var in (
-        var
-        for var in vars_between(inputs, output_to_list)
-        if var.owner
-        and isinstance(var.owner.op, (RandomVariable, SymbolicRandomVariable))
-        and var not in inputs
-    ):
-        # All nodes in `vars_between(inputs, outputs)` have owners.
-        # But mypy doesn't know, so we just assert it:
-        assert random_var.owner.op is not None
-        if isinstance(random_var.owner.op, RandomVariable):
-            rng = random_var.owner.inputs[0]
-            if getattr(rng, "default_update", None) is not None:
-                update_map = {rng: rng.default_update}
-            else:
-                update_map = {rng: random_var.owner.outputs[0]}
+    def find_default_update(clients, rng: Variable) -> Union[None, Variable]:
+        rng_clients = clients.get(rng, None)
+
+        # Root case, RNG is not used elsewhere
+        if not rng_clients:
+            return rng
+
+        if len(rng_clients) > 1:
+            warnings.warn(
+                f"RNG Variable {rng} has multiple clients. This is likely an inconsistent random graph.",
+                UserWarning,
+            )
+            return None
+
+        [client, _] = rng_clients[0]
+
+        # RNG is an output of the function, this is not a problem
+        if client == "output":
+            return rng
+
+        # RNG is used by another operator, which should output an update for the RNG
+        if isinstance(client.op, RandomVariable):
+            # RandomVariable first output is always the update of the input RNG
+            next_rng = client.outputs[0]
+
+        elif isinstance(client.op, SymbolicRandomVariable):
+            # SymbolicRandomVariable have an explicit method that returns an
+            # update mapping for their RNG(s)
+            next_rng = client.op.update(client).get(rng)
+            if next_rng is None:
+                raise ValueError(
+                    f"No update mapping found for RNG used in SymbolicRandomVariable Op {client.op}"
+                )
         else:
-            update_map = random_var.owner.op.update(random_var.owner)
-        # Check that we are not setting different update expressions for the same variables
-        for rng, update in update_map.items():
-            if rng not in rng_updates:
-                rng_updates[rng] = update
-            # When a variable has multiple outputs, it will be called twice with the same
-            # update expression. We don't want to raise in that case, only if the update
-            # expression in different from the one already registered
-            elif rng_updates[rng] is not update:
-                raise ValueError(f"Multiple update expressions found for the variable {rng}")
+            # We don't know how this RNG should be updated (e.g., Scan).
+            # The user should provide an update manually
+            return None
+
+        # Recurse until we find final update for RNG
+        return find_default_update(clients, next_rng)
+
+    outputs = makeiter(outputs)
+    fg = FunctionGraph(outputs=outputs, clone=False)
+    clients = fg.clients
+
+    rng_updates = {}
+    # Iterate over input RNGs. Only consider shared RNGs if `must_be_shared==True`
+    for input_rng in (
+        inp
+        for inp in graph_inputs(outputs, blockers=inputs)
+        if (
+            (not must_be_shared or isinstance(inp, SharedVariable))
+            and isinstance(inp.type, RandomType)
+        )
+    ):
+        # Even if an explicit default update is provided, we call it to
+        # issue any warnings about invalid random graphs.
+        default_update = find_default_update(clients, input_rng)
+
+        # Respect default update if provided
+        if getattr(input_rng, "default_update", None):
+            rng_updates[input_rng] = input_rng.default_update
+        else:
+            if default_update is not None:
+                rng_updates[input_rng] = default_update
+
     return rng_updates
 
 

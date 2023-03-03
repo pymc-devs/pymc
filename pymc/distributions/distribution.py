@@ -593,7 +593,9 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
 
     def update(self, node: Node):
         op = node.op
-        inner_updates = collect_default_updates(op.inner_inputs, op.inner_outputs)
+        inner_updates = collect_default_updates(
+            op.inner_inputs, op.inner_outputs, must_be_shared=False
+        )
 
         # Map inner updates to outer inputs/outputs
         updates = {}
