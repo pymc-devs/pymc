@@ -29,6 +29,7 @@ import pymc as pm
 
 from pymc import ShapeError
 from pymc.distributions.shape_utils import (
+    broadcast_dist_samples_shape,
     change_dist_size,
     convert_dims,
     convert_shape,
@@ -83,6 +84,43 @@ def fixture_shapes(request):
 @pytest.fixture(params=[False, True], ids=str)
 def fixture_exception_handling(request):
     return request.param
+
+
+class TestShapesBroadcasting:
+    def test_broadcasting(self, fixture_shapes):
+        shapes = fixture_shapes
+        try:
+            expected_out = np.broadcast(*(np.empty(s) for s in shapes)).shape
+        except ValueError:
+            expected_out = None
+        if expected_out is None:
+            with pytest.raises(ValueError):
+                np.broadcast_shapes(*shapes)
+        else:
+            out = np.broadcast_shapes(*shapes)
+            assert out == expected_out
+
+    def test_broadcast_dist_samples_shape(self, fixture_sizes, fixture_shapes):
+        size = fixture_sizes
+        shapes = fixture_shapes
+        size_ = to_tuple(size)
+        shapes_ = [
+            s if s[: min([len(size_), len(s)])] != size_ else s[len(size_) :] for s in shapes
+        ]
+        try:
+            expected_out = np.broadcast(*(np.empty(s) for s in shapes_)).shape
+        except ValueError:
+            expected_out = None
+        if expected_out is not None and any(
+            s[: min([len(size_), len(s)])] == size_ for s in shapes
+        ):
+            expected_out = size_ + expected_out
+        if expected_out is None:
+            with pytest.raises(ValueError):
+                broadcast_dist_samples_shape(shapes, size=size)
+        else:
+            out = broadcast_dist_samples_shape(shapes, size=size)
+            assert out == expected_out
 
 
 class TestSizeShapeDimsObserved:
