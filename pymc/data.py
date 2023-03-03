@@ -13,8 +13,6 @@
 #   limitations under the License.
 
 import io
-import os
-import pkgutil
 import urllib.request
 import warnings
 
@@ -63,12 +61,8 @@ def get_data(filename):
     -------
     BytesIO of the data
     """
-    data_pkg = "tests"
-    try:
-        content = pkgutil.get_data(data_pkg, os.path.join("data", filename))
-    except FileNotFoundError:
-        with urllib.request.urlopen(BASE_URL.format(filename=filename)) as handle:
-            content = handle.read()
+    with urllib.request.urlopen(BASE_URL.format(filename=filename)) as handle:
+        content = handle.read()
     return io.BytesIO(content)
 
 
