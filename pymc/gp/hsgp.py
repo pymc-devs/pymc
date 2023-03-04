@@ -12,6 +12,7 @@
 
 import warnings
 
+from types import ModuleType
 from typing import Optional, Sequence, Union
 
 import numpy as np
@@ -22,6 +23,73 @@ import pymc as pm
 from pymc.gp.cov import Covariance
 from pymc.gp.gp import Base
 from pymc.gp.mean import Mean, Zero
+
+
+def set_boundaries(
+    Xs: np.ndarray,
+    L: Optional[Sequence] = None,
+    c: Optional[Union[float, Sequence]] = None,
+    tl: ModuleType = np,
+):
+    """R Compute the boundary over which the approximation is accurate using the centered input data
+    locations, `Xs`.  It is requried that `Xs` has a mean at zero for each dimension, such that
+    `np.mean(Xs, axis=0) == [0, ..., 0]`.  If `L` is provided, c is calculated instead.  `tl` stands
+    for "tensor library", so the user can choose whether basic calculations are done with pytensor
+    or numpy.
+
+    Parameters
+    ----------
+    Xs: array-like
+        Function input values.  Assumes they have been mean subtracted or centered at zero.
+    """
+
+    if tl.__name__ not in ("numpy", "pytensor.tensor"):
+        raise ValueError("tl must be either numpy or pytensor.tensor.")
+
+    S = tl.max(tl.abs(Xs), axis=0)
+
+    if L is None and c is not None:
+        L = c * S
+    elif c is None and L is not None:
+        c = L / S
+    else:
+        raise ValueError("At least one of `c` or `L` must be supplied.")
+
+    if tl.__name__ == "numpy":
+        L = tl.asarray(L)
+    elif tl.__name__ == "pytensor.tensor":
+        L = tl.as_tensor_variable(L)
+
+    return S, L, c
+
+
+def calc_eigenvalues(
+    L: Union[np.ndarray, pt.TensorConstant], m: Sequence[int], tl: ModuleType = np
+):
+    """R Calculate eigenvalues of the Laplacian."""
+    S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(len(m))])
+    S = np.vstack([s.flatten() for s in S]).T
+    return tl.square((np.pi * S) / (2 * L))
+
+
+def calc_eigenvectors(
+    Xs: Union[np.ndarray, pt.TensorVariable],
+    L: Union[np.ndarray, pt.TensorConstant],
+    eigvals: Union[np.ndarray, pt.TensorConstant],
+    m: Sequence[int],
+    tl: ModuleType = np,
+):
+    """R Calculate eigenvectors of the Laplacian.  These are used as basis vectors in the HSGP
+    approximation.
+    """
+    m_star = int(np.prod(m))
+    phi = tl.ones((Xs.shape[0], m_star))
+    for d in range(len(m)):
+        c = 1.0 / tl.sqrt(L[d])
+        term1 = tl.sqrt(eigvals[:, d])
+        term2 = tl.tile(Xs[:, d][:, None], m_star) + L[d]
+        phi *= c * tl.sin(term1 * term2)
+    return phi
 
 
 class HSGP(Base):
@@ -152,45 +220,12 @@ class HSGP(Base):
         self.m_star = int(np.prod(self.m))
         self._boundary_set = False
 
-        # Record whether or not L instead of c was passed on construction.
-        self.L_given = self.L is not None
-
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def __add__(self, other):
         raise NotImplementedError("Additive HSGPs aren't supported ")
 
-    def _set_boundary(self, Xs):
-        """Make L from X and c if L is not passed in."""
-        if not self._boundary_set:
-
-            self.S = pt.max(pt.abs(Xs), axis=0)
-
-            if self.L is None:
-                self.L = self.c * self.S
-
-            else:
-                self.c = self.L / self.S
-                self.L = pt.as_tensor_variable(self.L)
-
-            self._boundary_set = True
-
-    @property
-    def _eigenvalues(self):
-        S = np.meshgrid(*[np.arange(1, 1 + self.m[d]) for d in range(self.n_dims)])
-        S = np.vstack([s.flatten() for s in S]).T
-        return pt.square((np.pi * S) / (2 * self.L))
-
-    def _eigenvectors(self, X):
-        phi = pt.ones((X.shape[0], self.m_star))
-        for d in range(self.n_dims):
-            c = 1.0 / np.sqrt(self.L[d])
-            term1 = pt.sqrt(self._eigenvalues[:, d])
-            term2 = pt.tile(X[:, d][:, None], self.m_star) + self.L[d]
-            phi *= c * pt.sin(term1 * term2)
-        return phi
-
-    def prior_linearized(self, X: Union[np.ndarray, pt.TensorVariable]):
+    def prior_linearized(self, Xs: Union[np.ndarray, pt.TensorVariable]):
         """Returns the linearized version of the HSGP, the Laplace eigenfunctions and the square
         root of the power spectral density needed to create the GP.  This function allows the user
         to bypass the GP interface and work directly with the basis and coefficients directly.
@@ -201,13 +236,13 @@ class HSGP(Base):
 
         Correct results when using `prior_linearized` in tandem with `pm.set_data` and
         `pm.MutableData` require two conditions.  First, one must specify `L` instead of `c` when
-        the GP is constructed.  If not, a RuntimeError is raised.  Second, the `X` needs to be
+        the GP is constructed.  If not, a RuntimeError is raised.  Second, the `Xs` needs to be
         zero centered, so it's mean must be subtracted.  An example is given below.
 
         Parameters
         ----------
-        X: array-like
-            Function input values.
+        Xs: array-like
+            Function input values.  Assumes they have been mean subtracted or centered at zero.
 
         Examples
         --------
@@ -233,7 +268,7 @@ class HSGP(Base):
                 Xs = X - X_mu
 
                 # Pass the zero-subtracted Xs in to the GP
-                phi, sqrt_psd = gp.prior_linearized(Xs)
+                phi, sqrt_psd = gp.prior_linearized(Xs=Xs)
 
                 # Specify standard normal prior in the coefficients.  The number of which
                 # is given by the number of basis vectors, which is also saved in the GP object
@@ -256,20 +291,17 @@ class HSGP(Base):
             with model:
                 ppc = pm.sample_posterior_predictive(idata, var_names=["f"])
         """
-        if not self.L_given:
-            warnings.warn(
-                "Since `c` was given instead of `L` on construction, usage of `model.set_data` "
-                "will result in an incorrect posterior predictive.  Ignore this warning if you "
-                "dont plan on creating predictions this way.  To remove this warning pass `L` "
-                "instead of `c` to the HSGP constructor."
-            )
 
-        X, _ = self.cov_func._slice(X)
+        # Index Xs using input_dim and active_dims of covariance function
+        Xs, _ = self.cov_func._slice(Xs)
 
-        self._set_boundary(X)
+        # If not provided, use Xs and c to set L
+        S, self.L, self.c = set_boundaries(Xs, self.L, self.c, tl=pt)
+        self._boundary_set = True
 
-        phi = self._eigenvectors(X)
-        omega = pt.sqrt(self._eigenvalues)
+        eigvals = calc_eigenvalues(self.L, self.m, tl=pt)
+        phi = calc_eigenvectors(Xs, self.L, eigvals, self.m, tl=pt)
+        omega = pt.sqrt(eigvals)
         psd = self.cov_func.power_spectral_density(omega)
 
         i = int(self.drop_first == True)
@@ -292,7 +324,7 @@ class HSGP(Base):
         phi, sqrt_psd = self.prior_linearized(X - self.X_mu)
 
         if self.parameterization == "noncentered":
-            self.beta = pm.Normal(f"{name}_hsgp_coeffs_", size=self.m_star)
+            self.beta = pm.Normal(f"{name}_hsgp_coeffs_", size=self.m_star - int(self.drop_first))
             self.sqrt_psd = sqrt_psd
             f = self.mean_func(X) + phi @ (self.beta * self.sqrt_psd)
 
@@ -312,7 +344,8 @@ class HSGP(Base):
             )
 
         Xnew, _ = self.cov_func._slice(Xnew)
-        phi = self._eigenvectors(Xnew - X_mu)
+        eigvals = calc_eigenvalues(self.L, self.m, tl=pt)
+        phi = calc_eigenvectors(Xnew - X_mu, self.L, eigvals, self.m, tl=pt)
         i = int(self.drop_first == True)
 
         if self.parameterization == "noncentered":
