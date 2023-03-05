@@ -48,7 +48,7 @@ Here is an example:
 (base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$
 ```
 
-**NOTE:** This working environment has been set up with [micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) which is a small, pure-C++ executable with enough functionalities to bootstrap fully functional conda-environments.
+.. admonition:: This working environment has been set up with [micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) which is a small, pure-C++ executable with enough functionalities to bootstrap fully functional conda-environments.
 
 6. Check that your git remotes are correct with `git remote -v` at the terminal.
 
