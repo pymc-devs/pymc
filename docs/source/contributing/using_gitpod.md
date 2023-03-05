@@ -16,11 +16,12 @@ These are some benefits to using Gitpod:
 These instructions are for contributing specifically to the [pymc-devs/pymc](https://github.com/pymc-devs/pymc) repo.  
 
 ### Gitpod Workflow
+
 1. Fork the pymc repo: [https://github.com/pymc-devs/pymc](https://github.com/pymc-devs/pymc)
 
 2. Create a Gitpod account. You can login and authorize access via your GitHub account:  [https://gitpod.io/](https://gitpod.io/)
 
-NOTE: Gitpod will show up as an authorized application in your account here:  [https://github.com/settings/applications](https://github.com/settings/applications)
+**NOTE:** Gitpod will show up as an authorized application in your account here:  [https://github.com/settings/applications](https://github.com/settings/applications)
 
 3. Grant GitHub / Gitpod integration permissions.
 
@@ -37,7 +38,7 @@ c) Select these permission: user:email, public_repo, repo, workflow
 
 4. Within Gitpod, create a "New Workspace".  Here you will want to select the forked pymc repo. If you don't see it, you can paste into the "Context URL" your forked repo path.  For example:  `https://github.com/reshamas/pymc`.  Then select "New Workspace".
 
-NOTE: Gitpod will pull a container and set up the workspace.  It will take a few minutes for the container to build.
+**NOTE:** Gitpod will pull a container and set up the workspace.  It will take a few minutes for the container to build.
 
 5. Once Gitpod is up and running, the interface is similar to a Visual Studio Code (VSC) interface, which will appear in your browser. You will observe installation notices in the terminal window.  This can take 5-10 minutes. Once that is complete, the terminal will indicate you are on the "(base)" environment on Gitpod with your forked repo.
 
@@ -47,7 +48,7 @@ Here is an example:
 (base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$
 ```
 
-NOTE: This working environment has been set up with [micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) which is a small, pure-C++ executable with enough functionalities to bootstrap fully functional conda-environments.
+**NOTE:** This working environment has been set up with [micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) which is a small, pure-C++ executable with enough functionalities to bootstrap fully functional conda-environments.
 
 6. Check that your git remotes are correct with `git remote -v` at the terminal.
 
@@ -66,6 +67,8 @@ upstream        https://github.com/pymc-devs/pymc.git (push)
 
 a) Check version of pymc: `pip list | grep pymc`
 
+Example:
+
 ```bash
 (base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ pip list | grep pymc
 pymc                          5.1.0       /workspace/pymc
@@ -75,14 +78,13 @@ pymc-sphinx-theme             0.1
 
 b) Check version of python: `python3 --version`
 
+Example:
+
 ```bash
 (base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ python3 --version
 Python 3.11.0
 (base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ 
 ```
-
-
-
 
 ### Reminders
 At the terminal, before beginning work, remember to:
