@@ -92,7 +92,7 @@ This working environment has been set up with [micromamba](https://mamba.readthe
     * Check version of python: `python3 --version`
 
     Example:
-    
+
     ```bash
     (base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ python3 --version
     Python 3.11.0
