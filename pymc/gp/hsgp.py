@@ -15,7 +15,7 @@
 import warnings
 
 from types import ModuleType
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pytensor.tensor as pt
@@ -26,13 +26,16 @@ from pymc.gp.cov import Covariance
 from pymc.gp.gp import Base
 from pymc.gp.mean import Mean, Zero
 
+TensorVariable = Union[np.ndarray, pt.TensorVariable]
+TensorConstant = Union[np.ndarray, pt.TensorConstant]
+
 
 def set_boundaries(
-    Xs: np.ndarray,
+    Xs: TensorVariable,
     L: Optional[Sequence] = None,
     c: Optional[Union[float, Sequence]] = None,
     tl: ModuleType = np,
-):
+) -> Tuple[TensorVariable, TensorVariable, Union[TensorConstant, float]]:
     """R Compute the boundary over which the approximation is accurate using the centered input data
     locations, `Xs`.  It is requried that `Xs` has a mean at zero for each dimension, such that
     `np.mean(Xs, axis=0) == [0, ..., 0]`.  If `L` is provided, c is calculated instead.  `tl` stands
@@ -66,19 +69,19 @@ def set_boundaries(
     return S, L, c
 
 
-def calc_eigenvalues(
-    L: Union[np.ndarray, pt.TensorConstant], m: Sequence[int], tl: ModuleType = np
-):
+def calc_eigenvalues(L: TensorConstant, m: Sequence[int], tl: ModuleType = np):
     """R Calculate eigenvalues of the Laplacian."""
     S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(len(m))])
     S = np.vstack([s.flatten() for s in S]).T
+    top = np.pi * S
+    bot = 2 * L
     return tl.square((np.pi * S) / (2 * L))
 
 
 def calc_eigenvectors(
-    Xs: Union[np.ndarray, pt.TensorVariable],
-    L: Union[np.ndarray, pt.TensorConstant],
-    eigvals: Union[np.ndarray, pt.TensorConstant],
+    Xs: TensorVariable,
+    L: TensorConstant,
+    eigvals: TensorConstant,
     m: Sequence[int],
     tl: ModuleType = np,
 ):
@@ -228,7 +231,7 @@ class HSGP(Base):
     def __add__(self, other):
         raise NotImplementedError("Additive HSGPs aren't supported ")
 
-    def prior_linearized(self, Xs: Union[np.ndarray, pt.TensorVariable]):
+    def prior_linearized(self, Xs: TensorVariable):
         """Returns the linearized version of the HSGP, the Laplace eigenfunctions and the square
         root of the power spectral density needed to create the GP.  This function allows the user
         to bypass the GP interface and work directly with the basis and coefficients directly.
@@ -310,7 +313,7 @@ class HSGP(Base):
         i = int(self.drop_first == True)
         return phi[:, i:], pt.sqrt(psd[i:])
 
-    def prior(self, name: str, X: Union[np.ndarray, pt.TensorVariable], *args, **kwargs):
+    def prior(self, name: str, X: TensorVariable, *args, **kwargs):
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
 
@@ -357,7 +360,7 @@ class HSGP(Base):
         elif self.parameterization == "centered":
             return self.mean_func(Xnew) + phi[:, i:] @ beta
 
-    def conditional(self, name: str, Xnew: Union[np.ndarray, pt.TensorVariable], *args, **kwargs):
+    def conditional(self, name: str, Xnew: TensorVariable, *args, **kwargs):
         R"""
         Returns the (approximate) conditional distribution evaluated over new input locations
         `Xnew`.  If using the
