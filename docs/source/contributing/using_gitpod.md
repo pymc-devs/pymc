@@ -13,7 +13,7 @@ These are some benefits to using Gitpod:
 
 ## Using Gitpod to Contribute to PyMC
 
-These instructions are for contributing specifically to the [pymc-devs/pymc](https://github.com/pymc-devs/pymc) repo.  
+These instructions are for contributing specifically to the [pymc-devs/pymc](https://github.com/pymc-devs/pymc) repo.
 
 ### Gitpod Workflow
 
@@ -73,7 +73,7 @@ Example:
 (base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ pip list | grep pymc
 pymc                          5.1.0       /workspace/pymc
 pymc-sphinx-theme             0.1
-(base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ 
+(base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$
 ```
 
 b) Check version of python: `python3 --version`
@@ -83,7 +83,7 @@ Example:
 ```bash
 (base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ python3 --version
 Python 3.11.0
-(base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ 
+(base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$
 ```
 
 ### Reminders
