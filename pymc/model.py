@@ -2061,7 +2061,7 @@ def Potential(name, var, model=None):
     ----------
     name : str
         Name of the potential variable to be registered in the model.
-    var : tensor-like
+    var : tensor_like
         Expression to be added to the model joint logp.
     model : Model, optional
         The model object to which the potential function is added.
@@ -2069,7 +2069,7 @@ def Potential(name, var, model=None):
 
     Returns
     -------
-    var : tensor-like
+    var : tensor_like
         The registered, named model variable.
 
     Examples
