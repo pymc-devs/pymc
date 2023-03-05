@@ -54,8 +54,9 @@ def set_boundaries(
         L = c * S
     elif c is None and L is not None:
         c = L / S
-    else:
+    elif c is None and L is None:
         raise ValueError("At least one of `c` or `L` must be supplied.")
+    # if both are passed, L takes precedent.
 
     if tl.__name__ == "numpy":
         L = tl.asarray(L)

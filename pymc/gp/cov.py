@@ -236,7 +236,6 @@ class Combination(Covariance):
         """
         factor_list = []
         for factor in self._factor_list:
-
             # make sure diag=True is handled properly
             if isinstance(factor, BaseCovariance):
                 factor_list.append(factor(X, Xs, diag))
@@ -255,7 +254,6 @@ class Combination(Covariance):
                     TensorSharedVariable,
                 ),
             ):
-
                 if factor.ndim == 2 and diag:
                     factor_list.append(at.diag(factor))
                 else:
@@ -275,7 +273,6 @@ class Combination(Covariance):
         factor_list = []
         for factor in self._factor_list:
             if isinstance(factor, Covariance):
-
                 # Allow merging covariances for psd only if active_dims are the same
                 if set(self.active_dims) != set(factor.active_dims):
                     raise ValueError(
@@ -288,7 +285,6 @@ class Combination(Covariance):
                     factor_list.append(factor.power_spectral_density(omega))
 
                 except (AttributeError, NotImplementedError) as e:
-
                     if isinstance(factor, Stationary):
                         raise NotImplementedError(
                             f"No power spectral density method has been implemented for {factor}."
