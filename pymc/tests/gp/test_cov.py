@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -202,7 +202,8 @@ class TestCovPSD:
             cov1 = 2 * pm.gp.cov.ExpQuad(1, ls=1)
             cov2 = pm.gp.cov.ExpQuad(1, ls=1)
 
-        with pytest.raises(NotImplementedError):
+        msg = "The power spectral density of products of covariance functions is not implemented"
+        with pytest.raises(NotImplementedError, match=msg):
             psd = (cov1 * cov2).power_spectral_density(omega[:, None]).eval()
 
     def test_covpsd_nonstationary1(self):
@@ -211,7 +212,8 @@ class TestCovPSD:
         with pm.Model() as model:
             cov = 2 * pm.gp.cov.Linear(1, c=5)
 
-        with pytest.raises(ValueError):
+        msg = "can only be calculated for `Stationary` covariance functions."
+        with pytest.raises(ValueError, match=msg):
             psd = cov.power_spectral_density(omega[:, None]).eval()
 
     def test_covpsd_nonstationary2(self):
@@ -220,7 +222,11 @@ class TestCovPSD:
         with pm.Model() as model:
             cov = 2 * pm.gp.cov.ExpQuad(1, ls=1) + 10.0
 
-        with pytest.raises(ValueError):
+        # Even though this should error, this isnt the appropriate message.  The actual problem
+        # is because the covariance function is non-stationary. The underlying bug is due to
+        # `Constant` covariances not having an input_dim.
+        msg = "All covariances must have the same `input_dim`."
+        with pytest.raises(ValueError, match=msg):
             psd = cov.power_spectral_density(omega[:, None]).eval()
 
     def test_covpsd_notimplemented(self):
@@ -232,7 +238,8 @@ class TestCovPSD:
         with pm.Model() as model:
             cov = 2 * NewStationaryCov(1, ls=1)
 
-        with pytest.raises(NotImplementedError):
+        msg = "No power spectral density method has been implemented"
+        with pytest.raises(NotImplementedError, match=msg):
             psd = cov.power_spectral_density(omega[:, None]).eval()
 
 

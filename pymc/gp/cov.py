@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -12,11 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import numbers
 import warnings
 
 from collections import Counter
 from functools import reduce
-from numbers import Number
 from operator import add, mul
 from typing import Optional, Sequence
 
@@ -57,7 +57,7 @@ def _verify_scalar(value):
         return at.squeeze(value)
     elif np.asarray(value).squeeze().shape == ():
         return np.squeeze(value)
-    elif isinstance(value, Number):
+    elif isinstance(value, numbers.Real):
         return value
 
     raise ValueError("A scalar value is required.")
@@ -95,12 +95,8 @@ class BaseCovariance:
     def __add__(self, other):
         # If it's a scalar, cast as Constant covariance.  This allows validation for power spectral
         # density calc.
-        if isinstance(other, Number):
-            try:
-                other = Constant(c=_verify_scalar(other))
-            except ValueError:
-                pass
-
+        if isinstance(other, numbers.Real):
+            other = Constant(c=other)
         return Add([self, other])
 
     def __mul__(self, other):
