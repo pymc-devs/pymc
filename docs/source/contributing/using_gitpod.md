@@ -21,14 +21,16 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
 2. Create a Gitpod account. You can login and authorize access via your GitHub account:  [https://gitpod.io/](https://gitpod.io/)
 
 :::{note}
-Gitpod will show up as an authorized application in your GitHub account here:  [https://github.com/settings/applications](https://github.com/settings/applications)
+Gitpod will show up as an authorized application in your GitHub account here: [https://github.com/settings/applications](https://github.com/settings/applications)
 :::
 
 3. Grant GitHub / Gitpod integration permissions.
 
-  a) Go to: [https://gitpod.io/user/integrations](https://gitpod.io/user/integrations)
-  b) Select GitHub and then "edit permissions"
-  c) Select these permission: user:email, public_repo, repo, workflow
+    a) Go to: [https://gitpod.io/user/integrations](https://gitpod.io/user/integrations)
+
+    b) Select GitHub and then "edit permissions"
+
+    c) Select these permission: user:email, public_repo, repo, workflow
 
 :::{figure-md} Gitpod integration
 
@@ -52,11 +54,11 @@ Gitpod will pull a container and set up the workspace.  It will take a few minut
 
 5. Once Gitpod is up and running, the interface is similar to a Visual Studio Code (VSC) interface, which will appear in your browser. You will observe installation notices in the terminal window.  This can take 5-10 minutes. Once that is complete, the terminal will indicate you are on the "(base)" environment on Gitpod with your forked repo.
 
-Here is an example:
+    Here is an example:
 
-```bash
-(base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$
-```
+    ```bash
+    (base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$
+    ```
 
 :::{note}
 This working environment has been set up with [micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) which is a small, pure-C++ executable with enough functionalities to bootstrap fully functional conda-environments.
@@ -64,37 +66,37 @@ This working environment has been set up with [micromamba](https://mamba.readthe
 
 6. Check that your git remotes are correct with `git remote -v` at the terminal.
 
-Example:
+    Example:
 
-```bash
-(base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$ git remote -v
-origin  https://github.com/reshamas/pymc.git (fetch)
-origin  https://github.com/reshamas/pymc.git (push)
-upstream        https://github.com/pymc-devs/pymc.git (fetch)
-upstream        https://github.com/pymc-devs/pymc.git (push)
-(base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$
-```
+    ```bash
+    (base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$ git remote -v
+    origin  https://github.com/reshamas/pymc.git (fetch)
+    origin  https://github.com/reshamas/pymc.git (push)
+    upstream        https://github.com/pymc-devs/pymc.git (fetch)
+    upstream        https://github.com/pymc-devs/pymc.git (push)
+    (base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$
+    ```
 
 7. Check which version of python and pymc are being used at the terminal.
 
-  * Check version of pymc: `pip list | grep pymc`
+    * Check version of pymc: `pip list | grep pymc`
 
-Example:
+    Example:
 
-```bash
-(base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ pip list | grep pymc
-pymc                          5.1.0       /workspace/pymc
-pymc-sphinx-theme             0.1
-```
+    ```bash
+    (base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ pip list | grep pymc
+    pymc                          5.1.0       /workspace/pymc
+    pymc-sphinx-theme             0.1
+    ```
 
-  * Check version of python: `python3 --version`
+    * Check version of python: `python3 --version`
 
-Example:
-
-```bash
-(base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ python3 --version
-Python 3.11.0
-```
+    Example:
+    
+    ```bash
+    (base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ python3 --version
+    Python 3.11.0
+    ```
 
 ### Reminders
 
