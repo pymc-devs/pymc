@@ -26,11 +26,11 @@ Gitpod will show up as an authorized application in your account here:  [https:/
 
 3. Grant GitHub / Gitpod integration permissions.
 
-  * Go to: [https://gitpod.io/user/integrations](https://gitpod.io/user/integrations)
-  
-  * Select GitHub and then "edit permissions"
+a) Go to: [https://gitpod.io/user/integrations](https://gitpod.io/user/integrations)
 
-  * Select these permission: user:email, public_repo, repo, workflow
+b) Select GitHub and then "edit permissions"
+
+c) Select these permission: user:email, public_repo, repo, workflow
 
 :::{figure-md} Gitpod integration
 
