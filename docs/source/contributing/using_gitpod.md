@@ -9,7 +9,6 @@ These are some benefits to using Gitpod:
 - Bypass local computer configuration and technical issues
 - Save time by using a pre-configured virtual environment for contributing to open source
 - Save space on your local computer
-- Alleviate delays in situations with low internet bandwidth
 
 ## Using Gitpod to Contribute to PyMC
 
@@ -21,18 +20,24 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
 
 2. Create a Gitpod account. You can login and authorize access via your GitHub account:  [https://gitpod.io/](https://gitpod.io/)
 
-**NOTE:** Gitpod will show up as an authorized application in your account here:  [https://github.com/settings/applications](https://github.com/settings/applications)
+:::{tip}
+Gitpod will show up as an authorized application in your account here:  [https://github.com/settings/applications](https://github.com/settings/applications)
+:::
 
 3. Grant GitHub / Gitpod integration permissions.
 
-  a) Go to: [https://gitpod.io/user/integrations](https://gitpod.io/user/integrations)
-  b) Select GitHub and then "edit permissions"
-  c) Select these permission: user:email, public_repo, repo, workflow
+  * Go to: [https://gitpod.io/user/integrations](https://gitpod.io/user/integrations)
+  
+  * Select GitHub and then "edit permissions"
 
-::::{grid-item-card} Gitpod and GitHub Integration
-:img-top: gitpod/gitpod_integration.png
+  * Select these permission: user:email, public_repo, repo, workflow
 
-::::
+:::{figure-md} Gitpod integration
+
+![gitpod_integration](gitpod/gitpod_integration.png)
+
+Gitpod [integration options](https://gitpod.io/user/integrations)
+:::
 
 4. Within Gitpod, create a "New Workspace".  Here you will want to select the forked pymc repo. If you don't see it, you can paste into the "Context URL" your forked repo path.  For example:  `https://github.com/reshamas/pymc`.  Then select "New Workspace".
 
@@ -46,7 +51,9 @@ Here is an example:
 (base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$
 ```
 
-.. admonition:: This working environment has been set up with [micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) which is a small, pure-C++ executable with enough functionalities to bootstrap fully functional conda-environments.
+:::{tip}
+This working environment has been set up with [micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) which is a small, pure-C++ executable with enough functionalities to bootstrap fully functional conda-environments.
+:::
 
 6. Check that your git remotes are correct with `git remote -v` at the terminal.
 
@@ -63,7 +70,7 @@ upstream        https://github.com/pymc-devs/pymc.git (push)
 
 7. Check which version of python and pymc are being used at the terminal.
 
-a) Check version of pymc: `pip list | grep pymc`
+  * Check version of pymc: `pip list | grep pymc`
 
 Example:
 
@@ -74,7 +81,7 @@ pymc-sphinx-theme             0.1
 (base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$
 ```
 
-b) Check version of python: `python3 --version`
+  * Check version of python: `python3 --version`
 
 Example:
 
@@ -90,11 +97,11 @@ At the terminal, before beginning work, remember to:
 1. Create a feature branch: `git checkout -b feature-branch`
 1. Work on a file
 1. Follow the Git workflow
-```bash
-git add file_name
-git commit -m 'message'
-git push origin feature-branch
-```
+  * `git add file_name`
+  * `git commit -m 'message'`
+  * `git push origin feature-branch`
 
 ### Gitpod Notes
+
+#### Billing
 The Gitpod free plan currently allow 500 free credits (50 hours of standard workspace usage) per month. Usage information can be found in the [Gitpod billing section](https://gitpod.io/user/billing).
