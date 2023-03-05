@@ -1,3 +1,5 @@
+#   Copyright 2023 The PyMC Developers
+#
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -23,6 +25,7 @@ import pymc as pm
 
 
 def build_mmd_func(sample1, sample2):
+    """Build a PyTensor function that calculates the minimum mean discrepancy (MMD) statistic."""
 
     assert sample1.shape[1] == sample2.shape[1]
 
@@ -49,7 +52,11 @@ def build_mmd_func(sample1, sample2):
 
 
 def two_sample_test(sample1, sample2, n_sims=1000, alpha=0.05):
-    """https://torchdrift.org/notebooks/note_on_mmd.html"""
+    """Calculate test whose null hypothesis is that two sets of samples were drawn from
+    the same distribution.
+
+    Largely taken from https://torchdrift.org/notebooks/note_on_mmd.html
+    """
     # build function to calculate mmd
     calc_mmd = build_mmd_func(sample1, sample2)
 
@@ -173,8 +180,8 @@ class TestHSGP:
 
     @pytest.mark.parametrize("parameterization", ["centered", "noncentered"])
     def test_prior(self, model, cov_func, X1, parameterization):
-        """Compare HSGP to unapproximated GP, pm.gp.Latent.  Draw samples from the prior and
-        compare them using MMD two sample test.  Tests both centered and non-centered
+        """Compare HSGP prior to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
+        prior and compare them using MMD two sample test.  Tests both centered and non-centered
         parameterizations.
         """
         with model:
@@ -193,3 +200,24 @@ class TestHSGP:
             samples1, samples2, n_sims=500, alpha=0.05
         )
         assert not reject, "H0 was rejected, even though HSGP and GP priors should match."
+
+    @pytest.mark.parametrize("parameterization", ["centered", "noncentered"])
+    def test_conditional(self, model, cov_func, X1, parameterization):
+        """Compare HSGP conditional to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
+        prior and compare them using MMD two sample test.  Tests both centered and non-centered
+        parameterizations.  The conditional should match the prior when no data is observed.
+        """
+        with model:
+            hsgp = pm.gp.HSGP(m=[100], c=2.0, parameterization=parameterization, cov_func=cov_func)
+            f = hsgp.prior("f", X=X1)
+            fc = hsgp.conditional("fc", Xnew=X1)
+
+            idata = pm.sample_prior_predictive(samples=1000)
+
+        samples1 = az.extract(idata.prior["f"])["f"].values.T
+        samples2 = az.extract(idata.prior["fc"])["fc"].values.T
+
+        h0, mmd, critical_value, reject = two_sample_test(
+            samples1, samples2, n_sims=500, alpha=0.05
+        )
+        assert not reject, "H0 was rejected, even though HSGP prior and conditional should match."
