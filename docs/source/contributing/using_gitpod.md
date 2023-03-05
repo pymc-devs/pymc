@@ -39,7 +39,7 @@ Gitpod will show up as an authorized application in your GitHub account here: [h
 Gitpod [integration options](https://gitpod.io/user/integrations)
 :::
 
-4. Within Gitpod, create a ["New Workspace"](https://gitpod.io/workspaces).  Here you will want to select the forked pymc repo. If you don't see it, you can paste into the "Context URL" your forked repo path.  For example:  `https://github.com/reshamas/pymc`.  Then select "New Workspace".
+4. Within Gitpod, create a ["New Workspace"](https://gitpod.io/workspaces).  Here you will want to select the forked pymc repo. If you don't see it, you can paste into the "Context URL" your forked repo path.  For example:  `https://github.com/yourusername/pymc`.  Then select "New Workspace".
 
 :::{figure-md} Gitpod workspace
 
