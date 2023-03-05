@@ -13,6 +13,8 @@ These are some benefits to using Gitpod:
 
 ## Using Gitpod to Contribute to PyMC
 
+These instructions are for contributing specifically to the [pymc-devs/pymc](https://github.com/pymc-devs/pymc) repo.  
+
 ### Gitpod Workflow
 1. Fork the pymc repo: https://github.com/pymc-devs/pymc
 
@@ -44,6 +46,8 @@ Here is an example:
 (base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$
 ```
 
+NOTE: This working environment has been set up with [micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) which is a small, pure-C++ executable with enough functionalities to bootstrap fully functional conda-environments.
+
 6. Check that your git remotes are correct with `git remote -v` at the terminal.
 
 Example:
@@ -56,6 +60,28 @@ upstream        https://github.com/pymc-devs/pymc.git (fetch)
 upstream        https://github.com/pymc-devs/pymc.git (push)
 (base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$
 ```
+
+7. Check which version of python and pymc are being used at the terminal.
+
+a) Check version of pymc: `pip list | grep pymc`
+
+```bash
+(base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ pip list | grep pymc
+pymc                          5.1.0       /workspace/pymc
+pymc-sphinx-theme             0.1
+(base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ 
+```
+
+b) Check version of python: `python3 --version`
+
+```bash
+(base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ python3 --version
+Python 3.11.0
+(base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ 
+```
+
+
+
 
 ### Reminders
 At the terminal, before beginning work, remember to:
