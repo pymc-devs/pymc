@@ -25,11 +25,9 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
 
 3. Grant GitHub / Gitpod integration permissions.
 
-a) Go to: [https://gitpod.io/user/integrations](https://gitpod.io/user/integrations)
-
-b) Select GitHub and then "edit permissions"
-
-c) Select these permission: user:email, public_repo, repo, workflow
+  a) Go to: [https://gitpod.io/user/integrations](https://gitpod.io/user/integrations)
+  b) Select GitHub and then "edit permissions"
+  c) Select these permission: user:email, public_repo, repo, workflow
 
 ::::{grid-item-card} Gitpod and GitHub Integration
 :img-top: gitpod/gitpod_integration.png
