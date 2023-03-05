@@ -73,8 +73,6 @@ def calc_eigenvalues(L: TensorConstant, m: Sequence[int], tl: ModuleType = np):
     """R Calculate eigenvalues of the Laplacian."""
     S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(len(m))])
     S = np.vstack([s.flatten() for s in S]).T
-    top = np.pi * S
-    bot = 2 * L
     return tl.square((np.pi * S) / (2 * L))
 
 
