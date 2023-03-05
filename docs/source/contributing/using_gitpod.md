@@ -115,3 +115,12 @@ At the terminal, before beginning work, remember to:
 
 #### Billing
 The Gitpod free plan currently allow 500 free credits (50 hours of standard workspace usage) per month. Usage information can be found in the [Gitpod billing section](https://gitpod.io/user/billing).
+
+:::{caution}
+Be sure to check out the Gitpod policies on [Workspace Deletion](https://www.gitpod.io/docs/configure/workspaces/workspace-lifecycle#workspace-deletion) and learn more about:
+
+- "Starting" & "Stopping" workspaces
+- "Workplace Inactivity": By default, workspaces stop following 30 minutes without user input (e.g. keystrokes or terminal input commands). You can increase the workspace timeout up to a maximum of 24 hours.
+- Workspaces are deleted after 14 days. Pinned workspaces are never deleted automatically."
+- "A pinned workspace is never deleted. You can pin a workspace from your workspace list in the Gitpod dashboard."
+:::
