@@ -9,7 +9,7 @@ repos:
     -   id: debug-statements
     -   id: end-of-file-fixer
     -   id: no-commit-to-branch
-        args: [--branch, master]
+        args: [--branch, main]
     -   id: requirements-txt-fixer
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
