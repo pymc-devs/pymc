@@ -1,4 +1,4 @@
-#   Copyright 2022- The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -961,16 +961,16 @@ def _create_transformed_rv_op(
         if use_jacobian:
             assert len(values) == len(logprobs) == len(op.transforms)
             logprobs_jac = []
-            for value, transform, logprob in zip(values, op.transforms, logprobs):
+            for value, transform, logp in zip(values, op.transforms, logprobs):
                 if transform is None:
-                    logprobs_jac.append(logprob)
+                    logprobs_jac.append(logp)
                     continue
                 assert isinstance(value.owner.op, TransformedVariable)
                 original_forward_value = value.owner.inputs[1]
                 jacobian = transform.log_jac_det(original_forward_value, *inputs).copy()
                 if value.name:
                     jacobian.name = f"{value.name}_jacobian"
-                logprobs_jac.append(logprob + jacobian)
+                logprobs_jac.append(logp + jacobian)
             logprobs = logprobs_jac
 
         return logprobs

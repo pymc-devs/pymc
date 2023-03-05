@@ -1,4 +1,4 @@
-#   Copyright 2022- The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -107,7 +107,6 @@ def convert_outer_out_to_in(
     old_inner_outs_to_outer_outs = {}
 
     for oo_var in outer_out_vars:
-
         var_info = output_scan_args.find_among_fields(
             oo_var, field_filter=lambda x: x.startswith("outer_out")
         )
@@ -123,7 +122,6 @@ def convert_outer_out_to_in(
     # update the outer and inner-inputs to reflect the addition of new
     # inner-inputs.
     for old_inner_out_var, oo_var in old_inner_outs_to_outer_outs.items():
-
         # Couldn't one do the same with `var_info`?
         inner_out_info = output_scan_args.find_among_fields(
             old_inner_out_var, field_filter=lambda x: x.startswith("inner_out")
@@ -280,7 +278,6 @@ def construct_scan(scan_args: ScanArgs, **kwargs) -> Tuple[List[TensorVariable],
 
 @_logprob.register(MeasurableScan)
 def logprob_ScanRV(op, values, *inputs, name=None, **kwargs):
-
     new_node = op.make_node(*inputs)
     scan_args = ScanArgs.from_node(new_node)
     rv_outer_outs = get_random_outer_outputs(scan_args)
@@ -420,7 +417,6 @@ def find_measurable_scans(fgraph, node):
         # We're going to replace the user's random variable/value variable mappings
         # with ones that map directly to outputs of this `Scan`.
         for rv_var, val_var, out_idx in indirect_rv_vars:
-
             # The full/un-`Subtensor`ed `Scan` output that we need to use
             full_out = node.outputs[out_idx]
 

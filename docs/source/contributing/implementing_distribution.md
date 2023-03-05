@@ -233,14 +233,14 @@ pm.logcdf(blah, [-0.5, 1.5]).eval()
 
 ## 3. Adding tests for the new `RandomVariable`
 
-Tests for new `RandomVariables` are mostly located in `pymc/tests/distributions/test_*.py`.
+Tests for new `RandomVariables` are mostly located in `tests/distributions/test_*.py`.
 Most tests can be accommodated by the default `BaseTestDistributionRandom` class, which provides default tests for checking:
 1. Expected inputs are passed to the `rv_op` by the `dist` `classmethod`, via `check_pymc_params_match_rv_op`
 1. Expected (exact) draws are being returned, via `check_pymc_draws_match_reference`
 1. Shape variable inference is correct, via `check_rv_size`
 
 ```python
-from pymc.tests.distributions.util import BaseTestDistributionRandom, seeded_scipy_distribution_builder
+from tests.distributions.util import BaseTestDistributionRandom, seeded_scipy_distribution_builder
 
 class TestBlah(BaseTestDistributionRandom):
 
@@ -279,7 +279,7 @@ class TestBlahAltParam2(BaseTestDistributionRandom):
 
 ```
 
-Custom tests can also be added to the class as is done for the {class}`~pymc.tests.distributions.test_continuous.TestFlat`.
+Custom tests can also be added to the class as is done for the {class}`~tests.distributions.test_continuous.TestFlat`.
 
 ### Note on `check_rv_size` test:
 
@@ -292,7 +292,7 @@ tests_to_run = ["check_rv_size"]
 ```
 
 This is usually needed for Multivariate distributions.
-You can see an example in {class}`~pymc.tests.distributions.test_multivariate.TestDirichlet`.
+You can see an example in {class}`~tests.distributions.test_multivariate.TestDirichlet`.
 
 ### Notes on `check_pymcs_draws_match_reference` test
 
@@ -302,17 +302,17 @@ The latter kind of test (if warranted) can be performed with the aid of `pymc_ra
 This kind of test only makes sense if there is a good independent generator reference (i.e., not just the same composition of NumPy / SciPy calls that is done inside `rng_fn`).
 
 Finally, when your `rng_fn` is doing something more than just calling a NumPy or SciPy method, you will need to set up an equivalent seeded function with which to compare for the exact draws (instead of relying on `seeded_[scipy|numpy]_distribution_builder`).
-You can find an example in {class}`~pymc.tests.distributions.test_continuous.TestWeibull`, whose `rng_fn` returns `beta * np.random.weibull(alpha, size=size)`.
+You can find an example in {class}`~tests.distributions.test_continuous.TestWeibull`, whose `rng_fn` returns `beta * np.random.weibull(alpha, size=size)`.
 
 
 ## 4. Adding tests for the `logp` / `logcdf` methods
 
 Tests for the `logp` and `logcdf` mostly make use of the helpers `check_logp`, `check_logcdf`, and
-`check_selfconsistency_discrete_logcdf` implemented in `~pymc.tests.distributions.util`
+`check_selfconsistency_discrete_logcdf` implemented in `~tests.distributions.util`
 
 ```python
-from pymc.tests.distributions.util import check_logp, check_logcdf, Domain
-from pymc.tests.helpers import select_by_precision
+from tests.helpers import select_by_precision
+from tests.distributions.util import check_logp, check_logcdf, Domain
 
 R = Domain([-np.inf, -2.1, -1, -0.01, 0.0, 0.01, 1, 2.1, np.inf])
 Rplus = Domain([0, 0.01, 0.1, 0.9, 0.99, 1, 1.5, 2, 100, np.inf])
@@ -382,7 +382,7 @@ which checks if:
 
 import pytest
 from pymc.distributions import Blah
-from pymc.tests.distributions.util import assert_moment_is_expected
+from tests.distributions.util import assert_moment_is_expected
 
 @pytest.mark.parametrize(
     "param1, param2, size, expected",

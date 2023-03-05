@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import numpy as np
 import pytensor
 import pytensor.tensor as at
 
-from pytensor.graph.basic import Node
+from pytensor.graph.basic import Node, ancestors
 from pytensor.graph.replace import clone_replace
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
@@ -33,7 +33,6 @@ from pymc.distributions.distribution import (
     _moment,
     moment,
 )
-from pymc.distributions.logprob import ignore_logprob, logp
 from pymc.distributions.multivariate import MvNormal, MvStudentT
 from pymc.distributions.shape_utils import (
     _change_dist_size,
@@ -43,6 +42,8 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.abstract import _logprob
+from pymc.logprob.joint_logprob import logp
+from pymc.logprob.utils import ignore_logprob, reconsider_logprob
 from pymc.pytensorf import constant_fold, floatX, intX
 from pymc.util import check_dist_not_registered
 
@@ -105,6 +106,15 @@ class RandomWalk(Distribution):
             raise TypeError(
                 "init_dist and innovation_dist must have the same support dimensionality"
             )
+
+        # We need to check this, because we clone the variables when we ignore their logprob next
+        if init_dist in ancestors([innovation_dist]) or innovation_dist in ancestors([init_dist]):
+            raise ValueError("init_dist and innovation_dist must be completely independent")
+
+        # PyMC should not be concerned that these variables don't have values, as they will be
+        # accounted for in the logp of RandomWalk
+        init_dist = ignore_logprob(init_dist)
+        innovation_dist = ignore_logprob(innovation_dist)
 
         steps = cls.get_steps(
             innovation_dist=innovation_dist,
@@ -225,12 +235,14 @@ def random_walk_moment(op, rv, init_dist, innovation_dist, steps):
 
 
 @_logprob.register(RandomWalkRV)
-def random_walk_logp(op, values, *inputs, **kwargs):
+def random_walk_logp(op, values, init_dist, innovation_dist, steps, **kwargs):
     # Although we can derive the logprob of random walks, it does not collapse
     # what we consider the core dimension of steps. We do it manually here.
     (value,) = values
     # Recreate RV and obtain inner graph
-    rv_node = op.make_node(*inputs)
+    rv_node = op.make_node(
+        reconsider_logprob(init_dist), reconsider_logprob(innovation_dist), steps
+    )
     rv = clone_replace(
         op.inner_outputs, replace={u: v for u, v in zip(op.inner_inputs, rv_node.inputs)}
     )[op.default_output]
@@ -666,7 +678,6 @@ class AR(Distribution):
 
 @_change_dist_size.register(AutoRegressiveRV)
 def change_ar_size(op, dist, new_size, expand=False):
-
     if expand:
         old_size = dist.shape[:-1]
         new_size = tuple(new_size) + tuple(old_size)
@@ -839,7 +850,6 @@ class GARCH11(Distribution):
 
 @_change_dist_size.register(GARCH11RV)
 def change_garch11_size(op, dist, new_size, expand=False):
-
     if expand:
         old_size = dist.shape[:-1]
         new_size = tuple(new_size) + tuple(old_size)
@@ -1024,7 +1034,6 @@ class EulerMaruyama(Distribution):
 
 @_change_dist_size.register(EulerMaruyamaRV)
 def change_eulermaruyama_size(op, dist, new_size, expand=False):
-
     if expand:
         old_size = dist.shape[:-1]
         new_size = tuple(new_size) + tuple(old_size)

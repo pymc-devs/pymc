@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -101,7 +101,6 @@ class Censored(Distribution):
 
     @classmethod
     def rv_op(cls, dist, lower=None, upper=None, size=None):
-
         lower = at.constant(-np.inf) if lower is None else at.as_tensor_variable(lower)
         upper = at.constant(np.inf) if upper is None else at.as_tensor_variable(upper)
 

@@ -1,4 +1,4 @@
-#   Copyright 2021 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -61,10 +61,10 @@ def check_parameters(logp: Variable, *conditions: Iterable[Variable], msg: str =
     check_bounds = False in pm.Model()
     """
     # at.all does not accept True/False, but accepts np.array(True)/np.array(False)
-    conditions = [
+    conditions_ = [
         cond if (cond is not True and cond is not False) else np.array(cond) for cond in conditions
     ]
-    all_true_scalar = at.all([at.all(cond) for cond in conditions])
+    all_true_scalar = at.all([at.all(cond) for cond in conditions_])
     return CheckParameterValue(msg)(logp, all_true_scalar)
 
 

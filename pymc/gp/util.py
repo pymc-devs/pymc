@@ -28,10 +28,10 @@ from scipy.cluster.vq import kmeans
 
 # Avoid circular dependency when importing modelcontext
 from pymc.distributions.distribution import Distribution
+from pymc.model import modelcontext
 from pymc.pytensorf import compile_pymc, walk_model
 
 _ = Distribution  # keep both pylint and black happy
-from pymc.model import modelcontext
 
 JITTER_DEFAULT = 1e-6
 

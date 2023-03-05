@@ -1,4 +1,4 @@
-#   Copyright 2021 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -161,7 +161,6 @@ def make_initial_point_fn(
         varnames.append(name)
 
     def make_seeded_function(func):
-
         rngs = find_rng_nodes(func.maker.fgraph.outputs)
 
         @functools.wraps(func)

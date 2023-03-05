@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -97,7 +97,6 @@ class DistributionMeta(ABCMeta):
     """
 
     def __new__(cls, name, bases, clsdict):
-
         # Forcefully deprecate old v3 `Distribution`s
         if "random" in clsdict:
 
@@ -112,11 +111,14 @@ class DistributionMeta(ABCMeta):
             clsdict["random"] = _random
 
         rv_op = clsdict.setdefault("rv_op", None)
-        rv_type = None
+        rv_type = clsdict.setdefault("rv_type", None)
 
         if isinstance(rv_op, RandomVariable):
-            rv_type = type(rv_op)
-            clsdict["rv_type"] = rv_type
+            if rv_type is not None:
+                assert isinstance(rv_op, rv_type)
+            else:
+                rv_type = type(rv_op)
+                clsdict["rv_type"] = rv_type
 
         new_cls = super().__new__(cls, name, bases, clsdict)
 
@@ -155,8 +157,8 @@ class DistributionMeta(ABCMeta):
                 def moment(op, rv, rng, size, dtype, *dist_params):
                     return class_moment(rv, size, *dist_params)
 
-            # Register the PyTensor `RandomVariable` type as a subclass of this
-            # `Distribution` type.
+            # Register the PyTensor rv_type as a subclass of this
+            # PyMC Distribution type.
             new_cls.register(rv_type)
 
         return new_cls
@@ -450,7 +452,6 @@ class Discrete(Distribution):
     """Base class for discrete distributions"""
 
     def __new__(cls, name, *args, **kwargs):
-
         if kwargs.get("transform", None):
             raise ValueError("Transformations for discrete distributions")
 
@@ -497,7 +498,6 @@ class _CustomDist(Distribution):
         dtype: str = "floatX",
         **kwargs,
     ):
-
         dist_params = [as_tensor_variable(param) for param in dist_params]
 
         # Assume scalar ndims_params
@@ -605,7 +605,6 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
 
 
 class _CustomSymbolicDist(Distribution):
-
     rv_type = CustomSymbolicDistRV
 
     @classmethod
@@ -613,7 +612,7 @@ class _CustomSymbolicDist(Distribution):
         cls,
         *dist_params,
         class_name: str,
-        random: Callable,
+        dist: Callable,
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
         moment: Optional[Callable] = None,
@@ -622,7 +621,7 @@ class _CustomSymbolicDist(Distribution):
         **kwargs,
     ):
         warnings.warn(
-            "CustomDist with symbolic random graph is still experimental. Expect bugs!",
+            "CustomDist with dist function is still experimental. Expect bugs!",
             UserWarning,
         )
 
@@ -644,7 +643,7 @@ class _CustomSymbolicDist(Distribution):
             class_name=class_name,
             logp=logp,
             logcdf=logcdf,
-            random=random,
+            dist=dist,
             moment=moment,
             ndim_supp=ndim_supp,
             **kwargs,
@@ -655,7 +654,7 @@ class _CustomSymbolicDist(Distribution):
         cls,
         *dist_params,
         class_name: str,
-        random: Callable,
+        dist: Callable,
         logp: Optional[Callable],
         logcdf: Optional[Callable],
         moment: Optional[Callable],
@@ -666,16 +665,16 @@ class _CustomSymbolicDist(Distribution):
         dummy_size_param = size.type()
         dummy_dist_params = [dist_param.type() for dist_param in dist_params]
         with BlockModelAccess(
-            error_msg_on_access="Model variables cannot be created in the random function. Use the `.dist` API"
+            error_msg_on_access="Model variables cannot be created in the dist function. Use the `.dist` API"
         ):
-            dummy_rv = random(*dummy_dist_params, dummy_size_param)
+            dummy_rv = dist(*dummy_dist_params, dummy_size_param)
         dummy_params = [dummy_size_param] + dummy_dist_params
         dummy_updates_dict = collect_default_updates(dummy_params, (dummy_rv,))
 
         rv_type = type(
             f"CustomSymbolicDistRV_{class_name}",
             (CustomSymbolicDistRV,),
-            # If logp is not provided, we infer it from the random graph
+            # If logp is not provided, we try to infer it from the dist graph
             dict(
                 inline_logprob=logp is None,
             ),
@@ -697,11 +696,11 @@ class _CustomSymbolicDist(Distribution):
             return moment(rv, size, *params[: len(params)])
 
         @_change_dist_size.register(rv_type)
-        def change_custom_symbolic_dist_size(op, dist, new_size, expand):
-            node = dist.owner
+        def change_custom_symbolic_dist_size(op, rv, new_size, expand):
+            node = rv.owner
 
             if expand:
-                shape = tuple(dist.shape)
+                shape = tuple(rv.shape)
                 old_size = shape[: len(shape) - node.op.ndim_supp]
                 new_size = tuple(new_size) + tuple(old_size)
             new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
@@ -711,7 +710,7 @@ class _CustomSymbolicDist(Distribution):
             # OpFromGraph has to be recreated if the size type changes!
             dummy_size_param = new_size.type()
             dummy_dist_params = [dist_param.type() for dist_param in old_dist_params]
-            dummy_rv = random(*dummy_dist_params, dummy_size_param)
+            dummy_rv = dist(*dummy_dist_params, dummy_size_param)
             dummy_params = [dummy_size_param] + dummy_dist_params
             dummy_updates_dict = collect_default_updates(dummy_params, (dummy_rv,))
             new_rv_op = rv_type(
@@ -737,17 +736,18 @@ class CustomDist:
     This class can be used to wrap black-box random and logp methods for use in
     forward and mcmc sampling.
 
-    A user can provide a `random` function that returns numerical draws (e.g., via
-    NumPy routines) or an Aesara graph that represents the random graph when evaluated.
+    A user can provide a `dist` function that returns a PyTensor graph built from
+    simpler PyMC distributions, which represents the distribution. This graph is
+    used to take random draws, and to infer the logp expression automatically
+    when not provided by the user.
 
-    A user can provide a `logp` function that must return an Aesara graph that
-    represents the logp graph when evaluated. This is used for mcmc sampling. In some
-    cases, if a user provides a `random` function that returns an Aesara graph, PyMC
-    will be able to automatically derive the appropriate `logp` graph when performing
-    MCMC sampling.
+    Alternatively, a user can provide a `random` function that returns numerical
+    draws (e.g., via NumPy routines), and a `logp` function that must return an
+    Python graph that represents the logp graph when evaluated. This is used for
+    mcmc sampling.
 
     Additionally, a user can provide a `logcdf` and `moment` functions that must return
-    an Aesara graph that computes those quantities. These may be used by other PyMC
+    an PyTensor graph that computes those quantities. These may be used by other PyMC
     routines.
 
     Parameters
@@ -765,11 +765,20 @@ class CustomDist:
             different methods across separate models, be sure to use distinct
             class_names.
 
-    random : Optional[Callable]
-        A callable that can be used to 1) generate random draws from the distribution or
-        2) returns an Aesara graph that represents the random draws.
+    dist: Optional[Callable]
+        A callable that returns a PyTensor graph built from simpler PyMC distributions
+        which represents the distribution. This can be used by PyMC to take random draws
+        as well as to infer the logp of the distribution in some cases. In that case
+        it's not necessary to implement ``random`` or ``logp`` functions.
 
-        If 1) it must have the following signature: ``random(*dist_params, rng=None, size=None)``.
+        It must have the following signature: ``dist(*dist_params, size)``.
+        The symbolic tensor distribution parameters are passed as positional arguments in
+        the same order as they are supplied when the ``CustomDist`` is constructed.
+
+    random : Optional[Callable]
+        A callable that can be used to generate random draws from the distribution
+
+        It must have the following signature: ``random(*dist_params, rng=None, size=None)``.
         The numerical distribution parameters are passed as positional arguments in the
         same order as they are supplied when the ``CustomDist`` is constructed.
         The keyword arguments are ``rng``, which will provide the random variable's
@@ -778,9 +787,6 @@ class CustomDist:
         error will be raised when trying to draw random samples from the distribution's
         prior or posterior predictive.
 
-        If 2) it must have the following signature: ``random(*dist_params, size)``.
-        The symbolic tensor distribution parameters are passed as postional arguments in
-        the same order as they are supplied when the ``CustomDist`` is constructed.
     logp : Optional[Callable]
         A callable that calculates the log probability of some given ``value``
         conditioned on certain distribution parameter values. It must have the
@@ -789,8 +795,8 @@ class CustomDist:
         are the tensors that hold the values of the distribution parameters.
         This function must return an PyTensor tensor.
 
-        When the `random` function is specified and returns an `Aesara` graph, PyMC
-        will try to automatically infer the `logp` when this is not provided.
+        When the `dist` function is specified, PyMC will try to automatically
+        infer the `logp` when this is not provided.
 
         Otherwise, a ``NotImplementedError`` will be raised when trying to compute the
         distribution's logp.
@@ -818,11 +824,11 @@ class CustomDist:
         The list of number of dimensions in the support of each of the distribution's
         parameters. If ``None``, it is assumed that all parameters are scalars, hence
         the number of dimensions of their support will be 0. This is not needed if an
-        Aesara random function is provided
+        PyTensor dist function is provided.
     dtype : str
         The dtype of the distribution. All draws and observations passed into the
-        distribution will be cast onto this dtype. This is not needed if an Aesara
-        random function is provided, which should already return the right dtype!
+        distribution will be cast onto this dtype. This is not needed if an PyTensor
+        dist function is provided, which should already return the right dtype!
     kwargs :
         Extra keyword arguments are passed to the parent's class ``__new__`` method.
 
@@ -884,16 +890,16 @@ class CustomDist:
             )
             prior = pm.sample_prior_predictive(10)
 
-    Provide a random function that creates an Aesara random graph. PyMC can
-    automatically infer that the logp of this variable corresponds to a shifted
-    Exponential distribution.
+    Provide a dist function that creates a PyTensor graph built from other
+    PyMC distributions. PyMC can automatically infer that the logp of this
+    variable corresponds to a shifted Exponential distribution.
 
     .. code-block:: python
 
         import pymc as pm
         from pytensor.tensor import TensorVariable
 
-        def random(
+        def dist(
             lam: TensorVariable,
             shift: TensorVariable,
             size: TensorVariable,
@@ -907,16 +913,16 @@ class CustomDist:
                 "custom_dist",
                 lam,
                 shift,
-                random=random,
+                dist=dist,
                 observed=[-1, -1, 0],
             )
 
             prior = pm.sample_prior_predictive()
             posterior = pm.sample()
 
-    Provide a random function that creates an Aesara random graph. PyMC can
-    automatically infer that the logp of this variable corresponds to a
-    modified-PERT distribution.
+    Provide a dist function that creates a PyTensor graph built from other
+    PyMC distributions. PyMC can automatically infer that the logp of
+    this variable corresponds to a modified-PERT distribution.
 
     .. code-block:: python
 
@@ -940,7 +946,7 @@ class CustomDist:
             peak = pm.Normal("peak", 50, 10)
             high = pm.Normal("high", 100, 10)
             lmbda = 4
-            pm.CustomDist("pert", low, peak, high, lmbda, random=pert, observed=[30, 35, 73])
+            pm.CustomDist("pert", low, peak, high, lmbda, dist=pert, observed=[30, 35, 73])
 
         m.point_logps()
 
@@ -950,6 +956,7 @@ class CustomDist:
         cls,
         name,
         *dist_params,
+        dist: Optional[Callable] = None,
         random: Optional[Callable] = None,
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
@@ -968,39 +975,39 @@ class CustomDist:
                 "parameters are positional arguments."
             )
         dist_params = cls.parse_dist_params(dist_params)
-        if cls.is_symbolic_random(random, dist_params):
+        cls.check_valid_dist_random(dist, random, dist_params)
+        if dist is not None:
             return _CustomSymbolicDist(
                 name,
                 *dist_params,
                 class_name=name,
-                random=random,
+                dist=dist,
                 logp=logp,
                 logcdf=logcdf,
                 moment=moment,
                 ndim_supp=ndim_supp,
                 **kwargs,
             )
-        else:
-            return _CustomDist(
-                name,
-                *dist_params,
-                class_name=name,
-                random=random,
-                logp=logp,
-                logcdf=logcdf,
-                moment=moment,
-                ndim_supp=ndim_supp,
-                ndims_params=ndims_params,
-                dtype=dtype,
-                **kwargs,
-            )
-        return super().__new__(cls, name, *args, **kwargs)
+        return _CustomDist(
+            name,
+            *dist_params,
+            class_name=name,
+            random=random,
+            logp=logp,
+            logcdf=logcdf,
+            moment=moment,
+            ndim_supp=ndim_supp,
+            ndims_params=ndims_params,
+            dtype=dtype,
+            **kwargs,
+        )
 
     @classmethod
     def dist(
         cls,
         *dist_params,
         class_name: str,
+        dist: Optional[Callable] = None,
         random: Optional[Callable] = None,
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
@@ -1011,11 +1018,12 @@ class CustomDist:
         **kwargs,
     ):
         dist_params = cls.parse_dist_params(dist_params)
-        if cls.is_symbolic_random(random, dist_params):
+        cls.check_valid_dist_random(dist, random, dist_params)
+        if dist is not None:
             return _CustomSymbolicDist.dist(
                 *dist_params,
                 class_name=class_name,
-                random=random,
+                dist=dist,
                 logp=logp,
                 logcdf=logcdf,
                 moment=moment,
@@ -1049,6 +1057,16 @@ class CustomDist:
         return [as_tensor_variable(param) for param in dist_params]
 
     @classmethod
+    def check_valid_dist_random(cls, dist, random, dist_params):
+        if dist is not None and random is not None:
+            raise ValueError("Cannot provide both dist and random functions")
+        if random is not None and cls.is_symbolic_random(random, dist_params):
+            raise TypeError(
+                "API change: function passed to `random` argument should no longer return a PyTensor graph. "
+                "Pass such function to the `dist` argument instead."
+            )
+
+    @classmethod
     def is_symbolic_random(self, random, dist_params):
         if random is None:
             return False
@@ -1056,7 +1074,7 @@ class CustomDist:
         try:
             size = normalize_size_param(None)
             with BlockModelAccess(
-                error_msg_on_access="Model variables cannot be created in the random function. Use the `.dist` API"
+                error_msg_on_access="Model variables cannot be created in the random function. Use the `.dist` API to create such variables."
             ):
                 out = random(*dist_params, size)
         except BlockModelAccessError:

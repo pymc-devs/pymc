@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -44,9 +44,9 @@ from pymc.distributions.dist_math import (
     normal_lcdf,
 )
 from pymc.distributions.distribution import Discrete
-from pymc.distributions.logprob import logp
 from pymc.distributions.mixture import Mixture
 from pymc.distributions.shape_utils import rv_size_is_none
+from pymc.logprob.joint_logprob import logp
 from pymc.math import sigmoid
 from pymc.pytensorf import floatX, intX
 from pymc.vartypes import continuous_types
@@ -220,7 +220,7 @@ class BetaBinomial(Discrete):
     ========  =================================================================
     Support   :math:`x \in \{0, 1, \ldots, n\}`
     Mean      :math:`n \dfrac{\alpha}{\alpha + \beta}`
-    Variance  :math:`n \dfrac{\alpha \beta}{(\alpha+\beta)^2 (\alpha+\beta+1)}`
+    Variance  :math:`\dfrac{n \alpha \beta (\alpha+\beta+n)}{(\alpha+\beta)^2 (\alpha+\beta+1)}`
     ========  =================================================================
 
     Parameters
@@ -847,9 +847,7 @@ class HyperGeometric(Discrete):
         k = 10
         for n in [20, 25]:
             pmf = st.hypergeom.pmf(x, N, k, n)
-            plt.plot(x, pmf, '-o', label='n = {}'.format(n))
-        plt.plot(x, pmf, '-o', label='N = {}'.format(N))
-        plt.plot(x, pmf, '-o', label='k = {}'.format(k))
+            plt.plot(x, pmf, '-o', label='N = {}, k = {}, n = {}'.format(N, k, n))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)

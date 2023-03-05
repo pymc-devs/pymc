@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -51,9 +51,12 @@ import collections
 import itertools
 import warnings
 
+from typing import Any
+
 import numpy as np
 import pytensor
 import pytensor.tensor as at
+import xarray
 
 from pytensor.graph.basic import Variable
 
@@ -62,7 +65,6 @@ import pymc as pm
 from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
-from pymc.distributions.logprob import _get_scaling
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
 from pymc.pytensorf import (
@@ -79,6 +81,7 @@ from pymc.util import (
     _get_seeds_per_chain,
     locally_cachedmethod,
 )
+from pymc.variational.minibatch_rv import MinibatchRandomVariable, get_scaling
 from pymc.variational.updates import adagrad_window
 from pymc.vartypes import discrete_types
 
@@ -672,11 +675,11 @@ class Group(WithMemoization):
     initial_dist_map = 0.0
 
     # for handy access using class methods
-    __param_spec__ = dict()
+    __param_spec__: dict = dict()
     short_name = ""
-    alias_names = frozenset()
-    __param_registry = dict()
-    __name_registry = dict()
+    alias_names: frozenset[str] = frozenset()
+    __param_registry: dict[frozenset, Any] = dict()
+    __name_registry: dict[str, Any] = dict()
 
     @classmethod
     def register(cls, sbcls):
@@ -977,7 +980,7 @@ class Group(WithMemoization):
 
     @pytensor.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(
-        self, node: Variable, s, d: bool, more_replacements: dict | None = None
+        self, node: Variable, s, d: bool, more_replacements: dict = None
     ) -> list[Variable]:
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
         :func:`symbolic_single_sample` new random generator can be allocated and applied to node
@@ -1066,9 +1069,11 @@ class Group(WithMemoization):
         t = self.to_flat_input(
             at.max(
                 [
-                    _get_scaling(self.model.rvs_to_total_sizes.get(v, None), v.shape, v.ndim)
+                    get_scaling(v.owner.inputs[1:], v.shape)
                     for v in self.group
+                    if isinstance(v.owner.op, MinibatchRandomVariable)
                 ]
+                + [1.0]  # To avoid empty max
             )
         )
         t = self.symbolic_single_sample(t)
@@ -1105,16 +1110,47 @@ class Group(WithMemoization):
         return f"{self.__class__.__name__}[{shp}]"
 
     @node_property
-    def std(self):
-        raise NotImplementedError
+    def std(self) -> at.TensorVariable:
+        """Standard deviation of the latent variables as an unstructured 1-dimensional tensor variable"""
+        raise NotImplementedError()
 
     @node_property
-    def cov(self):
-        raise NotImplementedError
+    def cov(self) -> at.TensorVariable:
+        """Covariance between the latent variables as an unstructured 2-dimensional tensor variable"""
+        raise NotImplementedError()
 
     @node_property
-    def mean(self):
-        raise NotImplementedError
+    def mean(self) -> at.TensorVariable:
+        """Mean of the latent variables as an unstructured 1-dimensional tensor variable"""
+        raise NotImplementedError()
+
+    def var_to_data(self, shared: at.TensorVariable) -> xarray.Dataset:
+        """Takes a flat 1-dimensional tensor variable and maps it to an xarray data set based on the information in
+        `self.ordering`.
+        """
+        # This is somewhat similar to `DictToArrayBijection.rmap`, which doesn't work here since we don't have
+        # `RaveledVars` and need to take the information from `self.ordering` instead
+        shared_nda = shared.eval()
+        result = dict()
+        for name, s, shape, dtype in self.ordering.values():
+            dims = self.model.named_vars_to_dims.get(name, None)
+            if dims is not None:
+                coords = {d: np.array(self.model.coords[d]) for d in dims}
+            else:
+                coords = None
+            values = shared_nda[s].reshape(shape).astype(dtype)
+            result[name] = xarray.DataArray(values, coords=coords, dims=dims, name=name)
+        return xarray.Dataset(result)
+
+    @property
+    def mean_data(self) -> xarray.Dataset:
+        """Mean of the latent variables as an xarray Dataset"""
+        return self.var_to_data(self.mean)
+
+    @property
+    def std_data(self) -> xarray.Dataset:
+        """Standard deviation of the latent variables as an xarray Dataset"""
+        return self.var_to_data(self.std)
 
 
 group_for_params = Group.group_for_params
@@ -1203,12 +1239,9 @@ class Approximation(WithMemoization):
         t = at.max(
             self.collect("symbolic_normalizing_constant")
             + [
-                _get_scaling(
-                    self.model.rvs_to_total_sizes.get(obs, None),
-                    obs.shape,
-                    obs.ndim,
-                )
+                get_scaling(obs.owner.inputs[1:], obs.shape)
                 for obs in self.model.observed_RVs
+                if isinstance(obs.owner.op, MinibatchRandomVariable)
             ]
         )
         t = at.switch(self._scale_cost_to_minibatch, t, at.constant(1, dtype=t.dtype))
@@ -1520,11 +1553,11 @@ class Approximation(WithMemoization):
         finally:
             trace.close()
 
-        trace = MultiTrace([trace])
+        multi_trace = MultiTrace([trace])
         if not return_inferencedata:
-            return trace
+            return multi_trace
         else:
-            return pm.to_inference_data(trace, model=self.model, **kwargs)
+            return pm.to_inference_data(multi_trace, model=self.model, **kwargs)
 
     @property
     def ndim(self):

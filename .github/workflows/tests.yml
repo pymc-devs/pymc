@@ -38,66 +38,66 @@ jobs:
         python-version: ["3.10"]
         test-subset:
           - |
-            pymc/tests/test_util.py
-            pymc/tests/distributions/test_logprob.py
-            pymc/tests/test_pytensorf.py
-            pymc/tests/test_math.py
-            pymc/tests/backends/test_base.py
-            pymc/tests/backends/test_ndarray.py
-            pymc/tests/step_methods/hmc/test_hmc.py
-            pymc/tests/test_func_utils.py
-            pymc/tests/distributions/test_shape_utils.py
-            pymc/tests/distributions/test_mixture.py
+            tests/test_util.py
+            tests/test_pytensorf.py
+            tests/test_math.py
+            tests/backends/test_base.py
+            tests/backends/test_ndarray.py
+            tests/step_methods/hmc/test_hmc.py
+            tests/test_func_utils.py
+            tests/distributions/test_shape_utils.py
+            tests/distributions/test_mixture.py
 
           - |
-            pymc/tests/distributions/test_continuous.py
-            pymc/tests/distributions/test_multivariate.py
+            tests/distributions/test_continuous.py
+            tests/distributions/test_multivariate.py
 
           - |
-            pymc/tests/distributions/test_bound.py
-            pymc/tests/distributions/test_censored.py
-            pymc/tests/distributions/test_simulator.py
-            pymc/tests/sampling/test_forward.py
-            pymc/tests/sampling/test_population.py
-            pymc/tests/stats/test_convergence.py
-            pymc/tests/stats/test_log_likelihood.py
-            pymc/tests/distributions/test_distribution.py
-            pymc/tests/distributions/test_discrete.py
+            tests/distributions/test_bound.py
+            tests/distributions/test_censored.py
+            tests/distributions/test_simulator.py
+            tests/sampling/test_forward.py
+            tests/sampling/test_population.py
+            tests/stats/test_convergence.py
+            tests/stats/test_log_likelihood.py
+            tests/distributions/test_distribution.py
+            tests/distributions/test_discrete.py
 
           - |
-            pymc/tests/tuning/test_scaling.py
-            pymc/tests/tuning/test_starting.py
-            pymc/tests/distributions/test_dist_math.py
-            pymc/tests/distributions/test_transform.py
-            pymc/tests/sampling/test_mcmc.py
-            pymc/tests/sampling/test_parallel.py
-            pymc/tests/test_printing.py
+            tests/tuning/test_scaling.py
+            tests/tuning/test_starting.py
+            tests/distributions/test_dist_math.py
+            tests/distributions/test_transform.py
+            tests/sampling/test_mcmc.py
+            tests/sampling/test_parallel.py
+            tests/test_printing.py
 
           - |
-            pymc/tests/distributions/test_timeseries.py
-            pymc/tests/gp/test_cov.py
-            pymc/tests/gp/test_gp.py
-            pymc/tests/gp/test_mean.py
-            pymc/tests/gp/test_util.py
-            pymc/tests/test_model.py
-            pymc/tests/test_model_graph.py
-            pymc/tests/ode/test_ode.py
-            pymc/tests/ode/test_utils.py
-            pymc/tests/step_methods/hmc/test_quadpotential.py
+            tests/distributions/test_timeseries.py
+            tests/gp/test_cov.py
+            tests/gp/test_gp.py
+            tests/gp/test_mean.py
+            tests/gp/test_util.py
+            tests/test_model.py
+            tests/test_model_graph.py
+            tests/ode/test_ode.py
+            tests/ode/test_utils.py
+            tests/step_methods/hmc/test_quadpotential.py
 
           - |
-            pymc/tests/distributions/test_truncated.py
-            pymc/tests/logprob/test_abstract.py
-            pymc/tests/logprob/test_censoring.py
-            pymc/tests/logprob/test_composite_logprob.py
-            pymc/tests/logprob/test_cumsum.py
-            pymc/tests/logprob/test_joint_logprob.py
-            pymc/tests/logprob/test_mixture.py
-            pymc/tests/logprob/test_rewriting.py
-            pymc/tests/logprob/test_scan.py
-            pymc/tests/logprob/test_tensor.py
-            pymc/tests/logprob/test_transforms.py
-            pymc/tests/logprob/test_utils.py
+            tests/backends/test_mcbackend.py
+            tests/distributions/test_truncated.py
+            tests/logprob/test_abstract.py
+            tests/logprob/test_censoring.py
+            tests/logprob/test_composite_logprob.py
+            tests/logprob/test_cumsum.py
+            tests/logprob/test_joint_logprob.py
+            tests/logprob/test_mixture.py
+            tests/logprob/test_rewriting.py
+            tests/logprob/test_scan.py
+            tests/logprob/test_tensor.py
+            tests/logprob/test_transforms.py
+            tests/logprob/test_utils.py
 
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -165,10 +165,10 @@ jobs:
         floatx: [float64]
         python-version: ["3.8"]
         test-subset:
-          - pymc/tests/variational/test_approximations.py pymc/tests/variational/test_callbacks.py pymc/tests/variational/test_inference.py pymc/tests/variational/test_opvi.py pymc/tests/test_initial_point.py
-          - pymc/tests/test_model.py pymc/tests/sampling/test_mcmc.py
-          - pymc/tests/gp/test_cov.py pymc/tests/gp/test_gp.py pymc/tests/gp/test_mean.py pymc/tests/gp/test_util.py pymc/tests/ode/test_ode.py pymc/tests/ode/test_utils.py pymc/tests/smc/test_smc.py pymc/tests/sampling/test_parallel.py
-          - pymc/tests/step_methods/test_metropolis.py pymc/tests/step_methods/test_slicer.py pymc/tests/step_methods/hmc/test_nuts.py pymc/tests/step_methods/test_compound.py pymc/tests/step_methods/hmc/test_hmc.py
+          - tests/variational/test_approximations.py tests/variational/test_callbacks.py tests/variational/test_inference.py tests/variational/test_opvi.py tests/test_initial_point.py
+          - tests/test_model.py tests/sampling/test_mcmc.py
+          - tests/gp/test_cov.py tests/gp/test_gp.py tests/gp/test_mean.py tests/gp/test_util.py tests/ode/test_ode.py tests/ode/test_utils.py tests/smc/test_smc.py tests/sampling/test_parallel.py
+          - tests/step_methods/test_metropolis.py tests/step_methods/test_slicer.py tests/step_methods/hmc/test_nuts.py tests/step_methods/test_compound.py tests/step_methods/hmc/test_hmc.py
 
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -239,16 +239,17 @@ jobs:
         python-version: ["3.9"]
         test-subset:
           - |
-            pymc/tests/sampling/test_parallel.py
-            pymc/tests/test_data.py
-            pymc/tests/test_model.py
+            tests/sampling/test_parallel.py
+            tests/test_data.py
+            tests/variational/test_minibatch_rv.py
+            tests/test_model.py
 
           - |
-            pymc/tests/sampling/test_mcmc.py
+            tests/sampling/test_mcmc.py
 
           - |
-            pymc/tests/backends/test_arviz.py
-            pymc/tests/variational/test_updates.py
+            tests/backends/test_arviz.py
+            tests/variational/test_updates.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
@@ -306,14 +307,14 @@ jobs:
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
-  jax:
+  external_samplers:
     strategy:
       matrix:
         os: [ubuntu-20.04]
         floatx: [float64]
         python-version: ["3.9"]
         test-subset:
-          - pymc/tests/sampling/test_jax.py
+          - tests/sampling/test_jax.py tests/sampling/test_mcmc_external.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
@@ -361,7 +362,7 @@ jobs:
           conda activate pymc-test
           pip install -e .
           python --version
-      - name: Install jax specific dependencies
+      - name: Install external samplers
         run: |
           conda activate pymc-test
           pip install "numpyro>=0.8.0"
@@ -383,7 +384,7 @@ jobs:
         floatx: [float32]
         python-version: ["3.10"]
         test-subset:
-        - pymc/tests/sampling/test_mcmc.py pymc/tests/ode/test_ode.py pymc/tests/ode/test_utils.py
+        - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
