@@ -27,7 +27,6 @@ from pymc.gp.gp import Base
 from pymc.gp.mean import Mean, Zero
 
 TensorVariable = Union[np.ndarray, pt.TensorVariable]
-TensorConstant = Union[np.ndarray, pt.TensorConstant]
 
 
 def set_boundary(Xs: TensorVariable, c: Union[float, TensorVariable]) -> TensorVariable:
@@ -39,17 +38,18 @@ def set_boundary(Xs: TensorVariable, c: Union[float, TensorVariable]) -> TensorV
     return L
 
 
-def calc_eigenvalues(L: TensorConstant, m: Sequence[int], tl: ModuleType = np):
+def calc_eigenvalues(L: TensorVariable, m: Sequence[int], tl: ModuleType = np):
     """Calculate eigenvalues of the Laplacian."""
     S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(len(m))])
     S_arr = np.vstack([s.flatten() for s in S]).T
+    print(S_arr.shape, L.shape)
     return tl.square((np.pi * S_arr) / (2 * L))
 
 
 def calc_eigenvectors(
     Xs: TensorVariable,
-    L: TensorConstant,
-    eigvals: TensorConstant,
+    L: TensorVariable,
+    eigvals: TensorVariable,
     m: Sequence[int],
     tl: ModuleType = np,
 ):
@@ -200,7 +200,7 @@ class HSGP(Base):
 
     @L.setter
     def L(self, value):
-        self._L = value
+        self._L = pt.as_tensor_variable(value)
 
     def prior_linearized(self, Xs: TensorVariable):
         """Returns the linearized version of the HSGP, the Laplace eigenfunctions and the square

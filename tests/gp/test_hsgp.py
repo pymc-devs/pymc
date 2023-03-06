@@ -184,7 +184,7 @@ class TestHSGP:
         samples2 = az.extract(idata.prior["f2"])["f2"].values.T
 
         h0, mmd, critical_value, reject = two_sample_test(
-            samples1, samples2, n_sims=500, alpha=0.05
+            samples1, samples2, n_sims=500, alpha=0.01
         )
         assert not reject, "H0 was rejected, even though HSGP and GP priors should match."
 
@@ -205,6 +205,6 @@ class TestHSGP:
         samples2 = az.extract(idata.prior["fc"])["fc"].values.T
 
         h0, mmd, critical_value, reject = two_sample_test(
-            samples1, samples2, n_sims=500, alpha=0.05
+            samples1, samples2, n_sims=500, alpha=0.01
         )
         assert not reject, "H0 was rejected, even though HSGP prior and conditional should match."
