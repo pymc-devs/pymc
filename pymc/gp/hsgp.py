@@ -52,6 +52,7 @@ def set_boundaries(
         raise ValueError("tl must be either numpy or pytensor.tensor.")
 
     S = tl.max(tl.abs(Xs), axis=0)
+    assert isinstance(S, (np.ndarray, TensorVariable))
 
     if L is None and c is not None:
         L = c * S
