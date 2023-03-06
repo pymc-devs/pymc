@@ -151,6 +151,8 @@ Sponsors
 
 |PyMCLabs|
 
+|Mistplay|
+
 .. |Binder| image:: https://mybinder.org/badge_logo.svg
    :target: https://mybinder.org/v2/gh/pymc-devs/pymc/main?filepath=%2Fdocs%2Fsource%2Fnotebooks
 .. |Build Status| image:: https://github.com/pymc-devs/pymc/workflows/pytest/badge.svg
@@ -165,5 +167,5 @@ Sponsors
    :target: http://www.numfocus.org/
 .. |PyMCLabs| image:: https://raw.githubusercontent.com/pymc-devs/pymc/main/docs/logos/sponsors/pymc-labs.png
    :target: https://pymc-labs.io
-.. |Mistplay| image:: https://raw.githubusercontent.com/pymc-devs/pymcon_web_series_website/static/images/sponsors_logos/mistplay_label_dark.png
+.. |Mistplay| image:: https://github.com/pymc-devs/pymcon_web_series_website/blob/main/static/images/sponsors_logos/mistplay_label_dark.png?raw=true
    :target: https://www.mistplay.com/
