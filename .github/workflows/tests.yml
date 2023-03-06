@@ -75,6 +75,7 @@ jobs:
           - |
             tests/distributions/test_timeseries.py
             tests/gp/test_cov.py
+            tests/gp/test_hsgp.py
             tests/gp/test_gp.py
             tests/gp/test_mean.py
             tests/gp/test_util.py
