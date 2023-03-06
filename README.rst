@@ -165,3 +165,5 @@ Sponsors
    :target: http://www.numfocus.org/
 .. |PyMCLabs| image:: https://raw.githubusercontent.com/pymc-devs/pymc/main/docs/logos/sponsors/pymc-labs.png
    :target: https://pymc-labs.io
+.. |Mistplay| image:: https://raw.githubusercontent.com/pymc-devs/pymcon_web_series_website/static/images/sponsors_logos/mistplay_label_dark.png
+   :target: https://www.mistplay.com/
