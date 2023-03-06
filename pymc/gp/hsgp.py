@@ -15,7 +15,7 @@
 import warnings
 
 from types import ModuleType
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Union
 
 import numpy as np
 import pytensor.tensor as pt
@@ -30,51 +30,20 @@ TensorVariable = Union[np.ndarray, pt.TensorVariable]
 TensorConstant = Union[np.ndarray, pt.TensorConstant]
 
 
-def set_boundaries(
-    Xs: TensorVariable,
-    L: Optional[Sequence] = None,
-    c: Optional[Union[float, Sequence]] = None,
-    tl: ModuleType = np,
-) -> Tuple[TensorVariable, TensorVariable, Union[TensorConstant, float]]:
-    """R Compute the boundary over which the approximation is accurate using the centered input data
-    locations, `Xs`.  It is requried that `Xs` has a mean at zero for each dimension, such that
-    `np.mean(Xs, axis=0) == [0, ..., 0]`.  If `L` is provided, c is calculated instead.  `tl` stands
-    for "tensor library", so the user can choose whether basic calculations are done with pytensor
-    or numpy.
-
-    Parameters
-    ----------
-    Xs: array-like
-        Function input values.  Assumes they have been mean subtracted or centered at zero.
+def set_boundary(Xs: TensorVariable, c: Union[float, TensorVariable]) -> TensorVariable:
+    """Set the boundary using the mean-subtracted `Xs` and `c`.  `c` is usually a scalar
+    multiplyer greater than 1.0, but it may be one value per dimension or column of `Xs`.
     """
-
-    if tl.__name__ not in ("numpy", "pytensor.tensor"):
-        raise ValueError("tl must be either numpy or pytensor.tensor.")
-
-    S = tl.max(tl.abs(Xs), axis=0)
-    assert isinstance(S, (np.ndarray, TensorVariable))
-
-    if L is None and c is not None:
-        L = c * S
-    elif c is None and L is not None:
-        c = L / S
-    elif c is None and L is None:
-        raise ValueError("At least one of `c` or `L` must be supplied.")
-    # if both are passed, L takes precedent.
-
-    if tl.__name__ == "numpy":
-        L = tl.asarray(L)
-    elif tl.__name__ == "pytensor.tensor":
-        L = tl.as_tensor_variable(L)
-
-    return S, L, c
+    S = pt.max(pt.abs(Xs), axis=0)
+    L = c * S
+    return L
 
 
 def calc_eigenvalues(L: TensorConstant, m: Sequence[int], tl: ModuleType = np):
-    """R Calculate eigenvalues of the Laplacian."""
+    """Calculate eigenvalues of the Laplacian."""
     S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(len(m))])
-    Sarr = np.vstack([s.flatten() for s in S]).T
-    return tl.square((np.pi * Sarr) / (2 * L))
+    S_arr = np.vstack([s.flatten() for s in S]).T
+    return tl.square((np.pi * S_arr) / (2 * L))
 
 
 def calc_eigenvectors(
@@ -84,7 +53,7 @@ def calc_eigenvectors(
     m: Sequence[int],
     tl: ModuleType = np,
 ):
-    """R Calculate eigenvectors of the Laplacian.  These are used as basis vectors in the HSGP
+    """Calculate eigenvectors of the Laplacian.  These are used as basis vectors in the HSGP
     approximation.
     """
     m_star = int(np.prod(m))
@@ -202,33 +171,36 @@ class HSGP(Base):
 
         if L is not None and (not isinstance(L, Sequence) or len(L) != cov_func.n_dims):
             raise ValueError(arg_err_msg)
-        elif L is not None:
-            L = tuple(L)
 
         if L is None and c is not None and c < 1.2:
-            warnings.warn(
-                "Most applications will require `c >= 1.2` for accuracy at the boundaries of the "
-                "domain."
-            )
+            warnings.warn("For an adequate approximation `c >= 1.2` is recommended.")
 
-        parameterization = parameterization.lower().replace("-", "")
+        parameterization = parameterization.lower().replace("-", "").replace("_", "")
         if parameterization not in ["centered", "noncentered"]:
             raise ValueError("`parameterization` must be either 'centered' or 'noncentered'.")
         else:
-            self.parameterization = parameterization
+            self._parameterization = parameterization
 
-        self.drop_first = drop_first
-        self.L = L
-        self.m = m
-        self.c = c
-        self.n_dims = cov_func.n_dims
-        self.m_star = int(np.prod(self.m))
-        self._boundary_set = False
+        self._drop_first = drop_first
+        self._m = m
+        self._m_star = int(np.prod(self._m))
+        self._L = L
+        self._c = c
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def __add__(self, other):
-        raise NotImplementedError("Additive HSGPs aren't supported ")
+        raise NotImplementedError("Additive HSGPs aren't supported.")
+
+    @property
+    def L(self):
+        if self._L is None:
+            raise RuntimeError("Boundaries `L` required but still unset.")
+        return self._L
+
+    @L.setter
+    def L(self, value):
+        self._L = value
 
     def prior_linearized(self, Xs: TensorVariable):
         """Returns the linearized version of the HSGP, the Laplace eigenfunctions and the square
@@ -268,9 +240,9 @@ class HSGP(Base):
                 # Order is important.  First calculate the mean, then make X a shared variable,
                 # then subtract the mean.  When X is mutated later, the correct mean will be
                 # subtracted.
-                X_mu = np.mean(X, axis=0)
+                X_mean = np.mean(X, axis=0)
                 X = pm.MutableData("X", X)
-                Xs = X - X_mu
+                Xs = X - X_mean
 
                 # Pass the zero-subtracted Xs in to the GP
                 phi, sqrt_psd = gp.prior_linearized(Xs=Xs)
@@ -301,15 +273,18 @@ class HSGP(Base):
         Xs, _ = self.cov_func._slice(Xs)
 
         # If not provided, use Xs and c to set L
-        S, self.L, self.c = set_boundaries(Xs, self.L, self.c, tl=pt)
-        self._boundary_set = True
+        if self._L is None:
+            assert isinstance(self._c, (float, np.ndarray, pt.TensorVariable))
+            self.L = set_boundary(Xs, self._c)
+        else:
+            self.L = self._L
 
-        eigvals = calc_eigenvalues(self.L, self.m, tl=pt)
-        phi = calc_eigenvectors(Xs, self.L, eigvals, self.m, tl=pt)
+        eigvals = calc_eigenvalues(self.L, self._m, tl=pt)
+        phi = calc_eigenvectors(Xs, self.L, eigvals, self._m, tl=pt)
         omega = pt.sqrt(eigvals)
         psd = self.cov_func.power_spectral_density(omega)
 
-        i = int(self.drop_first == True)
+        i = int(self._drop_first == True)
         return phi[:, i:], pt.sqrt(psd[i:])
 
     def prior(self, name: str, X: TensorVariable, *args, **kwargs):
@@ -325,38 +300,44 @@ class HSGP(Base):
         dims: None
             Dimension name for the GP random variable.
         """
-        self.X_mu = pt.mean(X, axis=0)
-        phi, sqrt_psd = self.prior_linearized(X - self.X_mu)
+        self._X_mean = pt.mean(X, axis=0)
+        phi, sqrt_psd = self.prior_linearized(X - self._X_mean)
 
-        if self.parameterization == "noncentered":
-            self.beta = pm.Normal(f"{name}_hsgp_coeffs_", size=self.m_star - int(self.drop_first))
-            self.sqrt_psd = sqrt_psd
-            f = self.mean_func(X) + phi @ (self.beta * self.sqrt_psd)
+        if self._parameterization == "noncentered":
+            self._beta = pm.Normal(
+                f"{name}_hsgp_coeffs_", size=self._m_star - int(self._drop_first)
+            )
+            self._sqrt_psd = sqrt_psd
+            f = self.mean_func(X) + phi @ (self._beta * self._sqrt_psd)
 
-        elif self.parameterization == "centered":
-            self.beta = pm.Normal(f"{name}_hsgp_coeffs_", sigma=sqrt_psd)
-            f = self.mean_func(X) + phi @ self.beta
+        elif self._parameterization == "centered":
+            self._beta = pm.Normal(f"{name}_hsgp_coeffs_", sigma=sqrt_psd)
+            f = self.mean_func(X) + phi @ self._beta
 
         self.f = pm.Deterministic(name, f, dims=kwargs.get("dims"))
         return self.f
 
     def _build_conditional(self, Xnew):
         try:
-            beta, X_mu = self.beta, self.X_mu
+            beta, X_mean = self._beta, self._X_mean
+
+            if self._parameterization == "noncentered":
+                sqrt_psd = self._sqrt_psd
+
         except AttributeError:
             raise ValueError(
                 "Prior is not set, can't create a conditional.  Call `.prior(name, X)` first."
             )
 
         Xnew, _ = self.cov_func._slice(Xnew)
-        eigvals = calc_eigenvalues(self.L, self.m, tl=pt)
-        phi = calc_eigenvectors(Xnew - X_mu, self.L, eigvals, self.m, tl=pt)
-        i = int(self.drop_first == True)
+        eigvals = calc_eigenvalues(self.L, self._m, tl=pt)
+        phi = calc_eigenvectors(Xnew - X_mean, self.L, eigvals, self._m, tl=pt)
+        i = int(self._drop_first == True)
 
-        if self.parameterization == "noncentered":
-            return self.mean_func(Xnew) + phi[:, i:] @ (beta * self.sqrt_psd)
+        if self._parameterization == "noncentered":
+            return self.mean_func(Xnew) + phi[:, i:] @ (beta * sqrt_psd)
 
-        elif self.parameterization == "centered":
+        elif self._parameterization == "centered":
             return self.mean_func(Xnew) + phi[:, i:] @ beta
 
     def conditional(self, name: str, Xnew: TensorVariable, *args, **kwargs):

@@ -116,26 +116,13 @@ class TestHSGP:
 
     def test_set_boundaries_1d(self, X1):
         X1s = X1 - np.mean(X1, axis=0)
-        S, L, c = pm.gp.hsgp.set_boundaries(X1s, c=2)
-        assert np.all(S == 5)
+        L = pm.gp.hsgp.set_boundary(X1s, c=2).eval()
         assert np.all(L == 10)
-        assert c == 2
 
     def test_set_boundaries_3d(self, X2):
         X2s = X2 - np.mean(X2, axis=0)
-        S, L, c = pm.gp.hsgp.set_boundaries(X2s, c=2)
-        assert np.all(S == 5)
+        L = pm.gp.hsgp.set_boundary(X2s, c=2).eval()
         assert np.all(L == 10)
-        assert c == 2
-
-    def test_set_boundaries_exceptions(self, X1):
-        X1s = X1 - np.mean(X1, axis=0)
-
-        with pytest.raises(ValueError, match="At least one of"):
-            pm.gp.hsgp.set_boundaries(X1s, tl=np)
-
-        with pytest.raises(ValueError, match="tl must be either numpy or pytensor.tensor"):
-            pm.gp.hsgp.set_boundaries(X1s, c=2, tl=sp)
 
     def test_parametrization(self):
         err_msg = "`m` and L, if provided, must be sequences with one element per active dimension"
