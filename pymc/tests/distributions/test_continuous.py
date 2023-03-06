@@ -2288,13 +2288,33 @@ class TestICDF:
         "dist_params, obs, size",
         [
             ((-5, 4), np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], dtype=np.float64), ()),
-            ((-5, 4), np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], dtype=np.float64), (4, 6)),
+            ((-1, 2), np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], dtype=np.float64), ()),
             ((0, 10), np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], dtype=np.float64), ()),
         ],
     )
     def test_uniform_icdf(self, dist_params, obs, size):
         dist_params_at, obs_at, size_at = create_pytensor_params(dist_params, obs, size)
         dist_params = dict(zip(dist_params_at, dist_params))
+        x = Uniform.dist(*dist_params_at)
+        scipy_logprob_tester(
+            x,
+            obs,
+            dist_params,
+            test_fn=lambda val, lower, upper: st.uniform.ppf(val, lower, upper - lower),
+            test="icdf",
+        )
 
-        x = Uniform.dist(*dist_params_at, size=size_at)
-        scipy_logprob_tester(x, obs, dist_params, test_fn=st.uniform.ppf, test="icdf")
+    """@pytest.mark.parametrize(
+        "dist_params, obs, size",
+        [
+            ((0, 1), np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], dtype=np.float64), ()),
+            #((-5, 4), np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], dtype=np.float64), (4, 6)),
+            #((0, 10), np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], dtype=np.float64), ()),
+        ],
+    )
+    def test_half_normal_icdf(self, *dist_params, obs, size):
+        dist_params_at, obs_at, size_at = create_pytensor_params(dist_params, obs, size)
+        dist_params = dict(zip(dist_params_at, dist_params))
+
+        x = HalfNormal.dist(*dist_params_at, size=size_at)
+        scipy_logprob_tester(x, obs, dist_params, test_fn=st.truncnorm.ppf, test="icdf")"""

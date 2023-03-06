@@ -344,7 +344,7 @@ class Uniform(BoundedContinuous):
         )
 
     def icdf(value, lower, upper):
-        return (upper * value) + lower
+        return lower + (upper - lower) * value
 
 
 @_default_transform.register(Uniform)
@@ -653,9 +653,9 @@ class TruncatedNormal(BoundedContinuous):
         cls,
         mu: Optional[DIST_PARAMETER_TYPES] = None,
         sigma: Optional[DIST_PARAMETER_TYPES] = None,
+        tau: Optional[DIST_PARAMETER_TYPES] = None,
         lower: Optional[DIST_PARAMETER_TYPES] = None,
         upper: Optional[DIST_PARAMETER_TYPES] = None,
-        tau: Optional[DIST_PARAMETER_TYPES] = None,
         *args,
         **kwargs,
     ) -> RandomVariable:
@@ -859,8 +859,8 @@ class HalfNormal(PositiveContinuous):
             msg="sigma > 0",
         )
 
-    def icdf(value, sigma):
-        return at.sqrt(2 * sigma**2) * at.erfinv(2 * value - 1)
+    def icdf(value, loc, sigma):
+        return loc + sigma * np.sqrt(2) * np.erfinv(2 * value - 1)
 
 
 class WaldRV(RandomVariable):
