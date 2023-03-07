@@ -37,7 +37,7 @@
 import re
 
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.stats.distributions as sp
 
@@ -114,7 +114,7 @@ def test_unmeasurable_meta_hash_reassignment():
 
 
 def test_assign_custom_measurable_outputs():
-    srng = at.random.RandomStream(seed=2320)
+    srng = pt.random.RandomStream(seed=2320)
 
     X_rv = srng.normal(-10.0, 0.1, name="X")
     Y_rv = srng.normal(10.0, 0.1, name="Y")
@@ -155,7 +155,7 @@ def test_measurable_elemwise():
 
 
 def test_logcdf_helper():
-    value = at.vector("value")
+    value = pt.vector("value")
     x = pm.Normal.dist(0, 1)
 
     x_logcdf = logcdf(x, value)

@@ -17,7 +17,7 @@ import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.stats as st
 
@@ -257,7 +257,7 @@ class TestCustomDist:
         with Model() as model:
 
             def logp(value, mu):
-                return pm.MvNormal.logp(value, mu, at.eye(mu.shape[0]))
+                return pm.MvNormal.logp(value, mu, pt.eye(mu.shape[0]))
 
             mu = Normal("mu", size=supp_shape)
             a = CustomDist("a", mu, logp=logp, ndims_params=[1], ndim_supp=1, size=size)
@@ -281,7 +281,7 @@ class TestCustomDist:
     )
     def test_custom_dist_default_moment_univariate(self, moment, size, expected):
         if moment == "custom_moment":
-            moment = lambda rv, size, *rv_inputs: 5 * at.ones(size, dtype=rv.dtype)
+            moment = lambda rv, size, *rv_inputs: 5 * pt.ones(size, dtype=rv.dtype)
         with pm.Model() as model:
             x = CustomDist("x", moment=moment, size=size)
         assert isinstance(x.owner.op, CustomDistRV)
@@ -290,7 +290,7 @@ class TestCustomDist:
     @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
     def test_custom_dist_custom_moment_univariate(self, size):
         def density_moment(rv, size, mu):
-            return (at.ones(size) * mu).astype(rv.dtype)
+            return (pt.ones(size) * mu).astype(rv.dtype)
 
         mu_val = np.array(np.random.normal(loc=2, scale=1)).astype(pytensor.config.floatX)
         with Model():
@@ -304,7 +304,7 @@ class TestCustomDist:
     @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
     def test_custom_dist_custom_moment_multivariate(self, size):
         def density_moment(rv, size, mu):
-            return (at.ones(size)[..., None] * mu).astype(rv.dtype)
+            return (pt.ones(size)[..., None] * mu).astype(rv.dtype)
 
         mu_val = np.random.normal(loc=2, scale=1, size=5).astype(pytensor.config.floatX)
         with Model():
@@ -370,7 +370,7 @@ class TestCustomDist:
 class TestCustomSymbolicDist:
     def test_basic(self):
         def custom_dist(mu, sigma, size):
-            return at.exp(pm.Normal.dist(mu, sigma, size=size))
+            return pt.exp(pm.Normal.dist(mu, sigma, size=size))
 
         with Model() as m:
             mu = Normal("mu")
@@ -430,16 +430,16 @@ class TestCustomSymbolicDist:
         def custom_dist(mu, size):
             if rv_size_is_none(size):
                 return mu
-            return at.full(size, mu)
+            return pt.full(size, mu)
 
         def custom_moment(rv, size, mu):
-            return at.full_like(rv, mu + 1)
+            return pt.full_like(rv, mu + 1)
 
         def custom_logp(value, mu):
-            return at.full_like(value, mu + 2)
+            return pt.full_like(value, mu + 2)
 
         def custom_logcdf(value, mu):
-            return at.full_like(value, mu + 3)
+            return pt.full_like(value, mu + 3)
 
         with pytest.warns(UserWarning, match="experimental"):
             customdist = CustomDist.dist(
@@ -460,7 +460,7 @@ class TestCustomSymbolicDist:
 
     def test_change_size(self):
         def custom_dist(mu, sigma, size):
-            return at.exp(pm.Normal.dist(mu, sigma, size=size))
+            return pt.exp(pm.Normal.dist(mu, sigma, size=size))
 
         with pytest.warns(UserWarning, match="experimental"):
             lognormal = CustomDist.dist(

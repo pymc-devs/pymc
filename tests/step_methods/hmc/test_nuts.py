@@ -17,7 +17,7 @@ import sys
 import warnings
 
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 import pymc as pm
@@ -125,8 +125,8 @@ class TestNutsCheckTrace:
     def test_emits_energy_warnings(self, caplog):
         with pm.Model():
             a = pm.Normal("a", size=2, initval=floatX(np.zeros(2)))
-            a = at.switch(a > 0, np.inf, a)
-            b = at.slinalg.solve(floatX(np.eye(2)), a, check_finite=False)
+            a = pt.switch(a > 0, np.inf, a)
+            b = pt.slinalg.solve(floatX(np.eye(2)), a, check_finite=False)
             pm.Normal("c", mu=b, size=2, initval=floatX(np.r_[0.0, 0.0]))
             caplog.clear()
             # The logger name must be specified for DEBUG level capturing to work

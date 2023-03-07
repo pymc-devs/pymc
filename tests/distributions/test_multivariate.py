@@ -20,7 +20,7 @@ import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.special as sp
 import scipy.stats as st
@@ -159,9 +159,9 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
 
 @pytest.fixture(scope="module")
 def stickbreakingweights_logpdf():
-    _value = at.vector()
-    _alpha = at.scalar()
-    _k = at.iscalar()
+    _value = pt.vector()
+    _alpha = pt.scalar()
+    _k = pt.iscalar()
     _logp = logp(pm.StickBreakingWeights.dist(_alpha, _k), _value)
     core_fn = compile_pymc([_value, _alpha, _k], _logp)
 
@@ -297,16 +297,16 @@ class TestMatchesScipy:
     )
     def test_mvnormal_indef(self):
         cov_val = np.array([[1, 0.5], [0.5, -2]])
-        cov = at.matrix("cov")
+        cov = pt.matrix("cov")
         cov.tag.test_value = np.eye(2)
         mu = floatX(np.zeros(2))
-        x = at.vector("x")
+        x = pt.vector("x")
         x.tag.test_value = np.zeros(2)
         mvn_logp = logp(pm.MvNormal.dist(mu=mu, cov=cov), x)
         f_logp = pytensor.function([cov, x], mvn_logp)
         with pytest.raises(ParameterValueError):
             f_logp(cov_val, np.ones(2))
-        dlogp = at.grad(mvn_logp, cov)
+        dlogp = pt.grad(mvn_logp, cov)
         f_dlogp = pytensor.function([cov, x], dlogp)
         assert not np.all(np.isfinite(f_dlogp(cov_val, np.ones(2))))
 
@@ -314,7 +314,7 @@ class TestMatchesScipy:
         f_logp = pytensor.function([cov, x], mvn_logp)
         with pytest.raises(ParameterValueError):
             f_logp(cov_val, np.ones(2))
-        dlogp = at.grad(mvn_logp, cov)
+        dlogp = pt.grad(mvn_logp, cov)
         f_dlogp = pytensor.function([cov, x], dlogp)
         assert not np.all(np.isfinite(f_dlogp(cov_val, np.ones(2))))
 
@@ -482,9 +482,11 @@ class TestMatchesScipy:
         with pm.Model() as model:
             pm.LKJCorr("lkj", eta=eta, n=n, transform=None)
 
-        pt = {"lkj": x}
+        point = {"lkj": x}
         decimals = select_by_precision(float64=6, float32=4)
-        npt.assert_almost_equal(model.compile_logp()(pt), lp, decimal=decimals, err_msg=str(pt))
+        npt.assert_almost_equal(
+            model.compile_logp()(point), lp, decimal=decimals, err_msg=str(point)
+        )
 
     @pytest.mark.parametrize("n", [1, 2, 3])
     def test_dirichlet(self, n):
@@ -566,7 +568,7 @@ class TestMatchesScipy:
         # logp raises a ParameterValueError
         value = np.array([[1, 1, 1]])
 
-        x = at.scalar("x")
+        x = pt.scalar("x")
         invalid_dist = pm.Multinomial.dist(n=1, p=[x, x, x])
 
         with pytest.raises(ParameterValueError):
@@ -577,7 +579,7 @@ class TestMatchesScipy:
         # logp raises a ParameterValueError
         value = np.array([[1, 1, 1]])
 
-        x = at.scalar("x")
+        x = pt.scalar("x")
         invalid_dist = pm.Multinomial.dist(n=1, p=(x, x, x))
         with pytest.raises(ParameterValueError):
             pm.logp(invalid_dist, value).eval({x: 0.5})
@@ -710,12 +712,12 @@ class TestMatchesScipy:
     def test_stickbreakingweights_logp(self, value, alpha, K, logp):
         with pm.Model() as model:
             sbw = pm.StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
-        pt = {"sbw": value}
+        point = {"sbw": value}
         npt.assert_almost_equal(
             pm.logp(sbw, value).eval(),
             logp,
             decimal=select_by_precision(float64=6, float32=2),
-            err_msg=str(pt),
+            err_msg=str(point),
         )
 
     def test_stickbreakingweights_invalid(self):
@@ -737,12 +739,12 @@ class TestMatchesScipy:
         value = pm.StickBreakingWeights.dist(alpha, K).eval()
         with pm.Model():
             sbw = pm.StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
-        pt = {"sbw": value}
+        point = {"sbw": value}
         npt.assert_almost_equal(
             pm.logp(sbw, value).eval(),
             stickbreakingweights_logpdf(value, alpha, K),
             decimal=select_by_precision(float64=6, float32=2),
-            err_msg=str(pt),
+            err_msg=str(point),
         )
 
     @pytest.mark.parametrize(
@@ -842,7 +844,7 @@ class TestLKJCholeskCov:
 
     def test_sd_dist_distribution(self):
         with pm.Model() as m:
-            sd_dist = at.constant([1, 2, 3])
+            sd_dist = pt.constant([1, 2, 3])
             with pytest.raises(TypeError, match="^sd_dist must be a scalar or vector distribution"):
                 x = pm.LKJCholeskyCov("x", n=3, eta=1, sd_dist=sd_dist)
 

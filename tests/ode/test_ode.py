@@ -15,7 +15,7 @@ import warnings
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 from scipy.stats import norm
@@ -112,13 +112,13 @@ class TestSensitivityInitialCondition:
         np.testing.assert_array_equal(model4_sens_ic, model4._sens_ic)
 
     def test_sens_ic_vector_2_param_tensor(self):
-        # Vector ODE 2 Param with return type at.TensorVariable
+        # Vector ODE 2 Param with return type pt.TensorVariable
         def ode_func_4_t(y, t, p):
             # Make sure that ds and di are vectors by slicing
             ds = -p[0:1] * y[0:1] * y[1:]
             di = p[0:1] * y[0:1] * y[1:] - p[1:] * y[1:]
 
-            return at.concatenate([ds, di], axis=0)
+            return pt.concatenate([ds, di], axis=0)
 
         # Instantiate ODE model
         model4_t = DifferentialEquation(
@@ -240,7 +240,7 @@ class TestErrors:
                 s1 = np.exp(-t) - p[0] * y[1]
                 s2 = np.exp(-t) - p[0] * y[2]
                 s3 = np.exp(-t) - p[0] * y[3]
-                return at.stack((s0, s1, s2, s3)).reshape((2, 2))
+                return pt.stack((s0, s1, s2, s3)).reshape((2, 2))
 
             DifferentialEquation(
                 func=system_2d_tensor, t0=0, times=self.times, n_states=4, n_theta=1

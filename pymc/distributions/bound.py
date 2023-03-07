@@ -14,7 +14,7 @@
 import warnings
 
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.tensor import as_tensor_variable
 from pytensor.tensor.random.op import RandomVariable
@@ -72,8 +72,8 @@ class _ContinuousBounded(BoundedContinuous):
         -------
         TensorVariable
         """
-        res = at.switch(
-            at.or_(at.lt(value, lower), at.gt(value, upper)),
+        res = pt.switch(
+            pt.or_(pt.lt(value, lower), pt.gt(value, upper)),
             -np.inf,
             logp(distribution, value),
         )
@@ -126,8 +126,8 @@ class _DiscreteBounded(Discrete):
         -------
         TensorVariable
         """
-        res = at.switch(
-            at.or_(at.lt(value, lower), at.gt(value, upper)),
+        res = pt.switch(
+            pt.or_(pt.lt(value, lower), pt.gt(value, upper)),
             -np.inf,
             logp(distribution, value),
         )

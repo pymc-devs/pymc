@@ -15,7 +15,7 @@ from functools import singledispatch
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor import scan
 from pytensor.graph import Op
@@ -167,11 +167,11 @@ class Truncated(Distribution):
         except NotImplementedError:
             pass
 
-        lower = at.as_tensor_variable(lower) if lower is not None else at.constant(-np.inf)
-        upper = at.as_tensor_variable(upper) if upper is not None else at.constant(np.inf)
+        lower = pt.as_tensor_variable(lower) if lower is not None else pt.constant(-np.inf)
+        upper = pt.as_tensor_variable(upper) if upper is not None else pt.constant(np.inf)
 
         if size is None:
-            size = at.broadcast_shape(dist, lower, upper)
+            size = pt.broadcast_shape(dist, lower, upper)
         dist = change_dist_size(dist, new_size=size)
 
         # Variables with `_` suffix identify dummy inputs for the OpFromGraph
@@ -189,11 +189,11 @@ class Truncated(Distribution):
             # For left truncated discrete RVs, we need to include the whole lower bound.
             # This may result in draws below the truncation range, if any uniform == 0
             lower_value = lower_ - 1 if dist.owner.op.dtype.startswith("int") else lower_
-            cdf_lower_ = at.exp(logcdf(rv_, lower_value))
-            cdf_upper_ = at.exp(logcdf(rv_, upper_))
+            cdf_lower_ = pt.exp(logcdf(rv_, lower_value))
+            cdf_upper_ = pt.exp(logcdf(rv_, upper_))
             # It's okay to reuse the same rng here, because the rng in rv_ will not be
             # used by either the logcdf of icdf functions
-            uniform_ = at.random.uniform(
+            uniform_ = pt.random.uniform(
                 cdf_lower_,
                 cdf_upper_,
                 rng=rng,
@@ -213,23 +213,23 @@ class Truncated(Distribution):
         # Fallback to rejection sampling
         def loop_fn(truncated_rv, reject_draws, lower, upper, rng, *rv_inputs):
             next_rng, new_truncated_rv = dist.owner.op.make_node(rng, *rv_inputs).outputs
-            truncated_rv = at.set_subtensor(
+            truncated_rv = pt.set_subtensor(
                 truncated_rv[reject_draws],
                 new_truncated_rv[reject_draws],
             )
-            reject_draws = at.or_((truncated_rv < lower), (truncated_rv > upper))
+            reject_draws = pt.or_((truncated_rv < lower), (truncated_rv > upper))
 
             return (
                 (truncated_rv, reject_draws),
                 [(rng, next_rng)],
-                until(~at.any(reject_draws)),
+                until(~pt.any(reject_draws)),
             )
 
         (truncated_rv_, reject_draws_), updates = scan(
             loop_fn,
             outputs_info=[
-                at.zeros_like(rv_),
-                at.ones_like(rv_, dtype=bool),
+                pt.zeros_like(rv_),
+                pt.ones_like(rv_, dtype=bool),
             ],
             non_sequences=[lower_, upper_, rng, *rv_inputs_],
             n_steps=max_n_steps,
@@ -237,7 +237,7 @@ class Truncated(Distribution):
         )
 
         truncated_rv_ = truncated_rv_[-1]
-        convergence_ = ~at.any(reject_draws_[-1])
+        convergence_ = ~pt.any(reject_draws_[-1])
         truncated_rv_ = TruncationCheck(f"Truncation did not converge in {max_n_steps} steps")(
             truncated_rv_, convergence_
         )
@@ -276,18 +276,18 @@ def truncated_moment(op, rv, *inputs):
     untruncated_rv = op.base_rv_op.make_node(rng, *rv_inputs).default_output()
     untruncated_moment = moment(untruncated_rv)
 
-    fallback_moment = at.switch(
-        at.and_(at.bitwise_not(at.isinf(lower)), at.bitwise_not(at.isinf(upper))),
+    fallback_moment = pt.switch(
+        pt.and_(pt.bitwise_not(pt.isinf(lower)), pt.bitwise_not(pt.isinf(upper))),
         (upper - lower) / 2,  # lower and upper are finite
-        at.switch(
-            at.isinf(upper),
+        pt.switch(
+            pt.isinf(upper),
             lower + 1,  # only lower is finite
             upper - 1,  # only upper is finite
         ),
     )
 
-    return at.switch(
-        at.and_(at.ge(untruncated_moment, lower), at.le(untruncated_moment, upper)),
+    return pt.switch(
+        pt.and_(pt.ge(untruncated_moment, lower), pt.le(untruncated_moment, upper)),
         untruncated_moment,  # untruncated moment is between lower and upper
         fallback_moment,
     )
@@ -329,22 +329,22 @@ def truncated_logprob(op, values, *inputs, **kwargs):
     if is_lower_bounded and is_upper_bounded:
         lognorm = logdiffexp(upper_logcdf, lower_logcdf)
     elif is_lower_bounded:
-        lognorm = at.log1mexp(lower_logcdf)
+        lognorm = pt.log1mexp(lower_logcdf)
     elif is_upper_bounded:
         lognorm = upper_logcdf
 
     logp = logp - lognorm
 
     if is_lower_bounded:
-        logp = at.switch(value < lower, -np.inf, logp)
+        logp = pt.switch(value < lower, -np.inf, logp)
 
     if is_upper_bounded:
-        logp = at.switch(value <= upper, logp, -np.inf)
+        logp = pt.switch(value <= upper, logp, -np.inf)
 
     if is_lower_bounded and is_upper_bounded:
         logp = check_parameters(
             logp,
-            at.le(lower, upper),
+            pt.le(lower, upper),
             msg="lower_bound <= upper_bound",
         )
 

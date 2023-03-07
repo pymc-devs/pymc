@@ -18,7 +18,7 @@ import warnings
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.special as sp
 import scipy.stats as st
@@ -502,7 +502,7 @@ class TestMatchesScipy:
             # entries if there is a single or pair number of negative values
             # and the rest are zero
             np.array([-1, -1, 0, 0]),
-            at.as_tensor_variable([-1, -1, 0, 0]),
+            pt.as_tensor_variable([-1, -1, 0, 0]),
         ],
     )
     def test_categorical_negative_p(self, p):
@@ -521,7 +521,7 @@ class TestMatchesScipy:
     def test_categorical_negative_p_symbolic(self):
         value = np.array([[1, 1, 1]])
 
-        x = at.scalar("x")
+        x = pt.scalar("x")
         invalid_dist = pm.Categorical.dist(p=[x, x, x])
 
         with pytest.raises(ParameterValueError):
@@ -530,7 +530,7 @@ class TestMatchesScipy:
     def test_categorical_p_not_normalized_symbolic(self):
         value = np.array([[1, 1, 1]])
 
-        x = at.scalar("x")
+        x = pt.scalar("x")
         invalid_dist = pm.Categorical.dist(p=(x, x, x))
 
         with pytest.raises(ParameterValueError):

@@ -20,7 +20,7 @@ import arviz as az
 import jax
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 from numpyro.infer import MCMC
@@ -135,8 +135,8 @@ def test_deterministic_samples(sampler):
 def test_get_jaxified_graph():
     # Check that jaxifying a graph does not emit the Supervisor Warning. This test can
     # be removed once https://github.com/pytensor-devs/pytensor/issues/637 is sorted.
-    x = at.scalar("x")
-    y = at.exp(x)
+    x = pt.scalar("x")
+    y = pt.exp(x)
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         fn = get_jaxified_graph(inputs=[x], outputs=[y])
@@ -190,7 +190,7 @@ def test_get_jaxified_logp():
     with pm.Model() as m:
         x = pm.Flat("x")
         y = pm.Flat("y")
-        pm.Potential("pot", at.log(at.exp(x) + at.exp(y)))
+        pm.Potential("pot", pt.log(pt.exp(x) + pt.exp(y)))
 
     jax_fn = get_jaxified_logp(m)
     # This would underflow if not optimized

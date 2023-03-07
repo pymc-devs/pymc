@@ -38,7 +38,7 @@ import warnings
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 from pytensor import function
@@ -62,15 +62,15 @@ from tests.logprob.utils import create_pytensor_params, scipy_logprob_tester
 
 
 def test_walk_model():
-    d = at.vector("d")
-    b = at.vector("b")
+    d = pt.vector("d")
+    b = pt.vector("b")
     c = uniform(0.0, d)
     c.name = "c"
-    e = at.log(c)
+    e = pt.log(c)
     a = normal(e, b)
     a.name = "a"
 
-    test_graph = at.exp(a + 1)
+    test_graph = pt.exp(a + 1)
     res = list(walk_model((test_graph,)))
     assert a in res
     assert c not in res
@@ -85,28 +85,28 @@ def test_walk_model():
 
 
 def test_rvs_to_value_vars():
-    a = at.random.uniform(0.0, 1.0)
+    a = pt.random.uniform(0.0, 1.0)
     a.name = "a"
     a.tag.value_var = a_value_var = a.clone()
 
-    b = at.random.uniform(0, a + 1.0)
+    b = pt.random.uniform(0, a + 1.0)
     b.name = "b"
     b.tag.value_var = b_value_var = b.clone()
 
-    c = at.random.normal()
+    c = pt.random.normal()
     c.name = "c"
     c.tag.value_var = c_value_var = c.clone()
 
-    d = at.log(c + b) + 2.0
+    d = pt.log(c + b) + 2.0
 
     initial_replacements = {b: b_value_var, c: c_value_var}
     (res,), replaced = rvs_to_value_vars((d,), initial_replacements=initial_replacements)
 
-    assert res.owner.op == at.add
+    assert res.owner.op == pt.add
     log_output = res.owner.inputs[0]
-    assert log_output.owner.op == at.log
+    assert log_output.owner.op == pt.log
     log_add_output = res.owner.inputs[0].owner.inputs[0]
-    assert log_add_output.owner.op == at.add
+    assert log_add_output.owner.op == pt.add
     c_output = log_add_output.owner.inputs[0]
 
     # We make sure that the random variables were replaced
@@ -127,19 +127,19 @@ def test_rvs_to_value_vars():
 
 def test_rvs_to_value_vars_intermediate_rv():
     """Test that function replaces values above an intermediate RV."""
-    a = at.random.uniform(0.0, 1.0)
+    a = pt.random.uniform(0.0, 1.0)
     a.name = "a"
     a.tag.value_var = a_value_var = a.clone()
 
-    b = at.random.uniform(0, a + 1.0)
+    b = pt.random.uniform(0, a + 1.0)
     b.name = "b"
     b.tag.value_var = b.clone()
 
-    c = at.random.normal()
+    c = pt.random.normal()
     c.name = "c"
     c.tag.value_var = c_value_var = c.clone()
 
-    d = at.log(c + b) + 2.0
+    d = pt.log(c + b) + 2.0
 
     initial_replacements = {a: a_value_var, c: c_value_var}
     (res,), replaced = rvs_to_value_vars((d,), initial_replacements=initial_replacements)
@@ -159,10 +159,10 @@ def test_rvs_to_value_vars_intermediate_rv():
 
 
 def test_CheckParameter():
-    mu = at.constant(0)
-    sigma = at.scalar("sigma")
-    x_rv = at.random.normal(mu, sigma, name="x")
-    x_vv = at.constant(0)
+    mu = pt.constant(0)
+    sigma = pt.scalar("sigma")
+    x_rv = pt.random.normal(mu, sigma, name="x")
+    x_vv = pt.constant(0)
     x_logp = logprob(x_rv, x_vv)
 
     x_logp_fn = function([sigma], x_logp)
@@ -172,7 +172,7 @@ def test_CheckParameter():
 
 def test_dirac_delta():
     fn = pytensor.function(
-        [], dirac_delta(at.as_tensor(1)), mode=get_default_mode().excluding("useless")
+        [], dirac_delta(pt.as_tensor(1)), mode=get_default_mode().excluding("useless")
     )
     with pytest.warns(UserWarning, match=".*DiracDelta.*"):
         assert np.array_equal(fn(), 1)

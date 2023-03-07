@@ -36,7 +36,7 @@
 
 from typing import List, Optional
 
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor.extra_ops import CumOp
@@ -62,13 +62,13 @@ def logprob_cumsum(op, values, base_rv, **kwargs):
     """Compute the log-likelihood graph for a `Cumsum`."""
     (value,) = values
 
-    value_diff = at.diff(value, axis=op.axis)
-    value_diff = at.concatenate(
+    value_diff = pt.diff(value, axis=op.axis)
+    value_diff = pt.concatenate(
         (
             # Take first element of axis and add a broadcastable dimension so
             # that it can be concatenated with the rest of value_diff
-            at.shape_padaxis(
-                at.take(value, 0, axis=op.axis),
+            pt.shape_padaxis(
+                pt.take(value, 0, axis=op.axis),
                 axis=op.axis,
             ),
             value_diff,

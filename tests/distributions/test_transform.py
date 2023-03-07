@@ -17,7 +17,7 @@ from typing import Union
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 from pytensor.tensor.var import TensorConstant
@@ -47,7 +47,7 @@ from tests.checks import close_to, close_to_logical
 tol = 1e-7 if pytensor.config.floatX == "float64" else 1e-6
 
 
-def check_transform(transform, domain, constructor=at.dscalar, test=0, rv_var=None):
+def check_transform(transform, domain, constructor=pt.dscalar, test=0, rv_var=None):
     x = constructor("x")
     x.tag.test_value = test
     if rv_var is None:
@@ -65,10 +65,10 @@ def check_transform(transform, domain, constructor=at.dscalar, test=0, rv_var=No
 
 
 def check_vector_transform(transform, domain, rv_var=None):
-    return check_transform(transform, domain, at.dvector, test=np.array([0, 0]), rv_var=rv_var)
+    return check_transform(transform, domain, pt.dvector, test=np.array([0, 0]), rv_var=rv_var)
 
 
-def get_values(transform, domain=R, constructor=at.dscalar, test=0, rv_var=None):
+def get_values(transform, domain=R, constructor=pt.dscalar, test=0, rv_var=None):
     x = constructor("x")
     x.tag.test_value = test
     if rv_var is None:
@@ -81,7 +81,7 @@ def get_values(transform, domain=R, constructor=at.dscalar, test=0, rv_var=None)
 def check_jacobian_det(
     transform,
     domain,
-    constructor=at.dscalar,
+    constructor=pt.dscalar,
     test=0,
     make_comparable=None,
     elemwise=False,
@@ -100,15 +100,15 @@ def check_jacobian_det(
         x = make_comparable(x)
 
     if not elemwise:
-        jac = at.log(at.nlinalg.det(jacobian(x, [y])))
+        jac = pt.log(pt.nlinalg.det(jacobian(x, [y])))
     else:
-        jac = at.log(at.abs(at.diag(jacobian(x, [y]))))
+        jac = pt.log(pt.abs(pt.diag(jacobian(x, [y]))))
 
     # ljd = log jacobian det
     actual_ljd = pytensor.function([y], jac)
 
     computed_ljd = pytensor.function(
-        [y], at.as_tensor_variable(transform.log_jac_det(y, *rv_inputs)), on_unused_input="ignore"
+        [y], pt.as_tensor_variable(transform.log_jac_det(y, *rv_inputs)), on_unused_input="ignore"
     )
 
     for yval in domain.vals:
@@ -119,22 +119,22 @@ def test_simplex():
     check_vector_transform(tr.simplex, Simplex(2))
     check_vector_transform(tr.simplex, Simplex(4))
 
-    check_transform(tr.simplex, MultiSimplex(3, 2), constructor=at.dmatrix, test=np.zeros((2, 2)))
+    check_transform(tr.simplex, MultiSimplex(3, 2), constructor=pt.dmatrix, test=np.zeros((2, 2)))
 
 
 def test_simplex_bounds():
-    vals = get_values(tr.simplex, Vector(R, 2), at.dvector, np.array([0, 0]))
+    vals = get_values(tr.simplex, Vector(R, 2), pt.dvector, np.array([0, 0]))
 
     close_to(vals.sum(axis=1), 1, tol)
     close_to_logical(vals > 0, True, tol)
     close_to_logical(vals < 1, True, tol)
 
-    check_jacobian_det(tr.simplex, Vector(R, 2), at.dvector, np.array([0, 0]), lambda x: x[:-1])
+    check_jacobian_det(tr.simplex, Vector(R, 2), pt.dvector, np.array([0, 0]), lambda x: x[:-1])
 
 
 def test_simplex_accuracy():
     val = np.array([-30])
-    x = at.dvector("x")
+    x = pt.dvector("x")
     x.tag.test_value = val
     identity_f = pytensor.function([x], tr.simplex.forward(x, tr.simplex.backward(x, x)))
     close_to(val, identity_f(val), tol)
@@ -148,10 +148,10 @@ def test_sum_to_1():
         tr.SumTo1(2)
 
     check_jacobian_det(
-        tr.univariate_sum_to_1, Vector(Unit, 2), at.dvector, np.array([0, 0]), lambda x: x[:-1]
+        tr.univariate_sum_to_1, Vector(Unit, 2), pt.dvector, np.array([0, 0]), lambda x: x[:-1]
     )
     check_jacobian_det(
-        tr.multivariate_sum_to_1, Vector(Unit, 2), at.dvector, np.array([0, 0]), lambda x: x[:-1]
+        tr.multivariate_sum_to_1, Vector(Unit, 2), pt.dvector, np.array([0, 0]), lambda x: x[:-1]
     )
 
 
@@ -159,7 +159,7 @@ def test_log():
     check_transform(tr.log, Rplusbig)
 
     check_jacobian_det(tr.log, Rplusbig, elemwise=True)
-    check_jacobian_det(tr.log, Vector(Rplusbig, 2), at.dvector, [0, 0], elemwise=True)
+    check_jacobian_det(tr.log, Vector(Rplusbig, 2), pt.dvector, [0, 0], elemwise=True)
 
     vals = get_values(tr.log)
     close_to_logical(vals > 0, True, tol)
@@ -169,7 +169,7 @@ def test_log_exp_m1():
     check_transform(tr.log_exp_m1, Rplusbig)
 
     check_jacobian_det(tr.log_exp_m1, Rplusbig, elemwise=True)
-    check_jacobian_det(tr.log_exp_m1, Vector(Rplusbig, 2), at.dvector, [0, 0], elemwise=True)
+    check_jacobian_det(tr.log_exp_m1, Vector(Rplusbig, 2), pt.dvector, [0, 0], elemwise=True)
 
     vals = get_values(tr.log_exp_m1)
     close_to_logical(vals > 0, True, tol)
@@ -179,7 +179,7 @@ def test_logodds():
     check_transform(tr.logodds, Unit)
 
     check_jacobian_det(tr.logodds, Unit, elemwise=True)
-    check_jacobian_det(tr.logodds, Vector(Unit, 2), at.dvector, [0.5, 0.5], elemwise=True)
+    check_jacobian_det(tr.logodds, Vector(Unit, 2), pt.dvector, [0.5, 0.5], elemwise=True)
 
     vals = get_values(tr.logodds)
     close_to_logical(vals > 0, True, tol)
@@ -191,7 +191,7 @@ def test_lowerbound():
     check_transform(trans, Rplusbig)
 
     check_jacobian_det(trans, Rplusbig, elemwise=True)
-    check_jacobian_det(trans, Vector(Rplusbig, 2), at.dvector, [0, 0], elemwise=True)
+    check_jacobian_det(trans, Vector(Rplusbig, 2), pt.dvector, [0, 0], elemwise=True)
 
     vals = get_values(trans)
     close_to_logical(vals > 0, True, tol)
@@ -202,7 +202,7 @@ def test_upperbound():
     check_transform(trans, Rminusbig)
 
     check_jacobian_det(trans, Rminusbig, elemwise=True)
-    check_jacobian_det(trans, Vector(Rminusbig, 2), at.dvector, [-1, -1], elemwise=True)
+    check_jacobian_det(trans, Vector(Rminusbig, 2), pt.dvector, [-1, -1], elemwise=True)
 
     vals = get_values(trans)
     close_to_logical(vals < 0, True, tol)
@@ -257,19 +257,19 @@ def test_ordered():
         tr.Ordered(2)
 
     check_jacobian_det(
-        tr.univariate_ordered, Vector(R, 2), at.dvector, np.array([0, 0]), elemwise=False
+        tr.univariate_ordered, Vector(R, 2), pt.dvector, np.array([0, 0]), elemwise=False
     )
     check_jacobian_det(
-        tr.multivariate_ordered, Vector(R, 2), at.dvector, np.array([0, 0]), elemwise=False
+        tr.multivariate_ordered, Vector(R, 2), pt.dvector, np.array([0, 0]), elemwise=False
     )
 
-    vals = get_values(tr.univariate_ordered, Vector(R, 3), at.dvector, np.zeros(3))
+    vals = get_values(tr.univariate_ordered, Vector(R, 3), pt.dvector, np.zeros(3))
     close_to_logical(np.diff(vals) >= 0, True, tol)
 
 
 def test_chain_values():
     chain_tranf = tr.Chain([tr.logodds, tr.univariate_ordered])
-    vals = get_values(chain_tranf, Vector(R, 5), at.dvector, np.zeros(5))
+    vals = get_values(chain_tranf, Vector(R, 5), pt.dvector, np.zeros(5))
     close_to_logical(np.diff(vals) >= 0, True, tol)
 
 
@@ -281,7 +281,7 @@ def test_chain_vector_transform():
 @pytest.mark.xfail(reason="Fails due to precision issue. Values just close to expected.")
 def test_chain_jacob_det():
     chain_tranf = tr.Chain([tr.logodds, tr.univariate_ordered])
-    check_jacobian_det(chain_tranf, Vector(R, 4), at.dvector, np.zeros(4), elemwise=False)
+    check_jacobian_det(chain_tranf, Vector(R, 4), pt.dvector, np.zeros(4), elemwise=False)
 
 
 class TestElementWiseLogp(SeededTest):
@@ -296,13 +296,13 @@ class TestElementWiseLogp(SeededTest):
         x = model.free_RVs[0]
         x_val_transf = model.rvs_to_values[x]
 
-        pt = model.initial_point(0)
-        test_array_transf = floatX(np.random.randn(*pt[x_val_transf.name].shape))
+        point = model.initial_point(0)
+        test_array_transf = floatX(np.random.randn(*point[x_val_transf.name].shape))
         transform = model.rvs_to_transforms[x]
         test_array_untransf = transform.backward(test_array_transf, *x.owner.inputs).eval()
 
         # Create input variable with same dimensionality as untransformed test_array
-        x_val_untransf = at.constant(test_array_untransf).type()
+        x_val_untransf = pt.constant(test_array_untransf).type()
 
         jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
         assert model.logp(x, sum=False)[0].ndim == x.ndim == jacob_det.ndim
@@ -332,13 +332,13 @@ class TestElementWiseLogp(SeededTest):
         x = model.free_RVs[0]
         x_val_transf = model.rvs_to_values[x]
 
-        pt = model.initial_point(0)
-        test_array_transf = floatX(np.random.randn(*pt[x_val_transf.name].shape))
+        point = model.initial_point(0)
+        test_array_transf = floatX(np.random.randn(*point[x_val_transf.name].shape))
         transform = model.rvs_to_transforms[x]
         test_array_untransf = transform.backward(test_array_transf, *x.owner.inputs).eval()
 
         # Create input variable with same dimensionality as untransformed test_array
-        x_val_untransf = at.constant(test_array_untransf).type()
+        x_val_untransf = pt.constant(test_array_untransf).type()
 
         jacob_det = transform.log_jac_det(test_array_transf, *x.owner.inputs)
         # Original distribution is univariate
@@ -417,8 +417,8 @@ class TestElementWiseLogp(SeededTest):
     def test_uniform(self, lower, upper, size):
         def transform_params(*inputs):
             _, _, _, lower, upper = inputs
-            lower = at.as_tensor_variable(lower) if lower is not None else None
-            upper = at.as_tensor_variable(upper) if upper is not None else None
+            lower = pt.as_tensor_variable(lower) if lower is not None else None
+            upper = pt.as_tensor_variable(upper) if upper is not None else None
             return lower, upper
 
         interval = tr.Interval(bounds_fn=transform_params)
@@ -438,8 +438,8 @@ class TestElementWiseLogp(SeededTest):
     def test_triangular(self, lower, c, upper, size):
         def transform_params(*inputs):
             _, _, _, lower, _, upper = inputs
-            lower = at.as_tensor_variable(lower) if lower is not None else None
-            upper = at.as_tensor_variable(upper) if upper is not None else None
+            lower = pt.as_tensor_variable(lower) if lower is not None else None
+            upper = pt.as_tensor_variable(upper) if upper is not None else None
             return lower, upper
 
         interval = tr.Interval(bounds_fn=transform_params)
@@ -533,8 +533,8 @@ class TestElementWiseLogp(SeededTest):
     def test_uniform_ordered(self, lower, upper, size):
         def transform_params(*inputs):
             _, _, _, lower, upper = inputs
-            lower = at.as_tensor_variable(lower) if lower is not None else None
-            upper = at.as_tensor_variable(upper) if upper is not None else None
+            lower = pt.as_tensor_variable(lower) if lower is not None else None
+            upper = pt.as_tensor_variable(upper) if upper is not None else None
             return lower, upper
 
         interval = tr.Interval(bounds_fn=transform_params)
@@ -613,9 +613,9 @@ def test_interval_transform_raises():
         tr.Interval(None, None)
 
     with pytest.raises(ValueError, match="Interval bounds must be constant values"):
-        tr.Interval(at.constant(5) + 1, None)
+        tr.Interval(pt.constant(5) + 1, None)
 
-    assert tr.Interval(at.constant(5), None)
+    assert tr.Interval(pt.constant(5), None)
 
 
 def test_discrete_trafo():

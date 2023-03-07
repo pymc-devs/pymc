@@ -17,7 +17,7 @@ import functools as ft
 import numpy as np
 import numpy.testing as npt
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.special as sp
 import scipy.stats as st
@@ -354,9 +354,11 @@ class TestMatchesScipy:
         # http://www.gamlss.org/.
         with pm.Model() as model:
             pm.Wald("wald", mu=mu, lam=lam, phi=phi, alpha=alpha, transform=None)
-        pt = {"wald": value}
+        point = {"wald": value}
         decimals = select_by_precision(float64=6, float32=1)
-        npt.assert_almost_equal(model.compile_logp()(pt), logp, decimal=decimals, err_msg=str(pt))
+        npt.assert_almost_equal(
+            model.compile_logp()(point), logp, decimal=decimals, err_msg=str(point)
+        )
 
     def test_beta_logp(self):
         check_logp(
@@ -887,11 +889,11 @@ class TestMatchesScipy:
         tau = np.array(2)
         npt.assert_almost_equal(get_tau_sigma(tau=tau), [tau, tau**-0.5])
 
-        tau, _ = get_tau_sigma(sigma=at.constant(-2))
+        tau, _ = get_tau_sigma(sigma=pt.constant(-2))
         with pytest.raises(ParameterValueError):
             tau.eval()
 
-        _, sigma = get_tau_sigma(tau=at.constant(-2))
+        _, sigma = get_tau_sigma(tau=pt.constant(-2))
         with pytest.raises(ParameterValueError):
             sigma.eval()
 
@@ -921,12 +923,12 @@ class TestMatchesScipy:
         See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/."""
         with pm.Model() as model:
             pm.ExGaussian("eg", mu=mu, sigma=sigma, nu=nu)
-        pt = {"eg": value}
+        point = {"eg": value}
         npt.assert_almost_equal(
-            model.compile_logp()(pt),
+            model.compile_logp()(point),
             logp,
             decimal=select_by_precision(float64=6, float32=2),
-            err_msg=str(pt),
+            err_msg=str(point),
         )
 
 

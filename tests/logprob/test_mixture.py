@@ -36,7 +36,7 @@
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.stats.distributions as sp
 
@@ -54,13 +54,13 @@ from tests.logprob.utils import joint_logprob, scipy_logprob
 
 
 def test_mixture_basics():
-    srng = at.random.RandomStream(29833)
+    srng = pt.random.RandomStream(29833)
 
     def create_mix_model(size, axis):
         X_rv = srng.normal(0, 1, size=size, name="X")
         Y_rv = srng.gamma(0.5, 0.5, size=size, name="Y")
 
-        p_at = at.scalar("p")
+        p_at = pt.scalar("p")
         p_at.tag.test_value = 0.5
 
         I_rv = srng.bernoulli(p_at, size=size, name="I")
@@ -68,9 +68,9 @@ def test_mixture_basics():
         i_vv.name = "i"
 
         if isinstance(axis, Variable):
-            M_rv = at.join(axis, X_rv, Y_rv)[I_rv]
+            M_rv = pt.join(axis, X_rv, Y_rv)[I_rv]
         else:
-            M_rv = at.stack([X_rv, Y_rv], axis=axis)[I_rv]
+            M_rv = pt.stack([X_rv, Y_rv], axis=axis)[I_rv]
 
         M_rv.name = "M"
         m_vv = M_rv.clone()
@@ -92,7 +92,7 @@ def test_mixture_basics():
         factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv, X_rv: x_vv})
 
     with pytest.raises(RuntimeError, match="could not be derived: {m}"):
-        axis_at = at.lscalar("axis")
+        axis_at = pt.lscalar("axis")
         axis_at.tag.test_value = 0
         env = create_mix_model((2,), axis_at)
         I_rv = env["I_rv"]
@@ -106,17 +106,17 @@ def test_mixture_basics():
 @pytest.mark.parametrize(
     "op_constructor",
     [
-        lambda _I, _X, _Y: at.stack([_X, _Y])[_I],
-        lambda _I, _X, _Y: at.switch(_I, _X, _Y),
+        lambda _I, _X, _Y: pt.stack([_X, _Y])[_I],
+        lambda _I, _X, _Y: pt.switch(_I, _X, _Y),
     ],
 )
 def test_compute_test_value(op_constructor):
-    srng = at.random.RandomStream(29833)
+    srng = pt.random.RandomStream(29833)
 
     X_rv = srng.normal(0, 1, name="X")
     Y_rv = srng.gamma(0.5, 0.5, name="Y")
 
-    p_at = at.scalar("p")
+    p_at = pt.scalar("p")
     p_at.tag.test_value = 0.3
 
     I_rv = srng.bernoulli(p_at, name="I")
@@ -151,18 +151,18 @@ def test_compute_test_value(op_constructor):
     ],
 )
 def test_hetero_mixture_binomial(p_val, size, supported):
-    srng = at.random.RandomStream(29833)
+    srng = pt.random.RandomStream(29833)
 
     X_rv = srng.normal(0, 1, size=size, name="X")
     Y_rv = srng.gamma(0.5, 0.5, size=size, name="Y")
 
     if np.ndim(p_val) == 0:
-        p_at = at.scalar("p")
+        p_at = pt.scalar("p")
         p_at.tag.test_value = p_val
         I_rv = srng.bernoulli(p_at, size=size, name="I")
         p_val_1 = p_val
     else:
-        p_at = at.vector("p")
+        p_at = pt.vector("p")
         p_at.tag.test_value = np.array(p_val, dtype=pytensor.config.floatX)
         I_rv = srng.categorical(p_at, size=size, name="I")
         p_val_1 = p_val[1]
@@ -170,7 +170,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
     i_vv = I_rv.clone()
     i_vv.name = "i"
 
-    M_rv = at.stack([X_rv, Y_rv])[I_rv]
+    M_rv = pt.stack([X_rv, Y_rv])[I_rv]
     M_rv.name = "M"
 
     m_vv = M_rv.clone()
@@ -560,13 +560,13 @@ def test_hetero_mixture_binomial(p_val, size, supported):
 def test_hetero_mixture_categorical(
     X_args, Y_args, Z_args, p_val, comp_size, idx_size, extra_indices, join_axis, supported
 ):
-    srng = at.random.RandomStream(29833)
+    srng = pt.random.RandomStream(29833)
 
     X_rv = srng.normal(*X_args, size=comp_size, name="X")
     Y_rv = srng.gamma(*Y_args, size=comp_size, name="Y")
     Z_rv = srng.normal(*Z_args, size=comp_size, name="Z")
 
-    p_at = at.as_tensor(p_val).type()
+    p_at = pt.as_tensor(p_val).type()
     p_at.name = "p"
     p_at.tag.test_value = np.array(p_val, dtype=pytensor.config.floatX)
     I_rv = srng.categorical(p_at, size=idx_size, name="I")
@@ -578,7 +578,7 @@ def test_hetero_mixture_categorical(
     indices_at.insert(join_axis, I_rv)
     indices_at = tuple(indices_at)
 
-    M_rv = at.stack([X_rv, Y_rv, Z_rv], axis=join_axis)[indices_at]
+    M_rv = pt.stack([X_rv, Y_rv, Z_rv], axis=join_axis)[indices_at]
     M_rv.name = "M"
 
     m_vv = M_rv.clone()
@@ -727,7 +727,7 @@ def test_hetero_mixture_categorical(
     ],
 )
 def test_expand_indices_basic(A_parts, indices):
-    A = at.stack(A_parts)
+    A = pt.stack(A_parts)
     at_indices = [as_index_constant(idx) for idx in indices]
     full_indices = expand_indices(at_indices, shape_tuple(A))
     assert len(full_indices) == A.ndim
@@ -764,7 +764,7 @@ def test_expand_indices_basic(A_parts, indices):
     ],
 )
 def test_expand_indices_moved_subspaces(A_parts, indices):
-    A = at.stack(A_parts)
+    A = pt.stack(A_parts)
     at_indices = [as_index_constant(idx) for idx in indices]
     full_indices = expand_indices(at_indices, shape_tuple(A))
     assert len(full_indices) == A.ndim
@@ -811,7 +811,7 @@ def test_expand_indices_moved_subspaces(A_parts, indices):
     ],
 )
 def test_expand_indices_single_indices(A_parts, indices):
-    A = at.stack(A_parts)
+    A = pt.stack(A_parts)
     at_indices = [as_index_constant(idx) for idx in indices]
     full_indices = expand_indices(at_indices, shape_tuple(A))
     assert len(full_indices) == A.ndim
@@ -866,7 +866,7 @@ def test_expand_indices_single_indices(A_parts, indices):
     ],
 )
 def test_expand_indices_newaxis(A_parts, indices):
-    A = at.stack(A_parts)
+    A = pt.stack(A_parts)
     at_indices = [as_index_constant(idx) for idx in indices]
     full_indices = expand_indices(at_indices, shape_tuple(A))
     assert len(full_indices) == A.ndim
@@ -876,7 +876,7 @@ def test_expand_indices_newaxis(A_parts, indices):
 
 
 def test_mixture_with_DiracDelta():
-    srng = at.random.RandomStream(29833)
+    srng = pt.random.RandomStream(29833)
 
     X_rv = srng.normal(0, 1, name="X")
     Y_rv = dirac_delta(0.0)
@@ -887,7 +887,7 @@ def test_mixture_with_DiracDelta():
     i_vv = I_rv.clone()
     i_vv.name = "i"
 
-    M_rv = at.stack([X_rv, Y_rv])[I_rv]
+    M_rv = pt.stack([X_rv, Y_rv])[I_rv]
     M_rv.name = "M"
 
     m_vv = M_rv.clone()
@@ -899,7 +899,7 @@ def test_mixture_with_DiracDelta():
 
 
 def test_switch_mixture():
-    srng = at.random.RandomStream(29833)
+    srng = pt.random.RandomStream(29833)
 
     X_rv = srng.normal(-10.0, 0.1, name="X")
     Y_rv = srng.normal(10.0, 0.1, name="Y")
@@ -908,7 +908,7 @@ def test_switch_mixture():
     i_vv = I_rv.clone()
     i_vv.name = "i"
 
-    Z1_rv = at.switch(I_rv, X_rv, Y_rv)
+    Z1_rv = pt.switch(I_rv, X_rv, Y_rv)
     z_vv = Z1_rv.clone()
     z_vv.name = "z1"
 
@@ -928,7 +928,7 @@ def test_switch_mixture():
 
     # building the identical graph but with a stack to check that mixture computations are identical
 
-    Z2_rv = at.stack((X_rv, Y_rv))[I_rv]
+    Z2_rv = pt.stack((X_rv, Y_rv))[I_rv]
 
     fgraph2, _, _ = construct_ir_fgraph({Z2_rv: z_vv, I_rv: i_vv})
 

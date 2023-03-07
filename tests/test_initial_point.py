@@ -14,7 +14,7 @@
 import cloudpickle
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 from pytensor.tensor.random.op import RandomVariable
@@ -182,7 +182,7 @@ class TestInitvalEvaluation:
             jitter_rvs={},
             return_transformed=True,
             overrides={
-                A: at.as_tensor(2, dtype=int),
+                A: pt.as_tensor(2, dtype=int),
                 B: 3,
                 C: 5,
             },
@@ -238,7 +238,7 @@ class TestMoment:
 
     @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
     def test_symbolic_moment_shape(self, rv_cls):
-        s = at.scalar(dtype="int64")
+        s = pt.scalar(dtype="int64")
         rv = rv_cls.dist(shape=(s,))
         assert not hasattr(rv.tag, "test_value")
         assert tuple(moment(rv).shape.eval({s: 4})) == (4,)

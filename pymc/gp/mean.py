@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 __all__ = ["Zero", "Constant", "Linear"]
 
@@ -46,7 +46,7 @@ class Zero(Mean):
     """
 
     def __call__(self, X):
-        return at.alloc(0.0, X.shape[0])
+        return pt.alloc(0.0, X.shape[0])
 
 
 class Constant(Mean):
@@ -64,7 +64,7 @@ class Constant(Mean):
         self.c = c
 
     def __call__(self, X):
-        return at.alloc(1.0, X.shape[0]) * self.c
+        return pt.alloc(1.0, X.shape[0]) * self.c
 
 
 class Linear(Mean):
@@ -85,7 +85,7 @@ class Linear(Mean):
         self.A = coeffs
 
     def __call__(self, X):
-        return at.squeeze(at.dot(X, self.A) + self.b)
+        return pt.squeeze(pt.dot(X, self.A) + self.b)
 
 
 class Add(Mean):
@@ -95,7 +95,7 @@ class Add(Mean):
         self.m2 = second_mean
 
     def __call__(self, X):
-        return at.add(self.m1(X), self.m2(X))
+        return pt.add(self.m1(X), self.m2(X))
 
 
 class Prod(Mean):
@@ -105,4 +105,4 @@ class Prod(Mean):
         self.m2 = second_mean
 
     def __call__(self, X):
-        return at.mul(self.m1(X), self.m2(X))
+        return pt.mul(self.m1(X), self.m2(X))

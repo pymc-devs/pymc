@@ -37,7 +37,7 @@
 from typing import List, Optional
 
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.graph.basic import Node
 from pytensor.graph.fg import FunctionGraph
@@ -91,8 +91,8 @@ def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[List[Me
     # Replace bounds by `+-inf` if `y = clip(x, x, ?)` or `y=clip(x, ?, x)`
     # This is used in `clip_logprob` to generate a more succinct logprob graph
     # for one-sided clipped random variables
-    lower_bound = lower_bound if (lower_bound is not base_var) else at.constant(-np.inf)
-    upper_bound = upper_bound if (upper_bound is not base_var) else at.constant(np.inf)
+    lower_bound = lower_bound if (lower_bound is not base_var) else pt.constant(-np.inf)
+    upper_bound = upper_bound if (upper_bound is not base_var) else pt.constant(np.inf)
 
     # Make base_var unmeasurable
     unmeasurable_base_var = assign_custom_measurable_outputs(base_var.owner)
@@ -143,28 +143,28 @@ def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
     if not (isinstance(upper_bound, TensorConstant) and np.all(np.isinf(upper_bound.value))):
         is_upper_bounded = True
 
-        logccdf = at.log1mexp(logcdf)
+        logccdf = pt.log1mexp(logcdf)
         # For right clipped discrete RVs, we need to add an extra term
         # corresponding to the pmf at the upper bound
         if base_rv.dtype.startswith("int"):
-            logccdf = at.logaddexp(logccdf, logprob)
+            logccdf = pt.logaddexp(logccdf, logprob)
 
-        logprob = at.switch(
-            at.eq(value, upper_bound),
+        logprob = pt.switch(
+            pt.eq(value, upper_bound),
             logccdf,
-            at.switch(at.gt(value, upper_bound), -np.inf, logprob),
+            pt.switch(pt.gt(value, upper_bound), -np.inf, logprob),
         )
     if not (isinstance(lower_bound, TensorConstant) and np.all(np.isneginf(lower_bound.value))):
         is_lower_bounded = True
-        logprob = at.switch(
-            at.eq(value, lower_bound),
+        logprob = pt.switch(
+            pt.eq(value, lower_bound),
             logcdf,
-            at.switch(at.lt(value, lower_bound), -np.inf, logprob),
+            pt.switch(pt.lt(value, lower_bound), -np.inf, logprob),
         )
 
     if is_lower_bounded and is_upper_bounded:
         logprob = CheckParameterValue("lower_bound <= upper_bound")(
-            logprob, at.all(at.le(lower_bound, upper_bound))
+            logprob, pt.all(pt.le(lower_bound, upper_bound))
         )
 
     return logprob
@@ -243,15 +243,15 @@ def round_logprob(op, values, base_rv, **kwargs):
     (value,) = values
 
     if isinstance(op.scalar_op, RoundHalfToEven):
-        value = at.round(value)
+        value = pt.round(value)
         value_upper = value + 0.5
         value_lower = value - 0.5
     elif isinstance(op.scalar_op, Floor):
-        value = at.floor(value)
+        value = pt.floor(value)
         value_upper = value + 1.0
         value_lower = value
     elif isinstance(op.scalar_op, Ceil):
-        value = at.ceil(value)
+        value = pt.ceil(value)
         value_upper = value
         value_lower = value - 1.0
     else:

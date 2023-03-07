@@ -14,7 +14,7 @@
 import arviz as az
 import numpy as np
 import numpy.testing as npt
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from scipy import stats
 
@@ -126,9 +126,9 @@ class LKJCholeskyCovFixture(KnownCDF):
                 "chol_packed", eta=3, n=5, sd_dist=sd_dist, compute_corr=False
             )
             chol = pm.expand_packed_triangular(5, chol_packed, lower=True)
-            cov = at.dot(chol, chol.T)
-            stds = at.sqrt(at.diag(cov))
-            pm.Deterministic("log_stds", at.log(stds))
+            cov = pt.dot(chol, chol.T)
+            stds = pt.sqrt(pt.diag(cov))
+            pm.Deterministic("log_stds", pt.log(stds))
             corr = cov / stds[None, :] / stds[:, None]
             corr_entries_unit = (corr[np.tril_indices(5, -1)] + 1) / 2
             pm.Deterministic("corr_entries_unit", corr_entries_unit)

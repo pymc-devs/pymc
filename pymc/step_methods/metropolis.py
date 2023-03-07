@@ -19,7 +19,7 @@ import pytensor
 import scipy.linalg
 import scipy.special
 
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.graph.fg import MissingInputError
 from pytensor.tensor.random.basic import BernoulliRV, CategoricalRV
 
@@ -1018,9 +1018,9 @@ def sample_except(limit, excluded):
 
 def delta_logp(
     point: Dict[str, np.ndarray],
-    logp: at.TensorVariable,
-    vars: List[at.TensorVariable],
-    shared: Dict[at.TensorVariable, at.sharedvar.TensorSharedVariable],
+    logp: pt.TensorVariable,
+    vars: List[pt.TensorVariable],
+    shared: Dict[pt.TensorVariable, pt.sharedvar.TensorSharedVariable],
 ) -> pytensor.compile.Function:
     [logp0], inarray0 = join_nonshared_inputs(
         point=point, outputs=[logp], inputs=vars, shared_inputs=shared

@@ -14,7 +14,7 @@
 
 import numpy as np
 import numpy.testing as npt
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 import pymc as pm
@@ -61,7 +61,7 @@ class TestKmeansInducing:
         Xu = pm.gp.util.kmeans_inducing_points(2, X).flatten()
         npt.assert_allclose(np.asarray(self.centers), np.sort(Xu), rtol=0.05)
 
-        X = at.as_tensor_variable(self.x[:, None])
+        X = pt.as_tensor_variable(self.x[:, None])
         Xu = pm.gp.util.kmeans_inducing_points(2, X).flatten()
         npt.assert_allclose(np.asarray(self.centers), np.sort(Xu), rtol=0.05)
 
@@ -84,7 +84,7 @@ class TestReplaceWithValues:
 
     def test_replace_no_inputs_needed(self):
         with pm.Model() as model:
-            a = at.as_tensor_variable(2.0)
+            a = pt.as_tensor_variable(2.0)
             b = 1.0 + a
             c = a * b
             (c_val,) = pm.gp.util.replace_with_values([c], replacements={"x": 100})

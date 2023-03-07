@@ -24,7 +24,7 @@ from typing import Iterable
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import scipy.linalg
 import scipy.stats
 
@@ -69,11 +69,11 @@ def check_parameters(
     expression under the normal parameter support as it can be disabled by the user via
     check_bounds = False in pm.Model()
     """
-    # at.all does not accept True/False, but accepts np.array(True)/np.array(False)
+    # pt.all does not accept True/False, but accepts np.array(True)/np.array(False)
     conditions_ = [
         cond if (cond is not True and cond is not False) else np.array(cond) for cond in conditions
     ]
-    all_true_scalar = at.all([at.all(cond) for cond in conditions_])
+    all_true_scalar = pt.all([pt.all(cond) for cond in conditions_])
 
     return CheckParameterValue(msg, can_be_replaced_by_ninf)(expr, all_true_scalar)
 
@@ -83,9 +83,9 @@ check_icdf_parameters = partial(check_parameters, can_be_replaced_by_ninf=False)
 
 def check_icdf_value(expr: Variable, value: Variable) -> Variable:
     """Wrap icdf expression in nan switch for value."""
-    value = at.as_tensor_variable(value)
-    expr = at.switch(
-        at.and_(value >= 0, value <= 1),
+    value = pt.as_tensor_variable(value)
+    expr = pt.switch(
+        pt.and_(value >= 0, value <= 1),
         expr,
         np.nan,
     )
@@ -98,7 +98,7 @@ def logpow(x, m):
     Calculates log(x**m) since m*log(x) will fail when m, x = 0.
     """
     # return m * log(x)
-    return at.switch(at.eq(x, 0), at.switch(at.eq(m, 0), 0.0, -np.inf), m * at.log(x))
+    return pt.switch(pt.eq(x, 0), pt.switch(pt.eq(m, 0), 0.0, -np.inf), m * pt.log(x))
 
 
 def factln(n):
@@ -117,25 +117,25 @@ def std_cdf(x):
     """
     Calculates the standard normal cumulative distribution function.
     """
-    return 0.5 + 0.5 * at.erf(x / at.sqrt(2.0))
+    return 0.5 + 0.5 * pt.erf(x / pt.sqrt(2.0))
 
 
 def normal_lcdf(mu, sigma, x):
     """Compute the log of the cumulative density function of the normal."""
     z = (x - mu) / sigma
-    return at.switch(
-        at.lt(z, -1.0),
-        at.log(at.erfcx(-z / at.sqrt(2.0)) / 2.0) - at.sqr(z) / 2.0,
-        at.log1p(-at.erfc(z / at.sqrt(2.0)) / 2.0),
+    return pt.switch(
+        pt.lt(z, -1.0),
+        pt.log(pt.erfcx(-z / pt.sqrt(2.0)) / 2.0) - pt.sqr(z) / 2.0,
+        pt.log1p(-pt.erfc(z / pt.sqrt(2.0)) / 2.0),
     )
 
 
 def normal_lccdf(mu, sigma, x):
     z = (x - mu) / sigma
-    return at.switch(
-        at.gt(z, 1.0),
-        at.log(at.erfcx(z / at.sqrt(2.0)) / 2.0) - at.sqr(z) / 2.0,
-        at.log1p(-at.erfc(-z / at.sqrt(2.0)) / 2.0),
+    return pt.switch(
+        pt.gt(z, 1.0),
+        pt.log(pt.erfcx(z / pt.sqrt(2.0)) / 2.0) - pt.sqr(z) / 2.0,
+        pt.log1p(-pt.erfc(-z / pt.sqrt(2.0)) / 2.0),
     )
 
 
@@ -160,21 +160,21 @@ def log_diff_normal_cdf(mu, sigma, x, y):
     log (\\Phi(x) - \\Phi(y))
 
     """
-    x = (x - mu) / sigma / at.sqrt(2.0)
-    y = (y - mu) / sigma / at.sqrt(2.0)
+    x = (x - mu) / sigma / pt.sqrt(2.0)
+    y = (y - mu) / sigma / pt.sqrt(2.0)
 
     # To stabilize the computation, consider these three regions:
     # 1) x > y > 0 => Use erf(x) = 1 - e^{-x^2} erfcx(x) and erf(y) =1 - e^{-y^2} erfcx(y)
     # 2) 0 > x > y => Use erf(x) = e^{-x^2} erfcx(-x) and erf(y) = e^{-y^2} erfcx(-y)
     # 3) x > 0 > y => Naive formula log( (erf(x) - erf(y)) / 2 ) works fine.
-    return at.log(0.5) + at.switch(
-        at.gt(y, 0),
-        -at.square(y) + at.log(at.erfcx(y) - at.exp(at.square(y) - at.square(x)) * at.erfcx(x)),
-        at.switch(
-            at.lt(x, 0),  # 0 > x > y
-            -at.square(x)
-            + at.log(at.erfcx(-x) - at.exp(at.square(x) - at.square(y)) * at.erfcx(-y)),
-            at.log(at.erf(x) - at.erf(y)),  # x >0 > y
+    return pt.log(0.5) + pt.switch(
+        pt.gt(y, 0),
+        -pt.square(y) + pt.log(pt.erfcx(y) - pt.exp(pt.square(y) - pt.square(x)) * pt.erfcx(x)),
+        pt.switch(
+            pt.lt(x, 0),  # 0 > x > y
+            -pt.square(x)
+            + pt.log(pt.erfcx(-x) - pt.exp(pt.square(x) - pt.square(y)) * pt.erfcx(-y)),
+            pt.log(pt.erf(x) - pt.erf(y)),  # x >0 > y
         ),
     )
 
@@ -183,14 +183,14 @@ def sigma2rho(sigma):
     """
     `sigma -> rho` PyTensor converter
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
-    return at.log(at.exp(at.abs(sigma)) - 1.0)
+    return pt.log(pt.exp(pt.abs(sigma)) - 1.0)
 
 
 def rho2sigma(rho):
     """
     `rho -> sigma` PyTensor converter
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
-    return at.softplus(rho)
+    return pt.softplus(rho)
 
 
 rho2sd = rho2sigma
@@ -233,13 +233,13 @@ def log_normal(x, mean, **kwargs):
     if sigma is not None:
         std = sigma
     elif w is not None:
-        std = at.exp(w)
+        std = pt.exp(w)
     elif rho is not None:
         std = rho2sigma(rho)
     else:
         std = tau ** (-1)
     std += f(eps)
-    return f(c) - at.log(at.abs(std)) - (x - mean) ** 2 / (2.0 * std**2)
+    return f(c) - pt.log(pt.abs(std)) - (x - mean) ** 2 / (2.0 * std**2)
 
 
 def MvNormalLogp():
@@ -249,14 +249,14 @@ def MvNormalLogp():
 
     Parameters
     ----------
-    cov: at.matrix
+    cov: pt.matrix
         The covariance matrix.
-    delta: at.matrix
+    delta: pt.matrix
         Array of deviations from the mean.
     """
-    cov = at.matrix("cov")
+    cov = pt.matrix("cov")
     cov.tag.test_value = floatX(np.eye(3))
-    delta = at.matrix("delta")
+    delta = pt.matrix("delta")
     delta.tag.test_value = floatX(np.zeros((2, 3)))
 
     cholesky = Cholesky(lower=True, on_error="nan")
@@ -264,17 +264,17 @@ def MvNormalLogp():
     n, k = delta.shape
     n, k = f(n), f(k)
     chol_cov = cholesky(cov)
-    diag = at.diag(chol_cov)
-    ok = at.all(diag > 0)
+    diag = pt.diag(chol_cov)
+    ok = pt.all(diag > 0)
 
-    chol_cov = at.switch(ok, chol_cov, at.fill(chol_cov, 1))
+    chol_cov = pt.switch(ok, chol_cov, pt.fill(chol_cov, 1))
     delta_trans = solve_lower(chol_cov, delta.T).T
 
-    result = n * k * at.log(f(2) * np.pi)
-    result += f(2) * n * at.sum(at.log(diag))
+    result = n * k * pt.log(f(2) * np.pi)
+    result += f(2) * n * pt.sum(pt.log(diag))
     result += (delta_trans ** f(2)).sum()
     result = f(-0.5) * result
-    logp = at.switch(ok, result, -np.inf)
+    logp = pt.switch(ok, result, -np.inf)
 
     def dlogp(inputs, gradients):
         (g_logp,) = gradients
@@ -284,21 +284,21 @@ def MvNormalLogp():
         n, k = delta.shape
 
         chol_cov = cholesky(cov)
-        diag = at.diag(chol_cov)
-        ok = at.all(diag > 0)
+        diag = pt.diag(chol_cov)
+        ok = pt.all(diag > 0)
 
-        chol_cov = at.switch(ok, chol_cov, at.fill(chol_cov, 1))
+        chol_cov = pt.switch(ok, chol_cov, pt.fill(chol_cov, 1))
         delta_trans = solve_lower(chol_cov, delta.T).T
 
-        inner = n * at.eye(k) - at.dot(delta_trans.T, delta_trans)
+        inner = n * pt.eye(k) - pt.dot(delta_trans.T, delta_trans)
         g_cov = solve_upper(chol_cov.T, inner)
         g_cov = solve_upper(chol_cov.T, g_cov.T)
 
         tau_delta = solve_upper(chol_cov.T, delta_trans.T)
         g_delta = tau_delta.T
 
-        g_cov = at.switch(ok, g_cov, -np.nan)
-        g_delta = at.switch(ok, g_delta, -np.nan)
+        g_cov = pt.switch(ok, g_cov, -np.nan)
+        g_delta = pt.switch(ok, g_delta, -np.nan)
 
         return [-0.5 * g_cov * g_logp, -g_delta * g_logp]
 
@@ -316,7 +316,7 @@ class SplineWrapper(Op):
         self.spline = spline
 
     def make_node(self, x):
-        x = at.as_tensor_variable(x)
+        x = pt.as_tensor_variable(x)
         return Apply(self, [x], [x.type()])
 
     @property
@@ -472,17 +472,17 @@ def multigammaln(a, p):
     p: int
        degrees of freedom. p > 0
     """
-    i = at.arange(1, p + 1)
-    return p * (p - 1) * at.log(np.pi) / 4.0 + at.sum(gammaln(a + (1.0 - i) / 2.0), axis=0)
+    i = pt.arange(1, p + 1)
+    return p * (p - 1) * pt.log(np.pi) / 4.0 + pt.sum(gammaln(a + (1.0 - i) / 2.0), axis=0)
 
 
 def log_i0(x):
     """
     Calculates the logarithm of the 0 order modified Bessel function of the first kind""
     """
-    return at.switch(
-        at.lt(x, 5),
-        at.log1p(
+    return pt.switch(
+        pt.lt(x, 5),
+        pt.log1p(
             x**2.0 / 4.0
             + x**4.0 / 64.0
             + x**6.0 / 2304.0
@@ -491,8 +491,8 @@ def log_i0(x):
             + x**12.0 / 2123366400.0
         ),
         x
-        - 0.5 * at.log(2.0 * np.pi * x)
-        + at.log1p(
+        - 0.5 * pt.log(2.0 * np.pi * x)
+        + pt.log1p(
             1.0 / (8.0 * x)
             + 9.0 / (128.0 * x**2.0)
             + 225.0 / (3072.0 * x**3.0)
@@ -507,4 +507,4 @@ def incomplete_beta(a, b, value):
         FutureWarning,
         stacklevel=2,
     )
-    return at.betainc(a, b, value)
+    return pt.betainc(a, b, value)

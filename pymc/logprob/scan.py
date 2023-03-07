@@ -39,7 +39,7 @@ from typing import Callable, Dict, Iterable, List, Tuple, cast
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.graph.basic import Variable
 from pytensor.graph.fg import FunctionGraph
@@ -223,7 +223,7 @@ def convert_outer_out_to_in(
         # slices of the actual outer-inputs (e.g. `out[1:]` instead of `out`
         # when `taps=[-1]`).
         var_slices = [new_outer_input_vars[oo_var][b:e] for b, e in slice_seqs]
-        n_steps = at.min([at.shape(n)[0] for n in var_slices])
+        n_steps = pt.min([pt.shape(n)[0] for n in var_slices])
 
         output_scan_args.n_steps = n_steps
 
@@ -445,7 +445,7 @@ def find_measurable_scans(fgraph, node):
             full_out_shape = tuple(
                 fgraph.shape_feature.get_shape(full_out, i) for i in range(full_out.ndim)
             )
-            new_val_var = at.empty(full_out_shape, dtype=full_out.dtype)
+            new_val_var = pt.empty(full_out_shape, dtype=full_out.dtype)
 
             # Set the parts of this new value variable that applied to the
             # user-specified value variable to the user's value variable
@@ -455,7 +455,7 @@ def find_measurable_scans(fgraph, node):
             # E.g. for a single `-1` TAPS, `s_0T[1:] = s_1T` where `s_0T` is
             # `new_val_var` and `s_1T` is the user-specified value variable
             # that only spans times `t=1` to `t=T`.
-            new_val_var = at.set_subtensor(new_val_var[subtensor_indices], val_var)
+            new_val_var = pt.set_subtensor(new_val_var[subtensor_indices], val_var)
 
             # This is the outer-input that sets `s_0T[i] = taps[i]` where `i`
             # is a TAP index (e.g. a TAP of `-1` maps to index `0` in a vector
