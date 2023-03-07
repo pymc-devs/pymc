@@ -40,7 +40,7 @@ from pymc.sampling.forward import (
     get_vars_in_point_list,
     observed_dependent_deterministics,
 )
-from tests.helpers import SeededTest, fast_unstable_sampling_mode
+from pymc.testing import SeededTest, fast_unstable_sampling_mode
 
 
 class TestDraw(SeededTest):

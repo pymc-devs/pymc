@@ -48,7 +48,7 @@ from scipy import stats as st
 from pymc.logprob import factorized_joint_logprob
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.logprob.tensor import naive_bcast_rv_lift
-from tests.helpers import assert_no_rvs
+from pymc.testing import assert_no_rvs
 from tests.logprob.utils import joint_logprob
 
 

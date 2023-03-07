@@ -32,7 +32,7 @@ from pymc.logprob.abstract import logcdf
 from pymc.logprob.joint_logprob import logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
-from tests.distributions.util import (
+from pymc.testing import (
     BaseTestDistributionRandom,
     Circ,
     Domain,
@@ -45,11 +45,11 @@ from tests.distributions.util import (
     assert_moment_is_expected,
     check_logcdf,
     check_logp,
-    pymc_random,
+    continuous_random_tester,
     seeded_numpy_distribution_builder,
     seeded_scipy_distribution_builder,
+    select_by_precision,
 )
-from tests.helpers import select_by_precision
 from tests.logprob.utils import create_pytensor_params, scipy_logprob_tester
 
 try:
@@ -2259,7 +2259,7 @@ class TestInterpolated(BaseTestDistributionRandom):
                         pdf_points = st.norm.pdf(x_points, loc=mu, scale=sigma)
                         return super().dist(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
-                pymc_random(
+                continuous_random_tester(
                     TestedInterpolated,
                     {},
                     extra_args={"rng": pytensor.shared(rng)},

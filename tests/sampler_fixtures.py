@@ -21,8 +21,8 @@ from scipy import stats
 import pymc as pm
 
 from pymc.backends.arviz import to_inference_data
+from pymc.testing import SeededTest
 from pymc.util import get_var_name
-from tests.helpers import SeededTest
 
 
 class KnownMean:

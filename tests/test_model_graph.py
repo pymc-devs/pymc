@@ -25,7 +25,7 @@ import pymc as pm
 
 from pymc.exceptions import ImputationWarning
 from pymc.model_graph import ModelGraph, model_to_graphviz, model_to_networkx
-from tests.helpers import SeededTest
+from pymc.testing import SeededTest
 
 
 def school_model():

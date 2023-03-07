@@ -62,13 +62,13 @@ from pymc.sampling.forward import (
 )
 from pymc.sampling.mcmc import sample
 from pymc.step_methods import Metropolis
-from tests.distributions.util import (
+from pymc.testing import (
     Domain,
+    SeededTest,
     Simplex,
     assert_moment_is_expected,
-    pymc_random,
+    continuous_random_tester,
 )
-from tests.helpers import SeededTest
 
 
 def generate_normal_mixture_data(w, mu, sigma, size=1000):
@@ -850,7 +850,7 @@ class TestNormalMixture(SeededTest):
             component = np.random.choice(w.size, size=size, p=w)
             return np.random.normal(mu[component], sigma[component], size=size)
 
-        pymc_random(
+        continuous_random_tester(
             NormalMixture,
             {
                 "w": Simplex(2),
@@ -861,7 +861,7 @@ class TestNormalMixture(SeededTest):
             size=1000,
             ref_rand=ref_rand,
         )
-        pymc_random(
+        continuous_random_tester(
             NormalMixture,
             {
                 "w": Simplex(3),

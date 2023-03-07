@@ -49,7 +49,7 @@ from pymc.logprob.joint_logprob import factorized_joint_logprob
 from pymc.logprob.mixture import MixtureRV, expand_indices
 from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.logprob.utils import dirac_delta
-from tests.helpers import assert_no_rvs
+from pymc.testing import assert_no_rvs
 from tests.logprob.utils import joint_logprob, scipy_logprob
 
 

@@ -23,7 +23,7 @@ from scipy.stats import norm
 import pymc as pm
 
 from pymc.ode import DifferentialEquation
-from tests.helpers import fast_unstable_sampling_mode
+from pymc.testing import fast_unstable_sampling_mode
 
 
 def test_simulate():

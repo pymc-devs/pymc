@@ -32,7 +32,7 @@ from pymc import floatX
 from pymc.initial_point import make_initial_point_fn
 from pymc.pytensorf import compile_pymc
 from pymc.smc.kernels import IMH
-from tests.helpers import SeededTest
+from pymc.testing import SeededTest
 
 
 class TestSimulator(SeededTest):
