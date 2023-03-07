@@ -47,6 +47,7 @@ jobs:
             tests/test_func_utils.py
             tests/distributions/test_shape_utils.py
             tests/distributions/test_mixture.py
+            tests/test_testing.py
 
           - |
             tests/distributions/test_continuous.py

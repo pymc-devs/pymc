@@ -48,8 +48,8 @@ from pymc.pytensorf import (
     rvs_to_value_vars,
     walk_model,
 )
+from pymc.testing import assert_no_rvs
 from pymc.vartypes import int_types
-from tests.helpers import assert_no_rvs
 
 
 @pytest.mark.parametrize(

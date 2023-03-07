@@ -31,7 +31,8 @@ from pymc.step_methods.compound import (
     get_stats_dtypes_shapes_from_steps,
     infer_warn_stats_info,
 )
-from tests.helpers import StepMethodTester, fast_unstable_sampling_mode
+from pymc.testing import fast_unstable_sampling_mode
+from tests.helpers import StepMethodTester
 from tests.models import simple_2model_continuous
 
 

@@ -41,7 +41,7 @@ import scipy.stats as st
 
 from pymc.logprob.censoring import MeasurableClip
 from pymc.logprob.rewriting import construct_ir_fgraph
-from tests.helpers import assert_no_rvs
+from pymc.testing import assert_no_rvs
 from tests.logprob.utils import joint_logprob
 
 

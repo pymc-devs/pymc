@@ -29,7 +29,7 @@ from pymc.logprob.abstract import _icdf
 from pymc.logprob.joint_logprob import logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.logprob.utils import ParameterValueError
-from tests.distributions.util import assert_moment_is_expected
+from pymc.testing import assert_moment_is_expected
 
 
 class IcdfNormalRV(NormalRV):

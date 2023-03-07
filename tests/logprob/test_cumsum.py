@@ -40,7 +40,7 @@ import pytensor.tensor as at
 import pytest
 import scipy.stats as st
 
-from tests.helpers import assert_no_rvs
+from pymc.testing import assert_no_rvs
 from tests.logprob.utils import joint_logprob
 
 

@@ -42,7 +42,7 @@ from pymc.logprob.utils import ParameterValueError
 from pymc.math import kronecker
 from pymc.pytensorf import compile_pymc, floatX, intX
 from pymc.sampling.forward import draw
-from tests.distributions.util import (
+from pymc.testing import (
     BaseTestDistributionRandom,
     Domain,
     Nat,
@@ -54,10 +54,10 @@ from tests.distributions.util import (
     Vector,
     assert_moment_is_expected,
     check_logp,
-    pymc_random,
+    continuous_random_tester,
     seeded_numpy_distribution_builder,
+    select_by_precision,
 )
-from tests.helpers import select_by_precision
 
 
 def betafn(a):
@@ -2010,7 +2010,7 @@ class TestLKJCorr(BaseTestDistributionRandom):
             beta = eta - 1 + n / 2
             return (st.beta.rvs(size=(size, shape), a=beta, b=beta) - 0.5) * 2
 
-        pymc_random(
+        continuous_random_tester(
             pm.LKJCorr,
             {
                 "n": Domain([2, 10, 50], edges=(None, None)),

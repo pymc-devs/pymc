@@ -51,7 +51,7 @@ from pymc.logprob.scan import (
     convert_outer_out_to_in,
     get_random_outer_outputs,
 )
-from tests.helpers import assert_no_rvs
+from pymc.testing import assert_no_rvs
 from tests.logprob.utils import joint_logprob
 
 

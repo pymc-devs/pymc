@@ -27,20 +27,20 @@ import pymc.distributions.transforms as tr
 
 from pymc.logprob.joint_logprob import joint_logp
 from pymc.pytensorf import floatX, jacobian
-from tests.checks import close_to, close_to_logical
-from tests.distributions.util import (
+from pymc.testing import (
     Circ,
     MultiSimplex,
     R,
     Rminusbig,
     Rplusbig,
+    SeededTest,
     Simplex,
     SortedVector,
     Unit,
     UnitSortedVector,
     Vector,
 )
-from tests.helpers import SeededTest
+from tests.checks import close_to, close_to_logical
 
 # some transforms (stick breaking) require addition of small slack in order to be numerically
 # stable. The minimal addable slack for float32 is higher thus we need to be less strict

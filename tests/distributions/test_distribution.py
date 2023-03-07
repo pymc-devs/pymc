@@ -50,8 +50,8 @@ from pymc.logprob.abstract import get_measurable_outputs, logcdf
 from pymc.logprob.joint_logprob import logp
 from pymc.model import Model
 from pymc.sampling import draw, sample
+from pymc.testing import assert_moment_is_expected
 from pymc.util import _FutureWarningValidatingScratchpad
-from tests.distributions.util import assert_moment_is_expected
 
 
 class TestBugfixes:

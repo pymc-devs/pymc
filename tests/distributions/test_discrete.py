@@ -33,8 +33,7 @@ from pymc.logprob.abstract import logcdf
 from pymc.logprob.joint_logprob import logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
-from pymc.vartypes import discrete_types
-from tests.distributions.util import (
+from pymc.testing import (
     BaseTestDistributionRandom,
     Bool,
     Domain,
@@ -58,6 +57,7 @@ from tests.distributions.util import (
     seeded_numpy_distribution_builder,
     seeded_scipy_distribution_builder,
 )
+from pymc.vartypes import discrete_types
 from tests.logprob.utils import create_pytensor_params, scipy_logprob_tester
 
 

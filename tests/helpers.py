@@ -24,32 +24,12 @@ import numpy.random as nr
 import pytensor
 
 from pytensor.gradient import verify_grad as at_verify_grad
-from pytensor.graph import ancestors
-from pytensor.graph.rewriting.basic import in2out
-from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
 
-from pymc.pytensorf import local_check_parameter_to_ninf_switch
+from pymc.testing import fast_unstable_sampling_mode
 from tests.checks import close_to
 from tests.models import mv_simple, mv_simple_coarse
-
-
-class SeededTest:
-    random_seed = 20160911
-    random_state = None
-
-    @classmethod
-    def setup_class(cls):
-        nr.seed(cls.random_seed)
-
-    def setup_method(self):
-        nr.seed(self.random_seed)
-
-    def get_random_state(self, reset=False):
-        if self.random_state is None or reset:
-            self.random_state = nr.RandomState(self.random_seed)
-        return self.random_state
 
 
 class LoggingHandler(BufferingHandler):
@@ -112,12 +92,6 @@ class Matcher:
         return result
 
 
-def select_by_precision(float64, float32):
-    """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
-    decimal = float64 if pytensor.config.floatX == "float64" else float32
-    return decimal
-
-
 @contextlib.contextmanager
 def not_raises():
     yield
@@ -135,21 +109,6 @@ def assert_random_state_equal(state1, state2):
             np.testing.assert_array_equal(field1, field2)
         else:
             assert field1 == field2
-
-
-# This mode can be used for tests where model compilations takes the bulk of the runtime
-# AND where we don't care about posterior numerical or sampling stability (e.g., when
-# all that matters are the shape of the draws or deterministic values of observed data).
-# DO NOT USE UNLESS YOU HAVE A GOOD REASON TO!
-fast_unstable_sampling_mode = (
-    pytensor.compile.mode.FAST_COMPILE
-    # Remove slow rewrite phases
-    .excluding("canonicalize", "specialize")
-    # Include necessary rewrites for proper logp handling
-    .including("remove_TransformedVariables").register(
-        (in2out(local_check_parameter_to_ninf_switch), -1)
-    )
-)
 
 
 class StepMethodTester:
@@ -213,8 +172,3 @@ class RVsAssignmentStepsTester:
             assert {m.rvs_to_values[c1], m.rvs_to_values[c2]} == set(
                 step([c1, c2], **step_kwargs).vars
             )
-
-
-def assert_no_rvs(var):
-    assert not any(isinstance(v.owner.op, RandomVariable) for v in ancestors([var]) if v.owner)
-    return var
