@@ -2041,7 +2041,7 @@ def Deterministic(name, var, model=None, dims=None):
     return var
 
 
-def Potential(name, var, model=None):
+def Potential(name, var, model=None, dims=None):
     """
     Add an arbitrary factor potential to the model likelihood
 
@@ -2135,7 +2135,7 @@ def Potential(name, var, model=None):
     model = modelcontext(model)
     var.name = model.name_for(name)
     model.potentials.append(var)
-    model.add_named_variable(var)
+    model.add_named_variable(var, dims)
 
     from pymc.printing import str_for_potential_or_deterministic
 
