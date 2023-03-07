@@ -2049,13 +2049,7 @@ def Potential(name, var, model=None):
 
     Warnings
     --------
-    Potential functions only influence logp based sampling, like the one used by ``pm.sample``.
-    Potentials, modify the log-probability of the model by adding a contribution to the logp which is used by sampling algorithms which rely on the information about the observed data to generate posterior samples.
-    Potentials are not applicable in the context of forward sampling because they don't affect the prior distribution itself, only the computation of the logp.
-    Forward sampling algorithms generate sample points from the prior distribution of the model, without taking into account the likelihood function.
-    In other words, it does not use the information about the observed data.
-    Hence, Potentials do not affect forward sampling, which is used by ``sample_prior_predictive`` and ``sample_posterior_predictive``.
-    A warning saying "The effect of Potentials on other parameters is ignored during prior predictive sampling" is always emitted to alert user of this.
+    Potential functions only influence logp-based sampling. Therefore, they are applicable for sampling with ``pm.sample`` but not ``pm.sample_prior_predictive`` or ``pm.sample_posterior_predictive``.
 
     Parameters
     ----------
@@ -2077,7 +2071,7 @@ def Potential(name, var, model=None):
     Have a look at the following example:
 
     In this example, we define a constraint on ``x`` to be greater or equal to 0 via the ``pm.Potential`` function.
-    We pass ``-pm.math.log(pm.math.switch(constraint, 1, 0))`` as second argument which will return an expression depending on if the constraint is met or not and which will be added to the likelihood of the model.
+    We pass ``pm.math.log(pm.math.switch(constraint, 1, 0))`` as second argument which will return an expression depending on if the constraint is met or not and which will be added to the likelihood of the model.
     The probablity density that this model produces agrees strongly with the constraint that ``x`` should be greater than or equal to 0. All the cases who do not satisfy the constraint are strictly not considered.
 
     .. code:: python
@@ -2086,9 +2080,9 @@ def Potential(name, var, model=None):
             x = pm.Normal("x", mu=0, sigma=1)
             y = pm.Normal("y", mu=x, sigma=1, observed=data)
             constraint = x >= 0
-            potential = pm.Potential("x_constraint", pm.math.log(pm.math.switch(constraint, 1, 0.0)))
+            potential = pm.Potential("x_constraint", pm.math.log(pm.math.switch(constraint, 1, 0)))
 
-    However, if we use ``-pm.math.log(pm.math.switch(constraint, 1, 0.5))`` the potential again penalizes the likelihood when constraint is not met but with some deviations allowed.
+    However, if we use ``pm.math.log(pm.math.switch(constraint, 1.0, 0.5))`` the potential again penalizes the likelihood when constraint is not met but with some deviations allowed.
     Here, Potential function is used to pass a soft constraint.
     A soft constraint is a constraint that is only partially satisfied.
     The effect of this is that the posterior probability for the parameters decreases as they move away from the constraint, but does not become exactly zero.
@@ -2100,7 +2094,7 @@ def Potential(name, var, model=None):
             x = pm.Normal("x", mu=0.1, sigma=1)
             y = pm.Normal("y", mu=x, sigma=1, observed=data)
             constraint = x >= 0
-            potential = pm.Potential("x_constraint", pm.math.log(pm.math.switch(constraint, 1, 0.5)))
+            potential = pm.Potential("x_constraint", pm.math.log(pm.math.switch(constraint, 1.0, 0.5)))
 
     In this example, Potential is used to obtain an arbitrary prior.
     This prior distribution refers to the prior knowledge that the values of ``max_items`` are likely to be small rather than being large.
