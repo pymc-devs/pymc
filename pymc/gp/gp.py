@@ -15,7 +15,7 @@
 import warnings
 
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.tensor.nlinalg import eigh
 
@@ -211,9 +211,9 @@ class Latent(Base):
         L = cholesky(stabilize(Kxx, jitter))
         A = solve_lower(L, Kxs)
         v = solve_lower(L, f - mean_total(X))
-        mu = self.mean_func(Xnew) + at.dot(at.transpose(A), v)
+        mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v)
         Kss = self.cov_func(Xnew)
-        cov = Kss - at.dot(at.transpose(A), A)
+        cov = Kss - pt.dot(pt.transpose(A), A)
         return mu, cov
 
     def conditional(self, name, Xnew, given=None, jitter=JITTER_DEFAULT, **kwargs):
@@ -342,10 +342,10 @@ class TP(Latent):
         Kss = self.cov_func(Xnew)
         L = cholesky(stabilize(Kxx, jitter))
         A = solve_lower(L, Kxs)
-        cov = Kss - at.dot(at.transpose(A), A)
+        cov = Kss - pt.dot(pt.transpose(A), A)
         v = solve_lower(L, f - self.mean_func(X))
-        mu = self.mean_func(Xnew) + at.dot(at.transpose(A), v)
-        beta = at.dot(v, v)
+        mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v)
+        beta = pt.dot(v, v)
         nu2 = self.nu + X.shape[0]
         covT = (self.nu + beta - 2) / (nu2 - 2) * cov
         return nu2, mu, covT
@@ -516,16 +516,16 @@ class Marginal(Base):
         L = cholesky(stabilize(Kxx, jitter) + Knx)
         A = solve_lower(L, Kxs)
         v = solve_lower(L, rxx)
-        mu = self.mean_func(Xnew) + at.dot(at.transpose(A), v)
+        mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v)
         if diag:
             Kss = self.cov_func(Xnew, diag=True)
-            var = Kss - at.sum(at.square(A), 0)
+            var = Kss - pt.sum(pt.square(A), 0)
             if pred_noise:
                 var += noise_func(Xnew, diag=True)
             return mu, var
         else:
             Kss = self.cov_func(Xnew)
-            cov = Kss - at.dot(at.transpose(A), A)
+            cov = Kss - pt.dot(pt.transpose(A), A)
             if pred_noise:
                 cov += noise_func(Xnew)
             return mu, cov if pred_noise else stabilize(cov, jitter)
@@ -718,32 +718,32 @@ class MarginalApprox(Marginal):
         return new_gp
 
     def _build_marginal_likelihood_loglik(self, y, X, Xu, sigma, jitter):
-        sigma2 = at.square(sigma)
+        sigma2 = pt.square(sigma)
         Kuu = self.cov_func(Xu)
         Kuf = self.cov_func(Xu, X)
         Luu = cholesky(stabilize(Kuu, jitter))
         A = solve_lower(Luu, Kuf)
-        Qffd = at.sum(A * A, 0)
+        Qffd = pt.sum(A * A, 0)
         if self.approx == "FITC":
             Kffd = self.cov_func(X, diag=True)
-            Lamd = at.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
+            Lamd = pt.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
             trace = 0.0
         elif self.approx == "VFE":
-            Lamd = at.ones_like(Qffd) * sigma2
+            Lamd = pt.ones_like(Qffd) * sigma2
             trace = (1.0 / (2.0 * sigma2)) * (
-                at.sum(self.cov_func(X, diag=True)) - at.sum(at.sum(A * A, 0))
+                pt.sum(self.cov_func(X, diag=True)) - pt.sum(pt.sum(A * A, 0))
             )
         else:  # DTC
-            Lamd = at.ones_like(Qffd) * sigma2
+            Lamd = pt.ones_like(Qffd) * sigma2
             trace = 0.0
         A_l = A / Lamd
-        L_B = cholesky(at.eye(Xu.shape[0]) + at.dot(A_l, at.transpose(A)))
+        L_B = cholesky(pt.eye(Xu.shape[0]) + pt.dot(A_l, pt.transpose(A)))
         r = y - self.mean_func(X)
         r_l = r / Lamd
-        c = solve_lower(L_B, at.dot(A, r_l))
-        constant = 0.5 * X.shape[0] * at.log(2.0 * np.pi)
-        logdet = 0.5 * at.sum(at.log(Lamd)) + at.sum(at.log(at.diag(L_B)))
-        quadratic = 0.5 * (at.dot(r, r_l) - at.dot(c, c))
+        c = solve_lower(L_B, pt.dot(A, r_l))
+        constant = 0.5 * X.shape[0] * pt.log(2.0 * np.pi)
+        logdet = 0.5 * pt.sum(pt.log(Lamd)) + pt.sum(pt.log(pt.diag(L_B)))
+        quadratic = 0.5 * (pt.dot(r, r_l) - pt.dot(c, c))
         return -1.0 * (constant + logdet + quadratic + trace)
 
     def marginal_likelihood(
@@ -792,36 +792,36 @@ class MarginalApprox(Marginal):
     def _build_conditional(
         self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total, jitter
     ):
-        sigma2 = at.square(sigma)
+        sigma2 = pt.square(sigma)
         Kuu = cov_total(Xu)
         Kuf = cov_total(Xu, X)
         Luu = cholesky(stabilize(Kuu, jitter))
         A = solve_lower(Luu, Kuf)
-        Qffd = at.sum(A * A, 0)
+        Qffd = pt.sum(A * A, 0)
         if self.approx == "FITC":
             Kffd = cov_total(X, diag=True)
-            Lamd = at.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
+            Lamd = pt.clip(Kffd - Qffd, 0.0, np.inf) + sigma2
         else:  # VFE or DTC
-            Lamd = at.ones_like(Qffd) * sigma2
+            Lamd = pt.ones_like(Qffd) * sigma2
         A_l = A / Lamd
-        L_B = cholesky(at.eye(Xu.shape[0]) + at.dot(A_l, at.transpose(A)))
+        L_B = cholesky(pt.eye(Xu.shape[0]) + pt.dot(A_l, pt.transpose(A)))
         r = y - mean_total(X)
         r_l = r / Lamd
-        c = solve_lower(L_B, at.dot(A, r_l))
+        c = solve_lower(L_B, pt.dot(A, r_l))
         Kus = self.cov_func(Xu, Xnew)
         As = solve_lower(Luu, Kus)
-        mu = self.mean_func(Xnew) + at.dot(at.transpose(As), solve_upper(at.transpose(L_B), c))
+        mu = self.mean_func(Xnew) + pt.dot(pt.transpose(As), solve_upper(pt.transpose(L_B), c))
         C = solve_lower(L_B, As)
         if diag:
             Kss = self.cov_func(Xnew, diag=True)
-            var = Kss - at.sum(at.square(As), 0) + at.sum(at.square(C), 0)
+            var = Kss - pt.sum(pt.square(As), 0) + pt.sum(pt.square(C), 0)
             if pred_noise:
                 var += sigma2
             return mu, var
         else:
-            cov = self.cov_func(Xnew) - at.dot(at.transpose(As), As) + at.dot(at.transpose(C), C)
+            cov = self.cov_func(Xnew) - pt.dot(pt.transpose(As), As) + pt.dot(pt.transpose(C), C)
             if pred_noise:
-                cov += sigma2 * at.identity_like(cov)
+                cov += sigma2 * pt.identity_like(cov)
             return mu, cov if pred_noise else stabilize(cov, jitter)
 
     def _get_given_vals(self, given):
@@ -953,7 +953,7 @@ class LatentKron(Base):
         mu = self.mean_func(cartesian(*Xs))
         chols = [cholesky(stabilize(cov(X), jitter)) for cov, X in zip(self.cov_funcs, Xs)]
         v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=self.N, **kwargs)
-        f = pm.Deterministic(name, mu + at.flatten(kron_dot(chols, v)))
+        f = pm.Deterministic(name, mu + pt.flatten(kron_dot(chols, v)))
         return f
 
     def prior(self, name, Xs, jitter=JITTER_DEFAULT, **kwargs):
@@ -991,15 +991,15 @@ class LatentKron(Base):
         delta = f - self.mean_func(X)
         covs = [stabilize(cov(Xi), jitter) for cov, Xi in zip(self.cov_funcs, Xs)]
         chols = [cholesky(cov) for cov in covs]
-        cholTs = [at.transpose(chol) for chol in chols]
+        cholTs = [pt.transpose(chol) for chol in chols]
         Kss = self.cov_func(Xnew)
         Kxs = self.cov_func(X, Xnew)
-        Ksx = at.transpose(Kxs)
+        Ksx = pt.transpose(Kxs)
         alpha = kron_solve_lower(chols, delta)
         alpha = kron_solve_upper(cholTs, alpha)
-        mu = at.dot(Ksx, alpha).ravel() + self.mean_func(Xnew)
+        mu = pt.dot(Ksx, alpha).ravel() + self.mean_func(Xnew)
         A = kron_solve_lower(chols, Kxs)
-        cov = stabilize(Kss - at.dot(at.transpose(A), A), jitter)
+        cov = stabilize(Kss - pt.dot(pt.transpose(A), A), jitter)
         return mu, cov
 
     def conditional(self, name, Xnew, jitter=JITTER_DEFAULT, **kwargs):
@@ -1174,7 +1174,7 @@ class MarginalKron(Base):
         delta = y - self.mean_func(X)
         Kns = [f(x) for f, x in zip(self.cov_funcs, Xs)]
         eigs_sep, Qs = zip(*map(eigh, Kns))  # Unzip
-        QTs = list(map(at.transpose, Qs))
+        QTs = list(map(pt.transpose, Qs))
         eigs = kron_diag(*eigs_sep)  # Combine separate eigs
         if sigma is not None:
             eigs += sigma**2
@@ -1187,21 +1187,21 @@ class MarginalKron(Base):
         alpha = kron_dot(QTs, delta)
         alpha = alpha / eigs[:, None]
         alpha = kron_dot(Qs, alpha)
-        mu = at.dot(Kmn, alpha).ravel() + self.mean_func(Xnew)
+        mu = pt.dot(Kmn, alpha).ravel() + self.mean_func(Xnew)
 
         # Build conditional cov
         A = kron_dot(QTs, Knm)
-        A = A / at.sqrt(eigs[:, None])
+        A = A / pt.sqrt(eigs[:, None])
         if diag:
-            Asq = at.sum(at.square(A), 0)
+            Asq = pt.sum(pt.square(A), 0)
             cov = Km - Asq
             if pred_noise:
                 cov += sigma
         else:
-            Asq = at.dot(A.T, A)
+            Asq = pt.dot(A.T, A)
             cov = Km - Asq
             if pred_noise:
-                cov += sigma * at.identity_like(cov)
+                cov += sigma * pt.identity_like(cov)
         return mu, cov
 
     def conditional(self, name, Xnew, pred_noise=False, diag=False, **kwargs):

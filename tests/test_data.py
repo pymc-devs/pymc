@@ -18,7 +18,7 @@ import itertools as it
 import cloudpickle
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 from pytensor import shared
@@ -318,8 +318,8 @@ class TestData(SeededTest):
         # pass coordinates explicitly, use numpy array in Data container
         with pm.Model(coords=coords) as pmodel:
             # Dims created from coords are constant by default
-            assert isinstance(pmodel.dim_lengths["rows"], at.TensorConstant)
-            assert isinstance(pmodel.dim_lengths["columns"], at.TensorConstant)
+            assert isinstance(pmodel.dim_lengths["rows"], pt.TensorConstant)
+            assert isinstance(pmodel.dim_lengths["columns"], pt.TensorConstant)
             pm.MutableData("observations", data, dims=("rows", "columns"))
             # new data with same (!) shape
             pm.set_data({"observations": data + 1})
@@ -433,7 +433,7 @@ class TestData(SeededTest):
         with pm.Model():
             with pytest.warns(UserWarning, match="`mutable` kwarg was not specified"):
                 data = pm.Data("x", [1, 2, 3])
-            assert isinstance(data, at.TensorConstant)
+            assert isinstance(data, pt.TensorConstant)
         pass
 
 
@@ -564,7 +564,7 @@ class TestGenerator:
 
     def test_gen_cloning_with_shape_change(self, datagen):
         gen = pm.generator(datagen)
-        gen_r = at.random.normal(size=gen.shape).T
+        gen_r = pt.random.normal(size=gen.shape).T
         X = gen.dot(gen_r)
         res, _ = pytensor.scan(lambda x: x.sum(), X, n_steps=X.shape[0])
         assert res.eval().shape == (50,)
@@ -597,16 +597,16 @@ class TestMinibatch:
         assert mb.eval().shape == (20, 10)
 
     def test_allowed(self):
-        mb = pm.Minibatch(at.as_tensor(self.data).astype(int), batch_size=20)
+        mb = pm.Minibatch(pt.as_tensor(self.data).astype(int), batch_size=20)
         assert is_minibatch(mb)
 
     def test_not_allowed(self):
         with pytest.raises(ValueError, match="not valid for Minibatch"):
-            mb = pm.Minibatch(at.as_tensor(self.data) * 2, batch_size=20)
+            mb = pm.Minibatch(pt.as_tensor(self.data) * 2, batch_size=20)
 
     def test_not_allowed2(self):
         with pytest.raises(ValueError, match="not valid for Minibatch"):
-            mb = pm.Minibatch(self.data, at.as_tensor(self.data) * 2, batch_size=20)
+            mb = pm.Minibatch(self.data, pt.as_tensor(self.data) * 2, batch_size=20)
 
     def test_assert(self):
         with pytest.raises(

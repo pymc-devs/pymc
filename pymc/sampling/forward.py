@@ -36,7 +36,7 @@ import xarray
 
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.graph.basic import (
     Apply,
     Constant,
@@ -253,7 +253,7 @@ def compile_forward_sampling_function(
             node,
             value
             if isinstance(value, (Variable, Apply))
-            else at.constant(value, dtype=getattr(node, "dtype", None), name=node.name),
+            else pt.constant(value, dtype=getattr(node, "dtype", None), name=node.name),
         )
         for node, value in givens_dict.items()
     ]

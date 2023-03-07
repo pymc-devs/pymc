@@ -15,7 +15,7 @@
 import warnings
 
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.compile import SharedVariable
 from pytensor.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
@@ -100,7 +100,7 @@ def stabilize(K, jitter=JITTER_DEFAULT):
     jitter: float
         A small constant.
     """
-    return K + jitter * at.identity_like(K)
+    return K + jitter * pt.identity_like(K)
 
 
 def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):

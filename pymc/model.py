@@ -36,7 +36,7 @@ from typing import (
 import numpy as np
 import pytensor
 import pytensor.sparse as sparse
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import scipy.sparse as sps
 
 from pytensor.compile.sharedvalue import SharedVariable
@@ -491,7 +491,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 Deterministic('v3_sq', self.v3 ** 2)
 
                 # Potentials too
-                Potential('p1', at.constant(1))
+                Potential('p1', pt.constant(1))
 
         # After defining a class CustomModel you can use it in several
         # ways
@@ -776,7 +776,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if not sum:
             return logp_factors
 
-        logp_scalar = at.sum([at.sum(factor) for factor in logp_factors])
+        logp_scalar = pt.sum([pt.sum(factor) for factor in logp_factors])
         logp_scalar_name = "__logp" if jacobian else "__logp_nojac"
         if self.name:
             logp_scalar_name = f"{logp_scalar_name}_{self.name}"
@@ -889,9 +889,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         # inputs and apply their transforms, if any
         potentials = self.replace_rvs_by_values(self.potentials)
         if potentials:
-            return at.sum([at.sum(factor) for factor in potentials])
+            return pt.sum([pt.sum(factor) for factor in potentials])
         else:
-            return at.constant(0.0)
+            return pt.constant(0.0)
 
     @property
     def value_vars(self):
@@ -1438,7 +1438,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # values, and another for the non-missing values.
 
             antimask_idx = (~mask).nonzero()
-            nonmissing_data = at.as_tensor_variable(data[antimask_idx])
+            nonmissing_data = pt.as_tensor_variable(data[antimask_idx])
             unmasked_rv_var = rv_var[antimask_idx]
             unmasked_rv_var = unmasked_rv_var.owner.clone().default_output()
 
@@ -1461,16 +1461,16 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             # Create deterministic that combines observed and missing
             # Note: This can widely increase memory consumption during sampling for large datasets
-            rv_var = at.empty(data.shape, dtype=observed_rv_var.type.dtype)
-            rv_var = at.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
-            rv_var = at.set_subtensor(rv_var[antimask_idx], observed_rv_var)
+            rv_var = pt.empty(data.shape, dtype=observed_rv_var.type.dtype)
+            rv_var = pt.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
+            rv_var = pt.set_subtensor(rv_var[antimask_idx], observed_rv_var)
             rv_var = Deterministic(name, rv_var, self, dims)
 
         else:
             if sps.issparse(data):
                 data = sparse.basic.as_sparse(data, name=name)
             else:
-                data = at.as_tensor_variable(data, name=name)
+                data = pt.as_tensor_variable(data, name=name)
 
             if total_size:
                 from pymc.variational.minibatch_rv import create_minibatch_rv
@@ -1802,7 +1802,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             point = self.initial_point()
 
         factors = self.basic_RVs + self.potentials
-        factor_logps_fn = [at.sum(factor) for factor in self.logp(factors, sum=False)]
+        factor_logps_fn = [pt.sum(factor) for factor in self.logp(factors, sum=False)]
         return {
             factor.name: np.round(np.asarray(factor_logp), round_vals)
             for factor, factor_logp in zip(

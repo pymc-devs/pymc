@@ -20,7 +20,7 @@ from operator import add, mul
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.graph.basic import Variable
 from pytensor.tensor.sharedvar import TensorSharedVariable
@@ -104,9 +104,9 @@ class Covariance:
                 " the number of columns to use. Ignore otherwise.",
                 UserWarning,
             )
-        X = at.as_tensor_variable(X[:, self.active_dims])
+        X = pt.as_tensor_variable(X[:, self.active_dims])
         if Xs is not None:
-            Xs = at.as_tensor_variable(Xs[:, self.active_dims])
+            Xs = pt.as_tensor_variable(Xs[:, self.active_dims])
         return X, Xs
 
     def __add__(self, other):
@@ -126,7 +126,7 @@ class Covariance:
             isinstance(other, pytensor.compile.SharedVariable)
             and other.get_value().squeeze().shape == ()
         ):
-            other = at.squeeze(other)
+            other = pt.squeeze(other)
             return Exponentiated(self, other)
         elif isinstance(other, Number):
             return Exponentiated(self, other)
@@ -195,7 +195,7 @@ class Combination(Covariance):
                 ),
             ):
                 if factor.ndim == 2 and diag:
-                    factor_list.append(at.diag(factor))
+                    factor_list.append(pt.diag(factor))
                 else:
                     factor_list.append(factor)
             else:
@@ -274,13 +274,13 @@ class Constant(Covariance):
         self.c = c
 
     def diag(self, X):
-        return at.alloc(self.c, X.shape[0])
+        return pt.alloc(self.c, X.shape[0])
 
     def full(self, X, Xs=None):
         if Xs is None:
-            return at.alloc(self.c, X.shape[0], X.shape[0])
+            return pt.alloc(self.c, X.shape[0], X.shape[0])
         else:
-            return at.alloc(self.c, X.shape[0], Xs.shape[0])
+            return pt.alloc(self.c, X.shape[0], Xs.shape[0])
 
 
 class WhiteNoise(Covariance):
@@ -297,13 +297,13 @@ class WhiteNoise(Covariance):
         self.sigma = sigma
 
     def diag(self, X):
-        return at.alloc(at.square(self.sigma), X.shape[0])
+        return pt.alloc(pt.square(self.sigma), X.shape[0])
 
     def full(self, X, Xs=None):
         if Xs is None:
-            return at.diag(self.diag(X))
+            return pt.diag(self.diag(X))
         else:
-            return at.alloc(0.0, X.shape[0], Xs.shape[0])
+            return pt.alloc(0.0, X.shape[0], Xs.shape[0])
 
 
 class Circular(Covariance):
@@ -340,25 +340,25 @@ class Circular(Covariance):
 
     def __init__(self, input_dim, period, tau=4, active_dims=None):
         super().__init__(input_dim, active_dims)
-        self.c = at.as_tensor_variable(period / 2)
+        self.c = pt.as_tensor_variable(period / 2)
         self.tau = tau
 
     def dist(self, X, Xs):
         if Xs is None:
-            Xs = at.transpose(X)
+            Xs = pt.transpose(X)
         else:
-            Xs = at.transpose(Xs)
-        return at.abs((X - Xs + self.c) % (self.c * 2) - self.c)
+            Xs = pt.transpose(Xs)
+        return pt.abs((X - Xs + self.c) % (self.c * 2) - self.c)
 
     def weinland(self, t):
-        return (1 + self.tau * t / self.c) * at.clip(1 - t / self.c, 0, np.inf) ** self.tau
+        return (1 + self.tau * t / self.c) * pt.clip(1 - t / self.c, 0, np.inf) ** self.tau
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
         return self.weinland(self.dist(X, Xs))
 
     def diag(self, X):
-        return at.alloc(1.0, X.shape[0])
+        return pt.alloc(1.0, X.shape[0])
 
 
 class Stationary(Covariance):
@@ -381,29 +381,29 @@ class Stationary(Covariance):
                 ls = 1.0 / np.asarray(ls_inv)
             else:
                 ls = 1.0 / ls_inv
-        self.ls = at.as_tensor_variable(ls)
+        self.ls = pt.as_tensor_variable(ls)
 
     def square_dist(self, X, Xs):
-        X = at.mul(X, 1.0 / self.ls)
-        X2 = at.sum(at.square(X), 1)
+        X = pt.mul(X, 1.0 / self.ls)
+        X2 = pt.sum(pt.square(X), 1)
         if Xs is None:
-            sqd = -2.0 * at.dot(X, at.transpose(X)) + (
-                at.reshape(X2, (-1, 1)) + at.reshape(X2, (1, -1))
+            sqd = -2.0 * pt.dot(X, pt.transpose(X)) + (
+                pt.reshape(X2, (-1, 1)) + pt.reshape(X2, (1, -1))
             )
         else:
-            Xs = at.mul(Xs, 1.0 / self.ls)
-            Xs2 = at.sum(at.square(Xs), 1)
-            sqd = -2.0 * at.dot(X, at.transpose(Xs)) + (
-                at.reshape(X2, (-1, 1)) + at.reshape(Xs2, (1, -1))
+            Xs = pt.mul(Xs, 1.0 / self.ls)
+            Xs2 = pt.sum(pt.square(Xs), 1)
+            sqd = -2.0 * pt.dot(X, pt.transpose(Xs)) + (
+                pt.reshape(X2, (-1, 1)) + pt.reshape(Xs2, (1, -1))
             )
-        return at.clip(sqd, 0.0, np.inf)
+        return pt.clip(sqd, 0.0, np.inf)
 
     def euclidean_dist(self, X, Xs):
         r2 = self.square_dist(X, Xs)
-        return at.sqrt(r2 + 1e-12)
+        return pt.sqrt(r2 + 1e-12)
 
     def diag(self, X):
-        return at.alloc(1.0, X.shape[0])
+        return pt.alloc(1.0, X.shape[0])
 
     def full(self, X, Xs=None):
         raise NotImplementedError
@@ -439,8 +439,8 @@ class Periodic(Stationary):
         f1 = X.dimshuffle(0, "x", 1)
         f2 = Xs.dimshuffle("x", 0, 1)
         r = np.pi * (f1 - f2) / self.period
-        r = at.sum(at.square(at.sin(r) / self.ls), 2)
-        return at.exp(-0.5 * r)
+        r = pt.sum(pt.square(pt.sin(r) / self.ls), 2)
+        return pt.exp(-0.5 * r)
 
 
 class ExpQuad(Stationary):
@@ -455,7 +455,7 @@ class ExpQuad(Stationary):
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
-        return at.exp(-0.5 * self.square_dist(X, Xs))
+        return pt.exp(-0.5 * self.square_dist(X, Xs))
 
 
 class RatQuad(Stationary):
@@ -473,7 +473,7 @@ class RatQuad(Stationary):
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
-        return at.power(
+        return pt.power(
             (1.0 + 0.5 * self.square_dist(X, Xs) * (1.0 / self.alpha)),
             -1.0 * self.alpha,
         )
@@ -493,7 +493,7 @@ class Matern52(Stationary):
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
         r = self.euclidean_dist(X, Xs)
-        return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * at.square(r)) * at.exp(-1.0 * np.sqrt(5.0) * r)
+        return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * pt.square(r)) * pt.exp(-1.0 * np.sqrt(5.0) * r)
 
 
 class Matern32(Stationary):
@@ -509,7 +509,7 @@ class Matern32(Stationary):
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
         r = self.euclidean_dist(X, Xs)
-        return (1.0 + np.sqrt(3.0) * r) * at.exp(-np.sqrt(3.0) * r)
+        return (1.0 + np.sqrt(3.0) * r) * pt.exp(-np.sqrt(3.0) * r)
 
 
 class Matern12(Stationary):
@@ -524,7 +524,7 @@ class Matern12(Stationary):
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
         r = self.euclidean_dist(X, Xs)
-        return at.exp(-r)
+        return pt.exp(-r)
 
 
 class Exponential(Stationary):
@@ -538,7 +538,7 @@ class Exponential(Stationary):
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
-        return at.exp(-0.5 * self.euclidean_dist(X, Xs))
+        return pt.exp(-0.5 * self.euclidean_dist(X, Xs))
 
 
 class Cosine(Stationary):
@@ -551,7 +551,7 @@ class Cosine(Stationary):
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
-        return at.cos(2.0 * np.pi * self.euclidean_dist(X, Xs))
+        return pt.cos(2.0 * np.pi * self.euclidean_dist(X, Xs))
 
 
 class Linear(Covariance):
@@ -568,20 +568,20 @@ class Linear(Covariance):
 
     def _common(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
-        Xc = at.sub(X, self.c)
+        Xc = pt.sub(X, self.c)
         return X, Xc, Xs
 
     def full(self, X, Xs=None):
         X, Xc, Xs = self._common(X, Xs)
         if Xs is None:
-            return at.dot(Xc, at.transpose(Xc))
+            return pt.dot(Xc, pt.transpose(Xc))
         else:
-            Xsc = at.sub(Xs, self.c)
-            return at.dot(Xc, at.transpose(Xsc))
+            Xsc = pt.sub(Xs, self.c)
+            return pt.dot(Xc, pt.transpose(Xsc))
 
     def diag(self, X):
         X, Xc, _ = self._common(X, None)
-        return at.sum(at.square(Xc), 1)
+        return pt.sum(pt.square(Xc), 1)
 
 
 class Polynomial(Linear):
@@ -599,11 +599,11 @@ class Polynomial(Linear):
 
     def full(self, X, Xs=None):
         linear = super().full(X, Xs)
-        return at.power(linear + self.offset, self.d)
+        return pt.power(linear + self.offset, self.d)
 
     def diag(self, X):
         linear = super().diag(X)
-        return at.power(linear + self.offset, self.d)
+        return pt.power(linear + self.offset, self.d)
 
 
 class WarpedInput(Covariance):
@@ -677,33 +677,33 @@ class Gibbs(Covariance):
         self.args = args
 
     def square_dist(self, X, Xs=None):
-        X2 = at.sum(at.square(X), 1)
+        X2 = pt.sum(pt.square(X), 1)
         if Xs is None:
-            sqd = -2.0 * at.dot(X, at.transpose(X)) + (
-                at.reshape(X2, (-1, 1)) + at.reshape(X2, (1, -1))
+            sqd = -2.0 * pt.dot(X, pt.transpose(X)) + (
+                pt.reshape(X2, (-1, 1)) + pt.reshape(X2, (1, -1))
             )
         else:
-            Xs2 = at.sum(at.square(Xs), 1)
-            sqd = -2.0 * at.dot(X, at.transpose(Xs)) + (
-                at.reshape(X2, (-1, 1)) + at.reshape(Xs2, (1, -1))
+            Xs2 = pt.sum(pt.square(Xs), 1)
+            sqd = -2.0 * pt.dot(X, pt.transpose(Xs)) + (
+                pt.reshape(X2, (-1, 1)) + pt.reshape(Xs2, (1, -1))
             )
-        return at.clip(sqd, 0.0, np.inf)
+        return pt.clip(sqd, 0.0, np.inf)
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
-        rx = self.lfunc(at.as_tensor_variable(X), self.args)
+        rx = self.lfunc(pt.as_tensor_variable(X), self.args)
         if Xs is None:
-            rz = self.lfunc(at.as_tensor_variable(X), self.args)
+            rz = self.lfunc(pt.as_tensor_variable(X), self.args)
             r2 = self.square_dist(X, X)
         else:
-            rz = self.lfunc(at.as_tensor_variable(Xs), self.args)
+            rz = self.lfunc(pt.as_tensor_variable(Xs), self.args)
             r2 = self.square_dist(X, Xs)
-        rx2 = at.reshape(at.square(rx), (-1, 1))
-        rz2 = at.reshape(at.square(rz), (1, -1))
-        return at.sqrt((2.0 * at.outer(rx, rz)) / (rx2 + rz2)) * at.exp(-1.0 * r2 / (rx2 + rz2))
+        rx2 = pt.reshape(pt.square(rx), (-1, 1))
+        rz2 = pt.reshape(pt.square(rz), (1, -1))
+        return pt.sqrt((2.0 * pt.outer(rx, rz)) / (rx2 + rz2)) * pt.exp(-1.0 * r2 / (rx2 + rz2))
 
     def diag(self, X):
-        return at.alloc(1.0, X.shape[0])
+        return pt.alloc(1.0, X.shape[0])
 
 
 class ScaledCov(Covariance):
@@ -738,17 +738,17 @@ class ScaledCov(Covariance):
     def diag(self, X):
         X, _ = self._slice(X, None)
         cov_diag = self.cov_func(X, diag=True)
-        scf_diag = at.square(at.flatten(self.scaling_func(X, self.args)))
+        scf_diag = pt.square(pt.flatten(self.scaling_func(X, self.args)))
         return cov_diag * scf_diag
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
         scf_x = self.scaling_func(X, self.args)
         if Xs is None:
-            return at.outer(scf_x, scf_x) * self.cov_func(X)
+            return pt.outer(scf_x, scf_x) * self.cov_func(X)
         else:
             scf_xs = self.scaling_func(Xs, self.args)
-            return at.outer(scf_x, scf_xs) * self.cov_func(X, Xs)
+            return pt.outer(scf_x, scf_xs) * self.cov_func(X, Xs)
 
 
 class Coregion(Covariance):
@@ -792,27 +792,27 @@ class Coregion(Covariance):
         if make_B and B is not None:
             raise ValueError("Exactly one of (W, kappa) and B must be provided to Coregion")
         if make_B:
-            self.W = at.as_tensor_variable(W)
-            self.kappa = at.as_tensor_variable(kappa)
-            self.B = at.dot(self.W, self.W.T) + at.diag(self.kappa)
+            self.W = pt.as_tensor_variable(W)
+            self.kappa = pt.as_tensor_variable(kappa)
+            self.B = pt.dot(self.W, self.W.T) + pt.diag(self.kappa)
         elif B is not None:
-            self.B = at.as_tensor_variable(B)
+            self.B = pt.as_tensor_variable(B)
         else:
             raise ValueError("Exactly one of (W, kappa) and B must be provided to Coregion")
 
     def full(self, X, Xs=None):
         X, Xs = self._slice(X, Xs)
-        index = at.cast(X, "int32")
+        index = pt.cast(X, "int32")
         if Xs is None:
             index2 = index.T
         else:
-            index2 = at.cast(Xs, "int32").T
+            index2 = pt.cast(Xs, "int32").T
         return self.B[index, index2]
 
     def diag(self, X):
         X, _ = self._slice(X, None)
-        index = at.cast(X, "int32")
-        return at.diag(self.B)[index.ravel()]
+        index = pt.cast(X, "int32")
+        return pt.diag(self.B)[index.ravel()]
 
 
 def handle_args(func, args):

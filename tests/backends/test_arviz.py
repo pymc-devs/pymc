@@ -17,7 +17,7 @@ import warnings
 from typing import Dict, Tuple
 
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 from arviz import InferenceData
@@ -643,7 +643,7 @@ class TestDataPyMC:
     def test_variable_dimension_name_collision(self):
         with pytest.raises(ValueError, match="same name as its dimension"):
             with pm.Model() as pmodel:
-                var = at.as_tensor([1, 2, 3])
+                var = pt.as_tensor([1, 2, 3])
                 pmodel.register_rv(var, name="time", dims=("time",))
 
     def test_include_transformed(self):

@@ -18,7 +18,7 @@ import numpy as np
 import pytensor
 import pytest
 
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.compile.mode import Mode
 from pytensor.graph import Constant, ancestors
 from pytensor.tensor import TensorVariable
@@ -299,7 +299,7 @@ class TestSizeShapeDimsObserved:
             assert "ddata" in pmodel.dim_lengths
 
             # Size does not include support dims, so this test must use a dist with support dims.
-            kwargs = dict(name="y", size=(2, 3), mu=at.ones((3, 4)), cov=at.eye(4))
+            kwargs = dict(name="y", size=(2, 3), mu=pt.ones((3, 4)), cov=pt.eye(4))
             y = pm.MvNormal(**kwargs, dims=("dsize", "ddata", "dsupport"))
             assert pmodel.named_vars_to_dims["y"] == ("dsize", "ddata", "dsupport")
 
@@ -343,7 +343,7 @@ class TestSizeShapeDimsObserved:
             assert z.eval().shape == (3, 2)
 
     def test_size32_doesnt_break_broadcasting(self):
-        size32 = at.constant([1, 10], dtype="int32")
+        size32 = pt.constant([1, 10], dtype="int32")
         rv = pm.Normal.dist(0, 1, size=size32)
         assert rv.broadcastable == (True, False)
 
@@ -355,15 +355,15 @@ class TestSizeShapeDimsObserved:
         with pm.Model() as model:
             # The `observed` is a broadcastable column vector
             obs = [
-                at.as_tensor_variable(np.ones((3, 1), dtype=pytensor.config.floatX))
+                pt.as_tensor_variable(np.ones((3, 1), dtype=pytensor.config.floatX))
                 for _ in range(4)
             ]
             assert all(obs_.broadcastable == (False, True) for obs_ in obs)
 
             # Both shapes describe broadcastable volumn vectors
-            size64 = at.constant([3, 1], dtype="int64")
+            size64 = pt.constant([3, 1], dtype="int64")
             # But the second shape is upcasted from an int32 vector
-            cast64 = at.cast(at.constant([3, 1], dtype="int32"), dtype="int64")
+            cast64 = pt.cast(pt.constant([3, 1], dtype="int32"), dtype="int64")
 
             pm.Normal("size64", mu=0, sigma=1, size=size64, observed=obs[0])
             pm.Normal("shape64", mu=0, sigma=1, shape=size64, observed=obs[1])
@@ -494,7 +494,7 @@ def test_rv_size_is_none():
 
 
 def test_change_rv_size():
-    loc = at.as_tensor_variable([1, 2])
+    loc = pt.as_tensor_variable([1, 2])
     rng = pytensor.shared(np.random.default_rng())
     rv = normal(loc=loc, rng=rng)
     assert rv.ndim == 1
@@ -503,7 +503,7 @@ def test_change_rv_size():
     with pytest.raises(ShapeError, match="must be ≤1-dimensional"):
         change_dist_size(rv, new_size=[[2, 3]])
     with pytest.raises(ShapeError, match="must be ≤1-dimensional"):
-        change_dist_size(rv, new_size=at.as_tensor_variable([[2, 3], [4, 5]]))
+        change_dist_size(rv, new_size=pt.as_tensor_variable([[2, 3], [4, 5]]))
 
     rv_new = change_dist_size(rv, new_size=(3,), expand=True)
     assert rv_new.ndim == 2
@@ -532,13 +532,13 @@ def test_change_rv_size():
     assert tuple(rv_newer.shape.eval()) == (4, 3)
 
     rv = normal(0, 1)
-    new_size = at.as_tensor(np.array([4, 3], dtype="int32"))
+    new_size = pt.as_tensor(np.array([4, 3], dtype="int32"))
     rv_newer = change_dist_size(rv, new_size=new_size, expand=True)
     assert rv_newer.ndim == 2
     assert tuple(rv_newer.shape.eval()) == (4, 3)
 
     rv = normal(0, 1)
-    new_size = at.as_tensor(2, dtype="int32")
+    new_size = pt.as_tensor(2, dtype="int32")
     rv_newer = change_dist_size(rv, new_size=new_size, expand=True)
     assert rv_newer.ndim == 1
     assert tuple(rv_newer.shape.eval()) == (2,)
@@ -573,9 +573,9 @@ def test_change_rv_size_default_update():
 
 def test_change_specify_shape_size_univariate():
     with pytensor.config.change_flags(mode=Mode("py")):
-        s1, s2 = at.iscalars("s1", "s2")
-        x = at.random.normal(size=(s1, s2))
-        x = at.specify_shape(x, (5, 3))
+        s1, s2 = pt.iscalars("s1", "s2")
+        x = pt.random.normal(size=(s1, s2))
+        x = pt.specify_shape(x, (5, 3))
         x.eval({s1: 5, s2: 3}).shape == (5, 3)
 
         new_x = change_dist_size(x, (10, 5))
@@ -593,9 +593,9 @@ def test_change_specify_shape_size_univariate():
 
 def test_change_specify_shape_size_multivariate():
     with pytensor.config.change_flags(mode=Mode("py")):
-        batch, supp = at.iscalars("batch", "supp")
-        x = at.random.multivariate_normal(at.zeros(supp), at.eye(supp), size=(batch,))
-        x = at.specify_shape(x, (5, 3))
+        batch, supp = pt.iscalars("batch", "supp")
+        x = pt.random.multivariate_normal(pt.zeros(supp), pt.eye(supp), size=(batch,))
+        x = pt.specify_shape(x, (5, 3))
         x.eval({batch: 5, supp: 3}).shape == (5, 3)
 
         new_x = change_dist_size(x, (10, 5))

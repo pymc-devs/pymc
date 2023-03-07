@@ -38,7 +38,7 @@ from typing import List, Optional, Union
 
 import pytensor
 
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor.basic import Join, MakeVector
@@ -107,9 +107,9 @@ def naive_bcast_rv_lift(fgraph, node):
     rng, size, dtype, *dist_params = lifted_node.inputs
 
     new_dist_params = [
-        at.broadcast_to(
+        pt.broadcast_to(
             param,
-            at.broadcast_shape(tuple(param.shape), tuple(bcast_shape), arrays_are_shapes=True),
+            pt.broadcast_shape(tuple(param.shape), tuple(bcast_shape), arrays_are_shapes=True),
         )
         for param in dist_params
     ]
@@ -146,7 +146,7 @@ def logprob_make_vector(op, values, *base_rvs, **kwargs):
     # If the stacked variables depend on each other, we have to replace them by the respective values
     logps = replace_rvs_by_values(logps, rvs_to_values=base_rvs_to_values)
 
-    return at.stack(logps)
+    return pt.stack(logps)
 
 
 class MeasurableJoin(Join):
@@ -169,7 +169,7 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
     # We don't need the graph to be constant, just to have RandomVariables removed
     base_rv_shapes = constant_fold(base_rv_shapes, raise_not_constant=False)
 
-    split_values = at.split(
+    split_values = pt.split(
         value,
         splits_size=base_rv_shapes,
         n_splits=len(base_rvs),
@@ -191,8 +191,8 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
     logps = replace_rvs_by_values(logps, rvs_to_values=base_rvs_to_split_values)
 
     base_vars_ndim_supp = split_values[0].ndim - logps[0].ndim
-    join_logprob = at.concatenate(
-        [at.atleast_1d(logp) for logp in logps],
+    join_logprob = pt.concatenate(
+        [pt.atleast_1d(logp) for logp in logps],
         axis=axis - base_vars_ndim_supp,
     )
 
