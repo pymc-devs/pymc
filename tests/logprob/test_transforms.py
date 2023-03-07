@@ -914,8 +914,13 @@ def test_scan_transform():
     init = at.random.beta(1, 1, name="init")
     init_vv = init.clone()
 
+    def scan_step(prev_innov):
+        next_innov = at.random.beta(prev_innov * 10, (1 - prev_innov) * 10)
+        update = {next_innov.owner.inputs[0]: next_innov.owner.outputs[0]}
+        return next_innov, update
+
     innov, _ = scan(
-        fn=lambda prev_innov: at.random.beta(prev_innov * 10, (1 - prev_innov) * 10),
+        fn=scan_step,
         outputs_info=[init],
         n_steps=4,
     )

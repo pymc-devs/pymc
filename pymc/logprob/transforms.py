@@ -237,7 +237,7 @@ def transform_scan_values(fgraph: FunctionGraph, node: Node) -> Optional[List[No
         return None
 
     transforms = [
-        values_to_transforms.get(rv_map_feature.original_values[value], None)
+        values_to_transforms.get(rv_map_feature.original_values[value_var], None)
         for value_var in value_vars
     ]
 
