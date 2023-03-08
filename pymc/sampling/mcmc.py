@@ -238,6 +238,7 @@ def _sample_external_nuts(
     progressbar: bool,
     idata_kwargs: Optional[Dict],
     nuts_kwargs: Optional[Dict],
+    sampler_kwargs: Optional[Dict],
     **kwargs,
 ):
     warnings.warn("Use of external NUTS sampler is still experimental", UserWarning)
@@ -288,10 +289,10 @@ def _sample_external_nuts(
             initvals=initvals,
             model=model,
             progressbar=progressbar,
-            keep_untransformed=nuts_kwargs.get("keep_untransformed", False),
-            chain_method=nuts_kwargs.get("chain_method", "parallel"),
-            postprocessing_backend=nuts_kwargs.get("postprocessing_backend"),
-            postprocessing_chunks=nuts_kwargs.get("postprocessing_chunks"),
+            keep_untransformed=sampler_kwargs.get("keep_untransformed", False),
+            chain_method=sampler_kwargs.get("chain_method", "parallel"),
+            postprocessing_backend=sampler_kwargs.get("postprocessing_backend"),
+            postprocessing_chunks=sampler_kwargs.get("postprocessing_chunks"),
             idata_kwargs=idata_kwargs,
             nuts_kwargs=nuts_kwargs,
             **kwargs,
@@ -309,6 +310,10 @@ def _sample_external_nuts(
             random_seed=random_seed,
             initvals=initvals,
             model=model,
+            keep_untransformed=sampler_kwargs.get("keep_untransformed", False),
+            chain_method=sampler_kwargs.get("chain_method", "parallel"),
+            postprocessing_backend=sampler_kwargs.get("postprocessing_backend"),
+            postprocessing_chunks=sampler_kwargs.get("postprocessing_chunks"),
             idata_kwargs=idata_kwargs,
         )
         return idata
@@ -340,6 +345,7 @@ def sample(
     return_inferencedata: bool = True,
     idata_kwargs: Optional[Dict[str, Any]] = None,
     nuts_kwargs: Optional[Dict[str, Any]] = None,
+    sampler_kwargs: Optional[Dict[str, Any]] = None,
     callback=None,
     mp_ctx=None,
     model: Optional[Model] = None,
@@ -418,6 +424,8 @@ def sample(
         Keyword arguments for :func:`pymc.to_inference_data`
     nuts_kwargs : dict, optional
         Keyword arguments for the NUTS sampler.
+    sampler_kwargs : dict, optional
+        Keyword arguments for the sampler.
     callback : function, default=None
         A function which gets called for every sample from the trace of a chain. The function is
         called with the trace and the current draw and will contain all samples for a single trace.
@@ -442,7 +450,7 @@ def sample(
 
     For example:
 
-       1. ``target_accept`` to NUTS: nuts={'target_accept':0.9}
+       1. ``target_accept`` to NUTS: nuts_kwargs={'target_accept':0.9}
        2. ``transit_p`` to BinaryGibbsMetropolis: binary_gibbs_metropolis={'transit_p':.7}
 
     Note that available step names are:
@@ -577,6 +585,7 @@ def sample(
             progressbar=progressbar,
             idata_kwargs=idata_kwargs,
             nuts_kwargs=nuts_kwargs,
+            sampler_kwargs=sampler_kwargs,
             **kwargs,
         )
 
