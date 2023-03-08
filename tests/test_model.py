@@ -1062,6 +1062,16 @@ def test_deterministic():
     assert model["y"] == y
 
 
+def test_potential_with_dims():
+    """
+    Test to check the passing of dims to the potential
+    """
+    with pm.Model(coords={"observed": range(10)}) as model:
+        x = pm.Normal("x", 0, 1)
+        y = pm.Deterministic("y", x**2, dims=("observed",))
+    assert model.named_vars_to_dims == {"y": ("observed",)}
+
+
 def test_empty_model_representation():
     assert pm.Model().str_repr() == ""
 
