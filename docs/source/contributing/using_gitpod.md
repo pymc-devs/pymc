@@ -89,7 +89,7 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
     pymc-sphinx-theme             0.1
     ```
 
-- Check the version of python: `python3 --version`
+    Check the version of python: `python3 --version`
 
     Example:
 
