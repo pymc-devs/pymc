@@ -114,7 +114,7 @@ At the terminal, before beginning work, remember to:
 ### Gitpod Notes
 
 #### Billing
-The Gitpod free plan currently allow 500 free credits (50 hours of standard workspace usage) per month. Usage information can be found in the [Gitpod billing section](https://gitpod.io/user/billing).
+The Gitpod free plan currently allows 500 free credits (50 hours of standard workspace usage) per month. Usage information can be found in the [Gitpod billing section](https://gitpod.io/user/billing).
 
 :::{caution}
 Be sure to check out the Gitpod policies on [Workspace Deletion](https://www.gitpod.io/docs/configure/workspaces/workspace-lifecycle#workspace-deletion) and learn more about:
