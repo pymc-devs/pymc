@@ -42,9 +42,10 @@ import pytest
 from pytensor import Mode
 from pytensor.raise_op import assert_op
 from pytensor.scan.utils import ScanArgs
+from scipy import stats
 
 from pymc.logprob.abstract import logprob
-from pymc.logprob.joint_logprob import factorized_joint_logprob
+from pymc.logprob.joint_logprob import factorized_joint_logprob, logp
 from pymc.logprob.scan import (
     construct_scan,
     convert_outer_out_to_in,
@@ -458,3 +459,22 @@ def test_mode_is_kept(remove_asserts):
     else:
         with pytest.raises(AssertionError):
             x_logp(x=x_test_val)
+
+
+def test_scan_non_pure_rv_output():
+    grw, _ = pytensor.scan(
+        fn=lambda xtm1: at.random.normal() + xtm1,
+        outputs_info=[at.zeros(())],
+        n_steps=10,
+        name="grw",
+    )
+
+    grw_vv = grw.clone()
+    grw_logp = logp(grw, grw_vv)
+    assert_no_rvs(grw_logp)
+
+    grw_vv_test = np.arange(10) + 1
+    np.testing.assert_array_almost_equal(
+        grw_logp.eval({grw_vv: grw_vv_test}),
+        stats.norm.logpdf(np.ones(10)),
+    )
