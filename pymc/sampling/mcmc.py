@@ -597,8 +597,8 @@ def sample(
     if isinstance(step, list):
         step = CompoundStep(step)
     elif isinstance(step, NUTS) and auto_nuts_init:
-        if nuts_kwargs is not None:
-            [kwargs.setdefault(k, v) for k, v in nuts_kwargs.items()]
+        for k, v in nuts_kwargs.items():
+            kwargs.setdefault(k, v)
         _log.info("Auto-assigning NUTS sampler...")
         initial_points, step = init_nuts(
             init=init,

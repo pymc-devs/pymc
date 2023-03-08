@@ -665,6 +665,12 @@ def test_step_args():
             idata1 = pm.sample(
                 nuts_kwargs={"target_accept": 0.5}, metropolis={"scaling": 0}, random_seed=1418 * 2
             )
+            idata2 = pm.sample(
+                nuts_sampler="numpyro",
+                nuts_kwargs={"target_accept": 0.5},
+                metropolis={"scaling": 0},
+                random_seed=1418 * 2,
+            )
 
     npt.assert_almost_equal(idata0.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
     npt.assert_almost_equal(idata1.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
