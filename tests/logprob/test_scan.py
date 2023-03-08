@@ -502,3 +502,55 @@ def test_scan_over_seqs():
         ys_logp.eval({xs_vv: xs_test, ys_vv: ys_test}),
         stats.norm.logpdf(ys_test, xs_test),
     )
+
+
+def test_scan_carried_deterministic_state():
+    """Test logp of scans with carried states downstream of measured variables.
+
+    A moving average model with 2 lags is used for testing.
+    """
+    rng = np.random.default_rng(490)
+    steps = 99
+
+    rho = pt.vector("rho", shape=(2,))
+    sigma = pt.scalar("sigma")
+
+    def ma2_step(eps_tm2, eps_tm1, rho, sigma):
+        mu = eps_tm1 * rho[0] + eps_tm2 * rho[1]
+        y = pt.random.normal(mu, sigma)
+        eps = y - mu
+        update = {y.owner.inputs[0]: y.owner.outputs[0]}
+        return (eps, y), update
+
+    [_, ma2], ma2_updates = pytensor.scan(
+        fn=ma2_step,
+        outputs_info=[{"initial": pt.arange(2, dtype="float64"), "taps": range(-2, 0)}, None],
+        non_sequences=[rho, sigma],
+        n_steps=steps,
+        strict=True,
+        name="ma2",
+    )
+
+    def ref_logp(values, rho, sigma):
+        epsilon_tm2 = 0
+        epsilon_tm1 = 1
+        step_logps = np.zeros_like(values)
+        for t, value in enumerate(values):
+            mu = epsilon_tm1 * rho[0] + epsilon_tm2 * rho[1]
+            step_logps[t] = stats.norm.logpdf(value, mu, sigma)
+            epsilon_tm2 = epsilon_tm1
+            epsilon_tm1 = value - mu
+        return step_logps
+
+    ma2_vv = ma2.clone()
+    logp_expr = logp(ma2, ma2_vv)
+    assert_no_rvs(logp_expr)
+
+    ma2_test = rng.normal(size=(steps,))
+    rho_test = np.array([0.3, 0.7])
+    sigma_test = 0.9
+
+    np.testing.assert_array_almost_equal(
+        logp_expr.eval({ma2_vv: ma2_test, rho: rho_test, sigma: sigma_test}),
+        ref_logp(ma2_test, rho_test, sigma_test),
+    )
