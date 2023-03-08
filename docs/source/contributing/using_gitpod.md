@@ -83,7 +83,7 @@ This working environment has been set up with [micromamba](https://mamba.readthe
 
     Example:
 
-    ```bash
+    ```console
     (base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ pip list | grep pymc
     pymc                          5.1.0       /workspace/pymc
     pymc-sphinx-theme             0.1
