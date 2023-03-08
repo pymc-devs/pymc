@@ -56,7 +56,7 @@ Gitpod will pull a container and set up the workspace.  It will take a few minut
 
     Here is an example:
 
-    ```bash
+    ```console
     (base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$
     ```
 
