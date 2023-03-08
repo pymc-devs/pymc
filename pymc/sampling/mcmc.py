@@ -504,7 +504,7 @@ def sample(
     if nuts_kwargs is None:
         nuts_kwargs = {}
     if "target_accept" in kwargs:
-        if nuts_kwargs is not None and "target_accept" in nuts_kwargs:
+        if "target_accept" in nuts_kwargs:
             raise ValueError(
                 "`target_accept` was defined twice. Please specify it either as a direct keyword argument or in the `nuts_kwargs` dict."
             )
