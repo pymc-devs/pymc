@@ -106,9 +106,9 @@ At the terminal, before beginning work, remember to:
 1. Create a feature branch: `git checkout -b feature-branch`
 1. Work on a file
 1. Follow the Git workflow
-  * `git add file_name`
-  * `git commit -m 'message'`
-  * `git push origin feature-branch`
+   * `git add file_name`
+   * `git commit -m 'message'`
+   * `git push origin feature-branch`
 :::
 
 ### Gitpod Notes
