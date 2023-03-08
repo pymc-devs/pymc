@@ -39,7 +39,7 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
     Gitpod [integration options](https://gitpod.io/user/integrations)
     :::
 
-4. Within Gitpod, create a ["New Workspace"](https://gitpod.io/workspaces).  Here you will want to select the forked pymc repo. If you don't see it, you can paste into the "Context URL" your forked repo path.  For example:  `https://github.com/yourusername/pymc`.  Then select "New Workspace".
+4. Within Gitpod, create a ["New Workspace"](https://gitpod.io/workspaces).  Here you will want to select the forked pymc repo. If you do not see it, you can paste your forked repo path into the "Context URL" box.  For example:  `https://github.com/yourusername/pymc`.  Then select "New Workspace".
 
     :::{figure-md} Gitpod workspace
 
@@ -79,7 +79,7 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
 
 7. Check which version of python and pymc are being used at the terminal.
 
-* Check the version of pymc: `pip list | grep pymc`
+- Check the version of pymc: `pip list | grep pymc`
 
     Example:
 
@@ -89,7 +89,7 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
     pymc-sphinx-theme             0.1
     ```
 
-* Check the version of python: `python3 --version`
+- Check the version of python: `python3 --version`
 
     Example:
 
@@ -98,7 +98,7 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
     Python 3.11.0
     ```
 
-### Reminders
+### Reminder: Git Workflow
 
 :::{attention}
 At the terminal, before beginning work, remember to create a feature branch:
@@ -108,15 +108,16 @@ git checkout -b feature-branch
 ```
 
 After working on a file, follow the Git workflow:
-    * `git add file_name`
-    * `git commit -m 'message'`
-    * `git push origin feature-branch`
+
+- `git add file_name`
+- `git commit -m 'message'`
+- `git push origin feature-branch`
 :::
 
 ### Gitpod Notes
 
 #### Billing
-The Gitpod free plan currently allows 500 free credits per month, which is 50 hours of standard workspace usage). Usage information can be found in the [Gitpod billing section](https://gitpod.io/user/billing).
+The Gitpod free plan currently allows 500 free credits per month, which is 50 hours of standard workspace usage. Usage information can be found in the [Gitpod billing section](https://gitpod.io/user/billing).
 
 :::{caution}
 Be sure to check out the Gitpod policies on [Workspace Deletion](https://www.gitpod.io/docs/configure/workspaces/workspace-lifecycle#workspace-deletion) and learn more about:
