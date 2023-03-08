@@ -237,6 +237,7 @@ def _sample_external_nuts(
     model: Model,
     progressbar: bool,
     idata_kwargs: Optional[Dict],
+    nuts_kwargs: Optional[Dict],
     **kwargs,
 ):
     warnings.warn("Use of external NUTS sampler is still experimental", UserWarning)
@@ -287,7 +288,12 @@ def _sample_external_nuts(
             initvals=initvals,
             model=model,
             progressbar=progressbar,
+            keep_untransformed=nuts_kwargs.get("keep_untransformed", False),
+            chain_method=nuts_kwargs.get("chain_method", "parallel"),
+            postprocessing_backend=nuts_kwargs.get("postprocessing_backend"),
+            postprocessing_chunks=nuts_kwargs.get("postprocessing_chunks"),
             idata_kwargs=idata_kwargs,
+            nuts_kwargs=nuts_kwargs,
             **kwargs,
         )
         return idata
@@ -304,7 +310,6 @@ def _sample_external_nuts(
             initvals=initvals,
             model=model,
             idata_kwargs=idata_kwargs,
-            **kwargs,
         )
         return idata
 
@@ -334,6 +339,7 @@ def sample(
     keep_warning_stat: bool = False,
     return_inferencedata: bool = True,
     idata_kwargs: Optional[Dict[str, Any]] = None,
+    nuts_kwargs: Optional[Dict[str, Any]] = None,
     callback=None,
     mp_ctx=None,
     model: Optional[Model] = None,
@@ -410,6 +416,8 @@ def sample(
         `MultiTrace` (False). Defaults to `True`.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
+    nuts_kwargs : dict, optional
+        Keyword arguments for the NUTS sampler.
     callback : function, default=None
         A function which gets called for every sample from the trace of a chain. The function is
         called with the trace and the current draw and will contain all samples for a single trace.
@@ -493,15 +501,14 @@ def sample(
             stacklevel=2,
         )
         initvals = kwargs.pop("start")
+    if nuts_kwargs is None:
+        nuts_kwargs = {}
     if "target_accept" in kwargs:
-        if "nuts" in kwargs and "target_accept" in kwargs["nuts"]:
+        if nuts_kwargs is not None and "target_accept" in nuts_kwargs:
             raise ValueError(
-                "`target_accept` was defined twice. Please specify it either as a direct keyword argument or in the `nuts` kwarg."
+                "`target_accept` was defined twice. Please specify it either as a direct keyword argument or in the `nuts_kwargs` dict."
             )
-        if "nuts" in kwargs:
-            kwargs["nuts"]["target_accept"] = kwargs.pop("target_accept")
-        else:
-            kwargs["nuts"] = {"target_accept": kwargs.pop("target_accept")}
+        nuts_kwargs["target_accept"] = kwargs.pop("target_accept")
     if isinstance(trace, list):
         raise DeprecationWarning(
             "We have removed support for partial traces because it simplified things."
@@ -563,20 +570,20 @@ def sample(
             draws=draws,
             tune=tune,
             chains=chains,
-            target_accept=kwargs.pop("nuts", {}).get("target_accept", 0.8),
+            target_accept=nuts_kwargs.get("target_accept", 0.8),
             random_seed=random_seed,
             initvals=initvals,
             model=model,
             progressbar=progressbar,
             idata_kwargs=idata_kwargs,
+            nuts_kwargs=nuts_kwargs,
             **kwargs,
         )
 
     if isinstance(step, list):
         step = CompoundStep(step)
     elif isinstance(step, NUTS) and auto_nuts_init:
-        if "nuts" in kwargs:
-            nuts_kwargs = kwargs.pop("nuts")
+        if nuts_kwargs is not None:
             [kwargs.setdefault(k, v) for k, v in nuts_kwargs.items()]
         _log.info("Auto-assigning NUTS sampler...")
         initial_points, step = init_nuts(
