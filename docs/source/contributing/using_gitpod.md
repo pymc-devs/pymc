@@ -79,7 +79,7 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
 
 7. Check which version of python and pymc are being used at the terminal.
 
-- Check the version of pymc: `pip list | grep pymc`
+    Check the version of pymc: `pip list | grep pymc`
 
     Example:
 
