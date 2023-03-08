@@ -238,10 +238,13 @@ def _sample_external_nuts(
     progressbar: bool,
     idata_kwargs: Optional[Dict],
     nuts_kwargs: Optional[Dict],
-    sampler_kwargs: Optional[Dict],
+    nuts_sampler_kwargs: Optional[Dict],
     **kwargs,
 ):
     warnings.warn("Use of external NUTS sampler is still experimental", UserWarning)
+
+    if nuts_sampler_kwargs is None:
+        nuts_sampler_kwargs = {}
 
     if sampler == "nutpie":
         try:
@@ -289,10 +292,10 @@ def _sample_external_nuts(
             initvals=initvals,
             model=model,
             progressbar=progressbar,
-            keep_untransformed=sampler_kwargs.get("keep_untransformed", False),
-            chain_method=sampler_kwargs.get("chain_method", "parallel"),
-            postprocessing_backend=sampler_kwargs.get("postprocessing_backend"),
-            postprocessing_chunks=sampler_kwargs.get("postprocessing_chunks"),
+            keep_untransformed=nuts_sampler_kwargs.get("keep_untransformed", False),
+            chain_method=nuts_sampler_kwargs.get("chain_method", "parallel"),
+            postprocessing_backend=nuts_sampler_kwargs.get("postprocessing_backend"),
+            postprocessing_chunks=nuts_sampler_kwargs.get("postprocessing_chunks"),
             idata_kwargs=idata_kwargs,
             nuts_kwargs=nuts_kwargs,
             **kwargs,
@@ -310,10 +313,10 @@ def _sample_external_nuts(
             random_seed=random_seed,
             initvals=initvals,
             model=model,
-            keep_untransformed=sampler_kwargs.get("keep_untransformed", False),
-            chain_method=sampler_kwargs.get("chain_method", "parallel"),
-            postprocessing_backend=sampler_kwargs.get("postprocessing_backend"),
-            postprocessing_chunks=sampler_kwargs.get("postprocessing_chunks"),
+            keep_untransformed=nuts_sampler_kwargs.get("keep_untransformed", False),
+            chain_method=nuts_sampler_kwargs.get("chain_method", "parallel"),
+            postprocessing_backend=nuts_sampler_kwargs.get("postprocessing_backend"),
+            postprocessing_chunks=nuts_sampler_kwargs.get("postprocessing_chunks"),
             idata_kwargs=idata_kwargs,
         )
         return idata
@@ -345,7 +348,7 @@ def sample(
     return_inferencedata: bool = True,
     idata_kwargs: Optional[Dict[str, Any]] = None,
     nuts_kwargs: Optional[Dict[str, Any]] = None,
-    sampler_kwargs: Optional[Dict[str, Any]] = None,
+    nuts_sampler_kwargs: Optional[Dict[str, Any]] = None,
     callback=None,
     mp_ctx=None,
     model: Optional[Model] = None,
@@ -424,7 +427,7 @@ def sample(
         Keyword arguments for :func:`pymc.to_inference_data`
     nuts_kwargs : dict, optional
         Keyword arguments for the NUTS sampler.
-    sampler_kwargs : dict, optional
+    nuts_sampler_kwargs : dict, optional
         Keyword arguments for the sampler.
     callback : function, default=None
         A function which gets called for every sample from the trace of a chain. The function is
@@ -509,6 +512,8 @@ def sample(
             stacklevel=2,
         )
         initvals = kwargs.pop("start")
+    if nuts_sampler_kwargs is None:
+        nuts_sampler_kwargs = {}
     if nuts_kwargs is None:
         nuts_kwargs = {}
     if "target_accept" in kwargs:
@@ -585,7 +590,7 @@ def sample(
             progressbar=progressbar,
             idata_kwargs=idata_kwargs,
             nuts_kwargs=nuts_kwargs,
-            sampler_kwargs=sampler_kwargs,
+            nuts_sampler_kwargs=nuts_sampler_kwargs,
             **kwargs,
         )
 
