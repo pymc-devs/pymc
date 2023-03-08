@@ -50,13 +50,20 @@ from pytensor.scan.op import Scan
 from pytensor.scan.rewriting import scan_eqopt1, scan_eqopt2
 from pytensor.scan.utils import ScanArgs
 from pytensor.tensor.random.type import RandomType
+from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.subtensor import Subtensor, indices_from_subtensor
 from pytensor.tensor.var import TensorVariable
 from pytensor.updates import OrderedUpdates
 
-from pymc.logprob.abstract import MeasurableVariable, _get_measurable_outputs, _logprob
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    _get_measurable_outputs,
+    _logprob,
+    get_measurable_outputs,
+)
 from pymc.logprob.joint_logprob import factorized_joint_logprob
 from pymc.logprob.rewriting import (
+    PreserveRVMappings,
     inc_subtensor_ops,
     logprob_rewrites_db,
     measurable_ir_rewrites_db,
@@ -65,6 +72,9 @@ from pymc.logprob.rewriting import (
 
 class MeasurableScan(Scan):
     """A placeholder used to specify a log-likelihood for a scan sub-graph."""
+
+    def __str__(self):
+        return f"Measurable({super().__str__()})"
 
 
 MeasurableVariable.register(MeasurableScan)
@@ -359,6 +369,12 @@ def find_measurable_scans(fgraph, node):
     )
     for n in local_fgraph_topo:
         if isinstance(n.op, MeasurableVariable):
+            measurable_outputs = get_measurable_outputs(n.op, n)
+            # This variable's source of measure is used by another inner node,
+            # So we don't need it to be an output!
+            if not measurable_outputs:
+                continue
+
             non_output_node_clients = [
                 c for c in clients[n] if c not in curr_scanargs.inner_outputs
             ]
@@ -494,6 +510,10 @@ def add_opts_to_inner_graphs(fgraph, node):
         clone=True,
         copy_inputs=False,
         copy_orphans=False,
+        features=[
+            ShapeFeature(),
+            PreserveRVMappings({}),
+        ],
     )
 
     logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"])).rewrite(inner_fgraph)
