@@ -20,37 +20,37 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
 
 2. Create a Gitpod account. You can login and authorize access via your GitHub account:  [https://gitpod.io/](https://gitpod.io/)
 
-   :::{note}
-   Gitpod will show up as an authorized application in your GitHub account here: [https://github.com/settings/applications](https://github.com/settings/applications)
-   :::
+    :::{note}
+    Gitpod will show up as an authorized application in your GitHub account here: [https://github.com/settings/applications](https://github.com/settings/applications)
+    :::
 
 3. Grant GitHub / Gitpod integration permissions.
 
-    a) Go to: [https://gitpod.io/user/integrations](https://gitpod.io/user/integrations)
+   a) Go to: [https://gitpod.io/user/integrations](https://gitpod.io/user/integrations)
 
-    b) Select GitHub and then "edit permissions"
+   b) Select GitHub and then "Edit Permissions"
 
-    c) Select these permission: user:email, public_repo, repo, workflow
+   c) Select these permission: `user:email`, `public_repo`, `repo`, `workflow`
 
-:::{figure-md} Gitpod integration
+    :::{figure-md} Gitpod integration
 
-![gitpod_integration](gitpod/gitpod_integration.png)
+    ![gitpod_integration](gitpod/gitpod_integration.png)
 
-Gitpod [integration options](https://gitpod.io/user/integrations)
-:::
+    Gitpod [integration options](https://gitpod.io/user/integrations)
+    :::
 
 4. Within Gitpod, create a ["New Workspace"](https://gitpod.io/workspaces).  Here you will want to select the forked pymc repo. If you don't see it, you can paste into the "Context URL" your forked repo path.  For example:  `https://github.com/yourusername/pymc`.  Then select "New Workspace".
 
-:::{figure-md} Gitpod workspace
+    :::{figure-md} Gitpod workspace
 
-![gitpod_workspace](gitpod/gitpod_workspace.png)
+    ![gitpod_workspace](gitpod/gitpod_workspace.png)
 
-Gitpod [workspace](https://gitpod.io/workspaces)
-:::
+    Gitpod [workspace](https://gitpod.io/workspaces)
+    :::
 
-:::{note}
-Gitpod will pull a container and set up the workspace.  It will take a few minutes for the container to build.
-:::
+    :::{note}
+    Gitpod will pull a container and set up the workspace.  It will take a few minutes for the container to build.
+    :::
 
 5. Once Gitpod is up and running, the interface is similar to a Visual Studio Code (VSC) interface, which will appear in your browser. You will observe installation notices in the terminal window.  This can take 5-10 minutes. Once that is complete, the terminal will indicate you are on the "(base)" environment on Gitpod with your forked repo.
 
@@ -60,15 +60,15 @@ Gitpod will pull a container and set up the workspace.  It will take a few minut
     (base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$
     ```
 
-:::{note}
-This working environment has been set up with [micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) which is a small, pure-C++ executable with enough functionalities to bootstrap fully functional conda-environments.
-:::
+    :::{note}
+    This working environment has been set up with [micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) which is a small, pure-C++ executable with enough functionalities to bootstrap fully functional conda-environments.
+    :::
 
 6. Check that your git remotes are correct with `git remote -v` at the terminal.
 
     Example:
 
-    ```bash
+    ```console
     (base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$ git remote -v
     origin  https://github.com/reshamas/pymc.git (fetch)
     origin  https://github.com/reshamas/pymc.git (push)
@@ -79,7 +79,7 @@ This working environment has been set up with [micromamba](https://mamba.readthe
 
 7. Check which version of python and pymc are being used at the terminal.
 
-    * Check version of pymc: `pip list | grep pymc`
+* Check the version of pymc: `pip list | grep pymc`
 
     Example:
 
@@ -89,11 +89,11 @@ This working environment has been set up with [micromamba](https://mamba.readthe
     pymc-sphinx-theme             0.1
     ```
 
-    * Check version of python: `python3 --version`
+* Check the version of python: `python3 --version`
 
     Example:
 
-    ```bash
+    ```console
     (base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ python3 --version
     Python 3.11.0
     ```
@@ -101,26 +101,28 @@ This working environment has been set up with [micromamba](https://mamba.readthe
 ### Reminders
 
 :::{attention}
-At the terminal, before beginning work, remember to:
+At the terminal, before beginning work, remember to create a feature branch:
 
-1. Create a feature branch: `git checkout -b feature-branch`
-1. Work on a file
-1. Follow the Git workflow
-   * `git add file_name`
-   * `git commit -m 'message'`
-   * `git push origin feature-branch`
+```console
+git checkout -b feature-branch
+```
+
+After working on a file, follow the Git workflow:
+    * `git add file_name`
+    * `git commit -m 'message'`
+    * `git push origin feature-branch`
 :::
 
 ### Gitpod Notes
 
 #### Billing
-The Gitpod free plan currently allows 500 free credits (50 hours of standard workspace usage) per month. Usage information can be found in the [Gitpod billing section](https://gitpod.io/user/billing).
+The Gitpod free plan currently allows 500 free credits per month, which is 50 hours of standard workspace usage). Usage information can be found in the [Gitpod billing section](https://gitpod.io/user/billing).
 
 :::{caution}
 Be sure to check out the Gitpod policies on [Workspace Deletion](https://www.gitpod.io/docs/configure/workspaces/workspace-lifecycle#workspace-deletion) and learn more about:
 
 - "Starting" & "Stopping" workspaces
 - "Workplace Inactivity": By default, workspaces stop following 30 minutes without user input (e.g. keystrokes or terminal input commands). You can increase the workspace timeout up to a maximum of 24 hours.
-- Workspaces are deleted after 14 days. Pinned workspaces are never deleted automatically."
-- "A pinned workspace is never deleted. You can pin a workspace from your workspace list in the Gitpod dashboard."
+- Workspaces are deleted after 14 days. Pinned workspaces are never deleted automatically.
+- You can pin a workspace from your workspace list in the Gitpod dashboard.
 :::
