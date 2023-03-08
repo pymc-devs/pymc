@@ -478,3 +478,27 @@ def test_scan_non_pure_rv_output():
         grw_logp.eval({grw_vv: grw_vv_test}),
         stats.norm.logpdf(np.ones(10)),
     )
+
+
+def test_scan_over_seqs():
+    """Test that logprob inference for scans based on sequences (mapping)."""
+    rng = np.random.default_rng(543)
+    n_steps = 10
+
+    xs = pt.random.normal(size=(n_steps,), name="xs")
+    ys, _ = pytensor.scan(
+        fn=lambda x: pt.random.normal(x), sequences=[xs], outputs_info=[None], name="ys"
+    )
+
+    xs_vv = ys.clone()
+    ys_vv = ys.clone()
+    ys_logp = factorized_joint_logprob({xs: xs_vv, ys: ys_vv})[ys_vv]
+
+    assert_no_rvs(ys_logp)
+
+    xs_test = rng.normal(size=(10,))
+    ys_test = rng.normal(size=(10,))
+    np.testing.assert_array_almost_equal(
+        ys_logp.eval({xs_vv: xs_test, ys_vv: ys_test}),
+        stats.norm.logpdf(ys_test, xs_test),
+    )
