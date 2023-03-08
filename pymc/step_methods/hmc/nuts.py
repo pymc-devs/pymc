@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -97,29 +97,27 @@ class NUTS(BaseHMC):
     name = "nuts"
 
     default_blocked = True
-    stats_dtypes = [
-        {
-            "depth": np.int64,
-            "step_size": np.float64,
-            "tune": bool,
-            "mean_tree_accept": np.float64,
-            "step_size_bar": np.float64,
-            "tree_size": np.float64,
-            "diverging": bool,
-            "energy_error": np.float64,
-            "energy": np.float64,
-            "max_energy_error": np.float64,
-            "model_logp": np.float64,
-            "process_time_diff": np.float64,
-            "perf_counter_diff": np.float64,
-            "perf_counter_start": np.float64,
-            "largest_eigval": np.float64,
-            "smallest_eigval": np.float64,
-            "index_in_trajectory": np.int64,
-            "reached_max_treedepth": bool,
-            "warning": SamplerWarning,
-        }
-    ]
+    stats_dtypes_shapes = {
+        "depth": (np.int64, []),
+        "step_size": (np.float64, []),
+        "tune": (bool, []),
+        "mean_tree_accept": (np.float64, []),
+        "step_size_bar": (np.float64, []),
+        "tree_size": (np.float64, []),
+        "diverging": (bool, []),
+        "energy_error": (np.float64, []),
+        "energy": (np.float64, []),
+        "max_energy_error": (np.float64, []),
+        "model_logp": (np.float64, []),
+        "process_time_diff": (np.float64, []),
+        "perf_counter_diff": (np.float64, []),
+        "perf_counter_start": (np.float64, []),
+        "largest_eigval": (np.float64, []),
+        "smallest_eigval": (np.float64, []),
+        "index_in_trajectory": (np.int64, []),
+        "reached_max_treedepth": (bool, []),
+        "warning": (SamplerWarning, None),
+    }
 
     def __init__(self, vars=None, max_treedepth=10, early_max_treedepth=8, **kwargs):
         r"""Set up the No-U-Turn sampler.
@@ -212,7 +210,6 @@ class NUTS(BaseHMC):
     def competence(var, has_grad):
         """Check how appropriate this class is for sampling a random variable."""
 
-        dist = getattr(var.owner, "op", None)
         if var.dtype in continuous_types and has_grad:
             return Competence.PREFERRED
         return Competence.INCOMPATIBLE

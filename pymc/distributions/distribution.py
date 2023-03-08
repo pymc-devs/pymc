@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -97,7 +97,6 @@ class DistributionMeta(ABCMeta):
     """
 
     def __new__(cls, name, bases, clsdict):
-
         # Forcefully deprecate old v3 `Distribution`s
         if "random" in clsdict:
 
@@ -112,11 +111,14 @@ class DistributionMeta(ABCMeta):
             clsdict["random"] = _random
 
         rv_op = clsdict.setdefault("rv_op", None)
-        rv_type = None
+        rv_type = clsdict.setdefault("rv_type", None)
 
         if isinstance(rv_op, RandomVariable):
-            rv_type = type(rv_op)
-            clsdict["rv_type"] = rv_type
+            if rv_type is not None:
+                assert isinstance(rv_op, rv_type)
+            else:
+                rv_type = type(rv_op)
+                clsdict["rv_type"] = rv_type
 
         new_cls = super().__new__(cls, name, bases, clsdict)
 
@@ -155,8 +157,8 @@ class DistributionMeta(ABCMeta):
                 def moment(op, rv, rng, size, dtype, *dist_params):
                     return class_moment(rv, size, *dist_params)
 
-            # Register the PyTensor `RandomVariable` type as a subclass of this
-            # `Distribution` type.
+            # Register the PyTensor rv_type as a subclass of this
+            # PyMC Distribution type.
             new_cls.register(rv_type)
 
         return new_cls
@@ -450,7 +452,6 @@ class Discrete(Distribution):
     """Base class for discrete distributions"""
 
     def __new__(cls, name, *args, **kwargs):
-
         if kwargs.get("transform", None):
             raise ValueError("Transformations for discrete distributions")
 
@@ -497,7 +498,6 @@ class _CustomDist(Distribution):
         dtype: str = "floatX",
         **kwargs,
     ):
-
         dist_params = [as_tensor_variable(param) for param in dist_params]
 
         # Assume scalar ndims_params
@@ -605,7 +605,6 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
 
 
 class _CustomSymbolicDist(Distribution):
-
     rv_type = CustomSymbolicDistRV
 
     @classmethod
@@ -989,21 +988,19 @@ class CustomDist:
                 ndim_supp=ndim_supp,
                 **kwargs,
             )
-        else:
-            return _CustomDist(
-                name,
-                *dist_params,
-                class_name=name,
-                random=random,
-                logp=logp,
-                logcdf=logcdf,
-                moment=moment,
-                ndim_supp=ndim_supp,
-                ndims_params=ndims_params,
-                dtype=dtype,
-                **kwargs,
-            )
-        return super().__new__(cls, name, *args, **kwargs)
+        return _CustomDist(
+            name,
+            *dist_params,
+            class_name=name,
+            random=random,
+            logp=logp,
+            logcdf=logcdf,
+            moment=moment,
+            ndim_supp=ndim_supp,
+            ndims_params=ndims_params,
+            dtype=dtype,
+            **kwargs,
+        )
 
     @classmethod
     def dist(

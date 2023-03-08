@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -50,12 +50,10 @@ class Slice(ArrayStep):
 
     name = "slice"
     default_blocked = False
-    stats_dtypes = [
-        {
-            "nstep_out": int,
-            "nstep_in": int,
-        }
-    ]
+    stats_dtypes_shapes = {
+        "nstep_out": (int, []),
+        "nstep_in": (int, []),
+    }
 
     def __init__(self, vars=None, w=1.0, tune=True, model=None, iter_limit=np.inf, **kwargs):
         self.model = modelcontext(model)

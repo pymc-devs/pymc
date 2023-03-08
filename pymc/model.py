@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -51,7 +51,6 @@ from pytensor.tensor.var import TensorConstant, TensorVariable
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, is_minibatch
-from pymc.distributions.logprob import _joint_logp
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import (
     BlockModelAccessError,
@@ -61,6 +60,7 @@ from pymc.exceptions import (
     ShapeWarning,
 )
 from pymc.initial_point import make_initial_point_fn
+from pymc.logprob.joint_logprob import joint_logp
 from pymc.pytensorf import (
     PointFunc,
     SeedSequenceSeed,
@@ -195,7 +195,7 @@ class ContextMeta(type):
         raise a ``TypeError`` instead of returning ``None``."""
         try:
             candidate: Optional[T] = cls.get_contexts()[-1]
-        except IndexError as e:
+        except IndexError:
             # Calling code expects to get a TypeError if the entity
             # is unfound, and there's too much to fix.
             if error_if_none:
@@ -550,6 +550,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         coords=None,
         check_bounds=True,
         *,
+        coords_mutable=None,
         pytensor_config=None,
         model=None,
     ):
@@ -563,7 +564,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.values_to_rvs = treedict(parent=self.parent.values_to_rvs)
             self.rvs_to_values = treedict(parent=self.parent.rvs_to_values)
             self.rvs_to_transforms = treedict(parent=self.parent.rvs_to_transforms)
-            self.rvs_to_total_sizes = treedict(parent=self.parent.rvs_to_total_sizes)
             self.rvs_to_initial_values = treedict(parent=self.parent.rvs_to_initial_values)
             self.free_RVs = treelist(parent=self.parent.free_RVs)
             self.observed_RVs = treelist(parent=self.parent.observed_RVs)
@@ -577,7 +577,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.values_to_rvs = treedict()
             self.rvs_to_values = treedict()
             self.rvs_to_transforms = treedict()
-            self.rvs_to_total_sizes = treedict()
             self.rvs_to_initial_values = treedict()
             self.free_RVs = treelist()
             self.observed_RVs = treelist()
@@ -586,6 +585,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self._coords = {}
             self._dim_lengths = {}
         self.add_coords(coords)
+        if coords_mutable is not None:
+            for name, values in coords_mutable.items():
+                self.add_coord(name, values, mutable=True)
 
         from pymc.printing import str_for_model
 
@@ -754,11 +756,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         rv_logps: List[TensorVariable] = []
         if rvs:
-            rv_logps = _joint_logp(
+            rv_logps = joint_logp(
                 rvs=rvs,
                 rvs_to_values=self.rvs_to_values,
                 rvs_to_transforms=self.rvs_to_transforms,
-                rvs_to_total_sizes=self.rvs_to_total_sizes,
                 jacobian=jacobian,
             )
             assert isinstance(rv_logps, list)
@@ -1310,8 +1311,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         name = self.name_for(name)
         rv_var.name = name
         _add_future_warning_tag(rv_var)
-        rv_var.tag.total_size = total_size
-        self.rvs_to_total_sizes[rv_var] = total_size
 
         # Associate previously unknown dimension names with
         # the length of the corresponding RV dimension.
@@ -1323,6 +1322,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     self.add_coord(dname, values=None, length=rv_var.shape[d])
 
         if observed is None:
+            if total_size is not None:
+                raise ValueError("total_size can only be passed to observed RVs")
             self.free_RVs.append(rv_var)
             self.create_value_var(rv_var, transform)
             self.add_named_variable(rv_var, dims)
@@ -1347,12 +1348,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             # `rv_var` is potentially changed by `make_obs_var`,
             # for example into a new graph for imputation of missing data.
-            rv_var = self.make_obs_var(rv_var, observed, dims, transform)
+            rv_var = self.make_obs_var(rv_var, observed, dims, transform, total_size)
 
         return rv_var
 
     def make_obs_var(
-        self, rv_var: TensorVariable, data: np.ndarray, dims, transform: Optional[Any]
+        self,
+        rv_var: TensorVariable,
+        data: np.ndarray,
+        dims,
+        transform: Union[Any, None],
+        total_size: Union[int, None],
     ) -> TensorVariable:
         """Create a `TensorVariable` for an observed random variable.
 
@@ -1388,18 +1394,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         mask = getattr(data, "mask", None)
         if mask is not None:
-
-            if mask.all():
-                # If there are no observed values, this variable isn't really
-                # observed.
-                return rv_var
-
             impute_message = (
                 f"Data in {rv_var} contains missing values and"
                 " will be automatically imputed from the"
                 " sampling distribution."
             )
             warnings.warn(impute_message, ImputationWarning)
+
+            if total_size is not None:
+                raise ValueError("total_size is not compatible with imputed variables")
 
             if not isinstance(rv_var.owner.op, RandomVariable):
                 raise NotImplementedError(
@@ -1468,6 +1471,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 data = sparse.basic.as_sparse(data, name=name)
             else:
                 data = at.as_tensor_variable(data, name=name)
+
+            if total_size:
+                from pymc.variational.minibatch_rv import create_minibatch_rv
+
+                rv_var = create_minibatch_rv(rv_var, total_size)
+                rv_var.name = name
+
             rv_var.tag.observations = data
             self.create_value_var(rv_var, transform=None, value_var=data)
             self.add_named_variable(rv_var, dims)
@@ -1752,7 +1762,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         value_names_to_dtypes = {value.name: value.dtype for value in self.value_vars}
         value_names_set = set(value_names_to_dtypes.keys())
         for elem in start_points:
-
             for k, v in elem.items():
                 elem[k] = np.asarray(v, dtype=value_names_to_dtypes[k])
 
@@ -2033,16 +2042,95 @@ def Deterministic(name, var, model=None, dims=None):
 
 
 def Potential(name, var, model=None):
-    """Add an arbitrary factor potential to the model likelihood
+    """
+    Add an arbitrary factor potential to the model likelihood
+
+    The Potential function is used to add arbitrary factors (such as constraints or other likelihood components) to adjust the probability density of the model.
+
+    Warnings
+    --------
+    Potential functions only influence logp based sampling, like the one used by ``pm.sample``.
+    Potentials, modify the log-probability of the model by adding a contribution to the logp which is used by sampling algorithms which rely on the information about the observed data to generate posterior samples.
+    Potentials are not applicable in the context of forward sampling because they don't affect the prior distribution itself, only the computation of the logp.
+    Forward sampling algorithms generate sample points from the prior distribution of the model, without taking into account the likelihood function.
+    In other words, it does not use the information about the observed data.
+    Hence, Potentials do not affect forward sampling, which is used by ``sample_prior_predictive`` and ``sample_posterior_predictive``.
+    A warning saying "The effect of Potentials on other parameters is ignored during prior predictive sampling" is always emitted to alert user of this.
 
     Parameters
     ----------
-    name: str
-    var: PyTensor variables
+    name : str
+        Name of the potential variable to be registered in the model.
+    var : tensor_like
+        Expression to be added to the model joint logp.
+    model : Model, optional
+        The model object to which the potential function is added.
+        If ``None`` is provided, the current model is used.
 
     Returns
     -------
-    var: var, with name attribute
+    var : tensor_like
+        The registered, named model variable.
+
+    Examples
+    --------
+    Have a look at the following example:
+
+    In this example, we define a constraint on ``x`` to be greater or equal to 0 via the ``pm.Potential`` function.
+    We pass ``-pm.math.log(pm.math.switch(constraint, 1, 0))`` as second argument which will return an expression depending on if the constraint is met or not and which will be added to the likelihood of the model.
+    The probablity density that this model produces agrees strongly with the constraint that ``x`` should be greater than or equal to 0. All the cases who do not satisfy the constraint are strictly not considered.
+
+    .. code:: python
+
+        with pm.Model() as model:
+            x = pm.Normal("x", mu=0, sigma=1)
+            y = pm.Normal("y", mu=x, sigma=1, observed=data)
+            constraint = x >= 0
+            potential = pm.Potential("x_constraint", pm.math.log(pm.math.switch(constraint, 1, 0.0)))
+
+    However, if we use ``-pm.math.log(pm.math.switch(constraint, 1, 0.5))`` the potential again penalizes the likelihood when constraint is not met but with some deviations allowed.
+    Here, Potential function is used to pass a soft constraint.
+    A soft constraint is a constraint that is only partially satisfied.
+    The effect of this is that the posterior probability for the parameters decreases as they move away from the constraint, but does not become exactly zero.
+    This allows the sampler to generate values that violate the constraint, but with lower probability.
+
+    .. code:: python
+
+        with pm.Model() as model:
+            x = pm.Normal("x", mu=0.1, sigma=1)
+            y = pm.Normal("y", mu=x, sigma=1, observed=data)
+            constraint = x >= 0
+            potential = pm.Potential("x_constraint", pm.math.log(pm.math.switch(constraint, 1, 0.5)))
+
+    In this example, Potential is used to obtain an arbitrary prior.
+    This prior distribution refers to the prior knowledge that the values of ``max_items`` are likely to be small rather than being large.
+    The prior probability of ``max_items`` is defined using a Potential object with the log of the inverse of ``max_items`` as its value.
+    This means that larger values of ``max_items`` have a lower prior probability density, while smaller values of ``max_items`` have a higher prior probability density.
+    When the model is sampled, the posterior distribution of ``max_items`` given the observed value of ``n_items`` will be influenced by the power-law prior defined in the Potential object
+
+    .. code:: python
+
+        with pm.Model():
+            # p(max_items) = 1 / max_items
+            max_items = pm.Uniform("max_items", lower=1, upper=100)
+            pm.Potential("power_prior", pm.math.log(1/max_items))
+
+            n_items = pm.Uniform("n_items", lower=1, upper=max_items, observed=60)
+
+    In the next example, the ``soft_sum_constraint`` potential encourages ``x`` and ``y`` to have a small sum, effectively adding a soft constraint on the relationship between the two variables.
+    This can be useful in cases where you want to ensure that the sum of multiple variables stays within a certain range, without enforcing an exact value.
+    In this case, the larger the deviation, larger will be the negative value (-((x + y)**2)) which the MCMC sampler will attempt to minimize.
+    However, the sampler might generate values for some small deviations but with lower probability hence this is a soft constraint.
+
+    .. code:: python
+
+        with pm.Model() as model:
+            x = pm.Normal("x", mu=0.1, sigma=1)
+            y = pm.Normal("y", mu=x, sigma=1, observed=data)
+            soft_sum_constraint = pm.Potential("soft_sum_constraint", -((x + y)**2))
+
+    The potential value is incorporated into the model log-probability, so it should be -inf (or very negative) when a constraint is violated, so that those draws are rejected. 0 won't have any effect and positive values will make the proposals more likely to be accepted.
+
     """
     model = modelcontext(model)
     var.name = model.name_for(name)

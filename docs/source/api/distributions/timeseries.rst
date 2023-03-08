@@ -6,7 +6,6 @@ Timeseries
 .. autosummary::
    :toctree: generated
 
-    AR1
     AR
     GaussianRandomWalk
     GARCH11

@@ -1,4 +1,4 @@
-#   Copyright 2021 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -759,8 +759,6 @@ def get_support_shape(
             for inferred, explicit in zip(inferred_support_shape, support_shape)
         ]
 
-    # Workaround https://github.com/pymc-devs/pytensor/issues/193 typing bug in stack signature
-    inferred_support_shape = cast(Sequence[TensorVariable], inferred_support_shape)
     return at.stack(inferred_support_shape)
 
 

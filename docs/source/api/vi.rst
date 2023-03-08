@@ -9,7 +9,6 @@ Variational Inference
 
    ADVI
    ASVGD
-   NFVI
    SVGD
    FullRankADVI
    ImplicitGradient
@@ -26,7 +25,6 @@ Approximations
    Empirical
    FullRank
    MeanField
-   NormalizingFlow
    sample_approx
 
 OPVI

@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -347,7 +347,6 @@ def _sample_smc_int(
     stage = 0
     sample_stats = defaultdict(list)
     while smc.beta < 1:
-
         smc.update_beta_and_weights()
 
         if progressbar:

@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -30,11 +30,12 @@ from pymc.distributions.distribution import (
     _moment,
     moment,
 )
-from pymc.distributions.logprob import ignore_logprob, logcdf, logp
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
 from pymc.distributions.transforms import _default_transform
-from pymc.logprob.abstract import _logcdf, _logprob
+from pymc.logprob.abstract import _logcdf, _logprob, logcdf
+from pymc.logprob.joint_logprob import logp
 from pymc.logprob.transforms import IntervalTransform
+from pymc.logprob.utils import ignore_logprob
 from pymc.util import check_dist_not_registered
 from pymc.vartypes import continuous_types, discrete_types
 
@@ -358,7 +359,6 @@ def marginal_mixture_logprob(op, values, rng, weights, *components, **kwargs):
 
 @_logcdf.register(MarginalMixtureRV)
 def marginal_mixture_logcdf(op, value, rng, weights, *components, **kwargs):
-
     # single component
     if len(components) == 1:
         # Need to broadcast value across mixture axis

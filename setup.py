@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -65,11 +65,10 @@ if __name__ == "__main__":
         url=URL,
         long_description=LONG_DESCRIPTION,
         long_description_content_type="text/x-rst",
-        packages=find_packages(),
+        packages=find_packages(exclude=["tests*"]),
         # because of an upload-size limit by PyPI, we're temporarily removing docs from the tarball.
         # Also see MANIFEST.in
         # package_data={'docs': ['*']},
-        include_package_data=True,
         classifiers=classifiers,
         python_requires=">=3.8",
         install_requires=install_reqs,

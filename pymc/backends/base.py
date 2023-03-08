@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -22,8 +22,10 @@ import warnings
 
 from abc import ABC
 from typing import (
+    Any,
     Dict,
     List,
+    Mapping,
     Optional,
     Sequence,
     Set,
@@ -47,7 +49,91 @@ class BackendError(Exception):
     pass
 
 
-class BaseTrace(ABC):
+class IBaseTrace(ABC, Sized):
+    """Minimal interface needed to record and access draws and stats for one MCMC chain."""
+
+    chain: int
+    """Chain number."""
+
+    varnames: List[str]
+    """Names of tracked variables."""
+
+    sampler_vars: List[Dict[str, Union[type, np.dtype]]]
+    """Sampler stats for each sampler."""
+
+    def __len__(self):
+        raise NotImplementedError()
+
+    def get_values(self, varname: str, burn=0, thin=1) -> np.ndarray:
+        """Get values from trace.
+
+        Parameters
+        ----------
+        varname: str
+        burn: int
+        thin: int
+
+        Returns
+        -------
+        A NumPy array
+        """
+        raise NotImplementedError()
+
+    def get_sampler_stats(
+        self, stat_name: str, sampler_idx: Optional[int] = None, burn=0, thin=1
+    ) -> np.ndarray:
+        """Get sampler statistics from the trace.
+
+        Parameters
+        ----------
+        stat_name : str
+            Name of the stat to fetch.
+        sampler_idx : int or None
+            Index of the sampler to get the stat from.
+        burn : int
+            Draws to skip from the start.
+        thin : int
+            Stepsize for the slice.
+
+        Returns
+        -------
+        stats : np.ndarray
+            If `sampler_idx` was specified, the shape should be `(draws,)`.
+            Otherwise, the shape should be `(draws, samplers)`.
+        """
+        raise NotImplementedError()
+
+    def _slice(self, idx: slice) -> "IBaseTrace":
+        """Slice trace object."""
+        raise NotImplementedError()
+
+    def point(self, idx: int) -> Dict[str, np.ndarray]:
+        """Return dictionary of point values at `idx` for current chain
+        with variables names as keys.
+        """
+        raise NotImplementedError()
+
+    def record(self, draw: Mapping[str, np.ndarray], stats: Sequence[Mapping[str, Any]]):
+        """Record results of a sampling iteration.
+
+        Parameters
+        ----------
+        draw: dict
+            Values mapped to variable names
+        stats: list of dicts
+            The diagnostic values for each sampler
+        """
+        raise NotImplementedError()
+
+    def close(self):
+        """Close the backend.
+
+        This is called after sampling has finished.
+        """
+        pass
+
+
+class BaseTrace(IBaseTrace):
     """Base trace object
 
     Parameters
@@ -127,25 +213,6 @@ class BaseTrace(ABC):
         self._set_sampler_vars(sampler_vars)
         self._is_base_setup = True
 
-    def record(self, point, sampler_states=None):
-        """Record results of a sampling iteration.
-
-        Parameters
-        ----------
-        point: dict
-            Values mapped to variable names
-        sampler_states: list of dicts
-            The diagnostic values for each sampler
-        """
-        raise NotImplementedError
-
-    def close(self):
-        """Close the database backend.
-
-        This is called after sampling has finished.
-        """
-        pass
-
     # Selection methods
 
     def __getitem__(self, idx):
@@ -157,41 +224,31 @@ class BaseTrace(ABC):
         except (ValueError, TypeError):  # Passed variable or variable name.
             raise ValueError("Can only index with slice or integer")
 
-    def __len__(self):
-        raise NotImplementedError
-
-    def get_values(self, varname, burn=0, thin=1):
-        """Get values from trace.
-
-        Parameters
-        ----------
-        varname: str
-        burn: int
-        thin: int
-
-        Returns
-        -------
-        A NumPy array
-        """
-        raise NotImplementedError
-
-    def get_sampler_stats(self, stat_name, sampler_idx=None, burn=0, thin=1):
+    def get_sampler_stats(
+        self, stat_name: str, sampler_idx: Optional[int] = None, burn=0, thin=1
+    ) -> np.ndarray:
         """Get sampler statistics from the trace.
 
+        Note: This implementation attempts to squeeze object arrays into a consistent dtype,
+        #     which can change their shape in hard-to-predict ways.
+        #     See https://github.com/pymc-devs/pymc/issues/6207
+
         Parameters
         ----------
-        stat_name: str
-        sampler_idx: int or None
-        burn: int
-        thin: int
+        stat_name : str
+            Name of the stat to fetch.
+        sampler_idx : int or None
+            Index of the sampler to get the stat from.
+        burn : int
+            Draws to skip from the start.
+        thin : int
+            Stepsize for the slice.
 
         Returns
         -------
-        If the `sampler_idx` is specified, return the statistic with
-        the given name in a numpy array. If it is not specified and there
-        is more than one sampler that provides this statistic, return
-        a numpy array of shape (m, n), where `m` is the number of
-        such samplers, and `n` is the number of samples.
+        stats : np.ndarray
+            If `sampler_idx` was specified, the shape should be `(draws,)`.
+            Otherwise, the shape should be `(draws, samplers)`.
         """
         if sampler_idx is not None:
             return self._get_sampler_stats(stat_name, sampler_idx, burn, thin)
@@ -209,30 +266,22 @@ class BaseTrace(ABC):
 
         if vals.dtype == np.dtype(object):
             try:
-                vals = np.vstack(vals)
+                vals = np.vstack(list(vals))
             except ValueError:
                 # Most likely due to non-identical shapes. Just stick with the object-array.
                 pass
 
         return vals
 
-    def _get_sampler_stats(self, stat_name, sampler_idx, burn, thin):
+    def _get_sampler_stats(
+        self, stat_name: str, sampler_idx: int, burn: int, thin: int
+    ) -> np.ndarray:
         """Get sampler statistics."""
-        raise NotImplementedError()
-
-    def _slice(self, idx: Union[int, slice]):
-        """Slice trace object."""
-        raise NotImplementedError()
-
-    def point(self, idx: int) -> Dict[str, np.ndarray]:
-        """Return dictionary of point values at `idx` for current chain
-        with variables names as keys.
-        """
         raise NotImplementedError()
 
     @property
     def stat_names(self) -> Set[str]:
-        names = set()
+        names: Set[str] = set()
         for vars in self.sampler_vars or []:
             names.update(vars.keys())
 
@@ -290,7 +339,7 @@ class MultiTrace:
         List of variable names in the trace(s)
     """
 
-    def __init__(self, straces: Sequence[BaseTrace]):
+    def __init__(self, straces: Sequence[IBaseTrace]):
         if len({t.chain for t in straces}) != len(straces):
             raise ValueError("Chains are not unique.")
         self._straces = {t.chain: t for t in straces}
@@ -386,7 +435,7 @@ class MultiTrace:
         sampler_vars = [s.sampler_vars for s in self._straces.values()]
         if not all(svars == sampler_vars[0] for svars in sampler_vars):
             raise ValueError("Inividual chains contain different sampler stats")
-        names = set()
+        names: Set[str] = set()
         for trace in self._straces.values():
             if trace.sampler_vars is None:
                 continue
@@ -441,23 +490,34 @@ class MultiTrace:
         combine: bool = True,
         chains: Optional[Union[int, Sequence[int]]] = None,
         squeeze: bool = True,
-    ):
+    ) -> Union[List[np.ndarray], np.ndarray]:
         """Get sampler statistics from the trace.
+
+        Note: This implementation attempts to squeeze object arrays into a consistent dtype,
+        #     which can change their shape in hard-to-predict ways.
+        #     See https://github.com/pymc-devs/pymc/issues/6207
 
         Parameters
         ----------
-        stat_name: str
-        sampler_idx: int or None
-        burn: int
-        thin: int
+        stat_name : str
+            Name of the stat to fetch.
+        sampler_idx : int or None
+            Index of the sampler to get the stat from.
+        burn : int
+            Draws to skip from the start.
+        thin : int
+            Stepsize for the slice.
+        combine : bool
+            If True, results from `chains` will be concatenated.
+        squeeze : bool
+            Return a single array element if the resulting list of
+            values only has one element. If False, the result will
+            always be a list of arrays, even if `combine` is True.
 
         Returns
         -------
-        If the `sampler_idx` is specified, return the statistic with
-        the given name in a numpy array. If it is not specified and there
-        is more than one sampler that provides this statistic, return
-        a numpy array of shape (m, n), where `m` is the number of
-        such samplers, and `n` is the number of samples.
+        stats : np.ndarray
+            List or ndarray depending on parameters.
         """
         if stat_name not in self.stat_names:
             raise KeyError("Unknown sampler statistic %s" % stat_name)
@@ -472,7 +532,7 @@ class MultiTrace:
         ]
         return _squeeze_cat(results, combine, squeeze)
 
-    def _slice(self, slice):
+    def _slice(self, slice: slice):
         """Return a new MultiTrace object sliced according to `slice`."""
         new_traces = [trace._slice(slice) for trace in self._straces.values()]
         trace = MultiTrace(new_traces)
@@ -508,7 +568,7 @@ class MultiTrace:
         return itl.chain.from_iterable(self._straces[chain] for chain in chains)
 
 
-def _squeeze_cat(results, combine, squeeze):
+def _squeeze_cat(results, combine: bool, squeeze: bool):
     """Squeeze and concatenate the results depending on values of
     `combine` and `squeeze`."""
     if combine:

@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -33,7 +33,6 @@ from pymc.distributions.distribution import (
     _moment,
     moment,
 )
-from pymc.distributions.logprob import ignore_logprob, logp, reconsider_logprob
 from pymc.distributions.multivariate import MvNormal, MvStudentT
 from pymc.distributions.shape_utils import (
     _change_dist_size,
@@ -43,6 +42,8 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.abstract import _logprob
+from pymc.logprob.joint_logprob import logp
+from pymc.logprob.utils import ignore_logprob, reconsider_logprob
 from pymc.pytensorf import constant_fold, floatX, intX
 from pymc.util import check_dist_not_registered
 
@@ -677,7 +678,6 @@ class AR(Distribution):
 
 @_change_dist_size.register(AutoRegressiveRV)
 def change_ar_size(op, dist, new_size, expand=False):
-
     if expand:
         old_size = dist.shape[:-1]
         new_size = tuple(new_size) + tuple(old_size)
@@ -850,7 +850,6 @@ class GARCH11(Distribution):
 
 @_change_dist_size.register(GARCH11RV)
 def change_garch11_size(op, dist, new_size, expand=False):
-
     if expand:
         old_size = dist.shape[:-1]
         new_size = tuple(new_size) + tuple(old_size)
@@ -1035,7 +1034,6 @@ class EulerMaruyama(Distribution):
 
 @_change_dist_size.register(EulerMaruyamaRV)
 def change_eulermaruyama_size(op, dist, new_size, expand=False):
-
     if expand:
         old_size = dist.shape[:-1]
         new_size = tuple(new_size) + tuple(old_size)

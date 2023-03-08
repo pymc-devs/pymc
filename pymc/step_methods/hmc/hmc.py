@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -39,27 +39,25 @@ class HamiltonianMC(BaseHMC):
 
     name = "hmc"
     default_blocked = True
-    stats_dtypes = [
-        {
-            "step_size": np.float64,
-            "n_steps": np.int64,
-            "tune": bool,
-            "step_size_bar": np.float64,
-            "accept": np.float64,
-            "diverging": bool,
-            "energy_error": np.float64,
-            "energy": np.float64,
-            "path_length": np.float64,
-            "accepted": bool,
-            "model_logp": np.float64,
-            "process_time_diff": np.float64,
-            "perf_counter_diff": np.float64,
-            "perf_counter_start": np.float64,
-            "largest_eigval": np.float64,
-            "smallest_eigval": np.float64,
-            "warning": SamplerWarning,
-        }
-    ]
+    stats_dtypes_shapes = {
+        "step_size": (np.float64, []),
+        "n_steps": (np.int64, []),
+        "tune": (bool, []),
+        "step_size_bar": (np.float64, []),
+        "accept": (np.float64, []),
+        "diverging": (bool, []),
+        "energy_error": (np.float64, []),
+        "energy": (np.float64, []),
+        "path_length": (np.float64, []),
+        "accepted": (bool, []),
+        "model_logp": (np.float64, []),
+        "process_time_diff": (np.float64, []),
+        "perf_counter_diff": (np.float64, []),
+        "perf_counter_start": (np.float64, []),
+        "largest_eigval": (np.float64, []),
+        "smallest_eigval": (np.float64, []),
+        "warning": (SamplerWarning, None),
+    }
 
     def __init__(self, vars=None, path_length=2.0, max_steps=1024, **kwargs):
         """

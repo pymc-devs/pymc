@@ -1,4 +1,4 @@
-#   Copyright 2022- The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -37,19 +37,42 @@
 import warnings
 
 from collections import deque
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Sequence, Union
 
-import pytensor.tensor as at
+import pytensor
+import pytensor.tensor as pt
 
 from pytensor import config
 from pytensor.graph.basic import graph_inputs, io_toposort
 from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
+from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorVariable
 
 from pymc.logprob.abstract import _logprob, get_measurable_outputs
+from pymc.logprob.abstract import logprob as logp_logprob
 from pymc.logprob.rewriting import construct_ir_fgraph
+from pymc.logprob.transforms import RVTransform, TransformValuesRewrite
 from pymc.logprob.utils import rvs_to_value_vars
+
+
+def logp(rv: TensorVariable, value) -> TensorVariable:
+    """Return the log-probability graph of a Random Variable"""
+
+    value = pt.as_tensor_variable(value, dtype=rv.dtype)
+    try:
+        return logp_logprob(rv, value)
+    except NotImplementedError:
+        try:
+            value = rv.type.filter_variable(value)
+        except TypeError as exc:
+            raise TypeError(
+                "When RV is not a pure distribution, value variable must have the same type"
+            ) from exc
+        try:
+            return factorized_joint_logprob({rv: value}, warn_missing_rvs=False)[value]
+        except Exception as exc:
+            raise NotImplementedError("PyMC could not infer logp of input variable.") from exc
 
 
 def factorized_joint_logprob(
@@ -196,7 +219,6 @@ def factorized_joint_logprob(
             q_logprob_vars = [q_logprob_vars]
 
         for q_value_var, q_logprob_var in zip(q_value_vars, q_logprob_vars):
-
             q_value_var = original_values[q_value_var]
 
             if q_value_var.name:
@@ -224,31 +246,64 @@ def factorized_joint_logprob(
     return logprob_vars
 
 
-def joint_logprob(*args, sum: bool = True, **kwargs) -> Optional[TensorVariable]:
-    """Create a graph representing the joint log-probability/measure of a graph.
+def _check_no_rvs(logp_terms: Sequence[TensorVariable]):
+    # Raise if there are unexpected RandomVariables in the logp graph
+    # Only SimulatorRVs MinibatchIndexRVs are allowed
+    from pymc.data import MinibatchIndexRV
+    from pymc.distributions.simulator import SimulatorRV
 
-    This function calls `factorized_joint_logprob` and returns the combined
-    log-probability factors as a single graph.
+    unexpected_rv_nodes = [
+        node
+        for node in pytensor.graph.ancestors(logp_terms)
+        if (
+            node.owner
+            and isinstance(node.owner.op, RandomVariable)
+            and not isinstance(node.owner.op, (SimulatorRV, MinibatchIndexRV))
+        )
+    ]
+    if unexpected_rv_nodes:
+        raise ValueError(
+            f"Random variables detected in the logp graph: {unexpected_rv_nodes}.\n"
+            "This can happen when DensityDist logp or Interval transform functions "
+            "reference nonlocal variables."
+        )
 
-    Parameters
-    ----------
-    sum: bool
-        If ``True`` each factor is collapsed to a scalar via ``sum`` before
-        being joined with the remaining factors. This may be necessary to
-        avoid incorrect broadcasting among independent factors.
 
-    """
-    logprob = factorized_joint_logprob(*args, **kwargs)
-    if not logprob:
-        return None
-    elif len(logprob) == 1:
-        logprob = tuple(logprob.values())[0]
-        if sum:
-            return at.sum(logprob)
-        else:
-            return logprob
-    else:
-        if sum:
-            return at.sum([at.sum(factor) for factor in logprob.values()])
-        else:
-            return at.add(*logprob.values())
+def joint_logp(
+    rvs: Sequence[TensorVariable],
+    *,
+    rvs_to_values: Dict[TensorVariable, TensorVariable],
+    rvs_to_transforms: Dict[TensorVariable, RVTransform],
+    jacobian: bool = True,
+    **kwargs,
+) -> List[TensorVariable]:
+    """Thin wrapper around pymc.logprob.factorized_joint_logprob, extended with Model
+    specific concerns such as transforms, jacobian, and scaling"""
+
+    transform_rewrite = None
+    values_to_transforms = {
+        rvs_to_values[rv]: transform
+        for rv, transform in rvs_to_transforms.items()
+        if transform is not None
+    }
+    if values_to_transforms:
+        # There seems to be an incorrect type hint in TransformValuesRewrite
+        transform_rewrite = TransformValuesRewrite(values_to_transforms)  # type: ignore
+
+    temp_logp_terms = factorized_joint_logprob(
+        rvs_to_values,
+        extra_rewrites=transform_rewrite,
+        use_jacobian=jacobian,
+        **kwargs,
+    )
+
+    # The function returns the logp for every single value term we provided to it.
+    # This includes the extra values we plugged in above, so we filter those we
+    # actually wanted in the same order they were given in.
+    logp_terms = {}
+    for rv in rvs:
+        value_var = rvs_to_values[rv]
+        logp_terms[value_var] = temp_logp_terms[value_var]
+
+    _check_no_rvs(list(logp_terms.values()))
+    return list(logp_terms.values())

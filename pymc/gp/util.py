@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -28,10 +28,10 @@ from scipy.cluster.vq import kmeans
 
 # Avoid circular dependency when importing modelcontext
 from pymc.distributions.distribution import Distribution
+from pymc.model import modelcontext
 from pymc.pytensorf import compile_pymc, walk_model
 
 _ = Distribution  # keep both pylint and black happy
-from pymc.model import modelcontext
 
 JITTER_DEFAULT = 1e-6
 

@@ -1,3 +1,16 @@
+#   Copyright 2023 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
 """PyMC-ArviZ conversion code."""
 import logging
 import warnings
@@ -58,6 +71,7 @@ def find_observations(model: "Model") -> Dict[str, Var]:
 
 def find_constants(model: "Model") -> Dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
+
     # The constant data vars must be either pm.Data or TensorConstant or SharedVariable
     def is_data(name, var, model) -> bool:
         observations = find_observations(model)
@@ -161,7 +175,6 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         save_warmup: Optional[bool] = None,
         include_transformed: bool = False,
     ):
-
         self.save_warmup = rcParams["data.save_warmup"] if save_warmup is None else save_warmup
         self.include_transformed = include_transformed
         self.trace = trace

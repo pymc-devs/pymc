@@ -9,12 +9,22 @@ repos:
     -   id: debug-statements
     -   id: end-of-file-fixer
     -   id: no-commit-to-branch
-        args: [--branch, master]
+        args: [--branch, main]
     -   id: requirements-txt-fixer
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
+- repo: https://github.com/lucianopaz/head_of_apache
+  rev: "0.0.3"
+  hooks:
+    - id: head_of_apache
+      args:
+        - --author=The PyMC Developers
+        - --exclude=docs/
+        - --exclude=scripts/
+        - --exclude=binder/
+        - --exclude=versioneer.py
 - repo: https://github.com/PyCQA/isort
-  rev: 5.11.4
+  rev: 5.12.0
   hooks:
     - id: isort
       name: isort
@@ -24,12 +34,12 @@ repos:
     - id: pyupgrade
       args: [--py37-plus]
 - repo: https://github.com/psf/black
-  rev: 22.12.0
+  rev: 23.1.0
   hooks:
     - id: black
     - id: black-jupyter
 - repo: https://github.com/PyCQA/pylint
-  rev: v2.16.0b1
+  rev: v2.16.3
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]

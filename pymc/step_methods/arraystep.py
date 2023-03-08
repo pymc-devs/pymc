@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -47,7 +47,6 @@ class ArrayStep(BlockedStep):
         self.blocked = blocked
 
     def step(self, point: PointType) -> Tuple[PointType, StatsType]:
-
         partial_funcs_and_point: List[Union[Callable, PointType]] = [
             DictToArrayBijection.mapf(x, start_point=point) for x in self.fs
         ]
@@ -92,7 +91,6 @@ class ArrayStepShared(BlockedStep):
         self.blocked = blocked
 
     def step(self, point: PointType) -> Tuple[PointType, StatsType]:
-
         for name, shared_var in self.shared.items():
             shared_var.set_value(point[name])
 
