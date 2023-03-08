@@ -20,9 +20,9 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
 
 2. Create a Gitpod account. You can login and authorize access via your GitHub account:  [https://gitpod.io/](https://gitpod.io/)
 
-:::{note}
-Gitpod will show up as an authorized application in your GitHub account here: [https://github.com/settings/applications](https://github.com/settings/applications)
-:::
+   :::{note}
+   Gitpod will show up as an authorized application in your GitHub account here: [https://github.com/settings/applications](https://github.com/settings/applications)
+   :::
 
 3. Grant GitHub / Gitpod integration permissions.
 
@@ -39,7 +39,7 @@ Gitpod will show up as an authorized application in your GitHub account here: [h
 Gitpod [integration options](https://gitpod.io/user/integrations)
 :::
 
-4. Within Gitpod, create a ["New Workspace"](https://gitpod.io/workspaces).  Here you will want to select the forked pymc repo. If you don't see it, you can paste into the "Context URL" your forked repo path.  For example:  `https://github.com/reshamas/pymc`.  Then select "New Workspace".
+4. Within Gitpod, create a ["New Workspace"](https://gitpod.io/workspaces).  Here you will want to select the forked pymc repo. If you don't see it, you can paste into the "Context URL" your forked repo path.  For example:  `https://github.com/yourusername/pymc`.  Then select "New Workspace".
 
 :::{figure-md} Gitpod workspace
 
@@ -56,7 +56,7 @@ Gitpod will pull a container and set up the workspace.  It will take a few minut
 
     Here is an example:
 
-    ```bash
+    ```console
     (base) gitpod@reshamas-pymc-0ygu5rf74md:/workspace/pymc$
     ```
 
@@ -83,7 +83,7 @@ This working environment has been set up with [micromamba](https://mamba.readthe
 
     Example:
 
-    ```bash
+    ```console
     (base) gitpod@reshamas-pymc-vpfb4pvr90z:/workspace/pymc$ pip list | grep pymc
     pymc                          5.1.0       /workspace/pymc
     pymc-sphinx-theme             0.1
@@ -106,15 +106,15 @@ At the terminal, before beginning work, remember to:
 1. Create a feature branch: `git checkout -b feature-branch`
 1. Work on a file
 1. Follow the Git workflow
-  * `git add file_name`
-  * `git commit -m 'message'`
-  * `git push origin feature-branch`
+   * `git add file_name`
+   * `git commit -m 'message'`
+   * `git push origin feature-branch`
 :::
 
 ### Gitpod Notes
 
 #### Billing
-The Gitpod free plan currently allow 500 free credits (50 hours of standard workspace usage) per month. Usage information can be found in the [Gitpod billing section](https://gitpod.io/user/billing).
+The Gitpod free plan currently allows 500 free credits (50 hours of standard workspace usage) per month. Usage information can be found in the [Gitpod billing section](https://gitpod.io/user/billing).
 
 :::{caution}
 Be sure to check out the Gitpod policies on [Workspace Deletion](https://www.gitpod.io/docs/configure/workspaces/workspace-lifecycle#workspace-deletion) and learn more about:
