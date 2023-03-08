@@ -24,7 +24,8 @@ import pytest
 from numpy import random as nr
 from numpy import testing as npt
 from pytensor.compile.mode import Mode
-from pytensor.graph.basic import ancestors
+from pytensor.graph.basic import walk
+from pytensor.graph.op import HasInnerGraph
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
@@ -37,7 +38,7 @@ from pymc import Distribution, logcdf, logp
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.initial_point import make_initial_point_fn
 from pymc.logprob import joint_logp
-from pymc.logprob.abstract import icdf
+from pymc.logprob.abstract import MeasurableVariable, icdf
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
     compile_pymc,
@@ -958,5 +959,18 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
 
 
 def assert_no_rvs(var):
-    assert not any(isinstance(v.owner.op, RandomVariable) for v in ancestors([var]) if v.owner)
-    return var
+    """Assert that there are no `MeasurableVariable` nodes in a graph."""
+
+    def expand(r):
+        owner = r.owner
+        if owner:
+            inputs = list(reversed(owner.inputs))
+
+            if isinstance(owner.op, HasInnerGraph):
+                inputs += owner.op.inner_outputs
+
+            return inputs
+
+    for v in walk([var], expand, False):
+        if v.owner and isinstance(v.owner.op, (RandomVariable, MeasurableVariable)):
+            raise AssertionError(f"RV found in graph: {v}")
