@@ -1503,6 +1503,10 @@ class TestMoments:
         with pm.Model() as model:
             pm.Rice("x", nu=nu, sigma=sigma, size=size)
 
+    @pytest.mark.skipif(
+        condition=_polyagamma_not_installed,
+        reason="`polyagamma package is not available/installed.",
+    )
     @pytest.mark.parametrize(
         "h, z, size, expected",
         [
