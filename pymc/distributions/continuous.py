@@ -859,9 +859,6 @@ class HalfNormal(PositiveContinuous):
             msg="sigma > 0",
         )
 
-    def icdf(value, loc, sigma):
-        return loc + sigma * np.sqrt(2) * np.erfinv(2 * value - 1)
-
 
 class WaldRV(RandomVariable):
     name = "wald"
@@ -1038,25 +1035,6 @@ class Wald(PositiveContinuous):
             lam > 0,
             alpha >= 0,
             msg="mu > 0, lam > 0, alpha >= 0",
-        )
-
-    def icdf(value, mu, lam, alpha):
-        # Compute standard deviation and location parameter
-        std = at.sqrt(lam)
-        loc = alpha + mu
-
-        # Compute inverse standard normal CDF
-        z = at.sqrt(2) * at.erfinv(2 * value - 1)
-
-        # Compute Wald ICDF
-        x = loc + std * z / (1 - 0.5 * std * z)
-
-        return check_parameters(
-            x,
-            0 <= value <= 1,
-            lam > 0,
-            alpha >= 0,
-            msg="0 <= val <= 1, lam > 0, alpha >= 0",
         )
 
 
