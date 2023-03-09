@@ -220,7 +220,7 @@ class BetaBinomial(Discrete):
     ========  =================================================================
     Support   :math:`x \in \{0, 1, \ldots, n\}`
     Mean      :math:`n \dfrac{\alpha}{\alpha + \beta}`
-    Variance  :math:`n \dfrac{\alpha \beta}{(\alpha+\beta)^2 (\alpha+\beta+1)}`
+    Variance  :math:`\dfrac{n \alpha \beta (\alpha+\beta+n)}{(\alpha+\beta)^2 (\alpha+\beta+1)}`
     ========  =================================================================
 
     Parameters
@@ -847,9 +847,7 @@ class HyperGeometric(Discrete):
         k = 10
         for n in [20, 25]:
             pmf = st.hypergeom.pmf(x, N, k, n)
-            plt.plot(x, pmf, '-o', label='n = {}'.format(n))
-        plt.plot(x, pmf, '-o', label='N = {}'.format(N))
-        plt.plot(x, pmf, '-o', label='k = {}'.format(k))
+            plt.plot(x, pmf, '-o', label='N = {}, k = {}, n = {}'.format(N, k, n))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)

@@ -61,15 +61,31 @@ Saved backends can be loaded using `arviz.from_netcdf`
 
 """
 from copy import copy
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
+
+from typing_extensions import TypeAlias
 
 from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
 from pymc.backends.base import BaseTrace, IBaseTrace
 from pymc.backends.ndarray import NDArray
 from pymc.model import Model
 from pymc.step_methods.compound import BlockedStep, CompoundStep
+
+HAS_MCB = False
+try:
+    from mcbackend import Backend, Run
+
+    from pymc.backends.mcbackend import init_chain_adapters
+
+    TraceOrBackend = Union[BaseTrace, Backend]
+    RunType: TypeAlias = Run
+    HAS_MCB = True
+except ImportError:
+    TraceOrBackend = BaseTrace  # type: ignore
+    RunType = type(None)  # type: ignore
+
 
 __all__ = ["to_inference_data", "predictions_to_inference_data"]
 
@@ -99,16 +115,25 @@ def _init_trace(
 
 def init_traces(
     *,
-    backend: Optional[BaseTrace],
+    backend: Optional[TraceOrBackend],
     chains: int,
     expected_length: int,
     step: Union[BlockedStep, CompoundStep],
-    var_dtypes: Dict[str, np.dtype],
-    var_shapes: Dict[str, Sequence[int]],
+    initial_point: Mapping[str, np.ndarray],
     model: Model,
-) -> Sequence[IBaseTrace]:
+) -> Tuple[Optional[RunType], Sequence[IBaseTrace]]:
     """Initializes a trace recorder for each chain."""
-    return [
+    if HAS_MCB and isinstance(backend, Backend):
+        return init_chain_adapters(
+            backend=backend,
+            chains=chains,
+            initial_point=initial_point,
+            step=step,
+            model=model,
+        )
+
+    assert backend is None or isinstance(backend, BaseTrace)
+    traces = [
         _init_trace(
             expected_length=expected_length,
             stats_dtypes=step.stats_dtypes,
@@ -118,3 +143,4 @@ def init_traces(
         )
         for chain_number in range(chains)
     ]
+    return None, traces

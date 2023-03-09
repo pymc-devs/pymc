@@ -50,12 +50,10 @@ class Slice(ArrayStep):
 
     name = "slice"
     default_blocked = False
-    stats_dtypes = [
-        {
-            "nstep_out": int,
-            "nstep_in": int,
-        }
-    ]
+    stats_dtypes_shapes = {
+        "nstep_out": (int, []),
+        "nstep_in": (int, []),
+    }
 
     def __init__(self, vars=None, w=1.0, tune=True, model=None, iter_limit=np.inf, **kwargs):
         self.model = modelcontext(model)

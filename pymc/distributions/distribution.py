@@ -988,21 +988,19 @@ class CustomDist:
                 ndim_supp=ndim_supp,
                 **kwargs,
             )
-        else:
-            return _CustomDist(
-                name,
-                *dist_params,
-                class_name=name,
-                random=random,
-                logp=logp,
-                logcdf=logcdf,
-                moment=moment,
-                ndim_supp=ndim_supp,
-                ndims_params=ndims_params,
-                dtype=dtype,
-                **kwargs,
-            )
-        return super().__new__(cls, name, *args, **kwargs)
+        return _CustomDist(
+            name,
+            *dist_params,
+            class_name=name,
+            random=random,
+            logp=logp,
+            logcdf=logcdf,
+            moment=moment,
+            ndim_supp=ndim_supp,
+            ndims_params=ndims_params,
+            dtype=dtype,
+            **kwargs,
+        )
 
     @classmethod
     def dist(

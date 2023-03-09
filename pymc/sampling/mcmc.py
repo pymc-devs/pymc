@@ -32,8 +32,8 @@ from typing_extensions import Protocol, TypeAlias
 
 import pymc as pm
 
-from pymc.backends import init_traces
-from pymc.backends.base import BaseTrace, IBaseTrace, MultiTrace, _choose_chains
+from pymc.backends import RunType, TraceOrBackend, init_traces
+from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
@@ -168,6 +168,11 @@ def assign_step_methods(model, step=None, methods=None, step_kwargs=None):
         except TypeError:
             steps.append(step)
         for step in steps:
+            for var in step.vars:
+                if var not in model.value_vars:
+                    raise ValueError(
+                        f"{var} assigned to {step} sampler is not a value variable in the model. You can use `util.get_value_vars_from_user_vars` to parse user provided variables."
+                    )
             assigned_vars = assigned_vars.union(set(step.vars))
 
     # Use competence classmethods to select step methods for remaining
@@ -221,28 +226,117 @@ def all_continuous(vars):
         return True
 
 
+def _sample_external_nuts(
+    sampler: str,
+    draws: int,
+    tune: int,
+    chains: int,
+    target_accept: float,
+    random_seed: Union[RandomState, None],
+    initvals: Union[StartDict, Sequence[Optional[StartDict]], None],
+    model: Model,
+    progressbar: bool,
+    idata_kwargs: Optional[Dict],
+    **kwargs,
+):
+    warnings.warn("Use of external NUTS sampler is still experimental", UserWarning)
+
+    if sampler == "nutpie":
+        try:
+            import nutpie
+        except ImportError as err:
+            raise ImportError(
+                "nutpie not found. Install it with conda install -c conda-forge nutpie"
+            ) from err
+
+        if initvals is not None:
+            warnings.warn(
+                "`initvals` are currently not passed to nutpie sampler. "
+                "Use `init_mean` kwarg following nutpie specification instead.",
+                UserWarning,
+            )
+
+        if idata_kwargs is not None:
+            warnings.warn(
+                "`idata_kwargs` are currently ignored by the nutpie sampler",
+                UserWarning,
+            )
+
+        compiled_model = nutpie.compile_pymc_model(model)
+        idata = nutpie.sample(
+            compiled_model,
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            target_accept=target_accept,
+            seed=_get_seeds_per_chain(random_seed, 1)[0],
+            progress_bar=progressbar,
+            **kwargs,
+        )
+        return idata
+
+    elif sampler == "numpyro":
+        import pymc.sampling.jax as pymc_jax
+
+        idata = pymc_jax.sample_numpyro_nuts(
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            target_accept=target_accept,
+            random_seed=random_seed,
+            initvals=initvals,
+            model=model,
+            progressbar=progressbar,
+            idata_kwargs=idata_kwargs,
+            **kwargs,
+        )
+        return idata
+
+    elif sampler == "blackjax":
+        import pymc.sampling.jax as pymc_jax
+
+        idata = pymc_jax.sample_blackjax_nuts(
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            target_accept=target_accept,
+            random_seed=random_seed,
+            initvals=initvals,
+            model=model,
+            idata_kwargs=idata_kwargs,
+            **kwargs,
+        )
+        return idata
+
+    else:
+        raise ValueError(
+            f"Sampler {sampler} not found. Choose one of ['nutpie', 'numpyro', 'blackjax', 'pymc']."
+        )
+
+
 def sample(
     draws: int = 1000,
-    step=None,
-    init: str = "auto",
-    n_init: int = 200_000,
-    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
-    trace: Optional[BaseTrace] = None,
+    *,
+    tune: int = 1000,
     chains: Optional[int] = None,
     cores: Optional[int] = None,
-    tune: int = 1000,
-    progressbar: bool = True,
-    model: Optional[Model] = None,
     random_seed: RandomState = None,
+    progressbar: bool = True,
+    step=None,
+    nuts_sampler: str = "pymc",
+    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    init: str = "auto",
+    jitter_max_retries: int = 10,
+    n_init: int = 200_000,
+    trace: Optional[TraceOrBackend] = None,
     discard_tuned_samples: bool = True,
     compute_convergence_checks: bool = True,
-    callback=None,
-    jitter_max_retries: int = 10,
-    *,
-    return_inferencedata: bool = True,
     keep_warning_stat: bool = False,
-    idata_kwargs: dict = None,
+    return_inferencedata: bool = True,
+    idata_kwargs: Optional[Dict[str, Any]] = None,
+    callback=None,
     mp_ctx=None,
+    model: Optional[Model] = None,
     **kwargs,
 ) -> Union[InferenceData, MultiTrace]:
     r"""Draw samples from the posterior using the given step methods.
@@ -254,22 +348,11 @@ def sample(
     draws : int
         The number of samples to draw. Defaults to 1000. The number of tuned samples are discarded
         by default. See ``discard_tuned_samples``.
-    init : str
-        Initialization method to use for auto-assigned NUTS samplers. See `pm.init_nuts` for a list
-        of all options. This argument is ignored when manually passing the NUTS step method.
-    step : function or iterable of functions
-        A step function or collection of functions. If there are variables without step methods,
-        step methods for those variables will be assigned automatically. By default the NUTS step
-        method will be used, if appropriate to the model.
-    n_init : int
-        Number of iterations of initializer. Only works for 'ADVI' init methods.
-    initvals : optional, dict, array of dict
-        Dict or list of dicts with initial value strategies to use instead of the defaults from
-        `Model.initial_values`. The keys should be names of transformed random variables.
-        Initialization methods for NUTS (see ``init`` keyword) can overwrite the default.
-    trace : backend, optional
-        A backend instance or None.
-        If None, the NDArray backend is used.
+    tune : int
+        Number of iterations to tune, defaults to 1000. Samplers adjust the step sizes, scalings or
+        similar during tuning. Tuning samples will be drawn in addition to the number specified in
+        the ``draws`` argument, and will be discarded unless ``discard_tuned_samples`` is set to
+        False.
     chains : int
         The number of chains to sample. Running independent chains is important for some
         convergence statistics and can also reveal multiple modes in the posterior. If ``None``,
@@ -277,40 +360,44 @@ def sample(
     cores : int
         The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
         system, but at most 4.
-    tune : int
-        Number of iterations to tune, defaults to 1000. Samplers adjust the step sizes, scalings or
-        similar during tuning. Tuning samples will be drawn in addition to the number specified in
-        the ``draws`` argument, and will be discarded unless ``discard_tuned_samples`` is set to
-        False.
-    progressbar : bool, optional default=True
-        Whether or not to display a progress bar in the command line. The bar shows the percentage
-        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
-        time until completion ("expected time of arrival"; ETA).
-    model : Model (optional if in ``with`` context)
-        Model to sample from. The model needs to have free random variables.
     random_seed : int, array-like of int, RandomState or Generator, optional
         Random seed(s) used by the sampling steps. If a list, tuple or array of ints
         is passed, each entry will be used to seed each chain. A ValueError will be
         raised if the length does not match the number of chains.
-    discard_tuned_samples : bool
-        Whether to discard posterior samples of the tune interval.
-    compute_convergence_checks : bool, default=True
-        Whether to compute sampler statistics like Gelman-Rubin and ``effective_n``.
-    callback : function, default=None
-        A function which gets called for every sample from the trace of a chain. The function is
-        called with the trace and the current draw and will contain all samples for a single trace.
-        the ``draw.chain`` argument can be used to determine which of the active chains the sample
-        is drawn from.
-        Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
+    progressbar : bool, optional default=True
+        Whether or not to display a progress bar in the command line. The bar shows the percentage
+        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
+        time until completion ("expected time of arrival"; ETA).
+        Only applicable to the pymc nuts sampler.
+    step : function or iterable of functions
+        A step function or collection of functions. If there are variables without step methods,
+        step methods for those variables will be assigned automatically. By default the NUTS step
+        method will be used, if appropriate to the model.
+    nuts_sampler : str
+        Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"].
+        This requires the chosen sampler to be installed.
+        All samplers, except "pymc", require the full model to be continuous.
+    initvals : optional, dict, array of dict
+        Dict or list of dicts with initial value strategies to use instead of the defaults from
+        `Model.initial_values`. The keys should be names of transformed random variables.
+        Initialization methods for NUTS (see ``init`` keyword) can overwrite the default.
+    init : str
+        Initialization method to use for auto-assigned NUTS samplers. See `pm.init_nuts` for a list
+        of all options. This argument is ignored when manually passing the NUTS step method.
+        Only applicable to the pymc nuts sampler.
     jitter_max_retries : int
         Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform
         jitter that yields a finite probability. This applies to ``jitter+adapt_diag`` and
         ``jitter+adapt_full`` init methods.
-    return_inferencedata : bool
-        Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a
-        `MultiTrace` (False). Defaults to `True`.
-    idata_kwargs : dict, optional
-        Keyword arguments for :func:`pymc.to_inference_data`
+    n_init : int
+        Number of iterations of initializer. Only works for 'ADVI' init methods.
+    trace : backend, optional
+        A backend instance or None.
+        If None, the NDArray backend is used.
+    discard_tuned_samples : bool
+        Whether to discard posterior samples of the tune interval.
+    compute_convergence_checks : bool, default=True
+        Whether to compute sampler statistics like Gelman-Rubin and ``effective_n``.
     keep_warning_stat : bool
         If ``True`` the "warning" stat emitted by, for example, HMC samplers will be kept
         in the returned ``idata.sample_stat`` group.
@@ -318,9 +405,22 @@ def sample(
         should only be set to ``True`` if you intend to use the "warning" objects right away.
         Defaults to ``False`` such that ``pm.drop_warning_stat`` is applied automatically,
         making the ``InferenceData`` compatible with saving.
+    return_inferencedata : bool
+        Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a
+        `MultiTrace` (False). Defaults to `True`.
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`pymc.to_inference_data`
+    callback : function, default=None
+        A function which gets called for every sample from the trace of a chain. The function is
+        called with the trace and the current draw and will contain all samples for a single trace.
+        the ``draw.chain`` argument can be used to determine which of the active chains the sample
+        is drawn from.
+        Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
     mp_ctx : multiprocessing.context.BaseContent
         A multiprocessing context for parallel sampling.
         See multiprocessing documentation for details.
+    model : Model (optional if in ``with`` context)
+        Model to sample from. The model needs to have free random variables.
 
     Returns
     -------
@@ -401,7 +501,7 @@ def sample(
         if "nuts" in kwargs:
             kwargs["nuts"]["target_accept"] = kwargs.pop("target_accept")
         else:
-            kwargs = {"nuts": {"target_accept": kwargs.pop("target_accept")}}
+            kwargs["nuts"] = {"target_accept": kwargs.pop("target_accept")}
     if isinstance(trace, list):
         raise DeprecationWarning(
             "We have removed support for partial traces because it simplified things."
@@ -441,8 +541,6 @@ def sample(
         msg = "Only %s samples in chain." % draws
         _log.warning(msg)
 
-    draws += tune
-
     auto_nuts_init = True
     if step is not None:
         if isinstance(step, CompoundStep):
@@ -454,6 +552,25 @@ def sample(
 
     initial_points = None
     step = assign_step_methods(model, step, methods=pm.STEP_METHODS, step_kwargs=kwargs)
+
+    if nuts_sampler != "pymc":
+        if not isinstance(step, NUTS):
+            raise ValueError(
+                "Model can not be sampled with NUTS alone. Your model is probably not continuous."
+            )
+        return _sample_external_nuts(
+            sampler=nuts_sampler,
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            target_accept=kwargs.pop("nuts", {}).get("target_accept", 0.8),
+            random_seed=random_seed,
+            initvals=initvals,
+            model=model,
+            progressbar=progressbar,
+            idata_kwargs=idata_kwargs,
+            **kwargs,
+        )
 
     if isinstance(step, list):
         step = CompoundStep(step)
@@ -492,18 +609,17 @@ def sample(
         _check_start_shape(model, ip)
 
     # Create trace backends for each chain
-    traces = init_traces(
+    run, traces = init_traces(
         backend=trace,
         chains=chains,
         expected_length=draws + tune,
         step=step,
-        var_dtypes={vn: v.dtype for vn, v in ip.items()},
-        var_shapes={vn: v.shape for vn, v in ip.items()},
+        initial_point=ip,
         model=model,
     )
 
     sample_args = {
-        "draws": draws,
+        "draws": draws + tune,  # FIXME: Why is tune added to draws?
         "step": step,
         "start": initial_points,
         "traces": traces,
@@ -570,7 +686,38 @@ def sample(
 
     t_sampling = time.time() - t_start
 
-    # Wrap chain traces in a MultiTrace
+    # Packaging, validating and returning the result was extracted
+    # into a function to make it easier to test and refactor.
+    return _sample_return(
+        run=run,
+        traces=traces,
+        tune=tune,
+        t_sampling=t_sampling,
+        discard_tuned_samples=discard_tuned_samples,
+        compute_convergence_checks=compute_convergence_checks,
+        return_inferencedata=return_inferencedata,
+        keep_warning_stat=keep_warning_stat,
+        idata_kwargs=idata_kwargs or {},
+        model=model,
+    )
+
+
+def _sample_return(
+    *,
+    run: Optional[RunType],
+    traces: Sequence[IBaseTrace],
+    tune: int,
+    t_sampling: float,
+    discard_tuned_samples: bool,
+    compute_convergence_checks: bool,
+    return_inferencedata: bool,
+    keep_warning_stat: bool,
+    idata_kwargs: Dict[str, Any],
+    model: Model,
+) -> Union[InferenceData, MultiTrace]:
+    """Final step of `pm.sampler` that picks/slices chains,
+    runs diagnostics and converts to the desired return type."""
+    # Pick and slice chains to keep the maximum number of samples
     if discard_tuned_samples:
         traces, length = _choose_chains(traces, tune)
     else:
@@ -608,8 +755,7 @@ def sample(
     idata = None
     if compute_convergence_checks or return_inferencedata:
         ikwargs: Dict[str, Any] = dict(model=model, save_warmup=not discard_tuned_samples)
-        if idata_kwargs:
-            ikwargs.update(idata_kwargs)
+        ikwargs.update(idata_kwargs)
         idata = pm.to_inference_data(mtrace, **ikwargs)
 
         if compute_convergence_checks:

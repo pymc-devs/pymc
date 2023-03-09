@@ -117,14 +117,12 @@ class Metropolis(ArrayStepShared):
     name = "metropolis"
 
     default_blocked = False
-    stats_dtypes = [
-        {
-            "accept": np.float64,
-            "accepted": np.float64,
-            "tune": bool,
-            "scaling": np.float64,
-        }
-    ]
+    stats_dtypes_shapes = {
+        "accept": (np.float64, []),
+        "accepted": (np.float64, []),
+        "tune": (bool, []),
+        "scaling": (np.float64, []),
+    }
 
     def __init__(
         self,
@@ -363,13 +361,11 @@ class BinaryMetropolis(ArrayStep):
 
     name = "binary_metropolis"
 
-    stats_dtypes = [
-        {
-            "accept": np.float64,
-            "tune": bool,
-            "p_jump": np.float64,
-        }
-    ]
+    stats_dtypes_shapes = {
+        "accept": (np.float64, []),
+        "tune": (bool, []),
+        "p_jump": (np.float64, []),
+    }
 
     def __init__(self, vars, scaling=1.0, tune=True, tune_interval=100, model=None):
         model = pm.modelcontext(model)
@@ -726,15 +722,13 @@ class DEMetropolis(PopulationArrayStepShared):
     name = "DEMetropolis"
 
     default_blocked = True
-    stats_dtypes = [
-        {
-            "accept": np.float64,
-            "accepted": bool,
-            "tune": bool,
-            "scaling": np.float64,
-            "lambda": np.float64,
-        }
-    ]
+    stats_dtypes_shapes = {
+        "accept": (np.float64, []),
+        "accepted": (bool, []),
+        "tune": (bool, []),
+        "scaling": (np.float64, []),
+        "lambda": (np.float64, []),
+    }
 
     def __init__(
         self,
@@ -871,15 +865,13 @@ class DEMetropolisZ(ArrayStepShared):
     name = "DEMetropolisZ"
 
     default_blocked = True
-    stats_dtypes = [
-        {
-            "accept": np.float64,
-            "accepted": bool,
-            "tune": bool,
-            "scaling": np.float64,
-            "lambda": np.float64,
-        }
-    ]
+    stats_dtypes_shapes = {
+        "accept": (np.float64, []),
+        "accepted": (bool, []),
+        "tune": (bool, []),
+        "scaling": (np.float64, []),
+        "lambda": (np.float64, []),
+    }
 
     def __init__(
         self,

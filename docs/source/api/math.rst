@@ -48,7 +48,7 @@ Functions exposed in pymc.math
    where
    and_
    or_
-   abs_
+   abs
    exp
    log
    cos

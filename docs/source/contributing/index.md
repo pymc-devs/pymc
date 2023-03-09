@@ -94,6 +94,7 @@ implementing_distribution
 build_docs
 running_the_test_suite
 review_pr_pymc_examples
+using_gitpod
 :::
 
 :::{toctree}
@@ -101,7 +102,6 @@ review_pr_pymc_examples
 :maxdepth: 1
 :caption: Reference content
 
-private_api/index
 python_style
 jupyter_style
 pr_checklist

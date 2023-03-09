@@ -20,7 +20,18 @@ Classes for working with subsets of parameters.
 from __future__ import annotations
 
 from functools import partial
-from typing import Any, Callable, Dict, Generic, List, NamedTuple, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    NamedTuple,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 
@@ -33,6 +44,8 @@ T = TypeVar("T")
 PointType: TypeAlias = Dict[str, np.ndarray]
 StatsDict: TypeAlias = Dict[str, Any]
 StatsType: TypeAlias = List[StatsDict]
+StatDtype: TypeAlias = Union[type, np.dtype]
+StatShape: TypeAlias = Optional[Sequence[Optional[int]]]
 
 
 # `point_map_info` is a tuple of tuples containing `(name, shape, dtype)` for
