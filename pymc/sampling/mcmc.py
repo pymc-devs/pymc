@@ -577,7 +577,6 @@ def sample(
             draws=draws,
             tune=tune,
             chains=chains,
-            target_accept=nuts_kwargs.get("target_accept", 0.8),
             random_seed=random_seed,
             initvals=initvals,
             model=model,
@@ -586,13 +585,14 @@ def sample(
             nuts_kwargs=nuts_kwargs,
             nuts_sampler_kwargs=nuts_sampler_kwargs,
             **kwargs,
+            **nuts_kwargs,
         )
 
     if isinstance(step, list):
         step = CompoundStep(step)
     elif isinstance(step, NUTS) and auto_nuts_init:
-        for k, v in nuts_kwargs.items():
-            kwargs.setdefault(k, v)
+        # for k, v in nuts_kwargs.items():
+        #     kwargs.setdefault(k, v)
         _log.info("Auto-assigning NUTS sampler...")
         initial_points, step = init_nuts(
             init=init,
@@ -604,7 +604,8 @@ def sample(
             jitter_max_retries=jitter_max_retries,
             tune=tune,
             initvals=initvals,
-            **kwargs,
+            # **kwargs,
+            **nuts_kwargs,
         )
 
     if initial_points is None:
