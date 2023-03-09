@@ -35,7 +35,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04]
         floatx: [float64]
-        python-version: ["3.10"]
+        python-version: ["3.11"]
         test-subset:
           - |
             tests/test_util.py
@@ -313,7 +313,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04]
         floatx: [float64]
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         test-subset:
           - tests/sampling/test_jax.py tests/sampling/test_mcmc_external.py
       fail-fast: false
@@ -383,7 +383,7 @@ jobs:
       matrix:
         os: [windows-latest]
         floatx: [float32]
-        python-version: ["3.10"]
+        python-version: ["3.11"]
         test-subset:
         - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py
       fail-fast: false
