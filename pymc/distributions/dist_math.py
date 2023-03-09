@@ -50,13 +50,21 @@ _beta_clip_values = {
 }
 
 
-def check_parameters(logp: Variable, *conditions: Iterable[Variable], msg: str = ""):
-    """
-    Wrap a log probability graph in a CheckParameterValue that asserts several
-    conditions are True. When conditions are not met a ParameterValueError assertion is
-    raised, with an optional custom message defined by `msg`
+def check_parameters(
+    expr: Variable,
+    *conditions: Iterable[Variable],
+    msg: str = "",
+    can_be_replaced_by_ninf: bool = True,
+):
+    """Wrap an expression in a CheckParameterValue that asserts several conditions are met.
 
-    Note that check_parameter should not be used to enforce the logic of the logp
+    When conditions are not met a ParameterValueError assertion is raised,
+    with an optional custom message defined by `msg`.
+
+    When the flag `can_be_replaced_by_ninf` is True (default), PyMC is allowed to replace the
+    assertion by a switch(condition, expr, -inf). This is used for logp graphs!
+
+    Note that check_parameter should not be used to enforce the logic of the
     expression under the normal parameter support as it can be disabled by the user via
     check_bounds = False in pm.Model()
     """
@@ -65,7 +73,8 @@ def check_parameters(logp: Variable, *conditions: Iterable[Variable], msg: str =
         cond if (cond is not True and cond is not False) else np.array(cond) for cond in conditions
     ]
     all_true_scalar = at.all([at.all(cond) for cond in conditions_])
-    return CheckParameterValue(msg)(logp, all_true_scalar)
+
+    return CheckParameterValue(msg, can_be_replaced_by_ninf)(expr, all_true_scalar)
 
 
 def logpow(x, m):

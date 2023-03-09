@@ -210,8 +210,11 @@ class CheckParameterValue(CheckAndRaise):
     Raises `ParameterValueError` if the check is not True.
     """
 
-    def __init__(self, msg=""):
+    __props__ = ("msg", "exc_type", "can_be_replaced_by_ninf")
+
+    def __init__(self, msg: str = "", can_be_replaced_by_ninf: bool = False):
         super().__init__(ParameterValueError, msg)
+        self.can_be_replaced_by_ninf = can_be_replaced_by_ninf
 
     def __str__(self):
         return f"Check{{{self.msg}}}"
