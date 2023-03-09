@@ -326,6 +326,21 @@ class TestCompilePyMC:
         with m:
             assert np.all(compile_pymc([], bound)() == -np.inf)
 
+    def test_check_parameters_can_be_replaced_by_ninf(self):
+        expr = at.vector("expr", shape=(3,))
+        cond = at.ge(expr, 0)
+
+        final_expr = check_parameters(expr, cond, can_be_replaced_by_ninf=True)
+        fn = compile_pymc([expr], final_expr)
+        np.testing.assert_array_equal(fn(expr=[1, 2, 3]), [1, 2, 3])
+        np.testing.assert_array_equal(fn(expr=[-1, 2, 3]), [-np.inf, -np.inf, -np.inf])
+
+        final_expr = check_parameters(expr, cond, msg="test", can_be_replaced_by_ninf=False)
+        fn = compile_pymc([expr], final_expr)
+        np.testing.assert_array_equal(fn(expr=[1, 2, 3]), [1, 2, 3])
+        with pytest.raises(ParameterValueError, match="test"):
+            fn([-1, 2, 3])
+
     def test_compile_pymc_sets_rng_updates(self):
         rng = pytensor.shared(np.random.default_rng(0))
         x = pm.Normal.dist(rng=rng)

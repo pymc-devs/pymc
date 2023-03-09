@@ -913,19 +913,21 @@ def local_remove_check_parameter(fgraph, node):
 
 @node_rewriter(tracks=[CheckParameterValue])
 def local_check_parameter_to_ninf_switch(fgraph, node):
-    if isinstance(node.op, CheckParameterValue):
-        logp_expr, *logp_conds = node.inputs
-        if len(logp_conds) > 1:
-            logp_cond = at.all(logp_conds)
-        else:
-            (logp_cond,) = logp_conds
-        out = at.switch(logp_cond, logp_expr, -np.inf)
-        out.name = node.op.msg
+    if not node.op.can_be_replaced_by_ninf:
+        return None
 
-        if out.dtype != node.outputs[0].dtype:
-            out = at.cast(out, node.outputs[0].dtype)
+    logp_expr, *logp_conds = node.inputs
+    if len(logp_conds) > 1:
+        logp_cond = at.all(logp_conds)
+    else:
+        (logp_cond,) = logp_conds
+    out = at.switch(logp_cond, logp_expr, -np.inf)
+    out.name = node.op.msg
 
-        return [out]
+    if out.dtype != node.outputs[0].dtype:
+        out = at.cast(out, node.outputs[0].dtype)
+
+    return [out]
 
 
 pytensor.compile.optdb["canonicalize"].register(
