@@ -292,13 +292,10 @@ def _sample_external_nuts(
             initvals=initvals,
             model=model,
             progressbar=progressbar,
-            keep_untransformed=nuts_sampler_kwargs.get("keep_untransformed", False),
-            chain_method=nuts_sampler_kwargs.get("chain_method", "parallel"),
-            postprocessing_backend=nuts_sampler_kwargs.get("postprocessing_backend"),
-            postprocessing_chunks=nuts_sampler_kwargs.get("postprocessing_chunks"),
             idata_kwargs=idata_kwargs,
             nuts_kwargs=nuts_kwargs,
             **kwargs,
+            **nuts_sampler_kwargs,
         )
         return idata
 
@@ -313,11 +310,8 @@ def _sample_external_nuts(
             random_seed=random_seed,
             initvals=initvals,
             model=model,
-            keep_untransformed=nuts_sampler_kwargs.get("keep_untransformed", False),
-            chain_method=nuts_sampler_kwargs.get("chain_method", "parallel"),
-            postprocessing_backend=nuts_sampler_kwargs.get("postprocessing_backend"),
-            postprocessing_chunks=nuts_sampler_kwargs.get("postprocessing_chunks"),
             idata_kwargs=idata_kwargs,
+            **nuts_sampler_kwargs,
         )
         return idata
 
