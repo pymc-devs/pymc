@@ -1454,7 +1454,7 @@ class ZeroInflatedNegativeBinomial:
     psi : tensor_like of float
         Expected proportion of NegativeBinomial variates (0 < psi < 1)
     mu : tensor_like of float
-        Poission distribution parameter (mu > 0).
+        Poisson distribution parameter (mu > 0).
     alpha : tensor_like of float
         Gamma distribution parameter (alpha > 0).
     p : tensor_like of float
