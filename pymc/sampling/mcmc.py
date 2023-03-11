@@ -276,7 +276,7 @@ def _sample_external_nuts(
             target_accept=target_accept,
             seed=_get_seeds_per_chain(random_seed, 1)[0],
             progress_bar=progressbar,
-            **kwargs,
+            **nuts_sampler_kwargs,
         )
         return idata
 
@@ -294,7 +294,6 @@ def _sample_external_nuts(
             progressbar=progressbar,
             idata_kwargs=idata_kwargs,
             nuts_kwargs=nuts_kwargs,
-            **kwargs,
             **nuts_sampler_kwargs,
         )
         return idata
