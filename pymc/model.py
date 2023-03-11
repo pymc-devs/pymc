@@ -2012,9 +2012,6 @@ def Deterministic(name, var, model=None, dims=None):
     ----------
     name: str
     var: PyTensor variables
-    auto: bool
-        Add automatically created deterministics (e.g., when imputing missing values)
-        to a separate model.auto_deterministics list for filtering during sampling.
 
 
     Returns
