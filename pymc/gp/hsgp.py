@@ -79,7 +79,7 @@ class HSGP(Base):
     additive covariances.
 
     For information on choosing appropriate `m`, `L`, and `c`, refer Ruitort-Mayol et. al. or to
-    the pymc examples that use HSGP.
+    the PyMC examples that use HSGP.
 
     Parameters
     ----------
@@ -111,15 +111,17 @@ class HSGP(Base):
         X = np.random.rand(100, 3)
 
         with pm.Model() as model:
-            # Specify the covariance function.  Three input dimensions, but we only want to use the
-            # last two.
+            # Specify the covariance function.
+            # Three input dimensions, but we only want to use the last two.
             cov_func = pm.gp.cov.ExpQuad(3, ls=0.1, active_dims=[1, 2])
 
-            # Specify the HSGP.  Use 25 basis vectors across each active dimension, [1, 2]  for a
-            # total of 25 * 25 = 625.  The value `c = 4` means the boundary of the approximation
-            # lies at four times the half width of the data.  In this example the data lie between
-            # zero and  one, so the boundaries occur at -1.5 and 2.5.  The data, both for training
-            # and prediction should reside well within that boundary..
+            # Specify the HSGP.
+            # Use 25 basis vectors across each active dimension for a total of 25 * 25 = 625.
+            # The value `c = 4` means the boundary of the approximation
+            # lies at four times the half width of the data.
+            # In this example the data lie between zero and one,
+            # so the boundaries occur at -1.5 and 2.5.  The data, both for
+            # training and prediction should reside well within that boundary..
             gp = pm.gp.HSGP(m=[25, 25], c=4.0, cov_func=cov_func)
 
             # Place a GP prior over the function f.
@@ -137,10 +139,10 @@ class HSGP(Base):
     References
     ----------
     -   Ruitort-Mayol, G., and Anderson, M., and Solin, A., and Vehtari, A. (2022). Practical
-    Hilbert Space Approximate Bayesian Gaussian Processes for Probabilistic Programming
+        Hilbert Space Approximate Bayesian Gaussian Processes for Probabilistic Programming
 
     -   Solin, A., Sarkka, S. (2019) Hilbert Space Methods for Reduced-Rank Gaussian Process
-    Regression.
+        Regression.
     """
 
     def __init__(
@@ -203,8 +205,10 @@ class HSGP(Base):
         self._L = pt.as_tensor_variable(value)
 
     def prior_linearized(self, Xs: TensorVariable):
-        """Returns the linearized version of the HSGP, the Laplace eigenfunctions and the square
-        root of the power spectral density needed to create the GP.  This function allows the user
+        """Linearized version of the HSGP, the Laplace eigenfunctions and the square
+        root of the power spectral density needed to create the GP.
+
+        This function allows the user
         to bypass the GP interface and work directly with the basis and coefficients directly.
         This format allows the user to create predictions using `pm.set_data` similarly to a
         linear model.  It also enables computational speed ups in multi-GP models since they may
@@ -347,11 +351,11 @@ class HSGP(Base):
 
         Parameters
         ----------
-        name: string
+        name
             Name of the random variable
-        Xnew: array-like
+        Xnew : array-like
             Function input values.
-        kwargs: dict-like
+        **kwargs : dict, optional
             Optional arguments such as `dims`.
         """
         fnew = self._build_conditional(Xnew)

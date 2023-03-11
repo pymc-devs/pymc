@@ -265,7 +265,9 @@ class Combination(Covariance):
         return factor_list
 
     def _merge_factors_psd(self, omega):
-        """Called to evaluatate spectral densities of combination kernels when possible.  Implements
+        """Called to evaluatate spectral densities of combination kernels when possible.
+
+        Implements
         a more restricted set of rules than `_merge_factors_cov` -- just additivity of stationary
         covariances with defined power spectral densities and multiplication by scalars.  Also, the
         active_dims for all covariances in the sum must be the same.
