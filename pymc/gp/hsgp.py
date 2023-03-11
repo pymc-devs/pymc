@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import numbers
 import warnings
 
 from types import ModuleType
@@ -146,7 +147,7 @@ class HSGP(Base):
         self,
         m: Sequence[int],
         L: Optional[Sequence[float]] = None,
-        c: Optional[float] = None,
+        c: Optional[numbers.Real] = None,
         drop_first: bool = False,
         parameterization="noncentered",
         *,
@@ -273,7 +274,7 @@ class HSGP(Base):
 
         # If not provided, use Xs and c to set L
         if self._L is None:
-            assert isinstance(self._c, (float, np.ndarray, pt.TensorVariable))
+            assert isinstance(self._c, (numbers.Real, np.ndarray, pt.TensorVariable))
             self.L = set_boundary(Xs, self._c)
         else:
             self.L = self._L
