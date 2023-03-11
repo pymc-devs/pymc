@@ -78,7 +78,8 @@ def find_measurable_asserts(fgraph, node):
 
     rv = node.outputs[0]
 
-    base_rv = node.inputs[0]
+    base_rv, *shape = node.inputs
+
     if not (
         base_rv.owner
         and isinstance(base_rv.owner.op, MeasurableVariable)
@@ -86,10 +87,10 @@ def find_measurable_asserts(fgraph, node):
     ):
         return None  # pragma: no cover
 
-    new_op = MeasurableAssert(node.input_shapes)
+    new_op = MeasurableAssert()
     # Make base_var unmeasurable
     unmeasurable_base_rv = assign_custom_measurable_outputs(base_rv.owner)
-    new_rv = new_op.make_node(unmeasurable_base_rv).default_output()
+    new_rv = new_op.make_node(unmeasurable_base_rv, *shape).default_output()
     new_rv.name = rv.name
 
     return [new_rv]
