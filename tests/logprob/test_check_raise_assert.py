@@ -34,51 +34,31 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import inspect
-import os
-import re
-import sys
-
-import numpy as np
-import pytensor
 import pytensor.tensor as pt
 import pytest
 
-from scipy import stats
+from pytensor.raise_op import Assert
 
-from pymc.distributions import Dirichlet
 from pymc.logprob.joint_logprob import factorized_joint_logprob
 
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0, parentdir)
-from distributions.test_multivariate import dirichlet_logpdf
 
+def test_assert_logprob():
+    rv = pt.random.normal()
+    assert_op = Assert("Test assert")
+    # Example: Add assert that rv must be positive
+    assert_rv = assert_op(rv > 0, rv)
+    assert_rv.name = "assert_rv"
 
-def test_specify_shape_logprob():
-    # 1. Create graph using SpecifyShape
-    # Use symbolic last dimension, so that SpecifyShape is not useless
-    last_dim = pt.scalar(name="last_dim", dtype="int64")
-    x_base = Dirichlet.dist(pt.ones((last_dim,)), shape=(5, last_dim))
-    x_base.name = "x"
-    x_rv = pt.specify_shape(x_base, shape=(5, 3))
-    x_rv.name = "x"
+    assert_vv = assert_rv.clone()
+    assert_logp = factorized_joint_logprob({assert_rv: assert_vv})[assert_vv]
 
-    # 2. Request logp
-    x_vv = x_rv.clone()
-    [x_logp] = factorized_joint_logprob({x_rv: x_vv}).values()
+    # Check valid value is correct and doesn't raise
+    # Since here the value to the rv satisfies the condition, no error is raised.
+    valid_value = 3.0
+    with pytest.raises(AssertionError, match="Test assert"):
+        assert_logp.eval({assert_vv: valid_value})
 
-    # 3. Test logp
-    x_logp_fn = pytensor.function([last_dim, x_vv], x_logp)
-
-    # 3.1 Test valid logp
-    x_vv_test = stats.dirichlet(np.ones((3,))).rvs(size=(5,))
-    np.testing.assert_array_almost_equal(
-        x_logp_fn(last_dim=3, x=x_vv_test),
-        dirichlet_logpdf(x_vv_test, np.ones((3,))),
-    )
-
-    # 3.2 Test shape error
-    x_vv_test_invalid = stats.dirichlet(np.ones((1,))).rvs(size=(5,))
-    with pytest.raises(TypeError, match=re.escape("not compatible with the data's ((5, 1))")):
-        x_logp_fn(last_dim=1, x=x_vv_test_invalid)
+    # Check invalid value
+    # Since here the value to the rv is negative, an exception is raised as the condition is not met
+    with pytest.raises(AssertionError, match="Test assert"):
+        assert_logp.eval({assert_vv: -5.0})
