@@ -420,9 +420,9 @@ def sample(
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
     nuts_kwargs : dict, optional
-        Keyword arguments for the NUTS sampler.
+        Keyword arguments for the NUTS step method.
     nuts_sampler_kwargs : dict, optional
-        Keyword arguments for the sampler.
+        Keyword arguments for the sampling library that implements nuts.
     callback : function, default=None
         A function which gets called for every sample from the trace of a chain. The function is
         called with the trace and the current draw and will contain all samples for a single trace.
@@ -591,8 +591,8 @@ def sample(
     if isinstance(step, list):
         step = CompoundStep(step)
     elif isinstance(step, NUTS) and auto_nuts_init:
-        # for k, v in nuts_kwargs.items():
-        #     kwargs.setdefault(k, v)
+        for k, v in nuts_kwargs.items():
+            kwargs.setdefault(k, v)
         _log.info("Auto-assigning NUTS sampler...")
         initial_points, step = init_nuts(
             init=init,
@@ -604,8 +604,7 @@ def sample(
             jitter_max_retries=jitter_max_retries,
             tune=tune,
             initvals=initvals,
-            # **kwargs,
-            **nuts_kwargs,
+            **kwargs,
         )
 
     if initial_points is None:
