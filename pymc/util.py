@@ -510,3 +510,11 @@ def _add_future_warning_tag(var) -> None:
         for k, v in old_tag.__dict__.items():
             new_tag.__dict__.setdefault(k, v)
         var.tag = new_tag
+
+def _as_coord_vals(values: Sequence) -> np.ndarray:
+    """Coerce a sequence coordinate values into a 1-dim array of values"""
+    arr = np.array(values)
+    if arr.ndim > 1:
+        arr = np.empty(len(values), dtype="O")
+        arr[:] = values
+    return arr

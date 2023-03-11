@@ -75,6 +75,7 @@ from pymc.util import (
     UNSET,
     WithMemoization,
     _add_future_warning_tag,
+    _as_coord_vals,
     get_transformed_name,
     get_value_vars_from_user_vars,
     get_var_name,
@@ -986,8 +987,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     @property
     def coords(self) -> Dict[str, Union[Tuple, None]]:
-        """Coordinate values for model dimensions."""
-        return self._coords
+        """Coordinate values (tuple) for model dimensions."""
+        return {
+            cname: tuple(cvals) if cvals is not None else None
+            for cname, cvals in self._coords.items()
+        }
+    
+    @property
+    def coords_typed(self) -> Dict[str, Union[np.ndarray, None]]:
+        """Coordinate values (numpy array) for model dimensions."""
+        return {
+            cname: cvals.copy() if cvals is not None else None
+            for cname, cvals in self._coords.items()
+        }
 
     @property
     def dim_lengths(self) -> Dict[str, Variable]:
@@ -1047,9 +1059,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 f"Either `values` or `length` must be specified for the '{name}' dimension."
             )
         if values is not None:
-            # Conversion to a tuple ensures that the coordinate values are immutable.
-            # Also unlike numpy arrays the's tuple.index(...) which is handy to work with.
-            values = tuple(values)
+            # Conversion to numpy array to ensure coord vals are 1-dim
+            values = _as_coord_vals(values)
         if name in self.coords:
             if not np.array_equal(values, self.coords[name]):
                 raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
@@ -1107,7 +1118,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     actual=len_cvals,
                     expected=new_length,
                 )
-            self._coords[name] = tuple(coord_values)
+            self._coords[name] = _as_coord_vals(coord_values)
         self.dim_lengths[name].set_value(new_length)
         return
 
@@ -1278,8 +1289,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         actual=len(new_coords),
                         expected=new_length,
                     )
-                # store it as tuple for immutability as in add_coord
-                self._coords[dname] = tuple(new_coords)
+                self._coords[dname] = _as_coord_vals(new_coords)
 
         shared_object.set_value(values)
 
