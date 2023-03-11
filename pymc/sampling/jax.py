@@ -384,9 +384,9 @@ def sample_blackjax_nuts(
     vars_to_sample = list(get_default_varnames(var_names, include_transformed=keep_untransformed))
 
     coords = {
-        cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
-        for cname, cvals in model.coords.items()
-        if cvals is not None
+        cname: cvals_typed
+        for cname, cvals_typed in model.coords_typed.items()
+        if cvals_typed is not None
     }
 
     dims = {
@@ -605,9 +605,9 @@ def sample_numpyro_nuts(
     vars_to_sample = list(get_default_varnames(var_names, include_transformed=keep_untransformed))
 
     coords = {
-        cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
-        for cname, cvals in model.coords.items()
-        if cvals is not None
+        cname: cvals_typed
+        for cname, cvals_typed in model.coords_typed.items()
+        if cvals_typed is not None
     }
 
     dims = {

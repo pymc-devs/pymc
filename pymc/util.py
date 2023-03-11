@@ -27,6 +27,8 @@ from pytensor import Variable
 from pytensor.compile import SharedVariable
 from pytensor.graph.utils import ValidatingScratchpad
 
+from pymc.exceptions import ShapeError
+
 
 class _UnsetType:
     """Type for the `UNSET` object to make it look nice in `help(...)` outputs."""
@@ -511,8 +513,17 @@ def _add_future_warning_tag(var) -> None:
             new_tag.__dict__.setdefault(k, v)
         var.tag = new_tag
 
-def _as_coord_vals(values: Sequence) -> np.ndarray:
-    """Coerce a sequence coordinate values into a 1-dim array of values"""
+
+def _as_coord_vals(values: Union[Sequence, np.ndarray]) -> np.ndarray:
+    """Coerce a sequence of coordinate values into a 1-dim array"""
+    if isinstance(values, np.ndarray):
+        if values.ndim != 1:
+            raise ShapeError(
+                "Coordinate values passed as a numpy array must be 1-dimensional",
+                actual=values.ndim,
+                expected=1,
+            )
+        return values
     arr = np.array(values)
     if arr.ndim > 1:
         arr = np.empty(len(values), dtype="O")

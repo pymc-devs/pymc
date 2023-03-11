@@ -230,9 +230,9 @@ def make_runmeta_and_point_fn(
             sample_stats.append(svar)
 
     coordinates = [
-        mcb.Coordinate(dname, mcb.npproto.utils.ndarray_from_numpy(np.array(cvals)))
-        for dname, cvals in model.coords.items()
-        if cvals is not None
+        mcb.Coordinate(dname, mcb.npproto.utils.ndarray_from_numpy(cvals_typed))
+        for dname, cvals_typed in model.coords_typed.items()
+        if cvals_typed is not None
     ]
     meta = mcb.RunMeta(
         rid=hagelkorn.random(),

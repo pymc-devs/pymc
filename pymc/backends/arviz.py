@@ -39,7 +39,7 @@ import pymc
 
 from pymc.model import Model, modelcontext
 from pymc.pytensorf import extract_obs_data
-from pymc.util import get_default_varnames
+from pymc.util import _as_coord_vals, get_default_varnames
 
 if TYPE_CHECKING:
     from pymc.backends.base import MultiTrace  # pylint: disable=invalid-name
@@ -216,15 +216,15 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 " one of trace, prior, posterior_predictive or predictions."
             )
 
-        # Make coord types more rigid
-        untyped_coords: Dict[str, Optional[Sequence[Any]]] = {**self.model.coords}
+        coords_typed = self.model.coords_typed
         if coords:
-            untyped_coords.update(coords)
-        self.coords = {
-            cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
-            for cname, cvals in untyped_coords.items()
-            if cvals is not None
+            coords_typed.update(_as_coord_vals(coords))
+        coords_typed = {
+            cname: cvals_typed
+            for cname, cvals_typed in coords_typed.items()
+            if cvals_typed is not None
         }
+        self.coords = coords_typed
 
         self.dims = {} if dims is None else dims
         model_dims = {k: list(v) for k, v in self.model.named_vars_to_dims.items()}

@@ -733,7 +733,7 @@ def test_nested_model_coords():
             c = pm.HalfNormal("c", dims="dim3")
             d = pm.Normal("d", b, c, dims="dim2")
         e = pm.Normal("e", a[None] + d[:, None], dims=("dim2", "dim1"))
-    assert m1.coords is m2.coords
+    assert m1.coords == m2.coords
     assert m1.dim_lengths is m2.dim_lengths
     assert set(m2.named_vars_to_dims) < set(m1.named_vars_to_dims)
 

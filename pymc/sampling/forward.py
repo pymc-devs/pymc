@@ -575,7 +575,7 @@ def sample_posterior_predictive(
 
     constant_coords = set()
     for dim, coord in trace_coords.items():
-        current_coord = model.coords.get(dim, None)
+        current_coord = model.coords_typed.get(dim, None)
         if (
             current_coord is not None
             and len(coord) == len(current_coord)

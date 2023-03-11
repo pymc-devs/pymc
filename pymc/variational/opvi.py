@@ -1135,7 +1135,7 @@ class Group(WithMemoization):
         for name, s, shape, dtype in self.ordering.values():
             dims = self.model.named_vars_to_dims.get(name, None)
             if dims is not None:
-                coords = {d: np.array(self.model.coords[d]) for d in dims}
+                coords = {d: self.model.coords_typed[d] for d in dims}
             else:
                 coords = None
             values = shared_nda[s].reshape(shape).astype(dtype)
