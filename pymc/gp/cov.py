@@ -57,8 +57,6 @@ def _verify_scalar(value):
         return at.squeeze(value)
     elif np.asarray(value).squeeze().shape == ():
         return np.squeeze(value)
-    elif isinstance(value, numbers.Real):
-        return value
 
     raise ValueError("A scalar value is required.")
 

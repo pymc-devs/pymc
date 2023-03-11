@@ -116,12 +116,12 @@ class TestHSGP:
 
     def test_set_boundaries_1d(self, X1):
         X1s = X1 - np.mean(X1, axis=0)
-        L = pm.gp.hsgp.set_boundary(X1s, c=2).eval()
+        L = pm.gp.hsgp_approx.set_boundary(X1s, c=2).eval()
         assert np.all(L == 10)
 
     def test_set_boundaries_3d(self, X2):
         X2s = X2 - np.mean(X2, axis=0)
-        L = pm.gp.hsgp.set_boundary(X2s, c=2).eval()
+        L = pm.gp.hsgp_approx.set_boundary(X2s, c=2).eval()
         assert np.all(L == 10)
 
     def test_parametrization(self):

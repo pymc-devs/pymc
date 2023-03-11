@@ -30,7 +30,7 @@ from pymc.gp.mean import Mean, Zero
 TensorVariable = Union[np.ndarray, pt.TensorVariable]
 
 
-def set_boundary(Xs: TensorVariable, c: Union[float, TensorVariable]) -> TensorVariable:
+def set_boundary(Xs: TensorVariable, c: Union[numbers.Real, TensorVariable]) -> TensorVariable:
     """Set the boundary using the mean-subtracted `Xs` and `c`.  `c` is usually a scalar
     multiplyer greater than 1.0, but it may be one value per dimension or column of `Xs`.
     """
@@ -68,18 +68,21 @@ def calc_eigenvectors(
 
 class HSGP(Base):
     R"""
-    Hilbert Space Gaussian process
+    Hilbert Space Gaussian process approximation.
 
     The `gp.HSGP` class is an implementation of the Hilbert Space Gaussian process.  It is a
     reduced rank GP approximation that uses a fixed set of basis vectors whose coefficients are
     random functions of a stationary covariance function's power spectral density.  It's usage
     is largely similar to `gp.Latent`.  Like `gp.Latent`, it does not assume a Gaussian noise model
     and can be used with any likelihood, or as a component anywhere within a model.  Also like
-    `gp.Latent`, it has `prior` and `conditional` methods.  It supports a limited subset of
-    additive covariances.
+    `gp.Latent`, it has `prior` and `conditional` methods.  It supports any sum of covariance
+    functions that implement a `power_spectral_density` method.
 
     For information on choosing appropriate `m`, `L`, and `c`, refer Ruitort-Mayol et. al. or to
     the PyMC examples that use HSGP.
+
+    To with with the HSGP in its "linearized" form, as a matrix of basis vectors and and vector of
+    coefficients, see the method `prior_linearized`.
 
     Parameters
     ----------
@@ -205,20 +208,19 @@ class HSGP(Base):
         self._L = pt.as_tensor_variable(value)
 
     def prior_linearized(self, Xs: TensorVariable):
-        """Linearized version of the HSGP, the Laplace eigenfunctions and the square
-        root of the power spectral density needed to create the GP.
+        """Linearized version of the HSGP.  Returns the Laplace eigenfunctions and the square root
+        of the power spectral density needed to create the GP.
 
-        This function allows the user
-        to bypass the GP interface and work directly with the basis and coefficients directly.
-        This format allows the user to create predictions using `pm.set_data` similarly to a
-        linear model.  It also enables computational speed ups in multi-GP models since they may
-        share the same basis.  The return values are the Laplace eigenfunctions `phi`, and the
-        square root of the power spectral density.
+        This function allows the user to bypass the GP interface and work directly with the basis
+        and coefficients directly.  This format allows the user to create predictions using
+        `pm.set_data` similarly to a linear model.  It also enables computational speed ups in
+        multi-GP models since they may share the same basis.  The return values are the Laplace
+        eigenfunctions `phi`, and the square root of the power spectral density.
 
         Correct results when using `prior_linearized` in tandem with `pm.set_data` and
         `pm.MutableData` require two conditions.  First, one must specify `L` instead of `c` when
         the GP is constructed.  If not, a RuntimeError is raised.  Second, the `Xs` needs to be
-        zero centered, so it's mean must be subtracted.  An example is given below.
+        zero-centered, so it's mean must be subtracted.  An example is given below.
 
         Parameters
         ----------
@@ -291,13 +293,13 @@ class HSGP(Base):
         i = int(self._drop_first == True)
         return phi[:, i:], pt.sqrt(psd[i:])
 
-    def prior(self, name: str, X: TensorVariable, *args, **kwargs):
+    def prior(self, name: str, X: TensorVariable, dims: Optional[str] = None):
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
 
         Parameters
         ----------
-        name: string
+        name: str
             Name of the random variable
         X: array-like
             Function input values.
@@ -318,7 +320,7 @@ class HSGP(Base):
             self._beta = pm.Normal(f"{name}_hsgp_coeffs_", sigma=sqrt_psd)
             f = self.mean_func(X) + phi @ self._beta
 
-        self.f = pm.Deterministic(name, f, dims=kwargs.get("dims"))
+        self.f = pm.Deterministic(name, f, dims=dims)
         return self.f
 
     def _build_conditional(self, Xnew):
@@ -344,10 +346,10 @@ class HSGP(Base):
         elif self._parameterization == "centered":
             return self.mean_func(Xnew) + phi[:, i:] @ beta
 
-    def conditional(self, name: str, Xnew: TensorVariable, *args, **kwargs):
+    def conditional(self, name: str, Xnew: TensorVariable, dims: Optional[str] = None):
         R"""
         Returns the (approximate) conditional distribution evaluated over new input locations
-        `Xnew`.  If using the
+        `Xnew`.
 
         Parameters
         ----------
@@ -355,8 +357,8 @@ class HSGP(Base):
             Name of the random variable
         Xnew : array-like
             Function input values.
-        **kwargs : dict, optional
-            Optional arguments such as `dims`.
+        dims: None
+            Dimension name for the GP random variable.
         """
         fnew = self._build_conditional(Xnew)
-        return pm.Deterministic(name, fnew, dims=kwargs.get("dims"))
+        return pm.Deterministic(name, fnew, dims=dims)

@@ -22,4 +22,4 @@ from pymc.gp.gp import (
     MarginalKron,
     MarginalSparse,
 )
-from pymc.gp.hsgp import HSGP
+from pymc.gp.hsgp_approx import HSGP
