@@ -2065,7 +2065,9 @@ def Potential(name, var, model=None, dims=None):
         Expression to be added to the model joint logp.
     model : Model, optional
         The model object to which the potential function is added.
-        If ``None`` is provided, the current model is used.
+        If ``None`` is provided, the current model in the context stack is used.
+    dims : str or tuple of str, optional
+        Dimension names for the variable.
 
     Returns
     -------
