@@ -237,7 +237,6 @@ def _sample_external_nuts(
     model: Model,
     progressbar: bool,
     idata_kwargs: Optional[Dict],
-    nuts_kwargs: Optional[Dict],
     nuts_sampler_kwargs: Optional[Dict],
     **kwargs,
 ):
@@ -293,7 +292,6 @@ def _sample_external_nuts(
             model=model,
             progressbar=progressbar,
             idata_kwargs=idata_kwargs,
-            nuts_kwargs=nuts_kwargs,
             **nuts_sampler_kwargs,
         )
         return idata
@@ -340,7 +338,6 @@ def sample(
     keep_warning_stat: bool = False,
     return_inferencedata: bool = True,
     idata_kwargs: Optional[Dict[str, Any]] = None,
-    nuts_kwargs: Optional[Dict[str, Any]] = None,
     nuts_sampler_kwargs: Optional[Dict[str, Any]] = None,
     callback=None,
     mp_ctx=None,
@@ -418,8 +415,6 @@ def sample(
         `MultiTrace` (False). Defaults to `True`.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
-    nuts_kwargs : dict, optional
-        Keyword arguments for the NUTS step method.
     nuts_sampler_kwargs : dict, optional
         Keyword arguments for the sampling library that implements nuts.
     callback : function, default=None
@@ -446,7 +441,7 @@ def sample(
 
     For example:
 
-       1. ``target_accept`` to NUTS: nuts_kwargs={'target_accept':0.9}
+       1. ``target_accept`` to NUTS: nuts={'target_accept':0.9}
        2. ``transit_p`` to BinaryGibbsMetropolis: binary_gibbs_metropolis={'transit_p':.7}
 
     Note that available step names are:
@@ -507,14 +502,15 @@ def sample(
         initvals = kwargs.pop("start")
     if nuts_sampler_kwargs is None:
         nuts_sampler_kwargs = {}
-    if nuts_kwargs is None:
-        nuts_kwargs = {}
     if "target_accept" in kwargs:
-        if "target_accept" in nuts_kwargs:
+        if "nuts" in kwargs and "target_accept" in kwargs["nuts"]:
             raise ValueError(
-                "`target_accept` was defined twice. Please specify it either as a direct keyword argument or in the `nuts_kwargs` dict."
+                "`target_accept` was defined twice. Please specify it either as a direct keyword argument or in the `nuts` kwarg."
             )
-        nuts_kwargs["target_accept"] = kwargs.pop("target_accept")
+        if "nuts" in kwargs:
+            kwargs["nuts"]["target_accept"] = kwargs.pop("target_accept")
+        else:
+            kwargs["nuts"] = {"target_accept": kwargs.pop("target_accept")}
     if isinstance(trace, list):
         raise DeprecationWarning(
             "We have removed support for partial traces because it simplified things."
@@ -581,17 +577,16 @@ def sample(
             model=model,
             progressbar=progressbar,
             idata_kwargs=idata_kwargs,
-            nuts_kwargs=nuts_kwargs,
             nuts_sampler_kwargs=nuts_sampler_kwargs,
             **kwargs,
-            **nuts_kwargs,
         )
 
     if isinstance(step, list):
         step = CompoundStep(step)
     elif isinstance(step, NUTS) and auto_nuts_init:
-        for k, v in nuts_kwargs.items():
-            kwargs.setdefault(k, v)
+        if "nuts" in kwargs:
+            nuts_kwargs = kwargs.pop("nuts")
+            [kwargs.setdefault(k, v) for k, v in nuts_kwargs.items()]
         _log.info("Auto-assigning NUTS sampler...")
         initial_points, step = init_nuts(
             init=init,
