@@ -237,9 +237,13 @@ def _sample_external_nuts(
     model: Model,
     progressbar: bool,
     idata_kwargs: Optional[Dict],
+    nuts_sampler_kwargs: Optional[Dict],
     **kwargs,
 ):
     warnings.warn("Use of external NUTS sampler is still experimental", UserWarning)
+
+    if nuts_sampler_kwargs is None:
+        nuts_sampler_kwargs = {}
 
     if sampler == "nutpie":
         try:
@@ -271,7 +275,7 @@ def _sample_external_nuts(
             target_accept=target_accept,
             seed=_get_seeds_per_chain(random_seed, 1)[0],
             progress_bar=progressbar,
-            **kwargs,
+            **nuts_sampler_kwargs,
         )
         return idata
 
@@ -288,7 +292,7 @@ def _sample_external_nuts(
             model=model,
             progressbar=progressbar,
             idata_kwargs=idata_kwargs,
-            **kwargs,
+            **nuts_sampler_kwargs,
         )
         return idata
 
@@ -304,7 +308,7 @@ def _sample_external_nuts(
             initvals=initvals,
             model=model,
             idata_kwargs=idata_kwargs,
-            **kwargs,
+            **nuts_sampler_kwargs,
         )
         return idata
 
@@ -334,6 +338,7 @@ def sample(
     keep_warning_stat: bool = False,
     return_inferencedata: bool = True,
     idata_kwargs: Optional[Dict[str, Any]] = None,
+    nuts_sampler_kwargs: Optional[Dict[str, Any]] = None,
     callback=None,
     mp_ctx=None,
     model: Optional[Model] = None,
@@ -410,6 +415,9 @@ def sample(
         `MultiTrace` (False). Defaults to `True`.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
+    nuts_sampler_kwargs : dict, optional
+        Keyword arguments for the sampling library that implements nuts.
+        Only used when an external sampler is specified via the `nuts_sampler` kwarg. 
     callback : function, default=None
         A function which gets called for every sample from the trace of a chain. The function is
         called with the trace and the current draw and will contain all samples for a single trace.
@@ -493,6 +501,8 @@ def sample(
             stacklevel=2,
         )
         initvals = kwargs.pop("start")
+    if nuts_sampler_kwargs is None:
+        nuts_sampler_kwargs = {}
     if "target_accept" in kwargs:
         if "nuts" in kwargs and "target_accept" in kwargs["nuts"]:
             raise ValueError(
@@ -569,6 +579,7 @@ def sample(
             model=model,
             progressbar=progressbar,
             idata_kwargs=idata_kwargs,
+            nuts_sampler_kwargs=nuts_sampler_kwargs,
             **kwargs,
         )
 
