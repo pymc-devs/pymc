@@ -1967,6 +1967,25 @@ def Deterministic(name, var, model=None, dims=None):
     they don't add randomness to the model.  They are generally used to record
     an intermediary result.
 
+    Parameters
+    ----------
+    name: str
+        Name of the deterministic variable to be registered in the model.
+    var: tensor_like
+        Expression for the calculation of the variable.
+    model : Model, optional
+        The model object to which the Deterministic function is added.
+        If ``None`` is provided, the current model in the context stack is used.
+    dims : str or tuple of str, optional
+        Dimension names for the variable.
+
+    Returns
+    -------
+    var: tensor_like
+        The registered, named variable wrapped in Deterministic.
+
+    Examples
+    --------
     Indeed, PyMC allows for arbitrary combinations of random variables, for
     example in the case of a logistic regression
 
@@ -2007,16 +2026,6 @@ def Deterministic(name, var, model=None, dims=None):
     of times during a NUTS step, the Deterministic quantities are just
     computeed once at the end of the step, with the final values of the other
     random variables.
-
-    Parameters
-    ----------
-    name: str
-    var: PyTensor variables
-
-
-    Returns
-    -------
-    var: var, with name attribute
     """
     model = modelcontext(model)
     var = var.copy(model.name_for(name))
