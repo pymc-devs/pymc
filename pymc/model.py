@@ -1061,9 +1061,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if values is not None:
             # Conversion to numpy array to ensure coord vals are 1-dim
             values = _as_coord_vals(values)
-        if name in self.coords_typed:
-            if not np.array_equal(_as_coord_vals(values), self.coords_typed[name]):
-                raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
+        if name in self.coords_typed and not np.array_equal(values, self.coords_typed[name]):
+            raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
         if length is not None and not isinstance(length, (int, Variable)):
             raise ValueError(
                 f"The `length` passed for the '{name}' coord must be an int, PyTensor Variable or None."

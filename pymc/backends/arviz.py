@@ -216,15 +216,19 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
                 " one of trace, prior, posterior_predictive or predictions."
             )
 
-        coords_typed = self.model.coords_typed
-        if coords:
-            coords_typed.update(_as_coord_vals(coords))
-        coords_typed = {
+        given_coords = coords if coords is not None else {}
+        given_coords_typed = {
+            cname: _as_coord_vals(cvals)
+            for cname, cvals in given_coords.items()
+            if cvals is not None
+        }
+        model_coords_typed = {
             cname: cvals_typed
-            for cname, cvals_typed in coords_typed.items()
+            for cname, cvals_typed in self.model.coords_typed.items()
             if cvals_typed is not None
         }
-        self.coords = coords_typed
+        # Coords from argument should have precedence
+        self.coords = {**model_coords_typed, **given_coords_typed}
 
         self.dims = {} if dims is None else dims
         model_dims = {k: list(v) for k, v in self.model.named_vars_to_dims.items()}
