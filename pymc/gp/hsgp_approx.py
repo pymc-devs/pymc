@@ -293,7 +293,7 @@ class HSGP(Base):
         i = int(self._drop_first == True)
         return phi[:, i:], pt.sqrt(psd[i:])
 
-    def prior(self, name: str, X: TensorVariable, dims: Optional[str] = None):
+    def prior(self, name: str, X: TensorVariable, dims: Optional[str] = None):  # type: ignore
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
 
@@ -346,7 +346,7 @@ class HSGP(Base):
         elif self._parameterization == "centered":
             return self.mean_func(Xnew) + phi[:, i:] @ beta
 
-    def conditional(self, name: str, Xnew: TensorVariable, dims: Optional[str] = None):
+    def conditional(self, name: str, Xnew: TensorVariable, dims: Optional[str] = None):  # type: ignore
         R"""
         Returns the (approximate) conditional distribution evaluated over new input locations
         `Xnew`.
