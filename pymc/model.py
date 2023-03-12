@@ -1969,19 +1969,19 @@ def Deterministic(name, var, model=None, dims=None):
 
     Parameters
     ----------
-    name: str
+    name : str
         Name of the deterministic variable to be registered in the model.
-    var: tensor_like
+    var : tensor_like
         Expression for the calculation of the variable.
     model : Model, optional
-        The model object to which the Deterministic function is added.
+        The model object to which the Deterministic variable is added.
         If ``None`` is provided, the current model in the context stack is used.
     dims : str or tuple of str, optional
         Dimension names for the variable.
 
     Returns
     -------
-    var: tensor_like
+    var : tensor_like
         The registered, named variable wrapped in Deterministic.
 
     Examples
