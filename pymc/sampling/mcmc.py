@@ -567,11 +567,16 @@ def sample(
             raise ValueError(
                 "Model can not be sampled with NUTS alone. Your model is probably not continuous."
             )
+        if "nuts" in kwargs:
+            target_accept = kwargs["nuts"].get("target_accept", 0.8)
+        else:
+            target_accept = 0.8
         return _sample_external_nuts(
             sampler=nuts_sampler,
             draws=draws,
             tune=tune,
             chains=chains,
+            target_accept=target_accept,
             random_seed=random_seed,
             initvals=initvals,
             model=model,

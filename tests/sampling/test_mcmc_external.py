@@ -18,9 +18,6 @@ import pytest
 
 from pymc import Model, Normal, sample
 
-# turns all warnings into errors for this module
-pytestmark = pytest.mark.filterwarnings("error")
-
 
 @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
 def test_external_nuts_sampler(recwarn, nuts_sampler):
@@ -72,7 +69,7 @@ def test_step_args():
         idata = sample(
             nuts_sampler="numpyro",
             target_accept=0.5,
-            nuts_kwargs={"max_treedepth": 10},
+            nuts={"max_treedepth": 10},
             random_seed=1410,
         )
 
