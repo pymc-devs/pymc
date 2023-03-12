@@ -417,6 +417,7 @@ def sample(
         Keyword arguments for :func:`pymc.to_inference_data`
     nuts_sampler_kwargs : dict, optional
         Keyword arguments for the sampling library that implements nuts.
+        Only used when an external sampler is specified via the `nuts_sampler` kwarg. 
     callback : function, default=None
         A function which gets called for every sample from the trace of a chain. The function is
         called with the trace and the current draw and will contain all samples for a single trace.
