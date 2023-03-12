@@ -31,6 +31,17 @@ def test_warn_divergences():
     assert "2 divergences after tuning" in warns[0].message
 
 
+def test_warn_treedepth():
+    idata = arviz.from_dict(
+        sample_stats={
+            "reached_max_treedepth": np.array([[0, 0, 0], [0, 1, 0]]).astype(bool),
+        }
+    )
+    warns = convergence.warn_treedepth(idata)
+    assert len(warns) == 1
+    assert "Chain 1 reached the maximum tree depth" in warns[0].message
+
+
 def test_log_warning_stats(caplog):
     s1 = dict(warning="Temperature too low!")
     s2 = dict(warning="Temperature too high!")
