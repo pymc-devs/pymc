@@ -351,6 +351,8 @@ def logprob_ScanRV(op, values, *inputs, name=None, **kwargs):
     # Return only the logp outputs, not any potentially carried states
     logp_outputs = logp_scan_out[-len(values) :]
 
+    if len(logp_outputs) == 1:
+        return logp_outputs[0]
     return logp_outputs
 
 
