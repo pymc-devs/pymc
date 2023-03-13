@@ -145,13 +145,7 @@ class TestMatchesScipy:
         )
 
     def test_hypergeometric(self):
-        def modified_scipy_hypergeom_logpmf(value, N, k, n):
-            # Convert nan to -np.inf
-            original_res = st.hypergeom.logpmf(value, N, k, n)
-            return original_res if not np.isnan(original_res) else -np.inf
-
         def modified_scipy_hypergeom_logcdf(value, N, k, n):
-            # Convert nan to -np.inf
             original_res = st.hypergeom.logcdf(value, N, k, n)
 
             # Correct for scipy bug in logcdf method (see https://github.com/scipy/scipy/issues/13280)
@@ -160,24 +154,27 @@ class TestMatchesScipy:
                 if np.all(np.isnan(pmfs)):
                     original_res = np.nan
 
-            return original_res if not np.isnan(original_res) else -np.inf
+            return original_res
+
+        N_domain = Domain([0, 10, 20, 30, np.inf], dtype="int64")
+        n_domain = k_domain = Domain([0, 1, 2, 3, np.inf], dtype="int64")
 
         check_logp(
             pm.HyperGeometric,
             Nat,
-            {"N": NatSmall, "k": NatSmall, "n": NatSmall},
-            modified_scipy_hypergeom_logpmf,
+            {"N": N_domain, "k": k_domain, "n": n_domain},
+            lambda value, N, k, n: st.hypergeom.logpmf(value, N, k, n),
         )
         check_logcdf(
             pm.HyperGeometric,
             Nat,
-            {"N": NatSmall, "k": NatSmall, "n": NatSmall},
+            {"N": N_domain, "k": k_domain, "n": n_domain},
             modified_scipy_hypergeom_logcdf,
         )
         check_selfconsistency_discrete_logcdf(
             pm.HyperGeometric,
             Nat,
-            {"N": NatSmall, "k": NatSmall, "n": NatSmall},
+            {"N": N_domain, "k": k_domain, "n": n_domain},
         )
 
     @pytest.mark.xfail(
@@ -535,15 +532,17 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_orderedlogistic(self, n):
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "invalid value encountered in log", RuntimeWarning)
-            warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
-            check_logp(
-                pm.OrderedLogistic,
-                Domain(range(n), dtype="int64", edges=(None, None)),
-                {"eta": R, "cutpoints": Vector(R, n - 1)},
-                lambda value, eta, cutpoints: orderedlogistic_logpdf(value, eta, cutpoints),
-            )
+        cutpoints_domain = Vector(R, n - 1)
+        # Filter out invalid non-monotonic values
+        cutpoints_domain.vals = [v for v in cutpoints_domain.vals if np.all(np.diff(v) > 0)]
+        assert len(cutpoints_domain.vals) > 0
+
+        check_logp(
+            pm.OrderedLogistic,
+            Domain(range(n), dtype="int64", edges=(None, None)),
+            {"eta": R, "cutpoints": cutpoints_domain},
+            lambda value, eta, cutpoints: orderedlogistic_logpdf(value, eta, cutpoints),
+        )
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_orderedprobit(self, n):
