@@ -51,6 +51,7 @@ from pymc.testing import (
     UnitSortedVector,
     Vector,
     assert_moment_is_expected,
+    check_icdf,
     check_logcdf,
     check_logp,
     check_selfconsistency_discrete_logcdf,
@@ -142,6 +143,11 @@ class TestMatchesScipy:
             pm.Geometric,
             Nat,
             {"p": Unit},
+        )
+        check_icdf(
+            pm.Geometric,
+            {"p": Unit},
+            st.geom.ppf,
         )
 
     def test_hypergeometric(self):
@@ -1148,29 +1154,3 @@ class TestOrderedProbit(BaseTestDistributionRandom):
         )
         p = categorical.owner.inputs[3].eval()
         assert p.shape == expected
-
-
-class TestICDF:
-    @pytest.mark.parametrize(
-        "dist_params, obs, size",
-        [
-            ((0.1,), np.array([-0.5, 0, 0.1, 0.5, 0.9, 1.0, 1.5], dtype=np.int64), ()),
-            ((0.5,), np.array([-0.5, 0, 0.1, 0.5, 0.9, 1.0, 1.5], dtype=np.int64), (3, 2)),
-            (
-                (np.array([0.0, 0.2, 0.5, 1.0]),),
-                np.array([0.7, 0.7, 0.7, 0.7], dtype=np.int64),
-                (),
-            ),
-        ],
-    )
-    def test_geometric_icdf(self, dist_params, obs, size):
-        dist_params_at, obs_at, size_at = create_pytensor_params(dist_params, obs, size)
-        dist_params = dict(zip(dist_params_at, dist_params))
-
-        x = Geometric.dist(*dist_params_at, size=size_at)
-
-        def scipy_geom_icdf(value, p):
-            # Scipy ppf returns floats
-            return st.geom.ppf(value, p).astype(value.dtype)
-
-        scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_geom_icdf, test="icdf")

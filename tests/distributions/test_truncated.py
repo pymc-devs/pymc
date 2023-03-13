@@ -174,7 +174,6 @@ def test_truncation_discrete_random(op_type, lower, upper):
     x = geometric_op(p, name="x", size=500)
     xt = Truncated.dist(x, lower=lower, upper=upper)
     assert isinstance(xt.owner.op, TruncatedRV)
-    assert xt.type.dtype == x.type.dtype
 
     xt_draws = draw(xt)
     assert np.all(xt_draws >= lower)

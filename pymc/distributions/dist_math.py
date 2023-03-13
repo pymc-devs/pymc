@@ -19,6 +19,7 @@ Created on Mar 7, 2011
 """
 import warnings
 
+from functools import partial
 from typing import Iterable
 
 import numpy as np
@@ -75,6 +76,21 @@ def check_parameters(
     all_true_scalar = at.all([at.all(cond) for cond in conditions_])
 
     return CheckParameterValue(msg, can_be_replaced_by_ninf)(expr, all_true_scalar)
+
+
+check_icdf_parameters = partial(check_parameters, can_be_replaced_by_ninf=False)
+
+
+def check_icdf_value(expr: Variable, value: Variable) -> Variable:
+    """Wrap icdf expression in nan switch for value."""
+    value = at.as_tensor_variable(value)
+    expr = at.switch(
+        at.and_(value >= 0, value <= 1),
+        expr,
+        np.nan,
+    )
+    expr.name = "0 <= value <= 1"
+    return expr
 
 
 def logpow(x, m):
