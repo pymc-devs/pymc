@@ -50,7 +50,7 @@ from pytensor.tensor.random.rewriting import (
     local_rv_size_lift,
 )
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob, logprob
+from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import ignore_logprob, ignore_logprob_multiple_vars
 
@@ -137,7 +137,7 @@ def logprob_make_vector(op, values, *base_rvs, **kwargs):
         base_rv.name = f"base_rv[{i}]"
         value.name = f"value[{i}]"
 
-    logps = [logprob(base_rv, value) for base_rv, value in base_rvs_to_values.items()]
+    logps = [_logprob_helper(base_rv, value) for base_rv, value in base_rvs_to_values.items()]
 
     # If the stacked variables depend on each other, we have to replace them by the respective values
     logps = replace_rvs_by_values(logps, rvs_to_values=base_rvs_to_values)
@@ -174,7 +174,8 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
 
     base_rvs_to_split_values = {base_rv: value for base_rv, value in zip(base_rvs, split_values)}
     logps = [
-        logprob(base_var, split_value) for base_var, split_value in base_rvs_to_split_values.items()
+        _logprob_helper(base_var, split_value)
+        for base_var, split_value in base_rvs_to_split_values.items()
     ]
 
     if len({logp.ndim for logp in logps}) != 1:
@@ -271,7 +272,7 @@ def logprob_dimshuffle(op, values, base_var, **kwargs):
     undo_ds = [original_shuffle.index(i) for i in range(len(original_shuffle))]
     value = value.dimshuffle(undo_ds)
 
-    raw_logp = logprob(base_var, value)
+    raw_logp = _logprob_helper(base_var, value)
 
     # Re-apply original dimshuffle, ignoring any support dimensions consumed by
     # the logprob function. This assumes that support dimensions are always in

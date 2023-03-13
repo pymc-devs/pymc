@@ -34,11 +34,11 @@ from scipy import stats as st
 
 import pymc as pm
 
-from pymc import Distribution, logcdf, logp
+from pymc.distributions.distribution import Distribution
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.initial_point import make_initial_point_fn
-from pymc.logprob import joint_logp
-from pymc.logprob.abstract import MeasurableVariable, icdf
+from pymc.logprob.abstract import MeasurableVariable
+from pymc.logprob.basic import icdf, joint_logp, logcdf, logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
     compile_pymc,

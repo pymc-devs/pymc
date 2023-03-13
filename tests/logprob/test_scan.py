@@ -44,7 +44,7 @@ from pytensor.raise_op import assert_op
 from pytensor.scan.utils import ScanArgs
 from scipy import stats
 
-from pymc.logprob.abstract import logprob
+from pymc.logprob.abstract import _logprob_helper
 from pymc.logprob.basic import factorized_joint_logprob, logp
 from pymc.logprob.scan import (
     construct_scan,
@@ -63,7 +63,7 @@ def create_inner_out_logp(value_map):
     """
     res = []
     for old_inner_out_var, new_inner_in_var in value_map.items():
-        logp = logprob(old_inner_out_var, new_inner_in_var)
+        logp = _logprob_helper(old_inner_out_var, new_inner_in_var)
         if new_inner_in_var.name:
             logp.name = f"logp({new_inner_in_var.name})"
         res.append(logp)
@@ -134,7 +134,7 @@ def test_convert_outer_out_to_in_sit_sot():
         y_tm1.name = "y_tm1"
         mu = mu_tm1 + y_tm1 + 1
         mu.name = "mu_t"
-        logp = logprob(pt.random.normal(mu, 1.0), y_t)
+        logp = _logprob_helper(pt.random.normal(mu, 1.0), y_t)
         logp.name = "logp"
         return mu, logp
 
@@ -233,7 +233,7 @@ def test_convert_outer_out_to_in_mit_sot():
         y_t.name = "y_t"
         y_tm1.name = "y_tm1"
         y_tm2.name = "y_tm2"
-        logp = logprob(pt.random.normal(y_tm1 + y_tm2, 1.0), y_t)
+        logp = _logprob_helper(pt.random.normal(y_tm1 + y_tm2, 1.0), y_t)
         logp.name = "logp(y_t)"
         return logp
 
@@ -359,7 +359,7 @@ def test_scan_joint_logprob(require_inner_rewrites):
     def scan_fn(mus_t, sigma_t, Y_t_val, S_t_val, Gamma_t):
         S_t = pt.random.categorical(Gamma_t[0], name="S_t")
         Y_t = pt.random.normal(mus_t[S_t_val], sigma_t, name="Y_t")
-        Y_t_logp, S_t_logp = logprob(Y_t, Y_t_val), logprob(S_t, S_t_val)
+        Y_t_logp, S_t_logp = _logprob_helper(Y_t, Y_t_val), _logprob_helper(S_t, S_t_val)
         Y_t_logp.name = "log(Y_t=y_t)"
         S_t_logp.name = "log(S_t=s_t)"
         return Y_t_logp, S_t_logp
@@ -375,7 +375,7 @@ def test_scan_joint_logprob(require_inner_rewrites):
     Y_rv_logp.name = "logp(Y=y)"
     S_rv_logp.name = "logp(S=s)"
 
-    Gamma_logp = logprob(Gamma_rv, Gamma_vv)
+    Gamma_logp = _logprob_helper(Gamma_rv, Gamma_vv)
 
     y_logp_ref = Y_rv_logp.sum() + S_rv_logp.sum() + Gamma_logp.sum()
 

@@ -42,8 +42,8 @@ from pytensor import tensor as pt
 from pytensor.tensor.var import TensorVariable
 from scipy import stats as stats
 
-from pymc.logprob import factorized_joint_logprob
-from pymc.logprob.abstract import get_measurable_outputs, icdf, logcdf, logprob
+from pymc.logprob import factorized_joint_logprob, icdf, logcdf, logp
+from pymc.logprob.abstract import get_measurable_outputs
 from pymc.logprob.utils import ignore_logprob
 
 
@@ -162,7 +162,7 @@ def scipy_logprob_tester(
         test_fn = getattr(stats, name)
 
     if test == "logprob":
-        pytensor_res = logprob(rv_var, pt.as_tensor(obs))
+        pytensor_res = logp(rv_var, pt.as_tensor(obs))
     elif test == "logcdf":
         pytensor_res = logcdf(rv_var, pt.as_tensor(obs))
     elif test == "icdf":
