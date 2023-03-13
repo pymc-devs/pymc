@@ -80,13 +80,25 @@ def logp(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
 def logcdf(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
     """Create a graph for the log-CDF of a Random Variable."""
     value = pt.as_tensor_variable(value, dtype=rv.dtype)
-    return _logcdf_helper(rv, value, **kwargs)
+    try:
+        return _logcdf_helper(rv, value, **kwargs)
+    except NotImplementedError:
+        # Try to rewrite rv
+        fgraph, rv_values, _ = construct_ir_fgraph({rv: value})
+        [ir_rv] = fgraph.outputs
+        return _logcdf_helper(ir_rv, value, **kwargs)
 
 
 def icdf(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
     """Create a graph for the inverse CDF of a  Random Variable."""
-    value = pt.as_tensor_variable(value)
-    return _icdf_helper(rv, value, **kwargs)
+    value = pt.as_tensor_variable(value, dtype=rv.dtype)
+    try:
+        return _icdf_helper(rv, value, **kwargs)
+    except NotImplementedError:
+        # Try to rewrite rv
+        fgraph, rv_values, _ = construct_ir_fgraph({rv: value})
+        [ir_rv] = fgraph.outputs
+        return _icdf_helper(ir_rv, value, **kwargs)
 
 
 def factorized_joint_logprob(
