@@ -28,8 +28,7 @@ import pymc as pm
 
 from pymc.distributions.continuous import Normal, Uniform, get_tau_sigma, interpolated
 from pymc.distributions.dist_math import clipped_beta_rvs
-from pymc.logprob.abstract import icdf, logcdf
-from pymc.logprob.basic import logp
+from pymc.logprob.basic import icdf, logcdf, logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
 from pymc.testing import (

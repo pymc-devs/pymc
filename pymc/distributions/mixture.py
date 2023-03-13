@@ -32,8 +32,7 @@ from pymc.distributions.distribution import (
 )
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
 from pymc.distributions.transforms import _default_transform
-from pymc.logprob.abstract import _logcdf, _logprob, logcdf
-from pymc.logprob.basic import logp
+from pymc.logprob.abstract import _logcdf, _logcdf_helper, _logprob, _logprob_helper
 from pymc.logprob.transforms import IntervalTransform
 from pymc.logprob.utils import ignore_logprob
 from pymc.util import check_dist_not_registered
@@ -337,10 +336,10 @@ def marginal_mixture_logprob(op, values, rng, weights, *components, **kwargs):
     if len(components) == 1:
         # Need to broadcast value across mixture axis
         mix_axis = -components[0].owner.op.ndim_supp - 1
-        components_logp = logp(components[0], pt.expand_dims(value, mix_axis))
+        components_logp = _logprob_helper(components[0], pt.expand_dims(value, mix_axis))
     else:
         components_logp = pt.stack(
-            [logp(component, value) for component in components],
+            [_logprob_helper(component, value) for component in components],
             axis=-1,
         )
 
@@ -363,10 +362,10 @@ def marginal_mixture_logcdf(op, value, rng, weights, *components, **kwargs):
     if len(components) == 1:
         # Need to broadcast value across mixture axis
         mix_axis = -components[0].owner.op.ndim_supp - 1
-        components_logcdf = logcdf(components[0], pt.expand_dims(value, mix_axis))
+        components_logcdf = _logcdf_helper(components[0], pt.expand_dims(value, mix_axis))
     else:
         components_logcdf = pt.stack(
-            [logcdf(component, value) for component in components],
+            [_logcdf_helper(component, value) for component in components],
             axis=-1,
         )
 

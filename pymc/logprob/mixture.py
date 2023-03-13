@@ -69,7 +69,7 @@ from pytensor.tensor.type import TensorType
 from pytensor.tensor.type_other import NoneConst, NoneTypeT, SliceConstant, SliceType
 from pytensor.tensor.var import TensorVariable
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob, logprob
+from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
 from pymc.logprob.rewriting import (
     local_lift_DiracDelta,
     logprob_rewrites_db,
@@ -445,7 +445,7 @@ def logprob_MixtureRV(
             # this intentional one-off?
             rv_m = rv_pull_down(rv[m_indices] if m_indices else rv)
             val_m = value[idx_m_on_axis]
-            logp_m = logprob(rv_m, val_m)
+            logp_m = _logprob_helper(rv_m, val_m)
             logp_val = pt.set_subtensor(logp_val[idx_m_on_axis], logp_m)
 
     else:
@@ -463,7 +463,7 @@ def logprob_MixtureRV(
 
         logp_val = 0.0
         for i, comp_rv in enumerate(comp_rvs):
-            comp_logp = logprob(comp_rv, value)
+            comp_logp = _logprob_helper(comp_rv, value)
             if join_axis_val is not None:
                 comp_logp = pt.squeeze(comp_logp, axis=join_axis_val)
             logp_val += ifelse(
@@ -540,10 +540,10 @@ def logprob_ifelse(op, values, if_var, *base_rvs, **kwargs):
     rvs_to_values_else = {else_rv: value for else_rv, value in zip(base_rvs[len(values) :], values)}
 
     logps_then = [
-        logprob(rv_then, value, **kwargs) for rv_then, value in rvs_to_values_then.items()
+        _logprob_helper(rv_then, value, **kwargs) for rv_then, value in rvs_to_values_then.items()
     ]
     logps_else = [
-        logprob(rv_else, value, **kwargs) for rv_else, value in rvs_to_values_else.items()
+        _logprob_helper(rv_else, value, **kwargs) for rv_else, value in rvs_to_values_else.items()
     ]
 
     # If the multiple variables depend on each other, we have to replace them

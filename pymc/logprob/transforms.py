@@ -78,7 +78,7 @@ from pymc.logprob.abstract import (
     MeasurableVariable,
     _get_measurable_outputs,
     _logprob,
-    logprob,
+    _logprob_helper,
 )
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import ignore_logprob, walk_model
@@ -369,10 +369,13 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
     # Some transformations, like squaring may produce multiple backward values
     if isinstance(backward_value, tuple):
         input_logprob = pt.logaddexp(
-            *(logprob(measurable_input, backward_val, **kwargs) for backward_val in backward_value)
+            *(
+                _logprob_helper(measurable_input, backward_val, **kwargs)
+                for backward_val in backward_value
+            )
         )
     else:
-        input_logprob = logprob(measurable_input, backward_value)
+        input_logprob = _logprob_helper(measurable_input, backward_value)
 
     if input_logprob.ndim < value.ndim:
         # Do we just need to sum the jacobian terms across the support dims?

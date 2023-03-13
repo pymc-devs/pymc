@@ -39,33 +39,54 @@ import warnings
 from collections import deque
 from typing import Dict, List, Optional, Sequence, Union
 
+import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
 from pytensor import config
-from pytensor.graph.basic import graph_inputs, io_toposort
+from pytensor.graph.basic import Variable, graph_inputs, io_toposort
 from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorVariable
+from typing_extensions import TypeAlias
 
-from pymc.logprob.abstract import _logprob, get_measurable_outputs
-from pymc.logprob.abstract import logprob as logp_logprob
+from pymc.logprob.abstract import (
+    _icdf_helper,
+    _logcdf_helper,
+    _logprob,
+    _logprob_helper,
+    get_measurable_outputs,
+)
 from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.logprob.transforms import RVTransform, TransformValuesRewrite
 from pymc.logprob.utils import rvs_to_value_vars
 
+TensorLike: TypeAlias = Union[Variable, float, np.ndarray]
 
-def logp(rv: TensorVariable, value: TensorVariable, **kwargs) -> TensorVariable:
+
+def logp(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
     """Return the log-probability graph of a Random Variable"""
 
     value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
-        return logp_logprob(rv, value, **kwargs)
+        return _logprob_helper(rv, value, **kwargs)
     except NotImplementedError:
         fgraph, _, _ = construct_ir_fgraph({rv: value})
         [(ir_rv, ir_value)] = fgraph.preserve_rv_mappings.rv_values.items()
-        return logp_logprob(ir_rv, ir_value, **kwargs)
+        return _logprob_helper(ir_rv, ir_value, **kwargs)
+
+
+def logcdf(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
+    """Create a graph for the log-CDF of a Random Variable."""
+    value = pt.as_tensor_variable(value, dtype=rv.dtype)
+    return _logcdf_helper(rv, value, **kwargs)
+
+
+def icdf(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
+    """Create a graph for the inverse CDF of a  Random Variable."""
+    value = pt.as_tensor_variable(value)
+    return _icdf_helper(rv, value, **kwargs)
 
 
 def factorized_joint_logprob(

@@ -37,7 +37,8 @@ from pymc.distributions.distribution import (
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size, to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import TruncationError
-from pymc.logprob.abstract import MeasurableVariable, _logcdf, _logprob, icdf, logcdf
+from pymc.logprob.abstract import MeasurableVariable, _logcdf, _logprob
+from pymc.logprob.basic import icdf, logcdf
 from pymc.math import logdiffexp
 from pymc.util import check_dist_not_registered
 

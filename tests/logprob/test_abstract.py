@@ -51,10 +51,11 @@ from pymc.logprob.abstract import (
     MeasurableVariable,
     UnmeasurableVariable,
     _get_measurable_outputs,
+    _logcdf_helper,
     assign_custom_measurable_outputs,
-    logcdf,
     noop_measurable_outputs_fn,
 )
+from pymc.logprob.basic import logcdf
 
 
 def assert_equal_hash(classA, classB):
@@ -158,10 +159,10 @@ def test_logcdf_helper():
     value = pt.vector("value")
     x = pm.Normal.dist(0, 1)
 
-    x_logcdf = logcdf(x, value)
+    x_logcdf = _logcdf_helper(x, value)
     np.testing.assert_almost_equal(x_logcdf.eval({value: [0, 1]}), sp.norm(0, 1).logcdf([0, 1]))
 
-    x_logcdf = logcdf(x, [0, 1])
+    x_logcdf = _logcdf_helper(x, [0, 1])
     np.testing.assert_almost_equal(x_logcdf.eval(), sp.norm(0, 1).logcdf([0, 1]))
 
 

@@ -47,8 +47,8 @@ from pytensor.tensor.random.basic import normal, uniform
 
 import pymc as pm
 
-from pymc.logprob.abstract import MeasurableVariable, get_measurable_outputs, logprob
-from pymc.logprob.basic import joint_logp
+from pymc.logprob.abstract import MeasurableVariable, get_measurable_outputs
+from pymc.logprob.basic import joint_logp, logp
 from pymc.logprob.utils import (
     ParameterValueError,
     dirac_delta,
@@ -163,7 +163,7 @@ def test_CheckParameter():
     sigma = pt.scalar("sigma")
     x_rv = pt.random.normal(mu, sigma, name="x")
     x_vv = pt.constant(0)
-    x_logp = logprob(x_rv, x_vv)
+    x_logp = logp(x_rv, x_vv)
 
     x_logp_fn = function([sigma], x_logp)
     with pytest.raises(ParameterValueError, match="sigma > 0"):
