@@ -45,7 +45,7 @@ from pytensor.scan.utils import ScanArgs
 from scipy import stats
 
 from pymc.logprob.abstract import logprob
-from pymc.logprob.joint_logprob import factorized_joint_logprob, logp
+from pymc.logprob.basic import factorized_joint_logprob, logp
 from pymc.logprob.scan import (
     construct_scan,
     convert_outer_out_to_in,

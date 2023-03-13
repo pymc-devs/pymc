@@ -47,7 +47,7 @@ from pytensor.tensor.random.basic import CategoricalRV
 from pytensor.tensor.shape import shape_tuple
 from pytensor.tensor.subtensor import as_index_constant
 
-from pymc.logprob.joint_logprob import factorized_joint_logprob
+from pymc.logprob.basic import factorized_joint_logprob
 from pymc.logprob.mixture import MixtureRV, expand_indices
 from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.logprob.utils import dirac_delta

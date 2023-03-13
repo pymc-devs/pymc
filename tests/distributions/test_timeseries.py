@@ -39,7 +39,7 @@ from pymc.distributions.timeseries import (
     MvStudentTRandomWalk,
     RandomWalk,
 )
-from pymc.logprob.joint_logprob import logp
+from pymc.logprob.basic import logp
 from pymc.model import Model
 from pymc.pytensorf import floatX
 from pymc.sampling.forward import draw, sample_posterior_predictive

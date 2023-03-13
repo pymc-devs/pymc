@@ -48,7 +48,7 @@ from pytensor.tensor.random.basic import normal, uniform
 import pymc as pm
 
 from pymc.logprob.abstract import MeasurableVariable, get_measurable_outputs, logprob
-from pymc.logprob.joint_logprob import joint_logp
+from pymc.logprob.basic import joint_logp
 from pymc.logprob.utils import (
     ParameterValueError,
     dirac_delta,

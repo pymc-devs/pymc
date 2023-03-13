@@ -25,7 +25,7 @@ from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import Continuous, Discrete
 from pymc.distributions.shape_utils import to_tuple
 from pymc.distributions.transforms import _default_transform
-from pymc.logprob.joint_logprob import logp
+from pymc.logprob.basic import logp
 from pymc.logprob.utils import ignore_logprob
 from pymc.model import modelcontext
 from pymc.pytensorf import floatX, intX

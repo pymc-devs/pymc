@@ -36,7 +36,7 @@
 
 from pymc.logprob.abstract import logprob, logcdf  # isort: split
 
-from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logp, logp
+from pymc.logprob.basic import factorized_joint_logprob, joint_logp, logp
 
 # isort: off
 # Add rewrites to the DBs

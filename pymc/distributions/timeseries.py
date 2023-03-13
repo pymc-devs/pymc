@@ -42,7 +42,7 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.abstract import _logprob
-from pymc.logprob.joint_logprob import logp
+from pymc.logprob.basic import logp
 from pymc.logprob.utils import ignore_logprob, reconsider_logprob
 from pymc.pytensorf import constant_fold, floatX, intX
 from pymc.util import check_dist_not_registered
