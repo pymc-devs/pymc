@@ -159,14 +159,6 @@ def laplace_asymmetric_logpdf(value, kappa, b, mu):
     return lPx
 
 
-def beta_mu_sigma(value, mu, sigma):
-    kappa = mu * (1 - mu) / sigma**2 - 1
-    if kappa > 0:
-        return st.beta.logpdf(value, mu * kappa, (1 - mu) * kappa)
-    else:
-        return -np.inf
-
-
 class TestMatchesScipy:
     def test_uniform(self):
         check_logp(
@@ -367,10 +359,18 @@ class TestMatchesScipy:
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: st.beta.logpdf(value, alpha, beta),
         )
+
+        def beta_mu_sigma(value, mu, sigma):
+            kappa = mu * (1 - mu) / sigma**2 - 1
+            return st.beta.logpdf(value, mu * kappa, (1 - mu) * kappa)
+
+        # The mu/sigma parametrization is not always valid
+        safe_mu_domain = Domain([0, 0.3, 0.5, 0.8, 1])
+        safe_sigma_domain = Domain([0, 0.05, 0.1, np.inf])
         check_logp(
             pm.Beta,
             Unit,
-            {"mu": Unit, "sigma": Rplus},
+            {"mu": safe_mu_domain, "sigma": safe_sigma_domain},
             beta_mu_sigma,
         )
 
