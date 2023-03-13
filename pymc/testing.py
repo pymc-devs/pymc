@@ -37,6 +37,7 @@ from pymc import Distribution, logcdf, logp
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.initial_point import make_initial_point_fn
 from pymc.logprob import joint_logp
+from pymc.logprob.abstract import icdf
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
     compile_pymc,
@@ -518,6 +519,97 @@ def check_logcdf(
             0,
             err_msg=str(point),
         )
+
+
+def check_icdf(
+    pymc_dist: Distribution,
+    paramdomains: Dict[str, Domain],
+    scipy_icdf: Callable,
+    decimal: Optional[int] = None,
+    n_samples: int = 100,
+) -> None:
+    """
+    Generic test for PyMC icdf methods
+
+    The following tests are performed by default:
+        1. Test PyMC icdf and equivalent scipy icdf (ppf) methods give similar
+        results for parameters inside the supported edges.
+        Edges are excluded by default, but can be artificially included by
+        creating a domain with repeated values (e.g., `Domain([0, 0, .5, 1, 1]`)
+        2. Test PyMC icdf method raises for invalid parameter values
+        outside the supported edges.
+        3. Test PyMC icdf method returns np.nan for values below 0 or above 1,
+         when using valid parameters.
+
+    Parameters
+    ----------
+    pymc_dist: PyMC distribution
+    paramdomains : Dictionary of Parameter : Domain pairs
+        Supported domains of distribution parameters
+    scipy_icdf : Scipy icdf method
+        Scipy icdf (ppp) method of equivalent pymc_dist distribution
+    decimal : int, optional
+        Level of precision with which pymc_dist and scipy_icdf are compared.
+        Defaults to 6 for float64 and 3 for float32
+    n_samples : int
+        Upper limit on the number of valid domain and value combinations that
+        are compared between pymc and scipy methods. If n_samples is below the
+        total number of combinations, a random subset is evaluated. Setting
+        n_samples = -1, will return all possible combinations. Defaults to 100
+
+    """
+    if decimal is None:
+        decimal = select_by_precision(float64=6, float32=3)
+
+    dist = create_dist_from_paramdomains(pymc_dist, paramdomains)
+    q = pt.scalar(dtype="float64", name="q")
+    dist_icdf = icdf(dist, q)
+    pymc_icdf = pytensor.function(list(inputvars(dist_icdf)), dist_icdf)
+
+    # Test pymc and scipy distributions match for values and parameters
+    # within the supported domain edges (excluding edges)
+    domains = paramdomains.copy()
+    domain = Domain([0, 0.1, 0.5, 0.75, 0.95, 0.99, 1])  # Values we test the icdf at
+    domains["q"] = domain
+
+    for point in product(domains, n_samples=n_samples):
+        point = dict(point)
+        npt.assert_almost_equal(
+            pymc_icdf(**point),
+            scipy_icdf(**point),
+            decimal=decimal,
+            err_msg=str(point),
+        )
+
+    valid_value = domain.vals[0]
+    valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
+    valid_params["q"] = valid_value
+
+    # Test pymc distribution raises ParameterValueError for parameters outside the
+    # supported domain edges (excluding edges)
+    invalid_params = find_invalid_scalar_params(paramdomains)
+    for invalid_param, invalid_edges in invalid_params.items():
+        for invalid_edge in invalid_edges:
+            if invalid_edge is None:
+                continue
+
+            point = valid_params.copy()
+            point[invalid_param] = invalid_edge
+            with pytest.raises(ParameterValueError):
+                pymc_icdf(**point)
+                pytest.fail(f"test_params={point}")
+
+    # Test that values below 0 or above 1 evaluate to nan
+    invalid_values = find_invalid_scalar_params({"q": domain})["q"]
+    for invalid_value in invalid_values:
+        if invalid_value is not None:
+            point = valid_params.copy()
+            point["q"] = invalid_value
+            npt.assert_equal(
+                pymc_icdf(**point),
+                np.nan,
+                err_msg=str(point),
+            )
 
 
 def check_selfconsistency_discrete_logcdf(

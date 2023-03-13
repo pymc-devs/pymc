@@ -36,6 +36,8 @@ import pymc as pm
 from pymc.distributions.dist_math import (
     betaln,
     binomln,
+    check_icdf_parameters,
+    check_icdf_value,
     check_parameters,
     factln,
     log_diff_normal_cdf,
@@ -820,7 +822,14 @@ class Geometric(Discrete):
         )
 
     def icdf(value, p):
-        return at.ceil(at.log1p(-value) / at.log1p(-p)).astype("int64")
+        res = at.ceil(at.log1p(-value) / at.log1p(-p)).astype("int64")
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            0 <= p,
+            p <= 1,
+            msg="0 <= p <= 1",
+        )
 
 
 class HyperGeometric(Discrete):

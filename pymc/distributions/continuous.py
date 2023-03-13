@@ -79,6 +79,8 @@ from scipy.special import expit
 from pymc.distributions import transforms
 from pymc.distributions.dist_math import (
     SplineWrapper,
+    check_icdf_parameters,
+    check_icdf_value,
     check_parameters,
     clipped_beta_rvs,
     i0e,
@@ -532,7 +534,13 @@ class Normal(Continuous):
         )
 
     def icdf(value, mu, sigma):
-        return mu + sigma * -np.sqrt(2.0) * at.erfcinv(2 * value)
+        res = mu + sigma * -np.sqrt(2.0) * at.erfcinv(2 * value)
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
 
 
 class TruncatedNormalRV(RandomVariable):

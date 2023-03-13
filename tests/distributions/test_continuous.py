@@ -43,6 +43,7 @@ from pymc.testing import (
     Runif,
     Unit,
     assert_moment_is_expected,
+    check_icdf,
     check_logcdf,
     check_logp,
     continuous_random_tester,
@@ -269,6 +270,11 @@ class TestMatchesScipy:
             {"mu": R, "sigma": Rplus},
             lambda value, mu, sigma: st.norm.logcdf(value, mu, sigma),
             decimal=select_by_precision(float64=6, float32=1),
+        )
+        check_icdf(
+            pm.Normal,
+            {"mu": R, "sigma": Rplus},
+            lambda q, mu, sigma: st.norm.ppf(q, mu, sigma),
         )
 
     def test_half_normal(self):
@@ -2269,21 +2275,3 @@ class TestInterpolated(BaseTestDistributionRandom):
                     extra_args={"rng": pytensor.shared(rng)},
                     ref_rand=ref_rand,
                 )
-
-
-class TestICDF:
-    @pytest.mark.parametrize(
-        "dist_params, obs, size",
-        [
-            ((0, 1), np.array([-0.5, 0, 0.3, 0.5, 1, 1.5], dtype=np.float64), ()),
-            ((-1, 20), np.array([-0.5, 0, 0.3, 0.5, 1, 1.5], dtype=np.float64), ()),
-            ((-1, 20), np.array([-0.5, 0, 0.3, 0.5, 1, 1.5], dtype=np.float64), (2, 3)),
-        ],
-    )
-    def test_normal_icdf(self, dist_params, obs, size):
-        dist_params_at, obs_at, size_at = create_pytensor_params(dist_params, obs, size)
-        dist_params = dict(zip(dist_params_at, dist_params))
-
-        x = Normal.dist(*dist_params_at, size=size_at)
-
-        scipy_logprob_tester(x, obs, dist_params, test_fn=st.norm.ppf, test="icdf")
