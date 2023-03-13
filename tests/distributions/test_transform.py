@@ -25,7 +25,7 @@ from pytensor.tensor.var import TensorConstant
 import pymc as pm
 import pymc.distributions.transforms as tr
 
-from pymc.logprob.joint_logprob import joint_logp
+from pymc.logprob.basic import joint_logp
 from pymc.pytensorf import floatX, jacobian
 from pymc.testing import (
     Circ,

@@ -59,7 +59,7 @@ from pymc.logprob.abstract import (
     _logprob,
     get_measurable_outputs,
 )
-from pymc.logprob.joint_logprob import factorized_joint_logprob
+from pymc.logprob.basic import factorized_joint_logprob
 from pymc.logprob.rewriting import (
     construct_ir_fgraph,
     inc_subtensor_ops,

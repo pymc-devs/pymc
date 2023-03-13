@@ -60,7 +60,7 @@ from pymc.exceptions import (
     ShapeWarning,
 )
 from pymc.initial_point import make_initial_point_fn
-from pymc.logprob.joint_logprob import joint_logp
+from pymc.logprob.basic import joint_logp
 from pymc.pytensorf import (
     PointFunc,
     SeedSequenceSeed,

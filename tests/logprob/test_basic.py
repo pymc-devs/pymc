@@ -56,7 +56,7 @@ from pytensor.tensor.subtensor import (
 import pymc as pm
 
 from pymc.logprob.abstract import logprob
-from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logp
+from pymc.logprob.basic import factorized_joint_logprob, joint_logp
 from pymc.logprob.utils import rvs_to_value_vars, walk_model
 from pymc.testing import assert_no_rvs
 from tests.logprob.utils import joint_logprob

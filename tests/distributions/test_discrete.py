@@ -30,7 +30,7 @@ import pymc as pm
 
 from pymc.distributions.discrete import Geometric, _OrderedLogistic, _OrderedProbit
 from pymc.logprob.abstract import icdf, logcdf
-from pymc.logprob.joint_logprob import logp
+from pymc.logprob.basic import logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
 from pymc.testing import (

@@ -26,7 +26,7 @@ from pymc.distributions.transforms import _default_transform
 from pymc.distributions.truncated import Truncated, TruncatedRV, _truncated
 from pymc.exceptions import TruncationError
 from pymc.logprob.abstract import _icdf
-from pymc.logprob.joint_logprob import logp
+from pymc.logprob.basic import logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.logprob.utils import ParameterValueError
 from pymc.testing import assert_moment_is_expected

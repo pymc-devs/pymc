@@ -30,7 +30,7 @@ pymc/distributions/timeseries.py
 pymc/distributions/truncated.py
 pymc/initial_point.py
 pymc/logprob/censoring.py
-pymc/logprob/joint_logprob.py
+pymc/logprob/basic.py
 pymc/logprob/mixture.py
 pymc/logprob/rewriting.py
 pymc/logprob/scan.py
