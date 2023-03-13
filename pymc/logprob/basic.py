@@ -56,23 +56,16 @@ from pymc.logprob.transforms import RVTransform, TransformValuesRewrite
 from pymc.logprob.utils import rvs_to_value_vars
 
 
-def logp(rv: TensorVariable, value) -> TensorVariable:
+def logp(rv: TensorVariable, value: TensorVariable, **kwargs) -> TensorVariable:
     """Return the log-probability graph of a Random Variable"""
 
     value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
-        return logp_logprob(rv, value)
+        return logp_logprob(rv, value, **kwargs)
     except NotImplementedError:
-        try:
-            value = rv.type.filter_variable(value)
-        except TypeError as exc:
-            raise TypeError(
-                "When RV is not a pure distribution, value variable must have the same type"
-            ) from exc
-        try:
-            return factorized_joint_logprob({rv: value}, warn_missing_rvs=False)[value]
-        except Exception as exc:
-            raise NotImplementedError("PyMC could not infer logp of input variable.") from exc
+        fgraph, _, _ = construct_ir_fgraph({rv: value})
+        [(ir_rv, ir_value)] = fgraph.preserve_rv_mappings.rv_values.items()
+        return logp_logprob(ir_rv, ir_value, **kwargs)
 
 
 def factorized_joint_logprob(
