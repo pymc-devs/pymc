@@ -432,8 +432,8 @@ def test_probability_direct_dispatch(func, scipy_func):
     "func, scipy_func, test_value",
     [
         (logp, "logpdf", 5.0),
-        pytest.param(logcdf, "logcdf", 5.0, marks=pytest.mark.xfail(raises=NotImplementedError)),
-        pytest.param(icdf, "ppf", 0.7, marks=pytest.mark.xfail(raises=NotImplementedError)),
+        (logcdf, "logcdf", 5.0),
+        (icdf, "ppf", 0.7),
     ],
 )
 def test_probability_inference(func, scipy_func, test_value):

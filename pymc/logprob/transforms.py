@@ -77,6 +77,10 @@ from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableVariable,
     _get_measurable_outputs,
+    _icdf,
+    _icdf_helper,
+    _logcdf,
+    _logcdf_helper,
     _logprob,
     _logprob_helper,
 )
@@ -388,6 +392,38 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
 
     # The jacobian is used to ensure a value in the supported domain was provided
     return pt.switch(pt.isnan(jacobian), -np.inf, input_logprob + jacobian)
+
+
+@_logcdf.register(MeasurableTransform)
+def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwargs):
+    """Compute the log-CDF graph for a `MeasurabeTransform`."""
+    other_inputs = list(inputs)
+    measurable_input = other_inputs.pop(op.measurable_input_idx)
+
+    backward_value = op.transform_elemwise.backward(value, *other_inputs)
+
+    # Some transformations, like squaring may produce multiple backward values
+    if isinstance(backward_value, tuple):
+        raise NotImplementedError
+
+    input_logcdf = _logcdf_helper(measurable_input, backward_value)
+
+    # The jacobian is used to ensure a value in the supported domain was provided
+    jacobian = op.transform_elemwise.log_jac_det(value, *other_inputs)
+
+    return pt.switch(pt.isnan(jacobian), -np.inf, input_logcdf)
+
+
+@_icdf.register(MeasurableTransform)
+def measurable_transform_icdf(op: MeasurableTransform, value, *inputs, **kwargs):
+    """Compute the inverse CDF graph for a `MeasurabeTransform`."""
+    other_inputs = list(inputs)
+    measurable_input = other_inputs.pop(op.measurable_input_idx)
+
+    input_icdf = _icdf_helper(measurable_input, value)
+    icdf = op.transform_elemwise.forward(input_icdf, *other_inputs)
+
+    return icdf
 
 
 @node_rewriter([reciprocal])
