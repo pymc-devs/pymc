@@ -15,7 +15,7 @@
 import functools as ft
 
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 import pymc as pm
@@ -39,7 +39,7 @@ def test_discrete_not_allowed():
 
     with pm.Model():
         mu = pm.Normal("mu", mu=0, sigma=10, size=3)
-        z = pm.Categorical("z", p=at.ones(3) / 3, size=len(y))
+        z = pm.Categorical("z", p=pt.ones(3) / 3, size=len(y))
         pm.Normal("y_obs", mu=mu[z], sigma=1.0, observed=y)
         with pytest.raises(opvi.ParametrizationError, match="Discrete variables"):
             pm.fit(n=1)  # fails

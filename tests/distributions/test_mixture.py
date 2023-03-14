@@ -22,7 +22,7 @@ import pytest
 import scipy.stats as st
 
 from numpy.testing import assert_allclose
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from scipy.special import logsumexp
@@ -62,13 +62,13 @@ from pymc.sampling.forward import (
 )
 from pymc.sampling.mcmc import sample
 from pymc.step_methods import Metropolis
-from tests.distributions.util import (
+from pymc.testing import (
     Domain,
+    SeededTest,
     Simplex,
     assert_moment_is_expected,
-    pymc_random,
+    continuous_random_tester,
 )
-from tests.helpers import SeededTest
 
 
 def generate_normal_mixture_data(w, mu, sigma, size=1000):
@@ -850,7 +850,7 @@ class TestNormalMixture(SeededTest):
             component = np.random.choice(w.size, size=size, p=w)
             return np.random.normal(mu[component], sigma[component], size=size)
 
-        pymc_random(
+        continuous_random_tester(
             NormalMixture,
             {
                 "w": Simplex(2),
@@ -861,7 +861,7 @@ class TestNormalMixture(SeededTest):
             size=1000,
             ref_rand=ref_rand,
         )
-        pymc_random(
+        continuous_random_tester(
             NormalMixture,
             {
                 "w": Simplex(3),
@@ -881,7 +881,7 @@ class TestMixtureVsLatent(SeededTest):
         nd = 3
         npop = 4
         # [[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]]
-        mus = at.constant(np.full((nd, npop), np.arange(npop)))
+        mus = pt.constant(np.full((nd, npop), np.arange(npop)))
 
         with Model() as model:
             m = NormalMixture(
@@ -893,7 +893,7 @@ class TestMixtureVsLatent(SeededTest):
                 shape=nd,
             )
             z = Categorical("z", p=np.ones(npop) / npop, shape=nd)
-            mu = at.as_tensor_variable([mus[i, z[i]] for i in range(nd)])
+            mu = pt.as_tensor_variable([mus[i, z[i]] for i in range(nd)])
             latent_m = Normal("latent_m", mu=mu, sigma=1e-5, shape=nd)
 
         size = 100
@@ -916,7 +916,7 @@ class TestMixtureVsLatent(SeededTest):
         nd = 3
         npop = 4
         # [[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]]
-        mus = at.constant(np.full((nd, npop), np.arange(npop)))
+        mus = pt.constant(np.full((nd, npop), np.arange(npop)))
 
         with Model() as model:
             m = Mixture(
@@ -1299,13 +1299,13 @@ class TestMixtureDefaultTransforms:
         with Model() as model:
             lower = Normal("lower", 0.5)
             upper = Uniform("upper", 0, 1)
-            uniform = Uniform("uniform", -at.abs(lower), at.abs(upper), transform=None)
+            uniform = Uniform("uniform", -pt.abs(lower), pt.abs(upper), transform=None)
             triangular = Triangular(
-                "triangular", -at.abs(lower), at.abs(upper), c=0.25, transform=None
+                "triangular", -pt.abs(lower), pt.abs(upper), c=0.25, transform=None
             )
             comp_dists = [
-                Uniform.dist(-at.abs(lower), at.abs(upper)),
-                Triangular.dist(-at.abs(lower), at.abs(upper), c=0.25),
+                Uniform.dist(-pt.abs(lower), pt.abs(upper)),
+                Triangular.dist(-pt.abs(lower), pt.abs(upper), c=0.25),
             ]
             mix1 = Mixture("mix1", [0.3, 0.7], comp_dists)
             mix2 = Mixture("mix2", [0.3, 0.7][::-1], comp_dists[::-1])

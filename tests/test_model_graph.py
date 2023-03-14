@@ -15,7 +15,7 @@ import warnings
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 from pytensor.compile.sharedvalue import SharedVariable
@@ -25,7 +25,7 @@ import pymc as pm
 
 from pymc.exceptions import ImputationWarning
 from pymc.model_graph import ModelGraph, model_to_graphviz, model_to_networkx
-from tests.helpers import SeededTest
+from pymc.testing import SeededTest
 
 
 def school_model():
@@ -343,7 +343,7 @@ class TestModelWithDims(BaseModelGraphTest):
 
     def test_issue_6335_dims_containing_none(self):
         with pm.Model(coords=dict(time=np.arange(5))) as pmodel:
-            data = at.as_tensor(np.ones((3, 5)))
+            data = pt.as_tensor(np.ones((3, 5)))
             pm.Deterministic("n", data, dims=(None, "time"))
 
         mg = ModelGraph(pmodel)

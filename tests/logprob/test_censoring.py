@@ -36,21 +36,21 @@
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy as sp
 import scipy.stats as st
 
 from pymc.logprob import factorized_joint_logprob
 from pymc.logprob.transforms import LogTransform, TransformValuesRewrite
-from tests.helpers import assert_no_rvs
+from pymc.testing import assert_no_rvs
 from tests.logprob.utils import joint_logprob
 
 
 @pytensor.config.change_flags(compute_test_value="raise")
 def test_continuous_rv_clip():
-    x_rv = at.random.normal(0.5, 1)
-    cens_x_rv = at.clip(x_rv, -2, 2)
+    x_rv = pt.random.normal(0.5, 1)
+    cens_x_rv = pt.clip(x_rv, -2, 2)
 
     cens_x_vv = cens_x_rv.clone()
     cens_x_vv.tag.test_value = 0
@@ -70,8 +70,8 @@ def test_continuous_rv_clip():
 
 
 def test_discrete_rv_clip():
-    x_rv = at.random.poisson(2)
-    cens_x_rv = at.clip(x_rv, 1, 4)
+    x_rv = pt.random.poisson(2)
+    cens_x_rv = pt.clip(x_rv, 1, 4)
 
     cens_x_vv = cens_x_rv.clone()
 
@@ -90,9 +90,9 @@ def test_discrete_rv_clip():
 
 
 def test_one_sided_clip():
-    x_rv = at.random.normal(0, 1)
-    lb_cens_x_rv = at.clip(x_rv, -1, x_rv)
-    ub_cens_x_rv = at.clip(x_rv, x_rv, 1)
+    x_rv = pt.random.normal(0, 1)
+    lb_cens_x_rv = pt.clip(x_rv, -1, x_rv)
+    ub_cens_x_rv = pt.clip(x_rv, x_rv, 1)
 
     lb_cens_x_vv = lb_cens_x_rv.clone()
     ub_cens_x_vv = ub_cens_x_rv.clone()
@@ -112,8 +112,8 @@ def test_one_sided_clip():
 
 
 def test_useless_clip():
-    x_rv = at.random.normal(0.5, 1, size=3)
-    cens_x_rv = at.clip(x_rv, x_rv, x_rv)
+    x_rv = pt.random.normal(0.5, 1, size=3)
+    cens_x_rv = pt.clip(x_rv, x_rv, x_rv)
 
     cens_x_vv = cens_x_rv.clone()
 
@@ -127,9 +127,9 @@ def test_useless_clip():
 
 
 def test_random_clip():
-    lb_rv = at.random.normal(0, 1, size=2)
-    x_rv = at.random.normal(0, 2)
-    cens_x_rv = at.clip(x_rv, lb_rv, [1, 1])
+    lb_rv = pt.random.normal(0, 1, size=2)
+    x_rv = pt.random.normal(0, 2)
+    cens_x_rv = pt.clip(x_rv, lb_rv, [1, 1])
 
     lb_vv = lb_rv.clone()
     cens_x_vv = cens_x_rv.clone()
@@ -143,9 +143,9 @@ def test_random_clip():
 
 
 def test_broadcasted_clip_constant():
-    lb_rv = at.random.uniform(0, 1)
-    x_rv = at.random.normal(0, 2)
-    cens_x_rv = at.clip(x_rv, lb_rv, [1, 1])
+    lb_rv = pt.random.uniform(0, 1)
+    x_rv = pt.random.normal(0, 2)
+    cens_x_rv = pt.clip(x_rv, lb_rv, [1, 1])
 
     lb_vv = lb_rv.clone()
     cens_x_vv = cens_x_rv.clone()
@@ -155,9 +155,9 @@ def test_broadcasted_clip_constant():
 
 
 def test_broadcasted_clip_random():
-    lb_rv = at.random.normal(0, 1)
-    x_rv = at.random.normal(0, 2, size=2)
-    cens_x_rv = at.clip(x_rv, lb_rv, 1)
+    lb_rv = pt.random.normal(0, 1)
+    x_rv = pt.random.normal(0, 2, size=2)
+    cens_x_rv = pt.clip(x_rv, lb_rv, 1)
 
     lb_vv = lb_rv.clone()
     cens_x_vv = cens_x_rv.clone()
@@ -168,8 +168,8 @@ def test_broadcasted_clip_random():
 
 def test_fail_base_and_clip_have_values():
     """Test failure when both base_rv and clipped_rv are given value vars"""
-    x_rv = at.random.normal(0, 1)
-    cens_x_rv = at.clip(x_rv, x_rv, 1)
+    x_rv = pt.random.normal(0, 1)
+    cens_x_rv = pt.clip(x_rv, x_rv, 1)
     cens_x_rv.name = "cens_x"
 
     x_vv = x_rv.clone()
@@ -180,10 +180,10 @@ def test_fail_base_and_clip_have_values():
 
 def test_fail_multiple_clip_single_base():
     """Test failure when multiple clipped_rvs share a single base_rv"""
-    base_rv = at.random.normal(0, 1)
-    cens_rv1 = at.clip(base_rv, -1, 1)
+    base_rv = pt.random.normal(0, 1)
+    cens_rv1 = pt.clip(base_rv, -1, 1)
     cens_rv1.name = "cens1"
-    cens_rv2 = at.clip(base_rv, -1, 1)
+    cens_rv2 = pt.clip(base_rv, -1, 1)
     cens_rv2.name = "cens2"
 
     cens_vv1 = cens_rv1.clone()
@@ -193,9 +193,9 @@ def test_fail_multiple_clip_single_base():
 
 
 def test_deterministic_clipping():
-    x_rv = at.random.normal(0, 1)
-    clip = at.clip(x_rv, 0, 0)
-    y_rv = at.random.normal(clip, 1)
+    x_rv = pt.random.normal(0, 1)
+    clip = pt.clip(x_rv, 0, 0)
+    y_rv = pt.random.normal(clip, 1)
 
     x_vv = x_rv.clone()
     y_vv = y_rv.clone()
@@ -210,8 +210,8 @@ def test_deterministic_clipping():
 
 
 def test_clip_transform():
-    x_rv = at.random.normal(0.5, 1)
-    cens_x_rv = at.clip(x_rv, 0, x_rv)
+    x_rv = pt.random.normal(0.5, 1)
+    cens_x_rv = pt.clip(x_rv, 0, x_rv)
 
     cens_x_vv = cens_x_rv.clone()
 
@@ -225,13 +225,13 @@ def test_clip_transform():
     assert np.isclose(obs_logp, exp_logp)
 
 
-@pytest.mark.parametrize("rounding_op", (at.round, at.floor, at.ceil))
+@pytest.mark.parametrize("rounding_op", (pt.round, pt.floor, pt.ceil))
 def test_rounding(rounding_op):
     loc = 1
     scale = 2
     test_value = np.arange(-3, 4)
 
-    x = at.random.normal(loc, scale, size=test_value.shape, name="x")
+    x = pt.random.normal(loc, scale, size=test_value.shape, name="x")
     xr = rounding_op(x)
     xr.name = "xr"
 
@@ -240,11 +240,11 @@ def test_rounding(rounding_op):
     assert logp is not None
 
     x_sp = st.norm(loc, scale)
-    if rounding_op == at.round:
+    if rounding_op == pt.round:
         expected_logp = np.log(x_sp.cdf(test_value + 0.5) - x_sp.cdf(test_value - 0.5))
-    elif rounding_op == at.floor:
+    elif rounding_op == pt.floor:
         expected_logp = np.log(x_sp.cdf(test_value + 1.0) - x_sp.cdf(test_value))
-    elif rounding_op == at.ceil:
+    elif rounding_op == pt.ceil:
         expected_logp = np.log(x_sp.cdf(test_value) - x_sp.cdf(test_value - 1.0))
     else:
         raise NotImplementedError()

@@ -21,7 +21,7 @@ from copy import copy
 import numpy as np
 import numpy.testing as npt
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.special
 
@@ -45,7 +45,7 @@ from pymc.step_methods import (
     Metropolis,
     Slice,
 )
-from tests.helpers import SeededTest, fast_unstable_sampling_mode
+from pymc.testing import SeededTest, fast_unstable_sampling_mode
 from tests.models import simple_init
 
 
@@ -534,7 +534,7 @@ class TestNamedSampling(SeededTest):
                 initval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
+                "theta", mu=pt.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
             )
             res = theta.eval()
             assert np.isclose(res, 0.0)
@@ -550,13 +550,13 @@ class TestNamedSampling(SeededTest):
                 initval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
+                "theta", mu=pt.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
             )
             res = theta.eval()
             assert np.isclose(res, 0.0)
 
     def test_constant_named(self):
-        G_var = at.constant(np.atleast_2d(1.0), name="G")
+        G_var = pt.constant(np.atleast_2d(1.0), name="G")
         with pm.Model():
             theta0 = pm.Normal(
                 "theta0",
@@ -566,7 +566,7 @@ class TestNamedSampling(SeededTest):
                 initval=np.atleast_2d(0),
             )
             theta = pm.Normal(
-                "theta", mu=at.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
+                "theta", mu=pt.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
             )
 
             res = theta.eval()
@@ -744,8 +744,8 @@ class TestAssignStepMethods:
 
             # a custom PyTensor Op that does not have a grad:
             is_64 = pytensor.config.floatX == "float64"
-            itypes = [at.dscalar] if is_64 else [at.fscalar]
-            otypes = [at.dscalar] if is_64 else [at.fscalar]
+            itypes = [pt.dscalar] if is_64 else [pt.fscalar]
+            otypes = [pt.dscalar] if is_64 else [pt.fscalar]
 
             @as_op(itypes, otypes)
             def kill_grad(x):

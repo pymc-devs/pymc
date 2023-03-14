@@ -9,7 +9,7 @@ repos:
     -   id: debug-statements
     -   id: end-of-file-fixer
     -   id: no-commit-to-branch
-        args: [--branch, master]
+        args: [--branch, main]
     -   id: requirements-txt-fixer
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
@@ -39,7 +39,7 @@ repos:
     - id: black
     - id: black-jupyter
 - repo: https://github.com/PyCQA/pylint
-  rev: v2.16.2
+  rev: v2.17.0
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]

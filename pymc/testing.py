@@ -14,29 +14,52 @@
 import functools as ft
 import itertools as it
 
-from contextlib import ExitStack as does_not_raise
-from typing import Callable, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-import numpy.random as nr
-import numpy.testing as npt
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
-import scipy.special as sp
-import scipy.stats as st
 
+from numpy import random as nr
+from numpy import testing as npt
 from pytensor.compile.mode import Mode
+from pytensor.graph.basic import ancestors
+from pytensor.graph.rewriting.basic import in2out
+from pytensor.tensor import TensorVariable
+from pytensor.tensor.random.op import RandomVariable
+from scipy import special as sp
+from scipy import stats as st
 
 import pymc as pm
 
+from pymc import Distribution, logcdf, logp
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.initial_point import make_initial_point_fn
-from pymc.logprob.abstract import logcdf
-from pymc.logprob.joint_logprob import joint_logp, logp
+from pymc.logprob import joint_logp
+from pymc.logprob.abstract import icdf
 from pymc.logprob.utils import ParameterValueError
-from pymc.pytensorf import compile_pymc, floatX, intX
-from tests.helpers import SeededTest, select_by_precision
+from pymc.pytensorf import (
+    compile_pymc,
+    floatX,
+    inputvars,
+    intX,
+    local_check_parameter_to_ninf_switch,
+)
+
+# This mode can be used for tests where model compilations takes the bulk of the runtime
+# AND where we don't care about posterior numerical or sampling stability (e.g., when
+# all that matters are the shape of the draws or deterministic values of observed data).
+# DO NOT USE UNLESS YOU HAVE A GOOD REASON TO!
+fast_unstable_sampling_mode = (
+    pytensor.compile.mode.FAST_COMPILE
+    # Remove slow rewrite phases
+    .excluding("canonicalize", "specialize")
+    # Include necessary rewrites for proper logp handling
+    .including("remove_TransformedVariables").register(
+        (in2out(local_check_parameter_to_ninf_switch), -1)
+    )
+)
 
 
 def product(domains, n_samples=-1):
@@ -47,7 +70,8 @@ def product(domains, n_samples=-1):
                  must be "domain-like", as in, have a `.vals` property
         n_samples: int, maximum samples to return.  -1 to return whole product
 
-    Returns:
+    Returns
+    -------
         list of the cartesian product of the domains
     """
     try:
@@ -119,22 +143,6 @@ class Domain:
         return Domain([-v for v in self.vals], self.dtype, (-self.lower, -self.upper), self.shape)
 
 
-@pytest.mark.parametrize(
-    "values, edges, expectation",
-    [
-        ([], None, pytest.raises(IndexError)),
-        ([], (0, 0), pytest.raises(ValueError)),
-        ([0], None, pytest.raises(ValueError)),
-        ([0], (0, 0), does_not_raise()),
-        ([-1, 1], None, pytest.raises(ValueError)),
-        ([-1, 0, 1], None, does_not_raise()),
-    ],
-)
-def test_domain(values, edges, expectation):
-    with expectation:
-        Domain(values, edges=edges)
-
-
 class ProductDomain:
     def __init__(self, domains):
         self.vals = list(it.product(*(d.vals for d in domains)))
@@ -203,22 +211,23 @@ Rplus = Domain([0, 0.01, 0.1, 0.9, 0.99, 1, 1.5, 2, 100, np.inf])
 Rplusbig = Domain([0, 0.5, 0.9, 0.99, 1, 1.5, 2, 20, np.inf])
 Rminusbig = Domain([-np.inf, -2, -1.5, -1, -0.99, -0.9, -0.5, -0.01, 0])
 Unit = Domain([0, 0.001, 0.1, 0.5, 0.75, 0.99, 1])
-
 Circ = Domain([-np.pi, -2.1, -1, -0.01, 0.0, 0.01, 1, 2.1, np.pi])
-
 Runif = Domain([-np.inf, -0.4, 0, 0.4, np.inf])
 Rdunif = Domain([-np.inf, -1, 0, 1, np.inf], "int64")
 Rplusunif = Domain([0, 0.5, np.inf])
 Rplusdunif = Domain([0, 10, np.inf], "int64")
-
 I = Domain([-np.inf, -3, -2, -1, 0, 1, 2, 3, np.inf], "int64")
-
 NatSmall = Domain([0, 3, 4, 5, np.inf], "int64")
 Nat = Domain([0, 1, 2, 3, np.inf], "int64")
 NatBig = Domain([0, 1, 2, 3, 5000, np.inf], "int64")
 PosNat = Domain([1, 2, 3, np.inf], "int64")
-
 Bool = Domain([0, 0, 1, 1], "int64")
+
+
+def select_by_precision(float64, float32):
+    """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
+    decimal = float64 if pytensor.config.floatX == "float64" else float32
+    return decimal
 
 
 def build_model(distfam, valuedomain, vardomains, extra_args=None):
@@ -228,9 +237,9 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
     with pm.Model() as m:
         param_vars = {}
         for v, dom in vardomains.items():
-            v_at = pytensor.shared(np.asarray(dom.vals[0]))
-            v_at.name = v
-            param_vars[v] = v_at
+            v_pt = pytensor.shared(np.asarray(dom.vals[0]))
+            v_pt.name = v
+            param_vars[v] = v_pt
         param_vars.update(extra_args)
         distfam(
             "value",
@@ -240,17 +249,69 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
     return m, param_vars
 
 
+def create_dist_from_paramdomains(
+    pymc_dist: Distribution,
+    paramdomains: Dict[str, Domain],
+    extra_args: Optional[Dict[str, Any]] = None,
+) -> TensorVariable:
+    """Create a PyMC distribution from a dictionary of parameter domains.
+
+    Returns
+    -------
+        PyMC distribution variable: TensorVariable
+        Value variable: TensorVariable
+    """
+    if extra_args is None:
+        extra_args = {}
+
+    param_vars = {}
+    for param, domain in paramdomains.items():
+        param_type = pt.constant(np.asarray(domain.vals[0])).type()
+        param_type.name = param
+        param_vars[param] = param_type
+
+    return pymc_dist.dist(**param_vars, **extra_args)
+
+
+def find_invalid_scalar_params(
+    paramdomains: Dict["str", Domain]
+) -> Dict["str", Tuple[Union[None, float], Union[None, float]]]:
+    """Find invalid parameter values from bounded scalar parameter domains.
+
+    For use in `check_logp`-like testing helpers.
+
+    Returns
+    -------
+    Invalid paramemeter values:
+        Dictionary mapping each parameter, to a lower and upper invalid values (out of domain).
+        If no lower or upper invalid values exist, None is returned for that entry.
+    """
+    invalid_params = {}
+    for param, paramdomain in paramdomains.items():
+        lower_edge, upper_edge = None, None
+
+        if np.ndim(paramdomain.lower) == 0:
+            if np.isfinite(paramdomain.lower):
+                lower_edge = paramdomain.lower - 1
+
+            if np.isfinite(paramdomain.upper):
+                upper_edge = paramdomain.upper + 1
+
+        invalid_params[param] = (lower_edge, upper_edge)
+    return invalid_params
+
+
 def check_logp(
-    pymc_dist,
-    domain,
-    paramdomains,
-    scipy_logp,
-    decimal=None,
-    n_samples=100,
-    extra_args=None,
-    scipy_args=None,
-    skip_paramdomain_outside_edge_test=False,
-):
+    pymc_dist: Distribution,
+    domain: Domain,
+    paramdomains: Dict[str, Domain],
+    scipy_logp: Callable,
+    decimal: Optional[int] = None,
+    n_samples: int = 100,
+    extra_args: Optional[Dict[str, Any]] = None,
+    scipy_args: Optional[Dict[str, Any]] = None,
+    skip_paramdomain_outside_edge_test: bool = False,
+) -> None:
     """
     Generic test for PyMC logp methods
 
@@ -285,122 +346,77 @@ def check_logp(
     if decimal is None:
         decimal = select_by_precision(float64=6, float32=3)
 
-    if extra_args is None:
-        extra_args = {}
-
     if scipy_args is None:
         scipy_args = {}
 
-    def logp_reference(args):
+    def scipy_logp_with_scipy_args(**args):
         args.update(scipy_args)
         return scipy_logp(**args)
 
-    def _model_input_dict(model, param_vars, pt):
-        """Create a dict with only the necessary, transformed logp inputs."""
-        pt_d = {}
-        for k, v in pt.items():
-            rv_var = model.named_vars.get(k)
-            nv = param_vars.get(k, rv_var)
-            nv = model.rvs_to_values.get(nv, nv)
+    dist = create_dist_from_paramdomains(pymc_dist, paramdomains, extra_args)
+    value = dist.type()
+    value.name = "value"
+    pymc_dist_logp = logp(dist, value).sum()
+    pymc_logp = pytensor.function(list(inputvars(pymc_dist_logp)), pymc_dist_logp)
 
-            transform = model.rvs_to_transforms.get(rv_var, None)
-            if transform:
-                # todo: the compiled graph behind this should be cached and
-                # reused (if it isn't already).
-                v = transform.forward(rv_var, v).eval()
-
-            if nv.name in param_vars:
-                # update the shared parameter variables in `param_vars`
-                param_vars[nv.name].set_value(v)
-            else:
-                # create an argument entry for the (potentially
-                # transformed) "value" variable
-                pt_d[nv.name] = v
-
-        return pt_d
-
-    model, param_vars = build_model(pymc_dist, domain, paramdomains, extra_args)
-    logp_pymc = model.compile_logp(jacobian=False)
-
-    # Test supported value and parameters domain matches scipy
+    # Test supported value and parameters domain matches Scipy
     domains = paramdomains.copy()
     domains["value"] = domain
-    for pt in product(domains, n_samples=n_samples):
-        pt = dict(pt)
-        pt_d = _model_input_dict(model, param_vars, pt)
-        pt_logp = pm.Point(pt_d, model=model)
-        pt_ref = pm.Point(pt, filter_model_vars=False, model=model)
+    for point in product(domains, n_samples=n_samples):
+        point = dict(point)
         npt.assert_almost_equal(
-            logp_pymc(pt_logp),
-            logp_reference(pt_ref),
+            pymc_logp(**point),
+            scipy_logp_with_scipy_args(**point),
             decimal=decimal,
-            err_msg=str(pt),
+            err_msg=str(point),
         )
 
     valid_value = domain.vals[0]
     valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
-    valid_dist = pymc_dist.dist(**valid_params, **extra_args)
+    valid_params["value"] = valid_value
 
     # Test pymc distribution raises ParameterValueError for scalar parameters outside
     # the supported domain edges (excluding edges)
     if not skip_paramdomain_outside_edge_test:
-        # Step1: collect potential invalid parameters
-        invalid_params = {param: [None, None] for param in paramdomains}
-        for param, paramdomain in paramdomains.items():
-            if np.ndim(paramdomain.lower) != 0:
-                continue
-            if np.isfinite(paramdomain.lower):
-                invalid_params[param][0] = paramdomain.lower - 1
-            if np.isfinite(paramdomain.upper):
-                invalid_params[param][1] = paramdomain.upper + 1
+        invalid_params = find_invalid_scalar_params(paramdomains)
 
-        # Step2: test invalid parameters, one a time
         for invalid_param, invalid_edges in invalid_params.items():
             for invalid_edge in invalid_edges:
                 if invalid_edge is None:
                     continue
-                test_params = valid_params.copy()  # Shallow copy should be okay
-                test_params[invalid_param] = at.as_tensor_variable(invalid_edge)
-                # We need to remove `Assert`s introduced by checks like
-                # `assert_negative_support` and disable test values;
-                # otherwise, we won't be able to create the `RandomVariable`
-                with pytensor.config.change_flags(compute_test_value="off"):
-                    invalid_dist = pymc_dist.dist(**test_params, **extra_args)
-                with pytensor.config.change_flags(mode=Mode("py")):
-                    with pytest.raises(ParameterValueError):
-                        logp(invalid_dist, valid_value).eval()
-                        pytest.fail(f"test_params={test_params}, valid_value={valid_value}")
+
+                point = valid_params.copy()  # Shallow copy should be okay
+                point[invalid_param] = invalid_edge
+                with pytest.raises(ParameterValueError):
+                    pymc_logp(**point)
+                    pytest.fail(f"test_params={point}")
 
     # Test that values outside of scalar domain support evaluate to -np.inf
-    if np.ndim(domain.lower) != 0:
-        return
-    invalid_values = [None, None]
-    if np.isfinite(domain.lower):
-        invalid_values[0] = domain.lower - 1
-    if np.isfinite(domain.upper):
-        invalid_values[1] = domain.upper + 1
+    invalid_values = find_invalid_scalar_params({"value": domain})["value"]
 
     for invalid_value in invalid_values:
         if invalid_value is None:
             continue
-        with pytensor.config.change_flags(mode=Mode("py")):
-            npt.assert_equal(
-                logp(valid_dist, invalid_value).eval(),
-                -np.inf,
-                err_msg=str(invalid_value),
-            )
+
+        point = valid_params.copy()
+        point["value"] = invalid_value
+        npt.assert_equal(
+            pymc_logp(**point),
+            -np.inf,
+            err_msg=str(point),
+        )
 
 
 def check_logcdf(
-    pymc_dist,
-    domain,
-    paramdomains,
-    scipy_logcdf,
-    decimal=None,
-    n_samples=100,
-    skip_paramdomain_inside_edge_test=False,
-    skip_paramdomain_outside_edge_test=False,
-):
+    pymc_dist: Distribution,
+    domain: Domain,
+    paramdomains: Dict[str, Domain],
+    scipy_logcdf: Callable,
+    decimal: Optional[int] = None,
+    n_samples: int = 100,
+    skip_paramdomain_inside_edge_test: bool = False,
+    skip_paramdomain_outside_edge_test: bool = False,
+) -> None:
     """
     Generic test for PyMC logcdf methods
 
@@ -441,139 +457,197 @@ def check_logcdf(
         Whether to run test 2., which checks that pymc distribution logcdf
         returns -inf for invalid parameter values outside the supported domain edge
 
-    Returns
-    -------
-
     """
+    if decimal is None:
+        decimal = select_by_precision(float64=6, float32=3)
+
+    dist = create_dist_from_paramdomains(pymc_dist, paramdomains)
+    value = dist.type()
+    value.name = "value"
+    dist_logcdf = logcdf(dist, value)
+    pymc_logcdf = pytensor.function(list(inputvars(dist_logcdf)), dist_logcdf)
+
     # Test pymc and scipy distributions match for values and parameters
     # within the supported domain edges (excluding edges)
     if not skip_paramdomain_inside_edge_test:
         domains = paramdomains.copy()
         domains["value"] = domain
-
-        model, param_vars = build_model(pymc_dist, domain, paramdomains)
-        rv = model["value"]
-        value = model.rvs_to_values[rv]
-        pymc_logcdf = model.compile_fn(logcdf(rv, value))
-
-        if decimal is None:
-            decimal = select_by_precision(float64=6, float32=3)
-
-        for pt in product(domains, n_samples=n_samples):
-            params = dict(pt)
-            scipy_eval = scipy_logcdf(**params)
-
-            value = params.pop("value")
-            # Update shared parameter variables in pymc_logcdf function
-            for param_name, param_value in params.items():
-                param_vars[param_name].set_value(param_value)
-            pymc_eval = pymc_logcdf({"value": value})
-
-            params["value"] = value  # for displaying in err_msg
+        for point in product(domains, n_samples=n_samples):
+            point = dict(point)
             npt.assert_almost_equal(
-                pymc_eval,
-                scipy_eval,
+                pymc_logcdf(**point),
+                scipy_logcdf(**point),
                 decimal=decimal,
-                err_msg=str(params),
+                err_msg=str(point),
             )
 
     valid_value = domain.vals[0]
     valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
-    valid_dist = pymc_dist.dist(**valid_params)
+    valid_params["value"] = valid_value
 
     # Test pymc distribution raises ParameterValueError for parameters outside the
     # supported domain edges (excluding edges)
     if not skip_paramdomain_outside_edge_test:
-        # Step1: collect potential invalid parameters
-        invalid_params = {param: [None, None] for param in paramdomains}
-        for param, paramdomain in paramdomains.items():
-            if np.isfinite(paramdomain.lower):
-                invalid_params[param][0] = paramdomain.lower - 1
-            if np.isfinite(paramdomain.upper):
-                invalid_params[param][1] = paramdomain.upper + 1
-        # Step2: test invalid parameters, one a time
+        invalid_params = find_invalid_scalar_params(paramdomains)
+
         for invalid_param, invalid_edges in invalid_params.items():
             for invalid_edge in invalid_edges:
-                if invalid_edge is not None:
-                    test_params = valid_params.copy()  # Shallow copy should be okay
-                    test_params[invalid_param] = at.as_tensor_variable(invalid_edge)
-                    # We need to remove `Assert`s introduced by checks like
-                    # `assert_negative_support` and disable test values;
-                    # otherwise, we won't be able to create the
-                    # `RandomVariable`
-                    with pytensor.config.change_flags(compute_test_value="off"):
-                        invalid_dist = pymc_dist.dist(**test_params)
-                    with pytensor.config.change_flags(mode=Mode("py")):
-                        with pytest.raises(ParameterValueError):
-                            logcdf(invalid_dist, valid_value).eval()
+                if invalid_edge is None:
+                    continue
 
-    # Test that values below domain edge evaluate to -np.inf
-    if np.isfinite(domain.lower):
-        below_domain = domain.lower - 1
-        with pytensor.config.change_flags(mode=Mode("py")):
+                point = valid_params.copy()
+                point[invalid_param] = invalid_edge
+                with pytest.raises(ParameterValueError):
+                    pymc_logcdf(**point)
+                    pytest.fail(f"test_params={point}")
+
+    # Test that values below domain edge evaluate to -np.inf, and above evaluates to 0
+    invalid_lower, invalid_upper = find_invalid_scalar_params({"value": domain})["value"]
+    if invalid_lower is not None:
+        point = valid_params.copy()
+        point["value"] = invalid_lower
+        npt.assert_equal(
+            pymc_logcdf(**point),
+            -np.inf,
+            err_msg=str(point),
+        )
+    if invalid_upper is not None:
+        point = valid_params.copy()
+        point["value"] = invalid_upper
+        npt.assert_equal(
+            pymc_logcdf(**point),
+            0,
+            err_msg=str(point),
+        )
+
+
+def check_icdf(
+    pymc_dist: Distribution,
+    paramdomains: Dict[str, Domain],
+    scipy_icdf: Callable,
+    decimal: Optional[int] = None,
+    n_samples: int = 100,
+) -> None:
+    """
+    Generic test for PyMC icdf methods
+
+    The following tests are performed by default:
+        1. Test PyMC icdf and equivalent scipy icdf (ppf) methods give similar
+        results for parameters inside the supported edges.
+        Edges are excluded by default, but can be artificially included by
+        creating a domain with repeated values (e.g., `Domain([0, 0, .5, 1, 1]`)
+        2. Test PyMC icdf method raises for invalid parameter values
+        outside the supported edges.
+        3. Test PyMC icdf method returns np.nan for values below 0 or above 1,
+         when using valid parameters.
+
+    Parameters
+    ----------
+    pymc_dist: PyMC distribution
+    paramdomains : Dictionary of Parameter : Domain pairs
+        Supported domains of distribution parameters
+    scipy_icdf : Scipy icdf method
+        Scipy icdf (ppp) method of equivalent pymc_dist distribution
+    decimal : int, optional
+        Level of precision with which pymc_dist and scipy_icdf are compared.
+        Defaults to 6 for float64 and 3 for float32
+    n_samples : int
+        Upper limit on the number of valid domain and value combinations that
+        are compared between pymc and scipy methods. If n_samples is below the
+        total number of combinations, a random subset is evaluated. Setting
+        n_samples = -1, will return all possible combinations. Defaults to 100
+
+    """
+    if decimal is None:
+        decimal = select_by_precision(float64=6, float32=3)
+
+    dist = create_dist_from_paramdomains(pymc_dist, paramdomains)
+    q = pt.scalar(dtype="float64", name="q")
+    dist_icdf = icdf(dist, q)
+    pymc_icdf = pytensor.function(list(inputvars(dist_icdf)), dist_icdf)
+
+    # Test pymc and scipy distributions match for values and parameters
+    # within the supported domain edges (excluding edges)
+    domains = paramdomains.copy()
+    domain = Domain([0, 0.1, 0.5, 0.75, 0.95, 0.99, 1])  # Values we test the icdf at
+    domains["q"] = domain
+
+    for point in product(domains, n_samples=n_samples):
+        point = dict(point)
+        npt.assert_almost_equal(
+            pymc_icdf(**point),
+            scipy_icdf(**point),
+            decimal=decimal,
+            err_msg=str(point),
+        )
+
+    valid_value = domain.vals[0]
+    valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
+    valid_params["q"] = valid_value
+
+    # Test pymc distribution raises ParameterValueError for parameters outside the
+    # supported domain edges (excluding edges)
+    invalid_params = find_invalid_scalar_params(paramdomains)
+    for invalid_param, invalid_edges in invalid_params.items():
+        for invalid_edge in invalid_edges:
+            if invalid_edge is None:
+                continue
+
+            point = valid_params.copy()
+            point[invalid_param] = invalid_edge
+            with pytest.raises(ParameterValueError):
+                pymc_icdf(**point)
+                pytest.fail(f"test_params={point}")
+
+    # Test that values below 0 or above 1 evaluate to nan
+    invalid_values = find_invalid_scalar_params({"q": domain})["q"]
+    for invalid_value in invalid_values:
+        if invalid_value is not None:
+            point = valid_params.copy()
+            point["q"] = invalid_value
             npt.assert_equal(
-                logcdf(valid_dist, below_domain).eval(),
-                -np.inf,
-                err_msg=str(below_domain),
-            )
-
-    # Test that values above domain edge evaluate to 0
-    if np.isfinite(domain.upper):
-        above_domain = domain.upper + 1
-        with pytensor.config.change_flags(mode=Mode("py")):
-            npt.assert_equal(
-                logcdf(valid_dist, above_domain).eval(),
-                0,
-                err_msg=str(above_domain),
-            )
-
-    # Test that method works with multiple values or raises informative TypeError
-    valid_dist = pymc_dist.dist(**valid_params, size=2)
-    with pytensor.config.change_flags(mode=Mode("py")):
-        try:
-            logcdf(valid_dist, np.array([valid_value, valid_value])).eval()
-        except TypeError as err:
-            assert str(err).endswith(
-                "logcdf expects a scalar value but received a 1-dimensional object."
+                pymc_icdf(**point),
+                np.nan,
+                err_msg=str(point),
             )
 
 
 def check_selfconsistency_discrete_logcdf(
-    distribution,
-    domain,
-    paramdomains,
-    decimal=None,
-    n_samples=100,
-):
+    distribution: Distribution,
+    domain: Domain,
+    paramdomains: Dict[str, Domain],
+    decimal: Optional[int] = None,
+    n_samples: int = 100,
+) -> None:
     """
-    Check that logcdf of discrete distributions matches sum of logps up to value
+    Check that logcdf of discrete distributions matches sum of logps up to value.
     """
-    domains = paramdomains.copy()
-    domains["value"] = domain
     if decimal is None:
         decimal = select_by_precision(float64=6, float32=3)
 
-    model, param_vars = build_model(distribution, domain, paramdomains)
-    rv = model["value"]
-    value = model.rvs_to_values[rv]
-    dist_logcdf = model.compile_fn(logcdf(rv, value))
-    dist_logp = model.compile_fn(logp(rv, value))
+    dist = create_dist_from_paramdomains(distribution, paramdomains)
+    value = dist.type()
+    value.name = "value"
+    dist_logp = logp(dist, value)
+    dist_logp_fn = pytensor.function(list(inputvars(dist_logp)), dist_logp)
 
-    for pt in product(domains, n_samples=n_samples):
-        params = dict(pt)
-        value = params.pop("value")
+    dist_logcdf = logcdf(dist, value)
+    dist_logcdf_fn = compile_pymc(list(inputvars(dist_logcdf)), dist_logcdf)
+
+    domains = paramdomains.copy()
+    domains["value"] = domain
+
+    for point in product(domains, n_samples=n_samples):
+        point = dict(point)
+        value = point.pop("value")
         values = np.arange(domain.lower, value + 1)
-
-        # Update shared parameter variables in logp/logcdf function
-        for param_name, param_value in params.items():
-            param_vars[param_name].set_value(param_value)
 
         with pytensor.config.change_flags(mode=Mode("py")):
             npt.assert_almost_equal(
-                dist_logcdf({"value": value}),
-                sp.logsumexp([dist_logp({"value": value}) for value in values]),
+                dist_logcdf_fn(**point, value=value),
+                sp.logsumexp([dist_logp_fn(value=value, **point) for value in values]),
                 decimal=decimal,
-                err_msg=str(pt),
+                err_msg=str(point),
             )
 
 
@@ -598,7 +672,7 @@ def assert_moment_is_expected(model, expected, check_finite_logp=True):
         logp_moment = (
             joint_logp(
                 (model["x"],),
-                rvs_to_values={model["x"]: at.constant(moment)},
+                rvs_to_values={model["x"]: pt.constant(moment)},
                 rvs_to_transforms={},
             )[0]
             .sum()
@@ -607,7 +681,7 @@ def assert_moment_is_expected(model, expected, check_finite_logp=True):
         assert np.isfinite(logp_moment)
 
 
-def pymc_random(
+def continuous_random_tester(
     dist,
     paramdomains,
     ref_rand,
@@ -629,12 +703,12 @@ def pymc_random(
     pymc_rand = compile_pymc([], model_dist)
 
     domains = paramdomains.copy()
-    for pt in product(domains, n_samples=100):
-        pt = pm.Point(pt, model=model)
-        pt.update(model_args)
+    for point in product(domains, n_samples=100):
+        point = pm.Point(point, model=model)
+        point.update(model_args)
 
         # Update the shared parameter variables in `param_vars`
-        for k, v in pt.items():
+        for k, v in point.items():
             nv = param_vars.get(k, model.named_vars.get(k))
             if nv.name in param_vars:
                 param_vars[nv.name].set_value(v)
@@ -645,13 +719,13 @@ def pymc_random(
         f = fails
         while p <= alpha and f > 0:
             s0 = pymc_rand()
-            s1 = floatX(ref_rand(size=size, **pt))
+            s1 = floatX(ref_rand(size=size, **point))
             _, p = st.ks_2samp(np.atleast_1d(s0).flatten(), np.atleast_1d(s1).flatten())
             f -= 1
-        assert p > alpha, str(pt)
+        assert p > alpha, str(point)
 
 
-def pymc_random_discrete(
+def discrete_random_tester(
     dist,
     paramdomains,
     valuedomain=None,
@@ -668,12 +742,12 @@ def pymc_random_discrete(
     pymc_rand = compile_pymc([], model_dist)
 
     domains = paramdomains.copy()
-    for pt in product(domains, n_samples=100):
-        pt = pm.Point(pt, model=model)
+    for point in product(domains, n_samples=100):
+        point = pm.Point(point, model=model)
         p = alpha
 
         # Update the shared parameter variables in `param_vars`
-        for k, v in pt.items():
+        for k, v in point.items():
             nv = param_vars.get(k, model.named_vars.get(k))
             if nv.name in param_vars:
                 param_vars[nv.name].set_value(v)
@@ -683,7 +757,7 @@ def pymc_random_discrete(
         f = fails
         while p <= alpha and f > 0:
             o = pymc_rand()
-            e = intX(ref_rand(size=size, **pt))
+            e = intX(ref_rand(size=size, **point))
             o = np.atleast_1d(o).flatten()
             e = np.atleast_1d(e).flatten()
             bins = min(20, max(len(set(e)), len(set(o))))
@@ -695,12 +769,29 @@ def pymc_random_discrete(
             else:
                 _, p = st.chisquare(observed + 1, expected + 1)
             f -= 1
-        assert p > alpha, str(pt)
+        assert p > alpha, str(point)
+
+
+class SeededTest:
+    random_seed = 20160911
+    random_state = None
+
+    @classmethod
+    def setup_class(cls):
+        nr.seed(cls.random_seed)
+
+    def setup_method(self):
+        nr.seed(self.random_seed)
+
+    def get_random_state(self, reset=False):
+        if self.random_state is None or reset:
+            self.random_state = nr.RandomState(self.random_seed)
+        return self.random_state
 
 
 class BaseTestDistributionRandom(SeededTest):
     """
-    This class provides a base for tests that new RandomVariables are correctly
+    Base class for tests that new RandomVariables are correctly
     implemented, and that the mapping of parameters between the PyMC
     Distribution and the respective RandomVariable is correct.
 
@@ -762,7 +853,7 @@ class BaseTestDistributionRandom(SeededTest):
     reference_dist: Optional[Callable] = None
     reference_dist_params: Optional[dict] = None
     expected_rv_op_params: Optional[dict] = None
-    checks_to_run = []
+    checks_to_run: List[str] = []
     size = 15
     decimal = select_by_precision(float64=6, float32=3)
 
@@ -864,3 +955,8 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
     return lambda self: ft.partial(
         getattr(np.random.RandomState, dist_name), self.get_random_state()
     )
+
+
+def assert_no_rvs(var):
+    assert not any(isinstance(v.owner.op, RandomVariable) for v in ancestors([var]) if v.owner)
+    return var

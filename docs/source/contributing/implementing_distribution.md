@@ -129,7 +129,7 @@ Here is how the example continues:
 
 ```python
 
-import pytensor.tensor as at
+import pytensor.tensor as pt
 from pymc.pytensorf import floatX, intX
 from pymc.distributions.continuous import PositiveContinuous
 from pymc.distributions.dist_math import check_parameters
@@ -146,12 +146,12 @@ class Blah(PositiveContinuous):
     # We pass the standard parametrizations to super().dist
     @classmethod
     def dist(cls, param1, param2=None, alt_param2=None, **kwargs):
-        param1 = at.as_tensor_variable(intX(param1))
+        param1 = pt.as_tensor_variable(intX(param1))
         if param2 is not None and alt_param2 is not None:
             raise ValueError("Only one of param2 and alt_param2 is allowed.")
         if alt_param2 is not None:
             param2 = 1 / alt_param2
-        param2 = at.as_tensor_variable(floatX(param2))
+        param2 = pt.as_tensor_variable(floatX(param2))
 
         # The first value-only argument should be a list of the parameters that
         # the rv_op needs in order to be instantiated
@@ -161,19 +161,19 @@ class Blah(PositiveContinuous):
     # the variable, given the implicit `rv`, `size` and `param1` ... `paramN`.
     # This is typically a "representative" point such as the the mean or mode.
     def moment(rv, size, param1, param2):
-        moment, _ = at.broadcast_arrays(param1, param2)
+        moment, _ = pt.broadcast_arrays(param1, param2)
         if not rv_size_is_none(size):
-            moment = at.full(size, moment)
+            moment = pt.full(size, moment)
         return moment
 
     # Logp returns a symbolic expression for the elementwise log-pdf or log-pmf evaluation
     # of the variable given the `value` of the variable and the parameters `param1` ... `paramN`.
     def logp(value, param1, param2):
-        logp_expression = value * (param1 + at.log(param2))
+        logp_expression = value * (param1 + pt.log(param2))
 
         # A switch is often used to enforce the distribution support domain
-        bounded_logp_expression = at.switch(
-            at.gt(value >= 0),
+        bounded_logp_expression = pt.switch(
+            pt.gt(value >= 0),
             logp_expression,
             -np.inf,
         )
@@ -240,10 +240,11 @@ Most tests can be accommodated by the default `BaseTestDistributionRandom` class
 1. Shape variable inference is correct, via `check_rv_size`
 
 ```python
-from tests.distributions.util import BaseTestDistributionRandom, seeded_scipy_distribution_builder
+
+from pymc.testing import BaseTestDistributionRandom, seeded_scipy_distribution_builder
+
 
 class TestBlah(BaseTestDistributionRandom):
-
     pymc_dist = pm.Blah
     # Parameters with which to test the blah pymc Distribution
     pymc_dist_params = {"param1": 0.25, "param2": 2.0}
@@ -311,38 +312,36 @@ Tests for the `logp` and `logcdf` mostly make use of the helpers `check_logp`, `
 `check_selfconsistency_discrete_logcdf` implemented in `~tests.distributions.util`
 
 ```python
-from tests.helpers import select_by_precision
-from tests.distributions.util import check_logp, check_logcdf, Domain
+
+from pymc.testing import Domain, check_logp, check_logcdf, select_by_precision
 
 R = Domain([-np.inf, -2.1, -1, -0.01, 0.0, 0.01, 1, 2.1, np.inf])
 Rplus = Domain([0, 0.01, 0.1, 0.9, 0.99, 1, 1.5, 2, 100, np.inf])
 
 
-
 def test_blah():
+    check_logp(
+        pymc_dist=pm.Blah,
+        # Domain of the distribution values
+        domain=R,
+        # Domains of the distribution parameters
+        paramdomains={"mu": R, "sigma": Rplus},
+        # Reference scipy (or other) logp function
+        scipy_logp=lambda value, mu, sigma: sp.norm.logpdf(value, mu, sigma),
+        # Number of decimal points expected to match between the pymc and reference functions
+        decimal=select_by_precision(float64=6, float32=3),
+        # Maximum number of combinations of domain * paramdomains to test
+        n_samples=100,
+    )
 
-  check_logp(
-      pymc_dist=pm.Blah,
-      # Domain of the distribution values
-      domain=R,
-      # Domains of the distribution parameters
-      paramdomains={"mu": R, "sigma": Rplus},
-      # Reference scipy (or other) logp function
-      scipy_logp = lambda value, mu, sigma: sp.norm.logpdf(value, mu, sigma),
-      # Number of decimal points expected to match between the pymc and reference functions
-      decimal=select_by_precision(float64=6, float32=3),
-      # Maximum number of combinations of domain * paramdomains to test
-      n_samples=100,
-  )
-
-  check_logcdf(
-      pymc_dist=pm.Blah,
-      domain=R,
-      paramdomains={"mu": R, "sigma": Rplus},
-      scipy_logcdf=lambda value, mu, sigma: sp.norm.logcdf(value, mu, sigma),
-      decimal=select_by_precision(float64=6, float32=1),
-      n_samples=-1,
-  )
+    check_logcdf(
+        pymc_dist=pm.Blah,
+        domain=R,
+        paramdomains={"mu": R, "sigma": Rplus},
+        scipy_logcdf=lambda value, mu, sigma: sp.norm.logcdf(value, mu, sigma),
+        decimal=select_by_precision(float64=6, float32=1),
+        n_samples=-1,
+    )
 
 ```
 
@@ -382,7 +381,8 @@ which checks if:
 
 import pytest
 from pymc.distributions import Blah
-from tests.distributions.util import assert_moment_is_expected
+from pymc.testing import assert_moment_is_expected
+
 
 @pytest.mark.parametrize(
     "param1, param2, size, expected",

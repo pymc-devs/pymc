@@ -29,7 +29,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import scipy.sparse as sps
 
 from pytensor import scalar
@@ -147,7 +147,7 @@ def convert_observed_data(data):
 @_as_tensor_variable.register(pd.Series)
 @_as_tensor_variable.register(pd.DataFrame)
 def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVariable:
-    return at.as_tensor_variable(df.to_numpy(), *args, **kwargs)
+    return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
 
 
 def extract_obs_data(x: TensorVariable) -> np.ndarray:
@@ -470,10 +470,10 @@ PyTensor derivative functions
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
-    return at.flatten(grad(f, v, disconnected_inputs="warn"))
+    return pt.flatten(grad(f, v, disconnected_inputs="warn"))
 
 
-empty_gradient = at.zeros(0, dtype="float32")
+empty_gradient = pt.zeros(0, dtype="float32")
 
 
 def gradient(f, vars=None):
@@ -481,15 +481,15 @@ def gradient(f, vars=None):
         vars = cont_inputs(f)
 
     if vars:
-        return at.concatenate([gradient1(f, v) for v in vars], axis=0)
+        return pt.concatenate([gradient1(f, v) for v in vars], axis=0)
     else:
         return empty_gradient
 
 
 def jacobian1(f, v):
     """jacobian of f wrt v"""
-    f = at.flatten(f)
-    idx = at.arange(f.shape[0], dtype="int32")
+    f = pt.flatten(f)
+    idx = pt.arange(f.shape[0], dtype="int32")
 
     def grad_i(i):
         return gradient1(f[i], v)
@@ -502,13 +502,13 @@ def jacobian(f, vars=None):
         vars = cont_inputs(f)
 
     if vars:
-        return at.concatenate([jacobian1(f, v) for v in vars], axis=1)
+        return pt.concatenate([jacobian1(f, v) for v in vars], axis=1)
     else:
         return empty_gradient
 
 
 def jacobian_diag(f, x):
-    idx = at.arange(f.shape[0], dtype="int32")
+    idx = pt.arange(f.shape[0], dtype="int32")
 
     def grad_ii(i, f, x):
         return grad(f[i], x)[i]
@@ -526,7 +526,7 @@ def hessian(f, vars=None):
 @pytensor.config.change_flags(compute_test_value="ignore")
 def hessian_diag1(f, v):
     g = gradient1(f, v)
-    idx = at.arange(g.shape[0], dtype="int32")
+    idx = pt.arange(g.shape[0], dtype="int32")
 
     def hess_ii(i):
         return gradient1(g[i], v)[i]
@@ -540,7 +540,7 @@ def hessian_diag(f, vars=None):
         vars = cont_inputs(f)
 
     if vars:
-        return -at.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
+        return -pt.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
     else:
         return empty_gradient
 
@@ -643,14 +643,14 @@ def join_nonshared_inputs(
 
     .. code-block:: python
 
-        import pytensor.tensor as at
+        import pytensor.tensor as pt
         import numpy as np
 
         from pymc.pytensorf import join_nonshared_inputs
 
         # Original non-shared inputs
-        x = at.scalar("x")
-        y = at.vector("y")
+        x = pt.scalar("x")
+        y = pt.vector("y")
         # Original output
         out = x + y
         print(out.eval({x: np.array(1), y: np.array([1, 2, 3])})) # [2, 3, 4]
@@ -725,7 +725,7 @@ def join_nonshared_inputs(
     if not inputs:
         raise ValueError("Empty list of input variables.")
 
-    raveled_inputs = at.concatenate([var.ravel() for var in inputs])
+    raveled_inputs = pt.concatenate([var.ravel() for var in inputs])
 
     if not make_inputs_shared:
         tensor_type = raveled_inputs.type
@@ -886,7 +886,7 @@ def ix_(*args):
     for k, new in enumerate(args):
         if new is None:
             out.append(slice(None))
-        new = at.as_tensor(new)
+        new = pt.as_tensor(new)
         if new.ndim != 1:
             raise ValueError("Cross index must be 1 dimensional")
         new = new.reshape((1,) * k + (new.size,) + (1,) * (nd - k - 1))
@@ -913,19 +913,21 @@ def local_remove_check_parameter(fgraph, node):
 
 @node_rewriter(tracks=[CheckParameterValue])
 def local_check_parameter_to_ninf_switch(fgraph, node):
-    if isinstance(node.op, CheckParameterValue):
-        logp_expr, *logp_conds = node.inputs
-        if len(logp_conds) > 1:
-            logp_cond = at.all(logp_conds)
-        else:
-            (logp_cond,) = logp_conds
-        out = at.switch(logp_cond, logp_expr, -np.inf)
-        out.name = node.op.msg
+    if not node.op.can_be_replaced_by_ninf:
+        return None
 
-        if out.dtype != node.outputs[0].dtype:
-            out = at.cast(out, node.outputs[0].dtype)
+    logp_expr, *logp_conds = node.inputs
+    if len(logp_conds) > 1:
+        logp_cond = pt.all(logp_conds)
+    else:
+        (logp_cond,) = logp_conds
+    out = pt.switch(logp_cond, logp_expr, -np.inf)
+    out.name = node.op.msg
 
-        return [out]
+    if out.dtype != node.outputs[0].dtype:
+        out = pt.cast(out, node.outputs[0].dtype)
+
+    return [out]
 
 
 pytensor.compile.optdb["canonicalize"].register(
@@ -968,7 +970,7 @@ def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVaria
     new_rng_nodes: List[Union[np.random.RandomState, np.random.Generator]] = []
     for rng_node in rng_nodes:
         rng_cls: type
-        if isinstance(rng_node, at.random.var.RandomStateSharedVariable):
+        if isinstance(rng_node, pt.random.var.RandomStateSharedVariable):
             rng_cls = np.random.RandomState
         else:
             rng_cls = np.random.Generator
@@ -990,7 +992,7 @@ def reseed_rngs(
     ]
     for rng, bit_generator in zip(rngs, bit_generators):
         new_rng: Union[np.random.RandomState, np.random.Generator]
-        if isinstance(rng, at.random.var.RandomStateSharedVariable):
+        if isinstance(rng, pt.random.var.RandomStateSharedVariable):
             new_rng = np.random.RandomState(bit_generator)
         else:
             new_rng = np.random.Generator(bit_generator)

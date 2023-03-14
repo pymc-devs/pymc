@@ -23,7 +23,7 @@ from typing import Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph import node_rewriter
 from pytensor.graph.basic import Node, Variable
@@ -703,7 +703,7 @@ class _CustomSymbolicDist(Distribution):
                 shape = tuple(rv.shape)
                 old_size = shape[: len(shape) - node.op.ndim_supp]
                 new_size = tuple(new_size) + tuple(old_size)
-            new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
+            new_size = pt.as_tensor(new_size, ndim=1, dtype="int64")
 
             old_size, *old_dist_params = node.inputs[: len(dist_params) + 1]
 
@@ -1105,9 +1105,9 @@ def default_not_implemented(rv_name, method_name):
 
 def default_moment(rv, size, *rv_inputs, rv_name=None, has_fallback=False, ndim_supp=0):
     if ndim_supp == 0:
-        return at.zeros(size, dtype=rv.dtype)
+        return pt.zeros(size, dtype=rv.dtype)
     elif has_fallback:
-        return at.zeros_like(rv)
+        return pt.zeros_like(rv)
     else:
         raise TypeError(
             "Cannot safely infer the size of a multivariate random variable's moment. "

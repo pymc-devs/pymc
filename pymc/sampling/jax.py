@@ -22,7 +22,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 import arviz as az
 import jax
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from arviz.data.base import make_attrs
 from jax.experimental.maps import SerialLoop, xmap
@@ -96,7 +96,7 @@ def _replace_shared_variables(graph: List[TensorVariable]) -> List[TensorVariabl
             "be safely replaced."
         )
 
-    replacements = {var: at.constant(var.get_value(borrow=True)) for var in shared_variables}
+    replacements = {var: pt.constant(var.get_value(borrow=True)) for var in shared_variables}
 
     new_graph = clone_replace(graph, replace=replacements)
     return new_graph
@@ -317,6 +317,7 @@ def sample_blackjax_nuts(
     postprocessing_backend: Optional[str] = None,
     postprocessing_chunks: Optional[int] = None,
     idata_kwargs: Optional[Dict[str, Any]] = None,
+    **kwargs,
 ) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``blackjax`` library.
@@ -529,6 +530,7 @@ def sample_numpyro_nuts(
     postprocessing_chunks: Optional[int] = None,
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
+    **kwargs,
 ) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``numpyro`` library.

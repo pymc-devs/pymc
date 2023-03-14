@@ -128,9 +128,9 @@ tensor_like
   Any scalar or sequence that can be interpreted as a {class}`~pytensor.tensor.TensorVariable`. In addition to TensorVariables, this includes NumPy ndarrays, scalars, lists and tuples (possibly nested). Any argument accepted by `pytensor.tensor.as_tensor_variable` is tensor_like.
 
   ```{jupyter-execute}
-  import pytensor.tensor as at
+  import pytensor.tensor as pt
 
-  at.as_tensor_variable([[1, 2.0], [0, 0]])
+  pt.as_tensor_variable([[1, 2.0], [0, 0]])
   ```
 
 :::::

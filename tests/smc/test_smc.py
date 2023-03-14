@@ -15,7 +15,7 @@ import logging
 import warnings
 
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.stats as st
 
@@ -26,7 +26,8 @@ import pymc as pm
 from pymc.backends.base import MultiTrace
 from pymc.pytensorf import floatX
 from pymc.smc.kernels import IMH, systematic_resampling
-from tests.helpers import SeededTest, assert_random_state_equal
+from pymc.testing import SeededTest
+from tests.helpers import assert_random_state_equal
 
 
 class TestSMC(SeededTest):
@@ -52,16 +53,16 @@ class TestSMC(SeededTest):
             Mixture of gaussians likelihood
             """
             log_like1 = (
-                -0.5 * n * at.log(2 * np.pi)
-                - 0.5 * at.log(dsigma)
+                -0.5 * n * pt.log(2 * np.pi)
+                - 0.5 * pt.log(dsigma)
                 - 0.5 * (x - mu1).T.dot(isigma).dot(x - mu1)
             )
             log_like2 = (
-                -0.5 * n * at.log(2 * np.pi)
-                - 0.5 * at.log(dsigma)
+                -0.5 * n * pt.log(2 * np.pi)
+                - 0.5 * pt.log(dsigma)
                 - 0.5 * (x - mu2).T.dot(isigma).dot(x - mu2)
             )
-            return at.log(w1 * at.exp(log_like1) + w2 * at.exp(log_like2))
+            return pt.log(w1 * pt.exp(log_like1) + w2 * pt.exp(log_like2))
 
         with pm.Model() as self.SMC_test:
             X = pm.Uniform("X", lower=-2, upper=2.0, shape=n)

@@ -36,7 +36,7 @@ from typing import (
 import numpy as np
 import pytensor
 import pytensor.sparse as sparse
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import scipy.sparse as sps
 
 from pytensor.compile.sharedvalue import SharedVariable
@@ -491,7 +491,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 Deterministic('v3_sq', self.v3 ** 2)
 
                 # Potentials too
-                Potential('p1', at.constant(1))
+                Potential('p1', pt.constant(1))
 
         # After defining a class CustomModel you can use it in several
         # ways
@@ -776,7 +776,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if not sum:
             return logp_factors
 
-        logp_scalar = at.sum([at.sum(factor) for factor in logp_factors])
+        logp_scalar = pt.sum([pt.sum(factor) for factor in logp_factors])
         logp_scalar_name = "__logp" if jacobian else "__logp_nojac"
         if self.name:
             logp_scalar_name = f"{logp_scalar_name}_{self.name}"
@@ -889,9 +889,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         # inputs and apply their transforms, if any
         potentials = self.replace_rvs_by_values(self.potentials)
         if potentials:
-            return at.sum([at.sum(factor) for factor in potentials])
+            return pt.sum([pt.sum(factor) for factor in potentials])
         else:
-            return at.constant(0.0)
+            return pt.constant(0.0)
 
     @property
     def value_vars(self):
@@ -1438,7 +1438,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # values, and another for the non-missing values.
 
             antimask_idx = (~mask).nonzero()
-            nonmissing_data = at.as_tensor_variable(data[antimask_idx])
+            nonmissing_data = pt.as_tensor_variable(data[antimask_idx])
             unmasked_rv_var = rv_var[antimask_idx]
             unmasked_rv_var = unmasked_rv_var.owner.clone().default_output()
 
@@ -1461,16 +1461,16 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             # Create deterministic that combines observed and missing
             # Note: This can widely increase memory consumption during sampling for large datasets
-            rv_var = at.empty(data.shape, dtype=observed_rv_var.type.dtype)
-            rv_var = at.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
-            rv_var = at.set_subtensor(rv_var[antimask_idx], observed_rv_var)
+            rv_var = pt.empty(data.shape, dtype=observed_rv_var.type.dtype)
+            rv_var = pt.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
+            rv_var = pt.set_subtensor(rv_var[antimask_idx], observed_rv_var)
             rv_var = Deterministic(name, rv_var, self, dims)
 
         else:
             if sps.issparse(data):
                 data = sparse.basic.as_sparse(data, name=name)
             else:
-                data = at.as_tensor_variable(data, name=name)
+                data = pt.as_tensor_variable(data, name=name)
 
             if total_size:
                 from pymc.variational.minibatch_rv import create_minibatch_rv
@@ -1802,7 +1802,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             point = self.initial_point()
 
         factors = self.basic_RVs + self.potentials
-        factor_logps_fn = [at.sum(factor) for factor in self.logp(factors, sum=False)]
+        factor_logps_fn = [pt.sum(factor) for factor in self.logp(factors, sum=False)]
         return {
             factor.name: np.round(np.asarray(factor_logp), round_vals)
             for factor, factor_logp in zip(
@@ -2041,22 +2041,95 @@ def Deterministic(name, var, model=None, dims=None):
     return var
 
 
-def Potential(name, var, model=None):
-    """Add an arbitrary factor potential to the model likelihood
+def Potential(name, var, model=None, dims=None):
+    """
+    Add an arbitrary factor potential to the model likelihood
+
+    The Potential function is used to add arbitrary factors (such as constraints or other likelihood components) to adjust the probability density of the model.
+
+    Warnings
+    --------
+    Potential functions only influence logp-based sampling. Therefore, they are applicable for sampling with ``pm.sample`` but not ``pm.sample_prior_predictive`` or ``pm.sample_posterior_predictive``.
 
     Parameters
     ----------
-    name: str
-    var: PyTensor variables
+    name : str
+        Name of the potential variable to be registered in the model.
+    var : tensor_like
+        Expression to be added to the model joint logp.
+    model : Model, optional
+        The model object to which the potential function is added.
+        If ``None`` is provided, the current model is used.
 
     Returns
     -------
-    var: var, with name attribute
+    var : tensor_like
+        The registered, named model variable.
+
+    Examples
+    --------
+    Have a look at the following example:
+
+    In this example, we define a constraint on ``x`` to be greater or equal to 0 via the ``pm.Potential`` function.
+    We pass ``pm.math.log(pm.math.switch(constraint, 1, 0))`` as second argument which will return an expression depending on if the constraint is met or not and which will be added to the likelihood of the model.
+    The probablity density that this model produces agrees strongly with the constraint that ``x`` should be greater than or equal to 0. All the cases who do not satisfy the constraint are strictly not considered.
+
+    .. code:: python
+
+        with pm.Model() as model:
+            x = pm.Normal("x", mu=0, sigma=1)
+            y = pm.Normal("y", mu=x, sigma=1, observed=data)
+            constraint = x >= 0
+            potential = pm.Potential("x_constraint", pm.math.log(pm.math.switch(constraint, 1, 0)))
+
+    However, if we use ``pm.math.log(pm.math.switch(constraint, 1.0, 0.5))`` the potential again penalizes the likelihood when constraint is not met but with some deviations allowed.
+    Here, Potential function is used to pass a soft constraint.
+    A soft constraint is a constraint that is only partially satisfied.
+    The effect of this is that the posterior probability for the parameters decreases as they move away from the constraint, but does not become exactly zero.
+    This allows the sampler to generate values that violate the constraint, but with lower probability.
+
+    .. code:: python
+
+        with pm.Model() as model:
+            x = pm.Normal("x", mu=0.1, sigma=1)
+            y = pm.Normal("y", mu=x, sigma=1, observed=data)
+            constraint = x >= 0
+            potential = pm.Potential("x_constraint", pm.math.log(pm.math.switch(constraint, 1.0, 0.5)))
+
+    In this example, Potential is used to obtain an arbitrary prior.
+    This prior distribution refers to the prior knowledge that the values of ``max_items`` are likely to be small rather than being large.
+    The prior probability of ``max_items`` is defined using a Potential object with the log of the inverse of ``max_items`` as its value.
+    This means that larger values of ``max_items`` have a lower prior probability density, while smaller values of ``max_items`` have a higher prior probability density.
+    When the model is sampled, the posterior distribution of ``max_items`` given the observed value of ``n_items`` will be influenced by the power-law prior defined in the Potential object
+
+    .. code:: python
+
+        with pm.Model():
+            # p(max_items) = 1 / max_items
+            max_items = pm.Uniform("max_items", lower=1, upper=100)
+            pm.Potential("power_prior", pm.math.log(1/max_items))
+
+            n_items = pm.Uniform("n_items", lower=1, upper=max_items, observed=60)
+
+    In the next example, the ``soft_sum_constraint`` potential encourages ``x`` and ``y`` to have a small sum, effectively adding a soft constraint on the relationship between the two variables.
+    This can be useful in cases where you want to ensure that the sum of multiple variables stays within a certain range, without enforcing an exact value.
+    In this case, the larger the deviation, larger will be the negative value (-((x + y)**2)) which the MCMC sampler will attempt to minimize.
+    However, the sampler might generate values for some small deviations but with lower probability hence this is a soft constraint.
+
+    .. code:: python
+
+        with pm.Model() as model:
+            x = pm.Normal("x", mu=0.1, sigma=1)
+            y = pm.Normal("y", mu=x, sigma=1, observed=data)
+            soft_sum_constraint = pm.Potential("soft_sum_constraint", -((x + y)**2))
+
+    The potential value is incorporated into the model log-probability, so it should be -inf (or very negative) when a constraint is violated, so that those draws are rejected. 0 won't have any effect and positive values will make the proposals more likely to be accepted.
+
     """
     model = modelcontext(model)
     var.name = model.name_for(name)
     model.potentials.append(var)
-    model.add_named_variable(var)
+    model.add_named_variable(var, dims)
 
     from pymc.printing import str_for_potential_or_deterministic
 

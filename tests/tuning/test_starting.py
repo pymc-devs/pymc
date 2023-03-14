@@ -20,10 +20,10 @@ import pymc as pm
 
 from pymc.exceptions import ImputationWarning
 from pymc.step_methods.metropolis import tune
+from pymc.testing import select_by_precision
 from pymc.tuning import find_MAP
 from tests import models
 from tests.checks import close_to
-from tests.helpers import select_by_precision
 from tests.models import non_normal, simple_arbitrary_det, simple_model
 
 

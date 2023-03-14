@@ -36,21 +36,22 @@
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 from pytensor import Mode
 from pytensor.raise_op import assert_op
 from pytensor.scan.utils import ScanArgs
+from scipy import stats
 
 from pymc.logprob.abstract import logprob
-from pymc.logprob.joint_logprob import factorized_joint_logprob
+from pymc.logprob.joint_logprob import factorized_joint_logprob, logp
 from pymc.logprob.scan import (
     construct_scan,
     convert_outer_out_to_in,
     get_random_outer_outputs,
 )
-from tests.helpers import assert_no_rvs
+from pymc.testing import assert_no_rvs
 from tests.logprob.utils import joint_logprob
 
 
@@ -92,17 +93,17 @@ def test_convert_outer_out_to_in_sit_sot():
         y_tm1.name = "y_tm1"
         mu = mu_tm1 + y_tm1 + 1
         mu.name = "mu_t"
-        return mu, at.random.normal(mu, 1.0, rng=rng, name="Y_t")
+        return mu, pt.random.normal(mu, 1.0, rng=rng, name="Y_t")
 
     (mu_tt, Y_rv), _ = pytensor.scan(
         fn=input_step_fn,
         outputs_info=[
             {
-                "initial": at.as_tensor_variable(0.0, dtype=pytensor.config.floatX),
+                "initial": pt.as_tensor_variable(0.0, dtype=pytensor.config.floatX),
                 "taps": [-1],
             },
             {
-                "initial": at.as_tensor_variable(0.0, dtype=pytensor.config.floatX),
+                "initial": pt.as_tensor_variable(0.0, dtype=pytensor.config.floatX),
                 "taps": [-1],
             },
         ],
@@ -125,7 +126,7 @@ def test_convert_outer_out_to_in_sit_sot():
     # Sample from the model and create another `Scan` that computes the
     # log-likelihood of the model at the sampled point.
     #
-    Y_obs = at.as_tensor_variable(Y_rv.eval())
+    Y_obs = pt.as_tensor_variable(Y_rv.eval())
     Y_obs.name = "Y_obs"
 
     def output_step_fn(y_t, y_tm1, mu_tm1):
@@ -133,7 +134,7 @@ def test_convert_outer_out_to_in_sit_sot():
         y_tm1.name = "y_tm1"
         mu = mu_tm1 + y_tm1 + 1
         mu.name = "mu_t"
-        logp = logprob(at.random.normal(mu, 1.0), y_t)
+        logp = logprob(pt.random.normal(mu, 1.0), y_t)
         logp.name = "logp"
         return mu, logp
 
@@ -142,7 +143,7 @@ def test_convert_outer_out_to_in_sit_sot():
         sequences=[{"input": Y_obs, "taps": [0, -1]}],
         outputs_info=[
             {
-                "initial": at.as_tensor_variable(0.0, dtype=pytensor.config.floatX),
+                "initial": pt.as_tensor_variable(0.0, dtype=pytensor.config.floatX),
                 "taps": [-1],
             },
             {},
@@ -202,12 +203,12 @@ def test_convert_outer_out_to_in_mit_sot():
     def input_step_fn(y_tm1, y_tm2, rng):
         y_tm1.name = "y_tm1"
         y_tm2.name = "y_tm2"
-        return at.random.normal(y_tm1 + y_tm2, 1.0, rng=rng, name="Y_t")
+        return pt.random.normal(y_tm1 + y_tm2, 1.0, rng=rng, name="Y_t")
 
     Y_rv, _ = pytensor.scan(
         fn=input_step_fn,
         outputs_info=[
-            {"initial": at.as_tensor_variable(np.r_[-1.0, 0.0]), "taps": [-1, -2]},
+            {"initial": pt.as_tensor_variable(np.r_[-1.0, 0.0]), "taps": [-1, -2]},
         ],
         non_sequences=[rng_tt],
         n_steps=10,
@@ -217,7 +218,7 @@ def test_convert_outer_out_to_in_mit_sot():
     Y_all = Y_rv.owner.inputs[0]
     Y_all.name = "Y_all"
 
-    Y_obs = at.as_tensor_variable(Y_rv.eval())
+    Y_obs = pt.as_tensor_variable(Y_rv.eval())
     Y_obs.name = "Y_obs"
 
     input_scan_args = ScanArgs.from_node(Y_rv.owner.inputs[0].owner)
@@ -232,7 +233,7 @@ def test_convert_outer_out_to_in_mit_sot():
         y_t.name = "y_t"
         y_tm1.name = "y_tm1"
         y_tm2.name = "y_tm2"
-        logp = logprob(at.random.normal(y_tm1 + y_tm2, 1.0), y_t)
+        logp = logprob(pt.random.normal(y_tm1 + y_tm2, 1.0), y_t)
         logp.name = "logp(y_t)"
         return logp
 
@@ -282,25 +283,25 @@ def test_convert_outer_out_to_in_mit_sot():
     ],
 )
 def test_scan_joint_logprob(require_inner_rewrites):
-    srng = at.random.RandomStream()
+    srng = pt.random.RandomStream()
 
-    N_tt = at.iscalar("N")
+    N_tt = pt.iscalar("N")
     N_val = 10
     N_tt.tag.test_value = N_val
 
-    M_tt = at.iscalar("M")
+    M_tt = pt.iscalar("M")
     M_val = 2
     M_tt.tag.test_value = M_val
 
-    mus_tt = at.matrix("mus_t")
+    mus_tt = pt.matrix("mus_t")
 
     mus_val = np.stack([np.arange(0.0, 10), np.arange(0.0, -10, -1)], axis=-1).astype(
         pytensor.config.floatX
     )
     mus_tt.tag.test_value = mus_val
 
-    sigmas_tt = at.ones((N_tt,))
-    Gamma_rv = srng.dirichlet(at.ones((M_tt, M_tt)), name="Gamma")
+    sigmas_tt = pt.ones((N_tt,))
+    Gamma_rv = srng.dirichlet(pt.ones((M_tt, M_tt)), name="Gamma")
 
     Gamma_vv = Gamma_rv.clone()
     Gamma_vv.name = "Gamma_vv"
@@ -356,8 +357,8 @@ def test_scan_joint_logprob(require_inner_rewrites):
     # Construct the joint log-probability by hand so we can compare it with
     # `y_logp`
     def scan_fn(mus_t, sigma_t, Y_t_val, S_t_val, Gamma_t):
-        S_t = at.random.categorical(Gamma_t[0], name="S_t")
-        Y_t = at.random.normal(mus_t[S_t_val], sigma_t, name="Y_t")
+        S_t = pt.random.categorical(Gamma_t[0], name="S_t")
+        Y_t = pt.random.normal(mus_t[S_t_val], sigma_t, name="Y_t")
         Y_t_logp, S_t_logp = logprob(Y_t, Y_t_val), logprob(S_t, S_t_val)
         Y_t_logp.name = "log(Y_t=y_t)"
         S_t_logp.name = "log(S_t=s_t)"
@@ -391,13 +392,13 @@ def test_scan_joint_logprob(require_inner_rewrites):
 @pytensor.config.change_flags(compute_test_value="raise")
 @pytest.mark.xfail(reason="see #148")
 def test_initial_values():
-    srng = at.random.RandomStream(seed=2320)
+    srng = pt.random.RandomStream(seed=2320)
 
     p_S_0 = np.array([0.9, 0.1])
     S_0_rv = srng.categorical(p_S_0, name="S_0")
     S_0_rv.tag.test_value = 0
 
-    Gamma_at = at.matrix("Gamma")
+    Gamma_at = pt.matrix("Gamma")
     Gamma_at.tag.test_value = np.array([[0, 1], [1, 0]])
 
     s_0_vv = S_0_rv.clone()
@@ -443,8 +444,8 @@ def test_initial_values():
 def test_mode_is_kept(remove_asserts):
     mode = Mode().including("local_remove_all_assert") if remove_asserts else None
     x, _ = pytensor.scan(
-        fn=lambda x: at.random.normal(assert_op(x, x > 0)),
-        outputs_info=[at.ones(())],
+        fn=lambda x: pt.random.normal(assert_op(x, x > 0)),
+        outputs_info=[pt.ones(())],
         n_steps=10,
         mode=mode,
     )
@@ -458,3 +459,22 @@ def test_mode_is_kept(remove_asserts):
     else:
         with pytest.raises(AssertionError):
             x_logp(x=x_test_val)
+
+
+def test_scan_non_pure_rv_output():
+    grw, _ = pytensor.scan(
+        fn=lambda xtm1: pt.random.normal() + xtm1,
+        outputs_info=[pt.zeros(())],
+        n_steps=10,
+        name="grw",
+    )
+
+    grw_vv = grw.clone()
+    grw_logp = logp(grw, grw_vv)
+    assert_no_rvs(grw_logp)
+
+    grw_vv_test = np.arange(10) + 1
+    np.testing.assert_array_almost_equal(
+        grw_logp.eval({grw_vv: grw_vv_test}),
+        stats.norm.logpdf(np.ones(10)),
+    )

@@ -92,10 +92,10 @@ def factorized_joint_logprob(
 
     .. code-block:: python
 
-        import pytensor.tensor as at
+        import pytensor.tensor as pt
 
-        sigma2_rv = at.random.invgamma(0.5, 0.5)
-        Y_rv = at.random.normal(0, at.sqrt(sigma2_rv))
+        sigma2_rv = pt.random.invgamma(0.5, 0.5)
+        Y_rv = pt.random.normal(0, pt.sqrt(sigma2_rv))
 
     This graph for ``Y_rv`` is equivalent to the following hierarchical model:
 
@@ -104,11 +104,11 @@ def factorized_joint_logprob(
         \sigma^2 \sim& \operatorname{InvGamma}(0.5, 0.5) \\
         Y \sim& \operatorname{N}(0, \sigma^2)
 
-    If we create a value variable for ``Y_rv``, i.e. ``y_vv = at.scalar("y")``,
+    If we create a value variable for ``Y_rv``, i.e. ``y_vv = pt.scalar("y")``,
     the graph of ``factorized_joint_logprob({Y_rv: y_vv})`` is equivalent to the
     conditional probability :math:`\log p(Y = y \mid \sigma^2)`, with a stochastic
     ``sigma2_rv``. If we specify a value variable for ``sigma2_rv``, i.e.
-    ``s_vv = at.scalar("s2")``, then ``factorized_joint_logprob({Y_rv: y_vv, sigma2_rv: s_vv})``
+    ``s_vv = pt.scalar("s2")``, then ``factorized_joint_logprob({Y_rv: y_vv, sigma2_rv: s_vv})``
     yields the joint log-probability of the two variables.
 
     .. math::

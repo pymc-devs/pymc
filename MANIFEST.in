@@ -1,7 +1,3 @@
-recursive-include tests/data *
-recursive-include source *
-# because of an upload-size limit by PyPI, we're temporarily removing docs from the tarball:
-recursive-exclude docs *
 include requirements.txt
 include *.md *.rst
 include scripts/*.sh

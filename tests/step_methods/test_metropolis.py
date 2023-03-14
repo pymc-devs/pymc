@@ -31,12 +31,9 @@ from pymc.step_methods.metropolis import (
     MultivariateNormalProposal,
     NormalProposal,
 )
+from pymc.testing import fast_unstable_sampling_mode
 from tests import sampler_fixtures as sf
-from tests.helpers import (
-    RVsAssignmentStepsTester,
-    StepMethodTester,
-    fast_unstable_sampling_mode,
-)
+from tests.helpers import RVsAssignmentStepsTester, StepMethodTester
 from tests.models import mv_simple, mv_simple_discrete, simple_categorical
 
 

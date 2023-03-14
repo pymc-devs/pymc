@@ -16,7 +16,7 @@ from itertools import product
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.compile.ops import as_op
 
@@ -38,7 +38,7 @@ def simple_model():
 def another_simple_model():
     _, _model, _ = simple_model()
     with _model:
-        pm.Potential("pot", at.ones((10, 10)))
+        pm.Potential("pot", pt.ones((10, 10)))
     return _model
 
 
@@ -63,7 +63,7 @@ def multidimensional_model():
 
 
 def simple_arbitrary_det():
-    scalar_type = at.dscalar if pytensor.config.floatX == "float64" else at.fscalar
+    scalar_type = pt.dscalar if pytensor.config.floatX == "float64" else pt.fscalar
 
     @as_op(itypes=[scalar_type], otypes=[scalar_type])
     def arbitrary_det(value):
@@ -89,7 +89,7 @@ def simple_2model():
     p = 0.4
     with Model() as model:
         x = pm.Normal("x", mu, tau=tau, initval=0.1)
-        pm.Deterministic("logx", at.log(x))
+        pm.Deterministic("logx", pt.log(x))
         pm.Bernoulli("y", p)
     return model.initial_point(), model
 
@@ -99,7 +99,7 @@ def simple_2model_continuous():
     tau = 1.3
     with Model() as model:
         x = pm.Normal("x", mu, tau=tau, initval=0.1)
-        pm.Deterministic("logx", at.log(x))
+        pm.Deterministic("logx", pt.log(x))
         pm.Beta("y", alpha=1, beta=1, size=2)
     return model.initial_point(), model
 
@@ -111,8 +111,8 @@ def mv_simple():
     with pm.Model() as model:
         pm.MvNormal(
             "x",
-            at.constant(mu),
-            tau=at.constant(tau),
+            pt.constant(mu),
+            tau=pt.constant(tau),
             initval=floatX_array([0.1, 1.0, 0.8]),
         )
     H = tau
@@ -127,8 +127,8 @@ def mv_simple_coarse():
     with pm.Model() as model:
         pm.MvNormal(
             "x",
-            at.constant(mu),
-            tau=at.constant(tau),
+            pt.constant(mu),
+            tau=pt.constant(tau),
             initval=floatX_array([0.1, 1.0, 0.8]),
         )
     H = tau
@@ -143,8 +143,8 @@ def mv_simple_very_coarse():
     with pm.Model() as model:
         pm.MvNormal(
             "x",
-            at.constant(mu),
-            tau=at.constant(tau),
+            pt.constant(mu),
+            tau=pt.constant(tau),
             initval=floatX_array([0.1, 1.0, 0.8]),
         )
     H = tau
@@ -157,7 +157,7 @@ def mv_simple_discrete():
     n = 5
     p = floatX_array([0.15, 0.85])
     with pm.Model() as model:
-        pm.Multinomial("x", n, at.constant(p), initval=np.array([1, 4]))
+        pm.Multinomial("x", n, pt.constant(p), initval=np.array([1, 4]))
         mu = n * p
         # covariance matrix
         C = np.zeros((d, d))

@@ -13,12 +13,10 @@
 #   limitations under the License.
 
 import numpy as np
+import numpy.testing as npt
 import pytest
 
 from pymc import Model, Normal, sample
-
-# turns all warnings into errors for this module
-pytestmark = pytest.mark.filterwarnings("error")
 
 
 @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
@@ -63,3 +61,16 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
     assert idata1.posterior.chain.size == 2
     assert idata1.posterior.draw.size == 500
     np.testing.assert_array_equal(idata1.posterior.x, idata2.posterior.x)
+
+
+def test_step_args():
+    with Model() as model:
+        a = Normal("a")
+        idata = sample(
+            nuts_sampler="numpyro",
+            target_accept=0.5,
+            nuts={"max_treedepth": 10},
+            random_seed=1410,
+        )
+
+    npt.assert_almost_equal(idata.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)

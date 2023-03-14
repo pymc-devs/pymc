@@ -16,7 +16,7 @@ import logging
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import scipy
 
 from pytensor.graph.basic import Apply
@@ -156,8 +156,8 @@ class DifferentialEquation(Op):
             )
 
         # convert inputs to tensors (and check their types)
-        y0 = at.cast(at.as_tensor_variable(y0), floatX)
-        theta = at.cast(at.as_tensor_variable(theta), floatX)
+        y0 = pt.cast(pt.as_tensor_variable(y0), floatX)
+        theta = pt.cast(pt.as_tensor_variable(theta), floatX)
         inputs = [y0, theta]
         for i, (input_val, itype) in enumerate(zip(inputs, self._itypes)):
             if not itype.is_super(input_val.type):
@@ -237,8 +237,8 @@ class DifferentialEquation(Op):
         # for each parameter, multiply sensitivities with the output gradient and sum the result
         # sens is (n_times, n_states, n_p)
         # ograds is (n_times, n_states)
-        grads = [at.sum(sens[:, :, p] * ograds) for p in range(self.n_p)]
+        grads = [pt.sum(sens[:, :, p] * ograds) for p in range(self.n_p)]
 
         # return separate gradient tensors for y0 and theta inputs
-        result = at.stack(grads[: self.n_states]), at.stack(grads[self.n_states :])
+        result = pt.stack(grads[: self.n_states]), pt.stack(grads[self.n_states :])
         return result

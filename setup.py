@@ -33,6 +33,7 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "License :: OSI Approved :: Apache Software License",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering",
@@ -65,11 +66,10 @@ if __name__ == "__main__":
         url=URL,
         long_description=LONG_DESCRIPTION,
         long_description_content_type="text/x-rst",
-        packages=find_packages(),
+        packages=find_packages(exclude=["tests*"]),
         # because of an upload-size limit by PyPI, we're temporarily removing docs from the tarball.
         # Also see MANIFEST.in
         # package_data={'docs': ['*']},
-        include_package_data=True,
         classifiers=classifiers,
         python_requires=">=3.8",
         install_requires=install_reqs,

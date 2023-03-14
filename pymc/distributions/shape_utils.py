@@ -25,7 +25,7 @@ from typing import Any, Optional, Sequence, Tuple, Union, cast
 import numpy as np
 
 from pytensor import config
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.graph.basic import Variable
 from pytensor.graph.op import Op, compute_test_value
 from pytensor.raise_op import Assert
@@ -546,7 +546,7 @@ def find_size(
 
 
 def rv_size_is_none(size: Variable) -> bool:
-    """Check whether an rv size is None (ie., at.Constant([]))"""
+    """Check whether an rv size is None (ie., pt.Constant([]))"""
     return size.type.shape == (0,)  # type: ignore [attr-defined]
 
 
@@ -626,7 +626,7 @@ def change_rv_size(op, rv, new_size, expand) -> TensorVariable:
 
     # Make sure the new size is a tensor. This dtype-aware conversion helps
     # to not unnecessarily pick up a `Cast` in some cases (see #4652).
-    new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
+    new_size = pt.as_tensor(new_size, ndim=1, dtype="int64")
 
     new_rv = rv_node.op(*dist_params, size=new_size, dtype=dtype)
 
@@ -662,7 +662,7 @@ def change_specify_shape_size(op, ss, new_size, expand) -> TensorVariable:
             new_shapes[-ndim_supp:] = shapes[-ndim_supp:]
 
     # specify_shape has a wrong signature https://github.com/pytensor-devs/pytensor/issues/1164
-    return at.specify_shape(new_var, new_shapes)  # type: ignore
+    return pt.specify_shape(new_var, new_shapes)  # type: ignore
 
 
 def get_support_shape(
@@ -753,13 +753,13 @@ def get_support_shape(
             cast(
                 Variable,
                 Assert(msg="support_shape does not match respective shape dimension")(
-                    inferred, at.eq(inferred, explicit)
+                    inferred, pt.eq(inferred, explicit)
                 ),
             )
             for inferred, explicit in zip(inferred_support_shape, support_shape)
         ]
 
-    return at.stack(inferred_support_shape)
+    return pt.stack(inferred_support_shape)
 
 
 def get_support_shape_1d(

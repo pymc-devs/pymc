@@ -20,7 +20,7 @@ import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import xarray as xr
 
@@ -40,7 +40,7 @@ from pymc.sampling.forward import (
     get_vars_in_point_list,
     observed_dependent_deterministics,
 )
-from tests.helpers import SeededTest, fast_unstable_sampling_mode
+from pymc.testing import SeededTest, fast_unstable_sampling_mode
 
 
 class TestDraw(SeededTest):
@@ -333,9 +333,9 @@ class TestCompileForwardSampler:
             # A user may register non-pure RandomVariables that can nevertheless be
             # sampled, as long as a custom logprob is dispatched or we can infer
             # its logprob (which is the case for `clip`)
-            y = at.clip(pm.Normal.dist(), -1, 1)
+            y = pt.clip(pm.Normal.dist(), -1, 1)
             y = model.register_rv(y, name="y")
-            y_abs = pm.Deterministic("y_abs", at.abs(y))
+            y_abs = pm.Deterministic("y_abs", pt.abs(y))
             obs = pm.Normal("obs", y_abs, observed=np.zeros(10))
 
         # y_abs should be resampled even if in the trace, because the source y is missing
@@ -1096,7 +1096,7 @@ class TestSamplePriorPredictive(SeededTest):
             phi = pm.Beta("phi", alpha=1.0, beta=1.0)
 
             kappa_log = pm.Exponential("logkappa", lam=5.0)
-            kappa = pm.Deterministic("kappa", at.exp(kappa_log))
+            kappa = pm.Deterministic("kappa", pt.exp(kappa_log))
 
             thetas = pm.Beta("thetas", alpha=phi * kappa, beta=(1.0 - phi) * kappa, size=n)
 
