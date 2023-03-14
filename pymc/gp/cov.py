@@ -175,9 +175,9 @@ class Covariance(BaseCovariance):
                 " the number of columns to use. Ignore otherwise.",
                 UserWarning,
             )
-        X = at.as_tensor_variable(X[:, self.active_dims])
+        X = pt.as_tensor_variable(X[:, self.active_dims])
         if Xs is not None:
-            Xs = at.as_tensor_variable(Xs[:, self.active_dims])
+            Xs = pt.as_tensor_variable(Xs[:, self.active_dims])
         return X, Xs
 
 
@@ -573,10 +573,10 @@ class ExpQuad(Stationary):
                (\sqrt(2 \pi)^D \prod_{i}^{D}\ell_i
                 \exp\left( -\frac{1}{2} \sum_{i}^{D}\ell_i^2 \omega_i^{2} \right)
         """
-        ls = at.ones(self.n_dims) * self.ls
-        c = at.power(at.sqrt(2.0 * np.pi), self.n_dims)
-        exp = at.exp(-0.5 * at.dot(at.square(omega), at.square(ls)))
-        return c * at.prod(ls) * exp
+        ls = pt.ones(self.n_dims) * self.ls
+        c = pt.power(pt.sqrt(2.0 * np.pi), self.n_dims)
+        exp = pt.exp(-0.5 * pt.dot(pt.square(omega), pt.square(ls)))
+        return c * pt.prod(ls) * exp
 
 
 class RatQuad(Stationary):
@@ -628,17 +628,17 @@ class Matern52(Stationary):
                \prod_{i=1}^{D}\ell_{i}
                \left(5 + \sum_{i=1}^{D}\ell_{i}^2 \boldsymbol\omega_{i}^{2}\right)^{-\frac{D+5}{2}}
         """
-        ls = at.ones(self.n_dims) * self.ls
+        ls = pt.ones(self.n_dims) * self.ls
         D52 = (self.n_dims + 5) / 2
         num = (
-            at.power(2, self.n_dims)
-            * at.power(np.pi, self.n_dims / 2)
-            * at.gamma(D52)
-            * at.power(5, 5 / 2)
+            pt.power(2, self.n_dims)
+            * pt.power(np.pi, self.n_dims / 2)
+            * pt.gamma(D52)
+            * pt.power(5, 5 / 2)
         )
-        den = 0.75 * at.sqrt(np.pi)
-        pow = at.power(5.0 + at.dot(at.square(omega), at.square(ls)), -1 * D52)
-        return (num / den) * at.prod(ls) * pow
+        den = 0.75 * pt.sqrt(np.pi)
+        pow = pt.power(5.0 + pt.dot(pt.square(omega), pt.square(ls)), -1 * D52)
+        return (num / den) * pt.prod(ls) * pow
 
 
 class Matern32(Stationary):
@@ -668,17 +668,17 @@ class Matern32(Stationary):
                \prod_{i=1}^{D}\ell_{i}
                \left(3 + \sum_{i=1}^{D}\ell_{i}^2 \boldsymbol\omega_{i}^{2}\right)^{-\frac{D+3}{2}}
         """
-        ls = at.ones(self.n_dims) * self.ls
+        ls = pt.ones(self.n_dims) * self.ls
         D32 = (self.n_dims + 3) / 2
         num = (
-            at.power(2, self.n_dims)
-            * at.power(np.pi, self.n_dims / 2)
-            * at.gamma(D32)
-            * at.power(3, 3 / 2)
+            pt.power(2, self.n_dims)
+            * pt.power(np.pi, self.n_dims / 2)
+            * pt.gamma(D32)
+            * pt.power(3, 3 / 2)
         )
-        den = 0.5 * at.sqrt(np.pi)
-        pow = at.power(3.0 + at.dot(at.square(omega), at.square(ls)), -1 * D32)
-        return (num / den) * at.prod(ls) * pow
+        den = 0.5 * pt.sqrt(np.pi)
+        pow = pt.power(3.0 + pt.dot(pt.square(omega), pt.square(ls)), -1 * D32)
+        return (num / den) * pt.prod(ls) * pow
 
 
 class Matern12(Stationary):
