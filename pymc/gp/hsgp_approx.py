@@ -27,10 +27,10 @@ from pymc.gp.cov import Covariance
 from pymc.gp.gp import Base
 from pymc.gp.mean import Mean, Zero
 
-TensorVariable = Union[np.ndarray, pt.TensorVariable]
+TensorLike = Union[np.ndarray, pt.TensorVariable]
 
 
-def set_boundary(Xs: TensorVariable, c: Union[numbers.Real, TensorVariable]) -> TensorVariable:
+def set_boundary(Xs: TensorLike, c: Union[numbers.Real, TensorLike]) -> TensorLike:
     """Set the boundary using the mean-subtracted `Xs` and `c`.  `c` is usually a scalar
     multiplyer greater than 1.0, but it may be one value per dimension or column of `Xs`.
     """
@@ -39,7 +39,7 @@ def set_boundary(Xs: TensorVariable, c: Union[numbers.Real, TensorVariable]) -> 
     return L
 
 
-def calc_eigenvalues(L: TensorVariable, m: Sequence[int], tl: ModuleType = np):
+def calc_eigenvalues(L: TensorLike, m: Sequence[int], tl: ModuleType = np):
     """Calculate eigenvalues of the Laplacian."""
     S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(len(m))])
     S_arr = np.vstack([s.flatten() for s in S]).T
@@ -47,9 +47,9 @@ def calc_eigenvalues(L: TensorVariable, m: Sequence[int], tl: ModuleType = np):
 
 
 def calc_eigenvectors(
-    Xs: TensorVariable,
-    L: TensorVariable,
-    eigvals: TensorVariable,
+    Xs: TensorLike,
+    L: TensorLike,
+    eigvals: TensorLike,
     m: Sequence[int],
     tl: ModuleType = np,
 ):
@@ -207,7 +207,7 @@ class HSGP(Base):
     def L(self, value):
         self._L = pt.as_tensor_variable(value)
 
-    def prior_linearized(self, Xs: TensorVariable):
+    def prior_linearized(self, Xs: TensorLike):
         """Linearized version of the HSGP.  Returns the Laplace eigenfunctions and the square root
         of the power spectral density needed to create the GP.
 
@@ -293,7 +293,7 @@ class HSGP(Base):
         i = int(self._drop_first == True)
         return phi[:, i:], pt.sqrt(psd[i:])
 
-    def prior(self, name: str, X: TensorVariable, dims: Optional[str] = None):  # type: ignore
+    def prior(self, name: str, X: TensorLike, dims: Optional[str] = None):  # type: ignore
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
 
@@ -346,7 +346,7 @@ class HSGP(Base):
         elif self._parameterization == "centered":
             return self.mean_func(Xnew) + phi[:, i:] @ beta
 
-    def conditional(self, name: str, Xnew: TensorVariable, dims: Optional[str] = None):  # type: ignore
+    def conditional(self, name: str, Xnew: TensorLike, dims: Optional[str] = None):  # type: ignore
         R"""
         Returns the (approximate) conditional distribution evaluated over new input locations
         `Xnew`.
