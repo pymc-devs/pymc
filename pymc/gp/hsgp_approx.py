@@ -227,6 +227,15 @@ class HSGP(Base):
         Xs: array-like
             Function input values.  Assumes they have been mean subtracted or centered at zero.
 
+        Returns
+        -------
+        phi: array-like
+            Either Numpy or PyTensor 2D array of the fixed basis vectors.  There are n rows, one
+            per row of `Xs` and `prod(m)` columns, one for each basis vector.
+        sqrt_psd: array-like
+            Either a Numpy or PyTensor 1D array of the square roots of the power spectral
+            densities.
+
         Examples
         --------
         .. code:: python
@@ -296,6 +305,7 @@ class HSGP(Base):
     def prior(self, name: str, X: TensorLike, dims: Optional[str] = None):  # type: ignore
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
+        For usage examples, refer to `pm.gp.Latent`.
 
         Parameters
         ----------
