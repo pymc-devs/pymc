@@ -107,7 +107,10 @@ class BaseCovariance:
         return self.__mul__(other)
 
     def __pow__(self, other):
-        return Exponentiated(self, _verify_scalar(other))
+        other = at.as_tensor_variable(other).squeeze()
+        if not other.ndim == 0:
+            raise ValueError("A covariance function can only be exponentiated by a scalar value")
+        return Exponentiated(self, other)
 
     def __array_wrap__(self, result):
         """

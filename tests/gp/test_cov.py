@@ -290,7 +290,9 @@ class TestCovExponentiation:
 
     def test_invalid_covexp(self):
         X = np.linspace(0, 1, 10)[:, None]
-        with pytest.raises(ValueError, match=r"scalar value is required"):
+        with pytest.raises(
+            ValueError, match=r"A covariance function can only be exponentiated by a scalar value"
+        ):
             with pm.Model() as model:
                 a = np.array([[1.0, 2.0]])
                 cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
