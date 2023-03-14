@@ -21,7 +21,6 @@ from operator import add, mul
 from typing import Optional, Sequence
 
 import numpy as np
-import pytensor
 import pytensor.tensor as pt
 
 from pytensor.graph.basic import Variable
