@@ -374,11 +374,14 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
     else:
         input_logprob = logprob(measurable_input, backward_value)
 
-    if input_logprob.ndim < value.ndim:
-        # Do we just need to sum the jacobian terms across the support dims?
-        raise NotImplementedError("Transform of multivariate RVs not implemented")
-
     jacobian = op.transform_elemwise.log_jac_det(value, *other_inputs)
+
+    if input_logprob.ndim < value.ndim:
+        # For multivariate variables, the Jacobian is diagonal.
+        # We can get the right result by summing the last dimensions
+        # of `transform_elemwise.log_jac_det`
+        ndim_supp = value.ndim - input_logprob.ndim
+        jacobian = jacobian.sum(axis=tuple(range(-ndim_supp, 0)))
 
     # The jacobian is used to ensure a value in the supported domain was provided
     return pt.switch(pt.isnan(jacobian), -np.inf, input_logprob + jacobian)
