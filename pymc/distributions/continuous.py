@@ -1042,8 +1042,9 @@ class Beta(UnitContinuous):
        f(x \mid \alpha, \beta) =
            \frac{x^{\alpha - 1} (1 - x)^{\beta - 1}}{B(\alpha, \beta)}
 
-    where :math:`B(\alpha, \beta) = \frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha + \beta)}`
-    and :math:`\Gamma` is the Gamma function.
+    where :math:`B` is the Beta function.
+
+    For more information, see https://en.wikipedia.org/wiki/Beta_distribution.
 
     .. plot::
         :context: close-figs
