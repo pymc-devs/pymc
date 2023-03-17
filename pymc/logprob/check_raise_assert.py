@@ -34,16 +34,14 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.raise_op import CheckAndRaise
+from typing import List, Optional
 
-from pymc.logprob.abstract import (
-    MeasurableVariable,
-    _logprob,
-    assign_custom_measurable_outputs,
-    logprob,
-)
+from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.raise_op import CheckAndRaise, ExceptionType
+
+from pymc.logprob.abstract import MeasurableVariable, _logprob, logprob
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
+from pymc.logprob.utils import ignore_logprob
 
 
 class MeasurableAssert(CheckAndRaise):
@@ -62,7 +60,7 @@ def logprob_assert(op, values, inner_rv, *assertion, **kwargs):
 
 
 @node_rewriter([CheckAndRaise])
-def find_measurable_asserts(fgraph, node):
+def find_measurable_asserts(fgraph, node) -> Optional[List[MeasurableAssert]]:
     r"""Finds `AssertOp`\s for which a `logprob` can be computed."""
 
     if not (isinstance(node.op, CheckAndRaise)):
@@ -78,7 +76,7 @@ def find_measurable_asserts(fgraph, node):
 
     rv = node.outputs[0]
 
-    base_rv, *shape = node.inputs
+    base_rv, *conds = node.inputs
 
     if not (
         base_rv.owner
@@ -87,10 +85,11 @@ def find_measurable_asserts(fgraph, node):
     ):
         return None  # pragma: no cover
 
-    new_op = MeasurableAssert()
+    exception_type = ExceptionType()
+    new_op = MeasurableAssert(exc_type=exception_type)
     # Make base_var unmeasurable
-    unmeasurable_base_rv = assign_custom_measurable_outputs(base_rv.owner)
-    new_rv = new_op.make_node(unmeasurable_base_rv, *shape).default_output()
+    unmeasurable_base_rv = ignore_logprob(base_rv)
+    new_rv = new_op.make_node(unmeasurable_base_rv, *conds).default_output()
     new_rv.name = rv.name
 
     return [new_rv]
