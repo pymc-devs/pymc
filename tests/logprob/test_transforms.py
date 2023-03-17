@@ -964,3 +964,28 @@ def test_scan_transform():
         "innov": np.full((4,), -0.5),
     }
     np.testing.assert_allclose(logp_fn(**test_point), ref_logp_fn(**test_point))
+
+
+@pytest.mark.parametrize("shift", [1.5, np.array([-0.5, 1, 0.3])])
+@pytest.mark.parametrize("scale", [2.0, np.array([1.5, 3.3, 1.0])])
+def test_multivariate_transform(shift, scale):
+    mu = np.array([0, 0.9, -2.1])
+    cov = np.array([[1, 0, 0.9], [0, 1, 0], [0.9, 0, 1]])
+    x_rv_raw = pt.random.multivariate_normal(mu, cov=cov)
+    x_rv = shift + x_rv_raw * scale
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+    logp = factorized_joint_logprob({x_rv: x_vv})[x_vv]
+    assert_no_rvs(logp)
+
+    x_vv_test = np.array([5.0, 4.9, -6.3])
+    scale_mat = scale * np.eye(x_vv_test.shape[0])
+    np.testing.assert_almost_equal(
+        logp.eval({x_vv: x_vv_test}),
+        sp.stats.multivariate_normal.logpdf(
+            x_vv_test,
+            shift + mu * scale,
+            scale_mat @ cov @ scale_mat.T,
+        ),
+    )
