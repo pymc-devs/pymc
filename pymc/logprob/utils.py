@@ -37,7 +37,17 @@
 import warnings
 
 from copy import copy
-from typing import Callable, Dict, Generator, Iterable, List, Optional, Set, Tuple
+from typing import (
+    Callable,
+    Dict,
+    Generator,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+)
 
 import numpy as np
 
@@ -210,8 +220,11 @@ class CheckParameterValue(CheckAndRaise):
     Raises `ParameterValueError` if the check is not True.
     """
 
-    def __init__(self, msg=""):
+    __props__ = ("msg", "exc_type", "can_be_replaced_by_ninf")
+
+    def __init__(self, msg: str = "", can_be_replaced_by_ninf: bool = False):
         super().__init__(ParameterValueError, msg)
+        self.can_be_replaced_by_ninf = can_be_replaced_by_ninf
 
     def __str__(self):
         return f"Check{{{self.msg}}}"
@@ -262,7 +275,7 @@ def diracdelta_logprob(op, values, *inputs, **kwargs):
 def ignore_logprob(rv: TensorVariable) -> TensorVariable:
     """Return a duplicated variable that is ignored when creating logprob graphs
 
-    This is used in SymbolicDistributions that use other RVs as inputs but account
+    This is used in by MeasurableRVs that use other RVs as inputs but account
     for their logp terms explicitly.
 
     If the variable is already ignored, it is returned directly.
@@ -272,6 +285,7 @@ def ignore_logprob(rv: TensorVariable) -> TensorVariable:
     op_type = type(node.op)
     if op_type.__name__.startswith(prefix):
         return rv
+    # By default `assign_custom_measurable_outputs` makes all outputs unmeasurable
     new_node = assign_custom_measurable_outputs(node, type_prefix=prefix)
     return new_node.outputs[node.outputs.index(rv)]
 
@@ -294,3 +308,32 @@ def reconsider_logprob(rv: TensorVariable) -> TensorVariable:
     new_node.op = copy(new_node.op)
     new_node.op.__class__ = original_op_type
     return new_node.outputs[node.outputs.index(rv)]
+
+
+def ignore_logprob_multiple_vars(
+    vars: Sequence[TensorVariable], rvs_to_values: Dict[TensorVariable, TensorVariable]
+) -> List[TensorVariable]:
+    """Return duplicated variables that are ignored when creating logprob graphs.
+
+    This function keeps any interdependencies between variables intact, after
+    making each "unmeasurable", whereas a sequential call to `ignore_logprob`
+    would not do this correctly.
+    """
+    from pymc.pytensorf import _replace_rvs_in_graphs
+
+    measurable_vars_to_unmeasurable_vars = {
+        measurable_var: ignore_logprob(measurable_var) for measurable_var in vars
+    }
+
+    def replacement_fn(var, replacements):
+        if var in measurable_vars_to_unmeasurable_vars:
+            replacements[var] = measurable_vars_to_unmeasurable_vars[var]
+        # We don't want to clone valued nodes. Assigning a var to itself in the
+        # replacements prevents this
+        elif var in rvs_to_values:
+            replacements[var] = var
+
+        return []
+
+    unmeasurable_vars, _ = _replace_rvs_in_graphs(graphs=vars, replacement_fn=replacement_fn)
+    return unmeasurable_vars

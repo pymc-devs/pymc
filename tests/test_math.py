@@ -17,7 +17,7 @@ import warnings
 import numpy as np
 import numpy.testing as npt
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 from pymc.math import (
@@ -49,7 +49,7 @@ def test_kronecker():
     [a, b, c] = [np.random.rand(3, 3 + i) for i in range(3)]
 
     custom = kronecker(a, b, c)  # Custom version
-    nested = at.slinalg.kron(a, at.slinalg.kron(b, c))
+    nested = pt.slinalg.kron(a, pt.slinalg.kron(b, c))
     np.testing.assert_array_almost_equal(custom.eval(), nested.eval())  # Standard nested version
 
 
@@ -104,7 +104,7 @@ def test_kron_dot():
     x = np.random.rand(tot_size).reshape((tot_size, 1))
     # Construct entire kronecker product then multiply
     big = kronecker(*Ks)
-    slow_ans = at.dot(big, x)
+    slow_ans = pt.dot(big, x)
     # Use tricks to avoid construction of entire kronecker product
     fast_ans = kron_dot(Ks, x)
     np.testing.assert_array_almost_equal(slow_ans.eval(), fast_ans.eval())
@@ -119,7 +119,7 @@ def test_kron_solve_lower():
     x = np.random.rand(tot_size).reshape((tot_size, 1))
     # Construct entire kronecker product then solve
     big = kronecker(*Ls)
-    slow_ans = at.slinalg.solve_triangular(big, x, lower=True)
+    slow_ans = pt.slinalg.solve_triangular(big, x, lower=True)
     # Use tricks to avoid construction of entire kronecker product
     fast_ans = kron_solve_lower(Ls, x)
     np.testing.assert_array_almost_equal(slow_ans.eval(), fast_ans.eval())
@@ -147,7 +147,7 @@ def test_log1mexp():
             0.0,
         ]
     )
-    actual = at.log1mexp(-vals).eval()
+    actual = pt.log1mexp(-vals).eval()
     npt.assert_allclose(actual, expected)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
@@ -166,7 +166,7 @@ def test_log1mexp_numpy_no_warning():
 
 
 def test_log1mexp_numpy_integer_input():
-    assert np.isclose(log1mexp_numpy(-2, negative_input=True), at.log1mexp(-2).eval())
+    assert np.isclose(log1mexp_numpy(-2, negative_input=True), pt.log1mexp(-2).eval())
 
 
 def test_log1mexp_deprecation_warnings():
@@ -240,11 +240,11 @@ class TestLogDet(SeededTest):
 
 def test_expand_packed_triangular():
     with pytest.raises(ValueError):
-        x = at.matrix("x")
+        x = pt.matrix("x")
         x.tag.test_value = np.array([[1.0]], dtype=pytensor.config.floatX)
         expand_packed_triangular(5, x)
     N = 5
-    packed = at.vector("packed")
+    packed = pt.vector("packed")
     packed.tag.test_value = floatX(np.zeros(N * (N + 1) // 2))
     with pytest.raises(TypeError):
         expand_packed_triangular(packed.shape[0], packed)
@@ -281,14 +281,14 @@ def test_invlogit_deprecation_warning():
 @pytest.mark.parametrize(
     "pytensor_function, pymc_wrapper",
     [
-        (at.special.softmax, softmax),
-        (at.special.log_softmax, log_softmax),
+        (pt.special.softmax, softmax),
+        (pt.special.log_softmax, log_softmax),
     ],
 )
 def test_softmax_logsoftmax_no_warnings(pytensor_function, pymc_wrapper):
     """Test that wrappers for pytensor functions do not issue Warnings"""
 
-    vector = at.vector("vector")
+    vector = pt.vector("vector")
     with pytest.warns(Warning) as record:
         pytensor_function(vector)
     assert {w.category for w in record.list} == {UserWarning, FutureWarning}

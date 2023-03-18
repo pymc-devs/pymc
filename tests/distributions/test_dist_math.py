@@ -14,7 +14,7 @@
 import numpy as np
 import numpy.testing as npt
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.special
 
@@ -46,16 +46,16 @@ from tests.helpers import verify_grad
     [
         ([], True),
         ([True], True),
-        ([at.ones(10)], True),
-        ([at.ones(10), 5 * at.ones(101)], True),
-        ([np.ones(10), 5 * at.ones(101)], True),
-        ([np.ones(10), True, 5 * at.ones(101)], True),
-        ([np.array([1, 2, 3]), True, 5 * at.ones(101)], True),
+        ([pt.ones(10)], True),
+        ([pt.ones(10), 5 * pt.ones(101)], True),
+        ([np.ones(10), 5 * pt.ones(101)], True),
+        ([np.ones(10), True, 5 * pt.ones(101)], True),
+        ([np.array([1, 2, 3]), True, 5 * pt.ones(101)], True),
         ([False], False),
-        ([at.zeros(10)], False),
+        ([pt.zeros(10)], False),
         ([True, False], False),
-        ([np.array([0, -1]), at.ones(60)], False),
-        ([np.ones(10), False, 5 * at.ones(101)], False),
+        ([np.array([0, -1]), pt.ones(60)], False),
+        ([np.ones(10), False, 5 * pt.ones(101)], False),
     ],
 )
 def test_check_parameters(conditions, succeeds):
@@ -68,7 +68,7 @@ def test_check_parameters(conditions, succeeds):
 
 
 def test_check_parameters_shape():
-    conditions = [True, at.ones(10), at.ones(5)]
+    conditions = [True, pt.ones(10), pt.ones(5)]
     assert check_parameters(1, *conditions).eval().shape == ()
 
 
@@ -81,11 +81,11 @@ class MultinomialA(Discrete):
 
     def logp(value, n, p):
         return check_parameters(
-            factln(n) - factln(value).sum() + (value * at.log(p)).sum(),
+            factln(n) - factln(value).sum() + (value * pt.log(p)).sum(),
             value >= 0,
             0 <= p,
             p <= 1,
-            at.isclose(p.sum(), 1),
+            pt.isclose(p.sum(), 1),
         )
 
 
@@ -98,11 +98,11 @@ class MultinomialB(Discrete):
 
     def logp(value, n, p):
         return check_parameters(
-            factln(n) - factln(value).sum() + (value * at.log(p)).sum(),
-            at.all(value >= 0),
-            at.all(0 <= p),
-            at.all(p <= 1),
-            at.isclose(p.sum(), 1),
+            factln(n) - factln(value).sum() + (value * pt.log(p)).sum(),
+            pt.all(value >= 0),
+            pt.all(0 <= p),
+            pt.all(p <= 1),
+            pt.isclose(p.sum(), 1),
         )
 
 
@@ -129,10 +129,10 @@ class TestMvNormalLogp:
 
         chol_val = floatX(np.array([[1, 0.9], [0, 2]]))
         cov_val = floatX(np.dot(chol_val, chol_val.T))
-        cov = at.matrix("cov")
+        cov = pt.matrix("cov")
         cov.tag.test_value = cov_val
         delta_val = floatX(np.random.randn(5, 2))
-        delta = at.matrix("delta")
+        delta = pt.matrix("delta")
         delta.tag.test_value = delta_val
         expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
         expect = expect.logpdf(delta_val).sum()
@@ -146,13 +146,13 @@ class TestMvNormalLogp:
         np.random.seed(42)
 
         def func(chol_vec, delta):
-            chol = at.stack(
+            chol = pt.stack(
                 [
-                    at.stack([at.exp(0.1 * chol_vec[0]), 0]),
-                    at.stack([chol_vec[1], 2 * at.exp(chol_vec[2])]),
+                    pt.stack([pt.exp(0.1 * chol_vec[0]), 0]),
+                    pt.stack([chol_vec[1], 2 * pt.exp(chol_vec[2])]),
                 ]
             )
-            cov = at.dot(chol, chol.T)
+            cov = pt.dot(chol, chol.T)
             return MvNormalLogp()(cov, delta)
 
         chol_vec_val = floatX(np.array([0.5, 1.0, -0.1]))
@@ -165,21 +165,21 @@ class TestMvNormalLogp:
 
     @pytensor.config.change_flags(compute_test_value="ignore")
     def test_hessian(self):
-        chol_vec = at.vector("chol_vec")
+        chol_vec = pt.vector("chol_vec")
         chol_vec.tag.test_value = floatX(np.array([0.1, 2, 3]))
-        chol = at.stack(
+        chol = pt.stack(
             [
-                at.stack([at.exp(0.1 * chol_vec[0]), 0]),
-                at.stack([chol_vec[1], 2 * at.exp(chol_vec[2])]),
+                pt.stack([pt.exp(0.1 * chol_vec[0]), 0]),
+                pt.stack([chol_vec[1], 2 * pt.exp(chol_vec[2])]),
             ]
         )
-        cov = at.dot(chol, chol.T)
-        delta = at.matrix("delta")
+        cov = pt.dot(chol, chol.T)
+        delta = pt.matrix("delta")
         delta.tag.test_value = floatX(np.ones((5, 2)))
         logp = MvNormalLogp()(cov, delta)
-        g_cov, g_delta = at.grad(logp, [cov, delta])
+        g_cov, g_delta = pt.grad(logp, [cov, delta])
         # TODO: What's the test?  Something needs to be asserted.
-        at.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
+        pt.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
 
 
 class TestSplineWrapper:
@@ -195,10 +195,10 @@ class TestSplineWrapper:
         x = np.linspace(0, 1, 100)
         y = x * x
         spline = SplineWrapper(interpolate.InterpolatedUnivariateSpline(x, y, k=1))
-        x_var = at.dscalar("x")
-        (g_x,) = at.grad(spline(x_var), [x_var])
+        x_var = pt.dscalar("x")
+        (g_x,) = pt.grad(spline(x_var), [x_var])
         with pytest.raises(NotImplementedError):
-            at.grad(g_x, [x_var])
+            pt.grad(g_x, [x_var])
 
 
 class TestI0e:
@@ -224,8 +224,8 @@ def check_vals(fn1, fn2, *args):
 
 
 def test_multigamma():
-    x = at.vector("x")
-    p = at.scalar("p")
+    x = pt.vector("x")
+    p = pt.scalar("p")
 
     xvals = [np.array([v], dtype=config.floatX) for v in [0.1, 2, 5, 10, 50, 100]]
 
@@ -243,4 +243,4 @@ def test_multigamma():
 def test_incomplete_beta_deprecation():
     with pytest.warns(FutureWarning, match="incomplete_beta has been deprecated"):
         res = incomplete_beta(3, 5, 0.5).eval()
-    assert np.isclose(res, at.betainc(3, 5, 0.5).eval())
+    assert np.isclose(res, pt.betainc(3, 5, 0.5).eval())

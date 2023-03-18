@@ -17,7 +17,7 @@ import functools as ft
 import numpy as np
 import numpy.testing as npt
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.special as sp
 import scipy.stats as st
@@ -43,6 +43,7 @@ from pymc.testing import (
     Runif,
     Unit,
     assert_moment_is_expected,
+    check_icdf,
     check_logcdf,
     check_logp,
     continuous_random_tester,
@@ -159,14 +160,6 @@ def laplace_asymmetric_logpdf(value, kappa, b, mu):
     return lPx
 
 
-def beta_mu_sigma(value, mu, sigma):
-    kappa = mu * (1 - mu) / sigma**2 - 1
-    if kappa > 0:
-        return st.beta.logpdf(value, mu * kappa, (1 - mu) * kappa)
-    else:
-        return -np.inf
-
-
 class TestMatchesScipy:
     def test_uniform(self):
         check_logp(
@@ -278,6 +271,11 @@ class TestMatchesScipy:
             lambda value, mu, sigma: st.norm.logcdf(value, mu, sigma),
             decimal=select_by_precision(float64=6, float32=1),
         )
+        check_icdf(
+            pm.Normal,
+            {"mu": R, "sigma": Rplus},
+            lambda q, mu, sigma: st.norm.ppf(q, mu, sigma),
+        )
 
     def test_half_normal(self):
         check_logp(
@@ -356,9 +354,11 @@ class TestMatchesScipy:
         # http://www.gamlss.org/.
         with pm.Model() as model:
             pm.Wald("wald", mu=mu, lam=lam, phi=phi, alpha=alpha, transform=None)
-        pt = {"wald": value}
+        point = {"wald": value}
         decimals = select_by_precision(float64=6, float32=1)
-        npt.assert_almost_equal(model.compile_logp()(pt), logp, decimal=decimals, err_msg=str(pt))
+        npt.assert_almost_equal(
+            model.compile_logp()(point), logp, decimal=decimals, err_msg=str(point)
+        )
 
     def test_beta_logp(self):
         check_logp(
@@ -367,10 +367,18 @@ class TestMatchesScipy:
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: st.beta.logpdf(value, alpha, beta),
         )
+
+        def beta_mu_sigma(value, mu, sigma):
+            kappa = mu * (1 - mu) / sigma**2 - 1
+            return st.beta.logpdf(value, mu * kappa, (1 - mu) * kappa)
+
+        # The mu/sigma parametrization is not always valid
+        safe_mu_domain = Domain([0, 0.3, 0.5, 0.8, 1])
+        safe_sigma_domain = Domain([0, 0.05, 0.1, np.inf])
         check_logp(
             pm.Beta,
             Unit,
-            {"mu": Unit, "sigma": Rplus},
+            {"mu": safe_mu_domain, "sigma": safe_sigma_domain},
             beta_mu_sigma,
         )
 
@@ -881,11 +889,11 @@ class TestMatchesScipy:
         tau = np.array(2)
         npt.assert_almost_equal(get_tau_sigma(tau=tau), [tau, tau**-0.5])
 
-        tau, _ = get_tau_sigma(sigma=at.constant(-2))
+        tau, _ = get_tau_sigma(sigma=pt.constant(-2))
         with pytest.raises(ParameterValueError):
             tau.eval()
 
-        _, sigma = get_tau_sigma(tau=at.constant(-2))
+        _, sigma = get_tau_sigma(tau=pt.constant(-2))
         with pytest.raises(ParameterValueError):
             sigma.eval()
 
@@ -915,12 +923,12 @@ class TestMatchesScipy:
         See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/."""
         with pm.Model() as model:
             pm.ExGaussian("eg", mu=mu, sigma=sigma, nu=nu)
-        pt = {"eg": value}
+        point = {"eg": value}
         npt.assert_almost_equal(
-            model.compile_logp()(pt),
+            model.compile_logp()(point),
             logp,
             decimal=select_by_precision(float64=6, float32=2),
-            err_msg=str(pt),
+            err_msg=str(point),
         )
 
 
@@ -1503,6 +1511,10 @@ class TestMoments:
         with pm.Model() as model:
             pm.Rice("x", nu=nu, sigma=sigma, size=size)
 
+    @pytest.mark.skipif(
+        condition=_polyagamma_not_installed,
+        reason="`polyagamma package is not available/installed.",
+    )
     @pytest.mark.parametrize(
         "h, z, size, expected",
         [

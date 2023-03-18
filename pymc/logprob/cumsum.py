@@ -36,18 +36,14 @@
 
 from typing import List, Optional
 
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor.extra_ops import CumOp
 
-from pymc.logprob.abstract import (
-    MeasurableVariable,
-    _logprob,
-    assign_custom_measurable_outputs,
-    logprob,
-)
+from pymc.logprob.abstract import MeasurableVariable, _logprob, logprob
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
+from pymc.logprob.utils import ignore_logprob
 
 
 class MeasurableCumsum(CumOp):
@@ -62,13 +58,13 @@ def logprob_cumsum(op, values, base_rv, **kwargs):
     """Compute the log-likelihood graph for a `Cumsum`."""
     (value,) = values
 
-    value_diff = at.diff(value, axis=op.axis)
-    value_diff = at.concatenate(
+    value_diff = pt.diff(value, axis=op.axis)
+    value_diff = pt.concatenate(
         (
             # Take first element of axis and add a broadcastable dimension so
             # that it can be concatenated with the rest of value_diff
-            at.shape_padaxis(
-                at.take(value, 0, axis=op.axis),
+            pt.shape_padaxis(
+                pt.take(value, 0, axis=op.axis),
                 axis=op.axis,
             ),
             value_diff,
@@ -112,7 +108,7 @@ def find_measurable_cumsums(fgraph, node) -> Optional[List[MeasurableCumsum]]:
 
     new_op = MeasurableCumsum(axis=node.op.axis or 0, mode="add")
     # Make base_var unmeasurable
-    unmeasurable_base_rv = assign_custom_measurable_outputs(base_rv.owner)
+    unmeasurable_base_rv = ignore_logprob(base_rv)
     new_rv = new_op.make_node(unmeasurable_base_rv).default_output()
     new_rv.name = rv.name
 

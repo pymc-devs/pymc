@@ -94,11 +94,11 @@ Examples
 >>> from lasagne.updates import sgd, apply_momentum
 >>> l_in = InputLayer((100, 20))
 >>> l1 = DenseLayer(l_in, num_units=3, nonlinearity=softmax)
->>> x = at.matrix('x')  # shp: num_batch x num_features
->>> y = at.ivector('y') # shp: num_batch
+>>> x = pt.matrix('x')  # shp: num_batch x num_features
+>>> y = pt.ivector('y') # shp: num_batch
 >>> l_out = get_output(l1, x)
 >>> params = lasagne.layers.get_all_params(l1)
->>> loss = at.mean(at.nnet.categorical_crossentropy(l_out, y))
+>>> loss = pt.mean(pt.nnet.categorical_crossentropy(l_out, y))
 >>> updates_sgd = sgd(loss, params, learning_rate=0.0001)
 >>> updates = apply_momentum(updates_sgd, params, momentum=0.9)
 >>> train_function = pytensor.function([x, y], updates=updates)
@@ -113,7 +113,7 @@ from functools import partial
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 import pymc as pm
 
@@ -533,7 +533,7 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
         accu = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
         accu_new = accu + grad**2
         updates[accu] = accu_new
-        updates[param] = param - (learning_rate * grad / at.sqrt(accu_new + epsilon))
+        updates[param] = param - (learning_rate * grad / pt.sqrt(accu_new + epsilon))
 
     return updates
 
@@ -573,13 +573,13 @@ def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon
         accu = pytensor.shared(np.zeros(value.shape + (n_win,), dtype=value.dtype))
 
         # Append squared gradient vector to accu_new
-        accu_new = at.set_subtensor(accu[..., i_int], grad**2)
-        i_new = at.switch((i + 1) < n_win, i + 1, 0)
+        accu_new = pt.set_subtensor(accu[..., i_int], grad**2)
+        i_new = pt.switch((i + 1) < n_win, i + 1, 0)
         updates[accu] = accu_new
         updates[i] = i_new
 
         accu_sum = accu_new.sum(axis=-1)
-        updates[param] = param - (learning_rate * grad / at.sqrt(accu_sum + epsilon))
+        updates[param] = param - (learning_rate * grad / pt.sqrt(accu_sum + epsilon))
     return updates
 
 
@@ -652,14 +652,14 @@ def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon
     updates = OrderedDict()
 
     # Using pytensor constant to prevent upcasting of float32
-    one = at.constant(1)
+    one = pt.constant(1)
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
         accu = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
         accu_new = rho * accu + (one - rho) * grad**2
         updates[accu] = accu_new
-        updates[param] = param - (learning_rate * grad / at.sqrt(accu_new + epsilon))
+        updates[param] = param - (learning_rate * grad / pt.sqrt(accu_new + epsilon))
 
     return updates
 
@@ -742,7 +742,7 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
     updates = OrderedDict()
 
     # Using pytensor constant to prevent upcasting of float32
-    one = at.constant(1)
+    one = pt.constant(1)
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
@@ -758,7 +758,7 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
         updates[accu] = accu_new
 
         # compute parameter update, using the 'old' delta_accu
-        update = grad * at.sqrt(delta_accu + epsilon) / at.sqrt(accu_new + epsilon)
+        update = grad * pt.sqrt(delta_accu + epsilon) / pt.sqrt(accu_new + epsilon)
         updates[param] = param - learning_rate * update
 
         # update delta_accu (as accu, but accumulating updates)
@@ -833,10 +833,10 @@ def adam(
     updates = OrderedDict()
 
     # Using pytensor constant to prevent upcasting of float32
-    one = at.constant(1)
+    one = pt.constant(1)
 
     t = t_prev + 1
-    a_t = learning_rate * at.sqrt(one - beta2**t) / (one - beta1**t)
+    a_t = learning_rate * pt.sqrt(one - beta2**t) / (one - beta1**t)
 
     for param, g_t in zip(params, all_grads):
         value = param.get_value(borrow=True)
@@ -845,7 +845,7 @@ def adam(
 
         m_t = beta1 * m_prev + (one - beta1) * g_t
         v_t = beta2 * v_prev + (one - beta2) * g_t**2
-        step = a_t * m_t / (at.sqrt(v_t) + epsilon)
+        step = a_t * m_t / (pt.sqrt(v_t) + epsilon)
 
         updates[m_prev] = m_t
         updates[v_prev] = v_t
@@ -917,7 +917,7 @@ def adamax(
     updates = OrderedDict()
 
     # Using pytensor constant to prevent upcasting of float32
-    one = at.constant(1)
+    one = pt.constant(1)
 
     t = t_prev + 1
     a_t = learning_rate / (one - beta1**t)
@@ -928,7 +928,7 @@ def adamax(
         u_prev = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
 
         m_t = beta1 * m_prev + (one - beta1) * g_t
-        u_t = at.maximum(beta2 * u_prev, abs(g_t))
+        u_t = pt.maximum(beta2 * u_prev, abs(g_t))
         step = a_t * m_t / (u_t + epsilon)
 
         updates[m_prev] = m_t
@@ -1010,8 +1010,8 @@ def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
         )
 
     dtype = np.dtype(pytensor.config.floatX).type
-    norms = at.sqrt(at.sum(at.sqr(tensor_var), axis=sum_over, keepdims=True))
-    target_norms = at.clip(norms, 0, dtype(max_norm))
+    norms = pt.sqrt(pt.sum(pt.sqr(tensor_var), axis=sum_over, keepdims=True))
+    target_norms = pt.clip(norms, 0, dtype(max_norm))
     constrained_output = tensor_var * (target_norms / (dtype(epsilon) + norms))
 
     return constrained_output
@@ -1051,14 +1051,14 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7, return_norm=False
     >>> from lasagne.layers import InputLayer, DenseLayer
     >>> import lasagne
     >>> from lasagne.updates import sgd, total_norm_constraint
-    >>> x = at.matrix()
-    >>> y = at.ivector()
+    >>> x = pt.matrix()
+    >>> y = pt.ivector()
     >>> l_in = InputLayer((5, 10))
-    >>> l1 = DenseLayer(l_in, num_units=7, nonlinearity=at.special.softmax)
+    >>> l1 = DenseLayer(l_in, num_units=7, nonlinearity=pt.special.softmax)
     >>> output = lasagne.layers.get_output(l1, x)
-    >>> cost = at.mean(at.nnet.categorical_crossentropy(output, y))
+    >>> cost = pt.mean(pt.nnet.categorical_crossentropy(output, y))
     >>> all_params = lasagne.layers.get_all_params(l1)
-    >>> all_grads = at.grad(cost, all_params)
+    >>> all_grads = pt.grad(cost, all_params)
     >>> scaled_grads = total_norm_constraint(all_grads, 5)
     >>> updates = sgd(scaled_grads, all_params, learning_rate=0.1)
 
@@ -1072,9 +1072,9 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7, return_norm=False
        learning with neural networks. In Advances in Neural Information
        Processing Systems (pp. 3104-3112).
     """
-    norm = at.sqrt(sum(at.sum(tensor**2) for tensor in tensor_vars))
+    norm = pt.sqrt(sum(pt.sum(tensor**2) for tensor in tensor_vars))
     dtype = np.dtype(pytensor.config.floatX).type
-    target_norm = at.clip(norm, 0, dtype(max_norm))
+    target_norm = pt.clip(norm, 0, dtype(max_norm))
     multiplier = target_norm / (dtype(epsilon) + norm)
     tensor_vars_scaled = [step * multiplier for step in tensor_vars]
 

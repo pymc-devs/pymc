@@ -129,7 +129,7 @@ Here is how the example continues:
 
 ```python
 
-import pytensor.tensor as at
+import pytensor.tensor as pt
 from pymc.pytensorf import floatX, intX
 from pymc.distributions.continuous import PositiveContinuous
 from pymc.distributions.dist_math import check_parameters
@@ -146,12 +146,12 @@ class Blah(PositiveContinuous):
     # We pass the standard parametrizations to super().dist
     @classmethod
     def dist(cls, param1, param2=None, alt_param2=None, **kwargs):
-        param1 = at.as_tensor_variable(intX(param1))
+        param1 = pt.as_tensor_variable(intX(param1))
         if param2 is not None and alt_param2 is not None:
             raise ValueError("Only one of param2 and alt_param2 is allowed.")
         if alt_param2 is not None:
             param2 = 1 / alt_param2
-        param2 = at.as_tensor_variable(floatX(param2))
+        param2 = pt.as_tensor_variable(floatX(param2))
 
         # The first value-only argument should be a list of the parameters that
         # the rv_op needs in order to be instantiated
@@ -161,19 +161,19 @@ class Blah(PositiveContinuous):
     # the variable, given the implicit `rv`, `size` and `param1` ... `paramN`.
     # This is typically a "representative" point such as the the mean or mode.
     def moment(rv, size, param1, param2):
-        moment, _ = at.broadcast_arrays(param1, param2)
+        moment, _ = pt.broadcast_arrays(param1, param2)
         if not rv_size_is_none(size):
-            moment = at.full(size, moment)
+            moment = pt.full(size, moment)
         return moment
 
     # Logp returns a symbolic expression for the elementwise log-pdf or log-pmf evaluation
     # of the variable given the `value` of the variable and the parameters `param1` ... `paramN`.
     def logp(value, param1, param2):
-        logp_expression = value * (param1 + at.log(param2))
+        logp_expression = value * (param1 + pt.log(param2))
 
         # A switch is often used to enforce the distribution support domain
-        bounded_logp_expression = at.switch(
-            at.gt(value >= 0),
+        bounded_logp_expression = pt.switch(
+            pt.gt(value >= 0),
             logp_expression,
             -np.inf,
         )

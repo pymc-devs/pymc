@@ -18,7 +18,7 @@ import numpy.ma as ma
 import numpy.testing as npt
 import pandas as pd
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.sparse as sps
 
@@ -62,7 +62,7 @@ from pymc.vartypes import int_types
 )
 def test_pd_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
     df = pd.DataFrame(np_array)
-    np.testing.assert_array_equal(x=at.as_tensor_variable(x=df).eval(), y=np_array)
+    np.testing.assert_array_equal(x=pt.as_tensor_variable(x=df).eval(), y=np_array)
 
 
 @pytest.mark.parametrize(
@@ -71,7 +71,7 @@ def test_pd_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
 )
 def test_pd_series_as_tensor_variable(np_array: np.ndarray) -> None:
     df = pd.Series(np_array)
-    np.testing.assert_array_equal(x=at.as_tensor_variable(x=df).eval(), y=np_array)
+    np.testing.assert_array_equal(x=pt.as_tensor_variable(x=df).eval(), y=np_array)
 
 
 def test_pd_as_tensor_variable_multiindex() -> None:
@@ -82,7 +82,7 @@ def test_pd_as_tensor_variable_multiindex() -> None:
     df = pd.DataFrame({"A": [12.0, 80.0, 30.0, 20.0], "B": [120.0, 700.0, 30.0, 20.0]}, index=index)
     np_array = np.array([[12.0, 80.0, 30.0, 20.0], [120.0, 700.0, 30.0, 20.0]]).T
     assert isinstance(df.index, pd.MultiIndex)
-    np.testing.assert_array_equal(x=at.as_tensor_variable(x=df).eval(), y=np_array)
+    np.testing.assert_array_equal(x=pt.as_tensor_variable(x=df).eval(), y=np_array)
 
 
 class TestBroadcasting:
@@ -135,10 +135,10 @@ def _make_along_axis_idx(arr_shape, indices, axis):
 
 def test_extract_obs_data():
     with pytest.raises(TypeError):
-        extract_obs_data(at.matrix())
+        extract_obs_data(pt.matrix())
 
     data = np.random.normal(size=(2, 3))
-    data_at = at.as_tensor(data)
+    data_at = pt.as_tensor(data)
     mask = np.random.binomial(1, 0.5, size=(2, 3)).astype(bool)
 
     for val_at in (data_at, pytensor.shared(data)):
@@ -150,8 +150,8 @@ def test_extract_obs_data():
     # AdvancedIncSubtensor check
     data_m = np.ma.MaskedArray(data, mask)
     missing_values = data_at.type()[mask]
-    constant = at.as_tensor(data_m.filled())
-    z_at = at.set_subtensor(constant[mask.nonzero()], missing_values)
+    constant = pt.as_tensor(data_m.filled())
+    z_at = pt.set_subtensor(constant[mask.nonzero()], missing_values)
 
     assert isinstance(z_at.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1))
 
@@ -162,13 +162,13 @@ def test_extract_obs_data():
 
     # AdvancedIncSubtensor1 check
     data = np.random.normal(size=(3,))
-    data_at = at.as_tensor(data)
+    data_at = pt.as_tensor(data)
     mask = np.random.binomial(1, 0.5, size=(3,)).astype(bool)
 
     data_m = np.ma.MaskedArray(data, mask)
     missing_values = data_at.type()[mask]
-    constant = at.as_tensor(data_m.filled())
-    z_at = at.set_subtensor(constant[mask.nonzero()], missing_values)
+    constant = pt.as_tensor(data_m.filled())
+    z_at = pt.set_subtensor(constant[mask.nonzero()], missing_values)
 
     assert isinstance(z_at.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1))
 
@@ -179,7 +179,7 @@ def test_extract_obs_data():
 
     # Cast check
     data = np.array(5)
-    t = at.cast(at.as_tensor(5.0), np.int64)
+    t = pt.cast(pt.as_tensor(5.0), np.int64)
     res = extract_obs_data(t)
 
     assert isinstance(res, np.ndarray)
@@ -197,7 +197,7 @@ def test_convert_observed_data(input_dtype):
     dense_input = np.arange(9).reshape((3, 3)).astype(input_dtype)
 
     input_name = "input_variable"
-    pytensor_graph_input = at.as_tensor(dense_input, name=input_name)
+    pytensor_graph_input = pt.as_tensor(dense_input, name=input_name)
     pandas_input = pd.DataFrame(dense_input)
 
     # All the even numbers are replaced with NaN
@@ -274,14 +274,14 @@ def test_pandas_to_array_pandas_index():
 
 
 def test_walk_model():
-    a = at.vector("a")
+    a = pt.vector("a")
     b = uniform(0.0, a, name="b")
-    c = at.log(b)
+    c = pt.log(b)
     c.name = "c"
-    d = at.vector("d")
+    d = pt.vector("d")
     e = normal(c, d, name="e")
 
-    test_graph = at.exp(e + 1)
+    test_graph = pt.exp(e + 1)
 
     res = list(walk_model((test_graph,)))
     assert a in res
@@ -308,7 +308,7 @@ def test_walk_model():
 class TestCompilePyMC:
     def test_check_bounds_flag(self):
         """Test that CheckParameterValue Ops are replaced or removed when using compile_pymc"""
-        logp = at.ones(3)
+        logp = pt.ones(3)
         cond = np.array([1, 0, 1])
         bound = check_parameters(logp, cond)
 
@@ -325,6 +325,21 @@ class TestCompilePyMC:
         m.check_bounds = True
         with m:
             assert np.all(compile_pymc([], bound)() == -np.inf)
+
+    def test_check_parameters_can_be_replaced_by_ninf(self):
+        expr = pt.vector("expr", shape=(3,))
+        cond = pt.ge(expr, 0)
+
+        final_expr = check_parameters(expr, cond, can_be_replaced_by_ninf=True)
+        fn = compile_pymc([expr], final_expr)
+        np.testing.assert_array_equal(fn(expr=[1, 2, 3]), [1, 2, 3])
+        np.testing.assert_array_equal(fn(expr=[-1, 2, 3]), [-np.inf, -np.inf, -np.inf])
+
+        final_expr = check_parameters(expr, cond, msg="test", can_be_replaced_by_ninf=False)
+        fn = compile_pymc([expr], final_expr)
+        np.testing.assert_array_equal(fn(expr=[1, 2, 3]), [1, 2, 3])
+        with pytest.raises(ParameterValueError, match="test"):
+            fn([-1, 2, 3])
 
     def test_compile_pymc_sets_rng_updates(self):
         rng = pytensor.shared(np.random.default_rng(0))
@@ -370,9 +385,9 @@ class TestCompilePyMC:
         """Test that compile_pymc does not include rngs updates of variables that are inputs
         or ancestors to inputs
         """
-        x = at.random.normal()
-        y = at.random.normal(x)
-        z = at.random.normal(y)
+        x = pt.random.normal()
+        y = pt.random.normal(x)
+        z = pt.random.normal(y)
 
         for inputs, rvs_in_graph in (
             ([], 3),
@@ -400,8 +415,8 @@ class TestCompilePyMC:
             def update(self, node):
                 return {node.inputs[0]: node.inputs[0] + 1}
 
-        dummy_inputs = [at.scalar(), at.scalar()]
-        dummy_outputs = [at.add(*dummy_inputs)]
+        dummy_inputs = [pt.scalar(), pt.scalar()]
+        dummy_outputs = [pt.add(*dummy_inputs)]
         dummy_x = NonSymbolicRV(dummy_inputs, dummy_outputs)(pytensor.shared(1.0), 1.0)
 
         # Check that there are no updates at first
@@ -417,8 +432,8 @@ class TestCompilePyMC:
     def test_random_seed(self):
         seedx = pytensor.shared(np.random.default_rng(1))
         seedy = pytensor.shared(np.random.default_rng(1))
-        x = at.random.normal(rng=seedx)
-        y = at.random.normal(rng=seedy)
+        x = pt.random.normal(rng=seedx)
+        y = pt.random.normal(rng=seedy)
 
         # Shared variables are the same, so outputs will be identical
         f0 = pytensor.function([], [x, y])
@@ -443,8 +458,8 @@ class TestCompilePyMC:
 
     def test_multiple_updates_same_variable(self):
         rng = pytensor.shared(np.random.default_rng(), name="rng")
-        x = at.random.normal(rng=rng)
-        y = at.random.normal(rng=rng)
+        x = pt.random.normal(rng=rng)
+        y = pt.random.normal(rng=rng)
 
         assert compile_pymc([], [x])
         assert compile_pymc([], [y])
@@ -455,7 +470,7 @@ class TestCompilePyMC:
 
 def test_replace_rng_nodes():
     rng = pytensor.shared(np.random.default_rng())
-    x = at.random.normal(rng=rng)
+    x = pt.random.normal(rng=rng)
     x_rng, *x_non_rng_inputs = x.owner.inputs
 
     cloned_x = x.owner.clone().default_output()
@@ -511,8 +526,8 @@ def test_reseed_rngs():
 
 
 def test_constant_fold():
-    x = at.random.normal(size=(5,))
-    y = at.arange(x.size)
+    x = pt.random.normal(size=(5,))
+    y = pt.arange(x.size)
 
     res = constant_fold((y, y.shape))
     assert np.array_equal(res[0], np.arange(5))
@@ -521,8 +536,8 @@ def test_constant_fold():
 
 def test_constant_fold_raises():
     size = pytensor.shared(5)
-    x = at.random.normal(size=(size,))
-    y = at.arange(x.size)
+    x = pt.random.normal(size=(size,))
+    y = pt.arange(x.size)
 
     with pytest.raises(NotConstantValueError):
         constant_fold((y, y.shape))
@@ -551,7 +566,7 @@ class TestReplaceRVsByValues:
             else:
                 b = pm.Uniform("b", 0, a + 1.0, transform=interval)
             c = pm.Normal("c")
-            d = at.log(c + b) + 2.0
+            d = pt.log(c + b) + 2.0
 
         a_value_var = m.rvs_to_values[a]
         assert m.rvs_to_transforms[a] is not None
@@ -569,11 +584,11 @@ class TestReplaceRVsByValues:
                 rvs_to_transforms=m.rvs_to_transforms,
             )
 
-        assert res.owner.op == at.add
+        assert res.owner.op == pt.add
         log_output = res.owner.inputs[0]
-        assert log_output.owner.op == at.log
+        assert log_output.owner.op == pt.log
         log_add_output = res.owner.inputs[0].owner.inputs[0]
-        assert log_add_output.owner.op == at.add
+        assert log_add_output.owner.op == pt.add
         c_output = log_add_output.owner.inputs[0]
 
         # We make sure that the random variables were replaced
@@ -624,12 +639,12 @@ class TestReplaceRVsByValues:
                 rvs_to_transforms=m.rvs_to_transforms,
             )
 
-        assert res.owner.op == at.add
+        assert res.owner.op == pt.add
         assert res.owner.inputs[0] is z_value
         res_y = res.owner.inputs[1]
         # Graph should have be cloned, and therefore y and res_y should have different ids
         assert res_y is not y
-        assert res_y.owner.op == at.random.normal
+        assert res_y.owner.op == pt.random.normal
         assert res_y.owner.inputs[3] is x_value
 
     @pytest.mark.parametrize("test_deprecated_fn", (True, False))
@@ -638,7 +653,7 @@ class TestReplaceRVsByValues:
         # does not change the original rvs in place. See issue #5172
         with pm.Model() as m:
             one = pm.LogNormal("one", mu=0)
-            two = pm.LogNormal("two", mu=at.log(one))
+            two = pm.LogNormal("two", mu=pt.log(one))
 
             # We add potentials or deterministics that are not in topological order
             pm.Potential("two_pot", two)

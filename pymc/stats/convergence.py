@@ -154,17 +154,17 @@ def warn_treedepth(idata: arviz.InferenceData) -> List[SamplerWarning]:
     if sampler_stats is None:
         return []
 
-    treedepth = sampler_stats.get("tree_depth", None)
-    if treedepth is None:
+    rmtd = sampler_stats.get("reached_max_treedepth", None)
+    if rmtd is None:
         return []
 
     warnings = []
-    for c in treedepth.chain:
-        if sum(treedepth.sel(chain=c)) / treedepth.sizes["draw"] > 0.05:
+    for c in rmtd.chain:
+        if sum(rmtd.sel(chain=c)) / rmtd.sizes["draw"] > 0.05:
             warnings.append(
                 SamplerWarning(
                     WarningType.TREEDEPTH,
-                    f"Chain {c} reached the maximum tree depth."
+                    f"Chain {int(c)} reached the maximum tree depth."
                     " Increase `max_treedepth`, increase `target_accept` or reparameterize.",
                     "warn",
                 )

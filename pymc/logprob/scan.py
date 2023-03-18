@@ -39,10 +39,9 @@ from typing import Callable, Dict, Iterable, List, Tuple, cast
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.graph.basic import Variable
-from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.graph.rewriting.db import RewriteDatabaseQuery
@@ -50,7 +49,6 @@ from pytensor.scan.op import Scan
 from pytensor.scan.rewriting import scan_eqopt1, scan_eqopt2
 from pytensor.scan.utils import ScanArgs
 from pytensor.tensor.random.type import RandomType
-from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.subtensor import Subtensor, indices_from_subtensor
 from pytensor.tensor.var import TensorVariable
 from pytensor.updates import OrderedUpdates
@@ -63,11 +61,12 @@ from pymc.logprob.abstract import (
 )
 from pymc.logprob.joint_logprob import factorized_joint_logprob
 from pymc.logprob.rewriting import (
-    PreserveRVMappings,
+    construct_ir_fgraph,
     inc_subtensor_ops,
     logprob_rewrites_db,
     measurable_ir_rewrites_db,
 )
+from pymc.pytensorf import replace_rvs_by_values
 
 
 class MeasurableScan(Scan):
@@ -223,7 +222,7 @@ def convert_outer_out_to_in(
         # slices of the actual outer-inputs (e.g. `out[1:]` instead of `out`
         # when `taps=[-1]`).
         var_slices = [new_outer_input_vars[oo_var][b:e] for b, e in slice_seqs]
-        n_steps = at.min([at.shape(n)[0] for n in var_slices])
+        n_steps = pt.min([pt.shape(n)[0] for n in var_slices])
 
         output_scan_args.n_steps = n_steps
 
@@ -249,8 +248,26 @@ def convert_outer_out_to_in(
     new_inner_out_nit_sot = tuple(output_scan_args.inner_out_nit_sot) + tuple(
         inner_out_fn(remapped_io_to_ii)
     )
-
     output_scan_args.inner_out_nit_sot = list(new_inner_out_nit_sot)
+
+    # Finally, we need to replace any lingering references to the new
+    # internal variables that could be in the recurrent states needed
+    # to compute the new nit_sots
+    traced_outs = (
+        output_scan_args.inner_out_mit_sot
+        + output_scan_args.inner_out_sit_sot
+        + output_scan_args.inner_out_nit_sot
+    )
+    traced_outs = replace_rvs_by_values(traced_outs, rvs_to_values=remapped_io_to_ii)
+    # Update output mappings
+    n_mit_sot = len(output_scan_args.inner_out_mit_sot)
+    output_scan_args.inner_out_mit_sot = traced_outs[:n_mit_sot]
+    offset = n_mit_sot
+    n_sit_sot = len(output_scan_args.inner_out_sit_sot)
+    output_scan_args.inner_out_sit_sot = traced_outs[offset : offset + n_sit_sot]
+    offset += n_sit_sot
+    n_nit_sot = len(output_scan_args.inner_out_nit_sot)
+    output_scan_args.inner_out_nit_sot = traced_outs[offset : offset + n_nit_sot]
 
     return output_scan_args
 
@@ -331,7 +348,10 @@ def logprob_ScanRV(op, values, *inputs, name=None, **kwargs):
     for key, value in updates.items():
         key.default_update = value
 
-    return logp_scan_out
+    # Return only the logp outputs, not any potentially carried states
+    logp_outputs = logp_scan_out[-len(values) :]
+
+    return logp_outputs
 
 
 @node_rewriter([Scan])
@@ -445,7 +465,7 @@ def find_measurable_scans(fgraph, node):
             full_out_shape = tuple(
                 fgraph.shape_feature.get_shape(full_out, i) for i in range(full_out.ndim)
             )
-            new_val_var = at.empty(full_out_shape, dtype=full_out.dtype)
+            new_val_var = pt.empty(full_out_shape, dtype=full_out.dtype)
 
             # Set the parts of this new value variable that applied to the
             # user-specified value variable to the user's value variable
@@ -455,7 +475,7 @@ def find_measurable_scans(fgraph, node):
             # E.g. for a single `-1` TAPS, `s_0T[1:] = s_1T` where `s_0T` is
             # `new_val_var` and `s_1T` is the user-specified value variable
             # that only spans times `t=1` to `t=T`.
-            new_val_var = at.set_subtensor(new_val_var[subtensor_indices], val_var)
+            new_val_var = pt.set_subtensor(new_val_var[subtensor_indices], val_var)
 
             # This is the outer-input that sets `s_0T[i] = taps[i]` where `i`
             # is a TAP index (e.g. a TAP of `-1` maps to index `0` in a vector
@@ -504,19 +524,9 @@ def add_opts_to_inner_graphs(fgraph, node):
     if getattr(node.op.mode, "had_logprob_rewrites", False):
         return None
 
-    inner_fgraph = FunctionGraph(
-        node.op.inner_inputs,
-        node.op.inner_outputs,
-        clone=True,
-        copy_inputs=False,
-        copy_orphans=False,
-        features=[
-            ShapeFeature(),
-            PreserveRVMappings({}),
-        ],
-    )
-
-    logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"])).rewrite(inner_fgraph)
+    inner_rv_values = {out: out.type() for out in node.op.inner_outputs}
+    ir_rewriter = logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"]))
+    inner_fgraph, rv_values, _ = construct_ir_fgraph(inner_rv_values, ir_rewriter=ir_rewriter)
 
     new_outputs = list(inner_fgraph.outputs)
 
@@ -531,11 +541,23 @@ def add_opts_to_inner_graphs(fgraph, node):
 
 
 @_get_measurable_outputs.register(MeasurableScan)
-def _get_measurable_outputs_MeasurableScan(op, node):
-    # TODO: This should probably use `get_random_outer_outputs`
-    # scan_args = ScanArgs.from_node(node)
-    # rv_outer_outs = get_random_outer_outputs(scan_args)
-    return [o for o in node.outputs if not isinstance(o.type, RandomType)]
+def _get_measurable_outputs_MeasurableScan(op: Scan, node):
+    """Collect measurable outputs for Measurable Scans"""
+    inner_out_from_outer_out_map = op.get_oinp_iinp_iout_oout_mappings()["inner_out_from_outer_out"]
+    inner_outs = op.inner_outputs
+
+    # Measurable scan outputs are those whose inner scan output counterparts are also measurable
+    measurable_outputs = []
+    for out_idx, out in enumerate(node.outputs):
+        [inner_out_idx] = inner_out_from_outer_out_map[out_idx]
+        inner_out = inner_outs[inner_out_idx]
+        inner_out_node = inner_out.owner
+        if isinstance(
+            inner_out_node.op, MeasurableVariable
+        ) and inner_out in get_measurable_outputs(inner_out_node.op, inner_out_node):
+            measurable_outputs.append(out)
+
+    return measurable_outputs
 
 
 measurable_ir_rewrites_db.register(

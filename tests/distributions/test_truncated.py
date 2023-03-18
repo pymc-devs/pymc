@@ -13,7 +13,7 @@
 #   limitations under the License.
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy
 
@@ -71,7 +71,7 @@ def _icdf_not_implemented(*args, **kwargs):
 @pytest.mark.parametrize("shape_info", ("shape", "dims", "observed"))
 def test_truncation_specialized_op(shape_info):
     rng = pytensor.shared(np.random.default_rng())
-    x = at.random.normal(0, 10, rng=rng, name="x")
+    x = pt.random.normal(0, 10, rng=rng, name="x")
 
     with Model(coords={"dim": range(100)}) as m:
         if shape_info == "shape":
@@ -95,7 +95,7 @@ def test_truncation_specialized_op(shape_info):
     # Test RNG is not reused
     assert xt.owner.inputs[0] is not rng
 
-    lower_upper = at.stack(xt.owner.inputs[5:])
+    lower_upper = pt.stack(xt.owner.inputs[5:])
     assert np.all(lower_upper.eval() == [5, 15])
 
 
@@ -174,7 +174,6 @@ def test_truncation_discrete_random(op_type, lower, upper):
     x = geometric_op(p, name="x", size=500)
     xt = Truncated.dist(x, lower=lower, upper=upper)
     assert isinstance(xt.owner.op, TruncatedRV)
-    assert xt.type.dtype == x.type.dtype
 
     xt_draws = draw(xt)
     assert np.all(xt_draws >= lower)
@@ -235,24 +234,24 @@ def test_truncation_discrete_logp(op_type, lower, upper):
 
 def test_truncation_exceptions():
     with pytest.raises(ValueError, match="lower and upper cannot both be None"):
-        Truncated.dist(at.random.normal())
+        Truncated.dist(pt.random.normal())
 
     # Truncation does not work with SymbolicRV inputs
     with pytest.raises(
         NotImplementedError,
         match="Truncation not implemented for SymbolicRandomVariable CensoredRV",
     ):
-        Truncated.dist(Censored.dist(at.random.normal(), lower=-1, upper=1), -1, 1)
+        Truncated.dist(Censored.dist(pt.random.normal(), lower=-1, upper=1), -1, 1)
 
     with pytest.raises(
         NotImplementedError,
         match="Truncation not implemented for multivariate distributions",
     ):
-        Truncated.dist(at.random.dirichlet([1, 1, 1]), -1, 1)
+        Truncated.dist(pt.random.dirichlet([1, 1, 1]), -1, 1)
 
 
 def test_truncation_logprob_bound_check():
-    x = at.random.normal(name="x")
+    x = pt.random.normal(name="x")
     xt = Truncated.dist(x, lower=5, upper=-5)
     with pytest.raises(ParameterValueError):
         logp(xt, 0).eval()

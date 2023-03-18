@@ -25,7 +25,7 @@ from typing import Any, Optional, Sequence, Tuple, Union, cast
 import numpy as np
 
 from pytensor import config
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.graph.basic import Variable
 from pytensor.graph.op import Op, compute_test_value
 from pytensor.raise_op import Assert
@@ -38,12 +38,8 @@ from pymc.model import modelcontext
 from pymc.pytensorf import convert_observed_data
 
 __all__ = [
-    "to_tuple",
-    "shapes_broadcasting",
     "broadcast_dist_samples_shape",
-    "get_broadcastable_dist_samples",
-    "broadcast_distribution_samples",
-    "broadcast_dist_samples_to",
+    "to_tuple",
     "rv_size_is_none",
     "change_dist_size",
 ]
@@ -91,47 +87,6 @@ def _check_shape_type(shape):
     return tuple(out)
 
 
-def shapes_broadcasting(*args, raise_exception=False):
-    """Return the shape resulting from broadcasting multiple shapes.
-    Represents numpy's broadcasting rules.
-
-    Parameters
-    ----------
-    *args: array-like of int
-        Tuples or arrays or lists representing the shapes of arrays to be
-        broadcast.
-    raise_exception: bool (optional)
-        Controls whether to raise an exception or simply return `None` if
-        the broadcasting fails.
-
-    Returns
-    -------
-    Resulting shape. If broadcasting is not possible and `raise_exception` is
-    False, then `None` is returned. If `raise_exception` is `True`, a
-    `ValueError` is raised.
-    """
-    x = list(_check_shape_type(args[0])) if args else ()
-    for arg in args[1:]:
-        y = list(_check_shape_type(arg))
-        if len(x) < len(y):
-            x, y = y, x
-        if len(y) > 0:
-            x[-len(y) :] = [
-                j if i == 1 else i if j == 1 else i if i == j else 0
-                for i, j in zip(x[-len(y) :], y)
-            ]
-        if not all(x):
-            if raise_exception:
-                raise ValueError(
-                    "Supplied shapes {} do not broadcast together".format(
-                        ", ".join([f"{a}" for a in args])
-                    )
-                )
-            else:
-                return None
-    return tuple(x)
-
-
 def broadcast_dist_samples_shape(shapes, size=None):
     """Apply shape broadcasting to shape tuples but assuming that the shapes
     correspond to draws from random variables, with the `size` tuple possibly
@@ -152,7 +107,6 @@ def broadcast_dist_samples_shape(shapes, size=None):
     Examples
     --------
     .. code-block:: python
-
         size = 100
         shape0 = (size,)
         shape1 = (size, 5)
@@ -160,9 +114,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
         out = broadcast_dist_samples_shape([shape0, shape1, shape2],
                                            size=size)
         assert out == (size, 4, 5)
-
     .. code-block:: python
-
         size = 100
         shape0 = (size,)
         shape1 = (5,)
@@ -170,9 +122,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
         out = broadcast_dist_samples_shape([shape0, shape1, shape2],
                                            size=size)
         assert out == (size, 4, 5)
-
     .. code-block:: python
-
         size = 100
         shape0 = (1,)
         shape1 = (5,)
@@ -182,7 +132,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
         assert out == (4, 5)
     """
     if size is None:
-        broadcasted_shape = shapes_broadcasting(*shapes)
+        broadcasted_shape = np.broadcast_shapes(*shapes)
         if broadcasted_shape is None:
             raise ValueError(
                 "Cannot broadcast provided shapes {} given size: {}".format(
@@ -195,7 +145,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
     # samples shapes without the size prepend
     sp_shapes = [s[len(_size) :] if _size == s[: min([len(_size), len(s)])] else s for s in shapes]
     try:
-        broadcast_shape = shapes_broadcasting(*sp_shapes, raise_exception=True)
+        broadcast_shape = np.broadcast_shapes(*sp_shapes)
     except ValueError:
         raise ValueError(
             "Cannot broadcast provided shapes {} given size: {}".format(
@@ -215,212 +165,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
         else:
             p_shape = shape
         broadcastable_shapes.append(p_shape)
-    return shapes_broadcasting(*broadcastable_shapes, raise_exception=True)
-
-
-def get_broadcastable_dist_samples(
-    samples, size=None, must_bcast_with=None, return_out_shape=False
-):
-    """Get a view of the samples drawn from distributions which adds new axes
-    in between the `size` prepend and the distribution's `shape`. These views
-    should be able to broadcast the samples from the distrubtions taking into
-    account the `size` (i.e. the number of samples) of the draw, which is
-    prepended to the sample's `shape`. Optionally, one can supply an extra
-    `must_bcast_with` to try to force samples to be able to broadcast with a
-    given shape. A `ValueError` is raised if it is not possible to broadcast
-    the provided samples.
-
-    Parameters
-    ----------
-    samples: Iterable of ndarrays holding the sampled values
-    size: None, int or tuple (optional)
-        size of the sample set requested.
-    must_bcast_with: None, int or tuple (optional)
-        Tuple shape to which the samples must be able to broadcast
-    return_out_shape: bool (optional)
-        If `True`, this function also returns the output's shape and not only
-        samples views.
-
-    Returns
-    -------
-    broadcastable_samples: List of the broadcasted sample arrays
-    broadcast_shape: If `return_out_shape` is `True`, the resulting broadcast
-        shape is returned.
-
-    Examples
-    --------
-    .. code-block:: python
-
-        must_bcast_with = (3, 1, 5)
-        size = 100
-        sample0 = np.random.randn(size)
-        sample1 = np.random.randn(size, 5)
-        sample2 = np.random.randn(size, 4, 5)
-        out = broadcast_dist_samples_to(
-            [sample0, sample1, sample2],
-            size=size,
-            must_bcast_with=must_bcast_with,
-        )
-        assert out[0].shape == (size, 1, 1, 1)
-        assert out[1].shape == (size, 1, 1, 5)
-        assert out[2].shape == (size, 1, 4, 5)
-        assert np.all(sample0[:, None, None, None] == out[0])
-        assert np.all(sample1[:, None, None] == out[1])
-        assert np.all(sample2[:, None] == out[2])
-
-    .. code-block:: python
-
-        size = 100
-        must_bcast_with = (3, 1, 5)
-        sample0 = np.random.randn(size)
-        sample1 = np.random.randn(5)
-        sample2 = np.random.randn(4, 5)
-        out = broadcast_dist_samples_to(
-            [sample0, sample1, sample2],
-            size=size,
-            must_bcast_with=must_bcast_with,
-        )
-        assert out[0].shape == (size, 1, 1, 1)
-        assert out[1].shape == (5,)
-        assert out[2].shape == (4, 5)
-        assert np.all(sample0[:, None, None, None] == out[0])
-        assert np.all(sample1 == out[1])
-        assert np.all(sample2 == out[2])
-    """
-    samples = [np.asarray(p) for p in samples]
-    _size = to_tuple(size)
-    must_bcast_with = to_tuple(must_bcast_with)
-    # Raw samples shapes
-    p_shapes = [p.shape for p in samples] + [_check_shape_type(must_bcast_with)]
-    out_shape = broadcast_dist_samples_shape(p_shapes, size=size)
-    # samples shapes without the size prepend
-    sp_shapes = [
-        s[len(_size) :] if _size == s[: min([len(_size), len(s)])] else s for s in p_shapes
-    ]
-    broadcast_shape = shapes_broadcasting(*sp_shapes, raise_exception=True)
-    broadcastable_samples = []
-    for param, p_shape, sp_shape in zip(samples, p_shapes, sp_shapes):
-        if _size == p_shape[: min([len(_size), len(p_shape)])]:
-            # If size prepends the shape, then we have to add broadcasting axis
-            # in the middle
-            slicer_head = [slice(None)] * len(_size)
-            slicer_tail = [np.newaxis] * (len(broadcast_shape) - len(sp_shape)) + [
-                slice(None)
-            ] * len(sp_shape)
-        else:
-            # If size does not prepend the shape, then we have leave the
-            # parameter as is
-            slicer_head = []
-            slicer_tail = [slice(None)] * len(sp_shape)
-        broadcastable_samples.append(param[tuple(slicer_head + slicer_tail)])
-    if return_out_shape:
-        return broadcastable_samples, out_shape
-    else:
-        return broadcastable_samples
-
-
-def broadcast_distribution_samples(samples, size=None):
-    """Broadcast samples drawn from distributions taking into account the
-    size (i.e. the number of samples) of the draw, which is prepended to
-    the sample's shape.
-
-    Parameters
-    ----------
-    samples: Iterable of ndarrays holding the sampled values
-    size: None, int or tuple (optional)
-        size of the sample set requested.
-
-    Returns
-    -------
-    List of broadcasted sample arrays
-
-    Examples
-    --------
-    .. code-block:: python
-
-        size = 100
-        sample0 = np.random.randn(size)
-        sample1 = np.random.randn(size, 5)
-        sample2 = np.random.randn(size, 4, 5)
-        out = broadcast_distribution_samples([sample0, sample1, sample2],
-                                             size=size)
-        assert all((o.shape == (size, 4, 5) for o in out))
-        assert np.all(sample0[:, None, None] == out[0])
-        assert np.all(sample1[:, None, :] == out[1])
-        assert np.all(sample2 == out[2])
-
-    .. code-block:: python
-
-        size = 100
-        sample0 = np.random.randn(size)
-        sample1 = np.random.randn(5)
-        sample2 = np.random.randn(4, 5)
-        out = broadcast_distribution_samples([sample0, sample1, sample2],
-                                             size=size)
-        assert all((o.shape == (size, 4, 5) for o in out))
-        assert np.all(sample0[:, None, None] == out[0])
-        assert np.all(sample1 == out[1])
-        assert np.all(sample2 == out[2])
-    """
-    return np.broadcast_arrays(*get_broadcastable_dist_samples(samples, size=size))
-
-
-def broadcast_dist_samples_to(to_shape, samples, size=None):
-    """Broadcast samples drawn from distributions to a given shape, taking into
-    account the size (i.e. the number of samples) of the draw, which is
-    prepended to the sample's shape.
-
-    Parameters
-    ----------
-    to_shape: Tuple shape onto which the samples must be able to broadcast
-    samples: Iterable of ndarrays holding the sampled values
-    size: None, int or tuple (optional)
-        size of the sample set requested.
-
-    Returns
-    -------
-    List of the broadcasted sample arrays
-
-    Examples
-    --------
-    .. code-block:: python
-
-        to_shape = (3, 1, 5)
-        size = 100
-        sample0 = np.random.randn(size)
-        sample1 = np.random.randn(size, 5)
-        sample2 = np.random.randn(size, 4, 5)
-        out = broadcast_dist_samples_to(
-            to_shape,
-            [sample0, sample1, sample2],
-            size=size
-        )
-        assert np.all((o.shape == (size, 3, 4, 5) for o in out))
-        assert np.all(sample0[:, None, None, None] == out[0])
-        assert np.all(sample1[:, None, None] == out[1])
-        assert np.all(sample2[:, None] == out[2])
-
-    .. code-block:: python
-
-        size = 100
-        to_shape = (3, 1, 5)
-        sample0 = np.random.randn(size)
-        sample1 = np.random.randn(5)
-        sample2 = np.random.randn(4, 5)
-        out = broadcast_dist_samples_to(
-            to_shape,
-            [sample0, sample1, sample2],
-            size=size
-        )
-        assert np.all((o.shape == (size, 3, 4, 5) for o in out))
-        assert np.all(sample0[:, None, None, None] == out[0])
-        assert np.all(sample1 == out[1])
-        assert np.all(sample2 == out[2])
-    """
-    samples, to_shape = get_broadcastable_dist_samples(
-        samples, size=size, must_bcast_with=to_shape, return_out_shape=True
-    )
-    return [np.broadcast_to(o, to_shape) for o in samples]
+    return np.broadcast_shapes(*broadcastable_shapes)
 
 
 # User-provided can be lazily specified as scalars
@@ -546,7 +291,7 @@ def find_size(
 
 
 def rv_size_is_none(size: Variable) -> bool:
-    """Check whether an rv size is None (ie., at.Constant([]))"""
+    """Check whether an rv size is None (ie., pt.Constant([]))"""
     return size.type.shape == (0,)  # type: ignore [attr-defined]
 
 
@@ -626,7 +371,7 @@ def change_rv_size(op, rv, new_size, expand) -> TensorVariable:
 
     # Make sure the new size is a tensor. This dtype-aware conversion helps
     # to not unnecessarily pick up a `Cast` in some cases (see #4652).
-    new_size = at.as_tensor(new_size, ndim=1, dtype="int64")
+    new_size = pt.as_tensor(new_size, ndim=1, dtype="int64")
 
     new_rv = rv_node.op(*dist_params, size=new_size, dtype=dtype)
 
@@ -662,7 +407,7 @@ def change_specify_shape_size(op, ss, new_size, expand) -> TensorVariable:
             new_shapes[-ndim_supp:] = shapes[-ndim_supp:]
 
     # specify_shape has a wrong signature https://github.com/pytensor-devs/pytensor/issues/1164
-    return at.specify_shape(new_var, new_shapes)  # type: ignore
+    return pt.specify_shape(new_var, new_shapes)  # type: ignore
 
 
 def get_support_shape(
@@ -753,13 +498,13 @@ def get_support_shape(
             cast(
                 Variable,
                 Assert(msg="support_shape does not match respective shape dimension")(
-                    inferred, at.eq(inferred, explicit)
+                    inferred, pt.eq(inferred, explicit)
                 ),
             )
             for inferred, explicit in zip(inferred_support_shape, support_shape)
         ]
 
-    return at.stack(inferred_support_shape)
+    return pt.stack(inferred_support_shape)
 
 
 def get_support_shape_1d(

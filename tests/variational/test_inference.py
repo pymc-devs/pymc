@@ -18,7 +18,7 @@ import operator
 import cloudpickle
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 import pymc as pm
@@ -287,7 +287,7 @@ def test_replacements(binomial_model_inference):
 
 
 def test_sample_replacements(binomial_model_inference):
-    i = at.iscalar()
+    i = pt.iscalar()
     i.tag.test_value = 1
     approx = binomial_model_inference.approx
     p = approx.model.p

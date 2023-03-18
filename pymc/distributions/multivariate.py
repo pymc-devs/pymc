@@ -22,7 +22,7 @@ from typing import Optional
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import scipy
 
 from pytensor.graph.basic import Apply, Constant, Variable
@@ -59,7 +59,7 @@ from pymc.distributions.distribution import (
 )
 from pymc.distributions.shape_utils import (
     _change_dist_size,
-    broadcast_dist_samples_to,
+    broadcast_dist_samples_shape,
     change_dist_size,
     get_support_shape,
     rv_size_is_none,
@@ -118,11 +118,11 @@ def quaddist_matrix(cov=None, chol=None, tau=None, lower=True, *args, **kwargs):
         raise ValueError("Incompatible parameterization. Specify exactly one of tau, cov, or chol.")
 
     if cov is not None:
-        cov = at.as_tensor_variable(cov)
+        cov = pt.as_tensor_variable(cov)
         if cov.ndim != 2:
             raise ValueError("cov must be two dimensional.")
     elif tau is not None:
-        tau = at.as_tensor_variable(tau)
+        tau = pt.as_tensor_variable(tau)
         if tau.ndim != 2:
             raise ValueError("tau must be two dimensional.")
         # TODO: What's the correct order/approach (in the non-square case)?
@@ -130,7 +130,7 @@ def quaddist_matrix(cov=None, chol=None, tau=None, lower=True, *args, **kwargs):
         cov = matrix_inverse(tau)
     else:
         # TODO: What's the correct order/approach (in the non-square case)?
-        chol = at.as_tensor_variable(chol)
+        chol = pt.as_tensor_variable(chol)
         if chol.ndim != 2:
             raise ValueError("chol must be two dimensional.")
         cov = chol.dot(chol.T)
@@ -163,30 +163,30 @@ def quaddist_parse(value, mu, cov, mat_type="cov"):
 
 
 def quaddist_chol(delta, chol_mat):
-    diag = at.diag(chol_mat)
+    diag = pt.diag(chol_mat)
     # Check if the covariance matrix is positive definite.
-    ok = at.all(diag > 0)
+    ok = pt.all(diag > 0)
     # If not, replace the diagonal. We return -inf later, but
     # need to prevent solve_lower from throwing an exception.
-    chol_cov = at.switch(ok, chol_mat, 1)
+    chol_cov = pt.switch(ok, chol_mat, 1)
 
     delta_trans = solve_lower(chol_cov, delta.T).T
     quaddist = (delta_trans**2).sum(axis=-1)
-    logdet = at.sum(at.log(diag))
+    logdet = pt.sum(pt.log(diag))
     return quaddist, logdet, ok
 
 
 def quaddist_tau(delta, chol_mat):
-    diag = at.nlinalg.diag(chol_mat)
+    diag = pt.nlinalg.diag(chol_mat)
     # Check if the precision matrix is positive definite.
-    ok = at.all(diag > 0)
+    ok = pt.all(diag > 0)
     # If not, replace the diagonal. We return -inf later, but
     # need to prevent solve_lower from throwing an exception.
-    chol_tau = at.switch(ok, chol_mat, 1)
+    chol_tau = pt.switch(ok, chol_mat, 1)
 
-    delta_trans = at.dot(delta, chol_tau)
+    delta_trans = pt.dot(delta, chol_tau)
     quaddist = (delta_trans**2).sum(axis=-1)
-    logdet = -at.sum(at.log(diag))
+    logdet = -pt.sum(pt.log(diag))
     return quaddist, logdet, ok
 
 
@@ -252,23 +252,23 @@ class MvNormal(Continuous):
         chol, _, _ = pm.LKJCholeskyCov('chol_cov', n=3, eta=2,
             sd_dist=sd_dist, compute_corr=True)
         vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=(5, 3))
-        vals = pm.Deterministic('vals', at.dot(chol, vals_raw.T).T)
+        vals = pm.Deterministic('vals', pt.dot(chol, vals_raw.T).T)
     """
     rv_op = multivariate_normal
 
     @classmethod
     def dist(cls, mu, cov=None, tau=None, chol=None, lower=True, **kwargs):
-        mu = at.as_tensor_variable(mu)
+        mu = pt.as_tensor_variable(mu)
         cov = quaddist_matrix(cov, chol, tau, lower)
         # PyTensor is stricter about the shape of mu, than PyMC used to be
-        mu = at.broadcast_arrays(mu, cov[..., -1])[0]
+        mu = pt.broadcast_arrays(mu, cov[..., -1])[0]
         return super().dist([mu, cov], **kwargs)
 
     def moment(rv, size, mu, cov):
         moment = mu
         if not rv_size_is_none(size):
-            moment_size = at.concatenate([size, [mu.shape[-1]]])
-            moment = at.full(moment_size, mu)
+            moment_size = pt.concatenate([size, [mu.shape[-1]]])
+            moment = pt.full(moment_size, mu)
         return moment
 
     def logp(value, mu, cov):
@@ -303,7 +303,7 @@ class MvStudentTRV(RandomVariable):
     _print_name = ("MvStudentT", "\\operatorname{MvStudentT}")
 
     def make_node(self, rng, size, dtype, nu, mu, cov):
-        nu = at.as_tensor_variable(nu)
+        nu = pt.as_tensor_variable(nu)
         if not nu.ndim == 0:
             raise ValueError("nu must be a scalar (ndim=0).")
 
@@ -395,19 +395,19 @@ class MvStudentT(Continuous):
             if scale is not None:
                 raise ValueError("Specify only one of scale and Sigma")
             scale = Sigma
-        nu = at.as_tensor_variable(floatX(nu))
-        mu = at.as_tensor_variable(floatX(mu))
+        nu = pt.as_tensor_variable(floatX(nu))
+        mu = pt.as_tensor_variable(floatX(mu))
         scale = quaddist_matrix(scale, chol, tau, lower)
         # PyTensor is stricter about the shape of mu, than PyMC used to be
-        mu = at.broadcast_arrays(mu, scale[..., -1])[0]
+        mu = pt.broadcast_arrays(mu, scale[..., -1])[0]
 
         return super().dist([nu, mu, scale], **kwargs)
 
     def moment(rv, size, nu, mu, scale):
         moment = mu
         if not rv_size_is_none(size):
-            moment_size = at.concatenate([size, [mu.shape[-1]]])
-            moment = at.full(moment_size, moment)
+            moment_size = pt.concatenate([size, [mu.shape[-1]]])
+            moment = pt.full(moment_size, moment)
         return moment
 
     def logp(value, nu, mu, scale):
@@ -427,8 +427,8 @@ class MvStudentT(Continuous):
         quaddist, logdet, ok = quaddist_parse(value, mu, scale)
         k = floatX(value.shape[-1])
 
-        norm = gammaln((nu + k) / 2.0) - gammaln(nu / 2.0) - 0.5 * k * at.log(nu * np.pi)
-        inner = -(nu + k) / 2.0 * at.log1p(quaddist / nu)
+        norm = gammaln((nu + k) / 2.0) - gammaln(nu / 2.0) - 0.5 * k * pt.log(nu * np.pi)
+        inner = -(nu + k) / 2.0 * pt.log1p(quaddist / nu)
         res = norm + inner - logdet
 
         return check_parameters(res, ok, nu > 0, msg="posdef, nu > 0")
@@ -462,17 +462,17 @@ class Dirichlet(SimplexContinuous):
 
     @classmethod
     def dist(cls, a, **kwargs):
-        a = at.as_tensor_variable(a)
-        # mean = a / at.sum(a)
-        # mode = at.switch(at.all(a > 1), (a - 1) / at.sum(a - 1), np.nan)
+        a = pt.as_tensor_variable(a)
+        # mean = a / pt.sum(a)
+        # mode = pt.switch(pt.all(a > 1), (a - 1) / pt.sum(a - 1), np.nan)
 
         return super().dist([a], **kwargs)
 
     def moment(rv, size, a):
-        norm_constant = at.sum(a, axis=-1)[..., None]
+        norm_constant = pt.sum(a, axis=-1)[..., None]
         moment = a / norm_constant
         if not rv_size_is_none(size):
-            moment = at.full(at.concatenate([size, [a.shape[-1]]]), moment)
+            moment = pt.full(pt.concatenate([size, [a.shape[-1]]]), moment)
         return moment
 
     def logp(value, a):
@@ -490,11 +490,11 @@ class Dirichlet(SimplexContinuous):
         TensorVariable
         """
         # only defined for sum(value) == 1
-        res = at.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(at.sum(a, axis=-1))
-        res = at.switch(
-            at.or_(
-                at.any(at.lt(value, 0), axis=-1),
-                at.any(at.gt(value, 1), axis=-1),
+        res = pt.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(pt.sum(a, axis=-1))
+        res = pt.switch(
+            pt.or_(
+                pt.any(pt.lt(value, 0), axis=-1),
+                pt.any(pt.gt(value, 1), axis=-1),
             ),
             -np.inf,
             res,
@@ -541,7 +541,7 @@ class Multinomial(Discrete):
 
     @classmethod
     def dist(cls, n, p, *args, **kwargs):
-        p = at.as_tensor_variable(p)
+        p = pt.as_tensor_variable(p)
         if isinstance(p, TensorConstant):
             p_ = np.asarray(p.data)
             if np.any(p_ < 0):
@@ -554,21 +554,21 @@ class Multinomial(Discrete):
                     "You can rescale them directly to get rid of this warning.",
                     UserWarning,
                 )
-                p_ = p_ / at.sum(p_, axis=-1, keepdims=True)
-                p = at.as_tensor_variable(p_)
-        n = at.as_tensor_variable(n)
-        p = at.as_tensor_variable(p)
+                p_ = p_ / pt.sum(p_, axis=-1, keepdims=True)
+                p = pt.as_tensor_variable(p_)
+        n = pt.as_tensor_variable(n)
+        p = pt.as_tensor_variable(p)
         return super().dist([n, p], *args, **kwargs)
 
     def moment(rv, size, n, p):
-        n = at.shape_padright(n)
-        mode = at.round(n * p)
-        diff = n - at.sum(mode, axis=-1, keepdims=True)
-        inc_bool_arr = at.abs(diff) > 0
-        mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
+        n = pt.shape_padright(n)
+        mode = pt.round(n * p)
+        diff = n - pt.sum(mode, axis=-1, keepdims=True)
+        inc_bool_arr = pt.abs(diff) > 0
+        mode = pt.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
         if not rv_size_is_none(size):
-            output_size = at.concatenate([size, [p.shape[-1]]])
-            mode = at.full(output_size, mode)
+            output_size = pt.concatenate([size, [p.shape[-1]]])
+            mode = pt.full(output_size, mode)
         return mode
 
     def logp(value, n, p):
@@ -586,9 +586,9 @@ class Multinomial(Discrete):
         TensorVariable
         """
 
-        res = factln(n) + at.sum(-factln(value) + logpow(p, value), axis=-1)
-        res = at.switch(
-            at.or_(at.any(at.lt(value, 0), axis=-1), at.neq(at.sum(value, axis=-1), n)),
+        res = factln(n) + pt.sum(-factln(value) + logpow(p, value), axis=-1)
+        res = pt.switch(
+            pt.or_(pt.any(pt.lt(value, 0), axis=-1), pt.neq(pt.sum(value, axis=-1), n)),
             -np.inf,
             res,
         )
@@ -596,8 +596,8 @@ class Multinomial(Discrete):
             res,
             0 <= p,
             p <= 1,
-            at.isclose(at.sum(p, axis=-1), 1),
-            at.ge(n, 0),
+            pt.isclose(pt.sum(p, axis=-1), 1),
+            pt.ge(n, 0),
             msg="0 <= p <= 1, sum(p) = 1, n >= 0",
         )
 
@@ -681,7 +681,7 @@ class DirichletMultinomial(Discrete):
         return super().dist([n, a], **kwargs)
 
     def moment(rv, size, n, a):
-        p = a / at.sum(a, axis=-1, keepdims=True)
+        p = a / pt.sum(a, axis=-1, keepdims=True)
         return moment(Multinomial.dist(n=n, p=p, size=size))
 
     def logp(value, n, a):
@@ -703,10 +703,10 @@ class DirichletMultinomial(Discrete):
         series = gammaln(value + a) - (gammaln(value + 1) + gammaln(a))
         res = const + series.sum(axis=-1)
 
-        res = at.switch(
-            at.or_(
-                at.any(at.lt(value, 0), axis=-1),
-                at.neq(at.sum(value, axis=-1), n),
+        res = pt.switch(
+            pt.or_(
+                pt.any(pt.lt(value, 0), axis=-1),
+                pt.neq(pt.sum(value, axis=-1), n),
             ),
             -np.inf,
             res,
@@ -729,16 +729,16 @@ class _OrderedMultinomial(Multinomial):
 
     @classmethod
     def dist(cls, eta, cutpoints, n, *args, **kwargs):
-        eta = at.as_tensor_variable(floatX(eta))
-        cutpoints = at.as_tensor_variable(cutpoints)
-        n = at.as_tensor_variable(intX(n))
+        eta = pt.as_tensor_variable(floatX(eta))
+        cutpoints = pt.as_tensor_variable(cutpoints)
+        n = pt.as_tensor_variable(intX(n))
 
-        pa = sigmoid(cutpoints - at.shape_padright(eta))
-        p_cum = at.concatenate(
+        pa = sigmoid(cutpoints - pt.shape_padright(eta))
+        p_cum = pt.concatenate(
             [
-                at.zeros_like(at.shape_padright(pa[..., 0])),
+                pt.zeros_like(pt.shape_padright(pa[..., 0])),
                 pa,
-                at.ones_like(at.shape_padright(pa[..., 0])),
+                pt.ones_like(pt.shape_padright(pa[..., 0])),
             ],
             axis=-1,
         )
@@ -855,7 +855,7 @@ class PosDefMatrix(Op):
     # Compulsory if itypes and otypes are not defined
 
     def make_node(self, x):
-        x = at.as_tensor_variable(x)
+        x = pt.as_tensor_variable(x)
         assert x.ndim == 2
         o = TensorType(dtype="int8", shape=[])()
         return Apply(self, [x], [o])
@@ -948,8 +948,8 @@ class Wishart(Continuous):
 
     @classmethod
     def dist(cls, nu, V, *args, **kwargs):
-        nu = at.as_tensor_variable(intX(nu))
-        V = at.as_tensor_variable(floatX(V))
+        nu = pt.as_tensor_variable(intX(nu))
+        V = pt.as_tensor_variable(floatX(V))
 
         warnings.warn(
             "The Wishart distribution can currently not be used "
@@ -963,7 +963,7 @@ class Wishart(Continuous):
 
         # mean = nu * V
         # p = V.shape[0]
-        # mode = at.switch(at.ge(nu, p + 1), (nu - p - 1) * V, np.nan)
+        # mode = pt.switch(pt.ge(nu, p + 1), (nu - p - 1) * V, np.nan)
         return super().dist([nu, V], *args, **kwargs)
 
     def logp(X, nu, V):
@@ -988,15 +988,15 @@ class Wishart(Continuous):
 
         return check_parameters(
             (
-                (nu - p - 1) * at.log(IXI)
+                (nu - p - 1) * pt.log(IXI)
                 - trace(matrix_inverse(V).dot(X))
-                - nu * p * at.log(2)
-                - nu * at.log(IVI)
+                - nu * p * pt.log(2)
+                - nu * pt.log(IVI)
                 - 2 * multigammaln(nu / 2.0, p)
             )
             / 2,
             matrix_pos_def(X),
-            at.eq(X, X.T),
+            pt.eq(X, X.T),
             nu > (p - 1),
         )
 
@@ -1065,22 +1065,22 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initv
         diag_testval = None
         tril_testval = None
 
-    c = at.sqrt(
+    c = pt.sqrt(
         ChiSquared("%s_c" % name, nu - np.arange(2, 2 + n_diag), shape=n_diag, initval=diag_testval)
     )
     pm._log.info("Added new variable %s_c to model diagonal of Wishart." % name)
     z = Normal("%s_z" % name, 0.0, 1.0, shape=n_tril, initval=tril_testval)
     pm._log.info("Added new variable %s_z to model off-diagonals of Wishart." % name)
     # Construct A matrix
-    A = at.zeros(S.shape, dtype=np.float32)
-    A = at.set_subtensor(A[diag_idx], c)
-    A = at.set_subtensor(A[tril_idx], z)
+    A = pt.zeros(S.shape, dtype=np.float32)
+    A = pt.set_subtensor(A[diag_idx], c)
+    A = pt.set_subtensor(A[tril_idx], z)
 
     # L * A * A.T * L.T ~ Wishart(L*L.T, nu)
     if return_cholesky:
-        return pm.Deterministic(name, at.dot(L, A))
+        return pm.Deterministic(name, pt.dot(L, A))
     else:
-        return pm.Deterministic(name, at.dot(at.dot(at.dot(L, A), A.T), L.T))
+        return pm.Deterministic(name, pt.dot(pt.dot(pt.dot(L, A), A.T), L.T))
 
 
 def _lkj_normalizing_constant(eta, n):
@@ -1090,24 +1090,24 @@ def _lkj_normalizing_constant(eta, n):
     if not isinstance(n, int):
         raise NotImplementedError("n must be an integer")
     if eta == 1:
-        result = gammaln(2.0 * at.arange(1, int((n - 1) / 2) + 1)).sum()
+        result = gammaln(2.0 * pt.arange(1, int((n - 1) / 2) + 1)).sum()
         if n % 2 == 1:
             result += (
-                0.25 * (n**2 - 1) * at.log(np.pi)
-                - 0.25 * (n - 1) ** 2 * at.log(2.0)
+                0.25 * (n**2 - 1) * pt.log(np.pi)
+                - 0.25 * (n - 1) ** 2 * pt.log(2.0)
                 - (n - 1) * gammaln(int((n + 1) / 2))
             )
         else:
             result += (
-                0.25 * n * (n - 2) * at.log(np.pi)
-                + 0.25 * (3 * n**2 - 4 * n) * at.log(2.0)
+                0.25 * n * (n - 2) * pt.log(np.pi)
+                + 0.25 * (3 * n**2 - 4 * n) * pt.log(2.0)
                 + n * gammaln(n / 2)
                 - (n - 1) * gammaln(n)
             )
     else:
         result = -(n - 1) * gammaln(eta + 0.5 * (n - 1))
-        k = at.arange(1, n)
-        result += (0.5 * k * at.log(np.pi) + gammaln(eta + 0.5 * (n - 1 - k))).sum()
+        k = pt.arange(1, n)
+        result += (0.5 * k * pt.log(np.pi) + gammaln(eta + 0.5 * (n - 1 - k))).sum()
     return result
 
 
@@ -1119,15 +1119,15 @@ class _LKJCholeskyCovBaseRV(RandomVariable):
     _print_name = ("_lkjcholeskycovbase", "\\operatorname{_lkjcholeskycovbase}")
 
     def make_node(self, rng, size, dtype, n, eta, D):
-        n = at.as_tensor_variable(n)
+        n = pt.as_tensor_variable(n)
         if not n.ndim == 0:
             raise ValueError("n must be a scalar (ndim=0).")
 
-        eta = at.as_tensor_variable(eta)
+        eta = pt.as_tensor_variable(eta)
         if not eta.ndim == 0:
             raise ValueError("eta must be a scalar (ndim=0).")
 
-        D = at.as_tensor_variable(D)
+        D = pt.as_tensor_variable(D)
 
         return super().make_node(rng, size, dtype, n, eta, D)
 
@@ -1179,8 +1179,8 @@ class _LKJCholeskyCov(Distribution):
 
     @classmethod
     def dist(cls, n, eta, sd_dist, **kwargs):
-        n = at.as_tensor_variable(intX(n))
-        eta = at.as_tensor_variable(floatX(eta))
+        n = pt.as_tensor_variable(intX(n))
+        eta = pt.as_tensor_variable(floatX(eta))
 
         if not (
             isinstance(sd_dist, Variable)
@@ -1239,9 +1239,9 @@ def change_LKJCholeksyCovRV_size(op, dist, new_size, expand=False):
 
 @_moment.register(_LKJCholeskyCovRV)
 def _LKJCholeksyCovRV_moment(op, rv, rng, n, eta, sd_dist):
-    diag_idxs = (at.cumsum(at.arange(1, n + 1)) - 1).astype("int32")
-    moment = at.zeros_like(rv)
-    moment = at.set_subtensor(moment[..., diag_idxs], 1)
+    diag_idxs = (pt.cumsum(pt.arange(1, n + 1)) - 1).astype("int32")
+    moment = pt.zeros_like(rv)
+    moment = pt.set_subtensor(moment[..., diag_idxs], 1)
     return moment
 
 
@@ -1258,23 +1258,23 @@ def _LKJCholeksyCovRV_logp(op, values, rng, n, eta, sd_dist, **kwargs):
     if value.ndim > 1:
         raise ValueError("_LKJCholeskyCov logp is only implemented for vector values (ndim=1)")
 
-    diag_idxs = at.cumsum(at.arange(1, n + 1)) - 1
-    cumsum = at.cumsum(value**2)
-    variance = at.zeros(at.atleast_1d(n))
-    variance = at.inc_subtensor(variance[0], value[0] ** 2)
-    variance = at.inc_subtensor(variance[1:], cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
-    sd_vals = at.sqrt(variance)
+    diag_idxs = pt.cumsum(pt.arange(1, n + 1)) - 1
+    cumsum = pt.cumsum(value**2)
+    variance = pt.zeros(pt.atleast_1d(n))
+    variance = pt.inc_subtensor(variance[0], value[0] ** 2)
+    variance = pt.inc_subtensor(variance[1:], cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
+    sd_vals = pt.sqrt(variance)
 
     logp_sd = pm.logp(sd_dist, sd_vals).sum()
     corr_diag = value[diag_idxs] / sd_vals
 
-    logp_lkj = (2 * eta - 3 + n - at.arange(n)) * at.log(corr_diag)
-    logp_lkj = at.sum(logp_lkj)
+    logp_lkj = (2 * eta - 3 + n - pt.arange(n)) * pt.log(corr_diag)
+    logp_lkj = pt.sum(logp_lkj)
 
     # Compute the log det jacobian of the second transformation
     # described in the docstring.
-    idx = at.arange(n)
-    det_invjac = at.log(corr_diag) - idx * at.log(sd_vals)
+    idx = pt.arange(n)
+    det_invjac = pt.log(corr_diag) - idx * pt.log(sd_vals)
     det_invjac = det_invjac.sum()
 
     # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
@@ -1377,10 +1377,10 @@ class LKJCholeskyCov:
 
             # Or transform an uncorrelated normal:
             vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=10)
-            vals = at.dot(chol, vals_raw)
+            vals = pt.dot(chol, vals_raw)
 
             # Or compute the covariance matrix
-            cov = at.dot(chol, chol.T)
+            cov = pt.dot(chol, chol.T)
 
     **Implementation** In the unconstrained space all values of the cholesky factor
     are stored untransformed, except for the diagonal entries, where
@@ -1457,9 +1457,9 @@ class LKJCholeskyCov:
     def helper_deterministics(cls, n, packed_chol):
         chol = pm.expand_packed_triangular(n, packed_chol, lower=True)
         # compute covariance matrix
-        cov = at.dot(chol, chol.T)
+        cov = pt.dot(chol, chol.T)
         # extract standard deviations and rho
-        stds = at.sqrt(at.diag(cov))
+        stds = pt.sqrt(pt.diag(cov))
         inv_stds = 1 / stds
         corr = inv_stds[None, :] * cov * inv_stds[:, None]
         return chol, corr, stds
@@ -1473,11 +1473,11 @@ class LKJCorrRV(RandomVariable):
     _print_name = ("LKJCorrRV", "\\operatorname{LKJCorrRV}")
 
     def make_node(self, rng, size, dtype, n, eta):
-        n = at.as_tensor_variable(n)
+        n = pt.as_tensor_variable(n)
         if not n.ndim == 0:
             raise ValueError("n must be a scalar (ndim=0).")
 
-        eta = at.as_tensor_variable(eta)
+        eta = pt.as_tensor_variable(eta)
         if not eta.ndim == 0:
             raise ValueError("eta must be a scalar (ndim=0).")
 
@@ -1577,12 +1577,12 @@ class LKJCorr(BoundedContinuous):
 
     @classmethod
     def dist(cls, n, eta, **kwargs):
-        n = at.as_tensor_variable(intX(n))
-        eta = at.as_tensor_variable(floatX(eta))
+        n = pt.as_tensor_variable(intX(n))
+        eta = pt.as_tensor_variable(floatX(eta))
         return super().dist([n, eta], **kwargs)
 
     def moment(rv, *args):
-        return at.zeros_like(rv)
+        return pt.zeros_like(rv)
 
     def logp(value, n, eta):
         """
@@ -1610,15 +1610,15 @@ class LKJCorr(BoundedContinuous):
         tri_index[np.triu_indices(n, k=1)] = np.arange(shape)
         tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
 
-        value = at.take(value, tri_index)
-        value = at.fill_diagonal(value, 1)
+        value = pt.take(value, tri_index)
+        value = pt.fill_diagonal(value, 1)
 
         # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
         if not isinstance(eta, Constant):
             raise NotImplementedError("logp only implemented for constant `eta`")
         eta = float(eta.data)
         result = _lkj_normalizing_constant(eta, n)
-        result += (eta - 1.0) * at.log(det(value))
+        result += (eta - 1.0) * pt.log(det(value))
         return check_parameters(
             result,
             value >= -1,
@@ -1651,7 +1651,9 @@ class MatrixNormalRV(RandomVariable):
         output_shape = size + dist_shape
 
         # Broadcasting all parameters
-        (mu,) = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)
+        shapes = [mu.shape, output_shape]
+        broadcastable_shape = broadcast_dist_samples_shape(shapes, size=size)
+        mu = np.broadcast_to(mu, shape=broadcastable_shape)
         rowchol = np.broadcast_to(rowchol, shape=size + rowchol.shape[-2:])
 
         colchol = np.broadcast_to(colchol, shape=size + colchol.shape[-2:])
@@ -1749,7 +1751,7 @@ class MatrixNormal(Continuous):
 
             # Setup left covariance matrix
             scale = pm.LogNormal('scale', mu=np.log(true_scale), sigma=0.5)
-            rowcov = at.diag([scale**(2*i) for i in range(m)])
+            rowcov = pt.diag([scale**(2*i) for i in range(m)])
 
             vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,
                                    observed=data)
@@ -1781,7 +1783,7 @@ class MatrixNormal(Continuous):
         else:
             if rowchol.ndim != 2:
                 raise ValueError("rowchol must be two dimensional.")
-            rowchol_cov = at.as_tensor_variable(rowchol)
+            rowchol_cov = pt.as_tensor_variable(rowchol)
 
         # Among-column matrices
         if len([i for i in [colcov, colchol] if i is not None]) != 1:
@@ -1789,25 +1791,25 @@ class MatrixNormal(Continuous):
                 "Incompatible parameterization. Specify exactly one of colcov, or colchol."
             )
         if colcov is not None:
-            colcov = at.as_tensor_variable(colcov)
+            colcov = pt.as_tensor_variable(colcov)
             if colcov.ndim != 2:
                 raise ValueError("colcov must be two dimensional.")
             colchol_cov = cholesky(colcov)
         else:
             if colchol.ndim != 2:
                 raise ValueError("colchol must be two dimensional.")
-            colchol_cov = at.as_tensor_variable(colchol)
+            colchol_cov = pt.as_tensor_variable(colchol)
 
         dist_shape = (rowchol_cov.shape[-1], colchol_cov.shape[-1])
 
         # Broadcasting mu
-        mu = at.extra_ops.broadcast_to(mu, shape=dist_shape)
-        mu = at.as_tensor_variable(floatX(mu))
+        mu = pt.extra_ops.broadcast_to(mu, shape=dist_shape)
+        mu = pt.as_tensor_variable(floatX(mu))
 
         return super().dist([mu, rowchol_cov, colchol_cov], **kwargs)
 
     def moment(rv, size, mu, rowchol, colchol):
-        return at.full_like(rv, mu)
+        return pt.full_like(rv, mu)
 
     def logp(value, mu, rowchol, colchol):
         """
@@ -1833,15 +1835,15 @@ class MatrixNormal(Continuous):
 
         # Find exponent piece by piece
         right_quaddist = solve_lower(rowchol, delta)
-        quaddist = at.nlinalg.matrix_dot(right_quaddist.T, right_quaddist)
+        quaddist = pt.nlinalg.matrix_dot(right_quaddist.T, right_quaddist)
         quaddist = solve_lower(colchol, quaddist)
         quaddist = solve_upper(colchol.T, quaddist)
-        trquaddist = at.nlinalg.trace(quaddist)
+        trquaddist = pt.nlinalg.trace(quaddist)
 
-        coldiag = at.diag(colchol)
-        rowdiag = at.diag(rowchol)
-        half_collogdet = at.sum(at.log(coldiag))  # logdet(M) = 2*Tr(log(L))
-        half_rowlogdet = at.sum(at.log(rowdiag))  # Using Cholesky: M = L L^T
+        coldiag = pt.diag(colchol)
+        rowdiag = pt.diag(rowchol)
+        half_collogdet = pt.sum(pt.log(coldiag))  # logdet(M) = 2*Tr(log(L))
+        half_rowlogdet = pt.sum(pt.log(rowdiag))  # Using Cholesky: M = L L^T
 
         m = rowchol.shape[0]
         n = colchol.shape[0]
@@ -1904,7 +1906,7 @@ class KroneckerNormal(Continuous):
         :math:`[(v_1, Q_1), (v_2, Q_2), ...]` such that
         :math:`K_i = Q_i \text{diag}(v_i) Q_i'`. For example::
 
-            v_i, Q_i = at.nlinalg.eigh(K_i)
+            v_i, Q_i = pt.nlinalg.eigh(K_i)
     sigma : scalar, optional
         Standard deviation of the Gaussian white noise.
 
@@ -1978,18 +1980,18 @@ class KroneckerNormal(Continuous):
             covs = []
             eigs_sep, Qs = zip(*eigh_iterable)  # Unzip
             for eig, Q in zip(eigs_sep, Qs):
-                cov_i = at.dot(Q, at.dot(at.diag(eig), Q.T))
+                cov_i = pt.dot(Q, pt.dot(pt.diag(eig), Q.T))
                 covs.append(cov_i)
 
-        mu = at.as_tensor_variable(mu)
+        mu = pt.as_tensor_variable(mu)
 
         return super().dist([mu, sigma, *covs], **kwargs)
 
     def moment(rv, size, mu, covs, chols, evds):
         mean = mu
         if not rv_size_is_none(size):
-            moment_size = at.concatenate([size, mu.shape])
-            mean = at.full(moment_size, mu)
+            moment_size = pt.concatenate([size, mu.shape])
+            mean = pt.full(moment_size, mu)
         return mean
 
     def logp(value, mu, sigma, *covs):
@@ -2019,24 +2021,24 @@ class KroneckerNormal(Continuous):
 
         eigh_iterable = map(eigh, covs)
         eigs_sep, Qs = zip(*eigh_iterable)  # Unzip
-        Qs = list(map(at.as_tensor_variable, Qs))
-        QTs = list(map(at.transpose, Qs))
+        Qs = list(map(pt.as_tensor_variable, Qs))
+        QTs = list(map(pt.transpose, Qs))
 
-        eigs_sep = list(map(at.as_tensor_variable, eigs_sep))
+        eigs_sep = list(map(pt.as_tensor_variable, eigs_sep))
         eigs = kron_diag(*eigs_sep)  # Combine separate eigs
         eigs += sigma**2
         N = eigs.shape[0]
 
         sqrt_quad = kron_dot(QTs, delta.T)
-        sqrt_quad = sqrt_quad / at.sqrt(eigs[:, None])
-        logdet = at.sum(at.log(eigs))
+        sqrt_quad = sqrt_quad / pt.sqrt(eigs[:, None])
+        logdet = pt.sum(pt.log(eigs))
 
         # Square each sample
-        quad = at.batched_dot(sqrt_quad.T, sqrt_quad.T)
+        quad = pt.batched_dot(sqrt_quad.T, sqrt_quad.T)
         if onedim:
             quad = quad[0]
 
-        a = -(quad + logdet + N * at.log(2 * np.pi)) / 2.0
+        a = -(quad + logdet + N * pt.log(2 * np.pi)) / 2.0
         return a
 
 
@@ -2048,7 +2050,7 @@ class CARRV(RandomVariable):
     _print_name = ("CAR", "\\operatorname{CAR}")
 
     def make_node(self, rng, size, dtype, mu, W, alpha, tau):
-        mu = at.as_tensor_variable(floatX(mu))
+        mu = pt.as_tensor_variable(floatX(mu))
 
         W = pytensor.sparse.as_sparse_or_tensor_variable(floatX(W))
         if not W.ndim == 2:
@@ -2058,12 +2060,12 @@ class CARRV(RandomVariable):
         msg = "W must be a symmetric adjacency matrix."
         if sparse:
             abs_diff = pytensor.sparse.basic.mul(pytensor.sparse.basic.sgn(W - W.T), W - W.T)
-            W = Assert(msg)(W, at.isclose(pytensor.sparse.basic.sp_sum(abs_diff), 0))
+            W = Assert(msg)(W, pt.isclose(pytensor.sparse.basic.sp_sum(abs_diff), 0))
         else:
-            W = Assert(msg)(W, at.allclose(W, W.T))
+            W = Assert(msg)(W, pt.allclose(W, W.T))
 
-        tau = at.as_tensor_variable(floatX(tau))
-        alpha = at.as_tensor_variable(floatX(alpha))
+        tau = pt.as_tensor_variable(floatX(tau))
+        alpha = pt.as_tensor_variable(floatX(alpha))
 
         return super().make_node(rng, size, dtype, mu, W, alpha, tau)
 
@@ -2164,7 +2166,7 @@ class CAR(Continuous):
         return super().dist([mu, W, alpha, tau], **kwargs)
 
     def moment(rv, size, mu, W, alpha, tau):
-        return at.full_like(rv, mu)
+        return pt.full_like(rv, mu)
 
     def logp(value, mu, W, alpha, tau):
         """
@@ -2187,27 +2189,27 @@ class CAR(Continuous):
 
         if sparse:
             D = sp_sum(W, axis=0)
-            Dinv_sqrt = at.diag(1 / at.sqrt(D))
-            DWD = at.dot(pytensor.sparse.dot(Dinv_sqrt, W), Dinv_sqrt)
+            Dinv_sqrt = pt.diag(1 / pt.sqrt(D))
+            DWD = pt.dot(pytensor.sparse.dot(Dinv_sqrt, W), Dinv_sqrt)
         else:
             D = W.sum(axis=0)
-            Dinv_sqrt = at.diag(1 / at.sqrt(D))
-            DWD = at.dot(at.dot(Dinv_sqrt, W), Dinv_sqrt)
-        lam = at.slinalg.eigvalsh(DWD, at.eye(DWD.shape[0]))
+            Dinv_sqrt = pt.diag(1 / pt.sqrt(D))
+            DWD = pt.dot(pt.dot(Dinv_sqrt, W), Dinv_sqrt)
+        lam = pt.slinalg.eigvalsh(DWD, pt.eye(DWD.shape[0]))
 
         d, _ = W.shape
 
         if value.ndim == 1:
             value = value[None, :]
 
-        logtau = d * at.log(tau).sum()
-        logdet = at.log(1 - alpha.T * lam[:, None]).sum()
+        logtau = d * pt.log(tau).sum()
+        logdet = pt.log(1 - alpha.T * lam[:, None]).sum()
         delta = value - mu
 
         if sparse:
             Wdelta = pytensor.sparse.dot(delta, W)
         else:
-            Wdelta = at.dot(delta, W)
+            Wdelta = pt.dot(delta, W)
 
         tau_dot_delta = D[None, :] * delta - alpha * Wdelta
         logquad = (tau * delta * tau_dot_delta).sum(axis=-1)
@@ -2228,8 +2230,8 @@ class StickBreakingWeightsRV(RandomVariable):
     _print_name = ("StickBreakingWeights", "\\operatorname{StickBreakingWeights}")
 
     def make_node(self, rng, size, dtype, alpha, K):
-        alpha = at.as_tensor_variable(alpha)
-        K = at.as_tensor_variable(intX(K))
+        alpha = pt.as_tensor_variable(alpha)
+        K = pt.as_tensor_variable(intX(K))
 
         if K.ndim > 0:
             raise ValueError("K must be a scalar.")
@@ -2310,18 +2312,18 @@ class StickBreakingWeights(SimplexContinuous):
 
     @classmethod
     def dist(cls, alpha, K, *args, **kwargs):
-        alpha = at.as_tensor_variable(floatX(alpha))
-        K = at.as_tensor_variable(intX(K))
+        alpha = pt.as_tensor_variable(floatX(alpha))
+        K = pt.as_tensor_variable(intX(K))
 
         return super().dist([alpha, K], **kwargs)
 
     def moment(rv, size, alpha, K):
         alpha = alpha[..., np.newaxis]
-        moment = (alpha / (1 + alpha)) ** at.arange(K)
+        moment = (alpha / (1 + alpha)) ** pt.arange(K)
         moment *= 1 / (1 + alpha)
-        moment = at.concatenate([moment, (alpha / (1 + alpha)) ** K], axis=-1)
+        moment = pt.concatenate([moment, (alpha / (1 + alpha)) ** K], axis=-1)
         if not rv_size_is_none(size):
-            moment_size = at.concatenate(
+            moment_size = pt.concatenate(
                 [
                     size,
                     [
@@ -2329,7 +2331,7 @@ class StickBreakingWeights(SimplexContinuous):
                     ],
                 ]
             )
-            moment = at.full(moment_size, moment)
+            moment = pt.full(moment_size, moment)
 
         return moment
 
@@ -2347,9 +2349,9 @@ class StickBreakingWeights(SimplexContinuous):
         -------
         TensorVariable
         """
-        logp = -at.sum(
-            at.log(
-                at.cumsum(
+        logp = -pt.sum(
+            pt.log(
+                pt.cumsum(
                     value[..., ::-1],
                     axis=-1,
                 )
@@ -2357,17 +2359,17 @@ class StickBreakingWeights(SimplexContinuous):
             axis=-1,
         )
         logp += -K * betaln(1, alpha)
-        logp += alpha * at.log(value[..., -1])
+        logp += alpha * pt.log(value[..., -1])
 
-        logp = at.switch(
-            at.or_(
-                at.any(
-                    at.and_(at.le(value, 0), at.ge(value, 1)),
+        logp = pt.switch(
+            pt.or_(
+                pt.any(
+                    pt.and_(pt.le(value, 0), pt.ge(value, 1)),
                     axis=-1,
                 ),
-                at.or_(
-                    at.bitwise_not(at.allclose(value.sum(-1), 1)),
-                    at.neq(value.shape[-1], K + 1),
+                pt.or_(
+                    pt.bitwise_not(pt.allclose(value.sum(-1), 1)),
+                    pt.neq(value.shape[-1], K + 1),
                 ),
             ),
             -np.inf,
@@ -2486,7 +2488,7 @@ class ZeroSumNormal(Distribution):
     def dist(cls, sigma=1, n_zerosum_axes=None, support_shape=None, **kwargs):
         n_zerosum_axes = cls.check_zerosum_axes(n_zerosum_axes)
 
-        sigma = at.as_tensor_variable(floatX(sigma))
+        sigma = pt.as_tensor_variable(floatX(sigma))
         if sigma.ndim > 0:
             raise ValueError("sigma has to be a scalar")
 
@@ -2499,12 +2501,12 @@ class ZeroSumNormal(Distribution):
         if support_shape is None:
             if n_zerosum_axes > 0:
                 raise ValueError("You must specify dims, shape or support_shape parameter")
-            # TODO: edge-case doesn't work for now, because at.stack in get_support_shape fails
+            # TODO: edge-case doesn't work for now, because pt.stack in get_support_shape fails
             # else:
             #     support_shape = () # because it's just a Normal in that case
-        support_shape = at.as_tensor_variable(intX(support_shape))
+        support_shape = pt.as_tensor_variable(intX(support_shape))
 
-        assert n_zerosum_axes == at.get_vector_length(
+        assert n_zerosum_axes == pt.get_vector_length(
             support_shape
         ), "support_shape has to be as long as n_zerosum_axes"
 
@@ -2564,7 +2566,7 @@ def change_zerosum_size(op, normal_dist, new_size, expand=False):
 
 @_moment.register(ZeroSumNormalRV)
 def zerosumnormal_moment(op, rv, *rv_inputs):
-    return at.zeros_like(rv)
+    return pt.zeros_like(rv)
 
 
 @_default_transform.register(ZeroSumNormalRV)
@@ -2579,16 +2581,16 @@ def zerosumnormal_logp(op, values, normal_dist, sigma, support_shape, **kwargs):
     shape = value.shape
     n_zerosum_axes = op.ndim_supp
 
-    _deg_free_support_shape = at.inc_subtensor(shape[-n_zerosum_axes:], -1)
-    _full_size = at.prod(shape)
-    _degrees_of_freedom = at.prod(_deg_free_support_shape)
+    _deg_free_support_shape = pt.inc_subtensor(shape[-n_zerosum_axes:], -1)
+    _full_size = pt.prod(shape)
+    _degrees_of_freedom = pt.prod(_deg_free_support_shape)
 
     zerosums = [
-        at.all(at.isclose(at.mean(value, axis=-axis - 1), 0, atol=1e-9))
+        pt.all(pt.isclose(pt.mean(value, axis=-axis - 1), 0, atol=1e-9))
         for axis in range(n_zerosum_axes)
     ]
 
-    out = at.sum(
+    out = pt.sum(
         pm.logp(normal_dist, value) * _degrees_of_freedom / _full_size,
         axis=tuple(np.arange(-n_zerosum_axes, 0)),
     )
