@@ -526,6 +526,7 @@ def check_icdf(
     pymc_dist: Distribution,
     paramdomains: Dict[str, Domain],
     scipy_icdf: Callable,
+    skip_paramdomain_outside_edge_test=False,
     decimal: Optional[int] = None,
     n_samples: int = 100,
 ) -> None:
@@ -548,7 +549,7 @@ def check_icdf(
     paramdomains : Dictionary of Parameter : Domain pairs
         Supported domains of distribution parameters
     scipy_icdf : Scipy icdf method
-        Scipy icdf (ppp) method of equivalent pymc_dist distribution
+        Scipy icdf (ppf) method of equivalent pymc_dist distribution
     decimal : int, optional
         Level of precision with which pymc_dist and scipy_icdf are compared.
         Defaults to 6 for float64 and 3 for float32
@@ -557,6 +558,9 @@ def check_icdf(
         are compared between pymc and scipy methods. If n_samples is below the
         total number of combinations, a random subset is evaluated. Setting
         n_samples = -1, will return all possible combinations. Defaults to 100
+    skip_paradomain_outside_edge_test : Bool
+        Whether to run test 2., which checks that pymc distribution icdf
+        returns nan for invalid parameter values outside the supported domain edge
 
     """
     if decimal is None:
@@ -586,19 +590,20 @@ def check_icdf(
     valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
     valid_params["q"] = valid_value
 
-    # Test pymc distribution raises ParameterValueError for parameters outside the
-    # supported domain edges (excluding edges)
-    invalid_params = find_invalid_scalar_params(paramdomains)
-    for invalid_param, invalid_edges in invalid_params.items():
-        for invalid_edge in invalid_edges:
-            if invalid_edge is None:
-                continue
+    if not skip_paramdomain_outside_edge_test:
+        # Test pymc distribution raises ParameterValueError for parameters outside the
+        # supported domain edges (excluding edges)
+        invalid_params = find_invalid_scalar_params(paramdomains)
+        for invalid_param, invalid_edges in invalid_params.items():
+            for invalid_edge in invalid_edges:
+                if invalid_edge is None:
+                    continue
 
-            point = valid_params.copy()
-            point[invalid_param] = invalid_edge
-            with pytest.raises(ParameterValueError):
-                pymc_icdf(**point)
-                pytest.fail(f"test_params={point}")
+                point = valid_params.copy()
+                point[invalid_param] = invalid_edge
+                with pytest.raises(ParameterValueError):
+                    pymc_icdf(**point)
+                    pytest.fail(f"test_params={point}")
 
     # Test that values below 0 or above 1 evaluate to nan
     invalid_values = find_invalid_scalar_params({"q": domain})["q"]

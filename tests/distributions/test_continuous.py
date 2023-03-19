@@ -26,9 +26,9 @@ from pytensor.compile.mode import Mode
 
 import pymc as pm
 
-from pymc.distributions.continuous import Normal, get_tau_sigma, interpolated
+from pymc.distributions.continuous import Normal, Uniform, get_tau_sigma, interpolated
 from pymc.distributions.dist_math import clipped_beta_rvs
-from pymc.logprob.abstract import logcdf
+from pymc.logprob.abstract import icdf, logcdf
 from pymc.logprob.joint_logprob import logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
@@ -176,6 +176,12 @@ class TestMatchesScipy:
             lambda value, lower, upper: st.uniform.logcdf(value, lower, upper - lower),
             skip_paramdomain_outside_edge_test=True,
         )
+        check_icdf(
+            pm.Uniform,
+            {"lower": -Rplusunif, "upper": Rplusunif},
+            lambda q, lower, upper: st.uniform.ppf(q=q, loc=lower, scale=upper - lower),
+            skip_paramdomain_outside_edge_test=True,
+        )
         # Custom logp / logcdf check for invalid parameters
         invalid_dist = pm.Uniform.dist(lower=1, upper=0)
         with pytensor.config.change_flags(mode=Mode("py")):
@@ -183,6 +189,8 @@ class TestMatchesScipy:
                 logp(invalid_dist, np.array(0.5)).eval()
             with pytest.raises(ParameterValueError):
                 logcdf(invalid_dist, np.array(0.5)).eval()
+            with pytest.raises(ParameterValueError):
+                icdf(invalid_dist, np.array(0.5)).eval()
 
     def test_triangular(self):
         check_logp(
