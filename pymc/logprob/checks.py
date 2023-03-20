@@ -36,12 +36,73 @@
 
 from typing import List, Optional
 
+import pytensor.tensor as pt
+
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.raise_op import CheckAndRaise, ExceptionType
+from pytensor.tensor.shape import SpecifyShape
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob, logprob
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import ignore_logprob
+
+
+class MeasurableSpecifyShape(SpecifyShape):
+    """A placeholder used to specify a log-likelihood for a specify-shape sub-graph."""
+
+
+MeasurableVariable.register(MeasurableSpecifyShape)
+
+
+@_logprob.register(MeasurableSpecifyShape)
+def logprob_specify_shape(op, values, inner_rv, *shapes, **kwargs):
+    (value,) = values
+    # transfer specify_shape from rv to value
+    value = pt.specify_shape(value, shapes)
+    return logprob(inner_rv, value)
+
+
+@node_rewriter([SpecifyShape])
+def find_measurable_specify_shapes(fgraph, node) -> Optional[List[MeasurableSpecifyShape]]:
+    r"""Finds `SpecifyShapeOp`\s for which a `logprob` can be computed."""
+
+    if not (isinstance(node.op, SpecifyShape)):
+        return None  # pragma: no cover
+
+    if isinstance(node.op, MeasurableSpecifyShape):
+        return None  # pragma: no cover
+
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    rv = node.outputs[0]
+
+    base_rv, *shape = node.inputs
+
+    if not (
+        base_rv.owner
+        and isinstance(base_rv.owner.op, MeasurableVariable)
+        and base_rv not in rv_map_feature.rv_values
+    ):
+        return None  # pragma: no cover
+
+    new_op = MeasurableSpecifyShape()
+    # Make base_var unmeasurable
+    unmeasurable_base_rv = ignore_logprob(base_rv)
+    new_rv = new_op.make_node(unmeasurable_base_rv, *shape).default_output()
+    new_rv.name = rv.name
+
+    return [new_rv]
+
+
+measurable_ir_rewrites_db.register(
+    "find_measurable_specify_shapes",
+    find_measurable_specify_shapes,
+    "basic",
+    "specify_shape",
+)
 
 
 class MeasurableAssert(CheckAndRaise):
