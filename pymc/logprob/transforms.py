@@ -674,7 +674,7 @@ class ScaleTransform(RVTransform):
 
     def log_jac_det(self, value, *inputs):
         scale = self.transform_args_fn(*inputs)
-        return -pt.log(pt.abs(scale))
+        return -pt.log(pt.abs(pt.broadcast_to(scale, value.shape)))
 
 
 class LogTransform(RVTransform):

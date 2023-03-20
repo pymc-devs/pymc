@@ -626,8 +626,8 @@ def test_chained_transform():
 
     log_jac_det = ch.log_jac_det(x_val_forward, *x.owner.inputs, scale, loc)
     assert np.isclose(
-        log_jac_det.eval(),
-        -np.log(scale) - np.sum(np.log(x_val_forward - loc)),
+        pt.sum(log_jac_det).eval(),
+        np.sum(-np.log(scale) - np.log(x_val_forward - loc)),
     )
 
 
