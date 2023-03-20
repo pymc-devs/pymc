@@ -66,6 +66,9 @@ def logprob_specify_shape(op, values, inner_rv, *shapes, **kwargs):
 def find_measurable_specify_shapes(fgraph, node) -> Optional[List[MeasurableSpecifyShape]]:
     r"""Finds `SpecifyShapeOp`\s for which a `logprob` can be computed."""
 
+    if not (isinstance(node.op, SpecifyShape)):
+        return None  # pragma: no cover
+
     if isinstance(node.op, MeasurableSpecifyShape):
         return None  # pragma: no cover
 
@@ -102,14 +105,14 @@ measurable_ir_rewrites_db.register(
 )
 
 
-class MeasurableCheckAndRaise(CheckAndRaise):
+class MeasurableAssert(CheckAndRaise):
     """A placeholder used to specify a log-likelihood for an assert sub-graph."""
 
 
-MeasurableVariable.register(MeasurableCheckAndRaise)
+MeasurableVariable.register(MeasurableAssert)
 
 
-@_logprob.register(MeasurableCheckAndRaise)
+@_logprob.register(MeasurableAssert)
 def logprob_assert(op, values, inner_rv, *assertion, **kwargs):
     (value,) = values
     # transfer assertion from rv to value
@@ -118,10 +121,13 @@ def logprob_assert(op, values, inner_rv, *assertion, **kwargs):
 
 
 @node_rewriter([CheckAndRaise])
-def find_measurable_asserts(fgraph, node) -> Optional[List[MeasurableCheckAndRaise]]:
+def find_measurable_asserts(fgraph, node) -> Optional[List[MeasurableAssert]]:
     r"""Finds `AssertOp`\s for which a `logprob` can be computed."""
 
-    if isinstance(node.op, MeasurableCheckAndRaise):
+    if not (isinstance(node.op, CheckAndRaise)):
+        return None  # pragma: no cover
+
+    if isinstance(node.op, MeasurableAssert):
         return None  # pragma: no cover
 
     rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
@@ -141,7 +147,7 @@ def find_measurable_asserts(fgraph, node) -> Optional[List[MeasurableCheckAndRai
         return None  # pragma: no cover
 
     exception_type = ExceptionType()
-    new_op = MeasurableCheckAndRaise(exc_type=exception_type)
+    new_op = MeasurableAssert(exc_type=exception_type)
     # Make base_var unmeasurable
     unmeasurable_base_rv = ignore_logprob(base_rv)
     new_rv = new_op.make_node(unmeasurable_base_rv, *conds).default_output()
