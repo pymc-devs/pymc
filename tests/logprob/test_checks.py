@@ -44,6 +44,7 @@ import pytensor
 import pytensor.tensor as pt
 import pytest
 
+from pytensor.raise_op import Assert
 from scipy import stats
 
 from pymc.distributions import Dirichlet
@@ -82,3 +83,25 @@ def test_specify_shape_logprob():
     x_vv_test_invalid = stats.dirichlet(np.ones((1,))).rvs(size=(5,))
     with pytest.raises(TypeError, match=re.escape("not compatible with the data's ((5, 1))")):
         x_logp_fn(last_dim=1, x=x_vv_test_invalid)
+
+
+def test_assert_logprob():
+    rv = pt.random.normal()
+    assert_op = Assert("Test assert")
+    # Example: Add assert that rv must be positive
+    assert_rv = assert_op(rv > 0, rv)
+    assert_rv.name = "assert_rv"
+
+    assert_vv = assert_rv.clone()
+    assert_logp = factorized_joint_logprob({assert_rv: assert_vv})[assert_vv]
+
+    # Check valid value is correct and doesn't raise
+    # Since here the value to the rv satisfies the condition, no error is raised.
+    valid_value = 3.0
+    with pytest.raises(AssertionError, match="Test assert"):
+        assert_logp.eval({assert_vv: valid_value})
+
+    # Check invalid value
+    # Since here the value to the rv is negative, an exception is raised as the condition is not met
+    with pytest.raises(AssertionError, match="Test assert"):
+        assert_logp.eval({assert_vv: -5.0})
