@@ -53,7 +53,7 @@ from pymc.logprob.joint_logprob import factorized_joint_logprob
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
-from distributions.test_multivariate import dirichlet_logpdf
+from tests.distributions.test_multivariate import dirichlet_logpdf
 
 
 def test_specify_shape_logprob():
