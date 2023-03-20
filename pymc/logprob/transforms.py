@@ -892,7 +892,8 @@ class ChainedTransform(RVTransform):
         det = 0.0
         for det_ in det_list:
             if det_.ndim > ndim0:
-                det += det_.sum(axis=-1)
+                ndim_diff = det_.ndim - ndim0
+                det += det_.sum(axis=tuple(range(-ndim_diff, 0)))
             else:
                 det += det_
         return det
