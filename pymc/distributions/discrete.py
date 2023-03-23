@@ -1058,6 +1058,15 @@ class DiscreteUniform(Discrete):
             msg="lower <= upper",
         )
 
+    def icdf(value, lower, upper):
+        res = pt.ceil(value * (upper - lower + 1)).astype("int64") + lower - 1
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            lower <= upper,
+            msg="lower <= upper",
+        )
+
 
 class Categorical(Discrete):
     R"""
