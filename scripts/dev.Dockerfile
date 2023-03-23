@@ -1,4 +1,4 @@
-FROM ghcr.io/mamba-org/micromamba-devcontainer:git-5185ae9
+FROM ghcr.io/mamba-org/micromamba-devcontainer:git-e04d158
 
 COPY --chown=${MAMBA_USER}:${MAMBA_USER} conda-envs/environment-dev.yml /tmp/environment-dev.yml
 RUN : \
