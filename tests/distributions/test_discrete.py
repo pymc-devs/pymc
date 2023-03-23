@@ -29,7 +29,7 @@ from pytensor.tensor import TensorVariable
 import pymc as pm
 
 from pymc.distributions.discrete import Geometric, _OrderedLogistic, _OrderedProbit
-from pymc.logprob.abstract import logcdf
+from pymc.logprob.abstract import icdf, logcdf
 from pymc.logprob.joint_logprob import logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
@@ -118,6 +118,12 @@ class TestMatchesScipy:
             Domain([-10, 0, 10], "int64"),
             {"lower": -Rplusdunif, "upper": Rplusdunif},
         )
+        check_icdf(
+            pm.DiscreteUniform,
+            {"lower": -Rplusdunif, "upper": Rplusdunif},
+            lambda q, lower, upper: st.randint.ppf(q=q, low=lower, high=upper + 1),
+            skip_paramdomain_outside_edge_test=True,
+        )
         # Custom logp / logcdf check for invalid parameters
         invalid_dist = pm.DiscreteUniform.dist(lower=1, upper=0)
         with pytensor.config.change_flags(mode=Mode("py")):
@@ -125,6 +131,8 @@ class TestMatchesScipy:
                 logp(invalid_dist, 0.5).eval()
             with pytest.raises(ParameterValueError):
                 logcdf(invalid_dist, 2).eval()
+            with pytest.raises(ParameterValueError):
+                icdf(invalid_dist, np.array(1)).eval()
 
     def test_geometric(self):
         check_logp(
