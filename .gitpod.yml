@@ -22,17 +22,14 @@ tasks:
 
       # Install dependencies
       sudo chown "$(id -u):$(id -g)" /opt/conda/conda-meta/history
-      micromamba install --yes --name base --file conda-envs/environment-dev.yml
-
-      # Install PyMC
-      pip install -e .
+      (micromamba install --yes --name base --file conda-envs/environment-dev.yml; pip install -e .) &> /tmp/install-init.log &
 
     command: |
       # Reinitialize devcontainer for good measure
       _dev-init.sh
 
       # Install the pre-commit hooks in the background if not already installed
-      pre-commit install --install-hooks
+      pre-commit install --install-hooks &> /tmp/pre-commit-init-output.log &
 
 vscode:
   extensions:
