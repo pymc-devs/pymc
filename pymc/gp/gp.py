@@ -111,10 +111,10 @@ class Latent(Base):
 
     Parameters
     ----------
-    cov_func : 2D array, or instance of Covariance, default Zero
-        The covariance function.
-    mean_func : instance of Mean, default Zero
+    mean_func : instance of Mean, default ~pymc.gp.mean.Zero
         The mean function.
+    cov_func : 2D array-like, or instance of Covariance, default ~pymc.gp.cov.Constant
+        The covariance function.
 
     Examples
     --------
@@ -247,7 +247,7 @@ class Latent(Base):
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
-            Extra keyword arguments that are passed to `MvNormal` distribution
+            Extra keyword arguments that are passed to :class:`~pymc.MvNormal` distribution
             constructor.
         """
         givens = self._get_given_vals(given)
@@ -272,10 +272,12 @@ class TP(Latent):
 
     Parameters
     ----------
-    scale_func : 2D array, or instance of Covariance, default Zero
-        The scale function.
-    mean_func : instance of Mean, default Zero
+    mean_func : instance of Mean, default ~pymc.gp.mean.Zero
         The mean function.
+    scale_func : 2D array-like, or instance of Covariance, default ~pymc.gp.cov.Constant
+        The covariance function.
+    cov_func : 2D array-like, or instance of Covariance, default None
+        Deprecated, previous version of "scale_func"
     nu : float
         The degrees of freedom
 
@@ -334,7 +336,8 @@ class TP(Latent):
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
-            Extra keyword arguments that are passed to 'MvStudentT' distribution constructor.
+            Extra keyword arguments that are passed to :class:`~pymc.MvStudentT'
+            distribution constructor.
         """
 
         f = self._build_prior(name, X, reparameterize, jitter, **kwargs)
@@ -376,7 +379,7 @@ class TP(Latent):
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
-            Extra keyword arguments that are passed to `MvStudentT` distribution
+            Extra keyword arguments that are passed to :class:`~pymc.MvStudentT` distribution
             constructor.
         """
 
@@ -400,10 +403,10 @@ class Marginal(Base):
 
     Parameters
     ----------
-    cov_func : 2D array, or instance of Covariance, default Zero
-        The covariance function.
-    mean_func: instance of Mean, default Zero
+    mean_func : instance of Mean, default ~pymc.gp.mean.Zero
         The mean function.
+    cov_func : 2D array-like, or instance of Covariance, default ~pymc.gp.cov.Constant
+        The covariance function.
 
     Examples
     --------
@@ -471,8 +474,10 @@ class Marginal(Base):
         jitter : scalar, 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
+        is_observed : bool, default True
+            Deprecated. Whether to set `y` as an `observed` variable in the `model`.
         **kwargs
-            Extra keyword arguments that are passed to `MvNormal` distribution
+            Extra keyword arguments that are passed to :class:`~pymc.MvNormal` distribution
             constructor.
         """
         sigma = _handle_sigma_noise_parameters(sigma=sigma, noise=noise)
@@ -571,7 +576,7 @@ class Marginal(Base):
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
-            Extra keyword arguments that are passed to `MvNormal` distribution
+            Extra keyword arguments that are passed to :class:`~pymc.MvNormal` distribution
             constructor.
         """
 
@@ -599,7 +604,7 @@ class Marginal(Base):
         Xnew : array-like
             Function input values.  If one-dimensional, must be a column
             vector with shape `(n, 1)`.
-        point : pymc.model.Point, optional
+        point : pymc.Point, optional
             A specific point to condition on.
         diag : bool, default False
             If `True`, return the diagonal instead of the full covariance
@@ -613,6 +618,10 @@ class Marginal(Base):
         jitter : scalar, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
+        model : Model, optional
+            Model with the Gaussian Process component for which predictions will
+            be generated. It is optional when inside a with context, otherwise
+            it is required.
         """
         if given is None:
             given = {}
@@ -661,10 +670,10 @@ class MarginalApprox(Marginal):
 
     Parameters
     ----------
-    cov_func : 2D array, or instance of Covariance, default Zero
-        The covariance function.
-    mean_func : instance of Mean, default Zero
+    mean_func : instance of Mean, default ~pymc.gp.mean.Zero
         The mean function.
+    cov_func : 2D array-like, or instance of Covariance, default ~pymc.gp.cov.Constant
+        The covariance function.
     approx : str, default 'VFE'
         The approximation to use.  Must be one of `VFE`, `FITC` or `DTC`.
 
@@ -782,7 +791,7 @@ class MarginalApprox(Marginal):
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
-            Extra keyword arguments that are passed to `MvNormal` distribution
+            Extra keyword arguments that are passed to :class:`~pymc.MvNormal` distribution
             constructor.
         """
 
@@ -871,7 +880,7 @@ class MarginalApprox(Marginal):
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
-            Extra keyword arguments that are passed to `MvNormal` distribution
+            Extra keyword arguments that are passed to :class:`~pymc.MvNormal` distribution
             constructor.
         """
 
@@ -908,10 +917,10 @@ class LatentKron(Base):
 
     Parameters
     ----------
-    cov_funcs : list of Covariance objects, default [Zero]
-        The covariance functions that compose the tensor (Kronecker) product.
-    mean_func : instance of Mean, default Zero.
+    mean_func : instance of Mean, default ~pymc.gp.mean.Zero
         The mean function.
+    cov_funcs : list of Covariance objects, default [~pymc.gp.cov.Constant]
+        The covariance functions that compose the tensor (Kronecker) product.
 
     Examples
     --------
@@ -1039,7 +1048,7 @@ class LatentKron(Base):
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
-            Extra keyword arguments that are passed to `MvNormal` distribution
+            Extra keyword arguments that are passed to :class:`~pymc.MvNormal` distribution
             constructor.
         """
         mu, cov = self._build_conditional(Xnew, jitter)
@@ -1064,10 +1073,10 @@ class MarginalKron(Base):
 
     Parameters
     ----------
-    cov_funcs : list of Covariance objects, default [Zero]
-        The covariance functions that compose the tensor (Kronecker) product.
-    mean_func : instance of Mean, default Zero
+    mean_func : instance of Mean, default ~pymc.gp.mean.Zero
         The mean function.
+    cov_funcs : list of Covariance objects, default [~pymc.gp.cov.Constant]
+        The covariance functions that compose the tensor (Kronecker) product.
 
     Examples
     --------
@@ -1150,7 +1159,7 @@ class MarginalKron(Base):
         sigma : scalar, Variable
             Standard deviation of the white Gaussian noise.
         is_observed : bool, default True
-            Whether to set `y` as an `observed` variable in the `model`.
+            Deprecated. Whether to set `y` as an `observed` variable in the `model`.
         **kwargs
             Extra keyword arguments that are passed to `KroneckerNormal`
             distribution constructor.
@@ -1239,7 +1248,7 @@ class MarginalKron(Base):
         pred_noise : bool, default False
             Whether or not observation noise is included in the conditional.
         **kwargs
-            Extra keyword arguments that are passed to `MvNormal` distribution
+            Extra keyword arguments that are passed to :class:`~pymc.MvNormal` distribution
             constructor.
         """
         mu, cov = self._build_conditional(Xnew, diag, pred_noise)
@@ -1256,13 +1265,17 @@ class MarginalKron(Base):
         Xnew : array-like
             Function input values.  If one-dimensional, must be a column
             vector with shape `(n, 1)`.
-        point : pymc.model.Point, optional
+        point : pymc.Point, optional
             A specific point to condition on.
         diag : bool, default False
             If `True`, return the diagonal instead of the full covariance
             matrix.
         pred_noise : bool, default False
             Whether or not observation noise is included in the conditional.
+        model : Model, optional
+            Model with the Gaussian Process component for which predictions will
+            be generated. It is optional when inside a with context, otherwise
+            it is required.
         """
         mu, cov = self._predict_at(Xnew, diag, pred_noise)
         return replace_with_values([mu, cov], replacements=point, model=model)
