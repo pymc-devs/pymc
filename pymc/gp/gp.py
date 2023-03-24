@@ -172,14 +172,16 @@ class Latent(Base):
         Parameters
         ----------
         name : str
+        name : str
             Name of the random variable
-        X : array-like
+        X  : array-like
             Function input values. If one-dimensional, must be a column
+            vector with shape `(n, 1)`. If one-dimensional, must be a column
             vector with shape `(n, 1)`.
-        reparameterize : bool, default True
+        reparameterize  : bool, default True, default True
             Reparameterize the distribution by rotating the random
             variable by the Cholesky factor of the covariance matrix.
-        jitter : scalar, default 1e-6
+        jitter  : scalar, default 1e-6, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -235,6 +237,7 @@ class Latent(Base):
         Parameters
         ----------
         name : str
+        name : str
             Name of the random variable
         Xnew : array-like
             Function input values. If one-dimensional, must be a column
@@ -242,8 +245,14 @@ class Latent(Base):
         given : dict, optional
             Can take as key value pairs: `X`, `y`,
             and `gp`. See the section in the documentation on additive GP
+        Xnew : array-like
+            Function input values. If one-dimensional, must be a column
+            vector with shape `(n, 1)`.
+        given : dict, optional
+            Can take as key value pairs: `X`, `y`,
+            and `gp`. See the section in the documentation on additive GP
             models in PyMC for more information.
-        jitter : scalar, default 1e-6
+        jitter  : scalar, default 1e-6, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -262,6 +271,7 @@ class TP(Latent):
 
     The usage is nearly identical to that of `gp.Latent`.  The differences
     are that it must be initialized with a degrees of freedom parameter, and
+    TP is not additive. Given a mean and covariance function, and a degrees of
     TP is not additive. Given a mean and covariance function, and a degrees of
     freedom parameter, the function :math:`f(x)` is modeled as,
 
@@ -325,13 +335,18 @@ class TP(Latent):
         Parameters
         ----------
         name : str
+        name : str
             Name of the random variable
-        X : array-like
+        X  : array-like
             Function input values. If one-dimensional, must be a column
+            vector with shape `(n, 1)`. If one-dimensional, must be a column
             vector with shape `(n, 1)`.
-        reparameterize : bool, default True
+        reparameterize  : bool, default True, default True
             Reparameterize the distribution by rotating the random
             variable by the Cholesky factor of the covariance matrix.
+        jitter : scalar, default 1e-6
+            A small correction added to the diagonal of positive semi-definite
+            covariance matrices to ensure numerical stability.
         jitter : scalar, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
@@ -371,11 +386,13 @@ class TP(Latent):
         Parameters
         ----------
         name : str
+        name : str
             Name of the random variable
-        Xnew : array-like
+        Xnew  : array-like
             Function input values. If one-dimensional, must be a column
+            vector with shape `(n, 1)`. If one-dimensional, must be a column
             vector with shape `(n, 1)`.
-        jitter : scalar, default 1e-6
+        jitter  : scalar, default 1e-6, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -398,6 +415,8 @@ class Marginal(Base):
     prior and additive noise.  It has `marginal_likelihood`, `conditional`
     and `predict` methods.  This GP implementation can be used to
     implement regression on data that is normally distributed.  For more
+    information on the `marginal_likelihood`, `conditional`
+    and `predict` methods, see their docstrings.
     information on the `marginal_likelihood`, `conditional`
     and `predict` methods, see their docstrings.
 
@@ -451,6 +470,7 @@ class Marginal(Base):
         locations `X` and the data `y`.
 
         This is the integral over the product of the GP prior and a normal likelihood.
+        This is the integral over the product of the GP prior and a normal likelihood.
 
         .. math::
 
@@ -459,18 +479,24 @@ class Marginal(Base):
         Parameters
         ----------
         name : str
+        name : str
             Name of the random variable
+        X : array-like
         X : array-like
             Function input values.  If one-dimensional, must be a column
             vector with shape `(n, 1)`.
         y : array-like
+        y : array-like
             Data that is the sum of the function with the GP prior and Gaussian
             noise.  Must have shape `(n, )`.
+        sigma : scalar, Variable, or Covariance
         sigma : scalar, Variable, or Covariance
             Standard deviation of the Gaussian noise.  Can also be a Covariance for
             non-white noise.
         noise : scalar, Variable, or Covariance, optional
+        noise : scalar, Variable, or Covariance, optional
             Previous parameterization of `sigma`.
+        jitter : scalar, 1e-6
         jitter : scalar, 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
@@ -562,16 +588,22 @@ class Marginal(Base):
         Parameters
         ----------
         name : str
+        name : str
             Name of the random variable
+        Xnew : array-like
         Xnew : array-like
             Function input values.  If one-dimensional, must be a column
             vector with shape `(n, 1)`.
         pred_noise : bool, default False
+        pred_noise : bool, default False
             Whether or not observation noise is included in the conditional.
+        given : dict, optional
+            Can take key value pairs: `X`, `y`, `sigma`,
         given : dict, optional
             Can take key value pairs: `X`, `y`, `sigma`,
             and `gp`.  See the section in the documentation on additive GP
             models in PyMC for more information.
+        jitter : scalar, default 1e-6
         jitter : scalar, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
@@ -602,15 +634,24 @@ class Marginal(Base):
         Parameters
         ----------
         Xnew : array-like
+        Xnew : array-like
             Function input values.  If one-dimensional, must be a column
             vector with shape `(n, 1)`.
         point : pymc.Point, optional
             A specific point to condition on.
         diag : bool, default False
+        diag : bool, default False
             If `True`, return the diagonal instead of the full covariance
             matrix.
         pred_noise : bool, default False
+            matrix.
+        pred_noise : bool, default False
             Whether or not observation noise is included in the conditional.
+        given : dict, optional
+            Can take key value pairs: `X`, `y`, `sigma`,
+            and `gp`.  See the section in the documentation on additive GP
+            models in PyMC for more information.
+        jitter : scalar, default 1e-6
         given : dict, optional
             Can take key value pairs: `X`, `y`, `sigma`,
             and `gp`.  See the section in the documentation on additive GP
@@ -635,6 +676,7 @@ class Marginal(Base):
 
         Parameters
         ----------
+        Xnew : array-like
         Xnew : array-like
             Function input values.  If one-dimensional, must be a column
             vector with shape `(n, 1)`.
@@ -1157,6 +1199,7 @@ class MarginalKron(Base):
             Data that is the sum of the function with the GP prior and Gaussian
             noise.  Must have shape `(n, )`.
         sigma : scalar, Variable
+        sigma : scalar, Variable
             Standard deviation of the white Gaussian noise.
         is_observed : bool, default True
             Deprecated. Whether to set `y` as an `observed` variable in the `model`.
@@ -1263,12 +1306,16 @@ class MarginalKron(Base):
         Parameters
         ----------
         Xnew : array-like
+        Xnew : array-like
             Function input values.  If one-dimensional, must be a column
             vector with shape `(n, 1)`.
         point : pymc.Point, optional
             A specific point to condition on.
         diag : bool, default False
+        diag : bool, default False
             If `True`, return the diagonal instead of the full covariance
+            matrix.
+        pred_noise : bool, default False
             matrix.
         pred_noise : bool, default False
             Whether or not observation noise is included in the conditional.
@@ -1288,10 +1335,14 @@ class MarginalKron(Base):
         Parameters
         ----------
         Xnew : array-like
+        Xnew : array-like
             Function input values.  If one-dimensional, must be a column
             vector with shape `(n, 1)`.
         diag : bool, default False
+        diag : bool, default False
             If `True`, return the diagonal instead of the full covariance
+            matrix.
+        pred_noise : bool, default False
             matrix.
         pred_noise : bool, default False
             Whether or not observation noise is included in the conditional.
