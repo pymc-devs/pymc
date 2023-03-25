@@ -183,7 +183,8 @@ class Latent(Base):
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
-            Extra keyword arguments that are passed to distribution constructor.
+            Extra keyword arguments that are passed to :class:`~pymc.MvNormal`
+            distribution constructor.
         """
 
         f = self._build_prior(name, X, reparameterize, jitter, **kwargs)
@@ -337,7 +338,7 @@ class TP(Latent):
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
-            Extra keyword arguments that are passed to :class:`~pymc.MvStudentT'
+            Extra keyword arguments that are passed to :class:`~pymc.MvStudentT`
             distribution constructor.
         """
 
@@ -454,7 +455,6 @@ class Marginal(Base):
         locations `X` and the data `y`.
 
         This is the integral over the product of the GP prior and a normal likelihood.
-        This is the integral over the product of the GP prior and a normal likelihood.
 
         .. math::
 
@@ -470,11 +470,11 @@ class Marginal(Base):
         y : array-like
             Data that is the sum of the function with the GP prior and Gaussian
             noise.  Must have shape `(n, )`.
-        sigma : scalar, Variable, or Covariance
+        sigma : scalar, Variable, or Covariance, default ~pymc.gp.cov.WhiteNoise
             Standard deviation of the Gaussian noise.  Can also be a Covariance for
             non-white noise.
         noise : scalar, Variable, or Covariance, optional
-            Previous parameterization of `sigma`.
+            Deprecated. Previous parameterization of `sigma`.
         jitter : scalar, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
@@ -923,7 +923,7 @@ class LatentKron(Base):
     ----------
     mean_func : instance of Mean, default ~pymc.gp.mean.Zero
         The mean function.
-    cov_funcs : list of Covariance objects, default [~pymc.gp.cov.Constant]
+    cov_funcs : list of Covariance, default [~pymc.gp.cov.Constant]
         The covariance functions that compose the tensor (Kronecker) product.
 
     Examples
@@ -993,7 +993,7 @@ class LatentKron(Base):
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
-            Extra keyword arguments that are passed to the :class:'~pymc.KroneckerNormal`
+            Extra keyword arguments that are passed to the :class:`~pymc.KroneckerNormal`
             distribution constructor.
         """
         if len(Xs) != len(self.cov_funcs):
@@ -1079,7 +1079,7 @@ class MarginalKron(Base):
     ----------
     mean_func : instance of Mean, default ~pymc.gp.mean.Zero
         The mean function.
-    cov_funcs : list of Covariance objects, default [~pymc.gp.cov.Constant]
+    cov_funcs : list of Covariance, default [~pymc.gp.cov.Constant]
         The covariance functions that compose the tensor (Kronecker) product.
 
     Examples
@@ -1165,7 +1165,7 @@ class MarginalKron(Base):
         is_observed : bool, default True
             Deprecated. Whether to set `y` as an `observed` variable in the `model`.
         **kwargs
-            Extra keyword arguments that are passed to :class:'~pymc.KroneckerNormal`
+            Extra keyword arguments that are passed to :class:`~pymc.KroneckerNormal`
             distribution constructor.
         """
         self._check_inputs(Xs, y)
