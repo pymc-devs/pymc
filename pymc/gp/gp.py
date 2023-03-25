@@ -173,14 +173,13 @@ class Latent(Base):
         ----------
         name : str
             Name of the random variable
-        X  : array-like
+        X : array-like
             Function input values. If one-dimensional, must be a column
-            vector with shape `(n, 1)`. If one-dimensional, must be a column
             vector with shape `(n, 1)`.
-        reparameterize  : bool, default True, default True
+        reparameterize : bool, default True
             Reparameterize the distribution by rotating the random
             variable by the Cholesky factor of the covariance matrix.
-        jitter  : scalar, default 1e-6, default 1e-6
+        jitter : scalar, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -243,14 +242,8 @@ class Latent(Base):
         given : dict, optional
             Can take as key value pairs: `X`, `y`,
             and `gp`. See the section in the documentation on additive GP
-        Xnew : array-like
-            Function input values. If one-dimensional, must be a column
-            vector with shape `(n, 1)`.
-        given : dict, optional
-            Can take as key value pairs: `X`, `y`,
-            and `gp`. See the section in the documentation on additive GP
             models in PyMC for more information.
-        jitter  : scalar, default 1e-6, default 1e-6
+        jitter : scalar, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -334,16 +327,12 @@ class TP(Latent):
         ----------
         name : str
             Name of the random variable
-        X  : array-like
+        X : array-like
             Function input values. If one-dimensional, must be a column
-            vector with shape `(n, 1)`. If one-dimensional, must be a column
             vector with shape `(n, 1)`.
-        reparameterize  : bool, default True, default True
+        reparameterize : bool, default True
             Reparameterize the distribution by rotating the random
             variable by the Cholesky factor of the covariance matrix.
-        jitter : scalar, default 1e-6
-            A small correction added to the diagonal of positive semi-definite
-            covariance matrices to ensure numerical stability.
         jitter : scalar, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
@@ -384,11 +373,10 @@ class TP(Latent):
         ----------
         name : str
             Name of the random variable
-        Xnew  : array-like
+        Xnew : array-like
             Function input values. If one-dimensional, must be a column
-            vector with shape `(n, 1)`. If one-dimensional, must be a column
             vector with shape `(n, 1)`.
-        jitter  : scalar, default 1e-6, default 1e-6
+        jitter : scalar, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -487,7 +475,7 @@ class Marginal(Base):
             non-white noise.
         noise : scalar, Variable, or Covariance, optional
             Previous parameterization of `sigma`.
-        jitter : scalar, 1e-6
+        jitter : scalar, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         is_observed : bool, default True
@@ -1005,7 +993,7 @@ class LatentKron(Base):
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
-            Extra keyword arguments that are passed to the `KroneckerNormal`
+            Extra keyword arguments that are passed to the :class:'~pymc.KroneckerNormal`
             distribution constructor.
         """
         if len(Xs) != len(self.cov_funcs):
@@ -1177,7 +1165,7 @@ class MarginalKron(Base):
         is_observed : bool, default True
             Deprecated. Whether to set `y` as an `observed` variable in the `model`.
         **kwargs
-            Extra keyword arguments that are passed to `KroneckerNormal`
+            Extra keyword arguments that are passed to :class:'~pymc.KroneckerNormal`
             distribution constructor.
         """
         self._check_inputs(Xs, y)
