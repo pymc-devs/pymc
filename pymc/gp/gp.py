@@ -471,7 +471,7 @@ class Marginal(Base):
             non-white noise.
         noise : scalar, Variable, or Covariance, optional
             Previous parameterization of `sigma`.
-        jitter : scalar, 1e-6
+        jitter : scalar, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         is_observed : bool, default True
@@ -989,7 +989,7 @@ class LatentKron(Base):
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
-            Extra keyword arguments that are passed to the `KroneckerNormal`
+            Extra keyword arguments that are passed to the :class:'~pymc.KroneckerNormal`
             distribution constructor.
         """
         if len(Xs) != len(self.cov_funcs):
@@ -1161,7 +1161,7 @@ class MarginalKron(Base):
         is_observed : bool, default True
             Deprecated. Whether to set `y` as an `observed` variable in the `model`.
         **kwargs
-            Extra keyword arguments that are passed to `KroneckerNormal`
+            Extra keyword arguments that are passed to :class:'~pymc.KroneckerNormal`
             distribution constructor.
         """
         self._check_inputs(Xs, y)
