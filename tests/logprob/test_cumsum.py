@@ -34,11 +34,6 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import inspect
-import os
-import re
-import sys
-
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
@@ -46,11 +41,7 @@ import pytest
 import scipy.stats as st
 
 from pymc.testing import assert_no_rvs
-
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0, parentdir)
-from logprob.utils import joint_logprob
+from tests.logprob.utils import joint_logprob
 
 
 @pytest.mark.parametrize(
