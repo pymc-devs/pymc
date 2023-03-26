@@ -34,6 +34,7 @@ If you have other ideas let us know on [Discourse](https://discourse.pymc.io/) t
   companies, to people who could use PyMC in their work or making sure that academics who use PyMC
   cite it correctly in their work
 * Help with our fundraising efforts
+* Add timestamps to [videos from PyMCon](https://github.com/pymc-devs/video-timestamps)
 
 ### Contribute via Pull Requests on GitHub
 We have a {ref}`pr_tutorial` and a {ref}`pr_checklist` page to help in all the steps of the contributing
