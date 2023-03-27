@@ -17,7 +17,7 @@ import numpy as np
 import pytensor
 
 from arviz import InferenceData
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.graph.basic import Variable
 from pytensor.tensor.var import TensorVariable
 
@@ -60,7 +60,7 @@ class MeanFieldGroup(Group):
     @node_property
     def cov(self):
         var = rho2sigma(self.rho) ** 2
-        return at.diag(var)
+        return pt.diag(var)
 
     @node_property
     def std(self):
@@ -107,8 +107,8 @@ class MeanFieldGroup(Group):
     def symbolic_logq_not_scaled(self):
         z0 = self.symbolic_initial
         std = rho2sigma(self.rho)
-        logdet = at.log(std)
-        quaddist = -0.5 * z0**2 - at.log((2 * np.pi) ** 0.5)
+        logdet = pt.log(std)
+        quaddist = -0.5 * z0**2 - pt.log((2 * np.pi) ** 0.5)
         logq = quaddist - logdet
         return logq.sum(range(1, logq.ndim))
 
@@ -140,10 +140,10 @@ class FullRankGroup(Group):
 
     @node_property
     def L(self):
-        L = at.zeros((self.ddim, self.ddim))
-        L = at.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"])
+        L = pt.zeros((self.ddim, self.ddim))
+        L = pt.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"])
         Ld = L[..., np.arange(self.ddim), np.arange(self.ddim)]
-        L = at.set_subtensor(Ld, rho2sigma(Ld))
+        L = pt.set_subtensor(Ld, rho2sigma(Ld))
         return L
 
     @node_property
@@ -157,7 +157,7 @@ class FullRankGroup(Group):
 
     @node_property
     def std(self):
-        return at.sqrt(at.diag(self.cov))
+        return pt.sqrt(pt.diag(self.cov))
 
     @property
     def num_tril_entries(self):
@@ -171,9 +171,9 @@ class FullRankGroup(Group):
     @node_property
     def symbolic_logq_not_scaled(self):
         z0 = self.symbolic_initial
-        diag = at.diagonal(self.L, 0, self.L.ndim - 2, self.L.ndim - 1)
-        logdet = at.log(diag)
-        quaddist = -0.5 * z0**2 - at.log((2 * np.pi) ** 0.5)
+        diag = pt.diagonal(self.L, 0, self.L.ndim - 2, self.L.ndim - 1)
+        logdet = pt.log(diag)
+        quaddist = -0.5 * z0**2 - pt.log((2 * np.pi) ** 0.5)
         logq = quaddist - logdet
         return logq.sum(range(1, logq.ndim))
 
@@ -251,7 +251,7 @@ class EmpiricalGroup(Group):
                 pass
         else:
             size = tuple(np.atleast_1d(size))
-        return at.random.integers(
+        return pt.random.integers(
             size=size,
             low=0,
             high=self.histogram.shape[0],
@@ -262,11 +262,11 @@ class EmpiricalGroup(Group):
         pytensor_condition_is_here = isinstance(deterministic, Variable)
         if size is None:
             size = 1
-        size = at.as_tensor(size)
+        size = pt.as_tensor(size)
         if pytensor_condition_is_here:
-            return at.switch(
+            return pt.switch(
                 deterministic,
-                at.repeat(self.mean.reshape((1, -1)), size, -1),
+                pt.repeat(self.mean.reshape((1, -1)), size, -1),
                 self.histogram[self.randidx(size)],
             )
         else:
@@ -274,7 +274,7 @@ class EmpiricalGroup(Group):
                 raise NotImplementedInference(
                     "Deterministic sampling from a Histogram is broken in v4"
                 )
-                return at.repeat(self.mean.reshape((1, -1)), size, -1)
+                return pt.repeat(self.mean.reshape((1, -1)), size, -1)
             else:
                 return self.histogram[self.randidx(size)]
 
@@ -297,7 +297,7 @@ class EmpiricalGroup(Group):
 
     @node_property
     def std(self):
-        return at.sqrt(at.diag(self.cov))
+        return pt.sqrt(pt.diag(self.cov))
 
     def __str__(self):
         if isinstance(self.histogram, pytensor.compile.SharedVariable):

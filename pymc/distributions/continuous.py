@@ -26,7 +26,7 @@ from typing import List, Optional, Union
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
@@ -56,7 +56,7 @@ from pytensor.tensor.random.basic import (
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorConstant
 
-from pymc.logprob.abstract import _logprob, logcdf, logprob
+from pymc.logprob.abstract import _logcdf_helper, _logprob_helper
 
 try:
     from polyagamma import polyagamma_cdf, polyagamma_pdf, random_polyagamma
@@ -79,6 +79,8 @@ from scipy.special import expit
 from pymc.distributions import transforms
 from pymc.distributions.dist_math import (
     SplineWrapper,
+    check_icdf_parameters,
+    check_icdf_value,
     check_parameters,
     clipped_beta_rvs,
     i0e,
@@ -181,13 +183,13 @@ def bounded_cont_transform(op, rv, bound_args_indices=None):
             if isinstance(lower, TensorConstant) and np.all(lower.value == -np.inf):
                 lower = None
             else:
-                lower = at.as_tensor_variable(lower)
+                lower = pt.as_tensor_variable(lower)
 
         if upper is not None:
             if isinstance(upper, TensorConstant) and np.all(upper.value == np.inf):
                 upper = None
             else:
-                upper = at.as_tensor_variable(upper)
+                upper = pt.as_tensor_variable(upper)
 
         return lower, upper
 
@@ -202,7 +204,7 @@ def assert_negative_support(var, label, distname, value=-1e-6):
     )
     msg = f"The variable specified for {label} has negative support for {distname}, "
     msg += "likely making it unsuitable for this parameter."
-    return Assert(msg)(var, at.all(at.ge(var, 0.0)))
+    return Assert(msg)(var, pt.all(pt.ge(var, 0.0)))
 
 
 def get_tau_sigma(tau=None, sigma=None):
@@ -302,21 +304,21 @@ class Uniform(BoundedContinuous):
 
     @classmethod
     def dist(cls, lower=0, upper=1, **kwargs):
-        lower = at.as_tensor_variable(floatX(lower))
-        upper = at.as_tensor_variable(floatX(upper))
+        lower = pt.as_tensor_variable(floatX(lower))
+        upper = pt.as_tensor_variable(floatX(upper))
         return super().dist([lower, upper], **kwargs)
 
     def moment(rv, size, lower, upper):
-        lower, upper = at.broadcast_arrays(lower, upper)
+        lower, upper = pt.broadcast_arrays(lower, upper)
         moment = (lower + upper) / 2
         if not rv_size_is_none(size):
-            moment = at.full(size, moment)
+            moment = pt.full(size, moment)
         return moment
 
     def logp(value, lower, upper):
-        res = at.switch(
-            at.bitwise_and(at.ge(value, lower), at.le(value, upper)),
-            at.fill(value, -at.log(upper - lower)),
+        res = pt.switch(
+            pt.bitwise_and(pt.ge(value, lower), pt.le(value, upper)),
+            pt.fill(value, -pt.log(upper - lower)),
             -np.inf,
         )
 
@@ -327,12 +329,12 @@ class Uniform(BoundedContinuous):
         )
 
     def logcdf(value, lower, upper):
-        res = at.switch(
-            at.lt(value, lower),
+        res = pt.switch(
+            pt.lt(value, lower),
             -np.inf,
-            at.switch(
-                at.lt(value, upper),
-                at.log(value - lower) - at.log(upper - lower),
+            pt.switch(
+                pt.lt(value, upper),
+                pt.log(value - lower) - pt.log(upper - lower),
                 0,
             ),
         )
@@ -342,6 +344,11 @@ class Uniform(BoundedContinuous):
             lower <= upper,
             msg="lower <= upper",
         )
+
+    def icdf(value, lower, upper):
+        res = lower + (upper - lower) * value
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(res, lower < upper)
 
 
 @_default_transform.register(Uniform)
@@ -382,14 +389,14 @@ class Flat(Continuous):
         return res
 
     def moment(rv, size):
-        return at.zeros(size)
+        return pt.zeros(size)
 
     def logp(value):
-        return at.zeros_like(value)
+        return pt.zeros_like(value)
 
     def logcdf(value):
-        return at.switch(
-            at.eq(value, -np.inf), -np.inf, at.switch(at.eq(value, np.inf), 0, at.log(0.5))
+        return pt.switch(
+            pt.eq(value, -np.inf), -np.inf, pt.switch(pt.eq(value, np.inf), 0, pt.log(0.5))
         )
 
 
@@ -423,13 +430,13 @@ class HalfFlat(PositiveContinuous):
         return res
 
     def moment(rv, size):
-        return at.ones(size)
+        return pt.ones(size)
 
     def logp(value):
-        return at.switch(at.lt(value, 0), -np.inf, at.zeros_like(value))
+        return pt.switch(pt.lt(value, 0), -np.inf, pt.zeros_like(value))
 
     def logcdf(value):
-        return at.switch(at.lt(value, np.inf), -np.inf, at.switch(at.eq(value, np.inf), 0, -np.inf))
+        return pt.switch(pt.lt(value, np.inf), -np.inf, pt.switch(pt.eq(value, np.inf), 0, -np.inf))
 
 
 class Normal(Continuous):
@@ -502,22 +509,22 @@ class Normal(Continuous):
     @classmethod
     def dist(cls, mu=0, sigma=None, tau=None, **kwargs):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        sigma = at.as_tensor_variable(sigma)
+        sigma = pt.as_tensor_variable(sigma)
 
-        # tau = at.as_tensor_variable(tau)
-        # mean = median = mode = mu = at.as_tensor_variable(floatX(mu))
+        # tau = pt.as_tensor_variable(tau)
+        # mean = median = mode = mu = pt.as_tensor_variable(floatX(mu))
         # variance = 1.0 / self.tau
 
         return super().dist([mu, sigma], **kwargs)
 
     def moment(rv, size, mu, sigma):
-        mu, _ = at.broadcast_arrays(mu, sigma)
+        mu, _ = pt.broadcast_arrays(mu, sigma)
         if not rv_size_is_none(size):
-            mu = at.full(size, mu)
+            mu = pt.full(size, mu)
         return mu
 
     def logp(value, mu, sigma):
-        res = -0.5 * at.pow((value - mu) / sigma, 2) - at.log(at.sqrt(2.0 * np.pi)) - at.log(sigma)
+        res = -0.5 * pt.pow((value - mu) / sigma, 2) - pt.log(pt.sqrt(2.0 * np.pi)) - pt.log(sigma)
         return check_parameters(
             res,
             sigma > 0,
@@ -532,7 +539,13 @@ class Normal(Continuous):
         )
 
     def icdf(value, mu, sigma):
-        return mu + sigma * -np.sqrt(2.0) * at.erfcinv(2 * value)
+        res = mu + sigma * -np.sqrt(2.0) * pt.erfcinv(2 * value)
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
 
 
 class TruncatedNormalRV(RandomVariable):
@@ -657,27 +670,27 @@ class TruncatedNormal(BoundedContinuous):
         **kwargs,
     ) -> RandomVariable:
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        sigma = at.as_tensor_variable(sigma)
-        tau = at.as_tensor_variable(tau)
-        mu = at.as_tensor_variable(floatX(mu))
+        sigma = pt.as_tensor_variable(sigma)
+        tau = pt.as_tensor_variable(tau)
+        mu = pt.as_tensor_variable(floatX(mu))
 
-        lower = at.as_tensor_variable(floatX(lower)) if lower is not None else at.constant(-np.inf)
-        upper = at.as_tensor_variable(floatX(upper)) if upper is not None else at.constant(np.inf)
+        lower = pt.as_tensor_variable(floatX(lower)) if lower is not None else pt.constant(-np.inf)
+        upper = pt.as_tensor_variable(floatX(upper)) if upper is not None else pt.constant(np.inf)
         return super().dist([mu, sigma, lower, upper], **kwargs)
 
     def moment(rv, size, mu, sigma, lower, upper):
-        mu, _, lower, upper = at.broadcast_arrays(mu, sigma, lower, upper)
-        moment = at.switch(
-            at.eq(lower, -np.inf),
-            at.switch(
-                at.eq(upper, np.inf),
+        mu, _, lower, upper = pt.broadcast_arrays(mu, sigma, lower, upper)
+        moment = pt.switch(
+            pt.eq(lower, -np.inf),
+            pt.switch(
+                pt.eq(upper, np.inf),
                 # lower = -inf, upper = inf
                 mu,
                 # lower = -inf, upper = x
                 upper - 1,
             ),
-            at.switch(
-                at.eq(upper, np.inf),
+            pt.switch(
+                pt.eq(upper, np.inf),
                 # lower = x, upper = inf
                 lower + 1,
                 # lower = x, upper = x
@@ -686,7 +699,7 @@ class TruncatedNormal(BoundedContinuous):
         )
 
         if not rv_size_is_none(size):
-            moment = at.full(size, moment)
+            moment = pt.full(size, moment)
 
         return moment
 
@@ -701,7 +714,7 @@ class TruncatedNormal(BoundedContinuous):
             lcdf_b = normal_lcdf(mu, sigma, upper)
             lsf_a = normal_lccdf(mu, sigma, lower)
             lsf_b = normal_lccdf(mu, sigma, upper)
-            norm = at.switch(lower > 0, logdiffexp(lsf_a, lsf_b), logdiffexp(lcdf_b, lcdf_a))
+            norm = pt.switch(lower > 0, logdiffexp(lsf_a, lsf_b), logdiffexp(lcdf_b, lcdf_a))
         elif is_lower_bounded:
             norm = normal_lccdf(mu, sigma, lower)
         elif is_upper_bounded:
@@ -709,18 +722,18 @@ class TruncatedNormal(BoundedContinuous):
         else:
             norm = 0.0
 
-        logp = _logprob(normal, (value,), None, None, None, mu, sigma) - norm
+        logp = _logprob_helper(Normal.dist(mu, sigma), value) - norm
 
         if is_lower_bounded:
-            logp = at.switch(value < lower, -np.inf, logp)
+            logp = pt.switch(value < lower, -np.inf, logp)
 
         if is_upper_bounded:
-            logp = at.switch(value > upper, -np.inf, logp)
+            logp = pt.switch(value > upper, -np.inf, logp)
 
         if is_lower_bounded and is_upper_bounded:
             logp = check_parameters(
                 logp,
-                at.le(lower, upper),
+                pt.le(lower, upper),
                 msg="lower_bound <= upper_bound",
             )
 
@@ -809,12 +822,12 @@ class HalfNormal(PositiveContinuous):
     def moment(rv, size, loc, sigma):
         moment = loc + sigma
         if not rv_size_is_none(size):
-            moment = at.full(size, moment)
+            moment = pt.full(size, moment)
         return moment
 
     def logp(value, loc, sigma):
-        res = -0.5 * at.pow((value - loc) / sigma, 2) + at.log(at.sqrt(2.0 / np.pi)) - at.log(sigma)
-        res = at.switch(at.ge(value, loc), res, -np.inf)
+        res = -0.5 * pt.pow((value - loc) / sigma, 2) + pt.log(pt.sqrt(2.0 / np.pi)) - pt.log(sigma)
+        res = pt.switch(pt.ge(value, loc), res, -np.inf)
         return check_parameters(
             res,
             sigma > 0,
@@ -823,10 +836,10 @@ class HalfNormal(PositiveContinuous):
 
     def logcdf(value, loc, sigma):
         z = zvalue(value, mu=loc, sigma=sigma)
-        logcdf = at.switch(
-            at.lt(value, loc),
+        logcdf = pt.switch(
+            pt.lt(value, loc),
             -np.inf,
-            at.log1p(-at.erfc(z / at.sqrt(2.0))),
+            pt.log1p(-pt.erfc(z / pt.sqrt(2.0))),
         )
 
         return check_parameters(
@@ -935,15 +948,15 @@ class Wald(PositiveContinuous):
     @classmethod
     def dist(cls, mu=None, lam=None, phi=None, alpha=0.0, **kwargs):
         mu, lam, phi = cls.get_mu_lam_phi(mu, lam, phi)
-        alpha = at.as_tensor_variable(floatX(alpha))
-        mu = at.as_tensor_variable(floatX(mu))
-        lam = at.as_tensor_variable(floatX(lam))
+        alpha = pt.as_tensor_variable(floatX(alpha))
+        mu = pt.as_tensor_variable(floatX(mu))
+        lam = pt.as_tensor_variable(floatX(lam))
         return super().dist([mu, lam, alpha], **kwargs)
 
     def moment(rv, size, mu, lam, alpha):
-        mu, _, _ = at.broadcast_arrays(mu, lam, alpha)
+        mu, _, _ = pt.broadcast_arrays(mu, lam, alpha)
         if not rv_size_is_none(size):
-            mu = at.full(size, mu)
+            mu = pt.full(size, mu)
         return mu
 
     @staticmethod
@@ -968,8 +981,8 @@ class Wald(PositiveContinuous):
 
     def logp(value, mu, lam, alpha):
         centered_value = value - alpha
-        logp = at.switch(
-            at.le(centered_value, 0),
+        logp = pt.switch(
+            pt.le(centered_value, 0),
             -np.inf,
             (
                 logpow(lam / (2.0 * np.pi), 0.5)
@@ -990,17 +1003,17 @@ class Wald(PositiveContinuous):
         value -= alpha
         q = value / mu
         l = lam * mu
-        r = at.sqrt(value * lam)
+        r = pt.sqrt(value * lam)
 
         a = normal_lcdf(0, 1, (q - 1.0) / r)
         b = 2.0 / l + normal_lcdf(0, 1, -(q + 1.0) / r)
 
-        logcdf = at.switch(
-            at.le(value, 0),
+        logcdf = pt.switch(
+            pt.le(value, 0),
             -np.inf,
-            at.switch(
-                at.lt(value, np.inf),
-                a + at.log1pexp(b - a),
+            pt.switch(
+                pt.lt(value, np.inf),
+                a + pt.log1pexp(b - a),
                 0,
             ),
         )
@@ -1033,6 +1046,10 @@ class Beta(UnitContinuous):
 
        f(x \mid \alpha, \beta) =
            \frac{x^{\alpha - 1} (1 - x)^{\beta - 1}}{B(\alpha, \beta)}
+
+    where :math:`B` is the Beta function.
+
+    For more information, see https://en.wikipedia.org/wiki/Beta_distribution.
 
     .. plot::
         :context: close-figs
@@ -1098,15 +1115,15 @@ class Beta(UnitContinuous):
     @classmethod
     def dist(cls, alpha=None, beta=None, mu=None, sigma=None, nu=None, *args, **kwargs):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma, nu)
-        alpha = at.as_tensor_variable(floatX(alpha))
-        beta = at.as_tensor_variable(floatX(beta))
+        alpha = pt.as_tensor_variable(floatX(alpha))
+        beta = pt.as_tensor_variable(floatX(beta))
 
         return super().dist([alpha, beta], **kwargs)
 
     def moment(rv, size, alpha, beta):
         mean = alpha / (alpha + beta)
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
+            mean = pt.full(size, mean)
         return mean
 
     @classmethod
@@ -1131,11 +1148,11 @@ class Beta(UnitContinuous):
 
     def logp(value, alpha, beta):
         res = (
-            at.switch(at.eq(alpha, 1.0), 0.0, (alpha - 1.0) * at.log(value))
-            + at.switch(at.eq(beta, 1.0), 0.0, (beta - 1.0) * at.log1p(-value))
-            - (at.gammaln(alpha) + at.gammaln(beta) - at.gammaln(alpha + beta))
+            pt.switch(pt.eq(alpha, 1.0), 0.0, (alpha - 1.0) * pt.log(value))
+            + pt.switch(pt.eq(beta, 1.0), 0.0, (beta - 1.0) * pt.log1p(-value))
+            - (pt.gammaln(alpha) + pt.gammaln(beta) - pt.gammaln(alpha + beta))
         )
-        res = at.switch(at.bitwise_and(at.ge(value, 0.0), at.le(value, 1.0)), res, -np.inf)
+        res = pt.switch(pt.bitwise_and(pt.ge(value, 0.0), pt.le(value, 1.0)), res, -np.inf)
         return check_parameters(
             res,
             alpha > 0,
@@ -1144,12 +1161,12 @@ class Beta(UnitContinuous):
         )
 
     def logcdf(value, alpha, beta):
-        logcdf = at.switch(
-            at.lt(value, 0),
+        logcdf = pt.switch(
+            pt.lt(value, 0),
             -np.inf,
-            at.switch(
-                at.lt(value, 1),
-                at.log(at.betainc(alpha, beta, value)),
+            pt.switch(
+                pt.lt(value, 1),
+                pt.log(pt.betainc(alpha, beta, value)),
                 0,
             ),
         )
@@ -1225,21 +1242,21 @@ class Kumaraswamy(UnitContinuous):
 
     @classmethod
     def dist(cls, a, b, *args, **kwargs):
-        a = at.as_tensor_variable(floatX(a))
-        b = at.as_tensor_variable(floatX(b))
+        a = pt.as_tensor_variable(floatX(a))
+        b = pt.as_tensor_variable(floatX(b))
 
         return super().dist([a, b], *args, **kwargs)
 
     def moment(rv, size, a, b):
-        mean = at.exp(at.log(b) + at.gammaln(1 + 1 / a) + at.gammaln(b) - at.gammaln(1 + 1 / a + b))
+        mean = pt.exp(pt.log(b) + pt.gammaln(1 + 1 / a) + pt.gammaln(b) - pt.gammaln(1 + 1 / a + b))
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
+            mean = pt.full(size, mean)
         return mean
 
     def logp(value, a, b):
-        res = at.log(a) + at.log(b) + (a - 1) * at.log(value) + (b - 1) * at.log(1 - value**a)
-        res = at.switch(
-            at.or_(at.lt(value, 0), at.gt(value, 1)),
+        res = pt.log(a) + pt.log(b) + (a - 1) * pt.log(value) + (b - 1) * pt.log(1 - value**a)
+        res = pt.switch(
+            pt.or_(pt.lt(value, 0), pt.gt(value, 1)),
             -np.inf,
             res,
         )
@@ -1251,12 +1268,12 @@ class Kumaraswamy(UnitContinuous):
         )
 
     def logcdf(value, a, b):
-        res = at.switch(
-            at.lt(value, 0),
+        res = pt.switch(
+            pt.lt(value, 0),
             -np.inf,
-            at.switch(
-                at.lt(value, 1),
-                at.log1mexp(b * at.log1p(-(value**a))),
+            pt.switch(
+                pt.lt(value, 1),
+                pt.log1mexp(b * pt.log1p(-(value**a))),
                 0,
             ),
         )
@@ -1311,19 +1328,19 @@ class Exponential(PositiveContinuous):
 
     @classmethod
     def dist(cls, lam, *args, **kwargs):
-        lam = at.as_tensor_variable(floatX(lam))
+        lam = pt.as_tensor_variable(floatX(lam))
 
         # PyTensor exponential op is parametrized in terms of mu (1/lam)
-        return super().dist([at.reciprocal(lam)], **kwargs)
+        return super().dist([pt.reciprocal(lam)], **kwargs)
 
     def moment(rv, size, mu):
         if not rv_size_is_none(size):
-            mu = at.full(size, mu)
+            mu = pt.full(size, mu)
         return mu
 
     def logp(value, mu):
-        res = -at.log(mu) - value / mu
-        res = at.switch(at.ge(value, 0.0), res, -np.inf)
+        res = -pt.log(mu) - value / mu
+        res = pt.switch(pt.ge(value, 0.0), res, -np.inf)
         return check_parameters(
             res,
             mu >= 0,
@@ -1331,11 +1348,11 @@ class Exponential(PositiveContinuous):
         )
 
     def logcdf(value, mu):
-        lam = at.reciprocal(mu)
-        res = at.switch(
-            at.lt(value, 0),
+        lam = pt.reciprocal(mu)
+        res = pt.switch(
+            pt.lt(value, 0),
             -np.inf,
-            at.log1mexp(-lam * value),
+            pt.log1mexp(-lam * value),
         )
 
         return check_parameters(
@@ -1392,19 +1409,19 @@ class Laplace(Continuous):
 
     @classmethod
     def dist(cls, mu, b, *args, **kwargs):
-        b = at.as_tensor_variable(floatX(b))
-        mu = at.as_tensor_variable(floatX(mu))
+        b = pt.as_tensor_variable(floatX(b))
+        mu = pt.as_tensor_variable(floatX(mu))
 
         return super().dist([mu, b], *args, **kwargs)
 
     def moment(rv, size, mu, b):
-        mu, _ = at.broadcast_arrays(mu, b)
+        mu, _ = pt.broadcast_arrays(mu, b)
         if not rv_size_is_none(size):
-            mu = at.full(size, mu)
+            mu = pt.full(size, mu)
         return mu
 
     def logp(value, mu, b):
-        res = -at.log(2 * b) - at.abs(value - mu) / b
+        res = -pt.log(2 * b) - pt.abs(value - mu) / b
         return check_parameters(
             res,
             b > 0,
@@ -1414,13 +1431,13 @@ class Laplace(Continuous):
     def logcdf(value, mu, b):
         y = (value - mu) / b
 
-        res = at.switch(
-            at.le(value, mu),
-            at.log(0.5) + y,
-            at.switch(
-                at.gt(y, 1),
-                at.log1p(-0.5 * at.exp(-y)),
-                at.log(1 - 0.5 * at.exp(-y)),
+        res = pt.switch(
+            pt.le(value, mu),
+            pt.log(0.5) + y,
+            pt.switch(
+                pt.gt(y, 1),
+                pt.log1p(-0.5 * pt.exp(-y)),
+                pt.log(1 - 0.5 * pt.exp(-y)),
             ),
         )
 
@@ -1501,9 +1518,9 @@ class AsymmetricLaplace(Continuous):
     @classmethod
     def dist(cls, kappa=None, mu=None, b=None, q=None, *args, **kwargs):
         kappa = cls.get_kappa(kappa, q)
-        b = at.as_tensor_variable(floatX(b))
-        kappa = at.as_tensor_variable(floatX(kappa))
-        mu = at.as_tensor_variable(floatX(mu))
+        b = pt.as_tensor_variable(floatX(b))
+        kappa = pt.as_tensor_variable(floatX(kappa))
+        mu = pt.as_tensor_variable(floatX(mu))
 
         return super().dist([b, kappa, mu], *args, **kwargs)
 
@@ -1527,13 +1544,13 @@ class AsymmetricLaplace(Continuous):
         mean = mu - (kappa - 1 / kappa) / b
 
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
+            mean = pt.full(size, mean)
         return mean
 
     def logp(value, b, kappa, mu):
         value = value - mu
-        res = at.log(b / (kappa + (kappa**-1))) + (
-            -value * b * at.sgn(value) * (kappa ** at.sgn(value))
+        res = pt.log(b / (kappa + (kappa**-1))) + (
+            -value * b * pt.sgn(value) * (kappa ** pt.sgn(value))
         )
 
         return check_parameters(
@@ -1617,25 +1634,25 @@ class LogNormal(PositiveContinuous):
     def dist(cls, mu=0, sigma=None, tau=None, *args, **kwargs):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        mu = at.as_tensor_variable(floatX(mu))
-        sigma = at.as_tensor_variable(floatX(sigma))
+        mu = pt.as_tensor_variable(floatX(mu))
+        sigma = pt.as_tensor_variable(floatX(sigma))
 
         return super().dist([mu, sigma], *args, **kwargs)
 
     def moment(rv, size, mu, sigma):
-        mean = at.exp(mu + 0.5 * sigma**2)
+        mean = pt.exp(mu + 0.5 * sigma**2)
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
+            mean = pt.full(size, mean)
         return mean
 
     def logp(value, mu, sigma):
         res = (
-            -0.5 * at.pow((at.log(value) - mu) / sigma, 2)
-            - 0.5 * at.log(2.0 * np.pi)
-            - at.log(sigma)
-            - at.log(value)
+            -0.5 * pt.pow((pt.log(value) - mu) / sigma, 2)
+            - 0.5 * pt.log(2.0 * np.pi)
+            - pt.log(sigma)
+            - pt.log(value)
         )
-        res = at.switch(at.gt(value, 0.0), res, -np.inf)
+        res = pt.switch(pt.gt(value, 0.0), res, -np.inf)
         return check_parameters(
             res,
             sigma > 0,
@@ -1643,10 +1660,10 @@ class LogNormal(PositiveContinuous):
         )
 
     def logcdf(value, mu, sigma):
-        res = at.switch(
-            at.le(value, 0),
+        res = pt.switch(
+            pt.le(value, 0),
             -np.inf,
-            normal_lcdf(mu, sigma, at.log(value)),
+            normal_lcdf(mu, sigma, pt.log(value)),
         )
 
         return check_parameters(
@@ -1742,16 +1759,16 @@ class StudentT(Continuous):
 
     @classmethod
     def dist(cls, nu, mu=0, *, sigma=None, lam=None, **kwargs):
-        nu = at.as_tensor_variable(floatX(nu))
+        nu = pt.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
-        sigma = at.as_tensor_variable(sigma)
+        sigma = pt.as_tensor_variable(sigma)
 
         return super().dist([nu, mu, sigma], **kwargs)
 
     def moment(rv, size, nu, mu, sigma):
-        mu, _, _ = at.broadcast_arrays(mu, nu, sigma)
+        mu, _, _ = pt.broadcast_arrays(mu, nu, sigma)
         if not rv_size_is_none(size):
-            mu = at.full(size, mu)
+            mu = pt.full(size, mu)
         return mu
 
     def logp(value, nu, mu, sigma):
@@ -1759,9 +1776,9 @@ class StudentT(Continuous):
 
         res = (
             gammaln((nu + 1.0) / 2.0)
-            + 0.5 * at.log(lam / (nu * np.pi))
+            + 0.5 * pt.log(lam / (nu * np.pi))
             - gammaln(nu / 2.0)
-            - (nu + 1.0) / 2.0 * at.log1p(lam * (value - mu) ** 2 / nu)
+            - (nu + 1.0) / 2.0 * pt.log1p(lam * (value - mu) ** 2 / nu)
         )
 
         return check_parameters(
@@ -1775,10 +1792,10 @@ class StudentT(Continuous):
         _, sigma = get_tau_sigma(sigma=sigma)
 
         t = (value - mu) / sigma
-        sqrt_t2_nu = at.sqrt(t**2 + nu)
+        sqrt_t2_nu = pt.sqrt(t**2 + nu)
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
 
-        res = at.log(at.betainc(nu / 2.0, nu / 2.0, x))
+        res = pt.log(pt.betainc(nu / 2.0, nu / 2.0, x))
 
         return check_parameters(
             res,
@@ -1839,20 +1856,20 @@ class Pareto(BoundedContinuous):
 
     @classmethod
     def dist(cls, alpha, m, **kwargs):
-        alpha = at.as_tensor_variable(floatX(alpha))
-        m = at.as_tensor_variable(floatX(m))
+        alpha = pt.as_tensor_variable(floatX(alpha))
+        m = pt.as_tensor_variable(floatX(m))
 
         return super().dist([alpha, m], **kwargs)
 
     def moment(rv, size, alpha, m):
         median = m * 2 ** (1 / alpha)
         if not rv_size_is_none(size):
-            median = at.full(size, median)
+            median = pt.full(size, median)
         return median
 
     def logp(value, alpha, m):
-        res = at.log(alpha) + logpow(m, alpha) - logpow(value, alpha + 1.0)
-        res = at.switch(at.ge(value, m), res, -np.inf)
+        res = pt.log(alpha) + logpow(m, alpha) - logpow(value, alpha + 1.0)
+        res = pt.switch(pt.ge(value, m), res, -np.inf)
         return check_parameters(
             res,
             alpha > 0,
@@ -1863,13 +1880,13 @@ class Pareto(BoundedContinuous):
     def logcdf(value, alpha, m):
         arg = (m / value) ** alpha
 
-        res = at.switch(
-            at.lt(value, m),
+        res = pt.switch(
+            pt.lt(value, m),
             -np.inf,
-            at.switch(
-                at.le(arg, 1e-5),
-                at.log1p(-arg),
-                at.log(1 - arg),
+            pt.switch(
+                pt.le(arg, 1e-5),
+                pt.log1p(-arg),
+                pt.log(1 - arg),
             ),
         )
 
@@ -1936,19 +1953,19 @@ class Cauchy(Continuous):
 
     @classmethod
     def dist(cls, alpha, beta, *args, **kwargs):
-        alpha = at.as_tensor_variable(floatX(alpha))
-        beta = at.as_tensor_variable(floatX(beta))
+        alpha = pt.as_tensor_variable(floatX(alpha))
+        beta = pt.as_tensor_variable(floatX(beta))
 
         return super().dist([alpha, beta], **kwargs)
 
     def moment(rv, size, alpha, beta):
-        alpha, _ = at.broadcast_arrays(alpha, beta)
+        alpha, _ = pt.broadcast_arrays(alpha, beta)
         if not rv_size_is_none(size):
-            alpha = at.full(size, alpha)
+            alpha = pt.full(size, alpha)
         return alpha
 
     def logp(value, alpha, beta):
-        res = -at.log(np.pi) - at.log(beta) - at.log1p(at.pow((value - alpha) / beta, 2))
+        res = -pt.log(np.pi) - pt.log(beta) - pt.log1p(pt.pow((value - alpha) / beta, 2))
         return check_parameters(
             res,
             beta > 0,
@@ -1956,7 +1973,7 @@ class Cauchy(Continuous):
         )
 
     def logcdf(value, alpha, beta):
-        res = at.log(0.5 + at.arctan((value - alpha) / beta) / np.pi)
+        res = pt.log(0.5 + pt.arctan((value - alpha) / beta) / np.pi)
         return check_parameters(
             res,
             beta > 0,
@@ -2007,17 +2024,17 @@ class HalfCauchy(PositiveContinuous):
 
     @classmethod
     def dist(cls, beta, *args, **kwargs):
-        beta = at.as_tensor_variable(floatX(beta))
+        beta = pt.as_tensor_variable(floatX(beta))
         return super().dist([0.0, beta], **kwargs)
 
     def moment(rv, size, loc, beta):
         if not rv_size_is_none(size):
-            beta = at.full(size, beta)
+            beta = pt.full(size, beta)
         return beta
 
     def logp(value, loc, beta):
-        res = at.log(2) + logprob(Cauchy.dist(loc, beta), value)
-        res = at.switch(at.ge(value, loc), res, -np.inf)
+        res = pt.log(2) + _logprob_helper(Cauchy.dist(loc, beta), value)
+        res = pt.switch(pt.ge(value, loc), res, -np.inf)
         return check_parameters(
             res,
             beta > 0,
@@ -2025,10 +2042,10 @@ class HalfCauchy(PositiveContinuous):
         )
 
     def logcdf(value, loc, beta):
-        res = at.switch(
-            at.lt(value, loc),
+        res = pt.switch(
+            pt.lt(value, loc),
             -np.inf,
-            at.log(2 * at.arctan((value - loc) / beta) / np.pi),
+            pt.log(2 * pt.arctan((value - loc) / beta) / np.pi),
         )
 
         return check_parameters(
@@ -2102,8 +2119,8 @@ class Gamma(PositiveContinuous):
     @classmethod
     def dist(cls, alpha=None, beta=None, mu=None, sigma=None, **kwargs):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma)
-        alpha = at.as_tensor_variable(floatX(alpha))
-        beta = at.as_tensor_variable(floatX(beta))
+        alpha = pt.as_tensor_variable(floatX(alpha))
+        beta = pt.as_tensor_variable(floatX(beta))
 
         # The PyTensor `GammaRV` `Op` will invert the `beta` parameter itself
         return super().dist([alpha, beta], **kwargs)
@@ -2132,13 +2149,13 @@ class Gamma(PositiveContinuous):
         # The PyTensor `GammaRV` `Op` inverts the `beta` parameter itself
         mean = alpha * inv_beta
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
+            mean = pt.full(size, mean)
         return mean
 
     def logp(value, alpha, inv_beta):
-        beta = at.reciprocal(inv_beta)
-        res = -at.gammaln(alpha) + logpow(beta, alpha) - beta * value + logpow(value, alpha - 1)
-        res = at.switch(at.ge(value, 0.0), res, -np.inf)
+        beta = pt.reciprocal(inv_beta)
+        res = -pt.gammaln(alpha) + logpow(beta, alpha) - beta * value + logpow(value, alpha - 1)
+        res = pt.switch(pt.ge(value, 0.0), res, -np.inf)
         return check_parameters(
             res,
             alpha > 0,
@@ -2147,11 +2164,11 @@ class Gamma(PositiveContinuous):
         )
 
     def logcdf(value, alpha, inv_beta):
-        beta = at.reciprocal(inv_beta)
-        res = at.switch(
-            at.lt(value, 0),
+        beta = pt.reciprocal(inv_beta)
+        res = pt.switch(
+            pt.lt(value, 0),
             -np.inf,
-            at.log(at.gammainc(alpha, beta * value)),
+            pt.log(pt.gammainc(alpha, beta * value)),
         )
 
         return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
@@ -2211,17 +2228,17 @@ class InverseGamma(PositiveContinuous):
     @classmethod
     def dist(cls, alpha=None, beta=None, mu=None, sigma=None, *args, **kwargs):
         alpha, beta = cls._get_alpha_beta(alpha, beta, mu, sigma)
-        alpha = at.as_tensor_variable(floatX(alpha))
-        beta = at.as_tensor_variable(floatX(beta))
+        alpha = pt.as_tensor_variable(floatX(alpha))
+        beta = pt.as_tensor_variable(floatX(beta))
 
         return super().dist([alpha, beta], **kwargs)
 
     def moment(rv, size, alpha, beta):
         mean = beta / (alpha - 1.0)
         mode = beta / (alpha + 1.0)
-        moment = at.switch(alpha > 1, mean, mode)
+        moment = pt.switch(alpha > 1, mean, mode)
         if not rv_size_is_none(size):
-            moment = at.full(size, moment)
+            moment = pt.full(size, moment)
         return moment
 
     @classmethod
@@ -2248,8 +2265,8 @@ class InverseGamma(PositiveContinuous):
         return alpha, beta
 
     def logp(value, alpha, beta):
-        res = -at.gammaln(alpha) + logpow(beta, alpha) - beta / value + logpow(value, -alpha - 1)
-        res = at.switch(at.ge(value, 0.0), res, -np.inf)
+        res = -pt.gammaln(alpha) + logpow(beta, alpha) - beta / value + logpow(value, -alpha - 1)
+        res = pt.switch(pt.ge(value, 0.0), res, -np.inf)
         return check_parameters(
             res,
             alpha > 0,
@@ -2258,10 +2275,10 @@ class InverseGamma(PositiveContinuous):
         )
 
     def logcdf(value, alpha, beta):
-        res = at.switch(
-            at.lt(value, 0),
+        res = pt.switch(
+            pt.lt(value, 0),
             -np.inf,
-            at.log(at.gammaincc(alpha, beta / value)),
+            pt.log(pt.gammaincc(alpha, beta / value)),
         )
 
         return check_parameters(
@@ -2315,20 +2332,20 @@ class ChiSquared(PositiveContinuous):
 
     @classmethod
     def dist(cls, nu, *args, **kwargs):
-        nu = at.as_tensor_variable(floatX(nu))
+        nu = pt.as_tensor_variable(floatX(nu))
         return super().dist([nu], *args, **kwargs)
 
     def moment(rv, size, nu):
         moment = nu
         if not rv_size_is_none(size):
-            moment = at.full(size, moment)
+            moment = pt.full(size, moment)
         return moment
 
     def logp(value, nu):
-        return logprob(Gamma.dist(alpha=nu / 2, beta=0.5), value)
+        return _logprob_helper(Gamma.dist(alpha=nu / 2, beta=0.5), value)
 
     def logcdf(value, nu):
-        return logcdf(Gamma.dist(alpha=nu / 2, beta=0.5), value)
+        return _logcdf_helper(Gamma.dist(alpha=nu / 2, beta=0.5), value)
 
 
 # TODO: Remove this once logp for multiplication is working!
@@ -2400,24 +2417,24 @@ class Weibull(PositiveContinuous):
 
     @classmethod
     def dist(cls, alpha, beta, *args, **kwargs):
-        alpha = at.as_tensor_variable(floatX(alpha))
-        beta = at.as_tensor_variable(floatX(beta))
+        alpha = pt.as_tensor_variable(floatX(alpha))
+        beta = pt.as_tensor_variable(floatX(beta))
 
         return super().dist([alpha, beta], *args, **kwargs)
 
     def moment(rv, size, alpha, beta):
-        mean = beta * at.gamma(1 + 1 / alpha)
+        mean = beta * pt.gamma(1 + 1 / alpha)
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
+            mean = pt.full(size, mean)
         return mean
 
     def logcdf(value, alpha, beta):
         a = (value / beta) ** alpha
 
-        res = at.switch(
-            at.lt(value, 0),
+        res = pt.switch(
+            pt.lt(value, 0),
             -np.inf,
-            at.log1mexp(-a),
+            pt.log1mexp(-a),
         )
 
         return check_parameters(
@@ -2429,12 +2446,12 @@ class Weibull(PositiveContinuous):
 
     def logp(value, alpha, beta):
         res = (
-            at.log(alpha)
-            - at.log(beta)
-            + (alpha - 1.0) * at.log(value / beta)
-            - at.pow(value / beta, alpha)
+            pt.log(alpha)
+            - pt.log(beta)
+            + (alpha - 1.0) * pt.log(value / beta)
+            - pt.pow(value / beta, alpha)
         )
-        res = at.switch(at.ge(value, 0.0), res, -np.inf)
+        res = pt.switch(pt.ge(value, 0.0), res, -np.inf)
         return check_parameters(
             res,
             alpha > 0,
@@ -2520,29 +2537,29 @@ class HalfStudentT(PositiveContinuous):
 
     @classmethod
     def dist(cls, nu, sigma=None, lam=None, *args, **kwargs):
-        nu = at.as_tensor_variable(floatX(nu))
+        nu = pt.as_tensor_variable(floatX(nu))
         lam, sigma = get_tau_sigma(lam, sigma)
-        sigma = at.as_tensor_variable(sigma)
+        sigma = pt.as_tensor_variable(sigma)
 
         return super().dist([nu, sigma], *args, **kwargs)
 
     def moment(rv, size, nu, sigma):
-        sigma, _ = at.broadcast_arrays(sigma, nu)
+        sigma, _ = pt.broadcast_arrays(sigma, nu)
         if not rv_size_is_none(size):
-            sigma = at.full(size, sigma)
+            sigma = pt.full(size, sigma)
         return sigma
 
     def logp(value, nu, sigma):
         res = (
-            at.log(2)
+            pt.log(2)
             + gammaln((nu + 1.0) / 2.0)
             - gammaln(nu / 2.0)
-            - 0.5 * at.log(nu * np.pi * sigma**2)
-            - (nu + 1.0) / 2.0 * at.log1p(value**2 / (nu * sigma**2))
+            - 0.5 * pt.log(nu * np.pi * sigma**2)
+            - (nu + 1.0) / 2.0 * pt.log1p(value**2 / (nu * sigma**2))
         )
 
-        res = at.switch(
-            at.lt(value, 0),
+        res = pt.switch(
+            pt.lt(value, 0),
             -np.inf,
             res,
         )
@@ -2640,25 +2657,25 @@ class ExGaussian(Continuous):
 
     @classmethod
     def dist(cls, mu=0.0, sigma=None, nu=None, *args, **kwargs):
-        mu = at.as_tensor_variable(floatX(mu))
-        sigma = at.as_tensor_variable(floatX(sigma))
-        nu = at.as_tensor_variable(floatX(nu))
+        mu = pt.as_tensor_variable(floatX(mu))
+        sigma = pt.as_tensor_variable(floatX(sigma))
+        nu = pt.as_tensor_variable(floatX(nu))
 
         return super().dist([mu, sigma, nu], *args, **kwargs)
 
     def moment(rv, size, mu, sigma, nu):
-        mu, nu, _ = at.broadcast_arrays(mu, nu, sigma)
+        mu, nu, _ = pt.broadcast_arrays(mu, nu, sigma)
         moment = mu + nu
         if not rv_size_is_none(size):
-            moment = at.full(size, moment)
+            moment = pt.full(size, moment)
         return moment
 
     def logp(value, mu, sigma, nu):
         # Alogithm is adapted from dexGAUS.R from gamlss
-        res = at.switch(
-            at.gt(nu, 0.05 * sigma),
+        res = pt.switch(
+            pt.gt(nu, 0.05 * sigma),
             (
-                -at.log(nu)
+                -pt.log(nu)
                 + (mu - value) / nu
                 + 0.5 * (sigma / nu) ** 2
                 + normal_lcdf(mu + (sigma**2) / nu, sigma, value)
@@ -2674,8 +2691,8 @@ class ExGaussian(Continuous):
 
     def logcdf(value, mu, sigma, nu):
         # Alogithm is adapted from pexGAUS.R from gamlss
-        res = at.switch(
-            at.gt(nu, 0.05 * sigma),
+        res = pt.switch(
+            pt.gt(nu, 0.05 * sigma),
             logdiffexp(
                 normal_lcdf(mu, sigma, value),
                 (
@@ -2745,19 +2762,19 @@ class VonMises(CircularContinuous):
 
     @classmethod
     def dist(cls, mu=0.0, kappa=1.0, *args, **kwargs):
-        mu = at.as_tensor_variable(floatX(mu))
-        kappa = at.as_tensor_variable(floatX(kappa))
+        mu = pt.as_tensor_variable(floatX(mu))
+        kappa = pt.as_tensor_variable(floatX(kappa))
         return super().dist([mu, kappa], *args, **kwargs)
 
     def moment(rv, size, mu, kappa):
-        mu, _ = at.broadcast_arrays(mu, kappa)
+        mu, _ = pt.broadcast_arrays(mu, kappa)
         if not rv_size_is_none(size):
-            mu = at.full(size, mu)
+            mu = pt.full(size, mu)
         return mu
 
     def logp(value, mu, kappa):
-        res = kappa * at.cos(mu - value) - at.log(2 * np.pi) - at.log(at.i0(kappa))
-        res = at.switch(at.bitwise_and(at.ge(value, -np.pi), at.le(value, np.pi)), res, -np.inf)
+        res = kappa * pt.cos(mu - value) - pt.log(2 * np.pi) - pt.log(pt.i0(kappa))
+        res = pt.switch(pt.bitwise_and(pt.ge(value, -np.pi), pt.le(value, np.pi)), res, -np.inf)
         return check_parameters(
             res,
             kappa > 0,
@@ -2848,25 +2865,25 @@ class SkewNormal(Continuous):
     @classmethod
     def dist(cls, alpha=1, mu=0.0, sigma=None, tau=None, *args, **kwargs):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        alpha = at.as_tensor_variable(floatX(alpha))
-        mu = at.as_tensor_variable(floatX(mu))
-        tau = at.as_tensor_variable(tau)
-        sigma = at.as_tensor_variable(sigma)
+        alpha = pt.as_tensor_variable(floatX(alpha))
+        mu = pt.as_tensor_variable(floatX(mu))
+        tau = pt.as_tensor_variable(tau)
+        sigma = pt.as_tensor_variable(sigma)
 
         return super().dist([mu, sigma, alpha], *args, **kwargs)
 
     def moment(rv, size, mu, sigma, alpha):
         mean = mu + sigma * (2 / np.pi) ** 0.5 * alpha / (1 + alpha**2) ** 0.5
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
+            mean = pt.full(size, mean)
         return mean
 
     def logp(value, mu, sigma, alpha):
         tau, _ = get_tau_sigma(sigma=sigma)
 
         res = (
-            at.log(1 + at.erf(((value - mu) * at.sqrt(tau) * alpha) / at.sqrt(2)))
-            + (-tau * (value - mu) ** 2 + at.log(tau / np.pi / 2.0)) / 2.0
+            pt.log(1 + pt.erf(((value - mu) * pt.sqrt(tau) * alpha) / pt.sqrt(2)))
+            + (-tau * (value - mu) ** 2 + pt.log(tau / np.pi / 2.0)) / 2.0
         )
 
         return check_parameters(
@@ -2937,25 +2954,25 @@ class Triangular(BoundedContinuous):
 
     @classmethod
     def dist(cls, lower=0, upper=1, c=0.5, *args, **kwargs):
-        lower = at.as_tensor_variable(floatX(lower))
-        upper = at.as_tensor_variable(floatX(upper))
-        c = at.as_tensor_variable(floatX(c))
+        lower = pt.as_tensor_variable(floatX(lower))
+        upper = pt.as_tensor_variable(floatX(upper))
+        c = pt.as_tensor_variable(floatX(c))
 
         return super().dist([lower, c, upper], *args, **kwargs)
 
     def moment(rv, size, lower, c, upper):
         mean = (lower + upper + c) / 3
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
+            mean = pt.full(size, mean)
         return mean
 
     def logp(value, lower, c, upper):
-        res = at.switch(
-            at.lt(value, c),
-            at.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
-            at.log(2 * (upper - value) / ((upper - lower) * (upper - c))),
+        res = pt.switch(
+            pt.lt(value, c),
+            pt.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
+            pt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),
         )
-        res = at.switch(at.bitwise_and(at.le(lower, value), at.le(value, upper)), res, -np.inf)
+        res = pt.switch(pt.bitwise_and(pt.le(lower, value), pt.le(value, upper)), res, -np.inf)
         return check_parameters(
             res,
             lower <= c,
@@ -2964,15 +2981,15 @@ class Triangular(BoundedContinuous):
         )
 
     def logcdf(value, lower, c, upper):
-        res = at.switch(
-            at.le(value, lower),
+        res = pt.switch(
+            pt.le(value, lower),
             -np.inf,
-            at.switch(
-                at.le(value, c),
-                at.log(((value - lower) ** 2) / ((upper - lower) * (c - lower))),
-                at.switch(
-                    at.lt(value, upper),
-                    at.log1p(-((upper - value) ** 2) / ((upper - lower) * (upper - c))),
+            pt.switch(
+                pt.le(value, c),
+                pt.log(((value - lower) ** 2) / ((upper - lower) * (c - lower))),
+                pt.switch(
+                    pt.lt(value, upper),
+                    pt.log1p(-((upper - value) ** 2) / ((upper - lower) * (upper - c))),
                     0,
                 ),
             ),
@@ -3044,20 +3061,20 @@ class Gumbel(Continuous):
 
     @classmethod
     def dist(cls, mu, beta, **kwargs):
-        mu = at.as_tensor_variable(floatX(mu))
-        beta = at.as_tensor_variable(floatX(beta))
+        mu = pt.as_tensor_variable(floatX(mu))
+        beta = pt.as_tensor_variable(floatX(beta))
 
         return super().dist([mu, beta], **kwargs)
 
     def moment(rv, size, mu, beta):
         mean = mu + beta * np.euler_gamma
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
+            mean = pt.full(size, mean)
         return mean
 
     def logp(value, mu, beta):
         z = (value - mu) / beta
-        res = -z - at.exp(-z) - at.log(beta)
+        res = -z - pt.exp(-z) - pt.log(beta)
         return check_parameters(
             res,
             beta > 0,
@@ -3065,7 +3082,7 @@ class Gumbel(Continuous):
         )
 
     def logcdf(value, mu, beta):
-        res = -at.exp(-(value - mu) / beta)
+        res = -pt.exp(-(value - mu) / beta)
 
         return check_parameters(
             res,
@@ -3154,8 +3171,8 @@ class Rice(PositiveContinuous):
     @classmethod
     def dist(cls, nu=None, sigma=None, b=None, *args, **kwargs):
         nu, b, sigma = cls.get_nu_b(nu, b, sigma)
-        b = at.as_tensor_variable(floatX(b))
-        sigma = at.as_tensor_variable(floatX(sigma))
+        b = pt.as_tensor_variable(floatX(b))
+        sigma = pt.as_tensor_variable(floatX(sigma))
 
         return super().dist([b, sigma], *args, **kwargs)
 
@@ -3176,24 +3193,24 @@ class Rice(PositiveContinuous):
         mean = (
             sigma
             * np.sqrt(np.pi / 2)
-            * at.exp(nu_sigma_ratio / 2)
+            * pt.exp(nu_sigma_ratio / 2)
             * (
-                (1 - nu_sigma_ratio) * at.i0(-nu_sigma_ratio / 2)
-                - nu_sigma_ratio * at.i1(-nu_sigma_ratio / 2)
+                (1 - nu_sigma_ratio) * pt.i0(-nu_sigma_ratio / 2)
+                - nu_sigma_ratio * pt.i1(-nu_sigma_ratio / 2)
             )
         )
 
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
+            mean = pt.full(size, mean)
         return mean
 
     def logp(value, b, sigma):
         x = value / sigma
 
-        res = at.switch(
-            at.le(value, 0),
+        res = pt.switch(
+            pt.le(value, 0),
             -np.inf,
-            at.log(x * at.exp((-(x - b) * (x - b)) / 2) * i0e(x * b) / sigma),
+            pt.log(x * pt.exp((-(x - b) * (x - b)) / 2) * i0e(x * b) / sigma),
         )
 
         return check_parameters(
@@ -3253,19 +3270,19 @@ class Logistic(Continuous):
 
     @classmethod
     def dist(cls, mu=0.0, s=1.0, *args, **kwargs):
-        mu = at.as_tensor_variable(floatX(mu))
-        s = at.as_tensor_variable(floatX(s))
+        mu = pt.as_tensor_variable(floatX(mu))
+        s = pt.as_tensor_variable(floatX(s))
         return super().dist([mu, s], *args, **kwargs)
 
     def moment(rv, size, mu, s):
-        mu, _ = at.broadcast_arrays(mu, s)
+        mu, _ = pt.broadcast_arrays(mu, s)
         if not rv_size_is_none(size):
-            mu = at.full(size, mu)
+            mu = pt.full(size, mu)
         return mu
 
     def logp(value, mu, s):
         z = (value - mu) / s
-        res = -z - at.log(s) - 2.0 * at.log1p(at.exp(-z))
+        res = -z - pt.log(s) - 2.0 * pt.log1p(pt.exp(-z))
         return check_parameters(
             res,
             s > 0,
@@ -3273,7 +3290,7 @@ class Logistic(Continuous):
         )
 
     def logcdf(value, mu, s):
-        res = -at.log1pexp(-(value - mu) / s)
+        res = -pt.log1pexp(-(value - mu) / s)
 
         return check_parameters(
             res,
@@ -3348,29 +3365,29 @@ class LogitNormal(UnitContinuous):
 
     @classmethod
     def dist(cls, mu=0, sigma=None, tau=None, **kwargs):
-        mu = at.as_tensor_variable(floatX(mu))
+        mu = pt.as_tensor_variable(floatX(mu))
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        sigma = at.as_tensor_variable(sigma)
-        tau = at.as_tensor_variable(tau)
+        sigma = pt.as_tensor_variable(sigma)
+        tau = pt.as_tensor_variable(tau)
 
         return super().dist([mu, sigma], **kwargs)
 
     def moment(rv, size, mu, sigma):
-        median, _ = at.broadcast_arrays(invlogit(mu), sigma)
+        median, _ = pt.broadcast_arrays(invlogit(mu), sigma)
         if not rv_size_is_none(size):
-            median = at.full(size, median)
+            median = pt.full(size, median)
         return median
 
     def logp(value, mu, sigma):
         tau, _ = get_tau_sigma(sigma=sigma)
 
-        res = at.switch(
-            at.or_(at.le(value, 0), at.ge(value, 1)),
+        res = pt.switch(
+            pt.or_(pt.le(value, 0), pt.ge(value, 1)),
             -np.inf,
             (
                 -0.5 * tau * (logit(value) - mu) ** 2
-                + 0.5 * at.log(tau / (2.0 * np.pi))
-                - at.log(value * (1 - value))
+                + 0.5 * pt.log(tau / (2.0 * np.pi))
+                - pt.log(value * (1 - value))
             ),
         )
 
@@ -3479,12 +3496,12 @@ class Interpolated(BoundedContinuous):
         cdf_points = interp.antiderivative()(x_points) / Z
         pdf_points = pdf_points / Z
 
-        x_points = at.constant(floatX(x_points))
-        pdf_points = at.constant(floatX(pdf_points))
-        cdf_points = at.constant(floatX(cdf_points))
+        x_points = pt.constant(floatX(x_points))
+        pdf_points = pt.constant(floatX(pdf_points))
+        cdf_points = pt.constant(floatX(cdf_points))
 
-        # lower = at.as_tensor_variable(x_points[0])
-        # upper = at.as_tensor_variable(x_points[-1])
+        # lower = pt.as_tensor_variable(x_points[0])
+        # upper = pt.as_tensor_variable(x_points[-1])
         # median = _interpolated_argcdf(0.5, pdf_points, cdf_points, x_points)
 
         return super().dist([x_points, pdf_points, cdf_points], **kwargs)
@@ -3493,11 +3510,11 @@ class Interpolated(BoundedContinuous):
         """
         Estimates the expectation integral using the trapezoid rule; cdf_points are not used.
         """
-        x_fx = at.mul(x_points, pdf_points)  # x_i * f(x_i) for all xi's in x_points
-        moment = at.sum(at.mul(at.diff(x_points), x_fx[1:] + x_fx[:-1])) / 2
+        x_fx = pt.mul(x_points, pdf_points)  # x_i * f(x_i) for all xi's in x_points
+        moment = pt.sum(pt.mul(pt.diff(x_points), x_fx[1:] + x_fx[:-1])) / 2
 
         if not rv_size_is_none(size):
-            moment = at.full(size, moment)
+            moment = pt.full(size, moment)
 
         return moment
 
@@ -3509,9 +3526,9 @@ class Interpolated(BoundedContinuous):
 
         # interp and Z are converted to symbolic variables here
         interp_op = SplineWrapper(interp)
-        Z = at.constant(Z)
+        Z = pt.constant(Z)
 
-        return at.log(interp_op(value) / Z)
+        return pt.log(interp_op(value) / Z)
 
 
 @_default_transform.register(Interpolated)
@@ -3590,21 +3607,21 @@ class Moyal(Continuous):
 
     @classmethod
     def dist(cls, mu=0, sigma=1.0, *args, **kwargs):
-        mu = at.as_tensor_variable(floatX(mu))
-        sigma = at.as_tensor_variable(floatX(sigma))
+        mu = pt.as_tensor_variable(floatX(mu))
+        sigma = pt.as_tensor_variable(floatX(sigma))
 
         return super().dist([mu, sigma], *args, **kwargs)
 
     def moment(rv, size, mu, sigma):
-        mean = mu + sigma * (np.euler_gamma + at.log(2))
+        mean = mu + sigma * (np.euler_gamma + pt.log(2))
 
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
+            mean = pt.full(size, mean)
         return mean
 
     def logp(value, mu, sigma):
         scaled = (value - mu) / sigma
-        res = -(1 / 2) * (scaled + at.exp(-scaled)) - at.log(sigma) - (1 / 2) * at.log(2 * np.pi)
+        res = -(1 / 2) * (scaled + pt.exp(-scaled)) - pt.log(sigma) - (1 / 2) * pt.log(2 * np.pi)
         return check_parameters(
             res,
             sigma > 0,
@@ -3613,7 +3630,7 @@ class Moyal(Continuous):
 
     def logcdf(value, mu, sigma):
         scaled = (value - mu) / sigma
-        res = at.log(at.erfc(at.exp(-scaled / 2) * (2**-0.5)))
+        res = pt.log(pt.erfc(pt.exp(-scaled / 2) * (2**-0.5)))
         return check_parameters(
             res,
             sigma > 0,
@@ -3677,12 +3694,12 @@ class _PolyaGammaLogDistFunc(Op):
         self.get_pdf = get_pdf
 
     def make_node(self, x, h, z):
-        x = at.as_tensor_variable(floatX(x))
-        h = at.as_tensor_variable(floatX(h))
-        z = at.as_tensor_variable(floatX(z))
+        x = pt.as_tensor_variable(floatX(x))
+        h = pt.as_tensor_variable(floatX(h))
+        z = pt.as_tensor_variable(floatX(z))
         bshape = broadcast_shape(x, h, z)
         shape = [None] * len(bshape)
-        return Apply(self, [x, h, z], [at.TensorType(pytensor.config.floatX, shape)()])
+        return Apply(self, [x, h, z], [pt.TensorType(pytensor.config.floatX, shape)()])
 
     def perform(self, node, ins, outs):
         x, h, z = ins[0], ins[1], ins[2]
@@ -3778,24 +3795,24 @@ class PolyaGamma(PositiveContinuous):
 
     @classmethod
     def dist(cls, h=1.0, z=0.0, **kwargs):
-        h = at.as_tensor_variable(floatX(h))
-        z = at.as_tensor_variable(floatX(z))
+        h = pt.as_tensor_variable(floatX(h))
+        z = pt.as_tensor_variable(floatX(z))
 
         msg = f"The variable {h} specified for PolyaGamma has non-positive "
         msg += "values, making it unsuitable for this parameter."
-        Assert(msg)(h, at.all(at.gt(h, 0.0)))
+        Assert(msg)(h, pt.all(pt.gt(h, 0.0)))
 
         return super().dist([h, z], **kwargs)
 
     def moment(rv, size, h, z):
-        mean = at.switch(at.eq(z, 0), h / 4, tanh(z / 2) * (h / (2 * z)))
+        mean = pt.switch(pt.eq(z, 0), h / 4, tanh(z / 2) * (h / (2 * z)))
         if not rv_size_is_none(size):
-            mean = at.full(size, mean)
+            mean = pt.full(size, mean)
         return mean
 
     def logp(value, h, z):
-        res = at.switch(
-            at.le(value, 0),
+        res = pt.switch(
+            pt.le(value, 0),
             -np.inf,
             _PolyaGammaLogDistFunc(get_pdf=True)(value, h, z),
         )
@@ -3806,8 +3823,8 @@ class PolyaGamma(PositiveContinuous):
         )
 
     def logcdf(value, h, z):
-        res = at.switch(
-            at.le(value, 0),
+        res = pt.switch(
+            pt.le(value, 0),
             -np.inf,
             _PolyaGammaLogDistFunc(get_pdf=False)(value, h, z),
         )

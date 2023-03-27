@@ -38,7 +38,7 @@ import numpy as np
 import pytensor
 import pytest
 
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.graph import RewriteDatabaseQuery
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.rewriting.utils import rewrite_graph
@@ -54,7 +54,7 @@ from tests.logprob.utils import joint_logprob
 
 def test_naive_bcast_rv_lift():
     r"""Make sure `naive_bcast_rv_lift` can handle useless scalar `BroadcastTo`\s."""
-    X_rv = at.random.normal()
+    X_rv = pt.random.normal()
     Z_at = BroadcastTo()(X_rv, ())
 
     # Make sure we're testing what we intend to test
@@ -67,10 +67,10 @@ def test_naive_bcast_rv_lift():
 def test_naive_bcast_rv_lift_valued_var():
     r"""Check that `naive_bcast_rv_lift` won't touch valued variables"""
 
-    x_rv = at.random.normal(name="x")
-    broadcasted_x_rv = at.broadcast_to(x_rv, (2,))
+    x_rv = pt.random.normal(name="x")
+    broadcasted_x_rv = pt.broadcast_to(x_rv, (2,))
 
-    y_rv = at.random.normal(broadcasted_x_rv, name="y")
+    y_rv = pt.random.normal(broadcasted_x_rv, name="y")
 
     x_vv = x_rv.clone()
     y_vv = y_rv.clone()
@@ -86,8 +86,8 @@ def test_naive_bcast_rv_lift_valued_var():
 def test_bcast_rv_logp():
     """Test that derived logp for broadcasted RV is correct"""
 
-    x_rv = at.random.normal(name="x")
-    broadcasted_x_rv = at.broadcast_to(x_rv, (2,))
+    x_rv = pt.random.normal(name="x")
+    broadcasted_x_rv = pt.broadcast_to(x_rv, (2,))
     broadcasted_x_rv.name = "broadcasted_x"
     broadcasted_x_vv = broadcasted_x_rv.clone()
 
@@ -103,10 +103,10 @@ def test_bcast_rv_logp():
 
 
 def test_measurable_make_vector():
-    base1_rv = at.random.normal(name="base1")
-    base2_rv = at.random.halfnormal(name="base2")
-    base3_rv = at.random.exponential(name="base3")
-    y_rv = at.stack((base1_rv, base2_rv, base3_rv))
+    base1_rv = pt.random.normal(name="base1")
+    base2_rv = pt.random.halfnormal(name="base2")
+    base3_rv = pt.random.exponential(name="base3")
+    y_rv = pt.stack((base1_rv, base2_rv, base3_rv))
     y_rv.name = "y"
 
     base1_vv = base1_rv.clone()
@@ -134,18 +134,18 @@ def test_measurable_make_vector():
 @pytest.mark.parametrize("reverse", (False, True))
 def test_measurable_make_vector_interdependent(reverse):
     """Test that we can obtain a proper graph when stacked RVs depend on each other"""
-    x = at.random.normal(name="x")
+    x = pt.random.normal(name="x")
     y_rvs = []
     prev_rv = x
     for i in range(3):
-        next_rv = at.random.normal(prev_rv + 1, name=f"y{i}")
+        next_rv = pt.random.normal(prev_rv + 1, name=f"y{i}")
         y_rvs.append(next_rv)
         prev_rv = next_rv
 
     if reverse:
         y_rvs = y_rvs[::-1]
 
-    ys = at.stack(y_rvs)
+    ys = pt.stack(y_rvs)
     ys.name = "ys"
 
     x_vv = x.clone()
@@ -174,18 +174,18 @@ def test_measurable_make_vector_interdependent(reverse):
 @pytest.mark.parametrize("reverse", (False, True))
 def test_measurable_join_interdependent(reverse):
     """Test that we can obtain a proper graph when stacked RVs depend on each other"""
-    x = at.random.normal(name="x")
+    x = pt.random.normal(name="x")
     y_rvs = []
     prev_rv = x
     for i in range(3):
-        next_rv = at.random.normal(prev_rv + 1, name=f"y{i}", size=(1, 2))
+        next_rv = pt.random.normal(prev_rv + 1, name=f"y{i}", size=(1, 2))
         y_rvs.append(next_rv)
         prev_rv = next_rv
 
     if reverse:
         y_rvs = y_rvs[::-1]
 
-    ys = at.concatenate(y_rvs, axis=0)
+    ys = pt.concatenate(y_rvs, axis=0)
     ys.name = "ys"
 
     x_vv = x.clone()
@@ -229,12 +229,12 @@ def test_measurable_join_interdependent(reverse):
     ],
 )
 def test_measurable_join_univariate(size1, size2, axis, concatenate):
-    base1_rv = at.random.normal(size=size1, name="base1")
-    base2_rv = at.random.exponential(size=size2, name="base2")
+    base1_rv = pt.random.normal(size=size1, name="base1")
+    base2_rv = pt.random.exponential(size=size2, name="base2")
     if concatenate:
-        y_rv = at.concatenate((base1_rv, base2_rv), axis=axis)
+        y_rv = pt.concatenate((base1_rv, base2_rv), axis=axis)
     else:
-        y_rv = at.stack((base1_rv, base2_rv), axis=axis)
+        y_rv = pt.stack((base1_rv, base2_rv), axis=axis)
     y_rv.name = "y"
 
     base1_vv = base1_rv.clone()
@@ -243,9 +243,9 @@ def test_measurable_join_univariate(size1, size2, axis, concatenate):
 
     base_logps = list(factorized_joint_logprob({base1_rv: base1_vv, base2_rv: base2_vv}).values())
     if concatenate:
-        base_logps = at.concatenate(base_logps, axis=axis)
+        base_logps = pt.concatenate(base_logps, axis=axis)
     else:
-        base_logps = at.stack(base_logps, axis=axis)
+        base_logps = pt.stack(base_logps, axis=axis)
     y_logp = joint_logprob({y_rv: y_vv}, sum=False)
     assert_no_rvs(y_logp)
 
@@ -290,30 +290,30 @@ def test_measurable_join_univariate(size1, size2, axis, concatenate):
     ],
 )
 def test_measurable_join_multivariate(size1, supp_size1, size2, supp_size2, axis, concatenate):
-    base1_rv = at.random.multivariate_normal(
+    base1_rv = pt.random.multivariate_normal(
         np.zeros(supp_size1), np.eye(supp_size1), size=size1, name="base1"
     )
-    base2_rv = at.random.dirichlet(np.ones(supp_size2), size=size2, name="base2")
+    base2_rv = pt.random.dirichlet(np.ones(supp_size2), size=size2, name="base2")
     if concatenate:
-        y_rv = at.concatenate((base1_rv, base2_rv), axis=axis)
+        y_rv = pt.concatenate((base1_rv, base2_rv), axis=axis)
     else:
-        y_rv = at.stack((base1_rv, base2_rv), axis=axis)
+        y_rv = pt.stack((base1_rv, base2_rv), axis=axis)
     y_rv.name = "y"
 
     base1_vv = base1_rv.clone()
     base2_vv = base2_rv.clone()
     y_vv = y_rv.clone()
     base_logps = [
-        at.atleast_1d(logp)
+        pt.atleast_1d(logp)
         for logp in factorized_joint_logprob({base1_rv: base1_vv, base2_rv: base2_vv}).values()
     ]
 
     if concatenate:
         axis_norm = np.core.numeric.normalize_axis_index(axis, base1_rv.ndim)
-        base_logps = at.concatenate(base_logps, axis=axis_norm - 1)
+        base_logps = pt.concatenate(base_logps, axis=axis_norm - 1)
     else:
         axis_norm = np.core.numeric.normalize_axis_index(axis, base1_rv.ndim + 1)
-        base_logps = at.stack(base_logps, axis=axis_norm - 1)
+        base_logps = pt.stack(base_logps, axis=axis_norm - 1)
     y_logp = joint_logprob({y_rv: y_vv}, sum=False)
     assert_no_rvs(y_logp)
 
@@ -330,9 +330,9 @@ def test_measurable_join_multivariate(size1, supp_size1, size2, supp_size2, axis
 
 
 def test_join_mixed_ndim_supp():
-    base1_rv = at.random.normal(size=3, name="base1")
-    base2_rv = at.random.dirichlet(np.ones(3), name="base2")
-    y_rv = at.concatenate((base1_rv, base2_rv), axis=0)
+    base1_rv = pt.random.normal(size=3, name="base1")
+    base2_rv = pt.random.dirichlet(np.ones(3), name="base2")
+    y_rv = pt.concatenate((base1_rv, base2_rv), axis=0)
 
     y_vv = y_rv.clone()
     with pytest.raises(ValueError, match="Joined logps have different number of dimensions"):
@@ -361,9 +361,9 @@ def test_join_mixed_ndim_supp():
 @pytest.mark.parametrize("multivariate", (False, True))
 def test_measurable_dimshuffle(ds_order, multivariate):
     if multivariate:
-        base_rv = at.random.dirichlet([1, 2, 3], size=(2, 1))
+        base_rv = pt.random.dirichlet([1, 2, 3], size=(2, 1))
     else:
-        base_rv = at.exp(at.random.beta(1, 2, size=(2, 1, 3)))
+        base_rv = pt.exp(pt.random.beta(1, 2, size=(2, 1, 3)))
 
     ds_rv = base_rv.dimshuffle(ds_order)
     base_vv = base_rv.clone()
@@ -388,7 +388,7 @@ def test_measurable_dimshuffle(ds_order, multivariate):
     ds_logp_fn = pytensor.function([ds_vv], ds_logp)
 
     base_test_value = base_rv.eval()
-    ds_test_value = at.constant(base_test_value).dimshuffle(ds_order).eval()
+    ds_test_value = pt.constant(base_test_value).dimshuffle(ds_order).eval()
 
     np.testing.assert_array_equal(ref_logp_fn(base_test_value), ds_logp_fn(ds_test_value))
 
@@ -397,7 +397,7 @@ def test_unmeargeable_dimshuffles():
     # Test that graphs with DimShuffles that cannot be lifted/merged fail
 
     # Initial support axis is at axis=-1
-    x = at.random.dirichlet(
+    x = pt.random.dirichlet(
         np.ones((3,)),
         size=(4, 2),
     )
@@ -405,7 +405,7 @@ def test_unmeargeable_dimshuffles():
     y = x.dimshuffle((0, 2, 1))
     # Downstream dimshuffle will not be lifted through cumsum. If it ever is,
     # we will need a different measurable Op example
-    z = at.cumsum(y, axis=-2)
+    z = pt.cumsum(y, axis=-2)
     # Support axis is now at axis=-3
     w = z.dimshuffle((1, 0, 2))
 

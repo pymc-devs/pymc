@@ -22,7 +22,7 @@ import pytest
 import scipy.stats as st
 
 from numpy.testing import assert_allclose
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from scipy.special import logsumexp
@@ -50,7 +50,7 @@ from pymc.distributions import (
 from pymc.distributions.mixture import MixtureTransformWarning
 from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.distributions.transforms import _default_transform
-from pymc.logprob.joint_logprob import logp
+from pymc.logprob.basic import logp
 from pymc.logprob.transforms import IntervalTransform, LogTransform, SimplexTransform
 from pymc.math import expand_packed_triangular
 from pymc.model import Model
@@ -881,7 +881,7 @@ class TestMixtureVsLatent(SeededTest):
         nd = 3
         npop = 4
         # [[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]]
-        mus = at.constant(np.full((nd, npop), np.arange(npop)))
+        mus = pt.constant(np.full((nd, npop), np.arange(npop)))
 
         with Model() as model:
             m = NormalMixture(
@@ -893,7 +893,7 @@ class TestMixtureVsLatent(SeededTest):
                 shape=nd,
             )
             z = Categorical("z", p=np.ones(npop) / npop, shape=nd)
-            mu = at.as_tensor_variable([mus[i, z[i]] for i in range(nd)])
+            mu = pt.as_tensor_variable([mus[i, z[i]] for i in range(nd)])
             latent_m = Normal("latent_m", mu=mu, sigma=1e-5, shape=nd)
 
         size = 100
@@ -916,7 +916,7 @@ class TestMixtureVsLatent(SeededTest):
         nd = 3
         npop = 4
         # [[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]]
-        mus = at.constant(np.full((nd, npop), np.arange(npop)))
+        mus = pt.constant(np.full((nd, npop), np.arange(npop)))
 
         with Model() as model:
             m = Mixture(
@@ -1299,13 +1299,13 @@ class TestMixtureDefaultTransforms:
         with Model() as model:
             lower = Normal("lower", 0.5)
             upper = Uniform("upper", 0, 1)
-            uniform = Uniform("uniform", -at.abs(lower), at.abs(upper), transform=None)
+            uniform = Uniform("uniform", -pt.abs(lower), pt.abs(upper), transform=None)
             triangular = Triangular(
-                "triangular", -at.abs(lower), at.abs(upper), c=0.25, transform=None
+                "triangular", -pt.abs(lower), pt.abs(upper), c=0.25, transform=None
             )
             comp_dists = [
-                Uniform.dist(-at.abs(lower), at.abs(upper)),
-                Triangular.dist(-at.abs(lower), at.abs(upper), c=0.25),
+                Uniform.dist(-pt.abs(lower), pt.abs(upper)),
+                Triangular.dist(-pt.abs(lower), pt.abs(upper), c=0.25),
             ]
             mix1 = Mixture("mix1", [0.3, 0.7], comp_dists)
             mix2 = Mixture("mix2", [0.3, 0.7][::-1], comp_dists[::-1])

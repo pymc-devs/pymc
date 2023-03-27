@@ -14,10 +14,6 @@ This module introduces functions that are made aware of the requested `size_tupl
    :toctree: generated/
 
    to_tuple
-   shapes_broadcasting
    broadcast_dist_samples_shape
-   get_broadcastable_dist_samples
-   broadcast_distribution_samples
-   broadcast_dist_samples_to
    rv_size_is_none
    change_dist_size

@@ -38,7 +38,7 @@ import warnings
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.stats.distributions as sp
 
@@ -55,8 +55,7 @@ from pytensor.tensor.subtensor import (
 
 import pymc as pm
 
-from pymc.logprob.abstract import logprob
-from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logp
+from pymc.logprob.basic import factorized_joint_logprob, icdf, joint_logp, logcdf, logp
 from pymc.logprob.utils import rvs_to_value_vars, walk_model
 from pymc.testing import assert_no_rvs
 from tests.logprob.utils import joint_logprob
@@ -64,18 +63,18 @@ from tests.logprob.utils import joint_logprob
 
 def test_joint_logprob_basic():
     # A simple check for when `joint_logprob` is the same as `logprob`
-    a = at.random.uniform(0.0, 1.0)
+    a = pt.random.uniform(0.0, 1.0)
     a.name = "a"
     a_value_var = a.clone()
 
     a_logp = joint_logprob({a: a_value_var}, sum=False)
-    a_logp_exp = logprob(a, a_value_var)
+    a_logp_exp = logp(a, a_value_var)
 
     assert equal_computations([a_logp], [a_logp_exp])
 
     # Let's try a hierarchical model
-    sigma = at.random.invgamma(0.5, 0.5)
-    Y = at.random.normal(0.0, sigma)
+    sigma = pt.random.invgamma(0.5, 0.5)
+    Y = pt.random.normal(0.0, sigma)
 
     sigma_value_var = sigma.clone()
     y_value_var = Y.clone()
@@ -84,21 +83,21 @@ def test_joint_logprob_basic():
 
     # We need to replace the reference to `sigma` in `Y` with its value
     # variable
-    ll_Y = logprob(Y, y_value_var)
+    ll_Y = logp(Y, y_value_var)
     (ll_Y,), _ = rvs_to_value_vars(
         [ll_Y],
         initial_replacements={sigma: sigma_value_var},
     )
-    total_ll_exp = logprob(sigma, sigma_value_var) + ll_Y
+    total_ll_exp = logp(sigma, sigma_value_var) + ll_Y
 
     assert equal_computations([total_ll], [total_ll_exp])
 
     # Now, make sure we can compute a joint log-probability for a hierarchical
     # model with some non-`RandomVariable` nodes
-    c = at.random.normal()
+    c = pt.random.normal()
     c.name = "c"
     b_l = c * a + 2.0
-    b = at.random.uniform(b_l, b_l + 1.0)
+    b = pt.random.uniform(b_l, b_l + 1.0)
     b.name = "b"
 
     b_value_var = b.clone()
@@ -116,33 +115,33 @@ def test_joint_logprob_basic():
 
 
 def test_joint_logprob_multi_obs():
-    a = at.random.uniform(0.0, 1.0)
-    b = at.random.normal(0.0, 1.0)
+    a = pt.random.uniform(0.0, 1.0)
+    b = pt.random.normal(0.0, 1.0)
 
     a_val = a.clone()
     b_val = b.clone()
 
-    logp = joint_logprob({a: a_val, b: b_val}, sum=False)
-    logp_exp = logprob(a, a_val) + logprob(b, b_val)
+    logp_res = joint_logprob({a: a_val, b: b_val}, sum=False)
+    logp_exp = logp(a, a_val) + logp(b, b_val)
 
-    assert equal_computations([logp], [logp_exp])
+    assert equal_computations([logp_res], [logp_exp])
 
-    x = at.random.normal(0, 1)
-    y = at.random.normal(x, 1)
+    x = pt.random.normal(0, 1)
+    y = pt.random.normal(x, 1)
 
     x_val = x.clone()
     y_val = y.clone()
 
-    logp = joint_logprob({x: x_val, y: y_val})
+    logp_res = joint_logprob({x: x_val, y: y_val})
     exp_logp = joint_logprob({x: x_val, y: y_val})
 
-    assert equal_computations([logp], [exp_logp])
+    assert equal_computations([logp_res], [exp_logp])
 
 
 def test_joint_logprob_diff_dims():
-    M = at.matrix("M")
-    x = at.random.normal(0, 1, size=M.shape[1], name="X")
-    y = at.random.normal(M.dot(x), 1, name="Y")
+    M = pt.matrix("M")
+    x = pt.random.normal(0, 1, size=M.shape[1], name="X")
+    y = pt.random.normal(M.dot(x), 1, name="Y")
 
     x_vv = x.clone()
     x_vv.name = "x"
@@ -170,8 +169,8 @@ def test_incsubtensor_original_values_output_dict():
     the logprob factor
     """
 
-    base_rv = at.random.normal(0, 1, size=2)
-    rv = at.set_subtensor(base_rv[0], 5)
+    base_rv = pt.random.normal(0, 1, size=2)
+    rv = pt.set_subtensor(base_rv[0], 5)
     vv = rv.clone()
 
     logp_dict = factorized_joint_logprob({rv: vv})
@@ -188,15 +187,15 @@ def test_joint_logprob_subtensor():
     sigma = 0.001
     rng = pytensor.shared(np.random.RandomState(232), borrow=True)
 
-    A_rv = at.random.normal(mu, sigma, rng=rng)
+    A_rv = pt.random.normal(mu, sigma, rng=rng)
     A_rv.name = "A"
 
     p = 0.5
 
-    I_rv = at.random.bernoulli(p, size=size, rng=rng)
+    I_rv = pt.random.bernoulli(p, size=size, rng=rng)
     I_rv.name = "I"
 
-    A_idx = A_rv[I_rv, at.ogrid[A_rv.shape[-1] :]]
+    A_idx = A_rv[I_rv, pt.ogrid[A_rv.shape[-1] :]]
 
     assert isinstance(A_idx.owner.op, (Subtensor, AdvancedSubtensor, AdvancedSubtensor1))
 
@@ -234,9 +233,9 @@ def test_joint_logprob_subtensor():
 
 def test_persist_inputs():
     """Make sure we don't unnecessarily clone variables."""
-    x = at.scalar("x")
-    beta_rv = at.random.normal(0, 1, name="beta")
-    Y_rv = at.random.normal(beta_rv * x, 1, name="y")
+    x = pt.scalar("x")
+    beta_rv = pt.random.normal(0, 1, name="beta")
+    Y_rv = pt.random.normal(beta_rv * x, 1, name="y")
 
     beta_vv = beta_rv.type()
     y_vv = Y_rv.clone()
@@ -253,8 +252,8 @@ def test_persist_inputs():
 
 
 def test_warn_random_not_found():
-    x_rv = at.random.normal(name="x")
-    y_rv = at.random.normal(x_rv, 1, name="y")
+    x_rv = pt.random.normal(name="x")
+    y_rv = pt.random.normal(x_rv, 1, name="y")
 
     y_vv = y_rv.clone()
 
@@ -267,8 +266,8 @@ def test_warn_random_not_found():
 
 
 def test_multiple_rvs_to_same_value_raises():
-    x_rv1 = at.random.normal(name="x1")
-    x_rv2 = at.random.normal(name="x2")
+    x_rv1 = pt.random.normal(name="x1")
+    x_rv2 = pt.random.normal(name="x2")
     x = x_rv1.type()
     x.name = "x"
 
@@ -332,7 +331,7 @@ def test_joint_logp_incsubtensor(indices, size):
     a_value_var = a.type()
     a.name = "a"
 
-    a_idx = at.set_subtensor(a[indices], data)
+    a_idx = pt.set_subtensor(a[indices], data)
 
     assert isinstance(a_idx.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1))
 
@@ -355,32 +354,6 @@ def test_joint_logp_incsubtensor(indices, size):
     a_val_idx[indices] = data
     exp_obs_logps = sp.norm.logpdf(a_val_idx, mu, sigma)
     np.testing.assert_almost_equal(logp_vals, exp_obs_logps)
-
-
-def test_logp_helper():
-    value = at.vector("value")
-    x = pm.Normal.dist(0, 1)
-
-    x_logp = pm.logp(x, value)
-    np.testing.assert_almost_equal(x_logp.eval({value: [0, 1]}), sp.norm(0, 1).logpdf([0, 1]))
-
-    x_logp = pm.logp(x, [0, 1])
-    np.testing.assert_almost_equal(x_logp.eval(), sp.norm(0, 1).logpdf([0, 1]))
-
-
-def test_logp_helper_derived_rv():
-    assert np.isclose(
-        pm.logp(at.exp(pm.Normal.dist()), 5).eval(),
-        pm.logp(pm.LogNormal.dist(), 5).eval(),
-    )
-
-
-def test_logp_helper_exceptions():
-    with pytest.raises(TypeError, match="When RV is not a pure distribution"):
-        pm.logp(at.exp(pm.Normal.dist()), [1, 2])
-
-    with pytest.raises(NotImplementedError, match="PyMC could not infer logp of input variable"):
-        pm.logp(at.cos(pm.Normal.dist()), 1)
 
 
 def test_model_unchanged_logprob_access():
@@ -430,3 +403,57 @@ def test_hierarchical_obs_logp():
     ops = {a.owner.op for a in logp_ancestors if a.owner}
     assert len(ops) > 0
     assert not any(isinstance(o, RandomVariable) for o in ops)
+
+
+@pytest.mark.parametrize(
+    "func, scipy_func",
+    [
+        (logp, "logpdf"),
+        (logcdf, "logcdf"),
+        (icdf, "ppf"),
+    ],
+)
+def test_probability_direct_dispatch(func, scipy_func):
+    value = pt.vector("value")
+    x = pm.Normal.dist(0, 1)
+
+    np.testing.assert_almost_equal(
+        func(x, value).eval({value: [0, 1]}),
+        getattr(sp.norm(0, 1), scipy_func)([0, 1]),
+    )
+
+    np.testing.assert_almost_equal(
+        func(x, [0, 1]).eval(),
+        getattr(sp.norm(0, 1), scipy_func)([0, 1]),
+    )
+
+
+@pytest.mark.parametrize(
+    "func, scipy_func, test_value",
+    [
+        (logp, "logpdf", 5.0),
+        pytest.param(logcdf, "logcdf", 5.0, marks=pytest.mark.xfail(raises=NotImplementedError)),
+        pytest.param(icdf, "ppf", 0.7, marks=pytest.mark.xfail(raises=NotImplementedError)),
+    ],
+)
+def test_probability_inference(func, scipy_func, test_value):
+    assert np.isclose(
+        func(pt.exp(pm.Normal.dist()), test_value).eval(),
+        getattr(sp.lognorm(s=1), scipy_func)(test_value),
+    )
+
+
+@pytest.mark.parametrize(
+    "func, func_name",
+    [
+        (logp, "Logprob"),
+        (logcdf, "LogCDF"),
+        (icdf, "Inverse CDF"),
+    ],
+)
+def test_probability_inference_fails(func, func_name):
+    with pytest.raises(
+        NotImplementedError,
+        match=f"{func_name} method not implemented for Elemwise{{cos,no_inplace}}",
+    ):
+        func(pt.cos(pm.Normal.dist()), 1)

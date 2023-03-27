@@ -15,7 +15,7 @@
 import numpy as np
 import numpy.testing as npt
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 
 import pymc as pm
@@ -71,7 +71,7 @@ class TestCovAdd:
 
     def test_leftadd_matrixt(self):
         X = np.linspace(0, 1, 10)[:, None]
-        M = 2 * at.ones((10, 10))
+        M = 2 * pt.ones((10, 10))
         with pm.Model() as model:
             cov = M + pm.gp.cov.ExpQuad(1, 0.1)
         K = cov(X).eval()
@@ -181,6 +181,68 @@ class TestCovProd:
             cov = M + pm.gp.cov.ExpQuad(1, 1.0)
 
 
+class TestCovPSD:
+    def test_covpsd_add(self):
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov1 = 2 * pm.gp.cov.ExpQuad(1, 0.1)
+            cov2 = 5 * pm.gp.cov.ExpQuad(1, 1.0)
+            cov = cov1 + cov2
+        psd1 = cov1.power_spectral_density(omega[:, None]).eval()
+        psd2 = cov2.power_spectral_density(omega[:, None]).eval()
+        psd = cov.power_spectral_density(omega[:, None]).eval()
+        npt.assert_allclose(psd, psd1 + psd2)
+
+    def test_copsd_multiply(self):
+        # This could be implemented via convolution
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov1 = 2 * pm.gp.cov.ExpQuad(1, ls=1)
+            cov2 = pm.gp.cov.ExpQuad(1, ls=1)
+
+        msg = "The power spectral density of products of covariance functions is not implemented"
+        with pytest.raises(NotImplementedError, match=msg):
+            psd = (cov1 * cov2).power_spectral_density(omega[:, None]).eval()
+
+    def test_covpsd_nonstationary1(self):
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov = 2 * pm.gp.cov.Linear(1, c=5)
+
+        msg = "can only be calculated for `Stationary` covariance functions."
+        with pytest.raises(ValueError, match=msg):
+            psd = cov.power_spectral_density(omega[:, None]).eval()
+
+    def test_covpsd_nonstationary2(self):
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov = 2 * pm.gp.cov.ExpQuad(1, ls=1) + 10.0
+
+        # Even though this should error, this isnt the appropriate message.  The actual problem
+        # is because the covariance function is non-stationary. The underlying bug is due to
+        # `Constant` covariances not having an input_dim.
+        msg = "All covariances must have the same `input_dim`."
+        with pytest.raises(ValueError, match=msg):
+            psd = cov.power_spectral_density(omega[:, None]).eval()
+
+    def test_covpsd_notimplemented(self):
+        class NewStationaryCov(pm.gp.cov.Stationary):
+            pass
+
+        L = 10.0
+        omega = np.pi * np.arange(1, 101) / (2 * L)
+        with pm.Model() as model:
+            cov = 2 * NewStationaryCov(1, ls=1)
+
+        msg = "No power spectral density method has been implemented"
+        with pytest.raises(NotImplementedError, match=msg):
+            psd = cov.power_spectral_density(omega[:, None]).eval()
+
+
 class TestCovExponentiation:
     def test_symexp_cov(self):
         X = np.linspace(0, 1, 10)[:, None]
@@ -207,7 +269,7 @@ class TestCovExponentiation:
     def test_covexp_pytensor(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
-            a = at.alloc(2.0, 1, 1)
+            a = pt.alloc(2.0, 1, 1)
             cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
         K = cov(X).eval()
         npt.assert_allclose(K[0, 1], 0.53940**2, atol=1e-3)
@@ -228,7 +290,9 @@ class TestCovExponentiation:
 
     def test_invalid_covexp(self):
         X = np.linspace(0, 1, 10)[:, None]
-        with pytest.raises(ValueError, match=r"can only be exponentiated by a scalar value"):
+        with pytest.raises(
+            ValueError, match=r"A covariance function can only be exponentiated by a scalar value"
+        ):
             with pm.Model() as model:
                 a = np.array([[1.0, 2.0]])
                 cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
@@ -262,7 +326,7 @@ class TestCovKron:
                 + pm.gp.cov.ExpQuad(1, 0.1)
                 + pm.gp.cov.ExpQuad(1, 0.1) * pm.gp.cov.ExpQuad(1, 0.1)
             )
-            cov2 = pm.gp.cov.ExpQuad(1, 0.1) * pm.gp.cov.ExpQuad(2, 0.1)
+            cov2 = pm.gp.cov.ExpQuad(2, 0.1) * pm.gp.cov.ExpQuad(2, 0.1)
             cov = pm.gp.cov.Kron([cov1, cov2])
         K_true = kronecker(cov1(X1).eval(), cov2(X2).eval()).eval()
         K = cov(X).eval()
@@ -373,6 +437,17 @@ class TestExpQuad:
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
+    def test_psd(self):
+        # compare to simple 1d formula
+        X = np.linspace(0, 1, 10)[:, None]
+        omega = np.linspace(0, 2, 50)
+        ell = 2.0
+        true_1d_psd = np.sqrt(2 * np.pi * np.square(ell)) * np.exp(-0.5 * np.square(ell * omega))
+        test_1d_psd = (
+            pm.gp.cov.ExpQuad(1, ls=ell).power_spectral_density(omega[:, None]).flatten().eval()
+        )
+        npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
+
 
 class TestWhiteNoise:
     def test_1d(self):
@@ -449,6 +524,18 @@ class TestMatern52:
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
+    def test_psd(self):
+        # compare to simple 1d formula
+        X = np.linspace(0, 1, 10)[:, None]
+        omega = np.linspace(0, 2, 50)
+        ell = 2.0
+        lamda = np.sqrt(5) / ell
+        true_1d_psd = (16.0 / 3.0) * np.power(lamda, 5) * np.power(lamda**2 + omega**2, -3)
+        test_1d_psd = (
+            pm.gp.cov.Matern52(1, ls=ell).power_spectral_density(omega[:, None]).flatten().eval()
+        )
+        npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
+
 
 class TestMatern32:
     def test_1d(self):
@@ -462,6 +549,18 @@ class TestMatern32:
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_psd(self):
+        # compare to simple 1d formula
+        X = np.linspace(0, 1, 10)[:, None]
+        omega = np.linspace(0, 2, 50)
+        ell = 2.0
+        lamda = np.sqrt(3) / ell
+        true_1d_psd = 4 * np.power(lamda, 3) * np.power(lamda**2 + omega**2, -2)
+        test_1d_psd = (
+            pm.gp.cov.Matern32(1, ls=ell).power_spectral_density(omega[:, None]).flatten().eval()
+        )
+        npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
 
 
 class TestMatern12:
@@ -538,7 +637,7 @@ class TestWarpedInput:
         X = np.linspace(0, 1, 10)[:, None]
 
         def warp_func(x, a, b, c):
-            return x + (a * at.tanh(b * (x - c)))
+            return x + (a * pt.tanh(b * (x - c)))
 
         with pm.Model() as model:
             cov_m52 = pm.gp.cov.Matern52(1, 0.2)
@@ -564,7 +663,7 @@ class TestGibbs:
         X = np.linspace(0, 2, 10)[:, None]
 
         def tanh_func(x, x1, x2, w, x0):
-            return (x1 + x2) / 2.0 - (x1 - x2) / 2.0 * at.tanh((x - x0) / w)
+            return (x1 + x2) / 2.0 - (x1 - x2) / 2.0 * pt.tanh((x - x0) / w)
 
         with pm.Model() as model:
             cov = pm.gp.cov.Gibbs(1, tanh_func, args=(0.05, 0.6, 0.4, 1.0))

@@ -16,7 +16,7 @@ import logging
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.graph.op import Apply, Op
 from pytensor.tensor.random.op import RandomVariable
@@ -188,9 +188,9 @@ class Simulator(Distribution):
             if sum_stat == "identity":
                 sum_stat = identity
             elif sum_stat == "sort":
-                sum_stat = at.sort
+                sum_stat = pt.sort
             elif sum_stat == "mean":
-                sum_stat = at.mean
+                sum_stat = pt.mean
             elif sum_stat == "median":
                 # Missing in PyTensor, see pytensor/issues/525
                 sum_stat = create_sum_stat_op_from_fn(np.median)
@@ -199,7 +199,7 @@ class Simulator(Distribution):
             else:
                 raise ValueError(f"The summary statistic {sum_stat} is not implemented")
 
-        epsilon = at.as_tensor_variable(floatX(epsilon))
+        epsilon = pt.as_tensor_variable(floatX(epsilon))
 
         if params is None:
             params = unnamed_params
@@ -260,8 +260,8 @@ class Simulator(Distribution):
 def simulator_moment(op, rv, *inputs):
     sim_inputs = inputs[3:]
     # Take the mean of 10 draws
-    multiple_sim = rv.owner.op(*sim_inputs, size=at.concatenate([[10], rv.shape]))
-    return at.mean(multiple_sim, axis=0)
+    multiple_sim = rv.owner.op(*sim_inputs, size=pt.concatenate([[10], rv.shape]))
+    return pt.mean(multiple_sim, axis=0)
 
 
 @_logprob.register(SimulatorRV)
@@ -296,7 +296,7 @@ def gaussian(epsilon, obs_data, sim_data):
 
 def laplace(epsilon, obs_data, sim_data):
     """Laplace kernel."""
-    return -at.abs((obs_data - sim_data) / epsilon)
+    return -pt.abs((obs_data - sim_data) / epsilon)
 
 
 class KullbackLeibler:
@@ -320,7 +320,7 @@ class KullbackLeibler:
 
 
 def create_sum_stat_op_from_fn(fn):
-    vectorX = at.dvector if pytensor.config.floatX == "float64" else at.fvector
+    vectorX = pt.dvector if pytensor.config.floatX == "float64" else pt.fvector
 
     # Check if callable returns TensorVariable with dummy inputs
     try:
@@ -333,7 +333,7 @@ def create_sum_stat_op_from_fn(fn):
     # Otherwise, automatically wrap in PyTensor Op
     class SumStat(Op):
         def make_node(self, x):
-            x = at.as_tensor_variable(x)
+            x = pt.as_tensor_variable(x)
             return Apply(self, [x], [vectorX()])
 
         def perform(self, node, inputs, outputs):
@@ -344,8 +344,8 @@ def create_sum_stat_op_from_fn(fn):
 
 
 def create_distance_op_from_fn(fn):
-    scalarX = at.dscalar if pytensor.config.floatX == "float64" else at.fscalar
-    vectorX = at.dvector if pytensor.config.floatX == "float64" else at.fvector
+    scalarX = pt.dscalar if pytensor.config.floatX == "float64" else pt.fscalar
+    vectorX = pt.dvector if pytensor.config.floatX == "float64" else pt.fvector
 
     # Check if callable returns TensorVariable with dummy inputs
     try:
@@ -358,9 +358,9 @@ def create_distance_op_from_fn(fn):
     # Otherwise, automatically wrap in PyTensor Op
     class Distance(Op):
         def make_node(self, epsilon, obs_data, sim_data):
-            epsilon = at.as_tensor_variable(epsilon)
-            obs_data = at.as_tensor_variable(obs_data)
-            sim_data = at.as_tensor_variable(sim_data)
+            epsilon = pt.as_tensor_variable(epsilon)
+            obs_data = pt.as_tensor_variable(obs_data)
+            sim_data = pt.as_tensor_variable(sim_data)
             return Apply(self, [epsilon, obs_data, sim_data], [vectorX()])
 
         def perform(self, node, inputs, outputs):

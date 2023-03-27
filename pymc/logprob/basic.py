@@ -39,40 +39,54 @@ import warnings
 from collections import deque
 from typing import Dict, List, Optional, Sequence, Union
 
+import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
 from pytensor import config
-from pytensor.graph.basic import graph_inputs, io_toposort
+from pytensor.graph.basic import Variable, graph_inputs, io_toposort
 from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorVariable
+from typing_extensions import TypeAlias
 
-from pymc.logprob.abstract import _logprob, get_measurable_outputs
-from pymc.logprob.abstract import logprob as logp_logprob
+from pymc.logprob.abstract import (
+    _icdf_helper,
+    _logcdf_helper,
+    _logprob,
+    _logprob_helper,
+    get_measurable_outputs,
+)
 from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.logprob.transforms import RVTransform, TransformValuesRewrite
 from pymc.logprob.utils import rvs_to_value_vars
 
+TensorLike: TypeAlias = Union[Variable, float, np.ndarray]
 
-def logp(rv: TensorVariable, value) -> TensorVariable:
+
+def logp(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
     """Return the log-probability graph of a Random Variable"""
 
     value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
-        return logp_logprob(rv, value)
+        return _logprob_helper(rv, value, **kwargs)
     except NotImplementedError:
-        try:
-            value = rv.type.filter_variable(value)
-        except TypeError as exc:
-            raise TypeError(
-                "When RV is not a pure distribution, value variable must have the same type"
-            ) from exc
-        try:
-            return factorized_joint_logprob({rv: value}, warn_missing_rvs=False)[value]
-        except Exception as exc:
-            raise NotImplementedError("PyMC could not infer logp of input variable.") from exc
+        fgraph, _, _ = construct_ir_fgraph({rv: value})
+        [(ir_rv, ir_value)] = fgraph.preserve_rv_mappings.rv_values.items()
+        return _logprob_helper(ir_rv, ir_value, **kwargs)
+
+
+def logcdf(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
+    """Create a graph for the log-CDF of a Random Variable."""
+    value = pt.as_tensor_variable(value, dtype=rv.dtype)
+    return _logcdf_helper(rv, value, **kwargs)
+
+
+def icdf(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
+    """Create a graph for the inverse CDF of a  Random Variable."""
+    value = pt.as_tensor_variable(value)
+    return _icdf_helper(rv, value, **kwargs)
 
 
 def factorized_joint_logprob(
@@ -92,10 +106,10 @@ def factorized_joint_logprob(
 
     .. code-block:: python
 
-        import pytensor.tensor as at
+        import pytensor.tensor as pt
 
-        sigma2_rv = at.random.invgamma(0.5, 0.5)
-        Y_rv = at.random.normal(0, at.sqrt(sigma2_rv))
+        sigma2_rv = pt.random.invgamma(0.5, 0.5)
+        Y_rv = pt.random.normal(0, pt.sqrt(sigma2_rv))
 
     This graph for ``Y_rv`` is equivalent to the following hierarchical model:
 
@@ -104,11 +118,11 @@ def factorized_joint_logprob(
         \sigma^2 \sim& \operatorname{InvGamma}(0.5, 0.5) \\
         Y \sim& \operatorname{N}(0, \sigma^2)
 
-    If we create a value variable for ``Y_rv``, i.e. ``y_vv = at.scalar("y")``,
+    If we create a value variable for ``Y_rv``, i.e. ``y_vv = pt.scalar("y")``,
     the graph of ``factorized_joint_logprob({Y_rv: y_vv})`` is equivalent to the
     conditional probability :math:`\log p(Y = y \mid \sigma^2)`, with a stochastic
     ``sigma2_rv``. If we specify a value variable for ``sigma2_rv``, i.e.
-    ``s_vv = at.scalar("s2")``, then ``factorized_joint_logprob({Y_rv: y_vv, sigma2_rv: s_vv})``
+    ``s_vv = pt.scalar("s2")``, then ``factorized_joint_logprob({Y_rv: y_vv, sigma2_rv: s_vv})``
     yields the joint log-probability of the two variables.
 
     .. math::

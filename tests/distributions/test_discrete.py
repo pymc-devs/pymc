@@ -18,7 +18,7 @@ import warnings
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.special as sp
 import scipy.stats as st
@@ -29,8 +29,7 @@ from pytensor.tensor import TensorVariable
 import pymc as pm
 
 from pymc.distributions.discrete import Geometric, _OrderedLogistic, _OrderedProbit
-from pymc.logprob.abstract import logcdf
-from pymc.logprob.joint_logprob import logp
+from pymc.logprob.basic import icdf, logcdf, logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
 from pymc.testing import (
@@ -51,6 +50,7 @@ from pymc.testing import (
     UnitSortedVector,
     Vector,
     assert_moment_is_expected,
+    check_icdf,
     check_logcdf,
     check_logp,
     check_selfconsistency_discrete_logcdf,
@@ -117,6 +117,12 @@ class TestMatchesScipy:
             Domain([-10, 0, 10], "int64"),
             {"lower": -Rplusdunif, "upper": Rplusdunif},
         )
+        check_icdf(
+            pm.DiscreteUniform,
+            {"lower": -Rplusdunif, "upper": Rplusdunif},
+            lambda q, lower, upper: st.randint.ppf(q=q, low=lower, high=upper + 1),
+            skip_paramdomain_outside_edge_test=True,
+        )
         # Custom logp / logcdf check for invalid parameters
         invalid_dist = pm.DiscreteUniform.dist(lower=1, upper=0)
         with pytensor.config.change_flags(mode=Mode("py")):
@@ -124,6 +130,8 @@ class TestMatchesScipy:
                 logp(invalid_dist, 0.5).eval()
             with pytest.raises(ParameterValueError):
                 logcdf(invalid_dist, 2).eval()
+            with pytest.raises(ParameterValueError):
+                icdf(invalid_dist, np.array(1)).eval()
 
     def test_geometric(self):
         check_logp(
@@ -143,15 +151,14 @@ class TestMatchesScipy:
             Nat,
             {"p": Unit},
         )
+        check_icdf(
+            pm.Geometric,
+            {"p": Unit},
+            st.geom.ppf,
+        )
 
     def test_hypergeometric(self):
-        def modified_scipy_hypergeom_logpmf(value, N, k, n):
-            # Convert nan to -np.inf
-            original_res = st.hypergeom.logpmf(value, N, k, n)
-            return original_res if not np.isnan(original_res) else -np.inf
-
         def modified_scipy_hypergeom_logcdf(value, N, k, n):
-            # Convert nan to -np.inf
             original_res = st.hypergeom.logcdf(value, N, k, n)
 
             # Correct for scipy bug in logcdf method (see https://github.com/scipy/scipy/issues/13280)
@@ -160,24 +167,27 @@ class TestMatchesScipy:
                 if np.all(np.isnan(pmfs)):
                     original_res = np.nan
 
-            return original_res if not np.isnan(original_res) else -np.inf
+            return original_res
+
+        N_domain = Domain([0, 10, 20, 30, np.inf], dtype="int64")
+        n_domain = k_domain = Domain([0, 1, 2, 3, np.inf], dtype="int64")
 
         check_logp(
             pm.HyperGeometric,
             Nat,
-            {"N": NatSmall, "k": NatSmall, "n": NatSmall},
-            modified_scipy_hypergeom_logpmf,
+            {"N": N_domain, "k": k_domain, "n": n_domain},
+            lambda value, N, k, n: st.hypergeom.logpmf(value, N, k, n),
         )
         check_logcdf(
             pm.HyperGeometric,
             Nat,
-            {"N": NatSmall, "k": NatSmall, "n": NatSmall},
+            {"N": N_domain, "k": k_domain, "n": n_domain},
             modified_scipy_hypergeom_logcdf,
         )
         check_selfconsistency_discrete_logcdf(
             pm.HyperGeometric,
             Nat,
-            {"N": NatSmall, "k": NatSmall, "n": NatSmall},
+            {"N": N_domain, "k": k_domain, "n": n_domain},
         )
 
     @pytest.mark.xfail(
@@ -499,7 +509,7 @@ class TestMatchesScipy:
             # entries if there is a single or pair number of negative values
             # and the rest are zero
             np.array([-1, -1, 0, 0]),
-            at.as_tensor_variable([-1, -1, 0, 0]),
+            pt.as_tensor_variable([-1, -1, 0, 0]),
         ],
     )
     def test_categorical_negative_p(self, p):
@@ -518,7 +528,7 @@ class TestMatchesScipy:
     def test_categorical_negative_p_symbolic(self):
         value = np.array([[1, 1, 1]])
 
-        x = at.scalar("x")
+        x = pt.scalar("x")
         invalid_dist = pm.Categorical.dist(p=[x, x, x])
 
         with pytest.raises(ParameterValueError):
@@ -527,7 +537,7 @@ class TestMatchesScipy:
     def test_categorical_p_not_normalized_symbolic(self):
         value = np.array([[1, 1, 1]])
 
-        x = at.scalar("x")
+        x = pt.scalar("x")
         invalid_dist = pm.Categorical.dist(p=(x, x, x))
 
         with pytest.raises(ParameterValueError):
@@ -535,15 +545,17 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_orderedlogistic(self, n):
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "invalid value encountered in log", RuntimeWarning)
-            warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
-            check_logp(
-                pm.OrderedLogistic,
-                Domain(range(n), dtype="int64", edges=(None, None)),
-                {"eta": R, "cutpoints": Vector(R, n - 1)},
-                lambda value, eta, cutpoints: orderedlogistic_logpdf(value, eta, cutpoints),
-            )
+        cutpoints_domain = Vector(R, n - 1)
+        # Filter out invalid non-monotonic values
+        cutpoints_domain.vals = [v for v in cutpoints_domain.vals if np.all(np.diff(v) > 0)]
+        assert len(cutpoints_domain.vals) > 0
+
+        check_logp(
+            pm.OrderedLogistic,
+            Domain(range(n), dtype="int64", edges=(None, None)),
+            {"eta": R, "cutpoints": cutpoints_domain},
+            lambda value, eta, cutpoints: orderedlogistic_logpdf(value, eta, cutpoints),
+        )
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_orderedprobit(self, n):
@@ -1149,29 +1161,3 @@ class TestOrderedProbit(BaseTestDistributionRandom):
         )
         p = categorical.owner.inputs[3].eval()
         assert p.shape == expected
-
-
-class TestICDF:
-    @pytest.mark.parametrize(
-        "dist_params, obs, size",
-        [
-            ((0.1,), np.array([-0.5, 0, 0.1, 0.5, 0.9, 1.0, 1.5], dtype=np.int64), ()),
-            ((0.5,), np.array([-0.5, 0, 0.1, 0.5, 0.9, 1.0, 1.5], dtype=np.int64), (3, 2)),
-            (
-                (np.array([0.0, 0.2, 0.5, 1.0]),),
-                np.array([0.7, 0.7, 0.7, 0.7], dtype=np.int64),
-                (),
-            ),
-        ],
-    )
-    def test_geometric_icdf(self, dist_params, obs, size):
-        dist_params_at, obs_at, size_at = create_pytensor_params(dist_params, obs, size)
-        dist_params = dict(zip(dist_params_at, dist_params))
-
-        x = Geometric.dist(*dist_params_at, size=size_at)
-
-        def scipy_geom_icdf(value, p):
-            # Scipy ppf returns floats
-            return st.geom.ppf(value, p).astype(value.dtype)
-
-        scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_geom_icdf, test="icdf")

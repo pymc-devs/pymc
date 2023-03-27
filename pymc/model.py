@@ -36,7 +36,7 @@ from typing import (
 import numpy as np
 import pytensor
 import pytensor.sparse as sparse
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import scipy.sparse as sps
 
 from pytensor.compile.sharedvalue import SharedVariable
@@ -60,7 +60,7 @@ from pymc.exceptions import (
     ShapeWarning,
 )
 from pymc.initial_point import make_initial_point_fn
-from pymc.logprob.joint_logprob import joint_logp
+from pymc.logprob.basic import joint_logp
 from pymc.pytensorf import (
     PointFunc,
     SeedSequenceSeed,
@@ -491,7 +491,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 Deterministic('v3_sq', self.v3 ** 2)
 
                 # Potentials too
-                Potential('p1', at.constant(1))
+                Potential('p1', pt.constant(1))
 
         # After defining a class CustomModel you can use it in several
         # ways
@@ -776,7 +776,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if not sum:
             return logp_factors
 
-        logp_scalar = at.sum([at.sum(factor) for factor in logp_factors])
+        logp_scalar = pt.sum([pt.sum(factor) for factor in logp_factors])
         logp_scalar_name = "__logp" if jacobian else "__logp_nojac"
         if self.name:
             logp_scalar_name = f"{logp_scalar_name}_{self.name}"
@@ -889,9 +889,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         # inputs and apply their transforms, if any
         potentials = self.replace_rvs_by_values(self.potentials)
         if potentials:
-            return at.sum([at.sum(factor) for factor in potentials])
+            return pt.sum([pt.sum(factor) for factor in potentials])
         else:
-            return at.constant(0.0)
+            return pt.constant(0.0)
 
     @property
     def value_vars(self):
@@ -1438,7 +1438,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # values, and another for the non-missing values.
 
             antimask_idx = (~mask).nonzero()
-            nonmissing_data = at.as_tensor_variable(data[antimask_idx])
+            nonmissing_data = pt.as_tensor_variable(data[antimask_idx])
             unmasked_rv_var = rv_var[antimask_idx]
             unmasked_rv_var = unmasked_rv_var.owner.clone().default_output()
 
@@ -1461,16 +1461,16 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             # Create deterministic that combines observed and missing
             # Note: This can widely increase memory consumption during sampling for large datasets
-            rv_var = at.empty(data.shape, dtype=observed_rv_var.type.dtype)
-            rv_var = at.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
-            rv_var = at.set_subtensor(rv_var[antimask_idx], observed_rv_var)
+            rv_var = pt.empty(data.shape, dtype=observed_rv_var.type.dtype)
+            rv_var = pt.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
+            rv_var = pt.set_subtensor(rv_var[antimask_idx], observed_rv_var)
             rv_var = Deterministic(name, rv_var, self, dims)
 
         else:
             if sps.issparse(data):
                 data = sparse.basic.as_sparse(data, name=name)
             else:
-                data = at.as_tensor_variable(data, name=name)
+                data = pt.as_tensor_variable(data, name=name)
 
             if total_size:
                 from pymc.variational.minibatch_rv import create_minibatch_rv
@@ -1802,7 +1802,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             point = self.initial_point()
 
         factors = self.basic_RVs + self.potentials
-        factor_logps_fn = [at.sum(factor) for factor in self.logp(factors, sum=False)]
+        factor_logps_fn = [pt.sum(factor) for factor in self.logp(factors, sum=False)]
         return {
             factor.name: np.round(np.asarray(factor_logp), round_vals)
             for factor, factor_logp in zip(
@@ -1967,6 +1967,25 @@ def Deterministic(name, var, model=None, dims=None):
     they don't add randomness to the model.  They are generally used to record
     an intermediary result.
 
+    Parameters
+    ----------
+    name : str
+        Name of the deterministic variable to be registered in the model.
+    var : tensor_like
+        Expression for the calculation of the variable.
+    model : Model, optional
+        The model object to which the Deterministic variable is added.
+        If ``None`` is provided, the current model in the context stack is used.
+    dims : str or tuple of str, optional
+        Dimension names for the variable.
+
+    Returns
+    -------
+    var : tensor_like
+        The registered, named variable wrapped in Deterministic.
+
+    Examples
+    --------
     Indeed, PyMC allows for arbitrary combinations of random variables, for
     example in the case of a logistic regression
 
@@ -2007,19 +2026,6 @@ def Deterministic(name, var, model=None, dims=None):
     of times during a NUTS step, the Deterministic quantities are just
     computeed once at the end of the step, with the final values of the other
     random variables.
-
-    Parameters
-    ----------
-    name: str
-    var: PyTensor variables
-    auto: bool
-        Add automatically created deterministics (e.g., when imputing missing values)
-        to a separate model.auto_deterministics list for filtering during sampling.
-
-
-    Returns
-    -------
-    var: var, with name attribute
     """
     model = modelcontext(model)
     var = var.copy(model.name_for(name))
@@ -2059,7 +2065,9 @@ def Potential(name, var, model=None, dims=None):
         Expression to be added to the model joint logp.
     model : Model, optional
         The model object to which the potential function is added.
-        If ``None`` is provided, the current model is used.
+        If ``None`` is provided, the current model in the context stack is used.
+    dims : str or tuple of str, optional
+        Dimension names for the variable.
 
     Returns
     -------

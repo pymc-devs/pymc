@@ -39,19 +39,11 @@ from typing import Optional
 import numpy as np
 
 from pytensor import tensor as pt
-from pytensor.graph.basic import walk
-from pytensor.graph.op import HasInnerGraph
 from pytensor.tensor.var import TensorVariable
 from scipy import stats as stats
 
-from pymc.logprob import factorized_joint_logprob
-from pymc.logprob.abstract import (
-    MeasurableVariable,
-    get_measurable_outputs,
-    icdf,
-    logcdf,
-    logprob,
-)
+from pymc.logprob import factorized_joint_logprob, icdf, logcdf, logp
+from pymc.logprob.abstract import get_measurable_outputs
 from pymc.logprob.utils import ignore_logprob
 
 
@@ -80,24 +72,6 @@ def joint_logprob(*args, sum: bool = True, **kwargs) -> Optional[TensorVariable]
     if sum:
         return pt.sum([pt.sum(factor) for factor in logprob.values()])
     return pt.add(*logprob.values())
-
-
-def assert_no_rvs(var):
-    """Assert that there are no `MeasurableVariable` nodes in a graph."""
-
-    def expand(r):
-        owner = r.owner
-        if owner:
-            inputs = list(reversed(owner.inputs))
-
-            if isinstance(owner.op, HasInnerGraph):
-                inputs += owner.op.inner_outputs
-
-            return inputs
-
-    for v in walk([var], expand, False):
-        if v.owner and isinstance(v.owner.op, MeasurableVariable):
-            raise AssertionError(f"Variable {v} is a MeasurableVariable")
 
 
 def simulate_poiszero_hmm(
@@ -188,7 +162,7 @@ def scipy_logprob_tester(
         test_fn = getattr(stats, name)
 
     if test == "logprob":
-        pytensor_res = logprob(rv_var, pt.as_tensor(obs))
+        pytensor_res = logp(rv_var, pt.as_tensor(obs))
     elif test == "logcdf":
         pytensor_res = logcdf(rv_var, pt.as_tensor(obs))
     elif test == "icdf":

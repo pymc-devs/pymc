@@ -36,7 +36,7 @@
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.stats as st
 
@@ -57,7 +57,7 @@ from tests.logprob.utils import joint_logprob
     ],
 )
 def test_normal_cumsum(size, axis):
-    rv = at.random.normal(0, 1, size=size).cumsum(axis)
+    rv = pt.random.normal(0, 1, size=size).cumsum(axis)
     vv = rv.clone()
     logp = joint_logprob({rv: vv})
     assert_no_rvs(logp)
@@ -81,7 +81,7 @@ def test_normal_cumsum(size, axis):
     ],
 )
 def test_bernoulli_cumsum(size, axis):
-    rv = at.random.bernoulli(0.9, size=size).cumsum(axis)
+    rv = pt.random.bernoulli(0.9, size=size).cumsum(axis)
     vv = rv.clone()
     logp = joint_logprob({rv: vv})
     assert_no_rvs(logp)
@@ -94,7 +94,7 @@ def test_bernoulli_cumsum(size, axis):
 
 def test_destructive_cumsum_fails():
     """Test that a cumsum that mixes dimensions fails"""
-    x_rv = at.random.normal(size=(2, 2, 2)).cumsum()
+    x_rv = pt.random.normal(size=(2, 2, 2)).cumsum()
     x_vv = x_rv.clone()
     with pytest.raises(RuntimeError, match="could not be derived"):
         joint_logprob({x_rv: x_vv})
@@ -102,9 +102,9 @@ def test_destructive_cumsum_fails():
 
 def test_deterministic_cumsum():
     """Test that deterministic cumsum is not affected"""
-    x_rv = at.random.normal(1, 1, size=5)
-    cumsum_x_rv = at.cumsum(x_rv)
-    y_rv = at.random.normal(cumsum_x_rv, 1)
+    x_rv = pt.random.normal(1, 1, size=5)
+    cumsum_x_rv = pt.cumsum(x_rv)
+    y_rv = pt.random.normal(cumsum_x_rv, 1)
 
     x_vv = x_rv.clone()
     y_vv = y_rv.clone()

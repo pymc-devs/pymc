@@ -22,7 +22,7 @@ from typing import Dict, Optional, Sequence, Tuple, Union, cast
 import numpy as np
 import pandas as pd
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import xarray as xr
 
 from pytensor.compile.sharedvalue import SharedVariable
@@ -164,7 +164,7 @@ def assert_all_scalars_equal(scalar, *scalars):
     else:
         return Assert(
             "All variables shape[0] in Minibatch should be equal, check your Minibatch(data1, data2, ...) code"
-        )(scalar, at.all([scalar == s for s in scalars]))
+        )(scalar, pt.all([scalar == s for s in scalars]))
 
 
 def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: int):
@@ -185,7 +185,7 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
     >>> mdata1, mdata2 = Minibatch(data1, data2, batch_size=10)
     """
 
-    tensor, *tensors = tuple(map(at.as_tensor, (variable, *variables)))
+    tensor, *tensors = tuple(map(pt.as_tensor, (variable, *variables)))
     upper = assert_all_scalars_equal(*[t.shape[0] for t in (tensor, *tensors)])
     slc = minibatch_index(0, upper, size=batch_size)
     for i, v in enumerate((tensor, *tensors)):
@@ -435,7 +435,7 @@ def Data(
     if mutable:
         x = pytensor.shared(arr, name, **kwargs)
     else:
-        x = at.as_tensor_variable(arr, name, **kwargs)
+        x = pt.as_tensor_variable(arr, name, **kwargs)
 
     if isinstance(dims, str):
         dims = (dims,)

@@ -34,13 +34,13 @@ First, we need to define symbolic variables for our inputs (this
 is similar to eg SymPy's `Symbol`)::
 
     import pytensor
-    import pytensor.tensor as at
+    import pytensor.tensor as pt
     # We don't specify the dtype of our input variables, so it
     # defaults to using float64 without any special config.
-    a = at.scalar('a')
-    x = at.vector('x')
-    # `at.ivector` creates a symbolic vector of integers.
-    y = at.ivector('y')
+    a = pt.scalar('a')
+    x = pt.vector('x')
+    # `pt.ivector` creates a symbolic vector of integers.
+    y = pt.ivector('y')
 
 Next, we use those variables to build up a symbolic representation
 of the output of our function. Note that no computation is actually
@@ -48,11 +48,11 @@ being done at this point. We only record what operations we need to
 do to compute the output::
 
     inner = a * x**3 + y**2
-    out = at.exp(inner).sum()
+    out = pt.exp(inner).sum()
 
 .. note::
 
-   In this example we use `at.exp` to create a symbolic representation
+   In this example we use `pt.exp` to create a symbolic representation
    of the exponential of `inner`. Somewhat surprisingly, it
    would also have worked if we used `np.exp`. This is because numpy
    gives objects it operates on a chance to define the results of
@@ -77,8 +77,8 @@ We can call this function with actual arrays as many times as we want::
 
 For the most part the symbolic PyTensor variables can be operated on
 like NumPy arrays. Most NumPy functions are available in `pytensor.tensor`
-(which is typically imported as `at`). A lot of linear algebra operations
-can be found in `at.nlinalg` and `at.slinalg` (the NumPy and SciPy
+(which is typically imported as `pt`). A lot of linear algebra operations
+can be found in `pt.nlinalg` and `pt.slinalg` (the NumPy and SciPy
 operations respectively). Some support for sparse matrices is available
 in `pytensor.sparse`. For a detailed overview of available operations,
 see :mod:`the pytensor api docs <pytensor.tensor>`.
@@ -88,9 +88,9 @@ NumPy arrays are operations involving conditional execution.
 
 Code like this won't work as expected::
 
-    a = at.vector('a')
+    a = pt.vector('a')
     if (a > 0).all():
-        b = at.sqrt(a)
+        b = pt.sqrt(a)
     else:
         b = -a
 
@@ -100,17 +100,17 @@ and according to the rules for this conversion, things that aren't empty
 containers or zero are converted to `True`. So the code is equivalent
 to this::
 
-    a = at.vector('a')
-    b = at.sqrt(a)
+    a = pt.vector('a')
+    b = pt.sqrt(a)
 
-To get the desired behaviour, we can use `at.switch`::
+To get the desired behaviour, we can use `pt.switch`::
 
-    a = at.vector('a')
-    b = at.switch((a > 0).all(), at.sqrt(a), -a)
+    a = pt.vector('a')
+    b = pt.switch((a > 0).all(), pt.sqrt(a), -a)
 
 Indexing also works similarly to NumPy::
 
-    a = at.vector('a')
+    a = pt.vector('a')
     # Access the 10th element. This will fail when a function build
     # from this expression is executed with an array that is too short.
     b = a[10]
@@ -118,10 +118,10 @@ Indexing also works similarly to NumPy::
     # Extract a subvector
     b = a[[1, 2, 10]]
 
-Changing elements of an array is possible using `at.set_subtensor`::
+Changing elements of an array is possible using `pt.set_subtensor`::
 
-    a = at.vector('a')
-    b = at.set_subtensor(a[:10], 1)
+    a = pt.vector('a')
+    b = pt.set_subtensor(a[:10], 1)
 
     # is roughly equivalent to this (although pytensor avoids
     # the copy if `a` isn't used anymore)
@@ -167,7 +167,7 @@ this is happening::
     # in exactly this way!
     model = pm.Model()
 
-    mu = at.scalar('mu')
+    mu = pt.scalar('mu')
     model.add_free_variable(mu)
     model.add_logp_term(pm.Normal.dist(0, 1).logp(mu))
 
@@ -195,15 +195,15 @@ is roughly equivalent to this::
 
     # For illustration only, not real code!
     model = pm.Model()
-    mu = at.scalar('mu')
+    mu = pt.scalar('mu')
     model.add_free_variable(mu)
     model.add_logp_term(pm.Normal.dist(0, 1).logp(mu))
 
-    sd_log__ = at.scalar('sd_log__')
+    sd_log__ = pt.scalar('sd_log__')
     model.add_free_variable(sd_log__)
     model.add_logp_term(corrected_logp_half_normal(sd_log__))
 
-    sigma = at.exp(sd_log__)
+    sigma = pt.exp(sd_log__)
     model.add_deterministic_variable(sigma)
 
     model.add_logp_term(pm.Normal.dist(mu, sigma).logp(data))
@@ -214,8 +214,8 @@ PyTensor operation on them::
 
     design_matrix = np.array([[...]])
     with pm.Model() as model:
-        # beta is a at.dvector
+        # beta is a pt.dvector
         beta = pm.Normal('beta', 0, 1, shape=len(design_matrix))
-        predict = at.dot(design_matrix, beta)
+        predict = pt.dot(design_matrix, beta)
         sigma = pm.HalfCauchy('sigma', beta=2.5)
         pm.Normal('y', mu=predict, sigma=sigma, observed=data)

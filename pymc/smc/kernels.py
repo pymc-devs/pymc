@@ -19,7 +19,7 @@ from abc import ABC
 from typing import Dict, Union, cast
 
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.graph.replace import clone_replace
 from scipy.special import logsumexp
@@ -617,9 +617,9 @@ def _logp_forw(point, out_vars, in_vars, shared):
         new_in_vars = []
         for in_var in in_vars:
             if in_var.dtype in discrete_types:
-                float_var = at.TensorType("floatX", in_var.type.shape)(in_var.name)
+                float_var = pt.TensorType("floatX", in_var.type.shape)(in_var.name)
                 new_in_vars.append(float_var)
-                replace_int_input[in_var] = at.round(float_var).astype(in_var.dtype)
+                replace_int_input[in_var] = pt.round(float_var).astype(in_var.dtype)
             else:
                 new_in_vars.append(in_var)
 

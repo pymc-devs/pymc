@@ -24,7 +24,7 @@ import numpy.ma as ma
 import numpy.testing as npt
 import pytensor
 import pytensor.sparse as sparse
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.sparse as sps
 import scipy.stats as st
@@ -42,7 +42,7 @@ from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
 from pymc.distributions.transforms import log
 from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
-from pymc.logprob.joint_logprob import joint_logp
+from pymc.logprob.basic import joint_logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
 from pymc.testing import SeededTest
@@ -60,8 +60,8 @@ class NewModel(pm.Model):
         self.v2 = pm.Normal("v2", mu=0, sigma=1)
         # 2) Potentials and Deterministic variables with method too
         # be sure that names will not overlap with other same models
-        pm.Deterministic("d", at.constant(1))
-        pm.Potential("p", at.constant(1))
+        pm.Deterministic("d", pt.constant(1))
+        pm.Potential("p", pt.constant(1))
 
 
 class DocstringModel(pm.Model):
@@ -71,7 +71,7 @@ class DocstringModel(pm.Model):
         Normal("v2", mu=mean, sigma=sigma)
         Normal("v3", mu=mean, sigma=Normal("sigma", mu=10, sigma=1, initval=1.0))
         Deterministic("v3_sq", self.v3**2)
-        Potential("p1", at.constant(1))
+        Potential("p1", pt.constant(1))
 
 
 class TestBaseModel:
@@ -258,13 +258,13 @@ def test_empty_observed():
 
 class TestValueGradFunction(unittest.TestCase):
     def test_no_extra(self):
-        a = at.vector("a")
+        a = pt.vector("a")
         a.tag.test_value = np.zeros(3, dtype=a.dtype)
         f_grad = ValueGradFunction([a.sum()], [a], {}, mode="FAST_COMPILE")
         assert f_grad._extra_vars == []
 
     def test_invalid_type(self):
-        a = at.ivector("a")
+        a = pt.ivector("a")
         a.tag.test_value = np.zeros(3, dtype=a.dtype)
         a.dshape = (3,)
         a.dsize = 3
@@ -273,17 +273,17 @@ class TestValueGradFunction(unittest.TestCase):
         err.match("Invalid dtype")
 
     def setUp(self):
-        extra1 = at.iscalar("extra1")
+        extra1 = pt.iscalar("extra1")
         extra1_ = np.array(0, dtype=extra1.dtype)
         extra1.dshape = tuple()
         extra1.dsize = 1
 
-        val1 = at.vector("val1")
+        val1 = pt.vector("val1")
         val1_ = np.zeros(3, dtype=val1.dtype)
         val1.dshape = (3,)
         val1.dsize = 3
 
-        val2 = at.matrix("val2")
+        val2 = pt.matrix("val2")
         val2_ = np.zeros((2, 3), dtype=val2.dtype)
         val2.dshape = (2, 3)
         val2.dsize = 6
@@ -360,10 +360,10 @@ class TestValueGradFunction(unittest.TestCase):
         # The dtype of the merged observed/missing deterministic should match the RV dtype
         assert m.deterministics[0].type.dtype == x2.type.dtype
 
-        pnt = m.initial_point(random_seed=None).copy()
-        del pnt["x2_missing"]
+        point = m.initial_point(random_seed=None).copy()
+        del point["x2_missing"]
 
-        res = [gf(DictToArrayBijection.map(Point(pnt, model=m))) for i in range(5)]
+        res = [gf(DictToArrayBijection.map(Point(point, model=m))) for i in range(5)]
 
         # Assert that all the elements of res are equal
         assert res[1:] == res[:-1]
@@ -418,7 +418,7 @@ def test_tempered_logp_dlogp():
     with pm.Model() as model:
         pm.Normal("x")
         pm.Normal("y", observed=1)
-        pm.Potential("z", at.constant(-1.0, dtype=pytensor.config.floatX))
+        pm.Potential("z", pt.constant(-1.0, dtype=pytensor.config.floatX))
 
     func = model.logp_dlogp_function()
     func.set_extra_values({})
@@ -634,7 +634,7 @@ class TestShapeEvaluation:
             pm.Normal("untransformed", size=(1, 2))
             pm.Uniform("transformed", size=(7,))
             obs = pm.Uniform("observed", size=(3,), observed=[0.1, 0.2, 0.3])
-            pm.LogNormal("lognorm", mu=at.log(obs))
+            pm.LogNormal("lognorm", mu=pt.log(obs))
             pm.Normal("from_dims", dims=("city", "year"))
         shapes = pmodel.eval_rv_shapes()
         assert shapes["untransformed"] == (1, 2)
@@ -714,7 +714,7 @@ def test_datalogp_multiple_shapes():
     with pm.Model() as m:
         x = pm.Normal("x", 0, 1)
         z1 = pm.Potential("z1", x)
-        z2 = pm.Potential("z2", at.full((1, 3), x))
+        z2 = pm.Potential("z2", pt.full((1, 3), x))
         y1 = pm.Normal("y1", x, 1, observed=np.array([1]))
         y2 = pm.Normal("y2", x, 1, observed=np.array([1, 2]))
         y3 = pm.Normal("y3", x, 1, observed=np.array([1, 2, 3]))
@@ -1513,7 +1513,7 @@ def test_tag_future_warning_model():
 
         model = pm.Model()
 
-        x = at.random.normal()
+        x = pt.random.normal()
         x.tag.something_else = "5"
         x.tag.test_value = 0
         assert not isinstance(x.tag, _FutureWarningValidatingScratchpad)

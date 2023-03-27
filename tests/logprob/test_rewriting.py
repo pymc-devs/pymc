@@ -36,7 +36,7 @@
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import pytest
 import scipy.stats.distributions as sp
 
@@ -56,10 +56,10 @@ from tests.logprob.utils import joint_logprob
 
 
 def test_local_lift_DiracDelta():
-    c_at = at.vector()
+    c_at = pt.vector()
     dd_at = dirac_delta(c_at)
 
-    Z_at = at.cast(dd_at, "int64")
+    Z_at = pt.cast(dd_at, "int64")
 
     res = rewrite_graph(Z_at, custom_rewrite=in2out(local_lift_DiracDelta), clone=False)
     assert isinstance(res.owner.op, DiracDelta)
@@ -78,16 +78,16 @@ def test_local_lift_DiracDelta():
     assert isinstance(res.owner.inputs[0].owner.op, Subtensor)
 
     # Don't lift multi-output `Op`s
-    c_at = at.matrix()
+    c_at = pt.matrix()
     dd_at = dirac_delta(c_at)
-    Z_at = at.nlinalg.svd(dd_at)[0]
+    Z_at = pt.nlinalg.svd(dd_at)[0]
 
     res = rewrite_graph(Z_at, custom_rewrite=in2out(local_lift_DiracDelta), clone=False)
     assert res is Z_at
 
 
 def test_local_remove_DiracDelta():
-    c_at = at.vector()
+    c_at = pt.vector()
     dd_at = dirac_delta(c_at)
 
     fn = pytensor.function([c_at], dd_at)
@@ -112,8 +112,8 @@ def test_joint_logprob_incsubtensor(indices, size):
     data = rng.normal(mu[indices], 1.0)
     y_val = rng.normal(mu, sigma, size=size)
 
-    Y_base_rv = at.random.normal(mu, sigma, size=size)
-    Y_rv = at.set_subtensor(Y_base_rv[indices], data)
+    Y_base_rv = pt.random.normal(mu, sigma, size=size)
+    Y_rv = pt.set_subtensor(Y_base_rv[indices], data)
     Y_rv.name = "Y"
     y_value_var = Y_rv.clone()
     y_value_var.name = "y"

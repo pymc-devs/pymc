@@ -18,7 +18,7 @@ import numpy as np
 import pytensor
 import pytest
 
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.compile.mode import Mode
 from pytensor.graph import Constant, ancestors
 from pytensor.tensor import TensorVariable
@@ -30,17 +30,13 @@ import pymc as pm
 from pymc import ShapeError
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_shape,
-    broadcast_dist_samples_to,
-    broadcast_distribution_samples,
     change_dist_size,
     convert_dims,
     convert_shape,
     convert_size,
-    get_broadcastable_dist_samples,
     get_support_shape,
     get_support_shape_1d,
     rv_size_is_none,
-    shapes_broadcasting,
     to_tuple,
 )
 from pymc.model import Model
@@ -90,67 +86,18 @@ def fixture_exception_handling(request):
     return request.param
 
 
-@pytest.fixture()
-def samples_to_broadcast(fixture_sizes, fixture_shapes):
-    samples = [np.empty(s) for s in fixture_shapes]
-    try:
-        broadcast_shape = broadcast_dist_samples_shape(fixture_shapes, size=fixture_sizes)
-    except ValueError:
-        broadcast_shape = None
-    return fixture_sizes, samples, broadcast_shape
-
-
-@pytest.fixture(params=test_to_shapes, ids=str)
-def samples_to_broadcast_to(request, samples_to_broadcast):
-    to_shape = request.param
-    size, samples, broadcast_shape = samples_to_broadcast
-    if broadcast_shape is not None:
-        try:
-            broadcast_shape = broadcast_dist_samples_shape(
-                [broadcast_shape, to_tuple(to_shape)], size=size
-            )
-        except ValueError:
-            broadcast_shape = None
-    return to_shape, size, samples, broadcast_shape
-
-
 class TestShapesBroadcasting:
-    @pytest.mark.parametrize(
-        "bad_input",
-        [None, [None], "asd", 3.6, {1: 2}, {3}, [8, [8]], "3", ["3"], np.array([[2]])],
-        ids=str,
-    )
-    def test_type_check_raises(self, bad_input):
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore", ".*ragged nested sequences.*", np.VisibleDeprecationWarning
-            )
-            with pytest.raises(TypeError):
-                shapes_broadcasting(bad_input, tuple(), raise_exception=True)
-            with pytest.raises(TypeError):
-                shapes_broadcasting(bad_input, tuple(), raise_exception=False)
-
-    def test_type_check_success(self):
-        inputs = [3, 3.0, tuple(), [3], (3,), np.array(3), np.array([3])]
-        out = shapes_broadcasting(*inputs)
-        assert out == (3,)
-
-    def test_broadcasting(self, fixture_shapes, fixture_exception_handling):
+    def test_broadcasting(self, fixture_shapes):
         shapes = fixture_shapes
-        raise_exception = fixture_exception_handling
         try:
             expected_out = np.broadcast(*(np.empty(s) for s in shapes)).shape
         except ValueError:
             expected_out = None
         if expected_out is None:
-            if raise_exception:
-                with pytest.raises(ValueError):
-                    shapes_broadcasting(*shapes, raise_exception=raise_exception)
-            else:
-                out = shapes_broadcasting(*shapes, raise_exception=raise_exception)
-                assert out is None
+            with pytest.raises(ValueError):
+                np.broadcast_shapes(*shapes)
         else:
-            out = shapes_broadcasting(*shapes, raise_exception=raise_exception)
+            out = np.broadcast_shapes(*shapes)
             assert out == expected_out
 
     def test_broadcast_dist_samples_shape(self, fixture_sizes, fixture_shapes):
@@ -174,48 +121,6 @@ class TestShapesBroadcasting:
         else:
             out = broadcast_dist_samples_shape(shapes, size=size)
             assert out == expected_out
-
-
-class TestSamplesBroadcasting:
-    def test_broadcast_distribution_samples(self, samples_to_broadcast):
-        size, samples, broadcast_shape = samples_to_broadcast
-        if broadcast_shape is not None:
-            outs = broadcast_distribution_samples(samples, size=size)
-            assert all(o.shape == broadcast_shape for o in outs)
-        else:
-            with pytest.raises(ValueError):
-                broadcast_distribution_samples(samples, size=size)
-
-    def test_get_broadcastable_dist_samples(self, samples_to_broadcast):
-        size, samples, broadcast_shape = samples_to_broadcast
-        if broadcast_shape is not None:
-            size_ = to_tuple(size)
-            outs, out_shape = get_broadcastable_dist_samples(
-                samples, size=size, return_out_shape=True
-            )
-            assert out_shape == broadcast_shape
-            for i, o in zip(samples, outs):
-                ishape = i.shape
-                if ishape[: min([len(size_), len(ishape)])] == size_:
-                    expected_shape = (
-                        size_ + (1,) * (len(broadcast_shape) - len(ishape)) + ishape[len(size_) :]
-                    )
-                else:
-                    expected_shape = ishape
-                assert o.shape == expected_shape
-            assert shapes_broadcasting(*(o.shape for o in outs)) == broadcast_shape
-        else:
-            with pytest.raises(ValueError):
-                get_broadcastable_dist_samples(samples, size=size)
-
-    def test_broadcast_dist_samples_to(self, samples_to_broadcast_to):
-        to_shape, size, samples, broadcast_shape = samples_to_broadcast_to
-        if broadcast_shape is not None:
-            outs = broadcast_dist_samples_to(to_shape, samples, size=size)
-            assert all(o.shape == broadcast_shape for o in outs)
-        else:
-            with pytest.raises(ValueError):
-                broadcast_dist_samples_to(to_shape, samples, size=size)
 
 
 class TestSizeShapeDimsObserved:
@@ -299,7 +204,7 @@ class TestSizeShapeDimsObserved:
             assert "ddata" in pmodel.dim_lengths
 
             # Size does not include support dims, so this test must use a dist with support dims.
-            kwargs = dict(name="y", size=(2, 3), mu=at.ones((3, 4)), cov=at.eye(4))
+            kwargs = dict(name="y", size=(2, 3), mu=pt.ones((3, 4)), cov=pt.eye(4))
             y = pm.MvNormal(**kwargs, dims=("dsize", "ddata", "dsupport"))
             assert pmodel.named_vars_to_dims["y"] == ("dsize", "ddata", "dsupport")
 
@@ -343,7 +248,7 @@ class TestSizeShapeDimsObserved:
             assert z.eval().shape == (3, 2)
 
     def test_size32_doesnt_break_broadcasting(self):
-        size32 = at.constant([1, 10], dtype="int32")
+        size32 = pt.constant([1, 10], dtype="int32")
         rv = pm.Normal.dist(0, 1, size=size32)
         assert rv.broadcastable == (True, False)
 
@@ -355,15 +260,15 @@ class TestSizeShapeDimsObserved:
         with pm.Model() as model:
             # The `observed` is a broadcastable column vector
             obs = [
-                at.as_tensor_variable(np.ones((3, 1), dtype=pytensor.config.floatX))
+                pt.as_tensor_variable(np.ones((3, 1), dtype=pytensor.config.floatX))
                 for _ in range(4)
             ]
             assert all(obs_.broadcastable == (False, True) for obs_ in obs)
 
             # Both shapes describe broadcastable volumn vectors
-            size64 = at.constant([3, 1], dtype="int64")
+            size64 = pt.constant([3, 1], dtype="int64")
             # But the second shape is upcasted from an int32 vector
-            cast64 = at.cast(at.constant([3, 1], dtype="int32"), dtype="int64")
+            cast64 = pt.cast(pt.constant([3, 1], dtype="int32"), dtype="int64")
 
             pm.Normal("size64", mu=0, sigma=1, size=size64, observed=obs[0])
             pm.Normal("shape64", mu=0, sigma=1, shape=size64, observed=obs[1])
@@ -494,7 +399,7 @@ def test_rv_size_is_none():
 
 
 def test_change_rv_size():
-    loc = at.as_tensor_variable([1, 2])
+    loc = pt.as_tensor_variable([1, 2])
     rng = pytensor.shared(np.random.default_rng())
     rv = normal(loc=loc, rng=rng)
     assert rv.ndim == 1
@@ -503,7 +408,7 @@ def test_change_rv_size():
     with pytest.raises(ShapeError, match="must be ≤1-dimensional"):
         change_dist_size(rv, new_size=[[2, 3]])
     with pytest.raises(ShapeError, match="must be ≤1-dimensional"):
-        change_dist_size(rv, new_size=at.as_tensor_variable([[2, 3], [4, 5]]))
+        change_dist_size(rv, new_size=pt.as_tensor_variable([[2, 3], [4, 5]]))
 
     rv_new = change_dist_size(rv, new_size=(3,), expand=True)
     assert rv_new.ndim == 2
@@ -532,13 +437,13 @@ def test_change_rv_size():
     assert tuple(rv_newer.shape.eval()) == (4, 3)
 
     rv = normal(0, 1)
-    new_size = at.as_tensor(np.array([4, 3], dtype="int32"))
+    new_size = pt.as_tensor(np.array([4, 3], dtype="int32"))
     rv_newer = change_dist_size(rv, new_size=new_size, expand=True)
     assert rv_newer.ndim == 2
     assert tuple(rv_newer.shape.eval()) == (4, 3)
 
     rv = normal(0, 1)
-    new_size = at.as_tensor(2, dtype="int32")
+    new_size = pt.as_tensor(2, dtype="int32")
     rv_newer = change_dist_size(rv, new_size=new_size, expand=True)
     assert rv_newer.ndim == 1
     assert tuple(rv_newer.shape.eval()) == (2,)
@@ -573,9 +478,9 @@ def test_change_rv_size_default_update():
 
 def test_change_specify_shape_size_univariate():
     with pytensor.config.change_flags(mode=Mode("py")):
-        s1, s2 = at.iscalars("s1", "s2")
-        x = at.random.normal(size=(s1, s2))
-        x = at.specify_shape(x, (5, 3))
+        s1, s2 = pt.iscalars("s1", "s2")
+        x = pt.random.normal(size=(s1, s2))
+        x = pt.specify_shape(x, (5, 3))
         x.eval({s1: 5, s2: 3}).shape == (5, 3)
 
         new_x = change_dist_size(x, (10, 5))
@@ -593,9 +498,9 @@ def test_change_specify_shape_size_univariate():
 
 def test_change_specify_shape_size_multivariate():
     with pytensor.config.change_flags(mode=Mode("py")):
-        batch, supp = at.iscalars("batch", "supp")
-        x = at.random.multivariate_normal(at.zeros(supp), at.eye(supp), size=(batch,))
-        x = at.specify_shape(x, (5, 3))
+        batch, supp = pt.iscalars("batch", "supp")
+        x = pt.random.multivariate_normal(pt.zeros(supp), pt.eye(supp), size=(batch,))
+        x = pt.specify_shape(x, (5, 3))
         x.eval({batch: 5, supp: 3}).shape == (5, 3)
 
         new_x = change_dist_size(x, (10, 5))

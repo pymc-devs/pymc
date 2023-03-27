@@ -76,6 +76,7 @@ jobs:
           - |
             tests/distributions/test_timeseries.py
             tests/gp/test_cov.py
+            tests/gp/test_hsgp_approx.py
             tests/gp/test_gp.py
             tests/gp/test_mean.py
             tests/gp/test_util.py
@@ -89,10 +90,10 @@ jobs:
             tests/backends/test_mcbackend.py
             tests/distributions/test_truncated.py
             tests/logprob/test_abstract.py
+            tests/logprob/test_basic.py
             tests/logprob/test_censoring.py
             tests/logprob/test_composite_logprob.py
             tests/logprob/test_cumsum.py
-            tests/logprob/test_joint_logprob.py
             tests/logprob/test_mixture.py
             tests/logprob/test_rewriting.py
             tests/logprob/test_scan.py

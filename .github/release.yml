@@ -17,6 +17,7 @@ changelog:
       labels:
         - bug
     - title: Documentation 📖
+      labels:
         - docs
     - title: Maintenance 🔧
       labels:
