@@ -1779,7 +1779,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 raise SamplingError(
                     "Initial evaluation of model at starting point failed!\n"
                     f"Starting values:\n{elem}\n\n"
-                    f"Initial evaluation results:\n{initial_eval}"
+                    f"Logp initial evaluation results:\n{initial_eval}"
                 )
 
     def point_logps(self, point=None, round_vals=2):
