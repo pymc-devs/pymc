@@ -34,11 +34,6 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import inspect
-import os
-import re
-import sys
-
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
@@ -49,11 +44,7 @@ from scipy import stats
 
 from pymc.distributions import Dirichlet
 from pymc.logprob.joint_logprob import factorized_joint_logprob
-
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0, parentdir)
-from distributions.test_multivariate import dirichlet_logpdf
+from tests.distributions.test_multivariate import dirichlet_logpdf
 
 
 def test_specify_shape_logprob():
