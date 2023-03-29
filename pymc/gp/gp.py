@@ -111,9 +111,9 @@ class Latent(Base):
 
     Parameters
     ----------
-    mean_func : instance of Mean, default ~pymc.gp.mean.Zero
+    mean_func : Mean, default ~pymc.gp.mean.Zero
         The mean function.
-    cov_func : 2D array-like, or instance of Covariance, default ~pymc.gp.cov.Constant
+    cov_func : 2D array-like, or Covariance, default ~pymc.gp.cov.Constant
         The covariance function.
 
     Examples
@@ -179,7 +179,7 @@ class Latent(Base):
         reparameterize : bool, default True
             Reparameterize the distribution by rotating the random
             variable by the Cholesky factor of the covariance matrix.
-        jitter : scalar, default 1e-6
+        jitter : float, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -242,9 +242,9 @@ class Latent(Base):
             vector with shape `(n, 1)`.
         given : dict, optional
             Can take as key value pairs: `X`, `y`,
-            and `gp`. See the section in the documentation on additive GP
-            models in PyMC for more information.
-        jitter : scalar, default 1e-6
+            and `gp`. See the :ref:`section <additive_gp>` in the documentation
+            on additive GP models in pymc for more information.
+        jitter : float, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -264,7 +264,6 @@ class TP(Latent):
     The usage is nearly identical to that of `gp.Latent`.  The differences
     are that it must be initialized with a degrees of freedom parameter, and
     TP is not additive. Given a mean and covariance function, and a degrees of
-    TP is not additive. Given a mean and covariance function, and a degrees of
     freedom parameter, the function :math:`f(x)` is modeled as,
 
     .. math::
@@ -274,11 +273,11 @@ class TP(Latent):
 
     Parameters
     ----------
-    mean_func : instance of Mean, default ~pymc.gp.mean.Zero
+    mean_func : Mean, default ~pymc.gp.mean.Zero
         The mean function.
-    scale_func : 2D array-like, or instance of Covariance, default ~pymc.gp.cov.Constant
+    scale_func : 2D array-like, or Covariance, default ~pymc.gp.cov.Constant
         The covariance function.
-    cov_func : 2D array-like, or instance of Covariance, default None
+    cov_func : 2D array-like, or Covariance, default None
         Deprecated, previous version of "scale_func"
     nu : float
         The degrees of freedom
@@ -334,7 +333,7 @@ class TP(Latent):
         reparameterize : bool, default True
             Reparameterize the distribution by rotating the random
             variable by the Cholesky factor of the covariance matrix.
-        jitter : scalar, default 1e-6
+        jitter : float, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -377,7 +376,7 @@ class TP(Latent):
         Xnew : array-like
             Function input values. If one-dimensional, must be a column
             vector with shape `(n, 1)`.
-        jitter : scalar, default 1e-6
+        jitter : float, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -402,14 +401,12 @@ class Marginal(Base):
     implement regression on data that is normally distributed.  For more
     information on the `marginal_likelihood`, `conditional`
     and `predict` methods, see their docstrings.
-    information on the `marginal_likelihood`, `conditional`
-    and `predict` methods, see their docstrings.
 
     Parameters
     ----------
-    mean_func : instance of Mean, default ~pymc.gp.mean.Zero
+    mean_func : Mean, default ~pymc.gp.mean.Zero
         The mean function.
-    cov_func : 2D array-like, or instance of Covariance, default ~pymc.gp.cov.Constant
+    cov_func : 2D array-like, or Covariance, default ~pymc.gp.cov.Constant
         The covariance function.
 
     Examples
@@ -470,12 +467,12 @@ class Marginal(Base):
         y : array-like
             Data that is the sum of the function with the GP prior and Gaussian
             noise.  Must have shape `(n, )`.
-        sigma : scalar, Variable, or Covariance, default ~pymc.gp.cov.WhiteNoise
+        sigma : float, Variable, or Covariance, default ~pymc.gp.cov.WhiteNoise
             Standard deviation of the Gaussian noise.  Can also be a Covariance for
             non-white noise.
-        noise : scalar, Variable, or Covariance, optional
+        noise : float, Variable, or Covariance, optional
             Deprecated. Previous parameterization of `sigma`.
-        jitter : scalar, default 1e-6
+        jitter : float, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         is_observed : bool, default True
@@ -574,9 +571,9 @@ class Marginal(Base):
             Whether or not observation noise is included in the conditional.
         given : dict, optional
             Can take key value pairs: `X`, `y`, `sigma`,
-            and `gp`.  See the section in the documentation on additive GP
-            models in PyMC for more information.
-        jitter : scalar, default 1e-6
+            and `gp`. See the :ref:`section <additive_gp>` in the documentation
+            on additive GP models in pymc for more information.
+        jitter : float, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -617,9 +614,9 @@ class Marginal(Base):
             Whether or not observation noise is included in the conditional.
         given : dict, optional
             Can take key value pairs: `X`, `y`, `sigma`,
-            and `gp`.  See the section in the documentation on additive GP
-            models in PyMC for more information.
-        jitter : scalar, default 1e-6
+            and `gp`. See the :ref:`section <additive_gp>` in the documentation
+            on additive GP models in pymc for more information.
+        jitter : float, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         model : Model, optional
@@ -649,8 +646,8 @@ class Marginal(Base):
             Whether or not observation noise is included in the conditional.
         given : dict, optional
             Can take key value pairs: `X`, `y`, `sigma`,
-            and `gp`.  See the section in the documentation on additive GP
-            models in PyMC for more information.
+            and `gp`. See the :ref:`section <additive_gp>` in the documentation
+            on additive GP models in pymc for more information.
         """
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, diag, *givens, jitter)
@@ -674,9 +671,9 @@ class MarginalApprox(Marginal):
 
     Parameters
     ----------
-    mean_func : instance of Mean, default ~pymc.gp.mean.Zero
+    mean_func : Mean, default ~pymc.gp.mean.Zero
         The mean function.
-    cov_func : 2D array-like, or instance of Covariance, default ~pymc.gp.cov.Constant
+    cov_func : 2D array-like, or Covariance, default ~pymc.gp.cov.Constant
         The covariance function.
     approx : str, default 'VFE'
         The approximation to use.  Must be one of `VFE`, `FITC` or `DTC`.
@@ -787,11 +784,11 @@ class MarginalApprox(Marginal):
         y : array-like
             Data that is the sum of the function with the GP prior and Gaussian
             noise.  Must have shape `(n, )`.
-        sigma : scalar, Variable
+        sigma : float, Variable
             Standard deviation of the Gaussian noise.
-        noise : scalar, Variable, optional
+        noise : float, Variable, optional
             Previous parameterization of `sigma`.
-        jitter : scalar, default 1e-6
+        jitter : float, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -878,9 +875,9 @@ class MarginalApprox(Marginal):
             Whether or not observation noise is included in the conditional.
         given : dict, optional
             Can take key value pairs: `X`, `Xu`, `y`, `sigma`,
-            and `gp`.  See the section in the documentation on additive GP
-            models in PyMC for more information.
-        jitter : scalar, default 1e-6
+            and `gp`. See the :ref:`section <additive_gp>` in the documentation
+            on additive GP models in pymc for more information.
+        jitter : float, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -921,7 +918,7 @@ class LatentKron(Base):
 
     Parameters
     ----------
-    mean_func : instance of Mean, default ~pymc.gp.mean.Zero
+    mean_func : Mean, default ~pymc.gp.mean.Zero
         The mean function.
     cov_funcs : list of Covariance, default [~pymc.gp.cov.Constant]
         The covariance functions that compose the tensor (Kronecker) product.
@@ -989,7 +986,7 @@ class LatentKron(Base):
             must be passable to its respective covariance without error. The
             total covariance function is measured on the full grid
             `cartesian(*Xs)`.
-        jitter : scalar, default 1e-6
+        jitter : float, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -1048,7 +1045,7 @@ class LatentKron(Base):
         Xnew : array-like
             Function input values.  If one-dimensional, must be a column
             vector with shape `(n, 1)`.
-        jitter : scalar, default 1e-6
+        jitter : float, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
         **kwargs
@@ -1077,7 +1074,7 @@ class MarginalKron(Base):
 
     Parameters
     ----------
-    mean_func : instance of Mean, default ~pymc.gp.mean.Zero
+    mean_func : Mean, default ~pymc.gp.mean.Zero
         The mean function.
     cov_funcs : list of Covariance, default [~pymc.gp.cov.Constant]
         The covariance functions that compose the tensor (Kronecker) product.
@@ -1160,7 +1157,7 @@ class MarginalKron(Base):
         y : array-like
             Data that is the sum of the function with the GP prior and Gaussian
             noise.  Must have shape `(n, )`.
-        sigma : scalar, Variable
+        sigma : float, Variable
             Standard deviation of the white Gaussian noise.
         is_observed : bool, default True
             Deprecated. Whether to set `y` as an `observed` variable in the `model`.
