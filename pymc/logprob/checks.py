@@ -42,7 +42,7 @@ from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.raise_op import CheckAndRaise, ExceptionType
 from pytensor.tensor.shape import SpecifyShape
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob, logprob
+from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import ignore_logprob
 
@@ -59,7 +59,7 @@ def logprob_specify_shape(op, values, inner_rv, *shapes, **kwargs):
     (value,) = values
     # transfer specify_shape from rv to value
     value = pt.specify_shape(value, shapes)
-    return logprob(inner_rv, value)
+    return _logprob_helper(inner_rv, value)
 
 
 @node_rewriter([SpecifyShape])
@@ -114,7 +114,7 @@ def logprob_assert(op, values, inner_rv, *assertion, **kwargs):
     (value,) = values
     # transfer assertion from rv to value
     value = op(assertion, value)
-    return logprob(inner_rv, value)
+    return _logprob_helper(inner_rv, value)
 
 
 @node_rewriter([CheckAndRaise])
