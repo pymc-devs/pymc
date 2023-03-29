@@ -40,6 +40,7 @@ from pymc.logprob.basic import factorized_joint_logprob, icdf, joint_logp, logcd
 # Add rewrites to the DBs
 import pymc.logprob.censoring
 import pymc.logprob.cumsum
+import pymc.logprob.checks
 import pymc.logprob.mixture
 import pymc.logprob.scan
 import pymc.logprob.tensor
