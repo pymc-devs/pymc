@@ -488,7 +488,6 @@ class _CustomDist(Distribution):
     def dist(
         cls,
         *dist_params,
-        class_name: str,
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
         random: Optional[Callable] = None,
@@ -496,6 +495,7 @@ class _CustomDist(Distribution):
         ndim_supp: int = 0,
         ndims_params: Optional[Sequence[int]] = None,
         dtype: str = "floatX",
+        class_name: str = "CustomDist",
         **kwargs,
     ):
         dist_params = [as_tensor_variable(param) for param in dist_params]
@@ -523,7 +523,6 @@ class _CustomDist(Distribution):
 
         return super().dist(
             dist_params,
-            class_name=class_name,
             logp=logp,
             logcdf=logcdf,
             random=random,
@@ -531,6 +530,7 @@ class _CustomDist(Distribution):
             ndim_supp=ndim_supp,
             ndims_params=ndims_params,
             dtype=dtype,
+            class_name=class_name,
             **kwargs,
         )
 
@@ -538,7 +538,6 @@ class _CustomDist(Distribution):
     def rv_op(
         cls,
         *dist_params,
-        class_name: str,
         logp: Optional[Callable],
         logcdf: Optional[Callable],
         random: Optional[Callable],
@@ -546,13 +545,14 @@ class _CustomDist(Distribution):
         ndim_supp: int,
         ndims_params: Optional[Sequence[int]],
         dtype: str,
+        class_name: str,
         **kwargs,
     ):
         rv_type = type(
-            f"CustomDistRV_{class_name}",
+            class_name,
             (CustomDistRV,),
             dict(
-                name=f"CustomDist_{class_name}",
+                name=class_name,
                 inplace=False,
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
@@ -613,20 +613,15 @@ class _CustomSymbolicDist(Distribution):
     def dist(
         cls,
         *dist_params,
-        class_name: str,
         dist: Callable,
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
         moment: Optional[Callable] = None,
         ndim_supp: int = 0,
         dtype: str = "floatX",
+        class_name: str = "CustomSymbolicDist",
         **kwargs,
     ):
-        warnings.warn(
-            "CustomDist with dist function is still experimental. Expect bugs!",
-            UserWarning,
-        )
-
         dist_params = [as_tensor_variable(param) for param in dist_params]
 
         if logcdf is None:
@@ -655,13 +650,13 @@ class _CustomSymbolicDist(Distribution):
     def rv_op(
         cls,
         *dist_params,
-        class_name: str,
         dist: Callable,
         logp: Optional[Callable],
         logcdf: Optional[Callable],
         moment: Optional[Callable],
         size=None,
         ndim_supp: int,
+        class_name: str,
     ):
         size = normalize_size_param(size)
         dummy_size_param = size.type()
@@ -674,7 +669,7 @@ class _CustomSymbolicDist(Distribution):
         dummy_updates_dict = collect_default_updates(dummy_params, (dummy_rv,))
 
         rv_type = type(
-            f"CustomSymbolicDistRV_{class_name}",
+            class_name,
             (CustomSymbolicDistRV,),
             # If logp is not provided, we try to infer it from the dist graph
             dict(
@@ -758,15 +753,6 @@ class CustomDist:
     dist_params : Tuple
         A sequence of the distribution's parameter. These will be converted into
         Pytensor tensor variables internally.
-    class_name : str
-        Name for the class which will wrap the CustomDist methods. When not specified,
-        it will be given the name of the model variable.
-
-        .. warning:: New CustomDists created with the same class_name will override the
-            methods dispatched onto the previous classes. If using CustomDists with
-            different methods across separate models, be sure to use distinct
-            class_names.
-
     dist: Optional[Callable]
         A callable that returns a PyTensor graph built from simpler PyMC distributions
         which represents the distribution. This can be used by PyMC to take random draws
@@ -831,6 +817,9 @@ class CustomDist:
         The dtype of the distribution. All draws and observations passed into the
         distribution will be cast onto this dtype. This is not needed if an PyTensor
         dist function is provided, which should already return the right dtype!
+    class_name : str
+        Name for the class which will wrap the CustomDist methods. When not specified,
+        it will be given the name of the model variable.
     kwargs :
         Extra keyword arguments are passed to the parent's class ``__new__`` method.
 
@@ -979,10 +968,10 @@ class CustomDist:
         dist_params = cls.parse_dist_params(dist_params)
         cls.check_valid_dist_random(dist, random, dist_params)
         if dist is not None:
+            kwargs.setdefault("class_name", f"CustomSymbolicDist_{name}")
             return _CustomSymbolicDist(
                 name,
                 *dist_params,
-                class_name=name,
                 dist=dist,
                 logp=logp,
                 logcdf=logcdf,
@@ -990,25 +979,25 @@ class CustomDist:
                 ndim_supp=ndim_supp,
                 **kwargs,
             )
-        return _CustomDist(
-            name,
-            *dist_params,
-            class_name=name,
-            random=random,
-            logp=logp,
-            logcdf=logcdf,
-            moment=moment,
-            ndim_supp=ndim_supp,
-            ndims_params=ndims_params,
-            dtype=dtype,
-            **kwargs,
-        )
+        else:
+            kwargs.setdefault("class_name", f"CustomDist_{name}")
+            return _CustomDist(
+                name,
+                *dist_params,
+                random=random,
+                logp=logp,
+                logcdf=logcdf,
+                moment=moment,
+                ndim_supp=ndim_supp,
+                ndims_params=ndims_params,
+                dtype=dtype,
+                **kwargs,
+            )
 
     @classmethod
     def dist(
         cls,
         *dist_params,
-        class_name: str,
         dist: Optional[Callable] = None,
         random: Optional[Callable] = None,
         logp: Optional[Callable] = None,
@@ -1024,7 +1013,6 @@ class CustomDist:
         if dist is not None:
             return _CustomSymbolicDist.dist(
                 *dist_params,
-                class_name=class_name,
                 dist=dist,
                 logp=logp,
                 logcdf=logcdf,
@@ -1035,7 +1023,6 @@ class CustomDist:
         else:
             return _CustomDist.dist(
                 *dist_params,
-                class_name=class_name,
                 random=random,
                 logp=logp,
                 logcdf=logcdf,

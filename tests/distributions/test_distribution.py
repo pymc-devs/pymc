@@ -13,6 +13,7 @@
 #   limitations under the License.
 import warnings
 
+import cloudpickle
 import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
@@ -48,7 +49,7 @@ from pymc.distributions.transforms import log
 from pymc.exceptions import BlockModelAccessError
 from pymc.logprob.abstract import get_measurable_outputs
 from pymc.logprob.basic import logcdf, logp
-from pymc.model import Model
+from pymc.model import Deterministic, Model
 from pymc.sampling import draw, sample
 from pymc.testing import assert_moment_is_expected
 from pymc.util import _FutureWarningValidatingScratchpad
@@ -235,14 +236,16 @@ class TestCustomDist:
         with Model():
             Normal("x")
             y = CustomDist("y", logp=func, random=random)
+            y_dist = CustomDist.dist(logp=func, random=random)
+            Deterministic("y_dist", y_dist)
             assert isinstance(y.owner.op, CustomDistRV)
+            assert isinstance(y_dist.owner.op, CustomDistRV)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 sample(draws=5, tune=1, mp_ctx="spawn")
 
-        import cloudpickle
-
         cloudpickle.loads(cloudpickle.dumps(y))
+        cloudpickle.loads(cloudpickle.dumps(y_dist))
 
     def test_custom_dist_old_api_error(self):
         with Model():
@@ -354,11 +357,12 @@ class TestCustomDist:
         mu = 1
         x = pm.CustomDist.dist(
             mu,
-            class_name="test",
             logp=lambda value, mu: pm.logp(pm.Normal.dist(mu), value),
             random=lambda mu, rng=None, size=None: rng.normal(loc=mu, scale=1, size=size),
             shape=(3,),
         )
+
+        x = cloudpickle.loads(cloudpickle.dumps(x))
 
         test_value = pm.draw(x, random_seed=1)
         assert np.all(test_value == pm.draw(x, random_seed=1))
@@ -375,16 +379,15 @@ class TestCustomSymbolicDist:
         with Model() as m:
             mu = Normal("mu")
             sigma = HalfNormal("sigma")
-            with pytest.warns(UserWarning, match="experimental"):
-                lognormal = CustomDist(
-                    "lognormal",
-                    mu,
-                    sigma,
-                    dist=custom_dist,
-                    size=(10,),
-                    transform=log,
-                    initval=np.ones(10),
-                )
+            lognormal = CustomDist(
+                "lognormal",
+                mu,
+                sigma,
+                dist=custom_dist,
+                size=(10,),
+                transform=log,
+                initval=np.ones(10),
+            )
 
         assert isinstance(lognormal.owner.op, CustomSymbolicDistRV)
 
@@ -407,14 +410,12 @@ class TestCustomSymbolicDist:
             comps = pm.Normal.dist([-sigma, sigma], 1e-1, size=(*size, 2)).T
             return comps[idx]
 
-        with pytest.warns(UserWarning, match="experimental"):
-            customdist = CustomDist.dist(
-                0.5,
-                10.0,
-                class_name="customdist",
-                dist=custom_dist,
-                size=(10,),
-            )
+        customdist = CustomDist.dist(
+            0.5,
+            10.0,
+            dist=custom_dist,
+            size=(10,),
+        )
 
         assert isinstance(customdist.owner.op, CustomSymbolicDistRV)
 
@@ -441,15 +442,13 @@ class TestCustomSymbolicDist:
         def custom_logcdf(value, mu):
             return pt.full_like(value, mu + 3)
 
-        with pytest.warns(UserWarning, match="experimental"):
-            customdist = CustomDist.dist(
-                [np.e, np.e],
-                class_name="customdist",
-                dist=custom_dist,
-                moment=custom_moment,
-                logp=custom_logp,
-                logcdf=custom_logcdf,
-            )
+        customdist = CustomDist.dist(
+            [np.e, np.e],
+            dist=custom_dist,
+            moment=custom_moment,
+            logp=custom_logp,
+            logcdf=custom_logcdf,
+        )
 
         assert isinstance(customdist.owner.op, CustomSymbolicDistRV)
 
@@ -462,14 +461,12 @@ class TestCustomSymbolicDist:
         def custom_dist(mu, sigma, size):
             return pt.exp(pm.Normal.dist(mu, sigma, size=size))
 
-        with pytest.warns(UserWarning, match="experimental"):
-            lognormal = CustomDist.dist(
-                0,
-                1,
-                class_name="lognormal",
-                dist=custom_dist,
-                size=(10,),
-            )
+        lognormal = CustomDist.dist(
+            0,
+            1,
+            dist=custom_dist,
+            size=(10,),
+        )
         assert isinstance(lognormal.owner.op, CustomSymbolicDistRV)
         assert tuple(lognormal.shape.eval()) == (10,)
 

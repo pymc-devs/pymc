@@ -86,15 +86,6 @@ class Simulator(Distribution):
         Keyword form of ''unnamed_params''.
         One of unnamed_params or params must be provided.
         If passed both unnamed_params and params, an error is raised.
-    class_name : str
-        Name for the RandomVariable class which will wrap the Simulator methods.
-        When not specified, it will be given the name of the variable.
-
-        .. warning:: New Simulators created with the same class_name will override the
-            methods dispatched onto the previous classes. If using Simulators with
-            different methods across separate models, be sure to use distinct
-            class_names.
-
     distance : PyTensor_Op, callable or str, default "gaussian"
         Distance function. Available options are ``"gaussian"``, ``"laplace"``,
         ``"kullback_leibler"`` or a user defined function (or PyTensor_Op) that takes
@@ -123,6 +114,8 @@ class Simulator(Distribution):
         Number of minimum dimensions of each parameter of the RV. For example,
         if the Simulator accepts two scalar inputs, it should be ``[0, 0]``.
         Default to list of 0 with length equal to the number of parameters.
+    class_name : str, optional
+        Suffix name for the RandomVariable class which will wrap the Simulator methods.
 
     Examples
     --------
@@ -149,7 +142,7 @@ class Simulator(Distribution):
     rv_type = SimulatorRV
 
     def __new__(cls, name, *args, **kwargs):
-        kwargs.setdefault("class_name", name)
+        kwargs.setdefault("class_name", f"Simulator_{name}")
         return super().__new__(cls, name, *args, **kwargs)
 
     @classmethod
@@ -158,13 +151,13 @@ class Simulator(Distribution):
         fn,
         *unnamed_params,
         params=None,
-        class_name: str,
         distance="gaussian",
         sum_stat="identity",
         epsilon=1,
         ndim_supp=0,
         ndims_params=None,
         dtype="floatX",
+        class_name: str = "Simulator",
         **kwargs,
     ):
         if not isinstance(distance, Op):
@@ -213,7 +206,6 @@ class Simulator(Distribution):
 
         return super().dist(
             params,
-            class_name=class_name,
             fn=fn,
             ndim_supp=ndim_supp,
             ndims_params=ndims_params,
@@ -221,6 +213,7 @@ class Simulator(Distribution):
             distance=distance,
             sum_stat=sum_stat,
             epsilon=epsilon,
+            class_name=class_name,
             **kwargs,
         )
 
@@ -228,7 +221,6 @@ class Simulator(Distribution):
     def rv_op(
         cls,
         *params,
-        class_name,
         fn,
         ndim_supp,
         ndims_params,
@@ -236,13 +228,14 @@ class Simulator(Distribution):
         distance,
         sum_stat,
         epsilon,
+        class_name,
         **kwargs,
     ):
         sim_op = type(
-            f"Simulator_{class_name}",
+            class_name,
             (SimulatorRV,),
             dict(
-                name=f"Simulator_{class_name}",
+                name=class_name,
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
                 dtype=dtype,
