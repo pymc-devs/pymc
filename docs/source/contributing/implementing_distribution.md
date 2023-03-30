@@ -146,12 +146,12 @@ class Blah(PositiveContinuous):
     # We pass the standard parametrizations to super().dist
     @classmethod
     def dist(cls, param1, param2=None, alt_param2=None, **kwargs):
-        param1 = pt.as_tensor_variable(intX(param1))
+        param1 = intX(param1)
         if param2 is not None and alt_param2 is not None:
             raise ValueError("Only one of param2 and alt_param2 is allowed.")
         if alt_param2 is not None:
             param2 = 1 / alt_param2
-        param2 = pt.as_tensor_variable(floatX(param2))
+        param2 = floatX(param2)
 
         # The first value-only argument should be a list of the parameters that
         # the rv_op needs in order to be instantiated

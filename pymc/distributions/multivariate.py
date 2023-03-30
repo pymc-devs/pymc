@@ -258,7 +258,7 @@ class MvNormal(Continuous):
 
     @classmethod
     def dist(cls, mu, cov=None, tau=None, chol=None, lower=True, **kwargs):
-        mu = pt.as_tensor_variable(mu)
+        mu = floatX(mu)
         cov = quaddist_matrix(cov, chol, tau, lower)
         # PyTensor is stricter about the shape of mu, than PyMC used to be
         mu = pt.broadcast_arrays(mu, cov[..., -1])[0]
@@ -395,8 +395,8 @@ class MvStudentT(Continuous):
             if scale is not None:
                 raise ValueError("Specify only one of scale and Sigma")
             scale = Sigma
-        nu = pt.as_tensor_variable(floatX(nu))
-        mu = pt.as_tensor_variable(floatX(mu))
+        nu = floatX(nu)
+        mu = floatX(mu)
         scale = quaddist_matrix(scale, chol, tau, lower)
         # PyTensor is stricter about the shape of mu, than PyMC used to be
         mu = pt.broadcast_arrays(mu, scale[..., -1])[0]
@@ -462,10 +462,7 @@ class Dirichlet(SimplexContinuous):
 
     @classmethod
     def dist(cls, a, **kwargs):
-        a = pt.as_tensor_variable(a)
-        # mean = a / pt.sum(a)
-        # mode = pt.switch(pt.all(a > 1), (a - 1) / pt.sum(a - 1), np.nan)
-
+        a = floatX(a)
         return super().dist([a], **kwargs)
 
     def moment(rv, size, a):
@@ -541,7 +538,7 @@ class Multinomial(Discrete):
 
     @classmethod
     def dist(cls, n, p, *args, **kwargs):
-        p = pt.as_tensor_variable(p)
+        p = floatX(p)
         if isinstance(p, TensorConstant):
             p_ = np.asarray(p.data)
             if np.any(p_ < 0):
@@ -555,9 +552,8 @@ class Multinomial(Discrete):
                     UserWarning,
                 )
                 p_ = p_ / pt.sum(p_, axis=-1, keepdims=True)
-                p = pt.as_tensor_variable(p_)
-        n = pt.as_tensor_variable(n)
-        p = pt.as_tensor_variable(p)
+                p = floatX(p_)
+        n = intX(n)
         return super().dist([n, p], *args, **kwargs)
 
     def moment(rv, size, n, p):
@@ -729,9 +725,9 @@ class _OrderedMultinomial(Multinomial):
 
     @classmethod
     def dist(cls, eta, cutpoints, n, *args, **kwargs):
-        eta = pt.as_tensor_variable(floatX(eta))
-        cutpoints = pt.as_tensor_variable(cutpoints)
-        n = pt.as_tensor_variable(intX(n))
+        eta = floatX(eta)
+        cutpoints = floatX(cutpoints)
+        n = intX(n)
 
         pa = sigmoid(cutpoints - pt.shape_padright(eta))
         p_cum = pt.concatenate(
@@ -948,8 +944,8 @@ class Wishart(Continuous):
 
     @classmethod
     def dist(cls, nu, V, *args, **kwargs):
-        nu = pt.as_tensor_variable(intX(nu))
-        V = pt.as_tensor_variable(floatX(V))
+        nu = intX(nu)
+        V = floatX(V)
 
         warnings.warn(
             "The Wishart distribution can currently not be used "
@@ -1179,8 +1175,8 @@ class _LKJCholeskyCov(Distribution):
 
     @classmethod
     def dist(cls, n, eta, sd_dist, **kwargs):
-        n = pt.as_tensor_variable(intX(n))
-        eta = pt.as_tensor_variable(floatX(eta))
+        n = intX(n)
+        eta = floatX(eta)
 
         if not (
             isinstance(sd_dist, Variable)
@@ -1577,8 +1573,8 @@ class LKJCorr(BoundedContinuous):
 
     @classmethod
     def dist(cls, n, eta, **kwargs):
-        n = pt.as_tensor_variable(intX(n))
-        eta = pt.as_tensor_variable(floatX(eta))
+        n = intX(n)
+        eta = floatX(eta)
         return super().dist([n, eta], **kwargs)
 
     def moment(rv, *args):
@@ -1783,7 +1779,7 @@ class MatrixNormal(Continuous):
         else:
             if rowchol.ndim != 2:
                 raise ValueError("rowchol must be two dimensional.")
-            rowchol_cov = pt.as_tensor_variable(rowchol)
+            rowchol_cov = floatX(rowchol)
 
         # Among-column matrices
         if len([i for i in [colcov, colchol] if i is not None]) != 1:
@@ -1791,20 +1787,20 @@ class MatrixNormal(Continuous):
                 "Incompatible parameterization. Specify exactly one of colcov, or colchol."
             )
         if colcov is not None:
-            colcov = pt.as_tensor_variable(colcov)
+            colcov = floatX(colcov)
             if colcov.ndim != 2:
                 raise ValueError("colcov must be two dimensional.")
             colchol_cov = cholesky(colcov)
         else:
             if colchol.ndim != 2:
                 raise ValueError("colchol must be two dimensional.")
-            colchol_cov = pt.as_tensor_variable(colchol)
+            colchol_cov = floatX(colchol)
 
         dist_shape = (rowchol_cov.shape[-1], colchol_cov.shape[-1])
 
         # Broadcasting mu
         mu = pt.extra_ops.broadcast_to(mu, shape=dist_shape)
-        mu = pt.as_tensor_variable(floatX(mu))
+        mu = floatX(mu)
 
         return super().dist([mu, rowchol_cov, colchol_cov], **kwargs)
 
@@ -1983,7 +1979,7 @@ class KroneckerNormal(Continuous):
                 cov_i = pt.dot(Q, pt.dot(pt.diag(eig), Q.T))
                 covs.append(cov_i)
 
-        mu = pt.as_tensor_variable(mu)
+        mu = floatX(mu)
 
         return super().dist([mu, sigma, *covs], **kwargs)
 
@@ -2050,7 +2046,7 @@ class CARRV(RandomVariable):
     _print_name = ("CAR", "\\operatorname{CAR}")
 
     def make_node(self, rng, size, dtype, mu, W, alpha, tau):
-        mu = pt.as_tensor_variable(floatX(mu))
+        mu = floatX(mu)
 
         W = pytensor.sparse.as_sparse_or_tensor_variable(floatX(W))
         if not W.ndim == 2:
@@ -2064,8 +2060,8 @@ class CARRV(RandomVariable):
         else:
             W = Assert(msg)(W, pt.allclose(W, W.T))
 
-        tau = pt.as_tensor_variable(floatX(tau))
-        alpha = pt.as_tensor_variable(floatX(alpha))
+        tau = floatX(tau)
+        alpha = floatX(alpha)
 
         return super().make_node(rng, size, dtype, mu, W, alpha, tau)
 
@@ -2231,7 +2227,7 @@ class StickBreakingWeightsRV(RandomVariable):
 
     def make_node(self, rng, size, dtype, alpha, K):
         alpha = pt.as_tensor_variable(alpha)
-        K = pt.as_tensor_variable(intX(K))
+        K = intX(K)
 
         if K.ndim > 0:
             raise ValueError("K must be a scalar.")
@@ -2312,8 +2308,8 @@ class StickBreakingWeights(SimplexContinuous):
 
     @classmethod
     def dist(cls, alpha, K, *args, **kwargs):
-        alpha = pt.as_tensor_variable(floatX(alpha))
-        K = pt.as_tensor_variable(intX(K))
+        alpha = floatX(alpha)
+        K = intX(K)
 
         return super().dist([alpha, K], **kwargs)
 
@@ -2488,7 +2484,7 @@ class ZeroSumNormal(Distribution):
     def dist(cls, sigma=1, n_zerosum_axes=None, support_shape=None, **kwargs):
         n_zerosum_axes = cls.check_zerosum_axes(n_zerosum_axes)
 
-        sigma = pt.as_tensor_variable(floatX(sigma))
+        sigma = floatX(sigma)
         if sigma.ndim > 0:
             raise ValueError("sigma has to be a scalar")
 
@@ -2504,7 +2500,7 @@ class ZeroSumNormal(Distribution):
             # TODO: edge-case doesn't work for now, because pt.stack in get_support_shape fails
             # else:
             #     support_shape = () # because it's just a Normal in that case
-        support_shape = pt.as_tensor_variable(intX(support_shape))
+        support_shape = intX(support_shape)
 
         assert n_zerosum_axes == pt.get_vector_length(
             support_shape

@@ -131,8 +131,8 @@ class Binomial(Discrete):
         if logit_p is not None:
             p = pt.sigmoid(logit_p)
 
-        n = pt.as_tensor_variable(intX(n))
-        p = pt.as_tensor_variable(floatX(p))
+        n = intX(n)
+        p = floatX(p)
         return super().dist([n, p], **kwargs)
 
     def moment(rv, size, n, p):
@@ -239,9 +239,9 @@ class BetaBinomial(Discrete):
 
     @classmethod
     def dist(cls, alpha, beta, n, *args, **kwargs):
-        alpha = pt.as_tensor_variable(floatX(alpha))
-        beta = pt.as_tensor_variable(floatX(beta))
-        n = pt.as_tensor_variable(intX(n))
+        alpha = floatX(alpha)
+        beta = floatX(beta)
+        n = intX(n)
         return super().dist([n, alpha, beta], **kwargs)
 
     def moment(rv, size, n, alpha, beta):
@@ -353,7 +353,7 @@ class Bernoulli(Discrete):
         if logit_p is not None:
             p = pt.sigmoid(logit_p)
 
-        p = pt.as_tensor_variable(floatX(p))
+        p = floatX(p)
         return super().dist([p], **kwargs)
 
     def moment(rv, size, p):
@@ -461,8 +461,8 @@ class DiscreteWeibull(Discrete):
 
     @classmethod
     def dist(cls, q, beta, *args, **kwargs):
-        q = pt.as_tensor_variable(floatX(q))
-        beta = pt.as_tensor_variable(floatX(beta))
+        q = floatX(q)
+        beta = floatX(beta)
         return super().dist([q, beta], **kwargs)
 
     def moment(rv, size, q, beta):
@@ -550,7 +550,7 @@ class Poisson(Discrete):
 
     @classmethod
     def dist(cls, mu, *args, **kwargs):
-        mu = pt.as_tensor_variable(floatX(mu))
+        mu = floatX(mu)
         return super().dist([mu], *args, **kwargs)
 
     def moment(rv, size, mu):
@@ -673,8 +673,8 @@ class NegativeBinomial(Discrete):
     @classmethod
     def dist(cls, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
         n, p = cls.get_n_p(mu=mu, alpha=alpha, p=p, n=n)
-        n = pt.as_tensor_variable(floatX(n))
-        p = pt.as_tensor_variable(floatX(p))
+        n = floatX(n)
+        p = floatX(p)
         return super().dist([n, p], *args, **kwargs)
 
     @classmethod
@@ -785,7 +785,7 @@ class Geometric(Discrete):
 
     @classmethod
     def dist(cls, p, *args, **kwargs):
-        p = pt.as_tensor_variable(floatX(p))
+        p = floatX(p)
         return super().dist([p], *args, **kwargs)
 
     def moment(rv, size, p):
@@ -882,9 +882,9 @@ class HyperGeometric(Discrete):
 
     @classmethod
     def dist(cls, N, k, n, *args, **kwargs):
-        good = pt.as_tensor_variable(intX(k))
-        bad = pt.as_tensor_variable(intX(N - k))
-        n = pt.as_tensor_variable(intX(n))
+        good = intX(k)
+        bad = intX(N - k)
+        n = intX(n)
         return super().dist([good, bad, n], *args, **kwargs)
 
     def moment(rv, size, good, bad, n):
@@ -1117,7 +1117,7 @@ class Categorical(Discrete):
         if logit_p is not None:
             p = pm.math.softmax(logit_p, axis=-1)
 
-        p = pt.as_tensor_variable(p)
+        p = floatX(p)
         if isinstance(p, TensorConstant):
             p_ = np.asarray(p.data)
             if np.any(p_ < 0):
@@ -1131,7 +1131,7 @@ class Categorical(Discrete):
                     UserWarning,
                 )
                 p_ = p_ / pt.sum(p_, axis=-1, keepdims=True)
-                p = pt.as_tensor_variable(p_)
+                p = floatX(p_)
         return super().dist([p], **kwargs)
 
     def moment(rv, size, p):
@@ -1258,7 +1258,7 @@ def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):
 
     If name is `None`, this function returns an unregistered variable
     """
-    nonzero_p = pt.as_tensor_variable(floatX(nonzero_p))
+    nonzero_p = floatX(nonzero_p)
     weights = pt.stack([1 - nonzero_p, nonzero_p], axis=-1)
     comp_dists = [
         DiracDelta.dist(0),
@@ -1508,8 +1508,8 @@ class _OrderedLogistic(Categorical):
 
     @classmethod
     def dist(cls, eta, cutpoints, *args, **kwargs):
-        eta = pt.as_tensor_variable(floatX(eta))
-        cutpoints = pt.as_tensor_variable(cutpoints)
+        eta = floatX(eta)
+        cutpoints = floatX(cutpoints)
 
         pa = sigmoid(cutpoints - pt.shape_padright(eta))
         p_cum = pt.concatenate(
@@ -1614,8 +1614,8 @@ class _OrderedProbit(Categorical):
 
     @classmethod
     def dist(cls, eta, cutpoints, sigma=1, *args, **kwargs):
-        eta = pt.as_tensor_variable(floatX(eta))
-        cutpoints = pt.as_tensor_variable(cutpoints)
+        eta = floatX(eta)
+        cutpoints = floatX(cutpoints)
 
         probits = pt.shape_padright(eta) - cutpoints
         _log_p = pt.concatenate(
@@ -1628,7 +1628,7 @@ class _OrderedProbit(Categorical):
             ],
             axis=-1,
         )
-        _log_p = pt.as_tensor_variable(floatX(_log_p))
+        _log_p = floatX(_log_p)
         p = pt.exp(_log_p)
 
         return super().dist(p, *args, **kwargs)

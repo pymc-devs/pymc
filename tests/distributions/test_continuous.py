@@ -2284,3 +2284,10 @@ class TestInterpolated(BaseTestDistributionRandom):
                     extra_args={"rng": pytensor.shared(rng)},
                     ref_rand=ref_rand,
                 )
+
+
+def test_list_of_variables_input():
+    x = pm.HalfNormal.dist(1)
+    y = pm.HalfCauchy.dist(1)
+    z = pm.Exponential.dist(lam=[x, y])
+    assert z.eval().shape == (2,)

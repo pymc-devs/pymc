@@ -199,7 +199,7 @@ class Simulator(Distribution):
             else:
                 raise ValueError(f"The summary statistic {sum_stat} is not implemented")
 
-        epsilon = pt.as_tensor_variable(floatX(epsilon))
+        epsilon = floatX(epsilon)
 
         if params is None:
             params = unnamed_params

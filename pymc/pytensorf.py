@@ -435,8 +435,7 @@ def floatX(X):
     try:
         return X.astype(pytensor.config.floatX)
     except AttributeError:
-        # Scalar passed
-        return np.asarray(X, dtype=pytensor.config.floatX)
+        return pt.as_tensor_variable(X, dtype=pytensor.config.floatX)
 
 
 _conversion_map = {"float64": "int32", "float32": "int16", "float16": "int8", "float8": "int8"}
@@ -450,8 +449,7 @@ def intX(X):
     try:
         return X.astype(intX)
     except AttributeError:
-        # Scalar passed
-        return np.asarray(X, dtype=intX)
+        return pt.as_tensor_variable(X, dtype=intX)
 
 
 def smartfloatX(x):

@@ -125,7 +125,7 @@ class RandomWalk(Distribution):
         )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
-        steps = pt.as_tensor_variable(intX(steps))
+        steps = intX(steps)
 
         return super().dist([init_dist, innovation_dist, steps], **kwargs)
 
@@ -305,8 +305,8 @@ class GaussianRandomWalk(PredefinedRandomWalk):
             )
             init_dist = Normal.dist(0, 100)
 
-        mu = pt.as_tensor_variable(mu)
-        sigma = pt.as_tensor_variable(sigma)
+        mu = floatX(mu)
+        sigma = floatX(sigma)
         innovation_dist = Normal.dist(mu=mu, sigma=sigma)
 
         return init_dist, innovation_dist, kwargs
@@ -506,7 +506,7 @@ class AR(Distribution):
     rv_type = AutoRegressiveRV
 
     def __new__(cls, name, rho, *args, steps=None, constant=False, ar_order=None, **kwargs):
-        rhos = pt.atleast_1d(pt.as_tensor_variable(floatX(rho)))
+        rhos = pt.atleast_1d(floatX(rho))
         ar_order = cls._get_ar_order(rhos=rhos, constant=constant, ar_order=ar_order)
         steps = get_support_shape_1d(
             support_shape=steps,
@@ -533,8 +533,8 @@ class AR(Distribution):
         **kwargs,
     ):
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        sigma = pt.as_tensor_variable(floatX(sigma))
-        rhos = pt.atleast_1d(pt.as_tensor_variable(floatX(rho)))
+        sigma = floatX(sigma)
+        rhos = pt.atleast_1d(floatX(rho))
 
         if "init" in kwargs:
             warnings.warn(
@@ -786,10 +786,10 @@ class GARCH11(Distribution):
             raise ValueError("Must specify steps or shape parameter")
         steps = pt.as_tensor_variable(intX(steps), ndim=0)
 
-        omega = pt.as_tensor_variable(omega)
-        alpha_1 = pt.as_tensor_variable(alpha_1)
-        beta_1 = pt.as_tensor_variable(beta_1)
-        initial_vol = pt.as_tensor_variable(initial_vol)
+        omega = floatX(omega)
+        alpha_1 = floatX(alpha_1)
+        beta_1 = floatX(beta_1)
+        initial_vol = floatX(initial_vol)
 
         init_dist = Normal.dist(0, initial_vol)
         # We can ignore init_dist, as it will be accounted for in the logp term
@@ -933,7 +933,7 @@ class EulerMaruyama(Distribution):
     rv_type = EulerMaruyamaRV
 
     def __new__(cls, name, dt, sde_fn, *args, steps=None, **kwargs):
-        dt = pt.as_tensor_variable(floatX(dt))
+        dt = floatX(dt)
         steps = get_support_shape_1d(
             support_shape=steps,
             shape=None,  # Shape will be checked in `cls.dist`
@@ -952,8 +952,8 @@ class EulerMaruyama(Distribution):
             raise ValueError("Must specify steps or shape parameter")
         steps = pt.as_tensor_variable(intX(steps), ndim=0)
 
-        dt = pt.as_tensor_variable(floatX(dt))
-        sde_pars = [pt.as_tensor_variable(x) for x in sde_pars]
+        dt = floatX(dt)
+        sde_pars = [floatX(x) for x in sde_pars]
 
         if init_dist is not None:
             if not isinstance(init_dist, TensorVariable) or not isinstance(
