@@ -76,6 +76,7 @@ numpydoc_xref_aliases = {
     "SMC_kernel": ":ref:`SMC Kernel <smc_kernels>`",
     "PyTensor_Op": ":class:`PyTensor Op <pytensor.graph.op.Op>`",
     "tensor_like": ":term:`tensor_like`",
+    "unnamed_distribution": ":term:`unnamed_distribution`",
     "numpy_Generator": ":class:`~numpy.random.Generator`",
     "Distribution": ":ref:`Distribution <api_distributions>`",
 }
