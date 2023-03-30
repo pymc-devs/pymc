@@ -814,7 +814,13 @@ class HalfNormal(PositiveContinuous):
     rv_op = halfnormal
 
     @classmethod
-    def dist(cls, sigma=None, tau=None, *args, **kwargs):
+    def dist(
+        cls,
+        sigma: Optional[DIST_PARAMETER_TYPES] = None,
+        tau: Optional[DIST_PARAMETER_TYPES] = None,
+        *args,
+        **kwargs,
+    ):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
         return super().dist([0.0, sigma], **kwargs)
@@ -946,7 +952,14 @@ class Wald(PositiveContinuous):
     rv_op = wald
 
     @classmethod
-    def dist(cls, mu=None, lam=None, phi=None, alpha=0.0, **kwargs):
+    def dist(
+        cls,
+        mu: Optional[DIST_PARAMETER_TYPES] = None,
+        lam: Optional[DIST_PARAMETER_TYPES] = None,
+        phi: Optional[DIST_PARAMETER_TYPES] = None,
+        alpha=0.0,
+        **kwargs,
+    ):
         mu, lam, phi = cls.get_mu_lam_phi(mu, lam, phi)
         alpha = pt.as_tensor_variable(floatX(alpha))
         mu = pt.as_tensor_variable(floatX(mu))
