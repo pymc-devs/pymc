@@ -30,6 +30,7 @@ import scipy.sparse as sps
 import scipy.stats as st
 
 from pytensor.graph import graph_inputs
+from pytensor.raise_op import Assert, assert_op
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.sharedvar import ScalarSharedVariable
@@ -1553,3 +1554,74 @@ def test_tag_future_warning_model():
         assert y_value.eval() == 5
 
         assert isinstance(y_value.tag, _FutureWarningValidatingScratchpad)
+
+
+class TestModelDebug:
+    @pytest.mark.parametrize("fn", ("logp", "dlogp", "random"))
+    def test_no_problems(self, fn, capfd):
+        with pm.Model() as m:
+            x = pm.Normal("x", [1, -1, 1])
+        m.debug(fn=fn)
+
+        out, _ = capfd.readouterr()
+        assert out == "point={'x': array([ 1., -1.,  1.])}\n\nNo problems found\n"
+
+    @pytest.mark.parametrize("fn", ("logp", "dlogp", "random"))
+    def test_invalid_parameter(self, fn, capfd):
+        with pm.Model() as m:
+            x = pm.Normal("x", [1, -1, 1])
+            y = pm.HalfNormal("y", tau=x)
+        m.debug(fn=fn)
+
+        out, _ = capfd.readouterr()
+        if fn == "dlogp":
+            # var dlogp is 0 or 1 without a likelihood
+            assert "No problems found" in out
+        else:
+            assert "The parameters evaluate to:\n0: 0.0\n1: [ 1. -1.  1.]" in out
+            if fn == "logp":
+                assert "This does not respect one of the following constraints: sigma > 0" in out
+            else:
+                assert (
+                    "The variable y random method raised the following exception: Domain error in arguments."
+                    in out
+                )
+
+    @pytest.mark.parametrize("verbose", (True, False))
+    @pytest.mark.parametrize("fn", ("logp", "dlogp", "random"))
+    def test_invalid_parameter_cant_be_evaluated(self, fn, verbose, capfd):
+        with pm.Model() as m:
+            x = pm.Normal("x", [1, 1, 1])
+            sigma = Assert(msg="x > 0")(pm.math.abs(x), (x > 0).all())
+            y = pm.HalfNormal("y", sigma=sigma)
+        m.debug(point={"x": [-1, -1, -1], "y_log__": [0, 0, 0]}, fn=fn, verbose=verbose)
+
+        out, _ = capfd.readouterr()
+        assert "{'x': [-1, -1, -1], 'y_log__': [0, 0, 0]}" in out
+        assert "The parameters of the variable y cannot be evaluated: x > 0" in out
+        verbose_str = "Apply node that caused the error:" in out
+        assert verbose_str if verbose else not verbose_str
+
+    def test_invalid_value(self, capfd):
+        with pm.Model() as m:
+            x = pm.Normal("x", [1, -1, 1])
+            y = pm.HalfNormal("y", tau=pm.math.abs(x), initval=[-1, 1, -1], transform=None)
+        m.debug()
+
+        out, _ = capfd.readouterr()
+        assert "The parameters of the variable y evaluate to:\n0: array(0., dtype=float32)\n1: array([1., 1., 1.])]"
+        assert "Some of the values of variable y are associated with a non-finite logp" in out
+        assert "value = -1.0 -> logp = -inf" in out
+
+    def test_invalid_observed_value(self, capfd):
+        with pm.Model() as m:
+            theta = pm.Uniform("theta", lower=0, upper=1)
+            y = pm.Uniform("y", lower=0, upper=theta, observed=[0.49, 0.27, 0.53, 0.19])
+        m.debug()
+
+        out, _ = capfd.readouterr()
+        assert "The parameters of the variable y evaluate to:\n0: 0.0\n1: 0.5"
+        assert (
+            "Some of the observed values of variable y are associated with a non-finite logp" in out
+        )
+        assert "value = 0.53 -> logp = -inf" in out
