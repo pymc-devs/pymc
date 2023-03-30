@@ -13,6 +13,7 @@
 #   limitations under the License.
 import warnings
 
+import cloudpickle
 import numpy as np
 import pytensor
 import pytest
@@ -357,9 +358,10 @@ class TestSimulator(SeededTest):
         assert np.all(np.abs((result - expected_sample_mean) / expected_sample_mean_std) < cutoff)
 
     def test_dist(self):
-        x = pm.Simulator.dist(self.normal_sim, 0, 1, sum_stat="sort", shape=(3,), class_name="test")
-        x_logp = pm.logp(x, [0, 1, 2])
+        x = pm.Simulator.dist(self.normal_sim, 0, 1, sum_stat="sort", shape=(3,))
+        x = cloudpickle.loads(cloudpickle.dumps(x))
 
+        x_logp = pm.logp(x, [0, 1, 2])
         x_logp_fn = compile_pymc([], x_logp, random_seed=1)
         res1, res2 = x_logp_fn(), x_logp_fn()
         assert res1.shape == (3,)
