@@ -161,11 +161,11 @@ Sponsors
    :target: https://codecov.io/gh/pymc-devs/pymc
 .. |Dockerhub| image:: https://img.shields.io/docker/automated/pymc/pymc.svg
    :target: https://hub.docker.com/r/pymc/pymc
-.. |NumFOCUS| image:: https://www.numfocus.org/wp-content/uploads/2017/03/1457562110.png
-   :target: http://www.numfocus.org/
 .. |NumFOCUS_badge| image:: https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A
    :target: http://www.numfocus.org/
-.. |PyMCLabs| image:: https://raw.githubusercontent.com/pymc-devs/pymc/main/docs/logos/sponsors/pymc-labs.png
+.. |NumFOCUS| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/sponsor_numfocus.png?raw=true
+   :target: http://www.numfocus.org/
+.. |PyMCLabs| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/sponsor_pymc_labs.png?raw=true
    :target: https://pymc-labs.io
-.. |Mistplay| image:: https://github.com/pymc-devs/pymcon_web_series_website/blob/main/static/images/sponsors_logos/mistplay_label_dark.png?raw=true
+.. |Mistplay| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/sponsor_mistplay.png?raw=true
    :target: https://www.mistplay.com/
