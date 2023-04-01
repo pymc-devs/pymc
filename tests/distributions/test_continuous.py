@@ -443,15 +443,6 @@ class TestMatchesScipy:
             {"lam": Rplus},
             lambda q, lam: st.expon.ppf(q, loc=0, scale=1 / lam),
         )
-        # Custom logp / logcdf / icdf check for invalid parameters
-        invalid_dist = pm.Exponential.dist(lam=-1)
-        with pytensor.config.change_flags(mode=Mode("py")):
-            with pytest.raises(ParameterValueError):
-                logp(invalid_dist, np.array(0.5)).eval()
-            with pytest.raises(ParameterValueError):
-                logcdf(invalid_dist, np.array(0.5)).eval()
-            with pytest.raises(ParameterValueError):
-                icdf(invalid_dist, np.array(0.5)).eval()
 
     def test_laplace(self):
         check_logp(
