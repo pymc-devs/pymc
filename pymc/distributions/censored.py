@@ -52,15 +52,15 @@ class Censored(Distribution):
 
     Parameters
     ----------
-    dist: unnamed distribution
-        Univariate distribution created via the `.dist()` API, which will be censored.
+    dist : unnamed_distribution
+        Univariate distribution which will be censored.
         This distribution must have a logcdf method implemented for sampling.
 
         .. warning:: dist will be cloned, rendering it independent of the one passed as input.
 
-    lower: float or None
+    lower : float or None
         Lower (left) censoring point. If `None` the distribution will not be left censored
-    upper: float or None
+    upper : float or None
         Upper (right) censoring point. If `None`, the distribution will not be right censored.
 
     Warnings

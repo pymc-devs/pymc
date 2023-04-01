@@ -234,24 +234,26 @@ def get_tau_sigma(tau=None, sigma=None):
             tau = 1.0
         else:
             if isinstance(sigma, Variable):
-                sigma_ = check_parameters(sigma, sigma > 0, msg="sigma > 0")
+                # Keep tau negative, if sigma was negative, so that it will fail when used
+                tau = (sigma**-2.0) * pt.sgn(sigma)
             else:
                 sigma_ = np.asarray(sigma)
                 if np.any(sigma_ <= 0):
                     raise ValueError("sigma must be positive")
-            tau = sigma_**-2.0
+                tau = sigma_**-2.0
 
     else:
         if sigma is not None:
             raise ValueError("Can't pass both tau and sigma")
         else:
             if isinstance(tau, Variable):
-                tau_ = check_parameters(tau, tau > 0, msg="tau > 0")
+                # Keep sigma negative, if tau was negative, so that it will fail when used
+                sigma = pt.abs(tau) ** (-0.5) * pt.sgn(tau)
             else:
                 tau_ = np.asarray(tau)
                 if np.any(tau_ <= 0):
                     raise ValueError("tau must be positive")
-            sigma = tau_**-0.5
+                sigma = tau_**-0.5
 
     return floatX(tau), floatX(sigma)
 

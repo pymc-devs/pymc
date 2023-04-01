@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import functools as ft
+import warnings
 
 import numpy as np
 import numpy.testing as npt
@@ -890,24 +891,26 @@ class TestMatchesScipy:
         assert np.isinf(logp[2])
 
     def test_get_tau_sigma(self):
-        sigma = np.array(2)
-        npt.assert_almost_equal(get_tau_sigma(sigma=sigma), [1.0 / sigma**2, sigma])
+        # Fail on warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
 
-        tau = np.array(2)
-        npt.assert_almost_equal(get_tau_sigma(tau=tau), [tau, tau**-0.5])
+            sigma = np.array(2)
+            npt.assert_almost_equal(get_tau_sigma(sigma=sigma), [1.0 / sigma**2, sigma])
 
-        tau, _ = get_tau_sigma(sigma=pt.constant(-2))
-        with pytest.raises(ParameterValueError):
-            tau.eval()
+            tau = np.array(2)
+            npt.assert_almost_equal(get_tau_sigma(tau=tau), [tau, tau**-0.5])
 
-        _, sigma = get_tau_sigma(tau=pt.constant(-2))
-        with pytest.raises(ParameterValueError):
-            sigma.eval()
+            tau, _ = get_tau_sigma(sigma=pt.constant(-2))
+            npt.assert_almost_equal(tau.eval(), -0.25)
 
-        sigma = [1, 2]
-        npt.assert_almost_equal(
-            get_tau_sigma(sigma=sigma), [1.0 / np.array(sigma) ** 2, np.array(sigma)]
-        )
+            _, sigma = get_tau_sigma(tau=pt.constant(-2))
+            npt.assert_almost_equal(sigma.eval(), -np.sqrt(1 / 2))
+
+            sigma = [1, 2]
+            npt.assert_almost_equal(
+                get_tau_sigma(sigma=sigma), [1.0 / np.array(sigma) ** 2, np.array(sigma)]
+            )
 
     @pytest.mark.parametrize(
         "value,mu,sigma,nu,logp",
