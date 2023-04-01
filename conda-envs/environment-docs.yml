@@ -23,6 +23,7 @@ dependencies:
 - myst-nb
 - numpydoc
 - pre-commit>=2.8.0
+- pymc-sphinx-theme==0.13
 - sphinx-copybutton
 - sphinx-design
 - sphinx-notfound-page
@@ -31,5 +32,4 @@ dependencies:
 - watermark
 - sphinx-remove-toctrees
 - pip:
-  - pymc-sphinx-theme==0.13
   - numdifftools>=0.9.40
