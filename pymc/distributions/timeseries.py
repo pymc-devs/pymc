@@ -277,7 +277,7 @@ class GaussianRandomWalk(PredefinedRandomWalk):
         innovation drift
     sigma : tensor_like of float, default 1
         sigma > 0, innovation standard deviation.
-    init_dist : Distribution
+    init_dist : unnamed_distribution
         Unnamed univariate distribution of the initial value. Unnamed refers to distributions
         created with the ``.dist()`` API.
 
@@ -317,19 +317,18 @@ class MvGaussianRandomWalk(PredefinedRandomWalk):
 
     Parameters
     ----------
-    mu: tensor_like of float
+    mu : tensor_like of float
         innovation drift
-    cov: tensor_like of float
+    cov : tensor_like of float
         pos def matrix, innovation covariance matrix
-    tau: tensor_like of float
+    tau : tensor_like of float
         pos def matrix, inverse covariance matrix
-    chol: tensor_like of float
+    chol : tensor_like of float
         Cholesky decomposition of covariance matrix
     lower : bool, default=True
         Whether the cholesky fatcor is given as a lower triangular matrix.
-    init_dist: distribution
-        Unnamed multivariate distribution of the initial value. Unnamed refers to distributions
-         created with the ``.dist()`` API.
+    init_dist : unnamed_distribution
+        Unnamed multivariate distribution of the initial value.
 
          .. warning:: init_dist will be cloned, rendering them independent of the ones passed as input.
 
@@ -370,21 +369,20 @@ class MvStudentTRandomWalk(PredefinedRandomWalk):
 
     Parameters
     ----------
-    nu: int
+    nu : int
         degrees of freedom
-    mu: tensor_like of float
+    mu : tensor_like of float
         innovation drift
-    scale: tensor_like of float
+    scale : tensor_like of float
         pos def matrix, innovation covariance matrix
-    tau: tensor_like of float
+    tau : tensor_like of float
         pos def matrix, inverse covariance matrix
-    chol: tensor_like of float
+    chol : tensor_like of float
         Cholesky decomposition of covariance matrix
     lower : bool, default=True
         Whether the cholesky fatcor is given as a lower triangular matrix.
-    init_dist: distribution
-        Unnamed multivariate distribution of the initial value. Unnamed refers to distributions
-         created with the ``.dist()`` API.
+    init_dist : unnamed_distribution
+        Unnamed multivariate distribution of the initial value.
 
          .. warning:: init_dist will be cloned, rendering them independent of the ones passed as input.
 
@@ -471,9 +469,8 @@ class AR(Distribution):
     constant : bool, default False
         Whether the first element of rho should be used as a constant term in the AR
         process.
-    init_dist : unnamed distribution, optional
-        Scalar or vector distribution for initial values. Unnamed refers to distributions
-        created with the ``.dist()`` API. Distributions should have shape (*shape[:-1], ar_order).
+    init_dist : unnamed_distribution, optional
+        Scalar or vector distribution for initial values. Distributions should have shape (*shape[:-1], ar_order).
         If not, it will be automatically resized. Defaults to pm.Normal.dist(0, 100, shape=...).
 
         .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.
@@ -755,13 +752,13 @@ class GARCH11(Distribution):
 
     Parameters
     ----------
-    omega: tensor
+    omega : tensor_like of float
         omega > 0, mean variance
-    alpha_1: tensor
+    alpha_1 : tensor_like of float
         alpha_1 >= 0, autoregressive term coefficient
-    beta_1: tensor
+    beta_1 : tensor_like of float
         beta_1 >= 0, alpha_1 + beta_1 < 1, moving average term coefficient
-    initial_vol: tensor
+    initial_vol : tensor_like of float
         initial_vol >= 0, initial volatility, sigma_0
     """
 
@@ -922,9 +919,8 @@ class EulerMaruyama(Distribution):
         function returning the drift and diffusion coefficients of SDE
     sde_pars : tuple
         parameters of the SDE, passed as ``*args`` to ``sde_fn``
-    init_dist : unnamed distribution, optional
-        Scalar distribution for initial values. Unnamed refers to distributions created with
-        the ``.dist()`` API. Distributions should have shape (*shape[:-1]).
+    init_dist : unnamed_distribution, optional
+        Scalar distribution for initial values. Distributions should have shape (*shape[:-1]).
         If not, it will be automatically resized. Defaults to pm.Normal.dist(0, 100, shape=...).
 
         .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.
