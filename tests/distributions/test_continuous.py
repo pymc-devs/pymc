@@ -438,6 +438,11 @@ class TestMatchesScipy:
             {"lam": Rplus},
             lambda value, lam: st.expon.logcdf(value, 0, 1 / lam),
         )
+        check_icdf(
+            pm.Exponential,
+            {"lam": Rplus},
+            lambda q, lam: st.expon.ppf(q, loc=0, scale=1 / lam),
+        )
 
     def test_laplace(self):
         check_logp(
