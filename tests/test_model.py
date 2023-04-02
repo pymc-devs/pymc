@@ -967,6 +967,27 @@ def test_set_data_constant_shape_error():
         pmodel.set_data("y", np.arange(10))
 
 
+def test_set_data_masked_array():
+    data = np.ma.MaskedArray([1.0, 2.0, 3], [0, 0, 1])
+
+    with pm.Model() as pmodel:
+        D = pm.MutableData("test", np.zeros(4))
+
+    with pytest.warns(UserWarning, match="masked arrays"):
+        pmodel.set_data("test", data)
+    result = D.get_value()
+    expected = np.array([1.0, 2.0, np.nan])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_set_data_masked_integer_array():
+    with pm.Model() as pmodel:
+        D = pm.MutableData("test", np.zeros(4))
+    with pytest.warns(UserWarning, match="masked arrays"):
+        with pytest.raises(TypeError, match="Masked integer"):
+            pmodel.set_data("test", np.ma.MaskedArray([1, 2, 3], [0, 0, 1]))
+
+
 def test_model_deprecation_warning():
     with pm.Model() as m:
         x = pm.Normal("x", 0, 1, size=2)
