@@ -75,6 +75,7 @@ from pymc.pytensorf import (
     hessian,
     inputvars,
     replace_rvs_by_values,
+    unmask_masked_data,
 )
 from pymc.util import (
     UNSET,
@@ -1184,7 +1185,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         if isinstance(values, list):
             values = np.array(values)
+
+        if isinstance(values, np.ma.MaskedArray):
+            warnings.warn(
+                "If possible, masked arrays will be converted to standard numpy arrays with np.nan values for compatibility with PyTensor."
+            )
+
         values = convert_observed_data(values)
+
+        # because converted_observed_data() is also used outside pyTensor, we need an extra step to ensure that any masked arrays
+        # produced by it are converted back to np.ndarray() with np.nan value.
+        # This is not very efficient and will not be necessary once pyTensor implements MaskedArray support
+        values = unmask_masked_data(values)
+
         dims = self.named_vars_to_dims.get(name, None) or ()
         coords = coords or {}
 

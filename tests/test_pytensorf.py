@@ -49,6 +49,7 @@ from pymc.pytensorf import (
     replace_rvs_by_values,
     reseed_rngs,
     rvs_to_value_vars,
+    unmask_masked_data,
     walk_model,
 )
 from pymc.testing import assert_no_rvs
@@ -267,6 +268,25 @@ def test_convert_observed_data(input_dtype):
     assert hasattr(wrapped, "set_default")
     # Make sure the returned object is an PyTensor TensorVariable
     assert isinstance(wrapped, TensorVariable)
+
+
+def test_unmask_masked_data():
+    # test with non-masked data
+    data = np.array([1, 2, 3])
+    result = unmask_masked_data(data)
+    expected = np.array([1, 2, 3])
+    np.testing.assert_array_equal(result, expected)
+
+    # test with masked float data
+    data = np.ma.MaskedArray([1.0, 2.0, 3.0], [0, 0, 1])
+    result = unmask_masked_data(data)
+    expected = np.array([1.0, 2.0, np.nan])
+    np.testing.assert_array_equal(result, expected)
+
+    # test with integer masked data
+    data = np.ma.MaskedArray([1, 2, 3], [0, 0, 1])
+    with pytest.raises(TypeError, match="Masked integer"):
+        unmask_masked_data(data)
 
 
 def test_pandas_to_array_pandas_index():

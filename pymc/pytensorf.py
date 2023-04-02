@@ -84,9 +84,31 @@ __all__ = [
     "make_shared_replacements",
     "generator",
     "convert_observed_data",
+    "unmask_masked_data",
     "compile_pymc",
     "constant_fold",
 ]
+
+
+def unmask_masked_data(data):
+    """Unmask masked numpy arrays for usage within PyTensor"""
+
+    # PyTensor currently does not support masked arrays
+    # If a masked array is passed, we convert it to a standard numpy array with np.nans for float type arrays
+    # In case of integer type arrays, we throw an error as np.nan is a float concept.
+
+    if isinstance(data, np.ma.MaskedArray):
+        if "int" in str(data.dtype):
+            raise TypeError(
+                "Masked integer arrays (integer type datasets with missing values) are not supported by pm.Data() / pm.Model.set_data() at this time. \n"
+                "Consider if using a float type fits your use case. \n"
+                "Alternatively, if you want to benefit from automatic imputation in pyMC, pass a masked array directly to `observed=` parameter when defining a distribution."
+            )
+        else:
+            ret = data.filled(fill_value=np.nan)
+    else:
+        ret = data
+    return ret
 
 
 def convert_observed_data(data):

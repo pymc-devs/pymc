@@ -454,6 +454,33 @@ def test_get_data():
     assert type(data) == io.BytesIO
 
 
+def test_masked_data_mutable():
+    with pm.Model():
+        data = np.ma.MaskedArray([1.0, 2.0, 3], [0, 0, 1])
+        expected = np.array([1, 2, np.nan])
+        with pytest.warns(UserWarning, match="masked arrays"):
+            result = pm.MutableData("test", data).get_value()
+        np.testing.assert_array_equal(result, expected)
+
+
+def test_masked_data_constant():
+    with pm.Model():
+        data = np.ma.MaskedArray([1.0, 2.0, 3], [0, 0, 1])
+        expected = np.array([1, 2, np.nan])
+        with pytest.warns(UserWarning, match="masked arrays"):
+            result = pm.ConstantData("test", data).data
+        np.testing.assert_array_equal(result, expected)
+
+
+def test_masked_integer_data():
+    with pm.Model():
+        data = np.ma.MaskedArray([1, 2, 3], [0, 0, 1])
+        with pytest.raises(TypeError, match="Masked integer"):
+            pm.ConstantData("test", data)
+        with pytest.raises(TypeError, match="Masked integer"):
+            pm.MutableData("test", data)
+
+
 class _DataSampler:
     """
     Not for users
