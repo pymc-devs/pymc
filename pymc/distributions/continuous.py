@@ -1385,6 +1385,15 @@ class Exponential(PositiveContinuous):
             msg="lam >= 0",
         )
 
+    def icdf(value, mu):
+        res = -mu * pt.log(1 - value)
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            mu >= 0,
+            msg="mu >= 0",
+        )
+
 
 class Laplace(Continuous):
     r"""
