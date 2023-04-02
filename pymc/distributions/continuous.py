@@ -345,6 +345,11 @@ class Uniform(BoundedContinuous):
             msg="lower <= upper",
         )
 
+    def icdf(value, lower, upper):
+        res = lower + (upper - lower) * value
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(res, lower < upper)
+
 
 @_default_transform.register(Uniform)
 def uniform_default_transform(op, rv):
