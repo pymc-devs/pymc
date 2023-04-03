@@ -1410,7 +1410,18 @@ class Model(WithMemoization, metaclass=ContextMeta):
             else:
                 rv_var.tag.test_value = data
 
-        mask = getattr(data, "mask", None)
+        # In case observed is a pyTensor variable, we need to retrieve the underlying array
+        # and convert it to a masked one to enable automatic imputation
+        if isinstance(data, SharedVariable):
+            values = data.get_value()
+            mask = np.isnan(values) if np.any(np.isnan(values)) else None
+        elif isinstance(data, TensorConstant):
+            values = data.data
+            mask = np.isnan(values) if np.any(np.isnan(values)) else None
+        else:
+            mask = getattr(data, "mask", None)
+            values = data
+
         if mask is not None:
             impute_message = (
                 f"Data in {rv_var} contains missing values and"
@@ -1456,7 +1467,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # values, and another for the non-missing values.
 
             antimask_idx = (~mask).nonzero()
-            nonmissing_data = pt.as_tensor_variable(data[antimask_idx])
+            nonmissing_data = pt.as_tensor_variable(values[antimask_idx])
             unmasked_rv_var = rv_var[antimask_idx]
             unmasked_rv_var = unmasked_rv_var.owner.clone().default_output()
 
@@ -1479,7 +1490,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             # Create deterministic that combines observed and missing
             # Note: This can widely increase memory consumption during sampling for large datasets
-            rv_var = pt.empty(data.shape, dtype=observed_rv_var.type.dtype)
+            rv_var = pt.empty(values.shape, dtype=observed_rv_var.type.dtype)
             rv_var = pt.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
             rv_var = pt.set_subtensor(rv_var[antimask_idx], observed_rv_var)
             rv_var = Deterministic(name, rv_var, self, dims)
