@@ -668,6 +668,82 @@ def check_selfconsistency_discrete_logcdf(
             )
 
 
+def check_selfconsistency_continuous_icdf(
+    distribution: Distribution,
+    paramdomains: Dict[str, Domain],
+    decimal: Optional[int] = None,
+    n_samples: int = 100,
+) -> None:
+    """
+    Check that the icdf and logcdf functions of the distribution are consistent for a sample of probability values.
+    """
+    if decimal is None:
+        decimal = select_by_precision(float64=6, float32=3)
+
+    dist = create_dist_from_paramdomains(distribution, paramdomains)
+    value = dist.type()
+    value.name = "value"
+
+    dist_icdf = icdf(dist, value)
+    dist_icdf_fn = pytensor.function(list(inputvars(dist_icdf)), dist_icdf)
+
+    dist_logcdf = logcdf(dist, value)
+    dist_logcdf_fn = compile_pymc(list(inputvars(dist_logcdf)), dist_logcdf)
+
+    domains = paramdomains.copy()
+    domains["value"] = Domain(np.linspace(0, 1, 10))
+
+    for point in product(domains, n_samples=n_samples):
+        point = dict(point)
+        value = point.pop("value")
+
+        with pytensor.config.change_flags(mode=Mode("py")):
+            npt.assert_almost_equal(
+                value,
+                np.exp(dist_logcdf_fn(**point, value=dist_icdf_fn(**point, value=value))),
+                decimal=decimal,
+                err_msg=f"point: {point}, value: {value}",
+            )
+
+
+def check_selfconsistency_discrete_icdf(
+    distribution: Distribution,
+    domain: Domain,
+    paramdomains: Dict[str, Domain],
+    n_samples: int = 100,
+) -> None:
+    """
+    Check that the icdf and logcdf functions of the distribution are
+    consistent for a sample of values in the domain of the
+    distribution.
+    """
+    dist = create_dist_from_paramdomains(distribution, paramdomains)
+
+    value = pt.TensorType(dtype="float64", shape=[])("value")
+
+    dist_icdf = icdf(dist, value)
+    dist_icdf_fn = pytensor.function(list(inputvars(dist_icdf)), dist_icdf)
+
+    dist_logcdf = logcdf(dist, value)
+    dist_logcdf_fn = compile_pymc(list(inputvars(dist_logcdf)), dist_logcdf)
+
+    domains = paramdomains.copy()
+    domains["value"] = domain
+
+    for point in product(domains, n_samples=n_samples):
+        point = dict(point)
+        value = point.pop("value")
+
+        with pytensor.config.change_flags(mode=Mode("py")):
+            expected_value = value
+            computed_value = dist_icdf_fn(
+                **point, value=np.exp(dist_logcdf_fn(**point, value=value))
+            )
+            assert (
+                expected_value == computed_value
+            ), f"expected_value = {expected_value}, computed_value = {computed_value}, {point}"
+
+
 def assert_support_point_is_expected(model, expected, check_finite_logp=True):
     fn = make_initial_point_fn(
         model=model,
