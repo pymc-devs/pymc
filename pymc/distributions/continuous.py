@@ -1323,6 +1323,16 @@ class Kumaraswamy(UnitContinuous):
             msg="a > 0, b > 0",
         )
 
+    def icdf(value, a, b):
+        res = pt.exp(pt.reciprocal(a) * pt.log1mexp(pt.reciprocal(b) * pt.log1p(-value)))
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            a > 0,
+            b > 0,
+            msg="a > 0, b > 0",
+        )
+
 
 class Exponential(PositiveContinuous):
     r"""
