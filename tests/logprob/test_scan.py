@@ -52,7 +52,6 @@ from pymc.logprob.scan import (
     get_random_outer_outputs,
 )
 from pymc.testing import assert_no_rvs
-from tests.logprob.utils import joint_logprob
 
 
 def create_inner_out_logp(value_map):
@@ -336,7 +335,8 @@ def test_scan_joint_logprob(require_inner_rewrites):
     s_vv = S_rv.clone()
     s_vv.name = "s"
 
-    y_logp = joint_logprob({Y_rv: y_vv, S_rv: s_vv, Gamma_rv: Gamma_vv})
+    y_logp = factorized_joint_logprob({Y_rv: y_vv, S_rv: s_vv, Gamma_rv: Gamma_vv})
+    y_logp_combined = pt.sum([pt.sum(factor) for factor in y_logp.values()])
 
     y_val = np.arange(10)
     s_val = np.array([0, 1, 0, 1, 1, 0, 0, 0, 1, 1])
@@ -350,7 +350,7 @@ def test_scan_joint_logprob(require_inner_rewrites):
         Gamma_vv: Gamma_val,
     }
 
-    y_logp_fn = pytensor.function(list(test_point.keys()), y_logp)
+    y_logp_fn = pytensor.function(list(test_point.keys()), y_logp_combined)
 
     assert_no_rvs(y_logp_fn.maker.fgraph.outputs[0])
 
@@ -381,7 +381,7 @@ def test_scan_joint_logprob(require_inner_rewrites):
 
     assert_no_rvs(y_logp_ref)
 
-    y_logp_val = y_logp.eval(test_point)
+    y_logp_val = y_logp_combined.eval(test_point)
 
     y_logp_ref_val = y_logp_ref.eval(test_point)
 
@@ -451,7 +451,7 @@ def test_mode_is_kept(remove_asserts):
     )
     x.name = "x"
     x_vv = x.clone()
-    x_logp = pytensor.function([x_vv], joint_logprob({x: x_vv}))
+    x_logp = pytensor.function([x_vv], pt.sum(logp(x, x_vv)))
 
     x_test_val = np.full((10,), -1)
     if remove_asserts:

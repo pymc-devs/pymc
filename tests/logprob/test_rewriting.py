@@ -50,9 +50,9 @@ from pytensor.tensor.subtensor import (
     Subtensor,
 )
 
+from pymc.logprob.basic import factorized_joint_logprob
 from pymc.logprob.rewriting import local_lift_DiracDelta
 from pymc.logprob.utils import DiracDelta, dirac_delta
-from tests.logprob.utils import joint_logprob
 
 
 def test_local_lift_DiracDelta():
@@ -120,9 +120,10 @@ def test_joint_logprob_incsubtensor(indices, size):
 
     assert isinstance(Y_rv.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1))
 
-    Y_rv_logp = joint_logprob({Y_rv: y_value_var}, sum=False)
+    Y_rv_logp = factorized_joint_logprob({Y_rv: y_value_var})
+    Y_rv_logp_combined = pt.add(*Y_rv_logp.values())
 
-    obs_logps = Y_rv_logp.eval({y_value_var: y_val})
+    obs_logps = Y_rv_logp_combined.eval({y_value_var: y_val})
 
     y_val_idx = y_val.copy()
     y_val_idx[indices] = data

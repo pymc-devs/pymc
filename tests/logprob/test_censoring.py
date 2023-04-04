@@ -41,10 +41,10 @@ import pytest
 import scipy as sp
 import scipy.stats as st
 
+from pymc import logp
 from pymc.logprob import factorized_joint_logprob
 from pymc.logprob.transforms import LogTransform, TransformValuesRewrite
 from pymc.testing import assert_no_rvs
-from tests.logprob.utils import joint_logprob
 
 
 @pytensor.config.change_flags(compute_test_value="raise")
@@ -55,10 +55,10 @@ def test_continuous_rv_clip():
     cens_x_vv = cens_x_rv.clone()
     cens_x_vv.tag.test_value = 0
 
-    logp = joint_logprob({cens_x_rv: cens_x_vv})
-    assert_no_rvs(logp)
+    logprob = pt.sum(logp(cens_x_rv, cens_x_vv))
+    assert_no_rvs(logprob)
 
-    logp_fn = pytensor.function([cens_x_vv], logp)
+    logp_fn = pytensor.function([cens_x_vv], logprob)
     ref_scipy = st.norm(0.5, 1)
 
     assert logp_fn(-3) == -np.inf
@@ -75,10 +75,10 @@ def test_discrete_rv_clip():
 
     cens_x_vv = cens_x_rv.clone()
 
-    logp = joint_logprob({cens_x_rv: cens_x_vv})
-    assert_no_rvs(logp)
+    logprob = pt.sum(logp(cens_x_rv, cens_x_vv))
+    assert_no_rvs(logprob)
 
-    logp_fn = pytensor.function([cens_x_vv], logp)
+    logp_fn = pytensor.function([cens_x_vv], logprob)
     ref_scipy = st.poisson(2)
 
     assert logp_fn(0) == -np.inf
@@ -97,8 +97,8 @@ def test_one_sided_clip():
     lb_cens_x_vv = lb_cens_x_rv.clone()
     ub_cens_x_vv = ub_cens_x_rv.clone()
 
-    lb_logp = joint_logprob({lb_cens_x_rv: lb_cens_x_vv})
-    ub_logp = joint_logprob({ub_cens_x_rv: ub_cens_x_vv})
+    lb_logp = pt.sum(logp(lb_cens_x_rv, lb_cens_x_vv))
+    ub_logp = pt.sum(logp(ub_cens_x_rv, ub_cens_x_vv))
     assert_no_rvs(lb_logp)
     assert_no_rvs(ub_logp)
 
@@ -117,10 +117,10 @@ def test_useless_clip():
 
     cens_x_vv = cens_x_rv.clone()
 
-    logp = joint_logprob({cens_x_rv: cens_x_vv}, sum=False)
-    assert_no_rvs(logp)
+    logprob = logp(cens_x_rv, cens_x_vv)
+    assert_no_rvs(logprob)
 
-    logp_fn = pytensor.function([cens_x_vv], logp)
+    logp_fn = pytensor.function([cens_x_vv], logprob)
     ref_scipy = st.norm(0.5, 1)
 
     np.testing.assert_allclose(logp_fn([-2, 0, 2]), ref_scipy.logpdf([-2, 0, 2]))
@@ -133,10 +133,12 @@ def test_random_clip():
 
     lb_vv = lb_rv.clone()
     cens_x_vv = cens_x_rv.clone()
-    logp = joint_logprob({cens_x_rv: cens_x_vv, lb_rv: lb_vv}, sum=False)
-    assert_no_rvs(logp)
+    logp = factorized_joint_logprob({cens_x_rv: cens_x_vv, lb_rv: lb_vv})
+    logp_combined = pt.add(*logp.values())
 
-    logp_fn = pytensor.function([lb_vv, cens_x_vv], logp)
+    assert_no_rvs(logp_combined)
+
+    logp_fn = pytensor.function([lb_vv, cens_x_vv], logp_combined)
     res = logp_fn([0, -1], [-1, -1])
     assert res[0] == -np.inf
     assert res[1] != -np.inf
@@ -150,8 +152,10 @@ def test_broadcasted_clip_constant():
     lb_vv = lb_rv.clone()
     cens_x_vv = cens_x_rv.clone()
 
-    logp = joint_logprob({cens_x_rv: cens_x_vv, lb_rv: lb_vv})
-    assert_no_rvs(logp)
+    logp = factorized_joint_logprob({cens_x_rv: cens_x_vv, lb_rv: lb_vv})
+    logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
+
+    assert_no_rvs(logp_combined)
 
 
 def test_broadcasted_clip_random():
@@ -162,8 +166,10 @@ def test_broadcasted_clip_random():
     lb_vv = lb_rv.clone()
     cens_x_vv = cens_x_rv.clone()
 
-    logp = joint_logprob({cens_x_rv: cens_x_vv, lb_rv: lb_vv})
-    assert_no_rvs(logp)
+    logp = factorized_joint_logprob({cens_x_rv: cens_x_vv, lb_rv: lb_vv})
+    logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
+
+    assert_no_rvs(logp_combined)
 
 
 def test_fail_base_and_clip_have_values():
@@ -199,10 +205,11 @@ def test_deterministic_clipping():
 
     x_vv = x_rv.clone()
     y_vv = y_rv.clone()
-    logp = joint_logprob({x_rv: x_vv, y_rv: y_vv})
-    assert_no_rvs(logp)
+    logp = factorized_joint_logprob({x_rv: x_vv, y_rv: y_vv})
+    logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
+    assert_no_rvs(logp_combined)
 
-    logp_fn = pytensor.function([x_vv, y_vv], logp)
+    logp_fn = pytensor.function([x_vv, y_vv], logp_combined)
     assert np.isclose(
         logp_fn(-1, 1),
         st.norm(0, 1).logpdf(-1) + st.norm(0, 1).logpdf(1),
@@ -216,10 +223,11 @@ def test_clip_transform():
     cens_x_vv = cens_x_rv.clone()
 
     transform = TransformValuesRewrite({cens_x_vv: LogTransform()})
-    logp = joint_logprob({cens_x_rv: cens_x_vv}, extra_rewrites=transform)
+    logp = factorized_joint_logprob({cens_x_rv: cens_x_vv}, extra_rewrites=transform)
+    logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
 
     cens_x_vv_testval = -1
-    obs_logp = logp.eval({cens_x_vv: cens_x_vv_testval})
+    obs_logp = logp_combined.eval({cens_x_vv: cens_x_vv_testval})
     exp_logp = sp.stats.norm(0.5, 1).logpdf(np.exp(cens_x_vv_testval)) + cens_x_vv_testval
 
     assert np.isclose(obs_logp, exp_logp)
@@ -236,8 +244,8 @@ def test_rounding(rounding_op):
     xr.name = "xr"
 
     xr_vv = xr.clone()
-    logp = joint_logprob({xr: xr_vv}, sum=False)
-    assert logp is not None
+    logprob = logp(xr, xr_vv)
+    assert logprob is not None
 
     x_sp = st.norm(loc, scale)
     if rounding_op == pt.round:
@@ -250,6 +258,6 @@ def test_rounding(rounding_op):
         raise NotImplementedError()
 
     assert np.allclose(
-        logp.eval({xr_vv: test_value}),
+        logprob.eval({xr_vv: test_value}),
         expected_logp,
     )

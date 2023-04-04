@@ -52,7 +52,7 @@ from pymc.logprob.mixture import MixtureRV, expand_indices
 from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.logprob.utils import dirac_delta
 from pymc.testing import assert_no_rvs
-from tests.logprob.utils import joint_logprob, scipy_logprob
+from tests.logprob.utils import scipy_logprob
 
 
 def test_mixture_basics():
@@ -101,7 +101,7 @@ def test_mixture_basics():
         i_vv = env["i_vv"]
         M_rv = env["M_rv"]
         m_vv = env["m_vv"]
-        joint_logprob({M_rv: m_vv, I_rv: i_vv})
+        factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
 
 
 @pytensor.config.change_flags(compute_test_value="warn")
@@ -134,9 +134,10 @@ def test_compute_test_value(op_constructor):
 
     del M_rv.tag.test_value
 
-    M_logp = joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
+    M_logp = factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
+    M_logp_combined = pt.add(*M_logp.values())
 
-    assert isinstance(M_logp.tag.test_value, np.ndarray)
+    assert isinstance(M_logp_combined.tag.test_value, np.ndarray)
 
 
 @pytest.mark.parametrize(
@@ -179,13 +180,14 @@ def test_hetero_mixture_binomial(p_val, size, supported):
     m_vv.name = "m"
 
     if supported:
-        M_logp = joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
+        M_logp = factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
+        M_logp_combined = pt.add(*M_logp.values())
     else:
         with pytest.raises(RuntimeError, match="could not be derived: {m}"):
-            joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
+            factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
         return
 
-    M_logp_fn = pytensor.function([p_at, m_vv, i_vv], M_logp)
+    M_logp_fn = pytensor.function([p_at, m_vv, i_vv], M_logp_combined)
 
     assert_no_rvs(M_logp_fn.maker.fgraph.outputs[0])
 
@@ -936,14 +938,16 @@ def test_switch_mixture():
 
     assert equal_computations(fgraph.outputs, fgraph2.outputs)
 
-    z1_logp = joint_logprob({Z1_rv: z_vv, I_rv: i_vv})
-    z2_logp = joint_logprob({Z2_rv: z_vv, I_rv: i_vv})
+    z1_logp = factorized_joint_logprob({Z1_rv: z_vv, I_rv: i_vv})
+    z2_logp = factorized_joint_logprob({Z2_rv: z_vv, I_rv: i_vv})
+    z1_logp_combined = pt.sum([pt.sum(factor) for factor in z1_logp.values()])
+    z2_logp_combined = pt.sum([pt.sum(factor) for factor in z2_logp.values()])
 
     # below should follow immediately from the equal_computations assertion above
-    assert equal_computations([z1_logp], [z2_logp])
+    assert equal_computations([z1_logp_combined], [z2_logp_combined])
 
-    np.testing.assert_almost_equal(0.69049938, z1_logp.eval({z_vv: -10, i_vv: 0}))
-    np.testing.assert_almost_equal(0.69049938, z2_logp.eval({z_vv: -10, i_vv: 0}))
+    np.testing.assert_almost_equal(0.69049938, z1_logp_combined.eval({z_vv: -10, i_vv: 0}))
+    np.testing.assert_almost_equal(0.69049938, z2_logp_combined.eval({z_vv: -10, i_vv: 0}))
 
 
 def test_ifelse_mixture_one_component():
