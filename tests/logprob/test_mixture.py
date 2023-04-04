@@ -45,7 +45,12 @@ from pytensor.graph.basic import Variable, equal_computations
 from pytensor.ifelse import ifelse
 from pytensor.tensor.random.basic import CategoricalRV
 from pytensor.tensor.shape import shape_tuple
-from pytensor.tensor.subtensor import as_index_constant
+from pytensor.tensor.subtensor import (
+    AdvancedSubtensor,
+    AdvancedSubtensor1,
+    Subtensor,
+    as_index_constant,
+)
 
 from pymc.logprob.basic import factorized_joint_logprob
 from pymc.logprob.mixture import MixtureRV, expand_indices
@@ -1054,3 +1059,58 @@ def test_ifelse_mixture_shared_component():
         ),
         decimal=6,
     )
+
+
+def test_joint_logprob_subtensor():
+    """Make sure we can compute a joint log-probability for ``Y[I]`` where ``Y`` and ``I`` are random variables."""
+
+    size = 5
+
+    mu_base = np.power(10, np.arange(np.prod(size))).reshape(size)
+    mu = np.stack([mu_base, -mu_base])
+    sigma = 0.001
+    rng = pytensor.shared(np.random.RandomState(232), borrow=True)
+
+    A_rv = pt.random.normal(mu, sigma, rng=rng)
+    A_rv.name = "A"
+
+    p = 0.5
+
+    I_rv = pt.random.bernoulli(p, size=size, rng=rng)
+    I_rv.name = "I"
+
+    A_idx = A_rv[I_rv, pt.ogrid[A_rv.shape[-1] :]]
+
+    assert isinstance(A_idx.owner.op, (Subtensor, AdvancedSubtensor, AdvancedSubtensor1))
+
+    A_idx_value_var = A_idx.type()
+    A_idx_value_var.name = "A_idx_value"
+
+    I_value_var = I_rv.type()
+    I_value_var.name = "I_value"
+
+    A_idx_logp = factorized_joint_logprob({A_idx: A_idx_value_var, I_rv: I_value_var})
+    A_idx_logp_comb = pt.add(*A_idx_logp.values())
+
+    logp_vals_fn = pytensor.function([A_idx_value_var, I_value_var], A_idx_logp_comb)
+
+    # The compiled graph should not contain any `RandomVariables`
+    assert_no_rvs(logp_vals_fn.maker.fgraph.outputs[0])
+
+    decimals = 6 if pytensor.config.floatX == "float64" else 4
+
+    test_val_rng = np.random.RandomState(3238)
+
+    for i in range(10):
+        bern_sp = sp.bernoulli(p)
+        I_value = bern_sp.rvs(size=size, random_state=test_val_rng).astype(I_rv.dtype)
+
+        norm_sp = sp.norm(mu[I_value, np.ogrid[mu.shape[1] :]], sigma)
+        A_idx_value = norm_sp.rvs(random_state=test_val_rng).astype(A_idx.dtype)
+
+        exp_obs_logps = norm_sp.logpdf(A_idx_value)
+        exp_obs_logps += bern_sp.logpmf(I_value)
+
+        logp_vals = logp_vals_fn(A_idx_value, I_value)
+
+        np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)
