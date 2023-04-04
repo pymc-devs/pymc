@@ -49,21 +49,24 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
 from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
-from pytensor.scalar import Abs, Add, Exp, Log, Mul, Pow, Sqr, Sqrt
+from pytensor.scalar import Abs, Add, Cosh, Exp, Log, Mul, Pow, Sinh, Sqr, Sqrt, Tanh
 from pytensor.scan.op import Scan
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.math import (
     abs,
     add,
+    cosh,
     exp,
     log,
     mul,
     neg,
     pow,
     reciprocal,
+    sinh,
     sqr,
     sqrt,
     sub,
+    tanh,
     true_div,
 )
 from pytensor.tensor.rewriting.basic import (
@@ -340,7 +343,7 @@ class TransformValuesRewrite(GraphRewriter):
 class MeasurableTransform(MeasurableElemwise):
     """A placeholder used to specify a log-likelihood for a transformed measurable variable"""
 
-    valid_scalar_types = (Exp, Log, Add, Mul, Pow, Abs)
+    valid_scalar_types = (Exp, Log, Add, Mul, Pow, Abs, Sinh, Cosh, Tanh)
 
     # Cannot use `transform` as name because it would clash with the property added by
     # the `TransformValuesRewrite`
@@ -540,7 +543,7 @@ def measurable_sub_to_neg(fgraph, node):
     return [pt.add(minuend, pt.neg(subtrahend))]
 
 
-@node_rewriter([exp, log, add, mul, pow, abs])
+@node_rewriter([exp, log, add, mul, pow, abs, sinh, cosh, tanh])
 def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
 
@@ -602,6 +605,12 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         transform = LogTransform()
     elif isinstance(scalar_op, Abs):
         transform = AbsTransform()
+    elif isinstance(scalar_op, Sinh):
+        transform = SinhTransform()
+    elif isinstance(scalar_op, Cosh):
+        transform = CoshTransform()
+    elif isinstance(scalar_op, Tanh):
+        transform = TanhTransform()
     elif isinstance(scalar_op, Pow):
         # We only allow for the base to be measurable
         if measurable_input_idx != 0:
@@ -680,6 +689,45 @@ measurable_ir_rewrites_db.register(
     "basic",
     "transform",
 )
+
+
+class SinhTransform(RVTransform):
+    name = "sinh"
+
+    def forward(self, value, *inputs):
+        return pt.sinh(value)
+
+    def backward(self, value, *inputs):
+        return pt.arcsinh(value)
+
+    def log_jac_det(self, value, *inputs):
+        return pt.log(pt.cosh(value))
+
+
+class CoshTransform(RVTransform):
+    name = "cosh"
+
+    def forward(self, value, *inputs):
+        return pt.cosh(value)
+
+    def backward(self, value, *inputs):
+        return pt.arccosh(value)
+
+    def log_jac_det(self, value, *inputs):
+        return pt.log(pt.sinh(value))
+
+
+class TanhTransform(RVTransform):
+    name = "tanh"
+
+    def forward(self, value, *inputs):
+        return pt.tanh(value)
+
+    def backward(self, value, *inputs):
+        return pt.arctanh(value)
+
+    def log_jac_det(self, value, *inputs):
+        return pt.log(1 / pt.cosh(value))
 
 
 class LocTransform(RVTransform):
