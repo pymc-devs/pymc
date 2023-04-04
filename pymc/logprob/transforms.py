@@ -599,19 +599,17 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
     measurable_input_idx = 0
     transform_inputs: Tuple[TensorVariable, ...] = (measurable_input,)
     transform: RVTransform
-    if isinstance(scalar_op, Exp):
-        transform = ExpTransform()
-    elif isinstance(scalar_op, Log):
-        transform = LogTransform()
-    elif isinstance(scalar_op, Abs):
-        transform = AbsTransform()
-    elif isinstance(scalar_op, Sinh):
-        transform = SinhTransform()
-    elif isinstance(scalar_op, Cosh):
-        transform = CoshTransform()
-    elif isinstance(scalar_op, Tanh):
-        transform = TanhTransform()
-    elif isinstance(scalar_op, Pow):
+
+    transform_dict = {
+        Exp: ExpTransform(),
+        Log: LogTransform(),
+        Abs: AbsTransform(),
+        Sinh: SinhTransform(),
+        Cosh: CoshTransform(),
+        Tanh: TanhTransform(),
+    }
+    transform = transform_dict.get(type(scalar_op), None)
+    if isinstance(scalar_op, Pow):
         # We only allow for the base to be measurable
         if measurable_input_idx != 0:
             return None
@@ -628,7 +626,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         transform = LocTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
-    else:
+    elif transform is None:
         transform_inputs = (measurable_input, pt.mul(*other_inputs))
         transform = ScaleTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
