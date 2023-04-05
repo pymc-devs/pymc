@@ -65,7 +65,33 @@ from pymc.logprob.utils import rvs_to_value_vars
 TensorLike: TypeAlias = Union[Variable, float, np.ndarray]
 
 
-def logp(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
+def _warn_rvs_in_inferred_graph(graph: Sequence[TensorVariable]):
+    """Issue warning if any RVs are found in graph.
+
+    RVs are usually an (implicit) conditional input of the derived probability expression,
+    and meant to be replaced by respective value variables before evaluation.
+    However, when the IR graph is built, any non-input nodes (including RVs) are cloned,
+    breaking the link with the original ones.
+    This makes it impossible (or difficult) to replace it by the respective values afterward,
+    so we instruct users to do it beforehand.
+    """
+    from pymc.testing import assert_no_rvs
+
+    try:
+        assert_no_rvs(graph)
+    except AssertionError:
+        warnings.warn(
+            "RandomVariables were found in the derived graph. "
+            "These variables are a clone and do not match the original ones on identity.\n"
+            "If you are deriving a quantity that depends on model RVs, use `model.replace_rvs_by_values` first. For example: "
+            "`logp(model.replace_rvs_by_values([rv])[0], value)`",
+            stacklevel=3,
+        )
+
+
+def logp(
+    rv: TensorVariable, value: TensorLike, warn_missing_rvs: bool = True, **kwargs
+) -> TensorVariable:
     """Return the log-probability graph of a Random Variable"""
 
     value = pt.as_tensor_variable(value, dtype=rv.dtype)
@@ -74,10 +100,15 @@ def logp(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
     except NotImplementedError:
         fgraph, _, _ = construct_ir_fgraph({rv: value})
         [(ir_rv, ir_value)] = fgraph.preserve_rv_mappings.rv_values.items()
-        return _logprob_helper(ir_rv, ir_value, **kwargs)
+        expr = _logprob_helper(ir_rv, ir_value, **kwargs)
+        if warn_missing_rvs:
+            _warn_rvs_in_inferred_graph(expr)
+        return expr
 
 
-def logcdf(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
+def logcdf(
+    rv: TensorVariable, value: TensorLike, warn_missing_rvs: bool = True, **kwargs
+) -> TensorVariable:
     """Create a graph for the log-CDF of a Random Variable."""
     value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
@@ -86,10 +117,15 @@ def logcdf(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
         # Try to rewrite rv
         fgraph, rv_values, _ = construct_ir_fgraph({rv: value})
         [ir_rv] = fgraph.outputs
-        return _logcdf_helper(ir_rv, value, **kwargs)
+        expr = _logcdf_helper(ir_rv, value, **kwargs)
+        if warn_missing_rvs:
+            _warn_rvs_in_inferred_graph(expr)
+        return expr
 
 
-def icdf(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
+def icdf(
+    rv: TensorVariable, value: TensorLike, warn_missing_rvs: bool = True, **kwargs
+) -> TensorVariable:
     """Create a graph for the inverse CDF of a  Random Variable."""
     value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
@@ -98,7 +134,10 @@ def icdf(rv: TensorVariable, value: TensorLike, **kwargs) -> TensorVariable:
         # Try to rewrite rv
         fgraph, rv_values, _ = construct_ir_fgraph({rv: value})
         [ir_rv] = fgraph.outputs
-        return _icdf_helper(ir_rv, value, **kwargs)
+        expr = _icdf_helper(ir_rv, value, **kwargs)
+        if warn_missing_rvs:
+            _warn_rvs_in_inferred_graph(expr)
+        return expr
 
 
 def factorized_joint_logprob(
@@ -215,7 +254,8 @@ def factorized_joint_logprob(
             if warn_missing_rvs:
                 warnings.warn(
                     "Found a random variable that was neither among the observations "
-                    f"nor the conditioned variables: {node.outputs}"
+                    f"nor the conditioned variables: {outputs}.\n"
+                    "This variables is a clone and does not match the original one on identity."
                 )
             continue
 
