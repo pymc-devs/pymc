@@ -56,7 +56,9 @@ from pytensor.tensor.subtensor import (
 import pymc as pm
 
 from pymc.logprob.basic import factorized_joint_logprob, icdf, joint_logp, logcdf, logp
+from pymc.logprob.transforms import LogTransform
 from pymc.logprob.utils import rvs_to_value_vars, walk_model
+from pymc.pytensorf import replace_rvs_by_values
 from pymc.testing import assert_no_rvs
 from tests.logprob.utils import joint_logprob
 
@@ -248,16 +250,25 @@ def test_persist_inputs():
     y_vv_2 = y_vv * 2
     logp_2 = joint_logprob({beta_rv: beta_vv, Y_rv: y_vv_2})
 
+    assert y_vv in ancestors([logp_2])
+    assert y_vv_2 in ancestors([logp_2])
+
+    # Even when they are random
+    y_vv = pt.random.normal(name="y_vv2")
+    y_vv_2 = y_vv * 2
+    logp_2 = joint_logprob({beta_rv: beta_vv, Y_rv: y_vv_2})
+
+    assert y_vv in ancestors([logp_2])
     assert y_vv_2 in ancestors([logp_2])
 
 
-def test_warn_random_not_found():
+def test_warn_random_found_factorized_joint_logprob():
     x_rv = pt.random.normal(name="x")
     y_rv = pt.random.normal(x_rv, 1, name="y")
 
     y_vv = y_rv.clone()
 
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning, match="Found a random variable that was neither among"):
         factorized_joint_logprob({y_rv: y_vv})
 
     with warnings.catch_warnings():
@@ -457,3 +468,45 @@ def test_probability_inference_fails(func, func_name):
         match=f"{func_name} method not implemented for Elemwise{{cos,no_inplace}}",
     ):
         func(pt.cos(pm.Normal.dist()), 1)
+
+
+@pytest.mark.parametrize(
+    "func, scipy_func, test_value",
+    [
+        (logp, "logpdf", 5.0),
+        (logcdf, "logcdf", 5.0),
+        (icdf, "ppf", 0.7),
+    ],
+)
+def test_warn_random_found_probability_inference(func, scipy_func, test_value):
+    # Fail if unexpected warning is issued
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+
+        input_rv = pm.Normal.dist(0, name="input")
+        # Note: This graph could correspond to a convolution of two normals
+        # In which case the inference should either return that or fail explicitly
+        # For now, the lopgrob submodule treats the input as a stochastic value.
+        rv = pt.exp(pm.Normal.dist(input_rv))
+        with pytest.warns(UserWarning, match="RandomVariables were found in the derived graph"):
+            assert func(rv, 0.0)
+
+        res = func(rv, 0.0, warn_missing_rvs=False)
+        # This is the problem we are warning about, as now we can no longer identify the original rv in the graph
+        # or replace it by the respective value
+        assert rv not in ancestors([res])
+
+        # Test that the prescribed solution does not raise a warning and works as expected
+        input_vv = input_rv.clone()
+        [new_rv] = replace_rvs_by_values(
+            [rv],
+            rvs_to_values={input_rv: input_vv},
+            rvs_to_transforms={input_rv: LogTransform()},
+        )
+        input_vv_test = 1.3
+        np.testing.assert_almost_equal(
+            func(new_rv, test_value).eval({input_vv: input_vv_test}),
+            getattr(sp.lognorm(s=1, loc=0, scale=np.exp(np.exp(input_vv_test))), scipy_func)(
+                test_value
+            ),
+        )
