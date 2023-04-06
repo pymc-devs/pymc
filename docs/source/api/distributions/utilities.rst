@@ -6,8 +6,8 @@ Distribution utilities
 .. autosummary::
    :toctree: generated/
 
-    Distribution
-    Discrete
     Continuous
     CustomDist
+    Distribution
+    Discrete
     SymbolicRandomVariable

@@ -6,18 +6,18 @@ Multivariate
 .. autosummary::
    :toctree: generated
 
+   CAR
+   Dirichlet
+   DirichletMultinomial
+   KroneckerNormal
+   LKJCholeskyCov
+   LKJCorr
+   MatrixNormal
+   Multinomial
    MvNormal
    MvStudentT
-   ZeroSumNormal
-   Dirichlet
-   Multinomial
-   DirichletMultinomial
    OrderedMultinomial
+   StickBreakingWeights
    Wishart
    WishartBartlett
-   LKJCorr
-   LKJCholeskyCov
-   MatrixNormal
-   KroneckerNormal
-   CAR
-   StickBreakingWeights
+   ZeroSumNormal

@@ -5,14 +5,14 @@ Distributions
 
 .. toctree::
 
+   distributions/censored
    distributions/continuous
    distributions/discrete
-   distributions/multivariate
+   distributions/logprob
    distributions/mixture
+   distributions/multivariate
+   distributions/simulator
    distributions/timeseries
    distributions/truncated
-   distributions/censored
-   distributions/simulator
    distributions/transforms
-   distributions/logprob
    distributions/utilities
