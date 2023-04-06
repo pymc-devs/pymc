@@ -114,6 +114,9 @@ After working on a file, follow the Git workflow:
 - `git push origin feature-branch`
 :::
 
+### Resources
+- Video: [Using Gitpod to Contribute to PyMC](https://youtu.be/jsjOmhUaKuU) (15 minute video)
+
 ### Gitpod Notes
 
 #### Billing
