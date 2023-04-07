@@ -2,23 +2,10 @@ name: tests
 
 on:
   pull_request:
-    paths:
-      - ".github/workflows/tests.yml"
-      - "pymc/**.py"
-      - "*.py"
-      - "conda-envs/**"
-      - "codecov.yml"
-      - "requirements*.txt"
-      - "scripts/*.sh"
   push:
-    branches: [main]
-    paths:
-      - ".github/workflows/tests.yml"
-      - "pymc/**.py"
-      - "*.py"
-      - "conda-envs/**"
-      - "codecov.yml"
-      - "scripts/*.sh"
+    branches:
+      - main
+
 
 # Tests are split into multiple jobs to accelerate the CI.
 # Different jobs should be organized to take approximately the same
@@ -30,7 +17,33 @@ on:
 # enforces that test run just once per OS / floatX setting.
 
 jobs:
+
+  changes:
+    name: "Check for changes"
+    runs-on: ubuntu-latest
+    outputs:
+      changes: ${{ steps.changes.outputs.src }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            src:
+              - ".github/workflows/tests.yml"
+              - "pymc/**.py"
+              - "tests/**.py"
+              - "*.py"
+              - "conda-envs/**"
+              - "requirements*.txt"
+              - "codecov.yml"
+              - "scripts/*.sh"
+
   ubuntu:
+    needs: changes
+    if: ${{ needs.changes.outputs.changes == 'true' }}
     strategy:
       matrix:
         os: [ubuntu-20.04]
@@ -160,7 +173,10 @@ jobs:
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
+
   windows:
+    needs: changes
+    if: ${{ needs.changes.outputs.changes == 'true' }}
     strategy:
       matrix:
         os: [windows-latest]
@@ -233,7 +249,10 @@ jobs:
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
+
   macos:
+    needs: changes
+    if: ${{ needs.changes.outputs.changes == 'true' }}
     strategy:
       matrix:
         os: [macos-latest]
@@ -309,7 +328,10 @@ jobs:
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
+
   external_samplers:
+    needs: changes
+    if: ${{ needs.changes.outputs.changes == 'true' }}
     strategy:
       matrix:
         os: [ubuntu-20.04]
@@ -379,7 +401,10 @@ jobs:
           env_vars: TEST_SUBSET
           name: JAX tests - ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
+
   float32:
+    needs: changes
+    if: ${{ needs.changes.outputs.changes == 'true' }}
     strategy:
       matrix:
         os: [windows-latest]
@@ -448,3 +473,17 @@ jobs:
           env_vars: TEST_SUBSET
           name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
+
+  all_tests:
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs: [ changes, ubuntu, windows, macos, external_samplers, float32 ]
+    steps:
+      - name: Check build matrix status
+        if: ${{ needs.changes.outputs.changes == 'true' &&
+                ( needs.ubuntu.result != 'success' ||
+                  needs.windows.result != 'success' ||
+                  needs.macos.result != 'success' ||
+                  needs.external_samplers.result != 'success' ||
+                  needs.float32.result != 'success' ) }}
+        run: exit 1
