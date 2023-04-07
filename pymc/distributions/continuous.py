@@ -816,7 +816,13 @@ class HalfNormal(PositiveContinuous):
     rv_op = halfnormal
 
     @classmethod
-    def dist(cls, sigma=None, tau=None, *args, **kwargs):
+    def dist(
+        cls,
+        sigma: Optional[DIST_PARAMETER_TYPES] = None,
+        tau: Optional[DIST_PARAMETER_TYPES] = None,
+        *args,
+        **kwargs,
+    ):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
         return super().dist([0.0, sigma], **kwargs)
@@ -948,7 +954,14 @@ class Wald(PositiveContinuous):
     rv_op = wald
 
     @classmethod
-    def dist(cls, mu=None, lam=None, phi=None, alpha=0.0, **kwargs):
+    def dist(
+        cls,
+        mu: Optional[DIST_PARAMETER_TYPES] = None,
+        lam: Optional[DIST_PARAMETER_TYPES] = None,
+        phi: Optional[DIST_PARAMETER_TYPES] = None,
+        alpha: Optional[DIST_PARAMETER_TYPES] = 0.0,
+        **kwargs,
+    ):
         mu, lam, phi = cls.get_mu_lam_phi(mu, lam, phi)
         alpha = pt.as_tensor_variable(floatX(alpha))
         mu = pt.as_tensor_variable(floatX(mu))
@@ -1115,7 +1128,16 @@ class Beta(UnitContinuous):
     rv_op = pytensor.tensor.random.beta
 
     @classmethod
-    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, nu=None, *args, **kwargs):
+    def dist(
+        cls,
+        alpha: Optional[DIST_PARAMETER_TYPES] = None,
+        beta: Optional[DIST_PARAMETER_TYPES] = None,
+        mu: Optional[DIST_PARAMETER_TYPES] = None,
+        sigma: Optional[DIST_PARAMETER_TYPES] = None,
+        nu: Optional[DIST_PARAMETER_TYPES] = None,
+        *args,
+        **kwargs,
+    ):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma, nu)
         alpha = pt.as_tensor_variable(floatX(alpha))
         beta = pt.as_tensor_variable(floatX(beta))
@@ -1243,7 +1265,7 @@ class Kumaraswamy(UnitContinuous):
     rv_op = kumaraswamy
 
     @classmethod
-    def dist(cls, a, b, *args, **kwargs):
+    def dist(cls, a: DIST_PARAMETER_TYPES, b: DIST_PARAMETER_TYPES, *args, **kwargs):
         a = pt.as_tensor_variable(floatX(a))
         b = pt.as_tensor_variable(floatX(b))
 
@@ -1329,7 +1351,7 @@ class Exponential(PositiveContinuous):
     rv_op = exponential
 
     @classmethod
-    def dist(cls, lam, *args, **kwargs):
+    def dist(cls, lam: DIST_PARAMETER_TYPES, *args, **kwargs):
         lam = pt.as_tensor_variable(floatX(lam))
 
         # PyTensor exponential op is parametrized in terms of mu (1/lam)
