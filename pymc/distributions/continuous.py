@@ -2501,8 +2501,8 @@ class HalfStudentTRV(RandomVariable):
     _print_name = ("HalfStudentT", "\\operatorname{HalfStudentT}")
 
     @classmethod
-    def rng_fn(cls, rng, nu, sigma, size=None) -> np.ndarray:
-        return np.asarray(np.abs(stats.t.rvs(nu, sigma, size=size, random_state=rng)))
+    def rng_fn(cls, rng, nu, scale=None, size=None) -> np.ndarray:
+        return np.asarray(np.abs(stats.t.rvs(nu, scale, size=size, random_state=rng)))
 
 
 halfstudentt = HalfStudentTRV()
