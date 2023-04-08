@@ -33,10 +33,10 @@ jobs:
           filters: |
             src:
               - ".github/workflows/tests.yml"
-              - "pymc/**.py"
-              - "tests/**.py"
+              - "pymc/**/*.py"
+              - "tests/**/*.py"
               - "*.py"
-              - "conda-envs/**"
+              - "conda-envs/*"
               - "requirements*.txt"
               - "codecov.yml"
               - "scripts/*.sh"
