@@ -728,6 +728,56 @@ class TanhTransform(RVTransform):
         return pt.log(1 / pt.cosh(value))
 
 
+class ErfTransform(RVTransform):
+    name = "erf"
+
+    def forward(self, value, *inputs):
+        return pt.erf(value)
+
+    def backward(self, value, *inputs):
+        return pt.erfinv(value)
+
+    def log_jac_det(self, value, *inputs):
+        return at.log(2 * at.exp(-(value**2)) / (at.sqrt(np.pi)))
+
+
+class ErfcTransform(RVTransform):
+    name = "erfc"
+
+    def forward(self, value, *inputs):
+        return at.erfc(value)
+
+    def backward(self, value, *inputs):
+        return at.erfcinv(value)
+
+    def log_jac_det(self, value, *inputs):
+        return at.log(-2 * at.exp(-(value**2)) / (at.sqrt(np.pi)))
+
+
+class ErfcxTransform(RVTransform):
+    name = "erfcx"
+
+    def forward(self, value, *inputs):
+        return at.erfcx(value)
+
+    def backward(y, tol=1e-10, max_iter=100):
+        # Compute x using the appropriate formula for each value of y
+        x = at.switch(y <= 1, 1.0 / (y * at.sqrt(np.pi)), -at.sqrt(at.log(y)))
+        iter_count = 0
+        while iter_count < max_iter:
+            iter_count += 1
+            fx = at.erfcx(x) - y
+            fpx = 2 * x * at.erfcx(x) - 2 / at.sqrt(np.pi)
+            delta_x = fx / fpx
+            x = x - delta_x
+            if (at.abs(delta_x) < tol).all():
+                break
+        return x
+
+    def log_jac_det(self, value, *inputs):
+        return at.log(2 * x * at.exp(x**2) * at.erfc(x) - 2.0 / at.sqrt(np.pi))
+
+
 class LocTransform(RVTransform):
     name = "loc"
 
