@@ -33,8 +33,8 @@ Continuous
    Rice
    SkewNormal
    StudentT
-   TruncatedNormal
    Triangular
+   TruncatedNormal
    Uniform
    VonMises
    Wald

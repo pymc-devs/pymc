@@ -6,5 +6,5 @@ Mixture
 .. autosummary::
    :toctree: generated
 
-   NormalMixture
    Mixture
+   NormalMixture

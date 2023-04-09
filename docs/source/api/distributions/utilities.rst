@@ -8,6 +8,6 @@ Distribution utilities
 
     Continuous
     CustomDist
-    Distribution
     Discrete
+    Distribution
     SymbolicRandomVariable
