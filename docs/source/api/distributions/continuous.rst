@@ -24,8 +24,8 @@ Continuous
    Kumaraswamy
    Laplace
    Logistic
-   LogNormal
    LogitNormal
+   LogNormal
    Moyal
    Normal
    Pareto
