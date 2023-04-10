@@ -104,6 +104,7 @@ jobs:
             tests/distributions/test_truncated.py
             tests/logprob/test_abstract.py
             tests/logprob/test_basic.py
+            tests/logprob/test_binary.py
             tests/logprob/test_censoring.py
             tests/logprob/test_composite_logprob.py
             tests/logprob/test_cumsum.py
