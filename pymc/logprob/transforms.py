@@ -49,13 +49,31 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
 from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
-from pytensor.scalar import Abs, Add, Cosh, Exp, Log, Mul, Pow, Sinh, Sqr, Sqrt, Tanh
+from pytensor.scalar import (
+    Abs,
+    Add,
+    Cosh,
+    Erf,
+    Erfc,
+    Erfcx,
+    Exp,
+    Log,
+    Mul,
+    Pow,
+    Sinh,
+    Sqr,
+    Sqrt,
+    Tanh,
+)
 from pytensor.scan.op import Scan
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.math import (
     abs,
     add,
     cosh,
+    erf,
+    erfc,
+    erfcx,
     exp,
     log,
     mul,
@@ -343,7 +361,7 @@ class TransformValuesRewrite(GraphRewriter):
 class MeasurableTransform(MeasurableElemwise):
     """A placeholder used to specify a log-likelihood for a transformed measurable variable"""
 
-    valid_scalar_types = (Exp, Log, Add, Mul, Pow, Abs, Sinh, Cosh, Tanh)
+    valid_scalar_types = (Exp, Log, Add, Mul, Pow, Abs, Sinh, Cosh, Tanh, Erf, Erfc, Erfcx)
 
     # Cannot use `transform` as name because it would clash with the property added by
     # the `TransformValuesRewrite`
@@ -543,7 +561,7 @@ def measurable_sub_to_neg(fgraph, node):
     return [pt.add(minuend, pt.neg(subtrahend))]
 
 
-@node_rewriter([exp, log, add, mul, pow, abs, sinh, cosh, tanh])
+@node_rewriter([exp, log, add, mul, pow, abs, sinh, cosh, tanh, erf, erfc, erfcx])
 def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
 
@@ -607,6 +625,9 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         Sinh: SinhTransform(),
         Cosh: CoshTransform(),
         Tanh: TanhTransform(),
+        Erf: ErfTransform(),
+        Erfc: ErfcTransform(),
+        Erfcx: ErfcxTransform(),
     }
     transform = transform_dict.get(type(scalar_op), None)
     if isinstance(scalar_op, Pow):
@@ -738,44 +759,44 @@ class ErfTransform(RVTransform):
         return pt.erfinv(value)
 
     def log_jac_det(self, value, *inputs):
-        return at.log(2 * at.exp(-(value**2)) / (at.sqrt(np.pi)))
+        return pt.log(2 * pt.exp(-(value**2)) / (pt.sqrt(np.pi)))
 
 
 class ErfcTransform(RVTransform):
     name = "erfc"
 
     def forward(self, value, *inputs):
-        return at.erfc(value)
+        return pt.erfc(value)
 
     def backward(self, value, *inputs):
-        return at.erfcinv(value)
+        return pt.erfcinv(value)
 
     def log_jac_det(self, value, *inputs):
-        return at.log(-2 * at.exp(-(value**2)) / (at.sqrt(np.pi)))
+        return pt.log(-2 * pt.exp(-(value**2)) / (pt.sqrt(np.pi)))
 
 
 class ErfcxTransform(RVTransform):
     name = "erfcx"
 
     def forward(self, value, *inputs):
-        return at.erfcx(value)
+        return pt.erfcx(value)
 
-    def backward(y, tol=1e-10, max_iter=100):
+    def backward(self, value, tol=1e-10, max_iter=100):
         # Compute x using the appropriate formula for each value of y
-        x = at.switch(y <= 1, 1.0 / (y * at.sqrt(np.pi)), -at.sqrt(at.log(y)))
+        x = pt.switch(value <= 1, 1.0 / (value * pt.sqrt(np.pi)), -pt.sqrt(pt.log(value)))
         iter_count = 0
         while iter_count < max_iter:
             iter_count += 1
-            fx = at.erfcx(x) - y
-            fpx = 2 * x * at.erfcx(x) - 2 / at.sqrt(np.pi)
+            fx = pt.erfcx(x) - value
+            fpx = 2 * x * pt.erfcx(x) - 2 / pt.sqrt(np.pi)
             delta_x = fx / fpx
             x = x - delta_x
-            if (at.abs(delta_x) < tol).all():
+            if (pt.abs(delta_x) < tol).all():
                 break
         return x
 
     def log_jac_det(self, value, *inputs):
-        return at.log(2 * x * at.exp(x**2) * at.erfc(x) - 2.0 / at.sqrt(np.pi))
+        return pt.log((2 * value * pt.exp(value**2) * pt.erfc(value) - 2.0) / pt.sqrt(np.pi))
 
 
 class LocTransform(RVTransform):
