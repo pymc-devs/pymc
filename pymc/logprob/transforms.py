@@ -782,14 +782,13 @@ class ErfcxTransform(RVTransform):
         return pt.erfcx(value)
 
     def backward(self, value, tol=1e-10, max_iter=100):
-        # Compute x using the appropriate formula for each value of y
+        # computes the inverse of erfcx, this was adapted from
+        # https://tinyurl.com/4mxfd3cz
         x = pt.switch(value <= 1, 1.0 / (value * pt.sqrt(np.pi)), -pt.sqrt(pt.log(value)))
         iter_count = 0
         while iter_count < max_iter:
             iter_count += 1
-            fx = pt.erfcx(x) - value
-            fpx = 2 * x * pt.erfcx(x) - 2 / pt.sqrt(np.pi)
-            delta_x = fx / fpx
+            delta_x = (pt.erfcx(x) - value) / (2 * x * pt.erfcx(x) - 2 / pt.sqrt(np.pi))
             x = x - delta_x
             if (pt.abs(delta_x) < tol).all():
                 break
