@@ -25,8 +25,9 @@ from pytensor.tensor.math import gt, lt
 from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableVariable,
-    _logcdf,
+    _logcdf_helper,
     _logprob,
+    _logprob_helper,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import ignore_logprob
@@ -81,9 +82,8 @@ def comparison_logprob(op, values, base_rv, operand, **kwargs):
     (value,) = values
 
     base_rv_op = base_rv.owner.op
-    base_rv_inputs = base_rv.owner.inputs
 
-    logcdf = _logcdf(base_rv_op, operand, *base_rv_inputs, **kwargs)
+    logcdf = _logcdf_helper(base_rv, operand, **kwargs)
     logccdf = pt.log1mexp(logcdf)
 
     condn_exp = pt.eq(value, np.array(True))
@@ -96,7 +96,7 @@ def comparison_logprob(op, values, base_rv, operand, **kwargs):
         raise TypeError(f"Unsupported scalar_op {op.scalar_op}")
 
     if base_rv.dtype.startswith("int"):
-        logp_point = _logprob(base_rv_op, (operand,), *base_rv_inputs, **kwargs)
+        logp_point = _logprob_helper(base_rv, operand, **kwargs)
         if isinstance(op.scalar_op, GT):
             logprob = pt.switch(condn_exp, pt.logaddexp(logprob, logp_point), logprob)
         elif isinstance(op.scalar_op, LT):
