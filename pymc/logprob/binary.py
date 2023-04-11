@@ -30,7 +30,7 @@ from pymc.logprob.abstract import (
     _logprob_helper,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
-from pymc.logprob.utils import ignore_logprob
+from pymc.logprob.utils import check_potential_measurability, ignore_logprob
 
 
 class MeasurableComparison(MeasurableElemwise):
@@ -58,6 +58,10 @@ def find_measurable_comparisons(
         and isinstance(base_var.owner.op, MeasurableVariable)
         and base_var not in rv_map_feature.rv_values
     ):
+        return None
+
+    # check for potential measurability of const
+    if not check_potential_measurability((const,), rv_map_feature):
         return None
 
     # Make base_var unmeasurable

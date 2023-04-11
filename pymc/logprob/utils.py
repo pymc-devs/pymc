@@ -210,6 +210,24 @@ def indices_from_subtensor(idx_list, indices):
     )
 
 
+def check_potential_measurability(inputs: Tuple[TensorVariable], rv_map_feature):
+    if any(
+        ancestor_node
+        for ancestor_node in walk_model(
+            inputs,
+            walk_past_rvs=False,
+            stop_at_vars=set(rv_map_feature.rv_values),
+        )
+        if (
+            ancestor_node.owner
+            and isinstance(ancestor_node.owner.op, MeasurableVariable)
+            and ancestor_node not in rv_map_feature.rv_values
+        )
+    ):
+        return None
+    return True
+
+
 class ParameterValueError(ValueError):
     """Exception for invalid parameters values in logprob graphs"""
 
