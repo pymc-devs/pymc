@@ -2059,8 +2059,8 @@ class CARRV(RandomVariable):
         sparse = isinstance(W, pytensor.sparse.SparseVariable)
         msg = "W must be a symmetric adjacency matrix."
         if sparse:
-            abs_diff = pytensor.sparse.basic.mul(pytensor.sparse.basic.sgn(W - W.T), W - W.T)
-            W = Assert(msg)(W, pt.isclose(pytensor.sparse.basic.sp_sum(abs_diff), 0))
+            abs_diff = pytensor.sparse.basic.mul(pytensor.sparse.sign(W - W.T), W - W.T)
+            W = Assert(msg)(W, pt.isclose(pytensor.sparse.sp_sum(abs_diff), 0))
         else:
             W = Assert(msg)(W, pt.allclose(W, W.T))
 

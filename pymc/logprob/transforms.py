@@ -608,7 +608,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
             return None
         try:
             (power,) = other_inputs
-            power = pt.get_scalar_constant_value(power).item()
+            power = pt.get_underlying_scalar_constant_value(power).item()
         # Power needs to be a constant
         except NotScalarConstantError:
             return None

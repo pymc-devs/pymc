@@ -370,7 +370,7 @@ class I0e(UnaryScalarOp):
     def grad(self, inp, grads):
         (x,) = inp
         (gz,) = grads
-        return (gz * (i1e_scalar(x) - pytensor.scalar.sgn(x) * i0e_scalar(x)),)
+        return (gz * (i1e_scalar(x) - pytensor.scalar.sign(x) * i0e_scalar(x)),)
 
 
 i0e_scalar = I0e(upgrade_to_float_no_complex, name="i0e")

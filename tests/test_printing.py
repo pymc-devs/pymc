@@ -132,63 +132,63 @@ class TestMonolith(BaseTestStrAndLatexRepr):
         self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
         self.expected = {
             ("plain", True): [
-                r"alpha ~ N(0, 10)",
-                r"sigma ~ N**+(0, 1)",
+                r"alpha ~ Normal(0, 10)",
+                r"sigma ~ HalfNormal(0, 1)",
                 r"mu ~ Deterministic(f(beta, alpha))",
-                r"beta ~ N(0, 10)",
-                r"Z ~ N(f(), f())",
-                r"nb_with_p_n ~ NB(10, nbp)",
-                r"zip ~ MarginalMixture(f(), DiracDelta(0), Pois(5))",
-                r"w ~ Dir(<constant>)",
+                r"beta ~ Normal(0, 10)",
+                r"Z ~ MultivariateNormal(f(), f())",
+                r"nb_with_p_n ~ NegativeBinomial(10, nbp)",
+                r"zip ~ MarginalMixture(f(), DiracDelta(0), Poisson(5))",
+                r"w ~ Dirichlet(<constant>)",
                 (
                     r"nested_mix ~ MarginalMixture(w, "
-                    r"MarginalMixture(f(), DiracDelta(0), Pois(5)), "
-                    r"Censored(Bern(0.5), -1, 1))"
+                    r"MarginalMixture(f(), DiracDelta(0), Poisson(5)), "
+                    r"Censored(Bernoulli(0.5), -1, 1))"
                 ),
-                r"Y_obs ~ N(mu, sigma)",
+                r"Y_obs ~ Normal(mu, sigma)",
                 r"pot ~ Potential(f(beta, alpha))",
             ],
             ("plain", False): [
-                r"alpha ~ N",
-                r"sigma ~ N**+",
+                r"alpha ~ Normal",
+                r"sigma ~ HalfNormal",
                 r"mu ~ Deterministic",
-                r"beta ~ N",
-                r"Z ~ N",
-                r"nb_with_p_n ~ NB",
+                r"beta ~ Normal",
+                r"Z ~ MultivariateNormal",
+                r"nb_with_p_n ~ NegativeBinomial",
                 r"zip ~ MarginalMixture",
-                r"w ~ Dir",
+                r"w ~ Dirichlet",
                 r"nested_mix ~ MarginalMixture",
-                r"Y_obs ~ N",
+                r"Y_obs ~ Normal",
                 r"pot ~ Potential",
             ],
             ("latex", True): [
-                r"$\text{alpha} \sim \operatorname{N}(0,~10)$",
-                r"$\text{sigma} \sim \operatorname{N^{+}}(0,~1)$",
+                r"$\text{alpha} \sim \operatorname{Normal}(0,~10)$",
+                r"$\text{sigma} \sim \operatorname{HalfNormal}(0,~1)$",
                 r"$\text{mu} \sim \operatorname{Deterministic}(f(\text{beta},~\text{alpha}))$",
-                r"$\text{beta} \sim \operatorname{N}(0,~10)$",
-                r"$\text{Z} \sim \operatorname{N}(f(),~f())$",
-                r"$\text{nb_with_p_n} \sim \operatorname{NB}(10,~\text{nbp})$",
-                r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Pois}(5))$",
-                r"$\text{w} \sim \operatorname{Dir}(\text{<constant>})$",
+                r"$\text{beta} \sim \operatorname{Normal}(0,~10)$",
+                r"$\text{Z} \sim \operatorname{MultivariateNormal}(f(),~f())$",
+                r"$\text{nb_with_p_n} \sim \operatorname{NegativeBinomial}(10,~\text{nbp})$",
+                r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5))$",
+                r"$\text{w} \sim \operatorname{Dirichlet}(\text{<constant>})$",
                 (
                     r"$\text{nested_mix} \sim \operatorname{MarginalMixture}(\text{w},"
-                    r"~\operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Pois}(5)),"
-                    r"~\operatorname{Censored}(\operatorname{Bern}(0.5),~-1,~1))$"
+                    r"~\operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5)),"
+                    r"~\operatorname{Censored}(\operatorname{Bernoulli}(0.5),~-1,~1))$"
                 ),
-                r"$\text{Y_obs} \sim \operatorname{N}(\text{mu},~\text{sigma})$",
+                r"$\text{Y_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$",
                 r"$\text{pot} \sim \operatorname{Potential}(f(\text{beta},~\text{alpha}))$",
             ],
             ("latex", False): [
-                r"$\text{alpha} \sim \operatorname{N}$",
-                r"$\text{sigma} \sim \operatorname{N^{+}}$",
+                r"$\text{alpha} \sim \operatorname{Normal}$",
+                r"$\text{sigma} \sim \operatorname{HalfNormal}$",
                 r"$\text{mu} \sim \operatorname{Deterministic}$",
-                r"$\text{beta} \sim \operatorname{N}$",
-                r"$\text{Z} \sim \operatorname{N}$",
-                r"$\text{nb_with_p_n} \sim \operatorname{NB}$",
+                r"$\text{beta} \sim \operatorname{Normal}$",
+                r"$\text{Z} \sim \operatorname{MultivariateNormal}$",
+                r"$\text{nb_with_p_n} \sim \operatorname{NegativeBinomial}$",
                 r"$\text{zip} \sim \operatorname{MarginalMixture}$",
-                r"$\text{w} \sim \operatorname{Dir}$",
+                r"$\text{w} \sim \operatorname{Dirichlet}$",
                 r"$\text{nested_mix} \sim \operatorname{MarginalMixture}$",
-                r"$\text{Y_obs} \sim \operatorname{N}$",
+                r"$\text{Y_obs} \sim \operatorname{Normal}$",
                 r"$\text{pot} \sim \operatorname{Potential}$",
             ],
         }
@@ -210,28 +210,28 @@ class TestData(BaseTestStrAndLatexRepr):
         self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
         self.expected = {
             ("plain", True): [
-                r"a ~ N(2, 1)",
-                r"b ~ N(<shared>, 1)",
-                r"c ~ N(2, 1)",
-                r"d ~ N(<constant>, 1)",
+                r"a ~ Normal(2, 1)",
+                r"b ~ Normal(<shared>, 1)",
+                r"c ~ Normal(2, 1)",
+                r"d ~ Normal(<constant>, 1)",
             ],
             ("plain", False): [
-                r"a ~ N",
-                r"b ~ N",
-                r"c ~ N",
-                r"d ~ N",
+                r"a ~ Normal",
+                r"b ~ Normal",
+                r"c ~ Normal",
+                r"d ~ Normal",
             ],
             ("latex", True): [
-                r"$\text{a} \sim \operatorname{N}(2,~1)$",
-                r"$\text{b} \sim \operatorname{N}(\text{<shared>},~1)$",
-                r"$\text{c} \sim \operatorname{N}(2,~1)$",
-                r"$\text{d} \sim \operatorname{N}(\text{<constant>},~1)$",
+                r"$\text{a} \sim \operatorname{Normal}(2,~1)$",
+                r"$\text{b} \sim \operatorname{Normal}(\text{<shared>},~1)$",
+                r"$\text{c} \sim \operatorname{Normal}(2,~1)$",
+                r"$\text{d} \sim \operatorname{Normal}(\text{<constant>},~1)$",
             ],
             ("latex", False): [
-                r"$\text{a} \sim \operatorname{N}$",
-                r"$\text{b} \sim \operatorname{N}$",
-                r"$\text{c} \sim \operatorname{N}$",
-                r"$\text{d} \sim \operatorname{N}$",
+                r"$\text{a} \sim \operatorname{Normal}$",
+                r"$\text{b} \sim \operatorname{Normal}$",
+                r"$\text{c} \sim \operatorname{Normal}$",
+                r"$\text{d} \sim \operatorname{Normal}$",
             ],
         }
 
@@ -249,9 +249,9 @@ def test_model_latex_repr_three_levels_model():
     expected = [
         "$$",
         "\\begin{array}{rcl}",
-        "\\text{mu} &\\sim & \\operatorname{N}(0,~5)\\\\\\text{sigma} &\\sim & "
-        "\\operatorname{C^{+}}(0,~2.5)\\\\\\text{censored_normal} &\\sim & "
-        "\\operatorname{Censored}(\\operatorname{N}(\\text{mu},~\\text{sigma}),~-2,~2)",
+        "\\text{mu} &\\sim & \\operatorname{Normal}(0,~5)\\\\\\text{sigma} &\\sim & "
+        "\\operatorname{HalfCauchy}(0,~2.5)\\\\\\text{censored_normal} &\\sim & "
+        "\\operatorname{Censored}(\\operatorname{Normal}(\\text{mu},~\\text{sigma}),~-2,~2)",
         "\\end{array}",
         "$$",
     ]
@@ -268,8 +268,8 @@ def test_model_latex_repr_mixture_model():
         "$$",
         "\\begin{array}{rcl}",
         "\\text{w} &\\sim & "
-        "\\operatorname{Dir}(\\text{<constant>})\\\\\\text{mix} &\\sim & "
-        "\\operatorname{MarginalMixture}(\\text{w},~\\operatorname{N}(0,~5),~\\operatorname{StudentT}(7,~0,~1))",
+        "\\operatorname{Dirichlet}(\\text{<constant>})\\\\\\text{mix} &\\sim & "
+        "\\operatorname{MarginalMixture}(\\text{w},~\\operatorname{Normal}(0,~5),~\\operatorname{StudentT}(7,~0,~1))",
         "\\end{array}",
         "$$",
     ]

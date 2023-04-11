@@ -1443,7 +1443,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # values, and another for the non-missing values.
 
             antimask_idx = (~mask).nonzero()
-            nonmissing_data = pt.as_tensor_variable(data[antimask_idx])
+            nonmissing_data = pt.as_tensor_variable(data[antimask_idx].data)
             unmasked_rv_var = rv_var[antimask_idx]
             unmasked_rv_var = unmasked_rv_var.owner.clone().default_output()
 
