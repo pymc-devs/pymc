@@ -235,7 +235,7 @@ def get_tau_sigma(tau=None, sigma=None):
         else:
             if isinstance(sigma, Variable):
                 # Keep tau negative, if sigma was negative, so that it will fail when used
-                tau = (sigma**-2.0) * pt.sgn(sigma)
+                tau = (sigma**-2.0) * pt.sign(sigma)
             else:
                 sigma_ = np.asarray(sigma)
                 if np.any(sigma_ <= 0):
@@ -248,7 +248,7 @@ def get_tau_sigma(tau=None, sigma=None):
         else:
             if isinstance(tau, Variable):
                 # Keep sigma negative, if tau was negative, so that it will fail when used
-                sigma = pt.abs(tau) ** (-0.5) * pt.sgn(tau)
+                sigma = pt.abs(tau) ** (-0.5) * pt.sign(tau)
             else:
                 tau_ = np.asarray(tau)
                 if np.any(tau_ <= 0):
