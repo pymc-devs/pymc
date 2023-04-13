@@ -684,9 +684,11 @@ class _CustomSymbolicDist(Distribution):
             def custom_dist_logp(op, values, size, *params, **kwargs):
                 return logp(values[0], *params[: len(dist_params)])
 
-        @_logcdf.register(rv_type)
-        def custom_dist_logcdf(op, value, size, *params, **kwargs):
-            return logcdf(value, *params[: len(dist_params)])
+        if logcdf is not None:
+
+            @_logcdf.register(rv_type)
+            def custom_dist_logcdf(op, value, size, *params, **kwargs):
+                return logcdf(value, *params[: len(dist_params)])
 
         @_moment.register(rv_type)
         def custom_dist_get_moment(op, rv, size, *params):
