@@ -404,6 +404,22 @@ class TestCustomSymbolicDist:
         ip = m.initial_point()
         np.testing.assert_allclose(m.compile_logp()(ip), ref_m.compile_logp()(ip))
 
+    def test_logcdf_inference(self):
+        def custom_dist(mu, sigma, size):
+            return pt.exp(pm.Normal.dist(mu, sigma, size=size))
+
+        mu = 1
+        sigma = 1.25
+        test_value = 0.9
+
+        custom_lognormal = CustomDist.dist(mu, sigma, dist=custom_dist)
+        ref_lognormal = LogNormal.dist(mu, sigma)
+
+        np.testing.assert_allclose(
+            pm.logcdf(custom_lognormal, test_value).eval(),
+            pm.logcdf(ref_lognormal, test_value).eval(),
+        )
+
     def test_random_multiple_rngs(self):
         def custom_dist(p, sigma, size):
             idx = pm.Bernoulli.dist(p=p)
