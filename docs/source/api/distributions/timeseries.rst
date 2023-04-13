@@ -7,8 +7,8 @@ Timeseries
    :toctree: generated
 
     AR
-    GaussianRandomWalk
-    GARCH11
     EulerMaruyama
+    GARCH11
+    GaussianRandomWalk
     MvGaussianRandomWalk
     MvStudentTRandomWalk

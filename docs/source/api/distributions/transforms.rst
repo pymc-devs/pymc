@@ -13,12 +13,12 @@ Transform instances are the entities that should be used in the
 .. autosummary::
    :toctree: generated
 
-    simplex
-    logodds
-    log_exp_m1
-    log
-    sum_to_1
     circular
+    log
+    log_exp_m1
+    logodds
+    simplex
+    sum_to_1
 
 
 Specific Transform Classes
