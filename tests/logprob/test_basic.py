@@ -510,3 +510,14 @@ def test_warn_random_found_probability_inference(func, scipy_func, test_value):
                 test_value
             ),
         )
+
+
+def test_icdf_discrete():
+    p = 0.1
+    value = 0.9
+    dist = pm.Geometric.dist(p=p)
+    dist_icdf = icdf(dist, value)
+    np.testing.assert_almost_equal(
+        dist_icdf.eval(),
+        sp.geom.ppf(value, p),
+    )

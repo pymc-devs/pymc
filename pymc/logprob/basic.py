@@ -127,7 +127,7 @@ def icdf(
     rv: TensorVariable, value: TensorLike, warn_missing_rvs: bool = True, **kwargs
 ) -> TensorVariable:
     """Create a graph for the inverse CDF of a  Random Variable."""
-    value = pt.as_tensor_variable(value, dtype=rv.dtype)
+    value = pt.as_tensor_variable(value, dtype="floatX")
     try:
         return _icdf_helper(rv, value, **kwargs)
     except NotImplementedError:
