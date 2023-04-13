@@ -2502,7 +2502,7 @@ class HalfStudentTRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, nu, sigma, size=None) -> np.ndarray:
-        return np.asarray(np.abs(stats.t.rvs(nu, sigma, size=size, random_state=rng)))
+        return np.asarray(np.abs(stats.t.rvs(nu, scale=sigma, size=size, random_state=rng)))
 
 
 halfstudentt = HalfStudentTRV()

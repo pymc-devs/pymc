@@ -1749,6 +1749,22 @@ class TestStudentT(BaseTestDistributionRandom):
     ]
 
 
+class TestHalfStudentT(BaseTestDistributionRandom):
+    def halfstudentt_rng_fn(self, df, loc, scale, size, rng):
+        return np.abs(st.t.rvs(df=df, loc=loc, scale=scale, size=size))
+
+    pymc_dist = pm.HalfStudentT
+    pymc_dist_params = {"nu": 5.0, "sigma": 2.0}
+    expected_rv_op_params = {"nu": 5.0, "sigma": 2.0}
+    reference_dist_params = {"df": 5.0, "loc": 0, "scale": 2.0}
+    reference_dist = lambda self: ft.partial(self.halfstudentt_rng_fn, rng=self.get_random_state())
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
 class TestMoyal(BaseTestDistributionRandom):
     pymc_dist = pm.Moyal
     pymc_dist_params = {"mu": 0.0, "sigma": 1.0}
