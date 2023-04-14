@@ -386,7 +386,7 @@ class Constant(BaseCovariance):
             return pt.alloc(self.c, X.shape[0], Xs.shape[0])
 
 
-class WhiteNoise(Covariance):
+class WhiteNoise(BaseCovariance):
     r"""
     White noise covariance function.
 
