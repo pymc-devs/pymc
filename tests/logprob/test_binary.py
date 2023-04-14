@@ -17,7 +17,10 @@ import pytensor.tensor as pt
 import pytest
 import scipy.stats as st
 
+from pytensor import function
+
 from pymc import logp
+from pymc.logprob import factorized_joint_logprob
 from pymc.testing import assert_no_rvs
 
 
@@ -71,3 +74,23 @@ def test_discrete_rv_comparison(comparison_op, exp_logp_true, exp_logp_false):
 
     assert np.isclose(logp_fn(1), exp_logp_true(3))
     assert np.isclose(logp_fn(0), exp_logp_false(3))
+
+
+def test_potentially_measurable_operand():
+    x_rv = pt.random.normal(2)
+    z_rv = pt.random.normal(x_rv)
+    y_rv = pt.lt(x_rv, z_rv)
+
+    y_vv = y_rv.clone()
+    z_vv = z_rv.clone()
+
+    logprob = factorized_joint_logprob({z_rv: z_vv, y_rv: y_vv})[y_vv]
+    assert_no_rvs(logprob)
+
+    fn = function([z_vv, y_vv], logprob)
+    z_vv_test = 0.5
+    y_vv_test = True
+    np.testing.assert_array_almost_equal(
+        fn(z_vv_test, y_vv_test),
+        st.norm(2, 1).logcdf(z_vv_test),
+    )
