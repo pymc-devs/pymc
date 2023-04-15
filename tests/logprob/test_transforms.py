@@ -52,6 +52,7 @@ from pymc.logprob.abstract import MeasurableVariable, _get_measurable_outputs, _
 from pymc.logprob.basic import factorized_joint_logprob
 from pymc.logprob.transforms import (
     ChainedTransform,
+    ErfTransform,
     ExpTransform,
     IntervalTransform,
     LocTransform,
@@ -988,4 +989,23 @@ def test_multivariate_transform(shift, scale):
             shift + mu * scale,
             scale_mat @ cov @ scale_mat.T,
         ),
+    )
+
+
+@pytest.mark.parametrize("transform", [ErfTransform])
+def test_erf_logp(transform):
+    base_rv = pt.random.normal(
+        0.5, 1, name="base_rv"
+    )  # Something not centered around 0 is usually better
+    rv = pt.erf(base_rv)
+    vv = rv.clone()
+    rv_logp = joint_logprob({rv: vv})
+
+    transform = transform()
+    expected_logp = joint_logprob({rv: transform.backward(vv)}) + transform.log_jac_det(vv)
+
+    vv_test = np.array(0.25)  # Arbitrary test value
+    np.testing.assert_almost_equal(
+        rv_logp.eval({vv: vv_test}),
+        expected_logp.eval({vv: vv_test}),
     )

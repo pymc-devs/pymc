@@ -781,18 +781,24 @@ class ErfcxTransform(RVTransform):
     def forward(self, value, *inputs):
         return pt.erfcx(value)
 
-    def backward(self, value, tol=1e-10, max_iter=100):
+    def backward(self, value, k=10):
         # computes the inverse of erfcx, this was adapted from
         # https://tinyurl.com/4mxfd3cz
         x = pt.switch(value <= 1, 1.0 / (value * pt.sqrt(np.pi)), -pt.sqrt(pt.log(value)))
-        iter_count = 0
-        while iter_count < max_iter:
-            iter_count += 1
-            delta_x = (pt.erfcx(x) - value) / (2 * x * pt.erfcx(x) - 2 / pt.sqrt(np.pi))
-            x = x - delta_x
-            if (pt.abs(delta_x) < tol).all():
-                break
-        return x
+
+        def calc_delta_x(value, prior_result):
+            return prior_result - (pt.erfcx(prior_result) - value) / (
+                2 * prior_result * pt.erfcx(prior_result) - 2 / pt.sqrt(np.pi)
+            )
+
+        result, updates = pytensor.scan(
+            fn=calc_delta_x,
+            outputs_info=at.ones_like(x),
+            sequences=value,
+            non_sequences=x,
+            n_steps=k,
+        )
+        return result[-1]
 
     def log_jac_det(self, value, *inputs):
         return pt.log((2 * value * pt.exp(value**2) * pt.erfc(value) - 2.0) / pt.sqrt(np.pi))
