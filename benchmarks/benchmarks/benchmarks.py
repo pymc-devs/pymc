@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import arviz as az
 import numpy as np
 import pandas as pd
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 import pymc as pm
 
@@ -61,8 +61,8 @@ def mixture_model(random_seed=1234):
         mu = pm.Normal("mu", mu=0.0, sigma=10.0, shape=w_true.shape)
         enforce_order = pm.Potential(
             "enforce_order",
-            at.switch(mu[0] - mu[1] <= 0, 0.0, -np.inf)
-            + at.switch(mu[1] - mu[2] <= 0, 0.0, -np.inf),
+            pt.switch(mu[0] - mu[1] <= 0, 0.0, -np.inf)
+            + pt.switch(mu[1] - mu[2] <= 0, 0.0, -np.inf),
         )
         tau = pm.Gamma("tau", alpha=1.0, beta=1.0, shape=w_true.shape)
         pm.NormalMixture("x_obs", w=w, mu=mu, tau=tau, observed=x)

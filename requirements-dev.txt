@@ -9,6 +9,7 @@ git+https://github.com/pymc-devs/pymc-sphinx-theme
 h5py>=2.7
 ipython>=7.16
 jupyter-sphinx
+mcbackend>=0.4.0
 mypy==0.990
 myst-nb
 numdifftools>=0.9.40
@@ -17,7 +18,7 @@ numpydoc
 pandas>=0.24.0
 polyagamma
 pre-commit>=2.8.0
-pytensor==2.8.11
+pytensor>=2.11.0,<2.12
 pytest-cov>=2.5
 pytest>=3.0
 scipy>=1.4.1

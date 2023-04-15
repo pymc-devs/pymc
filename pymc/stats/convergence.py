@@ -1,3 +1,16 @@
+#   Copyright 2023 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
 import dataclasses
 import enum
 import logging
@@ -53,10 +66,13 @@ def run_convergence_checks(idata: arviz.InferenceData, model) -> List[SamplerWar
         warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info", None, None, None)
         return [warn]
 
+    if idata["posterior"].sizes["draw"] < 100:
+        msg = "The number of samples is too small to check convergence reliably."
+        warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info", None, None, None)
+        return [warn]
+
     if idata["posterior"].sizes["chain"] == 1:
-        msg = (
-            "Only one chain was sampled, this makes it impossible to " "run some convergence checks"
-        )
+        msg = "Only one chain was sampled, this makes it impossible to run some convergence checks"
         warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info")
         return [warn]
 
@@ -138,17 +154,17 @@ def warn_treedepth(idata: arviz.InferenceData) -> List[SamplerWarning]:
     if sampler_stats is None:
         return []
 
-    treedepth = sampler_stats.get("tree_depth", None)
-    if treedepth is None:
+    rmtd = sampler_stats.get("reached_max_treedepth", None)
+    if rmtd is None:
         return []
 
     warnings = []
-    for c in treedepth.chain:
-        if sum(treedepth.sel(chain=c)) / treedepth.sizes["draw"] > 0.05:
+    for c in rmtd.chain:
+        if sum(rmtd.sel(chain=c)) / rmtd.sizes["draw"] > 0.05:
             warnings.append(
                 SamplerWarning(
                     WarningType.TREEDEPTH,
-                    f"Chain {c} reached the maximum tree depth."
+                    f"Chain {int(c)} reached the maximum tree depth."
                     " Increase `max_treedepth`, increase `target_accept` or reparameterize.",
                     "warn",
                 )

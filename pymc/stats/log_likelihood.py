@@ -1,4 +1,4 @@
-#   Copyright 2022 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Optional, Sequence
+from typing import Optional, Sequence, cast
 
 import numpy as np
 
@@ -22,6 +22,7 @@ import pymc
 
 from pymc.backends.arviz import _DefaultTrace
 from pymc.model import Model, modelcontext
+from pymc.pytensorf import PointFunc
 from pymc.util import dataset_to_point_list
 
 __all__ = ("compute_log_likelihood",)
@@ -86,6 +87,7 @@ def compute_log_likelihood(
             outs=model.logp(vars=observed_vars, sum=False),
             on_unused_input="ignore",
         )
+        elemwise_loglike_fn = cast(PointFunc, elemwise_loglike_fn)
     finally:
         model.rvs_to_values = original_rvs_to_values
         model.rvs_to_transforms = original_rvs_to_transforms

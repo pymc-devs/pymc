@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -17,14 +17,7 @@ import logging
 
 from typing import Dict, List, Optional
 
-import arviz
-
-from pymc.stats.convergence import (
-    _LEVELS,
-    SamplerWarning,
-    log_warnings,
-    run_convergence_checks,
-)
+from pymc.stats.convergence import _LEVELS, SamplerWarning
 
 logger = logging.getLogger("pymc")
 
@@ -73,21 +66,12 @@ class SamplerReport:
         if errors:
             raise ValueError("Serious convergence issues during sampling.")
 
-    def _run_convergence_checks(self, idata: arviz.InferenceData, model):
-        warnings = run_convergence_checks(idata, model)
-        self._add_warnings(warnings)
-
     def _add_warnings(self, warnings, chain=None):
         if chain is None:
             warn_list = self._global_warnings
         else:
             warn_list = self._chain_warnings.setdefault(chain, [])
         warn_list.extend(warnings)
-
-    def _log_summary(self):
-        for chain, warns in self._chain_warnings.items():
-            log_warnings(warns)
-        log_warnings(self._global_warnings)
 
     def _slice(self, start, stop, step):
         report = SamplerReport()

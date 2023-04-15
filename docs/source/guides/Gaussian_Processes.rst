@@ -114,7 +114,7 @@ which allows users to combine covariance functions into new ones, for example:
 After the covariance function is defined, it is now a function that is
 evaluated by calling :code:`cov_func(x, x)` (or :code:`mean_func(x)`).  Since
 PyMC is built on top of PyTensor, it is relatively easy to define and experiment
-with non-standard covariance and mean functons.  For more information check out
+with non-standard covariance and mean functions.  For more information check out
 the tutorial on covariance functions.
 
 

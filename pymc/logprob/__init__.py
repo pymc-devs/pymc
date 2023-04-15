@@ -1,4 +1,4 @@
-#   Copyright 2022- The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -34,14 +34,13 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from pymc.logprob.abstract import logprob  # isort: split
-
-from pymc.logprob.joint_logprob import factorized_joint_logprob, joint_logprob
+from pymc.logprob.basic import factorized_joint_logprob, icdf, joint_logp, logcdf, logp
 
 # isort: off
 # Add rewrites to the DBs
 import pymc.logprob.censoring
 import pymc.logprob.cumsum
+import pymc.logprob.checks
 import pymc.logprob.mixture
 import pymc.logprob.scan
 import pymc.logprob.tensor
@@ -49,4 +48,8 @@ import pymc.logprob.transforms
 
 # isort: on
 
-__all__ = ()
+__all__ = (
+    "logp",
+    "logcdf",
+    "icdf",
+)

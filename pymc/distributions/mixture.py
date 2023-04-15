@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@ import warnings
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.graph.basic import Node, equal_computations
 from pytensor.tensor import TensorVariable
@@ -30,11 +30,11 @@ from pymc.distributions.distribution import (
     _moment,
     moment,
 )
-from pymc.distributions.logprob import ignore_logprob, logcdf, logp
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
 from pymc.distributions.transforms import _default_transform
-from pymc.logprob.abstract import _logcdf, _logprob
+from pymc.logprob.abstract import _logcdf, _logcdf_helper, _logprob, _logprob_helper
 from pymc.logprob.transforms import IntervalTransform
+from pymc.logprob.utils import ignore_logprob
 from pymc.util import check_dist_not_registered
 from pymc.vartypes import continuous_types, discrete_types
 
@@ -204,7 +204,7 @@ class Mixture(Distribution):
                 f"Mixture components must all have the same support dimensionality, got {components_ndim_supp}"
             )
 
-        w = at.as_tensor_variable(w)
+        w = pt.as_tensor_variable(w)
         return super().dist([w, *comp_dists], **kwargs)
 
     @classmethod
@@ -219,7 +219,7 @@ class Mixture(Distribution):
             components = cls._resize_components(size, *components)
         elif not single_component:
             # We might need to broadcast components when size is not specified
-            shape = tuple(at.broadcast_shape(*components))
+            shape = tuple(pt.broadcast_shape(*components))
             size = shape[: len(shape) - ndim_supp]
             components = cls._resize_components(size, *components)
 
@@ -237,7 +237,7 @@ class Mixture(Distribution):
         # we try to resize them. This in necessary to avoid duplicated values in the
         # random method and for equivalency with the logp method
         if weights_ndim_batch:
-            new_size = at.concatenate(
+            new_size = pt.concatenate(
                 [
                     weights.shape[:weights_ndim_batch],
                     components[0].shape[:ndim_batch],
@@ -270,19 +270,19 @@ class Mixture(Distribution):
             # If single component, we consider it as being already "stacked"
             stacked_components_ = components_[0]
         else:
-            stacked_components_ = at.stack(components_, axis=mix_axis)
+            stacked_components_ = pt.stack(components_, axis=mix_axis)
 
         # Broadcast weights to (*batched dimensions, stack dimension), ignoring support dimensions
         weights_broadcast_shape_ = stacked_components_.shape[: ndim_batch + 1]
-        weights_broadcasted_ = at.broadcast_to(weights_, weights_broadcast_shape_)
+        weights_broadcasted_ = pt.broadcast_to(weights_, weights_broadcast_shape_)
 
         # Draw mixture indexes and append (stack + ndim_supp) broadcastable dimensions to the right
-        mix_indexes_ = at.random.categorical(weights_broadcasted_, rng=mix_indexes_rng_)
-        mix_indexes_padded_ = at.shape_padright(mix_indexes_, ndim_supp + 1)
+        mix_indexes_ = pt.random.categorical(weights_broadcasted_, rng=mix_indexes_rng_)
+        mix_indexes_padded_ = pt.shape_padright(mix_indexes_, ndim_supp + 1)
 
         # Index components and squeeze mixture dimension
-        mix_out_ = at.take_along_axis(stacked_components_, mix_indexes_padded_, axis=mix_axis)
-        mix_out_ = at.squeeze(mix_out_, axis=mix_axis)
+        mix_out_ = pt.take_along_axis(stacked_components_, mix_indexes_padded_, axis=mix_axis)
+        mix_out_ = pt.squeeze(mix_out_, axis=mix_axis)
 
         # Output mix_indexes rng update so that it can be updated in place
         mix_indexes_rng_next_ = mix_indexes_.owner.outputs[0]
@@ -336,20 +336,20 @@ def marginal_mixture_logprob(op, values, rng, weights, *components, **kwargs):
     if len(components) == 1:
         # Need to broadcast value across mixture axis
         mix_axis = -components[0].owner.op.ndim_supp - 1
-        components_logp = logp(components[0], at.expand_dims(value, mix_axis))
+        components_logp = _logprob_helper(components[0], pt.expand_dims(value, mix_axis))
     else:
-        components_logp = at.stack(
-            [logp(component, value) for component in components],
+        components_logp = pt.stack(
+            [_logprob_helper(component, value) for component in components],
             axis=-1,
         )
 
-    mix_logp = at.logsumexp(at.log(weights) + components_logp, axis=-1)
+    mix_logp = pt.logsumexp(pt.log(weights) + components_logp, axis=-1)
 
     mix_logp = check_parameters(
         mix_logp,
         0 <= weights,
         weights <= 1,
-        at.isclose(at.sum(weights, axis=-1), 1),
+        pt.isclose(pt.sum(weights, axis=-1), 1),
         msg="0 <= weights <= 1, sum(weights) == 1",
     )
 
@@ -358,25 +358,24 @@ def marginal_mixture_logprob(op, values, rng, weights, *components, **kwargs):
 
 @_logcdf.register(MarginalMixtureRV)
 def marginal_mixture_logcdf(op, value, rng, weights, *components, **kwargs):
-
     # single component
     if len(components) == 1:
         # Need to broadcast value across mixture axis
         mix_axis = -components[0].owner.op.ndim_supp - 1
-        components_logcdf = logcdf(components[0], at.expand_dims(value, mix_axis))
+        components_logcdf = _logcdf_helper(components[0], pt.expand_dims(value, mix_axis))
     else:
-        components_logcdf = at.stack(
-            [logcdf(component, value) for component in components],
+        components_logcdf = pt.stack(
+            [_logcdf_helper(component, value) for component in components],
             axis=-1,
         )
 
-    mix_logcdf = at.logsumexp(at.log(weights) + components_logcdf, axis=-1)
+    mix_logcdf = pt.logsumexp(pt.log(weights) + components_logcdf, axis=-1)
 
     mix_logcdf = check_parameters(
         mix_logcdf,
         0 <= weights,
         weights <= 1,
-        at.isclose(at.sum(weights, axis=-1), 1),
+        pt.isclose(pt.sum(weights, axis=-1), 1),
         msg="0 <= weights <= 1, sum(weights) == 1",
     )
 
@@ -386,21 +385,21 @@ def marginal_mixture_logcdf(op, value, rng, weights, *components, **kwargs):
 @_moment.register(MarginalMixtureRV)
 def marginal_mixture_moment(op, rv, rng, weights, *components):
     ndim_supp = components[0].owner.op.ndim_supp
-    weights = at.shape_padright(weights, ndim_supp)
+    weights = pt.shape_padright(weights, ndim_supp)
     mix_axis = -ndim_supp - 1
 
     if len(components) == 1:
         moment_components = moment(components[0])
 
     else:
-        moment_components = at.stack(
+        moment_components = pt.stack(
             [moment(component) for component in components],
             axis=mix_axis,
         )
 
-    mix_moment = at.sum(weights * moment_components, axis=mix_axis)
+    mix_moment = pt.sum(weights * moment_components, axis=mix_axis)
     if components[0].dtype in discrete_types:
-        mix_moment = at.round(mix_moment)
+        mix_moment = pt.round(mix_moment)
     return mix_moment
 
 

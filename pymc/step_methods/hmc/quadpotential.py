@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -419,7 +419,7 @@ class QuadPotentialDiagAdaptExp(QuadPotentialDiagAdapt):
         initial_diag : np.ndarray
             An estimate of the posterior variance of each parameter.
         alpha : float
-            Decay rate of the exponetial weighted variance.
+            Decay rate of the exponential weighted variance.
         use_grads : bool
             Use gradients, not only samples to estimate the mass matrix.
         stop_adaptation : int

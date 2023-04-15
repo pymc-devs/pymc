@@ -1,0 +1,1052 @@
+#   Copyright 2023 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#   MIT License
+#
+#   Copyright (c) 2021-2022 aesara-devs
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in all
+#   copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+
+import numpy as np
+import pytensor
+import pytensor.tensor as pt
+import pytest
+import scipy.stats.distributions as sp
+
+from pytensor import function
+from pytensor.graph.basic import Variable, equal_computations
+from pytensor.ifelse import ifelse
+from pytensor.tensor.random.basic import CategoricalRV
+from pytensor.tensor.shape import shape_tuple
+from pytensor.tensor.subtensor import as_index_constant
+
+from pymc.logprob.basic import factorized_joint_logprob
+from pymc.logprob.mixture import MixtureRV, expand_indices
+from pymc.logprob.rewriting import construct_ir_fgraph
+from pymc.logprob.utils import dirac_delta
+from pymc.testing import assert_no_rvs
+from tests.logprob.utils import joint_logprob, scipy_logprob
+
+
+def test_mixture_basics():
+    srng = pt.random.RandomStream(29833)
+
+    def create_mix_model(size, axis):
+        X_rv = srng.normal(0, 1, size=size, name="X")
+        Y_rv = srng.gamma(0.5, 0.5, size=size, name="Y")
+
+        p_at = pt.scalar("p")
+        p_at.tag.test_value = 0.5
+
+        I_rv = srng.bernoulli(p_at, size=size, name="I")
+        i_vv = I_rv.clone()
+        i_vv.name = "i"
+
+        if isinstance(axis, Variable):
+            M_rv = pt.join(axis, X_rv, Y_rv)[I_rv]
+        else:
+            M_rv = pt.stack([X_rv, Y_rv], axis=axis)[I_rv]
+
+        M_rv.name = "M"
+        m_vv = M_rv.clone()
+        m_vv.name = "m"
+
+        return locals()
+
+    env = create_mix_model(None, 0)
+    X_rv = env["X_rv"]
+    I_rv = env["I_rv"]
+    i_vv = env["i_vv"]
+    M_rv = env["M_rv"]
+    m_vv = env["m_vv"]
+
+    x_vv = X_rv.clone()
+    x_vv.name = "x"
+
+    with pytest.raises(RuntimeError, match="could not be derived: {m}"):
+        factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv, X_rv: x_vv})
+
+    with pytest.raises(RuntimeError, match="could not be derived: {m}"):
+        axis_at = pt.lscalar("axis")
+        axis_at.tag.test_value = 0
+        env = create_mix_model((2,), axis_at)
+        I_rv = env["I_rv"]
+        i_vv = env["i_vv"]
+        M_rv = env["M_rv"]
+        m_vv = env["m_vv"]
+        joint_logprob({M_rv: m_vv, I_rv: i_vv})
+
+
+@pytensor.config.change_flags(compute_test_value="warn")
+@pytest.mark.parametrize(
+    "op_constructor",
+    [
+        lambda _I, _X, _Y: pt.stack([_X, _Y])[_I],
+        lambda _I, _X, _Y: pt.switch(_I, _X, _Y),
+    ],
+)
+def test_compute_test_value(op_constructor):
+    srng = pt.random.RandomStream(29833)
+
+    X_rv = srng.normal(0, 1, name="X")
+    Y_rv = srng.gamma(0.5, 0.5, name="Y")
+
+    p_at = pt.scalar("p")
+    p_at.tag.test_value = 0.3
+
+    I_rv = srng.bernoulli(p_at, name="I")
+
+    i_vv = I_rv.clone()
+    i_vv.name = "i"
+
+    M_rv = op_constructor(I_rv, X_rv, Y_rv)
+    M_rv.name = "M"
+
+    m_vv = M_rv.clone()
+    m_vv.name = "m"
+
+    del M_rv.tag.test_value
+
+    M_logp = joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
+
+    assert isinstance(M_logp.tag.test_value, np.ndarray)
+
+
+@pytest.mark.parametrize(
+    "p_val, size, supported",
+    [
+        (np.array(0.0, dtype=pytensor.config.floatX), (), True),
+        (np.array(1.0, dtype=pytensor.config.floatX), (), True),
+        (np.array([0.1, 0.9], dtype=pytensor.config.floatX), (), True),
+        # The cases belowe are not supported because they may pick repeated values via AdvancedIndexing
+        (np.array(0.0, dtype=pytensor.config.floatX), (2,), False),
+        (np.array(1.0, dtype=pytensor.config.floatX), (2, 1), False),
+        (np.array(1.0, dtype=pytensor.config.floatX), (2, 3), False),
+        (np.array([0.1, 0.9], dtype=pytensor.config.floatX), (2, 3), False),
+    ],
+)
+def test_hetero_mixture_binomial(p_val, size, supported):
+    srng = pt.random.RandomStream(29833)
+
+    X_rv = srng.normal(0, 1, size=size, name="X")
+    Y_rv = srng.gamma(0.5, 0.5, size=size, name="Y")
+
+    if np.ndim(p_val) == 0:
+        p_at = pt.scalar("p")
+        p_at.tag.test_value = p_val
+        I_rv = srng.bernoulli(p_at, size=size, name="I")
+        p_val_1 = p_val
+    else:
+        p_at = pt.vector("p")
+        p_at.tag.test_value = np.array(p_val, dtype=pytensor.config.floatX)
+        I_rv = srng.categorical(p_at, size=size, name="I")
+        p_val_1 = p_val[1]
+
+    i_vv = I_rv.clone()
+    i_vv.name = "i"
+
+    M_rv = pt.stack([X_rv, Y_rv])[I_rv]
+    M_rv.name = "M"
+
+    m_vv = M_rv.clone()
+    m_vv.name = "m"
+
+    if supported:
+        M_logp = joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
+    else:
+        with pytest.raises(RuntimeError, match="could not be derived: {m}"):
+            joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
+        return
+
+    M_logp_fn = pytensor.function([p_at, m_vv, i_vv], M_logp)
+
+    assert_no_rvs(M_logp_fn.maker.fgraph.outputs[0])
+
+    decimals = 6 if pytensor.config.floatX == "float64" else 4
+
+    test_val_rng = np.random.RandomState(3238)
+
+    bern_sp = sp.bernoulli(p_val_1)
+    norm_sp = sp.norm(loc=0, scale=1)
+    gamma_sp = sp.gamma(0.5, scale=1.0 / 0.5)
+
+    for i in range(10):
+        i_val = bern_sp.rvs(size=size, random_state=test_val_rng)
+        x_val = norm_sp.rvs(size=size, random_state=test_val_rng)
+        y_val = gamma_sp.rvs(size=size, random_state=test_val_rng)
+
+        component_logps = np.stack([norm_sp.logpdf(x_val), gamma_sp.logpdf(y_val)])[i_val]
+        exp_obs_logps = component_logps + bern_sp.logpmf(i_val)
+
+        m_val = np.stack([x_val, y_val])[i_val]
+        logp_vals = M_logp_fn(p_val, m_val, i_val)
+
+        np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)
+
+
+@pytest.mark.parametrize(
+    "X_args, Y_args, Z_args, p_val, comp_size, idx_size, extra_indices, join_axis, supported",
+    [
+        # Scalar components, scalar index
+        (
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (),
+            (),
+            (),
+            0,
+            True,
+        ),
+        # Degenerate vector mixture components, scalar index along join axis
+        (
+            (
+                np.array([0], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([0.5], dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([100], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            None,
+            (),
+            (),
+            0,
+            True,
+        ),
+        # Degenerate vector mixture components, scalar index along join axis (axis=1)
+        (
+            (
+                np.array([0], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([0.5], dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([100], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            None,
+            (),
+            (slice(None),),
+            1,
+            True,
+        ),
+        # Vector mixture components, scalar index along the join axis
+        (
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (4,),
+            (),
+            (),
+            0,
+            True,
+        ),
+        # Vector mixture components, scalar index along the join axis (axis=1)
+        (
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (4,),
+            (),
+            (slice(None),),
+            1,
+            True,
+        ),
+        # Vector mixture components, scalar index that mixes across components
+        pytest.param(
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.1, 0.3], dtype=pytensor.config.floatX),
+            (4,),
+            (),
+            (),
+            1,
+            True,
+            marks=pytest.mark.xfail(
+                AssertionError,
+                match="Arrays are not almost equal to 6 decimals",  # This is ignored, but that's where it should fail!
+                reason="IfElse Mixture logprob fails when indexing mixes across components",
+            ),
+        ),
+        # Matrix components, scalar index along first axis
+        (
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (2, 3),
+            (),
+            (),
+            0,
+            True,
+        ),
+        # All the tests below rely on AdvancedIndexing, which is not supported at the moment
+        # See https://github.com/pymc-devs/pymc/issues/6398
+        # Scalar mixture components, vector index along first axis
+        (
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (),
+            (6,),
+            (),
+            0,
+            False,
+        ),
+        # Vector mixture components, vector index along first axis
+        (
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (2,),
+            (2,),
+            (slice(None),),
+            0,
+            False,
+        ),
+        # Vector mixture components, vector index along last axis
+        (
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (2,),
+            (4,),
+            (slice(None),),
+            1,
+            False,
+        ),
+        # Vector mixture components (with degenerate vector parameters), vector index along first axis
+        (
+            (
+                np.array([0], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([0.5], dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([100], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (2,),
+            (2,),
+            (),
+            0,
+            False,
+        ),
+        # Vector mixture components (with vector parameters), vector index along first axis
+        (
+            (
+                np.array([0, -100], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([0.5, 1], dtype=pytensor.config.floatX),
+                np.array([0.5, 1], dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([100, 1000], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([[0.1, 0.5, 0.4], [0.4, 0.1, 0.5]], dtype=pytensor.config.floatX),
+            (2,),
+            (2,),
+            (),
+            0,
+            False,
+        ),
+        # Vector mixture components (with vector parameters), vector index along first axis, implicit sizes
+        (
+            (
+                np.array([0, -100], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([0.5, 1], dtype=pytensor.config.floatX),
+                np.array([0.5, 1], dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array([100, 1000], dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([[0.1, 0.5, 0.4], [0.4, 0.1, 0.5]], dtype=pytensor.config.floatX),
+            None,
+            None,
+            (),
+            0,
+            False,
+        ),
+        # Matrix mixture components, matrix index
+        (
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (2, 3),
+            (2, 3),
+            (),
+            0,
+            False,
+        ),
+        # Vector components, matrix indexing (constant along first dimension, then random)
+        (
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (5,),
+            (5,),
+            (np.arange(5),),
+            0,
+            False,
+        ),
+        # Vector mixture components, tensor3 indexing (constant along first dimension, then degenerate, then random)
+        (
+            (
+                np.array(0, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(0.5, dtype=pytensor.config.floatX),
+            ),
+            (
+                np.array(100, dtype=pytensor.config.floatX),
+                np.array(1, dtype=pytensor.config.floatX),
+            ),
+            np.array([0.1, 0.5, 0.4], dtype=pytensor.config.floatX),
+            (5,),
+            (5,),
+            (np.arange(5), None),
+            0,
+            False,
+        ),
+    ],
+)
+def test_hetero_mixture_categorical(
+    X_args, Y_args, Z_args, p_val, comp_size, idx_size, extra_indices, join_axis, supported
+):
+    srng = pt.random.RandomStream(29833)
+
+    X_rv = srng.normal(*X_args, size=comp_size, name="X")
+    Y_rv = srng.gamma(*Y_args, size=comp_size, name="Y")
+    Z_rv = srng.normal(*Z_args, size=comp_size, name="Z")
+
+    p_at = pt.as_tensor(p_val).type()
+    p_at.name = "p"
+    p_at.tag.test_value = np.array(p_val, dtype=pytensor.config.floatX)
+    I_rv = srng.categorical(p_at, size=idx_size, name="I")
+
+    i_vv = I_rv.clone()
+    i_vv.name = "i"
+
+    indices_at = list(extra_indices)
+    indices_at.insert(join_axis, I_rv)
+    indices_at = tuple(indices_at)
+
+    M_rv = pt.stack([X_rv, Y_rv, Z_rv], axis=join_axis)[indices_at]
+    M_rv.name = "M"
+
+    m_vv = M_rv.clone()
+    m_vv.name = "m"
+
+    if supported:
+        logp_parts = factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
+    else:
+        with pytest.raises(RuntimeError, match="could not be derived: {m}"):
+            factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
+        return
+
+    I_logp_fn = pytensor.function([p_at, i_vv], logp_parts[i_vv])
+    M_logp_fn = pytensor.function([m_vv, i_vv], logp_parts[m_vv])
+
+    assert_no_rvs(I_logp_fn.maker.fgraph.outputs[0])
+    assert_no_rvs(M_logp_fn.maker.fgraph.outputs[0])
+
+    decimals = 6 if pytensor.config.floatX == "float64" else 4
+
+    test_val_rng = np.random.RandomState(3238)
+
+    norm_1_sp = sp.norm(loc=X_args[0], scale=X_args[1])
+    gamma_sp = sp.gamma(Y_args[0], scale=1 / Y_args[1])
+    norm_2_sp = sp.norm(loc=Z_args[0], scale=Z_args[1])
+
+    # Handle scipy annoying squeeze of random draws
+    real_comp_size = tuple(X_rv.shape.eval())
+
+    for i in range(10):
+        i_val = CategoricalRV.rng_fn(test_val_rng, p_val, idx_size)
+
+        indices_val = list(extra_indices)
+        indices_val.insert(join_axis, i_val)
+        indices_val = tuple(indices_val)
+
+        x_val = np.broadcast_to(
+            norm_1_sp.rvs(size=comp_size, random_state=test_val_rng), real_comp_size
+        )
+        y_val = np.broadcast_to(
+            gamma_sp.rvs(size=comp_size, random_state=test_val_rng), real_comp_size
+        )
+        z_val = np.broadcast_to(
+            norm_2_sp.rvs(size=comp_size, random_state=test_val_rng), real_comp_size
+        )
+
+        component_logps = np.stack(
+            [norm_1_sp.logpdf(x_val), gamma_sp.logpdf(y_val), norm_2_sp.logpdf(z_val)],
+            axis=join_axis,
+        )[indices_val]
+        index_logps = scipy_logprob(i_val, p_val)
+        exp_obs_logps = component_logps + index_logps[(Ellipsis,) + (None,) * join_axis]
+
+        m_val = np.stack([x_val, y_val, z_val], axis=join_axis)[indices_val]
+
+        I_logp_vals = I_logp_fn(p_val, i_val)
+        M_logp_vals = M_logp_fn(m_val, i_val)
+
+        logp_vals = M_logp_vals + I_logp_vals[(Ellipsis,) + (None,) * join_axis]
+
+        np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)
+
+
+@pytest.mark.parametrize(
+    "A_parts, indices",
+    [
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (np.array([[0, 1], [2, 2]]), slice(2, 3)),
+        ),
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (slice(2, 3), np.array([[0, 1], [2, 2]])),
+        ),
+        (
+            (
+                np.random.normal(size=(5, 4, 3)),
+                np.random.normal(size=(5, 4, 3)),
+                np.random.normal(size=(5, 4, 3)),
+            ),
+            (
+                np.array([[0], [2], [1]]),
+                slice(None),
+                np.array([2, 1]),
+                slice(2, 3),
+            ),
+        ),
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (slice(2, 3), np.array([0, 1, 2])),
+        ),
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (np.array([[0, 1], [2, 2]]), np.array([[0, 1], [2, 2]])),
+        ),
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (
+                np.array([[0, 1], [2, 2]]),
+                np.array([[0, 1], [2, 2]]),
+                np.array([[0, 1], [2, 2]]),
+            ),
+        ),
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (np.array([[0, 1], [2, 2]]), np.array([[0, 1], [2, 2]]), 1),
+        ),
+        (
+            (
+                np.random.normal(size=(5, 4, 3)),
+                np.random.normal(size=(5, 4, 3)),
+            ),
+            (slice(0, 2),),
+        ),
+        (
+            (
+                np.random.normal(size=(5, 4, 3)),
+                np.random.normal(size=(5, 4, 3)),
+            ),
+            (slice(0, 2), np.random.randint(3, size=(2, 3))),
+        ),
+    ],
+)
+def test_expand_indices_basic(A_parts, indices):
+    A = pt.stack(A_parts)
+    at_indices = [as_index_constant(idx) for idx in indices]
+    full_indices = expand_indices(at_indices, shape_tuple(A))
+    assert len(full_indices) == A.ndim
+    exp_res = A[indices].eval()
+    res = A[full_indices].eval()
+    assert np.array_equal(res, exp_res)
+
+
+@pytest.mark.parametrize(
+    "A_parts, indices",
+    [
+        (
+            (
+                np.random.normal(size=(6, 5, 4, 3)),
+                np.random.normal(size=(6, 5, 4, 3)),
+                np.random.normal(size=(6, 5, 4, 3)),
+            ),
+            (
+                slice(None),
+                np.array([[0], [2], [1]]),
+                slice(None),
+                np.array([2, 1]),
+                slice(2, 3),
+            ),
+        ),
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (np.array([[0, 1], [2, 2]]), slice(None), np.array([[0, 1], [2, 2]])),
+        ),
+    ],
+)
+def test_expand_indices_moved_subspaces(A_parts, indices):
+    A = pt.stack(A_parts)
+    at_indices = [as_index_constant(idx) for idx in indices]
+    full_indices = expand_indices(at_indices, shape_tuple(A))
+    assert len(full_indices) == A.ndim
+    exp_res = A[indices].eval()
+    res = A[full_indices].eval()
+    assert np.array_equal(res, exp_res)
+
+
+@pytest.mark.parametrize(
+    "A_parts, indices",
+    [
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (slice(2, 3), np.array([0, 1, 2]), 1),
+        ),
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (slice(2, 3), 1, np.array([0, 1, 2])),
+        ),
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (1, slice(2, 3), np.array([0, 1, 2])),
+        ),
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (np.random.randint(2, size=(4, 3)), 1, 0),
+        ),
+    ],
+)
+def test_expand_indices_single_indices(A_parts, indices):
+    A = pt.stack(A_parts)
+    at_indices = [as_index_constant(idx) for idx in indices]
+    full_indices = expand_indices(at_indices, shape_tuple(A))
+    assert len(full_indices) == A.ndim
+    exp_res = A[indices].eval()
+    res = A[full_indices].eval()
+    assert np.array_equal(res, exp_res)
+
+
+@pytest.mark.parametrize(
+    "A_parts, indices",
+    [
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (None,),
+        ),
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (None, None, None),
+        ),
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (None, 1, None, 0, None),
+        ),
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (slice(2, 3), None, 1, None, 0, None),
+        ),
+        (
+            (
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+                np.random.normal(size=(4, 3)),
+            ),
+            (slice(2, 3), None, 1, 0, None),
+        ),
+    ],
+)
+def test_expand_indices_newaxis(A_parts, indices):
+    A = pt.stack(A_parts)
+    at_indices = [as_index_constant(idx) for idx in indices]
+    full_indices = expand_indices(at_indices, shape_tuple(A))
+    assert len(full_indices) == A.ndim
+    exp_res = A[indices].eval()
+    res = A[full_indices].eval()
+    assert np.array_equal(res, exp_res)
+
+
+def test_mixture_with_DiracDelta():
+    srng = pt.random.RandomStream(29833)
+
+    X_rv = srng.normal(0, 1, name="X")
+    Y_rv = dirac_delta(0.0)
+    Y_rv.name = "Y"
+
+    I_rv = srng.categorical([0.5, 0.5], size=1)
+
+    i_vv = I_rv.clone()
+    i_vv.name = "i"
+
+    M_rv = pt.stack([X_rv, Y_rv])[I_rv]
+    M_rv.name = "M"
+
+    m_vv = M_rv.clone()
+    m_vv.name = "m"
+
+    logp_res = factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
+
+    assert m_vv in logp_res
+
+
+def test_switch_mixture():
+    srng = pt.random.RandomStream(29833)
+
+    X_rv = srng.normal(-10.0, 0.1, name="X")
+    Y_rv = srng.normal(10.0, 0.1, name="Y")
+
+    I_rv = srng.bernoulli(0.5, name="I")
+    i_vv = I_rv.clone()
+    i_vv.name = "i"
+
+    Z1_rv = pt.switch(I_rv, X_rv, Y_rv)
+    z_vv = Z1_rv.clone()
+    z_vv.name = "z1"
+
+    fgraph, _, _ = construct_ir_fgraph({Z1_rv: z_vv, I_rv: i_vv})
+
+    assert isinstance(fgraph.outputs[0].owner.op, MixtureRV)
+    assert not hasattr(
+        fgraph.outputs[0].tag, "test_value"
+    )  # pytensor.config.compute_test_value == "off"
+    assert fgraph.outputs[0].name is None
+
+    Z1_rv.name = "Z1"
+
+    fgraph, _, _ = construct_ir_fgraph({Z1_rv: z_vv, I_rv: i_vv})
+
+    assert fgraph.outputs[0].name == "Z1-mixture"
+
+    # building the identical graph but with a stack to check that mixture computations are identical
+
+    Z2_rv = pt.stack((X_rv, Y_rv))[I_rv]
+
+    fgraph2, _, _ = construct_ir_fgraph({Z2_rv: z_vv, I_rv: i_vv})
+
+    assert equal_computations(fgraph.outputs, fgraph2.outputs)
+
+    z1_logp = joint_logprob({Z1_rv: z_vv, I_rv: i_vv})
+    z2_logp = joint_logprob({Z2_rv: z_vv, I_rv: i_vv})
+
+    # below should follow immediately from the equal_computations assertion above
+    assert equal_computations([z1_logp], [z2_logp])
+
+    np.testing.assert_almost_equal(0.69049938, z1_logp.eval({z_vv: -10, i_vv: 0}))
+    np.testing.assert_almost_equal(0.69049938, z2_logp.eval({z_vv: -10, i_vv: 0}))
+
+
+def test_ifelse_mixture_one_component():
+    if_rv = pt.random.bernoulli(0.5, name="if")
+    scale_rv = pt.random.halfnormal(name="scale")
+    comp_then = pt.random.normal(0, scale_rv, size=(2,), name="comp_then")
+    comp_else = pt.random.halfnormal(0, scale_rv, size=(4,), name="comp_else")
+    mix_rv = ifelse(if_rv, comp_then, comp_else, name="mix")
+
+    if_vv = if_rv.clone()
+    scale_vv = scale_rv.clone()
+    mix_vv = mix_rv.clone()
+    mix_logp = factorized_joint_logprob({if_rv: if_vv, scale_rv: scale_vv, mix_rv: mix_vv})[mix_vv]
+    assert_no_rvs(mix_logp)
+
+    fn = function([if_vv, scale_vv, mix_vv], mix_logp)
+    scale_vv_test = 0.75
+    mix_vv_test = np.r_[1.0, 2.5]
+    np.testing.assert_array_almost_equal(
+        fn(1, scale_vv_test, mix_vv_test),
+        sp.norm(0, scale_vv_test).logpdf(mix_vv_test),
+    )
+    mix_vv_test = np.r_[1.0, 2.5, 3.5, 4.0]
+    np.testing.assert_array_almost_equal(
+        fn(0, scale_vv_test, mix_vv_test), sp.halfnorm(0, scale_vv_test).logpdf(mix_vv_test)
+    )
+
+
+def test_ifelse_mixture_multiple_components():
+    rng = np.random.default_rng(968)
+
+    if_var = pt.scalar("if_var", dtype="bool")
+    comp_then1 = pt.random.normal(size=(2,), name="comp_true1")
+    comp_then2 = pt.random.normal(comp_then1, size=(2, 2), name="comp_then2")
+    comp_else1 = pt.random.halfnormal(size=(4,), name="comp_else1")
+    comp_else2 = pt.random.halfnormal(size=(4, 4), name="comp_else2")
+
+    mix_rv1, mix_rv2 = ifelse(
+        if_var, [comp_then1, comp_then2], [comp_else1, comp_else2], name="mix"
+    )
+    mix_vv1 = mix_rv1.clone()
+    mix_vv2 = mix_rv2.clone()
+    mix_logp1, mix_logp2 = factorized_joint_logprob({mix_rv1: mix_vv1, mix_rv2: mix_vv2}).values()
+    assert_no_rvs(mix_logp1)
+    assert_no_rvs(mix_logp2)
+
+    fn = function([if_var, mix_vv1, mix_vv2], mix_logp1.sum() + mix_logp2.sum())
+    mix_vv1_test = np.abs(rng.normal(size=(2,)))
+    mix_vv2_test = np.abs(rng.normal(size=(2, 2)))
+    np.testing.assert_almost_equal(
+        fn(True, mix_vv1_test, mix_vv2_test),
+        sp.norm(0, 1).logpdf(mix_vv1_test).sum()
+        + sp.norm(mix_vv1_test, 1).logpdf(mix_vv2_test).sum(),
+    )
+    mix_vv1_test = np.abs(rng.normal(size=(4,)))
+    mix_vv2_test = np.abs(rng.normal(size=(4, 4)))
+    np.testing.assert_almost_equal(
+        fn(False, mix_vv1_test, mix_vv2_test),
+        sp.halfnorm(0, 1).logpdf(mix_vv1_test).sum() + sp.halfnorm(0, 1).logpdf(mix_vv2_test).sum(),
+    )
+
+
+def test_ifelse_mixture_shared_component():
+    rng = np.random.default_rng(1009)
+
+    if_var = pt.scalar("if_var", dtype="bool")
+    outer_rv = pt.random.normal(name="outer")
+    # comp_shared need not be an output of ifelse at all,
+    # but since we allow arbitrary graphs we test it works as expected.
+    comp_shared = pt.random.normal(size=(2,), name="comp_shared")
+    comp_then = outer_rv + pt.random.normal(comp_shared, 1, size=(4, 2), name="comp_then")
+    comp_else = outer_rv + pt.random.normal(comp_shared, 10, size=(8, 2), name="comp_else")
+    shared_rv, mix_rv = ifelse(
+        if_var, [comp_shared, comp_then], [comp_shared, comp_else], name="mix"
+    )
+
+    outer_vv = outer_rv.clone()
+    shared_vv = shared_rv.clone()
+    mix_vv = mix_rv.clone()
+    outer_logp, mix_logp1, mix_logp2 = factorized_joint_logprob(
+        {outer_rv: outer_vv, shared_rv: shared_vv, mix_rv: mix_vv}
+    ).values()
+    assert_no_rvs(outer_logp)
+    assert_no_rvs(mix_logp1)
+    assert_no_rvs(mix_logp2)
+
+    fn = function([if_var, outer_vv, shared_vv, mix_vv], mix_logp1.sum() + mix_logp2.sum())
+    outer_vv_test = rng.normal()
+    shared_vv_test = rng.normal(size=(2,))
+    mix_vv_test = rng.normal(size=(4, 2))
+    np.testing.assert_almost_equal(
+        fn(True, outer_vv_test, shared_vv_test, mix_vv_test),
+        (
+            sp.norm(0, 1).logpdf(shared_vv_test).sum()
+            + sp.norm(outer_vv_test + shared_vv_test, 1).logpdf(mix_vv_test).sum()
+        ),
+    )
+    mix_vv_test = rng.normal(size=(8, 2))
+    np.testing.assert_almost_equal(
+        fn(False, outer_vv_test, shared_vv_test, mix_vv_test),
+        (
+            sp.norm(0, 1).logpdf(shared_vv_test).sum()
+            + sp.norm(outer_vv_test + shared_vv_test, 10).logpdf(mix_vv_test).sum()
+        ),
+        decimal=6,
+    )

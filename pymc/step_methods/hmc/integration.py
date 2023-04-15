@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ class CpuLeapfrogIntegrator:
             return self._step(epsilon, state)
         except linalg.LinAlgError as err:
             msg = "LinAlgError during leapfrog step."
-            raise IntegrationError(msg)
+            raise IntegrationError(msg) from err
         except ValueError as err:
             # Raised by many scipy.linalg functions
             scipy_msg = "array must not contain infs or nans"

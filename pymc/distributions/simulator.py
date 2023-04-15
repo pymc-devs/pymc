@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ import logging
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.graph.op import Apply, Op
 from pytensor.tensor.random.op import RandomVariable
@@ -86,15 +86,6 @@ class Simulator(Distribution):
         Keyword form of ''unnamed_params''.
         One of unnamed_params or params must be provided.
         If passed both unnamed_params and params, an error is raised.
-    class_name : str
-        Name for the RandomVariable class which will wrap the Simulator methods.
-        When not specified, it will be given the name of the variable.
-
-        .. warning:: New Simulators created with the same class_name will override the
-            methods dispatched onto the previous classes. If using Simulators with
-            different methods across separate models, be sure to use distinct
-            class_names.
-
     distance : PyTensor_Op, callable or str, default "gaussian"
         Distance function. Available options are ``"gaussian"``, ``"laplace"``,
         ``"kullback_leibler"`` or a user defined function (or PyTensor_Op) that takes
@@ -123,6 +114,8 @@ class Simulator(Distribution):
         Number of minimum dimensions of each parameter of the RV. For example,
         if the Simulator accepts two scalar inputs, it should be ``[0, 0]``.
         Default to list of 0 with length equal to the number of parameters.
+    class_name : str, optional
+        Suffix name for the RandomVariable class which will wrap the Simulator methods.
 
     Examples
     --------
@@ -149,7 +142,7 @@ class Simulator(Distribution):
     rv_type = SimulatorRV
 
     def __new__(cls, name, *args, **kwargs):
-        kwargs.setdefault("class_name", name)
+        kwargs.setdefault("class_name", f"Simulator_{name}")
         return super().__new__(cls, name, *args, **kwargs)
 
     @classmethod
@@ -158,16 +151,15 @@ class Simulator(Distribution):
         fn,
         *unnamed_params,
         params=None,
-        class_name: str,
         distance="gaussian",
         sum_stat="identity",
         epsilon=1,
         ndim_supp=0,
         ndims_params=None,
         dtype="floatX",
+        class_name: str = "Simulator",
         **kwargs,
     ):
-
         if not isinstance(distance, Op):
             if distance == "gaussian":
                 distance = gaussian
@@ -189,9 +181,9 @@ class Simulator(Distribution):
             if sum_stat == "identity":
                 sum_stat = identity
             elif sum_stat == "sort":
-                sum_stat = at.sort
+                sum_stat = pt.sort
             elif sum_stat == "mean":
-                sum_stat = at.mean
+                sum_stat = pt.mean
             elif sum_stat == "median":
                 # Missing in PyTensor, see pytensor/issues/525
                 sum_stat = create_sum_stat_op_from_fn(np.median)
@@ -200,7 +192,7 @@ class Simulator(Distribution):
             else:
                 raise ValueError(f"The summary statistic {sum_stat} is not implemented")
 
-        epsilon = at.as_tensor_variable(floatX(epsilon))
+        epsilon = pt.as_tensor_variable(floatX(epsilon))
 
         if params is None:
             params = unnamed_params
@@ -214,7 +206,6 @@ class Simulator(Distribution):
 
         return super().dist(
             params,
-            class_name=class_name,
             fn=fn,
             ndim_supp=ndim_supp,
             ndims_params=ndims_params,
@@ -222,6 +213,7 @@ class Simulator(Distribution):
             distance=distance,
             sum_stat=sum_stat,
             epsilon=epsilon,
+            class_name=class_name,
             **kwargs,
         )
 
@@ -229,7 +221,6 @@ class Simulator(Distribution):
     def rv_op(
         cls,
         *params,
-        class_name,
         fn,
         ndim_supp,
         ndims_params,
@@ -237,13 +228,14 @@ class Simulator(Distribution):
         distance,
         sum_stat,
         epsilon,
+        class_name,
         **kwargs,
     ):
         sim_op = type(
-            f"Simulator_{class_name}",
+            class_name,
             (SimulatorRV,),
             dict(
-                name=f"Simulator_{class_name}",
+                name=class_name,
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
                 dtype=dtype,
@@ -261,8 +253,8 @@ class Simulator(Distribution):
 def simulator_moment(op, rv, *inputs):
     sim_inputs = inputs[3:]
     # Take the mean of 10 draws
-    multiple_sim = rv.owner.op(*sim_inputs, size=at.concatenate([[10], rv.shape]))
-    return at.mean(multiple_sim, axis=0)
+    multiple_sim = rv.owner.op(*sim_inputs, size=pt.concatenate([[10], rv.shape]))
+    return pt.mean(multiple_sim, axis=0)
 
 
 @_logprob.register(SimulatorRV)
@@ -272,7 +264,7 @@ def simulator_logp(op, values, *inputs, **kwargs):
     # Use a new rng to avoid non-randomness in parallel sampling
     # TODO: Model rngs should be updated prior to multiprocessing split,
     #  in which case this would not be needed. However, that would have to be
-    #  done for every sampler that may accomodate Simulators
+    #  done for every sampler that may accommodate Simulators
     rng = pytensor.shared(np.random.default_rng(), name="simulator_rng")
     # Create a new simulatorRV with identical inputs as the original one
     sim_value = op.make_node(rng, *inputs[1:]).default_output()
@@ -297,7 +289,7 @@ def gaussian(epsilon, obs_data, sim_data):
 
 def laplace(epsilon, obs_data, sim_data):
     """Laplace kernel."""
-    return -at.abs((obs_data - sim_data) / epsilon)
+    return -pt.abs((obs_data - sim_data) / epsilon)
 
 
 class KullbackLeibler:
@@ -321,7 +313,7 @@ class KullbackLeibler:
 
 
 def create_sum_stat_op_from_fn(fn):
-    vectorX = at.dvector if pytensor.config.floatX == "float64" else at.fvector
+    vectorX = pt.dvector if pytensor.config.floatX == "float64" else pt.fvector
 
     # Check if callable returns TensorVariable with dummy inputs
     try:
@@ -334,7 +326,7 @@ def create_sum_stat_op_from_fn(fn):
     # Otherwise, automatically wrap in PyTensor Op
     class SumStat(Op):
         def make_node(self, x):
-            x = at.as_tensor_variable(x)
+            x = pt.as_tensor_variable(x)
             return Apply(self, [x], [vectorX()])
 
         def perform(self, node, inputs, outputs):
@@ -345,8 +337,8 @@ def create_sum_stat_op_from_fn(fn):
 
 
 def create_distance_op_from_fn(fn):
-    scalarX = at.dscalar if pytensor.config.floatX == "float64" else at.fscalar
-    vectorX = at.dvector if pytensor.config.floatX == "float64" else at.fvector
+    scalarX = pt.dscalar if pytensor.config.floatX == "float64" else pt.fscalar
+    vectorX = pt.dvector if pytensor.config.floatX == "float64" else pt.fvector
 
     # Check if callable returns TensorVariable with dummy inputs
     try:
@@ -359,9 +351,9 @@ def create_distance_op_from_fn(fn):
     # Otherwise, automatically wrap in PyTensor Op
     class Distance(Op):
         def make_node(self, epsilon, obs_data, sim_data):
-            epsilon = at.as_tensor_variable(epsilon)
-            obs_data = at.as_tensor_variable(obs_data)
-            sim_data = at.as_tensor_variable(sim_data)
+            epsilon = pt.as_tensor_variable(epsilon)
+            obs_data = pt.as_tensor_variable(obs_data)
+            sim_data = pt.as_tensor_variable(sim_data)
             return Apply(self, [epsilon, obs_data, sim_data], [vectorX()])
 
         def perform(self, node, inputs, outputs):

@@ -1,4 +1,4 @@
-#   Copyright 2022 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ import xarray
 
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.graph.basic import (
     Apply,
     Constant,
@@ -253,7 +253,7 @@ def compile_forward_sampling_function(
             node,
             value
             if isinstance(value, (Variable, Apply))
-            else at.constant(value, dtype=getattr(node, "dtype", None), name=node.name),
+            else pt.constant(value, dtype=getattr(node, "dtype", None), name=node.name),
         )
         for node, value in givens_dict.items()
     ]
@@ -481,8 +481,7 @@ def sample_posterior_predictive(
         Whether to automatically use :meth:`arviz.InferenceData.extend` to add the posterior predictive samples to
         ``trace`` or not. If True, ``trace`` is modified inplace but still returned.
     predictions : bool, default False
-        Choose the function used to convert the samples to inferencedata. See ``idata_kwargs``
-        for more details.
+        Flag used to set the location of posterior predictive samples within the returned ``arviz.InferenceData`` object. If False, assumes samples are generated based on the fitting data to be used for posterior predictive checks, and samples are stored in the ``posterior_predictive``. If True, assumes samples are generated based on out-of-sample data as predictions, and samples are stored in the ``predictions`` group.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data` if ``predictions=False`` or to
         :func:`pymc.predictions_to_inference_data` otherwise.

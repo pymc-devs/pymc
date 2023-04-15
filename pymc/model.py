@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import functools
+import sys
 import threading
 import types
 import warnings
@@ -24,6 +25,7 @@ from typing import (
     Callable,
     Dict,
     List,
+    Literal,
     Optional,
     Sequence,
     Tuple,
@@ -36,9 +38,10 @@ from typing import (
 import numpy as np
 import pytensor
 import pytensor.sparse as sparse
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import scipy.sparse as sps
 
+from pytensor.compile import DeepCopyOp, get_mode
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Constant, Variable, graph_inputs
 from pytensor.graph.fg import FunctionGraph
@@ -46,12 +49,12 @@ from pytensor.scalar import Cast
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
+from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.sharedvar import ScalarSharedVariable
 from pytensor.tensor.var import TensorConstant, TensorVariable
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, is_minibatch
-from pymc.distributions.logprob import _joint_logp
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import (
     BlockModelAccessError,
@@ -61,6 +64,8 @@ from pymc.exceptions import (
     ShapeWarning,
 )
 from pymc.initial_point import make_initial_point_fn
+from pymc.logprob.basic import joint_logp
+from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
     PointFunc,
     SeedSequenceSeed,
@@ -195,7 +200,7 @@ class ContextMeta(type):
         raise a ``TypeError`` instead of returning ``None``."""
         try:
             candidate: Optional[T] = cls.get_contexts()[-1]
-        except IndexError as e:
+        except IndexError:
             # Calling code expects to get a TypeError if the entity
             # is unfound, and there's too much to fix.
             if error_if_none:
@@ -491,7 +496,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 Deterministic('v3_sq', self.v3 ** 2)
 
                 # Potentials too
-                Potential('p1', at.constant(1))
+                Potential('p1', pt.constant(1))
 
         # After defining a class CustomModel you can use it in several
         # ways
@@ -550,6 +555,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         coords=None,
         check_bounds=True,
         *,
+        coords_mutable=None,
         pytensor_config=None,
         model=None,
     ):
@@ -563,7 +569,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.values_to_rvs = treedict(parent=self.parent.values_to_rvs)
             self.rvs_to_values = treedict(parent=self.parent.rvs_to_values)
             self.rvs_to_transforms = treedict(parent=self.parent.rvs_to_transforms)
-            self.rvs_to_total_sizes = treedict(parent=self.parent.rvs_to_total_sizes)
             self.rvs_to_initial_values = treedict(parent=self.parent.rvs_to_initial_values)
             self.free_RVs = treelist(parent=self.parent.free_RVs)
             self.observed_RVs = treelist(parent=self.parent.observed_RVs)
@@ -577,7 +582,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.values_to_rvs = treedict()
             self.rvs_to_values = treedict()
             self.rvs_to_transforms = treedict()
-            self.rvs_to_total_sizes = treedict()
             self.rvs_to_initial_values = treedict()
             self.free_RVs = treelist()
             self.observed_RVs = treelist()
@@ -586,6 +590,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self._coords = {}
             self._dim_lengths = {}
         self.add_coords(coords)
+        if coords_mutable is not None:
+            for name, values in coords_mutable.items():
+                self.add_coord(name, values, mutable=True)
 
         from pymc.printing import str_for_model
 
@@ -754,11 +761,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         rv_logps: List[TensorVariable] = []
         if rvs:
-            rv_logps = _joint_logp(
+            rv_logps = joint_logp(
                 rvs=rvs,
                 rvs_to_values=self.rvs_to_values,
                 rvs_to_transforms=self.rvs_to_transforms,
-                rvs_to_total_sizes=self.rvs_to_total_sizes,
                 jacobian=jacobian,
             )
             assert isinstance(rv_logps, list)
@@ -775,7 +781,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if not sum:
             return logp_factors
 
-        logp_scalar = at.sum([at.sum(factor) for factor in logp_factors])
+        logp_scalar = pt.sum([pt.sum(factor) for factor in logp_factors])
         logp_scalar_name = "__logp" if jacobian else "__logp_nojac"
         if self.name:
             logp_scalar_name = f"{logp_scalar_name}_{self.name}"
@@ -888,9 +894,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         # inputs and apply their transforms, if any
         potentials = self.replace_rvs_by_values(self.potentials)
         if potentials:
-            return at.sum([at.sum(factor) for factor in potentials])
+            return pt.sum([pt.sum(factor) for factor in potentials])
         else:
-            return at.constant(0.0)
+            return pt.constant(0.0)
 
     @property
     def value_vars(self):
@@ -1310,17 +1316,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
         name = self.name_for(name)
         rv_var.name = name
         _add_future_warning_tag(rv_var)
-        rv_var.tag.total_size = total_size
-        self.rvs_to_total_sizes[rv_var] = total_size
 
         # Associate previously unknown dimension names with
         # the length of the corresponding RV dimension.
         if dims is not None:
             for d, dname in enumerate(dims):
+                if not isinstance(dname, str):
+                    raise TypeError(f"Dims must be string. Got {dname} of type {type(dname)}")
                 if dname not in self.dim_lengths:
                     self.add_coord(dname, values=None, length=rv_var.shape[d])
 
         if observed is None:
+            if total_size is not None:
+                raise ValueError("total_size can only be passed to observed RVs")
             self.free_RVs.append(rv_var)
             self.create_value_var(rv_var, transform)
             self.add_named_variable(rv_var, dims)
@@ -1345,12 +1353,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             # `rv_var` is potentially changed by `make_obs_var`,
             # for example into a new graph for imputation of missing data.
-            rv_var = self.make_obs_var(rv_var, observed, dims, transform)
+            rv_var = self.make_obs_var(rv_var, observed, dims, transform, total_size)
 
         return rv_var
 
     def make_obs_var(
-        self, rv_var: TensorVariable, data: np.ndarray, dims, transform: Optional[Any]
+        self,
+        rv_var: TensorVariable,
+        data: np.ndarray,
+        dims,
+        transform: Union[Any, None],
+        total_size: Union[int, None],
     ) -> TensorVariable:
         """Create a `TensorVariable` for an observed random variable.
 
@@ -1386,18 +1399,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         mask = getattr(data, "mask", None)
         if mask is not None:
-
-            if mask.all():
-                # If there are no observed values, this variable isn't really
-                # observed.
-                return rv_var
-
             impute_message = (
                 f"Data in {rv_var} contains missing values and"
                 " will be automatically imputed from the"
                 " sampling distribution."
             )
             warnings.warn(impute_message, ImputationWarning)
+
+            if total_size is not None:
+                raise ValueError("total_size is not compatible with imputed variables")
 
             if not isinstance(rv_var.owner.op, RandomVariable):
                 raise NotImplementedError(
@@ -1433,7 +1443,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # values, and another for the non-missing values.
 
             antimask_idx = (~mask).nonzero()
-            nonmissing_data = at.as_tensor_variable(data[antimask_idx])
+            nonmissing_data = pt.as_tensor_variable(data[antimask_idx].data)
             unmasked_rv_var = rv_var[antimask_idx]
             unmasked_rv_var = unmasked_rv_var.owner.clone().default_output()
 
@@ -1456,16 +1466,23 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             # Create deterministic that combines observed and missing
             # Note: This can widely increase memory consumption during sampling for large datasets
-            rv_var = at.zeros(data.shape)
-            rv_var = at.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
-            rv_var = at.set_subtensor(rv_var[antimask_idx], observed_rv_var)
+            rv_var = pt.empty(data.shape, dtype=observed_rv_var.type.dtype)
+            rv_var = pt.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
+            rv_var = pt.set_subtensor(rv_var[antimask_idx], observed_rv_var)
             rv_var = Deterministic(name, rv_var, self, dims)
 
         else:
             if sps.issparse(data):
                 data = sparse.basic.as_sparse(data, name=name)
             else:
-                data = at.as_tensor_variable(data, name=name)
+                data = pt.as_tensor_variable(data, name=name)
+
+            if total_size:
+                from pymc.variational.minibatch_rv import create_minibatch_rv
+
+                rv_var = create_minibatch_rv(rv_var, total_size)
+                rv_var.name = name
+
             rv_var.tag.observations = data
             self.create_value_var(rv_var, transform=None, value_var=data)
             self.add_named_variable(rv_var, dims)
@@ -1750,7 +1767,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         value_names_to_dtypes = {value.name: value.dtype for value in self.value_vars}
         value_names_set = set(value_names_to_dtypes.keys())
         for elem in start_points:
-
             for k, v in elem.items():
                 elem[k] = np.asarray(v, dtype=value_names_to_dtypes[k])
 
@@ -1768,7 +1784,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 raise SamplingError(
                     "Initial evaluation of model at starting point failed!\n"
                     f"Starting values:\n{elem}\n\n"
-                    f"Initial evaluation results:\n{initial_eval}"
+                    f"Logp initial evaluation results:\n{initial_eval}\n"
+                    "You can call `model.debug()` for more details."
                 )
 
     def point_logps(self, point=None, round_vals=2):
@@ -1791,7 +1808,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             point = self.initial_point()
 
         factors = self.basic_RVs + self.potentials
-        factor_logps_fn = [at.sum(factor) for factor in self.logp(factors, sum=False)]
+        factor_logps_fn = [pt.sum(factor) for factor in self.logp(factors, sum=False)]
         return {
             factor.name: np.round(np.asarray(factor_logp), round_vals)
             for factor, factor_logp in zip(
@@ -1799,6 +1816,152 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 self.compile_fn(factor_logps_fn)(point),
             )
         }
+
+    def debug(
+        self,
+        point: Optional[Dict[str, np.ndarray]] = None,
+        fn: Literal["logp", "dlogp", "random"] = "logp",
+        verbose: bool = False,
+    ):
+        """Debug model function at point.
+
+        The method will evaluate the `fn` for each variable at a time.
+        When an evaluation fails or produces a non-finite value we print:
+         1. The graph of the parameters
+         2. The value of the parameters (if those can be evaluated)
+         3. The output of `fn` (if it can be evaluated)
+
+        This function should help to quickly narrow down invalid parametrizations.
+
+        Parameters
+        ----------
+        point : Point
+            Point at which model function should be evaluated
+        fn : str, default "logp"
+            Function to be used for debugging. Can be one of [logp, dlogp, random].
+        verbose : bool, default False
+            Whether to show a more verbose PyTensor output when function cannot be evaluated
+        """
+        print_ = functools.partial(print, file=sys.stdout)
+
+        def first_line(exc):
+            return exc.args[0].split("\n")[0]
+
+        def debug_parameters(rv):
+            if isinstance(rv.owner.op, RandomVariable):
+                inputs = rv.owner.inputs[3:]
+            else:
+                inputs = [inp for inp in rv.owner.inputs if not isinstance(inp.type, RandomType)]
+            rv_inputs = pytensor.function(
+                self.value_vars,
+                self.replace_rvs_by_values(inputs),
+                on_unused_input="ignore",
+                mode=get_mode(None).excluding("inplace", "fusion"),
+            )
+
+            print_(f"The variable {rv} has the following parameters:")
+            # done and used_ids are used to keep the same ids across distinct dprint calls
+            done = {}
+            used_ids = {}
+            for i, out in enumerate(rv_inputs.maker.fgraph.outputs):
+                print_(f"{i}: ", end=""),
+                # Don't print useless deepcopys
+                if out.owner and isinstance(out.owner.op, DeepCopyOp):
+                    out = out.owner.inputs[0]
+                pytensor.dprint(out, print_type=True, done=done, used_ids=used_ids)
+
+            try:
+                print_("The parameters evaluate to:")
+                for i, rv_input_eval in enumerate(rv_inputs(**point)):
+                    print_(f"{i}: {rv_input_eval}")
+            except Exception as exc:
+                print_(
+                    f"The parameters of the variable {rv} cannot be evaluated: {first_line(exc)}"
+                )
+                if verbose:
+                    print_(exc, "\n")
+
+        if fn not in ("logp", "dlogp", "random"):
+            raise ValueError(f"fn must be one of [logp, dlogp, random], got {fn}")
+
+        if point is None:
+            point = self.initial_point()
+        print_(f"point={point}\n")
+
+        rvs_to_check = list(self.basic_RVs)
+        if fn in ("logp", "dlogp"):
+            rvs_to_check += [self.replace_rvs_by_values(p) for p in self.potentials]
+
+        found_problem = False
+        for rv in rvs_to_check:
+            if fn == "logp":
+                rv_fn = pytensor.function(
+                    self.value_vars, self.logp(vars=rv, sum=False)[0], on_unused_input="ignore"
+                )
+            elif fn == "dlogp":
+                rv_fn = pytensor.function(
+                    self.value_vars, self.dlogp(vars=rv), on_unused_input="ignore"
+                )
+            else:
+                [rv_inputs_replaced] = replace_rvs_by_values(
+                    [rv],
+                    # Don't include itself, or the function will just the the value variable
+                    rvs_to_values={
+                        rv_key: value
+                        for rv_key, value in self.rvs_to_values.items()
+                        if rv_key is not rv
+                    },
+                    rvs_to_transforms=self.rvs_to_transforms,
+                )
+                rv_fn = pytensor.function(
+                    self.value_vars, rv_inputs_replaced, on_unused_input="ignore"
+                )
+
+            try:
+                rv_fn_eval = rv_fn(**point)
+            except ParameterValueError as exc:
+                found_problem = True
+                debug_parameters(rv)
+                print_(
+                    f"This does not respect one of the following constraints: {first_line(exc)}\n"
+                )
+                if verbose:
+                    print_(exc)
+            except Exception as exc:
+                found_problem = True
+                debug_parameters(rv)
+                print_(
+                    f"The variable {rv} {fn} method raised the following exception: {first_line(exc)}\n"
+                )
+                if verbose:
+                    print_(exc)
+            else:
+                if not np.all(np.isfinite(rv_fn_eval)):
+                    found_problem = True
+                    debug_parameters(rv)
+                    if fn == "random" or rv is self.potentials:
+                        print_("This combination seems able to generate non-finite values")
+                    else:
+                        # Find which values are associated with non-finite evaluation
+                        values = self.rvs_to_values[rv]
+                        if rv in self.observed_RVs:
+                            values = values.eval()
+                        else:
+                            values = point[values.name]
+
+                        observed = " observed " if rv in self.observed_RVs else " "
+                        print_(
+                            f"Some of the{observed}values of variable {rv} are associated with a non-finite {fn}:"
+                        )
+                        mask = ~np.isfinite(rv_fn_eval)
+                        for value, fn_eval in zip(values[mask], rv_fn_eval[mask]):
+                            print_(f" value = {value} -> {fn} = {fn_eval}")
+                        print_()
+
+        if not found_problem:
+            print_("No problems found")
+        elif not verbose:
+            print_("You can set `verbose=True` for more details")
 
 
 # this is really disgusting, but it breaks a self-loop: I can't pass Model
@@ -1956,6 +2119,25 @@ def Deterministic(name, var, model=None, dims=None):
     they don't add randomness to the model.  They are generally used to record
     an intermediary result.
 
+    Parameters
+    ----------
+    name : str
+        Name of the deterministic variable to be registered in the model.
+    var : tensor_like
+        Expression for the calculation of the variable.
+    model : Model, optional
+        The model object to which the Deterministic variable is added.
+        If ``None`` is provided, the current model in the context stack is used.
+    dims : str or tuple of str, optional
+        Dimension names for the variable.
+
+    Returns
+    -------
+    var : tensor_like
+        The registered, named variable wrapped in Deterministic.
+
+    Examples
+    --------
     Indeed, PyMC allows for arbitrary combinations of random variables, for
     example in the case of a logistic regression
 
@@ -1996,19 +2178,6 @@ def Deterministic(name, var, model=None, dims=None):
     of times during a NUTS step, the Deterministic quantities are just
     computeed once at the end of the step, with the final values of the other
     random variables.
-
-    Parameters
-    ----------
-    name: str
-    var: PyTensor variables
-    auto: bool
-        Add automatically created deterministics (e.g., when imputing missing values)
-        to a separate model.auto_deterministics list for filtering during sampling.
-
-
-    Returns
-    -------
-    var: var, with name attribute
     """
     model = modelcontext(model)
     var = var.copy(model.name_for(name))
@@ -2030,22 +2199,97 @@ def Deterministic(name, var, model=None, dims=None):
     return var
 
 
-def Potential(name, var, model=None):
-    """Add an arbitrary factor potential to the model likelihood
+def Potential(name, var, model=None, dims=None):
+    """
+    Add an arbitrary factor potential to the model likelihood
+
+    The Potential function is used to add arbitrary factors (such as constraints or other likelihood components) to adjust the probability density of the model.
+
+    Warnings
+    --------
+    Potential functions only influence logp-based sampling. Therefore, they are applicable for sampling with ``pm.sample`` but not ``pm.sample_prior_predictive`` or ``pm.sample_posterior_predictive``.
 
     Parameters
     ----------
-    name: str
-    var: PyTensor variables
+    name : str
+        Name of the potential variable to be registered in the model.
+    var : tensor_like
+        Expression to be added to the model joint logp.
+    model : Model, optional
+        The model object to which the potential function is added.
+        If ``None`` is provided, the current model in the context stack is used.
+    dims : str or tuple of str, optional
+        Dimension names for the variable.
 
     Returns
     -------
-    var: var, with name attribute
+    var : tensor_like
+        The registered, named model variable.
+
+    Examples
+    --------
+    Have a look at the following example:
+
+    In this example, we define a constraint on ``x`` to be greater or equal to 0 via the ``pm.Potential`` function.
+    We pass ``pm.math.log(pm.math.switch(constraint, 1, 0))`` as second argument which will return an expression depending on if the constraint is met or not and which will be added to the likelihood of the model.
+    The probablity density that this model produces agrees strongly with the constraint that ``x`` should be greater than or equal to 0. All the cases who do not satisfy the constraint are strictly not considered.
+
+    .. code:: python
+
+        with pm.Model() as model:
+            x = pm.Normal("x", mu=0, sigma=1)
+            y = pm.Normal("y", mu=x, sigma=1, observed=data)
+            constraint = x >= 0
+            potential = pm.Potential("x_constraint", pm.math.log(pm.math.switch(constraint, 1, 0)))
+
+    However, if we use ``pm.math.log(pm.math.switch(constraint, 1.0, 0.5))`` the potential again penalizes the likelihood when constraint is not met but with some deviations allowed.
+    Here, Potential function is used to pass a soft constraint.
+    A soft constraint is a constraint that is only partially satisfied.
+    The effect of this is that the posterior probability for the parameters decreases as they move away from the constraint, but does not become exactly zero.
+    This allows the sampler to generate values that violate the constraint, but with lower probability.
+
+    .. code:: python
+
+        with pm.Model() as model:
+            x = pm.Normal("x", mu=0.1, sigma=1)
+            y = pm.Normal("y", mu=x, sigma=1, observed=data)
+            constraint = x >= 0
+            potential = pm.Potential("x_constraint", pm.math.log(pm.math.switch(constraint, 1.0, 0.5)))
+
+    In this example, Potential is used to obtain an arbitrary prior.
+    This prior distribution refers to the prior knowledge that the values of ``max_items`` are likely to be small rather than being large.
+    The prior probability of ``max_items`` is defined using a Potential object with the log of the inverse of ``max_items`` as its value.
+    This means that larger values of ``max_items`` have a lower prior probability density, while smaller values of ``max_items`` have a higher prior probability density.
+    When the model is sampled, the posterior distribution of ``max_items`` given the observed value of ``n_items`` will be influenced by the power-law prior defined in the Potential object
+
+    .. code:: python
+
+        with pm.Model():
+            # p(max_items) = 1 / max_items
+            max_items = pm.Uniform("max_items", lower=1, upper=100)
+            pm.Potential("power_prior", pm.math.log(1/max_items))
+
+            n_items = pm.Uniform("n_items", lower=1, upper=max_items, observed=60)
+
+    In the next example, the ``soft_sum_constraint`` potential encourages ``x`` and ``y`` to have a small sum, effectively adding a soft constraint on the relationship between the two variables.
+    This can be useful in cases where you want to ensure that the sum of multiple variables stays within a certain range, without enforcing an exact value.
+    In this case, the larger the deviation, larger will be the negative value (-((x + y)**2)) which the MCMC sampler will attempt to minimize.
+    However, the sampler might generate values for some small deviations but with lower probability hence this is a soft constraint.
+
+    .. code:: python
+
+        with pm.Model() as model:
+            x = pm.Normal("x", mu=0.1, sigma=1)
+            y = pm.Normal("y", mu=x, sigma=1, observed=data)
+            soft_sum_constraint = pm.Potential("soft_sum_constraint", -((x + y)**2))
+
+    The potential value is incorporated into the model log-probability, so it should be -inf (or very negative) when a constraint is violated, so that those draws are rejected. 0 won't have any effect and positive values will make the proposals more likely to be accepted.
+
     """
     model = modelcontext(model)
     var.name = model.name_for(name)
     model.potentials.append(var)
-    model.add_named_variable(var)
+    model.add_named_variable(var, dims)
 
     from pymc.printing import str_for_potential_or_deterministic
 

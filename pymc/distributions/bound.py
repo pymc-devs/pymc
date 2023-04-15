@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 import warnings
 
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.tensor import as_tensor_variable
 from pytensor.tensor.random.op import RandomVariable
@@ -23,9 +23,10 @@ from pytensor.tensor.var import TensorVariable
 from pymc.distributions.continuous import BoundedContinuous, bounded_cont_transform
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import Continuous, Discrete
-from pymc.distributions.logprob import ignore_logprob, logp
 from pymc.distributions.shape_utils import to_tuple
 from pymc.distributions.transforms import _default_transform
+from pymc.logprob.basic import logp
+from pymc.logprob.utils import ignore_logprob
 from pymc.model import modelcontext
 from pymc.pytensorf import floatX, intX
 from pymc.util import check_dist_not_registered
@@ -71,8 +72,8 @@ class _ContinuousBounded(BoundedContinuous):
         -------
         TensorVariable
         """
-        res = at.switch(
-            at.or_(at.lt(value, lower), at.gt(value, upper)),
+        res = pt.switch(
+            pt.or_(pt.lt(value, lower), pt.gt(value, upper)),
             -np.inf,
             logp(distribution, value),
         )
@@ -125,8 +126,8 @@ class _DiscreteBounded(Discrete):
         -------
         TensorVariable
         """
-        res = at.switch(
-            at.or_(at.lt(value, lower), at.gt(value, upper)),
+        res = pt.switch(
+            pt.or_(pt.lt(value, lower), pt.gt(value, upper)),
             -np.inf,
             logp(distribution, value),
         )
@@ -182,7 +183,6 @@ class Bound:
         dims=None,
         **kwargs,
     ):
-
         warnings.warn(
             "Bound has been deprecated in favor of Truncated, and will be removed in a "
             "future release. If Truncated is not an option, Bound can be implemented by"
@@ -234,7 +234,6 @@ class Bound:
         shape=None,
         **kwargs,
     ):
-
         cls._argument_checks(dist, **kwargs)
         lower, upper, initval = cls._set_values(lower, upper, size, shape, initval=None)
         dist = ignore_logprob(dist)

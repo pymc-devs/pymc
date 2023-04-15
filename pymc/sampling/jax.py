@@ -1,24 +1,28 @@
+#   Copyright 2023 The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
 import os
 import re
 import sys
-import warnings
-
-from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
-
-from pymc.initial_point import StartDict
-from pymc.sampling.mcmc import _init_jitter
-
-xla_flags = os.getenv("XLA_FLAGS", "")
-xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags).split()
-os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"] + xla_flags)
 
 from datetime import datetime
+from functools import partial
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 import arviz as az
 import jax
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from arviz.data.base import make_attrs
 from jax.experimental.maps import SerialLoop, xmap
@@ -29,15 +33,24 @@ from pytensor.graph.replace import clone_replace
 from pytensor.link.jax.dispatch import jax_funcify
 from pytensor.raise_op import Assert
 from pytensor.tensor import TensorVariable
+from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.shape import SpecifyShape
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_constants, find_observations
+from pymc.initial_point import StartDict
 from pymc.logprob.utils import CheckParameterValue
-from pymc.util import RandomSeed, _get_seeds_per_chain, get_default_varnames
+from pymc.sampling.mcmc import _init_jitter
+from pymc.util import (
+    RandomSeed,
+    RandomState,
+    _get_seeds_per_chain,
+    get_default_varnames,
+)
 
-warnings.warn("This module is experimental.")
-
+xla_flags_env = os.getenv("XLA_FLAGS", "")
+xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags_env).split()
+os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"] + xla_flags)
 
 __all__ = (
     "get_jaxified_graph",
@@ -72,13 +85,18 @@ def _replace_shared_variables(graph: List[TensorVariable]) -> List[TensorVariabl
 
     shared_variables = [var for var in graph_inputs(graph) if isinstance(var, SharedVariable)]
 
+    if any(isinstance(var.type, RandomType) for var in shared_variables):
+        raise ValueError(
+            "Graph contains shared RandomType variables which cannot be safely replaced"
+        )
+
     if any(var.default_update is not None for var in shared_variables):
         raise ValueError(
             "Graph contains shared variables with default_update which cannot "
             "be safely replaced."
         )
 
-    replacements = {var: at.constant(var.get_value(borrow=True)) for var in shared_variables}
+    replacements = {var: pt.constant(var.get_value(borrow=True)) for var in shared_variables}
 
     new_graph = clone_replace(graph, replace=replacements)
     return new_graph
@@ -90,7 +108,7 @@ def get_jaxified_graph(
 ) -> List[TensorVariable]:
     """Compile an PyTensor graph into an optimized JAX function"""
 
-    graph = _replace_shared_variables(outputs)
+    graph = _replace_shared_variables(outputs) if outputs is not None else None
 
     fgraph = FunctionGraph(inputs=inputs, outputs=graph, clone=True)
     # We need to add a Supervisor to the fgraph to be able to run the
@@ -233,12 +251,10 @@ def _get_batched_jittered_initial_points(
         jitter=jitter,
         jitter_max_retries=jitter_max_retries,
     )
-    initial_points = [list(initial_point.values()) for initial_point in initial_points]
+    initial_points_values = [list(initial_point.values()) for initial_point in initial_points]
     if chains == 1:
-        initial_points = initial_points[0]
-    else:
-        initial_points = [np.stack(init_state) for init_state in zip(*initial_points)]
-    return initial_points
+        return initial_points_values[0]
+    return [np.stack(init_state) for init_state in zip(*initial_points_values)]
 
 
 def _update_coords_and_dims(
@@ -292,7 +308,7 @@ def sample_blackjax_nuts(
     tune: int = 1000,
     chains: int = 4,
     target_accept: float = 0.8,
-    random_seed: Optional[RandomSeed] = None,
+    random_seed: Optional[RandomState] = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     model: Optional[Model] = None,
     var_names: Optional[Sequence[str]] = None,
@@ -301,6 +317,7 @@ def sample_blackjax_nuts(
     postprocessing_backend: Optional[str] = None,
     postprocessing_chunks: Optional[int] = None,
     idata_kwargs: Optional[Dict[str, Any]] = None,
+    **kwargs,
 ) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``blackjax`` library.
@@ -502,17 +519,18 @@ def sample_numpyro_nuts(
     tune: int = 1000,
     chains: int = 4,
     target_accept: float = 0.8,
-    random_seed: Optional[RandomSeed] = None,
+    random_seed: Optional[RandomState] = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     model: Optional[Model] = None,
     var_names: Optional[Sequence[str]] = None,
-    progress_bar: bool = True,
+    progressbar: bool = True,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
     postprocessing_backend: Optional[str] = None,
     postprocessing_chunks: Optional[int] = None,
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
+    **kwargs,
 ) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
@@ -544,7 +562,7 @@ def sample_numpyro_nuts(
     var_names : sequence of str, optional
         Names of variables for which to compute the posterior samples. Defaults to all
         variables in the posterior.
-    progress_bar : bool, default True
+    progressbar : bool, default True
         Whether or not to display a progress bar in the command line. The bar shows the
         percentage of completion, the sampling speed in samples per second (SPS), and
         the estimated remaining time until completion ("expected time of arrival"; ETA).
@@ -627,7 +645,7 @@ def sample_numpyro_nuts(
         num_chains=chains,
         postprocess_fn=None,
         chain_method=chain_method,
-        progress_bar=progress_bar,
+        progress_bar=progressbar,
     )
 
     tic2 = datetime.now()

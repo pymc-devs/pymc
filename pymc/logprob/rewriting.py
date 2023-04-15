@@ -1,4 +1,4 @@
-#   Copyright 2022- The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@
 
 from typing import Dict, Optional, Tuple
 
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.compile.mode import optdb
 from pytensor.graph.basic import Variable
@@ -208,7 +208,7 @@ def incsubtensor_rv_replace(fgraph, node):
 
     To compute the log-probability of a statement like ``Y[idx] = data``, we must
     first realize that our objective is equivalent to computing ``logprob(Y, z)``,
-    where ``z = at.set_subtensor(y[idx], data)`` and ``y`` is the value variable
+    where ``z = pt.set_subtensor(y[idx], data)`` and ``y`` is the value variable
     for ``Y``.
 
     In other words, the log-probability for an `*IncSubtensor*` is the log-probability
@@ -243,7 +243,7 @@ def incsubtensor_rv_replace(fgraph, node):
 
     # Create a new value variable with the indices `idx` set to `data`
     value_var = rv_map_feature.rv_values[rv_var]
-    new_value_var = at.set_subtensor(value_var[idx], data)
+    new_value_var = pt.set_subtensor(value_var[idx], data)
     rv_map_feature.update_rv_maps(rv_var, new_value_var, base_rv_var)
 
     # Return the `RandomVariable` being indexed

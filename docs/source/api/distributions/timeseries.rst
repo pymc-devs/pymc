@@ -6,10 +6,9 @@ Timeseries
 .. autosummary::
    :toctree: generated
 
-    AR1
     AR
-    GaussianRandomWalk
-    GARCH11
     EulerMaruyama
+    GARCH11
+    GaussianRandomWalk
     MvGaussianRandomWalk
     MvStudentTRandomWalk

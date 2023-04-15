@@ -1,4 +1,4 @@
-#   Copyright 2022- The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ from typing import List, Optional, Union
 
 import pytensor
 
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor.basic import Join, MakeVector
@@ -50,13 +50,9 @@ from pytensor.tensor.random.rewriting import (
     local_rv_size_lift,
 )
 
-from pymc.logprob.abstract import (
-    MeasurableVariable,
-    _logprob,
-    assign_custom_measurable_outputs,
-    logprob,
-)
+from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
+from pymc.logprob.utils import ignore_logprob, ignore_logprob_multiple_vars
 
 
 @node_rewriter([BroadcastTo])
@@ -107,9 +103,9 @@ def naive_bcast_rv_lift(fgraph, node):
     rng, size, dtype, *dist_params = lifted_node.inputs
 
     new_dist_params = [
-        at.broadcast_to(
+        pt.broadcast_to(
             param,
-            at.broadcast_shape(tuple(param.shape), tuple(bcast_shape), arrays_are_shapes=True),
+            pt.broadcast_shape(tuple(param.shape), tuple(bcast_shape), arrays_are_shapes=True),
         )
         for param in dist_params
     ]
@@ -141,12 +137,12 @@ def logprob_make_vector(op, values, *base_rvs, **kwargs):
         base_rv.name = f"base_rv[{i}]"
         value.name = f"value[{i}]"
 
-    logps = [logprob(base_rv, value) for base_rv, value in base_rvs_to_values.items()]
+    logps = [_logprob_helper(base_rv, value) for base_rv, value in base_rvs_to_values.items()]
 
     # If the stacked variables depend on each other, we have to replace them by the respective values
     logps = replace_rvs_by_values(logps, rvs_to_values=base_rvs_to_values)
 
-    return at.stack(logps)
+    return pt.stack(logps)
 
 
 class MeasurableJoin(Join):
@@ -169,7 +165,7 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
     # We don't need the graph to be constant, just to have RandomVariables removed
     base_rv_shapes = constant_fold(base_rv_shapes, raise_not_constant=False)
 
-    split_values = at.split(
+    split_values = pt.split(
         value,
         splits_size=base_rv_shapes,
         n_splits=len(base_rvs),
@@ -178,7 +174,8 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
 
     base_rvs_to_split_values = {base_rv: value for base_rv, value in zip(base_rvs, split_values)}
     logps = [
-        logprob(base_var, split_value) for base_var, split_value in base_rvs_to_split_values.items()
+        _logprob_helper(base_var, split_value)
+        for base_var, split_value in base_rvs_to_split_values.items()
     ]
 
     if len({logp.ndim for logp in logps}) != 1:
@@ -191,8 +188,8 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
     logps = replace_rvs_by_values(logps, rvs_to_values=base_rvs_to_split_values)
 
     base_vars_ndim_supp = split_values[0].ndim - logps[0].ndim
-    join_logprob = at.concatenate(
-        [at.atleast_1d(logp) for logp in logps],
+    join_logprob = pt.concatenate(
+        [pt.atleast_1d(logp) for logp in logps],
         axis=axis - base_vars_ndim_supp,
     )
 
@@ -232,30 +229,7 @@ def find_measurable_stacks(
     ):
         return None  # pragma: no cover
 
-    # Make base_vars unmeasurable
-    base_to_unmeasurable_vars = {
-        base_var: assign_custom_measurable_outputs(base_var.owner).outputs[
-            base_var.owner.outputs.index(base_var)
-        ]
-        for base_var in base_vars
-    }
-
-    def replacement_fn(var, replacements):
-        if var in base_to_unmeasurable_vars:
-            replacements[var] = base_to_unmeasurable_vars[var]
-        # We don't want to clone valued nodes. Assigning a var to itself in the
-        # replacements prevents this
-        elif var in rvs_to_values:
-            replacements[var] = var
-
-        return []
-
-    # TODO: Fix this import circularity!
-    from pymc.pytensorf import _replace_rvs_in_graphs
-
-    unmeasurable_base_vars, _ = _replace_rvs_in_graphs(
-        graphs=base_vars, replacement_fn=replacement_fn
-    )
+    unmeasurable_base_vars = ignore_logprob_multiple_vars(base_vars, rvs_to_values)
 
     if is_join:
         measurable_stack = MeasurableJoin()(axis, *unmeasurable_base_vars)
@@ -298,7 +272,7 @@ def logprob_dimshuffle(op, values, base_var, **kwargs):
     undo_ds = [original_shuffle.index(i) for i in range(len(original_shuffle))]
     value = value.dimshuffle(undo_ds)
 
-    raw_logp = logprob(base_var, value)
+    raw_logp = _logprob_helper(base_var, value)
 
     # Re-apply original dimshuffle, ignoring any support dimensions consumed by
     # the logprob function. This assumes that support dimensions are always in
@@ -339,7 +313,7 @@ def find_measurable_dimshuffles(fgraph, node) -> Optional[List[MeasurableDimShuf
         return None  # pragma: no cover
 
     # Make base_vars unmeasurable
-    base_var = assign_custom_measurable_outputs(base_var.owner)
+    base_var = ignore_logprob(base_var)
 
     measurable_dimshuffle = MeasurableDimShuffle(node.op.input_broadcastable, node.op.new_order)(
         base_var

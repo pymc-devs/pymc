@@ -1,11 +1,11 @@
-#   Copyright 2020 The PyMC Developers
-
+#   Copyright 2023 The PyMC Developers
+#
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
-
+#
 #       http://www.apache.org/licenses/LICENSE-2.0
-
+#
 #   Unless required by applicable law or agreed to in writing, software
 #   distributed under the License is distributed on an "AS IS" BASIS,
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,7 +14,7 @@
 from functools import singledispatch
 
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 # ignore mypy error because it somehow considers that
 # "numpy.core.numeric has no attribute normalize_axis_tuple"
@@ -60,7 +60,7 @@ class LogExpM1(RVTransform):
     name = "log_exp_m1"
 
     def backward(self, value, *inputs):
-        return at.softplus(value)
+        return pt.softplus(value)
 
     def forward(self, value, *inputs):
         """Inverse operation of softplus.
@@ -68,10 +68,10 @@ class LogExpM1(RVTransform):
         y = Log(Exp(x) - 1)
           = Log(1 - Exp(-x)) + x
         """
-        return at.log(1.0 - at.exp(-value)) + value
+        return pt.log(1.0 - pt.exp(-value)) + value
 
     def log_jac_det(self, value, *inputs):
-        return -at.softplus(-value)
+        return -pt.softplus(-value)
 
 
 class Ordered(RVTransform):
@@ -86,22 +86,22 @@ class Ordered(RVTransform):
         self.ndim_supp = ndim_supp
 
     def backward(self, value, *inputs):
-        x = at.zeros(value.shape)
-        x = at.inc_subtensor(x[..., 0], value[..., 0])
-        x = at.inc_subtensor(x[..., 1:], at.exp(value[..., 1:]))
-        return at.cumsum(x, axis=-1)
+        x = pt.zeros(value.shape)
+        x = pt.inc_subtensor(x[..., 0], value[..., 0])
+        x = pt.inc_subtensor(x[..., 1:], pt.exp(value[..., 1:]))
+        return pt.cumsum(x, axis=-1)
 
     def forward(self, value, *inputs):
-        y = at.zeros(value.shape)
-        y = at.inc_subtensor(y[..., 0], value[..., 0])
-        y = at.inc_subtensor(y[..., 1:], at.log(value[..., 1:] - value[..., :-1]))
+        y = pt.zeros(value.shape)
+        y = pt.inc_subtensor(y[..., 0], value[..., 0])
+        y = pt.inc_subtensor(y[..., 1:], pt.log(value[..., 1:] - value[..., :-1]))
         return y
 
     def log_jac_det(self, value, *inputs):
         if self.ndim_supp == 0:
-            return at.sum(value[..., 1:], axis=-1, keepdims=True)
+            return pt.sum(value[..., 1:], axis=-1, keepdims=True)
         else:
-            return at.sum(value[..., 1:], axis=-1)
+            return pt.sum(value[..., 1:], axis=-1)
 
 
 class SumTo1(RVTransform):
@@ -121,18 +121,18 @@ class SumTo1(RVTransform):
         self.ndim_supp = ndim_supp
 
     def backward(self, value, *inputs):
-        remaining = 1 - at.sum(value[..., :], axis=-1, keepdims=True)
-        return at.concatenate([value[..., :], remaining], axis=-1)
+        remaining = 1 - pt.sum(value[..., :], axis=-1, keepdims=True)
+        return pt.concatenate([value[..., :], remaining], axis=-1)
 
     def forward(self, value, *inputs):
         return value[..., :-1]
 
     def log_jac_det(self, value, *inputs):
-        y = at.zeros(value.shape)
+        y = pt.zeros(value.shape)
         if self.ndim_supp == 0:
-            return at.sum(y, axis=-1, keepdims=True)
+            return pt.sum(y, axis=-1, keepdims=True)
         else:
-            return at.sum(y, axis=-1)
+            return pt.sum(y, axis=-1)
 
 
 class CholeskyCovPacked(RVTransform):
@@ -151,20 +151,19 @@ class CholeskyCovPacked(RVTransform):
         n: int
             Number of diagonal entries in the LKJCholeskyCov distribution
         """
-        self.diag_idxs = at.arange(1, n + 1).cumsum() - 1
+        self.diag_idxs = pt.arange(1, n + 1).cumsum() - 1
 
     def backward(self, value, *inputs):
-        return at.set_subtensor(value[..., self.diag_idxs], at.exp(value[..., self.diag_idxs]))
+        return pt.set_subtensor(value[..., self.diag_idxs], pt.exp(value[..., self.diag_idxs]))
 
     def forward(self, value, *inputs):
-        return at.set_subtensor(value[..., self.diag_idxs], at.log(value[..., self.diag_idxs]))
+        return pt.set_subtensor(value[..., self.diag_idxs], pt.log(value[..., self.diag_idxs]))
 
     def log_jac_det(self, value, *inputs):
-        return at.sum(value[..., self.diag_idxs], axis=-1)
+        return pt.sum(value[..., self.diag_idxs], axis=-1)
 
 
 class Chain(RVTransform):
-
     __slots__ = ("param_extract_fn", "transform_list", "name")
 
     def __init__(self, transform_list):
@@ -186,7 +185,7 @@ class Chain(RVTransform):
         return x
 
     def log_jac_det(self, value, *inputs):
-        y = at.as_tensor_variable(value)
+        y = pt.as_tensor_variable(value)
         det_list = []
         ndim0 = y.ndim
         for transf in reversed(self.transform_list):
@@ -256,7 +255,7 @@ class Interval(IntervalTransform):
             return 0, None
 
         with pm.Model():
-            interval = pm.distributions.transforms.Interval(bouns_fn=get_bounds)
+            interval = pm.distributions.transforms.Interval(bounds_fn=get_bounds)
             x = pm.Normal("x", transform=interval)
 
     Create a lower-bounded interval transform that depends on a distribution parameter
@@ -277,7 +276,7 @@ class Interval(IntervalTransform):
         if bounds_fn is None:
             try:
                 bounds = tuple(
-                    None if bound is None else at.constant(bound, ndim=0).data
+                    None if bound is None else pt.constant(bound, ndim=0).data
                     for bound in (lower, upper)
                 )
             except (ValueError, TypeError):
@@ -327,16 +326,16 @@ class ZeroSumTransform(RVTransform):
         return value
 
     def log_jac_det(self, value, *rv_inputs):
-        return at.constant(0.0)
+        return pt.constant(0.0)
 
 
 def extend_axis(array, axis):
     n = array.shape[axis] + 1
     sum_vals = array.sum(axis, keepdims=True)
-    norm = sum_vals / (at.sqrt(n) + n)
-    fill_val = norm - sum_vals / at.sqrt(n)
+    norm = sum_vals / (pt.sqrt(n) + n)
+    fill_val = norm - sum_vals / pt.sqrt(n)
 
-    out = at.concatenate([array, fill_val], axis=axis)
+    out = pt.concatenate([array, fill_val], axis=axis)
     return out - norm
 
 
@@ -344,10 +343,10 @@ def extend_axis_rev(array, axis):
     normalized_axis = normalize_axis_tuple(axis, array.ndim)[0]
 
     n = array.shape[normalized_axis]
-    last = at.take(array, [-1], axis=normalized_axis)
+    last = pt.take(array, [-1], axis=normalized_axis)
 
-    sum_vals = -last * at.sqrt(n)
-    norm = sum_vals / (at.sqrt(n) + n)
+    sum_vals = -last * pt.sqrt(n)
+    norm = sum_vals / (pt.sqrt(n) + n)
     slice_before = (slice(None, None),) * normalized_axis
 
     return array[slice_before + (slice(None, -1),)] + norm

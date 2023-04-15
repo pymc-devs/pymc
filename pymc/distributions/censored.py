@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
@@ -52,15 +52,15 @@ class Censored(Distribution):
 
     Parameters
     ----------
-    dist: unnamed distribution
-        Univariate distribution created via the `.dist()` API, which will be censored.
+    dist : unnamed_distribution
+        Univariate distribution which will be censored.
         This distribution must have a logcdf method implemented for sampling.
 
         .. warning:: dist will be cloned, rendering it independent of the one passed as input.
 
-    lower: float or None
+    lower : float or None
         Lower (left) censoring point. If `None` the distribution will not be left censored
-    upper: float or None
+    upper : float or None
         Upper (right) censoring point. If `None`, the distribution will not be right censored.
 
     Warnings
@@ -101,17 +101,16 @@ class Censored(Distribution):
 
     @classmethod
     def rv_op(cls, dist, lower=None, upper=None, size=None):
-
-        lower = at.constant(-np.inf) if lower is None else at.as_tensor_variable(lower)
-        upper = at.constant(np.inf) if upper is None else at.as_tensor_variable(upper)
+        lower = pt.constant(-np.inf) if lower is None else pt.as_tensor_variable(lower)
+        upper = pt.constant(np.inf) if upper is None else pt.as_tensor_variable(upper)
 
         # When size is not specified, dist may have to be broadcasted according to lower/upper
-        dist_shape = size if size is not None else at.broadcast_shape(dist, lower, upper)
+        dist_shape = size if size is not None else pt.broadcast_shape(dist, lower, upper)
         dist = change_dist_size(dist, dist_shape)
 
         # Censoring is achieved by clipping the base distribution between lower and upper
         dist_, lower_, upper_ = dist.type(), lower.type(), upper.type()
-        censored_rv_ = at.clip(dist_, lower_, upper_)
+        censored_rv_ = pt.clip(dist_, lower_, upper_)
 
         return CensoredRV(
             inputs=[dist_, lower_, upper_],
@@ -130,22 +129,22 @@ def change_censored_size(cls, dist, new_size, expand=False):
 
 @_moment.register(CensoredRV)
 def moment_censored(op, rv, dist, lower, upper):
-    moment = at.switch(
-        at.eq(lower, -np.inf),
-        at.switch(
-            at.isinf(upper),
+    moment = pt.switch(
+        pt.eq(lower, -np.inf),
+        pt.switch(
+            pt.isinf(upper),
             # lower = -inf, upper = inf
             0,
             # lower = -inf, upper = x
             upper - 1,
         ),
-        at.switch(
-            at.eq(upper, np.inf),
+        pt.switch(
+            pt.eq(upper, np.inf),
             # lower = x, upper = inf
             lower + 1,
             # lower = x, upper = x
             (lower + upper) / 2,
         ),
     )
-    moment = at.full_like(dist, moment)
+    moment = pt.full_like(dist, moment)
     return moment

@@ -1,4 +1,4 @@
-#   Copyright 2021 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ from typing import Callable, Dict, List, Optional, Sequence, Set, Union
 
 import numpy as np
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.graph.basic import Variable
 from pytensor.graph.fg import FunctionGraph
@@ -161,7 +161,6 @@ def make_initial_point_fn(
         varnames.append(name)
 
     def make_seeded_function(func):
-
         rngs = find_rng_nodes(func.maker.fgraph.outputs)
 
         @functools.wraps(func)
@@ -244,7 +243,7 @@ def make_initial_point_expression(
                     f'Invalid string strategy: {strategy}. It must be one of ["moment", "prior"]'
                 )
         else:
-            value = at.as_tensor(strategy, dtype=variable.dtype).astype(variable.dtype)
+            value = pt.as_tensor(strategy, dtype=variable.dtype).astype(variable.dtype)
 
         transform = rvs_to_transforms.get(variable, None)
 
@@ -252,7 +251,7 @@ def make_initial_point_expression(
             value = transform.forward(value, *variable.owner.inputs)
 
         if variable in jitter_rvs:
-            jitter = at.random.uniform(-1, 1, size=value.shape)
+            jitter = pt.random.uniform(-1, 1, size=value.shape)
             jitter.name = f"{variable.name}_jitter"
             value = value + jitter
 

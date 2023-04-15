@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -16,14 +16,15 @@ import sys
 import warnings
 
 from abc import ABC
-from typing import Dict, cast
+from typing import Dict, Union, cast
 
 import numpy as np
-import pytensor.tensor as at
+import pytensor.tensor as pt
 
 from pytensor.graph.replace import clone_replace
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
+from typing_extensions import TypeAlias
 
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
@@ -38,6 +39,9 @@ from pymc.pytensorf import (
 from pymc.sampling.forward import draw
 from pymc.step_methods.metropolis import MultivariateNormalProposal
 from pymc.vartypes import discrete_types
+
+SMCStats: TypeAlias = Dict[str, Union[int, float]]
+SMCSettings: TypeAlias = Dict[str, Union[int, float]]
 
 
 class SMC_KERNEL(ABC):
@@ -304,7 +308,7 @@ class SMC_KERNEL(ABC):
         """Apply kernel-specific perturbation to the particles once per stage"""
         pass
 
-    def sample_stats(self) -> Dict:
+    def sample_stats(self) -> SMCStats:
         """Stats to be saved at the end of each stage
 
         These stats will be saved under `sample_stats` in the final InferenceData object.
@@ -314,7 +318,7 @@ class SMC_KERNEL(ABC):
             "beta": self.beta,
         }
 
-    def sample_settings(self) -> Dict:
+    def sample_settings(self) -> SMCSettings:
         """SMC_kernel settings to be saved once at the end of sampling.
 
         These stats will be saved under `sample_stats` in the final InferenceData object.
@@ -330,13 +334,13 @@ class SMC_KERNEL(ABC):
 
         This method should not be overwritten.
         """
-        lenght_pos = len(self.tempered_posterior)
+        length_pos = len(self.tempered_posterior)
         varnames = [v.name for v in self.variables]
 
         with self.model:
             strace = NDArray(name=self.model.name)
-            strace.setup(lenght_pos, chain)
-        for i in range(lenght_pos):
+            strace.setup(length_pos, chain)
+        for i in range(length_pos):
             value = []
             size = 0
             for var in self.variables:
@@ -425,7 +429,7 @@ class IMH(SMC_KERNEL):
 
         self.acc_rate = np.mean(ac_)
 
-    def sample_stats(self):
+    def sample_stats(self) -> SMCStats:
         stats = super().sample_stats()
         stats.update(
             {
@@ -434,7 +438,7 @@ class IMH(SMC_KERNEL):
         )
         return stats
 
-    def sample_settings(self):
+    def sample_settings(self) -> SMCSettings:
         stats = super().sample_settings()
         stats.update(
             {
@@ -543,7 +547,7 @@ class MH(SMC_KERNEL):
 
         self.chain_acc_rate = np.mean(ac_, axis=0)
 
-    def sample_stats(self):
+    def sample_stats(self) -> SMCStats:
         stats = super().sample_stats()
         stats.update(
             {
@@ -553,7 +557,7 @@ class MH(SMC_KERNEL):
         )
         return stats
 
-    def sample_settings(self):
+    def sample_settings(self) -> SMCSettings:
         stats = super().sample_settings()
         stats.update(
             {
@@ -613,9 +617,9 @@ def _logp_forw(point, out_vars, in_vars, shared):
         new_in_vars = []
         for in_var in in_vars:
             if in_var.dtype in discrete_types:
-                float_var = at.TensorType("floatX", in_var.type.shape)(in_var.name)
+                float_var = pt.TensorType("floatX", in_var.type.shape)(in_var.name)
                 new_in_vars.append(float_var)
-                replace_int_input[in_var] = at.round(float_var).astype(in_var.dtype)
+                replace_int_input[in_var] = pt.round(float_var).astype(in_var.dtype)
             else:
                 new_in_vars.append(in_var)
 

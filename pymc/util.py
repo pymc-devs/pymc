@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -235,7 +235,7 @@ def biwrap(wrapper):
 
 
 def dataset_to_point_list(
-    ds: xarray.Dataset, sample_dims: List
+    ds: xarray.Dataset, sample_dims: Sequence[str]
 ) -> Tuple[List[Dict[str, np.ndarray]], Dict[str, Any]]:
     # All keys of the dataset must be a str
     var_names = list(ds.keys())
@@ -350,7 +350,6 @@ class WithMemoization:
 
 
 def locally_cachedmethod(f):
-
     from collections import defaultdict
 
     def self_cache_fn(f_name):
@@ -490,7 +489,6 @@ class _FutureWarningValidatingScratchpad(ValidatingScratchpad):
         for deprecated_names, alternative in (
             (("value_var", "observations"), "model.rvs_to_values[rv]"),
             (("transform",), "model.rvs_to_transforms[rv]"),
-            (("total_size",), "model.rvs_to_total_sizes[rv]"),
         ):
             if name in deprecated_names:
                 try:

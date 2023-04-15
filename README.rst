@@ -80,13 +80,20 @@ Please choose from the following:
 Contact
 =======
 
-We are using `discourse.pymc.io <https://discourse.pymc.io/>`__ as our main communication channel. You can also follow us on `Twitter @pymc_devs <https://twitter.com/pymc_devs>`__ for updates and other announcements.
+We are using `discourse.pymc.io <https://discourse.pymc.io/>`__ as our main communication channel.
 
 To ask a question regarding modeling or usage of PyMC we encourage posting to our Discourse forum under the `“Questions” Category <https://discourse.pymc.io/c/questions>`__. You can also suggest feature in the `“Development” Category <https://discourse.pymc.io/c/development>`__.
 
+You can also follow us on these social media platforms for updates and other announcements:
+
+- `LinkedIn @pymc <https://www.linkedin.com/company/pymc/>`__
+- `YouTube @PyMCDevelopers <https://www.youtube.com/c/PyMCDevelopers>`__
+- `Twitter @pymc_devs <https://twitter.com/pymc_devs>`__
+- `Mastodon @pymc@bayes.club <https://bayes.club/@pymc>`__
+
 To report an issue with PyMC please use the `issue tracker <https://github.com/pymc-devs/pymc/issues>`__.
 
-Finally, if you need to get in touch for non-technical information about the project, `send us an e-mail <pymc.devs@gmail.com>`__.
+Finally, if you need to get in touch for non-technical information about the project, `send us an e-mail <info@pymc-devs.org>`__.
 
 License
 =======
@@ -144,6 +151,8 @@ Sponsors
 
 |PyMCLabs|
 
+|Mistplay|
+
 .. |Binder| image:: https://mybinder.org/badge_logo.svg
    :target: https://mybinder.org/v2/gh/pymc-devs/pymc/main?filepath=%2Fdocs%2Fsource%2Fnotebooks
 .. |Build Status| image:: https://github.com/pymc-devs/pymc/workflows/pytest/badge.svg
@@ -152,9 +161,11 @@ Sponsors
    :target: https://codecov.io/gh/pymc-devs/pymc
 .. |Dockerhub| image:: https://img.shields.io/docker/automated/pymc/pymc.svg
    :target: https://hub.docker.com/r/pymc/pymc
-.. |NumFOCUS| image:: https://www.numfocus.org/wp-content/uploads/2017/03/1457562110.png
-   :target: http://www.numfocus.org/
 .. |NumFOCUS_badge| image:: https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A
    :target: http://www.numfocus.org/
-.. |PyMCLabs| image:: https://raw.githubusercontent.com/pymc-devs/pymc/main/docs/logos/sponsors/pymc-labs.png
+.. |NumFOCUS| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/sponsor_numfocus.png?raw=true
+   :target: http://www.numfocus.org/
+.. |PyMCLabs| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/sponsor_pymc_labs.png?raw=true
    :target: https://pymc-labs.io
+.. |Mistplay| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/sponsor_mistplay.png?raw=true
+   :target: https://www.mistplay.com/

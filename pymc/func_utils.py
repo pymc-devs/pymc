@@ -1,4 +1,4 @@
-#   Copyright 2021 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 from typing import Callable, Dict, Optional, Union
 
 import numpy as np
-import pytensor.tensor as aet
+import pytensor.tensor as pt
 
 from pytensor.gradient import NullTypeGradError
 from scipy import optimize
@@ -139,7 +139,7 @@ def find_constrained_prior(
             "Feel free to open a pull request on PyMC repo if you really need this feature."
         )
 
-    dist_params = aet.vector("dist_params")
+    dist_params = pt.vector("dist_params")
     params_to_optim = {
         arg_name: dist_params[i] for arg_name, i in zip(init_guess.keys(), range(len(init_guess)))
     }
@@ -159,10 +159,10 @@ def find_constrained_prior(
             "need it."
         )
 
-    target = (aet.exp(logcdf_lower) - mass_below_lower) ** 2
+    target = (pt.exp(logcdf_lower) - mass_below_lower) ** 2
     target_fn = pm.pytensorf.compile_pymc([dist_params], target, allow_input_downcast=True)
 
-    constraint = aet.exp(logcdf_upper) - aet.exp(logcdf_lower)
+    constraint = pt.exp(logcdf_upper) - pt.exp(logcdf_lower)
     constraint_fn = pm.pytensorf.compile_pymc([dist_params], constraint, allow_input_downcast=True)
 
     jac: Union[str, Callable]

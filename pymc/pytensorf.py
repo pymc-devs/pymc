@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 import pytensor
-import pytensor.tensor as at
+import pytensor.tensor as pt
 import scipy.sparse as sps
 
 from pytensor import scalar
@@ -42,7 +42,6 @@ from pytensor.graph.basic import (
     Variable,
     clone_get_equiv,
     graph_inputs,
-    vars_between,
     walk,
 )
 from pytensor.graph.fg import FunctionGraph
@@ -51,6 +50,7 @@ from pytensor.scalar.basic import Cast
 from pytensor.tensor.basic import _as_tensor_variable
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.random.var import (
     RandomGeneratorSharedVariable,
     RandomStateSharedVariable,
@@ -87,23 +87,6 @@ __all__ = [
     "compile_pymc",
     "constant_fold",
 ]
-
-
-# Temporarily add an Aesara dispatch for PyTensor TensorVariable to inform users
-# of incorrect mixing of libraries
-try:
-    from aesara.tensor import _as_tensor_variable as _as_tensor_variable_aesara
-
-    @_as_tensor_variable_aesara.register(TensorVariable)
-    def raise_informative_error(*args, **kwargs):
-        raise TypeError(
-            "You are calling an Aesara function with PyTensor variables.\n"
-            "Starting with PyMC 5.0, Aesara was replaced by PyTensor (see https://www.pymc.io/blog/pytensor_announcement.html).\n"
-            "Replace your import of aesara.tensor with pytensor.tensor.",
-        )
-
-except ImportError:
-    pass
 
 
 def convert_observed_data(data):
@@ -164,7 +147,7 @@ def convert_observed_data(data):
 @_as_tensor_variable.register(pd.Series)
 @_as_tensor_variable.register(pd.DataFrame)
 def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVariable:
-    return at.as_tensor_variable(df.to_numpy(), *args, **kwargs)
+    return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
 
 
 def extract_obs_data(x: TensorVariable) -> np.ndarray:
@@ -487,10 +470,10 @@ PyTensor derivative functions
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
-    return at.flatten(grad(f, v, disconnected_inputs="warn"))
+    return pt.flatten(grad(f, v, disconnected_inputs="warn"))
 
 
-empty_gradient = at.zeros(0, dtype="float32")
+empty_gradient = pt.zeros(0, dtype="float32")
 
 
 def gradient(f, vars=None):
@@ -498,15 +481,15 @@ def gradient(f, vars=None):
         vars = cont_inputs(f)
 
     if vars:
-        return at.concatenate([gradient1(f, v) for v in vars], axis=0)
+        return pt.concatenate([gradient1(f, v) for v in vars], axis=0)
     else:
         return empty_gradient
 
 
 def jacobian1(f, v):
     """jacobian of f wrt v"""
-    f = at.flatten(f)
-    idx = at.arange(f.shape[0], dtype="int32")
+    f = pt.flatten(f)
+    idx = pt.arange(f.shape[0], dtype="int32")
 
     def grad_i(i):
         return gradient1(f[i], v)
@@ -519,13 +502,13 @@ def jacobian(f, vars=None):
         vars = cont_inputs(f)
 
     if vars:
-        return at.concatenate([jacobian1(f, v) for v in vars], axis=1)
+        return pt.concatenate([jacobian1(f, v) for v in vars], axis=1)
     else:
         return empty_gradient
 
 
 def jacobian_diag(f, x):
-    idx = at.arange(f.shape[0], dtype="int32")
+    idx = pt.arange(f.shape[0], dtype="int32")
 
     def grad_ii(i, f, x):
         return grad(f[i], x)[i]
@@ -543,7 +526,7 @@ def hessian(f, vars=None):
 @pytensor.config.change_flags(compute_test_value="ignore")
 def hessian_diag1(f, v):
     g = gradient1(f, v)
-    idx = at.arange(g.shape[0], dtype="int32")
+    idx = pt.arange(g.shape[0], dtype="int32")
 
     def hess_ii(i):
         return gradient1(g[i], v)[i]
@@ -557,7 +540,7 @@ def hessian_diag(f, vars=None):
         vars = cont_inputs(f)
 
     if vars:
-        return -at.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
+        return -pt.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
     else:
         return empty_gradient
 
@@ -660,14 +643,14 @@ def join_nonshared_inputs(
 
     .. code-block:: python
 
-        import pytensor.tensor as at
+        import pytensor.tensor as pt
         import numpy as np
 
         from pymc.pytensorf import join_nonshared_inputs
 
         # Original non-shared inputs
-        x = at.scalar("x")
-        y = at.vector("y")
+        x = pt.scalar("x")
+        y = pt.vector("y")
         # Original output
         out = x + y
         print(out.eval({x: np.array(1), y: np.array([1, 2, 3])})) # [2, 3, 4]
@@ -742,7 +725,7 @@ def join_nonshared_inputs(
     if not inputs:
         raise ValueError("Empty list of input variables.")
 
-    raveled_inputs = at.concatenate([var.ravel() for var in inputs])
+    raveled_inputs = pt.concatenate([var.ravel() for var in inputs])
 
     if not make_inputs_shared:
         tensor_type = raveled_inputs.type
@@ -903,7 +886,7 @@ def ix_(*args):
     for k, new in enumerate(args):
         if new is None:
             out.append(slice(None))
-        new = at.as_tensor(new)
+        new = pt.as_tensor(new)
         if new.ndim != 1:
             raise ValueError("Cross index must be 1 dimensional")
         new = new.reshape((1,) * k + (new.size,) + (1,) * (nd - k - 1))
@@ -930,19 +913,21 @@ def local_remove_check_parameter(fgraph, node):
 
 @node_rewriter(tracks=[CheckParameterValue])
 def local_check_parameter_to_ninf_switch(fgraph, node):
-    if isinstance(node.op, CheckParameterValue):
-        logp_expr, *logp_conds = node.inputs
-        if len(logp_conds) > 1:
-            logp_cond = at.all(logp_conds)
-        else:
-            (logp_cond,) = logp_conds
-        out = at.switch(logp_cond, logp_expr, -np.inf)
-        out.name = node.op.msg
+    if not node.op.can_be_replaced_by_ninf:
+        return None
 
-        if out.dtype != node.outputs[0].dtype:
-            out = at.cast(out, node.outputs[0].dtype)
+    logp_expr, *logp_conds = node.inputs
+    if len(logp_conds) > 1:
+        logp_cond = pt.all(logp_conds)
+    else:
+        (logp_cond,) = logp_conds
+    out = pt.switch(logp_cond, logp_expr, -np.inf)
+    out.name = node.op.msg
 
-        return [out]
+    if out.dtype != node.outputs[0].dtype:
+        out = pt.cast(out, node.outputs[0].dtype)
+
+    return [out]
 
 
 pytensor.compile.optdb["canonicalize"].register(
@@ -985,7 +970,7 @@ def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVaria
     new_rng_nodes: List[Union[np.random.RandomState, np.random.Generator]] = []
     for rng_node in rng_nodes:
         rng_cls: type
-        if isinstance(rng_node, at.random.var.RandomStateSharedVariable):
+        if isinstance(rng_node, pt.random.var.RandomStateSharedVariable):
             rng_cls = np.random.RandomState
         else:
             rng_cls = np.random.Generator
@@ -1007,7 +992,7 @@ def reseed_rngs(
     ]
     for rng, bit_generator in zip(rngs, bit_generators):
         new_rng: Union[np.random.RandomState, np.random.Generator]
-        if isinstance(rng, at.random.var.RandomStateSharedVariable):
+        if isinstance(rng, pt.random.var.RandomStateSharedVariable):
             new_rng = np.random.RandomState(bit_generator)
         else:
             new_rng = np.random.Generator(bit_generator)
@@ -1015,42 +1000,85 @@ def reseed_rngs(
 
 
 def collect_default_updates(
-    inputs: Sequence[Variable], outputs: Sequence[Variable]
+    inputs: Sequence[Variable],
+    outputs: Sequence[Variable],
+    must_be_shared: bool = True,
 ) -> Dict[Variable, Variable]:
-    """Collect default update expression of RVs between inputs and outputs"""
+    """Collect default update expression for shared-variable RNGs used by RVs between inputs and outputs.
+
+    If `must_be_shared` is False, update expressions will also be returned for non-shared input RNGs.
+    This can be useful to obtain the symbolic update expressions from inner graphs.
+    """
 
     # Avoid circular import
     from pymc.distributions.distribution import SymbolicRandomVariable
 
-    rng_updates = {}
-    output_to_list = outputs if isinstance(outputs, (list, tuple)) else [outputs]
-    for random_var in (
-        var
-        for var in vars_between(inputs, output_to_list)
-        if var.owner
-        and isinstance(var.owner.op, (RandomVariable, SymbolicRandomVariable))
-        and var not in inputs
-    ):
-        # All nodes in `vars_between(inputs, outputs)` have owners.
-        # But mypy doesn't know, so we just assert it:
-        assert random_var.owner.op is not None
-        if isinstance(random_var.owner.op, RandomVariable):
-            rng = random_var.owner.inputs[0]
-            if getattr(rng, "default_update", None) is not None:
-                update_map = {rng: rng.default_update}
-            else:
-                update_map = {rng: random_var.owner.outputs[0]}
+    def find_default_update(clients, rng: Variable) -> Union[None, Variable]:
+        rng_clients = clients.get(rng, None)
+
+        # Root case, RNG is not used elsewhere
+        if not rng_clients:
+            return rng
+
+        if len(rng_clients) > 1:
+            warnings.warn(
+                f"RNG Variable {rng} has multiple clients. This is likely an inconsistent random graph.",
+                UserWarning,
+            )
+            return None
+
+        [client, _] = rng_clients[0]
+
+        # RNG is an output of the function, this is not a problem
+        if client == "output":
+            return rng
+
+        # RNG is used by another operator, which should output an update for the RNG
+        if isinstance(client.op, RandomVariable):
+            # RandomVariable first output is always the update of the input RNG
+            next_rng = client.outputs[0]
+
+        elif isinstance(client.op, SymbolicRandomVariable):
+            # SymbolicRandomVariable have an explicit method that returns an
+            # update mapping for their RNG(s)
+            next_rng = client.op.update(client).get(rng)
+            if next_rng is None:
+                raise ValueError(
+                    f"No update mapping found for RNG used in SymbolicRandomVariable Op {client.op}"
+                )
         else:
-            update_map = random_var.owner.op.update(random_var.owner)
-        # Check that we are not setting different update expressions for the same variables
-        for rng, update in update_map.items():
-            if rng not in rng_updates:
-                rng_updates[rng] = update
-            # When a variable has multiple outputs, it will be called twice with the same
-            # update expression. We don't want to raise in that case, only if the update
-            # expression in different from the one already registered
-            elif rng_updates[rng] is not update:
-                raise ValueError(f"Multiple update expressions found for the variable {rng}")
+            # We don't know how this RNG should be updated (e.g., Scan).
+            # The user should provide an update manually
+            return None
+
+        # Recurse until we find final update for RNG
+        return find_default_update(clients, next_rng)
+
+    outputs = makeiter(outputs)
+    fg = FunctionGraph(outputs=outputs, clone=False)
+    clients = fg.clients
+
+    rng_updates = {}
+    # Iterate over input RNGs. Only consider shared RNGs if `must_be_shared==True`
+    for input_rng in (
+        inp
+        for inp in graph_inputs(outputs, blockers=inputs)
+        if (
+            (not must_be_shared or isinstance(inp, SharedVariable))
+            and isinstance(inp.type, RandomType)
+        )
+    ):
+        # Even if an explicit default update is provided, we call it to
+        # issue any warnings about invalid random graphs.
+        default_update = find_default_update(clients, input_rng)
+
+        # Respect default update if provided
+        if getattr(input_rng, "default_update", None):
+            rng_updates[input_rng] = input_rng.default_update
+        else:
+            if default_update is not None:
+                rng_updates[input_rng] = default_update
+
     return rng_updates
 
 

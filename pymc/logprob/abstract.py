@@ -1,4 +1,4 @@
-#   Copyright 2022- The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -48,35 +48,6 @@ from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 
 
-def logprob(rv_var, *rv_values, **kwargs):
-    """Create a graph for the log-probability of a ``RandomVariable``."""
-    logprob = _logprob(rv_var.owner.op, rv_values, *rv_var.owner.inputs, **kwargs)
-
-    for rv_var in rv_values:
-        if rv_var.name:
-            logprob.name = f"{rv_var.name}_logprob"
-
-    return logprob
-
-
-def logcdf(rv_var, rv_value, **kwargs):
-    """Create a graph for the logcdf of a ``RandomVariable``."""
-    logcdf = _logcdf(rv_var.owner.op, rv_value, *rv_var.owner.inputs, name=rv_var.name, **kwargs)
-
-    if rv_var.name:
-        logcdf.name = f"{rv_var.name}_logcdf"
-
-    return logcdf
-
-
-def icdf(rv, value, **kwargs):
-    """Create a graph for the inverse CDF of a `RandomVariable`."""
-    rv_icdf = _icdf(rv.owner.op, value, *rv.owner.inputs, **kwargs)
-    if rv.name:
-        rv_icdf.name = f"{rv.name}_icdf"
-    return rv_icdf
-
-
 @singledispatch
 def _logprob(
     op: Op,
@@ -94,6 +65,18 @@ def _logprob(
     raise NotImplementedError(f"Logprob method not implemented for {op}")
 
 
+def _logprob_helper(rv, *values, **kwargs):
+    """Helper that calls `_logprob` dispatcher."""
+    logprob = _logprob(rv.owner.op, values, *rv.owner.inputs, **kwargs)
+
+    for rv in values:
+        if rv.name:
+            logprob.name = f"{rv.name}_logprob"
+            break
+
+    return logprob
+
+
 @singledispatch
 def _logcdf(
     op: Op,
@@ -107,7 +90,17 @@ def _logcdf(
     of ``RandomVariable``.  If you want to implement new logcdf graphs
     for a ``RandomVariable``, register a new function on this dispatcher.
     """
-    raise NotImplementedError(f"Logcdf method not implemented for {op}")
+    raise NotImplementedError(f"LogCDF method not implemented for {op}")
+
+
+def _logcdf_helper(rv, value, **kwargs):
+    """Helper that calls `_logcdf` dispatcher."""
+    logcdf = _logcdf(rv.owner.op, value, *rv.owner.inputs, name=rv.name, **kwargs)
+
+    if rv.name:
+        logcdf.name = f"{rv.name}_logcdf"
+
+    return logcdf
 
 
 @singledispatch
@@ -122,7 +115,17 @@ def _icdf(
     This function dispatches on the type of `op`, which should be a subclass
     of `RandomVariable`.
     """
-    raise NotImplementedError(f"icdf not implemented for {op}")
+    raise NotImplementedError(f"Inverse CDF method not implemented for {op}")
+
+
+def _icdf_helper(rv, value, **kwargs):
+    """Helper that calls `_icdf` dispatcher."""
+    rv_icdf = _icdf(rv.owner.op, value, *rv.owner.inputs, **kwargs)
+
+    if rv.name:
+        rv_icdf.name = f"{rv.name}_icdf"
+
+    return rv_icdf
 
 
 class MeasurableVariable(abc.ABC):
@@ -174,7 +177,7 @@ def _get_measurable_outputs_RandomVariable(op, node):
 
 
 def noop_measurable_outputs_fn(*args, **kwargs):
-    return None
+    return []
 
 
 def assign_custom_measurable_outputs(
@@ -220,6 +223,7 @@ def assign_custom_measurable_outputs(
 
     new_op_dict = op_type.__dict__.copy()
     new_op_dict["id_obj"] = (new_node.op, measurable_outputs_fn)
+    new_op_dict.setdefault("original_op_type", op_type)
 
     new_op_type = type(
         f"{type_prefix}{op_type.__name__}", (op_type, UnmeasurableVariable), new_op_dict

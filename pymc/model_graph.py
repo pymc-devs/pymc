@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -62,15 +62,18 @@ class ModelGraph:
                 # Otherwise return all inputs
                 return node.inputs
 
+        blockers = set(self.model.named_vars)
+
         def _expand(x):
-            if x.name:
+            nonlocal blockers
+            if x.name in blockers:
                 return [x]
             if isinstance(x.owner, Apply):
                 return reversed(_filter_non_parameter_inputs(x))
             return []
 
         parents = {
-            get_var_name(x)
+            VarName(get_var_name(x))
             for x in walk(nodes=_filter_non_parameter_inputs(var), expand=_expand)
             # Only consider nodes that are in the named model variables.
             if x.name and x.name in self._all_var_names
@@ -106,7 +109,7 @@ class ModelGraph:
                 selected_ancestors.add(self.model.rvs_to_values[var])
 
         # ordering of self._all_var_names is important
-        return [var.name for var in selected_ancestors]
+        return [VarName(var.name) for var in selected_ancestors]
 
     def make_compute_graph(
         self, var_names: Optional[Iterable[VarName]] = None
@@ -125,7 +128,6 @@ class ModelGraph:
                 # loop created so that the elif block can go through this again
                 # and remove any intermediate ops, notably dtype casting, to observations
                 while True:
-
                     obs_name = obs_node.name
                     if obs_name and obs_name != var_name:
                         input_map[var_name] = input_map[var_name].difference({obs_name})
@@ -209,7 +211,7 @@ class ModelGraph:
 
         # TODO: Evaluate all RV shapes and dim_length at once.
         #       This should help to find discrepancies, and
-        #       avoids unncessary function compiles for deetermining labels.
+        #       avoids unnecessary function compiles for deetermining labels.
 
         for var_name in self.vars_to_plot(var_names):
             v = self.model[var_name]
@@ -228,7 +230,7 @@ class ModelGraph:
                 plate_label = " x ".join(dim_labels)
             else:
                 # The RV has no `dims` information.
-                dim_labels = map(str, shape)
+                dim_labels = [str(x) for x in shape]
                 plate_label = " x ".join(map(str, shape))
             plates[plate_label].add(var_name)
 
@@ -263,7 +265,7 @@ class ModelGraph:
                     self._make_node(var_name, graph, formatting=formatting)
 
         for child, parents in self.make_compute_graph(var_names=var_names).items():
-            # parents is a set of rv names that preceed child rv nodes
+            # parents is a set of rv names that precede child rv nodes
             for parent in parents:
                 graph.edge(parent.replace(":", "&"), child.replace(":", "&"))
 
@@ -316,11 +318,10 @@ class ModelGraph:
                 graphnetwork.graph["name"] = self.model.name
             else:
                 for var_name in all_var_names:
-
                     self._make_node(var_name, graphnetwork, nx=True, formatting=formatting)
 
         for child, parents in self.make_compute_graph(var_names=var_names).items():
-            # parents is a set of rv names that preceed child rv nodes
+            # parents is a set of rv names that precede child rv nodes
             for parent in parents:
                 graphnetwork.add_edge(parent.replace(":", "&"), child.replace(":", "&"))
         return graphnetwork
@@ -379,7 +380,6 @@ def model_to_networkx(
         model_to_networkx(schools)
     """
     if "plain" not in formatting:
-
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
 
     if formatting != "plain":

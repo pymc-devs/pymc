@@ -9,12 +9,22 @@ repos:
     -   id: debug-statements
     -   id: end-of-file-fixer
     -   id: no-commit-to-branch
-        args: [--branch, master]
+        args: [--branch, main]
     -   id: requirements-txt-fixer
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
+- repo: https://github.com/lucianopaz/head_of_apache
+  rev: "0.0.3"
+  hooks:
+    - id: head_of_apache
+      args:
+        - --author=The PyMC Developers
+        - --exclude=docs/
+        - --exclude=scripts/
+        - --exclude=binder/
+        - --exclude=versioneer.py
 - repo: https://github.com/PyCQA/isort
-  rev: 5.10.1
+  rev: 5.12.0
   hooks:
     - id: isort
       name: isort
@@ -24,19 +34,19 @@ repos:
     - id: pyupgrade
       args: [--py37-plus]
 - repo: https://github.com/psf/black
-  rev: 22.12.0
+  rev: 23.3.0
   hooks:
     - id: black
     - id: black-jupyter
 - repo: https://github.com/PyCQA/pylint
-  rev: v2.15.8
+  rev: v3.0.0a6
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]
       files: ^pymc/
       exclude: (?x)(pymc/_version.py)
 - repo: https://github.com/PyCQA/pydocstyle
-  rev: 6.1.1
+  rev: 6.3.0
   hooks:
     - id: pydocstyle
       args:
@@ -44,7 +54,7 @@ repos:
       files: ^pymc/
       exclude: ^pymc/tests/
 - repo: https://github.com/MarcoGorelli/madforhooks
-  rev: 0.3.0
+  rev: 0.4.1
   hooks:
     - id: no-print-statements
       files: ^pymc/

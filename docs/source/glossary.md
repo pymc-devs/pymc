@@ -128,9 +128,30 @@ tensor_like
   Any scalar or sequence that can be interpreted as a {class}`~pytensor.tensor.TensorVariable`. In addition to TensorVariables, this includes NumPy ndarrays, scalars, lists and tuples (possibly nested). Any argument accepted by `pytensor.tensor.as_tensor_variable` is tensor_like.
 
   ```{jupyter-execute}
-  import pytensor.tensor as at
+  import pytensor.tensor as pt
 
-  at.as_tensor_variable([[1, 2.0], [0, 0]])
+  pt.as_tensor_variable([[1, 2.0], [0, 0]])
   ```
+unnamed_distribution
+    PyMC distributions can be initialized directly (e.g. `pm.Normal`) or using the `.dist` classmethod (e.g. `pm.Normal.dist`). Distributions initialized with the 1st method are registered as model parameters and thus, need to be given a name and be initialized within a model context. "unnamed_distributions" are distributions initialized with the 2nd method. These are standalone distributions, they are not parameters in any model and can be used to draw samples from a distribution by itself or as parameters to other distributions like mixtures or censored.
+
+    "unnamed_distributions" can be used outside the model context. For example:
+
+    ```{jupyter-execute}
+    import pymc as pm
+
+    unnamed_dist = pm.Normal.dist(mu=1, sigma=2)
+    pm.draw(unnamed_dist, draws=10)
+    ```
+
+    Trying to initialize a named distribution outside a model context raises a `TypeError`:
+
+    ```{jupyter-execute}
+    :raises: TypeError
+
+    import pymc as pm
+
+    pm.Normal("variable")
+    ```
 
 :::::

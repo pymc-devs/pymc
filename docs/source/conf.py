@@ -76,6 +76,7 @@ numpydoc_xref_aliases = {
     "SMC_kernel": ":ref:`SMC Kernel <smc_kernels>`",
     "PyTensor_Op": ":class:`PyTensor Op <pytensor.graph.op.Op>`",
     "tensor_like": ":term:`tensor_like`",
+    "unnamed_distribution": ":term:`unnamed_distribution`",
     "numpy_Generator": ":class:`~numpy.random.Generator`",
     "Distribution": ":ref:`Distribution <api_distributions>`",
 }
@@ -125,7 +126,7 @@ release = version
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # configure notfound extension to not add any prefix to the urls
 notfound_urls_prefix = "/projects/docs/en/latest/"

@@ -1,4 +1,4 @@
-#   Copyright 2022- The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -36,11 +36,22 @@
 
 import warnings
 
-from typing import Callable, Dict, Generator, Iterable, List, Optional, Set, Tuple
+from copy import copy
+from typing import (
+    Callable,
+    Dict,
+    Generator,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+)
 
 import numpy as np
 
-from pytensor import tensor as at
+from pytensor import tensor as pt
 from pytensor.graph import Apply, Op
 from pytensor.graph.basic import Constant, clone_get_equiv, graph_inputs, walk
 from pytensor.graph.fg import FunctionGraph
@@ -48,7 +59,11 @@ from pytensor.link.c.type import CType
 from pytensor.raise_op import CheckAndRaise
 from pytensor.tensor.var import TensorVariable
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    _logprob,
+    assign_custom_measurable_outputs,
+)
 
 
 def walk_model(
@@ -205,8 +220,11 @@ class CheckParameterValue(CheckAndRaise):
     Raises `ParameterValueError` if the check is not True.
     """
 
-    def __init__(self, msg=""):
+    __props__ = ("msg", "exc_type", "can_be_replaced_by_ninf")
+
+    def __init__(self, msg: str = "", can_be_replaced_by_ninf: bool = False):
         super().__init__(ParameterValueError, msg)
+        self.can_be_replaced_by_ninf = can_be_replaced_by_ninf
 
     def __str__(self):
         return f"Check{{{self.msg}}}"
@@ -222,7 +240,7 @@ class DiracDelta(Op):
         self.atol = atol
 
     def make_node(self, x):
-        x = at.as_tensor(x)
+        x = pt.as_tensor(x)
         return Apply(self, [x], [x.type()])
 
     def do_constant_folding(self, fgraph, node):
@@ -250,5 +268,72 @@ dirac_delta = DiracDelta()
 def diracdelta_logprob(op, values, *inputs, **kwargs):
     (values,) = values
     (const_value,) = inputs
-    values, const_value = at.broadcast_arrays(values, const_value)
-    return at.switch(at.isclose(values, const_value, rtol=op.rtol, atol=op.atol), 0.0, -np.inf)
+    values, const_value = pt.broadcast_arrays(values, const_value)
+    return pt.switch(pt.isclose(values, const_value, rtol=op.rtol, atol=op.atol), 0.0, -np.inf)
+
+
+def ignore_logprob(rv: TensorVariable) -> TensorVariable:
+    """Return a duplicated variable that is ignored when creating logprob graphs
+
+    This is used in by MeasurableRVs that use other RVs as inputs but account
+    for their logp terms explicitly.
+
+    If the variable is already ignored, it is returned directly.
+    """
+    prefix = "Unmeasurable"
+    node = rv.owner
+    op_type = type(node.op)
+    if op_type.__name__.startswith(prefix):
+        return rv
+    # By default `assign_custom_measurable_outputs` makes all outputs unmeasurable
+    new_node = assign_custom_measurable_outputs(node, type_prefix=prefix)
+    return new_node.outputs[node.outputs.index(rv)]
+
+
+def reconsider_logprob(rv: TensorVariable) -> TensorVariable:
+    """Return a duplicated variable that is considered when creating logprob graphs
+
+    This undoes the effect of `ignore_logprob`.
+
+    If a variable was not ignored, it is returned directly.
+    """
+    prefix = "Unmeasurable"
+    node = rv.owner
+    op_type = type(node.op)
+    if not op_type.__name__.startswith(prefix):
+        return rv
+
+    new_node = node.clone()
+    original_op_type = new_node.op.original_op_type
+    new_node.op = copy(new_node.op)
+    new_node.op.__class__ = original_op_type
+    return new_node.outputs[node.outputs.index(rv)]
+
+
+def ignore_logprob_multiple_vars(
+    vars: Sequence[TensorVariable], rvs_to_values: Dict[TensorVariable, TensorVariable]
+) -> List[TensorVariable]:
+    """Return duplicated variables that are ignored when creating logprob graphs.
+
+    This function keeps any interdependencies between variables intact, after
+    making each "unmeasurable", whereas a sequential call to `ignore_logprob`
+    would not do this correctly.
+    """
+    from pymc.pytensorf import _replace_rvs_in_graphs
+
+    measurable_vars_to_unmeasurable_vars = {
+        measurable_var: ignore_logprob(measurable_var) for measurable_var in vars
+    }
+
+    def replacement_fn(var, replacements):
+        if var in measurable_vars_to_unmeasurable_vars:
+            replacements[var] = measurable_vars_to_unmeasurable_vars[var]
+        # We don't want to clone valued nodes. Assigning a var to itself in the
+        # replacements prevents this
+        elif var in rvs_to_values:
+            replacements[var] = var
+
+        return []
+
+    unmeasurable_vars, _ = _replace_rvs_in_graphs(graphs=vars, replacement_fn=replacement_fn)
+    return unmeasurable_vars
