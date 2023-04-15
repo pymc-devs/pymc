@@ -1347,13 +1347,22 @@ class Exponential(PositiveContinuous):
     ----------
     lam : tensor_like of float
         Rate or inverse scale (``lam`` > 0).
+    scale: tensor_like of float
+        Alternative parameter (scale = 1/lam).
     """
     rv_op = exponential
 
     @classmethod
-    def dist(cls, lam: DIST_PARAMETER_TYPES, *args, **kwargs):
-        lam = pt.as_tensor_variable(floatX(lam))
+    def dist(cls, lam=None, scale=None, *args, **kwargs):
+        if lam is not None and scale is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both lam and scale.")
+        elif lam is None and scale is None:
+            raise ValueError("Incompatible parametrization. Must specify either lam or scale.")
 
+        if scale is not None:
+            lam = pt.reciprocal(scale)
+
+        lam = pt.as_tensor_variable(floatX(lam))
         # PyTensor exponential op is parametrized in terms of mu (1/lam)
         return super().dist([pt.reciprocal(lam)], **kwargs)
 

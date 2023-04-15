@@ -432,17 +432,42 @@ class TestMatchesScipy:
             {"lam": Rplus},
             lambda value, lam: st.expon.logpdf(value, 0, 1 / lam),
         )
+        check_logp(
+            pm.Exponential,
+            Rplus,
+            {"scale": Rplus},
+            lambda value, scale: st.expon.logpdf(value, 0, scale),
+        )
         check_logcdf(
             pm.Exponential,
             Rplus,
             {"lam": Rplus},
             lambda value, lam: st.expon.logcdf(value, 0, 1 / lam),
         )
+        check_logcdf(
+            pm.Exponential,
+            Rplus,
+            {"scale": Rplus},
+            lambda value, scale: st.expon.logcdf(value, 0, scale),
+        )
         check_icdf(
             pm.Exponential,
             {"lam": Rplus},
             lambda q, lam: st.expon.ppf(q, loc=0, scale=1 / lam),
         )
+
+    def test_exponential_wrong_arguments(self):
+        m = pm.Model()
+
+        msg = "Incompatible parametrization. Can't specify both lam and scale"
+        with m:
+            with pytest.raises(ValueError, match=msg):
+                pm.Exponential("x", lam=0.5, scale=5)
+
+        msg = "Incompatible parametrization. Must specify either lam or scale"
+        with m:
+            with pytest.raises(ValueError, match=msg):
+                pm.Exponential("x")
 
     def test_laplace(self):
         check_logp(
@@ -2089,6 +2114,13 @@ class TestExponential(BaseTestDistributionRandom):
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
     ]
+
+
+class TestExponentialScale(BaseTestDistributionRandom):
+    pymc_dist = pm.Exponential
+    pymc_dist_params = {"scale": 5.0}
+    expected_rv_op_params = {"mu": pymc_dist_params["scale"]}
+    checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
 class TestCauchy(BaseTestDistributionRandom):
