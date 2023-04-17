@@ -257,6 +257,7 @@ class Metropolis(ArrayStepShared):
             q = floatX(q0d + delta)
 
         if self.elemwise_update:
+            q0d = q0d.copy()
             q_temp = q0d.copy()
             # Shuffle order of updates (probably we don't need to do this in every step)
             np.random.shuffle(self.enum_dims)
@@ -264,7 +265,7 @@ class Metropolis(ArrayStepShared):
                 q_temp[i] = q[i]
                 accept_rate_i = self.delta_logp(q_temp, q0d)
                 q_temp_, accepted_i = metrop_select(accept_rate_i, q_temp, q0d)
-                q_temp[i] = q_temp_[i]
+                q_temp[i] = q0d[i] = q_temp_[i]
                 self.accept_rate_iter[i] = accept_rate_i
                 self.accepted_iter[i] = accepted_i
                 self.accepted_sum[i] += accepted_i
