@@ -94,3 +94,9 @@ def test_potentially_measurable_operand():
         fn(z_vv_test, y_vv_test),
         st.norm(2, 1).logcdf(z_vv_test),
     )
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Logprob method not implemented",
+    ):
+        logp(y_rv, y_vv).eval({y_vv: y_vv_test})
