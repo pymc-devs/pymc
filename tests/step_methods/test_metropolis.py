@@ -120,6 +120,16 @@ class TestMetropolis:
         assert az.rhat(trace).max()["batched_dist"].values < 1.1
         assert az.ess(trace).min()["batched_dist"].values > 50
 
+    def test_elemwise_update_different_scales(self):
+        mu = [1, 2, 3, 4, 5, 100, 1_000, 10_000]
+        with pm.Model() as m:
+            x = pm.Poisson("x", mu=mu)
+            step = pm.Metropolis([x])
+            trace = pm.sample(draws=1000, chains=2, step=step, random_seed=128).posterior
+
+        np.testing.assert_allclose(trace["x"].mean(("draw", "chain")), mu, rtol=0.1)
+        np.testing.assert_allclose(trace["x"].var(("draw", "chain")), mu, rtol=0.2)
+
     def test_multinomial_no_elemwise_update(self):
         with pm.Model() as m:
             batched_dist = pm.Multinomial("batched_dist", n=5, p=np.ones(4) / 4, shape=(10, 4))
