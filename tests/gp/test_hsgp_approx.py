@@ -51,7 +51,7 @@ def build_mmd_func(sample1, sample2):
     return calc_mmd
 
 
-def two_sample_test(sample1, sample2, n_sims=1000, alpha=0.05):
+def two_sample_test(sample1, sample2, rng: np.random.Generator, n_sims=1000, alpha=0.05):
     """Calculate test whose null hypothesis is that two sets of samples were drawn from
     the same distribution.
 
@@ -67,7 +67,7 @@ def two_sample_test(sample1, sample2, n_sims=1000, alpha=0.05):
 
     h0 = []
     for i in range(n_sims):
-        np.random.shuffle(ix)
+        rng.shuffle(ix)
         X = X[ix, :]
         h0.append(calc_mmd(X[:half_N, :], X[half_N:, :]))
     h0 = np.asarray(h0)
@@ -171,6 +171,9 @@ class TestHSGP:
         prior and compare them using MMD two sample test.  Tests both centered and non-centered
         parameterizations.
         """
+        seeds = np.arange(5) + 174  # 5 possible seeds
+        rng = np.random.default_rng(np.random.choice(seeds))
+
         with model:
             hsgp = pm.gp.HSGP(m=[200], c=2.0, parameterization=parameterization, cov_func=cov_func)
             f1 = hsgp.prior("f1", X=X1)
@@ -178,13 +181,13 @@ class TestHSGP:
             gp = pm.gp.Latent(cov_func=cov_func)
             f2 = gp.prior("f2", X=X1)
 
-            idata = pm.sample_prior_predictive(samples=1000)
+            idata = pm.sample_prior_predictive(samples=1000, random_seed=rng)
 
         samples1 = az.extract(idata.prior["f1"])["f1"].values.T
         samples2 = az.extract(idata.prior["f2"])["f2"].values.T
 
         h0, mmd, critical_value, reject = two_sample_test(
-            samples1, samples2, n_sims=500, alpha=0.01
+            samples1, samples2, n_sims=500, alpha=0.01, rng=rng
         )
         assert not reject, "H0 was rejected, even though HSGP and GP priors should match."
 
@@ -194,17 +197,20 @@ class TestHSGP:
         prior and compare them using MMD two sample test.  Tests both centered and non-centered
         parameterizations.  The conditional should match the prior when no data is observed.
         """
+        seeds = np.arange(5) + 197  # 5 possible seeds
+        rng = np.random.default_rng(np.random.choice(seeds))
+
         with model:
             hsgp = pm.gp.HSGP(m=[100], c=2.0, parameterization=parameterization, cov_func=cov_func)
             f = hsgp.prior("f", X=X1)
             fc = hsgp.conditional("fc", Xnew=X1)
 
-            idata = pm.sample_prior_predictive(samples=1000)
+            idata = pm.sample_prior_predictive(samples=1000, random_seed=rng)
 
         samples1 = az.extract(idata.prior["f"])["f"].values.T
         samples2 = az.extract(idata.prior["fc"])["fc"].values.T
 
         h0, mmd, critical_value, reject = two_sample_test(
-            samples1, samples2, n_sims=500, alpha=0.01
+            samples1, samples2, n_sims=500, alpha=0.01, rng=rng
         )
         assert not reject, "H0 was rejected, even though HSGP prior and conditional should match."
