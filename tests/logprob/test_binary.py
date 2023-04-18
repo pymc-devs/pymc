@@ -51,12 +51,12 @@ def test_continuous_rv_comparison(comparison_op, exp_logp_true, exp_logp_false):
     [
         (
             pt.lt,
-            st.poisson(2).logcdf,
+            lambda x: st.poisson(2).logcdf(x - 1),
             lambda x: np.logaddexp(st.poisson(2).logsf(x), st.poisson(2).logpmf(x)),
         ),
         (
             pt.gt,
-            lambda x: np.logaddexp(st.poisson(2).logsf(x), st.poisson(2).logpmf(x)),
+            st.poisson(2).logsf,
             st.poisson(2).logcdf,
         ),
     ],

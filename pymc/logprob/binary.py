@@ -95,16 +95,14 @@ def comparison_logprob(op, values, base_rv, operand, **kwargs):
     if isinstance(op.scalar_op, GT):
         logprob = pt.switch(condn_exp, logccdf, logcdf)
     elif isinstance(op.scalar_op, LT):
-        logprob = pt.switch(condn_exp, logcdf, logccdf)
+        if base_rv.dtype.startswith("int"):
+            logpmf = _logprob_helper(base_rv, operand, **kwargs)
+            logcdf_lt_true = _logcdf_helper(base_rv, operand - 1, **kwargs)
+            logprob = pt.switch(condn_exp, logcdf_lt_true, pt.logaddexp(logccdf, logpmf))
+        else:
+            logprob = pt.switch(condn_exp, logcdf, logccdf)
     else:
         raise TypeError(f"Unsupported scalar_op {op.scalar_op}")
-
-    if base_rv.dtype.startswith("int"):
-        logp_point = _logprob_helper(base_rv, operand, **kwargs)
-        if isinstance(op.scalar_op, GT):
-            logprob = pt.switch(condn_exp, pt.logaddexp(logprob, logp_point), logprob)
-        elif isinstance(op.scalar_op, LT):
-            logprob = pt.switch(condn_exp, logprob, pt.logaddexp(logprob, logp_point))
 
     if base_rv_op.name:
         logprob.name = f"{base_rv_op}_logprob"
