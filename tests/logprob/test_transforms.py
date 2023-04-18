@@ -49,9 +49,12 @@ from pytensor.scan import scan
 
 from pymc.distributions.transforms import _default_transform, log, logodds
 from pymc.logprob.abstract import MeasurableVariable, _get_measurable_outputs, _logprob
-from pymc.logprob.basic import factorized_joint_logprob
+from pymc.logprob.basic import factorized_joint_logprob, logp
 from pymc.logprob.transforms import (
     ChainedTransform,
+    CoshTransform,
+    ErfcTransform,
+    ErfcxTransform,
     ErfTransform,
     ExpTransform,
     IntervalTransform,
@@ -60,6 +63,8 @@ from pymc.logprob.transforms import (
     LogTransform,
     RVTransform,
     ScaleTransform,
+    SinhTransform,
+    TanhTransform,
     TransformValuesMapping,
     TransformValuesRewrite,
     transformed_variable,
@@ -992,20 +997,41 @@ def test_multivariate_transform(shift, scale):
     )
 
 
-@pytest.mark.parametrize("transform", [ErfTransform])
-def test_erf_logp(transform):
+from pytensor.tensor import cosh, erf, erfc, erfcx, sinh, tanh
+
+
+@pytest.mark.parametrize(
+    "pt_transform, transform",
+    [
+        (erf, ErfTransform()),
+        (erfc, ErfcTransform()),
+        (erfcx, ErfcxTransform()),
+        (sinh, SinhTransform()),
+        (cosh, CoshTransform()),
+        (tanh, TanhTransform()),
+    ],
+)
+def test_erf_logp(pt_transform, transform):
     base_rv = pt.random.normal(
         0.5, 1, name="base_rv"
     )  # Something not centered around 0 is usually better
-    rv = pt.erf(base_rv)
-    vv = rv.clone()
-    rv_logp = joint_logprob({rv: vv})
+    rv = pt_transform(base_rv)
 
-    transform = transform()
-    expected_logp = joint_logprob({rv: transform.backward(vv)}) + transform.log_jac_det(vv)
+    vv = rv.clone()
+    rv_logp = logp(rv, vv)
+
+    expected_logp = logp(base_rv, transform.backward(vv)) + transform.log_jac_det(vv)
 
     vv_test = np.array(0.25)  # Arbitrary test value
     np.testing.assert_almost_equal(
         rv_logp.eval({vv: vv_test}),
         expected_logp.eval({vv: vv_test}),
     )
+
+
+from pymc.testing import Rplusbig, Vector
+from tests.distributions.test_transform import check_jacobian_det
+
+
+def test_check_jac_det():
+    check_jacobian_det(ErfTransform(), Vector(Rplusbig, 2), pt.dvector, [0, 0], elemwise=False)

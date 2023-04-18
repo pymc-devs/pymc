@@ -42,6 +42,7 @@ from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import pytensor.tensor as pt
 
+from pytensor import scan
 from pytensor.gradient import DisconnectedType, jacobian
 from pytensor.graph.basic import Apply, Node, Variable
 from pytensor.graph.features import AlreadyThere, Feature
@@ -791,9 +792,9 @@ class ErfcxTransform(RVTransform):
                 2 * prior_result * pt.erfcx(prior_result) - 2 / pt.sqrt(np.pi)
             )
 
-        result, updates = pytensor.scan(
+        result, updates = scan(
             fn=calc_delta_x,
-            outputs_info=at.ones_like(x),
+            outputs_info=pt.ones_like(x),
             sequences=value,
             non_sequences=x,
             n_steps=k,
