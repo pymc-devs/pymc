@@ -21,7 +21,7 @@ from pytensor.tensor.nlinalg import eigh
 
 import pymc as pm
 
-from pymc.gp.cov import Constant, Covariance
+from pymc.gp.cov import BaseCovariance, Constant
 from pymc.gp.mean import Zero
 from pymc.gp.util import (
     JITTER_DEFAULT,
@@ -483,7 +483,7 @@ class Marginal(Base):
         """
         sigma = _handle_sigma_noise_parameters(sigma=sigma, noise=noise)
 
-        noise_func = sigma if isinstance(sigma, Covariance) else pm.gp.cov.WhiteNoise(sigma)
+        noise_func = sigma if isinstance(sigma, BaseCovariance) else pm.gp.cov.WhiteNoise(sigma)
         mu, cov = self._build_marginal_likelihood(X=X, noise_func=noise_func, jitter=jitter)
         self.X = X
         self.y = y
@@ -515,7 +515,7 @@ class Marginal(Base):
 
         if all(val in given for val in ["X", "y", "sigma"]):
             X, y, sigma = given["X"], given["y"], given["sigma"]
-            noise_func = sigma if isinstance(sigma, Covariance) else pm.gp.cov.WhiteNoise(sigma)
+            noise_func = sigma if isinstance(sigma, BaseCovariance) else pm.gp.cov.WhiteNoise(sigma)
         else:
             X, y, noise_func = self.X, self.y, self.sigma
         return X, y, noise_func, cov_total, mean_total
