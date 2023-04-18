@@ -166,13 +166,13 @@ class TestHSGP:
                 assert n_coeffs == n_basis, "one was dropped when it shouldn't have been"
 
     @pytest.mark.parametrize("parameterization", ["centered", "noncentered"])
-    def test_prior(self, model, cov_func, X1, parameterization):
+    @pytest.mark.parametrize("seed", list(np.arange(5) + 174))
+    def test_prior(self, model, cov_func, X1, parameterization, seed):
         """Compare HSGP prior to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
         prior and compare them using MMD two sample test.  Tests both centered and non-centered
         parameterizations.
         """
-        seeds = np.arange(5) + 174  # 5 possible seeds
-        rng = np.random.default_rng(np.random.choice(seeds))
+        rng = np.random.default_rng(seed)
 
         with model:
             hsgp = pm.gp.HSGP(m=[200], c=2.0, parameterization=parameterization, cov_func=cov_func)
