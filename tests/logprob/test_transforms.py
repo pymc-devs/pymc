@@ -1025,7 +1025,9 @@ def test_erf_logp(pt_transform, transform):
     vv_test = np.array(0.25)  # Arbitrary test value
     np.testing.assert_almost_equal(
         rv_logp.eval({vv: vv_test}),
-        expected_logp.eval({vv: vv_test}),
+        np.where(
+            np.isnan(expected_logp.eval({vv: vv_test})), -np.inf, expected_logp.eval({vv: vv_test})
+        ),
     )
 
 
@@ -1034,4 +1036,11 @@ from tests.distributions.test_transform import check_jacobian_det
 
 
 def test_check_jac_det():
-    check_jacobian_det(ErfTransform(), Vector(Rplusbig, 2), pt.dvector, [0, 0], elemwise=False)
+    check_jacobian_det(
+        ErfTransform(),
+        Vector(Rplusbig, 2),
+        pt.dvector,
+        [0.1, 0.1],
+        elemwise=True,
+        rv_var=pt.random.normal(0.5, 1, name="base_rv"),
+    )

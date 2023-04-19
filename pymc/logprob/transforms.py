@@ -413,7 +413,7 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
         jacobian = jacobian.sum(axis=tuple(range(-ndim_supp, 0)))
 
     # The jacobian is used to ensure a value in the supported domain was provided
-    return pt.switch(pt.isnan(jacobian), -np.inf, input_logprob + jacobian)
+    return pt.switch(pt.isnan(input_logprob + jacobian), -np.inf, input_logprob + jacobian)
 
 
 @_logcdf.register(MeasurableTransform)
@@ -795,8 +795,7 @@ class ErfcxTransform(RVTransform):
         result, updates = scan(
             fn=calc_delta_x,
             outputs_info=pt.ones_like(x),
-            sequences=value,
-            non_sequences=x,
+            non_sequences=value,
             n_steps=k,
         )
         return result[-1]
