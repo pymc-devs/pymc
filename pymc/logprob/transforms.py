@@ -85,7 +85,7 @@ from pymc.logprob.abstract import (
     _logprob_helper,
 )
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
-from pymc.logprob.utils import ignore_logprob, walk_model
+from pymc.logprob.utils import check_potential_measurability, ignore_logprob
 
 
 class TransformedVariable(Op):
@@ -573,19 +573,8 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
     # Check that other inputs are not potentially measurable, in which case this rewrite
     # would be invalid
     other_inputs = tuple(inp for inp in node.inputs if inp is not measurable_input)
-    if any(
-        ancestor_node
-        for ancestor_node in walk_model(
-            other_inputs,
-            walk_past_rvs=False,
-            stop_at_vars=set(rv_map_feature.rv_values),
-        )
-        if (
-            ancestor_node.owner
-            and isinstance(ancestor_node.owner.op, MeasurableVariable)
-            and ancestor_node not in rv_map_feature.rv_values
-        )
-    ):
+
+    if not check_potential_measurability(other_inputs, rv_map_feature):
         return None
 
     # Make base_measure outputs unmeasurable

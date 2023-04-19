@@ -38,6 +38,7 @@ from pymc.logprob.basic import factorized_joint_logprob, icdf, joint_logp, logcd
 
 # isort: off
 # Add rewrites to the DBs
+import pymc.logprob.binary
 import pymc.logprob.censoring
 import pymc.logprob.cumsum
 import pymc.logprob.checks
