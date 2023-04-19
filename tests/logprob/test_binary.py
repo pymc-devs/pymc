@@ -27,23 +27,25 @@ from pymc.testing import assert_no_rvs
 @pytest.mark.parametrize(
     "comparison_op, exp_logp_true, exp_logp_false",
     [
-        (pt.lt, st.norm(0, 1).logcdf, st.norm(0, 1).logsf),
-        (pt.gt, st.norm(0, 1).logsf, st.norm(0, 1).logcdf),
+        ((pt.lt, pt.le), "logcdf", "logsf"),
+        ((pt.gt, pt.ge), "logsf", "logcdf"),
     ],
 )
 def test_continuous_rv_comparison(comparison_op, exp_logp_true, exp_logp_false):
     x_rv = pt.random.normal(0, 1)
-    comp_x_rv = comparison_op(x_rv, 0.5)
+    for op in comparison_op:
+        comp_x_rv = op(x_rv, 0.5)
 
-    comp_x_vv = comp_x_rv.clone()
+        comp_x_vv = comp_x_rv.clone()
 
-    logprob = logp(comp_x_rv, comp_x_vv)
-    assert_no_rvs(logprob)
+        logprob = logp(comp_x_rv, comp_x_vv)
+        assert_no_rvs(logprob)
 
-    logp_fn = pytensor.function([comp_x_vv], logprob)
+        logp_fn = pytensor.function([comp_x_vv], logprob)
+        ref_scipy = st.norm(0, 1)
 
-    assert np.isclose(logp_fn(0), exp_logp_false(0.5))
-    assert np.isclose(logp_fn(1), exp_logp_true(0.5))
+        assert np.isclose(logp_fn(0), getattr(ref_scipy, exp_logp_false)(0.5))
+        assert np.isclose(logp_fn(1), getattr(ref_scipy, exp_logp_true)(0.5))
 
 
 @pytest.mark.parametrize(
@@ -55,9 +57,19 @@ def test_continuous_rv_comparison(comparison_op, exp_logp_true, exp_logp_false):
             lambda x: np.logaddexp(st.poisson(2).logsf(x), st.poisson(2).logpmf(x)),
         ),
         (
+            pt.ge,
+            lambda x: np.logaddexp(st.poisson(2).logsf(x), st.poisson(2).logpmf(x)),
+            lambda x: st.poisson(2).logcdf(x - 1),
+        ),
+        (
             pt.gt,
             st.poisson(2).logsf,
             st.poisson(2).logcdf,
+        ),
+        (
+            pt.le,
+            st.poisson(2).logcdf,
+            st.poisson(2).logsf,
         ),
     ],
 )

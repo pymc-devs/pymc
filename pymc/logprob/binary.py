@@ -19,8 +19,8 @@ import pytensor.tensor as pt
 from pytensor.graph.basic import Node
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.scalar.basic import GT, LT
-from pytensor.tensor.math import gt, lt
+from pytensor.scalar.basic import GE, GT, LE, LT
+from pytensor.tensor.math import ge, gt, le, lt
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,
@@ -36,10 +36,10 @@ from pymc.logprob.utils import check_potential_measurability, ignore_logprob
 class MeasurableComparison(MeasurableElemwise):
     """A placeholder used to specify a log-likelihood for a binary comparison RV sub-graph."""
 
-    valid_scalar_types = (GT, LT)
+    valid_scalar_types = (GT, LT, GE, LE)
 
 
-@node_rewriter(tracks=[gt, lt])
+@node_rewriter(tracks=[gt, lt, ge, le])
 def find_measurable_comparisons(
     fgraph: FunctionGraph, node: Node
 ) -> Optional[List[MeasurableComparison]]:
@@ -92,17 +92,20 @@ def comparison_logprob(op, values, base_rv, operand, **kwargs):
 
     condn_exp = pt.eq(value, np.array(True))
 
-    if isinstance(op.scalar_op, GT):
+    if isinstance(op.scalar_op, (GT, GE)):
         logprob = pt.switch(condn_exp, logccdf, logcdf)
-    elif isinstance(op.scalar_op, LT):
-        if base_rv.dtype.startswith("int"):
-            logpmf = _logprob_helper(base_rv, operand, **kwargs)
-            logcdf_lt_true = _logcdf_helper(base_rv, operand - 1, **kwargs)
-            logprob = pt.switch(condn_exp, logcdf_lt_true, pt.logaddexp(logccdf, logpmf))
-        else:
-            logprob = pt.switch(condn_exp, logcdf, logccdf)
+    elif isinstance(op.scalar_op, (LT, LE)):
+        logprob = pt.switch(condn_exp, logcdf, logccdf)
     else:
         raise TypeError(f"Unsupported scalar_op {op.scalar_op}")
+
+    if base_rv.dtype.startswith("int"):
+        logpmf = _logprob_helper(base_rv, operand, **kwargs)
+        logcdf_prev = _logcdf_helper(base_rv, operand - 1, **kwargs)
+        if isinstance(op.scalar_op, LT):
+            return pt.switch(condn_exp, logcdf_prev, pt.logaddexp(logccdf, logpmf))
+        elif isinstance(op.scalar_op, GE):
+            return pt.switch(condn_exp, pt.logaddexp(logccdf, logpmf), logcdf_prev)
 
     if base_rv_op.name:
         logprob.name = f"{base_rv_op}_logprob"
