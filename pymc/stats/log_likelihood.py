@@ -13,8 +13,6 @@
 #   limitations under the License.
 from typing import Optional, Sequence, cast
 
-import numpy as np
-
 from arviz import InferenceData, dict_to_dataset
 from fastprogress import progress_bar
 
@@ -117,10 +115,7 @@ def compute_log_likelihood(
         loglike_trace,
         library=pymc,
         dims={dname: list(dvals) for dname, dvals in model.named_vars_to_dims.items()},
-        coords={
-            cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
-            for cname, cvals in model.coords.items()
-        },
+        coords={cname: cvals_typed for cname, cvals_typed in model.coords_typed.items()},
         default_dims=list(sample_dims),
         skip_event_dims=True,
     )

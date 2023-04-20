@@ -195,8 +195,8 @@ class Bound:
 
         if dims is not None:
             model = modelcontext(None)
-            if dims in model.coords:
-                dim_obj = np.asarray(model.coords[dims])
+            if dims in model.coords_typed:
+                dim_obj = model.coords_typed[dims]
                 size = dim_obj.shape
             else:
                 raise ValueError("Given dims do not exist in model coordinates.")

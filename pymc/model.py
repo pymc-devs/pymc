@@ -80,6 +80,7 @@ from pymc.util import (
     UNSET,
     WithMemoization,
     _add_future_warning_tag,
+    _as_coord_vals,
     get_transformed_name,
     get_value_vars_from_user_vars,
     get_var_name,
@@ -991,8 +992,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     @property
     def coords(self) -> Dict[str, Union[Tuple, None]]:
-        """Coordinate values for model dimensions."""
-        return self._coords
+        """Coordinate values (tuple) for model dimensions."""
+        return {
+            cname: tuple(cvals) if cvals is not None else None
+            for cname, cvals in self._coords.items()
+        }
+
+    @property
+    def coords_typed(self) -> Dict[str, Union[np.ndarray, None]]:
+        """Coordinate values (numpy array) for model dimensions."""
+        return {
+            cname: cvals.copy() if cvals is not None else None
+            for cname, cvals in self._coords.items()
+        }
 
     @property
     def dim_lengths(self) -> Dict[str, Variable]:
@@ -1007,20 +1019,20 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if len(set(dims)) != len(dims):
             raise ValueError("Can not contain the same dimension name twice.")
         for dim in dims:
-            if dim not in self.coords:
+            if dim not in self.coords_typed:
                 raise ValueError(
                     f"Unknown dimension name '{dim}'. All dimension "
                     "names must be specified in the `coords` "
                     "argument of the model or through a pm.Data "
                     "variable."
                 )
-            shape.extend(np.shape(self.coords[dim]))
+            shape.extend(self.coords_typed[dim].shape)
         return tuple(shape)
 
     def add_coord(
         self,
         name: str,
-        values: Optional[Sequence] = None,
+        values: Optional[Union[Sequence, np.ndarray]] = None,
         mutable: bool = False,
         *,
         length: Optional[Union[int, Variable]] = None,
@@ -1052,12 +1064,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 f"Either `values` or `length` must be specified for the '{name}' dimension."
             )
         if values is not None:
-            # Conversion to a tuple ensures that the coordinate values are immutable.
-            # Also unlike numpy arrays the's tuple.index(...) which is handy to work with.
-            values = tuple(values)
-        if name in self.coords:
-            if not np.array_equal(values, self.coords[name]):
-                raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
+            # Conversion to numpy array to ensure coord vals are 1-dim
+            values = _as_coord_vals(values)
+        if name in self.coords_typed and not np.array_equal(values, self.coords_typed[name]):
+            raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
         if length is not None and not isinstance(length, (int, Variable)):
             raise ValueError(
                 f"The `length` passed for the '{name}' coord must be an int, PyTensor Variable or None."
@@ -1074,7 +1084,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def add_coords(
         self,
-        coords: Dict[str, Optional[Sequence]],
+        coords: Dict[str, Optional[Union[Sequence, np.ndarray]]],
         *,
         lengths: Optional[Dict[str, Optional[Union[int, Variable]]]] = None,
     ):
@@ -1086,7 +1096,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         for name, values in coords.items():
             self.add_coord(name, values, length=lengths.get(name, None))
 
-    def set_dim(self, name: str, new_length: int, coord_values: Optional[Sequence] = None):
+    def set_dim(
+        self, name: str, new_length: int, coord_values: Optional[Union[Sequence, np.ndarray]] = None
+    ):
         """Update a mutable dimension.
 
         Parameters
@@ -1100,7 +1112,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         if not isinstance(self.dim_lengths[name], ScalarSharedVariable):
             raise ValueError(f"The dimension '{name}' is immutable.")
-        if coord_values is None and self.coords.get(name, None) is not None:
+        if coord_values is None and self.coords_typed.get(name, None) is not None:
             raise ValueError(
                 f"'{name}' has coord values. Pass `set_dim(..., coord_values=...)` to update them."
             )
@@ -1112,7 +1124,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     actual=len_cvals,
                     expected=new_length,
                 )
-            self._coords[name] = tuple(coord_values)
+            self._coords[name] = _as_coord_vals(coord_values)
         self.dim_lengths[name].set_value(new_length)
         return
 
@@ -1156,7 +1168,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         name: str,
         values: Dict[str, Optional[Sequence]],
-        coords: Optional[Dict[str, Sequence]] = None,
+        coords: Optional[Dict[str, Union[Sequence, np.ndarray]]] = None,
     ):
         """Changes the values of a data variable in the model.
 
@@ -1186,7 +1198,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             values = np.array(values)
         values = convert_observed_data(values)
         dims = self.named_vars_to_dims.get(name, None) or ()
-        coords = coords or {}
+        coords_untyped = coords or {}
 
         if values.ndim != shared_object.ndim:
             raise ValueError(
@@ -1197,8 +1209,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
             length_tensor = self.dim_lengths[dname]
             old_length = length_tensor.eval()
             new_length = values.shape[d]
-            original_coords = self.coords.get(dname, None)
-            new_coords = coords.get(dname, None)
+            original_coord_vals = self.coords_typed.get(dname, None)
+            new_coord_vals = coords_untyped.get(dname, None)
+            if new_coord_vals is not None:
+                new_coord_vals = _as_coord_vals(new_coord_vals)
 
             length_changed = new_length != old_length
 
@@ -1206,10 +1220,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # NOTE: If there are multiple pm.MutableData containers sharing this dim, but the user only
             #       changes the values for one of them, they will run into shape problems nonetheless.
             if length_changed:
-                if original_coords is not None:
-                    if new_coords is None:
+                if original_coord_vals is not None:
+                    if new_coord_vals is None:
                         raise ValueError(
-                            f"The '{name}' variable already had {len(original_coords)} coord values defined for "
+                            f"The '{name}' variable already had {len(original_coord_vals)} coord values defined for "
                             f"its {dname} dimension. With the new values this dimension changes to length "
                             f"{new_length}, so new coord values for the {dname} dimension are required."
                         )
@@ -1273,18 +1287,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 if isinstance(length_tensor, ScalarSharedVariable):
                     # The dimension is mutable, but was defined without being linked
                     # to a shared variable. This is allowed, but a little less robust.
-                    self.set_dim(dname, new_length, coord_values=new_coords)
+                    self.set_dim(dname, new_length, coord_values=new_coord_vals)
 
-            if new_coords is not None:
+            if new_coord_vals is not None:
                 # Update the registered coord values (also if they were None)
-                if len(new_coords) != new_length:
+                if len(new_coord_vals) != new_length:
                     raise ShapeError(
                         f"Length of new coordinate values for dimension '{dname}' does not match the provided values.",
-                        actual=len(new_coords),
+                        actual=len(new_coord_vals),
                         expected=new_length,
                     )
-                # store it as tuple for immutability as in add_coord
-                self._coords[dname] = tuple(new_coords)
+                self._coords[dname] = _as_coord_vals(new_coord_vals)
 
         shared_object.set_value(values)
 
@@ -1555,7 +1568,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             if isinstance(dims, str):
                 dims = (dims,)
             for dim in dims:
-                if dim not in self.coords and dim is not None:
+                if dim not in self.coords_typed and dim is not None:
                     raise ValueError(f"Dimension {dim} is not specified in `coords`.")
             if any(var.name == dim for dim in dims if dim is not None):
                 raise ValueError(f"Variable `{var.name}` has the same name as its dimension label.")
