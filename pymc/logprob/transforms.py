@@ -719,6 +719,7 @@ measurable_ir_rewrites_db.register(
 
 class SinhTransform(RVTransform):
     name = "sinh"
+    ndim_supp = 0
 
     def forward(self, value, *inputs):
         return pt.sinh(value)
@@ -726,12 +727,10 @@ class SinhTransform(RVTransform):
     def backward(self, value, *inputs):
         return pt.arcsinh(value)
 
-    def log_jac_det(self, value, *inputs):
-        return pt.log(pt.cosh(value))
-
 
 class CoshTransform(RVTransform):
     name = "cosh"
+    ndim_supp = 0
 
     def forward(self, value, *inputs):
         return pt.cosh(value)
@@ -739,21 +738,19 @@ class CoshTransform(RVTransform):
     def backward(self, value, *inputs):
         return pt.arccosh(value)
 
-    def log_jac_det(self, value, *inputs):
-        return pt.log(pt.sinh(value))
+    # def log_jac_det(self, value, *inputs):
+    #     return pt.log(pt.sinh(value))
 
 
 class TanhTransform(RVTransform):
     name = "tanh"
+    ndim_supp = 0
 
     def forward(self, value, *inputs):
         return pt.tanh(value)
 
     def backward(self, value, *inputs):
         return pt.arctanh(value)
-
-    def log_jac_det(self, value, *inputs):
-        return pt.log(1 / pt.cosh(value))
 
 
 class ErfTransform(RVTransform):
@@ -769,6 +766,7 @@ class ErfTransform(RVTransform):
 
 class ErfcTransform(RVTransform):
     name = "erfc"
+    ndim_supp = 0
 
     def forward(self, value, *inputs):
         return pt.erfc(value)
@@ -776,17 +774,15 @@ class ErfcTransform(RVTransform):
     def backward(self, value, *inputs):
         return pt.erfcinv(value)
 
-    def log_jac_det(self, value, *inputs):
-        return pt.log(-2 * pt.exp(-(value**2)) / (pt.sqrt(np.pi)))
-
 
 class ErfcxTransform(RVTransform):
     name = "erfcx"
+    ndim_supp = 0
 
     def forward(self, value, *inputs):
         return pt.erfcx(value)
 
-    def backward(self, value, k=10):
+    def backward(self, value, *inputs):
         # computes the inverse of erfcx, this was adapted from
         # https://tinyurl.com/4mxfd3cz
         x = pt.switch(value <= 1, 1.0 / (value * pt.sqrt(np.pi)), -pt.sqrt(pt.log(value)))
@@ -800,12 +796,9 @@ class ErfcxTransform(RVTransform):
             fn=calc_delta_x,
             outputs_info=pt.ones_like(x),
             non_sequences=value,
-            n_steps=k,
+            n_steps=10,
         )
         return result[-1]
-
-    def log_jac_det(self, value, *inputs):
-        return pt.log((2 * value * pt.exp(value**2) * pt.erfc(value) - 2.0) / pt.sqrt(np.pi))
 
 
 class LocTransform(RVTransform):

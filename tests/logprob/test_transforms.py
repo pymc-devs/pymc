@@ -1048,9 +1048,20 @@ from pymc.testing import Rplusbig, Vector
 from tests.distributions.test_transform import check_jacobian_det
 
 
-def test_check_jac_det():
-    check_jacobian_det(
+@pytest.mark.parametrize(
+    "transform",
+    [
         ErfTransform(),
+        ErfcTransform(),
+        ErfcxTransform(),
+        SinhTransform(),
+        CoshTransform(),
+        TanhTransform(),
+    ],
+)
+def test_check_jac_det(transform):
+    check_jacobian_det(
+        transform,
         Vector(Rplusbig, 2),
         pt.dvector,
         [0.1, 0.1],
