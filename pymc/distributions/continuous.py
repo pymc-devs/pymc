@@ -1359,12 +1359,12 @@ class Exponential(PositiveContinuous):
         elif lam is None and scale is None:
             raise ValueError("Incompatible parametrization. Must specify either lam or scale.")
 
-        if scale is not None:
-            lam = pt.reciprocal(scale)
+        if scale is None:
+            scale = pt.reciprocal(lam)
 
-        lam = pt.as_tensor_variable(floatX(lam))
+        scale = pt.as_tensor_variable(floatX(scale))
         # PyTensor exponential op is parametrized in terms of mu (1/lam)
-        return super().dist([pt.reciprocal(lam)], **kwargs)
+        return super().dist([scale], **kwargs)
 
     def moment(rv, size, mu):
         if not rv_size_is_none(size):

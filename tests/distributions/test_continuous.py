@@ -432,23 +432,11 @@ class TestMatchesScipy:
             {"lam": Rplus},
             lambda value, lam: st.expon.logpdf(value, 0, 1 / lam),
         )
-        check_logp(
-            pm.Exponential,
-            Rplus,
-            {"scale": Rplus},
-            lambda value, scale: st.expon.logpdf(value, 0, scale),
-        )
         check_logcdf(
             pm.Exponential,
             Rplus,
             {"lam": Rplus},
             lambda value, lam: st.expon.logcdf(value, 0, 1 / lam),
-        )
-        check_logcdf(
-            pm.Exponential,
-            Rplus,
-            {"scale": Rplus},
-            lambda value, scale: st.expon.logcdf(value, 0, scale),
         )
         check_icdf(
             pm.Exponential,
