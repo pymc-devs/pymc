@@ -50,7 +50,7 @@ Principled introduction to Bayesian data analysis, with practical exercises. The
 
 [Book website](https://sites.google.com/site/doingbayesiandataanalysis/home)
 
-[PyMC 3.x port of the second edition's code](https://github.com/JWarmenhoven/DBDA-python)
+[PyMC port of the second edition's code](https://github.com/cluhmann/DBDA-python)
 
 :::
 
