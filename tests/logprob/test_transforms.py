@@ -997,18 +997,15 @@ def test_multivariate_transform(shift, scale):
     )
 
 
-from pytensor.tensor import cosh, erf, erfc, erfcx, sinh, tanh
-
-
 @pytest.mark.parametrize(
     "pt_transform, transform",
     [
-        (erf, ErfTransform()),
-        (erfc, ErfcTransform()),
-        (erfcx, ErfcxTransform()),
-        (sinh, SinhTransform()),
-        (cosh, CoshTransform()),
-        (tanh, TanhTransform()),
+        (pt.erf, ErfTransform()),
+        (pt.erfc, ErfcTransform()),
+        (pt.erfcx, ErfcxTransform()),
+        (pt.sinh, SinhTransform()),
+        (pt.cosh, CoshTransform()),
+        (pt.tanh, TanhTransform()),
     ],
 )
 def test_erf_logp(pt_transform, transform):
@@ -1024,10 +1021,7 @@ def test_erf_logp(pt_transform, transform):
 
     vv_test = np.array(0.25)  # Arbitrary test value
     np.testing.assert_almost_equal(
-        rv_logp.eval({vv: vv_test}),
-        np.where(
-            np.isnan(expected_logp.eval({vv: vv_test})), -np.inf, expected_logp.eval({vv: vv_test})
-        ),
+        rv_logp.eval({vv: vv_test}), np.nan_to_num(expected_logp.eval({vv: vv_test}), nan=-np.inf)
     )
 
 
