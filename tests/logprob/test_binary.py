@@ -25,16 +25,17 @@ from pymc.testing import assert_no_rvs
 
 
 @pytest.mark.parametrize(
-    "comparison_op, exp_logp_true, exp_logp_false",
+    "comparison_op, exp_logp_true, exp_logp_false, inputs",
     [
-        ((pt.lt, pt.le), "logcdf", "logsf"),
-        ((pt.gt, pt.ge), "logsf", "logcdf"),
+        ((pt.lt, pt.le), "logcdf", "logsf", (pt.random.normal(0, 1), 0.5)),
+        ((pt.gt, pt.ge), "logsf", "logcdf", (pt.random.normal(0, 1), 0.5)),
+        ((pt.lt, pt.le), "logsf", "logcdf", (0.5, pt.random.normal(0, 1))),
+        ((pt.gt, pt.ge), "logcdf", "logsf", (0.5, pt.random.normal(0, 1))),
     ],
 )
-def test_continuous_rv_comparison(comparison_op, exp_logp_true, exp_logp_false):
-    x_rv = pt.random.normal(0, 1)
+def test_continuous_rv_comparison(comparison_op, exp_logp_true, exp_logp_false, inputs):
     for op in comparison_op:
-        comp_x_rv = op(x_rv, 0.5)
+        comp_x_rv = op(*inputs)
 
         comp_x_vv = comp_x_rv.clone()
 
@@ -49,33 +50,45 @@ def test_continuous_rv_comparison(comparison_op, exp_logp_true, exp_logp_false):
 
 
 @pytest.mark.parametrize(
-    "comparison_op, exp_logp_true, exp_logp_false",
+    "comparison_op, exp_logp_true, exp_logp_false, inputs",
     [
         (
             pt.lt,
             lambda x: st.poisson(2).logcdf(x - 1),
             lambda x: np.logaddexp(st.poisson(2).logsf(x), st.poisson(2).logpmf(x)),
+            (pt.random.poisson(2), 3),
         ),
         (
             pt.ge,
             lambda x: np.logaddexp(st.poisson(2).logsf(x), st.poisson(2).logpmf(x)),
             lambda x: st.poisson(2).logcdf(x - 1),
+            (pt.random.poisson(2), 3),
         ),
+        (pt.gt, st.poisson(2).logsf, st.poisson(2).logcdf, (pt.random.poisson(2), 3)),
+        (pt.le, st.poisson(2).logcdf, st.poisson(2).logsf, (pt.random.poisson(2), 3)),
         (
-            pt.gt,
+            pt.lt,
             st.poisson(2).logsf,
             st.poisson(2).logcdf,
+            (3, pt.random.poisson(2)),
+        ),
+        (pt.ge, st.poisson(2).logcdf, st.poisson(2).logsf, (3, pt.random.poisson(2))),
+        (
+            pt.gt,
+            lambda x: st.poisson(2).logcdf(x - 1),
+            lambda x: np.logaddexp(st.poisson(2).logsf(x), st.poisson(2).logpmf(x)),
+            (3, pt.random.poisson(2)),
         ),
         (
             pt.le,
-            st.poisson(2).logcdf,
-            st.poisson(2).logsf,
+            lambda x: np.logaddexp(st.poisson(2).logsf(x), st.poisson(2).logpmf(x)),
+            lambda x: st.poisson(2).logcdf(x - 1),
+            (3, pt.random.poisson(2)),
         ),
     ],
 )
-def test_discrete_rv_comparison(comparison_op, exp_logp_true, exp_logp_false):
-    x_rv = pt.random.poisson(2)
-    cens_x_rv = comparison_op(x_rv, 3)
+def test_discrete_rv_comparison(inputs, comparison_op, exp_logp_true, exp_logp_false):
+    cens_x_rv = comparison_op(*inputs)
 
     cens_x_vv = cens_x_rv.clone()
 

@@ -20,6 +20,7 @@ from pytensor.graph.basic import Node
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scalar.basic import GE, GT, LE, LT
+from pytensor.tensor import TensorVariable
 from pytensor.tensor.math import ge, gt, le, lt
 
 from pymc.logprob.abstract import (
@@ -50,26 +51,47 @@ def find_measurable_comparisons(
     if isinstance(node.op, MeasurableComparison):
         return None  # pragma: no cover
 
-    (compared_var,) = node.outputs
-    base_var, const = node.inputs
+    measurable_inputs = [
+        (inp, idx)
+        for idx, inp in enumerate(node.inputs)
+        if inp.owner
+        and isinstance(inp.owner.op, MeasurableVariable)
+        and inp not in rv_map_feature.rv_values
+    ]
 
-    if not (
-        base_var.owner
-        and isinstance(base_var.owner.op, MeasurableVariable)
-        and base_var not in rv_map_feature.rv_values
-    ):
+    if len(measurable_inputs) != 1:
         return None
+
+    base_var: TensorVariable = measurable_inputs[0][0]
+
+    # Check that the other input is not potentially measurable, in which case this rewrite
+    # would be invalid
+    const = tuple(inp for inp in node.inputs if inp is not base_var)
 
     # check for potential measurability of const
-    if not check_potential_measurability((const,), rv_map_feature):
+    if not check_potential_measurability(const, rv_map_feature):
         return None
+
+    const = const[0]
 
     # Make base_var unmeasurable
     unmeasurable_base_var = ignore_logprob(base_var)
 
-    compared_op = MeasurableComparison(node.op.scalar_op)
+    node_scalar_op = node.op.scalar_op
+
+    if measurable_inputs[0][1] == 1:
+        if isinstance(node_scalar_op, LT):
+            node_scalar_op = GT()
+        elif isinstance(node_scalar_op, GT):
+            node_scalar_op = LT()
+        elif isinstance(node_scalar_op, GE):
+            node_scalar_op = LE()
+        elif isinstance(node_scalar_op, LE):
+            node_scalar_op = GE()
+
+    compared_op = MeasurableComparison(node_scalar_op)
     compared_rv = compared_op.make_node(unmeasurable_base_var, const).default_output()
-    compared_rv.name = compared_var.name
+    compared_rv.name = node.outputs[0].name
     return [compared_rv]
 
 
