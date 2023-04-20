@@ -758,15 +758,13 @@ class TanhTransform(RVTransform):
 
 class ErfTransform(RVTransform):
     name = "erf"
+    ndim_supp = 0
 
     def forward(self, value, *inputs):
         return pt.erf(value)
 
     def backward(self, value, *inputs):
         return pt.erfinv(value)
-
-    def log_jac_det(self, value, *inputs):
-        return pt.log(2 * pt.exp(-(value**2)) / (pt.sqrt(np.pi)))
 
 
 class ErfcTransform(RVTransform):
