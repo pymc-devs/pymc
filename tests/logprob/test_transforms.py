@@ -333,6 +333,7 @@ def test_fallback_log_jac_det(ndim):
 
     class SquareTransform(RVTransform):
         name = "square"
+        ndim_supp = ndim
 
         def forward(self, value, *inputs):
             return pt.power(value, 2)
@@ -342,13 +343,31 @@ def test_fallback_log_jac_det(ndim):
 
     square_tr = SquareTransform()
 
-    value = pt.TensorType("float64", (None,) * ndim)("value")
+    value = pt.vector("value")
     value_tr = square_tr.forward(value)
     log_jac_det = square_tr.log_jac_det(value_tr)
 
-    test_value = np.full((2,) * ndim, 3)
-    expected_log_jac_det = -np.log(6) * test_value.size
-    assert np.isclose(log_jac_det.eval({value: test_value}), expected_log_jac_det)
+    test_value = np.r_[3, 4]
+    expected_log_jac_det = -np.log(2 * test_value)
+    if ndim == 1:
+        expected_log_jac_det = expected_log_jac_det.sum()
+    np.testing.assert_array_equal(log_jac_det.eval({value: test_value}), expected_log_jac_det)
+
+
+@pytest.mark.parametrize("ndim", (None, 2))
+def test_fallback_log_jac_det_undefined_ndim(ndim):
+    class SquareTransform(RVTransform):
+        name = "square"
+        ndim_supp = ndim
+
+        def forward(self, value, *inputs):
+            return pt.power(value, 2)
+
+        def backward(self, value, *inputs):
+            return pt.sqrt(value)
+
+    with pytest.raises(NotImplementedError, match=r"only implemented for ndim_supp in \(0, 1\)"):
+        SquareTransform().log_jac_det(0)
 
 
 def test_hierarchical_uniform_transform():

@@ -144,6 +144,8 @@ def remove_TransformedVariables(fgraph, node):
 
 
 class RVTransform(abc.ABC):
+    ndim_supp = None
+
     @abc.abstractmethod
     def forward(self, value: TensorVariable, *inputs: Variable) -> TensorVariable:
         """Apply the transformation."""
@@ -157,12 +159,16 @@ class RVTransform(abc.ABC):
 
     def log_jac_det(self, value: TensorVariable, *inputs) -> TensorVariable:
         """Construct the log of the absolute value of the Jacobian determinant."""
-        # jac = pt.reshape(
-        #     gradient(pt.sum(self.backward(value, *inputs)), [value]), value.shape
-        # )
-        # return pt.log(pt.abs(jac))
-        phi_inv = self.backward(value, *inputs)
-        return pt.log(pt.abs(pt.nlinalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
+        if self.ndim_supp not in (0, 1):
+            raise NotImplementedError(
+                f"RVTransform default log_jac_det only implemented for ndim_supp in (0, 1), got {self.ndim_supp=}"
+            )
+        if self.ndim_supp == 0:
+            jac = pt.reshape(pt.grad(pt.sum(self.backward(value, *inputs)), [value]), value.shape)
+            return pt.log(pt.abs(jac))
+        else:
+            phi_inv = self.backward(value, *inputs)
+            return pt.log(pt.abs(pt.nlinalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
 
 
 @node_rewriter(tracks=None)
