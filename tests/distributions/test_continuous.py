@@ -445,17 +445,13 @@ class TestMatchesScipy:
         )
 
     def test_exponential_wrong_arguments(self):
-        m = pm.Model()
-
         msg = "Incompatible parametrization. Can't specify both lam and scale"
-        with m:
-            with pytest.raises(ValueError, match=msg):
-                pm.Exponential("x", lam=0.5, scale=5)
+        with pytest.raises(ValueError, match=msg):
+            pm.Exponential.dist(lam=0.5, scale=5)
 
         msg = "Incompatible parametrization. Must specify either lam or scale"
-        with m:
-            with pytest.raises(ValueError, match=msg):
-                pm.Exponential("x")
+        with pytest.raises(ValueError, match=msg):
+            pm.Exponential.dist()
 
     def test_laplace(self):
         check_logp(
