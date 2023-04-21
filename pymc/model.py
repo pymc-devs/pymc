@@ -1155,7 +1155,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def set_data(
         self,
         name: str,
-        values: Dict[str, Optional[Sequence]],
+        values: Union[Sequence, np.ndarray],
         coords: Optional[Dict[str, Sequence]] = None,
     ):
         """Changes the values of a data variable in the model.
