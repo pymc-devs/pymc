@@ -62,6 +62,7 @@ def find_measurable_comparisons(
     if len(measurable_inputs) != 1:
         return None
 
+    # Make the measurable base_var always be the first input to the MeasurableComparison node
     base_var: TensorVariable = measurable_inputs[0][0]
 
     # Check that the other input is not potentially measurable, in which case this rewrite
@@ -79,6 +80,7 @@ def find_measurable_comparisons(
 
     node_scalar_op = node.op.scalar_op
 
+    # Change the Op if the base_var is the second input in node.inputs. e.g. pt.lt(const, dist) -> pt.gt(dist, const)
     if measurable_inputs[0][1] == 1:
         if isinstance(node_scalar_op, LT):
             node_scalar_op = GT()
