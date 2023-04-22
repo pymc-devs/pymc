@@ -110,7 +110,8 @@ measurable_ir_rewrites_db.register(
 class MeasurableCheckAndRaise(CheckAndRaise):
     """A placeholder used to specify a log-likelihood for an assert sub-graph."""
 
-    def __init__(self, ndim_supp=0, support_axis=None, d_type="mixed"):
+    def __init__(self, exc_type, ndim_supp=0, support_axis=None, d_type="mixed"):
+        super().__init__(exc_type)
         self.ndim_supp = ndim_supp
         self.support_axis = support_axis
         self.d_type = d_type
