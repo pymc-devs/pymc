@@ -75,6 +75,14 @@ class MeasurableScan(Scan):
     def __str__(self):
         return f"Measurable({super().__str__()})"
 
+    def __init__(
+        self, inputs, outputs, info, mode=None, ndim_supp=0, support_axis=None, d_type="mixed"
+    ):
+        super().__init__(inputs, outputs, info, mode)
+        self.ndim_supp = ndim_supp
+        self.support_axis = support_axis
+        self.d_type = d_type
+
 
 MeasurableVariable.register(MeasurableScan)
 

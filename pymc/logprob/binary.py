@@ -39,6 +39,12 @@ class MeasurableComparison(MeasurableElemwise):
 
     valid_scalar_types = (GT, LT, GE, LE)
 
+    def __init__(self, scalar, ndim_supp=0, support_axis=None, d_type="mixed"):
+        super().__init__(scalar)
+        self.ndim_supp = ndim_supp
+        self.support_axis = support_axis
+        self.d_type = d_type
+
 
 @node_rewriter(tracks=[gt, lt, ge, le])
 def find_measurable_comparisons(
