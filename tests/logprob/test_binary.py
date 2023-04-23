@@ -33,7 +33,7 @@ from pymc.testing import assert_no_rvs
         ((pt.gt, pt.ge), "logcdf", "logsf", (0.5, pt.random.normal(0, 1))),
     ],
 )
-def test_continuous_rv_comparison(comparison_op, exp_logp_true, exp_logp_false, inputs):
+def test_continuous_rv_comparison_bitwise(comparison_op, exp_logp_true, exp_logp_false, inputs):
     for op in comparison_op:
         comp_x_rv = op(*inputs)
 
@@ -47,6 +47,17 @@ def test_continuous_rv_comparison(comparison_op, exp_logp_true, exp_logp_false, 
 
         assert np.isclose(logp_fn(0), getattr(ref_scipy, exp_logp_false)(0.5))
         assert np.isclose(logp_fn(1), getattr(ref_scipy, exp_logp_true)(0.5))
+
+        bitwise_rv = pt.bitwise_not(op(*inputs))
+        bitwise_vv = bitwise_rv.clone()
+
+        logprob_not = logp(bitwise_rv, bitwise_vv)
+        assert_no_rvs(logprob_not)
+
+        logp_fn_not = pytensor.function([bitwise_vv], logprob_not)
+
+        assert np.isclose(logp_fn_not(0), getattr(ref_scipy, exp_logp_true)(0.5))
+        assert np.isclose(logp_fn_not(1), getattr(ref_scipy, exp_logp_false)(0.5))
 
 
 @pytest.mark.parametrize(
@@ -87,7 +98,7 @@ def test_continuous_rv_comparison(comparison_op, exp_logp_true, exp_logp_false, 
         ),
     ],
 )
-def test_discrete_rv_comparison(inputs, comparison_op, exp_logp_true, exp_logp_false):
+def test_discrete_rv_comparison_bitwise(inputs, comparison_op, exp_logp_true, exp_logp_false):
     cens_x_rv = comparison_op(*inputs)
 
     cens_x_vv = cens_x_rv.clone()
@@ -99,6 +110,17 @@ def test_discrete_rv_comparison(inputs, comparison_op, exp_logp_true, exp_logp_f
 
     assert np.isclose(logp_fn(1), exp_logp_true(3))
     assert np.isclose(logp_fn(0), exp_logp_false(3))
+
+    bitwise_rv = pt.bitwise_not(comparison_op(*inputs))
+    bitwise_vv = bitwise_rv.clone()
+
+    logprob_not = logp(bitwise_rv, bitwise_vv)
+    assert_no_rvs(logprob_not)
+
+    logp_fn_not = pytensor.function([bitwise_vv], logprob_not)
+
+    assert np.isclose(logp_fn_not(1), exp_logp_false(3))
+    assert np.isclose(logp_fn_not(0), exp_logp_true(3))
 
 
 def test_potentially_measurable_operand():

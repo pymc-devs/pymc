@@ -19,9 +19,9 @@ import pytensor.tensor as pt
 from pytensor.graph.basic import Node
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.scalar.basic import GE, GT, LE, LT
+from pytensor.scalar.basic import GE, GT, LE, LT, Invert
 from pytensor.tensor import TensorVariable
-from pytensor.tensor.math import ge, gt, le, lt
+from pytensor.tensor.math import ge, gt, invert, le, lt
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,
@@ -134,5 +134,56 @@ def comparison_logprob(op, values, base_rv, operand, **kwargs):
     if base_rv_op.name:
         logprob.name = f"{base_rv_op}_logprob"
         logcdf.name = f"{base_rv_op}_logcdf"
+
+    return logprob
+
+
+class MeasurableBitwise(MeasurableElemwise):
+    """A placeholder used to specify a log-likelihood for a bitwise operation RV sub-graph."""
+
+    valid_scalar_types = (Invert,)
+
+
+@node_rewriter(tracks=[invert])
+def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableBitwise]]:
+    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    if isinstance(node.op, MeasurableBitwise):
+        return None  # pragma: no cover
+
+    base_var = node.inputs[0]
+    if not (
+        base_var.owner
+        and isinstance(base_var.owner.op, MeasurableVariable)
+        and base_var not in rv_map_feature.rv_values
+    ):
+        return None
+
+    # Make base_var unmeasurable
+    unmeasurable_base_var = ignore_logprob(base_var)
+
+    node_scalar_op = node.op.scalar_op
+
+    bitwise_op = MeasurableBitwise(node_scalar_op)
+    bitwise_rv = bitwise_op.make_node(unmeasurable_base_var).default_output()
+    bitwise_rv.name = node.outputs[0].name
+    return [bitwise_rv]
+
+
+measurable_ir_rewrites_db.register(
+    "find_measurable_bitwise",
+    find_measurable_bitwise,
+    "basic",
+    "bitwise",
+)
+
+
+@_logprob.register(MeasurableBitwise)
+def bitwise_not_logprob(op, values, base_rv, **kwargs):
+    (value,) = values
+
+    logprob = _logprob_helper(base_rv, np.bitwise_not(value), **kwargs)
 
     return logprob
