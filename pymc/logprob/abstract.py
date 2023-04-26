@@ -38,7 +38,7 @@ import abc
 
 from copy import copy
 from functools import singledispatch
-from typing import Callable, List, Sequence, Tuple
+from typing import Any, Callable, List, Sequence, Tuple, Union
 
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
@@ -131,10 +131,10 @@ def _icdf_helper(rv, value, **kwargs):
 class MeasurableVariable(abc.ABC):
     """A variable that can be assigned a measure/log-probability"""
 
-    def __init__(self, ndim_supp, support_axis, d_type):
+    def __init__(self, ndim_supp, supp_axes, measure_type):
         self.ndim_supp = ndim_supp
-        self.support_axis = support_axis
-        self.d_type = d_type
+        self.supp_axes = supp_axes
+        self.measure_type = measure_type
 
 
 MeasurableVariable.register(RandomVariable)
@@ -266,7 +266,9 @@ class MeasureType(Enum):
     Mixed = auto()
 
 
-def get_default_measurable_metainfo(base_op: Op) -> Tuple[int, Tuple[int], MeasureType]:
+def get_default_measurable_metainfo(
+    base_op: Op,
+) -> Tuple[Any, Union[Tuple[Any, ...], Any], Union[MeasureType, Any]]:
     if not isinstance(base_op, MeasurableVariable):
         raise TypeError("base_op must be a RandomVariable or MeasurableVariable")
 
@@ -279,7 +281,9 @@ def get_default_measurable_metainfo(base_op: Op) -> Tuple[int, Tuple[int], Measu
     measure_type = getattr(base_op, "measure_type", None)
     if measure_type is None:
         measure_type = (
-            MeasureType.Discrete if base_op.dtype.startswith("int") else MeasureType.Continuous
+            MeasureType.Discrete
+            if base_op.measure_type.startswith("int")
+            else MeasureType.Continuous
         )
 
     return ndim_supp, supp_axes, measure_type
