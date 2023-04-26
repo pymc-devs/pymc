@@ -161,6 +161,9 @@ def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> Optional[List[
     ):
         return None
 
+    if not base_var.dtype.startswith("bool"):
+        raise None
+
     # Make base_var unmeasurable
     unmeasurable_base_var = ignore_logprob(base_var)
 
@@ -184,6 +187,6 @@ measurable_ir_rewrites_db.register(
 def bitwise_not_logprob(op, values, base_rv, **kwargs):
     (value,) = values
 
-    logprob = _logprob_helper(base_rv, np.bitwise_not(value), **kwargs)
+    logprob = _logprob_helper(base_rv, invert(value), **kwargs)
 
     return logprob
