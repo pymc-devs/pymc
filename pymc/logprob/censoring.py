@@ -62,12 +62,6 @@ class MeasurableClip(MeasurableElemwise):
 
     valid_scalar_types = (Clip,)
 
-    def __init__(self, scalar, ndim_supp=0, support_axis=None, d_type="mixed"):
-        super().__init__(scalar)
-        self.ndim_supp = ndim_supp
-        self.support_axis = support_axis
-        self.d_type = d_type
-
 
 measurable_clip = MeasurableClip(scalar_clip)
 
@@ -179,12 +173,6 @@ class MeasurableRound(MeasurableElemwise):
     """A placeholder used to specify a log-likelihood for a clipped RV sub-graph."""
 
     valid_scalar_types = (RoundHalfToEven, Floor, Ceil)
-
-    def __init__(self, scalar, ndim_supp=0, support_axis=None, d_type="mixed"):
-        super().__init__(scalar)
-        self.ndim_supp = ndim_supp
-        self.support_axis = support_axis
-        self.d_type = d_type
 
 
 @node_rewriter(tracks=[ceil, floor, round_half_to_even])

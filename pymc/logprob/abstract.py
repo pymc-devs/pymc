@@ -131,6 +131,11 @@ def _icdf_helper(rv, value, **kwargs):
 class MeasurableVariable(abc.ABC):
     """A variable that can be assigned a measure/log-probability"""
 
+    def __init__(self, ndim_supp, support_axis, d_type):
+        self.ndim_supp = ndim_supp
+        self.support_axis = support_axis
+        self.d_type = d_type
+
 
 MeasurableVariable.register(RandomVariable)
 
@@ -251,3 +256,30 @@ class MeasurableElemwise(Elemwise):
 
 
 MeasurableVariable.register(MeasurableElemwise)
+
+from enum import Enum, auto
+
+
+class MeasureType(Enum):
+    Discrete = auto()
+    Continuous = auto()
+    Mixed = auto()
+
+
+def get_default_measurable_metainfo(base_op: Op) -> Tuple[int, Tuple[int], MeasureType]:
+    if not isinstance(base_op, MeasurableVariable):
+        raise TypeError("base_op must be a RandomVariable or MeasurableVariable")
+
+    ndim_supp = base_op.ndim_supp
+
+    supp_axes = getattr(base_op, "supp_axes", None)
+    if supp_axes is None:
+        supp_axes = tuple(range(-base_op.ndim_supp, 0))
+
+    measure_type = getattr(base_op, "measure_type", None)
+    if measure_type is None:
+        measure_type = (
+            MeasureType.Discrete if base_op.dtype.startswith("int") else MeasureType.Continuous
+        )
+
+    return ndim_supp, supp_axes, measure_type

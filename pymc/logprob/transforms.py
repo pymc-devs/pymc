@@ -347,21 +347,9 @@ class MeasurableTransform(MeasurableElemwise):
     transform_elemwise: RVTransform
     measurable_input_idx: int
 
-    def __init__(
-        self,
-        *args,
-        transform: RVTransform,
-        measurable_input_idx: int,
-        ndim_supp=0,
-        support_axis=None,
-        d_type="mixed",
-        **kwargs,
-    ):
+    def __init__(self, *args, transform: RVTransform, measurable_input_idx: int, **kwargs):
         self.transform_elemwise = transform
         self.measurable_input_idx = measurable_input_idx
-        self.ndim_supp = ndim_supp
-        self.support_axis = support_axis
-        self.d_type = d_type
         super().__init__(*args, **kwargs)
 
 

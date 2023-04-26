@@ -49,12 +49,6 @@ from pymc.logprob.utils import ignore_logprob
 class MeasurableCumsum(CumOp):
     """A placeholder used to specify a log-likelihood for a cumsum sub-graph."""
 
-    def __init__(self, axis, mode, ndim_supp=0, support_axis=None, d_type="mixed"):
-        super().__init__(axis, mode)
-        self.ndim_supp = ndim_supp
-        self.support_axis = support_axis
-        self.d_type = d_type
-
 
 MeasurableVariable.register(MeasurableCumsum)
 

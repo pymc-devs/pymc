@@ -253,12 +253,9 @@ class DiracDelta(Op):
 
     __props__ = ("rtol", "atol")
 
-    def __init__(self, rtol=1e-5, atol=1e-8, ndim_supp=0, support_axis=None, d_type="mixed"):
+    def __init__(self, rtol=1e-5, atol=1e-8):
         self.rtol = rtol
         self.atol = atol
-        self.ndim_supp = ndim_supp
-        self.support_axis = support_axis
-        self.d_type = d_type
 
     def make_node(self, x):
         x = pt.as_tensor(x)
