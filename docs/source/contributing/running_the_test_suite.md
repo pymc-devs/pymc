@@ -7,7 +7,7 @@ pip install -r requirements-dev.txt
 ```
 
 The PyMC test suite uses `pytest` as the testing framework.
-If you are unfamiliar with `pytest`, check out [this short video series](https://calmcode.io/pytest/).
+If you are unfamiliar with `pytest`, check out [this short video series](https://calmcode.io/pytest/introduction.html).
 
 With the optional dependencies installed, you can start running tests.
 Below are some example of how you might want to run certain parts of the test suite.
