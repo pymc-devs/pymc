@@ -10,4 +10,5 @@ model_comparison
 posterior_predictive
 dimensionality
 pymc_pytensor
+Gaussian_Processes
 :::
