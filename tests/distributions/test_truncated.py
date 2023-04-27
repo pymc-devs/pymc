@@ -26,7 +26,7 @@ from pymc.distributions.transforms import _default_transform
 from pymc.distributions.truncated import Truncated, TruncatedRV, _truncated
 from pymc.exceptions import TruncationError
 from pymc.logprob.abstract import _icdf
-from pymc.logprob.basic import logp
+from pymc.logprob.basic import logcdf, logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.logprob.utils import ParameterValueError
 from pymc.testing import assert_moment_is_expected
@@ -165,6 +165,34 @@ def test_truncation_continuous_logp(op_type, lower, upper):
             assert np.isclose(xt_logp_fn(test_xt_v), ref_xt.logpdf(test_xt_v))
 
 
+@pytest.mark.parametrize("lower, upper", [(-1, np.inf), (-1, 1.5), (-np.inf, 1.5)])
+@pytest.mark.parametrize("op_type", ["icdf", "rejection"])
+def test_truncation_continuous_logcdf(op_type, lower, upper):
+    loc = 0.15
+    scale = 10
+    op = icdf_normal if op_type == "icdf" else rejection_normal
+
+    x = op(loc, scale, name="x")
+    xt = Truncated.dist(x, lower=lower, upper=upper)
+    assert isinstance(xt.owner.op, TruncatedRV)
+
+    xt_vv = xt.clone()
+    xt_logcdf_fn = pytensor.function([xt_vv], logcdf(xt, xt_vv))
+
+    ref_xt = scipy.stats.truncnorm(
+        (lower - loc) / scale,
+        (upper - loc) / scale,
+        loc,
+        scale,
+    )
+    for bound in (lower, upper):
+        if np.isinf(bound):
+            return
+        for offset in (-1, 0, 1):
+            test_xt_v = bound + offset
+            assert np.isclose(xt_logcdf_fn(test_xt_v), ref_xt.logcdf(test_xt_v))
+
+
 @pytest.mark.parametrize("lower, upper", [(2, np.inf), (2, 5), (-np.inf, 5)])
 @pytest.mark.parametrize("op_type", ["icdf", "rejection"])
 def test_truncation_discrete_random(op_type, lower, upper):
@@ -230,6 +258,38 @@ def test_truncation_discrete_logp(op_type, lower, upper):
     # Check that it integrates to 1
     log_integral = scipy.special.logsumexp([xt_logp_fn(v) for v in range(min(upper + 1, 20))])
     assert np.isclose(log_integral, 0.0, atol=1e-5)
+
+
+@pytest.mark.parametrize("lower, upper", [(2, np.inf), (2, 5), (-np.inf, 5)])
+@pytest.mark.parametrize("op_type", ["icdf", "rejection"])
+def test_truncation_discrete_logcdf(op_type, lower, upper):
+    p = 0.7
+    op = icdf_geometric if op_type == "icdf" else rejection_geometric
+
+    x = op(p, name="x")
+    xt = Truncated.dist(x, lower=lower, upper=upper)
+    assert isinstance(xt.owner.op, TruncatedRV)
+
+    xt_vv = xt.clone()
+    xt_logcdf_fn = pytensor.function([xt_vv], logcdf(xt, xt_vv))
+
+    ref_xt = scipy.stats.geom(p)
+    log_norm = np.log(ref_xt.cdf(upper) - ref_xt.cdf(lower - 1))
+
+    def ref_xt_logcdf(value):
+        if value < lower:
+            return -np.inf
+        elif value > upper:
+            return 0.0
+
+        return np.log(ref_xt.cdf(value) - ref_xt.cdf(lower - 1)) - log_norm
+
+    for bound in (lower, upper):
+        if np.isinf(bound):
+            continue
+        for offset in (-1, 0, 1):
+            test_xt_v = bound + offset
+            assert np.isclose(xt_logcdf_fn(test_xt_v), ref_xt_logcdf(test_xt_v))
 
 
 def test_truncation_exceptions():

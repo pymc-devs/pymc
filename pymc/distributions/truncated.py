@@ -352,6 +352,50 @@ def truncated_logprob(op, values, *inputs, **kwargs):
     return logp
 
 
+@_logcdf.register(TruncatedRV)
+def truncated_logcdf(op, value, *inputs, **kwargs):
+    *rv_inputs, lower, upper, rng = inputs
+    rv_inputs = [rng, *rv_inputs]
+
+    base_rv_op = op.base_rv_op
+    logcdf = _logcdf(base_rv_op, value, *rv_inputs, **kwargs)
+
+    # For left truncated RVs, we don't want to include the lower bound in the
+    # normalization term
+    lower_value = lower - 1 if base_rv_op.dtype.startswith("int") else lower
+    lower_logcdf = _logcdf(base_rv_op, lower_value, *rv_inputs, **kwargs)
+    upper_logcdf = _logcdf(base_rv_op, upper, *rv_inputs, **kwargs)
+
+    is_lower_bounded = not (isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value)))
+    is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
+
+    lognorm = 0
+    if is_lower_bounded and is_upper_bounded:
+        lognorm = logdiffexp(upper_logcdf, lower_logcdf)
+    elif is_lower_bounded:
+        lognorm = pt.log1mexp(lower_logcdf)
+    elif is_upper_bounded:
+        lognorm = upper_logcdf
+
+    logcdf_numerator = logdiffexp(logcdf, lower_logcdf) if is_lower_bounded else logcdf
+    logcdf_trunc = logcdf_numerator - lognorm
+
+    if is_lower_bounded:
+        logcdf_trunc = pt.switch(value < lower, -np.inf, logcdf_trunc)
+
+    if is_upper_bounded:
+        logcdf_trunc = pt.switch(value <= upper, logcdf_trunc, 0.0)
+
+    if is_lower_bounded and is_upper_bounded:
+        logcdf_trunc = check_parameters(
+            logcdf_trunc,
+            pt.le(lower, upper),
+            msg="lower_bound <= upper_bound",
+        )
+
+    return logcdf_trunc
+
+
 @_truncated.register(NormalRV)
 def _truncated_normal(op, lower, upper, size, rng, old_size, dtype, mu, sigma):
     return TruncatedNormal.dist(
