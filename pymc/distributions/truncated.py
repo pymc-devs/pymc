@@ -360,7 +360,7 @@ def truncated_logcdf(op, value, *inputs, **kwargs):
     base_rv_op = op.base_rv_op
     logcdf = _logcdf(base_rv_op, value, *rv_inputs, **kwargs)
 
-    # For left truncated RVs, we don't want to include the lower bound in the
+    # For left truncated discrete RVs, we don't want to include the lower bound in the
     # normalization term
     lower_value = lower - 1 if base_rv_op.dtype.startswith("int") else lower
     lower_logcdf = _logcdf(base_rv_op, lower_value, *rv_inputs, **kwargs)
