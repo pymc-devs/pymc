@@ -444,6 +444,15 @@ class TestMatchesScipy:
             lambda q, lam: st.expon.ppf(q, loc=0, scale=1 / lam),
         )
 
+    def test_exponential_wrong_arguments(self):
+        msg = "Incompatible parametrization. Can't specify both lam and scale"
+        with pytest.raises(ValueError, match=msg):
+            pm.Exponential.dist(lam=0.5, scale=5)
+
+        msg = "Incompatible parametrization. Must specify either lam or scale"
+        with pytest.raises(ValueError, match=msg):
+            pm.Exponential.dist()
+
     def test_laplace(self):
         check_logp(
             pm.Laplace,
@@ -2089,6 +2098,13 @@ class TestExponential(BaseTestDistributionRandom):
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
     ]
+
+
+class TestExponentialScale(BaseTestDistributionRandom):
+    pymc_dist = pm.Exponential
+    pymc_dist_params = {"scale": 5.0}
+    expected_rv_op_params = {"mu": pymc_dist_params["scale"]}
+    checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
 class TestCauchy(BaseTestDistributionRandom):
