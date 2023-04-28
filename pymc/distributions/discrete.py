@@ -61,7 +61,6 @@ __all__ = [
     "Poisson",
     "NegativeBinomial",
     "DiracDelta",
-    "Constant",
     "ZeroInflatedPoisson",
     "ZeroInflatedBinomial",
     "ZeroInflatedNegativeBinomial",
@@ -1243,23 +1242,6 @@ class DiracDelta(Discrete):
             -np.inf,
             0,
         )
-
-
-class Constant:
-    def __new__(cls, *args, **kwargs):
-        warnings.warn(
-            "pm.Constant has been deprecated. Use pm.DiracDelta instead.",
-            FutureWarning,
-        )
-        return DiracDelta(*args, **kwargs)
-
-    @classmethod
-    def dist(cls, *args, **kwargs):
-        warnings.warn(
-            "pm.Constant has been deprecated. Use pm.DiracDelta instead.",
-            FutureWarning,
-        )
-        return DiracDelta.dist(*args, **kwargs)
 
 
 def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):

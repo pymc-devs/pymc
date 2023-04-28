@@ -632,13 +632,6 @@ def test_zero_inflated_dists_dtype_and_broadcast(dist, non_psi_args):
     assert x.eval().shape == (3,)
 
 
-def test_constantdist_deprecated():
-    with pytest.warns(FutureWarning, match="DiracDelta"):
-        with pm.Model() as m:
-            x = pm.Constant("x", c=1)
-            assert isinstance(x.owner.op, pm.distributions.discrete.DiracDeltaRV)
-
-
 class TestMoments:
     @pytest.mark.parametrize(
         "p, size, expected",
