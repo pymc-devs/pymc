@@ -738,8 +738,6 @@ class CoshTransform(RVTransform):
     def backward(self, value, *inputs):
         return pt.arccosh(value)
 
-    # def log_jac_det(self, value, *inputs):
-    #     return pt.log(pt.sinh(value))
 
 
 class TanhTransform(RVTransform):
