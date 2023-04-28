@@ -24,7 +24,7 @@ import pytensor.tensor as pt
 import pytest
 import scipy.sparse as sps
 
-from pytensor import shared
+from pytensor import scan, shared
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable, equal_computations
 from pytensor.tensor.random.basic import normal, uniform
@@ -465,7 +465,7 @@ class TestCompilePyMC:
             ],
         )(rng1, rng2)
         with pytest.raises(
-            ValueError, match="No update mapping found for RNG used in SymbolicRandomVariable"
+            ValueError, match="No update found for at least one RNG used in SymbolicRandomVariable"
         ):
             compile_pymc(inputs=[], outputs=[dummy_x1, dummy_x2])
 
@@ -531,7 +531,7 @@ class TestCompilePyMC:
         next_rng2, y = pt.random.normal(rng=next_rng1).owner.outputs
         next_rng3, z = pt.random.normal(rng=next_rng2).owner.outputs
 
-        collect_default_updates([], [x, y, z]) == {rng: next_rng3}
+        collect_default_updates(inputs=[], outputs=[x, y, z]) == {rng: next_rng3}
 
         fn = compile_pymc([], [x, y, z], random_seed=514)
         assert not set(list(np.array(fn()))) & set(list(np.array(fn())))
@@ -540,19 +540,56 @@ class TestCompilePyMC:
         fn = pytensor.function([], [x, y, z], updates={rng: next_rng1})
         assert set(list(np.array(fn()))) & set(list(np.array(fn())))
 
+    def test_collect_default_updates_must_be_shared(self):
+        shared_rng = pytensor.shared(np.random.default_rng())
+        nonshared_rng = shared_rng.type()
 
-def test_collect_default_updates_must_be_shared():
-    shared_rng = pytensor.shared(np.random.default_rng())
-    nonshared_rng = shared_rng.type()
+        next_rng_of_shared, x = pt.random.normal(rng=shared_rng).owner.outputs
+        next_rng_of_nonshared, y = pt.random.normal(rng=nonshared_rng).owner.outputs
 
-    next_rng_of_shared, x = pt.random.normal(rng=shared_rng).owner.outputs
-    next_rng_of_nonshared, y = pt.random.normal(rng=nonshared_rng).owner.outputs
+        res = collect_default_updates(inputs=[nonshared_rng], outputs=[x, y])
+        assert res == {shared_rng: next_rng_of_shared}
 
-    res = collect_default_updates(inputs=[nonshared_rng], outputs=[x, y])
-    assert res == {shared_rng: next_rng_of_shared}
+        res = collect_default_updates(inputs=[nonshared_rng], outputs=[x, y], must_be_shared=False)
+        assert res == {shared_rng: next_rng_of_shared, nonshared_rng: next_rng_of_nonshared}
 
-    res = collect_default_updates(inputs=[nonshared_rng], outputs=[x, y], must_be_shared=False)
-    assert res == {shared_rng: next_rng_of_shared, nonshared_rng: next_rng_of_nonshared}
+    def test_scan_updates(self):
+        def step_with_update(x, rng):
+            next_rng, x = pm.Normal.dist(x, rng=rng).owner.outputs
+            return x, {rng: next_rng}
+
+        def step_wo_update(x, rng):
+            return step_with_update(x, rng)[0]
+
+        rng = pytensor.shared(np.random.default_rng())
+
+        xs, next_rng = scan(
+            fn=step_wo_update,
+            outputs_info=[pt.zeros(())],
+            non_sequences=[rng],
+            n_steps=10,
+            name="test_scan",
+        )
+
+        assert not next_rng
+
+        with pytest.raises(
+            ValueError,
+            match=r"No update found for at least one RNG used in Scan Op for\{cpu,test_scan\}",
+        ):
+            collect_default_updates([xs])
+
+        ys, next_rng = scan(
+            fn=step_with_update,
+            outputs_info=[pt.zeros(())],
+            non_sequences=[rng],
+            n_steps=10,
+        )
+
+        assert collect_default_updates([ys]) == {rng: tuple(next_rng.values())[0]}
+
+        fn = compile_pymc([], ys, random_seed=1)
+        assert not (set(fn()) & set(fn()))
 
 
 def test_replace_rng_nodes():

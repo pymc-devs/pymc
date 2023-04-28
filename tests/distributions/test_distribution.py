@@ -23,6 +23,7 @@ import pytensor.tensor as pt
 import pytest
 import scipy.stats as st
 
+from pytensor import scan
 from pytensor.tensor import TensorVariable
 
 import pymc as pm
@@ -51,6 +52,7 @@ from pymc.exceptions import BlockModelAccessError
 from pymc.logprob.abstract import get_measurable_outputs
 from pymc.logprob.basic import logcdf, logp
 from pymc.model import Deterministic, Model
+from pymc.pytensorf import collect_default_updates
 from pymc.sampling import draw, sample
 from pymc.testing import (
     BaseTestDistributionRandom,
@@ -522,6 +524,48 @@ class TestCustomSymbolicDist:
 
         # New API is fine
         pm.CustomDist.dist(dist=old_random, class_name="custom_dist")
+
+    def test_scan(self):
+        def trw(nu, sigma, steps, size):
+            def step(xtm1, nu, sigma):
+                x = pm.StudentT.dist(nu=nu, mu=xtm1, sigma=sigma, shape=size)
+                return x, collect_default_updates([x])
+
+            xs, _ = scan(
+                fn=step,
+                outputs_info=pt.zeros(size),
+                non_sequences=[nu, sigma],
+                n_steps=steps,
+            )
+
+            # Logprob inference cannot be derived yet  https://github.com/pymc-devs/pymc/issues/6360
+            # xs = swapaxes(xs, 0, -1)
+
+            return xs
+
+        nu = 4
+        sigma = 0.7
+        steps = 99
+        batch_size = 3
+        x = CustomDist.dist(nu, sigma, steps, dist=trw, size=batch_size)
+
+        x_draw = pm.draw(x, random_seed=1)
+        assert x_draw.shape == (steps, batch_size)
+        np.testing.assert_allclose(pm.draw(x, random_seed=1), x_draw)
+        assert not np.any(pm.draw(x, random_seed=2) == x_draw)
+
+        ref_dist = pm.RandomWalk.dist(
+            init_dist=pm.Flat.dist(),
+            innovation_dist=pm.StudentT.dist(nu=nu, sigma=sigma),
+            steps=steps,
+            size=(batch_size,),
+        )
+        ref_val = pt.concatenate([np.zeros((1, batch_size)), x_draw]).T
+
+        np.testing.assert_allclose(
+            pm.logp(x, x_draw).eval().sum(0),
+            pm.logp(ref_dist, ref_val).eval(),
+        )
 
 
 class TestSymbolicRandomVariable:
