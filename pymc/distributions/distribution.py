@@ -596,7 +596,7 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
     def update(self, node: Node):
         op = node.op
         inner_updates = collect_default_updates(
-            op.inner_inputs, op.inner_outputs, must_be_shared=False
+            inputs=op.inner_inputs, outputs=op.inner_outputs, must_be_shared=False
         )
 
         # Map inner updates to outer inputs/outputs
@@ -668,7 +668,7 @@ class _CustomSymbolicDist(Distribution):
         ):
             dummy_rv = dist(*dummy_dist_params, dummy_size_param)
         dummy_params = [dummy_size_param] + dummy_dist_params
-        dummy_updates_dict = collect_default_updates(dummy_params, (dummy_rv,))
+        dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
 
         rv_type = type(
             class_name,
@@ -713,7 +713,7 @@ class _CustomSymbolicDist(Distribution):
             dummy_dist_params = [dist_param.type() for dist_param in old_dist_params]
             dummy_rv = dist(*dummy_dist_params, dummy_size_param)
             dummy_params = [dummy_size_param] + dummy_dist_params
-            dummy_updates_dict = collect_default_updates(dummy_params, (dummy_rv,))
+            dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
             new_rv_op = rv_type(
                 inputs=dummy_params,
                 outputs=[*dummy_updates_dict.values(), dummy_rv],
