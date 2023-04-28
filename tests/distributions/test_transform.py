@@ -112,7 +112,7 @@ def check_jacobian_det(
     )
 
     for yval in domain.vals:
-        close_to(actual_ljd(yval), computed_ljd(yval), tol)
+        np.testing.assert_allclose(actual_ljd(yval), computed_ljd(yval), rtol=tol)
 
 
 def test_simplex():

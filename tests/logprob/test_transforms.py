@@ -49,9 +49,13 @@ from pytensor.scan import scan
 
 from pymc.distributions.transforms import _default_transform, log, logodds
 from pymc.logprob.abstract import MeasurableVariable, _get_measurable_outputs, _logprob
-from pymc.logprob.basic import factorized_joint_logprob
+from pymc.logprob.basic import factorized_joint_logprob, logp
 from pymc.logprob.transforms import (
     ChainedTransform,
+    CoshTransform,
+    ErfcTransform,
+    ErfcxTransform,
+    ErfTransform,
     ExpTransform,
     IntervalTransform,
     LocTransform,
@@ -59,6 +63,8 @@ from pymc.logprob.transforms import (
     LogTransform,
     RVTransform,
     ScaleTransform,
+    SinhTransform,
+    TanhTransform,
     TransformValuesMapping,
     TransformValuesRewrite,
     transformed_variable,
@@ -327,6 +333,7 @@ def test_fallback_log_jac_det(ndim):
 
     class SquareTransform(RVTransform):
         name = "square"
+        ndim_supp = ndim
 
         def forward(self, value, *inputs):
             return pt.power(value, 2)
@@ -336,13 +343,31 @@ def test_fallback_log_jac_det(ndim):
 
     square_tr = SquareTransform()
 
-    value = pt.TensorType("float64", (None,) * ndim)("value")
+    value = pt.vector("value")
     value_tr = square_tr.forward(value)
     log_jac_det = square_tr.log_jac_det(value_tr)
 
-    test_value = np.full((2,) * ndim, 3)
-    expected_log_jac_det = -np.log(6) * test_value.size
-    assert np.isclose(log_jac_det.eval({value: test_value}), expected_log_jac_det)
+    test_value = np.r_[3, 4]
+    expected_log_jac_det = -np.log(2 * test_value)
+    if ndim == 1:
+        expected_log_jac_det = expected_log_jac_det.sum()
+    np.testing.assert_array_equal(log_jac_det.eval({value: test_value}), expected_log_jac_det)
+
+
+@pytest.mark.parametrize("ndim", (None, 2))
+def test_fallback_log_jac_det_undefined_ndim(ndim):
+    class SquareTransform(RVTransform):
+        name = "square"
+        ndim_supp = ndim
+
+        def forward(self, value, *inputs):
+            return pt.power(value, 2)
+
+        def backward(self, value, *inputs):
+            return pt.sqrt(value)
+
+    with pytest.raises(NotImplementedError, match=r"only implemented for ndim_supp in \(0, 1\)"):
+        SquareTransform().log_jac_det(0)
 
 
 def test_hierarchical_uniform_transform():
@@ -988,4 +1013,58 @@ def test_multivariate_transform(shift, scale):
             shift + mu * scale,
             scale_mat @ cov @ scale_mat.T,
         ),
+    )
+
+
+@pytest.mark.parametrize(
+    "pt_transform, transform",
+    [
+        (pt.erf, ErfTransform()),
+        (pt.erfc, ErfcTransform()),
+        (pt.erfcx, ErfcxTransform()),
+        (pt.sinh, SinhTransform()),
+        (pt.cosh, CoshTransform()),
+        (pt.tanh, TanhTransform()),
+    ],
+)
+def test_erf_logp(pt_transform, transform):
+    base_rv = pt.random.normal(
+        0.5, 1, name="base_rv"
+    )  # Something not centered around 0 is usually better
+    rv = pt_transform(base_rv)
+
+    vv = rv.clone()
+    rv_logp = logp(rv, vv)
+
+    expected_logp = logp(base_rv, transform.backward(vv)) + transform.log_jac_det(vv)
+
+    vv_test = np.array(0.25)  # Arbitrary test value
+    np.testing.assert_almost_equal(
+        rv_logp.eval({vv: vv_test}), np.nan_to_num(expected_logp.eval({vv: vv_test}), nan=-np.inf)
+    )
+
+
+from pymc.testing import Rplusbig, Vector
+from tests.distributions.test_transform import check_jacobian_det
+
+
+@pytest.mark.parametrize(
+    "transform",
+    [
+        ErfTransform(),
+        ErfcTransform(),
+        ErfcxTransform(),
+        SinhTransform(),
+        CoshTransform(),
+        TanhTransform(),
+    ],
+)
+def test_check_jac_det(transform):
+    check_jacobian_det(
+        transform,
+        Vector(Rplusbig, 2),
+        pt.dvector,
+        [0.1, 0.1],
+        elemwise=True,
+        rv_var=pt.random.normal(0.5, 1, name="base_rv"),
     )

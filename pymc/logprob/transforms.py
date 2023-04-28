@@ -42,6 +42,7 @@ from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import pytensor.tensor as pt
 
+from pytensor import scan
 from pytensor.gradient import DisconnectedType, jacobian
 from pytensor.graph.basic import Apply, Node, Variable
 from pytensor.graph.features import AlreadyThere, Feature
@@ -49,21 +50,42 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
 from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
-from pytensor.scalar import Abs, Add, Exp, Log, Mul, Pow, Sqr, Sqrt
+from pytensor.scalar import (
+    Abs,
+    Add,
+    Cosh,
+    Erf,
+    Erfc,
+    Erfcx,
+    Exp,
+    Log,
+    Mul,
+    Pow,
+    Sinh,
+    Sqr,
+    Sqrt,
+    Tanh,
+)
 from pytensor.scan.op import Scan
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.math import (
     abs,
     add,
+    cosh,
+    erf,
+    erfc,
+    erfcx,
     exp,
     log,
     mul,
     neg,
     pow,
     reciprocal,
+    sinh,
     sqr,
     sqrt,
     sub,
+    tanh,
     true_div,
 )
 from pytensor.tensor.rewriting.basic import (
@@ -122,6 +144,8 @@ def remove_TransformedVariables(fgraph, node):
 
 
 class RVTransform(abc.ABC):
+    ndim_supp = None
+
     @abc.abstractmethod
     def forward(self, value: TensorVariable, *inputs: Variable) -> TensorVariable:
         """Apply the transformation."""
@@ -135,12 +159,16 @@ class RVTransform(abc.ABC):
 
     def log_jac_det(self, value: TensorVariable, *inputs) -> TensorVariable:
         """Construct the log of the absolute value of the Jacobian determinant."""
-        # jac = pt.reshape(
-        #     gradient(pt.sum(self.backward(value, *inputs)), [value]), value.shape
-        # )
-        # return pt.log(pt.abs(jac))
-        phi_inv = self.backward(value, *inputs)
-        return pt.log(pt.abs(pt.nlinalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
+        if self.ndim_supp not in (0, 1):
+            raise NotImplementedError(
+                f"RVTransform default log_jac_det only implemented for ndim_supp in (0, 1), got {self.ndim_supp=}"
+            )
+        if self.ndim_supp == 0:
+            jac = pt.reshape(pt.grad(pt.sum(self.backward(value, *inputs)), [value]), value.shape)
+            return pt.log(pt.abs(jac))
+        else:
+            phi_inv = self.backward(value, *inputs)
+            return pt.log(pt.abs(pt.nlinalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
 
 
 @node_rewriter(tracks=None)
@@ -340,7 +368,7 @@ class TransformValuesRewrite(GraphRewriter):
 class MeasurableTransform(MeasurableElemwise):
     """A placeholder used to specify a log-likelihood for a transformed measurable variable"""
 
-    valid_scalar_types = (Exp, Log, Add, Mul, Pow, Abs)
+    valid_scalar_types = (Exp, Log, Add, Mul, Pow, Abs, Sinh, Cosh, Tanh, Erf, Erfc, Erfcx)
 
     # Cannot use `transform` as name because it would clash with the property added by
     # the `TransformValuesRewrite`
@@ -540,7 +568,7 @@ def measurable_sub_to_neg(fgraph, node):
     return [pt.add(minuend, pt.neg(subtrahend))]
 
 
-@node_rewriter([exp, log, add, mul, pow, abs])
+@node_rewriter([exp, log, add, mul, pow, abs, sinh, cosh, tanh, erf, erfc, erfcx])
 def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
 
@@ -585,13 +613,20 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
     measurable_input_idx = 0
     transform_inputs: Tuple[TensorVariable, ...] = (measurable_input,)
     transform: RVTransform
-    if isinstance(scalar_op, Exp):
-        transform = ExpTransform()
-    elif isinstance(scalar_op, Log):
-        transform = LogTransform()
-    elif isinstance(scalar_op, Abs):
-        transform = AbsTransform()
-    elif isinstance(scalar_op, Pow):
+
+    transform_dict = {
+        Exp: ExpTransform(),
+        Log: LogTransform(),
+        Abs: AbsTransform(),
+        Sinh: SinhTransform(),
+        Cosh: CoshTransform(),
+        Tanh: TanhTransform(),
+        Erf: ErfTransform(),
+        Erfc: ErfcTransform(),
+        Erfcx: ErfcxTransform(),
+    }
+    transform = transform_dict.get(type(scalar_op), None)
+    if isinstance(scalar_op, Pow):
         # We only allow for the base to be measurable
         if measurable_input_idx != 0:
             return None
@@ -608,7 +643,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         transform = LocTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
-    else:
+    elif transform is None:
         transform_inputs = (measurable_input, pt.mul(*other_inputs))
         transform = ScaleTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
@@ -669,6 +704,87 @@ measurable_ir_rewrites_db.register(
     "basic",
     "transform",
 )
+
+
+class SinhTransform(RVTransform):
+    name = "sinh"
+    ndim_supp = 0
+
+    def forward(self, value, *inputs):
+        return pt.sinh(value)
+
+    def backward(self, value, *inputs):
+        return pt.arcsinh(value)
+
+
+class CoshTransform(RVTransform):
+    name = "cosh"
+    ndim_supp = 0
+
+    def forward(self, value, *inputs):
+        return pt.cosh(value)
+
+    def backward(self, value, *inputs):
+        return pt.arccosh(value)
+
+
+class TanhTransform(RVTransform):
+    name = "tanh"
+    ndim_supp = 0
+
+    def forward(self, value, *inputs):
+        return pt.tanh(value)
+
+    def backward(self, value, *inputs):
+        return pt.arctanh(value)
+
+
+class ErfTransform(RVTransform):
+    name = "erf"
+    ndim_supp = 0
+
+    def forward(self, value, *inputs):
+        return pt.erf(value)
+
+    def backward(self, value, *inputs):
+        return pt.erfinv(value)
+
+
+class ErfcTransform(RVTransform):
+    name = "erfc"
+    ndim_supp = 0
+
+    def forward(self, value, *inputs):
+        return pt.erfc(value)
+
+    def backward(self, value, *inputs):
+        return pt.erfcinv(value)
+
+
+class ErfcxTransform(RVTransform):
+    name = "erfcx"
+    ndim_supp = 0
+
+    def forward(self, value, *inputs):
+        return pt.erfcx(value)
+
+    def backward(self, value, *inputs):
+        # computes the inverse of erfcx, this was adapted from
+        # https://tinyurl.com/4mxfd3cz
+        x = pt.switch(value <= 1, 1.0 / (value * pt.sqrt(np.pi)), -pt.sqrt(pt.log(value)))
+
+        def calc_delta_x(value, prior_result):
+            return prior_result - (pt.erfcx(prior_result) - value) / (
+                2 * prior_result * pt.erfcx(prior_result) - 2 / pt.sqrt(np.pi)
+            )
+
+        result, updates = scan(
+            fn=calc_delta_x,
+            outputs_info=pt.ones_like(x),
+            non_sequences=value,
+            n_steps=10,
+        )
+        return result[-1]
 
 
 class LocTransform(RVTransform):
