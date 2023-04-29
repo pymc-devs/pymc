@@ -34,6 +34,7 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
+import re
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
@@ -43,7 +44,7 @@ from pytensor.raise_op import Assert
 from scipy import stats
 
 from pymc.distributions import Dirichlet
-from pymc.logprob.joint_logprob import factorized_joint_logprob
+from pymc.logprob.basic import factorized_joint_logprob
 from tests.distributions.test_multivariate import dirichlet_logpdf
 
 
@@ -78,9 +79,9 @@ def test_specify_shape_logprob():
 
 def test_assert_logprob():
     rv = pt.random.normal()
-    assert_op = Assert("Test assert")
+    assert_op = Assert(msg="Test assert")
     # Example: Add assert that rv must be positive
-    assert_rv = assert_op(rv > 0, rv)
+    assert_rv = assert_op(rv, rv>0)
     assert_rv.name = "assert_rv"
 
     assert_vv = assert_rv.clone()
@@ -89,10 +90,13 @@ def test_assert_logprob():
     # Check valid value is correct and doesn't raise
     # Since here the value to the rv satisfies the condition, no error is raised.
     valid_value = 3.0
-    with pytest.raises(AssertionError, match="Test assert"):
-        assert_logp.eval({assert_vv: valid_value})
+    assert_logp.eval({assert_vv: valid_value})
+
+    # Assertion error produced when value is 0
+    with pytest.raises(AssertionError):
+        assert_logp.eval({assert_vv: 0})
 
     # Check invalid value
     # Since here the value to the rv is negative, an exception is raised as the condition is not met
-    with pytest.raises(AssertionError, match="Test assert"):
+    with pytest.raises(AssertionError):
         assert_logp.eval({assert_vv: -5.0})

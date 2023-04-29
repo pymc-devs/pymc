@@ -39,7 +39,7 @@ from typing import List, Optional
 import pytensor.tensor as pt
 
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.raise_op import CheckAndRaise, ExceptionType
+from pytensor.raise_op import CheckAndRaise, ExceptionType, assert_op
 from pytensor.tensor.shape import SpecifyShape
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
@@ -140,8 +140,7 @@ def find_measurable_asserts(fgraph, node) -> Optional[List[MeasurableCheckAndRai
     ):
         return None  # pragma: no cover
 
-    exception_type = ExceptionType()
-    new_op = MeasurableCheckAndRaise(exc_type=exception_type)
+    new_op = MeasurableCheckAndRaise(exc_type = node.op.exc_type)
     # Make base_var unmeasurable
     unmeasurable_base_rv = ignore_logprob(base_rv)
     new_rv = new_op.make_node(unmeasurable_base_rv, *conds).default_output()
