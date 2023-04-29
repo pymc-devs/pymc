@@ -76,6 +76,25 @@ def find_hessian_diag(point, vars=None, model=None):
 
 
 def guess_scaling(point, vars=None, model=None, scaling_bound=1e-8):
+    """
+    Applies scaling on Hessian matrix using the `adjust_scaling` function. If the
+    `find_hessian_diag` function is not implemented for the model, it instead uses the `fixed_hessian` function to
+    compute the Hessian.
+
+    Parameters
+    ----------
+    point: dict
+    vars: list
+        Variables for which Hessian is to be calculated.
+    model= Model (optional if in `with` context)
+    scaling_bound = float
+        specifies a lower bound on the scaling factor.
+
+    Returns
+    -------
+    numpy.ndarray, shape (m, n)
+        scaled Hessian matrix
+    """
     model = modelcontext(model)
     try:
         h = find_hessian_diag(point, vars, model=model)
@@ -85,6 +104,13 @@ def guess_scaling(point, vars=None, model=None, scaling_bound=1e-8):
 
 
 def adjust_scaling(s, scaling_bound):
+    """
+    If the matrix has dimension less than 2,
+    it applies scaling to a matrix `s` using the `adjust_precision`
+    function to the matrix.
+    Or, it applies precision adjustment to the eigenvalues of the matrix and then reconstructs the matrix
+    using the eigenvectors and adjusted eigenvalues.
+    """
     if s.ndim < 2:
         return adjust_precision(s, scaling_bound)
     else:
@@ -94,6 +120,11 @@ def adjust_scaling(s, scaling_bound):
 
 
 def adjust_precision(tau, scaling_bound=1e-8):
+    """
+    Adjusts a precision parameter `tau` by taking the
+    logarithm of its magnitude, applying a lower and upper bound to this logarithm, and then exponentiating the
+    result raised to the power of 2.
+    """
     mag = sqrt(abs(tau))
 
     bounded = bound(log(mag), log(scaling_bound), log(1.0 / scaling_bound))
@@ -101,10 +132,26 @@ def adjust_precision(tau, scaling_bound=1e-8):
 
 
 def bound(a, l, u):
+    """
+    Returns a lower and upper bound to a given value `a`, with bounds specified
+    by the values `l` and `u`.
+    """
     return np.maximum(np.minimum(a, u), l)
 
 
 def eig_recompose(val, vec):
+    """
+    Returns reconstructed_matrix
+    Parameters
+    ----------
+    val:constant(eigenvalue)
+    vec:constant(eigenvector)
+
+    Returns
+    -------
+    numpy.ndarray, shape (m, n)
+        reconstructed_matrix = eigenvectors * diagonal_matrix_of_eigenvalues * eigenvectors^T
+    """
     return vec.dot(np.diag(val)).dot(vec.T)
 
 
