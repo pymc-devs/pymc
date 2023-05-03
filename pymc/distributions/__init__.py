@@ -74,6 +74,10 @@ from pymc.distributions.distribution import (
     SymbolicRandomVariable,
 )
 from pymc.distributions.mixture import (
+    HurdleGamma,
+    HurdleLogNormal,
+    HurdleNegativeBinomial,
+    HurdlePoisson,
     Mixture,
     NormalMixture,
     ZeroInflatedBinomial,
@@ -195,4 +199,8 @@ __all__ = [
     "Censored",
     "CAR",
     "PolyaGamma",
+    "HurdleGamma",
+    "HurdleLogNormal",
+    "HurdleNegativeBinomial",
+    "HurdlePoisson",
 ]

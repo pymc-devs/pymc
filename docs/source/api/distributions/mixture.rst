@@ -11,3 +11,7 @@ Mixture
    ZeroInflatedBinomial
    ZeroInflatedNegativeBinomial
    ZeroInflatedPoisson
+   HurdlePoisson
+   HurdleNegativeBinomial
+   HurdleGamma
+   HurdleLogNormal
