@@ -45,6 +45,7 @@ from pymc.distributions.shape_utils import (
     convert_shape,
     convert_size,
     find_size,
+    rv_size_is_none,
     shape_from_dims,
 )
 from pymc.exceptions import BlockModelAccessError
@@ -58,13 +59,14 @@ from pymc.logprob.abstract import (
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.model import BlockModelAccess
 from pymc.printing import str_for_dist
-from pymc.pytensorf import collect_default_updates, convert_observed_data
+from pymc.pytensorf import collect_default_updates, convert_observed_data, floatX
 from pymc.util import UNSET, _add_future_warning_tag
-from pymc.vartypes import string_types
+from pymc.vartypes import continuous_types, string_types
 
 __all__ = [
     "CustomDist",
     "DensityDist",
+    "DiracDelta",
     "Distribution",
     "Continuous",
     "Discrete",
@@ -1104,4 +1106,65 @@ def default_moment(rv, size, *rv_inputs, rv_name=None, has_fallback=False, ndim_
             "Cannot safely infer the size of a multivariate random variable's moment. "
             f"Please provide a moment function when instantiating the {rv_name} "
             "random variable."
+        )
+
+
+class DiracDeltaRV(RandomVariable):
+    name = "diracdelta"
+    ndim_supp = 0
+    ndims_params = [0]
+    _print_name = ("DiracDelta", "\\operatorname{DiracDelta}")
+
+    def make_node(self, rng, size, dtype, c):
+        c = pt.as_tensor_variable(c)
+        return super().make_node(rng, size, c.dtype, c)
+
+    @classmethod
+    def rng_fn(cls, rng, c, size=None):
+        if size is None:
+            return c.copy()
+        return np.full(size, c)
+
+
+diracdelta = DiracDeltaRV()
+
+
+class DiracDelta(Discrete):
+    r"""
+    DiracDelta log-likelihood.
+
+    Parameters
+    ----------
+    c : tensor_like of float or int
+        Dirac Delta parameter. The dtype of `c` determines the dtype of the distribution.
+        This can affect which sampler is assigned to DiracDelta variables, or variables
+        that use DiracDelta, such as Mixtures.
+    """
+
+    rv_op = diracdelta
+
+    @classmethod
+    def dist(cls, c, *args, **kwargs):
+        c = pt.as_tensor_variable(c)
+        if c.dtype in continuous_types:
+            c = floatX(c)
+        return super().dist([c], **kwargs)
+
+    def moment(rv, size, c):
+        if not rv_size_is_none(size):
+            c = pt.full(size, c)
+        return c
+
+    def logp(value, c):
+        return pt.switch(
+            pt.eq(value, c),
+            pt.zeros_like(value),
+            -np.inf,
+        )
+
+    def logcdf(value, c):
+        return pt.switch(
+            pt.lt(value, c),
+            -np.inf,
+            0,
         )

@@ -10,7 +10,6 @@ Discrete
    BetaBinomial
    Binomial
    Categorical
-   DiracDelta
    DiscreteUniform
    DiscreteWeibull
    Geometric
@@ -19,6 +18,3 @@ Discrete
    OrderedLogistic
    OrderedProbit
    Poisson
-   ZeroInflatedBinomial
-   ZeroInflatedNegativeBinomial
-   ZeroInflatedPoisson

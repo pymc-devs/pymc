@@ -55,7 +55,6 @@ from pymc.distributions.discrete import (
     BetaBinomial,
     Binomial,
     Categorical,
-    DiracDelta,
     DiscreteUniform,
     DiscreteWeibull,
     Geometric,
@@ -64,19 +63,23 @@ from pymc.distributions.discrete import (
     OrderedLogistic,
     OrderedProbit,
     Poisson,
-    ZeroInflatedBinomial,
-    ZeroInflatedNegativeBinomial,
-    ZeroInflatedPoisson,
 )
 from pymc.distributions.distribution import (
     Continuous,
     CustomDist,
     DensityDist,
+    DiracDelta,
     Discrete,
     Distribution,
     SymbolicRandomVariable,
 )
-from pymc.distributions.mixture import Mixture, NormalMixture
+from pymc.distributions.mixture import (
+    Mixture,
+    NormalMixture,
+    ZeroInflatedBinomial,
+    ZeroInflatedNegativeBinomial,
+    ZeroInflatedPoisson,
+)
 from pymc.distributions.multivariate import (
     CAR,
     Dirichlet,
