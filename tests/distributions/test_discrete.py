@@ -36,13 +36,11 @@ from pymc.testing import (
     BaseTestDistributionRandom,
     Bool,
     Domain,
-    I,
     Nat,
     NatSmall,
     R,
     Rdunif,
     Rplus,
-    Rplusbig,
     Rplusdunif,
     Runif,
     Simplex,
@@ -57,8 +55,6 @@ from pymc.testing import (
     seeded_numpy_distribution_builder,
     seeded_scipy_distribution_builder,
 )
-from pymc.vartypes import discrete_types
-from tests.logprob.utils import create_pytensor_params, scipy_logprob_tester
 
 
 def discrete_weibull_logpmf(value, q, beta):
@@ -367,120 +363,6 @@ class TestMatchesScipy:
             {"mu": Rplus},
         )
 
-    def test_diracdeltadist(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
-            check_logp(pm.DiracDelta, I, {"c": I}, lambda value, c: np.log(c == value))
-            check_logcdf(pm.DiracDelta, I, {"c": I}, lambda value, c: np.log(value >= c))
-
-    def test_zeroinflatedpoisson(self):
-        def logp_fn(value, psi, mu):
-            if value == 0:
-                return np.log((1 - psi) * st.poisson.pmf(0, mu))
-            else:
-                return np.log(psi * st.poisson.pmf(value, mu))
-
-        def logcdf_fn(value, psi, mu):
-            return np.log((1 - psi) + psi * st.poisson.cdf(value, mu))
-
-        check_logp(
-            pm.ZeroInflatedPoisson,
-            Nat,
-            {"psi": Unit, "mu": Rplus},
-            logp_fn,
-        )
-
-        check_logcdf(
-            pm.ZeroInflatedPoisson,
-            Nat,
-            {"psi": Unit, "mu": Rplus},
-            logcdf_fn,
-        )
-
-        check_selfconsistency_discrete_logcdf(
-            pm.ZeroInflatedPoisson,
-            Nat,
-            {"mu": Rplus, "psi": Unit},
-        )
-
-    def test_zeroinflatednegativebinomial(self):
-        def logp_fn(value, psi, mu, alpha):
-            n, p = pm.NegativeBinomial.get_n_p(mu=mu, alpha=alpha)
-            if value == 0:
-                return np.log((1 - psi) * st.nbinom.pmf(0, n, p))
-            else:
-                return np.log(psi * st.nbinom.pmf(value, n, p))
-
-        def logcdf_fn(value, psi, mu, alpha):
-            n, p = pm.NegativeBinomial.get_n_p(mu=mu, alpha=alpha)
-            return np.log((1 - psi) + psi * st.nbinom.cdf(value, n, p))
-
-        check_logp(
-            pm.ZeroInflatedNegativeBinomial,
-            Nat,
-            {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
-            logp_fn,
-        )
-
-        check_logp(
-            pm.ZeroInflatedNegativeBinomial,
-            Nat,
-            {"psi": Unit, "p": Unit, "n": NatSmall},
-            lambda value, psi, p, n: np.log((1 - psi) * st.nbinom.pmf(0, n, p))
-            if value == 0
-            else np.log(psi * st.nbinom.pmf(value, n, p)),
-        )
-
-        check_logcdf(
-            pm.ZeroInflatedNegativeBinomial,
-            Nat,
-            {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
-            logcdf_fn,
-        )
-
-        check_logcdf(
-            pm.ZeroInflatedNegativeBinomial,
-            Nat,
-            {"psi": Unit, "p": Unit, "n": NatSmall},
-            lambda value, psi, p, n: np.log((1 - psi) + psi * st.nbinom.cdf(value, n, p)),
-        )
-
-        check_selfconsistency_discrete_logcdf(
-            pm.ZeroInflatedNegativeBinomial,
-            Nat,
-            {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
-        )
-
-    def test_zeroinflatedbinomial(self):
-        def logp_fn(value, psi, n, p):
-            if value == 0:
-                return np.log((1 - psi) * st.binom.pmf(0, n, p))
-            else:
-                return np.log(psi * st.binom.pmf(value, n, p))
-
-        def logcdf_fn(value, psi, n, p):
-            return np.log((1 - psi) + psi * st.binom.cdf(value, n, p))
-
-        check_logp(
-            pm.ZeroInflatedBinomial,
-            Nat,
-            {"psi": Unit, "n": NatSmall, "p": Unit},
-            logp_fn,
-        )
-
-        check_logcdf(
-            pm.ZeroInflatedBinomial,
-            Nat,
-            {"psi": Unit, "n": NatSmall, "p": Unit},
-            logcdf_fn,
-        )
-
-        check_selfconsistency_discrete_logcdf(
-            pm.ZeroInflatedBinomial,
-            Nat,
-            {"n": NatSmall, "p": Unit, "psi": Unit},
-        )
-
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_categorical(self, n):
         check_logp(
@@ -618,20 +500,6 @@ def test_ordered_probit_probs():
     assert isinstance(x, TensorVariable)
 
 
-@pytest.mark.parametrize(
-    "dist, non_psi_args",
-    [
-        (pm.ZeroInflatedPoisson.dist, (2,)),
-        (pm.ZeroInflatedBinomial.dist, (2, 0.5)),
-        (pm.ZeroInflatedNegativeBinomial.dist, (2, 2)),
-    ],
-)
-def test_zero_inflated_dists_dtype_and_broadcast(dist, non_psi_args):
-    x = dist([0.5, 0.5, 0.5], *non_psi_args)
-    assert x.dtype in discrete_types
-    assert x.eval().shape == (3,)
-
-
 class TestMoments:
     @pytest.mark.parametrize(
         "p, size, expected",
@@ -706,53 +574,6 @@ class TestMoments:
     def test_negative_binomial_moment(self, n, p, size, expected):
         with pm.Model() as model:
             pm.NegativeBinomial("x", n=n, p=p, size=size)
-        assert_moment_is_expected(model, expected)
-
-    @pytest.mark.parametrize(
-        "c, size, expected",
-        [
-            (1, None, 1),
-            (1, 5, np.full(5, 1)),
-            (np.arange(1, 6), None, np.arange(1, 6)),
-        ],
-    )
-    def test_diracdelta_moment(self, c, size, expected):
-        with pm.Model() as model:
-            pm.DiracDelta("x", c=c, size=size)
-        assert_moment_is_expected(model, expected)
-
-    @pytest.mark.parametrize(
-        "psi, mu, size, expected",
-        [
-            (0.9, 3.0, None, 3),
-            (0.8, 2.9, 5, np.full(5, 2)),
-            (0.2, np.arange(1, 5) * 5, None, np.arange(1, 5)),
-            (0.2, np.arange(1, 5) * 5, (2, 4), np.full((2, 4), np.arange(1, 5))),
-        ],
-    )
-    def test_zero_inflated_poisson_moment(self, psi, mu, size, expected):
-        with pm.Model() as model:
-            pm.ZeroInflatedPoisson("x", psi=psi, mu=mu, size=size)
-        assert_moment_is_expected(model, expected)
-
-    @pytest.mark.parametrize(
-        "psi, n, p, size, expected",
-        [
-            (0.8, 7, 0.7, None, 4),
-            (0.8, 7, 0.3, 5, np.full(5, 2)),
-            (0.4, 25, np.arange(1, 6) / 10, None, np.arange(1, 6)),
-            (
-                0.4,
-                25,
-                np.arange(1, 6) / 10,
-                (2, 5),
-                np.full((2, 5), np.arange(1, 6)),
-            ),
-        ],
-    )
-    def test_zero_inflated_binomial_moment(self, psi, n, p, size, expected):
-        with pm.Model() as model:
-            pm.ZeroInflatedBinomial("x", psi=psi, n=n, p=p, size=size)
         assert_moment_is_expected(model, expected)
 
     @pytest.mark.parametrize(
@@ -843,32 +664,6 @@ class TestMoments:
     def test_categorical_moment(self, p, size, expected):
         with pm.Model() as model:
             pm.Categorical("x", p=p, size=size)
-        assert_moment_is_expected(model, expected)
-
-    @pytest.mark.parametrize(
-        "psi, mu, alpha, size, expected",
-        [
-            (0.2, 10, 3, None, 2),
-            (0.2, 10, 4, 5, np.full(5, 2)),
-            (
-                0.4,
-                np.arange(1, 5),
-                np.arange(2, 6),
-                None,
-                np.array([0, 1, 1, 2] if pytensor.config.floatX == "float64" else [0, 0, 1, 1]),
-            ),
-            (
-                np.linspace(0.2, 0.6, 3),
-                np.arange(1, 10, 4),
-                np.arange(1, 4),
-                (2, 3),
-                np.full((2, 3), np.array([0, 2, 5])),
-            ),
-        ],
-    )
-    def test_zero_inflated_negative_binomial_moment(self, psi, mu, alpha, size, expected):
-        with pm.Model() as model:
-            pm.ZeroInflatedNegativeBinomial("x", psi=psi, mu=mu, alpha=alpha, size=size)
         assert_moment_is_expected(model, expected)
 
 
@@ -1059,35 +854,6 @@ class TestDiscreteUniform(BaseTestDistributionRandom):
     def test_implied_degenerate_shape(self):
         x = pm.DiscreteUniform.dist(0, [1])
         assert x.eval().shape == (1,)
-
-
-class TestDiracDelta(BaseTestDistributionRandom):
-    def diracdelta_rng_fn(self, size, c):
-        if size is None:
-            return c
-        return np.full(size, c)
-
-    pymc_dist = pm.DiracDelta
-    pymc_dist_params = {"c": 3}
-    expected_rv_op_params = {"c": 3}
-    reference_dist_params = {"c": 3}
-    reference_dist = lambda self: self.diracdelta_rng_fn
-    checks_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
-        "check_rv_size",
-    ]
-
-    @pytest.mark.parametrize("floatX", ["float32", "float64"])
-    @pytest.mark.xfail(
-        sys.platform == "win32", reason="https://github.com/pytensor-devs/pytensor/issues/871"
-    )
-    def test_dtype(self, floatX):
-        with pytensor.config.change_flags(floatX=floatX):
-            assert pm.DiracDelta.dist(2**4).dtype == "int8"
-            assert pm.DiracDelta.dist(2**16).dtype == "int32"
-            assert pm.DiracDelta.dist(2**32).dtype == "int64"
-            assert pm.DiracDelta.dist(2.0).dtype == floatX
 
 
 class TestOrderedLogistic(BaseTestDistributionRandom):

@@ -40,12 +40,16 @@ from pymc.distributions import (
     Mixture,
     Multinomial,
     MvNormal,
+    NegativeBinomial,
     Normal,
     NormalMixture,
     Poisson,
     StickBreakingWeights,
     Triangular,
     Uniform,
+    ZeroInflatedBinomial,
+    ZeroInflatedNegativeBinomial,
+    ZeroInflatedPoisson,
 )
 from pymc.distributions.mixture import MixtureTransformWarning
 from pymc.distributions.shape_utils import change_dist_size, to_tuple
@@ -64,11 +68,21 @@ from pymc.sampling.mcmc import sample
 from pymc.step_methods import Metropolis
 from pymc.testing import (
     Domain,
+    Nat,
+    NatSmall,
+    R,
+    Rplus,
+    Rplusbig,
     SeededTest,
     Simplex,
+    Unit,
     assert_moment_is_expected,
+    check_logcdf,
+    check_logp,
+    check_selfconsistency_discrete_logcdf,
     continuous_random_tester,
 )
+from pymc.vartypes import discrete_types
 
 
 def generate_normal_mixture_data(w, mu, sigma, size=1000):
@@ -1363,3 +1377,186 @@ class TestMixtureDefaultTransforms:
             with warnings.catch_warnings():
                 warnings.simplefilter("error")
                 Mixture("mix6", w=[0.5, 0.5], comp_dists=comp_dists)
+
+
+class TestZeroInflatedMixture:
+    def test_zeroinflatedpoisson_logp(self):
+        def logp_fn(value, psi, mu):
+            if value == 0:
+                return np.log((1 - psi) * st.poisson.pmf(0, mu))
+            else:
+                return np.log(psi * st.poisson.pmf(value, mu))
+
+        def logcdf_fn(value, psi, mu):
+            return np.log((1 - psi) + psi * st.poisson.cdf(value, mu))
+
+        check_logp(
+            ZeroInflatedPoisson,
+            Nat,
+            {"psi": Unit, "mu": Rplus},
+            logp_fn,
+        )
+
+        check_logcdf(
+            ZeroInflatedPoisson,
+            Nat,
+            {"psi": Unit, "mu": Rplus},
+            logcdf_fn,
+        )
+
+        check_selfconsistency_discrete_logcdf(
+            ZeroInflatedPoisson,
+            Nat,
+            {"mu": Rplus, "psi": Unit},
+        )
+
+    def test_zeroinflatednegativebinomial_logp(self):
+        def logp_fn(value, psi, mu, alpha):
+            n, p = NegativeBinomial.get_n_p(mu=mu, alpha=alpha)
+            if value == 0:
+                return np.log((1 - psi) * st.nbinom.pmf(0, n, p))
+            else:
+                return np.log(psi * st.nbinom.pmf(value, n, p))
+
+        def logcdf_fn(value, psi, mu, alpha):
+            n, p = NegativeBinomial.get_n_p(mu=mu, alpha=alpha)
+            return np.log((1 - psi) + psi * st.nbinom.cdf(value, n, p))
+
+        check_logp(
+            ZeroInflatedNegativeBinomial,
+            Nat,
+            {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
+            logp_fn,
+        )
+
+        check_logp(
+            ZeroInflatedNegativeBinomial,
+            Nat,
+            {"psi": Unit, "p": Unit, "n": NatSmall},
+            lambda value, psi, p, n: np.log((1 - psi) * st.nbinom.pmf(0, n, p))
+            if value == 0
+            else np.log(psi * st.nbinom.pmf(value, n, p)),
+        )
+
+        check_logcdf(
+            ZeroInflatedNegativeBinomial,
+            Nat,
+            {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
+            logcdf_fn,
+        )
+
+        check_logcdf(
+            ZeroInflatedNegativeBinomial,
+            Nat,
+            {"psi": Unit, "p": Unit, "n": NatSmall},
+            lambda value, psi, p, n: np.log((1 - psi) + psi * st.nbinom.cdf(value, n, p)),
+        )
+
+        check_selfconsistency_discrete_logcdf(
+            ZeroInflatedNegativeBinomial,
+            Nat,
+            {"psi": Unit, "mu": Rplusbig, "alpha": Rplusbig},
+        )
+
+    def test_zeroinflatedbinomial_logp(self):
+        def logp_fn(value, psi, n, p):
+            if value == 0:
+                return np.log((1 - psi) * st.binom.pmf(0, n, p))
+            else:
+                return np.log(psi * st.binom.pmf(value, n, p))
+
+        def logcdf_fn(value, psi, n, p):
+            return np.log((1 - psi) + psi * st.binom.cdf(value, n, p))
+
+        check_logp(
+            ZeroInflatedBinomial,
+            Nat,
+            {"psi": Unit, "n": NatSmall, "p": Unit},
+            logp_fn,
+        )
+
+        check_logcdf(
+            ZeroInflatedBinomial,
+            Nat,
+            {"psi": Unit, "n": NatSmall, "p": Unit},
+            logcdf_fn,
+        )
+
+        check_selfconsistency_discrete_logcdf(
+            ZeroInflatedBinomial,
+            Nat,
+            {"n": NatSmall, "p": Unit, "psi": Unit},
+        )
+
+    @pytest.mark.parametrize(
+        "psi, mu, size, expected",
+        [
+            (0.9, 3.0, None, 3),
+            (0.8, 2.9, 5, np.full(5, 2)),
+            (0.2, np.arange(1, 5) * 5, None, np.arange(1, 5)),
+            (0.2, np.arange(1, 5) * 5, (2, 4), np.full((2, 4), np.arange(1, 5))),
+        ],
+    )
+    def test_zero_inflated_poisson_moment(self, psi, mu, size, expected):
+        with Model() as model:
+            ZeroInflatedPoisson("x", psi=psi, mu=mu, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "psi, n, p, size, expected",
+        [
+            (0.8, 7, 0.7, None, 4),
+            (0.8, 7, 0.3, 5, np.full(5, 2)),
+            (0.4, 25, np.arange(1, 6) / 10, None, np.arange(1, 6)),
+            (
+                0.4,
+                25,
+                np.arange(1, 6) / 10,
+                (2, 5),
+                np.full((2, 5), np.arange(1, 6)),
+            ),
+        ],
+    )
+    def test_zero_inflated_binomial_moment(self, psi, n, p, size, expected):
+        with Model() as model:
+            ZeroInflatedBinomial("x", psi=psi, n=n, p=p, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "psi, mu, alpha, size, expected",
+        [
+            (0.2, 10, 3, None, 2),
+            (0.2, 10, 4, 5, np.full(5, 2)),
+            (
+                0.4,
+                np.arange(1, 5),
+                np.arange(2, 6),
+                None,
+                np.array([0, 1, 1, 2] if pytensor.config.floatX == "float64" else [0, 0, 1, 1]),
+            ),
+            (
+                np.linspace(0.2, 0.6, 3),
+                np.arange(1, 10, 4),
+                np.arange(1, 4),
+                (2, 3),
+                np.full((2, 3), np.array([0, 2, 5])),
+            ),
+        ],
+    )
+    def test_zero_inflated_negative_binomial_moment(self, psi, mu, alpha, size, expected):
+        with Model() as model:
+            ZeroInflatedNegativeBinomial("x", psi=psi, mu=mu, alpha=alpha, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "dist, non_psi_args",
+        [
+            (ZeroInflatedPoisson.dist, (2,)),
+            (ZeroInflatedBinomial.dist, (2, 0.5)),
+            (ZeroInflatedNegativeBinomial.dist, (2, 2)),
+        ],
+    )
+    def test_zero_inflated_dists_dtype_and_broadcast(self, dist, non_psi_args):
+        x = dist([0.5, 0.5, 0.5], *non_psi_args)
+        assert x.dtype in discrete_types
+        assert x.eval().shape == (3,)

@@ -11,3 +11,4 @@ Distribution utilities
     Discrete
     Distribution
     SymbolicRandomVariable
+    DiracDelta

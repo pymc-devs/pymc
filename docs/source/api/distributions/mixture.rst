@@ -8,3 +8,6 @@ Mixture
 
    Mixture
    NormalMixture
+   ZeroInflatedBinomial
+   ZeroInflatedNegativeBinomial
+   ZeroInflatedPoisson

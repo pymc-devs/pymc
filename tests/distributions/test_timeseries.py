@@ -22,7 +22,7 @@ import pymc as pm
 
 from pymc import MutableData
 from pymc.distributions.continuous import Exponential, Flat, HalfNormal, Normal, Uniform
-from pymc.distributions.discrete import DiracDelta
+from pymc.distributions.distribution import DiracDelta
 from pymc.distributions.multivariate import (
     Dirichlet,
     LKJCholeskyCov,

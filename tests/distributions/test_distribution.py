@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import sys
 import warnings
 
 import numpy as np
@@ -50,7 +51,13 @@ from pymc.logprob.abstract import get_measurable_outputs
 from pymc.logprob.basic import logcdf, logp
 from pymc.model import Model
 from pymc.sampling import draw, sample
-from pymc.testing import assert_moment_is_expected
+from pymc.testing import (
+    BaseTestDistributionRandom,
+    I,
+    assert_moment_is_expected,
+    check_logcdf,
+    check_logp,
+)
 from pymc.util import _FutureWarningValidatingScratchpad
 
 
@@ -587,3 +594,52 @@ def test_distribution_op_registered():
     """Test that returned Ops are registered as virtual subclasses of the respective PyMC distributions."""
     assert isinstance(Normal.dist().owner.op, Normal)
     assert isinstance(Censored.dist(Normal.dist(), lower=None, upper=None).owner.op, Censored)
+
+
+class TestDiracDelta:
+    def test_logp(self):
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
+            check_logp(pm.DiracDelta, I, {"c": I}, lambda value, c: np.log(c == value))
+            check_logcdf(pm.DiracDelta, I, {"c": I}, lambda value, c: np.log(value >= c))
+
+        @pytest.mark.parametrize(
+            "c, size, expected",
+            [
+                (1, None, 1),
+                (1, 5, np.full(5, 1)),
+                (np.arange(1, 6), None, np.arange(1, 6)),
+            ],
+        )
+        def test_moment(self, c, size, expected):
+            with pm.Model() as model:
+                pm.DiracDelta("x", c=c, size=size)
+            assert_moment_is_expected(model, expected)
+
+    class TestDiracDelta(BaseTestDistributionRandom):
+        def diracdelta_rng_fn(self, size, c):
+            if size is None:
+                return c
+            return np.full(size, c)
+
+        pymc_dist = pm.DiracDelta
+        pymc_dist_params = {"c": 3}
+        expected_rv_op_params = {"c": 3}
+        reference_dist_params = {"c": 3}
+        reference_dist = lambda self: self.diracdelta_rng_fn
+        checks_to_run = [
+            "check_pymc_params_match_rv_op",
+            "check_pymc_draws_match_reference",
+            "check_rv_size",
+        ]
+
+        @pytest.mark.parametrize("floatX", ["float32", "float64"])
+        @pytest.mark.xfail(
+            sys.platform == "win32", reason="https://github.com/pytensor-devs/pytensor/issues/871"
+        )
+        def test_dtype(self, floatX):
+            with pytensor.config.change_flags(floatX=floatX):
+                assert pm.DiracDelta.dist(2**4).dtype == "int8"
+                assert pm.DiracDelta.dist(2**16).dtype == "int32"
+                assert pm.DiracDelta.dist(2**32).dtype == "int64"
+                assert pm.DiracDelta.dist(2.0).dtype == floatX
