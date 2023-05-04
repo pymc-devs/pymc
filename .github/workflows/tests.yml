@@ -167,13 +167,6 @@ jobs:
         run: |
           conda activate pymc-test
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
-          env_vars: TEST_SUBSET
-          name: ${{ matrix.os }} ${{ matrix.floatx }}
-          fail_ci_if_error: false
 
   windows:
     needs: changes
@@ -243,13 +236,6 @@ jobs:
         run: >-
           conda activate pymc-test &&
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
-          env_vars: TEST_SUBSET
-          name: ${{ matrix.os }} ${{ matrix.floatx }}
-          fail_ci_if_error: false
 
   macos:
     needs: changes
@@ -322,13 +308,6 @@ jobs:
       - name: Run tests
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
-          env_vars: TEST_SUBSET
-          name: ${{ matrix.os }} ${{ matrix.floatx }}
-          fail_ci_if_error: false
 
   external_samplers:
     needs: changes
@@ -395,13 +374,6 @@ jobs:
       - name: Run tests
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
-          env_vars: TEST_SUBSET
-          name: JAX tests - ${{ matrix.os }} ${{ matrix.floatx }}
-          fail_ci_if_error: false
 
   float32:
     needs: changes
@@ -467,13 +439,6 @@ jobs:
         run: >-
           conda activate pymc-test &&
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
-          env_vars: TEST_SUBSET
-          name: ${{ matrix.os }} ${{ matrix.floatx }}
-          fail_ci_if_error: false
 
   all_tests:
     if: ${{ always() }}
@@ -488,3 +453,33 @@ jobs:
                   needs.external_samplers.result != 'success' ||
                   needs.float32.result != 'success' ) }}
         run: exit 1
+
+  upload-coverage:
+    runs-on: ubuntu-latest
+    name: "Upload coverage"
+    needs: [all_tests, changes]
+    if: ${{ needs.all_tests.result == 'success' && needs.changes.outputs.changes == 'true'}}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U coverage>=5.1 coveralls
+
+      - name: Download coverage file
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage
+          path: coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
+          directory: ./coverage/
+          fail_ci_if_error: true
