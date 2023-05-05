@@ -173,7 +173,12 @@ jobs:
       - name: Run tests
         run: |
           conda activate pymc-test
-          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+          python -m pytest -vv --cov=pymc --cov-report=coverage/coverage-${steps.matrix-id.outputs.id}.xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+      - name: Upload coverage file
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage/coverage-${{ steps.matrix-id.outputs.id }}.xml
 
   windows:
     needs: changes
@@ -242,7 +247,12 @@ jobs:
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
         run: >-
           conda activate pymc-test &&
-          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
+          python -m pytest -vv --cov=pymc --cov-report=coverage/coverage-${steps.matrix-id.outputs.id}.xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
+      - name: Upload coverage file
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage/coverage-${{ steps.matrix-id.outputs.id }}.xml
 
   macos:
     needs: changes
@@ -314,7 +324,12 @@ jobs:
           python --version
       - name: Run tests
         run: |
-          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+          python -m pytest -vv --cov=pymc --cov-report=coverage/coverage-${steps.matrix-id.outputs.id}.xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+      - name: Upload coverage file
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage/coverage-${{ steps.matrix-id.outputs.id }}.xml
 
   external_samplers:
     needs: changes
@@ -380,7 +395,12 @@ jobs:
           pip install git+https://github.com/blackjax-devs/blackjax.git@0.7.0
       - name: Run tests
         run: |
-          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+          python -m pytest -vv --cov=pymc --cov-report=coverage/coverage-${steps.matrix-id.outputs.id}.xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+      - name: Upload coverage file
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage/coverage-${{ steps.matrix-id.outputs.id }}.xml
 
   float32:
     needs: changes
@@ -445,7 +465,12 @@ jobs:
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
         run: >-
           conda activate pymc-test &&
-          python -m pytest -vv --cov=pymc --cov-report=xml:coverage.xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
+          python -m pytest -vv --cov=pymc --cov-report=xml:coverage/coverage-${steps.matrix-id.outputs.id}.xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
+      - name: Upload coverage file
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage/coverage-${{ steps.matrix-id.outputs.id }}.xml
 
   all_tests:
     if: ${{ always() }}
@@ -461,10 +486,29 @@ jobs:
                   needs.float32.result != 'success' ) }}
         run: exit 1
 
+
+  merge-reports:
+    runs-on: ubuntu-latest
+    needs: [all_tests, changes]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Merge coverage reports
+        run: |
+          # Find all coverage reports and merge them into a single file
+          python -m coverage combine
+
+      - name: Save combined coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage
+          path: coverage
+
+
   upload-coverage:
     runs-on: ubuntu-latest
     name: "Upload coverage"
-    needs: [all_tests, changes]
+    needs: [merge-reports]
     if: ${{ needs.all_tests.result == 'success' && needs.changes.outputs.changes == 'true'}}
     steps:
       - uses: actions/checkout@v3
