@@ -16,6 +16,13 @@ on:
 # A pre-commit hook (scripts/check_all_tests_are_covered.py)
 # enforces that test run just once per OS / floatX setting.
 
+# Cancels all previous workflow runs for pull requests that have not completed.
+concurrency:
+  # The concurrency group contains the workflow name and the branch name for pull requests
+  # or the commit hash for any other events.
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: true
+
 jobs:
 
   changes:
@@ -438,7 +445,7 @@ jobs:
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
         run: >-
           conda activate pymc-test &&
-          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
+          python -m pytest -vv --cov=pymc --cov-report=xml:coverage.xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
 
   all_tests:
     if: ${{ always() }}
