@@ -496,6 +496,7 @@ jobs:
       - name: Merge coverage reports
         run: |
           # Find all coverage reports and merge them into a single file
+          python -m pip install -U coverage>=5.1 coveralls
           python -m coverage combine --append coverage-*.xml
 
       - name: Save combined coverage report
