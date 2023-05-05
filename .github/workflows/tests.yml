@@ -173,12 +173,12 @@ jobs:
       - name: Run tests
         run: |
           conda activate pymc-test
-          python -m pytest -vv --cov=pymc --cov-report=coverage/coverage-${steps.matrix-id.outputs.id}.xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+          python -m pytest -vv --cov=pymc --cov-report=coverage/coverage-${{ matrix.id }}.xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage file
         uses: actions/upload-artifact@v3
         with:
           name: coverage
-          path: coverage/coverage-${{ steps.matrix-id.outputs.id }}.xml
+          path: coverage/coverage-${{ matrix.id }}.xml
 
   windows:
     needs: changes
@@ -247,12 +247,12 @@ jobs:
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
         run: >-
           conda activate pymc-test &&
-          python -m pytest -vv --cov=pymc --cov-report=coverage/coverage-${steps.matrix-id.outputs.id}.xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
+          python -m pytest -vv --cov=pymc --cov-report=coverage/coverage-${{ matrix.id }}.xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage file
         uses: actions/upload-artifact@v3
         with:
           name: coverage
-          path: coverage/coverage-${{ steps.matrix-id.outputs.id }}.xml
+          path: coverage/coverage-${{ matrix.id }}.xml
 
   macos:
     needs: changes
@@ -324,12 +324,12 @@ jobs:
           python --version
       - name: Run tests
         run: |
-          python -m pytest -vv --cov=pymc --cov-report=coverage/coverage-${steps.matrix-id.outputs.id}.xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+          python -m pytest -vv --cov=pymc --cov-report=coverage/coverage-${{ matrix.id }}.xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage file
         uses: actions/upload-artifact@v3
         with:
           name: coverage
-          path: coverage/coverage-${{ steps.matrix-id.outputs.id }}.xml
+          path: coverage/coverage-${{ matrix.id }}.xml
 
   external_samplers:
     needs: changes
@@ -395,12 +395,12 @@ jobs:
           pip install git+https://github.com/blackjax-devs/blackjax.git@0.7.0
       - name: Run tests
         run: |
-          python -m pytest -vv --cov=pymc --cov-report=coverage/coverage-${steps.matrix-id.outputs.id}.xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+          python -m pytest -vv --cov=pymc --cov-report=coverage/coverage-${{ matrix.id }}.xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage file
         uses: actions/upload-artifact@v3
         with:
           name: coverage
-          path: coverage/coverage-${{ steps.matrix-id.outputs.id }}.xml
+          path: coverage/coverage-${{ matrix.id }}.xml
 
   float32:
     needs: changes
@@ -470,7 +470,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: coverage
-          path: coverage/coverage-${{ steps.matrix-id.outputs.id }}.xml
+          path: coverage/coverage-${{ matrix.id }}.xml
 
   all_tests:
     if: ${{ always() }}
