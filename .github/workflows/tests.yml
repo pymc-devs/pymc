@@ -493,10 +493,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Install coverage
-        run: conda install coverage -y
       - name: Merge coverage reports
         run: |
+          # Activate conda environment
+          conda activate pymc-test
           # Find all coverage reports and merge them into a single file
           python -m coverage combine --append coverage-*.xml
 
