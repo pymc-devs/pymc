@@ -496,7 +496,7 @@ jobs:
       - name: Merge coverage reports
         run: |
           # Find all coverage reports and merge them into a single file
-          run: python -m coverage combine --append coverage-*.xml
+          python -m coverage combine --append coverage-*.xml
 
       - name: Save combined coverage report
         uses: actions/upload-artifact@v2
