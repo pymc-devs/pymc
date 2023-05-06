@@ -1489,6 +1489,19 @@ class Laplace(Continuous):
             msg="b > 0",
         )
 
+    def icdf(value, mu, b):
+        res = pt.switch(
+            pt.le(value, 0.5),
+            mu + b * np.log(2 * value),
+            mu - b * np.log(2 - 2 * value)
+        )
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            b > 0,
+            msg="b > 0"
+        )
+
 
 class AsymmetricLaplaceRV(RandomVariable):
     name = "asymmetriclaplace"
