@@ -457,11 +457,7 @@ class TestMatchesScipy:
             {"mu": R, "b": Rplus},
             lambda value, mu, b: st.laplace.logcdf(value, mu, b),
         )
-        check_icdf(
-            pm.Laplace,
-            {"mu": R, "b": Rplus},
-            lambda q, mu, b: st.laplace.ppf(q, mu, b)
-        )
+        check_icdf(pm.Laplace, {"mu": R, "b": Rplus}, lambda q, mu, b: st.laplace.ppf(q, mu, b))
 
     def test_laplace_asymmetric(self):
         check_logp(
@@ -637,6 +633,11 @@ class TestMatchesScipy:
             Rplus,
             {"alpha": Rplusbig, "m": Rplusbig},
             lambda value, alpha, m: st.pareto.logcdf(value, alpha, scale=m),
+        )
+        check_icdf(
+            pm.Pareto,
+            {"alpha": Rplusbig, "m": Rplusbig},
+            lambda q, alpha, m: st.pareto.ppf(q, alpha, scale=m),
         )
 
     @pytest.mark.skipif(
