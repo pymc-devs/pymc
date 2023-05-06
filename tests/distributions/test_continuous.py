@@ -457,6 +457,11 @@ class TestMatchesScipy:
             {"mu": R, "b": Rplus},
             lambda value, mu, b: st.laplace.logcdf(value, mu, b),
         )
+        check_icdf(
+            pm.Laplace,
+            {"mu": R, "b": Rplus},
+            lambda q, mu, b: st.laplace.ppf(q, mu, b)
+        )
 
     def test_laplace_asymmetric(self):
         check_logp(
