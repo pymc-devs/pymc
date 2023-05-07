@@ -44,7 +44,7 @@ from pymc.distributions.dist_math import (
     normal_lccdf,
     normal_lcdf,
 )
-from pymc.distributions.distribution import Discrete
+from pymc.distributions.distribution import Distribution, Discrete
 from pymc.distributions.logprob import logp
 from pymc.distributions.mixture import Mixture
 from pymc.distributions.shape_utils import rv_size_is_none
@@ -1254,7 +1254,7 @@ def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):
         return Mixture.dist(weights, comp_dists, **kwargs)
 
 
-class ZeroInflatedPoisson:
+class ZeroInflatedPoisson(Distribution):
     R"""
     Zero-inflated Poisson log-likelihood.
 
@@ -1305,11 +1305,6 @@ class ZeroInflatedPoisson:
         Expected number of occurrences during the given interval
         (mu >= 0).
     """
-
-    def __new__(cls, name, psi, mu, **kwargs):
-        return _zero_inflated_mixture(
-            name=name, nonzero_p=psi, nonzero_dist=Poisson.dist(mu=mu), **kwargs
-        )
 
     @classmethod
     def dist(cls, psi, mu, **kwargs):
