@@ -29,7 +29,7 @@ _LEVELS = {
     "critical": logging.CRITICAL,
 }
 
-logger = logging.getLogger("pymc")
+logger = logging.getLogger(__name__)
 
 
 @enum.unique

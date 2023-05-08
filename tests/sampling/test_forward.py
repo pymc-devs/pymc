@@ -805,12 +805,12 @@ class TestSamplePPC(SeededTest):
 
         with m:
             pm.sample_prior_predictive(samples=1)
-        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [x, z]")]
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x, z]")]
         caplog.clear()
 
         with m:
             pm.sample_prior_predictive(samples=1, var_names=["x"])
-        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [x]")]
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x]")]
         caplog.clear()
 
     def test_logging_sampled_basic_rvs_posterior(self, caplog):
@@ -823,18 +823,20 @@ class TestSamplePPC(SeededTest):
         idata = az_from_dict(posterior={"x": np.zeros(5), "x_det": np.ones(5), "y": np.ones(5)})
         with m:
             pm.sample_posterior_predictive(idata)
-        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [z]")]
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [z]")]
         caplog.clear()
 
         with m:
             pm.sample_posterior_predictive(idata, var_names=["y", "z"])
-        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [y, z]")]
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [y, z]")]
         caplog.clear()
 
         # Resampling `x` will force resampling of `y`, even if it is in trace
         with m:
             pm.sample_posterior_predictive(idata, var_names=["x", "z"])
-        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [x, y, z]")]
+        assert caplog.record_tuples == [
+            ("pymc.sampling.forward", logging.INFO, "Sampling: [x, y, z]")
+        ]
         caplog.clear()
 
         # Missing deterministic `x_det` does not show in the log, even if it is being
@@ -842,21 +844,23 @@ class TestSamplePPC(SeededTest):
         idata = az_from_dict(posterior={"x": np.zeros(5)})
         with m:
             pm.sample_posterior_predictive(idata)
-        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [y, z]")]
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [y, z]")]
         caplog.clear()
 
         # Missing deterministic `x_det` does not cause recomputation of downstream `y` RV
         idata = az_from_dict(posterior={"x": np.zeros(5), "y": np.ones(5)})
         with m:
             pm.sample_posterior_predictive(idata)
-        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [z]")]
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [z]")]
         caplog.clear()
 
         # Missing `x` causes sampling of downstream `y` RV, even if it is present in trace
         idata = az_from_dict(posterior={"y": np.ones(5)})
         with m:
             pm.sample_posterior_predictive(idata)
-        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [x, y, z]")]
+        assert caplog.record_tuples == [
+            ("pymc.sampling.forward", logging.INFO, "Sampling: [x, y, z]")
+        ]
         caplog.clear()
 
     def test_logging_sampled_basic_rvs_posterior_deterministic(self, caplog):
@@ -871,7 +875,7 @@ class TestSamplePPC(SeededTest):
         idata = az_from_dict(posterior={"x": np.zeros(5), "x_det": np.ones(5), "y": np.ones(5)})
         with m:
             pm.sample_posterior_predictive(idata, var_names=["x_det", "z"])
-        assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [y, z]")]
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [y, z]")]
         caplog.clear()
 
     @staticmethod
@@ -938,19 +942,25 @@ class TestSamplePPC(SeededTest):
             # MultiTrace will only have the actual MCMC posterior samples but no information on
             # the MutableData and mutable coordinate values, so it will always assume they are volatile
             # and resample their descendants
-            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, b, sigma, y]")]
+            assert caplog.record_tuples == [
+                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
+            ]
             caplog.clear()
         elif kind == "InferenceData":
             # InferenceData has all MCMC posterior samples and the values for both coordinates and
             # data containers. This enables it to see that no data has changed and it should only
             # resample the observed variable
-            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [y]")]
+            assert caplog.record_tuples == [
+                ("pymc.sampling.forward", logging.INFO, "Sampling: [y]")
+            ]
             caplog.clear()
         elif kind == "Dataset":
             # Dataset has all MCMC posterior samples and the values of the coordinates. This
             # enables it to see that the coordinates have not changed, but the MutableData is
             # assumed volatile by default
-            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [b, y]")]
+            assert caplog.record_tuples == [
+                ("pymc.sampling.forward", logging.INFO, "Sampling: [b, y]")
+            ]
             caplog.clear()
 
         original_offsets = model["offsets"].get_value()
@@ -959,13 +969,19 @@ class TestSamplePPC(SeededTest):
             pm.set_data({"offsets": original_offsets + 1})
             pm.sample_posterior_predictive(samples)
         if kind == "MultiTrace":
-            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, b, sigma, y]")]
+            assert caplog.record_tuples == [
+                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
+            ]
             caplog.clear()
         elif kind == "InferenceData":
-            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [b, y]")]
+            assert caplog.record_tuples == [
+                ("pymc.sampling.forward", logging.INFO, "Sampling: [b, y]")
+            ]
             caplog.clear()
         elif kind == "Dataset":
-            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [b, y]")]
+            assert caplog.record_tuples == [
+                ("pymc.sampling.forward", logging.INFO, "Sampling: [b, y]")
+            ]
             caplog.clear()
 
         with model:
@@ -974,13 +990,19 @@ class TestSamplePPC(SeededTest):
             pm.set_data({"offsets": original_offsets, "y_obs": np.zeros((10, 4))})
             pm.sample_posterior_predictive(samples)
         if kind == "MultiTrace":
-            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, b, sigma, y]")]
+            assert caplog.record_tuples == [
+                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
+            ]
             caplog.clear()
         elif kind == "InferenceData":
-            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, sigma, y]")]
+            assert caplog.record_tuples == [
+                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, sigma, y]")
+            ]
             caplog.clear()
         elif kind == "Dataset":
-            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, b, sigma, y]")]
+            assert caplog.record_tuples == [
+                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
+            ]
             caplog.clear()
 
         with model:
@@ -990,13 +1012,19 @@ class TestSamplePPC(SeededTest):
             pm.set_data({"offsets": original_offsets + 1, "y_obs": np.zeros((10, 3))})
             pm.sample_posterior_predictive(samples)
         if kind == "MultiTrace":
-            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, b, sigma, y]")]
+            assert caplog.record_tuples == [
+                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
+            ]
             caplog.clear()
         elif kind == "InferenceData":
-            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, b, sigma, y]")]
+            assert caplog.record_tuples == [
+                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
+            ]
             caplog.clear()
         elif kind == "Dataset":
-            assert caplog.record_tuples == [("pymc", logging.INFO, "Sampling: [a, b, sigma, y]")]
+            assert caplog.record_tuples == [
+                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
+            ]
             caplog.clear()
 
 

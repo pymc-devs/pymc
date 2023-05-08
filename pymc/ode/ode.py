@@ -26,7 +26,7 @@ from pytensor.tensor.type import TensorType
 from pymc.exceptions import DtypeError, ShapeError
 from pymc.ode import utils
 
-_log = logging.getLogger("pymc")
+_log = logging.getLogger(__name__)
 floatX = pytensor.config.floatX
 
 

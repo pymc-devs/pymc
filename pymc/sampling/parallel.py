@@ -32,7 +32,7 @@ from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.util import RandomSeed
 
-logger = logging.getLogger("pymc")
+logger = logging.getLogger(__name__)
 
 
 class ParallelSamplingError(Exception):

@@ -193,7 +193,7 @@ def sample_smc(
 
     model = modelcontext(model)
 
-    _log = logging.getLogger("pymc")
+    _log = logging.getLogger(__name__)
     _log.info("Initializing SMC sampler...")
     _log.info(
         f"Sampling {chains} chain{'s' if chains > 1 else ''} "

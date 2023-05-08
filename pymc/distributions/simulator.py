@@ -29,7 +29,7 @@ from pymc.pytensorf import floatX
 
 __all__ = ["Simulator"]
 
-_log = logging.getLogger("pymc")
+_log = logging.getLogger(__name__)
 
 
 class SimulatorRV(RandomVariable):

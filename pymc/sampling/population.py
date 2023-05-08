@@ -45,7 +45,7 @@ __all__ = ()
 Step: TypeAlias = Union[BlockedStep, CompoundStep]
 
 
-_log = logging.getLogger("pymc")
+_log = logging.getLogger(__name__)
 
 
 def _sample_population(

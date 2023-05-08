@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 
 ___all__ = [""]
 
-_log = logging.getLogger("pymc")
+_log = logging.getLogger(__name__)
 
 # random variable object ...
 Var = Any  # pylint: disable=invalid-name

@@ -19,7 +19,7 @@ from typing import Dict, List, Optional
 
 from pymc.stats.convergence import _LEVELS, SamplerWarning
 
-logger = logging.getLogger("pymc")
+logger = logging.getLogger(__name__)
 
 
 class SamplerReport:

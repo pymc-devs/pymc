@@ -35,7 +35,7 @@ from pymc.step_methods.hmc.quadpotential import QuadPotentialDiagAdapt, quad_pot
 from pymc.tuning import guess_scaling
 from pymc.util import get_value_vars_from_user_vars
 
-logger = logging.getLogger("pymc")
+logger = logging.getLogger(__name__)
 
 
 class DivergenceInfo(NamedTuple):
