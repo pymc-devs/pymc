@@ -80,7 +80,7 @@ __all__ = (
 ArrayLike: TypeAlias = Union[np.ndarray, List[float]]
 PointList: TypeAlias = List[PointType]
 
-_log = logging.getLogger("pymc")
+_log = logging.getLogger(__name__)
 
 
 def get_vars_in_point_list(trace, model):

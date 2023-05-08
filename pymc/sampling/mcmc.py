@@ -75,7 +75,7 @@ class SamplingIteratorCallback(Protocol):
         pass
 
 
-_log = logging.getLogger("pymc")
+_log = logging.getLogger(__name__)
 
 
 def instantiate_steppers(

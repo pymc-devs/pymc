@@ -42,7 +42,7 @@ from pymc.backends.report import SamplerReport
 from pymc.model import modelcontext
 from pymc.util import get_var_name
 
-logger = logging.getLogger("pymc")
+logger = logging.getLogger(__name__)
 
 
 class BackendError(Exception):

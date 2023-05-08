@@ -37,7 +37,7 @@ from pymc.step_methods.compound import (
     flatten_steps,
 )
 
-_log = logging.getLogger("pymc")
+_log = logging.getLogger(__name__)
 
 
 def find_data(pmodel: Model) -> List[mcb.DataVariable]:

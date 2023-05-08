@@ -16,7 +16,7 @@
 
 import logging
 
-_log = logging.getLogger("pymc")
+_log = logging.getLogger(__name__)
 
 if not logging.root.handlers:
     _log.setLevel(logging.INFO)
