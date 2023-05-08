@@ -51,6 +51,7 @@ class Slice(ArrayStep):
     name = "slice"
     default_blocked = False
     stats_dtypes_shapes = {
+        "tune": (bool, []),
         "nstep_out": (int, []),
         "nstep_in": (int, []),
     }
@@ -140,6 +141,7 @@ class Slice(ArrayStep):
             self.n_tunes += 1
 
         stats = {
+            "tune": self.tune,
             "nstep_out": nstep_out,
             "nstep_in": nstep_in,
         }
