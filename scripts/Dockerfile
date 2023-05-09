@@ -1,23 +1,28 @@
-FROM jupyter/base-notebook:python-3.9.12
-
-LABEL name="pymc"
-LABEL description="Environment for PyMC version 4"
-
+# Stage 1: Base image
+FROM jupyter/base-notebook:python-3.9.12 as base
+LABEL name="pymc" description="Environment for PyMC version 4"
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
-
-# Switch to jovyan to avoid container runs as root
 USER $NB_UID
 
-COPY /conda-envs/environment-dev.yml .
+# Stage 2: Install Conda dependencies
+FROM base as conda
+COPY --chown=$NB_UID:users /conda-envs/environment-dev.yml .
 RUN mamba env create -f environment-dev.yml && \
-    /bin/bash -c ". activate pymc-dev && \
-    mamba install -c conda-forge -y pymc" && \
     conda clean --all -f -y
+
+# Stage 3: Install PyMC
+FROM conda as pymc
+RUN /bin/bash -c ". activate pymc-dev && \
+    mamba install -c conda-forge -y pymc"
+
+# Stage 4: Final stage
+FROM base
+COPY --from=pymc --chown=$NB_UID:users /opt/conda /opt/conda
 
 # Fix PkgResourcesDeprecationWarning
 RUN pip install --upgrade --user setuptools==58.3.0
 
-#Setup working folder
+# Setup working folder
 WORKDIR /home/jovyan/work
 
 # For running from bash
