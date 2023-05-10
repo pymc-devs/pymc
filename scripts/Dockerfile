@@ -1,6 +1,6 @@
 # Stage 1: Base image
 FROM jupyter/base-notebook:python-3.9.12 as base
-LABEL name="pymc" description="Environment for PyMC version 4"
+LABEL name="pymc" description="Environment for PyMC"
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 USER $NB_UID
 
