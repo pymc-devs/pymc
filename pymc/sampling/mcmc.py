@@ -21,7 +21,18 @@ import time
 import warnings
 
 from collections import defaultdict
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import (
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    overload,
+)
 
 import numpy as np
 import pytensor.gradient as tg
@@ -316,6 +327,65 @@ def _sample_external_nuts(
         raise ValueError(
             f"Sampler {sampler} not found. Choose one of ['nutpie', 'numpyro', 'blackjax', 'pymc']."
         )
+
+
+@overload
+def sample(
+    draws: int = 1000,
+    *,
+    tune: int = 1000,
+    chains: Optional[int] = None,
+    cores: Optional[int] = None,
+    random_seed: RandomState = None,
+    progressbar: bool = True,
+    step=None,
+    nuts_sampler: str = "pymc",
+    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    init: str = "auto",
+    jitter_max_retries: int = 10,
+    n_init: int = 200_000,
+    trace: Optional[TraceOrBackend] = None,
+    discard_tuned_samples: bool = True,
+    compute_convergence_checks: bool = True,
+    keep_warning_stat: bool = False,
+    return_inferencedata: Literal[True],
+    idata_kwargs: Optional[Dict[str, Any]] = None,
+    nuts_sampler_kwargs: Optional[Dict[str, Any]] = None,
+    callback=None,
+    mp_ctx=None,
+    **kwargs,
+) -> InferenceData:
+    ...
+
+
+@overload
+def sample(
+    draws: int = 1000,
+    *,
+    tune: int = 1000,
+    chains: Optional[int] = None,
+    cores: Optional[int] = None,
+    random_seed: RandomState = None,
+    progressbar: bool = True,
+    step=None,
+    nuts_sampler: str = "pymc",
+    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    init: str = "auto",
+    jitter_max_retries: int = 10,
+    n_init: int = 200_000,
+    trace: Optional[TraceOrBackend] = None,
+    discard_tuned_samples: bool = True,
+    compute_convergence_checks: bool = True,
+    keep_warning_stat: bool = False,
+    return_inferencedata: Literal[False],
+    idata_kwargs: Optional[Dict[str, Any]] = None,
+    nuts_sampler_kwargs: Optional[Dict[str, Any]] = None,
+    callback=None,
+    mp_ctx=None,
+    model: Optional[Model] = None,
+    **kwargs,
+) -> MultiTrace:
+    ...
 
 
 def sample(
