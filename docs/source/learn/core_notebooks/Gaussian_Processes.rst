@@ -261,5 +261,5 @@ their conditionals need to be provided with the required inputs.  In the same
 fashion as the prior, :code:`f_star`, :code:`f1_star` and :code:`f2_star` are random
 variables that can now be used like any other random variable in PyMC.
 
-Check the `notebooks <gaussian-processes>`_
+Check the :ref:`notebooks <gaussian_processes>`
 for detailed demonstrations of the usage of GP functionality in PyMC.
