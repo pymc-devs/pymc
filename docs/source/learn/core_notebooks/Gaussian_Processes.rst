@@ -182,7 +182,7 @@ be added to :code:`gp.Latent`.
 Consider two independent GP distributed functions, :math:`f_1(x) \sim
 \mathcal{GP}\left(m_1(x),\, k_1(x, x')\right)` and :math:`f_2(x) \sim
 \mathcal{GP}\left( m_2(x),\, k_2(x, x')\right)`.  The joint distribution of
-:math:`f_1,\, f_1^*,\, f_2,\, f_2^*,\, f_1 + f_2' and :math:'f_1^* + f_2^*` is
+:math:`f_1,\, f_1^*,\, f_2,\, f_2^*,\, f_1 + f_2` and :math:`f_1^* + f_2^*` is
 
 .. math::
 
@@ -260,5 +260,5 @@ their conditionals need to be provided with the required inputs.  In the same
 fashion as the prior, :code:`f_star`, :code:`f1_star` and :code:`f2_star` are random
 variables that can now be used like any other random variable in PyMC.
 
-Check the `notebooks <gaussian_processes/>`_
+Check the `notebooks <gaussian-processes>`_
 for detailed demonstrations of the usage of GP functionality in PyMC.
