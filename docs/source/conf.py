@@ -235,14 +235,12 @@ v3_example_tutorials = [
     "pymc3_howto/api_quickstart",
     "variational_inference/variational_api_quickstart",
     "Probability_Distributions.rst",
-    "Gaussian_Processes.rst",
     "pymc3_howto/data_container",
     "pymc3_howto/sampling_compound_step",
     "pymc3_howto/sampling_callback",
     "diagnostics_and_criticism/sampler-stats",
     "diagnostics_and_criticism/Diagnosing_biased_Inference_with_Divergences",
     "Advanced_usage_of_Theano_in_PyMC3.rst",
-    "getting_started",
     "ode_models/ODE_API_shapes_and_benchmarking",
     "samplers/DEMetropolisZ_EfficiencyComparison",
     "samplers/DEMetropolisZ_tune_drop_fraction",
@@ -258,12 +256,13 @@ v3_example_tutorials = [
 ]
 rediraffe_redirects = {
     "index.md": "learn.md",
-    "pymc-examples/examples/getting_started.md": "learn/core_notebooks/pymc_overview.html",
-    "pymc-examples/examples/PyMC3_and_Theano.rst": "learn/core_notebooks/pymc_pytensor.html",
-    "pymc-examples/examples/generalized_linear_models/GLM.ipynb": "learn/core_notebooks/GLM_linear.html",
-    "pymc-examples/examples/generalized_linear_models/GLM-linear.ipynb": "learn/core_notebooks/GLM_linear.html",
-    "pymc-examples/examples/diagnostics_and_criticism/model_comparison.ipynb": "learn/core_notebooks/model_comparison.html",
-    "pymc-examples/examples/diagnostics_and_criticism/posterior_predictive.ipynb": "learn/core_notebooks/posterior_predictive.html",
+    "pymc-examples/examples/getting_started.md": "learn/core_notebooks/pymc_overview.ipynb",
+    "pymc-examples/examples/PyMC3_and_Theano.rst": "learn/core_notebooks/pymc_pytensor.ipynb",
+    "pymc-examples/examples/generalized_linear_models/GLM.ipynb": "learn/core_notebooks/GLM_linear.ipynb",
+    "pymc-examples/examples/generalized_linear_models/GLM-linear.ipynb": "learn/core_notebooks/GLM_linear.ipynb",
+    "pymc-examples/examples/diagnostics_and_criticism/model_comparison.ipynb": "learn/core_notebooks/model_comparison.ipynb",
+    "pymc-examples/examples/diagnostics_and_criticism/posterior_predictive.ipynb": "learn/core_notebooks/posterior_predictive.ipynb",
+    "pymc-examples/examples/Gaussian_Processes.rst": "learn/core_notebooks/Gaussian_Processes.rst",
     **{
         f"pymc-examples/examples/{v3_path}.ipynb": "learn/core_notebooks/index.md"
         for v3_path in v3_example_tutorials
