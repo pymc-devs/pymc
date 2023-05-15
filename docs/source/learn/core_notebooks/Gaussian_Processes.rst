@@ -166,6 +166,7 @@ distribution over the latent function at arbitrary :math:`x_*` input points,
 	f_star = gp.conditional("f_star", X_star)
 
 .. _additive_gp:
+
 Additive GPs
 ============
 
