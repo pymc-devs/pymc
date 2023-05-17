@@ -24,6 +24,7 @@ import pytensor.tensor as pt
 import pytest
 import scipy.sparse as sps
 
+from pytensor import shared
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable, equal_computations
 from pytensor.tensor.random.basic import normal, uniform
@@ -40,6 +41,7 @@ from pymc.distributions.transforms import Interval
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
+    _replace_vars_in_graphs,
     collect_default_updates,
     compile_pymc,
     constant_fold,
@@ -821,3 +823,21 @@ class TestReplaceRVsByValues:
             ),
             [expected_x, expected_y, expected_z, expected_w],
         )
+
+    def test_replace_input(self):
+        inp = shared(0.0, name="inp")
+        x = pm.Normal.dist(inp)
+
+        assert x.eval() < 50
+
+        new_inp = inp + 100
+
+        def replacement_fn(var, replacements):
+            if var is x:
+                replacements[x.owner.inputs[3]] = new_inp
+
+            return []
+
+        [new_x], _ = _replace_vars_in_graphs([x], replacement_fn=replacement_fn)
+
+        assert new_x.eval() > 50

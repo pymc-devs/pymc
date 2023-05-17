@@ -337,7 +337,7 @@ def ignore_logprob_multiple_vars(
     making each "unmeasurable", whereas a sequential call to `ignore_logprob`
     would not do this correctly.
     """
-    from pymc.pytensorf import _replace_rvs_in_graphs
+    from pymc.pytensorf import _replace_vars_in_graphs
 
     measurable_vars_to_unmeasurable_vars = {
         measurable_var: ignore_logprob(measurable_var) for measurable_var in vars
@@ -353,5 +353,5 @@ def ignore_logprob_multiple_vars(
 
         return []
 
-    unmeasurable_vars, _ = _replace_rvs_in_graphs(graphs=vars, replacement_fn=replacement_fn)
+    unmeasurable_vars, _ = _replace_vars_in_graphs(graphs=vars, replacement_fn=replacement_fn)
     return unmeasurable_vars

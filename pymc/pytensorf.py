@@ -205,12 +205,12 @@ def walk_model(
     yield from walk(graphs, expand, bfs=False)
 
 
-def _replace_rvs_in_graphs(
+def _replace_vars_in_graphs(
     graphs: Iterable[TensorVariable],
     replacement_fn: Callable[[TensorVariable], Dict[TensorVariable, TensorVariable]],
     **kwargs,
 ) -> Tuple[List[TensorVariable], Dict[TensorVariable, TensorVariable]]:
-    """Replace random variables in graphs
+    """Replace variables in graphs.
 
     This will *not* recompute test values.
 
@@ -218,6 +218,9 @@ def _replace_rvs_in_graphs(
     ----------
     graphs
         The graphs in which random variables are to be replaced.
+    replacement_fn
+        A callable called on each graph output that populates a replacement dictionary and returns
+        nodes that should be investigated further.
 
     Returns
     -------
@@ -256,7 +259,8 @@ def _replace_rvs_in_graphs(
         toposort = fg.toposort()
         sorted_replacements = sorted(
             tuple(replacements.items()),
-            key=lambda pair: toposort.index(pair[0].owner),
+            # Root inputs don't have owner, we give them negative priority -1
+            key=lambda pair: toposort.index(pair[0].owner) if pair[0].owner is not None else -1,
             reverse=True,
         )
         fg.replace_all(sorted_replacements, import_missing=True)
@@ -317,7 +321,7 @@ def rvs_to_value_vars(
     equiv = clone_get_equiv(inputs, graphs, False, False, {})
     graphs = [equiv[n] for n in graphs]
 
-    graphs, _ = _replace_rvs_in_graphs(
+    graphs, _ = _replace_vars_in_graphs(
         graphs,
         replacement_fn=populate_replacements,
         **kwargs,
@@ -385,7 +389,7 @@ def replace_rvs_by_values(
         # replacements if that is not a simple input variable
         return [value]
 
-    graphs, _ = _replace_rvs_in_graphs(
+    graphs, _ = _replace_vars_in_graphs(
         graphs,
         replacement_fn=poulate_replacements,
         **kwargs,
