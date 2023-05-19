@@ -60,19 +60,19 @@ from pymc.logprob.transforms import LogTransform
 from pymc.logprob.utils import rvs_to_value_vars, walk_model
 from pymc.pytensorf import replace_rvs_by_values
 from pymc.testing import assert_no_rvs
-from tests.logprob.utils import joint_logprob
 
 
-def test_joint_logprob_basic():
-    # A simple check for when `joint_logprob` is the same as `logprob`
+def test_factorized_joint_logprob_basic():
+    # A simple check for when `factorized_joint_logprob` is the same as `logprob`
     a = pt.random.uniform(0.0, 1.0)
     a.name = "a"
     a_value_var = a.clone()
 
-    a_logp = joint_logprob({a: a_value_var}, sum=False)
+    a_logp = factorized_joint_logprob({a: a_value_var})
+    a_logp_comb = tuple(a_logp.values())[0]
     a_logp_exp = logp(a, a_value_var)
 
-    assert equal_computations([a_logp], [a_logp_exp])
+    assert equal_computations([a_logp_comb], [a_logp_exp])
 
     # Let's try a hierarchical model
     sigma = pt.random.invgamma(0.5, 0.5)
@@ -81,7 +81,8 @@ def test_joint_logprob_basic():
     sigma_value_var = sigma.clone()
     y_value_var = Y.clone()
 
-    total_ll = joint_logprob({Y: y_value_var, sigma: sigma_value_var}, sum=False)
+    total_ll = factorized_joint_logprob({Y: y_value_var, sigma: sigma_value_var})
+    total_ll_combined = pt.add(*total_ll.values())
 
     # We need to replace the reference to `sigma` in `Y` with its value
     # variable
@@ -92,7 +93,7 @@ def test_joint_logprob_basic():
     )
     total_ll_exp = logp(sigma, sigma_value_var) + ll_Y
 
-    assert equal_computations([total_ll], [total_ll_exp])
+    assert equal_computations([total_ll_combined], [total_ll_exp])
 
     # Now, make sure we can compute a joint log-probability for a hierarchical
     # model with some non-`RandomVariable` nodes
@@ -105,28 +106,30 @@ def test_joint_logprob_basic():
     b_value_var = b.clone()
     c_value_var = c.clone()
 
-    b_logp = joint_logprob({a: a_value_var, b: b_value_var, c: c_value_var})
+    b_logp = factorized_joint_logprob({a: a_value_var, b: b_value_var, c: c_value_var})
+    b_logp_combined = pt.sum([pt.sum(factor) for factor in b_logp.values()])
 
     # There shouldn't be any `RandomVariable`s in the resulting graph
-    assert_no_rvs(b_logp)
+    assert_no_rvs(b_logp_combined)
 
-    res_ancestors = list(walk_model((b_logp,), walk_past_rvs=True))
+    res_ancestors = list(walk_model((b_logp_combined,), walk_past_rvs=True))
     assert b_value_var in res_ancestors
     assert c_value_var in res_ancestors
     assert a_value_var in res_ancestors
 
 
-def test_joint_logprob_multi_obs():
+def test_factorized_joint_logprob_multi_obs():
     a = pt.random.uniform(0.0, 1.0)
     b = pt.random.normal(0.0, 1.0)
 
     a_val = a.clone()
     b_val = b.clone()
 
-    logp_res = joint_logprob({a: a_val, b: b_val}, sum=False)
+    logp_res = factorized_joint_logprob({a: a_val, b: b_val})
+    logp_res_combined = pt.add(*logp_res.values())
     logp_exp = logp(a, a_val) + logp(b, b_val)
 
-    assert equal_computations([logp_res], [logp_exp])
+    assert equal_computations([logp_res_combined], [logp_exp])
 
     x = pt.random.normal(0, 1)
     y = pt.random.normal(x, 1)
@@ -134,13 +137,15 @@ def test_joint_logprob_multi_obs():
     x_val = x.clone()
     y_val = y.clone()
 
-    logp_res = joint_logprob({x: x_val, y: y_val})
-    exp_logp = joint_logprob({x: x_val, y: y_val})
+    logp_res = factorized_joint_logprob({x: x_val, y: y_val})
+    exp_logp = factorized_joint_logprob({x: x_val, y: y_val})
+    logp_res_comb = pt.sum([pt.sum(factor) for factor in logp_res.values()])
+    exp_logp_comb = pt.sum([pt.sum(factor) for factor in exp_logp.values()])
 
-    assert equal_computations([logp_res], [exp_logp])
+    assert equal_computations([logp_res_comb], [exp_logp_comb])
 
 
-def test_joint_logprob_diff_dims():
+def test_factorized_joint_logprob_diff_dims():
     M = pt.matrix("M")
     x = pt.random.normal(0, 1, size=M.shape[1], name="X")
     y = pt.random.normal(M.dot(x), 1, name="Y")
@@ -150,14 +155,15 @@ def test_joint_logprob_diff_dims():
     y_vv = y.clone()
     y_vv.name = "y"
 
-    logp = joint_logprob({x: x_vv, y: y_vv})
+    logp = factorized_joint_logprob({x: x_vv, y: y_vv})
+    logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
 
     M_val = np.random.normal(size=(10, 3))
     x_val = np.random.normal(size=(3,))
     y_val = np.random.normal(size=(10,))
 
     point = {M: M_val, x_vv: x_val, y_vv: y_val}
-    logp_val = logp.eval(point)
+    logp_val = logp_combined.eval(point)
 
     exp_logp_val = (
         sp.norm.logpdf(x_val, 0, 1).sum() + sp.norm.logpdf(y_val, M_val.dot(x_val), 1).sum()
@@ -179,60 +185,6 @@ def test_incsubtensor_original_values_output_dict():
     assert vv in logp_dict
 
 
-def test_joint_logprob_subtensor():
-    """Make sure we can compute a joint log-probability for ``Y[I]`` where ``Y`` and ``I`` are random variables."""
-
-    size = 5
-
-    mu_base = np.power(10, np.arange(np.prod(size))).reshape(size)
-    mu = np.stack([mu_base, -mu_base])
-    sigma = 0.001
-    rng = pytensor.shared(np.random.RandomState(232), borrow=True)
-
-    A_rv = pt.random.normal(mu, sigma, rng=rng)
-    A_rv.name = "A"
-
-    p = 0.5
-
-    I_rv = pt.random.bernoulli(p, size=size, rng=rng)
-    I_rv.name = "I"
-
-    A_idx = A_rv[I_rv, pt.ogrid[A_rv.shape[-1] :]]
-
-    assert isinstance(A_idx.owner.op, (Subtensor, AdvancedSubtensor, AdvancedSubtensor1))
-
-    A_idx_value_var = A_idx.type()
-    A_idx_value_var.name = "A_idx_value"
-
-    I_value_var = I_rv.type()
-    I_value_var.name = "I_value"
-
-    A_idx_logp = joint_logprob({A_idx: A_idx_value_var, I_rv: I_value_var}, sum=False)
-
-    logp_vals_fn = pytensor.function([A_idx_value_var, I_value_var], A_idx_logp)
-
-    # The compiled graph should not contain any `RandomVariables`
-    assert_no_rvs(logp_vals_fn.maker.fgraph.outputs[0])
-
-    decimals = 6 if pytensor.config.floatX == "float64" else 4
-
-    test_val_rng = np.random.RandomState(3238)
-
-    for i in range(10):
-        bern_sp = sp.bernoulli(p)
-        I_value = bern_sp.rvs(size=size, random_state=test_val_rng).astype(I_rv.dtype)
-
-        norm_sp = sp.norm(mu[I_value, np.ogrid[mu.shape[1] :]], sigma)
-        A_idx_value = norm_sp.rvs(random_state=test_val_rng).astype(A_idx.dtype)
-
-        exp_obs_logps = norm_sp.logpdf(A_idx_value)
-        exp_obs_logps += bern_sp.logpmf(I_value)
-
-        logp_vals = logp_vals_fn(A_idx_value, I_value)
-
-        np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)
-
-
 def test_persist_inputs():
     """Make sure we don't unnecessarily clone variables."""
     x = pt.scalar("x")
@@ -242,24 +194,27 @@ def test_persist_inputs():
     beta_vv = beta_rv.type()
     y_vv = Y_rv.clone()
 
-    logp = joint_logprob({beta_rv: beta_vv, Y_rv: y_vv})
+    logp = factorized_joint_logprob({beta_rv: beta_vv, Y_rv: y_vv})
+    logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
 
-    assert x in ancestors([logp])
+    assert x in ancestors([logp_combined])
 
     # Make sure we don't clone value variables when they're graphs.
     y_vv_2 = y_vv * 2
-    logp_2 = joint_logprob({beta_rv: beta_vv, Y_rv: y_vv_2})
+    logp_2 = factorized_joint_logprob({beta_rv: beta_vv, Y_rv: y_vv_2})
+    logp_2_combined = pt.sum([pt.sum(factor) for factor in logp_2.values()])
 
-    assert y_vv in ancestors([logp_2])
-    assert y_vv_2 in ancestors([logp_2])
+    assert y_vv in ancestors([logp_2_combined])
+    assert y_vv_2 in ancestors([logp_2_combined])
 
     # Even when they are random
     y_vv = pt.random.normal(name="y_vv2")
     y_vv_2 = y_vv * 2
-    logp_2 = joint_logprob({beta_rv: beta_vv, Y_rv: y_vv_2})
+    logp_2 = factorized_joint_logprob({beta_rv: beta_vv, Y_rv: y_vv_2})
+    logp_2_combined = pt.sum([pt.sum(factor) for factor in logp_2.values()])
 
-    assert y_vv in ancestors([logp_2])
-    assert y_vv_2 in ancestors([logp_2])
+    assert y_vv in ancestors([logp_2_combined])
+    assert y_vv_2 in ancestors([logp_2_combined])
 
 
 def test_warn_random_found_factorized_joint_logprob():
@@ -284,7 +239,7 @@ def test_multiple_rvs_to_same_value_raises():
 
     msg = "More than one logprob factor was assigned to the value var x"
     with pytest.raises(ValueError, match=msg):
-        joint_logprob({x_rv1: x, x_rv2: x})
+        factorized_joint_logprob({x_rv1: x, x_rv2: x})
 
 
 def test_joint_logp_basic():

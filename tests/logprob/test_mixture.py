@@ -45,14 +45,19 @@ from pytensor.graph.basic import Variable, equal_computations
 from pytensor.ifelse import ifelse
 from pytensor.tensor.random.basic import CategoricalRV
 from pytensor.tensor.shape import shape_tuple
-from pytensor.tensor.subtensor import as_index_constant
+from pytensor.tensor.subtensor import (
+    AdvancedSubtensor,
+    AdvancedSubtensor1,
+    Subtensor,
+    as_index_constant,
+)
 
 from pymc.logprob.basic import factorized_joint_logprob
 from pymc.logprob.mixture import MixtureRV, expand_indices
 from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.logprob.utils import dirac_delta
 from pymc.testing import assert_no_rvs
-from tests.logprob.utils import joint_logprob, scipy_logprob
+from tests.logprob.utils import scipy_logprob
 
 
 def test_mixture_basics():
@@ -101,7 +106,7 @@ def test_mixture_basics():
         i_vv = env["i_vv"]
         M_rv = env["M_rv"]
         m_vv = env["m_vv"]
-        joint_logprob({M_rv: m_vv, I_rv: i_vv})
+        factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
 
 
 @pytensor.config.change_flags(compute_test_value="warn")
@@ -134,9 +139,10 @@ def test_compute_test_value(op_constructor):
 
     del M_rv.tag.test_value
 
-    M_logp = joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
+    M_logp = factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
+    M_logp_combined = pt.add(*M_logp.values())
 
-    assert isinstance(M_logp.tag.test_value, np.ndarray)
+    assert isinstance(M_logp_combined.tag.test_value, np.ndarray)
 
 
 @pytest.mark.parametrize(
@@ -179,13 +185,14 @@ def test_hetero_mixture_binomial(p_val, size, supported):
     m_vv.name = "m"
 
     if supported:
-        M_logp = joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
+        M_logp = factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
+        M_logp_combined = pt.add(*M_logp.values())
     else:
         with pytest.raises(RuntimeError, match="could not be derived: {m}"):
-            joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
+            factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
         return
 
-    M_logp_fn = pytensor.function([p_at, m_vv, i_vv], M_logp)
+    M_logp_fn = pytensor.function([p_at, m_vv, i_vv], M_logp_combined)
 
     assert_no_rvs(M_logp_fn.maker.fgraph.outputs[0])
 
@@ -936,14 +943,16 @@ def test_switch_mixture():
 
     assert equal_computations(fgraph.outputs, fgraph2.outputs)
 
-    z1_logp = joint_logprob({Z1_rv: z_vv, I_rv: i_vv})
-    z2_logp = joint_logprob({Z2_rv: z_vv, I_rv: i_vv})
+    z1_logp = factorized_joint_logprob({Z1_rv: z_vv, I_rv: i_vv})
+    z2_logp = factorized_joint_logprob({Z2_rv: z_vv, I_rv: i_vv})
+    z1_logp_combined = pt.sum([pt.sum(factor) for factor in z1_logp.values()])
+    z2_logp_combined = pt.sum([pt.sum(factor) for factor in z2_logp.values()])
 
     # below should follow immediately from the equal_computations assertion above
-    assert equal_computations([z1_logp], [z2_logp])
+    assert equal_computations([z1_logp_combined], [z2_logp_combined])
 
-    np.testing.assert_almost_equal(0.69049938, z1_logp.eval({z_vv: -10, i_vv: 0}))
-    np.testing.assert_almost_equal(0.69049938, z2_logp.eval({z_vv: -10, i_vv: 0}))
+    np.testing.assert_almost_equal(0.69049938, z1_logp_combined.eval({z_vv: -10, i_vv: 0}))
+    np.testing.assert_almost_equal(0.69049938, z2_logp_combined.eval({z_vv: -10, i_vv: 0}))
 
 
 def test_ifelse_mixture_one_component():
@@ -1050,3 +1059,58 @@ def test_ifelse_mixture_shared_component():
         ),
         decimal=6,
     )
+
+
+def test_joint_logprob_subtensor():
+    """Make sure we can compute a joint log-probability for ``Y[I]`` where ``Y`` and ``I`` are random variables."""
+
+    size = 5
+
+    mu_base = np.power(10, np.arange(np.prod(size))).reshape(size)
+    mu = np.stack([mu_base, -mu_base])
+    sigma = 0.001
+    rng = pytensor.shared(np.random.RandomState(232), borrow=True)
+
+    A_rv = pt.random.normal(mu, sigma, rng=rng)
+    A_rv.name = "A"
+
+    p = 0.5
+
+    I_rv = pt.random.bernoulli(p, size=size, rng=rng)
+    I_rv.name = "I"
+
+    A_idx = A_rv[I_rv, pt.ogrid[A_rv.shape[-1] :]]
+
+    assert isinstance(A_idx.owner.op, (Subtensor, AdvancedSubtensor, AdvancedSubtensor1))
+
+    A_idx_value_var = A_idx.type()
+    A_idx_value_var.name = "A_idx_value"
+
+    I_value_var = I_rv.type()
+    I_value_var.name = "I_value"
+
+    A_idx_logp = factorized_joint_logprob({A_idx: A_idx_value_var, I_rv: I_value_var})
+    A_idx_logp_comb = pt.add(*A_idx_logp.values())
+
+    logp_vals_fn = pytensor.function([A_idx_value_var, I_value_var], A_idx_logp_comb)
+
+    # The compiled graph should not contain any `RandomVariables`
+    assert_no_rvs(logp_vals_fn.maker.fgraph.outputs[0])
+
+    decimals = 6 if pytensor.config.floatX == "float64" else 4
+
+    test_val_rng = np.random.RandomState(3238)
+
+    for i in range(10):
+        bern_sp = sp.bernoulli(p)
+        I_value = bern_sp.rvs(size=size, random_state=test_val_rng).astype(I_rv.dtype)
+
+        norm_sp = sp.norm(mu[I_value, np.ogrid[mu.shape[1] :]], sigma)
+        A_idx_value = norm_sp.rvs(random_state=test_val_rng).astype(A_idx.dtype)
+
+        exp_obs_logps = norm_sp.logpdf(A_idx_value)
+        exp_obs_logps += bern_sp.logpmf(I_value)
+
+        logp_vals = logp_vals_fn(A_idx_value, I_value)
+
+        np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)

@@ -47,33 +47,6 @@ from pymc.logprob.abstract import get_measurable_outputs
 from pymc.logprob.utils import ignore_logprob
 
 
-def joint_logprob(*args, sum: bool = True, **kwargs) -> Optional[TensorVariable]:
-    """Create a graph representing the joint log-probability/measure of a graph.
-
-    This function calls `factorized_joint_logprob` and returns the combined
-    log-probability factors as a single graph.
-
-    Parameters
-    ----------
-    sum: bool
-        If ``True`` each factor is collapsed to a scalar via ``sum`` before
-        being joined with the remaining factors. This may be necessary to
-        avoid incorrect broadcasting among independent factors.
-
-    """
-    logprob = factorized_joint_logprob(*args, **kwargs)
-    if not logprob:
-        return None
-    if len(logprob) == 1:
-        logprob = tuple(logprob.values())[0]
-        if sum:
-            return pt.sum(logprob)
-        return logprob
-    if sum:
-        return pt.sum([pt.sum(factor) for factor in logprob.values()])
-    return pt.add(*logprob.values())
-
-
 def simulate_poiszero_hmm(
     N, mu=10.0, pi_0_a=np.r_[1, 1], p_0_a=np.r_[5, 1], p_1_a=np.r_[1, 1], seed=None
 ):

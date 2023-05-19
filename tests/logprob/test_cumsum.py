@@ -40,8 +40,9 @@ import pytensor.tensor as pt
 import pytest
 import scipy.stats as st
 
+from pymc import logp
+from pymc.logprob.basic import factorized_joint_logprob
 from pymc.testing import assert_no_rvs
-from tests.logprob.utils import joint_logprob
 
 
 @pytest.mark.parametrize(
@@ -59,12 +60,12 @@ from tests.logprob.utils import joint_logprob
 def test_normal_cumsum(size, axis):
     rv = pt.random.normal(0, 1, size=size).cumsum(axis)
     vv = rv.clone()
-    logp = joint_logprob({rv: vv})
-    assert_no_rvs(logp)
+    logprob = logp(rv, vv)
+    assert_no_rvs(logprob)
 
     assert np.isclose(
         st.norm(0, 1).logpdf(np.ones(size)).sum(),
-        logp.eval({vv: np.ones(size).cumsum(axis)}),
+        logprob.eval({vv: np.ones(size).cumsum(axis)}).sum(),
     )
 
 
@@ -83,12 +84,12 @@ def test_normal_cumsum(size, axis):
 def test_bernoulli_cumsum(size, axis):
     rv = pt.random.bernoulli(0.9, size=size).cumsum(axis)
     vv = rv.clone()
-    logp = joint_logprob({rv: vv})
-    assert_no_rvs(logp)
+    logprob = logp(rv, vv)
+    assert_no_rvs(logprob)
 
     assert np.isclose(
         st.bernoulli(0.9).logpmf(np.ones(size)).sum(),
-        logp.eval({vv: np.ones(size, int).cumsum(axis)}),
+        logprob.eval({vv: np.ones(size, int).cumsum(axis)}).sum(),
     )
 
 
@@ -97,7 +98,7 @@ def test_destructive_cumsum_fails():
     x_rv = pt.random.normal(size=(2, 2, 2)).cumsum()
     x_vv = x_rv.clone()
     with pytest.raises(RuntimeError, match="could not be derived"):
-        joint_logprob({x_rv: x_vv})
+        factorized_joint_logprob({x_rv: x_vv})
 
 
 def test_deterministic_cumsum():
@@ -108,11 +109,13 @@ def test_deterministic_cumsum():
 
     x_vv = x_rv.clone()
     y_vv = y_rv.clone()
-    logp = joint_logprob({x_rv: x_vv, y_rv: y_vv})
-    assert_no_rvs(logp)
 
-    logp_fn = pytensor.function([x_vv, y_vv], logp)
+    logp = factorized_joint_logprob({x_rv: x_vv, y_rv: y_vv})
+    logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
+    assert_no_rvs(logp_combined)
+
+    logp_fn = pytensor.function([x_vv, y_vv], logp_combined)
     assert np.isclose(
-        logp_fn(np.ones(5), np.arange(5) + 1),
+        logp_fn(np.ones(5), np.arange(5) + 1).sum(),
         st.norm(1, 1).logpdf(1) * 10,
     )
