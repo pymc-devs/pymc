@@ -503,7 +503,7 @@ class Stationary(Covariance):
     def euclidean_dist(self, X, Xs):
         r2 = self.square_dist(X, Xs)
         return self._sqrt(r2)
-    
+
     def _sqrt(self, r2):
         return pt.sqrt(r2 + 1e-12)
 
@@ -515,7 +515,7 @@ class Stationary(Covariance):
 
     def power_spectral_density(self, omega):
         raise NotImplementedError
-    
+
 
 class IsotropicStationary(Stationary):
     r"""
@@ -527,7 +527,7 @@ class IsotropicStationary(Stationary):
         X, Xs = self._slice(X, Xs)
         r2 = self.square_dist(X, Xs)
         return self.full_r2(r2)
-    
+
     def full_r2(self, r2):
         if hasattr(self, "full_r"):
             return self.full_r(self._sqrt(r2))
@@ -566,7 +566,7 @@ class Periodic(Stationary):
         r = np.pi * (f1 - f2) / self.period
         r = pt.sum(pt.square(pt.sin(r) / self.ls), 2)
         return pt.exp(-0.5 * r)
-    
+
 
 class GeneralizedPeriodic(Stationary):
     r"""
@@ -588,7 +588,7 @@ class GeneralizedPeriodic(Stationary):
     @property
     def active_dims(self):
         return self.base_kernel.active_dims
-    
+
     @property
     def ls(self):
         return self.base_kernel.ls
