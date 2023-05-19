@@ -536,7 +536,7 @@ class Stationary(Covariance):
     def euclidean_dist(self, X, Xs):
         r2 = self.square_dist(X, Xs)
         return self._sqrt(r2)
-    
+
     def _sqrt(self, r2):
         return pt.sqrt(r2 + 1e-12)
 
