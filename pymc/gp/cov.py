@@ -53,7 +53,7 @@ class BaseCovariance:
     Base class for kernels/covariance functions.
     """
 
-    def __call__(self, X, Xs=None, diag=False):
+    def __call__(self, X, Xs=None, diag: bool = False):
         r"""
         Evaluate the kernel/covariance function.
 
@@ -502,6 +502,9 @@ class Stationary(Covariance):
 
     def euclidean_dist(self, X, Xs):
         r2 = self.square_dist(X, Xs)
+        return self._sqrt(r2)
+    
+    def _sqrt(self, r2):
         return pt.sqrt(r2 + 1e-12)
 
     def diag(self, X):
@@ -511,6 +514,23 @@ class Stationary(Covariance):
         raise NotImplementedError
 
     def power_spectral_density(self, omega):
+        raise NotImplementedError
+    
+
+class IsotropicStationary(Stationary):
+    r"""
+    Base class for isotropic stationary kernels/covariance functions i.e. kernels
+    that only depend on ‖x - x'‖.
+    """
+
+    def full(self, X, Xs=None):
+        X, Xs = self._slice(X, Xs)
+        r2 = self.square_dist(X, Xs)
+        return self.full_r2(r2)
+    
+    def full_r2(self, r2):
+        if hasattr(self, "full_r"):
+            return self.full_r(self._sqrt(r2))
         raise NotImplementedError
 
 
@@ -546,9 +566,50 @@ class Periodic(Stationary):
         r = np.pi * (f1 - f2) / self.period
         r = pt.sum(pt.square(pt.sin(r) / self.ls), 2)
         return pt.exp(-0.5 * r)
+    
+
+class GeneralizedPeriodic(Stationary):
+    r"""
+    The Generalized Periodic kernel.
+
+    Can be used to wrap any isotropic stationary kernel to transform it
+    into a periodic version. The derivation can be achieved by mapping the
+    original inputs through the transformation u = (cos(x), sin(x)).
+    """
+
+    def __init__(self, base_kernel: IsotropicStationary, period):
+        self.base_kernel = base_kernel
+        self.period = period
+
+    @property
+    def input_dim(self):
+        return self.base_kernel.input_dim
+
+    @property
+    def active_dims(self):
+        return self.base_kernel.active_dims
+    
+    @property
+    def ls(self):
+        return self.base_kernel.ls
+
+    def full(self, X, Xs=None):
+        X, Xs = self._slice(X, Xs)
+        if Xs is None:
+            Xs = X
+        f1 = X.dimshuffle(0, "x", 1)
+        f2 = Xs.dimshuffle("x", 0, 1)
+        r = np.pi * (f1 - f2) / self.period
+        if hasattr(self.base_kernel, "full_r"):
+            r = pt.sum(pt.abs(pt.sin(r) / self.ls), 2)
+            K = self.base_kernel.full_r(r)
+        else:
+            r2 = pt.sum(pt.square(pt.sin(r) / self.ls), 2)
+            K = self.base_kernel.full_r2(r2)
+        return K
 
 
-class ExpQuad(Stationary):
+class ExpQuad(IsotropicStationary):
     r"""
     The Exponentiated Quadratic kernel.  Also referred to as the Squared
     Exponential, or Radial Basis Function kernel.
@@ -559,9 +620,8 @@ class ExpQuad(Stationary):
 
     """
 
-    def full(self, X, Xs=None):
-        X, Xs = self._slice(X, Xs)
-        return pt.exp(-0.5 * self.square_dist(X, Xs))
+    def full_r2(self, r2):
+        return pt.exp(-0.5 * r2)
 
     def power_spectral_density(self, omega):
         r"""
@@ -579,7 +639,7 @@ class ExpQuad(Stationary):
         return c * pt.prod(ls) * exp
 
 
-class RatQuad(Stationary):
+class RatQuad(IsotropicStationary):
     r"""
     The Rational Quadratic kernel.
 
@@ -592,15 +652,14 @@ class RatQuad(Stationary):
         super().__init__(input_dim, ls, ls_inv, active_dims)
         self.alpha = alpha
 
-    def full(self, X, Xs=None):
-        X, Xs = self._slice(X, Xs)
+    def full_r2(self, r2):
         return pt.power(
-            (1.0 + 0.5 * self.square_dist(X, Xs) * (1.0 / self.alpha)),
+            (1.0 + 0.5 * r2 * (1.0 / self.alpha)),
             -1.0 * self.alpha,
         )
 
 
-class Matern52(Stationary):
+class Matern52(IsotropicStationary):
     r"""
     The Matern kernel with nu = 5/2.
 
@@ -611,9 +670,7 @@ class Matern52(Stationary):
                    \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]
     """
 
-    def full(self, X, Xs=None):
-        X, Xs = self._slice(X, Xs)
-        r = self.euclidean_dist(X, Xs)
+    def full_r(self, r):
         return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * pt.square(r)) * pt.exp(-1.0 * np.sqrt(5.0) * r)
 
     def power_spectral_density(self, omega):
@@ -641,7 +698,7 @@ class Matern52(Stationary):
         return (num / den) * pt.prod(ls) * pow
 
 
-class Matern32(Stationary):
+class Matern32(IsotropicStationary):
     r"""
     The Matern kernel with nu = 3/2.
 
@@ -651,9 +708,7 @@ class Matern32(Stationary):
                   \mathrm{exp}\left[ - \frac{\sqrt{3(x - x')^2}}{\ell} \right]
     """
 
-    def full(self, X, Xs=None):
-        X, Xs = self._slice(X, Xs)
-        r = self.euclidean_dist(X, Xs)
+    def full_r(self, r):
         return (1.0 + np.sqrt(3.0) * r) * pt.exp(-np.sqrt(3.0) * r)
 
     def power_spectral_density(self, omega):
@@ -681,7 +736,7 @@ class Matern32(Stationary):
         return (num / den) * pt.prod(ls) * pow
 
 
-class Matern12(Stationary):
+class Matern12(IsotropicStationary):
     r"""
     The Matern kernel with nu = 1/2
 
@@ -690,13 +745,11 @@ class Matern12(Stationary):
         k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell} \right]
     """
 
-    def full(self, X, Xs=None):
-        X, Xs = self._slice(X, Xs)
-        r = self.euclidean_dist(X, Xs)
+    def full_r(self, r):
         return pt.exp(-r)
 
 
-class Exponential(Stationary):
+class Exponential(IsotropicStationary):
     r"""
     The Exponential kernel.
 
@@ -705,9 +758,8 @@ class Exponential(Stationary):
        k(x, x') = \mathrm{exp}\left[ -\frac{||x - x'||}{2\ell} \right]
     """
 
-    def full(self, X, Xs=None):
-        X, Xs = self._slice(X, Xs)
-        return pt.exp(-0.5 * self.euclidean_dist(X, Xs))
+    def full_r(self, r):
+        return pt.exp(-0.5 * r)
 
 
 class Cosine(Stationary):
