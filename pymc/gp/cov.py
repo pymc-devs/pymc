@@ -536,7 +536,7 @@ class Stationary(Covariance):
     def euclidean_dist(self, X, Xs):
         r2 = self.square_dist(X, Xs)
         return self._sqrt(r2)
-
+    
     def _sqrt(self, r2):
         return pt.sqrt(r2 + 1e-12)
 
@@ -557,7 +557,7 @@ class Stationary(Covariance):
         raise NotImplementedError
 
 
-class ExpQuad(Stationary):
+class ExpQuad(IsotropicStationary):
     r"""
     The Exponentiated Quadratic kernel.  Also referred to as the Squared
     Exponential, or Radial Basis Function kernel.
@@ -587,7 +587,7 @@ class ExpQuad(Stationary):
         return c * pt.prod(ls) * exp
 
 
-class RatQuad(Stationary):
+class RatQuad(IsotropicStationary):
     r"""
     The Rational Quadratic kernel.
 
@@ -614,7 +614,7 @@ class RatQuad(Stationary):
         )
 
 
-class Matern52(Stationary):
+class Matern52(IsotropicStationary):
     r"""
     The Matern kernel with nu = 5/2.
 
@@ -653,7 +653,7 @@ class Matern52(Stationary):
         return (num / den) * pt.prod(ls) * pow
 
 
-class Matern32(Stationary):
+class Matern32(IsotropicStationary):
     r"""
     The Matern kernel with nu = 3/2.
 
@@ -691,7 +691,7 @@ class Matern32(Stationary):
         return (num / den) * pt.prod(ls) * pow
 
 
-class Matern12(Stationary):
+class Matern12(IsotropicStationary):
     r"""
     The Matern kernel with nu = 1/2
 
@@ -704,7 +704,7 @@ class Matern12(Stationary):
         return pt.exp(-r)
 
 
-class Exponential(Stationary):
+class Exponential(IsotropicStationary):
     r"""
     The Exponential kernel.
 
