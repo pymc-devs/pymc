@@ -18,7 +18,7 @@ import warnings
 from collections import Counter
 from functools import reduce
 from operator import add, mul
-from typing import Optional, Sequence, Type
+from typing import Optional, Sequence, Type, Union
 
 import numpy as np
 import pytensor.tensor as pt
@@ -47,13 +47,17 @@ __all__ = [
     "Kron",
 ]
 
+TensorLike = Union[np.ndarray, TensorVariable]
+
 
 class BaseCovariance:
     """
     Base class for kernels/covariance functions.
     """
 
-    def __call__(self, X, Xs=None, diag: bool = False):
+    def __call__(
+        self, X: TensorLike, Xs: Optional[TensorLike] = None, diag: bool = False
+    ) -> TensorVariable:
         r"""
         Evaluate the kernel/covariance function.
 
@@ -71,10 +75,10 @@ class BaseCovariance:
         else:
             return self.full(X, Xs)
 
-    def diag(self, X):
+    def diag(self, X: TensorLike) -> TensorVariable:
         raise NotImplementedError
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         raise NotImplementedError
 
     def __add__(self, other):
@@ -145,7 +149,7 @@ class Covariance(BaseCovariance):
         function operates on.
     """
 
-    def __init__(self, input_dim: int, active_dims: Optional[Sequence[int]] = None):
+    def __init__(self, input_dim: int, active_dims: Optional[Sequence[int]] = None) -> None:
         self.input_dim = input_dim
         if active_dims is None:
             self.active_dims = np.arange(input_dim)
@@ -156,7 +160,7 @@ class Covariance(BaseCovariance):
             raise ValueError("Values in `active_dims` can't be larger than `input_dim`.")
 
     @property
-    def n_dims(self):
+    def n_dims(self) -> int:
         """The dimensionality of the input, as taken from the
         `active_dims`.
         """
@@ -182,7 +186,7 @@ class Covariance(BaseCovariance):
 
 
 class Combination(Covariance):
-    def __init__(self, factor_list):
+    def __init__(self, factor_list) -> None:
         """Use constituent factors to get input_dim and active_dims for the Combination covariance."""
 
         # Check if all input_dim are the same in factor_list
@@ -295,7 +299,9 @@ class Combination(Covariance):
 
 
 class Add(Combination):
-    def __call__(self, X, Xs=None, diag=False):
+    def __call__(
+        self, X: TensorLike, Xs: Optional[TensorLike] = None, diag: bool = False
+    ) -> TensorVariable:
         return reduce(add, self._merge_factors_cov(X, Xs, diag))
 
     def power_spectral_density(self, omega):
@@ -303,7 +309,9 @@ class Add(Combination):
 
 
 class Prod(Combination):
-    def __call__(self, X, Xs=None, diag=False):
+    def __call__(
+        self, X: TensorLike, Xs: Optional[TensorLike] = None, diag: bool = False
+    ) -> TensorVariable:
         return reduce(mul, self._merge_factors_cov(X, Xs, diag))
 
     def power_spectral_density(self, omega):
@@ -318,12 +326,14 @@ class Prod(Combination):
 
 
 class Exponentiated(Covariance):
-    def __init__(self, kernel, power):
+    def __init__(self, kernel: Covariance, power) -> None:
         self.kernel = kernel
         self.power = power
         super().__init__(input_dim=self.kernel.input_dim, active_dims=self.kernel.active_dims)
 
-    def __call__(self, X, Xs=None, diag=False):
+    def __call__(
+        self, X: TensorLike, Xs: Optional[TensorLike] = None, diag: bool = False
+    ) -> TensorVariable:
         return self.kernel(X, Xs, diag=diag) ** self.power
 
 
@@ -343,7 +353,7 @@ class Kron(Covariance):
     implementations.
     """
 
-    def __init__(self, factor_list):
+    def __init__(self, factor_list) -> None:
         self.input_dims = [factor.input_dim for factor in factor_list]
         input_dim = sum(self.input_dims)
         super().__init__(input_dim=input_dim)
@@ -358,7 +368,9 @@ class Kron(Covariance):
             Xs_split = [None] * len(X_split)
         return X_split, Xs_split
 
-    def __call__(self, X, Xs=None, diag=False):
+    def __call__(
+        self, X: TensorLike, Xs: Optional[TensorLike] = None, diag: bool = False
+    ) -> TensorVariable:
         X_split, Xs_split = self._split(X, Xs)
         covs = [cov(x, xs, diag) for cov, x, xs in zip(self._factor_list, X_split, Xs_split)]
         return reduce(mul, covs)
@@ -373,13 +385,13 @@ class Constant(BaseCovariance):
        k(x, x') = c
     """
 
-    def __init__(self, c):
+    def __init__(self, c) -> None:
         self.c = c
 
-    def diag(self, X):
+    def diag(self, X: TensorLike) -> TensorVariable:
         return pt.alloc(self.c, X.shape[0])
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         if Xs is None:
             return pt.alloc(self.c, X.shape[0], X.shape[0])
         else:
@@ -395,13 +407,13 @@ class WhiteNoise(BaseCovariance):
        k(x, x') = \sigma^2 \mathrm{I}
     """
 
-    def __init__(self, sigma):
+    def __init__(self, sigma) -> None:
         self.sigma = sigma
 
-    def diag(self, X):
+    def diag(self, X: TensorLike) -> TensorVariable:
         return pt.alloc(pt.square(self.sigma), X.shape[0])
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         if Xs is None:
             return pt.diag(self.diag(X))
         else:
@@ -440,7 +452,9 @@ class Circular(Covariance):
     https://hal.archives-ouvertes.fr/hal-01119942v1/document
     """
 
-    def __init__(self, input_dim: int, period, tau=4, active_dims: Optional[Sequence[int]] = None):
+    def __init__(
+        self, input_dim: int, period, tau=4, active_dims: Optional[Sequence[int]] = None
+    ) -> None:
         super().__init__(input_dim, active_dims)
         self.c = pt.as_tensor_variable(period / 2)
         self.tau = tau
@@ -455,11 +469,11 @@ class Circular(Covariance):
     def weinland(self, t):
         return (1 + self.tau * t / self.c) * pt.clip(1 - t / self.c, 0, np.inf) ** self.tau
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         return self.weinland(self.dist(X, Xs))
 
-    def diag(self, X):
+    def diag(self, X: TensorLike) -> TensorVariable:
         return pt.alloc(1.0, X.shape[0])
 
 
@@ -476,7 +490,7 @@ class Stationary(Covariance):
 
     def __init__(
         self, input_dim: int, ls=None, ls_inv=None, active_dims: Optional[Sequence[int]] = None
-    ):
+    ) -> None:
         super().__init__(input_dim, active_dims)
         if (ls is None and ls_inv is None) or (ls is not None and ls_inv is not None):
             raise ValueError("Only one of 'ls' or 'ls_inv' must be provided")
@@ -509,10 +523,10 @@ class Stationary(Covariance):
     def _sqrt(self, r2):
         return pt.sqrt(r2 + 1e-12)
 
-    def diag(self, X):
+    def diag(self, X: TensorLike) -> TensorVariable:
         return pt.alloc(1.0, X.shape[0])
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         raise NotImplementedError
 
     def power_spectral_density(self, omega):
@@ -525,12 +539,12 @@ class IsotropicStationary(Stationary):
     that only depend on ‖x - x'‖.
     """
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         r2 = self.square_dist(X, Xs)
         return self.full_r2(r2)
 
-    def full_r2(self, r2):
+    def full_r2(self, r2: TensorLike) -> TensorVariable:
         if hasattr(self, "full_r"):
             return self.full_r(self._sqrt(r2))
         raise NotImplementedError
@@ -547,7 +561,7 @@ class ExpQuad(IsotropicStationary):
 
     """
 
-    def full_r2(self, r2):
+    def full_r2(self, r2: TensorLike) -> TensorVariable:
         return pt.exp(-0.5 * r2)
 
     def power_spectral_density(self, omega):
@@ -582,11 +596,11 @@ class RatQuad(IsotropicStationary):
         ls=None,
         ls_inv=None,
         active_dims: Optional[Sequence[int]] = None,
-    ):
+    ) -> None:
         super().__init__(input_dim, ls, ls_inv, active_dims)
         self.alpha = alpha
 
-    def full_r2(self, r2):
+    def full_r2(self, r2: TensorLike) -> TensorVariable:
         return pt.power(
             (1.0 + 0.5 * r2 * (1.0 / self.alpha)),
             -1.0 * self.alpha,
@@ -604,7 +618,7 @@ class Matern52(IsotropicStationary):
                    \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]
     """
 
-    def full_r(self, r):
+    def full_r(self, r: TensorLike) -> TensorVariable:
         return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * pt.square(r)) * pt.exp(-1.0 * np.sqrt(5.0) * r)
 
     def power_spectral_density(self, omega):
@@ -642,7 +656,7 @@ class Matern32(IsotropicStationary):
                   \mathrm{exp}\left[ - \frac{\sqrt{3(x - x')^2}}{\ell} \right]
     """
 
-    def full_r(self, r):
+    def full_r(self, r: TensorLike) -> TensorVariable:
         return (1.0 + np.sqrt(3.0) * r) * pt.exp(-np.sqrt(3.0) * r)
 
     def power_spectral_density(self, omega):
@@ -679,7 +693,7 @@ class Matern12(IsotropicStationary):
         k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell} \right]
     """
 
-    def full_r(self, r):
+    def full_r(self, r: TensorLike) -> TensorVariable:
         return pt.exp(-r)
 
 
@@ -692,7 +706,7 @@ class Exponential(IsotropicStationary):
        k(x, x') = \mathrm{exp}\left[ -\frac{||x - x'||}{2\ell} \right]
     """
 
-    def full_r(self, r):
+    def full_r(self, r: TensorLike) -> TensorVariable:
         return pt.exp(-0.5 * r)
 
 
@@ -742,7 +756,7 @@ class Periodic(Stationary):
         active_dims: Optional[Sequence[int]] = None,
         base_kernel_class: Type[IsotropicStationary] = ExpQuad,
         **base_kernel_kwargs,
-    ):
+    ) -> None:
         super().__init__(input_dim, ls, ls_inv, active_dims)
 
         if period <= 0:
@@ -761,7 +775,7 @@ class Periodic(Stationary):
             **self.base_kernel_kwargs,
         )
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         if Xs is None:
             Xs = X
@@ -785,7 +799,7 @@ class Cosine(Stationary):
        k(x, x') = \mathrm{cos}\left( 2 \pi \frac{||x - x'||}{ \ell^2} \right)
     """
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         return pt.cos(2.0 * np.pi * self.euclidean_dist(X, Xs))
 
@@ -798,7 +812,7 @@ class Linear(Covariance):
        k(x, x') = (x - c)(x' - c)
     """
 
-    def __init__(self, input_dim, c, active_dims=None):
+    def __init__(self, input_dim: int, c, active_dims: Optional[Sequence[int]] = None) -> None:
         super().__init__(input_dim, active_dims)
         self.c = c
 
@@ -807,7 +821,7 @@ class Linear(Covariance):
         Xc = pt.sub(X, self.c)
         return X, Xc, Xs
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xc, Xs = self._common(X, Xs)
         if Xs is None:
             return pt.dot(Xc, pt.transpose(Xc))
@@ -815,7 +829,7 @@ class Linear(Covariance):
             Xsc = pt.sub(Xs, self.c)
             return pt.dot(Xc, pt.transpose(Xsc))
 
-    def diag(self, X):
+    def diag(self, X: TensorLike) -> TensorVariable:
         X, Xc, _ = self._common(X, None)
         return pt.sum(pt.square(Xc), 1)
 
@@ -828,16 +842,18 @@ class Polynomial(Linear):
        k(x, x') = [(x - c)(x' - c) + \mathrm{offset}]^{d}
     """
 
-    def __init__(self, input_dim, c, d, offset, active_dims=None):
+    def __init__(
+        self, input_dim: int, c, d, offset, active_dims: Optional[Sequence[int]] = None
+    ) -> None:
         super().__init__(input_dim, c, active_dims)
         self.d = d
         self.offset = offset
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         linear = super().full(X, Xs)
         return pt.power(linear + self.offset, self.d)
 
-    def diag(self, X):
+    def diag(self, X: TensorLike) -> TensorVariable:
         linear = super().diag(X)
         return pt.power(linear + self.offset, self.d)
 
@@ -859,7 +875,14 @@ class WarpedInput(Covariance):
         Additional inputs (besides X or Xs) to warp_func.
     """
 
-    def __init__(self, input_dim, cov_func, warp_func, args=None, active_dims=None):
+    def __init__(
+        self,
+        input_dim: int,
+        cov_func,
+        warp_func,
+        args=None,
+        active_dims: Optional[Sequence[int]] = None,
+    ) -> None:
         super().__init__(input_dim, active_dims)
         if not callable(warp_func):
             raise TypeError("warp_func must be callable")
@@ -869,14 +892,14 @@ class WarpedInput(Covariance):
         self.args = args
         self.cov_func = cov_func
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         if Xs is None:
             return self.cov_func(self.w(X, self.args), Xs)
         else:
             return self.cov_func(self.w(X, self.args), self.w(Xs, self.args))
 
-    def diag(self, X):
+    def diag(self, X: TensorLike) -> TensorVariable:
         X, _ = self._slice(X, None)
         return self.cov_func(self.w(X, self.args), diag=True)
 
@@ -899,7 +922,13 @@ class Gibbs(Covariance):
         Additional inputs (besides X or Xs) to lengthscale_func.
     """
 
-    def __init__(self, input_dim, lengthscale_func, args=None, active_dims=None):
+    def __init__(
+        self,
+        input_dim: int,
+        lengthscale_func,
+        args=None,
+        active_dims: Optional[Sequence[int]] = None,
+    ) -> None:
         super().__init__(input_dim, active_dims)
         if active_dims is not None:
             if len(active_dims) > 1:
@@ -925,7 +954,7 @@ class Gibbs(Covariance):
             )
         return pt.clip(sqd, 0.0, np.inf)
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         rx = self.lfunc(pt.as_tensor_variable(X), self.args)
         if Xs is None:
@@ -938,7 +967,7 @@ class Gibbs(Covariance):
         rz2 = pt.reshape(pt.square(rz), (1, -1))
         return pt.sqrt((2.0 * pt.outer(rx, rz)) / (rx2 + rz2)) * pt.exp(-1.0 * r2 / (rx2 + rz2))
 
-    def diag(self, X):
+    def diag(self, X: TensorLike) -> TensorVariable:
         return pt.alloc(1.0, X.shape[0])
 
 
@@ -961,7 +990,14 @@ class ScaledCov(Covariance):
         Additional inputs (besides X or Xs) to lengthscale_func.
     """
 
-    def __init__(self, input_dim, cov_func, scaling_func, args=None, active_dims=None):
+    def __init__(
+        self,
+        input_dim: int,
+        cov_func,
+        scaling_func,
+        args=None,
+        active_dims: Optional[Sequence[int]] = None,
+    ) -> None:
         super().__init__(input_dim, active_dims)
         if not callable(scaling_func):
             raise TypeError("scaling_func must be callable")
@@ -971,13 +1007,13 @@ class ScaledCov(Covariance):
         self.scaling_func = handle_args(scaling_func, args)
         self.args = args
 
-    def diag(self, X):
+    def diag(self, X: TensorLike) -> TensorVariable:
         X, _ = self._slice(X, None)
         cov_diag = self.cov_func(X, diag=True)
         scf_diag = pt.square(pt.flatten(self.scaling_func(X, self.args)))
         return cov_diag * scf_diag
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         scf_x = self.scaling_func(X, self.args)
         if Xs is None:
@@ -1020,7 +1056,14 @@ class Coregion(Covariance):
     `input_dim != 1`, then `active_dims` must have a length of one.
     """
 
-    def __init__(self, input_dim, W=None, kappa=None, B=None, active_dims=None):
+    def __init__(
+        self,
+        input_dim: int,
+        W=None,
+        kappa=None,
+        B=None,
+        active_dims: Optional[Sequence[int]] = None,
+    ) -> None:
         super().__init__(input_dim, active_dims)
         if len(self.active_dims) != 1:
             raise ValueError("Coregion requires exactly one dimension to be active")
@@ -1036,7 +1079,7 @@ class Coregion(Covariance):
         else:
             raise ValueError("Exactly one of (W, kappa) and B must be provided to Coregion")
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         index = pt.cast(X, "int32")
         if Xs is None:
@@ -1045,7 +1088,7 @@ class Coregion(Covariance):
             index2 = pt.cast(Xs, "int32").T
         return self.B[index, index2]
 
-    def diag(self, X):
+    def diag(self, X: TensorLike) -> TensorVariable:
         X, _ = self._slice(X, None)
         index = pt.cast(X, "int32")
         return pt.diag(self.B)[index.ravel()]
