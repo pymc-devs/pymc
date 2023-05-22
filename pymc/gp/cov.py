@@ -755,15 +755,15 @@ class Periodic(Stationary):
     """
 
     def __init__(
-            self,
-            input_dim: int,
-            period,
-            ls=None,
-            ls_inv=None,
-            active_dims: Optional[Sequence[int]] = None,
-            base_kernel_class: Type[IsotropicStationary] = ExpQuad,
-            **base_kernel_kwargs,
-        ):
+        self,
+        input_dim: int,
+        period,
+        ls=None,
+        ls_inv=None,
+        active_dims: Optional[Sequence[int]] = None,
+        base_kernel_class: Type[IsotropicStationary] = ExpQuad,
+        **base_kernel_kwargs,
+    ):
         super().__init__(input_dim, ls, ls_inv, active_dims)
 
         if period <= 0:
