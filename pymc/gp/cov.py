@@ -152,7 +152,7 @@ class Covariance(BaseCovariance):
         function operates on.
     """
 
-    def __init__(self, input_dim: int, active_dims: Optional[Sequence[int]] = None):
+    def __init__(self, input_dim: int, active_dims: Optional[Sequence[int]] = None) -> None:
         self.input_dim = input_dim
         if active_dims is None:
             self.active_dims = np.arange(input_dim)
@@ -189,7 +189,7 @@ class Covariance(BaseCovariance):
 
 
 class Combination(Covariance):
-    def __init__(self, factor_list):
+    def __init__(self, factor_list) -> None:
         """Use constituent factors to get input_dim and active_dims for the Combination covariance."""
 
         # Check if all input_dim are the same in factor_list
@@ -394,7 +394,7 @@ class Constant(BaseCovariance):
        k(x, x') = c
     """
 
-    def __init__(self, c):
+    def __init__(self, c) -> None:
         self.c = c
 
     def diag(self, X: TensorLike) -> TensorVariable:
@@ -416,7 +416,7 @@ class WhiteNoise(BaseCovariance):
        k(x, x') = \sigma^2 \mathrm{I}
     """
 
-    def __init__(self, sigma):
+    def __init__(self, sigma) -> None:
         self.sigma = sigma
 
     def diag(self, X: TensorLike) -> TensorVariable:
@@ -603,7 +603,7 @@ class RatQuad(IsotropicStationary):
         ls=None,
         ls_inv=None,
         active_dims: Optional[Sequence[int]] = None,
-    ):
+    ) -> None:
         super().__init__(input_dim, ls, ls_inv, active_dims)
         self.alpha = alpha
 
@@ -763,7 +763,7 @@ class Periodic(Stationary):
         active_dims: Optional[Sequence[int]] = None,
         base_kernel_class: Type[IsotropicStationary] = ExpQuad,
         **base_kernel_kwargs,
-    ):
+    ) -> None:
         super().__init__(input_dim, ls, ls_inv, active_dims)
 
         if period <= 0:
@@ -782,7 +782,7 @@ class Periodic(Stationary):
             **self.base_kernel_kwargs,
         )
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         if Xs is None:
             Xs = X
