@@ -487,49 +487,28 @@ jobs:
         run: exit 1
 
 
-  merge-reports:
-    runs-on: ubuntu-latest
-    needs: [all_tests, changes]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Merge coverage reports
-        run: |
-          # Activate conda environment
-          conda activate pymc-test
-          # Find all coverage reports and merge them into a single file
-          python -m coverage combine --append coverage-*.xml
-
-      - name: Save combined coverage report
-        uses: actions/upload-artifact@v2
-        with:
-          name: coverage
-          path: coverage
-
-
   upload-coverage:
     runs-on: ubuntu-latest
-    name: "Upload coverage"
-    needs: [merge-reports]
+    needs: [all_tests, changes]
     if: ${{ needs.all_tests.result == 'success' && needs.changes.outputs.changes == 'true'}}
     steps:
       - uses: actions/checkout@v3
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-
       - name: Install dependencies
         run: |
           python -m pip install -U coverage>=5.1 coveralls
-
-      - name: Download coverage file
+      - name: Download coverage files
         uses: actions/download-artifact@v3
         with:
           name: coverage
           path: coverage
-
+      - name: Merge coverage reports
+        run: |
+          # Find all coverage reports and merge them into a single file
+          python -m coverage combine --append coverage/*.xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
