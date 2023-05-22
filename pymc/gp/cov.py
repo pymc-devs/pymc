@@ -474,7 +474,9 @@ class Stationary(Covariance):
     ls_inv: Inverse lengthscale.  1 / ls.  One of ls or ls_inv must be provided.
     """
 
-    def __init__(self, input_dim: int, ls=None, ls_inv=None, active_dims: Optional[Sequence[int]] = None):
+    def __init__(
+        self, input_dim: int, ls=None, ls_inv=None, active_dims: Optional[Sequence[int]] = None
+    ):
         super().__init__(input_dim, active_dims)
         if (ls is None and ls_inv is None) or (ls is not None and ls_inv is not None):
             raise ValueError("Only one of 'ls' or 'ls_inv' must be provided")
@@ -573,7 +575,14 @@ class RatQuad(IsotropicStationary):
        k(x, x') = \left(1 + \frac{(x - x')^2}{2\alpha\ell^2} \right)^{-\alpha}
     """
 
-    def __init__(self, input_dim: int, alpha, ls=None, ls_inv=None, active_dims: Optional[Sequence[int]] = None):
+    def __init__(
+        self,
+        input_dim: int,
+        alpha,
+        ls=None,
+        ls_inv=None,
+        active_dims: Optional[Sequence[int]] = None,
+    ):
         super().__init__(input_dim, ls, ls_inv, active_dims)
         self.alpha = alpha
 
@@ -725,15 +734,15 @@ class Periodic(Stationary):
     """
 
     def __init__(
-            self,
-            input_dim: int,
-            period,
-            ls=None,
-            ls_inv=None,
-            active_dims: Optional[Sequence[int]] = None,
-            base_kernel_class: Type[IsotropicStationary] = ExpQuad,
-            **base_kernel_kwargs,
-        ):
+        self,
+        input_dim: int,
+        period,
+        ls=None,
+        ls_inv=None,
+        active_dims: Optional[Sequence[int]] = None,
+        base_kernel_class: Type[IsotropicStationary] = ExpQuad,
+        **base_kernel_kwargs,
+    ):
         super().__init__(input_dim, ls, ls_inv, active_dims)
 
         if period <= 0:
