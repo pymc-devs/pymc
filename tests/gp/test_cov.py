@@ -633,12 +633,11 @@ class TestGeneralizedPeriodic:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model() as model:
-            base = pm.gp.cov.ExpQuad(1, 0.1)
-            cov = pm.gp.cov.GeneralizedPeriodic(base, 0.1)
+            cov = pm.gp.cov.Periodic(1, 0.1, 0.1, base_kernel_class=pm.gp.cov.RatQuad, alpha=0.5)
         K = cov(X).eval()
-        npt.assert_allclose(K[0, 1], 0.00288, atol=1e-3)
+        npt.assert_allclose(K[0, 1], 0.28063, atol=1e-3)
         K = cov(X, X).eval()
-        npt.assert_allclose(K[0, 1], 0.00288, atol=1e-3)
+        npt.assert_allclose(K[0, 1], 0.28063, atol=1e-3)
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)

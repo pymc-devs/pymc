@@ -717,6 +717,87 @@ class Exponential(IsotropicStationary):
         return pt.exp(-0.5 * r)
 
 
+class Periodic(Stationary):
+    r"""
+    The Periodic kernel.
+
+    This can be used to wrap any `IsotropicStationary` kernel to transform it into a periodic
+    version. The canonical form (based on the `ExpQuad` kernel) is given by:
+
+    .. math::
+
+       k(x, x') = \mathrm{exp}\left( -\frac{\mathrm{sin}^2(\pi |x-x'| \frac{1}{T})}{2\ell^2} \right)
+
+    The derivation can be achieved by mapping the original inputs through the transformation
+    u = (cos(x), sin(x)).
+
+    Parameters
+    ----------
+    period: Period.  The period of the kernel.
+    ls: Lengthscale.  If input_dim > 1, a list or array of scalars or PyMC random
+        variables.  If input_dim == 1, a scalar or PyMC random variable.
+    ls_inv: Inverse lengthscale.  1 / ls.  One of ls or ls_inv must be provided.
+    base_kernel_class: Base kernel class.  The `IsotropicStationary` kernel to use
+        for the base behaviour, defaults to `ExpQuad`.
+    **base_kernel_kwargs: Additional kwargs passed to the base kernel for initialization.
+        For example, used to pass `alpha` to the `RatQuad` kernel.
+
+    Notes
+    -----
+    Note that the scaling factor for this kernel is different compared to the more common
+    definition (see [1]_). Here, 0.5 is in the exponent instead of the more common value, 2.
+    Divide the length-scale by 2 when initializing the kernel to recover the standard definition.
+
+    References
+    ----------
+    .. [1] David Duvenaud, "The Kernel Cookbook"
+       https://www.cs.toronto.edu/~duvenaud/cookbook/
+    """
+
+    def __init__(
+            self,
+            input_dim: int,
+            period,
+            ls=None,
+            ls_inv=None,
+            active_dims: Optional[Sequence[int]] = None,
+            base_kernel_class: Type[IsotropicStationary] = ExpQuad,
+            **base_kernel_kwargs,
+        ):
+        super().__init__(input_dim, ls, ls_inv, active_dims)
+
+        if period <= 0:
+            raise ValueError("Period parameter must be positive")
+        self.period = period
+        self.base_kernel_class = base_kernel_class
+        self.base_kernel_kwargs = base_kernel_kwargs
+
+    @property
+    def base_kernel(self) -> IsotropicStationary:
+        """Instantiation of the base kernel."""
+        return self.base_kernel_class(
+            self.input_dim,
+            ls=self.ls,
+            active_dims=self.active_dims,
+            **self.base_kernel_kwargs,
+        )
+
+    def full(self, X, Xs=None):
+        X, Xs = self._slice(X, Xs)
+        if Xs is None:
+            Xs = X
+        f1 = pt.expand_dims(X, axis=(0,))
+        f2 = pt.expand_dims(X, axis=(1,))
+        r = np.pi * (f1 - f2) / self.period
+        if hasattr(self.base_kernel, "full_r"):
+            r = pt.sum(pt.abs(pt.sin(r) / self.ls), 2)
+            K = self.base_kernel.full_r(r)
+        else:
+            r2 = pt.sum(pt.square(pt.sin(r) / self.ls), 2)
+            K = self.base_kernel.full_r2(r2)
+        return K
+
+
 class Cosine(Stationary):
     r"""
     The Cosine kernel.
