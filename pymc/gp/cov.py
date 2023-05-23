@@ -527,19 +527,6 @@ class Stationary(Covariance):
         return pt.alloc(1.0, X.shape[0])
 
     def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
-        raise NotImplementedError
-
-    def power_spectral_density(self, omega):
-        raise NotImplementedError
-
-
-class IsotropicStationary(Stationary):
-    r"""
-    Base class for isotropic stationary kernels/covariance functions i.e. kernels
-    that only depend on ‖x - x'‖.
-    """
-
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         r2 = self.square_dist(X, Xs)
         return self.full_r2(r2)
@@ -549,8 +536,11 @@ class IsotropicStationary(Stationary):
             return self.full_r(self._sqrt(r2))
         raise NotImplementedError
 
+    def power_spectral_density(self, omega):
+        raise NotImplementedError
 
-class ExpQuad(IsotropicStationary):
+
+class ExpQuad(Stationary):
     r"""
     The Exponentiated Quadratic kernel.  Also referred to as the Squared
     Exponential, or Radial Basis Function kernel.
@@ -580,7 +570,7 @@ class ExpQuad(IsotropicStationary):
         return c * pt.prod(ls) * exp
 
 
-class RatQuad(IsotropicStationary):
+class RatQuad(Stationary):
     r"""
     The Rational Quadratic kernel.
 
@@ -607,7 +597,7 @@ class RatQuad(IsotropicStationary):
         )
 
 
-class Matern52(IsotropicStationary):
+class Matern52(Stationary):
     r"""
     The Matern kernel with nu = 5/2.
 
@@ -646,7 +636,7 @@ class Matern52(IsotropicStationary):
         return (num / den) * pt.prod(ls) * pow
 
 
-class Matern32(IsotropicStationary):
+class Matern32(Stationary):
     r"""
     The Matern kernel with nu = 3/2.
 
@@ -684,7 +674,7 @@ class Matern32(IsotropicStationary):
         return (num / den) * pt.prod(ls) * pow
 
 
-class Matern12(IsotropicStationary):
+class Matern12(Stationary):
     r"""
     The Matern kernel with nu = 1/2
 
@@ -697,7 +687,7 @@ class Matern12(IsotropicStationary):
         return pt.exp(-r)
 
 
-class Exponential(IsotropicStationary):
+class Exponential(Stationary):
     r"""
     The Exponential kernel.
 
@@ -710,11 +700,23 @@ class Exponential(IsotropicStationary):
         return pt.exp(-0.5 * r)
 
 
+class Cosine(Stationary):
+    r"""
+    The Cosine kernel.
+
+    .. math::
+       k(x, x') = \mathrm{cos}\left( 2 \pi \frac{||x - x'||}{ \ell^2} \right)
+    """
+
+    def full_r(self, r: TensorLike) -> TensorVariable:
+        return pt.cos(2.0 * np.pi * r)
+
+
 class Periodic(Stationary):
     r"""
     The Periodic kernel.
 
-    This can be used to wrap any `IsotropicStationary` kernel to transform it into a periodic
+    This can be used to wrap any `Stationary` kernel to transform it into a periodic
     version. The canonical form (based on the `ExpQuad` kernel) is given by:
 
     .. math::
@@ -754,7 +756,7 @@ class Periodic(Stationary):
         ls=None,
         ls_inv=None,
         active_dims: Optional[Sequence[int]] = None,
-        base_kernel_class: Type[IsotropicStationary] = ExpQuad,
+        base_kernel_class: Type[Stationary] = ExpQuad,
         **base_kernel_kwargs,
     ) -> None:
         super().__init__(input_dim, ls, ls_inv, active_dims)
@@ -766,7 +768,7 @@ class Periodic(Stationary):
         self.base_kernel_kwargs = base_kernel_kwargs
 
     @property
-    def base_kernel(self) -> IsotropicStationary:
+    def base_kernel(self) -> Stationary:
         """Instantiation of the base kernel."""
         return self.base_kernel_class(
             self.input_dim,
@@ -789,19 +791,6 @@ class Periodic(Stationary):
             r2 = pt.sum(pt.square(pt.sin(r) / self.ls), 2)
             K = self.base_kernel.full_r2(r2)
         return K
-
-
-class Cosine(Stationary):
-    r"""
-    The Cosine kernel.
-
-    .. math::
-       k(x, x') = \mathrm{cos}\left( 2 \pi \frac{||x - x'||}{ \ell^2} \right)
-    """
-
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
-        X, Xs = self._slice(X, Xs)
-        return pt.cos(2.0 * np.pi * self.euclidean_dist(X, Xs))
 
 
 class Linear(Covariance):
