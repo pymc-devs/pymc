@@ -44,7 +44,13 @@ import pytensor
 import pytensor.tensor as pt
 
 from pytensor import config
-from pytensor.graph.basic import Variable, graph_inputs, io_toposort
+from pytensor.graph.basic import (
+    Constant,
+    Variable,
+    ancestors,
+    graph_inputs,
+    io_toposort,
+)
 from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
 from pytensor.tensor.random.op import RandomVariable
@@ -231,10 +237,16 @@ def factorized_joint_logprob(
     # node.
     replacements = updated_rv_values.copy()
 
-    # To avoid cloning the value variables, we map them to themselves in the
-    # `replacements` `dict` (i.e. entries already existing in `replacements`
-    # aren't cloned)
-    replacements.update({v: v for v in rv_values.values()})
+    # To avoid cloning the value variables (or ancestors of value variables),
+    # we map them to themselves in the `replacements` `dict`
+    # (i.e. entries already existing in `replacements` aren't cloned)
+    replacements.update(
+        {
+            v: v
+            for v in ancestors(rv_values.values())
+            if (not isinstance(v, Constant) and v not in replacements)
+        }
+    )
 
     # Walk the graph from its inputs to its outputs and construct the
     # log-probability
