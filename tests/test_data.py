@@ -14,6 +14,7 @@
 
 import io
 import itertools as it
+import re
 
 import cloudpickle
 import numpy as np
@@ -614,3 +615,23 @@ class TestMinibatch:
         ):
             d1, d2 = pm.Minibatch(self.data, self.data[::2], batch_size=20)
             d1.eval()
+
+    def test_multiple_vars(self):
+        A = np.arange(1000)
+        B = np.arange(1000)
+        mA, mB = pm.Minibatch(A, B, batch_size=10)
+
+        [draw_mA, draw_mB] = pm.draw([mA, mB])
+        assert draw_mA.shape == (10,)
+        np.testing.assert_allclose(draw_mA, draw_mB)
+
+        # Check invalid dims
+        A = np.arange(1000)
+        C = np.arange(999)
+        mA, mC = pm.Minibatch(A, C, batch_size=10)
+
+        with pytest.raises(
+            AssertionError,
+            match=re.escape("All variables shape[0] in Minibatch should be equal"),
+        ):
+            pm.draw([mA, mC])
