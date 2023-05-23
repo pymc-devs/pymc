@@ -20,6 +20,7 @@ from scipy import stats as st
 import pymc as pm
 
 from pymc import Normal, draw
+from pymc.data import minibatch_index
 from pymc.testing import select_by_precision
 from pymc.variational.minibatch_rv import create_minibatch_rv
 from tests.test_data import gen1, gen2
@@ -155,3 +156,36 @@ class TestMinibatchRandomVariable:
         mx = create_minibatch_rv(x, total_size=(10,))
         assert mx is not x
         np.testing.assert_array_equal(draw(mx, random_seed=1), draw(x, random_seed=1))
+
+    @pytest.mark.filterwarnings("error")
+    def test_minibatch_parameter_and_value(self):
+        rng = np.random.default_rng(161)
+        total_size = 1000
+
+        with pm.Model(check_bounds=False) as m:
+            AD = pm.MutableData("AD", np.arange(total_size, dtype="float64"))
+            TD = pm.MutableData("TD", np.arange(total_size, dtype="float64"))
+
+            minibatch_idx = minibatch_index(0, 10, size=(9,))
+            AD_mt = AD[minibatch_idx]
+            TD_mt = TD[minibatch_idx]
+
+            pm.Normal(
+                "AD_predicted",
+                mu=TD_mt,
+                observed=AD_mt,
+                total_size=1000,
+            )
+
+        logp_fn = m.compile_logp()
+
+        ip = m.initial_point()
+        np.testing.assert_allclose(logp_fn(ip), st.norm.logpdf(0) * 1000)
+
+        with m:
+            pm.set_data({"AD": np.arange(total_size) + 1})
+        np.testing.assert_allclose(logp_fn(ip), st.norm.logpdf(1) * 1000)
+
+        with m:
+            pm.set_data({"AD": rng.normal(size=1000)})
+        assert logp_fn(ip) != logp_fn(ip)

@@ -39,7 +39,7 @@ from typing import Dict, Optional, Tuple
 import pytensor.tensor as pt
 
 from pytensor.compile.mode import optdb
-from pytensor.graph.basic import Variable
+from pytensor.graph.basic import Constant, Variable, ancestors
 from pytensor.graph.features import Feature
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import GraphRewriter, node_rewriter
@@ -316,8 +316,8 @@ def construct_ir_fgraph(
     # the old nodes to the new ones; otherwise, we won't be able to use
     # `rv_values`.
     # We start the `dict` with mappings from the value variables to themselves,
-    # to prevent them from being cloned.
-    memo = {v: v for v in rv_values.values()}
+    # to prevent them from being cloned. This also includes ancestors
+    memo = {v: v for v in ancestors(rv_values.values()) if not isinstance(v, Constant)}
 
     # We add `ShapeFeature` because it will get rid of references to the old
     # `RandomVariable`s that have been lifted; otherwise, it will be difficult
