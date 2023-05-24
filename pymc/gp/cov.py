@@ -152,7 +152,7 @@ class Covariance(BaseCovariance):
         function operates on.
     """
 
-    def __init__(self, input_dim: int, active_dims: Optional[Sequence[int]] = None) -> None:
+    def __init__(self, input_dim: int, active_dims: Optional[Sequence[int]] = None):
         self.input_dim = input_dim
         if active_dims is None:
             self.active_dims = np.arange(input_dim)
@@ -189,7 +189,7 @@ class Covariance(BaseCovariance):
 
 
 class Combination(Covariance):
-    def __init__(self, factor_list) -> None:
+    def __init__(self, factor_list):
         """Use constituent factors to get input_dim and active_dims for the Combination covariance."""
 
         # Check if all input_dim are the same in factor_list
@@ -394,7 +394,7 @@ class Constant(BaseCovariance):
        k(x, x') = c
     """
 
-    def __init__(self, c) -> None:
+    def __init__(self, c):
         self.c = c
 
     def diag(self, X: TensorLike) -> TensorVariable:
@@ -416,7 +416,7 @@ class WhiteNoise(BaseCovariance):
        k(x, x') = \sigma^2 \mathrm{I}
     """
 
-    def __init__(self, sigma) -> None:
+    def __init__(self, sigma):
         self.sigma = sigma
 
     def diag(self, X: TensorLike) -> TensorVariable:
@@ -553,14 +553,8 @@ class Stationary(Covariance):
             return self.full_r(self._sqrt(r2))
         raise NotImplementedError
 
-<<<<<<< HEAD
     def power_spectral_density(self, omega) -> TensorVariable:
         raise NotImplementedError
-
-=======
-    def power_spectral_density(self, omega):
-        raise NotImplementedError
->>>>>>> 102afd8f (Move isotropic stationary functionality into stationary kernel)
 
 
 class ExpQuad(Stationary):
@@ -609,7 +603,7 @@ class RatQuad(Stationary):
         ls=None,
         ls_inv=None,
         active_dims: Optional[Sequence[int]] = None,
-    ) -> None:
+    ):
         super().__init__(input_dim, ls, ls_inv, active_dims)
         self.alpha = alpha
 
@@ -781,7 +775,7 @@ class Periodic(Stationary):
         active_dims: Optional[Sequence[int]] = None,
         base_kernel_class: Type[Stationary] = ExpQuad,
         **base_kernel_kwargs,
-    ) -> None:
+    ):
         super().__init__(input_dim, ls, ls_inv, active_dims)
 
         if period <= 0:
