@@ -18,7 +18,7 @@ import warnings
 from collections import Counter
 from functools import reduce
 from operator import add, mul
-from typing import Optional, Sequence, Type, Union
+from typing import Callable, Optional, Sequence, Type, Union
 
 import numpy as np
 import pytensor.tensor as pt
@@ -56,7 +56,10 @@ class BaseCovariance:
     """
 
     def __call__(
-        self, X: TensorLike, Xs: Optional[TensorLike] = None, diag: bool = False
+        self,
+        X: TensorLike,
+        Xs: Optional[TensorLike] = None,
+        diag: bool = False,
     ) -> TensorVariable:
         r"""
         Evaluate the kernel/covariance function.
@@ -149,7 +152,7 @@ class Covariance(BaseCovariance):
         function operates on.
     """
 
-    def __init__(self, input_dim: int, active_dims: Optional[Sequence[int]] = None) -> None:
+    def __init__(self, input_dim: int, active_dims: Optional[Sequence[int]] = None):
         self.input_dim = input_dim
         if active_dims is None:
             self.active_dims = np.arange(input_dim)
@@ -186,7 +189,7 @@ class Covariance(BaseCovariance):
 
 
 class Combination(Covariance):
-    def __init__(self, factor_list) -> None:
+    def __init__(self, factor_list):
         """Use constituent factors to get input_dim and active_dims for the Combination covariance."""
 
         # Check if all input_dim are the same in factor_list
@@ -300,21 +303,27 @@ class Combination(Covariance):
 
 class Add(Combination):
     def __call__(
-        self, X: TensorLike, Xs: Optional[TensorLike] = None, diag: bool = False
+        self,
+        X: TensorLike,
+        Xs: Optional[TensorLike] = None,
+        diag: bool = False,
     ) -> TensorVariable:
         return reduce(add, self._merge_factors_cov(X, Xs, diag))
 
-    def power_spectral_density(self, omega):
+    def power_spectral_density(self, omega) -> TensorVariable:
         return reduce(add, self._merge_factors_psd(omega))
 
 
 class Prod(Combination):
     def __call__(
-        self, X: TensorLike, Xs: Optional[TensorLike] = None, diag: bool = False
+        self,
+        X: TensorLike,
+        Xs: Optional[TensorLike] = None,
+        diag: bool = False,
     ) -> TensorVariable:
         return reduce(mul, self._merge_factors_cov(X, Xs, diag))
 
-    def power_spectral_density(self, omega):
+    def power_spectral_density(self, omega) -> TensorVariable:
         check = Counter([isinstance(factor, Covariance) for factor in self._factor_list])
         if check.get(True) >= 2:
             raise NotImplementedError(
@@ -326,7 +335,7 @@ class Prod(Combination):
 
 
 class Exponentiated(Covariance):
-    def __init__(self, kernel: Covariance, power) -> None:
+    def __init__(self, kernel: Covariance, power):
         self.kernel = kernel
         self.power = power
         super().__init__(input_dim=self.kernel.input_dim, active_dims=self.kernel.active_dims)
@@ -353,7 +362,7 @@ class Kron(Covariance):
     implementations.
     """
 
-    def __init__(self, factor_list) -> None:
+    def __init__(self, factor_list: Sequence[Covariance]):
         self.input_dims = [factor.input_dim for factor in factor_list]
         input_dim = sum(self.input_dims)
         super().__init__(input_dim=input_dim)
@@ -385,7 +394,7 @@ class Constant(BaseCovariance):
        k(x, x') = c
     """
 
-    def __init__(self, c) -> None:
+    def __init__(self, c):
         self.c = c
 
     def diag(self, X: TensorLike) -> TensorVariable:
@@ -407,7 +416,7 @@ class WhiteNoise(BaseCovariance):
        k(x, x') = \sigma^2 \mathrm{I}
     """
 
-    def __init__(self, sigma) -> None:
+    def __init__(self, sigma):
         self.sigma = sigma
 
     def diag(self, X: TensorLike) -> TensorVariable:
@@ -453,8 +462,12 @@ class Circular(Covariance):
     """
 
     def __init__(
-        self, input_dim: int, period, tau=4, active_dims: Optional[Sequence[int]] = None
-    ) -> None:
+        self,
+        input_dim: int,
+        period,
+        tau=4,
+        active_dims: Optional[Sequence[int]] = None,
+    ):
         super().__init__(input_dim, active_dims)
         self.c = pt.as_tensor_variable(period / 2)
         self.tau = tau
@@ -489,8 +502,12 @@ class Stationary(Covariance):
     """
 
     def __init__(
-        self, input_dim: int, ls=None, ls_inv=None, active_dims: Optional[Sequence[int]] = None
-    ) -> None:
+        self,
+        input_dim: int,
+        ls=None,
+        ls_inv=None,
+        active_dims: Optional[Sequence[int]] = None,
+    ):
         super().__init__(input_dim, active_dims)
         if (ls is None and ls_inv is None) or (ls is not None and ls_inv is not None):
             raise ValueError("Only one of 'ls' or 'ls_inv' must be provided")
@@ -536,7 +553,7 @@ class Stationary(Covariance):
             return self.full_r(self._sqrt(r2))
         raise NotImplementedError
 
-    def power_spectral_density(self, omega):
+    def power_spectral_density(self, omega) -> TensorVariable:
         raise NotImplementedError
 
 
@@ -554,7 +571,7 @@ class ExpQuad(Stationary):
     def full_r2(self, r2: TensorLike) -> TensorVariable:
         return pt.exp(-0.5 * r2)
 
-    def power_spectral_density(self, omega):
+    def power_spectral_density(self, omega) -> TensorVariable:
         r"""
         The power spectral density for the ExpQuad kernel is:
 
@@ -586,7 +603,7 @@ class RatQuad(Stationary):
         ls=None,
         ls_inv=None,
         active_dims: Optional[Sequence[int]] = None,
-    ) -> None:
+    ):
         super().__init__(input_dim, ls, ls_inv, active_dims)
         self.alpha = alpha
 
@@ -611,7 +628,7 @@ class Matern52(Stationary):
     def full_r(self, r: TensorLike) -> TensorVariable:
         return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * pt.square(r)) * pt.exp(-1.0 * np.sqrt(5.0) * r)
 
-    def power_spectral_density(self, omega):
+    def power_spectral_density(self, omega) -> TensorVariable:
         r"""
         The power spectral density for the Matern52 kernel is:
 
@@ -649,7 +666,7 @@ class Matern32(Stationary):
     def full_r(self, r: TensorLike) -> TensorVariable:
         return (1.0 + np.sqrt(3.0) * r) * pt.exp(-np.sqrt(3.0) * r)
 
-    def power_spectral_density(self, omega):
+    def power_spectral_density(self, omega) -> TensorVariable:
         r"""
         The power spectral density for the Matern32 kernel is:
 
@@ -758,7 +775,7 @@ class Periodic(Stationary):
         active_dims: Optional[Sequence[int]] = None,
         base_kernel_class: Type[Stationary] = ExpQuad,
         **base_kernel_kwargs,
-    ) -> None:
+    ):
         super().__init__(input_dim, ls, ls_inv, active_dims)
 
         if period <= 0:
@@ -801,7 +818,7 @@ class Linear(Covariance):
        k(x, x') = (x - c)(x' - c)
     """
 
-    def __init__(self, input_dim: int, c, active_dims: Optional[Sequence[int]] = None) -> None:
+    def __init__(self, input_dim: int, c, active_dims: Optional[Sequence[int]] = None):
         super().__init__(input_dim, active_dims)
         self.c = c
 
@@ -831,9 +848,7 @@ class Polynomial(Linear):
        k(x, x') = [(x - c)(x' - c) + \mathrm{offset}]^{d}
     """
 
-    def __init__(
-        self, input_dim: int, c, d, offset, active_dims: Optional[Sequence[int]] = None
-    ) -> None:
+    def __init__(self, input_dim: int, c, d, offset, active_dims: Optional[Sequence[int]] = None):
         super().__init__(input_dim, c, active_dims)
         self.d = d
         self.offset = offset
@@ -867,11 +882,11 @@ class WarpedInput(Covariance):
     def __init__(
         self,
         input_dim: int,
-        cov_func,
-        warp_func,
+        cov_func: Covariance,
+        warp_func: Callable,
         args=None,
         active_dims: Optional[Sequence[int]] = None,
-    ) -> None:
+    ):
         super().__init__(input_dim, active_dims)
         if not callable(warp_func):
             raise TypeError("warp_func must be callable")
@@ -917,7 +932,7 @@ class Gibbs(Covariance):
         lengthscale_func,
         args=None,
         active_dims: Optional[Sequence[int]] = None,
-    ) -> None:
+    ):
         super().__init__(input_dim, active_dims)
         if active_dims is not None:
             if len(active_dims) > 1:
@@ -982,11 +997,11 @@ class ScaledCov(Covariance):
     def __init__(
         self,
         input_dim: int,
-        cov_func,
-        scaling_func,
+        cov_func: Covariance,
+        scaling_func: Callable,
         args=None,
         active_dims: Optional[Sequence[int]] = None,
-    ) -> None:
+    ):
         super().__init__(input_dim, active_dims)
         if not callable(scaling_func):
             raise TypeError("scaling_func must be callable")
@@ -1052,7 +1067,7 @@ class Coregion(Covariance):
         kappa=None,
         B=None,
         active_dims: Optional[Sequence[int]] = None,
-    ) -> None:
+    ):
         super().__init__(input_dim, active_dims)
         if len(self.active_dims) != 1:
             raise ValueError("Coregion requires exactly one dimension to be active")
@@ -1083,7 +1098,7 @@ class Coregion(Covariance):
         return pt.diag(self.B)[index.ravel()]
 
 
-def handle_args(func, args):
+def handle_args(func, args) -> Callable:
     def f(x, args):
         if args is None:
             return func(x)
