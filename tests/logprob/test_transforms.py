@@ -561,6 +561,7 @@ def test_original_values_output_dict():
     assert p_vv in logp_dict
 
 
+@pytest.mark.filterwarnings("error")
 def test_mixture_transform():
     """Make sure that non-`RandomVariable` `MeasurableVariable`s can be transformed.
 
@@ -588,21 +589,17 @@ def test_mixture_transform():
 
     transform_rewrite = TransformValuesRewrite({y_vv: LogTransform()})
 
-    with pytest.warns(None) as record:
-        # This shouldn't raise any warnings
-        logp_trans = factorized_joint_logprob(
-            {Y_rv: y_vv, I_rv: i_vv},
-            extra_rewrites=transform_rewrite,
-            use_jacobian=False,
-        )
-        logp_trans_combined = pt.sum([pt.sum(factor) for factor in logp_trans.values()])
-
-    assert not record.list
+    logp_trans = factorized_joint_logprob(
+        {Y_rv: y_vv, I_rv: i_vv},
+        extra_rewrites=transform_rewrite,
+        use_jacobian=False,
+    )
+    logp_trans_combined = pt.sum([pt.sum(factor) for factor in logp_trans.values()])
 
     # The untransformed graph should be the same as the transformed graph after
     # replacing the `Y_rv` value variable with a transformed version of itself
     logp_nt_fg = FunctionGraph(outputs=[logp_no_trans_comb], clone=False)
-    y_trans = transformed_variable(pt.exp(y_vv), y_vv)
+    y_trans = pt.exp(y_vv)
     y_trans.name = "y_log"
     logp_nt_fg.replace(y_vv, y_trans)
     logp_nt = logp_nt_fg.outputs[0]

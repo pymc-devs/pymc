@@ -34,7 +34,7 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Sequence, Tuple
 
 import pytensor.tensor as pt
 
@@ -43,11 +43,17 @@ from pytensor.graph.basic import Constant, Variable, ancestors
 from pytensor.graph.features import Feature
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import GraphRewriter, node_rewriter
-from pytensor.graph.rewriting.db import EquilibriumDB, RewriteDatabaseQuery, SequenceDB
+from pytensor.graph.rewriting.db import (
+    EquilibriumDB,
+    LocalGroupDB,
+    RewriteDatabaseQuery,
+    SequenceDB,
+    TopoDB,
+)
 from pytensor.tensor.elemwise import DimShuffle, Elemwise
 from pytensor.tensor.extra_ops import BroadcastTo
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
-from pytensor.tensor.rewriting.basic import register_canonicalize, register_useless
+from pytensor.tensor.rewriting.basic import register_canonicalize
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.subtensor import (
     AdvancedIncSubtensor,
@@ -191,9 +197,8 @@ def local_lift_DiracDelta(fgraph, node):
     return new_node.outputs
 
 
-@register_useless
-@node_rewriter((DiracDelta,))
-def local_remove_DiracDelta(fgraph, node):
+@node_rewriter([DiracDelta])
+def remove_DiracDelta(fgraph, node):
     r"""Remove `DiracDelta`\s."""
     dd_val = node.inputs[0]
     return [dd_val]
@@ -269,6 +274,17 @@ measurable_ir_rewrites_db.register("subtensor_lift", local_subtensor_rv_lift, "b
 measurable_ir_rewrites_db.register("incsubtensor_lift", incsubtensor_rv_replace, "basic")
 
 logprob_rewrites_db.register("post-canonicalize", optdb.query("+canonicalize"), "basic")
+
+# Rewrites that remove IR Ops
+cleanup_ir_rewrites_db = LocalGroupDB()
+cleanup_ir_rewrites_db.name = "cleanup_ir_rewrites_db"
+logprob_rewrites_db.register(
+    "cleanup_ir_rewrites",
+    TopoDB(cleanup_ir_rewrites_db, order="out_to_in", ignore_newtrees=True, failure_callback=None),
+    "cleanup",
+)
+
+cleanup_ir_rewrites_db.register("remove_DiracDelta", remove_DiracDelta, "cleanup")
 
 
 def construct_ir_fgraph(
@@ -351,3 +367,9 @@ def construct_ir_fgraph(
         fgraph.replace_all(new_to_old)
 
     return fgraph, rv_values, memo
+
+
+def cleanup_ir(vars: Sequence[Variable]) -> None:
+    fgraph = FunctionGraph(outputs=vars, clone=False)
+    ir_rewriter = logprob_rewrites_db.query(RewriteDatabaseQuery(include=["cleanup"]))
+    ir_rewriter.rewrite(fgraph)
