@@ -37,9 +37,11 @@
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
+import pytest
 import scipy.stats as st
 
 from pymc import logp
+from pymc.logprob.abstract import MeasurableVariable
 from pymc.logprob.basic import factorized_joint_logprob
 from pymc.logprob.censoring import MeasurableClip
 from pymc.logprob.rewriting import construct_ir_fgraph
@@ -121,10 +123,13 @@ def test_nested_scalar_mixtures():
     assert np.isclose(logp_fn(0, 0, 1, 50), st.norm.logpdf(150) + np.log(0.5) * 3)
 
 
-def test_unvalued_ir_reversion():
+@pytest.mark.parametrize("nested", (False, True))
+def test_unvalued_ir_reversion(nested):
     """Make sure that un-valued IR rewrites are reverted."""
     x_rv = pt.random.normal()
     y_rv = pt.clip(x_rv, 0, 1)
+    if nested:
+        y_rv = y_rv + 5
     z_rv = pt.random.normal(y_rv, 1, name="z")
     z_vv = z_rv.clone()
 
@@ -134,14 +139,10 @@ def test_unvalued_ir_reversion():
 
     z_fgraph, _, memo = construct_ir_fgraph(rv_values)
 
-    assert memo[y_rv] in z_fgraph.preserve_rv_mappings.measurable_conversions
-
-    measurable_y_rv = z_fgraph.preserve_rv_mappings.measurable_conversions[memo[y_rv]]
-    assert isinstance(measurable_y_rv.owner.op, MeasurableClip)
-
-    # `construct_ir_fgraph` should've reverted the un-valued measurable IR
-    # change
-    assert measurable_y_rv not in z_fgraph
+    assert len(z_fgraph.preserve_rv_mappings.measurable_conversions) == 1 + nested
+    assert (
+        sum(isinstance(node.op, MeasurableVariable) for node in z_fgraph.apply_nodes) == 2
+    )  # Just the 2 rvs
 
 
 def test_shifted_cumsum():

@@ -347,7 +347,7 @@ def construct_ir_fgraph(
 
     if rv_remapper.measurable_conversions:
         # Undo un-valued measurable IR rewrites
-        new_to_old = tuple((v, k) for k, v in rv_remapper.measurable_conversions.items())
+        new_to_old = tuple((v, k) for k, v in reversed(rv_remapper.measurable_conversions.items()))
         fgraph.replace_all(new_to_old)
 
     return fgraph, rv_values, memo
