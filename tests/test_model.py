@@ -1625,3 +1625,12 @@ class TestModelDebug:
             "Some of the observed values of variable y are associated with a non-finite logp" in out
         )
         assert "value = 0.53 -> logp = -inf" in out
+
+
+def test_model_logp_fast_compile():
+    # Issue #5618
+    with pm.Model() as m:
+        pm.Dirichlet("a", np.ones(3))
+
+    with pytensor.config.change_flags(mode="FAST_COMPILE"):
+        assert m.point_logps() == {"a": -1.5}

@@ -64,7 +64,7 @@ from pymc.logprob.abstract import (
     _logprob_helper,
     get_measurable_outputs,
 )
-from pymc.logprob.rewriting import construct_ir_fgraph
+from pymc.logprob.rewriting import cleanup_ir, construct_ir_fgraph
 from pymc.logprob.transforms import RVTransform, TransformValuesRewrite
 from pymc.logprob.utils import rvs_to_value_vars
 
@@ -107,6 +107,7 @@ def logp(
         fgraph, _, _ = construct_ir_fgraph({rv: value})
         [(ir_rv, ir_value)] = fgraph.preserve_rv_mappings.rv_values.items()
         expr = _logprob_helper(ir_rv, ir_value, **kwargs)
+        cleanup_ir([expr])
         if warn_missing_rvs:
             _warn_rvs_in_inferred_graph(expr)
         return expr
@@ -124,6 +125,7 @@ def logcdf(
         fgraph, rv_values, _ = construct_ir_fgraph({rv: value})
         [ir_rv] = fgraph.outputs
         expr = _logcdf_helper(ir_rv, value, **kwargs)
+        cleanup_ir([expr])
         if warn_missing_rvs:
             _warn_rvs_in_inferred_graph(expr)
         return expr
@@ -141,6 +143,7 @@ def icdf(
         fgraph, rv_values, _ = construct_ir_fgraph({rv: value})
         [ir_rv] = fgraph.outputs
         expr = _icdf_helper(ir_rv, value, **kwargs)
+        cleanup_ir([expr])
         if warn_missing_rvs:
             _warn_rvs_in_inferred_graph(expr)
         return expr
@@ -320,6 +323,8 @@ def factorized_joint_logprob(
         raise RuntimeError(
             f"The logprob terms of the following value variables could not be derived: {missing_value_terms}"
         )
+
+    cleanup_ir(logprob_vars.values())
 
     return logprob_vars
 

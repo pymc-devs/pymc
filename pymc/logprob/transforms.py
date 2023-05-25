@@ -88,11 +88,6 @@ from pytensor.tensor.math import (
     tanh,
     true_div,
 )
-from pytensor.tensor.rewriting.basic import (
-    register_specialize,
-    register_stabilize,
-    register_useless,
-)
 from pytensor.tensor.var import TensorVariable
 
 from pymc.logprob.abstract import (
@@ -106,7 +101,11 @@ from pymc.logprob.abstract import (
     _logprob,
     _logprob_helper,
 )
-from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
+from pymc.logprob.rewriting import (
+    PreserveRVMappings,
+    cleanup_ir_rewrites_db,
+    measurable_ir_rewrites_db,
+)
 from pymc.logprob.utils import check_potential_measurability, ignore_logprob
 
 
@@ -134,13 +133,18 @@ class TransformedVariable(Op):
 transformed_variable = TransformedVariable()
 
 
-@register_specialize
-@register_stabilize
-@register_useless
 @node_rewriter([TransformedVariable])
 def remove_TransformedVariables(fgraph, node):
     if isinstance(node.op, TransformedVariable):
         return [node.inputs[0]]
+
+
+cleanup_ir_rewrites_db.register(
+    "remove_TransformedVariables",
+    remove_TransformedVariables,
+    "cleanup",
+    "transform",
+)
 
 
 class RVTransform(abc.ABC):
