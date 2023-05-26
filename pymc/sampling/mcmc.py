@@ -90,7 +90,10 @@ _log = logging.getLogger(__name__)
 
 
 def instantiate_steppers(
-    model, steps: List[Step], selected_steps, step_kwargs=None
+    model,
+    steps: List[Step],
+    selected_steps: Dict[str, List[Any]],
+    step_kwargs: Optional[Dict[str, Dict]] = None,
 ) -> Union[Step, List[Step]]:
     """Instantiate steppers assigned to the model variables.
 
@@ -129,7 +132,14 @@ def instantiate_steppers(
 
     unused_args = set(step_kwargs).difference(used_keys)
     if unused_args:
-        raise ValueError("Unused step method arguments: %s" % unused_args)
+        s = "s" if len(unused_args) > 1 else ""
+        example_arg = sorted(unused_args)[0]
+        example_step = list(selected_steps.keys())[0]
+        raise ValueError(
+            f"Invalid key{s} found in step_kwargs: {unused_args}. "
+            "Keys must be step names and values valid kwargs for that stepper. "
+            f'Did you mean {{"{example_step}": {{"{example_arg}": ...}}}}?'
+        )
 
     if len(steps) == 1:
         return steps[0]
