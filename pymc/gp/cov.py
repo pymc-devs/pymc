@@ -18,7 +18,7 @@ import warnings
 from collections import Counter
 from functools import reduce
 from operator import add, mul
-from typing import Callable, Optional, Sequence, Type, Union
+from typing import Callable, Optional, Sequence, Union
 
 import numpy as np
 import pytensor.tensor as pt
@@ -84,23 +84,23 @@ class BaseCovariance:
     def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         raise NotImplementedError
 
-    def __add__(self, other):
+    def __add__(self, other) -> "Add":
         # If it's a scalar, cast as Constant covariance.  This allows validation for power spectral
         # density calc.
         if isinstance(other, numbers.Real):
             other = Constant(c=other)
         return Add([self, other])
 
-    def __mul__(self, other):
+    def __mul__(self, other) -> "Prod":
         return Prod([self, other])
 
-    def __radd__(self, other):
+    def __radd__(self, other) -> "Add":
         return self.__add__(other)
 
-    def __rmul__(self, other):
+    def __rmul__(self, other) -> "Prod":
         return self.__mul__(other)
 
-    def __pow__(self, other):
+    def __pow__(self, other) -> "Exponentiated":
         other = pt.as_tensor_variable(other).squeeze()
         if not other.ndim == 0:
             raise ValueError("A covariance function can only be exponentiated by a scalar value")
@@ -189,7 +189,7 @@ class Covariance(BaseCovariance):
 
 
 class Combination(Covariance):
-    def __init__(self, factor_list):
+    def __init__(self, factor_list: Sequence):
         """Use constituent factors to get input_dim and active_dims for the Combination covariance."""
 
         # Check if all input_dim are the same in factor_list
@@ -330,7 +330,6 @@ class Prod(Combination):
                 "The power spectral density of products of covariance "
                 "functions is not implemented."
             )
-
         return reduce(mul, self._merge_factors_psd(omega))
 
 
@@ -544,13 +543,6 @@ class Stationary(Covariance):
         return pt.alloc(1.0, X.shape[0])
 
     def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
-        X, Xs = self._slice(X, Xs)
-        r2 = self.square_dist(X, Xs)
-        return self.full_r2(r2)
-
-    def full_r2(self, r2: TensorLike) -> TensorVariable:
-        if hasattr(self, "full_r"):
-            return self.full_r(self._sqrt(r2))
         raise NotImplementedError
 
     def power_spectral_density(self, omega) -> TensorVariable:
@@ -568,7 +560,9 @@ class ExpQuad(Stationary):
 
     """
 
-    def full_r2(self, r2: TensorLike) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+        X, Xs = self._slice(X, Xs)
+        r2 = self.square_dist(X, Xs)
         return pt.exp(-0.5 * r2)
 
     def power_spectral_density(self, omega) -> TensorVariable:
@@ -607,7 +601,9 @@ class RatQuad(Stationary):
         super().__init__(input_dim, ls, ls_inv, active_dims)
         self.alpha = alpha
 
-    def full_r2(self, r2: TensorLike) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+        X, Xs = self._slice(X, Xs)
+        r2 = self.square_dist(X, Xs)
         return pt.power(
             (1.0 + 0.5 * r2 * (1.0 / self.alpha)),
             -1.0 * self.alpha,
@@ -625,7 +621,9 @@ class Matern52(Stationary):
                    \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]
     """
 
-    def full_r(self, r: TensorLike) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+        X, Xs = self._slice(X, Xs)
+        r = self.euclidean_dist(X, Xs)
         return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * pt.square(r)) * pt.exp(-1.0 * np.sqrt(5.0) * r)
 
     def power_spectral_density(self, omega) -> TensorVariable:
@@ -663,7 +661,9 @@ class Matern32(Stationary):
                   \mathrm{exp}\left[ - \frac{\sqrt{3(x - x')^2}}{\ell} \right]
     """
 
-    def full_r(self, r: TensorLike) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+        X, Xs = self._slice(X, Xs)
+        r = self.euclidean_dist(X, Xs)
         return (1.0 + np.sqrt(3.0) * r) * pt.exp(-np.sqrt(3.0) * r)
 
     def power_spectral_density(self, omega) -> TensorVariable:
@@ -700,7 +700,9 @@ class Matern12(Stationary):
         k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell} \right]
     """
 
-    def full_r(self, r: TensorLike) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+        X, Xs = self._slice(X, Xs)
+        r = self.euclidean_dist(X, Xs)
         return pt.exp(-r)
 
 
@@ -713,7 +715,9 @@ class Exponential(Stationary):
        k(x, x') = \mathrm{exp}\left[ -\frac{||x - x'||}{2\ell} \right]
     """
 
-    def full_r(self, r: TensorLike) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+        X, Xs = self._slice(X, Xs)
+        r = self.euclidean_dist(X, Xs)
         return pt.exp(-0.5 * r)
 
 
@@ -725,7 +729,9 @@ class Cosine(Stationary):
        k(x, x') = \mathrm{cos}\left( 2 \pi \frac{||x - x'||}{ \ell^2} \right)
     """
 
-    def full_r(self, r: TensorLike) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+        X, Xs = self._slice(X, Xs)
+        r = self.euclidean_dist(X, Xs)
         return pt.cos(2.0 * np.pi * r)
 
 
@@ -733,26 +739,8 @@ class Periodic(Stationary):
     r"""
     The Periodic kernel.
 
-    This can be used to wrap any `Stationary` kernel to transform it into a periodic
-    version. The canonical form (based on the `ExpQuad` kernel) is given by:
-
     .. math::
-
        k(x, x') = \mathrm{exp}\left( -\frac{\mathrm{sin}^2(\pi |x-x'| \frac{1}{T})}{2\ell^2} \right)
-
-    The derivation can be achieved by mapping the original inputs through the transformation
-    u = (cos(x), sin(x)).
-
-    Parameters
-    ----------
-    period: Period.  The period of the kernel.
-    ls: Lengthscale.  If input_dim > 1, a list or array of scalars or PyMC random
-        variables.  If input_dim == 1, a scalar or PyMC random variable.
-    ls_inv: Inverse lengthscale.  1 / ls.  One of ls or ls_inv must be provided.
-    base_kernel_class: Base kernel class.  The `IsotropicStationary` kernel to use
-        for the base behaviour, defaults to `ExpQuad`.
-    **base_kernel_kwargs: Additional kwargs passed to the base kernel for initialization.
-        For example, used to pass `alpha` to the `RatQuad` kernel.
 
     Notes
     -----
@@ -773,41 +761,19 @@ class Periodic(Stationary):
         ls=None,
         ls_inv=None,
         active_dims: Optional[Sequence[int]] = None,
-        base_kernel_class: Type[Stationary] = ExpQuad,
-        **base_kernel_kwargs,
     ):
         super().__init__(input_dim, ls, ls_inv, active_dims)
-
-        if period <= 0:
-            raise ValueError("Period parameter must be positive")
         self.period = period
-        self.base_kernel_class = base_kernel_class
-        self.base_kernel_kwargs = base_kernel_kwargs
-
-    @property
-    def base_kernel(self) -> Stationary:
-        """Instantiation of the base kernel."""
-        return self.base_kernel_class(
-            self.input_dim,
-            ls=self.ls,
-            active_dims=self.active_dims,
-            **self.base_kernel_kwargs,
-        )
 
     def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         if Xs is None:
             Xs = X
         f1 = pt.expand_dims(X, axis=(0,))
-        f2 = pt.expand_dims(X, axis=(1,))
+        f2 = pt.expand_dims(Xs, axis=(1,))
         r = np.pi * (f1 - f2) / self.period
-        if hasattr(self.base_kernel, "full_r"):
-            r = pt.sum(pt.abs(pt.sin(r) / self.ls), 2)
-            K = self.base_kernel.full_r(r)
-        else:
-            r2 = pt.sum(pt.square(pt.sin(r) / self.ls), 2)
-            K = self.base_kernel.full_r2(r2)
-        return K
+        r2 = pt.sum(pt.square(pt.sin(r) / self.ls), 2)
+        return pt.exp(-0.5 * r2)
 
 
 class Cosine(Stationary):
@@ -985,7 +951,7 @@ class WarpedInput(Covariance):
             raise TypeError("warp_func must be callable")
         if not isinstance(cov_func, Covariance):
             raise TypeError("Must be or inherit from the Covariance class")
-        self.w = handle_args(warp_func, args)
+        self.w = handle_args(warp_func)
         self.args = args
         self.cov_func = cov_func
 
@@ -1022,7 +988,7 @@ class Gibbs(Covariance):
     def __init__(
         self,
         input_dim: int,
-        lengthscale_func,
+        lengthscale_func: Callable,
         args=None,
         active_dims: Optional[Sequence[int]] = None,
     ):
@@ -1035,7 +1001,7 @@ class Gibbs(Covariance):
                 raise NotImplementedError(("Higher dimensional inputs ", "are untested"))
         if not callable(lengthscale_func):
             raise TypeError("lengthscale_func must be callable")
-        self.lfunc = handle_args(lengthscale_func, args)
+        self.lfunc = handle_args(lengthscale_func)
         self.args = args
 
     def square_dist(self, X, Xs=None):
@@ -1101,7 +1067,7 @@ class ScaledCov(Covariance):
         if not isinstance(cov_func, Covariance):
             raise TypeError("Must be or inherit from the Covariance class")
         self.cov_func = cov_func
-        self.scaling_func = handle_args(scaling_func, args)
+        self.scaling_func = handle_args(scaling_func)
         self.args = args
 
     def diag(self, X: TensorLike) -> TensorVariable:
@@ -1191,7 +1157,7 @@ class Coregion(Covariance):
         return pt.diag(self.B)[index.ravel()]
 
 
-def handle_args(func, args) -> Callable:
+def handle_args(func: Callable) -> Callable:
     def f(x, args):
         if args is None:
             return func(x)
