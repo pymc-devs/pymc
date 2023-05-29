@@ -41,6 +41,7 @@ __all__ = [
     "Cosine",
     "Periodic",
     "WarpedInput",
+    "WrappedPeriodic",
     "Gibbs",
     "Coregion",
     "ScaledCov",
@@ -502,12 +503,20 @@ class Stationary(Covariance):
 
     def euclidean_dist(self, X, Xs):
         r2 = self.square_dist(X, Xs)
+        return self._sqrt(r2)
+
+    def _sqrt(self, r2):
         return pt.sqrt(r2 + 1e-12)
 
     def diag(self, X):
         return pt.alloc(1.0, X.shape[0])
 
     def full(self, X, Xs=None):
+        X, Xs = self._slice(X, Xs)
+        r2 = self.square_dist(X, Xs)
+        return self.full_from_distance(r2, squared=True)
+    
+    def full_from_distance(self, dist, squared=False):
         raise NotImplementedError
 
     def power_spectral_density(self, omega):
@@ -544,8 +553,14 @@ class Periodic(Stationary):
         f1 = X.dimshuffle(0, "x", 1)
         f2 = Xs.dimshuffle("x", 0, 1)
         r = np.pi * (f1 - f2) / self.period
-        r = pt.sum(pt.square(pt.sin(r) / self.ls), 2)
-        return pt.exp(-0.5 * r)
+        r2 = pt.sum(pt.square(pt.sin(r) / self.ls), 2)
+        return self.full_from_distance(r2, squared=True)
+
+    def full_from_distance(self, dist, squared=False):
+        # NOTE: This is the same as the ExpQuad as we assume the periodicity
+        # has already been accounted for in the distance
+        r2 = dist if squared else dist ** 2
+        return pt.exp(-0.5 * r2)
 
 
 class ExpQuad(Stationary):
@@ -559,9 +574,9 @@ class ExpQuad(Stationary):
 
     """
 
-    def full(self, X, Xs=None):
-        X, Xs = self._slice(X, Xs)
-        return pt.exp(-0.5 * self.square_dist(X, Xs))
+    def full_from_distance(self, dist, squared=False):
+        r2 = dist if squared else dist ** 2
+        return pt.exp(-0.5 * r2)
 
     def power_spectral_density(self, omega):
         r"""
@@ -592,10 +607,10 @@ class RatQuad(Stationary):
         super().__init__(input_dim, ls, ls_inv, active_dims)
         self.alpha = alpha
 
-    def full(self, X, Xs=None):
-        X, Xs = self._slice(X, Xs)
+    def full_from_distance(self, dist, squared=False):
+        r2 = dist if squared else dist ** 2
         return pt.power(
-            (1.0 + 0.5 * self.square_dist(X, Xs) * (1.0 / self.alpha)),
+            (1.0 + 0.5 * r2 * (1.0 / self.alpha)),
             -1.0 * self.alpha,
         )
 
@@ -611,9 +626,8 @@ class Matern52(Stationary):
                    \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]
     """
 
-    def full(self, X, Xs=None):
-        X, Xs = self._slice(X, Xs)
-        r = self.euclidean_dist(X, Xs)
+    def full_from_distance(self, dist, squared=False):
+        r = self._sqrt(dist) if squared else dist
         return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * pt.square(r)) * pt.exp(-1.0 * np.sqrt(5.0) * r)
 
     def power_spectral_density(self, omega):
@@ -651,9 +665,8 @@ class Matern32(Stationary):
                   \mathrm{exp}\left[ - \frac{\sqrt{3(x - x')^2}}{\ell} \right]
     """
 
-    def full(self, X, Xs=None):
-        X, Xs = self._slice(X, Xs)
-        r = self.euclidean_dist(X, Xs)
+    def full_from_distance(self, dist, squared=False):
+        r = self._sqrt(dist) if squared else dist
         return (1.0 + np.sqrt(3.0) * r) * pt.exp(-np.sqrt(3.0) * r)
 
     def power_spectral_density(self, omega):
@@ -690,9 +703,8 @@ class Matern12(Stationary):
         k(x, x') = \mathrm{exp}\left[ -\frac{(x - x')^2}{\ell} \right]
     """
 
-    def full(self, X, Xs=None):
-        X, Xs = self._slice(X, Xs)
-        r = self.euclidean_dist(X, Xs)
+    def full_from_distance(self, dist, squared=False):
+        r = self._sqrt(dist) if squared else dist
         return pt.exp(-r)
 
 
@@ -705,9 +717,9 @@ class Exponential(Stationary):
        k(x, x') = \mathrm{exp}\left[ -\frac{||x - x'||}{2\ell} \right]
     """
 
-    def full(self, X, Xs=None):
-        X, Xs = self._slice(X, Xs)
-        return pt.exp(-0.5 * self.euclidean_dist(X, Xs))
+    def full_from_distance(self, dist, squared=False):
+        r = self._sqrt(dist) if squared else dist
+        return pt.exp(-0.5 * r)
 
 
 class Cosine(Stationary):
@@ -718,9 +730,9 @@ class Cosine(Stationary):
        k(x, x') = \mathrm{cos}\left( 2 \pi \frac{||x - x'||}{ \ell^2} \right)
     """
 
-    def full(self, X, Xs=None):
-        X, Xs = self._slice(X, Xs)
-        return pt.cos(2.0 * np.pi * self.euclidean_dist(X, Xs))
+    def full_from_distance(self, dist, squared=False):
+        r = self._sqrt(dist) if squared else dist
+        return pt.cos(2.0 * np.pi * r)
 
 
 class Linear(Covariance):
@@ -812,6 +824,52 @@ class WarpedInput(Covariance):
     def diag(self, X):
         X, _ = self._slice(X, None)
         return self.cov_func(self.w(X, self.args), diag=True)
+    
+
+class WrappedPeriodic(Covariance):
+    r"""
+    Wrap a stationary covariance function to make it periodic.
+
+    This is done by warping the input with the function
+
+    .. math::
+        \mathbf{u}(x) = \left(
+            \mathrm{sin} \left( \frac{2\pi x}{T} \right),
+            \mathrm{cos} \left( \frac{2\pi x}{T} \right)
+        \right)
+
+    Parameters
+    ----------
+    cov_func: Stationary
+        Base kernel or covariance function
+    period: Period
+    """
+
+    def __init__(
+        self,
+        input_dim: int,
+        cov_func: Stationary,
+        period,
+        active_dims: Optional[Sequence[int]] = None,
+    ):  
+        super().__init__(input_dim, active_dims)
+        if not isinstance(cov_func, Stationary):
+            raise TypeError("Must inherit from the Stationary class")
+        self.cov_func = cov_func
+        self.period = period
+
+    def full(self, X, Xs=None):
+        X, Xs = self._slice(X, Xs)
+        if Xs is None:
+            Xs = X
+        f1 = pt.expand_dims(X, axis=(0,))
+        f2 = pt.expand_dims(Xs, axis=(1,))
+        r = np.pi * (f1 - f2) / self.period
+        r2 = pt.sum(4 * pt.square(pt.sin(r) / self.cov_func.ls), 2)
+        return self.cov_func.full_from_distance(r2, squared=True)
+        
+    def diag(self, X):
+        return pt.alloc(1.0, X.shape[0])
 
 
 class Gibbs(Covariance):
