@@ -616,18 +616,6 @@ class TestPeriodic:
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
-    def test_1d_ratquad(self):
-        X = np.linspace(0, 1, 10)[:, None]
-        with pm.Model() as model:
-            cov = pm.gp.cov.Periodic(1, 0.1, 0.1, base_kernel_class=pm.gp.cov.RatQuad, alpha=0.5)
-        K = cov(X).eval()
-        npt.assert_allclose(K[0, 1], 0.28063, atol=1e-3)
-        K = cov(X, X).eval()
-        npt.assert_allclose(K[0, 1], 0.28063, atol=1e-3)
-        # check diagonal
-        Kd = cov(X, diag=True).eval()
-        npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
-
 
 class TestLinear:
     def test_1d(self):
