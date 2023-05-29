@@ -348,7 +348,7 @@ def sample(
     discard_tuned_samples: bool = True,
     compute_convergence_checks: bool = True,
     keep_warning_stat: bool = False,
-    return_inferencedata: Literal[True],
+    return_inferencedata: Literal[True] = True,
     idata_kwargs: Optional[Dict[str, Any]] = None,
     nuts_sampler_kwargs: Optional[Dict[str, Any]] = None,
     callback=None,
