@@ -1634,11 +1634,13 @@ def test_get_vars_in_point_list():
     with pm.Model() as modelA:
         pm.Normal("a", 0, 1)
         pm.Normal("b", 0, 1)
+        pm.Normal("d", 0, 1)
     with pm.Model() as modelB:
         a = pm.Normal("a", 0, 1)
         pm.Normal("c", 0, 1)
+        pm.ConstantData("d", 0)
 
-    point_list = [{"a": 0, "b": 0}]
+    point_list = [{"a": 0, "b": 0, "d": 0}]
     vars_in_trace = get_vars_in_point_list(point_list, modelB)
     assert set(vars_in_trace) == {a}
 
