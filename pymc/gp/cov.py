@@ -865,7 +865,7 @@ class WrappedPeriodic(Covariance):
         f1 = pt.expand_dims(X, axis=(0,))
         f2 = pt.expand_dims(Xs, axis=(1,))
         r = np.pi * (f1 - f2) / self.period
-        r2 = pt.sum(4 * pt.square(pt.sin(r) / self.cov_func.ls), 2)
+        r2 = 4 * pt.sum(pt.square(pt.sin(r) / self.cov_func.ls), 2)
         return self.cov_func.full_from_distance(r2, squared=True)
         
     def diag(self, X):
