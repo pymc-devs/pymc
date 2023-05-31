@@ -223,7 +223,7 @@ def test_warn_random_found_factorized_joint_logprob():
 
     y_vv = y_rv.clone()
 
-    with pytest.warns(UserWarning, match="RandomVariables were found in the derived graph"):
+    with pytest.warns(UserWarning, match="Random variables detected in the logp graph: {x}"):
         factorized_joint_logprob({y_rv: y_vv})
 
     with warnings.catch_warnings():
@@ -443,7 +443,9 @@ def test_warn_random_found_probability_inference(func, scipy_func, test_value):
         # In which case the inference should either return that or fail explicitly
         # For now, the lopgrob submodule treats the input as a stochastic value.
         rv = pt.exp(pm.Normal.dist(input_rv))
-        with pytest.warns(UserWarning, match="RandomVariables were found in the derived graph"):
+        with pytest.warns(
+            UserWarning, match="RandomVariables {input} were found in the derived graph"
+        ):
             assert func(rv, 0.0)
 
         res = func(rv, 0.0, warn_missing_rvs=False)

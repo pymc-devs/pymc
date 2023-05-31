@@ -36,19 +36,34 @@
 
 import warnings
 
-from typing import Callable, Dict, Generator, Iterable, List, Optional, Set, Tuple
+from typing import (
+    Callable,
+    Dict,
+    Generator,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 
 import numpy as np
 
+from pytensor import Variable
 from pytensor import tensor as pt
 from pytensor.graph import Apply, Op
 from pytensor.graph.basic import Constant, clone_get_equiv, graph_inputs, walk
 from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.op import HasInnerGraph
 from pytensor.link.c.type import CType
 from pytensor.raise_op import CheckAndRaise
+from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorVariable
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.util import makeiter
 
 
 def walk_model(
@@ -273,3 +288,23 @@ def diracdelta_logprob(op, values, *inputs, **kwargs):
     (const_value,) = inputs
     values, const_value = pt.broadcast_arrays(values, const_value)
     return pt.switch(pt.isclose(values, const_value, rtol=op.rtol, atol=op.atol), 0.0, -np.inf)
+
+
+def find_rvs_in_graph(vars: Union[Variable, Sequence[Variable]]) -> Set[Variable]:
+    """Assert that there are no `MeasurableVariable` nodes in a graph."""
+
+    def expand(r):
+        owner = r.owner
+        if owner:
+            inputs = list(reversed(owner.inputs))
+
+            if isinstance(owner.op, HasInnerGraph):
+                inputs += owner.op.inner_outputs
+
+            return inputs
+
+    return {
+        node
+        for node in walk(makeiter(vars), expand, False)
+        if node.owner and isinstance(node.owner.op, (RandomVariable, MeasurableVariable))
+    }
