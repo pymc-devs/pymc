@@ -39,7 +39,7 @@ from typing import List, Optional
 import pytensor.tensor as pt
 
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.raise_op import CheckAndRaise, ExceptionType
+from pytensor.raise_op import CheckAndRaise
 from pytensor.tensor.shape import SpecifyShape
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
@@ -106,15 +106,18 @@ MeasurableVariable.register(MeasurableCheckAndRaise)
 
 
 @_logprob.register(MeasurableCheckAndRaise)
-def logprob_assert(op, values, inner_rv, *assertion, **kwargs):
+def logprob_check_and_raise(op, values, inner_rv, *assertions, **kwargs):
+    from pymc.pytensorf import replace_rvs_by_values
+
     (value,) = values
     # transfer assertion from rv to value
-    value = op(assertion, value)
+    assertions = replace_rvs_by_values(assertions, rvs_to_values={inner_rv: value})
+    value = op(value, *assertions)
     return _logprob_helper(inner_rv, value)
 
 
 @node_rewriter([CheckAndRaise])
-def find_measurable_asserts(fgraph, node) -> Optional[List[MeasurableCheckAndRaise]]:
+def find_measurable_check_and_raise(fgraph, node) -> Optional[List[MeasurableCheckAndRaise]]:
     r"""Finds `AssertOp`\s for which a `logprob` can be computed."""
 
     if isinstance(node.op, MeasurableCheckAndRaise):
@@ -126,24 +129,19 @@ def find_measurable_asserts(fgraph, node) -> Optional[List[MeasurableCheckAndRai
         return None  # pragma: no cover
 
     base_rv, *conds = node.inputs
+    if not rv_map_feature.request_measurable([base_rv]):
+        return None
 
-    if not (
-        base_rv.owner
-        and isinstance(base_rv.owner.op, MeasurableVariable)
-        and base_rv not in rv_map_feature.rv_values
-    ):
-        return None  # pragma: no cover
-
-    exception_type = ExceptionType()
-    new_op = MeasurableCheckAndRaise(exc_type=exception_type)
+    op = node.op
+    new_op = MeasurableCheckAndRaise(exc_type=op.exc_type, msg=op.msg)
     new_rv = new_op.make_node(base_rv, *conds).default_output()
 
     return [new_rv]
 
 
 measurable_ir_rewrites_db.register(
-    "find_measurable_asserts",
-    find_measurable_asserts,
+    "find_measurable_check_and_raise",
+    find_measurable_check_and_raise,
     "basic",
     "assert",
 )

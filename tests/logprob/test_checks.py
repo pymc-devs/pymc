@@ -81,7 +81,7 @@ def test_assert_logprob():
     rv = pt.random.normal()
     assert_op = Assert("Test assert")
     # Example: Add assert that rv must be positive
-    assert_rv = assert_op(rv > 0, rv)
+    assert_rv = assert_op(rv, rv > 0)
     assert_rv.name = "assert_rv"
 
     assert_vv = assert_rv.clone()
@@ -90,8 +90,10 @@ def test_assert_logprob():
     # Check valid value is correct and doesn't raise
     # Since here the value to the rv satisfies the condition, no error is raised.
     valid_value = 3.0
-    with pytest.raises(AssertionError, match="Test assert"):
-        assert_logp.eval({assert_vv: valid_value})
+    np.testing.assert_allclose(
+        assert_logp.eval({assert_vv: valid_value}),
+        stats.norm.logpdf(valid_value),
+    )
 
     # Check invalid value
     # Since here the value to the rv is negative, an exception is raised as the condition is not met
