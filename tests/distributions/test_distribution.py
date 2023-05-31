@@ -49,7 +49,6 @@ from pymc.distributions.distribution import (
 from pymc.distributions.shape_utils import change_dist_size, rv_size_is_none, to_tuple
 from pymc.distributions.transforms import log
 from pymc.exceptions import BlockModelAccessError
-from pymc.logprob.abstract import get_measurable_outputs
 from pymc.logprob.basic import logcdf, logp
 from pymc.model import Deterministic, Model
 from pymc.pytensorf import collect_default_updates
@@ -567,6 +566,30 @@ class TestCustomSymbolicDist:
             pm.logp(ref_dist, ref_val).eval(),
         )
 
+    def test_inferred_logp_mixture(self):
+        import numpy as np
+
+        import pymc as pm
+
+        def shifted_normal(mu, sigma, size):
+            return mu + pm.Normal.dist(0, sigma, shape=size)
+
+        mus = [3.5, -4.3]
+        sds = [1.5, 2.3]
+        w = [0.3, 0.7]
+        with pm.Model() as m:
+            comp_dists = [
+                pm.DensityDist.dist(mus[0], sds[0], dist=shifted_normal),
+                pm.DensityDist.dist(mus[1], sds[1], dist=shifted_normal),
+            ]
+            pm.Mixture("mix", w=w, comp_dists=comp_dists)
+
+        test_value = 0.1
+        np.testing.assert_allclose(
+            m.compile_logp()({"mix": test_value}),
+            pm.logp(pm.NormalMixture.dist(w=w, mu=mus, sigma=sds), test_value).eval(),
+        )
+
 
 class TestSymbolicRandomVariable:
     def test_inline(self):
@@ -585,29 +608,6 @@ class TestSymbolicRandomVariable:
 
         x_inline = TestInlinedSymbolicRV([], [Flat.dist()], ndim_supp=0)()
         assert np.isclose(logp(x_inline, 0).eval(), 0)
-
-    def test_measurable_outputs_rng_ignored(self):
-        """Test that any RandomType outputs are ignored as a measurable_outputs"""
-
-        class TestSymbolicRV(SymbolicRandomVariable):
-            pass
-
-        next_rng_, dirac_delta_ = DiracDelta.dist(5).owner.outputs
-        next_rng, dirac_delta = TestSymbolicRV([], [next_rng_, dirac_delta_], ndim_supp=0)()
-        node = dirac_delta.owner
-        assert get_measurable_outputs(node.op, node) == [dirac_delta]
-
-    @pytest.mark.parametrize("default_output_idx", (0, 1))
-    def test_measurable_outputs_default_output(self, default_output_idx):
-        """Test that if provided, a default output is considered the only measurable_output"""
-
-        class TestSymbolicRV(SymbolicRandomVariable):
-            default_output = default_output_idx
-
-        dirac_delta_1_ = DiracDelta.dist(5)
-        dirac_delta_2_ = DiracDelta.dist(10)
-        node = TestSymbolicRV([], [dirac_delta_1_, dirac_delta_2_], ndim_supp=0)().owner
-        assert get_measurable_outputs(node.op, node) == [node.outputs[default_output_idx]]
 
 
 def test_tag_future_warning_dist():

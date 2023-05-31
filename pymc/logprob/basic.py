@@ -58,11 +58,11 @@ from pytensor.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
 from pymc.logprob.abstract import (
+    MeasurableVariable,
     _icdf_helper,
     _logcdf_helper,
     _logprob,
     _logprob_helper,
-    get_measurable_outputs,
 )
 from pymc.logprob.rewriting import cleanup_ir, construct_ir_fgraph
 from pymc.logprob.transforms import RVTransform, TransformValuesRewrite
@@ -71,7 +71,7 @@ from pymc.logprob.utils import rvs_to_value_vars
 TensorLike: TypeAlias = Union[Variable, float, np.ndarray]
 
 
-def _warn_rvs_in_inferred_graph(graph: Sequence[TensorVariable]):
+def _warn_rvs_in_inferred_graph(graph: Union[TensorVariable, Sequence[TensorVariable]]):
     """Issue warning if any RVs are found in graph.
 
     RVs are usually an (implicit) conditional input of the derived probability expression,
@@ -199,7 +199,7 @@ def factorized_joint_logprob(
         values in a log-probability.
     warn_missing_rvs
         When ``True``, issue a warning when a `RandomVariable` is found in
-        the graph and doesn't have a corresponding value variable specified in
+        the logp graph and doesn't have a corresponding value variable specified in
         `rv_values`.
     ir_rewriter
         Rewriter that produces the intermediate representation of Measurable Variables.
@@ -254,44 +254,32 @@ def factorized_joint_logprob(
     # Walk the graph from its inputs to its outputs and construct the
     # log-probability
     q = deque(fgraph.toposort())
-
     logprob_vars = {}
 
     while q:
         node = q.popleft()
 
-        outputs = get_measurable_outputs(node.op, node)
-
-        if not outputs:
+        if not isinstance(node.op, MeasurableVariable):
             continue
 
-        if any(o not in updated_rv_values for o in outputs):
-            if warn_missing_rvs:
-                warnings.warn(
-                    "Found a random variable that was neither among the observations "
-                    f"nor the conditioned variables: {outputs}.\n"
-                    "This variables is a clone and does not match the original one on identity."
-                )
-            continue
+        q_values = [replacements[q_rv] for q_rv in node.outputs if q_rv in updated_rv_values]
 
-        q_value_vars = [replacements[q_rv_var] for q_rv_var in outputs]
-
-        if not q_value_vars:
+        if not q_values:
             continue
 
         # Replace `RandomVariable`s in the inputs with value variables.
         # Also, store the results in the `replacements` map for the nodes
         # that follow.
         remapped_vars, _ = rvs_to_value_vars(
-            q_value_vars + list(node.inputs),
+            q_values + list(node.inputs),
             initial_replacements=replacements,
         )
-        q_value_vars = remapped_vars[: len(q_value_vars)]
-        q_rv_inputs = remapped_vars[len(q_value_vars) :]
+        q_values = remapped_vars[: len(q_values)]
+        q_rv_inputs = remapped_vars[len(q_values) :]
 
         q_logprob_vars = _logprob(
             node.op,
-            q_value_vars,
+            q_values,
             *q_rv_inputs,
             **kwargs,
         )
@@ -299,7 +287,7 @@ def factorized_joint_logprob(
         if not isinstance(q_logprob_vars, (list, tuple)):
             q_logprob_vars = [q_logprob_vars]
 
-        for q_value_var, q_logprob_var in zip(q_value_vars, q_logprob_vars):
+        for q_value_var, q_logprob_var in zip(q_values, q_logprob_vars):
             q_value_var = original_values[q_value_var]
 
             if q_value_var.name:
@@ -324,7 +312,11 @@ def factorized_joint_logprob(
             f"The logprob terms of the following value variables could not be derived: {missing_value_terms}"
         )
 
-    cleanup_ir(logprob_vars.values())
+    logprob_expressions = list(logprob_vars.values())
+    cleanup_ir(logprob_expressions)
+
+    if warn_missing_rvs:
+        _warn_rvs_in_inferred_graph(logprob_expressions)
 
     return logprob_vars
 
@@ -373,6 +365,7 @@ def joint_logp(
         # There seems to be an incorrect type hint in TransformValuesRewrite
         transform_rewrite = TransformValuesRewrite(values_to_transforms)  # type: ignore
 
+    kwargs.setdefault("warn_missing_rvs", False)
     temp_logp_terms = factorized_joint_logprob(
         rvs_to_values,
         extra_rewrites=transform_rewrite,

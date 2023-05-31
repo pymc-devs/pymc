@@ -35,7 +35,7 @@
 #   SOFTWARE.
 
 from copy import copy
-from typing import Callable, Dict, Iterable, List, Tuple, cast
+from typing import Callable, Dict, Iterable, List, Optional, Tuple, cast
 
 import numpy as np
 import pytensor
@@ -53,14 +53,10 @@ from pytensor.tensor.subtensor import Subtensor, indices_from_subtensor
 from pytensor.tensor.var import TensorVariable
 from pytensor.updates import OrderedUpdates
 
-from pymc.logprob.abstract import (
-    MeasurableVariable,
-    _get_measurable_outputs,
-    _logprob,
-    get_measurable_outputs,
-)
+from pymc.logprob.abstract import MeasurableVariable, _logprob
 from pymc.logprob.basic import factorized_joint_logprob
 from pymc.logprob.rewriting import (
+    PreserveRVMappings,
     construct_ir_fgraph,
     inc_subtensor_ops,
     logprob_rewrites_db,
@@ -314,7 +310,7 @@ def logprob_ScanRV(op, values, *inputs, name=None, **kwargs):
 
     def create_inner_out_logp(value_map: Dict[TensorVariable, TensorVariable]) -> TensorVariable:
         """Create a log-likelihood inner-output for a `Scan`."""
-        logp_parts = factorized_joint_logprob(value_map, warn_missing_rvs=False)
+        logp_parts = factorized_joint_logprob(value_map, warn_rvs=False)
         return logp_parts.values()
 
     logp_scan_args = convert_outer_out_to_in(
@@ -356,7 +352,7 @@ def logprob_ScanRV(op, values, *inputs, name=None, **kwargs):
     return logp_outputs
 
 
-@node_rewriter([Scan])
+@node_rewriter([Scan, Subtensor])
 def find_measurable_scans(fgraph, node):
     r"""Find `Scan`\s for which a `logprob` can be computed.
 
@@ -365,49 +361,26 @@ def find_measurable_scans(fgraph, node):
     parts of a `Scan`\s outputs (e.g. everything except the initial values).
     """
 
-    if not isinstance(node.op, Scan):
-        return None
-
-    if isinstance(node.op, MeasurableScan):
-        return None
-
     if not hasattr(fgraph, "shape_feature"):
         return None  # pragma: no cover
 
-    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
 
+    if isinstance(node.op, Subtensor):
+        node = node.inputs[0].owner
+        if not (node and isinstance(node.op, Scan)):
+            return None
+        if isinstance(node.op, MeasurableScan):
+            return None
+
     curr_scanargs = ScanArgs.from_node(node)
 
     # Find the un-output `MeasurableVariable`s created in the inner-graph
-    clients: Dict[Variable, List[Variable]] = {}
-
-    local_fgraph_topo = pytensor.graph.basic.io_toposort(
-        curr_scanargs.inner_inputs,
-        [o for o in curr_scanargs.inner_outputs if not isinstance(o.type, RandomType)],
-        clients=clients,
-    )
-    for n in local_fgraph_topo:
-        if isinstance(n.op, MeasurableVariable):
-            measurable_outputs = get_measurable_outputs(n.op, n)
-            # This variable's source of measure is used by another inner node,
-            # So we don't need it to be an output!
-            if not measurable_outputs:
-                continue
-
-            non_output_node_clients = [
-                c for c in clients[n] if c not in curr_scanargs.inner_outputs
-            ]
-
-            if non_output_node_clients:
-                # This node is a `MeasurableVariable`, but it depends on
-                # variable that's not being output?
-                # TODO: Why can't we make this a `MeasurableScan`?
-                return None
-
     if not any(out in rv_map_feature.rv_values for out in node.outputs):
+        # TODO: T
         # We need to remap user inputs that have been specified in terms of
         # `Subtensor`s of this `Scan`'s node's outputs.
         #
@@ -511,7 +484,7 @@ def find_measurable_scans(fgraph, node):
     return dict(zip(node.outputs, new_node.outputs))
 
 
-@node_rewriter([Scan])
+@node_rewriter([Scan, Subtensor])
 def add_opts_to_inner_graphs(fgraph, node):
     """Update the `Mode`(s) used to compile the inner-graph of a `Scan` `Op`.
 
@@ -519,9 +492,12 @@ def add_opts_to_inner_graphs(fgraph, node):
     (i.e. inner-graph) of a `Scan` loop.
     """
 
-    if not isinstance(node.op, Scan):
-        return None
+    if isinstance(node.op, Subtensor):
+        node = node.inputs[0].owner
+        if not (node and isinstance(node.op, Scan)):
+            return None
 
+    # TODO: This might not be needed now that we only target relevant nodes
     # Avoid unnecessarily re-applying this rewrite
     if getattr(node.op.mode, "had_logprob_rewrites", False):
         return None
@@ -542,32 +518,9 @@ def add_opts_to_inner_graphs(fgraph, node):
     return dict(zip(node.outputs, new_node.outputs))
 
 
-@_get_measurable_outputs.register(MeasurableScan)
-def _get_measurable_outputs_MeasurableScan(op: Scan, node):
-    """Collect measurable outputs for Measurable Scans"""
-    inner_out_from_outer_out_map = op.get_oinp_iinp_iout_oout_mappings()["inner_out_from_outer_out"]
-    inner_outs = op.inner_outputs
-
-    # Measurable scan outputs are those whose inner scan output counterparts are also measurable
-    measurable_outputs = []
-    for out_idx, out in enumerate(node.outputs):
-        [inner_out_idx] = inner_out_from_outer_out_map[out_idx]
-        inner_out = inner_outs[inner_out_idx]
-        inner_out_node = inner_out.owner
-        if isinstance(
-            inner_out_node.op, MeasurableVariable
-        ) and inner_out in get_measurable_outputs(inner_out_node.op, inner_out_node):
-            measurable_outputs.append(out)
-
-    return measurable_outputs
-
-
 measurable_ir_rewrites_db.register(
     "add_opts_to_inner_graphs",
     add_opts_to_inner_graphs,
-    # out2in(
-    #     add_opts_to_inner_graphs, name="add_opts_to_inner_graphs", ignore_newtrees=True
-    # ),
     "basic",
     "scan",
 )

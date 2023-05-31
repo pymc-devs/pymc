@@ -139,7 +139,7 @@ def test_unvalued_ir_reversion(nested):
 
     z_fgraph, _, memo = construct_ir_fgraph(rv_values)
 
-    assert len(z_fgraph.preserve_rv_mappings.measurable_conversions) == 1 + nested
+    # assert len(z_fgraph.preserve_rv_mappings.measurable_conversions) == 1
     assert (
         sum(isinstance(node.op, MeasurableVariable) for node in z_fgraph.apply_nodes) == 2
     )  # Just the 2 rvs

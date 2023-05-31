@@ -14,7 +14,7 @@
 import functools as ft
 import itertools as it
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pytensor
@@ -24,7 +24,7 @@ import pytest
 from numpy import random as nr
 from numpy import testing as npt
 from pytensor.compile.mode import Mode
-from pytensor.graph.basic import walk
+from pytensor.graph.basic import Variable, walk
 from pytensor.graph.op import HasInnerGraph
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.tensor import TensorVariable
@@ -46,6 +46,7 @@ from pymc.pytensorf import (
     inputvars,
     intX,
     local_check_parameter_to_ninf_switch,
+    makeiter,
 )
 
 # This mode can be used for tests where model compilations takes the bulk of the runtime
@@ -963,7 +964,7 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
     )
 
 
-def assert_no_rvs(var):
+def assert_no_rvs(vars: Union[Variable, Sequence[Variable]]):
     """Assert that there are no `MeasurableVariable` nodes in a graph."""
 
     def expand(r):
@@ -976,6 +977,6 @@ def assert_no_rvs(var):
 
             return inputs
 
-    for v in walk([var], expand, False):
+    for v in walk(makeiter(vars), expand, False):
         if v.owner and isinstance(v.owner.op, (RandomVariable, MeasurableVariable)):
             raise AssertionError(f"RV found in graph: {v}")

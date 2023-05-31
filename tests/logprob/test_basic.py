@@ -223,7 +223,7 @@ def test_warn_random_found_factorized_joint_logprob():
 
     y_vv = y_rv.clone()
 
-    with pytest.warns(UserWarning, match="Found a random variable that was neither among"):
+    with pytest.warns(UserWarning, match="RandomVariables were found in the derived graph"):
         factorized_joint_logprob({y_rv: y_vv})
 
     with warnings.catch_warnings():

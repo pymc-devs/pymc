@@ -35,9 +35,9 @@ from pymc.distributions.distribution import (
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
 from pymc.distributions.transforms import _default_transform
 from pymc.distributions.truncated import Truncated
-from pymc.logprob.abstract import _logcdf, _logcdf_helper, _logprob, _logprob_helper
+from pymc.logprob.abstract import _logcdf, _logcdf_helper, _logprob
+from pymc.logprob.basic import logp
 from pymc.logprob.transforms import IntervalTransform
-from pymc.logprob.utils import ignore_logprob
 from pymc.pytensorf import floatX
 from pymc.util import check_dist_not_registered
 from pymc.vartypes import continuous_types, discrete_types
@@ -267,10 +267,6 @@ class Mixture(Distribution):
 
         assert weights_ndim_batch == 0
 
-        # Component RVs terms are accounted by the Mixture logprob, so they can be
-        # safely ignored in the logprob graph
-        components = [ignore_logprob(component) for component in components]
-
         # Create a OpFromGraph that encapsulates the random generating process
         # Create dummy input variables with the same type as the ones provided
         weights_ = weights.type()
@@ -350,10 +346,10 @@ def marginal_mixture_logprob(op, values, rng, weights, *components, **kwargs):
     if len(components) == 1:
         # Need to broadcast value across mixture axis
         mix_axis = -components[0].owner.op.ndim_supp - 1
-        components_logp = _logprob_helper(components[0], pt.expand_dims(value, mix_axis))
+        components_logp = logp(components[0], pt.expand_dims(value, mix_axis))
     else:
         components_logp = pt.stack(
-            [_logprob_helper(component, value) for component in components],
+            [logp(component, value) for component in components],
             axis=-1,
         )
 

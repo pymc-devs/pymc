@@ -36,7 +36,6 @@ from pytensor.tensor.var import TensorConstant, TensorVariable
 
 import pymc as pm
 
-from pymc.logprob.abstract import _get_measurable_outputs
 from pymc.pytensorf import convert_observed_data
 
 __all__ = [
@@ -133,11 +132,6 @@ class MinibatchIndexRV(IntegersRV):
         if rng is None:
             rng = pytensor.shared(np.random.default_rng())
         return super().make_node(rng, *args, **kwargs)
-
-
-@_get_measurable_outputs.register(MinibatchIndexRV)
-def minibatch_index_rv_measuarable_outputs(op, node):
-    return []
 
 
 minibatch_index = MinibatchIndexRV()
