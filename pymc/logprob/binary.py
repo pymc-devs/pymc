@@ -20,18 +20,16 @@ from pytensor.graph.basic import Node
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scalar.basic import GE, GT, LE, LT, Invert
-from pytensor.tensor import TensorVariable
 from pytensor.tensor.math import ge, gt, invert, le, lt
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,
-    MeasurableVariable,
     _logcdf_helper,
     _logprob,
     _logprob_helper,
 )
-from pymc.logprob.rewriting import measurable_ir_rewrites_db
-from pymc.logprob.utils import check_potential_measurability, ignore_logprob
+from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
+from pymc.logprob.utils import check_potential_measurability
 
 
 class MeasurableComparison(MeasurableElemwise):
@@ -44,44 +42,31 @@ class MeasurableComparison(MeasurableElemwise):
 def find_measurable_comparisons(
     fgraph: FunctionGraph, node: Node
 ) -> Optional[List[MeasurableComparison]]:
-    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
 
-    if isinstance(node.op, MeasurableComparison):
-        return None  # pragma: no cover
-
-    measurable_inputs = [
-        (inp, idx)
-        for idx, inp in enumerate(node.inputs)
-        if inp.owner
-        and isinstance(inp.owner.op, MeasurableVariable)
-        and inp not in rv_map_feature.rv_values
-    ]
+    measurable_inputs = rv_map_feature.request_measurable(node.inputs)
 
     if len(measurable_inputs) != 1:
         return None
 
     # Make the measurable base_var always be the first input to the MeasurableComparison node
-    base_var: TensorVariable = measurable_inputs[0][0]
+    [measurable_var] = measurable_inputs
+    measurable_var_idx = node.inputs.index(measurable_var)
 
     # Check that the other input is not potentially measurable, in which case this rewrite
     # would be invalid
-    const = tuple(inp for inp in node.inputs if inp is not base_var)
+    const = node.inputs[(measurable_var_idx + 1) % 2]
 
     # check for potential measurability of const
-    if not check_potential_measurability(const, rv_map_feature):
+    if not check_potential_measurability([const], rv_map_feature):
         return None
-
-    const = const[0]
-
-    # Make base_var unmeasurable
-    unmeasurable_base_var = ignore_logprob(base_var)
 
     node_scalar_op = node.op.scalar_op
 
     # Change the Op if the base_var is the second input in node.inputs. e.g. pt.lt(const, dist) -> pt.gt(dist, const)
-    if measurable_inputs[0][1] == 1:
+    if measurable_var_idx == 1:
         if isinstance(node_scalar_op, LT):
             node_scalar_op = GT()
         elif isinstance(node_scalar_op, GT):
@@ -92,8 +77,7 @@ def find_measurable_comparisons(
             node_scalar_op = GE()
 
     compared_op = MeasurableComparison(node_scalar_op)
-    compared_rv = compared_op.make_node(unmeasurable_base_var, const).default_output()
-    compared_rv.name = node.outputs[0].name
+    compared_rv = compared_op.make_node(measurable_var, const).default_output()
     return [compared_rv]
 
 
@@ -146,32 +130,21 @@ class MeasurableBitwise(MeasurableElemwise):
 
 @node_rewriter(tracks=[invert])
 def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableBitwise]]:
-    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
 
-    if isinstance(node.op, MeasurableBitwise):
-        return None  # pragma: no cover
-
     base_var = node.inputs[0]
-    if not (
-        base_var.owner
-        and isinstance(base_var.owner.op, MeasurableVariable)
-        and base_var not in rv_map_feature.rv_values
-    ):
-        return None
 
     if not base_var.dtype.startswith("bool"):
         raise None
 
-    # Make base_var unmeasurable
-    unmeasurable_base_var = ignore_logprob(base_var)
+    if not rv_map_feature.request_measurable([base_var]):
+        return None
 
     node_scalar_op = node.op.scalar_op
-
     bitwise_op = MeasurableBitwise(node_scalar_op)
-    bitwise_rv = bitwise_op.make_node(unmeasurable_base_var).default_output()
-    bitwise_rv.name = node.outputs[0].name
+    bitwise_rv = bitwise_op.make_node(base_var).default_output()
     return [bitwise_rv]
 
 

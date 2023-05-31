@@ -33,6 +33,7 @@
 #   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
+import re
 
 import numpy as np
 import pytensor
@@ -43,7 +44,7 @@ from pytensor.raise_op import Assert
 from scipy import stats
 
 from pymc.distributions import Dirichlet
-from pymc.logprob.joint_logprob import factorized_joint_logprob
+from pymc.logprob.basic import factorized_joint_logprob
 from tests.distributions.test_multivariate import dirichlet_logpdf
 
 

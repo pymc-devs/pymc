@@ -42,15 +42,9 @@ import pytensor.tensor as pt
 from pytensor.graph.basic import Apply, Constant, Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op, compute_test_value
-from pytensor.graph.rewriting.basic import (
-    EquilibriumGraphRewriter,
-    node_rewriter,
-    pre_greedy_node_rewriter,
-)
+from pytensor.graph.rewriting.basic import node_rewriter, pre_greedy_node_rewriter
 from pytensor.ifelse import IfElse, ifelse
-from pytensor.scalar.basic import Switch
-from pytensor.tensor.basic import Join, MakeVector
-from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.basic import Join, MakeVector, switch
 from pytensor.tensor.random.rewriting import (
     local_dimshuffle_rv_lift,
     local_rv_size_lift,
@@ -71,13 +65,12 @@ from pytensor.tensor.var import TensorVariable
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
 from pymc.logprob.rewriting import (
+    PreserveRVMappings,
     local_lift_DiracDelta,
-    logprob_rewrites_db,
     measurable_ir_rewrites_db,
     subtensor_ops,
 )
 from pymc.logprob.tensor import naive_bcast_rv_lift
-from pymc.logprob.utils import ignore_logprob, ignore_logprob_multiple_vars
 
 
 def is_newaxis(x):
@@ -272,7 +265,7 @@ def get_stack_mixture_vars(
 
 
 @node_rewriter(subtensor_ops)
-def mixture_replace(fgraph, node):
+def find_measurable_index_mixture(fgraph, node):
     r"""Identify mixture sub-graphs and replace them with a place-holder `Op`.
 
     The basic idea is to find ``stack(mixture_comps)[I_rv]``, where
@@ -281,28 +274,9 @@ def mixture_replace(fgraph, node):
     From these terms, new terms ``Z_rv[i] = mixture_comps[i][i == I_rv]`` are
     created for each ``i`` in ``enumerate(mixture_comps)``.
     """
-    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
-        return None  # pragma: no cover
-
-    old_mixture_rv = node.default_output()
-
-    mixture_rvs, join_axis = get_stack_mixture_vars(node)
-
-    # We don't support symbolic join axis
-    if mixture_rvs is None or not isinstance(join_axis, (NoneTypeT, Constant)):
-        return None
-
-    # Check that all components are MeasurableVariables and none is already conditioned on
-    if not all(
-        (
-            rv.owner is not None
-            and isinstance(rv.owner.op, MeasurableVariable)
-            and rv not in rv_map_feature.rv_values
-        )
-        for rv in mixture_rvs
-    ):
         return None  # pragma: no cover
 
     mixing_indices = node.inputs[1:]
@@ -318,15 +292,15 @@ def mixture_replace(fgraph, node):
         ):
             return None
 
-    # We loop through mixture components and collect all the array elements
-    # that belong to each one (by way of their indices).
-    new_mixture_rvs = []
-    for i, component_rv in enumerate(mixture_rvs):
-        # We create custom types for the mixture components and assign them
-        # null `get_measurable_outputs` dispatches so that they aren't
-        # erroneously encountered in places like `factorized_joint_logprob`.
-        new_comp_rv = ignore_logprob(component_rv)
-        new_mixture_rvs.append(new_comp_rv)
+    old_mixture_rv = node.default_output()
+    mixture_rvs, join_axis = get_stack_mixture_vars(node)
+
+    # We don't support symbolic join axis
+    if mixture_rvs is None or not isinstance(join_axis, (NoneTypeT, Constant)):
+        return None
+
+    if rv_map_feature.request_measurable(mixture_rvs) != mixture_rvs:
+        return None
 
     # Replace this sub-graph with a `MixtureRV`
     mix_op = MixtureRV(
@@ -334,7 +308,7 @@ def mixture_replace(fgraph, node):
         old_mixture_rv.dtype,
         old_mixture_rv.broadcastable,
     )
-    new_node = mix_op.make_node(*([join_axis] + mixing_indices + new_mixture_rvs))
+    new_node = mix_op.make_node(*([join_axis] + mixing_indices + mixture_rvs))
 
     new_mixture_rv = new_node.default_output()
 
@@ -346,54 +320,36 @@ def mixture_replace(fgraph, node):
 
         new_mixture_rv.tag.test_value = old_mixture_rv.tag.test_value
 
-    if old_mixture_rv.name:
-        new_mixture_rv.name = f"{old_mixture_rv.name}-mixture"
-
     return [new_mixture_rv]
 
 
-@node_rewriter((Elemwise,))
-def switch_mixture_replace(fgraph, node):
-    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
+@node_rewriter([switch])
+def find_measurable_switch_mixture(fgraph, node):
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
 
-    if not isinstance(node.op.scalar_op, Switch):
-        return None  # pragma: no cover
-
     old_mixture_rv = node.default_output()
-    # idx, component_1, component_2 = node.inputs
+    idx, *components = node.inputs
 
-    mixture_rvs = []
-
-    for component_rv in node.inputs[1:]:
-        if not (
-            component_rv.owner
-            and isinstance(component_rv.owner.op, MeasurableVariable)
-            and component_rv not in rv_map_feature.rv_values
-        ):
-            return None
-        new_comp_rv = ignore_logprob(component_rv)
-        mixture_rvs.append(new_comp_rv)
+    if rv_map_feature.request_measurable(components) != components:
+        return None
 
     mix_op = MixtureRV(
         2,
         old_mixture_rv.dtype,
         old_mixture_rv.broadcastable,
     )
-    new_node = mix_op.make_node(*([NoneConst, as_nontensor_scalar(node.inputs[0])] + mixture_rvs))
-
-    new_mixture_rv = new_node.default_output()
+    new_mixture_rv = mix_op.make_node(
+        *([NoneConst, as_nontensor_scalar(node.inputs[0])] + components)
+    ).default_output()
 
     if pytensor.config.compute_test_value != "off":
         if not hasattr(old_mixture_rv.tag, "test_value"):
             compute_test_value(node)
 
         new_mixture_rv.tag.test_value = old_mixture_rv.tag.test_value
-
-    if old_mixture_rv.name:
-        new_mixture_rv.name = f"{old_mixture_rv.name}-mixture"
 
     return [new_mixture_rv]
 
@@ -475,12 +431,16 @@ def logprob_MixtureRV(
     return logp_val
 
 
-logprob_rewrites_db.register(
-    "mixture_replace",
-    EquilibriumGraphRewriter(
-        [mixture_replace, switch_mixture_replace],
-        max_use_ratio=pytensor.config.optdb__max_use_ratio,
-    ),
+measurable_ir_rewrites_db.register(
+    "find_measurable_index_mixture",
+    find_measurable_index_mixture,
+    "basic",
+    "mixture",
+)
+
+measurable_ir_rewrites_db.register(
+    "find_measurable_switch_mixture",
+    find_measurable_switch_mixture,
     "basic",
     "mixture",
 )
@@ -495,30 +455,17 @@ MeasurableVariable.register(MeasurableIfElse)
 
 @node_rewriter([IfElse])
 def find_measurable_ifelse_mixture(fgraph, node):
-    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
 
-    if isinstance(node.op, MeasurableIfElse):
-        return None
-
-    # Check if all components are unvalued measuarable variables
     if_var, *base_rvs = node.inputs
 
-    if not all(
-        (
-            rv.owner is not None
-            and isinstance(rv.owner.op, MeasurableVariable)
-            and rv not in rv_map_feature.rv_values
-        )
-        for rv in base_rvs
-    ):
-        return None  # pragma: no cover
+    if rv_map_feature.request_measurable(base_rvs) != base_rvs:
+        return None
 
-    unmeasurable_base_rvs = ignore_logprob_multiple_vars(base_rvs, rv_map_feature.rv_values)
-
-    return MeasurableIfElse(n_outs=node.op.n_outs).make_node(if_var, *unmeasurable_base_rvs).outputs
+    return MeasurableIfElse(n_outs=node.op.n_outs).make_node(if_var, *base_rvs).outputs
 
 
 measurable_ir_rewrites_db.register(

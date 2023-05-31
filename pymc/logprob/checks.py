@@ -44,7 +44,6 @@ from pytensor.tensor.shape import SpecifyShape
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
-from pymc.logprob.utils import ignore_logprob
 
 
 class MeasurableSpecifyShape(SpecifyShape):
@@ -86,10 +85,7 @@ def find_measurable_specify_shapes(fgraph, node) -> Optional[List[MeasurableSpec
         return None  # pragma: no cover
 
     new_op = MeasurableSpecifyShape()
-    # Make base_var unmeasurable
-    unmeasurable_base_rv = ignore_logprob(base_rv)
-    new_rv = new_op.make_node(unmeasurable_base_rv, *shape).default_output()
-    new_rv.name = rv.name
+    new_rv = new_op.make_node(base_rv, *shape).default_output()
 
     return [new_rv]
 
@@ -129,8 +125,6 @@ def find_measurable_asserts(fgraph, node) -> Optional[List[MeasurableCheckAndRai
     if rv_map_feature is None:
         return None  # pragma: no cover
 
-    rv = node.outputs[0]
-
     base_rv, *conds = node.inputs
 
     if not (
@@ -142,10 +136,7 @@ def find_measurable_asserts(fgraph, node) -> Optional[List[MeasurableCheckAndRai
 
     exception_type = ExceptionType()
     new_op = MeasurableCheckAndRaise(exc_type=exception_type)
-    # Make base_var unmeasurable
-    unmeasurable_base_rv = ignore_logprob(base_rv)
-    new_rv = new_op.make_node(unmeasurable_base_rv, *conds).default_output()
-    new_rv.name = rv.name
+    new_rv = new_op.make_node(base_rv, *conds).default_output()
 
     return [new_rv]
 

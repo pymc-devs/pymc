@@ -39,12 +39,9 @@ from typing import Optional
 import numpy as np
 
 from pytensor import tensor as pt
-from pytensor.tensor.var import TensorVariable
 from scipy import stats as stats
 
-from pymc.logprob import factorized_joint_logprob, icdf, logcdf, logp
-from pymc.logprob.abstract import get_measurable_outputs
-from pymc.logprob.utils import ignore_logprob
+from pymc.logprob import icdf, logcdf, logp
 
 
 def scipy_logprob(obs, p):
@@ -116,52 +113,3 @@ def scipy_logprob_tester(
     np.testing.assert_array_equal(pytensor_res_val.shape, numpy_res.shape)
 
     np.testing.assert_array_almost_equal(pytensor_res_val, numpy_res, 4)
-
-
-def test_ignore_logprob_basic():
-    x = Normal.dist()
-    (measurable_x_out,) = get_measurable_outputs(x.owner.op, x.owner)
-    assert measurable_x_out is x.owner.outputs[1]
-
-    new_x = ignore_logprob(x)
-    assert new_x is not x
-    assert isinstance(new_x.owner.op, Normal)
-    assert type(new_x.owner.op).__name__ == "UnmeasurableNormalRV"
-    # Confirm that it does not have measurable output
-    assert get_measurable_outputs(new_x.owner.op, new_x.owner) is None
-
-    # Test that it will not clone a variable that is already unmeasurable
-    new_new_x = ignore_logprob(new_x)
-    assert new_new_x is new_x
-
-
-def test_ignore_logprob_model():
-    # logp that does not depend on input
-    def logp(value, x):
-        return value
-
-    with Model() as m:
-        x = Normal.dist()
-        y = CustomDist("y", x, logp=logp)
-    with pytest.warns(
-        UserWarning,
-        match="Found a random variable that was neither among the observations "
-        "nor the conditioned variables",
-    ):
-        joint_logp(
-            [y],
-            rvs_to_values={y: y.type()},
-            rvs_to_transforms={},
-        )
-
-    # The above warning should go away with ignore_logprob.
-    with Model() as m:
-        x = ignore_logprob(Normal.dist())
-        y = CustomDist("y", x, logp=logp)
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        assert joint_logp(
-            [y],
-            rvs_to_values={y: y.type()},
-            rvs_to_transforms={},
-        )

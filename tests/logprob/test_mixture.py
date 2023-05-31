@@ -933,8 +933,6 @@ def test_switch_mixture():
 
     fgraph, _, _ = construct_ir_fgraph({Z1_rv: z_vv, I_rv: i_vv})
 
-    assert fgraph.outputs[0].name == "Z1-mixture"
-
     # building the identical graph but with a stack to check that mixture computations are identical
 
     Z2_rv = pt.stack((X_rv, Y_rv))[I_rv]

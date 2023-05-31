@@ -33,19 +33,27 @@
 #   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
+import warnings
 
-from typing import Dict, Optional, Sequence, Tuple
+from collections import deque
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import pytensor.tensor as pt
 
+from pytensor import config
 from pytensor.compile.mode import optdb
-from pytensor.graph.basic import Constant, Variable, ancestors
+from pytensor.graph.basic import Constant, Variable, ancestors, io_toposort
 from pytensor.graph.features import Feature
 from pytensor.graph.fg import FunctionGraph
-from pytensor.graph.rewriting.basic import GraphRewriter, node_rewriter
+from pytensor.graph.rewriting.basic import (
+    ChangeTracker,
+    EquilibriumGraphRewriter,
+    GraphRewriter,
+    node_rewriter,
+)
 from pytensor.graph.rewriting.db import (
-    EquilibriumDB,
     LocalGroupDB,
+    RewriteDatabase,
     RewriteDatabaseQuery,
     SequenceDB,
     TopoDB,
@@ -72,18 +80,103 @@ inc_subtensor_ops = (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
 subtensor_ops = (AdvancedSubtensor, AdvancedSubtensor1, Subtensor)
 
 
-class NoCallbackEquilibriumDB(EquilibriumDB):
-    r"""An `EquilibriumDB` that doesn't hide its exceptions.
+class MeasurableEquilibriumGraphRewriter(EquilibriumGraphRewriter):
+    """EquilibriumGraphRewriter focused on IR measurable rewrites.
 
-    By setting `failure_callback` to ``None`` in the `EquilibriumGraphRewriter`\s
-    that `EquilibriumDB` generates, we're able to directly emit the desired
-    exceptions from within the `NodeRewriter`\s themselves.
+    This is a stripped down version of the EquilibriumGraphRewriter,
+    which specifically targets nodes in `PreserveRVMAppings.needs_measuring`
+    that are not yet measurable.
+
+    """
+
+    def apply(self, fgraph):
+        rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+        if not rv_map_feature:
+            return None
+
+        change_tracker = ChangeTracker()
+        fgraph.attach_feature(change_tracker)
+
+        changed = True
+        max_use_abort = False
+        rewriter_name = None
+        global_process_count = {}
+
+        for rewriter in self.global_rewriters + list(self.get_node_rewriters()):
+            global_process_count.setdefault(rewriter, 0)
+
+        while changed and not max_use_abort:
+            changed = False
+            max_nb_nodes = len(fgraph.apply_nodes)
+            max_use = max_nb_nodes * self.max_use_ratio
+
+            # Apply global rewriters
+            for grewrite in self.global_rewriters:
+                change_tracker.reset()
+                grewrite.apply(fgraph)
+                if change_tracker.changed:
+                    global_process_count[grewrite] += 1
+                    changed = True
+                    if global_process_count[grewrite] > max_use:
+                        max_use_abort = True
+                        rewriter_name = getattr(grewrite, "name", None) or getattr(
+                            grewrite, "__name__", ""
+                        )
+
+            # Apply local node rewriters
+            q = deque(io_toposort(fgraph.inputs, fgraph.outputs))
+            while q:
+                node = q.pop()
+                if node not in fgraph.apply_nodes:
+                    continue
+                # This is where we filter only those nodes we care about:
+                # Nodes that have variables that we want to measure and are not yet measurable
+                if isinstance(node.op, MeasurableVariable):
+                    continue
+                if not any(out in rv_map_feature.needs_measuring for out in node.outputs):
+                    continue
+                for node_rewriter in self.node_tracker.get_trackers(node.op):
+                    node_rewriter_change = self.process_node(fgraph, node, node_rewriter)
+                    if not node_rewriter_change:
+                        continue
+                    global_process_count[node_rewriter] += 1
+                    changed = True
+                    if global_process_count[node_rewriter] > max_use:
+                        max_use_abort = True
+                        rewriter_name = getattr(node_rewriter, "name", None) or getattr(
+                            node_rewriter, "__name__", ""
+                        )
+                    # If we converted to a MeasurableVariable we're done here!
+                    if node not in fgraph.apply_nodes or isinstance(node.op, MeasurableVariable):
+                        # go to next node
+                        break
+
+        if max_use_abort:
+            msg = (
+                f"{type(self).__name__} max'ed out by {rewriter_name}."
+                "You can safely raise the current threshold of "
+                f"{config.optdb__max_use_ratio} with the option `optdb__max_use_ratio`."
+            )
+            if config.on_opt_error == "raise":
+                raise AssertionError(msg)
+            else:
+                warnings.warn(msg)
+        fgraph.remove_feature(change_tracker)
+
+
+class MeasurableEquilibriumDB(RewriteDatabase):
+    """A database of rewrites that should be applied until equilibrium is reached.
+
+    This will return a MeasurableEquilibriumGraphRewriter when queried.
+
     """
 
     def query(self, *tags, **kwtags):
-        res = super().query(*tags, **kwtags)
-        res.failure_callback = None
-        return res
+        rewriters = super().query(*tags, **kwtags)
+        return MeasurableEquilibriumGraphRewriter(
+            rewriters,
+            max_use_ratio=config.optdb__max_use_ratio,
+        )
 
 
 class PreserveRVMappings(Feature):
@@ -116,7 +209,7 @@ class PreserveRVMappings(Feature):
         """
         self.rv_values = rv_values
         self.original_values = {v: v for v in rv_values.values()}
-        self.measurable_conversions: Dict[Variable, Variable] = {}
+        self.needs_measuring = set(rv_values.keys())
 
     def on_attach(self, fgraph):
         if hasattr(fgraph, "preserve_rv_mappings"):
@@ -163,14 +256,21 @@ class PreserveRVMappings(Feature):
         r_value_var = self.rv_values.pop(r, None)
         if r_value_var is not None:
             self.rv_values[new_r] = r_value_var
-        elif (
-            new_r not in self.rv_values
-            and r.owner
-            and new_r.owner
-            and not isinstance(r.owner.op, MeasurableVariable)
-            and isinstance(new_r.owner.op, MeasurableVariable)
-        ):
-            self.measurable_conversions[r] = new_r
+            self.needs_measuring.add(new_r)
+            if new_r.name is None:
+                new_r.name = r.name
+
+    def request_measurable(self, vars: Sequence[Variable]) -> List[Variable]:
+        measurable = []
+        for var in vars:
+            # Input vars or valued vars can't be measured for derived expressions
+            if not var.owner or var in self.rv_values:
+                continue
+            if isinstance(var.owner.op, MeasurableVariable):
+                measurable.append(var)
+            else:
+                self.needs_measuring.add(var)
+        return measurable
 
 
 @register_canonicalize
@@ -222,12 +322,9 @@ def incsubtensor_rv_replace(fgraph, node):
 
     This provides a means of specifying "missing data", for instance.
     """
-    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
-        return None  # pragma: no cover
-
-    if not isinstance(node.op, inc_subtensor_ops):
         return None  # pragma: no cover
 
     rv_var = node.outputs[0]
@@ -236,12 +333,8 @@ def incsubtensor_rv_replace(fgraph, node):
 
     base_rv_var = node.inputs[0]
 
-    if not (
-        base_rv_var.owner
-        and isinstance(base_rv_var.owner.op, MeasurableVariable)
-        and base_rv_var not in rv_map_feature.rv_values
-    ):
-        return None  # pragma: no cover
+    if not rv_map_feature.request_measurable([base_rv_var]):
+        return None
 
     data = node.inputs[1]
     idx = indices_from_subtensor(getattr(node.op, "idx_list", None), node.inputs[2:])
@@ -262,7 +355,7 @@ logprob_rewrites_db.register("pre-canonicalize", optdb.query("+canonicalize"), "
 # These rewrites convert un-measurable variables into their measurable forms,
 # but they need to be reapplied, because some of the measurable forms require
 # their inputs to be measurable.
-measurable_ir_rewrites_db = NoCallbackEquilibriumDB()
+measurable_ir_rewrites_db = MeasurableEquilibriumDB()
 measurable_ir_rewrites_db.name = "measurable_ir_rewrites_db"
 
 logprob_rewrites_db.register("measurable_ir_rewrites", measurable_ir_rewrites_db, "basic")
@@ -360,11 +453,6 @@ def construct_ir_fgraph(
     if ir_rewriter is None:
         ir_rewriter = logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"]))
     ir_rewriter.rewrite(fgraph)
-
-    if rv_remapper.measurable_conversions:
-        # Undo un-valued measurable IR rewrites
-        new_to_old = tuple((v, k) for k, v in reversed(rv_remapper.measurable_conversions.items()))
-        fgraph.replace_all(new_to_old)
 
     return fgraph, rv_values, memo
 

@@ -48,7 +48,7 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.scan import scan
 
 from pymc.distributions.transforms import _default_transform, log, logodds
-from pymc.logprob.abstract import MeasurableVariable, _get_measurable_outputs, _logprob
+from pymc.logprob.abstract import MeasurableVariable, _logprob
 from pymc.logprob.basic import factorized_joint_logprob, logp
 from pymc.logprob.transforms import (
     ChainedTransform,
@@ -488,10 +488,6 @@ def multiout_measurable_op():
     def logp_multiout(op, values, mu1, mu2):
         value1, value2 = values
         return value1 + mu1, value2 + mu2
-
-    @_get_measurable_outputs.register(TestOpFromGraph)
-    def measurable_multiout_op_outputs(op, node):
-        return node.outputs
 
     return multiout_op
 
