@@ -40,7 +40,6 @@ from collections import deque
 from typing import Dict, List, Optional, Sequence, Union
 
 import numpy as np
-import pytensor
 import pytensor.tensor as pt
 
 from pytensor import config
@@ -53,7 +52,6 @@ from pytensor.graph.basic import (
 )
 from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
-from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
@@ -66,9 +64,20 @@ from pymc.logprob.abstract import (
 )
 from pymc.logprob.rewriting import cleanup_ir, construct_ir_fgraph
 from pymc.logprob.transforms import RVTransform, TransformValuesRewrite
-from pymc.logprob.utils import rvs_to_value_vars
+from pymc.logprob.utils import find_rvs_in_graph, rvs_to_value_vars
 
 TensorLike: TypeAlias = Union[Variable, float, np.ndarray]
+
+
+def _find_unallowed_rvs_in_graph(graph):
+    from pymc.data import MinibatchIndexRV
+    from pymc.distributions.simulator import SimulatorRV
+
+    return {
+        rv
+        for rv in find_rvs_in_graph(graph)
+        if not isinstance(rv.owner.op, (SimulatorRV, MinibatchIndexRV))
+    }
 
 
 def _warn_rvs_in_inferred_graph(graph: Union[TensorVariable, Sequence[TensorVariable]]):
@@ -81,13 +90,11 @@ def _warn_rvs_in_inferred_graph(graph: Union[TensorVariable, Sequence[TensorVari
     This makes it impossible (or difficult) to replace it by the respective values afterward,
     so we instruct users to do it beforehand.
     """
-    from pymc.testing import assert_no_rvs
 
-    try:
-        assert_no_rvs(graph)
-    except AssertionError:
+    rvs_in_graph = _find_unallowed_rvs_in_graph(graph)
+    if rvs_in_graph:
         warnings.warn(
-            "RandomVariables were found in the derived graph. "
+            f"RandomVariables {rvs_in_graph} were found in the derived graph. "
             "These variables are a clone and do not match the original ones on identity.\n"
             "If you are deriving a quantity that depends on model RVs, use `model.replace_rvs_by_values` first. For example: "
             "`logp(model.replace_rvs_by_values([rv])[0], value)`",
@@ -147,6 +154,13 @@ def icdf(
         if warn_missing_rvs:
             _warn_rvs_in_inferred_graph(expr)
         return expr
+
+
+RVS_IN_JOINT_LOGP_GRAPH_MSG = (
+    "Random variables detected in the logp graph: %s.\n"
+    "This can happen when DensityDist logp or Interval transform functions reference nonlocal variables,\n"
+    "or when not all rvs have a corresponding value variable."
+)
 
 
 def factorized_joint_logprob(
@@ -316,32 +330,11 @@ def factorized_joint_logprob(
     cleanup_ir(logprob_expressions)
 
     if warn_missing_rvs:
-        _warn_rvs_in_inferred_graph(logprob_expressions)
+        rvs_in_logp_expressions = _find_unallowed_rvs_in_graph(logprob_expressions)
+        if rvs_in_logp_expressions:
+            warnings.warn(RVS_IN_JOINT_LOGP_GRAPH_MSG % rvs_in_logp_expressions, UserWarning)
 
     return logprob_vars
-
-
-def _check_no_rvs(logp_terms: Sequence[TensorVariable]):
-    # Raise if there are unexpected RandomVariables in the logp graph
-    # Only SimulatorRVs MinibatchIndexRVs are allowed
-    from pymc.data import MinibatchIndexRV
-    from pymc.distributions.simulator import SimulatorRV
-
-    unexpected_rv_nodes = [
-        node
-        for node in pytensor.graph.ancestors(logp_terms)
-        if (
-            node.owner
-            and isinstance(node.owner.op, RandomVariable)
-            and not isinstance(node.owner.op, (SimulatorRV, MinibatchIndexRV))
-        )
-    ]
-    if unexpected_rv_nodes:
-        raise ValueError(
-            f"Random variables detected in the logp graph: {unexpected_rv_nodes}.\n"
-            "This can happen when DensityDist logp or Interval transform functions "
-            "reference nonlocal variables."
-        )
 
 
 def joint_logp(
@@ -381,5 +374,10 @@ def joint_logp(
         value_var = rvs_to_values[rv]
         logp_terms[value_var] = temp_logp_terms[value_var]
 
-    _check_no_rvs(list(logp_terms.values()))
-    return list(logp_terms.values())
+    logp_terms_list = list(logp_terms.values())
+
+    rvs_in_logp_expressions = _find_unallowed_rvs_in_graph(logp_terms_list)
+    if rvs_in_logp_expressions:
+        raise ValueError(RVS_IN_JOINT_LOGP_GRAPH_MSG % rvs_in_logp_expressions)
+
+    return logp_terms_list
