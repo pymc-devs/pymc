@@ -66,11 +66,13 @@ from pytensor.tensor.var import TensorVariable
 from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
 from pymc.logprob.rewriting import (
     PreserveRVMappings,
+    assume_measured_ir_outputs,
     local_lift_DiracDelta,
     measurable_ir_rewrites_db,
     subtensor_ops,
 )
 from pymc.logprob.tensor import naive_bcast_rv_lift
+from pymc.logprob.utils import check_potential_measurability
 
 
 def is_newaxis(x):
@@ -454,18 +456,65 @@ MeasurableVariable.register(MeasurableIfElse)
 
 
 @node_rewriter([IfElse])
+def useless_ifelse_outputs(fgraph, node):
+    """Remove outputs that are shared across the IfElse branches."""
+    # TODO: This should be a PyTensor canonicalization
+    op = node.op
+    if_var, *inputs = node.inputs
+    shared_inputs = set(inputs[op.n_outs :]).intersection(inputs[: op.n_outs])
+    if not shared_inputs:
+        return None
+
+    replacements = {}
+    for shared_inp in shared_inputs:
+        idx = inputs.index(shared_inp)
+        replacements[node.outputs[idx]] = shared_inp
+
+    # IfElse isn't needed at all
+    if len(shared_inputs) == op.n_outs:
+        return replacements
+
+    # Create subset IfElse with remaining nodes
+    remaining_inputs = [inp for inp in inputs if inp not in shared_inputs]
+    new_outs = (
+        IfElse(n_outs=len(remaining_inputs) // 2).make_node(if_var, *remaining_inputs).outputs
+    )
+    for inp, new_out in zip(remaining_inputs, new_outs):
+        idx = inputs.index(inp)
+        replacements[node.outputs[idx]] = new_out
+
+    return replacements
+
+
+@node_rewriter([IfElse])
 def find_measurable_ifelse_mixture(fgraph, node):
     rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
 
+    op = node.op
     if_var, *base_rvs = node.inputs
 
-    if rv_map_feature.request_measurable(base_rvs) != base_rvs:
+    valued_rvs = rv_map_feature.rv_values.keys()
+    if not all(check_potential_measurability([base_var], valued_rvs) for base_var in base_rvs):
         return None
 
-    return MeasurableIfElse(n_outs=node.op.n_outs).make_node(if_var, *base_rvs).outputs
+    base_rvs = assume_measured_ir_outputs(valued_rvs, base_rvs)
+    if len(base_rvs) != op.n_outs * 2:
+        return None
+    if not all(var.owner and isinstance(var.owner.op, MeasurableVariable) for var in base_rvs):
+        return None
+
+    return MeasurableIfElse(n_outs=op.n_outs).make_node(if_var, *base_rvs).outputs
+
+
+measurable_ir_rewrites_db.register(
+    "useless_ifelse_outputs",
+    useless_ifelse_outputs,
+    "basic",
+    "mixture",
+)
 
 
 measurable_ir_rewrites_db.register(

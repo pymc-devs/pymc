@@ -529,7 +529,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
     # would be invalid
     other_inputs = tuple(inp for inp in node.inputs if inp is not measurable_input)
 
-    if not check_potential_measurability(other_inputs, rv_map_feature):
+    if check_potential_measurability(other_inputs, rv_map_feature.rv_values.keys()):
         return None
 
     scalar_op = node.op.scalar_op

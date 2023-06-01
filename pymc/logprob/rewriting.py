@@ -42,9 +42,16 @@ import pytensor.tensor as pt
 
 from pytensor import config
 from pytensor.compile.mode import optdb
-from pytensor.graph.basic import Constant, Variable, ancestors, io_toposort
+from pytensor.graph.basic import (
+    Constant,
+    Variable,
+    ancestors,
+    io_toposort,
+    truncated_graph_inputs,
+)
 from pytensor.graph.features import Feature
 from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import (
     ChangeTracker,
     EquilibriumGraphRewriter,
@@ -461,3 +468,34 @@ def cleanup_ir(vars: Sequence[Variable]) -> None:
     fgraph = FunctionGraph(outputs=vars, clone=False)
     ir_rewriter = logprob_rewrites_db.query(RewriteDatabaseQuery(include=["cleanup"]))
     ir_rewriter.rewrite(fgraph)
+
+
+def assume_measured_ir_outputs(
+    inputs: Sequence[TensorVariable], outputs: Sequence[TensorVariable]
+) -> Sequence[TensorVariable]:
+    """Run IR rewrite assuming each output is measured.
+
+    IR variables could depend on each other in a way that looks unmeasurable without a value variable assigned to each.
+    For instance `join([add(x, z), z])` is a potentially measurable join, but `add(x, z)` can look unmeasurable
+    because neither `x` and `z` are valued in the IR representation.
+    This helper runs an inner ir rewrite after giving each output a dummy value variable.
+    We replace inputs by dummies and then undo it so that any dependency on outer variables is preserved.
+    """
+    # Replace inputs by dummy variables
+    replaced_inputs = {
+        var: var.type()
+        for var in truncated_graph_inputs(outputs, ancestors_to_include=inputs)
+        if var in inputs
+    }
+    cloned_outputs = clone_replace(outputs, replace=replaced_inputs)
+
+    dummy_rv_values = {base_var: base_var.type() for base_var in cloned_outputs}
+    fgraph, *_ = construct_ir_fgraph(dummy_rv_values)
+
+    # Replace dummy variables by inputs
+    fgraph.replace_all(
+        tuple((repl, orig) for orig, repl in replaced_inputs.items()),
+        import_missing=True,
+    )
+
+    return fgraph.outputs
