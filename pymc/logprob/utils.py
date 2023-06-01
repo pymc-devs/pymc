@@ -38,6 +38,7 @@ import warnings
 
 from typing import (
     Callable,
+    Container,
     Dict,
     Generator,
     Iterable,
@@ -210,22 +211,24 @@ def indices_from_subtensor(idx_list, indices):
     )
 
 
-def check_potential_measurability(inputs: Tuple[TensorVariable], rv_map_feature):
+def check_potential_measurability(
+    inputs: Tuple[TensorVariable], valued_rvs: Container[TensorVariable]
+) -> bool:
     if any(
-        ancestor_node
-        for ancestor_node in walk_model(
+        ancestor_var
+        for ancestor_var in walk_model(
             inputs,
             walk_past_rvs=False,
-            stop_at_vars=set(rv_map_feature.rv_values),
+            stop_at_vars=set(valued_rvs),
         )
         if (
-            ancestor_node.owner
-            and isinstance(ancestor_node.owner.op, MeasurableVariable)
-            and ancestor_node not in rv_map_feature.rv_values
+            ancestor_var.owner
+            and isinstance(ancestor_var.owner.op, MeasurableVariable)
+            and ancestor_var not in valued_rvs
         )
     ):
-        return None
-    return True
+        return True
+    return False
 
 
 class ParameterValueError(ValueError):

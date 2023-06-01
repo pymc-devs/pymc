@@ -60,7 +60,7 @@ def find_measurable_comparisons(
     const = node.inputs[(measurable_var_idx + 1) % 2]
 
     # check for potential measurability of const
-    if not check_potential_measurability([const], rv_map_feature):
+    if check_potential_measurability([const], rv_map_feature.rv_values.keys()):
         return None
 
     node_scalar_op = node.op.scalar_op

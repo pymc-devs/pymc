@@ -984,7 +984,7 @@ def test_ifelse_mixture_multiple_components():
 
     if_var = pt.scalar("if_var", dtype="bool")
     comp_then1 = pt.random.normal(size=(2,), name="comp_true1")
-    comp_then2 = pt.random.normal(comp_then1, size=(2, 2), name="comp_then2")
+    comp_then2 = comp_then1 + pt.random.normal(size=(2, 2), name="comp_then2")
     comp_else1 = pt.random.halfnormal(size=(4,), name="comp_else1")
     comp_else2 = pt.random.halfnormal(size=(4, 4), name="comp_else2")
 

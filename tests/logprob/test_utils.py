@@ -51,6 +51,7 @@ from pymc.logprob.abstract import MeasurableVariable
 from pymc.logprob.basic import joint_logp, logp
 from pymc.logprob.utils import (
     ParameterValueError,
+    check_potential_measurability,
     dirac_delta,
     rvs_to_value_vars,
     walk_model,
@@ -194,3 +195,17 @@ def test_dirac_delta_logprob(dist_params, obs):
         return 0.0 if obs == c else -np.inf
 
     scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logprob)
+
+
+def test_check_potential_measurability():
+    x1 = pt.random.normal()
+    x2 = pt.random.normal()
+    x3 = pt.scalar("x3")
+    y = pt.exp(x1 + x2 + x3)
+
+    # In the first three cases, y is potentially measurable, because it has at least on unvalued RV input
+    assert check_potential_measurability([y], {})
+    assert check_potential_measurability([y], {x1})
+    assert check_potential_measurability([y], {x2})
+    # y is not potentially measurable because both RV inputs are valued
+    assert not check_potential_measurability([y], {x1, x2})

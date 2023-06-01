@@ -40,7 +40,7 @@ import pytensor.tensor as pt
 import pytest
 import scipy.stats as st
 
-from pymc import logp
+from pymc import draw, logp
 from pymc.logprob.abstract import MeasurableVariable
 from pymc.logprob.basic import factorized_joint_logprob
 from pymc.logprob.censoring import MeasurableClip
@@ -217,4 +217,52 @@ def test_affine_log_transform_rv():
     assert np.allclose(
         logp_fn(a_val, b_val, y_val),
         st.norm(a_val, b_val).logpdf(y_val),
+    )
+
+
+@pytest.mark.parametrize("reverse", (False, True))
+def test_affine_join_interdependent(reverse):
+    x = pt.random.normal(name="x")
+    y_rvs = []
+    prev_rv = x
+    for i in range(3):
+        next_rv = pt.exp(prev_rv + pt.random.beta(3, 1, name=f"y{i}", size=(1, 2)))
+        y_rvs.append(next_rv)
+        prev_rv = next_rv
+
+    if reverse:
+        y_rvs = y_rvs[::-1]
+
+    ys = pt.concatenate(y_rvs, axis=0)
+    ys.name = "ys"
+
+    x_vv = x.clone()
+    ys_vv = ys.clone()
+
+    logp = factorized_joint_logprob({x: x_vv, ys: ys_vv})
+    logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
+    assert_no_rvs(logp_combined)
+
+    y0_vv = y_rvs[0].clone()
+    y1_vv = y_rvs[1].clone()
+    y2_vv = y_rvs[2].clone()
+
+    ref_logp = factorized_joint_logprob(
+        {x: x_vv, y_rvs[0]: y0_vv, y_rvs[1]: y1_vv, y_rvs[2]: y2_vv}
+    )
+    ref_logp_combined = pt.sum([pt.sum(factor) for factor in ref_logp.values()])
+
+    rng = np.random.default_rng()
+    x_vv_test, ys_vv_test = draw([x, ys], random_seed=rng)
+    ys_vv_test = rng.normal(size=(3, 2))
+    np.testing.assert_allclose(
+        logp_combined.eval({x_vv: x_vv_test, ys_vv: ys_vv_test}),
+        ref_logp_combined.eval(
+            {
+                x_vv: x_vv_test,
+                y0_vv: ys_vv_test[0:1],
+                y1_vv: ys_vv_test[1:2],
+                y2_vv: ys_vv_test[2:3],
+            }
+        ),
     )
