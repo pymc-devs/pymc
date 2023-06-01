@@ -747,11 +747,9 @@ def check_selfconsistency_discrete_icdf(
             computed_value = dist_icdf_fn(
                 **point, value=ftrunc(np.exp(dist_logcdf_fn(**point, value=value)), decimal=decimal)
             )
-            npt.assert_almost_equal(
-                expected_value,
-                computed_value,
-                err_msg=f"point: {point}, value: {value}, cdf: {np.exp(dist_logcdf_fn(**point, value=value))}",
-            )
+            assert (
+                expected_value == computed_value
+            ), f"expected_value = {expected_value}, computed_value = {computed_value}, {point}"
 
 
 def assert_support_point_is_expected(model, expected, check_finite_logp=True):
