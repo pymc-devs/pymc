@@ -1721,6 +1721,15 @@ class LogNormal(PositiveContinuous):
             msg="sigma > 0",
         )
 
+    def icdf(value, mu, sigma):
+        res = np.exp(mu - np.sqrt(2 * sigma**2) * pt.erfcinv(2 * value))
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
+
 
 Lognormal = LogNormal
 
