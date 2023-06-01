@@ -1722,7 +1722,7 @@ class LogNormal(PositiveContinuous):
         )
 
     def icdf(value, mu, sigma):
-        res = np.exp(mu - np.sqrt(2 * sigma**2) * pt.erfcinv(2 * value))
+        res = pt.exp(mu - pt.sqrt(2 * sigma**2) * pt.erfcinv(2 * value))
         res = check_icdf_value(res, value)
         return check_icdf_parameters(
             res,
@@ -2046,6 +2046,15 @@ class Cauchy(Continuous):
             res,
             beta > 0,
             msg="beta > 0",
+        )
+    
+    def icdf(value, alpha, beta):
+        res = alpha + beta * pt.tan(np.pi * (value-0.5))
+        res = check_icdf_value(res, value)
+        return check_parameters(
+                res,
+                beta > 0,
+                msg="beta > 0",
         )
 
 
@@ -3359,7 +3368,16 @@ class Logistic(Continuous):
 
     def logcdf(value, mu, s):
         res = -pt.log1pexp(-(value - mu) / s)
-
+        
+        return check_parameters(
+            res,
+            s > 0,
+            msg="s > 0",
+        )
+    
+    def icdf(value, mu, s):
+        res = mu + s * pt.log(value/(1 - value))
+        res = check_icdf_value(res, value)
         return check_parameters(
             res,
             s > 0,
