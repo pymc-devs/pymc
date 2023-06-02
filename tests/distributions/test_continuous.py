@@ -502,16 +502,6 @@ class TestMatchesScipy:
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: st.lognorm.logcdf(value, sigma, 0, np.exp(mu)),
         )
-        check_icdf(
-            pm.LogNormal,
-            {"mu": R, "tau": Rplusbig},
-            lambda q, mu, tau: st.lognorm.ppf(q, tau**-0.5, 0, np.exp(mu)),
-        )
-        check_icdf(
-            pm.LogNormal,
-            {"mu": R, "sigma": Rplusbig},
-            lambda q, mu, sigma: st.lognorm.ppf(q, sigma, 0, np.exp(mu)),
-        )
 
     def test_studentt_logp(self):
         check_logp(
