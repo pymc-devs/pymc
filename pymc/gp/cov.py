@@ -214,7 +214,6 @@ class Combination(Covariance):
                 dtype=int,
             )
         )
-
         super().__init__(input_dim=input_dim, active_dims=active_dims)
 
         # Set up combination kernel, flatten out factor_list so that
@@ -310,7 +309,7 @@ class Add(Combination):
     ) -> TensorVariable:
         return reduce(add, self._merge_factors_cov(X, Xs, diag))
 
-    def power_spectral_density(self, omega) -> TensorVariable:
+    def power_spectral_density(self, omega: TensorLike) -> TensorVariable:
         return reduce(add, self._merge_factors_psd(omega))
 
 
@@ -323,7 +322,7 @@ class Prod(Combination):
     ) -> TensorVariable:
         return reduce(mul, self._merge_factors_cov(X, Xs, diag))
 
-    def power_spectral_density(self, omega) -> TensorVariable:
+    def power_spectral_density(self, omega: TensorLike) -> TensorVariable:
         check = Counter([isinstance(factor, Covariance) for factor in self._factor_list])
         if check.get(True) >= 2:
             raise NotImplementedError(
@@ -545,7 +544,7 @@ class Stationary(Covariance):
     def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         raise NotImplementedError
 
-    def power_spectral_density(self, omega) -> TensorVariable:
+    def power_spectral_density(self, omega: TensorLike) -> TensorVariable:
         raise NotImplementedError
 
 
@@ -565,7 +564,7 @@ class ExpQuad(Stationary):
         r2 = self.square_dist(X, Xs)
         return pt.exp(-0.5 * r2)
 
-    def power_spectral_density(self, omega) -> TensorVariable:
+    def power_spectral_density(self, omega: TensorLike) -> TensorVariable:
         r"""
         The power spectral density for the ExpQuad kernel is:
 
@@ -626,7 +625,7 @@ class Matern52(Stationary):
         r = self.euclidean_dist(X, Xs)
         return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * pt.square(r)) * pt.exp(-1.0 * np.sqrt(5.0) * r)
 
-    def power_spectral_density(self, omega) -> TensorVariable:
+    def power_spectral_density(self, omega: TensorLike) -> TensorVariable:
         r"""
         The power spectral density for the Matern52 kernel is:
 
@@ -666,7 +665,7 @@ class Matern32(Stationary):
         r = self.euclidean_dist(X, Xs)
         return (1.0 + np.sqrt(3.0) * r) * pt.exp(-np.sqrt(3.0) * r)
 
-    def power_spectral_density(self, omega) -> TensorVariable:
+    def power_spectral_density(self, omega: TensorLike) -> TensorVariable:
         r"""
         The power spectral density for the Matern32 kernel is:
 
