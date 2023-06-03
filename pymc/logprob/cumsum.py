@@ -42,12 +42,23 @@ from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.extra_ops import CumOp
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    _logprob,
+    _logprob_helper,
+    get_default_measurable_metainfo,
+)
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 
 
 class MeasurableCumsum(CumOp):
     """A placeholder used to specify a log-likelihood for a cumsum sub-graph."""
+
+    def __init__(self, ndim_supp, support_axis, d_type, axis, mode, *args, **kwargs):
+        super().__init__(axis, mode)
+        self.ndim_supp = ndim_supp
+        self.support_axis = support_axis
+        self.d_type = d_type
 
 
 MeasurableVariable.register(MeasurableCumsum)

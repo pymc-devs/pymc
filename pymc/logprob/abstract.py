@@ -143,13 +143,44 @@ class MeasurableElemwise(Elemwise):
 
     valid_scalar_types: tuple[MetaType, ...] = ()
 
-    def __init__(self, scalar_op, *args, **kwargs):
+    def __init__(self, scalar_op, ndim_supp, support_axis, d_type, *args, **kwargs):
         if not isinstance(scalar_op, self.valid_scalar_types):
             raise TypeError(
                 f"scalar_op {scalar_op} is not valid for class {self.__class__}. "
                 f"Acceptable types are {self.valid_scalar_types}"
             )
         super().__init__(scalar_op, *args, **kwargs)
+        self.ndim_supp = ndim_supp
+        self.support_axis = support_axis
+        self.d_type = d_type
+
+
+from enum import Enum, auto
+
+
+class MeasureType(Enum):
+    Discrete = auto()
+    Continuous = auto()
+    Mixed = auto()
+
+
+def get_default_measurable_metainfo(base_op: Op, base_dtype) -> Tuple[int, Tuple[int], MeasureType]:
+    if not isinstance(base_op, MeasurableVariable):
+        raise TypeError("base_op must be a RandomVariable or MeasurableVariable")
+
+    ndim_supp = base_op.ndim_supp
+
+    supp_axes = getattr(base_op, "supp_axes", None)
+    if supp_axes is None:
+        supp_axes = tuple(range(-base_op.ndim_supp, 0))
+
+    measure_type = getattr(base_op, "measure_type", None)
+    if measure_type is None:
+        measure_type = (
+            MeasureType.Discrete if base_dtype.dtype.startswith("int") else MeasureType.Continuous
+        )
+
+    return ndim_supp, supp_axes, measure_type
 
 
 MeasurableVariable.register(MeasurableElemwise)

@@ -462,6 +462,12 @@ measurable_ir_rewrites_db.register(
 class MeasurableIfElse(IfElse):
     """Measurable subclass of IfElse operator."""
 
+    def __init__(self, ndim_supp, support_axis, d_type, n_outs, *args, **kwargs):
+        super().__init__(n_outs)
+        self.ndim_supp = ndim_supp
+        self.support_axis = support_axis
+        self.d_type = d_type
+
 
 MeasurableVariable.register(MeasurableIfElse)
 
