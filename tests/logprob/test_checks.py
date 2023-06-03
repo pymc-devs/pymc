@@ -35,6 +35,8 @@
 #   SOFTWARE.
 import re
 
+import re
+
 import numpy as np
 import pytensor
 import pytensor.tensor as pt

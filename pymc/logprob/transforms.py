@@ -500,10 +500,19 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[li
         transform = ScaleTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
+
+    ndim_supp = measurable_inputs[0].owner.op.ndim_supp
+    supp_axes = getattr(measurable_inputs[0].owner.op, "supp_axes", None)
+    if supp_axes is None:
+        supp_axes = tuple(range(-ndim_supp, 0))
+
     transform_op = MeasurableTransform(
         scalar_op=scalar_op,
         transform=transform,
         measurable_input_idx=measurable_input_idx,
+        ndim_supp=ndim_supp,
+        support_axis=supp_axes,
+        d_type=MeasureType.Continuous,
     )
     transform_out = transform_op.make_node(*transform_inputs).default_output()
     return [transform_out]

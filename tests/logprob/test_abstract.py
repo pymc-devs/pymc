@@ -58,13 +58,20 @@ def assert_equal_hash(classA, classB):
 
 def test_measurable_elemwise():
     # Default does not accept any scalar_op
+
+    ndim_supp = 0
+    support_axis = None
+    d_type = "mixed"
+
     with pytest.raises(TypeError, match=re.escape("scalar_op exp is not valid")):
-        MeasurableElemwise(exp)
+        MeasurableElemwise(exp, ndim_supp=ndim_supp, support_axis=support_axis, d_type=d_type)
 
     class TestMeasurableElemwise(MeasurableElemwise):
         valid_scalar_types = (Exp,)
 
-    measurable_exp_op = TestMeasurableElemwise(scalar_op=exp)
+    measurable_exp_op = TestMeasurableElemwise(
+        ndim_supp=ndim_supp, support_axis=support_axis, d_type=d_type, scalar_op=exp
+    )
     measurable_exp = measurable_exp_op(0.0)
     assert isinstance(measurable_exp.owner.op, MeasurableVariable)
 

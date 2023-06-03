@@ -43,13 +43,24 @@ from pytensor.raise_op import CheckAndRaise
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.shape import SpecifyShape
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    _logprob,
+    _logprob_helper,
+    get_default_measurable_metainfo,
+)
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import replace_rvs_by_values
 
 
 class MeasurableSpecifyShape(SpecifyShape):
     """A placeholder used to specify a log-likelihood for a specify-shape sub-graph."""
+
+    def __init__(self, ndim_supp, support_axis, d_type, *args, **kwargs):
+        super().__init__()
+        self.ndim_supp = ndim_supp
+        self.support_axis = support_axis
+        self.d_type = d_type
 
 
 MeasurableVariable.register(MeasurableSpecifyShape)
@@ -102,6 +113,12 @@ measurable_ir_rewrites_db.register(
 
 class MeasurableCheckAndRaise(CheckAndRaise):
     """A placeholder used to specify a log-likelihood for an assert sub-graph."""
+
+    def __init__(self, exc_type, msg, ndim_supp, support_axis, d_type, *args, **kwargs):
+        super().__init__(exc_type, msg)
+        self.ndim_supp = ndim_supp
+        self.support_axis = support_axis
+        self.d_type = d_type
 
 
 MeasurableVariable.register(MeasurableCheckAndRaise)

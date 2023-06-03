@@ -72,6 +72,23 @@ class MeasurableScan(Scan):
     def __str__(self):
         return f"Measurable({super().__str__()})"
 
+    def __init__(
+        self,
+        inner_inputs,
+        inner_outputs,
+        info,
+        ndim_supp,
+        support_axis,
+        d_type,
+        mode,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(inner_inputs, inner_outputs, info, mode)
+        self.ndim_supp = ndim_supp
+        self.support_axis = support_axis
+        self.d_type = d_type
+
 
 MeasurableVariable.register(MeasurableScan)
 
@@ -469,10 +486,16 @@ def find_measurable_scans(fgraph, node):
             # Replace the mapping
             rv_map_feature.update_rv_maps(rv_var, new_val_var, full_out)
 
+    for n in local_fgraph_topo:
+        if isinstance(n.op, MeasurableVariable):
+            ndim_supp, supp_axis, d_type = get_default_measurable_metainfo(n.op, node.inputs[0])
     op = MeasurableScan(
         curr_scanargs.inner_inputs,
         curr_scanargs.inner_outputs,
         curr_scanargs.info,
+        ndim_supp=ndim_supp,
+        support_axis=supp_axis,
+        d_type=d_type,
         mode=node.op.mode,
     )
     new_node = op.make_node(*curr_scanargs.outer_inputs)

@@ -59,9 +59,6 @@ class MeasurableClip(MeasurableElemwise):
     valid_scalar_types = (Clip,)
 
 
-measurable_clip = MeasurableClip(scalar_clip)
-
-
 @node_rewriter(tracks=[clip])
 def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[list[TensorVariable]]:
     # TODO: Canonicalize x[x>ub] = ub -> clip(x, x, ub)
