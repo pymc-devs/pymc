@@ -828,7 +828,7 @@ class WarpedInput(Covariance):
 
 class WrappedPeriodic(Covariance):
     r"""
-    Wrap a stationary covariance function to make it periodic.
+    The `WrappedPeriodic` kernel constructs periodic kernels from any `Stationary` kernel.
 
     This is done by warping the input with the function
 
@@ -837,6 +837,32 @@ class WrappedPeriodic(Covariance):
             \mathrm{sin} \left( \frac{2\pi x}{T} \right),
             \mathrm{cos} \left( \frac{2\pi x}{T} \right)
         \right)
+
+    The original derivation as applied to the squared exponential kernel can
+    be found in [1] or referenced in Chapter 4, page 92 of [2].
+
+    Notes
+    -----
+    Note that we drop the resulting scaling by 4 found in the original derivation
+    so that the interpretation of the length scales is consistent between the
+    underlying kernel and the periodic version.
+
+    Examples
+    --------
+    In order to construct a kernel equivalent to the `Periodic` kernel you
+    can do the following (though using `Periodic` will likely be a bit faster):
+
+    .. code:: python
+
+        exp_quad = pm.gp.cov.ExpQuad(1, ls=0.5)
+        cov = pm.gp.cov.WrappedPeriodic(exp_quad, period=5)
+
+    References
+    ----------
+    .. [1] MacKay, D. J. C. (1998). Introduction to Gaussian Processes.
+       In Bishop, C. M., editor, Neural Networks and Machine Learning. Springer-Verlag
+    .. [2] Rasmussen, C. E., & Williams, C. K. I. (2006). Gaussian processes for machine learning. MIT Press.
+       http://gaussianprocess.org/gpml/chapters/
 
     Parameters
     ----------
