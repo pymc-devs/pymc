@@ -67,10 +67,15 @@ def _logprob_helper(rv, *values, **kwargs):
     """Helper that calls `_logprob` dispatcher."""
     logprob = _logprob(rv.owner.op, values, *rv.owner.inputs, **kwargs)
 
-    for rv in values:
-        if rv.name:
-            logprob.name = f"{rv.name}_logprob"
-            break
+    name = rv.name
+    if (not name) and (len(values) == 1):
+        name = values[0].name
+    if name:
+        if isinstance(logprob, (list, tuple)):
+            for i, term in enumerate(logprob):
+                term.name = f"{name}_logprob.{i}"
+        else:
+            logprob.name = f"{name}_logprob"
 
     return logprob
 
