@@ -66,31 +66,11 @@ from pymc.logprob.rewriting import (
 from pymc.logprob.utils import replace_rvs_by_values
 
 
-class MeasurableScan(Scan):
+class MeasurableScan(MeasurableVariable, Scan):
     """A placeholder used to specify a log-likelihood for a scan sub-graph."""
 
     def __str__(self):
         return f"Measurable({super().__str__()})"
-
-    def __init__(
-        self,
-        inner_inputs,
-        inner_outputs,
-        info,
-        ndim_supp,
-        support_axis,
-        d_type,
-        mode,
-        *args,
-        **kwargs,
-    ):
-        super().__init__(inner_inputs, inner_outputs, info, mode)
-        self.ndim_supp = ndim_supp
-        self.support_axis = support_axis
-        self.d_type = d_type
-
-
-MeasurableVariable.register(MeasurableScan)
 
 
 def convert_outer_out_to_in(
@@ -486,16 +466,22 @@ def find_measurable_scans(fgraph, node):
             # Replace the mapping
             rv_map_feature.update_rv_maps(rv_var, new_val_var, full_out)
 
+    all_ndim_supp = []
+    all_supp_axes = []
+    all_measure_type = []
     for n in local_fgraph_topo:
         if isinstance(n.op, MeasurableVariable):
-            ndim_supp, supp_axis, d_type = get_default_measurable_metainfo(n.op, node.inputs[0])
+            ndim_supp, supp_axes, measure_type = get_measurable_meta_info(n.op)
+            all_ndim_supp.append(ndim_supp)
+            all_supp_axes.append(supp_axes)
+            all_measure_type.append(measure_type)
     op = MeasurableScan(
         curr_scanargs.inner_inputs,
         curr_scanargs.inner_outputs,
         curr_scanargs.info,
-        ndim_supp=ndim_supp,
-        support_axis=supp_axis,
-        d_type=d_type,
+        ndim_supp=all_ndim_supp,
+        support_axis=all_supp_axes,
+        measure_type=all_measure_type,
         mode=node.op.mode,
     )
     new_node = op.make_node(*curr_scanargs.outer_inputs)

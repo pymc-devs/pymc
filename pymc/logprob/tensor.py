@@ -122,17 +122,8 @@ def naive_bcast_rv_lift(fgraph, node):
     return [bcasted_node.outputs[1]]
 
 
-class MeasurableMakeVector(MakeVector):
+class MeasurableMakeVector(MeasurableVariable, MakeVector):
     """A placeholder used to specify a log-likelihood for a cumsum sub-graph."""
-
-    def __init__(self, data_type, ndim_supp, support_axis, d_type, *args, **kwargs):
-        super().__init__(data_type)
-        self.ndim_supp = ndim_supp
-        self.support_axis = support_axis
-        self.d_type = d_type
-
-
-MeasurableVariable.register(MeasurableMakeVector)
 
 
 @_logprob.register(MeasurableMakeVector)
@@ -155,17 +146,8 @@ def logprob_make_vector(op, values, *base_rvs, **kwargs):
     return pt.stack(logps)
 
 
-class MeasurableJoin(Join):
+class MeasurableJoin(MeasurableVariable, Join):
     """A placeholder used to specify a log-likelihood for a join sub-graph."""
-
-    def __init__(self, axis, ndim_supp, support_axis, d_type, *args, **kwargs):
-        super().__init__(axis)
-        self.ndim_supp = ndim_supp
-        self.support_axis = support_axis
-        self.d_type = d_type
-
-
-MeasurableVariable.register(MeasurableJoin)
 
 
 @_logprob.register(MeasurableJoin)
@@ -233,9 +215,7 @@ def find_measurable_stacks(fgraph, node) -> Optional[list[TensorVariable]]:
     if not all(var.owner and isinstance(var.owner.op, MeasurableVariable) for var in base_vars):
         return None
 
-    ndim_supp, supp_axis, d_type = get_default_measurable_metainfo(
-        base_vars[0].owner.op, base_vars[0]
-    )
+    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_vars[0].owner.op)
 
     if is_join:
         measurable_stack = MeasurableJoin()(axis, *base_vars)
@@ -245,23 +225,12 @@ def find_measurable_stacks(fgraph, node) -> Optional[list[TensorVariable]]:
     return [measurable_stack]
 
 
-class MeasurableDimShuffle(DimShuffle):
+class MeasurableDimShuffle(MeasurableVariable, DimShuffle):
     """A placeholder used to specify a log-likelihood for a dimshuffle sub-graph."""
 
     # Need to get the absolute path of `c_func_file`, otherwise it tries to
     # find it locally and fails when a new `Op` is initialized
     c_func_file = DimShuffle.get_path(DimShuffle.c_func_file)
-
-    def __init__(
-        self, input_broadcastable, new_order, ndim_supp, support_axis, d_type, *args, **kwargs
-    ):
-        super().__init__(input_broadcastable, new_order)
-        self.ndim_supp = ndim_supp
-        self.support_axis = support_axis
-        self.d_type = d_type
-
-
-MeasurableVariable.register(MeasurableDimShuffle)
 
 
 @_logprob.register(MeasurableDimShuffle)

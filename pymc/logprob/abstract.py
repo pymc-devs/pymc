@@ -131,8 +131,30 @@ def _icdf_helper(rv, value, **kwargs):
     return rv_icdf
 
 
+from enum import Enum, auto
+
+
+class MeasureType(Enum):
+    Discrete = auto()
+    Continuous = auto()
+    Mixed = auto()
+
+
 class MeasurableVariable(abc.ABC):
     """A variable that can be assigned a measure/log-probability"""
+
+    def __init__(
+        self,
+        *args,
+        ndim_supp: Union[int, Tuple[int]],
+        supp_axes: Tuple[Union[int, Tuple[int]]],
+        measure_type: Union[MeasureType, Tuple[MeasureType]],
+        **kwargs,
+    ):
+        self.ndim_supp = ndim_supp
+        self.supp_axes = supp_axes
+        self.measure_type = measure_type
+        super().__init__(*args, **kwargs)
 
 
 MeasurableVariable.register(RandomVariable)
@@ -143,44 +165,25 @@ class MeasurableElemwise(Elemwise):
 
     valid_scalar_types: tuple[MetaType, ...] = ()
 
-    def __init__(self, scalar_op, ndim_supp, support_axis, d_type, *args, **kwargs):
+    def __init__(self, scalar_op, *args, **kwargs):
         if not isinstance(scalar_op, self.valid_scalar_types):
             raise TypeError(
                 f"scalar_op {scalar_op} is not valid for class {self.__class__}. "
                 f"Acceptable types are {self.valid_scalar_types}"
             )
         super().__init__(scalar_op, *args, **kwargs)
-        self.ndim_supp = ndim_supp
-        self.support_axis = support_axis
-        self.d_type = d_type
 
 
-from enum import Enum, auto
-
-
-class MeasureType(Enum):
-    Discrete = auto()
-    Continuous = auto()
-    Mixed = auto()
-
-
-def get_default_measurable_metainfo(base_op: Op, base_dtype) -> Tuple[int, Tuple[int], MeasureType]:
+def get_measurable_meta_info(base_op: Op) -> Tuple[int, Tuple[int], MeasureType]:
     if not isinstance(base_op, MeasurableVariable):
         raise TypeError("base_op must be a RandomVariable or MeasurableVariable")
 
-    ndim_supp = base_op.ndim_supp
-
-    supp_axes = getattr(base_op, "supp_axes", None)
-    if supp_axes is None:
-        supp_axes = tuple(range(-base_op.ndim_supp, 0))
-
-    measure_type = getattr(base_op, "measure_type", None)
-    if measure_type is None:
+    if isinstance(base_op, RandomVariable):
+        ndim_supp = base_op.ndim_supp
+        supp_axes = tuple(range(-ndim_supp, 0))
         measure_type = (
-            MeasureType.Discrete if base_dtype.dtype.startswith("int") else MeasureType.Continuous
+            MeasureType.Continuous if base_op.dtype.startswith("float") else MeasureType.Discrete
         )
-
-    return ndim_supp, supp_axes, measure_type
-
-
-MeasurableVariable.register(MeasurableElemwise)
+        return base_op.ndim_supp, supp_axes, measure_type
+    else:
+        return base_op.ndim_supp, base_op.supp_axes, base_op.measure_type

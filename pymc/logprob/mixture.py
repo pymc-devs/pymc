@@ -70,6 +70,7 @@ from pymc.logprob.abstract import (
     MeasurableVariable,
     _logprob,
     _logprob_helper,
+    get_measurable_meta_info,
 )
 from pymc.logprob.rewriting import (
     PreserveRVMappings,
@@ -217,25 +218,23 @@ def rv_pull_down(x: TensorVariable) -> TensorVariable:
     return fgraph.outputs[0]
 
 
-class MixtureRV(Op):
+class MixtureRV(MeasurableVariable, Op):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
 
     __props__ = ("indices_end_idx", "out_dtype", "out_broadcastable")
 
-    def __init__(self, indices_end_idx, out_dtype, out_broadcastable):
+    def __init__(self, *args, indices_end_idx, out_dtype, out_broadcastable, **kwargs):
         super().__init__()
         self.indices_end_idx = indices_end_idx
         self.out_dtype = out_dtype
         self.out_broadcastable = out_broadcastable
+        super().__init__(*args, **kwargs)
 
     def make_node(self, *inputs):
         return Apply(self, list(inputs), [TensorType(self.out_dtype, self.out_broadcastable)()])
 
     def perform(self, node, inputs, outputs):
         raise NotImplementedError("This is a stand-in Op.")  # pragma: no cover
-
-
-MeasurableVariable.register(MixtureRV)
 
 
 def get_stack_mixture_vars(
@@ -459,17 +458,8 @@ measurable_ir_rewrites_db.register(
 )
 
 
-class MeasurableIfElse(IfElse):
+class MeasurableIfElse(MeasurableVariable, IfElse):
     """Measurable subclass of IfElse operator."""
-
-    def __init__(self, ndim_supp, support_axis, d_type, n_outs, *args, **kwargs):
-        super().__init__(n_outs)
-        self.ndim_supp = ndim_supp
-        self.support_axis = support_axis
-        self.d_type = d_type
-
-
-MeasurableVariable.register(MeasurableIfElse)
 
 
 @node_rewriter([IfElse])
