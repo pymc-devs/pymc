@@ -28,7 +28,7 @@ from pymc.logprob.abstract import (
     _logcdf_helper,
     _logprob,
     _logprob_helper,
-    get_default_measurable_metainfo,
+    get_measurable_meta_info,
 )
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import check_potential_measurability
