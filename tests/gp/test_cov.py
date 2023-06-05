@@ -671,6 +671,28 @@ class TestWarpedInput:
             pm.gp.cov.WarpedInput(1, "str is not Covariance object", lambda x: x)
 
 
+class TestPeriodic:
+    def test_1d(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model():
+            cov1 = pm.gp.cov.Periodic(1, ls=0.2, period=1)
+            cov2 = pm.gp.cov.WrappedPeriodic(
+                cov_func=pm.gp.cov.ExpQuad(1, ls=0.2),
+                period=1,
+            )
+        K1 = cov1(X).eval()
+        K2 = cov2(X).eval()
+        npt.assert_allclose(K1, K2, atol=1e-3)
+        K1d = cov1(X, diag=True).eval()
+        K2d = cov2(X, diag=True).eval()
+        npt.assert_allclose(K1d, K2d, atol=1e-3)
+
+    def test_raises(self):
+        lin_cov = pm.gp.cov.Linear(1, c=1)
+        with pytest.raises(TypeError, match="Must inherit from the Stationary class"):
+            pm.gp.cov.WrappedPeriodic(lin_cov, period=1)
+
+
 class TestGibbs:
     def test_1d(self):
         X = np.linspace(0, 2, 10)[:, None]

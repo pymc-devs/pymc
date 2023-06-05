@@ -515,7 +515,7 @@ class Stationary(Covariance):
         X, Xs = self._slice(X, Xs)
         r2 = self.square_dist(X, Xs)
         return self.full_from_distance(r2, squared=True)
-    
+
     def full_from_distance(self, dist, squared=False):
         raise NotImplementedError
 
@@ -559,7 +559,7 @@ class Periodic(Stationary):
     def full_from_distance(self, dist, squared=False):
         # NOTE: This is the same as the ExpQuad as we assume the periodicity
         # has already been accounted for in the distance
-        r2 = dist if squared else dist ** 2
+        r2 = dist if squared else dist**2
         return pt.exp(-0.5 * r2)
 
 
@@ -575,7 +575,7 @@ class ExpQuad(Stationary):
     """
 
     def full_from_distance(self, dist, squared=False):
-        r2 = dist if squared else dist ** 2
+        r2 = dist if squared else dist**2
         return pt.exp(-0.5 * r2)
 
     def power_spectral_density(self, omega):
@@ -608,7 +608,7 @@ class RatQuad(Stationary):
         self.alpha = alpha
 
     def full_from_distance(self, dist, squared=False):
-        r2 = dist if squared else dist ** 2
+        r2 = dist if squared else dist**2
         return pt.power(
             (1.0 + 0.5 * r2 * (1.0 / self.alpha)),
             -1.0 * self.alpha,
@@ -824,7 +824,7 @@ class WarpedInput(Covariance):
     def diag(self, X):
         X, _ = self._slice(X, None)
         return self.cov_func(self.w(X, self.args), diag=True)
-    
+
 
 class WrappedPeriodic(Covariance):
     r"""
@@ -871,7 +871,7 @@ class WrappedPeriodic(Covariance):
     period: Period
     """
 
-    def __init__(self, cov_func: Stationary, period):  
+    def __init__(self, cov_func: Stationary, period):
         if not isinstance(cov_func, Stationary):
             raise TypeError("Must inherit from the Stationary class")
         self.cov_func = cov_func
@@ -880,7 +880,7 @@ class WrappedPeriodic(Covariance):
     @property
     def input_dim(self):
         return self.cov_func.input_dim
-    
+
     @property
     def active_dims(self):
         return self.cov_func.active_dims
@@ -892,9 +892,9 @@ class WrappedPeriodic(Covariance):
         f1 = pt.expand_dims(X, axis=(0,))
         f2 = pt.expand_dims(Xs, axis=(1,))
         r = np.pi * (f1 - f2) / self.period
-        r2 = 4 * pt.sum(pt.square(pt.sin(r) / self.cov_func.ls), 2)
+        r2 = pt.sum(pt.square(pt.sin(r) / self.cov_func.ls), 2)
         return self.cov_func.full_from_distance(r2, squared=True)
-        
+
     def diag(self, X):
         return pt.alloc(1.0, X.shape[0])
 
