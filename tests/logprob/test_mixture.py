@@ -52,7 +52,7 @@ from pytensor.tensor.subtensor import (
     as_index_constant,
 )
 
-from pymc.logprob.basic import factorized_joint_logprob
+from pymc.logprob.basic import factorized_joint_logprob, logp
 from pymc.logprob.mixture import MixtureRV, expand_indices
 from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.logprob.utils import dirac_delta
@@ -1112,3 +1112,23 @@ def test_joint_logprob_subtensor():
         logp_vals = logp_vals_fn(A_idx_value, I_value)
 
         np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)
+
+
+def test_nested_ifelse():
+    idx = pt.scalar("idx", dtype=int)
+
+    dist0 = pt.random.normal(-5, 1)
+    dist1 = pt.random.normal(0, 1)
+    dist2 = pt.random.normal(5, 1)
+    mix = ifelse(pt.eq(idx, 0), dist0, ifelse(pt.eq(idx, 1), dist1, dist2))
+    mix.name = "mix"
+
+    value = mix.clone()
+    mix_logp = logp(mix, value)
+    assert mix_logp.name == "mix_logprob"
+    mix_logp_fn = pytensor.function([idx, value], mix_logp)
+
+    test_value = 0.25
+    np.testing.assert_almost_equal(mix_logp_fn(0, test_value), sp.norm.logpdf(test_value, -5, 1))
+    np.testing.assert_almost_equal(mix_logp_fn(1, test_value), sp.norm.logpdf(test_value, 0, 1))
+    np.testing.assert_almost_equal(mix_logp_fn(2, test_value), sp.norm.logpdf(test_value, 5, 1))
