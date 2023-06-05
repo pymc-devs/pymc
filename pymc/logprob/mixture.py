@@ -547,4 +547,7 @@ def logprob_ifelse(op, values, if_var, *base_rvs, **kwargs):
     logps_then = replace_rvs_by_values(logps_then, rvs_to_values=rvs_to_values_then)
     logps_else = replace_rvs_by_values(logps_else, rvs_to_values=rvs_to_values_else)
 
-    return ifelse(if_var, logps_then, logps_else)
+    logps = ifelse(if_var, logps_then, logps_else)
+    if len(logps) == 1:
+        return logps[0]
+    return logps
