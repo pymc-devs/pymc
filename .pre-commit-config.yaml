@@ -64,7 +64,7 @@ repos:
     - id: check-no-tests-are-ignored
       additional_dependencies: [pandas,pyyaml]
       entry: python scripts/check_all_tests_are_covered.py
-      files: ^\.github/workflows/pytest\.yml$
+      files: ^.github/workflows/tests.yml$
       language: python
       name: Check no tests are ignored
       pass_filenames: false
