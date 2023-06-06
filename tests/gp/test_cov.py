@@ -671,7 +671,7 @@ class TestWarpedInput:
             pm.gp.cov.WarpedInput(1, "str is not Covariance object", lambda x: x)
 
 
-class TestPeriodic:
+class TestWrappedPeriodic:
     def test_1d(self):
         X = np.linspace(0, 1, 10)[:, None]
         with pm.Model():
