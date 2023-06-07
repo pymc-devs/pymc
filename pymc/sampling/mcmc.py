@@ -20,16 +20,18 @@ import sys
 import time
 import warnings
 
-from collections import defaultdict
 from typing import (
     Any,
     Dict,
     Iterator,
     List,
     Literal,
+    Mapping,
     Optional,
     Sequence,
+    Set,
     Tuple,
+    Type,
     Union,
     overload,
 )
@@ -39,6 +41,7 @@ import pytensor.gradient as tg
 
 from arviz import InferenceData
 from fastprogress.fastprogress import progress_bar
+from pytensor.graph.basic import Variable
 from typing_extensions import Protocol, TypeAlias
 
 import pymc as pm
@@ -90,7 +93,10 @@ _log = logging.getLogger(__name__)
 
 
 def instantiate_steppers(
-    model, steps: List[Step], selected_steps, step_kwargs=None
+    model: Model,
+    steps: List[Step],
+    selected_steps: Mapping[Type[BlockedStep], List[Any]],
+    step_kwargs: Optional[Dict[str, Dict]] = None,
 ) -> Union[Step, List[Step]]:
     """Instantiate steppers assigned to the model variables.
 
@@ -122,14 +128,23 @@ def instantiate_steppers(
     used_keys = set()
     for step_class, vars in selected_steps.items():
         if vars:
-            args = step_kwargs.get(step_class.name, {})
-            used_keys.add(step_class.name)
+            name = getattr(step_class, "name")
+            args = step_kwargs.get(name, {})
+            used_keys.add(name)
             step = step_class(vars=vars, model=model, **args)
             steps.append(step)
 
     unused_args = set(step_kwargs).difference(used_keys)
     if unused_args:
-        raise ValueError("Unused step method arguments: %s" % unused_args)
+        s = "s" if len(unused_args) > 1 else ""
+        example_arg = sorted(unused_args)[0]
+        example_step = (list(selected_steps.keys()) or pm.STEP_METHODS)[0]
+        example_step_name = getattr(example_step, "name")
+        raise ValueError(
+            f"Invalid key{s} found in step_kwargs: {unused_args}. "
+            "Keys must be step names and values valid kwargs for that stepper. "
+            f'Did you mean {{"{example_step_name}": {{"{example_arg}": ...}}}}?'
+        )
 
     if len(steps) == 1:
         return steps[0]
@@ -137,7 +152,12 @@ def instantiate_steppers(
     return steps
 
 
-def assign_step_methods(model, step=None, methods=None, step_kwargs=None):
+def assign_step_methods(
+    model: Model,
+    step: Optional[Union[Step, Sequence[Step]]] = None,
+    methods: Optional[Sequence[Type[BlockedStep]]] = None,
+    step_kwargs: Optional[Dict[str, Any]] = None,
+) -> Union[Step, List[Step]]:
     """Assign model variables to appropriate step methods.
 
     Passing a specified model will auto-assign its constituent stochastic
@@ -167,49 +187,48 @@ def assign_step_methods(model, step=None, methods=None, step_kwargs=None):
     methods : list
         List of step methods associated with the model's variables.
     """
-    steps = []
-    assigned_vars = set()
-
-    if methods is None:
-        methods = pm.STEP_METHODS
+    steps: List[Step] = []
+    assigned_vars: Set[Variable] = set()
 
     if step is not None:
-        try:
-            steps += list(step)
-        except TypeError:
+        if isinstance(step, (BlockedStep, CompoundStep)):
             steps.append(step)
+        else:
+            steps.extend(step)
         for step in steps:
             for var in step.vars:
                 if var not in model.value_vars:
                     raise ValueError(
-                        f"{var} assigned to {step} sampler is not a value variable in the model. You can use `util.get_value_vars_from_user_vars` to parse user provided variables."
+                        f"{var} assigned to {step} sampler is not a value variable in the model. "
+                        "You can use `util.get_value_vars_from_user_vars` to parse user provided variables."
                     )
             assigned_vars = assigned_vars.union(set(step.vars))
 
     # Use competence classmethods to select step methods for remaining
     # variables
-    selected_steps = defaultdict(list)
+    methods_list: List[Type[BlockedStep]] = list(methods or pm.STEP_METHODS)
+    selected_steps: Dict[Type[BlockedStep], List] = {}
     model_logp = model.logp()
 
     for var in model.value_vars:
         if var not in assigned_vars:
             # determine if a gradient can be computed
-            has_gradient = var.dtype not in discrete_types
+            has_gradient = getattr(var, "dtype") not in discrete_types
             if has_gradient:
                 try:
-                    tg.grad(model_logp, var)
+                    tg.grad(model_logp, var)  # type: ignore
                 except (NotImplementedError, tg.NullTypeGradError):
                     has_gradient = False
 
             # select the best method
             rv_var = model.values_to_rvs[var]
             selected = max(
-                methods,
-                key=lambda method, var=rv_var, has_gradient=has_gradient: method._competence(
+                methods_list,
+                key=lambda method, var=rv_var, has_gradient=has_gradient: method._competence(  # type: ignore
                     var, has_gradient
                 ),
             )
-            selected_steps[selected].append(var)
+            selected_steps.setdefault(selected, []).append(var)
 
     return instantiate_steppers(model, steps, selected_steps, step_kwargs)
 
