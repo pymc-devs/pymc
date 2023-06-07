@@ -30,6 +30,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Type,
     Union,
     overload,
 )
@@ -92,7 +93,7 @@ _log = logging.getLogger(__name__)
 def instantiate_steppers(
     model,
     steps: List[Step],
-    selected_steps: Dict[str, List[Any]],
+    selected_steps: Dict[Type[BlockedStep], List[Any]],
     step_kwargs: Optional[Dict[str, Dict]] = None,
 ) -> Union[Step, List[Step]]:
     """Instantiate steppers assigned to the model variables.
@@ -125,8 +126,9 @@ def instantiate_steppers(
     used_keys = set()
     for step_class, vars in selected_steps.items():
         if vars:
-            args = step_kwargs.get(step_class.name, {})
-            used_keys.add(step_class.name)
+            name = getattr(step_class, "name")
+            args = step_kwargs.get(name, {})
+            used_keys.add(name)
             step = step_class(vars=vars, model=model, **args)
             steps.append(step)
 
