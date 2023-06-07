@@ -42,7 +42,7 @@ import scipy.stats as st
 
 from pymc import draw, logp
 from pymc.logprob.abstract import MeasurableVariable
-from pymc.logprob.basic import factorized_joint_logprob
+from pymc.logprob.basic import conditional_logp
 from pymc.logprob.censoring import MeasurableClip
 from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.testing import assert_no_rvs
@@ -64,7 +64,7 @@ def test_scalar_clipped_mixture():
     idxs_vv = idxs.clone()
     idxs_vv.name = "idxs_val"
 
-    logp = factorized_joint_logprob({idxs: idxs_vv, mix: mix_vv})
+    logp = conditional_logp({idxs: idxs_vv, mix: mix_vv})
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
 
     logp_fn = pytensor.function([idxs_vv, mix_vv], logp_combined)
@@ -102,9 +102,7 @@ def test_nested_scalar_mixtures():
     idxs12_vv = idxs12.clone()
     mix12_vv = mix12.clone()
 
-    logp = factorized_joint_logprob(
-        {idxs1: idxs1_vv, idxs2: idxs2_vv, idxs12: idxs12_vv, mix12: mix12_vv}
-    )
+    logp = conditional_logp({idxs1: idxs1_vv, idxs2: idxs2_vv, idxs12: idxs12_vv, mix12: mix12_vv})
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
 
     logp_fn = pytensor.function([idxs1_vv, idxs2_vv, idxs12_vv, mix12_vv], logp_combined)
@@ -239,7 +237,7 @@ def test_affine_join_interdependent(reverse):
     x_vv = x.clone()
     ys_vv = ys.clone()
 
-    logp = factorized_joint_logprob({x: x_vv, ys: ys_vv})
+    logp = conditional_logp({x: x_vv, ys: ys_vv})
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
     assert_no_rvs(logp_combined)
 
@@ -247,9 +245,7 @@ def test_affine_join_interdependent(reverse):
     y1_vv = y_rvs[1].clone()
     y2_vv = y_rvs[2].clone()
 
-    ref_logp = factorized_joint_logprob(
-        {x: x_vv, y_rvs[0]: y0_vv, y_rvs[1]: y1_vv, y_rvs[2]: y2_vv}
-    )
+    ref_logp = conditional_logp({x: x_vv, y_rvs[0]: y0_vv, y_rvs[1]: y1_vv, y_rvs[2]: y2_vv})
     ref_logp_combined = pt.sum([pt.sum(factor) for factor in ref_logp.values()])
 
     rng = np.random.default_rng()

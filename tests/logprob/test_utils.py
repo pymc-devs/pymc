@@ -48,7 +48,7 @@ from pytensor.tensor.random.basic import normal, uniform
 import pymc as pm
 
 from pymc.logprob.abstract import MeasurableVariable
-from pymc.logprob.basic import joint_logp, logp
+from pymc.logprob.basic import logp, transformed_conditional_logp
 from pymc.logprob.utils import (
     ParameterValueError,
     check_potential_measurability,

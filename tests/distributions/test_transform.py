@@ -25,7 +25,7 @@ from pytensor.tensor.var import TensorConstant
 import pymc as pm
 import pymc.distributions.transforms as tr
 
-from pymc.logprob.basic import joint_logp
+from pymc.logprob.basic import transformed_conditional_logp
 from pymc.pytensorf import floatX, jacobian
 from pymc.testing import (
     Circ,
@@ -308,7 +308,7 @@ class TestElementWiseLogp(SeededTest):
         assert model.logp(x, sum=False)[0].ndim == x.ndim == jacob_det.ndim
 
         v1 = (
-            joint_logp(
+            transformed_conditional_logp(
                 (x,),
                 rvs_to_values={x: x_val_transf},
                 rvs_to_transforms={x: transform},
@@ -318,7 +318,7 @@ class TestElementWiseLogp(SeededTest):
             .eval({x_val_transf: test_array_transf})
         )
         v2 = (
-            joint_logp(
+            transformed_conditional_logp(
                 (x,),
                 rvs_to_values={x: x_val_untransf},
                 rvs_to_transforms={},
@@ -356,7 +356,7 @@ class TestElementWiseLogp(SeededTest):
             assert model.logp(x, sum=False)[0].ndim == (x.ndim - 1) == jacob_det.ndim
 
         a = (
-            joint_logp(
+            transformed_conditional_logp(
                 (x,),
                 rvs_to_values={x: x_val_transf},
                 rvs_to_transforms={x: transform},
@@ -366,7 +366,7 @@ class TestElementWiseLogp(SeededTest):
             .eval({x_val_transf: test_array_transf})
         )
         b = (
-            joint_logp(
+            transformed_conditional_logp(
                 (x,),
                 rvs_to_values={x: x_val_untransf},
                 rvs_to_transforms={},

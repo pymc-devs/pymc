@@ -52,7 +52,7 @@ from pytensor.tensor.subtensor import (
 )
 
 from pymc.distributions.transforms import logodds
-from pymc.logprob.basic import factorized_joint_logprob
+from pymc.logprob.basic import conditional_logp
 from pymc.logprob.rewriting import cleanup_ir, local_lift_DiracDelta
 from pymc.logprob.transforms import TransformedVariable, TransformValuesRewrite
 from pymc.logprob.utils import DiracDelta, dirac_delta
@@ -103,7 +103,7 @@ def test_local_remove_TransformedVariable():
     p_vv = p_rv.clone()
 
     tr = TransformValuesRewrite({p_vv: logodds})
-    [p_logp] = factorized_joint_logprob({p_rv: p_vv}, extra_rewrites=tr).values()
+    [p_logp] = conditional_logp({p_rv: p_vv}, extra_rewrites=tr).values()
 
     assert not any(
         isinstance(v.owner.op, TransformedVariable) for v in ancestors([p_logp]) if v.owner
@@ -136,7 +136,7 @@ def test_joint_logprob_incsubtensor(indices, size):
 
     assert isinstance(Y_rv.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1))
 
-    Y_rv_logp = factorized_joint_logprob({Y_rv: y_value_var})
+    Y_rv_logp = conditional_logp({Y_rv: y_value_var})
     Y_rv_logp_combined = pt.add(*Y_rv_logp.values())
 
     obs_logps = Y_rv_logp_combined.eval({y_value_var: y_val})
