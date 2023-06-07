@@ -139,10 +139,11 @@ def instantiate_steppers(
         s = "s" if len(unused_args) > 1 else ""
         example_arg = sorted(unused_args)[0]
         example_step = (list(selected_steps.keys()) or pm.STEP_METHODS)[0]
+        example_step_name = getattr(example_step, "name")
         raise ValueError(
             f"Invalid key{s} found in step_kwargs: {unused_args}. "
             "Keys must be step names and values valid kwargs for that stepper. "
-            f'Did you mean {{"{example_step.name}": {{"{example_arg}": ...}}}}?'
+            f'Did you mean {{"{example_step_name}": {{"{example_arg}": ...}}}}?'
         )
 
     if len(steps) == 1:
