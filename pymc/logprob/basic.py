@@ -163,15 +163,15 @@ RVS_IN_JOINT_LOGP_GRAPH_MSG = (
 )
 
 
-def factorized_joint_logprob(
+def conditional_logp(
     rv_values: Dict[TensorVariable, TensorVariable],
     warn_missing_rvs: bool = True,
     ir_rewriter: Optional[GraphRewriter] = None,
     extra_rewrites: Optional[Union[GraphRewriter, NodeRewriter]] = None,
     **kwargs,
 ) -> Dict[TensorVariable, TensorVariable]:
-    r"""Create a map between variables and their log-probabilities such that the
-    sum is their joint log-probability.
+    r"""Create a map between variables and conditional log-probabilities
+    such that the sum is their joint log-probability.
 
     The `rv_values` dictionary specifies a joint probability graph defined by
     pairs of random variables and respective measure-space input parameters
@@ -189,20 +189,21 @@ def factorized_joint_logprob(
 
     .. math::
 
-        \sigma^2 \sim& \operatorname{InvGamma}(0.5, 0.5) \\
-        Y \sim& \operatorname{N}(0, \sigma^2)
+        \Sigma^2 \sim& \operatorname{InvGamma}(0.5, 0.5) \\
+        Y \sim& \operatorname{N}(0, \Sigma)
 
     If we create a value variable for ``Y_rv``, i.e. ``y_vv = pt.scalar("y")``,
-    the graph of ``factorized_joint_logprob({Y_rv: y_vv})`` is equivalent to the
-    conditional probability :math:`\log p(Y = y \mid \sigma^2)`, with a stochastic
+    the graph of ``conditional_logp({Y_rv: y_vv})`` is equivalent to the
+    conditional log-probability :math:`\log p(Y = y \mid \Sigma^2)`, with a stochastic
     ``sigma2_rv``. If we specify a value variable for ``sigma2_rv``, i.e.
-    ``s_vv = pt.scalar("s2")``, then ``factorized_joint_logprob({Y_rv: y_vv, sigma2_rv: s_vv})``
-    yields the joint log-probability of the two variables.
+    ``s_vv = pt.scalar("s2")``, then ``conditional_logp({Y_rv: y_vv, sigma2_rv: s_vv})``
+    yields the conditional log-probabilities of the two variables.
+    The sum of the two terms gives their joint log-probability.
 
     .. math::
 
-        \log p(Y = y, \sigma^2 = s) =
-            \log p(Y = y \mid \sigma^2 = s) + \log p(\sigma^2 = s)
+        \log p(Y = y, \Sigma^2 = \sigma^2) =
+            \log p(Y = y \mid \Sigma^2 = \sigma^2) + \log p(\Sigma^2 = \sigma^2)
 
 
     Parameters
@@ -223,7 +224,7 @@ def factorized_joint_logprob(
 
     Returns
     -------
-    A ``dict`` that maps each value variable to the log-probability factor derived
+    A ``dict`` that maps each value variable to the conditional log-probability term derived
     from the respective `RandomVariable`.
 
     """
@@ -309,7 +310,7 @@ def factorized_joint_logprob(
 
             if q_value_var in logprob_vars:
                 raise ValueError(
-                    f"More than one logprob factor was assigned to the value var {q_value_var}"
+                    f"More than one logprob term was assigned to the value var {q_value_var}"
                 )
 
             logprob_vars[q_value_var] = q_logprob_var
@@ -337,7 +338,7 @@ def factorized_joint_logprob(
     return logprob_vars
 
 
-def joint_logp(
+def transformed_conditional_logp(
     rvs: Sequence[TensorVariable],
     *,
     rvs_to_values: Dict[TensorVariable, TensorVariable],
@@ -345,8 +346,11 @@ def joint_logp(
     jacobian: bool = True,
     **kwargs,
 ) -> List[TensorVariable]:
-    """Thin wrapper around pymc.logprob.factorized_joint_logprob, extended with Model
-    specific concerns such as transforms, jacobian, and scaling"""
+    """Thin wrapper around conditional_logprob, which creates a value transform rewrite.
+
+    This helper will only return the subset of logprob terms corresponding to `rvs`.
+    All rvs_to_values and rvs_to_transforms mappings are required.
+    """
 
     transform_rewrite = None
     values_to_transforms = {
@@ -359,7 +363,7 @@ def joint_logp(
         transform_rewrite = TransformValuesRewrite(values_to_transforms)  # type: ignore
 
     kwargs.setdefault("warn_missing_rvs", False)
-    temp_logp_terms = factorized_joint_logprob(
+    temp_logp_terms = conditional_logp(
         rvs_to_values,
         extra_rewrites=transform_rewrite,
         use_jacobian=jacobian,
@@ -381,3 +385,21 @@ def joint_logp(
         raise ValueError(RVS_IN_JOINT_LOGP_GRAPH_MSG % rvs_in_logp_expressions)
 
     return logp_terms_list
+
+
+def factorized_joint_logprob(*args, **kwargs):
+    warnings.warn(
+        "`factorized_joint_logprob` was renamed to `conditional_logp`. "
+        "The function will be removed in a future release",
+        FutureWarning,
+    )
+    return conditional_logp(*args, **kwargs)
+
+
+def joint_logp(*args, **kwargs):
+    warnings.warn(
+        "`joint_logp` was renamed to `transformed_conditional_logp`. "
+        "The function will be removed in a future release",
+        FutureWarning,
+    )
+    return transformed_conditional_logp(*args, **kwargs)

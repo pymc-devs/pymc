@@ -55,7 +55,13 @@ from pytensor.tensor.subtensor import (
 
 import pymc as pm
 
-from pymc.logprob.basic import factorized_joint_logprob, icdf, joint_logp, logcdf, logp
+from pymc.logprob.basic import (
+    conditional_logp,
+    icdf,
+    logcdf,
+    logp,
+    transformed_conditional_logp,
+)
 from pymc.logprob.transforms import LogTransform
 from pymc.logprob.utils import rvs_to_value_vars, walk_model
 from pymc.pytensorf import replace_rvs_by_values
@@ -68,7 +74,7 @@ def test_factorized_joint_logprob_basic():
     a.name = "a"
     a_value_var = a.clone()
 
-    a_logp = factorized_joint_logprob({a: a_value_var})
+    a_logp = conditional_logp({a: a_value_var})
     a_logp_comb = tuple(a_logp.values())[0]
     a_logp_exp = logp(a, a_value_var)
 
@@ -81,7 +87,7 @@ def test_factorized_joint_logprob_basic():
     sigma_value_var = sigma.clone()
     y_value_var = Y.clone()
 
-    total_ll = factorized_joint_logprob({Y: y_value_var, sigma: sigma_value_var})
+    total_ll = conditional_logp({Y: y_value_var, sigma: sigma_value_var})
     total_ll_combined = pt.add(*total_ll.values())
 
     # We need to replace the reference to `sigma` in `Y` with its value
@@ -106,7 +112,7 @@ def test_factorized_joint_logprob_basic():
     b_value_var = b.clone()
     c_value_var = c.clone()
 
-    b_logp = factorized_joint_logprob({a: a_value_var, b: b_value_var, c: c_value_var})
+    b_logp = conditional_logp({a: a_value_var, b: b_value_var, c: c_value_var})
     b_logp_combined = pt.sum([pt.sum(factor) for factor in b_logp.values()])
 
     # There shouldn't be any `RandomVariable`s in the resulting graph
@@ -125,7 +131,7 @@ def test_factorized_joint_logprob_multi_obs():
     a_val = a.clone()
     b_val = b.clone()
 
-    logp_res = factorized_joint_logprob({a: a_val, b: b_val})
+    logp_res = conditional_logp({a: a_val, b: b_val})
     logp_res_combined = pt.add(*logp_res.values())
     logp_exp = logp(a, a_val) + logp(b, b_val)
 
@@ -137,8 +143,8 @@ def test_factorized_joint_logprob_multi_obs():
     x_val = x.clone()
     y_val = y.clone()
 
-    logp_res = factorized_joint_logprob({x: x_val, y: y_val})
-    exp_logp = factorized_joint_logprob({x: x_val, y: y_val})
+    logp_res = conditional_logp({x: x_val, y: y_val})
+    exp_logp = conditional_logp({x: x_val, y: y_val})
     logp_res_comb = pt.sum([pt.sum(factor) for factor in logp_res.values()])
     exp_logp_comb = pt.sum([pt.sum(factor) for factor in exp_logp.values()])
 
@@ -155,7 +161,7 @@ def test_factorized_joint_logprob_diff_dims():
     y_vv = y.clone()
     y_vv.name = "y"
 
-    logp = factorized_joint_logprob({x: x_vv, y: y_vv})
+    logp = conditional_logp({x: x_vv, y: y_vv})
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
 
     M_val = np.random.normal(size=(10, 3))
@@ -181,7 +187,7 @@ def test_incsubtensor_original_values_output_dict():
     rv = pt.set_subtensor(base_rv[0], 5)
     vv = rv.clone()
 
-    logp_dict = factorized_joint_logprob({rv: vv})
+    logp_dict = conditional_logp({rv: vv})
     assert vv in logp_dict
 
 
@@ -194,14 +200,14 @@ def test_persist_inputs():
     beta_vv = beta_rv.type()
     y_vv = Y_rv.clone()
 
-    logp = factorized_joint_logprob({beta_rv: beta_vv, Y_rv: y_vv})
+    logp = conditional_logp({beta_rv: beta_vv, Y_rv: y_vv})
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
 
     assert x in ancestors([logp_combined])
 
     # Make sure we don't clone value variables when they're graphs.
     y_vv_2 = y_vv * 2
-    logp_2 = factorized_joint_logprob({beta_rv: beta_vv, Y_rv: y_vv_2})
+    logp_2 = conditional_logp({beta_rv: beta_vv, Y_rv: y_vv_2})
     logp_2_combined = pt.sum([pt.sum(factor) for factor in logp_2.values()])
 
     assert y_vv in ancestors([logp_2_combined])
@@ -210,7 +216,7 @@ def test_persist_inputs():
     # Even when they are random
     y_vv = pt.random.normal(name="y_vv2")
     y_vv_2 = y_vv * 2
-    logp_2 = factorized_joint_logprob({beta_rv: beta_vv, Y_rv: y_vv_2})
+    logp_2 = conditional_logp({beta_rv: beta_vv, Y_rv: y_vv_2})
     logp_2_combined = pt.sum([pt.sum(factor) for factor in logp_2.values()])
 
     assert y_vv in ancestors([logp_2_combined])
@@ -224,11 +230,11 @@ def test_warn_random_found_factorized_joint_logprob():
     y_vv = y_rv.clone()
 
     with pytest.warns(UserWarning, match="Random variables detected in the logp graph: {x}"):
-        factorized_joint_logprob({y_rv: y_vv})
+        conditional_logp({y_rv: y_vv})
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        factorized_joint_logprob({y_rv: y_vv}, warn_missing_rvs=False)
+        conditional_logp({y_rv: y_vv}, warn_missing_rvs=False)
 
 
 def test_multiple_rvs_to_same_value_raises():
@@ -237,9 +243,9 @@ def test_multiple_rvs_to_same_value_raises():
     x = x_rv1.type()
     x.name = "x"
 
-    msg = "More than one logprob factor was assigned to the value var x"
+    msg = "More than one logprob term was assigned to the value var x"
     with pytest.raises(ValueError, match=msg):
-        factorized_joint_logprob({x_rv1: x, x_rv2: x})
+        conditional_logp({x_rv1: x, x_rv2: x})
 
 
 def test_joint_logp_basic():
@@ -259,7 +265,7 @@ def test_joint_logp_basic():
 
     c_value_var = m.rvs_to_values[c]
 
-    (b_logp,) = joint_logp(
+    (b_logp,) = transformed_conditional_logp(
         (b,),
         rvs_to_values=m.rvs_to_values,
         rvs_to_transforms=m.rvs_to_transforms,
@@ -304,7 +310,7 @@ def test_joint_logp_incsubtensor(indices, size):
     a_idx_value_var = a_idx.type()
     a_idx_value_var.name = "a_idx_value"
 
-    a_idx_logp = joint_logp(
+    a_idx_logp = transformed_conditional_logp(
         (a_idx,),
         rvs_to_values={a_idx: a_value_var},
         rvs_to_transforms={},

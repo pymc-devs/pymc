@@ -44,7 +44,7 @@ from pytensor.raise_op import Assert
 from scipy import stats
 
 from pymc.distributions import Dirichlet
-from pymc.logprob.basic import factorized_joint_logprob
+from pymc.logprob.basic import conditional_logp
 from tests.distributions.test_multivariate import dirichlet_logpdf
 
 
@@ -59,7 +59,7 @@ def test_specify_shape_logprob():
 
     # 2. Request logp
     x_vv = x_rv.clone()
-    [x_logp] = factorized_joint_logprob({x_rv: x_vv}).values()
+    [x_logp] = conditional_logp({x_rv: x_vv}).values()
 
     # 3. Test logp
     x_logp_fn = pytensor.function([last_dim, x_vv], x_logp)
@@ -85,7 +85,7 @@ def test_assert_logprob():
     assert_rv.name = "assert_rv"
 
     assert_vv = assert_rv.clone()
-    assert_logp = factorized_joint_logprob({assert_rv: assert_vv})[assert_vv]
+    assert_logp = conditional_logp({assert_rv: assert_vv})[assert_vv]
 
     # Check valid value is correct and doesn't raise
     # Since here the value to the rv satisfies the condition, no error is raised.

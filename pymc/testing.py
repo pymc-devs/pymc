@@ -35,7 +35,7 @@ import pymc as pm
 from pymc.distributions.distribution import Distribution
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.initial_point import make_initial_point_fn
-from pymc.logprob.basic import icdf, joint_logp, logcdf, logp
+from pymc.logprob.basic import icdf, logcdf, logp, transformed_conditional_logp
 from pymc.logprob.utils import ParameterValueError, find_rvs_in_graph
 from pymc.pytensorf import (
     compile_pymc,
@@ -673,7 +673,7 @@ def assert_moment_is_expected(model, expected, check_finite_logp=True):
 
     if check_finite_logp:
         logp_moment = (
-            joint_logp(
+            transformed_conditional_logp(
                 (model["x"],),
                 rvs_to_values={model["x"]: pt.constant(moment)},
                 rvs_to_transforms={},

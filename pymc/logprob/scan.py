@@ -54,7 +54,7 @@ from pytensor.tensor.var import TensorVariable
 from pytensor.updates import OrderedUpdates
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob
-from pymc.logprob.basic import factorized_joint_logprob
+from pymc.logprob.basic import conditional_logp
 from pymc.logprob.rewriting import (
     PreserveRVMappings,
     construct_ir_fgraph,
@@ -310,7 +310,7 @@ def logprob_ScanRV(op, values, *inputs, name=None, **kwargs):
 
     def create_inner_out_logp(value_map: Dict[TensorVariable, TensorVariable]) -> TensorVariable:
         """Create a log-likelihood inner-output for a `Scan`."""
-        logp_parts = factorized_joint_logprob(value_map, warn_rvs=False)
+        logp_parts = conditional_logp(value_map, warn_rvs=False)
         return logp_parts.values()
 
     logp_scan_args = convert_outer_out_to_in(
