@@ -15,6 +15,7 @@ API
    api/smc
    api/data
    api/ode
+   api/logprob
    api/tuning
    api/math
    api/pytensorf
