@@ -102,10 +102,25 @@ def _warn_rvs_in_inferred_graph(graph: Union[TensorVariable, Sequence[TensorVari
         )
 
 
-def logp(
-    rv: TensorVariable, value: TensorLike, warn_missing_rvs: bool = True, **kwargs
-) -> TensorVariable:
+def _deprecate_warn_missing_rvs(warn_rvs, kwargs):
+    if "warn_missing_rvs" in kwargs:
+        warnings.warn(
+            "Argument `warn_missing_rvs` was renamed to `warn_rvs` and will be removed in a future release",
+            FutureWarning,
+        )
+        if warn_rvs is None:
+            warn_rvs = kwargs.pop("warn_missing_rvs")
+        else:
+            raise ValueError("Can't set both warn_rvs and warn_missing_rvs")
+    else:
+        if warn_rvs is None:
+            warn_rvs = True
+    return warn_rvs, kwargs
+
+
+def logp(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> TensorVariable:
     """Return the log-probability graph of a Random Variable"""
+    warn_rvs, kwargs = _deprecate_warn_missing_rvs(warn_rvs, kwargs)
 
     value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
@@ -115,15 +130,14 @@ def logp(
         [(ir_rv, ir_value)] = fgraph.preserve_rv_mappings.rv_values.items()
         expr = _logprob_helper(ir_rv, ir_value, **kwargs)
         cleanup_ir([expr])
-        if warn_missing_rvs:
+        if warn_rvs:
             _warn_rvs_in_inferred_graph(expr)
         return expr
 
 
-def logcdf(
-    rv: TensorVariable, value: TensorLike, warn_missing_rvs: bool = True, **kwargs
-) -> TensorVariable:
+def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> TensorVariable:
     """Create a graph for the log-CDF of a Random Variable."""
+    warn_rvs, kwargs = _deprecate_warn_missing_rvs(warn_rvs, kwargs)
     value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
         return _logcdf_helper(rv, value, **kwargs)
@@ -133,15 +147,14 @@ def logcdf(
         [ir_rv] = fgraph.outputs
         expr = _logcdf_helper(ir_rv, value, **kwargs)
         cleanup_ir([expr])
-        if warn_missing_rvs:
+        if warn_rvs:
             _warn_rvs_in_inferred_graph(expr)
         return expr
 
 
-def icdf(
-    rv: TensorVariable, value: TensorLike, warn_missing_rvs: bool = True, **kwargs
-) -> TensorVariable:
+def icdf(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> TensorVariable:
     """Create a graph for the inverse CDF of a  Random Variable."""
+    warn_rvs, kwargs = _deprecate_warn_missing_rvs(warn_rvs, kwargs)
     value = pt.as_tensor_variable(value, dtype="floatX")
     try:
         return _icdf_helper(rv, value, **kwargs)
@@ -151,7 +164,7 @@ def icdf(
         [ir_rv] = fgraph.outputs
         expr = _icdf_helper(ir_rv, value, **kwargs)
         cleanup_ir([expr])
-        if warn_missing_rvs:
+        if warn_rvs:
             _warn_rvs_in_inferred_graph(expr)
         return expr
 
@@ -165,7 +178,7 @@ RVS_IN_JOINT_LOGP_GRAPH_MSG = (
 
 def conditional_logp(
     rv_values: Dict[TensorVariable, TensorVariable],
-    warn_missing_rvs: bool = True,
+    warn_rvs=None,
     ir_rewriter: Optional[GraphRewriter] = None,
     extra_rewrites: Optional[Union[GraphRewriter, NodeRewriter]] = None,
     **kwargs,
@@ -212,7 +225,7 @@ def conditional_logp(
         A ``dict`` of variables that maps stochastic elements
         (e.g. `RandomVariable`\s) to symbolic `Variable`\s representing their
         values in a log-probability.
-    warn_missing_rvs
+    warn_rvs
         When ``True``, issue a warning when a `RandomVariable` is found in
         the logp graph and doesn't have a corresponding value variable specified in
         `rv_values`.
@@ -228,6 +241,8 @@ def conditional_logp(
     from the respective `RandomVariable`.
 
     """
+    warn_rvs, kwargs = _deprecate_warn_missing_rvs(warn_rvs, kwargs)
+
     fgraph, rv_values, _ = construct_ir_fgraph(rv_values, ir_rewriter=ir_rewriter)
 
     if extra_rewrites is not None:
@@ -330,7 +345,7 @@ def conditional_logp(
     logprob_expressions = list(logprob_vars.values())
     cleanup_ir(logprob_expressions)
 
-    if warn_missing_rvs:
+    if warn_rvs:
         rvs_in_logp_expressions = _find_unallowed_rvs_in_graph(logprob_expressions)
         if rvs_in_logp_expressions:
             warnings.warn(RVS_IN_JOINT_LOGP_GRAPH_MSG % rvs_in_logp_expressions, UserWarning)
@@ -362,7 +377,7 @@ def transformed_conditional_logp(
         # There seems to be an incorrect type hint in TransformValuesRewrite
         transform_rewrite = TransformValuesRewrite(values_to_transforms)  # type: ignore
 
-    kwargs.setdefault("warn_missing_rvs", False)
+    kwargs.setdefault("warn_rvs", False)
     temp_logp_terms = conditional_logp(
         rvs_to_values,
         extra_rewrites=transform_rewrite,
