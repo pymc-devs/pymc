@@ -13,13 +13,13 @@ API
    api/samplers
    api/vi
    api/smc
-   api/backends
    api/data
    api/ode
    api/tuning
    api/math
    api/pytensorf
    api/shape_utils
+   api/backends
    api/misc
 
 ------------------
