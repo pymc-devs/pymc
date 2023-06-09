@@ -436,7 +436,8 @@ class TestDataPyMC:
         with pm.Model() as model:
             x = pm.ConstantData("x", [1.0, 2.0, 3.0])
             y = pm.MutableData("y", [1.0, 2.0, 3.0])
-            beta = pm.Normal("beta", 0, 1)
+            beta_sigma = pm.MutableData("beta_sigma", 1)
+            beta = pm.Normal("beta", 0, beta_sigma)
             obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
             trace = pm.sample(100, chains=2, tune=100, return_inferencedata=False)
             if use_context:
@@ -444,10 +445,16 @@ class TestDataPyMC:
 
         if not use_context:
             inference_data = to_inference_data(trace=trace, model=model, log_likelihood=True)
-        test_dict = {"posterior": ["beta"], "observed_data": ["obs"], "constant_data": ["x"]}
+        test_dict = {
+            "posterior": ["beta"],
+            "observed_data": ["obs"],
+            "constant_data": ["x", "y", "beta_sigma"],
+        }
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
         assert inference_data.log_likelihood["obs"].shape == (2, 100, 3)
+        # test that scalars are dimensionless in constant_data (issue #6755)
+        assert inference_data.constant_data["beta_sigma"].ndim == 0
 
     def test_predictions_constant_data(self):
         with pm.Model():
