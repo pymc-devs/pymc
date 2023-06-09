@@ -917,7 +917,12 @@ def test_switch_mixture():
     i_vv = I_rv.clone()
     i_vv.name = "i"
 
+    # When I_rv == True, X_rv flows through otherwise Y_rv does
     Z1_rv = pt.switch(I_rv, X_rv, Y_rv)
+
+    assert Z1_rv.eval({I_rv: 0}) > 5
+    assert Z1_rv.eval({I_rv: 1}) < -5
+
     z_vv = Z1_rv.clone()
     z_vv.name = "z1"
 
@@ -935,7 +940,10 @@ def test_switch_mixture():
 
     # building the identical graph but with a stack to check that mixture computations are identical
 
-    Z2_rv = pt.stack((X_rv, Y_rv))[I_rv]
+    Z2_rv = pt.stack((Y_rv, X_rv))[I_rv]
+
+    assert Z2_rv.eval({I_rv: 0}) > 5
+    assert Z2_rv.eval({I_rv: 1}) < -5
 
     fgraph2, _, _ = construct_ir_fgraph({Z2_rv: z_vv, I_rv: i_vv})
 
@@ -949,8 +957,8 @@ def test_switch_mixture():
     # below should follow immediately from the equal_computations assertion above
     assert equal_computations([z1_logp_combined], [z2_logp_combined])
 
-    np.testing.assert_almost_equal(0.69049938, z1_logp_combined.eval({z_vv: -10, i_vv: 0}))
-    np.testing.assert_almost_equal(0.69049938, z2_logp_combined.eval({z_vv: -10, i_vv: 0}))
+    np.testing.assert_almost_equal(0.69049938, z1_logp_combined.eval({z_vv: -10, i_vv: 1}))
+    np.testing.assert_almost_equal(0.69049938, z2_logp_combined.eval({z_vv: -10, i_vv: 1}))
 
 
 def test_ifelse_mixture_one_component():
