@@ -344,7 +344,7 @@ def find_measurable_switch_mixture(fgraph, node):
         old_mixture_rv.broadcastable,
     )
     new_mixture_rv = mix_op.make_node(
-        *([NoneConst, as_nontensor_scalar(node.inputs[0])] + components)
+        *([NoneConst, as_nontensor_scalar(node.inputs[0])] + components[::-1])
     ).default_output()
 
     if pytensor.config.compute_test_value != "off":
