@@ -480,7 +480,7 @@ def find_measurable_scans(fgraph, node):
         curr_scanargs.inner_outputs,
         curr_scanargs.info,
         ndim_supp=all_ndim_supp,
-        support_axis=all_supp_axes,
+        supp_axes=all_supp_axes,
         measure_type=all_measure_type,
         mode=node.op.mode,
     )
