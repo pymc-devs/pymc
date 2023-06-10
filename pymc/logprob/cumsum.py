@@ -55,6 +55,9 @@ class MeasurableCumsum(MeasurableVariable, CumOp):
     """A placeholder used to specify a log-likelihood for a cumsum sub-graph."""
 
 
+MeasurableVariable.register(MeasurableCumsum)
+
+
 @_logprob.register(MeasurableCumsum)
 def logprob_cumsum(op, values, base_rv, **kwargs):
     """Compute the log-likelihood graph for a `Cumsum`."""
@@ -103,7 +106,14 @@ def find_measurable_cumsums(fgraph, node) -> Optional[list[TensorVariable]]:
     if not rv_map_feature.request_measurable(node.inputs):
         return None
 
-    new_op = MeasurableCumsum(axis=node.op.axis or 0, mode="add")
+    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_rv.owner.op)
+    new_op = MeasurableCumsum(
+        axis=node.op.axis or 0,
+        mode="add",
+        ndim_supp=ndim_supp,
+        supp_axes=supp_axes,
+        measure_type=measure_type,
+    )
     new_rv = new_op.make_node(base_rv).default_output()
 
     return [new_rv]

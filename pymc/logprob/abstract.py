@@ -160,7 +160,7 @@ class MeasurableVariable(abc.ABC):
 MeasurableVariable.register(RandomVariable)
 
 
-class MeasurableElemwise(Elemwise):
+class MeasurableElemwise(MeasurableVariable, Elemwise):
     """Base class for Measurable Elemwise variables"""
 
     valid_scalar_types: tuple[MetaType, ...] = ()
@@ -174,7 +174,7 @@ class MeasurableElemwise(Elemwise):
         super().__init__(scalar_op, *args, **kwargs)
 
 
-def get_measurable_meta_info(base_op: MeasurableVariable) -> Tuple[int, Tuple[int], MeasureType]:
+def get_measurable_meta_info(base_op: Op) -> Tuple[int, Tuple[int], MeasureType]:
     if not isinstance(base_op, MeasurableVariable):
         raise TypeError("base_op must be a RandomVariable or MeasurableVariable")
 

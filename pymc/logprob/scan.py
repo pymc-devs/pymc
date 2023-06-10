@@ -54,7 +54,7 @@ from pytensor.tensor.subtensor import Subtensor, indices_from_subtensor
 from pytensor.tensor.variable import TensorVariable
 from pytensor.updates import OrderedUpdates
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.logprob.abstract import MeasurableVariable, _logprob, get_measurable_meta_info
 from pymc.logprob.basic import conditional_logp
 from pymc.logprob.rewriting import (
     PreserveRVMappings,
@@ -71,6 +71,9 @@ class MeasurableScan(MeasurableVariable, Scan):
 
     def __str__(self):
         return f"Measurable({super().__str__()})"
+
+
+MeasurableVariable.register(MeasurableScan)
 
 
 def convert_outer_out_to_in(
@@ -466,6 +469,12 @@ def find_measurable_scans(fgraph, node):
             # Replace the mapping
             rv_map_feature.update_rv_maps(rv_var, new_val_var, full_out)
 
+    clients: Dict[Variable, List[Variable]] = {}
+    local_fgraph_topo = pytensor.graph.basic.io_toposort(
+        curr_scanargs.inner_inputs,
+        [o for o in curr_scanargs.inner_outputs if not isinstance(o.type, RandomType)],
+        clients=clients,
+    )
     all_ndim_supp = []
     all_supp_axes = []
     all_measure_type = []
@@ -475,6 +484,7 @@ def find_measurable_scans(fgraph, node):
             all_ndim_supp.append(ndim_supp)
             all_supp_axes.append(supp_axes)
             all_measure_type.append(measure_type)
+
     op = MeasurableScan(
         curr_scanargs.inner_inputs,
         curr_scanargs.inner_outputs,

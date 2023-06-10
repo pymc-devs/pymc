@@ -82,7 +82,14 @@ def find_measurable_comparisons(
         elif isinstance(node_scalar_op, LE):
             node_scalar_op = GE()
 
-    compared_op = MeasurableComparison(node_scalar_op)
+    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(measurable_var.owner.op)
+
+    compared_op = MeasurableComparison(
+        scalar_op=node_scalar_op,
+        ndim_supp=ndim_supp,
+        supp_axes=supp_axes,
+        measure_type=measure_type,
+    )
     compared_rv = compared_op.make_node(measurable_var, const).default_output()
     return [compared_rv]
 
@@ -149,7 +156,13 @@ def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> Optional[list[
         return None
 
     node_scalar_op = node.op.scalar_op
-    bitwise_op = MeasurableBitwise(node_scalar_op)
+    ndim_supp, supp_axis, measure_type = get_measurable_meta_info(base_var.owner.op)
+    bitwise_op = MeasurableBitwise(
+        scalar_op=node_scalar_op,
+        ndim_supp=ndim_supp,
+        supp_axes=supp_axis,
+        measure_type=measure_type,
+    )
     bitwise_rv = bitwise_op.make_node(base_var).default_output()
     return [bitwise_rv]
 

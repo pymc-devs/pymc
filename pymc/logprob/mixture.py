@@ -237,6 +237,9 @@ class MixtureRV(MeasurableVariable, Op):
         raise NotImplementedError("This is a stand-in Op.")  # pragma: no cover
 
 
+MeasurableVariable.register(MixtureRV)
+
+
 def get_stack_mixture_vars(
     node: Apply,
 ) -> tuple[Optional[list[TensorVariable]], Optional[int]]:
@@ -342,7 +345,7 @@ def find_measurable_switch_mixture(fgraph, node):
     if rv_map_feature.request_measurable(components) != components:
         return None
 
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(mixture_rvs[0].owner.op)
+    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(idx.owner.op)
 
     mix_op = MixtureRV(
         indices_end_idx=2,
@@ -554,7 +557,15 @@ def find_measurable_ifelse_mixture(fgraph, node):
     if not all(var.owner and isinstance(var.owner.op, MeasurableVariable) for var in base_rvs):
         return None
 
-    return MeasurableIfElse(n_outs=op.n_outs).make_node(if_var, *base_rvs).outputs
+    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_rvs[0].owner.op)
+
+    return (
+        MeasurableIfElse(
+            n_outs=op.n_outs, ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+        )
+        .make_node(if_var, *base_rvs)
+        .outputs
+    )
 
 
 measurable_ir_rewrites_db.register(
