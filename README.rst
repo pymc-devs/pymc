@@ -173,5 +173,3 @@ Sponsors
    :target: https://www.mistplay.com/
 .. |ODSC| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/odsc/sponsor_odsc.png?raw=true
    :target: https://odsc.com/california/?utm_source=pymc&utm_medium=referral
-
-   
