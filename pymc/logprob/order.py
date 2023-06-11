@@ -52,7 +52,6 @@ from pymc.logprob.abstract import (
     _logprob,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
-from pymc.logprob.utils import ignore_logprob
 
 
 class MeasurableMax(MaxAndArgmax):
@@ -71,30 +70,21 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Meas
         return None  # pragma: no cover
 
     
-    max_var = node.outputs[0]
     base_var = node.inputs[0]
 
-
-    if not (
-        base_var.owner
-        and isinstance(base_var.owner.op, MeasurableVariable)
-        and base_var not in rv_map_feature.rv_values
-    ):
-        return None
     
     if(base_var.owner.inputs[3].type.ndim != 0):
         return None
     
+    if not rv_map_feature.request_measurable(node.inputs):
+        return None
     
-    # Make base_var unmeasurable
-    unmeasurable_base_var = ignore_logprob(base_var)
+
     axis = node.op.axis
     measurable_max =  MeasurableMax(list(axis))
-    max_rv_node = measurable_max.make_node(unmeasurable_base_var)
+    max_rv_node = measurable_max.make_node(base_var)
     max_rv = max_rv_node.outputs
 
-    max_rv[0].name = max_var.name
-    max_rv[1].name = node.outputs[1].name
 
     return max_rv
 
