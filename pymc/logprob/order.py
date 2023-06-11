@@ -36,32 +36,24 @@
 
 from typing import List, Optional
 
-import numpy as np
-import math
-import pytensor.tensor as pt
-import pytensor
-
 from pytensor.graph.basic import Node
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.tensor.math import Max, MaxAndArgmax
+from pytensor.tensor.math import MaxAndArgmax
 
-from pymc.logprob.abstract import (
-    MeasurableVariable,
-    _logcdf,
-    _logprob,
-)
+from pymc.logprob.abstract import MeasurableVariable, _logcdf, _logprob
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 
 
 class MeasurableMax(MaxAndArgmax):
     """A placeholder used to specify a log-likelihood for a clipped RV sub-graph."""
 
+
 MeasurableVariable.register(MeasurableMax)
+
 
 @node_rewriter([MaxAndArgmax])
 def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableMax]]:
-    
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -69,22 +61,18 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Meas
     if isinstance(node.op, MeasurableMax):
         return None  # pragma: no cover
 
-    
     base_var = node.inputs[0]
 
-    
-    if(base_var.owner.inputs[3].type.ndim != 0):
+    if base_var.owner.inputs[3].type.ndim != 0:
         return None
-    
+
     if not rv_map_feature.request_measurable(node.inputs):
         return None
-    
 
     axis = node.op.axis
-    measurable_max =  MeasurableMax(list(axis))
+    measurable_max = MeasurableMax(list(axis))
     max_rv_node = measurable_max.make_node(base_var)
     max_rv = max_rv_node.outputs
-
 
     return max_rv
 
@@ -99,7 +87,6 @@ measurable_ir_rewrites_db.register(
 
 @_logprob.register(MeasurableMax)
 def max_logprob(op, values, base_rv, **kwargs):
-   
     (value,) = values
 
     base_rv_op = base_rv.owner.op
@@ -114,14 +101,14 @@ def max_logprob(op, values, base_rv, **kwargs):
 
     size_var = base_rv.owner.inputs[1]
     string_size = str(size_var)
-    for b in (0, len(string_size)-1):
-        if(string_size[b] == '}'):
-            a = string_size[b-1]
-    try :
+    for b in (0, len(string_size) - 1):
+        if string_size[b] == "}":
+            a = string_size[b - 1]
+    try:
         n = int(a)
     except ValueError:
         return None
 
-    logprob = (n-1)*logcdf + logprob
+    logprob = (n - 1) * logcdf + logprob
 
     return logprob
