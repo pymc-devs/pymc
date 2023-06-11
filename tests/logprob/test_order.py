@@ -34,30 +34,22 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from pymc.logprob.basic import (
-    conditional_logp,
-    icdf,
-    logcdf,
-    logp,
-    transformed_conditional_logp,
-)
+import numpy as np
+import pytensor
+import pytensor.tensor as pt
+import pytest
+import scipy.stats as st
 
-# isort: off
-# Add rewrites to the DBs
-import pymc.logprob.binary
-import pymc.logprob.censoring
-import pymc.logprob.cumsum
-import pymc.logprob.checks
-import pymc.logprob.mixture
-import pymc.logprob.order
-import pymc.logprob.scan
-import pymc.logprob.tensor
-import pymc.logprob.transforms
+from pymc import logp
+from pymc.logprob.basic import factorized_joint_logprob
+from pymc.testing import assert_no_rvs
 
-# isort: on
 
-__all__ = (
-    "logp",
-    "logcdf",
-    "icdf",
-)
+def test_max():
+    x = pt.random.normal(0, 1, size=(3,))
+    x_name = "x"
+    x_max = pt.max_and_argmax(x, axis=-1)
+    x_max_value = pt.vector("x_max_value")
+    x_max_logprob = logp(x_max[0], x_max_value)
+    
+    assert_no_rvs(x_max_logprob)
