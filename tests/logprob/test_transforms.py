@@ -51,6 +51,9 @@ from pymc.distributions.transforms import _default_transform, log, logodds
 from pymc.logprob.abstract import MeasurableVariable, _logprob
 from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.transforms import (
+    ArccoshTransform,
+    ArcsinhTransform,
+    ArctanhTransform,
     ChainedTransform,
     CoshTransform,
     ErfcTransform,
@@ -1028,6 +1031,9 @@ def test_multivariate_transform(shift, scale):
         (pt.sinh, SinhTransform()),
         (pt.cosh, CoshTransform()),
         (pt.tanh, TanhTransform()),
+        (pt.arcsinh, ArcsinhTransform()),
+        (pt.arccosh, ArccoshTransform()),
+        (pt.arctanh, ArctanhTransform()),
     ],
 )
 def test_erf_logp(pt_transform, transform):
@@ -1060,6 +1066,9 @@ from tests.distributions.test_transform import check_jacobian_det
         SinhTransform(),
         CoshTransform(),
         TanhTransform(),
+        ArcsinhTransform(),
+        ArccoshTransform(),
+        ArctanhTransform(),
     ],
 )
 def test_check_jac_det(transform):
