@@ -16,6 +16,7 @@ If you like, replace the name ``pymc_env`` with whatever environment name you pr
 
 .. seealso::
    
+   
    The `conda-forge tips & tricks <https://conda-forge.org/docs/user/tipsandtricks.html#using-multiple-channels>`_ page to avoid installation
    issues when using multiple conda channels (e.g. defaults and conda-forge).
 
