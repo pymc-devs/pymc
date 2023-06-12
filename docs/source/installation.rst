@@ -34,4 +34,4 @@ Similarly, to use BlackJAX for sampling it should be installed via ``pip``:
 
    pip install blackjax
 
-Note that JAX is not directly supported on Windows systems at the moment.
+Note that JAX is not directly supported on Windows systems at the moment. 
