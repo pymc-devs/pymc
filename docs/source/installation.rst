@@ -15,8 +15,8 @@ Once you have installed one of the above, PyMC can be installed into a new conda
 If you like, replace the name ``pymc_env`` with whatever environment name you prefer.
 
 .. seealso::
-   
-   
+
+
    The `conda-forge tips & tricks <https://conda-forge.org/docs/user/tipsandtricks.html#using-multiple-channels>`_ page to avoid installation
    issues when using multiple conda channels (e.g. defaults and conda-forge).
 
