@@ -39,12 +39,11 @@ from typing import List, Optional
 import pytensor.tensor as pt
 
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.raise_op import CheckAndRaise, ExceptionType
+from pytensor.raise_op import CheckAndRaise
 from pytensor.tensor.shape import SpecifyShape
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
-from pymc.logprob.utils import ignore_logprob
 
 
 class MeasurableSpecifyShape(SpecifyShape):
@@ -86,10 +85,7 @@ def find_measurable_specify_shapes(fgraph, node) -> Optional[List[MeasurableSpec
         return None  # pragma: no cover
 
     new_op = MeasurableSpecifyShape()
-    # Make base_var unmeasurable
-    unmeasurable_base_rv = ignore_logprob(base_rv)
-    new_rv = new_op.make_node(unmeasurable_base_rv, *shape).default_output()
-    new_rv.name = rv.name
+    new_rv = new_op.make_node(base_rv, *shape).default_output()
 
     return [new_rv]
 
@@ -110,15 +106,18 @@ MeasurableVariable.register(MeasurableCheckAndRaise)
 
 
 @_logprob.register(MeasurableCheckAndRaise)
-def logprob_assert(op, values, inner_rv, *assertion, **kwargs):
+def logprob_check_and_raise(op, values, inner_rv, *assertions, **kwargs):
+    from pymc.pytensorf import replace_rvs_by_values
+
     (value,) = values
     # transfer assertion from rv to value
-    value = op(assertion, value)
+    assertions = replace_rvs_by_values(assertions, rvs_to_values={inner_rv: value})
+    value = op(value, *assertions)
     return _logprob_helper(inner_rv, value)
 
 
 @node_rewriter([CheckAndRaise])
-def find_measurable_asserts(fgraph, node) -> Optional[List[MeasurableCheckAndRaise]]:
+def find_measurable_check_and_raise(fgraph, node) -> Optional[List[MeasurableCheckAndRaise]]:
     r"""Finds `AssertOp`\s for which a `logprob` can be computed."""
 
     if isinstance(node.op, MeasurableCheckAndRaise):
@@ -129,30 +128,20 @@ def find_measurable_asserts(fgraph, node) -> Optional[List[MeasurableCheckAndRai
     if rv_map_feature is None:
         return None  # pragma: no cover
 
-    rv = node.outputs[0]
-
     base_rv, *conds = node.inputs
+    if not rv_map_feature.request_measurable([base_rv]):
+        return None
 
-    if not (
-        base_rv.owner
-        and isinstance(base_rv.owner.op, MeasurableVariable)
-        and base_rv not in rv_map_feature.rv_values
-    ):
-        return None  # pragma: no cover
-
-    exception_type = ExceptionType()
-    new_op = MeasurableCheckAndRaise(exc_type=exception_type)
-    # Make base_var unmeasurable
-    unmeasurable_base_rv = ignore_logprob(base_rv)
-    new_rv = new_op.make_node(unmeasurable_base_rv, *conds).default_output()
-    new_rv.name = rv.name
+    op = node.op
+    new_op = MeasurableCheckAndRaise(exc_type=op.exc_type, msg=op.msg)
+    new_rv = new_op.make_node(base_rv, *conds).default_output()
 
     return [new_rv]
 
 
 measurable_ir_rewrites_db.register(
-    "find_measurable_asserts",
-    find_measurable_asserts,
+    "find_measurable_check_and_raise",
+    find_measurable_check_and_raise,
     "basic",
     "assert",
 )

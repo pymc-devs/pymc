@@ -39,53 +39,9 @@ from typing import Optional
 import numpy as np
 
 from pytensor import tensor as pt
-from pytensor.tensor.var import TensorVariable
 from scipy import stats as stats
 
-from pymc.logprob import factorized_joint_logprob, icdf, logcdf, logp
-from pymc.logprob.abstract import get_measurable_outputs
-from pymc.logprob.utils import ignore_logprob
-
-
-def simulate_poiszero_hmm(
-    N, mu=10.0, pi_0_a=np.r_[1, 1], p_0_a=np.r_[5, 1], p_1_a=np.r_[1, 1], seed=None
-):
-    rng = np.random.default_rng(seed)
-
-    p_0 = rng.dirichlet(p_0_a)
-    p_1 = rng.dirichlet(p_1_a)
-
-    Gammas = np.stack([p_0, p_1])
-    Gammas = np.broadcast_to(Gammas, (N,) + Gammas.shape)
-
-    pi_0 = rng.dirichlet(pi_0_a)
-    s_0 = rng.choice(pi_0.shape[0], p=pi_0)
-    s_tm1 = s_0
-
-    y_samples = np.empty((N,), dtype=np.int64)
-    s_samples = np.empty((N,), dtype=np.int64)
-
-    for i in range(N):
-        s_t = rng.choice(Gammas.shape[-1], p=Gammas[i, s_tm1])
-        s_samples[i] = s_t
-        s_tm1 = s_t
-
-        if s_t == 1:
-            y_samples[i] = rng.poisson(mu)
-        else:
-            y_samples[i] = 0
-
-    sample_point = {
-        "Y_t": y_samples,
-        "p_0": p_0,
-        "p_1": p_1,
-        "S_t": s_samples,
-        "P_tt": Gammas,
-        "S_0": s_0,
-        "pi_0": pi_0,
-    }
-
-    return sample_point
+from pymc.logprob import icdf, logcdf, logp
 
 
 def scipy_logprob(obs, p):
@@ -157,52 +113,3 @@ def scipy_logprob_tester(
     np.testing.assert_array_equal(pytensor_res_val.shape, numpy_res.shape)
 
     np.testing.assert_array_almost_equal(pytensor_res_val, numpy_res, 4)
-
-
-def test_ignore_logprob_basic():
-    x = Normal.dist()
-    (measurable_x_out,) = get_measurable_outputs(x.owner.op, x.owner)
-    assert measurable_x_out is x.owner.outputs[1]
-
-    new_x = ignore_logprob(x)
-    assert new_x is not x
-    assert isinstance(new_x.owner.op, Normal)
-    assert type(new_x.owner.op).__name__ == "UnmeasurableNormalRV"
-    # Confirm that it does not have measurable output
-    assert get_measurable_outputs(new_x.owner.op, new_x.owner) is None
-
-    # Test that it will not clone a variable that is already unmeasurable
-    new_new_x = ignore_logprob(new_x)
-    assert new_new_x is new_x
-
-
-def test_ignore_logprob_model():
-    # logp that does not depend on input
-    def logp(value, x):
-        return value
-
-    with Model() as m:
-        x = Normal.dist()
-        y = CustomDist("y", x, logp=logp)
-    with pytest.warns(
-        UserWarning,
-        match="Found a random variable that was neither among the observations "
-        "nor the conditioned variables",
-    ):
-        joint_logp(
-            [y],
-            rvs_to_values={y: y.type()},
-            rvs_to_transforms={},
-        )
-
-    # The above warning should go away with ignore_logprob.
-    with Model() as m:
-        x = ignore_logprob(Normal.dist())
-        y = CustomDist("y", x, logp=logp)
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        assert joint_logp(
-            [y],
-            rvs_to_values={y: y.type()},
-            rvs_to_transforms={},
-        )

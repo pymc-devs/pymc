@@ -14,7 +14,7 @@
 import functools as ft
 import itertools as it
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pytensor
@@ -24,11 +24,9 @@ import pytest
 from numpy import random as nr
 from numpy import testing as npt
 from pytensor.compile.mode import Mode
-from pytensor.graph.basic import walk
-from pytensor.graph.op import HasInnerGraph
+from pytensor.graph.basic import Variable
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.tensor import TensorVariable
-from pytensor.tensor.random.op import RandomVariable
 from scipy import special as sp
 from scipy import stats as st
 
@@ -37,9 +35,8 @@ import pymc as pm
 from pymc.distributions.distribution import Distribution
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.initial_point import make_initial_point_fn
-from pymc.logprob.abstract import MeasurableVariable
-from pymc.logprob.basic import icdf, joint_logp, logcdf, logp
-from pymc.logprob.utils import ParameterValueError
+from pymc.logprob.basic import icdf, logcdf, logp, transformed_conditional_logp
+from pymc.logprob.utils import ParameterValueError, find_rvs_in_graph
 from pymc.pytensorf import (
     compile_pymc,
     floatX,
@@ -676,7 +673,7 @@ def assert_moment_is_expected(model, expected, check_finite_logp=True):
 
     if check_finite_logp:
         logp_moment = (
-            joint_logp(
+            transformed_conditional_logp(
                 (model["x"],),
                 rvs_to_values={model["x"]: pt.constant(moment)},
                 rvs_to_transforms={},
@@ -963,19 +960,9 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
     )
 
 
-def assert_no_rvs(var):
+def assert_no_rvs(vars: Sequence[Variable]) -> None:
     """Assert that there are no `MeasurableVariable` nodes in a graph."""
 
-    def expand(r):
-        owner = r.owner
-        if owner:
-            inputs = list(reversed(owner.inputs))
-
-            if isinstance(owner.op, HasInnerGraph):
-                inputs += owner.op.inner_outputs
-
-            return inputs
-
-    for v in walk([var], expand, False):
-        if v.owner and isinstance(v.owner.op, (RandomVariable, MeasurableVariable)):
-            raise AssertionError(f"RV found in graph: {v}")
+    rvs = find_rvs_in_graph(vars)
+    if rvs:
+        raise AssertionError(f"RV found in graph: {rvs}")

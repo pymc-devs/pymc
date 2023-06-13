@@ -32,7 +32,6 @@ from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.utils import MetaType
 from pytensor.tensor.basic import as_tensor_variable
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
@@ -49,13 +48,7 @@ from pymc.distributions.shape_utils import (
     shape_from_dims,
 )
 from pymc.exceptions import BlockModelAccessError
-from pymc.logprob.abstract import (
-    MeasurableVariable,
-    _get_measurable_outputs,
-    _icdf,
-    _logcdf,
-    _logprob,
-)
+from pymc.logprob.abstract import MeasurableVariable, _icdf, _logcdf, _logprob
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.model import BlockModelAccess
 from pymc.printing import str_for_dist
@@ -399,20 +392,6 @@ class Distribution(metaclass=DistributionMeta):
 
 # Let PyMC know that the SymbolicRandomVariable has a logprob.
 MeasurableVariable.register(SymbolicRandomVariable)
-
-
-@_get_measurable_outputs.register(SymbolicRandomVariable)
-def _get_measurable_outputs_symbolic_random_variable(op, node):
-    # This tells PyMC that any non RandomType outputs are measurable
-
-    # Assume that if there is one default_output, that's the only one that is measurable
-    # In the rare case this is not what one wants, a specialized _get_measuarable_outputs
-    # can dispatch for a subclassed Op
-    if op.default_output is not None:
-        return [node.default_output()]
-
-    # Otherwise assume that any outputs that are not of RandomType are measurable
-    return [out for out in node.outputs if not isinstance(out.type, RandomType)]
 
 
 @node_rewriter([SymbolicRandomVariable])

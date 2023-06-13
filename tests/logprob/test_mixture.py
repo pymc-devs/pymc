@@ -52,7 +52,7 @@ from pytensor.tensor.subtensor import (
     as_index_constant,
 )
 
-from pymc.logprob.basic import factorized_joint_logprob
+from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.mixture import MixtureRV, expand_indices
 from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.logprob.utils import dirac_delta
@@ -96,7 +96,7 @@ def test_mixture_basics():
     x_vv.name = "x"
 
     with pytest.raises(RuntimeError, match="could not be derived: {m}"):
-        factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv, X_rv: x_vv})
+        conditional_logp({M_rv: m_vv, I_rv: i_vv, X_rv: x_vv})
 
     with pytest.raises(RuntimeError, match="could not be derived: {m}"):
         axis_at = pt.lscalar("axis")
@@ -106,7 +106,7 @@ def test_mixture_basics():
         i_vv = env["i_vv"]
         M_rv = env["M_rv"]
         m_vv = env["m_vv"]
-        factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
+        conditional_logp({M_rv: m_vv, I_rv: i_vv})
 
 
 @pytensor.config.change_flags(compute_test_value="warn")
@@ -139,7 +139,7 @@ def test_compute_test_value(op_constructor):
 
     del M_rv.tag.test_value
 
-    M_logp = factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
+    M_logp = conditional_logp({M_rv: m_vv, I_rv: i_vv})
     M_logp_combined = pt.add(*M_logp.values())
 
     assert isinstance(M_logp_combined.tag.test_value, np.ndarray)
@@ -185,11 +185,11 @@ def test_hetero_mixture_binomial(p_val, size, supported):
     m_vv.name = "m"
 
     if supported:
-        M_logp = factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
+        M_logp = conditional_logp({M_rv: m_vv, I_rv: i_vv})
         M_logp_combined = pt.add(*M_logp.values())
     else:
         with pytest.raises(RuntimeError, match="could not be derived: {m}"):
-            factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
+            conditional_logp({M_rv: m_vv, I_rv: i_vv})
         return
 
     M_logp_fn = pytensor.function([p_at, m_vv, i_vv], M_logp_combined)
@@ -594,10 +594,10 @@ def test_hetero_mixture_categorical(
     m_vv.name = "m"
 
     if supported:
-        logp_parts = factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
+        logp_parts = conditional_logp({M_rv: m_vv, I_rv: i_vv}, sum=False)
     else:
         with pytest.raises(RuntimeError, match="could not be derived: {m}"):
-            factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv}, sum=False)
+            conditional_logp({M_rv: m_vv, I_rv: i_vv}, sum=False)
         return
 
     I_logp_fn = pytensor.function([p_at, i_vv], logp_parts[i_vv])
@@ -902,7 +902,7 @@ def test_mixture_with_DiracDelta():
     m_vv = M_rv.clone()
     m_vv.name = "m"
 
-    logp_res = factorized_joint_logprob({M_rv: m_vv, I_rv: i_vv})
+    logp_res = conditional_logp({M_rv: m_vv, I_rv: i_vv})
 
     assert m_vv in logp_res
 
@@ -917,7 +917,12 @@ def test_switch_mixture():
     i_vv = I_rv.clone()
     i_vv.name = "i"
 
+    # When I_rv == True, X_rv flows through otherwise Y_rv does
     Z1_rv = pt.switch(I_rv, X_rv, Y_rv)
+
+    assert Z1_rv.eval({I_rv: 0}) > 5
+    assert Z1_rv.eval({I_rv: 1}) < -5
+
     z_vv = Z1_rv.clone()
     z_vv.name = "z1"
 
@@ -933,26 +938,27 @@ def test_switch_mixture():
 
     fgraph, _, _ = construct_ir_fgraph({Z1_rv: z_vv, I_rv: i_vv})
 
-    assert fgraph.outputs[0].name == "Z1-mixture"
-
     # building the identical graph but with a stack to check that mixture computations are identical
 
-    Z2_rv = pt.stack((X_rv, Y_rv))[I_rv]
+    Z2_rv = pt.stack((Y_rv, X_rv))[I_rv]
+
+    assert Z2_rv.eval({I_rv: 0}) > 5
+    assert Z2_rv.eval({I_rv: 1}) < -5
 
     fgraph2, _, _ = construct_ir_fgraph({Z2_rv: z_vv, I_rv: i_vv})
 
     assert equal_computations(fgraph.outputs, fgraph2.outputs)
 
-    z1_logp = factorized_joint_logprob({Z1_rv: z_vv, I_rv: i_vv})
-    z2_logp = factorized_joint_logprob({Z2_rv: z_vv, I_rv: i_vv})
+    z1_logp = conditional_logp({Z1_rv: z_vv, I_rv: i_vv})
+    z2_logp = conditional_logp({Z2_rv: z_vv, I_rv: i_vv})
     z1_logp_combined = pt.sum([pt.sum(factor) for factor in z1_logp.values()])
     z2_logp_combined = pt.sum([pt.sum(factor) for factor in z2_logp.values()])
 
     # below should follow immediately from the equal_computations assertion above
     assert equal_computations([z1_logp_combined], [z2_logp_combined])
 
-    np.testing.assert_almost_equal(0.69049938, z1_logp_combined.eval({z_vv: -10, i_vv: 0}))
-    np.testing.assert_almost_equal(0.69049938, z2_logp_combined.eval({z_vv: -10, i_vv: 0}))
+    np.testing.assert_almost_equal(0.69049938, z1_logp_combined.eval({z_vv: -10, i_vv: 1}))
+    np.testing.assert_almost_equal(0.69049938, z2_logp_combined.eval({z_vv: -10, i_vv: 1}))
 
 
 def test_ifelse_mixture_one_component():
@@ -965,7 +971,7 @@ def test_ifelse_mixture_one_component():
     if_vv = if_rv.clone()
     scale_vv = scale_rv.clone()
     mix_vv = mix_rv.clone()
-    mix_logp = factorized_joint_logprob({if_rv: if_vv, scale_rv: scale_vv, mix_rv: mix_vv})[mix_vv]
+    mix_logp = conditional_logp({if_rv: if_vv, scale_rv: scale_vv, mix_rv: mix_vv})[mix_vv]
     assert_no_rvs(mix_logp)
 
     fn = function([if_vv, scale_vv, mix_vv], mix_logp)
@@ -986,7 +992,7 @@ def test_ifelse_mixture_multiple_components():
 
     if_var = pt.scalar("if_var", dtype="bool")
     comp_then1 = pt.random.normal(size=(2,), name="comp_true1")
-    comp_then2 = pt.random.normal(comp_then1, size=(2, 2), name="comp_then2")
+    comp_then2 = comp_then1 + pt.random.normal(size=(2, 2), name="comp_then2")
     comp_else1 = pt.random.halfnormal(size=(4,), name="comp_else1")
     comp_else2 = pt.random.halfnormal(size=(4, 4), name="comp_else2")
 
@@ -995,7 +1001,7 @@ def test_ifelse_mixture_multiple_components():
     )
     mix_vv1 = mix_rv1.clone()
     mix_vv2 = mix_rv2.clone()
-    mix_logp1, mix_logp2 = factorized_joint_logprob({mix_rv1: mix_vv1, mix_rv2: mix_vv2}).values()
+    mix_logp1, mix_logp2 = conditional_logp({mix_rv1: mix_vv1, mix_rv2: mix_vv2}).values()
     assert_no_rvs(mix_logp1)
     assert_no_rvs(mix_logp2)
 
@@ -1032,7 +1038,7 @@ def test_ifelse_mixture_shared_component():
     outer_vv = outer_rv.clone()
     shared_vv = shared_rv.clone()
     mix_vv = mix_rv.clone()
-    outer_logp, mix_logp1, mix_logp2 = factorized_joint_logprob(
+    outer_logp, mix_logp1, mix_logp2 = conditional_logp(
         {outer_rv: outer_vv, shared_rv: shared_vv, mix_rv: mix_vv}
     ).values()
     assert_no_rvs(outer_logp)
@@ -1089,7 +1095,7 @@ def test_joint_logprob_subtensor():
     I_value_var = I_rv.type()
     I_value_var.name = "I_value"
 
-    A_idx_logp = factorized_joint_logprob({A_idx: A_idx_value_var, I_rv: I_value_var})
+    A_idx_logp = conditional_logp({A_idx: A_idx_value_var, I_rv: I_value_var})
     A_idx_logp_comb = pt.add(*A_idx_logp.values())
 
     logp_vals_fn = pytensor.function([A_idx_value_var, I_value_var], A_idx_logp_comb)
@@ -1114,3 +1120,23 @@ def test_joint_logprob_subtensor():
         logp_vals = logp_vals_fn(A_idx_value, I_value)
 
         np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)
+
+
+def test_nested_ifelse():
+    idx = pt.scalar("idx", dtype=int)
+
+    dist0 = pt.random.normal(-5, 1)
+    dist1 = pt.random.normal(0, 1)
+    dist2 = pt.random.normal(5, 1)
+    mix = ifelse(pt.eq(idx, 0), dist0, ifelse(pt.eq(idx, 1), dist1, dist2))
+    mix.name = "mix"
+
+    value = mix.clone()
+    mix_logp = logp(mix, value)
+    assert mix_logp.name == "mix_logprob"
+    mix_logp_fn = pytensor.function([idx, value], mix_logp)
+
+    test_value = 0.25
+    np.testing.assert_almost_equal(mix_logp_fn(0, test_value), sp.norm.logpdf(test_value, -5, 1))
+    np.testing.assert_almost_equal(mix_logp_fn(1, test_value), sp.norm.logpdf(test_value, 0, 1))
+    np.testing.assert_almost_equal(mix_logp_fn(2, test_value), sp.norm.logpdf(test_value, 5, 1))

@@ -34,7 +34,13 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from pymc.logprob.basic import factorized_joint_logprob, icdf, joint_logp, logcdf, logp
+from pymc.logprob.basic import (
+    conditional_logp,
+    icdf,
+    logcdf,
+    logp,
+    transformed_conditional_logp,
+)
 
 # isort: off
 # Add rewrites to the DBs

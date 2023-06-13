@@ -65,6 +65,7 @@ from pytensor.tensor.var import TensorConstant, TensorVariable
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.transforms import RVTransform
 from pymc.logprob.utils import CheckParameterValue
+from pymc.util import makeiter
 from pymc.vartypes import continuous_types, isgenerator, typefilter
 
 PotentialShapeType = Union[int, np.ndarray, Sequence[Union[int, Variable]], TensorVariable]
@@ -548,13 +549,6 @@ def hessian_diag(f, vars=None):
         return -pt.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
     else:
         return empty_gradient
-
-
-def makeiter(a):
-    if isinstance(a, (tuple, list)):
-        return a
-    else:
-        return [a]
 
 
 class IdentityOp(scalar.UnaryScalarOp):

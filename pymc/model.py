@@ -64,7 +64,7 @@ from pymc.exceptions import (
     ShapeWarning,
 )
 from pymc.initial_point import make_initial_point_fn
-from pymc.logprob.basic import joint_logp
+from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
     PointFunc,
@@ -761,7 +761,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         rv_logps: List[TensorVariable] = []
         if rvs:
-            rv_logps = joint_logp(
+            rv_logps = transformed_conditional_logp(
                 rvs=rvs,
                 rvs_to_values=self.rvs_to_values,
                 rvs_to_transforms=self.rvs_to_transforms,

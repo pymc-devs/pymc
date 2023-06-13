@@ -246,7 +246,7 @@ class CompoundStep:
                 method.reset_tuning()
 
     @property
-    def vars(self):
+    def vars(self) -> List[Variable]:
         return [var for method in self.methods for var in method.vars]
 
 
