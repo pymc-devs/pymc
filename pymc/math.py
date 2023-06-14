@@ -443,11 +443,17 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
     elif lower:
         out = pt.zeros((n, n), dtype=pytensor.config.floatX)
         idxs = np.tril_indices(n)
-        return pt.set_subtensor(out[idxs], packed)
+        # tag as lower triangular to enable pytensor rewrites
+        out = pt.set_subtensor(out[idxs], packed)
+        out.tag.lower_triangular = True
+        return out
     elif not lower:
         out = pt.zeros((n, n), dtype=pytensor.config.floatX)
         idxs = np.triu_indices(n)
-        return pt.set_subtensor(out[idxs], packed)
+        # tag as upper triangular to enable pytensor rewrites
+        out = pt.set_subtensor(out[idxs], packed)
+        out.tag.upper_triangular = True
+        return out
 
 
 class BatchedDiag(Op):
