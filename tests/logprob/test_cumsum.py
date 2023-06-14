@@ -41,7 +41,7 @@ import pytest
 import scipy.stats as st
 
 from pymc import logp
-from pymc.logprob.basic import factorized_joint_logprob
+from pymc.logprob.basic import conditional_logp
 from pymc.testing import assert_no_rvs
 
 
@@ -98,7 +98,7 @@ def test_destructive_cumsum_fails():
     x_rv = pt.random.normal(size=(2, 2, 2)).cumsum()
     x_vv = x_rv.clone()
     with pytest.raises(RuntimeError, match="could not be derived"):
-        factorized_joint_logprob({x_rv: x_vv})
+        conditional_logp({x_rv: x_vv})
 
 
 def test_deterministic_cumsum():
@@ -110,7 +110,7 @@ def test_deterministic_cumsum():
     x_vv = x_rv.clone()
     y_vv = y_rv.clone()
 
-    logp = factorized_joint_logprob({x_rv: x_vv, y_rv: y_vv})
+    logp = conditional_logp({x_rv: x_vv, y_rv: y_vv})
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
     assert_no_rvs(logp_combined)
 

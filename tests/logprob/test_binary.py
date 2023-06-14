@@ -20,7 +20,7 @@ import scipy.stats as st
 from pytensor import function
 
 from pymc import logp
-from pymc.logprob import factorized_joint_logprob
+from pymc.logprob import conditional_logp
 from pymc.testing import assert_no_rvs
 
 
@@ -131,7 +131,7 @@ def test_potentially_measurable_operand():
     y_vv = y_rv.clone()
     z_vv = z_rv.clone()
 
-    logprob = factorized_joint_logprob({z_rv: z_vv, y_rv: y_vv})[y_vv]
+    logprob = conditional_logp({z_rv: z_vv, y_rv: y_vv})[y_vv]
     assert_no_rvs(logprob)
 
     fn = function([z_vv, y_vv], logprob)

@@ -510,3 +510,10 @@ def _add_future_warning_tag(var) -> None:
         for k, v in old_tag.__dict__.items():
             new_tag.__dict__.setdefault(k, v)
         var.tag = new_tag
+
+
+def makeiter(a):
+    if isinstance(a, (tuple, list)):
+        return a
+    else:
+        return [a]

@@ -43,7 +43,6 @@ from pymc.distributions.shape_utils import (
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.abstract import _logprob
 from pymc.logprob.basic import logp
-from pymc.logprob.utils import ignore_logprob, reconsider_logprob
 from pymc.pytensorf import constant_fold, floatX, intX
 from pymc.util import check_dist_not_registered
 
@@ -110,11 +109,6 @@ class RandomWalk(Distribution):
         # We need to check this, because we clone the variables when we ignore their logprob next
         if init_dist in ancestors([innovation_dist]) or innovation_dist in ancestors([init_dist]):
             raise ValueError("init_dist and innovation_dist must be completely independent")
-
-        # PyMC should not be concerned that these variables don't have values, as they will be
-        # accounted for in the logp of RandomWalk
-        init_dist = ignore_logprob(init_dist)
-        innovation_dist = ignore_logprob(innovation_dist)
 
         steps = cls.get_steps(
             innovation_dist=innovation_dist,
@@ -235,14 +229,12 @@ def random_walk_moment(op, rv, init_dist, innovation_dist, steps):
 
 
 @_logprob.register(RandomWalkRV)
-def random_walk_logp(op, values, init_dist, innovation_dist, steps, **kwargs):
+def random_walk_logp(op, values, *inputs, **kwargs):
     # Although we can derive the logprob of random walks, it does not collapse
     # what we consider the core dimension of steps. We do it manually here.
     (value,) = values
     # Recreate RV and obtain inner graph
-    rv_node = op.make_node(
-        reconsider_logprob(init_dist), reconsider_logprob(innovation_dist), steps
-    )
+    rv_node = op.make_node(*inputs)
     rv = clone_replace(
         op.inner_outputs, replace={u: v for u, v in zip(op.inner_inputs, rv_node.inputs)}
     )[op.default_output]
@@ -571,9 +563,6 @@ class AR(Distribution):
             )
             init_dist = Normal.dist(0, 100, shape=(*sigma.shape, ar_order))
 
-        # We can ignore init_dist, as it will be accounted for in the logp term
-        init_dist = ignore_logprob(init_dist)
-
         return super().dist([rhos, sigma, init_dist, steps, ar_order, constant], **kwargs)
 
     @classmethod
@@ -789,8 +778,6 @@ class GARCH11(Distribution):
         initial_vol = pt.as_tensor_variable(initial_vol)
 
         init_dist = Normal.dist(0, initial_vol)
-        # We can ignore init_dist, as it will be accounted for in the logp term
-        init_dist = ignore_logprob(init_dist)
 
         return super().dist([omega, alpha_1, beta_1, initial_vol, init_dist, steps], **kwargs)
 
@@ -973,8 +960,6 @@ class EulerMaruyama(Distribution):
                 UserWarning,
             )
             init_dist = Normal.dist(0, 100, shape=sde_pars[0].shape)
-        # We can ignore init_dist, as it will be accounted for in the logp term
-        init_dist = ignore_logprob(init_dist)
 
         return super().dist([init_dist, steps, sde_pars, dt, sde_fn], **kwargs)
 

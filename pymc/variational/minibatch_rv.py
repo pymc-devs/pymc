@@ -19,13 +19,7 @@ from pytensor import Variable, config
 from pytensor.graph import Apply, Op
 from pytensor.tensor import NoneConst, TensorVariable, as_tensor_variable
 
-from pymc.logprob.abstract import (
-    MeasurableVariable,
-    _get_measurable_outputs,
-    _logprob,
-    _logprob_helper,
-)
-from pymc.logprob.utils import ignore_logprob
+from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
 
 
 class MinibatchRandomVariable(Op):
@@ -81,8 +75,6 @@ def create_minibatch_rv(
     else:
         raise TypeError(f"Invalid type for total_size: {total_size}")
 
-    rv = ignore_logprob(rv)
-
     return cast(TensorVariable, minibatch_rv(rv, *total_size))
 
 
@@ -103,11 +95,6 @@ def get_scaling(total_size: Sequence[Variable], shape: TensorVariable) -> Tensor
 
 
 MeasurableVariable.register(MinibatchRandomVariable)
-
-
-@_get_measurable_outputs.register(MinibatchRandomVariable)
-def _get_measurable_outputs_minibatch_random_variable(op, node):
-    return [node.outputs[0]]
 
 
 @_logprob.register(MinibatchRandomVariable)

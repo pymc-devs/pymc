@@ -48,9 +48,12 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.scan import scan
 
 from pymc.distributions.transforms import _default_transform, log, logodds
-from pymc.logprob.abstract import MeasurableVariable, _get_measurable_outputs, _logprob
-from pymc.logprob.basic import factorized_joint_logprob, logp
+from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.transforms import (
+    ArccoshTransform,
+    ArcsinhTransform,
+    ArctanhTransform,
     ChainedTransform,
     CoshTransform,
     ErfcTransform,
@@ -240,9 +243,7 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
 
     transform = _default_transform(a.owner.op, a)
     transform_rewrite = TransformValuesRewrite({a_value_var: transform})
-    res = factorized_joint_logprob(
-        {a: a_value_var, b: b_value_var}, extra_rewrites=transform_rewrite
-    )
+    res = conditional_logp({a: a_value_var, b: b_value_var}, extra_rewrites=transform_rewrite)
     res_combined = pt.sum([pt.sum(factor) for factor in res.values()])
 
     test_val_rng = np.random.RandomState(3238)
@@ -316,7 +317,7 @@ def test_simple_transformed_logprob_nojac(use_jacobian):
     x_vv.name = "x"
 
     transform_rewrite = TransformValuesRewrite({x_vv: log})
-    tr_logp = factorized_joint_logprob(
+    tr_logp = conditional_logp(
         {X_rv: x_vv}, extra_rewrites=transform_rewrite, use_jacobian=use_jacobian
     )
     tr_logp_combined = pt.sum([pt.sum(factor) for factor in tr_logp.values()])
@@ -394,7 +395,7 @@ def test_hierarchical_uniform_transform():
             x: _default_transform(x_rv.owner.op, x_rv),
         }
     )
-    logp = factorized_joint_logprob(
+    logp = conditional_logp(
         {lower_rv: lower, upper_rv: upper, x_rv: x},
         extra_rewrites=transform_rewrite,
     )
@@ -421,7 +422,7 @@ def test_nondefault_transforms():
         }
     )
 
-    logp = factorized_joint_logprob(
+    logp = conditional_logp(
         {loc_rv: loc, scale_rv: scale, x_rv: x},
         extra_rewrites=transform_rewrite,
     )
@@ -459,7 +460,7 @@ def test_default_transform_multiout():
 
     transform_rewrite = TransformValuesRewrite({x: None})
 
-    logp = factorized_joint_logprob(
+    logp = conditional_logp(
         {x_rv: x},
         extra_rewrites=transform_rewrite,
     )
@@ -489,10 +490,6 @@ def multiout_measurable_op():
         value1, value2 = values
         return value1 + mu1, value2 + mu2
 
-    @_get_measurable_outputs.register(TestOpFromGraph)
-    def measurable_multiout_op_outputs(op, node):
-        return node.outputs
-
     return multiout_op
 
 
@@ -512,7 +509,7 @@ def test_nondefault_transform_multiout(transform_x, transform_y, multiout_measur
         }
     )
 
-    logp = factorized_joint_logprob({x: x_vv, y: y_vv}, extra_rewrites=transform_rewrite)
+    logp = conditional_logp({x: x_vv, y: y_vv}, extra_rewrites=transform_rewrite)
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
 
     x_vv_test = np.random.normal()
@@ -556,7 +553,7 @@ def test_original_values_output_dict():
     p_vv = p_rv.clone()
 
     tr = TransformValuesRewrite({p_vv: logodds})
-    logp_dict = factorized_joint_logprob({p_rv: p_vv}, extra_rewrites=tr)
+    logp_dict = conditional_logp({p_rv: p_vv}, extra_rewrites=tr)
 
     assert p_vv in logp_dict
 
@@ -582,14 +579,14 @@ def test_mixture_transform():
     y_vv = Y_rv.clone()
     y_vv.name = "y"
 
-    logp_no_trans = factorized_joint_logprob(
+    logp_no_trans = conditional_logp(
         {Y_rv: y_vv, I_rv: i_vv},
     )
     logp_no_trans_comb = pt.sum([pt.sum(factor) for factor in logp_no_trans.values()])
 
     transform_rewrite = TransformValuesRewrite({y_vv: LogTransform()})
 
-    logp_trans = factorized_joint_logprob(
+    logp_trans = conditional_logp(
         {Y_rv: y_vv, I_rv: i_vv},
         extra_rewrites=transform_rewrite,
         use_jacobian=False,
@@ -763,7 +760,7 @@ def test_transformed_rv_and_value():
 
     transform_rewrite = TransformValuesRewrite({y_vv: LogTransform()})
 
-    logp = factorized_joint_logprob({y_rv: y_vv}, extra_rewrites=transform_rewrite)
+    logp = conditional_logp({y_rv: y_vv}, extra_rewrites=transform_rewrite)
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
     assert_no_rvs(logp_combined)
     logp_fn = pytensor.function([y_vv], logp_combined)
@@ -784,7 +781,7 @@ def test_loc_transform_multiple_rvs_fails1():
     y = y_rv.clone()
 
     with pytest.raises(RuntimeError, match="could not be derived"):
-        factorized_joint_logprob({y_rv: y})
+        conditional_logp({y_rv: y})
 
 
 def test_nested_loc_transform_multiple_rvs_fails2():
@@ -795,19 +792,19 @@ def test_nested_loc_transform_multiple_rvs_fails2():
     y = y_rv.clone()
 
     with pytest.raises(RuntimeError, match="could not be derived"):
-        factorized_joint_logprob({y_rv: y})
+        conditional_logp({y_rv: y})
 
 
 def test_discrete_rv_unary_transform_fails():
     y_rv = pt.exp(pt.random.poisson(1))
     with pytest.raises(RuntimeError, match="could not be derived"):
-        factorized_joint_logprob({y_rv: y_rv.clone()})
+        conditional_logp({y_rv: y_rv.clone()})
 
 
 def test_discrete_rv_multinary_transform_fails():
     y_rv = 5 + pt.random.poisson(1)
     with pytest.raises(RuntimeError, match="could not be derived"):
-        factorized_joint_logprob({y_rv: y_rv.clone()})
+        conditional_logp({y_rv: y_rv.clone()})
 
 
 @pytest.mark.xfail(reason="Check not implemented yet")
@@ -967,9 +964,9 @@ def test_scan_transform():
             innov_vv: LogOddsTransform(),
         }
     )
-    logp = factorized_joint_logprob(
-        {init: init_vv, innov: innov_vv}, extra_rewrites=tr, use_jacobian=True
-    )[innov_vv]
+    logp = conditional_logp({init: init_vv, innov: innov_vv}, extra_rewrites=tr, use_jacobian=True)[
+        innov_vv
+    ]
     logp_fn = pytensor.function([init_vv, innov_vv], logp, on_unused_input="ignore")
 
     # Create an unrolled scan graph as reference
@@ -988,7 +985,7 @@ def test_scan_transform():
             innov_vv: LogOddsTransform(),
         }
     )
-    ref_logp = factorized_joint_logprob(
+    ref_logp = conditional_logp(
         {init: init_vv, innov: innov_vv}, extra_rewrites=tr, use_jacobian=True
     )[innov_vv]
     ref_logp_fn = pytensor.function([init_vv, innov_vv], ref_logp, on_unused_input="ignore")
@@ -1010,7 +1007,7 @@ def test_multivariate_transform(shift, scale):
     x_rv.name = "x"
 
     x_vv = x_rv.clone()
-    logp = factorized_joint_logprob({x_rv: x_vv})[x_vv]
+    logp = conditional_logp({x_rv: x_vv})[x_vv]
     assert_no_rvs(logp)
 
     x_vv_test = np.array([5.0, 4.9, -6.3])
@@ -1034,6 +1031,9 @@ def test_multivariate_transform(shift, scale):
         (pt.sinh, SinhTransform()),
         (pt.cosh, CoshTransform()),
         (pt.tanh, TanhTransform()),
+        (pt.arcsinh, ArcsinhTransform()),
+        (pt.arccosh, ArccoshTransform()),
+        (pt.arctanh, ArctanhTransform()),
     ],
 )
 def test_erf_logp(pt_transform, transform):
@@ -1066,6 +1066,9 @@ from tests.distributions.test_transform import check_jacobian_det
         SinhTransform(),
         CoshTransform(),
         TanhTransform(),
+        ArcsinhTransform(),
+        ArccoshTransform(),
+        ArctanhTransform(),
     ],
 )
 def test_check_jac_det(transform):
