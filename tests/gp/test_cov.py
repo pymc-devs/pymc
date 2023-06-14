@@ -302,13 +302,20 @@ class TestCovExponentiation:
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_invalid_covexp(self):
-        X = np.linspace(0, 1, 10)[:, None]
         with pytest.raises(
             ValueError, match=r"A covariance function can only be exponentiated by a scalar value"
         ):
-            with pm.Model() as model:
+            with pm.Model():
                 a = np.array([[1.0, 2.0]])
-                cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
+                pm.gp.cov.ExpQuad(1, 0.1) ** a
+
+    def test_invalid_covexp_noncov(self):
+        with pytest.raises(
+            TypeError,
+            match=r"Can only exponentiate covariance functions which inherit from `Covariance`",
+        ):
+            with pm.Model():
+                pm.gp.cov.Constant(2) ** 2
 
 
 class TestCovKron:
@@ -765,9 +772,9 @@ class TestHandleArgs:
         x = 100
         a = 2
         b = 3
-        func_noargs2 = pm.gp.cov.handle_args(func_noargs, None)
-        func_onearg2 = pm.gp.cov.handle_args(func_onearg, a)
-        func_twoarg2 = pm.gp.cov.handle_args(func_twoarg, args=(a, b))
+        func_noargs2 = pm.gp.cov.handle_args(func_noargs)
+        func_onearg2 = pm.gp.cov.handle_args(func_onearg)
+        func_twoarg2 = pm.gp.cov.handle_args(func_twoarg)
         assert func_noargs(x) == func_noargs2(x, args=None)
         assert func_onearg(x, a) == func_onearg2(x, args=a)
         assert func_twoarg(x, a, b) == func_twoarg2(x, args=(a, b))
