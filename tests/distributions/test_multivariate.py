@@ -1720,7 +1720,7 @@ class TestDirichlet(BaseTestDistributionRandom):
         with pm.Model() as model:
             c = pm.floatX([1, 1, 1])
             pm.Dirichlet("a", c)
-        model.point_logps()
+        model.logp()
 
 
 class TestMultinomial(BaseTestDistributionRandom):
