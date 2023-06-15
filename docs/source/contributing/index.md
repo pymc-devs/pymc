@@ -93,6 +93,7 @@ pr_tutorial
 
 implementing_distribution
 build_docs
+docker_container
 running_the_test_suite
 review_pr_pymc_examples
 using_gitpod
