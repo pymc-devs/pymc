@@ -1716,12 +1716,12 @@ class TestDirichlet(BaseTestDistributionRandom):
 
     @pytensor.config.change_flags(warn_float64="raise", floatX="float32")
     def test_dirichlet_float32(self):
-        """https://github.com/pymc-devs/pymc/issues/6779
-        """
+        """https://github.com/pymc-devs/pymc/issues/6779"""
         with pm.Model() as model:
             c = pm.floatX([1, 1, 1])
             pm.Dirichlet("a", c)
         model.point_logps()
+
 
 class TestMultinomial(BaseTestDistributionRandom):
     pymc_dist = pm.Multinomial
@@ -2134,4 +2134,3 @@ def test_posdef_symmetric(matrix, result):
     """
     data = np.array(matrix, dtype=pytensor.config.floatX)
     assert posdef(data) == result
-
