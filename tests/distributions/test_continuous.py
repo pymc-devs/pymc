@@ -548,6 +548,11 @@ class TestMatchesScipy:
             {"alpha": R, "beta": Rplusbig},
             lambda value, alpha, beta: st.cauchy.logcdf(value, alpha, beta),
         )
+        check_icdf(
+            pm.Cauchy,
+            {"alpha": R, "beta": Rplusbig},
+            lambda q, alpha, beta: st.cauchy.ppf(q, alpha, beta),
+        )
 
     def test_half_cauchy(self):
         check_logp(
@@ -766,6 +771,12 @@ class TestMatchesScipy:
             R,
             {"mu": R, "s": Rplus},
             lambda value, mu, s: st.logistic.logcdf(value, mu, s),
+            decimal=select_by_precision(float64=6, float32=1),
+        )
+        check_icdf(
+            pm.Logistic,
+            {"mu": R, "s": Rplus},
+            lambda q, mu, s: st.logistic.ppf(q, mu, s),
             decimal=select_by_precision(float64=6, float32=1),
         )
 
