@@ -2269,7 +2269,7 @@ def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariabl
             soft_sum_constraint = pm.Potential("soft_sum_constraint", -((x + y)**2))
 
     A Potential can be used to define a specific prior term.
-    The following example imposes a prior law prior on `max_items`, under the form ``log(1/max_items)``,
+    The following example imposes a power law prior on `max_items`, under the form ``log(1/max_items)``,
     which penalizes very large values of `max_items`.
 
     .. code:: python
