@@ -398,13 +398,23 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         if not constant_data:
             return None
 
-        return dict_to_dataset(
+        xarray_dataset = dict_to_dataset(
             constant_data,
             library=pymc,
             coords=self.coords,
             dims=self.dims,
             default_dims=[],
         )
+
+        # provisional handling of scalars in constant
+        # data to prevent promotion to rank 1
+        # in the future this will be handled by arviz
+        scalars = [var_name for var_name, value in constant_data.items() if np.ndim(value) == 0]
+        for s in scalars:
+            s_dim_0_name = f"{s}_dim_0"
+            xarray_dataset = xarray_dataset.squeeze(s_dim_0_name, drop=True)
+
+        return xarray_dataset
 
     def to_inference_data(self):
         """Convert all available data to an InferenceData object.
