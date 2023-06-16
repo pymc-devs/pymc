@@ -1232,7 +1232,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     if isinstance(length_tensor_origin, TensorConstant):
                         raise ShapeError(
                             f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
-                            f"because the dimension length is tied to a {length_tensor_origin}. "
+                            f"because the dimension length is tied to a TensorConstant. "
                             f"Check if the dimension was defined implicitly before the shared variable '{name}' was created, "
                             f"for example by another model variable.",
                             actual=new_length,
