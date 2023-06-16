@@ -575,7 +575,7 @@ class TestCompilePyMC:
 
         with pytest.raises(
             ValueError,
-            match=r"No update found for at least one RNG used in Scan Op for\{cpu,test_scan\}",
+            match="No update found for at least one RNG used in Scan Op",
         ):
             collect_default_updates([xs])
 

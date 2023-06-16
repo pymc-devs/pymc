@@ -426,7 +426,7 @@ def test_probability_inference(func, scipy_func, test_value):
 def test_probability_inference_fails(func, func_name):
     with pytest.raises(
         NotImplementedError,
-        match=f"{func_name} method not implemented for Elemwise{{cos,no_inplace}}",
+        match=f"{func_name} method not implemented for (Elemwise{{cos,no_inplace}}|Cos)",
     ):
         func(pt.cos(pm.Normal.dist()), 1)
 
