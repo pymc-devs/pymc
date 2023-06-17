@@ -328,6 +328,7 @@ def change_dist_size(
     Examples
     --------
     .. code-block:: python
+
         x = Normal.dist(shape=(2, 3))
         new_x = change_dist_size(x, new_size=(5, 3), expand=False)
         assert new_x.eval().shape == (5, 3)

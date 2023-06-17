@@ -613,11 +613,13 @@ class ZeroInflatedPoisson:
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
         plt.show()
+
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
     Mean      :math:`\psi\mu`
     Variance  :math:`\mu + \frac{1-\psi}{\psi}\mu^2`
     ========  ==========================
+
     Parameters
     ----------
     psi : tensor_like of float
@@ -674,11 +676,13 @@ class ZeroInflatedBinomial:
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
         plt.show()
+
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
     Mean      :math:`\psi n p`
     Variance  :math:`(1-\psi) n p [1 - p(1 - \psi n)].`
     ========  ==========================
+
     Parameters
     ----------
     psi : tensor_like of float
@@ -750,6 +754,7 @@ class ZeroInflatedNegativeBinomial:
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
         plt.show()
+
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
     Mean      :math:`\psi\mu`

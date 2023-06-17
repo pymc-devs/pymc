@@ -18,16 +18,17 @@ issues when using multiple conda channels (e.g. defaults and conda-forge).
 
 ## JAX sampling
 
-If you wish to enable sampling using the JAX backend via NumPyro, the following should also be installed:
+If you wish to enable sampling using the JAX backend via NumPyro,
+you need to install it manually as it is an optional dependency:
 
 ```console
-pip install numpyro
+conda install numpyro
 ```
 
-Similarly, to use BlackJAX for sampling it should be installed via `pip`:
+Similarly, to use BlackJAX sampler instead:
 
 ```console
-pip install blackjax
+conda install blackjax
 ```
 
 Note that JAX is not directly supported on Windows systems at the moment.

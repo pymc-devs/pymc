@@ -196,6 +196,7 @@ class SymbolicRandomVariable(OpFromGraph):
     """Tuple of (name, latex name) used for for pretty-printing variables of this type"""
 
     def __init__(self, *args, ndim_supp, **kwargs):
+        """Initialitze a SymbolicRandomVariable class."""
         self.ndim_supp = ndim_supp
         kwargs.setdefault("inline", True)
         super().__init__(*args, **kwargs)
