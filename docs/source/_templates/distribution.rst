@@ -5,7 +5,7 @@
 {% if objtype == "class" %}
 .. autoclass:: {{ objname }}
 
-   .. rubric:: Methods
+   .. rubric:: {{ _('Methods') }}
 
    .. autosummary::
       :toctree: classmethods

@@ -2,7 +2,7 @@
 Distribution utilities
 **********************
 
-.. currenmodule:: pymc
+.. currentmodule:: pymc
 .. autosummary::
    :toctree: generated/
 

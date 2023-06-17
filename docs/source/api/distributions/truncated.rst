@@ -2,8 +2,19 @@
 Truncated
 *********
 
-.. currentmodule:: pymc
-.. autosummary::
-   :template: distribution.rst
+..
+   Manually follow the template in _templates/distribution.rst.
+   If at any point, multiple objects are listed here,
+   the pattern should instead be modified to that of the
+   other API files such as api/distributions/continuous.rst
 
-   Truncated
+.. currentmodule:: pymc
+
+.. autoclass:: Truncated
+
+   .. rubric:: {{ _('Methods') }}
+
+   .. autosummary::
+      :toctree: classmethods
+
+      Truncated.dist
