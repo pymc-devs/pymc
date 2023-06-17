@@ -12,5 +12,8 @@ Distributions
    distributions/multivariate
    distributions/mixture
    distributions/timeseries
-   distributions/misc
+   distributions/truncated
+   distributions/censored
+   distributions/simulator
    distributions/transforms
+   distributions/utilities
