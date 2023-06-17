@@ -45,7 +45,7 @@ This guide does not teach nor cover MyST extensively, only gives some opinionate
 
 * If the output (or even code and output) of a cell is not necessary to follow the
   notebook or it is very long and can break the flow of reading, consider hiding
-  it with a {doc}`toggle button <myst-nb:use/hiding/code>`
+  it with a {ref}`toggle button <myst-nb:use/hiding/code>`
 
 * Consider using {ref}`myst:syntax/md-figures` to add captions to images used in the notebook.
 
