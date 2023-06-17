@@ -12,7 +12,7 @@ Censored
 
 .. autoclass:: Censored
 
-   .. rubric:: {{ _('Methods') }}
+   .. rubric:: Methods
 
    .. autosummary::
       :toctree: classmethods

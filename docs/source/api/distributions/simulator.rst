@@ -12,7 +12,7 @@ Simulator
 
 .. autoclass:: Simulator
 
-   .. rubric:: {{ _('Methods') }}
+   .. rubric:: Methods
 
    .. autosummary::
       :toctree: classmethods

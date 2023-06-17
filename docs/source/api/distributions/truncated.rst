@@ -12,7 +12,7 @@ Truncated
 
 .. autoclass:: Truncated
 
-   .. rubric:: {{ _('Methods') }}
+   .. rubric:: Methods
 
    .. autosummary::
       :toctree: classmethods
