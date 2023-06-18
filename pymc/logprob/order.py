@@ -36,23 +36,26 @@
 
 from typing import List, Optional
 
+import pytensor.tensor as pt
+
 from pytensor.graph.basic import Node
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.tensor.math import MaxAndArgmax
+from pytensor.tensor.math import Max
+from pytensor.tensor.random.op import RandomVariable
 
 from pymc.logprob.abstract import MeasurableVariable, _logcdf, _logprob
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 
 
-class MeasurableMax(MaxAndArgmax):
-    """A placeholder used to specify a log-likelihood for a clipped RV sub-graph."""
+class MeasurableMax(Max):
+    """A placeholder used to specify a log-likelihood for a cmax sub-graph."""
 
 
 MeasurableVariable.register(MeasurableMax)
 
 
-@node_rewriter([MaxAndArgmax])
+@node_rewriter([Max])
 def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableMax]]:
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
@@ -63,13 +66,28 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Meas
 
     base_var = node.inputs[0]
 
-    if base_var.owner.inputs[3].type.ndim != 0:
-        return None
+    if isinstance(base_var.owner.op, RandomVariable):
+        for op in base_var.owner.inputs[3:]:
+            if op.type.ndim != 0:
+                return None
 
     if not rv_map_feature.request_measurable(node.inputs):
         return None
 
     axis = node.op.axis
+    for x in range(base_var.ndim):
+        if x not in axis:
+            return None
+
+    axis = set(node.op.axis)
+    base_var_dims = set(range(base_var.ndim))
+    if not axis.issubset(base_var_dims):
+        return None
+
+    for ndim_param, param in zip(base_var.owner.op.ndims_params, base_var.owner.inputs[3:]):
+        if param.type.ndim != ndim_param:
+            return None
+
     measurable_max = MeasurableMax(list(axis))
     max_rv_node = measurable_max.make_node(base_var)
     max_rv = max_rv_node.outputs
@@ -87,6 +105,12 @@ measurable_ir_rewrites_db.register(
 
 @_logprob.register(MeasurableMax)
 def max_logprob(op, values, base_rv, **kwargs):
+    r"""Compute the log-likelihood graph for the `Max` operation.
+
+    The formula that we use here is :
+        \ln(f_{(n)}(x)) = \ln(n) + (n-1) \ln(F(x)) + \ln(f(x))
+    where f(x) represents the p.d.f and F(x) represents the c.d.f of the distrivution respectively.
+    """
     (value,) = values
 
     base_rv_op = base_rv.owner.op
@@ -99,16 +123,17 @@ def max_logprob(op, values, base_rv, **kwargs):
         logprob.name = f"{base_rv_op}_logprob"
         logcdf.name = f"{base_rv_op}_logcdf"
 
-    size_var = base_rv.owner.inputs[1]
-    string_size = str(size_var)
-    for b in (0, len(string_size) - 1):
-        if string_size[b] == "}":
-            a = string_size[b - 1]
-    try:
-        n = int(a)
-    except ValueError:
-        return None
+    # size_var = base_rv.owner.inputs[1]
+    # string_size = str(size_var)
+    # for b in (0, len(string_size) - 1):
+    #     if string_size[b] == "}":
+    #         a = string_size[b - 1]
+    # try:
+    #     n = int(a)
+    # except ValueError:
+    #     return None
+    n = value.size
 
-    logprob = (n - 1) * logcdf + logprob
+    logprob = (n - 1) * logcdf + logprob + pt.math.log(n)
 
     return logprob

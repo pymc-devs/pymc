@@ -34,7 +34,15 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
+import re
+
+import numpy as np
+import pytensor
 import pytensor.tensor as pt
+import pytest
+import scipy.stats as st
+
+import pymc as pm
 
 from pymc import logp
 from pymc.testing import assert_no_rvs
@@ -43,8 +51,63 @@ from pymc.testing import assert_no_rvs
 def test_max():
     x = pt.random.normal(0, 1, size=(3,))
     x_name = "x"
-    x_max = pt.max_and_argmax(x, axis=-1)
+    x_max = pt.max(x, axis=-1)
     x_max_value = pt.vector("x_max_value")
-    x_max_logprob = logp(x_max[0], x_max_value)
+    x_max_logprob = logp(x_max, x_max_value)
 
     assert_no_rvs(x_max_logprob)
+
+
+def test_argmax():
+    x = pt.random.normal(0, 1, size=(3,))
+    x_name = "x"
+    x_max = pt.argmax(x, axis=-1)
+    x_max_value = pt.vector("x_max_value")
+
+    with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented for Argmax")):
+        x_max_logprob = logp(x_max, x_max_value)
+
+
+def test_max_non_iid_fails():
+    x = pm.Normal.dist([0, 1, 2, 3, 4], 1, shape=(5,))
+    x_name = "x"
+    x_max = pt.max(x, axis=-1)
+    x_max_value = pt.vector("x_max_value")
+    with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
+        x_max_logprob = logp(x_max, x_max_value)
+
+
+# def test_max_non_rv_fails():
+#     x = pt.exp(pm.Beta.dist(1, 1))
+#     x_name = "x"
+#     x_max = pt.max(x, axis=-1)
+#     x_max_value = pt.vector("x_max_value")
+#     # with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
+#     x_max_logprob = logp(x_max, x_max_value)
+
+
+def test_max_categorical():
+    x = pm.Categorical.dist([1, 1, 1, 1], shape=(5,))
+    x_name = "x"
+    x_max = pt.max(x, axis=-1)
+    x_max_value = pt.vector("x_max_value")
+    # REASON for this failing is lines 71 - 74 and not the expected 89-91 which would pass?
+    with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
+        x_max_logprob = logp(x_max, x_max_value)
+
+
+def test_max_logprob():
+    x = pt.random.uniform(0, 1, size=(3,))
+    x_name = "x"
+    x_max = pt.max(x, axis=-1)
+    x_max_value = pt.vector("x_max_value")
+    x_max_logprob = logp(x_max, x_max_value)
+    # pytensor.dprint(x_max_logprob)
+    beta_rv = pt.random.beta(0, 1, name="beta")
+    # pytensor.dprint(beta_rv)
+
+    # assert np.isclose(
+    #     expected_beta.eval(),
+    #     x_max_logprob.eval({x_max_value: np.ones((3,)).max(axis= -1)}),
+    # )
+    assert beta_rv in x_max_logprob
