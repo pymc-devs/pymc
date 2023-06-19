@@ -3824,7 +3824,8 @@ class PolyaGamma(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         from polyagamma import polyagamma_pdf
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0.01, 5, 500);x.sort()
         hs = [1., 5., 10., 15.]
         zs = [0.] * 4
@@ -3838,7 +3839,7 @@ class PolyaGamma(PositiveContinuous):
 
     ========  =============================
     Support   :math:`x \in (0, \infty)`
-    Mean      :math:`dfrac{h}{4} if :math:`z=0`, :math:`\dfrac{tanh(z/2)h}{2z}` otherwise.
+    Mean      :math:`\dfrac{h}{4}` if :math:`z=0`, :math:`\dfrac{tanh(z/2)h}{2z}` otherwise.
     Variance  :math:`0.041666688h` if :math:`z=0`, :math:`\dfrac{h(sinh(z) - z)(1 - tanh^2(z/2))}{4z^3}` otherwise.
     ========  =============================
 
