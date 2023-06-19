@@ -234,7 +234,7 @@ def test_warn_random_found_factorized_joint_logprob():
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        conditional_logp({y_rv: y_vv}, warn_missing_rvs=False)
+        conditional_logp({y_rv: y_vv}, warn_rvs=False)
 
 
 def test_multiple_rvs_to_same_value_raises():
@@ -426,7 +426,7 @@ def test_probability_inference(func, scipy_func, test_value):
 def test_probability_inference_fails(func, func_name):
     with pytest.raises(
         NotImplementedError,
-        match=f"{func_name} method not implemented for Elemwise{{cos,no_inplace}}",
+        match=f"{func_name} method not implemented for (Elemwise{{cos,no_inplace}}|Cos)",
     ):
         func(pt.cos(pm.Normal.dist()), 1)
 
@@ -454,7 +454,7 @@ def test_warn_random_found_probability_inference(func, scipy_func, test_value):
         ):
             assert func(rv, 0.0)
 
-        res = func(rv, 0.0, warn_missing_rvs=False)
+        res = func(rv, 0.0, warn_rvs=False)
         # This is the problem we are warning about, as now we can no longer identify the original rv in the graph
         # or replace it by the respective value
         assert rv not in ancestors([res])

@@ -22,6 +22,7 @@ dependencies:
 - jupyter-sphinx
 - myst-nb
 - numpydoc
+- polyagamma
 - pre-commit>=2.8.0
 - pymc-sphinx-theme==0.13
 - sphinx-copybutton

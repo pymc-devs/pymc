@@ -1714,7 +1714,6 @@ class LogNormal(PositiveContinuous):
             -np.inf,
             normal_lcdf(mu, sigma, pt.log(value)),
         )
-
         return check_parameters(
             res,
             sigma > 0,
@@ -2042,6 +2041,15 @@ class Cauchy(Continuous):
 
     def logcdf(value, alpha, beta):
         res = pt.log(0.5 + pt.arctan((value - alpha) / beta) / np.pi)
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
+
+    def icdf(value, alpha, beta):
+        res = alpha + beta * pt.tan(np.pi * (value - 0.5))
+        res = check_icdf_value(res, value)
         return check_parameters(
             res,
             beta > 0,
@@ -3366,6 +3374,15 @@ class Logistic(Continuous):
             msg="s > 0",
         )
 
+    def icdf(value, mu, s):
+        res = mu + s * pt.log(value / (1 - value))
+        res = check_icdf_value(res, value)
+        return check_parameters(
+            res,
+            s > 0,
+            msg="s > 0",
+        )
+
 
 class LogitNormalRV(RandomVariable):
     name = "logit_normal"
@@ -3806,7 +3823,8 @@ class PolyaGamma(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         from polyagamma import polyagamma_pdf
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0.01, 5, 500);x.sort()
         hs = [1., 5., 10., 15.]
         zs = [0.] * 4
@@ -3820,7 +3838,7 @@ class PolyaGamma(PositiveContinuous):
 
     ========  =============================
     Support   :math:`x \in (0, \infty)`
-    Mean      :math:`dfrac{h}{4} if :math:`z=0`, :math:`\dfrac{tanh(z/2)h}{2z}` otherwise.
+    Mean      :math:`\dfrac{h}{4}` if :math:`z=0`, :math:`\dfrac{tanh(z/2)h}{2z}` otherwise.
     Variance  :math:`0.041666688h` if :math:`z=0`, :math:`\dfrac{h(sinh(z) - z)(1 - tanh^2(z/2))}{4z^3}` otherwise.
     ========  =============================
 
