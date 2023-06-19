@@ -752,10 +752,10 @@ class OrderedMultinomial:
 
     Useful for regression on ordinal data whose values range
     from 1 to K as a function of some predictor, :math:`\eta`, but
-     which are _aggregated_ by trial, like multinomial observations (in
-     contrast to `pm.OrderedLogistic`, which only accepts ordinal data
-     in a _disaggregated_ format, like categorical observations).
-     The cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
+    which are _aggregated_ by trial, like multinomial observations (in
+    contrast to `pm.OrderedLogistic`, which only accepts ordinal data
+    in a _disaggregated_ format, like categorical observations).
+    The cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
     mapped to which of the K observed dependent variables. The number
     of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.

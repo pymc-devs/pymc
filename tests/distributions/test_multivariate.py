@@ -316,7 +316,12 @@ class TestMatchesScipy:
             f_logp(cov_val, np.ones(2))
         dlogp = pt.grad(mvn_logp, cov)
         f_dlogp = pytensor.function([cov, x], dlogp)
-        assert not np.all(np.isfinite(f_dlogp(cov_val, np.ones(2))))
+        try:
+            res = f_dlogp(cov_val, np.ones(2))
+        except ValueError:
+            pass  # Op raises internally
+        else:
+            assert not np.all(np.isfinite(res))  # Otherwise, should return nan
 
     def test_mvnormal_init_fail(self):
         with pm.Model():

@@ -1232,7 +1232,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     if isinstance(length_tensor_origin, TensorConstant):
                         raise ShapeError(
                             f"Resizing dimension '{dname}' with values of length {new_length} would lead to incompatibilities, "
-                            f"because the dimension length is tied to a {length_tensor_origin}. "
+                            f"because the dimension length is tied to a TensorConstant. "
                             f"Check if the dimension was defined implicitly before the shared variable '{name}' was created, "
                             f"for example by another model variable.",
                             actual=new_length,
@@ -2199,15 +2199,14 @@ def Deterministic(name, var, model=None, dims=None):
     return var
 
 
-def Potential(name, var, model=None, dims=None):
-    """
-    Add an arbitrary factor potential to the model likelihood
-
-    The Potential function is used to add arbitrary factors (such as constraints or other likelihood components) to adjust the probability density of the model.
+def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariable:
+    """Add an arbitrary term to the model log-probability.
 
     Warnings
     --------
-    Potential functions only influence logp-based sampling. Therefore, they are applicable for sampling with ``pm.sample`` but not ``pm.sample_prior_predictive`` or ``pm.sample_posterior_predictive``.
+    Potential terms only influence probability-based sampling, such as ``pm.sample``, but not forward sampling like
+    ``pm.sample_prior_predictive`` or ``pm.sample_posterior_predictive``. A warning is raised when doing forward
+    sampling with models containing Potential terms.
 
     Parameters
     ----------
@@ -2228,62 +2227,80 @@ def Potential(name, var, model=None, dims=None):
 
     Examples
     --------
-    Have a look at the following example:
-
-    In this example, we define a constraint on ``x`` to be greater or equal to 0 via the ``pm.Potential`` function.
-    We pass ``pm.math.log(pm.math.switch(constraint, 1, 0))`` as second argument which will return an expression depending on if the constraint is met or not and which will be added to the likelihood of the model.
-    The probablity density that this model produces agrees strongly with the constraint that ``x`` should be greater than or equal to 0. All the cases who do not satisfy the constraint are strictly not considered.
+    In this example, we define a constraint on ``x`` to be greater or equal to 0.
+    The statement ``pm.math.log(pm.math.switch(constraint, 0, 1))`` adds either 0 or -inf to the model logp,
+    depending on whether the constraint is met. During sampling, any proposals where ``x`` is negative will be rejected.
 
     .. code:: python
+
+        import pymc as pm
 
         with pm.Model() as model:
             x = pm.Normal("x", mu=0, sigma=1)
-            y = pm.Normal("y", mu=x, sigma=1, observed=data)
+
             constraint = x >= 0
             potential = pm.Potential("x_constraint", pm.math.log(pm.math.switch(constraint, 1, 0)))
 
-    However, if we use ``pm.math.log(pm.math.switch(constraint, 1.0, 0.5))`` the potential again penalizes the likelihood when constraint is not met but with some deviations allowed.
-    Here, Potential function is used to pass a soft constraint.
-    A soft constraint is a constraint that is only partially satisfied.
-    The effect of this is that the posterior probability for the parameters decreases as they move away from the constraint, but does not become exactly zero.
-    This allows the sampler to generate values that violate the constraint, but with lower probability.
+
+    Instead, with a soft constraint like ``pm.math.log(pm.math.switch(constraint, 1, 0.5))``,
+    the sampler will be less likely, but not forbidden, from accepting negative values for `x`.
 
     .. code:: python
 
+        import pymc as pm
+
         with pm.Model() as model:
-            x = pm.Normal("x", mu=0.1, sigma=1)
-            y = pm.Normal("y", mu=x, sigma=1, observed=data)
+            x = pm.Normal("x", mu=0, sigma=1)
+
             constraint = x >= 0
             potential = pm.Potential("x_constraint", pm.math.log(pm.math.switch(constraint, 1.0, 0.5)))
 
-    In this example, Potential is used to obtain an arbitrary prior.
-    This prior distribution refers to the prior knowledge that the values of ``max_items`` are likely to be small rather than being large.
-    The prior probability of ``max_items`` is defined using a Potential object with the log of the inverse of ``max_items`` as its value.
-    This means that larger values of ``max_items`` have a lower prior probability density, while smaller values of ``max_items`` have a higher prior probability density.
-    When the model is sampled, the posterior distribution of ``max_items`` given the observed value of ``n_items`` will be influenced by the power-law prior defined in the Potential object
+    A Potential term can depend on multiple variables.
+    In the following example, the ``soft_sum_constraint`` potential encourages ``x`` and ``y`` to have a small sum.
+    The more the sum deviates from zero, the more negative the penalty value of ``(-((x + y)**2))``.
 
     .. code:: python
 
-        with pm.Model():
+        import pymc as pm
+
+        with pm.Model() as model:
+            x = pm.Normal("x", mu=0, sigma=10)
+            y = pm.Normal("y", mu=0, sigma=10)
+            soft_sum_constraint = pm.Potential("soft_sum_constraint", -((x + y)**2))
+
+    A Potential can be used to define a specific prior term.
+    The following example imposes a power law prior on `max_items`, under the form ``log(1/max_items)``,
+    which penalizes very large values of `max_items`.
+
+    .. code:: python
+
+        import pymc as pm
+
+        with pm.Model() as model:
             # p(max_items) = 1 / max_items
             max_items = pm.Uniform("max_items", lower=1, upper=100)
             pm.Potential("power_prior", pm.math.log(1/max_items))
 
             n_items = pm.Uniform("n_items", lower=1, upper=max_items, observed=60)
 
-    In the next example, the ``soft_sum_constraint`` potential encourages ``x`` and ``y`` to have a small sum, effectively adding a soft constraint on the relationship between the two variables.
-    This can be useful in cases where you want to ensure that the sum of multiple variables stays within a certain range, without enforcing an exact value.
-    In this case, the larger the deviation, larger will be the negative value (-((x + y)**2)) which the MCMC sampler will attempt to minimize.
-    However, the sampler might generate values for some small deviations but with lower probability hence this is a soft constraint.
+    A Potential can be used to define a specific likelihood term.
+    In the following example, a normal likelihood term is added to fixed data.
+    The same result would be obtained by using an observed `Normal` variable.
 
     .. code:: python
 
-        with pm.Model() as model:
-            x = pm.Normal("x", mu=0.1, sigma=1)
-            y = pm.Normal("y", mu=x, sigma=1, observed=data)
-            soft_sum_constraint = pm.Potential("soft_sum_constraint", -((x + y)**2))
+        import pymc as pm
 
-    The potential value is incorporated into the model log-probability, so it should be -inf (or very negative) when a constraint is violated, so that those draws are rejected. 0 won't have any effect and positive values will make the proposals more likely to be accepted.
+        def normal_logp(value, mu, sigma):
+            return -0.5 * ((value - mu) / sigma) ** 2 - pm.math.log(sigma)
+
+        with pm.Model() as model:
+            mu = pm.Normal("x")
+            sigma = pm.HalfNormal("sigma")
+
+            data = [0.1, 0.5, 0.9]
+            llike = pm.Potential("llike", normal_logp(data, mu, sigma))
+
 
     """
     model = modelcontext(model)
