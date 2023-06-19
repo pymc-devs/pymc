@@ -507,10 +507,15 @@ class TestMatchesScipy:
             {"mu": R, "tau": Rplusbig},
             lambda q, mu, tau: floatX(st.lognorm.ppf(q, tau**-0.5, 0, np.exp(mu))),
         )
+        # Because we exponentiate the normal quantile function, setting sigma >= 9.5
+        # return extreme values that results in relative errors above 4 digits
+        # we circumvent it by keeping it below or equal to 9.
+        custom_rplusbig = Domain([0, 0.5, 0.9, 0.99, 1, 1.5, 2, 9, np.inf])
         check_icdf(
             pm.LogNormal,
-            {"mu": R, "sigma": Rplusbig},
+            {"mu": R, "sigma": custom_rplusbig},
             lambda q, mu, sigma: floatX(st.lognorm.ppf(q, sigma, 0, np.exp(mu))),
+            decimal=select_by_precision(float64=4, float32=3),
         )
 
     def test_studentt_logp(self):
