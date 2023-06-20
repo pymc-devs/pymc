@@ -299,6 +299,11 @@ class TestMatchesScipy:
             {"sigma": Rplus},
             lambda value, sigma: st.halfnorm.logcdf(value, scale=sigma),
         )
+        check_icdf(
+            pm.HalfNormal,
+            {"sigma": Rplus},
+            lambda q, sigma: st.halfnorm.ppf(q, scale=sigma),
+        )
 
     def test_chisquared_logp(self):
         check_logp(
@@ -581,6 +586,9 @@ class TestMatchesScipy:
             Rplus,
             {"beta": Rplusbig},
             lambda value, beta: st.halfcauchy.logcdf(value, scale=beta),
+        )
+        check_icdf(
+            pm.HalfCauchy, {"beta": Rplusbig}, lambda q, beta: st.halfcauchy.ppf(q, scale=beta)
         )
 
     def test_gamma_logp(self):

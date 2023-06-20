@@ -856,6 +856,15 @@ class HalfNormal(PositiveContinuous):
             msg="sigma > 0",
         )
 
+    def icdf(value, loc, sigma):
+        res = Normal.icdf((value + 1.0) / 2.0, loc, sigma)
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
+
 
 class WaldRV(RandomVariable):
     name = "wald"
@@ -2125,6 +2134,15 @@ class HalfCauchy(PositiveContinuous):
             pt.log(2 * pt.arctan((value - loc) / beta) / np.pi),
         )
 
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
+
+    def icdf(value, loc, beta):
+        res = loc + beta * pt.tan(np.pi * (value) / 2.0)
+        res = check_icdf_value(res, value)
         return check_parameters(
             res,
             beta > 0,
