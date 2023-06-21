@@ -24,7 +24,7 @@ Underdispersion
 
 Bayesian Workflow
   The Bayesian workflow involves all the steps needed for model building. This includes {term}`Bayesian inference` but also other tasks such as i) diagnoses of the quality of the inference, ii) model criticism, including evaluations of both model assumptions and model predictions, iii) comparison of models, not
-just for the purpose of model selection or model averaging but more importantly to better understand these models and iv) Preparation of the results for a particular audience. These non-inferencial tasks require both numerical and visual summaries to help practitioners analyse their models. And they are sometimes collectively known as [Exploratory Analysis of Bayesian Models](https://joss.theoj.org/papers/10.21105/joss.01143).
+  just for the purpose of model selection or model averaging but more importantly to better understand these models and iv) Preparation of the results for a particular audience. These non-inferencial tasks require both numerical and visual summaries to help practitioners analyse their models. And they are sometimes collectively known as [Exploratory Analysis of Bayesian Models](https://joss.theoj.org/papers/10.21105/joss.01143).
   - For a compact overview, see Bayesian statistics and modelling by van de Schoot, R., Depaoli, S., King, R. et al in Nat Rev Methods - Primers 1, 1 (2021).
   - For an in-depth overview, see Bayesian Workflow by Andrew Gelman, Aki Vehtari, Daniel Simpson, Charles C. Margossian, Bob Carpenter, Yuling Yao, Lauren Kennedy, Jonah Gabry, Paul-Christian Bürkner, Martin Modrák
   - For an exercise-based material, see Think Bayes 2e: Bayesian Statistics Made Simple by Allen B. Downey
@@ -132,6 +132,7 @@ tensor_like
 
   pt.as_tensor_variable([[1, 2.0], [0, 0]])
   ```
+
 unnamed_distribution
     PyMC distributions can be initialized directly (e.g. `pm.Normal`) or using the `.dist` classmethod (e.g. `pm.Normal.dist`). Distributions initialized with the 1st method are registered as model parameters and thus, need to be given a name and be initialized within a model context. "unnamed_distributions" are distributions initialized with the 2nd method. These are standalone distributions, they are not parameters in any model and can be used to draw samples from a distribution by itself or as parameters to other distributions like mixtures or censored.
 
