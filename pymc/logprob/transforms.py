@@ -40,7 +40,6 @@ from copy import copy
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
-import pytensor
 import pytensor.tensor as pt
 
 from pytensor import scan
@@ -959,8 +958,9 @@ class SimplexTransform(RVTransform):
     name = "simplex"
 
     def forward(self, value, *inputs):
+        value = pt.as_tensor(value)
         log_value = pt.log(value)
-        N = value.shape[-1].astype(pytensor.config.floatX)
+        N = value.shape[-1].astype(value.dtype)
         shift = pt.sum(log_value, -1, keepdims=True) / N
         return log_value[..., :-1] - shift
 
@@ -970,8 +970,9 @@ class SimplexTransform(RVTransform):
         return exp_value_max / pt.sum(exp_value_max, -1, keepdims=True)
 
     def log_jac_det(self, value, *inputs):
+        value = pt.as_tensor(value)
         N = value.shape[-1] + 1
-        N = N.astype(pytensor.config.floatX)
+        N = N.astype(value.dtype)
         sum_value = pt.sum(value, -1, keepdims=True)
         value_sum_expanded = value + sum_value
         value_sum_expanded = pt.concatenate([value_sum_expanded, pt.zeros(sum_value.shape)], -1)
