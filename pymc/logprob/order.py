@@ -44,7 +44,12 @@ from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor.math import Max
 from pytensor.tensor.random.op import RandomVariable
 
-from pymc.logprob.abstract import MeasurableVariable, _logcdf, _logprob
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    _logcdf_helper,
+    _logprob,
+    _logprob_helper,
+)
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 
 
@@ -66,6 +71,13 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Meas
 
     base_var = node.inputs[0]
 
+    if base_var.owner is None:
+        return None
+
+    if not isinstance(base_var.owner.op, RandomVariable):
+        return None
+
+    # univariate iid test which also rules out other distributions
     if isinstance(base_var.owner.op, RandomVariable):
         for op in base_var.owner.inputs[3:]:
             if op.type.ndim != 0:
@@ -73,11 +85,6 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Meas
 
     if not rv_map_feature.request_measurable(node.inputs):
         return None
-
-    axis = node.op.axis
-    for x in range(base_var.ndim):
-        if x not in axis:
-            return None
 
     axis = set(node.op.axis)
     base_var_dims = set(range(base_var.ndim))
@@ -113,26 +120,10 @@ def max_logprob(op, values, base_rv, **kwargs):
     """
     (value,) = values
 
-    base_rv_op = base_rv.owner.op
-    base_rv_inputs = base_rv.owner.inputs
+    logprob = _logprob_helper(base_rv, value)
+    logcdf = _logcdf_helper(base_rv, value)
 
-    logprob = _logprob(base_rv_op, (value,), *base_rv_inputs, **kwargs)
-    logcdf = _logcdf(base_rv_op, value, *base_rv_inputs, **kwargs)
-
-    if base_rv_op.name:
-        logprob.name = f"{base_rv_op}_logprob"
-        logcdf.name = f"{base_rv_op}_logcdf"
-
-    # size_var = base_rv.owner.inputs[1]
-    # string_size = str(size_var)
-    # for b in (0, len(string_size) - 1):
-    #     if string_size[b] == "}":
-    #         a = string_size[b - 1]
-    # try:
-    #     n = int(a)
-    # except ValueError:
-    #     return None
-    n = value.size
+    n = base_rv.size
 
     logprob = (n - 1) * logcdf + logprob + pt.math.log(n)
 
