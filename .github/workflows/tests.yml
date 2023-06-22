@@ -413,7 +413,7 @@ jobs:
         floatx: [float32]
         python-version: ["3.11"]
         test-subset:
-        - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py
+        - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py tests/distributions/test_transform.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
