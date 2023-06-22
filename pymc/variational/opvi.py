@@ -1073,11 +1073,11 @@ class Group(WithMemoization):
                     for v in self.group
                     if isinstance(v.owner.op, MinibatchRandomVariable)
                 ]
-                + [1.0]  # To avoid empty max
+                + [pm.floatX(1.0)]  # To avoid empty max
             )
         )
         t = self.symbolic_single_sample(t)
-        return pm.floatX(t)
+        return t
 
     @node_property
     def symbolic_logq_not_scaled(self):
