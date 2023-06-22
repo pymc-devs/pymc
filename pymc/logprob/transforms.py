@@ -958,8 +958,10 @@ class SimplexTransform(RVTransform):
     name = "simplex"
 
     def forward(self, value, *inputs):
+        value = pt.as_tensor(value)
         log_value = pt.log(value)
-        shift = pt.sum(log_value, -1, keepdims=True) / value.shape[-1]
+        N = value.shape[-1].astype(value.dtype)
+        shift = pt.sum(log_value, -1, keepdims=True) / N
         return log_value[..., :-1] - shift
 
     def backward(self, value, *inputs):
@@ -968,7 +970,9 @@ class SimplexTransform(RVTransform):
         return exp_value_max / pt.sum(exp_value_max, -1, keepdims=True)
 
     def log_jac_det(self, value, *inputs):
+        value = pt.as_tensor(value)
         N = value.shape[-1] + 1
+        N = N.astype(value.dtype)
         sum_value = pt.sum(value, -1, keepdims=True)
         value_sum_expanded = value + sum_value
         value_sum_expanded = pt.concatenate([value_sum_expanded, pt.zeros(sum_value.shape)], -1)
