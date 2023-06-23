@@ -39,7 +39,6 @@ from pymc.math import (
     softmax,
 )
 from pymc.pytensorf import floatX
-from pymc.testing import SeededTest
 from tests.helpers import verify_grad
 
 
@@ -205,9 +204,8 @@ def test_logdiffexp():
     assert np.allclose(logdiffexp(a, b).eval(), 0)
 
 
-class TestLogDet(SeededTest):
+class TestLogDet:
     def setup_method(self):
-        super().setup_method()
         np.random.seed(899853)
         self.op_class = LogDet
         self.op = logdet

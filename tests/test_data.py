@@ -29,10 +29,9 @@ import pymc as pm
 
 from pymc.data import is_minibatch
 from pymc.pytensorf import GeneratorOp, floatX
-from pymc.testing import SeededTest
 
 
-class TestData(SeededTest):
+class TestData:
     def test_deterministic(self):
         data_values = np.array([0.5, 0.4, 5, 2])
         with pm.Model() as model:
@@ -40,7 +39,7 @@ class TestData(SeededTest):
             pm.Normal("y", 0, 1, observed=X)
             model.compile_logp()(model.initial_point())
 
-    def test_sample(self):
+    def test_sample(self, seeded_test):
         x = np.random.normal(size=100)
         y = x + np.random.normal(scale=1e-2, size=100)
 
@@ -308,7 +307,7 @@ class TestData(SeededTest):
             for expected in expected_substrings:
                 assert expected in g.source
 
-    def test_explicit_coords(self):
+    def test_explicit_coords(self, seeded_test):
         N_rows = 5
         N_cols = 7
         data = np.random.uniform(size=(N_rows, N_cols))
@@ -371,7 +370,7 @@ class TestData(SeededTest):
             assert pmodel.dim_lengths["row"].eval() == 4
             assert pmodel.dim_lengths["column"].eval() == 5
 
-    def test_implicit_coords_series(self):
+    def test_implicit_coords_series(self, seeded_test):
         pd = pytest.importorskip("pandas")
         ser_sales = pd.Series(
             data=np.random.randint(low=0, high=30, size=22),
@@ -385,7 +384,7 @@ class TestData(SeededTest):
         assert len(pmodel.coords["date"]) == 22
         assert pmodel.named_vars_to_dims == {"sales": ("date",)}
 
-    def test_implicit_coords_dataframe(self):
+    def test_implicit_coords_dataframe(self, seeded_test):
         pd = pytest.importorskip("pandas")
         N_rows = 5
         N_cols = 7

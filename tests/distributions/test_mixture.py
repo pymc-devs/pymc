@@ -79,7 +79,6 @@ from pymc.testing import (
     R,
     Rplus,
     Rplusbig,
-    SeededTest,
     Simplex,
     Unit,
     assert_moment_is_expected,
@@ -115,7 +114,10 @@ def generate_poisson_mixture_data(w, mu, size=1000):
     return x
 
 
-class TestMixture(SeededTest):
+class TestMixture:
+    def get_random_state(self):
+        return np.random.RandomState(20160911)
+
     def get_initial_point(self, model):
         """Get initial point with untransformed variables for posterior predictive sampling"""
         return {
@@ -477,7 +479,7 @@ class TestMixture(SeededTest):
                 trace = sample(
                     5000,
                     step=step,
-                    random_seed=self.random_seed,
+                    random_seed=45354,
                     progressbar=False,
                     chains=1,
                     return_inferencedata=False,
@@ -502,7 +504,7 @@ class TestMixture(SeededTest):
                     5000,
                     chains=1,
                     step=Metropolis(),
-                    random_seed=self.random_seed,
+                    random_seed=5363567,
                     progressbar=False,
                     return_inferencedata=False,
                 )
@@ -533,7 +535,7 @@ class TestMixture(SeededTest):
                     5000,
                     chains=1,
                     step=Metropolis(),
-                    random_seed=self.random_seed,
+                    random_seed=645334,
                     progressbar=False,
                     return_inferencedata=False,
                 )
@@ -785,8 +787,8 @@ class TestMixture(SeededTest):
                 )
 
 
-class TestNormalMixture(SeededTest):
-    def test_normal_mixture_sampling(self):
+class TestNormalMixture:
+    def test_normal_mixture_sampling(self, seeded_test):
         norm_w = np.array([0.75, 0.25])
         norm_mu = np.array([0.0, 5.0])
         norm_sigma = np.ones_like(norm_mu)
@@ -804,7 +806,7 @@ class TestNormalMixture(SeededTest):
                 trace = sample(
                     5000,
                     step=step,
-                    random_seed=self.random_seed,
+                    random_seed=20160911,
                     progressbar=False,
                     chains=1,
                     return_inferencedata=False,
@@ -816,7 +818,7 @@ class TestNormalMixture(SeededTest):
     @pytest.mark.parametrize(
         "nd, ncomp", [(tuple(), 5), (1, 5), (3, 5), ((3, 3), 5), (3, 3), ((3, 3), 3)], ids=str
     )
-    def test_normal_mixture_nd(self, nd, ncomp):
+    def test_normal_mixture_nd(self, seeded_test, nd, ncomp):
         nd = to_tuple(nd)
         ncomp = int(ncomp)
         comp_shape = nd + (ncomp,)
@@ -865,7 +867,7 @@ class TestNormalMixture(SeededTest):
             assert_allclose(logp0, logp1)
             assert_allclose(logp0, logp2)
 
-    def test_random(self):
+    def test_random(self, seeded_test):
         def ref_rand(size, w, mu, sigma):
             component = np.random.choice(w.size, size=size, p=w)
             return np.random.normal(mu[component], sigma[component], size=size)
@@ -894,8 +896,11 @@ class TestNormalMixture(SeededTest):
         )
 
 
-class TestMixtureVsLatent(SeededTest):
+class TestMixtureVsLatent:
     """This class contains tests that compare a marginal Mixture with a latent indexed Mixture"""
+
+    def get_random_state(self):
+        return np.random.RandomState(20160911)
 
     def test_scalar_components(self):
         nd = 3
@@ -1013,7 +1018,7 @@ class TestMixtureVsLatent(SeededTest):
         assert_allclose(mix_logp, latent_mix_logp, rtol=rtol)
 
 
-class TestMixtureSameFamily(SeededTest):
+class TestMixtureSameFamily:
     """Tests that used to belong to deprecated `TestMixtureSameFamily`.
 
     The functionality is now expected to be provided by `Mixture`
@@ -1021,13 +1026,12 @@ class TestMixtureSameFamily(SeededTest):
 
     @classmethod
     def setup_class(cls):
-        super().setup_class()
         cls.size = 50
         cls.n_samples = 1000
         cls.mixture_comps = 10
 
     @pytest.mark.parametrize("batch_shape", [(3, 4), (20,)], ids=str)
-    def test_with_multinomial(self, batch_shape):
+    def test_with_multinomial(self, seeded_test, batch_shape):
         p = np.random.uniform(size=(*batch_shape, self.mixture_comps, 3))
         p /= p.sum(axis=-1, keepdims=True)
         n = 100 * np.ones((*batch_shape, 1))
@@ -1062,7 +1066,7 @@ class TestMixtureSameFamily(SeededTest):
             rtol,
         )
 
-    def test_with_mvnormal(self):
+    def test_with_mvnormal(self, seeded_test):
         # 10 batch, 3-variate Gaussian
         mu = np.random.randn(self.mixture_comps, 3)
         mat = np.random.randn(3, 3)

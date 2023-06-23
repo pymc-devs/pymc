@@ -47,7 +47,6 @@ from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.logprob.basic import conditional_logp, transformed_conditional_logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
-from pymc.testing import SeededTest
 from pymc.util import _FutureWarningValidatingScratchpad
 from pymc.variational.minibatch_rv import MinibatchRandomVariable
 from tests.models import simple_model
@@ -647,10 +646,7 @@ class TestShapeEvaluation:
         assert shapes["from_dims"] == (3, 4)
 
 
-class TestCheckStartVals(SeededTest):
-    def setup_method(self):
-        super().setup_method()
-
+class TestCheckStartVals:
     def test_valid_start_point(self):
         with pm.Model() as model:
             a = pm.Uniform("a", lower=0.0, upper=1.0)
@@ -1519,7 +1515,7 @@ class TestImputationMissingData:
         )
 
 
-class TestShared(SeededTest):
+class TestShared:
     def test_deterministic(self):
         with pm.Model() as model:
             data_values = np.array([0.5, 0.4, 5, 2])
