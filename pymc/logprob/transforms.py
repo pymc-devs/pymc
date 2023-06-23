@@ -448,7 +448,8 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
 
     backward_value = op.transform_elemwise.backward(value, *other_inputs)
 
-    # Some transformations, like squaring may produce multiple backward values
+    # Fail if transformation is not injective
+    # A TensorVariable is returned in 1-to-1 inversions, and a tuple in 1-to-many
     if isinstance(backward_value, tuple):
         raise NotImplementedError
 
@@ -468,6 +469,11 @@ def measurable_transform_icdf(op: MeasurableTransform, value, *inputs, **kwargs)
 
     input_icdf = _icdf_helper(measurable_input, value)
     icdf = op.transform_elemwise.forward(input_icdf, *other_inputs)
+
+    # Fail if transformation is not injective
+    # A TensorVariable is returned in 1-to-1 inversions, and a tuple in 1-to-many
+    if isinstance(op.transform_elemwise.backward(icdf, *other_inputs), tuple):
+        raise NotImplementedError
 
     return icdf
 
