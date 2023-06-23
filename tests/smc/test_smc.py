@@ -26,15 +26,13 @@ import pymc as pm
 from pymc.backends.base import MultiTrace
 from pymc.pytensorf import floatX
 from pymc.smc.kernels import IMH, systematic_resampling
-from pymc.testing import SeededTest
 from tests.helpers import assert_random_state_equal
 
 
-class TestSMC(SeededTest):
+class TestSMC:
     """Tests for the default SMC kernel"""
 
     def setup_class(self):
-        super().setup_class()
         self.samples = 1000
         n = 4
         mu1 = np.ones(n) * 0.5
@@ -107,7 +105,7 @@ class TestSMC(SeededTest):
 
     def test_unobserved_bernoulli(self):
         n = 10
-        rng = self.get_random_state()
+        rng = np.random.RandomState(20160911)
         z_true = np.zeros(n, dtype=int)
         z_true[int(n / 2) :] = 1
         y = st.norm(np.array([-1, 1])[z_true], 0.25).rvs(random_state=rng)
@@ -258,9 +256,9 @@ class TestSMC(SeededTest):
                 pm.sample_smc(draws=10, chains=1, save_log_pseudolikelihood=True)
 
 
-class TestMHKernel(SeededTest):
+class TestMHKernel:
     def test_normal_model(self):
-        data = st.norm(10, 0.5).rvs(1000, random_state=self.get_random_state())
+        data = st.norm(10, 0.5).rvs(1000, random_state=np.random.RandomState(20160911))
 
         initial_rng_state = np.random.get_state()
         with pm.Model() as m:

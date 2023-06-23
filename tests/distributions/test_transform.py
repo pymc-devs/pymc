@@ -33,7 +33,6 @@ from pymc.testing import (
     R,
     Rminusbig,
     Rplusbig,
-    SeededTest,
     Simplex,
     SortedVector,
     Unit,
@@ -301,7 +300,7 @@ def test_chain_jacob_det():
     check_jacobian_det(chain_tranf, Vector(R, 4), pt.vector, floatX(np.zeros(4)), elemwise=False)
 
 
-class TestElementWiseLogp(SeededTest):
+class TestElementWiseLogp:
     def build_model(self, distfam, params, size, transform, initval=None):
         if initval is not None:
             initval = pm.floatX(initval)

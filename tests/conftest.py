@@ -44,8 +44,7 @@ def strict_float32():
 
 @pytest.fixture(scope="function", autouse=False)
 def seeded_test():
-    # TODO: use this instead of SeededTest
-    np.random.seed(42)
+    np.random.seed(20160911)
 
 
 @pytest.fixture

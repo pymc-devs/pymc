@@ -45,13 +45,12 @@ from pymc.step_methods import (
     Metropolis,
     Slice,
 )
-from pymc.testing import SeededTest, fast_unstable_sampling_mode
+from pymc.testing import fast_unstable_sampling_mode
 from tests.models import simple_init
 
 
-class TestInitNuts(SeededTest):
+class TestInitNuts:
     def setup_method(self):
-        super().setup_method()
         self.model, self.start, self.step, _ = simple_init()
 
     def test_checks_seeds_kwarg(self):
@@ -60,9 +59,8 @@ class TestInitNuts(SeededTest):
                 pm.sampling.mcmc.init_nuts(chains=2, random_seed=[1])
 
 
-class TestSample(SeededTest):
+class TestSample:
     def setup_method(self):
-        super().setup_method()
         self.model, self.start, self.step, _ = simple_init()
 
     @pytest.mark.parametrize("init", ("jitter+adapt_diag", "advi", "map"))
@@ -168,7 +166,7 @@ class TestSample(SeededTest):
                     "tune": 120,
                     "n_init": 1000,
                     "draws": 50,
-                    "random_seed": self.random_seed,
+                    "random_seed": 20160911,
                 }
                 with warnings.catch_warnings(record=True) as rec:
                     warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
@@ -196,7 +194,7 @@ class TestSample(SeededTest):
                     cores=2,
                     discard_tuned_samples=False,
                     initvals=[{"x": [10, 10]}, {"x": [-10, -10]}],
-                    random_seed=self.random_seed,
+                    random_seed=20160911,
                 )
         assert idata.warmup_posterior["x"].sel(chain=0, draw=0).values[0] > 0
         assert idata.warmup_posterior["x"].sel(chain=1, draw=0).values[0] < 0
@@ -241,7 +239,7 @@ class TestSample(SeededTest):
                         chains=2,
                         step=self.step,
                         cores=cores,
-                        random_seed=self.random_seed,
+                        random_seed=20160911,
                         callback=callback,
                     )
                 assert callback.called
@@ -262,7 +260,7 @@ class TestSample(SeededTest):
                     chains=1,
                     step=self.step,
                     cores=1,
-                    random_seed=self.random_seed,
+                    random_seed=2016911,
                     callback=callback,
                     return_inferencedata=False,
                 )
@@ -519,7 +517,7 @@ def test_partial_trace_unsupported():
 
 
 @pytest.mark.xfail(condition=(pytensor.config.floatX == "float32"), reason="Fails on float32")
-class TestNamedSampling(SeededTest):
+class TestNamedSampling:
     def test_shared_named(self):
         G_var = shared(value=np.atleast_2d(1.0), shape=(1, None), name="G")
 
@@ -838,8 +836,8 @@ class TestType:
                     pm.sample(draws=10, tune=10, chains=1, step=sampler())
 
 
-class TestShared(SeededTest):
-    def test_sample(self):
+class TestShared:
+    def test_sample(self, seeded_test):
         x = np.random.normal(size=100)
         y = x + np.random.normal(scale=1e-2, size=100)
 
