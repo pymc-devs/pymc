@@ -48,6 +48,7 @@ from pymc.testing import assert_no_rvs
 
 
 def test_max():
+    """Test whether the logprob for ```pt.max``` is implemented"""
     x = pt.random.normal(0, 1, size=(3,))
     x.name = "x"
     x_max = pt.max(x, axis=-1)
@@ -57,7 +58,19 @@ def test_max():
     assert_no_rvs(x_max_logprob)
 
 
+def test_axis_max():
+    """Test whether the rewrite takes into account ```None``` axis"""
+    x = pt.random.normal(0, 1)
+    x.name = "x"
+    x_max = pt.max(x, axis=None)
+    x_max_value = pt.vector("x_max_value")
+    x_max_logprob = logp(x_max, x_max_value)
+
+    assert_no_rvs(x_max_logprob)
+
+
 def test_argmax():
+    """Test whether the logprob for ```pt.argmax``` is rejected correctly"""
     x = pt.random.normal(0, 1, size=(3,))
     x.name = "x"
     x_max = pt.argmax(x, axis=-1)
@@ -68,6 +81,7 @@ def test_argmax():
 
 
 def test_max_non_iid_fails():
+    """Test whether the logprob for ```pt.max``` for non i.i.d is rejected correctly"""
     x = pm.Normal.dist([0, 1, 2, 3, 4], 1, shape=(5,))
     x.name = "x"
     x_max = pt.max(x, axis=-1)
@@ -77,7 +91,8 @@ def test_max_non_iid_fails():
 
 
 def test_max_non_rv_fails():
-    x = pt.exp(pt.random.normal(0, 1, size=(3,)))
+    """Test whether the logprob for ```pt.max``` for non RVs is rejected correctly"""
+    x = pt.exp(pt.random.beta(0, 1, size=(3,)))
     x.name = "x"
     x_max = pt.max(x, axis=-1)
     x_max_value = pt.vector("x_max_value")
@@ -86,6 +101,7 @@ def test_max_non_rv_fails():
 
 
 def test_max_categorical():
+    """Test whether the logprob for ```pt.max``` for unsupported distributions is rejected correctly"""
     x = pm.Categorical.dist([1, 1, 1, 1], shape=(5,))
     x.name = "x"
     x_max = pt.max(x, axis=-1)
@@ -94,7 +110,28 @@ def test_max_categorical():
         x_max_logprob = logp(x_max, x_max_value)
 
 
+def test_non_supp_axis_max():
+    """Test whether the logprob for ```pt.max``` for unsupported axis is rejected correctly"""
+    x = pt.random.normal(0, 1, size=(3, 3))
+    x.name = "x"
+    x_max_none = pt.max(x, axis=None)
+    x_max_value = pt.vector("x_max_value")
+    x_max_logprob = logp(x_max_none, x_max_value)
+
+    x_max = pt.max(x, axis=-1)
+    with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
+        x_max_logprob = logp(x_max, x_max_value)
+
+    assert_no_rvs(x_max_logprob)
+
+
 def test_max_logprob():
+    """Test whether the logprob for ```pt.max``` produces the corrected
+
+    The fact that order statistics of i.i.d. uniform RVs ~ Beta is used here:
+        U_1, \\dots, U_n \\stackrel{\text{i.i.d.}}{\\sim} \text{Uniform}(0, 1) \\Rightarrow U_{(k)} \\sim \text{Beta}(k, n + 1- k)
+    for all 1<=k<=n
+    """
     x = pt.random.uniform(0, 1, size=(3,))
     x.name = "x"
     x_max = pt.max(x, axis=-1)

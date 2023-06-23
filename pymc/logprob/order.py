@@ -74,26 +74,24 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Meas
     if base_var.owner is None:
         return None
 
+    # NonRVS must be rejected
     if not isinstance(base_var.owner.op, RandomVariable):
         return None
 
     # univariate iid test which also rules out other distributions
     if isinstance(base_var.owner.op, RandomVariable):
-        for op in base_var.owner.inputs[3:]:
-            if op.type.ndim != 0:
+        for params in base_var.owner.inputs[3:]:
+            if params.type.ndim != 0:
                 return None
 
     if not rv_map_feature.request_measurable(node.inputs):
         return None
 
+    # Check whether axis is supported or not
     axis = set(node.op.axis)
     base_var_dims = set(range(base_var.ndim))
-    if not axis.issubset(base_var_dims):
+    if axis != base_var_dims:
         return None
-
-    for ndim_param, param in zip(base_var.owner.op.ndims_params, base_var.owner.inputs[3:]):
-        if param.type.ndim != ndim_param:
-            return None
 
     measurable_max = MeasurableMax(list(axis))
     max_rv_node = measurable_max.make_node(base_var)
@@ -116,7 +114,7 @@ def max_logprob(op, values, base_rv, **kwargs):
 
     The formula that we use here is :
         \ln(f_{(n)}(x)) = \ln(n) + (n-1) \ln(F(x)) + \ln(f(x))
-    where f(x) represents the p.d.f and F(x) represents the c.d.f of the distrivution respectively.
+    where f(x) represents the p.d.f and F(x) represents the c.d.f of the distribution respectively.
     """
     (value,) = values
 
