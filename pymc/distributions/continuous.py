@@ -57,6 +57,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorConstant
 
 from pymc.logprob.abstract import _logcdf_helper, _logprob_helper
+from pymc.logprob.basic import icdf
 
 try:
     from polyagamma import polyagamma_cdf, polyagamma_pdf, random_polyagamma
@@ -857,13 +858,9 @@ class HalfNormal(PositiveContinuous):
         )
 
     def icdf(value, loc, sigma):
-        res = Normal.icdf((value + 1.0) / 2.0, loc, sigma)
+        res = icdf(Normal.dist(loc, sigma), (value + 1.0) / 2.0)
         res = check_icdf_value(res, value)
-        return check_icdf_parameters(
-            res,
-            sigma > 0,
-            msg="sigma > 0",
-        )
+        return res
 
 
 class WaldRV(RandomVariable):
@@ -1731,13 +1728,9 @@ class LogNormal(PositiveContinuous):
         )
 
     def icdf(value, mu, sigma):
-        res = pt.exp(Normal.icdf(value, mu, sigma))
+        res = pt.exp(icdf(Normal.dist(mu, sigma), value))
         res = check_icdf_value(res, value)
-        return check_icdf_parameters(
-            res,
-            sigma > 0,
-            msg="sigma > 0",
-        )
+        return res
 
 
 Lognormal = LogNormal
