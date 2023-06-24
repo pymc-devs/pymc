@@ -509,7 +509,12 @@ class Normal(Continuous):
     rv_op = normal
 
     @classmethod
-    def dist(cls, mu=0, sigma=None, tau=None, **kwargs):
+    def dist(
+        cls, 
+        mu: DIST_PARAMETER_TYPES= 0, 
+        sigma:Optional[DIST_PARAMETER_TYPES] = None, 
+        tau: Optional[DIST_PARAMETER_TYPES] = None, 
+        **kwargs):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         sigma = pt.as_tensor_variable(sigma)
 
