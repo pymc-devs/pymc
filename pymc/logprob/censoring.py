@@ -47,14 +47,9 @@ from pytensor.scalar.basic import clip as scalar_clip
 from pytensor.tensor.math import ceil, clip, floor, round_half_to_even
 from pytensor.tensor.var import TensorConstant
 
-from pymc.logprob.abstract import (
-    MeasurableElemwise,
-    MeasurableVariable,
-    _logcdf,
-    _logprob,
-)
-from pymc.logprob.rewriting import measurable_ir_rewrites_db
-from pymc.logprob.utils import CheckParameterValue, ignore_logprob
+from pymc.logprob.abstract import MeasurableElemwise, _logcdf, _logprob
+from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
+from pymc.logprob.utils import CheckParameterValue
 
 
 class MeasurableClip(MeasurableElemwise):
@@ -70,22 +65,14 @@ measurable_clip = MeasurableClip(scalar_clip)
 def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableClip]]:
     # TODO: Canonicalize x[x>ub] = ub -> clip(x, x, ub)
 
-    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
 
-    if isinstance(node.op, MeasurableClip):
-        return None  # pragma: no cover
-
-    clipped_var = node.outputs[0]
-    base_var, lower_bound, upper_bound = node.inputs
-
-    if not (
-        base_var.owner
-        and isinstance(base_var.owner.op, MeasurableVariable)
-        and base_var not in rv_map_feature.rv_values
-    ):
+    if not rv_map_feature.request_measurable(node.inputs):
         return None
+
+    base_var, lower_bound, upper_bound = node.inputs
 
     # Replace bounds by `+-inf` if `y = clip(x, x, ?)` or `y=clip(x, ?, x)`
     # This is used in `clip_logprob` to generate a more succinct logprob graph
@@ -93,13 +80,7 @@ def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[List[Me
     lower_bound = lower_bound if (lower_bound is not base_var) else pt.constant(-np.inf)
     upper_bound = upper_bound if (upper_bound is not base_var) else pt.constant(np.inf)
 
-    # Make base_var unmeasurable
-    unmeasurable_base_var = ignore_logprob(base_var)
-    clipped_rv_node = measurable_clip.make_node(unmeasurable_base_var, lower_bound, upper_bound)
-    clipped_rv = clipped_rv_node.outputs[0]
-
-    clipped_rv.name = clipped_var.name
-
+    clipped_rv = measurable_clip.make_node(base_var, lower_bound, upper_bound).outputs[0]
     return [clipped_rv]
 
 
@@ -177,31 +158,17 @@ class MeasurableRound(MeasurableElemwise):
 
 @node_rewriter(tracks=[ceil, floor, round_half_to_even])
 def find_measurable_roundings(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableRound]]:
-    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
 
-    if isinstance(node.op, MeasurableRound):
-        return None  # pragma: no cover
-
-    (rounded_var,) = node.outputs
-    (base_var,) = node.inputs
-
-    if not (
-        base_var.owner
-        and isinstance(base_var.owner.op, MeasurableVariable)
-        and base_var not in rv_map_feature.rv_values
-        # Rounding only makes sense for continuous variables
-        and base_var.dtype.startswith("float")
-    ):
+    if not rv_map_feature.request_measurable(node.inputs):
         return None
 
-    # Make base_var unmeasurable
-    unmeasurable_base_var = ignore_logprob(base_var)
-
+    [base_var] = node.inputs
     rounded_op = MeasurableRound(node.op.scalar_op)
-    rounded_rv = rounded_op.make_node(unmeasurable_base_var).default_output()
-    rounded_rv.name = rounded_var.name
+    rounded_rv = rounded_op.make_node(base_var).default_output()
+    rounded_rv.name = node.outputs[0].name
     return [rounded_rv]
 
 

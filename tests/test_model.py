@@ -43,7 +43,7 @@ from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
 from pymc.distributions.transforms import log
 from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
-from pymc.logprob.basic import joint_logp
+from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
 from pymc.testing import SeededTest
@@ -1461,7 +1461,7 @@ class TestImputationMissingData:
         x_unobs_rv = m["x_missing"]
         x_unobs_vv = m.rvs_to_values[x_unobs_rv]
 
-        logp = joint_logp(
+        logp = transformed_conditional_logp(
             [x_obs_rv, x_unobs_rv],
             rvs_to_values={x_obs_rv: x_obs_vv, x_unobs_rv: x_unobs_vv},
             rvs_to_transforms={},
@@ -1625,3 +1625,12 @@ class TestModelDebug:
             "Some of the observed values of variable y are associated with a non-finite logp" in out
         )
         assert "value = 0.53 -> logp = -inf" in out
+
+
+def test_model_logp_fast_compile():
+    # Issue #5618
+    with pm.Model() as m:
+        pm.Dirichlet("a", np.ones(3))
+
+    with pytensor.config.change_flags(mode="FAST_COMPILE"):
+        assert m.point_logps() == {"a": -1.5}

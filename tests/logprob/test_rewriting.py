@@ -40,6 +40,7 @@ import pytensor.tensor as pt
 import pytest
 import scipy.stats.distributions as sp
 
+from pytensor.graph import ancestors
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.rewriting.utils import rewrite_graph
 from pytensor.tensor.elemwise import DimShuffle, Elemwise
@@ -50,8 +51,10 @@ from pytensor.tensor.subtensor import (
     Subtensor,
 )
 
-from pymc.logprob.basic import factorized_joint_logprob
-from pymc.logprob.rewriting import local_lift_DiracDelta
+from pymc.distributions.transforms import logodds
+from pymc.logprob.basic import conditional_logp
+from pymc.logprob.rewriting import cleanup_ir, local_lift_DiracDelta
+from pymc.logprob.transforms import TransformedVariable, TransformValuesRewrite
 from pymc.logprob.utils import DiracDelta, dirac_delta
 
 
@@ -88,10 +91,23 @@ def test_local_lift_DiracDelta():
 
 def test_local_remove_DiracDelta():
     c_at = pt.vector()
-    dd_at = dirac_delta(c_at)
+    dd_at = dirac_delta(c_at) + dirac_delta(5)
+    assert sum(isinstance(v.owner.op, DiracDelta) for v in ancestors([dd_at]) if v.owner) == 2
 
-    fn = pytensor.function([c_at], dd_at)
-    assert not any(isinstance(node.op, DiracDelta) for node in fn.maker.fgraph.toposort())
+    cleanup_ir([dd_at])
+    assert not any(isinstance(v.owner.op, DiracDelta) for v in ancestors([dd_at]) if v.owner)
+
+
+def test_local_remove_TransformedVariable():
+    p_rv = pt.random.beta(1, 1, name="p")
+    p_vv = p_rv.clone()
+
+    tr = TransformValuesRewrite({p_vv: logodds})
+    [p_logp] = conditional_logp({p_rv: p_vv}, extra_rewrites=tr).values()
+
+    assert not any(
+        isinstance(v.owner.op, TransformedVariable) for v in ancestors([p_logp]) if v.owner
+    )
 
 
 @pytest.mark.parametrize(
@@ -120,7 +136,7 @@ def test_joint_logprob_incsubtensor(indices, size):
 
     assert isinstance(Y_rv.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1))
 
-    Y_rv_logp = factorized_joint_logprob({Y_rv: y_value_var})
+    Y_rv_logp = conditional_logp({Y_rv: y_value_var})
     Y_rv_logp_combined = pt.add(*Y_rv_logp.values())
 
     obs_logps = Y_rv_logp_combined.eval({y_value_var: y_val})

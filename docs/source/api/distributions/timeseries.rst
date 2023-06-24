@@ -5,6 +5,7 @@ Timeseries
 .. currentmodule:: pymc
 .. autosummary::
    :toctree: generated
+   :template: distribution.rst
 
     AR
     EulerMaruyama

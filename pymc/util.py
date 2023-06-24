@@ -250,7 +250,7 @@ def dataset_to_point_list(
     }
     points = [
         {vn: stacked_dict[vn][i, ...] for vn in var_names}
-        for i in range(np.product([len(coords) for coords in stacked_dims.values()]))
+        for i in range(np.prod([len(coords) for coords in stacked_dims.values()]))
     ]
     # use the list of points
     return cast(List[Dict[str, np.ndarray]], points), stacked_dims
@@ -510,3 +510,10 @@ def _add_future_warning_tag(var) -> None:
         for k, v in old_tag.__dict__.items():
             new_tag.__dict__.setdefault(k, v)
         var.tag = new_tag
+
+
+def makeiter(a):
+    if isinstance(a, (tuple, list)):
+        return a
+    else:
+        return [a]

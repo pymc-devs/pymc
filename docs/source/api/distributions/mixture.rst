@@ -5,6 +5,7 @@ Mixture
 .. currentmodule:: pymc
 .. autosummary::
    :toctree: generated
+   :template: distribution.rst
 
    Mixture
    NormalMixture

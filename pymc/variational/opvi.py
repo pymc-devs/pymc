@@ -72,7 +72,6 @@ from pymc.pytensorf import (
     compile_pymc,
     find_rng_nodes,
     identity,
-    makeiter,
     reseed_rngs,
 )
 from pymc.util import (
@@ -80,6 +79,7 @@ from pymc.util import (
     WithMemoization,
     _get_seeds_per_chain,
     locally_cachedmethod,
+    makeiter,
 )
 from pymc.variational.minibatch_rv import MinibatchRandomVariable, get_scaling
 from pymc.variational.updates import adagrad_window

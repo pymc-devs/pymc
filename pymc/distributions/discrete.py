@@ -1355,7 +1355,7 @@ class OrderedProbit:
         based on the cutpoints' values. Defaults to True.
         Might be useful to disable it if memory usage is of interest.
 
-    Example
+    Examples
     --------
     .. code:: python
 

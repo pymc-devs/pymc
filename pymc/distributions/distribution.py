@@ -32,7 +32,6 @@ from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.utils import MetaType
 from pytensor.tensor.basic import as_tensor_variable
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
@@ -49,13 +48,7 @@ from pymc.distributions.shape_utils import (
     shape_from_dims,
 )
 from pymc.exceptions import BlockModelAccessError
-from pymc.logprob.abstract import (
-    MeasurableVariable,
-    _get_measurable_outputs,
-    _icdf,
-    _logcdf,
-    _logprob,
-)
+from pymc.logprob.abstract import MeasurableVariable, _icdf, _logcdf, _logprob
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.model import BlockModelAccess
 from pymc.printing import str_for_dist
@@ -203,6 +196,7 @@ class SymbolicRandomVariable(OpFromGraph):
     """Tuple of (name, latex name) used for for pretty-printing variables of this type"""
 
     def __init__(self, *args, ndim_supp, **kwargs):
+        """Initialitze a SymbolicRandomVariable class."""
         self.ndim_supp = ndim_supp
         kwargs.setdefault("inline", True)
         super().__init__(*args, **kwargs)
@@ -401,20 +395,6 @@ class Distribution(metaclass=DistributionMeta):
 MeasurableVariable.register(SymbolicRandomVariable)
 
 
-@_get_measurable_outputs.register(SymbolicRandomVariable)
-def _get_measurable_outputs_symbolic_random_variable(op, node):
-    # This tells PyMC that any non RandomType outputs are measurable
-
-    # Assume that if there is one default_output, that's the only one that is measurable
-    # In the rare case this is not what one wants, a specialized _get_measuarable_outputs
-    # can dispatch for a subclassed Op
-    if op.default_output is not None:
-        return [node.default_output()]
-
-    # Otherwise assume that any outputs that are not of RandomType are measurable
-    return [out for out in node.outputs if not isinstance(out.type, RandomType)]
-
-
 @node_rewriter([SymbolicRandomVariable])
 def inline_symbolic_random_variable(fgraph, node):
     """
@@ -596,7 +576,7 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
     def update(self, node: Node):
         op = node.op
         inner_updates = collect_default_updates(
-            op.inner_inputs, op.inner_outputs, must_be_shared=False
+            inputs=op.inner_inputs, outputs=op.inner_outputs, must_be_shared=False
         )
 
         # Map inner updates to outer inputs/outputs
@@ -668,7 +648,7 @@ class _CustomSymbolicDist(Distribution):
         ):
             dummy_rv = dist(*dummy_dist_params, dummy_size_param)
         dummy_params = [dummy_size_param] + dummy_dist_params
-        dummy_updates_dict = collect_default_updates(dummy_params, (dummy_rv,))
+        dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
 
         rv_type = type(
             class_name,
@@ -713,7 +693,7 @@ class _CustomSymbolicDist(Distribution):
             dummy_dist_params = [dist_param.type() for dist_param in old_dist_params]
             dummy_rv = dist(*dummy_dist_params, dummy_size_param)
             dummy_params = [dummy_size_param] + dummy_dist_params
-            dummy_updates_dict = collect_default_updates(dummy_params, (dummy_rv,))
+            dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
             new_rv_op = rv_type(
                 inputs=dummy_params,
                 outputs=[*dummy_updates_dict.values(), dummy_rv],

@@ -105,6 +105,7 @@ jobs:
             tests/logprob/test_abstract.py
             tests/logprob/test_basic.py
             tests/logprob/test_binary.py
+            tests/logprob/test_checks.py
             tests/logprob/test_censoring.py
             tests/logprob/test_composite_logprob.py
             tests/logprob/test_cumsum.py
@@ -412,7 +413,7 @@ jobs:
         floatx: [float32]
         python-version: ["3.11"]
         test-subset:
-        - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py
+        - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py tests/distributions/test_transform.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:

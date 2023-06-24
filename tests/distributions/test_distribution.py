@@ -23,6 +23,7 @@ import pytensor.tensor as pt
 import pytest
 import scipy.stats as st
 
+from pytensor import scan
 from pytensor.tensor import TensorVariable
 
 import pymc as pm
@@ -48,9 +49,9 @@ from pymc.distributions.distribution import (
 from pymc.distributions.shape_utils import change_dist_size, rv_size_is_none, to_tuple
 from pymc.distributions.transforms import log
 from pymc.exceptions import BlockModelAccessError
-from pymc.logprob.abstract import get_measurable_outputs
 from pymc.logprob.basic import logcdf, logp
 from pymc.model import Deterministic, Model
+from pymc.pytensorf import collect_default_updates
 from pymc.sampling import draw, sample
 from pymc.testing import (
     BaseTestDistributionRandom,
@@ -523,6 +524,72 @@ class TestCustomSymbolicDist:
         # New API is fine
         pm.CustomDist.dist(dist=old_random, class_name="custom_dist")
 
+    def test_scan(self):
+        def trw(nu, sigma, steps, size):
+            def step(xtm1, nu, sigma):
+                x = pm.StudentT.dist(nu=nu, mu=xtm1, sigma=sigma, shape=size)
+                return x, collect_default_updates([x])
+
+            xs, _ = scan(
+                fn=step,
+                outputs_info=pt.zeros(size),
+                non_sequences=[nu, sigma],
+                n_steps=steps,
+            )
+
+            # Logprob inference cannot be derived yet  https://github.com/pymc-devs/pymc/issues/6360
+            # xs = swapaxes(xs, 0, -1)
+
+            return xs
+
+        nu = 4
+        sigma = 0.7
+        steps = 99
+        batch_size = 3
+        x = CustomDist.dist(nu, sigma, steps, dist=trw, size=batch_size)
+
+        x_draw = pm.draw(x, random_seed=1)
+        assert x_draw.shape == (steps, batch_size)
+        np.testing.assert_allclose(pm.draw(x, random_seed=1), x_draw)
+        assert not np.any(pm.draw(x, random_seed=2) == x_draw)
+
+        ref_dist = pm.RandomWalk.dist(
+            init_dist=pm.Flat.dist(),
+            innovation_dist=pm.StudentT.dist(nu=nu, sigma=sigma),
+            steps=steps,
+            size=(batch_size,),
+        )
+        ref_val = pt.concatenate([np.zeros((1, batch_size)), x_draw]).T
+
+        np.testing.assert_allclose(
+            pm.logp(x, x_draw).eval().sum(0),
+            pm.logp(ref_dist, ref_val).eval(),
+        )
+
+    def test_inferred_logp_mixture(self):
+        import numpy as np
+
+        import pymc as pm
+
+        def shifted_normal(mu, sigma, size):
+            return mu + pm.Normal.dist(0, sigma, shape=size)
+
+        mus = [3.5, -4.3]
+        sds = [1.5, 2.3]
+        w = [0.3, 0.7]
+        with pm.Model() as m:
+            comp_dists = [
+                pm.DensityDist.dist(mus[0], sds[0], dist=shifted_normal),
+                pm.DensityDist.dist(mus[1], sds[1], dist=shifted_normal),
+            ]
+            pm.Mixture("mix", w=w, comp_dists=comp_dists)
+
+        test_value = 0.1
+        np.testing.assert_allclose(
+            m.compile_logp()({"mix": test_value}),
+            pm.logp(pm.NormalMixture.dist(w=w, mu=mus, sigma=sds), test_value).eval(),
+        )
+
 
 class TestSymbolicRandomVariable:
     def test_inline(self):
@@ -541,29 +608,6 @@ class TestSymbolicRandomVariable:
 
         x_inline = TestInlinedSymbolicRV([], [Flat.dist()], ndim_supp=0)()
         assert np.isclose(logp(x_inline, 0).eval(), 0)
-
-    def test_measurable_outputs_rng_ignored(self):
-        """Test that any RandomType outputs are ignored as a measurable_outputs"""
-
-        class TestSymbolicRV(SymbolicRandomVariable):
-            pass
-
-        next_rng_, dirac_delta_ = DiracDelta.dist(5).owner.outputs
-        next_rng, dirac_delta = TestSymbolicRV([], [next_rng_, dirac_delta_], ndim_supp=0)()
-        node = dirac_delta.owner
-        assert get_measurable_outputs(node.op, node) == [dirac_delta]
-
-    @pytest.mark.parametrize("default_output_idx", (0, 1))
-    def test_measurable_outputs_default_output(self, default_output_idx):
-        """Test that if provided, a default output is considered the only measurable_output"""
-
-        class TestSymbolicRV(SymbolicRandomVariable):
-            default_output = default_output_idx
-
-        dirac_delta_1_ = DiracDelta.dist(5)
-        dirac_delta_2_ = DiracDelta.dist(10)
-        node = TestSymbolicRV([], [dirac_delta_1_, dirac_delta_2_], ndim_supp=0)().owner
-        assert get_measurable_outputs(node.op, node) == [node.outputs[default_output_idx]]
 
 
 def test_tag_future_warning_dist():

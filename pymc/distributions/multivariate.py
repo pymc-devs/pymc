@@ -67,7 +67,6 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
 from pymc.logprob.abstract import _logprob
-from pymc.logprob.utils import ignore_logprob
 from pymc.math import kron_diag, kron_dot
 from pymc.pytensorf import floatX, intX
 from pymc.util import check_dist_not_registered
@@ -753,10 +752,10 @@ class OrderedMultinomial:
 
     Useful for regression on ordinal data whose values range
     from 1 to K as a function of some predictor, :math:`\eta`, but
-     which are _aggregated_ by trial, like multinomial observations (in
-     contrast to `pm.OrderedLogistic`, which only accepts ordinal data
-     in a _disaggregated_ format, like categorical observations).
-     The cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
+    which are _aggregated_ by trial, like multinomial observations (in
+    contrast to `pm.OrderedLogistic`, which only accepts ordinal data
+    in a _disaggregated_ format, like categorical observations).
+    The cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
     mapped to which of the K observed dependent variables. The number
     of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.
@@ -1191,9 +1190,6 @@ class _LKJCholeskyCov(Distribution):
             raise TypeError("sd_dist must be a scalar or vector distribution variable")
 
         check_dist_not_registered(sd_dist)
-        # sd_dist is part of the generative graph, but should be completely ignored
-        # by the logp graph, since the LKJ logp explicitly includes these terms.
-        sd_dist = ignore_logprob(sd_dist)
         return super().dist([n, eta, sd_dist], **kwargs)
 
     @classmethod
@@ -2527,7 +2523,7 @@ class ZeroSumNormal(Distribution):
     @classmethod
     def rv_op(cls, sigma, n_zerosum_axes, support_shape, size=None):
         shape = to_tuple(size) + tuple(support_shape)
-        normal_dist = ignore_logprob(pm.Normal.dist(sigma=sigma, shape=shape))
+        normal_dist = pm.Normal.dist(sigma=sigma, shape=shape)
 
         if n_zerosum_axes > normal_dist.ndim:
             raise ValueError("Shape of distribution is too small for the number of zerosum axes")

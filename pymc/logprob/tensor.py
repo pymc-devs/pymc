@@ -51,8 +51,12 @@ from pytensor.tensor.random.rewriting import (
 )
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
-from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
-from pymc.logprob.utils import ignore_logprob, ignore_logprob_multiple_vars
+from pymc.logprob.rewriting import (
+    PreserveRVMappings,
+    assume_measured_ir_outputs,
+    measurable_ir_rewrites_db,
+)
+from pymc.logprob.utils import check_potential_measurability
 
 
 @node_rewriter([BroadcastTo])
@@ -202,17 +206,10 @@ def find_measurable_stacks(
 ) -> Optional[List[Union[MeasurableMakeVector, MeasurableJoin]]]:
     r"""Finds `Joins`\s and `MakeVector`\s for which a `logprob` can be computed."""
 
-    if isinstance(node.op, (MeasurableMakeVector, MeasurableJoin)):
-        return None  # pragma: no cover
-
     rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
-
-    rvs_to_values = rv_map_feature.rv_values
-
-    stack_out = node.outputs[0]
 
     is_join = isinstance(node.op, Join)
 
@@ -221,22 +218,18 @@ def find_measurable_stacks(
     else:
         base_vars = node.inputs
 
-    if not all(
-        base_var.owner
-        and isinstance(base_var.owner.op, MeasurableVariable)
-        and base_var not in rvs_to_values
-        for base_var in base_vars
-    ):
-        return None  # pragma: no cover
+    valued_rvs = rv_map_feature.rv_values.keys()
+    if not all(check_potential_measurability([base_var], valued_rvs) for base_var in base_vars):
+        return None
 
-    unmeasurable_base_vars = ignore_logprob_multiple_vars(base_vars, rvs_to_values)
+    base_vars = assume_measured_ir_outputs(valued_rvs, base_vars)
+    if not all(var.owner and isinstance(var.owner.op, MeasurableVariable) for var in base_vars):
+        return None
 
     if is_join:
-        measurable_stack = MeasurableJoin()(axis, *unmeasurable_base_vars)
+        measurable_stack = MeasurableJoin()(axis, *base_vars)
     else:
-        measurable_stack = MeasurableMakeVector(node.op.dtype)(*unmeasurable_base_vars)
-
-    measurable_stack.name = stack_out.name
+        measurable_stack = MeasurableMakeVector(node.op.dtype)(*base_vars)
 
     return [measurable_stack]
 
@@ -287,13 +280,13 @@ def logprob_dimshuffle(op, values, base_var, **kwargs):
 def find_measurable_dimshuffles(fgraph, node) -> Optional[List[MeasurableDimShuffle]]:
     r"""Finds `Dimshuffle`\s for which a `logprob` can be computed."""
 
-    if isinstance(node.op, MeasurableDimShuffle):
-        return None  # pragma: no cover
-
     rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
+
+    if not rv_map_feature.request_measurable(node.inputs):
+        return None
 
     base_var = node.inputs[0]
 
@@ -305,20 +298,12 @@ def find_measurable_dimshuffles(fgraph, node) -> Optional[List[MeasurableDimShuf
     # lifted towards the base RandomVariable.
     # TODO: If we include the support axis as meta information in each
     # intermediate MeasurableVariable, we can lift this restriction.
-    if not (
-        base_var.owner
-        and isinstance(base_var.owner.op, RandomVariable)
-        and base_var not in rv_map_feature.rv_values
-    ):
+    if not isinstance(base_var.owner.op, RandomVariable):
         return None  # pragma: no cover
-
-    # Make base_vars unmeasurable
-    base_var = ignore_logprob(base_var)
 
     measurable_dimshuffle = MeasurableDimShuffle(node.op.input_broadcastable, node.op.new_order)(
         base_var
     )
-    measurable_dimshuffle.name = node.outputs[0].name
 
     return [measurable_dimshuffle]
 

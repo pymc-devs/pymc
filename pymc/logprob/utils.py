@@ -36,9 +36,9 @@
 
 import warnings
 
-from copy import copy
 from typing import (
     Callable,
+    Container,
     Dict,
     Generator,
     Iterable,
@@ -47,23 +47,24 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    Union,
 )
 
 import numpy as np
 
+from pytensor import Variable
 from pytensor import tensor as pt
 from pytensor.graph import Apply, Op
 from pytensor.graph.basic import Constant, clone_get_equiv, graph_inputs, walk
 from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.op import HasInnerGraph
 from pytensor.link.c.type import CType
 from pytensor.raise_op import CheckAndRaise
+from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorVariable
 
-from pymc.logprob.abstract import (
-    MeasurableVariable,
-    _logprob,
-    assign_custom_measurable_outputs,
-)
+from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.util import makeiter
 
 
 def walk_model(
@@ -210,22 +211,24 @@ def indices_from_subtensor(idx_list, indices):
     )
 
 
-def check_potential_measurability(inputs: Tuple[TensorVariable], rv_map_feature):
+def check_potential_measurability(
+    inputs: Tuple[TensorVariable], valued_rvs: Container[TensorVariable]
+) -> bool:
     if any(
-        ancestor_node
-        for ancestor_node in walk_model(
+        ancestor_var
+        for ancestor_var in walk_model(
             inputs,
             walk_past_rvs=False,
-            stop_at_vars=set(rv_map_feature.rv_values),
+            stop_at_vars=set(valued_rvs),
         )
         if (
-            ancestor_node.owner
-            and isinstance(ancestor_node.owner.op, MeasurableVariable)
-            and ancestor_node not in rv_map_feature.rv_values
+            ancestor_var.owner
+            and isinstance(ancestor_var.owner.op, MeasurableVariable)
+            and ancestor_var not in valued_rvs
         )
     ):
-        return None
-    return True
+        return True
+    return False
 
 
 class ParameterValueError(ValueError):
@@ -290,68 +293,21 @@ def diracdelta_logprob(op, values, *inputs, **kwargs):
     return pt.switch(pt.isclose(values, const_value, rtol=op.rtol, atol=op.atol), 0.0, -np.inf)
 
 
-def ignore_logprob(rv: TensorVariable) -> TensorVariable:
-    """Return a duplicated variable that is ignored when creating logprob graphs
+def find_rvs_in_graph(vars: Union[Variable, Sequence[Variable]]) -> Set[Variable]:
+    """Assert that there are no `MeasurableVariable` nodes in a graph."""
 
-    This is used in by MeasurableRVs that use other RVs as inputs but account
-    for their logp terms explicitly.
+    def expand(r):
+        owner = r.owner
+        if owner:
+            inputs = list(reversed(owner.inputs))
 
-    If the variable is already ignored, it is returned directly.
-    """
-    prefix = "Unmeasurable"
-    node = rv.owner
-    op_type = type(node.op)
-    if op_type.__name__.startswith(prefix):
-        return rv
-    # By default `assign_custom_measurable_outputs` makes all outputs unmeasurable
-    new_node = assign_custom_measurable_outputs(node, type_prefix=prefix)
-    return new_node.outputs[node.outputs.index(rv)]
+            if isinstance(owner.op, HasInnerGraph):
+                inputs += owner.op.inner_outputs
 
+            return inputs
 
-def reconsider_logprob(rv: TensorVariable) -> TensorVariable:
-    """Return a duplicated variable that is considered when creating logprob graphs
-
-    This undoes the effect of `ignore_logprob`.
-
-    If a variable was not ignored, it is returned directly.
-    """
-    prefix = "Unmeasurable"
-    node = rv.owner
-    op_type = type(node.op)
-    if not op_type.__name__.startswith(prefix):
-        return rv
-
-    new_node = node.clone()
-    original_op_type = new_node.op.original_op_type
-    new_node.op = copy(new_node.op)
-    new_node.op.__class__ = original_op_type
-    return new_node.outputs[node.outputs.index(rv)]
-
-
-def ignore_logprob_multiple_vars(
-    vars: Sequence[TensorVariable], rvs_to_values: Dict[TensorVariable, TensorVariable]
-) -> List[TensorVariable]:
-    """Return duplicated variables that are ignored when creating logprob graphs.
-
-    This function keeps any interdependencies between variables intact, after
-    making each "unmeasurable", whereas a sequential call to `ignore_logprob`
-    would not do this correctly.
-    """
-    from pymc.pytensorf import _replace_vars_in_graphs
-
-    measurable_vars_to_unmeasurable_vars = {
-        measurable_var: ignore_logprob(measurable_var) for measurable_var in vars
+    return {
+        node
+        for node in walk(makeiter(vars), expand, False)
+        if node.owner and isinstance(node.owner.op, (RandomVariable, MeasurableVariable))
     }
-
-    def replacement_fn(var, replacements):
-        if var in measurable_vars_to_unmeasurable_vars:
-            replacements[var] = measurable_vars_to_unmeasurable_vars[var]
-        # We don't want to clone valued nodes. Assigning a var to itself in the
-        # replacements prevents this
-        elif var in rvs_to_values:
-            replacements[var] = var
-
-        return []
-
-    unmeasurable_vars, _ = _replace_vars_in_graphs(graphs=vars, replacement_fn=replacement_fn)
-    return unmeasurable_vars

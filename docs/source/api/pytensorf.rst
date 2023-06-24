@@ -1,5 +1,5 @@
 PyTensor utils
-************
+**************
 
 .. currentmodule:: pymc
 
