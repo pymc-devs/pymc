@@ -62,6 +62,8 @@ from pytensor.scalar import (
     Erfcx,
     Exp,
     Log,
+    Log2,
+    Log10,
     Mul,
     Pow,
     Sinh,
@@ -380,6 +382,8 @@ class MeasurableTransform(MeasurableElemwise):
     valid_scalar_types = (
         Exp,
         Log,
+        Log2,
+        Log10,
         Add,
         Mul,
         Pow,
@@ -571,25 +575,26 @@ def measurable_sub_to_neg(fgraph, node):
     return [pt.add(minuend, pt.neg(subtrahend))]
 
 
-@node_rewriter([log, log2, log10])
-def measurable_logs_to_logn(fgraph, node):
-    """Convert logrithm funtions involving `MeasurableVariable`s to logarithm base n"""
-    [inp] = node.inputs
-    scalar_op = node.op.scalar_op
-
-    def logn(input, base):
-        return pt.log(input) / pt.log(base)
-
-    if isinstance(scalar_op, log):
-        return [logn(inp, np.exp)]
-    if isinstance(scalar_op, log2):
-        return [logn(inp, 2)]
-    if isinstance(scalar_op, log10):
-        return [logn(inp, 10)]
-
-
 @node_rewriter(
-    [exp, log, add, mul, pow, abs, sinh, cosh, tanh, arcsinh, arccosh, arctanh, erf, erfc, erfcx]
+    [
+        exp,
+        log,
+        log2,
+        log10,
+        add,
+        mul,
+        pow,
+        abs,
+        sinh,
+        cosh,
+        tanh,
+        arcsinh,
+        arccosh,
+        arctanh,
+        erf,
+        erfc,
+        erfcx,
+    ]
 )
 def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
@@ -628,7 +633,6 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
 
     transform_dict = {
         Exp: ExpTransform(),
-        Log: LogTransform(),
         Abs: AbsTransform(),
         Sinh: SinhTransform(),
         Cosh: CoshTransform(),
@@ -658,6 +662,12 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         transform = LocTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
+    elif isinstance(scalar_op, Log):
+        transform = LogTransform()
+    elif isinstance(scalar_op, Log2):
+        transform = LogTransform(base=2)
+    elif isinstance(scalar_op, Log10):
+        transform = LogTransform(base=10)
     elif transform is None:
         transform_inputs = (measurable_input, pt.mul(*other_inputs))
         transform = ScaleTransform(
