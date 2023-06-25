@@ -394,6 +394,8 @@ class MeasurableTransform(MeasurableElemwise):
     valid_scalar_types = (
         Exp,
         Log,
+        Log2,
+        Log10,
         Add,
         Mul,
         Pow,
@@ -670,7 +672,6 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
 
     transform_dict = {
         Exp: ExpTransform(),
-        Log: LogTransform(),
         Abs: AbsTransform(),
         Sinh: SinhTransform(),
         Cosh: CoshTransform(),
@@ -700,6 +701,12 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         transform = LocTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
+    elif isinstance(scalar_op, Log):
+        transform = LogTransform()
+    elif isinstance(scalar_op, Log2):
+        transform = LogTransform(base=2)
+    elif isinstance(scalar_op, Log10):
+        transform = LogTransform(base=10)
     elif transform is None:
         transform_inputs = (measurable_input, pt.mul(*other_inputs))
         transform = ScaleTransform(
