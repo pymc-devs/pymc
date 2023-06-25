@@ -83,6 +83,8 @@ from pytensor.tensor.math import (
     erfcx,
     exp,
     log,
+    log2,
+    log10,
     mul,
     neg,
     pow,
@@ -569,6 +571,23 @@ def measurable_sub_to_neg(fgraph, node):
     return [pt.add(minuend, pt.neg(subtrahend))]
 
 
+@node_rewriter([log, log2, log10])
+def measurable_logs_to_logn(fgraph, node):
+    """Convert logrithm funtions involving `MeasurableVariable`s to logarithm base n"""
+    [inp] = node.inputs
+    scalar_op = node.op.scalar_op
+
+    def logn(input, base):
+        return pt.log(input) / pt.log(base)
+
+    if isinstance(scalar_op, log):
+        return [logn(inp, np.exp)]
+    if isinstance(scalar_op, log2):
+        return [logn(inp, 2)]
+    if isinstance(scalar_op, log10):
+        return [logn(inp, 10)]
+
+
 @node_rewriter(
     [exp, log, add, mul, pow, abs, sinh, cosh, tanh, arcsinh, arccosh, arctanh, erf, erfc, erfcx]
 )
@@ -862,11 +881,15 @@ class ScaleTransform(RVTransform):
 class LogTransform(RVTransform):
     name = "log"
 
+    def __init__(self, base=pt.exp(1)):
+        self.base = base
+        super().__init__()
+
     def forward(self, value, *inputs):
-        return pt.log(value)
+        return pt.log(value) / pt.log(self.base)
 
     def backward(self, value, *inputs):
-        return pt.exp(value)
+        return pt.power(self.base, value)
 
     def log_jac_det(self, value, *inputs):
         return value
