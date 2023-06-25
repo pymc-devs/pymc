@@ -937,11 +937,15 @@ class ScaleTransform(RVTransform):
 class LogTransform(RVTransform):
     name = "log"
 
+    def __init__(self, base=pt.exp(1)):
+        self.base = base
+        super().__init__()
+
     def forward(self, value, *inputs):
-        return pt.log(value)
+        return pt.log(value) / pt.log(self.base)
 
     def backward(self, value, *inputs):
-        return pt.exp(value)
+        return pt.power(self.base, value)
 
     def log_jac_det(self, value, *inputs):
         return value
