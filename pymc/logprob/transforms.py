@@ -62,11 +62,14 @@ from pytensor.scalar import (
     Erfcx,
     Exp,
     Log,
+    Log1mexp,
+    Log1p,
     Log2,
     Log10,
     Mul,
     Pow,
     Sinh,
+    Softplus,
     Sqr,
     Sqrt,
     Tanh,
@@ -85,6 +88,8 @@ from pytensor.tensor.math import (
     erfcx,
     exp,
     log,
+    log1mexp,
+    log1p,
     log2,
     log10,
     mul,
@@ -92,6 +97,7 @@ from pytensor.tensor.math import (
     pow,
     reciprocal,
     sinh,
+    softplus,
     sqr,
     sqrt,
     sub,
@@ -384,6 +390,9 @@ class MeasurableTransform(MeasurableElemwise):
         Log,
         Log2,
         Log10,
+        Log1p,
+        Softplus,
+        Log1mexp,
         Add,
         Mul,
         Pow,
@@ -575,6 +584,19 @@ def measurable_sub_to_neg(fgraph, node):
     return [pt.add(minuend, pt.neg(subtrahend))]
 
 
+@node_rewriter([log1p, softplus, log1mexp])
+def measurable_special_log_to_log(fgraph, node):
+    """Convert log1p, log1mexp, softplus of `MeasurableVariable`s to log form."""
+    [inp] = node.inputs
+
+    if isinstance(node.op.scalar_op, Log1p):
+        return [pt.log(1 + inp)]
+    if isinstance(node.op.scalar_op, Softplus):
+        return [pt.log(1 + pt.exp(inp))]
+    if isinstance(node.op.scalar_op, Log1p):
+        return [pt.log(1 - pt.exp(pt.neg(inp)))]
+
+
 @node_rewriter(
     [
         exp,
@@ -717,6 +739,13 @@ measurable_ir_rewrites_db.register(
 measurable_ir_rewrites_db.register(
     "measurable_sub_to_neg",
     measurable_sub_to_neg,
+    "basic",
+    "transform",
+)
+
+measurable_ir_rewrites_db.register(
+    "measurable_special_log_to_log",
+    measurable_special_log_to_log,
     "basic",
     "transform",
 )
