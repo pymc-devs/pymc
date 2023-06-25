@@ -1729,7 +1729,6 @@ class LogNormal(PositiveContinuous):
 
     def icdf(value, mu, sigma):
         res = pt.exp(icdf(Normal.dist(mu, sigma), value))
-        res = check_icdf_value(res, value)
         return res
 
 
