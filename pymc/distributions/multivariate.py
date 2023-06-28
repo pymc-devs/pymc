@@ -2063,8 +2063,6 @@ class CARRV(RandomVariable):
         tau = pt.as_tensor_variable(floatX(tau))
 
         alpha = pt.as_tensor_variable(floatX(alpha))
-        msg = "the domain of alpha is: -1 < alpha < 1."
-        alpha = Assert(msg)(alpha, pt.lt(alpha, 1) and pt.gt(alpha, -1))
 
         return super().make_node(rng, size, dtype, mu, W, alpha, tau)
 
@@ -2080,6 +2078,9 @@ class CARRV(RandomVariable):
         Journal of the Royal Statistical Society Series B, Royal Statistical Society,
         vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288
         """
+        if np.all(alpha >= 1) or np.all(alpha <= -1):
+            raise ValueError("the domain of alpha is: -1 < alpha < 1")
+
         if not scipy.sparse.issparse(W):
             W = scipy.sparse.csr_matrix(W)
         s = np.asarray(W.sum(axis=0))[0]
