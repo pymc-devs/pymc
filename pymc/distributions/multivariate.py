@@ -2061,7 +2061,10 @@ class CARRV(RandomVariable):
             W = Assert(msg)(W, pt.allclose(W, W.T))
 
         tau = pt.as_tensor_variable(floatX(tau))
+
         alpha = pt.as_tensor_variable(floatX(alpha))
+        msg = "the domain of alpha is: -1 < alpha < 1."
+        alpha = Assert(msg)(alpha, pt.lt(alpha, 1) and pt.gt(alpha, -1))
 
         return super().make_node(rng, size, dtype, mu, W, alpha, tau)
 
@@ -2143,8 +2146,9 @@ class CAR(Continuous):
         :func:`~pytensor.sparse.basic.as_sparse_or_tensor_variable` is
         used for this sparse or tensorvariable conversion.
     alpha : tensor_like of float
-        Autoregression parameter taking values between -1 and 1. Values closer to 0 indicate weaker
-        correlation and values closer to 1 indicate higher autocorrelation. For most use cases, the
+        Autoregression parameter taking values greater than -1 and less than 1.
+        Values closer to 0 indicate weaker correlation and values closer to
+        1 indicate higher autocorrelation. For most use cases, the
         support of alpha should be restricted to (0, 1).
     tau : tensor_like of float
         Positive precision variable controlling the scale of the underlying normal variates.
@@ -2211,10 +2215,10 @@ class CAR(Continuous):
         logquad = (tau * delta * tau_dot_delta).sum(axis=-1)
         return check_parameters(
             0.5 * (logtau + logdet - logquad),
-            -1 <= alpha,
-            alpha <= 1,
+            -1 < alpha,
+            alpha < 1,
             tau > 0,
-            msg="-1 <= alpha <= 1, tau > 0",
+            msg="-1 < alpha < 1, tau > 0",
         )
 
 
