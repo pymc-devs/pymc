@@ -352,7 +352,6 @@ class TestDataPyMC:
         # See https://github.com/pymc-devs/pymc/issues/5255
         assert inference_data.log_likelihood["y_observed"].shape == (2, 100, 3)
 
-    @pytest.mark.xfail(reason="Multivariate partial observed RVs not implemented for V4")
     def test_mv_missing_data_model(self):
         data = ma.masked_values([[1, 2], [2, 2], [-1, 4], [2, -1], [-1, -1]], value=-1)
 
@@ -361,19 +360,25 @@ class TestDataPyMC:
             mu = pm.Normal("mu", 0, 1, size=2)
             sd_dist = pm.HalfNormal.dist(1.0, size=2)
             # pylint: disable=unpacking-non-sequence
-            chol, *_ = pm.LKJCholeskyCov("chol_cov", n=2, eta=1, sd_dist=sd_dist, compute_corr=True)
+            chol, *_ = pm.LKJCholeskyCov("chol_cov", n=2, eta=1, sd_dist=sd_dist)
             # pylint: enable=unpacking-non-sequence
             with pytest.warns(ImputationWarning):
                 y = pm.MvNormal("y", mu=mu, chol=chol, observed=data)
-            inference_data = pm.sample(100, chains=2, return_inferencedata=True)
+            inference_data = pm.sample(
+                tune=10,
+                draws=10,
+                chains=2,
+                step=pm.Metropolis(),
+                idata_kwargs=dict(log_likelihood=True),
+            )
 
         # make sure that data is really missing
-        assert isinstance(y.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1))
+        assert isinstance(y.owner.inputs[0].owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1))
 
         test_dict = {
             "posterior": ["mu", "chol_cov"],
-            "observed_data": ["y"],
-            "log_likelihood": ["y"],
+            "observed_data": ["y_observed"],
+            "log_likelihood": ["y_observed"],
         }
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails

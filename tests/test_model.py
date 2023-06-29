@@ -41,9 +41,10 @@ import pymc as pm
 from pymc import Deterministic, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
-from pymc.distributions.transforms import log
+from pymc.distributions.distribution import PartialObservedRV
+from pymc.distributions.transforms import log, simplex
 from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
-from pymc.logprob.basic import transformed_conditional_logp
+from pymc.logprob.basic import conditional_logp, transformed_conditional_logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
 from pymc.testing import SeededTest
@@ -1398,32 +1399,43 @@ class TestImputationMissingData:
 
         assert m_logp == m_missing_logp
 
-    def test_missing_multivariate(self):
-        """Test model with missing variables whose transform changes base shape still works"""
-
+    def test_missing_multivariate_separable(self):
         with pm.Model() as m_miss:
-            with pytest.raises(
-                NotImplementedError,
-                match="Automatic inputation is only supported for univariate RandomVariables",
-            ):
-                with pytest.warns(ImputationWarning):
-                    x = pm.Dirichlet(
-                        "x",
-                        a=[1, 2, 3],
-                        observed=np.array([[0.3, 0.3, 0.4], [np.nan, np.nan, np.nan]]),
-                    )
+            with pytest.warns(ImputationWarning):
+                x = pm.Dirichlet(
+                    "x",
+                    a=[1, 2, 3],
+                    observed=np.array([[0.3, 0.3, 0.4], [np.nan, np.nan, np.nan]]),
+                )
+        assert (m_miss["x_missing"].owner.op, pm.Dirichlet)
+        assert (m_miss["x_observed"].owner.op, pm.Dirichlet)
 
-        # TODO: Test can be used when local_subtensor_rv_lift supports multivariate distributions
-        # from pymc.distributions.transforms import simplex
-        #
-        # with pm.Model() as m_unobs:
-        #     x = pm.Dirichlet("x", a=[1, 2, 3])
-        #
-        # inp_vals = simplex.forward(np.array([0.3, 0.3, 0.4])).eval()
-        # assert np.isclose(
-        #     m_miss.compile_logp()({"x_missing_simplex__": inp_vals}),
-        #     m_unobs.compile_logp(jacobian=False)({"x_simplex__": inp_vals}) * 2,
-        # )
+        with pm.Model() as m_unobs:
+            x = pm.Dirichlet("x", a=[1, 2, 3], shape=(1, 3))
+
+        inp_vals = simplex.forward(np.array([[0.3, 0.3, 0.4]])).eval()
+        np.testing.assert_allclose(
+            m_miss.compile_logp(jacobian=False)({"x_missing_simplex__": inp_vals}),
+            m_unobs.compile_logp(jacobian=False)({"x_simplex__": inp_vals}) * 2,
+        )
+
+    def test_missing_multivariate_unseparable(self):
+        with pm.Model() as m_miss:
+            with pytest.warns(ImputationWarning):
+                x = pm.Dirichlet(
+                    "x",
+                    a=[1, 2, 3],
+                    observed=np.array([[0.3, 0.3, np.nan], [np.nan, np.nan, 0.4]]),
+                )
+
+        assert isinstance(m_miss["x_missing"].owner.op, PartialObservedRV)
+        assert isinstance(m_miss["x_observed"].owner.op, PartialObservedRV)
+
+        inp_values = np.array([0.3, 0.3, 0.4])
+        np.testing.assert_allclose(
+            m_miss.compile_logp()({"x_missing": [0.4, 0.3, 0.3]}),
+            st.dirichlet.logpdf(inp_values, [1, 2, 3]) * 2,
+        )
 
     def test_missing_vector_parameter(self):
         with pm.Model() as m:
@@ -1482,11 +1494,10 @@ class TestImputationMissingData:
                 x = pm.Normal("x", observed=data, dims=("observed",))
         assert model.named_vars_to_dims == {"x": ("observed",)}
 
-    def test_error_non_random_variable(self):
+    def test_symbolic_random_variable(self):
         data = np.array([np.nan] * 3 + [0] * 7)
         with pm.Model() as model:
-            msg = "x of type <class 'pymc.distributions.censored.CensoredRV'> is not supported"
-            with pytest.raises(NotImplementedError, match=msg):
+            with pytest.warns(ImputationWarning):
                 x = pm.Censored(
                     "x",
                     pm.Normal.dist(),
@@ -1494,6 +1505,10 @@ class TestImputationMissingData:
                     upper=10,
                     observed=data,
                 )
+        np.testing.assert_almost_equal(
+            model.compile_logp()({"x_missing": [0] * 3}),
+            st.norm.logcdf(0) * 10,
+        )
 
 
 class TestShared(SeededTest):
