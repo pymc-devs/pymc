@@ -601,7 +601,7 @@ class _CustomSymbolicDist(Distribution):
         moment: Optional[Callable] = None,
         ndim_supp: int = 0,
         dtype: str = "floatX",
-        class_name: str = "CustomSymbolicDist",
+        class_name: str = "CustomDist",
         **kwargs,
     ):
         dist_params = [as_tensor_variable(param) for param in dist_params]
@@ -952,7 +952,7 @@ class CustomDist:
         dist_params = cls.parse_dist_params(dist_params)
         cls.check_valid_dist_random(dist, random, dist_params)
         if dist is not None:
-            kwargs.setdefault("class_name", f"CustomSymbolicDist_{name}")
+            kwargs.setdefault("class_name", f"CustomDist_{name}")
             return _CustomSymbolicDist(
                 name,
                 *dist_params,
