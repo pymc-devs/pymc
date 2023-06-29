@@ -49,7 +49,7 @@ from pytensor.scan import scan
 
 from pymc.distributions.transforms import _default_transform, log, logodds
 from pymc.logprob.abstract import MeasurableVariable, _logprob
-from pymc.logprob.basic import conditional_logp, logp
+from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
 from pymc.logprob.transforms import (
     ArccoshTransform,
     ArcsinhTransform,
@@ -1080,3 +1080,37 @@ def test_check_jac_det(transform):
         elemwise=True,
         rv_var=pt.random.normal(0.5, 1, name="base_rv"),
     )
+
+
+def test_logcdf_measurable_transform():
+    x = pt.exp(pt.random.uniform(0, 1))
+    value = x.type()
+    logcdf_fn = pytensor.function([value], logcdf(x, value))
+
+    assert logcdf_fn(0) == -np.inf
+    np.testing.assert_almost_equal(logcdf_fn(np.exp(0.5)), np.log(0.5))
+    np.testing.assert_almost_equal(logcdf_fn(5), 0)
+
+
+def test_logcdf_measurable_non_injective_fails():
+    x = pt.abs(pt.random.uniform(0, 1))
+    value = x.type()
+    with pytest.raises(NotImplementedError):
+        logcdf(x, value)
+
+
+def test_icdf_measurable_transform():
+    x = pt.exp(pt.random.uniform(0, 1))
+    value = x.type()
+    icdf_fn = pytensor.function([value], icdf(x, value))
+
+    np.testing.assert_almost_equal(icdf_fn(1e-16), 1)
+    np.testing.assert_almost_equal(icdf_fn(0.5), np.exp(0.5))
+    np.testing.assert_almost_equal(icdf_fn(1 - 1e-16), np.e)
+
+
+def test_icdf_measurable_non_injective_fails():
+    x = pt.abs(pt.random.uniform(0, 1))
+    value = x.type()
+    with pytest.raises(NotImplementedError):
+        icdf(x, value)

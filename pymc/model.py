@@ -75,6 +75,7 @@ from pymc.pytensorf import (
     hessian,
     inputvars,
     replace_rvs_by_values,
+    rewrite_pregrad,
 )
 from pymc.util import (
     UNSET,
@@ -380,6 +381,8 @@ class ValueGradFunction:
             )
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
+
+        cost = rewrite_pregrad(cost)
 
         if compute_grads:
             grads = pytensor.grad(cost, grad_vars, disconnected_inputs="ignore")
@@ -824,6 +827,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     )
 
         cost = self.logp(jacobian=jacobian)
+        cost = rewrite_pregrad(cost)
         return gradient(cost, value_vars)
 
     def d2logp(
@@ -862,6 +866,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     )
 
         cost = self.logp(jacobian=jacobian)
+        cost = rewrite_pregrad(cost)
         return hessian(cost, value_vars)
 
     @property
