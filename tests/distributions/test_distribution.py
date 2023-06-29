@@ -590,6 +590,13 @@ class TestCustomSymbolicDist:
             pm.logp(pm.NormalMixture.dist(w=w, mu=mus, sigma=sds), test_value).eval(),
         )
 
+    def test_symbolic_dist(self):
+        # Test we can create a SymbolicDist inside a CustomDist
+        def dist(size):
+            return pm.Truncated.dist(pm.Beta.dist(1, 1, size=size), lower=0.1, upper=0.9)
+
+        assert pm.CustomDist.dist(dist=dist)
+
 
 class TestSymbolicRandomVariable:
     def test_inline(self):

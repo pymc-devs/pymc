@@ -27,6 +27,8 @@ from pytensor import Variable
 from pytensor.compile import SharedVariable
 from pytensor.graph.utils import ValidatingScratchpad
 
+from pymc.exceptions import BlockModelAccessError
+
 
 class _UnsetType:
     """Type for the `UNSET` object to make it look nice in `help(...)` outputs."""
@@ -367,7 +369,7 @@ def check_dist_not_registered(dist, model=None):
 
     try:
         model = modelcontext(None)
-    except TypeError:
+    except (TypeError, BlockModelAccessError):
         pass
     else:
         if dist in model.basic_RVs:
