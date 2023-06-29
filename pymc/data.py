@@ -423,6 +423,11 @@ def Data(
     # `convert_observed_data` takes care of parameter `value` and
     # transforms it to something digestible for PyTensor.
     arr = convert_observed_data(value)
+    if isinstance(arr, np.ma.MaskedArray):
+        raise NotImplementedError(
+            "Masked arrays or arrays with `nan` entries are not supported. "
+            "Pass them directly to `observed` if you want to trigger auto-imputation"
+        )
 
     if mutable is None:
         warnings.warn(
