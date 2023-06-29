@@ -437,6 +437,14 @@ class TestData(SeededTest):
             assert isinstance(data, pt.TensorConstant)
         pass
 
+    def test_masked_array_error(self):
+        with pm.Model():
+            with pytest.raises(
+                NotImplementedError,
+                match="Masked arrays or arrays with `nan` entries are not supported.",
+            ):
+                pm.ConstantData("x", [0, 1, np.nan, 2])
+
 
 def test_data_naming():
     """
