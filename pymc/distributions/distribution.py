@@ -25,13 +25,14 @@ import numpy as np
 
 from pytensor import tensor as pt
 from pytensor.compile.builders import OpFromGraph
-from pytensor.graph import node_rewriter
+from pytensor.graph import FunctionGraph, node_rewriter
 from pytensor.graph.basic import Node, Variable
 from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.utils import MetaType
 from pytensor.tensor.basic import as_tensor_variable
 from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
@@ -49,6 +50,7 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.exceptions import BlockModelAccessError
 from pymc.logprob.abstract import MeasurableVariable, _icdf, _logcdf, _logprob
+from pymc.logprob.basic import logp
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.model import BlockModelAccess
 from pymc.printing import str_for_dist
@@ -1148,3 +1150,145 @@ class DiracDelta(Discrete):
             -np.inf,
             0,
         )
+
+
+class PartialObservedRV(SymbolicRandomVariable):
+    """RandomVariable with partially observed subspace, as indicated by a boolean mask.
+
+    See `create_partial_observed_rv` for more details.
+    """
+
+
+def create_partial_observed_rv(
+    rv: TensorVariable,
+    mask: Union[np.ndarray, TensorVariable],
+) -> Tuple[
+    Tuple[TensorVariable, TensorVariable], Tuple[TensorVariable, TensorVariable], TensorVariable
+]:
+    """Separate observed and unobserved components of a RandomVariable.
+
+    This function may return two independent RandomVariables or, if not possible,
+    two variables from a common `PartialObservedRV` node
+
+    Parameters
+    ----------
+    rv : TensorVariable
+    mask : tensor_like
+        Constant or variable boolean mask. True entries correspond to components of the variable that are not observed.
+
+    Returns
+    -------
+    observed_rv and mask : Tuple of TensorVariable
+        The observed component of the RV and respective indexing mask
+    unobserved_rv and mask : Tuple of TensorVariable
+        The unobserved component of the RV and respective indexing mask
+    joined_rv : TensorVariable
+        The symbolic join of the observed and unobserved components.
+    """
+    if not mask.dtype == "bool":
+        raise ValueError(
+            f"mask must be an array or tensor of boolean dtype, got dtype: {mask.dtype}"
+        )
+
+    if mask.ndim > rv.ndim:
+        raise ValueError(f"mask can't have more dims than rv, got ndim: {mask.ndim}")
+
+    antimask = ~mask
+
+    can_rewrite = False
+    # Only pure RVs can be rewritten
+    if isinstance(rv.owner.op, RandomVariable):
+        ndim_supp = rv.owner.op.ndim_supp
+
+        # All univariate RVs can be rewritten
+        if ndim_supp == 0:
+            can_rewrite = True
+
+        # Multivariate RVs can be rewritten if masking does not split within support dimensions
+        else:
+            batch_dims = rv.type.ndim - ndim_supp
+            constant_mask = getattr(as_tensor_variable(mask), "data", None)
+
+            # Indexing does not overlap with core dimensions
+            if mask.ndim <= batch_dims:
+                can_rewrite = True
+
+            # Try to handle special case where mask is constant across support dimensions,
+            # TODO: This could be done by the rewrite itself
+            elif constant_mask is not None:
+                # We check if a constant_mask that only keeps the first entry of each support dim
+                # is equivalent to the original one after re-expanding.
+                trimmed_mask = constant_mask[(...,) + (0,) * ndim_supp]
+                expanded_mask = np.broadcast_to(
+                    np.expand_dims(trimmed_mask, axis=tuple(range(-ndim_supp, 0))),
+                    shape=constant_mask.shape,
+                )
+                if np.array_equal(constant_mask, expanded_mask):
+                    mask = trimmed_mask
+                    antimask = ~trimmed_mask
+                    can_rewrite = True
+
+    if can_rewrite:
+        # Rewrite doesn't work with boolean masks. Should be fixed after https://github.com/pymc-devs/pytensor/pull/329
+        mask, antimask = mask.nonzero(), antimask.nonzero()
+
+        masked_rv = rv[mask]
+        fgraph = FunctionGraph(outputs=[masked_rv], clone=False)
+        [unobserved_rv] = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
+
+        antimasked_rv = rv[antimask]
+        fgraph = FunctionGraph(outputs=[antimasked_rv], clone=False)
+        [observed_rv] = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
+
+        # Make a clone of the observedRV, with a distinct rng so that observed and
+        # unobserved are never treated as equivalent (and mergeable) nodes by pytensor.
+        _, size, _, *inps = observed_rv.owner.inputs
+        observed_rv = observed_rv.owner.op(*inps, size=size)
+
+    # For all other cases use the more general PartialObservedRV
+    else:
+        # The symbolic graph simply splits the observed and unobserved components,
+        # so they can be given separate values.
+        dist_, mask_ = rv.type(), as_tensor_variable(mask).type()
+        observed_rv_, unobserved_rv_ = dist_[~mask_], dist_[mask_]
+
+        observed_rv, unobserved_rv = PartialObservedRV(
+            inputs=[dist_, mask_],
+            outputs=[observed_rv_, unobserved_rv_],
+            ndim_supp=rv.owner.op.ndim_supp,
+        )(rv, mask)
+
+    joined_rv = pt.empty(rv.shape, dtype=rv.type.dtype)
+    joined_rv = pt.set_subtensor(joined_rv[mask], unobserved_rv)
+    joined_rv = pt.set_subtensor(joined_rv[antimask], observed_rv)
+
+    return (observed_rv, antimask), (unobserved_rv, mask), joined_rv
+
+
+@_logprob.register(PartialObservedRV)
+def partial_observed_rv_logprob(op, values, dist, mask, **kwargs):
+    # For the logp, simply join the values
+    [obs_value, unobs_value] = values
+    antimask = ~mask
+    joined_value = pt.empty_like(dist)
+    joined_value = pt.set_subtensor(joined_value[mask], unobs_value)
+    joined_value = pt.set_subtensor(joined_value[antimask], obs_value)
+    joined_logp = logp(dist, joined_value)
+
+    # If we have a univariate RV we can split apart the logp terms
+    if op.ndim_supp == 0:
+        return joined_logp[antimask], joined_logp[mask]
+    # Otherwise, we can't (always/ easily) split apart logp terms.
+    # We return the full logp for the observed value, and a 0-nd array for the unobserved value
+    else:
+        return joined_logp.ravel(), pt.zeros((0,), dtype=joined_logp.type.dtype)
+
+
+@_moment.register(PartialObservedRV)
+def partial_observed_rv_moment(op, partial_obs_rv, rv, mask):
+    # Unobserved output
+    if partial_obs_rv.owner.outputs.index(partial_obs_rv) == 1:
+        return moment(rv)[mask]
+    # Observed output
+    else:
+        return moment(rv)[~mask]
