@@ -43,6 +43,7 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor.math import Max
 from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.var import TensorVariable
 
 from pymc.logprob.abstract import (
     MeasurableVariable,
@@ -61,7 +62,7 @@ MeasurableVariable.register(MeasurableMax)
 
 
 @node_rewriter([Max])
-def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableMax]]:
+def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[TensorVariable]]:
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
