@@ -1378,7 +1378,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.observed_RVs.append(observed_rv)
 
             # Register FreeRV corresponding to unobserved components
-            self.register_rv(unobserved_rv, f"{name}_missing", transform=transform)
+            self.register_rv(unobserved_rv, f"{name}_unobserved", transform=transform)
 
             # Register Deterministic that combines observed and missing
             # Note: This can widely increase memory consumption during sampling for large datasets
