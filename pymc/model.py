@@ -100,56 +100,6 @@ __all__ = [
 ]
 
 
-class InstanceMethod:
-    """Class for hiding references to instance methods so they can be pickled.
-
-    >>> self.method = InstanceMethod(some_object, 'method_name')
-    """
-
-    def __init__(self, obj, method_name):
-        self.obj = obj
-        self.method_name = method_name
-
-    def __call__(self, *args, **kwargs):
-        return getattr(self.obj, self.method_name)(*args, **kwargs)
-
-
-def incorporate_methods(source, destination, methods, wrapper=None, override=False):
-    """
-    Add attributes to a destination object which point to
-    methods from from a source object.
-
-    Parameters
-    ----------
-    source: object
-        The source object containing the methods.
-    destination: object
-        The destination object for the methods.
-    methods: list of str
-        Names of methods to incorporate.
-    wrapper: function
-        An optional function to allow the source method to be
-        wrapped. Should take the form my_wrapper(source, method_name)
-        and return a single value.
-    override: bool
-        If the destination object already has a method/attribute
-        an AttributeError will be raised if override is False (the default).
-    """
-    for method in methods:
-        if hasattr(destination, method) and not override:
-            raise AttributeError(
-                f"Cannot add method {method!r}" + "to destination object as it already exists. "
-                "To prevent this error set 'override=True'."
-            )
-        if hasattr(source, method):
-            if wrapper is None:
-                setattr(destination, method, getattr(source, method))
-            else:
-                setattr(destination, method, wrapper(source, method))
-        else:
-            setattr(destination, method, None)
-
-
 T = TypeVar("T", bound="ContextMeta")
 
 
