@@ -145,13 +145,13 @@ def model_with_imputations():
 
     compute_graph = {
         "a": set(),
-        "L_missing": {"a"},
+        "L_unobserved": {"a"},
         "L_observed": {"a"},
-        "L": {"L_missing", "L_observed"},
+        "L": {"L_unobserved", "L_observed"},
     }
     plates = {
         "": {"a"},
-        "2": {"L_missing"},
+        "2": {"L_unobserved"},
         "10": {"L_observed"},
         "12": {"L"},
     }

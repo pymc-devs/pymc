@@ -338,10 +338,10 @@ class TestDataPyMC:
             )
 
         # make sure that data is really missing
-        assert "y_missing" in model.named_vars
+        assert "y_unobserved" in model.named_vars
 
         test_dict = {
-            "posterior": ["x", "y_missing"],
+            "posterior": ["x", "y_unobserved"],
             "observed_data": ["y_observed"],
             "log_likelihood": ["y_observed"],
         }

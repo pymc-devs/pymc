@@ -357,13 +357,13 @@ class TestValueGradFunction(unittest.TestCase):
         gf = m.logp_dlogp_function()
         gf._extra_are_set = True
 
-        assert m["x2_missing"].type == gf._extra_vars_shared["x2_missing"].type
+        assert m["x2_unobserved"].type == gf._extra_vars_shared["x2_unobserved"].type
 
         # The dtype of the merged observed/missing deterministic should match the RV dtype
         assert m.deterministics[0].type.dtype == x2.type.dtype
 
         point = m.initial_point(random_seed=None).copy()
-        del point["x2_missing"]
+        del point["x2_unobserved"]
 
         res = [gf(DictToArrayBijection.map(Point(point, model=m))) for i in range(5)]
 
@@ -566,7 +566,7 @@ def test_make_obs_var():
     assert masked_output != fake_distribution
     assert not isinstance(masked_output, RandomVariable)
     # Ensure it has missing values
-    assert {"testing_inputs_missing"} == {v.name for v in fake_model.value_vars}
+    assert {"testing_inputs_unobserved"} == {v.name for v in fake_model.value_vars}
     assert {"testing_inputs", "testing_inputs_observed"} == {
         v.name for v in fake_model.observed_RVs
     }
@@ -1221,7 +1221,7 @@ class TestImputationMissingData:
             with pytest.warns(ImputationWarning):
                 _ = pm.Normal("y", x, 1, observed=missing_data)
 
-        assert "y_missing" in model.named_vars
+        assert "y_unobserved" in model.named_vars
 
         test_point = model.initial_point()
         assert not np.isnan(model.compile_logp()(test_point))
@@ -1238,7 +1238,7 @@ class TestImputationMissingData:
             with pytest.warns(ImputationWarning):
                 y = pm.Normal("y", x * predictors, 1, observed=data)
 
-        assert "y_missing" in model.named_vars
+        assert "y_unobserved" in model.named_vars
 
         test_point = model.initial_point()
         assert not np.isnan(model.compile_logp()(test_point))
@@ -1278,17 +1278,19 @@ class TestImputationMissingData:
             with pytest.warns(ImputationWarning):
                 theta2 = pm.Normal("theta2", mu=theta1, observed=obs2)
 
-            assert isinstance(model.rvs_to_transforms[model["theta1_missing"]], IntervalTransform)
+            assert isinstance(
+                model.rvs_to_transforms[model["theta1_unobserved"]], IntervalTransform
+            )
             assert model.rvs_to_transforms[model["theta1_observed"]] is None
 
             prior_trace = pm.sample_prior_predictive(random_seed=rng, return_inferencedata=False)
             assert set(prior_trace.keys()) == {
                 "theta1",
                 "theta1_observed",
-                "theta1_missing",
+                "theta1_unobserved",
                 "theta2",
                 "theta2_observed",
-                "theta2_missing",
+                "theta2_unobserved",
             }
 
             # Make sure the observed + missing combined deterministics have the
@@ -1303,14 +1305,16 @@ class TestImputationMissingData:
             # Make sure the missing parts of the combined deterministic matches the
             # sampled missing and observed variable values
             assert (
-                np.mean(prior_trace["theta1"][:, obs1.mask] - prior_trace["theta1_missing"]) == 0.0
+                np.mean(prior_trace["theta1"][:, obs1.mask] - prior_trace["theta1_unobserved"])
+                == 0.0
             )
             assert (
                 np.mean(prior_trace["theta1"][:, ~obs1.mask] - prior_trace["theta1_observed"])
                 == 0.0
             )
             assert (
-                np.mean(prior_trace["theta2"][:, obs2.mask] - prior_trace["theta2_missing"]) == 0.0
+                np.mean(prior_trace["theta2"][:, obs2.mask] - prior_trace["theta2_unobserved"])
+                == 0.0
             )
             assert (
                 np.mean(prior_trace["theta2"][:, ~obs2.mask] - prior_trace["theta2_observed"])
@@ -1326,18 +1330,22 @@ class TestImputationMissingData:
             )
             assert set(trace.varnames) == {
                 "theta1",
-                "theta1_missing",
-                "theta1_missing_interval__",
+                "theta1_unobserved",
+                "theta1_unobserved_interval__",
                 "theta2",
-                "theta2_missing",
+                "theta2_unobserved",
             }
 
             # Make sure that the missing values are newly generated samples and that
             # the observed and deterministic match
-            assert np.all(0 < trace["theta1_missing"].mean(0))
-            assert np.all(0 < trace["theta2_missing"].mean(0))
-            assert np.isclose(np.mean(trace["theta1"][:, obs1.mask] - trace["theta1_missing"]), 0)
-            assert np.isclose(np.mean(trace["theta2"][:, obs2.mask] - trace["theta2_missing"]), 0)
+            assert np.all(0 < trace["theta1_unobserved"].mean(0))
+            assert np.all(0 < trace["theta2_unobserved"].mean(0))
+            assert np.isclose(
+                np.mean(trace["theta1"][:, obs1.mask] - trace["theta1_unobserved"]), 0
+            )
+            assert np.isclose(
+                np.mean(trace["theta2"][:, obs2.mask] - trace["theta2_unobserved"]), 0
+            )
 
             # Make sure that the observed values are unchanged
             assert np.allclose(np.var(trace["theta1"][:, ~obs1.mask], 0), 0.0)
@@ -1378,7 +1386,7 @@ class TestImputationMissingData:
             with pytest.warns(ImputationWarning):
                 x = pm.Gamma("x", 1, 1, observed=[1, 1, 1, np.nan])
 
-        logp_val = m2.compile_logp()({"x_missing_log__": np.array([0])})
+        logp_val = m2.compile_logp()({"x_unobserved_log__": np.array([0])})
         assert logp_val == -4.0
 
     def test_missing_logp2(self):
@@ -1394,7 +1402,7 @@ class TestImputationMissingData:
                     "theta2", mu=theta1, observed=np.array([np.nan, np.nan, 2, np.nan, 4])
                 )
         m_missing_logp = m_missing.compile_logp()(
-            {"theta1_missing": [2, 4], "theta2_missing": [0, 1, 3]}
+            {"theta1_unobserved": [2, 4], "theta2_unobserved": [0, 1, 3]}
         )
 
         assert m_logp == m_missing_logp
@@ -1407,7 +1415,7 @@ class TestImputationMissingData:
                     a=[1, 2, 3],
                     observed=np.array([[0.3, 0.3, 0.4], [np.nan, np.nan, np.nan]]),
                 )
-        assert (m_miss["x_missing"].owner.op, pm.Dirichlet)
+        assert (m_miss["x_unobserved"].owner.op, pm.Dirichlet)
         assert (m_miss["x_observed"].owner.op, pm.Dirichlet)
 
         with pm.Model() as m_unobs:
@@ -1415,7 +1423,7 @@ class TestImputationMissingData:
 
         inp_vals = simplex.forward(np.array([[0.3, 0.3, 0.4]])).eval()
         np.testing.assert_allclose(
-            m_miss.compile_logp(jacobian=False)({"x_missing_simplex__": inp_vals}),
+            m_miss.compile_logp(jacobian=False)({"x_unobserved_simplex__": inp_vals}),
             m_unobs.compile_logp(jacobian=False)({"x_simplex__": inp_vals}) * 2,
         )
 
@@ -1428,12 +1436,12 @@ class TestImputationMissingData:
                     observed=np.array([[0.3, 0.3, np.nan], [np.nan, np.nan, 0.4]]),
                 )
 
-        assert isinstance(m_miss["x_missing"].owner.op, PartialObservedRV)
+        assert isinstance(m_miss["x_unobserved"].owner.op, PartialObservedRV)
         assert isinstance(m_miss["x_observed"].owner.op, PartialObservedRV)
 
         inp_values = np.array([0.3, 0.3, 0.4])
         np.testing.assert_allclose(
-            m_miss.compile_logp()({"x_missing": [0.4, 0.3, 0.3]}),
+            m_miss.compile_logp()({"x_unobserved": [0.4, 0.3, 0.3]}),
             st.dirichlet.logpdf(inp_values, [1, 2, 3]) * 2,
         )
 
@@ -1451,7 +1459,7 @@ class TestImputationMissingData:
         assert np.all(x_draws[:, 0] < 0)
         assert np.all(x_draws[:, 1] > 0)
         assert np.isclose(
-            m.compile_logp()({"x_missing": np.array([-10, 10, -10, 10])}),
+            m.compile_logp()({"x_unobserved": np.array([-10, 10, -10, 10])}),
             st.norm(scale=0.1).logpdf(0) * 6,
         )
 
@@ -1470,7 +1478,7 @@ class TestImputationMissingData:
         x_obs_rv = m["x_observed"]
         x_obs_vv = m.rvs_to_values[x_obs_rv]
 
-        x_unobs_rv = m["x_missing"]
+        x_unobs_rv = m["x_unobserved"]
         x_unobs_vv = m.rvs_to_values[x_unobs_rv]
 
         logp = transformed_conditional_logp(
@@ -1506,7 +1514,7 @@ class TestImputationMissingData:
                     observed=data,
                 )
         np.testing.assert_almost_equal(
-            model.compile_logp()({"x_missing": [0] * 3}),
+            model.compile_logp()({"x_unobserved": [0] * 3}),
             st.norm.logcdf(0) * 10,
         )
 
