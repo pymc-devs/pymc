@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-# Contains code from Aeppl, Copyright (c) 2021-2022, PyTensor Developers.
+# Contains code from AePPL, Copyright (c) 2021-2022, Aesara Developers.
 
 # coding: utf-8
 """
