@@ -48,7 +48,6 @@ from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.testing import assert_no_rvs
 
 
-@pytest.mark.xfail(RuntimeError, reason="logprob for broadcasted RVs not implemented")
 def test_bcast_rv_logp():
     """Test that derived logp for broadcasted RV is correct"""
 
@@ -61,11 +60,11 @@ def test_bcast_rv_logp():
     logp_combined = pt.add(*logp.values())
     valid_logp = logp_combined.eval({broadcasted_x_vv: [0, 0]})
 
+    # The broadcast dimension is consumed like a support dimension
     assert valid_logp.shape == ()
     assert np.isclose(valid_logp, st.norm.logpdf(0))
 
     # It's not possible for broadcasted dimensions to have different values
-    # This should either raise or return -inf
     invalid_logp = logp_combined.eval({broadcasted_x_vv: [0, 1]})
     assert invalid_logp == -np.inf
 

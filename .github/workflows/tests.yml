@@ -135,6 +135,7 @@ jobs:
             tests/logprob/test_order.py
             tests/logprob/test_rewriting.py
             tests/logprob/test_scan.py
+            tests/logprob/test_shape.py
             tests/logprob/test_tensor.py
             tests/logprob/test_switch.py
             tests/logprob/test_transform_value.py
