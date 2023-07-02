@@ -52,7 +52,7 @@ from pytensor.tensor.subtensor import (
     as_index_constant,
 )
 
-from pymc.logprob.abstract import MeasurableVariable
+from pymc.logprob.abstract import MeasurableVariable, get_measurable_meta_info
 from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.mixture import MeasurableSwitchMixture, expand_indices
 from pymc.logprob.rewriting import construct_ir_fgraph

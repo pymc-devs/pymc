@@ -332,42 +332,6 @@ def find_measurable_index_mixture(fgraph, node):
     return [new_mixture_rv]
 
 
-@node_rewriter([switch])
-def find_measurable_switch_mixture(fgraph, node):
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
-    old_mixture_rv = node.default_output()
-    idx, *components = node.inputs
-
-    if rv_map_feature.request_measurable(components) != components:
-        return None
-
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(idx.owner.op)
-
-    mix_op = MixtureRV(
-        indices_end_idx=2,
-        out_dtype=old_mixture_rv.dtype,
-        out_broadcastable=old_mixture_rv.broadcastable,
-        ndim_supp=ndim_supp,
-        supp_axes=supp_axes,
-        measure_type=measure_type,
-    )
-    new_mixture_rv = mix_op.make_node(
-        *([NoneConst, as_nontensor_scalar(node.inputs[0])] + components[::-1])
-    ).default_output()
-
-    if pytensor.config.compute_test_value != "off":
-        if not hasattr(old_mixture_rv.tag, "test_value"):
-            compute_test_value(node)
-
-        new_mixture_rv.tag.test_value = old_mixture_rv.tag.test_value
-
-    return [new_mixture_rv]
-
-
 @_logprob.register(MixtureRV)
 def logprob_MixtureRV(
     op, values, *inputs: Optional[Union[TensorVariable, slice]], name=None, **kwargs
@@ -446,9 +410,6 @@ class MeasurableSwitchMixture(MeasurableElemwise):
     valid_scalar_types = (Switch,)
 
 
-measurable_switch_mixture = MeasurableSwitchMixture(scalar_switch)
-
-
 @node_rewriter([switch])
 def find_measurable_switch_mixture(fgraph, node):
     rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
@@ -472,6 +433,12 @@ def find_measurable_switch_mixture(fgraph, node):
 
     if rv_map_feature.request_measurable(components) != components:
         return None
+
+    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(components[0].owner.op)
+
+    measurable_switch_mixture = MeasurableSwitchMixture(
+        scalar_switch, ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+    )
 
     return [measurable_switch_mixture(switch_cond, *components)]
 
