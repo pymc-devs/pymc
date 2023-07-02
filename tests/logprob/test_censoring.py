@@ -46,6 +46,7 @@ from pymc.logprob import conditional_logp
 from pymc.logprob.transform_value import TransformValuesRewrite
 from pymc.logprob.transforms import LogTransform
 from pymc.testing import assert_no_rvs
+from tests.logprob.utils import meta_info_helper
 
 
 @pytensor.config.change_flags(compute_test_value="raise")
@@ -68,6 +69,25 @@ def test_continuous_rv_clip():
     assert np.isclose(logp_fn(-2), ref_scipy.logcdf(-2))
     assert np.isclose(logp_fn(2), ref_scipy.logsf(2))
     assert np.isclose(logp_fn(0), ref_scipy.logpdf(0))
+
+
+def test_clip_meta_info():
+    base_rv = pt.random.normal(0.5, 1)
+    rv = pt.clip(base_rv, -2, 2)
+
+    vv = rv.clone()
+
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(base_rv.owner.op)
+
+    ndim_supp, supp_axes, measure_type = meta_info_helper(rv, vv)
+
+    assert np.isclose(
+        ndim_supp_base,
+        ndim_supp,
+    )
+    assert supp_axes_base == supp_axes
+
+    assert measure_type_base == measure_type
 
 
 def test_discrete_rv_clip():
@@ -262,3 +282,27 @@ def test_rounding(rounding_op):
         logprob.eval({xr_vv: test_value}),
         expected_logp,
     )
+
+
+@pytest.mark.parametrize("rounding_op", (pt.round, pt.floor, pt.ceil))
+def test_round_meta_info(rounding_op):
+    loc = 1
+    scale = 2
+    test_value = np.arange(-3, 4)
+
+    x = pt.random.normal(loc, scale, size=test_value.shape, name="x")
+    xr = rounding_op(x)
+    xr.name = "xr"
+
+    xr_vv = xr.clone()
+    ndim_supp, supp_axes, measure_type = meta_info_helper(xr, xr_vv)
+
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(x.owner.op)
+
+    assert np.isclose(
+        ndim_supp_base,
+        ndim_supp,
+    )
+    assert supp_axes_base == supp_axes
+
+    assert measure_type_base == measure_type

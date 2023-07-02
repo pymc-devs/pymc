@@ -41,8 +41,10 @@ import pytest
 import scipy.stats as st
 
 from pymc import logp
+from pymc.logprob.abstract import get_measurable_meta_info
 from pymc.logprob.basic import conditional_logp
 from pymc.testing import assert_no_rvs
+from tests.logprob.utils import meta_info_helper
 
 
 @pytest.mark.parametrize(
@@ -67,6 +69,36 @@ def test_normal_cumsum(size, axis):
         st.norm(0, 1).logpdf(np.ones(size)).sum(),
         logprob.eval({vv: np.ones(size).cumsum(axis)}).sum(),
     )
+
+
+@pytest.mark.parametrize(
+    "size, axis",
+    [
+        (10, None),
+        (10, 0),
+        ((2, 10), 0),
+        ((2, 10), 1),
+        ((3, 2, 10), 0),
+        ((3, 2, 10), 1),
+        ((3, 2, 10), 2),
+    ],
+)
+def test_meta_info(size, axis):
+    rv = pt.random.normal(0, 1, size=size).cumsum(axis)
+    vv = rv.clone()
+    base_rv = pt.random.normal(0, 1, size=size)
+    base_vv = base_rv.clone()
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(base_rv.owner.op)
+
+    ndim_supp, supp_axes, measure_type = meta_info_helper(rv, vv)
+
+    assert np.isclose(
+        ndim_supp_base,
+        ndim_supp,
+    )
+    assert supp_axes_base == supp_axes
+
+    assert measure_type_base == measure_type
 
 
 @pytest.mark.parametrize(

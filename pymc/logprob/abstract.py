@@ -174,7 +174,11 @@ class MeasurableElemwise(MeasurableVariable, Elemwise):
         super().__init__(scalar_op, *args, **kwargs)
 
 
-def get_measurable_meta_info(base_op: Op) -> Tuple[int, Tuple[int], MeasureType]:
+def get_measurable_meta_info(
+    base_op: Op,
+) -> Tuple[
+    Union[int, Tuple[int]], Tuple[Union[int, Tuple[int]]], Union[MeasureType, Tuple[MeasureType]]
+]:
     if not isinstance(base_op, MeasurableVariable):
         raise TypeError("base_op must be a RandomVariable or MeasurableVariable")
 

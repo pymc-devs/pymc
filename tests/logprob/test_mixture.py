@@ -58,7 +58,7 @@ from pymc.logprob.mixture import MeasurableSwitchMixture, expand_indices
 from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.logprob.utils import dirac_delta
 from pymc.testing import assert_no_rvs
-from tests.logprob.utils import scipy_logprob
+from tests.logprob.utils import meta_info_helper, scipy_logprob
 
 
 def test_mixture_basics():
@@ -900,7 +900,38 @@ def test_mixture_with_DiracDelta():
     assert m_vv in logp_res
 
 
-def test_scalar_switch_mixture():
+def test_meta_with_DiracDelta():
+    srng = pt.random.RandomStream(29833)
+
+    X_rv = srng.normal(0, 1, name="X")
+    Y_rv = dirac_delta(0.0)
+    Y_rv.name = "Y"
+
+    I_rv = srng.categorical([0.5, 0.5], size=1)
+
+    i_vv = I_rv.clone()
+    i_vv.name = "i"
+
+    M_rv = pt.stack([X_rv, Y_rv])[I_rv]
+    M_rv.name = "M"
+
+    m_vv = M_rv.clone()
+    m_vv.name = "m"
+
+    ndim_supp, supp_axes, measure_type = meta_info_helper(M_rv, m_vv)
+
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(X_rv.owner.op)
+
+    assert np.isclose(
+        ndim_supp_base,
+        ndim_supp,
+    )
+    assert supp_axes_base == supp_axes
+
+    assert measure_type_base == measure_type
+
+
+def test_switch_mixture():
     srng = pt.random.RandomStream(29833)
 
     X_rv = srng.normal(-10.0, 0.1, name="X")
@@ -1029,6 +1060,30 @@ def test_ifelse_mixture_one_component():
     np.testing.assert_array_almost_equal(
         fn(0, scale_vv_test, mix_vv_test), sp.halfnorm(0, scale_vv_test).logpdf(mix_vv_test)
     )
+
+
+def test_meta_ifelse():
+    if_rv = pt.random.bernoulli(0.5, name="if")
+    scale_rv = pt.random.halfnormal(name="scale")
+    comp_then = pt.random.normal(0, scale_rv, size=(2,), name="comp_then")
+    comp_else = pt.random.halfnormal(0, scale_rv, size=(4,), name="comp_else")
+    mix_rv = ifelse(if_rv, comp_then, comp_else, name="mix")
+
+    if_vv = if_rv.clone()
+    scale_vv = scale_rv.clone()
+    mix_vv = mix_rv.clone()
+
+    ndim_supp, supp_axes, measure_type = meta_info_helper(mix_rv, mix_vv)
+
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(if_rv.owner.op)
+
+    assert np.isclose(
+        ndim_supp_base,
+        ndim_supp,
+    )
+    assert supp_axes_base == supp_axes
+
+    assert measure_type_base != measure_type
 
 
 def test_ifelse_mixture_multiple_components():
