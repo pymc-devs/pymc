@@ -113,9 +113,96 @@ measurable_ir_rewrites_db.register(
 def max_logprob(op, values, base_rv, **kwargs):
     r"""Compute the log-likelihood graph for the `Max` operation.
 
+    Parameters
+    ----------
+    op : Max-Op
+    values : tensor_like
+    rv : TensorVariable
+
+    Returns
+    -------
+    logprob : TensorVariable
+
+    Examples
+    --------
+    It is often desirable to find the Maximum from the distribution of random variables.
+
+    .. code-block:: python
+
+        import pytensor.tensor as pt
+
+        x = pt.random.normal(0, 1, size=(3,))
+        x.name = "x"
+        print(x.eval())
+        #[0.61748772 1.08723759 0.98970957]
+
+        x_max = pt.max(x, axis=None)
+        print(x_max.eval())
+        # 1.087237592696084
+
+    It is only but natural that one might expect to derive the logarithmic probability corresponding to the Max operation.
+
     The formula that we use here is :
         \ln(f_{(n)}(x)) = \ln(n) + (n-1) \ln(F(x)) + \ln(f(x))
     where f(x) represents the p.d.f and F(x) represents the c.d.f of the distribution respectively.
+
+    An example corresponding to this is illustrated below:
+
+    .. code-block:: python
+
+        import pytensor.tensor as pt
+        from pymc import logp
+
+        x = pt.random.uniform(0, 1, size=(3,))
+        x.name = "x"
+        # [0.09081509 0.84761712 0.59030273]
+
+        x_max = pt.max(x, axis=-1)
+        # 0.8476171198716373
+
+        x_max_value = pt.scalar("x_max_value")
+        x_max_logprob = logp(x_max, x_max_value)
+        test_value = x_max.eval()
+
+        x_max_logprob.eval({x_max_value: test_value})
+        # 0.7679597791946853
+
+    Currently our implementation has certain limitations which are mandated through some constraints.
+
+    We only consider a distribution of RandomVariables and the logp function fails for NonRVs.
+
+    .. code-block:: python
+
+        import pytensor.tensor as pt
+        from pymc import logp
+
+        x = pt.exp(pt.random.beta(0, 1, size=(3,)))
+        x.name = "x"
+        x_max = pt.max(x, axis=-1)
+        x_max_value = pt.vector("x_max_value")
+        x_max_logprob = logp(x_max, x_max_value)
+
+    The above code gives a Runtime error stating logprob method was not implemented as x in this case is a Non random variable distribution.
+
+    We only consider independent and identically distributed random variables.
+    In probability theory and statistics, a collection of random variables is independent and identically distributed if each random variable has the same probability distribution as the others and all are mutually independent.
+    Hence the logp method fails for non-ids.
+
+    .. code-block:: python
+
+        import pytensor.tensor as pt
+        from pymc import logp
+
+        x = pm.Normal.dist([0, 1, 2, 3, 4], 1, shape=(5,))
+        x.name = "x"
+        x_max = pt.max(x, axis=-1)
+        x_max_value = pt.vector("x_max_value")
+        x_max_logprob = logp(x_max, x_max_value)
+
+    The above code gives a Runtime error stating logprob method was not implemented as x in this case is a Non-iid distribution.
+
+    Note: We assume a very fluid definition of iid here.We assume only univariate distributions to be iids which rejects any multivariate distribution even though it might be iid by definition.
+
     """
     (value,) = values
 
