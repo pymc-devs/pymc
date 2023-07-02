@@ -50,6 +50,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.sharedvar import ScalarSharedVariable
 from pytensor.tensor.var import TensorConstant, TensorVariable
+from typing_extensions import Self
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, is_minibatch
@@ -478,10 +479,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     if TYPE_CHECKING:
 
-        def __enter__(self: "Model") -> "Model":
+        def __enter__(self: Self) -> Self:
             ...
 
-        def __exit__(self: "Model", *exc: Any) -> bool:
+        def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
             ...
 
     def __new__(cls, *args, **kwargs):
