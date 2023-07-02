@@ -32,6 +32,7 @@ pymc/distributions/truncated.py
 pymc/initial_point.py
 pymc/logprob/binary.py
 pymc/logprob/censoring.py
+pymc/logprob/checks.py
 pymc/logprob/basic.py
 pymc/logprob/mixture.py
 pymc/logprob/order.py

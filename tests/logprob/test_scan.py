@@ -44,7 +44,7 @@ from pytensor.raise_op import assert_op
 from pytensor.scan.utils import ScanArgs
 from scipy import stats
 
-from pymc.logprob.abstract import _logprob_helper
+from pymc.logprob.abstract import _logprob_helper, get_measurable_meta_info
 from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.scan import (
     construct_scan,
@@ -52,6 +52,7 @@ from pymc.logprob.scan import (
     get_random_outer_outputs,
 )
 from pymc.testing import assert_no_rvs
+from tests.logprob.utils import meta_info_helper
 
 
 def create_inner_out_logp(value_map):
@@ -502,6 +503,32 @@ def test_scan_over_seqs():
         ys_logp.eval({xs_vv: xs_test, ys_vv: ys_test}),
         stats.norm.logpdf(ys_test, xs_test),
     )
+
+
+def test_meta_scan_over_seqs():
+    """Test that logprob inference for scans based on sequences (mapping)."""
+    rng = np.random.default_rng(543)
+    n_steps = 10
+
+    xs = pt.random.normal(size=(n_steps,), name="xs")
+    ys, _ = pytensor.scan(
+        fn=lambda x: pt.random.normal(x), sequences=[xs], outputs_info=[None], name="ys"
+    )
+
+    xs_vv = ys.clone()
+    ys_vv = ys.clone()
+
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(xs.owner.op)
+
+    ndim_supp, supp_axes, measure_type = meta_info_helper(ys, ys_vv)
+
+    assert np.isclose(
+        ndim_supp_base,
+        ndim_supp,
+    )
+    assert supp_axes_base == supp_axes[0]
+
+    assert measure_type_base == measure_type[0]
 
 
 def test_scan_carried_deterministic_state():

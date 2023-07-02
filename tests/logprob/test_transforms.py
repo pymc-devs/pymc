@@ -229,6 +229,26 @@ def test_exp_transform_rv():
     )
 
 
+def test_meta_exp_transform_rv():
+    base_rv = pt.random.normal(0, 1, size=3, name="base_rv")
+    y_rv = pt.exp(base_rv)
+    y_rv.name = "y"
+
+    y_vv = y_rv.clone()
+
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(base_rv.owner.op)
+
+    ndim_supp, supp_axes, measure_type = meta_info_helper(y_rv, y_vv)
+
+    assert np.isclose(
+        ndim_supp_base,
+        ndim_supp,
+    )
+    assert supp_axes_base == supp_axes
+
+    assert measure_type_base == measure_type
+
+
 def test_log_transform_rv():
     base_rv = pt.random.lognormal(0, 1, size=2, name="base_rv")
     y_rv = pt.log(base_rv)
