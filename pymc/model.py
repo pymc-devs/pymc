@@ -107,14 +107,6 @@ class ContextMeta(type):
     the `with` statement.
     """
 
-    if TYPE_CHECKING:
-
-        def __enter__(self: Self) -> Self:
-            ...
-
-        def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
-            ...
-
     def __new__(cls, name, bases, dct, **kwargs):  # pylint: disable=unused-argument
         """Add __enter__ and __exit__ methods to the class."""
 
@@ -222,7 +214,7 @@ class ContextMeta(type):
     # Initialize object in its own context...
     # Merged from InitContextMeta in the original.
     def __call__(cls, *args, **kwargs):
-        instance = cls.__new__(cls, *args, **kwargs)
+        instance: "Model" = cls.__new__(cls, *args, **kwargs)
         with instance:  # appends context
             instance.__init__(*args, **kwargs)
         return instance
@@ -484,6 +476,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         # variables inside both scopes will be named like `first::*`, `second::*`
     """
+
+    if TYPE_CHECKING:
+
+        def __enter__(self: Self) -> Self:
+            ...
+
+        def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
+            ...
 
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
