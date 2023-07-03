@@ -214,6 +214,8 @@ class ContextMeta(type):
     # Initialize object in its own context...
     # Merged from InitContextMeta in the original.
     def __call__(cls, *args, **kwargs):
+        # We type hint Model here so type checkers understand that Model is a context manager.
+        # This metaclass is only used for Model, so this is safe to do. See #6809 for more info.
         instance: "Model" = cls.__new__(cls, *args, **kwargs)
         with instance:  # appends context
             instance.__init__(*args, **kwargs)
