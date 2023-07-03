@@ -27,6 +27,8 @@ from pytensor import Variable
 from pytensor.compile import SharedVariable
 from pytensor.graph.utils import ValidatingScratchpad
 
+from pymc.exceptions import BlockModelAccessError
+
 
 class _UnsetType:
     """Type for the `UNSET` object to make it look nice in `help(...)` outputs."""
@@ -250,7 +252,7 @@ def dataset_to_point_list(
     }
     points = [
         {vn: stacked_dict[vn][i, ...] for vn in var_names}
-        for i in range(np.product([len(coords) for coords in stacked_dims.values()]))
+        for i in range(np.prod([len(coords) for coords in stacked_dims.values()]))
     ]
     # use the list of points
     return cast(List[Dict[str, np.ndarray]], points), stacked_dims
@@ -367,7 +369,7 @@ def check_dist_not_registered(dist, model=None):
 
     try:
         model = modelcontext(None)
-    except TypeError:
+    except (TypeError, BlockModelAccessError):
         pass
     else:
         if dist in model.basic_RVs:

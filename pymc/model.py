@@ -44,11 +44,9 @@ import scipy.sparse as sps
 from pytensor.compile import DeepCopyOp, get_mode
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Constant, Variable, graph_inputs
-from pytensor.graph.fg import FunctionGraph
 from pytensor.scalar import Cast
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.sharedvar import ScalarSharedVariable
 from pytensor.tensor.var import TensorConstant, TensorVariable
@@ -75,6 +73,7 @@ from pymc.pytensorf import (
     hessian,
     inputvars,
     replace_rvs_by_values,
+    rewrite_pregrad,
 )
 from pymc.util import (
     UNSET,
@@ -97,56 +96,6 @@ __all__ = [
     "Point",
     "compile_fn",
 ]
-
-
-class InstanceMethod:
-    """Class for hiding references to instance methods so they can be pickled.
-
-    >>> self.method = InstanceMethod(some_object, 'method_name')
-    """
-
-    def __init__(self, obj, method_name):
-        self.obj = obj
-        self.method_name = method_name
-
-    def __call__(self, *args, **kwargs):
-        return getattr(self.obj, self.method_name)(*args, **kwargs)
-
-
-def incorporate_methods(source, destination, methods, wrapper=None, override=False):
-    """
-    Add attributes to a destination object which point to
-    methods from from a source object.
-
-    Parameters
-    ----------
-    source: object
-        The source object containing the methods.
-    destination: object
-        The destination object for the methods.
-    methods: list of str
-        Names of methods to incorporate.
-    wrapper: function
-        An optional function to allow the source method to be
-        wrapped. Should take the form my_wrapper(source, method_name)
-        and return a single value.
-    override: bool
-        If the destination object already has a method/attribute
-        an AttributeError will be raised if override is False (the default).
-    """
-    for method in methods:
-        if hasattr(destination, method) and not override:
-            raise AttributeError(
-                f"Cannot add method {method!r}" + "to destination object as it already exists. "
-                "To prevent this error set 'override=True'."
-            )
-        if hasattr(source, method):
-            if wrapper is None:
-                setattr(destination, method, getattr(source, method))
-            else:
-                setattr(destination, method, wrapper(source, method))
-        else:
-            setattr(destination, method, None)
 
 
 T = TypeVar("T", bound="ContextMeta")
@@ -380,6 +329,8 @@ class ValueGradFunction:
             )
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
+
+        cost = rewrite_pregrad(cost)
 
         if compute_grads:
             grads = pytensor.grad(cost, grad_vars, disconnected_inputs="ignore")
@@ -824,6 +775,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     )
 
         cost = self.logp(jacobian=jacobian)
+        cost = rewrite_pregrad(cost)
         return gradient(cost, value_vars)
 
     def d2logp(
@@ -862,6 +814,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     )
 
         cost = self.logp(jacobian=jacobian)
+        cost = rewrite_pregrad(cost)
         return hessian(cost, value_vars)
 
     @property
@@ -1409,67 +1362,27 @@ class Model(WithMemoization, metaclass=ContextMeta):
             if total_size is not None:
                 raise ValueError("total_size is not compatible with imputed variables")
 
-            if not isinstance(rv_var.owner.op, RandomVariable):
-                raise NotImplementedError(
-                    "Automatic inputation is only supported for univariate RandomVariables."
-                    f" {rv_var} of type {type(rv_var.owner.op)} is not supported."
-                )
+            from pymc.distributions.distribution import create_partial_observed_rv
 
-            if rv_var.owner.op.ndim_supp > 0:
-                raise NotImplementedError(
-                    f"Automatic inputation is only supported for univariate "
-                    f"RandomVariables, but {rv_var} is multivariate"
-                )
+            (
+                (observed_rv, observed_mask),
+                (unobserved_rv, _),
+                joined_rv,
+            ) = create_partial_observed_rv(rv_var, mask)
+            observed_data = pt.as_tensor(data.data[observed_mask])
 
-            # We can get a random variable comprised of only the unobserved
-            # entries by lifting the indices through the `RandomVariable` `Op`.
+            # Register ObservedRV corresponding to observed component
+            observed_rv.name = f"{name}_observed"
+            self.create_value_var(observed_rv, transform=None, value_var=observed_data)
+            self.add_named_variable(observed_rv)
+            self.observed_RVs.append(observed_rv)
 
-            masked_rv_var = rv_var[mask.nonzero()]
+            # Register FreeRV corresponding to unobserved components
+            self.register_rv(unobserved_rv, f"{name}_unobserved", transform=transform)
 
-            fgraph = FunctionGraph(
-                [i for i in graph_inputs((masked_rv_var,)) if not isinstance(i, Constant)],
-                [masked_rv_var],
-                clone=False,
-            )
-
-            (missing_rv_var,) = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
-
-            self.register_rv(missing_rv_var, f"{name}_missing", transform=transform)
-
-            # Now, we lift the non-missing observed values and produce a new
-            # `rv_var` that contains only those.
-            #
-            # The end result is two disjoint distributions: one for the missing
-            # values, and another for the non-missing values.
-
-            antimask_idx = (~mask).nonzero()
-            nonmissing_data = pt.as_tensor_variable(data[antimask_idx].data)
-            unmasked_rv_var = rv_var[antimask_idx]
-            unmasked_rv_var = unmasked_rv_var.owner.clone().default_output()
-
-            fgraph = FunctionGraph(
-                [i for i in graph_inputs((unmasked_rv_var,)) if not isinstance(i, Constant)],
-                [unmasked_rv_var],
-                clone=False,
-            )
-            (observed_rv_var,) = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
-            # Make a clone of the RV, but let it create a new rng so that observed and
-            # missing are not treated as equivalent nodes by pytensor. This would happen
-            # if the size of the masked and unmasked array happened to coincide
-            _, size, _, *inps = observed_rv_var.owner.inputs
-            observed_rv_var = observed_rv_var.owner.op(*inps, size=size, name=f"{name}_observed")
-            observed_rv_var.tag.observations = nonmissing_data
-
-            self.create_value_var(observed_rv_var, transform=None, value_var=nonmissing_data)
-            self.add_named_variable(observed_rv_var)
-            self.observed_RVs.append(observed_rv_var)
-
-            # Create deterministic that combines observed and missing
+            # Register Deterministic that combines observed and missing
             # Note: This can widely increase memory consumption during sampling for large datasets
-            rv_var = pt.empty(data.shape, dtype=observed_rv_var.type.dtype)
-            rv_var = pt.set_subtensor(rv_var[mask.nonzero()], missing_rv_var)
-            rv_var = pt.set_subtensor(rv_var[antimask_idx], observed_rv_var)
-            rv_var = Deterministic(name, rv_var, self, dims)
+            rv_var = Deterministic(name, joined_rv, self, dims)
 
         else:
             if sps.issparse(data):

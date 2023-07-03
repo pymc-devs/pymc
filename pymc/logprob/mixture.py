@@ -44,6 +44,8 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op, compute_test_value
 from pytensor.graph.rewriting.basic import node_rewriter, pre_greedy_node_rewriter
 from pytensor.ifelse import IfElse, ifelse
+from pytensor.scalar import Switch
+from pytensor.scalar import switch as scalar_switch
 from pytensor.tensor.basic import Join, MakeVector, switch
 from pytensor.tensor.random.rewriting import (
     local_dimshuffle_rv_lift,
@@ -55,7 +57,6 @@ from pytensor.tensor.subtensor import (
     AdvancedSubtensor,
     AdvancedSubtensor1,
     as_index_literal,
-    as_nontensor_scalar,
     get_canonical_form_slice,
     is_basic_idx,
 )
@@ -63,7 +64,12 @@ from pytensor.tensor.type import TensorType
 from pytensor.tensor.type_other import NoneConst, NoneTypeT, SliceConstant, SliceType
 from pytensor.tensor.var import TensorVariable
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
+from pymc.logprob.abstract import (
+    MeasurableElemwise,
+    MeasurableVariable,
+    _logprob,
+    _logprob_helper,
+)
 from pymc.logprob.rewriting import (
     PreserveRVMappings,
     assume_measured_ir_outputs,
@@ -325,37 +331,6 @@ def find_measurable_index_mixture(fgraph, node):
     return [new_mixture_rv]
 
 
-@node_rewriter([switch])
-def find_measurable_switch_mixture(fgraph, node):
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
-    old_mixture_rv = node.default_output()
-    idx, *components = node.inputs
-
-    if rv_map_feature.request_measurable(components) != components:
-        return None
-
-    mix_op = MixtureRV(
-        2,
-        old_mixture_rv.dtype,
-        old_mixture_rv.broadcastable,
-    )
-    new_mixture_rv = mix_op.make_node(
-        *([NoneConst, as_nontensor_scalar(node.inputs[0])] + components[::-1])
-    ).default_output()
-
-    if pytensor.config.compute_test_value != "off":
-        if not hasattr(old_mixture_rv.tag, "test_value"):
-            compute_test_value(node)
-
-        new_mixture_rv.tag.test_value = old_mixture_rv.tag.test_value
-
-    return [new_mixture_rv]
-
-
 @_logprob.register(MixtureRV)
 def logprob_MixtureRV(
     op, values, *inputs: Optional[Union[TensorVariable, slice]], name=None, **kwargs
@@ -431,6 +406,51 @@ def logprob_MixtureRV(
             )
 
     return logp_val
+
+
+class MeasurableSwitchMixture(MeasurableElemwise):
+    valid_scalar_types = (Switch,)
+
+
+measurable_switch_mixture = MeasurableSwitchMixture(scalar_switch)
+
+
+@node_rewriter([switch])
+def find_measurable_switch_mixture(fgraph, node):
+    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    switch_cond, *components = node.inputs
+
+    # We don't support broadcasting of components, as that yields dependent (identical) values.
+    # The current logp implementation assumes all component values are independent.
+    # Broadcasting of the switch condition is fine
+    out_bcast = node.outputs[0].type.broadcastable
+    if any(comp.type.broadcastable != out_bcast for comp in components):
+        return None
+
+    # Check that `switch_cond` is not potentially measurable
+    valued_rvs = rv_map_feature.rv_values.keys()
+    if check_potential_measurability([switch_cond], valued_rvs):
+        return None
+
+    if rv_map_feature.request_measurable(components) != components:
+        return None
+
+    return [measurable_switch_mixture(switch_cond, *components)]
+
+
+@_logprob.register(MeasurableSwitchMixture)
+def logprob_switch_mixture(op, values, switch_cond, component_true, component_false, **kwargs):
+    [value] = values
+
+    return switch(
+        switch_cond,
+        _logprob_helper(component_true, value),
+        _logprob_helper(component_false, value),
+    )
 
 
 measurable_ir_rewrites_db.register(

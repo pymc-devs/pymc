@@ -448,7 +448,8 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
 
     backward_value = op.transform_elemwise.backward(value, *other_inputs)
 
-    # Some transformations, like squaring may produce multiple backward values
+    # Fail if transformation is not injective
+    # A TensorVariable is returned in 1-to-1 inversions, and a tuple in 1-to-many
     if isinstance(backward_value, tuple):
         raise NotImplementedError
 
@@ -468,6 +469,11 @@ def measurable_transform_icdf(op: MeasurableTransform, value, *inputs, **kwargs)
 
     input_icdf = _icdf_helper(measurable_input, value)
     icdf = op.transform_elemwise.forward(input_icdf, *other_inputs)
+
+    # Fail if transformation is not injective
+    # A TensorVariable is returned in 1-to-1 inversions, and a tuple in 1-to-many
+    if isinstance(op.transform_elemwise.backward(icdf, *other_inputs), tuple):
+        raise NotImplementedError
 
     return icdf
 
@@ -958,8 +964,10 @@ class SimplexTransform(RVTransform):
     name = "simplex"
 
     def forward(self, value, *inputs):
+        value = pt.as_tensor(value)
         log_value = pt.log(value)
-        shift = pt.sum(log_value, -1, keepdims=True) / value.shape[-1]
+        N = value.shape[-1].astype(value.dtype)
+        shift = pt.sum(log_value, -1, keepdims=True) / N
         return log_value[..., :-1] - shift
 
     def backward(self, value, *inputs):
@@ -968,7 +976,9 @@ class SimplexTransform(RVTransform):
         return exp_value_max / pt.sum(exp_value_max, -1, keepdims=True)
 
     def log_jac_det(self, value, *inputs):
+        value = pt.as_tensor(value)
         N = value.shape[-1] + 1
+        N = N.astype(value.dtype)
         sum_value = pt.sum(value, -1, keepdims=True)
         value_sum_expanded = value + sum_value
         value_sum_expanded = pt.concatenate([value_sum_expanded, pt.zeros(sum_value.shape)], -1)
