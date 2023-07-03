@@ -6,7 +6,8 @@ Order_Statistics
 Introduction
 ------------
 
-Users can derive the nth Order Statistic using PyMC for their custom DIstributions and the logarithmic probablity related to them.
+In statistics, the kth order statistic of a statistical sample is equal to its kth-smallest value.
+In this section, we'll tackle how users can find the Logarithmic probability corresponding to the nth order statistic (maximum value) using PyMC for their own Custom distributions.
 
 In PyMC users can derive their own custom distributions. Custom distribution refers to the ability to define and use probability distributions that are not included in the standard set of distributions provided.
 While PyMC provides a wide range of common probability distributions (e.g., Normal, Bernoulli, etc.), there may be cases where you need to use a distribution that is not available by default. In such cases, you can create your own custom distribution using the pm.DensityDist class provided by PyMC.

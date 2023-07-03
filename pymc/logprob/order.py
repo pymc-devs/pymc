@@ -55,7 +55,7 @@ from pymc.logprob.rewriting import measurable_ir_rewrites_db
 
 
 class MeasurableMax(Max):
-    """A placeholder used to specify a log-likelihood for a cmax sub-graph."""
+    """A placeholder used to specify a log-likelihood for a max sub-graph."""
 
 
 MeasurableVariable.register(MeasurableMax)
@@ -79,7 +79,7 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Tens
     if not isinstance(base_var.owner.op, RandomVariable):
         return None
 
-    # univariate iid test which also rules out other distributions
+    # univariate i.i.d. test which also rules out other distributions
     if isinstance(base_var.owner.op, RandomVariable):
         for params in base_var.owner.inputs[3:]:
             if params.type.ndim != 0:
@@ -125,7 +125,10 @@ def max_logprob(op, values, base_rv, **kwargs):
 
     Examples
     --------
-    It is often desirable to find the Maximum from the distribution of random variables.
+    It is often desirable to find the log-probability of the maximum of i.i.d. random variables.
+
+    The "max of i.i.d. random variables" refers to finding the maximum value among a collection of random variables that are independent and identically distributed.
+    The example below illustrates how to find the Maximum from the distribution of random variables.
 
     .. code-block:: python
 
@@ -140,7 +143,7 @@ def max_logprob(op, values, base_rv, **kwargs):
         print(x_max.eval())
         # 1.087237592696084
 
-    It is only but natural that one might expect to derive the logarithmic probability corresponding to the Max operation.
+    The log-probability of the maximum of i.i.d. random variables is a measure of the likelihood of observing a specific maximum value in a set of independent and identically distributed random variables.
 
     The formula that we use here is :
         \ln(f_{(n)}(x)) = \ln(n) + (n-1) \ln(F(x)) + \ln(f(x))
@@ -182,11 +185,13 @@ def max_logprob(op, values, base_rv, **kwargs):
         x_max_value = pt.vector("x_max_value")
         x_max_logprob = logp(x_max, x_max_value)
 
-    The above code gives a Runtime error stating logprob method was not implemented as x in this case is a Non random variable distribution.
+    The above code gives a Runtime error stating logprob method was not implemented as x in this case is not a pure random variable.
+    A pure random variable in PyMC represents an unknown quantity in a Bayesian model and is associated with a prior distribution that is combined with the likelihood of observed data to obtain the posterior distribution through Bayesian inference
 
-    We only consider independent and identically distributed random variables.
+    We assume only univariate distributions as for multivariate variables, the concept of ordering is ambiguous since a "depth function" is required .
+
+    We only consider independent and identically distributed random variables, for now.
     In probability theory and statistics, a collection of random variables is independent and identically distributed if each random variable has the same probability distribution as the others and all are mutually independent.
-    Hence the logp method fails for non-ids.
 
     .. code-block:: python
 
@@ -201,7 +206,8 @@ def max_logprob(op, values, base_rv, **kwargs):
 
     The above code gives a Runtime error stating logprob method was not implemented as x in this case is a Non-iid distribution.
 
-    Note: We assume a very fluid definition of iid here.We assume only univariate distributions to be iids which rejects any multivariate distribution even though it might be iid by definition.
+    Note: We assume a very fluid definition of i.i.d. here. We say that an RV belongs to an i.i.d. if that RVs do not have different stochastic ancestors.
+
 
     """
     (value,) = values
