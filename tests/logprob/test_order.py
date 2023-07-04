@@ -39,7 +39,6 @@ import re
 import numpy as np
 import pytensor.tensor as pt
 import pytest
-import scipy.stats as st
 
 import pymc as pm
 
@@ -58,11 +57,16 @@ def test_max():
     assert_no_rvs(x_max_logprob)
 
 
-def test_axis_max():
+@pytest.mark.parametrize(
+    "x, axis",
+    [
+        (pt.random.normal(0, 1), -1),
+        (pt.random.normal(0, 1), None),
+    ],
+)
+def test_axis_max(x, axis):
     """Test whether the rewrite takes into account ```None``` axis"""
-    x = pt.random.normal(0, 1)
-    x.name = "x"
-    x_max = pt.max(x, axis=None)
+    x_max = pt.max(x, axis)
     x_max_value = pt.vector("x_max_value")
     x_max_logprob = logp(x_max, x_max_value)
 
@@ -114,15 +118,10 @@ def test_non_supp_axis_max():
     """Test whether the logprob for ```pt.max``` for unsupported axis is rejected correctly"""
     x = pt.random.normal(0, 1, size=(3, 3))
     x.name = "x"
-    x_max_none = pt.max(x, axis=None)
-    x_max_value = pt.vector("x_max_value")
-    x_max_logprob = logp(x_max_none, x_max_value)
-
     x_max = pt.max(x, axis=-1)
+    x_max_value = pt.vector("x_max_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_max, x_max_value)
-
-    assert_no_rvs(x_max_logprob)
 
 
 def test_max_logprob():

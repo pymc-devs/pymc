@@ -21,11 +21,3 @@ Conditional probability
 
    conditional_logp
    transformed_conditional_logp
-
-Logarithmic probability
------------------------
-
-.. toctree::
-   :maxdepth: 2
-
-   order_stats
