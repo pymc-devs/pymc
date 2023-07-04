@@ -418,7 +418,7 @@ def construct_ir_fgraph(
     For instance, some `Op`s will be lifted through `MeasurableVariable`\s in
     this IR, and the resulting graphs will not be computationally sound,
     because they wouldn't produce independent samples when the original graph
-    would.  See https://github.com/pytensor-devs/aeppl/pull/78.
+    would.  See https://github.com/aesara-devs/aeppl/pull/78.
 
     Returns
     -------

@@ -701,7 +701,7 @@ class TestDiracDelta:
 
         @pytest.mark.parametrize("floatX", ["float32", "float64"])
         @pytest.mark.xfail(
-            sys.platform == "win32", reason="https://github.com/pytensor-devs/pytensor/issues/871"
+            sys.platform == "win32", reason="https://github.com/aesara-devs/aesara/issues/871"
         )
         def test_dtype(self, floatX):
             with pytensor.config.change_flags(floatX=floatX):
