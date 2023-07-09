@@ -75,18 +75,17 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Tens
     if base_var.owner is None:
         return None
 
-    # NonRVS must be rejected
+    # Non-RVS must be rejected
     if not isinstance(base_var.owner.op, RandomVariable):
         return None
 
     # univariate i.i.d. test which also rules out other distributions
-    if isinstance(base_var.owner.op, RandomVariable):
-        for params in base_var.owner.inputs[3:]:
-            if params.type.ndim != 0:
-                return None
+    for params in base_var.owner.inputs[3:]:
+        if params.type.ndim != 0:
+            return None
 
-    if not rv_map_feature.request_measurable(node.inputs):
-        return None
+    # if not rv_map_feature.request_measurable(node.inputs):
+    #     return None
 
     # Check whether axis is supported or not
     axis = set(node.op.axis)

@@ -43,18 +43,8 @@ import pytest
 import pymc as pm
 
 from pymc import logp
+from pymc.logprob import conditional_logp
 from pymc.testing import assert_no_rvs
-
-
-def test_max():
-    """Test whether the logprob for ```pt.max``` is implemented"""
-    x = pt.random.normal(0, 1, size=(3,))
-    x.name = "x"
-    x_max = pt.max(x, axis=-1)
-    x_max_value = pt.vector("x_max_value")
-    x_max_logprob = logp(x_max, x_max_value)
-
-    assert_no_rvs(x_max_logprob)
 
 
 @pytest.mark.parametrize(
@@ -70,11 +60,9 @@ def test_axis_max(x, axis):
     x_max_value = pt.vector("x_max_value")
     x_max_logprob = logp(x_max, x_max_value)
 
-    assert_no_rvs(x_max_logprob)
-
 
 def test_argmax():
-    """Test whether the logprob for ```pt.argmax``` is rejected correctly"""
+    """Test whether the logprob for ```pt.argmax``` is correctly rejected"""
     x = pt.random.normal(0, 1, size=(3,))
     x.name = "x"
     x_max = pt.argmax(x, axis=-1)
@@ -85,7 +73,7 @@ def test_argmax():
 
 
 def test_max_non_iid_fails():
-    """Test whether the logprob for ```pt.max``` for non i.i.d is rejected correctly"""
+    """Test whether the logprob for ```pt.max``` for non i.i.d is correctly rejected"""
     x = pm.Normal.dist([0, 1, 2, 3, 4], 1, shape=(5,))
     x.name = "x"
     x_max = pt.max(x, axis=-1)
@@ -95,7 +83,7 @@ def test_max_non_iid_fails():
 
 
 def test_max_non_rv_fails():
-    """Test whether the logprob for ```pt.max``` for non RVs is rejected correctly"""
+    """Test whether the logprob for ```pt.max``` for non-RVs is correctly rejected"""
     x = pt.exp(pt.random.beta(0, 1, size=(3,)))
     x.name = "x"
     x_max = pt.max(x, axis=-1)
@@ -105,7 +93,7 @@ def test_max_non_rv_fails():
 
 
 def test_max_categorical():
-    """Test whether the logprob for ```pt.max``` for unsupported distributions is rejected correctly"""
+    """Test whether the logprob for ```pt.max``` for unsupported distributions is correctly rejected"""
     x = pm.Categorical.dist([1, 1, 1, 1], shape=(5,))
     x.name = "x"
     x_max = pt.max(x, axis=-1)
@@ -115,7 +103,7 @@ def test_max_categorical():
 
 
 def test_non_supp_axis_max():
-    """Test whether the logprob for ```pt.max``` for unsupported axis is rejected correctly"""
+    """Test whether the logprob for ```pt.max``` for unsupported axis is correctly rejected"""
     x = pt.random.normal(0, 1, size=(3, 3))
     x.name = "x"
     x_max = pt.max(x, axis=-1)
@@ -124,22 +112,34 @@ def test_non_supp_axis_max():
         x_max_logprob = logp(x_max, x_max_value)
 
 
-def test_max_logprob():
+@pytest.mark.parametrize(
+    "n, value",
+    [
+        (3, 0.85),
+        (3, 0.01),
+        (2, 0.2),
+        (4, 0.5),
+        (11, 0.9),  # interestingly this fails
+    ],
+)
+def test_max_logprob(n, value):
     """Test whether the logprob for ```pt.max``` produces the corrected
 
     The fact that order statistics of i.i.d. uniform RVs ~ Beta is used here:
         U_1, \\dots, U_n \\stackrel{\text{i.i.d.}}{\\sim} \text{Uniform}(0, 1) \\Rightarrow U_{(k)} \\sim \text{Beta}(k, n + 1- k)
     for all 1<=k<=n
     """
-    x = pt.random.uniform(0, 1, size=(3,))
+    x = pt.random.uniform(0, 1, size=(n,))
     x.name = "x"
     x_max = pt.max(x, axis=-1)
     x_max_value = pt.scalar("x_max_value")
     x_max_logprob = logp(x_max, x_max_value)
 
-    test_value = 0.85  # or a vector of your choice
+    assert_no_rvs(x_max_logprob)
 
-    beta_rv = pt.random.beta(3, 1, name="beta")
+    test_value = value
+
+    beta_rv = pt.random.beta(n, 1, name="beta")
     beta_vv = beta_rv.clone()
     beta_rv_logprob = logp(beta_rv, beta_vv)
 
