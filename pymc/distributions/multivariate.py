@@ -2078,7 +2078,7 @@ class CARRV(RandomVariable):
         Journal of the Royal Statistical Society Series B, Royal Statistical Society,
         vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288
         """
-        if np.all(alpha >= 1) or np.all(alpha <= -1):
+        if np.any(alpha >= 1) or np.any(alpha <= -1):
             raise ValueError("the domain of alpha is: -1 < alpha < 1")
 
         if not scipy.sparse.issparse(W):

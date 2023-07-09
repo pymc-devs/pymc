@@ -836,7 +836,7 @@ def test_car_matrix_check(sparse):
 
 
 @pytest.mark.parametrize("alpha", [1, -1])
-def test_car_alpha(alpha):
+def test_car_alpha_bounds(alpha):
     """
     Tests the check that -1 < alpha < 1
     """
@@ -845,11 +845,15 @@ def test_car_alpha(alpha):
 
     tau = 1
     mu = np.array([0, 0, 0])
+    values = np.array([-0.5, 0, 0.5])
 
     car_dist = pm.CAR.dist(W=W, alpha=alpha, mu=mu, tau=tau)
 
     with pytest.raises(ValueError, match="the domain of alpha is: -1 < alpha < 1"):
         pm.draw(car_dist)
+
+    with pytest.raises(ValueError, match="-1 < alpha < 1, tau > 0"):
+        pm.logp(car_dist, values).eval()
 
 
 class TestLKJCholeskCov:
