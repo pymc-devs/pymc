@@ -36,6 +36,7 @@
 
 
 import numpy as np
+import pytensor
 
 from pytensor import tensor as pt
 from scipy import stats as stats
@@ -124,3 +125,15 @@ def meta_info_helper(rv, vv):
     measure_type = node.op.measure_type
 
     return ndim_supp, supp_axes, measure_type
+
+
+def get_measurable_meta_infos(
+    base_op,
+):
+    # if not isinstance(base_op, MeasurableVariable):
+    #     raise TypeError("base_op must be a RandomVariable or MeasurableVariable")
+
+    # if isinstance(base_op, RandomVariable):
+    ndim_supp = base_op.ndim_supp
+    supp_axes = tuple(range(-ndim_supp, 0))
+    return base_op.ndim_supp, supp_axes

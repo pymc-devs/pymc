@@ -50,7 +50,11 @@ from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.logprob.tensor import naive_bcast_rv_lift
 from pymc.testing import assert_no_rvs
-from tests.logprob.utils import meta_info_helper, scipy_logprob
+from tests.logprob.utils import (
+    get_measurable_meta_infos,
+    meta_info_helper,
+    scipy_logprob,
+)
 
 
 def test_naive_bcast_rv_lift():
@@ -497,12 +501,16 @@ def test_measurable_dimshuffle(ds_order, multivariate):
         (2, "x", 0),  # Swap, expand and drop
     ],
 )
-@pytest.mark.parametrize("multivariate", [True])
+@pytest.mark.parametrize("multivariate", (False, True))
 def test_meta_measurable_dimshuffle(ds_order, multivariate):
     if multivariate:
         base_rv = pt.random.dirichlet([1, 2, 3], size=(2, 1))
+        ds_rv = base_rv.dimshuffle(ds_order)
+    else:
+        base_rv = pt.random.beta(1, 2, size=(2, 1, 3))
+        base_rv_1 = pt.exp(base_rv)
+        ds_rv = base_rv_1.dimshuffle(ds_order)
 
-    ds_rv = base_rv.dimshuffle(ds_order)
     base_vv = base_rv.clone()
     ds_vv = ds_rv.clone()
 
@@ -517,6 +525,53 @@ def test_meta_measurable_dimshuffle(ds_order, multivariate):
     assert supp_axes_base == supp_axes
 
     assert measure_type_base == measure_type
+
+
+def test_meta_unmeargeable_dimshuffles():
+    # Test that graphs with DimShuffles that cannot be lifted/merged fail
+
+    # Initial support axis is at axis=-1
+    x = pt.random.dirichlet(
+        np.ones((3,)),
+        size=(4, 2),
+    )
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(x.owner.op)
+    # pytensor.dprint(x.owner.inputs[0])
+    # print(ndim_supp_base)
+    # print(supp_axes_base)
+    # print(measure_type_base)
+    # print(x.shape)
+
+    # Support axis is now at axis=-2
+    y = x.dimshuffle((0, 2, 1))
+    y_vv = y.clone()
+    ndim_supp, supp_axes, measure_type = meta_info_helper(y, y_vv)
+    pytensor.dprint(y.owner.outputs[0])
+    # print(ndim_supp)
+    # print(supp_axes)
+    # print(measure_type)
+    # print(y.shape)
+    # Downstream dimshuffle will not be lifted through cumsum. If it ever is,
+    # we will need a different measurable Op example
+    z = pt.cumsum(y, axis=-2)
+    z_vv = z.clone()
+    ndim_supp_base, supp_axes_base, measure_type_base = meta_info_helper(z, z_vv)
+    # print(ndim_supp_base)
+    # print(supp_axes_base)
+    # print(measure_type_base)
+    # print(z.shape)
+    # Support axis is now at axis=-3
+    w = z.dimshuffle((1, 0, 2))
+    w_vv = w.clone()
+    ndim_supp_base, supp_axes_base, measure_type_base = meta_info_helper(w, w_vv)
+    # print(ndim_supp_base)
+    # print(supp_axes_base)
+    # print(measure_type_base)
+    # print(w.shape)
+    # TODO: Check that logp is correct if this type of graphs is ever supported
+    with pytest.raises(RuntimeError, match="could not be derived"):
+        conditional_logp({w: w_vv})
+    assert 0
 
 
 def test_unmeargeable_dimshuffles():

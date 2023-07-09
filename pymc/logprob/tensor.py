@@ -304,17 +304,17 @@ def find_measurable_dimshuffles(fgraph, node) -> Optional[list[TensorVariable]]:
     # lifted towards the base RandomVariable.
     # TODO: If we include the support axis as meta information in each
     # intermediate MeasurableVariable, we can lift this restriction.
-    if not isinstance(base_var.owner.op, RandomVariable):
-        return None  # pragma: no cover
+    # if not isinstance(base_var.owner.op, RandomVariable):
+    #     return None  # pragma: no cover
 
-    ndim_supp, supp_axis, d_type = get_measurable_meta_info(base_var.owner.op)
+    ndim_supp, supp_axis, measure_type = get_measurable_meta_info(base_var.owner.op)
 
     measurable_dimshuffle = MeasurableDimShuffle(
         node.op.input_broadcastable,
         node.op.new_order,
         ndim_supp=ndim_supp,
         supp_axes=supp_axis,
-        measure_type=d_type,
+        measure_type=measure_type,
     )(base_var)
 
     return [measurable_dimshuffle]
