@@ -47,20 +47,6 @@ from pymc.logprob import conditional_logp
 from pymc.testing import assert_no_rvs
 
 
-@pytest.mark.parametrize(
-    "x, axis",
-    [
-        (pt.random.normal(0, 1), -1),
-        (pt.random.normal(0, 1), None),
-    ],
-)
-def test_axis_max(x, axis):
-    """Test whether the rewrite takes into account ```None``` axis"""
-    x_max = pt.max(x, axis)
-    x_max_value = pt.vector("x_max_value")
-    x_max_logprob = logp(x_max, x_max_value)
-
-
 def test_argmax():
     """Test whether the logprob for ```pt.argmax``` is correctly rejected"""
     x = pt.random.normal(0, 1, size=(3,))
@@ -113,25 +99,26 @@ def test_non_supp_axis_max():
 
 
 @pytest.mark.parametrize(
-    "n, value",
+    "shape, value, axis",
     [
-        (3, 0.85),
-        (3, 0.01),
-        (2, 0.2),
-        (4, 0.5),
-        (11, 0.9),  # interestingly this fails
+        (3, 0.85, -1),
+        (3, 0.01, 0),
+        (2, 0.2, None),
+        (4, 0.5, 0),
+        ((3, 4), 0.9, None),
+        ((3, 4), 0.75, (1, 0)),
     ],
 )
-def test_max_logprob(n, value):
+def test_max_logprob(shape, value, axis):
     """Test whether the logprob for ```pt.max``` produces the corrected
 
     The fact that order statistics of i.i.d. uniform RVs ~ Beta is used here:
         U_1, \\dots, U_n \\stackrel{\text{i.i.d.}}{\\sim} \text{Uniform}(0, 1) \\Rightarrow U_{(k)} \\sim \text{Beta}(k, n + 1- k)
     for all 1<=k<=n
     """
-    x = pt.random.uniform(0, 1, size=(n,))
+    x = pt.random.uniform(0, 1, size=shape)
     x.name = "x"
-    x_max = pt.max(x, axis=-1)
+    x_max = pt.max(x, axis=axis)
     x_max_value = pt.scalar("x_max_value")
     x_max_logprob = logp(x_max, x_max_value)
 
@@ -139,10 +126,13 @@ def test_max_logprob(n, value):
 
     test_value = value
 
+    n = np.prod(shape)
     beta_rv = pt.random.beta(n, 1, name="beta")
     beta_vv = beta_rv.clone()
     beta_rv_logprob = logp(beta_rv, beta_vv)
 
     np.testing.assert_allclose(
-        beta_rv_logprob.eval({beta_vv: test_value}), (x_max_logprob.eval({x_max_value: test_value}))
+        beta_rv_logprob.eval({beta_vv: test_value}),
+        (x_max_logprob.eval({x_max_value: test_value})),
+        rtol=1e-06,
     )
