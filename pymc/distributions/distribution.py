@@ -52,7 +52,7 @@ from pymc.exceptions import BlockModelAccessError
 from pymc.logprob.abstract import MeasurableVariable, _icdf, _logcdf, _logprob
 from pymc.logprob.basic import logp
 from pymc.logprob.rewriting import logprob_rewrites_db
-from pymc.model import BlockModelAccess
+from pymc.model import new_or_existing_block_model_access
 from pymc.printing import str_for_dist
 from pymc.pytensorf import collect_default_updates, convert_observed_data, floatX
 from pymc.util import UNSET, _add_future_warning_tag
@@ -645,7 +645,7 @@ class _CustomSymbolicDist(Distribution):
         size = normalize_size_param(size)
         dummy_size_param = size.type()
         dummy_dist_params = [dist_param.type() for dist_param in dist_params]
-        with BlockModelAccess(
+        with new_or_existing_block_model_access(
             error_msg_on_access="Model variables cannot be created in the dist function. Use the `.dist` API"
         ):
             dummy_rv = dist(*dummy_dist_params, dummy_size_param)
@@ -1048,7 +1048,7 @@ class CustomDist:
         # Try calling random with symbolic inputs
         try:
             size = normalize_size_param(None)
-            with BlockModelAccess(
+            with new_or_existing_block_model_access(
                 error_msg_on_access="Model variables cannot be created in the random function. Use the `.dist` API to create such variables."
             ):
                 out = random(*dist_params, size)

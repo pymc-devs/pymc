@@ -144,7 +144,7 @@ class ContextMeta(type):
             cls._context_class = context_class
         super().__init__(name, bases, nmspc)
 
-    def get_context(cls, error_if_none=True) -> Optional[T]:
+    def get_context(cls, error_if_none=True, allow_block_model_access=False) -> Optional[T]:
         """Return the most recently pushed context object of type ``cls``
         on the stack, or ``None``. If ``error_if_none`` is True (default),
         raise a ``TypeError`` instead of returning ``None``."""
@@ -156,7 +156,7 @@ class ContextMeta(type):
             if error_if_none:
                 raise TypeError(f"No {cls} on context stack")
             return None
-        if isinstance(candidate, BlockModelAccess):
+        if isinstance(candidate, BlockModelAccess) and not allow_block_model_access:
             raise BlockModelAccessError(candidate.error_msg_on_access)
         return candidate
 
@@ -1890,6 +1890,14 @@ class BlockModelAccess(Model):
 
     def __init__(self, *args, error_msg_on_access="Model access is blocked", **kwargs):
         self.error_msg_on_access = error_msg_on_access
+
+
+def new_or_existing_block_model_access(*args, **kwargs):
+    """Return a BlockModelAccess in the stack or create a new one if none is found."""
+    model = Model.get_context(error_if_none=False, allow_block_model_access=True)
+    if isinstance(model, BlockModelAccess):
+        return model
+    return BlockModelAccess(*args, **kwargs)
 
 
 def set_data(new_data, model=None, *, coords=None):
