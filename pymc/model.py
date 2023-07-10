@@ -50,6 +50,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.sharedvar import ScalarSharedVariable
 from pytensor.tensor.var import TensorConstant, TensorVariable
+from typing_extensions import Self
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, is_minibatch
@@ -213,7 +214,9 @@ class ContextMeta(type):
     # Initialize object in its own context...
     # Merged from InitContextMeta in the original.
     def __call__(cls, *args, **kwargs):
-        instance = cls.__new__(cls, *args, **kwargs)
+        # We type hint Model here so type checkers understand that Model is a context manager.
+        # This metaclass is only used for Model, so this is safe to do. See #6809 for more info.
+        instance: "Model" = cls.__new__(cls, *args, **kwargs)
         with instance:  # appends context
             instance.__init__(*args, **kwargs)
         return instance
@@ -478,10 +481,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     if TYPE_CHECKING:
 
-        def __enter__(self: "Model") -> "Model":
+        def __enter__(self: Self) -> Self:
             ...
 
-        def __exit__(self: "Model", *exc: Any) -> bool:
+        def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
             ...
 
     def __new__(cls, *args, **kwargs):
