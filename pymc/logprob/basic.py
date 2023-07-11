@@ -439,7 +439,7 @@ def conditional_logp(
     ``sigma2_rv``.
 
     If we specify a value variable for ``sigma2_rv``, i.e.
-    ``s_vv = pt.scalar("s2")``, then ``conditional_logp({Y_rv: y_vv, sigma2_rv: s_vv})``
+    ``s2_vv = pt.scalar("s2")``, then ``conditional_logp({Y_rv: y_vv, sigma2_rv: s2_vv})``
     yields the conditional log-probabilities of the two variables.
     The sum of the two terms gives their joint log-probability.
 
