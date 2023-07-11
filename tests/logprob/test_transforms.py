@@ -1081,9 +1081,16 @@ def test_absolute_rv_transform(test_val):
         (pt.arcsinh, ArcsinhTransform()),
         (pt.arccosh, ArccoshTransform()),
         (pt.arctanh, ArctanhTransform()),
+        (pt.exp2, ExpTransform(base=2)),
+        (pt.expm1, ExpTransform(m=True)),
+        (pt.log2, LogTransform(base=2)),
+        (pt.log10, LogTransform(base=10)),
+        (pt.log1p, LogTransform()),
+        (pt.log1mexp, LogTransform()),
+        (pt.log1pexp, LogTransform()),
     ],
 )
-def test_erf_logp(pt_transform, transform):
+def test_transform_logp(pt_transform, transform):
     base_rv = pt.random.normal(
         0.5, 1, name="base_rv"
     )  # Something not centered around 0 is usually better
