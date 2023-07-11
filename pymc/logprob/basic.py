@@ -435,7 +435,7 @@ def conditional_logp(
 
     If we create a value variable for ``Y_rv``, i.e. ``y_vv = pt.scalar("y")``,
     the graph of ``conditional_logp({Y_rv: y_vv})`` is equivalent to the
-    conditional log-probability :math:`\log p_{Y \mid s^2}(y \mid s^2)`, with a stochastic
+    conditional log-probability :math:`\log p_{Y \mid \sigma^2}(y \mid s^2)`, with a stochastic
     ``sigma2_rv``.
 
     If we specify a value variable for ``sigma2_rv``, i.e.
@@ -445,8 +445,8 @@ def conditional_logp(
 
     .. math::
 
-        \log p_{Y,s^2}(y, \sigma^2) =
-            \log p_{Y \mid s^2}(y \mid \sigma^2) + \log p_{s^2}(\sigma^2)
+        \log p_{Y, \sigma^2}(y, s^2) =
+            \log p_{Y \mid \sigma^2}(y \mid s^2) + \log p_{\sigma^2}(s^2)
 
 
     Parameters
