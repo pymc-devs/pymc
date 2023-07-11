@@ -431,7 +431,7 @@ def conditional_logp(
     .. math::
 
         \sigma^2 \sim& \operatorname{InvGamma}(0.5, 0.5) \\
-        Y \sim& \operatorname{N}(0, s)
+        Y \sim& \operatorname{N}(0, \sigma^2)
 
     If we create a value variable for ``Y_rv``, i.e. ``y_vv = pt.scalar("y")``,
     the graph of ``conditional_logp({Y_rv: y_vv})`` is equivalent to the
