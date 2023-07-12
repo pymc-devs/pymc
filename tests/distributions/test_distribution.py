@@ -87,7 +87,7 @@ class TestBugfixes:
         npt.assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), -np.log(2) * 10)
 
         with pm.Model(check_bounds=False) as m:
-            x = pm.DiscreteUniform("x", 0, 1, size=10)
+            x = pm.DiscreteUniform("x", 0, 1, size=10, transform=None)
         npt.assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), -np.log(2) * 10)
 
         with pm.Model(check_bounds=False) as m:

@@ -48,6 +48,7 @@ from pymc.distributions.shape_utils import (
     rv_size_is_none,
     shape_from_dims,
 )
+from pymc.distributions.transforms import DiscreteRVTransform
 from pymc.exceptions import BlockModelAccessError
 from pymc.logprob.abstract import MeasurableVariable, _icdf, _logcdf, _logprob
 from pymc.logprob.basic import logp
@@ -436,8 +437,12 @@ class Discrete(Distribution):
     """Base class for discrete distributions"""
 
     def __new__(cls, name, *args, **kwargs):
-        if kwargs.get("transform", None):
-            raise ValueError("Transformations for discrete distributions")
+        if kwargs.get("transform", None) is not None and not isinstance(
+            kwargs["transform"], DiscreteRVTransform
+        ):
+            tr = kwargs["transform"]
+            tr_name = getattr(tr, "name", tr)
+            raise ValueError(f"{tr_name} transformation cannot be used with discrete distribution.")
 
         return super().__new__(cls, name, *args, **kwargs)
 

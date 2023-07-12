@@ -1657,3 +1657,20 @@ def test_model_logp_fast_compile():
 
     with pytensor.config.change_flags(mode="FAST_COMPILE"):
         assert m.point_logps() == {"a": -1.5}
+
+
+def test_structural_discrete_rv():
+    """Test that default discrete transforms avoid structural errors in logp graph."""
+
+    with pm.Model() as safe_m:
+        x = pm.Categorical("x", p=[0.5, 0.5, 0.5])
+        pot = pm.Potential("pot", pt.constant([0, 0, 0])[x])
+
+    assert safe_m.compile_logp(pot)({"x_dinterval__": 10}) == 0
+
+    with pm.Model() as unsafe_m:
+        x = pm.Categorical("x", p=[0.5, 0.5], transform=None)
+        pot = pm.Potential("pot", pt.constant([0, 0])[x])
+
+    with pytest.raises(IndexError, match="index out of bounds"):
+        unsafe_m.compile_logp(pot)({"x": 10})
