@@ -17,7 +17,7 @@ dependencies:
 - python-graphviz
 - python=3.7
 - recommonmark>=0.4
-- scipy>=1.4.1,<1.8.0
+- scipy>=1.4.1
 - sphinx-autobuild>=0.7
 - sphinx>=1.5
 - watermark
