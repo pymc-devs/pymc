@@ -508,3 +508,60 @@ def incomplete_beta(a, b, value):
         stacklevel=2,
     )
     return pt.betainc(a, b, value)
+
+
+def tri_gamma_approx(x):
+    """ Approximation to the trigamma function (derivative of digamma). This function is in 
+    PyTensor, but doesn't currently have a derivative implemented.  Until that's in this is 
+    a series expansion from Wikipedia: https://en.wikipedia.org/wiki/Trigamma_function
+    """
+    return (
+        1 / x
+        + (1 / (2 * x**2))
+        + (1 / (6 * x**3))
+        - (1 / (30 * x**5))
+        + (1 / (42 * x**7))
+        - (1 / (30 * x**9))
+        + (5 / (66 * x**11))
+        - (691 / (2730 * x**13))
+        + (7 / (6 * x**15))
+    )
+
+
+def pc_prior_studentt_kld_dist(nu):
+    """ Calculates the distance in terms of sqrt(2KLD) between the base model, Gaussian, and the
+    more complex model, Student t.
+    """
+    return pt.sqrt(
+        1 + pt.log(2 * pt.reciprocal(nu - 2))
+        + 2 * pt.gammaln((nu + 1) / 2)
+        - 2 * pt.gammaln(nu / 2)
+        - (nu + 1) * (pt.digamma((nu + 1) / 2) - pt.digamma(nu / 2))
+    )
+
+
+def pc_prior_studentt_logp(nu, lam):
+    """ Log-probability for the PC prior of the Student-t degrees of freedom parameter.
+    """
+    return (
+        pt.log(lam)
+        + pt.log((1 / (nu - 2)) + ((nu + 1) / 2)
+            * (tri_gamma_approx((nu + 1) / 2) - tri_gamma_approx(nu / 2)))
+        - pt.log(4 * pc_prior_studentt_kld_dist(nu))
+        - lam * pc_prior_studentt_kld_dist(nu)
+        + pt.log(2)
+    )
+
+
+def _make_pct_inv_func():
+    """ Numerically calculate the inverse of the PC Student-t distance function.
+    """
+    nu = np.concatenate((
+        np.linspace(2.0 + 1e-6, 2.4, 2000),
+        np.linspace(2.4 + 1e-4, 4000, 10000)
+    ))
+    return UnivariateSpline(
+        pc_prior_studentt_kld_dist(nu).eval()[::-1], nu[::-1], ext=3, k=3, s=0,
+    )
+
+pc_prior_studentt_kld_dist_inv_op = SplineWrapper(_make_pct_inv_func())

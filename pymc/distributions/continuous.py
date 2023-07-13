@@ -89,6 +89,9 @@ from pymc.distributions.dist_math import (
     logpow,
     normal_lccdf,
     normal_lcdf,
+    pc_prior_studentt_kld_dist,
+    pc_prior_studentt_logp,
+    pc_prior_studentt_kld_dist_inv_op,
     zvalue,
 )
 from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous
@@ -3972,4 +3975,70 @@ class PolyaGamma(PositiveContinuous):
             res,
             h > 0,
             msg="h > 0",
+        )
+
+
+class PCPriorStudentT_dof_RV(RandomVariable):
+    name = "pc_prior_studentt_dof"
+    ndim_supp = 0
+    ndims_params = [0]
+    dtype = "floatX"
+    _print_name = ("PCTDoF", "\\operatorname{PCPriorStudentT_dof}")
+
+    @classmethod
+    def rng_fn(cls, rng, lam, size=None) -> np.ndarray:
+        return pc_prior_studentt_kld_dist_inv_op.spline(
+                rng.exponential(scale=1.0 / lam, size=size)
+        )
+
+
+pc_prior_studentt_dof = PCPriorStudentT_dof_RV()
+
+
+class PCPriorStudentT_dof(PositiveContinuous):
+
+    rv_op = pc_prior_studentt_dof
+
+    @classmethod
+    def dist(
+        cls,
+        alpha: Optional[DIST_PARAMETER_TYPES] = None,
+        U: Optional[DIST_PARAMETER_TYPES] = None,
+        lam: Optional[DIST_PARAMETER_TYPES] = None,
+        *args,
+        **kwargs
+    ):
+        lam = cls.get_lam(alpha, U, lam)
+        return super().dist([lam], *args, **kwargs)
+
+    def moment(rv, size, lam):
+        mean = pc_prior_studentt_kld_dist_inv_op(1.0 / lam)
+        if not rv_size_is_none(size):
+            mean = pt.full(size, mean)
+        return mean
+
+
+    @classmethod
+    def get_lam(cls, alpha=None, U=None, lam=None):
+        if (alpha is not None) and (U is not None):
+            return -np.log(alpha) / pc_prior_studentt_kld_dist(U)
+        elif (lam is not None):
+            return lam
+        else:
+            raise ValueError(
+                "Incompatible parameterization. Either use alpha and U, or lam to specify the "
+                "distribution."
+            )
+
+    def logp(value, lam):
+        res = pc_prior_studentt_logp(value, lam)
+        res = pt.switch(
+            pt.lt(value, 2 + 1e-6), # 2 + 1e-6 smallest value for nu
+            -np.inf,
+            res,
+        )
+        return check_parameters(
+            res,
+            lam > 0,
+            msg="lam > 0"
         )
