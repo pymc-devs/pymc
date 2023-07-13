@@ -964,7 +964,10 @@ class LogTransform(RVTransform):
         return pt.power(self.base, value)
 
     def log_jac_det(self, value, *inputs):
-        return value
+        if self.base == pt.exp(1):
+            return value
+        else:
+            return pt.log(pt.power(self.base, value) * pt.log(self.base))
 
 
 class ExpTransform(RVTransform):
@@ -988,7 +991,10 @@ class ExpTransform(RVTransform):
             return pt.log(value) / pt.log(self.base)
 
     def log_jac_det(self, value, *inputs):
-        return -pt.log(value) / pt.log(self.base)
+        if self.m:
+            return -pt.log(value + 1)
+        else:
+            return -pt.log(value) - pt.log(pt.log(self.base))
 
 
 class AbsTransform(RVTransform):
