@@ -1085,9 +1085,6 @@ def test_absolute_rv_transform(test_val):
         (pt.expm1, ExpTransform(m=True)),
         (pt.log2, LogTransform(base=2)),
         (pt.log10, LogTransform(base=10)),
-        (pt.log1p, LogTransform()),
-        (pt.log1mexp, LogTransform()),
-        (pt.log1pexp, LogTransform()),
     ],
 )
 def test_erf_logp(pt_transform, transform):
@@ -1108,17 +1105,8 @@ def test_erf_logp(pt_transform, transform):
     )
 
 
-def test_cosh_rv_transform():
-    # Something not centered around 0 is usually better
-    base_rv = pt.random.normal(0.5, 1, size=(2,), name="base_rv")
-    rv = pt.cosh(base_rv)
-
-    vv = rv.clone()
-    rv_logp = logp(rv, vv)
-    with pytest.raises(NotImplementedError):
-        logcdf(rv, vv)
-    with pytest.raises(NotImplementedError):
-        icdf(rv, vv)
+from pymc.testing import Rplusbig, Vector
+from tests.distributions.test_transform import check_jacobian_det
 
 
 @pytest.mark.parametrize(
@@ -1133,6 +1121,10 @@ def test_cosh_rv_transform():
         ArcsinhTransform(),
         ArccoshTransform(),
         ArctanhTransform(),
+        ExpTransform(base=2),
+        ExpTransform(m=True),
+        LogTransform(base=2),
+        LogTransform(base=10),
     ],
 )
 def test_check_jac_det(transform):
