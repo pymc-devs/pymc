@@ -599,6 +599,22 @@ class TestCustomSymbolicDist:
 
         assert pm.CustomDist.dist(dist=dist)
 
+    def test_nested_custom_dist(self):
+        """Test we can create CustomDist that creates another CustomDist"""
+
+        def dist(size=None):
+            def inner_dist(size=None):
+                return pm.Normal.dist(size=size)
+
+            inner_dist = pm.CustomDist.dist(dist=inner_dist, size=size)
+            return pt.exp(inner_dist)
+
+        rv = pm.CustomDist.dist(dist=dist)
+        np.testing.assert_allclose(
+            pm.logp(rv, 1.0).eval(),
+            pm.logp(pm.LogNormal.dist(), 1.0).eval(),
+        )
+
 
 class TestSymbolicRandomVariable:
     def test_inline(self):
@@ -701,7 +717,7 @@ class TestDiracDelta:
 
         @pytest.mark.parametrize("floatX", ["float32", "float64"])
         @pytest.mark.xfail(
-            sys.platform == "win32", reason="https://github.com/pytensor-devs/pytensor/issues/871"
+            sys.platform == "win32", reason="https://github.com/aesara-devs/aesara/issues/871"
         )
         def test_dtype(self, floatX):
             with pytensor.config.change_flags(floatX=floatX):

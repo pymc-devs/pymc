@@ -115,7 +115,7 @@ def get_jaxified_graph(
     # JAX sequential optimizer without warnings. We made sure there
     # are no mutable input variables, so we only need to check for
     # "destroyers". This should be automatically handled by PyTensor
-    # once https://github.com/pytensor-devs/pytensor/issues/637 is fixed.
+    # once https://github.com/aesara-devs/aesara/issues/637 is fixed.
     fgraph.attach_feature(
         Supervisor(
             input
