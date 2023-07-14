@@ -1413,14 +1413,32 @@ class LKJCholeskyCov:
     """
 
     def __new__(cls, name, eta, n, sd_dist, *, compute_corr=True, store_in_trace=True, **kwargs):
+        dims = kwargs.pop("dims", None)
+
+        if dims is not None:
+            # TODO: Add check for 2d dims?
+            packed_dim_name, packed_dim_value = cls._make_packed_coord_from_dims(
+                n, dims, "packed_tril"
+            )
+            cls._register_new_coords_with_model(packed_dim_name, packed_dim_value)
+            kwargs["dims"] = [packed_dim_name]
+
         packed_chol = _LKJCholeskyCov(name, eta=eta, n=n, sd_dist=sd_dist, **kwargs)
+
         if not compute_corr:
             return packed_chol
         else:
             chol, corr, stds = cls.helper_deterministics(n, packed_chol)
             if store_in_trace:
-                corr = pm.Deterministic(f"{name}_corr", corr)
-                stds = pm.Deterministic(f"{name}_stds", stds)
+                corr_triu = corr[pt.triu_indices_from(corr, k=1)]
+                corr_triu_dim_name, corr_triu_dim_value = cls._make_packed_coord_from_dims(
+                    n, dims, "corr", lower=False, k=1
+                )
+                cls._register_new_coords_with_model(corr_triu_dim_name, corr_triu_dim_value)
+
+                corr_tril = pm.Deterministic(f"{name}_corr", corr_triu, dims=corr_triu_dim_name)
+                stds = pm.Deterministic(f"{name}_stds", stds, dims=dims[0])
+
             return chol, corr, stds
 
     @classmethod
@@ -1442,6 +1460,28 @@ class LKJCholeskyCov:
         inv_stds = 1 / stds
         corr = inv_stds[None, :] * cov * inv_stds[:, None]
         return chol, corr, stds
+
+    @classmethod
+    def _make_packed_coord_from_dims(cls, n, dims, name_prefix, lower=True, k=0):
+        mod = pm.modelcontext(None)
+        chol_dims = [mod.coords[dim] for dim in dims]
+        if lower:
+            f_idx = np.tril_indices
+        else:
+            f_idx = np.triu_indices
+
+        flat_tri_idx = np.arange(n**2, dtype=int).reshape(n, n)[f_idx(n, k=k)]
+        coord_product = np.fromiter([f"{x}" for x in product(*chol_dims)], dtype="object")
+        tri_coords = coord_product[flat_tri_idx].tolist()
+
+        packed_dim_name = f"{name_prefix}_{dims[0]}"
+        return packed_dim_name, tri_coords
+
+    @classmethod
+    def _register_new_coords_with_model(cls, name, value):
+        mod = pm.modelcontext(None)
+        mod.coords[name] = value
+        mod.dim_lengths[name] = pt.TensorConstant(pt.lscalar, np.array(len(value)))
 
 
 class LKJCorrRV(RandomVariable):
