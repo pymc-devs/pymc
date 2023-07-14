@@ -2218,6 +2218,217 @@ class CAR(Continuous):
         )
 
 
+class ICARRV(RandomVariable):
+    name = "icar"
+    ndim_supp = 1
+    ndims_params = [2, 1, 1, 0, 0, 0]
+    dtype = "floatX"
+    _print_name = ("ICAR", "\\operatorname{ICAR}")
+
+    def __call__(
+        self, W, node1, node2, sigma=1, N=None, centering_strength=0.001, size=None, **kwargs
+    ):
+        return super().__call__(W, node1, node2, sigma, N, centering_strength, size=size, **kwargs)
+
+    @classmethod
+    def rng_fn(cls, rng, size, W, node1, node2, sigma, N, centering_strength):
+        raise NotImplementedError("Cannot sample from ICAR prior")
+
+
+icar = ICARRV()
+
+
+class ICAR(Continuous):
+    r"""
+    The intrinsic conditional autoregressive prior. It is primarily used to model
+    covariance between neighboring areas on large datasets. It is a special case
+    of the :class:`~pymc.CAR` distribution where alpha is set to 1.
+
+    The log probability density function is
+
+    .. math::
+        f(\\phi| W,\\sigma) =
+          -\frac{1}{2\\sigma^{2}} \\sum_{i\\sim j} (\\phi_{i} - \\phi_{j})^2 -
+          \frac{1}{2}*\frac{\\sum_{i}{\\phi_{i}}}{0.001N}^{2} - \\ln{\\sqrt{2\\pi}} -
+          \\ln{0.001N}
+
+    The first term represents the spatial covariance component. Each $\\phi_{i}$ is penalized
+    based on the square distance from each of its neighbors. The notation $i\\sim j$
+    indicates a sum over all the neighbors of $\\phi_{i}$. The last three terms are the
+    Normal log density function where the mean is zero and the standard deviation is
+    $N * 0.001$ (where N is the length of the vector $\\phi$). This component imposed the zero-sum
+    constraint by finding the sum of the vector $\\phi$ and penalizing based on its
+    distance from zero.
+
+    ========  ==========================================
+    Support   :math:`x \\in \\mathbb{R}^k` ?
+    Mean      :math:`0` ?
+    Variance  :math:`T^{-1}` ?
+    ========  ==========================================
+
+    Parameters
+    ----------
+    W : ndarray of int, optional
+        Symmetric adjacency matrix of 1s and 0s indicating adjacency between elements.
+        Must pass either W or both node1 and node2.
+
+    node1 : tensor_like of int, optional
+        The edgelist. Must be passed with node2 as well. See example below to
+        illustrate the relationship between the adjacency matrix and the edgelist.
+
+    node2 : tensor_like of int, optional
+        Must be passed with node1 as well.
+
+    sigma : scalar, default 1
+        Standard deviation of the vector of phi's. Putting a prior on sigma
+        will result in a centered parameterization. In most cases, it is
+        preferable to use a non-centered parameterization by using the default
+        value and multiplying the resulting phi's by sigma. See the example below.
+
+    centering_strength : scalar, default 0.001
+        Controls how strongly to enforce the zero-sum constraint. It sets the
+        standard deviation of a normal density function with mean zero.
+
+
+    Examples
+    --------
+    This example illustrates how to switch between centered and non-centered
+    parameterizations.
+
+    .. code-block:: python
+
+        # 4x4 adjacency matrix
+        # arranged in a square lattice
+
+        W = np.array([[0,1,0,1],
+                      [1,0,1,0],
+                      [0,1,0,1],
+                      [1,0,1,0]])
+
+        # centered parameterization
+
+        with pm.Model():
+            sigma = pm.Exponential('sigma',1)
+            phi = pm.ICAR('phi',W=W,sigma=sigma)
+
+            mu = phi
+
+        # non-centered parameterization
+
+        with pm.Model():
+            sigma = pm.Exponential('sigma',1)
+            phi = pm.ICAR('phi',W=W)
+
+            mu = sigma * phi
+
+    This example illustrates how to switch between adjacency matrices and
+    edge lists.
+
+    .. code-block:: python
+
+        # phi is still arranged
+        # in a square lattice
+        # as above. But now we
+        # represent the lattice
+        # through an edgelist
+
+        node1 = np.array([0,0,1,2])
+        node2 = np.array([1,3,2,3])
+
+        with pm.Model():
+            phi = pm.ICAR('phi',node1=node1,node2=node2)
+
+
+    References
+    ----------
+    ..  Mitzi, M., Wheeler-Martin, K., Simpson, D., Mooney, J. S.,
+        Gelman, A., Dimaggio, C.
+        "Bayesian hierarchical spatial models: Implementing the Besag York
+        Mollié model in stan"
+        Spatial and Spatio-temporal Epidemiology, Vol. 31, (Aug., 2019),
+        pp 1-18
+
+
+    """
+
+    rv_op = icar
+
+    @classmethod
+    def dist(
+        cls, W=None, node1=None, node2=None, sigma=1, N=None, centering_strength=0.001, **kwargs
+    ):
+        # check that they use either an adjacency matrix or edgelist
+        # specification but not both
+
+        if W is not None and (node1 is not None or node2 is not None):
+            raise ValueError(
+                "Cannot pass both an adjacency matrix (W) and an edgelist (node1, node2)"
+            )
+
+        if W is None and (node1 is None and node2 is None):
+            raise ValueError(
+                "Must pass either an adjacency matrix (W) or an edgelist (node1, node2)"
+            )
+
+        if W is None and (node1 is None or node2 is None):
+            raise ValueError("node1 must be passed with node2")
+
+        # check that adjacency matrix is two dimensional
+
+        if W is not None and not W.ndim == 2:
+            raise ValueError("W must be a matrix (ndim=2).")
+
+        # convert adjacency matrix to edgelist representation
+
+        if W is not None:
+            node1, node2 = np.where(np.tril(W) == 1)
+
+        node1 = pt.as_tensor_variable(node1, dtype=int)
+        node2 = pt.as_tensor_variable(node2, dtype=int)
+
+        # check symmetry of adjacency matrix
+
+        if W is not None:
+            W = pt.as_tensor_variable(floatX(W))
+            msg = "W must be a symmetric adjacency matrix."
+            W = Assert(msg)(W, pt.allclose(W, W.T))
+
+        # need some way of figuring out the sample size
+        # if they do not pass W. Or we only allow
+        # users to pass the adjacency matrix.
+
+        N = pt.shape(W)[0]
+
+        # check on sigma
+
+        sigma = pt.as_tensor_variable(floatX(sigma))
+        sigma = Assert("sigma > 0")(sigma, pt.gt(sigma, 0))
+
+        # check on centering_strength
+
+        centering_strength = pt.as_tensor_variable(floatX(centering_strength))
+        centering_strength = Assert("centering_strength > 0")(
+            centering_strength, pt.gt(centering_strength, 0)
+        )
+
+        return super().dist([W, node1, node2, sigma, N, centering_strength], **kwargs)
+
+    def moment(rv, size, W, node1, node2, sigma, N, centering_strength):
+        return pt.zeros(pt.shape(W)[1])
+
+    def logp(value, W, node1, node2, sigma, N, centering_strength):
+        pairwise_difference = (-1 / (2 * sigma**2)) * pt.sum(
+            pt.square(value[node1] - value[node2])
+        )
+        soft_center = (
+            -0.5 * pt.pow(pt.sum(value) / (centering_strength * N), 2)
+            - pt.log(pt.sqrt(2.0 * np.pi))
+            - pt.log(centering_strength * N)
+        )
+
+        return check_parameters(pairwise_difference + soft_center, sigma > 0, msg="sigma > 0")
+
+
 class StickBreakingWeightsRV(RandomVariable):
     name = "stick_breaking_weights"
     ndim_supp = 1
