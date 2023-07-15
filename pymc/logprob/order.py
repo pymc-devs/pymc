@@ -81,12 +81,12 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Tens
     # Non-univariate non-RVs must be rejected
     if (
         not isinstance(base_var.owner.op, RandomVariable)
-        and base_var.owner.inputs[0].owner.op.ndim_supp == 0
+        and base_var.owner.inputs[0].owner.op.ndim_supp != 0
     ):
         return None
 
     # TODO: We are currently only supporting continuous rvs
-    if base_var.owner.op.dtype.startswith("int"):
+    if isinstance(base_var.owner.op, RandomVariable) and base_var.owner.op.dtype.startswith("int"):
         return None
 
     # univariate i.i.d. test which also rules out other distributions
