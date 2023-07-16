@@ -593,7 +593,7 @@ def measurable_sub_to_neg(fgraph, node):
     return [pt.add(minuend, pt.neg(subtrahend))]
 
 
-@node_rewriter([log1p, softplus, log1mexp])
+@node_rewriter([log1p, softplus, log1mexp, log2, log10])
 def measurable_special_log_to_log(fgraph, node):
     """Convert log1p, log1mexp, softplus of `MeasurableVariable`s to log form."""
     [inp] = node.inputs
@@ -604,17 +604,29 @@ def measurable_special_log_to_log(fgraph, node):
         return [pt.log(1 + pt.exp(inp))]
     if isinstance(node.op.scalar_op, Log1mexp):
         return [pt.log(1 - pt.exp(pt.neg(inp)))]
+    if isinstance(node.op.scalar_op, Log2):
+        return [pt.log(inp) / pt.log(2)]
+    if isinstance(node.op.scalar_op, Log10):
+        return [pt.log(inp) / pt.log(10)]
+
+
+@node_rewriter([exp2, expm1, sigmoid])
+def measurable_special_exp_to_exp(fgraph, node):
+    """Convert log1p, log1mexp, softplus of `MeasurableVariable`s to log form."""
+    [inp] = node.inputs
+
+    if isinstance(node.op.scalar_op, Exp2):
+        return [pt.power(2, inp)]
+    if isinstance(node.op.scalar_op, Expm1):
+        return [pt.exp(inp + 1)]
+    if isinstance(node.op.scalar_op, Sigmoid):
+        return [1 / (1 + pt.exp(-inp))]
 
 
 @node_rewriter(
     [
         exp,
-        exp2,
-        expm1,
-        sigmoid,
         log,
-        log2,
-        log10,
         add,
         mul,
         pow,
@@ -667,12 +679,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
 
     transform_dict = {
         Exp: ExpTransform(),
-        Exp2: ExpTransform(base=2),
-        Expm1: ExpTransform(m=True),
         Log: LogTransform(),
-        Log2: LogTransform(base=2),
-        Log10: LogTransform(base=10),
-        Sigmoid: SigmoidTransform(),
         Abs: AbsTransform(),
         Sinh: SinhTransform(),
         Cosh: CoshTransform(),
@@ -757,6 +764,13 @@ measurable_ir_rewrites_db.register(
 measurable_ir_rewrites_db.register(
     "measurable_special_log_to_log",
     measurable_special_log_to_log,
+    "basic",
+    "transform",
+)
+
+measurable_ir_rewrites_db.register(
+    "measurable_special_exp_to_exp",
+    measurable_special_exp_to_exp,
     "basic",
     "transform",
 )
@@ -931,48 +945,27 @@ class ScaleTransform(RVTransform):
 class LogTransform(RVTransform):
     name = "log"
 
-    def __init__(self, base=pt.exp(1)):
-        self.base = base
-        super().__init__()
-
     def forward(self, value, *inputs):
-        return pt.log(value) / pt.log(self.base)
+        return pt.log(value)
 
     def backward(self, value, *inputs):
-        return pt.power(self.base, value)
+        return pt.exp(value)
 
     def log_jac_det(self, value, *inputs):
-        if self.base == pt.exp(1):
-            return value
-        else:
-            return pt.log(pt.power(self.base, value) * pt.log(self.base))
+        return value
 
 
 class ExpTransform(RVTransform):
     name = "exp"
 
-    def __init__(self, base=pt.exp(1), m=False):
-        self.base = base
-        self.m = m
-        super().__init__()
-
     def forward(self, value, *inputs):
-        if self.m:
-            return pt.power(self.base, value) - 1
-        else:
-            return pt.power(self.base, value)
+        return pt.exp(value)
 
     def backward(self, value, *inputs):
-        if self.m:
-            return pt.log(value + 1)
-        else:
-            return pt.log(value) / pt.log(self.base)
+        return pt.log(value)
 
     def log_jac_det(self, value, *inputs):
-        if self.m:
-            return -pt.log(value + 1)
-        else:
-            return -pt.log(value) - pt.log(pt.log(self.base))
+        return -pt.log(value)
 
 
 class AbsTransform(RVTransform):
@@ -1082,20 +1075,6 @@ class IntervalTransform(RVTransform):
             raise ValueError("Both edges of IntervalTransform cannot be None")
         else:
             return value
-
-
-class SigmoidTransform(RVTransform):
-    name = "Sigmoid"
-
-    def forward(self, value, *inputs):
-        return pt.expit(value)
-
-    def backward(self, value, *inputs):
-        return pt.log(value / (1 - value))
-
-    def log_jac_det(self, value, *inputs):
-        sigmoid_value = pt.sigmoid(value)
-        return pt.log(sigmoid_value * (1 - sigmoid_value))
 
 
 class LogOddsTransform(RVTransform):

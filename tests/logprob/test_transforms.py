@@ -1081,10 +1081,6 @@ def test_absolute_rv_transform(test_val):
         (pt.arcsinh, ArcsinhTransform()),
         (pt.arccosh, ArccoshTransform()),
         (pt.arctanh, ArctanhTransform()),
-        (pt.exp2, ExpTransform(base=2)),
-        (pt.expm1, ExpTransform(m=True)),
-        (pt.log2, LogTransform(base=2)),
-        (pt.log10, LogTransform(base=10)),
     ],
 )
 def test_erf_logp(pt_transform, transform):
@@ -1125,6 +1121,7 @@ from tests.distributions.test_transform import check_jacobian_det
         ExpTransform(m=True),
         LogTransform(base=2),
         LogTransform(base=10),
+        ExpTransform(),
     ],
 )
 def test_check_jac_det(transform):
