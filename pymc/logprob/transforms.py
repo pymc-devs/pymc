@@ -625,9 +625,6 @@ def measurable_special_exp_to_exp(fgraph, node):
 @node_rewriter(
     [
         exp,
-        exp2,
-        expm1,
-        sigmoid,
         log,
         add,
         mul,
@@ -681,12 +678,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
 
     transform_dict = {
         Exp: ExpTransform(),
-        Exp2: ExpTransform(base=2),
-        Expm1: ExpTransform(m=True),
         Log: LogTransform(),
-        Log2: LogTransform(base=2),
-        Log10: LogTransform(base=10),
-        Sigmoid: SigmoidTransform(),
         Abs: AbsTransform(),
         Sinh: SinhTransform(),
         Cosh: CoshTransform(),
@@ -953,48 +945,27 @@ class ScaleTransform(RVTransform):
 class LogTransform(RVTransform):
     name = "log"
 
-    def __init__(self, base=pt.exp(1)):
-        self.base = base
-        super().__init__()
-
     def forward(self, value, *inputs):
-        return pt.log(value) / pt.log(self.base)
+        return pt.log(value)
 
     def backward(self, value, *inputs):
-        return pt.power(self.base, value)
+        return pt.exp(value)
 
     def log_jac_det(self, value, *inputs):
-        if self.base == pt.exp(1):
-            return value
-        else:
-            return pt.log(pt.power(self.base, value) * pt.log(self.base))
+        return value
 
 
 class ExpTransform(RVTransform):
     name = "exp"
 
-    def __init__(self, base=pt.exp(1), m=False):
-        self.base = base
-        self.m = m
-        super().__init__()
-
     def forward(self, value, *inputs):
-        if self.m:
-            return pt.power(self.base, value) - 1
-        else:
-            return pt.power(self.base, value)
+        return pt.exp(value)
 
     def backward(self, value, *inputs):
-        if self.m:
-            return pt.log(value + 1)
-        else:
-            return pt.log(value) / pt.log(self.base)
+        return pt.log(value)
 
     def log_jac_det(self, value, *inputs):
-        if self.m:
-            return -pt.log(value + 1)
-        else:
-            return -pt.log(value) - pt.log(pt.log(self.base))
+        return -pt.log(value)
 
 
 class AbsTransform(RVTransform):
@@ -1104,20 +1075,6 @@ class IntervalTransform(RVTransform):
             raise ValueError("Both edges of IntervalTransform cannot be None")
         else:
             return value
-
-
-class SigmoidTransform(RVTransform):
-    name = "Sigmoid"
-
-    def forward(self, value, *inputs):
-        return pt.expit(value)
-
-    def backward(self, value, *inputs):
-        return pt.log(value / (1 - value))
-
-    def log_jac_det(self, value, *inputs):
-        sigmoid_value = pt.sigmoid(value)
-        return pt.log(sigmoid_value * (1 - sigmoid_value))
 
 
 class LogOddsTransform(RVTransform):

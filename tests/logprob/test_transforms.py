@@ -1081,10 +1081,6 @@ def test_absolute_rv_transform(test_val):
         (pt.arcsinh, ArcsinhTransform()),
         (pt.arccosh, ArccoshTransform()),
         (pt.arctanh, ArctanhTransform()),
-        (pt.exp2, ExpTransform(base=2)),
-        (pt.expm1, ExpTransform(m=True)),
-        (pt.log2, LogTransform(base=2)),
-        (pt.log10, LogTransform(base=10)),
     ],
 )
 def test_transform_logp(pt_transform, transform):
