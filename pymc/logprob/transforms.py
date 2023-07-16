@@ -393,15 +393,7 @@ class MeasurableTransform(MeasurableElemwise):
 
     valid_scalar_types = (
         Exp,
-        Exp2,
-        Expm1,
-        Sigmoid,
         Log,
-        Log2,
-        Log10,
-        Log1p,
-        Softplus,
-        Log1mexp,
         Add,
         Mul,
         Pow,
