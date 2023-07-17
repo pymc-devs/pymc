@@ -963,7 +963,7 @@ def test_set_data_constant_shape_error():
         pmodel.add_coord("weekday", length=x.shape[0])
         pm.MutableData("y", np.arange(7), dims="weekday")
 
-    msg = "because the dimension length is tied to a TensorConstant"
+    msg = "because the dimension was initialized from 'x'"
     with pytest.raises(ShapeError, match=msg):
         pmodel.set_data("y", np.arange(10))
 

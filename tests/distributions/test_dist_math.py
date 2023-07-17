@@ -224,7 +224,7 @@ def check_vals(fn1, fn2, *args):
 
 
 def test_multigamma():
-    x = pt.vector("x")
+    x = pt.vector("x", shape=(1,))
     p = pt.scalar("p")
 
     xvals = [np.array([v], dtype=config.floatX) for v in [0.1, 2, 5, 10, 50, 100]]

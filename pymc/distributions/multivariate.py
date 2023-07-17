@@ -32,8 +32,11 @@ from pytensor.sparse.basic import sp_sum
 from pytensor.tensor import TensorConstant, gammaln, sigmoid
 from pytensor.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from pytensor.tensor.random.basic import dirichlet, multinomial, multivariate_normal
-from pytensor.tensor.random.op import RandomVariable, default_supp_shape_from_params
-from pytensor.tensor.random.utils import broadcast_params
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.utils import (
+    broadcast_params,
+    supp_shape_from_ref_param_shape,
+)
 from pytensor.tensor.slinalg import Cholesky, SolveTriangular
 from pytensor.tensor.type import TensorType
 from scipy import linalg, stats
@@ -320,9 +323,12 @@ class MvStudentTRV(RandomVariable):
             cov = np.array([[1.0]], dtype=dtype)
         return super().__call__(nu, mu, cov, size=size, **kwargs)
 
-    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
-        return default_supp_shape_from_params(
-            self.ndim_supp, dist_params, rep_param_idx, param_shapes
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=1,
         )
 
     @classmethod
@@ -611,9 +617,12 @@ class DirichletMultinomialRV(RandomVariable):
     dtype = "int64"
     _print_name = ("DirichletMN", "\\operatorname{DirichletMN}")
 
-    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
-        return default_supp_shape_from_params(
-            self.ndim_supp, dist_params, rep_param_idx, param_shapes
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=1,
         )
 
     @classmethod
@@ -893,9 +902,14 @@ class WishartRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("Wishart", "\\operatorname{Wishart}")
 
-    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
         # The shape of second parameter `V` defines the shape of the output.
-        return dist_params[1].shape[-2:]
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=1,
+        )
 
     @classmethod
     def rng_fn(cls, rng, nu, V, size):
@@ -1639,9 +1653,13 @@ class MatrixNormalRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("MatrixNormal", "\\operatorname{MatrixNormal}")
 
-    def _infer_shape(self, size, dist_params, param_shapes=None):
-        shape = tuple(size) + tuple(dist_params[0].shape[-2:])
-        return shape
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=0,
+        )
 
     @classmethod
     def rng_fn(cls, rng, mu, rowchol, colchol, size=None):
@@ -1858,6 +1876,14 @@ class KroneckerNormalRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("KroneckerNormal", "\\operatorname{KroneckerNormal}")
 
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=0,
+        )
+
     def rng_fn(self, rng, mu, sigma, *covs, size=None):
         size = size if size else covs[-1]
         covs = covs[:-1] if covs[-1] == size else covs
@@ -2069,9 +2095,13 @@ class CARRV(RandomVariable):
 
         return super().make_node(rng, size, dtype, mu, W, alpha, tau)
 
-    def _infer_shape(self, size, dist_params, param_shapes=None):
-        shape = tuple(size) + (dist_params[0].shape[-1],)
-        return shape
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=0,
+        )
 
     @classmethod
     def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, size):
@@ -2242,7 +2272,7 @@ class StickBreakingWeightsRV(RandomVariable):
 
         return super().make_node(rng, size, dtype, alpha, K)
 
-    def _supp_shape_from_params(self, dist_params, **kwargs):
+    def _supp_shape_from_params(self, dist_params, param_shapes):
         K = dist_params[1]
         return (K + 1,)
 

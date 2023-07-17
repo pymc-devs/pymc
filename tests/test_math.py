@@ -262,37 +262,3 @@ def test_expand_packed_triangular():
     assert np.all(expand_upper.eval({packed: upper_packed}) == upper)
     assert np.all(expand_diag_lower.eval({packed: lower_packed}) == floatX(np.diag(vals)))
     assert np.all(expand_diag_upper.eval({packed: upper_packed}) == floatX(np.diag(vals)))
-
-
-def test_invlogit_deprecation_warning():
-    with pytest.warns(
-        FutureWarning,
-        match="pymc.math.invlogit no longer supports the",
-    ):
-        res = invlogit(np.array(-750.0), 1e-5).eval()
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        res_zero_eps = invlogit(np.array(-750.0)).eval()
-
-    assert np.isclose(res, res_zero_eps)
-
-
-@pytest.mark.parametrize(
-    "pytensor_function, pymc_wrapper",
-    [
-        (pt.special.softmax, softmax),
-        (pt.special.log_softmax, log_softmax),
-    ],
-)
-def test_softmax_logsoftmax_no_warnings(pytensor_function, pymc_wrapper):
-    """Test that wrappers for pytensor functions do not issue Warnings"""
-
-    vector = pt.vector("vector")
-    with pytest.warns(Warning) as record:
-        pytensor_function(vector)
-    assert {w.category for w in record.list} == {UserWarning, FutureWarning}
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        pymc_wrapper(vector)
