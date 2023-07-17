@@ -766,12 +766,6 @@ measurable_ir_rewrites_db.register(
     "transform",
 )
 
-measurable_ir_rewrites_db.register(
-    "measurable_general_exp_to_exp",
-    measurable_general_exp_to_exp,
-    "basic",
-    "transform",
-)
 
 measurable_ir_rewrites_db.register(
     "find_measurable_transforms",
