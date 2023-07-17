@@ -75,13 +75,14 @@ from pytensor.tensor import (
     where,
     zeros_like,
 )
+from pytensor.tensor.special import log_softmax, softmax
 
 try:
     from pytensor.tensor.basic import extract_diag
 except ImportError:
     from pytensor.tensor.nlinalg import extract_diag
 
-from pytensor.tensor.nlinalg import det, matrix_dot, matrix_inverse, trace
+from pytensor.tensor.nlinalg import matrix_inverse
 from scipy.linalg import block_diag as scipy_block_diag
 
 from pymc.pytensorf import floatX, ix_, largest_common_dtype
@@ -267,31 +268,7 @@ def logdiffexp_numpy(a, b):
     return a + log1mexp_numpy(b - a, negative_input=True)
 
 
-def invlogit(x, eps=None):
-    """The inverse of the logit function, 1 / (1 + exp(-x))."""
-    if eps is not None:
-        warnings.warn(
-            "pymc.math.invlogit no longer supports the ``eps`` argument and it will be ignored.",
-            FutureWarning,
-            stacklevel=2,
-        )
-    return pt.sigmoid(x)
-
-
-def softmax(x, axis=None):
-    # Ignore vector case UserWarning issued by PyTensor. This can be removed once PyTensor
-    # drops that warning
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        return pt.special.softmax(x, axis=axis)
-
-
-def log_softmax(x, axis=None):
-    # Ignore vector case UserWarning issued by PyTensor. This can be removed once PyTensor
-    # drops that warning
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        return pt.special.log_softmax(x, axis=axis)
+invlogit = sigmoid
 
 
 def logbern(log_p):

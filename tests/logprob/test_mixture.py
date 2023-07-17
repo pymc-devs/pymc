@@ -1119,6 +1119,7 @@ def test_ifelse_mixture_shared_component():
     )
 
 
+@pytest.mark.xfail(reason="Relied on rewrite-case that is no longer supported by PyTensor")
 def test_joint_logprob_subtensor():
     """Make sure we can compute a joint log-probability for ``Y[I]`` where ``Y`` and ``I`` are random variables."""
 
@@ -1137,6 +1138,10 @@ def test_joint_logprob_subtensor():
     I_rv = pt.random.bernoulli(p, size=size, rng=rng)
     I_rv.name = "I"
 
+    # The rewrite for lifting subtensored RVs refuses to work with advanced
+    # indexing as it could lead to repeated draws.
+    # TODO: Re-enable rewrite for cases where this is not a concern
+    #  (e.g., at least one of the advanced indexes has non-repeating values)
     A_idx = A_rv[I_rv, pt.ogrid[A_rv.shape[-1] :]]
 
     assert isinstance(A_idx.owner.op, (Subtensor, AdvancedSubtensor, AdvancedSubtensor1))

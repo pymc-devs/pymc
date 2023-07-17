@@ -34,6 +34,7 @@ from pytensor.tensor.basic import as_tensor_variable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.random.utils import normalize_size_param
+from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.var import TensorVariable
 from typing_extensions import TypeAlias
 
@@ -54,7 +55,12 @@ from pymc.logprob.basic import logp
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.model import new_or_existing_block_model_access
 from pymc.printing import str_for_dist
-from pymc.pytensorf import collect_default_updates, convert_observed_data, floatX
+from pymc.pytensorf import (
+    collect_default_updates,
+    constant_fold,
+    convert_observed_data,
+    floatX,
+)
 from pymc.util import UNSET, _add_future_warning_tag
 from pymc.vartypes import continuous_types, string_types
 
@@ -1229,15 +1235,12 @@ def create_partial_observed_rv(
                     can_rewrite = True
 
     if can_rewrite:
-        # Rewrite doesn't work with boolean masks. Should be fixed after https://github.com/pymc-devs/pytensor/pull/329
-        mask, antimask = mask.nonzero(), antimask.nonzero()
-
         masked_rv = rv[mask]
-        fgraph = FunctionGraph(outputs=[masked_rv], clone=False)
+        fgraph = FunctionGraph(outputs=[masked_rv], clone=False, features=[ShapeFeature()])
         [unobserved_rv] = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
 
         antimasked_rv = rv[antimask]
-        fgraph = FunctionGraph(outputs=[antimasked_rv], clone=False)
+        fgraph = FunctionGraph(outputs=[antimasked_rv], clone=False, features=[ShapeFeature()])
         [observed_rv] = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
 
         # Make a clone of the observedRV, with a distinct rng so that observed and
@@ -1270,7 +1273,7 @@ def partial_observed_rv_logprob(op, values, dist, mask, **kwargs):
     # For the logp, simply join the values
     [obs_value, unobs_value] = values
     antimask = ~mask
-    joined_value = pt.empty_like(dist)
+    joined_value = pt.empty(constant_fold([dist.shape])[0])
     joined_value = pt.set_subtensor(joined_value[mask], unobs_value)
     joined_value = pt.set_subtensor(joined_value[antimask], obs_value)
     joined_logp = logp(dist, joined_value)

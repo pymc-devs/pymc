@@ -52,6 +52,7 @@ from pymc.logprob.abstract import (
     _logprob_helper,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.pytensorf import constant_fold
 
 
 class MeasurableMax(Max):
@@ -120,7 +121,7 @@ def max_logprob(op, values, base_rv, **kwargs):
     logprob = _logprob_helper(base_rv, value)
     logcdf = _logcdf_helper(base_rv, value)
 
-    n = base_rv.size
+    [n] = constant_fold([base_rv.size])
 
     logprob = (n - 1) * logcdf + logprob + pt.math.log(n)
 

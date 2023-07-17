@@ -87,7 +87,6 @@ __all__ = [
     "generator",
     "convert_observed_data",
     "compile_pymc",
-    "constant_fold",
 ]
 
 
