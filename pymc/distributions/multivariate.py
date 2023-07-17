@@ -2225,13 +2225,11 @@ class ICARRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("ICAR", "\\operatorname{ICAR}")
 
-    def __call__(
-        self, W, node1, node2, sigma=1, N=None, centering_strength=0.001, size=None, **kwargs
-    ):
-        return super().__call__(W, node1, node2, sigma, N, centering_strength, size=size, **kwargs)
+    def __call__(self, W, node1, node2, N, sigma, centering_strength, size=None, **kwargs):
+        return super().__call__(W, node1, node2, N, sigma, centering_strength, size=size, **kwargs)
 
     @classmethod
-    def rng_fn(cls, rng, size, W, node1, node2, sigma, N, centering_strength):
+    def rng_fn(cls, rng, size, W, node1, node2, N, sigma, centering_strength):
         raise NotImplementedError("Cannot sample from ICAR prior")
 
 
@@ -2239,7 +2237,7 @@ icar = ICARRV()
 
 
 class ICAR(Continuous):
-    r"""
+    """
     The intrinsic conditional autoregressive prior. It is primarily used to model
     covariance between neighboring areas on large datasets. It is a special case
     of the :class:`~pymc.CAR` distribution where alpha is set to 1.
@@ -2268,16 +2266,9 @@ class ICAR(Continuous):
 
     Parameters
     ----------
-    W : ndarray of int, optional
+    W : ndarray of int
         Symmetric adjacency matrix of 1s and 0s indicating adjacency between elements.
         Must pass either W or both node1 and node2.
-
-    node1 : tensor_like of int, optional
-        The edgelist. Must be passed with node2 as well. See example below to
-        illustrate the relationship between the adjacency matrix and the edgelist.
-
-    node2 : tensor_like of int, optional
-        Must be passed with node1 as well.
 
     sigma : scalar, default 1
         Standard deviation of the vector of phi's. Putting a prior on sigma
@@ -2296,6 +2287,9 @@ class ICAR(Continuous):
     parameterizations.
 
     .. code-block:: python
+
+        import numpy as np
+        import pymc as pm
 
         # 4x4 adjacency matrix
         # arranged in a square lattice
@@ -2321,24 +2315,6 @@ class ICAR(Continuous):
 
             mu = sigma * phi
 
-    This example illustrates how to switch between adjacency matrices and
-    edge lists.
-
-    .. code-block:: python
-
-        # phi is still arranged
-        # in a square lattice
-        # as above. But now we
-        # represent the lattice
-        # through an edgelist
-
-        node1 = np.array([0,0,1,2])
-        node2 = np.array([1,3,2,3])
-
-        with pm.Model():
-            phi = pm.ICAR('phi',node1=node1,node2=node2)
-
-
     References
     ----------
     ..  Mitzi, M., Wheeler-Martin, K., Simpson, D., Mooney, J. S.,
@@ -2354,50 +2330,31 @@ class ICAR(Continuous):
     rv_op = icar
 
     @classmethod
-    def dist(
-        cls, W=None, node1=None, node2=None, sigma=1, N=None, centering_strength=0.001, **kwargs
-    ):
-        # check that they use either an adjacency matrix or edgelist
-        # specification but not both
+    def dist(cls, W, sigma=1, centering_strength=0.001, **kwargs):
+        # check that adjacency matrix is two dimensional,
+        # square
+        # and symmetrical
 
-        if W is not None and (node1 is not None or node2 is not None):
-            raise ValueError(
-                "Cannot pass both an adjacency matrix (W) and an edgelist (node1, node2)"
-            )
+        if not W.ndim == 2:
+            raise ValueError("W must be matrix with ndim=2")
 
-        if W is None and (node1 is None and node2 is None):
-            raise ValueError(
-                "Must pass either an adjacency matrix (W) or an edgelist (node1, node2)"
-            )
+        if not W.shape[0] == W.shape[1]:
+            raise ValueError("W must be a square matrix")
 
-        if W is None and (node1 is None or node2 is None):
-            raise ValueError("node1 must be passed with node2")
-
-        # check that adjacency matrix is two dimensional
-
-        if W is not None and not W.ndim == 2:
-            raise ValueError("W must be a matrix (ndim=2).")
+        if not np.allclose(W.T, W):
+            raise ValueError("W must be a symmetric matrix")
 
         # convert adjacency matrix to edgelist representation
 
-        if W is not None:
-            node1, node2 = np.where(np.tril(W) == 1)
+        node1, node2 = np.where(np.tril(W) == 1)
 
         node1 = pt.as_tensor_variable(node1, dtype=int)
         node2 = pt.as_tensor_variable(node2, dtype=int)
 
-        # check symmetry of adjacency matrix
-
-        if W is not None:
-            W = pt.as_tensor_variable(floatX(W))
-            msg = "W must be a symmetric adjacency matrix."
-            W = Assert(msg)(W, pt.allclose(W, W.T))
-
-        # need some way of figuring out the sample size
-        # if they do not pass W. Or we only allow
-        # users to pass the adjacency matrix.
+        W = pt.as_tensor_variable(W, dtype=int)
 
         N = pt.shape(W)[0]
+        N = pt.as_tensor_variable(N)
 
         # check on sigma
 
@@ -2411,12 +2368,12 @@ class ICAR(Continuous):
             centering_strength, pt.gt(centering_strength, 0)
         )
 
-        return super().dist([W, node1, node2, sigma, N, centering_strength], **kwargs)
+        return super().dist([W, node1, node2, N, sigma, centering_strength], **kwargs)
 
-    def moment(rv, size, W, node1, node2, sigma, N, centering_strength):
-        return pt.zeros(pt.shape(W)[1])
+    def moment(rv, size, W, node1, node2, N, sigma, centering_strength):
+        return pt.zeros(N)
 
-    def logp(value, W, node1, node2, sigma, N, centering_strength):
+    def logp(value, W, node1, node2, N, sigma, centering_strength):
         pairwise_difference = (-1 / (2 * sigma**2)) * pt.sum(
             pt.square(value[node1] - value[node2])
         )

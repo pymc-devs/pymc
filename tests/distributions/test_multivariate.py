@@ -2070,6 +2070,51 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
         assert np.all(np.abs(draw(x, random_seed=rng) - np.array([0.5, 0, 2.0])) < 0.01)
 
 
+# checks on adjacency matrix
+
+
+@pytest.mark.parametrize(
+    "W,msg",
+    [
+        (np.array([0, 1, 0, 0]), "W must be matrix with ndim=2"),
+        (np.array([[0, 1, 0, 0], [1, 0, 0, 1], [1, 0, 0, 1]]), "W must be a square matrix"),
+        (
+            np.array([[0, 1, 0, 0], [1, 0, 0, 1], [1, 0, 0, 1], [0, 1, 1, 0]]),
+            "W must be a symmetric matrix",
+        ),
+    ],
+)
+def test_icar_matrix_checks(W, msg):
+    with pytest.raises(ValueError, match=msg):
+        pm.ICAR.dist(W=W)
+
+
+# test logp
+
+
+def test_icar_logp():
+    W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
+
+    with pm.Model() as m:
+        RV = pm.ICAR("phi", W=W)
+
+    assert pt.isclose(
+        pm.logp(RV, np.array([0.01, -0.03, 0.02, 0.00])).eval(), np.array(4.60022238)
+    ).eval(), "logp inaccuracy"
+
+
+# test draw
+
+
+def test_icar_rng_fn():
+    W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
+
+    RV = pm.ICAR.dist(W=W)
+
+    with pytest.raises(NotImplementedError, match="Cannot sample from ICAR prior"):
+        pm.draw(RV)
+
+
 @pytest.mark.parametrize("sparse", [True, False])
 def test_car_rng_fn(sparse):
     delta = 0.05  # limit for KS p-value
