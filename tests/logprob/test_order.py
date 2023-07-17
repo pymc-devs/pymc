@@ -78,6 +78,17 @@ def test_max_non_rv_fails():
         x_max_logprob = logp(x_max, x_max_value)
 
 
+def test_max_multivariate_rv_fails():
+    _alpha = pt.scalar()
+    _k = pt.iscalar()
+    x = pm.StickBreakingWeights.dist(_alpha, _k)
+    x.name = "x"
+    x_max = pt.max(x, axis=-1)
+    x_max_value = pt.vector("x_max_value")
+    with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
+        x_max_logprob = logp(x_max, x_max_value)
+
+
 def test_max_categorical():
     """Test whether the logprob for ```pt.max``` for unsupported distributions is correctly rejected"""
     x = pm.Categorical.dist([1, 1, 1, 1], shape=(5,))
