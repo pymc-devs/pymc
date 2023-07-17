@@ -587,7 +587,7 @@ def measurable_sub_to_neg(fgraph, node):
 
 @node_rewriter([log1p, softplus, log1mexp, log2, log10])
 def measurable_special_log_to_log(fgraph, node):
-    """Convert log1p, log1mexp, softplus of `MeasurableVariable`s to log form."""
+    """Convert log1p, log1mexp, softplus, log2, log10 of `MeasurableVariable`s to log form."""
     [inp] = node.inputs
 
     if isinstance(node.op.scalar_op, Log1p):
@@ -602,27 +602,16 @@ def measurable_special_log_to_log(fgraph, node):
         return [pt.log(inp) / pt.log(10)]
 
 
-@node_rewriter([expm1, sigmoid])
+@node_rewriter([expm1, sigmoid, exp2])
 def measurable_special_exp_to_exp(fgraph, node):
-    """Convert expm1, sigmoid of `MeasurableVariable`s to xp form."""
+    """Convert expm1, sigmoid, and exp2 of `MeasurableVariable`s to xp form."""
     [inp] = node.inputs
+    if isinstance(node.op.scalar_op, Exp2):
+        return [pt.exp(pt.log(2) * inp)]
     if isinstance(node.op.scalar_op, Expm1):
         return [pt.exp(inp) - 1]
     if isinstance(node.op.scalar_op, Sigmoid):
         return [1 / (1 + pt.exp(-inp))]
-
-
-@node_rewriter([exp2, pow])
-def measurable_general_exp_to_exp(fgraph, node):
-    """Convert exp2 and any const^x of `MeasurableVariable`s to exp form."""
-    if len(node.inputs) > 1:
-        [const, inp] = node.inputs
-    else:
-        [inp] = node.inputs
-    if isinstance(node.op.scalar_op, Exp2):
-        return [pt.exp(pt.log(2) * inp)]
-    if isinstance(node.op.scalar_op, Pow) and isinstance(inp, pt.TensorVariable):
-        return [pt.exp(pt.log(const) * inp)]
 
 
 @node_rewriter(
