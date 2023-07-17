@@ -183,7 +183,7 @@ jobs:
       matrix:
         os: [windows-latest]
         floatx: [float64]
-        python-version: ["3.8"]
+        python-version: ["3.9"]
         test-subset:
           - tests/variational/test_approximations.py tests/variational/test_callbacks.py tests/variational/test_inference.py tests/variational/test_opvi.py tests/test_initial_point.py
           - tests/test_model.py tests/sampling/test_mcmc.py
@@ -259,7 +259,7 @@ jobs:
       matrix:
         os: [macos-latest]
         floatx: [float64]
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         test-subset:
           - |
             tests/sampling/test_parallel.py
@@ -338,7 +338,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04]
         floatx: [float64]
-        python-version: ["3.10"]
+        python-version: ["3.11"]
         test-subset:
           - tests/sampling/test_jax.py tests/sampling/test_mcmc_external.py
       fail-fast: false
