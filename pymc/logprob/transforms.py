@@ -610,7 +610,7 @@ def measurable_special_exp_to_exp(fgraph, node):
     if isinstance(node.op.scalar_op, Exp2):
         return [pt.power(2, inp)]
     if isinstance(node.op.scalar_op, Expm1):
-        return [pt.exp(inp + 1)]
+        return [pt.exp(inp) - 1]
     if isinstance(node.op.scalar_op, Sigmoid):
         return [1 / (1 + pt.exp(-inp))]
 
