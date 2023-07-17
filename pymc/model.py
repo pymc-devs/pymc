@@ -50,6 +50,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.sharedvar import ScalarSharedVariable
 from pytensor.tensor.var import TensorConstant, TensorVariable
+from typing_extensions import Self
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, is_minibatch
@@ -143,7 +144,7 @@ class ContextMeta(type):
             cls._context_class = context_class
         super().__init__(name, bases, nmspc)
 
-    def get_context(cls, error_if_none=True) -> Optional[T]:
+    def get_context(cls, error_if_none=True, allow_block_model_access=False) -> Optional[T]:
         """Return the most recently pushed context object of type ``cls``
         on the stack, or ``None``. If ``error_if_none`` is True (default),
         raise a ``TypeError`` instead of returning ``None``."""
@@ -155,7 +156,7 @@ class ContextMeta(type):
             if error_if_none:
                 raise TypeError(f"No {cls} on context stack")
             return None
-        if isinstance(candidate, BlockModelAccess):
+        if isinstance(candidate, BlockModelAccess) and not allow_block_model_access:
             raise BlockModelAccessError(candidate.error_msg_on_access)
         return candidate
 
@@ -213,7 +214,9 @@ class ContextMeta(type):
     # Initialize object in its own context...
     # Merged from InitContextMeta in the original.
     def __call__(cls, *args, **kwargs):
-        instance = cls.__new__(cls, *args, **kwargs)
+        # We type hint Model here so type checkers understand that Model is a context manager.
+        # This metaclass is only used for Model, so this is safe to do. See #6809 for more info.
+        instance: "Model" = cls.__new__(cls, *args, **kwargs)
         with instance:  # appends context
             instance.__init__(*args, **kwargs)
         return instance
@@ -478,10 +481,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     if TYPE_CHECKING:
 
-        def __enter__(self: "Model") -> "Model":
+        def __enter__(self: Self) -> Self:
             ...
 
-        def __exit__(self: "Model", *exc: Any) -> bool:
+        def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
             ...
 
     def __new__(cls, *args, **kwargs):
@@ -1887,6 +1890,14 @@ class BlockModelAccess(Model):
 
     def __init__(self, *args, error_msg_on_access="Model access is blocked", **kwargs):
         self.error_msg_on_access = error_msg_on_access
+
+
+def new_or_existing_block_model_access(*args, **kwargs):
+    """Return a BlockModelAccess in the stack or create a new one if none is found."""
+    model = Model.get_context(error_if_none=False, allow_block_model_access=True)
+    if isinstance(model, BlockModelAccess):
+        return model
+    return BlockModelAccess(*args, **kwargs)
 
 
 def set_data(new_data, model=None, *, coords=None):
