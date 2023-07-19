@@ -480,7 +480,7 @@ def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
     encodings = inputs[2 * encodings_count : 3 * encodings_count]
     encodings = pt.broadcast_arrays(*encodings)
 
-    encodings = Assert(msg="all encodings are unique")(
+    encodings = Assert(msg="all encodings should be unique")(
         encodings, pt.eq(pt.unique(encodings).shape[0], len(encodings))
     )
 
@@ -508,26 +508,20 @@ def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
     )  # (encoding, *base_rv.shape)
 
     # default logprob is -inf for when there are no rvs and no matching encodings
-    logprob = -np.inf
+    logprob = _logprob_helper(base_rv, value, **kwargs)
+    # Add rv branch (and checks whether it is possible)
+    for i in op.rv_idx:
+        logprob = pt.where(
+            pt.and_(value <= upper_interval_bounds[i], value >= lower_interval_bounds[i]),
+            logprob,
+            -np.inf,
+        )
+
     for i in range(encodings_count):
         # if encoding found in interval (Lower, Upper), then Prob = CDF(Upper) - CDF(Lower)
         logprob = pt.where(
             pt.eq(value, encodings[i]),
             logcdf_intervals[i],
-            logprob,
-        )
-
-    # TODO: Define this before the encoding branch so it can be written more simply
-    # Add rv branch (and checks whether it is possible)
-    logp_rv = _logprob_helper(base_rv, value, **kwargs)
-    for i in op.rv_idx:
-        logprob = pt.where(
-            pt.eq(logprob, -np.inf),
-            pt.where(
-                value <= upper_interval_bounds[i],
-                pt.where(value >= lower_interval_bounds[i], logp_rv, -np.inf),
-                -np.inf,
-            ),
             logprob,
         )
 
