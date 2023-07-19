@@ -39,7 +39,6 @@ extensions = [
     "numpydoc",
     "IPython.sphinxext.ipython_console_highlighting",
     "IPython.sphinxext.ipython_directive",
-    "sphinx.ext.autosectionlabel",
     "myst_nb",
     "sphinx_design",
     "notfound.extension",
@@ -108,7 +107,8 @@ author = "PyMC contributors"
 # built documents.
 
 version = pymc.__version__
-if os.environ.get("READTHEDOCS", False):
+on_readthedocs = os.environ.get("READTHEDOCS", False)
+if on_readthedocs:
     rtd_version = os.environ.get("READTHEDOCS_VERSION", "")
     if rtd_version.lower() == "stable":
         version = pymc.__version__.split("+")[0]
@@ -147,7 +147,7 @@ exclude_patterns = [
 ]
 
 # myst config
-nb_execution_mode = "force"
+nb_execution_mode = "force" if on_readthedocs else "off"
 nb_execution_allow_errors = False
 nb_execution_raise_on_error = True
 nb_execution_timeout = 300
@@ -306,6 +306,7 @@ intersphinx_mapping = {
     "myst": ("https://myst-parser.readthedocs.io/en/latest", None),
     "myst-nb": ("https://myst-nb.readthedocs.io/en/latest/", None),
     "python": ("https://docs.python.org/3/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
     "xarray": ("https://docs.xarray.dev/en/stable/", None),
 }
 

@@ -26,7 +26,6 @@ from pymc.distributions.distribution import Continuous, Discrete
 from pymc.distributions.shape_utils import to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.logprob.basic import logp
-from pymc.logprob.utils import ignore_logprob
 from pymc.model import modelcontext
 from pymc.pytensorf import floatX, intX
 from pymc.util import check_dist_not_registered
@@ -202,7 +201,6 @@ class Bound:
                 raise ValueError("Given dims do not exist in model coordinates.")
 
         lower, upper, initval = cls._set_values(lower, upper, size, shape, initval)
-        dist = ignore_logprob(dist)
 
         if isinstance(dist.owner.op, Continuous):
             res = _ContinuousBounded(
@@ -236,7 +234,6 @@ class Bound:
     ):
         cls._argument_checks(dist, **kwargs)
         lower, upper, initval = cls._set_values(lower, upper, size, shape, initval=None)
-        dist = ignore_logprob(dist)
         if isinstance(dist.owner.op, Continuous):
             res = _ContinuousBounded.dist(
                 [dist, lower, upper],

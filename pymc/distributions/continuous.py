@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-# Contains code from Aeppl, Copyright (c) 2021-2022, PyTensor Developers.
+# Contains code from AePPL, Copyright (c) 2021-2022, Aesara Developers.
 
 # coding: utf-8
 """
@@ -57,6 +57,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorConstant
 
 from pymc.logprob.abstract import _logcdf_helper, _logprob_helper
+from pymc.logprob.basic import icdf
 
 try:
     from polyagamma import polyagamma_cdf, polyagamma_pdf, random_polyagamma
@@ -855,6 +856,11 @@ class HalfNormal(PositiveContinuous):
             sigma > 0,
             msg="sigma > 0",
         )
+
+    def icdf(value, loc, sigma):
+        res = icdf(Normal.dist(loc, sigma), (value + 1.0) / 2.0)
+        res = check_icdf_value(res, value)
+        return res
 
 
 class WaldRV(RandomVariable):
@@ -1721,6 +1727,10 @@ class LogNormal(PositiveContinuous):
             msg="sigma > 0",
         )
 
+    def icdf(value, mu, sigma):
+        res = pt.exp(icdf(Normal.dist(mu, sigma), value))
+        return res
+
 
 Lognormal = LogNormal
 
@@ -2039,6 +2049,15 @@ class Cauchy(Continuous):
             msg="beta > 0",
         )
 
+    def icdf(value, alpha, beta):
+        res = alpha + beta * pt.tan(np.pi * (value - 0.5))
+        res = check_icdf_value(res, value)
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
+
 
 class HalfCauchy(PositiveContinuous):
     r"""
@@ -2107,6 +2126,15 @@ class HalfCauchy(PositiveContinuous):
             pt.log(2 * pt.arctan((value - loc) / beta) / np.pi),
         )
 
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
+
+    def icdf(value, loc, beta):
+        res = loc + beta * pt.tan(np.pi * (value) / 2.0)
+        res = check_icdf_value(res, value)
         return check_parameters(
             res,
             beta > 0,
@@ -2511,6 +2539,16 @@ class Weibull(PositiveContinuous):
             - pt.pow(value / beta, alpha)
         )
         res = pt.switch(pt.ge(value, 0.0), res, -np.inf)
+        return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
+
+    def icdf(value, alpha, beta):
+        res = beta * (-pt.log(1 - value)) ** (1 / alpha)
+        res = check_icdf_value(res, value)
         return check_parameters(
             res,
             alpha > 0,
@@ -3061,6 +3099,20 @@ class Triangular(BoundedContinuous):
             msg="lower <= c <= upper",
         )
 
+    def icdf(value, lower, c, upper):
+        res = pt.switch(
+            pt.lt(value, ((c - lower) / (upper - lower))),
+            lower + np.sqrt((upper - lower) * (c - lower) * value),
+            upper - np.sqrt((upper - lower) * (upper - c) * (1 - value)),
+        )
+        res = check_icdf_value(res, value)
+        return check_parameters(
+            res,
+            lower <= c,
+            c <= upper,
+            msg="lower <= c <= upper",
+        )
+
 
 @_default_transform.register(Triangular)
 def triangular_default_transform(op, rv):
@@ -3143,6 +3195,15 @@ class Gumbel(Continuous):
     def logcdf(value, mu, beta):
         res = -pt.exp(-(value - mu) / beta)
 
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
+
+    def icdf(value, mu, beta):
+        res = mu - beta * pt.log(-pt.log(value))
+        res = check_icdf_value(res, value)
         return check_parameters(
             res,
             beta > 0,
@@ -3351,6 +3412,15 @@ class Logistic(Continuous):
     def logcdf(value, mu, s):
         res = -pt.log1pexp(-(value - mu) / s)
 
+        return check_parameters(
+            res,
+            s > 0,
+            msg="s > 0",
+        )
+
+    def icdf(value, mu, s):
+        res = mu + s * pt.log(value / (1 - value))
+        res = check_icdf_value(res, value)
         return check_parameters(
             res,
             s > 0,
@@ -3696,6 +3766,15 @@ class Moyal(Continuous):
             msg="sigma > 0",
         )
 
+    def icdf(value, mu, sigma):
+        res = sigma * -pt.log(2.0 * pt.erfcinv(value) ** 2) + mu
+        res = check_icdf_value(res, value)
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
+
 
 class PolyaGammaRV(RandomVariable):
     """Polya-Gamma random variable."""
@@ -3797,7 +3876,8 @@ class PolyaGamma(PositiveContinuous):
         import matplotlib.pyplot as plt
         import numpy as np
         from polyagamma import polyagamma_pdf
-        plt.style.use('seaborn-darkgrid')
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0.01, 5, 500);x.sort()
         hs = [1., 5., 10., 15.]
         zs = [0.] * 4
@@ -3811,7 +3891,7 @@ class PolyaGamma(PositiveContinuous):
 
     ========  =============================
     Support   :math:`x \in (0, \infty)`
-    Mean      :math:`dfrac{h}{4} if :math:`z=0`, :math:`\dfrac{tanh(z/2)h}{2z}` otherwise.
+    Mean      :math:`\dfrac{h}{4}` if :math:`z=0`, :math:`\dfrac{tanh(z/2)h}{2z}` otherwise.
     Variance  :math:`0.041666688h` if :math:`z=0`, :math:`\dfrac{h(sinh(z) - z)(1 - tanh^2(z/2))}{4z^3}` otherwise.
     ========  =============================
 

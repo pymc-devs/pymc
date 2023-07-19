@@ -37,7 +37,7 @@ from pymc.distributions.distribution import (
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size, to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import TruncationError
-from pymc.logprob.abstract import MeasurableVariable, _logcdf, _logprob
+from pymc.logprob.abstract import _logcdf, _logprob
 from pymc.logprob.basic import icdf, logcdf
 from pymc.math import logdiffexp
 from pymc.util import check_dist_not_registered
@@ -62,9 +62,6 @@ class TruncatedRV(SymbolicRandomVariable):
         """Return the update mapping for the noise RV."""
         # Since RNG is a shared variable it shows up as the last node input
         return {node.inputs[-1]: node.outputs[0]}
-
-
-MeasurableVariable.register(TruncatedRV)
 
 
 @singledispatch

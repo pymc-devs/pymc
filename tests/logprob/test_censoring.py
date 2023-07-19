@@ -42,7 +42,7 @@ import scipy as sp
 import scipy.stats as st
 
 from pymc import logp
-from pymc.logprob import factorized_joint_logprob
+from pymc.logprob import conditional_logp
 from pymc.logprob.transforms import LogTransform, TransformValuesRewrite
 from pymc.testing import assert_no_rvs
 
@@ -133,7 +133,7 @@ def test_random_clip():
 
     lb_vv = lb_rv.clone()
     cens_x_vv = cens_x_rv.clone()
-    logp = factorized_joint_logprob({cens_x_rv: cens_x_vv, lb_rv: lb_vv})
+    logp = conditional_logp({cens_x_rv: cens_x_vv, lb_rv: lb_vv})
     logp_combined = pt.add(*logp.values())
 
     assert_no_rvs(logp_combined)
@@ -152,7 +152,7 @@ def test_broadcasted_clip_constant():
     lb_vv = lb_rv.clone()
     cens_x_vv = cens_x_rv.clone()
 
-    logp = factorized_joint_logprob({cens_x_rv: cens_x_vv, lb_rv: lb_vv})
+    logp = conditional_logp({cens_x_rv: cens_x_vv, lb_rv: lb_vv})
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
 
     assert_no_rvs(logp_combined)
@@ -166,7 +166,7 @@ def test_broadcasted_clip_random():
     lb_vv = lb_rv.clone()
     cens_x_vv = cens_x_rv.clone()
 
-    logp = factorized_joint_logprob({cens_x_rv: cens_x_vv, lb_rv: lb_vv})
+    logp = conditional_logp({cens_x_rv: cens_x_vv, lb_rv: lb_vv})
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
 
     assert_no_rvs(logp_combined)
@@ -181,7 +181,7 @@ def test_fail_base_and_clip_have_values():
     x_vv = x_rv.clone()
     cens_x_vv = cens_x_rv.clone()
     with pytest.raises(RuntimeError, match="could not be derived: {cens_x}"):
-        factorized_joint_logprob({cens_x_rv: cens_x_vv, x_rv: x_vv})
+        conditional_logp({cens_x_rv: cens_x_vv, x_rv: x_vv})
 
 
 def test_fail_multiple_clip_single_base():
@@ -195,7 +195,7 @@ def test_fail_multiple_clip_single_base():
     cens_vv1 = cens_rv1.clone()
     cens_vv2 = cens_rv2.clone()
     with pytest.raises(RuntimeError, match="could not be derived: {cens2}"):
-        factorized_joint_logprob({cens_rv1: cens_vv1, cens_rv2: cens_vv2})
+        conditional_logp({cens_rv1: cens_vv1, cens_rv2: cens_vv2})
 
 
 def test_deterministic_clipping():
@@ -205,7 +205,7 @@ def test_deterministic_clipping():
 
     x_vv = x_rv.clone()
     y_vv = y_rv.clone()
-    logp = factorized_joint_logprob({x_rv: x_vv, y_rv: y_vv})
+    logp = conditional_logp({x_rv: x_vv, y_rv: y_vv})
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
     assert_no_rvs(logp_combined)
 
@@ -223,7 +223,7 @@ def test_clip_transform():
     cens_x_vv = cens_x_rv.clone()
 
     transform = TransformValuesRewrite({cens_x_vv: LogTransform()})
-    logp = factorized_joint_logprob({cens_x_rv: cens_x_vv}, extra_rewrites=transform)
+    logp = conditional_logp({cens_x_rv: cens_x_vv}, extra_rewrites=transform)
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
 
     cens_x_vv_testval = -1

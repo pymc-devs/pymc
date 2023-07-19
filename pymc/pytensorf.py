@@ -65,6 +65,7 @@ from pytensor.tensor.var import TensorConstant, TensorVariable
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.transforms import RVTransform
 from pymc.logprob.utils import CheckParameterValue
+from pymc.util import makeiter
 from pymc.vartypes import continuous_types, isgenerator, typefilter
 
 PotentialShapeType = Union[int, np.ndarray, Sequence[Union[int, Variable]], TensorVariable]
@@ -548,13 +549,6 @@ def hessian_diag(f, vars=None):
         return -pt.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
     else:
         return empty_gradient
-
-
-def makeiter(a):
-    if isinstance(a, (tuple, list)):
-        return a
-    else:
-        return [a]
 
 
 class IdentityOp(scalar.UnaryScalarOp):
@@ -1234,3 +1228,10 @@ def constant_fold(
     return tuple(
         folded_x.data if isinstance(folded_x, Constant) else folded_x for folded_x in folded_xs
     )
+
+
+def rewrite_pregrad(graph):
+    """Apply simplifying or stabilizing rewrites to graph that are safe to use
+    pre-grad.
+    """
+    return rewrite_graph(graph, include=("canonicalize", "stabilize"))

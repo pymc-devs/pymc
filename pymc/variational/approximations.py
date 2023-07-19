@@ -25,7 +25,7 @@ import pymc as pm
 
 from pymc.blocking import DictToArrayBijection
 from pymc.distributions.dist_math import rho2sigma
-from pymc.pytensorf import makeiter
+from pymc.util import makeiter
 from pymc.variational import opvi
 from pymc.variational.opvi import (
     Approximation,

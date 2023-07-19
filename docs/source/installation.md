@@ -6,7 +6,7 @@ We recommend using [Anaconda](https://www.anaconda.com/) (or [Miniforge](https:/
 Once you have installed one of the above, PyMC can be installed into a new conda environment as follows:
 
 ```console
-conda create -c conda-forge -n pymc_env "pymc>=4"
+conda create -c conda-forge -n pymc_env "pymc>=5"
 conda activate pymc_env
 ```
 If you like, replace the name `pymc_env` with whatever environment name you prefer.
@@ -18,16 +18,17 @@ issues when using multiple conda channels (e.g. defaults and conda-forge).
 
 ## JAX sampling
 
-If you wish to enable sampling using the JAX backend via NumPyro, the following should also be installed:
+If you wish to enable sampling using the JAX backend via NumPyro,
+you need to install it manually as it is an optional dependency:
 
 ```console
-pip install numpyro
+conda install numpyro
 ```
 
-Similarly, to use BlackJAX for sampling it should be installed via `pip`:
+Similarly, to use BlackJAX sampler instead:
 
 ```console
-pip install blackjax
+conda install blackjax
 ```
 
 Note that JAX is not directly supported on Windows systems at the moment.

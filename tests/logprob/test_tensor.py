@@ -45,7 +45,7 @@ from pytensor.graph.rewriting.utils import rewrite_graph
 from pytensor.tensor.extra_ops import BroadcastTo
 from scipy import stats as st
 
-from pymc.logprob.basic import factorized_joint_logprob, logp
+from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.logprob.tensor import naive_bcast_rv_lift
 from pymc.testing import assert_no_rvs
@@ -73,7 +73,7 @@ def test_naive_bcast_rv_lift_valued_var():
 
     x_vv = x_rv.clone()
     y_vv = y_rv.clone()
-    logp_map = factorized_joint_logprob({x_rv: x_vv, y_rv: y_vv})
+    logp_map = conditional_logp({x_rv: x_vv, y_rv: y_vv})
     assert x_vv in logp_map
     assert y_vv in logp_map
     assert len(logp_map) == 2
@@ -90,7 +90,7 @@ def test_bcast_rv_logp():
     broadcasted_x_rv.name = "broadcasted_x"
     broadcasted_x_vv = broadcasted_x_rv.clone()
 
-    logp = factorized_joint_logprob({broadcasted_x_rv: broadcasted_x_vv})
+    logp = conditional_logp({broadcasted_x_rv: broadcasted_x_vv})
     logp_combined = pt.add(*logp.values())
     valid_logp = logp_combined.eval({broadcasted_x_vv: [0, 0]})
 
@@ -115,9 +115,7 @@ def test_measurable_make_vector():
     base3_vv = base3_rv.clone()
     y_vv = y_rv.clone()
 
-    ref_logp = factorized_joint_logprob(
-        {base1_rv: base1_vv, base2_rv: base2_vv, base3_rv: base3_vv}
-    )
+    ref_logp = conditional_logp({base1_rv: base1_vv, base2_rv: base2_vv, base3_rv: base3_vv})
     ref_logp_combined = pt.sum([pt.sum(factor) for factor in ref_logp.values()])
 
     make_vector_logp = logp(y_rv, y_vv)
@@ -156,7 +154,7 @@ def test_measurable_make_vector_interdependent(reverse):
     x_vv = x.clone()
     ys_vv = ys.clone()
 
-    logp = factorized_joint_logprob({x: x_vv, ys: ys_vv})
+    logp = conditional_logp({x: x_vv, ys: ys_vv})
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
     assert_no_rvs(logp_combined)
 
@@ -164,9 +162,7 @@ def test_measurable_make_vector_interdependent(reverse):
     y1_vv = y_rvs[1].clone()
     y2_vv = y_rvs[2].clone()
 
-    ref_logp = factorized_joint_logprob(
-        {x: x_vv, y_rvs[0]: y0_vv, y_rvs[1]: y1_vv, y_rvs[2]: y2_vv}
-    )
+    ref_logp = conditional_logp({x: x_vv, y_rvs[0]: y0_vv, y_rvs[1]: y1_vv, y_rvs[2]: y2_vv})
     ref_logp_combined = pt.sum([pt.sum(factor) for factor in ref_logp.values()])
 
     rng = np.random.default_rng()
@@ -200,7 +196,7 @@ def test_measurable_join_interdependent(reverse):
     x_vv = x.clone()
     ys_vv = ys.clone()
 
-    logp = factorized_joint_logprob({x: x_vv, ys: ys_vv})
+    logp = conditional_logp({x: x_vv, ys: ys_vv})
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
     assert_no_rvs(logp_combined)
 
@@ -208,9 +204,7 @@ def test_measurable_join_interdependent(reverse):
     y1_vv = y_rvs[1].clone()
     y2_vv = y_rvs[2].clone()
 
-    ref_logp = factorized_joint_logprob(
-        {x: x_vv, y_rvs[0]: y0_vv, y_rvs[1]: y1_vv, y_rvs[2]: y2_vv}
-    )
+    ref_logp = conditional_logp({x: x_vv, y_rvs[0]: y0_vv, y_rvs[1]: y1_vv, y_rvs[2]: y2_vv})
     ref_logp_combined = pt.sum([pt.sum(factor) for factor in ref_logp.values()])
 
     rng = np.random.default_rng()
@@ -254,7 +248,7 @@ def test_measurable_join_univariate(size1, size2, axis, concatenate):
     base2_vv = base2_rv.clone()
     y_vv = y_rv.clone()
 
-    base_logps = list(factorized_joint_logprob({base1_rv: base1_vv, base2_rv: base2_vv}).values())
+    base_logps = list(conditional_logp({base1_rv: base1_vv, base2_rv: base2_vv}).values())
     if concatenate:
         base_logps = pt.concatenate(base_logps, axis=axis)
     else:
@@ -318,7 +312,7 @@ def test_measurable_join_multivariate(size1, supp_size1, size2, supp_size2, axis
     y_vv = y_rv.clone()
     base_logps = [
         pt.atleast_1d(logp)
-        for logp in factorized_joint_logprob({base1_rv: base1_vv, base2_rv: base2_vv}).values()
+        for logp in conditional_logp({base1_rv: base1_vv, base2_rv: base2_vv}).values()
     ]
 
     if concatenate:
@@ -394,7 +388,7 @@ def test_measurable_dimshuffle(ds_order, multivariate):
     ir_rewriter = logprob_rewrites_db.query(
         RewriteDatabaseQuery(include=["basic"]).excluding("dimshuffle_lift")
     )
-    ds_logp = factorized_joint_logprob({ds_rv: ds_vv}, ir_rewriter=ir_rewriter)
+    ds_logp = conditional_logp({ds_rv: ds_vv}, ir_rewriter=ir_rewriter)
     ds_logp_combined = pt.add(*ds_logp.values())
     assert ds_logp_combined is not None
 
@@ -426,4 +420,4 @@ def test_unmeargeable_dimshuffles():
     w_vv = w.clone()
     # TODO: Check that logp is correct if this type of graphs is ever supported
     with pytest.raises(RuntimeError, match="could not be derived"):
-        factorized_joint_logprob({w: w_vv})
+        conditional_logp({w: w_vv})

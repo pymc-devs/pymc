@@ -328,6 +328,7 @@ def change_dist_size(
     Examples
     --------
     .. code-block:: python
+
         x = Normal.dist(shape=(2, 3))
         new_x = change_dist_size(x, new_size=(5, 3), expand=False)
         assert new_x.eval().shape == (5, 3)
@@ -406,7 +407,7 @@ def change_specify_shape_size(op, ss, new_size, expand) -> TensorVariable:
         if ndim_supp > 0:
             new_shapes[-ndim_supp:] = shapes[-ndim_supp:]
 
-    # specify_shape has a wrong signature https://github.com/pytensor-devs/pytensor/issues/1164
+    # specify_shape has a wrong signature https://github.com/aesara-devs/aesara/issues/1164
     return pt.specify_shape(new_var, new_shapes)  # type: ignore
 
 

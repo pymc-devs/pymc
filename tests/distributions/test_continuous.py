@@ -207,6 +207,12 @@ class TestMatchesScipy:
             lambda value, c, lower, upper: st.triang.logcdf(value, c - lower, lower, upper - lower),
             skip_paramdomain_outside_edge_test=True,
         )
+        check_icdf(
+            pm.Triangular,
+            {"lower": -Rplusunif, "c": Runif, "upper": Rplusunif},
+            lambda q, c, lower, upper: st.triang.ppf(q, c - lower, lower, upper - lower),
+            skip_paramdomain_outside_edge_test=True,
+        )
 
         # Custom logp/logcdf check for values outside of domain
         valid_dist = pm.Triangular.dist(lower=0, upper=1, c=0.9, size=2)
@@ -298,6 +304,11 @@ class TestMatchesScipy:
             Rplus,
             {"sigma": Rplus},
             lambda value, sigma: st.halfnorm.logcdf(value, scale=sigma),
+        )
+        check_icdf(
+            pm.HalfNormal,
+            {"sigma": Rplus},
+            lambda q, sigma: st.halfnorm.ppf(q, scale=sigma),
         )
 
     def test_chisquared_logp(self):
@@ -502,6 +513,21 @@ class TestMatchesScipy:
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: st.lognorm.logcdf(value, sigma, 0, np.exp(mu)),
         )
+        check_icdf(
+            pm.LogNormal,
+            {"mu": R, "tau": Rplusbig},
+            lambda q, mu, tau: floatX(st.lognorm.ppf(q, tau**-0.5, 0, np.exp(mu))),
+        )
+        # Because we exponentiate the normal quantile function, setting sigma >= 9.5
+        # return extreme values that results in relative errors above 4 digits
+        # we circumvent it by keeping it below or equal to 9.
+        custom_rplusbig = Domain([0, 0.5, 0.9, 0.99, 1, 1.5, 2, 9, np.inf])
+        check_icdf(
+            pm.LogNormal,
+            {"mu": R, "sigma": custom_rplusbig},
+            lambda q, mu, sigma: floatX(st.lognorm.ppf(q, sigma, 0, np.exp(mu))),
+            decimal=select_by_precision(float64=4, float32=3),
+        )
 
     def test_studentt_logp(self):
         check_logp(
@@ -548,6 +574,11 @@ class TestMatchesScipy:
             {"alpha": R, "beta": Rplusbig},
             lambda value, alpha, beta: st.cauchy.logcdf(value, alpha, beta),
         )
+        check_icdf(
+            pm.Cauchy,
+            {"alpha": R, "beta": Rplusbig},
+            lambda q, alpha, beta: st.cauchy.ppf(q, alpha, beta),
+        )
 
     def test_half_cauchy(self):
         check_logp(
@@ -561,6 +592,9 @@ class TestMatchesScipy:
             Rplus,
             {"beta": Rplusbig},
             lambda value, beta: st.halfcauchy.logcdf(value, scale=beta),
+        )
+        check_icdf(
+            pm.HalfCauchy, {"beta": Rplusbig}, lambda q, beta: st.halfcauchy.ppf(q, scale=beta)
         )
 
     def test_gamma_logp(self):
@@ -676,6 +710,13 @@ class TestMatchesScipy:
             lambda value, alpha, beta: st.exponweib.logcdf(value, 1, alpha, scale=beta),
         )
 
+    def test_weibull_icdf(self):
+        check_icdf(
+            pm.Weibull,
+            {"alpha": Rplusbig, "beta": Rplusbig},
+            lambda q, alpha, beta: st.exponweib.ppf(q, 1, alpha, scale=beta),
+        )
+
     def test_half_studentt(self):
         # this is only testing for nu=1 (halfcauchy)
         check_logp(
@@ -752,6 +793,11 @@ class TestMatchesScipy:
             {"mu": R, "beta": Rplusbig},
             lambda value, mu, beta: st.gumbel_r.logcdf(value, loc=mu, scale=beta),
         )
+        check_icdf(
+            pm.Gumbel,
+            {"mu": R, "beta": Rplusbig},
+            lambda q, mu, beta: st.gumbel_r.ppf(q, loc=mu, scale=beta),
+        )
 
     def test_logistic(self):
         check_logp(
@@ -766,6 +812,12 @@ class TestMatchesScipy:
             R,
             {"mu": R, "s": Rplus},
             lambda value, mu, s: st.logistic.logcdf(value, mu, s),
+            decimal=select_by_precision(float64=6, float32=1),
+        )
+        check_icdf(
+            pm.Logistic,
+            {"mu": R, "s": Rplus},
+            lambda q, mu, s: st.logistic.ppf(q, mu, s),
             decimal=select_by_precision(float64=6, float32=1),
         )
 
@@ -828,6 +880,13 @@ class TestMatchesScipy:
         )
         if pytensor.config.floatX == "float32":
             raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
+
+    def test_moyal_icdf(self):
+        check_icdf(
+            pm.Moyal,
+            {"mu": R, "sigma": Rplusbig},
+            lambda q, mu, sigma: floatX(st.moyal.ppf(q, mu, sigma)),
+        )
 
     def test_interpolated(self):
         for mu in R.vals:

@@ -180,13 +180,11 @@ class TestSample(SeededTest):
 
     def test_sample_args(self):
         with self.model:
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(ValueError, match=r"'foo'"):
                 pm.sample(50, tune=0, chains=1, step=pm.Metropolis(), foo=1)
-            assert "'foo'" in str(excinfo.value)
 
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(ValueError, match=r"'foo'") as excinfo:
                 pm.sample(50, tune=0, chains=1, step=pm.Metropolis(), foo={})
-            assert "foo" in str(excinfo.value)
 
     def test_parallel_start(self):
         with self.model:
