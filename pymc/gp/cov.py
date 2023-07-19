@@ -575,7 +575,7 @@ class ExpQuad(Stationary):
     """
 
     def full_from_distance(self, dist: TensorLike, squared: bool = False) -> TensorVariable:
-        r2 = dist if squared else dist ** 2
+        r2 = dist if squared else dist**2
         return pt.exp(-0.5 * r2)
 
     def power_spectral_density(self, omega: TensorLike) -> TensorVariable:
@@ -615,7 +615,7 @@ class RatQuad(Stationary):
         self.alpha = alpha
 
     def full_from_distance(self, dist: TensorLike, squared: bool = False) -> TensorVariable:
-        r2 = dist if squared else dist ** 2
+        r2 = dist if squared else dist**2
         return pt.power(
             (1.0 + 0.5 * r2 * (1.0 / self.alpha)),
             -1.0 * self.alpha,
@@ -776,8 +776,8 @@ class Periodic(Stationary):
         X, Xs = self._slice(X, Xs)
         if Xs is None:
             Xs = X
-        f1 = X.dimshuffle(0, "x", 1)
-        f2 = Xs.dimshuffle("x", 0, 1)
+        f1 = pt.expand_dims(X, axis=(0,))
+        f2 = pt.expand_dims(Xs, axis=(1,))
         r = np.pi * (f1 - f2) / self.period
         r2 = pt.sum(pt.square(pt.sin(r) / self.ls), 2)
         return self.full_from_distance(r2, squared=True)
@@ -785,7 +785,7 @@ class Periodic(Stationary):
     def full_from_distance(self, dist: TensorLike, squared: bool = False) -> TensorVariable:
         # NOTE: This is the same as the ExpQuad as we assume the periodicity
         # has already been accounted for in the distance
-        r2 = dist if squared else dist ** 2
+        r2 = dist if squared else dist**2
         return pt.exp(-0.5 * r2)
 
 

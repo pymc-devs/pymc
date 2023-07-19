@@ -468,6 +468,22 @@ class TestExpQuad:
         )
         npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
 
+    def test_euclidean_dist(self):
+        X = np.arange(0, 3)[:, None]
+        Xs = np.arange(1, 4)[:, None]
+        with pm.Model():
+            cov = pm.gp.cov.ExpQuad(1, ls=1)
+        result = cov.euclidean_dist(X, Xs).eval()
+        expected = np.array(
+            [
+                [1, 2, 3],
+                [0, 1, 2],
+                [1, 0, 1],
+            ]
+        )
+        print(result, expected)
+        npt.assert_allclose(result, expected, atol=1e-5)
+
 
 class TestWhiteNoise:
     def test_1d(self):
