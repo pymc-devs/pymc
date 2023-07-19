@@ -939,14 +939,14 @@ class WrappedPeriodic(Covariance):
         self.period = period
 
     @property
-    def input_dim(self):
+    def input_dim(self) -> int:
         return self.cov_func.input_dim
 
     @property
-    def active_dims(self):
+    def active_dims(self) -> IntSequence:
         return self.cov_func.active_dims
 
-    def full(self, X, Xs=None):
+    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         if Xs is None:
             Xs = X
@@ -956,8 +956,8 @@ class WrappedPeriodic(Covariance):
         r2 = pt.sum(pt.square(pt.sin(r) / self.cov_func.ls), 2)
         return self.cov_func.full_from_distance(r2, squared=True)
 
-    def diag(self, X):
-        return pt.alloc(1.0, X.shape[0])
+    def diag(self, X: TensorLike) -> TensorVariable:
+        return self._alloc(1.0, X.shape[0])
 
 
 class Gibbs(Covariance):
