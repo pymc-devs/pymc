@@ -468,6 +468,22 @@ class TestExpQuad:
         )
         npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
 
+    def test_euclidean_dist(self):
+        X = np.arange(0, 3)[:, None]
+        Xs = np.arange(1, 4)[:, None]
+        with pm.Model():
+            cov = pm.gp.cov.ExpQuad(1, ls=1)
+        result = cov.euclidean_dist(X, Xs).eval()
+        expected = np.array(
+            [
+                [1, 2, 3],
+                [0, 1, 2],
+                [1, 0, 1],
+            ]
+        )
+        print(result, expected)
+        npt.assert_allclose(result, expected, atol=1e-5)
+
 
 class TestWhiteNoise:
     def test_1d(self):
@@ -676,6 +692,28 @@ class TestWarpedInput:
             pm.gp.cov.WarpedInput(1, cov_m52, "str is not callable")
         with pytest.raises(TypeError):
             pm.gp.cov.WarpedInput(1, "str is not Covariance object", lambda x: x)
+
+
+class TestWrappedPeriodic:
+    def test_1d(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model():
+            cov1 = pm.gp.cov.Periodic(1, ls=0.2, period=1)
+            cov2 = pm.gp.cov.WrappedPeriodic(
+                cov_func=pm.gp.cov.ExpQuad(1, ls=0.2),
+                period=1,
+            )
+        K1 = cov1(X).eval()
+        K2 = cov2(X).eval()
+        npt.assert_allclose(K1, K2, atol=1e-3)
+        K1d = cov1(X, diag=True).eval()
+        K2d = cov2(X, diag=True).eval()
+        npt.assert_allclose(K1d, K2d, atol=1e-3)
+
+    def test_raises(self):
+        lin_cov = pm.gp.cov.Linear(1, c=1)
+        with pytest.raises(TypeError, match="Must inherit from the Stationary class"):
+            pm.gp.cov.WrappedPeriodic(lin_cov, period=1)
 
 
 class TestGibbs:
