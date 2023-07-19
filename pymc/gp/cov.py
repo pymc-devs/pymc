@@ -933,18 +933,11 @@ class WrappedPeriodic(Covariance):
     """
 
     def __init__(self, cov_func: Stationary, period):
+        super().__init__(cov_func.input_dim, cov_func.active_dims)
         if not isinstance(cov_func, Stationary):
             raise TypeError("Must inherit from the Stationary class")
         self.cov_func = cov_func
         self.period = period
-
-    @property
-    def input_dim(self) -> int:
-        return self.cov_func.input_dim
-
-    @property
-    def active_dims(self) -> IntSequence:
-        return self.cov_func.active_dims
 
     def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
