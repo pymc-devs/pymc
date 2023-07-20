@@ -221,9 +221,13 @@ def make_runmeta_and_point_fn(
                 (-1 if s is None else s)
                 for s in (shape or [])
             ]
+            dt = np.dtype(dtype).name
+            # Object types will be pickled by the ChainRecordAdapter!
+            if dt == "object":
+                dt = "str"
             svar = mcb.Variable(
                 name=sname,
-                dtype=np.dtype(dtype).name,
+                dtype=dt,
                 shape=sshape,
                 undefined_ndim=shape is None,
             )
