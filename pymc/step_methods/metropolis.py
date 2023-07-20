@@ -458,9 +458,16 @@ class BinaryGibbsMetropolis(ArrayStep):
 
     name = "binary_gibbs_metropolis"
 
+    stats_dtypes_shapes = {
+        "tune": (bool, []),
+    }
+
     def __init__(self, vars, order="random", transit_p=0.8, model=None):
         model = pm.modelcontext(model)
 
+        # Doesn't actually tune, but it's required to emit a sampler stat
+        # that indicates whether a draw was done in a tuning phase.
+        self.tune = True
         # transition probabilities
         self.transit_p = transit_p
 
@@ -483,6 +490,11 @@ class BinaryGibbsMetropolis(ArrayStep):
 
         super().__init__(vars, [model.compile_logp()])
 
+    def reset_tuning(self):
+        # There are no tuning parameters in this step method.
+        self.tune = False
+        return
+
     def astep(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
         logp: Callable[[RaveledVars], np.ndarray] = args[0]
         order = self.order
@@ -503,7 +515,10 @@ class BinaryGibbsMetropolis(ArrayStep):
                 if accepted:
                     logp_curr = logp_prop
 
-        return q, []
+        stats = {
+            "tune": self.tune,
+        }
+        return q, [stats]
 
     @staticmethod
     def competence(var):
@@ -542,6 +557,10 @@ class CategoricalGibbsMetropolis(ArrayStep):
     """
 
     name = "categorical_gibbs_metropolis"
+
+    stats_dtypes_shapes = {
+        "tune": (bool, []),
+    }
 
     def __init__(self, vars, proposal="uniform", order="random", model=None):
         model = pm.modelcontext(model)
@@ -593,7 +612,16 @@ class CategoricalGibbsMetropolis(ArrayStep):
         else:
             raise ValueError("Argument 'proposal' should either be 'uniform' or 'proportional'")
 
+        # Doesn't actually tune, but it's required to emit a sampler stat
+        # that indicates whether a draw was done in a tuning phase.
+        self.tune = True
+
         super().__init__(vars, [model.compile_logp()])
+
+    def reset_tuning(self):
+        # There are no tuning parameters in this step method.
+        self.tune = False
+        return
 
     def astep_unif(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
         logp = args[0]
@@ -614,7 +642,10 @@ class CategoricalGibbsMetropolis(ArrayStep):
             if accepted:
                 logp_curr = logp_prop
 
-        return q, []
+        stats = {
+            "tune": self.tune,
+        }
+        return q, [stats]
 
     def astep_prop(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
         logp = args[0]
