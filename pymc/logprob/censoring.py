@@ -265,37 +265,34 @@ def find_measurable_switch_encoding(
     switch_condn, *components = node.inputs
 
     # broadcasting of switch condition is not supported
-    if switch_condn.ndim != 0:
-        if any(switch_condn.type.broadcastable):
-            return None
+    if switch_condn.type.broadcastable != node.outputs[0].type.broadcastable:
+        return None
 
     if rv_map_feature.request_measurable([switch_condn]) != [switch_condn]:
         return None
-        # this automatically checks the measurability of the switch condition and converts switch to MeasurableSwitch
+    # this automatically checks the measurability of the switch condition and converts switch to MeasurableSwitch
 
-    measurable_comp_idx = next(
-        (
-            idx
-            for idx, component in enumerate(components)
-            if check_potential_measurability([component], valued_rvs)
-        ),
-        -1,
-    )
+    measurable_comp_list = [
+        idx
+        for idx, component in enumerate(components)
+        if check_potential_measurability([component], valued_rvs)
+    ]
+
+    # Maximum one branch allowed to be measurable
+    if len(measurable_comp_list) > 1:
+        return None
 
     # If at least one of the branches is measurable
-    if measurable_comp_idx != -1:
+    if len(measurable_comp_list) == 1:
+        measurable_comp_idx = measurable_comp_list[0]
         measurable_component = components[measurable_comp_idx]
 
         # broadcasting of the measurable component is not supported
-        if measurable_component.ndim != 0 and any(measurable_component.type.broadcastable):
-            return None
-
-        if not compare_measurability_source([switch_condn, measurable_component], valued_rvs):
-            return None
-
-        measurable_inputs = rv_map_feature.request_measurable(components)
-        # Maximum one branch allowed to be measurable
-        if len(measurable_inputs) > 1:
+        if (
+            (measurable_component.type.broadcastable != node.outputs[0].broadcastable)
+            or (not compare_measurability_source([switch_condn, measurable_component], valued_rvs))
+            or (not rv_map_feature.request_measurable([measurable_component]))
+        ):
             return None
 
         if measurable_comp_idx == 0:
