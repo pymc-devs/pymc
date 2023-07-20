@@ -33,6 +33,7 @@ from pymc.step_methods.compound import (
     BlockedStep,
     CompoundStep,
     StatsBijection,
+    check_step_emits_tune,
     flat_statname,
     flatten_steps,
 )
@@ -207,11 +208,10 @@ def make_runmeta_and_point_fn(
 ) -> Tuple[mcb.RunMeta, PointFunc]:
     variables, point_fn = get_variables_and_point_fn(model, initial_point)
 
-    sample_stats = [
-        mcb.Variable("tune", "bool"),
-    ]
+    check_step_emits_tune(step)
 
     # In PyMC the sampler stats are grouped by the sampler.
+    sample_stats = []
     steps = flatten_steps(step)
     for s, sm in enumerate(steps):
         for statname, (dtype, shape) in sm.stats_dtypes_shapes.items():

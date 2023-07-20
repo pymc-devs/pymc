@@ -119,7 +119,7 @@ def test_make_runmeta_and_point_fn(simple_model):
     assert not vars["vector"].is_deterministic
     assert not vars["vector_interval__"].is_deterministic
     assert vars["matrix"].is_deterministic
-    assert len(rmeta.sample_stats) == 1 + len(step.stats_dtypes[0])
+    assert len(rmeta.sample_stats) == len(step.stats_dtypes[0])
     pass
 
 
