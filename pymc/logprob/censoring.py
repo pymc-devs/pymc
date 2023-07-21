@@ -51,6 +51,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorConstant, TensorVariable
 
 from pymc.logprob.abstract import MeasurableElemwise, _logcdf, _logprob, _logprob_helper
+from pymc.logprob.binary import MeasurableBitwise
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import CheckParameterValue, check_potential_measurability
 
@@ -297,12 +298,13 @@ def find_measurable_switch_encoding(
 
         if measurable_comp_idx == 0:
             # changing the first branch of switch to always be the encoding
+            inverted_switch = pt.invert(switch_condn)
+
+            bitwise_op = MeasurableBitwise(inverted_switch.owner.op.scalar_op)
+            measurable_inverted_switch = bitwise_op.make_node(switch_condn).default_output()
             encoded_rv = measurable_switch_encoding.make_node(
-                pt.invert(switch_condn), *components[::-1]
+                measurable_inverted_switch, *components[::-1]
             ).default_output()
-            # FIXME: For graphs like y = pt.switch(x > 0.5, x, 0.3), they should be rewritten
-            #  to pt.switch(x <= 0.5, 0.3, x).
-            #  But the invert Op does not get converted to its Measurable counterpart.
 
             return [encoded_rv]
 
