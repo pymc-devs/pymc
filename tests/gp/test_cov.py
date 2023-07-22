@@ -302,13 +302,20 @@ class TestCovExponentiation:
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
     def test_invalid_covexp(self):
-        X = np.linspace(0, 1, 10)[:, None]
         with pytest.raises(
             ValueError, match=r"A covariance function can only be exponentiated by a scalar value"
         ):
-            with pm.Model() as model:
+            with pm.Model():
                 a = np.array([[1.0, 2.0]])
-                cov = pm.gp.cov.ExpQuad(1, 0.1) ** a
+                pm.gp.cov.ExpQuad(1, 0.1) ** a
+
+    def test_invalid_covexp_noncov(self):
+        with pytest.raises(
+            TypeError,
+            match=r"Can only exponentiate covariance functions which inherit from `Covariance`",
+        ):
+            with pm.Model():
+                pm.gp.cov.Constant(2) ** 2
 
 
 class TestCovKron:
@@ -460,6 +467,22 @@ class TestExpQuad:
             pm.gp.cov.ExpQuad(1, ls=ell).power_spectral_density(omega[:, None]).flatten().eval()
         )
         npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
+
+    def test_euclidean_dist(self):
+        X = np.arange(0, 3)[:, None]
+        Xs = np.arange(1, 4)[:, None]
+        with pm.Model():
+            cov = pm.gp.cov.ExpQuad(1, ls=1)
+        result = cov.euclidean_dist(X, Xs).eval()
+        expected = np.array(
+            [
+                [1, 2, 3],
+                [0, 1, 2],
+                [1, 0, 1],
+            ]
+        )
+        print(result, expected)
+        npt.assert_allclose(result, expected, atol=1e-5)
 
 
 class TestWhiteNoise:
@@ -671,6 +694,28 @@ class TestWarpedInput:
             pm.gp.cov.WarpedInput(1, "str is not Covariance object", lambda x: x)
 
 
+class TestWrappedPeriodic:
+    def test_1d(self):
+        X = np.linspace(0, 1, 10)[:, None]
+        with pm.Model():
+            cov1 = pm.gp.cov.Periodic(1, ls=0.2, period=1)
+            cov2 = pm.gp.cov.WrappedPeriodic(
+                cov_func=pm.gp.cov.ExpQuad(1, ls=0.2),
+                period=1,
+            )
+        K1 = cov1(X).eval()
+        K2 = cov2(X).eval()
+        npt.assert_allclose(K1, K2, atol=1e-3)
+        K1d = cov1(X, diag=True).eval()
+        K2d = cov2(X, diag=True).eval()
+        npt.assert_allclose(K1d, K2d, atol=1e-3)
+
+    def test_raises(self):
+        lin_cov = pm.gp.cov.Linear(1, c=1)
+        with pytest.raises(TypeError, match="Must inherit from the Stationary class"):
+            pm.gp.cov.WrappedPeriodic(lin_cov, period=1)
+
+
 class TestGibbs:
     def test_1d(self):
         X = np.linspace(0, 2, 10)[:, None]
@@ -765,9 +810,9 @@ class TestHandleArgs:
         x = 100
         a = 2
         b = 3
-        func_noargs2 = pm.gp.cov.handle_args(func_noargs, None)
-        func_onearg2 = pm.gp.cov.handle_args(func_onearg, a)
-        func_twoarg2 = pm.gp.cov.handle_args(func_twoarg, args=(a, b))
+        func_noargs2 = pm.gp.cov.handle_args(func_noargs)
+        func_onearg2 = pm.gp.cov.handle_args(func_onearg)
+        func_twoarg2 = pm.gp.cov.handle_args(func_twoarg)
         assert func_noargs(x) == func_noargs2(x, args=None)
         assert func_onearg(x, a) == func_onearg2(x, args=a)
         assert func_twoarg(x, a, b) == func_twoarg2(x, args=(a, b))
