@@ -2238,7 +2238,7 @@ icar = ICARRV()
 
 
 class ICAR(Continuous):
-    """
+    r"""
     The intrinsic conditional autoregressive prior. It is primarily used to model
     covariance between neighboring areas on large datasets. It is a special case
     of the :class:`~pymc.CAR` distribution where alpha is set to 1.
