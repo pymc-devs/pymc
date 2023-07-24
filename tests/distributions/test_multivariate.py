@@ -1061,6 +1061,18 @@ class TestMoments:
         assert_moment_is_expected(model, expected)
 
     @pytest.mark.parametrize(
+        "W, expected",
+        [
+            (np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]]), np.array([0, 0, 0])),
+            (np.array([[0, 1], [1, 0]]), np.array([0, 0])),
+        ],
+    )
+    def test_icar_moment(self, W, expected):
+        with pm.Model() as model:
+            RV = pm.ICAR("phi", W=W)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
         "nu, mu, cov, size, expected",
         [
             (2, np.ones(1), np.eye(1), None, np.ones(1)),
@@ -2084,35 +2096,53 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
         ),
     ],
 )
-def test_icar_matrix_checks(W, msg):
-    with pytest.raises(ValueError, match=msg):
-        pm.ICAR.dist(W=W)
+class TestICAR(BaseTestDistributionRandom):
+    pymc_dist = pm.ICAR
+    pymc_dist_params = {"W": np.array([0, 1, 1], [1, 0, 1], [1, 1, 0]), "sigma": 2}
+    expected_rv_op_params = {"W": np.array([0, 1, 1], [1, 0, 1], [1, 1, 0]), "sigma": 2}
+    sizes_to_check = [None, (1), (2), (2, 2)]
+    sizes_expected = [(3,), (3), (6), (12)]
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
+    ]
 
+    @pytest.mark.parametrize(
+        "W,msg",
+        [
+            (np.array([0, 1, 0, 0]), "W must be matrix with ndim=2"),
+            (np.array([[0, 1, 0, 0], [1, 0, 0, 1], [1, 0, 0, 1]]), "W must be a symmetric matrix"),
+            (
+                np.array([[0, 1, 0, 0], [1, 0, 0, 1], [1, 0, 0, 1], [0, 1, 1, 0]]),
+                "W must be a symmetric matrix",
+            ),
+            (
+                np.array([[0, 1, 1, 0], [1, 0, 0, 0.5], [1, 0, 0, 1], [0, 0.5, 1, 0]]),
+                "W must be composed of only 1s and 0s",
+            ),
+        ],
+    )
+    def test_icar_matrix_checks(W, msg):
+        with pytest.raises(ValueError, match=msg):
+            pm.ICAR.dist(W=W)
 
-# test logp
+    def test_icar_logp():
+        W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
 
+        with pm.Model() as m:
+            RV = pm.ICAR("phi", W=W)
 
-def test_icar_logp():
-    W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
+        assert pt.isclose(
+            pm.logp(RV, np.array([0.01, -0.03, 0.02, 0.00])).eval(), np.array(4.60022238)
+        ).eval(), "logp inaccuracy"
 
-    with pm.Model() as m:
-        RV = pm.ICAR("phi", W=W)
+    def test_icar_rng_fn():
+        W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
 
-    assert pt.isclose(
-        pm.logp(RV, np.array([0.01, -0.03, 0.02, 0.00])).eval(), np.array(4.60022238)
-    ).eval(), "logp inaccuracy"
+        RV = pm.ICAR.dist(W=W)
 
-
-# test draw
-
-
-def test_icar_rng_fn():
-    W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
-
-    RV = pm.ICAR.dist(W=W)
-
-    with pytest.raises(NotImplementedError, match="Cannot sample from ICAR prior"):
-        pm.draw(RV)
+        with pytest.raises(NotImplementedError, match="Cannot sample from ICAR prior"):
+            pm.draw(RV)
 
 
 @pytest.mark.parametrize("sparse", [True, False])

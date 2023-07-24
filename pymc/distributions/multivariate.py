@@ -86,6 +86,7 @@ __all__ = [
     "MatrixNormal",
     "KroneckerNormal",
     "CAR",
+    "ICAR",
     "StickBreakingWeights",
 ]
 
@@ -2225,11 +2226,11 @@ class ICARRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("ICAR", "\\operatorname{ICAR}")
 
-    def __call__(self, W, node1, node2, N, sigma, centering_strength, size=None, **kwargs):
-        return super().__call__(W, node1, node2, N, sigma, centering_strength, size=size, **kwargs)
+    def __call__(self, W, node1, node2, N, sigma, zero_sum_strength, size=None, **kwargs):
+        return super().__call__(W, node1, node2, N, sigma, zero_sum_strength, size=size, **kwargs)
 
     @classmethod
-    def rng_fn(cls, rng, size, W, node1, node2, N, sigma, centering_strength):
+    def rng_fn(cls, rng, size, W, node1, node2, N, sigma, zero_sum_strength):
         raise NotImplementedError("Cannot sample from ICAR prior")
 
 
@@ -2259,8 +2260,8 @@ class ICAR(Continuous):
     distance from zero.
 
     ========  ==========================================
-    Support   :math:`x \\in \\mathbb{R}^k` ?
-    Mean      :math:`0` ?
+    Support   :math:`x \\in \\mathbb{R}^k`
+    Mean      :math:`0`
     Variance  :math:`T^{-1}` ?
     ========  ==========================================
 
@@ -2276,7 +2277,7 @@ class ICAR(Continuous):
         preferable to use a non-centered parameterization by using the default
         value and multiplying the resulting phi's by sigma. See the example below.
 
-    centering_strength : scalar, default 0.001
+    zero_sum_strength : scalar, default 0.001
         Controls how strongly to enforce the zero-sum constraint. It sets the
         standard deviation of a normal density function with mean zero.
 
@@ -2323,26 +2324,27 @@ class ICAR(Continuous):
         Mollié model in stan"
         Spatial and Spatio-temporal Epidemiology, Vol. 31, (Aug., 2019),
         pp 1-18
-
+    ..  Banerjee, S., Carlin, B., Gelfand, A. Hierarchical Modeling
+        and Analysis for Spatial Data. Second edition. CRC press. (2015)
 
     """
 
     rv_op = icar
 
     @classmethod
-    def dist(cls, W, sigma=1, centering_strength=0.001, **kwargs):
+    def dist(cls, W, sigma=1, zero_sum_strength=0.001, **kwargs):
         # check that adjacency matrix is two dimensional,
-        # square
-        # and symmetrical
+        # symmetrical
+        # and composed of 1s or 0s.
 
         if not W.ndim == 2:
             raise ValueError("W must be matrix with ndim=2")
 
-        if not W.shape[0] == W.shape[1]:
-            raise ValueError("W must be a square matrix")
-
         if not np.allclose(W.T, W):
             raise ValueError("W must be a symmetric matrix")
+
+        if np.any((W != 0) & (W != 1)):
+            raise ValueError("W must be composed of only 1s and 0s")
 
         # convert adjacency matrix to edgelist representation
 
@@ -2363,24 +2365,24 @@ class ICAR(Continuous):
 
         # check on centering_strength
 
-        centering_strength = pt.as_tensor_variable(floatX(centering_strength))
-        centering_strength = Assert("centering_strength > 0")(
-            centering_strength, pt.gt(centering_strength, 0)
+        zero_sum_strength = pt.as_tensor_variable(floatX(zero_sum_strength))
+        zero_sum_strength = Assert("centering_strength > 0")(
+            zero_sum_strength, pt.gt(zero_sum_strength, 0)
         )
 
-        return super().dist([W, node1, node2, N, sigma, centering_strength], **kwargs)
+        return super().dist([W, node1, node2, N, sigma, zero_sum_strength], **kwargs)
 
-    def moment(rv, size, W, node1, node2, N, sigma, centering_strength):
+    def moment(rv, size, W, node1, node2, N, sigma, zero_sum_strength):
         return pt.zeros(N)
 
-    def logp(value, W, node1, node2, N, sigma, centering_strength):
+    def logp(value, W, node1, node2, N, sigma, zero_sum_strength):
         pairwise_difference = (-1 / (2 * sigma**2)) * pt.sum(
             pt.square(value[node1] - value[node2])
         )
         soft_center = (
-            -0.5 * pt.pow(pt.sum(value) / (centering_strength * N), 2)
+            -0.5 * pt.pow(pt.sum(value) / (zero_sum_strength * N), 2)
             - pt.log(pt.sqrt(2.0 * np.pi))
-            - pt.log(centering_strength * N)
+            - pt.log(zero_sum_strength * N)
         )
 
         return check_parameters(pairwise_difference + soft_center, sigma > 0, msg="sigma > 0")
