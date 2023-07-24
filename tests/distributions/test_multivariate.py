@@ -2098,8 +2098,8 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
 )
 class TestICAR(BaseTestDistributionRandom):
     pymc_dist = pm.ICAR
-    pymc_dist_params = {"W": np.array([0, 1, 1], [1, 0, 1], [1, 1, 0]), "sigma": 2}
-    expected_rv_op_params = {"W": np.array([0, 1, 1], [1, 0, 1], [1, 1, 0]), "sigma": 2}
+    pymc_dist_params = {"W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]), "sigma": 2}
+    expected_rv_op_params = {"W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]), "sigma": 2}
     sizes_to_check = [None, (1), (2), (2, 2)]
     sizes_expected = [(3,), (3), (6), (12)]
     checks_to_run = [
