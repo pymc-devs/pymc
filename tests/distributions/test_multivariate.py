@@ -2082,20 +2082,6 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
         assert np.all(np.abs(draw(x, random_seed=rng) - np.array([0.5, 0, 2.0])) < 0.01)
 
 
-# checks on adjacency matrix
-
-
-@pytest.mark.parametrize(
-    "W,msg",
-    [
-        (np.array([0, 1, 0, 0]), "W must be matrix with ndim=2"),
-        (np.array([[0, 1, 0, 0], [1, 0, 0, 1], [1, 0, 0, 1]]), "W must be a square matrix"),
-        (
-            np.array([[0, 1, 0, 0], [1, 0, 0, 1], [1, 0, 0, 1], [0, 1, 1, 0]]),
-            "W must be a symmetric matrix",
-        ),
-    ],
-)
 class TestICAR(BaseTestDistributionRandom):
     pymc_dist = pm.ICAR
     pymc_dist_params = {"W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]), "sigma": 2}
@@ -2124,7 +2110,8 @@ class TestICAR(BaseTestDistributionRandom):
     )
     def test_icar_matrix_checks(W, msg):
         with pytest.raises(ValueError, match=msg):
-            pm.ICAR.dist(W=W)
+            with pm.Model():
+                pm.ICAR("phi", W=W)
 
     def test_icar_logp():
         W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
