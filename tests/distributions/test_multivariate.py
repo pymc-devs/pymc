@@ -2085,19 +2085,39 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
 class TestICAR(BaseTestDistributionRandom):
     pymc_dist = pm.ICAR
     pymc_dist_params = {"W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]), "sigma": 2}
-    expected_rv_op_params = {"W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]), "sigma": 2}
-    sizes_to_check = [None, (1), (2), (2, 2)]
-    sizes_expected = [(3,), (3), (6), (12)]
-    checks_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_rv_size",
-    ]
+    expected_rv_op_params = {
+        "W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]),
+        "node1": np.array([1, 2, 2]),
+        "node2": np.array([0, 0, 1]),
+        "N": 3,
+        "sigma": 2,
+        "zero_sum_strength": 0.001,
+    }
+    checks_to_run = ["check_pymc_params_match_rv_op"]
+
+    def test_icar_logp(self):
+        W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
+
+        with pm.Model() as m:
+            RV = pm.ICAR("phi", W=W)
+
+        assert pt.isclose(
+            pm.logp(RV, np.array([0.01, -0.03, 0.02, 0.00])).eval(), np.array(4.60022238)
+        ).eval(), "logp inaccuracy"
+
+    def test_icar_rng_fn(self):
+        W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
+
+        RV = pm.ICAR.dist(W=W)
+
+        with pytest.raises(NotImplementedError, match="Cannot sample from ICAR prior"):
+            pm.draw(RV)
 
     @pytest.mark.parametrize(
         "W,msg",
         [
             (np.array([0, 1, 0, 0]), "W must be matrix with ndim=2"),
-            (np.array([[0, 1, 0, 0], [1, 0, 0, 1], [1, 0, 0, 1]]), "W must be a symmetric matrix"),
+            (np.array([[0, 1, 0, 0], [1, 0, 0, 1], [1, 0, 0, 1]]), "W must be a square matrix"),
             (
                 np.array([[0, 1, 0, 0], [1, 0, 0, 1], [1, 0, 0, 1], [0, 1, 1, 0]]),
                 "W must be a symmetric matrix",
@@ -2108,28 +2128,10 @@ class TestICAR(BaseTestDistributionRandom):
             ),
         ],
     )
-    def test_icar_matrix_checks(W, msg):
+    def test_icar_matrix_checks(self, W, msg):
         with pytest.raises(ValueError, match=msg):
             with pm.Model():
                 pm.ICAR("phi", W=W)
-
-    def test_icar_logp():
-        W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
-
-        with pm.Model() as m:
-            RV = pm.ICAR("phi", W=W)
-
-        assert pt.isclose(
-            pm.logp(RV, np.array([0.01, -0.03, 0.02, 0.00])).eval(), np.array(4.60022238)
-        ).eval(), "logp inaccuracy"
-
-    def test_icar_rng_fn():
-        W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
-
-        RV = pm.ICAR.dist(W=W)
-
-        with pytest.raises(NotImplementedError, match="Cannot sample from ICAR prior"):
-            pm.draw(RV)
 
 
 @pytest.mark.parametrize("sparse", [True, False])

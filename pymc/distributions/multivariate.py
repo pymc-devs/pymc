@@ -2334,11 +2334,15 @@ class ICAR(Continuous):
     @classmethod
     def dist(cls, W, sigma=1, zero_sum_strength=0.001, **kwargs):
         # check that adjacency matrix is two dimensional,
+        # square,
         # symmetrical
         # and composed of 1s or 0s.
 
         if not W.ndim == 2:
             raise ValueError("W must be matrix with ndim=2")
+
+        if not W.shape[0] == W.shape[1]:
+            raise ValueError("W must be a square matrix")
 
         if not np.allclose(W.T, W):
             raise ValueError("W must be a symmetric matrix")
