@@ -1069,7 +1069,7 @@ class TestMoments:
     )
     def test_icar_moment(self, W, expected):
         with pm.Model() as model:
-            RV = pm.ICAR("phi", W=W)
+            RV = pm.ICAR("x", W=W)
         assert_moment_is_expected(model, expected)
 
     @pytest.mark.parametrize(
