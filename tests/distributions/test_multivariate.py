@@ -2093,7 +2093,15 @@ class TestICAR(BaseTestDistributionRandom):
         "sigma": 2,
         "zero_sum_strength": 0.001,
     }
-    checks_to_run = ["check_pymc_params_match_rv_op"]
+    checks_to_run = ["check_pymc_params_match_rv_op", "check_rv_inferred_size"]
+
+    def check_rv_inferred_size(self):
+        sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+        sizes_expected = [(3,), (3,), (1, 3), (1, 3), (5, 3), (4, 5, 3), (2, 4, 2, 3)]
+        for size, expected in zip(sizes_to_check, sizes_expected):
+            pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
+            expected_symbolic = tuple(pymc_rv.shape.eval())
+            assert expected_symbolic == expected
 
     def test_icar_logp(self):
         W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])

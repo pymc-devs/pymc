@@ -2259,12 +2259,6 @@ class ICAR(Continuous):
     constraint by finding the sum of the vector $\\phi$ and penalizing based on its
     distance from zero.
 
-    ========  ==========================================
-    Support   :math:`x \\in \\mathbb{R}^k`
-    Mean      :math:`0`
-    Variance  :math:`T^{-1}` ?
-    ========  ==========================================
-
     Parameters
     ----------
     W : ndarray of int
@@ -2365,14 +2359,10 @@ class ICAR(Continuous):
         # check on sigma
 
         sigma = pt.as_tensor_variable(floatX(sigma))
-        sigma = Assert("sigma > 0")(sigma, pt.gt(sigma, 0))
 
         # check on centering_strength
 
         zero_sum_strength = pt.as_tensor_variable(floatX(zero_sum_strength))
-        zero_sum_strength = Assert("centering_strength > 0")(
-            zero_sum_strength, pt.gt(zero_sum_strength, 0)
-        )
 
         return super().dist([W, node1, node2, N, sigma, zero_sum_strength], **kwargs)
 
