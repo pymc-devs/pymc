@@ -2064,6 +2064,7 @@ class CARRV(RandomVariable):
             W = Assert(msg)(W, pt.allclose(W, W.T))
 
         tau = pt.as_tensor_variable(floatX(tau))
+
         alpha = pt.as_tensor_variable(floatX(alpha))
 
         return super().make_node(rng, size, dtype, mu, W, alpha, tau)
@@ -2080,6 +2081,9 @@ class CARRV(RandomVariable):
         Journal of the Royal Statistical Society Series B, Royal Statistical Society,
         vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288
         """
+        if np.any(alpha >= 1) or np.any(alpha <= -1):
+            raise ValueError("the domain of alpha is: -1 < alpha < 1")
+
         if not scipy.sparse.issparse(W):
             W = scipy.sparse.csr_matrix(W)
         s = np.asarray(W.sum(axis=0))[0]
@@ -2146,8 +2150,9 @@ class CAR(Continuous):
         :func:`~pytensor.sparse.basic.as_sparse_or_tensor_variable` is
         used for this sparse or tensorvariable conversion.
     alpha : tensor_like of float
-        Autoregression parameter taking values between -1 and 1. Values closer to 0 indicate weaker
-        correlation and values closer to 1 indicate higher autocorrelation. For most use cases, the
+        Autoregression parameter taking values greater than -1 and less than 1.
+        Values closer to 0 indicate weaker correlation and values closer to
+        1 indicate higher autocorrelation. For most use cases, the
         support of alpha should be restricted to (0, 1).
     tau : tensor_like of float
         Positive precision variable controlling the scale of the underlying normal variates.
@@ -2214,10 +2219,10 @@ class CAR(Continuous):
         logquad = (tau * delta * tau_dot_delta).sum(axis=-1)
         return check_parameters(
             0.5 * (logtau + logdet - logquad),
-            -1 <= alpha,
-            alpha <= 1,
+            -1 < alpha,
+            alpha < 1,
             tau > 0,
-            msg="-1 <= alpha <= 1, tau > 0",
+            msg="-1 < alpha < 1, tau > 0",
         )
 
 
