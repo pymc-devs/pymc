@@ -12,8 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import pytensor
 import pytensor.tensor as pt
+
+from pytensor.graph.replace import graph_replace
 
 from pymc.pytensorf import floatX
 from pymc.util import WithMemoization, locally_cachedmethod
@@ -85,9 +86,10 @@ class Stein(WithMemoization):
     def logp_norm(self):
         sized_symbolic_logp = self.approx.sized_symbolic_logp
         if self.use_histogram:
-            sized_symbolic_logp = pytensor.clone_replace(
+            sized_symbolic_logp = graph_replace(
                 sized_symbolic_logp,
                 dict(zip(self.approx.symbolic_randoms, self.approx.collect("histogram"))),
+                strict=False,
             )
         return sized_symbolic_logp / self.approx.symbolic_normalizing_constant
 
