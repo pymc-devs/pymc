@@ -217,6 +217,10 @@ class TestCustomDist:
         with pytest.raises(NotImplementedError):
             pm.sample_posterior_predictive(idata, model=model)
 
+    @pytest.mark.xfail(
+        NotImplementedError,
+        reason="Support shape of multivariate CustomDist cannot be inferred. See https://github.com/pymc-devs/pytensor/pull/388",
+    )
     @pytest.mark.parametrize("size", [(), (3,), (3, 2)], ids=str)
     def test_custom_dist_with_random_multivariate(self, size):
         supp_shape = 5
@@ -264,6 +268,10 @@ class TestCustomDist:
             ):
                 CustomDist("a", lambda x: x)
 
+    @pytest.mark.xfail(
+        NotImplementedError,
+        reason="Support shape of multivariate CustomDist cannot be inferred. See https://github.com/pymc-devs/pytensor/pull/388",
+    )
     @pytest.mark.parametrize("size", [None, (), (2,)], ids=str)
     def test_custom_dist_multivariate_logp(self, size):
         supp_shape = 5
@@ -314,6 +322,10 @@ class TestCustomDist:
         assert evaled_moment.shape == to_tuple(size)
         assert np.all(evaled_moment == mu_val)
 
+    @pytest.mark.xfail(
+        NotImplementedError,
+        reason="Support shape of multivariate CustomDist cannot be inferred. See https://github.com/pymc-devs/pytensor/pull/388",
+    )
     @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
     def test_custom_dist_custom_moment_multivariate(self, size):
         def density_moment(rv, size, mu):
@@ -328,6 +340,10 @@ class TestCustomDist:
         assert evaled_moment.shape == to_tuple(size) + (5,)
         assert np.all(evaled_moment == mu_val)
 
+    @pytest.mark.xfail(
+        NotImplementedError,
+        reason="Support shape of multivariate CustomDist cannot be inferred. See https://github.com/pymc-devs/pytensor/pull/388",
+    )
     @pytest.mark.parametrize(
         "with_random, size",
         [

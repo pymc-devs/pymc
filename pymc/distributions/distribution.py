@@ -488,6 +488,11 @@ class _CustomDist(Distribution):
         class_name: str = "CustomDist",
         **kwargs,
     ):
+        if ndim_supp > 0:
+            raise NotImplementedError(
+                "CustomDist with ndim_supp > 0 and without a `dist` function are not supported."
+            )
+
         dist_params = [as_tensor_variable(param) for param in dist_params]
 
         # Assume scalar ndims_params
