@@ -2226,11 +2226,11 @@ class ICARRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("ICAR", "\\operatorname{ICAR}")
 
-    def __call__(self, W, node1, node2, N, sigma, zero_sum_strength, size=None, **kwargs):
-        return super().__call__(W, node1, node2, N, sigma, zero_sum_strength, size=size, **kwargs)
+    def __call__(self, W, node1, node2, N, sigma, zero_sum_stdev, size=None, **kwargs):
+        return super().__call__(W, node1, node2, N, sigma, zero_sum_stdev, size=size, **kwargs)
 
     @classmethod
-    def rng_fn(cls, rng, size, W, node1, node2, N, sigma, zero_sum_strength):
+    def rng_fn(cls, rng, size, W, node1, node2, N, sigma, zero_sum_stdev):
         raise NotImplementedError("Cannot sample from ICAR prior")
 
 
@@ -2240,30 +2240,29 @@ icar = ICARRV()
 class ICAR(Continuous):
     r"""
     The intrinsic conditional autoregressive prior. It is primarily used to model
-    covariance between neighboring areas on large datasets. It is a special case
+    covariance between neighboring areas. It is a special case
     of the :class:`~pymc.CAR` distribution where alpha is set to 1.
 
     The log probability density function is
 
     .. math::
-        f(\\phi| W,\\sigma) =
-          -\frac{1}{2\\sigma^{2}} \\sum_{i\\sim j} (\\phi_{i} - \\phi_{j})^2 -
-          \frac{1}{2}*\frac{\\sum_{i}{\\phi_{i}}}{0.001N}^{2} - \\ln{\\sqrt{2\\pi}} -
-          \\ln{0.001N}
+        f(\phi| W,\sigma) =
+          -\frac{1}{2\sigma^{2}} \sum_{i\sim j} (\phi_{i} - \phi_{j})^2 -
+          \frac{1}{2}*\frac{\sum_{i}{\phi_{i}}}{0.001N}^{2} - \ln{\sqrt{2\\pi}} -
+          \ln{0.001N}
 
     The first term represents the spatial covariance component. Each $\\phi_{i}$ is penalized
     based on the square distance from each of its neighbors. The notation $i\\sim j$
     indicates a sum over all the neighbors of $\\phi_{i}$. The last three terms are the
     Normal log density function where the mean is zero and the standard deviation is
-    $N * 0.001$ (where N is the length of the vector $\\phi$). This component imposed the zero-sum
-    constraint by finding the sum of the vector $\\phi$ and penalizing based on its
-    distance from zero.
+    $N * 0.001$ (where N is the length of the vector $\\phi$). This component imposes
+    a zero-sum constraint by finding the sum of the vector $\\phi$ and penalizing based
+    on its distance from zero.
 
     Parameters
     ----------
     W : ndarray of int
         Symmetric adjacency matrix of 1s and 0s indicating adjacency between elements.
-        Must pass either W or both node1 and node2.
 
     sigma : scalar, default 1
         Standard deviation of the vector of phi's. Putting a prior on sigma
@@ -2271,9 +2270,11 @@ class ICAR(Continuous):
         preferable to use a non-centered parameterization by using the default
         value and multiplying the resulting phi's by sigma. See the example below.
 
-    zero_sum_strength : scalar, default 0.001
-        Controls how strongly to enforce the zero-sum constraint. It sets the
-        standard deviation of a normal density function with mean zero.
+    zero_sum_stdev : scalar, default 0.001
+        Controls how strongly to enforce the zero-sum constraint. The sum of
+        phi is normally distributed with a mean of zero and small standard deviation.
+        This parameter sets the standard deviation of a normal density function with
+        mean zero.
 
 
     Examples
@@ -2289,25 +2290,23 @@ class ICAR(Continuous):
         # 4x4 adjacency matrix
         # arranged in a square lattice
 
-        W = np.array([[0,1,0,1],
-                      [1,0,1,0],
-                      [0,1,0,1],
-                      [1,0,1,0]])
+        W = np.array([
+            [0,1,0,1],
+            [1,0,1,0],
+            [0,1,0,1],
+            [1,0,1,0]
+        ])
 
         # centered parameterization
-
         with pm.Model():
-            sigma = pm.Exponential('sigma',1)
-            phi = pm.ICAR('phi',W=W,sigma=sigma)
-
+            sigma = pm.Exponential('sigma', 1)
+            phi = pm.ICAR('phi', W=W, sigma=sigma)
             mu = phi
 
         # non-centered parameterization
-
         with pm.Model():
-            sigma = pm.Exponential('sigma',1)
-            phi = pm.ICAR('phi',W=W)
-
+            sigma = pm.Exponential('sigma', 1)
+            phi = pm.ICAR('phi', W=W)
             mu = sigma * phi
 
     References
@@ -2326,12 +2325,7 @@ class ICAR(Continuous):
     rv_op = icar
 
     @classmethod
-    def dist(cls, W, sigma=1, zero_sum_strength=0.001, **kwargs):
-        # check that adjacency matrix is two dimensional,
-        # square,
-        # symmetrical
-        # and composed of 1s or 0s.
-
+    def dist(cls, W, sigma=1, zero_sum_stdev=0.001, **kwargs):
         if not W.ndim == 2:
             raise ValueError("W must be matrix with ndim=2")
 
@@ -2345,6 +2339,12 @@ class ICAR(Continuous):
             raise ValueError("W must be composed of only 1s and 0s")
 
         # convert adjacency matrix to edgelist representation
+        # An edgelist is a pair of lists.
+        # If node i and node j are connected then one list
+        # will contain i and the other will contain j at the same
+        # index value.
+        # We only use the lower triangle here because adjacency
+        # is a undirected connection.
 
         node1, node2 = np.where(np.tril(W) == 1)
 
@@ -2356,30 +2356,25 @@ class ICAR(Continuous):
         N = pt.shape(W)[0]
         N = pt.as_tensor_variable(N)
 
-        # check on sigma
-
         sigma = pt.as_tensor_variable(floatX(sigma))
+        zero_sum_stdev = pt.as_tensor_variable(floatX(zero_sum_stdev))
 
-        # check on centering_strength
+        return super().dist([W, node1, node2, N, sigma, zero_sum_stdev], **kwargs)
 
-        zero_sum_strength = pt.as_tensor_variable(floatX(zero_sum_strength))
-
-        return super().dist([W, node1, node2, N, sigma, zero_sum_strength], **kwargs)
-
-    def moment(rv, size, W, node1, node2, N, sigma, zero_sum_strength):
+    def moment(rv, size, W, node1, node2, N, sigma, zero_sum_stdev):
         return pt.zeros(N)
 
-    def logp(value, W, node1, node2, N, sigma, zero_sum_strength):
+    def logp(value, W, node1, node2, N, sigma, zero_sum_stdev):
         pairwise_difference = (-1 / (2 * sigma**2)) * pt.sum(
             pt.square(value[node1] - value[node2])
         )
-        soft_center = (
-            -0.5 * pt.pow(pt.sum(value) / (zero_sum_strength * N), 2)
+        zero_sum = (
+            -0.5 * pt.pow(pt.sum(value) / (zero_sum_stdev * N), 2)
             - pt.log(pt.sqrt(2.0 * np.pi))
-            - pt.log(zero_sum_strength * N)
+            - pt.log(zero_sum_stdev * N)
         )
 
-        return check_parameters(pairwise_difference + soft_center, sigma > 0, msg="sigma > 0")
+        return check_parameters(pairwise_difference + zero_sum, sigma > 0, msg="sigma > 0")
 
 
 class StickBreakingWeightsRV(RandomVariable):
