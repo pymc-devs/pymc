@@ -33,7 +33,10 @@ from pytensor.tensor import TensorConstant, gammaln, sigmoid
 from pytensor.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from pytensor.tensor.random.basic import dirichlet, multinomial, multivariate_normal
 from pytensor.tensor.random.op import RandomVariable, default_supp_shape_from_params
-from pytensor.tensor.random.utils import broadcast_params
+from pytensor.tensor.random.utils import (
+    broadcast_params,
+    supp_shape_from_ref_param_shape,
+)
 from pytensor.tensor.slinalg import Cholesky, SolveTriangular
 from pytensor.tensor.type import TensorType
 from scipy import linalg, stats
@@ -2228,6 +2231,14 @@ class ICARRV(RandomVariable):
 
     def __call__(self, W, node1, node2, N, sigma, zero_sum_stdev, size=None, **kwargs):
         return super().__call__(W, node1, node2, N, sigma, zero_sum_stdev, size=size, **kwargs)
+
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=0,
+        )
 
     @classmethod
     def rng_fn(cls, rng, size, W, node1, node2, N, sigma, zero_sum_stdev):
