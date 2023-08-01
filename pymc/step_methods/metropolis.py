@@ -492,7 +492,6 @@ class BinaryGibbsMetropolis(ArrayStep):
 
     def reset_tuning(self):
         # There are no tuning parameters in this step method.
-        self.tune = False
         return
 
     def astep(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
@@ -620,7 +619,6 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
     def reset_tuning(self):
         # There are no tuning parameters in this step method.
-        self.tune = False
         return
 
     def astep_unif(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
