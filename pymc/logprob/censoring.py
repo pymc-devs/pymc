@@ -269,15 +269,15 @@ def find_measurable_switch_encoding(
     if switch_condn.type.broadcastable != node.outputs[0].type.broadcastable:
         return None
 
-    if rv_map_feature.request_measurable([switch_condn]) != [switch_condn]:
-        return None
-    # this automatically checks the measurability of the switch condition and converts switch to MeasurableSwitch
-
     measurable_comp_list = [
         idx
         for idx, component in enumerate(components)
         if check_potential_measurability([component], valued_rvs)
     ]
+
+    # this automatically checks the measurability of the switch condition and converts switch to MeasurableSwitch
+    if rv_map_feature.request_measurable([switch_condn]) != [switch_condn]:
+        return None
 
     # Maximum one branch allowed to be measurable
     if len(measurable_comp_list) > 1:
