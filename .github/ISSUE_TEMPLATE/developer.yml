@@ -1,0 +1,9 @@
+name: Developer issue
+description: This template is for developers only!
+
+body:
+- type: textarea
+  attributes:
+    label: Description
+  validations:
+    required: true

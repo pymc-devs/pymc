@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -40,8 +40,6 @@ class NDArray(base.BaseTrace):
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
     """
-
-    supports_sampler_stats = True
 
     def __init__(self, name=None, model=None, vars=None, test_point=None):
         super().__init__(name, model, vars, test_point)
@@ -87,7 +85,7 @@ class NDArray(base.BaseTrace):
         if self._stats is None:
             self._stats = []
             for sampler in sampler_vars:
-                data = dict()  # type: Dict[str, np.ndarray]
+                data: Dict[str, np.ndarray] = dict()
                 self._stats.append(data)
                 for varname, dtype in sampler.items():
                     data[varname] = np.zeros(draws, dtype=dtype)
@@ -95,7 +93,6 @@ class NDArray(base.BaseTrace):
             for data, vars in zip(self._stats, sampler_vars):
                 if vars.keys() != data.keys():
                     raise ValueError("Sampler vars can't change")
-                old_draws = len(self)
                 for varname, dtype in vars.items():
                     old = data[varname]
                     new = np.zeros(draws, dtype=dtype)
@@ -122,7 +119,9 @@ class NDArray(base.BaseTrace):
                     data[key][self.draw_idx] = val
         self.draw_idx += 1
 
-    def _get_sampler_stats(self, varname, sampler_idx, burn, thin):
+    def _get_sampler_stats(
+        self, varname: str, sampler_idx: int, burn: int, thin: int
+    ) -> np.ndarray:
         return self._stats[sampler_idx][varname][burn::thin]
 
     def close(self):
@@ -159,7 +158,7 @@ class NDArray(base.BaseTrace):
         """
         return self.samples[varname][burn::thin]
 
-    def _slice(self, idx):
+    def _slice(self, idx: slice):
         # Slicing directly instead of using _slice_as_ndarray to
         # support stop value in slice (which is needed by
         # iter_sample).
@@ -177,7 +176,7 @@ class NDArray(base.BaseTrace):
             return sliced
         sliced._stats = []
         for vars in self._stats:
-            var_sliced = {}
+            var_sliced: Dict[str, np.ndarray] = {}
             sliced._stats.append(var_sliced)
             for key, vals in vars.items():
                 var_sliced[key] = vals[idx]
@@ -220,6 +219,7 @@ def point_list_to_multitrace(
     with _model:
         chain = NDArray(model=_model, vars=[_model[vn] for vn in varnames])
         chain.setup(draws=len(point_list), chain=0)
+
         # since we are simply loading a trace by hand, we need only a vacuous function for
         # chain.record() to use. This crushes the default.
         def point_fun(point):

@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -11,21 +11,23 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
 
-import aesara.tensor as at
 import numpy as np
+import pytensor.tensor as pt
 
-from aesara.tensor import as_tensor_variable
-from aesara.tensor.random.op import RandomVariable
-from aesara.tensor.var import TensorVariable
+from pytensor.tensor import as_tensor_variable
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.var import TensorVariable
 
-from pymc.aesaraf import floatX, intX
-from pymc.distributions.continuous import BoundedContinuous
+from pymc.distributions.continuous import BoundedContinuous, bounded_cont_transform
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import Continuous, Discrete
-from pymc.distributions.logprob import logp
 from pymc.distributions.shape_utils import to_tuple
+from pymc.distributions.transforms import _default_transform
+from pymc.logprob.basic import logp
 from pymc.model import modelcontext
+from pymc.pytensorf import floatX, intX
 from pymc.util import check_dist_not_registered
 
 __all__ = ["Bound"]
@@ -69,8 +71,8 @@ class _ContinuousBounded(BoundedContinuous):
         -------
         TensorVariable
         """
-        res = at.switch(
-            at.or_(at.lt(value, lower), at.gt(value, upper)),
+        res = pt.switch(
+            pt.or_(pt.lt(value, lower), pt.gt(value, upper)),
             -np.inf,
             logp(distribution, value),
         )
@@ -80,6 +82,11 @@ class _ContinuousBounded(BoundedContinuous):
             lower <= upper,
             msg="lower <= upper",
         )
+
+
+@_default_transform.register(BoundRV)
+def bound_default_transform(op, rv):
+    return bounded_cont_transform(op, rv, _ContinuousBounded.bound_args_indices)
 
 
 class DiscreteBoundRV(BoundRV):
@@ -94,8 +101,8 @@ class _DiscreteBounded(Discrete):
     rv_op = discrete_boundrv
 
     def __new__(cls, *args, **kwargs):
-        transform = kwargs.get("transform", None)
-        if transform is not None:
+        kwargs.setdefault("transform", None)
+        if kwargs.get("transform") is not None:
             raise ValueError("Cannot transform discrete variable.")
         return super().__new__(cls, *args, **kwargs)
 
@@ -118,8 +125,8 @@ class _DiscreteBounded(Discrete):
         -------
         TensorVariable
         """
-        res = at.switch(
-            at.or_(at.lt(value, lower), at.gt(value, upper)),
+        res = pt.switch(
+            pt.or_(pt.lt(value, lower), pt.gt(value, upper)),
             -np.inf,
             logp(distribution, value),
         )
@@ -175,7 +182,14 @@ class Bound:
         dims=None,
         **kwargs,
     ):
-
+        warnings.warn(
+            "Bound has been deprecated in favor of Truncated, and will be removed in a "
+            "future release. If Truncated is not an option, Bound can be implemented by"
+            "adding an IntervalTransform between lower and upper to a continuous "
+            "variable. A Potential that returns negative infinity for values outside "
+            "of the bounds can be used for discrete variables.",
+            FutureWarning,
+        )
         cls._argument_checks(dist, **kwargs)
 
         if dims is not None:
@@ -187,7 +201,6 @@ class Bound:
                 raise ValueError("Given dims do not exist in model coordinates.")
 
         lower, upper, initval = cls._set_values(lower, upper, size, shape, initval)
-        dist.tag.ignore_logprob = True
 
         if isinstance(dist.owner.op, Continuous):
             res = _ContinuousBounded(
@@ -219,10 +232,8 @@ class Bound:
         shape=None,
         **kwargs,
     ):
-
         cls._argument_checks(dist, **kwargs)
         lower, upper, initval = cls._set_values(lower, upper, size, shape, initval=None)
-        dist.tag.ignore_logprob = True
         if isinstance(dist.owner.op, Continuous):
             res = _ContinuousBounded.dist(
                 [dist, lower, upper],

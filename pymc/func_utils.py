@@ -1,4 +1,4 @@
-#   Copyright 2021 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -11,14 +11,12 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import warnings
-
 from typing import Callable, Dict, Optional, Union
 
-import aesara.tensor as aet
 import numpy as np
+import pytensor.tensor as pt
 
-from aesara.gradient import NullTypeGradError
+from pytensor.gradient import NullTypeGradError
 from scipy import optimize
 
 import pymc as pm
@@ -33,41 +31,56 @@ def find_constrained_prior(
     init_guess: Dict[str, float],
     mass: float = 0.95,
     fixed_params: Optional[Dict[str, float]] = None,
+    mass_below_lower: Optional[float] = None,
+    **kwargs,
 ) -> Dict[str, float]:
     """
     Find optimal parameters to get `mass` % of probability
-    of `pm_dist` between `lower` and `upper`.
+    of a :ref:`distribution <api_distributions>` between `lower` and `upper`.
+
     Note: only works for one- and two-parameter distributions, as there
     are exactly two constraints. Fix some combination of parameters
     if you want to use it on >=3-parameter distributions.
 
     Parameters
     ----------
-    distribution : pm.Distribution
+    distribution : Distribution
         PyMC distribution you want to set a prior on.
         Needs to have a ``logcdf`` method implemented in PyMC.
     lower : float
         Lower bound to get `mass` % of probability of `pm_dist`.
     upper : float
         Upper bound to get `mass` % of probability of `pm_dist`.
-    init_guess: Dict[str, float]
+    init_guess : dict of {str : float}
         Initial guess for ``scipy.optimize.least_squares`` to find the
         optimal parameters of `pm_dist` fitting the interval constraint.
         Must be a dictionary with the name of the PyMC distribution's
         parameter as keys and the initial guess as values.
-    mass: float, default to 0.95
+    mass : float, default 0.95
         Share of the probability mass we want between ``lower`` and ``upper``.
         Defaults to 95%.
-    fixed_params: Dict[str, float], Optional, default None
+    fixed_params : str or float, optional, default None
         Only used when `pm_dist` has at least three parameters.
         Dictionary of fixed parameters, so that there are only 2 to optimize.
-        For instance, for a StudenT, you fix nu to a constant and get the optimized
+        For instance, for a StudentT, you fix nu to a constant and get the optimized
         mu and sigma.
+    mass_below_lower : float, optional, default None
+        The probability mass below the ``lower`` bound. If ``None``,
+        defaults to ``(1 - mass) / 2``, which implies that the probability
+        mass below the ``lower`` value will be equal to the probability
+        mass above the ``upper`` value.
 
     Returns
     -------
-    The optimized distribution parameters as a dictionary with the parameters'
-    name as key and the optimized value as value.
+    opt_params : dict
+        The optimized distribution parameters as a dictionary.
+        Dictionary keys are the parameter names and
+        dictionary values are the optimized parameter values.
+
+    Notes
+    -----
+    Optional keyword arguments can be passed to ``find_constrained_prior``. These will be
+    delivered to the underlying call to :external:py:func:`scipy.optimize.minimize`.
 
     Examples
     --------
@@ -93,11 +106,31 @@ def find_constrained_prior(
             init_guess={"mu": 5, "sigma": 2},
             fixed_params={"nu": 7},
         )
+
+    Under some circumstances, you might not want to have the same cumulative
+    probability below the ``lower`` threshold and above the ``upper`` threshold.
+    For example, you might want to constrain an Exponential distribution to
+    find the parameter that yields 90% of the mass below the ``upper`` bound,
+    and have zero mass below ``lower``. You can do that with the following call
+    to ``find_constrained_prior``
+
+    .. code-block:: python
+
+        opt_params = pm.find_constrained_prior(
+            pm.Exponential,
+            lower=0,
+            upper=3.,
+            mass=0.9,
+            init_guess={"lam": 1},
+            mass_below_lower=0,
+        )
     """
     assert 0.01 <= mass <= 0.99, (
         "This function optimizes the mass of the given distribution +/- "
         f"1%, so `mass` has to be between 0.01 and 0.99. You provided {mass}."
     )
+    if mass_below_lower is None:
+        mass_below_lower = (1 - mass) / 2
 
     # exit when any parameter is not scalar:
     if np.any(np.asarray(distribution.rv_op.ndims_params) != 0):
@@ -106,7 +139,7 @@ def find_constrained_prior(
             "Feel free to open a pull request on PyMC repo if you really need this feature."
         )
 
-    dist_params = aet.vector("dist_params")
+    dist_params = pt.vector("dist_params")
     params_to_optim = {
         arg_name: dist_params[i] for arg_name, i in zip(init_guess.keys(), range(len(init_guess)))
     }
@@ -126,20 +159,34 @@ def find_constrained_prior(
             "need it."
         )
 
-    cdf_error = (pm.math.exp(logcdf_upper) - pm.math.exp(logcdf_lower)) - mass
-    cdf_error_fn = pm.aesaraf.compile_pymc([dist_params], cdf_error, allow_input_downcast=True)
+    target = (pt.exp(logcdf_lower) - mass_below_lower) ** 2
+    target_fn = pm.pytensorf.compile_pymc([dist_params], target, allow_input_downcast=True)
+
+    constraint = pt.exp(logcdf_upper) - pt.exp(logcdf_lower)
+    constraint_fn = pm.pytensorf.compile_pymc([dist_params], constraint, allow_input_downcast=True)
 
     jac: Union[str, Callable]
+    constraint_jac: Union[str, Callable]
     try:
-        aesara_jac = pm.gradient(cdf_error, [dist_params])
-        jac = pm.aesaraf.compile_pymc([dist_params], aesara_jac, allow_input_downcast=True)
+        pytensor_jac = pm.gradient(target, [dist_params])
+        jac = pm.pytensorf.compile_pymc([dist_params], pytensor_jac, allow_input_downcast=True)
+        pytensor_constraint_jac = pm.gradient(constraint, [dist_params])
+        constraint_jac = pm.pytensorf.compile_pymc(
+            [dist_params], pytensor_constraint_jac, allow_input_downcast=True
+        )
     # when PyMC cannot compute the gradient
     except (NotImplementedError, NullTypeGradError):
         jac = "2-point"
+        constraint_jac = "2-point"
+    cons = optimize.NonlinearConstraint(constraint_fn, lb=mass, ub=mass, jac=constraint_jac)
 
-    opt = optimize.least_squares(cdf_error_fn, x0=list(init_guess.values()), jac=jac)
+    opt = optimize.minimize(
+        target_fn, x0=list(init_guess.values()), jac=jac, constraints=cons, **kwargs
+    )
     if not opt.success:
-        raise ValueError("Optimization of parameters failed.")
+        raise ValueError(
+            f"Optimization of parameters failed.\nOptimization termination details:\n{opt}"
+        )
 
     # save optimal parameters
     opt_params = {
@@ -147,18 +194,4 @@ def find_constrained_prior(
     }
     if fixed_params is not None:
         opt_params.update(fixed_params)
-
-    # check mass in interval is not too far from `mass`
-    opt_dist = distribution.dist(**opt_params)
-    mass_in_interval = (
-        pm.math.exp(pm.logcdf(opt_dist, upper)) - pm.math.exp(pm.logcdf(opt_dist, lower))
-    ).eval()
-    if (np.abs(mass_in_interval - mass)) > 0.01:
-        warnings.warn(
-            f"Final optimization has {(mass_in_interval if mass_in_interval.ndim < 1 else mass_in_interval[0])* 100:.0f}% of probability mass between "
-            f"{lower} and {upper} instead of the requested {mass * 100:.0f}%.\n"
-            "You may need to use a more flexible distribution, change the fixed parameters in the "
-            "`fixed_params` dictionary, or provide better initial guesses."
-        )
-
     return opt_params

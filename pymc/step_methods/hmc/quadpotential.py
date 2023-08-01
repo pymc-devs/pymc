@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -12,16 +12,20 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from __future__ import annotations
+
 import warnings
 
-import aesara
+from typing import overload
+
 import numpy as np
+import pytensor
 import scipy.linalg
 
 from numpy.random import normal
 from scipy.sparse import issparse
 
-from pymc.aesaraf import floatX
+from pymc.pytensorf import floatX
 
 __all__ = [
     "quad_potential",
@@ -94,7 +98,17 @@ class PositiveDefiniteError(ValueError):
 
 
 class QuadPotential:
-    def velocity(self, x, out=None):
+    dtype: np.dtype
+
+    @overload
+    def velocity(self, x: np.ndarray, out: None) -> np.ndarray:
+        ...
+
+    @overload
+    def velocity(self, x: np.ndarray, out: np.ndarray) -> None:
+        ...
+
+    def velocity(self, x: np.ndarray, out: np.ndarray | None = None) -> np.ndarray | None:
         """Compute the current velocity at a position in parameter space."""
         raise NotImplementedError("Abstract method")
 
@@ -135,6 +149,9 @@ class QuadPotential:
 
     def reset(self):
         pass
+
+    def stats(self):
+        return {"largest_eigval": np.nan, "smallest_eigval": np.nan}
 
 
 def isquadpotential(value):
@@ -198,7 +215,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
             raise ValueError(f"Wrong shape for initial_mean: expected {n} got {len(initial_mean)}")
 
         if dtype is None:
-            dtype = aesara.config.floatX
+            dtype = pytensor.config.floatX
 
         if initial_diag is None:
             initial_diag = np.ones(n, dtype=dtype)
@@ -223,7 +240,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
     def reset(self):
         self._var = np.array(self._initial_diag, dtype=self.dtype, copy=True)
-        self._var_aesara = aesara.shared(self._var)
+        self._var_pytensor = pytensor.shared(self._var)
         self._stds = np.sqrt(self._initial_diag)
         self._inv_stds = floatX(1.0) / self._stds
         self._foreground_var = _WeightedVariance(
@@ -254,9 +271,10 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
     def _update_from_weightvar(self, weightvar):
         weightvar.current_variance(out=self._var)
+        self._var = np.clip(self._var, 1e-12, 1e12)
         np.sqrt(self._var, out=self._stds)
         np.divide(1, self._stds, out=self._inv_stds)
-        self._var_aesara.set_value(self._var)
+        self._var_pytensor.set_value(self._var)
 
     def update(self, sample, grad, tune):
         """Inform the potential about a new sample during tuning."""
@@ -401,7 +419,7 @@ class QuadPotentialDiagAdaptExp(QuadPotentialDiagAdapt):
         initial_diag : np.ndarray
             An estimate of the posterior variance of each parameter.
         alpha : float
-            Decay rate of the exponetial weighted variance.
+            Decay rate of the exponential weighted variance.
         use_grads : bool
             Use gradients, not only samples to estimate the mass matrix.
         stop_adaptation : int
@@ -481,7 +499,7 @@ class QuadPotentialDiag(QuadPotential):
            Diagonal of covariance matrix for the potential vector
         """
         if dtype is None:
-            dtype = aesara.config.floatX
+            dtype = pytensor.config.floatX
         self.dtype = dtype
         v = v.astype(self.dtype)
         s = v**0.5
@@ -525,7 +543,7 @@ class QuadPotentialFullInv(QuadPotential):
            Inverse of covariance matrix for the potential vector
         """
         if dtype is None:
-            dtype = aesara.config.floatX
+            dtype = pytensor.config.floatX
         self.dtype = dtype
         self.L = floatX(scipy.linalg.cholesky(A, lower=True))
 
@@ -565,7 +583,7 @@ class QuadPotentialFull(QuadPotential):
             scaling matrix for the potential vector
         """
         if dtype is None:
-            dtype = aesara.config.floatX
+            dtype = pytensor.config.floatX
         self.dtype = dtype
         self._cov = np.array(cov, dtype=self.dtype, copy=True)
         self._chol = scipy.linalg.cholesky(self._cov, lower=True)
@@ -620,7 +638,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
             raise ValueError(f"Wrong shape for initial_mean: expected {n} got {len(initial_mean)}")
 
         if dtype is None:
-            dtype = aesara.config.floatX
+            dtype = pytensor.config.floatX
 
         if initial_cov is None:
             initial_cov = np.eye(n, dtype=dtype)
@@ -753,7 +771,7 @@ except ImportError:
 if chol_available:
     __all__ += ["QuadPotentialSparse"]
 
-    import aesara.sparse
+    import pytensor.sparse
 
     class QuadPotentialSparse(QuadPotential):
         def __init__(self, A):
@@ -771,8 +789,8 @@ if chol_available:
 
         def velocity(self, x):
             """Compute the current velocity at a position in parameter space."""
-            A = aesara.sparse.as_sparse(self.A)
-            return aesara.sparse.dot(A, x)
+            A = pytensor.sparse.as_sparse(self.A)
+            return pytensor.sparse.dot(A, x)
 
         def random(self):
             """Draw random value from QuadPotential."""

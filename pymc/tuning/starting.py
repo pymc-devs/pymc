@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -18,23 +18,24 @@ Created on Mar 12, 2011
 @author: johnsalvatier
 """
 import sys
+import warnings
 
-from typing import Optional
+from typing import Optional, Sequence
 
-import aesara.gradient as tg
 import numpy as np
+import pytensor.gradient as tg
 
 from fastprogress.fastprogress import ProgressBar, progress_bar
-from numpy import isfinite, nan_to_num
+from numpy import isfinite
+from pytensor import Variable
 from scipy.optimize import minimize
 
 import pymc as pm
 
-from pymc.aesaraf import inputvars
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
-from pymc.util import get_default_varnames, get_var_name
+from pymc.util import get_default_varnames, get_value_vars_from_user_vars
 from pymc.vartypes import discrete_types, typefilter
 
 __all__ = ["find_MAP"]
@@ -42,7 +43,7 @@ __all__ = ["find_MAP"]
 
 def find_MAP(
     start=None,
-    vars=None,
+    vars: Optional[Sequence[Variable]] = None,
     method="L-BFGS-B",
     return_raw=False,
     include_transformed=True,
@@ -62,20 +63,23 @@ def find_MAP(
     Parameters
     ----------
     start: `dict` of parameter values (Defaults to `model.initial_point`)
-    vars: list
-        List of variables to optimize and set to optimum (Defaults to all continuous).
-    method: string or callable
-        Optimization algorithm (Defaults to 'L-BFGS-B' unless
-        discrete variables are specified in `vars`, then
-        `Powell` which will perform better).  For instructions on use of a callable,
-        refer to SciPy's documentation of `optimize.minimize`.
-    return_raw: bool
-        Whether to return the full output of scipy.optimize.minimize (Defaults to `False`)
+        These values will be fixed and used for any free RandomVariables that are
+        not being optimized.
+    vars: list of TensorVariable
+        List of free RandomVariables to optimize the posterior with respect to.
+        Defaults to all continuous RVs in a model. The respective value variables
+        may also be passed instead.
+    method: string or callable, optional
+        Optimization algorithm. Defaults to 'L-BFGS-B' unless discrete variables are
+        specified in `vars`, then `Powell` which will perform better. For instructions
+        on use of a callable, refer to SciPy's documentation of `optimize.minimize`.
+    return_raw: bool, optional defaults to False
+        Whether to return the full output of scipy.optimize.minimize
     include_transformed: bool, optional defaults to True
-        Flag for reporting automatically transformed variables in addition
-        to original variables.
+        Flag for reporting automatically unconstrained transformed values in addition
+        to the constrained values
     progressbar: bool, optional defaults to True
-        Whether or not to display a progress bar in the command line.
+        Whether to display a progress bar in the command line.
     maxeval: int, optional, defaults to 5000
         The maximum number of times the posterior distribution is evaluated.
     model: Model (optional if in `with` context)
@@ -92,29 +96,37 @@ def find_MAP(
     model = modelcontext(model)
 
     if vars is None:
-        vars = model.cont_vars
+        vars = model.continuous_value_vars
         if not vars:
             raise ValueError("Model has no unobserved continuous variables.")
     else:
-        vars = [model.rvs_to_values.get(var, var) for var in vars]
+        try:
+            vars = get_value_vars_from_user_vars(vars, model)
+        except ValueError as exc:
+            # Accommodate case where user passed non-pure RV nodes
+            vars = pm.inputvars(model.replace_rvs_by_values(vars))
+            if vars:
+                warnings.warn(
+                    "Intermediate variables (such as Deterministic or Potential) were passed. "
+                    "find_MAP will optimize the underlying free_RVs instead.",
+                    UserWarning,
+                )
+            else:
+                raise exc
 
-    vars = inputvars(vars)
     disc_vars = list(typefilter(vars, discrete_types))
-    allinmodel(vars, model)
     ipfn = make_initial_point_fn(
         model=model,
         jitter_rvs=set(),
         return_transformed=True,
         overrides=start,
     )
-    if seed is None:
-        seed = model.rng_seeder.randint(2**30, dtype=np.int64)
     start = ipfn(seed)
     model.check_start_vals(start)
 
-    var_names = {var.name for var in vars}
+    vars_dict = {var.name: var for var in vars}
     x0 = DictToArrayBijection.map(
-        {var_name: value for var_name, value in start.items() if var_name in var_names}
+        {var_name: value for var_name, value in start.items() if var_name in vars_dict}
     )
 
     # TODO: If the mapping is fixed, we can simply create graphs for the
@@ -122,7 +134,7 @@ def find_MAP(
     compiled_logp_func = DictToArrayBijection.mapf(model.compile_logp(jacobian=False), start)
     logp_func = lambda x: compiled_logp_func(RaveledVars(x, x0.point_map_info))
 
-    rvs = [model.values_to_rvs[value] for value in vars]
+    rvs = [model.values_to_rvs[vars_dict[name]] for name, _, _ in x0.point_map_info]
     try:
         # This might be needed for calls to `dlogp_func`
         # start_map_info = tuple((v.name, v.shape, v.dtype) for v in vars)
@@ -144,10 +156,11 @@ def find_MAP(
         )
         method = "Powell"
 
-    if compute_gradient:
+    if compute_gradient and method != "Powell":
         cost_func = CostFuncWrapper(maxeval, progressbar, logp_func, dlogp_func)
     else:
         cost_func = CostFuncWrapper(maxeval, progressbar, logp_func)
+        compute_gradient = False
 
     try:
         opt_result = minimize(
@@ -183,17 +196,6 @@ def allfinite(x):
     return np.all(isfinite(x))
 
 
-def nan_to_high(x):
-    return np.where(isfinite(x), x, 1.0e100)
-
-
-def allinmodel(vars, model):
-    notin = [v for v in vars if v not in model.value_vars]
-    if notin:
-        notin = list(map(get_var_name, notin))
-        raise ValueError("Some variables not in the model: " + str(notin))
-
-
 class CostFuncWrapper:
     def __init__(self, maxeval=5000, progressbar=True, logp_func=None, dlogp_func=None):
         self.n_eval = 0
@@ -216,12 +218,12 @@ class CostFuncWrapper:
 
     def __call__(self, x):
         neg_value = np.float64(self.logp_func(pm.floatX(x)))
-        value = -1.0 * nan_to_high(neg_value)
+        value = -1.0 * neg_value
         if self.use_gradient:
             neg_grad = self.dlogp_func(pm.floatX(x))
             if np.all(np.isfinite(neg_grad)):
                 self.previous_x = x
-            grad = nan_to_num(-1.0 * neg_grad)
+            grad = -1.0 * neg_grad
             grad = grad.astype(np.float64)
         else:
             self.previous_x = x

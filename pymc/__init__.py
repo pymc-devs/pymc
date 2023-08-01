@@ -1,4 +1,4 @@
-#   Copyright 2021 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -13,13 +13,10 @@
 #   limitations under the License.
 
 # pylint: disable=wildcard-import
-__version__ = "4.0.0b4"
 
 import logging
-import multiprocessing as mp
-import platform
 
-_log = logging.getLogger("pymc")
+_log = logging.getLogger(__name__)
 
 if not logging.root.handlers:
     _log.setLevel(logging.INFO)
@@ -29,10 +26,10 @@ if not logging.root.handlers:
 
 
 def __set_compiler_flags():
-    # Workarounds for Aesara compiler problems on various platforms
-    import aesara
+    # Workarounds for PyTensor compiler problems on various platforms
+    import pytensor
 
-    current = aesara.config.gcc__cxxflags
+    current = pytensor.config.gcc__cxxflags
     augmented = f"{current} -Wno-c++11-narrowing"
 
     # Work around compiler bug in GCC < 8.4 related to structured exception
@@ -44,20 +41,19 @@ def __set_compiler_flags():
     # Now disable the generation of stack unwinding tables.
     augmented = f"{augmented} -fno-unwind-tables -fno-asynchronous-unwind-tables"
 
-    aesara.config.gcc__cxxflags = augmented
+    pytensor.config.gcc__cxxflags = augmented
 
 
 __set_compiler_flags()
 
-from pymc import gp, ode, sampling
-from pymc.aesaraf import *
+from pymc import _version, gp, ode, sampling
 from pymc.backends import *
 from pymc.blocking import *
 from pymc.data import *
 from pymc.distributions import *
-from pymc.distributions import transforms
 from pymc.exceptions import *
 from pymc.func_utils import find_constrained_prior
+from pymc.logprob import *
 from pymc.math import (
     expand_packed_triangular,
     invlogit,
@@ -68,13 +64,17 @@ from pymc.math import (
     probit,
 )
 from pymc.model import *
-from pymc.model_graph import model_to_graphviz
+from pymc.model_graph import model_to_graphviz, model_to_networkx
 from pymc.plots import *
 from pymc.printing import *
+from pymc.pytensorf import *
 from pymc.sampling import *
 from pymc.smc import *
 from pymc.stats import *
 from pymc.step_methods import *
 from pymc.tuning import *
+from pymc.util import drop_warning_stat
 from pymc.variational import *
 from pymc.vartypes import *
+
+__version__ = _version.get_versions()["version"]

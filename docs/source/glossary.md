@@ -24,7 +24,7 @@ Underdispersion
 
 Bayesian Workflow
   The Bayesian workflow involves all the steps needed for model building. This includes {term}`Bayesian inference` but also other tasks such as i) diagnoses of the quality of the inference, ii) model criticism, including evaluations of both model assumptions and model predictions, iii) comparison of models, not
-just for the purpose of model selection or model averaging but more importantly to better understand these models and iv) Preparation of the results for a particular audience. These non-inferencial tasks require both numerical and visual summaries to help practitioners analyse their models. And they are sometimes collectively known as [Exploratory Analysis of Bayesian Models](https://joss.theoj.org/papers/10.21105/joss.01143).
+  just for the purpose of model selection or model averaging but more importantly to better understand these models and iv) Preparation of the results for a particular audience. These non-inferencial tasks require both numerical and visual summaries to help practitioners analyse their models. And they are sometimes collectively known as [Exploratory Analysis of Bayesian Models](https://joss.theoj.org/papers/10.21105/joss.01143).
   - For a compact overview, see Bayesian statistics and modelling by van de Schoot, R., Depaoli, S., King, R. et al in Nat Rev Methods - Primers 1, 1 (2021).
   - For an in-depth overview, see Bayesian Workflow by Andrew Gelman, Aki Vehtari, Daniel Simpson, Charles C. Margossian, Bob Carpenter, Yuling Yao, Lauren Kennedy, Jonah Gabry, Paul-Christian Bürkner, Martin Modrák
   - For an exercise-based material, see Think Bayes 2e: Bayesian Statistics Made Simple by Allen B. Downey
@@ -125,12 +125,34 @@ Hierarchical Ordinary Differential Equation
   Markov chain Monte Carlo (MCMC) methods comprise a class of algorithms for sampling from a probability distribution. By constructing a {term}`Markov Chain` that has the desired distribution as its equilibrium distribution, one can obtain a sample of the desired distribution by recording states from the chain.  Various algorithms exist for constructing chains, including the Metropolis–Hastings algorithm.
 
 tensor_like
-  Any scalar or sequence that can be interpreted as a {class}`~aesara.tensor.TensorVariable`. In addition to TensorVariables, this includes NumPy ndarrays, scalars, lists and tuples (possibly nested). Any argument accepted by `aesara.tensor.as_tensor_variable` is tensor_like.
+  Any scalar or sequence that can be interpreted as a {class}`~pytensor.tensor.TensorVariable`. In addition to TensorVariables, this includes NumPy ndarrays, scalars, lists and tuples (possibly nested). Any argument accepted by `pytensor.tensor.as_tensor_variable` is tensor_like.
 
   ```{jupyter-execute}
-  import aesara.tensor as at
+  import pytensor.tensor as pt
 
-  at.as_tensor_variable([[1, 2.0], [0, 0]])
+  pt.as_tensor_variable([[1, 2.0], [0, 0]])
   ```
+
+unnamed_distribution
+    PyMC distributions can be initialized directly (e.g. `pm.Normal`) or using the `.dist` classmethod (e.g. `pm.Normal.dist`). Distributions initialized with the 1st method are registered as model parameters and thus, need to be given a name and be initialized within a model context. "unnamed_distributions" are distributions initialized with the 2nd method. These are standalone distributions, they are not parameters in any model and can be used to draw samples from a distribution by itself or as parameters to other distributions like mixtures or censored.
+
+    "unnamed_distributions" can be used outside the model context. For example:
+
+    ```{jupyter-execute}
+    import pymc as pm
+
+    unnamed_dist = pm.Normal.dist(mu=1, sigma=2)
+    pm.draw(unnamed_dist, draws=10)
+    ```
+
+    Trying to initialize a named distribution outside a model context raises a `TypeError`:
+
+    ```{jupyter-execute}
+    :raises: TypeError
+
+    import pymc as pm
+
+    pm.Normal("variable")
+    ```
 
 :::::

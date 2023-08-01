@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -18,37 +18,33 @@
 import warnings
 
 from functools import reduce
+from typing import Optional
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as pt
 import scipy
 
-from aesara.graph.basic import Apply, Constant, Variable
-from aesara.graph.op import Op
-from aesara.raise_op import Assert
-from aesara.sparse.basic import sp_sum
-from aesara.tensor import gammaln, sigmoid
-from aesara.tensor.nlinalg import det, eigh, matrix_inverse, trace
-from aesara.tensor.random.basic import MultinomialRV, dirichlet, multivariate_normal
-from aesara.tensor.random.op import RandomVariable, default_supp_shape_from_params
-from aesara.tensor.random.utils import broadcast_params
-from aesara.tensor.slinalg import Cholesky
-from aesara.tensor.slinalg import solve_lower_triangular as solve_lower
-from aesara.tensor.slinalg import solve_upper_triangular as solve_upper
-from aesara.tensor.type import TensorType
+from pytensor.graph.basic import Apply, Constant, Variable
+from pytensor.graph.op import Op
+from pytensor.raise_op import Assert
+from pytensor.sparse.basic import sp_sum
+from pytensor.tensor import TensorConstant, gammaln, sigmoid
+from pytensor.tensor.nlinalg import det, eigh, matrix_inverse, trace
+from pytensor.tensor.random.basic import dirichlet, multinomial, multivariate_normal
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.utils import (
+    broadcast_params,
+    supp_shape_from_ref_param_shape,
+)
+from pytensor.tensor.slinalg import Cholesky, SolveTriangular
+from pytensor.tensor.type import TensorType
 from scipy import linalg, stats
 
 import pymc as pm
 
-from pymc.aesaraf import change_rv_size, floatX, intX
 from pymc.distributions import transforms
-from pymc.distributions.continuous import (
-    BoundedContinuous,
-    ChiSquared,
-    Normal,
-    assert_negative_support,
-)
+from pymc.distributions.continuous import BoundedContinuous, ChiSquared, Normal
 from pymc.distributions.dist_math import (
     betaln,
     check_parameters,
@@ -56,18 +52,31 @@ from pymc.distributions.dist_math import (
     logpow,
     multigammaln,
 )
-from pymc.distributions.distribution import Continuous, Discrete
+from pymc.distributions.distribution import (
+    Continuous,
+    Discrete,
+    Distribution,
+    SymbolicRandomVariable,
+    _moment,
+    moment,
+)
 from pymc.distributions.shape_utils import (
-    broadcast_dist_samples_to,
+    _change_dist_size,
+    broadcast_dist_samples_shape,
+    change_dist_size,
+    get_support_shape,
     rv_size_is_none,
     to_tuple,
 )
-from pymc.distributions.transforms import interval
+from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
+from pymc.logprob.abstract import _logprob
 from pymc.math import kron_diag, kron_dot
-from pymc.util import UNSET, check_dist_not_registered
+from pymc.pytensorf import floatX, intX
+from pymc.util import check_dist_not_registered
 
 __all__ = [
     "MvNormal",
+    "ZeroSumNormal",
     "MvStudentT",
     "Dirichlet",
     "Multinomial",
@@ -82,6 +91,19 @@ __all__ = [
     "CAR",
     "StickBreakingWeights",
 ]
+
+solve_lower = SolveTriangular(lower=True)
+solve_upper = SolveTriangular(lower=False)
+
+
+class SimplexContinuous(Continuous):
+    """Base class for simplex continuous distributions"""
+
+
+@_default_transform.register(SimplexContinuous)
+def simplex_cont_transform(op, rv):
+    return transforms.simplex
+
 
 # Step methods and advi do not catch LinAlgErrors at the
 # moment. We work around that by using a cholesky op
@@ -98,21 +120,24 @@ def quaddist_matrix(cov=None, chol=None, tau=None, lower=True, *args, **kwargs):
         raise ValueError("Incompatible parameterization. Specify exactly one of tau, cov, or chol.")
 
     if cov is not None:
-        cov = at.as_tensor_variable(cov)
+        cov = pt.as_tensor_variable(cov)
         if cov.ndim != 2:
             raise ValueError("cov must be two dimensional.")
     elif tau is not None:
-        tau = at.as_tensor_variable(tau)
+        tau = pt.as_tensor_variable(tau)
         if tau.ndim != 2:
             raise ValueError("tau must be two dimensional.")
         # TODO: What's the correct order/approach (in the non-square case)?
-        # `aesara.tensor.nlinalg.tensorinv`?
+        # `pytensor.tensor.nlinalg.tensorinv`?
         cov = matrix_inverse(tau)
     else:
         # TODO: What's the correct order/approach (in the non-square case)?
-        chol = at.as_tensor_variable(chol)
+        chol = pt.as_tensor_variable(chol)
         if chol.ndim != 2:
             raise ValueError("chol must be two dimensional.")
+
+        # tag as lower triangular to enable pytensor rewrites of chol(l.l') -> l
+        chol.tag.lower_triangular = True
         cov = chol.dot(chol.T)
 
     return cov
@@ -143,30 +168,30 @@ def quaddist_parse(value, mu, cov, mat_type="cov"):
 
 
 def quaddist_chol(delta, chol_mat):
-    diag = at.diag(chol_mat)
+    diag = pt.diag(chol_mat)
     # Check if the covariance matrix is positive definite.
-    ok = at.all(diag > 0)
+    ok = pt.all(diag > 0)
     # If not, replace the diagonal. We return -inf later, but
     # need to prevent solve_lower from throwing an exception.
-    chol_cov = at.switch(ok, chol_mat, 1)
+    chol_cov = pt.switch(ok, chol_mat, 1)
 
     delta_trans = solve_lower(chol_cov, delta.T).T
     quaddist = (delta_trans**2).sum(axis=-1)
-    logdet = at.sum(at.log(diag))
+    logdet = pt.sum(pt.log(diag))
     return quaddist, logdet, ok
 
 
 def quaddist_tau(delta, chol_mat):
-    diag = at.nlinalg.diag(chol_mat)
+    diag = pt.nlinalg.diag(chol_mat)
     # Check if the precision matrix is positive definite.
-    ok = at.all(diag > 0)
+    ok = pt.all(diag > 0)
     # If not, replace the diagonal. We return -inf later, but
     # need to prevent solve_lower from throwing an exception.
-    chol_tau = at.switch(ok, chol_mat, 1)
+    chol_tau = pt.switch(ok, chol_mat, 1)
 
-    delta_trans = at.dot(delta, chol_tau)
+    delta_trans = pt.dot(delta, chol_tau)
     quaddist = (delta_trans**2).sum(axis=-1)
-    logdet = -at.sum(at.log(diag))
+    logdet = -pt.sum(pt.log(diag))
     return quaddist, logdet, ok
 
 
@@ -188,13 +213,13 @@ class MvNormal(Continuous):
 
     Parameters
     ----------
-    mu: array
+    mu : tensor_like of float
         Vector of means.
-    cov: array
+    cov : tensor_like of float, optional
         Covariance matrix. Exactly one of cov, tau, or chol is needed.
-    tau: array
+    tau : tensor_like of float, optional
         Precision matrix. Exactly one of cov, tau, or chol is needed.
-    chol: array
+    chol : tensor_like of float, optional
         Cholesky decomposition of covariance matrix. Exactly one of cov,
         tau, or chol is needed.
     lower: bool, default=True
@@ -232,23 +257,23 @@ class MvNormal(Continuous):
         chol, _, _ = pm.LKJCholeskyCov('chol_cov', n=3, eta=2,
             sd_dist=sd_dist, compute_corr=True)
         vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=(5, 3))
-        vals = pm.Deterministic('vals', at.dot(chol, vals_raw.T).T)
+        vals = pm.Deterministic('vals', pt.dot(chol, vals_raw.T).T)
     """
     rv_op = multivariate_normal
 
     @classmethod
     def dist(cls, mu, cov=None, tau=None, chol=None, lower=True, **kwargs):
-        mu = at.as_tensor_variable(mu)
+        mu = pt.as_tensor_variable(mu)
         cov = quaddist_matrix(cov, chol, tau, lower)
-        # Aesara is stricter about the shape of mu, than PyMC used to be
-        mu = at.broadcast_arrays(mu, cov[..., -1])[0]
+        # PyTensor is stricter about the shape of mu, than PyMC used to be
+        mu = pt.broadcast_arrays(mu, cov[..., -1])[0]
         return super().dist([mu, cov], **kwargs)
 
-    def get_moment(rv, size, mu, cov):
+    def moment(rv, size, mu, cov):
         moment = mu
         if not rv_size_is_none(size):
-            moment_size = at.concatenate([size, [mu.shape[-1]]])
-            moment = at.full(moment_size, mu)
+            moment_size = pt.concatenate([size, [mu.shape[-1]]])
+            moment = pt.full(moment_size, mu)
         return moment
 
     def logp(value, mu, cov):
@@ -268,7 +293,11 @@ class MvNormal(Continuous):
         quaddist, logdet, ok = quaddist_parse(value, mu, cov)
         k = floatX(value.shape[-1])
         norm = -0.5 * k * pm.floatX(np.log(2 * np.pi))
-        return check_parameters(norm - 0.5 * quaddist - logdet, ok)
+        return check_parameters(
+            norm - 0.5 * quaddist - logdet,
+            ok,
+            msg="posdef",
+        )
 
 
 class MvStudentTRV(RandomVariable):
@@ -279,15 +308,14 @@ class MvStudentTRV(RandomVariable):
     _print_name = ("MvStudentT", "\\operatorname{MvStudentT}")
 
     def make_node(self, rng, size, dtype, nu, mu, cov):
-        nu = at.as_tensor_variable(nu)
+        nu = pt.as_tensor_variable(nu)
         if not nu.ndim == 0:
             raise ValueError("nu must be a scalar (ndim=0).")
 
         return super().make_node(rng, size, dtype, nu, mu, cov)
 
     def __call__(self, nu, mu=None, cov=None, size=None, **kwargs):
-
-        dtype = aesara.config.floatX if self.dtype == "floatX" else self.dtype
+        dtype = pytensor.config.floatX if self.dtype == "floatX" else self.dtype
 
         if mu is None:
             mu = np.array([0.0], dtype=dtype)
@@ -295,14 +323,16 @@ class MvStudentTRV(RandomVariable):
             cov = np.array([[1.0]], dtype=dtype)
         return super().__call__(nu, mu, cov, size=size, **kwargs)
 
-    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
-        return default_supp_shape_from_params(
-            self.ndim_supp, dist_params, rep_param_idx, param_shapes
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=1,
         )
 
     @classmethod
     def rng_fn(cls, rng, nu, mu, cov, size):
-
         mv_samples = multivariate_normal.rng_fn(rng=rng, mean=np.zeros_like(mu), cov=cov, size=size)
 
         # Take chi2 draws and add an axis of length 1 to the right for correct broadcasting below
@@ -342,45 +372,53 @@ class MvStudentT(Continuous):
 
     Parameters
     ----------
-    nu: float
+    nu : tensor_like of float
         Degrees of freedom, should be a positive scalar.
-    Sigma: matrix
-        Covariance matrix. Use `cov` in new code.
-    mu: array
+    Sigma : tensor_like of float, optional
+        Scale matrix. Use `scale` in new code.
+    mu : tensor_like of float, optional
         Vector of means.
-    cov: matrix
-        The covariance matrix.
-    tau: matrix
+    scale : tensor_like of float, optional
+        The scale matrix.
+    tau : tensor_like of float, optional
         The precision matrix.
-    chol: matrix
-        The cholesky factor of the covariance matrix.
-    lower: bool, default=True
+    chol : tensor_like of float, optional
+        The cholesky factor of the scale matrix.
+    lower : bool, default=True
         Whether the cholesky fatcor is given as a lower triangular matrix.
     """
     rv_op = mv_studentt
 
     @classmethod
-    def dist(cls, nu, Sigma=None, mu=None, cov=None, tau=None, chol=None, lower=True, **kwargs):
+    def dist(cls, nu, Sigma=None, mu=None, scale=None, tau=None, chol=None, lower=True, **kwargs):
+        cov = kwargs.pop("cov", None)
+        if cov is not None:
+            warnings.warn(
+                "Use the scale argument to specify the scale matrix. "
+                "cov will be removed in future versions.",
+                FutureWarning,
+            )
+            scale = cov
         if Sigma is not None:
-            if cov is not None:
-                raise ValueError("Specify only one of cov and Sigma")
-            cov = Sigma
-        nu = at.as_tensor_variable(floatX(nu))
-        mu = at.as_tensor_variable(floatX(mu))
-        cov = quaddist_matrix(cov, chol, tau, lower)
-        # Aesara is stricter about the shape of mu, than PyMC used to be
-        mu = at.broadcast_arrays(mu, cov[..., -1])[0]
-        assert_negative_support(nu, "nu", "MvStudentT")
-        return super().dist([nu, mu, cov], **kwargs)
+            if scale is not None:
+                raise ValueError("Specify only one of scale and Sigma")
+            scale = Sigma
+        nu = pt.as_tensor_variable(floatX(nu))
+        mu = pt.as_tensor_variable(floatX(mu))
+        scale = quaddist_matrix(scale, chol, tau, lower)
+        # PyTensor is stricter about the shape of mu, than PyMC used to be
+        mu = pt.broadcast_arrays(mu, scale[..., -1])[0]
 
-    def get_moment(rv, size, nu, mu, cov):
+        return super().dist([nu, mu, scale], **kwargs)
+
+    def moment(rv, size, nu, mu, scale):
         moment = mu
         if not rv_size_is_none(size):
-            moment_size = at.concatenate([size, [mu.shape[-1]]])
-            moment = at.full(moment_size, moment)
+            moment_size = pt.concatenate([size, [mu.shape[-1]]])
+            moment = pt.full(moment_size, moment)
         return moment
 
-    def logp(value, nu, mu, cov):
+    def logp(value, nu, mu, scale):
         """
         Calculate log-probability of Multivariate Student's T distribution
         at specified value.
@@ -394,21 +432,17 @@ class MvStudentT(Continuous):
         -------
         TensorVariable
         """
-        quaddist, logdet, ok = quaddist_parse(value, mu, cov)
+        quaddist, logdet, ok = quaddist_parse(value, mu, scale)
         k = floatX(value.shape[-1])
 
-        norm = gammaln((nu + k) / 2.0) - gammaln(nu / 2.0) - 0.5 * k * at.log(nu * np.pi)
-        inner = -(nu + k) / 2.0 * at.log1p(quaddist / nu)
+        norm = gammaln((nu + k) / 2.0) - gammaln(nu / 2.0) - 0.5 * k * pt.log(nu * np.pi)
+        inner = -(nu + k) / 2.0 * pt.log1p(quaddist / nu)
         res = norm + inner - logdet
 
-        return check_parameters(
-            res,
-            ok,
-            nu > 0,
-        )
+        return check_parameters(res, ok, nu > 0, msg="posdef, nu > 0")
 
 
-class Dirichlet(Continuous):
+class Dirichlet(SimplexContinuous):
     r"""
     Dirichlet log-likelihood.
 
@@ -428,29 +462,25 @@ class Dirichlet(Continuous):
 
     Parameters
     ----------
-    a: float array
+    a : tensor_like of float
         Concentration parameters (a > 0). The number of categories is given by the
         length of the last axis.
     """
     rv_op = dirichlet
 
-    def __new__(cls, name, *args, **kwargs):
-        kwargs.setdefault("transform", transforms.simplex)
-        return super().__new__(cls, name, *args, **kwargs)
-
     @classmethod
     def dist(cls, a, **kwargs):
-        a = at.as_tensor_variable(a)
-        # mean = a / at.sum(a)
-        # mode = at.switch(at.all(a > 1), (a - 1) / at.sum(a - 1), np.nan)
+        a = pt.as_tensor_variable(a)
+        # mean = a / pt.sum(a)
+        # mode = pt.switch(pt.all(a > 1), (a - 1) / pt.sum(a - 1), np.nan)
 
         return super().dist([a], **kwargs)
 
-    def get_moment(rv, size, a):
-        norm_constant = at.sum(a, axis=-1)[..., None]
+    def moment(rv, size, a):
+        norm_constant = pt.sum(a, axis=-1)[..., None]
         moment = a / norm_constant
         if not rv_size_is_none(size):
-            moment = at.full(at.concatenate([size, [a.shape[-1]]]), moment)
+            moment = pt.full(pt.concatenate([size, [a.shape[-1]]]), moment)
         return moment
 
     def logp(value, a):
@@ -468,11 +498,11 @@ class Dirichlet(Continuous):
         TensorVariable
         """
         # only defined for sum(value) == 1
-        res = at.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(at.sum(a, axis=-1))
-        res = at.switch(
-            at.or_(
-                at.any(at.lt(value, 0), axis=-1),
-                at.any(at.gt(value, 1), axis=-1),
+        res = pt.sum(logpow(value, a - 1) - gammaln(a), axis=-1) + gammaln(pt.sum(a, axis=-1))
+        res = pt.switch(
+            pt.or_(
+                pt.any(pt.lt(value, 0), axis=-1),
+                pt.any(pt.gt(value, 1), axis=-1),
             ),
             -np.inf,
             res,
@@ -482,30 +512,6 @@ class Dirichlet(Continuous):
             a > 0,
             msg="a > 0",
         )
-
-
-class MultinomialRV(MultinomialRV):
-    """Aesara's `MultinomialRV` doesn't broadcast; this one does."""
-
-    @classmethod
-    def rng_fn(cls, rng, n, p, size):
-        if n.ndim > 0 or p.ndim > 1:
-            n, p = broadcast_params([n, p], cls.ndims_params)
-            size = tuple(size or ())
-
-            if size:
-                n = np.broadcast_to(n, size)
-                p = np.broadcast_to(p, size + (p.shape[-1],))
-
-            res = np.empty(p.shape)
-            for idx in np.ndindex(p.shape[:-1]):
-                res[idx] = rng.multinomial(n[idx], p[idx])
-            return res
-        else:
-            return rng.multinomial(n, p, size=size)
-
-
-multinomial = MultinomialRV()
 
 
 class Multinomial(Discrete):
@@ -532,44 +538,45 @@ class Multinomial(Discrete):
 
     Parameters
     ----------
-    n: int
+    n : tensor_like of int
         Total counts in each replicate (n > 0).
-    p: float array
+    p : tensor_like of float
         Probability of each one of the different outcomes (0 <= p <= 1). The number of
         categories is given by the length of the last axis. Elements are expected to sum
-        to 1 along the last axis, and they will be automatically rescaled otherwise.
+        to 1 along the last axis.
     """
     rv_op = multinomial
 
     @classmethod
     def dist(cls, n, p, *args, **kwargs):
-        if isinstance(p, np.ndarray) or isinstance(p, list):
-            if (np.asarray(p) < 0).any():
-                raise ValueError(f"Negative `p` parameters are not valid, got: {p}")
-            p_sum = np.sum([p], axis=-1)
-            if not np.all(np.isclose(p_sum, 1.0)):
+        p = pt.as_tensor_variable(p)
+        if isinstance(p, TensorConstant):
+            p_ = np.asarray(p.data)
+            if np.any(p_ < 0):
+                raise ValueError(f"Negative `p` parameters are not valid, got: {p_}")
+            p_sum_ = np.sum([p_], axis=-1)
+            if not np.all(np.isclose(p_sum_, 1.0)):
                 warnings.warn(
-                    f"`p` parameters sum up to {p_sum}, instead of 1.0. They will be automatically rescaled. You can rescale them directly to get rid of this warning.",
+                    f"`p` parameters sum to {p_sum_}, instead of 1.0. "
+                    "They will be automatically rescaled. "
+                    "You can rescale them directly to get rid of this warning.",
                     UserWarning,
                 )
-                p = p / at.sum(p, axis=-1, keepdims=True)
-        n = at.as_tensor_variable(n)
-        p = at.as_tensor_variable(p)
+                p_ = p_ / pt.sum(p_, axis=-1, keepdims=True)
+                p = pt.as_tensor_variable(p_)
+        n = pt.as_tensor_variable(n)
+        p = pt.as_tensor_variable(p)
         return super().dist([n, p], *args, **kwargs)
 
-    def get_moment(rv, size, n, p):
-        if p.ndim > 1:
-            n = at.shape_padright(n)
-        if (p.ndim == 1) & (n.ndim > 0):
-            n = at.shape_padright(n)
-            p = at.shape_padleft(p)
-        mode = at.round(n * p)
-        diff = n - at.sum(mode, axis=-1, keepdims=True)
-        inc_bool_arr = at.abs_(diff) > 0
-        mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
+    def moment(rv, size, n, p):
+        n = pt.shape_padright(n)
+        mode = pt.round(n * p)
+        diff = n - pt.sum(mode, axis=-1, keepdims=True)
+        inc_bool_arr = pt.abs(diff) > 0
+        mode = pt.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
         if not rv_size_is_none(size):
-            output_size = at.concatenate([size, [p.shape[-1]]])
-            mode = at.full(output_size, mode)
+            output_size = pt.concatenate([size, [p.shape[-1]]])
+            mode = pt.full(output_size, mode)
         return mode
 
     def logp(value, n, p):
@@ -587,18 +594,19 @@ class Multinomial(Discrete):
         TensorVariable
         """
 
-        res = factln(n) + at.sum(-factln(value) + logpow(p, value), axis=-1)
-        res = at.switch(
-            at.or_(at.any(at.lt(value, 0), axis=-1), at.neq(at.sum(value, axis=-1), n)),
+        res = factln(n) + pt.sum(-factln(value) + logpow(p, value), axis=-1)
+        res = pt.switch(
+            pt.or_(pt.any(pt.lt(value, 0), axis=-1), pt.neq(pt.sum(value, axis=-1), n)),
             -np.inf,
             res,
         )
         return check_parameters(
             res,
+            0 <= p,
             p <= 1,
-            at.isclose(at.sum(p, axis=-1), 1),
-            at.ge(n, 0),
-            msg="p <= 1, sum(p) = 1, n >= 0",
+            pt.isclose(pt.sum(p, axis=-1), 1),
+            pt.ge(n, 0),
+            msg="0 <= p <= 1, sum(p) = 1, n >= 0",
         )
 
 
@@ -609,14 +617,16 @@ class DirichletMultinomialRV(RandomVariable):
     dtype = "int64"
     _print_name = ("DirichletMN", "\\operatorname{DirichletMN}")
 
-    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
-        return default_supp_shape_from_params(
-            self.ndim_supp, dist_params, rep_param_idx, param_shapes
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=1,
         )
 
     @classmethod
     def rng_fn(cls, rng, n, a, size):
-
         if n.ndim > 0 or a.ndim > 1:
             n, a = broadcast_params([n, a], cls.ndims_params)
             size = tuple(size or ())
@@ -665,10 +675,10 @@ class DirichletMultinomial(Discrete):
 
     Parameters
     ----------
-    n : int
+    n : tensor_like of int
         Total counts in each replicate (n > 0).
 
-    a : float array
+    a : tensor_like of float
         Dirichlet concentration parameters (a > 0). The number of categories is given by
         the length of the last axis.
     """
@@ -681,22 +691,9 @@ class DirichletMultinomial(Discrete):
 
         return super().dist([n, a], **kwargs)
 
-    def get_moment(rv, size, n, a):
-        p = a / at.sum(a, axis=-1)
-        mode = at.round(n * p)
-        diff = n - at.sum(mode, axis=-1, keepdims=True)
-        inc_bool_arr = at.abs_(diff) > 0
-        mode = at.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
-
-        # Reshape mode according to dimensions implied by the parameters
-        # This can include axes of length 1
-        _, p_bcast = broadcast_params([n, p], ndims_params=[0, 1])
-        mode = at.reshape(mode, p_bcast.shape)
-
-        if not rv_size_is_none(size):
-            output_size = at.concatenate([size, [p.shape[-1]]])
-            mode = at.full(output_size, mode)
-        return mode
+    def moment(rv, size, n, a):
+        p = a / pt.sum(a, axis=-1, keepdims=True)
+        return moment(Multinomial.dist(n=n, p=p, size=size))
 
     def logp(value, n, a):
         """
@@ -717,10 +714,10 @@ class DirichletMultinomial(Discrete):
         series = gammaln(value + a) - (gammaln(value + 1) + gammaln(a))
         res = const + series.sum(axis=-1)
 
-        res = at.switch(
-            at.or_(
-                at.any(at.lt(value, 0), axis=-1),
-                at.neq(at.sum(value, axis=-1), n),
+        res = pt.switch(
+            pt.or_(
+                pt.any(pt.lt(value, 0), axis=-1),
+                pt.neq(pt.sum(value, axis=-1), n),
             ),
             -np.inf,
             res,
@@ -743,16 +740,16 @@ class _OrderedMultinomial(Multinomial):
 
     @classmethod
     def dist(cls, eta, cutpoints, n, *args, **kwargs):
-        eta = at.as_tensor_variable(floatX(eta))
-        cutpoints = at.as_tensor_variable(cutpoints)
-        n = at.as_tensor_variable(intX(n))
+        eta = pt.as_tensor_variable(floatX(eta))
+        cutpoints = pt.as_tensor_variable(cutpoints)
+        n = pt.as_tensor_variable(intX(n))
 
-        pa = sigmoid(cutpoints - at.shape_padright(eta))
-        p_cum = at.concatenate(
+        pa = sigmoid(cutpoints - pt.shape_padright(eta))
+        p_cum = pt.concatenate(
             [
-                at.zeros_like(at.shape_padright(pa[..., 0])),
+                pt.zeros_like(pt.shape_padright(pa[..., 0])),
                 pa,
-                at.ones_like(at.shape_padright(pa[..., 0])),
+                pt.ones_like(pt.shape_padright(pa[..., 0])),
             ],
             axis=-1,
         )
@@ -767,10 +764,10 @@ class OrderedMultinomial:
 
     Useful for regression on ordinal data whose values range
     from 1 to K as a function of some predictor, :math:`\eta`, but
-     which are _aggregated_ by trial, like multinomial observations (in
-     contrast to `pm.OrderedLogistic`, which only accepts ordinal data
-     in a _disaggregated_ format, like categorical observations).
-     The cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
+    which are _aggregated_ by trial, like multinomial observations (in
+    contrast to `pm.OrderedLogistic`, which only accepts ordinal data
+    in a _disaggregated_ format, like categorical observations).
+    The cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
     mapped to which of the K observed dependent variables. The number
     of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.
@@ -791,15 +788,15 @@ class OrderedMultinomial:
 
     Parameters
     ----------
-    eta: float
+    eta : tensor_like of float
         The predictor.
-    cutpoints: array
+    cutpoints : tensor_like of float
         The length K - 1 array of cutpoints which break :math:`\eta` into
         ranges. Do not explicitly set the first and last elements of
         :math:`c` to negative and positive infinity.
-    n: int
+    n : tensor_like of int
         The total number of multinomial trials.
-    compute_p: boolean, default True
+    compute_p : boolean, default=True
         Whether to compute and store in the trace the inferred probabilities of each
         categories,
         based on the cutpoints' values. Defaults to True.
@@ -807,7 +804,6 @@ class OrderedMultinomial:
 
     Examples
     --------
-
     .. code-block:: python
 
         # Generate data for a simple 1 dimensional example problem
@@ -870,14 +866,13 @@ class PosDefMatrix(Op):
     # Compulsory if itypes and otypes are not defined
 
     def make_node(self, x):
-        x = at.as_tensor_variable(x)
+        x = pt.as_tensor_variable(x)
         assert x.ndim == 2
-        o = TensorType(dtype="int8", broadcastable=[])()
+        o = TensorType(dtype="int8", shape=[])()
         return Apply(self, [x], [o])
 
     # Python implementation:
     def perform(self, node, inputs, outputs):
-
         (x,) = inputs
         (z,) = outputs
         try:
@@ -891,7 +886,7 @@ class PosDefMatrix(Op):
 
     def grad(self, inp, grads):
         (x,) = inp
-        return [x.zeros_like(aesara.config.floatX)]
+        return [x.zeros_like(pytensor.config.floatX)]
 
     def __str__(self):
         return "MatrixIsPositiveDefinite"
@@ -907,14 +902,19 @@ class WishartRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("Wishart", "\\operatorname{Wishart}")
 
-    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
         # The shape of second parameter `V` defines the shape of the output.
-        return dist_params[1].shape[-2:]
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=1,
+        )
 
     @classmethod
     def rng_fn(cls, rng, nu, V, size):
         scipy_size = size if size else 1  # Default size for Scipy's wishart.rvs is 1
-        result = stats.wishart.rvs(np.int(nu), V, size=scipy_size, random_state=rng)
+        result = stats.wishart.rvs(int(nu), V, size=scipy_size, random_state=rng)
         if size == (1,):
             return result[np.newaxis, ...]
         else:
@@ -950,9 +950,9 @@ class Wishart(Continuous):
 
     Parameters
     ----------
-    nu: int
+    nu : tensor_like of int
         Degrees of freedom, > 0.
-    V: array
+    V : tensor_like of float
         p x p positive definite matrix.
 
     Notes
@@ -964,8 +964,8 @@ class Wishart(Continuous):
 
     @classmethod
     def dist(cls, nu, V, *args, **kwargs):
-        nu = at.as_tensor_variable(intX(nu))
-        V = at.as_tensor_variable(floatX(V))
+        nu = pt.as_tensor_variable(intX(nu))
+        V = pt.as_tensor_variable(floatX(V))
 
         warnings.warn(
             "The Wishart distribution can currently not be used "
@@ -979,7 +979,7 @@ class Wishart(Continuous):
 
         # mean = nu * V
         # p = V.shape[0]
-        # mode = at.switch(at.ge(nu, p + 1), (nu - p - 1) * V, np.nan)
+        # mode = pt.switch(pt.ge(nu, p + 1), (nu - p - 1) * V, np.nan)
         return super().dist([nu, V], *args, **kwargs)
 
     def logp(X, nu, V):
@@ -1004,15 +1004,15 @@ class Wishart(Continuous):
 
         return check_parameters(
             (
-                (nu - p - 1) * at.log(IXI)
+                (nu - p - 1) * pt.log(IXI)
                 - trace(matrix_inverse(V).dot(X))
-                - nu * p * at.log(2)
-                - nu * at.log(IVI)
+                - nu * p * pt.log(2)
+                - nu * pt.log(IVI)
                 - 2 * multigammaln(nu / 2.0, p)
             )
             / 2,
             matrix_pos_def(X),
-            at.eq(X, X.T),
+            pt.eq(X, X.T),
             nu > (p - 1),
         )
 
@@ -1041,18 +1041,18 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initv
 
     Parameters
     ----------
-    S: ndarray
+    S : ndarray
         p x p positive definite matrix
         Or:
         p x p lower-triangular matrix that is the Cholesky factor
         of the covariance matrix.
-    nu: int
+    nu : tensor_like of int
         Degrees of freedom, > dim(S).
-    is_cholesky: bool (default=False)
+    is_cholesky : bool, default=False
         Input matrix S is already Cholesky decomposed as S.T * S
-    return_cholesky: bool (default=False)
+    return_cholesky : bool, default=False
         Only return the Cholesky decomposed matrix.
-    initval: ndarray
+    initval : ndarray
         p x p positive definite matrix used to initialize
 
     Notes
@@ -1081,22 +1081,22 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initv
         diag_testval = None
         tril_testval = None
 
-    c = at.sqrt(
+    c = pt.sqrt(
         ChiSquared("%s_c" % name, nu - np.arange(2, 2 + n_diag), shape=n_diag, initval=diag_testval)
     )
     pm._log.info("Added new variable %s_c to model diagonal of Wishart." % name)
     z = Normal("%s_z" % name, 0.0, 1.0, shape=n_tril, initval=tril_testval)
     pm._log.info("Added new variable %s_z to model off-diagonals of Wishart." % name)
     # Construct A matrix
-    A = at.zeros(S.shape, dtype=np.float32)
-    A = at.set_subtensor(A[diag_idx], c)
-    A = at.set_subtensor(A[tril_idx], z)
+    A = pt.zeros(S.shape, dtype=np.float32)
+    A = pt.set_subtensor(A[diag_idx], c)
+    A = pt.set_subtensor(A[tril_idx], z)
 
     # L * A * A.T * L.T ~ Wishart(L*L.T, nu)
     if return_cholesky:
-        return pm.Deterministic(name, at.dot(L, A))
+        return pm.Deterministic(name, pt.dot(L, A))
     else:
-        return pm.Deterministic(name, at.dot(at.dot(at.dot(L, A), A.T), L.T))
+        return pm.Deterministic(name, pt.dot(pt.dot(pt.dot(L, A), A.T), L.T))
 
 
 def _lkj_normalizing_constant(eta, n):
@@ -1106,61 +1106,58 @@ def _lkj_normalizing_constant(eta, n):
     if not isinstance(n, int):
         raise NotImplementedError("n must be an integer")
     if eta == 1:
-        result = gammaln(2.0 * at.arange(1, int((n - 1) / 2) + 1)).sum()
+        result = gammaln(2.0 * pt.arange(1, int((n - 1) / 2) + 1)).sum()
         if n % 2 == 1:
             result += (
-                0.25 * (n**2 - 1) * at.log(np.pi)
-                - 0.25 * (n - 1) ** 2 * at.log(2.0)
+                0.25 * (n**2 - 1) * pt.log(np.pi)
+                - 0.25 * (n - 1) ** 2 * pt.log(2.0)
                 - (n - 1) * gammaln(int((n + 1) / 2))
             )
         else:
             result += (
-                0.25 * n * (n - 2) * at.log(np.pi)
-                + 0.25 * (3 * n**2 - 4 * n) * at.log(2.0)
+                0.25 * n * (n - 2) * pt.log(np.pi)
+                + 0.25 * (3 * n**2 - 4 * n) * pt.log(2.0)
                 + n * gammaln(n / 2)
                 - (n - 1) * gammaln(n)
             )
     else:
         result = -(n - 1) * gammaln(eta + 0.5 * (n - 1))
-        k = at.arange(1, n)
-        result += (0.5 * k * at.log(np.pi) + gammaln(eta + 0.5 * (n - 1 - k))).sum()
+        k = pt.arange(1, n)
+        result += (0.5 * k * pt.log(np.pi) + gammaln(eta + 0.5 * (n - 1 - k))).sum()
     return result
 
 
-class _LKJCholeskyCovRV(RandomVariable):
-    name = "_lkjcholeskycov"
+class _LKJCholeskyCovBaseRV(RandomVariable):
+    name = "_lkjcholeskycovbase"
     ndim_supp = 1
     ndims_params = [0, 0, 1]
     dtype = "floatX"
-    _print_name = ("_lkjcholeskycov", "\\operatorname{_lkjcholeskycov}")
+    _print_name = ("_lkjcholeskycovbase", "\\operatorname{_lkjcholeskycovbase}")
 
     def make_node(self, rng, size, dtype, n, eta, D):
-        n = at.as_tensor_variable(n)
+        n = pt.as_tensor_variable(n)
         if not n.ndim == 0:
             raise ValueError("n must be a scalar (ndim=0).")
 
-        eta = at.as_tensor_variable(eta)
+        eta = pt.as_tensor_variable(eta)
         if not eta.ndim == 0:
             raise ValueError("eta must be a scalar (ndim=0).")
 
-        D = at.as_tensor_variable(D)
+        D = pt.as_tensor_variable(D)
 
         return super().make_node(rng, size, dtype, n, eta, D)
 
-    def _infer_shape(self, size, dist_params, param_shapes=None):
+    def _supp_shape_from_params(self, dist_params, param_shapes):
         n = dist_params[0]
-        dist_shape = tuple(size) + ((n * (n + 1)) // 2,)
-        return dist_shape
+        return ((n * (n + 1)) // 2,)
 
     def rng_fn(self, rng, n, eta, D, size):
         # We flatten the size to make operations easier, and then rebuild it
         if size is None:
-            flat_size = 1
-        else:
-            flat_size = np.prod(size)
+            size = D.shape[:-1]
+        flat_size = np.prod(size).astype(int)
 
-        C = LKJCorrRV._random_corr_matrix(rng, n, eta, flat_size)
-
+        C = LKJCorrRV._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
         D = D.reshape(flat_size, n)
         C *= D[..., :, np.newaxis] * D[..., np.newaxis, :]
 
@@ -1176,114 +1173,135 @@ class _LKJCholeskyCovRV(RandomVariable):
         return samples
 
 
-_ljk_cholesky_cov = _LKJCholeskyCovRV()
+_ljk_cholesky_cov_base = _LKJCholeskyCovBaseRV()
 
 
-class _LKJCholeskyCov(Continuous):
+# _LKJCholeskyCovBaseRV requires a properly shaped `D`, which means the variable can't
+# be safely resized. Because of this, we add the thin SymbolicRandomVariable wrapper
+class _LKJCholeskyCovRV(SymbolicRandomVariable):
+    default_output = 1
+    _print_name = ("_lkjcholeskycov", "\\operatorname{_lkjcholeskycov}")
+
+    def update(self, node):
+        return {node.inputs[0]: node.outputs[0]}
+
+
+class _LKJCholeskyCov(Distribution):
     r"""Underlying class for covariance matrix with LKJ distributed correlations.
     See docs for LKJCholeskyCov function for more details on how to use it in models.
     """
-    rv_op = _ljk_cholesky_cov
 
-    def __new__(cls, name, eta, n, sd_dist, **kwargs):
-        transform = kwargs.get("transform", UNSET)
-        if transform is UNSET:
-            kwargs["transform"] = transforms.CholeskyCovPacked(n)
-
-        check_dist_not_registered(sd_dist)
-
-        return super().__new__(cls, name, eta, n, sd_dist, **kwargs)
+    rv_type = _LKJCholeskyCovRV
 
     @classmethod
-    def dist(cls, eta, n, sd_dist, size=None, **kwargs):
-        eta = at.as_tensor_variable(floatX(eta))
-        n = at.as_tensor_variable(intX(n))
+    def dist(cls, n, eta, sd_dist, **kwargs):
+        n = pt.as_tensor_variable(intX(n))
+        eta = pt.as_tensor_variable(floatX(eta))
 
         if not (
             isinstance(sd_dist, Variable)
             and sd_dist.owner is not None
-            and isinstance(sd_dist.owner.op, RandomVariable)
+            and isinstance(sd_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
             and sd_dist.owner.op.ndim_supp < 2
         ):
             raise TypeError("sd_dist must be a scalar or vector distribution variable")
 
-        # We resize the sd_dist automatically so that it has (size x n) independent draws
-        # which is what the `_LKJCholeskyCovRV.rng_fn` expects. This makes the random
-        # and logp methods equivalent, as the latter also assumes a unique value for each
-        # diagonal element.
+        check_dist_not_registered(sd_dist)
+        return super().dist([n, eta, sd_dist], **kwargs)
+
+    @classmethod
+    def rv_op(cls, n, eta, sd_dist, size=None):
+        # We resize the sd_dist automatically so that it has (size x n) independent
+        # draws which is what the `_LKJCholeskyCovBaseRV.rng_fn` expects. This makes the
+        # random and logp methods equivalent, as the latter also assumes a unique value
+        # for each diagonal element.
         # Since `eta` and `n` are forced to be scalars we don't need to worry about
-        # implied batched dimensions for the time being.
+        # implied batched dimensions from those for the time being.
+        if size is None:
+            size = sd_dist.shape[:-1]
+        shape = tuple(size) + (n,)
         if sd_dist.owner.op.ndim_supp == 0:
-            sd_dist = change_rv_size(sd_dist, to_tuple(size) + (n,))
+            sd_dist = change_dist_size(sd_dist, shape)
         else:
             # The support shape must be `n` but we have no way of controlling it
-            sd_dist = change_rv_size(sd_dist, to_tuple(size))
+            sd_dist = change_dist_size(sd_dist, shape[:-1])
 
-        # sd_dist is part of the generative graph, but should be completely ignored
-        # by the logp graph, since the LKJ logp explicitly includes these terms.
-        # Setting sd_dist.tag.ignore_logprob to True, will prevent Aeppl warning about
-        # an unnacounted RandomVariable in the graph
-        # TODO: Things could be simplified a bit if we managed to extract the
-        #  sd_dist prior components from the logp expression.
-        sd_dist.tag.ignore_logprob = True
+        # Create new rng for the _lkjcholeskycov internal RV
+        rng = pytensor.shared(np.random.default_rng())
 
-        return super().dist([n, eta, sd_dist], size=size, **kwargs)
+        rng_, n_, eta_, sd_dist_ = rng.type(), n.type(), eta.type(), sd_dist.type()
+        next_rng_, lkjcov_ = _ljk_cholesky_cov_base(n_, eta_, sd_dist_, rng=rng_).owner.outputs
 
-    def get_moment(rv, size, n, eta, sd_dists):
-        diag_idxs = (at.cumsum(at.arange(1, n + 1)) - 1).astype("int32")
-        moment = at.zeros_like(rv)
-        moment = at.set_subtensor(moment[..., diag_idxs], 1)
-        return moment
+        return _LKJCholeskyCovRV(
+            inputs=[rng_, n_, eta_, sd_dist_],
+            outputs=[next_rng_, lkjcov_],
+            ndim_supp=1,
+        )(rng, n, eta, sd_dist)
 
-    def logp(value, n, eta, sd_dist):
-        """
-        Calculate log-probability of Covariance matrix with LKJ
-        distributed correlations at specified value.
 
-        Parameters
-        ----------
-        value: numeric
-            Value for which log-probability is calculated.
+@_change_dist_size.register(_LKJCholeskyCovRV)
+def change_LKJCholeksyCovRV_size(op, dist, new_size, expand=False):
+    n, eta, sd_dist = dist.owner.inputs[1:]
 
-        Returns
-        -------
-        TensorVariable
-        """
+    if expand:
+        old_size = sd_dist.shape[:-1]
+        new_size = tuple(new_size) + tuple(old_size)
 
-        if value.ndim > 1:
-            raise ValueError("LKJCholeskyCov logp is only implemented for vector values (ndim=1)")
+    return _LKJCholeskyCov.rv_op(n, eta, sd_dist, size=new_size)
 
-        diag_idxs = at.cumsum(at.arange(1, n + 1)) - 1
-        cumsum = at.cumsum(value**2)
-        variance = at.zeros(at.atleast_1d(n))
-        variance = at.inc_subtensor(variance[0], value[0] ** 2)
-        variance = at.inc_subtensor(variance[1:], cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
-        sd_vals = at.sqrt(variance)
 
-        logp_sd = pm.logp(sd_dist, sd_vals).sum()
-        corr_diag = value[diag_idxs] / sd_vals
+@_moment.register(_LKJCholeskyCovRV)
+def _LKJCholeksyCovRV_moment(op, rv, rng, n, eta, sd_dist):
+    diag_idxs = (pt.cumsum(pt.arange(1, n + 1)) - 1).astype("int32")
+    moment = pt.zeros_like(rv)
+    moment = pt.set_subtensor(moment[..., diag_idxs], 1)
+    return moment
 
-        logp_lkj = (2 * eta - 3 + n - at.arange(n)) * at.log(corr_diag)
-        logp_lkj = at.sum(logp_lkj)
 
-        # Compute the log det jacobian of the second transformation
-        # described in the docstring.
-        idx = at.arange(n)
-        det_invjac = at.log(corr_diag) - idx * at.log(sd_vals)
-        det_invjac = det_invjac.sum()
+@_default_transform.register(_LKJCholeskyCovRV)
+def _LKJCholeksyCovRV_default_transform(op, rv):
+    _, n, _, _ = rv.owner.inputs
+    return transforms.CholeskyCovPacked(n)
 
-        # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
-        if not isinstance(n, Constant):
-            raise NotImplementedError("logp only implemented for constant `n`")
-        n = int(n.data)
 
-        if not isinstance(eta, Constant):
-            raise NotImplementedError("logp only implemented for constant `eta`")
-        eta = float(eta.data)
+@_logprob.register(_LKJCholeskyCovRV)
+def _LKJCholeksyCovRV_logp(op, values, rng, n, eta, sd_dist, **kwargs):
+    (value,) = values
 
-        norm = _lkj_normalizing_constant(eta, n)
+    if value.ndim > 1:
+        raise ValueError("_LKJCholeskyCov logp is only implemented for vector values (ndim=1)")
 
-        return norm + logp_lkj + logp_sd + det_invjac
+    diag_idxs = pt.cumsum(pt.arange(1, n + 1)) - 1
+    cumsum = pt.cumsum(value**2)
+    variance = pt.zeros(pt.atleast_1d(n))
+    variance = pt.inc_subtensor(variance[0], value[0] ** 2)
+    variance = pt.inc_subtensor(variance[1:], cumsum[diag_idxs[1:]] - cumsum[diag_idxs[:-1]])
+    sd_vals = pt.sqrt(variance)
+
+    logp_sd = pm.logp(sd_dist, sd_vals).sum()
+    corr_diag = value[diag_idxs] / sd_vals
+
+    logp_lkj = (2 * eta - 3 + n - pt.arange(n)) * pt.log(corr_diag)
+    logp_lkj = pt.sum(logp_lkj)
+
+    # Compute the log det jacobian of the second transformation
+    # described in the docstring.
+    idx = pt.arange(n)
+    det_invjac = pt.log(corr_diag) - idx * pt.log(sd_vals)
+    det_invjac = det_invjac.sum()
+
+    # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
+    if not isinstance(n, Constant):
+        raise NotImplementedError("logp only implemented for constant `n`")
+    n = int(n.data)
+
+    if not isinstance(eta, Constant):
+        raise NotImplementedError("logp only implemented for constant `eta`")
+    eta = float(eta.data)
+
+    norm = _lkj_normalizing_constant(eta, n)
+
+    return norm + logp_lkj + logp_sd + det_invjac
 
 
 class LKJCholeskyCov:
@@ -1291,29 +1309,32 @@ class LKJCholeskyCov:
 
     This defines a distribution over Cholesky decomposed covariance
     matrices, such that the underlying correlation matrices follow an
-    LKJ distribution [1] and the standard deviations follow an arbitray
+    LKJ distribution [1] and the standard deviations follow an arbitrary
     distribution specified by the user.
 
     Parameters
     ----------
-    name: str
+    name : str
         The name given to the variable in the model.
-    eta: float
+    eta : tensor_like of float
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
         larger values put more weight on matrices with few correlations.
-    n: int
+    n : tensor_like of int
         Dimension of the covariance matrix (n > 1).
-    sd_dist: pm.Distribution
+    sd_dist : Distribution
         A positive scalar or vector distribution for the standard deviations, created
         with the `.dist()` API. Should have `shape[-1]=n`. Scalar distributions will be
         automatically resized to ensure this.
-    compute_corr: bool, default=True
+
+        .. warning:: sd_dist will be cloned, rendering it independent of the one passed as input.
+
+    compute_corr : bool, default=True
         If `True`, returns three values: the Cholesky decomposition, the correlations
         and the standard deviations of the covariance matrix. Otherwise, only returns
         the packed Cholesky decomposition. Defaults to `True`.
         compatibility.
-    store_in_trace: bool, default=True
+    store_in_trace : bool, default=True
         Whether to store the correlations and standard deviations of the covariance
         matrix in the posterior trace. If `True`, they will automatically be named as
         `{name}_corr` and `{name}_stds` respectively. Effective only when
@@ -1321,13 +1342,13 @@ class LKJCholeskyCov:
 
     Returns
     -------
-    chol:  TensorVariable
+    chol :  TensorVariable
         If `compute_corr=True`. The unpacked Cholesky covariance decomposition.
-    corr: TensorVariable
+    corr : TensorVariable
         If `compute_corr=True`. The correlations of the covariance matrix.
-    stds: TensorVariable
+    stds : TensorVariable
         If `compute_corr=True`. The standard deviations of the covariance matrix.
-    packed_chol: TensorVariable
+    packed_chol : TensorVariable
         If `compute_corr=False` The packed Cholesky covariance decomposition.
 
     Notes
@@ -1369,17 +1390,17 @@ class LKJCholeskyCov:
 
             # Or transform an uncorrelated normal:
             vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=10)
-            vals = at.dot(chol, vals_raw)
+            vals = pt.dot(chol, vals_raw)
 
             # Or compute the covariance matrix
-            cov = at.dot(chol, chol.T)
+            cov = pt.dot(chol, chol.T)
 
     **Implementation** In the unconstrained space all values of the cholesky factor
     are stored untransformed, except for the diagonal entries, where
     we use a log-transform to restrict them to positive values.
 
     To correctly compute log-likelihoods for the standard deviations
-    and the correlation matrix seperatly, we need to consider a
+    and the correlation matrix separately, we need to consider a
     second transformation: Given a cholesky factorization
     :math:`LL^T = \Sigma` of a covariance matrix we can recover the
     standard deviations :math:`\sigma` as the euclidean lengths of
@@ -1449,9 +1470,9 @@ class LKJCholeskyCov:
     def helper_deterministics(cls, n, packed_chol):
         chol = pm.expand_packed_triangular(n, packed_chol, lower=True)
         # compute covariance matrix
-        cov = at.dot(chol, chol.T)
+        cov = pt.dot(chol, chol.T)
         # extract standard deviations and rho
-        stds = at.sqrt(at.diag(cov))
+        stds = pt.sqrt(pt.diag(cov))
         inv_stds = 1 / stds
         corr = inv_stds[None, :] * cov * inv_stds[:, None]
         return chol, corr, stds
@@ -1465,11 +1486,11 @@ class LKJCorrRV(RandomVariable):
     _print_name = ("LKJCorrRV", "\\operatorname{LKJCorrRV}")
 
     def make_node(self, rng, size, dtype, n, eta):
-        n = at.as_tensor_variable(n)
+        n = pt.as_tensor_variable(n)
         if not n.ndim == 0:
             raise ValueError("n must be a scalar (ndim=0).")
 
-        eta = at.as_tensor_variable(eta)
+        eta = pt.as_tensor_variable(eta)
         if not eta.ndim == 0:
             raise ValueError("eta must be a scalar (ndim=0).")
 
@@ -1482,14 +1503,13 @@ class LKJCorrRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, n, eta, size):
-
         # We flatten the size to make operations easier, and then rebuild it
         if size is None:
             flat_size = 1
         else:
             flat_size = np.prod(size)
 
-        C = cls._random_corr_matrix(rng, n, eta, flat_size)
+        C = cls._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
 
         triu_idx = np.triu_indices(n, k=1)
         samples = C[..., triu_idx[0], triu_idx[1]]
@@ -1538,9 +1558,9 @@ class LKJCorr(BoundedContinuous):
 
     Parameters
     ----------
-    n: int
+    n : tensor_like of int
         Dimension of the covariance matrix (n > 1).
-    eta: float
+    eta : tensor_like of float
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
         larger values put more weight on matrices with few correlations.
@@ -1568,20 +1588,14 @@ class LKJCorr(BoundedContinuous):
 
     rv_op = lkjcorr
 
-    def __new__(cls, *args, **kwargs):
-        transform = kwargs.get("transform", UNSET)
-        if transform is UNSET:
-            kwargs["transform"] = interval(lambda *args: (floatX(-1.0), floatX(1.0)))
-        return super().__new__(cls, *args, **kwargs)
-
     @classmethod
     def dist(cls, n, eta, **kwargs):
-        n = at.as_tensor_variable(intX(n))
-        eta = at.as_tensor_variable(floatX(eta))
+        n = pt.as_tensor_variable(intX(n))
+        eta = pt.as_tensor_variable(floatX(eta))
         return super().dist([n, eta], **kwargs)
 
-    def get_moment(rv, *args):
-        return at.zeros_like(rv)
+    def moment(rv, *args):
+        return pt.zeros_like(rv)
 
     def logp(value, n, eta):
         """
@@ -1598,7 +1612,7 @@ class LKJCorr(BoundedContinuous):
         TensorVariable
         """
 
-        # TODO: Aesara does not have a `triu_indices`, so we can only work with constant
+        # TODO: PyTensor does not have a `triu_indices`, so we can only work with constant
         #  n (or else find a different expression)
         if not isinstance(n, Constant):
             raise NotImplementedError("logp only implemented for constant `n`")
@@ -1609,15 +1623,15 @@ class LKJCorr(BoundedContinuous):
         tri_index[np.triu_indices(n, k=1)] = np.arange(shape)
         tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
 
-        value = at.take(value, tri_index)
-        value = at.fill_diagonal(value, 1)
+        value = pt.take(value, tri_index)
+        value = pt.fill_diagonal(value, 1)
 
         # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
         if not isinstance(eta, Constant):
             raise NotImplementedError("logp only implemented for constant `eta`")
         eta = float(eta.data)
         result = _lkj_normalizing_constant(eta, n)
-        result += (eta - 1.0) * at.log(det(value))
+        result += (eta - 1.0) * pt.log(det(value))
         return check_parameters(
             result,
             value >= -1,
@@ -1627,6 +1641,11 @@ class LKJCorr(BoundedContinuous):
         )
 
 
+@_default_transform.register(LKJCorr)
+def lkjcorr_default_transform(op, rv):
+    return Interval(floatX(-1.0), floatX(1.0))
+
+
 class MatrixNormalRV(RandomVariable):
     name = "matrixnormal"
     ndim_supp = 2
@@ -1634,19 +1653,24 @@ class MatrixNormalRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("MatrixNormal", "\\operatorname{MatrixNormal}")
 
-    def _infer_shape(self, size, dist_params, param_shapes=None):
-        shape = tuple(size) + tuple(dist_params[0].shape[-2:])
-        return shape
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=0,
+        )
 
     @classmethod
     def rng_fn(cls, rng, mu, rowchol, colchol, size=None):
-
         size = to_tuple(size)
         dist_shape = to_tuple([rowchol.shape[0], colchol.shape[0]])
         output_shape = size + dist_shape
 
         # Broadcasting all parameters
-        (mu,) = broadcast_dist_samples_to(to_shape=output_shape, samples=[mu], size=size)
+        shapes = [mu.shape, output_shape]
+        broadcastable_shape = broadcast_dist_samples_shape(shapes, size=size)
+        mu = np.broadcast_to(mu, shape=broadcastable_shape)
         rowchol = np.broadcast_to(rowchol, shape=size + rowchol.shape[-2:])
 
         colchol = np.broadcast_to(colchol, shape=size + colchol.shape[-2:])
@@ -1681,20 +1705,20 @@ class MatrixNormal(Continuous):
 
     Parameters
     ----------
-    mu: array
+    mu : tensor_like of float
         Array of means. Must be broadcastable with the random variable X such
-        that the shape of mu + X is (m,n).
-    rowcov: mxm array
+        that the shape of mu + X is (M, N).
+    rowcov : (M, M) tensor_like of float, optional
         Among-row covariance matrix. Defines variance within
         columns. Exactly one of rowcov or rowchol is needed.
-    rowchol: mxm array
+    rowchol : (M, M) tensor_like of float, optional
         Cholesky decomposition of among-row covariance matrix. Exactly one of
         rowcov or rowchol is needed.
-    colcov: nxn array
+    colcov : (N, N) tensor_like of float, optional
         Among-column covariance matrix. If rowcov is the identity matrix,
         this functions as `cov` in MvNormal.
         Exactly one of colcov or colchol is needed.
-    colchol: nxn array
+    colchol : (N, N) tensor_like of float, optional
         Cholesky decomposition of among-column covariance matrix. Exactly one
         of colcov or colchol is needed.
 
@@ -1744,7 +1768,7 @@ class MatrixNormal(Continuous):
 
             # Setup left covariance matrix
             scale = pm.LogNormal('scale', mu=np.log(true_scale), sigma=0.5)
-            rowcov = at.diag([scale**(2*i) for i in range(m)])
+            rowcov = pt.diag([scale**(2*i) for i in range(m)])
 
             vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,
                                    observed=data)
@@ -1762,7 +1786,6 @@ class MatrixNormal(Continuous):
         *args,
         **kwargs,
     ):
-
         cholesky = Cholesky(lower=True, on_error="raise")
 
         # Among-row matrices
@@ -1777,7 +1800,7 @@ class MatrixNormal(Continuous):
         else:
             if rowchol.ndim != 2:
                 raise ValueError("rowchol must be two dimensional.")
-            rowchol_cov = at.as_tensor_variable(rowchol)
+            rowchol_cov = pt.as_tensor_variable(rowchol)
 
         # Among-column matrices
         if len([i for i in [colcov, colchol] if i is not None]) != 1:
@@ -1785,25 +1808,25 @@ class MatrixNormal(Continuous):
                 "Incompatible parameterization. Specify exactly one of colcov, or colchol."
             )
         if colcov is not None:
-            colcov = at.as_tensor_variable(colcov)
+            colcov = pt.as_tensor_variable(colcov)
             if colcov.ndim != 2:
                 raise ValueError("colcov must be two dimensional.")
             colchol_cov = cholesky(colcov)
         else:
             if colchol.ndim != 2:
                 raise ValueError("colchol must be two dimensional.")
-            colchol_cov = at.as_tensor_variable(colchol)
+            colchol_cov = pt.as_tensor_variable(colchol)
 
         dist_shape = (rowchol_cov.shape[-1], colchol_cov.shape[-1])
 
         # Broadcasting mu
-        mu = at.extra_ops.broadcast_to(mu, shape=dist_shape)
-        mu = at.as_tensor_variable(floatX(mu))
+        mu = pt.extra_ops.broadcast_to(mu, shape=dist_shape)
+        mu = pt.as_tensor_variable(floatX(mu))
 
         return super().dist([mu, rowchol_cov, colchol_cov], **kwargs)
 
-    def get_moment(rv, size, mu, rowchol, colchol):
-        return at.full_like(rv, mu)
+    def moment(rv, size, mu, rowchol, colchol):
+        return pt.full_like(rv, mu)
 
     def logp(value, mu, rowchol, colchol):
         """
@@ -1829,15 +1852,15 @@ class MatrixNormal(Continuous):
 
         # Find exponent piece by piece
         right_quaddist = solve_lower(rowchol, delta)
-        quaddist = at.nlinalg.matrix_dot(right_quaddist.T, right_quaddist)
+        quaddist = pt.nlinalg.matrix_dot(right_quaddist.T, right_quaddist)
         quaddist = solve_lower(colchol, quaddist)
         quaddist = solve_upper(colchol.T, quaddist)
-        trquaddist = at.nlinalg.trace(quaddist)
+        trquaddist = pt.nlinalg.trace(quaddist)
 
-        coldiag = at.diag(colchol)
-        rowdiag = at.diag(rowchol)
-        half_collogdet = at.sum(at.log(coldiag))  # logdet(M) = 2*Tr(log(L))
-        half_rowlogdet = at.sum(at.log(rowdiag))  # Using Cholesky: M = L L^T
+        coldiag = pt.diag(colchol)
+        rowdiag = pt.diag(rowchol)
+        half_collogdet = pt.sum(pt.log(coldiag))  # logdet(M) = 2*Tr(log(L))
+        half_rowlogdet = pt.sum(pt.log(rowdiag))  # Using Cholesky: M = L L^T
 
         m = rowchol.shape[0]
         n = colchol.shape[0]
@@ -1852,6 +1875,14 @@ class KroneckerNormalRV(RandomVariable):
     ndims_params = [1, 0, 2]
     dtype = "floatX"
     _print_name = ("KroneckerNormal", "\\operatorname{KroneckerNormal}")
+
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=0,
+        )
 
     def rng_fn(self, rng, mu, sigma, *covs, size=None):
         size = size if size else covs[-1]
@@ -1882,27 +1913,26 @@ class KroneckerNormal(Continuous):
     ========  ==========================
     Support   :math:`x \in \mathbb{R}^N`
     Mean      :math:`\mu`
-    Variance  :math:`K = \bigotimes K_i` + \sigma^2 I_N
+    Variance  :math:`K = \bigotimes K_i + \sigma^2 I_N`
     ========  ==========================
 
     Parameters
     ----------
-    mu: array
+    mu : tensor_like of float
         Vector of means, just as in `MvNormal`.
-    covs: list of arrays
+    covs : list of arrays
         The set of covariance matrices :math:`[K_1, K_2, ...]` to be
         Kroneckered in the order provided :math:`\bigotimes K_i`.
-    chols: list of arrays
+    chols : list of arrays
         The set of lower cholesky matrices :math:`[L_1, L_2, ...]` such that
         :math:`K_i = L_i L_i'`.
-    evds: list of tuples
+    evds : list of tuples
         The set of eigenvalue-vector, eigenvector-matrix pairs
         :math:`[(v_1, Q_1), (v_2, Q_2), ...]` such that
         :math:`K_i = Q_i \text{diag}(v_i) Q_i'`. For example::
 
-            v_i, Q_i = at.nlinalg.eigh(K_i)
-
-    sigma: scalar, variable
+            v_i, Q_i = pt.nlinalg.eigh(K_i)
+    sigma : scalar, optional
         Standard deviation of the Gaussian white noise.
 
     Examples
@@ -1920,7 +1950,7 @@ class KroneckerNormal(Continuous):
         with pm.Model() as model:
             vals = pm.KroneckerNormal('vals', mu=mu, covs=covs, shape=N)
 
-    Effeciency gains are made by cholesky decomposing :math:`K_1` and
+    Efficiency gains are made by cholesky decomposing :math:`K_1` and
     :math:`K_2` individually rather than the larger :math:`K` matrix. Although
     only two matrices :math:`K_1` and :math:`K_2` are shown here, an arbitrary
     number of submatrices can be combined in this way. Choleskys and
@@ -1961,7 +1991,6 @@ class KroneckerNormal(Continuous):
 
     @classmethod
     def dist(cls, mu, covs=None, chols=None, evds=None, sigma=None, *args, **kwargs):
-
         if len([i for i in [covs, chols, evds] if i is not None]) != 1:
             raise ValueError(
                 "Incompatible parameterization. Specify exactly one of covs, chols, or evds."
@@ -1976,18 +2005,18 @@ class KroneckerNormal(Continuous):
             covs = []
             eigs_sep, Qs = zip(*eigh_iterable)  # Unzip
             for eig, Q in zip(eigs_sep, Qs):
-                cov_i = at.dot(Q, at.dot(at.diag(eig), Q.T))
+                cov_i = pt.dot(Q, pt.dot(pt.diag(eig), Q.T))
                 covs.append(cov_i)
 
-        mu = at.as_tensor_variable(mu)
+        mu = pt.as_tensor_variable(mu)
 
         return super().dist([mu, sigma, *covs], **kwargs)
 
-    def get_moment(rv, size, mu, covs, chols, evds):
+    def moment(rv, size, mu, covs, chols, evds):
         mean = mu
         if not rv_size_is_none(size):
-            moment_size = at.concatenate([size, mu.shape])
-            mean = at.full(moment_size, mu)
+            moment_size = pt.concatenate([size, mu.shape])
+            mean = pt.full(moment_size, mu)
         return mean
 
     def logp(value, mu, sigma, *covs):
@@ -2017,24 +2046,24 @@ class KroneckerNormal(Continuous):
 
         eigh_iterable = map(eigh, covs)
         eigs_sep, Qs = zip(*eigh_iterable)  # Unzip
-        Qs = list(map(at.as_tensor_variable, Qs))
-        QTs = list(map(at.transpose, Qs))
+        Qs = list(map(pt.as_tensor_variable, Qs))
+        QTs = list(map(pt.transpose, Qs))
 
-        eigs_sep = list(map(at.as_tensor_variable, eigs_sep))
+        eigs_sep = list(map(pt.as_tensor_variable, eigs_sep))
         eigs = kron_diag(*eigs_sep)  # Combine separate eigs
         eigs += sigma**2
         N = eigs.shape[0]
 
         sqrt_quad = kron_dot(QTs, delta.T)
-        sqrt_quad = sqrt_quad / at.sqrt(eigs[:, None])
-        logdet = at.sum(at.log(eigs))
+        sqrt_quad = sqrt_quad / pt.sqrt(eigs[:, None])
+        logdet = pt.sum(pt.log(eigs))
 
         # Square each sample
-        quad = at.batched_dot(sqrt_quad.T, sqrt_quad.T)
+        quad = pt.batched_dot(sqrt_quad.T, sqrt_quad.T)
         if onedim:
             quad = quad[0]
 
-        a = -(quad + logdet + N * at.log(2 * np.pi)) / 2.0
+        a = -(quad + logdet + N * pt.log(2 * np.pi)) / 2.0
         return a
 
 
@@ -2046,28 +2075,33 @@ class CARRV(RandomVariable):
     _print_name = ("CAR", "\\operatorname{CAR}")
 
     def make_node(self, rng, size, dtype, mu, W, alpha, tau):
-        mu = at.as_tensor_variable(floatX(mu))
+        mu = pt.as_tensor_variable(floatX(mu))
 
-        W = aesara.sparse.as_sparse_or_tensor_variable(floatX(W))
+        W = pytensor.sparse.as_sparse_or_tensor_variable(floatX(W))
         if not W.ndim == 2:
             raise ValueError("W must be a matrix (ndim=2).")
 
-        sparse = isinstance(W, aesara.sparse.SparseVariable)
+        sparse = isinstance(W, pytensor.sparse.SparseVariable)
         msg = "W must be a symmetric adjacency matrix."
         if sparse:
-            abs_diff = aesara.sparse.basic.mul(aesara.sparse.basic.sgn(W - W.T), W - W.T)
-            W = Assert(msg)(W, at.isclose(aesara.sparse.basic.sp_sum(abs_diff), 0))
+            abs_diff = pytensor.sparse.basic.mul(pytensor.sparse.sign(W - W.T), W - W.T)
+            W = Assert(msg)(W, pt.isclose(pytensor.sparse.sp_sum(abs_diff), 0))
         else:
-            W = Assert(msg)(W, at.allclose(W, W.T))
+            W = Assert(msg)(W, pt.allclose(W, W.T))
 
-        tau = at.as_tensor_variable(floatX(tau))
-        alpha = at.as_tensor_variable(floatX(alpha))
+        tau = pt.as_tensor_variable(floatX(tau))
+
+        alpha = pt.as_tensor_variable(floatX(alpha))
 
         return super().make_node(rng, size, dtype, mu, W, alpha, tau)
 
-    def _infer_shape(self, size, dist_params, param_shapes=None):
-        shape = tuple(size) + (dist_params[0].shape[-1],)
-        return shape
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=0,
+        )
 
     @classmethod
     def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, size):
@@ -2077,6 +2111,9 @@ class CARRV(RandomVariable):
         Journal of the Royal Statistical Society Series B, Royal Statistical Society,
         vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288
         """
+        if np.any(alpha >= 1) or np.any(alpha <= -1):
+            raise ValueError("the domain of alpha is: -1 < alpha < 1")
+
         if not scipy.sparse.issparse(W):
             W = scipy.sparse.csr_matrix(W)
         s = np.asarray(W.sum(axis=0))[0]
@@ -2134,19 +2171,21 @@ class CAR(Continuous):
 
     Parameters
     ----------
-    mu: array
+    mu : tensor_like of float
         Real-valued mean vector
-    W: Numpy matrix
+    W : (M, M) tensor_like of int
         Symmetric adjacency matrix of 1s and 0s indicating
-        adjacency between elements.
-    alpha: float or array
-        Autoregression parameter taking values between -1 and 1. Values closer to 0 indicate weaker
-        correlation and values closer to 1 indicate higher autocorrelation. For most use cases, the
-        support of alpha should be restricted to (0, 1)
-    tau: float or array
+        adjacency between elements. If possible, *W* is converted
+        to a sparse matrix, falling back to a dense variable.
+        :func:`~pytensor.sparse.basic.as_sparse_or_tensor_variable` is
+        used for this sparse or tensorvariable conversion.
+    alpha : tensor_like of float
+        Autoregression parameter taking values greater than -1 and less than 1.
+        Values closer to 0 indicate weaker correlation and values closer to
+        1 indicate higher autocorrelation. For most use cases, the
+        support of alpha should be restricted to (0, 1).
+    tau : tensor_like of float
         Positive precision variable controlling the scale of the underlying normal variates.
-    sparse: bool, default=False
-        Determines whether or not sparse computations are used
 
     References
     ----------
@@ -2160,8 +2199,8 @@ class CAR(Continuous):
     def dist(cls, mu, W, alpha, tau, *args, **kwargs):
         return super().dist([mu, W, alpha, tau], **kwargs)
 
-    def get_moment(rv, size, mu, W, alpha, tau):
-        return at.full_like(rv, mu)
+    def moment(rv, size, mu, W, alpha, tau):
+        return pt.full_like(rv, mu)
 
     def logp(value, mu, W, alpha, tau):
         """
@@ -2180,40 +2219,40 @@ class CAR(Continuous):
         TensorVariable
         """
 
-        sparse = isinstance(W, (aesara.sparse.SparseConstant, aesara.sparse.SparseVariable))
+        sparse = isinstance(W, (pytensor.sparse.SparseConstant, pytensor.sparse.SparseVariable))
 
         if sparse:
             D = sp_sum(W, axis=0)
-            Dinv_sqrt = at.diag(1 / at.sqrt(D))
-            DWD = at.dot(aesara.sparse.dot(Dinv_sqrt, W), Dinv_sqrt)
+            Dinv_sqrt = pt.diag(1 / pt.sqrt(D))
+            DWD = pt.dot(pytensor.sparse.dot(Dinv_sqrt, W), Dinv_sqrt)
         else:
             D = W.sum(axis=0)
-            Dinv_sqrt = at.diag(1 / at.sqrt(D))
-            DWD = at.dot(at.dot(Dinv_sqrt, W), Dinv_sqrt)
-        lam = at.slinalg.eigvalsh(DWD, at.eye(DWD.shape[0]))
+            Dinv_sqrt = pt.diag(1 / pt.sqrt(D))
+            DWD = pt.dot(pt.dot(Dinv_sqrt, W), Dinv_sqrt)
+        lam = pt.slinalg.eigvalsh(DWD, pt.eye(DWD.shape[0]))
 
         d, _ = W.shape
 
         if value.ndim == 1:
             value = value[None, :]
 
-        logtau = d * at.log(tau).sum()
-        logdet = at.log(1 - alpha.T * lam[:, None]).sum()
+        logtau = d * pt.log(tau).sum()
+        logdet = pt.log(1 - alpha.T * lam[:, None]).sum()
         delta = value - mu
 
         if sparse:
-            Wdelta = aesara.sparse.dot(delta, W)
+            Wdelta = pytensor.sparse.dot(delta, W)
         else:
-            Wdelta = at.dot(delta, W)
+            Wdelta = pt.dot(delta, W)
 
         tau_dot_delta = D[None, :] * delta - alpha * Wdelta
         logquad = (tau * delta * tau_dot_delta).sum(axis=-1)
         return check_parameters(
             0.5 * (logtau + logdet - logquad),
-            alpha <= 1,
-            alpha >= -1,
+            -1 < alpha,
+            alpha < 1,
             tau > 0,
-            msg="-1 <= alpha <= 1, tau > 0",
+            msg="-1 < alpha < 1, tau > 0",
         )
 
 
@@ -2225,36 +2264,26 @@ class StickBreakingWeightsRV(RandomVariable):
     _print_name = ("StickBreakingWeights", "\\operatorname{StickBreakingWeights}")
 
     def make_node(self, rng, size, dtype, alpha, K):
-
-        alpha = at.as_tensor_variable(alpha)
-        K = at.as_tensor_variable(intX(K))
-
-        if alpha.ndim > 0:
-            raise ValueError("The concentration parameter needs to be a scalar.")
+        alpha = pt.as_tensor_variable(alpha)
+        K = pt.as_tensor_variable(intX(K))
 
         if K.ndim > 0:
             raise ValueError("K must be a scalar.")
 
         return super().make_node(rng, size, dtype, alpha, K)
 
-    def _infer_shape(self, size, dist_params, param_shapes=None):
-        alpha, K = dist_params
-
-        size = tuple(size)
-
-        return size + (K + 1,)
+    def _supp_shape_from_params(self, dist_params, param_shapes):
+        K = dist_params[1]
+        return (K + 1,)
 
     @classmethod
     def rng_fn(cls, rng, alpha, K, size):
         if K < 0:
             raise ValueError("K needs to be positive.")
 
-        if size is None:
-            size = (K,)
-        elif isinstance(size, int):
-            size = (size,) + (K,)
-        else:
-            size = tuple(size) + (K,)
+        size = to_tuple(size) if size is not None else alpha.shape
+        size = size + (K,)
+        alpha = alpha[..., np.newaxis]
 
         betas = rng.beta(1, alpha, size=size)
 
@@ -2278,7 +2307,7 @@ class StickBreakingWeightsRV(RandomVariable):
 stickbreakingweights = StickBreakingWeightsRV()
 
 
-class StickBreakingWeights(Continuous):
+class StickBreakingWeights(SimplexContinuous):
     r"""
     Likelihood of truncated stick-breaking weights. The weights are generated from a
     stick-breaking proceduce where :math:`x_k = v_k \prod_{\ell < k} (1 - v_\ell)` for
@@ -2299,9 +2328,9 @@ class StickBreakingWeights(Continuous):
 
     Parameters
     ----------
-    alpha: float
+    alpha : tensor_like of float
         Concentration parameter (alpha > 0).
-    K: int
+    K : tensor_like of int
         The number of "sticks" to break off from an initial one-unit stick. The length of the weight
         vector is K + 1, where the last weight is one minus the sum of all the first sticks.
 
@@ -2315,26 +2344,20 @@ class StickBreakingWeights(Continuous):
     """
     rv_op = stickbreakingweights
 
-    def __new__(cls, name, *args, **kwargs):
-        kwargs.setdefault("transform", transforms.simplex)
-        return super().__new__(cls, name, *args, **kwargs)
-
     @classmethod
     def dist(cls, alpha, K, *args, **kwargs):
-        alpha = at.as_tensor_variable(floatX(alpha))
-        K = at.as_tensor_variable(intX(K))
-
-        assert_negative_support(alpha, "alpha", "StickBreakingWeights")
-        assert_negative_support(K, "K", "StickBreakingWeights")
+        alpha = pt.as_tensor_variable(floatX(alpha))
+        K = pt.as_tensor_variable(intX(K))
 
         return super().dist([alpha, K], **kwargs)
 
-    def get_moment(rv, size, alpha, K):
-        moment = (alpha / (1 + alpha)) ** at.arange(K)
+    def moment(rv, size, alpha, K):
+        alpha = alpha[..., np.newaxis]
+        moment = (alpha / (1 + alpha)) ** pt.arange(K)
         moment *= 1 / (1 + alpha)
-        moment = at.concatenate([moment, [(alpha / (1 + alpha)) ** K]], axis=-1)
+        moment = pt.concatenate([moment, (alpha / (1 + alpha)) ** K], axis=-1)
         if not rv_size_is_none(size):
-            moment_size = at.concatenate(
+            moment_size = pt.concatenate(
                 [
                     size,
                     [
@@ -2342,7 +2365,7 @@ class StickBreakingWeights(Continuous):
                     ],
                 ]
             )
-            moment = at.full(moment_size, moment)
+            moment = pt.full(moment_size, moment)
 
         return moment
 
@@ -2360,9 +2383,9 @@ class StickBreakingWeights(Continuous):
         -------
         TensorVariable
         """
-        logp = -at.sum(
-            at.log(
-                at.cumsum(
+        logp = -pt.sum(
+            pt.log(
+                pt.cumsum(
                     value[..., ::-1],
                     axis=-1,
                 )
@@ -2370,17 +2393,17 @@ class StickBreakingWeights(Continuous):
             axis=-1,
         )
         logp += -K * betaln(1, alpha)
-        logp += alpha * at.log(value[..., -1])
+        logp += alpha * pt.log(value[..., -1])
 
-        logp = at.switch(
-            at.or_(
-                at.any(
-                    at.and_(at.le(value, 0), at.ge(value, 1)),
+        logp = pt.switch(
+            pt.or_(
+                pt.any(
+                    pt.and_(pt.le(value, 0), pt.ge(value, 1)),
                     axis=-1,
                 ),
-                at.or_(
-                    at.bitwise_not(at.allclose(value.sum(-1), 1)),
-                    at.neq(value.shape[-1], K + 1),
+                pt.or_(
+                    pt.bitwise_not(pt.allclose(value.sum(-1), 1)),
+                    pt.neq(value.shape[-1], K + 1),
                 ),
             ),
             -np.inf,
@@ -2393,3 +2416,217 @@ class StickBreakingWeights(Continuous):
             K > 0,
             msg="alpha > 0, K > 0",
         )
+
+
+class ZeroSumNormalRV(SymbolicRandomVariable):
+    """ZeroSumNormal random variable"""
+
+    _print_name = ("ZeroSumNormal", "\\operatorname{ZeroSumNormal}")
+    default_output = 0
+
+
+class ZeroSumNormal(Distribution):
+    r"""
+    ZeroSumNormal distribution, i.e Normal distribution where one or
+    several axes are constrained to sum to zero.
+    By default, the last axis is constrained to sum to zero.
+    See `n_zerosum_axes` kwarg for more details.
+
+    .. math::
+
+        \begin{align*}
+            ZSN(\sigma) = N \Big( 0, \sigma^2 (I - \tfrac{1}{n}J) \Big) \\
+            \text{where} \ ~ J_{ij} = 1 \ ~ \text{and} \\
+            n = \text{nbr of zero-sum axes}
+        \end{align*}
+
+    Parameters
+    ----------
+    sigma : tensor_like of float
+        Scale parameter (sigma > 0).
+        It's actually the standard deviation of the underlying, unconstrained Normal distribution.
+        Defaults to 1 if not specified.
+        For now, ``sigma`` has to be a scalar, to ensure the zero-sum constraint.
+    n_zerosum_axes: int, defaults to 1
+        Number of axes along which the zero-sum constraint is enforced, starting from the rightmost position.
+        Defaults to 1, i.e the rightmost axis.
+    zerosum_axes: int, deprecated please use n_zerosum_axes as its successor
+    dims: sequence of strings, optional
+        Dimension names of the distribution. Works the same as for other PyMC distributions.
+        Necessary if ``shape`` is not passed.
+    shape: tuple of integers, optional
+        Shape of the distribution. Works the same as for other PyMC distributions.
+        Necessary if ``dims`` or ``observed`` is not passed.
+
+    Warnings
+    --------
+    ``sigma`` has to be a scalar, to ensure the zero-sum constraint.
+    The ability to specify a vector of ``sigma`` may be added in future versions.
+
+    ``n_zerosum_axes`` has to be > 0. If you want the behavior of ``n_zerosum_axes = 0``,
+    just use ``pm.Normal``.
+
+    Examples
+    --------
+    Define a `ZeroSumNormal` variable, with `sigma=1` and
+    `n_zerosum_axes=1`  by default::
+
+        COORDS = {
+            "regions": ["a", "b", "c"],
+            "answers": ["yes", "no", "whatever", "don't understand question"],
+        }
+        with pm.Model(coords=COORDS) as m:
+            # the zero sum axis will be 'answers'
+            v = pm.ZeroSumNormal("v", dims=("regions", "answers"))
+
+        with pm.Model(coords=COORDS) as m:
+            # the zero sum axes will be 'answers' and 'regions'
+            v = pm.ZeroSumNormal("v", dims=("regions", "answers"), n_zerosum_axes=2)
+
+        with pm.Model(coords=COORDS) as m:
+            # the zero sum axes will be the last two
+            v = pm.ZeroSumNormal("v", shape=(3, 4, 5), n_zerosum_axes=2)
+    """
+    rv_type = ZeroSumNormalRV
+
+    def __new__(
+        cls, *args, zerosum_axes=None, n_zerosum_axes=None, support_shape=None, dims=None, **kwargs
+    ):
+        if zerosum_axes is not None:
+            n_zerosum_axes = zerosum_axes
+            warnings.warn(
+                "The 'zerosum_axes' parameter is deprecated. Use 'n_zerosum_axes' instead.",
+                DeprecationWarning,
+            )
+        if dims is not None or kwargs.get("observed") is not None:
+            n_zerosum_axes = cls.check_zerosum_axes(n_zerosum_axes)
+
+            support_shape = get_support_shape(
+                support_shape=support_shape,
+                shape=None,  # Shape will be checked in `cls.dist`
+                dims=dims,
+                observed=kwargs.get("observed", None),
+                ndim_supp=n_zerosum_axes,
+            )
+
+        return super().__new__(
+            cls,
+            *args,
+            n_zerosum_axes=n_zerosum_axes,
+            support_shape=support_shape,
+            dims=dims,
+            **kwargs,
+        )
+
+    @classmethod
+    def dist(cls, sigma=1, n_zerosum_axes=None, support_shape=None, **kwargs):
+        n_zerosum_axes = cls.check_zerosum_axes(n_zerosum_axes)
+
+        sigma = pt.as_tensor_variable(floatX(sigma))
+        if sigma.ndim > 0:
+            raise ValueError("sigma has to be a scalar")
+
+        support_shape = get_support_shape(
+            support_shape=support_shape,
+            shape=kwargs.get("shape"),
+            ndim_supp=n_zerosum_axes,
+        )
+
+        if support_shape is None:
+            if n_zerosum_axes > 0:
+                raise ValueError("You must specify dims, shape or support_shape parameter")
+            # TODO: edge-case doesn't work for now, because pt.stack in get_support_shape fails
+            # else:
+            #     support_shape = () # because it's just a Normal in that case
+        support_shape = pt.as_tensor_variable(intX(support_shape))
+
+        assert n_zerosum_axes == pt.get_vector_length(
+            support_shape
+        ), "support_shape has to be as long as n_zerosum_axes"
+
+        return super().dist(
+            [sigma], n_zerosum_axes=n_zerosum_axes, support_shape=support_shape, **kwargs
+        )
+
+    @classmethod
+    def check_zerosum_axes(cls, n_zerosum_axes: Optional[int]) -> int:
+        if n_zerosum_axes is None:
+            n_zerosum_axes = 1
+        if not isinstance(n_zerosum_axes, int):
+            raise TypeError("n_zerosum_axes has to be an integer")
+        if not n_zerosum_axes > 0:
+            raise ValueError("n_zerosum_axes has to be > 0")
+        return n_zerosum_axes
+
+    @classmethod
+    def rv_op(cls, sigma, n_zerosum_axes, support_shape, size=None):
+        shape = to_tuple(size) + tuple(support_shape)
+        normal_dist = pm.Normal.dist(sigma=sigma, shape=shape)
+
+        if n_zerosum_axes > normal_dist.ndim:
+            raise ValueError("Shape of distribution is too small for the number of zerosum axes")
+
+        normal_dist_, sigma_, support_shape_ = (
+            normal_dist.type(),
+            sigma.type(),
+            support_shape.type(),
+        )
+
+        # Zerosum-normaling is achieved by subtracting the mean along the given n_zerosum_axes
+        zerosum_rv_ = normal_dist_
+        for axis in range(n_zerosum_axes):
+            zerosum_rv_ -= zerosum_rv_.mean(axis=-axis - 1, keepdims=True)
+
+        return ZeroSumNormalRV(
+            inputs=[normal_dist_, sigma_, support_shape_],
+            outputs=[zerosum_rv_, support_shape_],
+            ndim_supp=n_zerosum_axes,
+        )(normal_dist, sigma, support_shape)
+
+
+@_change_dist_size.register(ZeroSumNormalRV)
+def change_zerosum_size(op, normal_dist, new_size, expand=False):
+    normal_dist, sigma, support_shape = normal_dist.owner.inputs
+
+    if expand:
+        original_shape = tuple(normal_dist.shape)
+        old_size = original_shape[: len(original_shape) - op.ndim_supp]
+        new_size = tuple(new_size) + old_size
+
+    return ZeroSumNormal.rv_op(
+        sigma=sigma, n_zerosum_axes=op.ndim_supp, support_shape=support_shape, size=new_size
+    )
+
+
+@_moment.register(ZeroSumNormalRV)
+def zerosumnormal_moment(op, rv, *rv_inputs):
+    return pt.zeros_like(rv)
+
+
+@_default_transform.register(ZeroSumNormalRV)
+def zerosum_default_transform(op, rv):
+    n_zerosum_axes = tuple(np.arange(-op.ndim_supp, 0))
+    return ZeroSumTransform(n_zerosum_axes)
+
+
+@_logprob.register(ZeroSumNormalRV)
+def zerosumnormal_logp(op, values, normal_dist, sigma, support_shape, **kwargs):
+    (value,) = values
+    shape = value.shape
+    n_zerosum_axes = op.ndim_supp
+
+    _deg_free_support_shape = pt.inc_subtensor(shape[-n_zerosum_axes:], -1)
+    _full_size = pt.prod(shape)
+    _degrees_of_freedom = pt.prod(_deg_free_support_shape)
+
+    zerosums = [
+        pt.all(pt.isclose(pt.mean(value, axis=-axis - 1), 0, atol=1e-9))
+        for axis in range(n_zerosum_axes)
+    ]
+
+    out = pt.sum(
+        pm.logp(normal_dist, value) * _degrees_of_freedom / _full_size,
+        axis=tuple(np.arange(-n_zerosum_axes, 0)),
+    )
+
+    return check_parameters(out, *zerosums, msg="mean(value, axis=n_zerosum_axes) = 0")

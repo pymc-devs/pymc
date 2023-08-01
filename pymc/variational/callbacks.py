@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
 
 import collections
 
+from typing import Callable, Dict
+
 import numpy as np
 
 __all__ = ["Callback", "CheckParametersConvergence", "Tracker"]
@@ -24,15 +26,19 @@ class Callback:
         raise NotImplementedError
 
 
-def relative(current, prev, eps=1e-6):
-    return (np.abs(current - prev) + eps) / (np.abs(prev) + eps)
+def relative(current: np.ndarray, prev: np.ndarray, eps=1e-6) -> np.ndarray:
+    diff = current - prev  # type: ignore
+    return (np.abs(diff) + eps) / (np.abs(prev) + eps)
 
 
-def absolute(current, prev):
-    return np.abs(current - prev)
+def absolute(current: np.ndarray, prev: np.ndarray) -> np.ndarray:
+    diff = current - prev  # type: ignore
+    return np.abs(diff)
 
 
-_diff = dict(relative=relative, absolute=absolute)
+_diff: Dict[str, Callable[[np.ndarray, np.ndarray], np.ndarray]] = dict(
+    relative=relative, absolute=absolute
+)
 
 
 class CheckParametersConvergence(Callback):
@@ -68,7 +74,7 @@ class CheckParametersConvergence(Callback):
         self.prev = None
         self.tolerance = tolerance
 
-    def __call__(self, approx, _, i):
+    def __call__(self, approx, _, i) -> None:
         if self.prev is None:
             self.prev = self.flatten_shared(approx.params)
             return
@@ -76,7 +82,7 @@ class CheckParametersConvergence(Callback):
             return
         current = self.flatten_shared(approx.params)
         prev = self.prev
-        delta = self._diff(current, prev)  # type: np.ndarray
+        delta: np.ndarray = self._diff(current, prev)
         self.prev = current
         norm = np.linalg.norm(delta, self.ord)
         if norm < self.tolerance:

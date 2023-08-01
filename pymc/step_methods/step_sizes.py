@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ import numpy as np
 
 from scipy import stats
 
-from pymc.backends.report import SamplerWarning, WarningType
+from pymc.stats.convergence import SamplerWarning, WarningType
 
 
 class DualAverageAdaptation:

@@ -5,37 +5,38 @@ Continuous
 .. currentmodule:: pymc
 .. autosummary::
    :toctree: generated/
+   :template: distribution.rst
 
-   Uniform
-   Flat
-   HalfFlat
-   Normal
-   TruncatedNormal
+   AsymmetricLaplace
    Beta
-   Kumaraswamy
-   Exponential
-   Laplace
-   StudentT
    Cauchy
-   HalfCauchy
-   Gamma
-   Weibull
-   HalfStudentT
-   LogNormal
    ChiSquared
-   HalfNormal
-   Wald
-   Pareto
-   InverseGamma
    ExGaussian
-   VonMises
-   SkewNormal
-   Triangular
+   Exponential
+   Flat
+   Gamma
    Gumbel
+   HalfCauchy
+   HalfFlat
+   HalfNormal
+   HalfStudentT
+   Interpolated
+   InverseGamma
+   Kumaraswamy
+   Laplace
    Logistic
    LogitNormal
-   Interpolated
-   Rice
+   LogNormal
    Moyal
-   AsymmetricLaplace
+   Normal
+   Pareto
    PolyaGamma
+   Rice
+   SkewNormal
+   StudentT
+   Triangular
+   TruncatedNormal
+   Uniform
+   VonMises
+   Wald
+   Weibull

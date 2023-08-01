@@ -17,7 +17,10 @@ everyone's cup of tea. If that is your case, don't worry, you will be
 more than welcome if you want to help.
 
 :::{tip}
-Contact us on [Discourse](https://discourse.pymc.io/) if you want to contribute to the project but are not sure where you can contribute or how to start
+Contact us on [Discourse](https://discourse.pymc.io/) if you want to contribute to the project but are not sure where you can contribute or how to start.
+
+We also host office hours regularly to provide more support, especially to contributors.
+If you are interested in participating [subscribe to the `office-hours` tag](https://discourse.pymc.io/tag/office-hours) on Discourse.
 :::
 
 Below there are some examples of non code nor doc contributions that could serve as an inspiration.
@@ -31,19 +34,39 @@ If you have other ideas let us know on [Discourse](https://discourse.pymc.io/) t
   companies, to people who could use PyMC in their work or making sure that academics who use PyMC
   cite it correctly in their work
 * Help with our fundraising efforts
+* Add timestamps to [videos from PyMCon](https://github.com/pymc-devs/video-timestamps)
 
-### Code related contributions
+### Contribute via Pull Requests on GitHub
+We have a {ref}`pr_tutorial` and a {ref}`pr_checklist` page to help in all the steps of the contributing
+process, from before your first ever contribution to regular contributions as a core contributor.
+
+(pr_etiquette)=
+#### Etiquette for code contributions
+* When you start working working on an issue, open a `Draft` pull request as soon as you make your first commit (see {ref}`pr_tutorial`).
+* Before opening a PR with a new feature, please make a proposal by opening an [issue](https://github.com/pymc-devs/pymc/issues) or [Discussion](https://github.com/pymc-devs/pymc/discussions) with the maintainers. Depending on the proposal we might direct you to other places such as [`pymc-experimental`](https://github.com/pymc-devs/pymc-experimental) or [`pymc-examples`](https://github.com/pymc-devs/pymc-examples).
+* Any issue without an open pull request is available for work.
+   * If a pull request has no recent activity it may be closed, or taken over by someone else.
+   * The specific timeframe for "recent" is hard to define as it depends on the contributor the specific code change, and other contextual factors. As a rule of thumb in a normal pull request with no other blockers there is typically activity every couple of days.
+   * The core devs will make their best judgement when opting to close PRs or reassign them to others.
+* If unsure if an issue ticket is available feel free to ask in the issue ticket. Note however, that per the previous point an open pull request is way to claim an issue ticket. Please do not make unrealistic pledges in the issue tickets.
+* It's okay if you are delayed or need to take a break, but please leave a comment in the pull request if you cannot get it to a state where it can be merged. Depending on the change (urgent bugfix vs. new feature) the core devs can determine if the PR needs to be reassigned to get the work done.
+
+
+#### Code related contributions
 Join the discussion or submit a solution for an open issue. [See open issues](https://github.com/pymc-devs/pymc/issues)
 
-
-### Documentation related contributions
+#### Documentation related contributions
 
 See all open issues in documentation [here](https://github.com/pymc-devs/pymc/issues?q=is%3Aissue+is%3Aopen+label%3A%22docs%22+)
 
-New to the open source space? Find a good beginner friendly documentation issue you can help with [here](https://github.com/pymc-devs/pymc/issues?q=is%3Aissue+is%3Aopen+label%3A%22beginner+friendly%22+label%3A%22docs%22) or [here](https://github.com/pymc-devs/pymc-examples/issues?q=is%3Aopen+label%3Adocs+label%3A%22good+first+issue%22).
+:::{admonition} New to the open source space?
+:class: tip
 
-You will need to express your interest in the issue by commenting on it using your GitHub account, and you will need to use some beginner level Git to complete the Pull Request process, but don't worry! There are plenty of good [Github tutorials](https://guides.github.com/activities/hello-world/) out there, and PyMC reviewers are happy to help.
-
+If you are not sure where or how to start, take a look at the [sprint materials](https://pymc-data-umbrella.xyz/en/latest/sprint/docstring_tutorial.html)
+(even if you plan on contributing on your own outside of sprint events).
+They are the most detailed guide available on contributing to PyMC also
+with advice on which contributions are good starting points.
+:::
 
 ## Contribute as an institution
 
@@ -51,12 +74,9 @@ Institutions can contribute in the following ways:
 
 - By becoming [Institutional Partners](https://github.com/pymc-devs/pymc/blob/main/GOVERNANCE.md#institutional-partners-and-funding)
 - By becoming [Sponsors](https://github.com/pymc-devs/pymc/blob/main/GOVERNANCE.md#sponsors)
-- By subscribing to {ref}`Tidelift <pymc_for_enterprise>`
 
 Contact PyMC at pymc.devs@gmail.com for more information.
 
-
-TODO: Add https://github.com/pymc-devs/pymc/blob/main/CONTRIBUTING.md
 
 :::{toctree}
 :hidden:
@@ -71,9 +91,12 @@ pr_tutorial
 :maxdepth: 1
 :caption: How-to guides
 
-developer_guide_implementing_distribution
+implementing_distribution
 build_docs
+docker_container
 running_the_test_suite
+review_pr_pymc_examples
+using_gitpod
 :::
 
 :::{toctree}
@@ -93,5 +116,5 @@ release_checklist
 :maxdepth: 1
 :caption: In depth explanations
 
-developer_guide
+versioning_schemes_explanation
 :::

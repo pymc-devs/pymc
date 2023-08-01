@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -12,16 +12,19 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from __future__ import annotations
+
 from collections import namedtuple
 
 import numpy as np
 
-from pymc.aesaraf import floatX
-from pymc.backends.report import SamplerWarning, WarningType
-from pymc.math import logbern, logdiffexp_numpy
-from pymc.step_methods.arraystep import Competence
+from pymc.math import logbern
+from pymc.pytensorf import floatX
+from pymc.stats.convergence import SamplerWarning
+from pymc.step_methods.compound import Competence
+from pymc.step_methods.hmc import integration
 from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
-from pymc.step_methods.hmc.integration import IntegrationError
+from pymc.step_methods.hmc.integration import IntegrationError, State
 from pymc.vartypes import continuous_types
 
 __all__ = ["NUTS"]
@@ -78,6 +81,12 @@ class NUTS(BaseHMC):
       by the python standard library `time.perf_counter` (wall time).
     - `perf_counter_start`: The value of `time.perf_counter` at the beginning
       of the computation of the draw.
+    - `index_in_trajectory`: This is usually only interesting for debugging
+      purposes. This indicates the position of the posterior draw in the
+      trajectory. Eg a -4 would indicate that the draw was the result of the
+      fourth leapfrog step in negative direction.
+    - `largest_eigval` and `smallest_eigval`: Experimental statistics for
+      some mass matrix adaptation algorithms. This is nan if it is not used.
 
     References
     ----------
@@ -88,25 +97,27 @@ class NUTS(BaseHMC):
     name = "nuts"
 
     default_blocked = True
-    generates_stats = True
-    stats_dtypes = [
-        {
-            "depth": np.int64,
-            "step_size": np.float64,
-            "tune": bool,
-            "mean_tree_accept": np.float64,
-            "step_size_bar": np.float64,
-            "tree_size": np.float64,
-            "diverging": bool,
-            "energy_error": np.float64,
-            "energy": np.float64,
-            "max_energy_error": np.float64,
-            "model_logp": np.float64,
-            "process_time_diff": np.float64,
-            "perf_counter_diff": np.float64,
-            "perf_counter_start": np.float64,
-        }
-    ]
+    stats_dtypes_shapes = {
+        "depth": (np.int64, []),
+        "step_size": (np.float64, []),
+        "tune": (bool, []),
+        "mean_tree_accept": (np.float64, []),
+        "step_size_bar": (np.float64, []),
+        "tree_size": (np.float64, []),
+        "diverging": (bool, []),
+        "energy_error": (np.float64, []),
+        "energy": (np.float64, []),
+        "max_energy_error": (np.float64, []),
+        "model_logp": (np.float64, []),
+        "process_time_diff": (np.float64, []),
+        "perf_counter_diff": (np.float64, []),
+        "perf_counter_start": (np.float64, []),
+        "largest_eigval": (np.float64, []),
+        "smallest_eigval": (np.float64, []),
+        "index_in_trajectory": (np.int64, []),
+        "reached_max_treedepth": (bool, []),
+        "warning": (SamplerWarning, None),
+    }
 
     def __init__(self, vars=None, max_treedepth=10, early_max_treedepth=8, **kwargs):
         r"""Set up the No-U-Turn sampler.
@@ -149,7 +160,7 @@ class NUTS(BaseHMC):
         scaling: array_like, ndim = {1,2}
             The inverse mass, or precision matrix. One dimensional arrays are
             interpreted as diagonal matrices. If `is_cov` is set to True,
-            this will be interpreded as the mass or covariance matrix.
+            this will be interpreted as the mass or covariance matrix.
         is_cov: bool, default=False
             Treat the scaling as mass or covariance matrix.
         potential: Potential, optional
@@ -180,6 +191,7 @@ class NUTS(BaseHMC):
 
         tree = _Tree(len(p0), self.integrator, start, step_size, self.Emax)
 
+        reached_max_treedepth = False
         for _ in range(max_treedepth):
             direction = logbern(np.log(0.5)) * 2 - 1
             divergence_info, turning = tree.extend(direction)
@@ -187,49 +199,41 @@ class NUTS(BaseHMC):
             if divergence_info or turning:
                 break
         else:
-            if not self.tune:
-                self._reached_max_treedepth += 1
+            reached_max_treedepth = not self.tune
 
         stats = tree.stats()
         accept_stat = stats["mean_tree_accept"]
+        stats["reached_max_treedepth"] = reached_max_treedepth
         return HMCStepData(tree.proposal, accept_stat, divergence_info, stats)
 
     @staticmethod
     def competence(var, has_grad):
         """Check how appropriate this class is for sampling a random variable."""
 
-        dist = getattr(var.owner, "op", None)
         if var.dtype in continuous_types and has_grad:
             return Competence.PREFERRED
         return Competence.INCOMPATIBLE
 
-    def warnings(self):
-        warnings = super().warnings()
-        n_samples = self._samples_after_tune
-        n_treedepth = self._reached_max_treedepth
-
-        if n_samples > 0 and n_treedepth / float(n_samples) > 0.05:
-            msg = (
-                "The chain reached the maximum tree depth. Increase "
-                "max_treedepth, increase target_accept or reparameterize."
-            )
-            warn = SamplerWarning(WarningType.TREEDEPTH, msg, "warn")
-            warnings.append(warn)
-        return warnings
-
 
 # A proposal for the next position
-Proposal = namedtuple("Proposal", "q, q_grad, energy, log_p_accept_weighted, logp")
+Proposal = namedtuple("Proposal", "q, q_grad, energy, logp, index_in_trajectory")
 
 # A subtree of the binary tree built by nuts.
 Subtree = namedtuple(
     "Subtree",
-    "left, right, p_sum, proposal, log_size, log_weighted_accept_sum, n_proposals",
+    "left, right, p_sum, proposal, log_size",
 )
 
 
 class _Tree:
-    def __init__(self, ndim, integrator, start, step_size, Emax):
+    def __init__(
+        self,
+        ndim: int,
+        integrator: integration.CpuLeapfrogIntegrator,
+        start: State,
+        step_size: float,
+        Emax: float,
+    ):
         """Binary tree from the NUTS algorithm.
 
         Parameters
@@ -249,17 +253,17 @@ class _Tree:
         self.start = start
         self.step_size = step_size
         self.Emax = Emax
-        self.start_energy = np.array(start.energy)
+        self.start_energy = start.energy
 
         self.left = self.right = start
-        self.proposal = Proposal(start.q.data, start.q_grad, start.energy, 1.0, start.model_logp)
+        self.proposal = Proposal(start.q.data, start.q_grad, start.energy, start.model_logp, 0)
         self.depth = 0
-        self.log_size = 0
-        self.log_weighted_accept_sum = -np.inf
+        self.log_size = 0.0
+        self.log_accept_sum = -np.inf
         self.mean_tree_accept = 0.0
         self.n_proposals = 0
         self.p_sum = start.p.data.copy()
-        self.max_energy_change = 0
+        self.max_energy_change = 0.0
 
     def extend(self, direction):
         """Double the treesize by extending the tree in the given direction.
@@ -279,7 +283,7 @@ class _Tree:
             )
             leftmost_begin, leftmost_end = self.left, self.right
             rightmost_begin, rightmost_end = tree.left, tree.right
-            leftmost_p_sum = self.p_sum
+            leftmost_p_sum = self.p_sum.copy()
             rightmost_p_sum = tree.p_sum
             self.right = tree.right
         else:
@@ -289,11 +293,10 @@ class _Tree:
             leftmost_begin, leftmost_end = tree.right, tree.left
             rightmost_begin, rightmost_end = self.left, self.right
             leftmost_p_sum = tree.p_sum
-            rightmost_p_sum = self.p_sum
+            rightmost_p_sum = self.p_sum.copy()
             self.left = tree.right
 
         self.depth += 1
-        self.n_proposals += tree.n_proposals
 
         if diverging or turning:
             return diverging, turning
@@ -303,9 +306,6 @@ class _Tree:
             self.proposal = tree.proposal
 
         self.log_size = np.logaddexp(self.log_size, tree.log_size)
-        self.log_weighted_accept_sum = np.logaddexp(
-            self.log_weighted_accept_sum, tree.log_weighted_accept_sum
-        )
         self.p_sum[:] += tree.p_sum
 
         # Additional turning check only when tree depth > 0 to avoid redundant work
@@ -321,47 +321,50 @@ class _Tree:
 
         return diverging, turning
 
-    def _single_step(self, left, epsilon):
+    def _single_step(self, left: State, epsilon: float):
         """Perform a leapfrog step and handle error cases."""
+        right: State | None
+        error: IntegrationError | None
+        error_msg: str | None
         try:
-            # `State` type
             right = self.integrator.step(epsilon, left)
         except IntegrationError as err:
             error_msg = str(err)
             error = err
             right = None
         else:
+            assert right is not None  # since there was no IntegrationError
             # h - H0
             energy_change = right.energy - self.start_energy
             if np.isnan(energy_change):
                 energy_change = np.inf
 
+            self.log_accept_sum = np.logaddexp(self.log_accept_sum, min(0, -energy_change))
+
             if np.abs(energy_change) > np.abs(self.max_energy_change):
                 self.max_energy_change = energy_change
-            if np.abs(energy_change) < self.Emax:
+            if energy_change < self.Emax:
                 # Acceptance statistic
                 # e^{H(q_0, p_0) - H(q_n, p_n)} max(1, e^{H(q_0, p_0) - H(q_n, p_n)})
                 # Saturated Metropolis accept probability with Boltzmann weight
-                # if h - H0 < 0
-                log_p_accept_weighted = -energy_change + min(0.0, -energy_change)
                 log_size = -energy_change
                 proposal = Proposal(
                     right.q.data,
                     right.q_grad,
                     right.energy,
-                    log_p_accept_weighted,
                     right.model_logp,
+                    right.index_in_trajectory,
                 )
-                tree = Subtree(
-                    right, right, right.p.data, proposal, log_size, log_p_accept_weighted, 1
-                )
+                tree = Subtree(right, right, right.p.data, proposal, log_size)
                 return tree, None, False
             else:
                 error_msg = f"Energy change in leapfrog step is too large: {energy_change}."
                 error = None
-        tree = Subtree(None, None, None, None, -np.inf, -np.inf, 1)
-        divergance_info = DivergenceInfo(error_msg, error, left, right)
-        return tree, divergance_info, False
+        finally:
+            self.n_proposals += 1
+        tree = Subtree(None, None, None, None, -np.inf)
+        divergence_info = DivergenceInfo(error_msg, error, left, right)
+        return tree, divergence_info, False
 
     def _build_subtree(self, left, depth, epsilon):
         if depth == 0:
@@ -387,9 +390,6 @@ class _Tree:
                 turning = turning | turning1 | turning2
 
             log_size = np.logaddexp(tree1.log_size, tree2.log_size)
-            log_weighted_accept_sum = np.logaddexp(
-                tree1.log_weighted_accept_sum, tree2.log_weighted_accept_sum
-            )
             if logbern(tree2.log_size - log_size):
                 proposal = tree2.proposal
             else:
@@ -397,21 +397,13 @@ class _Tree:
         else:
             p_sum = tree1.p_sum
             log_size = tree1.log_size
-            log_weighted_accept_sum = tree1.log_weighted_accept_sum
             proposal = tree1.proposal
 
-        n_proposals = tree1.n_proposals + tree2.n_proposals
-
-        tree = Subtree(left, right, p_sum, proposal, log_size, log_weighted_accept_sum, n_proposals)
+        tree = Subtree(left, right, p_sum, proposal, log_size)
         return tree, diverging, turning
 
     def stats(self):
-        # Update accept stat if any subtrees were accepted
-        if self.log_size > 0:
-            # Remove contribution from initial state which is always a perfect
-            # accept
-            log_sum_weight = logdiffexp_numpy(self.log_size, 0.0)
-            self.mean_tree_accept = np.exp(self.log_weighted_accept_sum - log_sum_weight)
+        self.mean_tree_accept = np.exp(self.log_accept_sum) / self.n_proposals
         return {
             "depth": self.depth,
             "mean_tree_accept": self.mean_tree_accept,
@@ -420,4 +412,5 @@ class _Tree:
             "tree_size": self.n_proposals,
             "max_energy_error": self.max_energy_change,
             "model_logp": self.proposal.logp,
+            "index_in_trajectory": self.proposal.index_in_trajectory,
         }

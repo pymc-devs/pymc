@@ -5,11 +5,11 @@ Timeseries
 .. currentmodule:: pymc
 .. autosummary::
    :toctree: generated
+   :template: distribution.rst
 
-    AR1
     AR
-    GaussianRandomWalk
-    GARCH11
     EulerMaruyama
+    GARCH11
+    GaussianRandomWalk
     MvGaussianRandomWalk
     MvStudentTRandomWalk

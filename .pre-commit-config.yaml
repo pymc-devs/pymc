@@ -1,7 +1,7 @@
 exclude: ^(docs/logos|pymc/tests/data)/
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.1.0
+  rev: v4.4.0
   hooks:
     -   id: check-merge-conflict
     -   id: check-toml
@@ -9,68 +9,69 @@ repos:
     -   id: debug-statements
     -   id: end-of-file-fixer
     -   id: no-commit-to-branch
-        args: [--branch, master]
+        args: [--branch, main]
     -   id: requirements-txt-fixer
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
-- repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v0.940
+- repo: https://github.com/lucianopaz/head_of_apache
+  rev: "0.0.3"
   hooks:
-    - id: mypy
-      name: Run static type checks
-      language: python
-      entry: python ./scripts/run_mypy.py --verbose
-      additional_dependencies:
-      - pandas
-      - types-cachetools
-      - types-filelock
-      - types-setuptools
-      - arviz
-      - aesara==2.4.0
-      - aeppl==0.0.26
-      always_run: true
-      require_serial: true
-      pass_filenames: false
+    - id: head_of_apache
+      args:
+        - --author=The PyMC Developers
+        - --exclude=docs/
+        - --exclude=scripts/
+        - --exclude=binder/
+        - --exclude=versioneer.py
 - repo: https://github.com/PyCQA/isort
-  rev: 5.10.1
+  rev: 5.12.0
   hooks:
     - id: isort
       name: isort
 - repo: https://github.com/asottile/pyupgrade
-  rev: v2.31.1
+  rev: v3.9.0
   hooks:
     - id: pyupgrade
       args: [--py37-plus]
 - repo: https://github.com/psf/black
-  rev: 22.1.0
+  rev: 23.7.0
   hooks:
     - id: black
+    - id: black-jupyter
 - repo: https://github.com/PyCQA/pylint
-  rev: v2.12.2
+  rev: v3.0.0a6
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]
       files: ^pymc/
+      exclude: (?x)(pymc/_version.py)
+- repo: https://github.com/PyCQA/pydocstyle
+  rev: 6.3.0
+  hooks:
+    - id: pydocstyle
+      args:
+      - --ignore=D100,D101,D102,D103,D104,D105,D107,D200,D202,D203,D204,D205,D209,D212,D213,D301,D400,D401,D403,D413,D415,D417
+      files: ^pymc/
+      exclude: ^pymc/tests/
 - repo: https://github.com/MarcoGorelli/madforhooks
-  rev: 0.3.0
+  rev: 0.4.1
   hooks:
     - id: no-print-statements
       files: ^pymc/
-    - id: conda-env-sorter
-      files: ^conda-envs/environment-dev-py.+\.yml$
+      exclude: (?x)(pymc/_version.py)
 - repo: local
   hooks:
     - id: check-no-tests-are-ignored
       additional_dependencies: [pandas,pyyaml]
       entry: python scripts/check_all_tests_are_covered.py
-      files: ^\.github/workflows/pytest\.yml$
+      files: ^.github/workflows/tests.yml$
       language: python
       name: Check no tests are ignored
       pass_filenames: false
     - id: pip-from-conda
       additional_dependencies: [pyyaml]
       entry: python scripts/generate_pip_deps_from_conda.py
-      files: ^conda-envs/environment-dev-py.+.yml$
+      files: ^conda-envs/environment-dev.yml$
       language: python
       name: Generate pip dependency from conda
     - id: no-relative-imports
@@ -78,8 +79,9 @@ repos:
       entry: from \.[\.\w]* import
       types: [python]
       language: pygrep
+      exclude: (?x)(pymc/_version.py|versioneer.py)
     - id: no-internal-links
-      name: Check no internal links are in the docs
+      name: Check no links that should be cross-references are in the docs
       description: >-
         'A quick check for the links in the intersphinx '
         'mapping inside `docs/source/`'
@@ -95,13 +97,15 @@ repos:
           (?x)(index.md|
                404.md|
                contributing/release_checklist.md|
-               contributing/developer_guide.rst|
+               contributing/versioning_schemes_explanation.md|
                learn/examples.md)
       entry: >
           (?x)(arviz-devs.github.io|
-               aesara.readthedocs.io|
-               aeppl.readthedocs.io|
+               python.arviz.org|
+               pytensor.readthedocs.io|
+               pymc-experimental.readthedocs.io|
                docs.pymc.io|
+               www.pymc.io|
                numpy.org/doc|
                pymc-examples.readthedocs.io|
                myst-parser.readthedocs.io|

@@ -5,20 +5,17 @@ Discrete
 .. currentmodule:: pymc
 .. autosummary::
    :toctree: generated
+   :template: distribution.rst
 
-   Binomial
-   BetaBinomial
    Bernoulli
-   DiscreteWeibull
-   Poisson
-   NegativeBinomial
-   Constant
-   ZeroInflatedPoisson
-   ZeroInflatedBinomial
-   ZeroInflatedNegativeBinomial
+   BetaBinomial
+   Binomial
+   Categorical
    DiscreteUniform
+   DiscreteWeibull
    Geometric
    HyperGeometric
-   Categorical
+   NegativeBinomial
    OrderedLogistic
    OrderedProbit
+   Poisson

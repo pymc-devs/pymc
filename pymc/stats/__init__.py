@@ -1,4 +1,4 @@
-#   Copyright 2021 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -27,5 +27,6 @@ for attr in az.stats.__all__:
     if not attr.startswith("__"):
         setattr(sys.modules[__name__], attr, obj)
 
+from pymc.stats.log_likelihood import compute_log_likelihood
 
-__all__ = tuple(az.stats.__all__)
+__all__ = ("compute_log_likelihood",) + tuple(az.stats.__all__)

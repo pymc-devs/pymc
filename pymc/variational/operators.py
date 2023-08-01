@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -11,14 +11,21 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import aesara
+from __future__ import annotations
 
-from aesara import tensor as at
+import pytensor
+
+from pytensor.graph.basic import Variable
 
 import pymc as pm
 
 from pymc.variational import opvi
-from pymc.variational.opvi import ObjectiveFunction, Operator
+from pymc.variational.opvi import (
+    NotImplementedInference,
+    ObjectiveFunction,
+    Operator,
+    _known_scan_ignored_inputs,
+)
 from pymc.variational.stein import Stein
 
 __all__ = ["KL", "KSD"]
@@ -70,14 +77,16 @@ class KSDObjective(ObjectiveFunction):
         OPVI TestFunction
     """
 
-    def __init__(self, op, tf):
+    op: KSD
+
+    def __init__(self, op: KSD, tf: opvi.TestFunction):
         if not isinstance(op, KSD):
             raise opvi.ParametrizationError("Op should be KSD")
         super().__init__(op, tf)
 
-    @aesara.config.change_flags(compute_test_value="off")
-    def __call__(self, nmc, **kwargs):
-        op = self.op  # type: KSD
+    @pytensor.config.change_flags(compute_test_value="off")
+    def __call__(self, nmc, **kwargs) -> list[Variable]:
+        op: KSD = self.op
         grad = op.apply(self.tf)
         if self.approx.all_histograms:
             z = self.approx.joint_histogram
@@ -88,7 +97,7 @@ class KSDObjective(ObjectiveFunction):
         else:
             params = self.test_params + kwargs["more_tf_params"]
             grad *= pm.floatX(-1)
-        grads = at.grad(None, params, known_grads={z: grad})
+        grads = pytensor.grad(None, params, known_grads={z: grad})
         return self.approx.set_size_and_deterministic(
             grads, nmc, 0, kwargs.get("more_replacements")
         )
@@ -132,6 +141,10 @@ class KSD(Operator):
 
     def apply(self, f):
         # f: kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
+        if _known_scan_ignored_inputs([self.approx.model.logp()]):
+            raise NotImplementedInference(
+                "SVGD does not currently support Minibatch or Simulator RV"
+            )
         stein = Stein(
             approx=self.approx,
             kernel=f,

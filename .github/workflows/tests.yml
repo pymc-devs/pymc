@@ -1,0 +1,492 @@
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+
+# Tests are split into multiple jobs to accelerate the CI.
+# Different jobs should be organized to take approximately the same
+# time to complete (and not be prohibitely slow).
+# Because GitHub Actions don't support YAML anchors, we have to place the
+# splitting of testfiles into groups in the strategy/matrix/test-subset
+# and can't re-use the groups across jobs.
+# A pre-commit hook (scripts/check_all_tests_are_covered.py)
+# enforces that test run just once per OS / floatX setting.
+
+jobs:
+
+  changes:
+    name: "Check for changes"
+    runs-on: ubuntu-latest
+    outputs:
+      changes: ${{ steps.changes.outputs.src }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            src:
+              - ".github/workflows/tests.yml"
+              - "pymc/**/*.py"
+              - "tests/**/*.py"
+              - "*.py"
+              - "conda-envs/*"
+              - "requirements*.txt"
+              - "codecov.yml"
+              - "scripts/*.sh"
+
+  ubuntu:
+    needs: changes
+    if: ${{ needs.changes.outputs.changes == 'true' }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+        floatx: [float64]
+        python-version: ["3.11"]
+        test-subset:
+          - |
+            tests/test_util.py
+            tests/test_pytensorf.py
+            tests/test_math.py
+            tests/backends/test_base.py
+            tests/backends/test_ndarray.py
+            tests/step_methods/hmc/test_hmc.py
+            tests/test_func_utils.py
+            tests/distributions/test_shape_utils.py
+            tests/distributions/test_mixture.py
+            tests/test_testing.py
+
+          - |
+            tests/distributions/test_continuous.py
+            tests/distributions/test_multivariate.py
+
+          - |
+            tests/distributions/test_bound.py
+            tests/distributions/test_censored.py
+            tests/distributions/test_simulator.py
+            tests/sampling/test_forward.py
+            tests/sampling/test_population.py
+            tests/stats/test_convergence.py
+            tests/stats/test_log_likelihood.py
+            tests/distributions/test_distribution.py
+            tests/distributions/test_discrete.py
+
+          - |
+            tests/tuning/test_scaling.py
+            tests/tuning/test_starting.py
+            tests/distributions/test_dist_math.py
+            tests/distributions/test_transform.py
+            tests/sampling/test_mcmc.py
+            tests/sampling/test_parallel.py
+            tests/test_printing.py
+
+          - |
+            tests/distributions/test_timeseries.py
+            tests/gp/test_cov.py
+            tests/gp/test_hsgp_approx.py
+            tests/gp/test_gp.py
+            tests/gp/test_mean.py
+            tests/gp/test_util.py
+            tests/test_model.py
+            tests/test_model_graph.py
+            tests/ode/test_ode.py
+            tests/ode/test_utils.py
+            tests/step_methods/hmc/test_quadpotential.py
+
+          - |
+            tests/backends/test_mcbackend.py
+            tests/distributions/test_truncated.py
+            tests/logprob/test_abstract.py
+            tests/logprob/test_basic.py
+            tests/logprob/test_binary.py
+            tests/logprob/test_checks.py
+            tests/logprob/test_censoring.py
+            tests/logprob/test_composite_logprob.py
+            tests/logprob/test_cumsum.py
+            tests/logprob/test_mixture.py
+            tests/logprob/test_order.py
+            tests/logprob/test_rewriting.py
+            tests/logprob/test_scan.py
+            tests/logprob/test_tensor.py
+            tests/logprob/test_transforms.py
+            tests/logprob/test_utils.py
+
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    env:
+      TEST_SUBSET: ${{ matrix.test-subset }}
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cache conda
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if environment-test.yml has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda-envs/environment-test.yml') }}
+      - name: Cache multiple paths
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if requirements.txt has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: |
+            ~/.cache/pip
+            $RUNNER_TOOL_CACHE/Python/*
+            ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('requirements.txt') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          mamba-version: "*"
+          activate-environment: pymc-test
+          channel-priority: strict
+          environment-file: conda-envs/environment-test.yml
+          python-version: ${{matrix.python-version}}
+          use-mamba: true
+          use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
+      - name: Install-pymc
+        run: |
+          conda activate pymc-test
+          pip install -e .
+          pip install --pre -U polyagamma
+          python --version
+      - name: Run tests
+        run: |
+          conda activate pymc-test
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
+          env_vars: TEST_SUBSET
+          name: ${{ matrix.os }} ${{ matrix.floatx }}
+          fail_ci_if_error: false
+
+  windows:
+    needs: changes
+    if: ${{ needs.changes.outputs.changes == 'true' }}
+    strategy:
+      matrix:
+        os: [windows-latest]
+        floatx: [float64]
+        python-version: ["3.9"]
+        test-subset:
+          - tests/variational/test_approximations.py tests/variational/test_callbacks.py tests/variational/test_inference.py tests/variational/test_opvi.py tests/test_initial_point.py
+          - tests/test_model.py tests/sampling/test_mcmc.py
+          - tests/gp/test_cov.py tests/gp/test_gp.py tests/gp/test_mean.py tests/gp/test_util.py tests/ode/test_ode.py tests/ode/test_utils.py tests/smc/test_smc.py tests/sampling/test_parallel.py
+          - tests/step_methods/test_metropolis.py tests/step_methods/test_slicer.py tests/step_methods/hmc/test_nuts.py tests/step_methods/test_compound.py tests/step_methods/hmc/test_hmc.py
+
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    env:
+      TEST_SUBSET: ${{ matrix.test-subset }}
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=core2'
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cache conda
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if conda-envs/windows-environment-test.yml has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda-envs/windows-environment-test.yml') }}
+      - name: Cache multiple paths
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if requirements.txt has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: |
+            ~/.cache/pip
+            $RUNNER_TOOL_CACHE/Python/*
+            ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('requirements.txt') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          mamba-version: "*"
+          activate-environment: pymc-test
+          channel-priority: strict
+          environment-file: conda-envs/windows-environment-test.yml
+          python-version: ${{matrix.python-version}}
+          use-mamba: true
+          use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
+      - name: Install-pymc
+        run: |
+          conda activate pymc-test
+          pip install -e .
+          pip install --pre -U polyagamma
+          python --version
+      - name: Run tests
+        # This job uses a cmd shell, therefore the environment variable syntax is different!
+        # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
+        run: >-
+          conda activate pymc-test &&
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
+          env_vars: TEST_SUBSET
+          name: ${{ matrix.os }} ${{ matrix.floatx }}
+          fail_ci_if_error: false
+
+  macos:
+    needs: changes
+    if: ${{ needs.changes.outputs.changes == 'true' }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+        floatx: [float64]
+        python-version: ["3.10"]
+        test-subset:
+          - |
+            tests/sampling/test_parallel.py
+            tests/test_data.py
+            tests/variational/test_minibatch_rv.py
+            tests/test_model.py
+
+          - |
+            tests/sampling/test_mcmc.py
+
+          - |
+            tests/backends/test_arviz.py
+            tests/variational/test_updates.py
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    env:
+      TEST_SUBSET: ${{ matrix.test-subset }}
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cache conda
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if environment-test.yml has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda-envs/environment-test.yml') }}
+      - name: Cache multiple paths
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if requirements.txt has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: |
+            ~/.cache/pip
+            $RUNNER_TOOL_CACHE/Python/*
+            ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('requirements.txt') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          mamba-version: "*"
+          activate-environment: pymc-test
+          channel-priority: strict
+          environment-file: conda-envs/environment-test.yml
+          python-version: ${{matrix.python-version}}
+          use-mamba: true
+          use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
+      - name: Install pymc
+        run: |
+          conda activate pymc-test
+          pip install -e .
+          python --version
+      - name: Run tests
+        run: |
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
+          env_vars: TEST_SUBSET
+          name: ${{ matrix.os }} ${{ matrix.floatx }}
+          fail_ci_if_error: false
+
+  external_samplers:
+    needs: changes
+    if: ${{ needs.changes.outputs.changes == 'true' }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+        floatx: [float64]
+        python-version: ["3.11"]
+        test-subset:
+          - tests/sampling/test_jax.py tests/sampling/test_mcmc_external.py
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    env:
+      TEST_SUBSET: ${{ matrix.test-subset }}
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cache conda
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if environment-test.yml has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda-envs/environment-test.yml') }}
+      - name: Cache multiple paths
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if requirements.txt has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: |
+            ~/.cache/pip
+            $RUNNER_TOOL_CACHE/Python/*
+            ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('requirements.txt') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          mamba-version: "*"
+          activate-environment: pymc-test
+          channel-priority: strict
+          environment-file: conda-envs/environment-test.yml
+          python-version: ${{matrix.python-version}}
+          use-mamba: true
+          use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
+      - name: Install pymc
+        run: |
+          conda activate pymc-test
+          pip install -e .
+          python --version
+      - name: Install external samplers
+        run: |
+          conda activate pymc-test
+          pip install "numpyro>=0.8.0"
+          pip install git+https://github.com/blackjax-devs/blackjax.git@0.7.0
+      - name: Run tests
+        run: |
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
+          env_vars: TEST_SUBSET
+          name: JAX tests - ${{ matrix.os }} ${{ matrix.floatx }}
+          fail_ci_if_error: false
+
+  float32:
+    needs: changes
+    if: ${{ needs.changes.outputs.changes == 'true' }}
+    strategy:
+      matrix:
+        os: [windows-latest]
+        floatx: [float32]
+        python-version: ["3.11"]
+        test-subset:
+        - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py tests/distributions/test_transform.py
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    env:
+      TEST_SUBSET: ${{ matrix.test-subset }}
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=core2'
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cache conda
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if conda-envs/windows-environment-test.yml has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('conda-envs/windows-environment-test.yml') }}
+      - name: Cache multiple paths
+        uses: actions/cache@v3
+        env:
+          # Increase this value to reset cache if requirements.txt has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: |
+            ~/.cache/pip
+            $RUNNER_TOOL_CACHE/Python/*
+            ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
+            hashFiles('requirements.txt') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          mamba-version: "*"
+          activate-environment: pymc-test
+          channel-priority: strict
+          environment-file: conda-envs/windows-environment-test.yml
+          python-version: ${{matrix.python-version}}
+          use-mamba: true
+          use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
+      - name: Install-pymc
+        run: |
+          conda activate pymc-test
+          pip install -e .
+          pip install --pre -U polyagamma
+          python --version
+      - name: Run tests
+        # This job uses a cmd shell, therefore the environment variable syntax is different!
+        # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
+        run: >-
+          conda activate pymc-test &&
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
+          env_vars: TEST_SUBSET
+          name: ${{ matrix.os }} ${{ matrix.floatx }}
+          fail_ci_if_error: false
+
+  all_tests:
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs: [ changes, ubuntu, windows, macos, external_samplers, float32 ]
+    steps:
+      - name: Check build matrix status
+        if: ${{ needs.changes.outputs.changes == 'true' &&
+                ( needs.ubuntu.result != 'success' ||
+                  needs.windows.result != 'success' ||
+                  needs.macos.result != 'success' ||
+                  needs.external_samplers.result != 'success' ||
+                  needs.float32.result != 'success' ) }}
+        run: exit 1

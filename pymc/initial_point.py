@@ -1,4 +1,4 @@
-#   Copyright 2021 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -16,15 +16,16 @@ import warnings
 
 from typing import Callable, Dict, List, Optional, Sequence, Set, Union
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as pt
 
-from aesara.graph.basic import Variable, graph_inputs
-from aesara.graph.fg import FunctionGraph
-from aesara.tensor.var import TensorVariable
+from pytensor.graph.basic import Variable
+from pytensor.graph.fg import FunctionGraph
+from pytensor.tensor.var import TensorVariable
 
-from pymc.aesaraf import compile_pymc
+from pymc.logprob.transforms import RVTransform
+from pymc.pytensorf import compile_pymc, find_rng_nodes, replace_rng_nodes, reseed_rngs
 from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
 
 StartDict = Dict[Union[Variable, str], Union[np.ndarray, Variable, str]]
@@ -43,9 +44,7 @@ def convert_str_to_rv_dict(
         if isinstance(key, str):
             if is_transformed_name(key):
                 rv = model[get_untransformed_name(key)]
-                initvals[rv] = model.rvs_to_values[rv].tag.transform.backward(
-                    initval, *rv.owner.inputs
-                )
+                initvals[rv] = model.rvs_to_transforms[rv].backward(initval, *rv.owner.inputs)
             else:
                 initvals[model[key]] = initval
         else:
@@ -53,29 +52,11 @@ def convert_str_to_rv_dict(
     return initvals
 
 
-def filter_rvs_to_jitter(step) -> Set[TensorVariable]:
-    """Find the set of RVs for which the responsible step methods ask for
-    the addition of jitter to the initial point.
-
-    Parameters
-    ----------
-    step : BlockedStep or CompoundStep
-        One or many step methods that were assigned model variables.
-
-    Returns
-    -------
-    rvs_to_jitter : set
-        The random variables for which jitter should be added.
-    """
-    # TODO: implement this
-    return set()
-
-
 def make_initial_point_fns_per_chain(
     *,
     model,
     overrides: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
-    jitter_rvs: Set[TensorVariable],
+    jitter_rvs: Optional[Set[TensorVariable]] = None,
     chains: int,
 ) -> List[Callable]:
     """Create an initial point function for each chain, as defined by initvals
@@ -88,7 +69,7 @@ def make_initial_point_fns_per_chain(
     overrides : optional, list or dict
         Initial value strategy overrides that should take precedence over the defaults from the model.
         A sequence of None or dicts will be treated as chain-wise strategies and must have the same length as `seeds`.
-    jitter_rvs : set
+    jitter_rvs : set, optional
         Random variable tensors for which U(-1, 1) jitter shall be applied.
         (To the transformed space if applicable.)
 
@@ -150,28 +131,15 @@ def make_initial_point_fn(
         If `True` the returned variables will correspond to transformed initial values.
     """
 
-    def find_rng_nodes(variables):
-        return [
-            node
-            for node in graph_inputs(variables)
-            if isinstance(
-                node,
-                (
-                    at.random.var.RandomStateSharedVariable,
-                    at.random.var.RandomGeneratorSharedVariable,
-                ),
-            )
-        ]
-
     sdict_overrides = convert_str_to_rv_dict(model, overrides or {})
     initval_strats = {
-        **model.initial_values,
+        **model.rvs_to_initial_values,
         **sdict_overrides,
     }
 
     initial_values = make_initial_point_expression(
         free_rvs=model.free_RVs,
-        rvs_to_values=model.rvs_to_values,
+        rvs_to_transforms=model.rvs_to_transforms,
         initval_strategies=initval_strats,
         jitter_rvs=jitter_rvs,
         default_strategy=default_strategy,
@@ -180,22 +148,12 @@ def make_initial_point_fn(
 
     # Replace original rng shared variables so that we don't mess with them
     # when calling the final seeded function
-    graph = FunctionGraph(outputs=initial_values, clone=False)
-    rng_nodes = find_rng_nodes(graph.outputs)
-    new_rng_nodes: List[Union[np.random.RandomState, np.random.Generator]] = []
-    for rng_node in rng_nodes:
-        rng_cls: type
-        if isinstance(rng_node, at.random.var.RandomStateSharedVariable):
-            rng_cls = np.random.RandomState
-        else:
-            rng_cls = np.random.Generator
-        new_rng_nodes.append(aesara.shared(rng_cls(np.random.PCG64())))
-    graph.replace_all(zip(rng_nodes, new_rng_nodes), import_missing=True)
-    func = compile_pymc(inputs=[], outputs=graph.outputs, mode=aesara.compile.mode.FAST_COMPILE)
+    initial_values = replace_rng_nodes(initial_values)
+    func = compile_pymc(inputs=[], outputs=initial_values, mode=pytensor.compile.mode.FAST_COMPILE)
 
     varnames = []
     for var in model.free_RVs:
-        transform = getattr(model.rvs_to_values[var].tag, "transform", None)
+        transform = model.rvs_to_transforms[var]
         if transform is not None and return_transformed:
             name = get_transformed_name(var.name, transform)
         else:
@@ -203,21 +161,11 @@ def make_initial_point_fn(
         varnames.append(name)
 
     def make_seeded_function(func):
-
         rngs = find_rng_nodes(func.maker.fgraph.outputs)
 
         @functools.wraps(func)
         def inner(seed, *args, **kwargs):
-            seeds = [
-                np.random.PCG64(sub_seed)
-                for sub_seed in np.random.SeedSequence(seed).spawn(len(rngs))
-            ]
-            for rng, seed in zip(rngs, seeds):
-                if isinstance(rng, at.random.var.RandomStateSharedVariable):
-                    new_rng = np.random.RandomState(seed)
-                else:
-                    new_rng = np.random.Generator(seed)
-                rng.set_value(new_rng, True)
+            reseed_rngs(rngs, seed)
             values = func(*args, **kwargs)
             return dict(zip(varnames, values))
 
@@ -229,7 +177,7 @@ def make_initial_point_fn(
 def make_initial_point_expression(
     *,
     free_rvs: Sequence[TensorVariable],
-    rvs_to_values: Dict[TensorVariable, TensorVariable],
+    rvs_to_transforms: Dict[TensorVariable, RVTransform],
     initval_strategies: Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]],
     jitter_rvs: Set[TensorVariable] = None,
     default_strategy: str = "moment",
@@ -257,9 +205,9 @@ def make_initial_point_expression(
     Returns
     -------
     initial_points : list of TensorVariable
-        Aesara expressions for initial values of the free random variables.
+        PyTensor expressions for initial values of the free random variables.
     """
-    from pymc.distributions.distribution import get_moment
+    from pymc.distributions.distribution import moment
 
     if jitter_rvs is None:
         jitter_rvs = set()
@@ -276,14 +224,14 @@ def make_initial_point_expression(
         if isinstance(strategy, str):
             if strategy == "moment":
                 try:
-                    value = get_moment(variable)
+                    value = moment(variable)
                 except NotImplementedError:
                     warnings.warn(
                         f"Moment not defined for variable {variable} of type "
                         f"{variable.owner.op.__class__.__name__}, defaulting to "
                         f"a draw from the prior. This can lead to difficulties "
                         f"during tuning. You can manually define an initval or "
-                        f"implement a get_moment dispatched function for this "
+                        f"implement a moment dispatched function for this "
                         f"distribution.",
                         UserWarning,
                     )
@@ -295,15 +243,15 @@ def make_initial_point_expression(
                     f'Invalid string strategy: {strategy}. It must be one of ["moment", "prior"]'
                 )
         else:
-            value = at.as_tensor(strategy, dtype=variable.dtype).astype(variable.dtype)
+            value = pt.as_tensor(strategy, dtype=variable.dtype).astype(variable.dtype)
 
-        transform = getattr(rvs_to_values[variable].tag, "transform", None)
+        transform = rvs_to_transforms.get(variable, None)
 
         if transform is not None:
             value = transform.forward(value, *variable.owner.inputs)
 
         if variable in jitter_rvs:
-            jitter = at.random.uniform(-1, 1, size=value.shape)
+            jitter = pt.random.uniform(-1, 1, size=value.shape)
             jitter.name = f"{variable.name}_jitter"
             value = value + jitter
 

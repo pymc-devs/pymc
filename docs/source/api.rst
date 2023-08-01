@@ -1,11 +1,11 @@
 .. _api:
 
-*************
-API Reference
-*************
+***
+API
+***
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    api/distributions
    api/gp
@@ -13,20 +13,21 @@ API Reference
    api/samplers
    api/vi
    api/smc
-   api/backends
    api/data
    api/ode
+   api/logprob
    api/tuning
    api/math
-   api/aesaraf
+   api/pytensorf
    api/shape_utils
+   api/backends
    api/misc
 
 ------------------
 Dimensionality
 ------------------
-PyMC provides numerous methods, and syntatic sugar, to easily specify the dimensionality of
-Random Variables in modeling. Refer to {ref}`dimensionality` notebook to see examples
+PyMC provides numerous methods, and syntactic sugar, to easily specify the dimensionality of
+Random Variables in modeling. Refer to :ref:`dimensionality` notebook to see examples
 demonstrating the functionality.
 
 --------------
@@ -41,10 +42,10 @@ library, a general purpose library for
 "exploratory analysis of Bayesian models".
 
 * Functions from the `arviz.plots` module are available through ``pymc.<function>`` or ``pymc.plots.<function>``,
-but for their API documentation please refer to the :ref:`ArviZ documentation <arviz:plot_api>`.
+  but for their API documentation please refer to the :ref:`ArviZ documentation <arviz:plot_api>`.
 
 * Functions from the `arviz.stats` module are available through ``pymc.<function>`` or ``pymc.stats.<function>``,
-but for their API documentation please refer to the :ref:`ArviZ documentation <arviz:stats_api>`.
+  but for their API documentation please refer to the :ref:`ArviZ documentation <arviz:stats_api>`.
 
 ArviZ is a dependency of PyMC and so, in addition to the locations described above,
 importing ArviZ and using ``arviz.<function>`` will also work without any extra installation.

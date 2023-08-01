@@ -1,6 +1,6 @@
 """
 Invokes mypy and compare the reults with files in /pymc except tests
-and a list of files that are expected to pass without mypy errors.
+and a list of files that are known to fail.
 
 Exit code 0 indicates that there are no unexpected results.
 
@@ -20,64 +20,31 @@ from typing import Iterator
 import pandas
 
 DP_ROOT = pathlib.Path(__file__).absolute().parent.parent
-PASSING = """
-pymc/__init__.py
-pymc/backends/__init__.py
-pymc/backends/arviz.py
-pymc/backends/base.py
-pymc/backends/ndarray.py
-pymc/backends/report.py
-pymc/blocking.py
-pymc/data.py
-pymc/distributions/__init__.py
-pymc/distributions/bound.py
-pymc/distributions/censored.py
-pymc/distributions/discrete.py
-pymc/distributions/shape_utils.py
-pymc/distributions/simulator.py
+FAILING = """
+pymc/distributions/continuous.py
+pymc/distributions/dist_math.py
+pymc/distributions/distribution.py
+pymc/distributions/mixture.py
+pymc/distributions/multivariate.py
 pymc/distributions/timeseries.py
-pymc/distributions/transforms.py
-pymc/exceptions.py
-pymc/func_utils.py
-pymc/gp/__init__.py
-pymc/gp/cov.py
-pymc/gp/gp.py
-pymc/gp/mean.py
-pymc/gp/util.py
-pymc/math.py
-pymc/ode/__init__.py
-pymc/ode/ode.py
-pymc/ode/utils.py
-pymc/parallel_sampling.py
-pymc/plots/__init__.py
-pymc/sampling.py
-pymc/smc/__init__.py
-pymc/smc/sample_smc.py
-pymc/smc/smc.py
-pymc/stats/__init__.py
-pymc/step_methods/__init__.py
-pymc/step_methods/compound.py
-pymc/step_methods/elliptical_slice.py
-pymc/step_methods/hmc/__init__.py
-pymc/step_methods/hmc/base_hmc.py
-pymc/step_methods/hmc/hmc.py
-pymc/step_methods/hmc/integration.py
-pymc/step_methods/hmc/nuts.py
-pymc/step_methods/hmc/quadpotential.py
-pymc/step_methods/slicer.py
-pymc/step_methods/step_sizes.py
-pymc/tuning/__init__.py
-pymc/tuning/scaling.py
-pymc/tuning/starting.py
-pymc/util.py
-pymc/variational/__init__.py
-pymc/variational/callbacks.py
-pymc/variational/inference.py
-pymc/variational/operators.py
-pymc/variational/stein.py
-pymc/variational/test_functions.py
-pymc/variational/updates.py
-pymc/vartypes.py
+pymc/distributions/truncated.py
+pymc/initial_point.py
+pymc/logprob/binary.py
+pymc/logprob/censoring.py
+pymc/logprob/basic.py
+pymc/logprob/mixture.py
+pymc/logprob/order.py
+pymc/logprob/rewriting.py
+pymc/logprob/scan.py
+pymc/logprob/tensor.py
+pymc/logprob/transforms.py
+pymc/logprob/utils.py
+pymc/model.py
+pymc/model_graph.py
+pymc/printing.py
+pymc/pytensorf.py
+pymc/sampling/jax.py
+pymc/variational/opvi.py
 """
 
 
@@ -102,7 +69,7 @@ def mypy_to_pandas(input_lines: Iterator[str]) -> pandas.DataFrame:
         "file": [],
         "line": [],
         "type": [],
-        "section": [],
+        "errorcode": [],
         "message": [],
     }
     for line in input_lines:
@@ -121,7 +88,7 @@ def mypy_to_pandas(input_lines: Iterator[str]) -> pandas.DataFrame:
             data["file"].append(file)
             data["line"].append(lineno)
             data["type"].append(message_type)
-            data["section"].append(current_section)
+            data["errorcode"].append(current_section)
             data["message"].append(message)
         except Exception as ex:
             print(elems)
@@ -130,7 +97,7 @@ def mypy_to_pandas(input_lines: Iterator[str]) -> pandas.DataFrame:
 
 
 def check_no_unexpected_results(mypy_lines: Iterator[str]):
-    """Compares mypy results with list of known PASSING files.
+    """Compares mypy results with list of known FAILING files.
 
     Exits the process with non-zero exit code upon unexpected results.
     """
@@ -139,7 +106,7 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
     all_files = {
         str(fp).replace(str(DP_ROOT), "").strip(os.sep).replace(os.sep, "/")
         for fp in DP_ROOT.glob("pymc/**/*.py")
-        if not "tests" in str(fp)
+        if "tests" not in str(fp)
     }
     failing = set(df.reset_index().file.str.replace(os.sep, "/", regex=False))
     if not failing.issubset(all_files):
@@ -148,46 +115,68 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
             + "\n".join(sorted(map(str, failing - all_files)))
         )
     passing = all_files - failing
-    expected_passing = set(PASSING.strip().split("\n")) - {""}
-    unexpected_failing = expected_passing - passing
-    unexpected_passing = passing - expected_passing
+    expected_failing = set(FAILING.strip().split("\n")) - {""}
+    unexpected_failing = failing - expected_failing
+    unexpected_passing = passing.intersection(expected_failing)
 
     if not unexpected_failing:
         print(f"{len(passing)}/{len(all_files)} files pass as expected.")
     else:
-        print(f"{len(unexpected_failing)} files unexpectedly failed:")
+        print("!!!!!!!!!")
+        print(f"{len(unexpected_failing)} files unexpectedly failed.")
         print("\n".join(sorted(map(str, unexpected_failing))))
+        print(
+            "These files did not fail before, so please check the above output"
+            f" for errors in {unexpected_failing} and fix them."
+        )
+        print("You can run `python scripts/run_mypy.py --verbose` to reproduce this test locally.")
         sys.exit(1)
 
     if unexpected_passing:
+        print("!!!!!!!!!")
         print(f"{len(unexpected_passing)} files unexpectedly passed the type checks:")
         print("\n".join(sorted(map(str, unexpected_passing))))
-        print("This is good news! Go to scripts/run-mypy.py and add them to the list.")
+        print(
+            "This is good news! Go to scripts/run_mypy.py and remove them from the `FAILING` list."
+        )
         if all_files.issubset(passing):
             print("WOW! All files are passing the mypy type checks!")
             print("scripts\\run_mypy.py may no longer be needed.")
+        print("!!!!!!!!!")
         sys.exit(1)
     return
 
 
 if __name__ == "__main__":
-    # Enforce PEP 561 for some important dependencies that
-    # have relevant type hints but don't tell that to mypy.
-    enforce_pep561("aesara")
-    enforce_pep561("aeppl")
-
-    parser = argparse.ArgumentParser(description="Process some integers.")
+    parser = argparse.ArgumentParser(description="Run mypy type checks on PyMC codebase.")
     parser.add_argument(
         "--verbose", action="count", default=0, help="Pass this to print mypy output."
+    )
+    parser.add_argument(
+        "--groupby",
+        default="file",
+        help="How to group verbose output. One of {file|errorcode|message}.",
     )
     args, _ = parser.parse_known_args()
 
     cp = subprocess.run(
-        ["mypy", "--exclude", "pymc/tests", "pymc"],
+        ["mypy", "--show-error-codes", "--exclude", "tests", "pymc"],
         capture_output=True,
     )
     output = cp.stdout.decode()
     if args.verbose:
-        print(output)
+        df = mypy_to_pandas(output.split("\n"))
+        for section, sdf in df.reset_index().groupby(args.groupby):
+            print(f"\n\n[{section}]")
+            for row in sdf.itertuples():
+                print(f"{row.file}:{row.line}: {row.type}: {row.message}")
+        print()
+    else:
+        print(
+            "Mypy output hidden."
+            " Run `python run_mypy.py --verbose` to see the full output,"
+            " or `python run_mypy.py --help` for other options."
+        )
+
     check_no_unexpected_results(output.split("\n"))
     sys.exit(0)

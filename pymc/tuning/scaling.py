@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@ import numpy as np
 
 from numpy import exp, log, sqrt
 
-from pymc.aesaraf import hessian_diag, inputvars
 from pymc.blocking import DictToArrayBijection
 from pymc.model import Point, modelcontext
+from pymc.pytensorf import hessian_diag
 from pymc.util import get_var_name
 
 __all__ = ["find_hessian", "trace_cov", "guess_scaling"]
 
 
-def fixed_hessian(point, vars=None, model=None):
+def fixed_hessian(point, model=None):
     """
     Returns a fixed Hessian for any chain location.
 
@@ -37,10 +37,6 @@ def fixed_hessian(point, vars=None, model=None):
     """
 
     model = modelcontext(model)
-    if vars is None:
-        vars = model.cont_vars
-    vars = inputvars(vars)
-
     point = Point(point, model=model)
 
     rval = np.ones(DictToArrayBijection.map(point).size) / 10
@@ -75,7 +71,7 @@ def find_hessian_diag(point, vars=None, model=None):
         Variables for which Hessian is to be calculated.
     """
     model = modelcontext(model)
-    H = model.compile_fn(hessian_diag(model.logpt(), vars))
+    H = model.compile_fn(hessian_diag(model.logp(), vars))
     return H(Point(point, model=model))
 
 
@@ -84,7 +80,7 @@ def guess_scaling(point, vars=None, model=None, scaling_bound=1e-8):
     try:
         h = find_hessian_diag(point, vars, model=model)
     except NotImplementedError:
-        h = fixed_hessian(point, vars, model=model)
+        h = fixed_hessian(point, model=model)
     return adjust_scaling(h, scaling_bound)
 
 

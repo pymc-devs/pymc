@@ -2,7 +2,7 @@
 Transformations
 ***************
 
-.. currentmodule:: pymc.transforms
+.. currentmodule:: pymc.distributions.transforms
 
 Transform Instances
 ~~~~~~~~~~~~~~~~~~~
@@ -13,14 +13,27 @@ Transform instances are the entities that should be used in the
 .. autosummary::
    :toctree: generated
 
-    simplex
-    logodds
-    interval
-    log_exp_m1
-    ordered
-    log
-    sum_to_1
     circular
+    log
+    log_exp_m1
+    logodds
+    simplex
+    sum_to_1
+
+
+Specific Transform Classes
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated
+
+    CholeskyCovPacked
+    Interval
+    LogExpM1
+    Ordered
+    SumTo1
+    ZeroSumTransform
+
 
 Transform Composition Classes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -29,14 +42,3 @@ Transform Composition Classes
    :toctree: generated
 
     Chain
-    CholeskyCovPacked
-
-Specific Transform Classes
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autosummary::
-   :toctree: generated
-
-    LogExpM1
-    Ordered
-    SumTo1

@@ -11,9 +11,9 @@ jobs:
     env:
       PYPI_TOKEN: ${{ secrets.PYPI_TOKEN_PYMC }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: 3.7
     # TODO: ideally, this pipeline should run parallelized tests in upstream jobs..
@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Set up Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: 3.7
     - name: Give PyPI a chance to update the index

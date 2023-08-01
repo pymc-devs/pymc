@@ -7,19 +7,19 @@ jobs:
   runPreCommit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           repository: ${{github.event.client_payload.pull_request.head.repo.full_name}}
           ref: ${{github.event.client_payload.pull_request.head.ref}}
           token: ${{ secrets.ACTION_TRIGGER_TOKEN }}
       - name: Cache multiple paths
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cache/pre-commit
             ~/.cache/pip
           key: pre-commit-dispatched-${{ runner.os }}-build
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.8
       - name: install-pre-commit

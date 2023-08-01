@@ -1,7 +1,5 @@
 codecov:
-  require_ci_to_pass: no
-  notify:
-      after_n_builds: 6
+  require_ci_to_pass: yes
 
 coverage:
   precision: 2
@@ -22,7 +20,8 @@ coverage:
         base: auto
 
 ignore:
-  - "pymc/tests/*"
+  - "tests/*"
+  - "pymc/_version.py"
 
 comment:
   layout: "reach, diff, flags, files"

@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 from pymc.step_methods.compound import CompoundStep
-from pymc.step_methods.elliptical_slice import EllipticalSlice
 from pymc.step_methods.hmc import NUTS, HamiltonianMC
 from pymc.step_methods.metropolis import (
     BinaryGibbsMetropolis,
@@ -28,12 +27,6 @@ from pymc.step_methods.metropolis import (
     NormalProposal,
     PoissonProposal,
     UniformProposal,
-)
-from pymc.step_methods.mlda import (
-    MLDA,
-    DEMetropolisZMLDA,
-    MetropolisMLDA,
-    RecursiveDAProposal,
 )
 from pymc.step_methods.slicer import Slice
 

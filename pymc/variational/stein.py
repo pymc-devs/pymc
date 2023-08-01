@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -12,10 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import aesara
-import aesara.tensor as at
+import pytensor.tensor as pt
 
-from pymc.aesaraf import floatX
+from pytensor.graph.replace import graph_replace
+
+from pymc.pytensorf import floatX
 from pymc.util import WithMemoization, locally_cachedmethod
 from pymc.variational.opvi import node_property
 from pymc.variational.test_functions import rbf
@@ -46,12 +47,13 @@ class Stein(WithMemoization):
 
     @node_property
     def dlogp(self):
-        grad = at.grad(self.logp_norm.sum(), self.approx_symbolic_matrices)
+        logp = self.logp_norm.sum()
+        grad = pt.grad(logp, self.approx_symbolic_matrices)
 
         def flatten2(tensor):
             return tensor.flatten(2)
 
-        return at.concatenate(list(map(flatten2, grad)), -1)
+        return pt.concatenate(list(map(flatten2, grad)), -1)
 
     @node_property
     def grad(self):
@@ -64,7 +66,7 @@ class Stein(WithMemoization):
     def density_part_grad(self):
         Kxy = self.Kxy
         dlogpdx = self.dlogp
-        return at.dot(Kxy, dlogpdx)
+        return pt.dot(Kxy, dlogpdx)
 
     @node_property
     def repulsive_part_grad(self):
@@ -84,9 +86,10 @@ class Stein(WithMemoization):
     def logp_norm(self):
         sized_symbolic_logp = self.approx.sized_symbolic_logp
         if self.use_histogram:
-            sized_symbolic_logp = aesara.clone_replace(
+            sized_symbolic_logp = graph_replace(
                 sized_symbolic_logp,
                 dict(zip(self.approx.symbolic_randoms, self.approx.collect("histogram"))),
+                strict=False,
             )
         return sized_symbolic_logp / self.approx.symbolic_normalizing_constant
 

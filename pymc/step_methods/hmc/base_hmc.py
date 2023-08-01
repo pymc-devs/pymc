@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -12,35 +12,50 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from __future__ import annotations
+
 import logging
 import time
 
 from abc import abstractmethod
-from collections import namedtuple
+from typing import Any, NamedTuple
 
 import numpy as np
 
-from pymc.aesaraf import floatX
-from pymc.backends.report import SamplerWarning, WarningType
-from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.blocking import DictToArrayBijection, RaveledVars, StatsType
 from pymc.exceptions import SamplingError
 from pymc.model import Point, modelcontext
+from pymc.pytensorf import floatX
+from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods import step_sizes
 from pymc.step_methods.arraystep import GradientSharedStep
 from pymc.step_methods.hmc import integration
+from pymc.step_methods.hmc.integration import IntegrationError, State
 from pymc.step_methods.hmc.quadpotential import QuadPotentialDiagAdapt, quad_potential
 from pymc.tuning import guess_scaling
+from pymc.util import get_value_vars_from_user_vars
 
-logger = logging.getLogger("pymc")
+logger = logging.getLogger(__name__)
 
-HMCStepData = namedtuple("HMCStepData", "end, accept_stat, divergence_info, stats")
 
-DivergenceInfo = namedtuple("DivergenceInfo", "message, exec_info, state, state_div")
+class DivergenceInfo(NamedTuple):
+    message: str
+    exec_info: IntegrationError | None
+    state: State
+    state_div: State | None
+
+
+class HMCStepData(NamedTuple):
+    end: State
+    accept_stat: int
+    divergence_info: DivergenceInfo | None
+    stats: dict[str, Any]
 
 
 class BaseHMC(GradientSharedStep):
     """Superclass to implement Hamiltonian/hybrid monte carlo."""
 
+    integrator: integration.CpuLeapfrogIntegrator
     default_blocked = True
 
     def __init__(
@@ -60,14 +75,14 @@ class BaseHMC(GradientSharedStep):
         t0=10,
         adapt_step_size=True,
         step_rand=None,
-        **aesara_kwargs
+        **pytensor_kwargs,
     ):
         """Set up Hamiltonian samplers with common structures.
 
         Parameters
         ----------
         vars: list, default=None
-            List of Aesara variables. If None, all continuous RVs from the
+            List of PyTensor variables. If None, all continuous RVs from the
             model are included.
         scaling: array_like, ndim={1,2}
             Scaling for momentum distribution. 1d arrays interpreted matrix
@@ -83,16 +98,15 @@ class BaseHMC(GradientSharedStep):
         potential: Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods.
-        **aesara_kwargs: passed to Aesara functions
+        **pytensor_kwargs: passed to PyTensor functions
         """
         self._model = modelcontext(model)
 
         if vars is None:
-            vars = self._model.cont_vars
+            vars = self._model.continuous_value_vars
         else:
-            vars = [self._model.rvs_to_values.get(var, var) for var in vars]
-
-        super().__init__(vars, blocked=blocked, model=self._model, dtype=dtype, **aesara_kwargs)
+            vars = get_value_vars_from_user_vars(vars, self._model)
+        super().__init__(vars, blocked=blocked, model=self._model, dtype=dtype, **pytensor_kwargs)
 
         self.adapt_step_size = adapt_step_size
         self.Emax = Emax
@@ -102,7 +116,7 @@ class BaseHMC(GradientSharedStep):
         # size.
         # XXX: If the dimensions of these terms change, the step size
         # dimension-scaling should change as well, no?
-        test_point = self._model.compute_initial_point()
+        test_point = self._model.initial_point()
 
         nuts_vars = [test_point[v.name] for v in vars]
         size = sum(v.size for v in nuts_vars)
@@ -134,18 +148,16 @@ class BaseHMC(GradientSharedStep):
         self.integrator = integration.CpuLeapfrogIntegrator(self.potential, self._logp_dlogp_func)
 
         self._step_rand = step_rand
-        self._warnings = []
-        self._samples_after_tune = 0
         self._num_divs_sample = 0
 
     @abstractmethod
-    def _hamiltonian_step(self, start, p0, step_size):
+    def _hamiltonian_step(self, start, p0, step_size) -> HMCStepData:
         """Compute one Hamiltonian trajectory and return the next state.
 
         Subclasses must overwrite this abstract method and return an `HMCStepData` object.
         """
 
-    def astep(self, q0):
+    def astep(self, q0: RaveledVars) -> tuple[RaveledVars, StatsType]:
         """Perform a single HMC iteration."""
         perf_start = time.perf_counter()
         process_start = time.process_time()
@@ -155,6 +167,7 @@ class BaseHMC(GradientSharedStep):
 
         start = self.integrator.compute_state(q0, p0)
 
+        warning: SamplerWarning | None = None
         if not np.isfinite(start.energy):
             model = self._model
             check_test_point_dict = model.point_logps()
@@ -165,7 +178,7 @@ class BaseHMC(GradientSharedStep):
             self.potential.raise_ok(q0.point_map_info)
             message_energy = (
                 "Bad initial energy, check any log probabilities that "
-                "are inf or -inf, nan or very small:\n{}".format(error_logp.to_string())
+                f"are inf or -inf, nan or very small:\n{error_logp}"
             )
             warning = SamplerWarning(
                 WarningType.BAD_ENERGY,
@@ -173,8 +186,7 @@ class BaseHMC(GradientSharedStep):
                 "critical",
                 self.iter_count,
             )
-            self._warnings.append(warning)
-            raise SamplingError("Bad initial energy")
+            raise SamplingError(f"Bad initial energy: {warning}")
 
         adapt_step = self.tune and self.adapt_step_size
         step_size = self.step_adapt.current(adapt_step)
@@ -205,7 +217,7 @@ class BaseHMC(GradientSharedStep):
                     point = DictToArrayBijection.rmap(info.state.q)
 
                 if self._num_divs_sample < 100 and info.state_div is not None:
-                    point = DictToArrayBijection.rmap(info.state_div.q)
+                    point_dest = DictToArrayBijection.rmap(info.state_div.q)
 
                 if self._num_divs_sample < 100:
                     info_store = info
@@ -220,22 +232,20 @@ class BaseHMC(GradientSharedStep):
                 divergence_info=info_store,
             )
 
-            self._warnings.append(warning)
-
         self.iter_count += 1
-        if not self.tune:
-            self._samples_after_tune += 1
 
-        stats = {
+        stats: dict[str, Any] = {
             "tune": self.tune,
             "diverging": bool(hmc_step.divergence_info),
             "perf_counter_diff": perf_end - perf_start,
             "process_time_diff": process_end - process_start,
             "perf_counter_start": perf_start,
+            "warning": warning,
         }
 
         stats.update(hmc_step.stats)
         stats.update(self.step_adapt.stats())
+        stats.update(self.potential.stats())
 
         return hmc_step.end.q, [stats]
 
@@ -246,32 +256,3 @@ class BaseHMC(GradientSharedStep):
     def reset(self, start=None):
         self.tune = True
         self.potential.reset()
-
-    def warnings(self):
-        # list.copy() is not available in python2
-        warnings = self._warnings[:]
-
-        # Generate a global warning for divergences
-        message = ""
-        n_divs = self._num_divs_sample
-        if n_divs and self._samples_after_tune == n_divs:
-            message = (
-                "The chain contains only diverging samples. The model " "is probably misspecified."
-            )
-        elif n_divs == 1:
-            message = (
-                "There was 1 divergence after tuning. Increase "
-                "`target_accept` or reparameterize."
-            )
-        elif n_divs > 1:
-            message = (
-                "There were %s divergences after tuning. Increase "
-                "`target_accept` or reparameterize." % n_divs
-            )
-
-        if message:
-            warning = SamplerWarning(WarningType.DIVERGENCES, message, "error")
-            warnings.append(warning)
-
-        warnings.extend(self.step_adapt.warnings())
-        return warnings

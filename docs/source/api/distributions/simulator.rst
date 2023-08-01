@@ -1,11 +1,20 @@
-**********
+*********
 Simulator
-**********
+*********
+
+..
+   Manually follow the template in _templates/distribution.rst.
+   If at any point, multiple objects are listed here,
+   the pattern should instead be modified to that of the
+   other API files such as api/distributions/continuous.rst
 
 .. currentmodule:: pymc
-.. autosummary::
-   :toctree: generated
 
-   SimulatorRV
-   Simulator
-   KullbackLiebler
+.. autoclass:: Simulator
+
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree: classmethods
+
+      Simulator.dist

@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -14,32 +14,34 @@
 
 import logging
 
-import aesara
-import aesara.tensor as at
 import numpy as np
+import pytensor
+import pytensor.tensor as pt
 import scipy
 
-from aesara.graph.basic import Apply
-from aesara.graph.op import Op, get_test_value
-from aesara.tensor.type import TensorType
+from pytensor.graph.basic import Apply
+from pytensor.graph.op import Op, get_test_value
+from pytensor.tensor.type import TensorType
 
 from pymc.exceptions import DtypeError, ShapeError
 from pymc.ode import utils
 
-_log = logging.getLogger("pymc")
-floatX = aesara.config.floatX
+_log = logging.getLogger(__name__)
+floatX = pytensor.config.floatX
 
 
 class DifferentialEquation(Op):
     r"""
     Specify an ordinary differential equation
 
+    Due to the nature of the model (as well as included solvers), the process of ODE solution may perform slowly.  A faster alternative library based on PyMC--sunode--has implemented Adams' method and BDF (backward differentation formula).  More information about sunode is available at: https://github.com/aseyboldt/sunode.
+
+
     .. math::
         \dfrac{dy}{dt} = f(y,t,p) \quad y(t_0) = y_0
 
     Parameters
     ----------
-
     func : callable
         Function specifying the differential equation. Must take arguments y (n_states,), t (scalar), p (n_theta,)
     times : array
@@ -54,7 +56,6 @@ class DifferentialEquation(Op):
 
     Examples
     --------
-
     .. code-block:: python
 
         def odefunc(y, t, p):
@@ -64,6 +65,7 @@ class DifferentialEquation(Op):
         times = np.arange(0.5, 5, 0.5)
 
         ode_model = DifferentialEquation(func=odefunc, times=times, n_states=1, n_theta=1, t0=0)
+
     """
     _itypes = [
         TensorType(floatX, (False,)),  # y0 as 1D floatX vector
@@ -104,7 +106,7 @@ class DifferentialEquation(Op):
         self._output_sensitivities = {}
 
     def _system(self, Y, t, p):
-        r"""This is the function that will be passed to odeint. Solves both ODE and sensitivities.
+        r"""The function that will be passed to odeint. Solves both ODE and sensitivities.
 
         Parameters
         ----------
@@ -154,11 +156,11 @@ class DifferentialEquation(Op):
             )
 
         # convert inputs to tensors (and check their types)
-        y0 = at.cast(at.unbroadcast(at.as_tensor_variable(y0), 0), floatX)
-        theta = at.cast(at.unbroadcast(at.as_tensor_variable(theta), 0), floatX)
+        y0 = pt.cast(pt.as_tensor_variable(y0), floatX)
+        theta = pt.cast(pt.as_tensor_variable(theta), floatX)
         inputs = [y0, theta]
         for i, (input_val, itype) in enumerate(zip(inputs, self._itypes)):
-            if not input_val.type.in_same_class(itype):
+            if not itype.is_super(input_val.type):
                 raise ValueError(
                     f"Input {i} of type {input_val.type} does not have the expected type of {itype}"
                 )
@@ -166,7 +168,7 @@ class DifferentialEquation(Op):
         # use default implementation to prepare symbolic outputs (via make_node)
         states, sens = super().__call__(y0, theta, **kwargs)
 
-        if aesara.config.compute_test_value != "off":
+        if pytensor.config.compute_test_value != "off":
             # compute test values from input test values
             test_states, test_sens = self._simulate(
                 y0=get_test_value(y0), theta=get_test_value(theta)
@@ -235,8 +237,8 @@ class DifferentialEquation(Op):
         # for each parameter, multiply sensitivities with the output gradient and sum the result
         # sens is (n_times, n_states, n_p)
         # ograds is (n_times, n_states)
-        grads = [at.sum(sens[:, :, p] * ograds) for p in range(self.n_p)]
+        grads = [pt.sum(sens[:, :, p] * ograds) for p in range(self.n_p)]
 
         # return separate gradient tensors for y0 and theta inputs
-        result = at.stack(grads[: self.n_states]), at.stack(grads[self.n_states :])
+        result = pt.stack(grads[: self.n_states]), pt.stack(grads[self.n_states :])
         return result

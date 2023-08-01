@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -14,32 +14,29 @@
 
 import warnings
 
-import aesara.tensor as at
 import numpy as np
+import pytensor.tensor as pt
 
-from aesara.compile import SharedVariable
-from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
+from pytensor.compile import SharedVariable
+from pytensor.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
+    SolveTriangular,
     cholesky,
     solve,
 )
-from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
-    solve_lower_triangular as solve_lower,
-)
-from aesara.tensor.slinalg import (  # noqa: W0611; pylint: disable=unused-import
-    solve_upper_triangular as solve_upper,
-)
-from aesara.tensor.var import TensorConstant
+from pytensor.tensor.var import TensorConstant
 from scipy.cluster.vq import kmeans
 
-from pymc.aesaraf import compile_pymc, walk_model
-
 # Avoid circular dependency when importing modelcontext
-from pymc.distributions.distribution import NoDistribution
-
-assert NoDistribution  # keep both pylint and black happy
+from pymc.distributions.distribution import Distribution
 from pymc.model import modelcontext
+from pymc.pytensorf import compile_pymc, walk_model
+
+_ = Distribution  # keep both pylint and black happy
 
 JITTER_DEFAULT = 1e-6
+
+solve_lower = SolveTriangular(lower=True)
+solve_upper = SolveTriangular(lower=False)
 
 
 def replace_with_values(vars_needed, replacements=None, model=None):
@@ -59,7 +56,7 @@ def replace_with_values(vars_needed, replacements=None, model=None):
     model = modelcontext(model)
 
     inputs, input_names = [], []
-    for rv in walk_model(vars_needed, walk_past_rvs=True):
+    for rv in walk_model(vars_needed):
         if rv in model.named_vars.values() and not isinstance(rv, SharedVariable):
             inputs.append(rv)
             input_names.append(rv.name)
@@ -88,29 +85,6 @@ def replace_with_values(vars_needed, replacements=None, model=None):
     return fn(**replacements)
 
 
-def infer_size(X, n_points=None):
-    R"""
-    Maybe attempt to infer the size, or N, of a Gaussian process input matrix.
-
-    If a specific shape cannot be inferred, for instance if X is symbolic, then an
-    error is raised.
-
-    Parameters
-    ----------
-    X: array-like
-        Gaussian process input matrix.
-    n_points: None or int
-        The number of rows of `X`.  If `None`, the number of rows of `X` is
-        calculated from `X` if possible.
-    """
-    if n_points is None:
-        try:
-            n_points = int(X.shape[0])
-        except TypeError:
-            raise TypeError("Cannot infer 'shape', provide as an argument")
-    return n_points
-
-
 def stabilize(K, jitter=JITTER_DEFAULT):
     R"""
     Adds small diagonal to a covariance matrix.
@@ -126,7 +100,7 @@ def stabilize(K, jitter=JITTER_DEFAULT):
     jitter: float
         A small constant.
     """
-    return K + jitter * at.identity_like(K)
+    return K + jitter * pt.identity_like(K)
 
 
 def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
@@ -161,7 +135,7 @@ def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
     Xw = X / scaling
 
     if "k_or_guess" in kmeans_kwargs:
-        warn.UserWarning("Use `n_inducing` to set the `k_or_guess` parameter instead.")
+        warnings.warn("Use `n_inducing` to set the `k_or_guess` parameter instead.")
 
     Xu, distortion = kmeans(Xw, k_or_guess=n_inducing, **kmeans_kwargs)
     return Xu * scaling
@@ -214,7 +188,7 @@ def plot_gp_dist(
 ):
     """A helper function for plotting 1D GP posteriors from trace
 
-        Parameters
+    Parameters
     ----------
     ax: axes
         Matplotlib axes.
@@ -239,7 +213,6 @@ def plot_gp_dist(
 
     Returns
     -------
-
     ax: Matplotlib axes
     """
     import matplotlib.pyplot as plt

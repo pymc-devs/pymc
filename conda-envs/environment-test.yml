@@ -1,0 +1,34 @@
+# "test" conda envs are used to set up our CI environment in GitHub actions
+name: pymc-test
+channels:
+- conda-forge
+- defaults
+dependencies:
+# Base dependencies
+- arviz>=0.13.0
+- blas
+- cachetools>=4.2.1
+- cloudpickle
+- fastprogress>=0.2.0
+- h5py>=2.7
+- jax
+- libblas=*=*mkl
+- mkl-service
+- numpy>=1.15.0
+- pandas>=0.24.0
+- pip
+- pytensor>=2.14.1,<2.15
+- python-graphviz
+- networkx
+- scipy>=1.4.1
+- typing-extensions>=3.7.4
+# Extra dependencies for testing
+- ipython>=7.16
+- pre-commit>=2.8.0
+- pytest-cov>=2.5
+- pytest>=3.0
+- mypy=0.990
+- types-cachetools
+- pip:
+  - numdifftools>=0.9.40
+  - mcbackend>=0.4.0

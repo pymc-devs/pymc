@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -12,119 +12,19 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from abc import ABC, abstractmethod
-from enum import IntEnum, unique
-from typing import Dict, List, Tuple, TypeVar, Union
+from abc import abstractmethod
+from typing import Callable, List, Tuple, Union, cast
 
 import numpy as np
 
-from aesara.graph.basic import Variable
 from numpy.random import uniform
 
-from pymc.blocking import DictToArrayBijection, PointType, RaveledVars
+from pymc.blocking import DictToArrayBijection, PointType, RaveledVars, StatsType
 from pymc.model import modelcontext
-from pymc.step_methods.compound import CompoundStep
+from pymc.step_methods.compound import BlockedStep
 from pymc.util import get_var_name
 
-__all__ = ["ArrayStep", "ArrayStepShared", "metrop_select", "Competence"]
-
-StatsType = TypeVar("StatsType")
-
-
-@unique
-class Competence(IntEnum):
-    """Enum for characterizing competence classes of step methods.
-    Values include:
-    0: INCOMPATIBLE
-    1: COMPATIBLE
-    2: PREFERRED
-    3: IDEAL
-    """
-
-    INCOMPATIBLE = 0
-    COMPATIBLE = 1
-    PREFERRED = 2
-    IDEAL = 3
-
-
-class BlockedStep(ABC):
-
-    generates_stats = False
-    stats_dtypes: List[Dict[str, type]] = []
-    vars: List[Variable] = []
-
-    def __new__(cls, *args, **kwargs):
-        blocked = kwargs.get("blocked")
-        if blocked is None:
-            # Try to look up default value from class
-            blocked = getattr(cls, "default_blocked", True)
-            kwargs["blocked"] = blocked
-
-        model = modelcontext(kwargs.get("model"))
-        kwargs.update({"model": model})
-
-        # vars can either be first arg or a kwarg
-        if "vars" not in kwargs and len(args) >= 1:
-            vars = args[0]
-            args = args[1:]
-        elif "vars" in kwargs:
-            vars = kwargs.pop("vars")
-        else:  # Assume all model variables
-            vars = model.value_vars
-
-        if not isinstance(vars, (tuple, list)):
-            vars = [vars]
-
-        if len(vars) == 0:
-            raise ValueError("No free random variables to sample.")
-
-        if not blocked and len(vars) > 1:
-            # In this case we create a separate sampler for each var
-            # and append them to a CompoundStep
-            steps = []
-            for var in vars:
-                step = super().__new__(cls)
-                # If we don't return the instance we have to manually
-                # call __init__
-                step.__init__([var], *args, **kwargs)
-                # Hack for creating the class correctly when unpickling.
-                step.__newargs = ([var],) + args, kwargs
-                steps.append(step)
-
-            return CompoundStep(steps)
-        else:
-            step = super().__new__(cls)
-            # Hack for creating the class correctly when unpickling.
-            step.__newargs = (vars,) + args, kwargs
-            return step
-
-    # Hack for creating the class correctly when unpickling.
-    def __getnewargs_ex__(self):
-        return self.__newargs
-
-    @abstractmethod
-    def step(point: PointType, *args, **kwargs) -> Union[PointType, Tuple[PointType, StatsType]]:
-        """Perform a single step of the sampler."""
-
-    @staticmethod
-    def competence(var, has_grad):
-        return Competence.INCOMPATIBLE
-
-    @classmethod
-    def _competence(cls, vars, have_grad):
-        vars = np.atleast_1d(vars)
-        have_grad = np.atleast_1d(have_grad)
-        competences = []
-        for var, has_grad in zip(vars, have_grad):
-            try:
-                competences.append(cls.competence(var, has_grad))
-            except TypeError:
-                competences.append(cls.competence(var))
-        return competences
-
-    def stop_tuning(self):
-        if hasattr(self, "tune"):
-            self.tune = False
+__all__ = ["ArrayStep", "ArrayStepShared", "metrop_select"]
 
 
 class ArrayStep(BlockedStep):
@@ -135,7 +35,7 @@ class ArrayStep(BlockedStep):
     ----------
     vars: list
         List of value variables for sampler.
-    fs: list of logp Aesara functions
+    fs: list of logp PyTensor functions
     allvars: Boolean (default False)
     blocked: Boolean (default True)
     """
@@ -146,19 +46,16 @@ class ArrayStep(BlockedStep):
         self.allvars = allvars
         self.blocked = blocked
 
-    def step(self, point: PointType):
-
-        partial_funcs_and_point = [DictToArrayBijection.mapf(x, start_point=point) for x in self.fs]
+    def step(self, point: PointType) -> Tuple[PointType, StatsType]:
+        partial_funcs_and_point: List[Union[Callable, PointType]] = [
+            DictToArrayBijection.mapf(x, start_point=point) for x in self.fs
+        ]
         if self.allvars:
             partial_funcs_and_point.append(point)
 
-        apoint = DictToArrayBijection.map({v.name: point[v.name] for v in self.vars})
-        step_res = self.astep(apoint, *partial_funcs_and_point)
-
-        if self.generates_stats:
-            apoint_new, stats = step_res
-        else:
-            apoint_new = step_res
+        var_dict = {cast(str, v.name): point[cast(str, v.name)] for v in self.vars}
+        apoint = DictToArrayBijection.map(var_dict)
+        apoint_new, stats = self.astep(apoint, *partial_funcs_and_point)
 
         if not isinstance(apoint_new, RaveledVars):
             # We assume that the mapping has stayed the same
@@ -166,15 +63,10 @@ class ArrayStep(BlockedStep):
 
         point_new = DictToArrayBijection.rmap(apoint_new, start_point=point)
 
-        if self.generates_stats:
-            return point_new, stats
-
-        return point_new
+        return point_new, stats
 
     @abstractmethod
-    def astep(
-        self, apoint: RaveledVars, point: PointType, *args
-    ) -> Union[RaveledVars, Tuple[RaveledVars, StatsType]]:
+    def astep(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
         """Perform a single sample step in a raveled and concatenated parameter space."""
 
 
@@ -191,26 +83,21 @@ class ArrayStepShared(BlockedStep):
         Parameters
         ----------
         vars: list of sampling value variables
-        shared: dict of Aesara variable -> shared variable
+        shared: dict of PyTensor variable -> shared variable
         blocked: Boolean (default True)
         """
         self.vars = vars
         self.shared = {get_var_name(var): shared for var, shared in shared.items()}
         self.blocked = blocked
 
-    def step(self, point):
-
+    def step(self, point: PointType) -> Tuple[PointType, StatsType]:
         for name, shared_var in self.shared.items():
             shared_var.set_value(point[name])
 
-        q = DictToArrayBijection.map({v.name: point[v.name] for v in self.vars})
+        var_dict = {cast(str, v.name): point[cast(str, v.name)] for v in self.vars}
+        q = DictToArrayBijection.map(var_dict)
 
-        step_res = self.astep(q)
-
-        if self.generates_stats:
-            apoint, stats = step_res
-        else:
-            apoint = step_res
+        apoint, stats = self.astep(q)
 
         if not isinstance(apoint, RaveledVars):
             # We assume that the mapping has stayed the same
@@ -218,10 +105,11 @@ class ArrayStepShared(BlockedStep):
 
         new_point = DictToArrayBijection.rmap(apoint, start_point=point)
 
-        if self.generates_stats:
-            return new_point, stats
+        return new_point, stats
 
-        return new_point
+    @abstractmethod
+    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, StatsType]:
+        """Perform a single sample step in a raveled and concatenated parameter space."""
 
 
 class PopulationArrayStepShared(ArrayStepShared):
@@ -236,7 +124,7 @@ class PopulationArrayStepShared(ArrayStepShared):
         Parameters
         ----------
         vars: list of sampling value variables
-        shared: dict of Aesara variable -> shared variable
+        shared: dict of PyTensor variable -> shared variable
         blocked: Boolean (default True)
         """
         self.population = None
@@ -268,12 +156,12 @@ class PopulationArrayStepShared(ArrayStepShared):
 
 class GradientSharedStep(ArrayStepShared):
     def __init__(
-        self, vars, model=None, blocked=True, dtype=None, logp_dlogp_func=None, **aesara_kwargs
+        self, vars, model=None, blocked=True, dtype=None, logp_dlogp_func=None, **pytensor_kwargs
     ):
         model = modelcontext(model)
 
         if logp_dlogp_func is None:
-            func = model.logp_dlogp_function(vars, dtype=dtype, **aesara_kwargs)
+            func = model.logp_dlogp_function(vars, dtype=dtype, **pytensor_kwargs)
         else:
             func = logp_dlogp_func
 
@@ -281,12 +169,12 @@ class GradientSharedStep(ArrayStepShared):
 
         super().__init__(vars, func._extra_vars_shared, blocked)
 
-    def step(self, point):
+    def step(self, point) -> Tuple[PointType, StatsType]:
         self._logp_dlogp_func._extra_are_set = True
         return super().step(point)
 
 
-def metrop_select(mr, q, q0):
+def metrop_select(mr: np.ndarray, q: np.ndarray, q0: np.ndarray) -> Tuple[np.ndarray, bool]:
     """Perform rejection/acceptance step for Metropolis class samplers.
 
     Returns the new sample q if a uniform random number is less than the

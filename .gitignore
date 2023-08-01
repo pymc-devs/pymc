@@ -17,7 +17,10 @@ tags
 
 # Sphinx
 _build
+docs/_build
+docs/build
 docs/jupyter_execute
+docs/.jupyter_cache
 docs/**/generated/*
 
 # Merge tool
@@ -43,3 +46,6 @@ pytestdebug.log
 
 # Codespaces
 pythonenv*
+env/
+venv/
+.venv/

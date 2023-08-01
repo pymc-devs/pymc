@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -22,13 +22,8 @@ from fastprogress.fastprogress import progress_bar
 
 import pymc as pm
 
-from pymc.variational import opvi, test_functions
-from pymc.variational.approximations import (
-    Empirical,
-    FullRank,
-    MeanField,
-    NormalizingFlow,
-)
+from pymc.variational import test_functions
+from pymc.variational.approximations import Empirical, FullRank, MeanField
 from pymc.variational.operators import KL, KSD
 
 logger = logging.getLogger(__name__)
@@ -38,7 +33,6 @@ __all__ = [
     "FullRankADVI",
     "SVGD",
     "ASVGD",
-    "NFVI",
     "Inference",
     "ImplicitGradient",
     "KLqp",
@@ -55,12 +49,12 @@ class Inference:
 
     Parameters
     ----------
-    op: Operator class
-    approx: Approximation class or instance
-    tf: TestFunction instance
-    model: Model
+    op : Operator class    #:class:`~pymc.variational.operators`
+    approx : Approximation class or instance    #:class:`~pymc.variational.approximations`
+    tf : TestFunction instance  #?
+    model : Model
         PyMC Model
-    kwargs: kwargs passed to :class:`Operator`
+    kwargs : kwargs passed to :class:`Operator` #:class:`~pymc.variational.operators`, optional
     """
 
     def __init__(self, op, approx, tf, **kwargs):
@@ -102,18 +96,18 @@ class Inference:
 
         Parameters
         ----------
-        n: int
+        n : int
             number of iterations
-        score: bool
+        score : bool
             evaluate loss on each iteration or not
-        callbacks: list[function: (Approximation, losses, i) -> None]
+        callbacks : list[function: (Approximation, losses, i) -> None]
             calls provided functions after each iteration step
-        progressbar: bool
+        progressbar : bool
             whether to show progressbar or not
 
         Other Parameters
         ----------------
-        obj_n_mc: `int`
+        obj_n_mc: int
             Number of monte carlo samples used for approximation of objective gradients
         tf_n_mc: `int`
             Number of monte carlo samples used for approximation of test function gradients
@@ -130,7 +124,7 @@ class Inference:
         total_grad_norm_constraint: `float`
             Bounds gradient norm, prevents exploding gradient problem
         fn_kwargs: `dict`
-            Add kwargs to aesara.function (e.g. `{'profile': True}`)
+            Add kwargs to pytensor.function (e.g. `{'profile': True}`)
         more_replacements: `dict`
             Apply custom replacements before calculating gradients
 
@@ -263,7 +257,9 @@ class Inference:
                     )
                 )
         else:
-            if n < 10:
+            if n == 0:
+                logger.info("Initialization only")
+            elif n < 10:
                 logger.info(f"Finished [100%]: Loss = {scores[-1]:,.5g}")
             else:
                 avg_loss = _infmean(scores[max(0, i - 1000) : i + 1])
@@ -340,7 +336,7 @@ class ADVI(KLqp):
     The last ones are local random variables
     :math:`{\cal Z}=\{\mathbf{z}_{i}\}_{i=1}^{N}`, where
     :math:`\mathbf{z}_{i}=\{\mathbf{z}_{i}^{k}\}_{k=1}^{V_{l}}`.
-    These RVs are used only in AEVB.
+    These RVs are used only in AEVB (which is not implemented in PyMC).
 
     The goal of ADVI is to approximate the posterior distribution
     :math:`p(\Theta,{\cal Z}|{\cal Y})` by variational posterior
@@ -414,14 +410,14 @@ class ADVI(KLqp):
 
     -   The probabilistic model
 
-        `model` with three types of RVs (`observed_RVs`,
-        `global_RVs` and `local_RVs`).
+        `model` with two types of RVs (`observed_RVs`,
+        `global_RVs`).
 
     -   (optional) Minibatches
 
         The tensors to which mini-bathced samples are supplied are
         handled separately by using callbacks in :func:`Inference.fit` method
-        that change storage of shared Aesara variable or by :func:`pymc.generator`
+        that change storage of shared PyTensor variable or by :func:`pymc.generator`
         that automatically iterates over minibatches and defined beforehand.
 
     -   (optional) Parameters of deterministic mappings
@@ -434,17 +430,13 @@ class ADVI(KLqp):
 
     Parameters
     ----------
-    local_rv: dict[var->tuple]
-        mapping {model_variable -> approx params}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
     model: :class:`pymc.Model`
         PyMC model for inference
     random_seed: None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
-    start: `Point`
+    start: `dict[str, np.ndarray]` or `StartDict`
         starting point for inference
+    start_sigma: `dict[str, np.ndarray]`
+        starting standard deviation for inference, only available for method 'advi'
 
     References
     ----------
@@ -469,16 +461,10 @@ class FullRankADVI(KLqp):
 
     Parameters
     ----------
-    local_rv: dict[var->tuple]
-        mapping {model_variable -> approx params}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
     model: :class:`pymc.Model`
         PyMC model for inference
     random_seed: None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
-    start: `Point`
+    start: `dict[str, np.ndarray]` or `StartDict`
         starting point for inference
 
     References
@@ -546,13 +532,9 @@ class SVGD(ImplicitGradient):
         kernel function for KSD :math:`f(histogram) -> (k(x,.), \nabla_x k(x,.))`
     temperature: float
         parameter responsible for exploration, higher temperature gives more broad posterior estimate
-    start: `dict`
+    start: `dict[str, np.ndarray]` or `StartDict`
         initial point for inference
     random_seed: None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
-    start: `Point`
-        starting point for inference
     kwargs: other keyword arguments passed to estimator
 
     References
@@ -577,8 +559,6 @@ class SVGD(ImplicitGradient):
         kernel=test_functions.rbf,
         **kwargs,
     ):
-        if kwargs.get("local_rv") is not None:
-            raise opvi.AEVBInferenceError("SVGD does not support local groups")
         empirical = Empirical(
             size=n_particles,
             jitter=jitter,
@@ -646,7 +626,7 @@ class ASVGD(ImplicitGradient):
         )
         if approx is None:
             approx = FullRank(
-                model=kwargs.pop("model", None), local_rv=kwargs.pop("local_rv", None)
+                model=kwargs.pop("model", None), random_seed=kwargs.pop("random_seed", None)
             )
         super().__init__(estimator=estimator, approx=approx, kernel=kernel, **kwargs)
 
@@ -672,68 +652,13 @@ class ASVGD(ImplicitGradient):
         return super().run_profiling(n=n, score=score, obj_n_mc=obj_n_mc, **kwargs)
 
 
-class NFVI(KLqp):
-    r"""**Normalizing Flow based :class:`KLqp` inference**
-
-    Normalizing flow is a series of invertible transformations on initial distribution.
-
-    .. math::
-
-        z_K = f_K \circ \dots \circ f_2 \circ f_1(z_0)
-
-    In that case we can compute tractable density for the flow.
-
-    .. math::
-
-        \ln q_K(z_K) = \ln q_0(z_0) - \sum_{k=1}^{K}\ln \left|\frac{\partial f_k}{\partial z_{k-1}}\right|
-
-
-    Every :math:`f_k` here is a parametric function with defined determinant.
-    We can choose every step here. For example the here is a simple flow
-    is an affine transform:
-
-    .. math::
-
-        z = loc(scale(z_0)) = \mu + \sigma * z_0
-
-    Here we get mean field approximation if :math:`z_0 \sim \mathcal{N}(0, 1)`
-
-    **Flow Formulas**
-
-    In PyMC there is a flexible way to define flows with formulas. We have 5 of them by the moment:
-
-    -   Loc (:code:`loc`): :math:`z' = z + \mu`
-    -   Scale (:code:`scale`): :math:`z' = \sigma * z`
-    -   Planar (:code:`planar`): :math:`z' = z + u * \tanh(w^T z + b)`
-    -   Radial (:code:`radial`): :math:`z' = z + \beta (\alpha + (z-z_r))^{-1}(z-z_r)`
-    -   Householder (:code:`hh`): :math:`z' = H z`
-
-    Formula can be written as a string, e.g. `'scale-loc'`, `'scale-hh*4-loc'`, `'panar*10'`.
-    Every step is separated with `'-'`, repeated flow is marked with `'*'` producing `'flow*repeats'`.
-
-    Parameters
-    ----------
-    flow: str|AbstractFlow
-        formula or initialized Flow, default is `'scale-loc'` that
-        is identical to MeanField
-    model: :class:`pymc.Model`
-        PyMC model for inference
-    random_seed: None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(NormalizingFlow(*args, **kwargs))
-
-
 def fit(
     n=10000,
-    local_rv=None,
     method="advi",
     model=None,
     random_seed=None,
     start=None,
+    start_sigma=None,
     inf_kwargs=None,
     **kwargs,
 ):
@@ -743,10 +668,6 @@ def fit(
     ----------
     n: `int`
         number of iterations
-    local_rv: dict[var->tuple]
-        mapping {model_variable -> approx params}
-        Local Vars are used for Autoencoding Variational Bayes
-        See (AEVB; Kingma and Welling, 2014) for details
     method: str or :class:`Inference`
         string name is case insensitive in:
 
@@ -754,18 +675,16 @@ def fit(
         -   'fullrank_advi'  for FullRankADVI
         -   'svgd'  for Stein Variational Gradient Descent
         -   'asvgd'  for Amortized Stein Variational Gradient Descent
-        -   'nfvi'  for Normalizing Flow with default `scale-loc` flow
-        -   'nfvi=<formula>'  for Normalizing Flow using formula
 
     model: :class:`Model`
         PyMC model for inference
     random_seed: None or int
-        leave None to use package global RandomStream or other
-        valid value to create instance specific one
     inf_kwargs: dict
         additional kwargs passed to :class:`Inference`
-    start: `Point`
+    start: `dict[str, np.ndarray]` or `StartDict`
         starting point for inference
+    start_sigma: `dict[str, np.ndarray]`
+        starting standard deviation for inference, only available for method 'advi'
 
     Other Parameters
     ----------------
@@ -792,7 +711,7 @@ def fit(
     total_grad_norm_constraint: `float`
         Bounds gradient norm, prevents exploding gradient problem
     fn_kwargs: `dict`
-        Add kwargs to aesara.function (e.g. `{'profile': True}`)
+        Add kwargs to pytensor.function (e.g. `{'profile': True}`)
     more_replacements: `dict`
         Apply custom replacements before calculating gradients
 
@@ -804,22 +723,20 @@ def fit(
         inf_kwargs = dict()
     else:
         inf_kwargs = inf_kwargs.copy()
-    if local_rv is not None:
-        inf_kwargs["local_rv"] = local_rv
     if random_seed is not None:
         inf_kwargs["random_seed"] = random_seed
     if start is not None:
         inf_kwargs["start"] = start
+    if start_sigma is not None:
+        if method != "advi":
+            raise NotImplementedError("start_sigma is only available for method advi")
+        inf_kwargs["start_sigma"] = start_sigma
     if model is None:
         model = pm.modelcontext(model)
-    _select = dict(advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD, asvgd=ASVGD, nfvi=NFVI)
+    _select = dict(advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD, asvgd=ASVGD)
     if isinstance(method, str):
         method = method.lower()
-        if method.startswith("nfvi="):
-            formula = method[5:]
-            inference = NFVI(formula, **inf_kwargs)
-        elif method in _select:
-
+        if method in _select:
             inference = _select[method](model=model, **inf_kwargs)
         else:
             raise KeyError(f"method should be one of {set(_select.keys())} or Inference instance")

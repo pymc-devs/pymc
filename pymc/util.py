@@ -1,4 +1,4 @@
-#   Copyright 2020 The PyMC Developers
+#   Copyright 2023 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -13,8 +13,9 @@
 #   limitations under the License.
 
 import functools
+import warnings
 
-from typing import Dict, List, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
 
 import arviz
 import cloudpickle
@@ -22,6 +23,11 @@ import numpy as np
 import xarray
 
 from cachetools import LRUCache, cachedmethod
+from pytensor import Variable
+from pytensor.compile import SharedVariable
+from pytensor.graph.utils import ValidatingScratchpad
+
+from pymc.exceptions import BlockModelAccessError
 
 
 class _UnsetType:
@@ -116,7 +122,7 @@ class treedict(dict):
     update = withparent(dict.update)
 
     def tree_contains(self, item):
-        # needed for `add_random_variable` method
+        # needed for `add_named_variable` method
         if isinstance(self.parent, treedict):
             return dict.__contains__(self, item) or self.parent.tree_contains(item)
         elif isinstance(self.parent, dict):
@@ -230,16 +236,40 @@ def biwrap(wrapper):
     return enhanced
 
 
-def dataset_to_point_list(ds: xarray.Dataset) -> List[Dict[str, np.ndarray]]:
-    # make dicts
-    points: List[Dict[str, np.ndarray]] = []
-    vn: str
-    da: "xarray.DataArray"
-    for c in ds.chain:
-        for d in ds.draw:
-            points.append({vn: da.sel(chain=c, draw=d).values for vn, da in ds.items()})
+def dataset_to_point_list(
+    ds: xarray.Dataset, sample_dims: Sequence[str]
+) -> Tuple[List[Dict[str, np.ndarray]], Dict[str, Any]]:
+    # All keys of the dataset must be a str
+    var_names = list(ds.keys())
+    for vn in var_names:
+        if not isinstance(vn, str):
+            raise ValueError(f"Variable names must be str, but dataset key {vn} is a {type(vn)}.")
+    num_sample_dims = len(sample_dims)
+    stacked_dims = {dim_name: ds[dim_name] for dim_name in sample_dims}
+    ds = ds.transpose(*sample_dims, ...)
+    stacked_dict = {
+        vn: da.values.reshape((-1, *da.shape[num_sample_dims:])) for vn, da in ds.items()
+    }
+    points = [
+        {vn: stacked_dict[vn][i, ...] for vn in var_names}
+        for i in range(np.prod([len(coords) for coords in stacked_dims.values()]))
+    ]
     # use the list of points
-    return points
+    return cast(List[Dict[str, np.ndarray]], points), stacked_dims
+
+
+def drop_warning_stat(idata: arviz.InferenceData) -> arviz.InferenceData:
+    """Returns a new ``InferenceData`` object with the "warning" stat removed from sample stats groups.
+
+    This function should be applied to an ``InferenceData`` object obtained with
+    ``pm.sample(keep_warning_stat=True)`` before trying to ``.to_netcdf()`` or ``.to_zarr()`` it.
+    """
+    nidata = arviz.InferenceData(attrs=idata.attrs)
+    for gname, group in idata.items():
+        if "sample_stat" in gname:
+            group = group.drop_vars(names=["warning", "warning_dim_0"], errors="ignore")
+        nidata.add_groups({gname: group}, coords=group.coords, dims=group.dims)
+    return nidata
 
 
 def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tuple[int, int]:
@@ -248,7 +278,7 @@ def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tupl
     if isinstance(data, xarray.Dataset):
         dataset = data
     elif isinstance(data, arviz.InferenceData):
-        dataset = data.posterior
+        dataset = data["posterior"]
     else:
         raise ValueError(
             "Argument must be xarray Dataset or arviz InferenceData. Got %s",
@@ -322,7 +352,6 @@ class WithMemoization:
 
 
 def locally_cachedmethod(f):
-
     from collections import defaultdict
 
     def self_cache_fn(f_name):
@@ -340,7 +369,7 @@ def check_dist_not_registered(dist, model=None):
 
     try:
         model = modelcontext(None)
-    except TypeError:
+    except (TypeError, BlockModelAccessError):
         pass
     else:
         if dist in model.basic_RVs:
@@ -349,3 +378,144 @@ def check_dist_not_registered(dist, model=None):
                 f"You should use an unregistered (unnamed) distribution created via "
                 f"the `.dist()` API instead, such as:\n`dist=pm.Normal.dist(0, 1)`"
             )
+
+
+def point_wrapper(core_function):
+    """Wrap an pytensor compiled function to be able to ingest point dictionaries whilst
+    ignoring the keys that are not valid inputs to the core function.
+    """
+    ins = [i.name for i in core_function.maker.fgraph.inputs if not isinstance(i, SharedVariable)]
+
+    def wrapped(**kwargs):
+        input_point = {k: v for k, v in kwargs.items() if k in ins}
+        return core_function(**input_point)
+
+    return wrapped
+
+
+RandomSeed = Optional[Union[int, Sequence[int], np.ndarray]]
+RandomState = Union[RandomSeed, np.random.RandomState, np.random.Generator]
+
+
+def _get_seeds_per_chain(
+    random_state: RandomState,
+    chains: int,
+) -> Union[Sequence[int], np.ndarray]:
+    """Obtain or validate specified integer seeds per chain.
+
+    This function process different possible sources of seeding and returns one integer
+    seed per chain:
+    1. If the input is an integer and a single chain is requested, the input is
+        returned inside a tuple.
+    2. If the input is a sequence or NumPy array with as many entries as chains,
+        the input is returned.
+    3. If the input is an integer and multiple chains are requested, new unique seeds
+        are generated from NumPy default Generator seeded with that integer.
+    4. If the input is None new unique seeds are generated from an unseeded NumPy default
+        Generator.
+    5. If a RandomState or Generator is provided, new unique seeds are generated from it.
+
+    Raises
+    ------
+    ValueError
+        If none of the conditions above are met
+    """
+
+    def _get_unique_seeds_per_chain(integers_fn):
+        seeds = []
+        while len(set(seeds)) != chains:
+            seeds = [int(seed) for seed in integers_fn(2**30, dtype=np.int64, size=chains)]
+        return seeds
+
+    if random_state is None or isinstance(random_state, int):
+        if chains == 1 and isinstance(random_state, int):
+            return (random_state,)
+        return _get_unique_seeds_per_chain(np.random.default_rng(random_state).integers)
+    if isinstance(random_state, np.random.Generator):
+        return _get_unique_seeds_per_chain(random_state.integers)
+    if isinstance(random_state, np.random.RandomState):
+        return _get_unique_seeds_per_chain(random_state.randint)
+
+    if not isinstance(random_state, (list, tuple, np.ndarray)):
+        raise ValueError(f"The `seeds` must be array-like. Got {type(random_state)} instead.")
+
+    if len(random_state) != chains:
+        raise ValueError(
+            f"Number of seeds ({len(random_state)}) does not match the number of chains ({chains})."
+        )
+
+    return random_state
+
+
+def get_value_vars_from_user_vars(
+    vars: Union[Variable, Sequence[Variable]], model
+) -> List[Variable]:
+    """Converts user "vars" input into value variables.
+
+    More often than not, users will pass random variables, and we will extract the
+    respective value variables, but we also allow for the input to already be value
+    variables, in case the function is called internally or by a "super-user"
+
+    Returns
+    -------
+    value_vars: list of TensorVariable
+        List of model value variables that correspond to the input vars
+
+    Raises
+    ------
+    ValueError:
+        If any of the provided variables do not correspond to any model value variable
+    """
+    if not isinstance(vars, Sequence):
+        # Single var was passed
+        value_vars = [model.rvs_to_values.get(vars, vars)]
+    else:
+        value_vars = [model.rvs_to_values.get(var, var) for var in vars]
+
+    # Check that we only have value vars from the model
+    model_value_vars = model.value_vars
+    notin = [v for v in value_vars if v not in model_value_vars]
+    if notin:
+        notin = list(map(get_var_name, notin))
+        # We mention random variables, even though the input may be a wrong value variable
+        # because most users don't know about that duality
+        raise ValueError(
+            "The following variables are not random variables in the model: " + str(notin)
+        )
+
+    return value_vars
+
+
+class _FutureWarningValidatingScratchpad(ValidatingScratchpad):
+    def __getattribute__(self, name):
+        for deprecated_names, alternative in (
+            (("value_var", "observations"), "model.rvs_to_values[rv]"),
+            (("transform",), "model.rvs_to_transforms[rv]"),
+        ):
+            if name in deprecated_names:
+                try:
+                    super().__getattribute__(name)
+                except AttributeError:
+                    pass
+                else:
+                    warnings.warn(
+                        f"The tag attribute {name} is deprecated. Use {alternative} instead",
+                        FutureWarning,
+                    )
+        return super().__getattribute__(name)
+
+
+def _add_future_warning_tag(var) -> None:
+    old_tag = var.tag
+    if not isinstance(old_tag, _FutureWarningValidatingScratchpad):
+        new_tag = _FutureWarningValidatingScratchpad("test_value", var.type.filter)
+        for k, v in old_tag.__dict__.items():
+            new_tag.__dict__.setdefault(k, v)
+        var.tag = new_tag
+
+
+def makeiter(a):
+    if isinstance(a, (tuple, list)):
+        return a
+    else:
+        return [a]

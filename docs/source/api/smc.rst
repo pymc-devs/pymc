@@ -8,11 +8,12 @@ Sequential Monte Carlo
 
     sample_smc
 
-(smc_kernels)=
+.. _smc_kernels:
+
 SMC kernels
 -----------
 
-.. currentmodule:: pymc.smc.smc
+.. currentmodule:: pymc.smc.kernels
 .. autosummary::
    :toctree: generated/
 

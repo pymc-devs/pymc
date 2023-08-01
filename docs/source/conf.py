@@ -17,12 +17,8 @@
 # serve to show the default.
 
 import os
-import sys
+from pathlib import Path
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 import pymc  # isort:skip
 
 # -- General configuration ------------------------------------------------
@@ -43,13 +39,13 @@ extensions = [
     "numpydoc",
     "IPython.sphinxext.ipython_console_highlighting",
     "IPython.sphinxext.ipython_directive",
-    "sphinx.ext.autosectionlabel",
     "myst_nb",
     "sphinx_design",
     "notfound.extension",
     "sphinx_copybutton",
     "sphinx_remove_toctrees",
     "jupyter_sphinx",
+    "sphinxext.rediraffe",
 ]
 
 # Don't auto-generate summary for class members.
@@ -62,12 +58,12 @@ numpydoc_xref_param_type = True
 # fmt: off
 numpydoc_xref_ignore = {
     "of", "or", "optional", "default", "numeric", "type", "scalar", "1D", "2D", "3D", "nD", "array",
-    "instance"
+    "instance", "M", "N"
 }
 # fmt: on
 numpydoc_xref_aliases = {
-    "TensorVariable": ":class:`~aesara.tensor.TensorVariable`",
-    "RandomVariable": ":class:`~aesara.tensor.random.RandomVariable`",
+    "TensorVariable": ":class:`~pytensor.tensor.TensorVariable`",
+    "RandomVariable": ":class:`~pytensor.tensor.random.RandomVariable`",
     "ndarray": ":class:`~numpy.ndarray`",
     "Covariance": ":mod:`Covariance <pymc.gp.cov>`",
     "Mean": ":mod:`Mean <pymc.gp.mean>`",
@@ -77,8 +73,11 @@ numpydoc_xref_aliases = {
     "Point": ":class:`~pymc.Point`",
     "Model": ":class:`~pymc.Model`",
     "SMC_kernel": ":ref:`SMC Kernel <smc_kernels>`",
-    "Aesara_Op": ":class:`Aesara Op <aesara.graph.op.Op>`",
+    "PyTensor_Op": ":class:`PyTensor Op <pytensor.graph.op.Op>`",
     "tensor_like": ":term:`tensor_like`",
+    "unnamed_distribution": ":term:`unnamed_distribution`",
+    "numpy_Generator": ":class:`~numpy.random.Generator`",
+    "Distribution": ":ref:`Distribution <api_distributions>`",
 }
 
 # Show the documentation of __init__ and the class docstring
@@ -108,10 +107,15 @@ author = "PyMC contributors"
 # built documents.
 
 version = pymc.__version__
-if os.environ.get("READTHEDOCS", False):
+on_readthedocs = os.environ.get("READTHEDOCS", False)
+if on_readthedocs:
     rtd_version = os.environ.get("READTHEDOCS_VERSION", "")
-    if "." not in rtd_version and rtd_version.lower() != "stable":
+    if rtd_version.lower() == "stable":
+        version = pymc.__version__.split("+")[0]
+    elif rtd_version.lower() == "latest":
         version = "dev"
+    else:
+        version = rtd_version
 else:
     rtd_version = "local"
 # The full version, including alpha/beta/rc tags.
@@ -122,10 +126,10 @@ release = version
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # configure notfound extension to not add any prefix to the urls
-notfound_urls_prefix = "/en/latest/"
+notfound_urls_prefix = "/projects/docs/en/latest/"
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -142,15 +146,128 @@ exclude_patterns = [
     "about/featured_testimonials.md",
 ]
 
-# myst and panels config
-jupyter_execute_notebooks = "auto"
+# myst config
+nb_execution_mode = "force" if on_readthedocs else "off"
+nb_execution_allow_errors = False
+nb_execution_raise_on_error = True
+nb_execution_timeout = 300
+nb_kernel_rgx_aliases = {".*": "python3"}
 myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath", "substitution"]
 myst_substitutions = {
     "version_slug": rtd_version,
 }
-panels_add_bootstrap_css = False
 myst_heading_anchors = None
 
+v3_example_tutorials = [
+    "case_studies/BEST",
+    "case_studies/LKJ",
+    "case_studies/stochastic_volatility",
+    "case_studies/rugby_analytics",
+    "case_studies/multilevel_modeling",
+    "case_studies/putting_workflow",
+    "case_studies/moderation_analysis",
+    "case_studies/mediation_analysis",
+    "case_studies/bayesian_ab_testing",
+    "case_studies/item_response_nba",
+    "diagnostics_and_criticism/Diagnosing_biased_Inference_with_Divergences",
+    "diagnostics_and_criticism/Bayes_factor",
+    "generalized_linear_models/GLM-logistic",
+    "generalized_linear_models/GLM-binomial-regression",
+    "generalized_linear_models/GLM-hierarchical-binominal-model",
+    "generalized_linear_models/GLM-hierarchical",
+    "case_studies/hierarchical_partial_pooling",
+    "generalized_linear_models/GLM-model-selection",
+    "generalized_linear_models/GLM-negative-binomial-regression",
+    "generalized_linear_models/GLM-out-of-sample-predictions",
+    "generalized_linear_models/GLM-poisson-regression",
+    "generalized_linear_models/GLM-robust-with-outlier-detection",
+    "generalized_linear_models/GLM-robust",
+    "generalized_linear_models/GLM-rolling-regression",
+    "generalized_linear_models/GLM-truncated-censored-regression",
+    "generalized_linear_models/GLM-simpsons-paradox",
+    "gaussian_processes/GP-Kron",
+    "gaussian_processes/GP-Latent",
+    "gaussian_processes/GP-Marginal",
+    "gaussian_processes/GP-MaunaLoa",
+    "gaussian_processes/GP-MaunaLoa2",
+    "gaussian_processes/GP-MeansAndCovs",
+    "gaussian_processes/GP-SparseApprox",
+    "gaussian_processes/GP-TProcess",
+    "gaussian_processes/GP-smoothing",
+    "gaussian_processes/GP-Heteroskedastic",
+    "gaussian_processes/gaussian_process",
+    "case_studies/conditional-autoregressive-model",
+    "case_studies/log-gaussian-cox-process",
+    "gaussian_processes/GP-Circular",
+    "mixture_models/dependent_density_regression",
+    "mixture_models/dp_mix",
+    "variational_inference/gaussian-mixture-model-advi",
+    "mixture_models/gaussian_mixture_model",
+    "mixture_models/marginalized_gaussian_mixture_model",
+    "mixture_models/dirichlet_mixture_of_multinomials",
+    "samplers/SMC2_gaussians",
+    "samplers/SMC-ABC_Lotka-Volterra_example",
+    "survival_analysis/bayes_param_survival_pymc3",
+    "survival_analysis/censored_data",
+    "survival_analysis/survival_analysis",
+    "survival_analysis/weibull_aft",
+    "survival_analysis/cox_model",
+    "time_series/MvGaussianRandomWalk_demo",
+    "time_series/AR",
+    "time_series/Euler-Maruyama_and_SDEs",
+    "time_series/Air_passengers-Prophet_with_Bayesian_workflow",
+    "variational_inference/bayesian_neural_network_advi",
+    "variational_inference/convolutional_vae_keras_advi",
+    "variational_inference/empirical-approx-overview",
+    "variational_inference/lda-advi-aevb",
+    "variational_inference/normalizing_flows_overview",
+    "variational_inference/gaussian-mixture-model-advi",
+    "variational_inference/GLM-hierarchical-advi-minibatch",
+    "ode_models/ODE_with_manual_gradients",
+    "ode_models/ODE_API_introduction",
+    "case_studies/probabilistic_matrix_factorization",
+    "pymc3_howto/sampling_conjugate_step",
+    "samplers/MLDA_introduction",
+    "samplers/MLDA_simple_linear_regression",
+    "samplers/MLDA_gravity_surveying",
+    "samplers/MLDA_variance_reduction_linear_regression",
+    "samplers/GLM-hierarchical-jax",
+    "pymc3_howto/api_quickstart",
+    "variational_inference/variational_api_quickstart",
+    "Probability_Distributions.rst",
+    "pymc3_howto/data_container",
+    "pymc3_howto/sampling_compound_step",
+    "pymc3_howto/sampling_callback",
+    "diagnostics_and_criticism/sampler-stats",
+    "diagnostics_and_criticism/Diagnosing_biased_Inference_with_Divergences",
+    "Advanced_usage_of_Theano_in_PyMC3.rst",
+    "ode_models/ODE_API_shapes_and_benchmarking",
+    "samplers/DEMetropolisZ_EfficiencyComparison",
+    "samplers/DEMetropolisZ_tune_drop_fraction",
+    "case_studies/factor_analysis",
+    "case_studies/blackbox_external_likelihood",
+    "pymc3_howto/profiling",
+    "pymc3_howto/howto_debugging",
+    "diagnostics_and_criticism/model_averaging",
+    "pymc3_howto/updating_priors",
+    "pymc3_howto/lasso_block_update",
+    "nb_examples/index.html",
+    "nb_tutorials/index.html",
+]
+rediraffe_redirects = {
+    "index.md": "learn.md",
+    "pymc-examples/examples/getting_started.md": "learn/core_notebooks/pymc_overview.ipynb",
+    "pymc-examples/examples/PyMC3_and_Theano.rst": "learn/core_notebooks/pymc_pytensor.ipynb",
+    "pymc-examples/examples/generalized_linear_models/GLM.ipynb": "learn/core_notebooks/GLM_linear.ipynb",
+    "pymc-examples/examples/generalized_linear_models/GLM-linear.ipynb": "learn/core_notebooks/GLM_linear.ipynb",
+    "pymc-examples/examples/diagnostics_and_criticism/model_comparison.ipynb": "learn/core_notebooks/model_comparison.ipynb",
+    "pymc-examples/examples/diagnostics_and_criticism/posterior_predictive.ipynb": "learn/core_notebooks/posterior_predictive.ipynb",
+    "pymc-examples/examples/Gaussian_Processes.rst": "learn/core_notebooks/Gaussian_Processes.rst",
+    **{
+        f"pymc-examples/examples/{v3_path}.ipynb": "learn/core_notebooks/index.md"
+        for v3_path in v3_example_tutorials
+    },
+}
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
 # default_role = None
@@ -180,23 +297,46 @@ todo_include_todos = False
 
 # intersphinx configuration to ease linking arviz docs
 intersphinx_mapping = {
-    "arviz": ("https://arviz-devs.github.io/arviz/", None),
-    "aesara": ("https://aesara.readthedocs.io/en/latest/", None),
-    "aeppl": ("https://aeppl.readthedocs.io/en/latest/", None),
+    "arviz": ("https://python.arviz.org/en/latest/", None),
+    "pytensor": ("https://pytensor.readthedocs.io/en/latest/", None),
+    "home": ("https://www.pymc.io", None),
+    "pmx": ("https://www.pymc.io/projects/experimental/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
-    "nb": ("https://pymc-examples.readthedocs.io/en/latest/", None),
+    "nb": ("https://www.pymc.io/projects/examples/en/latest/", None),
     "myst": ("https://myst-parser.readthedocs.io/en/latest", None),
     "myst-nb": ("https://myst-nb.readthedocs.io/en/latest/", None),
     "python": ("https://docs.python.org/3/", None),
-    "xarray": ("https://xarray.pydata.org/en/stable/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    "xarray": ("https://docs.xarray.dev/en/stable/", None),
 }
+
+
+def remove_index(app):
+    """
+    This removes the index pages so rediraffe generates the redirect placeholder
+    It needs to be present initially for the toctree as it defines the navbar.
+    """
+
+    index_file = Path(app.outdir) / "index.html"
+    index_file.unlink()
+
+    app.env.project.docnames -= {"index"}
+    yield "", {}, "layout.html"
+
+
+def setup(app):
+    """
+    Add extra step to sphinx build
+    """
+
+    app.connect("html-collect-pages", remove_index, 100)
 
 
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "pydata_sphinx_theme"
+html_theme = "pymc_sphinx_theme"
 
 
 # Theme options are theme-specific and customize the look and feel of a theme
@@ -204,43 +344,16 @@ html_theme = "pydata_sphinx_theme"
 # documentation.
 
 html_theme_options = {
-    "icon_links": [
-        {
-            "name": "GitHub",
-            "url": "https://github.com/pymc-devs/pymc",
-            "icon": "fab fa-github-square",
-        },
-        {
-            "name": "Twitter",
-            "url": "https://twitter.com/pymc_devs",
-            "icon": "fab fa-twitter-square",
-        },
-        {
-            "name": "Discourse",
-            "url": "https://discourse.pymc.io",
-            "icon": "fab fa-discourse",
-        },
-    ],
-    "show_prev_next": False,
-    "navbar_align": "left",
-    "navbar_start": ["navbar-logo", "navbar-version"],
-    "navbar_end": ["search-field.html", "navbar-icon-links.html"],
-    "search_bar_text": "Search...",
-    "use_edit_page_button": False,  # TODO: see how to skip of fix for generated pages
-    "google_analytics_id": "UA-176578023-1",
+    "logo": {
+        "link": "https://www.pymc.io",
+    },
 }
 html_context = {
     "github_user": "pymc-devs",
     "github_repo": "pymc",
     "github_version": "main",
     "doc_path": "docs/source/",
-}
-# this controls which sidebar sections are available in which pages. [] removes the left sidebar
-html_sidebars = {
-    "learn": [],
-    "installation": [],
-    "community": ["twitter", "sidebar-nav-bs.html", "sidebar-ethical-ads.html"],
-    "**": ["sidebar-nav-bs.html", "sidebar-ethical-ads.html"],
+    "default_mode": "light",
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
@@ -281,7 +394,6 @@ html_static_path = ["../logos"]
 # html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-# html_sidebars = {"**": ["about.html", "navigation.html", "searchbox.html"]}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
