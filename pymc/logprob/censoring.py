@@ -279,6 +279,10 @@ def find_measurable_switch_encoding(
     if rv_map_feature.request_measurable([switch_condn]) != [switch_condn]:
         return None
 
+    [base_var] = rv_map_feature.request_measurable([switch_condn.owner.inputs[0]])
+    if base_var.dtype.startswith("int"):
+        return None
+
     # Maximum one branch allowed to be measurable
     if len(measurable_comp_list) > 1:
         return None
