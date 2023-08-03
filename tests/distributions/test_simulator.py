@@ -33,10 +33,9 @@ from pymc import floatX
 from pymc.initial_point import make_initial_point_fn
 from pymc.pytensorf import compile_pymc
 from pymc.smc.kernels import IMH
-from pymc.testing import SeededTest
 
 
-class TestSimulator(SeededTest):
+class TestSimulator:
     @staticmethod
     def count_rvs(end_node):
         return len(
@@ -60,7 +59,6 @@ class TestSimulator(SeededTest):
         return np.quantile(x, [0.25, 0.5, 0.75])
 
     def setup_class(self):
-        super().setup_class()
         self.data = np.random.normal(loc=0, scale=1, size=1000)
 
         with pm.Model() as self.SMABC_test:
@@ -75,7 +73,7 @@ class TestSimulator(SeededTest):
             c = pm.Potential("c", pm.math.switch(a > 0, 0, -np.inf))
             s = pm.Simulator("s", self.normal_sim, a, b, observed=self.data)
 
-    def test_one_gaussian(self):
+    def test_one_gaussian(self, seeded_test):
         assert self.count_rvs(self.SMABC_test.logp()) == 1
 
         with self.SMABC_test:
@@ -95,7 +93,7 @@ class TestSimulator(SeededTest):
         assert abs(self.data.std() - po_p["s"].std()) < 0.10
 
     @pytest.mark.parametrize("floatX", ["float32", "float64"])
-    def test_custom_dist_sum_stat(self, floatX):
+    def test_custom_dist_sum_stat(self, seeded_test, floatX):
         with pytensor.config.change_flags(floatX=floatX):
             with pm.Model() as m:
                 a = pm.Normal("a", mu=0, sigma=1)
@@ -118,7 +116,7 @@ class TestSimulator(SeededTest):
                     pm.sample_smc(draws=100)
 
     @pytest.mark.parametrize("floatX", ["float32", "float64"])
-    def test_custom_dist_sum_stat_scalar(self, floatX):
+    def test_custom_dist_sum_stat_scalar(self, seeded_test, floatX):
         """
         Test that automatically wrapped functions cope well with scalar inputs
         """
@@ -149,14 +147,14 @@ class TestSimulator(SeededTest):
                 )
             assert self.count_rvs(m.logp()) == 1
 
-    def test_model_with_potential(self):
+    def test_model_with_potential(self, seeded_test):
         assert self.count_rvs(self.SMABC_potential.logp()) == 1
 
         with self.SMABC_potential:
             trace = pm.sample_smc(draws=100, chains=1, return_inferencedata=False)
             assert np.all(trace["a"] >= 0)
 
-    def test_simulator_metropolis_mcmc(self):
+    def test_simulator_metropolis_mcmc(self, seeded_test):
         with self.SMABC_test as m:
             step = pm.Metropolis([m.rvs_to_values[m["a"]], m.rvs_to_values[m["b"]]])
             trace = pm.sample(step=step, return_inferencedata=False)
@@ -164,7 +162,7 @@ class TestSimulator(SeededTest):
         assert abs(self.data.mean() - trace["a"].mean()) < 0.05
         assert abs(self.data.std() - trace["b"].mean()) < 0.05
 
-    def test_multiple_simulators(self):
+    def test_multiple_simulators(self, seeded_test):
         true_a = 2
         true_b = -2
 
@@ -214,9 +212,9 @@ class TestSimulator(SeededTest):
         assert abs(true_a - trace["a"].mean()) < 0.05
         assert abs(true_b - trace["b"].mean()) < 0.05
 
-    def test_nested_simulators(self):
+    def test_nested_simulators(self, seeded_test):
         true_a = 2
-        rng = self.get_random_state()
+        rng = np.random.RandomState(20160911)
         data = rng.normal(true_a, 0.1, size=1000)
 
         with pm.Model() as m:
@@ -244,7 +242,7 @@ class TestSimulator(SeededTest):
 
         assert np.abs(true_a - trace["sim1"].mean()) < 0.1
 
-    def test_upstream_rngs_not_in_compiled_logp(self):
+    def test_upstream_rngs_not_in_compiled_logp(self, seeded_test):
         smc = IMH(model=self.SMABC_test)
         smc.initialize_population()
         smc._initialize_kernel()
@@ -263,7 +261,7 @@ class TestSimulator(SeededTest):
         ]
         assert len(shared_rng_vars) == 1
 
-    def test_simulator_error_msg(self):
+    def test_simulator_error_msg(self, seeded_test):
         msg = "The distance metric not_real is not implemented"
         with pytest.raises(ValueError, match=msg):
             with pm.Model() as m:
@@ -280,7 +278,7 @@ class TestSimulator(SeededTest):
                 sim = pm.Simulator("sim", self.normal_sim, 0, params=(1))
 
     @pytest.mark.xfail(reason="KL not refactored")
-    def test_automatic_use_of_sort(self):
+    def test_automatic_use_of_sort(self, seeded_test):
         with pm.Model() as model:
             s_k = pm.Simulator(
                 "s_k",
@@ -292,7 +290,7 @@ class TestSimulator(SeededTest):
             )
         assert s_k.distribution.sum_stat is pm.distributions.simulator.identity
 
-    def test_name_is_string_type(self):
+    def test_name_is_string_type(self, seeded_test):
         with self.SMABC_potential:
             assert not self.SMABC_potential.name
             with warnings.catch_warnings():
@@ -303,7 +301,7 @@ class TestSimulator(SeededTest):
                 trace = pm.sample_smc(draws=10, chains=1, return_inferencedata=False)
             assert isinstance(trace._straces[0].name, str)
 
-    def test_named_model(self):
+    def test_named_model(self, seeded_test):
         # Named models used to fail with Simulator because the arguments to the
         # random fn used to be passed by name. This is no longer true.
         # https://github.com/pymc-devs/pymc/pull/4365#issuecomment-761221146
@@ -323,7 +321,7 @@ class TestSimulator(SeededTest):
     @pytest.mark.parametrize("mu", [0, np.arange(3)], ids=str)
     @pytest.mark.parametrize("sigma", [1, np.array([1, 2, 5])], ids=str)
     @pytest.mark.parametrize("size", [None, 3, (5, 3)], ids=str)
-    def test_simulator_moment(self, mu, sigma, size):
+    def test_simulator_moment(self, seeded_test, mu, sigma, size):
         def normal_sim(rng, mu, sigma, size):
             return rng.normal(mu, sigma, size=size)
 
@@ -357,7 +355,7 @@ class TestSimulator(SeededTest):
 
         assert np.all(np.abs((result - expected_sample_mean) / expected_sample_mean_std) < cutoff)
 
-    def test_dist(self):
+    def test_dist(self, seeded_test):
         x = pm.Simulator.dist(self.normal_sim, 0, 1, sum_stat="sort", shape=(3,))
         x = cloudpickle.loads(cloudpickle.dumps(x))
 

@@ -15,6 +15,8 @@
 import io
 import operator
 
+from contextlib import nullcontext
+
 import cloudpickle
 import numpy as np
 import pytensor
@@ -29,7 +31,7 @@ from pymc.variational.inference import ADVI, ASVGD, SVGD, FullRankADVI
 from pymc.variational.opvi import NotImplementedInference
 from tests import models
 
-pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test")
+pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test", "fail_on_warning")
 
 
 @pytest.mark.parametrize("score", [True, False])
@@ -157,7 +159,16 @@ def fit_kwargs(inference, use_minibatch):
 
 
 def test_fit_oo(inference, fit_kwargs, simple_model_data):
-    trace = inference.fit(**fit_kwargs).sample(10000)
+    # Minibatch data can't be extracted into the `observed_data` group in the final InferenceData
+    if getattr(simple_model_data["data"], "name", "").startswith("minibatch"):
+        warn_ctxt = pytest.warns(
+            UserWarning, match="Could not extract data from symbolic observation"
+        )
+    else:
+        warn_ctxt = nullcontext()
+
+    with warn_ctxt:
+        trace = inference.fit(**fit_kwargs).sample(10000)
     mu_post = simple_model_data["mu_post"]
     d = simple_model_data["d"]
     np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_post, rtol=0.05)
@@ -180,11 +191,21 @@ def test_fit_start(inference_spec, simple_model):
     kw = {"start": {"mu": mu_init}}
     if has_start_sigma:
         kw.update({"start_sigma": {"mu": mu_sigma_init}})
-
     with simple_model:
         inference = inference_spec(**kw)
+
+    # Minibatch data can't be extracted into the `observed_data` group in the final InferenceData
+    [observed_value] = [simple_model.rvs_to_values[obs] for obs in simple_model.observed_RVs]
+    if observed_value.name.startswith("minibatch"):
+        warn_ctxt = pytest.warns(
+            UserWarning, match="Could not extract data from symbolic observation"
+        )
+    else:
+        warn_ctxt = nullcontext()
+
     try:
-        trace = inference.fit(n=0).sample(10000)
+        with warn_ctxt:
+            trace = inference.fit(n=0).sample(10000)
     except NotImplementedInference as e:
         pytest.skip(str(e))
     np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_init, rtol=0.05)

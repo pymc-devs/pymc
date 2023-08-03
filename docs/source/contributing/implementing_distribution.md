@@ -1,11 +1,11 @@
 (implementing-a-distribution)=
 # Implementing a RandomVariable Distribution
 
-This guide provides an overview on how to implement a distribution for PyMC version `>=4.0.0`.
+This guide provides an overview on how to implement a distribution for PyMC.
 It is designed for developers who wish to add a new distribution to the library.
-Users will not be aware of all this complexity and should instead make use of helper methods such as `~pymc.DensityDist`.
+Users will not be aware of all this complexity and should instead make use of helper methods such as `~pymc.CustomDist`.
 
-PyMC {class}`~pymc.Distribution` builds on top of PyTensor's {class}`~pytensor.tensor.random.op.RandomVariable`, and implements `logp`, `logcdf` and `moment` methods as well as other initialization and validation helpers.
+PyMC {class}`~pymc.Distribution` builds on top of PyTensor's {class}`~pytensor.tensor.random.op.RandomVariable`, and implements `logp`, `logcdf`, `icdf` and `moment` methods as well as other initialization and validation helpers.
 Most notably `shape/dims/observed` kwargs, alternative parametrizations, and default `transform`.
 
 Here is a summary check-list of the steps needed to implement a new distribution.
@@ -14,14 +14,14 @@ Each section will be expanded below:
 1. Creating a new `RandomVariable` `Op`
 1. Implementing the corresponding `Distribution` class
 1. Adding tests for the new `RandomVariable`
-1. Adding tests for `logp` / `logcdf` and `moment` methods
+1. Adding tests for `logp` / `logcdf` / `icdf` and `moment` methods
 1. Documenting the new `Distribution`.
 
 This guide does not attempt to explain the rationale behind the `Distributions` current implementation, and details are provided only insofar as they help to implement new "standard" distributions.
 
 ## 1. Creating a new `RandomVariable` `Op`
 
-{class}`~pytensor.tensor.random.op.RandomVariable` are responsible for implementing the random sampling methods, which in version 3 of PyMC used to be one of the standard `Distribution` methods, alongside `logp` and `logcdf`.
+{class}`~pytensor.tensor.random.op.RandomVariable` are responsible for implementing the random sampling methods.
 The `RandomVariable` is also responsible for parameter broadcasting and shape inference.
 
 Before creating a new `RandomVariable` make sure that it is not already offered in the {mod}`NumPy library <numpy.random>`.
@@ -68,8 +68,7 @@ class BlahRV(RandomVariable):
     # This is the Python code that produces samples.  Its signature will always
     # start with a NumPy `RandomState` object, then the distribution
     # parameters, and, finally, the size.
-    #
-    # This is effectively the PyMC >=4.0 replacement for `Distribution.random`.
+
     @classmethod
     def rng_fn(
         cls,
@@ -87,19 +86,20 @@ blah = BlahRV()
 
 Some important things to keep in mind:
 
-1. Everything inside the `rng_fn` method is pure Python code (as are the inputs) and should not make use of other `PyTensor` symbolic ops. The random method should make use of the `rng` which is a NumPy {class}`~numpy.random.RandomState`, so that samples are reproducible.
+1. Everything inside the `rng_fn` method is pure Python code (as are the inputs) and should __not__ make use of other `PyTensor` symbolic ops. The random method should make use of the `rng` which is a NumPy {class}`~numpy.random.RandomGenerator`, so that samples are reproducible.
 1. Non-default `RandomVariable` dimensions will end up in the `rng_fn` via the `size` kwarg. The `rng_fn` will have to take this into consideration for correct output. `size` is the specification used by NumPy and SciPy and works like PyMC `shape` for univariate distributions, but is different for multivariate distributions. For multivariate distributions the __`size` excludes the `ndim_supp` support dimensions__, whereas the __`shape` of the resulting `TensorVariable` or `ndarray` includes the support dimensions__. For more context check {ref}`The dimensionality notebook <dimensionality>`.
-1. `PyTensor` tries to infer the output shape of the `RandomVariable` (given a user-specified size) by introspection of the `ndim_supp` and `ndim_params` attributes. However, the default method may not work for more complex distributions. In that case, custom `_supp_shape_from_params` (and less probably, `_infer_shape`) should also be implemented in the new `RandomVariable` class. One simple example is seen in the {class}`~pymc.DirichletMultinomialRV` where it was necessary to specify the `rep_param_idx` so that the `default_supp_shape_from_params` helper method can do its job. In more complex cases, it may not suffice to use this default helper. This could happen for instance if the argument values determined the support shape of the distribution, as happens in the `~pymc.distributions.multivarite._LKJCholeskyCovRV`.
+1. `PyTensor` can automatically infer the output shape of univariate `RandomVariable`s (`ndim_supp=0`). For multivariate distributions (`ndim_supp>=1`), the method `_supp_shape_from_params` must be implemented in the new `RandomVariable` class. This method returns the support dimensionality of an RV given its parameters. In some cases this can be derived from the shape of one of its parameters, in which case the helper {func}`pytensor.tensor.random.utils.supp_shape_from_ref_param_shape` cand be used as is in {class}`~pymc.DirichletMultinomialRV`. In other cases the argument values (and not their shapes) may determine the support shape of the distribution, as happens in the `~pymc.distributions.multivarite._LKJCholeskyCovRV`. In simpler cases they may be constant.
 1. It's okay to use the `rng_fn` `classmethods` of other PyTensor and PyMC `RandomVariables` inside the new `rng_fn`. For example if you are implementing a negative HalfNormal `RandomVariable`, your `rng_fn` can simply return `- halfnormal.rng_fn(rng, scale, size)`.
 
 *Note: In addition to `size`, the PyMC API also provides `shape`, `dims` and `observed` as alternatives to define a distribution dimensionality, but this is taken care of by {class}`~pymc.Distribution`, and should not require any extra changes.*
 
-For a quick test that your new `RandomVariable` `Op` is working, you can call the `Op` with the necessary parameters and then call `eval()` on the returned object:
+For a quick test that your new `RandomVariable` `Op` is working, you can call the `Op` with the necessary parameters and then call {class}`~pymc.draw` on the returned object:
 
 ```python
 
 # blah = pytensor.tensor.random.uniform in this example
-blah([0, 0], [1, 2], size=(10, 2)).eval()
+# multiple calls with the same seed should return the same values
+pm.draw(blah([0, 0], [1, 2], size=(10, 2)), random_seed=1)
 
 # array([[0.83674527, 0.76593773],
 #    [0.00958496, 1.85742402],
@@ -117,10 +117,10 @@ blah([0, 0], [1, 2], size=(10, 2)).eval()
 ## 2. Inheriting from a PyMC base `Distribution` class
 
 After implementing the new `RandomVariable` `Op`, it's time to make use of it in a new PyMC {class}`~pymc.Distribution`.
-PyMC `>=4.0.0` works in a very {term}`functional <Functional Programming>` way, and the `distribution` classes are there mostly to facilitate porting the `PyMC3` v3.x code to PyMC `>=4.0.0`, add PyMC API features and keep related methods organized together.
+PyMC works in a very {term}`functional <Functional Programming>` way, and the `distribution` classes are there mostly to add PyMC API features and keep related methods organized together.
 In practice, they take care of:
 
-1. Linking ({term}`Dispatching`) an rv_op class with the corresponding `moment`, `logp` and `logcdf` methods.
+1. Linking ({term}`Dispatching`) an `rv_op` class with the corresponding `moment`, `logp`, `logcdf` and `icdf` methods.
 1. Defining a standard transformation (for continuous distributions) that converts a bounded variable domain (e.g., positive line) to an unbounded domain (i.e., the real line), which many samplers prefer.
 1. Validating the parametrization of a distribution and converting non-symbolic inputs (i.e., numeric literals or NumPy arrays) to symbolic variables.
 1. Converting multiple alternative parametrizations to the standard parametrization that the `RandomVariable` is defined in terms of.
@@ -130,7 +130,6 @@ Here is how the example continues:
 ```python
 
 import pytensor.tensor as pt
-from pymc.pytensorf import floatX, intX
 from pymc.distributions.continuous import PositiveContinuous
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.shape_utils import rv_size_is_none
@@ -146,12 +145,12 @@ class Blah(PositiveContinuous):
     # We pass the standard parametrizations to super().dist
     @classmethod
     def dist(cls, param1, param2=None, alt_param2=None, **kwargs):
-        param1 = pt.as_tensor_variable(intX(param1))
+        param1 = pt.as_tensor_variable(param1)
         if param2 is not None and alt_param2 is not None:
             raise ValueError("Only one of param2 and alt_param2 is allowed.")
         if alt_param2 is not None:
             param2 = 1 / alt_param2
-        param2 = pt.as_tensor_variable(floatX(param2))
+        param2 = pt.as_tensor_variable(param2)
 
         # The first value-only argument should be a list of the parameters that
         # the rv_op needs in order to be instantiated
@@ -183,7 +182,7 @@ class Blah(PositiveContinuous):
         # Whenever a bound is invalidated, the returned expression raises an error
         # with the message defined in the optional `msg` keyword argument.
         return check_parameters(
-            logp_expression,
+            bounded_logp_expression,
             param2 >= 0,
             msg="param2 >= 0",
         )
@@ -193,15 +192,18 @@ class Blah(PositiveContinuous):
     def logcdf(value, param1, param2):
         ...
 
+    def icdf(value, param1, param2):
+        ...
+
 ```
 
 Some notes:
 
 1. A distribution should at the very least inherit from {class}`~pymc.Discrete` or {class}`~pymc.Continuous`. For the latter, more specific subclasses exist: `PositiveContinuous`, `UnitContinuous`, `BoundedContinuous`, `CircularContinuous`, `SimplexContinuous`, which specify default transformations for the variables. If you need to specify a one-time custom transform you can also create a `_default_transform` dispatch function as is done for the {class}`~pymc.distributions.multivariate.LKJCholeskyCov`.
 1. If a distribution does not have a corresponding `rng_fn` implementation, a `RandomVariable` should still be created to raise a `NotImplementedError`. This is, for example, the case in {class}`~pymc.distributions.continuous.Flat`. In this case it will be necessary to provide a `moment` method, because without a `rng_fn`, PyMC can't fall back to a random draw to use as an initial point for MCMC.
-1. As mentioned above, PyMC `>=4.0.0` works in a very {term}`functional <Functional Programming>` way, and all the information that is needed in the `logp` and `logcdf` methods is expected to be "carried" via the `RandomVariable` inputs. You may pass numerical arguments that are not strictly needed for the `rng_fn` method but are used in the `logp` and `logcdf` methods. Just keep in mind whether this affects the correct shape inference behavior of the `RandomVariable`. If specialized non-numeric information is needed you might need to define your custom`_logp` and `_logcdf` {term}`Dispatching` functions, but this should be done as a last resort.
-1. The `logcdf` method is not a requirement, but it's a nice plus!
-1. Currently, only one moment is supported in the `moment` method, and probably the "higher-order" one is the most useful (that is `mean` > `median` > `mode`)... You might need to truncate the moment if you are dealing with a discrete distribution.
+1. As mentioned above, PyMC works in a very {term}`functional <Functional Programming>` way, and all the information that is needed in the `logp`, `logcdf`, `icdf` and `moment` methods is expected to be "carried" via the `RandomVariable` inputs. You may pass numerical arguments that are not strictly needed for the `rng_fn` method but are used in the those methods. Just keep in mind whether this affects the correct shape inference behavior of the `RandomVariable`.
+1. The `logcdf`, and `icdf` methods is not a requirement, but it's a nice plus!
+1. Currently, only one moment is supported in the `moment` method, and probably the "higher-order" one is the most useful (that is `mean` > `median` > `mode`)... You might need to truncate the moment if you are dealing with a discrete distribution. `moment` should return a valid point for the random variable (i.e., it always has non-zero probability when evaluated at that point)
 1. When creating the `moment` method, be careful with `size != None` and broadcast properly also based on parameters that are not necessarily used to calculate the moment. For example, the `sigma` in `pm.Normal.dist(mu=0, sigma=np.arange(1, 6))` is irrelevant for the moment, but may nevertheless inform about the shape. In this case, the `moment` should return `[mu, mu, mu, mu, mu]`.
 
 For a quick check that things are working you can try the following:
@@ -215,7 +217,7 @@ from pymc.distributions.distribution import moment
 blah = pm.blah.dist(mu=0, sigma=1)
 
 # Test that the returned blah_op is still working fine
-blah.eval()
+pm.draw(blah, random_seed=1)
 # array(-1.01397228)
 
 # Test the moment method
@@ -306,10 +308,10 @@ Finally, when your `rng_fn` is doing something more than just calling a NumPy or
 You can find an example in {class}`~tests.distributions.test_continuous.TestWeibull`, whose `rng_fn` returns `beta * np.random.weibull(alpha, size=size)`.
 
 
-## 4. Adding tests for the `logp` / `logcdf` methods
+## 4. Adding tests for the `logp` / `logcdf` / `icdf` methods
 
-Tests for the `logp` and `logcdf` mostly make use of the helpers `check_logp`, `check_logcdf`, and
-`check_selfconsistency_discrete_logcdf` implemented in `~tests.distributions.util`
+Tests for the `logp`, `logcdf` and `icdf` mostly make use of the helpers `check_logp`, `check_logcdf`, `check_icdf` and
+`check_selfconsistency_discrete_logcdf` implemented in `~testing`
 
 ```python
 

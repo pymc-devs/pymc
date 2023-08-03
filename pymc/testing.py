@@ -775,24 +775,7 @@ def discrete_random_tester(
         assert p > alpha, str(point)
 
 
-class SeededTest:
-    random_seed = 20160911
-    random_state = None
-
-    @classmethod
-    def setup_class(cls):
-        nr.seed(cls.random_seed)
-
-    def setup_method(self):
-        nr.seed(self.random_seed)
-
-    def get_random_state(self, reset=False):
-        if self.random_state is None or reset:
-            self.random_state = nr.RandomState(self.random_seed)
-        return self.random_state
-
-
-class BaseTestDistributionRandom(SeededTest):
+class BaseTestDistributionRandom:
     """
     Base class for tests that new RandomVariables are correctly
     implemented, and that the mapping of parameters between the PyMC
@@ -863,8 +846,9 @@ class BaseTestDistributionRandom(SeededTest):
     sizes_to_check: Optional[List] = None
     sizes_expected: Optional[List] = None
     repeated_params_shape = 5
+    random_state = None
 
-    def test_distribution(self):
+    def test_distribution(self, seeded_test):
         self.validate_tests_list()
         if self.pymc_dist == pm.Wishart:
             with pytest.warns(UserWarning, match="can currently not be used for MCMC sampling"):
@@ -885,6 +869,11 @@ class BaseTestDistributionRandom(SeededTest):
                     getattr(self, check_name)()
             else:
                 getattr(self, check_name)()
+
+    def get_random_state(self, reset=False):
+        if self.random_state is None or reset:
+            self.random_state = nr.RandomState(20160911)
+        return self.random_state
 
     def _instantiate_pymc_rv(self, dist_params=None):
         params = dist_params if dist_params else self.pymc_dist_params

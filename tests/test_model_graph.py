@@ -25,7 +25,6 @@ import pymc as pm
 
 from pymc.exceptions import ImputationWarning
 from pymc.model_graph import ModelGraph, model_to_graphviz, model_to_networkx
-from pymc.testing import SeededTest
 
 
 def school_model():
@@ -44,7 +43,7 @@ def school_model():
     return schools
 
 
-class BaseModelNXTest(SeededTest):
+class BaseModelNXTest:
     network_model = {
         "graph_attr_dict_factory": dict,
         "node_dict_factory": dict,
@@ -263,7 +262,7 @@ def model_non_random_variable_rvs():
     return model, compute_graph, plates
 
 
-class BaseModelGraphTest(SeededTest):
+class BaseModelGraphTest:
     model_func = None
 
     @classmethod

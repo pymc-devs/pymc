@@ -19,6 +19,7 @@ import pytensor
 from arviz import InferenceData
 from pytensor import tensor as pt
 from pytensor.graph.basic import Variable
+from pytensor.graph.replace import graph_replace
 from pytensor.tensor.var import TensorVariable
 
 import pymc as pm
@@ -390,7 +391,7 @@ class Empirical(SingleGroupApproximation):
         node = self.to_flat_input(node)
 
         def sample(post, *_):
-            return pytensor.clone_replace(node, {self.input: post})
+            return graph_replace(node, {self.input: post}, strict=False)
 
         nodes, _ = pytensor.scan(
             sample, self.histogram, non_sequences=_known_scan_ignored_inputs(makeiter(node))
