@@ -54,6 +54,7 @@ from pymc.logprob.abstract import MeasurableElemwise, _logcdf, _logprob, _logpro
 from pymc.logprob.binary import MeasurableBitwise
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import CheckParameterValue, check_potential_measurability
+from pymc.pytensorf import replace_rvs_by_values
 
 
 class MeasurableClip(MeasurableElemwise):
@@ -247,6 +248,8 @@ class MeasurableSwitchEncoding(MeasurableElemwise):
     """A placeholder used to specify the log-likelihood for a encoded RV sub-graph."""
 
     valid_scalar_types = (Switch,)
+    # number of measurable branches to facilitate correct logprob calculation
+    measurable_branches = 0
 
 
 measurable_switch_encoding = MeasurableSwitchEncoding(scalar_switch)
@@ -292,6 +295,8 @@ def find_measurable_switch_encoding(
         measurable_comp_idx = measurable_comp_list[0]
         measurable_component = components[measurable_comp_idx]
 
+        measurable_switch_encoding.measurable_branches = 1
+
         # broadcasting of the measurable component is not supported
         if (
             (measurable_component.type.broadcastable != node.outputs[0].broadcastable)
@@ -323,19 +328,31 @@ def switch_encoding_logprob(op, values, *inputs, **kwargs):
 
     switch_condn, *components = inputs
 
-    # Right now, this only works for switch with both encoding branches.
-    logprob = pt.switch(
-        pt.eq(value, components[0]),
-        _logprob_helper(switch_condn, pt.as_tensor(np.array(True)), **kwargs),
-        pt.switch(
-            pt.eq(value, components[1]),
-            _logprob_helper(switch_condn, pt.as_tensor(np.array(False))),
-            -np.inf,
-        ),
-    )
+    if op.measurable_branches == 0:
+        logprob = pt.switch(
+            pt.eq(value, components[0]),
+            _logprob_helper(switch_condn, pt.as_tensor(np.array(True)), **kwargs),
+            pt.switch(
+                pt.eq(value, components[1]),
+                _logprob_helper(switch_condn, pt.as_tensor(np.array(False))),
+                -np.inf,
+            ),
+        )
+    else:
+        base_var = components[1]  # there needs to be a better way to obtain the base variable.
 
-    # TODO: Calculate logprob for switch with one measurable component If RV is discrete,
-    #  give preference over encoding.
+        logp_first_branch = _logprob_helper(switch_condn, pt.as_tensor(np.array(True)), **kwargs)
+
+        (switch_condn,) = replace_rvs_by_values([switch_condn], rvs_to_values={base_var: value})
+        logprob = pt.switch(
+            pt.eq(value, components[0]),
+            logp_first_branch,
+            pt.switch(
+                pt.invert(switch_condn),
+                _logprob_helper(base_var, value, **kwargs),
+                -np.inf,
+            ),
+        )
 
     return logprob
 
