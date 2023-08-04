@@ -33,7 +33,7 @@ from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
 from pytensor.tensor import gammaln
 from pytensor.tensor.extra_ops import broadcast_shape
-from pytensor.tensor.math import tanh
+from pytensor.tensor.math import betaincinv, gammaincinv, tanh
 from pytensor.tensor.random.basic import (
     BetaRV,
     _gamma,
@@ -1227,6 +1227,16 @@ class Beta(UnitContinuous):
             msg="alpha > 0, beta > 0",
         )
 
+    def icdf(value, alpha, beta):
+        res = betaincinv(alpha, beta, value)
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
+
 
 class KumaraswamyRV(RandomVariable):
     name = "kumaraswamy"
@@ -1872,6 +1882,21 @@ class StudentT(Continuous):
             msg="nu > 0, sigma > 0",
         )
 
+    def icdf(value, nu, mu, sigma):
+        res = pt.switch(
+            pt.lt(value, 0.5),
+            -pt.sqrt(nu) * pt.sqrt((1.0 / betaincinv(nu * 0.5, 0.5, 2.0 * value)) - 1.0),
+            pt.sqrt(nu) * pt.sqrt((1.0 / betaincinv(nu * 0.5, 0.5, 2.0 * (1 - value))) - 1.0),
+        )
+        res = mu + res * sigma
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            nu > 0,
+            sigma > 0,
+            msg="nu > 0, sigma > 0",
+        )
+
 
 class Pareto(BoundedContinuous):
     r"""
@@ -2271,6 +2296,16 @@ class Gamma(PositiveContinuous):
             pt.log(pt.gammainc(alpha, beta * value)),
         )
         return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
+
+    def icdf(value, alpha, scale):
+        res = scale * gammaincinv(alpha, value)
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            alpha > 0,
+            scale > 0,
+            msg="alpha > 0, beta > 0",
+        )
 
 
 class InverseGamma(PositiveContinuous):
