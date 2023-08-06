@@ -66,6 +66,13 @@ class MeasurableMax(Max):
 MeasurableVariable.register(MeasurableMax)
 
 
+class MeasurableMaxDiscrete(Max):
+    """A placeholder used to specify a log-likelihood for a cmax sub-graph."""
+
+
+MeasurableVariable.register(MeasurableMaxDiscrete)
+
+
 @node_rewriter([Max])
 def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[TensorVariable]]:
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
@@ -87,10 +94,6 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Tens
     if not (isinstance(base_var.owner.op, RandomVariable) and base_var.owner.op.ndim_supp == 0):
         return None
 
-    # TODO: We are currently only supporting continuous rvs
-    if isinstance(base_var.owner.op, RandomVariable) and base_var.owner.op.dtype.startswith("int"):
-        return None
-
     # univariate i.i.d. test which also rules out other distributions
     for params in base_var.owner.inputs[3:]:
         if params.type.ndim != 0:
@@ -102,11 +105,20 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Tens
     if axis != base_var_dims:
         return None
 
-    measurable_max = MeasurableMax(list(axis))
-    max_rv_node = measurable_max.make_node(base_var)
-    max_rv = max_rv_node.outputs
+    # logprob for discrete distribution
+    if isinstance(base_var.owner.op, RandomVariable) and base_var.owner.op.dtype.startswith("int"):
+        measurable_max = MeasurableMaxDiscrete(list(axis))
+        max_rv_node = measurable_max.make_node(base_var)
+        max_rv = max_rv_node.outputs
 
-    return max_rv
+        return max_rv
+    # logprob for continuous distribution
+    else:
+        measurable_max = MeasurableMax(list(axis))
+        max_rv_node = measurable_max.make_node(base_var)
+        max_rv = max_rv_node.outputs
+
+        return max_rv
 
 
 measurable_ir_rewrites_db.register(
@@ -127,6 +139,26 @@ def max_logprob(op, values, base_rv, **kwargs):
 
     [n] = constant_fold([base_rv.size])
     logprob = (n - 1) * logcdf + logprob + pt.math.log(n)
+
+    return logprob
+
+
+@_logprob.register(MeasurableMaxDiscrete)
+def max_logprob_discrete(op, values, base_rv, **kwargs):
+    r"""Compute the log-likelihood graph for the `Max` operation.
+
+    The formula that we use here is :
+        \ln(f_{(n)}(x)) = \ln(F(x)^n - F(x-1)^n)
+    where f(x) represents the p.d.f and F(x) represents the c.d.f of the distrivution respectively.
+    """
+    (value,) = values
+    logprob = _logprob_helper(base_rv, value)
+    logcdf = _logcdf_helper(base_rv, value)
+    logcdf_prev = _logcdf_helper(base_rv, value - 1)
+
+    n = base_rv.size
+
+    logprob = pt.log((pt.exp(logcdf)) ** n - (pt.exp(logcdf_prev)) ** n)
 
     return logprob
 

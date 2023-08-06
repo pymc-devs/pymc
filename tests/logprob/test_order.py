@@ -230,3 +230,12 @@ def test_min_non_mul_elemwise_fails():
     x_min_value = pt.vector("x_min_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_min_logprob = logp(x_min, x_min_value)
+
+def test_max_discrete():
+    x = pm.DiscreteUniform.dist(0, 1, size=(3,))
+    x.name = "x"
+    x_max = pt.max(x, axis=-1)
+    x_max_value = pt.scalar("x_max_value")
+    x_max_logprob = logp(x_max, x_max_value)
+
+    x_max_logprob.eval({x_max_value: 0.85})
