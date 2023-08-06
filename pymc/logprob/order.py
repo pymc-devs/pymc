@@ -41,6 +41,8 @@ import pytensor.tensor as pt
 from pytensor.graph.basic import Node
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.scalar.basic import Mul
+from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.math import Max
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorVariable
@@ -122,7 +124,94 @@ def max_logprob(op, values, base_rv, **kwargs):
     logcdf = _logcdf_helper(base_rv, value)
 
     [n] = constant_fold([base_rv.size])
-
     logprob = (n - 1) * logcdf + logprob + pt.math.log(n)
+
+    return logprob
+
+
+class MeasurableMin(Max):
+    """A placeholder used to specify a log-likelihood for a min sub-graph."""
+
+
+MeasurableVariable.register(MeasurableMin)
+
+
+@node_rewriter(tracks=[Max])
+def find_measurable_min(fgraph: FunctionGraph, node: Node) -> Optional[List[TensorVariable]]:
+    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
+
+    if rv_map_feature is None:
+        return None  # pragma: no cover
+
+    if isinstance(node.op, MeasurableMin):
+        return None  # pragma: no cover
+
+    base_var = node.inputs[0]
+
+    if base_var.owner is None:
+        return None
+
+    if not rv_map_feature.request_measurable(node.inputs):
+        return None
+
+    # Min is the Max of the negation of the same distribution. Hence, op must be Elemiwise
+    if not isinstance(base_var.owner.op, Elemwise):
+        return None
+
+    # negation is -1*(rv). Hence the scalar_op must be Mul
+    if not isinstance(base_var.owner.op.scalar_op, Mul):
+        return None
+
+    base_rv = base_var.owner.inputs[0]
+
+    # Non-univariate distributions and non-RVs must be rejected
+    if not (isinstance(base_rv.owner.op, RandomVariable) and base_rv.owner.op.ndim_supp == 0):
+        return None
+
+    # TODO: We are currently only supporting continuous rvs
+    if isinstance(base_rv.owner.op, RandomVariable) and base_rv.owner.op.dtype.startswith("int"):
+        return None
+
+    # univariate i.i.d. test which also rules out other distributions
+    for params in base_rv.owner.inputs[3:]:
+        if params.type.ndim != 0:
+            return None
+
+    # Check whether axis is supported or not
+    axis = set(node.op.axis)
+    base_var_dims = set(range(base_var.ndim))
+    if axis != base_var_dims:
+        return None
+
+    measurable_min = MeasurableMin(list(axis))
+    min_rv_node = measurable_min.make_node(base_var)
+    min_rv = min_rv_node.outputs
+
+    return min_rv
+
+
+measurable_ir_rewrites_db.register(
+    "find_measurable_min",
+    find_measurable_min,
+    "basic",
+    "min",
+)
+
+
+@_logprob.register(MeasurableMin)
+def min_logprob(op, values, base_var, **kwargs):
+    r"""Compute the log-likelihood graph for the `Max` operation.
+    The formula that we use here is :
+        \ln(f_{(n)}(x)) = \ln(n) + (n-1) \ln(1 - F(x)) + \ln(f(x))
+    where f(x) represents the p.d.f and F(x) represents the c.d.f of the distribution respectively.
+    """
+    (value,) = values
+    base_rv = base_var.owner.inputs[0]
+
+    logprob = _logprob_helper(base_rv, value)
+    logcdf = _logcdf_helper(base_rv, value)
+
+    [n] = constant_fold([base_rv.size])
+    logprob = (n - 1) * pt.math.log(1 - pt.math.exp(logcdf)) + logprob + pt.math.log(n)
 
     return logprob
