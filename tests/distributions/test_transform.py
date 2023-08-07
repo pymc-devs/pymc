@@ -97,6 +97,9 @@ def check_jacobian_det(
     rv_inputs = rv_var.owner.inputs if rv_var.owner else []
 
     x = transform.backward(y, *rv_inputs)
+    # Assume non-injective transforms are symmetric around the origin
+    if isinstance(x, tuple):
+        x = x[-1]
     if make_comparable:
         x = make_comparable(x)
 
