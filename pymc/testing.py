@@ -848,7 +848,7 @@ class BaseTestDistributionRandom:
     repeated_params_shape = 5
     random_state = None
 
-    def test_distribution(self, seeded_test):
+    def test_distribution(self):
         self.validate_tests_list()
         if self.pymc_dist == pm.Wishart:
             with pytest.warns(UserWarning, match="can currently not be used for MCMC sampling"):
