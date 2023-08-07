@@ -1972,7 +1972,7 @@ class TestKroneckerNormal(BaseTestDistributionRandom):
     def kronecker_rng_fn(self, size, mu, covs=None, sigma=None, rng=None):
         cov = pm.math.kronecker(covs[0], covs[1]).eval()
         cov += sigma**2 * np.identity(cov.shape[0])
-        return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size)
+        return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size, random_state=rng)
 
     pymc_dist = pm.KroneckerNormal
 
