@@ -440,6 +440,10 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
     return pt.switch(pt.isnan(jacobian), -np.inf, input_logprob + jacobian)
 
 
+MONOTONICALLY_INCREASING_OPS = (Exp, Log, Add, Sinh, Tanh, ArcSinh, ArcCosh, ArcTanh, Erf)
+MONOTONICALLY_DECREASING_OPS = (Erfc, Erfcx)
+
+
 @_logcdf.register(MeasurableTransform)
 def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwargs):
     """Compute the log-CDF graph for a `MeasurabeTransform`."""
@@ -453,12 +457,35 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
     if isinstance(backward_value, tuple):
         raise NotImplementedError
 
-    input_logcdf = _logcdf_helper(measurable_input, backward_value)
+    logcdf = _logcdf_helper(measurable_input, backward_value)
+    logccdf = pt.log1mexp(logcdf)
+
+    if isinstance(op.scalar_op, MONOTONICALLY_INCREASING_OPS):
+        pass
+    elif isinstance(op.scalar_op, MONOTONICALLY_DECREASING_OPS):
+        logcdf = logccdf
+    # mul is monotonically increasing for scale > 0, and monotonically decreasing otherwise
+    elif isinstance(op.scalar_op, Mul):
+        [scale] = other_inputs
+        logcdf = pt.switch(pt.ge(scale, 0), logcdf, logccdf)
+    # pow is increasing if pow > 0, and decreasing otherwise (even powers are rejected above)!
+    # Care must be taken to handle negative values (https://math.stackexchange.com/a/442362/783483)
+    elif isinstance(op.scalar_op, Pow):
+        if op.transform_elemwise.power < 0:
+            logcdf_zero = _logcdf_helper(measurable_input, 0)
+            logcdf = pt.switch(
+                pt.lt(backward_value, 0),
+                pt.log(pt.exp(logcdf_zero) - pt.exp(logcdf)),
+                pt.logaddexp(logccdf, logcdf_zero),
+            )
+    else:
+        # We don't know if this Op is monotonically increasing/decreasing
+        raise NotImplementedError
 
     # The jacobian is used to ensure a value in the supported domain was provided
     jacobian = op.transform_elemwise.log_jac_det(value, *other_inputs)
 
-    return pt.switch(pt.isnan(jacobian), -np.inf, input_logcdf)
+    return pt.switch(pt.isnan(jacobian), -np.inf, logcdf)
 
 
 @_icdf.register(MeasurableTransform)
@@ -466,6 +493,19 @@ def measurable_transform_icdf(op: MeasurableTransform, value, *inputs, **kwargs)
     """Compute the inverse CDF graph for a `MeasurabeTransform`."""
     other_inputs = list(inputs)
     measurable_input = other_inputs.pop(op.measurable_input_idx)
+
+    if isinstance(op.scalar_op, MONOTONICALLY_INCREASING_OPS):
+        pass
+    elif isinstance(op.scalar_op, MONOTONICALLY_DECREASING_OPS):
+        value = 1 - value
+    elif isinstance(op.scalar_op, Mul):
+        [scale] = other_inputs
+        value = pt.switch(pt.lt(scale, 0), 1 - value, value)
+    elif isinstance(op.scalar_op, Pow):
+        if op.transform_elemwise.power < 0:
+            raise NotImplementedError
+    else:
+        raise NotImplementedError
 
     input_icdf = _icdf_helper(measurable_input, value)
     icdf = op.transform_elemwise.forward(input_icdf, *other_inputs)
@@ -871,7 +911,7 @@ class PowerTransform(RVTransform):
         super().__init__()
 
     def forward(self, value, *inputs):
-        pt.power(value, self.power)
+        return pt.power(value, self.power)
 
     def backward(self, value, *inputs):
         inv_power = 1 / self.power

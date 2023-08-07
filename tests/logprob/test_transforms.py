@@ -47,6 +47,7 @@ from pytensor.graph.basic import equal_computations
 from pytensor.graph.fg import FunctionGraph
 from pytensor.scan import scan
 
+from pymc.distributions.continuous import Cauchy
 from pymc.distributions.transforms import _default_transform, log, logodds
 from pymc.logprob.abstract import MeasurableVariable, _logprob
 from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
@@ -764,13 +765,23 @@ def test_exp_transform_rv():
     y_rv.name = "y"
 
     y_vv = y_rv.clone()
-    logprob = logp(y_rv, y_vv)
-    logp_fn = pytensor.function([y_vv], logprob)
+    logp_fn = pytensor.function([y_vv], logp(y_rv, y_vv))
+    logcdf_fn = pytensor.function([y_vv], logcdf(y_rv, y_vv))
+    icdf_fn = pytensor.function([y_vv], icdf(y_rv, y_vv))
 
     y_val = [-2.0, 0.1, 0.3]
+    q_val = [0.2, 0.5, 0.9]
     np.testing.assert_allclose(
         logp_fn(y_val),
         sp.stats.lognorm(s=1).logpdf(y_val),
+    )
+    np.testing.assert_almost_equal(
+        logcdf_fn(y_val),
+        sp.stats.lognorm(s=1).logcdf(y_val),
+    )
+    np.testing.assert_almost_equal(
+        icdf_fn(q_val),
+        sp.stats.lognorm(s=1).ppf(q_val),
     )
 
 
@@ -811,13 +822,23 @@ class TestLocScaleRVTransform:
         logprob = logp(y_rv, y_vv)
         assert_no_rvs(logprob)
         logp_fn = pytensor.function([loc, y_vv], logprob)
+        logcdf_fn = pytensor.function([loc, y_vv], logcdf(y_rv, y_vv))
+        icdf_fn = pytensor.function([loc, y_vv], icdf(y_rv, y_vv))
 
         loc_test_val = np.full(rv_size, 4.0)
         y_test_val = np.full(rv_size, 1.0)
-
+        q_test_val = np.full(rv_size, 0.7)
         np.testing.assert_allclose(
             logp_fn(loc_test_val, y_test_val),
             sp.stats.norm(loc_test_val, 1).logpdf(y_test_val),
+        )
+        np.testing.assert_allclose(
+            logcdf_fn(loc_test_val, y_test_val),
+            sp.stats.norm(loc_test_val, 1).logcdf(y_test_val),
+        )
+        np.testing.assert_allclose(
+            icdf_fn(loc_test_val, q_test_val),
+            sp.stats.norm(loc_test_val, 1).ppf(q_test_val),
         )
 
     @pytest.mark.parametrize(
@@ -840,13 +861,23 @@ class TestLocScaleRVTransform:
         logprob = logp(y_rv, y_vv)
         assert_no_rvs(logprob)
         logp_fn = pytensor.function([scale, y_vv], logprob)
+        logcdf_fn = pytensor.function([scale, y_vv], logcdf(y_rv, y_vv))
+        icdf_fn = pytensor.function([scale, y_vv], icdf(y_rv, y_vv))
 
         scale_test_val = np.full(rv_size, 4.0)
         y_test_val = np.full(rv_size, 1.0)
-
+        q_test_val = np.full(rv_size, 0.3)
         np.testing.assert_allclose(
             logp_fn(scale_test_val, y_test_val),
             sp.stats.norm(0, scale_test_val).logpdf(y_test_val),
+        )
+        np.testing.assert_allclose(
+            logcdf_fn(scale_test_val, y_test_val),
+            sp.stats.norm(0, scale_test_val).logcdf(y_test_val),
+        )
+        np.testing.assert_allclose(
+            icdf_fn(scale_test_val, q_test_val),
+            sp.stats.norm(0, scale_test_val).ppf(q_test_val),
         )
 
     def test_negated_rv_transform(self):
@@ -854,9 +885,13 @@ class TestLocScaleRVTransform:
         x_rv.name = "x"
 
         x_vv = x_rv.clone()
-        x_logp_fn = pytensor.function([x_vv], pt.sum(logp(x_rv, x_vv)))
+        x_logp_fn = pytensor.function([x_vv], logp(x_rv, x_vv))
+        x_logcdf_fn = pytensor.function([x_vv], logcdf(x_rv, x_vv))
+        x_icdf_fn = pytensor.function([x_vv], icdf(x_rv, x_vv))
 
         np.testing.assert_allclose(x_logp_fn(-1.5), sp.stats.halfnorm.logpdf(1.5))
+        np.testing.assert_allclose(x_logcdf_fn(-1.5), sp.stats.halfnorm.logsf(1.5))
+        np.testing.assert_allclose(x_icdf_fn(0.3), -sp.stats.halfnorm.ppf(1 - 0.3))
 
     def test_subtracted_rv_transform(self):
         # Choose base RV that is asymmetric around zero
@@ -899,25 +934,55 @@ class TestPowerRVTransform:
 
         x_vv = x_rv.clone()
         x_logp_fn = pytensor.function([x_vv], logp(x_rv, x_vv))
+        x_logcdf_fn = pytensor.function([x_vv], logcdf(x_rv, x_vv))
+
+        with pytest.raises(NotImplementedError):
+            icdf(x_rv, x_vv)
 
         x_test_val = np.r_[-0.5, 1.5]
         np.testing.assert_allclose(
             x_logp_fn(x_test_val),
             sp.stats.invgamma(shape, scale=scale * numerator).logpdf(x_test_val),
         )
+        np.testing.assert_allclose(
+            x_logcdf_fn(x_test_val),
+            sp.stats.invgamma(shape, scale=scale * numerator).logcdf(x_test_val),
+        )
+
+    def test_reciprocal_real_rv_transform(self):
+        # 1 / Cauchy(mu, sigma) = Cauchy(mu / (mu^2 + sigma ^2), sigma / (mu ^ 2, sigma ^ 2))
+        test_value = [-0.5, 0.9]
+        test_rv = Cauchy.dist(1, 2, size=(2,)) ** (-1)
+
+        np.testing.assert_allclose(
+            logp(test_rv, test_value).eval(),
+            sp.stats.cauchy(1 / 5, 2 / 5).logpdf(test_value),
+        )
+        np.testing.assert_allclose(
+            logcdf(test_rv, test_value).eval(),
+            sp.stats.cauchy(1 / 5, 2 / 5).logcdf(test_value),
+        )
+        with pytest.raises(NotImplementedError):
+            icdf(test_rv, test_value)
 
     def test_sqr_transform(self):
-        # The square of a unit normal is a chi-square with 1 df
-        x_rv = pt.random.normal(0, 1, size=(4,)) ** 2
+        # The square of a normal with unit variance is a noncentral chi-square with 1 df and nc = mean ** 2
+        x_rv = pt.random.normal(0.5, 1, size=(4,)) ** 2
         x_rv.name = "x"
 
         x_vv = x_rv.clone()
         x_logp_fn = pytensor.function([x_vv], logp(x_rv, x_vv))
 
+        with pytest.raises(NotImplementedError):
+            logcdf(x_rv, x_vv)
+
+        with pytest.raises(NotImplementedError):
+            icdf(x_rv, x_vv)
+
         x_test_val = np.r_[-0.5, 0.5, 1, 2.5]
         np.testing.assert_allclose(
             x_logp_fn(x_test_val),
-            sp.stats.chi2(df=1).logpdf(x_test_val),
+            sp.stats.ncx2(df=1, nc=0.5**2).logpdf(x_test_val),
         )
 
     def test_sqrt_transform(self):
@@ -927,11 +992,28 @@ class TestPowerRVTransform:
 
         x_vv = x_rv.clone()
         x_logp_fn = pytensor.function([x_vv], logp(x_rv, x_vv))
+        x_logcdf_fn = pytensor.function([x_vv], logcdf(x_rv, x_vv))
 
         x_test_val = np.r_[-2.5, 0.5, 1, 2.5]
         np.testing.assert_allclose(
             x_logp_fn(x_test_val),
             sp.stats.chi(df=3).logpdf(x_test_val),
+        )
+        np.testing.assert_allclose(
+            x_logcdf_fn(x_test_val),
+            sp.stats.chi(df=3).logcdf(x_test_val),
+        )
+
+        # ICDF is not implemented for chisquare, so we have to test with another identity
+        # sqrt(exponential(lam)) = rayleigh(1 / sqrt(2 * lam))
+        lam = 2.5
+        y_rv = pt.sqrt(pt.random.exponential(scale=1 / lam))
+        y_vv = x_rv.clone()
+        y_icdf_fn = pytensor.function([y_vv], icdf(y_rv, y_vv))
+        q_test_val = np.r_[0.2, 0.5, 0.7, 0.9]
+        np.testing.assert_allclose(
+            y_icdf_fn(q_test_val),
+            (1 / np.sqrt(2 * lam)) * np.sqrt(-2 * np.log(1 - q_test_val)),
         )
 
     @pytest.mark.parametrize("power", (-3, -1, 1, 5, 7))
@@ -947,7 +1029,7 @@ class TestPowerRVTransform:
         assert np.isfinite(x_logp_fn(-1))
 
     @pytest.mark.parametrize("power", (-2, 2, 4, 6, 8))
-    def test_negative_value_even_power_transform(self, power):
+    def test_negative_value_even_power_transform_logp(self, power):
         # check that negative values and odd powers evaluate to -inf logp
         x_rv = pt.random.normal() ** power
         x_rv.name = "x"
@@ -959,7 +1041,7 @@ class TestPowerRVTransform:
         assert np.isneginf(x_logp_fn(-1))
 
     @pytest.mark.parametrize("power", (-1 / 3, -1 / 2, 1 / 2, 1 / 3))
-    def test_negative_value_frac_power_transform(self, power):
+    def test_negative_value_frac_power_transform_logp(self, power):
         # check that negative values and fractional powers evaluate to -inf logp
         x_rv = pt.random.normal() ** power
         x_rv.name = "x"
@@ -979,8 +1061,12 @@ def test_absolute_rv_transform(test_val):
     x_vv = x_rv.clone()
     y_vv = y_rv.clone()
     x_logp_fn = pytensor.function([x_vv], logp(x_rv, x_vv))
-    y_logp_fn = pytensor.function([y_vv], logp(y_rv, y_vv))
+    with pytest.raises(NotImplementedError):
+        logcdf(x_rv, x_vv)
+    with pytest.raises(NotImplementedError):
+        icdf(x_rv, x_vv)
 
+    y_logp_fn = pytensor.function([y_vv], logp(y_rv, y_vv))
     np.testing.assert_allclose(x_logp_fn(test_val), y_logp_fn(test_val))
 
 
@@ -1022,6 +1108,10 @@ def test_cosh_rv_transform():
 
     vv = rv.clone()
     rv_logp = logp(rv, vv)
+    with pytest.raises(NotImplementedError):
+        logcdf(rv, vv)
+    with pytest.raises(NotImplementedError):
+        icdf(rv, vv)
 
     transform = CoshTransform()
     [back_neg, back_pos] = transform.backward(vv)
@@ -1083,37 +1173,3 @@ def test_invalid_broadcasted_transform_rv_fails():
     # This logp derivation should fail or count only once the values that are broadcasted
     logprob = logp(y_rv, y_vv)
     assert logprob.eval({y_vv: [0, 0, 0, 0], loc: [0, 0, 0, 0]}).shape == ()
-
-
-def test_logcdf_measurable_transform():
-    x = pt.exp(pt.random.uniform(0, 1))
-    value = x.type()
-    logcdf_fn = pytensor.function([value], logcdf(x, value))
-
-    assert logcdf_fn(0) == -np.inf
-    np.testing.assert_allclose(logcdf_fn(np.exp(0.5)), np.log(0.5))
-    np.testing.assert_allclose(logcdf_fn(5), 0)
-
-
-def test_logcdf_measurable_non_injective_fails():
-    x = pt.abs(pt.random.uniform(0, 1))
-    value = x.type()
-    with pytest.raises(NotImplementedError):
-        logcdf(x, value)
-
-
-def test_icdf_measurable_transform():
-    x = pt.exp(pt.random.uniform(0, 1))
-    value = x.type()
-    icdf_fn = pytensor.function([value], icdf(x, value))
-
-    np.testing.assert_allclose(icdf_fn(1e-16), 1)
-    np.testing.assert_allclose(icdf_fn(0.5), np.exp(0.5))
-    np.testing.assert_allclose(icdf_fn(1 - 1e-16), np.e)
-
-
-def test_icdf_measurable_non_injective_fails():
-    x = pt.abs(pt.random.uniform(0, 1))
-    value = x.type()
-    with pytest.raises(NotImplementedError):
-        icdf(x, value)
