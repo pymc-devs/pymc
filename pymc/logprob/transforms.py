@@ -679,7 +679,15 @@ class CoshTransform(RVTransform):
         return pt.cosh(value)
 
     def backward(self, value, *inputs):
-        return pt.arccosh(value)
+        back_value = pt.arccosh(value)
+        return (-back_value, back_value)
+
+    def log_jac_det(self, value, *inputs):
+        return pt.switch(
+            value < 1,
+            np.nan,
+            -pt.log(pt.sqrt(value**2 - 1)),
+        )
 
 
 class TanhTransform(RVTransform):
