@@ -287,7 +287,7 @@ def test_switch_encoding_both_branches():
     ],
 )
 def test_switch_encoding_one_branch_measurable(measurable_idx, test_values, exp_logp):
-    x_rv = pt.random.normal(0.5, 1)  # should not be defined again ideally
+    x_rv = pt.random.normal(0.5, 1)
     branches = (1, x_rv) if measurable_idx == 1 else (x_rv, 1)
 
     y_rv = pt.switch(x_rv < 1, *branches)
