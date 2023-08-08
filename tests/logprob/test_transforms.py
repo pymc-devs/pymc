@@ -70,7 +70,6 @@ from pymc.logprob.transforms import (
     TanhTransform,
     TransformValuesMapping,
     TransformValuesRewrite,
-    transformed_variable,
 )
 from pymc.testing import assert_no_rvs
 
@@ -299,7 +298,7 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
             exp_log_jac_val = np.linalg.slogdet(jacobian_val)[-1]
 
         log_jac_val = log_jac_fn(a_trans_value)
-        np.testing.assert_almost_equal(exp_log_jac_val, log_jac_val, decimal=4)
+        np.testing.assert_allclose(exp_log_jac_val, log_jac_val, rtol=1e-4, atol=1e-10)
 
         exp_logprob_val = a_dist.logpdf(a_val).sum()
         exp_logprob_val += exp_log_jac_val.sum()
@@ -307,7 +306,7 @@ def test_transformed_logprob(at_dist, dist_params, sp_dist, size):
 
         logprob_val = logp_vals_fn(a_trans_value, b_val)
 
-        np.testing.assert_almost_equal(exp_logprob_val, logprob_val, decimal=4)
+        np.testing.assert_allclose(exp_logprob_val, logprob_val, rtol=1e-4, atol=1e-10)
 
 
 @pytest.mark.parametrize("use_jacobian", [True, False])
@@ -322,7 +321,7 @@ def test_simple_transformed_logprob_nojac(use_jacobian):
     )
     tr_logp_combined = pt.sum([pt.sum(factor) for factor in tr_logp.values()])
 
-    assert np.isclose(
+    np.testing.assert_allclose(
         tr_logp_combined.eval({x_vv: np.log(2.5)}),
         sp.stats.halfnorm(0, 3).logpdf(2.5) + (np.log(2.5) if use_jacobian else 0.0),
     )
@@ -443,7 +442,7 @@ def test_nondefault_transforms():
     exp_logp += sp.stats.norm(loc_val, scale_val).logpdf(x_val)
     exp_logp += x_val_tr  # log log_jac_det
 
-    assert np.isclose(
+    np.testing.assert_allclose(
         logp_combined.eval({loc: loc_val, scale: scale_val_tr, x: x_val_tr}),
         exp_logp,
     )
@@ -466,7 +465,7 @@ def test_default_transform_multiout():
     )
     logp_combined = pt.sum([pt.sum(factor) for factor in logp.values()])
 
-    assert np.isclose(
+    np.testing.assert_allclose(
         logp_combined.eval({x: 1}),
         sp.stats.norm(0, 1).logpdf(1),
     )
@@ -526,7 +525,7 @@ def test_nondefault_transform_multiout(transform_x, transform_y, multiout_measur
     else:
         expected_logp += np.log(y_vv_test) + 2 - np.log(y_vv_test)
 
-    np.testing.assert_almost_equal(
+    np.testing.assert_allclose(
         logp_combined.eval({x_vv: x_vv_test, y_vv: y_vv_test}), expected_logp
     )
 
@@ -643,19 +642,19 @@ def test_chained_transform():
     x_val = x.eval()
 
     x_val_forward = ch.forward(x_val, *x.owner.inputs).eval()
-    assert np.allclose(
+    np.testing.assert_allclose(
         x_val_forward,
         np.exp(x_val * scale) + loc,
     )
 
     x_val_backward = ch.backward(x_val_forward, *x.owner.inputs, scale, loc).eval()
-    assert np.allclose(
+    np.testing.assert_allclose(
         x_val_backward,
         x_val,
     )
 
     log_jac_det = ch.log_jac_det(x_val_forward, *x.owner.inputs, scale, loc)
-    assert np.isclose(
+    np.testing.assert_allclose(
         pt.sum(log_jac_det).eval(),
         np.sum(-np.log(scale) - np.log(x_val_forward - loc)),
     )
@@ -767,7 +766,7 @@ def test_transformed_rv_and_value():
 
     y_test_val = -5
 
-    assert np.isclose(
+    np.testing.assert_allclose(
         logp_fn(y_test_val),
         sp.stats.halfnorm(0, 1).logpdf(np.exp(y_test_val)) + y_test_val,
     )
@@ -830,7 +829,7 @@ def test_reciprocal_rv_transform(numerator):
     x_logp_fn = pytensor.function([x_vv], logp(x_rv, x_vv))
 
     x_test_val = np.r_[-0.5, 1.5]
-    assert np.allclose(
+    np.testing.assert_allclose(
         x_logp_fn(x_test_val),
         sp.stats.invgamma(shape, scale=scale * numerator).logpdf(x_test_val),
     )
@@ -845,7 +844,7 @@ def test_sqr_transform():
     x_logp_fn = pytensor.function([x_vv], logp(x_rv, x_vv))
 
     x_test_val = np.r_[-0.5, 0.5, 1, 2.5]
-    assert np.allclose(
+    np.testing.assert_allclose(
         x_logp_fn(x_test_val),
         sp.stats.chi2(df=1).logpdf(x_test_val),
     )
@@ -860,7 +859,7 @@ def test_sqrt_transform():
     x_logp_fn = pytensor.function([x_vv], logp(x_rv, x_vv))
 
     x_test_val = np.r_[-2.5, 0.5, 1, 2.5]
-    assert np.allclose(
+    np.testing.assert_allclose(
         x_logp_fn(x_test_val),
         sp.stats.chi(df=3).logpdf(x_test_val),
     )
@@ -915,7 +914,7 @@ def test_absolute_transform(test_val):
     x_logp_fn = pytensor.function([x_vv], logp(x_rv, x_vv))
     y_logp_fn = pytensor.function([y_vv], logp(y_rv, y_vv))
 
-    assert np.allclose(x_logp_fn(test_val), y_logp_fn(test_val))
+    np.testing.assert_allclose(x_logp_fn(test_val), y_logp_fn(test_val))
 
 
 def test_negated_rv_transform():
@@ -925,7 +924,7 @@ def test_negated_rv_transform():
     x_vv = x_rv.clone()
     x_logp_fn = pytensor.function([x_vv], pt.sum(logp(x_rv, x_vv)))
 
-    assert np.isclose(x_logp_fn(-1.5), sp.stats.halfnorm.logpdf(1.5))
+    np.testing.assert_allclose(x_logp_fn(-1.5), sp.stats.halfnorm.logpdf(1.5))
 
 
 def test_subtracted_rv_transform():
@@ -936,7 +935,7 @@ def test_subtracted_rv_transform():
     x_vv = x_rv.clone()
     x_logp_fn = pytensor.function([x_vv], pt.sum(logp(x_rv, x_vv)))
 
-    assert np.isclose(x_logp_fn(7.3), sp.stats.norm.logpdf(5.0 - 7.3, 1.0))
+    np.testing.assert_allclose(x_logp_fn(7.3), sp.stats.norm.logpdf(5.0 - 7.3, 1.0))
 
 
 def test_scan_transform():
@@ -1012,7 +1011,7 @@ def test_multivariate_transform(shift, scale):
 
     x_vv_test = np.array([5.0, 4.9, -6.3])
     scale_mat = scale * np.eye(x_vv_test.shape[0])
-    np.testing.assert_almost_equal(
+    np.testing.assert_allclose(
         logp.eval({x_vv: x_vv_test}),
         sp.stats.multivariate_normal.logpdf(
             x_vv_test,
@@ -1048,7 +1047,7 @@ def test_erf_logp(pt_transform, transform):
     expected_logp = logp(base_rv, transform.backward(vv)) + transform.log_jac_det(vv)
 
     vv_test = np.array(0.25)  # Arbitrary test value
-    np.testing.assert_almost_equal(
+    np.testing.assert_allclose(
         rv_logp.eval({vv: vv_test}), np.nan_to_num(expected_logp.eval({vv: vv_test}), nan=-np.inf)
     )
 
@@ -1088,8 +1087,8 @@ def test_logcdf_measurable_transform():
     logcdf_fn = pytensor.function([value], logcdf(x, value))
 
     assert logcdf_fn(0) == -np.inf
-    np.testing.assert_almost_equal(logcdf_fn(np.exp(0.5)), np.log(0.5))
-    np.testing.assert_almost_equal(logcdf_fn(5), 0)
+    np.testing.assert_allclose(logcdf_fn(np.exp(0.5)), np.log(0.5))
+    np.testing.assert_allclose(logcdf_fn(5), 0)
 
 
 def test_logcdf_measurable_non_injective_fails():
@@ -1104,9 +1103,9 @@ def test_icdf_measurable_transform():
     value = x.type()
     icdf_fn = pytensor.function([value], icdf(x, value))
 
-    np.testing.assert_almost_equal(icdf_fn(1e-16), 1)
-    np.testing.assert_almost_equal(icdf_fn(0.5), np.exp(0.5))
-    np.testing.assert_almost_equal(icdf_fn(1 - 1e-16), np.e)
+    np.testing.assert_allclose(icdf_fn(1e-16), 1)
+    np.testing.assert_allclose(icdf_fn(0.5), np.exp(0.5))
+    np.testing.assert_allclose(icdf_fn(1 - 1e-16), np.e)
 
 
 def test_icdf_measurable_non_injective_fails():
