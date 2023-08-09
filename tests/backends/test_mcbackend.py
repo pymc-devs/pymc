@@ -119,7 +119,20 @@ def test_make_runmeta_and_point_fn(simple_model):
     assert not vars["vector"].is_deterministic
     assert not vars["vector_interval__"].is_deterministic
     assert vars["matrix"].is_deterministic
-    assert len(rmeta.sample_stats) == 1 + len(step.stats_dtypes[0])
+    assert len(rmeta.sample_stats) == len(step.stats_dtypes[0])
+
+    with simple_model:
+        step = pm.NUTS()
+    rmeta, point_fn = make_runmeta_and_point_fn(
+        initial_point=simple_model.initial_point(),
+        step=step,
+        model=simple_model,
+    )
+    assert isinstance(rmeta, mcb.RunMeta)
+    svars = {s.name: s for s in rmeta.sample_stats}
+    # Unbeknownst to McBackend, object stats are pickled to str
+    assert "sampler_0__warning" in svars
+    assert svars["sampler_0__warning"].dtype == "str"
     pass
 
 

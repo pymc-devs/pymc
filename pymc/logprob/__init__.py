@@ -49,6 +49,7 @@ import pymc.logprob.censoring
 import pymc.logprob.cumsum
 import pymc.logprob.checks
 import pymc.logprob.mixture
+import pymc.logprob.order
 import pymc.logprob.scan
 import pymc.logprob.tensor
 import pymc.logprob.transforms

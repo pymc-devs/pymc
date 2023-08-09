@@ -32,7 +32,7 @@ from pytensor.sparse.basic import sp_sum
 from pytensor.tensor import TensorConstant, gammaln, sigmoid
 from pytensor.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from pytensor.tensor.random.basic import dirichlet, multinomial, multivariate_normal
-from pytensor.tensor.random.op import RandomVariable, default_supp_shape_from_params
+from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import (
     broadcast_params,
     supp_shape_from_ref_param_shape,
@@ -136,6 +136,9 @@ def quaddist_matrix(cov=None, chol=None, tau=None, lower=True, *args, **kwargs):
         chol = pt.as_tensor_variable(chol)
         if chol.ndim != 2:
             raise ValueError("chol must be two dimensional.")
+
+        # tag as lower triangular to enable pytensor rewrites of chol(l.l') -> l
+        chol.tag.lower_triangular = True
         cov = chol.dot(chol.T)
 
     return cov
@@ -321,9 +324,12 @@ class MvStudentTRV(RandomVariable):
             cov = np.array([[1.0]], dtype=dtype)
         return super().__call__(nu, mu, cov, size=size, **kwargs)
 
-    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
-        return default_supp_shape_from_params(
-            self.ndim_supp, dist_params, rep_param_idx, param_shapes
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=1,
         )
 
     @classmethod
@@ -612,9 +618,12 @@ class DirichletMultinomialRV(RandomVariable):
     dtype = "int64"
     _print_name = ("DirichletMN", "\\operatorname{DirichletMN}")
 
-    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
-        return default_supp_shape_from_params(
-            self.ndim_supp, dist_params, rep_param_idx, param_shapes
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=1,
         )
 
     @classmethod
@@ -894,9 +903,14 @@ class WishartRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("Wishart", "\\operatorname{Wishart}")
 
-    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
         # The shape of second parameter `V` defines the shape of the output.
-        return dist_params[1].shape[-2:]
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=1,
+        )
 
     @classmethod
     def rng_fn(cls, rng, nu, V, size):
@@ -1640,9 +1654,13 @@ class MatrixNormalRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("MatrixNormal", "\\operatorname{MatrixNormal}")
 
-    def _infer_shape(self, size, dist_params, param_shapes=None):
-        shape = tuple(size) + tuple(dist_params[0].shape[-2:])
-        return shape
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=0,
+        )
 
     @classmethod
     def rng_fn(cls, rng, mu, rowchol, colchol, size=None):
@@ -1859,6 +1877,14 @@ class KroneckerNormalRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("KroneckerNormal", "\\operatorname{KroneckerNormal}")
 
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=0,
+        )
+
     def rng_fn(self, rng, mu, sigma, *covs, size=None):
         size = size if size else covs[-1]
         covs = covs[:-1] if covs[-1] == size else covs
@@ -2065,13 +2091,18 @@ class CARRV(RandomVariable):
             W = Assert(msg)(W, pt.allclose(W, W.T))
 
         tau = pt.as_tensor_variable(floatX(tau))
+
         alpha = pt.as_tensor_variable(floatX(alpha))
 
         return super().make_node(rng, size, dtype, mu, W, alpha, tau)
 
-    def _infer_shape(self, size, dist_params, param_shapes=None):
-        shape = tuple(size) + (dist_params[0].shape[-1],)
-        return shape
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=0,
+        )
 
     @classmethod
     def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, size):
@@ -2081,6 +2112,9 @@ class CARRV(RandomVariable):
         Journal of the Royal Statistical Society Series B, Royal Statistical Society,
         vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288
         """
+        if np.any(alpha >= 1) or np.any(alpha <= -1):
+            raise ValueError("the domain of alpha is: -1 < alpha < 1")
+
         if not scipy.sparse.issparse(W):
             W = scipy.sparse.csr_matrix(W)
         s = np.asarray(W.sum(axis=0))[0]
@@ -2147,8 +2181,9 @@ class CAR(Continuous):
         :func:`~pytensor.sparse.basic.as_sparse_or_tensor_variable` is
         used for this sparse or tensorvariable conversion.
     alpha : tensor_like of float
-        Autoregression parameter taking values between -1 and 1. Values closer to 0 indicate weaker
-        correlation and values closer to 1 indicate higher autocorrelation. For most use cases, the
+        Autoregression parameter taking values greater than -1 and less than 1.
+        Values closer to 0 indicate weaker correlation and values closer to
+        1 indicate higher autocorrelation. For most use cases, the
         support of alpha should be restricted to (0, 1).
     tau : tensor_like of float
         Positive precision variable controlling the scale of the underlying normal variates.
@@ -2215,10 +2250,10 @@ class CAR(Continuous):
         logquad = (tau * delta * tau_dot_delta).sum(axis=-1)
         return check_parameters(
             0.5 * (logtau + logdet - logquad),
-            -1 <= alpha,
-            alpha <= 1,
+            -1 < alpha,
+            alpha < 1,
             tau > 0,
-            msg="-1 <= alpha <= 1, tau > 0",
+            msg="-1 < alpha < 1, tau > 0",
         )
 
 
@@ -2404,7 +2439,7 @@ class StickBreakingWeightsRV(RandomVariable):
 
         return super().make_node(rng, size, dtype, alpha, K)
 
-    def _supp_shape_from_params(self, dist_params, **kwargs):
+    def _supp_shape_from_params(self, dist_params, param_shapes):
         K = dist_params[1]
         return (K + 1,)
 

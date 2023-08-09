@@ -430,23 +430,23 @@ def conditional_logp(
 
     .. math::
 
-        \Sigma^2 \sim& \operatorname{InvGamma}(0.5, 0.5) \\
-        Y \sim& \operatorname{N}(0, \Sigma)
+        \sigma^2 \sim& \operatorname{InvGamma}(0.5, 0.5) \\
+        Y \sim& \operatorname{N}(0, \sigma^2)
 
     If we create a value variable for ``Y_rv``, i.e. ``y_vv = pt.scalar("y")``,
     the graph of ``conditional_logp({Y_rv: y_vv})`` is equivalent to the
-    conditional log-probability :math:`\log p(Y = y \mid \Sigma^2)`, with a stochastic
+    conditional log-probability :math:`\log p_{Y \mid \sigma^2}(y \mid s^2)`, with a stochastic
     ``sigma2_rv``.
 
     If we specify a value variable for ``sigma2_rv``, i.e.
-    ``s_vv = pt.scalar("s2")``, then ``conditional_logp({Y_rv: y_vv, sigma2_rv: s_vv})``
+    ``s2_vv = pt.scalar("s2")``, then ``conditional_logp({Y_rv: y_vv, sigma2_rv: s2_vv})``
     yields the conditional log-probabilities of the two variables.
     The sum of the two terms gives their joint log-probability.
 
     .. math::
 
-        \log p(Y = y, \Sigma^2 = \sigma^2) =
-            \log p(Y = y \mid \Sigma^2 = \sigma^2) + \log p(\Sigma^2 = \sigma^2)
+        \log p_{Y, \sigma^2}(y, s^2) =
+            \log p_{Y \mid \sigma^2}(y \mid s^2) + \log p_{\sigma^2}(s^2)
 
 
     Parameters

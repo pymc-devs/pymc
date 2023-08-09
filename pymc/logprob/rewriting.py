@@ -57,6 +57,7 @@ from pytensor.graph.rewriting.basic import (
     EquilibriumGraphRewriter,
     GraphRewriter,
     node_rewriter,
+    out2in,
 )
 from pytensor.graph.rewriting.db import (
     LocalGroupDB,
@@ -70,6 +71,7 @@ from pytensor.tensor.extra_ops import BroadcastTo
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.rewriting.basic import register_canonicalize
 from pytensor.tensor.rewriting.shape import ShapeFeature
+from pytensor.tensor.rewriting.uncanonicalize import local_max_and_argmax
 from pytensor.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
@@ -358,6 +360,7 @@ def incsubtensor_rv_replace(fgraph, node):
 logprob_rewrites_db = SequenceDB()
 logprob_rewrites_db.name = "logprob_rewrites_db"
 logprob_rewrites_db.register("pre-canonicalize", optdb.query("+canonicalize"), "basic")
+logprob_rewrites_db.register("local_max_and_argmax", out2in(local_max_and_argmax), "basic")
 
 # These rewrites convert un-measurable variables into their measurable forms,
 # but they need to be reapplied, because some of the measurable forms require
@@ -418,7 +421,7 @@ def construct_ir_fgraph(
     For instance, some `Op`s will be lifted through `MeasurableVariable`\s in
     this IR, and the resulting graphs will not be computationally sound,
     because they wouldn't produce independent samples when the original graph
-    would.  See https://github.com/pytensor-devs/aeppl/pull/78.
+    would.  See https://github.com/aesara-devs/aeppl/pull/78.
 
     Returns
     -------

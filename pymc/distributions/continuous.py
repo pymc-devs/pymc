@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-# Contains code from Aeppl, Copyright (c) 2021-2022, PyTensor Developers.
+# Contains code from AePPL, Copyright (c) 2021-2022, Aesara Developers.
 
 # coding: utf-8
 """
@@ -2546,6 +2546,16 @@ class Weibull(PositiveContinuous):
             msg="alpha > 0, beta > 0",
         )
 
+    def icdf(value, alpha, beta):
+        res = beta * (-pt.log(1 - value)) ** (1 / alpha)
+        res = check_icdf_value(res, value)
+        return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
+
 
 class HalfStudentTRV(RandomVariable):
     name = "halfstudentt"
@@ -3089,6 +3099,20 @@ class Triangular(BoundedContinuous):
             msg="lower <= c <= upper",
         )
 
+    def icdf(value, lower, c, upper):
+        res = pt.switch(
+            pt.lt(value, ((c - lower) / (upper - lower))),
+            lower + np.sqrt((upper - lower) * (c - lower) * value),
+            upper - np.sqrt((upper - lower) * (upper - c) * (1 - value)),
+        )
+        res = check_icdf_value(res, value)
+        return check_parameters(
+            res,
+            lower <= c,
+            c <= upper,
+            msg="lower <= c <= upper",
+        )
+
 
 @_default_transform.register(Triangular)
 def triangular_default_transform(op, rv):
@@ -3171,6 +3195,15 @@ class Gumbel(Continuous):
     def logcdf(value, mu, beta):
         res = -pt.exp(-(value - mu) / beta)
 
+        return check_parameters(
+            res,
+            beta > 0,
+            msg="beta > 0",
+        )
+
+    def icdf(value, mu, beta):
+        res = mu - beta * pt.log(-pt.log(value))
+        res = check_icdf_value(res, value)
         return check_parameters(
             res,
             beta > 0,
@@ -3727,6 +3760,15 @@ class Moyal(Continuous):
     def logcdf(value, mu, sigma):
         scaled = (value - mu) / sigma
         res = pt.log(pt.erfc(pt.exp(-scaled / 2) * (2**-0.5)))
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
+
+    def icdf(value, mu, sigma):
+        res = sigma * -pt.log(2.0 * pt.erfcinv(value) ** 2) + mu
+        res = check_icdf_value(res, value)
         return check_parameters(
             res,
             sigma > 0,

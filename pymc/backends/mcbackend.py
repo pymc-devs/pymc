@@ -33,6 +33,7 @@ from pymc.step_methods.compound import (
     BlockedStep,
     CompoundStep,
     StatsBijection,
+    check_step_emits_tune,
     flat_statname,
     flatten_steps,
 )
@@ -207,11 +208,10 @@ def make_runmeta_and_point_fn(
 ) -> Tuple[mcb.RunMeta, PointFunc]:
     variables, point_fn = get_variables_and_point_fn(model, initial_point)
 
-    sample_stats = [
-        mcb.Variable("tune", "bool"),
-    ]
+    check_step_emits_tune(step)
 
     # In PyMC the sampler stats are grouped by the sampler.
+    sample_stats = []
     steps = flatten_steps(step)
     for s, sm in enumerate(steps):
         for statname, (dtype, shape) in sm.stats_dtypes_shapes.items():
@@ -221,9 +221,13 @@ def make_runmeta_and_point_fn(
                 (-1 if s is None else s)
                 for s in (shape or [])
             ]
+            dt = np.dtype(dtype).name
+            # Object types will be pickled by the ChainRecordAdapter!
+            if dt == "object":
+                dt = "str"
             svar = mcb.Variable(
                 name=sname,
-                dtype=np.dtype(dtype).name,
+                dtype=dt,
                 shape=sshape,
                 undefined_ndim=shape is None,
             )

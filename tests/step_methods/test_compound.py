@@ -26,6 +26,7 @@ from pymc.step_methods import (
     Slice,
 )
 from pymc.step_methods.compound import (
+    BlockedStep,
     StatsBijection,
     flatten_steps,
     get_stats_dtypes_shapes_from_steps,
@@ -34,6 +35,16 @@ from pymc.step_methods.compound import (
 from pymc.testing import fast_unstable_sampling_mode
 from tests.helpers import StepMethodTester
 from tests.models import simple_2model_continuous
+
+
+def test_all_stepmethods_emit_tune_stat():
+    attrs = [getattr(pm.step_methods, n) for n in dir(pm.step_methods)]
+    step_types = [
+        attr for attr in attrs if isinstance(attr, type) and issubclass(attr, BlockedStep)
+    ]
+    assert len(step_types) > 5
+    for cls in step_types:
+        assert "tune" in cls.stats_dtypes_shapes
 
 
 class TestCompoundStep:

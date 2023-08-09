@@ -87,7 +87,6 @@ __all__ = [
     "generator",
     "convert_observed_data",
     "compile_pymc",
-    "constant_fold",
 ]
 
 
@@ -1228,3 +1227,10 @@ def constant_fold(
     return tuple(
         folded_x.data if isinstance(folded_x, Constant) else folded_x for folded_x in folded_xs
     )
+
+
+def rewrite_pregrad(graph):
+    """Apply simplifying or stabilizing rewrites to graph that are safe to use
+    pre-grad.
+    """
+    return rewrite_graph(graph, include=("canonicalize", "stabilize"))

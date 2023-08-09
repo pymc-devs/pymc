@@ -33,6 +33,7 @@ pymc/logprob/binary.py
 pymc/logprob/censoring.py
 pymc/logprob/basic.py
 pymc/logprob/mixture.py
+pymc/logprob/order.py
 pymc/logprob/rewriting.py
 pymc/logprob/scan.py
 pymc/logprob/tensor.py
