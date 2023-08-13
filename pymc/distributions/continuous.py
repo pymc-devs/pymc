@@ -3125,7 +3125,7 @@ class Gumbel(Continuous):
 
     This distribution is typically used for modeling maximum (or extreme) values.
     Those looking to find the extreme minimum provided by the left-skewed Gumbel should
-    invert the sign to all x and mu values.
+    invert the sign of all x and mu values.
 
     The pdf of this distribution is
 
