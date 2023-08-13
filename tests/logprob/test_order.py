@@ -43,6 +43,7 @@ import pytest
 import pymc as pm
 
 from pymc import logp
+from pymc.logprob.abstract import _logcdf_helper, _logprob_helper
 from pymc.testing import assert_no_rvs
 
 
@@ -238,4 +239,16 @@ def test_max_discrete():
     x_max_value = pt.scalar("x_max_value")
     x_max_logprob = logp(x_max, x_max_value)
 
-    x_max_logprob.eval({x_max_value: 0.85})
+    discrete_logprob = _logprob_helper(x, x_max_value)
+    discrete_logcdf = _logcdf_helper(x, x_max_value)
+    discrete_logcdf_prev = _logcdf_helper(x, x_max_value - 1)
+    n = x.size
+    discrete_logprob = pt.log((pt.exp(discrete_logcdf)) ** n - (pt.exp(discrete_logcdf_prev)) ** n)
+
+    test_value = 0.85
+
+    np.testing.assert_allclose(
+        discrete_logprob.eval({x_max_value: test_value}),
+        (x_max_logprob.eval({x_max_value: test_value})),
+        rtol=1e-06,
+    )
