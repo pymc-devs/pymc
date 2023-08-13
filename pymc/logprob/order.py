@@ -129,11 +129,11 @@ def max_logprob(op, values, base_rv, **kwargs):
     return logprob
 
 
-class MeasurableMin(Max):
+class MeasurableMaxNeg(Max):
     """A placeholder used to specify a log-likelihood for a min sub-graph."""
 
 
-MeasurableVariable.register(MeasurableMin)
+MeasurableVariable.register(MeasurableMaxNeg)
 
 
 @node_rewriter(tracks=[Max])
@@ -143,7 +143,7 @@ def find_measurable_min(fgraph: FunctionGraph, node: Node) -> Optional[List[Tens
     if rv_map_feature is None:
         return None  # pragma: no cover
 
-    if isinstance(node.op, MeasurableMin):
+    if isinstance(node.op, MeasurableMaxNeg):
         return None  # pragma: no cover
 
     base_var = node.inputs[0]
@@ -183,7 +183,7 @@ def find_measurable_min(fgraph: FunctionGraph, node: Node) -> Optional[List[Tens
     if axis != base_var_dims:
         return None
 
-    measurable_min = MeasurableMin(list(axis))
+    measurable_min = MeasurableMaxNeg(list(axis))
     min_rv_node = measurable_min.make_node(base_var)
     min_rv = min_rv_node.outputs
 
@@ -198,7 +198,7 @@ measurable_ir_rewrites_db.register(
 )
 
 
-@_logprob.register(MeasurableMin)
+@_logprob.register(MeasurableMaxNeg)
 def min_logprob(op, values, base_var, **kwargs):
     r"""Compute the log-likelihood graph for the `Max` operation.
     The formula that we use here is :
@@ -208,8 +208,8 @@ def min_logprob(op, values, base_var, **kwargs):
     (value,) = values
     base_rv = base_var.owner.inputs[0]
 
-    logprob = _logprob_helper(base_rv, value)
-    logcdf = _logcdf_helper(base_rv, value)
+    logprob = _logprob_helper(base_rv, -value)
+    logcdf = _logcdf_helper(base_rv, -value)
 
     [n] = constant_fold([base_rv.size])
     logprob = (n - 1) * pt.math.log(1 - pt.math.exp(logcdf)) + logprob + pt.math.log(n)

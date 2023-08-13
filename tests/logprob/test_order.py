@@ -72,8 +72,7 @@ def test_non_iid_fails(if_max):
         x_m = pt.max(x, axis=-1)
         x_m_value = pt.vector("x_max_value")
     else:
-        x_min = pt.min(x, axis=-1)
-        x_m = x_min.owner.inputs[0]
+        x_m = pt.min(x, axis=-1)
         x_m_value = pt.vector("x_min_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_m, x_m_value)
@@ -91,8 +90,7 @@ def test_non_rv_fails(if_max):
         x_m = pt.max(x, axis=-1)
         x_m_value = pt.vector("x_max_value")
     else:
-        x_min = pt.min(x, axis=-1)
-        x_m = x_min.owner.inputs[0]
+        x_m = pt.min(x, axis=-1)
         x_m_value = pt.vector("x_min_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_m, x_m_value)
@@ -114,8 +112,7 @@ def test_multivariate_rv_fails(if_max):
         x_m = pt.max(x, axis=-1)
         x_m_value = pt.vector("x_max_value")
     else:
-        x_min = pt.min(x, axis=-1)
-        x_m = x_min.owner.inputs[0]
+        x_m = pt.min(x, axis=-1)
         x_m_value = pt.vector("x_min_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_m, x_m_value)
@@ -136,8 +133,7 @@ def test_categorical(if_max):
         x_m = pt.max(x, axis=-1)
         x_m_value = pt.vector("x_max_value")
     else:
-        x_min = pt.min(x, axis=-1)
-        x_m = x_min.owner.inputs[0]
+        x_m = pt.min(x, axis=-1)
         x_m_value = pt.vector("x_min_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_m, x_m_value)
@@ -158,8 +154,7 @@ def test_non_supp_axis(if_max):
         x_m = pt.max(x, axis=-1)
         x_m_value = pt.vector("x_max_value")
     else:
-        x_min = pt.min(x, axis=-1)
-        x_m = x_min.owner.inputs[0]
+        x_m = pt.min(x, axis=-1)
         x_m_value = pt.vector("x_min_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_m, x_m_value)
@@ -225,9 +220,8 @@ def test_min_logprob(shape, value, axis):
     x = pt.random.uniform(0, 1, size=shape)
     x.name = "x"
     x_min = pt.min(x, axis=axis)
-    x_min_rv = x_min.owner.inputs[0]
     x_min_value = pt.scalar("x_min_value")
-    x_min_logprob = logp(x_min_rv, x_min_value)
+    x_min_logprob = logp(x_min, x_min_value)
 
     assert_no_rvs(x_min_logprob)
 
@@ -250,7 +244,6 @@ def test_min_non_mul_elemwise_fails():
     x = pt.log(pt.random.beta(0, 1, size=(3,)))
     x.name = "x"
     x_min = pt.min(x, axis=-1)
-    x_min_rv = x_min.owner.inputs[0]
     x_min_value = pt.vector("x_min_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
-        x_min_logprob = logp(x_min_rv, x_min_value)
+        x_min_logprob = logp(x_min, x_min_value)
