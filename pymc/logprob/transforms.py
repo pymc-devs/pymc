@@ -35,6 +35,7 @@
 #   SOFTWARE.
 
 import abc
+import warnings
 
 from copy import copy
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
@@ -111,6 +112,7 @@ from pymc.logprob.rewriting import (
     cleanup_ir_rewrites_db,
     measurable_ir_rewrites_db,
 )
+from pymc.logprob.shape import measurable_broadcast
 from pymc.logprob.utils import check_potential_measurability
 
 
@@ -564,10 +566,13 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
 
     scalar_op = node.op.scalar_op
     measurable_input_idx = 0
+    measurable_input_broadcast = (
+        measurable_input.type.broadcastable != node.default_output().type.broadcastable
+    )
     transform_inputs: Tuple[TensorVariable, ...] = (measurable_input,)
     transform: RVTransform
 
-    transform_dict = {
+    unary_transforms_dict = {
         Exp: ExpTransform(),
         Log: LogTransform(),
         Abs: AbsTransform(),
@@ -581,29 +586,49 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         Erfc: ErfcTransform(),
         Erfcx: ErfcxTransform(),
     }
-    transform = transform_dict.get(type(scalar_op), None)
-    if isinstance(scalar_op, Pow):
-        # We only allow for the base to be measurable
-        if measurable_input_idx != 0:
+    transform = unary_transforms_dict.get(type(scalar_op), None)
+    if transform is None:
+        if isinstance(scalar_op, Pow):
+            # We only allow for the base to be measurable
+            if measurable_input_idx != 0:
+                return None
+            try:
+                (power,) = other_inputs
+                base_power = pt.get_underlying_scalar_constant_value(power).item()
+            # Power needs to be a constant
+            except NotScalarConstantError:
+                return None
+            transform_inputs = (measurable_input, power)
+            transform = PowerTransform(power=base_power)
+        elif isinstance(scalar_op, Add):
+            transform_inputs = (measurable_input, pt.add(*other_inputs))
+            transform = LocTransform(
+                transform_args_fn=lambda *inputs: inputs[-1],
+            )
+        elif isinstance(scalar_op, Mul):
+            transform_inputs = (measurable_input, pt.mul(*other_inputs))
+            transform = ScaleTransform(
+                transform_args_fn=lambda *inputs: inputs[-1],
+            )
+        else:
+            raise TypeError(
+                f"Scalar Op not supported: {scalar_op}. Rewrite should not have been triggered"
+            )  # pragma: no cover
+
+    if measurable_input_broadcast:
+        # This rewrite logic only supports broadcasting for transforms with two inputs, where the first is measurable.
+        # This covers all current cases, update if other cases are supported in the future.
+        if len(transform_inputs) != 2 or measurable_input_idx != 0:
             return None
-        try:
-            (power,) = other_inputs
-            power = pt.get_underlying_scalar_constant_value(power).item()
-        # Power needs to be a constant
-        except NotScalarConstantError:
-            return None
-        transform_inputs = (measurable_input, power)
-        transform = PowerTransform(power=power)
-    elif isinstance(scalar_op, Add):
-        transform_inputs = (measurable_input, pt.add(*other_inputs))
-        transform = LocTransform(
-            transform_args_fn=lambda *inputs: inputs[-1],
+        warnings.warn(
+            "MeasurableTransform with implicit broadcasting detected. This corresponds to a potentially degenerate probability graph.\n"
+            "If you did not intend this, make sure the base measurable variable is created with all the dimensions from the start."
+            "Otherwise, an explicit `broadcast_to` operation can be used to silence this warning.\n",
+            UserWarning,
         )
-    elif transform is None:
-        transform_inputs = (measurable_input, pt.mul(*other_inputs))
-        transform = ScaleTransform(
-            transform_args_fn=lambda *inputs: inputs[-1],
-        )
+        measurable_input, other_input = transform_inputs
+        measurable_input = measurable_broadcast(measurable_input, other_input.shape)
+        transform_inputs = (measurable_input, other_input)
 
     transform_op = MeasurableTransform(
         scalar_op=scalar_op,

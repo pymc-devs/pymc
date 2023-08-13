@@ -807,16 +807,36 @@ def test_discrete_rv_multinary_transform_fails():
         conditional_logp({y_rv: y_rv.clone()})
 
 
-@pytest.mark.xfail(reason="Check not implemented yet")
-def test_invalid_broadcasted_transform_rv_fails():
+@pytest.mark.filterwarnings("error")  # Fail if unexpected warning is issued
+@pytest.mark.parametrize("implicit_broadcast", (True, False))
+def test_broadcasted_transform_rv(implicit_broadcast):
     loc = pt.vector("loc")
-    y_rv = loc + pt.random.normal(0, 1, size=1, name="base_rv")
+    base_rv = pt.random.normal(0, 1, size=1, name="base_rv")
+    if implicit_broadcast:
+        y_rv = loc + base_rv
+    else:
+        y_rv = loc + pt.broadcast_to(base_rv, shape=loc.shape)
     y_rv.name = "y"
     y_vv = y_rv.clone()
 
-    # This logp derivation should fail or count only once the values that are broadcasted
-    logprob = logp(y_rv, y_vv)
-    assert logprob.eval({y_vv: [0, 0, 0, 0], loc: [0, 0, 0, 0]}).shape == ()
+    if implicit_broadcast:
+        with pytest.warns(UserWarning, match="implicit broadcasting detected"):
+            logprob = logp(y_rv, y_vv)
+    else:
+        logprob = logp(y_rv, y_vv)
+    logprob_fn = pytensor.function([loc, y_vv], logprob)
+
+    # All values must have the same offset from `loc`
+    np.testing.assert_allclose(
+        logprob_fn([1, 1, 1, 1], [0, 0, 0, 0]), sp.stats.norm.logpdf([0], loc=1)
+    )
+    np.testing.assert_allclose(
+        logprob_fn([1, 2, 3, 4], [0, 1, 2, 3]), sp.stats.norm.logpdf([0], loc=1)
+    )
+
+    # Otherwise probability is 0
+    np.testing.assert_array_equal(logprob_fn([1, 1, 1, 1], [0, 0, 0, 1]), [-np.inf])
+    np.testing.assert_array_equal(logprob_fn([1, 2, 3, 4], [0, 0, 0, 0]), [-np.inf])
 
 
 @pytest.mark.parametrize("numerator", (1.0, 2.0))
