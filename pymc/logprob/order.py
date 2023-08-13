@@ -119,7 +119,7 @@ def max_logprob(op, values, base_rv, **kwargs):
 
     Parameters
     ----------
-    op : Max-Op
+    op : MeasurableMax
     values : tensor_like
     rv : TensorVariable
 
@@ -129,7 +129,7 @@ def max_logprob(op, values, base_rv, **kwargs):
 
     Examples
     --------
-    It is often desirable to find the log-probability of the maximum of i.i.d. random variables.
+    It is often desirable to find the log-probability corresponding to the maximum of i.i.d. random variables.
 
     The "max of i.i.d. random variables" refers to finding the maximum value among a collection of random variables that are independent and identically distributed.
     The example below illustrates how to find the Maximum from the distribution of random variables.
@@ -204,10 +204,10 @@ def max_logprob(op, values, base_rv, **kwargs):
         x_max_value = pt.vector("x_max_value")
         x_max_logprob = logp(x_max, x_max_value)
 
-    The above code gives a Runtime error stating logprob method was not implemented as x in this case is not a pure random variable.
-    A pure random variable in PyMC represents an unknown quantity in a Bayesian model and is associated with a prior distribution that is combined with the likelihood of observed data to obtain the posterior distribution through Bayesian inference
+    The above code gives a Runtime error stating that logprob method was not implemented as x in this case is not a pure random variable.
+    A pure random variable in PyMC represents an unknown quantity in a Bayesian model and is associated with a prior distribution that is combined with the likelihood of observed data to obtain the posterior distribution through Bayesian inference.
 
-    We assume only univariate distributions as for multivariate variables, the concept of ordering is ambiguous since a "depth function" is required .
+    We assume only univariate distributions as for multivariate variables, the concept of ordering is ambiguous since a "depth function" is required.
 
     We only consider independent and identically distributed random variables, for now.
     In probability theory and statistics, a collection of random variables is independent and identically distributed if each random variable has the same probability distribution as the others and all are mutually independent.
