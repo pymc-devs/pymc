@@ -26,9 +26,9 @@ Conditional probability
 Derived probability functions
 -----------------------------
 
-In PyMC users can derive their own custom distributions. Custom distribution refers to the ability to define and use probability distributions that are not included in the standard set of distributions provided.
-While PyMC provides a wide range of common probability distributions (e.g., Normal, Bernoulli, etc.), there may be cases where you need to use a distribution that is not available by default. In such cases, you can create your own custom distribution using the pm.CustomDist class provided by PyMC.
-Simplest way to define a Custom Distribution can be better understood from the following example:
+In PyMC, users can create their own custom distributions, which refers to the ability to define and utilize probability distributions not found in the standard set provided.
+While PyMC provides a wide range of common probability distributions (e.g., Normal, Bernoulli, etc.), there may be cases where you need to use a distribution that is not available by default. In such cases, you can create your own custom distribution using the :class:`~pm.CustomDist` class provided by PyMC.
+Use of pm.CustomDist can be illustrated with the help of the following example:
 
 .. code-block:: python
 
@@ -53,7 +53,7 @@ Simplest way to define a Custom Distribution can be better understood from the f
         prior = pm.sample_prior_predictive()
         posterior = pm.sample()
 
-Here, we provide a dist function that creates a PyTensor graph built from other PyMC distributions. PyMC can automatically infer that the logp of this variable corresponds to a shifted Exponential distribution.
+Here, we build a PyTensor graph from other PyMC distributions through :class:`~pymc.CustomDist`. PyMC can automatically infer that the logp of this graph that corresponds to a shifted Exponential distribution.
 
 For more details, check out:
 

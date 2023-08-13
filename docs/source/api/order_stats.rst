@@ -1,5 +1,5 @@
 ================
-Order_Statistics
+Order Statistics
 ================
 
 ------------
