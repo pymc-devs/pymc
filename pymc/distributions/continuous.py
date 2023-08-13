@@ -3121,7 +3121,11 @@ def triangular_default_transform(op, rv):
 
 class Gumbel(Continuous):
     r"""
-    Univariate Gumbel log-likelihood.
+    Univariate right-skewed Gumbel log-likelihood.
+
+    This distribution is typically used for modeling maximum (or extreme) values.
+    Those looking to find the extreme minimum provided by the left-skewed Gumbel should
+    invert the sign of all x and mu values.
 
     The pdf of this distribution is
 
