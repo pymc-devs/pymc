@@ -43,6 +43,9 @@ import scipy.stats as st
 
 from pymc import logp
 from pymc.logprob import conditional_logp
+from pymc.logprob.abstract import MeasurableVariable
+from pymc.logprob.censoring import MeasurableSwitchEncoding
+from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.logprob.transforms import LogTransform, TransformValuesRewrite
 from pymc.testing import assert_no_rvs
 
@@ -300,6 +303,27 @@ def test_switch_encoding_one_branch_measurable(measurable_idx, test_values, exp_
 
     for i, j in zip(test_values, exp_logp):
         assert np.isclose(logp_fn(i), j)
+
+
+def test_switch_encoding_invalid_bcast():
+    x_rv = pt.random.normal(0.5, 1, size=(4,))
+
+    switch_cond = x_rv < 0.3
+
+    valid_true_branch = pt.vector("valid_true_branch")
+    valid_false_branch = pt.vector("valid_false_branch")
+
+    invalid_false_branch = pt.matrix("invalid_false_branch")
+
+    valid_encoding = pt.switch(switch_cond, valid_true_branch, valid_false_branch)
+    fgraph, _, _ = construct_ir_fgraph({valid_encoding: valid_encoding.type()})
+    assert isinstance(fgraph.outputs[0].owner.op, MeasurableVariable)
+    assert isinstance(fgraph.outputs[0].owner.op, MeasurableSwitchEncoding)
+
+    invalid_encoding = pt.switch(switch_cond, valid_true_branch, invalid_false_branch)
+    fgraph, _, _ = construct_ir_fgraph({invalid_encoding: invalid_encoding.type()})
+    assert not isinstance(fgraph.outputs[0].owner.op, MeasurableVariable)
+    assert not isinstance(fgraph.outputs[0].owner.op, MeasurableSwitchEncoding)
 
 
 def test_switch_encoding_discrete_fail():
