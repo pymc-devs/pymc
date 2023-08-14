@@ -268,7 +268,7 @@ def test_rounding(rounding_op):
 
 def test_switch_encoding_both_branches():
     x_rv = pt.random.normal(0.5, 1)
-    y_rv = pt.switch(x_rv < 0.3, 1, 2)
+    y_rv = pt.switch(x_rv < 0.3, 1.0, 2.0)
 
     y_vv = y_rv.clone()
     ref_scipy = st.norm(0.5, 1)
@@ -276,7 +276,7 @@ def test_switch_encoding_both_branches():
     logprob = logp(y_rv, y_vv)
     logp_fn = pytensor.function([y_vv], logprob)
 
-    assert logp_fn(3) == -np.inf
+    assert logp_fn(1.5) == -np.inf
 
     assert np.isclose(logp_fn(1), ref_scipy.logcdf(0.3))
     assert np.isclose(logp_fn(2), ref_scipy.logsf(0.3))
