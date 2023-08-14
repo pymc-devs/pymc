@@ -327,6 +327,7 @@ def test_switch_encoding_invalid_bcast():
 
 
 def test_switch_encoding_discrete_fail():
+    """We do not support the encoding graphs of discrete RVs yet"""
     x_rv = pt.random.poisson(2)
     y_rv = pt.switch(x_rv > 3, x_rv, 1)
 
