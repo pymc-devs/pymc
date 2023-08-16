@@ -1907,26 +1907,22 @@ class TestMatrixNormal(BaseTestDistributionRandom):
         def ref_rand(mu, rowcov, colcov):
             return st.matrix_normal.rvs(mean=mu, rowcov=rowcov, colcov=colcov)
 
-        with pm.Model():
-            matrixnormal = pm.MatrixNormal(
-                "matnormal",
-                mu=np.random.random((3, 3)),
-                rowcov=np.eye(3),
-                colcov=np.eye(3),
-            )
-            check = pm.sample_prior_predictive(n_fails, return_inferencedata=False, random_seed=1)
-
-        ref_smp = ref_rand(mu=np.random.random((3, 3)), rowcov=np.eye(3), colcov=np.eye(3))
+        matrixnormal = pm.MatrixNormal.dist(
+            mu=np.random.random((3, 3)),
+            rowcov=np.eye(3),
+            colcov=np.eye(3),
+        )
 
         p, f = delta, n_fails
         while p <= delta and f > 0:
-            matrixnormal_smp = check["matnormal"]
+            matrixnormal_smp = pm.draw(matrixnormal)
+            ref_smp = ref_rand(mu=np.random.random((3, 3)), rowcov=np.eye(3), colcov=np.eye(3))
 
             p = np.min(
                 [
                     st.ks_2samp(
-                        np.atleast_1d(matrixnormal_smp).flatten(),
-                        np.atleast_1d(ref_smp).flatten(),
+                        matrixnormal_smp.flatten(),
+                        ref_smp.flatten(),
                     )
                 ]
             )
