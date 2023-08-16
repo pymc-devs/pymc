@@ -849,9 +849,9 @@ class OrderedMultinomial:
 def posdef(AA):
     try:
         linalg.cholesky(AA)
-        return 1
+        return True
     except linalg.LinAlgError:
-        return 0
+        return False
 
 
 class PosDefMatrix(Op):
@@ -868,7 +868,7 @@ class PosDefMatrix(Op):
     def make_node(self, x):
         x = pt.as_tensor_variable(x)
         assert x.ndim == 2
-        o = TensorType(dtype="int8", shape=[])()
+        o = TensorType(dtype="bool", shape=[])()
         return Apply(self, [x], [o])
 
     # Python implementation:
@@ -876,7 +876,7 @@ class PosDefMatrix(Op):
         (x,) = inputs
         (z,) = outputs
         try:
-            z[0] = np.array(posdef(x), dtype="int8")
+            z[0] = np.array(posdef(x), dtype="bool")
         except Exception:
             pm._log.exception("Failed to check if %s positive definite", x)
             raise
