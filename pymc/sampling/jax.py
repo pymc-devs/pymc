@@ -21,6 +21,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 import arviz as az
 import jax
+import jax.numpy as jnp
 import numpy as np
 import pytensor.tensor as pt
 
@@ -37,6 +38,7 @@ from pytensor.tensor.random.type import RandomType
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_constants, find_observations
+from pymc.distributions.multivariate import PosDefMatrix
 from pymc.initial_point import StartDict
 from pymc.logprob.utils import CheckParameterValue
 from pymc.sampling.mcmc import _init_jitter
@@ -70,6 +72,15 @@ def jax_funcify_Assert(op, **kwargs):
         return value
 
     return assert_fn
+
+
+@jax_funcify.register(PosDefMatrix)
+def jax_funcify_PosDefMatrix(op, **kwargs):
+    def posdefmatrix_fn(value, *inps):
+        no_pos_def = jnp.any(jnp.isnan(jnp.linalg.cholesky(value)))
+        return jnp.invert(no_pos_def)
+
+    return posdefmatrix_fn
 
 
 def _replace_shared_variables(graph: List[TensorVariable]) -> List[TensorVariable]:
