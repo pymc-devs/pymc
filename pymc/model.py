@@ -1922,7 +1922,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
                 obs = Normal("obs", theta, sigma=sigma, observed=y)
 
-            model_to_graphviz(schools)
+            schools.graphviz()
         """
         return model_to_graphviz(model=self, var_names=var_names, formatting=formatting)
 
@@ -1969,7 +1969,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
                 obs = Normal("obs", theta, sigma=sigma, observed=y)
 
-            model_to_networkx(schools)
+            schools.networkx()
         """
         return model_to_networkx(model=self, var_names=var_names, formatting=formatting)
 
