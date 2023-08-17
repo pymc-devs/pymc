@@ -47,7 +47,7 @@ from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.logprob.basic import conditional_logp, transformed_conditional_logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
-from pymc.model_graph import model_to_graphviz, model_to_networkx
+from pymc.model_graph import model_to_graphviz
 from pymc.util import _FutureWarningValidatingScratchpad
 from pymc.variational.minibatch_rv import MinibatchRandomVariable
 from tests.models import simple_model
@@ -1673,7 +1673,3 @@ class TestModelGraphs:
     def test_graphviz(self) -> None:
         model = self.school_model()
         assert model.graphviz()
-
-    def test_networkx(self) -> None:
-        model = self.school_model()
-        model_to_networkx(model=model) == model.networkx()

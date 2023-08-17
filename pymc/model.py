@@ -66,7 +66,7 @@ from pymc.exceptions import (
 from pymc.initial_point import make_initial_point_fn
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.utils import ParameterValueError
-from pymc.model_graph import VarName, model_to_graphviz, model_to_networkx
+from pymc.model_graph import VarName, model_to_graphviz
 from pymc.pytensorf import (
     PointFunc,
     SeedSequenceSeed,
@@ -1925,53 +1925,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             schools.graphviz()
         """
         return model_to_graphviz(model=self, var_names=var_names, formatting=formatting)
-
-    def networkx(self, *, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"):
-        """Produce a networkx Digraph from a PyMC model.
-
-        Requires networkx, which may be installed most easily with::
-
-            conda install networkx
-
-        Alternatively, you may install using pip with::
-
-            pip install networkx
-
-        See https://networkx.org/documentation/stable/ for more information.
-
-        Parameters
-        ----------
-        var_names : iterable of str, optional
-            Subset of variables to be plotted that identify a subgraph with respect to the entire model graph
-        formatting : str, optional
-            one of { "plain" }
-
-        Examples
-        --------
-        How to plot the graph of the model.
-
-        .. code-block:: python
-
-            import numpy as np
-            from pymc import HalfCauchy, Model, Normal, model_to_networkx
-
-            J = 8
-            y = np.array([28, 8, -3, 7, -1, 1, 18, 12])
-            sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18])
-
-            with Model() as schools:
-
-                eta = Normal("eta", 0, 1, shape=J)
-                mu = Normal("mu", 0, sigma=1e6)
-                tau = HalfCauchy("tau", 25)
-
-                theta = mu + tau * eta
-
-                obs = Normal("obs", theta, sigma=sigma, observed=y)
-
-            schools.networkx()
-        """
-        return model_to_networkx(model=self, var_names=var_names, formatting=formatting)
 
 
 # this is really disgusting, but it breaks a self-loop: I can't pass Model
