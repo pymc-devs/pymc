@@ -1658,18 +1658,28 @@ def test_model_logp_fast_compile():
 
 class TestModelGraphs:
     @staticmethod
-    def school_model() -> pm.Model:
-        J = 8
+    def school_model(J: int) -> pm.Model:
         y = np.array([28, 8, -3, 7, -1, 1, 18, 12])
         sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18])
-        with pm.Model() as schools:
-            eta = pm.Normal("eta", 0, 1, shape=J)
+        with pm.Model(coords={"school": np.arange(J)}) as schools:
+            eta = pm.Normal("eta", 0, 1, dims="school")
             mu = pm.Normal("mu", 0, sigma=1e6)
             tau = pm.HalfCauchy("tau", 25)
             theta = mu + tau * eta
-            obs = pm.Normal("obs", theta, sigma=sigma, observed=y)
+            pm.Normal("obs", theta, sigma=sigma, observed=y, dims="school")
         return schools
 
     def test_graphviz(self) -> None:
-        model = self.school_model()
-        assert model.graphviz()
+        model = self.school_model(J=8)
+        g_actual = model.graphviz()
+        g_expected = model_to_graphviz(model)
+        assert g_actual.body == g_expected.body
+        assert g_actual.source == g_expected.source
+
+    def test_graphviz_different_models(self) -> None:
+        model_1 = self.school_model(J=8)
+        model_2 = self.school_model(J=5)
+        g_1 = model_1.graphviz()
+        g_2 = model_2.graphviz()
+        assert g_1.body != g_2.body
+        assert g_1.source != g_2.source
