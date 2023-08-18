@@ -1881,7 +1881,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         elif not verbose:
             print_("You can set `verbose=True` for more details")
 
-    def graphviz(self, *, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"):
+    def to_graphviz(
+        self, *, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
+    ):
         """Produce a graphviz Digraph from a PyMC model.
 
         Requires graphviz, which may be installed most easily with
