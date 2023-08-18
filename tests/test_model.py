@@ -17,6 +17,8 @@ import traceback
 import unittest
 import warnings
 
+from unittest.mock import MagicMock, patch
+
 import arviz as az
 import cloudpickle
 import numpy as np
@@ -1668,6 +1670,17 @@ class TestModelGraphs:
             theta = mu + tau * eta
             pm.Normal("obs", theta, sigma=sigma, observed=y, dims="school")
         return schools
+
+    @pytest.mark.parametrize(
+        argnames="var_names", argvalues=[None, ["mu", "tau"]], ids=["all", "subset"]
+    )
+    def test_graphviz_call_function(self, var_names) -> None:
+        model = self.school_model(J=8)
+        with patch("pymc.model.model_to_graphviz") as mock_model_to_graphviz:
+            model.to_graphviz(var_names=var_names)
+            mock_model_to_graphviz.assert_called_once_with(
+                model=model, var_names=var_names, formatting="plain"
+            )
 
     def test_graphviz(self) -> None:
         model = self.school_model(J=8)
