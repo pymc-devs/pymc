@@ -563,10 +563,7 @@ class Multinomial(Discrete):
                     "You can rescale them directly to get rid of this warning.",
                     UserWarning,
                 )
-                p_ = p_ / pt.sum(p_, axis=-1, keepdims=True)
-                p = pt.as_tensor_variable(p_)
         n = pt.as_tensor_variable(n)
-        p = pt.as_tensor_variable(p)
         return super().dist([n, p], *args, **kwargs)
 
     def moment(rv, size, n, p):
@@ -595,7 +592,10 @@ class Multinomial(Discrete):
         TensorVariable
         """
 
-        res = factln(n) + pt.sum(-factln(value) + logpow(p, value), axis=-1)
+        # Correction term if the sum of p is not 1
+        corr = n * pt.log(pt.sum(p, axis=-1))
+
+        res = factln(n) + pt.sum(-factln(value) + logpow(p, value), axis=-1) - corr
         res = pt.switch(
             pt.or_(pt.any(pt.lt(value, 0), axis=-1), pt.neq(pt.sum(value, axis=-1), n)),
             -np.inf,
@@ -604,10 +604,8 @@ class Multinomial(Discrete):
         return check_parameters(
             res,
             0 <= p,
-            p <= 1,
-            pt.isclose(pt.sum(p, axis=-1), 1),
             pt.ge(n, 0),
-            msg="0 <= p <= 1, sum(p) = 1, n >= 0",
+            msg="0 <= p, n >= 0",
         )
 
 

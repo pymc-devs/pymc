@@ -561,12 +561,16 @@ class TestMatchesScipy:
 
     def test_multinomial_p_not_normalized(self):
         # test UserWarning is raised for p vals that sum to more than 1
-        # and normaliation is triggered
+        # and logp is fine
         with pytest.warns(UserWarning, match="They will be automatically rescaled"):
             with pm.Model() as m:
-                x = pm.Multinomial("x", n=5, p=[1, 1, 1, 1, 1])
+                pm.Multinomial("x", n=5, p=[1] * 5)
+                pm.Multinomial("y", n=5, p=[1 / 5] * 5)
         # test stored p-vals have been normalised
-        assert np.isclose(m.x.owner.inputs[4].sum().eval(), 1.0)
+        values = [0, 1, 2, 2, 0]
+        logp_x = pm.logp(m.x, values).eval()
+        logp_y = pm.logp(m.x, values).eval()
+        assert np.isclose(logp_x, logp_y)
 
     def test_multinomial_negative_p_symbolic(self):
         # Passing symbolic negative p does not raise an immediate error, but evaluating
@@ -580,14 +584,16 @@ class TestMatchesScipy:
             pm.logp(invalid_dist, value).eval({x: -1 / 3})
 
     def test_multinomial_p_not_normalized_symbolic(self):
-        # Passing symbolic p that do not add up to on does not raise any warning, but evaluating
-        # logp raises a ParameterValueError
-        value = np.array([[1, 1, 1]])
-
+        # Passing symbolic p that do not add up to on does not raise any warning,
+        # and logp is fine
         x = pt.scalar("x")
-        invalid_dist = pm.Multinomial.dist(n=1, p=(x, x, x))
-        with pytest.raises(ParameterValueError):
-            pm.logp(invalid_dist, value).eval({x: 0.5})
+        normalized_dist = pm.Multinomial.dist(n=1, p=(x / 3, x / 3, x / 3))
+        unnormalized_dist = pm.Multinomial.dist(n=1, p=(x, x, x))
+        values = [0, 1, 0]
+        x_val = 0.5
+        normalized_logp = pm.logp(normalized_dist, values).eval({x: x_val})
+        unnormalized_logp = pm.logp(unnormalized_dist, values).eval({x: x_val})
+        assert np.isclose(normalized_logp, unnormalized_logp)
 
     @pytest.mark.parametrize("n", [(10), ([10, 11]), ([[5, 6], [10, 11]])])
     @pytest.mark.parametrize(
