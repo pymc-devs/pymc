@@ -1681,18 +1681,3 @@ class TestModelGraphs:
             mock_model_to_graphviz.assert_called_once_with(
                 model=model, var_names=var_names, formatting="plain"
             )
-
-    def test_graphviz(self) -> None:
-        model = self.school_model(J=8)
-        g_actual = model.to_graphviz()
-        g_expected = model_to_graphviz(model)
-        assert g_actual.body == g_expected.body
-        assert g_actual.source == g_expected.source
-
-    def test_graphviz_different_models(self) -> None:
-        model_1 = self.school_model(J=8)
-        model_2 = self.school_model(J=5)
-        g_1 = model_1.to_graphviz()
-        g_2 = model_2.to_graphviz()
-        assert g_1.body != g_2.body
-        assert g_1.source != g_2.source
