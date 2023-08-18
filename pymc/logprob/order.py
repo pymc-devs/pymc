@@ -42,7 +42,9 @@ from pytensor.graph.basic import Node
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scalar.basic import Mul
+from pytensor.tensor.basic import get_underlying_scalar_constant_value
 from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.math import Max
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.var import TensorVariable
@@ -130,14 +132,15 @@ def max_logprob(op, values, base_rv, **kwargs):
 
 
 class MeasurableMaxNeg(Max):
-    """A placeholder used to specify a log-likelihood for a min sub-graph."""
+    """A placeholder used to specify a log-likelihood for a max(neg(x)) sub-graph.
+    This shows up in the graph of min, which is (neg(max(neg(x)))."""
 
 
 MeasurableVariable.register(MeasurableMaxNeg)
 
 
 @node_rewriter(tracks=[Max])
-def find_measurable_min(fgraph: FunctionGraph, node: Node) -> Optional[List[TensorVariable]]:
+def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> Optional[List[TensorVariable]]:
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
@@ -154,12 +157,19 @@ def find_measurable_min(fgraph: FunctionGraph, node: Node) -> Optional[List[Tens
     if not rv_map_feature.request_measurable(node.inputs):
         return None
 
-    # Min is the Max of the negation of the same distribution. Hence, op must be Elemiwise
+    # Min is the Max of the negation of the same distribution. Hence, op must be Elemwise
     if not isinstance(base_var.owner.op, Elemwise):
         return None
 
-    # negation is -1*(rv). Hence the scalar_op must be Mul
-    if not isinstance(base_var.owner.op.scalar_op, Mul):
+    # negation is rv * (-1). Hence the scalar_op must be Mul
+    try:
+        if not (
+            isinstance(base_var.owner.op.scalar_op, Mul)
+            and len(base_var.owner.inputs) == 2
+            and get_underlying_scalar_constant_value(base_var.owner.inputs[1]) == -1
+        ):
+            return None
+    except NotScalarConstantError:
         return None
 
     base_rv = base_var.owner.inputs[0]
@@ -191,8 +201,8 @@ def find_measurable_min(fgraph: FunctionGraph, node: Node) -> Optional[List[Tens
 
 
 measurable_ir_rewrites_db.register(
-    "find_measurable_min",
-    find_measurable_min,
+    "find_measurable_max_neg",
+    find_measurable_max_neg,
     "basic",
     "min",
 )

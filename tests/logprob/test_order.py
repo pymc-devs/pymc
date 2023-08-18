@@ -58,104 +58,87 @@ def test_argmax():
 
 
 @pytest.mark.parametrize(
-    "if_max",
+    "pt_op",
     [
-        True,
-        False,
+        pt.max,
+        pt.min,
     ],
 )
-def test_non_iid_fails(if_max):
+def test_non_iid_fails(pt_op):
     """Test whether the logprob for ```pt.max``` or ```pt.min``` for non i.i.d is correctly rejected"""
     x = pm.Normal.dist([0, 1, 2, 3, 4], 1, shape=(5,))
     x.name = "x"
-    if if_max == True:
-        x_m = pt.max(x, axis=-1)
-        x_m_value = pt.vector("x_max_value")
-    else:
-        x_m = pt.min(x, axis=-1)
-        x_m_value = pt.vector("x_min_value")
+    x_m = pt_op(x, axis=-1)
+    x_m_value = pt.vector("x_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_m, x_m_value)
 
 
 @pytest.mark.parametrize(
-    "if_max",
-    [True, False],
+    "pt_op",
+    [
+        pt.max,
+        pt.min,
+    ],
 )
-def test_non_rv_fails(if_max):
+def test_non_rv_fails(pt_op):
     """Test whether the logprob for ```pt.max``` for non-RVs is correctly rejected"""
     x = pt.exp(pt.random.beta(0, 1, size=(3,)))
     x.name = "x"
-    if if_max == True:
-        x_m = pt.max(x, axis=-1)
-        x_m_value = pt.vector("x_max_value")
-    else:
-        x_m = pt.min(x, axis=-1)
-        x_m_value = pt.vector("x_min_value")
+    x_m = pt_op(x, axis=-1)
+    x_m_value = pt.vector("x_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_m, x_m_value)
 
 
 @pytest.mark.parametrize(
-    "if_max",
+    "pt_op",
     [
-        True,
-        False,
+        pt.max,
+        pt.min,
     ],
 )
-def test_multivariate_rv_fails(if_max):
+def test_multivariate_rv_fails(pt_op):
     _alpha = pt.scalar()
     _k = pt.iscalar()
     x = pm.StickBreakingWeights.dist(_alpha, _k)
     x.name = "x"
-    if if_max == True:
-        x_m = pt.max(x, axis=-1)
-        x_m_value = pt.vector("x_max_value")
-    else:
-        x_m = pt.min(x, axis=-1)
-        x_m_value = pt.vector("x_min_value")
+    x_m = pt_op(x, axis=-1)
+    x_m_value = pt.vector("x_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_m, x_m_value)
 
 
 @pytest.mark.parametrize(
-    "if_max",
+    "pt_op",
     [
-        True,
-        False,
+        pt.max,
+        pt.min,
     ],
 )
-def test_categorical(if_max):
+def test_categorical(pt_op):
     """Test whether the logprob for ```pt.max``` for unsupported distributions is correctly rejected"""
     x = pm.Categorical.dist([1, 1, 1, 1], shape=(5,))
     x.name = "x"
-    if if_max == True:
-        x_m = pt.max(x, axis=-1)
-        x_m_value = pt.vector("x_max_value")
-    else:
-        x_m = pt.min(x, axis=-1)
-        x_m_value = pt.vector("x_min_value")
+    x_m = pt_op(x, axis=-1)
+    x_m_value = pt.vector("x_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_m, x_m_value)
 
 
 @pytest.mark.parametrize(
-    "if_max",
+    "pt_op",
     [
-        True,
-        False,
+        pt.max,
+        pt.min,
     ],
 )
-def test_non_supp_axis(if_max):
+def test_non_supp_axis(pt_op):
     """Test whether the logprob for ```pt.max``` for unsupported axis is correctly rejected"""
     x = pt.random.normal(0, 1, size=(3, 3))
     x.name = "x"
-    if if_max == True:
-        x_m = pt.max(x, axis=-1)
-        x_m_value = pt.vector("x_max_value")
-    else:
-        x_m = pt.min(x, axis=-1)
-        x_m_value = pt.vector("x_min_value")
+    x_m = pt_op(x, axis=-1)
+    x_m_value = pt.vector("x_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_m, x_m_value)
 
