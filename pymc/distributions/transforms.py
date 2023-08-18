@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from functools import singledispatch
+from typing import Callable, Optional, Tuple
 
 import numpy as np
 import pytensor.tensor as pt
@@ -19,8 +20,8 @@ import pytensor.tensor as pt
 # ignore mypy error because it somehow considers that
 # "numpy.core.numeric has no attribute normalize_axis_tuple"
 from numpy.core.numeric import normalize_axis_tuple  # type: ignore
-from pytensor.graph import Op
-from pytensor.tensor import TensorVariable
+from pytensor.graph import Op, Variable
+from pytensor.tensor.var import TensorVariable
 
 from pymc.logprob.transforms import (
     CircularTransform,
@@ -33,9 +34,13 @@ from pymc.logprob.transforms import (
 
 __all__ = [
     "RVTransform",
+    "DiscreteRVTransform",
     "simplex",
     "logodds",
     "Interval",
+    "DiscreteInterval",
+    "discrete_positive",
+    "discrete_binary",
     "log_exp_m1",
     "univariate_ordered",
     "multivariate_ordered",
@@ -394,3 +399,75 @@ circular = CircularTransform()
 circular.__doc__ = """
 Instantiation of :class:`pymc.logprob.transforms.CircularTransform`
 for use in the ``transform`` argument of a random variable."""
+
+
+class DiscreteRVTransform(RVTransform):
+    """Class of transforms that can be used for discrete variables"""
+
+    name = "discrete_transform"
+
+
+class DiscreteBinary(DiscreteRVTransform):
+    name = "dbinary"
+
+    def forward(self, value: TensorVariable, *inputs: Variable) -> TensorVariable:
+        return value
+
+    def backward(self, value: TensorVariable, *inputs: Variable) -> TensorVariable:
+        return value % 2
+
+
+discrete_binary = DiscreteBinary()
+
+
+class DiscreteInterval(DiscreteRVTransform):
+    name = "dinterval"
+
+    def __init__(
+        self, args_fn: Callable[..., Tuple[Optional[TensorVariable], Optional[TensorVariable]]]
+    ):
+        """
+
+        Parameters
+        ----------
+        args_fn: function
+            Function that expects inputs of RandomVariable and returns the lower
+            and upper bounds for the modulo transformation. If one of these is
+            None, the RV is considered to be unbounded on the respective edge.
+        """
+        self.args_fn = args_fn
+
+    def forward(self, value: TensorVariable, *inputs: Variable) -> TensorVariable:
+        return value
+
+    def backward(self, value: TensorVariable, *inputs: Variable) -> TensorVariable:
+        lower, upper = self.args_fn(*inputs)
+
+        if lower is not None and upper is not None:
+            # Reflect value across lower and upper. If lower=0, upper=5, we get the following mapping:
+            # value = array([-7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
+            # backward = array([5, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 5, 4, 3, 2, 1, 0, 0, 1])
+            mod_distance = pt.mod(value - lower, upper - lower + 1)
+            return pt.switch(
+                (((value - lower) // (upper - lower + 1)) % 2),
+                upper - mod_distance,
+                lower + mod_distance,
+            )
+
+        elif lower is not None:
+            # The commented out formula under-represents lower as no invalid value maps to it
+            # It would require a trick with the jacobian to work correctly
+            # return lower + pt.abs(value - lower)
+            return pt.switch(value < lower, pt.abs(value - lower) - 1, value)
+        elif upper is not None:
+            raise NotImplementedError(
+                "DiscreteIntervalTransform with only upper bound not implemented"
+            )
+        else:
+            raise ValueError("Both edges of DiscreteIntervalTransform cannot be None")
+
+    def log_jac_det(self, value: TensorVariable, *inputs) -> TensorVariable:
+        return pt.zeros_like(value)
+
+
+discrete_positive = DiscreteInterval(args_fn=(lambda *args: (pt.constant(0), None)))

@@ -152,7 +152,7 @@ class TestSMC:
 
     def test_start(self):
         with pm.Model() as model:
-            a = pm.Poisson("a", 5)
+            a = pm.Poisson("a", 5, transform=None)
             b = pm.HalfNormal("b", 10)
             y = pm.Normal("y", a, b, observed=[1, 2, 3, 4])
             start = {
