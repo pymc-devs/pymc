@@ -1924,7 +1924,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
                 obs = Normal("obs", theta, sigma=sigma, observed=y)
 
-            schools.graphviz()
+            schools.to_graphviz()
         """
         return model_to_graphviz(model=self, var_names=var_names, formatting=formatting)
 
