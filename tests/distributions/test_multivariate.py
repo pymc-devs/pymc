@@ -1596,7 +1596,7 @@ class TestZeroSumNormal:
             (5, 3, None, [-1]),
             (2, 6, None, [-1]),
             (5, (7, 3), None, [-1]),
-            (5, (2, 7, 3), 2, [1, 2]),
+            (5, (2, 7, 3), 2, [-2, -1]),
         ],
     )
     def test_zsn_logp(self, sigma, shape, n_zerosum_axes, mvn_axes):
@@ -1629,8 +1629,9 @@ class TestZeroSumNormal:
             return np.where(inds, np.sum(-psdet - exp, axis=-1), -np.inf)
 
         zsn_dist = pm.ZeroSumNormal.dist(sigma=sigma, shape=shape, n_zerosum_axes=n_zerosum_axes)
-        zsn_logp = pm.logp(zsn_dist, value=np.zeros(shape)).eval()
-        mvn_logp = logp_norm(value=np.zeros(shape), sigma=sigma, axes=mvn_axes)
+        zsn_draws = pm.draw(zsn_dist, 100)
+        zsn_logp = pm.logp(zsn_dist, value=zsn_draws).eval()
+        mvn_logp = logp_norm(value=zsn_draws, sigma=sigma, axes=mvn_axes)
 
         np.testing.assert_allclose(zsn_logp, mvn_logp)
 
