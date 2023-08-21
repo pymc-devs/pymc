@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
 
 import numpy as np
 import pytensor
@@ -43,5 +44,11 @@ def strict_float32():
 
 @pytest.fixture(scope="function", autouse=False)
 def seeded_test():
-    # TODO: use this instead of SeededTest
-    np.random.seed(42)
+    np.random.seed(20160911)
+
+
+@pytest.fixture
+def fail_on_warning():
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        yield

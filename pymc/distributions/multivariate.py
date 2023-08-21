@@ -32,8 +32,11 @@ from pytensor.sparse.basic import sp_sum
 from pytensor.tensor import TensorConstant, gammaln, sigmoid
 from pytensor.tensor.nlinalg import det, eigh, matrix_inverse, trace
 from pytensor.tensor.random.basic import dirichlet, multinomial, multivariate_normal
-from pytensor.tensor.random.op import RandomVariable, default_supp_shape_from_params
-from pytensor.tensor.random.utils import broadcast_params
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.utils import (
+    broadcast_params,
+    supp_shape_from_ref_param_shape,
+)
 from pytensor.tensor.slinalg import Cholesky, SolveTriangular
 from pytensor.tensor.type import TensorType
 from scipy import linalg, stats
@@ -86,6 +89,7 @@ __all__ = [
     "MatrixNormal",
     "KroneckerNormal",
     "CAR",
+    "ICAR",
     "StickBreakingWeights",
 ]
 
@@ -320,9 +324,12 @@ class MvStudentTRV(RandomVariable):
             cov = np.array([[1.0]], dtype=dtype)
         return super().__call__(nu, mu, cov, size=size, **kwargs)
 
-    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
-        return default_supp_shape_from_params(
-            self.ndim_supp, dist_params, rep_param_idx, param_shapes
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=1,
         )
 
     @classmethod
@@ -611,9 +618,12 @@ class DirichletMultinomialRV(RandomVariable):
     dtype = "int64"
     _print_name = ("DirichletMN", "\\operatorname{DirichletMN}")
 
-    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
-        return default_supp_shape_from_params(
-            self.ndim_supp, dist_params, rep_param_idx, param_shapes
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=1,
         )
 
     @classmethod
@@ -840,9 +850,9 @@ class OrderedMultinomial:
 def posdef(AA):
     try:
         linalg.cholesky(AA)
-        return 1
+        return True
     except linalg.LinAlgError:
-        return 0
+        return False
 
 
 class PosDefMatrix(Op):
@@ -859,7 +869,7 @@ class PosDefMatrix(Op):
     def make_node(self, x):
         x = pt.as_tensor_variable(x)
         assert x.ndim == 2
-        o = TensorType(dtype="int8", shape=[])()
+        o = TensorType(dtype="bool", shape=[])()
         return Apply(self, [x], [o])
 
     # Python implementation:
@@ -867,7 +877,7 @@ class PosDefMatrix(Op):
         (x,) = inputs
         (z,) = outputs
         try:
-            z[0] = np.array(posdef(x), dtype="int8")
+            z[0] = np.array(posdef(x), dtype="bool")
         except Exception:
             pm._log.exception("Failed to check if %s positive definite", x)
             raise
@@ -893,9 +903,14 @@ class WishartRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("Wishart", "\\operatorname{Wishart}")
 
-    def _supp_shape_from_params(self, dist_params, rep_param_idx=1, param_shapes=None):
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
         # The shape of second parameter `V` defines the shape of the output.
-        return dist_params[1].shape[-2:]
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=1,
+        )
 
     @classmethod
     def rng_fn(cls, rng, nu, V, size):
@@ -1639,9 +1654,13 @@ class MatrixNormalRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("MatrixNormal", "\\operatorname{MatrixNormal}")
 
-    def _infer_shape(self, size, dist_params, param_shapes=None):
-        shape = tuple(size) + tuple(dist_params[0].shape[-2:])
-        return shape
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=0,
+        )
 
     @classmethod
     def rng_fn(cls, rng, mu, rowchol, colchol, size=None):
@@ -1858,6 +1877,14 @@ class KroneckerNormalRV(RandomVariable):
     dtype = "floatX"
     _print_name = ("KroneckerNormal", "\\operatorname{KroneckerNormal}")
 
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=0,
+        )
+
     def rng_fn(self, rng, mu, sigma, *covs, size=None):
         size = size if size else covs[-1]
         covs = covs[:-1] if covs[-1] == size else covs
@@ -2069,9 +2096,13 @@ class CARRV(RandomVariable):
 
         return super().make_node(rng, size, dtype, mu, W, alpha, tau)
 
-    def _infer_shape(self, size, dist_params, param_shapes=None):
-        shape = tuple(size) + (dist_params[0].shape[-1],)
-        return shape
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=0,
+        )
 
     @classmethod
     def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, size):
@@ -2226,6 +2257,172 @@ class CAR(Continuous):
         )
 
 
+class ICARRV(RandomVariable):
+    name = "icar"
+    ndim_supp = 1
+    ndims_params = [2, 1, 1, 0, 0, 0]
+    dtype = "floatX"
+    _print_name = ("ICAR", "\\operatorname{ICAR}")
+
+    def __call__(self, W, node1, node2, N, sigma, zero_sum_stdev, size=None, **kwargs):
+        return super().__call__(W, node1, node2, N, sigma, zero_sum_stdev, size=size, **kwargs)
+
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        return supp_shape_from_ref_param_shape(
+            ndim_supp=self.ndim_supp,
+            dist_params=dist_params,
+            param_shapes=param_shapes,
+            ref_param_idx=0,
+        )
+
+    @classmethod
+    def rng_fn(cls, rng, size, W, node1, node2, N, sigma, zero_sum_stdev):
+        raise NotImplementedError("Cannot sample from ICAR prior")
+
+
+icar = ICARRV()
+
+
+class ICAR(Continuous):
+    r"""
+    The intrinsic conditional autoregressive prior. It is primarily used to model
+    covariance between neighboring areas. It is a special case
+    of the :class:`~pymc.CAR` distribution where alpha is set to 1.
+
+    The log probability density function is
+
+    .. math::
+        f(\phi| W,\sigma) =
+          -\frac{1}{2\sigma^{2}} \sum_{i\sim j} (\phi_{i} - \phi_{j})^2 -
+          \frac{1}{2}*\frac{\sum_{i}{\phi_{i}}}{0.001N}^{2} - \ln{\sqrt{2\\pi}} -
+          \ln{0.001N}
+
+    The first term represents the spatial covariance component. Each $\\phi_{i}$ is penalized
+    based on the square distance from each of its neighbors. The notation $i\\sim j$
+    indicates a sum over all the neighbors of $\\phi_{i}$. The last three terms are the
+    Normal log density function where the mean is zero and the standard deviation is
+    $N * 0.001$ (where N is the length of the vector $\\phi$). This component imposes
+    a zero-sum constraint by finding the sum of the vector $\\phi$ and penalizing based
+    on its distance from zero.
+
+    Parameters
+    ----------
+    W : ndarray of int
+        Symmetric adjacency matrix of 1s and 0s indicating adjacency between elements.
+
+    sigma : scalar, default 1
+        Standard deviation of the vector of phi's. Putting a prior on sigma
+        will result in a centered parameterization. In most cases, it is
+        preferable to use a non-centered parameterization by using the default
+        value and multiplying the resulting phi's by sigma. See the example below.
+
+    zero_sum_stdev : scalar, default 0.001
+        Controls how strongly to enforce the zero-sum constraint. The sum of
+        phi is normally distributed with a mean of zero and small standard deviation.
+        This parameter sets the standard deviation of a normal density function with
+        mean zero.
+
+
+    Examples
+    --------
+    This example illustrates how to switch between centered and non-centered
+    parameterizations.
+
+    .. code-block:: python
+
+        import numpy as np
+        import pymc as pm
+
+        # 4x4 adjacency matrix
+        # arranged in a square lattice
+
+        W = np.array([
+            [0,1,0,1],
+            [1,0,1,0],
+            [0,1,0,1],
+            [1,0,1,0]
+        ])
+
+        # centered parameterization
+        with pm.Model():
+            sigma = pm.Exponential('sigma', 1)
+            phi = pm.ICAR('phi', W=W, sigma=sigma)
+            mu = phi
+
+        # non-centered parameterization
+        with pm.Model():
+            sigma = pm.Exponential('sigma', 1)
+            phi = pm.ICAR('phi', W=W)
+            mu = sigma * phi
+
+    References
+    ----------
+    ..  Mitzi, M., Wheeler-Martin, K., Simpson, D., Mooney, J. S.,
+        Gelman, A., Dimaggio, C.
+        "Bayesian hierarchical spatial models: Implementing the Besag York
+        Mollié model in stan"
+        Spatial and Spatio-temporal Epidemiology, Vol. 31, (Aug., 2019),
+        pp 1-18
+    ..  Banerjee, S., Carlin, B., Gelfand, A. Hierarchical Modeling
+        and Analysis for Spatial Data. Second edition. CRC press. (2015)
+
+    """
+
+    rv_op = icar
+
+    @classmethod
+    def dist(cls, W, sigma=1, zero_sum_stdev=0.001, **kwargs):
+        if not W.ndim == 2:
+            raise ValueError("W must be matrix with ndim=2")
+
+        if not W.shape[0] == W.shape[1]:
+            raise ValueError("W must be a square matrix")
+
+        if not np.allclose(W.T, W):
+            raise ValueError("W must be a symmetric matrix")
+
+        if np.any((W != 0) & (W != 1)):
+            raise ValueError("W must be composed of only 1s and 0s")
+
+        # convert adjacency matrix to edgelist representation
+        # An edgelist is a pair of lists.
+        # If node i and node j are connected then one list
+        # will contain i and the other will contain j at the same
+        # index value.
+        # We only use the lower triangle here because adjacency
+        # is a undirected connection.
+
+        node1, node2 = np.where(np.tril(W) == 1)
+
+        node1 = pt.as_tensor_variable(node1, dtype=int)
+        node2 = pt.as_tensor_variable(node2, dtype=int)
+
+        W = pt.as_tensor_variable(W, dtype=int)
+
+        N = pt.shape(W)[0]
+        N = pt.as_tensor_variable(N)
+
+        sigma = pt.as_tensor_variable(floatX(sigma))
+        zero_sum_stdev = pt.as_tensor_variable(floatX(zero_sum_stdev))
+
+        return super().dist([W, node1, node2, N, sigma, zero_sum_stdev], **kwargs)
+
+    def moment(rv, size, W, node1, node2, N, sigma, zero_sum_stdev):
+        return pt.zeros(N)
+
+    def logp(value, W, node1, node2, N, sigma, zero_sum_stdev):
+        pairwise_difference = (-1 / (2 * sigma**2)) * pt.sum(
+            pt.square(value[node1] - value[node2])
+        )
+        zero_sum = (
+            -0.5 * pt.pow(pt.sum(value) / (zero_sum_stdev * N), 2)
+            - pt.log(pt.sqrt(2.0 * np.pi))
+            - pt.log(zero_sum_stdev * N)
+        )
+
+        return check_parameters(pairwise_difference + zero_sum, sigma > 0, msg="sigma > 0")
+
+
 class StickBreakingWeightsRV(RandomVariable):
     name = "stick_breaking_weights"
     ndim_supp = 1
@@ -2242,7 +2439,7 @@ class StickBreakingWeightsRV(RandomVariable):
 
         return super().make_node(rng, size, dtype, alpha, K)
 
-    def _supp_shape_from_params(self, dist_params, **kwargs):
+    def _supp_shape_from_params(self, dist_params, param_shapes):
         K = dist_params[1]
         return (K + 1,)
 

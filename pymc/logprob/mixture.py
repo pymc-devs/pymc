@@ -42,7 +42,7 @@ import pytensor.tensor as pt
 from pytensor.graph.basic import Apply, Constant, Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op, compute_test_value
-from pytensor.graph.rewriting.basic import node_rewriter, pre_greedy_node_rewriter
+from pytensor.graph.rewriting.basic import EquilibriumGraphRewriter, node_rewriter
 from pytensor.ifelse import IfElse, ifelse
 from pytensor.scalar import Switch
 from pytensor.scalar import switch as scalar_switch
@@ -52,6 +52,7 @@ from pytensor.tensor.random.rewriting import (
     local_rv_size_lift,
     local_subtensor_rv_lift,
 )
+from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.shape import shape_tuple
 from pytensor.tensor.subtensor import (
     AdvancedSubtensor,
@@ -77,7 +78,6 @@ from pymc.logprob.rewriting import (
     measurable_ir_rewrites_db,
     subtensor_ops,
 )
-from pymc.logprob.tensor import naive_bcast_rv_lift
 from pymc.logprob.utils import check_potential_measurability
 
 
@@ -203,21 +203,17 @@ def expand_indices(
     return cast(Tuple[TensorVariable], tuple(pt.broadcast_arrays(*adv_indices)))
 
 
-def rv_pull_down(x: TensorVariable, dont_touch_vars=None) -> TensorVariable:
+def rv_pull_down(x: TensorVariable) -> TensorVariable:
     """Pull a ``RandomVariable`` ``Op`` down through a graph, when possible."""
-    fgraph = FunctionGraph(outputs=dont_touch_vars or [], clone=False)
-
-    return pre_greedy_node_rewriter(
-        fgraph,
-        [
-            local_rv_size_lift,
-            local_dimshuffle_rv_lift,
-            local_subtensor_rv_lift,
-            naive_bcast_rv_lift,
-            local_lift_DiracDelta,
-        ],
-        x,
-    )
+    fgraph = FunctionGraph(outputs=[x], clone=False, features=[ShapeFeature()])
+    rewrites = [
+        local_rv_size_lift,
+        local_dimshuffle_rv_lift,
+        local_subtensor_rv_lift,
+        local_lift_DiracDelta,
+    ]
+    EquilibriumGraphRewriter(rewrites, max_use_ratio=100).rewrite(fgraph)
+    return fgraph.outputs[0]
 
 
 class MixtureRV(Op):

@@ -40,10 +40,10 @@ from pymc.sampling.forward import (
     get_vars_in_point_list,
     observed_dependent_deterministics,
 )
-from pymc.testing import SeededTest, fast_unstable_sampling_mode
+from pymc.testing import fast_unstable_sampling_mode
 
 
-class TestDraw(SeededTest):
+class TestDraw:
     def test_univariate(self):
         with pm.Model():
             x = pm.Normal("x")
@@ -438,7 +438,7 @@ class TestCompileForwardSampler:
         }
 
 
-class TestSamplePPC(SeededTest):
+class TestSamplePPC:
     def test_normal_scalar(self):
         nchains = 2
         ndraws = 500
@@ -466,7 +466,7 @@ class TestSamplePPC(SeededTest):
             assert ppc["a"].shape == (nchains, ndraws)
 
             # test default case
-            random_state = self.get_random_state()
+            random_state = np.random.RandomState(20160911)
             idata_ppc = pm.sample_posterior_predictive(
                 trace, var_names=["a"], random_seed=random_state
             )
@@ -573,7 +573,7 @@ class TestSamplePPC(SeededTest):
             _, pval = stats.kstest(ppc["b"].flatten(), stats.norm(scale=scale).cdf)
             assert pval > 0.001
 
-    def test_model_not_drawable_prior(self):
+    def test_model_not_drawable_prior(self, seeded_test):
         data = np.random.poisson(lam=10, size=200)
         model = pm.Model()
         with model:
@@ -1039,8 +1039,8 @@ def point_list_arg_bug_fixture() -> Tuple[pm.Model, pm.backends.base.MultiTrace]
     return pmodel, trace
 
 
-class TestSamplePriorPredictive(SeededTest):
-    def test_ignores_observed(self):
+class TestSamplePriorPredictive:
+    def test_ignores_observed(self, seeded_test):
         observed = np.random.normal(10, 1, size=200)
         with pm.Model():
             # Use a prior that's way off to show we're ignoring the observed variables
@@ -1081,7 +1081,7 @@ class TestSamplePriorPredictive(SeededTest):
 
         assert trace.prior["m"].shape == (1, 10, 4)
 
-    def test_multivariate2(self):
+    def test_multivariate2(self, seeded_test):
         # Added test for issue #3271
         mn_data = np.random.multinomial(n=100, pvals=[1 / 6.0] * 6, size=10)
         with pm.Model() as dm_model:
@@ -1114,7 +1114,7 @@ class TestSamplePriorPredictive(SeededTest):
         avg = np.stack([b_sampler() for i in range(10000)]).mean(0)
         npt.assert_array_almost_equal(avg, 0.5 * np.ones((10,)), decimal=2)
 
-    def test_transformed(self):
+    def test_transformed(self, seeded_test):
         n = 18
         at_bats = 45 * np.ones(n, dtype=int)
         hits = np.random.randint(1, 40, size=n, dtype=int)
@@ -1135,7 +1135,7 @@ class TestSamplePriorPredictive(SeededTest):
         assert gen.prior_predictive["y"].shape == (1, draws, n)
         assert "thetas" in gen.prior.data_vars
 
-    def test_shared(self):
+    def test_shared(self, seeded_test):
         n1 = 10
         obs = shared(np.random.rand(n1) < 0.5)
         draws = 50
@@ -1157,7 +1157,7 @@ class TestSamplePriorPredictive(SeededTest):
         assert gen2.prior_predictive["y"].shape == (1, draws, n2)
         assert gen2.prior["o"].shape == (1, draws, n2)
 
-    def test_density_dist(self):
+    def test_density_dist(self, seeded_test):
         obs = np.random.normal(-1, 0.1, size=10)
         with pm.Model():
             mu = pm.Normal("mu", 0, 1)
@@ -1344,7 +1344,7 @@ def test_distinct_rvs():
     assert np.array_equal(pp_samples["y"], pp_samples_2["y"])
 
 
-class TestNestedRandom(SeededTest):
+class TestNestedRandom:
     def build_model(self, distribution, shape, nested_rvs_info):
         with pm.Model() as model:
             nested_rvs = {}

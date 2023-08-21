@@ -59,6 +59,8 @@ import pytensor.tensor as pt
 import xarray
 
 from pytensor.graph.basic import Variable
+from pytensor.graph.replace import graph_replace
+from pytensor.tensor.shape import unbroadcast
 
 import pymc as pm
 
@@ -1002,7 +1004,7 @@ class Group(WithMemoization):
         """
 
         flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
-        node_out = pytensor.clone_replace(node, flat2rand)
+        node_out = graph_replace(node, flat2rand, strict=False)
         assert not (
             set(makeiter(self.input)) & set(pytensor.graph.graph_inputs(makeiter(node_out)))
         )
@@ -1012,7 +1014,7 @@ class Group(WithMemoization):
 
     def to_flat_input(self, node):
         """*Dev* - replace vars with flattened view stored in `self.inputs`"""
-        return pytensor.clone_replace(node, self.replacements)
+        return graph_replace(node, self.replacements, strict=False)
 
     def symbolic_sample_over_posterior(self, node):
         """*Dev* - performs sampling of node applying independent samples from posterior each time.
@@ -1023,7 +1025,7 @@ class Group(WithMemoization):
         random = pt.specify_shape(random, self.symbolic_initial.type.shape)
 
         def sample(post, *_):
-            return pytensor.clone_replace(node, {self.input: post})
+            return graph_replace(node, {self.input: post}, strict=False)
 
         nodes, _ = pytensor.scan(
             sample, random, non_sequences=_known_scan_ignored_inputs(makeiter(random))
@@ -1038,7 +1040,7 @@ class Group(WithMemoization):
         """
         node = self.to_flat_input(node)
         random = self.symbolic_random.astype(self.symbolic_initial.dtype)
-        return pytensor.clone_replace(node, {self.input: random[0]})
+        return graph_replace(node, {self.input: random[0]}, strict=False)
 
     def make_size_and_deterministic_replacements(self, s, d, more_replacements=None):
         """*Dev* - creates correct replacements for initial depending on
@@ -1059,8 +1061,15 @@ class Group(WithMemoization):
         """
         initial = self._new_initial(s, d, more_replacements)
         initial = pt.specify_shape(initial, self.symbolic_initial.type.shape)
+        # The static shape of initial may be more precise than self.symbolic_initial,
+        # and reveal previously unknown broadcastable dimensions. We have to mask those again.
+        if initial.type.broadcastable != self.symbolic_initial.type.broadcastable:
+            unbroadcast_axes = (
+                i for i, b in enumerate(self.symbolic_initial.type.broadcastable) if not b
+            )
+            initial = unbroadcast(initial, *unbroadcast_axes)
         if more_replacements:
-            initial = pytensor.clone_replace(initial, more_replacements)
+            initial = graph_replace(initial, more_replacements, strict=False)
         return {self.symbolic_initial: initial}
 
     @node_property
@@ -1394,8 +1403,8 @@ class Approximation(WithMemoization):
         _node = node
         optimizations = self.get_optimization_replacements(s, d)
         flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
-        node = pytensor.clone_replace(node, optimizations)
-        node = pytensor.clone_replace(node, flat2rand)
+        node = graph_replace(node, optimizations, strict=False)
+        node = graph_replace(node, flat2rand, strict=False)
         assert not (set(self.symbolic_randoms) & set(pytensor.graph.graph_inputs(makeiter(node))))
         try_to_set_test_value(_node, node, s)
         return node
@@ -1403,8 +1412,8 @@ class Approximation(WithMemoization):
     def to_flat_input(self, node, more_replacements=None):
         """*Dev* - replace vars with flattened view stored in `self.inputs`"""
         more_replacements = more_replacements or {}
-        node = pytensor.clone_replace(node, more_replacements)
-        return pytensor.clone_replace(node, self.replacements)
+        node = graph_replace(node, more_replacements, strict=False)
+        return graph_replace(node, self.replacements, strict=False)
 
     def symbolic_sample_over_posterior(self, node, more_replacements=None):
         """*Dev* - performs sampling of node applying independent samples from posterior each time.
@@ -1413,7 +1422,7 @@ class Approximation(WithMemoization):
         node = self.to_flat_input(node)
 
         def sample(*post):
-            return pytensor.clone_replace(node, dict(zip(self.inputs, post)))
+            return graph_replace(node, dict(zip(self.inputs, post)), strict=False)
 
         nodes, _ = pytensor.scan(
             sample, self.symbolic_randoms, non_sequences=_known_scan_ignored_inputs(makeiter(node))
@@ -1429,7 +1438,7 @@ class Approximation(WithMemoization):
         node = self.to_flat_input(node, more_replacements=more_replacements)
         post = [v[0] for v in self.symbolic_randoms]
         inp = self.inputs
-        return pytensor.clone_replace(node, dict(zip(inp, post)))
+        return graph_replace(node, dict(zip(inp, post)), strict=False)
 
     def get_optimization_replacements(self, s, d):
         """*Dev* - optimizations for logP. If sample size is static and equal to 1:
@@ -1463,7 +1472,7 @@ class Approximation(WithMemoization):
         """
         node_in = node
         if more_replacements:
-            node = pytensor.clone_replace(node, more_replacements)
+            node = graph_replace(node, more_replacements, strict=False)
         if not isinstance(node, (list, tuple)):
             node = [node]
         node = self.model.replace_rvs_by_values(node)

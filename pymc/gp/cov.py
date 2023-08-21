@@ -183,7 +183,10 @@ class Covariance(BaseCovariance):
     def _slice(self, X, Xs=None):
         xdims = X.shape[-1]
         if isinstance(xdims, Variable):
-            xdims = xdims.eval()
+            # Circular dependency
+            from pymc.pytensorf import constant_fold
+
+            [xdims] = constant_fold([xdims])
         if self.input_dim != xdims:
             warnings.warn(
                 f"Only {self.input_dim} column(s) out of {xdims} are"

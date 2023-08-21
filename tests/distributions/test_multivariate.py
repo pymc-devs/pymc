@@ -1082,6 +1082,18 @@ class TestMoments:
         assert_moment_is_expected(model, expected)
 
     @pytest.mark.parametrize(
+        "W, expected",
+        [
+            (np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]]), np.array([0, 0, 0])),
+            (np.array([[0, 1], [1, 0]]), np.array([0, 0])),
+        ],
+    )
+    def test_icar_moment(self, W, expected):
+        with pm.Model() as model:
+            RV = pm.ICAR("x", W=W)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
         "nu, mu, cov, size, expected",
         [
             (2, np.ones(1), np.eye(1), None, np.ones(1)),
@@ -1907,26 +1919,22 @@ class TestMatrixNormal(BaseTestDistributionRandom):
         def ref_rand(mu, rowcov, colcov):
             return st.matrix_normal.rvs(mean=mu, rowcov=rowcov, colcov=colcov)
 
-        with pm.Model():
-            matrixnormal = pm.MatrixNormal(
-                "matnormal",
-                mu=np.random.random((3, 3)),
-                rowcov=np.eye(3),
-                colcov=np.eye(3),
-            )
-            check = pm.sample_prior_predictive(n_fails, return_inferencedata=False, random_seed=1)
-
-        ref_smp = ref_rand(mu=np.random.random((3, 3)), rowcov=np.eye(3), colcov=np.eye(3))
+        matrixnormal = pm.MatrixNormal.dist(
+            mu=np.random.random((3, 3)),
+            rowcov=np.eye(3),
+            colcov=np.eye(3),
+        )
 
         p, f = delta, n_fails
         while p <= delta and f > 0:
-            matrixnormal_smp = check["matnormal"]
+            matrixnormal_smp = pm.draw(matrixnormal)
+            ref_smp = ref_rand(mu=np.random.random((3, 3)), rowcov=np.eye(3), colcov=np.eye(3))
 
             p = np.min(
                 [
                     st.ks_2samp(
-                        np.atleast_1d(matrixnormal_smp).flatten(),
-                        np.atleast_1d(ref_smp).flatten(),
+                        matrixnormal_smp.flatten(),
+                        ref_smp.flatten(),
                     )
                 ]
             )
@@ -1972,7 +1980,7 @@ class TestKroneckerNormal(BaseTestDistributionRandom):
     def kronecker_rng_fn(self, size, mu, covs=None, sigma=None, rng=None):
         cov = pm.math.kronecker(covs[0], covs[1]).eval()
         cov += sigma**2 * np.identity(cov.shape[0])
-        return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size)
+        return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size, random_state=rng)
 
     pymc_dist = pm.KroneckerNormal
 
@@ -2091,6 +2099,66 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
         assert np.all(np.abs(draw(x, random_seed=rng) - np.array([0.5, 0, 2.0])) < 0.01)
 
 
+class TestICAR(BaseTestDistributionRandom):
+    pymc_dist = pm.ICAR
+    pymc_dist_params = {"W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]), "sigma": 2}
+    expected_rv_op_params = {
+        "W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]),
+        "node1": np.array([1, 2, 2]),
+        "node2": np.array([0, 0, 1]),
+        "N": 3,
+        "sigma": 2,
+        "zero_sum_strength": 0.001,
+    }
+    checks_to_run = ["check_pymc_params_match_rv_op", "check_rv_inferred_size"]
+
+    def check_rv_inferred_size(self):
+        sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+        sizes_expected = [(3,), (3,), (1, 3), (1, 3), (5, 3), (4, 5, 3), (2, 4, 2, 3)]
+        for size, expected in zip(sizes_to_check, sizes_expected):
+            pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
+            expected_symbolic = tuple(pymc_rv.shape.eval())
+            assert expected_symbolic == expected
+
+    def test_icar_logp(self):
+        W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
+
+        with pm.Model() as m:
+            RV = pm.ICAR("phi", W=W)
+
+        assert pt.isclose(
+            pm.logp(RV, np.array([0.01, -0.03, 0.02, 0.00])).eval(), np.array(4.60022238)
+        ).eval(), "logp inaccuracy"
+
+    def test_icar_rng_fn(self):
+        W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
+
+        RV = pm.ICAR.dist(W=W)
+
+        with pytest.raises(NotImplementedError, match="Cannot sample from ICAR prior"):
+            pm.draw(RV)
+
+    @pytest.mark.parametrize(
+        "W,msg",
+        [
+            (np.array([0, 1, 0, 0]), "W must be matrix with ndim=2"),
+            (np.array([[0, 1, 0, 0], [1, 0, 0, 1], [1, 0, 0, 1]]), "W must be a square matrix"),
+            (
+                np.array([[0, 1, 0, 0], [1, 0, 0, 1], [1, 0, 0, 1], [0, 1, 1, 0]]),
+                "W must be a symmetric matrix",
+            ),
+            (
+                np.array([[0, 1, 1, 0], [1, 0, 0, 0.5], [1, 0, 0, 1], [0, 0.5, 1, 0]]),
+                "W must be composed of only 1s and 0s",
+            ),
+        ],
+    )
+    def test_icar_matrix_checks(self, W, msg):
+        with pytest.raises(ValueError, match=msg):
+            with pm.Model():
+                pm.ICAR("phi", W=W)
+
+
 @pytest.mark.parametrize("sparse", [True, False])
 def test_car_rng_fn(sparse):
     delta = 0.05  # limit for KS p-value
@@ -2134,10 +2202,10 @@ def test_car_rng_fn(sparse):
 @pytest.mark.parametrize(
     "matrix, result",
     [
-        ([[1.0, 0], [0, 1]], 1),
-        ([[1.0, 2], [2, 1]], 0),
-        ([[1.0, 1], [1, 1]], 0),
-        ([[1, 0.99, 1], [0.99, 1, 0.999], [1, 0.999, 1]], 0),
+        ([[1.0, 0], [0, 1]], True),
+        ([[1.0, 2], [2, 1]], False),
+        ([[1.0, 1], [1, 1]], False),
+        ([[1, 0.99, 1], [0.99, 1, 0.999], [1, 0.999, 1]], False),
     ],
 )
 def test_posdef_symmetric(matrix, result):

@@ -32,3 +32,14 @@ conda install blackjax
 ```
 
 Note that JAX is not directly supported on Windows systems at the moment.
+
+## Nutpie sampling
+
+You can also enable sampling with [nutpie](https://github.com/pymc-devs/nutpie).
+Nutpie uses numba as the compiler and a sampler written in Rust for faster performance.
+
+```console
+conda install -c conda-forge nutpie
+```
+
+Unlike JAX, nutpie is directly supported on Windows.
