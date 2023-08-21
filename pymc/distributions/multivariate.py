@@ -2781,6 +2781,7 @@ def zerosumnormal_logp(op, values, normal_dist, sigma, support_shape, **kwargs):
     (value,) = values
     shape = value.shape
     n_zerosum_axes = op.ndim_supp
+    *_, sigma = normal_dist.owner.inputs
 
     _deg_free_support_shape = pt.inc_subtensor(shape[-n_zerosum_axes:], -1)
     _full_size = pt.prod(shape)
@@ -2792,7 +2793,8 @@ def zerosumnormal_logp(op, values, normal_dist, sigma, support_shape, **kwargs):
     ]
 
     out = pt.sum(
-        pm.logp(normal_dist, value) * _degrees_of_freedom / _full_size,
+        -0.5 * pt.pow(value / sigma, 2)
+        - (pt.log(pt.sqrt(2.0 * np.pi)) + pt.log(sigma)) * _degrees_of_freedom / _full_size,
         axis=tuple(np.arange(-n_zerosum_axes, 0)),
     )
 
