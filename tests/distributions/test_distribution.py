@@ -430,6 +430,32 @@ class TestCustomSymbolicDist:
         ip = m.initial_point()
         np.testing.assert_allclose(m.compile_logp()(ip), ref_m.compile_logp()(ip))
 
+    @pytest.mark.parametrize(
+        "mu, sigma, size, expected",
+        [
+            (0, 1, None, np.exp(0 + 0.5 * 1**2)),
+            (0, np.ones(5), None, np.exp(0 + 0.5 * np.ones(5) ** 2)),
+            (np.arange(5), np.ones(5), None, np.exp(np.arange(5) + 0.5 * 1**2)),
+        ],
+    )
+    def test_custom_dist_default_moment(self, mu, sigma, size, expected):
+        def custom_dist(mu, sigma, size):
+            return pm.math.exp(pm.Normal.dist(mu, sigma, size=size))
+
+        with Model() as model:
+            mu = Normal("mu")
+            sigma = HalfNormal("sigma")
+            CustomDist(
+                "x",
+                mu,
+                sigma,
+                dist=custom_dist,
+                size=(10,),
+                transform=log,
+                initval=np.ones(10),
+            )
+        assert_moment_is_expected(model, expected)
+
     def test_logcdf_inference(self):
         def custom_dist(mu, sigma, size):
             return pt.exp(pm.Normal.dist(mu, sigma, size=size))
