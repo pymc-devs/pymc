@@ -21,6 +21,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 import arviz as az
 import jax
+import jax.numpy as jnp
 import numpy as np
 import pytensor.tensor as pt
 
@@ -34,10 +35,10 @@ from pytensor.link.jax.dispatch import jax_funcify
 from pytensor.raise_op import Assert
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.type import RandomType
-from pytensor.tensor.shape import SpecifyShape
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import find_constants, find_observations
+from pymc.distributions.multivariate import PosDefMatrix
 from pymc.initial_point import StartDict
 from pymc.logprob.utils import CheckParameterValue
 from pymc.sampling.mcmc import _init_jitter
@@ -62,7 +63,6 @@ __all__ = (
 
 @jax_funcify.register(Assert)
 @jax_funcify.register(CheckParameterValue)
-@jax_funcify.register(SpecifyShape)
 def jax_funcify_Assert(op, **kwargs):
     # Jax does not allow assert whose values aren't known during JIT compilation
     # within it's JIT-ed code. Hence we need to make a simple pass through
@@ -72,6 +72,15 @@ def jax_funcify_Assert(op, **kwargs):
         return value
 
     return assert_fn
+
+
+@jax_funcify.register(PosDefMatrix)
+def jax_funcify_PosDefMatrix(op, **kwargs):
+    def posdefmatrix_fn(value, *inps):
+        no_pos_def = jnp.any(jnp.isnan(jnp.linalg.cholesky(value)))
+        return jnp.invert(no_pos_def)
+
+    return posdefmatrix_fn
 
 
 def _replace_shared_variables(graph: List[TensorVariable]) -> List[TensorVariable]:
