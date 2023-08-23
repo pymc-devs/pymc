@@ -676,6 +676,7 @@ def sample_numpyro_nuts(
     if tune > 0:
         pmap_numpyro.warmup(
             map_seed,
+            collect_warmup=True,
             init_params=init_params,
             extra_fields=extra_fields,
         )
