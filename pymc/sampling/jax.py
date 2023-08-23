@@ -658,8 +658,6 @@ def sample_numpyro_nuts(
     tic2 = datetime.now()
     print("Compilation time = ", tic2 - tic1, file=sys.stdout)
 
-    print("Sampling...", file=sys.stdout)
-
     map_seed = jax.random.PRNGKey(random_seed)
     if chains > 1:
         map_seed = jax.random.split(map_seed, chains)
@@ -674,6 +672,7 @@ def sample_numpyro_nuts(
     )
 
     if tune > 0:
+        print("Warmup...", file=sys.stdout)
         pmap_numpyro.warmup(
             map_seed,
             collect_warmup=True,
@@ -684,6 +683,7 @@ def sample_numpyro_nuts(
         raw_mcmc_warmup_samples = pmap_numpyro.get_samples(group_by_chain=True)
         warmup_sample_stats = _sample_stats_to_xarray(pmap_numpyro)
 
+        print("Sampling...", file=sys.stdout)
         pmap_numpyro.post_warmup_state = pmap_numpyro.last_state
         pmap_numpyro.run(
             pmap_numpyro.post_warmup_state.rng_key,
@@ -691,6 +691,7 @@ def sample_numpyro_nuts(
         )
 
     else:
+        print("Sampling...", file=sys.stdout)
         pmap_numpyro.run(
             map_seed,
             init_params=init_params,
