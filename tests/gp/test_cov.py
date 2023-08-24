@@ -18,6 +18,8 @@ import pytensor
 import pytensor.tensor as pt
 import pytest
 
+from scipy.special import iv
+
 import pymc as pm
 
 from pymc.math import cartesian, kronecker
@@ -638,6 +640,21 @@ class TestPeriodic:
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_psd(self):
+        # compare to simple 1d formula
+        ell = 2.0
+        P = 0.1
+        m = 5
+
+        a = 1 / np.square(ell)
+        J = np.arange(0, m)
+        true_1d_psd = np.where(J > 0, 2, 1) * iv(J, a) / np.exp(a)
+
+        test_1d_psd = (
+            pm.gp.cov.Periodic(1, period=P, ls=ell).power_spectral_density(m).flatten().eval()
+        )
+        npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
 
 
 class TestLinear:
