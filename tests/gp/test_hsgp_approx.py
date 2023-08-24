@@ -105,15 +105,6 @@ class TestHSGP:
     def model(self):
         return pm.Model()
 
-    @pytest.fixture
-    def cov_func(self):
-        return pm.gp.cov.ExpQuad(1, ls=1)
-
-    @pytest.fixture
-    def gp(self, cov_func):
-        gp = pm.gp.Latent(cov_func=cov_func)
-        return gp
-
     def test_set_boundaries_1d(self, X1):
         X1s = X1 - np.mean(X1, axis=0)
         L = pm.gp.hsgp_approx.set_boundary(X1s, c=2).eval()
@@ -150,6 +141,7 @@ class TestHSGP:
         cov_func = pm.gp.cov.ExpQuad(2, ls=[1, 2])
         pm.gp.HSGP(m=[50, 50], L=[12, 12], cov_func=cov_func)
 
+    @pytest.mark.parametrize("cov_func", [pm.gp.cov.ExpQuad(1, ls=1)])
     @pytest.mark.parametrize("drop_first", [True, False])
     def test_parametrization_drop_first(self, model, cov_func, X1, drop_first):
         n_basis = 100
@@ -165,6 +157,7 @@ class TestHSGP:
             else:
                 assert n_coeffs == n_basis, "one was dropped when it shouldn't have been"
 
+    @pytest.mark.parametrize("cov_func", [pm.gp.cov.ExpQuad(1, ls=1)])
     @pytest.mark.parametrize("parameterization", ["centered", "noncentered"])
     def test_prior(self, model, cov_func, X1, parameterization, rng):
         """Compare HSGP prior to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
@@ -188,6 +181,7 @@ class TestHSGP:
         )
         assert not reject, "H0 was rejected, even though HSGP and GP priors should match."
 
+    @pytest.mark.parametrize("cov_func", [pm.gp.cov.ExpQuad(1, ls=1)])
     @pytest.mark.parametrize("parameterization", ["centered", "noncentered"])
     def test_conditional(self, model, cov_func, X1, parameterization):
         """Compare HSGP conditional to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
