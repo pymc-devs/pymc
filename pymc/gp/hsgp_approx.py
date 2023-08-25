@@ -23,7 +23,7 @@ import pytensor.tensor as pt
 
 import pymc as pm
 
-from pymc.gp.cov import Covariance
+from pymc.gp.cov import Covariance, Periodic
 from pymc.gp.gp import Base
 from pymc.gp.mean import Mean, Zero
 
@@ -53,7 +53,7 @@ def calc_eigenvectors(
     m: Sequence[int],
     tl: ModuleType = np,
 ):
-    """Calculate eigenvectors of the Laplacian.  These are used as basis vectors in the HSGP
+    """Calculate eigenvectors of the Laplacian. These are used as basis vectors in the HSGP
     approximation.
     """
     m_star = int(np.prod(m))
@@ -64,6 +64,25 @@ def calc_eigenvectors(
         term2 = tl.tile(Xs[:, d][:, None], m_star) + L[d]
         phi *= c * tl.sin(term1 * term2)
     return phi
+
+
+def calc_basis_periodic(
+    Xs: TensorLike,
+    period: TensorLike,
+    m: Sequence[int],
+    tl: ModuleType = np,
+):
+    """
+    Calculate basis vectors for the cosine series expansion of the periodic covariance function.
+    These are derived from the Taylor series representation of the covariance.
+    """
+    w0 = (2 * tl.pi) / period  # angular frequency defining the periodicity
+    m1 = tl.tile(w0 * Xs[:, None], m)
+    m2 = tl.diag(tl.arange(m))
+    mw0x = m1 @ m2
+    phi_cos = tl.cos(mw0x)
+    phi_sin = tl.sin(mw0x)
+    return phi_cos, phi_sin
 
 
 class HSGP(Base):
@@ -160,7 +179,7 @@ class HSGP(Base):
         cov_func: Covariance,
     ):
         arg_err_msg = (
-            "`m` and L, if provided, must be sequences with one element per active "
+            "`m` and `L`, if provided, must be sequences with one element per active "
             "dimension of the kernel or covariance function."
         )
 
@@ -185,6 +204,11 @@ class HSGP(Base):
             raise ValueError("`parameterization` must be either 'centered' or 'noncentered'.")
         else:
             self._parameterization = parameterization
+
+        if isinstance(cov_func, Periodic) and cov_func.n_dims > 1:
+            raise ValueError(
+                "HSGP approximation for periodic kernel only implemented for 1-dimensional case."
+            )
 
         self._drop_first = drop_first
         self._m = m
@@ -287,20 +311,26 @@ class HSGP(Base):
         # Index Xs using input_dim and active_dims of covariance function
         Xs, _ = self.cov_func._slice(Xs)
 
-        # If not provided, use Xs and c to set L
-        if self._L is None:
-            assert isinstance(self._c, (numbers.Real, np.ndarray, pt.TensorVariable))
-            self.L = set_boundary(Xs, self._c)
+        if isinstance(self.cov_func, Periodic):
+            phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m, tl=pt)
+            psd = self.cov_func.power_spectral_density(self._m)
+            return (phi_cos, phi_sin), psd
+
         else:
-            self.L = self._L
+            # If not provided, use Xs and c to set L
+            if self._L is None:
+                assert isinstance(self._c, (numbers.Real, np.ndarray, pt.TensorVariable))
+                self.L = set_boundary(Xs, self._c)
+            else:
+                self.L = self._L
 
-        eigvals = calc_eigenvalues(self.L, self._m, tl=pt)
-        phi = calc_eigenvectors(Xs, self.L, eigvals, self._m, tl=pt)
-        omega = pt.sqrt(eigvals)
-        psd = self.cov_func.power_spectral_density(omega)
+            eigvals = calc_eigenvalues(self.L, self._m, tl=pt)
+            phi = calc_eigenvectors(Xs, self.L, eigvals, self._m, tl=pt)
+            omega = pt.sqrt(eigvals)
+            psd = self.cov_func.power_spectral_density(omega)
 
-        i = int(self._drop_first == True)
-        return phi[:, i:], pt.sqrt(psd[i:])
+            i = int(self._drop_first == True)
+            return phi[:, i:], pt.sqrt(psd[i:])
 
     def prior(self, name: str, X: TensorLike, dims: Optional[str] = None):  # type: ignore
         R"""
@@ -319,16 +349,26 @@ class HSGP(Base):
         self._X_mean = pt.mean(X, axis=0)
         phi, sqrt_psd = self.prior_linearized(X - self._X_mean)
 
-        if self._parameterization == "noncentered":
-            self._beta = pm.Normal(
-                f"{name}_hsgp_coeffs_", size=self._m_star - int(self._drop_first)
+        if isinstance(self.cov_func, Periodic):
+            (phi_cos, phi_sin), psd = self.prior_linearized(X - self._X_mean)
+            self._beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(self._m * 2 - 1))
+            # The first eigenfunction for the sine component is zero
+            # and so does not contribute to the approximation.
+            f = phi_cos @ (psd * self._beta[: self._m]) + phi_sin[..., 1:] @ (
+                psd[1:] * self._beta[self._m + 1 :]
             )
-            self._sqrt_psd = sqrt_psd
-            f = self.mean_func(X) + phi @ (self._beta * self._sqrt_psd)
 
-        elif self._parameterization == "centered":
-            self._beta = pm.Normal(f"{name}_hsgp_coeffs_", sigma=sqrt_psd)
-            f = self.mean_func(X) + phi @ self._beta
+        else:
+            if self._parameterization == "noncentered":
+                self._beta = pm.Normal(
+                    f"{name}_hsgp_coeffs_", size=self._m_star - int(self._drop_first)
+                )
+                self._sqrt_psd = sqrt_psd
+                f = self.mean_func(X) + phi @ (self._beta * self._sqrt_psd)
+
+            elif self._parameterization == "centered":
+                self._beta = pm.Normal(f"{name}_hsgp_coeffs_", sigma=sqrt_psd)
+                f = self.mean_func(X) + phi @ self._beta
 
         self.f = pm.Deterministic(name, f, dims=dims)
         return self.f
@@ -346,15 +386,27 @@ class HSGP(Base):
             )
 
         Xnew, _ = self.cov_func._slice(Xnew)
-        eigvals = calc_eigenvalues(self.L, self._m, tl=pt)
-        phi = calc_eigenvectors(Xnew - X_mean, self.L, eigvals, self._m, tl=pt)
-        i = int(self._drop_first == True)
 
-        if self._parameterization == "noncentered":
-            return self.mean_func(Xnew) + phi[:, i:] @ (beta * sqrt_psd)
+        if isinstance(self.cov_func, Periodic):
+            phi_cos, phi_sin = calc_basis_periodic(
+                Xnew - X_mean, self.cov_func.period, self._m, tl=pt
+            )
+            psd = self.cov_func.power_spectral_density(self._m)
 
-        elif self._parameterization == "centered":
-            return self.mean_func(Xnew) + phi[:, i:] @ beta
+            phi = phi_cos @ (psd * beta[: self._m]) + phi_sin[..., 1:] @ (
+                psd[1:] * beta[self._m + 1 :]
+            )
+            return self.mean_func(Xnew) + phi
+        else:
+            eigvals = calc_eigenvalues(self.L, self._m, tl=pt)
+            phi = calc_eigenvectors(Xnew - X_mean, self.L, eigvals, self._m, tl=pt)
+            i = int(self._drop_first == True)
+
+            if self._parameterization == "noncentered":
+                return self.mean_func(Xnew) + phi[:, i:] @ (beta * sqrt_psd)
+
+            elif self._parameterization == "centered":
+                return self.mean_func(Xnew) + phi[:, i:] @ beta
 
     def conditional(self, name: str, Xnew: TensorLike, dims: Optional[str] = None):  # type: ignore
         R"""

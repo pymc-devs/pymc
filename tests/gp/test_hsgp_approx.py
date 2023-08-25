@@ -116,7 +116,9 @@ class TestHSGP:
         assert np.all(L == 10)
 
     def test_parametrization(self):
-        err_msg = "`m` and L, if provided, must be sequences with one element per active dimension"
+        err_msg = (
+            "`m` and `L`, if provided, must be sequences with one element per active dimension"
+        )
 
         with pytest.raises(ValueError, match=err_msg):
             # m must be a list
@@ -132,6 +134,13 @@ class TestHSGP:
             # m must have same length as L, and match number of active dims of cov_func
             cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
             pm.gp.HSGP(m=[500], L=[12, 12], cov_func=cov_func)
+
+        with pytest.raises(
+            ValueError,
+            match="HSGP approximation for periodic kernel only implemented for 1-dimensional case.",
+        ):
+            cov_func = pm.gp.cov.Periodic(2, period=1, ls=[1, 2])
+            pm.gp.HSGP(m=[500, 500], L=[12, 12], cov_func=cov_func)
 
         # pass without error, cov_func has 2 active dimensions, c given as scalar
         cov_func = pm.gp.cov.ExpQuad(3, ls=[1, 2], active_dims=[0, 2])
