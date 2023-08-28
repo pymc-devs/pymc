@@ -1103,6 +1103,52 @@ def test_erf_logp(pt_transform, transform):
 
 @pytest.mark.parametrize(
     "transform",
+    ["log1p", "softplus", "log1mexp", "log2", "log10"],
+)
+def test_special_log_transforms(transform):
+    base_rv = pt.random.normal(name="base_rv")
+    vv = pt.scalar("vv")
+    if transform == "log1p":
+        logp_test = logp(pt.log1p(base_rv), vv)
+        logp_ref = logp(pt.log(1 + base_rv), vv)
+    elif transform == "softplus":
+        logp_test = logp(pt.softplus(base_rv), vv)
+        logp_ref = logp(pt.log(1 + pt.exp(base_rv)), vv)
+    elif transform == "log1mexp":
+        logp_test = logp(pt.log1mexp(base_rv), vv)
+        logp_ref = logp(pt.log(1 - pt.exp(pt.neg(base_rv))), vv)
+    elif transform == "log2":
+        logp_test = logp(pt.log2(base_rv), vv)
+        logp_ref = logp(pt.log(base_rv) / pt.log(2), vv)
+    elif transform == "log10":
+        logp_test = logp(pt.log10(base_rv), vv)
+        logp_ref = logp(pt.log(base_rv) / pt.log(10), vv)
+    assert equal_computations([logp_test], [logp_ref])
+
+
+@pytest.mark.parametrize(
+    "transform",
+    ["exp2", "expm1", "sigmoid"],
+)
+def test_special_exp_transforms(transform):
+    base_rv = pt.random.normal(name="base_rv")
+    vv = pt.scalar("vv")
+
+    if transform == "exp2":
+        logp_test = logp(pt.exp2(base_rv), vv)
+        logp_ref = logp(pt.exp(pt.log(2) * base_rv), vv)
+    elif transform == "expm1":
+        logp_test = logp(pt.expm1(base_rv), vv)
+        logp_ref = logp(pt.exp(base_rv) - 1, vv)
+    elif transform == "sigmoid":
+        logp_test = logp(pt.sigmoid(base_rv), vv)
+        logp_ref = logp(1 / (1 + pt.exp(-base_rv)), vv)
+
+    assert equal_computations([logp_test], [logp_ref])
+
+
+@pytest.mark.parametrize(
+    "transform",
     [
         ErfTransform(),
         ErfcTransform(),
@@ -1113,10 +1159,7 @@ def test_erf_logp(pt_transform, transform):
         ArcsinhTransform(),
         ArccoshTransform(),
         ArctanhTransform(),
-        ExpTransform(base=2),
-        ExpTransform(m=True),
-        LogTransform(base=2),
-        LogTransform(base=10),
+        LogTransform(),
         ExpTransform(),
     ],
 )
