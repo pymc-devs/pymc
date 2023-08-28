@@ -39,7 +39,10 @@ pymc/logprob/scan.py
 pymc/logprob/tensor.py
 pymc/logprob/transforms.py
 pymc/logprob/utils.py
-pymc/model.py
+pymc/model/core.py
+pymc/model/fgraph.py
+pymc/model/transform/basic.py
+pymc/model/transform/conditioning.py
 pymc/model_graph.py
 pymc/printing.py
 pymc/pytensorf.py

@@ -46,10 +46,9 @@ from pymc.distributions import Normal, transforms
 from pymc.distributions.distribution import PartialObservedRV
 from pymc.distributions.transforms import log, simplex
 from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
-from pymc.logprob.basic import conditional_logp, transformed_conditional_logp
+from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
-from pymc.model_graph import model_to_graphviz
 from pymc.util import _FutureWarningValidatingScratchpad
 from pymc.variational.minibatch_rv import MinibatchRandomVariable
 from tests.models import simple_model
@@ -1676,7 +1675,7 @@ class TestModelGraphs:
     )
     def test_graphviz_call_function(self, var_names) -> None:
         model = self.school_model(J=8)
-        with patch("pymc.model.model_to_graphviz") as mock_model_to_graphviz:
+        with patch("pymc.model.core.model_to_graphviz") as mock_model_to_graphviz:
             model.to_graphviz(var_names=var_names)
             mock_model_to_graphviz.assert_called_once_with(
                 model=model, var_names=var_names, formatting="plain"
