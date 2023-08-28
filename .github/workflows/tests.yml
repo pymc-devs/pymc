@@ -93,7 +93,10 @@ jobs:
             tests/gp/test_gp.py
             tests/gp/test_mean.py
             tests/gp/test_util.py
-            tests/test_model.py
+            tests/model/test_core.py
+            tests/model/test_fgraph.py
+            tests/model/transform/test_basic.py
+            tests/model/transform/test_conditioning.py
             tests/test_model_graph.py
             tests/ode/test_ode.py
             tests/ode/test_utils.py
@@ -187,7 +190,7 @@ jobs:
         python-version: ["3.9"]
         test-subset:
           - tests/variational/test_approximations.py tests/variational/test_callbacks.py tests/variational/test_inference.py tests/variational/test_opvi.py tests/test_initial_point.py
-          - tests/test_model.py tests/sampling/test_mcmc.py
+          - tests/model/test_core.py tests/sampling/test_mcmc.py
           - tests/gp/test_cov.py tests/gp/test_gp.py tests/gp/test_mean.py tests/gp/test_util.py tests/ode/test_ode.py tests/ode/test_utils.py tests/smc/test_smc.py tests/sampling/test_parallel.py
           - tests/step_methods/test_metropolis.py tests/step_methods/test_slicer.py tests/step_methods/hmc/test_nuts.py tests/step_methods/test_compound.py tests/step_methods/hmc/test_hmc.py
 
@@ -266,7 +269,7 @@ jobs:
             tests/sampling/test_parallel.py
             tests/test_data.py
             tests/variational/test_minibatch_rv.py
-            tests/test_model.py
+            tests/model/test_core.py
 
           - |
             tests/sampling/test_mcmc.py

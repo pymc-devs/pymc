@@ -35,7 +35,7 @@ import scipy.sparse as sps
 from pytensor import scalar
 from pytensor.compile import Function, Mode, get_mode
 from pytensor.gradient import grad
-from pytensor.graph import node_rewriter, rewrite_graph
+from pytensor.graph import Type, node_rewriter, rewrite_graph
 from pytensor.graph.basic import (
     Apply,
     Constant,
@@ -1234,3 +1234,46 @@ def rewrite_pregrad(graph):
     pre-grad.
     """
     return rewrite_graph(graph, include=("canonicalize", "stabilize"))
+
+
+class StringType(Type[str]):
+    def clone(self, **kwargs):
+        return type(self)()
+
+    def filter(self, x, strict=False, allow_downcast=None):
+        if isinstance(x, str):
+            return x
+        else:
+            raise TypeError("Expected a string!")
+
+    def __str__(self):
+        return "string"
+
+    @staticmethod
+    def may_share_memory(a, b):
+        return isinstance(a, str) and a is b
+
+
+stringtype = StringType()
+
+
+class StringConstant(Constant):
+    pass
+
+
+@pytensor._as_symbolic.register(str)
+def as_symbolic_string(x, **kwargs):
+    return StringConstant(stringtype, x)
+
+
+def toposort_replace(
+    fgraph: FunctionGraph, replacements: Sequence[Tuple[Variable, Variable]], reverse: bool = False
+) -> None:
+    """Replace multiple variables in topological order."""
+    toposort = fgraph.toposort()
+    sorted_replacements = sorted(
+        replacements,
+        key=lambda pair: toposort.index(pair[0].owner) if pair[0].owner else -1,
+        reverse=reverse,
+    )
+    fgraph.replace_all(sorted_replacements, import_missing=True)
