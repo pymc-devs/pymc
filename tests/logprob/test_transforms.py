@@ -1081,9 +1081,16 @@ def test_absolute_rv_transform(test_val):
         (pt.arcsinh, ArcsinhTransform()),
         (pt.arccosh, ArccoshTransform()),
         (pt.arctanh, ArctanhTransform()),
+        (pt.exp2, ExpTransform(base=2)),
+        (pt.expm1, ExpTransform(m=True)),
+        (pt.log2, LogTransform(base=2)),
+        (pt.log10, LogTransform(base=10)),
+        (pt.log1p, LogTransform()),
+        (pt.log1mexp, LogTransform()),
+        (pt.log1pexp, LogTransform()),
     ],
 )
-def test_extra_bijective_rv_transforms(pt_transform, transform):
+def test_erf_logp(pt_transform, transform):
     base_rv = pt.random.normal(
         0.5, 1, name="base_rv"
     )  # Something not centered around 0 is usually better
@@ -1113,16 +1120,29 @@ def test_cosh_rv_transform():
     with pytest.raises(NotImplementedError):
         icdf(rv, vv)
 
-    transform = CoshTransform()
-    [back_neg, back_pos] = transform.backward(vv)
-    expected_logp = pt.logaddexp(
-        logp(base_rv, back_neg), logp(base_rv, back_pos)
-    ) + transform.log_jac_det(vv)
 
-    vv_test = np.array([0.25, 1.5])
-    np.testing.assert_allclose(
-        rv_logp.eval({vv: vv_test}),
-        np.nan_to_num(expected_logp.eval({vv: vv_test}), nan=-np.inf),
+@pytest.mark.parametrize(
+    "transform",
+    [
+        ErfTransform(),
+        ErfcTransform(),
+        ErfcxTransform(),
+        SinhTransform(),
+        CoshTransform(),
+        TanhTransform(),
+        ArcsinhTransform(),
+        ArccoshTransform(),
+        ArctanhTransform(),
+    ],
+)
+def test_check_jac_det(transform):
+    check_jacobian_det(
+        transform,
+        Vector(Rplusbig, 2),
+        pt.dvector,
+        [0.1, 0.1],
+        elemwise=True,
+        rv_var=pt.random.normal(0.5, 1, name="base_rv"),
     )
 
 

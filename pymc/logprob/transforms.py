@@ -61,6 +61,8 @@ from pytensor.scalar import (
     Erfc,
     Erfcx,
     Exp,
+    Exp2,
+    Expm1,
     Log,
     Log1mexp,
     Log1p,
@@ -68,6 +70,7 @@ from pytensor.scalar import (
     Log10,
     Mul,
     Pow,
+    Sigmoid,
     Sinh,
     Softplus,
     Sqr,
@@ -87,6 +90,8 @@ from pytensor.tensor.math import (
     erfc,
     erfcx,
     exp,
+    exp2,
+    expm1,
     log,
     log1mexp,
     log1p,
@@ -96,6 +101,7 @@ from pytensor.tensor.math import (
     neg,
     pow,
     reciprocal,
+    sigmoid,
     sinh,
     softplus,
     sqr,
@@ -387,6 +393,9 @@ class MeasurableTransform(MeasurableElemwise):
 
     valid_scalar_types = (
         Exp,
+        Exp2,
+        Expm1,
+        Sigmoid,
         Log,
         Log2,
         Log10,
@@ -593,13 +602,16 @@ def measurable_special_log_to_log(fgraph, node):
         return [pt.log(1 + inp)]
     if isinstance(node.op.scalar_op, Softplus):
         return [pt.log(1 + pt.exp(inp))]
-    if isinstance(node.op.scalar_op, Log1p):
+    if isinstance(node.op.scalar_op, Log1mexp):
         return [pt.log(1 - pt.exp(pt.neg(inp)))]
 
 
 @node_rewriter(
     [
         exp,
+        exp2,
+        expm1,
+        sigmoid,
         log,
         log2,
         log10,
@@ -655,6 +667,12 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
 
     transform_dict = {
         Exp: ExpTransform(),
+        Exp2: ExpTransform(base=2),
+        Expm1: ExpTransform(m=True),
+        Log: LogTransform(),
+        Log2: LogTransform(base=2),
+        Log10: LogTransform(base=10),
+        Sigmoid: SigmoidTransform(),
         Abs: AbsTransform(),
         Sinh: SinhTransform(),
         Cosh: CoshTransform(),
@@ -684,18 +702,11 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         transform = LocTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
-    elif isinstance(scalar_op, Log):
-        transform = LogTransform()
-    elif isinstance(scalar_op, Log2):
-        transform = LogTransform(base=2)
-    elif isinstance(scalar_op, Log10):
-        transform = LogTransform(base=10)
     elif transform is None:
         transform_inputs = (measurable_input, pt.mul(*other_inputs))
         transform = ScaleTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
-
     transform_op = MeasurableTransform(
         scalar_op=scalar_op,
         transform=transform,
@@ -937,14 +948,25 @@ class LogTransform(RVTransform):
 class ExpTransform(RVTransform):
     name = "exp"
 
+    def __init__(self, base=pt.exp(1), m=False):
+        self.base = base
+        self.m = m
+        super().__init__()
+
     def forward(self, value, *inputs):
-        return pt.exp(value)
+        if self.m:
+            return pt.power(self.base, value) - 1
+        else:
+            return pt.power(self.base, value)
 
     def backward(self, value, *inputs):
-        return pt.log(value)
+        if self.m:
+            return pt.log(value + 1)
+        else:
+            return pt.log(value) / pt.log(self.base)
 
     def log_jac_det(self, value, *inputs):
-        return -pt.log(value)
+        return -pt.log(value) / pt.log(self.base)
 
 
 class AbsTransform(RVTransform):
@@ -1054,6 +1076,20 @@ class IntervalTransform(RVTransform):
             raise ValueError("Both edges of IntervalTransform cannot be None")
         else:
             return value
+
+
+class SigmoidTransform(RVTransform):
+    name = "Sigmoid"
+
+    def forward(self, value, *inputs):
+        return pt.expit(value)
+
+    def backward(self, value, *inputs):
+        return pt.log(value / (1 - value))
+
+    def log_jac_det(self, value, *inputs):
+        sigmoid_value = pt.sigmoid(value)
+        return pt.log(sigmoid_value * (1 - sigmoid_value))
 
 
 class LogOddsTransform(RVTransform):
