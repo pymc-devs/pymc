@@ -306,24 +306,23 @@ def test_switch_encoding_one_branch_measurable(measurable_idx, test_values, exp_
 
 
 def test_switch_encoding_invalid_bcast():
-    x_rv = pt.random.normal(0.5, 1, size=(4,))
+    x_rv = pt.random.normal(0.5, 1)
 
-    switch_cond = x_rv < 0.3
+    y_rv = pt.switch(x_rv < 0.3, 0.0, 1.0)
+    y_rv_invalid = pt.switch(x_rv < 0.3, [0.0, 0.5], 1.0)
 
-    valid_true_branch = pt.vector("valid_true_branch")
-    valid_false_branch = pt.vector("valid_false_branch")
+    y_vv = y_rv.clone()
+    y_vv_invalid = y_rv_invalid.clone()
 
-    invalid_false_branch = pt.matrix("invalid_false_branch")
+    y_test = 1.0
 
-    valid_encoding = pt.switch(switch_cond, valid_true_branch, valid_false_branch)
-    fgraph, _, _ = construct_ir_fgraph({valid_encoding: valid_encoding.type()})
-    assert isinstance(fgraph.outputs[0].owner.op, MeasurableVariable)
-    assert isinstance(fgraph.outputs[0].owner.op, MeasurableSwitchEncoding)
+    assert np.isclose(logp(y_rv, y_vv).eval({y_vv: y_test}), st.norm(0.5, 1).logsf(0.3))
 
-    invalid_encoding = pt.switch(switch_cond, valid_true_branch, invalid_false_branch)
-    fgraph, _, _ = construct_ir_fgraph({invalid_encoding: invalid_encoding.type()})
-    assert not isinstance(fgraph.outputs[0].owner.op, MeasurableVariable)
-    assert not isinstance(fgraph.outputs[0].owner.op, MeasurableSwitchEncoding)
+    with pytest.raises(
+        NotImplementedError,
+        match="Logprob method not implemented",
+    ):
+        logp(y_rv_invalid, y_vv_invalid).eval({y_vv_invalid: y_test})
 
 
 def test_switch_encoding_discrete_fail():
