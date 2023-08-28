@@ -1101,10 +1101,6 @@ def test_erf_logp(pt_transform, transform):
     )
 
 
-from pymc.testing import Rplusbig, Vector
-from tests.distributions.test_transform import check_jacobian_det
-
-
 @pytest.mark.parametrize(
     "transform",
     [
