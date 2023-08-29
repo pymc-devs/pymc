@@ -42,7 +42,7 @@ from pytensor import tensor as pt
 from pytensor.graph import RewriteDatabaseQuery
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.rewriting.utils import rewrite_graph
-from pytensor.tensor.extra_ops import BroadcastTo
+from pytensor.tensor.basic import Alloc
 from scipy import stats as st
 
 from pymc.logprob.basic import conditional_logp, logp
@@ -52,12 +52,12 @@ from pymc.testing import assert_no_rvs
 
 
 def test_naive_bcast_rv_lift():
-    r"""Make sure `naive_bcast_rv_lift` can handle useless scalar `BroadcastTo`\s."""
+    r"""Make sure `naive_bcast_rv_lift` can handle useless scalar `Alloc`\s."""
     X_rv = pt.random.normal()
-    Z_at = BroadcastTo()(X_rv, ())
+    Z_at = Alloc()(X_rv, *())
 
     # Make sure we're testing what we intend to test
-    assert isinstance(Z_at.owner.op, BroadcastTo)
+    assert isinstance(Z_at.owner.op, Alloc)
 
     res = rewrite_graph(Z_at, custom_rewrite=in2out(naive_bcast_rv_lift), clone=False)
     assert res is X_rv

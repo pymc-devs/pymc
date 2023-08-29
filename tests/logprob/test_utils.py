@@ -180,8 +180,8 @@ def test_dirac_delta():
 @pytest.mark.parametrize(
     "dist_params, obs",
     [
-        ((np.array(0, dtype=np.float64),), np.array([0, 0.5, 1, -1], dtype=np.float64)),
-        ((np.array([0, 0], dtype=np.int64),), np.array(0, dtype=np.int64)),
+        ((np.array([0, 0, 0, 0], dtype=np.float64),), np.array([0, 0.5, 1, -1], dtype=np.float64)),
+        ((np.array(0, dtype=np.int64),), np.array(0, dtype=np.int64)),
     ],
 )
 def test_dirac_delta_logprob(dist_params, obs):
