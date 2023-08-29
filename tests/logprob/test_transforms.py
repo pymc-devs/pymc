@@ -1101,48 +1101,29 @@ def test_erf_logp(pt_transform, transform):
     )
 
 
-@pytest.mark.parametrize(
-    "transform",
-    ["log1p", "softplus", "log1mexp", "log2", "log10"],
-)
-def test_special_log_transforms(transform):
-    base_rv = pt.random.normal(name="base_rv")
-    vv = pt.scalar("vv")
-    if transform == "log1p":
-        logp_test = logp(pt.log1p(base_rv), vv)
-        logp_ref = logp(pt.log(1 + base_rv), vv)
-    elif transform == "softplus":
-        logp_test = logp(pt.softplus(base_rv), vv)
-        logp_ref = logp(pt.log(1 + pt.exp(base_rv)), vv)
-    elif transform == "log1mexp":
-        logp_test = logp(pt.log1mexp(base_rv), vv)
-        logp_ref = logp(pt.log(1 - pt.exp(pt.neg(base_rv))), vv)
-    elif transform == "log2":
-        logp_test = logp(pt.log2(base_rv), vv)
-        logp_ref = logp(pt.log(base_rv) / pt.log(2), vv)
-    elif transform == "log10":
-        logp_test = logp(pt.log10(base_rv), vv)
-        logp_ref = logp(pt.log(base_rv) / pt.log(10), vv)
-    assert equal_computations([logp_test], [logp_ref])
+TRANSFORMATIONS = {
+    "log1p": (pt.log1p, lambda x: pt.log(1 + x)),
+    "softplus": (pt.softplus, lambda x: pt.log(1 + pt.exp(x))),
+    "log1mexp": (pt.log1mexp, lambda x: pt.log(1 - pt.exp(pt.neg(x)))),
+    "log2": (pt.log2, lambda x: pt.log(x) / pt.log(2)),
+    "log10": (pt.log10, lambda x: pt.log(x) / pt.log(10)),
+    "exp2": (pt.exp2, lambda x: pt.exp(pt.log(2) * x)),
+    "expm1": (pt.expm1, lambda x: pt.exp(x) - 1),
+    "sigmoid": (pt.sigmoid, lambda x: 1 / (1 + pt.exp(-x))),
+}
 
 
-@pytest.mark.parametrize(
-    "transform",
-    ["exp2", "expm1", "sigmoid"],
-)
-def test_special_exp_transforms(transform):
+@pytest.mark.parametrize("transform", TRANSFORMATIONS.keys())
+def test_special_log_exp_transforms(transform):
     base_rv = pt.random.normal(name="base_rv")
     vv = pt.scalar("vv")
 
-    if transform == "exp2":
-        logp_test = logp(pt.exp2(base_rv), vv)
-        logp_ref = logp(pt.exp(pt.log(2) * base_rv), vv)
-    elif transform == "expm1":
-        logp_test = logp(pt.expm1(base_rv), vv)
-        logp_ref = logp(pt.exp(base_rv) - 1, vv)
-    elif transform == "sigmoid":
-        logp_test = logp(pt.sigmoid(base_rv), vv)
-        logp_ref = logp(1 / (1 + pt.exp(-base_rv)), vv)
+    transform_func, ref_func = TRANSFORMATIONS[transform]
+    transformed_rv = transform_func(base_rv)
+    ref_transformed_rv = ref_func(base_rv)
+
+    logp_test = logp(transformed_rv, vv)
+    logp_ref = logp(ref_transformed_rv, vv)
 
     assert equal_computations([logp_test], [logp_ref])
 
