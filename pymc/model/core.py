@@ -942,7 +942,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         Entries in the tuples may be ``None``, if the RV dimension was not given a name.
         """
         warnings.warn(
-            "Model.RV_dims is deprecated. User Model.named_vars_to_dims instead.",
+            "Model.RV_dims is deprecated. Use Model.named_vars_to_dims instead.",
             FutureWarning,
         )
         return self.named_vars_to_dims

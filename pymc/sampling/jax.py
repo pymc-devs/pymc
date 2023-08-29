@@ -37,7 +37,11 @@ from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.type import RandomType
 
 from pymc import Model, modelcontext
-from pymc.backends.arviz import find_constants, find_observations
+from pymc.backends.arviz import (
+    coords_and_dims_for_inferencedata,
+    find_constants,
+    find_observations,
+)
 from pymc.distributions.multivariate import PosDefMatrix
 from pymc.initial_point import StartDict
 from pymc.logprob.utils import CheckParameterValue
@@ -392,17 +396,6 @@ def sample_blackjax_nuts(
 
     vars_to_sample = list(get_default_varnames(var_names, include_transformed=keep_untransformed))
 
-    coords = {
-        cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
-        for cname, cvals in model.coords.items()
-        if cvals is not None
-    }
-
-    dims = {
-        var_name: [dim for dim in dims if dim is not None]
-        for var_name, dims in model.named_vars_to_dims.items()
-    }
-
     (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
     tic1 = datetime.now()
@@ -485,7 +478,7 @@ def sample_blackjax_nuts(
         "sampling_time": (tic3 - tic2).total_seconds(),
     }
 
-    posterior = mcmc_samples
+    coords, dims = coords_and_dims_for_inferencedata(model)
     # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
     # and drop keys 'coords' and 'dims' from 'idata_kwargs' if present.
     _update_coords_and_dims(coords=coords, dims=dims, idata_kwargs=idata_kwargs)
@@ -500,7 +493,7 @@ def sample_blackjax_nuts(
         dims=dims,
         attrs=make_attrs(attrs, library=blackjax),
     )
-    az_trace = to_trace(posterior=posterior, **idata_kwargs)
+    az_trace = to_trace(posterior=mcmc_samples, **idata_kwargs)
 
     return az_trace
 
@@ -613,17 +606,6 @@ def sample_numpyro_nuts(
 
     vars_to_sample = list(get_default_varnames(var_names, include_transformed=keep_untransformed))
 
-    coords = {
-        cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
-        for cname, cvals in model.coords.items()
-        if cvals is not None
-    }
-
-    dims = {
-        var_name: [dim for dim in dims if dim is not None]
-        for var_name, dims in model.named_vars_to_dims.items()
-    }
-
     (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
     tic1 = datetime.now()
@@ -715,7 +697,7 @@ def sample_numpyro_nuts(
         "sampling_time": (tic3 - tic2).total_seconds(),
     }
 
-    posterior = mcmc_samples
+    coords, dims = coords_and_dims_for_inferencedata(model)
     # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
     # and drop keys 'coords' and 'dims' from 'idata_kwargs' if present.
     _update_coords_and_dims(coords=coords, dims=dims, idata_kwargs=idata_kwargs)
@@ -730,5 +712,5 @@ def sample_numpyro_nuts(
         dims=dims,
         attrs=make_attrs(attrs, library=numpyro),
     )
-    az_trace = to_trace(posterior=posterior, **idata_kwargs)
+    az_trace = to_trace(posterior=mcmc_samples, **idata_kwargs)
     return az_trace
