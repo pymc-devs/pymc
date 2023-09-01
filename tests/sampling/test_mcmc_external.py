@@ -46,8 +46,6 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
         if warn.category is not FutureWarning
     }
     expected = set()
-    if nuts_sampler != "pymc":
-        expected.add((UserWarning, "Use of external NUTS sampler is still experimental"))
     if nuts_sampler == "nutpie":
         expected.add(
             (
