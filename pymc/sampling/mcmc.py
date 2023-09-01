@@ -270,8 +270,6 @@ def _sample_external_nuts(
     nuts_sampler_kwargs: Optional[Dict],
     **kwargs,
 ):
-    warnings.warn("Use of external NUTS sampler is still experimental", UserWarning)
-
     if nuts_sampler_kwargs is None:
         nuts_sampler_kwargs = {}
 
