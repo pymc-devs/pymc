@@ -27,8 +27,9 @@ from pytensor import tensor as pt
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph import FunctionGraph, node_rewriter
 from pytensor.graph.basic import Node, Variable
+from pytensor.graph.features import ReplaceValidate
 from pytensor.graph.replace import clone_replace
-from pytensor.graph.rewriting.basic import NodeRewriter, WalkingGraphRewriter, in2out
+from pytensor.graph.rewriting.basic import GraphRewriter, in2out
 from pytensor.graph.utils import MetaType
 from pytensor.tensor.basic import as_tensor_variable
 from pytensor.tensor.random.op import RandomVariable
@@ -83,12 +84,30 @@ vectorized_ppc: contextvars.ContextVar[Optional[Callable]] = contextvars.Context
 PLATFORM = sys.platform
 
 
-class MomentRewrite(NodeRewriter):
-    def transform(self, fgraph, node):
-        if isinstance(node.op, Distribution) and hasattr(node, "owner"):
-            node = moment(node)
-            return node
-        return False
+class MomentRewrite(GraphRewriter):
+    def add_requirements(self, fgraph):
+        fgraph.attach_feature(ReplaceValidate())
+
+    def apply(self, fgraph):
+        for node in fgraph.toposort():
+            for i, inp in enumerate(node.inputs):
+                if (
+                    hasattr(inp, "owner")
+                    and hasattr(inp.owner, "op")
+                    and isinstance(inp.owner.op, Distribution)
+                ):
+                    fgraph.replace(node.inputs[i], moment(node.inputs[i]))
+
+    # def transform(self, fgraph, node):
+    #     flag = False
+    #     for i, inp in enumerate(node.inputs):
+    #         if hasattr(inp, "owner") and hasattr(inp.owner, "op") and isinstance(inp.owner.op, Distribution):
+    #             #node.inputs[i] = moment(inp)
+    #             node.inputs[i] = inp
+    #             flag = True
+    #     if flag:
+    #         return [node]
+    #     return False
 
 
 class _Unpickling:
@@ -632,7 +651,7 @@ class _CustomSymbolicDist(Distribution):
 
         def dist_moment(rv, size, *dist_params):
             fgraph = FunctionGraph(outputs=[dist(*dist_params, size=size)], clone=True)
-            replace_moments = WalkingGraphRewriter(MomentRewrite())
+            replace_moments = MomentRewrite()
             replace_moments.rewrite(fgraph)
             [moment] = fgraph.outputs
             return moment
