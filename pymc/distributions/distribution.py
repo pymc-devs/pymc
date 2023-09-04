@@ -98,17 +98,6 @@ class MomentRewrite(GraphRewriter):
                 ):
                     fgraph.replace(node.inputs[i], moment(node.inputs[i]))
 
-    # def transform(self, fgraph, node):
-    #     flag = False
-    #     for i, inp in enumerate(node.inputs):
-    #         if hasattr(inp, "owner") and hasattr(inp.owner, "op") and isinstance(inp.owner.op, Distribution):
-    #             #node.inputs[i] = moment(inp)
-    #             node.inputs[i] = inp
-    #             flag = True
-    #     if flag:
-    #         return [node]
-    #     return False
-
 
 class _Unpickling:
     pass
@@ -657,12 +646,6 @@ class _CustomSymbolicDist(Distribution):
             return moment
 
         if moment is None:
-            # moment = functools.partial(
-            #    default_moment,
-            #    rv_name=class_name,
-            #    has_fallback=True,
-            #    ndim_supp=ndim_supp,
-            # )
             moment = dist_moment
 
         return super().dist(
