@@ -209,7 +209,7 @@ measurable_ir_rewrites_db.register(
 
 
 @_logprob.register(MeasurableMaxNeg)
-def min_logprob(op, values, base_var, **kwargs):
+def max_neg_logprob(op, values, base_var, **kwargs):
     r"""Compute the log-likelihood graph for the `Max` operation.
     The formula that we use here is :
         \ln(f_{(n)}(x)) = \ln(n) + (n-1) \ln(1 - F(x)) + \ln(f(x))
