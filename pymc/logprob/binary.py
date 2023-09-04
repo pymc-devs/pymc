@@ -55,6 +55,10 @@ def find_measurable_comparisons(
     [measurable_var] = measurable_inputs
     measurable_var_idx = node.inputs.index(measurable_var)
 
+    # deny broadcasting of the measurable input
+    if measurable_var.type.broadcastable != node.outputs[0].type.broadcastable:
+        return None
+
     # Check that the other input is not potentially measurable, in which case this rewrite
     # would be invalid
     const = node.inputs[(measurable_var_idx + 1) % 2]
