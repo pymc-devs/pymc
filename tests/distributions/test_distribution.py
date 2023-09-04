@@ -434,8 +434,8 @@ class TestCustomSymbolicDist:
         "mu, sigma, size, expected",
         [
             (5, 1, None, np.exp(5)),
-            # (0, np.ones(5), None, np.exp(0 + 0.5 * np.ones(5) ** 2)),
-            # (np.arange(5), np.ones(5), None, np.exp(np.arange(5) + 0.5 * 1**2)),
+            (2, np.ones(5), None, np.exp([2, 2, 2, 2, 2])),
+            (np.arange(5), np.ones(5), None, np.exp(np.arange(5))),
         ],
     )
     def test_custom_dist_default_moment(self, mu, sigma, size, expected):
@@ -443,8 +443,6 @@ class TestCustomSymbolicDist:
             return pm.math.exp(pm.Normal.dist(mu, sigma, size=size))
 
         with Model() as model:
-            # mu = Normal("mu")
-            # sigma = HalfNormal("sigma")
             CustomDist("x", mu, sigma, dist=custom_dist, size=size)
         assert_moment_is_expected(model, expected)
 
