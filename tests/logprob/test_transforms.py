@@ -1125,7 +1125,13 @@ def test_special_log_exp_transforms(transform):
     logp_test = logp(transformed_rv, vv)
     logp_ref = logp(ref_transformed_rv, vv)
 
-    assert equal_computations([logp_test], [logp_ref])
+    if transform in ["log2", "log10"]:
+        # in the cases of log2 and log10 floating point inprecision causes failure
+        # from equal_computations so evaluate logp and check all close instead
+        vv_test = np.array(0.25)
+        np.testing.assert_allclose(logp_ref.eval({vv: vv_test}), logp_test.eval({vv: vv_test}))
+    else:
+        assert equal_computations([logp_test], [logp_ref])
 
 
 @pytest.mark.parametrize(
