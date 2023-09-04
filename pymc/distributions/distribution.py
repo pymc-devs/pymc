@@ -35,6 +35,7 @@ from pytensor.tensor.basic import as_tensor_variable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.random.utils import normalize_size_param
+from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.variable import TensorVariable
 from typing_extensions import TypeAlias
@@ -705,7 +706,8 @@ class _CustomSymbolicDist(Distribution):
 
         @_moment.register(rv_type)
         def custom_dist_get_moment(op, rv, size, *params):
-            return moment(rv, size, *params[: len(params) - 1])
+            params = [i for i in params if not isinstance(i, RandomGeneratorSharedVariable)]
+            return moment(rv, size, *params[: len(params)])
 
         @_change_dist_size.register(rv_type)
         def change_custom_symbolic_dist_size(op, rv, new_size, expand):

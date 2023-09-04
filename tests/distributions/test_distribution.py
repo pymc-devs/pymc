@@ -431,19 +431,39 @@ class TestCustomSymbolicDist:
         np.testing.assert_allclose(m.compile_logp()(ip), ref_m.compile_logp()(ip))
 
     @pytest.mark.parametrize(
-        "mu, sigma, size, expected",
+        "dist_params, size, expected, dist_fn",
         [
-            (5, 1, None, np.exp(5)),
-            (2, np.ones(5), None, np.exp([2, 2, 2, 2, 2])),
-            (np.arange(5), np.ones(5), None, np.exp(np.arange(5))),
+            (
+                (5, 1),
+                None,
+                np.exp(5),
+                lambda mu, sigma, size: pt.exp(pm.Normal.dist(mu, sigma, size=size)),
+            ),
+            (
+                (2, np.ones(5)),
+                None,
+                np.exp([2, 2, 2, 2, 2] + np.ones(5)),
+                lambda mu, sigma, size: pt.exp(
+                    pm.Normal.dist(mu, sigma, size=size) + pt.ones(size)
+                ),
+            ),
+            (
+                (1, 2),
+                None,
+                np.sqrt(np.exp(1 + 0.5 * 2**2)),
+                lambda mu, sigma, size: pt.sqrt(pm.LogNormal.dist(mu, sigma, size=size)),
+            ),
+            (
+                (4,),
+                (3,),
+                np.log([4, 4, 4]),
+                lambda nu, size: pt.log(pm.ChiSquared.dist(nu, size=size)),
+            ),
         ],
     )
-    def test_custom_dist_default_moment(self, mu, sigma, size, expected):
-        def custom_dist(mu, sigma, size):
-            return pm.math.exp(pm.Normal.dist(mu, sigma, size=size))
-
+    def test_custom_dist_default_moment(self, dist_params, size, expected, dist_fn):
         with Model() as model:
-            CustomDist("x", mu, sigma, dist=custom_dist, size=size)
+            CustomDist("x", *dist_params, dist=dist_fn, size=size)
         assert_moment_is_expected(model, expected)
 
     def test_logcdf_inference(self):
