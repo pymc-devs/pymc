@@ -39,6 +39,7 @@ import re
 import numpy as np
 import pytensor.tensor as pt
 import pytest
+import scipy.stats as sp
 
 import pymc as pm
 
@@ -232,23 +233,25 @@ def test_min_non_mul_elemwise_fails():
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_min_logprob = logp(x_min, x_min_value)
 
-def test_max_discrete():
-    x = pm.DiscreteUniform.dist(0, 1, size=(3,))
-    x.name = "x"
-    x_max = pt.max(x, axis=-1)
+
+@pytest.mark.parametrize(
+    "mu, size, value, axis",
+    [(2, 3, 0.85, -1), (2, 3, 0.01, 0), (1, 2, 0.2, None), (0, 4, 0, 0)],
+)
+def test_max_discrete(mu, size, value, axis):
+    x = pm.Poisson.dist(name="x", mu=mu, size=(size))
+    x_max = pt.max(x, axis=axis)
     x_max_value = pt.scalar("x_max_value")
     x_max_logprob = logp(x_max, x_max_value)
 
-    discrete_logprob = _logprob_helper(x, x_max_value)
-    discrete_logcdf = _logcdf_helper(x, x_max_value)
-    discrete_logcdf_prev = _logcdf_helper(x, x_max_value - 1)
-    n = x.size
-    discrete_logprob = pt.log((pt.exp(discrete_logcdf)) ** n - (pt.exp(discrete_logcdf_prev)) ** n)
+    test_value = value
 
-    test_value = 0.85
+    n = size
+    exp_rv = np.exp(sp.poisson(mu).logcdf(test_value)) ** n
+    exp_rv_prev = np.exp(sp.poisson(mu).logcdf(test_value - 1)) ** n
 
     np.testing.assert_allclose(
-        discrete_logprob.eval({x_max_value: test_value}),
+        np.log(exp_rv - exp_rv_prev),
         (x_max_logprob.eval({x_max_value: test_value})),
         rtol=1e-06,
     )
