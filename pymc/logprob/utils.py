@@ -48,6 +48,10 @@ from pytensor.graph.basic import Constant, clone_get_equiv, graph_inputs, walk
 from pytensor.graph.op import HasInnerGraph
 from pytensor.link.c.type import CType
 from pytensor.raise_op import CheckAndRaise
+from pytensor.scalar.basic import Mul
+from pytensor.tensor.basic import get_underlying_scalar_constant_value
+from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 
@@ -295,3 +299,26 @@ def diracdelta_logprob(op, values, *inputs, **kwargs):
     (const_value,) = inputs
     values, const_value = pt.broadcast_arrays(values, const_value)
     return pt.switch(pt.isclose(values, const_value, rtol=op.rtol, atol=op.atol), 0.0, -np.inf)
+
+
+def find_negated_var(var):
+    """Return a variable that is being multiplied by -1 or None otherwise."""
+
+    if (
+        not (var.owner)
+        and isinstance(var.owner.op, Elemwise)
+        and isinstance(var.owner.op.scalar_op, Mul)
+    ):
+        return None
+    if len(var.owner.inputs) != 2:
+        return None
+
+    inputs = var.owner.inputs
+    for mul_var, mul_const in (inputs, reversed(inputs)):
+        try:
+            if get_underlying_scalar_constant_value(mul_const) == -1:
+                return mul_var
+        except NotScalarConstantError:
+            continue
+
+    return None

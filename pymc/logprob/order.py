@@ -41,10 +41,7 @@ import pytensor.tensor as pt
 from pytensor.graph.basic import Node
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.scalar.basic import Mul
-from pytensor.tensor.basic import get_underlying_scalar_constant_value
 from pytensor.tensor.elemwise import Elemwise
-from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.math import Max
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
@@ -56,6 +53,7 @@ from pymc.logprob.abstract import (
     _logprob_helper,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.utils import find_negated_var
 from pymc.math import logdiffexp
 from pymc.pytensorf import constant_fold
 
@@ -168,6 +166,13 @@ class MeasurableMaxNeg(Max):
 MeasurableVariable.register(MeasurableMaxNeg)
 
 
+class MeasurableDiscreteMaxNeg(Max):
+    """A placeholder used to specify a log-likelihood for sub-graphs of negative maxima of discrete variables"""
+
+
+MeasurableVariable.register(MeasurableDiscreteMaxNeg)
+
+
 @node_rewriter(tracks=[Max])
 def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> Optional[List[TensorVariable]]:
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
@@ -180,35 +185,18 @@ def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> Optional[List[
 
     base_var = node.inputs[0]
 
-    if base_var.owner is None:
-        return None
-
-    if not rv_map_feature.request_measurable(node.inputs):
-        return None
-
     # Min is the Max of the negation of the same distribution. Hence, op must be Elemwise
-    if not isinstance(base_var.owner.op, Elemwise):
+    if not (base_var.owner is not None and isinstance(base_var.owner.op, Elemwise)):
         return None
+
+    base_rv = find_negated_var(base_var)
 
     # negation is rv * (-1). Hence the scalar_op must be Mul
-    try:
-        if not (
-            isinstance(base_var.owner.op.scalar_op, Mul)
-            and len(base_var.owner.inputs) == 2
-            and get_underlying_scalar_constant_value(base_var.owner.inputs[1]) == -1
-        ):
-            return None
-    except NotScalarConstantError:
+    if base_rv is None:
         return None
-
-    base_rv = base_var.owner.inputs[0]
 
     # Non-univariate distributions and non-RVs must be rejected
     if not (isinstance(base_rv.owner.op, RandomVariable) and base_rv.owner.op.ndim_supp == 0):
-        return None
-
-    # TODO: We are currently only supporting continuous rvs
-    if isinstance(base_rv.owner.op, RandomVariable) and base_rv.owner.op.dtype.startswith("int"):
         return None
 
     # univariate i.i.d. test which also rules out other distributions
@@ -222,11 +210,16 @@ def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> Optional[List[
     if axis != base_var_dims:
         return None
 
-    measurable_min = MeasurableMaxNeg(list(axis))
-    min_rv_node = measurable_min.make_node(base_var)
-    min_rv = min_rv_node.outputs
+    if not rv_map_feature.request_measurable([base_rv]):
+        return None
 
-    return min_rv
+    # distinguish measurable discrete and continuous (because logprob is different)
+    if base_rv.owner.op.dtype.startswith("int"):
+        measurable_min = MeasurableDiscreteMaxNeg(list(axis))
+    else:
+        measurable_min = MeasurableMaxNeg(list(axis))
+
+    return measurable_min.make_node(base_rv).outputs
 
 
 measurable_ir_rewrites_db.register(
@@ -238,19 +231,46 @@ measurable_ir_rewrites_db.register(
 
 
 @_logprob.register(MeasurableMaxNeg)
-def max_neg_logprob(op, values, base_var, **kwargs):
+def max_neg_logprob(op, values, base_rv, **kwargs):
     r"""Compute the log-likelihood graph for the `Max` operation.
     The formula that we use here is :
         \ln(f_{(n)}(x)) = \ln(n) + (n-1) \ln(1 - F(x)) + \ln(f(x))
     where f(x) represents the p.d.f and F(x) represents the c.d.f of the distribution respectively.
     """
     (value,) = values
-    base_rv = base_var.owner.inputs[0]
 
     logprob = _logprob_helper(base_rv, -value)
     logcdf = _logcdf_helper(base_rv, -value)
 
     [n] = constant_fold([base_rv.size])
     logprob = (n - 1) * pt.math.log(1 - pt.math.exp(logcdf)) + logprob + pt.math.log(n)
+
+    return logprob
+
+
+@_logprob.register(MeasurableDiscreteMaxNeg)
+def discrete_max_neg_logprob(op, values, base_rv, **kwargs):
+    r"""Compute the log-likelihood graph for the `Max` operation.
+
+    The formula that we use here is :
+    .. math::
+        \ln(P_{(n)}(x)) = \ln((1 - F(x - 1))^n - (1 - F(x))^n)
+    where $P_{(n)}(x)$ represents the p.m.f of the maximum statistic and $F(x)$ represents the c.d.f of the i.i.d. variables.
+    """
+
+    (value,) = values
+
+    # The cdf of a negative variable is the survival at the negated value
+    logcdf = pt.log1mexp(_logcdf_helper(base_rv, -value))
+    logcdf_prev = pt.log1mexp(_logcdf_helper(base_rv, -(value + 1)))
+
+    [n] = constant_fold([base_rv.size])
+
+    # Now we can use the same expression as the discrete max
+    logprob = pt.where(
+        pt.and_(pt.eq(logcdf, -pt.inf), pt.eq(logcdf_prev, -pt.inf)),
+        -pt.inf,
+        logdiffexp(n * logcdf_prev, n * logcdf),
+    )
 
     return logprob
