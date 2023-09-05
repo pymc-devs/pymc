@@ -1083,7 +1083,7 @@ def test_absolute_rv_transform(test_val):
         (pt.arctanh, ArctanhTransform()),
     ],
 )
-def test_transform_logp(pt_transform, transform):
+def test_extra_bijective_rv_transforms(pt_transform, transform):
     base_rv = pt.random.normal(
         0.5, 1, name="base_rv"
     )  # Something not centered around 0 is usually better
@@ -1095,6 +1095,29 @@ def test_transform_logp(pt_transform, transform):
     expected_logp = logp(base_rv, transform.backward(vv)) + transform.log_jac_det(vv)
 
     vv_test = np.array(0.25)  # Arbitrary test value
+    np.testing.assert_allclose(
+        rv_logp.eval({vv: vv_test}),
+        np.nan_to_num(expected_logp.eval({vv: vv_test}), nan=-np.inf),
+    )
+
+
+def test_cosh_rv_transform():
+    # Something not centered around 0 is usually better
+    base_rv = pt.random.normal(0.5, 1, size=(2,), name="base_rv")
+    rv = pt.cosh(base_rv)
+    vv = rv.clone()
+    rv_logp = logp(rv, vv)
+    with pytest.raises(NotImplementedError):
+        logcdf(rv, vv)
+    with pytest.raises(NotImplementedError):
+        icdf(rv, vv)
+
+    transform = CoshTransform()
+    [back_neg, back_pos] = transform.backward(vv)
+    expected_logp = pt.logaddexp(
+        logp(base_rv, back_neg), logp(base_rv, back_pos)
+    ) + transform.log_jac_det(vv)
+    vv_test = np.array([0.25, 1.5])
     np.testing.assert_allclose(
         rv_logp.eval({vv: vv_test}),
         np.nan_to_num(expected_logp.eval({vv: vv_test}), nan=-np.inf),
