@@ -134,22 +134,22 @@ class TestCensored:
                 assert xt_logcdf_fn(test_xt_v) is not None
 
 
-@pytest.mark.parametrize("lower, upper", [(2, np.inf), (2, 5), (-np.inf, 5)])
-@pytest.mark.parametrize("op_type", ["icdf", "rejection"])
-def test_censoring_discrete_logcdf(op_type, lower, upper):
-    p = 0.7
-    op = icdf_geometric if op_type == "icdf" else rejection_geometric
-
-    x = op(p, name="x")
-    xt = pm.Censored.dist(x, lower=lower, upper=upper)
-    assert isinstance(xt.owner.op, pm.CensoredRV)
-
-    xt_vv = xt.clone()
-    xt_logcdf_fn = pytensor.function([xt_vv], logcdf(xt, xt_vv))
-
-    for bound in (lower, upper):
-        if np.isinf(bound):
-            continue
-        for offset in (-1, 0, 1):
-            test_xt_v = bound + offset
-            assert xt_logcdf_fn(test_xt_v) is not None
+    @pytest.mark.parametrize("lower, upper", [(2, np.inf), (2, 5), (-np.inf, 5)])
+    @pytest.mark.parametrize("op_type", ["icdf", "rejection"])
+    def test_censoring_discrete_logcdf(op_type, lower, upper):
+        p = 0.7
+        op = icdf_geometric if op_type == "icdf" else rejection_geometric
+    
+        x = op(p, name="x")
+        xt = pm.Censored.dist(x, lower=lower, upper=upper)
+        assert isinstance(xt.owner.op, pm.CensoredRV)
+    
+        xt_vv = xt.clone()
+        xt_logcdf_fn = pytensor.function([xt_vv], logcdf(xt, xt_vv))
+    
+        for bound in (lower, upper):
+            if np.isinf(bound):
+                continue
+            for offset in (-1, 0, 1):
+                test_xt_v = bound + offset
+                assert xt_logcdf_fn(test_xt_v) is not None
