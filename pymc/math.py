@@ -75,14 +75,9 @@ from pytensor.tensor import (
     where,
     zeros_like,
 )
-from pytensor.tensor.special import log_softmax, softmax
-
-try:
-    from pytensor.tensor.basic import extract_diag
-except ImportError:
-    from pytensor.tensor.nlinalg import extract_diag
-
+from pytensor.tensor.linalg import solve_triangular
 from pytensor.tensor.nlinalg import matrix_inverse
+from pytensor.tensor.special import log_softmax, softmax
 from scipy.linalg import block_diag as scipy_block_diag
 
 from pymc.pytensorf import floatX, ix_, largest_common_dtype
@@ -230,8 +225,8 @@ def kron_matrix_op(krons, m, op):
 
 # Define kronecker functions that work on 1D and 2D arrays
 kron_dot = partial(kron_matrix_op, op=pt.dot)
-kron_solve_lower = partial(kron_matrix_op, op=pt.slinalg.SolveTriangular(lower=True))
-kron_solve_upper = partial(kron_matrix_op, op=pt.slinalg.SolveTriangular(lower=False))
+kron_solve_lower = partial(kron_matrix_op, op=partial(solve_triangular, lower=True))
+kron_solve_upper = partial(kron_matrix_op, op=partial(solve_triangular, lower=False))
 
 
 def flat_outer(a, b):
