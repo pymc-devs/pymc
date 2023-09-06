@@ -166,11 +166,11 @@ def censored_logcdf(op, value, *inputs, **kwargs):
 
     #If function is left censored, set logcdf to -np,inf
     if is_lower_bounded:
-        logcdf_trunc = pt.switch(value < lower, -np.inf, logcdf_cens)
+        logcdf_cens = pt.switch(value < lower, -np.inf, logcdf_cens)
 
     #If function is right censored, set logcdf to 0
     if is_upper_bounded:
-        logcdf_trunc = pt.switch(value <= upper, logcdf_cens, 0.0)
+        logcdf_cens = pt.switch(value <= upper, logcdf_cens, 0.0)
 
     #If in domain, set logcdf as if uncensored
     if is_lower_bounded and is_upper_bounded:
