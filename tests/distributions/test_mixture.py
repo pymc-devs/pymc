@@ -333,21 +333,18 @@ class TestMixture:
         assert not repetitions
 
         # Test logp
-        # MvNormal logp is currently limited to 2d values
-        expectation = pytest.raises(ValueError) if mix_eval.ndim > 2 else does_not_raise()
-        with expectation:
-            mix_logp_eval = logp(mix, mix_eval).eval()
-            assert mix_logp_eval.shape == expected_shape[:-1]
-            bcast_weights = np.broadcast_to(weights, (*expected_shape[:-1], 2))
-            expected_logp = np.stack(
-                (
-                    logp(components[0], mix_eval).eval(),
-                    logp(components[1], mix_eval).eval(),
-                ),
-                axis=-1,
-            )[bcast_weights == 1]
-            expected_logp = expected_logp.reshape(expected_shape[:-1])
-            assert np.allclose(mix_logp_eval, expected_logp)
+        mix_logp_eval = logp(mix, mix_eval).eval()
+        assert mix_logp_eval.shape == expected_shape[:-1]
+        bcast_weights = np.broadcast_to(weights, (*expected_shape[:-1], 2))
+        expected_logp = np.stack(
+            (
+                logp(components[0], mix_eval).eval(),
+                logp(components[1], mix_eval).eval(),
+            ),
+            axis=-1,
+        )[bcast_weights == 1]
+        expected_logp = expected_logp.reshape(expected_shape[:-1])
+        assert np.allclose(mix_logp_eval, expected_logp)
 
     def test_component_choice_random(self):
         """Test that mixture choices change over evaluations"""
