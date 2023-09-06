@@ -158,9 +158,6 @@ def censored_logcdf(op, value, *inputs, **kwargs):
     base_rv_op = op.base_rv_op
     logcdf_cens = _logcdf(base_rv_op, value, *rv_inputs, **kwargs)
 
-    lower_logcdf = _logcdf(base_rv_op, lower_value, *rv_inputs, **kwargs)
-    upper_logcdf = _logcdf(base_rv_op, upper, *rv_inputs, **kwargs)
-
     is_lower_bounded = not (isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value)))
     is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
 
