@@ -24,6 +24,7 @@ from pymc.distributions.distribution import (
 )
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
 from pymc.util import check_dist_not_registered
+from pymc.logprob.abstract import _logcdf
 
 
 class CensoredRV(SymbolicRandomVariable):
@@ -148,3 +149,35 @@ def moment_censored(op, rv, dist, lower, upper):
     )
     moment = pt.full_like(dist, moment)
     return moment
+
+@_logcdf.register(CensoredRV)
+def censored_logcdf(op, value, *inputs, **kwargs):
+    *rv_inputs, lower, upper, rng = inputs
+    rv_inputs = [rng, *rv_inputs]
+
+    base_rv_op = op.base_rv_op
+    logcdf_cens = _logcdf(base_rv_op, value, *rv_inputs, **kwargs)
+
+    lower_logcdf = _logcdf(base_rv_op, lower_value, *rv_inputs, **kwargs)
+    upper_logcdf = _logcdf(base_rv_op, upper, *rv_inputs, **kwargs)
+
+    is_lower_bounded = not (isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value)))
+    is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
+
+    #If function is left censored, set logcdf to -np,inf
+    if is_lower_bounded:
+        logcdf_trunc = pt.switch(value < lower, -np.inf, logcdf_cens)
+
+    #If function is right censored, set logcdf to 0
+    if is_upper_bounded:
+        logcdf_trunc = pt.switch(value <= upper, logcdf_cens, 0.0)
+
+    #If in domain, set logcdf as if uncensored
+    if is_lower_bounded and is_upper_bounded:
+        logcdf_trunc = check_parameters(
+            logcdf_cens,
+            pt.le(lower, upper),
+            msg="lower_bound <= upper_bound",
+        )
+
+    return logcdf_cens
