@@ -17,7 +17,7 @@
 
 import warnings
 
-from functools import reduce
+from functools import partial, reduce
 from typing import Optional
 
 import numpy as np
@@ -30,16 +30,17 @@ from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
 from pytensor.sparse.basic import sp_sum
 from pytensor.tensor import TensorConstant, gammaln, sigmoid
-from pytensor.tensor.nlinalg import det, eigh, matrix_inverse, trace
+from pytensor.tensor.linalg import cholesky, det, eigh
+from pytensor.tensor.linalg import inv as matrix_inverse
+from pytensor.tensor.linalg import solve_triangular, trace
 from pytensor.tensor.random.basic import dirichlet, multinomial, multivariate_normal
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import (
     broadcast_params,
     supp_shape_from_ref_param_shape,
 )
-from pytensor.tensor.slinalg import Cholesky, SolveTriangular
 from pytensor.tensor.type import TensorType
-from scipy import linalg, stats
+from scipy import stats
 
 import pymc as pm
 
@@ -93,8 +94,8 @@ __all__ = [
     "StickBreakingWeights",
 ]
 
-solve_lower = SolveTriangular(lower=True)
-solve_upper = SolveTriangular(lower=False)
+solve_lower = partial(solve_triangular, lower=True)
+solve_upper = partial(solve_triangular, lower=False)
 
 
 class SimplexContinuous(Continuous):
@@ -110,7 +111,7 @@ def simplex_cont_transform(op, rv):
 # moment. We work around that by using a cholesky op
 # that returns a nan as first entry instead of raising
 # an error.
-cholesky = Cholesky(lower=True, on_error="nan")
+nan_lower_cholesky = partial(cholesky, lower=True, on_error="nan")
 
 
 def quaddist_matrix(cov=None, chol=None, tau=None, lower=True, *args, **kwargs):
@@ -155,7 +156,7 @@ def quaddist_parse(value, mu, cov, mat_type="cov"):
         onedim = False
 
     delta = value - mu
-    chol_cov = cholesky(cov)
+    chol_cov = nan_lower_cholesky(cov)
     if mat_type != "tau":
         dist, logdet, ok = quaddist_chol(delta, chol_cov)
     else:
@@ -847,9 +848,9 @@ class OrderedMultinomial:
 
 def posdef(AA):
     try:
-        linalg.cholesky(AA)
+        scipy.linalg.cholesky(AA)
         return True
-    except linalg.LinAlgError:
+    except scipy.linalg.LinAlgError:
         return False
 
 
@@ -1073,7 +1074,7 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initv
     if initval is not None:
         # Inverse transform
         initval = np.dot(np.dot(np.linalg.inv(L), initval), np.linalg.inv(L.T))
-        initval = linalg.cholesky(initval, lower=True)
+        initval = scipy.linalg.cholesky(initval, lower=True)
         diag_testval = initval[diag_idx] ** 2
         tril_testval = initval[tril_idx]
     else:
@@ -1785,7 +1786,7 @@ class MatrixNormal(Continuous):
         *args,
         **kwargs,
     ):
-        cholesky = Cholesky(lower=True, on_error="raise")
+        lower_cholesky = partial(cholesky, lower=True, on_error="raise")
 
         # Among-row matrices
         if len([i for i in [rowcov, rowchol] if i is not None]) != 1:
@@ -1795,7 +1796,7 @@ class MatrixNormal(Continuous):
         if rowcov is not None:
             if rowcov.ndim != 2:
                 raise ValueError("rowcov must be two dimensional.")
-            rowchol_cov = cholesky(rowcov)
+            rowchol_cov = lower_cholesky(rowcov)
         else:
             if rowchol.ndim != 2:
                 raise ValueError("rowchol must be two dimensional.")
@@ -1810,7 +1811,7 @@ class MatrixNormal(Continuous):
             colcov = pt.as_tensor_variable(colcov)
             if colcov.ndim != 2:
                 raise ValueError("colcov must be two dimensional.")
-            colchol_cov = cholesky(colcov)
+            colchol_cov = lower_cholesky(colcov)
         else:
             if colchol.ndim != 2:
                 raise ValueError("colchol must be two dimensional.")
@@ -1851,10 +1852,10 @@ class MatrixNormal(Continuous):
 
         # Find exponent piece by piece
         right_quaddist = solve_lower(rowchol, delta)
-        quaddist = pt.nlinalg.matrix_dot(right_quaddist.T, right_quaddist)
+        quaddist = pt.linalg.matrix_dot(right_quaddist.T, right_quaddist)
         quaddist = solve_lower(colchol, quaddist)
         quaddist = solve_upper(colchol.T, quaddist)
-        trquaddist = pt.nlinalg.trace(quaddist)
+        trquaddist = pt.linalg.trace(quaddist)
 
         coldiag = pt.diag(colchol)
         rowdiag = pt.diag(rowchol)
@@ -1887,7 +1888,7 @@ class KroneckerNormalRV(RandomVariable):
         size = size if size else covs[-1]
         covs = covs[:-1] if covs[-1] == size else covs
 
-        cov = reduce(linalg.kron, covs)
+        cov = reduce(scipy.linalg.kron, covs)
 
         if sigma:
             cov = cov + sigma**2 * np.eye(cov.shape[0])
@@ -1930,7 +1931,7 @@ class KroneckerNormal(Continuous):
         :math:`[(v_1, Q_1), (v_2, Q_2), ...]` such that
         :math:`K_i = Q_i \text{diag}(v_i) Q_i'`. For example::
 
-            v_i, Q_i = pt.nlinalg.eigh(K_i)
+            v_i, Q_i = pt.linalg.eigh(K_i)
     sigma : scalar, optional
         Standard deviation of the Gaussian white noise.
 
@@ -2228,7 +2229,7 @@ class CAR(Continuous):
             D = W.sum(axis=0)
             Dinv_sqrt = pt.diag(1 / pt.sqrt(D))
             DWD = pt.dot(pt.dot(Dinv_sqrt, W), Dinv_sqrt)
-        lam = pt.slinalg.eigvalsh(DWD, pt.eye(DWD.shape[0]))
+        lam = pt.linalg.eigvalsh(DWD, pt.eye(DWD.shape[0]))
 
         d, _ = W.shape
 
