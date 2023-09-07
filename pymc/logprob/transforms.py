@@ -61,10 +61,18 @@ from pytensor.scalar import (
     Erfc,
     Erfcx,
     Exp,
+    Exp2,
+    Expm1,
     Log,
+    Log1mexp,
+    Log1p,
+    Log2,
+    Log10,
     Mul,
     Pow,
+    Sigmoid,
     Sinh,
+    Softplus,
     Sqr,
     Sqrt,
     Tanh,
@@ -82,12 +90,20 @@ from pytensor.tensor.math import (
     erfc,
     erfcx,
     exp,
+    exp2,
+    expm1,
     log,
+    log1mexp,
+    log1p,
+    log2,
+    log10,
     mul,
     neg,
     pow,
     reciprocal,
+    sigmoid,
     sinh,
+    softplus,
     sqr,
     sqrt,
     sub,
@@ -569,8 +585,53 @@ def measurable_sub_to_neg(fgraph, node):
     return [pt.add(minuend, pt.neg(subtrahend))]
 
 
+@node_rewriter([log1p, softplus, log1mexp, log2, log10])
+def measurable_special_log_to_log(fgraph, node):
+    """Convert log1p, log1mexp, softplus, log2, log10 of `MeasurableVariable`s to log form."""
+    [inp] = node.inputs
+
+    if isinstance(node.op.scalar_op, Log1p):
+        return [pt.log(1 + inp)]
+    if isinstance(node.op.scalar_op, Softplus):
+        return [pt.log(1 + pt.exp(inp))]
+    if isinstance(node.op.scalar_op, Log1mexp):
+        return [pt.log(1 - pt.exp(inp))]
+    if isinstance(node.op.scalar_op, Log2):
+        return [pt.log(inp) / pt.log(2)]
+    if isinstance(node.op.scalar_op, Log10):
+        return [pt.log(inp) / pt.log(10)]
+
+
+@node_rewriter([expm1, sigmoid, exp2])
+def measurable_special_exp_to_exp(fgraph, node):
+    """Convert expm1, sigmoid, and exp2 of `MeasurableVariable`s to xp form."""
+    [inp] = node.inputs
+    if isinstance(node.op.scalar_op, Exp2):
+        return [pt.exp(pt.log(2) * inp)]
+    if isinstance(node.op.scalar_op, Expm1):
+        return [pt.add(pt.exp(inp), -1)]
+    if isinstance(node.op.scalar_op, Sigmoid):
+        return [1 / (1 + pt.exp(-inp))]
+
+
 @node_rewriter(
-    [exp, log, add, mul, pow, abs, sinh, cosh, tanh, arcsinh, arccosh, arctanh, erf, erfc, erfcx]
+    [
+        exp,
+        log,
+        add,
+        mul,
+        pow,
+        abs,
+        sinh,
+        cosh,
+        tanh,
+        arcsinh,
+        arccosh,
+        arctanh,
+        erf,
+        erfc,
+        erfcx,
+    ]
 )
 def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
@@ -644,7 +705,6 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         transform = ScaleTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
-
     transform_op = MeasurableTransform(
         scalar_op=scalar_op,
         transform=transform,
@@ -691,6 +751,21 @@ measurable_ir_rewrites_db.register(
     "basic",
     "transform",
 )
+
+measurable_ir_rewrites_db.register(
+    "measurable_special_log_to_log",
+    measurable_special_log_to_log,
+    "basic",
+    "transform",
+)
+
+measurable_ir_rewrites_db.register(
+    "measurable_special_exp_to_exp",
+    measurable_special_exp_to_exp,
+    "basic",
+    "transform",
+)
+
 
 measurable_ir_rewrites_db.register(
     "find_measurable_transforms",
