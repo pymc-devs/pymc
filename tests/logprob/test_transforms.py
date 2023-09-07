@@ -1052,6 +1052,32 @@ class TestPowerRVTransform:
         assert np.isfinite(x_logp_fn(2.5))
         assert np.isneginf(x_logp_fn(-2.5))
 
+    @pytest.mark.parametrize(
+        "transform",
+        [
+            ErfTransform(),
+            ErfcTransform(),
+            ErfcxTransform(),
+            SinhTransform(),
+            CoshTransform(),
+            TanhTransform(),
+            ArcsinhTransform(),
+            ArccoshTransform(),
+            ArctanhTransform(),
+            LogTransform(),
+            ExpTransform(),
+        ],
+    )
+    def test_check_jac_det(self, transform):
+        check_jacobian_det(
+            transform,
+            Vector(Rplusbig, 2),
+            pt.dvector,
+            [0.1, 0.1],
+            elemwise=True,
+            rv_var=pt.random.normal(0.5, 1, name="base_rv"),
+        )
+
 
 @pytest.mark.parametrize("test_val", (2.5, -2.5))
 def test_absolute_rv_transform(test_val):
@@ -1155,33 +1181,6 @@ def test_special_log_exp_transforms(transform):
         np.testing.assert_allclose(logp_ref.eval({vv: vv_test}), logp_test.eval({vv: vv_test}))
     else:
         assert equal_computations([logp_test], [logp_ref])
-
-
-@pytest.mark.parametrize(
-    "transform",
-    [
-        ErfTransform(),
-        ErfcTransform(),
-        ErfcxTransform(),
-        SinhTransform(),
-        CoshTransform(),
-        TanhTransform(),
-        ArcsinhTransform(),
-        ArccoshTransform(),
-        ArctanhTransform(),
-        LogTransform(),
-        ExpTransform(),
-    ],
-)
-def test_check_jac_det(transform):
-    check_jacobian_det(
-        transform,
-        Vector(Rplusbig, 2),
-        pt.dvector,
-        [0.1, 0.1],
-        elemwise=True,
-        rv_var=pt.random.normal(0.5, 1, name="base_rv"),
-    )
 
 
 @pytest.mark.parametrize("shift", [1.5, np.array([-0.5, 1, 0.3])])
