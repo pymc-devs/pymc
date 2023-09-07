@@ -95,7 +95,7 @@ class MomentRewrite(GraphRewriter):
                 if (
                     hasattr(inp, "owner")
                     and hasattr(inp.owner, "op")
-                    and isinstance(inp.owner.op, Distribution)
+                    and isinstance(inp.owner.op, RandomVariable)
                 ):
                     fgraph.replace(node.inputs[i], moment(node.inputs[i]))
 
