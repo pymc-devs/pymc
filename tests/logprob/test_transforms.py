@@ -746,6 +746,8 @@ class TestRVTransform:
             ArcsinhTransform(),
             ArccoshTransform(),
             ArctanhTransform(),
+            LogTransform(),
+            ExpTransform(),
         ],
     )
     def test_check_jac_det(self, transform):
@@ -1052,32 +1054,6 @@ class TestPowerRVTransform:
         assert np.isfinite(x_logp_fn(2.5))
         assert np.isneginf(x_logp_fn(-2.5))
 
-    @pytest.mark.parametrize(
-        "transform",
-        [
-            ErfTransform(),
-            ErfcTransform(),
-            ErfcxTransform(),
-            SinhTransform(),
-            CoshTransform(),
-            TanhTransform(),
-            ArcsinhTransform(),
-            ArccoshTransform(),
-            ArctanhTransform(),
-            LogTransform(),
-            ExpTransform(),
-        ],
-    )
-    def test_check_jac_det(self, transform):
-        check_jacobian_det(
-            transform,
-            Vector(Rplusbig, 2),
-            pt.dvector,
-            [0.1, 0.1],
-            elemwise=True,
-            rv_var=pt.random.normal(0.5, 1, name="base_rv"),
-        )
-
 
 @pytest.mark.parametrize("test_val", (2.5, -2.5))
 def test_absolute_rv_transform(test_val):
@@ -1153,7 +1129,7 @@ def test_cosh_rv_transform():
 TRANSFORMATIONS = {
     "log1p": (pt.log1p, lambda x: pt.log(1 + x)),
     "softplus": (pt.softplus, lambda x: pt.log(1 + pt.exp(x))),
-    "log1mexp": (pt.log1mexp, lambda x: pt.log(1 - pt.exp(pt.neg(x)))),
+    "log1mexp": (pt.log1mexp, lambda x: pt.log(1 - pt.exp(x))),
     "log2": (pt.log2, lambda x: pt.log(x) / pt.log(2)),
     "log10": (pt.log10, lambda x: pt.log(x) / pt.log(10)),
     "exp2": (pt.exp2, lambda x: pt.exp(pt.log(2) * x)),

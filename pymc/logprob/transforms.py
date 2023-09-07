@@ -595,7 +595,7 @@ def measurable_special_log_to_log(fgraph, node):
     if isinstance(node.op.scalar_op, Softplus):
         return [pt.log(1 + pt.exp(inp))]
     if isinstance(node.op.scalar_op, Log1mexp):
-        return [pt.log(1 - pt.exp(pt.neg(inp)))]
+        return [pt.log(1 - pt.exp(inp))]
     if isinstance(node.op.scalar_op, Log2):
         return [pt.log(inp) / pt.log(2)]
     if isinstance(node.op.scalar_op, Log10):
