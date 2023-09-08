@@ -155,8 +155,6 @@ def quaddist_parse(value, mu, cov, mat_type="cov"):
         onedim = False
 
     delta = value - mu
-    # Use this when Theano#5908 is released.
-    # return MvNormalLogp()(self.cov, delta)
     chol_cov = cholesky(cov)
     if mat_type != "tau":
         dist, logdet, ok = quaddist_chol(delta, chol_cov)
