@@ -24,7 +24,7 @@ from pytensor.scalar.basic import Cast
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.shape import Shape
-from pytensor.tensor.var import TensorConstant, TensorVariable
+from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 import pymc as pm
 

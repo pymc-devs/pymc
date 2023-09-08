@@ -18,7 +18,7 @@ import numpy as np
 import pytensor.tensor as pt
 
 from pytensor.compile import SharedVariable
-from pytensor.tensor.var import TensorConstant
+from pytensor.tensor.variable import TensorConstant
 from scipy.cluster.vq import kmeans
 
 # Avoid circular dependency when importing modelcontext

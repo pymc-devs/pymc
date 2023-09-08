@@ -25,7 +25,7 @@ import pytensor.tensor as pt
 
 from pytensor.graph.basic import Variable
 from pytensor.tensor.sharedvar import TensorSharedVariable
-from pytensor.tensor.var import TensorConstant, TensorVariable
+from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 __all__ = [
     "Constant",

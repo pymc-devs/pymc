@@ -110,7 +110,7 @@ from pytensor.tensor.math import (
     tanh,
     true_div,
 )
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,

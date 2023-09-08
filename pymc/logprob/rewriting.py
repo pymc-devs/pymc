@@ -80,7 +80,7 @@ from pytensor.tensor.subtensor import (
     IncSubtensor,
     Subtensor,
 )
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import MeasurableVariable
 from pymc.logprob.utils import DiracDelta, indices_from_subtensor

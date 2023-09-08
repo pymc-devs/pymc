@@ -31,7 +31,7 @@ from pytensor.graph.op import Op, compute_test_value
 from pytensor.raise_op import Assert
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.shape import SpecifyShape
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 from typing_extensions import TypeAlias
 
 from pymc.model import modelcontext

@@ -18,7 +18,7 @@ import pytensor.tensor as pt
 
 from pytensor.tensor import as_tensor_variable
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.distributions.continuous import BoundedContinuous, bounded_cont_transform
 from pymc.distributions.dist_math import check_parameters

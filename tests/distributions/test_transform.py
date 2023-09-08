@@ -20,7 +20,7 @@ import pytensor
 import pytensor.tensor as pt
 import pytest
 
-from pytensor.tensor.var import TensorConstant
+from pytensor.tensor.variable import TensorConstant
 
 import pymc as pm
 import pymc.distributions.transforms as tr

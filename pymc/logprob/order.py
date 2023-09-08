@@ -47,7 +47,7 @@ from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.math import Max
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
     MeasurableVariable,

@@ -45,7 +45,7 @@ from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scalar.basic import Ceil, Clip, Floor, RoundHalfToEven
 from pytensor.scalar.basic import clip as scalar_clip
 from pytensor.tensor.math import ceil, clip, floor, round_half_to_even
-from pytensor.tensor.var import TensorConstant
+from pytensor.tensor.variable import TensorConstant
 
 from pymc.logprob.abstract import MeasurableElemwise, _logcdf, _logprob
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db

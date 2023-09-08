@@ -32,7 +32,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.var import RandomStateSharedVariable
 from pytensor.tensor.slinalg import Cholesky
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 import pymc as pm
 
