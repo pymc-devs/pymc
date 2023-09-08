@@ -19,7 +19,7 @@ import pytensor.tensor as pt
 import pytest
 
 from pytensor.compile.sharedvalue import SharedVariable
-from pytensor.tensor.var import TensorConstant
+from pytensor.tensor.variable import TensorConstant
 
 import pymc as pm
 

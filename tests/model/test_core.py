@@ -36,7 +36,7 @@ from pytensor.raise_op import Assert, assert_op
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.sharedvar import ScalarSharedVariable
-from pytensor.tensor.var import TensorConstant
+from pytensor.tensor.variable import TensorConstant
 
 import pymc as pm
 

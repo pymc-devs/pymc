@@ -35,7 +35,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.rewriting.shape import ShapeFeature
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 from typing_extensions import TypeAlias
 
 from pymc.distributions.shape_utils import (

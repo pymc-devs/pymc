@@ -54,7 +54,7 @@ from pytensor.tensor.random.basic import (
     vonmises,
 )
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.var import TensorConstant
+from pytensor.tensor.variable import TensorConstant
 
 from pymc.logprob.abstract import _logcdf_helper, _logprob_helper
 from pymc.logprob.basic import icdf
