@@ -44,7 +44,6 @@ import scipy.stats as sp
 import pymc as pm
 
 from pymc import logp
-from pymc.logprob.abstract import _logcdf_helper, _logprob_helper
 from pymc.testing import assert_no_rvs
 
 
