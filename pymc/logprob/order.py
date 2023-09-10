@@ -111,16 +111,15 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Tens
     if base_var.owner.op.dtype.startswith("int"):
         if isinstance(base_var.owner.op, RandomVariable):
             measurable_max = MeasurableMaxDiscrete(list(axis))
-            max_rv_node = measurable_max.make_node(base_var)
-            max_rv = max_rv_node.outputs
-
-            return max_rv
+        else:
+            return None
     else:
         measurable_max = MeasurableMax(list(axis))
-        max_rv_node = measurable_max.make_node(base_var)
-        max_rv = max_rv_node.outputs
 
-        return max_rv
+    max_rv_node = measurable_max.make_node(base_var)
+    max_rv = max_rv_node.outputs
+
+    return max_rv
 
 
 measurable_ir_rewrites_db.register(

@@ -236,7 +236,7 @@ def test_min_non_mul_elemwise_fails():
 
 @pytest.mark.parametrize(
     "mu, size, value, axis",
-    [(2, 3, 0.85, -1), (2, 3, 0.01, 0), (1, 2, 0.2, None), (0, 4, 0, 0)],
+    [(2, 3, 0.85, -1), (2, 3, 1, 0), (1, 2, 2, None), (0, 4, 0, 0)],
 )
 def test_max_discrete(mu, size, value, axis):
     x = pm.Poisson.dist(name="x", mu=mu, size=(size))
@@ -247,8 +247,8 @@ def test_max_discrete(mu, size, value, axis):
     test_value = value
 
     n = size
-    exp_rv = np.exp(sp.poisson(mu).logcdf(test_value)) ** n
-    exp_rv_prev = np.exp(sp.poisson(mu).logcdf(test_value - 1)) ** n
+    exp_rv = sp.poisson(mu).cdf(test_value) ** n
+    exp_rv_prev = sp.poisson(mu).cdf(test_value - 1) ** n
 
     np.testing.assert_allclose(
         np.log(exp_rv - exp_rv_prev),
