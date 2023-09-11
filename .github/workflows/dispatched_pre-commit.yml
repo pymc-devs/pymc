@@ -7,7 +7,7 @@ jobs:
   runPreCommit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
         with:
           repository: ${{github.event.client_payload.pull_request.head.repo.full_name}}
           ref: ${{github.event.client_payload.pull_request.head.ref}}
