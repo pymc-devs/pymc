@@ -2783,8 +2783,8 @@ def zerosumnormal_logp(op, values, normal_dist, sigma, support_shape, **kwargs):
     n_zerosum_axes = op.ndim_supp
 
     _deg_free_support_shape = pt.inc_subtensor(shape[-n_zerosum_axes:], -1)
-    _full_size = pt.prod(shape)
-    _degrees_of_freedom = pt.prod(_deg_free_support_shape)
+    _full_size = pm.floatX(pt.prod(shape))
+    _degrees_of_freedom = pm.floatX(pt.prod(_deg_free_support_shape))
 
     zerosums = [
         pt.all(pt.isclose(pt.mean(value, axis=-axis - 1), 0, atol=1e-9))

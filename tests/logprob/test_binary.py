@@ -147,3 +147,15 @@ def test_potentially_measurable_operand():
         match="Logprob method not implemented",
     ):
         logp(y_rv, y_vv).eval({y_vv: y_vv_test})
+
+
+def test_comparison_invalid_broadcast():
+    x_rv = pt.random.normal(0.5, 1, size=(3,))
+
+    const = np.array([[0.1], [0.2], [-0.1]])
+    y_rv_invalid = pt.gt(x_rv, const)
+
+    y_vv_invalid = y_rv_invalid.clone()
+
+    with pytest.raises(NotImplementedError, match="Logprob method not implemented for"):
+        logp(y_rv_invalid, y_vv_invalid)

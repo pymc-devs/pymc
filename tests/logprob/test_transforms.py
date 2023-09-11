@@ -746,6 +746,8 @@ class TestRVTransform:
             ArcsinhTransform(),
             ArccoshTransform(),
             ArctanhTransform(),
+            LogTransform(),
+            ExpTransform(),
         ],
     )
     def test_check_jac_det(self, transform):
@@ -1105,7 +1107,6 @@ def test_cosh_rv_transform():
     # Something not centered around 0 is usually better
     base_rv = pt.random.normal(0.5, 1, size=(2,), name="base_rv")
     rv = pt.cosh(base_rv)
-
     vv = rv.clone()
     rv_logp = logp(rv, vv)
     with pytest.raises(NotImplementedError):
@@ -1118,12 +1119,44 @@ def test_cosh_rv_transform():
     expected_logp = pt.logaddexp(
         logp(base_rv, back_neg), logp(base_rv, back_pos)
     ) + transform.log_jac_det(vv)
-
     vv_test = np.array([0.25, 1.5])
     np.testing.assert_allclose(
         rv_logp.eval({vv: vv_test}),
         np.nan_to_num(expected_logp.eval({vv: vv_test}), nan=-np.inf),
     )
+
+
+TRANSFORMATIONS = {
+    "log1p": (pt.log1p, lambda x: pt.log(1 + x)),
+    "softplus": (pt.softplus, lambda x: pt.log(1 + pt.exp(x))),
+    "log1mexp": (pt.log1mexp, lambda x: pt.log(1 - pt.exp(x))),
+    "log2": (pt.log2, lambda x: pt.log(x) / pt.log(2)),
+    "log10": (pt.log10, lambda x: pt.log(x) / pt.log(10)),
+    "exp2": (pt.exp2, lambda x: pt.exp(pt.log(2) * x)),
+    "expm1": (pt.expm1, lambda x: pt.exp(x) - 1),
+    "sigmoid": (pt.sigmoid, lambda x: 1 / (1 + pt.exp(-x))),
+}
+
+
+@pytest.mark.parametrize("transform", TRANSFORMATIONS.keys())
+def test_special_log_exp_transforms(transform):
+    base_rv = pt.random.normal(name="base_rv")
+    vv = pt.scalar("vv")
+
+    transform_func, ref_func = TRANSFORMATIONS[transform]
+    transformed_rv = transform_func(base_rv)
+    ref_transformed_rv = ref_func(base_rv)
+
+    logp_test = logp(transformed_rv, vv)
+    logp_ref = logp(ref_transformed_rv, vv)
+
+    if transform in ["log2", "log10"]:
+        # in the cases of log2 and log10 floating point inprecision causes failure
+        # from equal_computations so evaluate logp and check all close instead
+        vv_test = np.array(0.25)
+        np.testing.assert_allclose(logp_ref.eval({vv: vv_test}), logp_test.eval({vv: vv_test}))
+    else:
+        assert equal_computations([logp_test], [logp_ref])
 
 
 @pytest.mark.parametrize("shift", [1.5, np.array([-0.5, 1, 0.3])])

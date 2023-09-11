@@ -1634,6 +1634,12 @@ class TestZeroSumNormal:
 
         np.testing.assert_allclose(zsn_logp, mvn_logp)
 
+    def test_does_not_upcast_to_float64(self):
+        with pytensor.config.change_flags(floatX="float32", warn_float64="raise"):
+            with pm.Model() as m:
+                pm.ZeroSumNormal("b", sigma=1, shape=(2,))
+            m.logp()
+
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
     def mvstudentt_rng_fn(self, size, nu, mu, scale, rng):

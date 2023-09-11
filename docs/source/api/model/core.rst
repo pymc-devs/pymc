@@ -4,7 +4,7 @@ Model
 Model creation and inspection
 -----------------------------
 
-.. currentmodule:: pymc
+.. currentmodule:: pymc.model.core
 .. autosummary::
    :toctree: generated/
 
