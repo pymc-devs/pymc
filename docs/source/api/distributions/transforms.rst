@@ -19,6 +19,7 @@ Transform instances are the entities that should be used in the
     logodds
     simplex
     sum_to_1
+    ordered
 
 
 Specific Transform Classes
