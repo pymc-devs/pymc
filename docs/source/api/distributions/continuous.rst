@@ -27,6 +27,7 @@ Continuous
    Logistic
    LogitNormal
    LogNormal
+   Maxwell
    Moyal
    Normal
    Pareto

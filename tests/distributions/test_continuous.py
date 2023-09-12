@@ -529,6 +529,20 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=4, float32=3),
         )
 
+    def test_maxwell(self):
+        check_logp(
+            pm.Maxwell,
+            R,
+            {"mu": R, "sigma": Rplusbig},
+            lambda value, mu, sigma: st.maxwell.logpdf(value, loc=mu, scale=sigma),
+        )
+        check_logcdf(
+            pm.Maxwell,
+            R,
+            {"mu": R, "sigma": Rplusbig},
+            lambda value, mu, sigma: st.maxwell.logcdf(value, loc=mu, scale=sigma),
+        )
+
     def test_studentt_logp(self):
         check_logp(
             pm.StudentT,
@@ -1242,6 +1256,20 @@ class TestMoments:
         assert_moment_is_expected(model, expected)
 
     @pytest.mark.parametrize(
+        "mu, sigma, size, expected",
+        [
+            (0, 1, None, 0),
+            (0, np.ones(5), None, np.zeros(5)),
+            (np.arange(5), 1, None, np.arange(5)),
+            (np.arange(5), np.arange(1, 6), (2, 5), np.full((2, 5))),
+        ],
+    )
+    def test_maxwell_moment(self, mu, sigma, size, expected):
+        with pm.Model() as model:
+            pm.Maxwell("x", mu=mu, sigma=sigma, size=size)
+        assert_moment_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
         "beta, size, expected",
         [
             (1, None, 1),
@@ -1807,6 +1835,19 @@ class TestGumbel(BaseTestDistributionRandom):
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
+    ]
+
+
+class TestMaxwell(BaseTestDistributionRandom):
+    pymc_dist = pm.Maxwell
+    pymc_dist_params = {"loc": 1.5, "sigma": 3.0}
+    expected_rv_op_params = {"loc": 1.5, "sigma": 3.0}
+    reference_dist_params = {"loc": 1.5, "sigma": 3.0}
+    reference_dist = seeded_scipy_distribution_builder("maxwell")
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
     ]
 
 

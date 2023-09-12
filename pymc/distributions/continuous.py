@@ -47,6 +47,7 @@ from pytensor.tensor.random.basic import (
     laplace,
     logistic,
     lognormal,
+    maxwell,
     normal,
     pareto,
     triangular,
@@ -114,6 +115,7 @@ __all__ = [
     "Weibull",
     "HalfStudentT",
     "LogNormal",
+    "Maxwell",
     "ChiSquared",
     "HalfNormal",
     "Wald",
@@ -1733,6 +1735,94 @@ class LogNormal(PositiveContinuous):
 
 
 Lognormal = LogNormal
+
+
+class Maxwell(PositiveContinuous):
+    r"""
+    Univariate Maxwell (or Maxwell-Boltzmann) log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \mu, \sigma) =
+           \sqrt{\frac{2}{\pi}}
+           \frac{(x-\mu)^2 \exp\left\{-(x-\mu)^2/(2\sigma^2)\right\}}{\sigma^3}
+
+    .. plot::
+        :context: close-figs
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        import arviz as az
+        plt.style.use('arviz-darkgrid')
+        x = np.linspace(0, 10, 1000)
+        mus = [0., 0., 0., 2.]
+        sigmas = [0.4, 1., 2., 0.4]
+        for mu, sigma in zip(mus, sigmas):
+            pdf = st.maxwell.pdf(x, mu, sigma)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sigma))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  =========================================================================
+    Support   :math:`x \in [0, \infty)`
+    Mean      :math:`2\sigma\sqrt{\frac{2}{\pi}}`
+    Variance  :math:`\sigma^2(3\pi - 8)/\pi`
+    ========  =========================================================================
+
+    Parameters
+    ----------
+    mu : tensor_like of float, default 0
+        Location parameter.
+    sigma : tensor_like of float, default 1
+        Scale parameter. (sigma > 0).
+
+    Examples
+    --------
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.Maxwell('x', mu=2, sigma=5)
+    """
+    rv_op = maxwell
+
+    @classmethod
+    def dist(cls, mu=0, sigma=1, **kwargs):
+        sigma = pt.as_tensor_variable(sigma)
+        return super().dist([mu, sigma], **kwargs)
+
+    def moment(rv, size, mu, sigma):
+        mu, _ = pt.broadcast_arrays(mu, sigma)
+        if not rv_size_is_none(size):
+            mu = pt.full(size, mu)
+        return mu
+
+    def logp(value, mu, sigma):
+        res = (
+            -0.5 * pt.pow((value - mu) / sigma, 2)
+            + pt.log(pt.sqrt(2.0 / np.pi))
+            + 2.0 * pt.log((value - mu) / sigma)
+            - pt.log(sigma)
+        )
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
+
+    def logcdf(value, mu, sigma):
+        res = pt.log(pt.gammainc(1.5, 0.5 * pt.pow(value / sigma, 2))) + pt.log(
+            2.0 / pt.sqrt(np.pi)
+        )
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
 
 
 class StudentTRV(RandomVariable):
