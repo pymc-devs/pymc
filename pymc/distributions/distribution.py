@@ -85,22 +85,6 @@ vectorized_ppc: contextvars.ContextVar[Optional[Callable]] = contextvars.Context
 PLATFORM = sys.platform
 
 
-class InnerMomentRewrite(GraphRewriter):
-    def add_requirements(self, fgraph):
-        fgraph.attach_feature(ReplaceValidate())
-
-    def apply(self, fgraph):
-        # breakpoint()
-        for node in fgraph.toposort():
-            for i, inp in enumerate(node.inputs):
-                if (
-                    hasattr(inp, "owner")
-                    and hasattr(inp.owner, "op")
-                    and isinstance(inp.owner.op, (RandomVariable, SymbolicRandomVariable))
-                ):
-                    fgraph.replace(node.inputs[i], moment(node.inputs[i]))
-
-
 class MomentRewrite(GraphRewriter):
     def add_requirements(self, fgraph):
         fgraph.attach_feature(ReplaceValidate())
@@ -108,8 +92,7 @@ class MomentRewrite(GraphRewriter):
     def apply(self, fgraph):
         for node in fgraph.toposort():
             if hasattr(node.op, "fgraph"):
-                moment_replace = InnerMomentRewrite()
-                moment_replace.rewrite(node.op.fgraph)
+                self.rewrite(node.op.fgraph)
             elif isinstance(node.op, (RandomVariable, SymbolicRandomVariable)):
                 fgraph.replace(node.out, moment(node.out))
 

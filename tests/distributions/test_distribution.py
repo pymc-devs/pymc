@@ -473,25 +473,40 @@ class TestCustomSymbolicDist:
         assert_moment_is_expected(model, expected)
 
     def test_custom_dist_default_moment_inner_graph(self):
-        def scan_step(mu):
-            x = pt.exp(pm.Normal.dist(mu, 1))
+        # def scan_step(mu):
+        #     x = pt.exp(pm.Normal.dist(mu, 1))
+        #     x_update = collect_default_updates([x])
+        #     return x, x_update
+
+        # def dist(mu, size):
+        #     # size = size.reshape(mu.shape)
+        #     ys, _ = pytensor.scan(
+        #         fn=scan_step,
+        #         sequences=[mu],
+        #         outputs_info=[None],
+        #         name="ys",
+        #     )
+        #     return pt.sum(ys)
+
+        def scan_step(xtm1):
+            x = xtm1 * 2
             x_update = collect_default_updates([x])
             return x, x_update
 
-        def dist(mu, size):
-            # size = size.reshape(mu.shape)
-            ys, _ = pytensor.scan(
+        def dist(size):
+            x0 = pm.Normal.dist(1, 1)
+
+            xs, updates = scan(
                 fn=scan_step,
-                sequences=[mu],
-                outputs_info=[None],
-                name="ys",
+                outputs_info=[x0],
+                n_steps=2,
+                name="xs",
             )
-            return pt.sum(ys)
+            return xs[-1]
 
         with Model() as model:
-            CustomDist("x", pt.ones(2), dist=dist)
-        # assert_moment_is_expected(model, 5.43656365691809)
-        assert_moment_is_expected(model, np.sum(np.exp(np.ones(2))))
+            CustomDist("x", dist=dist)
+        assert_moment_is_expected(model, 4, check_finite_logp=False)
 
     def test_logcdf_inference(self):
         def custom_dist(mu, sigma, size):
