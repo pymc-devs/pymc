@@ -539,7 +539,7 @@ class NormalMixture:
                 mu=data.mean(),
                 sigma=10,
                 shape=n_components,
-                transform=pm.distributions.transforms.univariate_ordered,
+                transform=pm.distributions.transforms.ordered,
                 initval=[1, 2, 3],
             )
             σ = pm.HalfNormal("σ", sigma=10, shape=n_components)

@@ -195,6 +195,9 @@ class RVTransform(abc.ABC):
             phi_inv = self.backward(value, *inputs)
             return pt.log(pt.abs(pt.nlinalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
 
+    def __str__(self):
+        return f"{self.__class__.__name__}"
+
 
 @node_rewriter(tracks=None)
 def transform_values(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
@@ -1219,22 +1222,46 @@ def _create_transformed_rv_op(
         if not isinstance(logprobs, Sequence):
             logprobs = [logprobs]
 
-        if use_jacobian:
-            assert len(values) == len(logprobs) == len(op.transforms)
-            logprobs_jac = []
-            for value, transform, logp in zip(values, op.transforms, logprobs):
-                if transform is None:
-                    logprobs_jac.append(logp)
-                    continue
-                assert isinstance(value.owner.op, TransformedVariable)
-                original_forward_value = value.owner.inputs[1]
-                jacobian = transform.log_jac_det(original_forward_value, *inputs).copy()
-                if value.name:
-                    jacobian.name = f"{value.name}_jacobian"
-                logprobs_jac.append(logp + jacobian)
-            logprobs = logprobs_jac
+        # Handle jacobian
+        assert len(values) == len(logprobs) == len(op.transforms)
+        logprobs_jac = []
+        for value, transform, logp in zip(values, op.transforms, logprobs):
+            if transform is None:
+                logprobs_jac.append(logp)
+                continue
 
-        return logprobs
+            assert isinstance(value.owner.op, TransformedVariable)
+            original_forward_value = value.owner.inputs[1]
+            log_jac_det = transform.log_jac_det(original_forward_value, *inputs).copy()
+            # The jacobian determinant has less dims than the logp
+            # when a multivariate transform (like Simplex or Ordered) is applied to univariate distributions.
+            # In this case we have to reduce the last logp dimensions, as they are no longer independent
+            if log_jac_det.ndim < logp.ndim:
+                diff_ndims = logp.ndim - log_jac_det.ndim
+                logp = logp.sum(axis=np.arange(-diff_ndims, 0))
+            # This case is sometimes, but not always, trivial to accomodate depending on the "space rank" of the
+            # multivariate distribution. See https://proceedings.mlr.press/v130/radul21a.html
+            elif log_jac_det.ndim > logp.ndim:
+                raise NotImplementedError(
+                    f"Univariate transform {transform} cannot be applied to multivariate {rv_op}"
+                )
+            else:
+                # Check there is no broadcasting between logp and jacobian
+                if logp.type.broadcastable != log_jac_det.type.broadcastable:
+                    raise ValueError(
+                        f"The logp of {rv_op} and log_jac_det of {transform} are not allowed to broadcast together. "
+                        "There is a bug in the implementation of either one."
+                    )
+
+            if use_jacobian:
+                if value.name:
+                    log_jac_det.name = f"{value.name}_jacobian"
+                logprobs_jac.append(logp + log_jac_det)
+            else:
+                # We still want to use the reduced logp, even though the jacobian isn't included
+                logprobs_jac.append(logp)
+
+        return logprobs_jac
 
     new_op = copy(rv_op)
     new_op.__class__ = new_op_type
