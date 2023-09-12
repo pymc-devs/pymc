@@ -85,11 +85,12 @@ vectorized_ppc: contextvars.ContextVar[Optional[Callable]] = contextvars.Context
 PLATFORM = sys.platform
 
 
-class MomentRewrite(GraphRewriter):
+class InnerMomentRewrite(GraphRewriter):
     def add_requirements(self, fgraph):
         fgraph.attach_feature(ReplaceValidate())
 
     def apply(self, fgraph):
+        # breakpoint()
         for node in fgraph.toposort():
             for i, inp in enumerate(node.inputs):
                 if (
@@ -98,6 +99,19 @@ class MomentRewrite(GraphRewriter):
                     and isinstance(inp.owner.op, (RandomVariable, SymbolicRandomVariable))
                 ):
                     fgraph.replace(node.inputs[i], moment(node.inputs[i]))
+
+
+class MomentRewrite(GraphRewriter):
+    def add_requirements(self, fgraph):
+        fgraph.attach_feature(ReplaceValidate())
+
+    def apply(self, fgraph):
+        for node in fgraph.toposort():
+            if hasattr(node.op, "fgraph"):
+                moment_replace = InnerMomentRewrite()
+                moment_replace.rewrite(node.op.fgraph)
+            elif isinstance(node.op, (RandomVariable, SymbolicRandomVariable)):
+                fgraph.replace(node.out, moment(node.out))
 
 
 class _Unpickling:

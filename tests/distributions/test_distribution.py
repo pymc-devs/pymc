@@ -459,6 +459,12 @@ class TestCustomSymbolicDist:
                 np.log([4, 4, 4]),
                 lambda nu, size: pt.log(pm.ChiSquared.dist(nu, size=size)),
             ),
+            (
+                (12, 1),
+                None,
+                12,
+                lambda mu1, sigma, size: pm.Normal.dist(mu1, sigma, size=size),
+            ),
         ],
     )
     def test_custom_dist_default_moment(self, dist_params, size, expected, dist_fn):
@@ -466,9 +472,9 @@ class TestCustomSymbolicDist:
             CustomDist("x", *dist_params, dist=dist_fn, size=size)
         assert_moment_is_expected(model, expected)
 
-    def test_custom_dist_custom_moment_inner_graph(self):
+    def test_custom_dist_default_moment_inner_graph(self):
         def scan_step(mu):
-            x = pm.Normal.dist(mu, 1)
+            x = pt.exp(pm.Normal.dist(mu, 1))
             x_update = collect_default_updates([x])
             return x, x_update
 
@@ -484,7 +490,8 @@ class TestCustomSymbolicDist:
 
         with Model() as model:
             CustomDist("x", pt.ones(2), dist=dist)
-        assert_moment_is_expected(model, 2)
+        # assert_moment_is_expected(model, 5.43656365691809)
+        assert_moment_is_expected(model, np.sum(np.exp(np.ones(2))))
 
     def test_logcdf_inference(self):
         def custom_dist(mu, sigma, size):
