@@ -473,21 +473,6 @@ class TestCustomSymbolicDist:
         assert_moment_is_expected(model, expected)
 
     def test_custom_dist_default_moment_inner_graph(self):
-        # def scan_step(mu):
-        #     x = pt.exp(pm.Normal.dist(mu, 1))
-        #     x_update = collect_default_updates([x])
-        #     return x, x_update
-
-        # def dist(mu, size):
-        #     # size = size.reshape(mu.shape)
-        #     ys, _ = pytensor.scan(
-        #         fn=scan_step,
-        #         sequences=[mu],
-        #         outputs_info=[None],
-        #         name="ys",
-        #     )
-        #     return pt.sum(ys)
-
         def scan_step(xtm1):
             x = xtm1 * 2
             x_update = collect_default_updates([x])
