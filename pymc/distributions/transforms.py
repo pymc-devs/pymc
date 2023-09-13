@@ -96,14 +96,14 @@ class Ordered(RVTransform):
 
     def backward(self, value, *inputs):
         x = pt.zeros(value.shape)
-        x = pt.inc_subtensor(x[..., 0], value[..., 0])
-        x = pt.inc_subtensor(x[..., 1:], pt.exp(value[..., 1:]))
+        x = pt.set_subtensor(x[..., 0], value[..., 0])
+        x = pt.set_subtensor(x[..., 1:], pt.exp(value[..., 1:]))
         return pt.cumsum(x, axis=-1)
 
     def forward(self, value, *inputs):
         y = pt.zeros(value.shape)
-        y = pt.inc_subtensor(y[..., 0], value[..., 0])
-        y = pt.inc_subtensor(y[..., 1:], pt.log(value[..., 1:] - value[..., :-1]))
+        y = pt.set_subtensor(y[..., 0], value[..., 0])
+        y = pt.set_subtensor(y[..., 1:], pt.log(value[..., 1:] - value[..., :-1]))
         return y
 
     def log_jac_det(self, value, *inputs):
