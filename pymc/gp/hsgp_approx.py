@@ -76,7 +76,7 @@ def calc_basis_periodic(
     Calculate basis vectors for the cosine series expansion of the periodic covariance function.
     These are derived from the Taylor series representation of the covariance.
     """
-    w0 = (2 * tl.pi) / period  # angular frequency defining the periodicity
+    w0 = (2 * np.pi) / period  # angular frequency defining the periodicity
     m1 = tl.tile(w0 * Xs[:, None], m)
     m2 = tl.diag(tl.arange(m))
     mw0x = m1 @ m2
