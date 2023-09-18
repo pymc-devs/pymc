@@ -36,7 +36,6 @@
 
 import warnings
 
-from collections import deque
 from typing import Dict, List, Optional, Sequence, Union
 
 import numpy as np
@@ -65,7 +64,7 @@ from pymc.logprob.abstract import (
 )
 from pymc.logprob.rewriting import cleanup_ir, construct_ir_fgraph
 from pymc.logprob.transforms import TransformValuesRewrite
-from pymc.logprob.utils import rvs_in_graph
+from pymc.logprob.utils import get_related_valued_nodes, rvs_in_graph
 from pymc.pytensorf import replace_vars_in_graphs
 
 TensorLike: TypeAlias = Union[Variable, float, np.ndarray]
@@ -211,7 +210,8 @@ def logp(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> Tens
         return _logprob_helper(rv, value, **kwargs)
     except NotImplementedError:
         fgraph, _, _ = construct_ir_fgraph({rv: value})
-        [(ir_rv, ir_value)] = fgraph.preserve_rv_mappings.rv_values.items()
+        [ir_valued_rv] = fgraph.outputs
+        [ir_rv, ir_value] = ir_valued_rv.owner.inputs
         expr = _logprob_helper(ir_rv, ir_value, **kwargs)
         cleanup_ir([expr])
         if warn_rvs:
@@ -309,8 +309,9 @@ def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> Te
     except NotImplementedError:
         # Try to rewrite rv
         fgraph, rv_values, _ = construct_ir_fgraph({rv: value})
-        [ir_rv] = fgraph.outputs
-        expr = _logcdf_helper(ir_rv, value, **kwargs)
+        [ir_valued_rv] = fgraph.outputs
+        [ir_rv, ir_value] = ir_valued_rv.owner.inputs
+        expr = _logcdf_helper(ir_rv, ir_value, **kwargs)
         cleanup_ir([expr])
         if warn_rvs:
             _warn_rvs_in_inferred_graph(expr)
@@ -391,8 +392,9 @@ def icdf(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> Tens
     except NotImplementedError:
         # Try to rewrite rv
         fgraph, rv_values, _ = construct_ir_fgraph({rv: value})
-        [ir_rv] = fgraph.outputs
-        expr = _icdf_helper(ir_rv, value, **kwargs)
+        [ir_valued_rv] = fgraph.outputs
+        [ir_rv, ir_value] = ir_valued_rv.owner.inputs
+        expr = _icdf_helper(ir_rv, ir_value, **kwargs)
         cleanup_ir([expr])
         if warn_rvs:
             _warn_rvs_in_inferred_graph(expr)
@@ -476,32 +478,14 @@ def conditional_logp(
     """
     warn_rvs, kwargs = _deprecate_warn_missing_rvs(warn_rvs, kwargs)
 
-    fgraph, rv_values, _ = construct_ir_fgraph(rv_values, ir_rewriter=ir_rewriter)
+    fgraph, rv_values, memo = construct_ir_fgraph(rv_values, ir_rewriter=ir_rewriter)
 
     if extra_rewrites is not None:
         extra_rewrites.rewrite(fgraph)
 
-    rv_remapper = fgraph.preserve_rv_mappings
-
-    # This is the updated random-to-value-vars map with the lifted/rewritten
-    # variables.  The rewrites are supposed to produce new
-    # `MeasurableVariable`s that are amenable to `_logprob`.
-    updated_rv_values = rv_remapper.rv_values
-
-    # Some rewrites also transform the original value variables. This is the
-    # updated map from the new value variables to the original ones, which
-    # we want to use as the keys in the final dictionary output
-    original_values = rv_remapper.original_values
-
-    # When a `_logprob` has been produced for a `MeasurableVariable` node, all
-    # other references to it need to be replaced with its value-variable all
-    # throughout the `_logprob`-produced graphs.  The following `dict`
-    # cumulatively maintains remappings for all the variables/nodes that needed
-    # to be recreated after replacing `MeasurableVariable`s with their
-    # value-variables.  Since these replacements work in topological order, all
-    # the necessary value-variable replacements should be present for each
-    # node.
-    replacements = updated_rv_values.copy()
+    # Walk the graph from its inputs to its outputs and construct the
+    # log-probability
+    replacements = {}
 
     # To avoid cloning the value variables (or ancestors of value variables),
     # we map them to themselves in the `replacements` `dict`
@@ -514,73 +498,84 @@ def conditional_logp(
         }
     )
 
-    # Walk the graph from its inputs to its outputs and construct the
-    # log-probability
-    q = deque(fgraph.toposort())
-    logprob_vars = {}
+    values_to_logprobs = {}
+    original_values = tuple(rv_values.values())
 
-    while q:
-        node = q.popleft()
-
+    # TODO: This seems too convoluted, can we just replace all RVs by their values,
+    #  except for the fgraph outputs (for which we want to call _logprob on)?
+    for node in fgraph.toposort():
         if not isinstance(node.op, MeasurableVariable):
             continue
 
-        q_values = [replacements[q_rv] for q_rv in node.outputs if q_rv in updated_rv_values]
+        valued_nodes = get_related_valued_nodes(node, fgraph)
 
-        if not q_values:
+        if not valued_nodes:
             continue
 
+        node_values = [valued_var.inputs[1] for valued_var in valued_nodes]
+        node_rvs = [valued_var.inputs[0] for valued_var in valued_nodes]
+        node_output_idxs = [
+            fgraph.outputs.index(valued_var.outputs[0]) for valued_var in valued_nodes
+        ]
+
         # Replace `RandomVariable`s in the inputs with value variables.
+        # Also, store the results in the `replacements` map for the nodes that follow.
+        for node_rv, node_value in zip(node_rvs, node_values):
+            replacements[node_rv] = node_value
+
         remapped_vars = replace_vars_in_graphs(
-            graphs=q_values + list(node.inputs),
+            graphs=node_values + list(node.inputs),
             replacements=replacements,
         )
-        q_values = remapped_vars[: len(q_values)]
-        q_rv_inputs = remapped_vars[len(q_values) :]
+        node_values = remapped_vars[: len(node_values)]
+        node_inputs = remapped_vars[len(node_values) :]
 
-        q_logprob_vars = _logprob(
+        node_logprob_expressions = _logprob(
             node.op,
-            q_values,
-            *q_rv_inputs,
+            node_values,
+            *node_inputs,
             **kwargs,
         )
 
-        if not isinstance(q_logprob_vars, (list, tuple)):
-            q_logprob_vars = [q_logprob_vars]
+        if not isinstance(node_logprob_expressions, (list, tuple)):
+            node_logprob_expressions = [node_logprob_expressions]
 
-        for q_value_var, q_logprob_var in zip(q_values, q_logprob_vars):
-            q_value_var = original_values[q_value_var]
+        for node_output_idx, node_value, node_logprob_expression in zip(
+            node_output_idxs, node_values, node_logprob_expressions
+        ):
+            original_value = original_values[node_output_idx]
+            if original_value.name:
+                node_logprob_expression.name = f"{original_value.name}_logprob"
 
-            if q_value_var.name:
-                q_logprob_var.name = f"{q_value_var.name}_logprob"
-
-            if q_value_var in logprob_vars:
+            if original_value in values_to_logprobs:
                 raise ValueError(
-                    f"More than one logprob term was assigned to the value var {q_value_var}"
+                    f"More than one logprob term was assigned to the value var {original_value}"
                 )
 
-            logprob_vars[q_value_var] = q_logprob_var
+            values_to_logprobs[original_value] = node_logprob_expression
 
         # Recompute test values for the changes introduced by the replacements above.
         if config.compute_test_value != "off":
-            for node in io_toposort(graph_inputs(q_logprob_vars), q_logprob_vars):
+            for node in io_toposort(
+                graph_inputs(node_logprob_expressions), node_logprob_expressions
+            ):
                 compute_test_value(node)
 
-    missing_value_terms = set(original_values.values()) - set(logprob_vars.keys())
+    missing_value_terms = set(original_values) - set(values_to_logprobs.keys())
     if missing_value_terms:
         raise RuntimeError(
             f"The logprob terms of the following value variables could not be derived: {missing_value_terms}"
         )
 
-    logprob_expressions = list(logprob_vars.values())
-    cleanup_ir(logprob_expressions)
+    logprobs = list(values_to_logprobs.values())
+    cleanup_ir(logprobs)
 
     if warn_rvs:
-        rvs_in_logp_expressions = _find_unallowed_rvs_in_graph(logprob_expressions)
+        rvs_in_logp_expressions = _find_unallowed_rvs_in_graph(logprobs)
         if rvs_in_logp_expressions:
             warnings.warn(RVS_IN_JOINT_LOGP_GRAPH_MSG % rvs_in_logp_expressions, UserWarning)
 
-    return logprob_vars
+    return values_to_logprobs
 
 
 def transformed_conditional_logp(

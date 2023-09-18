@@ -59,8 +59,8 @@ from pymc.logprob.utils import replace_rvs_by_values
 from pymc.testing import assert_no_rvs
 
 
-def test_factorized_joint_logprob_basic():
-    # A simple check for when `factorized_joint_logprob` is the same as `logprob`
+def test_conditional_logp_basic():
+    # A simple check for when `conditional_logp` is the same as `logprob`
     a = pt.random.uniform(0.0, 1.0)
     a.name = "a"
     a_value_var = a.clone()
@@ -115,7 +115,7 @@ def test_factorized_joint_logprob_basic():
     assert a_value_var in res_ancestors
 
 
-def test_factorized_joint_logprob_multi_obs():
+def test_conditional_logp_multi_obs():
     a = pt.random.uniform(0.0, 1.0)
     b = pt.random.normal(0.0, 1.0)
 
@@ -142,7 +142,7 @@ def test_factorized_joint_logprob_multi_obs():
     assert equal_computations([logp_res_comb], [exp_logp_comb])
 
 
-def test_factorized_joint_logprob_diff_dims():
+def test_conditional_logp_diff_dims():
     M = pt.matrix("M")
     x = pt.random.normal(0, 1, size=M.shape[1], name="X")
     y = pt.random.normal(M.dot(x), 1, name="Y")
@@ -174,7 +174,7 @@ def test_persist_inputs():
     beta_rv = pt.random.normal(0, 1, name="beta")
     Y_rv = pt.random.normal(beta_rv * x, 1, name="y")
 
-    beta_vv = beta_rv.type()
+    beta_vv = beta_rv.clone()
     y_vv = Y_rv.clone()
 
     logp = conditional_logp({beta_rv: beta_vv, Y_rv: y_vv})
@@ -184,6 +184,7 @@ def test_persist_inputs():
 
     # Make sure we don't clone value variables when they're graphs.
     y_vv_2 = y_vv * 2
+    y_vv_2.name = "y_2"
     logp_2 = conditional_logp({beta_rv: beta_vv, Y_rv: y_vv_2})
     logp_2_combined = pt.sum([pt.sum(factor) for factor in logp_2.values()])
 
@@ -200,7 +201,7 @@ def test_persist_inputs():
     assert y_vv_2 in ancestors([logp_2_combined])
 
 
-def test_warn_random_found_factorized_joint_logprob():
+def test_warn_random_found_conditional_logp():
     x_rv = pt.random.normal(name="x")
     y_rv = pt.random.normal(x_rv, 1, name="y")
 
@@ -225,7 +226,7 @@ def test_multiple_rvs_to_same_value_raises():
         conditional_logp({x_rv1: x, x_rv2: x})
 
 
-def test_joint_logp_basic():
+def test_transformed_conditional_logp():
     """Make sure we can compute a log-likelihood for a hierarchical model with transforms."""
 
     with pm.Model() as m:

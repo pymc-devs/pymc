@@ -498,27 +498,53 @@ class TestCompilePyMC:
             warnings.simplefilter("error")
 
             rng = pytensor.shared(np.random.default_rng(), name="rng")
-            x = pt.random.normal(rng=rng)
-            y = pt.random.normal(rng=rng)
+            # x1 and x2 are identical
+            x1 = pt.random.normal(rng=rng)
+            x2 = pt.random.normal(rng=rng)
+            next_rng_x = x1.owner.outputs[0]
+            next_rng_x.name = "next_rng_x"
+            # y1 and y2 are not!
+            y1 = pt.random.normal(loc=-1, rng=next_rng_x)
+            y2 = pt.random.normal(loc=1, rng=next_rng_x)
+            next_rng_y = y1.owner.outputs[0]
+            next_rng_y.name = "next_rng_y"
 
             # No warnings if only one variable is used
-            assert compile_pymc([], [x])
-            assert compile_pymc([], [y])
+            assert compile_pymc([], [x1])
+            assert compile_pymc([], [x2])
+            assert compile_pymc([], [y1])
+            assert compile_pymc([], [y2])
 
+            # No warnings if two identical variables use the same RNG
+            f = compile_pymc([], [x1, x2], random_seed=456)
+            res1 = f()
+            res2 = f()
+            assert res1[0] == res1[1]
+            assert res2[0] == res2[1]
+            assert res1[0] != res2[0]
+
+            # This could be allowed since the update graph for rng->x2->next_rng
+            # is a complete subset of the update graph for rng->x1->next_rng->y1->next_rng
             user_warn_msg = "RNG Variable rng has multiple clients"
             with pytest.warns(UserWarning, match=user_warn_msg):
-                f = compile_pymc([], [x, y], random_seed=456)
+                f = compile_pymc([], [x1, x2, y1], random_seed=456)
+            assert f() == f()
+
+            # Warnings if two non-identical variables use the same RNG
+            user_warn_msg = "RNG Variable next_rng_x has multiple clients"
+            with pytest.warns(UserWarning, match=user_warn_msg):
+                f = compile_pymc([], [y1, y2], random_seed=456)
             assert f() == f()
 
             # The user can provide an explicit update, but we will still issue a warning
             with pytest.warns(UserWarning, match=user_warn_msg):
-                f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
+                f = compile_pymc([], [y1, y2], updates={rng: next_rng_y}, random_seed=456)
             assert f() != f()
 
             # Same with default update
-            rng.default_update = x.owner.outputs[0]
+            rng.default_update = next_rng_y
             with pytest.warns(UserWarning, match=user_warn_msg):
-                f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
+                f = compile_pymc([], [y1, y2], random_seed=456)
             assert f() != f()
 
     def test_nested_updates(self):

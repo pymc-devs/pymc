@@ -52,10 +52,10 @@ def test_argmax():
     x = pt.random.normal(0, 1, size=(3,))
     x.name = "x"
     x_max = pt.argmax(x, axis=-1)
-    x_max_value = pt.vector("x_max_value")
+    x_max_value = pt.scalar("x_max_value", dtype=x_max.type.dtype)
 
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented for Argmax")):
-        x_max_logprob = logp(x_max, x_max_value)
+        logp(x_max, x_max_value)
 
 
 @pytest.mark.parametrize(
@@ -70,7 +70,7 @@ def test_non_iid_fails(pt_op):
     x = pm.Normal.dist([0, 1, 2, 3, 4], 1, shape=(5,))
     x.name = "x"
     x_m = pt_op(x, axis=-1)
-    x_m_value = pt.vector("x_value")
+    x_m_value = pt.scalar("x_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_m, x_m_value)
 
@@ -87,7 +87,7 @@ def test_non_rv_fails(pt_op):
     x = pt.exp(pt.random.beta(0, 1, size=(3,)))
     x.name = "x"
     x_m = pt_op(x, axis=-1)
-    x_m_value = pt.vector("x_value")
+    x_m_value = pt.scalar("x_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_m, x_m_value)
 
@@ -105,7 +105,7 @@ def test_multivariate_rv_fails(pt_op):
     x = pm.StickBreakingWeights.dist(_alpha, _k)
     x.name = "x"
     x_m = pt_op(x, axis=-1)
-    x_m_value = pt.vector("x_value")
+    x_m_value = pt.scalar("x_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_m, x_m_value)
 
@@ -122,7 +122,7 @@ def test_categorical(pt_op):
     x = pm.Categorical.dist([1, 1, 1, 1], shape=(5,))
     x.name = "x"
     x_m = pt_op(x, axis=-1)
-    x_m_value = pt.vector("x_value")
+    x_m_value = pt.scalar("x_value", dtype=x.type.dtype)
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_max_logprob = logp(x_m, x_m_value)
 
@@ -228,7 +228,7 @@ def test_min_non_mul_elemwise_fails():
     x = pt.log(pt.random.beta(0, 1, size=(3,)))
     x.name = "x"
     x_min = pt.min(x, axis=-1)
-    x_min_value = pt.vector("x_min_value")
+    x_min_value = pt.scalar("x_min_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_min_logprob = logp(x_min, x_min_value)
 
@@ -238,9 +238,9 @@ def test_min_non_mul_elemwise_fails():
     [(2, 3, 1, -1), (2, 3, 1, 0), (1, 2, 2, None), (0, 4, 0, 0)],
 )
 def test_max_discrete(mu, size, value, axis):
-    x = pm.Poisson.dist(name="x", mu=mu, size=(size))
+    x = pm.Poisson.dist(name="x", mu=mu, size=size)
     x_max = pt.max(x, axis=axis)
-    x_max_value = pt.scalar("x_max_value")
+    x_max_value = pt.scalar("x_max_value", dtype=x.type.dtype)
     x_max_logprob = logp(x_max, x_max_value)
 
     test_value = value

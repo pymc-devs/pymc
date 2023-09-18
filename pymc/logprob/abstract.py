@@ -39,7 +39,7 @@ import abc
 from functools import singledispatch
 from typing import Sequence, Tuple
 
-from pytensor.graph.op import Op
+from pytensor.graph import Apply, Op, Variable
 from pytensor.graph.utils import MetaType
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.elemwise import Elemwise
@@ -153,3 +153,50 @@ class MeasurableElemwise(Elemwise):
 
 
 MeasurableVariable.register(MeasurableElemwise)
+
+
+class ValuedRV(Op):
+    r"""Represents the association of a measurable variable and its value.
+
+    A `ValuedVariable` node represents the pair :math:`(Y, y)`, where
+    :math:`Y` is a random variable and :math:`y \sim Y`.
+
+    Log-probability (densities) are functions over these pairs, which makes
+    these nodes in a graph an intermediate form that serves to construct a
+    log-probability from a model graph.
+    """
+
+    def make_node(self, rv, value):
+        assert isinstance(rv, Variable)
+        if value is not None:
+            assert isinstance(value, Variable)
+            assert rv.type.in_same_class(value.type)
+        return Apply(self, [rv, value], [rv.type(name=rv.name)])
+
+    def perform(self, node, inputs, out):
+        raise NotImplementedError("ValuedVar should not be present in the final graph!")
+        out[0][0] = inputs[0]
+
+    def infer_shape(self, fgraph, node, input_shapes):
+        return [input_shapes[0]]
+
+
+valued_rv = ValuedRV()
+
+
+class PromisedValuedRV(Op):
+    r"""Marks a variable as being promised a valued variable in the logprob method."""
+
+    def make_node(self, rv):
+        assert isinstance(rv, Variable)
+        return Apply(self, [rv], [rv.type(name=rv.name)])
+
+    def perform(self, node, inputs, out):
+        raise NotImplementedError("PromisedValuedRV should not be present in the final graph!")
+        out[0][0] = inputs[0]
+
+    def infer_shape(self, fgraph, node, input_shapes):
+        return [input_shapes[0]]
+
+
+promised_valued_rv = PromisedValuedRV()

@@ -36,14 +36,14 @@
 
 import warnings
 
-from typing import Container, Dict, List, Optional, Sequence, Set, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Set, Tuple, Union
 
 import numpy as np
 import pytensor
 
 from pytensor import Variable
 from pytensor import tensor as pt
-from pytensor.graph import Apply, Op, node_rewriter
+from pytensor.graph import Apply, FunctionGraph, Op, node_rewriter
 from pytensor.graph.basic import walk
 from pytensor.graph.op import HasInnerGraph
 from pytensor.link.c.type import CType
@@ -52,7 +52,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.distributions.transforms import Transform
-from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.logprob.abstract import MeasurableVariable, ValuedRV, _logprob
 from pymc.pytensorf import replace_vars_in_graphs
 from pymc.util import makeiter
 
@@ -154,14 +154,22 @@ def indices_from_subtensor(idx_list, indices):
     )
 
 
-def check_potential_measurability(
-    inputs: Tuple[TensorVariable], valued_rvs: Container[TensorVariable]
-) -> bool:
-    valued_rvs = set(valued_rvs)
+def filter_measurable_variables(inputs):
+    return [
+        inp
+        for inp in inputs
+        if (
+            inp.owner is not None
+            and not isinstance(inp.owner.op, ValuedRV)
+            and isinstance(inp.owner.op, MeasurableVariable)
+        )
+    ]
 
+
+def check_potential_measurability(inputs: Tuple[TensorVariable]) -> bool:
     def expand_fn(var):
         # expand_fn does not go beyond valued_rvs or any MeasurableVariable
-        if var.owner and not isinstance(var.owner.op, MeasurableVariable) and var not in valued_rvs:
+        if var.owner and not isinstance(var.owner.op, (ValuedRV, MeasurableVariable)):
             return reversed(var.owner.inputs)
         else:
             return []
@@ -171,12 +179,32 @@ def check_potential_measurability(
         for ancestor_var in walk(inputs, expand=expand_fn, bfs=False)
         if (
             ancestor_var.owner
+            and not isinstance(ancestor_var.owner.op, ValuedRV)
             and isinstance(ancestor_var.owner.op, MeasurableVariable)
-            and ancestor_var not in valued_rvs
         )
     ):
         return True
     return False
+
+
+def get_related_valued_nodes(node: Apply, fgraph: FunctionGraph) -> list[Apply]:
+    """Get all ValuedVars related to the same RV node.
+
+    Returns
+    -------
+        rv_node
+        valued_nodes
+    """
+    clients = fgraph.clients
+    valued_nodes = []
+    for out in node.outputs:
+        for client, _ in clients[out]:
+            if client == "output":
+                continue
+            if isinstance(client.op, ValuedRV):
+                valued_nodes.append(client)
+
+    return valued_nodes
 
 
 class ParameterValueError(ValueError):

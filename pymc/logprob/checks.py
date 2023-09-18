@@ -43,8 +43,8 @@ from pytensor.raise_op import CheckAndRaise
 from pytensor.tensor.shape import SpecifyShape
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
-from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
-from pymc.logprob.utils import replace_rvs_by_values
+from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.utils import filter_measurable_variables, replace_rvs_by_values
 
 
 class MeasurableSpecifyShape(SpecifyShape):
@@ -52,6 +52,9 @@ class MeasurableSpecifyShape(SpecifyShape):
 
 
 MeasurableVariable.register(MeasurableSpecifyShape)
+
+
+measurable_specify_shape = MeasurableSpecifyShape()
 
 
 @_logprob.register(MeasurableSpecifyShape)
@@ -63,30 +66,18 @@ def logprob_specify_shape(op, values, inner_rv, *shapes, **kwargs):
 
 
 @node_rewriter([SpecifyShape])
-def find_measurable_specify_shapes(fgraph, node) -> Optional[List[MeasurableSpecifyShape]]:
+def find_measurable_specify_shapes(fgraph, node):
     r"""Finds `SpecifyShapeOp`\s for which a `logprob` can be computed."""
 
     if isinstance(node.op, MeasurableSpecifyShape):
         return None  # pragma: no cover
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
-    rv = node.outputs[0]
-
     base_rv, *shape = node.inputs
 
-    if not (
-        base_rv.owner
-        and isinstance(base_rv.owner.op, MeasurableVariable)
-        and base_rv not in rv_map_feature.rv_values
-    ):
-        return None  # pragma: no cover
+    if not filter_measurable_variables([base_rv]):
+        return None
 
-    new_op = MeasurableSpecifyShape()
-    new_rv = new_op.make_node(base_rv, *shape).default_output()
+    new_rv = measurable_specify_shape.make_node(base_rv, *shape).default_output()
 
     return [new_rv]
 
@@ -122,13 +113,9 @@ def find_measurable_check_and_raise(fgraph, node) -> Optional[List[MeasurableChe
     if isinstance(node.op, MeasurableCheckAndRaise):
         return None  # pragma: no cover
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
     base_rv, *conds = node.inputs
-    if not rv_map_feature.request_measurable([base_rv]):
+
+    if not filter_measurable_variables([base_rv]):
         return None
 
     op = node.op

@@ -28,8 +28,11 @@ from pymc.logprob.abstract import (
     _logprob,
     _logprob_helper,
 )
-from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
-from pymc.logprob.utils import check_potential_measurability
+from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.utils import (
+    check_potential_measurability,
+    filter_measurable_variables,
+)
 
 
 class MeasurableComparison(MeasurableElemwise):
@@ -42,11 +45,7 @@ class MeasurableComparison(MeasurableElemwise):
 def find_measurable_comparisons(
     fgraph: FunctionGraph, node: Node
 ) -> Optional[List[MeasurableComparison]]:
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
-    measurable_inputs = rv_map_feature.request_measurable(node.inputs)
+    measurable_inputs = filter_measurable_variables(node.inputs)
 
     if len(measurable_inputs) != 1:
         return None
@@ -64,7 +63,7 @@ def find_measurable_comparisons(
     const = node.inputs[(measurable_var_idx + 1) % 2]
 
     # check for potential measurability of const
-    if check_potential_measurability([const], rv_map_feature.rv_values.keys()):
+    if check_potential_measurability([const]):
         return None
 
     node_scalar_op = node.op.scalar_op
@@ -134,16 +133,12 @@ class MeasurableBitwise(MeasurableElemwise):
 
 @node_rewriter(tracks=[invert])
 def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableBitwise]]:
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
     base_var = node.inputs[0]
 
     if not base_var.dtype.startswith("bool"):
         raise None
 
-    if not rv_map_feature.request_measurable([base_var]):
+    if not filter_measurable_variables([base_var]):
         return None
 
     node_scalar_op = node.op.scalar_op

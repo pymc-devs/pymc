@@ -41,6 +41,7 @@ from pytensor.graph.basic import (
     Constant,
     Variable,
     clone_get_equiv,
+    equal_computations,
     graph_inputs,
     walk,
 )
@@ -840,57 +841,80 @@ def collect_default_updates(
     from pymc.distributions.distribution import SymbolicRandomVariable
 
     def find_default_update(clients, rng: Variable) -> Union[None, Variable]:
+        """Recursively find default update expression for rng.
+
+        Returns None if no unambiguous update can be found.
+        """
         rng_clients = clients.get(rng, None)
 
-        # Root case, RNG is not used elsewhere
+        # Root case, RNG is not used elsewhere and can be used safely
         if not rng_clients:
             return rng
 
-        if len(rng_clients) > 1:
-            warnings.warn(
-                f"RNG Variable {rng} has multiple clients. This is likely an inconsistent random graph.",
-                UserWarning,
-            )
+        updates = []
+        for client, _ in rng_clients:
+            # RNG is an output of the function, this is not a problem
+            if client == "output":
+                updates.append("output")
+
+            # RNG is used by another operator, which should output an update for the RNG
+            elif isinstance(client.op, RandomVariable):
+                # RandomVariable first output is always the update of the input RNG
+                next_rng = client.outputs[0]
+
+            elif isinstance(client.op, SymbolicRandomVariable):
+                # SymbolicRandomVariable have an explicit method that returns an
+                # update mapping for their RNG(s)
+                next_rng = client.op.update(client).get(rng)
+                if next_rng is None:
+                    raise ValueError(
+                        f"No update found for at least one RNG used in SymbolicRandomVariable Op {client.op}"
+                    )
+            elif isinstance(client.op, Scan):
+                # Check if any shared output corresponds to the RNG
+                rng_idx = client.inputs.index(rng)
+                io_map = client.op.get_oinp_iinp_iout_oout_mappings()["outer_out_from_outer_inp"]
+                out_idx = io_map.get(rng_idx, -1)
+                if out_idx != -1:
+                    next_rng = client.outputs[out_idx]
+                else:  # No break
+                    raise ValueError(
+                        f"No update found for at least one RNG used in Scan Op {client.op}.\n"
+                        "You can use `pytensorf.collect_default_updates` inside the Scan function to return updates automatically."
+                    )
+            else:
+                # We don't know how this RNG should be updated by this strange Op (e.g., OpFromGraph).
+                # The user should provide an update manually
+                continue
+
+            # Recurse until we find final update for RNG
+            final_update = find_default_update(clients, next_rng)
+            if final_update is not None:
+                updates.append(final_update)
+
+        if len(updates) == 0:
             return None
 
-        [client, _] = rng_clients[0]
+        updates = [update for update in updates if update != "output"]
 
-        # RNG is an output of the function, this is not a problem
-        if client == "output":
+        # RNG was only used as an output
+        if len(updates) == 0:
             return rng
 
-        # RNG is used by another operator, which should output an update for the RNG
-        if isinstance(client.op, RandomVariable):
-            # RandomVariable first output is always the update of the input RNG
-            next_rng = client.outputs[0]
+        update = updates[0]
 
-        elif isinstance(client.op, SymbolicRandomVariable):
-            # SymbolicRandomVariable have an explicit method that returns an
-            # update mapping for their RNG(s)
-            next_rng = client.op.update(client).get(rng)
-            if next_rng is None:
-                raise ValueError(
-                    f"No update found for at least one RNG used in SymbolicRandomVariable Op {client.op}"
+        if len(updates) > 1:
+            # RNG was used in multiple places. This is only okay if graphs are equivalent
+            if not all(
+                equal_computations([update], [other_update]) for other_update in updates[1:]
+            ):
+                warnings.warn(
+                    f"RNG Variable {rng} has multiple clients. This is likely an inconsistent random graph.",
+                    UserWarning,
                 )
-        elif isinstance(client.op, Scan):
-            # Check if any shared output corresponds to the RNG
-            rng_idx = client.inputs.index(rng)
-            io_map = client.op.get_oinp_iinp_iout_oout_mappings()["outer_out_from_outer_inp"]
-            out_idx = io_map.get(rng_idx, -1)
-            if out_idx != -1:
-                next_rng = client.outputs[out_idx]
-            else:  # No break
-                raise ValueError(
-                    f"No update found for at least one RNG used in Scan Op {client.op}.\n"
-                    "You can use `pytensorf.collect_default_updates` inside the Scan function to return updates automatically."
-                )
-        else:
-            # We don't know how this RNG should be updated (e.g., OpFromGraph).
-            # The user should provide an update manually
-            return None
+                return None
 
-        # Recurse until we find final update for RNG
-        return find_default_update(clients, next_rng)
+        return update
 
     if inputs is None:
         inputs = []

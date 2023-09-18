@@ -876,8 +876,8 @@ class TestPowerRVTransform:
         # ICDF is not implemented for chisquare, so we have to test with another identity
         # sqrt(exponential(lam)) = rayleigh(1 / sqrt(2 * lam))
         lam = 2.5
-        y_rv = pt.sqrt(pt.random.exponential(scale=1 / lam))
-        y_vv = x_rv.clone()
+        y_rv = pt.sqrt(pt.random.exponential(scale=1 / lam, size=(4,)))
+        y_vv = y_rv.clone()
         y_icdf_fn = pytensor.function([y_vv], icdf(y_rv, y_vv))
         q_test_val = np.r_[0.2, 0.5, 0.7, 0.9]
         np.testing.assert_allclose(
@@ -1076,7 +1076,7 @@ def test_base_exponent_non_measurable():
 
     with pytest.raises(
         RuntimeError,
-        match="The logprob terms of the following value variables could not be derived: {x}",
+        match=r"The logprob terms of the following value variables could not be derived: {x}",
     ):
         conditional_logp({x_rv: x_vv})
 

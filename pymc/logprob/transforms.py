@@ -130,6 +130,7 @@ from pymc.distributions.transforms import (
 from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableVariable,
+    ValuedRV,
     _icdf,
     _icdf_helper,
     _logcdf,
@@ -137,12 +138,13 @@ from pymc.logprob.abstract import (
     _logprob,
     _logprob_helper,
 )
-from pymc.logprob.rewriting import (
-    PreserveRVMappings,
-    cleanup_ir_rewrites_db,
-    measurable_ir_rewrites_db,
+from pymc.logprob.rewriting import cleanup_ir_rewrites_db, measurable_ir_rewrites_db
+from pymc.logprob.utils import (
+    CheckParameterValue,
+    check_potential_measurability,
+    filter_measurable_variables,
+    get_related_valued_nodes,
 )
-from pymc.logprob.utils import CheckParameterValue, check_potential_measurability
 
 
 class TransformedVariable(Op):
@@ -183,8 +185,8 @@ cleanup_ir_rewrites_db.register(
 )
 
 
-@node_rewriter(tracks=None)
-def transform_values(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
+@node_rewriter(tracks=[ValuedRV])
+def transform_values(fgraph: FunctionGraph, valued_node: Node) -> Optional[List[Node]]:
     """Apply transforms to value variables.
 
     It is assumed that the input value variables correspond to forward
@@ -196,56 +198,45 @@ def transform_values(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     ``Y`` on the natural scale.
     """
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
     values_to_transforms: Optional[TransformValuesMapping] = getattr(
         fgraph, "values_to_transforms", None
     )
 
-    if rv_map_feature is None or values_to_transforms is None:
+    if values_to_transforms is None:
         return None  # pragma: no cover
 
-    rv_vars = []
-    value_vars = []
-
-    for out in node.outputs:
-        value = rv_map_feature.rv_values.get(out, None)
-        if value is None:
-            continue
-        rv_vars.append(out)
-        value_vars.append(value)
-
-    if not value_vars:
-        return None
-
-    transforms = [values_to_transforms.get(value_var, None) for value_var in value_vars]
+    rv_node = valued_node.inputs[0].owner
+    valued_nodes = get_related_valued_nodes(rv_node, fgraph)
+    rvs = [valued_var.inputs[0] for valued_var in valued_nodes]
+    values = [valued_var.inputs[1] for valued_var in valued_nodes]
+    transforms = [values_to_transforms.get(value, None) for value in values]
 
     if all(transform is None for transform in transforms):
         return None
 
-    new_op = _create_transformed_rv_op(node.op, transforms)
+    # Create a new RV Op whose logprob respects the transformed value variable
+    transformed_rv_op = _create_transformed_rv_op(rv_node.op, transforms)
     # Create a new `Apply` node and outputs
-    trans_node = node.clone()
-    trans_node.op = new_op
+    transformed_node = rv_node.clone()
+    transformed_node.op = transformed_rv_op
+
+    replacements = dict(zip(rv_node.outputs, transformed_node.outputs))
 
     # We now assume that the old value variable represents the *transformed space*.
     # This means that we need to replace all instance of the old value variable
     # with "inversely/un-" transformed versions of itself.
-    for rv_var, value_var, transform in zip(rv_vars, value_vars, transforms):
-        rv_var_out_idx = node.outputs.index(rv_var)
-
+    for rv, value, transform in zip(rvs, values, transforms):
         if transform is None:
             continue
 
-        new_value_var = transformed_variable(
-            transform.backward(value_var, *trans_node.inputs), value_var
-        )
+        new_value = transformed_variable(transform.backward(value, *transformed_node.inputs), value)
 
-        if value_var.name and getattr(transform, "name", None):
-            new_value_var.name = f"{value_var.name}_{transform.name}"
+        if value.name and getattr(transform, "name", "transformed"):
+            new_value.name = f"{value.name}_{transform.name}"
 
-        rv_map_feature.update_rv_maps(rv_var, new_value_var, trans_node.outputs[rv_var_out_idx])
+        replacements[value] = new_value
 
-    return trans_node.outputs
+    return replacements
 
 
 @node_rewriter(tracks=[Scan])
@@ -524,13 +515,17 @@ def measurable_transform_icdf(op: MeasurableTransform, value, *inputs, **kwargs)
 @node_rewriter([reciprocal])
 def measurable_reciprocal_to_power(fgraph, node):
     """Convert reciprocal of `MeasurableVariable`s to power."""
-    [inp] = node.inputs
-    return [pt.pow(inp, -1.0)]
+    if filter_measurable_variables(node.inputs):
+        [inp] = node.inputs
+        return [pt.pow(inp, -1.0)]
 
 
 @node_rewriter([sqr, sqrt])
 def measurable_sqrt_sqr_to_power(fgraph, node):
     """Convert square root or square of `MeasurableVariable`s to power form."""
+    if not filter_measurable_variables(node.inputs):
+        return None
+
     [inp] = node.inputs
 
     if isinstance(node.op.scalar_op, Sqr):
@@ -543,6 +538,9 @@ def measurable_sqrt_sqr_to_power(fgraph, node):
 @node_rewriter([true_div])
 def measurable_div_to_product(fgraph, node):
     """Convert divisions involving `MeasurableVariable`s to products."""
+    if not filter_measurable_variables(node.inputs):
+        return None
+
     numerator, denominator = node.inputs
 
     # Check if numerator is 1
@@ -561,20 +559,25 @@ def measurable_div_to_product(fgraph, node):
 @node_rewriter([neg])
 def measurable_neg_to_product(fgraph, node):
     """Convert negation of `MeasurableVariable`s to product with `-1`."""
-    inp = node.inputs[0]
-    return [pt.mul(inp, -1.0)]
+    if filter_measurable_variables(node.inputs):
+        inp = node.inputs[0]
+        return [pt.mul(inp, -1)]
 
 
 @node_rewriter([sub])
 def measurable_sub_to_neg(fgraph, node):
     """Convert subtraction involving `MeasurableVariable`s to addition with neg"""
-    minuend, subtrahend = node.inputs
-    return [pt.add(minuend, pt.neg(subtrahend))]
+    if filter_measurable_variables(node.inputs):
+        minuend, subtrahend = node.inputs
+        return [pt.add(minuend, pt.neg(subtrahend))]
 
 
 @node_rewriter([log1p, softplus, log1mexp, log2, log10])
 def measurable_special_log_to_log(fgraph, node):
     """Convert log1p, log1mexp, softplus, log2, log10 of `MeasurableVariable`s to log form."""
+    if not filter_measurable_variables(node.inputs):
+        return None
+
     [inp] = node.inputs
 
     if isinstance(node.op.scalar_op, Log1p):
@@ -592,7 +595,11 @@ def measurable_special_log_to_log(fgraph, node):
 @node_rewriter([expm1, sigmoid, exp2])
 def measurable_special_exp_to_exp(fgraph, node):
     """Convert expm1, sigmoid, and exp2 of `MeasurableVariable`s to xp form."""
+    if not filter_measurable_variables(node.inputs):
+        return None
+
     [inp] = node.inputs
+
     if isinstance(node.op.scalar_op, Exp2):
         return [pt.exp(pt.log(2) * inp)]
     if isinstance(node.op.scalar_op, Expm1):
@@ -606,9 +613,12 @@ def measurable_power_exponent_to_exp(fgraph, node):
     """Convert power(base, rv) of `MeasurableVariable`s to exp(log(base) * rv) form."""
     base, inp_exponent = node.inputs
 
+    if not filter_measurable_variables([inp_exponent]):
+        return None
+
     # When the base is measurable we have `power(rv, exponent)`, which should be handled by `PowerTransform` and needs no further rewrite.
     # Here we change only the cases where exponent is measurable `power(base, rv)` which is not supported by the `PowerTransform`
-    if check_potential_measurability([base], fgraph.preserve_rv_mappings.rv_values.keys()):
+    if check_potential_measurability([base]):
         return None
 
     base = CheckParameterValue("base >= 0")(base, pt.all(pt.ge(base, 0.0)))
@@ -642,12 +652,8 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
     if isinstance(node.op, MeasurableVariable):
         return None  # pragma: no cover
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
     # Check that we have a single source of measurement
-    measurable_inputs = rv_map_feature.request_measurable(node.inputs)
+    measurable_inputs = filter_measurable_variables(node.inputs)
 
     if len(measurable_inputs) != 1:
         return None
@@ -662,7 +668,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
     # would be invalid
     other_inputs = tuple(inp for inp in node.inputs if inp is not measurable_input)
 
-    if check_potential_measurability(other_inputs, rv_map_feature.rv_values.keys()):
+    if check_potential_measurability(other_inputs):
         return None
 
     scalar_op = node.op.scalar_op

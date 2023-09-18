@@ -48,8 +48,8 @@ from pytensor.tensor.math import ceil, clip, floor, round_half_to_even
 from pytensor.tensor.variable import TensorConstant
 
 from pymc.logprob.abstract import MeasurableElemwise, _logcdf, _logprob
-from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
-from pymc.logprob.utils import CheckParameterValue
+from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.utils import CheckParameterValue, filter_measurable_variables
 
 
 class MeasurableClip(MeasurableElemwise):
@@ -65,11 +65,7 @@ measurable_clip = MeasurableClip(scalar_clip)
 def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableClip]]:
     # TODO: Canonicalize x[x>ub] = ub -> clip(x, x, ub)
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
-    if not rv_map_feature.request_measurable(node.inputs):
+    if not filter_measurable_variables(node.inputs):
         return None
 
     base_var, lower_bound, upper_bound = node.inputs
@@ -158,11 +154,7 @@ class MeasurableRound(MeasurableElemwise):
 
 @node_rewriter(tracks=[ceil, floor, round_half_to_even])
 def find_measurable_roundings(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableRound]]:
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
-    if not rv_map_feature.request_measurable(node.inputs):
+    if not filter_measurable_variables(node.inputs):
         return None
 
     [base_var] = node.inputs

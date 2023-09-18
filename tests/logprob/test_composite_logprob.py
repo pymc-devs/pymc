@@ -121,6 +121,7 @@ def test_nested_scalar_mixtures():
     assert np.isclose(logp_fn(0, 0, 1, 50), st.norm.logpdf(150) + np.log(0.5) * 3)
 
 
+@pytest.mark.xfail(reason="This is not currently enforced")
 @pytest.mark.parametrize("nested", (False, True))
 def test_unvalued_ir_reversion(nested):
     """Make sure that un-valued IR rewrites are reverted."""
@@ -135,7 +136,7 @@ def test_unvalued_ir_reversion(nested):
     # measurable IR.
     rv_values = {z_rv: z_vv}
 
-    z_fgraph, _, memo = construct_ir_fgraph(rv_values)
+    z_fgraph, _, _ = construct_ir_fgraph(rv_values)
 
     # assert len(z_fgraph.preserve_rv_mappings.measurable_conversions) == 1
     assert (

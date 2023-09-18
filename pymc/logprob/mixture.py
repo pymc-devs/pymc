@@ -70,15 +70,21 @@ from pymc.logprob.abstract import (
     MeasurableVariable,
     _logprob,
     _logprob_helper,
+    promised_valued_rv,
 )
 from pymc.logprob.rewriting import (
-    PreserveRVMappings,
-    assume_measured_ir_outputs,
+    assume_valued_outputs,
+    early_measurable_ir_rewrites_db,
     local_lift_DiracDelta,
     measurable_ir_rewrites_db,
+    remove_valued_rvs,
     subtensor_ops,
 )
-from pymc.logprob.utils import check_potential_measurability, replace_rvs_by_values
+from pymc.logprob.utils import (
+    check_potential_measurability,
+    filter_measurable_variables,
+    replace_rvs_by_values,
+)
 from pymc.pytensorf import constant_fold
 
 
@@ -263,7 +269,8 @@ def get_stack_mixture_vars(
 
         mixture_rvs = joined_rvs.owner.inputs[1:]
 
-    return mixture_rvs, join_axis
+    # TODO: Get rid of these 'PromisedValuedRVs' (the reason we have to get the input)
+    return [rv.owner.inputs[0] for rv in mixture_rvs], join_axis
 
 
 @node_rewriter(subtensor_ops)
@@ -276,11 +283,6 @@ def find_measurable_index_mixture(fgraph, node):
     From these terms, new terms ``Z_rv[i] = mixture_comps[i][i == I_rv]`` are
     created for each ``i`` in ``enumerate(mixture_comps)``.
     """
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
     mixing_indices = node.inputs[1:]
 
     # TODO: Add check / test case for Advanced Boolean indexing
@@ -301,7 +303,7 @@ def find_measurable_index_mixture(fgraph, node):
     if mixture_rvs is None or not isinstance(join_axis, (NoneTypeT, Constant)):
         return None
 
-    if rv_map_feature.request_measurable(mixture_rvs) != mixture_rvs:
+    if set(filter_measurable_variables(mixture_rvs)) != set(mixture_rvs):
         return None
 
     # Replace this sub-graph with a `MixtureRV`
@@ -408,10 +410,8 @@ measurable_switch_mixture = MeasurableSwitchMixture(scalar_switch)
 
 @node_rewriter([switch])
 def find_measurable_switch_mixture(fgraph, node):
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
+    if isinstance(node.op, MeasurableSwitchMixture):
+        return None
 
     switch_cond, *components = node.inputs
 
@@ -422,12 +422,11 @@ def find_measurable_switch_mixture(fgraph, node):
     if any(comp.type.broadcastable != out_bcast for comp in components):
         return None
 
-    # Check that `switch_cond` is not potentially measurable
-    valued_rvs = rv_map_feature.rv_values.keys()
-    if check_potential_measurability([switch_cond], valued_rvs):
+    if set(filter_measurable_variables(components)) != set(components):
         return None
 
-    if rv_map_feature.request_measurable(components) != components:
+    # Check that `switch_cond` is not potentially measurable
+    if check_potential_measurability([switch_cond]):
         return None
 
     return [measurable_switch_mixture(switch_cond, *components)]
@@ -499,28 +498,33 @@ def useless_ifelse_outputs(fgraph, node):
 
 @node_rewriter([IfElse])
 def find_measurable_ifelse_mixture(fgraph, node):
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
+    from pymc.pytensorf import toposort_replace
 
     op = node.op
-    if_var, *base_rvs = node.inputs
 
-    valued_rvs = rv_map_feature.rv_values.keys()
-    if not all(check_potential_measurability([base_var], valued_rvs) for base_var in base_rvs):
+    if isinstance(op, MeasurableIfElse):
         return None
 
-    base_rvs = assume_measured_ir_outputs(valued_rvs, base_rvs)
+    if_var, *base_rvs = node.inputs
+
+    if not all(check_potential_measurability([base_var]) for base_var in base_rvs):
+        return None
+
+    base_rvs = assume_valued_outputs(base_rvs)
     if len(base_rvs) != op.n_outs * 2:
         return None
     if not all(var.owner and isinstance(var.owner.op, MeasurableVariable) for var in base_rvs):
         return None
 
-    return MeasurableIfElse(n_outs=op.n_outs).make_node(if_var, *base_rvs).outputs
+    replacements = [(base_rv, promised_valued_rv(base_rv)) for base_rv in base_rvs]
+    temp_fgraph = FunctionGraph(outputs=base_rvs, clone=False)
+    toposort_replace(temp_fgraph, replacements)
+    new_base_rvs = temp_fgraph.outputs
+
+    return MeasurableIfElse(n_outs=op.n_outs).make_node(if_var, *new_base_rvs).outputs
 
 
-measurable_ir_rewrites_db.register(
+early_measurable_ir_rewrites_db.register(
     "useless_ifelse_outputs",
     useless_ifelse_outputs,
     "basic",
@@ -528,7 +532,7 @@ measurable_ir_rewrites_db.register(
 )
 
 
-measurable_ir_rewrites_db.register(
+early_measurable_ir_rewrites_db.register(
     "find_measurable_ifelse_mixture",
     find_measurable_ifelse_mixture,
     "basic",
@@ -539,6 +543,10 @@ measurable_ir_rewrites_db.register(
 @_logprob.register(MeasurableIfElse)
 def logprob_ifelse(op, values, if_var, *base_rvs, **kwargs):
     """Compute the log-likelihood graph for an `IfElse`."""
+
+    temp_fgraph = FunctionGraph(outputs=base_rvs, clone=False)
+    remove_valued_rvs.apply(temp_fgraph)
+    base_rvs = temp_fgraph.outputs
 
     assert len(values) * 2 == len(base_rvs)
 

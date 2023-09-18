@@ -36,89 +36,32 @@
 
 from typing import List, Optional, Union
 
-import pytensor
-
 from pytensor import tensor as pt
-from pytensor.graph.op import compute_test_value
+from pytensor.graph import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.tensor.basic import Alloc, Join, MakeVector
+from pytensor.tensor.basic import Join, MakeVector
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.random.rewriting import (
-    local_dimshuffle_rv_lift,
-    local_rv_size_lift,
-)
+from pytensor.tensor.random.rewriting import local_dimshuffle_rv_lift
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    _logprob,
+    _logprob_helper,
+    promised_valued_rv,
+)
 from pymc.logprob.rewriting import (
-    PreserveRVMappings,
-    assume_measured_ir_outputs,
+    assume_valued_outputs,
+    early_measurable_ir_rewrites_db,
     measurable_ir_rewrites_db,
+    remove_valued_rvs,
 )
-from pymc.logprob.utils import check_potential_measurability, replace_rvs_by_values
-from pymc.pytensorf import constant_fold
-
-
-@node_rewriter([Alloc])
-def naive_bcast_rv_lift(fgraph, node):
-    """Lift an ``Alloc`` through a ``RandomVariable`` ``Op``.
-
-    XXX: This implementation simply broadcasts the ``RandomVariable``'s
-    parameters, which won't always work (e.g. multivariate distributions).
-
-    TODO: Instead, it should use ``RandomVariable.ndim_supp``--and the like--to
-    determine which dimensions of each parameter need to be broadcasted.
-    Also, this doesn't need to remove ``size`` to perform the lifting, like it
-    currently does.
-    """
-
-    if not (
-        isinstance(node.op, Alloc)
-        and node.inputs[0].owner
-        and isinstance(node.inputs[0].owner.op, RandomVariable)
-    ):
-        return None  # pragma: no cover
-
-    bcast_shape = node.inputs[1:]
-
-    rv_var = node.inputs[0]
-    rv_node = rv_var.owner
-
-    if hasattr(fgraph, "dont_touch_vars") and rv_var in fgraph.dont_touch_vars:
-        return None  # pragma: no cover
-
-    # Do not replace RV if it is associated with a value variable
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-    if rv_map_feature is not None and rv_var in rv_map_feature.rv_values:
-        return None
-
-    if not bcast_shape:
-        # The `Alloc` is broadcasting a scalar to a scalar (i.e. doing nothing)
-        assert rv_var.ndim == 0
-        return [rv_var]
-
-    size_lift_res = local_rv_size_lift.transform(fgraph, rv_node)
-    if size_lift_res is None:
-        lifted_node = rv_node
-    else:
-        _, lifted_rv = size_lift_res
-        lifted_node = lifted_rv.owner
-
-    rng, size, dtype, *dist_params = lifted_node.inputs
-
-    new_dist_params = [
-        pt.broadcast_to(
-            param,
-            pt.broadcast_shape(tuple(param.shape), tuple(bcast_shape), arrays_are_shapes=True),
-        )
-        for param in dist_params
-    ]
-    bcasted_node = lifted_node.op.make_node(rng, size, dtype, *new_dist_params)
-
-    if pytensor.config.compute_test_value != "off":
-        compute_test_value(bcasted_node)
-
-    return [bcasted_node.outputs[1]]
+from pymc.logprob.utils import (
+    check_potential_measurability,
+    filter_measurable_variables,
+    replace_rvs_by_values,
+)
+from pymc.pytensorf import constant_fold, toposort_replace
 
 
 class MeasurableMakeVector(MakeVector):
@@ -134,6 +77,10 @@ def logprob_make_vector(op, values, *base_rvs, **kwargs):
     # TODO: Sort out this circular dependency issue
 
     (value,) = values
+
+    temp_fgraph = FunctionGraph(outputs=base_rvs, clone=False)
+    remove_valued_rvs.apply(temp_fgraph)
+    base_rvs = temp_fgraph.outputs
 
     base_rvs_to_values = {base_rv: value[i] for i, base_rv in enumerate(base_rvs)}
     for i, (base_rv, value) in enumerate(base_rvs_to_values.items()):
@@ -159,6 +106,10 @@ MeasurableVariable.register(MeasurableJoin)
 def logprob_join(op, values, axis, *base_rvs, **kwargs):
     """Compute the log-likelihood graph for a `Join`."""
     (value,) = values
+
+    temp_fgraph = FunctionGraph(outputs=base_rvs, clone=False)
+    remove_valued_rvs.apply(temp_fgraph)
+    base_rvs = temp_fgraph.outputs
 
     base_rv_shapes = [base_var.shape[axis] for base_var in base_rvs]
 
@@ -200,12 +151,18 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
 def find_measurable_stacks(
     fgraph, node
 ) -> Optional[List[Union[MeasurableMakeVector, MeasurableJoin]]]:
-    r"""Finds `Joins`\s and `MakeVector`\s for which a `logprob` can be computed."""
+    r"""Finds `Joins`\s and `MakeVector`\s for which a `logprob` can be computed.
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    Because base variables in the Join and MakeVector may be interdependent,
+    the IR graph of these Ops is almost like an inner IR, except it doesn't have "valued RVs".
 
-    if rv_map_feature is None:
-        return None  # pragma: no cover
+    To circumvent this issue, we run this rewrite early on, and tag variables as being
+    "promised_valued_rvs". A perhaps more elegant alternative is to wrap the sub-graph in an OpFromGraph?
+    This might avoid the repeated boxing and unboxing done to the "base_vars" throughout the life of the IR
+    """
+
+    if isinstance(node.op, (MeasurableMakeVector, MeasurableJoin)):
+        return None
 
     is_join = isinstance(node.op, Join)
 
@@ -214,18 +171,25 @@ def find_measurable_stacks(
     else:
         base_vars = node.inputs
 
-    valued_rvs = rv_map_feature.rv_values.keys()
-    if not all(check_potential_measurability([base_var], valued_rvs) for base_var in base_vars):
+    if not all(check_potential_measurability([base_var]) for base_var in base_vars):
         return None
 
-    base_vars = assume_measured_ir_outputs(valued_rvs, base_vars)
+    base_vars = assume_valued_outputs(base_vars)
     if not all(var.owner and isinstance(var.owner.op, MeasurableVariable) for var in base_vars):
         return None
 
+    # Each base var will be "valued" by the logprob method, so other rewrites shouldn't mess with it
+    # and potentially break interdependencies. For this reason, this rewrite should be applied early in
+    # the IR construction
+    replacements = [(base_var, promised_valued_rv(base_var)) for base_var in base_vars]
+    temp_fgraph = FunctionGraph(outputs=base_vars, clone=False)
+    toposort_replace(temp_fgraph, replacements)
+    new_base_vars = temp_fgraph.outputs
+
     if is_join:
-        measurable_stack = MeasurableJoin()(axis, *base_vars)
+        measurable_stack = MeasurableJoin()(axis, *new_base_vars)
     else:
-        measurable_stack = MeasurableMakeVector(node.op.dtype)(*base_vars)
+        measurable_stack = MeasurableMakeVector(node.op.dtype)(*new_base_vars)
 
     return [measurable_stack]
 
@@ -276,12 +240,10 @@ def logprob_dimshuffle(op, values, base_var, **kwargs):
 def find_measurable_dimshuffles(fgraph, node) -> Optional[List[MeasurableDimShuffle]]:
     r"""Finds `Dimshuffle`\s for which a `logprob` can be computed."""
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    if isinstance(node.op, MeasurableDimShuffle):
+        return None
 
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
-    if not rv_map_feature.request_measurable(node.inputs):
+    if not filter_measurable_variables(node.inputs):
         return None
 
     base_var = node.inputs[0]
@@ -312,7 +274,7 @@ measurable_ir_rewrites_db.register(
     "find_measurable_dimshuffles", find_measurable_dimshuffles, "basic", "tensor"
 )
 
-measurable_ir_rewrites_db.register(
+early_measurable_ir_rewrites_db.register(
     "find_measurable_stacks",
     find_measurable_stacks,
     "basic",

@@ -42,7 +42,8 @@ from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor.extra_ops import CumOp
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
-from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
+from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.utils import filter_measurable_variables
 
 
 class MeasurableCumsum(CumOp):
@@ -86,18 +87,13 @@ def find_measurable_cumsums(fgraph, node) -> Optional[List[MeasurableCumsum]]:
     if isinstance(node.op, MeasurableCumsum):
         return None  # pragma: no cover
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
     base_rv = node.inputs[0]
 
     # Check that cumsum does not mix dimensions
     if base_rv.ndim > 1 and node.op.axis is None:
         return None
 
-    if not rv_map_feature.request_measurable(node.inputs):
+    if not filter_measurable_variables(node.inputs):
         return None
 
     new_op = MeasurableCumsum(axis=node.op.axis or 0, mode="add")

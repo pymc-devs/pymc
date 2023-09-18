@@ -56,6 +56,7 @@ from pymc.logprob.abstract import (
     _logprob_helper,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.utils import filter_measurable_variables
 from pymc.math import logdiffexp
 from pymc.pytensorf import constant_fold
 
@@ -76,11 +77,7 @@ MeasurableVariable.register(MeasurableMaxDiscrete)
 
 @node_rewriter([Max])
 def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[TensorVariable]]:
-    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
-    if isinstance(node.op, MeasurableMax):
+    if isinstance(node.op, (MeasurableMax, MeasurableMaxDiscrete)):
         return None  # pragma: no cover
 
     base_var = node.inputs[0]
@@ -88,7 +85,7 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Tens
     if base_var.owner is None:
         return None
 
-    if not rv_map_feature.request_measurable(node.inputs):
+    if not filter_measurable_variables(node.inputs):
         return None
 
     # Non-univariate distributions and non-RVs must be rejected
@@ -170,11 +167,6 @@ MeasurableVariable.register(MeasurableMaxNeg)
 
 @node_rewriter(tracks=[Max])
 def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> Optional[List[TensorVariable]]:
-    rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
     if isinstance(node.op, MeasurableMaxNeg):
         return None  # pragma: no cover
 
@@ -183,7 +175,7 @@ def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> Optional[List[
     if base_var.owner is None:
         return None
 
-    if not rv_map_feature.request_measurable(node.inputs):
+    if not filter_measurable_variables(node.inputs):
         return None
 
     # Min is the Max of the negation of the same distribution. Hence, op must be Elemwise
