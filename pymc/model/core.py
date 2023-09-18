@@ -50,7 +50,7 @@ from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.sharedvar import ScalarSharedVariable
-from pytensor.tensor.var import TensorConstant, TensorVariable
+from pytensor.tensor.variable import TensorConstant, TensorVariable
 from typing_extensions import Self
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
@@ -942,7 +942,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         Entries in the tuples may be ``None``, if the RV dimension was not given a name.
         """
         warnings.warn(
-            "Model.RV_dims is deprecated. User Model.named_vars_to_dims instead.",
+            "Model.RV_dims is deprecated. Use Model.named_vars_to_dims instead.",
             FutureWarning,
         )
         return self.named_vars_to_dims

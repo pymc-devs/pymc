@@ -14,10 +14,12 @@
 
 import warnings
 
+from functools import partial
+
 import numpy as np
 import pytensor.tensor as pt
 
-from pytensor.tensor.nlinalg import eigh
+from pytensor.tensor.linalg import cholesky, eigh, solve_triangular
 
 import pymc as pm
 
@@ -25,14 +27,14 @@ from pymc.gp.cov import BaseCovariance, Constant
 from pymc.gp.mean import Zero
 from pymc.gp.util import (
     JITTER_DEFAULT,
-    cholesky,
     conditioned_vars,
     replace_with_values,
-    solve_lower,
-    solve_upper,
     stabilize,
 )
 from pymc.math import cartesian, kron_diag, kron_dot, kron_solve_lower, kron_solve_upper
+
+solve_lower = partial(solve_triangular, lower=True)
+solve_upper = partial(solve_triangular, lower=False)
 
 __all__ = ["Latent", "Marginal", "TP", "MarginalApprox", "LatentKron", "MarginalKron"]
 

@@ -28,20 +28,15 @@ import pytensor.tensor as pt
 import scipy.linalg
 import scipy.stats
 
-from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
 from pytensor.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from pytensor.tensor import gammaln
 from pytensor.tensor.elemwise import Elemwise
-from pytensor.tensor.slinalg import Cholesky, SolveTriangular
 
 from pymc.distributions.shape_utils import to_tuple
 from pymc.logprob.utils import CheckParameterValue
 from pymc.pytensorf import floatX
-
-solve_lower = SolveTriangular(lower=True)
-solve_upper = SolveTriangular(lower=False)
 
 f = floatX
 c = -0.5 * np.log(2.0 * np.pi)
@@ -240,69 +235,6 @@ def log_normal(x, mean, **kwargs):
         std = tau ** (-1)
     std += f(eps)
     return f(c) - pt.log(pt.abs(std)) - (x - mean) ** 2 / (2.0 * std**2)
-
-
-def MvNormalLogp():
-    """Compute the log pdf of a multivariate normal distribution.
-
-    This should be used in MvNormal.logp once Theano#5908 is released.
-
-    Parameters
-    ----------
-    cov: pt.matrix
-        The covariance matrix.
-    delta: pt.matrix
-        Array of deviations from the mean.
-    """
-    cov = pt.matrix("cov")
-    cov.tag.test_value = floatX(np.eye(3))
-    delta = pt.matrix("delta")
-    delta.tag.test_value = floatX(np.zeros((2, 3)))
-
-    cholesky = Cholesky(lower=True, on_error="nan")
-
-    n, k = delta.shape
-    n, k = f(n), f(k)
-    chol_cov = cholesky(cov)
-    diag = pt.diag(chol_cov)
-    ok = pt.all(diag > 0)
-
-    chol_cov = pt.switch(ok, chol_cov, pt.fill(chol_cov, 1))
-    delta_trans = solve_lower(chol_cov, delta.T).T
-
-    result = n * k * pt.log(f(2) * np.pi)
-    result += f(2) * n * pt.sum(pt.log(diag))
-    result += (delta_trans ** f(2)).sum()
-    result = f(-0.5) * result
-    logp = pt.switch(ok, result, -np.inf)
-
-    def dlogp(inputs, gradients):
-        (g_logp,) = gradients
-        cov, delta = inputs
-
-        g_logp.tag.test_value = floatX(1.0)
-        n, k = delta.shape
-
-        chol_cov = cholesky(cov)
-        diag = pt.diag(chol_cov)
-        ok = pt.all(diag > 0)
-
-        chol_cov = pt.switch(ok, chol_cov, pt.fill(chol_cov, 1))
-        delta_trans = solve_lower(chol_cov, delta.T).T
-
-        inner = n * pt.eye(k) - pt.dot(delta_trans.T, delta_trans)
-        g_cov = solve_upper(chol_cov.T, inner)
-        g_cov = solve_upper(chol_cov.T, g_cov.T)
-
-        tau_delta = solve_upper(chol_cov.T, delta_trans.T)
-        g_delta = tau_delta.T
-
-        g_cov = pt.switch(ok, g_cov, -np.nan)
-        g_delta = pt.switch(ok, g_delta, -np.nan)
-
-        return [-0.5 * g_cov * g_logp, -g_delta * g_logp]
-
-    return OpFromGraph([cov, delta], [logp], grad_overrides=dlogp, inline=True)
 
 
 class SplineWrapper(Op):

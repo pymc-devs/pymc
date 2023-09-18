@@ -32,7 +32,7 @@ from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.basic import IntegersRV
 from pytensor.tensor.subtensor import AdvancedSubtensor
 from pytensor.tensor.type import TensorType
-from pytensor.tensor.var import TensorConstant, TensorVariable
+from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 import pymc as pm
 

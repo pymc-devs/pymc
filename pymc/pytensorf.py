@@ -60,7 +60,7 @@ from pytensor.tensor.rewriting.basic import topo_constant_folding
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
-from pytensor.tensor.var import TensorConstant, TensorVariable
+from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.transforms import RVTransform

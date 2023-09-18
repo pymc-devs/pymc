@@ -26,7 +26,6 @@ import pymc as pm
 
 from pymc.distributions import Discrete
 from pymc.distributions.dist_math import (
-    MvNormalLogp,
     SplineWrapper,
     check_parameters,
     clipped_beta_rvs,
@@ -121,65 +120,6 @@ def test_multinomial_check_parameters():
     assert np.isclose(
         modelA.compile_logp()({"p_simplex__": [0]}), modelB.compile_logp()({"p_simplex__": [0]})
     )
-
-
-class TestMvNormalLogp:
-    def test_logp(self):
-        np.random.seed(42)
-
-        chol_val = floatX(np.array([[1, 0.9], [0, 2]]))
-        cov_val = floatX(np.dot(chol_val, chol_val.T))
-        cov = pt.matrix("cov")
-        cov.tag.test_value = cov_val
-        delta_val = floatX(np.random.randn(5, 2))
-        delta = pt.matrix("delta")
-        delta.tag.test_value = delta_val
-        expect = stats.multivariate_normal(mean=np.zeros(2), cov=cov_val)
-        expect = expect.logpdf(delta_val).sum()
-        logp = MvNormalLogp()(cov, delta)
-        logp_f = pytensor.function([cov, delta], logp)
-        logp = logp_f(cov_val, delta_val)
-        npt.assert_allclose(logp, expect)
-
-    @pytensor.config.change_flags(compute_test_value="ignore")
-    def test_grad(self):
-        np.random.seed(42)
-
-        def func(chol_vec, delta):
-            chol = pt.stack(
-                [
-                    pt.stack([pt.exp(0.1 * chol_vec[0]), 0]),
-                    pt.stack([chol_vec[1], 2 * pt.exp(chol_vec[2])]),
-                ]
-            )
-            cov = pt.dot(chol, chol.T)
-            return MvNormalLogp()(cov, delta)
-
-        chol_vec_val = floatX(np.array([0.5, 1.0, -0.1]))
-
-        delta_val = floatX(np.random.randn(1, 2))
-        verify_grad(func, [chol_vec_val, delta_val])
-
-        delta_val = floatX(np.random.randn(5, 2))
-        verify_grad(func, [chol_vec_val, delta_val])
-
-    @pytensor.config.change_flags(compute_test_value="ignore")
-    def test_hessian(self):
-        chol_vec = pt.vector("chol_vec")
-        chol_vec.tag.test_value = floatX(np.array([0.1, 2, 3]))
-        chol = pt.stack(
-            [
-                pt.stack([pt.exp(0.1 * chol_vec[0]), 0]),
-                pt.stack([chol_vec[1], 2 * pt.exp(chol_vec[2])]),
-            ]
-        )
-        cov = pt.dot(chol, chol.T)
-        delta = pt.matrix("delta")
-        delta.tag.test_value = floatX(np.ones((5, 2)))
-        logp = MvNormalLogp()(cov, delta)
-        g_cov, g_delta = pt.grad(logp, [cov, delta])
-        # TODO: What's the test?  Something needs to be asserted.
-        pt.grad(g_delta.sum() + g_cov.sum(), [delta, cov])
 
 
 class TestSplineWrapper:

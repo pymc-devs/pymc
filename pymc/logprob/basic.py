@@ -52,7 +52,7 @@ from pytensor.graph.basic import (
 )
 from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 from typing_extensions import TypeAlias
 
 from pymc.logprob.abstract import (
