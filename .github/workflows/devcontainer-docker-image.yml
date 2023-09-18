@@ -34,7 +34,7 @@ jobs:
           type=raw,value=latest
 
     - name: Log into registry ${{ env.REGISTRY }}
-      uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
+      uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
