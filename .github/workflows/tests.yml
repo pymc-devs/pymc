@@ -395,8 +395,7 @@ jobs:
       - name: Install external samplers
         run: |
           conda activate pymc-test
-          pip install "numpyro>=0.8.0"
-          pip install git+https://github.com/blackjax-devs/blackjax.git@0.7.0
+          pip install "numpyro>=0.8.0" "blackjax>=1.0.0"
       - name: Run tests
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
