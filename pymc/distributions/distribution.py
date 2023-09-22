@@ -100,13 +100,9 @@ def rewrite_moment_scan_node(node):
     to_replace_set = set()
 
     for nd in local_fgraph_topo:
-        if nd not in to_replace_set and isinstance(
-            node.op, (RandomVariable, SymbolicRandomVariable)
-        ):
-            for out in enumerate(nd.outputs):
-                # y_place_holder = safe_new(y, "_replace")
-                replace_with_moment.append(out)
-                to_replace_set.add(nd)
+        if nd not in to_replace_set and isinstance(nd.op, (RandomVariable, SymbolicRandomVariable)):
+            replace_with_moment.append(nd.out)
+            to_replace_set.add(nd)
     givens = {}
     if len(replace_with_moment) > 0:
         for item in replace_with_moment:
@@ -138,7 +134,8 @@ class MomentRewrite(GraphRewriter):
                 # self.rewrite(inner_graph)
                 # node.op.fgraph = inner_graph
                 new_node = rewrite_moment_scan_node(node)
-                fgraph.replace(node, new_node)
+                for out1, out2 in zip(node.outputs, new_node.outputs):
+                    fgraph.replace(out1, out2)
             elif isinstance(node.op, (RandomVariable, SymbolicRandomVariable)):
                 fgraph.replace(node.out, moment(node.out))
 
