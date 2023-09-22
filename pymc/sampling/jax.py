@@ -310,11 +310,11 @@ def _blackjax_inference_loop(
         target_acceptance_rate=target_accept,
     )
     (last_state, tuned_params), _ = adapt.run(seed, init_position, num_steps=tune)
-    kernel = algorithm.build_kernel()
+    kernel = algorithm(logprob_fn, **tuned_params).step
 
     def inference_loop(rng_key, initial_state):
         def one_step(state, rng_key):
-            state, info = kernel(rng_key, state, logprob_fn, **tuned_params)
+            state, info = kernel(rng_key, state)
             return state, (state, info)
 
         keys = jax.random.split(rng_key, draws)
