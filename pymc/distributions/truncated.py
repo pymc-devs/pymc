@@ -211,10 +211,14 @@ class Truncated(Distribution):
         # Fallback to rejection sampling
         def loop_fn(truncated_rv, reject_draws, lower, upper, rng, *rv_inputs):
             next_rng, new_truncated_rv = dist.owner.op.make_node(rng, *rv_inputs).outputs
-            truncated_rv = pt.set_subtensor(
-                truncated_rv[reject_draws],
-                new_truncated_rv[reject_draws],
-            )
+            # Avoid scalar boolean indexing
+            if truncated_rv.type.ndim == 0:
+                truncated_rv = new_truncated_rv
+            else:
+                truncated_rv = pt.set_subtensor(
+                    truncated_rv[reject_draws],
+                    new_truncated_rv[reject_draws],
+                )
             reject_draws = pt.or_((truncated_rv < lower), (truncated_rv > upper))
 
             return (
