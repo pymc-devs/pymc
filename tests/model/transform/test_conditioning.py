@@ -308,3 +308,16 @@ def test_remove_value_transforms():
     new_p = new_m["p"]
     new_q = new_m["q"]
     assert new_m.rvs_to_transforms == {new_p: logodds, new_q: None}
+
+
+def test_do_transformed():
+    """There was a bug when the shape check compared value vars
+    with actual rv type which can have different shapes"""
+    with pm.Model() as m:
+        pm.ConstantData("data_std", 1)
+        # value var has different number of dimensions
+        pm.LKJCorr("c", 4, 1.0)
+        # value var has different shape
+        pm.Dirichlet("d", [1, 2])
+    m2 = do(m, {"data_std": 2})
+    assert m2["data_std"].eval() == 2
