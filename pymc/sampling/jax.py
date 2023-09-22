@@ -306,15 +306,15 @@ def _blackjax_inference_loop(
 
     adapt = blackjax.window_adaptation(
         algorithm=algorithm,
-        logprob_fn=logprob_fn,
-        num_steps=tune,
+        logdensity_fn=logprob_fn,
         target_acceptance_rate=target_accept,
     )
-    last_state, kernel, _ = adapt.run(seed, init_position)
+    (last_state, tuned_params), _ = adapt.run(seed, init_position, num_steps=tune)
+    kernel = algorithm.build_kernel()
 
     def inference_loop(rng_key, initial_state):
         def one_step(state, rng_key):
-            state, info = kernel(rng_key, state)
+            state, info = kernel(rng_key, state, logprob_fn, **tuned_params)
             return state, (state, info)
 
         keys = jax.random.split(rng_key, draws)
@@ -450,7 +450,7 @@ def sample_blackjax_nuts(
 
     states, stats = map_fn(get_posterior_samples)(keys, init_params)
     raw_mcmc_samples = states.position
-    potential_energy = states.potential_energy
+    potential_energy = states.logdensity
     tic3 = datetime.now()
     print("Sampling time = ", tic3 - tic2, file=sys.stdout)
 
