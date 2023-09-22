@@ -25,12 +25,12 @@ import numpy as np
 
 from pytensor import tensor as pt
 from pytensor.compile.builders import OpFromGraph
-from pytensor.graph import FunctionGraph, node_rewriter
-from pytensor.graph.basic import Node, Variable
+from pytensor.graph import FunctionGraph, clone_replace, node_rewriter
+from pytensor.graph.basic import Node, Variable, io_toposort
 from pytensor.graph.features import ReplaceValidate
-from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import GraphRewriter, in2out
 from pytensor.graph.utils import MetaType
+from pytensor.scan.op import Scan
 from pytensor.tensor.basic import as_tensor_variable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
@@ -85,14 +85,60 @@ vectorized_ppc: contextvars.ContextVar[Optional[Callable]] = contextvars.Context
 PLATFORM = sys.platform
 
 
+def rewrite_moment_scan_node(node):
+    if not isinstance(node.op, Scan):
+        return
+
+    node_inputs, node_outputs = node.op.inner_inputs, node.op.inner_outputs
+    op = node.op
+
+    local_fgraph_topo = io_toposort(node_inputs, node_outputs)
+    local_fgraph_outs_set = set(node_outputs)
+    local_fgraph_outs_map = {v: k for k, v in enumerate(node_outputs)}
+
+    replace_with_moment = []
+    to_replace_set = set()
+
+    for nd in local_fgraph_topo:
+        if nd not in to_replace_set and isinstance(
+            node.op, (RandomVariable, SymbolicRandomVariable)
+        ):
+            for out in enumerate(nd.outputs):
+                # y_place_holder = safe_new(y, "_replace")
+                replace_with_moment.append(out)
+                to_replace_set.add(nd)
+    givens = {}
+    if len(replace_with_moment) > 0:
+        for item in replace_with_moment:
+            givens[item] = moment(item)
+    op_outs = clone_replace(node_outputs, replace=givens)
+
+    nwScan = Scan(
+        node_inputs,
+        op_outs,
+        op.info,
+        mode=op.mode,
+        profile=op.profile,
+        truncate_gradient=op.truncate_gradient,
+        name=op.name,
+        allow_gc=op.allow_gc,
+    )
+    nw_node = nwScan(*(node.inputs), return_list=True)[0].owner
+    return nw_node
+
+
 class MomentRewrite(GraphRewriter):
     def add_requirements(self, fgraph):
         fgraph.attach_feature(ReplaceValidate())
 
     def apply(self, fgraph):
         for node in fgraph.toposort():
-            if hasattr(node.op, "fgraph"):
-                self.rewrite(node.op.fgraph)
+            if isinstance(node.op, Scan):
+                # inner_graph = node.op.fgraph.clone()
+                # self.rewrite(inner_graph)
+                # node.op.fgraph = inner_graph
+                new_node = rewrite_moment_scan_node(node)
+                fgraph.replace(node, new_node)
             elif isinstance(node.op, (RandomVariable, SymbolicRandomVariable)):
                 fgraph.replace(node.out, moment(node.out))
 
@@ -637,6 +683,7 @@ class _CustomSymbolicDist(Distribution):
             logcdf = default_not_implemented(class_name, "logcdf")
 
         def dist_moment(rv, size, *dist_params):
+            # TODO: add check for other op with inner graph (not Scan)
             fgraph = FunctionGraph(outputs=[dist(*dist_params, size=size)], clone=True)
             replace_moments = MomentRewrite()
             replace_moments.rewrite(fgraph)
