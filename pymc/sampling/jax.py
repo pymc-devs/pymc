@@ -339,6 +339,7 @@ def sample_blackjax_nuts(
     postprocessing_backend: Literal["cpu", "gpu"] | None = None,
     postprocessing_vectorize: Literal["vmap", "scan"] | None = None,
     idata_kwargs: Optional[Dict[str, Any]] = None,
+    postprocessing_chunks=None,  # deprecated
 ) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``blackjax`` library.
@@ -375,12 +376,10 @@ def sample_blackjax_nuts(
     chain_method : str, default "parallel"
         Specify how samples should be drawn. The choices include "parallel", and
         "vectorized".
-    postprocessing_backend : str, optional
+    postprocessing_backend: Optional[Literal["cpu", "gpu"]], default None,
         Specify how postprocessing should be computed. gpu or cpu
-    postprocessing_chunks: Optional[int], default None
-        Specify the number of chunks the postprocessing should be computed in. More
-        chunks reduces memory usage at the cost of losing some vectorization, None
-        uses jax.vmap
+    postprocessing_vectorize: Optional[Literal["vmap", "scan"]], default None
+        How to vectorize the postprocessing: vmap or sequential scan
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
         value for the ``log_likelihood`` key to indicate that the pointwise log
@@ -396,6 +395,15 @@ def sample_blackjax_nuts(
         with their respective sample stats and pointwise log likeihood values (unless
         skipped with ``idata_kwargs``).
     """
+    if postprocessing_chunks is not None:
+        import warnings
+
+        warnings.warn(
+            "postprocessing_chunks is deprecated due to being unstable, "
+            "using postprocessing_vectorize='scan' instead",
+            DeprecationWarning,
+        )
+        postprocessing_vectorize = "scan"
     import blackjax
 
     model = modelcontext(model)
@@ -543,6 +551,7 @@ def sample_numpyro_nuts(
     postprocessing_vectorize: Literal["vmap", "scan"] | None = None,
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
+    postprocessing_chunks=None,
 ) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
@@ -583,12 +592,10 @@ def sample_numpyro_nuts(
     chain_method : str, default "parallel"
         Specify how samples should be drawn. The choices include "sequential",
         "parallel", and "vectorized".
-    postprocessing_backend : Optional[str]
+    postprocessing_backend: Optional[Literal["cpu", "gpu"]], default None,
         Specify how postprocessing should be computed. gpu or cpu
-    postprocessing_chunks: Optional[int], default None
-        Specify the number of chunks the postprocessing should be computed in. More
-        chunks reduces memory usage at the cost of losing some vectorization, None
-        uses jax.vmap
+    postprocessing_vectorize: Optional[Literal["vmap", "scan"]], default None
+        How to vectorize the postprocessing: vmap or sequential scan
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
         value for the ``log_likelihood`` key to indicate that the pointwise log
@@ -606,7 +613,15 @@ def sample_numpyro_nuts(
         with their respective sample stats and pointwise log likeihood values (unless
         skipped with ``idata_kwargs``).
     """
+    if postprocessing_chunks is not None:
+        import warnings
 
+        warnings.warn(
+            "postprocessing_chunks is deprecated due to being unstable, "
+            "using postprocessing_vectorize='scan' instead",
+            DeprecationWarning,
+        )
+        postprocessing_vectorize = "scan"
     import numpyro
 
     from numpyro.infer import MCMC, NUTS
