@@ -101,11 +101,12 @@ def test_truncation_specialized_op(shape_info):
 
 @pytest.mark.parametrize("lower, upper", [(-1, np.inf), (-1, 1.5), (-np.inf, 1.5)])
 @pytest.mark.parametrize("op_type", ["icdf", "rejection"])
-def test_truncation_continuous_random(op_type, lower, upper):
+@pytest.mark.parametrize("scalar", [True, False])
+def test_truncation_continuous_random(op_type, lower, upper, scalar):
     loc = 0.15
     scale = 10
     normal_op = icdf_normal if op_type == "icdf" else rejection_normal
-    x = normal_op(loc, scale, name="x", size=100)
+    x = normal_op(loc, scale, name="x", size=() if scalar else (100,))
 
     xt = Truncated.dist(x, lower=lower, upper=upper)
     assert isinstance(xt.owner.op, TruncatedRV)
@@ -134,7 +135,7 @@ def test_truncation_continuous_random(op_type, lower, upper):
         assert np.unique(xt_draws).size == xt_draws.size
     else:
         with pytest.raises(TruncationError, match="^Truncation did not converge"):
-            draw(xt)
+            draw(xt, draws=100 if scalar else 1)
 
 
 @pytest.mark.parametrize("lower, upper", [(-1, np.inf), (-1, 1.5), (-np.inf, 1.5)])
