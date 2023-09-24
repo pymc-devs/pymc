@@ -550,7 +550,7 @@ def sample_numpyro_nuts(
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
-    postprocessing_chunks = None,
+    postprocessing_chunks=None,
 ) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
