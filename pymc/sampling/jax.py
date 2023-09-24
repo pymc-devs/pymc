@@ -183,9 +183,9 @@ def _postprocess_samples(
     jax_fn: Callable,
     raw_mcmc_samples: List[TensorVariable],
     postprocessing_backend: Literal["cpu", "gpu"] | None = None,
-    postprocessing_vectorize: Literal["vmap", "scan"] | None = None,
+    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
 ) -> List[TensorVariable]:
-    if postprocessing_vectorize is None or postprocessing_vectorize == "scan":
+    if postprocessing_vectorize == "scan":
         t_raw_mcmc_samples = [jnp.swapaxes(t, 0, 1) for t in raw_mcmc_samples]
         jax_vfn = jax.vmap(jax_fn)
         _, outs = scan(
@@ -238,7 +238,7 @@ def _get_log_likelihood(
     model: Model,
     samples,
     backend: Literal["cpu", "gpu"] | None = None,
-    postprocessing_vectorize: Literal["vmap", "scan"] | None = None,
+    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
 ) -> Dict:
     """Compute log-likelihood for all observations"""
     elemwise_logp = model.logp(model.observed_RVs, sum=False)
@@ -337,9 +337,9 @@ def sample_blackjax_nuts(
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
     postprocessing_backend: Literal["cpu", "gpu"] | None = None,
-    postprocessing_vectorize: Literal["vmap", "scan"] | None = None,
+    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
     idata_kwargs: Optional[Dict[str, Any]] = None,
-    postprocessing_chunks=None,  # deprecated
+    postprocessing_chunks = None,  # deprecated
 ) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``blackjax`` library.
@@ -378,7 +378,7 @@ def sample_blackjax_nuts(
         "vectorized".
     postprocessing_backend: Optional[Literal["cpu", "gpu"]], default None,
         Specify how postprocessing should be computed. gpu or cpu
-    postprocessing_vectorize: Optional[Literal["vmap", "scan"]], default None
+    postprocessing_vectorize: Literal["vmap", "scan"], default "scan"
         How to vectorize the postprocessing: vmap or sequential scan
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
@@ -403,7 +403,6 @@ def sample_blackjax_nuts(
             "using postprocessing_vectorize='scan' instead",
             DeprecationWarning,
         )
-        postprocessing_vectorize = "scan"
     import blackjax
 
     model = modelcontext(model)
@@ -548,10 +547,10 @@ def sample_numpyro_nuts(
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
     postprocessing_backend: Literal["cpu", "gpu"] | None = None,
-    postprocessing_vectorize: Literal["vmap", "scan"] | None = None,
+    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
-    postprocessing_chunks=None,
+    postprocessing_chunks = None,
 ) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
@@ -594,7 +593,7 @@ def sample_numpyro_nuts(
         "parallel", and "vectorized".
     postprocessing_backend: Optional[Literal["cpu", "gpu"]], default None,
         Specify how postprocessing should be computed. gpu or cpu
-    postprocessing_vectorize: Optional[Literal["vmap", "scan"]], default None
+    postprocessing_vectorize: Literal["vmap", "scan"], default "scan"
         How to vectorize the postprocessing: vmap or sequential scan
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
@@ -621,7 +620,6 @@ def sample_numpyro_nuts(
             "using postprocessing_vectorize='scan' instead",
             DeprecationWarning,
         )
-        postprocessing_vectorize = "scan"
     import numpyro
 
     from numpyro.infer import MCMC, NUTS
