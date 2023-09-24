@@ -339,7 +339,7 @@ def sample_blackjax_nuts(
     postprocessing_backend: Literal["cpu", "gpu"] | None = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
     idata_kwargs: Optional[Dict[str, Any]] = None,
-    postprocessing_chunks = None,  # deprecated
+    postprocessing_chunks=None,  # deprecated
 ) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``blackjax`` library.
