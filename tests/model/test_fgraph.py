@@ -351,3 +351,16 @@ def test_fgraph_rewrite(non_centered_rewrite):
         m_new.compile_logp()(ip),
         m_ref.compile_logp()(ip),
     )
+
+
+def test_multivariate_transform():
+    with pm.Model() as m:
+        x = pm.Dirichlet("x", a=[1, 1, 1])
+        y, *_ = pm.LKJCholeskyCov("y", n=4, eta=1, sd_dist=pm.Exponential.dist(1))
+
+    new_m = clone_model(m)
+
+    ip = m.initial_point()
+    new_ip = new_m.initial_point()
+    np.testing.assert_allclose(ip["x_simplex__"], new_ip["x_simplex__"])
+    np.testing.assert_allclose(ip["y_cholesky-cov-packed__"], new_ip["y_cholesky-cov-packed__"])

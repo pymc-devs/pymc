@@ -17,7 +17,7 @@ import sys
 
 from datetime import datetime
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Union
 
 import arviz as az
 import jax
@@ -26,7 +26,7 @@ import numpy as np
 import pytensor.tensor as pt
 
 from arviz.data.base import make_attrs
-from jax.experimental.maps import SerialLoop, xmap
+from jax.lax import scan
 from pytensor.compile import SharedVariable, Supervisor, mode
 from pytensor.graph.basic import graph_inputs
 from pytensor.graph.fg import FunctionGraph
@@ -175,25 +175,29 @@ def _sample_stats_to_xarray(posterior):
     return data
 
 
+def _device_put(input, device: str):
+    return jax.device_put(input, jax.devices(device)[0])
+
+
 def _postprocess_samples(
-    jax_fn: List[TensorVariable],
+    jax_fn: Callable,
     raw_mcmc_samples: List[TensorVariable],
-    postprocessing_backend: str,
-    num_chunks: Optional[int] = None,
+    postprocessing_backend: Literal["cpu", "gpu"] | None = None,
+    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
 ) -> List[TensorVariable]:
-    if num_chunks is not None:
-        loop = xmap(
-            jax_fn,
-            in_axes=["chain", "samples", ...],
-            out_axes=["chain", "samples", ...],
-            axis_resources={"samples": SerialLoop(num_chunks)},
+    if postprocessing_vectorize == "scan":
+        t_raw_mcmc_samples = [jnp.swapaxes(t, 0, 1) for t in raw_mcmc_samples]
+        jax_vfn = jax.vmap(jax_fn)
+        _, outs = scan(
+            lambda _, x: ((), jax_vfn(*x)),
+            (),
+            _device_put(t_raw_mcmc_samples, postprocessing_backend),
         )
-        f = xmap(loop, in_axes=[...], out_axes=[...])
-        return f(*jax.device_put(raw_mcmc_samples, jax.devices(postprocessing_backend)[0]))
+        return [jnp.swapaxes(t, 0, 1) for t in outs]
+    elif postprocessing_vectorize == "vmap":
+        return jax.vmap(jax.vmap(jax_fn))(*_device_put(raw_mcmc_samples, postprocessing_backend))
     else:
-        return jax.vmap(jax.vmap(jax_fn))(
-            *jax.device_put(raw_mcmc_samples, jax.devices(postprocessing_backend)[0])
-        )
+        raise ValueError(f"Unrecognized postprocessing_vectorize: {postprocessing_vectorize}")
 
 
 def _blackjax_stats_to_dict(sample_stats, potential_energy) -> Dict:
@@ -231,12 +235,17 @@ def _blackjax_stats_to_dict(sample_stats, potential_energy) -> Dict:
 
 
 def _get_log_likelihood(
-    model: Model, samples, backend=None, num_chunks: Optional[int] = None
+    model: Model,
+    samples,
+    backend: Literal["cpu", "gpu"] | None = None,
+    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
 ) -> Dict:
     """Compute log-likelihood for all observations"""
     elemwise_logp = model.logp(model.observed_RVs, sum=False)
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=elemwise_logp)
-    result = _postprocess_samples(jax_fn, samples, backend, num_chunks=num_chunks)
+    result = _postprocess_samples(
+        jax_fn, samples, backend, postprocessing_vectorize=postprocessing_vectorize
+    )
     return {v.name: r for v, r in zip(model.observed_RVs, result)}
 
 
@@ -297,11 +306,11 @@ def _blackjax_inference_loop(
 
     adapt = blackjax.window_adaptation(
         algorithm=algorithm,
-        logprob_fn=logprob_fn,
-        num_steps=tune,
+        logdensity_fn=logprob_fn,
         target_acceptance_rate=target_accept,
     )
-    last_state, kernel, _ = adapt.run(seed, init_position)
+    (last_state, tuned_params), _ = adapt.run(seed, init_position, num_steps=tune)
+    kernel = algorithm(logprob_fn, **tuned_params).step
 
     def inference_loop(rng_key, initial_state):
         def one_step(state, rng_key):
@@ -327,9 +336,10 @@ def sample_blackjax_nuts(
     var_names: Optional[Sequence[str]] = None,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
-    postprocessing_backend: Optional[str] = None,
-    postprocessing_chunks: Optional[int] = None,
+    postprocessing_backend: Literal["cpu", "gpu"] | None = None,
+    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
     idata_kwargs: Optional[Dict[str, Any]] = None,
+    postprocessing_chunks=None,  # deprecated
 ) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``blackjax`` library.
@@ -366,12 +376,10 @@ def sample_blackjax_nuts(
     chain_method : str, default "parallel"
         Specify how samples should be drawn. The choices include "parallel", and
         "vectorized".
-    postprocessing_backend : str, optional
+    postprocessing_backend: Optional[Literal["cpu", "gpu"]], default None,
         Specify how postprocessing should be computed. gpu or cpu
-    postprocessing_chunks: Optional[int], default None
-        Specify the number of chunks the postprocessing should be computed in. More
-        chunks reduces memory usage at the cost of losing some vectorization, None
-        uses jax.vmap
+    postprocessing_vectorize: Literal["vmap", "scan"], default "scan"
+        How to vectorize the postprocessing: vmap or sequential scan
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
         value for the ``log_likelihood`` key to indicate that the pointwise log
@@ -387,6 +395,14 @@ def sample_blackjax_nuts(
         with their respective sample stats and pointwise log likeihood values (unless
         skipped with ``idata_kwargs``).
     """
+    if postprocessing_chunks is not None:
+        import warnings
+
+        warnings.warn(
+            "postprocessing_chunks is deprecated due to being unstable, "
+            "using postprocessing_vectorize='scan' instead",
+            DeprecationWarning,
+        )
     import blackjax
 
     model = modelcontext(model)
@@ -441,14 +457,17 @@ def sample_blackjax_nuts(
 
     states, stats = map_fn(get_posterior_samples)(keys, init_params)
     raw_mcmc_samples = states.position
-    potential_energy = states.potential_energy
+    potential_energy = states.logdensity
     tic3 = datetime.now()
     print("Sampling time = ", tic3 - tic2, file=sys.stdout)
 
     print("Transforming variables...", file=sys.stdout)
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
     result = _postprocess_samples(
-        jax_fn, raw_mcmc_samples, postprocessing_backend, num_chunks=postprocessing_chunks
+        jax_fn,
+        raw_mcmc_samples,
+        postprocessing_backend=postprocessing_backend,
+        postprocessing_vectorize=postprocessing_vectorize,
     )
     mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
     mcmc_stats = _blackjax_stats_to_dict(stats, potential_energy)
@@ -467,7 +486,7 @@ def sample_blackjax_nuts(
             model,
             raw_mcmc_samples,
             backend=postprocessing_backend,
-            num_chunks=postprocessing_chunks,
+            postprocessing_vectorize=postprocessing_vectorize,
         )
         tic6 = datetime.now()
         print("Log Likelihood time = ", tic6 - tic5, file=sys.stdout)
@@ -527,10 +546,11 @@ def sample_numpyro_nuts(
     progressbar: bool = True,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
-    postprocessing_backend: Optional[str] = None,
-    postprocessing_chunks: Optional[int] = None,
+    postprocessing_backend: Literal["cpu", "gpu"] | None = None,
+    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
     idata_kwargs: Optional[Dict] = None,
     nuts_kwargs: Optional[Dict] = None,
+    postprocessing_chunks=None,
 ) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
@@ -571,12 +591,10 @@ def sample_numpyro_nuts(
     chain_method : str, default "parallel"
         Specify how samples should be drawn. The choices include "sequential",
         "parallel", and "vectorized".
-    postprocessing_backend : Optional[str]
+    postprocessing_backend: Optional[Literal["cpu", "gpu"]], default None,
         Specify how postprocessing should be computed. gpu or cpu
-    postprocessing_chunks: Optional[int], default None
-        Specify the number of chunks the postprocessing should be computed in. More
-        chunks reduces memory usage at the cost of losing some vectorization, None
-        uses jax.vmap
+    postprocessing_vectorize: Literal["vmap", "scan"], default "scan"
+        How to vectorize the postprocessing: vmap or sequential scan
     idata_kwargs : dict, optional
         Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
         value for the ``log_likelihood`` key to indicate that the pointwise log
@@ -594,7 +612,14 @@ def sample_numpyro_nuts(
         with their respective sample stats and pointwise log likeihood values (unless
         skipped with ``idata_kwargs``).
     """
+    if postprocessing_chunks is not None:
+        import warnings
 
+        warnings.warn(
+            "postprocessing_chunks is deprecated due to being unstable, "
+            "using postprocessing_vectorize='scan' instead",
+            DeprecationWarning,
+        )
     import numpyro
 
     from numpyro.infer import MCMC, NUTS
@@ -667,7 +692,10 @@ def sample_numpyro_nuts(
     print("Transforming variables...", file=sys.stdout)
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
     result = _postprocess_samples(
-        jax_fn, raw_mcmc_samples, postprocessing_backend, num_chunks=postprocessing_chunks
+        jax_fn,
+        raw_mcmc_samples,
+        postprocessing_backend=postprocessing_backend,
+        postprocessing_vectorize=postprocessing_vectorize,
     )
     mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
 
@@ -686,7 +714,7 @@ def sample_numpyro_nuts(
             model,
             raw_mcmc_samples,
             backend=postprocessing_backend,
-            num_chunks=postprocessing_chunks,
+            postprocessing_vectorize=postprocessing_vectorize,
         )
         tic6 = datetime.now()
         print("Log Likelihood time = ", tic6 - tic5, file=sys.stdout)
