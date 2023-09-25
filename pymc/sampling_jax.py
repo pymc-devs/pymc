@@ -16,5 +16,7 @@
 
 # pylint: disable=wildcard-import
 # pylint: disable=unused-wildcard-import
+import warnings
 
+warnings.warn("This module is deprecated, use pymc.sampling.jax", DeprecationWarning)
 from pymc.sampling.jax import *
