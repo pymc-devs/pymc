@@ -473,22 +473,25 @@ class TestCustomSymbolicDist:
         assert_moment_is_expected(model, expected)
 
     def test_custom_dist_default_moment_inner_graph(self):
-        def scan_step(mu):
-            x = pm.Normal.dist(mu, 1)
+        def scan_step(left, right):
+            x = pm.Uniform.dist(left, right)
             x_update = collect_default_updates([x])
             return x, x_update
 
         def dist(size):
             xs, updates = scan(
                 fn=scan_step,
-                sequences=[pt.ones(2)],
+                sequences=[
+                    pt.as_tensor_variable(np.array([-4, -3])),
+                    pt.as_tensor_variable(np.array([-2, -1])),
+                ],
                 name="xs",
             )
-            return pt.sum(xs)
+            return xs
 
         with Model() as model:
             CustomDist("x", dist=dist)
-        assert_moment_is_expected(model, 2, check_finite_logp=False)
+        assert_moment_is_expected(model, np.array([-3, -2]))
 
     def test_logcdf_inference(self):
         def custom_dist(mu, sigma, size):
