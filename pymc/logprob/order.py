@@ -49,8 +49,6 @@ from pytensor.tensor.math import Max
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 
-import pymc as pm
-
 from pymc.logprob.abstract import (
     MeasurableVariable,
     _logcdf_helper,
@@ -58,6 +56,7 @@ from pymc.logprob.abstract import (
     _logprob_helper,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.math import logdiffexp
 from pymc.pytensorf import constant_fold
 
 
@@ -159,7 +158,7 @@ def max_logprob_discrete(op, values, base_rv, **kwargs):
 
     [n] = constant_fold([base_rv.size])
 
-    logprob = pm.math.logdiffexp(n * logcdf, n * logcdf_prev)
+    logprob = logdiffexp(n * logcdf, n * logcdf_prev)
 
     return logprob
 
