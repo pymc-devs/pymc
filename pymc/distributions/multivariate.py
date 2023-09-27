@@ -542,8 +542,15 @@ class Multinomial(Discrete):
         n = pt.shape_padright(n)
         mode = pt.round(n * p)
         diff = n - pt.sum(mode, axis=-1, keepdims=True)
-        inc_bool_arr = pt.abs(diff) > 0
-        mode = pt.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
+        if len(mode.shape.eval()) == 1:
+            mode = mode.reshape((1, -1))
+        for i in range(mode.shape.eval()[0]):
+            elem_to_change = pt.abs(diff[i].astype(int))
+            ind = pt.argsort(mode[i, :])[-elem_to_change:]
+            mode = pt.inc_subtensor(
+                mode[i, ind], diff[i] / pt.abs(diff[i]) * pt.ones_like(mode[i, ind])
+            )
+        mode = mode.squeeze()
         if not rv_size_is_none(size):
             output_size = pt.concatenate([size, [p.shape[-1]]])
             mode = pt.full(output_size, mode)
