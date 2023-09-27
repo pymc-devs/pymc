@@ -36,10 +36,10 @@ from pytensor.tensor.extra_ops import broadcast_shape
 from pytensor.tensor.math import tanh
 from pytensor.tensor.random.basic import (
     BetaRV,
+    _gamma,
     cauchy,
     chisquare,
     exponential,
-    gamma,
     gumbel,
     halfcauchy,
     halfnormal,
@@ -2201,16 +2201,17 @@ class Gamma(PositiveContinuous):
     sigma : tensor_like of float, optional
         Alternative scale parameter (sigma > 0).
     """
-    rv_op = gamma
+    # gamma is temporarily a deprecation wrapper in PyTensor
+    rv_op = _gamma
 
     @classmethod
     def dist(cls, alpha=None, beta=None, mu=None, sigma=None, **kwargs):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma)
         alpha = pt.as_tensor_variable(floatX(alpha))
         beta = pt.as_tensor_variable(floatX(beta))
-
-        # The PyTensor `GammaRV` `Op` will invert the `beta` parameter itself
-        return super().dist([alpha, beta], **kwargs)
+        # PyTensor gamma op is parametrized in terms of scale (1/beta)
+        scale = pt.reciprocal(beta)
+        return super().dist([alpha, scale], **kwargs)
 
     @classmethod
     def get_alpha_beta(cls, alpha=None, beta=None, mu=None, sigma=None):
@@ -2232,15 +2233,14 @@ class Gamma(PositiveContinuous):
 
         return alpha, beta
 
-    def moment(rv, size, alpha, inv_beta):
-        # The PyTensor `GammaRV` `Op` inverts the `beta` parameter itself
-        mean = alpha * inv_beta
+    def moment(rv, size, alpha, scale):
+        mean = alpha * scale
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)
         return mean
 
-    def logp(value, alpha, inv_beta):
-        beta = pt.reciprocal(inv_beta)
+    def logp(value, alpha, scale):
+        beta = pt.reciprocal(scale)
         res = -pt.gammaln(alpha) + logpow(beta, alpha) - beta * value + logpow(value, alpha - 1)
         res = pt.switch(pt.ge(value, 0.0), res, -np.inf)
         return check_parameters(
@@ -2250,14 +2250,13 @@ class Gamma(PositiveContinuous):
             msg="alpha > 0, beta > 0",
         )
 
-    def logcdf(value, alpha, inv_beta):
-        beta = pt.reciprocal(inv_beta)
+    def logcdf(value, alpha, scale):
+        beta = pt.reciprocal(scale)
         res = pt.switch(
             pt.lt(value, 0),
             -np.inf,
             pt.log(pt.gammainc(alpha, beta * value)),
         )
-
         return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
 
 
