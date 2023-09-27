@@ -62,16 +62,14 @@ from tests.logprob.utils import scipy_logprob
 
 
 def test_mixture_basics():
-    srng = pt.random.RandomStream(29833)
-
     def create_mix_model(size, axis):
-        X_rv = srng.normal(0, 1, size=size, name="X")
-        Y_rv = srng.gamma(0.5, 0.5, size=size, name="Y")
+        X_rv = pt.random.normal(0, 1, size=size, name="X")
+        Y_rv = pt.random.gamma(0.5, scale=2.0, size=size, name="Y")
 
         p_at = pt.scalar("p")
         p_at.tag.test_value = 0.5
 
-        I_rv = srng.bernoulli(p_at, size=size, name="I")
+        I_rv = pt.random.bernoulli(p_at, size=size, name="I")
         i_vv = I_rv.clone()
         i_vv.name = "i"
 
@@ -119,15 +117,13 @@ def test_mixture_basics():
     ],
 )
 def test_compute_test_value(op_constructor):
-    srng = pt.random.RandomStream(29833)
-
-    X_rv = srng.normal(0, 1, name="X")
-    Y_rv = srng.gamma(0.5, 0.5, name="Y")
+    X_rv = pt.random.normal(0, 1, name="X")
+    Y_rv = pt.random.gamma(0.5, scale=2.0, name="Y")
 
     p_at = pt.scalar("p")
     p_at.tag.test_value = 0.3
 
-    I_rv = srng.bernoulli(p_at, name="I")
+    I_rv = pt.random.bernoulli(p_at, name="I")
 
     i_vv = I_rv.clone()
     i_vv.name = "i"
@@ -160,20 +156,18 @@ def test_compute_test_value(op_constructor):
     ],
 )
 def test_hetero_mixture_binomial(p_val, size, supported):
-    srng = pt.random.RandomStream(29833)
-
-    X_rv = srng.normal(0, 1, size=size, name="X")
-    Y_rv = srng.gamma(0.5, 0.5, size=size, name="Y")
+    X_rv = pt.random.normal(0, 1, size=size, name="X")
+    Y_rv = pt.random.gamma(0.5, scale=2.0, size=size, name="Y")
 
     if np.ndim(p_val) == 0:
         p_at = pt.scalar("p")
         p_at.tag.test_value = p_val
-        I_rv = srng.bernoulli(p_at, size=size, name="I")
+        I_rv = pt.random.bernoulli(p_at, size=size, name="I")
         p_val_1 = p_val
     else:
         p_at = pt.vector("p")
         p_at.tag.test_value = np.array(p_val, dtype=pytensor.config.floatX)
-        I_rv = srng.categorical(p_at, size=size, name="I")
+        I_rv = pt.random.categorical(p_at, size=size, name="I")
         p_val_1 = p_val[1]
 
     i_vv = I_rv.clone()
@@ -203,7 +197,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
 
     bern_sp = sp.bernoulli(p_val_1)
     norm_sp = sp.norm(loc=0, scale=1)
-    gamma_sp = sp.gamma(0.5, scale=1.0 / 0.5)
+    gamma_sp = sp.gamma(0.5, scale=2.0)
 
     for i in range(10):
         i_val = bern_sp.rvs(size=size, random_state=test_val_rng)
@@ -230,7 +224,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array(0.5, dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(2.0, dtype=pytensor.config.floatX),
             ),
             (
                 np.array(100, dtype=pytensor.config.floatX),
@@ -251,7 +245,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array([0.5], dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(2.0, dtype=pytensor.config.floatX),
             ),
             (
                 np.array([100], dtype=pytensor.config.floatX),
@@ -272,7 +266,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array([0.5], dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(2.0, dtype=pytensor.config.floatX),
             ),
             (
                 np.array([100], dtype=pytensor.config.floatX),
@@ -293,7 +287,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array(0.5, dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(2.0, dtype=pytensor.config.floatX),
             ),
             (
                 np.array(100, dtype=pytensor.config.floatX),
@@ -314,7 +308,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array(0.5, dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(2.0, dtype=pytensor.config.floatX),
             ),
             (
                 np.array(100, dtype=pytensor.config.floatX),
@@ -335,7 +329,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array(0.5, dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(2.0, dtype=pytensor.config.floatX),
             ),
             (
                 np.array(100, dtype=pytensor.config.floatX),
@@ -361,7 +355,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array(0.5, dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(2.0, dtype=pytensor.config.floatX),
             ),
             (
                 np.array(100, dtype=pytensor.config.floatX),
@@ -384,7 +378,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array(0.5, dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(2.0, dtype=pytensor.config.floatX),
             ),
             (
                 np.array(100, dtype=pytensor.config.floatX),
@@ -405,7 +399,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array(0.5, dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(2.0, dtype=pytensor.config.floatX),
             ),
             (
                 np.array(100, dtype=pytensor.config.floatX),
@@ -426,7 +420,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array(0.5, dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(2.0, dtype=pytensor.config.floatX),
             ),
             (
                 np.array(100, dtype=pytensor.config.floatX),
@@ -447,7 +441,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array([0.5], dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(2.0, dtype=pytensor.config.floatX),
             ),
             (
                 np.array([100], dtype=pytensor.config.floatX),
@@ -468,7 +462,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array([0.5, 1], dtype=pytensor.config.floatX),
-                np.array([0.5, 1], dtype=pytensor.config.floatX),
+                np.array([2.0, 1], dtype=pytensor.config.floatX),
             ),
             (
                 np.array([100, 1000], dtype=pytensor.config.floatX),
@@ -489,7 +483,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array([0.5, 1], dtype=pytensor.config.floatX),
-                np.array([0.5, 1], dtype=pytensor.config.floatX),
+                np.array([2.0, 1], dtype=pytensor.config.floatX),
             ),
             (
                 np.array([100, 1000], dtype=pytensor.config.floatX),
@@ -510,7 +504,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array(0.5, dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(2.0, dtype=pytensor.config.floatX),
             ),
             (
                 np.array(100, dtype=pytensor.config.floatX),
@@ -531,7 +525,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array(0.5, dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(2.0, dtype=pytensor.config.floatX),
             ),
             (
                 np.array(100, dtype=pytensor.config.floatX),
@@ -552,7 +546,7 @@ def test_hetero_mixture_binomial(p_val, size, supported):
             ),
             (
                 np.array(0.5, dtype=pytensor.config.floatX),
-                np.array(0.5, dtype=pytensor.config.floatX),
+                np.array(2.0, dtype=pytensor.config.floatX),
             ),
             (
                 np.array(100, dtype=pytensor.config.floatX),
@@ -570,16 +564,14 @@ def test_hetero_mixture_binomial(p_val, size, supported):
 def test_hetero_mixture_categorical(
     X_args, Y_args, Z_args, p_val, comp_size, idx_size, extra_indices, join_axis, supported
 ):
-    srng = pt.random.RandomStream(29833)
-
-    X_rv = srng.normal(*X_args, size=comp_size, name="X")
-    Y_rv = srng.gamma(*Y_args, size=comp_size, name="Y")
-    Z_rv = srng.normal(*Z_args, size=comp_size, name="Z")
+    X_rv = pt.random.normal(*X_args, size=comp_size, name="X")
+    Y_rv = pt.random.gamma(Y_args[0], scale=Y_args[1], size=comp_size, name="Y")
+    Z_rv = pt.random.normal(*Z_args, size=comp_size, name="Z")
 
     p_at = pt.as_tensor(p_val).type()
     p_at.name = "p"
     p_at.tag.test_value = np.array(p_val, dtype=pytensor.config.floatX)
-    I_rv = srng.categorical(p_at, size=idx_size, name="I")
+    I_rv = pt.random.categorical(p_at, size=idx_size, name="I")
 
     i_vv = I_rv.clone()
     i_vv.name = "i"
@@ -612,7 +604,7 @@ def test_hetero_mixture_categorical(
     test_val_rng = np.random.RandomState(3238)
 
     norm_1_sp = sp.norm(loc=X_args[0], scale=X_args[1])
-    gamma_sp = sp.gamma(Y_args[0], scale=1 / Y_args[1])
+    gamma_sp = sp.gamma(Y_args[0], scale=Y_args[1])
     norm_2_sp = sp.norm(loc=Z_args[0], scale=Z_args[1])
 
     # Handle scipy annoying squeeze of random draws
