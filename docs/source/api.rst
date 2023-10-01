@@ -9,7 +9,7 @@ API
 
    api/distributions
    api/gp
-   api/model/core
+   api/model
    api/samplers
    api/vi
    api/smc
