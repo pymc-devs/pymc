@@ -13,7 +13,7 @@
 #   limitations under the License.
 import warnings
 
-from typing import Optional, TypeAlias, Union
+from typing import Optional, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -34,6 +34,7 @@ from pytensor.tensor.random.basic import (
 )
 from pytensor.tensor.variable import TensorVariable
 from scipy import stats
+from typing_extensions import TypeAlias
 
 import pymc as pm
 
