@@ -1,6 +1,3 @@
-Model
------
-
 Model creation and inspection
 -----------------------------
 

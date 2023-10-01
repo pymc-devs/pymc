@@ -7,6 +7,5 @@ Model
    :maxdepth: 2
 
    model/core
-   model/creation
    model/conditioning
    model/fgraph
