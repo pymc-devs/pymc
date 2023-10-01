@@ -10,29 +10,6 @@ Model creation and inspection
    model_to_networkx
    modelcontext
 
-Model Conditioning
-------------------
-
-.. currentmodule:: pymc.model.transform.conditioning
-.. autosummary::
-   :toctree: generated/
-
-   change_value_transforms
-   do
-   observe
-   remove_value_transforms
-
-FunctionGraph
--------------
-
-.. currentmodule:: pymc.model.fgraph
-.. autosummary::
-   :toctree: generated/
-
-   clone_model
-   fgraph_from_model
-   model_from_fgraph
-
 Others
 ------
 
