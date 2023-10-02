@@ -1043,7 +1043,7 @@ class TestMoments:
                 4,
                 None,
                 np.array([1, 1, 1, 1, 0, 0, 0]),
-                marks=pytest.mark.xfail(reason="First element is negative"),
+                marks=pytest.mark.xfail(reason="Known failure in mode approximation "),
             ),
         ],
     )
