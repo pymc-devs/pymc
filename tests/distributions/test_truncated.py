@@ -20,7 +20,7 @@ import scipy
 from pytensor.tensor.random.basic import GeometricRV, NormalRV
 
 from pymc import Censored, Model, draw, find_MAP
-from pymc.distributions.continuous import Exponential, TruncatedNormalRV
+from pymc.distributions.continuous import Exponential, Gamma, TruncatedNormalRV
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.distributions.transforms import _default_transform
 from pymc.distributions.truncated import Truncated, TruncatedRV, _truncated
@@ -392,3 +392,33 @@ def test_truncated_inference():
         map = find_MAP(progressbar=False)
 
     assert np.isclose(map["lam"], lam_true, atol=0.1)
+
+
+def test_truncated_gamma():
+    # Regression test for https://github.com/pymc-devs/pymc/issues/6931
+    alpha = 3.0
+    beta = 3.0
+    upper = 2.5
+    x = np.linspace(0.0, upper + 0.5, 100)
+
+    gamma_scipy = scipy.stats.gamma(a=alpha, scale=1.0 / beta)
+    logp_scipy = gamma_scipy.logpdf(x) - gamma_scipy.logcdf(upper)
+    logp_scipy[x > upper] = -np.inf
+
+    gamma_trunc_pymc = Truncated.dist(
+        Gamma.dist(alpha=alpha, beta=beta),
+        upper=upper,
+    )
+    logp_pymc = logp(gamma_trunc_pymc, x).eval()
+    np.testing.assert_allclose(
+        logp_pymc,
+        logp_scipy,
+    )
+
+    # Changing the size used to invert the beta Gamma parameter again
+    resized_gamma_trunc_pymc = change_dist_size(gamma_trunc_pymc, new_size=x.shape)
+    logp_resized_pymc = logp(resized_gamma_trunc_pymc, x).eval()
+    np.testing.assert_allclose(
+        logp_resized_pymc,
+        logp_scipy,
+    )
