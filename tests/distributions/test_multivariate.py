@@ -2300,7 +2300,11 @@ def test_mvnormal_no_cholesky_in_model_logp():
 
 
 def test_mvnormal_mu_convenience():
-    """Test that mu is broadcasted to the length of cov"""
+    """Test that mu is broadcasted to the length of cov and provided a default of zero"""
+    x = pm.MvNormal.dist(cov=np.eye(3))
+    mu = x.owner.inputs[3]
+    np.testing.assert_allclose(mu.eval(), np.zeros((3,)))
+
     x = pm.MvNormal.dist(mu=1, cov=np.eye(3))
     mu = x.owner.inputs[3]
     np.testing.assert_allclose(mu.eval(), np.ones((3,)))
@@ -2325,7 +2329,11 @@ def test_mvnormal_mu_convenience():
 
 
 def test_mvstudentt_mu_convenience():
-    """Test that mu is broadcasted to the length of scale"""
+    """Test that mu is broadcasted to the length of scale and provided a default of zero"""
+    x = pm.MvStudentT.dist(nu=4, scale=np.eye(3))
+    mu = x.owner.inputs[4]
+    np.testing.assert_allclose(mu.eval(), np.zeros((3,)))
+
     x = pm.MvStudentT.dist(nu=4, mu=1, scale=np.eye(3))
     mu = x.owner.inputs[4]
     np.testing.assert_allclose(mu.eval(), np.ones((3,)))

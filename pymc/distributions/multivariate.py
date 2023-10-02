@@ -238,7 +238,7 @@ class MvNormal(Continuous):
     rv_op = multivariate_normal
 
     @classmethod
-    def dist(cls, mu, cov=None, tau=None, chol=None, lower=True, **kwargs):
+    def dist(cls, mu=0, cov=None, *, tau=None, chol=None, lower=True, **kwargs):
         mu = pt.as_tensor_variable(mu)
         cov = quaddist_matrix(cov, chol, tau, lower)
         # PyTensor is stricter about the shape of mu, than PyMC used to be
@@ -358,7 +358,7 @@ class MvStudentT(Continuous):
     rv_op = mv_studentt
 
     @classmethod
-    def dist(cls, nu, *, Sigma=None, mu, scale=None, tau=None, chol=None, lower=True, **kwargs):
+    def dist(cls, nu, *, Sigma=None, mu=0, scale=None, tau=None, chol=None, lower=True, **kwargs):
         cov = kwargs.pop("cov", None)
         if cov is not None:
             warnings.warn(
