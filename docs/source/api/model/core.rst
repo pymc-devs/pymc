@@ -1,6 +1,3 @@
-Model
------
-
 Model creation and inspection
 -----------------------------
 
@@ -16,6 +13,7 @@ Model creation and inspection
 Others
 ------
 
+.. currentmodule:: pymc.model.core
 .. autosummary::
    :toctree: generated/
 
