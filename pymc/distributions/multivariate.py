@@ -540,18 +540,16 @@ class Multinomial(Discrete):
 
     def moment(rv, size, n, p):
         n = pt.shape_padright(n)
-        mode = pt.round(n * p)
+        mean = n * p
+        mode = pt.round(mean)
+        # Add correction term between n and approximation.
+        # We modify highest expected entry to minimize chances of negative values.
         diff = n - pt.sum(mode, axis=-1, keepdims=True)
-        inc_bool_arr = (pt.abs(diff) > 0).nonzero()
-        # inc_bool_arr is a tuple of mode elemeents that we need to change to get 0 diff.
-        # Each element is a vector of 1 or 2 elements. The first element (if present) is
-        # a row of elements that we want to change, and the second element is the
-        # corresponding column. Columm is always a zero, but we want to change it to
-        # maximum element in the row to awoid a risk of getting a negative value
-        max_elem = pt.argmax(mode, axis=-1).reshape((-1, 1))
-        for i in range(len(inc_bool_arr)):
-            pt.set_subtensor(inc_bool_arr[i][-1], max_elem[i][0])
-        mode = pt.inc_subtensor(mode[inc_bool_arr], diff[inc_bool_arr])
+        max_elem_idx = pt.argmax(mean, axis=-1, keepdims=True)
+        mode = pt.inc_subtensor(
+            pt.take_along_axis(mode, max_elem_idx, axis=-1),
+            diff,
+        )
         if not rv_size_is_none(size):
             output_size = pt.concatenate([size, [p.shape[-1]]])
             mode = pt.full(output_size, mode)
