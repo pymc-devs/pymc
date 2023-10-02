@@ -1038,6 +1038,13 @@ class TestMoments:
                 (3, 2),
                 np.full((3, 2, 4), [[1, 0, 0, 0], [2, 3, 3, 2]]),
             ),
+            pytest.param(
+                np.array([0.1441, 0.1363, 0.1385, 0.1348, 0.1521, 0.1500, 0.1442]),
+                4,
+                None,
+                np.array([1, 1, 1, 1, 0, 0, 0]),
+                marks=pytest.mark.xfail(reason="First element is negative"),
+            ),
         ],
     )
     def test_multinomial_moment(self, p, n, size, expected):
