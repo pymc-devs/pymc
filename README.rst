@@ -155,6 +155,8 @@ Sponsors
 
 |ODSC|
 
+|AdiaLab|
+
 .. |Binder| image:: https://mybinder.org/badge_logo.svg
    :target: https://mybinder.org/v2/gh/pymc-devs/pymc/main?filepath=%2Fdocs%2Fsource%2Fnotebooks
 .. |Build Status| image:: https://github.com/pymc-devs/pymc/workflows/pytest/badge.svg
@@ -173,3 +175,5 @@ Sponsors
    :target: https://www.mistplay.com/
 .. |ODSC| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/odsc/sponsor_odsc.png?raw=true
    :target: https://odsc.com/california/?utm_source=pymc&utm_medium=referral
+.. |AdiaLab| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/adia-lab/sponsor_adia_lab.png?raw=true
+   :target: https://www.adialab.ae/
