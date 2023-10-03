@@ -326,6 +326,14 @@ def flat_switch_helper(node, valued_rvs, encoding_list, outer_interval, base_rv)
     """
     switch_cond, *components = node.inputs
 
+    # deny broadcasting of the switch condition
+    if switch_cond.type.broadcastable != node.outputs[0].type.broadcastable:
+        return None
+
+    # check if the switch_cond is measurable and if measurability sources for all switch conditions are the same
+    if not compare_measurability_source([switch_cond, base_rv], valued_rvs):
+        return None
+
     # Get intervals for true and false components from the condition
     intervals = get_intervals(switch_cond.owner, valued_rvs)
     adjusted_intervals = adjust_intervals(intervals, outer_interval)
