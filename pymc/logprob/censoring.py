@@ -334,6 +334,28 @@ def flat_switch_helper(node, valued_rvs, encoding_list, outer_interval, base_rv)
     if not compare_measurability_source([switch_cond, base_rv], valued_rvs):
         return None
 
+    measurable_var_idx = []
+    switch_comp_idx = []
+
+    # get the indices for the switch and other measurable components for further recursion
+    for idx, component in enumerate(components):
+        if check_potential_measurability([component], valued_rvs):
+            if isinstance(component.owner.op, RandomVariable) or not isinstance(
+                component.owner.op.scalar_op, Switch
+            ):
+                measurable_var_idx.append(idx)
+            else:
+                switch_comp_idx.append(idx)
+
+    # Deny the broadcasting of any measurable components present other than switch
+    # Check that the measurability source is the same for all
+    for i in measurable_var_idx:
+        component = components[i]
+        if component.type.broadcastable != node.outputs[
+            0
+        ].broadcastable or not compare_measurability_source([base_rv, component], valued_rvs):
+            return None
+
     # Get intervals for true and false components from the condition
     intervals = get_intervals(switch_cond.owner, valued_rvs)
     adjusted_intervals = adjust_intervals(intervals, outer_interval)
