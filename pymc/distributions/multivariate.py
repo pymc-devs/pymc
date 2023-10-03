@@ -553,7 +553,13 @@ class Multinomial(Discrete):
         if not rv_size_is_none(size):
             output_size = pt.concatenate([size, [p.shape[-1]]])
             mode = pt.full(output_size, mode)
-        return mode
+        return Assert(
+            """
+        Negative value in moment found, it`s a result of
+        a known limitation of Multinomial distribution.
+        Please provide initial value manualy.
+        """
+        )(mode, pt.all(mode >= 0))
 
     def logp(value, n, p):
         """

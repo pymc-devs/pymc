@@ -1049,7 +1049,9 @@ class TestMoments:
                 4,
                 None,
                 np.array([1, 1, 1, 1, 0, 0, 0]),
-                marks=pytest.mark.xfail(reason="Known failure in mode approximation "),
+                marks=pytest.mark.xfail(
+                    rises=AssertionError, reason="Known failure in mode approximation "
+                ),
             ),
         ],
     )
