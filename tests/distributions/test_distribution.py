@@ -493,6 +493,22 @@ class TestCustomSymbolicDist:
             CustomDist("x", dist=dist)
         assert_moment_is_expected(model, np.array([-3, -2]))
 
+    @pytest.mark.parametrize(
+        "left, right, size, expected",
+        [
+            (-1, 1, None, 0 + 5),
+            (-3, -1, None, -2 + 5),
+            (-3, 1, (3,), np.array([-1 + 5, -1 + 5, -1 + 5])),
+        ],
+    )
+    def test_custom_dist_default_moment_nested(self, left, right, size, expected):
+        def dist_fn(left, right, size):
+            return pm.Truncated.dist(pm.Normal.dist(0, 1), left, right, size=size) + 5
+
+        with Model() as model:
+            CustomDist("x", left, right, size=size, dist=dist_fn)
+        assert_moment_is_expected(model, expected)
+
     def test_logcdf_inference(self):
         def custom_dist(mu, sigma, size):
             return pt.exp(pm.Normal.dist(mu, sigma, size=size))
