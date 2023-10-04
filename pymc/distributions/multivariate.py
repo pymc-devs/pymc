@@ -555,9 +555,9 @@ class Multinomial(Discrete):
             mode = pt.full(output_size, mode)
         return Assert(
             """
-        Negative value in moment found, it`s a result of
-        a known limitation of Multinomial distribution.
-        Please provide initial value manualy.
+        Negative value in computed moment of Multinomial. 
+        It is a known limitation that can arise when the expected largest count is small. 
+        Please provide an initial value manually.
         """
         )(mode, pt.all(mode >= 0))
 
