@@ -554,11 +554,9 @@ class Multinomial(Discrete):
             output_size = pt.concatenate([size, [p.shape[-1]]])
             mode = pt.full(output_size, mode)
         return Assert(
-            """
-        Negative value in computed moment of Multinomial. 
-        It is a known limitation that can arise when the expected largest count is small. 
-        Please provide an initial value manually.
-        """
+            "Negative value in computed moment of Multinomial."
+            "It is a known limitation that can arise when the expected largest count is small."
+            "Please provide an initial value manually."
         )(mode, pt.all(mode >= 0))
 
     def logp(value, n, p):
