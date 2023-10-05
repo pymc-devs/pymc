@@ -675,7 +675,6 @@ class _CustomSymbolicDist(Distribution):
             logcdf = default_not_implemented(class_name, "logcdf")
 
         def dist_moment(rv, size, *dist_params):
-            # TODO: add check for other op with inner graph (not Scan)
             fgraph = FunctionGraph(outputs=[dist(*dist_params, size=size)], clone=True)
             replace_moments = MomentRewrite()
             replace_moments.rewrite(fgraph)
