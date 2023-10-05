@@ -93,8 +93,6 @@ def rewrite_moment_scan_node(node):
     op = node.op
 
     local_fgraph_topo = io_toposort(node_inputs, node_outputs)
-    local_fgraph_outs_set = set(node_outputs)
-    local_fgraph_outs_map = {v: k for k, v in enumerate(node_outputs)}
 
     replace_with_moment = []
     to_replace_set = set()
@@ -130,9 +128,6 @@ class MomentRewrite(GraphRewriter):
     def apply(self, fgraph):
         for node in fgraph.toposort():
             if isinstance(node.op, Scan):
-                # inner_graph = node.op.fgraph.clone()
-                # self.rewrite(inner_graph)
-                # node.op.fgraph = inner_graph
                 new_node = rewrite_moment_scan_node(node)
                 for out1, out2 in zip(node.outputs, new_node.outputs):
                     fgraph.replace(out1, out2)
