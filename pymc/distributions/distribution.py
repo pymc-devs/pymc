@@ -127,12 +127,12 @@ class MomentRewrite(GraphRewriter):
 
     def apply(self, fgraph):
         for node in fgraph.toposort():
-            if isinstance(node.op, Scan):
+            if isinstance(node.op, (RandomVariable, SymbolicRandomVariable)):
+                fgraph.replace(node.out, moment(node.out))
+            elif isinstance(node.op, Scan):
                 new_node = rewrite_moment_scan_node(node)
                 for out1, out2 in zip(node.outputs, new_node.outputs):
                     fgraph.replace(out1, out2)
-            elif isinstance(node.op, (RandomVariable, SymbolicRandomVariable)):
-                fgraph.replace(node.out, moment(node.out))
 
 
 class _Unpickling:
