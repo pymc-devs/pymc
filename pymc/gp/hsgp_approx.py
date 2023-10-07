@@ -119,7 +119,10 @@ class HSGP(Base):
     drop_first: bool
         Default `False`. Sometimes the first basis vector is quite "flat" and very similar to
         the intercept term.  When there is an intercept in the model, ignoring the first basis
-        vector may improve sampling.
+        vector may improve sampling. This argument will be deprecated in future versions.
+    parameterization: str
+        Whether to use `centred` or `noncentered` parameterization when multiplying the
+        basis by the coefficients.
     cov_func: None, 2D array, or instance of Covariance
         The covariance function.  Defaults to zero.
     mean_func: None, instance of Mean
@@ -173,7 +176,7 @@ class HSGP(Base):
         L: Optional[Sequence[float]] = None,
         c: Optional[numbers.Real] = None,
         drop_first: bool = False,
-        parameterization="noncentered",
+        parameterization: Optional[str] = "noncentered",
         *,
         mean_func: Mean = Zero(),
         cov_func: Covariance,
@@ -190,24 +193,37 @@ class HSGP(Base):
             raise ValueError(arg_err_msg)
         m = tuple(m)
 
-        if (L is None and c is None) or (L is not None and c is not None):
-            raise ValueError("Provide one of `c` or `L`")
+        if isinstance(cov_func, Periodic):
+            if cov_func.n_dims > 1:
+                raise ValueError(
+                    "HSGP approximation for `Periodic` kernel only implemented for 1-dimensional case."
+                )
+            if (L or c or parameterization) is not None:
+                warnings.warn(
+                    "Argument `L`, `c` or `parameterization` supplied but not used for `Periodic` kernel."
+                )
 
-        if L is not None and (not isinstance(L, Sequence) or len(L) != cov_func.n_dims):
-            raise ValueError(arg_err_msg)
-
-        if L is None and c is not None and c < 1.2:
-            warnings.warn("For an adequate approximation `c >= 1.2` is recommended.")
-
-        parameterization = parameterization.lower().replace("-", "").replace("_", "")
-        if parameterization not in ["centered", "noncentered"]:
-            raise ValueError("`parameterization` must be either 'centered' or 'noncentered'.")
         else:
-            self._parameterization = parameterization
+            if (L is None and c is None) or (L is not None and c is not None):
+                raise ValueError("Provide one of `c` or `L`")
 
-        if isinstance(cov_func, Periodic) and cov_func.n_dims > 1:
-            raise ValueError(
-                "HSGP approximation for periodic kernel only implemented for 1-dimensional case."
+            if L is not None and (not isinstance(L, Sequence) or len(L) != cov_func.n_dims):
+                raise ValueError(arg_err_msg)
+
+            if L is None and c is not None and c < 1.2:
+                warnings.warn("For an adequate approximation `c >= 1.2` is recommended.")
+
+            parameterization = parameterization.lower().replace("-", "").replace("_", "")
+            if parameterization not in ["centered", "noncentered"]:
+                raise ValueError("`parameterization` must be either 'centered' or 'noncentered'.")
+            else:
+                self._parameterization = parameterization
+
+        if drop_first:
+            warnings.warn(
+                "The drop_first argument will be deprecated in future versions."
+                " See https://github.com/pymc-devs/pymc/pull/6877",
+                DeprecationWarning,
             )
 
         self._drop_first = drop_first

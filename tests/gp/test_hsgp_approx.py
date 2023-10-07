@@ -137,10 +137,10 @@ class TestHSGP:
 
         with pytest.raises(
             ValueError,
-            match="HSGP approximation for periodic kernel only implemented for 1-dimensional case.",
+            match="HSGP approximation for `Periodic` kernel only implemented for 1-dimensional case.",
         ):
             cov_func = pm.gp.cov.Periodic(2, period=1, ls=[1, 2])
-            pm.gp.HSGP(m=[500, 500], L=[12, 12], cov_func=cov_func)
+            pm.gp.HSGP(m=[500, 500], cov_func=cov_func)
 
         # pass without error, cov_func has 2 active dimensions, c given as scalar
         cov_func = pm.gp.cov.ExpQuad(3, ls=[1, 2], active_dims=[0, 2])
