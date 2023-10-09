@@ -791,10 +791,11 @@ class Periodic(Stationary):
         r2 = dist if squared else dist**2
         return pt.exp(-0.5 * r2)
 
-    def power_spectral_density(self, m: TensorLike) -> TensorVariable:
+    def power_spectral_density(self, J: TensorLike) -> TensorVariable:
         """
         Technically, this is not a spectral density but these are the first `m` coefficients of
         the low rank approximation for the periodic kernel, which are used in the same way.
+        `J` is a vector of `np.arange(m)`.
 
         The coefficients of the HSGP approximation for the Periodic kernel are given by:
 
@@ -806,7 +807,6 @@ class Periodic(Stationary):
         where $\text{I}_j$ is the modified Bessel function of the first kind.
         """
         a = 1 / pt.square(self.ls)
-        J = pt.arange(0, m)
         c = pt.where(J > 0, 2, 1)
 
         q2 = c * pt.iv(J, a) / pt.exp(a)

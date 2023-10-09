@@ -76,9 +76,12 @@ def calc_basis_periodic(
     Calculate basis vectors for the cosine series expansion of the periodic covariance function.
     These are derived from the Taylor series representation of the covariance.
     """
+    if len(m) != 1:
+        raise ValueError("`Periodic` basis vectors only implemented for 1-dimensional case.")
+    m = m[0]  # for compatibility with other kernels, m must be a sequence
     w0 = (2 * np.pi) / period  # angular frequency defining the periodicity
-    m1 = tl.tile(w0 * Xs[:, None], m)
-    m2 = tl.diag(tl.arange(m))
+    m1 = tl.tile(w0 * Xs, m)
+    m2 = tl.diag(tl.arange(0, m, 1))
     mw0x = m1 @ m2
     phi_cos = tl.cos(mw0x)
     phi_sin = tl.sin(mw0x)
@@ -329,7 +332,8 @@ class HSGP(Base):
 
         if isinstance(self.cov_func, Periodic):
             phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m, tl=pt)
-            psd = self.cov_func.power_spectral_density(self._m)
+            J = pt.arange(0, self._m[0], 1)
+            psd = self.cov_func.power_spectral_density(J)
             return (phi_cos, phi_sin), psd
 
         else:
@@ -367,12 +371,12 @@ class HSGP(Base):
 
         if isinstance(self.cov_func, Periodic):
             (phi_cos, phi_sin), psd = self.prior_linearized(X - self._X_mean)
-            self._beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(self._m * 2 - 1))
+
+            m0 = self._m[0]
+            self._beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m0 * 2 - 1))
             # The first eigenfunction for the sine component is zero
             # and so does not contribute to the approximation.
-            f = phi_cos @ (psd * self._beta[: self._m]) + phi_sin[..., 1:] @ (
-                psd[1:] * self._beta[self._m + 1 :]
-            )
+            f = phi_cos @ (psd * self._beta[:m0]) + phi_sin[..., 1:] @ (psd[1:] * self._beta[m0:])
 
         else:
             if self._parameterization == "noncentered":
@@ -407,11 +411,11 @@ class HSGP(Base):
             phi_cos, phi_sin = calc_basis_periodic(
                 Xnew - X_mean, self.cov_func.period, self._m, tl=pt
             )
-            psd = self.cov_func.power_spectral_density(self._m)
+            m0 = self._m[0]
+            J = pt.arange(0, m0, 1)
+            psd = self.cov_func.power_spectral_density(J)
 
-            phi = phi_cos @ (psd * beta[: self._m]) + phi_sin[..., 1:] @ (
-                psd[1:] * beta[self._m + 1 :]
-            )
+            phi = phi_cos @ (psd * beta[:m0]) + phi_sin[..., 1:] @ (psd[1:] * beta[m0:])
             return self.mean_func(Xnew) + phi
         else:
             eigvals = calc_eigenvalues(self.L, self._m, tl=pt)

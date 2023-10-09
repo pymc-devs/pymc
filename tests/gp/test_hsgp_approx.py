@@ -166,8 +166,14 @@ class TestHSGP:
             else:
                 assert n_coeffs == n_basis, "one was dropped when it shouldn't have been"
 
-    @pytest.mark.parametrize("cov_func", [pm.gp.cov.ExpQuad(1, ls=1)])
-    @pytest.mark.parametrize("parameterization", ["centered", "noncentered"])
+    @pytest.mark.parametrize(
+        "cov_func,parameterization",
+        [
+            (pm.gp.cov.ExpQuad(1, ls=1), "centered"),
+            (pm.gp.cov.ExpQuad(1, ls=1), "noncentered"),
+            (pm.gp.cov.Periodic(1, period=1, ls=1), None),
+        ],
+    )
     def test_prior(self, model, cov_func, X1, parameterization, rng):
         """Compare HSGP prior to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
         prior and compare them using MMD two sample test.  Tests both centered and non-centered
@@ -190,8 +196,14 @@ class TestHSGP:
         )
         assert not reject, "H0 was rejected, even though HSGP and GP priors should match."
 
-    @pytest.mark.parametrize("cov_func", [pm.gp.cov.ExpQuad(1, ls=1)])
-    @pytest.mark.parametrize("parameterization", ["centered", "noncentered"])
+    @pytest.mark.parametrize(
+        "cov_func,parameterization",
+        [
+            (pm.gp.cov.ExpQuad(1, ls=1), "centered"),
+            (pm.gp.cov.ExpQuad(1, ls=1), "noncentered"),
+            (pm.gp.cov.Periodic(1, period=1, ls=1), None),
+        ],
+    )
     def test_conditional(self, model, cov_func, X1, parameterization):
         """Compare HSGP conditional to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
         prior and compare them using MMD two sample test.  Tests both centered and non-centered
