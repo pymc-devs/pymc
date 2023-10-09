@@ -78,10 +78,10 @@ def calc_basis_periodic(
     """
     if len(m) != 1:
         raise ValueError("`Periodic` basis vectors only implemented for 1-dimensional case.")
-    m = m[0]  # for compatibility with other kernels, m must be a sequence
+    m0 = m[0]  # for compatibility with other kernels, m must be a sequence
     w0 = (2 * np.pi) / period  # angular frequency defining the periodicity
-    m1 = tl.tile(w0 * Xs, m)
-    m2 = tl.diag(tl.arange(0, m, 1))
+    m1 = tl.tile(w0 * Xs, m0)
+    m2 = tl.diag(tl.arange(0, m0, 1))
     mw0x = m1 @ m2
     phi_cos = tl.cos(mw0x)
     phi_sin = tl.sin(mw0x)
