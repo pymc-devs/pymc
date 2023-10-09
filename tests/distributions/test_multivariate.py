@@ -25,8 +25,10 @@ import pytest
 import scipy.special as sp
 import scipy.stats as st
 
+from pytensor import tensor as pt
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.utils import broadcast_params
+from pytensor.tensor.slinalg import Cholesky
 
 import pymc as pm
 
@@ -330,6 +332,41 @@ class TestMatchesScipy:
             with pytest.raises(ValueError):
                 x = pm.MvNormal("x", mu=np.zeros(3), cov=np.eye(3), tau=np.eye(3), size=3)
 
+    @pytest.mark.parametrize("batch_mu", (False, True))
+    @pytest.mark.parametrize("batch_cov", (False, True))
+    @pytest.mark.parametrize("cov_form", ("cov", "tau", "chol_lower", "chol_upper"))
+    def test_mvnormal_batched_dims(self, batch_mu, batch_cov, cov_form):
+        def ref_logp_core(value, mu, cov):
+            return st.multivariate_normal.logpdf(value, mu, cov)
+
+        ref_logp = np.vectorize(ref_logp_core, signature="(a),(a),(a,a)->()")
+
+        mu = np.arange(5 * 3 * 2).reshape(5, 3, 2) + 1
+        cov = np.eye(2) * mu[..., None]
+        value = mu - np.mean(mu)
+
+        if not batch_mu:
+            mu = mu[0, 0]
+            assert mu.ndim == 1
+        if not batch_cov:
+            cov = cov[0, 0]
+            assert cov.ndim == 2
+
+        if cov_form == "cov":
+            dist = pm.MvNormal.dist(mu=mu, cov=cov)
+        elif cov_form == "tau":
+            dist = pm.MvNormal.dist(mu=mu, tau=np.linalg.inv(cov))
+        else:  # chol
+            chol = np.linalg.cholesky(cov)
+            if cov_form == "chol_upper":
+                chol = np.swapaxes(chol, -1, -2)
+            dist = pm.MvNormal.dist(mu=mu, chol=chol, lower="lower" in cov_form)
+
+        np.testing.assert_allclose(
+            pm.logp(dist, value).eval(),
+            ref_logp(value, mu, cov),
+        )
+
     @pytest.mark.parametrize("n", [1, 2, 3])
     def test_matrixnormal(self, n):
         mat_scale = 1e3  # To reduce logp magnitude
@@ -470,6 +507,42 @@ class TestMatchesScipy:
             {"nu": Rplus, "Sigma": PdMatrix(n), "mu": Vector(R, n)},
             mvt_logpdf,
             extra_args={"size": 2},
+        )
+
+    @pytest.mark.parametrize("batch_nu", (False, True))
+    @pytest.mark.parametrize("batch_mu", (False, True))
+    @pytest.mark.parametrize("batch_cov", (False, True))
+    @pytest.mark.parametrize("chol_form", ("cov", "tau", "chol"))
+    def test_mvt_batched_dims(self, batch_nu, batch_mu, batch_cov, chol_form):
+        def ref_logp_core(value, nu, mu, cov):
+            return st.multivariate_t.logpdf(value, mu, cov, df=nu)
+
+        ref_logp = np.vectorize(ref_logp_core, signature="(a),(),(a),(a,a)->()")
+
+        nu = np.arange(5 * 3).reshape(5, 3) + 2
+        mu = np.arange(5 * 3 * 2).reshape(5, 3, 2) + 1
+        cov = np.eye(2) * mu[..., None]
+        value = mu - np.mean(mu)
+
+        if not batch_nu:
+            nu = nu[0, 0]
+        if not batch_mu:
+            mu = mu[0, 0]
+            assert mu.ndim == 1
+        if not batch_cov:
+            cov = cov[0, 0]
+            assert cov.ndim == 2
+
+        if chol_form == "cov":
+            dist = pm.MvStudentT.dist(nu=nu, mu=mu, cov=cov)
+        elif chol_form == "tau":
+            dist = pm.MvStudentT.dist(nu=nu, mu=mu, tau=np.linalg.inv(cov))
+        else:  # chol
+            dist = pm.MvStudentT.dist(nu=nu, mu=mu, chol=np.linalg.cholesky(cov))
+
+        np.testing.assert_allclose(
+            pm.logp(dist, value).eval(),
+            ref_logp(value, nu, mu, cov),
         )
 
     @pytest.mark.parametrize("n", [2, 3])
@@ -1038,8 +1111,7 @@ class TestMoments:
         with pm.Model() as model:
             x = pm.MvNormal("x", mu=mu, cov=cov, size=size)
 
-        # MvNormal logp is only implemented for up to 2D variables
-        assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
+        assert_moment_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "shape, n_zerosum_axes, expected",
@@ -1103,14 +1175,14 @@ class TestMoments:
             (2, rand2d, np.eye(3), None, rand2d),
             (2, rand2d, np.eye(3), (2, 2), np.full((2, 2, 3), rand2d)),
             (2, rand2d, np.eye(3), (2, 5, 2), np.full((2, 5, 2, 3), rand2d)),
+            ([2, 4], 0, np.eye(3), None, np.zeros((2, 3))),
         ],
     )
     def test_mvstudentt_moment(self, nu, mu, cov, size, expected):
         with pm.Model() as model:
             x = pm.MvStudentT("x", nu=nu, mu=mu, scale=cov, size=size)
 
-        # MvStudentT logp is only implemented for up to 2D variables
-        assert_moment_is_expected(model, expected, check_finite_logp=x.ndim < 3)
+        assert_moment_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, rowchol, colchol, size, expected",
@@ -1304,31 +1376,7 @@ class TestMvNormalCov(BaseTestDistributionRandom):
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
         "check_rv_size",
-        "check_mu_broadcast_helper",
     ]
-
-    def check_mu_broadcast_helper(self):
-        """Test that mu is broadcasted to the shape of cov"""
-        x = pm.MvNormal.dist(mu=1, cov=np.eye(3))
-        mu = x.owner.inputs[3]
-        assert mu.eval().shape == (3,)
-
-        x = pm.MvNormal.dist(mu=np.ones(1), cov=np.eye(3))
-        mu = x.owner.inputs[3]
-        assert mu.eval().shape == (3,)
-
-        x = pm.MvNormal.dist(mu=np.ones((1, 1)), cov=np.eye(3))
-        mu = x.owner.inputs[3]
-        assert mu.eval().shape == (1, 3)
-
-        x = pm.MvNormal.dist(mu=np.ones((10, 1)), cov=np.eye(3))
-        mu = x.owner.inputs[3]
-        assert mu.eval().shape == (10, 3)
-
-        # Cov is artificially limited to being 2D
-        # x = pm.MvNormal.dist(mu=np.ones((10, 1)), cov=np.full((2, 3, 3), np.eye(3)))
-        # mu = x.owner.inputs[3]
-        # assert mu.eval().shape == (10, 2, 3)
 
 
 class TestMvNormalChol(BaseTestDistributionRandom):
@@ -1671,43 +1719,38 @@ class TestMvStudentTCov(BaseTestDistributionRandom):
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
         "check_rv_size",
-        "check_errors",
-        "check_mu_broadcast_helper",
+        "check_batched_nu",
     ]
 
-    def check_errors(self):
-        msg = "nu must be a scalar (ndim=0)."
-        with pm.Model():
-            with pytest.raises(ValueError, match=re.escape(msg)):
-                mvstudentt = pm.MvStudentT(
-                    "mvstudentt",
-                    nu=np.array([1, 2]),
-                    mu=np.ones(2),
-                    scale=np.full((2, 2), np.ones(2)),
-                )
+    def check_batched_nu(self):
+        rng = np.random.default_rng(sum(map(ord, "batched_nu")))
+        a = (
+            pm.draw(
+                pm.MvStudentT.dist(nu=2, mu=[1, 2, 3], cov=np.eye(3), size=(5_000,)),
+                random_seed=rng,
+            )
+            .std(-1)
+            .mean()
+        )
+        b = (
+            pm.draw(
+                pm.MvStudentT.dist(nu=30, mu=[1, 2, 3], cov=np.eye(3), size=(5_000,)),
+                random_seed=rng,
+            )
+            .std(-1)
+            .mean()
+        )
+        ab = (
+            pm.draw(
+                pm.MvStudentT.dist(nu=[2, 30], mu=[1, 2, 3], cov=np.eye(3), size=(5_000, 2)),
+                random_seed=rng,
+            )
+            .std(-1)
+            .mean(0)
+        )
 
-    def check_mu_broadcast_helper(self):
-        """Test that mu is broadcasted to the shape of cov"""
-        x = pm.MvStudentT.dist(nu=4, mu=1, scale=np.eye(3))
-        mu = x.owner.inputs[4]
-        assert mu.eval().shape == (3,)
-
-        x = pm.MvStudentT.dist(nu=4, mu=np.ones(1), scale=np.eye(3))
-        mu = x.owner.inputs[4]
-        assert mu.eval().shape == (3,)
-
-        x = pm.MvStudentT.dist(nu=4, mu=np.ones((1, 1)), scale=np.eye(3))
-        mu = x.owner.inputs[4]
-        assert mu.eval().shape == (1, 3)
-
-        x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), scale=np.eye(3))
-        mu = x.owner.inputs[4]
-        assert mu.eval().shape == (10, 3)
-
-        # Cov is artificially limited to being 2D
-        # x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), scale=np.full((2, 3, 3), np.eye(3)))
-        # mu = x.owner.inputs[4]
-        # assert mu.eval().shape == (10, 2, 3)
+        assert not np.isclose(ab[0], ab[1], rtol=0.3), "Test is not informative"
+        np.testing.assert_allclose([a, b], ab, rtol=0.1)
 
 
 class TestMvStudentTChol(BaseTestDistributionRandom):
@@ -2222,3 +2265,93 @@ def test_posdef_symmetric(matrix, result):
     """
     data = np.array(matrix, dtype=pytensor.config.floatX)
     assert posdef(data) == result
+
+
+def test_mvnormal_no_cholesky_in_model_logp():
+    """
+    Test MvNormal likelihood when using Cholesky factor parameterization does not unnecessarily
+    recompute the cholesky factorization
+    Reversion test of #6717
+    """
+    with pm.Model() as m:
+        batch_size = 10
+        n = 3
+        sd_dist = pm.HalfNormal.dist(shape=n)
+        chol, corr, sigmas = pm.LKJCholeskyCov("cov", n=n, eta=1, sd_dist=sd_dist)
+        mu = np.zeros(n)
+        data = np.ones((batch_size, n))
+        pm.MvNormal("y", mu=mu, chol=pt.broadcast_to(chol, (batch_size, n, n)), observed=data)
+
+    contains_cholesky_op = lambda fgraph: any(
+        isinstance(node.op, Cholesky) for node in fgraph.apply_nodes
+    )
+
+    logp = m.compile_logp()
+    assert not contains_cholesky_op(logp.f.maker.fgraph)
+
+    dlogp = m.compile_dlogp()
+    assert not contains_cholesky_op(dlogp.f.maker.fgraph)
+
+    d2logp = m.compile_d2logp()
+    assert not contains_cholesky_op(d2logp.f.maker.fgraph)
+
+    logp_dlogp = m.logp_dlogp_function()
+    assert not contains_cholesky_op(logp_dlogp._pytensor_function.maker.fgraph)
+
+
+def test_mvnormal_mu_convenience():
+    """Test that mu is broadcasted to the length of cov and provided a default of zero"""
+    x = pm.MvNormal.dist(cov=np.eye(3))
+    mu = x.owner.inputs[3]
+    np.testing.assert_allclose(mu.eval(), np.zeros((3,)))
+
+    x = pm.MvNormal.dist(mu=1, cov=np.eye(3))
+    mu = x.owner.inputs[3]
+    np.testing.assert_allclose(mu.eval(), np.ones((3,)))
+
+    x = pm.MvNormal.dist(mu=np.ones((1, 1)), cov=np.eye(3))
+    mu = x.owner.inputs[3]
+    np.testing.assert_allclose(
+        mu.eval(),
+        np.ones((1, 3)),
+    )
+
+    x = pm.MvNormal.dist(mu=np.ones((10, 1)), cov=np.eye(3))
+    mu = x.owner.inputs[3]
+    np.testing.assert_allclose(
+        mu.eval(),
+        np.ones((10, 3)),
+    )
+
+    x = pm.MvNormal.dist(mu=np.ones((10, 1, 1)), cov=np.full((2, 3, 3), np.eye(3)))
+    mu = x.owner.inputs[3]
+    np.testing.assert_allclose(mu.eval(), np.ones((10, 2, 3)))
+
+
+def test_mvstudentt_mu_convenience():
+    """Test that mu is broadcasted to the length of scale and provided a default of zero"""
+    x = pm.MvStudentT.dist(nu=4, scale=np.eye(3))
+    mu = x.owner.inputs[4]
+    np.testing.assert_allclose(mu.eval(), np.zeros((3,)))
+
+    x = pm.MvStudentT.dist(nu=4, mu=1, scale=np.eye(3))
+    mu = x.owner.inputs[4]
+    np.testing.assert_allclose(mu.eval(), np.ones((3,)))
+
+    x = pm.MvStudentT.dist(nu=4, mu=np.ones((1, 1)), scale=np.eye(3))
+    mu = x.owner.inputs[4]
+    np.testing.assert_allclose(
+        mu.eval(),
+        np.ones((1, 3)),
+    )
+
+    x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), scale=np.eye(3))
+    mu = x.owner.inputs[4]
+    np.testing.assert_allclose(
+        mu.eval(),
+        np.ones((10, 3)),
+    )
+
+    x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1, 1)), scale=np.full((2, 3, 3), np.eye(3)))
+    mu = x.owner.inputs[4]
+    np.testing.assert_allclose(mu.eval(), np.ones((10, 2, 3)))

@@ -299,7 +299,7 @@ def change_value_transforms(
             new_p = untransformed_p['p']
             std_q = ((1 / pm.find_hessian(mean_q, vars=[new_p])) ** 0.5)[0]
 
-        print(f"  Mean, Standard deviation\np {mean_q['p']:.2}, {std_q[0]:.2}")
+        print(f"  Mean, Standard deviation\\np {mean_q['p']:.2}, {std_q[0]:.2}")
         #   Mean, Standard deviation
         # p 0.67, 0.16
 
@@ -379,7 +379,7 @@ def remove_value_transforms(
         with remove_value_transforms(transformed_m) as untransformed_m:
             new_p = untransformed_m["p"]
             std_q = ((1 / pm.find_hessian(mean_q, vars=[new_p])) ** 0.5)[0]
-            print(f"  Mean, Standard deviation\np {mean_q['p']:.2}, {std_q[0]:.2}")
+            print(f"  Mean, Standard deviation\\np {mean_q['p']:.2}, {std_q[0]:.2}")
 
         #   Mean, Standard deviation
         # p 0.67, 0.16

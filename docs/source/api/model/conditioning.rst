@@ -5,14 +5,7 @@ Model Conditioning
 .. autosummary::
    :toctree: generated/
 
+   change_value_transforms
    do
    observe
-
-Others
-------
-
-.. autosummary::
-   :toctree: generated/
-
-   change_value_transforms
    remove_value_transforms

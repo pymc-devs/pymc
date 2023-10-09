@@ -13,8 +13,6 @@
 #   limitations under the License.
 import warnings
 
-from unittest import mock
-
 import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
@@ -30,7 +28,6 @@ from pytensor.graph.basic import Variable, equal_computations
 from pytensor.tensor.random.basic import normal, uniform
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.var import RandomStateSharedVariable
-from pytensor.tensor.slinalg import Cholesky
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from pytensor.tensor.variable import TensorVariable
 
@@ -879,34 +876,3 @@ class TestReplaceRVsByValues:
         [new_x], _ = _replace_vars_in_graphs([x], replacement_fn=replacement_fn)
 
         assert new_x.eval() > 50
-
-
-def test_mvnormal_no_cholesky_op():
-    """
-    Test MvNormal likelihood when using Cholesky factor parameterization does not unnecessarily
-    recompute the cholesky factorization
-    Reversion test of #6717
-    """
-    with pm.Model() as m:
-        n = 3
-        sd_dist = pm.HalfNormal.dist(shape=n)
-        chol, corr, sigmas = pm.LKJCholeskyCov("cov", n=n, eta=1, sd_dist=sd_dist)
-        mu = np.zeros(n)
-        data = np.ones((10, n))
-        pm.MvNormal("y", mu=mu, chol=chol, observed=data)
-
-    contains_cholesky_op = lambda fgraph: any(
-        isinstance(node.op, Cholesky) for node in fgraph.apply_nodes
-    )
-
-    logp = m.compile_logp()
-    assert not contains_cholesky_op(logp.f.maker.fgraph)
-
-    dlogp = m.compile_dlogp()
-    assert not contains_cholesky_op(dlogp.f.maker.fgraph)
-
-    d2logp = m.compile_d2logp()
-    assert not contains_cholesky_op(d2logp.f.maker.fgraph)
-
-    logp_dlogp = m.logp_dlogp_function()
-    assert not contains_cholesky_op(logp_dlogp._pytensor_function.maker.fgraph)
