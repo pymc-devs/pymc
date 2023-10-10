@@ -43,11 +43,9 @@ pymc/model/core.py
 pymc/model/fgraph.py
 pymc/model/transform/basic.py
 pymc/model/transform/conditioning.py
-pymc/model_graph.py
 pymc/printing.py
 pymc/pytensorf.py
 pymc/sampling/jax.py
-pymc/variational/opvi.py
 """
 
 
