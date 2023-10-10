@@ -54,6 +54,8 @@ def prune_vars_detached_from_observed(model: Model) -> Model:
 
 
 def parse_vars(model: Model, vars: Union[ModelVariable, Sequence[ModelVariable]]) -> List[Variable]:
-    if not isinstance(vars, (list, tuple)):
-        vars = (vars,)
-    return [model[var] if isinstance(var, str) else var for var in vars]
+    if isinstance(vars, (list, tuple)):
+        vars_seq = vars
+    else:
+        vars_seq = (vars,)
+    return [model[var] if isinstance(var, str) else var for var in vars_seq]
