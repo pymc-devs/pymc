@@ -41,7 +41,6 @@ pymc/logprob/transforms.py
 pymc/logprob/utils.py
 pymc/model/core.py
 pymc/model/fgraph.py
-pymc/model/transform/basic.py
 pymc/model/transform/conditioning.py
 pymc/printing.py
 pymc/pytensorf.py
