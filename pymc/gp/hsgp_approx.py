@@ -205,6 +205,7 @@ class HSGP(Base):
                 warnings.warn(
                     "Argument `L`, `c` or `parameterization` supplied but not used for `Periodic` kernel."
                 )
+            self._parameterization = parameterization
 
         else:
             if (L is None and c is None) or (L is not None and c is not None):
