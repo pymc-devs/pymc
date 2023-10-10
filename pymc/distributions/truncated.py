@@ -63,8 +63,7 @@ class TruncatedRV(SymbolicRandomVariable):
         super().__init__(*args, **kwargs)
 
     def update(self, node: Node):
-        """Return the update mapping for the noise RV."""
-        # Since RNG is a shared variable it shows up as the last node input
+        """Return the update mapping for the internal RNG."""
         return {node.inputs[-1]: node.outputs[0]}
 
 
@@ -195,20 +194,20 @@ class Truncated(Distribution):
             cdf_upper_ = pt.exp(logcdf(rv_, upper_))
             # It's okay to reuse the same rng here, because the rng in rv_ will not be
             # used by either the logcdf of icdf functions
-            uniform_ = pt.random.uniform(
+            uniform_next_rng_, uniform_ = pt.random.uniform(
                 cdf_lower_,
                 cdf_upper_,
                 rng=rng,
                 size=rv_inputs_[0],
-            )
+            ).owner.outputs
             truncated_rv_ = icdf(rv_, uniform_)
             return TruncatedRV(
                 base_rv_op=dist.owner.op,
-                inputs=graph_inputs_,
-                outputs=[uniform_.owner.outputs[0], truncated_rv_],
+                inputs=[*graph_inputs_, rng],
+                outputs=[uniform_next_rng_, truncated_rv_],
                 ndim_supp=0,
                 max_n_steps=max_n_steps,
-            )(*graph_inputs)
+            )(*graph_inputs, rng)
         except NotImplementedError:
             pass
 
@@ -248,13 +247,14 @@ class Truncated(Distribution):
             truncated_rv_, convergence_
         )
 
+        [next_rng] = updates.values()
         return TruncatedRV(
             base_rv_op=dist.owner.op,
-            inputs=graph_inputs_,
-            outputs=[next(iter(updates.values())), truncated_rv_],
+            inputs=[*graph_inputs_, rng],
+            outputs=[next_rng, truncated_rv_],
             ndim_supp=0,
             max_n_steps=max_n_steps,
-        )(*graph_inputs)
+        )(*graph_inputs, rng)
 
 
 @_change_dist_size.register(TruncatedRV)
