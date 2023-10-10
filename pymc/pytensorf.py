@@ -801,7 +801,7 @@ def collect_default_updates_inner_fgraph(node: Node) -> dict[Variable, Variable]
 
 
 def collect_default_updates(
-    outputs: Sequence[Variable],
+    outputs: Variable | Sequence[Variable],
     *,
     inputs: Sequence[Variable] | None = None,
     must_be_shared: bool = True,
