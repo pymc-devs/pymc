@@ -76,12 +76,12 @@ class ModelGraph:
                 return reversed(_filter_non_parameter_inputs(x))
             return []
 
-        parents = {
-            VarName(get_var_name(x))
-            for x in walk(nodes=_filter_non_parameter_inputs(var), expand=_expand)
+        parents = set()
+        for x in walk(nodes=_filter_non_parameter_inputs(var), expand=_expand):
             # Only consider nodes that are in the named model variables.
-            if x.name and x.name in self._all_var_names
-        }
+            vname = getattr(x, "name", None)
+            if isinstance(vname, str) and vname in self._all_var_names:
+                parents.add(VarName(vname))
 
         return parents
 
@@ -113,7 +113,7 @@ class ModelGraph:
                 selected_ancestors.add(self.model.rvs_to_values[var])
 
         # ordering of self._all_var_names is important
-        return [VarName(var.name) for var in selected_ancestors]
+        return [VarName(get_var_name(var)) for var in selected_ancestors]
 
     def make_compute_graph(
         self, var_names: Optional[Iterable[VarName]] = None

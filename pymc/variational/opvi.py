@@ -51,7 +51,7 @@ import collections
 import itertools
 import warnings
 
-from typing import Any
+from typing import Any, overload
 
 import numpy as np
 import pytensor
@@ -980,17 +980,29 @@ class Group(WithMemoization):
         """
         raise NotImplementedError
 
+    @overload
+    def set_size_and_deterministic(
+        self, node: Variable, s, d: bool, more_replacements: dict | None = None
+    ) -> Variable:
+        ...
+
+    @overload
+    def set_size_and_deterministic(
+        self, node: list[Variable], s, d: bool, more_replacements: dict | None = None
+    ) -> list[Variable]:
+        ...
+
     @pytensor.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(
-        self, node: Variable, s, d: bool, more_replacements: dict = None
-    ) -> list[Variable]:
+        self, node: Variable | list[Variable], s, d: bool, more_replacements: dict | None = None
+    ) -> Variable | list[Variable]:
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
         :func:`symbolic_single_sample` new random generator can be allocated and applied to node
 
         Parameters
         ----------
-        node: :class:`Variable`
-            PyTensor node with symbolically applied VI replacements
+        node
+            PyTensor node(s) with symbolically applied VI replacements
         s: scalar
             desired number of samples
         d: bool or int
@@ -1000,7 +1012,7 @@ class Group(WithMemoization):
 
         Returns
         -------
-        :class:`Variable` with applied replacements, ready to use
+        :class:`Variable` or list with applied replacements, ready to use
         """
 
         flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
