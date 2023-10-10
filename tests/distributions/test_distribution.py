@@ -41,13 +41,14 @@ from pymc.distributions.distribution import (
     CustomDist,
     CustomDistRV,
     CustomSymbolicDistRV,
+    DiracDelta,
     PartialObservedRV,
     SymbolicRandomVariable,
     _support_point,
     create_partial_observed_rv,
     support_point,
 )
-from pymc.distributions.shape_utils import change_dist_size, rv_size_is_none, to_tuple
+from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.distributions.transforms import log
 from pymc.exceptions import BlockModelAccessError
 from pymc.logprob.basic import conditional_logp, logcdf, logp
@@ -584,9 +585,7 @@ class TestCustomSymbolicDist:
 
     def test_custom_methods(self):
         def custom_dist(mu, size):
-            if rv_size_is_none(size):
-                return mu
-            return pt.full(size, mu)
+            return DiracDelta.dist(mu, size=size)
 
         def custom_support_point(rv, size, mu):
             return pt.full_like(rv, mu + 1)
@@ -778,7 +777,8 @@ class TestSymbolicRandomVariable:
         class TestSymbolicRV(SymbolicRandomVariable):
             pass
 
-        x = TestSymbolicRV([], [Flat.dist()], ndim_supp=0)()
+        rng = pytensor.shared(np.random.default_rng())
+        x = TestSymbolicRV([rng], [Flat.dist(rng=rng)], ndim_supp=0)(rng)
 
         # By default, the SymbolicRandomVariable will not be inlined. Because we did not
         # dispatch a custom logprob function it will raise next
@@ -788,7 +788,7 @@ class TestSymbolicRandomVariable:
         class TestInlinedSymbolicRV(SymbolicRandomVariable):
             inline_logprob = True
 
-        x_inline = TestInlinedSymbolicRV([], [Flat.dist()], ndim_supp=0)()
+        x_inline = TestInlinedSymbolicRV([rng], [Flat.dist(rng=rng)], ndim_supp=0)(rng)
         assert np.isclose(logp(x_inline, 0).eval(), 0)
 
     def test_default_update(self):
@@ -825,6 +825,32 @@ class TestSymbolicRandomVariable:
             match="No update found for at least one RNG used in SymbolicRandomVariable Op SymbolicRVCustomUpdates",
         ):
             compile_pymc(inputs=[], outputs=x, random_seed=431)
+
+    def test_recreate_with_different_rng_inputs(self):
+        """Test that we can recreate a SymbolicRandomVariable with new RNG inputs.
+
+        Related to https://github.com/pymc-devs/pytensor/issues/473
+        """
+        rng = pytensor.shared(np.random.default_rng())
+
+        dummy_rng = rng.type()
+        dummy_next_rng, dummy_x = pt.random.normal(rng=dummy_rng).owner.outputs
+
+        op = SymbolicRandomVariable(
+            [dummy_rng],
+            [dummy_next_rng, dummy_x],
+            ndim_supp=0,
+        )
+
+        next_rng, x = op(rng)
+        assert op.update(x.owner) == {rng: next_rng}
+
+        new_rng = pytensor.shared(np.random.default_rng())
+        inputs = x.owner.inputs.copy()
+        inputs[0] = new_rng
+        # This would fail with the default OpFromGraph.__call__()
+        new_next_rng, new_x = x.owner.op(*inputs)
+        assert op.update(new_x.owner) == {new_rng: new_next_rng}
 
 
 def test_tag_future_warning_dist():
