@@ -61,6 +61,7 @@ from pymc.model.core import new_or_existing_block_model_access
 from pymc.printing import str_for_dist
 from pymc.pytensorf import (
     collect_default_updates,
+    collect_default_updates_inner_fgraph,
     constant_fold,
     convert_observed_data,
     floatX,
@@ -300,14 +301,14 @@ class SymbolicRandomVariable(OpFromGraph):
         kwargs.setdefault("inline", True)
         super().__init__(*args, **kwargs)
 
-    def update(self, node: Node):
+    def update(self, node: Node) -> dict[Variable, Variable]:
         """Symbolic update expression for input random state variables
 
         Returns a dictionary with the symbolic expressions required for correct updating
         of random state input variables repeated function evaluations. This is used by
         `pytensorf.compile_pymc`.
         """
-        return {}
+        return collect_default_updates_inner_fgraph(node)
 
     def batch_ndim(self, node: Node) -> int:
         """Number of dimensions of the distribution's batch shape."""
@@ -704,20 +705,6 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
     default_output = -1
 
     _print_name = ("CustomSymbolicDist", "\\operatorname{CustomSymbolicDist}")
-
-    def update(self, node: Node):
-        op = node.op
-        inner_updates = collect_default_updates(
-            inputs=op.inner_inputs, outputs=op.inner_outputs, must_be_shared=False
-        )
-
-        # Map inner updates to outer inputs/outputs
-        updates = {}
-        for rng, update in inner_updates.items():
-            inp_idx = op.inner_inputs.index(rng)
-            out_idx = op.inner_outputs.index(update)
-            updates[node.inputs[inp_idx]] = node.outputs[out_idx]
-        return updates
 
 
 @_support_point.register(CustomSymbolicDistRV)

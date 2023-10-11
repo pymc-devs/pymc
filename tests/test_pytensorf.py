@@ -408,28 +408,6 @@ class TestCompilePyMC:
             # Each RV adds a shared output for its rng
             assert len(fn_fgraph.outputs) == 1 + rvs_in_graph
 
-    def test_compile_pymc_symbolic_rv_update(self):
-        """Test that SymbolicRandomVariable Op update methods are used by compile_pymc"""
-
-        class NonSymbolicRV(OpFromGraph):
-            def update(self, node):
-                return {node.inputs[0]: node.outputs[0]}
-
-        rng = pytensor.shared(np.random.default_rng())
-        dummy_rng = rng.type()
-        dummy_next_rng, dummy_x = NonSymbolicRV(
-            [dummy_rng], pt.random.normal(rng=dummy_rng).owner.outputs
-        )(rng)
-
-        # Check that there are no updates at first
-        fn = compile_pymc(inputs=[], outputs=dummy_x)
-        assert fn() == fn()
-
-        # And they are enabled once the Op is registered as a SymbolicRV
-        SymbolicRandomVariable.register(NonSymbolicRV)
-        fn = compile_pymc(inputs=[], outputs=dummy_x, random_seed=431)
-        assert fn() != fn()
-
     def test_compile_pymc_symbolic_rv_missing_update(self):
         """Test that error is raised if SymbolicRandomVariable Op does not
         provide rule for updating RNG"""
@@ -586,6 +564,22 @@ class TestCompilePyMC:
         assert collect_default_updates([ys]) == {rng: next(iter(next_rng.values()))}
 
         fn = compile_pymc([], ys, random_seed=1)
+        assert not (set(fn()) & set(fn()))
+
+    def test_op_from_graph_updates(self):
+        rng = pytensor.shared(np.random.default_rng())
+        next_rng_, x_ = pt.random.normal(size=(10,), rng=rng).owner.outputs
+
+        x = OpFromGraph([], [x_])()
+        with pytest.raises(
+            ValueError,
+            match="No update found for at least one RNG used in OpFromGraph Op",
+        ):
+            collect_default_updates([x])
+
+        next_rng, x = OpFromGraph([], [next_rng_, x_])()
+        assert collect_default_updates([x]) == {rng: next_rng}
+        fn = compile_pymc([], x, random_seed=1)
         assert not (set(fn()) & set(fn()))
 
 
