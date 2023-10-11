@@ -52,7 +52,7 @@ from pymc.distributions.transforms import log
 from pymc.exceptions import BlockModelAccessError
 from pymc.logprob.basic import conditional_logp, logcdf, logp
 from pymc.model import Deterministic, Model
-from pymc.pytensorf import collect_default_updates
+from pymc.pytensorf import collect_default_updates, compile_pymc
 from pymc.sampling import draw, sample
 from pymc.testing import (
     BaseTestDistributionRandom,
@@ -790,6 +790,41 @@ class TestSymbolicRandomVariable:
 
         x_inline = TestInlinedSymbolicRV([], [Flat.dist()], ndim_supp=0)()
         assert np.isclose(logp(x_inline, 0).eval(), 0)
+
+    def test_default_update(self):
+        """Test SymbolicRandomVariable Op default to updates from inner graph."""
+
+        class SymbolicRVDefaultUpdates(SymbolicRandomVariable):
+            pass
+
+        class SymbolicRVCustomUpdates(SymbolicRandomVariable):
+            def update(self, node):
+                return {}
+
+        rng = pytensor.shared(np.random.default_rng())
+        dummy_rng = rng.type()
+        dummy_next_rng, dummy_x = pt.random.normal(rng=dummy_rng).owner.outputs
+
+        # Check that default updates work
+        next_rng, x = SymbolicRVDefaultUpdates(
+            inputs=[dummy_rng],
+            outputs=[dummy_next_rng, dummy_x],
+            ndim_supp=0,
+        )(rng)
+        fn = compile_pymc(inputs=[], outputs=x, random_seed=431)
+        assert fn() != fn()
+
+        # Check that custom updates are respected, by using one that's broken
+        next_rng, x = SymbolicRVCustomUpdates(
+            inputs=[dummy_rng],
+            outputs=[dummy_next_rng, dummy_x],
+            ndim_supp=0,
+        )(rng)
+        with pytest.raises(
+            ValueError,
+            match="No update found for at least one RNG used in SymbolicRandomVariable Op SymbolicRVCustomUpdates",
+        ):
+            compile_pymc(inputs=[], outputs=x, random_seed=431)
 
 
 def test_tag_future_warning_dist():

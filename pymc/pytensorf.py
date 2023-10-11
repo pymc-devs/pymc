@@ -23,11 +23,13 @@ import scipy.sparse as sps
 
 from pytensor import scalar
 from pytensor.compile import Function, Mode, get_mode
+from pytensor.compile.builders import OpFromGraph
 from pytensor.gradient import grad
 from pytensor.graph import Type, rewrite_graph
 from pytensor.graph.basic import (
     Apply,
     Constant,
+    Node,
     Variable,
     clone_get_equiv,
     graph_inputs,
@@ -781,6 +783,23 @@ def reseed_rngs(
         rng.set_value(new_rng, borrow=True)
 
 
+def collect_default_updates_inner_fgraph(node: Node) -> dict[Variable, Variable]:
+    """Collect default updates from node with inner fgraph."""
+    op = node.op
+    inner_updates = collect_default_updates(
+        inputs=op.inner_inputs, outputs=op.inner_outputs, must_be_shared=False
+    )
+
+    # Map inner updates to outer inputs/outputs
+    updates = {}
+    for rng, update in inner_updates.items():
+        inp_idx = op.inner_inputs.index(rng)
+        out_idx = op.inner_outputs.index(update)
+        updates[node.inputs[inp_idx]] = node.outputs[out_idx]
+
+    return updates
+
+
 def collect_default_updates(
     outputs: Sequence[Variable],
     *,
@@ -874,9 +893,16 @@ def collect_default_updates(
                     f"No update found for at least one RNG used in Scan Op {client.op}.\n"
                     "You can use `pytensorf.collect_default_updates` inside the Scan function to return updates automatically."
                 )
+        elif isinstance(client.op, OpFromGraph):
+            try:
+                next_rng = collect_default_updates_inner_fgraph(client)[rng]
+            except (ValueError, KeyError):
+                raise ValueError(
+                    f"No update found for at least one RNG used in OpFromGraph Op {client.op}.\n"
+                    "You can use `pytensorf.collect_default_updates` and include those updates as outputs."
+                )
         else:
-            # We don't know how this RNG should be updated (e.g., OpFromGraph).
-            # The user should provide an update manually
+            # We don't know how this RNG should be updated. The user should provide an update manually
             return None
 
         # Recurse until we find final update for RNG
