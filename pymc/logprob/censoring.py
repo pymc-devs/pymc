@@ -358,13 +358,10 @@ def flat_switch_helper(node, valued_rvs, encoding_list, outer_interval, base_rv)
             else:
                 switch_comp_idx.append(idx)
 
-    # Deny the broadcasting of any measurable components present other than switch
-    # Check that the measurability source is the same for all
+    # Check that the measurability source is the same for all measurable components within the current branch
     for i in measurable_var_idx:
         component = components[i]
-        if component.type.broadcastable != node.outputs[
-            0
-        ].broadcastable or not compare_measurability_source([base_rv, component], valued_rvs):
+        if not compare_measurability_source([base_rv, component], valued_rvs):
             return None
 
     # Get intervals for true and false components from the condition
