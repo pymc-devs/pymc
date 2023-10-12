@@ -260,11 +260,12 @@ def round_logprob(op, values, base_rv, **kwargs):
 
 
 class FlatSwitches(Op):
-    __props__ = ("meta_info",)
+    __props__ = ("meta_info", "out_dtype")
 
-    def __init__(self, *args, meta_info, **kwargs):
+    def __init__(self, *args, meta_info, out_dtype, **kwargs):
         super().__init__(*args, **kwargs)
         self.meta_info = meta_info
+        self.out_dtype = out_dtype
 
     def make_node(self, base_rv):
         assert isinstance(base_rv, Variable) and (base_rv.owner.op, MeasurableVariable)
@@ -434,9 +435,9 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
 
     encoding_list = flat_switch_helper(node, valued_rvs, encoding_list, initial_interval, base_rv)
 
-    flat_switch_op = FlatSwitches(meta_info=encoding_list)
+    flat_switch_op = FlatSwitches(meta_info=encoding_list, out_dtype=base_rv.dtype)
 
-    new_outs = flat_switch_op.make_node(base_rv).outputs
+    new_outs = flat_switch_op.make_node(base_rv).default_output()
     return [new_outs]
 
 
