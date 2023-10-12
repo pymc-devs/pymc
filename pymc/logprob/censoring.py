@@ -332,9 +332,9 @@ def flat_switch_helper(node, valued_rvs, encoding_list, outer_interval, base_rv)
     Carries out the main recursion through the branches to fetch the encodings, their respective
     intervals and adjust any overlaps. It also performs several checks on the switch condition and measurable
     components.
-
-
     """
+    from pymc.distributions.distribution import SymbolicRandomVariable
+
     switch_cond, *components = node.inputs
 
     # deny broadcasting of the switch condition
@@ -351,9 +351,9 @@ def flat_switch_helper(node, valued_rvs, encoding_list, outer_interval, base_rv)
     # get the indices for the switch and other measurable components for further recursion
     for idx, component in enumerate(components):
         if check_potential_measurability([component], valued_rvs):
-            if isinstance(component.owner.op, RandomVariable) or not isinstance(
-                component.owner.op.scalar_op, Switch
-            ):
+            if isinstance(
+                component.owner.op, (RandomVariable, SymbolicRandomVariable)
+            ) or not isinstance(component.owner.op.scalar_op, Switch):
                 measurable_var_idx.append(idx)
             else:
                 switch_comp_idx.append(idx)
@@ -408,18 +408,22 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
         return None  # pragma: no cover
 
     valued_rvs = rv_map_feature.rv_values.keys()
+    switch_cond = node.inputs[0]
 
     encoding_list = []
     initial_interval = (-np.inf, np.inf)
 
-    # gets the base_var in the first switch condition and checks its measurability
-    base_rv_set = get_measurability_source(node.inputs[0], valued_rvs)
+    # fetch base_var as the only measurable input to the logical op in switch condition
+    measurable_comp_list = [
+        component
+        for component in switch_cond.owner.inputs
+        if check_potential_measurability([component], valued_rvs)
+    ]
 
-    # Allow only one base_rv. For example, two unmeasurable variables like pt.switch(x > y) not allowed
-    if len(base_rv_set) != 1:
+    if len(measurable_comp_list) != 1:
         return None
 
-    base_rv = list(base_rv_set)[0]
+    base_rv = measurable_comp_list[0]
 
     # We do not allow discrete RVs yet
     if base_rv.dtype.startswith("int"):
