@@ -423,9 +423,6 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
 
     base_rv = list(base_rv_set)[0]
 
-    if base_rv is None:
-        return None
-
     # We do not allow discrete RVs yet
     if base_rv.dtype.startswith("int"):
         return None
