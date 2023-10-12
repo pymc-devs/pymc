@@ -205,7 +205,6 @@ class HSGP(Base):
                 warnings.warn(
                     "Argument `L`, `c` or `parameterization` supplied but not used for `Periodic` kernel."
                 )
-            self._parameterization = parameterization
 
         else:
             if (L is None and c is None) or (L is not None and c is not None):
@@ -217,11 +216,12 @@ class HSGP(Base):
             if L is None and c is not None and c < 1.2:
                 warnings.warn("For an adequate approximation `c >= 1.2` is recommended.")
 
-            parameterization = parameterization.lower().replace("-", "").replace("_", "")
-            if parameterization not in ["centered", "noncentered"]:
-                raise ValueError("`parameterization` must be either 'centered' or 'noncentered'.")
-            else:
-                self._parameterization = parameterization
+            if parameterization is not None:
+                parameterization = parameterization.lower().replace("-", "").replace("_", "")
+                if parameterization not in ["centered", "noncentered"]:
+                    raise ValueError(
+                        "`parameterization` must be either 'centered' or 'noncentered'."
+                    )
 
         if drop_first:
             warnings.warn(
@@ -235,6 +235,7 @@ class HSGP(Base):
         self._m_star = int(np.prod(self._m))
         self._L = L
         self._c = c
+        self._parameterization = parameterization
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
