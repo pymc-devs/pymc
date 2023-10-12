@@ -434,6 +434,12 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
 
     flat_switch_op = FlatSwitches(meta_info=encoding_list, out_dtype=base_rv.dtype)
 
+    # print("\n")
+    # for i in range(len(encoding_list)):
+    #     print("lower:", encoding_list[i]["lower"].eval())
+    #     print("upper:", encoding_list[i]["upper"].eval())
+    #     print("encoding:", encoding_list[i]["encoding"], "\n")
+
     new_outs = flat_switch_op.make_node(base_rv).default_output()
     return [new_outs]
 
