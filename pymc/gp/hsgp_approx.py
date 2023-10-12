@@ -377,7 +377,11 @@ class HSGP(Base):
             self._beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m0 * 2 - 1))
             # The first eigenfunction for the sine component is zero
             # and so does not contribute to the approximation.
-            f = phi_cos @ (psd * self._beta[:m0]) + phi_sin[..., 1:] @ (psd[1:] * self._beta[m0:])
+            f = (
+                self.mean_func(X)
+                + phi_cos @ (psd * self._beta[:m0])
+                + phi_sin[..., 1:] @ (psd[1:] * self._beta[m0:])
+            )
 
         else:
             phi, sqrt_psd = self.prior_linearized(X - self._X_mean)
