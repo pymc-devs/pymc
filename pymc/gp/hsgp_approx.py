@@ -369,7 +369,6 @@ class HSGP(Base):
             Dimension name for the GP random variable.
         """
         self._X_mean = pt.mean(X, axis=0)
-        phi, sqrt_psd = self.prior_linearized(X - self._X_mean)
 
         if isinstance(self.cov_func, Periodic):
             (phi_cos, phi_sin), psd = self.prior_linearized(X - self._X_mean)
@@ -381,6 +380,7 @@ class HSGP(Base):
             f = phi_cos @ (psd * self._beta[:m0]) + phi_sin[..., 1:] @ (psd[1:] * self._beta[m0:])
 
         else:
+            phi, sqrt_psd = self.prior_linearized(X - self._X_mean)
             if self._parameterization == "noncentered":
                 self._beta = pm.Normal(
                     f"{name}_hsgp_coeffs_", size=self._m_star - int(self._drop_first)
