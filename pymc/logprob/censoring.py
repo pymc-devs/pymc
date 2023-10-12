@@ -344,6 +344,18 @@ def flat_switch_helper(node, valued_rvs, encoding_list, outer_interval, base_rv)
     if not compare_measurability_source([switch_cond, base_rv], valued_rvs):
         return None
 
+    measurable_var_switch = [
+        var for var in switch_cond.owner.inputs if check_potential_measurability([var], valued_rvs)
+    ]
+
+    if len(measurable_var_switch) != 1:
+        return None
+
+    current_base_var = measurable_var_switch[0]
+    # deny cases where base_var is some function of 'x', e.g. pt.exp(x), and measurable var in the current switch is x
+    if current_base_var != base_rv:
+        return None
+
     measurable_var_idx = []
     switch_comp_idx = []
 
@@ -360,6 +372,8 @@ def flat_switch_helper(node, valued_rvs, encoding_list, outer_interval, base_rv)
     # Check that the measurability source is the same for all measurable components within the current branch
     for i in measurable_var_idx:
         component = components[i]
+        if component != base_rv:
+            return None
         if not compare_measurability_source([base_rv, component], valued_rvs):
             return None
 
@@ -449,7 +463,6 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
 @_logprob.register(FlatSwitches)
 def flat_switches_logprob(op, values, *inputs):
     # Defined logp expression based on this
-    [value] = values
 
     logp = pt.zeros_like(value)
     logp.name = "interval_logp"
