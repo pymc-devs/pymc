@@ -41,7 +41,7 @@ import numpy as np
 import pytensor.tensor as pt
 
 from pytensor.graph import Op
-from pytensor.graph.basic import Apply, Node, Variable, walk
+from pytensor.graph.basic import Apply, Node, walk
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scalar.basic import (
@@ -267,9 +267,8 @@ class FlatSwitches(Op):
         self.meta_info = meta_info
         self.out_dtype = out_dtype
 
-    def make_node(self, base_rv):
-        assert isinstance(base_rv, Variable) and (base_rv.owner.op, MeasurableVariable)
-        return Apply(self, [base_rv], [base_rv.type()])
+    def make_node(self, *inputs):
+        return Apply(self, list(inputs), [inputs[0].type()])
 
     def perform(self, *args, **kwargs):
         raise NotImplementedError("This Op should not be evaluated")
@@ -436,15 +435,14 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
 
     encoding_list = flat_switch_helper(node, valued_rvs, encoding_list, initial_interval, base_rv)
 
-    flat_switch_op = FlatSwitches(meta_info=encoding_list, out_dtype=base_rv.dtype)
+    flat_switch_op = FlatSwitches(meta_info=len(encoding_list), out_dtype=base_rv.dtype)
 
-    # print("\n")
-    # for i in range(len(encoding_list)):
-    #     print("lower:", encoding_list[i]["lower"].eval())
-    #     print("upper:", encoding_list[i]["upper"].eval())
-    #     print("encoding:", encoding_list[i]["encoding"], "\n")
+    encodings, intervals = [], []
+    for item in encoding_list:
+        encodings.append(item["encoding"])
+        intervals.extend((item["lower"], item["upper"]))
 
-    new_outs = flat_switch_op.make_node(base_rv).default_output()
+    new_outs = flat_switch_op.make_node(base_rv, *intervals, *encodings).default_output()
     return [new_outs]
 
 
