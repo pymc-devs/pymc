@@ -427,6 +427,11 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
     if base_rv.dtype.startswith("int"):
         return None
 
+    # Since we verify the source of measurability to be the same for switch conditions
+    # and all measurable components, denying broadcastability of the base_var is enough
+    if base_rv.type.broadcastable != node.outputs[0].type.broadcastable:
+        return None
+
     encoding_list = flat_switch_helper(node, valued_rvs, encoding_list, initial_interval, base_rv)
 
     flat_switch_op = FlatSwitches(meta_info=encoding_list)
