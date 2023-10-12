@@ -16,7 +16,7 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-from pymc import Model, Normal, sample
+from pymc import ConstantData, Model, Normal, sample
 
 
 @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
@@ -25,7 +25,11 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
         pytest.importorskip(nuts_sampler)
 
     with Model():
-        Normal("x")
+        x = Normal("x", 100, 5)
+        y = ConstantData("y", [1, 2, 3, 4])
+        ConstantData("z", [100, 190, 310, 405])
+
+        Normal("L", mu=x, sigma=0.1, observed=y)
 
         kwargs = dict(
             nuts_sampler=nuts_sampler,
@@ -55,7 +59,9 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
             )
         )
     assert warns == expected
-
+    assert "y" in idata1.constant_data
+    assert "z" in idata1.constant_data
+    assert "L" in idata1.observed_data
     assert idata1.posterior.chain.size == 2
     assert idata1.posterior.draw.size == 500
     np.testing.assert_array_equal(idata1.posterior.x, idata2.posterior.x)

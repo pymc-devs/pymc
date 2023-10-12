@@ -39,7 +39,8 @@ from typing import (
 import numpy as np
 import pytensor.gradient as tg
 
-from arviz import InferenceData
+from arviz import InferenceData, dict_to_dataset
+from arviz.data.base import make_attrs
 from fastprogress.fastprogress import progress_bar
 from pytensor.graph.basic import Variable
 from typing_extensions import Protocol, TypeAlias
@@ -47,6 +48,11 @@ from typing_extensions import Protocol, TypeAlias
 import pymc as pm
 
 from pymc.backends import RunType, TraceOrBackend, init_traces
+from pymc.backends.arviz import (
+    coords_and_dims_for_inferencedata,
+    find_constants,
+    find_observations,
+)
 from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
@@ -293,8 +299,8 @@ def _sample_external_nuts(
                 "`idata_kwargs` are currently ignored by the nutpie sampler",
                 UserWarning,
             )
-
         compiled_model = nutpie.compile_pymc_model(model)
+        t_start = time.time()
         idata = nutpie.sample(
             compiled_model,
             draws=draws,
@@ -304,6 +310,37 @@ def _sample_external_nuts(
             seed=_get_seeds_per_chain(random_seed, 1)[0],
             progress_bar=progressbar,
             **nuts_sampler_kwargs,
+        )
+        t_sample = time.time() - t_start
+        # Temporary work-around. Revert once https://github.com/pymc-devs/nutpie/issues/74 is fixed
+        # gather observed and constant data as nutpie.sample() has no access to the PyMC model
+        coords, dims = coords_and_dims_for_inferencedata(model)
+        constant_data = dict_to_dataset(
+            find_constants(model),
+            library=pm,
+            coords=coords,
+            dims=dims,
+            default_dims=[],
+        )
+        observed_data = dict_to_dataset(
+            find_observations(model),
+            library=pm,
+            coords=coords,
+            dims=dims,
+            default_dims=[],
+        )
+        attrs = make_attrs(
+            {
+                "sampling_time": t_sample,
+            },
+            library=nutpie,
+        )
+        for k, v in attrs.items():
+            idata.posterior.attrs[k] = v
+        idata.add_groups(
+            {"constant_data": constant_data, "observed_data": observed_data},
+            coords=coords,
+            dims=dims,
         )
         return idata
 
