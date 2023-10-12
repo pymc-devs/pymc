@@ -452,6 +452,8 @@ def get_measurability_source(
     """
     Returns all the sources of measurability in the input boolean condition.
     """
+    from pymc.distributions.distribution import SymbolicRandomVariable
+
     ancestor_var_set = set()
 
     for ancestor_var in walk_model(
@@ -461,7 +463,7 @@ def get_measurability_source(
     ):
         if (
             ancestor_var.owner
-            and isinstance(ancestor_var.owner.op, RandomVariable)
+            and isinstance(ancestor_var.owner.op, (RandomVariable, SymbolicRandomVariable))
             # TODO: Check if MeasurableVariable needs to be added
             and ancestor_var not in valued_rvs
         ):
@@ -495,7 +497,7 @@ def walk_model(
 
         if (
             var.owner
-            and (walk_past_rvs or not isinstance(var.owner.op, RandomVariable))
+            and (walk_past_rvs or not isinstance(var.owner.op, MeasurableVariable))
             and (var not in stop_at_vars)
         ):
             new_vars.extend(reversed(var.owner.inputs))
