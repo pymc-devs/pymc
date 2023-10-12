@@ -382,20 +382,20 @@ def flat_switch_helper(node, valued_rvs, encoding_list, outer_interval, base_rv)
         return encoding_list
 
     else:
-        # There is at least one switch, so measurable components can be at most 1
-        for i in measurable_var_idx:
-            switch_dict = {
-                "lower": adjusted_intervals[i][0],
-                "upper": adjusted_intervals[i][1],
-                "encoding": components[i],
-            }
-            encoding_list.append(switch_dict)
+        for i in range(2):
+            if i in switch_comp_idx:
+                # Recurse through the switch component(es)
+                encoding_list = flat_switch_helper(
+                    components[i].owner, valued_rvs, encoding_list, adjusted_intervals[i], base_rv
+                )
 
-        # Recurse through the switch component(es)
-        for j in switch_comp_idx:
-            encoding_list = flat_switch_helper(
-                components[j].owner, valued_rvs, encoding_list, adjusted_intervals[j], base_rv
-            )
+            else:
+                switch_dict = {
+                    "lower": adjusted_intervals[i][0],
+                    "upper": adjusted_intervals[i][1],
+                    "encoding": components[i],
+                }
+                encoding_list.append(switch_dict)
 
     return encoding_list
 
