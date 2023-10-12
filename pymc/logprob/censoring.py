@@ -415,7 +415,13 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
     initial_interval = (-np.inf, np.inf)
 
     # gets the base_var in the first switch condition and checks its measurability
-    base_rv = get_measurability_source(node.inputs[0], valued_rvs)
+    base_rv_set = get_measurability_source(node.inputs[0], valued_rvs)
+
+    # Allow only one base_rv. For example, two unmeasurable variables like pt.switch(x > y) not allowed
+    if len(base_rv_set) != 1:
+        return None
+
+    base_rv = list(base_rv_set)[0]
 
     if base_rv is None:
         return None
