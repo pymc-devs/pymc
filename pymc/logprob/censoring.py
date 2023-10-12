@@ -44,7 +44,17 @@ from pytensor.graph import Op
 from pytensor.graph.basic import Apply, Node, Variable, walk
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.scalar.basic import GE, GT, LE, LT, Ceil, Clip, Floor, RoundHalfToEven
+from pytensor.scalar.basic import (
+    GE,
+    GT,
+    LE,
+    LT,
+    Ceil,
+    Clip,
+    Floor,
+    RoundHalfToEven,
+    Switch,
+)
 from pytensor.scalar.basic import clip as scalar_clip
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.basic import switch as switch
@@ -438,10 +448,9 @@ measurable_ir_rewrites_db.register(
 
 def get_measurability_source(
     inp: TensorVariable, valued_rvs: Container[TensorVariable]
-) -> TensorVariable:
+) -> Set[TensorVariable]:
     """
-    Checks if there is a single measurability source in the input variable and
-    returns the source when True
+    Returns all the sources of measurability in the input boolean condition.
     """
     ancestor_var_set = set()
 
@@ -453,11 +462,12 @@ def get_measurability_source(
         if (
             ancestor_var.owner
             and isinstance(ancestor_var.owner.op, RandomVariable)
+            # TODO: Check if MeasurableVariable needs to be added
             and ancestor_var not in valued_rvs
         ):
             ancestor_var_set.add(ancestor_var)
 
-    return ancestor_var_set.pop() if len(ancestor_var_set) == 1 else None
+    return ancestor_var_set
 
 
 def compare_measurability_source(
@@ -466,7 +476,8 @@ def compare_measurability_source(
     """
     Compares the source of measurability for all elements in 'inputs' separately
     """
-    ancestor_var_set = {get_measurability_source(inp, valued_rvs) for inp in inputs}
+    ancestor_var_set = set()
+    [ancestor_var_set.update(get_measurability_source(inp, valued_rvs)) for inp in inputs]
     return len(ancestor_var_set) == 1
 
 
