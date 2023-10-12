@@ -299,6 +299,20 @@ def _sample_external_nuts(
                 "`idata_kwargs` are currently ignored by the nutpie sampler",
                 UserWarning,
             )
+        compiled_model = nutpie.compile_pymc_model(model)
+        t_start = time.time()
+        idata = nutpie.sample(
+            compiled_model,
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            target_accept=target_accept,
+            seed=_get_seeds_per_chain(random_seed, 1)[0],
+            progress_bar=progressbar,
+            **nuts_sampler_kwargs,
+        )
+        t_sample = time.time() - t_start
+        # Temporary work-around. Revert once https://github.com/pymc-devs/nutpie/issues/74 is fixed
         # gather observed and constant data as nutpie.sample() has no access to the PyMC model
         coords, dims = coords_and_dims_for_inferencedata(model)
         constant_data = dict_to_dataset(
@@ -315,19 +329,6 @@ def _sample_external_nuts(
             dims=dims,
             default_dims=[],
         )
-        compiled_model = nutpie.compile_pymc_model(model)
-        t_start = time.time()
-        idata = nutpie.sample(
-            compiled_model,
-            draws=draws,
-            tune=tune,
-            chains=chains,
-            target_accept=target_accept,
-            seed=_get_seeds_per_chain(random_seed, 1)[0],
-            progress_bar=progressbar,
-            **nuts_sampler_kwargs,
-        )
-        t_sample = time.time() - t_start
         attrs = make_attrs(
             {
                 "sampling_time": t_sample,
