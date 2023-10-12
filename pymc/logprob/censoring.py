@@ -426,6 +426,10 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
     if base_rv is None:
         return None
 
+    # We do not allow discrete RVs yet
+    if base_rv.dtype.startswith("int"):
+        return None
+
     encoding_list = flat_switch_helper(node, valued_rvs, encoding_list, initial_interval, base_rv)
 
     flat_switch_op = FlatSwitches(meta_info=encoding_list)
