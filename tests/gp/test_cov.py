@@ -872,3 +872,29 @@ class TestCoregion:
         with pm.Model() as model:
             with pytest.raises(ValueError):
                 B = pm.gp.cov.Coregion(1)
+
+
+@pytest.mark.parametrize(
+    ["kernel", "args"],
+    [
+        ["Constant", (1.0,)],
+        ["WhiteNoise", (1.0,)],
+        ["ExpQuad", (1, 1.0)],
+        ["RatQuad", (1, 1.0, 1.0)],
+        ["Exponential", (1, 1.0)],
+        ["Matern12", (1, 1.0)],
+        ["Matern32", (1, 1.0)],
+        ["Matern52", (1, 1.0)],
+        ["Periodic", (1, 1.0, 1.0)],
+        ["Circular", (1, 1.0)],
+        ["Linear", (1, 1.0)],
+        ["Cosine", (1, 1.0)],
+        ["Polynomial", (1, 1.0, 1.0, 1.0)],
+        ["WrappedPeriodic", (pm.gp.cov.ExpQuad(1, 1.0), 1.0)],
+        ["Gibbs", (1, lambda x: pt.ones(x.shape))],
+    ],
+)
+def test_full_shape(kernel, args):
+    X = np.arange(10)[:, None]
+    Xs = np.arange(5)[:, None]
+    assert tuple(getattr(pm.gp.cov, kernel)(*args).full(X, Xs).shape.eval()) == (len(X), len(Xs))
