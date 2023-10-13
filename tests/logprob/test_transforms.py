@@ -1159,6 +1159,19 @@ def test_special_log_exp_transforms(transform):
         assert equal_computations([logp_test], [logp_ref])
 
 
+def test_power_const_exponent():
+    x_rv_pow = pt.pow(2, pt.random.normal())
+    x_rv_exp2 = pt.exp2(pt.random.normal())
+
+    x_vv_pow = x_rv_pow.clone()
+    x_vv_exp2 = x_rv_exp2.clone()
+
+    x_logp_fn_pow = pytensor.function([x_vv_pow], pt.sum(logp(x_rv_pow, x_vv_pow)))
+    x_logp_fn_exp2 = pytensor.function([x_vv_exp2], pt.sum(logp(x_rv_exp2, x_vv_exp2)))
+
+    np.testing.assert_allclose(x_logp_fn_pow(0.1), x_logp_fn_exp2(0.1))
+
+
 @pytest.mark.parametrize("shift", [1.5, np.array([-0.5, 1, 0.3])])
 @pytest.mark.parametrize("scale", [2.0, np.array([1.5, 3.3, 1.0])])
 def test_multivariate_rv_transform(shift, scale):

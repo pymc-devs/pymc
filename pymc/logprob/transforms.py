@@ -617,6 +617,20 @@ def measurable_special_exp_to_exp(fgraph, node):
         return [1 / (1 + pt.exp(-inp))]
 
 
+@node_rewriter([pow])
+def measurable_power_expotent_to_exp(fgraph, node):
+    exponent, inp = node.inputs
+    try:
+        scalar_exponent = pt.get_underlying_scalar_constant_value(exponent).item()
+    except:
+        return None
+
+    if inp.type.dtype.startswith("int"):
+        return None
+    if scalar_exponent > 0:
+        return [pt.exp(pt.log(scalar_exponent) * inp)]
+
+
 @node_rewriter(
     [
         exp,
@@ -691,8 +705,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         if measurable_input_idx != 0:
             return None
         try:
-            (power,) = other_inputs
-            power = pt.get_underlying_scalar_constant_value(power).item()
+            power = pt.get_underlying_scalar_constant_value(node.inputs[1]).item()
         # Power needs to be a constant
         except NotScalarConstantError:
             return None
@@ -769,6 +782,12 @@ measurable_ir_rewrites_db.register(
     "transform",
 )
 
+measurable_ir_rewrites_db.register(
+    "measurable_power_expotent_to_exp",
+    measurable_power_expotent_to_exp,
+    "basic",
+    "transform",
+)
 
 measurable_ir_rewrites_db.register(
     "find_measurable_transforms",
