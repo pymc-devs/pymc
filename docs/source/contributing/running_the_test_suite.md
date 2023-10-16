@@ -19,7 +19,7 @@ Therefore, we recommend to run just specific tests that target the parts of the 
 
 To run all tests from a single file:
 ```bash
-pytest -v tests/test_model.py
+pytest -v tests/model/test_core.py
 ```
 
 ```{tip}
@@ -28,10 +28,10 @@ The `-v` flag is short-hand for `--verbose` and prints the names of the test cas
 
 Often, you'll want to focus on just a few test cases first.
 By using the `-k` flag, you can filter for test cases that match a certain pattern.
-For example, the following command runs all test cases from `test_model.py` that have "coord" in their name:
+For example, the following command runs all test cases from `test_core.py` that have "coord" in their name:
 
 ```bash
-pytest -v tests/test_model.py -k coord
+pytest -v tests/model/test_core.py -k coord
 ```
 
 

@@ -20,7 +20,7 @@ from arviz import InferenceData
 from pytensor import tensor as pt
 from pytensor.graph.basic import Variable
 from pytensor.graph.replace import graph_replace
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 import pymc as pm
 

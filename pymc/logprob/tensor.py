@@ -41,9 +41,8 @@ import pytensor
 from pytensor import tensor as pt
 from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.tensor.basic import Join, MakeVector
+from pytensor.tensor.basic import Alloc, Join, MakeVector
 from pytensor.tensor.elemwise import DimShuffle
-from pytensor.tensor.extra_ops import BroadcastTo
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import (
     local_dimshuffle_rv_lift,
@@ -59,9 +58,9 @@ from pymc.logprob.rewriting import (
 from pymc.logprob.utils import check_potential_measurability
 
 
-@node_rewriter([BroadcastTo])
+@node_rewriter([Alloc])
 def naive_bcast_rv_lift(fgraph, node):
-    """Lift a ``BroadcastTo`` through a ``RandomVariable`` ``Op``.
+    """Lift an ``Alloc`` through a ``RandomVariable`` ``Op``.
 
     XXX: This implementation simply broadcasts the ``RandomVariable``'s
     parameters, which won't always work (e.g. multivariate distributions).
@@ -73,7 +72,7 @@ def naive_bcast_rv_lift(fgraph, node):
     """
 
     if not (
-        isinstance(node.op, BroadcastTo)
+        isinstance(node.op, Alloc)
         and node.inputs[0].owner
         and isinstance(node.inputs[0].owner.op, RandomVariable)
     ):
@@ -93,7 +92,7 @@ def naive_bcast_rv_lift(fgraph, node):
         return None
 
     if not bcast_shape:
-        # The `BroadcastTo` is broadcasting a scalar to a scalar (i.e. doing nothing)
+        # The `Alloc` is broadcasting a scalar to a scalar (i.e. doing nothing)
         assert rv_var.ndim == 0
         return [rv_var]
 

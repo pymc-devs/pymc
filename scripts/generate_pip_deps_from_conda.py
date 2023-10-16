@@ -54,6 +54,7 @@ EXCLUDE = {
     "networkx",
     "blas",
     "jax",
+    "jaxlib",
 }
 RENAME = {}
 

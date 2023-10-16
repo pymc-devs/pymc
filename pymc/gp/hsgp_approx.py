@@ -233,7 +233,9 @@ class HSGP(Base):
         self._drop_first = drop_first
         self._m = m
         self._m_star = int(np.prod(self._m))
-        self._L = L
+        self._L: Optional[pt.TensorVariable] = None
+        if L is not None:
+            self._L = pt.as_tensor(L)
         self._c = c
         self._parameterization = parameterization
 
@@ -243,13 +245,13 @@ class HSGP(Base):
         raise NotImplementedError("Additive HSGPs aren't supported.")
 
     @property
-    def L(self):
+    def L(self) -> pt.TensorVariable:
         if self._L is None:
             raise RuntimeError("Boundaries `L` required but still unset.")
         return self._L
 
     @L.setter
-    def L(self, value):
+    def L(self, value: TensorLike):
         self._L = pt.as_tensor_variable(value)
 
     def prior_linearized(self, Xs: TensorLike):
@@ -331,7 +333,7 @@ class HSGP(Base):
 
         # Index Xs using input_dim and active_dims of covariance function
         Xs, _ = self.cov_func._slice(Xs)
-
+        
         if isinstance(self.cov_func, Periodic):
             phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m, tl=pt)
             J = pt.arange(0, self._m[0], 1)
@@ -342,7 +344,7 @@ class HSGP(Base):
             # If not provided, use Xs and c to set L
             if self._L is None:
                 assert isinstance(self._c, (numbers.Real, np.ndarray, pt.TensorVariable))
-                self.L = set_boundary(Xs, self._c)
+                self.L = pt.as_tensor(set_boundary(Xs, self._c))
             else:
                 self.L = self._L
 

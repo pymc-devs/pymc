@@ -1,26 +1,11 @@
 Model
------
-
-Model creation and inspection
------------------------------
-
-.. currentmodule:: pymc
-.. autosummary::
-   :toctree: generated/
-
-   Model
-   model_to_graphviz
-   model_to_networkx
-   modelcontext
-
-Others
 ------
 
-.. autosummary::
-   :toctree: generated/
+.. automodule:: pymc.model
 
-   Deterministic
-   Potential
-   set_data
-   Point
-   compile_fn
+.. toctree::
+   :maxdepth: 2
+
+   model/core
+   model/conditioning
+   model/fgraph

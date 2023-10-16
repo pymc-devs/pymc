@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 from functools import singledispatch
 
 import numpy as np
@@ -21,6 +23,8 @@ import pytensor.tensor as pt
 from numpy.core.numeric import normalize_axis_tuple  # type: ignore
 from pytensor.graph import Op
 from pytensor.tensor import TensorVariable
+
+import pymc as pm
 
 from pymc.logprob.transforms import (
     CircularTransform,
@@ -37,17 +41,26 @@ __all__ = [
     "logodds",
     "Interval",
     "log_exp_m1",
-    "univariate_ordered",
-    "multivariate_ordered",
+    "ordered",
     "log",
     "sum_to_1",
-    "univariate_sum_to_1",
-    "multivariate_sum_to_1",
     "circular",
     "CholeskyCovPacked",
     "Chain",
     "ZeroSumTransform",
 ]
+
+
+def __getattr__(name):
+    if name in ("univariate_ordered", "multivariate_ordered"):
+        warnings.warn(f"{name} has been deprecated, use ordered instead.", FutureWarning)
+        return ordered
+
+    if name in ("univariate_sum_to_1, multivariate_sum_to_1"):
+        warnings.warn(f"{name} has been deprecated, use sum_to_1 instead.", FutureWarning)
+        return sum_to_1
+
+    raise AttributeError(f"module {__name__} has no attribute {name}")
 
 
 @singledispatch
@@ -77,31 +90,24 @@ class LogExpM1(RVTransform):
 class Ordered(RVTransform):
     name = "ordered"
 
-    def __init__(self, ndim_supp=0):
-        if ndim_supp > 1:
-            raise ValueError(
-                f"For Ordered transformation number of core dimensions"
-                f"(ndim_supp) must not exceed 1 but is {ndim_supp}"
-            )
-        self.ndim_supp = ndim_supp
+    def __init__(self, ndim_supp=None):
+        if ndim_supp is not None:
+            warnings.warn("ndim_supp argument is deprecated and has no effect", FutureWarning)
 
     def backward(self, value, *inputs):
         x = pt.zeros(value.shape)
-        x = pt.inc_subtensor(x[..., 0], value[..., 0])
-        x = pt.inc_subtensor(x[..., 1:], pt.exp(value[..., 1:]))
+        x = pt.set_subtensor(x[..., 0], value[..., 0])
+        x = pt.set_subtensor(x[..., 1:], pt.exp(value[..., 1:]))
         return pt.cumsum(x, axis=-1)
 
     def forward(self, value, *inputs):
         y = pt.zeros(value.shape)
-        y = pt.inc_subtensor(y[..., 0], value[..., 0])
-        y = pt.inc_subtensor(y[..., 1:], pt.log(value[..., 1:] - value[..., :-1]))
+        y = pt.set_subtensor(y[..., 0], value[..., 0])
+        y = pt.set_subtensor(y[..., 1:], pt.log(value[..., 1:] - value[..., :-1]))
         return y
 
     def log_jac_det(self, value, *inputs):
-        if self.ndim_supp == 0:
-            return pt.sum(value[..., 1:], axis=-1, keepdims=True)
-        else:
-            return pt.sum(value[..., 1:], axis=-1)
+        return pt.sum(value[..., 1:], axis=-1)
 
 
 class SumTo1(RVTransform):
@@ -112,13 +118,9 @@ class SumTo1(RVTransform):
 
     name = "sumto1"
 
-    def __init__(self, ndim_supp=0):
-        if ndim_supp > 1:
-            raise ValueError(
-                f"For SumTo1 transformation number of core dimensions"
-                f"(ndim_supp) must not exceed 1 but is {ndim_supp}"
-            )
-        self.ndim_supp = ndim_supp
+    def __init__(self, ndim_supp=None):
+        if ndim_supp is not None:
+            warnings.warn("ndim_supp argument is deprecated and has no effect", FutureWarning)
 
     def backward(self, value, *inputs):
         remaining = 1 - pt.sum(value[..., :], axis=-1, keepdims=True)
@@ -129,10 +131,7 @@ class SumTo1(RVTransform):
 
     def log_jac_det(self, value, *inputs):
         y = pt.zeros(value.shape)
-        if self.ndim_supp == 0:
-            return pt.sum(y, axis=-1, keepdims=True)
-        else:
-            return pt.sum(y, axis=-1)
+        return pt.sum(y, axis=-1)
 
 
 class CholeskyCovPacked(RVTransform):
@@ -330,7 +329,7 @@ class ZeroSumTransform(RVTransform):
 
 
 def extend_axis(array, axis):
-    n = array.shape[axis] + 1
+    n = pm.floatX(array.shape[axis] + 1)
     sum_vals = array.sum(axis, keepdims=True)
     norm = sum_vals / (pt.sqrt(n) + n)
     fill_val = norm - sum_vals / pt.sqrt(n)
@@ -342,7 +341,7 @@ def extend_axis(array, axis):
 def extend_axis_rev(array, axis):
     normalized_axis = normalize_axis_tuple(axis, array.ndim)[0]
 
-    n = array.shape[normalized_axis]
+    n = pm.floatX(array.shape[normalized_axis])
     last = pt.take(array, [-1], axis=normalized_axis)
 
     sum_vals = -last * pt.sqrt(n)
@@ -357,38 +356,21 @@ log_exp_m1.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.LogExpM1`
 for use in the ``transform`` argument of a random variable."""
 
-univariate_ordered = Ordered(ndim_supp=0)
-univariate_ordered.__doc__ = """
+# Deprecated
+ordered = Ordered()
+ordered.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.Ordered`
-for use in the ``transform`` argument of a univariate random variable."""
-
-multivariate_ordered = Ordered(ndim_supp=1)
-multivariate_ordered.__doc__ = """
-Instantiation of :class:`pymc.distributions.transforms.Ordered`
-for use in the ``transform`` argument of a multivariate random variable."""
+for use in the ``transform`` argument of a random variable."""
 
 log = LogTransform()
 log.__doc__ = """
 Instantiation of :class:`pymc.logprob.transforms.LogTransform`
 for use in the ``transform`` argument of a random variable."""
 
-univariate_sum_to_1 = SumTo1(ndim_supp=0)
-univariate_sum_to_1.__doc__ = """
-Instantiation of :class:`pymc.distributions.transforms.SumTo1`
-for use in the ``transform`` argument of a univariate random variable."""
-
-multivariate_sum_to_1 = SumTo1(ndim_supp=1)
-multivariate_sum_to_1.__doc__ = """
-Instantiation of :class:`pymc.distributions.transforms.SumTo1`
-for use in the ``transform`` argument of a multivariate random variable."""
-
-# backwards compatibility
-sum_to_1 = SumTo1(ndim_supp=1)
+sum_to_1 = SumTo1()
 sum_to_1.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.SumTo1`
-for use in the ``transform`` argument of a random variable.
-This instantiation is for backwards compatibility only.
-Please use `univariate_sum_to_1` or `multivariate_sum_to_1` instead."""
+for use in the ``transform`` argument of a random variable."""
 
 circular = CircularTransform()
 circular.__doc__ = """

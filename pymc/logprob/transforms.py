@@ -61,10 +61,18 @@ from pytensor.scalar import (
     Erfc,
     Erfcx,
     Exp,
+    Exp2,
+    Expm1,
     Log,
+    Log1mexp,
+    Log1p,
+    Log2,
+    Log10,
     Mul,
     Pow,
+    Sigmoid,
     Sinh,
+    Softplus,
     Sqr,
     Sqrt,
     Tanh,
@@ -82,19 +90,27 @@ from pytensor.tensor.math import (
     erfc,
     erfcx,
     exp,
+    exp2,
+    expm1,
     log,
+    log1mexp,
+    log1p,
+    log2,
+    log10,
     mul,
     neg,
     pow,
     reciprocal,
+    sigmoid,
     sinh,
+    softplus,
     sqr,
     sqrt,
     sub,
     tanh,
     true_div,
 )
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,
@@ -178,6 +194,9 @@ class RVTransform(abc.ABC):
         else:
             phi_inv = self.backward(value, *inputs)
             return pt.log(pt.abs(pt.nlinalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
+
+    def __str__(self):
+        return f"{self.__class__.__name__}"
 
 
 @node_rewriter(tracks=None)
@@ -569,8 +588,53 @@ def measurable_sub_to_neg(fgraph, node):
     return [pt.add(minuend, pt.neg(subtrahend))]
 
 
+@node_rewriter([log1p, softplus, log1mexp, log2, log10])
+def measurable_special_log_to_log(fgraph, node):
+    """Convert log1p, log1mexp, softplus, log2, log10 of `MeasurableVariable`s to log form."""
+    [inp] = node.inputs
+
+    if isinstance(node.op.scalar_op, Log1p):
+        return [pt.log(1 + inp)]
+    if isinstance(node.op.scalar_op, Softplus):
+        return [pt.log(1 + pt.exp(inp))]
+    if isinstance(node.op.scalar_op, Log1mexp):
+        return [pt.log(1 - pt.exp(inp))]
+    if isinstance(node.op.scalar_op, Log2):
+        return [pt.log(inp) / pt.log(2)]
+    if isinstance(node.op.scalar_op, Log10):
+        return [pt.log(inp) / pt.log(10)]
+
+
+@node_rewriter([expm1, sigmoid, exp2])
+def measurable_special_exp_to_exp(fgraph, node):
+    """Convert expm1, sigmoid, and exp2 of `MeasurableVariable`s to xp form."""
+    [inp] = node.inputs
+    if isinstance(node.op.scalar_op, Exp2):
+        return [pt.exp(pt.log(2) * inp)]
+    if isinstance(node.op.scalar_op, Expm1):
+        return [pt.add(pt.exp(inp), -1)]
+    if isinstance(node.op.scalar_op, Sigmoid):
+        return [1 / (1 + pt.exp(-inp))]
+
+
 @node_rewriter(
-    [exp, log, add, mul, pow, abs, sinh, cosh, tanh, arcsinh, arccosh, arctanh, erf, erfc, erfcx]
+    [
+        exp,
+        log,
+        add,
+        mul,
+        pow,
+        abs,
+        sinh,
+        cosh,
+        tanh,
+        arcsinh,
+        arccosh,
+        arctanh,
+        erf,
+        erfc,
+        erfcx,
+    ]
 )
 def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
@@ -644,7 +708,6 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         transform = ScaleTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
-
     transform_op = MeasurableTransform(
         scalar_op=scalar_op,
         transform=transform,
@@ -691,6 +754,21 @@ measurable_ir_rewrites_db.register(
     "basic",
     "transform",
 )
+
+measurable_ir_rewrites_db.register(
+    "measurable_special_log_to_log",
+    measurable_special_log_to_log,
+    "basic",
+    "transform",
+)
+
+measurable_ir_rewrites_db.register(
+    "measurable_special_exp_to_exp",
+    measurable_special_exp_to_exp,
+    "basic",
+    "transform",
+)
+
 
 measurable_ir_rewrites_db.register(
     "find_measurable_transforms",
@@ -1144,22 +1222,46 @@ def _create_transformed_rv_op(
         if not isinstance(logprobs, Sequence):
             logprobs = [logprobs]
 
-        if use_jacobian:
-            assert len(values) == len(logprobs) == len(op.transforms)
-            logprobs_jac = []
-            for value, transform, logp in zip(values, op.transforms, logprobs):
-                if transform is None:
-                    logprobs_jac.append(logp)
-                    continue
-                assert isinstance(value.owner.op, TransformedVariable)
-                original_forward_value = value.owner.inputs[1]
-                jacobian = transform.log_jac_det(original_forward_value, *inputs).copy()
-                if value.name:
-                    jacobian.name = f"{value.name}_jacobian"
-                logprobs_jac.append(logp + jacobian)
-            logprobs = logprobs_jac
+        # Handle jacobian
+        assert len(values) == len(logprobs) == len(op.transforms)
+        logprobs_jac = []
+        for value, transform, logp in zip(values, op.transforms, logprobs):
+            if transform is None:
+                logprobs_jac.append(logp)
+                continue
 
-        return logprobs
+            assert isinstance(value.owner.op, TransformedVariable)
+            original_forward_value = value.owner.inputs[1]
+            log_jac_det = transform.log_jac_det(original_forward_value, *inputs).copy()
+            # The jacobian determinant has less dims than the logp
+            # when a multivariate transform (like Simplex or Ordered) is applied to univariate distributions.
+            # In this case we have to reduce the last logp dimensions, as they are no longer independent
+            if log_jac_det.ndim < logp.ndim:
+                diff_ndims = logp.ndim - log_jac_det.ndim
+                logp = logp.sum(axis=np.arange(-diff_ndims, 0))
+            # This case is sometimes, but not always, trivial to accomodate depending on the "space rank" of the
+            # multivariate distribution. See https://proceedings.mlr.press/v130/radul21a.html
+            elif log_jac_det.ndim > logp.ndim:
+                raise NotImplementedError(
+                    f"Univariate transform {transform} cannot be applied to multivariate {rv_op}"
+                )
+            else:
+                # Check there is no broadcasting between logp and jacobian
+                if logp.type.broadcastable != log_jac_det.type.broadcastable:
+                    raise ValueError(
+                        f"The logp of {rv_op} and log_jac_det of {transform} are not allowed to broadcast together. "
+                        "There is a bug in the implementation of either one."
+                    )
+
+            if use_jacobian:
+                if value.name:
+                    log_jac_det.name = f"{value.name}_jacobian"
+                logprobs_jac.append(logp + log_jac_det)
+            else:
+                # We still want to use the reduced logp, even though the jacobian isn't included
+                logprobs_jac.append(logp)
+
+        return logprobs_jac
 
     new_op = copy(rv_op)
     new_op.__class__ = new_op_type

@@ -17,6 +17,8 @@ import traceback
 import unittest
 import warnings
 
+from unittest.mock import MagicMock, patch
+
 import arviz as az
 import cloudpickle
 import numpy as np
@@ -34,7 +36,7 @@ from pytensor.raise_op import Assert, assert_op
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.sharedvar import ScalarSharedVariable
-from pytensor.tensor.var import TensorConstant
+from pytensor.tensor.variable import TensorConstant
 
 import pymc as pm
 
@@ -44,7 +46,7 @@ from pymc.distributions import Normal, transforms
 from pymc.distributions.distribution import PartialObservedRV
 from pymc.distributions.transforms import log, simplex
 from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
-from pymc.logprob.basic import conditional_logp, transformed_conditional_logp
+from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
 from pymc.util import _FutureWarningValidatingScratchpad
@@ -1653,3 +1655,28 @@ def test_model_logp_fast_compile():
 
     with pytensor.config.change_flags(mode="FAST_COMPILE"):
         assert m.point_logps() == {"a": -1.5}
+
+
+class TestModelGraphs:
+    @staticmethod
+    def school_model(J: int) -> pm.Model:
+        y = np.array([28, 8, -3, 7, -1, 1, 18, 12])
+        sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18])
+        with pm.Model(coords={"school": np.arange(J)}) as schools:
+            eta = pm.Normal("eta", 0, 1, dims="school")
+            mu = pm.Normal("mu", 0, sigma=1e6)
+            tau = pm.HalfCauchy("tau", 25)
+            theta = mu + tau * eta
+            pm.Normal("obs", theta, sigma=sigma, observed=y, dims="school")
+        return schools
+
+    @pytest.mark.parametrize(
+        argnames="var_names", argvalues=[None, ["mu", "tau"]], ids=["all", "subset"]
+    )
+    def test_graphviz_call_function(self, var_names) -> None:
+        model = self.school_model(J=8)
+        with patch("pymc.model.core.model_to_graphviz") as mock_model_to_graphviz:
+            model.to_graphviz(var_names=var_names)
+            mock_model_to_graphviz.assert_called_once_with(
+                model=model, var_names=var_names, formatting="plain"
+            )

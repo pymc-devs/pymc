@@ -23,7 +23,7 @@ import pytensor.tensor as pt
 import pytest
 
 from pytensor import shared
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 import pymc as pm
 

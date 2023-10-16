@@ -13,6 +13,8 @@
 #   limitations under the License.
 import numpy as np
 
+from pytensor.tensor.random import normal
+
 from pymc import Bernoulli, Censored, HalfCauchy, Mixture, StudentT
 from pymc.distributions import (
     Dirichlet,
@@ -274,3 +276,15 @@ def test_model_latex_repr_mixture_model():
         "$$",
     ]
     assert [line.strip() for line in latex_repr.split("\n")] == expected
+
+
+def test_model_repr_variables_without_monkey_patched_repr():
+    """Test that model repr does not rely on individual variables having the str_repr method monkey patched."""
+    x = normal(name="x")
+    assert not hasattr(x, "str_repr")
+
+    model = Model()
+    model.register_rv(x, "x")
+
+    str_repr = model.str_repr()
+    assert str_repr == "x ~ Normal(0, 1)"

@@ -61,7 +61,7 @@ from pytensor.graph.op import HasInnerGraph
 from pytensor.link.c.type import CType
 from pytensor.raise_op import CheckAndRaise
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob
 from pymc.util import makeiter
