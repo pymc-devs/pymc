@@ -333,7 +333,7 @@ class HSGP(Base):
 
         # Index Xs using input_dim and active_dims of covariance function
         Xs, _ = self.cov_func._slice(Xs)
-        
+
         if isinstance(self.cov_func, Periodic):
             phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m, tl=pt)
             J = pt.arange(0, self._m[0], 1)
