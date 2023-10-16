@@ -392,8 +392,8 @@ class HSGP(Base):
             # and so does not contribute to the approximation.
             f = (
                 self.mean_func(X)
-                + phi_cos @ (psd * self._beta[:m0])
-                + phi_sin[..., 1:] @ (psd[1:] * self._beta[m0:])
+                + phi_cos @ (psd * self._beta[:m0])  # type: ignore
+                + phi_sin[..., 1:] @ (psd[1:] * self._beta[m0:])  # type: ignore
             )
 
         else:
