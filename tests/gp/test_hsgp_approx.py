@@ -142,8 +142,8 @@ class TestHSGP:
         with pytest.raises(
             ValueError, match="`parameterization` must be either 'centered' or 'noncentered'."
         ):
-            cov_func = pm.gp.cov.ExpQuad(2, ls=[1, 2], parameterization="wrong")
-            pm.gp.HSGP(m=[50, 50], L=[12, 12], cov_func=cov_func)
+            cov_func = pm.gp.cov.ExpQuad(2, ls=[1, 2])
+            pm.gp.HSGP(m=[50, 50], L=[12, 12], parameterization="wrong", cov_func=cov_func)
 
         with pytest.raises(
             ValueError,
