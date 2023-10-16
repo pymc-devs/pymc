@@ -797,7 +797,7 @@ class Periodic(Stationary):
         the low rank approximation for the periodic kernel, which are used in the same way.
         `J` is a vector of `np.arange(m)`.
 
-        The coefficients of the HSGP approximation for the Periodic kernel are given by:
+        The coefficients of the HSGP approximation for the `Periodic` kernel are given by:
 
         .. math::
 

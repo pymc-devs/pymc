@@ -114,18 +114,19 @@ class HSGP(Base):
     L: list
         The boundary of the space for each `active_dim`.  It is called the boundary condition.
         Choose L such that the domain `[-L, L]` contains all points in the column of X given by the
-        `active_dim`.
+        `active_dim`.  This parameter is not used for `Periodic` covariance.
     c: float
         The proportion extension factor.  Used to construct L from X.  Defined as `S = max|X|` such
         that `X` is in `[-S, S]`.  `L` is the calculated as `c * S`.  One of `c` or `L` must be
-        provided.  Further information can be found in Ruitort-Mayol et. al.
+        provided.  Further information can be found in Ruitort-Mayol et al.  This parameter is not
+        used for `Periodic` covariance.
     drop_first: bool
         Default `False`. Sometimes the first basis vector is quite "flat" and very similar to
         the intercept term.  When there is an intercept in the model, ignoring the first basis
         vector may improve sampling. This argument will be deprecated in future versions.
     parameterization: str
         Whether to use `centred` or `noncentered` parameterization when multiplying the
-        basis by the coefficients.
+        basis by the coefficients.  This parameter is not used for `Periodic` covariance.
     cov_func: None, 2D array, or instance of Covariance
         The covariance function.  Defaults to zero.
     mean_func: None, instance of Mean
@@ -268,6 +269,16 @@ class HSGP(Base):
         `pm.MutableData` require two conditions.  First, one must specify `L` instead of `c` when
         the GP is constructed.  If not, a RuntimeError is raised.  Second, the `Xs` needs to be
         zero-centered, so it's mean must be subtracted.  An example is given below.
+
+        Note, for the `Periodic` covariance, the approximation is not a spectral density, but a low
+        rank approximation based on expanding the periodic covariance function into a series of
+        stochastic resonators.  However, these are used in the same way as the HSGP approximation.
+        Further information can be found in Appendix B of Ruitort-Mayol et al.
+        We no longer need to specify `L` or `c` because we are dealing with a periodic space and we
+        aren't using the Laplacian with boundary conditions.  Rather than returning the Laplace
+        eigenfunctions and the square root of the power spectral density, in the periodic case we
+        return the cosine and sine terms of the periodic basis as a tuple, `(phi_cos, phi_sin)`,
+        and the coefficients of tbe expansion.
 
         Parameters
         ----------
