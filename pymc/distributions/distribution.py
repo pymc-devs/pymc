@@ -85,6 +85,10 @@ vectorized_ppc: contextvars.ContextVar[Optional[Callable]] = contextvars.Context
 PLATFORM = sys.platform
 
 
+def filter_shared_RNGs(params):
+    return [p for p in params if not isinstance(p, RandomGeneratorSharedVariable)]
+
+
 def rewrite_moment_scan_node(node):
     if not isinstance(node.op, Scan):
         return
@@ -741,8 +745,7 @@ class _CustomSymbolicDist(Distribution):
 
         @_moment.register(rv_type)
         def custom_dist_get_moment(op, rv, size, *params):
-            params = [i for i in params if not isinstance(i, RandomGeneratorSharedVariable)]
-            return moment(rv, size, *params[: len(params)])
+            return moment(rv, size, *filter_shared_RNGs(params))
 
         @_change_dist_size.register(rv_type)
         def change_custom_symbolic_dist_size(op, rv, new_size, expand):
