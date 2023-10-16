@@ -120,6 +120,10 @@ class TestHSGP:
             "`m` and `L`, if provided, must be sequences with one element per active dimension"
         )
 
+        with pytest.raises(ValueError, match="Provide one of `c` or `L`"):
+            cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
+            pm.gp.HSGP(m=[500], c=2, L=[12], cov_func=cov_func)
+
         with pytest.raises(ValueError, match=err_msg):
             # m must be a list
             cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
@@ -134,6 +138,12 @@ class TestHSGP:
             # m must have same length as L, and match number of active dims of cov_func
             cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
             pm.gp.HSGP(m=[500], L=[12, 12], cov_func=cov_func)
+
+        with pytest.raises(
+            ValueError, match="`parameterization` must be either 'centered' or 'noncentered'."
+        ):
+            cov_func = pm.gp.cov.ExpQuad(2, ls=[1, 2], parameterization="wrong")
+            pm.gp.HSGP(m=[50, 50], L=[12, 12], cov_func=cov_func)
 
         with pytest.raises(
             ValueError,
