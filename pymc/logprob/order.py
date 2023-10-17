@@ -108,10 +108,7 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Tens
 
     # distinguish measurable discrete and continuous (because logprob is different)
     if base_var.owner.op.dtype.startswith("int"):
-        if isinstance(base_var.owner.op, RandomVariable):
-            measurable_max = MeasurableMaxDiscrete(list(axis))
-        else:
-            return None
+        measurable_max = MeasurableMaxDiscrete(list(axis))
     else:
         measurable_max = MeasurableMax(list(axis))
 
