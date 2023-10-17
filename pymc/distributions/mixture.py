@@ -1009,7 +1009,7 @@ class HurdleLogNormal:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of Gamma variates (0 < psi < 1)
+        Expected proportion of LogNormal variates (0 < psi < 1)
     mu : tensor_like of float, default 0
         Location parameter.
     sigma : tensor_like of float, optional
