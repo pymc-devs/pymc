@@ -235,7 +235,7 @@ def test_min_non_mul_elemwise_fails():
 
 @pytest.mark.parametrize(
     "mu, size, value, axis",
-    [(2, 3, 0.85, -1), (2, 3, 1, 0), (1, 2, 2, None), (0, 4, 0, 0)],
+    [(2, 3, 1, -1), (2, 3, 1, 0), (1, 2, 2, None), (0, 4, 0, 0)],
 )
 def test_max_discrete(mu, size, value, axis):
     x = pm.Poisson.dist(name="x", mu=mu, size=(size))
