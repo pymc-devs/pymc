@@ -71,13 +71,22 @@ def test_continuous_rv_clip():
     assert np.isclose(logp_fn(0), ref_scipy.logpdf(0))
 
 
-def test_clip_meta_info():
-    base_rv = pt.random.normal(0.5, 1)
-    rv = pt.clip(base_rv, -2, 2)
+@pytest.mark.parametrize(
+    "measure_type",
+    [("Discrete"), ("Continuous")],
+)
+def test_clip_meta_info(measure_type):
+    # use true and false
+    if measure_type == "Continuous":
+        base_rv = pt.random.normal(0.5, 1)
+        rv = pt.clip(base_rv, -2, 2)
+    else:
+        base_rv = pt.random.poisson(2)
+        rv = pt.clip(base_rv, 1, 4)
 
     vv = rv.clone()
 
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(base_rv.owner.op)
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(base_rv)
 
     ndim_supp, supp_axes, measure_type = meta_info_helper(rv, vv)
 
@@ -297,7 +306,7 @@ def test_round_meta_info(rounding_op):
     xr_vv = xr.clone()
     ndim_supp, supp_axes, measure_type = meta_info_helper(xr, xr_vv)
 
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(x.owner.op)
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(x)
 
     assert np.isclose(
         ndim_supp_base,
@@ -305,4 +314,4 @@ def test_round_meta_info(rounding_op):
     )
     assert supp_axes_base == supp_axes
 
-    assert measure_type_base == measure_type
+    assert str(measure_type) == "MeasureType.Discrete"

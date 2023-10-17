@@ -106,7 +106,7 @@ def find_measurable_cumsums(fgraph, node) -> Optional[list[TensorVariable]]:
     if not rv_map_feature.request_measurable(node.inputs):
         return None
 
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_rv.owner.op)
+    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_rv)
     new_op = MeasurableCumsum(
         axis=node.op.axis or 0,
         mode="add",

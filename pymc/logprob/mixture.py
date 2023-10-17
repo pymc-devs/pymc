@@ -68,6 +68,7 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableVariable,
+    MeasureType,
     _logprob,
     _logprob_helper,
     get_measurable_meta_info,
@@ -306,13 +307,25 @@ def find_measurable_index_mixture(fgraph, node):
     if rv_map_feature.request_measurable(mixture_rvs) != mixture_rvs:
         return None
 
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(mixture_rvs[0].owner.op)
+    all_ndim_supp = []
+    all_supp_axes = []
+    all_measure_type = []
+    for i in range(0, len(mixture_rvs)):
+        ndim_supp, supp_axes, measure_type = get_measurable_meta_info(mixture_rvs[0])
+        all_ndim_supp.append(ndim_supp)
+        all_supp_axes.append(supp_axes)
+        all_measure_type.append(measure_type)
+
+    if all_measure_type[1:] == all_measure_type[:-1]:
+        m_type = all_measure_type[0]
+    else:
+        m_type = MeasureType.Mixed
 
     # Replace this sub-graph with a `MixtureRV`
     mix_op = MixtureRV(
-        ndim_supp=ndim_supp,
-        supp_axes=supp_axes,
-        measure_type=measure_type,
+        ndim_supp=all_ndim_supp[0],
+        supp_axes=all_supp_axes[0],
+        measure_type=all_measure_type,
         indices_end_idx=1 + len(mixing_indices),
         out_dtype=old_mixture_rv.dtype,
         out_broadcastable=old_mixture_rv.broadcastable,
@@ -434,10 +447,24 @@ def find_measurable_switch_mixture(fgraph, node):
     if rv_map_feature.request_measurable(components) != components:
         return None
 
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(components[0].owner.op)
+    all_ndim_supp = []
+    all_supp_axes = []
+    all_measure_type = []
+    for i in range(0, len(components)):
+        ndim_supp, supp_axes, measure_type = get_measurable_meta_info(components[i])
+        all_ndim_supp.append(ndim_supp)
+        all_supp_axes.append(supp_axes)
+        all_measure_type.append(measure_type)
+
+    if all_measure_type[1:] == all_measure_type[:-1]:
+        m_type = all_measure_type[0]
+    else:
+        m_type = MeasureType.Mixed
+
+    # ndim_supp, supp_axes, measure_type = get_measurable_meta_info(components[0])
 
     measurable_switch_mixture = MeasurableSwitchMixture(
-        scalar_switch, ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+        scalar_switch, ndim_supp=all_ndim_supp[0], supp_axes=all_supp_axes[0], measure_type=m_type
     )
 
     return [measurable_switch_mixture(switch_cond, *components)]
@@ -524,7 +551,7 @@ def find_measurable_ifelse_mixture(fgraph, node):
     if not all(var.owner and isinstance(var.owner.op, MeasurableVariable) for var in base_rvs):
         return None
 
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_rvs[0].owner.op)
+    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_rvs[0])
 
     return (
         MeasurableIfElse(

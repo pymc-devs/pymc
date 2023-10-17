@@ -88,7 +88,7 @@ def test_meta_info(size, axis):
     vv = rv.clone()
     base_rv = pt.random.normal(0, 1, size=size)
     base_vv = base_rv.clone()
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(base_rv.owner.op)
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(base_rv)
 
     ndim_supp, supp_axes, measure_type = meta_info_helper(rv, vv)
 

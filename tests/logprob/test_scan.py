@@ -518,7 +518,7 @@ def test_meta_scan_over_seqs():
     xs_vv = ys.clone()
     ys_vv = ys.clone()
 
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(xs.owner.op)
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(xs)
 
     ndim_supp, supp_axes, measure_type = meta_info_helper(ys, ys_vv)
 

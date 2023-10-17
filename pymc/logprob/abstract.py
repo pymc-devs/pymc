@@ -175,13 +175,23 @@ class MeasurableElemwise(MeasurableVariable, Elemwise):
 
 
 def get_measurable_meta_info(
-    base_op: Op,
+    base_var,
 ) -> Tuple[
     Union[int, Tuple[int]], Tuple[Union[int, Tuple[int]]], Union[MeasureType, Tuple[MeasureType]]
 ]:
+    # instead of taking base_op, take base_var as input
+    # Get base_op from base_var.owner.op
+    # index= base_var.owner.outputs.index(base_var) gives the output
+    if not isinstance(base_var, MeasurableVariable):
+        base_op = base_var.owner.op
+        index = base_var.owner.outputs.index(base_var)
+    else:
+        base_op = base_var
     if not isinstance(base_op, MeasurableVariable):
         raise TypeError("base_op must be a RandomVariable or MeasurableVariable")
 
+    # Add a test for pm.mixture, exponentiate it. Ask for logprob of this as this is not a rv and also does not have ndim_supp and properties. Such a test might exist in distributions. Do check.
+    # TODO: Handle Symbolic random variables
     if isinstance(base_op, RandomVariable):
         ndim_supp = base_op.ndim_supp
         supp_axes = tuple(range(-ndim_supp, 0))
@@ -190,4 +200,10 @@ def get_measurable_meta_info(
         )
         return base_op.ndim_supp, supp_axes, measure_type
     else:
+        if isinstance(base_op.ndim_supp, tuple):
+            if len(base_var.owner.outputs) != len(base_op.ndim_supp):
+                raise NotImplementedError("length of outputs and meta-propertues is different")
+            return base_op.ndim_supp[index], base_op.supp_axes, base_op.measure_type
+        # check if base_var.owner.outputs length is same as length of each prop( length of the tuple). If not , raise an error.
+        # We'll need this for scan or IfElse
         return base_op.ndim_supp, base_op.supp_axes, base_op.measure_type

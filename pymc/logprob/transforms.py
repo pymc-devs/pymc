@@ -502,7 +502,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[li
             transform_args_fn=lambda *inputs: inputs[-1],
         )
 
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(measurable_input.owner.op)
+    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(measurable_input)
     transform_op = MeasurableTransform(
         scalar_op=scalar_op,
         transform=transform,
