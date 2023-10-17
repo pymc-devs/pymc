@@ -94,7 +94,7 @@ def test_shape_meta_info():
     x_vv = x_rv.clone()
     ndim_supp, supp_axes, measure_type = meta_info_helper(x_rv, x_vv)
 
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(x_base.owner.op)
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(x_base)
 
     assert np.isclose(
         ndim_supp_base,
@@ -139,7 +139,7 @@ def test_assert_meta_info():
     assert_vv = assert_rv.clone()
     ndim_supp, supp_axes, measure_type = meta_info_helper(assert_rv, assert_vv)
 
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(rv.owner.op)
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(rv)
 
     assert np.isclose(
         ndim_supp_base,

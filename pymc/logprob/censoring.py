@@ -50,6 +50,7 @@ from pytensor.tensor.variable import TensorConstant
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,
+    MeasureType,
     _logcdf,
     _logprob,
     get_measurable_meta_info,
@@ -83,7 +84,11 @@ def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[list[Te
     lower_bound = lower_bound if (lower_bound is not base_var) else pt.constant(-np.inf)
     upper_bound = upper_bound if (upper_bound is not base_var) else pt.constant(np.inf)
 
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_var.owner.op)
+    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_var)
+
+    if measure_type == MeasureType.Continuous:
+        measure_type = MeasureType.Mixed
+
     measurable_clip = MeasurableClip(
         scalar_clip, ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
     )
@@ -174,9 +179,10 @@ def find_measurable_roundings(fgraph: FunctionGraph, node: Node) -> Optional[lis
         return None
 
     [base_var] = node.inputs
-    ndim_supp, supp_axis, d_type = get_measurable_meta_info(base_var.owner.op)
+    ndim_supp, supp_axis, _ = get_measurable_meta_info(base_var)
+    measure_type = MeasureType.Discrete
     rounded_op = MeasurableRound(
-        node.op.scalar_op, ndim_supp=ndim_supp, supp_axes=supp_axis, measure_type=d_type
+        node.op.scalar_op, ndim_supp=ndim_supp, supp_axes=supp_axis, measure_type=measure_type
     )
     rounded_rv = rounded_op.make_node(base_var).default_output()
     rounded_rv.name = node.outputs[0].name

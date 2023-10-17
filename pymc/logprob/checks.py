@@ -91,7 +91,7 @@ def find_measurable_specify_shapes(fgraph, node) -> Optional[list[TensorVariable
     ):
         return None  # pragma: no cover
 
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_rv.owner.op)
+    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_rv)
 
     new_op = MeasurableSpecifyShape(
         ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
@@ -142,7 +142,7 @@ def find_measurable_check_and_raise(fgraph, node) -> Optional[list[TensorVariabl
         return None
 
     op = node.op
-    ndim_supp, supp_axis, d_type = get_measurable_meta_info(base_rv.owner.op)
+    ndim_supp, supp_axis, d_type = get_measurable_meta_info(base_rv)
     new_op = MeasurableCheckAndRaise(
         exc_type=op.exc_type,
         msg=op.msg,

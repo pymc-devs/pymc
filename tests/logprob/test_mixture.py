@@ -52,7 +52,11 @@ from pytensor.tensor.subtensor import (
     as_index_constant,
 )
 
-from pymc.logprob.abstract import MeasurableVariable, get_measurable_meta_info
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    MeasureType,
+    get_measurable_meta_info,
+)
 from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.mixture import MeasurableSwitchMixture, expand_indices
 from pymc.logprob.rewriting import construct_ir_fgraph
@@ -900,37 +904,6 @@ def test_mixture_with_DiracDelta():
     assert m_vv in logp_res
 
 
-def test_meta_with_DiracDelta():
-    srng = pt.random.RandomStream(29833)
-
-    X_rv = srng.normal(0, 1, name="X")
-    Y_rv = dirac_delta(0.0)
-    Y_rv.name = "Y"
-
-    I_rv = srng.categorical([0.5, 0.5], size=1)
-
-    i_vv = I_rv.clone()
-    i_vv.name = "i"
-
-    M_rv = pt.stack([X_rv, Y_rv])[I_rv]
-    M_rv.name = "M"
-
-    m_vv = M_rv.clone()
-    m_vv.name = "m"
-
-    ndim_supp, supp_axes, measure_type = meta_info_helper(M_rv, m_vv)
-
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(X_rv.owner.op)
-
-    assert np.isclose(
-        ndim_supp_base,
-        ndim_supp,
-    )
-    assert supp_axes_base == supp_axes
-
-    assert measure_type_base == measure_type
-
-
 def test_switch_mixture():
     srng = pt.random.RandomStream(29833)
 
@@ -968,6 +941,36 @@ def test_switch_mixture():
     np.testing.assert_almost_equal(0.69049938, z2_logp_combined.eval({z_vv: -10, i_vv: 1}))
 
 
+def test_meta_switch_mixture():
+    srng = pt.random.RandomStream(29833)
+
+    X_rv = srng.normal(-10.0, 0.1, name="X")
+    Y_rv = srng.normal(10.0, 0.1, name="Y")
+
+    I_rv = srng.bernoulli(0.5, name="I")
+    i_vv = I_rv.clone()
+    i_vv.name = "i"
+
+    # When I_rv == True, X_rv flows through otherwise Y_rv does
+    Z1_rv = pt.switch(I_rv, X_rv, Y_rv)
+    Z1_rv.name = "Z1"
+
+    assert Z1_rv.eval({I_rv: 0}) > 5
+    assert Z1_rv.eval({I_rv: 1}) < -5
+
+    z_vv = Z1_rv.clone()
+    z_vv.name = "z1"
+
+    fgraph, _, _ = construct_ir_fgraph({Z1_rv: z_vv, I_rv: i_vv})
+    assert isinstance(fgraph.outputs[0].owner.op, MeasurableSwitchMixture)
+
+    ndim_supp = fgraph.outputs[0].owner.op.ndim_supp
+    measure_type = fgraph.outputs[0].owner.op.measure_type
+
+    np.testing.assert_almost_equal(0, ndim_supp)
+    assert measure_type == MeasureType.Continuous
+
+
 @pytest.mark.parametrize("switch_cond_scalar", (True, False))
 def test_switch_mixture_vector(switch_cond_scalar):
     if switch_cond_scalar:
@@ -995,6 +998,24 @@ def test_switch_mixture_vector(switch_cond_scalar):
             logp(false_branch, test_switch_value).eval(),
         ),
     )
+
+
+pytest.mark.parametrize("switch_cond_scalar", (True, False))
+
+
+def test_switch_mixture_vector(switch_cond_scalar):
+    if switch_cond_scalar:
+        switch_cond = pt.scalar("switch_cond", dtype=bool)
+    else:
+        switch_cond = pt.vector("switch_cond", dtype=bool)
+    true_branch = pt.exp(pt.random.normal(size=(4,)))
+    false_branch = pt.abs(pt.random.normal(size=(4,)))
+
+    switch = pt.switch(switch_cond, true_branch, false_branch)
+    switch.name = "switch_mix"
+    switch_value = switch.clone()
+
+    ndim_supp, supp_axes, measure_type = meta_info_helper(switch, switch_value)
 
 
 def test_switch_mixture_measurable_cond_fails():
@@ -1075,7 +1096,7 @@ def test_meta_ifelse():
 
     ndim_supp, supp_axes, measure_type = meta_info_helper(mix_rv, mix_vv)
 
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(comp_then.owner.op)
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(comp_then)
 
     assert np.isclose(
         ndim_supp_base,

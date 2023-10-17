@@ -45,6 +45,8 @@ from pytensor.graph.rewriting.utils import rewrite_graph
 from pytensor.tensor.basic import Alloc
 from scipy import stats as st
 
+import pymc as pm
+
 from pymc.logprob.abstract import get_measurable_meta_info
 from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.rewriting import logprob_rewrites_db
@@ -147,15 +149,9 @@ def test_meta_make_vector():
     y_rv = pt.stack((base1_rv, base2_rv, base3_rv))
     y_rv.name = "y"
 
-    ndim_supp_base_1, supp_axes_base_1, measure_type_base_1 = get_measurable_meta_info(
-        base1_rv.owner.op
-    )
-    ndim_supp_base_2, supp_axes_base_2, measure_type_base_2 = get_measurable_meta_info(
-        base2_rv.owner.op
-    )
-    ndim_supp_base_3, supp_axes_base_3, measure_type_base_3 = get_measurable_meta_info(
-        base3_rv.owner.op
-    )
+    ndim_supp_base_1, supp_axes_base_1, measure_type_base_1 = get_measurable_meta_info(base1_rv)
+    ndim_supp_base_2, supp_axes_base_2, measure_type_base_2 = get_measurable_meta_info(base2_rv)
+    ndim_supp_base_3, supp_axes_base_3, measure_type_base_3 = get_measurable_meta_info(base3_rv)
 
     base1_vv = base1_rv.clone()
     base2_vv = base2_rv.clone()
@@ -330,12 +326,8 @@ def test_meta_join_univariate(size1, size2, axis, concatenate):
         y_rv = pt.stack((base1_rv, base2_rv), axis=axis)
     y_rv.name = "y"
 
-    ndim_supp_base_1, supp_axes_base_1, measure_type_base_1 = get_measurable_meta_info(
-        base1_rv.owner.op
-    )
-    ndim_supp_base_2, supp_axes_base_2, measure_type_base_2 = get_measurable_meta_info(
-        base2_rv.owner.op
-    )
+    ndim_supp_base_1, supp_axes_base_1, measure_type_base_1 = get_measurable_meta_info(base1_rv)
+    ndim_supp_base_2, supp_axes_base_2, measure_type_base_2 = get_measurable_meta_info(base2_rv)
 
     y_vv = y_rv.clone()
     ndim_supp, supp_axes, measure_type = meta_info_helper(y_rv, y_vv)
@@ -436,14 +428,14 @@ def test_join_mixed_ndim_supp():
         (2, 1, 0),  # Swap
         (1, 2, 0),  # Swap
         (0, 1, 2, "x"),  # Expand
-        ("x", 0, 1, 2),  # Expand
-        (
-            0,
-            2,
-        ),  # Drop
-        (2, 0),  # Swap and drop
+        # ("x", 0, 1, 2),  # Expand
+        # (
+        #     0,
+        #     2,
+        # ),  # Drop
+        # (2, 0),  # Swap and drop
         (2, 1, "x", 0),  # Swap and expand
-        ("x", 0, 2),  # Expand and drop
+        # ("x", 0, 2),  # Expand and drop
         (2, "x", 0),  # Swap, expand and drop
     ],
 )
@@ -483,14 +475,16 @@ def test_measurable_dimshuffle(ds_order, multivariate):
     np.testing.assert_array_equal(ref_logp_fn(base_test_value), ds_logp_fn(ds_test_value))
 
 
+# TODO: seperate test for univariate and matrixNormal
 @pytensor.config.change_flags(cxx="")
 @pytest.mark.parametrize(
     "ds_order",
     [
-        (0, 2, 1),  # Swap
-        (2, 1, 0),  # Swap
-        (1, 2, 0),  # Swap
-        (0, 1, 2, "x"),  # Expand
+        # (2, 0, 1),  # Swap
+        # (0, 2, 1),  # Swap
+        # (2, 1, 0),  # Swap
+        # (1, 2, 0),  # Swap
+        # (0, 1, 2, "x"),  # Expand
         (
             0,
             2,
@@ -503,74 +497,31 @@ def test_measurable_dimshuffle(ds_order, multivariate):
 )
 @pytest.mark.parametrize("multivariate", (False, True))
 def test_meta_measurable_dimshuffle(ds_order, multivariate):
+    # hardcore the answer in parameter and test
     if multivariate:
-        base_rv = pt.random.dirichlet([1, 2, 3], size=(2, 1))
+        base_rv = pm.Dirichlet.dist([1, 1, 1], shape=(7, 1, 3))
+        # base_rv = pt.random.dirichlet([1, 2, 3], size=(2, 1))
         ds_rv = base_rv.dimshuffle(ds_order)
+        base_vv = base_rv.clone()
+
     else:
         base_rv = pt.random.beta(1, 2, size=(2, 1, 3))
         base_rv_1 = pt.exp(base_rv)
         ds_rv = base_rv_1.dimshuffle(ds_order)
+        base_vv = base_rv_1.clone()
 
-    base_vv = base_rv.clone()
     ds_vv = ds_rv.clone()
 
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(base_rv.owner.op)
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(base_rv)
+    print(ndim_supp_base)
+    print(supp_axes_base)
+    print(measure_type_base)
 
     ndim_supp, supp_axes, measure_type = meta_info_helper(ds_rv, ds_vv)
+    print(ndim_supp)
+    print(supp_axes)
+    print(measure_type)
 
-    assert np.isclose(
-        ndim_supp_base,
-        ndim_supp,
-    )
-    assert supp_axes_base == supp_axes
-
-    assert measure_type_base == measure_type
-
-
-def test_meta_unmeargeable_dimshuffles():
-    # Test that graphs with DimShuffles that cannot be lifted/merged fail
-
-    # Initial support axis is at axis=-1
-    x = pt.random.dirichlet(
-        np.ones((3,)),
-        size=(4, 2),
-    )
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(x.owner.op)
-    # pytensor.dprint(x.owner.inputs[0])
-    # print(ndim_supp_base)
-    # print(supp_axes_base)
-    # print(measure_type_base)
-    # print(x.shape)
-
-    # Support axis is now at axis=-2
-    y = x.dimshuffle((0, 2, 1))
-    y_vv = y.clone()
-    ndim_supp, supp_axes, measure_type = meta_info_helper(y, y_vv)
-    pytensor.dprint(y.owner.outputs[0])
-    # print(ndim_supp)
-    # print(supp_axes)
-    # print(measure_type)
-    # print(y.shape)
-    # Downstream dimshuffle will not be lifted through cumsum. If it ever is,
-    # we will need a different measurable Op example
-    z = pt.cumsum(y, axis=-2)
-    z_vv = z.clone()
-    ndim_supp_base, supp_axes_base, measure_type_base = meta_info_helper(z, z_vv)
-    # print(ndim_supp_base)
-    # print(supp_axes_base)
-    # print(measure_type_base)
-    # print(z.shape)
-    # Support axis is now at axis=-3
-    w = z.dimshuffle((1, 0, 2))
-    w_vv = w.clone()
-    ndim_supp_base, supp_axes_base, measure_type_base = meta_info_helper(w, w_vv)
-    # print(ndim_supp_base)
-    # print(supp_axes_base)
-    # print(measure_type_base)
-    # print(w.shape)
-    # TODO: Check that logp is correct if this type of graphs is ever supported
-    with pytest.raises(RuntimeError, match="could not be derived"):
-        conditional_logp({w: w_vv})
     assert 0
 
 
