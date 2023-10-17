@@ -628,10 +628,11 @@ class NegativeBinomial(Discrete):
         plt.legend(loc=1)
         plt.show()
 
-    ========  ==========================
+    ========  ==================================
     Support   :math:`x \in \mathbb{N}_0`
     Mean      :math:`\mu`
-    ========  ==========================
+    Variance  :math:`\frac{\mu^2}{\alpha} + \mu`
+    ========  ==================================
 
     The negative binomial distribution can be parametrized either in terms of mu or p,
     and either in terms of alpha or n. The link between the parametrizations is given by
