@@ -619,10 +619,17 @@ def measurable_special_exp_to_exp(fgraph, node):
 
 @node_rewriter([pow])
 def measurable_power_expotent_to_exp(fgraph, node):
+    """Convert power(base, x) of `MeasurableVariable`s to exp form."""
     base, inp_exponent = node.inputs
-    base = CheckParameterValue("base > 0")(base, pt.all(pt.ge(base, 0.0)))
 
-    # check whether inp is discrete
+    # if base is measurable then it is power(x, exponent) and not power(base, x) as expected
+    # and should use PowerTransform
+    if check_potential_measurability([base], fgraph.preserve_rv_mappings.rv_values.keys()):
+        return None
+
+    base = CheckParameterValue("base >= 0")(base, pt.all(pt.ge(base, 0.0)))
+
+    # check whether inp_exponent is discrete
     if inp_exponent.type.dtype.startswith("int"):
         return None
 
