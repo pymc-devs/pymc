@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import numpy as np
-import numpy.testing as npt
 import pytensor
 import pytensor.tensor as pt
 import pytest
@@ -36,7 +35,6 @@ from pymc.distributions.dist_math import (
 )
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
-from tests.checks import close_to
 from tests.helpers import verify_grad
 
 
@@ -160,7 +158,7 @@ def test_clipped_beta_rvs(dtype):
 
 def check_vals(fn1, fn2, *args):
     v = fn1(*args)
-    close_to(v, fn2(*args), 1e-6 if v.dtype == np.float64 else 1e-4)
+    np.testing.assert_allclose(v, fn2(*args), atol=1e-6 if v.dtype == np.float64 else 1e-4)
 
 
 def test_multigamma():
