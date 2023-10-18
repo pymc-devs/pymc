@@ -127,7 +127,7 @@ from pymc.logprob.rewriting import (
     cleanup_ir_rewrites_db,
     measurable_ir_rewrites_db,
 )
-from pymc.logprob.utils import check_potential_measurability
+from pymc.logprob.utils import CheckParameterValue, check_potential_measurability
 
 
 class TransformedVariable(Op):
@@ -619,12 +619,14 @@ def measurable_special_exp_to_exp(fgraph, node):
 
 @node_rewriter([pow])
 def measurable_power_expotent_to_exp(fgraph, node):
-    exponent, inp = node.inputs
+    base, inp_exponent = node.inputs
+    base = CheckParameterValue("base > 0")(base, pt.all(pt.ge(base, 0.0)))
 
-    if inp.type.dtype.startswith("int"):
+    # check whether inp is discrete
+    if inp_exponent.type.dtype.startswith("int"):
         return None
-    # if scalar_exponent > 0:
-    return [pt.exp(pt.log(exponent) * inp)]
+
+    return [pt.exp(pt.log(base) * inp_exponent)]
 
 
 @node_rewriter(
