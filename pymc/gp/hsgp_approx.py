@@ -98,7 +98,9 @@ class HSGP(Base):
     is largely similar to `gp.Latent`.  Like `gp.Latent`, it does not assume a Gaussian noise model
     and can be used with any likelihood, or as a component anywhere within a model.  Also like
     `gp.Latent`, it has `prior` and `conditional` methods.  It supports any sum of covariance
-    functions that implement a `power_spectral_density` method.
+    functions that implement a `power_spectral_density` method (Note, this therefore excludes the
+    `Periodic` covariance function, which uses a different set of basis functions for the
+    approximation.).
 
     For information on choosing appropriate `m`, `L`, and `c`, refer Ruitort-Mayol et. al. or to
     the PyMC examples that use HSGP.
@@ -348,7 +350,7 @@ class HSGP(Base):
         if isinstance(self.cov_func, Periodic):
             phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m, tl=pt)
             J = pt.arange(0, self._m[0], 1)
-            psd = self.cov_func.power_spectral_density(J)
+            psd = self.cov_func.power_spectral_density_approx(J)
             return (phi_cos, phi_sin), psd
 
         else:
@@ -432,7 +434,7 @@ class HSGP(Base):
             )
             m0 = self._m[0]
             J = pt.arange(0, m0, 1)
-            psd = self.cov_func.power_spectral_density(J)
+            psd = self.cov_func.power_spectral_density_approx(J)
 
             phi = phi_cos @ (psd * beta[:m0]) + phi_sin[..., 1:] @ (psd[1:] * beta[m0:])
             return self.mean_func(Xnew) + phi

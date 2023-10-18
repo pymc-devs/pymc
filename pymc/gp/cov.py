@@ -791,7 +791,7 @@ class Periodic(Stationary):
         r2 = dist if squared else dist**2
         return pt.exp(-0.5 * r2)
 
-    def power_spectral_density(self, J: TensorLike) -> TensorVariable:
+    def power_spectral_density_approx(self, J: TensorLike) -> TensorVariable:
         """
         Technically, this is not a spectral density but these are the first `m` coefficients of
         the low rank approximation for the periodic kernel, which are used in the same way.

@@ -652,7 +652,10 @@ class TestPeriodic:
         true_1d_psd = np.where(J > 0, 2, 1) * iv(J, a) / np.exp(a)
 
         test_1d_psd = (
-            pm.gp.cov.Periodic(1, period=P, ls=ell).power_spectral_density(J).flatten().eval()
+            pm.gp.cov.Periodic(1, period=P, ls=ell)
+            .power_spectral_density_approx(J)
+            .flatten()
+            .eval()
         )
         npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
 
