@@ -20,6 +20,7 @@ import pytensor
 import pytensor.tensor as pt
 import pytest
 
+from numpy.testing import assert_allclose, assert_array_equal
 from pytensor.tensor.variable import TensorConstant
 
 import pymc as pm
@@ -40,7 +41,6 @@ from pymc.testing import (
     UnitSortedVector,
     Vector,
 )
-from tests.checks import close_to, close_to_logical
 
 # some transforms (stick breaking) require addition of small slack in order to be numerically
 # stable. The minimal addable slack for float32 is higher thus we need to be less strict
@@ -61,7 +61,7 @@ def check_transform(transform, domain, constructor=pt.scalar, test=0, rv_var=Non
     assert z.type == x.type
     identity_f = pytensor.function([x], z, *rv_inputs)
     for val in domain.vals:
-        close_to(val, identity_f(val), tol)
+        assert_allclose(val, identity_f(val), tol)
 
 
 def check_vector_transform(transform, domain, rv_var=None):
@@ -117,7 +117,7 @@ def check_jacobian_det(
     )
 
     for yval in domain.vals:
-        np.testing.assert_allclose(actual_ljd(yval), computed_ljd(yval), rtol=tol)
+        assert_allclose(actual_ljd(yval), computed_ljd(yval), rtol=tol)
 
 
 def test_simplex():
@@ -132,9 +132,9 @@ def test_simplex():
 def test_simplex_bounds():
     vals = get_values(tr.simplex, Vector(R, 2), pt.vector, floatX(np.array([0, 0])))
 
-    close_to(vals.sum(axis=1), 1, tol)
-    close_to_logical(vals > 0, True, tol)
-    close_to_logical(vals < 1, True, tol)
+    assert_allclose(vals.sum(axis=1), 1, tol)
+    assert_array_equal(vals > 0, True)
+    assert_array_equal(vals < 1, True)
 
     check_jacobian_det(
         tr.simplex, Vector(R, 2), pt.vector, floatX(np.array([0, 0])), lambda x: x[:-1]
@@ -146,7 +146,7 @@ def test_simplex_accuracy():
     x = pt.vector("x")
     x.tag.test_value = val
     identity_f = pytensor.function([x], tr.simplex.forward(x, tr.simplex.backward(x, x)))
-    close_to(val, identity_f(val), tol)
+    assert_allclose(val, identity_f(val), tol)
 
 
 def test_sum_to_1():
@@ -179,7 +179,7 @@ def test_log():
     check_jacobian_det(tr.log, Vector(Rplusbig, 2), pt.vector, [0, 0], elemwise=True)
 
     vals = get_values(tr.log)
-    close_to_logical(vals > 0, True, tol)
+    assert_array_equal(vals > 0, True)
 
 
 @pytest.mark.skipif(
@@ -192,7 +192,7 @@ def test_log_exp_m1():
     check_jacobian_det(tr.log_exp_m1, Vector(Rplusbig, 2), pt.vector, [0, 0], elemwise=True)
 
     vals = get_values(tr.log_exp_m1)
-    close_to_logical(vals > 0, True, tol)
+    assert_array_equal(vals > 0, True)
 
 
 def test_logodds():
@@ -202,8 +202,8 @@ def test_logodds():
     check_jacobian_det(tr.logodds, Vector(Unit, 2), pt.vector, [0.5, 0.5], elemwise=True)
 
     vals = get_values(tr.logodds)
-    close_to_logical(vals > 0, True, tol)
-    close_to_logical(vals < 1, True, tol)
+    assert_array_equal(vals > 0, True)
+    assert_array_equal(vals < 1, True)
 
 
 def test_lowerbound():
@@ -214,7 +214,7 @@ def test_lowerbound():
     check_jacobian_det(trans, Vector(Rplusbig, 2), pt.vector, [0, 0], elemwise=True)
 
     vals = get_values(trans)
-    close_to_logical(vals > 0, True, tol)
+    assert_array_equal(vals > 0, True)
 
 
 def test_upperbound():
@@ -225,7 +225,7 @@ def test_upperbound():
     check_jacobian_det(trans, Vector(Rminusbig, 2), pt.vector, [-1, -1], elemwise=True)
 
     vals = get_values(trans)
-    close_to_logical(vals < 0, True, tol)
+    assert_array_equal(vals < 0, True)
 
 
 def test_interval():
@@ -238,8 +238,8 @@ def test_interval():
         check_jacobian_det(trans, domain, elemwise=True)
 
         vals = get_values(trans)
-        close_to_logical(vals > a, True, tol)
-        close_to_logical(vals < b, True, tol)
+        assert_array_equal(vals > a, True)
+        assert_array_equal(vals < b, True)
 
 
 @pytest.mark.skipif(
@@ -254,7 +254,7 @@ def test_interval_near_boundary():
         pm.Uniform("x", initval=x0, lower=lb, upper=ub)
 
     log_prob = model.point_logps()
-    np.testing.assert_allclose(list(log_prob.values()), floatX(np.array([-52.68])))
+    assert_allclose(list(log_prob.values()), floatX(np.array([-52.68])))
 
 
 def test_circular():
@@ -264,8 +264,8 @@ def test_circular():
     check_jacobian_det(trans, Circ)
 
     vals = get_values(trans)
-    close_to_logical(vals > -np.pi, True, tol)
-    close_to_logical(vals < np.pi, True, tol)
+    assert_array_equal(vals > -np.pi, True)
+    assert_array_equal(vals < np.pi, True)
 
     assert isinstance(trans.forward(1, None), TensorConstant)
 
@@ -281,13 +281,13 @@ def test_ordered():
     )
 
     vals = get_values(tr.ordered, Vector(R, 3), pt.vector, floatX(np.zeros(3)))
-    close_to_logical(np.diff(vals) >= 0, True, tol)
+    assert_array_equal(np.diff(vals) >= 0, True)
 
 
 def test_chain_values():
     chain_tranf = tr.Chain([tr.logodds, tr.ordered])
     vals = get_values(chain_tranf, Vector(R, 5), pt.vector, floatX(np.zeros(5)))
-    close_to_logical(np.diff(vals) >= 0, True, tol)
+    assert_array_equal(np.diff(vals) >= 0, True)
 
 
 def test_chain_vector_transform():
@@ -339,7 +339,7 @@ class TestElementWiseLogp:
         untransform_logp_eval = untransform_logp.eval({x_val_untransf: test_array_untransf})
         log_jac_det_eval = log_jac_det.eval({x_val_transf: test_array_transf})
         # Summing the log_jac_det separately from the untransform_logp ensures there is no broadcasting between terms
-        np.testing.assert_allclose(
+        assert_allclose(
             transform_logp_eval.sum(),
             untransform_logp_eval.sum() + log_jac_det_eval.sum(),
             rtol=tol,
