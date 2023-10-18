@@ -145,7 +145,7 @@ def test_simplex_accuracy():
     val = floatX(np.array([-30]))
     x = pt.vector("x")
     x.tag.test_value = val
-    identity_f = pytensor.function([x], tr.simplex.forward(x, tr.simplex.backward(x, x)))
+    identity_f = pytensor.function([x], tr.simplex.forward(tr.simplex.backward(x)))
     assert_allclose(val, identity_f(val), tol)
 
 
