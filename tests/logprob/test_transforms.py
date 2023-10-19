@@ -72,6 +72,7 @@ from pymc.logprob.transforms import (
     TransformValuesMapping,
     TransformValuesRewrite,
 )
+from pymc.logprob.utils import ParameterValueError
 from pymc.testing import Rplusbig, Vector, assert_no_rvs
 from tests.distributions.test_transform import check_jacobian_det
 
@@ -1159,7 +1160,7 @@ def test_special_log_exp_transforms(transform):
         assert equal_computations([logp_test], [logp_ref])
 
 
-def test_power_const_exponent():
+def test_power_const_exponent_output():
     x_rv_pow = pt.pow(2, pt.random.normal())
     x_rv_exp2 = pt.exp2(pt.random.normal())
 
@@ -1170,6 +1171,60 @@ def test_power_const_exponent():
     x_logp_fn_exp2 = pytensor.function([x_vv_exp2], pt.sum(logp(x_rv_exp2, x_vv_exp2)))
 
     np.testing.assert_allclose(x_logp_fn_pow(0.1), x_logp_fn_exp2(0.1))
+
+
+def test_power_const_exponent_negative_rv_error():
+    # test when const < 0 we raise error
+    # test with RV when logp(<0) we raise error
+    base_rv = pt.random.normal([2])
+    x_raw_rv = pt.random.normal()
+    x_rv = pt.power(base_rv, x_raw_rv)
+
+    x_rv.name = "x"
+    base_rv.name = "base"
+    base_vv = base_rv.clone()
+    x_vv = x_rv.clone()
+
+    res = conditional_logp({base_rv: base_vv, x_rv: x_vv})
+    factors = [factor for factor in res.values()]
+    logp_vals_fn = pytensor.function([base_vv, x_vv], factors[1])
+
+    with pytest.raises(ParameterValueError, match="base >= 0"):
+        logp_vals_fn(np.array([-2]), np.array([2]))
+
+
+def test_power_const_exponent_negative_const_error():
+    with pytest.raises(ParameterValueError, match="base >= 0"):
+        x_rv = pt.pow(-2, pt.random.normal())
+        x_vv = x_rv.clone()
+        logp(x_rv, x_vv)
+
+
+def test_power_const_exponent_rv():
+    base_rv = pt.random.normal([2])
+    x_raw_rv = pt.random.normal()
+
+    x_rv = pt.power(base_rv, x_raw_rv)
+    x_rv.name = "x"
+    base_rv.name = "base"
+    base_vv = base_rv.clone()
+    x_vv = x_rv.clone()
+
+    res_transform = conditional_logp({base_rv: base_vv, x_rv: x_vv})
+    factors_transform = [factor for factor in res_transform.values()]
+    logp_vals_transform_fn = pytensor.function([base_vv, x_vv], factors_transform[1])
+
+    x_rv_ref = pt.exp(pt.log(base_rv) * x_raw_rv)
+    x_vv_ref = x_rv_ref.clone()
+
+    res_ref = conditional_logp({base_rv: base_vv, x_rv: x_vv_ref})
+    factors_ref = [factor for factor in res_ref.values()]
+    logp_vals_ref_fn = pytensor.function([base_vv, x_vv_ref], factors_ref[1])
+
+    np.testing.assert_allclose(
+        logp_vals_transform_fn(np.array([2]), np.array([2])),
+        logp_vals_ref_fn(np.array([2]), np.array([2])),
+    )
 
 
 @pytest.mark.parametrize("shift", [1.5, np.array([-0.5, 1, 0.3])])
