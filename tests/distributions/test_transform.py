@@ -61,7 +61,7 @@ def check_transform(transform, domain, constructor=pt.scalar, test=0, rv_var=Non
     assert z.type == x.type
     identity_f = pytensor.function([x], z, *rv_inputs)
     for val in domain.vals:
-        assert_allclose(val, identity_f(val), tol)
+        assert_allclose(val, identity_f(val), atol=tol)
 
 
 def check_vector_transform(transform, domain, rv_var=None):
