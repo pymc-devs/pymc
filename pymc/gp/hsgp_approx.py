@@ -204,9 +204,11 @@ class HSGP(Base):
                 raise ValueError(
                     "HSGP approximation for `Periodic` kernel only implemented for 1-dimensional case."
                 )
-            if (L or c or parameterization) is not None:
+            # only for `parameterization == "centered"` to avoid triggering for default `parameterization` case
+            if ((L or c) is not None) or (parameterization == "centered"):
                 warnings.warn(
                     "Argument `L`, `c` or `parameterization` supplied but not used for `Periodic` kernel."
+                    "For this kernel, `m` is the only parameter controlling the approximation that must be supplied."
                 )
 
         else:
