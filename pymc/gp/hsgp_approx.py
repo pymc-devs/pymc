@@ -280,7 +280,7 @@ class HSGP(Base):
         aren't using the Laplacian with boundary conditions.  Rather than returning the Laplace
         eigenfunctions and the square root of the power spectral density, in the periodic case we
         return the cosine and sine terms of the periodic basis as a tuple, `(phi_cos, phi_sin)`,
-        and the coefficients of tbe expansion.
+        and the coefficients of the expansion.
 
         Parameters
         ----------
