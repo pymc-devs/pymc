@@ -23,12 +23,12 @@ import numpy as np
 import numpy.random as nr
 import pytensor
 
+from numpy.testing import assert_array_less
 from pytensor.gradient import verify_grad as at_verify_grad
 
 import pymc as pm
 
 from pymc.testing import fast_unstable_sampling_mode
-from tests.checks import close_to
 from tests.models import mv_simple, mv_simple_coarse
 
 
@@ -118,11 +118,11 @@ class StepMethodTester:
     def teardown_class(self):
         shutil.rmtree(self.temp_dir)
 
-    def check_stat(self, check, idata, name):
+    def check_stat(self, check, idata):
         group = idata.posterior
         for var, stat, value, bound in check:
             s = stat(group[var].sel(chain=0), axis=0)
-            close_to(s, value, bound, name)
+            assert_array_less(np.abs(s.values - value), bound)
 
     def check_stat_dtype(self, step, idata):
         # TODO: This check does not confirm the announced dtypes are correct as the
@@ -156,7 +156,7 @@ class StepMethodTester:
             assert idata.warmup_posterior.sizes["draw"] == tune
             assert idata.posterior.sizes["chain"] == chains
             assert idata.posterior.sizes["draw"] == draws
-            self.check_stat(check, idata, step.__class__.__name__)
+            self.check_stat(check, idata)
             self.check_stat_dtype(idata, step)
 
 
