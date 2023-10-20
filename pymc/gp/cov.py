@@ -510,6 +510,9 @@ class Stationary(Covariance):
     ls: Lengthscale.  If input_dim > 1, a list or array of scalars or PyMC random
         variables.  If input_dim == 1, a scalar or PyMC random variable.
     ls_inv: Inverse lengthscale.  1 / ls.  One of ls or ls_inv must be provided.
+    square_dist: An optional (squared) distance function.  If None is supplied, the 
+        default is the square of the Euclidean distance.  The signature of this 
+        function is `square_dist(X: TensorLike, Xs: Tensorlike, ls: Tensorlike)`.
     """
 
     def __init__(
@@ -518,6 +521,7 @@ class Stationary(Covariance):
         ls=None,
         ls_inv=None,
         active_dims: Optional[IntSequence] = None,
+        square_dist: Optional[Callable] = None,
     ):
         super().__init__(input_dim, active_dims)
         if (ls is None and ls_inv is None) or (ls is not None and ls_inv is not None):
@@ -529,23 +533,19 @@ class Stationary(Covariance):
                 ls = 1.0 / ls_inv
         self.ls = pt.as_tensor_variable(ls)
 
-    def square_dist(self, X, Xs):
-        X = pt.mul(X, 1.0 / self.ls)
+    @staticmethod
+    def square_dist(X, Xs, ls):
+        X = pt.mul(X, 1.0 / ls)
         X2 = pt.sum(pt.square(X), 1)
-        if Xs is None:
-            sqd = -2.0 * pt.dot(X, pt.transpose(X)) + (
-                pt.reshape(X2, (-1, 1)) + pt.reshape(X2, (1, -1))
-            )
-        else:
-            Xs = pt.mul(Xs, 1.0 / self.ls)
-            Xs2 = pt.sum(pt.square(Xs), 1)
-            sqd = -2.0 * pt.dot(X, pt.transpose(Xs)) + (
-                pt.reshape(X2, (-1, 1)) + pt.reshape(Xs2, (1, -1))
-            )
+        Xs = pt.mul(Xs, 1.0 / ls)
+        Xs2 = pt.sum(pt.square(Xs), 1)
+        sqd = -2.0 * pt.dot(X, pt.transpose(Xs)) + (
+            pt.reshape(X2, (-1, 1)) + pt.reshape(Xs2, (1, -1))
+        )
         return pt.clip(sqd, 0.0, np.inf)
 
     def euclidean_dist(self, X, Xs):
-        r2 = self.square_dist(X, Xs)
+        r2 = self.square_dist(X, Xs, self.ls)
         return self._sqrt(r2)
 
     def _sqrt(self, r2):
@@ -556,7 +556,9 @@ class Stationary(Covariance):
 
     def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
-        r2 = self.square_dist(X, Xs)
+        if Xs is None:
+            Xs = X
+        r2 = self.square_dist(X, Xs, self.ls)
         return self.full_from_distance(r2, squared=True)
 
     def full_from_distance(self, dist: TensorLike, squared: bool = False) -> TensorVariable:
