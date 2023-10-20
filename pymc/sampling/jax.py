@@ -289,7 +289,6 @@ def _update_coords_and_dims(
         dims.update(idata_kwargs.pop("dims"))
 
 
-@partial(jax.jit, static_argnums=(2, 3, 4, 5, 6))
 def _blackjax_inference_loop(
     seed,
     init_position,
@@ -297,17 +296,21 @@ def _blackjax_inference_loop(
     draws,
     tune,
     target_accept,
-    algorithm=None,
+    **adaptation_kwargs
 ):
     import blackjax
 
-    if algorithm is None:
+    algorithm_name = adaptation_kwargs.pop("algorithm", "nuts")
+    if algorithm_name == "nuts":
         algorithm = blackjax.nuts
+    else:
+        algorithm = blackjax.hmc
 
     adapt = blackjax.window_adaptation(
         algorithm=algorithm,
         logdensity_fn=logprob_fn,
         target_acceptance_rate=target_accept,
+        **adaptation_kwargs,
     )
     (last_state, tuned_params), _ = adapt.run(seed, init_position, num_steps=tune)
     kernel = algorithm(logprob_fn, **tuned_params).step
@@ -339,6 +342,7 @@ def sample_blackjax_nuts(
     postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
     idata_kwargs: Optional[Dict[str, Any]] = None,
+    adaptation_kwargs: Optional[Dict[str, Any]] = None,
     postprocessing_chunks=None,  # deprecated
 ) -> az.InferenceData:
     """
@@ -438,6 +442,7 @@ def sample_blackjax_nuts(
         tune=tune,
         draws=draws,
         target_accept=target_accept,
+        **adaptation_kwargs,
     )
 
     tic2 = datetime.now()
