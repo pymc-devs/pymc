@@ -297,8 +297,10 @@ def _blackjax_inference_loop(
     algorithm_name = adaptation_kwargs.pop("algorithm", "nuts")
     if algorithm_name == "nuts":
         algorithm = blackjax.nuts
-    else:
+    elif algorithm_name == "hmc":
         algorithm = blackjax.hmc
+    else:
+        raise ValueError("Only supporting 'nuts' or 'hmc' as algorithm to draw samples.")
 
     adapt = blackjax.window_adaptation(
         algorithm=algorithm,
@@ -430,6 +432,8 @@ def sample_blackjax_nuts(
     seed = jax.random.PRNGKey(random_seed)
     keys = jax.random.split(seed, chains)
 
+    if adaptation_kwargs is None:
+        adaptation_kwargs = {}
     get_posterior_samples = partial(
         _blackjax_inference_loop,
         logprob_fn=logprob_fn,
