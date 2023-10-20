@@ -510,8 +510,8 @@ class Stationary(Covariance):
     ls: Lengthscale.  If input_dim > 1, a list or array of scalars or PyMC random
         variables.  If input_dim == 1, a scalar or PyMC random variable.
     ls_inv: Inverse lengthscale.  1 / ls.  One of ls or ls_inv must be provided.
-    square_dist: An optional (squared) distance function.  If None is supplied, the 
-        default is the square of the Euclidean distance.  The signature of this 
+    square_dist: An optional (squared) distance function.  If None is supplied, the
+        default is the square of the Euclidean distance.  The signature of this
         function is `square_dist(X: TensorLike, Xs: Tensorlike, ls: Tensorlike)`.
     """
 

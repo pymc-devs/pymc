@@ -414,10 +414,11 @@ class TestStability:
 
 class TestDistance:
     def test_alt_distance(self):
-        """ square_dist below is the same as the default. Check if we get the same
-        result by passing it as an argument to covariance func that inherets from 
+        """square_dist below is the same as the default. Check if we get the same
+        result by passing it as an argument to covariance func that inherets from
         Stationary.
         """
+
         def square_dist(X, Xs, ls):
             X = pt.mul(X, 1.0 / ls)
             Xs = pt.mul(Xs, 1.0 / ls)
