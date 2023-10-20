@@ -290,13 +290,7 @@ def _update_coords_and_dims(
 
 
 def _blackjax_inference_loop(
-    seed,
-    init_position,
-    logprob_fn,
-    draws,
-    tune,
-    target_accept,
-    **adaptation_kwargs
+    seed, init_position, logprob_fn, draws, tune, target_accept, **adaptation_kwargs
 ):
     import blackjax
 
