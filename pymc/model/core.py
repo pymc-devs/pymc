@@ -66,7 +66,7 @@ from pymc.exceptions import (
 from pymc.initial_point import make_initial_point_fn
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.utils import ParameterValueError
-from pymc.model_graph import VarName, model_to_graphviz
+from pymc.model_graph import model_to_graphviz
 from pymc.pytensorf import (
     PointFunc,
     SeedSequenceSeed,
@@ -80,6 +80,7 @@ from pymc.pytensorf import (
 )
 from pymc.util import (
     UNSET,
+    VarName,
     WithMemoization,
     _add_future_warning_tag,
     get_transformed_name,
@@ -2061,7 +2062,7 @@ def compile_fn(
     )
 
 
-def Point(*args, filter_model_vars=False, **kwargs) -> Dict[str, np.ndarray]:
+def Point(*args, filter_model_vars=False, **kwargs) -> Dict[VarName, np.ndarray]:
     """Build a point. Uses same args as dict() does.
     Filters out variables not in the model. All keys are strings.
 

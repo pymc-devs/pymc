@@ -16,6 +16,8 @@ import re
 import numpy as np
 import pytest
 
+from numpy.testing import assert_allclose
+
 import pymc as pm
 
 from pymc.exceptions import ImputationWarning
@@ -23,7 +25,6 @@ from pymc.step_methods.metropolis import tune
 from pymc.testing import select_by_precision
 from pymc.tuning import find_MAP
 from tests import models
-from tests.checks import close_to
 from tests.models import non_normal, simple_arbitrary_det, simple_model
 
 
@@ -36,7 +37,7 @@ def test_mle_jacobian(bounded):
     start, model, _ = models.simple_normal(bounded_prior=bounded)
     with model:
         map_estimate = find_MAP(method="BFGS", model=model)
-    np.testing.assert_allclose(map_estimate["mu_i"], truth, rtol=rtol)
+    assert_allclose(map_estimate["mu_i"], truth, rtol=rtol)
 
 
 def test_tune_not_inplace():
@@ -50,14 +51,16 @@ def test_accuracy_normal():
     _, model, (mu, _) = simple_model()
     with model:
         newstart = find_MAP(pm.Point(x=[-10.5, 100.5]))
-        close_to(newstart["x"], [mu, mu], select_by_precision(float64=1e-5, float32=1e-4))
+        assert_allclose(
+            newstart["x"], [mu, mu], atol=select_by_precision(float64=1e-5, float32=1e-4)
+        )
 
 
 def test_accuracy_non_normal():
     _, model, (mu, _) = non_normal(4)
     with model:
         newstart = find_MAP(pm.Point(x=[0.5, 0.01, 0.95, 0.99]))
-        close_to(newstart["x"], mu, select_by_precision(float64=1e-5, float32=1e-4))
+        assert_allclose(newstart["x"], mu, atol=select_by_precision(float64=1e-5, float32=1e-4))
 
 
 def test_find_MAP_discrete():
@@ -76,9 +79,9 @@ def test_find_MAP_discrete():
         map_est1 = find_MAP()
         map_est2 = find_MAP(vars=model.value_vars)
 
-    close_to(map_est1["p"], 0.6086956533498806, tol1)
+    assert_allclose(map_est1["p"], 0.6086956533498806, atol=tol1, rtol=0)
 
-    close_to(map_est2["p"], 0.695642178810167, tol2)
+    assert_allclose(map_est2["p"], 0.695642178810167, atol=tol2, rtol=0)
     assert map_est2["ss"] == 14
 
 
@@ -105,11 +108,11 @@ def test_find_MAP():
         # Test non-gradient minimization
         map_est2 = find_MAP(progressbar=False, method="Powell")
 
-    close_to(map_est1["mu"], 0, tol)
-    close_to(map_est1["sigma"], 1, tol)
+    assert_allclose(map_est1["mu"], 0, atol=tol)
+    assert_allclose(map_est1["sigma"], 1, atol=tol)
 
-    close_to(map_est2["mu"], 0, tol)
-    close_to(map_est2["sigma"], 1, tol)
+    assert_allclose(map_est2["mu"], 0, atol=tol)
+    assert_allclose(map_est2["sigma"], 1, atol=tol)
 
 
 def test_find_MAP_issue_5923():
@@ -131,11 +134,11 @@ def test_find_MAP_issue_5923():
         map_est1 = find_MAP(progressbar=False, vars=[mu, sigma], start=start)
         map_est2 = find_MAP(progressbar=False, vars=[sigma, mu], start=start)
 
-    close_to(map_est1["mu"], 0, tol)
-    close_to(map_est1["sigma"], 1, tol)
+    assert_allclose(map_est1["mu"], 0, atol=tol)
+    assert_allclose(map_est1["sigma"], 1, atol=tol)
 
-    close_to(map_est2["mu"], 0, tol)
-    close_to(map_est2["sigma"], 1, tol)
+    assert_allclose(map_est2["mu"], 0, atol=tol)
+    assert_allclose(map_est2["sigma"], 1, atol=tol)
 
 
 def test_find_MAP_issue_4488():
@@ -147,8 +150,8 @@ def test_find_MAP_issue_4488():
         map_estimate = find_MAP()
 
     assert not set.difference({"x_unobserved", "x_unobserved_log__", "y"}, set(map_estimate.keys()))
-    np.testing.assert_allclose(map_estimate["x_unobserved"], 0.2, rtol=1e-4, atol=1e-4)
-    np.testing.assert_allclose(map_estimate["y"], [2.0, map_estimate["x_unobserved"][0] + 1])
+    assert_allclose(map_estimate["x_unobserved"], 0.2, rtol=1e-4, atol=1e-4)
+    assert_allclose(map_estimate["y"], [2.0, map_estimate["x_unobserved"][0] + 1])
 
 
 def test_find_MAP_warning_non_free_RVs():
@@ -161,4 +164,4 @@ def test_find_MAP_warning_non_free_RVs():
         msg = "Intermediate variables (such as Deterministic or Potential) were passed"
         with pytest.warns(UserWarning, match=re.escape(msg)):
             r = pm.find_MAP(vars=[det])
-        np.testing.assert_allclose([r["x"], r["y"], r["det"]], [50, 50, 100])
+        assert_allclose([r["x"], r["y"], r["det"]], [50, 50, 100])

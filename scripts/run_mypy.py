@@ -41,13 +41,10 @@ pymc/logprob/transforms.py
 pymc/logprob/utils.py
 pymc/model/core.py
 pymc/model/fgraph.py
-pymc/model/transform/basic.py
 pymc/model/transform/conditioning.py
-pymc/model_graph.py
 pymc/printing.py
 pymc/pytensorf.py
 pymc/sampling/jax.py
-pymc/variational/opvi.py
 """
 
 
@@ -105,7 +102,6 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
     Exits the process with non-zero exit code upon unexpected results.
     """
     df = mypy_to_pandas(mypy_lines)
-
     all_files = {
         str(fp).replace(str(DP_ROOT), "").strip(os.sep).replace(os.sep, "/")
         for fp in DP_ROOT.glob("pymc/**/*.py")

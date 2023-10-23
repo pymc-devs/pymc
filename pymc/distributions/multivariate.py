@@ -540,14 +540,24 @@ class Multinomial(Discrete):
 
     def moment(rv, size, n, p):
         n = pt.shape_padright(n)
-        mode = pt.round(n * p)
+        mean = n * p
+        mode = pt.round(mean)
+        # Add correction term between n and approximation.
+        # We modify highest expected entry to minimize chances of negative values.
         diff = n - pt.sum(mode, axis=-1, keepdims=True)
-        inc_bool_arr = pt.abs(diff) > 0
-        mode = pt.inc_subtensor(mode[inc_bool_arr.nonzero()], diff[inc_bool_arr.nonzero()])
+        max_elem_idx = pt.argmax(mean, axis=-1, keepdims=True)
+        mode = pt.inc_subtensor(
+            pt.take_along_axis(mode, max_elem_idx, axis=-1),
+            diff,
+        )
         if not rv_size_is_none(size):
             output_size = pt.concatenate([size, [p.shape[-1]]])
             mode = pt.full(output_size, mode)
-        return mode
+        return Assert(
+            "Negative value in computed moment of Multinomial."
+            "It is a known limitation that can arise when the expected largest count is small."
+            "Please provide an initial value manually."
+        )(mode, pt.all(mode >= 0))
 
     def logp(value, n, p):
         """

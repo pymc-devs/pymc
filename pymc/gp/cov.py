@@ -779,8 +779,8 @@ class Periodic(Stationary):
         X, Xs = self._slice(X, Xs)
         if Xs is None:
             Xs = X
-        f1 = pt.expand_dims(X, axis=(0,))
-        f2 = pt.expand_dims(Xs, axis=(1,))
+        f1 = pt.expand_dims(X, axis=(1,))
+        f2 = pt.expand_dims(Xs, axis=(0,))
         r = np.pi * (f1 - f2) / self.period
         r2 = pt.sum(pt.square(pt.sin(r) / self.ls), 2)
         return self.full_from_distance(r2, squared=True)
@@ -946,8 +946,8 @@ class WrappedPeriodic(Covariance):
         X, Xs = self._slice(X, Xs)
         if Xs is None:
             Xs = X
-        f1 = pt.expand_dims(X, axis=(0,))
-        f2 = pt.expand_dims(Xs, axis=(1,))
+        f1 = pt.expand_dims(X, axis=(1,))
+        f2 = pt.expand_dims(Xs, axis=(0,))
         r = np.pi * (f1 - f2) / self.period
         r2 = pt.sum(pt.square(pt.sin(r) / self.cov_func.ls), 2)
         return self.cov_func.full_from_distance(r2, squared=True)
