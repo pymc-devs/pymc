@@ -342,6 +342,7 @@ def sample_blackjax_nuts(
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     model: Optional[Model] = None,
     var_names: Optional[Sequence[str]] = None,
+    progress_bar: bool = False,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
     postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
@@ -447,14 +448,14 @@ def sample_blackjax_nuts(
     # Adapted from numpyro
     if chain_method == "parallel":
         map_fn = jax.pmap
-        if adaptation_kwargs.get("progress_bar", False):
+        if progress_bar:
             import warnings
 
             warnings.warn(
-                "BlackJax currently only display progress_bar correctly under "
-                "`chain_method == 'vectorized'`. Setting `progress_bar=False`."
+                "BlackJax currently only display progress bar correctly under "
+                "`chain_method == 'vectorized'`. Setting `progressbar=False`."
             )
-            adaptation_kwargs["progress_bar"] = False
+            progress_bar = False
     elif chain_method == "vectorized":
         map_fn = jax.vmap
     else:
@@ -462,6 +463,7 @@ def sample_blackjax_nuts(
             "Only supporting the following methods to draw chains:" ' "parallel" or "vectorized"'
         )
 
+    adaptation_kwargs["progress_bar"] = progress_bar
     get_posterior_samples = partial(
         _blackjax_inference_loop,
         logprob_fn=logprob_fn,
