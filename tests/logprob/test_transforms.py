@@ -1160,7 +1160,7 @@ def test_special_log_exp_transforms(transform):
         assert equal_computations([logp_test], [logp_ref])
 
 
-def test_power_const_exponent_output():
+def test_measurable_power_exponent_with_constant_base():
     x_rv_pow = pt.pow(2, pt.random.normal())
     x_rv_exp2 = pt.exp2(pt.random.normal())
 
