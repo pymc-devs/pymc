@@ -657,6 +657,13 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
         return updates
 
 
+def get_rv_fgraph(dist_fn, dist_params, size):
+    rv = dist_fn(*dist_params, size=size)
+    outputs = [rv]
+    fgraph = FunctionGraph(outputs=outputs, clone=True)
+    return fgraph
+
+
 class _CustomSymbolicDist(Distribution):
     rv_type = CustomSymbolicDistRV
 
@@ -679,7 +686,7 @@ class _CustomSymbolicDist(Distribution):
             logcdf = default_not_implemented(class_name, "logcdf")
 
         def dist_moment(rv, size, *dist_params):
-            fgraph = FunctionGraph(outputs=[dist(*dist_params, size=size)], clone=True)
+            fgraph = get_rv_fgraph(dist, dist_params, size)
             replace_moments = MomentRewrite()
             replace_moments.rewrite(fgraph)
             [moment] = fgraph.outputs
