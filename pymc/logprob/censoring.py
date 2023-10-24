@@ -56,7 +56,9 @@ from pytensor.scalar.basic import (
     Switch,
 )
 from pytensor.scalar.basic import clip as scalar_clip
+
 from pytensor.tensor import TensorVariable
+from pytensor.tensor import TensorType
 from pytensor.tensor.basic import switch as switch
 from pytensor.tensor.math import ceil, clip, floor, round_half_to_even
 from pytensor.tensor.random.op import RandomVariable
@@ -268,7 +270,9 @@ class FlatSwitches(Op):
         self.out_dtype = out_dtype
 
     def make_node(self, *inputs):
-        return Apply(self, list(inputs), [inputs[0].type()])
+        return Apply(
+            self, list(inputs), [TensorType(dtype=self.out_dtype, shape=inputs[0].type.shape)()]
+        )
 
     def perform(self, *args, **kwargs):
         raise NotImplementedError("This Op should not be evaluated")
