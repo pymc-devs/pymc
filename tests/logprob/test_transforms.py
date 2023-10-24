@@ -1173,7 +1173,7 @@ def test_measurable_power_exponent_with_constant_base():
     np.testing.assert_allclose(x_logp_fn_pow(0.1), x_logp_fn_exp2(0.1))
 
 
-def test_power_const_exponent_negative_rv_error():
+def def test_measurable_power_exponent_with_variable_base():
     # test when const < 0 we raise error
     # test with RV when logp(<0) we raise error
     base_rv = pt.random.normal([2])
