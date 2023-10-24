@@ -34,14 +34,13 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-
 from typing import Optional
 
 import numpy as np
 import pytensor.tensor as pt
 
 from pytensor.graph import Op
-from pytensor.graph.basic import Apply, Node, walk
+from pytensor.graph.basic import Apply, Node
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scalar.basic import (
@@ -344,10 +343,6 @@ def flat_switch_helper(node, valued_rvs, encoding_list, outer_interval, base_rv)
     if switch_cond.type.broadcastable != node.outputs[0].type.broadcastable:
         return None
 
-    # check if the switch_cond is measurable and if measurability sources for all switch conditions are the same
-    if not compare_measurability_source([switch_cond, base_rv], valued_rvs):
-        return None
-
     measurable_var_switch = [
         var for var in switch_cond.owner.inputs if check_potential_measurability([var], valued_rvs)
     ]
@@ -357,7 +352,8 @@ def flat_switch_helper(node, valued_rvs, encoding_list, outer_interval, base_rv)
 
     current_base_var = measurable_var_switch[0]
     # deny cases where base_var is some function of 'x', e.g. pt.exp(x), and measurable var in the current switch is x
-    if current_base_var != base_rv:
+    # also check if all the sources of measurability are the same RV. e.g. x1 and x2
+    if current_base_var is not base_rv:
         return None
 
     measurable_var_idx = []
@@ -373,13 +369,9 @@ def flat_switch_helper(node, valued_rvs, encoding_list, outer_interval, base_rv)
             else:
                 switch_comp_idx.append(idx)
 
-    # Check that the measurability source is the same for all measurable components within the current branch
-    for i in measurable_var_idx:
-        component = components[i]
-        if component != base_rv:
-            return None
-        if not compare_measurability_source([base_rv, component], valued_rvs):
-            return None
+    # Check if measurability source and the component itself are the same for all measurable components
+    if any(components[i] is not base_rv for i in measurable_var_idx):
+        return None
 
     # Get intervals for true and false components from the condition
     intervals = get_intervals(switch_cond.owner, valued_rvs)
@@ -431,16 +423,16 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
     initial_interval = (-np.inf, np.inf)
 
     # fetch base_var as the only measurable input to the logical op in switch condition
-    measurable_comp_list = [
+    measurable_switch_inp = [
         component
         for component in switch_cond.owner.inputs
         if check_potential_measurability([component], valued_rvs)
     ]
 
-    if len(measurable_comp_list) != 1:
+    if len(measurable_switch_inp) != 1:
         return None
 
-    base_rv = measurable_comp_list[0]
+    base_rv = measurable_switch_inp[0]
 
     # We do not allow discrete RVs yet
     if base_rv.dtype.startswith("int"):
@@ -479,64 +471,3 @@ measurable_ir_rewrites_db.register(
     "basic",
     "censoring",
 )
-
-
-def get_measurability_source(
-    inp: TensorVariable, valued_rvs: Container[TensorVariable]
-) -> Set[TensorVariable]:
-    """
-    Returns all the sources of measurability in the input boolean condition.
-    """
-    from pymc.distributions.distribution import SymbolicRandomVariable
-
-    ancestor_var_set = set()
-
-    for ancestor_var in walk_model(
-        [inp],
-        walk_past_rvs=False,
-        stop_at_vars=set(valued_rvs),
-    ):
-        if (
-            ancestor_var.owner
-            and isinstance(ancestor_var.owner.op, (RandomVariable, SymbolicRandomVariable))
-            # TODO: Check if MeasurableVariable needs to be added
-            and ancestor_var not in valued_rvs
-        ):
-            ancestor_var_set.add(ancestor_var)
-
-    return ancestor_var_set
-
-
-def compare_measurability_source(
-    inputs: Tuple[TensorVariable], valued_rvs: Container[TensorVariable]
-) -> bool:
-    """
-    Compares the source of measurability for all elements in 'inputs' separately
-    """
-    ancestor_var_set = set()
-    [ancestor_var_set.update(get_measurability_source(inp, valued_rvs)) for inp in inputs]
-    return len(ancestor_var_set) == 1
-
-
-def walk_model(
-    graphs: Iterable[TensorVariable],
-    walk_past_rvs: bool = False,
-    stop_at_vars: Optional[Set[TensorVariable]] = None,
-    expand_fn: Callable[[TensorVariable], List[TensorVariable]] = lambda var: [],
-) -> Generator[TensorVariable, None, None]:
-    if stop_at_vars is None:
-        stop_at_vars = set()
-
-    def expand(var: TensorVariable, stop_at_vars=stop_at_vars) -> List[TensorVariable]:
-        new_vars = expand_fn(var)
-
-        if (
-            var.owner
-            and (walk_past_rvs or not isinstance(var.owner.op, MeasurableVariable))
-            and (var not in stop_at_vars)
-        ):
-            new_vars.extend(reversed(var.owner.inputs))
-
-        return new_vars
-
-    yield from walk(graphs, expand, False)
