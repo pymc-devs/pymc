@@ -618,7 +618,7 @@ def measurable_special_exp_to_exp(fgraph, node):
 
 
 @node_rewriter([pow])
-def measurable_power_expotent_to_exp(fgraph, node):
+def measurable_power_exponent_to_exp(fgraph, node):
     """Convert power(base, x) of `MeasurableVariable`s to exp form."""
     base, inp_exponent = node.inputs
 
