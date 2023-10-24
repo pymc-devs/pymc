@@ -39,6 +39,7 @@ import re
 import numpy as np
 import pytensor.tensor as pt
 import pytest
+import scipy.stats as sp
 
 import pymc as pm
 
@@ -230,3 +231,26 @@ def test_min_non_mul_elemwise_fails():
     x_min_value = pt.vector("x_min_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
         x_min_logprob = logp(x_min, x_min_value)
+
+
+@pytest.mark.parametrize(
+    "mu, size, value, axis",
+    [(2, 3, 1, -1), (2, 3, 1, 0), (1, 2, 2, None), (0, 4, 0, 0)],
+)
+def test_max_discrete(mu, size, value, axis):
+    x = pm.Poisson.dist(name="x", mu=mu, size=(size))
+    x_max = pt.max(x, axis=axis)
+    x_max_value = pt.scalar("x_max_value")
+    x_max_logprob = logp(x_max, x_max_value)
+
+    test_value = value
+
+    n = size
+    exp_rv = sp.poisson(mu).cdf(test_value) ** n
+    exp_rv_prev = sp.poisson(mu).cdf(test_value - 1) ** n
+
+    np.testing.assert_allclose(
+        np.log(exp_rv - exp_rv_prev),
+        (x_max_logprob.eval({x_max_value: test_value})),
+        rtol=1e-06,
+    )

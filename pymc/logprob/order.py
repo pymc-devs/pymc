@@ -56,6 +56,7 @@ from pymc.logprob.abstract import (
     _logprob_helper,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.math import logdiffexp
 from pymc.pytensorf import constant_fold
 
 
@@ -64,6 +65,13 @@ class MeasurableMax(Max):
 
 
 MeasurableVariable.register(MeasurableMax)
+
+
+class MeasurableMaxDiscrete(Max):
+    """A placeholder used to specify a log-likelihood for sub-graphs of maxima of discrete variables"""
+
+
+MeasurableVariable.register(MeasurableMaxDiscrete)
 
 
 @node_rewriter([Max])
@@ -87,10 +95,6 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Tens
     if not (isinstance(base_var.owner.op, RandomVariable) and base_var.owner.op.ndim_supp == 0):
         return None
 
-    # TODO: We are currently only supporting continuous rvs
-    if isinstance(base_var.owner.op, RandomVariable) and base_var.owner.op.dtype.startswith("int"):
-        return None
-
     # univariate i.i.d. test which also rules out other distributions
     for params in base_var.owner.inputs[3:]:
         if params.type.ndim != 0:
@@ -102,7 +106,12 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[List[Tens
     if axis != base_var_dims:
         return None
 
-    measurable_max = MeasurableMax(list(axis))
+    # distinguish measurable discrete and continuous (because logprob is different)
+    if base_var.owner.op.dtype.startswith("int"):
+        measurable_max = MeasurableMaxDiscrete(list(axis))
+    else:
+        measurable_max = MeasurableMax(list(axis))
+
     max_rv_node = measurable_max.make_node(base_var)
     max_rv = max_rv_node.outputs
 
@@ -127,6 +136,26 @@ def max_logprob(op, values, base_rv, **kwargs):
 
     [n] = constant_fold([base_rv.size])
     logprob = (n - 1) * logcdf + logprob + pt.math.log(n)
+
+    return logprob
+
+
+@_logprob.register(MeasurableMaxDiscrete)
+def max_logprob_discrete(op, values, base_rv, **kwargs):
+    r"""Compute the log-likelihood graph for the `Max` operation.
+
+    The formula that we use here is :
+    .. math::
+        \ln(P_{(n)}(x)) = \ln(F(x)^n - F(x-1)^n)
+    where $P_{(n)}(x)$ represents the p.m.f of the maximum statistic and $F(x)$ represents the c.d.f of the i.i.d. variables.
+    """
+    (value,) = values
+    logcdf = _logcdf_helper(base_rv, value)
+    logcdf_prev = _logcdf_helper(base_rv, value - 1)
+
+    [n] = constant_fold([base_rv.size])
+
+    logprob = logdiffexp(n * logcdf, n * logcdf_prev)
 
     return logprob
 
