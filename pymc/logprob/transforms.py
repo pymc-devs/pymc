@@ -619,7 +619,7 @@ def measurable_special_exp_to_exp(fgraph, node):
 
 @node_rewriter([pow])
 def measurable_power_exponent_to_exp(fgraph, node):
-    """Convert power(base, x) of `MeasurableVariable`s to exp form."""
+    """Convert power(base, rv) of `MeasurableVariable`s to exp(log(base) * rv) form."""
     base, inp_exponent = node.inputs
 
     # When the base is measurable we have `power(rv, exponent)`, which should be handled by `PowerTransform` and needs no further rewrite.
@@ -628,10 +628,6 @@ def measurable_power_exponent_to_exp(fgraph, node):
         return None
 
     base = CheckParameterValue("base >= 0")(base, pt.all(pt.ge(base, 0.0)))
-
-    # check whether inp_exponent is discrete
-    if inp_exponent.type.dtype.startswith("int"):
-        return None
 
     return [pt.exp(pt.log(base) * inp_exponent)]
 
@@ -710,8 +706,9 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         if measurable_input_idx != 0:
             return None
         try:
-            power = pt.get_underlying_scalar_constant_value(node.inputs[1]).item()
-        # Power needs to be a constant, if not then proceed to the other case power(const, x)
+            (power,) = other_inputs
+            power = pt.get_underlying_scalar_constant_value(power).item()
+        # Power needs to be a constant, if not then proceed to the other case power(base, rv)
         except NotScalarConstantError:
             return None
         transform_inputs = (measurable_input, power)
@@ -789,7 +786,7 @@ measurable_ir_rewrites_db.register(
 
 measurable_ir_rewrites_db.register(
     "measurable_power_expotent_to_exp",
-    measurable_power_expotent_to_exp,
+    measurable_power_exponent_to_exp,
     "basic",
     "transform",
 )
