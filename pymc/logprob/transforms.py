@@ -622,8 +622,8 @@ def measurable_power_exponent_to_exp(fgraph, node):
     """Convert power(base, x) of `MeasurableVariable`s to exp form."""
     base, inp_exponent = node.inputs
 
-    # if base is measurable then it is power(x, exponent) and not power(base, x) as expected
-    # and should use PowerTransform
+    # When the base is measurable we have `power(rv, exponent)`, which should be handled by `PowerTransform` and needs no further rewrite.
+    # Here we change only the cases where exponent is measurable `power(base, rv)` which is not supported by the `PowerTransform`
     if check_potential_measurability([base], fgraph.preserve_rv_mappings.rv_values.keys()):
         return None
 
