@@ -1172,8 +1172,13 @@ def test_measurable_power_exponent_with_constant_base():
 
     np.testing.assert_allclose(x_logp_fn_pow(0.1), x_logp_fn_exp2(0.1))
 
+    with pytest.raises(ParameterValueError, match="base >= 0"):
+        x_rv_neg = pt.pow(-2, pt.random.normal())
+        x_vv_neg = x_rv_neg.clone()
+        logp(x_rv_neg, x_vv_neg)
 
-def def test_measurable_power_exponent_with_variable_base():
+
+def test_measurable_power_exponent_with_variable_base():
     # test when const < 0 we raise error
     # test with RV when logp(<0) we raise error
     base_rv = pt.random.normal([2])
@@ -1193,38 +1198,12 @@ def def test_measurable_power_exponent_with_variable_base():
         logp_vals_fn(np.array([-2]), np.array([2]))
 
 
-def test_power_const_exponent_negative_const_error():
-    with pytest.raises(ParameterValueError, match="base >= 0"):
-        x_rv = pt.pow(-2, pt.random.normal())
-        x_vv = x_rv.clone()
-        logp(x_rv, x_vv)
+def test_base_exponent_non_measurable():
+    x_rv = pt.pow(2, 2)
 
-
-def test_power_const_exponent_rv():
-    base_rv = pt.random.normal([2])
-    x_raw_rv = pt.random.normal()
-
-    x_rv = pt.power(base_rv, x_raw_rv)
-    x_rv.name = "x"
-    base_rv.name = "base"
-    base_vv = base_rv.clone()
     x_vv = x_rv.clone()
-
-    res_transform = conditional_logp({base_rv: base_vv, x_rv: x_vv})
-    factors_transform = [factor for factor in res_transform.values()]
-    logp_vals_transform_fn = pytensor.function([base_vv, x_vv], factors_transform[1])
-
-    x_rv_ref = pt.exp(pt.log(base_rv) * x_raw_rv)
-    x_vv_ref = x_rv_ref.clone()
-
-    res_ref = conditional_logp({base_rv: base_vv, x_rv: x_vv_ref})
-    factors_ref = [factor for factor in res_ref.values()]
-    logp_vals_ref_fn = pytensor.function([base_vv, x_vv_ref], factors_ref[1])
-
-    np.testing.assert_allclose(
-        logp_vals_transform_fn(np.array([2]), np.array([2])),
-        logp_vals_ref_fn(np.array([2]), np.array([2])),
-    )
+    with pytest.raises(AttributeError, match="'NoneType' object has no attribute 'op'"):
+        logp(x_rv, x_vv)
 
 
 @pytest.mark.parametrize("shift", [1.5, np.array([-0.5, 1, 0.3])])
