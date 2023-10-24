@@ -533,8 +533,13 @@ class Stationary(Covariance):
                 ls = 1.0 / ls_inv
         self.ls = pt.as_tensor_variable(ls)
 
+        if square_dist is None:
+            self.square_dist = self.default_square_dist
+        else:
+            self.square_dist = square_dist
+
     @staticmethod
-    def square_dist(X, Xs, ls):
+    def default_square_dist(X, Xs, ls):
         X = pt.mul(X, 1.0 / ls)
         X2 = pt.sum(pt.square(X), 1)
         Xs = pt.mul(Xs, 1.0 / ls)
