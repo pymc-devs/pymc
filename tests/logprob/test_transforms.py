@@ -1191,8 +1191,8 @@ def test_measurable_power_exponent_with_variable_base():
     x_vv = x_rv.clone()
 
     res = conditional_logp({base_rv: base_vv, x_rv: x_vv})
-    factors = [factor for factor in res.values()]
-    logp_vals_fn = pytensor.function([base_vv, x_vv], factors[1])
+    x_logp = res[x_vv]
+    logp_vals_fn = pytensor.function([base_vv, x_vv], x_logp)
 
     with pytest.raises(ParameterValueError, match="base >= 0"):
         logp_vals_fn(np.array([-2]), np.array([2]))
