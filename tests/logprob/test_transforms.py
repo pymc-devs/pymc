@@ -1161,6 +1161,8 @@ def test_special_log_exp_transforms(transform):
 
 
 def test_measurable_power_exponent_with_constant_base():
+    # test power(2, rv) = exp2(rv)
+    # test negative base fails
     x_rv_pow = pt.pow(2, pt.random.normal())
     x_rv_exp2 = pt.exp2(pt.random.normal())
 
@@ -1179,7 +1181,6 @@ def test_measurable_power_exponent_with_constant_base():
 
 
 def test_measurable_power_exponent_with_variable_base():
-    # test when const < 0 we raise error
     # test with RV when logp(<0) we raise error
     base_rv = pt.random.normal([2])
     x_raw_rv = pt.random.normal()
@@ -1199,11 +1200,19 @@ def test_measurable_power_exponent_with_variable_base():
 
 
 def test_base_exponent_non_measurable():
-    x_rv = pt.pow(2, 2)
+    # test dual sources of measuravility fails
+    base_rv = pt.random.normal([2])
+    x_raw_rv = pt.random.normal()
+    x_rv = pt.power(base_rv, x_raw_rv)
+    x_rv.name = "x"
 
     x_vv = x_rv.clone()
-    with pytest.raises(AttributeError, match="'NoneType' object has no attribute 'op'"):
-        logp(x_rv, x_vv)
+
+    with pytest.raises(
+        RuntimeError,
+        match="The logprob terms of the following value variables could not be derived: {x}",
+    ):
+        conditional_logp({x_rv: x_vv})
 
 
 @pytest.mark.parametrize("shift", [1.5, np.array([-0.5, 1, 0.3])])
