@@ -184,7 +184,7 @@ def _device_put(input, device: str):
 def _postprocess_samples(
     jax_fn: Callable,
     raw_mcmc_samples: List[TensorVariable],
-    postprocessing_backend: Literal["cpu", "gpu"] | None = None,
+    postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
 ) -> List[TensorVariable]:
     if postprocessing_vectorize == "scan":
@@ -239,7 +239,7 @@ def _blackjax_stats_to_dict(sample_stats, potential_energy) -> Dict:
 def _get_log_likelihood(
     model: Model,
     samples,
-    backend: Literal["cpu", "gpu"] | None = None,
+    backend: Optional[Literal["cpu", "gpu"]] = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
 ) -> Dict:
     """Compute log-likelihood for all observations"""
