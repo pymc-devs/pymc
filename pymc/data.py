@@ -40,7 +40,6 @@ from pymc.pytensorf import convert_observed_data
 
 __all__ = [
     "get_data",
-    "GeneratorAdapter",
     "Minibatch",
     "Data",
     "ConstantData",

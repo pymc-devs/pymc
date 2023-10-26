@@ -20,7 +20,6 @@ See https://arviz-devs.github.io/arviz/ for details on plots.
 """
 import functools
 import sys
-import warnings
 
 import arviz as az
 
@@ -29,40 +28,3 @@ for attr in az.plots.__all__:
     obj = getattr(az.plots, attr)
     if not attr.startswith("__"):
         setattr(sys.modules[__name__], attr, obj)
-
-
-def alias_deprecation(func, alias: str):
-    original = func.__name__
-
-    @functools.wraps(func)
-    def wrapped(*args, **kwargs):
-        raise FutureWarning(
-            f"The function `{alias}` from PyMC was an alias for `{original}` from ArviZ. "
-            "It was removed in PyMC 4.0. "
-            f"Switch to `pymc.{original}` or `arviz.{original}`."
-        )
-
-    return wrapped
-
-
-# Aliases of ArviZ functions
-autocorrplot = alias_deprecation(az.plot_autocorr, alias="autocorrplot")
-forestplot = alias_deprecation(az.plot_forest, alias="forestplot")
-kdeplot = alias_deprecation(az.plot_kde, alias="kdeplot")
-energyplot = alias_deprecation(az.plot_energy, alias="energyplot")
-densityplot = alias_deprecation(az.plot_density, alias="densityplot")
-pairplot = alias_deprecation(az.plot_pair, alias="pairplot")
-traceplot = alias_deprecation(az.plot_trace, alias="traceplot")
-compareplot = alias_deprecation(az.plot_compare, alias="compareplot")
-
-
-__all__ = tuple(az.plots.__all__) + (
-    "autocorrplot",
-    "compareplot",
-    "forestplot",
-    "kdeplot",
-    "traceplot",
-    "energyplot",
-    "densityplot",
-    "pairplot",
-)

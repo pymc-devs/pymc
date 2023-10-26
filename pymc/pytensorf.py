@@ -76,16 +76,9 @@ __all__ = [
     "hessian",
     "hessian_diag",
     "inputvars",
-    "cont_inputs",
     "floatX",
     "intX",
-    "smartfloatX",
     "jacobian",
-    "CallableTensor",
-    "join_nonshared_inputs",
-    "make_shared_replacements",
-    "generator",
-    "convert_observed_data",
     "compile_pymc",
 ]
 

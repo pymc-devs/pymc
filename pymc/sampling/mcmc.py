@@ -52,6 +52,7 @@ from pymc.backends.arviz import (
     coords_and_dims_for_inferencedata,
     find_constants,
     find_observations,
+    to_inference_data,
 )
 from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
 from pymc.blocking import DictToArrayBijection
@@ -892,7 +893,7 @@ def _sample_return(
     if compute_convergence_checks or return_inferencedata:
         ikwargs: Dict[str, Any] = dict(model=model, save_warmup=not discard_tuned_samples)
         ikwargs.update(idata_kwargs)
-        idata = pm.to_inference_data(mtrace, **ikwargs)
+        idata = to_inference_data(mtrace, **ikwargs)
 
         if compute_convergence_checks:
             warns = run_convergence_checks(idata, model)

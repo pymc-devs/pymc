@@ -28,5 +28,3 @@ for attr in az.stats.__all__:
         setattr(sys.modules[__name__], attr, obj)
 
 from pymc.stats.log_likelihood import compute_log_likelihood
-
-__all__ = ("compute_log_likelihood",) + tuple(az.stats.__all__)

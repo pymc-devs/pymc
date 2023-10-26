@@ -64,6 +64,7 @@ from pytensor.tensor.shape import unbroadcast
 
 import pymc as pm
 
+from pymc.backends import to_inference_data
 from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
@@ -1578,7 +1579,7 @@ class Approximation(WithMemoization):
         if not return_inferencedata:
             return multi_trace
         else:
-            return pm.to_inference_data(multi_trace, model=self.model, **kwargs)
+            return to_inference_data(multi_trace, model=self.model, **kwargs)
 
     @property
     def ndim(self):
