@@ -56,7 +56,7 @@ from pymc.backends.arviz import (
 )
 from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
 from pymc.blocking import DictToArrayBijection
-from pymc.exceptions import SamplingError
+from pymc.exceptions import ParallelSamplingError, SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
 from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import Draw, _cpu_count
@@ -1199,7 +1199,7 @@ def _mp_sample(
                     if callback is not None:
                         callback(trace=strace, draw=draw)
 
-        except ps.ParallelSamplingError as error:
+        except ParallelSamplingError as error:
             strace = traces[error._chain]
             for strace in traces:
                 strace.close()

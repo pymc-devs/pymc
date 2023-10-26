@@ -68,6 +68,12 @@ from pymc.backends import to_inference_data
 from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
+from pymc.exceptions import (
+    ExplicitInferenceError,
+    GroupError,
+    ParametrizationError,
+    VariationalInferenceError,
+)
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
 from pymc.pytensorf import (
@@ -89,30 +95,6 @@ from pymc.variational.updates import adagrad_window
 from pymc.vartypes import discrete_types
 
 __all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximation"]
-
-
-class VariationalInferenceError(Exception):
-    """Exception for VI specific cases"""
-
-
-class NotImplementedInference(VariationalInferenceError, NotImplementedError):
-    """Marking non functional parts of code"""
-
-
-class ExplicitInferenceError(VariationalInferenceError, TypeError):
-    """Exception for bad explicit inference"""
-
-
-class AEVBInferenceError(VariationalInferenceError, TypeError):
-    """Exception for bad aevb inference"""
-
-
-class ParametrizationError(VariationalInferenceError, ValueError):
-    """Error raised in case of bad parametrization"""
-
-
-class GroupError(VariationalInferenceError, TypeError):
-    """Error related to VI groups"""
 
 
 def _known_scan_ignored_inputs(terms):

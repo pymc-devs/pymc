@@ -39,8 +39,8 @@ from pymc.distributions.multivariate import (
     quaddist_matrix,
 )
 from pymc.distributions.shape_utils import change_dist_size, to_tuple
+from pymc.exceptions import ParameterValueError
 from pymc.logprob.basic import logp
-from pymc.logprob.utils import ParameterValueError
 from pymc.math import kronecker
 from pymc.pytensorf import compile_pymc, floatX, intX
 from pymc.sampling.forward import draw

@@ -18,13 +18,14 @@ from collections import namedtuple
 
 import numpy as np
 
+from pymc.exceptions import IntegrationError
 from pymc.math import logbern
 from pymc.pytensorf import floatX
 from pymc.stats.convergence import SamplerWarning
 from pymc.step_methods.compound import Competence
 from pymc.step_methods.hmc import integration
 from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
-from pymc.step_methods.hmc.integration import IntegrationError, State
+from pymc.step_methods.hmc.integration import State
 from pymc.vartypes import continuous_types
 
 __all__ = ["NUTS"]

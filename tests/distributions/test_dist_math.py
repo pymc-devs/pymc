@@ -33,7 +33,7 @@ from pymc.distributions.dist_math import (
     incomplete_beta,
     multigammaln,
 )
-from pymc.logprob.utils import ParameterValueError
+from pymc.exceptions import ParameterValueError
 from pymc.pytensorf import floatX
 from tests.helpers import verify_grad
 

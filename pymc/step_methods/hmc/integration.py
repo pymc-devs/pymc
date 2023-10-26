@@ -19,6 +19,7 @@ import numpy as np
 from scipy import linalg
 
 from pymc.blocking import RaveledVars
+from pymc.exceptions import IntegrationError
 from pymc.step_methods.hmc.quadpotential import QuadPotential
 
 
@@ -30,10 +31,6 @@ class State(NamedTuple):
     energy: float
     model_logp: float
     index_in_trajectory: int
-
-
-class IntegrationError(RuntimeError):
-    pass
 
 
 class CpuLeapfrogIntegrator:

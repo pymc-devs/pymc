@@ -20,13 +20,14 @@ import scipy.sparse
 
 import pymc
 
+from pymc.exceptions import PositiveDefiniteError
 from pymc.pytensorf import floatX
 from pymc.step_methods.hmc import quadpotential
 
 
 def test_elemwise_posdef():
     scaling = np.array([0, 2, 3])
-    with pytest.raises(quadpotential.PositiveDefiniteError):
+    with pytest.raises(PositiveDefiniteError):
         quadpotential.quad_potential(scaling, True)
 
 

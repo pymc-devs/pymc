@@ -25,6 +25,7 @@ import scipy.linalg
 from numpy.random import normal
 from scipy.sparse import issparse
 
+from pymc.exceptions import PositiveDefiniteError
 from pymc.pytensorf import floatX
 
 __all__ = [
@@ -85,16 +86,6 @@ def partial_check_positive_definite(C):
 
     if len(i):
         raise PositiveDefiniteError("Simple check failed. Diagonal contains negatives", i)
-
-
-class PositiveDefiniteError(ValueError):
-    def __init__(self, msg, idx):
-        super().__init__(msg)
-        self.idx = idx
-        self.msg = msg
-
-    def __str__(self):
-        return f"Scaling is not positive definite: {self.msg}. Check indexes {self.idx}."
 
 
 class QuadPotential:

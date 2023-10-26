@@ -12,13 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-__all__ = [
-    "SamplingError",
-    "ImputationWarning",
-    "ShapeWarning",
-    "ShapeError",
-]
-
 
 class SamplingError(RuntimeError):
     pass
@@ -74,3 +67,55 @@ class NotConstantValueError(ValueError):
 
 class BlockModelAccessError(RuntimeError):
     pass
+
+
+class ParallelSamplingError(Exception):
+    def __init__(self, message, chain):
+        super().__init__(message)
+        self._chain = chain
+
+
+class RemoteTraceback(Exception):
+    def __init__(self, tb):
+        self.tb = tb
+
+    def __str__(self):
+        return self.tb
+
+
+class VariationalInferenceError(Exception):
+    """Exception for VI specific cases"""
+
+
+class NotImplementedInference(VariationalInferenceError, NotImplementedError):
+    """Marking non functional parts of code"""
+
+
+class ExplicitInferenceError(VariationalInferenceError, TypeError):
+    """Exception for bad explicit inference"""
+
+
+class ParametrizationError(VariationalInferenceError, ValueError):
+    """Error raised in case of bad parametrization"""
+
+
+class GroupError(VariationalInferenceError, TypeError):
+    """Error related to VI groups"""
+
+
+class IntegrationError(RuntimeError):
+    pass
+
+
+class PositiveDefiniteError(ValueError):
+    def __init__(self, msg, idx):
+        super().__init__(msg)
+        self.idx = idx
+        self.msg = msg
+
+    def __str__(self):
+        return f"Scaling is not positive definite: {self.msg}. Check indexes {self.idx}."
+
+
+class ParameterValueError(ValueError):
+    """Exception for invalid parameters values in logprob graphs"""

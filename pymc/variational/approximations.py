@@ -26,12 +26,11 @@ import pymc as pm
 
 from pymc.blocking import DictToArrayBijection
 from pymc.distributions.dist_math import rho2sigma
+from pymc.exceptions import NotImplementedInference
 from pymc.util import makeiter
-from pymc.variational import opvi
 from pymc.variational.opvi import (
     Approximation,
     Group,
-    NotImplementedInference,
     _known_scan_ignored_inputs,
     node_property,
 )
@@ -212,7 +211,7 @@ class EmpiricalGroup(Group):
     def create_shared_params(self, trace=None, size=None, jitter=1, start=None):
         if trace is None:
             if size is None:
-                raise opvi.ParametrizationError("Need `trace` or `size` to initialize")
+                raise pymc.exceptions.ParametrizationError("Need `trace` or `size` to initialize")
             else:
                 start = self._prepare_start(start)
                 # Initialize particles
