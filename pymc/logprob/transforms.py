@@ -127,7 +127,7 @@ from pymc.logprob.rewriting import (
     cleanup_ir_rewrites_db,
     measurable_ir_rewrites_db,
 )
-from pymc.logprob.utils import check_potential_measurability
+from pymc.logprob.utils import CheckParameterValue, check_potential_measurability
 
 
 class TransformedVariable(Op):
@@ -617,6 +617,21 @@ def measurable_special_exp_to_exp(fgraph, node):
         return [1 / (1 + pt.exp(-inp))]
 
 
+@node_rewriter([pow])
+def measurable_power_exponent_to_exp(fgraph, node):
+    """Convert power(base, rv) of `MeasurableVariable`s to exp(log(base) * rv) form."""
+    base, inp_exponent = node.inputs
+
+    # When the base is measurable we have `power(rv, exponent)`, which should be handled by `PowerTransform` and needs no further rewrite.
+    # Here we change only the cases where exponent is measurable `power(base, rv)` which is not supported by the `PowerTransform`
+    if check_potential_measurability([base], fgraph.preserve_rv_mappings.rv_values.keys()):
+        return None
+
+    base = CheckParameterValue("base >= 0")(base, pt.all(pt.ge(base, 0.0)))
+
+    return [pt.exp(pt.log(base) * inp_exponent)]
+
+
 @node_rewriter(
     [
         exp,
@@ -693,7 +708,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         try:
             (power,) = other_inputs
             power = pt.get_underlying_scalar_constant_value(power).item()
-        # Power needs to be a constant
+        # Power needs to be a constant, if not then proceed to the other case power(base, rv)
         except NotScalarConstantError:
             return None
         transform_inputs = (measurable_input, power)
@@ -769,6 +784,12 @@ measurable_ir_rewrites_db.register(
     "transform",
 )
 
+measurable_ir_rewrites_db.register(
+    "measurable_power_expotent_to_exp",
+    measurable_power_exponent_to_exp,
+    "basic",
+    "transform",
+)
 
 measurable_ir_rewrites_db.register(
     "find_measurable_transforms",
