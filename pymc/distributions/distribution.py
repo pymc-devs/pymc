@@ -85,8 +85,8 @@ vectorized_ppc: contextvars.ContextVar[Optional[Callable]] = contextvars.Context
 PLATFORM = sys.platform
 
 
-def filter_shared_RNGs(params):
-    return [p for p in params if not isinstance(p, RandomGeneratorSharedVariable)]
+def filter_RNGs(params):
+    return [p for p in params if not isinstance(p.type, RandomType)]
 
 
 def rewrite_moment_scan_node(node):
