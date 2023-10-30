@@ -24,7 +24,7 @@ from pytensor.scalar import Identity
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.sharedvar import ScalarSharedVariable
 
-from pymc.logprob.transforms import RVTransform
+from pymc.distributions.transforms import Transform
 from pymc.model.core import Model
 from pymc.pytensorf import StringType, find_rng_nodes, toposort_replace
 
@@ -59,8 +59,8 @@ class ModelVar(Op):
 class ModelValuedVar(ModelVar):
     __props__ = ("transform",)
 
-    def __init__(self, transform: Optional[RVTransform] = None):
-        if transform is not None and not isinstance(transform, RVTransform):
+    def __init__(self, transform: Optional[Transform] = None):
+        if transform is not None and not isinstance(transform, Transform):
             raise TypeError(f"transform must be None or RVTransform type, got {type(transform)}")
         self.transform = transform
         super().__init__()

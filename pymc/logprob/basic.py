@@ -55,6 +55,7 @@ from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
 from pytensor.tensor.variable import TensorVariable
 from typing_extensions import TypeAlias
 
+from pymc.distributions.transforms import Transform
 from pymc.logprob.abstract import (
     MeasurableVariable,
     _icdf_helper,
@@ -63,7 +64,7 @@ from pymc.logprob.abstract import (
     _logprob_helper,
 )
 from pymc.logprob.rewriting import cleanup_ir, construct_ir_fgraph
-from pymc.logprob.transforms import RVTransform, TransformValuesRewrite
+from pymc.logprob.transforms import TransformValuesRewrite
 from pymc.logprob.utils import find_rvs_in_graph, rvs_to_value_vars
 
 TensorLike: TypeAlias = Union[Variable, float, np.ndarray]
@@ -588,7 +589,7 @@ def transformed_conditional_logp(
     rvs: Sequence[TensorVariable],
     *,
     rvs_to_values: Dict[TensorVariable, TensorVariable],
-    rvs_to_transforms: Dict[TensorVariable, RVTransform],
+    rvs_to_transforms: Dict[TensorVariable, Transform],
     jacobian: bool = True,
     **kwargs,
 ) -> List[TensorVariable]:

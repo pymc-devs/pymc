@@ -13,21 +13,36 @@
 #   limitations under the License.
 
 
-from typing import Union
-
 import numpy as np
 import pytensor
-import pytensor.tensor as pt
 import pytest
 
 from numpy.testing import assert_allclose, assert_array_equal
+from pytensor import tensor as pt
 from pytensor.tensor.variable import TensorConstant
 
 import pymc as pm
 import pymc.distributions.transforms as tr
 
+from pymc.distributions.transforms import (
+    ArccoshTransform,
+    ArcsinhTransform,
+    ArctanhTransform,
+    ChainTransform,
+    CoshTransform,
+    ErfcTransform,
+    ErfcxTransform,
+    ErfTransform,
+    ExpTransform,
+    IntervalTransform,
+    LocTransform,
+    LogTransform,
+    ScaleTransform,
+    SinhTransform,
+    TanhTransform,
+    Transform,
+)
 from pymc.logprob.basic import transformed_conditional_logp
-from pymc.logprob.transforms import RVTransform
 from pymc.pytensorf import floatX, jacobian
 from pymc.testing import (
     Circ,
@@ -120,33 +135,199 @@ def check_jacobian_det(
         assert_allclose(actual_ljd(yval), computed_ljd(yval), rtol=tol)
 
 
-def test_simplex():
-    check_vector_transform(tr.simplex, Simplex(2))
-    check_vector_transform(tr.simplex, Simplex(4))
+class TestTransformBase:
+    @pytest.mark.parametrize("ndim", (0, 1))
+    def test_fallback_log_jac_det(self, ndim):
+        """
+        Test fallback log_jac_det in RVTransform produces correct the graph for a
+        simple transformation: x**2 -> -log(2*x)
+        """
 
-    check_transform(
-        tr.simplex, MultiSimplex(3, 2), constructor=pt.matrix, test=floatX(np.zeros((2, 2)))
+        class SquareTransform(Transform):
+            name = "square"
+            ndim_supp = ndim
+
+            def forward(self, value, *inputs):
+                return pt.power(value, 2)
+
+            def backward(self, value, *inputs):
+                return pt.sqrt(value)
+
+        square_tr = SquareTransform()
+
+        value = pt.vector("value", dtype="float64")
+        value_tr = square_tr.forward(value)
+        log_jac_det = square_tr.log_jac_det(value_tr)
+
+        test_value = np.r_[3, 4]
+        expected_log_jac_det = -np.log(2 * test_value)
+        if ndim == 1:
+            expected_log_jac_det = expected_log_jac_det.sum()
+        np.testing.assert_array_equal(log_jac_det.eval({value: test_value}), expected_log_jac_det)
+
+    @pytest.mark.parametrize("ndim", (None, 2))
+    def test_fallback_log_jac_det_undefined_ndim(self, ndim):
+        class SquareTransform(Transform):
+            name = "square"
+            ndim_supp = ndim
+
+            def forward(self, value, *inputs):
+                return pt.power(value, 2)
+
+            def backward(self, value, *inputs):
+                return pt.sqrt(value)
+
+        with pytest.raises(
+            NotImplementedError, match=r"only implemented for ndim_supp in \(0, 1\)"
+        ):
+            SquareTransform().log_jac_det(0)
+
+
+class TestInvalidTransform:
+    def test_discrete_trafo(self):
+        with pm.Model():
+            with pytest.raises(ValueError) as err:
+                pm.Binomial("a", n=5, p=0.5, transform="log")
+            err.match("Transformations for discrete distributions")
+
+    def test_univariate_transform_multivariate_dist_raises(self):
+        with pm.Model() as m:
+            pm.Dirichlet("x", [1, 1, 1], transform=tr.log)
+
+        for jacobian in (True, False):
+            with pytest.raises(
+                NotImplementedError,
+                match="Univariate transform LogTransform cannot be applied to multivariate",
+            ):
+                m.logp(jacobian=jacobian)
+
+    def test_invalid_jacobian_broadcast_raises(self):
+        class BuggyTransform(Transform):
+            name = "buggy"
+
+            def forward(self, value, *inputs):
+                return value
+
+            def backward(self, value, *inputs):
+                return value
+
+            def log_jac_det(self, value, *inputs):
+                return pt.zeros_like(value.sum(-1, keepdims=True))
+
+        buggy_transform = BuggyTransform()
+
+        with pm.Model() as m:
+            pm.Uniform("x", shape=(4, 3), transform=buggy_transform)
+
+        for jacobian in (True, False):
+            with pytest.raises(
+                ValueError,
+                match="are not allowed to broadcast together. There is a bug in the implementation of either one",
+            ):
+                m.logp(jacobian=jacobian)
+
+
+class TestInterval:
+    def test_lowerbound(self):
+        trans = tr.Interval(0.0, None)
+        check_transform(trans, Rplusbig)
+
+        check_jacobian_det(trans, Rplusbig, elemwise=True)
+        check_jacobian_det(trans, Vector(Rplusbig, 2), pt.vector, [0, 0], elemwise=True)
+
+        vals = get_values(trans)
+        assert_array_equal(vals > 0, True)
+
+    def test_upperbound(self):
+        trans = tr.Interval(None, 0.0)
+        check_transform(trans, Rminusbig)
+
+        check_jacobian_det(trans, Rminusbig, elemwise=True)
+        check_jacobian_det(trans, Vector(Rminusbig, 2), pt.vector, [-1, -1], elemwise=True)
+
+        vals = get_values(trans)
+        assert_array_equal(vals < 0, True)
+
+    def test_interval(self):
+        for a, b in [(-4, 5.5), (0.1, 0.7), (-10, 4.3)]:
+            domain = Unit * np.float64(b - a) + np.float64(a)
+
+            trans = tr.Interval(a, b)
+            check_transform(trans, domain)
+
+            check_jacobian_det(trans, domain, elemwise=True)
+
+            vals = get_values(trans)
+            assert_array_equal(vals > a, True)
+            assert_array_equal(vals < b, True)
+
+    @pytest.mark.skipif(
+        pytensor.config.floatX == "float32", reason="Test is designed for 64bit precision"
     )
+    def test_interval_near_boundary(self):
+        lb = -1.0
+        ub = 1e-7
+        x0 = np.nextafter(ub, lb)
+
+        with pm.Model() as model:
+            pm.Uniform("x", initval=x0, lower=lb, upper=ub)
+
+        log_prob = model.point_logps()
+        assert_allclose(list(log_prob.values()), floatX(np.array([-52.68])))
+
+    def test_invalid_interval_helper(self):
+        with pytest.raises(ValueError, match="Lower and upper interval bounds cannot both be None"):
+            tr.Interval(None, None)
+
+        with pytest.raises(ValueError, match="Interval bounds must be constant values"):
+            tr.Interval(pt.constant(5) + 1, None)
+
+        assert tr.Interval(pt.constant(5), None)
+
+    def test_invalid_interval_transform(self):
+        x_rv = pt.random.normal(0, 1)
+        x_vv = x_rv.clone()
+
+        msg = "Both edges of IntervalTransform cannot be None"
+        tr = IntervalTransform(lambda *inputs: (None, None))
+        with pytest.raises(ValueError, match=msg):
+            tr.forward(x_vv, *x_rv.owner.inputs)
+
+        tr = IntervalTransform(lambda *inputs: (None, None))
+        with pytest.raises(ValueError, match=msg):
+            tr.backward(x_vv, *x_rv.owner.inputs)
+
+        tr = IntervalTransform(lambda *inputs: (None, None))
+        with pytest.raises(ValueError, match=msg):
+            tr.log_jac_det(x_vv, *x_rv.owner.inputs)
 
 
-def test_simplex_bounds():
-    vals = get_values(tr.simplex, Vector(R, 2), pt.vector, floatX(np.array([0, 0])))
+class TestSimplex:
+    def test_simplex(self):
+        check_vector_transform(tr.simplex, Simplex(2))
+        check_vector_transform(tr.simplex, Simplex(4))
 
-    assert_allclose(vals.sum(axis=1), 1, tol)
-    assert_array_equal(vals > 0, True)
-    assert_array_equal(vals < 1, True)
+        check_transform(
+            tr.simplex, MultiSimplex(3, 2), constructor=pt.matrix, test=floatX(np.zeros((2, 2)))
+        )
 
-    check_jacobian_det(
-        tr.simplex, Vector(R, 2), pt.vector, floatX(np.array([0, 0])), lambda x: x[:-1]
-    )
+    def test_simplex_bounds(self):
+        vals = get_values(tr.simplex, Vector(R, 2), pt.vector, floatX(np.array([0, 0])))
 
+        assert_allclose(vals.sum(axis=1), 1, tol)
+        assert_array_equal(vals > 0, True)
+        assert_array_equal(vals < 1, True)
 
-def test_simplex_accuracy():
-    val = floatX(np.array([-30]))
-    x = pt.vector("x")
-    x.tag.test_value = val
-    identity_f = pytensor.function([x], tr.simplex.forward(tr.simplex.backward(x)))
-    assert_allclose(val, identity_f(val), tol)
+        check_jacobian_det(
+            tr.simplex, Vector(R, 2), pt.vector, floatX(np.array([0, 0])), lambda x: x[:-1]
+        )
+
+    def test_simplex_accuracy(self):
+        val = floatX(np.array([-30]))
+        x = pt.vector("x")
+        x.tag.test_value = val
+        identity_f = pytensor.function([x], tr.simplex.forward(tr.simplex.backward(x)))
+        assert_allclose(val, identity_f(val), tol)
 
 
 def test_sum_to_1():
@@ -154,7 +335,7 @@ def test_sum_to_1():
     check_vector_transform(tr.sum_to_1, Simplex(4))
 
     with pytest.warns(FutureWarning, match="ndim_supp argument is deprecated"):
-        tr.SumTo1(2)
+        tr.SumTo1Transform(2)
 
     check_jacobian_det(
         tr.sum_to_1,
@@ -206,57 +387,6 @@ def test_logodds():
     assert_array_equal(vals < 1, True)
 
 
-def test_lowerbound():
-    trans = tr.Interval(0.0, None)
-    check_transform(trans, Rplusbig)
-
-    check_jacobian_det(trans, Rplusbig, elemwise=True)
-    check_jacobian_det(trans, Vector(Rplusbig, 2), pt.vector, [0, 0], elemwise=True)
-
-    vals = get_values(trans)
-    assert_array_equal(vals > 0, True)
-
-
-def test_upperbound():
-    trans = tr.Interval(None, 0.0)
-    check_transform(trans, Rminusbig)
-
-    check_jacobian_det(trans, Rminusbig, elemwise=True)
-    check_jacobian_det(trans, Vector(Rminusbig, 2), pt.vector, [-1, -1], elemwise=True)
-
-    vals = get_values(trans)
-    assert_array_equal(vals < 0, True)
-
-
-def test_interval():
-    for a, b in [(-4, 5.5), (0.1, 0.7), (-10, 4.3)]:
-        domain = Unit * np.float64(b - a) + np.float64(a)
-
-        trans = tr.Interval(a, b)
-        check_transform(trans, domain)
-
-        check_jacobian_det(trans, domain, elemwise=True)
-
-        vals = get_values(trans)
-        assert_array_equal(vals > a, True)
-        assert_array_equal(vals < b, True)
-
-
-@pytest.mark.skipif(
-    pytensor.config.floatX == "float32", reason="Test is designed for 64bit precision"
-)
-def test_interval_near_boundary():
-    lb = -1.0
-    ub = 1e-7
-    x0 = np.nextafter(ub, lb)
-
-    with pm.Model() as model:
-        pm.Uniform("x", initval=x0, lower=lb, upper=ub)
-
-    log_prob = model.point_logps()
-    assert_allclose(list(log_prob.values()), floatX(np.array([-52.68])))
-
-
 def test_circular():
     trans = tr.circular
     check_transform(trans, Circ)
@@ -270,11 +400,47 @@ def test_circular():
     assert isinstance(trans.forward(1, None), TensorConstant)
 
 
+def test_triangular_transform():
+    with pm.Model() as m:
+        x = pm.Triangular("x", lower=0, c=1, upper=2)
+
+    transform = m.rvs_to_transforms[x]
+    assert np.isclose(transform.backward(-np.inf, *x.owner.inputs).eval(), 0)
+    assert np.isclose(transform.backward(np.inf, *x.owner.inputs).eval(), 2)
+
+
+@pytest.mark.parametrize(
+    "transform",
+    [
+        ErfTransform(),
+        ErfcTransform(),
+        ErfcxTransform(),
+        SinhTransform(),
+        CoshTransform(),
+        TanhTransform(),
+        ArcsinhTransform(),
+        ArccoshTransform(),
+        ArctanhTransform(),
+        LogTransform(),
+        ExpTransform(),
+    ],
+)
+def test_check_jac_det(transform):
+    check_jacobian_det(
+        transform,
+        Vector(Rplusbig, 2),
+        pt.dvector,
+        [0.1, 0.1],
+        elemwise=True,
+        rv_var=pt.random.normal(0.5, 1, name="base_rv"),
+    )
+
+
 def test_ordered():
     check_vector_transform(tr.ordered, SortedVector(6))
 
     with pytest.warns(FutureWarning, match="ndim_supp argument is deprecated"):
-        tr.Ordered(1)
+        tr.OrderedTransform(1)
 
     check_jacobian_det(
         tr.ordered, Vector(R, 2), pt.vector, floatX(np.array([0, 0])), elemwise=False
@@ -284,24 +450,64 @@ def test_ordered():
     assert_array_equal(np.diff(vals) >= 0, True)
 
 
-def test_chain_values():
-    chain_tranf = tr.Chain([tr.logodds, tr.ordered])
-    vals = get_values(chain_tranf, Vector(R, 5), pt.vector, floatX(np.zeros(5)))
-    assert_array_equal(np.diff(vals) >= 0, True)
+class TestChain:
+    def test_chain_values(self):
+        chain_tranf = tr.Chain([tr.logodds, tr.ordered])
+        vals = get_values(chain_tranf, Vector(R, 5), pt.vector, floatX(np.zeros(5)))
+        assert_array_equal(np.diff(vals) >= 0, True)
+
+    def test_chain_vector_transform(self):
+        chain_tranf = tr.Chain([tr.logodds, tr.ordered])
+        check_vector_transform(chain_tranf, UnitSortedVector(3))
+
+    @pytest.mark.xfail(reason="Fails due to precision issue. Values just close to expected.")
+    def test_chain_jacob_det(self):
+        chain_tranf = tr.Chain([tr.logodds, tr.ordered])
+        check_jacobian_det(
+            chain_tranf, Vector(R, 4), pt.vector, floatX(np.zeros(4)), elemwise=False
+        )
+
+    def test_chained_transform(self):
+        loc = 5
+        scale = 0.1
+
+        ch = ChainTransform(
+            transform_list=[
+                ScaleTransform(
+                    transform_args_fn=lambda *inputs: pt.constant(scale),
+                ),
+                ExpTransform(),
+                LocTransform(
+                    transform_args_fn=lambda *inputs: pt.constant(loc),
+                ),
+            ],
+        )
+
+        x = pt.random.multivariate_normal(np.zeros(3), np.eye(3))
+        x_val = x.eval()
+
+        x_val_forward = ch.forward(x_val, *x.owner.inputs).eval()
+        np.testing.assert_allclose(
+            x_val_forward,
+            np.exp(x_val * scale) + loc,
+            rtol=1e-6,
+        )
+
+        x_val_backward = ch.backward(x_val_forward, *x.owner.inputs, scale, loc).eval()
+        np.testing.assert_allclose(
+            x_val_backward,
+            x_val,
+            rtol=1e-5,
+        )
+
+        log_jac_det = ch.log_jac_det(x_val_forward, *x.owner.inputs, scale, loc)
+        np.testing.assert_allclose(
+            pt.sum(log_jac_det).eval(),
+            np.sum(-np.log(scale) - np.log(x_val_forward - loc)),
+        )
 
 
-def test_chain_vector_transform():
-    chain_tranf = tr.Chain([tr.logodds, tr.ordered])
-    check_vector_transform(chain_tranf, UnitSortedVector(3))
-
-
-@pytest.mark.xfail(reason="Fails due to precision issue. Values just close to expected.")
-def test_chain_jacob_det():
-    chain_tranf = tr.Chain([tr.logodds, tr.ordered])
-    check_jacobian_det(chain_tranf, Vector(R, 4), pt.vector, floatX(np.zeros(4)), elemwise=False)
-
-
-class TestElementWiseLogp:
+class TestTransformedRVLogp:
     def build_model(self, distfam, params, size, transform, initval=None):
         if initval is not None:
             initval = pm.floatX(initval)
@@ -578,88 +784,23 @@ class TestElementWiseLogp:
         )
         self.check_vectortransform_elementwise_logp(model)
 
+    def test_transform_univariate_dist_logp_shape(self):
+        with pm.Model() as m:
+            pm.Uniform("x", shape=(4, 3), transform=tr.logodds)
 
-def test_triangular_transform():
-    with pm.Model() as m:
-        x = pm.Triangular("x", lower=0, c=1, upper=2)
+        assert m.logp(jacobian=False, sum=False)[0].type.shape == (4, 3)
+        assert m.logp(jacobian=True, sum=False)[0].type.shape == (4, 3)
 
-    transform = m.rvs_to_transforms[x]
-    assert np.isclose(transform.backward(-np.inf, *x.owner.inputs).eval(), 0)
-    assert np.isclose(transform.backward(np.inf, *x.owner.inputs).eval(), 2)
+        with pm.Model() as m:
+            pm.Uniform("x", shape=(4, 3), transform=tr.ordered)
 
-
-def test_interval_transform_raises():
-    with pytest.raises(ValueError, match="Lower and upper interval bounds cannot both be None"):
-        tr.Interval(None, None)
-
-    with pytest.raises(ValueError, match="Interval bounds must be constant values"):
-        tr.Interval(pt.constant(5) + 1, None)
-
-    assert tr.Interval(pt.constant(5), None)
-
-
-def test_discrete_trafo():
-    with pm.Model():
-        with pytest.raises(ValueError) as err:
-            pm.Binomial("a", n=5, p=0.5, transform="log")
-        err.match("Transformations for discrete distributions")
-
-
-def test_transform_univariate_dist_logp_shape():
-    with pm.Model() as m:
-        pm.Uniform("x", shape=(4, 3), transform=tr.logodds)
-
-    assert m.logp(jacobian=False, sum=False)[0].type.shape == (4, 3)
-    assert m.logp(jacobian=True, sum=False)[0].type.shape == (4, 3)
-
-    with pm.Model() as m:
-        pm.Uniform("x", shape=(4, 3), transform=tr.ordered)
-
-    assert m.logp(jacobian=False, sum=False)[0].type.shape == (4,)
-    assert m.logp(jacobian=True, sum=False)[0].type.shape == (4,)
-
-
-def test_univariate_transform_multivariate_dist_raises():
-    with pm.Model() as m:
-        pm.Dirichlet("x", [1, 1, 1], transform=tr.log)
-
-    for jacobian in (True, False):
-        with pytest.raises(
-            NotImplementedError,
-            match="Univariate transform LogTransform cannot be applied to multivariate",
-        ):
-            m.logp(jacobian=jacobian)
-
-
-def test_invalid_jacobian_broadcast_raises():
-    class BuggyTransform(RVTransform):
-        name = "buggy"
-
-        def forward(self, value, *inputs):
-            return value
-
-        def backward(self, value, *inputs):
-            return value
-
-        def log_jac_det(self, value, *inputs):
-            return pt.zeros_like(value.sum(-1, keepdims=True))
-
-    buggy_transform = BuggyTransform()
-
-    with pm.Model() as m:
-        pm.Uniform("x", shape=(4, 3), transform=buggy_transform)
-
-    for jacobian in (True, False):
-        with pytest.raises(
-            ValueError,
-            match="are not allowed to broadcast together. There is a bug in the implementation of either one",
-        ):
-            m.logp(jacobian=jacobian)
+        assert m.logp(jacobian=False, sum=False)[0].type.shape == (4,)
+        assert m.logp(jacobian=True, sum=False)[0].type.shape == (4,)
 
 
 def test_deprecated_ndim_supp_transforms():
     with pytest.warns(FutureWarning, match="deprecated"):
-        tr.Ordered(ndim_supp=1)
+        tr.OrderedTransform(ndim_supp=1)
 
     with pytest.warns(FutureWarning, match="deprecated"):
         assert tr.univariate_ordered == tr.ordered
@@ -668,7 +809,7 @@ def test_deprecated_ndim_supp_transforms():
         assert tr.multivariate_ordered == tr.ordered
 
     with pytest.warns(FutureWarning, match="deprecated"):
-        tr.SumTo1(ndim_supp=1)
+        tr.SumTo1Transform(ndim_supp=1)
 
     with pytest.warns(FutureWarning, match="deprecated"):
         assert tr.univariate_sum_to_1 == tr.sum_to_1

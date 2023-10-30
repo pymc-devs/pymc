@@ -33,11 +33,10 @@ from pymc.distributions.distribution import (
     moment,
 )
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
-from pymc.distributions.transforms import _default_transform
+from pymc.distributions.transforms import IntervalTransform, _default_transform
 from pymc.distributions.truncated import Truncated
 from pymc.logprob.abstract import _logcdf, _logcdf_helper, _logprob
 from pymc.logprob.basic import logp
-from pymc.logprob.transforms import IntervalTransform
 from pymc.pytensorf import floatX
 from pymc.util import check_dist_not_registered
 from pymc.vartypes import continuous_types, discrete_types
@@ -417,15 +416,15 @@ def marginal_mixture_moment(op, rv, rng, weights, *components):
 # special handling or because we have custom logic to enable them. If new default
 # transforms are implemented, this list and function should be updated
 allowed_default_mixture_transforms = (
-    transforms.CholeskyCovPacked,
+    transforms.CholeskyCovPackedTransform,
     transforms.CircularTransform,
     transforms.IntervalTransform,
     transforms.LogTransform,
-    transforms.LogExpM1,
+    transforms.LogExpM1Transform,
     transforms.LogOddsTransform,
-    transforms.Ordered,
+    transforms.OrderedTransform,
     transforms.SimplexTransform,
-    transforms.SumTo1,
+    transforms.SumTo1Transform,
 )
 
 

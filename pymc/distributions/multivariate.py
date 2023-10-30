@@ -1241,7 +1241,7 @@ def _LKJCholeksyCovRV_moment(op, rv, rng, n, eta, sd_dist):
 @_default_transform.register(_LKJCholeskyCovRV)
 def _LKJCholeksyCovRV_default_transform(op, rv):
     _, n, _, _ = rv.owner.inputs
-    return transforms.CholeskyCovPacked(n)
+    return transforms.CholeskyCovPackedTransform(n)
 
 
 @_logprob.register(_LKJCholeskyCovRV)

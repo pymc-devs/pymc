@@ -48,33 +48,28 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.scan import scan
 
 from pymc.distributions.continuous import Cauchy
-from pymc.distributions.transforms import _default_transform, log, logodds
-from pymc.logprob.abstract import MeasurableVariable, _logprob
-from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
-from pymc.logprob.transforms import (
+from pymc.distributions.transforms import (
     ArccoshTransform,
     ArcsinhTransform,
     ArctanhTransform,
-    ChainedTransform,
     CoshTransform,
     ErfcTransform,
     ErfcxTransform,
     ErfTransform,
     ExpTransform,
-    IntervalTransform,
-    LocTransform,
     LogOddsTransform,
     LogTransform,
-    RVTransform,
-    ScaleTransform,
     SinhTransform,
     TanhTransform,
-    TransformValuesMapping,
-    TransformValuesRewrite,
+    _default_transform,
+    log,
+    logodds,
 )
+from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
+from pymc.logprob.transforms import TransformValuesMapping, TransformValuesRewrite
 from pymc.logprob.utils import ParameterValueError
-from pymc.testing import Rplusbig, Vector, assert_no_rvs
-from tests.distributions.test_transform import check_jacobian_det
+from pymc.testing import assert_no_rvs
 
 
 class DirichletScipyDist:
@@ -631,135 +626,6 @@ class TestValueTransformRewrite:
             "innov": np.full((4,), -0.5),
         }
         np.testing.assert_allclose(logp_fn(**test_point), ref_logp_fn(**test_point))
-
-
-class TestRVTransform:
-    @pytest.mark.parametrize("ndim", (0, 1))
-    def test_fallback_log_jac_det(self, ndim):
-        """
-        Test fallback log_jac_det in RVTransform produces correct the graph for a
-        simple transformation: x**2 -> -log(2*x)
-        """
-
-        class SquareTransform(RVTransform):
-            name = "square"
-            ndim_supp = ndim
-
-            def forward(self, value, *inputs):
-                return pt.power(value, 2)
-
-            def backward(self, value, *inputs):
-                return pt.sqrt(value)
-
-        square_tr = SquareTransform()
-
-        value = pt.vector("value")
-        value_tr = square_tr.forward(value)
-        log_jac_det = square_tr.log_jac_det(value_tr)
-
-        test_value = np.r_[3, 4]
-        expected_log_jac_det = -np.log(2 * test_value)
-        if ndim == 1:
-            expected_log_jac_det = expected_log_jac_det.sum()
-        np.testing.assert_array_equal(log_jac_det.eval({value: test_value}), expected_log_jac_det)
-
-    @pytest.mark.parametrize("ndim", (None, 2))
-    def test_fallback_log_jac_det_undefined_ndim(self, ndim):
-        class SquareTransform(RVTransform):
-            name = "square"
-            ndim_supp = ndim
-
-            def forward(self, value, *inputs):
-                return pt.power(value, 2)
-
-            def backward(self, value, *inputs):
-                return pt.sqrt(value)
-
-        with pytest.raises(
-            NotImplementedError, match=r"only implemented for ndim_supp in \(0, 1\)"
-        ):
-            SquareTransform().log_jac_det(0)
-
-    def test_invalid_interval_transform(self):
-        x_rv = pt.random.normal(0, 1)
-        x_vv = x_rv.clone()
-
-        msg = "Both edges of IntervalTransform cannot be None"
-        tr = IntervalTransform(lambda *inputs: (None, None))
-        with pytest.raises(ValueError, match=msg):
-            tr.forward(x_vv, *x_rv.owner.inputs)
-
-        tr = IntervalTransform(lambda *inputs: (None, None))
-        with pytest.raises(ValueError, match=msg):
-            tr.backward(x_vv, *x_rv.owner.inputs)
-
-        tr = IntervalTransform(lambda *inputs: (None, None))
-        with pytest.raises(ValueError, match=msg):
-            tr.log_jac_det(x_vv, *x_rv.owner.inputs)
-
-    def test_chained_transform(self):
-        loc = 5
-        scale = 0.1
-
-        ch = ChainedTransform(
-            transform_list=[
-                ScaleTransform(
-                    transform_args_fn=lambda *inputs: pt.constant(scale),
-                ),
-                ExpTransform(),
-                LocTransform(
-                    transform_args_fn=lambda *inputs: pt.constant(loc),
-                ),
-            ],
-            base_op=pt.random.multivariate_normal,
-        )
-
-        x = pt.random.multivariate_normal(np.zeros(3), np.eye(3))
-        x_val = x.eval()
-
-        x_val_forward = ch.forward(x_val, *x.owner.inputs).eval()
-        np.testing.assert_allclose(
-            x_val_forward,
-            np.exp(x_val * scale) + loc,
-        )
-
-        x_val_backward = ch.backward(x_val_forward, *x.owner.inputs, scale, loc).eval()
-        np.testing.assert_allclose(
-            x_val_backward,
-            x_val,
-        )
-
-        log_jac_det = ch.log_jac_det(x_val_forward, *x.owner.inputs, scale, loc)
-        np.testing.assert_allclose(
-            pt.sum(log_jac_det).eval(),
-            np.sum(-np.log(scale) - np.log(x_val_forward - loc)),
-        )
-
-    @pytest.mark.parametrize(
-        "transform",
-        [
-            ErfTransform(),
-            ErfcTransform(),
-            ErfcxTransform(),
-            SinhTransform(),
-            CoshTransform(),
-            TanhTransform(),
-            ArcsinhTransform(),
-            ArccoshTransform(),
-            ArctanhTransform(),
-            LogTransform(),
-            ExpTransform(),
-        ],
-    )
-    def test_check_jac_det(self, transform):
-        check_jacobian_det(
-            transform,
-            Vector(Rplusbig, 2),
-            pt.dvector,
-            [0.1, 0.1],
-            elemwise=True,
-            rv_var=pt.random.normal(0.5, 1, name="base_rv"),
-        )
 
 
 def test_exp_transform_rv():

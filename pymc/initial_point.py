@@ -24,7 +24,7 @@ from pytensor.graph.basic import Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.transforms import RVTransform
+from pymc.distributions.transforms import Transform
 from pymc.pytensorf import compile_pymc, find_rng_nodes, replace_rng_nodes, reseed_rngs
 from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
 
@@ -177,7 +177,7 @@ def make_initial_point_fn(
 def make_initial_point_expression(
     *,
     free_rvs: Sequence[TensorVariable],
-    rvs_to_transforms: Dict[TensorVariable, RVTransform],
+    rvs_to_transforms: Dict[TensorVariable, Transform],
     initval_strategies: Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]],
     jitter_rvs: Set[TensorVariable] = None,
     default_strategy: str = "moment",

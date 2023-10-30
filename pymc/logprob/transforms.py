@@ -34,17 +34,14 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import abc
-
 from copy import copy
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pytensor.tensor as pt
 
-from pytensor import scan
-from pytensor.gradient import DisconnectedType, jacobian
-from pytensor.graph.basic import Apply, Node, Variable
+from pytensor.gradient import DisconnectedType
+from pytensor.graph.basic import Apply, Node
 from pytensor.graph.features import AlreadyThere, Feature
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
@@ -112,6 +109,24 @@ from pytensor.tensor.math import (
 )
 from pytensor.tensor.variable import TensorVariable
 
+from pymc.distributions.transforms import (
+    AbsTransform,
+    ArccoshTransform,
+    ArcsinhTransform,
+    ArctanhTransform,
+    CoshTransform,
+    ErfcTransform,
+    ErfcxTransform,
+    ErfTransform,
+    ExpTransform,
+    LocTransform,
+    LogTransform,
+    PowerTransform,
+    ScaleTransform,
+    SinhTransform,
+    TanhTransform,
+    Transform,
+)
 from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableVariable,
@@ -166,37 +181,6 @@ cleanup_ir_rewrites_db.register(
     "cleanup",
     "transform",
 )
-
-
-class RVTransform(abc.ABC):
-    ndim_supp = None
-
-    @abc.abstractmethod
-    def forward(self, value: TensorVariable, *inputs: Variable) -> TensorVariable:
-        """Apply the transformation."""
-
-    @abc.abstractmethod
-    def backward(
-        self, value: TensorVariable, *inputs: Variable
-    ) -> Union[TensorVariable, Tuple[TensorVariable, ...]]:
-        """Invert the transformation. Multiple values may be returned when the
-        transformation is not 1-to-1"""
-
-    def log_jac_det(self, value: TensorVariable, *inputs) -> TensorVariable:
-        """Construct the log of the absolute value of the Jacobian determinant."""
-        if self.ndim_supp not in (0, 1):
-            raise NotImplementedError(
-                f"RVTransform default log_jac_det only implemented for ndim_supp in (0, 1), got {self.ndim_supp=}"
-            )
-        if self.ndim_supp == 0:
-            jac = pt.reshape(pt.grad(pt.sum(self.backward(value, *inputs)), [value]), value.shape)
-            return pt.log(pt.abs(jac))
-        else:
-            phi_inv = self.backward(value, *inputs)
-            return pt.log(pt.abs(pt.nlinalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
-
-    def __str__(self):
-        return f"{self.__class__.__name__}"
 
 
 @node_rewriter(tracks=None)
@@ -367,7 +351,7 @@ class TransformValuesRewrite(GraphRewriter):
 
     def __init__(
         self,
-        values_to_transforms: Dict[TensorVariable, Union[RVTransform, None]],
+        values_to_transforms: Dict[TensorVariable, Union[Transform, None]],
     ):
         """
         Parameters
@@ -414,10 +398,10 @@ class MeasurableTransform(MeasurableElemwise):
 
     # Cannot use `transform` as name because it would clash with the property added by
     # the `TransformValuesRewrite`
-    transform_elemwise: RVTransform
+    transform_elemwise: Transform
     measurable_input_idx: int
 
-    def __init__(self, *args, transform: RVTransform, measurable_input_idx: int, **kwargs):
+    def __init__(self, *args, transform: Transform, measurable_input_idx: int, **kwargs):
         self.transform_elemwise = transform
         self.measurable_input_idx = measurable_input_idx
         super().__init__(*args, **kwargs)
@@ -684,23 +668,8 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
     scalar_op = node.op.scalar_op
     measurable_input_idx = 0
     transform_inputs: Tuple[TensorVariable, ...] = (measurable_input,)
-    transform: RVTransform
+    transform: Transform
 
-    transform_dict = {
-        Exp: ExpTransform(),
-        Log: LogTransform(),
-        Abs: AbsTransform(),
-        Sinh: SinhTransform(),
-        Cosh: CoshTransform(),
-        Tanh: TanhTransform(),
-        ArcSinh: ArcsinhTransform(),
-        ArcCosh: ArccoshTransform(),
-        ArcTanh: ArctanhTransform(),
-        Erf: ErfTransform(),
-        Erfc: ErfcTransform(),
-        Erfcx: ErfcxTransform(),
-    }
-    transform = transform_dict.get(type(scalar_op), None)
     if isinstance(scalar_op, Pow):
         # We only allow for the base to be measurable
         if measurable_input_idx != 0:
@@ -718,11 +687,26 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         transform = LocTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
-    elif transform is None:
+    elif isinstance(scalar_op, Mul):
         transform_inputs = (measurable_input, pt.mul(*other_inputs))
         transform = ScaleTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
+    else:
+        transform = {
+            Exp: ExpTransform,
+            Log: LogTransform,
+            Abs: AbsTransform,
+            Sinh: SinhTransform,
+            Cosh: CoshTransform,
+            Tanh: TanhTransform,
+            ArcSinh: ArcsinhTransform,
+            ArcCosh: ArccoshTransform,
+            ArcTanh: ArctanhTransform,
+            Erf: ErfTransform,
+            Erfc: ErfcTransform,
+            Erfcx: ErfcxTransform,
+        }[type(scalar_op)]()
     transform_op = MeasurableTransform(
         scalar_op=scalar_op,
         transform=transform,
@@ -799,394 +783,9 @@ measurable_ir_rewrites_db.register(
 )
 
 
-class SinhTransform(RVTransform):
-    name = "sinh"
-    ndim_supp = 0
-
-    def forward(self, value, *inputs):
-        return pt.sinh(value)
-
-    def backward(self, value, *inputs):
-        return pt.arcsinh(value)
-
-
-class CoshTransform(RVTransform):
-    name = "cosh"
-    ndim_supp = 0
-
-    def forward(self, value, *inputs):
-        return pt.cosh(value)
-
-    def backward(self, value, *inputs):
-        back_value = pt.arccosh(value)
-        return (-back_value, back_value)
-
-    def log_jac_det(self, value, *inputs):
-        return pt.switch(
-            value < 1,
-            np.nan,
-            -pt.log(pt.sqrt(value**2 - 1)),
-        )
-
-
-class TanhTransform(RVTransform):
-    name = "tanh"
-    ndim_supp = 0
-
-    def forward(self, value, *inputs):
-        return pt.tanh(value)
-
-    def backward(self, value, *inputs):
-        return pt.arctanh(value)
-
-
-class ArcsinhTransform(RVTransform):
-    name = "arcsinh"
-    ndim_supp = 0
-
-    def forward(self, value, *inputs):
-        return pt.arcsinh(value)
-
-    def backward(self, value, *inputs):
-        return pt.sinh(value)
-
-
-class ArccoshTransform(RVTransform):
-    name = "arccosh"
-    ndim_supp = 0
-
-    def forward(self, value, *inputs):
-        return pt.arccosh(value)
-
-    def backward(self, value, *inputs):
-        return pt.cosh(value)
-
-
-class ArctanhTransform(RVTransform):
-    name = "arctanh"
-    ndim_supp = 0
-
-    def forward(self, value, *inputs):
-        return pt.arctanh(value)
-
-    def backward(self, value, *inputs):
-        return pt.tanh(value)
-
-
-class ErfTransform(RVTransform):
-    name = "erf"
-    ndim_supp = 0
-
-    def forward(self, value, *inputs):
-        return pt.erf(value)
-
-    def backward(self, value, *inputs):
-        return pt.erfinv(value)
-
-
-class ErfcTransform(RVTransform):
-    name = "erfc"
-    ndim_supp = 0
-
-    def forward(self, value, *inputs):
-        return pt.erfc(value)
-
-    def backward(self, value, *inputs):
-        return pt.erfcinv(value)
-
-
-class ErfcxTransform(RVTransform):
-    name = "erfcx"
-    ndim_supp = 0
-
-    def forward(self, value, *inputs):
-        return pt.erfcx(value)
-
-    def backward(self, value, *inputs):
-        # computes the inverse of erfcx, this was adapted from
-        # https://tinyurl.com/4mxfd3cz
-        x = pt.switch(value <= 1, 1.0 / (value * pt.sqrt(np.pi)), -pt.sqrt(pt.log(value)))
-
-        def calc_delta_x(value, prior_result):
-            return prior_result - (pt.erfcx(prior_result) - value) / (
-                2 * prior_result * pt.erfcx(prior_result) - 2 / pt.sqrt(np.pi)
-            )
-
-        result, updates = scan(
-            fn=calc_delta_x,
-            outputs_info=pt.ones_like(x),
-            non_sequences=value,
-            n_steps=10,
-        )
-        return result[-1]
-
-
-class LocTransform(RVTransform):
-    name = "loc"
-
-    def __init__(self, transform_args_fn):
-        self.transform_args_fn = transform_args_fn
-
-    def forward(self, value, *inputs):
-        loc = self.transform_args_fn(*inputs)
-        return value + loc
-
-    def backward(self, value, *inputs):
-        loc = self.transform_args_fn(*inputs)
-        return value - loc
-
-    def log_jac_det(self, value, *inputs):
-        return pt.zeros_like(value)
-
-
-class ScaleTransform(RVTransform):
-    name = "scale"
-
-    def __init__(self, transform_args_fn):
-        self.transform_args_fn = transform_args_fn
-
-    def forward(self, value, *inputs):
-        scale = self.transform_args_fn(*inputs)
-        return value * scale
-
-    def backward(self, value, *inputs):
-        scale = self.transform_args_fn(*inputs)
-        return value / scale
-
-    def log_jac_det(self, value, *inputs):
-        scale = self.transform_args_fn(*inputs)
-        return -pt.log(pt.abs(pt.broadcast_to(scale, value.shape)))
-
-
-class LogTransform(RVTransform):
-    name = "log"
-
-    def forward(self, value, *inputs):
-        return pt.log(value)
-
-    def backward(self, value, *inputs):
-        return pt.exp(value)
-
-    def log_jac_det(self, value, *inputs):
-        return value
-
-
-class ExpTransform(RVTransform):
-    name = "exp"
-
-    def forward(self, value, *inputs):
-        return pt.exp(value)
-
-    def backward(self, value, *inputs):
-        return pt.log(value)
-
-    def log_jac_det(self, value, *inputs):
-        return -pt.log(value)
-
-
-class AbsTransform(RVTransform):
-    name = "abs"
-
-    def forward(self, value, *inputs):
-        return pt.abs(value)
-
-    def backward(self, value, *inputs):
-        value = pt.switch(value >= 0, value, np.nan)
-        return -value, value
-
-    def log_jac_det(self, value, *inputs):
-        return pt.switch(value >= 0, 0, np.nan)
-
-
-class PowerTransform(RVTransform):
-    name = "power"
-
-    def __init__(self, power=None):
-        if not isinstance(power, (int, float)):
-            raise TypeError(f"Power must be integer or float, got {type(power)}")
-        if power == 0:
-            raise ValueError("Power cannot be 0")
-        self.power = power
-        super().__init__()
-
-    def forward(self, value, *inputs):
-        return pt.power(value, self.power)
-
-    def backward(self, value, *inputs):
-        inv_power = 1 / self.power
-
-        # Powers that don't admit negative values
-        if (np.abs(self.power) < 1) or (self.power % 2 == 0):
-            backward_value = pt.switch(value >= 0, pt.power(value, inv_power), np.nan)
-        # Powers that admit negative values require special logic, because (-1)**(1/3) returns `nan` in PyTensor
-        else:
-            backward_value = pt.power(pt.abs(value), inv_power) * pt.switch(value >= 0, 1, -1)
-
-        # In this case the transform is not 1-to-1
-        if self.power % 2 == 0:
-            return -backward_value, backward_value
-        else:
-            return backward_value
-
-    def log_jac_det(self, value, *inputs):
-        inv_power = 1 / self.power
-
-        # Note: This fails for value==0
-        res = np.log(np.abs(inv_power)) + (inv_power - 1) * pt.log(pt.abs(value))
-
-        # Powers that don't admit negative values
-        if (np.abs(self.power) < 1) or (self.power % 2 == 0):
-            res = pt.switch(value >= 0, res, np.nan)
-
-        return res
-
-
-class IntervalTransform(RVTransform):
-    name = "interval"
-
-    def __init__(self, args_fn: Callable[..., Tuple[Optional[Variable], Optional[Variable]]]):
-        """
-
-        Parameters
-        ----------
-        args_fn
-            Function that expects inputs of RandomVariable and returns the lower
-            and upper bounds for the interval transformation. If one of these is
-            None, the RV is considered to be unbounded on the respective edge.
-        """
-        self.args_fn = args_fn
-
-    def forward(self, value, *inputs):
-        a, b = self.args_fn(*inputs)
-
-        if a is not None and b is not None:
-            return pt.log(value - a) - pt.log(b - value)
-        elif a is not None:
-            return pt.log(value - a)
-        elif b is not None:
-            return pt.log(b - value)
-        else:
-            raise ValueError("Both edges of IntervalTransform cannot be None")
-
-    def backward(self, value, *inputs):
-        a, b = self.args_fn(*inputs)
-
-        if a is not None and b is not None:
-            sigmoid_x = pt.sigmoid(value)
-            return sigmoid_x * b + (1 - sigmoid_x) * a
-        elif a is not None:
-            return pt.exp(value) + a
-        elif b is not None:
-            return b - pt.exp(value)
-        else:
-            raise ValueError("Both edges of IntervalTransform cannot be None")
-
-    def log_jac_det(self, value, *inputs):
-        a, b = self.args_fn(*inputs)
-
-        if a is not None and b is not None:
-            s = pt.softplus(-value)
-            return pt.log(b - a) - 2 * s - value
-        elif a is None and b is None:
-            raise ValueError("Both edges of IntervalTransform cannot be None")
-        else:
-            return value
-
-
-class LogOddsTransform(RVTransform):
-    name = "logodds"
-
-    def backward(self, value, *inputs):
-        return pt.expit(value)
-
-    def forward(self, value, *inputs):
-        return pt.log(value / (1 - value))
-
-    def log_jac_det(self, value, *inputs):
-        sigmoid_value = pt.sigmoid(value)
-        return pt.log(sigmoid_value) + pt.log1p(-sigmoid_value)
-
-
-class SimplexTransform(RVTransform):
-    name = "simplex"
-
-    def forward(self, value, *inputs):
-        value = pt.as_tensor(value)
-        log_value = pt.log(value)
-        N = value.shape[-1].astype(value.dtype)
-        shift = pt.sum(log_value, -1, keepdims=True) / N
-        return log_value[..., :-1] - shift
-
-    def backward(self, value, *inputs):
-        value = pt.concatenate([value, -pt.sum(value, -1, keepdims=True)], axis=-1)
-        exp_value_max = pt.exp(value - pt.max(value, -1, keepdims=True))
-        return exp_value_max / pt.sum(exp_value_max, -1, keepdims=True)
-
-    def log_jac_det(self, value, *inputs):
-        value = pt.as_tensor(value)
-        N = value.shape[-1] + 1
-        N = N.astype(value.dtype)
-        sum_value = pt.sum(value, -1, keepdims=True)
-        value_sum_expanded = value + sum_value
-        value_sum_expanded = pt.concatenate([value_sum_expanded, pt.zeros(sum_value.shape)], -1)
-        logsumexp_value_expanded = pt.logsumexp(value_sum_expanded, -1, keepdims=True)
-        res = pt.log(N) + (N * sum_value) - (N * logsumexp_value_expanded)
-        return pt.sum(res, -1)
-
-
-class CircularTransform(RVTransform):
-    name = "circular"
-
-    def backward(self, value, *inputs):
-        return pt.arctan2(pt.sin(value), pt.cos(value))
-
-    def forward(self, value, *inputs):
-        return pt.as_tensor_variable(value)
-
-    def log_jac_det(self, value, *inputs):
-        return pt.zeros(value.shape)
-
-
-class ChainedTransform(RVTransform):
-    name = "chain"
-
-    def __init__(self, transform_list, base_op):
-        self.transform_list = transform_list
-        self.base_op = base_op
-
-    def forward(self, value, *inputs):
-        for transform in self.transform_list:
-            value = transform.forward(value, *inputs)
-        return value
-
-    def backward(self, value, *inputs):
-        for transform in reversed(self.transform_list):
-            value = transform.backward(value, *inputs)
-        return value
-
-    def log_jac_det(self, value, *inputs):
-        value = pt.as_tensor_variable(value)
-        det_list = []
-        ndim0 = value.ndim
-        for transform in reversed(self.transform_list):
-            det_ = transform.log_jac_det(value, *inputs)
-            det_list.append(det_)
-            ndim0 = min(ndim0, det_.ndim)
-            value = transform.backward(value, *inputs)
-        # match the shape of the smallest jacobian_det
-        det = 0.0
-        for det_ in det_list:
-            if det_.ndim > ndim0:
-                ndim_diff = det_.ndim - ndim0
-                det += det_.sum(axis=tuple(range(-ndim_diff, 0)))
-            else:
-                det += det_
-        return det
-
-
 def _create_transformed_rv_op(
     rv_op: Op,
-    transforms: Union[RVTransform, Sequence[Union[None, RVTransform]]],
+    transforms: Union[Transform, Sequence[Union[None, Transform]]],
     *,
     cls_dict_extra: Optional[Dict] = None,
 ) -> Op:

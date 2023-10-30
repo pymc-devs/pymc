@@ -42,8 +42,9 @@ import scipy as sp
 import scipy.stats as st
 
 from pymc import logp
+from pymc.distributions.transforms import LogTransform
 from pymc.logprob import conditional_logp
-from pymc.logprob.transforms import LogTransform, TransformValuesRewrite
+from pymc.logprob.transforms import TransformValuesRewrite
 from pymc.testing import assert_no_rvs
 
 

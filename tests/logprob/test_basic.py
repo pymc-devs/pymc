@@ -55,6 +55,7 @@ from pytensor.tensor.subtensor import (
 
 import pymc as pm
 
+from pymc.distributions.transforms import LogTransform
 from pymc.logprob.basic import (
     conditional_logp,
     icdf,
@@ -62,7 +63,6 @@ from pymc.logprob.basic import (
     logp,
     transformed_conditional_logp,
 )
-from pymc.logprob.transforms import LogTransform
 from pymc.logprob.utils import rvs_to_value_vars, walk_model
 from pymc.pytensorf import replace_rvs_by_values
 from pymc.testing import assert_no_rvs
