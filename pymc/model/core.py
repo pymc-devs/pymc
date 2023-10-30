@@ -65,7 +65,7 @@ from pymc.exceptions import (
 )
 from pymc.initial_point import make_initial_point_fn
 from pymc.logprob.basic import transformed_conditional_logp
-from pymc.logprob.utils import ParameterValueError
+from pymc.logprob.utils import ParameterValueError, replace_rvs_by_values
 from pymc.model_graph import model_to_graphviz
 from pymc.pytensorf import (
     PointFunc,
@@ -75,7 +75,6 @@ from pymc.pytensorf import (
     gradient,
     hessian,
     inputvars,
-    replace_rvs_by_values,
     rewrite_pregrad,
 )
 from pymc.util import (

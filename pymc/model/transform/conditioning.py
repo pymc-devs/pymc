@@ -13,17 +13,14 @@
 #   limitations under the License.
 import warnings
 
-from typing import Any, List, Mapping, Optional, Sequence, Union
+from typing import Any, Mapping, Optional, Sequence, Union
 
-from pytensor import Variable
 from pytensor.graph import ancestors
-from pytensor.graph.basic import walk
-from pytensor.graph.op import HasInnerGraph
 from pytensor.tensor import TensorVariable
-from pytensor.tensor.random.op import RandomVariable
 
 from pymc import Model
 from pymc.logprob.transforms import Transform
+from pymc.logprob.utils import rvs_in_graph
 from pymc.model.fgraph import (
     ModelDeterministic,
     ModelFreeRV,
@@ -40,7 +37,7 @@ from pymc.model.transform.basic import (
     parse_vars,
     prune_vars_detached_from_observed,
 )
-from pymc.pytensorf import _replace_vars_in_graphs, toposort_replace
+from pymc.pytensorf import replace_vars_in_graphs, toposort_replace
 from pymc.util import get_transformed_name, get_untransformed_name
 
 
@@ -120,44 +117,6 @@ def observe(
     toposort_replace(fgraph, tuple(replacements.items()))
 
     return model_from_fgraph(fgraph)
-
-
-def replace_vars_in_graphs(graphs: Sequence[TensorVariable], replacements) -> List[TensorVariable]:
-    def replacement_fn(var, inner_replacements):
-        if var in replacements:
-            inner_replacements[var] = replacements[var]
-
-        # Handle root inputs as those will never be passed to the replacement_fn
-        for inp in var.owner.inputs:
-            if inp.owner is None and inp in replacements:
-                inner_replacements[inp] = replacements[inp]
-
-        return [var]
-
-    replaced_graphs, _ = _replace_vars_in_graphs(graphs=graphs, replacement_fn=replacement_fn)
-    return replaced_graphs
-
-
-def rvs_in_graph(vars: Sequence[Variable]) -> bool:
-    """Check if there are any rvs in the graph of vars"""
-
-    from pymc.distributions.distribution import SymbolicRandomVariable
-
-    def expand(r):
-        owner = r.owner
-        if owner:
-            inputs = list(reversed(owner.inputs))
-
-            if isinstance(owner.op, HasInnerGraph):
-                inputs += owner.op.inner_outputs
-
-            return inputs
-
-    return any(
-        node
-        for node in walk(vars, expand, False)
-        if node.owner and isinstance(node.owner.op, (RandomVariable, SymbolicRandomVariable))
-    )
 
 
 def do(

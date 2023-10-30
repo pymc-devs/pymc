@@ -62,7 +62,7 @@ from pymc.logprob.rewriting import (
     logprob_rewrites_db,
     measurable_ir_rewrites_db,
 )
-from pymc.pytensorf import replace_rvs_by_values
+from pymc.logprob.utils import replace_rvs_by_values
 
 
 class MeasurableScan(Scan):
