@@ -36,14 +36,12 @@ from pymc.distributions.distribution import Distribution
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.initial_point import make_initial_point_fn
 from pymc.logprob.basic import icdf, logcdf, logp, transformed_conditional_logp
-from pymc.logprob.utils import ParameterValueError, find_rvs_in_graph
-from pymc.pytensorf import (
-    compile_pymc,
-    floatX,
-    inputvars,
-    intX,
+from pymc.logprob.utils import (
+    ParameterValueError,
     local_check_parameter_to_ninf_switch,
+    rvs_in_graph,
 )
+from pymc.pytensorf import compile_pymc, floatX, inputvars, intX
 
 # This mode can be used for tests where model compilations takes the bulk of the runtime
 # AND where we don't care about posterior numerical or sampling stability (e.g., when
@@ -952,6 +950,6 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
 def assert_no_rvs(vars: Sequence[Variable]) -> None:
     """Assert that there are no `MeasurableVariable` nodes in a graph."""
 
-    rvs = find_rvs_in_graph(vars)
+    rvs = rvs_in_graph(vars)
     if rvs:
         raise AssertionError(f"RV found in graph: {rvs}")

@@ -78,7 +78,8 @@ from pymc.logprob.rewriting import (
     measurable_ir_rewrites_db,
     subtensor_ops,
 )
-from pymc.logprob.utils import check_potential_measurability
+from pymc.logprob.utils import check_potential_measurability, replace_rvs_by_values
+from pymc.pytensorf import constant_fold
 
 
 def is_newaxis(x):
@@ -255,9 +256,6 @@ def get_stack_mixture_vars(
         mixture_rvs = joined_rvs.owner.inputs
 
     elif isinstance(joined_rvs.owner.op, Join):
-        # TODO: Find better solution to avoid this circular dependency
-        from pymc.pytensorf import constant_fold
-
         join_axis = joined_rvs.owner.inputs[0]
         # TODO: Support symbolic join axes. This will raise ValueError if it's not a constant
         (join_axis,) = constant_fold((join_axis,), raise_not_constant=False)
@@ -351,9 +349,6 @@ def logprob_MixtureRV(
             comp_rvs = [comp[None] for comp in comp_rvs]
             original_shape = (len(comp_rvs),)
         else:
-            # TODO: Find better solution to avoid this circular dependency
-            from pymc.pytensorf import constant_fold
-
             join_axis_val = constant_fold((join_axis,))[0].item()
             original_shape = shape_tuple(comp_rvs[0])
 
@@ -544,7 +539,6 @@ measurable_ir_rewrites_db.register(
 @_logprob.register(MeasurableIfElse)
 def logprob_ifelse(op, values, if_var, *base_rvs, **kwargs):
     """Compute the log-likelihood graph for an `IfElse`."""
-    from pymc.pytensorf import replace_rvs_by_values
 
     assert len(values) * 2 == len(base_rvs)
 
