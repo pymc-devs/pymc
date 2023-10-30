@@ -271,66 +271,6 @@ def _replace_vars_in_graphs(
     return graphs, replacements
 
 
-def rvs_to_value_vars(
-    graphs: Iterable[Variable],
-    apply_transforms: bool = True,
-    **kwargs,
-) -> List[Variable]:
-    """Clone and replace random variables in graphs with their value variables.
-
-    This will *not* recompute test values in the resulting graphs.
-
-    Parameters
-    ----------
-    graphs
-        The graphs in which to perform the replacements.
-    apply_transforms
-        If ``True``, apply each value variable's transform.
-    """
-    warnings.warn(
-        "rvs_to_value_vars is deprecated. Use model.replace_rvs_by_values instead",
-        FutureWarning,
-    )
-
-    def populate_replacements(
-        random_var: TensorVariable, replacements: Dict[TensorVariable, TensorVariable]
-    ) -> List[TensorVariable]:
-        # Populate replacements dict with {rv: value} pairs indicating which graph
-        # RVs should be replaced by what value variables.
-
-        value_var = getattr(
-            random_var.tag, "observations", getattr(random_var.tag, "value_var", None)
-        )
-
-        # No value variable to replace RV with
-        if value_var is None:
-            return []
-
-        transform = getattr(value_var.tag, "transform", None)
-        if transform is not None and apply_transforms:
-            # We want to replace uses of the RV by the back-transformation of its value
-            value_var = transform.backward(value_var, *random_var.owner.inputs)
-
-        replacements[random_var] = value_var
-
-        # Also walk the graph of the value variable to make any additional replacements
-        # if that is not a simple input variable
-        return [value_var]
-
-    # Clone original graphs
-    inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
-    equiv = clone_get_equiv(inputs, graphs, False, False, {})
-    graphs = [equiv[n] for n in graphs]
-
-    graphs, _ = _replace_vars_in_graphs(
-        graphs,
-        replacement_fn=populate_replacements,
-        **kwargs,
-    )
-
-    return graphs
-
-
 def replace_rvs_by_values(
     graphs: Sequence[TensorVariable],
     *,
