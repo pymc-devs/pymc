@@ -65,7 +65,8 @@ from pymc.logprob.abstract import (
 )
 from pymc.logprob.rewriting import cleanup_ir, construct_ir_fgraph
 from pymc.logprob.transforms import TransformValuesRewrite
-from pymc.logprob.utils import find_rvs_in_graph, rvs_to_value_vars
+from pymc.logprob.utils import rvs_in_graph
+from pymc.pytensorf import replace_vars_in_graphs
 
 TensorLike: TypeAlias = Union[Variable, float, np.ndarray]
 
@@ -76,7 +77,7 @@ def _find_unallowed_rvs_in_graph(graph):
 
     return {
         rv
-        for rv in find_rvs_in_graph(graph)
+        for rv in rvs_in_graph(graph)
         if not isinstance(rv.owner.op, (SimulatorRV, MinibatchIndexRV))
     }
 
@@ -530,11 +531,9 @@ def conditional_logp(
             continue
 
         # Replace `RandomVariable`s in the inputs with value variables.
-        # Also, store the results in the `replacements` map for the nodes
-        # that follow.
-        remapped_vars, _ = rvs_to_value_vars(
-            q_values + list(node.inputs),
-            initial_replacements=replacements,
+        remapped_vars = replace_vars_in_graphs(
+            graphs=q_values + list(node.inputs),
+            replacements=replacements,
         )
         q_values = remapped_vars[: len(q_values)]
         q_rv_inputs = remapped_vars[len(q_values) :]
@@ -562,8 +561,7 @@ def conditional_logp(
 
             logprob_vars[q_value_var] = q_logprob_var
 
-        # Recompute test values for the changes introduced by the
-        # replacements above.
+        # Recompute test values for the changes introduced by the replacements above.
         if config.compute_test_value != "off":
             for node in io_toposort(graph_inputs(q_logprob_vars), q_logprob_vars):
                 compute_test_value(node)

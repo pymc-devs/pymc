@@ -63,8 +63,7 @@ from pymc.logprob.basic import (
     logp,
     transformed_conditional_logp,
 )
-from pymc.logprob.utils import rvs_to_value_vars, walk_model
-from pymc.pytensorf import replace_rvs_by_values
+from pymc.logprob.utils import replace_rvs_by_values
 from pymc.testing import assert_no_rvs
 
 
@@ -93,9 +92,9 @@ def test_factorized_joint_logprob_basic():
     # We need to replace the reference to `sigma` in `Y` with its value
     # variable
     ll_Y = logp(Y, y_value_var)
-    (ll_Y,), _ = rvs_to_value_vars(
+    (ll_Y,) = replace_rvs_by_values(
         [ll_Y],
-        initial_replacements={sigma: sigma_value_var},
+        rvs_to_values={sigma: sigma_value_var},
     )
     total_ll_exp = logp(sigma, sigma_value_var) + ll_Y
 
@@ -118,7 +117,7 @@ def test_factorized_joint_logprob_basic():
     # There shouldn't be any `RandomVariable`s in the resulting graph
     assert_no_rvs(b_logp_combined)
 
-    res_ancestors = list(walk_model((b_logp_combined,), walk_past_rvs=True))
+    res_ancestors = list(ancestors((b_logp_combined,)))
     assert b_value_var in res_ancestors
     assert c_value_var in res_ancestors
     assert a_value_var in res_ancestors
@@ -274,7 +273,7 @@ def test_joint_logp_basic():
     # There shouldn't be any `RandomVariable`s in the resulting graph
     assert_no_rvs(b_logp)
 
-    res_ancestors = list(walk_model((b_logp,)))
+    res_ancestors = list(ancestors((b_logp,)))
     assert b_value_var in res_ancestors
     assert c_value_var in res_ancestors
     assert a_value_var in res_ancestors

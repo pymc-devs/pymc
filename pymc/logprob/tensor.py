@@ -55,7 +55,8 @@ from pymc.logprob.rewriting import (
     assume_measured_ir_outputs,
     measurable_ir_rewrites_db,
 )
-from pymc.logprob.utils import check_potential_measurability
+from pymc.logprob.utils import check_potential_measurability, replace_rvs_by_values
+from pymc.pytensorf import constant_fold
 
 
 @node_rewriter([Alloc])
@@ -131,7 +132,6 @@ MeasurableVariable.register(MeasurableMakeVector)
 def logprob_make_vector(op, values, *base_rvs, **kwargs):
     """Compute the log-likelihood graph for a `MeasurableMakeVector`."""
     # TODO: Sort out this circular dependency issue
-    from pymc.pytensorf import replace_rvs_by_values
 
     (value,) = values
 
@@ -158,9 +158,6 @@ MeasurableVariable.register(MeasurableJoin)
 @_logprob.register(MeasurableJoin)
 def logprob_join(op, values, axis, *base_rvs, **kwargs):
     """Compute the log-likelihood graph for a `Join`."""
-    # TODO: Find better way to avoid circular dependency
-    from pymc.pytensorf import constant_fold, replace_rvs_by_values
-
     (value,) = values
 
     base_rv_shapes = [base_var.shape[axis] for base_var in base_rvs]
