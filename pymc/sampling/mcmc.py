@@ -372,6 +372,7 @@ def _sample_external_nuts(
             random_seed=random_seed,
             initvals=initvals,
             model=model,
+            progress_bar=progressbar,
             idata_kwargs=idata_kwargs,
             **nuts_sampler_kwargs,
         )

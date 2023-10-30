@@ -11,9 +11,9 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import logging
 import os
 import re
-import sys
 
 from datetime import datetime
 from functools import partial
@@ -52,6 +52,8 @@ from pymc.util import (
     _get_seeds_per_chain,
     get_default_varnames,
 )
+
+logger = logging.getLogger(__name__)
 
 xla_flags_env = os.getenv("XLA_FLAGS", "")
 xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags_env).split()
@@ -182,7 +184,7 @@ def _device_put(input, device: str):
 def _postprocess_samples(
     jax_fn: Callable,
     raw_mcmc_samples: List[TensorVariable],
-    postprocessing_backend: Literal["cpu", "gpu"] | None = None,
+    postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
 ) -> List[TensorVariable]:
     if postprocessing_vectorize == "scan":
@@ -237,7 +239,7 @@ def _blackjax_stats_to_dict(sample_stats, potential_energy) -> Dict:
 def _get_log_likelihood(
     model: Model,
     samples,
-    backend: Literal["cpu", "gpu"] | None = None,
+    backend: Optional[Literal["cpu", "gpu"]] = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
 ) -> Dict:
     """Compute log-likelihood for all observations"""
@@ -289,40 +291,46 @@ def _update_coords_and_dims(
         dims.update(idata_kwargs.pop("dims"))
 
 
-@partial(jax.jit, static_argnums=(2, 3, 4, 5, 6))
 def _blackjax_inference_loop(
-    seed,
-    init_position,
-    logprob_fn,
-    draws,
-    tune,
-    target_accept,
-    algorithm=None,
+    seed, init_position, logprob_fn, draws, tune, target_accept, **adaptation_kwargs
 ):
     import blackjax
 
-    if algorithm is None:
+    algorithm_name = adaptation_kwargs.pop("algorithm", "nuts")
+    if algorithm_name == "nuts":
         algorithm = blackjax.nuts
+    elif algorithm_name == "hmc":
+        algorithm = blackjax.hmc
+    else:
+        raise ValueError("Only supporting 'nuts' or 'hmc' as algorithm to draw samples.")
 
     adapt = blackjax.window_adaptation(
         algorithm=algorithm,
         logdensity_fn=logprob_fn,
         target_acceptance_rate=target_accept,
+        **adaptation_kwargs,
     )
     (last_state, tuned_params), _ = adapt.run(seed, init_position, num_steps=tune)
     kernel = algorithm(logprob_fn, **tuned_params).step
 
-    def inference_loop(rng_key, initial_state):
-        def one_step(state, rng_key):
-            state, info = kernel(rng_key, state)
-            return state, (state, info)
+    def _one_step(state, xs):
+        _, rng_key = xs
+        state, info = kernel(rng_key, state)
+        return state, (state, info)
 
-        keys = jax.random.split(rng_key, draws)
-        _, (states, infos) = jax.lax.scan(one_step, initial_state, keys)
+    progress_bar = adaptation_kwargs.pop("progress_bar", False)
+    if progress_bar:
+        from blackjax.progress_bar import progress_bar_scan
 
-        return states, infos
+        logger.info("Sample with tuned parameters")
+        one_step = jax.jit(progress_bar_scan(draws)(_one_step))
+    else:
+        one_step = jax.jit(_one_step)
 
-    return inference_loop(seed, last_state)
+    keys = jax.random.split(seed, draws)
+    _, (states, infos) = jax.lax.scan(one_step, last_state, (jnp.arange(draws), keys))
+
+    return states, infos
 
 
 def sample_blackjax_nuts(
@@ -334,11 +342,13 @@ def sample_blackjax_nuts(
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     model: Optional[Model] = None,
     var_names: Optional[Sequence[str]] = None,
+    progress_bar: bool = False,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
     postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
     idata_kwargs: Optional[Dict[str, Any]] = None,
+    adaptation_kwargs: Optional[Dict[str, Any]] = None,
     postprocessing_chunks=None,  # deprecated
 ) -> az.InferenceData:
     """
@@ -415,7 +425,7 @@ def sample_blackjax_nuts(
     (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
     tic1 = datetime.now()
-    print("Compiling...", file=sys.stdout)
+    logger.info("Compiling...")
 
     init_params = _get_batched_jittered_initial_points(
         model=model,
@@ -432,22 +442,20 @@ def sample_blackjax_nuts(
     seed = jax.random.PRNGKey(random_seed)
     keys = jax.random.split(seed, chains)
 
-    get_posterior_samples = partial(
-        _blackjax_inference_loop,
-        logprob_fn=logprob_fn,
-        tune=tune,
-        draws=draws,
-        target_accept=target_accept,
-    )
-
-    tic2 = datetime.now()
-    print("Compilation time = ", tic2 - tic1, file=sys.stdout)
-
-    print("Sampling...", file=sys.stdout)
+    if adaptation_kwargs is None:
+        adaptation_kwargs = {}
 
     # Adapted from numpyro
     if chain_method == "parallel":
         map_fn = jax.pmap
+        if progress_bar:
+            import warnings
+
+            warnings.warn(
+                "BlackJax currently only display progress bar correctly under "
+                "`chain_method == 'vectorized'`. Setting `progressbar=False`."
+            )
+            progress_bar = False
     elif chain_method == "vectorized":
         map_fn = jax.vmap
     else:
@@ -455,13 +463,28 @@ def sample_blackjax_nuts(
             "Only supporting the following methods to draw chains:" ' "parallel" or "vectorized"'
         )
 
+    adaptation_kwargs["progress_bar"] = progress_bar
+    get_posterior_samples = partial(
+        _blackjax_inference_loop,
+        logprob_fn=logprob_fn,
+        tune=tune,
+        draws=draws,
+        target_accept=target_accept,
+        **adaptation_kwargs,
+    )
+
+    tic2 = datetime.now()
+    logger.info(f"Compilation time = {tic2 - tic1}")
+
+    logger.info("Sampling...")
+
     states, stats = map_fn(get_posterior_samples)(keys, init_params)
     raw_mcmc_samples = states.position
-    potential_energy = states.logdensity
+    potential_energy = states.logdensity.block_until_ready()
     tic3 = datetime.now()
-    print("Sampling time = ", tic3 - tic2, file=sys.stdout)
+    logger.info(f"Sampling time = {tic3 - tic2}")
 
-    print("Transforming variables...", file=sys.stdout)
+    logger.info("Transforming variables...")
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
     result = _postprocess_samples(
         jax_fn,
@@ -472,7 +495,7 @@ def sample_blackjax_nuts(
     mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
     mcmc_stats = _blackjax_stats_to_dict(stats, potential_energy)
     tic4 = datetime.now()
-    print("Transformation time = ", tic4 - tic3, file=sys.stdout)
+    logger.info(f"Transformation time = {tic4 - tic3}")
 
     if idata_kwargs is None:
         idata_kwargs = {}
@@ -481,7 +504,7 @@ def sample_blackjax_nuts(
 
     if idata_kwargs.pop("log_likelihood", False):
         tic5 = datetime.now()
-        print("Computing Log Likelihood...", file=sys.stdout)
+        logger.info(f"Computing Log Likelihood...")
         log_likelihood = _get_log_likelihood(
             model,
             raw_mcmc_samples,
@@ -489,7 +512,7 @@ def sample_blackjax_nuts(
             postprocessing_vectorize=postprocessing_vectorize,
         )
         tic6 = datetime.now()
-        print("Log Likelihood time = ", tic6 - tic5, file=sys.stdout)
+        logger.info(f"Log Likelihood time = {tic6 - tic5}")
     else:
         log_likelihood = None
 
@@ -634,7 +657,7 @@ def sample_numpyro_nuts(
     (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
     tic1 = datetime.now()
-    print("Compiling...", file=sys.stdout)
+    logger.info("Compiling...")
 
     init_params = _get_batched_jittered_initial_points(
         model=model,
@@ -663,9 +686,9 @@ def sample_numpyro_nuts(
     )
 
     tic2 = datetime.now()
-    print("Compilation time = ", tic2 - tic1, file=sys.stdout)
+    logger.info(f"Compilation time = {tic2 - tic1}")
 
-    print("Sampling...", file=sys.stdout)
+    logger.info("Sampling...")
 
     map_seed = jax.random.PRNGKey(random_seed)
     if chains > 1:
@@ -687,9 +710,9 @@ def sample_numpyro_nuts(
     raw_mcmc_samples = pmap_numpyro.get_samples(group_by_chain=True)
 
     tic3 = datetime.now()
-    print("Sampling time = ", tic3 - tic2, file=sys.stdout)
+    logger.info(f"Sampling time = {tic3 - tic2}")
 
-    print("Transforming variables...", file=sys.stdout)
+    logger.info("Transforming variables...")
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
     result = _postprocess_samples(
         jax_fn,
@@ -700,7 +723,7 @@ def sample_numpyro_nuts(
     mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
 
     tic4 = datetime.now()
-    print("Transformation time = ", tic4 - tic3, file=sys.stdout)
+    logger.info(f"Transformation time = {tic4 - tic3}")
 
     if idata_kwargs is None:
         idata_kwargs = {}
@@ -709,7 +732,7 @@ def sample_numpyro_nuts(
 
     if idata_kwargs.pop("log_likelihood", False):
         tic5 = datetime.now()
-        print("Computing Log Likelihood...", file=sys.stdout)
+        logger.info(f"Computing Log Likelihood...")
         log_likelihood = _get_log_likelihood(
             model,
             raw_mcmc_samples,
@@ -717,7 +740,9 @@ def sample_numpyro_nuts(
             postprocessing_vectorize=postprocessing_vectorize,
         )
         tic6 = datetime.now()
-        print("Log Likelihood time = ", tic6 - tic5, file=sys.stdout)
+        logger.info(
+            f"Log Likelihood time = {tic6 - tic5}",
+        )
     else:
         log_likelihood = None
 

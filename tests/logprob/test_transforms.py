@@ -72,6 +72,7 @@ from pymc.logprob.transforms import (
     TransformValuesMapping,
     TransformValuesRewrite,
 )
+from pymc.logprob.utils import ParameterValueError
 from pymc.testing import Rplusbig, Vector, assert_no_rvs
 from tests.distributions.test_transform import check_jacobian_det
 
@@ -1157,6 +1158,61 @@ def test_special_log_exp_transforms(transform):
         np.testing.assert_allclose(logp_ref.eval({vv: vv_test}), logp_test.eval({vv: vv_test}))
     else:
         assert equal_computations([logp_test], [logp_ref])
+
+
+def test_measurable_power_exponent_with_constant_base():
+    # test power(2, rv) = exp2(rv)
+    # test negative base fails
+    x_rv_pow = pt.pow(2, pt.random.normal())
+    x_rv_exp2 = pt.exp2(pt.random.normal())
+
+    x_vv_pow = x_rv_pow.clone()
+    x_vv_exp2 = x_rv_exp2.clone()
+
+    x_logp_fn_pow = pytensor.function([x_vv_pow], pt.sum(logp(x_rv_pow, x_vv_pow)))
+    x_logp_fn_exp2 = pytensor.function([x_vv_exp2], pt.sum(logp(x_rv_exp2, x_vv_exp2)))
+
+    np.testing.assert_allclose(x_logp_fn_pow(0.1), x_logp_fn_exp2(0.1))
+
+    with pytest.raises(ParameterValueError, match="base >= 0"):
+        x_rv_neg = pt.pow(-2, pt.random.normal())
+        x_vv_neg = x_rv_neg.clone()
+        logp(x_rv_neg, x_vv_neg)
+
+
+def test_measurable_power_exponent_with_variable_base():
+    # test with RV when logp(<0) we raise error
+    base_rv = pt.random.normal([2])
+    x_raw_rv = pt.random.normal()
+    x_rv = pt.power(base_rv, x_raw_rv)
+
+    x_rv.name = "x"
+    base_rv.name = "base"
+    base_vv = base_rv.clone()
+    x_vv = x_rv.clone()
+
+    res = conditional_logp({base_rv: base_vv, x_rv: x_vv})
+    x_logp = res[x_vv]
+    logp_vals_fn = pytensor.function([base_vv, x_vv], x_logp)
+
+    with pytest.raises(ParameterValueError, match="base >= 0"):
+        logp_vals_fn(np.array([-2]), np.array([2]))
+
+
+def test_base_exponent_non_measurable():
+    # test dual sources of measuravility fails
+    base_rv = pt.random.normal([2])
+    x_raw_rv = pt.random.normal()
+    x_rv = pt.power(base_rv, x_raw_rv)
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+
+    with pytest.raises(
+        RuntimeError,
+        match="The logprob terms of the following value variables could not be derived: {x}",
+    ):
+        conditional_logp({x_rv: x_vv})
 
 
 @pytest.mark.parametrize("shift", [1.5, np.array([-0.5, 1, 0.3])])
