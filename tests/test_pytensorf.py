@@ -281,21 +281,24 @@ def test_walk_model():
 
     test_graph = pt.exp(e + 1)
 
-    res = list(walk_model((test_graph,)))
+    with pytest.warns(FutureWarning):
+        res = list(walk_model((test_graph,)))
     assert a in res
     assert b in res
     assert c in res
     assert d in res
     assert e in res
 
-    res = list(walk_model((test_graph,), stop_at_vars={c}))
+    with pytest.warns(FutureWarning):
+        res = list(walk_model((test_graph,), stop_at_vars={c}))
     assert a not in res
     assert b not in res
     assert c in res
     assert d in res
     assert e in res
 
-    res = list(walk_model((test_graph,), stop_at_vars={b}))
+    with pytest.warns(FutureWarning):
+        res = list(walk_model((test_graph,), stop_at_vars={b}))
     assert a not in res
     assert b in res
     assert c in res

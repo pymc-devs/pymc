@@ -190,6 +190,8 @@ def walk_model(
     expand_fn
         A function that returns the next variable(s) to be traversed.
     """
+    warnings.warn("walk_model will be removed in a future relase of PyMC", FutureWarning)
+
     if stop_at_vars is None:
         stop_at_vars = set()
 
