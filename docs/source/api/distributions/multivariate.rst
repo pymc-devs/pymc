@@ -10,6 +10,7 @@ Multivariate
    CAR
    Dirichlet
    DirichletMultinomial
+   ICAR
    KroneckerNormal
    LKJCholeskyCov
    LKJCorr

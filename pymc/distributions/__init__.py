@@ -86,6 +86,7 @@ from pymc.distributions.mixture import (
 )
 from pymc.distributions.multivariate import (
     CAR,
+    ICAR,
     Dirichlet,
     DirichletMultinomial,
     KroneckerNormal,
@@ -198,6 +199,7 @@ __all__ = [
     "Truncated",
     "Censored",
     "CAR",
+    "ICAR",
     "PolyaGamma",
     "HurdleGamma",
     "HurdleLogNormal",

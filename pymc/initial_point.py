@@ -22,7 +22,7 @@ import pytensor.tensor as pt
 
 from pytensor.graph.basic import Variable
 from pytensor.graph.fg import FunctionGraph
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.transforms import RVTransform
 from pymc.pytensorf import compile_pymc, find_rng_nodes, replace_rng_nodes, reseed_rngs

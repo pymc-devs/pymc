@@ -47,7 +47,7 @@ Learn Bayesian statistics with a book together with PyMC
 --------------------------------------------------------
 
 -  `Probabilistic Programming and Bayesian Methods for Hackers <https://github.com/CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers>`__: Fantastic book with many applied code examples.
--  `PyMC port of the book "Doing Bayesian Data Analysis" by John Kruschke <https://github.com/aloctavodia/Doing_bayesian_data_analysis>`__ as well as the `second edition <https://github.com/JWarmenhoven/DBDA-python>`__: Principled introduction to Bayesian data analysis.
+-  `PyMC port of the book "Doing Bayesian Data Analysis" by John Kruschke <https://github.com/cluhmann/DBDA-python>`__ as well as the `first edition <https://github.com/aloctavodia/Doing_bayesian_data_analysis>`__.
 -  `PyMC port of the book "Statistical Rethinking A Bayesian Course with Examples in R and Stan" by Richard McElreath <https://github.com/pymc-devs/resources/tree/master/Rethinking>`__
 -  `PyMC port of the book "Bayesian Cognitive Modeling" by Michael Lee and EJ Wagenmakers <https://github.com/pymc-devs/resources/tree/master/BCM>`__: Focused on using Bayesian statistics in cognitive modeling.
 -  `Bayesian Analysis with Python  <https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python-second-edition>`__ (second edition) by Osvaldo Martin: Great introductory book. (`code <https://github.com/aloctavodia/BAP>`__ and errata).
@@ -68,12 +68,12 @@ Citing PyMC
 ===========
 Please choose from the following:
 
-- |DOIpaper| *Probabilistic programming in Python using PyMC3*, Salvatier J., Wiecki T.V., Fonnesbeck C. (2016)
+- |DOIpaper| *PyMC: A Modern and Comprehensive Probabilistic Programming Framework in Python*, Abril-Pla O, Andreani V, Carroll C, Dong L, Fonnesbeck CJ, Kochurov M, Kumar R, Lao J, Luhmann CC, Martin OA, Osthege M, Vieira R, Wiecki T, Zinkov R. (2023)
 - |DOIzenodo| A DOI for all versions.
 - DOIs for specific versions are shown on Zenodo and under `Releases <https://github.com/pymc-devs/pymc/releases>`_
 
-.. |DOIpaper| image:: https://img.shields.io/badge/DOI-10.7717%2Fpeerj--cs.55-blue
-     :target: https://doi.org/10.7717/peerj-cs.55
+.. |DOIpaper| image:: https://img.shields.io/badge/DOI-10.7717%2Fpeerj--cs.1516-blue
+     :target: https://doi.org/10.7717/peerj-cs.1516
 .. |DOIzenodo| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4603970.svg
    :target: https://doi.org/10.5281/zenodo.4603970
 

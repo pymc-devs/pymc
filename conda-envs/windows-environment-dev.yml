@@ -14,7 +14,7 @@ dependencies:
 - numpy>=1.15.0
 - pandas>=0.24.0
 - pip
-- pytensor>=2.14.1,<2.15
+- pytensor>=2.17.0,<2.18
 - python-graphviz
 - networkx
 - scipy>=1.4.1
@@ -33,7 +33,7 @@ dependencies:
 - sphinx>=1.5
 - watermark
 - sphinx-remove-toctrees
-- mypy=0.990
+- mypy=1.5.1
 - types-cachetools
 - pip:
   - git+https://github.com/pymc-devs/pymc-sphinx-theme

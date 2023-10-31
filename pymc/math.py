@@ -32,6 +32,7 @@ from pytensor.graph.op import Op
 from pytensor.tensor import (
     abs,
     and_,
+    broadcast_to,
     ceil,
     clip,
     concatenate,
@@ -47,6 +48,8 @@ from pytensor.tensor import (
     exp,
     flatten,
     floor,
+    full,
+    full_like,
     ge,
     gt,
     le,
@@ -55,9 +58,12 @@ from pytensor.tensor import (
     logaddexp,
     logsumexp,
     lt,
+    matmul,
     maximum,
+    mean,
     minimum,
     neq,
+    ones,
     ones_like,
     or_,
     prod,
@@ -73,16 +79,12 @@ from pytensor.tensor import (
     tan,
     tanh,
     where,
+    zeros,
     zeros_like,
 )
-from pytensor.tensor.special import log_softmax, softmax
-
-try:
-    from pytensor.tensor.basic import extract_diag
-except ImportError:
-    from pytensor.tensor.nlinalg import extract_diag
-
+from pytensor.tensor.linalg import solve_triangular
 from pytensor.tensor.nlinalg import matrix_inverse
+from pytensor.tensor.special import log_softmax, softmax
 from scipy.linalg import block_diag as scipy_block_diag
 
 from pymc.pytensorf import floatX, ix_, largest_common_dtype
@@ -92,6 +94,7 @@ from pymc.pytensorf import floatX, ix_, largest_common_dtype
 __all__ = [
     "abs",
     "and_",
+    "broadcast_to",
     "ceil",
     "clip",
     "concatenate",
@@ -105,6 +108,8 @@ __all__ = [
     "erfcinv",
     "erfinv",
     "exp",
+    "full",
+    "full_like",
     "flatten",
     "floor",
     "ge",
@@ -115,9 +120,12 @@ __all__ = [
     "logaddexp",
     "logsumexp",
     "lt",
+    "matmul",
     "maximum",
+    "mean",
     "minimum",
     "neq",
+    "ones",
     "ones_like",
     "or_",
     "prod",
@@ -133,6 +141,7 @@ __all__ = [
     "tan",
     "tanh",
     "where",
+    "zeros",
     "zeros_like",
     "kronecker",
     "cartesian",
@@ -230,8 +239,8 @@ def kron_matrix_op(krons, m, op):
 
 # Define kronecker functions that work on 1D and 2D arrays
 kron_dot = partial(kron_matrix_op, op=pt.dot)
-kron_solve_lower = partial(kron_matrix_op, op=pt.slinalg.SolveTriangular(lower=True))
-kron_solve_upper = partial(kron_matrix_op, op=pt.slinalg.SolveTriangular(lower=False))
+kron_solve_lower = partial(kron_matrix_op, op=partial(solve_triangular, lower=True))
+kron_solve_upper = partial(kron_matrix_op, op=partial(solve_triangular, lower=False))
 
 
 def flat_outer(a, b):

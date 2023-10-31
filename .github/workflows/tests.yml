@@ -24,7 +24,7 @@ jobs:
     outputs:
       changes: ${{ steps.changes.outputs.src }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
           fetch-depth: 0
       - uses: dorny/paths-filter@v2
@@ -93,7 +93,10 @@ jobs:
             tests/gp/test_gp.py
             tests/gp/test_mean.py
             tests/gp/test_util.py
-            tests/test_model.py
+            tests/model/test_core.py
+            tests/model/test_fgraph.py
+            tests/model/transform/test_basic.py
+            tests/model/transform/test_conditioning.py
             tests/test_model_graph.py
             tests/ode/test_ode.py
             tests/ode/test_utils.py
@@ -126,7 +129,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - name: Cache conda
         uses: actions/cache@v3
         env:
@@ -187,7 +190,7 @@ jobs:
         python-version: ["3.9"]
         test-subset:
           - tests/variational/test_approximations.py tests/variational/test_callbacks.py tests/variational/test_inference.py tests/variational/test_opvi.py tests/test_initial_point.py
-          - tests/test_model.py tests/sampling/test_mcmc.py
+          - tests/model/test_core.py tests/sampling/test_mcmc.py
           - tests/gp/test_cov.py tests/gp/test_gp.py tests/gp/test_mean.py tests/gp/test_util.py tests/ode/test_ode.py tests/ode/test_utils.py tests/smc/test_smc.py tests/sampling/test_parallel.py
           - tests/step_methods/test_metropolis.py tests/step_methods/test_slicer.py tests/step_methods/hmc/test_nuts.py tests/step_methods/test_compound.py tests/step_methods/hmc/test_hmc.py
 
@@ -200,7 +203,7 @@ jobs:
       run:
         shell: cmd
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - name: Cache conda
         uses: actions/cache@v3
         env:
@@ -266,7 +269,7 @@ jobs:
             tests/sampling/test_parallel.py
             tests/test_data.py
             tests/variational/test_minibatch_rv.py
-            tests/test_model.py
+            tests/model/test_core.py
 
           - |
             tests/sampling/test_mcmc.py
@@ -283,7 +286,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - name: Cache conda
         uses: actions/cache@v3
         env:
@@ -351,16 +354,16 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - name: Cache conda
         uses: actions/cache@v3
         env:
-          # Increase this value to reset cache if environment-test.yml has not changed
+          # Increase this value to reset cache if environment-jax.yml has not changed
           CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/environment-test.yml') }}
+            hashFiles('conda-envs/environment-jax.yml') }}
       - name: Cache multiple paths
         uses: actions/cache@v3
         env:
@@ -380,7 +383,7 @@ jobs:
           mamba-version: "*"
           activate-environment: pymc-test
           channel-priority: strict
-          environment-file: conda-envs/environment-test.yml
+          environment-file: conda-envs/environment-jax.yml
           python-version: ${{matrix.python-version}}
           use-mamba: true
           use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
@@ -389,11 +392,6 @@ jobs:
           conda activate pymc-test
           pip install -e .
           python --version
-      - name: Install external samplers
-        run: |
-          conda activate pymc-test
-          pip install "numpyro>=0.8.0"
-          pip install git+https://github.com/blackjax-devs/blackjax.git@0.7.0
       - name: Run tests
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
@@ -424,7 +422,7 @@ jobs:
       run:
         shell: cmd
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - name: Cache conda
         uses: actions/cache@v3
         env:

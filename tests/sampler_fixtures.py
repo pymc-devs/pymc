@@ -21,7 +21,6 @@ from scipy import stats
 import pymc as pm
 
 from pymc.backends.arviz import to_inference_data
-from pymc.testing import SeededTest
 from pymc.util import get_var_name
 
 
@@ -135,10 +134,11 @@ class LKJCholeskyCovFixture(KnownCDF):
         return model
 
 
-class BaseSampler(SeededTest):
+class BaseSampler:
     @classmethod
     def setup_class(cls):
-        super().setup_class()
+        cls.random_seed = 20160911
+        np.random.seed(cls.random_seed)
         cls.model = cls.make_model()
         with cls.model:
             cls.step = cls.make_step()

@@ -24,6 +24,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Iterable,
     List,
     Literal,
     Optional,
@@ -49,7 +50,7 @@ from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.sharedvar import ScalarSharedVariable
-from pytensor.tensor.var import TensorConstant, TensorVariable
+from pytensor.tensor.variable import TensorConstant, TensorVariable
 from typing_extensions import Self
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
@@ -65,6 +66,7 @@ from pymc.exceptions import (
 from pymc.initial_point import make_initial_point_fn
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.utils import ParameterValueError
+from pymc.model_graph import model_to_graphviz
 from pymc.pytensorf import (
     PointFunc,
     SeedSequenceSeed,
@@ -78,6 +80,7 @@ from pymc.pytensorf import (
 )
 from pymc.util import (
     UNSET,
+    VarName,
     WithMemoization,
     _add_future_warning_tag,
     get_transformed_name,
@@ -940,7 +943,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         Entries in the tuples may be ``None``, if the RV dimension was not given a name.
         """
         warnings.warn(
-            "Model.RV_dims is deprecated. User Model.named_vars_to_dims instead.",
+            "Model.RV_dims is deprecated. Use Model.named_vars_to_dims instead.",
             FutureWarning,
         )
         return self.named_vars_to_dims
@@ -1879,6 +1882,53 @@ class Model(WithMemoization, metaclass=ContextMeta):
         elif not verbose:
             print_("You can set `verbose=True` for more details")
 
+    def to_graphviz(
+        self, *, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
+    ):
+        """Produce a graphviz Digraph from a PyMC model.
+
+        Requires graphviz, which may be installed most easily with
+            conda install -c conda-forge python-graphviz
+
+        Alternatively, you may install the `graphviz` binaries yourself,
+        and then `pip install graphviz` to get the python bindings.  See
+        http://graphviz.readthedocs.io/en/stable/manual.html
+        for more information.
+
+        Parameters
+        ----------
+        var_names : iterable of variable names, optional
+            Subset of variables to be plotted that identify a subgraph with respect to the entire model graph
+        formatting : str, optional
+            one of { "plain" }
+
+        Examples
+        --------
+        How to plot the graph of the model.
+
+        .. code-block:: python
+
+            import numpy as np
+            from pymc import HalfCauchy, Model, Normal, model_to_graphviz
+
+            J = 8
+            y = np.array([28, 8, -3, 7, -1, 1, 18, 12])
+            sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18])
+
+            with Model() as schools:
+
+                eta = Normal("eta", 0, 1, shape=J)
+                mu = Normal("mu", 0, sigma=1e6)
+                tau = HalfCauchy("tau", 25)
+
+                theta = mu + tau * eta
+
+                obs = Normal("obs", theta, sigma=sigma, observed=y)
+
+            schools.to_graphviz()
+        """
+        return model_to_graphviz(model=self, var_names=var_names, formatting=formatting)
+
 
 # this is really disgusting, but it breaks a self-loop: I can't pass Model
 # itself as context class init arg.
@@ -2012,7 +2062,7 @@ def compile_fn(
     )
 
 
-def Point(*args, filter_model_vars=False, **kwargs) -> Dict[str, np.ndarray]:
+def Point(*args, filter_model_vars=False, **kwargs) -> Dict[VarName, np.ndarray]:
     """Build a point. Uses same args as dict() does.
     Filters out variables not in the model. All keys are strings.
 

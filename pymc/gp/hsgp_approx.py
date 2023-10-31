@@ -189,7 +189,9 @@ class HSGP(Base):
         self._drop_first = drop_first
         self._m = m
         self._m_star = int(np.prod(self._m))
-        self._L = L
+        self._L: Optional[pt.TensorVariable] = None
+        if L is not None:
+            self._L = pt.as_tensor(L)
         self._c = c
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
@@ -198,13 +200,13 @@ class HSGP(Base):
         raise NotImplementedError("Additive HSGPs aren't supported.")
 
     @property
-    def L(self):
+    def L(self) -> pt.TensorVariable:
         if self._L is None:
             raise RuntimeError("Boundaries `L` required but still unset.")
         return self._L
 
     @L.setter
-    def L(self, value):
+    def L(self, value: TensorLike):
         self._L = pt.as_tensor_variable(value)
 
     def prior_linearized(self, Xs: TensorLike):
@@ -290,9 +292,7 @@ class HSGP(Base):
         # If not provided, use Xs and c to set L
         if self._L is None:
             assert isinstance(self._c, (numbers.Real, np.ndarray, pt.TensorVariable))
-            self.L = set_boundary(Xs, self._c)
-        else:
-            self.L = self._L
+            self._L = pt.as_tensor(set_boundary(Xs, self._c))
 
         eigvals = calc_eigenvalues(self.L, self._m, tl=pt)
         phi = calc_eigenvectors(Xs, self.L, eigvals, self._m, tl=pt)

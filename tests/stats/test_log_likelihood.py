@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 import scipy.stats as st
 
-from arviz import InferenceData, dict_to_dataset
+from arviz import InferenceData, dict_to_dataset, from_dict
 
 from pymc.distributions import Dirichlet, Normal
 from pymc.distributions.transforms import log
@@ -117,3 +117,18 @@ class TestComputeLogLikelihood:
             idata = InferenceData(posterior=dict_to_dataset({"x": np.arange(100).reshape(4, 25)}))
             with pytest.raises(ValueError, match="var_names must refer to observed_RVs"):
                 compute_log_likelihood(idata, var_names=["x"])
+
+    def test_dims_without_coords(self):
+        # Issues #6820
+        with Model() as m:
+            x = Normal("x")
+            y = Normal("y", x, observed=[0, 0, 0], shape=(3,), dims="obs")
+
+            trace = from_dict({"x": [[0, 1]]})
+            llike = compute_log_likelihood(trace)
+
+        assert len(llike.log_likelihood["obs"]) == 3
+        np.testing.assert_allclose(
+            llike.log_likelihood["y"].values,
+            st.norm.logpdf([[[0, 0, 0], [1, 1, 1]]]),
+        )

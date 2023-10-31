@@ -66,8 +66,8 @@ from pytensor.graph.rewriting.db import (
     SequenceDB,
     TopoDB,
 )
+from pytensor.tensor.basic import Alloc
 from pytensor.tensor.elemwise import DimShuffle, Elemwise
-from pytensor.tensor.extra_ops import BroadcastTo
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.rewriting.basic import register_canonicalize
 from pytensor.tensor.rewriting.shape import ShapeFeature
@@ -80,7 +80,7 @@ from pytensor.tensor.subtensor import (
     IncSubtensor,
     Subtensor,
 )
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import MeasurableVariable
 from pymc.logprob.utils import DiracDelta, indices_from_subtensor
@@ -283,7 +283,7 @@ class PreserveRVMappings(Feature):
 
 
 @register_canonicalize
-@node_rewriter((Elemwise, BroadcastTo, DimShuffle) + subtensor_ops)
+@node_rewriter((Elemwise, Alloc, DimShuffle) + subtensor_ops)
 def local_lift_DiracDelta(fgraph, node):
     r"""Lift basic `Op`\s through `DiracDelta`\s."""
 

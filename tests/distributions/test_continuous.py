@@ -1825,7 +1825,7 @@ class TestStudentT(BaseTestDistributionRandom):
 
 class TestHalfStudentT(BaseTestDistributionRandom):
     def halfstudentt_rng_fn(self, df, loc, scale, size, rng):
-        return np.abs(st.t.rvs(df=df, loc=loc, scale=scale, size=size))
+        return np.abs(st.t.rvs(df=df, loc=loc, scale=scale, size=size, random_state=rng))
 
     pymc_dist = pm.HalfStudentT
     pymc_dist_params = {"nu": 5.0, "sigma": 2.0}
@@ -2199,7 +2199,7 @@ class TestHalfCauchy(BaseTestDistributionRandom):
 class TestGamma(BaseTestDistributionRandom):
     pymc_dist = pm.Gamma
     pymc_dist_params = {"alpha": 2.0, "beta": 5.0}
-    expected_rv_op_params = {"alpha": 2.0, "beta": 1 / 5.0}
+    expected_rv_op_params = {"shape": 2.0, "scale": 1 / 5.0}
     reference_dist_params = {"shape": 2.0, "scale": 1 / 5.0}
     reference_dist = seeded_numpy_distribution_builder("gamma")
     checks_to_run = [

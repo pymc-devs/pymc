@@ -302,7 +302,7 @@ class TestStepMetropolis(StepMethodTester):
                 model=model,
                 random_seed=1,
             )
-            self.check_stat(check, idata, step.__class__.__name__)
+            self.check_stat(check, idata)
             self.check_stat_dtype(idata, step)
 
     @pytest.mark.parametrize("proposal", ["uniform", "proportional"])
@@ -321,7 +321,7 @@ class TestStepMetropolis(StepMethodTester):
                 model=model,
                 random_seed=1,
             )
-            self.check_stat(check, idata, step.__class__.__name__)
+            self.check_stat(check, idata)
             self.check_stat_dtype(idata, step)
 
     @pytest.mark.parametrize(

@@ -63,7 +63,7 @@ from pytensor.tensor.subtensor import (
 )
 from pytensor.tensor.type import TensorType
 from pytensor.tensor.type_other import NoneConst, NoneTypeT, SliceConstant, SliceType
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,

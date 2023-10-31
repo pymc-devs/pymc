@@ -35,7 +35,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.rewriting.shape import ShapeFeature
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 from typing_extensions import TypeAlias
 
 from pymc.distributions.shape_utils import (
@@ -53,7 +53,7 @@ from pymc.exceptions import BlockModelAccessError
 from pymc.logprob.abstract import MeasurableVariable, _icdf, _logcdf, _logprob
 from pymc.logprob.basic import logp
 from pymc.logprob.rewriting import logprob_rewrites_db
-from pymc.model import new_or_existing_block_model_access
+from pymc.model.core import new_or_existing_block_model_access
 from pymc.printing import str_for_dist
 from pymc.pytensorf import (
     collect_default_updates,

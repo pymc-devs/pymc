@@ -13,14 +13,12 @@
 #   limitations under the License.
 from typing import Optional, Sequence, cast
 
-import numpy as np
-
 from arviz import InferenceData, dict_to_dataset
 from fastprogress import progress_bar
 
 import pymc
 
-from pymc.backends.arviz import _DefaultTrace
+from pymc.backends.arviz import _DefaultTrace, coords_and_dims_for_inferencedata
 from pymc.model import Model, modelcontext
 from pymc.pytensorf import PointFunc
 from pymc.util import dataset_to_point_list
@@ -113,14 +111,12 @@ def compute_log_likelihood(
             (*[len(coord) for coord in stacked_dims.values()], *array.shape[1:])
         )
 
+    coords, dims = coords_and_dims_for_inferencedata(model)
     loglike_dataset = dict_to_dataset(
         loglike_trace,
         library=pymc,
-        dims={dname: list(dvals) for dname, dvals in model.named_vars_to_dims.items()},
-        coords={
-            cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
-            for cname, cvals in model.coords.items()
-        },
+        dims=dims,
+        coords=coords,
         default_dims=list(sample_dims),
         skip_event_dims=True,
     )

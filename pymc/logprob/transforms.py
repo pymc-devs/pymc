@@ -61,10 +61,18 @@ from pytensor.scalar import (
     Erfc,
     Erfcx,
     Exp,
+    Exp2,
+    Expm1,
     Log,
+    Log1mexp,
+    Log1p,
+    Log2,
+    Log10,
     Mul,
     Pow,
+    Sigmoid,
     Sinh,
+    Softplus,
     Sqr,
     Sqrt,
     Tanh,
@@ -82,19 +90,27 @@ from pytensor.tensor.math import (
     erfc,
     erfcx,
     exp,
+    exp2,
+    expm1,
     log,
+    log1mexp,
+    log1p,
+    log2,
+    log10,
     mul,
     neg,
     pow,
     reciprocal,
+    sigmoid,
     sinh,
+    softplus,
     sqr,
     sqrt,
     sub,
     tanh,
     true_div,
 )
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,
@@ -111,7 +127,7 @@ from pymc.logprob.rewriting import (
     cleanup_ir_rewrites_db,
     measurable_ir_rewrites_db,
 )
-from pymc.logprob.utils import check_potential_measurability
+from pymc.logprob.utils import CheckParameterValue, check_potential_measurability
 
 
 class TransformedVariable(Op):
@@ -178,6 +194,9 @@ class RVTransform(abc.ABC):
         else:
             phi_inv = self.backward(value, *inputs)
             return pt.log(pt.abs(pt.nlinalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
+
+    def __str__(self):
+        return f"{self.__class__.__name__}"
 
 
 @node_rewriter(tracks=None)
@@ -440,6 +459,10 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
     return pt.switch(pt.isnan(jacobian), -np.inf, input_logprob + jacobian)
 
 
+MONOTONICALLY_INCREASING_OPS = (Exp, Log, Add, Sinh, Tanh, ArcSinh, ArcCosh, ArcTanh, Erf)
+MONOTONICALLY_DECREASING_OPS = (Erfc, Erfcx)
+
+
 @_logcdf.register(MeasurableTransform)
 def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwargs):
     """Compute the log-CDF graph for a `MeasurabeTransform`."""
@@ -453,12 +476,35 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
     if isinstance(backward_value, tuple):
         raise NotImplementedError
 
-    input_logcdf = _logcdf_helper(measurable_input, backward_value)
+    logcdf = _logcdf_helper(measurable_input, backward_value)
+    logccdf = pt.log1mexp(logcdf)
+
+    if isinstance(op.scalar_op, MONOTONICALLY_INCREASING_OPS):
+        pass
+    elif isinstance(op.scalar_op, MONOTONICALLY_DECREASING_OPS):
+        logcdf = logccdf
+    # mul is monotonically increasing for scale > 0, and monotonically decreasing otherwise
+    elif isinstance(op.scalar_op, Mul):
+        [scale] = other_inputs
+        logcdf = pt.switch(pt.ge(scale, 0), logcdf, logccdf)
+    # pow is increasing if pow > 0, and decreasing otherwise (even powers are rejected above)!
+    # Care must be taken to handle negative values (https://math.stackexchange.com/a/442362/783483)
+    elif isinstance(op.scalar_op, Pow):
+        if op.transform_elemwise.power < 0:
+            logcdf_zero = _logcdf_helper(measurable_input, 0)
+            logcdf = pt.switch(
+                pt.lt(backward_value, 0),
+                pt.log(pt.exp(logcdf_zero) - pt.exp(logcdf)),
+                pt.logaddexp(logccdf, logcdf_zero),
+            )
+    else:
+        # We don't know if this Op is monotonically increasing/decreasing
+        raise NotImplementedError
 
     # The jacobian is used to ensure a value in the supported domain was provided
     jacobian = op.transform_elemwise.log_jac_det(value, *other_inputs)
 
-    return pt.switch(pt.isnan(jacobian), -np.inf, input_logcdf)
+    return pt.switch(pt.isnan(jacobian), -np.inf, logcdf)
 
 
 @_icdf.register(MeasurableTransform)
@@ -466,6 +512,19 @@ def measurable_transform_icdf(op: MeasurableTransform, value, *inputs, **kwargs)
     """Compute the inverse CDF graph for a `MeasurabeTransform`."""
     other_inputs = list(inputs)
     measurable_input = other_inputs.pop(op.measurable_input_idx)
+
+    if isinstance(op.scalar_op, MONOTONICALLY_INCREASING_OPS):
+        pass
+    elif isinstance(op.scalar_op, MONOTONICALLY_DECREASING_OPS):
+        value = 1 - value
+    elif isinstance(op.scalar_op, Mul):
+        [scale] = other_inputs
+        value = pt.switch(pt.lt(scale, 0), 1 - value, value)
+    elif isinstance(op.scalar_op, Pow):
+        if op.transform_elemwise.power < 0:
+            raise NotImplementedError
+    else:
+        raise NotImplementedError
 
     input_icdf = _icdf_helper(measurable_input, value)
     icdf = op.transform_elemwise.forward(input_icdf, *other_inputs)
@@ -529,8 +588,68 @@ def measurable_sub_to_neg(fgraph, node):
     return [pt.add(minuend, pt.neg(subtrahend))]
 
 
+@node_rewriter([log1p, softplus, log1mexp, log2, log10])
+def measurable_special_log_to_log(fgraph, node):
+    """Convert log1p, log1mexp, softplus, log2, log10 of `MeasurableVariable`s to log form."""
+    [inp] = node.inputs
+
+    if isinstance(node.op.scalar_op, Log1p):
+        return [pt.log(1 + inp)]
+    if isinstance(node.op.scalar_op, Softplus):
+        return [pt.log(1 + pt.exp(inp))]
+    if isinstance(node.op.scalar_op, Log1mexp):
+        return [pt.log(1 - pt.exp(inp))]
+    if isinstance(node.op.scalar_op, Log2):
+        return [pt.log(inp) / pt.log(2)]
+    if isinstance(node.op.scalar_op, Log10):
+        return [pt.log(inp) / pt.log(10)]
+
+
+@node_rewriter([expm1, sigmoid, exp2])
+def measurable_special_exp_to_exp(fgraph, node):
+    """Convert expm1, sigmoid, and exp2 of `MeasurableVariable`s to xp form."""
+    [inp] = node.inputs
+    if isinstance(node.op.scalar_op, Exp2):
+        return [pt.exp(pt.log(2) * inp)]
+    if isinstance(node.op.scalar_op, Expm1):
+        return [pt.add(pt.exp(inp), -1)]
+    if isinstance(node.op.scalar_op, Sigmoid):
+        return [1 / (1 + pt.exp(-inp))]
+
+
+@node_rewriter([pow])
+def measurable_power_exponent_to_exp(fgraph, node):
+    """Convert power(base, rv) of `MeasurableVariable`s to exp(log(base) * rv) form."""
+    base, inp_exponent = node.inputs
+
+    # When the base is measurable we have `power(rv, exponent)`, which should be handled by `PowerTransform` and needs no further rewrite.
+    # Here we change only the cases where exponent is measurable `power(base, rv)` which is not supported by the `PowerTransform`
+    if check_potential_measurability([base], fgraph.preserve_rv_mappings.rv_values.keys()):
+        return None
+
+    base = CheckParameterValue("base >= 0")(base, pt.all(pt.ge(base, 0.0)))
+
+    return [pt.exp(pt.log(base) * inp_exponent)]
+
+
 @node_rewriter(
-    [exp, log, add, mul, pow, abs, sinh, cosh, tanh, arcsinh, arccosh, arctanh, erf, erfc, erfcx]
+    [
+        exp,
+        log,
+        add,
+        mul,
+        pow,
+        abs,
+        sinh,
+        cosh,
+        tanh,
+        arcsinh,
+        arccosh,
+        arctanh,
+        erf,
+        erfc,
+        erfcx,
+    ]
 )
 def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
     """Find measurable transformations from Elemwise operators."""
@@ -589,7 +708,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         try:
             (power,) = other_inputs
             power = pt.get_underlying_scalar_constant_value(power).item()
-        # Power needs to be a constant
+        # Power needs to be a constant, if not then proceed to the other case power(base, rv)
         except NotScalarConstantError:
             return None
         transform_inputs = (measurable_input, power)
@@ -604,7 +723,6 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
         transform = ScaleTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
-
     transform_op = MeasurableTransform(
         scalar_op=scalar_op,
         transform=transform,
@@ -653,6 +771,27 @@ measurable_ir_rewrites_db.register(
 )
 
 measurable_ir_rewrites_db.register(
+    "measurable_special_log_to_log",
+    measurable_special_log_to_log,
+    "basic",
+    "transform",
+)
+
+measurable_ir_rewrites_db.register(
+    "measurable_special_exp_to_exp",
+    measurable_special_exp_to_exp,
+    "basic",
+    "transform",
+)
+
+measurable_ir_rewrites_db.register(
+    "measurable_power_expotent_to_exp",
+    measurable_power_exponent_to_exp,
+    "basic",
+    "transform",
+)
+
+measurable_ir_rewrites_db.register(
     "find_measurable_transforms",
     find_measurable_transforms,
     "basic",
@@ -679,7 +818,15 @@ class CoshTransform(RVTransform):
         return pt.cosh(value)
 
     def backward(self, value, *inputs):
-        return pt.arccosh(value)
+        back_value = pt.arccosh(value)
+        return (-back_value, back_value)
+
+    def log_jac_det(self, value, *inputs):
+        return pt.switch(
+            value < 1,
+            np.nan,
+            -pt.log(pt.sqrt(value**2 - 1)),
+        )
 
 
 class TanhTransform(RVTransform):
@@ -863,7 +1010,7 @@ class PowerTransform(RVTransform):
         super().__init__()
 
     def forward(self, value, *inputs):
-        pt.power(value, self.power)
+        return pt.power(value, self.power)
 
     def backward(self, value, *inputs):
         inv_power = 1 / self.power
@@ -1096,22 +1243,46 @@ def _create_transformed_rv_op(
         if not isinstance(logprobs, Sequence):
             logprobs = [logprobs]
 
-        if use_jacobian:
-            assert len(values) == len(logprobs) == len(op.transforms)
-            logprobs_jac = []
-            for value, transform, logp in zip(values, op.transforms, logprobs):
-                if transform is None:
-                    logprobs_jac.append(logp)
-                    continue
-                assert isinstance(value.owner.op, TransformedVariable)
-                original_forward_value = value.owner.inputs[1]
-                jacobian = transform.log_jac_det(original_forward_value, *inputs).copy()
-                if value.name:
-                    jacobian.name = f"{value.name}_jacobian"
-                logprobs_jac.append(logp + jacobian)
-            logprobs = logprobs_jac
+        # Handle jacobian
+        assert len(values) == len(logprobs) == len(op.transforms)
+        logprobs_jac = []
+        for value, transform, logp in zip(values, op.transforms, logprobs):
+            if transform is None:
+                logprobs_jac.append(logp)
+                continue
 
-        return logprobs
+            assert isinstance(value.owner.op, TransformedVariable)
+            original_forward_value = value.owner.inputs[1]
+            log_jac_det = transform.log_jac_det(original_forward_value, *inputs).copy()
+            # The jacobian determinant has less dims than the logp
+            # when a multivariate transform (like Simplex or Ordered) is applied to univariate distributions.
+            # In this case we have to reduce the last logp dimensions, as they are no longer independent
+            if log_jac_det.ndim < logp.ndim:
+                diff_ndims = logp.ndim - log_jac_det.ndim
+                logp = logp.sum(axis=np.arange(-diff_ndims, 0))
+            # This case is sometimes, but not always, trivial to accomodate depending on the "space rank" of the
+            # multivariate distribution. See https://proceedings.mlr.press/v130/radul21a.html
+            elif log_jac_det.ndim > logp.ndim:
+                raise NotImplementedError(
+                    f"Univariate transform {transform} cannot be applied to multivariate {rv_op}"
+                )
+            else:
+                # Check there is no broadcasting between logp and jacobian
+                if logp.type.broadcastable != log_jac_det.type.broadcastable:
+                    raise ValueError(
+                        f"The logp of {rv_op} and log_jac_det of {transform} are not allowed to broadcast together. "
+                        "There is a bug in the implementation of either one."
+                    )
+
+            if use_jacobian:
+                if value.name:
+                    log_jac_det.name = f"{value.name}_jacobian"
+                logprobs_jac.append(logp + log_jac_det)
+            else:
+                # We still want to use the reduced logp, even though the jacobian isn't included
+                logprobs_jac.append(logp)
+
+        return logprobs_jac
 
     new_op = copy(rv_op)
     new_op.__class__ = new_op_type

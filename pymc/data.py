@@ -32,7 +32,7 @@ from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.basic import IntegersRV
 from pytensor.tensor.subtensor import AdvancedSubtensor
 from pytensor.tensor.type import TensorType
-from pytensor.tensor.var import TensorConstant, TensorVariable
+from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 import pymc as pm
 
@@ -234,7 +234,7 @@ def determine_coords(
             for dim in dims:
                 dim_name = dim
                 # str is applied because dim entries may be None
-                coords[str(dim_name)] = value[dim].to_numpy()
+                coords[str(dim_name)] = cast(xr.DataArray, value[dim]).to_numpy()
 
     if isinstance(value, np.ndarray) and dims is not None:
         if len(dims) != value.ndim:
