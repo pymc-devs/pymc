@@ -342,6 +342,24 @@ class TestCompilePyMC:
         with pytest.raises(ParameterValueError, match="test"):
             fn([-1, 2, 3])
 
+    def test_check_parameters_removed_from_scan(self):
+        def scan_step(x_0):
+            x = x_0 + 1
+            x_update = collect_default_updates([x])
+            return x, x_update
+
+        xs, _ = scan(
+            fn=scan_step,
+            sequences=[
+                pt.zeros(3),
+                # pt.as_tensor_variable(np.array([-4, -3])),
+                # pt.as_tensor_variable(np.array([-2, -1])),
+            ],
+            name="xs",
+        )
+        fn = compile_pymc([], xs)
+        np.testing.assert_array_equal(fn(), [1, 1, 1])
+
     def test_compile_pymc_sets_rng_updates(self):
         rng = pytensor.shared(np.random.default_rng(0))
         x = pm.Normal.dist(rng=rng)
