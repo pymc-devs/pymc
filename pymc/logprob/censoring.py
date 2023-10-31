@@ -43,6 +43,7 @@ from pytensor.graph import Op
 from pytensor.graph.basic import Apply, Node
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.raise_op import Assert
 from pytensor.scalar.basic import (
     GE,
     GT,
@@ -67,7 +68,9 @@ from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableVariable,
     _logcdf,
+    _logcdf_helper,
     _logprob,
+    _logprob_helper,
 )
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import CheckParameterValue, check_potential_measurability
@@ -456,12 +459,43 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
 
 
 @_logprob.register(FlatSwitches)
-def flat_switches_logprob(op, values, *inputs):
-    # Defined logp expression based on this
+def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
+    (value,) = values
+    base_rv_op = base_rv.owner.op
 
-    logp = pt.zeros_like(value)
-    logp.name = "interval_logp"
-    return logp
+    # if encoding found, get index in the encodings list and find the corresponding interval.
+
+    encodings_count = len(inputs) // 3
+    # inputs is of the form (lower1, upper1, lower2, upper2, encoding1, encoding2)
+    intervals = [(inputs[i], inputs[i + 1]) for i in range(0, 2 * encodings_count, 2)]
+    encodings = inputs[2 * encodings_count : 3 * encodings_count]
+    encodings = pt.broadcast_arrays(*encodings)
+
+    encodings = Assert(msg="all encodings are unique")(
+        encodings, pt.eq(pt.unique(encodings).shape[0], len(encodings))
+    )
+
+    logprob = _logprob_helper(base_rv, value, **kwargs)
+    logcdf_interval = [
+        (
+            _logcdf_helper(base_rv, intervals[i][0], **kwargs),
+            _logcdf_helper(base_rv, intervals[i][1], **kwargs),
+        )
+        for i in range(encodings_count)
+    ]
+
+    from pymc.math import logdiffexp
+
+    # cdf(upper) - cdf(lower)
+    for i in range(encodings_count):
+        logprob = pt.where(
+            pt.eq(value, encodings[i]),
+            logdiffexp(logcdf_interval[i][1], logcdf_interval[i][0]),
+            logprob,
+        )
+    # TODO: use pytensor.graph.replace.vectorize
+
+    return logprob
 
 
 measurable_ir_rewrites_db.register(
