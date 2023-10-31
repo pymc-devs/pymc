@@ -112,6 +112,8 @@ class MomentRewrite(GraphRewriter):
         if len(replace_with_moment) > 0:
             for item in replace_with_moment:
                 givens[item] = moment(item)
+        else:
+            return
         op_outs = clone_replace(node_outputs, replace=givens)
 
         nwScan = Scan(
@@ -135,9 +137,10 @@ class MomentRewrite(GraphRewriter):
             if isinstance(node.op, (RandomVariable, SymbolicRandomVariable)):
                 fgraph.replace(node.out, moment(node.out))
             elif isinstance(node.op, Scan):
-                new_node = rewrite_moment_scan_node(node)
-                for out1, out2 in zip(node.outputs, new_node.outputs):
-                    fgraph.replace(out1, out2)
+                new_node = self.rewrite_moment_scan_node(node)
+                if new_node is not None:
+                    for out1, out2 in zip(node.outputs, new_node.outputs):
+                        fgraph.replace(out1, out2)
 
 
 class _Unpickling:
