@@ -90,7 +90,7 @@ def filter_RNGs(params):
 
 
 class MomentRewrite(GraphRewriter):
-    def rewrite_moment_scan_node(node):
+    def rewrite_moment_scan_node(self, node):
         if not isinstance(node.op, Scan):
             return
 
