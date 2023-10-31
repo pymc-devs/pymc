@@ -89,43 +89,44 @@ def filter_RNGs(params):
     return [p for p in params if not isinstance(p.type, RandomType)]
 
 
-def rewrite_moment_scan_node(node):
-    if not isinstance(node.op, Scan):
-        return
-
-    node_inputs, node_outputs = node.op.inner_inputs, node.op.inner_outputs
-    op = node.op
-
-    local_fgraph_topo = io_toposort(node_inputs, node_outputs)
-
-    replace_with_moment = []
-    to_replace_set = set()
-
-    for nd in local_fgraph_topo:
-        if nd not in to_replace_set and isinstance(nd.op, (RandomVariable, SymbolicRandomVariable)):
-            replace_with_moment.append(nd.out)
-            to_replace_set.add(nd)
-    givens = {}
-    if len(replace_with_moment) > 0:
-        for item in replace_with_moment:
-            givens[item] = moment(item)
-    op_outs = clone_replace(node_outputs, replace=givens)
-
-    nwScan = Scan(
-        node_inputs,
-        op_outs,
-        op.info,
-        mode=op.mode,
-        profile=op.profile,
-        truncate_gradient=op.truncate_gradient,
-        name=op.name,
-        allow_gc=op.allow_gc,
-    )
-    nw_node = nwScan(*(node.inputs), return_list=True)[0].owner
-    return nw_node
-
-
 class MomentRewrite(GraphRewriter):
+    def rewrite_moment_scan_node(node):
+        if not isinstance(node.op, Scan):
+            return
+
+        node_inputs, node_outputs = node.op.inner_inputs, node.op.inner_outputs
+        op = node.op
+
+        local_fgraph_topo = io_toposort(node_inputs, node_outputs)
+
+        replace_with_moment = []
+        to_replace_set = set()
+
+        for nd in local_fgraph_topo:
+            if nd not in to_replace_set and isinstance(
+                nd.op, (RandomVariable, SymbolicRandomVariable)
+            ):
+                replace_with_moment.append(nd.out)
+                to_replace_set.add(nd)
+        givens = {}
+        if len(replace_with_moment) > 0:
+            for item in replace_with_moment:
+                givens[item] = moment(item)
+        op_outs = clone_replace(node_outputs, replace=givens)
+
+        nwScan = Scan(
+            node_inputs,
+            op_outs,
+            op.info,
+            mode=op.mode,
+            profile=op.profile,
+            truncate_gradient=op.truncate_gradient,
+            name=op.name,
+            allow_gc=op.allow_gc,
+        )
+        nw_node = nwScan(*(node.inputs), return_list=True)[0].owner
+        return nw_node
+
     def add_requirements(self, fgraph):
         fgraph.attach_feature(ReplaceValidate())
 
