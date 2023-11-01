@@ -223,6 +223,20 @@ class TestObserved:
         assert x1.type.dtype == X.type.dtype
         assert x2.type.dtype == X.type.dtype
 
+    def test_observed_compute_test_value(self):
+        try:
+            with pytensor.config.change_flags(compute_test_value="raise"):
+                rng = np.random.default_rng(123)
+                data = rng.standard_normal(100)
+                with pm.Model():
+                    obs = pm.Normal(
+                        "obs", mu=pt.zeros_like(data), sigma=pt.ones_like(data), observed=data
+                    )
+        except TypeError:
+            pytest.fail(
+                "TypeError raised when trying to add an observed RV with `compute_test_value='false'`"
+            )
+
 
 def test_duplicate_vars():
     with pytest.raises(ValueError) as err:
