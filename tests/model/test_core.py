@@ -228,7 +228,11 @@ class TestObserved:
             rng = np.random.default_rng(123)
             data = rng.standard_normal(100)
             with pm.Model():
-                pm.Normal("obs", mu=pt.zeros_like(data), sigma=pt.ones_like(data), observed=data)
+                obs = pm.Normal(
+                    "obs", mu=pt.zeros_like(data), sigma=pt.ones_like(data), observed=data
+                )
+                assert obs.tag.test_value.shape == data.shape
+                assert obs.tag.test_value.dtype == data.dtype
 
 
 def test_duplicate_vars():
