@@ -1127,31 +1127,31 @@ def test_cosh_rv_transform():
     )
 
 
-TRANSFORMATIONS = {
-    "log1p": (pt.log1p, lambda x: pt.log(1 + x)),
-    "softplus": (pt.softplus, lambda x: pt.log(1 + pt.exp(x))),
-    "log1mexp": (pt.log1mexp, lambda x: pt.log(1 - pt.exp(x))),
-    "log2": (pt.log2, lambda x: pt.log(x) / pt.log(2)),
-    "log10": (pt.log10, lambda x: pt.log(x) / pt.log(10)),
-    "exp2": (pt.exp2, lambda x: pt.exp(pt.log(2) * x)),
-    "expm1": (pt.expm1, lambda x: pt.exp(x) - 1),
-    "sigmoid": (pt.sigmoid, lambda x: 1 / (1 + pt.exp(-x))),
-}
-
-
-@pytest.mark.parametrize("transform", TRANSFORMATIONS.keys())
-def test_special_log_exp_transforms(transform):
+@pytest.mark.parametrize(
+    "canonical_func,raw_func",
+    [
+        (pt.log1p, lambda x: pt.log(1 + x)),
+        (pt.softplus, lambda x: pt.log(1 + pt.exp(x))),
+        (pt.log1mexp, lambda x: pt.log(1 - pt.exp(x))),
+        (pt.log2, lambda x: pt.log(x) / pt.log(2)),
+        (pt.log10, lambda x: pt.log(x) / pt.log(10)),
+        (pt.exp2, lambda x: pt.exp(pt.log(2) * x)),
+        (pt.expm1, lambda x: pt.exp(x) - 1),
+        (pt.sigmoid, lambda x: 1 / (1 + pt.exp(-x))),
+        (pt.sigmoid, lambda x: pt.exp(x) / (1 + pt.exp(x))),
+    ],
+)
+def test_special_log_exp_transforms(canonical_func, raw_func):
     base_rv = pt.random.normal(name="base_rv")
     vv = pt.scalar("vv")
 
-    transform_func, ref_func = TRANSFORMATIONS[transform]
-    transformed_rv = transform_func(base_rv)
-    ref_transformed_rv = ref_func(base_rv)
+    transformed_rv = raw_func(base_rv)
+    ref_transformed_rv = canonical_func(base_rv)
 
     logp_test = logp(transformed_rv, vv)
     logp_ref = logp(ref_transformed_rv, vv)
 
-    if transform in ["log2", "log10"]:
+    if canonical_func in (pt.log2, pt.log10):
         # in the cases of log2 and log10 floating point inprecision causes failure
         # from equal_computations so evaluate logp and check all close instead
         vv_test = np.array(0.25)
