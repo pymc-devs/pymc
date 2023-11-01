@@ -32,6 +32,12 @@ from pytensor.graph.op import Op
 from pytensor.tensor import (
     abs,
     and_,
+    arccos,
+    arccosh,
+    arcsin,
+    arcsinh,
+    arctan,
+    arctanh,
     broadcast_to,
     ceil,
     clip,
@@ -39,6 +45,8 @@ from pytensor.tensor import (
     constant,
     cos,
     cosh,
+    cumprod,
+    cumsum,
     dot,
     eq,
     erf,
@@ -59,8 +67,10 @@ from pytensor.tensor import (
     logsumexp,
     lt,
     matmul,
+    max,
     maximum,
     mean,
+    min,
     minimum,
     neq,
     ones,
@@ -94,6 +104,12 @@ from pymc.pytensorf import floatX, ix_, largest_common_dtype
 __all__ = [
     "abs",
     "and_",
+    "arccos",
+    "arccosh",
+    "arcsin",
+    "arcsinh",
+    "arctan",
+    "arctanh",
     "broadcast_to",
     "ceil",
     "clip",
@@ -101,6 +117,8 @@ __all__ = [
     "constant",
     "cos",
     "cosh",
+    "cumprod",
+    "cumsum",
     "dot",
     "eq",
     "erf",
@@ -121,14 +139,17 @@ __all__ = [
     "logsumexp",
     "lt",
     "matmul",
+    "max",
     "maximum",
     "mean",
+    "min",
     "minimum",
     "neq",
     "ones",
     "ones_like",
     "or_",
     "prod",
+    "round",
     "sgn",
     "sigmoid",
     "sin",
@@ -258,13 +279,18 @@ def kron_diag(*diags):
     return reduce(flat_outer, diags)
 
 
-def tround(*args, **kwargs):
+def round(*args, **kwargs):
     """
     Temporary function to silence round warning in PyTensor. Please remove
     when the warning disappears.
     """
     kwargs["mode"] = "half_to_even"
     return pt.round(*args, **kwargs)
+
+
+def tround(*args, **kwargs):
+    warnings.warn("tround is deprecated. Use round instead.")
+    return round(*args, **kwargs)
 
 
 def logdiffexp(a, b):
