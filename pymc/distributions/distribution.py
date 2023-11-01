@@ -34,7 +34,7 @@ from pytensor.scan.op import Scan
 from pytensor.tensor.basic import as_tensor_variable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
-from pytensor.tensor.random.type import RandomType
+from pytensor.tensor.random.type import RandomGeneratorType, RandomType
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.variable import TensorVariable
@@ -86,7 +86,7 @@ PLATFORM = sys.platform
 
 
 def filter_RNGs(params):
-    return [p for p in params if not isinstance(p.type, RandomType)]
+    return [p for p in params if not isinstance(p.type, (RandomType, RandomGeneratorType))]
 
 
 class MomentRewrite(GraphRewriter):
@@ -661,13 +661,6 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
         return updates
 
 
-def get_rv_fgraph(dist_fn, dist_params, size):
-    rv = dist_fn(*dist_params, size=size)
-    outputs = [rv]
-    fgraph = FunctionGraph(outputs=outputs, clone=True)
-    return fgraph
-
-
 class _CustomSymbolicDist(Distribution):
     rv_type = CustomSymbolicDistRV
 
@@ -690,9 +683,32 @@ class _CustomSymbolicDist(Distribution):
             logcdf = default_not_implemented(class_name, "logcdf")
 
         def dist_moment(rv, size, *dist_params):
-            fgraph = get_rv_fgraph(dist, dist_params, size)
+            size = normalize_size_param(size)
+            dummy_size_param = size.type()
+            dummy_dist_params = [dist_param.type() for dist_param in dist_params]
+            dummy_rv = dist(*dummy_dist_params, dummy_size_param)
+            # dummy_updates_dict = collect_default_updates(inputs=dummy_dist_params, outputs=(dummy_rv,))
+            dummy_params = [dummy_size_param] + dummy_dist_params
+            # dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
+            rv_type = type(
+                class_name,
+                (CustomSymbolicDistRV,),
+                # If logp is not provided, we try to infer it from the dist graph
+                dict(
+                    inline_logprob=logp is None,
+                ),
+            )
+            rv_op = rv_type(
+                inputs=dummy_params,
+                # inputs=dummy_dist_params,
+                outputs=[dummy_rv],
+                ndim_supp=ndim_supp,
+            )
+            fgraph = rv_op.fgraph.clone()
             replace_moments = MomentRewrite()
             replace_moments.rewrite(fgraph)
+            for i, par in enumerate([size] + list(dist_params)):
+                fgraph.replace(fgraph.inputs[i], par)
             [moment] = fgraph.outputs
             return moment
 
