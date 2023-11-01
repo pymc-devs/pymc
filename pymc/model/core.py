@@ -1352,7 +1352,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             if test_value is not None:
                 # We try to reuse the old test value
-                rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.shape)
+                rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.type.shape)
             else:
                 rv_var.tag.test_value = data
 
