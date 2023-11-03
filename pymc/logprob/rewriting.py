@@ -70,6 +70,7 @@ from pytensor.tensor.basic import Alloc
 from pytensor.tensor.elemwise import DimShuffle, Elemwise
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.rewriting.basic import register_canonicalize
+from pytensor.tensor.rewriting.math import local_exp_over_1_plus_exp
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.rewriting.uncanonicalize import local_max_and_argmax
 from pytensor.tensor.subtensor import (
@@ -359,7 +360,12 @@ def incsubtensor_rv_replace(fgraph, node):
 
 logprob_rewrites_db = SequenceDB()
 logprob_rewrites_db.name = "logprob_rewrites_db"
+# Introduce sigmoid. We do it before canonicalization so that useless mul are removed next
+logprob_rewrites_db.register(
+    "local_exp_over_1_plus_exp", out2in(local_exp_over_1_plus_exp), "basic"
+)
 logprob_rewrites_db.register("pre-canonicalize", optdb.query("+canonicalize"), "basic")
+# Split max_and_argmax
 logprob_rewrites_db.register("local_max_and_argmax", out2in(local_max_and_argmax), "basic")
 
 # These rewrites convert un-measurable variables into their measurable forms,
