@@ -1347,15 +1347,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 "Dimensionality of data and RV don't match.", actual=data.ndim, expected=rv_var.ndim
             )
 
-        if pytensor.config.compute_test_value != "off":
-            test_value = getattr(rv_var.tag, "test_value", None)
-
-            if test_value is not None:
-                # We try to reuse the old test value
-                rv_var.tag.test_value = np.broadcast_to(test_value, rv_var.shape)
-            else:
-                rv_var.tag.test_value = data
-
         mask = getattr(data, "mask", None)
         if mask is not None:
             impute_message = (
