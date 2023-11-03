@@ -19,6 +19,7 @@ import pytensor.tensor as pt
 import pytest
 
 import pymc as pm
+import pymc.exceptions
 
 from pymc.variational import opvi
 from pymc.variational.approximations import (
@@ -41,7 +42,7 @@ def test_discrete_not_allowed():
         mu = pm.Normal("mu", mu=0, sigma=10, size=3)
         z = pm.Categorical("z", p=pt.ones(3) / 3, size=len(y))
         pm.Normal("y_obs", mu=mu[z], sigma=1.0, observed=y)
-        with pytest.raises(opvi.ParametrizationError, match="Discrete variables"):
+        with pytest.raises(pymc.exceptions.ParametrizationError, match="Discrete variables"):
             pm.fit(n=1)  # fails
 
 

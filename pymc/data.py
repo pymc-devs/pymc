@@ -36,11 +36,11 @@ from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 import pymc as pm
 
+from pymc.exceptions import ShapeError
 from pymc.pytensorf import convert_observed_data
 
 __all__ = [
     "get_data",
-    "GeneratorAdapter",
     "Minibatch",
     "Data",
     "ConstantData",
@@ -238,7 +238,7 @@ def determine_coords(
 
     if isinstance(value, np.ndarray) and dims is not None:
         if len(dims) != value.ndim:
-            raise pm.exceptions.ShapeError(
+            raise ShapeError(
                 "Invalid data shape. The rank of the dataset must match the " "length of `dims`.",
                 actual=value.shape,
                 expected=value.ndim,
@@ -446,7 +446,7 @@ def Data(
     if isinstance(dims, str):
         dims = (dims,)
     if not (dims is None or len(dims) == x.ndim):
-        raise pm.exceptions.ShapeError(
+        raise ShapeError(
             "Length of `dims` must match the dimensions of the dataset.",
             actual=len(dims),
             expected=x.ndim,

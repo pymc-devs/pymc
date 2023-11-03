@@ -29,25 +29,13 @@ import numpy as np
 from fastprogress.fastprogress import progress_bar
 
 from pymc.blocking import DictToArrayBijection
-from pymc.exceptions import SamplingError
+from pymc.exceptions import ParallelSamplingError, RemoteTraceback, SamplingError
 from pymc.util import RandomSeed
 
 logger = logging.getLogger(__name__)
 
 
-class ParallelSamplingError(Exception):
-    def __init__(self, message, chain):
-        super().__init__(message)
-        self._chain = chain
-
-
 # Taken from https://hg.python.org/cpython/rev/c4f92b597074
-class RemoteTraceback(Exception):
-    def __init__(self, tb):
-        self.tb = tb
-
-    def __str__(self):
-        return self.tb
 
 
 class ExceptionWithTraceback:

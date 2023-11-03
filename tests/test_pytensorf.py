@@ -36,8 +36,7 @@ import pymc as pm
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.distributions.transforms import Interval
-from pymc.exceptions import NotConstantValueError
-from pymc.logprob.utils import ParameterValueError
+from pymc.exceptions import NotConstantValueError, ParameterValueError
 from pymc.pytensorf import (
     _replace_vars_in_graphs,
     collect_default_updates,

@@ -63,6 +63,7 @@ from pytensor.raise_op import CheckAndRaise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 
+from pymc.exceptions import ParameterValueError
 from pymc.logprob.abstract import MeasurableVariable, _logprob
 from pymc.util import makeiter
 
@@ -229,10 +230,6 @@ def check_potential_measurability(
     ):
         return True
     return False
-
-
-class ParameterValueError(ValueError):
-    """Exception for invalid parameters values in logprob graphs"""
 
 
 class CheckParameterValue(CheckAndRaise):

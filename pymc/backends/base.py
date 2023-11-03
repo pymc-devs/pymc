@@ -45,10 +45,6 @@ from pymc.util import get_var_name
 logger = logging.getLogger(__name__)
 
 
-class BackendError(Exception):
-    pass
-
-
 class IBaseTrace(ABC, Sized):
     """Minimal interface needed to record and access draws and stats for one MCMC chain."""
 

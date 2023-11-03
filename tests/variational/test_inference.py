@@ -24,11 +24,12 @@ import pytensor.tensor as pt
 import pytest
 
 import pymc as pm
+import pymc.exceptions
 import pymc.variational.opvi as opvi
 
+from pymc.exceptions import NotImplementedInference
 from pymc.pytensorf import intX
 from pymc.variational.inference import ADVI, ASVGD, SVGD, FullRankADVI
-from pymc.variational.opvi import NotImplementedInference
 from tests import models
 
 pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test", "fail_on_warning")
@@ -288,14 +289,14 @@ def test_replacements(binomial_model_inference):
     try:
         p_z = approx.sample_node(p_t, deterministic=True, size=10)
         assert p_z.shape.eval() == (10,)
-    except opvi.NotImplementedInference:
+    except pymc.exceptions.NotImplementedInference:
         pass
 
     try:
         p_d = approx.sample_node(p_t, deterministic=True)
         sampled = [pm.draw(p_d) for _ in range(100)]
         assert all(map(operator.eq, sampled[1:], sampled[:-1]))  # deterministic
-    except opvi.NotImplementedInference:
+    except pymc.exceptions.NotImplementedInference:
         pass
 
     p_r = approx.sample_node(p_t, deterministic=d)

@@ -47,10 +47,10 @@ from pytensor.tensor.random.basic import normal, uniform
 
 import pymc as pm
 
+from pymc.exceptions import ParameterValueError
 from pymc.logprob.abstract import MeasurableVariable
 from pymc.logprob.basic import logp, transformed_conditional_logp
 from pymc.logprob.utils import (
-    ParameterValueError,
     check_potential_measurability,
     dirac_delta,
     rvs_to_value_vars,

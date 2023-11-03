@@ -34,9 +34,10 @@ import pymc as pm
 
 from pymc.distributions.distribution import Distribution
 from pymc.distributions.shape_utils import change_dist_size
+from pymc.exceptions import ParameterValueError
 from pymc.initial_point import make_initial_point_fn
 from pymc.logprob.basic import icdf, logcdf, logp, transformed_conditional_logp
-from pymc.logprob.utils import ParameterValueError, find_rvs_in_graph
+from pymc.logprob.utils import find_rvs_in_graph
 from pymc.pytensorf import (
     compile_pymc,
     floatX,

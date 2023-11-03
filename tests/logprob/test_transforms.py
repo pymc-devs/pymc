@@ -49,6 +49,7 @@ from pytensor.scan import scan
 
 from pymc.distributions.continuous import Cauchy
 from pymc.distributions.transforms import _default_transform, log, logodds
+from pymc.exceptions import ParameterValueError
 from pymc.logprob.abstract import MeasurableVariable, _logprob
 from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
 from pymc.logprob.transforms import (
@@ -72,7 +73,6 @@ from pymc.logprob.transforms import (
     TransformValuesMapping,
     TransformValuesRewrite,
 )
-from pymc.logprob.utils import ParameterValueError
 from pymc.testing import Rplusbig, Vector, assert_no_rvs
 from tests.distributions.test_transform import check_jacobian_det
 

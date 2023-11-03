@@ -53,9 +53,11 @@ from pytensor.tensor.random.var import (
 from pytensor.tensor.sharedvar import SharedVariable
 from typing_extensions import TypeAlias
 
-import pymc as pm
-
-from pymc.backends.arviz import _DefaultTrace
+from pymc.backends.arviz import (
+    _DefaultTrace,
+    predictions_to_inference_data,
+    to_inference_data,
+)
 from pymc.backends.base import MultiTrace
 from pymc.blocking import PointType
 from pymc.model import Model, modelcontext
@@ -438,7 +440,7 @@ def sample_prior_predictive(
     ikwargs: Dict[str, Any] = dict(model=model)
     if idata_kwargs:
         ikwargs.update(idata_kwargs)
-    return pm.to_inference_data(prior=prior, **ikwargs)
+    return to_inference_data(prior=prior, **ikwargs)
 
 
 def sample_posterior_predictive(
@@ -669,8 +671,8 @@ def sample_posterior_predictive(
         if extend_inferencedata:
             ikwargs.setdefault("idata_orig", idata)
             ikwargs.setdefault("inplace", True)
-        return pm.predictions_to_inference_data(ppc_trace, **ikwargs)
-    idata_pp = pm.to_inference_data(posterior_predictive=ppc_trace, **ikwargs)
+        return predictions_to_inference_data(ppc_trace, **ikwargs)
+    idata_pp = to_inference_data(posterior_predictive=ppc_trace, **ikwargs)
 
     if extend_inferencedata and idata is not None:
         idata.extend(idata_pp)

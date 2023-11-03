@@ -59,13 +59,13 @@ from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import (
     BlockModelAccessError,
     ImputationWarning,
+    ParameterValueError,
     SamplingError,
     ShapeError,
     ShapeWarning,
 )
 from pymc.initial_point import make_initial_point_fn
 from pymc.logprob.basic import transformed_conditional_logp
-from pymc.logprob.utils import ParameterValueError
 from pymc.model_graph import model_to_graphviz
 from pymc.pytensorf import (
     PointFunc,

@@ -37,9 +37,6 @@ import numpy as np
 
 from typing_extensions import TypeAlias
 
-__all__ = ["DictToArrayBijection"]
-
-
 T = TypeVar("T")
 PointType: TypeAlias = Dict[str, np.ndarray]
 StatsDict: TypeAlias = Dict[str, Any]

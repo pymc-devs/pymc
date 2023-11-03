@@ -29,8 +29,8 @@ from pytensor.tensor import TensorVariable
 import pymc as pm
 
 from pymc.distributions.discrete import Geometric, _OrderedLogistic, _OrderedProbit
+from pymc.exceptions import ParameterValueError
 from pymc.logprob.basic import icdf, logcdf, logp
-from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
 from pymc.testing import (
     BaseTestDistributionRandom,

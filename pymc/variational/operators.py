@@ -19,9 +19,9 @@ from pytensor.graph.basic import Variable
 
 import pymc as pm
 
+from pymc.exceptions import NotImplementedInference, ParametrizationError
 from pymc.variational import opvi
 from pymc.variational.opvi import (
-    NotImplementedInference,
     ObjectiveFunction,
     Operator,
     _known_scan_ignored_inputs,
@@ -81,7 +81,7 @@ class KSDObjective(ObjectiveFunction):
 
     def __init__(self, op: KSD, tf: opvi.TestFunction):
         if not isinstance(op, KSD):
-            raise opvi.ParametrizationError("Op should be KSD")
+            raise ParametrizationError("Op should be KSD")
         super().__init__(op, tf)
 
     @pytensor.config.change_flags(compute_test_value="off")

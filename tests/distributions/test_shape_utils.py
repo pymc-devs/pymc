@@ -27,7 +27,6 @@ from pytensor.tensor.shape import SpecifyShape
 
 import pymc as pm
 
-from pymc import ShapeError
 from pymc.distributions.shape_utils import (
     broadcast_dist_samples_shape,
     change_dist_size,
@@ -39,6 +38,7 @@ from pymc.distributions.shape_utils import (
     rv_size_is_none,
     to_tuple,
 )
+from pymc.exceptions import ShapeError
 from pymc.model import Model
 
 test_shapes = [

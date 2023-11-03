@@ -23,14 +23,14 @@ from typing import Any, NamedTuple
 import numpy as np
 
 from pymc.blocking import DictToArrayBijection, RaveledVars, StatsType
-from pymc.exceptions import SamplingError
+from pymc.exceptions import IntegrationError, SamplingError
 from pymc.model import Point, modelcontext
 from pymc.pytensorf import floatX
 from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods import step_sizes
 from pymc.step_methods.arraystep import GradientSharedStep
 from pymc.step_methods.hmc import integration
-from pymc.step_methods.hmc.integration import IntegrationError, State
+from pymc.step_methods.hmc.integration import State
 from pymc.step_methods.hmc.quadpotential import QuadPotentialDiagAdapt, quad_potential
 from pymc.tuning import guess_scaling
 from pymc.util import get_value_vars_from_user_vars

@@ -27,6 +27,7 @@ from pytensor.compile.ops import as_op
 from pytensor.tensor.type import TensorType
 
 import pymc as pm
+import pymc.exceptions
 import pymc.sampling.parallel as ps
 
 from pymc.pytensorf import floatX
@@ -87,7 +88,9 @@ def test_remote_pipe_closed():
         pm.Normal("y", mu=_crash_remote_process(x, at_pid), shape=2)
 
         step = pm.Metropolis()
-        with pytest.raises(ps.ParallelSamplingError, match="Chain [0-9] failed with") as ex:
+        with pytest.raises(
+            pymc.exceptions.ParallelSamplingError, match="Chain [0-9] failed with"
+        ) as ex:
             pm.sample(step=step, mp_ctx="spawn", tune=2, draws=2, cores=2, chains=2)
 
 

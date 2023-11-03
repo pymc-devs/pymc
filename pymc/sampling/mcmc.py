@@ -52,10 +52,11 @@ from pymc.backends.arviz import (
     coords_and_dims_for_inferencedata,
     find_constants,
     find_observations,
+    to_inference_data,
 )
 from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
 from pymc.blocking import DictToArrayBijection
-from pymc.exceptions import SamplingError
+from pymc.exceptions import ParallelSamplingError, SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
 from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import Draw, _cpu_count
@@ -892,7 +893,7 @@ def _sample_return(
     if compute_convergence_checks or return_inferencedata:
         ikwargs: Dict[str, Any] = dict(model=model, save_warmup=not discard_tuned_samples)
         ikwargs.update(idata_kwargs)
-        idata = pm.to_inference_data(mtrace, **ikwargs)
+        idata = to_inference_data(mtrace, **ikwargs)
 
         if compute_convergence_checks:
             warns = run_convergence_checks(idata, model)
@@ -1198,7 +1199,7 @@ def _mp_sample(
                     if callback is not None:
                         callback(trace=strace, draw=draw)
 
-        except ps.ParallelSamplingError as error:
+        except ParallelSamplingError as error:
             strace = traces[error._chain]
             for strace in traces:
                 strace.close()
