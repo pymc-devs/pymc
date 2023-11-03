@@ -184,29 +184,12 @@ class SMC_KERNEL(ABC):
         self.iteration = 0
         self.resampling_indexes = None
         self.weights = np.ones(self.draws) / self.draws
+        self.population_initializer = initialize_population
 
     def initialize_population(self) -> Dict[str, np.ndarray]:
         """Create an initial population from the prior distribution"""
         sys.stdout.write(" ")  # see issue #5828
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore", category=UserWarning, message="The effect of Potentials"
-            )
-
-            model = self.model
-            prior_expression = make_initial_point_expression(
-                free_rvs=model.free_RVs,
-                rvs_to_transforms=model.rvs_to_transforms,
-                initval_strategies={},
-                default_strategy="prior",
-                return_transformed=True,
-            )
-            prior_values = draw(prior_expression, draws=self.draws, random_seed=self.rng)
-
-            names = [model.rvs_to_values[rv].name for rv in model.free_RVs]
-            dict_prior = {k: np.stack(v) for k, v in zip(names, prior_values)}
-
-        return cast(Dict[str, np.ndarray], dict_prior)
+        return self.population_initializer(self.model, self.draws, self.rng)
 
     def _initialize_kernel(self):
         """Create variables and logp function necessary to run SMC kernel
@@ -217,8 +200,7 @@ class SMC_KERNEL(ABC):
         """
         # Create dictionary that stores original variables shape and size
         initial_point = self.model.initial_point(random_seed=self.rng.integers(2**30))
-        for v in self.variables:
-            self.var_info[v.name] = (initial_point[v.name].shape, initial_point[v.name].size)
+        self.var_info = var_map_from_model(self.model, initial_point)
         # Create particles bijection map
         if self.start:
             init_rnd = self.start
@@ -632,3 +614,33 @@ def _logp_forw(point, out_vars, in_vars, shared):
     f = compile_pymc([inarray0], out_list[0])
     f.trust_input = True
     return f
+
+
+def initialize_population(model, draws, random_seed) -> Dict[str, np.ndarray]:
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=UserWarning, message="The effect of Potentials")
+
+        prior_expression = make_initial_point_expression(
+            free_rvs=model.free_RVs,
+            rvs_to_transforms=model.rvs_to_transforms,
+            initval_strategies={},
+            default_strategy="prior",
+            return_transformed=True,
+        )
+        prior_values = draw(prior_expression, draws=draws, random_seed=random_seed)
+
+        names = [model.rvs_to_values[rv].name for rv in model.free_RVs]
+        dict_prior = {k: np.stack(v) for k, v in zip(names, prior_values)}
+
+    return cast(Dict[str, np.ndarray], dict_prior)
+
+
+def var_map_from_model(model, initial_point) -> dict:
+    """
+    Computes a dictionary that maps
+    variable names to tuples (shape, size)
+    """
+    var_info = {}
+    for v in model.value_vars:
+        var_info[v.name] = (initial_point[v.name].shape, initial_point[v.name].size)
+    return var_info

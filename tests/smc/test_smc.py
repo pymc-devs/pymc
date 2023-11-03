@@ -15,7 +15,6 @@ import logging
 import warnings
 
 import numpy as np
-import pytensor.tensor as pt
 import pytest
 import scipy.stats as st
 
@@ -27,6 +26,7 @@ from pymc.backends.base import MultiTrace
 from pymc.pytensorf import floatX
 from pymc.smc.kernels import IMH, systematic_resampling
 from tests.helpers import assert_random_state_equal
+from tests.smc.conftest import fast_model, two_gaussians_model
 
 
 class TestSMC:
@@ -34,43 +34,10 @@ class TestSMC:
 
     def setup_class(self):
         self.samples = 1000
-        n = 4
-        mu1 = np.ones(n) * 0.5
-        mu2 = -mu1
 
-        stdev = 0.1
-        sigma = np.power(stdev, 2) * np.eye(n)
-        isigma = np.linalg.inv(sigma)
-        dsigma = np.linalg.det(sigma)
+        self.SMC_test, self.muref = two_gaussians_model()
 
-        w1 = stdev
-        w2 = 1 - stdev
-
-        def two_gaussians(x):
-            """
-            Mixture of gaussians likelihood
-            """
-            log_like1 = (
-                -0.5 * n * pt.log(2 * np.pi)
-                - 0.5 * pt.log(dsigma)
-                - 0.5 * (x - mu1).T.dot(isigma).dot(x - mu1)
-            )
-            log_like2 = (
-                -0.5 * n * pt.log(2 * np.pi)
-                - 0.5 * pt.log(dsigma)
-                - 0.5 * (x - mu2).T.dot(isigma).dot(x - mu2)
-            )
-            return pt.log(w1 * pt.exp(log_like1) + w2 * pt.exp(log_like2))
-
-        with pm.Model() as self.SMC_test:
-            X = pm.Uniform("X", lower=-2, upper=2.0, shape=n)
-            llk = pm.Potential("muh", two_gaussians(X))
-
-        self.muref = mu1
-
-        with pm.Model() as self.fast_model:
-            x = pm.Normal("x", 0, 1)
-            y = pm.Normal("y", x, 1, observed=0)
+        self.fast_model = fast_model()
 
     def test_sample(self):
         initial_rng_state = np.random.get_state()
@@ -282,7 +249,7 @@ class TestMHKernel:
                     draws=10,
                     chains=1,
                     kernel=pm.smc.MH,
-                    return_inferencedata=False,
+                    return_inferencedata=True,
                 )
 
 
