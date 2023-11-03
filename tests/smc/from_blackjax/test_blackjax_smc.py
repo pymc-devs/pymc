@@ -26,7 +26,6 @@ from pymc import to_inference_data
 from pymc.backends.base import MultiTrace
 from pymc.smc.from_blackjax.sampling import (
     arviz_from_particles,
-    arviz_from_particles,
     blackjax_particles_from_pymc_population,
     get_jaxified_loglikelihood,
     get_jaxified_logprior,
