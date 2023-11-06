@@ -63,7 +63,8 @@ from pymc.logprob.abstract import (
     _logprob_helper,
 )
 from pymc.logprob.rewriting import cleanup_ir, construct_ir_fgraph
-from pymc.logprob.transforms import RVTransform, TransformValuesRewrite
+from pymc.logprob.transform_value import TransformValuesRewrite
+from pymc.logprob.transforms import RVTransform
 from pymc.logprob.utils import find_rvs_in_graph, rvs_to_value_vars
 
 TensorLike: TypeAlias = Union[Variable, float, np.ndarray]
