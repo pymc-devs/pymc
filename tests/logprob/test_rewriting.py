@@ -54,7 +54,7 @@ from pytensor.tensor.subtensor import (
 from pymc.distributions.transforms import logodds
 from pymc.logprob.basic import conditional_logp
 from pymc.logprob.rewriting import cleanup_ir, local_lift_DiracDelta
-from pymc.logprob.transforms import TransformedVariable, TransformValuesRewrite
+from pymc.logprob.transform_value import TransformedVariable, TransformValuesRewrite
 from pymc.logprob.utils import DiracDelta, dirac_delta
 
 
