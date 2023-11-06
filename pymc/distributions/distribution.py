@@ -23,6 +23,7 @@ from typing import Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
+from pytensor import shared
 from pytensor import tensor as pt
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph import FunctionGraph, clone_replace, node_rewriter
@@ -683,33 +684,54 @@ class _CustomSymbolicDist(Distribution):
             logcdf = default_not_implemented(class_name, "logcdf")
 
         def dist_moment(rv, size, *dist_params):
-            size = normalize_size_param(size)
-            dummy_size_param = size.type()
-            dummy_dist_params = [dist_param.type() for dist_param in dist_params]
-            dummy_rv = dist(*dummy_dist_params, dummy_size_param)
-            # dummy_updates_dict = collect_default_updates(inputs=dummy_dist_params, outputs=(dummy_rv,))
-            dummy_params = [dummy_size_param] + dummy_dist_params
-            # dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
-            rv_type = type(
-                class_name,
-                (CustomSymbolicDistRV,),
-                # If logp is not provided, we try to infer it from the dist graph
-                dict(
-                    inline_logprob=logp is None,
-                ),
-            )
-            rv_op = rv_type(
-                inputs=dummy_params,
-                # inputs=dummy_dist_params,
-                outputs=[dummy_rv],
-                ndim_supp=ndim_supp,
-            )
-            fgraph = rv_op.fgraph.clone()
+            # size = normalize_size_param(size)
+            # dummy_size_param = size.type()
+            # dummy_dist_params = [dist_param.type() for dist_param in dist_params]
+            # dummy_rv = dist(*dummy_dist_params, dummy_size_param)
+            # # dummy_updates_dict = collect_default_updates(inputs=dummy_dist_params, outputs=(dummy_rv,))
+            # dummy_params = [dummy_size_param] + dummy_dist_params
+            # # dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
+            # rv_type = type(
+            #     class_name,
+            #     (CustomSymbolicDistRV,),
+            #     # If logp is not provided, we try to infer it from the dist graph
+            #     dict(
+            #         inline_logprob=logp is None,
+            #     ),
+            # )
+            # rv_op = rv_type(
+            #     inputs=dummy_params,
+            #     # inputs=dummy_dist_params,
+            #     outputs=[dummy_rv],
+            #     ndim_supp=ndim_supp,
+            # )
+            # fgraph = rv_op.fgraph.clone()
+            fgraph = rv.owner.op.fgraph.clone()
+            # inputs = filter_RNGs(rv.owner.op.fgraph.inputs)
+            # scan_node = rv.owner.op.fgraph.toposort()[-1]
+            # output = rv.owner.op.fgraph.outputs[-1]
+            # fgraph = FunctionGraph(inputs=inputs, outputs=[output], clone=True)
             replace_moments = MomentRewrite()
             replace_moments.rewrite(fgraph)
             for i, par in enumerate([size] + list(dist_params)):
                 fgraph.replace(fgraph.inputs[i], par)
-            [moment] = fgraph.outputs
+            # for i, inp in enumerate(replace_rng_nodes(rv.owner.inputs)):
+            #    if isinstance(inp.type, RandomGeneratorType):
+            #        fgraph.replace(fgraph.inputs[i], inp)
+            # breakpoint()
+            # outputs = replace_rng_nodes(fgraph.outputs)
+            for node in fgraph.toposort():
+                if isinstance(node.op, Scan):
+                    # breakpoint()
+                    for inp in node.inputs:
+                        if isinstance(inp.type, RandomGeneratorType):
+                            fgraph.replace(
+                                inp,
+                                shared(np.random.Generator(np.random.PCG64())),
+                                import_missing=True,
+                            )
+            moment = fgraph.outputs[-1]
+            # breakpoint()
             return moment
 
         if moment is None:
