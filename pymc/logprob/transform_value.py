@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from copy import copy
 from typing import Dict, Optional, Sequence, Union
 
 import numpy as np
@@ -31,8 +30,11 @@ from pymc.logprob.rewriting import PreserveRVMappings, cleanup_ir_rewrites_db
 from pymc.logprob.transforms import RVTransform
 
 
-class TransformedVariable(Op):
-    """A no-op that identifies a transform and its un-transformed input."""
+class TransformedValue(Op):
+    """A no-op that pairs the original value with its transformed version.
+
+    This is introduced by the `TransformValuesRewrite`
+    """
 
     view_map = {0: [0]}
 
@@ -52,7 +54,94 @@ class TransformedVariable(Op):
         return g_outs[0], DisconnectedType()()
 
 
-transformed_variable = TransformedVariable()
+transformed_value = TransformedValue()
+
+
+class TransformedValueRV(Op):
+    """A no-op that identifies RVs whose values were transformed.
+
+    This is introduced by the `TransformValuesRewrite`
+    """
+
+    view_map = {0: [0]}
+
+    __props__ = ("transforms",)
+
+    def __init__(self, transforms: Sequence[RVTransform]):
+        self.transforms = tuple(transforms)
+        super().__init__()
+
+    def make_node(self, *rv_outputs):
+        return Apply(self, rv_outputs, [out.type() for out in rv_outputs])
+
+    def perform(self, node, inputs, outputs):
+        raise NotImplementedError(
+            "`TransformedRV` `Op`s should be removed from graphs used for computation."
+        )
+
+    def connection_pattern(self, node):
+        return [[True] for _ in node.outputs]
+
+    def infer_shape(self, fgraph, node, input_shapes):
+        return input_shapes
+
+
+MeasurableVariable.register(TransformedValueRV)
+
+
+@_logprob.register(TransformedValueRV)
+def transformed_value_logprob(op, values, *rv_outs, use_jacobian=True, **kwargs):
+    """Compute the log-probability graph for a `TransformedRV`.
+
+    This is introduced by the `TransformValuesRewrite`
+    """
+    rv_op = rv_outs[0].owner.op
+    rv_inputs = rv_outs[0].owner.inputs
+    logprobs = _logprob(rv_op, values, *rv_inputs, **kwargs)
+
+    if not isinstance(logprobs, Sequence):
+        logprobs = [logprobs]
+
+    # Handle jacobian
+    assert len(values) == len(logprobs) == len(op.transforms)
+    logprobs_jac = []
+    for value, transform, logp in zip(values, op.transforms, logprobs):
+        if transform is None:
+            logprobs_jac.append(logp)
+            continue
+
+        assert isinstance(value.owner.op, TransformedValue)
+        original_forward_value = value.owner.inputs[1]
+        log_jac_det = transform.log_jac_det(original_forward_value, *rv_inputs).copy()
+        # The jacobian determinant has less dims than the logp
+        # when a multivariate transform (like Simplex or Ordered) is applied to univariate distributions.
+        # In this case we have to reduce the last logp dimensions, as they are no longer independent
+        if log_jac_det.ndim < logp.ndim:
+            diff_ndims = logp.ndim - log_jac_det.ndim
+            logp = logp.sum(axis=np.arange(-diff_ndims, 0))
+        # This case is sometimes, but not always, trivial to accomodate depending on the "space rank" of the
+        # multivariate distribution. See https://proceedings.mlr.press/v130/radul21a.html
+        elif log_jac_det.ndim > logp.ndim:
+            raise NotImplementedError(
+                f"Univariate transform {transform} cannot be applied to multivariate {rv_op}"
+            )
+        else:
+            # Check there is no broadcasting between logp and jacobian
+            if logp.type.broadcastable != log_jac_det.type.broadcastable:
+                raise ValueError(
+                    f"The logp of {rv_op} and log_jac_det of {transform} are not allowed to broadcast together. "
+                    "There is a bug in the implementation of either one."
+                )
+
+        if use_jacobian:
+            if value.name:
+                log_jac_det.name = f"{value.name}_jacobian"
+            logprobs_jac.append(logp + log_jac_det)
+        else:
+            # We still want to use the reduced logp, even though the jacobian isn't included
+            logprobs_jac.append(logp)
+
+    return logprobs_jac
 
 
 @node_rewriter(tracks=None)
@@ -94,10 +183,10 @@ def transform_values(fgraph: FunctionGraph, node: Apply) -> Optional[list[Apply]
     if all(transform is None for transform in transforms):
         return None
 
-    new_op = _create_transformed_rv_op(node.op, transforms)
-    # Create a new `Apply` node and outputs
-    trans_node = node.clone()
-    trans_node.op = new_op
+    transformed_rv_op = TransformedValueRV(transforms)
+    # Clone outputs so that rewrite doesn't reference original variables circularly
+    cloned_outputs = node.clone().outputs
+    transformed_rv_node = transformed_rv_op.make_node(*cloned_outputs)
 
     # We now assume that the old value variable represents the *transformed space*.
     # This means that we need to replace all instance of the old value variable
@@ -108,16 +197,19 @@ def transform_values(fgraph: FunctionGraph, node: Apply) -> Optional[list[Apply]
         if transform is None:
             continue
 
-        new_value_var = transformed_variable(
-            transform.backward(value_var, *trans_node.inputs), value_var
+        new_value_var = transformed_value(
+            transform.backward(value_var, *node.inputs),
+            value_var,
         )
 
         if value_var.name and getattr(transform, "name", None):
             new_value_var.name = f"{value_var.name}_{transform.name}"
 
-        rv_map_feature.update_rv_maps(rv_var, new_value_var, trans_node.outputs[rv_var_out_idx])
+        rv_map_feature.update_rv_maps(
+            rv_var, new_value_var, transformed_rv_node.outputs[rv_var_out_idx]
+        )
 
-    return trans_node.outputs
+    return transformed_rv_node.outputs
 
 
 @node_rewriter(tracks=[Scan])
@@ -158,9 +250,10 @@ def transform_scan_values(fgraph: FunctionGraph, node: Apply) -> Optional[list[A
     if all(transform is None for transform in transforms):
         return None
 
-    new_op = _create_transformed_rv_op(node.op, transforms)
-    trans_node = node.clone()
-    trans_node.op = new_op
+    transformed_rv_op = TransformedValueRV(transforms)
+    # Clone outputs so that rewrite doesn't reference original variables circularly
+    cloned_outputs = node.clone().outputs
+    transformed_rv_node = transformed_rv_op.make_node(*cloned_outputs)
 
     # We now assume that the old value variable represents the *transformed space*.
     # This means that we need to replace all instance of the old value variable
@@ -173,7 +266,9 @@ def transform_scan_values(fgraph: FunctionGraph, node: Apply) -> Optional[list[A
 
         # We access the original value variable and apply the transform to that
         original_value_var = rv_map_feature.original_values[value_var]
-        trans_original_value_var = transform.backward(original_value_var, *trans_node.inputs)
+        trans_original_value_var = transform.backward(
+            original_value_var, *transformed_rv_node.inputs
+        )
 
         # We then replace the reference to the original value variable in the scan value
         # variable by the back-transform projection computed above
@@ -188,18 +283,20 @@ def transform_scan_values(fgraph: FunctionGraph, node: Apply) -> Optional[list[A
             (value_var.owner.inputs[0],),
             replace={original_value_var: trans_original_value_var},
         )
-        trans_value_var = value_var.owner.clone_with_new_inputs(
+        transformed_value_var = value_var.owner.clone_with_new_inputs(
             inputs=[trans_original_value_var] + value_var.owner.inputs[1:]
         ).default_output()
 
-        new_value_var = transformed_variable(trans_value_var, original_value_var)
+        new_value_var = transformed_value(transformed_value_var, original_value_var)
 
         if value_var.name and getattr(transform, "name", None):
             new_value_var.name = f"{value_var.name}_{transform.name}"
 
-        rv_map_feature.update_rv_maps(rv_var, new_value_var, trans_node.outputs[rv_var_out_idx])
+        rv_map_feature.update_rv_maps(
+            rv_var, new_value_var, transformed_rv_node.outputs[rv_var_out_idx]
+        )
 
-    return trans_node.outputs
+    return transformed_rv_node.outputs
 
 
 class TransformValuesMapping(Feature):
@@ -247,121 +344,27 @@ class TransformValuesRewrite(GraphRewriter):
         self.scan_transform_rewrite.rewrite(fgraph)
 
 
-def _create_transformed_rv_op(
-    rv_op: Op,
-    transforms: Union[RVTransform, Sequence[Union[None, RVTransform]]],
-    *,
-    cls_dict_extra: Optional[Dict] = None,
-) -> Op:
-    """Create a new transformed variable instance given a base `RandomVariable` `Op`.
-
-    This will essentially copy the `type` of the given `Op` instance, create a
-    copy of said `Op` instance and change it's `type` to the new one.
-
-    In the end, we have an `Op` instance that will map to a `RVTransform` while
-    also behaving exactly as it did before.
-
-    Parameters
-    ----------
-    rv_op
-        The `RandomVariable` for which we want to construct a `TransformedRV`.
-    transform
-        The `RVTransform` for `rv_op`.
-    cls_dict_extra
-        Additional class members to add to the constructed `TransformedRV`.
-
-    """
-
-    if not isinstance(transforms, Sequence):
-        transforms = (transforms,)
-
-    trans_names = [
-        getattr(transform, "name", "transformed") if transform is not None else "None"
-        for transform in transforms
-    ]
-    rv_op_type = type(rv_op)
-    rv_type_name = rv_op_type.__name__
-    cls_dict = rv_op_type.__dict__.copy()
-    rv_name = cls_dict.get("name", "")
-    if rv_name:
-        cls_dict["name"] = f"{rv_name}_{'_'.join(trans_names)}"
-    cls_dict["transforms"] = transforms
-
-    if cls_dict_extra is not None:
-        cls_dict.update(cls_dict_extra)
-
-    new_op_type = type(f"Transformed{rv_type_name}", (rv_op_type,), cls_dict)
-
-    MeasurableVariable.register(new_op_type)
-
-    @_logprob.register(new_op_type)
-    def transformed_logprob(op, values, *inputs, use_jacobian=True, **kwargs):
-        """Compute the log-likelihood graph for a `TransformedRV`.
-
-        We assume that the value variable was back-transformed to be on the natural
-        support of the respective random variable.
-        """
-        logprobs = _logprob(rv_op, values, *inputs, **kwargs)
-
-        if not isinstance(logprobs, Sequence):
-            logprobs = [logprobs]
-
-        # Handle jacobian
-        assert len(values) == len(logprobs) == len(op.transforms)
-        logprobs_jac = []
-        for value, transform, logp in zip(values, op.transforms, logprobs):
-            if transform is None:
-                logprobs_jac.append(logp)
-                continue
-
-            assert isinstance(value.owner.op, TransformedVariable)
-            original_forward_value = value.owner.inputs[1]
-            log_jac_det = transform.log_jac_det(original_forward_value, *inputs).copy()
-            # The jacobian determinant has less dims than the logp
-            # when a multivariate transform (like Simplex or Ordered) is applied to univariate distributions.
-            # In this case we have to reduce the last logp dimensions, as they are no longer independent
-            if log_jac_det.ndim < logp.ndim:
-                diff_ndims = logp.ndim - log_jac_det.ndim
-                logp = logp.sum(axis=np.arange(-diff_ndims, 0))
-            # This case is sometimes, but not always, trivial to accomodate depending on the "space rank" of the
-            # multivariate distribution. See https://proceedings.mlr.press/v130/radul21a.html
-            elif log_jac_det.ndim > logp.ndim:
-                raise NotImplementedError(
-                    f"Univariate transform {transform} cannot be applied to multivariate {rv_op}"
-                )
-            else:
-                # Check there is no broadcasting between logp and jacobian
-                if logp.type.broadcastable != log_jac_det.type.broadcastable:
-                    raise ValueError(
-                        f"The logp of {rv_op} and log_jac_det of {transform} are not allowed to broadcast together. "
-                        "There is a bug in the implementation of either one."
-                    )
-
-            if use_jacobian:
-                if value.name:
-                    log_jac_det.name = f"{value.name}_jacobian"
-                logprobs_jac.append(logp + log_jac_det)
-            else:
-                # We still want to use the reduced logp, even though the jacobian isn't included
-                logprobs_jac.append(logp)
-
-        return logprobs_jac
-
-    new_op = copy(rv_op)
-    new_op.__class__ = new_op_type
-
-    return new_op
+@node_rewriter([TransformedValue])
+def remove_TransformedValues(fgraph, node):
+    return [node.inputs[0]]
 
 
-@node_rewriter([TransformedVariable])
-def remove_TransformedVariables(fgraph, node):
-    if isinstance(node.op, TransformedVariable):
-        return [node.inputs[0]]
+@node_rewriter([TransformedValueRV])
+def remove_TransformedValueRVs(fgraph, node):
+    return node.inputs
 
 
 cleanup_ir_rewrites_db.register(
-    "remove_TransformedVariables",
-    remove_TransformedVariables,
+    "remove_TransformedValues",
+    remove_TransformedValues,
+    "cleanup",
+    "transform",
+)
+
+
+cleanup_ir_rewrites_db.register(
+    "remove_TransformedValueRVs",
+    remove_TransformedValueRVs,
     "cleanup",
     "transform",
 )

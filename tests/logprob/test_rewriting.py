@@ -54,7 +54,7 @@ from pytensor.tensor.subtensor import (
 from pymc.distributions.transforms import logodds
 from pymc.logprob.basic import conditional_logp
 from pymc.logprob.rewriting import cleanup_ir, local_lift_DiracDelta
-from pymc.logprob.transform_value import TransformedVariable, TransformValuesRewrite
+from pymc.logprob.transform_value import TransformedValue, TransformValuesRewrite
 from pymc.logprob.utils import DiracDelta, dirac_delta
 
 
@@ -105,9 +105,7 @@ def test_local_remove_TransformedVariable():
     tr = TransformValuesRewrite({p_vv: logodds})
     [p_logp] = conditional_logp({p_rv: p_vv}, extra_rewrites=tr).values()
 
-    assert not any(
-        isinstance(v.owner.op, TransformedVariable) for v in ancestors([p_logp]) if v.owner
-    )
+    assert not any(isinstance(v.owner.op, TransformedValue) for v in ancestors([p_logp]) if v.owner)
 
 
 @pytest.mark.parametrize(

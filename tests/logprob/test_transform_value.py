@@ -11,6 +11,9 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import gc
+import operator
+
 import numpy as np
 import pytensor
 import pytest
@@ -567,3 +570,47 @@ def test_scan_transform():
         "innov": np.full((4,), -0.5),
     }
     np.testing.assert_allclose(logp_fn(**test_point), ref_logp_fn(**test_point))
+
+
+def test_weakref_leak():
+    """Check that the rewrite does not have a growing memory footprint.
+
+    See #6990
+    """
+
+    def _growth(limit=10, peak_stats={}):
+        """Vendoring of objgraph.growth
+
+        Source: https://github.com/mgedmin/objgraph/blob/94b1ca61a11109547442701800292dcfc7f59fc8/objgraph.py#L253
+        """
+        gc.collect()
+        objects = gc.get_objects()
+
+        stats = {}
+        for o in objects:
+            n = type(o).__name__
+            stats[n] = stats.get(n, 0) + 1
+
+        deltas = {}
+        for name, count in stats.items():
+            old_count = peak_stats.get(name, 0)
+            if count > old_count:
+                deltas[name] = count - old_count
+                peak_stats[name] = count
+
+        deltas = sorted(deltas.items(), key=operator.itemgetter(1), reverse=True)
+
+        if limit:
+            deltas = deltas[:limit]
+
+        return [(name, stats[name], delta) for name, delta in deltas]
+
+    rvs_to_values = {pt.random.beta(1, 1, name=f"p_{i}"): pt.scalar(f"p_{i}") for i in range(30)}
+    tr = TransformValuesRewrite({v: logodds for v in rvs_to_values.values()})
+
+    for i in range(20):
+        conditional_logp(rvs_to_values, extra_rewrites=tr)
+        res = _growth()
+        # Only start checking after warmup
+        if i > 15:
+            assert not res, "Object counts are still growing"
