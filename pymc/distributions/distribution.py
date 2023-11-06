@@ -687,8 +687,10 @@ class _CustomSymbolicDist(Distribution):
             fgraph = rv.owner.op.fgraph.clone()
             replace_moments = MomentRewrite()
             replace_moments.rewrite(fgraph)
+            # we need to replace dummy variable by actual dist params
             for i, par in enumerate([size] + list(dist_params)):
                 fgraph.replace(fgraph.inputs[i], par)
+            # we need to replace dymmy random generators in Scan node inputs
             for node in fgraph.toposort():
                 if isinstance(node.op, Scan):
                     for inp in node.inputs:
