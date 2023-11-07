@@ -22,4 +22,19 @@ from pymc.gp.gp import (
     MarginalKron,
     MarginalSparse,
 )
-from pymc.gp.hsgp_approx import HSGP
+from pymc.gp.hsgp_approx import HSGP, HSTP
+
+__all__ = [
+    "cov",
+    "mean",
+    "util",
+    "TP",
+    "Latent",
+    "LatentKron",
+    "Marginal",
+    "MarginalApprox",
+    "MarginalKron",
+    "MarginalSparse",
+    "HSGP",
+    "HSTP",
+]

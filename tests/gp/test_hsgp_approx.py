@@ -76,7 +76,7 @@ def two_sample_test(sample1, sample2, n_sims=1000, alpha=0.05):
     return h0, mmd, critical_value, mmd > critical_value
 
 
-class TestHSGP:
+class _BaseFixtures:
     @pytest.fixture
     def rng(self):
         return np.random.RandomState(10)
@@ -114,6 +114,8 @@ class TestHSGP:
         gp = pm.gp.Latent(cov_func=cov_func)
         return gp
 
+
+class TestHSGP(_BaseFixtures):
     def test_set_boundaries_1d(self, X1):
         X1s = X1 - np.mean(X1, axis=0)
         L = pm.gp.hsgp_approx.set_boundary(X1s, c=2).eval()
@@ -208,3 +210,41 @@ class TestHSGP:
             samples1, samples2, n_sims=500, alpha=0.01
         )
         assert not reject, "H0 was rejected, even though HSGP prior and conditional should match."
+
+
+class TestHSTP(_BaseFixtures):
+    @pytest.fixture
+    def nu(self):
+        return 15.0
+
+    @pytest.fixture
+    def gp(self, cov_func, nu) -> pm.gp.TP:
+        return pm.gp.TP(scale_func=cov_func, nu=nu)
+
+    @pytest.mark.parametrize("parameterization", ["centered", "noncentered"])
+    def test_prior(self, model, gp, cov_func, nu, X1, parameterization, rng):
+        """Compare HSGP prior to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
+        prior and compare them using MMD two sample test.  Tests both centered and non-centered
+        parameterizations.
+        """
+        with model:
+            hstp = pm.gp.HSTP(
+                m=[200],
+                c=2.0,
+                parameterization=parameterization,
+                scale_func=cov_func,
+                nu=nu,
+            )
+            f1 = hstp.prior("f1", X=X1)
+
+            f2 = gp.prior("f2", X=X1)
+
+            idata = pm.sample_prior_predictive(samples=1000, random_seed=rng)
+
+        samples1 = az.extract(idata.prior["f1"])["f1"].values.T
+        samples2 = az.extract(idata.prior["f2"])["f2"].values.T
+
+        h0, mmd, critical_value, reject = two_sample_test(
+            samples1, samples2, n_sims=500, alpha=0.01
+        )
+        assert not reject, "H0 was rejected, even though HSTP and TP priors should match."

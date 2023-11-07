@@ -15,6 +15,7 @@
 import numbers
 import warnings
 
+from abc import ABC, abstractmethod
 from types import ModuleType
 from typing import Optional, Sequence, Union
 
@@ -28,6 +29,8 @@ from pymc.gp.gp import Base
 from pymc.gp.mean import Mean, Zero
 
 TensorLike = Union[np.ndarray, pt.TensorVariable]
+
+__all__ = ["HSGP", "HSTP"]
 
 
 def set_boundary(Xs: TensorLike, c: Union[numbers.Real, TensorLike]) -> TensorLike:
@@ -66,87 +69,8 @@ def calc_eigenvectors(
     return phi
 
 
-class HSGP(Base):
-    R"""
-    Hilbert Space Gaussian process approximation.
-
-    The `gp.HSGP` class is an implementation of the Hilbert Space Gaussian process.  It is a
-    reduced rank GP approximation that uses a fixed set of basis vectors whose coefficients are
-    random functions of a stationary covariance function's power spectral density.  It's usage
-    is largely similar to `gp.Latent`.  Like `gp.Latent`, it does not assume a Gaussian noise model
-    and can be used with any likelihood, or as a component anywhere within a model.  Also like
-    `gp.Latent`, it has `prior` and `conditional` methods.  It supports any sum of covariance
-    functions that implement a `power_spectral_density` method.
-
-    For information on choosing appropriate `m`, `L`, and `c`, refer Ruitort-Mayol et. al. or to
-    the PyMC examples that use HSGP.
-
-    To with with the HSGP in its "linearized" form, as a matrix of basis vectors and and vector of
-    coefficients, see the method `prior_linearized`.
-
-    Parameters
-    ----------
-    m: list
-        The number of basis vectors to use for each active dimension (covariance parameter
-        `active_dim`).
-    L: list
-        The boundary of the space for each `active_dim`.  It is called the boundary condition.
-        Choose L such that the domain `[-L, L]` contains all points in the column of X given by the
-        `active_dim`.
-    c: float
-        The proportion extension factor.  Used to construct L from X.  Defined as `S = max|X|` such
-        that `X` is in `[-S, S]`.  `L` is the calculated as `c * S`.  One of `c` or `L` must be
-        provided.  Further information can be found in Ruitort-Mayol et. al.
-    drop_first: bool
-        Default `False`. Sometimes the first basis vector is quite "flat" and very similar to
-        the intercept term.  When there is an intercept in the model, ignoring the first basis
-        vector may improve sampling.
-    cov_func: None, 2D array, or instance of Covariance
-        The covariance function.  Defaults to zero.
-    mean_func: None, instance of Mean
-        The mean function.  Defaults to zero.
-
-    Examples
-    --------
-    .. code:: python
-
-        # A three dimensional column vector of inputs.
-        X = np.random.rand(100, 3)
-
-        with pm.Model() as model:
-            # Specify the covariance function.
-            # Three input dimensions, but we only want to use the last two.
-            cov_func = pm.gp.cov.ExpQuad(3, ls=0.1, active_dims=[1, 2])
-
-            # Specify the HSGP.
-            # Use 25 basis vectors across each active dimension for a total of 25 * 25 = 625.
-            # The value `c = 4` means the boundary of the approximation
-            # lies at four times the half width of the data.
-            # In this example the data lie between zero and one,
-            # so the boundaries occur at -1.5 and 2.5.  The data, both for
-            # training and prediction should reside well within that boundary..
-            gp = pm.gp.HSGP(m=[25, 25], c=4.0, cov_func=cov_func)
-
-            # Place a GP prior over the function f.
-            f = gp.prior("f", X=X)
-
-        ...
-
-        # After fitting or sampling, specify the distribution
-        # at new points with .conditional
-        Xnew = np.linspace(-1, 2, 50)[:, None]
-
-        with model:
-            fcond = gp.conditional("fcond", Xnew=Xnew)
-
-    References
-    ----------
-    -   Ruitort-Mayol, G., and Anderson, M., and Solin, A., and Vehtari, A. (2022). Practical
-        Hilbert Space Approximate Bayesian Gaussian Processes for Probabilistic Programming
-
-    -   Solin, A., Sarkka, S. (2019) Hilbert Space Methods for Reduced-Rank Gaussian Process
-        Regression.
-    """
+class HSSP(ABC, Base):
+    """Hilbert Space Base."""
 
     def __init__(
         self,
@@ -158,7 +82,7 @@ class HSGP(Base):
         *,
         mean_func: Mean = Zero(),
         cov_func: Covariance,
-    ):
+    ) -> None:
         arg_err_msg = (
             "`m` and L, if provided, must be sequences with one element per active "
             "dimension of the kernel or covariance function."
@@ -302,6 +226,10 @@ class HSGP(Base):
         i = int(self._drop_first == True)
         return phi[:, i:], pt.sqrt(psd[i:])
 
+    @abstractmethod
+    def _base_dist(self, name: str, **kwargs) -> pt.TensorVariable:
+        raise NotImplementedError
+
     def prior(self, name: str, X: TensorLike, dims: Optional[str] = None):  # type: ignore
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
@@ -320,14 +248,14 @@ class HSGP(Base):
         phi, sqrt_psd = self.prior_linearized(X - self._X_mean)
 
         if self._parameterization == "noncentered":
-            self._beta = pm.Normal(
+            self._beta = self._base_dist(
                 f"{name}_hsgp_coeffs_", size=self._m_star - int(self._drop_first)
             )
             self._sqrt_psd = sqrt_psd
             f = self.mean_func(X) + phi @ (self._beta * self._sqrt_psd)
 
         elif self._parameterization == "centered":
-            self._beta = pm.Normal(f"{name}_hsgp_coeffs_", sigma=sqrt_psd)
+            self._beta = self._base_dist(f"{name}_hsgp_coeffs_", sigma=sqrt_psd)
             f = self.mean_func(X) + phi @ self._beta
 
         self.f = pm.Deterministic(name, f, dims=dims)
@@ -372,3 +300,205 @@ class HSGP(Base):
         """
         fnew = self._build_conditional(Xnew)
         return pm.Deterministic(name, fnew, dims=dims)
+
+
+class HSGP(HSSP):
+    R"""
+    Hilbert Space Gaussian process approximation.
+
+    The `gp.HSGP` class is an implementation of the Hilbert Space Gaussian process.  It is a
+    reduced rank GP approximation that uses a fixed set of basis vectors whose coefficients are
+    random functions of a stationary covariance function's power spectral density.  It's usage
+    is largely similar to `gp.Latent`.  Like `gp.Latent`, it does not assume a Gaussian noise model
+    and can be used with any likelihood, or as a component anywhere within a model.  Also like
+    `gp.Latent`, it has `prior` and `conditional` methods.  It supports any sum of covariance
+    functions that implement a `power_spectral_density` method.
+
+    For information on choosing appropriate `m`, `L`, and `c`, refer Ruitort-Mayol et. al. or to
+    the PyMC examples that use HSGP.
+
+    To with with the HSGP in its "linearized" form, as a matrix of basis vectors and and vector of
+    coefficients, see the method `prior_linearized`.
+
+    Parameters
+    ----------
+    m: list
+        The number of basis vectors to use for each active dimension (covariance parameter
+        `active_dim`).
+    L: list
+        The boundary of the space for each `active_dim`.  It is called the boundary condition.
+        Choose L such that the domain `[-L, L]` contains all points in the column of X given by the
+        `active_dim`.
+    c: float
+        The proportion extension factor.  Used to construct L from X.  Defined as `S = max|X|` such
+        that `X` is in `[-S, S]`.  `L` is the calculated as `c * S`.  One of `c` or `L` must be
+        provided.  Further information can be found in Ruitort-Mayol et. al.
+    drop_first: bool
+        Default `False`. Sometimes the first basis vector is quite "flat" and very similar to
+        the intercept term.  When there is an intercept in the model, ignoring the first basis
+        vector may improve sampling.
+    cov_func: None, 2D array, or instance of Covariance
+        The covariance function.
+    mean_func: None, instance of Mean
+        The mean function.  Defaults to zero.
+
+    Examples
+    --------
+    .. code:: python
+
+        # A three dimensional column vector of inputs.
+        X = np.random.rand(100, 3)
+
+        with pm.Model() as model:
+            # Specify the covariance function.
+            # Three input dimensions, but we only want to use the last two.
+            cov_func = pm.gp.cov.ExpQuad(3, ls=0.1, active_dims=[1, 2])
+
+            # Specify the HSGP.
+            # Use 25 basis vectors across each active dimension for a total of 25 * 25 = 625.
+            # The value `c = 4` means the boundary of the approximation
+            # lies at four times the half width of the data.
+            # In this example the data lie between zero and one,
+            # so the boundaries occur at -1.5 and 2.5.  The data, both for
+            # training and prediction should reside well within that boundary..
+            gp = pm.gp.HSGP(m=[25, 25], c=4.0, cov_func=cov_func)
+
+            # Place a GP prior over the function f.
+            f = gp.prior("f", X=X)
+
+        ...
+
+        # After fitting or sampling, specify the distribution
+        # at new points with .conditional
+        Xnew = np.linspace(-1, 2, 50)[:, None]
+
+        with model:
+            fcond = gp.conditional("fcond", Xnew=Xnew)
+
+    References
+    ----------
+    -   Ruitort-Mayol, G., and Anderson, M., and Solin, A., and Vehtari, A. (2022). Practical
+        Hilbert Space Approximate Bayesian Gaussian Processes for Probabilistic Programming
+
+    -   Solin, A., Sarkka, S. (2019) Hilbert Space Methods for Reduced-Rank Gaussian Process
+        Regression.
+    """
+
+    def _base_dist(self, name: str, **kwargs) -> pt.TensorVariable:
+        return pm.Normal(name, **kwargs)
+
+
+class HSTP(HSSP):
+    R"""
+    Hilbert Space Student-T process approximation.
+
+    The `gp.HSTP` class is an implementation of the Hilbert Space Student T process.  It is a
+    reduced rank TP approximation that uses a fixed set of basis vectors whose coefficients are
+    random functions of a stationary covariance function's power spectral density.  It's usage
+    is largely similar to `gp.Latent`.  Like `gp.Latent`, it does not assume a Gaussian noise model
+    and can be used with any likelihood, or as a component anywhere within a model.  Also like
+    `gp.Latent`, it has `prior` and `conditional` methods.  It supports any sum of covariance
+    functions that implement a `power_spectral_density` method.
+
+    For information on choosing appropriate `m`, `L`, and `c`, refer Ruitort-Mayol et. al. or to
+    the PyMC examples that use HSGP.
+
+    To with with the HSGP in its "linearized" form, as a matrix of basis vectors and and vector of
+    coefficients, see the method `prior_linearized`.
+
+    Parameters
+    ----------
+    m: list
+        The number of basis vectors to use for each active dimension (covariance parameter
+        `active_dim`).
+    L: list
+        The boundary of the space for each `active_dim`.  It is called the boundary condition.
+        Choose L such that the domain `[-L, L]` contains all points in the column of X given by the
+        `active_dim`.
+    c: float
+        The proportion extension factor.  Used to construct L from X.  Defined as `S = max|X|` such
+        that `X` is in `[-S, S]`.  `L` is the calculated as `c * S`.  One of `c` or `L` must be
+        provided.  Further information can be found in Ruitort-Mayol et. al.
+    drop_first: bool
+        Default `False`. Sometimes the first basis vector is quite "flat" and very similar to
+        the intercept term.  When there is an intercept in the model, ignoring the first basis
+        vector may improve sampling.
+    scale_func: None, 2D array, or instance of Covariance
+        The covariance function.
+    mean_func: None, instance of Mean
+        The mean function.  Defaults to zero.
+    nu: TensorLike
+        Student T degrees of freedom
+
+    Examples
+    --------
+    .. code:: python
+
+        # A three dimensional column vector of inputs.
+        X = np.random.rand(100, 3)
+
+        with pm.Model() as model:
+            # Specify the covariance (scale) function.
+            # Three input dimensions, but we only want to use the last two.
+            scale_func = pm.gp.cov.ExpQuad(3, ls=0.1, active_dims=[1, 2])
+
+            # Specify the HSTP.
+            # Use 25 basis vectors across each active dimension for a total of 25 * 25 = 625.
+            # The value `c = 4` means the boundary of the approximation
+            # lies at four times the half width of the data.
+            # In this example the data lie between zero and one,
+            # so the boundaries occur at -1.5 and 2.5.  The data, both for
+            # training and prediction should reside well within that boundary.
+            #
+            # Do not forget `nu` this time
+            tp = pm.gp.HSTP(m=[25, 25], c=4.0, scale_func=cov_func, nu=5.)
+
+            # Place a GP prior over the function f.
+            f = tp.prior("f", X=X)
+
+        ...
+
+        # After fitting or sampling, specify the distribution
+        # at new points with .conditional
+        Xnew = np.linspace(-1, 2, 50)[:, None]
+
+        with model:
+            fcond = tp.conditional("fcond", Xnew=Xnew)
+
+    References
+    ----------
+    -   Ruitort-Mayol, G., and Anderson, M., and Solin, A., and Vehtari, A. (2022). Practical
+        Hilbert Space Approximate Bayesian Gaussian Processes for Probabilistic Programming
+
+    -   Solin, A., Sarkka, S. (2019) Hilbert Space Methods for Reduced-Rank Gaussian Process
+        Regression.
+
+    -   Jeremy Sellier, Petros Dellaportas, (2023). Bayesian online change point detection
+        with Hilbert space approximate Student-t process
+    """
+
+    def __init__(
+        self,
+        m: Sequence[int],
+        L: Optional[Sequence[float]] = None,
+        c: Optional[numbers.Real] = None,
+        drop_first: bool = False,
+        parameterization="noncentered",
+        *,
+        mean_func: Mean = Zero(),
+        scale_func: Covariance,
+        nu: pt.TensorLike,
+    ) -> None:
+        super().__init__(
+            m,
+            L,
+            c,
+            drop_first,
+            parameterization,
+            mean_func=mean_func,
+            cov_func=scale_func,
+        )
+        self.nu = pt.as_tensor_variable(nu)
+
+    def _base_dist(self, name: str, **kwargs) -> pt.TensorVariable:
+        return pm.StudentT(name, nu=self.nu, **kwargs)
