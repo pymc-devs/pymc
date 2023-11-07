@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import logging
+import platform
 import warnings
 
 import numpy as np
@@ -27,6 +28,8 @@ from pymc.backends.base import MultiTrace
 from pymc.pytensorf import floatX
 from pymc.smc.kernels import IMH, systematic_resampling
 from tests.helpers import assert_random_state_equal
+
+_IS_WINDOWS = platform.system() == "Windows"
 
 
 class TestSMC:
@@ -75,7 +78,9 @@ class TestSMC:
     def test_sample(self):
         initial_rng_state = np.random.get_state()
         with self.SMC_test:
-            mtrace = pm.sample_smc(draws=self.samples, return_inferencedata=False)
+            mtrace = pm.sample_smc(
+                draws=self.samples, return_inferencedata=False, progressbar=not _IS_WINDOWS
+            )
 
         # Verify sampling was done with a non-global random generator
         assert_random_state_equal(initial_rng_state, np.random.get_state())
@@ -142,7 +147,9 @@ class TestSMC:
             with pm.Model() as model:
                 a = pm.Beta("a", alpha, beta)
                 y = pm.Bernoulli("y", a, observed=data)
-                trace = pm.sample_smc(2000, chains=2, return_inferencedata=False)
+                trace = pm.sample_smc(
+                    2000, chains=2, return_inferencedata=False, progressbar=not _IS_WINDOWS
+                )
             # log_marginal_likelihood is found in the last value of each chain
             lml = np.mean([chain[-1] for chain in trace.report.log_marginal_likelihood])
             marginals.append(lml)
@@ -203,8 +210,15 @@ class TestSMC:
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 warnings.filterwarnings("ignore", "More chains .* than draws .*", UserWarning)
-                idata = pm.sample_smc(chains=chains, draws=draws)
-                mt = pm.sample_smc(chains=chains, draws=draws, return_inferencedata=False)
+                idata = pm.sample_smc(
+                    chains=chains, draws=draws, progressbar=not (chains > 1 and _IS_WINDOWS)
+                )
+                mt = pm.sample_smc(
+                    chains=chains,
+                    draws=draws,
+                    return_inferencedata=False,
+                    progressbar=not (chains > 1 and _IS_WINDOWS),
+                )
 
         assert isinstance(idata, InferenceData)
         assert "sample_stats" in idata
@@ -218,7 +232,7 @@ class TestSMC:
     def test_convergence_checks(self, caplog):
         with caplog.at_level(logging.INFO):
             with self.fast_model:
-                pm.sample_smc(draws=99)
+                pm.sample_smc(draws=99, progressbar=not _IS_WINDOWS)
         assert "The number of samples is too small" in caplog.text
 
     def test_deprecated_parallel_arg(self):
@@ -265,7 +279,7 @@ class TestMHKernel:
             mu = pm.Normal("mu", 0, 3)
             sigma = pm.HalfNormal("sigma", 1)
             y = pm.Normal("y", mu, sigma, observed=data)
-            idata = pm.sample_smc(draws=2000, kernel=pm.smc.MH)
+            idata = pm.sample_smc(draws=2000, kernel=pm.smc.MH, progressbar=not _IS_WINDOWS)
         assert_random_state_equal(initial_rng_state, np.random.get_state())
 
         post = idata.posterior.stack(sample=("chain", "draw"))
