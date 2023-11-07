@@ -13,20 +13,19 @@
 #   limitations under the License.
 
 import functools as ft
-import re
 import warnings
 
 import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
 import pytensor
-import pytensor.tensor as pt
 import pytest
 import scipy.special as sp
 import scipy.stats as st
 
 from pytensor import tensor as pt
 from pytensor.tensor import TensorVariable
+from pytensor.tensor.blockwise import Blockwise
 from pytensor.tensor.random.utils import broadcast_params
 from pytensor.tensor.slinalg import Cholesky
 
@@ -2312,6 +2311,21 @@ def test_mvnormal_no_cholesky_in_model_logp():
 
     logp_dlogp = m.logp_dlogp_function()
     assert not contains_cholesky_op(logp_dlogp._pytensor_function.maker.fgraph)
+
+
+def test_mvnormal_blockwise_solve_opt():
+    """Check that no blockwise show up in the d/logp graph of a 2D MvNormal with a single covariance.
+
+    See #6993
+    """
+    with pm.Model() as m:
+        pm.MvNormal("y", mu=0, cov=pt.diag([2, 2]), shape=(3, 2))
+
+    logp = m.logp()
+    dlogp = pytensor.grad(logp, wrt=m.value_vars[0])
+    fn = m.compile_fn(inputs=m.value_vars, outs=[logp, dlogp], point_fn=False)
+
+    assert not any(isinstance(node.op, Blockwise) for node in fn.maker.fgraph.apply_nodes)
 
 
 def test_mvnormal_mu_convenience():
