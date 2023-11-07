@@ -344,7 +344,7 @@ class TestCompilePyMC:
 
     def test_check_parameters_removed_from_scan(self):
         def scan_step(x_0):
-            cond = pt.ge(x_0, 0)
+            cond = pt.ge(x_0, 1)
             x = check_parameters(x_0, cond)
             x_update = collect_default_updates([x])
             return x, x_update
@@ -372,6 +372,23 @@ class TestCompilePyMC:
         with m:
             fn = compile_pymc([], xs)
             assert np.all(fn() == -np.inf)
+
+    def test_check_parameters_can_be_replaced_by_ninf_from_scan(self):
+        def scan_step(x_0):
+            cond = pt.ge(x_0, 0)
+            x = check_parameters(x_0, cond, can_be_replaced_by_ninf=True)
+            x_update = collect_default_updates([x])
+            return x, x_update
+
+        xs, _ = scan(
+            fn=scan_step,
+            sequences=[
+                pt.as_tensor_variable([-1, 0, 1]),
+            ],
+            name="xs",
+        )
+        fn = compile_pymc([], xs)
+        np.testing.assert_array_equal(fn(), [-np.inf, 0, 1])
 
     def test_compile_pymc_sets_rng_updates(self):
         rng = pytensor.shared(np.random.default_rng(0))
