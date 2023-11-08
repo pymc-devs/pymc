@@ -816,41 +816,97 @@ class IntervalTransform(RVTransform):
         """
         self.args_fn = args_fn
 
+    def get_a_and_b(self, inputs):
+        """Return interval bound values.
+
+        Also returns two boolean variables indicating whether the transform is known to be statically bounded.
+        This is used to generate smaller graphs in the transform methods.
+        """
+        a, b = self.args_fn(*inputs)
+        lower_bounded, upper_bounded = True, True
+        if a is None:
+            a = -pt.inf
+            lower_bounded = False
+        if b is None:
+            b = pt.inf
+            upper_bounded = False
+        return a, b, lower_bounded, upper_bounded
+
     def forward(self, value, *inputs):
-        a, b = self.args_fn(*inputs)
+        a, b, lower_bounded, upper_bounded = self.get_a_and_b(inputs)
 
-        if a is not None and b is not None:
-            return pt.log(value - a) - pt.log(b - value)
-        elif a is not None:
-            return pt.log(value - a)
-        elif b is not None:
-            return pt.log(b - value)
-        else:
-            raise ValueError("Both edges of IntervalTransform cannot be None")
+        log_lower_distance = pt.log(value - a)
+        log_upper_distance = pt.log(b - value)
 
-    def backward(self, value, *inputs):
-        a, b = self.args_fn(*inputs)
-
-        if a is not None and b is not None:
-            sigmoid_x = pt.sigmoid(value)
-            return sigmoid_x * b + (1 - sigmoid_x) * a
-        elif a is not None:
-            return pt.exp(value) + a
-        elif b is not None:
-            return b - pt.exp(value)
-        else:
-            raise ValueError("Both edges of IntervalTransform cannot be None")
-
-    def log_jac_det(self, value, *inputs):
-        a, b = self.args_fn(*inputs)
-
-        if a is not None and b is not None:
-            s = pt.softplus(-value)
-            return pt.log(b - a) - 2 * s - value
-        elif a is None and b is None:
-            raise ValueError("Both edges of IntervalTransform cannot be None")
+        if lower_bounded and upper_bounded:
+            return pt.where(
+                pt.and_(pt.neq(a, -pt.inf), pt.neq(b, pt.inf)),
+                log_lower_distance - log_upper_distance,
+                pt.where(
+                    pt.neq(a, -pt.inf),
+                    log_lower_distance,
+                    pt.where(
+                        pt.neq(b, pt.inf),
+                        log_upper_distance,
+                        value,
+                    ),
+                ),
+            )
+        elif lower_bounded:
+            return log_lower_distance
+        elif upper_bounded:
+            return log_upper_distance
         else:
             return value
+
+    def backward(self, value, *inputs):
+        a, b, lower_bounded, upper_bounded = self.get_a_and_b(inputs)
+
+        exp_value = pt.exp(value)
+        sigmoid_x = pt.sigmoid(value)
+        lower_distance = exp_value + a
+        upper_distance = b - exp_value
+
+        if lower_bounded and upper_bounded:
+            return pt.where(
+                pt.and_(pt.neq(a, -pt.inf), pt.neq(b, pt.inf)),
+                sigmoid_x * b + (1 - sigmoid_x) * a,
+                pt.where(
+                    pt.neq(a, -pt.inf),
+                    lower_distance,
+                    pt.where(
+                        pt.neq(b, pt.inf),
+                        upper_distance,
+                        value,
+                    ),
+                ),
+            )
+        elif lower_bounded:
+            return lower_distance
+        elif upper_bounded:
+            return upper_distance
+        else:
+            return value
+
+    def log_jac_det(self, value, *inputs):
+        a, b, lower_bounded, upper_bounded = self.get_a_and_b(inputs)
+
+        if lower_bounded and upper_bounded:
+            s = pt.softplus(-value)
+
+            return pt.where(
+                pt.and_(pt.neq(a, -pt.inf), pt.neq(b, pt.inf)),
+                pt.log(b - a) - 2 * s - value,
+                pt.where(
+                    pt.or_(pt.neq(a, -pt.inf), pt.neq(b, pt.inf)),
+                    value,
+                    pt.zeros_like(value),
+                ),
+            )
+        elif lower_bounded or upper_bounded:
+            return value
+        else:
+            return pt.zeros_like(value)
 
 
 class LogOddsTransform(RVTransform):
