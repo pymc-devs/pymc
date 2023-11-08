@@ -2248,7 +2248,7 @@ def test_car_rng_fn(sparse):
     with pm.Model():
         car = pm.CAR("car", mu, W, alpha, tau, size=size)
         mn = pm.MvNormal("mn", mu, cov, size=size)
-        check = pm.sample_prior_predictive(n_fails, return_inferencedata=False, random_seed=1)
+        check = pm.sample_prior_predictive(n_fails, return_inferencedata=False, random_seed=2)
 
     p, f = delta, n_fails
     while p <= delta and f > 0:
