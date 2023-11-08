@@ -664,7 +664,7 @@ class TruncatedNormal(BoundedContinuous):
     @classmethod
     def dist(
         cls,
-        mu: Optional[DIST_PARAMETER_TYPES] = None,
+        mu: Optional[DIST_PARAMETER_TYPES] = 0,
         sigma: Optional[DIST_PARAMETER_TYPES] = None,
         *,
         tau: Optional[DIST_PARAMETER_TYPES] = None,
@@ -674,7 +674,6 @@ class TruncatedNormal(BoundedContinuous):
     ) -> RandomVariable:
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         sigma = pt.as_tensor_variable(sigma)
-        tau = pt.as_tensor_variable(tau)
         mu = pt.as_tensor_variable(floatX(mu))
 
         lower = pt.as_tensor_variable(floatX(lower)) if lower is not None else pt.constant(-np.inf)

@@ -40,7 +40,7 @@ from pytensor.tensor.variable import TensorConstant
 
 import pymc as pm
 
-from pymc import Deterministic, Potential
+from pymc import Deterministic, Model, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
 from pymc.distributions.distribution import PartialObservedRV
@@ -1523,6 +1523,18 @@ class TestImputationMissingData:
             model.compile_logp()({"x_unobserved": [0] * 3}),
             st.norm.logcdf(0) * 10,
         )
+
+    def test_truncated_normal(self):
+        """Test transform of unobserved TruncatedNormal leads to finite logp.
+
+        Regression test for #6999
+        """
+        with Model() as m:
+            mu = pm.TruncatedNormal("mu", mu=1, sigma=2, lower=0)
+            x = pm.TruncatedNormal(
+                "x", mu=mu, sigma=0.5, lower=0, observed=np.array([0.1, 0.2, 0.5, np.nan, np.nan])
+            )
+        m.check_start_vals(m.initial_point())
 
 
 class TestShared:

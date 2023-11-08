@@ -55,7 +55,6 @@ from pymc.logprob.transforms import (
     ErfcxTransform,
     ErfTransform,
     ExpTransform,
-    IntervalTransform,
     LocTransform,
     LogTransform,
     RVTransform,
@@ -138,23 +137,6 @@ class TestRVTransform:
             NotImplementedError, match=r"only implemented for ndim_supp in \(0, 1\)"
         ):
             SquareTransform().log_jac_det(0)
-
-    def test_invalid_interval_transform(self):
-        x_rv = pt.random.normal(0, 1)
-        x_vv = x_rv.clone()
-
-        msg = "Both edges of IntervalTransform cannot be None"
-        tr = IntervalTransform(lambda *inputs: (None, None))
-        with pytest.raises(ValueError, match=msg):
-            tr.forward(x_vv, *x_rv.owner.inputs)
-
-        tr = IntervalTransform(lambda *inputs: (None, None))
-        with pytest.raises(ValueError, match=msg):
-            tr.backward(x_vv, *x_rv.owner.inputs)
-
-        tr = IntervalTransform(lambda *inputs: (None, None))
-        with pytest.raises(ValueError, match=msg):
-            tr.log_jac_det(x_vv, *x_rv.owner.inputs)
 
     def test_chained_transform(self):
         loc = 5
