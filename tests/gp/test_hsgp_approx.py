@@ -176,7 +176,6 @@ class TestHSGP(_BaseFixtures):
         [
             (pm.gp.cov.ExpQuad(1, ls=1), "centered"),
             (pm.gp.cov.ExpQuad(1, ls=1), "noncentered"),
-            # (pm.gp.cov.Periodic(1, period=1, ls=1), None),
         ],
     )
     def test_prior(self, model, cov_func, X1, parameterization, rng):
