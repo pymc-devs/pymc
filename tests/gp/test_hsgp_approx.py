@@ -76,7 +76,7 @@ def two_sample_test(sample1, sample2, n_sims=1000, alpha=0.05):
     return h0, mmd, critical_value, mmd > critical_value
 
 
-class TestHSGP:
+class _BaseFixtures:
     @pytest.fixture
     def rng(self):
         return np.random.RandomState(10)
@@ -105,6 +105,8 @@ class TestHSGP:
     def model(self):
         return pm.Model()
 
+
+class TestHSGP(_BaseFixtures):
     def test_set_boundaries_1d(self, X1):
         X1s = X1 - np.mean(X1, axis=0)
         L = pm.gp.hsgp_approx.set_boundary(X1s, c=2).eval()
@@ -145,13 +147,6 @@ class TestHSGP:
             cov_func = pm.gp.cov.ExpQuad(2, ls=[1, 2])
             pm.gp.HSGP(m=[50, 50], L=[12, 12], parameterization="wrong", cov_func=cov_func)
 
-        with pytest.raises(
-            ValueError,
-            match="HSGP approximation for `Periodic` kernel only implemented for 1-dimensional case.",
-        ):
-            cov_func = pm.gp.cov.Periodic(2, period=1, ls=[1, 2])
-            pm.gp.HSGP(m=[500, 500], cov_func=cov_func)
-
         # pass without error, cov_func has 2 active dimensions, c given as scalar
         cov_func = pm.gp.cov.ExpQuad(3, ls=[1, 2], active_dims=[0, 2])
         pm.gp.HSGP(m=[50, 50], c=2, cov_func=cov_func)
@@ -188,11 +183,6 @@ class TestHSGP:
         """Compare HSGP prior to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
         prior and compare them using MMD two sample test.  Tests both centered and non-centered
         parameterizations.
-
-        Note: for `pm.gp.cov.Periodic`, this test does not pass and has been commented out.
-        The test passes more often when subtracting the mean from the mean from the samples.
-        It might be that the period is slightly off for the approximate power spectral density.
-        See https://github.com/pymc-devs/pymc/pull/6877/ for the full discussion.
         """
         with model:
             hsgp = pm.gp.HSGP(m=[200], c=2.0, parameterization=parameterization, cov_func=cov_func)
@@ -209,14 +199,13 @@ class TestHSGP:
         h0, mmd, critical_value, reject = two_sample_test(
             samples1, samples2, n_sims=500, alpha=0.01
         )
-        assert not reject, "H0 was rejected, even though HSGP and GP priors should match."
+        assert not reject, f"H0 was rejected, even though HSGP and GP priors should match."
 
     @pytest.mark.parametrize(
         "cov_func,parameterization",
         [
             (pm.gp.cov.ExpQuad(1, ls=1), "centered"),
             (pm.gp.cov.ExpQuad(1, ls=1), "noncentered"),
-            (pm.gp.cov.Periodic(1, period=1, ls=1), None),
         ],
     )
     def test_conditional(self, model, cov_func, X1, parameterization):
@@ -226,6 +215,66 @@ class TestHSGP:
         """
         with model:
             hsgp = pm.gp.HSGP(m=[100], c=2.0, parameterization=parameterization, cov_func=cov_func)
+            f = hsgp.prior("f", X=X1)
+            fc = hsgp.conditional("fc", Xnew=X1)
+
+            idata = pm.sample_prior_predictive(samples=1000)
+
+        samples1 = az.extract(idata.prior["f"])["f"].values.T
+        samples2 = az.extract(idata.prior["fc"])["fc"].values.T
+
+        h0, mmd, critical_value, reject = two_sample_test(
+            samples1, samples2, n_sims=500, alpha=0.01
+        )
+        assert not reject, "H0 was rejected, even though HSGP prior and conditional should match."
+
+
+class TestHSGPPeriodic(_BaseFixtures):
+    def test_parametrization(self):
+        with pytest.raises(
+            ValueError,
+            match="HSGP approximation for `Periodic` kernel only implemented for 1-dimensional case.",
+        ):
+            cov_func = pm.gp.cov.Periodic(2, period=1, ls=[1, 2])
+            pm.gp.HSGPPeriodic(m=[500, 500], cov_func=cov_func)
+
+    @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
+    @pytest.mark.xfail(
+        reason="For `pm.gp.cov.Periodic`, this test does not pass.\
+        The mmd is around `0.0468`.\
+        The test passes more often when subtracting the mean from the mean from the samples.\
+        It might be that the period is slightly off for the approximate power spectral density.\
+        See https://github.com/pymc-devs/pymc/pull/6877/ for the full discussion."
+    )
+    def test_prior(self, model, cov_func, X1, rng):
+        """Compare HSGPPeriodic prior to unapproximated GP prior, pm.gp.Latent. Draw samples from the
+        prior and compare them using MMD two sample test.
+        """
+        with model:
+            hsgp = pm.gp.HSGPPeriodic(m=[200], cov_func=cov_func)
+            f1 = hsgp.prior("f1", X=X1)
+
+            gp = pm.gp.Latent(cov_func=cov_func)
+            f2 = gp.prior("f2", X=X1)
+
+            idata = pm.sample_prior_predictive(samples=1000, random_seed=rng)
+
+        samples1 = az.extract(idata.prior["f1"])["f1"].values.T
+        samples2 = az.extract(idata.prior["f2"])["f2"].values.T
+
+        h0, mmd, critical_value, reject = two_sample_test(
+            samples1, samples2, n_sims=500, alpha=0.01
+        )
+        assert not reject, f"H0 was rejected, {mmd} even though HSGP and GP priors should match."
+
+    @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
+    def test_conditional_periodic(self, model, cov_func, X1):
+        """Compare HSGPPeriodic conditional to unapproximated GP prior, pm.gp.Latent. Draw samples
+        from the prior and compare them using MMD two sample test. The conditional should match the
+        prior when no data is observed.
+        """
+        with model:
+            hsgp = pm.gp.HSGPPeriodic(m=[100], cov_func=cov_func)
             f = hsgp.prior("f", X=X1)
             fc = hsgp.conditional("fc", Xnew=X1)
 
