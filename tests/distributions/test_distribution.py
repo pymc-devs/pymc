@@ -472,7 +472,7 @@ class TestCustomSymbolicDist:
             CustomDist("x", *dist_params, dist=dist_fn, size=size)
         assert_moment_is_expected(model, expected)
 
-    def test_custom_dist_default_moment_inner_graph(self):
+    def test_custom_dist_default_moment_scan(self):
         def scan_step(left, right):
             x = pm.Uniform.dist(left, right)
             x_update = collect_default_updates([x])
