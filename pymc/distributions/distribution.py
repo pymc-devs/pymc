@@ -23,7 +23,6 @@ from typing import Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from pytensor import shared
 from pytensor import tensor as pt
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph import FunctionGraph, clone_replace, node_rewriter
@@ -662,6 +661,20 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
         return updates
 
 
+def dist_moment(rv, *args):
+    node = rv.owner
+    op = node.op
+    rv_out_idx = node.outputs.index(rv)
+
+    fgraph = op.fgraph.clone()
+    replace_moments = MomentRewrite()
+    replace_moments.rewrite(fgraph)
+    # Replace dummy inner inputs by outer inputs
+    fgraph.replace_all(tuple(zip(op.inner_inputs, node.inputs)), import_missing=True)
+    moment = fgraph.outputs[rv_out_idx]
+    return moment
+
+
 class _CustomSymbolicDist(Distribution):
     rv_type = CustomSymbolicDistRV
 
@@ -682,26 +695,6 @@ class _CustomSymbolicDist(Distribution):
 
         if logcdf is None:
             logcdf = default_not_implemented(class_name, "logcdf")
-
-        def dist_moment(rv, size, *dist_params):
-            fgraph = rv.owner.op.fgraph.clone()
-            replace_moments = MomentRewrite()
-            replace_moments.rewrite(fgraph)
-            # we need to replace dummy variable by actual dist params
-            for i, par in enumerate([size] + list(dist_params)):
-                fgraph.replace(fgraph.inputs[i], par)
-            # we need to replace dymmy random generators in Scan node inputs
-            for node in fgraph.toposort():
-                if isinstance(node.op, Scan):
-                    for inp in node.inputs:
-                        if isinstance(inp.type, RandomGeneratorType):
-                            fgraph.replace(
-                                inp,
-                                shared(np.random.Generator(np.random.PCG64())),
-                                import_missing=True,
-                            )
-            moment = fgraph.outputs[-1]
-            return moment
 
         if moment is None:
             moment = dist_moment
