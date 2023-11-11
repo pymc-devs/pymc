@@ -62,7 +62,7 @@ def to_tuple(shape: Optional[Union[None, int, np.ndarray]]) -> Tuple:
     tuple
         If `shape` is None, returns an empty tuple. If it's an int, (shape,) is
         returned. If it is array-like, `tuple(shape)` is returned.
-        
+
     Examples
     --------
     >>> to_tuple(None)
@@ -97,7 +97,9 @@ def _check_shape_type(shape):
     return tuple(out)
 
 
-def broadcast_dist_samples_shape(shapes: Iterable[Tuple[int, ...]], size: Optional[int] = None) -> Tuple[int, ...]:
+def broadcast_dist_samples_shape(
+    shapes: Iterable[Tuple[int, ...]], size: Optional[int] = None
+) -> Tuple[int, ...]:
     """Apply shape broadcasting to shape tuples for random variables.
 
     Parameters
