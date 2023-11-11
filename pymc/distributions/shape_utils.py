@@ -339,7 +339,7 @@ def change_dist_size(
     ----------
     dist : TensorVariable
         The old distribution to be resized.
-    new_size : Union[int, Tuple[int, ...]]
+    new_size : Union[int, Tuple[int, ...], TensorVariable]
         The new size of the distribution.
     expand : bool, optional
         If True, `new_size` is prepended to the existing distribution `size`,

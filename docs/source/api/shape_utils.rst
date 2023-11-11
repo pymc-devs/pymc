@@ -16,4 +16,3 @@ This module introduces functions that are made aware of the requested `size_tupl
    to_tuple
    rv_size_is_none
    change_dist_size
-   broadcast_dist_samples_shape
