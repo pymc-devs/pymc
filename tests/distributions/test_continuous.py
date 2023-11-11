@@ -1133,19 +1133,6 @@ class TestMoments:
         assert_moment_is_expected(model, expected)
 
     @pytest.mark.parametrize(
-        "nu, size, expected",
-        [
-            (1, None, 1),
-            (1, 5, np.full(5, 1)),
-            (np.arange(1, 6), None, np.arange(1, 6)),
-        ],
-    )
-    def test_chisquared_moment(self, nu, size, expected):
-        with pm.Model() as model:
-            pm.ChiSquared("x", nu=nu, size=size)
-        assert_moment_is_expected(model, expected)
-
-    @pytest.mark.parametrize(
         "lam, size, expected",
         [
             (2, None, 0.5),

@@ -38,7 +38,6 @@ from pytensor.tensor.random.basic import (
     BetaRV,
     _gamma,
     cauchy,
-    chisquare,
     exponential,
     gumbel,
     halfcauchy,
@@ -56,7 +55,8 @@ from pytensor.tensor.random.basic import (
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorConstant
 
-from pymc.logprob.abstract import _logcdf_helper, _logprob_helper
+from pymc.distributions.distribution import CustomDist
+from pymc.logprob.abstract import _logprob_helper
 from pymc.logprob.basic import icdf
 
 try:
@@ -2374,7 +2374,7 @@ class InverseGamma(PositiveContinuous):
         )
 
 
-class ChiSquared(PositiveContinuous):
+class ChiSquared:
     r"""
     :math:`\chi^2` log-likelihood.
 
@@ -2413,24 +2413,27 @@ class ChiSquared(PositiveContinuous):
     nu : tensor_like of float
         Degrees of freedom (nu > 0).
     """
-    rv_op = chisquare
+
+    def chisquared_dist(nu, size):
+        return Gamma.dist(alpha=nu / 2, beta=1 / 2, size=size)
+
+    def __new__(cls, name, nu, **kwargs):
+        return CustomDist(
+            name,
+            nu,
+            dist=cls.chisquared_dist,
+            class_name="ChiSquared",
+            **kwargs,
+        )
 
     @classmethod
-    def dist(cls, nu, *args, **kwargs):
-        nu = pt.as_tensor_variable(floatX(nu))
-        return super().dist([nu], *args, **kwargs)
-
-    def moment(rv, size, nu):
-        moment = nu
-        if not rv_size_is_none(size):
-            moment = pt.full(size, moment)
-        return moment
-
-    def logp(value, nu):
-        return _logprob_helper(Gamma.dist(alpha=nu / 2, beta=0.5), value)
-
-    def logcdf(value, nu):
-        return _logcdf_helper(Gamma.dist(alpha=nu / 2, beta=0.5), value)
+    def dist(cls, nu, **kwargs):
+        return CustomDist.dist(
+            nu,
+            dist=cls.chisquared_dist,
+            class_name="ChiSquared",
+            **kwargs,
+        )
 
 
 # TODO: Remove this once logp for multiplication is working!
