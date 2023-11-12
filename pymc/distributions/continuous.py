@@ -2378,7 +2378,7 @@ class ChiSquared:
     :math:`\chi^2` log-likelihood.
 
     This is the distribution from the sum of the squares of :math:`\nu` independent standard normal random variables or a special
-    case of the gamma distribution.
+    case of the gamma distribution with :math:`\alpha = \nu/2` and :math:`\beta = 1/2`.
 
     The pdf of this distribution is
 
