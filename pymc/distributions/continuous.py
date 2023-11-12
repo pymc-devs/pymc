@@ -55,7 +55,6 @@ from pytensor.tensor.random.basic import (
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorConstant
 
-from pymc.distributions.distribution import CustomDist
 from pymc.logprob.abstract import _logprob_helper
 from pymc.logprob.basic import icdf
 
@@ -2378,11 +2377,16 @@ class ChiSquared:
     r"""
     :math:`\chi^2` log-likelihood.
 
+    This is the distribution from the sum of the squares of :math:`\nu` independent standard normal random variables or a special
+    case of the gamma distribution.
+
     The pdf of this distribution is
 
     .. math::
 
        f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
+
+    Read more about the :math:`\chi^2` distribution at https://en.wikipedia.org/wiki/Chi-squared_distribution
 
     .. plot::
         :context: close-figs
@@ -2414,26 +2418,12 @@ class ChiSquared:
         Degrees of freedom (nu > 0).
     """
 
-    def chisquared_dist(nu, size):
-        return Gamma.dist(alpha=nu / 2, beta=1 / 2, size=size)
-
     def __new__(cls, name, nu, **kwargs):
-        return CustomDist(
-            name,
-            nu,
-            dist=cls.chisquared_dist,
-            class_name="ChiSquared",
-            **kwargs,
-        )
+        return Gamma(name, alpha=nu / 2, beta=1 / 2, **kwargs)
 
     @classmethod
     def dist(cls, nu, **kwargs):
-        return CustomDist.dist(
-            nu,
-            dist=cls.chisquared_dist,
-            class_name="ChiSquared",
-            **kwargs,
-        )
+        return Gamma.dist(alpha=nu / 2, beta=1 / 2, **kwargs)
 
 
 # TODO: Remove this once logp for multiplication is working!
