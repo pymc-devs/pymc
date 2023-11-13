@@ -85,10 +85,6 @@ vectorized_ppc: contextvars.ContextVar[Optional[Callable]] = contextvars.Context
 PLATFORM = sys.platform
 
 
-def filter_RNGs(params):
-    return [p for p in params if not isinstance(p.type, (RandomType, RandomGeneratorType))]
-
-
 class MomentRewrite(GraphRewriter):
     def rewrite_moment_scan_node(self, node):
         if not isinstance(node.op, Scan):
@@ -695,8 +691,8 @@ class _CustomSymbolicDist(Distribution):
         if logcdf is None:
             logcdf = default_not_implemented(class_name, "logcdf")
 
-        # if moment is None:
-        moment = dist_moment
+        if moment is None:
+            moment = dist_moment
 
         return super().dist(
             dist_params,
@@ -757,7 +753,15 @@ class _CustomSymbolicDist(Distribution):
 
             @_moment.register(rv_type)
             def custom_dist_get_moment(op, rv, size, *params):
-                return moment(rv, size, *filter_RNGs(params))
+                return moment(
+                    rv,
+                    size,
+                    *[
+                        p
+                        for p in params
+                        if not isinstance(p.type, (RandomType, RandomGeneratorType))
+                    ],
+                )
 
         @_change_dist_size.register(rv_type)
         def change_custom_symbolic_dist_size(op, rv, new_size, expand):
