@@ -495,7 +495,7 @@ class TestCustomSymbolicDist:
 
     def test_custom_dist_default_moment_scan_recurring(self):
         def scan_step(xtm1):
-            x = pm.Normal.dist(xtm1)
+            x = pm.Normal.dist(xtm1 + 1)
             x_update = collect_default_updates([x])
             return x, x_update
 
@@ -510,7 +510,7 @@ class TestCustomSymbolicDist:
 
         with Model() as model:
             CustomDist("x", dist=dist)
-        assert_moment_is_expected(model, np.array([[0], [0], [0]]))
+        assert_moment_is_expected(model, np.array([[1], [2], [3]]))
 
     @pytest.mark.parametrize(
         "left, right, size, expected",

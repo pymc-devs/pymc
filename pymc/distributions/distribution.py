@@ -139,8 +139,7 @@ class MomentRewrite(GraphRewriter):
             elif isinstance(node.op, Scan):
                 new_node = self.rewrite_moment_scan_node(node)
                 if new_node is not None:
-                    for out1, out2 in zip(node.outputs, new_node.outputs):
-                        fgraph.replace(out1, out2)
+                    fgraph.replace_all(tuple(zip(node.outputs, new_node.outputs)))
 
 
 class _Unpickling:
@@ -696,8 +695,8 @@ class _CustomSymbolicDist(Distribution):
         if logcdf is None:
             logcdf = default_not_implemented(class_name, "logcdf")
 
-        if moment is None:
-            moment = dist_moment
+        # if moment is None:
+        moment = dist_moment
 
         return super().dist(
             dist_params,
@@ -754,9 +753,11 @@ class _CustomSymbolicDist(Distribution):
             def custom_dist_logcdf(op, value, size, *params, **kwargs):
                 return logcdf(value, *params[: len(dist_params)])
 
-        @_moment.register(rv_type)
-        def custom_dist_get_moment(op, rv, size, *params):
-            return moment(rv, size, *filter_RNGs(params))
+        if moment is not None:
+
+            @_moment.register(rv_type)
+            def custom_dist_get_moment(op, rv, size, *params):
+                return moment(rv, size, *filter_RNGs(params))
 
         @_change_dist_size.register(rv_type)
         def change_custom_symbolic_dist_size(op, rv, new_size, expand):
