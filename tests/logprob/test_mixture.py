@@ -52,6 +52,8 @@ from pytensor.tensor.subtensor import (
     as_index_constant,
 )
 
+# from pymc.logprob.utils import dirac_delta
+from pymc.distributions.distribution import diracdelta
 from pymc.logprob.abstract import (
     MeasurableVariable,
     MeasureType,
@@ -60,7 +62,6 @@ from pymc.logprob.abstract import (
 from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.mixture import MeasurableSwitchMixture, expand_indices
 from pymc.logprob.rewriting import construct_ir_fgraph
-from pymc.logprob.utils import dirac_delta
 from pymc.testing import assert_no_rvs
 from tests.logprob.utils import meta_info_helper, scipy_logprob
 
@@ -885,7 +886,7 @@ def test_mixture_with_DiracDelta():
     srng = pt.random.RandomStream(29833)
 
     X_rv = srng.normal(0, 1, name="X")
-    Y_rv = dirac_delta(0.0)
+    Y_rv = diracdelta(0.0)
     Y_rv.name = "Y"
 
     I_rv = srng.categorical([0.5, 0.5], size=1)
@@ -1000,22 +1001,20 @@ def test_switch_mixture_vector(switch_cond_scalar):
     )
 
 
-pytest.mark.parametrize("switch_cond_scalar", (True, False))
+# pytest.mark.parametrize("switch_cond_scalar", (True, False))
+# def test_meta_switch_mixture_vector(switch_cond_scalar):
+#     if switch_cond_scalar:
+#         switch_cond = pt.scalar("switch_cond", dtype=bool)
+#     else:
+#         switch_cond = pt.vector("switch_cond", dtype=bool)
+#     true_branch = pt.exp(pt.random.normal(size=(4,)))
+#     false_branch = pt.abs(pt.random.normal(size=(4,)))
 
+#     switch = pt.switch(switch_cond, true_branch, false_branch)
+#     switch.name = "switch_mix"
+#     switch_value = switch.clone()
 
-def test_switch_mixture_vector(switch_cond_scalar):
-    if switch_cond_scalar:
-        switch_cond = pt.scalar("switch_cond", dtype=bool)
-    else:
-        switch_cond = pt.vector("switch_cond", dtype=bool)
-    true_branch = pt.exp(pt.random.normal(size=(4,)))
-    false_branch = pt.abs(pt.random.normal(size=(4,)))
-
-    switch = pt.switch(switch_cond, true_branch, false_branch)
-    switch.name = "switch_mix"
-    switch_value = switch.clone()
-
-    ndim_supp, supp_axes, measure_type = meta_info_helper(switch, switch_value)
+#     ndim_supp, supp_axes, measure_type = meta_info_helper(switch, switch_value)
 
 
 def test_switch_mixture_measurable_cond_fails():

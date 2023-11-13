@@ -192,6 +192,9 @@ def get_measurable_meta_info(
 
     # Add a test for pm.mixture, exponentiate it. Ask for logprob of this as this is not a rv and also does not have ndim_supp and properties. Such a test might exist in distributions. Do check.
     # TODO: Handle Symbolic random variables
+
+    # Handle Diracdelta specially
+
     if isinstance(base_op, RandomVariable):
         ndim_supp = base_op.ndim_supp
         supp_axes = tuple(range(-ndim_supp, 0))

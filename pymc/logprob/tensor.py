@@ -67,11 +67,7 @@ from pymc.pytensorf import constant_fold
 
 @node_rewriter([Alloc])
 def naive_bcast_rv_lift(fgraph, node):
-<<<<<<< HEAD
-    """Lift an ``Alloc`` through a ``RandomVariable`` ``Op``.
-=======
     """Lift a ``Alloc`` through a ``RandomVariable`` ``Op``.
->>>>>>> draft changes till mixture
 
     XXX: This implementation simply broadcasts the ``RandomVariable``'s
     parameters, which won't always work (e.g. multivariate distributions).
