@@ -656,16 +656,18 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
         return updates
 
 
+@_moment.register(CustomSymbolicDistRV)
 def dist_moment(rv, *args):
-    node = rv.owner
+    x = args[0]
+    node = x.owner
     op = node.op
-    rv_out_idx = node.outputs.index(rv)
+    rv_out_idx = node.outputs.index(x)
 
     fgraph = op.fgraph.clone()
     replace_moments = MomentRewrite()
     replace_moments.rewrite(fgraph)
     # Replace dummy inner inputs by outer inputs
-    fgraph.replace_all(tuple(zip(op.inner_inputs, node.inputs)), import_missing=True)
+    fgraph.replace_all(tuple(zip(op.inner_inputs, args[1:])), import_missing=True)
     moment = fgraph.outputs[rv_out_idx]
     return moment
 
