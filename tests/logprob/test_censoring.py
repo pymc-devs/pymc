@@ -43,7 +43,8 @@ import scipy.stats as st
 
 from pymc import logp
 from pymc.logprob import conditional_logp
-from pymc.logprob.transforms import LogTransform, TransformValuesRewrite
+from pymc.logprob.transform_value import TransformValuesRewrite
+from pymc.logprob.transforms import LogTransform
 from pymc.testing import assert_no_rvs
 
 
