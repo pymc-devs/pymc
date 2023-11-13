@@ -153,14 +153,6 @@ def quaddist_chol(value, mu, cov):
 
     delta = value - mu
     chol_cov = nan_lower_cholesky(cov)
-    if mat_type != "tau":
-        dist, logdet, ok = quaddist_chol(delta, chol_cov)
-    else:
-        dist, logdet, ok = quaddist_tau(delta, chol_cov)
-    if onedim:
-        return dist[0], logdet, ok
-
-    return dist, logdet, ok
 
     diag = pt.diagonal(chol_cov, axis1=-2, axis2=-1)
     # Check if the covariance matrix is positive definite.
@@ -291,22 +283,6 @@ class MvStudentTRV(RandomVariable):
     ndims_params = [0, 1, 2]
     dtype = "floatX"
     _print_name = ("MvStudentT", "\\operatorname{MvStudentT}")
-
-    def make_node(self, rng, size, dtype, nu, mu, cov):
-        nu = pt.as_tensor_variable(nu)
-        if not nu.ndim == 0:
-            raise ValueError("nu must be a scalar (ndim=0).")
-
-        return super().make_node(rng, size, dtype, nu, mu, cov)
-
-    def __call__(self, nu, mu=None, cov=None, size=None, **kwargs):
-        dtype = pytensor.config.floatX if self.dtype == "floatX" else self.dtype
-
-        if mu is None:
-            mu = np.array([0.0], dtype=dtype)
-        if cov is None:
-            cov = np.array([[1.0]], dtype=dtype)
-        return super().__call__(nu, mu, cov, size=size, **kwargs)
 
     def _supp_shape_from_params(self, dist_params, param_shapes=None):
         return supp_shape_from_ref_param_shape(
@@ -2484,8 +2460,6 @@ class ICAR(Continuous):
             - pt.log(pt.sqrt(2.0 * np.pi))
             - pt.log(zero_sum_stdev * N)
         )
-
-        return check_parameters(pairwise_difference + zero_sum, sigma > 0, msg="sigma > 0")
 
         return check_parameters(pairwise_difference + zero_sum, sigma > 0, msg="sigma > 0")
 

@@ -311,7 +311,7 @@ def find_measurable_index_mixture(fgraph, node):
     all_supp_axes = []
     all_measure_type = []
     for i in range(0, len(mixture_rvs)):
-        ndim_supp, supp_axes, measure_type = get_measurable_meta_info(mixture_rvs[0])
+        ndim_supp, supp_axes, measure_type = get_measurable_meta_info(mixture_rvs[i])
         all_ndim_supp.append(ndim_supp)
         all_supp_axes.append(supp_axes)
         all_measure_type.append(measure_type)

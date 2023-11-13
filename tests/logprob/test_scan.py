@@ -510,7 +510,7 @@ def test_meta_scan_over_seqs():
     rng = np.random.default_rng(543)
     n_steps = 10
 
-    xs = pt.random.normal(size=(n_steps,), name="xs")
+    xs = pt.random.normal(size=(n_steps,), name="xs")  # use vector with a fixed size
     ys, _ = pytensor.scan(
         fn=lambda x: pt.random.normal(x), sequences=[xs], outputs_info=[None], name="ys"
     )

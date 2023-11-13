@@ -478,7 +478,7 @@ def find_measurable_scans(fgraph, node):
     all_ndim_supp = []
     all_supp_axes = []
     all_measure_type = []
-    for n in local_fgraph_topo:
+    for n in curr_scanargs.inner_outputs:
         if isinstance(n.op, MeasurableVariable):
             ndim_supp, supp_axes, measure_type = get_measurable_meta_info(n.op)
             all_ndim_supp.append(ndim_supp)
