@@ -430,6 +430,104 @@ class TestCustomSymbolicDist:
         ip = m.initial_point()
         np.testing.assert_allclose(m.compile_logp()(ip), ref_m.compile_logp()(ip))
 
+    @pytest.mark.parametrize(
+        "dist_params, size, expected, dist_fn",
+        [
+            (
+                (5, 1),
+                None,
+                np.exp(5),
+                lambda mu, sigma, size: pt.exp(pm.Normal.dist(mu, sigma, size=size)),
+            ),
+            (
+                (2, np.ones(5)),
+                None,
+                np.exp([2, 2, 2, 2, 2] + np.ones(5)),
+                lambda mu, sigma, size: pt.exp(
+                    pm.Normal.dist(mu, sigma, size=size) + pt.ones(size)
+                ),
+            ),
+            (
+                (1, 2),
+                None,
+                np.sqrt(np.exp(1 + 0.5 * 2**2)),
+                lambda mu, sigma, size: pt.sqrt(pm.LogNormal.dist(mu, sigma, size=size)),
+            ),
+            (
+                (4,),
+                (3,),
+                np.log([4, 4, 4]),
+                lambda nu, size: pt.log(pm.ChiSquared.dist(nu, size=size)),
+            ),
+            (
+                (12, 1),
+                None,
+                12,
+                lambda mu1, sigma, size: pm.Normal.dist(mu1, sigma, size=size),
+            ),
+        ],
+    )
+    def test_custom_dist_default_moment(self, dist_params, size, expected, dist_fn):
+        with Model() as model:
+            CustomDist("x", *dist_params, dist=dist_fn, size=size)
+        assert_moment_is_expected(model, expected)
+
+    def test_custom_dist_default_moment_scan(self):
+        def scan_step(left, right):
+            x = pm.Uniform.dist(left, right)
+            x_update = collect_default_updates([x])
+            return x, x_update
+
+        def dist(size):
+            xs, updates = scan(
+                fn=scan_step,
+                sequences=[
+                    pt.as_tensor_variable(np.array([-4, -3])),
+                    pt.as_tensor_variable(np.array([-2, -1])),
+                ],
+                name="xs",
+            )
+            return xs
+
+        with Model() as model:
+            CustomDist("x", dist=dist)
+        assert_moment_is_expected(model, np.array([-3, -2]))
+
+    def test_custom_dist_default_moment_scan_recurring(self):
+        def scan_step(xtm1):
+            x = pm.Normal.dist(xtm1 + 1)
+            x_update = collect_default_updates([x])
+            return x, x_update
+
+        def dist(size):
+            xs, _ = scan(
+                fn=scan_step,
+                outputs_info=pt.as_tensor_variable(np.array([0])).astype(float),
+                n_steps=3,
+                name="xs",
+            )
+            return xs
+
+        with Model() as model:
+            CustomDist("x", dist=dist)
+        assert_moment_is_expected(model, np.array([[1], [2], [3]]))
+
+    @pytest.mark.parametrize(
+        "left, right, size, expected",
+        [
+            (-1, 1, None, 0 + 5),
+            (-3, -1, None, -2 + 5),
+            (-3, 1, (3,), np.array([-1 + 5, -1 + 5, -1 + 5])),
+        ],
+    )
+    def test_custom_dist_default_moment_nested(self, left, right, size, expected):
+        def dist_fn(left, right, size):
+            return pm.Truncated.dist(pm.Normal.dist(0, 1), left, right, size=size) + 5
+
+        with Model() as model:
+            CustomDist("x", left, right, size=size, dist=dist_fn)
+        assert_moment_is_expected(model, expected)
+
     def test_logcdf_inference(self):
         def custom_dist(mu, sigma, size):
             return pt.exp(pm.Normal.dist(mu, sigma, size=size))
