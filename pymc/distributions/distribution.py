@@ -691,9 +691,6 @@ class _CustomSymbolicDist(Distribution):
         if logcdf is None:
             logcdf = default_not_implemented(class_name, "logcdf")
 
-        if moment is None:
-            moment = dist_moment
-
         return super().dist(
             dist_params,
             class_name=class_name,
