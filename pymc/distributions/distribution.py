@@ -659,7 +659,6 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
 @_moment.register(CustomSymbolicDistRV)
 def dist_moment(op, rv, *args):
     node = rv.owner
-    op = node.op
     rv_out_idx = node.outputs.index(rv)
 
     fgraph = op.fgraph.clone()
