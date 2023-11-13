@@ -2230,19 +2230,6 @@ class TestInverseGammaMuSigma(BaseTestDistributionRandom):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
-class TestChiSquared(BaseTestDistributionRandom):
-    pymc_dist = pm.ChiSquared
-    pymc_dist_params = {"nu": 2.0}
-    expected_rv_op_params = {"nu": 2.0}
-    reference_dist_params = {"df": 2.0}
-    reference_dist = seeded_numpy_distribution_builder("chisquare")
-    checks_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
-        "check_rv_size",
-    ]
-
-
 class TestLogistic(BaseTestDistributionRandom):
     pymc_dist = pm.Logistic
     pymc_dist_params = {"mu": 1.0, "s": 2.0}

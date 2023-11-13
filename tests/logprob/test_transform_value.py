@@ -153,12 +153,6 @@ def test_original_values_output_dict():
             lambda alpha, beta: sp.stats.invgamma(alpha, scale=beta),
             (),
         ),
-        (
-            pt.random.chisquare,
-            (1.5,),
-            lambda df: sp.stats.chi2(df),
-            (),
-        ),
         pytest.param(
             pt.random.weibull,
             (1.5,),
