@@ -657,7 +657,7 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
 
 
 @_moment.register(CustomSymbolicDistRV)
-def dist_moment(rv, *args):
+def dist_moment(op, rv, *args):
     x = args[0]
     node = x.owner
     op = node.op
