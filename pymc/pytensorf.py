@@ -63,7 +63,7 @@ from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 from pymc.exceptions import NotConstantValueError
-from pymc.logprob.transforms import RVTransform
+from pymc.logprob.transforms import Transform
 from pymc.logprob.utils import CheckParameterValue
 from pymc.util import makeiter
 from pymc.vartypes import continuous_types, isgenerator, typefilter
@@ -335,7 +335,7 @@ def replace_rvs_by_values(
     graphs: Sequence[TensorVariable],
     *,
     rvs_to_values: Dict[TensorVariable, TensorVariable],
-    rvs_to_transforms: Optional[Dict[TensorVariable, RVTransform]] = None,
+    rvs_to_transforms: Optional[Dict[TensorVariable, Transform]] = None,
     **kwargs,
 ) -> List[TensorVariable]:
     """Clone and replace random variables in graphs with their value variables.

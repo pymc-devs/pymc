@@ -64,7 +64,7 @@ from pymc.logprob.abstract import (
 )
 from pymc.logprob.rewriting import cleanup_ir, construct_ir_fgraph
 from pymc.logprob.transform_value import TransformValuesRewrite
-from pymc.logprob.transforms import RVTransform
+from pymc.logprob.transforms import Transform
 from pymc.logprob.utils import find_rvs_in_graph, rvs_to_value_vars
 
 TensorLike: TypeAlias = Union[Variable, float, np.ndarray]
@@ -589,7 +589,7 @@ def transformed_conditional_logp(
     rvs: Sequence[TensorVariable],
     *,
     rvs_to_values: Dict[TensorVariable, TensorVariable],
-    rvs_to_transforms: Dict[TensorVariable, RVTransform],
+    rvs_to_transforms: Dict[TensorVariable, Transform],
     jacobian: bool = True,
     **kwargs,
 ) -> List[TensorVariable]:
