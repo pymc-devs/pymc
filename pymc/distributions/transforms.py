@@ -281,41 +281,41 @@ class ZeroSumTransform(Transform):
     def __init__(self, zerosum_axes):
         self.zerosum_axes = tuple(int(axis) for axis in zerosum_axes)
 
+    @staticmethod
+    def extend_axis(array, axis):
+        n = pm.floatX(array.shape[axis] + 1)
+        sum_vals = array.sum(axis, keepdims=True)
+        norm = sum_vals / (pt.sqrt(n) + n)
+        fill_val = norm - sum_vals / pt.sqrt(n)
+
+        out = pt.concatenate([array, fill_val], axis=axis)
+        return out - norm
+
+    @staticmethod
+    def extend_axis_rev(array, axis):
+        normalized_axis = normalize_axis_tuple(axis, array.ndim)[0]
+
+        n = pm.floatX(array.shape[normalized_axis])
+        last = pt.take(array, [-1], axis=normalized_axis)
+
+        sum_vals = -last * pt.sqrt(n)
+        norm = sum_vals / (pt.sqrt(n) + n)
+        slice_before = (slice(None, None),) * normalized_axis
+
+        return array[slice_before + (slice(None, -1),)] + norm
+
     def forward(self, value, *rv_inputs):
         for axis in self.zerosum_axes:
-            value = extend_axis_rev(value, axis=axis)
+            value = self.extend_axis_rev(value, axis=axis)
         return value
 
     def backward(self, value, *rv_inputs):
         for axis in self.zerosum_axes:
-            value = extend_axis(value, axis=axis)
+            value = self.extend_axis(value, axis=axis)
         return value
 
     def log_jac_det(self, value, *rv_inputs):
         return pt.constant(0.0)
-
-
-def extend_axis(array, axis):
-    n = pm.floatX(array.shape[axis] + 1)
-    sum_vals = array.sum(axis, keepdims=True)
-    norm = sum_vals / (pt.sqrt(n) + n)
-    fill_val = norm - sum_vals / pt.sqrt(n)
-
-    out = pt.concatenate([array, fill_val], axis=axis)
-    return out - norm
-
-
-def extend_axis_rev(array, axis):
-    normalized_axis = normalize_axis_tuple(axis, array.ndim)[0]
-
-    n = pm.floatX(array.shape[normalized_axis])
-    last = pt.take(array, [-1], axis=normalized_axis)
-
-    sum_vals = -last * pt.sqrt(n)
-    norm = sum_vals / (pt.sqrt(n) + n)
-    slice_before = (slice(None, None),) * normalized_axis
-
-    return array[slice_before + (slice(None, -1),)] + norm
 
 
 log_exp_m1 = LogExpM1()
