@@ -37,6 +37,7 @@
 from typing import Optional
 
 import numpy as np
+import pytensor
 import pytensor.tensor as pt
 
 from pytensor.graph import Op
@@ -466,8 +467,7 @@ def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
     # if encoding found, get index in the encodings list and find the corresponding interval.
 
     encodings_count = len(inputs) // 3
-    # inputs is of the form (lower1, upper1, lower2, upper2, encoding1, encoding2)
-    intervals = [(inputs[i], inputs[i + 1]) for i in range(0, 2 * encodings_count, 2)]
+    # 'inputs' is of the form (lower1, upper1, lower2, upper2, encoding1, encoding2)
     encodings = inputs[2 * encodings_count : 3 * encodings_count]
     encodings = pt.broadcast_arrays(*encodings)
 
@@ -475,14 +475,22 @@ def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
         encodings, pt.eq(pt.unique(encodings).shape[0], len(encodings))
     )
 
+    # TODO: Assert that the base_rv is not discrete
+
+    # define a logcdf map on a scalar, use vectorize to calculate it for 2D intervals
+    x = pt.scalar("x", dtype=base_rv.dtype)
+    logcdf_y1 = _logcdf_helper(base_rv, x, **kwargs)
+
+    #    intervals = [[inputs[i], inputs[i + 1]] for i in range(0, 2 * encodings_count, 2)]
+
+    lower = pt.stack(inputs[0 : 2 * encodings_count - 1 : 2])
+    upper = pt.stack(inputs[1 : 2 * encodings_count : 2])
+
+    interval_tensor = pt.concatenate([lower[None], upper[None]])
+
+    logcdf_all = pytensor.graph.replace.vectorize(logcdf_y1, replace={x: interval_tensor})
+
     logprob = _logprob_helper(base_rv, value, **kwargs)
-    logcdf_interval = [
-        (
-            _logcdf_helper(base_rv, intervals[i][0], **kwargs),
-            _logcdf_helper(base_rv, intervals[i][1], **kwargs),
-        )
-        for i in range(encodings_count)
-    ]
 
     from pymc.math import logdiffexp
 
@@ -490,10 +498,9 @@ def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
     for i in range(encodings_count):
         logprob = pt.where(
             pt.eq(value, encodings[i]),
-            logdiffexp(logcdf_interval[i][1], logcdf_interval[i][0]),
+            logdiffexp(logcdf_all[i], logcdf_all[i] + 1),
             logprob,
         )
-    # TODO: use pytensor.graph.replace.vectorize
 
     return logprob
 
