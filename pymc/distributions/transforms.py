@@ -27,6 +27,7 @@ from pytensor.tensor import TensorVariable
 import pymc as pm
 
 from pymc.logprob.transforms import (
+    ChainedTransform,
     CircularTransform,
     IntervalTransform,
     LogOddsTransform,
@@ -166,45 +167,7 @@ class CholeskyCovPacked(Transform):
         return pt.sum(value[..., self.diag_idxs], axis=-1)
 
 
-class Chain(Transform):
-    __slots__ = ("param_extract_fn", "transform_list", "name")
-
-    def __init__(self, transform_list):
-        self.transform_list = transform_list
-        self.name = "+".join([transf.name for transf in self.transform_list])
-
-    def forward(self, value, *inputs):
-        y = value
-        for transf in self.transform_list:
-            # TODO:Needs proper discussion as to what should be
-            # passed as inputs here
-            y = transf.forward(y, *inputs)
-        return y
-
-    def backward(self, value, *inputs):
-        x = value
-        for transf in reversed(self.transform_list):
-            x = transf.backward(x, *inputs)
-        return x
-
-    def log_jac_det(self, value, *inputs):
-        y = pt.as_tensor_variable(value)
-        det_list = []
-        ndim0 = y.ndim
-        for transf in reversed(self.transform_list):
-            det_ = transf.log_jac_det(y, *inputs)
-            det_list.append(det_)
-            y = transf.backward(y, *inputs)
-            ndim0 = min(ndim0, det_.ndim)
-        # match the shape of the smallest log_jac_det
-        det = 0.0
-        for det_ in det_list:
-            if det_.ndim > ndim0:
-                det += det_.sum(axis=-1)
-            else:
-                det += det_
-        return det
-
+Chain = ChainedTransform
 
 simplex = SimplexTransform()
 simplex.__doc__ = """
