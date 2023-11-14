@@ -52,3 +52,33 @@ def test_tracker_callback():
     tracker = pm.callbacks.Tracker(bad=lambda t: t)  # bad signature
     with pytest.raises(TypeError):
         tracker(None, None, 1)
+
+
+def test_reducelronplateau_callback():
+    lr = pytensor.shared(0.1)
+    cb = pm.variational.callbacks.ReduceLROnPlateau(
+        initial_learning_rate=lr,
+        patience=1,
+        min_lr=0.001,
+    )
+    cb(None, [float("inf")], 1)
+    np.testing.assert_almost_equal(lr.get_value(), 0.1)
+    assert cb.best == float("inf")
+    cb(None, [float("inf"), 2], 1)
+    np.testing.assert_almost_equal(lr.get_value(), 0.1)
+    assert cb.best == 2
+    cb(None, [float("inf"), 2, 1], 1)
+    np.testing.assert_almost_equal(lr.get_value(), 0.1)
+    assert cb.best == 1
+    cb(None, [float("inf"), 2, 1, 99], 1)
+    np.testing.assert_almost_equal(lr.get_value(), 0.01)
+    assert cb.best == 1
+    cb(None, [float("inf"), 2, 1, 99, 0.9], 1)
+    np.testing.assert_almost_equal(lr.get_value(), 0.01)
+    assert cb.best == 0.9
+    cb(None, [float("inf"), 2, 1, 99, 0.9, 99], 1)
+    np.testing.assert_almost_equal(lr.get_value(), 0.001)
+    assert cb.best == 0.9
+    cb(None, [float("inf"), 2, 1, 99, 0.9, 99, 99], 1)
+    np.testing.assert_almost_equal(lr.get_value(), 0.001)
+    assert cb.best == 0.9

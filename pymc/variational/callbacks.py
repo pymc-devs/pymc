@@ -18,7 +18,9 @@ from typing import Callable, Dict
 
 import numpy as np
 
-__all__ = ["Callback", "CheckParametersConvergence", "Tracker"]
+from pytensor import shared
+
+__all__ = ["Callback", "CheckParametersConvergence", "ReduceLROnPlateau", "Tracker"]
 
 
 class Callback:
@@ -91,6 +93,78 @@ class CheckParametersConvergence(Callback):
     @staticmethod
     def flatten_shared(shared_list):
         return np.concatenate([sh.get_value().flatten() for sh in shared_list])
+
+
+class ReduceLROnPlateau(Callback):
+    """Reduce learning rate when the loss has stopped improving.
+
+    This is inspired by Keras' homonymous callback:
+    https://github.com/keras-team/keras/blob/v2.14.0/keras/callbacks.py
+
+    Parameters
+    ----------
+    learning_rate: shared
+        shared variable containing the learning rate
+    factor: float
+        factor by which the learning rate will be reduced: `new_lr = lr * factor`
+    patience: int
+        number of epochs with no improvement after which learning rate will be reduced
+    min_lr: float
+        lower bound on the learning rate
+    cooldown: int
+        number of iterations to wait before resuming normal operation after lr has been reduced
+    verbose: bool
+        false: quiet, true: update messages
+    """
+
+    def __init__(
+        self,
+        initial_learning_rate: shared,
+        factor=0.1,
+        patience=10,
+        min_lr=1e-6,
+        cooldown=0,
+    ):
+        self.learning_rate = initial_learning_rate
+        self.factor = factor
+        self.patience = patience
+        self.min_lr = min_lr
+        self.cooldown = cooldown
+
+        self.cooldown_counter = 0
+        self.wait = 0
+        self.best = float("inf")
+        self.old_lr = None
+
+    def __call__(self, approx, loss_hist, i):
+        current = loss_hist[-1]
+
+        if np.isinf(current):
+            return
+
+        if self.in_cooldown():
+            self.cooldown_counter -= 1
+            self.wait = 0
+            return
+
+        if current < self.best:
+            self.best = current
+            self.wait = 0
+        elif not np.isinf(self.best):
+            self.wait += 1
+            if self.wait >= self.patience:
+                self.reduce_lr()
+                self.cooldown_counter = self.cooldown
+                self.wait = 0
+
+    def reduce_lr(self):
+        old_lr = float(self.learning_rate.get_value())
+        if old_lr > self.min_lr:
+            new_lr = max(old_lr * self.factor, self.min_lr)
+            self.learning_rate.set_value(new_lr)
+
+    def in_cooldown(self):
+        return self.cooldown_counter > 0
 
 
 class Tracker(Callback):
