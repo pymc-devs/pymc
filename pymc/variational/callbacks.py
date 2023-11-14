@@ -18,8 +18,6 @@ from typing import Callable, Dict
 
 import numpy as np
 
-from pytensor import shared
-
 __all__ = ["Callback", "CheckParametersConvergence", "ReduceLROnPlateau", "Tracker"]
 
 
@@ -103,8 +101,8 @@ class ReduceLROnPlateau(Callback):
 
     Parameters
     ----------
-    learning_rate: shared
-        shared variable containing the learning rate
+    optimiser: callable
+        PyMC optimiser
     factor: float
         factor by which the learning rate will be reduced: `new_lr = lr * factor`
     patience: int
@@ -119,13 +117,13 @@ class ReduceLROnPlateau(Callback):
 
     def __init__(
         self,
-        initial_learning_rate: shared,
+        optimiser,
         factor=0.1,
         patience=10,
         min_lr=1e-6,
         cooldown=0,
     ):
-        self.learning_rate = initial_learning_rate
+        self.optimiser = optimiser
         self.factor = factor
         self.patience = patience
         self.min_lr = min_lr
@@ -158,10 +156,10 @@ class ReduceLROnPlateau(Callback):
                 self.wait = 0
 
     def reduce_lr(self):
-        old_lr = float(self.learning_rate.get_value())
+        old_lr = float(self.optimiser.keywords["learning_rate"])
         if old_lr > self.min_lr:
             new_lr = max(old_lr * self.factor, self.min_lr)
-            self.learning_rate.set_value(new_lr)
+            self.optimiser.keywords["learning_rate"] = new_lr
 
     def in_cooldown(self):
         return self.cooldown_counter > 0
