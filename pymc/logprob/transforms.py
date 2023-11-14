@@ -966,9 +966,8 @@ class CircularTransform(Transform):
 class ChainedTransform(Transform):
     name = "chain"
 
-    def __init__(self, transform_list, base_op):
+    def __init__(self, transform_list):
         self.transform_list = transform_list
-        self.base_op = base_op
 
     def forward(self, value, *inputs):
         for transform in self.transform_list:

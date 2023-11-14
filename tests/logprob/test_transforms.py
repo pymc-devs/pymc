@@ -152,7 +152,6 @@ class TestTransform:
                     transform_args_fn=lambda *inputs: pt.constant(loc),
                 ),
             ],
-            base_op=pt.random.multivariate_normal,
         )
 
         x = pt.random.multivariate_normal(np.zeros(3), np.eye(3))
