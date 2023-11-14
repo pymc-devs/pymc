@@ -56,7 +56,7 @@ further defined and clarified by project maintainers.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported by contacting PyMC developer Christopher Fonnesbeck via email
-(chris.fonnesbeck@vanderbilt.edu) or phone (615-955-0380). Alternatively, you
+(fonnesbeck@gmail.com) or phone (615-955-0380). Alternatively, you
 may also contact NumFOCUS Executive Director Leah Silen (512-222-5449), as PyMC
 is a member of NumFOCUS and subscribes to their code of conduct as a
 precondition for continued membership. All complaints will be reviewed and
