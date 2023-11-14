@@ -22,7 +22,7 @@ from cachetools import cached
 
 import pymc as pm
 
-from pymc.distributions.transforms import RVTransform
+from pymc.distributions.transforms import Transform
 from pymc.util import (
     UNSET,
     _get_seeds_per_chain,
@@ -40,7 +40,7 @@ class TestTransformName:
     transform_name = "test"
 
     def test_get_transformed_name(self):
-        class NewTransform(RVTransform):
+        class NewTransform(Transform):
             name = self.transform_name
 
             def forward(self, value):

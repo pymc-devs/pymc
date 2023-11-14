@@ -23,7 +23,7 @@ from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 
 from pymc import Model
-from pymc.logprob.transforms import RVTransform
+from pymc.logprob.transforms import Transform
 from pymc.model.fgraph import (
     ModelDeterministic,
     ModelFreeRV,
@@ -263,7 +263,7 @@ def do(
 
 def change_value_transforms(
     model: Model,
-    vars_to_transforms: Mapping[ModelVariable, Union[RVTransform, None]],
+    vars_to_transforms: Mapping[ModelVariable, Union[Transform, None]],
 ) -> Model:
     """Change the value variables transforms in the model
 

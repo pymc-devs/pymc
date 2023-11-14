@@ -27,7 +27,7 @@ from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob
 from pymc.logprob.rewriting import PreserveRVMappings, cleanup_ir_rewrites_db
-from pymc.logprob.transforms import RVTransform
+from pymc.logprob.transforms import Transform
 
 
 class TransformedValue(Op):
@@ -67,7 +67,7 @@ class TransformedValueRV(Op):
 
     __props__ = ("transforms",)
 
-    def __init__(self, transforms: Sequence[RVTransform]):
+    def __init__(self, transforms: Sequence[Transform]):
         self.transforms = tuple(transforms)
         super().__init__()
 
@@ -320,7 +320,7 @@ class TransformValuesRewrite(GraphRewriter):
 
     def __init__(
         self,
-        values_to_transforms: Dict[TensorVariable, Union[RVTransform, None]],
+        values_to_transforms: Dict[TensorVariable, Union[Transform, None]],
     ):
         """
         Parameters

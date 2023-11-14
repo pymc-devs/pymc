@@ -31,12 +31,12 @@ from pymc.logprob.transforms import (
     IntervalTransform,
     LogOddsTransform,
     LogTransform,
-    RVTransform,
     SimplexTransform,
+    Transform,
 )
 
 __all__ = [
-    "RVTransform",
+    "Transform",
     "simplex",
     "logodds",
     "Interval",
@@ -60,6 +60,10 @@ def __getattr__(name):
         warnings.warn(f"{name} has been deprecated, use sum_to_1 instead.", FutureWarning)
         return sum_to_1
 
+    if name == "RVTransform":
+        warnings.warn("RVTransform has been renamed to Transform", FutureWarning)
+        return Transform
+
     raise AttributeError(f"module {__name__} has no attribute {name}")
 
 
@@ -69,7 +73,7 @@ def _default_transform(op: Op, rv: TensorVariable):
     return None
 
 
-class LogExpM1(RVTransform):
+class LogExpM1(Transform):
     name = "log_exp_m1"
 
     def backward(self, value, *inputs):
@@ -87,7 +91,7 @@ class LogExpM1(RVTransform):
         return -pt.softplus(-value)
 
 
-class Ordered(RVTransform):
+class Ordered(Transform):
     name = "ordered"
 
     def __init__(self, ndim_supp=None):
@@ -110,7 +114,7 @@ class Ordered(RVTransform):
         return pt.sum(value[..., 1:], axis=-1)
 
 
-class SumTo1(RVTransform):
+class SumTo1(Transform):
     """
     Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to a K - 1 vector of values in [0,1]
     This Transformation operates on the last dimension of the input tensor.
@@ -134,7 +138,7 @@ class SumTo1(RVTransform):
         return pt.sum(y, axis=-1)
 
 
-class CholeskyCovPacked(RVTransform):
+class CholeskyCovPacked(Transform):
     """
     Transforms the diagonal elements of the LKJCholeskyCov distribution to be on the
     log scale
@@ -162,7 +166,7 @@ class CholeskyCovPacked(RVTransform):
         return pt.sum(value[..., self.diag_idxs], axis=-1)
 
 
-class Chain(RVTransform):
+class Chain(Transform):
     __slots__ = ("param_extract_fn", "transform_list", "name")
 
     def __init__(self, transform_list):
@@ -297,7 +301,7 @@ class Interval(IntervalTransform):
         super().__init__(args_fn=bounds_fn)
 
 
-class ZeroSumTransform(RVTransform):
+class ZeroSumTransform(Transform):
     """
     Constrains any random samples to sum to zero along the user-provided ``zerosum_axes``.
 

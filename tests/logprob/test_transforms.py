@@ -57,10 +57,10 @@ from pymc.logprob.transforms import (
     ExpTransform,
     LocTransform,
     LogTransform,
-    RVTransform,
     ScaleTransform,
     SinhTransform,
     TanhTransform,
+    Transform,
 )
 from pymc.logprob.utils import ParameterValueError
 from pymc.testing import Rplusbig, Vector, assert_no_rvs
@@ -91,7 +91,7 @@ class DirichletScipyDist:
         return res
 
 
-class TestRVTransform:
+class TestTransform:
     @pytest.mark.parametrize("ndim", (0, 1))
     def test_fallback_log_jac_det(self, ndim):
         """
@@ -99,7 +99,7 @@ class TestRVTransform:
         simple transformation: x**2 -> -log(2*x)
         """
 
-        class SquareTransform(RVTransform):
+        class SquareTransform(Transform):
             name = "square"
             ndim_supp = ndim
 
@@ -123,7 +123,7 @@ class TestRVTransform:
 
     @pytest.mark.parametrize("ndim", (None, 2))
     def test_fallback_log_jac_det_undefined_ndim(self, ndim):
-        class SquareTransform(RVTransform):
+        class SquareTransform(Transform):
             name = "square"
             ndim_supp = ndim
 

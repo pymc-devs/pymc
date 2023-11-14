@@ -27,7 +27,7 @@ import pymc as pm
 import pymc.distributions.transforms as tr
 
 from pymc.logprob.basic import transformed_conditional_logp
-from pymc.logprob.transforms import RVTransform
+from pymc.logprob.transforms import Transform
 from pymc.pytensorf import floatX, jacobian
 from pymc.testing import (
     Circ,
@@ -632,7 +632,7 @@ def test_univariate_transform_multivariate_dist_raises():
 
 
 def test_invalid_jacobian_broadcast_raises():
-    class BuggyTransform(RVTransform):
+    class BuggyTransform(Transform):
         name = "buggy"
 
         def forward(self, value, *inputs):
