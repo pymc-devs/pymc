@@ -43,11 +43,12 @@ import pytensor
 
 from pytensor import Variable
 from pytensor import tensor as pt
-from pytensor.graph import Apply, Op, node_rewriter
-from pytensor.graph.basic import walk
+from pytensor.graph import Apply, Op, clone_replace, node_rewriter
+from pytensor.graph.basic import io_toposort, walk
 from pytensor.graph.op import HasInnerGraph
 from pytensor.link.c.type import CType
 from pytensor.raise_op import CheckAndRaise
+from pytensor.scan.op import Scan
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 
@@ -201,12 +202,49 @@ class CheckParameterValue(CheckAndRaise):
         return f"Check{{{self.msg}}}"
 
 
+def remove_check_parameter_from_scan(node):
+    node_inputs, node_outputs = node.op.inner_inputs, node.op.inner_outputs
+    local_fgraph_topo = io_toposort(node_inputs, node_outputs)
+    op = node.op
+    givens = {}
+    to_remove_set = set()
+    for nd in local_fgraph_topo:
+        if nd not in to_remove_set:
+            if isinstance(nd.op, CheckParameterValue):
+                givens[nd.outputs[0]] = nd.inputs[0]
+                to_remove_set.add(nd)
+            elif isinstance(nd.op, Scan):
+                new_node = remove_check_parameter_from_scan(nd)
+                if new_node is not None:
+                    givens.update(zip(nd.outputs, new_node.owner.outputs))
+                    to_remove_set.add(nd)
+    if len(to_remove_set) == 0:
+        return None
+    op_outs = clone_replace(node_outputs, replace=givens)
+
+    nwScan = Scan(
+        node_inputs,
+        op_outs,
+        op.info,
+        mode=op.mode,
+        profile=op.profile,
+        truncate_gradient=op.truncate_gradient,
+        name=op.name,
+        allow_gc=op.allow_gc,
+    )
+    nw_node = nwScan(*(node.inputs))
+    return nw_node
+
+
 @node_rewriter(tracks=[CheckParameterValue])
 def local_remove_check_parameter(fgraph, node):
     """Rewrite that removes CheckParameterValue
 
     This is used when compile_rv_inplace
     """
+    if isinstance(node.op, Scan):
+        new_scan = remove_check_parameter_from_scan(node)
+        return [new_scan] if new_scan is not None else None
     if isinstance(node.op, CheckParameterValue):
         return [node.inputs[0]]
 
