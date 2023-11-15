@@ -54,7 +54,12 @@ from pytensor.tensor.subtensor import Subtensor, indices_from_subtensor
 from pytensor.tensor.variable import TensorVariable
 from pytensor.updates import OrderedUpdates
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob, get_measurable_meta_info
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    MeasureType,
+    _logprob,
+    get_measurable_meta_info,
+)
 from pymc.logprob.basic import conditional_logp
 from pymc.logprob.rewriting import (
     PreserveRVMappings,
@@ -475,15 +480,17 @@ def find_measurable_scans(fgraph, node):
         [o for o in curr_scanargs.inner_outputs if not isinstance(o.type, RandomType)],
         clients=clients,
     )
-    all_ndim_supp = []
-    all_supp_axes = []
-    all_measure_type = []
+    all_ndim_supp = ()
+    all_supp_axes = ()
     for n in curr_scanargs.inner_outputs:
-        if isinstance(n.op, MeasurableVariable):
-            ndim_supp, supp_axes, measure_type = get_measurable_meta_info(n.op)
-            all_ndim_supp.append(ndim_supp)
-            all_supp_axes.append(supp_axes)
-            all_measure_type.append(measure_type)
+        ndim_supp, supp_axes, _ = get_measurable_meta_info(n)
+        all_ndim_supp += (ndim_supp,)
+        all_supp_axes += (supp_axes,)
+
+    if len(all_ndim_supp) == 1:
+        measure_type = MeasureType.Continuous
+    else:
+        measure_type = MeasureType.Discrete
 
     op = MeasurableScan(
         curr_scanargs.inner_inputs,
@@ -491,7 +498,7 @@ def find_measurable_scans(fgraph, node):
         curr_scanargs.info,
         ndim_supp=all_ndim_supp,
         supp_axes=all_supp_axes,
-        measure_type=all_measure_type,
+        measure_type=measure_type,
         mode=node.op.mode,
     )
     new_node = op.make_node(*curr_scanargs.outer_inputs)
