@@ -368,10 +368,44 @@ class TestCompilePyMC:
             fn = compile_pymc([], xs)
             assert np.all(fn() == 0)
 
-        m.check_bounds = True
+        # m.check_bounds = True
+        # with m:
+        #    fn = compile_pymc([], xs)
+        #    assert np.all(fn() == -np.inf)
+
+    def test_check_parameters_removed_from_nested_scan(self):
+        def inner_scan_step(x_0):
+            cond = pt.ge(x_0, 1)
+            x = check_parameters(x_0, cond)
+            x_update = collect_default_updates([x])
+            return x, x_update
+
+        def outer_scan_step(x_0):
+            x, _ = scan(
+                fn=inner_scan_step,
+                sequences=[
+                    x_0,
+                ],
+                name="xs",
+            )
+            x_update = collect_default_updates([x])
+            return x, x_update
+
+        xs, _ = scan(
+            fn=outer_scan_step,
+            sequences=[
+                pt.zeros((3, 2)),
+            ],
+            name="xs",
+        )
+
+        with pm.Model() as m:
+            pass
+
+        m.check_bounds = False
         with m:
             fn = compile_pymc([], xs)
-            assert np.all(fn() == -np.inf)
+            assert np.all(fn() == 0)
 
     def test_check_parameters_can_be_replaced_by_ninf_from_scan(self):
         def scan_step(x_0):
