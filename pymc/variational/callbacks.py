@@ -132,7 +132,6 @@ class ReduceLROnPlateau(Callback):
         self.cooldown_counter = 0
         self.wait = 0
         self.best = float("inf")
-        self.old_lr = None
 
     def __call__(self, approx, loss_hist, i):
         current = loss_hist[-1]
