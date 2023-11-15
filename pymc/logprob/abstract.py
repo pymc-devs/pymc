@@ -205,7 +205,7 @@ def get_measurable_meta_info(
     else:
         if isinstance(base_op.ndim_supp, tuple):
             if len(base_var.owner.outputs) != len(base_op.ndim_supp):
-                raise NotImplementedError("length of outputs and meta-propertues is different")
+                raise NotImplementedError("length of outputs and meta-properties is different")
             return base_op.ndim_supp[index], base_op.supp_axes, base_op.measure_type
         # check if base_var.owner.outputs length is same as length of each prop( length of the tuple). If not , raise an error.
         # We'll need this for scan or IfElse

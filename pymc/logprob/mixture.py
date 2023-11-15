@@ -551,11 +551,22 @@ def find_measurable_ifelse_mixture(fgraph, node):
     if not all(var.owner and isinstance(var.owner.op, MeasurableVariable) for var in base_rvs):
         return None
 
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_rvs[0])
+    ndim_supp_all = ()
+    supp_axes_all = ()
+    measure_type_all = ()
+
+    for i in range(0, len(base_rvs)):
+        ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_rvs[i])
+        ndim_supp_all += (ndim_supp,)
+        supp_axes_all += (supp_axes,)
+        measure_type_all += (measure_type,)
 
     return (
         MeasurableIfElse(
-            n_outs=op.n_outs, ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+            n_outs=op.n_outs,
+            ndim_supp=ndim_supp_all,
+            supp_axes=supp_axes_all,
+            measure_type=measure_type_all,
         )
         .make_node(if_var, *base_rvs)
         .outputs

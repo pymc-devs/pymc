@@ -505,6 +505,25 @@ def test_scan_over_seqs():
     )
 
 
+def test_meta_scan_non_pure_rv_output():
+    grw, _ = pytensor.scan(
+        fn=lambda xtm1: pt.random.normal() + xtm1,
+        outputs_info=[pt.zeros(())],
+        n_steps=10,
+        name="grw",
+    )
+
+    grw_vv = grw.clone()
+
+    ndim_supp_1, supp_axes_1, measure_type_1 = meta_info_helper(grw, grw_vv)
+
+    print(ndim_supp_1)
+    print(supp_axes_1)
+    print(measure_type_1)
+
+    assert 0
+
+
 def test_meta_scan_over_seqs():
     """Test that logprob inference for scans based on sequences (mapping)."""
     rng = np.random.default_rng(543)
@@ -512,23 +531,25 @@ def test_meta_scan_over_seqs():
 
     xs = pt.random.normal(size=(n_steps,), name="xs")  # use vector with a fixed size
     ys, _ = pytensor.scan(
-        fn=lambda x: pt.random.normal(x), sequences=[xs], outputs_info=[None], name="ys"
+        fn=lambda x, x1: (pt.random.normal(0, 1), pt.random.poisson(x1)),
+        sequences=[xs, xs],
+        outputs_info=[None, None],
+        name=("ys1", "ys2"),
     )
+    ys1_vv = ys[0].clone()
+    ys2_vv = ys[1].clone()
 
-    xs_vv = ys.clone()
-    ys_vv = ys.clone()
+    ndim_supp_1, supp_axes_1, measure_type_1 = meta_info_helper(ys[0], ys1_vv)
+    ndim_supp_2, supp_axes_2, measure_type_2 = meta_info_helper(ys[1], ys1_vv)
 
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(xs)
+    print(ndim_supp_1)
+    print(ndim_supp_2)
+    print(supp_axes_1)
+    print(supp_axes_2)
+    print(measure_type_1)
+    print(measure_type_2)
 
-    ndim_supp, supp_axes, measure_type = meta_info_helper(ys, ys_vv)
-
-    assert np.isclose(
-        ndim_supp_base,
-        ndim_supp,
-    )
-    assert supp_axes_base == supp_axes[0]
-
-    assert measure_type_base == measure_type[0]
+    assert 0
 
 
 def test_scan_carried_deterministic_state():

@@ -1097,13 +1097,19 @@ def test_meta_ifelse():
 
     ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(comp_then)
 
-    assert np.isclose(
-        ndim_supp_base,
-        ndim_supp,
-    )
-    assert supp_axes_base == supp_axes
+    print(ndim_supp_base)
+    print(supp_axes_base)
+    print(measure_type_base)
 
-    assert measure_type_base == measure_type
+    assert 0
+
+    # assert np.isclose(
+    #     ndim_supp_base,
+    #     ndim_supp,
+    # )
+    # assert supp_axes_base == supp_axes
+
+    # assert measure_type_base == measure_type
 
 
 def test_ifelse_mixture_multiple_components():
