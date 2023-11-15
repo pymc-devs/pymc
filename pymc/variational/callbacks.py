@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import collections
-
 from typing import Callable, Dict
 
 import numpy as np
@@ -101,8 +100,8 @@ class ReduceLROnPlateau(Callback):
 
     Parameters
     ----------
-    optimiser: callable
-        PyMC optimiser
+    optimizer: callable
+        PyMC optimizer
     factor: float
         factor by which the learning rate will be reduced: `new_lr = lr * factor`
     patience: int
@@ -117,13 +116,13 @@ class ReduceLROnPlateau(Callback):
 
     def __init__(
         self,
-        optimiser,
+        optimizer,
         factor=0.1,
         patience=10,
         min_lr=1e-6,
         cooldown=0,
     ):
-        self.optimiser = optimiser
+        self.optimizer = optimizer
         self.factor = factor
         self.patience = patience
         self.min_lr = min_lr
@@ -156,10 +155,10 @@ class ReduceLROnPlateau(Callback):
                 self.wait = 0
 
     def reduce_lr(self):
-        old_lr = float(self.optimiser.keywords["learning_rate"])
+        old_lr = float(self.optimizer.keywords["learning_rate"])
         if old_lr > self.min_lr:
             new_lr = max(old_lr * self.factor, self.min_lr)
-            self.optimiser.keywords["learning_rate"] = new_lr
+            self.optimizer.keywords["learning_rate"] = new_lr
 
     def in_cooldown(self):
         return self.cooldown_counter > 0
