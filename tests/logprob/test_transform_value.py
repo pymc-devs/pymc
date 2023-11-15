@@ -26,6 +26,8 @@ from pytensor.compile.builders import OpFromGraph
 from pytensor.graph import FunctionGraph
 from pytensor.graph.basic import equal_computations
 
+import pymc as pm
+
 from pymc.distributions.transforms import _default_transform, log, logodds
 from pymc.logprob import conditional_logp
 from pymc.logprob.abstract import MeasurableVariable, _logprob
@@ -151,6 +153,12 @@ def test_original_values_output_dict():
             pt.random.invgamma,
             (1.5, 10.5),
             lambda alpha, beta: sp.stats.invgamma(alpha, scale=beta),
+            (),
+        ),
+        (
+            pm.ChiSquared.dist,
+            (1.5,),
+            lambda df: sp.stats.chi2(df),
             (),
         ),
         pytest.param(
