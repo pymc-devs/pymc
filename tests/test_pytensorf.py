@@ -358,7 +358,7 @@ class TestCompilePyMC:
         )
 
         with pytest.raises(ParameterValueError):
-            compile_pymc([], xs)()
+            pytensor.function([], xs)()
 
         with pm.Model() as m:
             pass
@@ -368,10 +368,10 @@ class TestCompilePyMC:
             fn = compile_pymc([], xs)
             assert np.all(fn() == 0)
 
-        # m.check_bounds = True
-        # with m:
-        #    fn = compile_pymc([], xs)
-        #    assert np.all(fn() == -np.inf)
+        m.check_bounds = True
+        with m:
+            fn = compile_pymc([], xs)
+            assert np.all(fn() == -np.inf)
 
     def test_check_parameters_removed_from_nested_scan(self):
         def inner_scan_step(x_0):

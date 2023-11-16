@@ -236,7 +236,51 @@ def remove_check_parameter_from_scan(node):
     return nw_node
 
 
-@node_rewriter(tracks=[CheckParameterValue])
+def replace_check_parameter_by_ninf_in_scan(node):
+    node_inputs, node_outputs = node.op.inner_inputs, node.op.inner_outputs
+    local_fgraph_topo = io_toposort(node_inputs, node_outputs)
+    op = node.op
+    givens = {}
+    to_remove_set = set()
+    for nd in local_fgraph_topo:
+        if nd not in to_remove_set:
+            if isinstance(nd.op, CheckParameterValue):
+                if nd.op.can_be_replaced_by_ninf:
+                    logp_expr, *logp_conds = nd.inputs
+                    if len(logp_conds) > 1:
+                        logp_cond = pt.all(logp_conds)
+                    else:
+                        (logp_cond,) = logp_conds
+                    new_node = pt.switch(logp_cond, logp_expr, -np.inf)
+
+                    if new_node.dtype != nd.outputs[0].dtype:
+                        new_node = pt.cast(new_node, nd.outputs[0].dtype)
+                    givens.update(zip(nd.outputs, new_node.owner.outputs))
+                    to_remove_set.add(nd)
+            elif isinstance(nd.op, Scan):
+                new_node = replace_check_parameter_by_ninf_in_scan(nd)
+                if new_node is not None:
+                    givens.update(zip(nd.outputs, new_node.owner.outputs))
+                    to_remove_set.add(nd)
+    if len(to_remove_set) == 0:
+        return None
+    op_outs = clone_replace(node_outputs, replace=givens)
+
+    nwScan = Scan(
+        node_inputs,
+        op_outs,
+        op.info,
+        mode=op.mode,
+        profile=op.profile,
+        truncate_gradient=op.truncate_gradient,
+        name=op.name,
+        allow_gc=op.allow_gc,
+    )
+    nw_node = nwScan(*(node.inputs))
+    return nw_node
+
+
+@node_rewriter(tracks=[CheckParameterValue, Scan])
 def local_remove_check_parameter(fgraph, node):
     """Rewrite that removes CheckParameterValue
 
@@ -249,8 +293,12 @@ def local_remove_check_parameter(fgraph, node):
         return [node.inputs[0]]
 
 
-@node_rewriter(tracks=[CheckParameterValue])
+@node_rewriter(tracks=[CheckParameterValue, Scan])
 def local_check_parameter_to_ninf_switch(fgraph, node):
+    if isinstance(node.op, Scan):
+        new_scan = replace_check_parameter_by_ninf_in_scan(node)
+        return [new_scan] if new_scan is not None else None
+
     if not node.op.can_be_replaced_by_ninf:
         return None
 
