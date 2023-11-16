@@ -106,7 +106,7 @@ class LearningRateScheduler(Callback):
         self.optimizer.keywords["learning_rate"] = new_lr
 
 
-class ExponentialScheduler(LearningRateScheduler):
+class ExponentialDecay(LearningRateScheduler):
     """
     Exponentially decays the learning rate.
 
