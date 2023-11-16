@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import collections
+
 from typing import Callable, Dict
 
 import numpy as np
