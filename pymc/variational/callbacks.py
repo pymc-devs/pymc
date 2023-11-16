@@ -18,7 +18,13 @@ from typing import Callable, Dict
 
 import numpy as np
 
-__all__ = ["Callback", "CheckParametersConvergence", "ReduceLROnPlateau", "Tracker"]
+__all__ = [
+    "Callback",
+    "CheckParametersConvergence",
+    "ExponentialDecay",
+    "ReduceLROnPlateau",
+    "Tracker",
+]
 
 
 class Callback:
