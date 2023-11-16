@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import collections
-
 from typing import Callable, Dict
 
 import numpy as np
@@ -109,6 +108,9 @@ class LearningRateScheduler(Callback):
 class ExponentialDecay(LearningRateScheduler):
     """
     Exponentially decays the learning rate.
+
+    This is inspired by Keras' homonymous callback:
+    https://github.com/keras-team/keras/blob/v2.14.0/keras/optimizers/schedules/learning_rate_schedule.py
 
     Parameters
     ----------
