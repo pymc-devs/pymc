@@ -43,7 +43,7 @@ import scipy.special
 
 from pytensor.graph.basic import equal_computations
 
-from pymc.distributions.continuous import Cauchy
+from pymc.distributions.continuous import Cauchy, ChiSquared
 from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
 from pymc.logprob.transforms import (
     ArccoshTransform,
@@ -431,7 +431,7 @@ class TestPowerRVTransform:
 
     def test_sqrt_transform(self):
         # The sqrt of a chisquare with n df is a chi distribution with n df
-        x_rv = pt.sqrt(pt.random.chisquare(df=3, size=(4,)))
+        x_rv = pt.sqrt(ChiSquared.dist(nu=3, size=(4,)))
         x_rv.name = "x"
 
         x_vv = x_rv.clone()

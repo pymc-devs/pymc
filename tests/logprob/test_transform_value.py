@@ -26,6 +26,8 @@ from pytensor.compile.builders import OpFromGraph
 from pytensor.graph import FunctionGraph
 from pytensor.graph.basic import equal_computations
 
+import pymc as pm
+
 from pymc.distributions.transforms import _default_transform, log, logodds
 from pymc.logprob import conditional_logp
 from pymc.logprob.abstract import MeasurableVariable, _logprob
@@ -154,7 +156,7 @@ def test_original_values_output_dict():
             (),
         ),
         (
-            pt.random.chisquare,
+            pm.ChiSquared.dist,
             (1.5,),
             lambda df: sp.stats.chi2(df),
             (),
