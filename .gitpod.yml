@@ -36,6 +36,7 @@ vscode:
     - eamodio.gitlens
     - ms-python.python
     - ms-pyright.pyright
+    - ms-toolsai.jupyter
     - donjayamanne.githistory
 
 github:
