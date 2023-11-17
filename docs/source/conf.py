@@ -156,7 +156,7 @@ myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath", "su
 myst_substitutions = {
     "version_slug": rtd_version,
 }
-myst_heading_anchors = None
+myst_heading_anchors = 0
 
 v3_example_tutorials = [
     "case_studies/BEST",
