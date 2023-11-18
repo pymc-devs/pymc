@@ -407,7 +407,7 @@ class TestCompilePyMC:
             fn = compile_pymc([], xs)
             assert np.all(fn() == 0)
 
-    def test_check_parameters_can_be_replaced_by_ninf_from_scan(self):
+    def test_check_parameters_can_be_replaced_by_ninf_in_scan(self):
         def scan_step(x_0):
             cond = pt.ge(x_0, 0)
             x = check_parameters(x_0, cond, can_be_replaced_by_ninf=True)
