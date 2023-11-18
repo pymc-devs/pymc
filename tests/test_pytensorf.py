@@ -417,7 +417,7 @@ class TestCompilePyMC:
         xs, _ = scan(
             fn=scan_step,
             sequences=[
-                pt.as_tensor_variable([-1, 0, 1]),
+                pt.as_tensor_variable([-1.0, 0.0, 1.0]),
             ],
             name="xs",
         )
