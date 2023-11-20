@@ -481,12 +481,14 @@ def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
     x = pt.scalar("x", dtype=base_rv.dtype)
     logcdf_y1 = _logcdf_helper(base_rv, x, **kwargs)
 
-    #    intervals = [[inputs[i], inputs[i + 1]] for i in range(0, 2 * encodings_count, 2)]
+    intervals = pt.broadcast_arrays(*inputs[0 : 2 * encodings_count])
+    lower = intervals[::2]
+    upper = intervals[1::2]
 
-    lower = pt.stack(inputs[0 : 2 * encodings_count - 1 : 2])
-    upper = pt.stack(inputs[1 : 2 * encodings_count : 2])
+    lower_tensor = pt.concatenate([i[None] for i in lower])
+    upper_tensor = pt.concatenate([j[None] for j in upper])
 
-    interval_tensor = pt.concatenate([lower[None], upper[None]])
+    interval_tensor = pt.concatenate([lower_tensor[None], upper_tensor[None]])
 
     logcdf_all = pytensor.graph.replace.vectorize(logcdf_y1, replace={x: interval_tensor})
 
@@ -498,7 +500,7 @@ def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
     for i in range(encodings_count):
         logprob = pt.where(
             pt.eq(value, encodings[i]),
-            logdiffexp(logcdf_all[i], logcdf_all[i] + 1),
+            logdiffexp(logcdf_all[1][i], logcdf_all[0][i]),
             logprob,
         )
 
