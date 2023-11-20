@@ -424,6 +424,27 @@ class TestCompilePyMC:
         fn = compile_pymc([], xs)
         np.testing.assert_array_equal(fn(), [-np.inf, 0, 1])
 
+    def test_check_parameters_can_be_removed_from_op_from_graph(self):
+        x, y, z = pt.scalars("xyz")
+        e = x + y * z
+        cond = pt.ge(e, 0)
+        e = check_parameters(e, cond)
+        op = OpFromGraph([x, y, z], [e])
+        e2 = op(x, y, z) + op(z, y, x)
+
+        with pm.Model() as m:
+            pass
+
+        m.check_bounds = False
+        with m:
+            fn = compile_pymc([x, y, z], e2)
+            print(fn(-1, -2, -3))
+
+        m.check_bounds = True
+        with m:
+            fn = compile_pymc([x, y, z], e2)
+            assert np.all(fn(-1.0, -2.0, -3.0) == -np.inf)
+
     def test_compile_pymc_sets_rng_updates(self):
         rng = pytensor.shared(np.random.default_rng(0))
         x = pm.Normal.dist(rng=rng)
