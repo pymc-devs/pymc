@@ -398,6 +398,8 @@ class TestCompilePyMC:
             ],
             name="xs",
         )
+        with pytest.raises(ParameterValueError):
+            pytensor.function([], xs)()
 
         with pm.Model() as m:
             pass
@@ -435,10 +437,13 @@ class TestCompilePyMC:
         with pm.Model() as m:
             pass
 
+        with pytest.raises(ParameterValueError):
+            pytensor.function([x, y, z], e2)(-1, -2, -3)
+
         m.check_bounds = False
         with m:
             fn = compile_pymc([x, y, z], e2)
-            print(fn(-1, -2, -3))
+            assert fn(-1, -2, -3) == 4
 
         m.check_bounds = True
         with m:
@@ -454,6 +459,9 @@ class TestCompilePyMC:
         e2 = op(x, y) * op(x, y)
         op2 = OpFromGraph([x, y], [e2])
         e3 = op2(x, y) + z
+
+        with pytest.raises(ParameterValueError):
+            pytensor.function([x, y, z], e3)(0, 0, 2)
 
         with pm.Model() as m:
             pass
