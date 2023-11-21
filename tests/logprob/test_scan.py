@@ -510,12 +510,12 @@ def test_meta_scan_non_pure_rv_output():
         fn=lambda xtm1: pt.random.normal() + xtm1,
         outputs_info=[pt.zeros(())],
         n_steps=10,
-        name="grw",
+        name="grw1",
     )
 
-    grw_vv = grw.clone()
+    grw1_vv = grw[0].clone()
 
-    ndim_supp_1, supp_axes_1, measure_type_1 = meta_info_helper(grw, grw_vv)
+    ndim_supp_1, supp_axes_1, measure_type_1 = meta_info_helper(grw[0], grw1_vv)
 
     print(ndim_supp_1)
     print(supp_axes_1)
@@ -531,7 +531,7 @@ def test_meta_scan_over_seqs():
 
     xs = pt.random.normal(size=(n_steps,), name="xs")  # use vector with a fixed size
     ys, _ = pytensor.scan(
-        fn=lambda x, x1: (pt.random.normal(0, 1), pt.random.poisson(x1)),
+        fn=lambda x, x1: (pt.random.normal(x), pt.random.poisson(x1)),
         sequences=[xs, xs],
         outputs_info=[None, None],
         name=("ys1", "ys2"),
@@ -540,7 +540,7 @@ def test_meta_scan_over_seqs():
     ys2_vv = ys[1].clone()
 
     ndim_supp_1, supp_axes_1, measure_type_1 = meta_info_helper(ys[0], ys1_vv)
-    ndim_supp_2, supp_axes_2, measure_type_2 = meta_info_helper(ys[1], ys1_vv)
+    ndim_supp_2, supp_axes_2, measure_type_2 = meta_info_helper(ys[1], ys2_vv)
 
     print(ndim_supp_1)
     print(ndim_supp_2)

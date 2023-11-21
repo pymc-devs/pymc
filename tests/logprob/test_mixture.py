@@ -52,8 +52,7 @@ from pytensor.tensor.subtensor import (
     as_index_constant,
 )
 
-# from pymc.logprob.utils import dirac_delta
-from pymc.distributions.distribution import diracdelta
+# from pymc.distributions.distribution import diracdelta
 from pymc.logprob.abstract import (
     MeasurableVariable,
     MeasureType,
@@ -62,6 +61,7 @@ from pymc.logprob.abstract import (
 from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.mixture import MeasurableSwitchMixture, expand_indices
 from pymc.logprob.rewriting import construct_ir_fgraph
+from pymc.logprob.utils import dirac_delta as diracdelta
 from pymc.testing import assert_no_rvs
 from tests.logprob.utils import meta_info_helper, scipy_logprob
 
