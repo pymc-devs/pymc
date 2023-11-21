@@ -51,6 +51,7 @@ from pymc.logprob.abstract import (
     _logcdf_helper,
     _logprob,
     _logprob_helper,
+    get_measurable_meta_info,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import find_negated_var
@@ -58,8 +59,11 @@ from pymc.math import logdiffexp
 from pymc.pytensorf import constant_fold
 
 
-class MeasurableMax(Max):
+class MeasurableMax(MeasurableVariable, Max):
     """A placeholder used to specify a log-likelihood for a max sub-graph."""
+
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
 
 
 MeasurableVariable.register(MeasurableMax)

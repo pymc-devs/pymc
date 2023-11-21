@@ -121,7 +121,7 @@ def meta_info_helper(rv, vv):
     # ir_rewriter = logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"]), exclude=)
     fgraph, _, _ = construct_ir_fgraph({rv: vv})
     node = fgraph.outputs[0].owner
-    # pytensor.dprint(node)
+    pytensor.dprint(node)
     ndim_supp = node.op.ndim_supp
     supp_axes = node.op.supp_axes
     measure_type = node.op.measure_type
