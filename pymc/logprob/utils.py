@@ -294,6 +294,11 @@ def remove_check_parameter_op_from_graph(node):
             if isinstance(nd.op, CheckParameterValue):
                 givens[nd.outputs[0]] = nd.inputs[0]
                 to_remove_set.add(nd)
+            elif isinstance(nd.op, OpFromGraph):
+                new_node = remove_check_parameter_op_from_graph(nd)
+                if new_node is not None:
+                    givens.update(zip(nd.outputs, new_node.owner.outputs))
+                    to_remove_set.add(nd)
     if len(to_remove_set) == 0:
         return None
     op_outs = clone_replace(node_outputs, replace=givens)
@@ -331,6 +336,11 @@ def replace_check_parameters_by_ninf_in_op_from_graph(node):
 
                     if new_node.dtype != nd.outputs[0].dtype:
                         new_node = pt.cast(new_node, nd.outputs[0].dtype)
+                    givens.update(zip(nd.outputs, new_node.owner.outputs))
+                    to_remove_set.add(nd)
+            elif isinstance(nd.op, OpFromGraph):
+                new_node = replace_check_parameters_by_ninf_in_op_from_graph(nd)
+                if new_node is not None:
                     givens.update(zip(nd.outputs, new_node.owner.outputs))
                     to_remove_set.add(nd)
     if len(to_remove_set) == 0:
