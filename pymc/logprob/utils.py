@@ -43,6 +43,7 @@ import pytensor
 
 from pytensor import Variable
 from pytensor import tensor as pt
+from pytensor.compile.builders import OpFromGraph
 from pytensor.graph import Apply, Op, clone_replace, node_rewriter
 from pytensor.graph.basic import io_toposort, walk
 from pytensor.graph.op import HasInnerGraph
@@ -280,7 +281,78 @@ def replace_check_parameter_by_ninf_in_scan(node):
     return nw_node
 
 
-@node_rewriter(tracks=[CheckParameterValue, Scan])
+def remove_check_parameter_op_from_graph(node):
+    node_inputs, node_outputs = node.op.inner_inputs, node.op.inner_outputs
+    op = node.op
+
+    local_fgraph_topo = io_toposort(node_inputs, node_outputs)
+    op = node.op
+    givens = {}
+    to_remove_set = set()
+    for nd in local_fgraph_topo:
+        if nd not in to_remove_set:
+            if isinstance(nd.op, CheckParameterValue):
+                givens[nd.outputs[0]] = nd.inputs[0]
+                to_remove_set.add(nd)
+    if len(to_remove_set) == 0:
+        return None
+    op_outs = clone_replace(node_outputs, replace=givens)
+
+    nwOpFromGraph = OpFromGraph(
+        node_inputs,
+        op_outs,
+        op.is_inline,
+        op.lop_overrides,
+        op.grad_overrides,
+        op.rop_overrides,
+        connection_pattern=op._connection_pattern,
+        name=op.name,
+        **op.kwargs,
+    )
+    nw_node = nwOpFromGraph(*(node.inputs))
+    return nw_node
+
+
+def replace_check_parameters_by_ninf_in_op_from_graph(node):
+    node_inputs, node_outputs = node.op.inner_inputs, node.op.inner_outputs
+    op = node.op
+    givens = {}
+    to_remove_set = set()
+    for nd in io_toposort(node_inputs, node_outputs):
+        if nd not in to_remove_set:
+            if isinstance(nd.op, CheckParameterValue):
+                if nd.op.can_be_replaced_by_ninf:
+                    logp_expr, *logp_conds = nd.inputs
+                    if len(logp_conds) > 1:
+                        logp_cond = pt.all(logp_conds)
+                    else:
+                        (logp_cond,) = logp_conds
+                    new_node = pt.switch(logp_cond, logp_expr, -np.inf)
+
+                    if new_node.dtype != nd.outputs[0].dtype:
+                        new_node = pt.cast(new_node, nd.outputs[0].dtype)
+                    givens.update(zip(nd.outputs, new_node.owner.outputs))
+                    to_remove_set.add(nd)
+    if len(to_remove_set) == 0:
+        return None
+    op_outs = clone_replace(node_outputs, replace=givens)
+
+    nwOpFromGraph = OpFromGraph(
+        node_inputs,
+        op_outs,
+        op.is_inline,
+        op.lop_overrides,
+        op.grad_overrides,
+        op.rop_overrides,
+        connection_pattern=op._connection_pattern,
+        name=op.name,
+        **op.kwargs,
+    )
+    nw_node = nwOpFromGraph(*(node.inputs))
+    return nw_node
+
+
+@node_rewriter(tracks=[CheckParameterValue, Scan, OpFromGraph])
 def local_remove_check_parameter(fgraph, node):
     """Rewrite that removes CheckParameterValue
 
@@ -289,15 +361,22 @@ def local_remove_check_parameter(fgraph, node):
     if isinstance(node.op, Scan):
         new_scan = remove_check_parameter_from_scan(node)
         return [new_scan] if new_scan is not None else None
+    if isinstance(node.op, OpFromGraph):
+        new_op_from_graph = remove_check_parameter_op_from_graph(node)
+        return [new_op_from_graph] if new_op_from_graph is not None else None
     if isinstance(node.op, CheckParameterValue):
         return [node.inputs[0]]
 
 
-@node_rewriter(tracks=[CheckParameterValue, Scan])
+@node_rewriter(tracks=[CheckParameterValue, Scan, OpFromGraph])
 def local_check_parameter_to_ninf_switch(fgraph, node):
     if isinstance(node.op, Scan):
         new_scan = replace_check_parameter_by_ninf_in_scan(node)
         return [new_scan] if new_scan is not None else None
+
+    if isinstance(node.op, OpFromGraph):
+        new_op_from_graph = replace_check_parameters_by_ninf_in_op_from_graph(node)
+        return [new_op_from_graph] if new_op_from_graph is not None else None
 
     if not node.op.can_be_replaced_by_ninf:
         return None
