@@ -23,7 +23,7 @@ import pytensor.tensor as pt
 
 import pymc as pm
 
-from pymc.gp.cov import Covariance
+from pymc.gp.cov import Covariance, Periodic
 from pymc.gp.gp import Base
 from pymc.gp.mean import Mean, Zero
 
@@ -69,19 +69,16 @@ def calc_eigenvectors(
 def calc_basis_periodic(
     Xs: TensorLike,
     period: TensorLike,
-    m: Sequence[int],
+    m: int,
     tl: ModuleType = np,
 ):
     """
     Calculate basis vectors for the cosine series expansion of the periodic covariance function.
     These are derived from the Taylor series representation of the covariance.
     """
-    if len(m) != 1:
-        raise ValueError("`Periodic` basis vectors only implemented for 1-dimensional case.")
-    m0 = m[0]  # for compatibility with other kernels, m must be a sequence
     w0 = (2 * np.pi) / period  # angular frequency defining the periodicity
-    m1 = tl.tile(w0 * Xs, m0)
-    m2 = tl.diag(tl.arange(0, m0, 1))
+    m1 = tl.tile(w0 * Xs, m)
+    m2 = tl.diag(tl.arange(0, m, 1))
     mw0x = m1 @ m2
     phi_cos = tl.cos(mw0x)
     phi_sin = tl.sin(mw0x)
@@ -128,8 +125,8 @@ class HSGP(Base):
     parameterization: str
         Whether to use `centred` or `noncentered` parameterization when multiplying the
         basis by the coefficients.
-    cov_func: None, 2D array, or instance of `Covariance`
-        The covariance function.  Defaults to zero.
+    cov_func: Covariance function, must be an instance of `Stationary` and implement a
+        `power_spectral_density` method.
     mean_func: None, instance of Mean
         The mean function.  Defaults to zero.
 
@@ -431,10 +428,11 @@ class HSGPPeriodic(Base):
 
     Parameters
     ----------
-    m: list
-        The number of basis vectors to use. Must be a list with one element.
-    cov_func: Instance of `Periodic` covariance
-        The covariance function.  Defaults to zero.
+    m: int
+        The number of basis vectors to use. Must be a positive integer.
+    scale: TensorLike
+        The standard deviation (square root of the variance) of the GP effect. Defaults to 1.0.
+    cov_func: Must be an instance of instance of `Periodic` covariance
     mean_func: None, instance of Mean
         The mean function.  Defaults to zero.
 
@@ -447,10 +445,11 @@ class HSGPPeriodic(Base):
 
         with pm.Model() as model:
             # Specify the covariance function, only for the 1-D case
+            scale = pm.HalfNormal(10)
             cov_func = pm.gp.cov.Periodic(1, period=1, ls=0.1)
 
             # Specify the approximation with 25 basis vectors
-            gp = pm.gp.HSGPPeriodic(m=[25], cov_func=cov_func)
+            gp = pm.gp.HSGPPeriodic(m=25, scale=scale, cov_func=cov_func)
 
             # Place a GP prior over the function f.
             f = gp.prior("f", X=X)
@@ -472,31 +471,37 @@ class HSGPPeriodic(Base):
 
     def __init__(
         self,
-        m: Sequence[int],
+        m: int,
+        scale: Optional[Union[float, TensorLike]] = 1.0,
         *,
         mean_func: Mean = Zero(),
-        cov_func: Covariance,
+        cov_func: Periodic,
     ):
-        arg_err_msg = (
-            "`m` and `L`, if provided, must be sequences with one element per active "
-            "dimension of the kernel or covariance function."
-        )
+        arg_err_msg = "`m` must be a positive integer as the `Periodic` kernel approximation is only implemented for 1-dimensional case."
 
-        if not isinstance(m, Sequence):
+        if not isinstance(m, int):
             raise ValueError(arg_err_msg)
+
+        if m <= 0:
+            raise ValueError(arg_err_msg)
+
+        if not isinstance(cov_func, Periodic):
+            raise ValueError(
+                "`cov_func` must be an instance of a `Periodic` kernel only. Use the `scale` parameter to control the variance."
+            )
 
         if cov_func.n_dims > 1:
             raise ValueError(
                 "HSGP approximation for `Periodic` kernel only implemented for 1-dimensional case."
             )
-        m = tuple(m)
 
         self._m = m
+        self.scale = scale
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def prior_linearized(self, Xs: TensorLike):
-        """Linearized version of the approximation. Returns the cosine and sine bases and coeffients
+        """Linearized version of the approximation. Returns the cosine and sine bases and coefficients
         of the expansion needed to create the GP.
 
         This function allows the user to bypass the GP interface and work directly with the basis
@@ -529,10 +534,11 @@ class HSGPPeriodic(Base):
             X = np.linspace(0, 10, 100)[:, None]
 
             with pm.Model() as model:
+                scale = pm.HalfNormal(10)
                 cov_func = pm.gp.cov.Periodic(1, period=1, ls=ell)
 
-                # m = [200] means 200 basis vectors for the first dimension
-                gp = pm.gp.HSGPPeriodic(m=[200], cov_func=cov_func)
+                # m=200 means 200 basis vectors
+                gp = pm.gp.HSGPPeriodic(m=200, scale=scale, cov_func=cov_func)
 
                 # Order is important.  First calculate the mean, then make X a shared variable,
                 # then subtract the mean.  When X is mutated later, the correct mean will be
@@ -542,19 +548,19 @@ class HSGPPeriodic(Base):
                 Xs = X - X_mean
 
                 # Pass the zero-subtracted Xs in to the GP
-                (phi_cos, phi_sin), psd, sqrt_psd = gp.prior_linearized(Xs=Xs)
+                (phi_cos, phi_sin), psd = gp.prior_linearized(Xs=Xs)
 
                 # Specify standard normal prior in the coefficients.  The number of which
                 # is twice the number of basis vectors minus one.
                 # This is so that each cosine term has a `beta` and all but one of the
                 # sine terms, as first eigenfunction for the sine component is zero
-                m0 = gp._m[0]
-                beta = pm.Normal("beta", size=(m0 * 2 - 1))
+                m = gp._m
+                beta = pm.Normal("beta", size=(m * 2 - 1))
 
                 # The (non-centered) GP approximation is given by
                 f = pm.Deterministic(
                     "f",
-                    phi_cos @ (psd * self._beta[:m0]) + phi_sin[..., 1:] @ (psd[1:] * self._beta[m0:])
+                    phi_cos @ (psd * beta[:m]) + phi_sin[..., 1:] @ (psd[1:] * beta[m:])
                 )
                 ...
 
@@ -572,8 +578,9 @@ class HSGPPeriodic(Base):
         Xs, _ = self.cov_func._slice(Xs)
 
         phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m, tl=pt)
-        J = pt.arange(0, self._m[0], 1)
-        psd = self.cov_func.power_spectral_density_approx(J)
+        J = pt.arange(0, self._m, 1)
+        # rescale basis coefficients by the sqrt variance term
+        psd = self.scale * self.cov_func.power_spectral_density_approx(J)
         return (phi_cos, phi_sin), psd
 
     def prior(self, name: str, X: TensorLike, dims: Optional[str] = None):  # type: ignore
@@ -594,14 +601,14 @@ class HSGPPeriodic(Base):
 
         (phi_cos, phi_sin), psd = self.prior_linearized(X - self._X_mean)
 
-        m0 = self._m[0]
-        self._beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m0 * 2 - 1))
+        m = self._m
+        self._beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m * 2 - 1))
         # The first eigenfunction for the sine component is zero
         # and so does not contribute to the approximation.
         f = (
             self.mean_func(X)
-            + phi_cos @ (psd * self._beta[:m0])  # type: ignore
-            + phi_sin[..., 1:] @ (psd[1:] * self._beta[m0:])  # type: ignore
+            + phi_cos @ (psd * self._beta[:m])  # type: ignore
+            + phi_sin[..., 1:] @ (psd[1:] * self._beta[m:])  # type: ignore
         )
 
         self.f = pm.Deterministic(name, f, dims=dims)
@@ -619,11 +626,12 @@ class HSGPPeriodic(Base):
         Xnew, _ = self.cov_func._slice(Xnew)
 
         phi_cos, phi_sin = calc_basis_periodic(Xnew - X_mean, self.cov_func.period, self._m, tl=pt)
-        m0 = self._m[0]
-        J = pt.arange(0, m0, 1)
-        psd = self.cov_func.power_spectral_density_approx(J)
+        m = self._m
+        J = pt.arange(0, m, 1)
+        # rescale basis coefficients by the sqrt variance term
+        psd = self.scale * self.cov_func.power_spectral_density_approx(J)
 
-        phi = phi_cos @ (psd * beta[:m0]) + phi_sin[..., 1:] @ (psd[1:] * beta[m0:])
+        phi = phi_cos @ (psd * beta[:m]) + phi_sin[..., 1:] @ (psd[1:] * beta[m:])
         return self.mean_func(Xnew) + phi
 
     def conditional(self, name: str, Xnew: TensorLike, dims: Optional[str] = None):  # type: ignore
