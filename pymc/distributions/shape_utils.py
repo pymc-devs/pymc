@@ -321,9 +321,10 @@ def change_dist_size(
 
     Returns
     -------
-    A new distribution variable that is equivalent to the original distribution with
-    the new size. The new distribution will not reuse the old RandomState/Generator
-    input, so it will be independent from the original distribution.
+    dist: 
+        A new distribution variable that is equivalent to the original distribution with
+        the new size. The new distribution will not reuse the old RandomState/Generator
+        input, so it will be independent from the original distribution.
 
     Examples
     --------
