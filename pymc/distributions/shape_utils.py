@@ -59,8 +59,9 @@ def to_tuple(shape):
 
     Returns
     -------
-    If `shape` is None, returns an empty tuple. If it's an int, (shape,) is
-    returned. If it is array-like, tuple(shape) is returned.
+    shape: 
+        If `shape` is None, returns an empty tuple. If it's an int, (shape,) is
+        returned. If it is array-like, tuple(shape) is returned.
     """
     if shape is None:
         return tuple()
