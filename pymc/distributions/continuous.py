@@ -567,14 +567,15 @@ class TruncatedNormalRV(RandomVariable):
         upper: Union[np.ndarray, float],
         size: Optional[Union[List[int], int]],
     ) -> np.ndarray:
-        return stats.truncnorm.rvs(
-            a=(lower - mu) / sigma,
-            b=(upper - mu) / sigma,
-            loc=mu,
-            scale=sigma,
-            size=size,
-            random_state=rng,
-        )
+        a = (lower - mu) / sigma
+        b = (upper - mu) / sigma
+
+        dist = stats.truncnorm(a=a, b=b, loc=mu, scale=sigma)
+        # Underlying uniform should be of the same dtype as other inputs (`mu` for now)
+        ps = rng.random(size=size, dtype=mu.dtype)
+        ret = dist.ppf(ps)
+        # Enforce bounds b/c precision can violate
+        return ret.clip(lower, upper)
 
 
 truncated_normal = TruncatedNormalRV()
