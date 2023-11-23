@@ -191,6 +191,7 @@ Contributors don't need to be part of any dedicated team.
 * Michael Osthege (dev)
 * Oriol Abril-Pla (docs, community)
 * Osvaldo Martin (dev, docs)
+* Purna Chandra Mansingh (community(
 * Ravin Kumar (dev, community, docs)
 * Reshama Shaikh (community - PyMC Labs)
 * Ricardo Vieira (dev, community)
