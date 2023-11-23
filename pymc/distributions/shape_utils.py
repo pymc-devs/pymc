@@ -59,7 +59,7 @@ def to_tuple(shape):
 
     Returns
     -------
-    shape: 
+    shape : tuple
         If `shape` is None, returns an empty tuple. If it's an int, (shape,) is
         returned. If it is array-like, tuple(shape) is returned.
     """
@@ -322,7 +322,7 @@ def change_dist_size(
 
     Returns
     -------
-    dist: 
+    dist : TensorVariable
         A new distribution variable that is equivalent to the original distribution with
         the new size. The new distribution will not reuse the old RandomState/Generator
         input, so it will be independent from the original distribution.
