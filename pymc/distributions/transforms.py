@@ -57,7 +57,7 @@ def __getattr__(name):
         warnings.warn(f"{name} has been deprecated, use ordered instead.", FutureWarning)
         return ordered
 
-    if name in ("univariate_sum_to_1, multivariate_sum_to_1"):
+    if name in ("univariate_sum_to_1", "multivariate_sum_to_1"):
         warnings.warn(f"{name} has been deprecated, use sum_to_1 instead.", FutureWarning)
         return sum_to_1
 
