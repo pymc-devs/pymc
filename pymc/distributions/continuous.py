@@ -48,6 +48,7 @@ from pytensor.tensor.random.basic import (
     lognormal,
     normal,
     pareto,
+    t,
     triangular,
     uniform,
     vonmises,
@@ -1733,21 +1734,6 @@ class LogNormal(PositiveContinuous):
 Lognormal = LogNormal
 
 
-class StudentTRV(RandomVariable):
-    name = "studentt"
-    ndim_supp = 0
-    ndims_params = [0, 0, 0]
-    dtype = "floatX"
-    _print_name = ("StudentT", "\\operatorname{StudentT}")
-
-    @classmethod
-    def rng_fn(cls, rng, nu, mu, sigma, size=None) -> np.ndarray:
-        return np.asarray(stats.t.rvs(nu, mu, sigma, size=size, random_state=rng))
-
-
-studentt = StudentTRV()
-
-
 class StudentT(Continuous):
     r"""
     Student's T log-likelihood.
@@ -1812,7 +1798,7 @@ class StudentT(Continuous):
         with pm.Model():
             x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
     """
-    rv_op = studentt
+    rv_op = t
 
     @classmethod
     def dist(cls, nu, mu=0, *, sigma=None, lam=None, **kwargs):
