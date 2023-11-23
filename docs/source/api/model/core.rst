@@ -7,7 +7,6 @@ Model creation and inspection
 
    Model
    model_to_graphviz
-   model_to_networkx
    modelcontext
 
 Others
