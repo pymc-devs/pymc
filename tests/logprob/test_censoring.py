@@ -262,3 +262,45 @@ def test_rounding(rounding_op):
         logprob.eval({xr_vv: test_value}),
         expected_logp,
     )
+
+
+@pytest.mark.parametrize(
+    "measurable_idx, test_values, exp_logp",
+    [
+        (1, (0.9, 1, 1.5), (-np.inf, st.norm(0.5, 1).logcdf(1), st.norm(0.5, 1).logpdf(1.5))),
+        (0, (1.5, 1, 0.9), (-np.inf, st.norm(0.5, 1).logsf(1), st.norm(0.5, 1).logpdf(0.9))),
+    ],
+)
+def test_switch_encoding_one_branch_measurable(measurable_idx, test_values, exp_logp):
+    x_rv = pt.random.normal(0.5, 1)
+    branches = (1, x_rv) if measurable_idx == 1 else (x_rv, 1)
+
+    y_rv = pt.switch(x_rv < 1, *branches)
+
+    y_vv = y_rv.clone()
+
+    logprob = logp(y_rv, y_vv)
+
+    logp_fn = pytensor.function([y_vv], logprob)
+
+    for i, j in zip(test_values, exp_logp):
+        assert np.isclose(logp_fn(i), j)
+
+
+@pytest.mark.parametrize("test_values", [-1, 0, 1, 1.5])
+def test_switch_encoding_two_branches(test_values):
+    x_rv = pt.random.normal(0.5, 1)
+
+    y_rv = pt.switch(x_rv < -1, -1, pt.switch(x_rv < 1, x_rv, 1))
+    clip_rv = pt.clip(x_rv, -1, 1)
+
+    y_vv = y_rv.clone()
+    clip_vv = y_vv.clone()
+
+    logp_switch = logp(y_rv, y_vv)
+    logp_clip = logp(clip_rv, clip_vv)
+
+    logp_fn_switch = pytensor.function([y_vv], logp_switch)
+    logp_fn_clip = pytensor.function([clip_vv], logp_clip)
+
+    assert np.isclose(logp_fn_switch(test_values), logp_fn_clip(test_values))
