@@ -267,9 +267,10 @@ def round_logprob(op, values, base_rv, **kwargs):
 class FlatSwitches(Op):
     __props__ = ("out_dtype",)
 
-    def __init__(self, *args, out_dtype, **kwargs):
+    def __init__(self, *args, out_dtype, rv_idx, **kwargs):
         super().__init__(*args, **kwargs)
         self.out_dtype = out_dtype
+        self.rv_idx = rv_idx
 
     def make_node(self, *inputs):
         return Apply(
@@ -448,12 +449,19 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
 
     encoding_list = flat_switch_helper(node, valued_rvs, encoding_list, initial_interval, base_rv)
 
-    flat_switch_op = FlatSwitches(out_dtype=base_rv.dtype)
+    encodings, intervals, rv_idx = [], [], []
 
-    encodings, intervals = [], []
-    for item in encoding_list:
-        encodings.append(item["encoding"])
+    # TODO: Some alternative cleaner way to do this
+    for idx, item in enumerate(encoding_list):
+        encoding = item["encoding"]
+        # indices of intervals having base_rv as their "encoding"
+        if encoding == base_rv:
+            rv_idx.append(idx)
+
+        encodings.append(encoding)
         intervals.extend((item["lower"], item["upper"]))
+
+    flat_switch_op = FlatSwitches(out_dtype=base_rv.dtype, rv_idx=rv_idx)
 
     new_outs = flat_switch_op.make_node(base_rv, *intervals, *encodings).default_output()
     return [new_outs]
@@ -463,8 +471,6 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
 def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
     (value,) = values
     base_rv_op = base_rv.owner.op
-
-    # if encoding found, get index in the encodings list and find the corresponding interval.
 
     encodings_count = len(inputs) // 3
     # 'inputs' is of the form (lower1, upper1, lower2, upper2, encoding1, encoding2)
@@ -492,15 +498,39 @@ def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
 
     logcdf_all = pytensor.graph.replace.vectorize(logcdf_y1, replace={x: interval_tensor})
 
-    logprob = _logprob_helper(base_rv, value, **kwargs)
+    # default logprob is -inf for when there are no rvs and no matching encodings
+    logprob = -np.inf
 
     from pymc.math import logdiffexp
 
-    # cdf(upper) - cdf(lower)
+    # TODO: Implement correct indexing of the vectorized block logcdf_all
+    # for i in range(encodings_count):
+    #     logprob = pt.where(
+    #         pt.eq(value, encodings[i]),
+    #         logdiffexp(logcdf_all[1, i], logcdf_all[0, i]),
+    #         logprob,
+    #     )
+
     for i in range(encodings_count):
+        # if encoding found in interval (Lower, Upper), then Prob = CDF(Upper) - CDF(Lower)
         logprob = pt.where(
             pt.eq(value, encodings[i]),
-            logdiffexp(logcdf_all[1][i], logcdf_all[0][i]),
+            logdiffexp(
+                _logcdf_helper(base_rv, interval_tensor[1][i], **kwargs),
+                _logcdf_helper(base_rv, interval_tensor[0][i], **kwargs),
+            ),
+            logprob,
+        )
+
+    logp_rv = _logprob_helper(base_rv, value, **kwargs)
+    for i in op.rv_idx:
+        logprob = pt.where(
+            pt.eq(logprob, -np.inf),
+            pt.where(
+                value < upper_tensor[i],
+                pt.where(value > lower_tensor[i], logp_rv, -np.inf),
+                -np.inf,
+            ),
             logprob,
         )
 
