@@ -28,6 +28,7 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
+from pytensor.configdefaults import config
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
@@ -569,6 +570,8 @@ class TruncatedNormalRV(RandomVariable):
     ) -> np.ndarray:
         # Upcast to float64 and then downcast if necessary
         #   (Work-around for https://github.com/scipy/scipy/issues/15928)
+        if cls.dtype == "floatX":
+            dtype = config.floatX
         return stats.truncnorm.rvs(
             a=((lower - mu) / sigma).astype("float64"),
             b=((upper - mu) / sigma).astype("float64"),
@@ -576,7 +579,7 @@ class TruncatedNormalRV(RandomVariable):
             scale=(sigma).astype("float64"),
             size=size,
             random_state=rng,
-        ).astype(mu.dtype)
+        ).astype(dtype)
 
 
 truncated_normal = TruncatedNormalRV()
