@@ -559,6 +559,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     @property
     def model(self):
+        warnings.warn("Model.model property is deprecated. Just use Model.", FutureWarning)
         return self
 
     @property
@@ -629,7 +630,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Whether to sum all logp terms or return elemwise logp for each variable.
             Defaults to True.
         """
-        return self.model.compile_fn(self.logp(vars=vars, jacobian=jacobian, sum=sum))
+        return self.compile_fn(self.logp(vars=vars, jacobian=jacobian, sum=sum))
 
     def compile_dlogp(
         self,
@@ -646,7 +647,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian:
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.model.compile_fn(self.dlogp(vars=vars, jacobian=jacobian))
+        return self.compile_fn(self.dlogp(vars=vars, jacobian=jacobian))
 
     def compile_d2logp(
         self,
@@ -663,7 +664,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian:
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.model.compile_fn(self.d2logp(vars=vars, jacobian=jacobian))
+        return self.compile_fn(self.d2logp(vars=vars, jacobian=jacobian))
 
     def logp(
         self,
