@@ -705,9 +705,9 @@ def test_set_initval():
         alpha = pm.HalfNormal("alpha", initval=100)
         value = pm.NegativeBinomial("value", mu=mu, alpha=alpha)
 
-    assert np.array_equal(model.initial_values[mu], np.array([[100.0]]))
-    np.testing.assert_array_equal(model.initial_values[alpha], np.array(100))
-    assert model.initial_values[value] is None
+    assert np.array_equal(model.rvs_to_initial_values[mu], np.array([[100.0]]))
+    np.testing.assert_array_equal(model.rvs_to_initial_values[alpha], np.array(100))
+    assert model.rvs_to_initial_values[value] is None
 
     # `Flat` cannot be sampled, so let's make sure that doesn't break initial
     # value computations
@@ -715,7 +715,7 @@ def test_set_initval():
         x = pm.Flat("x")
         y = pm.Normal("y", x, 1)
 
-    assert y in model.initial_values
+    assert y in model.rvs_to_initial_values
 
 
 def test_datalogp_multiple_shapes():
@@ -972,18 +972,6 @@ def test_set_data_constant_shape_error():
     msg = "because the dimension was initialized from 'x'"
     with pytest.raises(ShapeError, match=msg):
         pmodel.set_data("y", np.arange(10))
-
-
-def test_model_deprecation_warning():
-    with pm.Model() as m:
-        x = pm.Normal("x", 0, 1, size=2)
-        y = pm.LogNormal("y", 0, 1, size=2)
-
-    with pytest.warns(FutureWarning):
-        m.disc_vars
-
-    with pytest.warns(FutureWarning):
-        m.cont_vars
 
 
 @pytest.mark.parametrize("jacobian", [True, False])
