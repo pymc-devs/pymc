@@ -496,7 +496,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
             instance._parent = kwargs.get("model")
         else:
             instance._parent = cls.get_context(error_if_none=False)
-        instance._pytensor_config = kwargs.get("pytensor_config", {})
+        pytensor_config = kwargs.get("pytensor_config", {})
+        if pytensor_config:
+            warnings.warn(
+                "pytensor_config is deprecated. Use pytensor.config or pytensor.config.change_flags context manager instead.",
+                FutureWarning,
+            )
+        instance._pytensor_config = pytensor_config
         return instance
 
     @staticmethod
