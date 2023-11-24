@@ -572,6 +572,8 @@ class TruncatedNormalRV(RandomVariable):
         #   (Work-around for https://github.com/scipy/scipy/issues/15928)
         if cls.dtype == "floatX":
             dtype = config.floatX
+        else:
+            dtype = cls.dtype
         return stats.truncnorm.rvs(
             a=((lower - mu) / sigma).astype("float64"),
             b=((upper - mu) / sigma).astype("float64"),
