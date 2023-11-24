@@ -84,10 +84,6 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
     y_obs = np.array([1.6, 1.4])
     beta = len(y_obs) / float(aux_total_size)
 
-    # TODO: pytensor_config
-    # with pm.Model(pytensor_config=dict(floatX='float64')):
-    # did not not work as expected
-    # there were some numeric problems, so float64 is forced
     with pytensor.config.change_flags(floatX="float64", warn_float64="ignore"):
         assert pytensor.config.floatX == "float64"
         assert pytensor.config.warn_float64 == "ignore"

@@ -797,14 +797,6 @@ class TestAssignStepMethods:
 class TestType:
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
 
-    def setup_method(self):
-        # save PyTensor config object
-        self.pytensor_config = copy(pytensor.config)
-
-    def teardown_method(self):
-        # restore pytensor config
-        pytensor.config = self.pytensor_config
-
     @pytensor.config.change_flags({"floatX": "float64", "warn_float64": "ignore"})
     def test_float64(self):
         with pm.Model() as model:

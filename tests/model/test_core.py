@@ -1102,7 +1102,9 @@ def test_compile_fn():
 
 def test_model_pytensor_config():
     assert pytensor.config.mode != "JAX"
-    with pm.Model(pytensor_config=dict(mode="JAX")) as model:
+    with pytest.warns(FutureWarning, match="pytensor_config is deprecated"):
+        m = pm.Model(pytensor_config=dict(mode="JAX"))
+    with m:
         assert pytensor.config.mode == "JAX"
     assert pytensor.config.mode != "JAX"
 
