@@ -22,7 +22,7 @@ Others
    compile_fn
 
 
-Graph visualisation
+Graph visualization
 -------------------
 
 .. currentmodule:: pymc.model_graph
