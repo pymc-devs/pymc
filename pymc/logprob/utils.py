@@ -370,10 +370,14 @@ def local_remove_check_parameter(fgraph, node):
     """
     if isinstance(node.op, Scan):
         new_scan = remove_check_parameter_from_scan(node)
-        return [new_scan] if new_scan is not None else None
+        if new_scan is None:
+            return None
+        return new_scan if isinstance(new_scan, list) else [new_scan]
     if isinstance(node.op, OpFromGraph):
         new_op_from_graph = remove_check_parameter_op_from_graph(node)
-        return [new_op_from_graph] if new_op_from_graph is not None else None
+        if new_op_from_graph is None:
+            return None
+        return new_op_from_graph if isinstance(new_op_from_graph, list) else [new_op_from_graph]
     if isinstance(node.op, CheckParameterValue):
         return [node.inputs[0]]
 
@@ -382,11 +386,15 @@ def local_remove_check_parameter(fgraph, node):
 def local_check_parameter_to_ninf_switch(fgraph, node):
     if isinstance(node.op, Scan):
         new_scan = replace_check_parameter_by_ninf_in_scan(node)
-        return [new_scan] if new_scan is not None else None
+        if new_scan is None:
+            return None
+        return new_scan if isinstance(new_scan, list) else [new_scan]
 
     if isinstance(node.op, OpFromGraph):
         new_op_from_graph = replace_check_parameters_by_ninf_in_op_from_graph(node)
-        return [new_op_from_graph] if new_op_from_graph is not None else None
+        if new_op_from_graph is None:
+            return None
+        return new_op_from_graph if isinstance(new_op_from_graph, list) else [new_op_from_graph]
 
     if not node.op.can_be_replaced_by_ninf:
         return None
