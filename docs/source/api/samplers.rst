@@ -4,25 +4,39 @@ Samplers
 This submodule contains functions for MCMC and forward sampling.
 
 
-.. currentmodule:: pymc
+.. currentmodule:: pymc.sampling.forward
+
+.. autosummary::
+   :toctree: generated/
+
+   sample_prior_predictive
+   sample_posterior_predictive
+   draw
+
+
+.. currentmodule:: pymc.sampling.mcmc
 
 .. autosummary::
    :toctree: generated/
 
    sample
-   sample_prior_predictive
-   sample_posterior_predictive
-   sample_posterior_predictive_w
    init_nuts
-   draw
+
+.. currentmodule:: pymc.sampling.jax
+
+.. autosummary::
+   :toctree: generated/
+
+   sample_blackjax_nuts
+   sample_numpyro_nuts
+
 
 Step methods
 ************
 
-.. currentmodule:: pymc
-
 HMC family
 ----------
+.. currentmodule:: pymc.step_methods.hmc
 
 .. autosummary::
    :toctree: generated/
@@ -32,6 +46,7 @@ HMC family
 
 Metropolis family
 -----------------
+.. currentmodule:: pymc.step_methods
 
 .. autosummary::
     :toctree: generated/
@@ -51,6 +66,7 @@ Metropolis family
 
 Other step methods
 ------------------
+.. currentmodule:: pymc.step_methods
 
 .. autosummary::
    :toctree: generated/
