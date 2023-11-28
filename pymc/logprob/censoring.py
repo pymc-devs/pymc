@@ -469,11 +469,14 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
 
 @_logprob.register(FlatSwitches)
 def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
+    from pymc.math import logdiffexp
+
     (value,) = values
-    base_rv_op = base_rv.owner.op
 
     encodings_count = len(inputs) // 3
     # 'inputs' is of the form (lower1, upper1, lower2, upper2, encoding1, encoding2)
+    # Possible TODO:
+    # encodings = op.get_encodings_from_inputs(inputs)
     encodings = inputs[2 * encodings_count : 3 * encodings_count]
     encodings = pt.broadcast_arrays(*encodings)
 
@@ -483,52 +486,45 @@ def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
 
     # TODO: Assert that the base_rv is not discrete
 
+    interval_bounds = pt.broadcast_arrays(*inputs[0 : 2 * encodings_count])
+    lower_interval_bounds = interval_bounds[::2]
+    upper_interval_bounds = interval_bounds[1::2]
+
+    lower_interval_bounds = pt.concatenate([i[None] for i in lower_interval_bounds], axis=0)
+    upper_interval_bounds = pt.concatenate([j[None] for j in upper_interval_bounds], axis=0)
+
+    interval_bounds = pt.concatenate(
+        [lower_interval_bounds[None], upper_interval_bounds[None]], axis=0
+    )
+
     # define a logcdf map on a scalar, use vectorize to calculate it for 2D intervals
-    x = pt.scalar("x", dtype=base_rv.dtype)
-    logcdf_y1 = _logcdf_helper(base_rv, x, **kwargs)
-
-    intervals = pt.broadcast_arrays(*inputs[0 : 2 * encodings_count])
-    lower = intervals[::2]
-    upper = intervals[1::2]
-
-    lower_tensor = pt.concatenate([i[None] for i in lower])
-    upper_tensor = pt.concatenate([j[None] for j in upper])
-
-    interval_tensor = pt.concatenate([lower_tensor[None], upper_tensor[None]])
-
-    logcdf_all = pytensor.graph.replace.vectorize(logcdf_y1, replace={x: interval_tensor})
+    scalar_interval_bound = pt.scalar("scalar_interval_bound", dtype=base_rv.dtype)
+    logcdf_scalar_interval_bound = _logcdf_helper(base_rv, scalar_interval_bound, **kwargs)
+    logcdf_interval_bounds = pytensor.graph.replace.vectorize(
+        logcdf_scalar_interval_bound, replace={scalar_interval_bound: interval_bounds}
+    )
+    logcdf_intervals = logdiffexp(
+        logcdf_interval_bounds[1, ...], logcdf_interval_bounds[0, ...]
+    )  # (encoding, *base_rv.shape)
 
     # default logprob is -inf for when there are no rvs and no matching encodings
     logprob = -np.inf
-
-    from pymc.math import logdiffexp
-
-    # TODO: Implement correct indexing of the vectorized block logcdf_all
-    # for i in range(encodings_count):
-    #     logprob = pt.where(
-    #         pt.eq(value, encodings[i]),
-    #         logdiffexp(logcdf_all[1, i], logcdf_all[0, i]),
-    #         logprob,
-    #     )
-
     for i in range(encodings_count):
         # if encoding found in interval (Lower, Upper), then Prob = CDF(Upper) - CDF(Lower)
         logprob = pt.where(
             pt.eq(value, encodings[i]),
-            logdiffexp(
-                _logcdf_helper(base_rv, interval_tensor[1][i], **kwargs),
-                _logcdf_helper(base_rv, interval_tensor[0][i], **kwargs),
-            ),
+            logcdf_intervals[i],
             logprob,
         )
 
+    # Add rv branch (and checks whether it is possible)
     logp_rv = _logprob_helper(base_rv, value, **kwargs)
     for i in op.rv_idx:
         logprob = pt.where(
             pt.eq(logprob, -np.inf),
             pt.where(
-                value < upper_tensor[i],
-                pt.where(value > lower_tensor[i], logp_rv, -np.inf),
+                value <= upper_interval_bounds[i],
+                pt.where(value >= lower_interval_bounds[i], logp_rv, -np.inf),
                 -np.inf,
             ),
             logprob,
