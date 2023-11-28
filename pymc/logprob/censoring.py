@@ -517,6 +517,7 @@ def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
             logprob,
         )
 
+    # TODO: Define this before the encoding branch so it can be written more simply
     # Add rv branch (and checks whether it is possible)
     logp_rv = _logprob_helper(base_rv, value, **kwargs)
     for i in op.rv_idx:
