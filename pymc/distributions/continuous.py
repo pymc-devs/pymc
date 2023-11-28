@@ -28,7 +28,6 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.configdefaults import config
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
