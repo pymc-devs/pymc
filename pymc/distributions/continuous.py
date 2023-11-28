@@ -568,11 +568,13 @@ class TruncatedNormalRV(RandomVariable):
         upper: Union[np.ndarray, float],
         size: Optional[Union[List[int], int]],
     ) -> np.ndarray:
+        # Upcast to float64. (Caller will downcast to desired dtype if needed)
+        #   (Work-around for https://github.com/scipy/scipy/issues/15928)
         return stats.truncnorm.rvs(
-            a=(lower - mu) / sigma,
-            b=(upper - mu) / sigma,
-            loc=mu,
-            scale=sigma,
+            a=((lower - mu) / sigma).astype("float64"),
+            b=((upper - mu) / sigma).astype("float64"),
+            loc=(mu).astype("float64"),
+            scale=(sigma).astype("float64"),
             size=size,
             random_state=rng,
         )
