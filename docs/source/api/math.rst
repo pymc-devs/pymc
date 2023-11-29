@@ -67,11 +67,7 @@ Functions exposed in pymc.math
    sgn
    ceil
    floor
-   det
    matrix_inverse
-   extract_diag
-   matrix_dot
-   trace
    sigmoid
    logsumexp
    invlogit

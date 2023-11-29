@@ -6,8 +6,6 @@ Model creation and inspection
    :toctree: generated/
 
    Model
-   model_to_graphviz
-   model_to_networkx
    modelcontext
 
 Others
@@ -22,3 +20,14 @@ Others
    set_data
    Point
    compile_fn
+
+
+Graph visualization
+-------------------
+
+.. currentmodule:: pymc.model_graph
+.. autosummary::
+   :toctree: generated/
+
+   model_to_networkx
+   model_to_graphviz
