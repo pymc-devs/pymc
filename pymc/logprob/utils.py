@@ -213,7 +213,7 @@ class InnerGraphRewriter:
         raise NotImplementedError
 
     def rewrite(self, node: Union[Scan, OpFromGraph]):
-        if not isinstance(node, (Scan, OpFromGraph)):
+        if not isinstance(node.op, (Scan, OpFromGraph)):
             raise TypeError("Expected Scan or OpFromGraph in InernerGraphRewriter")
         node_inputs, node_outputs = node.op.inner_inputs, node.op.inner_outputs
         local_fgraph_topo = io_toposort(node_inputs, node_outputs)
@@ -223,7 +223,7 @@ class InnerGraphRewriter:
         to_remove_set = set()
         for nd in local_fgraph_topo:
             if nd not in to_remove_set:
-                if isinstance(nd.op, Scan):
+                if isinstance(nd.op, (Scan, OpFromGraph)):
                     new_node = self.rewrite(nd)
                     if new_node is not None:
                         givens.update(zip(nd.outputs, new_node.owner.outputs))
@@ -240,7 +240,7 @@ class InnerGraphRewriter:
         if len(to_remove_set) == 0:
             return None
         op_outs = clone_replace(node_outputs, replace=givens)
-        if isinstance(node, Scan):
+        if isinstance(op, Scan):
             nwScan = Scan(
                 node_inputs,
                 op_outs,
@@ -459,33 +459,22 @@ def local_remove_check_parameter(fgraph, node):
 
     This is used when compile_rv_inplace
     """
-    if isinstance(node.op, Scan):
-        new_scan = remove_check_parameter_from_scan(node)
-        if new_scan is None:
+    if isinstance(node.op, (Scan, OpFromGraph)):
+        new_node = RemoveCheckParameterInnerGraph().rewrite(node)
+        if new_node is None:
             return None
-        return new_scan if isinstance(new_scan, list) else [new_scan]
-    if isinstance(node.op, OpFromGraph):
-        new_op_from_graph = remove_check_parameter_op_from_graph(node)
-        if new_op_from_graph is None:
-            return None
-        return new_op_from_graph if isinstance(new_op_from_graph, list) else [new_op_from_graph]
+        return new_node if isinstance(new_node, list) else [new_node]
     if isinstance(node.op, CheckParameterValue):
         return [node.inputs[0]]
 
 
 @node_rewriter(tracks=[CheckParameterValue, Scan, OpFromGraph])
 def local_check_parameter_to_ninf_switch(fgraph, node):
-    if isinstance(node.op, Scan):
-        new_scan = replace_check_parameter_by_ninf_in_scan(node)
-        if new_scan is None:
+    if isinstance(node.op, (Scan, OpFromGraph)):
+        new_node = ReplaceCheckParameterInnerGraph().rewrite(node)
+        if new_node is None:
             return None
-        return new_scan if isinstance(new_scan, list) else [new_scan]
-
-    if isinstance(node.op, OpFromGraph):
-        new_op_from_graph = replace_check_parameters_by_ninf_in_op_from_graph(node)
-        if new_op_from_graph is None:
-            return None
-        return new_op_from_graph if isinstance(new_op_from_graph, list) else [new_op_from_graph]
+        return new_node if isinstance(new_node, list) else [new_node]
 
     if not node.op.can_be_replaced_by_ninf:
         return None
