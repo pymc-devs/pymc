@@ -212,7 +212,7 @@ class InnerGraphRewriter:
         """
         raise NotImplementedError
 
-    def rewrite(self, node: Union[Scan, OpFromGraph]):
+    def apply(self, fgraph: FunctionGraph, node: Union[Scan, OpFromGraph]):
         if not isinstance(node.op, (Scan, OpFromGraph)):
             raise TypeError("Expected Scan or OpFromGraph in InernerGraphRewriter")
         node_inputs, node_outputs = node.op.inner_inputs, node.op.inner_outputs
