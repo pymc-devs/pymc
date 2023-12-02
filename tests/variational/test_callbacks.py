@@ -54,14 +54,17 @@ def test_tracker_callback():
         tracker(None, None, 1)
 
 
-OPTIMIZERS = [pm.sgd(learning_rate=0.1),
-              pm.momentum(learning_rate=0.1),
-              pm.nesterov_momentum(learning_rate=0.1),
-              pm.adagrad(learning_rate=0.1),
-              pm.rmsprop(learning_rate=0.1),
-              pm.adadelta(learning_rate=0.1),
-              pm.adam(learning_rate=0.1),
-              pm.adamax(learning_rate=0.1),]
+OPTIMIZERS = [
+    pm.sgd(learning_rate=0.1),
+    pm.momentum(learning_rate=0.1),
+    pm.nesterov_momentum(learning_rate=0.1),
+    pm.adagrad(learning_rate=0.1),
+    pm.rmsprop(learning_rate=0.1),
+    pm.adadelta(learning_rate=0.1),
+    pm.adam(learning_rate=0.1),
+    pm.adamax(learning_rate=0.1),
+]
+
 
 @pytest.mark.parametrize("optimizer", OPTIMIZERS)
 def test_reduce_lr_on_plateau(optimizer):

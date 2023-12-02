@@ -176,7 +176,7 @@ def get_or_compute_grads(loss_or_grads, params):
     else:
         grads = pytensor.grad(loss_or_grads, params)
         for grad, param in zip(grads, params):
-            grad.name = f'd_loss/d_{param.name}'
+            grad.name = f"d_loss/d_{param.name}"
         return grads
 
 
@@ -219,8 +219,8 @@ def _partial_initialization_wrapper(optimizer):
     @wraps(optimizer)
     def make_partial_if_necessary(*args, **kwargs):
         args = list(args)
-        loss_or_grads = _find_variable_among_args_kwargs(args, kwargs, 'loss_or_grads')
-        params = _find_variable_among_args_kwargs(args, kwargs, 'params')
+        loss_or_grads = _find_variable_among_args_kwargs(args, kwargs, "loss_or_grads")
+        params = _find_variable_among_args_kwargs(args, kwargs, "params")
 
         if loss_or_grads is None and params is None:
             return partial(optimizer, **kwargs)
@@ -252,7 +252,9 @@ def _handle_loss_and_grad_input_wrapper(optimizer):
     """
 
     @wraps(optimizer)
-    def discard_or_pass_through_loss_optimizer(loss_or_grads, params, discard_loss=True, *args, **kwargs):
+    def discard_or_pass_through_loss_optimizer(
+        loss_or_grads, params, discard_loss=True, *args, **kwargs
+    ):
         if isinstance(loss_or_grads, tuple):
             loss, grads = loss_or_grads
             updates = optimizer(loss_or_grads=grads, params=params, *args, **kwargs)
@@ -313,7 +315,7 @@ def _sgd(loss_or_grads=None, params=None, *, learning_rate=1e-3):
 
     for param, grad in zip(params, grads):
         updated_param = param - learning_rate * grad
-        updated_param.name = f'{param.name}__updated'
+        updated_param.name = f"{param.name}__updated"
         updates[param] = updated_param
 
     return updates
@@ -361,13 +363,15 @@ def apply_momentum(updates, params=None, momentum=0.9):
 
     for param in params:
         value = param.get_value(borrow=True)
-        velocity = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape, name='velocity')
+        velocity = pytensor.shared(
+            np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape, name="velocity"
+        )
 
         updated_param = momentum * velocity + updates[param]
-        updated_param.name = f'{param}__updated'
+        updated_param.name = f"{param}__updated"
 
         updated_velocity = updated_param - param
-        updated_velocity.name = 'velocity__updated'
+        updated_velocity.name = "velocity__updated"
 
         updates[velocity] = updated_velocity
         updates[param] = updated_param
@@ -483,10 +487,10 @@ def apply_nesterov_momentum(updates, params=None, momentum=0.9):
         velocity = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape)
 
         updated_velocity = momentum * velocity + updates[param] - param
-        updated_velocity.name = 'velocity__updated'
+        updated_velocity.name = "velocity__updated"
 
         updated_param = momentum * updated_velocity + updates[param]
-        updated_param.name = f'{param.name}__updated'
+        updated_param.name = f"{param.name}__updated"
 
         updates[velocity] = updated_velocity
         updates[param] = updated_param
@@ -556,7 +560,9 @@ def _nesterov_momentum(loss_or_grads=None, params=None, learning_rate=1e-3, mome
     return apply_nesterov_momentum(updates, momentum=momentum)
 
 
-nesterov_momentum = _partial_initialization_wrapper(_handle_loss_and_grad_input_wrapper(_nesterov_momentum))
+nesterov_momentum = _partial_initialization_wrapper(
+    _handle_loss_and_grad_input_wrapper(_nesterov_momentum)
+)
 
 
 def _adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
@@ -624,15 +630,18 @@ def _adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
-        accu = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape,
-                               name='gradient_squares')
-        accu_new = accu + grad ** 2
-        accu_new.name = 'gradient_squares__updated'
+        accu = pytensor.shared(
+            np.zeros(value.shape, dtype=value.dtype),
+            shape=param.type.shape,
+            name="gradient_squares",
+        )
+        accu_new = accu + grad**2
+        accu_new.name = "gradient_squares__updated"
 
         updates[accu] = accu_new
 
         updated_param = param - (learning_rate * grad / pt.sqrt(accu_new + epsilon))
-        updated_param.name = f'{param.name}__updated'
+        updated_param.name = f"{param.name}__updated"
 
         updates[param] = updated_param
 
@@ -667,19 +676,20 @@ def _adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilo
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
     for param, grad in zip(params, grads):
-        i = pytensor.shared(pm.floatX(0), name='window_idx')
+        i = pytensor.shared(pm.floatX(0), name="window_idx")
         i_int = i.astype("int32")
         value = param.get_value(borrow=True)
 
-        accu = pytensor.shared(np.zeros(value.shape + (n_win,), dtype=value.dtype),
-                               name='gradient_squares')
+        accu = pytensor.shared(
+            np.zeros(value.shape + (n_win,), dtype=value.dtype), name="gradient_squares"
+        )
 
         # Append squared gradient vector to accu_new
-        accu_new = pt.set_subtensor(accu[..., i_int], grad ** 2)
-        accu_new.name = 'gradient_squares__updated'
+        accu_new = pt.set_subtensor(accu[..., i_int], grad**2)
+        accu_new.name = "gradient_squares__updated"
 
         i_new = pt.switch((i + 1) < n_win, i + 1, 0)
-        i_new.name = 'window_idx__updated'
+        i_new.name = "window_idx__updated"
 
         updates[accu] = accu_new
         updates[i] = i_new
@@ -687,13 +697,15 @@ def _adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilo
         accu_sum = accu_new.sum(axis=-1)
 
         param_updated = param - (learning_rate * grad / pt.sqrt(accu_sum + epsilon))
-        param_updated.name = f'{param.name}__updated'
+        param_updated.name = f"{param.name}__updated"
         updates[param] = param_updated
 
     return updates
 
 
-adagrad_window = _partial_initialization_wrapper(_handle_loss_and_grad_input_wrapper(_adagrad_window))
+adagrad_window = _partial_initialization_wrapper(
+    _handle_loss_and_grad_input_wrapper(_adagrad_window)
+)
 
 
 def _rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon=1e-6):
@@ -765,16 +777,19 @@ def _rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilo
 
     for param, grad in zip(params, grads):
         value = param.get_value(borrow=True)
-        accu = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape,
-                               name='gradient_squares')
+        accu = pytensor.shared(
+            np.zeros(value.shape, dtype=value.dtype),
+            shape=param.type.shape,
+            name="gradient_squares",
+        )
 
-        accu_new = rho * accu + (one - rho) * grad ** 2
-        accu_new.name = 'gradient_squares__updated'
+        accu_new = rho * accu + (one - rho) * grad**2
+        accu_new.name = "gradient_squares__updated"
 
         updates[accu] = accu_new
 
         param_updated = param - (learning_rate * grad / pt.sqrt(accu_new + epsilon))
-        param_updated.name = f'{param.name}__updated'
+        param_updated.name = f"{param.name}__updated"
         updates[param] = param_updated
 
     return updates
@@ -863,15 +878,18 @@ def _adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsi
         value = param.get_value(borrow=True)
         # accu: accumulate gradient magnitudes
 
-        accu = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape,
-                               name='gradient_squares')
+        accu = pytensor.shared(
+            np.zeros(value.shape, dtype=value.dtype),
+            shape=param.type.shape,
+            name="gradient_squares",
+        )
         # delta_accu: accumulate update magnitudes (recursively!)
         delta_accu = pytensor.shared(
-            np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape, name=''
+            np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape, name=""
         )
 
         # update accu (as in rmsprop)
-        accu_new = rho * accu + (one - rho) * grad ** 2
+        accu_new = rho * accu + (one - rho) * grad**2
         updates[accu] = accu_new
 
         # compute parameter update, using the 'old' delta_accu
@@ -879,7 +897,7 @@ def _adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsi
         updates[param] = param - learning_rate * update
 
         # update delta_accu (as accu, but accumulating updates)
-        delta_accu_new = rho * delta_accu + (one - rho) * update ** 2
+        delta_accu_new = rho * delta_accu + (one - rho) * update**2
         updates[delta_accu] = delta_accu_new
 
     return updates
@@ -889,7 +907,7 @@ adadelta = _partial_initialization_wrapper(_handle_loss_and_grad_input_wrapper(_
 
 
 def _adam(
-        loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
+    loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
 ):
     """Adam updates
 
@@ -945,36 +963,40 @@ def _adam(
     True
     """
     all_grads = get_or_compute_grads(loss_or_grads, params)
-    t_prev = pytensor.shared(pm.pytensorf.floatX(0.0), name='t')
+    t_prev = pytensor.shared(pm.pytensorf.floatX(0.0), name="t")
     updates = OrderedDict()
 
     # Using pytensor constant to prevent upcasting of float32
     one = pt.constant(1)
 
     t = t_prev + 1
-    t.name = 't__updated'
-    a_t = learning_rate * pt.sqrt(one - beta2 ** t) / (one - beta1 ** t)
-    a_t.name = 'a'
+    t.name = "t__updated"
+    a_t = learning_rate * pt.sqrt(one - beta2**t) / (one - beta1**t)
+    a_t.name = "a"
 
     for param, g_t in zip(params, all_grads):
         name = param.name
         value = param.get_value(borrow=True)
-        m_prev = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape, name=f'{name}_m')
-        v_prev = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape, name=f'{name}_v')
+        m_prev = pytensor.shared(
+            np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape, name=f"{name}_m"
+        )
+        v_prev = pytensor.shared(
+            np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape, name=f"{name}_v"
+        )
 
         m_t = beta1 * m_prev + (one - beta1) * g_t
-        m_t.name = f'{name}_m__updated'
-        v_t = beta2 * v_prev + (one - beta2) * g_t ** 2
-        v_t.name = f'{name}_v__updated'
+        m_t.name = f"{name}_m__updated"
+        v_t = beta2 * v_prev + (one - beta2) * g_t**2
+        v_t.name = f"{name}_v__updated"
 
         step = a_t * m_t / (pt.sqrt(v_t) + epsilon)
-        step.name = f'{name}_step_size'
+        step.name = f"{name}_step_size"
 
         updates[m_prev] = m_t
         updates[v_prev] = v_t
 
         param_updated = param - step
-        param_updated.name = f'{name}__updated'
+        param_updated.name = f"{name}__updated"
         updates[param] = param_updated
 
     updates[t_prev] = t
@@ -985,7 +1007,7 @@ adam = _partial_initialization_wrapper(_handle_loss_and_grad_input_wrapper(_adam
 
 
 def _adamax(
-        loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9, beta2=0.999, epsilon=1e-8
+    loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9, beta2=0.999, epsilon=1e-8
 ):
     """Adamax updates
 
@@ -1038,38 +1060,42 @@ def _adamax(
     True
     """
     all_grads = get_or_compute_grads(loss_or_grads, params)
-    t_prev = pytensor.shared(pm.pytensorf.floatX(0.0), name='t')
+    t_prev = pytensor.shared(pm.pytensorf.floatX(0.0), name="t")
     updates = OrderedDict()
 
     # Using pytensor constant to prevent upcasting of float32
     one = pt.constant(1)
 
     t = t_prev + 1
-    t.name = 't__updated'
+    t.name = "t__updated"
 
-    a_t = learning_rate / (one - beta1 ** t)
-    a_t.name = 'a'
+    a_t = learning_rate / (one - beta1**t)
+    a_t.name = "a"
 
     for param, g_t in zip(params, all_grads):
         name = param.name
         value = param.get_value(borrow=True)
-        m_prev = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape, name=f'{name}_m')
-        u_prev = pytensor.shared(np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape, name=f'{name}_u')
+        m_prev = pytensor.shared(
+            np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape, name=f"{name}_m"
+        )
+        u_prev = pytensor.shared(
+            np.zeros(value.shape, dtype=value.dtype), shape=param.type.shape, name=f"{name}_u"
+        )
 
         m_t = beta1 * m_prev + (one - beta1) * g_t
-        m_t.name = f'{name}_m__updated'
+        m_t.name = f"{name}_m__updated"
 
         u_t = pt.maximum(beta2 * u_prev, abs(g_t))
-        u_t.name = f'{name}_u__updated'
+        u_t.name = f"{name}_u__updated"
 
         step = a_t * m_t / (u_t + epsilon)
-        step.name = f'{name}_step_size'
+        step.name = f"{name}_step_size"
 
         updates[m_prev] = m_t
         updates[u_prev] = u_t
 
         param_updated = param - step
-        param_updated.name = f'{name}__updated'
+        param_updated.name = f"{name}__updated"
         updates[param] = param_updated
 
     updates[t_prev] = t
@@ -1212,7 +1238,7 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7, return_norm=False
        learning with neural networks. In Advances in Neural Information
        Processing Systems (pp. 3104-3112).
     """
-    norm = pt.sqrt(sum(pt.sum(tensor ** 2) for tensor in tensor_vars))
+    norm = pt.sqrt(sum(pt.sum(tensor**2) for tensor in tensor_vars))
     dtype = np.dtype(pytensor.config.floatX).type
     target_norm = pt.clip(norm, 0, dtype(max_norm))
     multiplier = target_norm / (dtype(epsilon) + norm)
@@ -1250,11 +1276,11 @@ def _handle_time_updates(updates):
     old_values = list(updates.keys())
     old_names = [shared_var.name for shared_var in old_values]
 
-    t_idx = old_names.index('t') if 't' in old_names else None
+    t_idx = old_names.index("t") if "t" in old_names else None
     if t_idx is None:
-        t = pytensor.shared(pm.pytensorf.floatX(0.0), name='t')
+        t = pytensor.shared(pm.pytensorf.floatX(0.0), name="t")
         new_t = t + 1
-        new_t.name = 't__updated'
+        new_t.name = "t__updated"
     else:
         # If t is already present, we will reuse it, but we also need to delete it from the update dict temporarily.
         # We always want it to be the last update applied.
@@ -1265,8 +1291,13 @@ def _handle_time_updates(updates):
     return t, new_t
 
 
-def exponential_decay_scheduler(optimizer: Callable, decay_steps: int, decay_rate: float, min_lr: float = 1e-6,
-                                staircase: bool = False):
+def exponential_decay_scheduler(
+    optimizer: Callable,
+    decay_steps: int,
+    decay_rate: float,
+    min_lr: float = 1e-6,
+    staircase: bool = False,
+):
     """
     Returns a new optimizer that applies exponential decay to the learning rate.
 
@@ -1291,14 +1322,14 @@ def exponential_decay_scheduler(optimizer: Callable, decay_steps: int, decay_rat
         Optimizer with exponential decay applied to learning rate.
     """
     if not 0 < decay_rate <= 1:
-        raise ValueError('decay_rate must be between 0 and 1')
+        raise ValueError("decay_rate must be between 0 and 1")
 
     kwargs = optimizer.keywords
-    _initial_lr = pm.floatX(optimizer.keywords['learning_rate'])
+    _initial_lr = pm.floatX(optimizer.keywords["learning_rate"])
 
-    initial_lr = pt.constant(_initial_lr, name='initial_learning_rate')
-    shared_lr = _input_to_shared_variable(_initial_lr, 'learning_rate')
-    kwargs['learning_rate'] = shared_lr
+    initial_lr = pt.constant(_initial_lr, name="initial_learning_rate")
+    shared_lr = _input_to_shared_variable(_initial_lr, "learning_rate")
+    kwargs["learning_rate"] = shared_lr
 
     @wraps(optimizer)
     def optimizer_with_exponential_decay(loss_or_grads, params, *args, **kwargs):
@@ -1312,7 +1343,7 @@ def exponential_decay_scheduler(optimizer: Callable, decay_steps: int, decay_rat
 
         new_lr = pt.maximum(new_lr, min_lr)
 
-        new_lr.name = 'learning_rate__updated'
+        new_lr.name = "learning_rate__updated"
         updates[shared_lr] = new_lr
         updates[t] = new_t
 
@@ -1323,17 +1354,17 @@ def exponential_decay_scheduler(optimizer: Callable, decay_steps: int, decay_rat
 
 def reduce_lr_on_plateau_scheduler(optimizer, factor=0.1, patience=10, min_lr=1e-6, cooldown=0):
     kwargs = optimizer.keywords
-    _initial_lr = pm.floatX(optimizer.keywords['learning_rate'])
-    shared_lr = _input_to_shared_variable(_initial_lr, 'learning_rate')
-    kwargs['learning_rate'] = shared_lr
+    _initial_lr = pm.floatX(optimizer.keywords["learning_rate"])
+    shared_lr = _input_to_shared_variable(_initial_lr, "learning_rate")
+    kwargs["learning_rate"] = shared_lr
 
     @wraps(optimizer)
     def optimizer_with_reduce_lr_on_plateau(loss_or_grads, params, *args, **kwargs):
         updates, loss = optimizer(loss_or_grads, params, *args, discard_loss=False, **kwargs)
 
-        cooldown_counter = pytensor.shared(np.zeros((), dtype='int32'), name='cooldown_counter')
-        wait = pytensor.shared(np.zeros((), dtype='int32'), name='wait')
-        best_loss = pytensor.shared(np.inf, name='best_loss')
+        cooldown_counter = pytensor.shared(np.zeros((), dtype="int32"), name="cooldown_counter")
+        wait = pytensor.shared(np.zeros((), dtype="int32"), name="wait")
+        best_loss = pytensor.shared(np.inf, name="best_loss")
 
         loss_is_inf = pt.isinf(loss)
 
@@ -1341,47 +1372,53 @@ def reduce_lr_on_plateau_scheduler(optimizer, factor=0.1, patience=10, min_lr=1e
         improving_loss = pt.lt(loss, best_loss)
         patience_exceeded = pt.ge(wait, patience)
 
-        updated_best_loss = pt.switch(loss_is_inf,
-                                      best_loss,
-                                      pt.switch(improving_loss,
-                                                loss,
-                                                best_loss))
+        updated_best_loss = pt.switch(
+            loss_is_inf, best_loss, pt.switch(improving_loss, loss, best_loss)
+        )
 
-        updated_best_loss.name = 'best_loss__updated'
+        updated_best_loss.name = "best_loss__updated"
 
-        updated_cooldown_counter = pt.switch(loss_is_inf,
-                                             cooldown_counter,
-                                             pt.switch(in_cooldown,
-                                                       cooldown_counter - 1,
-                                                       pt.switch(improving_loss,
-                                                                 cooldown_counter,
-                                                                 pt.switch(patience_exceeded,
-                                                                           cooldown,
-                                                                           cooldown_counter))))
-        updated_cooldown_counter.name = 'cooldown_counter__updated'
+        updated_cooldown_counter = pt.switch(
+            loss_is_inf,
+            cooldown_counter,
+            pt.switch(
+                in_cooldown,
+                cooldown_counter - 1,
+                pt.switch(
+                    improving_loss,
+                    cooldown_counter,
+                    pt.switch(patience_exceeded, cooldown, cooldown_counter),
+                ),
+            ),
+        )
+        updated_cooldown_counter.name = "cooldown_counter__updated"
 
-        updated_lr = pt.switch(loss_is_inf,
-                           shared_lr,
-                           pt.switch(in_cooldown,
-                                     shared_lr,
-                                     pt.switch(improving_loss,
-                                               shared_lr,
-                                               pt.switch(patience_exceeded,
-                                                         pt.maximum(min_lr, shared_lr * factor),
-                                                         shared_lr))))
+        updated_lr = pt.switch(
+            loss_is_inf,
+            shared_lr,
+            pt.switch(
+                in_cooldown,
+                shared_lr,
+                pt.switch(
+                    improving_loss,
+                    shared_lr,
+                    pt.switch(patience_exceeded, pt.maximum(min_lr, shared_lr * factor), shared_lr),
+                ),
+            ),
+        )
 
-        updated_lr.name = 'learning_rate__updated'
+        updated_lr.name = "learning_rate__updated"
 
-        updated_wait = pt.switch(loss_is_inf,
-                              wait,
-                              pt.switch(in_cooldown,
-                                        0,
-                                        pt.switch(improving_loss,
-                                                  0,
-                                                  pt.switch(patience_exceeded,
-                                                            0,
-                                                            wait + 1))))
-        updated_wait.name = 'wait__updated'
+        updated_wait = pt.switch(
+            loss_is_inf,
+            wait,
+            pt.switch(
+                in_cooldown,
+                0,
+                pt.switch(improving_loss, 0, pt.switch(patience_exceeded, 0, wait + 1)),
+            ),
+        )
+        updated_wait.name = "wait__updated"
 
         updates[best_loss] = updated_best_loss
         updates[cooldown_counter] = updated_cooldown_counter

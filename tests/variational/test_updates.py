@@ -17,30 +17,44 @@ import pytensor
 import pytest
 
 import pymc as pm
+
 from pymc.variational.updates import (
     adadelta,
     adagrad,
     adagrad_window,
     adam,
     adamax,
+    exponential_decay_scheduler,
     momentum,
     nesterov_momentum,
+    reduce_lr_on_plateau_scheduler,
     rmsprop,
-    sgd, exponential_decay_scheduler, reduce_lr_on_plateau_scheduler,
+    sgd,
 )
 
-OPTIMIZERS = [sgd,
-              momentum,
-              nesterov_momentum,
-              adagrad,
-              rmsprop,
-              adadelta,
-              adam,
-              adamax,
-              adagrad_window]
+OPTIMIZERS = [
+    sgd,
+    momentum,
+    nesterov_momentum,
+    adagrad,
+    rmsprop,
+    adadelta,
+    adam,
+    adamax,
+    adagrad_window,
+]
 
-OPTIMIZER_NAMES = ["sgd", "momentum", "nesterov_momentum", "adagrad", "rmsprop",
-                   "adadelta", "adam", "adamax", "adagrad_window"]
+OPTIMIZER_NAMES = [
+    "sgd",
+    "momentum",
+    "nesterov_momentum",
+    "adagrad",
+    "rmsprop",
+    "adadelta",
+    "adam",
+    "adamax",
+    "adagrad_window",
+]
 
 _a = pytensor.shared(1.0)
 _b = _a * 2
@@ -105,7 +119,9 @@ def regression_model():
     y = intercept + coef * X + noise
 
     with pm.Model() as model:
-        a = pm.Normal("a", )
+        a = pm.Normal(
+            "a",
+        )
         b = pm.Normal("b")
 
         mu = a + b * X
@@ -114,20 +130,26 @@ def regression_model():
     return model
 
 
-SCHEDULER_PARAMS = [(1, 0.5, 1, 1e-8, False),
-                    (1, 0.5, 1, 1e-8, True),
-                    (1, 0.5, 2, 1e-8, False),
-                    (1, 0.5, 2, 1e-8, True)]
-SCHEDULER_IDS = [f"initial_lr={x[0]}, decay_rate={x[1]}, decay_steps={x[2]}, min_lr={x[3]}, staircase={x[4]}"
-                 for x in SCHEDULER_PARAMS]
+SCHEDULER_PARAMS = [
+    (1, 0.5, 1, 1e-8, False),
+    (1, 0.5, 1, 1e-8, True),
+    (1, 0.5, 2, 1e-8, False),
+    (1, 0.5, 2, 1e-8, True),
+]
+SCHEDULER_IDS = [
+    f"initial_lr={x[0]}, decay_rate={x[1]}, decay_steps={x[2]}, min_lr={x[3]}, staircase={x[4]}"
+    for x in SCHEDULER_PARAMS
+]
 
 
 @pytest.mark.parametrize("optimizer", OPTIMIZERS, ids=OPTIMIZER_NAMES)
-@pytest.mark.parametrize('scheduler_args', SCHEDULER_PARAMS, ids=SCHEDULER_IDS)
+@pytest.mark.parametrize("scheduler_args", SCHEDULER_PARAMS, ids=SCHEDULER_IDS)
 def test_exponential_decay_scheduler(regression_model, optimizer, scheduler_args):
     initial_lr, decay_rate, decay_steps, min_lr, staircase = scheduler_args
     opt = optimizer(learning_rate=initial_lr)
-    scheduled_optimizer = exponential_decay_scheduler(opt, decay_steps, decay_rate, min_lr, staircase)
+    scheduled_optimizer = exponential_decay_scheduler(
+        opt, decay_steps, decay_rate, min_lr, staircase
+    )
 
     with regression_model:
         advi = pm.ADVI()
@@ -139,15 +161,17 @@ def test_exponential_decay_scheduler(regression_model, optimizer, scheduler_args
     old_names = [x.name for x in inputs]
     new_names = [x.name for x in outputs]
 
-    assert all([expected_name in old_names for expected_name in ['learning_rate', 't']])
-    assert all([expected_name in new_names for expected_name in ['learning_rate__updated', 't__updated']])
+    assert all([expected_name in old_names for expected_name in ["learning_rate", "t"]])
+    assert all(
+        [expected_name in new_names for expected_name in ["learning_rate__updated", "t__updated"]]
+    )
 
-    lr_idx = old_names.index('learning_rate')
-    t_idx = old_names.index('t')
+    lr_idx = old_names.index("learning_rate")
+    t_idx = old_names.index("t")
 
-    step_func = pytensor.function([], [outputs[lr_idx], outputs[t_idx]],
-                                  updates=updates,
-                                  mode='FAST_COMPILE')
+    step_func = pytensor.function(
+        [], [outputs[lr_idx], outputs[t_idx]], updates=updates, mode="FAST_COMPILE"
+    )
 
     steps = np.vstack([step_func() for _ in range(10)])
 
@@ -156,7 +180,9 @@ def test_exponential_decay_scheduler(regression_model, optimizer, scheduler_args
 
     div_func = floor_div if staircase else np.divide
 
-    expected_decay = np.maximum(initial_lr * decay_rate ** (div_func(np.arange(10), decay_steps)), min_lr)
+    expected_decay = np.maximum(
+        initial_lr * decay_rate ** (div_func(np.arange(10), decay_steps)), min_lr
+    )
 
     np.testing.assert_allclose(steps[:, 0], expected_decay)
     np.testing.assert_allclose(steps[:, 1], np.arange(1, 11))
@@ -168,9 +194,9 @@ def test_reduce_lr_on_plateau_scheduler(regression_model):
     patience = 10
     min_lr = 1e-6
     cooldown = 10
-    scheduled_optimizer = reduce_lr_on_plateau_scheduler(opt,
-                                                         factor=factor, patience=patience,
-                                                         min_lr=min_lr, cooldown=cooldown)
+    scheduled_optimizer = reduce_lr_on_plateau_scheduler(
+        opt, factor=factor, patience=patience, min_lr=min_lr, cooldown=cooldown
+    )
     with regression_model:
         advi = pm.ADVI()
 
@@ -181,28 +207,32 @@ def test_reduce_lr_on_plateau_scheduler(regression_model):
         old_names = [x.name for x in inputs]
         new_names = [x.name for x in outputs]
 
-        expected_names = ['best_loss', 'cooldown_counter', 'wait', 'learning_rate']
+        expected_names = ["best_loss", "cooldown_counter", "wait", "learning_rate"]
 
         assert all([expected_name in old_names for expected_name in expected_names])
-        assert all([f'{expected_name}__updated' in new_names for expected_name in expected_names])
+        assert all([f"{expected_name}__updated" in new_names for expected_name in expected_names])
 
-        outputs_of_interest = [outputs[new_names.index(f'{expected_name}__updated')] for expected_name in
-                               expected_names]
+        outputs_of_interest = [
+            outputs[new_names.index(f"{expected_name}__updated")]
+            for expected_name in expected_names
+        ]
 
-        tracker = pm.callbacks.Tracker(best_loss=outputs_of_interest[0].eval,
-                                       cooldown_counter=outputs_of_interest[1].eval,
-                                       wait=outputs_of_interest[2].eval,
-                                       learning_rate=outputs_of_interest[3].eval)
+        tracker = pm.callbacks.Tracker(
+            best_loss=outputs_of_interest[0].eval,
+            cooldown_counter=outputs_of_interest[1].eval,
+            wait=outputs_of_interest[2].eval,
+            learning_rate=outputs_of_interest[3].eval,
+        )
         approx = advi.fit(1000, callbacks=[tracker], obj_optimizer=scheduled_optimizer)
 
     # Best loss only decreases
-    assert np.all(np.diff(np.stack(tracker.hist['best_loss'])) <= 0)
+    assert np.all(np.diff(np.stack(tracker.hist["best_loss"])) <= 0)
 
     # Learning_rate only decreases
-    assert np.all(np.diff(np.stack(tracker.hist['learning_rate'])) <= 0)
+    assert np.all(np.diff(np.stack(tracker.hist["learning_rate"])) <= 0)
 
     # Wait is never greater than patience
-    assert np.all(np.stack(tracker.hist['wait']) <= patience)
+    assert np.all(np.stack(tracker.hist["wait"]) <= patience)
 
     # Cooldown_counter is never greater than cooldown
-    assert np.all(np.stack(tracker.hist['cooldown_counter']) <= cooldown)
+    assert np.all(np.stack(tracker.hist["cooldown_counter"]) <= cooldown)
