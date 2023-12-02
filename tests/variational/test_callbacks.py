@@ -54,22 +54,19 @@ def test_tracker_callback():
         tracker(None, None, 1)
 
 
-@pytest.mark.parametrize(
-    "optimizer",
-    [
-        pm.sgd(learning_rate=0.1),
-        pm.momentum(learning_rate=0.1),
-        pm.nesterov_momentum(learning_rate=0.1),
-        pm.adagrad(learning_rate=0.1),
-        pm.rmsprop(learning_rate=0.1),
-        pm.adadelta(learning_rate=0.1),
-        pm.adam(learning_rate=0.1),
-        pm.adamax(learning_rate=0.1),
-    ],
-)
+OPTIMIZERS = [pm.sgd,
+              pm.momentum,
+              pm.nesterov_momentum,
+              pm.adagrad,
+              pm.rmsprop,
+              pm.adadelta,
+              pm.adam,
+              pm.adamax]
+
+@pytest.mark.parametrize("optimizer", OPTIMIZERS)
 def test_reduce_lr_on_plateau(optimizer):
     cb = pm.variational.callbacks.ReduceLROnPlateau(
-        optimizer=optimizer,
+        optimizer=optimizer(learning_rate=0.1),
         patience=1,
         min_lr=0.001,
     )
@@ -96,19 +93,7 @@ def test_reduce_lr_on_plateau(optimizer):
     assert cb.best == 0.9
 
 
-@pytest.mark.parametrize(
-    "optimizer",
-    [
-        pm.sgd(learning_rate=0.1),
-        pm.momentum(learning_rate=0.1),
-        pm.nesterov_momentum(learning_rate=0.1),
-        pm.adagrad(learning_rate=0.1),
-        pm.rmsprop(learning_rate=0.1),
-        pm.adadelta(learning_rate=0.1),
-        pm.adam(learning_rate=0.1),
-        pm.adamax(learning_rate=0.1),
-    ],
-)
+@pytest.mark.parametrize("optimizer", OPTIMIZERS)
 def test_exponential_decay(optimizer):
     cb = pm.variational.callbacks.ExponentialDecay(
         optimizer=optimizer,
@@ -125,3 +110,30 @@ def test_exponential_decay(optimizer):
     np.testing.assert_almost_equal(optimizer.keywords["learning_rate"], 0.001)
     cb(None, [float("inf"), 2, 2, 2, 2], 4)
     np.testing.assert_almost_equal(optimizer.keywords["learning_rate"], 0.001)
+
+
+def test_learning_rate_scheduler():
+    X = np.random.normal(size=(100, 5))
+    beta = np.random.normal(size=(5,))
+    alpha = np.random.normal()
+    noise = np.random.normal(size=(100,))
+    y = alpha + X @ beta + noise
+
+    optimizer = pm.sgd()
+    scheduler = pm.callbacks.ExponentialDecay(optimizer=optimizer, decay_steps=10, decay_rate=0.5)
+
+    with pm.Model() as mod:
+        b = pm.Normal('b', shape=(5,))
+        a = pm.Normal('a')
+        sigma = pm.HalfNormal('sigma')
+
+        mu = a + X @ b
+        y_hat = pm.Normal('y_hat', mu, sigma, observed=y)
+        advi = pm.ADVI(optimizer=optimizer)
+
+        tracker = pm.callbacks.Tracker(mean=advi.approx.mean.eval)
+        approx = advi.fit(100, callbacks=[scheduler, tracker])
+
+        mean_history = tracker['mean']
+
+
