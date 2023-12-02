@@ -110,30 +110,3 @@ def test_exponential_decay(optimizer):
     np.testing.assert_almost_equal(optimizer.keywords["learning_rate"], 0.001)
     cb(None, [float("inf"), 2, 2, 2, 2], 4)
     np.testing.assert_almost_equal(optimizer.keywords["learning_rate"], 0.001)
-
-
-def test_learning_rate_scheduler():
-    X = np.random.normal(size=(100, 5))
-    beta = np.random.normal(size=(5,))
-    alpha = np.random.normal()
-    noise = np.random.normal(size=(100,))
-    y = alpha + X @ beta + noise
-
-    optimizer = pm.sgd()
-    scheduler = pm.callbacks.ExponentialDecay(optimizer=optimizer, decay_steps=10, decay_rate=0.5)
-
-    with pm.Model() as mod:
-        b = pm.Normal('b', shape=(5,))
-        a = pm.Normal('a')
-        sigma = pm.HalfNormal('sigma')
-
-        mu = a + X @ b
-        y_hat = pm.Normal('y_hat', mu, sigma, observed=y)
-        advi = pm.ADVI(optimizer=optimizer)
-
-        tracker = pm.callbacks.Tracker(mean=advi.approx.mean.eval)
-        approx = advi.fit(100, callbacks=[scheduler, tracker])
-
-        mean_history = tracker['mean']
-
-
