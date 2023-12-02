@@ -110,7 +110,6 @@ Taken from the Lasagne project: http://lasagne.readthedocs.io/en/latest/
 """
 from collections import OrderedDict
 from functools import partial, wraps
-from typing import Callable
 
 import numpy as np
 import pytensor
@@ -1292,7 +1291,7 @@ def _handle_time_updates(updates):
 
 
 def exponential_decay_scheduler(
-    optimizer: Callable,
+    optimizer: partial,
     decay_steps: int,
     decay_rate: float,
     min_lr: float = 1e-6,
