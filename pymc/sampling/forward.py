@@ -115,7 +115,7 @@ def compile_forward_sampling_function(
 
     Concretely, this function can be used to compile a function to sample from the
     posterior predictive distribution of a model that has variables that are conditioned
-    on ``MutableData`` instances. The variables that depend on the mutable data that have changed
+    on ``Data`` instances. The variables that depend on the mutable data that have changed
     will be considered volatile, and as such, they wont be included as inputs into the compiled
     function. This means that if they have values stored in the posterior, these values will be
     ignored and new values will be computed (in the case of deterministics and potentials) or
@@ -147,8 +147,8 @@ def compile_forward_sampling_function(
         in the compiled function. The types of the key and value should match or an error will be
         raised during compilation.
     constant_data : Optional[Dict[str, numpy.ndarray]]
-        A dictionary that maps the names of ``MutableData`` or ``ConstantData`` instances to their
-        corresponding values at inference time. If a model was created with ``MutableData``, these
+        A dictionary that maps the names of ``Data`` instances to their
+        corresponding values at inference time. If a model was created with ``Data``, these
         are stored as ``SharedVariable`` with the name of the data variable and a value equal to
         the initial data. At inference time, this information is stored in ``InferenceData``
         objects under the ``constant_data`` group, which allows us to check whether a

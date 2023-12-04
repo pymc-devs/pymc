@@ -199,10 +199,10 @@ class TestData(BaseTestStrAndLatexRepr):
             import pymc as pm
 
             with pm.Model() as model:
-                a = pm.Normal("a", pm.MutableData("a_data", (2,)))
-                b = pm.Normal("b", pm.MutableData("b_data", (2, 3)))
-                c = pm.Normal("c", pm.ConstantData("c_data", (2,)))
-                d = pm.Normal("d", pm.ConstantData("d_data", (2, 3)))
+                a = pm.Normal("a", pm.Data("a_data", (2,)))
+                b = pm.Normal("b", pm.Data("b_data", (2, 3)))
+                c = pm.Normal("c", pm.Data("c_data", (2,)))
+                d = pm.Normal("d", pm.Data("d_data", (2, 3)))
 
         self.distributions = [a, b, c, d]
         # tuples of (formatting, include_params)
@@ -212,7 +212,7 @@ class TestData(BaseTestStrAndLatexRepr):
                 r"a ~ Normal(2, 1)",
                 r"b ~ Normal(<shared>, 1)",
                 r"c ~ Normal(2, 1)",
-                r"d ~ Normal(<constant>, 1)",
+                r"d ~ Normal(<shared>, 1)",
             ],
             ("plain", False): [
                 r"a ~ Normal",
@@ -224,7 +224,7 @@ class TestData(BaseTestStrAndLatexRepr):
                 r"$\text{a} \sim \operatorname{Normal}(2,~1)$",
                 r"$\text{b} \sim \operatorname{Normal}(\text{<shared>},~1)$",
                 r"$\text{c} \sim \operatorname{Normal}(2,~1)$",
-                r"$\text{d} \sim \operatorname{Normal}(\text{<constant>},~1)$",
+                r"$\text{d} \sim \operatorname{Normal}(\text{<shared>},~1)$",
             ],
             ("latex", False): [
                 r"$\text{a} \sim \operatorname{Normal}$",
