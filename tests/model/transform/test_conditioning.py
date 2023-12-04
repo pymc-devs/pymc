@@ -132,7 +132,7 @@ def test_do():
 
     # Test two substitutions
     with m_old:
-        switch = pm.MutableData("switch", 1)
+        switch = pm.Data("switch", 1)
     m_new = do(m_old, {y: 100 * switch, x: 100 * switch})
 
     assert len(m_new.free_RVs) == 1
@@ -213,8 +213,8 @@ def test_do_dims():
 @pytest.mark.parametrize("prune", (False, True))
 def test_do_prune(prune):
     with pm.Model() as m:
-        x0 = pm.ConstantData("x0", 0)
-        x1 = pm.ConstantData("x1", 0)
+        x0 = pm.Data("x0", 0)
+        x1 = pm.Data("x1", 0)
         y = pm.Normal("y")
         y_det = pm.Deterministic("y_det", y + x0)
         z = pm.Normal("z", y_det)

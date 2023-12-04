@@ -515,6 +515,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self.name = self._validate_name(name)
         self.check_bounds = check_bounds
 
+        if coords_mutable is not None:
+            warnings.warn(
+                "All coords are now mutable by default. coords_mutable will be removed in a future release.",
+                FutureWarning,
+            )
+
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
             self.named_vars_to_dims = treedict(parent=self.parent.named_vars_to_dims)
@@ -951,7 +957,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         name: str,
         values: Optional[Sequence] = None,
-        mutable: bool = False,
+        mutable: Optional[bool] = None,
         *,
         length: Optional[Union[int, Variable]] = None,
     ):
@@ -972,6 +978,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
             A scalar of the dimensions length.
             Defaults to ``pytensor.tensor.constant(len(values))``.
         """
+        if mutable is not None:
+            warnings.warn(
+                "Coords are now always mutable. Specifying `mutable` will raise an error in a future release",
+                FutureWarning,
+            )
+
         if name in {"draw", "chain", "__sample__"}:
             raise ValueError(
                 "Dimensions can not be named `draw`, `chain` or `__sample__`, "
@@ -995,10 +1007,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if length is None:
             length = len(values)
         if not isinstance(length, Variable):
-            if mutable:
-                length = pytensor.shared(length, name=name)
-            else:
-                length = pytensor.tensor.constant(length)
+            length = pytensor.shared(length, name=name)
         assert length.type.ndim == 0
         self._dim_lengths[name] = length
         self._coords[name] = values
@@ -1029,8 +1038,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         coord_values : array_like, optional
             Optional sequence of coordinate values.
         """
-        if not isinstance(self.dim_lengths[name], SharedVariable):
-            raise ValueError(f"The dimension '{name}' is immutable.")
         if coord_values is None and self.coords.get(name, None) is not None:
             raise ValueError(
                 f"'{name}' has coord values. Pass `set_dim(..., coord_values=...)` to update them."
@@ -1079,7 +1086,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
     ):
         """Changes the values of a data variable in the model.
 
-        In contrast to pm.MutableData().set_value, this method can also
+        In contrast to pm.Data().set_value, this method can also
         update the corresponding coordinates.
 
         Parameters
@@ -1097,7 +1104,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if not isinstance(shared_object, SharedVariable):
             raise TypeError(
                 f"The variable `{name}` must be a `SharedVariable`"
-                " (created through `pm.MutableData()` or `pm.Data(mutable=True)`) to allow updating. "
+                " (created through `pm.Data()` or `pm.Data(mutable=True)`) to allow updating. "
                 f"The current type is: {type(shared_object)}"
             )
 
@@ -1114,7 +1121,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         for d, dname in enumerate(dims):
             length_tensor = self.dim_lengths[dname]
-            old_length = length_tensor.eval()
+            with pytensor.config.change_flags(cxx=""):
+                old_length = length_tensor.eval()
             new_length = values.shape[d]
             original_coords = self.coords.get(dname, None)
             new_coords = coords.get(dname, None)
@@ -1122,7 +1130,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             length_changed = new_length != old_length
 
             # Reject resizing if we already know that it would create shape problems.
-            # NOTE: If there are multiple pm.MutableData containers sharing this dim, but the user only
+            # NOTE: If there are multiple pm.Data containers sharing this dim, but the user only
             #       changes the values for one of them, they will run into shape problems nonetheless.
             if length_changed:
                 if original_coords is not None:
@@ -1984,8 +1992,8 @@ def set_data(new_data, model=None, *, coords=None):
         import pymc as pm
 
         with pm.Model() as model:
-            x = pm.MutableData('x', [1., 2., 3.])
-            y = pm.MutableData('y', [1., 2., 3.])
+            x = pm.Data('x', [1., 2., 3.])
+            y = pm.Data('y', [1., 2., 3.])
             beta = pm.Normal('beta', 0, 1)
             obs = pm.Normal('obs', x * beta, 1, observed=y, shape=x.shape)
             idata = pm.sample()
@@ -2014,7 +2022,7 @@ def set_data(new_data, model=None, *, coords=None):
         data = rng.normal(loc=1.0, scale=2.0, size=100)
 
         with pm.Model() as model:
-            y = pm.MutableData('y', data)
+            y = pm.Data('y', data)
             theta = pm.Normal('theta', mu=0.0, sigma=10.0)
             obs = pm.Normal('obs', theta, 2.0, observed=y, shape=y.shape)
             idata = pm.sample()

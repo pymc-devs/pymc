@@ -182,8 +182,7 @@ def fgraph_from_model(
         for named_val in named_value_vars:
             idx = value_vars.index(named_val)
             value_vars[idx] = named_val
-    # Other variables that are in named_vars but are not any of the categories above
-    # E.g., MutableData, ConstantData, _dim_lengths
+    # Other variables that are in named_vars but are not any of the categories above (e.g., Data)
     # We use the same trick as deterministics!
     accounted_for = set(free_rvs + observed_rvs + potentials + old_deterministics + old_value_vars)
     other_named_vars = [
@@ -200,8 +199,8 @@ def fgraph_from_model(
 
     # Replace the following shared variables in the model:
     # 1. RNGs
-    # 2. MutableData (could increase memory usage significantly)
-    # 3. Mutable coords dim lengths
+    # 2. Data (could increase memory usage significantly)
+    # 3. Symbolic coords dim lengths
     shared_vars_to_copy = find_rng_nodes(model_vars)
     shared_vars_to_copy += [v for v in model.dim_lengths.values() if isinstance(v, SharedVariable)]
     shared_vars_to_copy += [v for v in model.named_vars.values() if isinstance(v, SharedVariable)]
