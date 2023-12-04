@@ -96,6 +96,7 @@ jobs:
             tests/model/test_fgraph.py
             tests/model/transform/test_basic.py
             tests/model/transform/test_conditioning.py
+            tests/model/transform/test_optimization.py
             tests/test_model_graph.py
             tests/ode/test_ode.py
             tests/ode/test_utils.py
