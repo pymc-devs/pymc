@@ -612,6 +612,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
         sum: bool = True,
+        **compile_kwargs,
     ) -> PointFunc:
         """Compiled log probability density function.
 
@@ -626,12 +627,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Whether to sum all logp terms or return elemwise logp for each variable.
             Defaults to True.
         """
-        return self.compile_fn(self.logp(vars=vars, jacobian=jacobian, sum=sum))
+        return self.compile_fn(self.logp(vars=vars, jacobian=jacobian, sum=sum), **compile_kwargs)
 
     def compile_dlogp(
         self,
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
+        **compile_kwargs,
     ) -> PointFunc:
         """Compiled log probability density gradient function.
 
@@ -643,12 +645,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.compile_fn(self.dlogp(vars=vars, jacobian=jacobian))
+        return self.compile_fn(self.dlogp(vars=vars, jacobian=jacobian), **compile_kwargs)
 
     def compile_d2logp(
         self,
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
+        **compile_kwargs,
     ) -> PointFunc:
         """Compiled log probability density hessian function.
 
@@ -660,7 +663,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.compile_fn(self.d2logp(vars=vars, jacobian=jacobian))
+        return self.compile_fn(self.d2logp(vars=vars, jacobian=jacobian), **compile_kwargs)
 
     def logp(
         self,
