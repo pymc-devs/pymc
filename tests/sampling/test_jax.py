@@ -185,7 +185,7 @@ def test_get_log_likelihood():
     b_true = trace.log_likelihood.b.values
     a = np.array(trace.posterior.a)
     sigma_log_ = np.log(np.array(trace.posterior.sigma))
-    b_jax = _get_log_likelihood(model, [a, sigma_log_])["b"]
+    b_jax = _get_log_likelihood(model, {"a": a, "sigma_log__": sigma_log_})["b"]
 
     assert np.allclose(b_jax.reshape(-1), b_true.reshape(-1))
 
@@ -215,7 +215,7 @@ def test_get_jaxified_logp():
 
     jax_fn = get_jaxified_logp(m)
     # This would underflow if not optimized
-    assert not np.isinf(jax_fn((np.array(5000.0), np.array(5000.0))))
+    assert not np.isinf(jax_fn(dict(x=np.array(5000.0), y=np.array(5000.0))))
 
 
 @pytest.fixture(scope="module")
@@ -302,19 +302,19 @@ def test_get_batched_jittered_initial_points():
     ips = _get_batched_jittered_initial_points(
         model=model, chains=1, random_seed=1, initvals=None, jitter=False
     )
-    assert np.all(ips[0] == 0)
+    assert np.all(ips["x"] == 0)
 
     # Single chain
     ips = _get_batched_jittered_initial_points(model=model, chains=1, random_seed=1, initvals=None)
 
-    assert ips[0].shape == (2, 3)
-    assert np.all(ips[0] != 0)
+    assert ips["x"].shape == (2, 3)
+    assert np.all(ips["x"] != 0)
 
     # Multiple chains
     ips = _get_batched_jittered_initial_points(model=model, chains=2, random_seed=1, initvals=None)
 
-    assert ips[0].shape == (2, 2, 3)
-    assert np.all(ips[0][0] != ips[0][1])
+    assert ips["x"].shape == (2, 2, 3)
+    assert np.all(ips["x"][0] != ips["x"][1])
 
 
 @pytest.mark.parametrize(
