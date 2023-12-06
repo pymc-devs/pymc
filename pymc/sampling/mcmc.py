@@ -380,6 +380,9 @@ def _sample_external_nuts(
             idata_kwargs=idata_kwargs,
             **nuts_sampler_kwargs,
         )
+        warns = run_convergence_checks(idata, model)
+        log_warnings(warns)
+
         return idata
 
     else:
