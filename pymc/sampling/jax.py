@@ -43,7 +43,7 @@ from pymc.backends.arviz import (
     find_observations,
 )
 from pymc.distributions.multivariate import PosDefMatrix
-from pymc.initial_point import StartDict
+from pymc.initial_point import PointType, StartDict
 from pymc.logprob.utils import CheckParameterValue
 from pymc.sampling.mcmc import _init_jitter
 from pymc.util import (
@@ -144,14 +144,16 @@ def get_jaxified_graph(
     return jax_funcify(fgraph)
 
 
-def get_jaxified_logp(model: Model, negative_logp=True) -> Callable:
+def get_jaxified_logp(model: Model, negative_logp=True) -> Callable[[PointType], jnp.ndarray]:
     model_logp = model.logp()
     if not negative_logp:
         model_logp = -model_logp
     logp_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[model_logp])
+    names = [v.name for v in model.value_vars]
 
-    def logp_fn_wrap(x):
-        return logp_fn(*x)[0]
+    def logp_fn_wrap(x: PointType) -> jnp.ndarray:
+        p = [x[n] for n in names]
+        return logp_fn(*p)[0]
 
     return logp_fn_wrap
 
@@ -182,22 +184,22 @@ def _device_put(input, device: str):
 
 
 def _postprocess_samples(
-    jax_fn: Callable,
-    raw_mcmc_samples: List[TensorVariable],
+    jax_fn: Callable[[PointType], List[jnp.ndarray]],
+    raw_mcmc_samples: PointType,
     postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
-) -> List[TensorVariable]:
+) -> List[jnp.ndarray]:
     if postprocessing_vectorize == "scan":
-        t_raw_mcmc_samples = [jnp.swapaxes(t, 0, 1) for t in raw_mcmc_samples]
+        t_raw_mcmc_samples = {t: jnp.swapaxes(a, 0, 1) for t, a in raw_mcmc_samples.items()}
         jax_vfn = jax.vmap(jax_fn)
         _, outs = scan(
-            lambda _, x: ((), jax_vfn(*x)),
+            lambda _, x: ((), jax_vfn(x)),
             (),
             _device_put(t_raw_mcmc_samples, postprocessing_backend),
         )
         return [jnp.swapaxes(t, 0, 1) for t in outs]
     elif postprocessing_vectorize == "vmap":
-        return jax.vmap(jax.vmap(jax_fn))(*_device_put(raw_mcmc_samples, postprocessing_backend))
+        return jax.vmap(jax.vmap(jax_fn))(_device_put(raw_mcmc_samples, postprocessing_backend))
     else:
         raise ValueError(f"Unrecognized postprocessing_vectorize: {postprocessing_vectorize}")
 
@@ -238,17 +240,46 @@ def _blackjax_stats_to_dict(sample_stats, potential_energy) -> Dict:
 
 def _get_log_likelihood(
     model: Model,
-    samples,
+    samples: PointType,
     backend: Optional[Literal["cpu", "gpu"]] = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
-) -> Dict:
+) -> Dict[str, jnp.ndarray]:
     """Compute log-likelihood for all observations"""
     elemwise_logp = model.logp(model.observed_RVs, sum=False)
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=elemwise_logp)
+    names = [v.name for v in model.value_vars]
+
+    def jax_fn_wrap(x: PointType) -> List[jnp.ndarray]:
+        p = [x[n] for n in names]
+        return jax_fn(*p)
+
     result = _postprocess_samples(
-        jax_fn, samples, backend, postprocessing_vectorize=postprocessing_vectorize
+        jax_fn_wrap, samples, backend, postprocessing_vectorize=postprocessing_vectorize
     )
     return {v.name: r for v, r in zip(model.observed_RVs, result)}
+
+
+def _get_transformed_values(
+    model: Model,
+    samples: PointType,
+    vars_to_sample: List[str],
+    backend: Optional[Literal["cpu", "gpu"]] = None,
+    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
+) -> Dict[str, jnp.ndarray]:
+    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
+    names = [v.name for v in model.value_vars]
+
+    def jax_fn_wrap(x: PointType) -> List[jnp.ndarray]:
+        p = [x[n] for n in names]
+        return jax_fn(*p)
+
+    result = _postprocess_samples(
+        jax_fn_wrap,
+        samples,
+        postprocessing_backend=backend,
+        postprocessing_vectorize=postprocessing_vectorize,
+    )
+    return {v.name: r for v, r in zip(vars_to_sample, result)}
 
 
 def _get_batched_jittered_initial_points(
@@ -258,7 +289,7 @@ def _get_batched_jittered_initial_points(
     random_seed: RandomSeed,
     jitter: bool = True,
     jitter_max_retries: int = 10,
-) -> Union[np.ndarray, List[np.ndarray]]:
+) -> Dict[str, np.ndarray]:
     """Get jittered initial point in format expected by NumPyro MCMC kernel
 
     Returns
@@ -275,10 +306,10 @@ def _get_batched_jittered_initial_points(
         jitter=jitter,
         jitter_max_retries=jitter_max_retries,
     )
-    initial_points_values = [list(initial_point.values()) for initial_point in initial_points]
     if chains == 1:
-        return initial_points_values[0]
-    return [np.stack(init_state) for init_state in zip(*initial_points_values)]
+        return initial_points[0]
+    else:
+        return {k: np.stack([ip[k] for ip in initial_points]) for k in initial_points[0].keys()}
 
 
 def _update_coords_and_dims(
@@ -420,7 +451,12 @@ def sample_blackjax_nuts(
     if var_names is None:
         var_names = model.unobserved_value_vars
 
-    vars_to_sample = list(get_default_varnames(var_names, include_transformed=keep_untransformed))
+    vars_to_sample = list(
+        get_default_varnames(
+            var_names,
+            include_transformed=keep_untransformed,
+        )
+    )
 
     (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
@@ -435,7 +471,7 @@ def sample_blackjax_nuts(
     )
 
     if chains == 1:
-        init_params = [np.stack(init_state) for init_state in zip(init_params)]
+        init_params = {k: np.stack([v]) for k, v in init_params.items()}
 
     logprob_fn = get_jaxified_logp(model)
 
@@ -485,14 +521,14 @@ def sample_blackjax_nuts(
     logger.info(f"Sampling time = {tic3 - tic2}")
 
     logger.info("Transforming variables...")
-    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
-    result = _postprocess_samples(
-        jax_fn,
-        raw_mcmc_samples,
-        postprocessing_backend=postprocessing_backend,
+
+    mcmc_samples = _get_transformed_values(
+        model=model,
+        vars_to_sample=vars_to_sample,
+        samples=raw_mcmc_samples,
+        backend=postprocessing_backend,
         postprocessing_vectorize=postprocessing_vectorize,
     )
-    mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
     mcmc_stats = _blackjax_stats_to_dict(stats, potential_energy)
     tic4 = datetime.now()
     logger.info(f"Transformation time = {tic4 - tic3}")
@@ -713,14 +749,13 @@ def sample_numpyro_nuts(
     logger.info(f"Sampling time = {tic3 - tic2}")
 
     logger.info("Transforming variables...")
-    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
-    result = _postprocess_samples(
-        jax_fn,
-        raw_mcmc_samples,
-        postprocessing_backend=postprocessing_backend,
+    mcmc_samples = _get_transformed_values(
+        model=model,
+        vars_to_sample=vars_to_sample,
+        samples=raw_mcmc_samples,
+        backend=postprocessing_backend,
         postprocessing_vectorize=postprocessing_vectorize,
     )
-    mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
 
     tic4 = datetime.now()
     logger.info(f"Transformation time = {tic4 - tic3}")

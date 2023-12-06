@@ -459,3 +459,22 @@ def test_idata_contains_stats(sampler_name: str):
     for stat_var, stat_var_dims in stat_vars.items():
         assert stat_var in stats.variables
         assert stats.get(stat_var).values.shape == stat_var_dims
+
+
+def test_sample_numpyro_nuts_block_adapt():
+    with pm.Model(
+        coords=dict(level=["Basement", "Floor"], county=[1, 2]),
+    ) as model:
+        # multilevel modelling
+        a = pm.Normal("a")
+        s = pm.HalfNormal("s")
+        a_g = pm.Normal("a_g", a, s, dims="level")
+        s_g = pm.HalfNormal("s_g")
+        a_ig = pm.Normal("a_ig", a_g, s_g, dims=("county", "level"))
+        trace = sample_numpyro_nuts(
+            nuts_kwargs=dict(
+                dense_mass=[
+                    ("a", "a_g"),
+                ]
+            )
+        )
