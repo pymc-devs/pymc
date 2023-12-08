@@ -44,7 +44,7 @@ import pytensor
 from pytensor import Variable
 from pytensor import tensor as pt
 from pytensor.graph import Apply, Op, node_rewriter
-from pytensor.graph.basic import walk
+from pytensor.graph.basic import Constant, clone_get_equiv, graph_inputs, walk
 from pytensor.graph.op import HasInnerGraph
 from pytensor.link.c.type import CType
 from pytensor.raise_op import CheckAndRaise
@@ -76,6 +76,18 @@ def replace_rvs_by_values(
     rvs_to_transforms, optional
         Mapping between the original graph RVs and respective value transforms
     """
+
+    if rvs_to_transforms:
+        # Conditional transforms like Interval can reference variables in the original RV graph
+        # To avoid mutating the original graphs in place, we have to clone them
+        inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
+        equiv = clone_get_equiv(inputs, graphs, False, False)
+
+        graphs = [equiv[g] for g in graphs]
+        rvs_to_values = {equiv.get(rv, rv): value for rv, value in rvs_to_values.items()}
+        rvs_to_transforms = {
+            equiv.get(rv, rv): transform for rv, transform in rvs_to_transforms.items()
+        }
 
     replacements = {}
 

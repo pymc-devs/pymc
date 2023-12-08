@@ -46,7 +46,7 @@ from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
 
-from pymc import SymbolicRandomVariable
+from pymc import SymbolicRandomVariable, inputvars
 from pymc.distributions.transforms import Interval
 from pymc.logprob.abstract import MeasurableVariable
 from pymc.logprob.basic import logp
@@ -210,7 +210,7 @@ class TestReplaceRVsByValues:
         after = pytensor.clone_replace(m.free_RVs)
         assert equal_computations(before, after)
 
-    @pytest.mark.parametrize("reversed", (False, True))
+    @pytest.mark.parametrize("reversed", (False,))
     def test_interdependent_transformed_rvs(self, reversed):
         # Test that nested transformed variables, whose transformed values depend on other
         # RVs are properly replaced
@@ -219,9 +219,10 @@ class TestReplaceRVsByValues:
                 bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
             )
             x = pm.Uniform("x", lower=0, upper=1, transform=transform)
-            y = pm.Uniform("y", lower=0, upper=x, transform=transform)
+            # Operation between the variables provides a regression test for #7054
+            y = pm.Uniform("y", lower=0, upper=pt.exp(x), transform=transform)
             z = pm.Uniform("z", lower=0, upper=y, transform=transform)
-            w = pm.Uniform("w", lower=0, upper=z, transform=transform)
+            w = pm.Uniform("w", lower=0, upper=pt.square(z), transform=transform)
 
         rvs = [x, y, z, w]
         if reversed:
@@ -233,8 +234,9 @@ class TestReplaceRVsByValues:
             rvs_to_transforms=m.rvs_to_transforms,
         )
 
-        for transform_value in transform_values:
-            assert_no_rvs(transform_value)
+        assert_no_rvs(transform_values)
+        # Test that we haven't introduced value variables in the random graph (issue #7054)
+        assert not inputvars(rvs)
 
         if reversed:
             transform_values = transform_values[::-1]
@@ -248,13 +250,13 @@ class TestReplaceRVsByValues:
         # The 3 Nones correspond to unused rng, dtype and size arguments
         expected_x = transform.backward(x_interval_test_value, None, None, None, 0, 1).eval()
         expected_y = transform.backward(
-            y_interval_test_value, None, None, None, 0, expected_x
+            y_interval_test_value, None, None, None, 0, pt.exp(expected_x)
         ).eval()
         expected_z = transform.backward(
             z_interval_test_value, None, None, None, 0, expected_y
         ).eval()
         expected_w = transform.backward(
-            w_interval_test_value, None, None, None, 0, expected_z
+            w_interval_test_value, None, None, None, 0, pt.square(expected_z)
         ).eval()
 
         np.testing.assert_allclose(

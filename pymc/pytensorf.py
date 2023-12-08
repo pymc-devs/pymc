@@ -212,9 +212,10 @@ def replace_vars_in_graphs(
 ) -> List[Variable]:
     """Replace variables in graphs.
 
-    Graphs are cloned and not modified in place.
+    Graphs are cloned and not modified in place, unless the replacement expressions include variables from the original graphs.
+
     """
-    # Clone graph and get equivalences
+    # Clone graphs and get equivalences
     inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
     equiv = {k: k for k in replacements.keys()}
     equiv = clone_get_equiv(inputs, graphs, False, False, equiv)
@@ -1064,7 +1065,7 @@ def as_symbolic_string(x, **kwargs):
 def toposort_replace(
     fgraph: FunctionGraph, replacements: Sequence[Tuple[Variable, Variable]], reverse: bool = False
 ) -> None:
-    """Replace multiple variables in topological order."""
+    """Replace multiple variables in place in topological order."""
     toposort = fgraph.toposort()
     sorted_replacements = sorted(
         replacements,
