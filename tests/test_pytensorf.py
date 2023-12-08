@@ -23,6 +23,7 @@ import pytest
 import scipy.sparse as sps
 
 from pytensor import scan, shared
+from pytensor.compile import UnusedInputError
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable
 from pytensor.tensor.random.basic import normal, uniform
@@ -670,11 +671,63 @@ def test_replace_vars_in_graphs():
     inp = shared(0.0, name="inp")
     x = pm.Normal.dist(inp)
 
-    assert x.eval() < 50
-
-    new_inp = inp + 100
-
-    replacements = {x.owner.inputs[3]: new_inp}
+    replacements = {inp: inp + 100}
     [new_x] = replace_vars_in_graphs([x], replacements=replacements)
 
+    assert x.eval() < 50
     assert new_x.eval() > 50
+
+
+def test_replace_vars_in_graphs_nested_reference():
+    # Replace both `x` and `y`, where the replacement of y references `x`
+    x = pm.HalfNormal.dist(1e-3, name="x")
+    neg_x = -x
+    y = pm.Uniform.dist(neg_x, x, name="y")
+    x_value = x.clone()
+    y_value = y.clone()
+    replacements = {x: x_value, y: neg_x + y_value}
+    [new_x, new_y] = replace_vars_in_graphs([x, y], replacements=replacements)
+    assert new_x.eval({x_value: 100}) == 100
+    assert new_y.eval({x_value: 100, y_value: 1}) == -99
+    assert new_y.eval({neg_x: 100, y_value: 1}) == 101
+    assert np.abs(x.eval()) < 1
+    # Confirm the original `y` variable is changed in place
+    # This is unavoidable if we want to respect the identity of the replacement variables
+    # As when imputing `neg_x` and `x` while evaluating `new_y` above and below.
+    assert np.abs(y.eval({x_value: 100})) > 1
+
+    # Only replace `y`, same replacement as before
+    x = pm.HalfNormal.dist(1e-3, name="x")
+    neg_x = -x
+    y = pm.Uniform.dist(neg_x, x, name="y")
+    y_value = y.clone()
+    replacements = {y: neg_x + y_value}
+    [new_y] = replace_vars_in_graphs([y], replacements=replacements)
+    assert np.abs(new_y.eval({y_value: 0})) < 1
+    # Confirm that `x` and `neg_x` are still in the graph of `new_y` and that we can impute either
+    assert new_y.eval({x: 100, y_value: 1}) == -99
+    assert new_y.eval({neg_x: 100, y_value: 1}) == 101
+    assert np.abs(x.eval()) < 1
+    # In this case the original `y` is not altered, because we did not replace `x`
+    assert np.abs(y.eval()) < 1
+
+    # Replacement introduces equivalent but not identical operations
+    x = pm.HalfNormal.dist(1e-3, name="x")
+    neg_x = -x
+    neg_x.name = "neg_x"
+    y = pm.Uniform.dist(neg_x, x, name="y")
+    x_value = x.clone()
+    y_value = y.clone()
+    # We clone neg_x!
+    replacements = {x: x_value, y: neg_x.owner.clone().outputs[0] + y_value}
+    [new_x, new_y] = replace_vars_in_graphs([x, y], replacements=replacements)
+    assert new_x.eval({x_value: 100}) == 100
+    assert new_y.eval({x_value: 100, y_value: 1}) == -99
+    # This now fails because the original `neg_x` is not in the replaced graph!
+    with pytest.raises(UnusedInputError, match="neg_x"):
+        new_y.eval({neg_x: 100, y_value: 1})
+    # We can retrieve the cloned variable by name
+    assert new_y.eval({"neg_x": 100, y_value: 1}) == 101
+    assert np.abs(x.eval()) < 1
+    # Confirm the original `y` variable is not changed in place
+    assert np.abs(y.eval()) < 1
