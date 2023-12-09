@@ -17,6 +17,7 @@ import warnings
 
 from collections import Counter
 from functools import reduce
+from math import ceil
 from operator import add, mul
 from typing import Any, Callable, List, Optional, Sequence, Union
 
@@ -564,6 +565,10 @@ class Stationary(Covariance):
     def power_spectral_density(self, omega: TensorLike) -> TensorVariable:
         raise NotImplementedError
 
+    @staticmethod
+    def required_num_eigenvectors(L: float, ls: float) -> int:
+        raise NotImplementedError
+
 
 class ExpQuad(Stationary):
     r"""
@@ -594,6 +599,28 @@ class ExpQuad(Stationary):
         c = pt.power(pt.sqrt(2.0 * np.pi), self.n_dims)
         exp = pt.exp(-0.5 * pt.dot(pt.square(omega), pt.square(ls)))
         return c * pt.prod(ls) * exp
+
+    @staticmethod
+    def required_num_eigenvectors(L: float, ls: float) -> int:
+        r"""Number of eigenvectors in Hilbert space that approximate the GP well.
+
+        .. math::
+
+            m \ge 1.75  \frac{L}{ls}
+
+        Parameters
+        ----------
+        L : float
+            Approximation bound
+        ls : float
+            lengthscale
+
+        Returns
+        -------
+        int
+            Number of eigenvectors
+        """
+        return ceil(1.75 * L / ls)
 
 
 class RatQuad(Stationary):
@@ -663,6 +690,28 @@ class Matern52(Stationary):
         pow = pt.power(5.0 + pt.dot(pt.square(omega), pt.square(ls)), -1 * D52)
         return (num / den) * pt.prod(ls) * pow
 
+    @staticmethod
+    def required_num_eigenvectors(L: float, ls: float) -> int:
+        r"""Number of eigenvectors in Hilbert space that approximate the GP well.
+
+        .. math::
+
+            m \ge 2.65  \frac{L}{ls}
+
+        Parameters
+        ----------
+        L : float
+            Approximation bound
+        ls : float
+            lengthscale
+
+        Returns
+        -------
+        int
+            Number of eigenvectors
+        """
+        return ceil(2.65 * L / ls)
+
 
 class Matern32(Stationary):
     r"""
@@ -701,6 +750,28 @@ class Matern32(Stationary):
         den = 0.5 * pt.sqrt(np.pi)
         pow = pt.power(3.0 + pt.dot(pt.square(omega), pt.square(ls)), -1 * D32)
         return (num / den) * pt.prod(ls) * pow
+
+    @staticmethod
+    def required_num_eigenvectors(L: float, ls: float) -> int:
+        r"""Number of eigenvectors in Hilbert space that approximate the GP well.
+
+        .. math::
+
+            m \ge 3.42 \frac{L}{ls}
+
+        Parameters
+        ----------
+        L : float
+            Approximation bound
+        ls : float
+            lengthscale
+
+        Returns
+        -------
+        int
+            Number of eigenvectors
+        """
+        return ceil(3.42 * L / ls)
 
 
 class Matern12(Stationary):

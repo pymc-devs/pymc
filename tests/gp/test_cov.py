@@ -484,6 +484,13 @@ class TestExpQuad:
         print(result, expected)
         npt.assert_allclose(result, expected, atol=1e-5)
 
+    def test_required_num_eigenvectors(self):
+        L = 4
+        l = 1
+        m = 7
+        m_est = pm.gp.cov.ExpQuad.required_num_eigenvectors(L, l)
+        assert m_est == m
+
 
 class TestWhiteNoise:
     def test_1d(self):
@@ -572,6 +579,13 @@ class TestMatern52:
         )
         npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
 
+    def test_required_num_eigenvectors(self):
+        L = 4
+        l = 1
+        m = 11
+        m_est = pm.gp.cov.Matern52.required_num_eigenvectors(L, l)
+        assert m_est == m
+
 
 class TestMatern32:
     def test_1d(self):
@@ -597,6 +611,13 @@ class TestMatern32:
             pm.gp.cov.Matern32(1, ls=ell).power_spectral_density(omega[:, None]).flatten().eval()
         )
         npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
+
+    def test_required_num_eigenvectors(self):
+        L = 4
+        l = 1
+        m = 14
+        m_est = pm.gp.cov.Matern32.required_num_eigenvectors(L, l)
+        assert m_est == m
 
 
 class TestMatern12:
