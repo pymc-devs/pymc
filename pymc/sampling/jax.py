@@ -17,7 +17,17 @@ import re
 
 from datetime import datetime
 from functools import partial
-from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Union,
+    overload,
+)
 
 import arviz as az
 import jax
@@ -144,16 +154,45 @@ def get_jaxified_graph(
     return jax_funcify(fgraph)
 
 
-def get_jaxified_logp(model: Model, negative_logp=True) -> Callable[[PointType], jnp.ndarray]:
+@overload
+def get_jaxified_logp(
+    model: Model,
+    negative_logp: bool = ...,
+    point_fn: Literal[False] = ...,
+) -> Callable[[Sequence[np.ndarray]], jnp.ndarray]:
+    ...
+
+
+@overload
+def get_jaxified_logp(
+    model: Model,
+    negative_logp: bool = ...,
+    point_fn: Literal[True] = ...,
+) -> Callable[[PointType], jnp.ndarray]:
+    ...
+
+
+def get_jaxified_logp(
+    model: Model,
+    negative_logp: bool = True,
+    point_fn: bool = False,
+) -> Union[Callable[[PointType], jnp.ndarray], Callable[[Sequence[np.ndarray]], jnp.ndarray]]:
     model_logp = model.logp()
     if not negative_logp:
         model_logp = -model_logp
     logp_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[model_logp])
     names = [v.name for v in model.value_vars]
 
-    def logp_fn_wrap(x: PointType) -> jnp.ndarray:
-        p = [x[n] for n in names]
-        return logp_fn(*p)[0]
+    if point_fn:
+
+        def logp_fn_wrap(x: PointType) -> jnp.ndarray:
+            p = [x[n] for n in names]
+            return logp_fn(*p)[0]
+
+    else:
+
+        def logp_fn_wrap(x: Sequence[np.ndarray]) -> jnp.ndarray:
+            return logp_fn(*x)[0]
 
     return logp_fn_wrap
 
@@ -473,7 +512,7 @@ def sample_blackjax_nuts(
     if chains == 1:
         init_params = {k: np.stack([v]) for k, v in init_params.items()}
 
-    logprob_fn = get_jaxified_logp(model)
+    logprob_fn = get_jaxified_logp(model, point_fn=True)
 
     seed = jax.random.PRNGKey(random_seed)
     keys = jax.random.split(seed, chains)
@@ -702,7 +741,7 @@ def sample_numpyro_nuts(
         random_seed=random_seed,
     )
 
-    logp_fn = get_jaxified_logp(model, negative_logp=False)
+    logp_fn = get_jaxified_logp(model, negative_logp=False, point_fn=True)
 
     nuts_kwargs = _update_numpyro_nuts_kwargs(nuts_kwargs)
     nuts_kernel = NUTS(

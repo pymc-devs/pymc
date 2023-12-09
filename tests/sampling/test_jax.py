@@ -217,6 +217,11 @@ def test_get_jaxified_logp():
     # This would underflow if not optimized
     assert not np.isinf(jax_fn(dict(x=np.array(5000.0), y=np.array(5000.0))))
 
+    # by default return array fn
+    jax_fn = get_jaxified_logp(m, point_fn=True)
+    # This would underflow if not optimized
+    assert not np.isinf(jax_fn(dict(x=np.array(5000.0), y=np.array(5000.0))))
+
 
 @pytest.fixture(scope="module")
 def model_test_idata_kwargs() -> pm.Model:
