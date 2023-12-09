@@ -342,6 +342,140 @@ class TestCompilePyMC:
         with pytest.raises(ParameterValueError, match="test"):
             fn([-1, 2, 3])
 
+    def test_check_parameters_removed_from_scan(self):
+        def scan_step(x_0):
+            cond = pt.ge(x_0, 1)
+            x = check_parameters(x_0, cond)
+            x_update = collect_default_updates([x])
+            return x, x_update
+
+        xs, _ = scan(
+            fn=scan_step,
+            sequences=[
+                pt.zeros(3),
+            ],
+            name="xs",
+        )
+
+        with pytest.raises(ParameterValueError):
+            pytensor.function([], xs)()
+
+        with pm.Model() as m:
+            pass
+
+        m.check_bounds = False
+        with m:
+            fn = compile_pymc([], xs)
+            assert np.all(fn() == 0)
+
+        m.check_bounds = True
+        with m:
+            fn = compile_pymc([], xs)
+            assert np.all(fn() == -np.inf)
+
+    def test_check_parameters_removed_from_nested_scan(self):
+        def inner_scan_step(x_0):
+            cond = pt.ge(x_0, 1)
+            x = check_parameters(x_0, cond)
+            x_update = collect_default_updates([x])
+            return x, x_update
+
+        def outer_scan_step(x_0):
+            x, _ = scan(
+                fn=inner_scan_step,
+                sequences=[
+                    x_0,
+                ],
+                name="xs",
+            )
+            x_update = collect_default_updates([x])
+            return x, x_update
+
+        xs, _ = scan(
+            fn=outer_scan_step,
+            sequences=[
+                pt.zeros((3, 2)),
+            ],
+            name="xs",
+        )
+        with pytest.raises(ParameterValueError):
+            pytensor.function([], xs)()
+
+        with pm.Model() as m:
+            pass
+
+        m.check_bounds = False
+        with m:
+            fn = compile_pymc([], xs)
+            assert np.all(fn() == 0)
+
+    def test_check_parameters_can_be_replaced_by_ninf_in_scan(self):
+        def scan_step(x_0):
+            cond = pt.ge(x_0, 0)
+            x = check_parameters(x_0, cond, can_be_replaced_by_ninf=True)
+            x_update = collect_default_updates([x])
+            return x, x_update
+
+        xs, _ = scan(
+            fn=scan_step,
+            sequences=[
+                pt.as_tensor_variable([-1.0, 0.0, 1.0]),
+            ],
+            name="xs",
+        )
+        fn = compile_pymc([], xs)
+        np.testing.assert_array_equal(fn(), [-np.inf, 0, 1])
+
+    def test_check_parameters_can_be_removed_from_op_from_graph(self):
+        x, y, z = pt.scalars("xyz")
+        e = x + y * z
+        cond = pt.ge(e, 0)
+        e = check_parameters(e, cond)
+        op = OpFromGraph([x, y, z], [e])
+        e2 = op(x, y, z) + op(z, y, x)
+
+        with pm.Model() as m:
+            pass
+
+        with pytest.raises(ParameterValueError):
+            pytensor.function([x, y, z], e2)(-1, -2, -3)
+
+        m.check_bounds = False
+        with m:
+            fn = compile_pymc([x, y, z], e2)
+            assert fn(-1, -2, -3) == 4
+
+        m.check_bounds = True
+        with m:
+            fn = compile_pymc([x, y, z], e2)
+            assert np.all(fn(-1.0, -2.0, -3.0) == -np.inf)
+
+    def test_check_parameters_can_be_removed_from_nested_op_from_graph(self):
+        x, y, z = pt.scalars("xyz")
+        e = x + y
+        cond = pt.ge(e, 1)
+        e = check_parameters(e, cond)
+        op = OpFromGraph([x, y], [e])
+        e2 = op(x, y) * op(x, y)
+        op2 = OpFromGraph([x, y], [e2])
+        e3 = op2(x, y) + z
+
+        with pytest.raises(ParameterValueError):
+            pytensor.function([x, y, z], e3)(0, 0, 2)
+
+        with pm.Model() as m:
+            pass
+
+        m.check_bounds = False
+        with m:
+            fn = compile_pymc([x, y, z], e3)
+            assert fn(0, 0, 2) == 2
+
+        m.check_bounds = True
+        with m:
+            fn = compile_pymc([x, y, z], e3)
+            assert np.all(fn(0.0, 0.0, 2.0) == np.inf)
+
     def test_compile_pymc_sets_rng_updates(self):
         rng = pytensor.shared(np.random.default_rng(0))
         x = pm.Normal.dist(rng=rng)
