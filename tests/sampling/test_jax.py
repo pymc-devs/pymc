@@ -433,8 +433,8 @@ def test_idata_contains_stats(sampler_name: str):
 
     stats = idata.get("sample_stats")
     assert stats is not None
-    n_chains = stats.dims["chain"]
-    n_draws = stats.dims["draw"]
+    n_chains = stats.sizes["chain"]
+    n_draws = stats.sizes["draw"]
 
     # Stats vars expected for both samplers
     expected_stat_vars = {

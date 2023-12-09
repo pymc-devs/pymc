@@ -582,8 +582,8 @@ def predictions_to_inference_data(
     )
     if hasattr(idata_orig, "posterior"):
         assert idata_orig is not None
-        converter.nchains = idata_orig["posterior"].dims["chain"]
-        converter.ndraws = idata_orig["posterior"].dims["draw"]
+        converter.nchains = idata_orig["posterior"].sizes["chain"]
+        converter.ndraws = idata_orig["posterior"].sizes["draw"]
     else:
         aelem = next(iter(predictions.values()))
         converter.nchains, converter.ndraws = aelem.shape[:2]
