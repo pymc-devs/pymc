@@ -266,8 +266,8 @@ class HSGP(Base):
 
                 # Specify standard normal prior in the coefficients.  The number of which
                 # is given by the number of basis vectors, which is also saved in the GP object
-                # as m_star.
-                beta = pm.Normal("beta", size=gp.m_star)
+                # as _m_star.
+                beta = pm.Normal("beta", size=gp._m_star)
 
                 # The (non-centered) GP approximation is given by
                 f = pm.Deterministic("f", phi @ (beta * sqrt_psd))
