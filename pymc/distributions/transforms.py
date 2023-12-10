@@ -61,6 +61,10 @@ def __getattr__(name):
         warnings.warn(f"{name} has been deprecated, use sum_to_1 instead.", FutureWarning)
         return sum_to_1
 
+    # if name == "sum_to_1":
+    #     warnings.warn("sum_to_1 will be deprecated, use simplex instead.", FutureWarning)
+    #     return sum_to_1
+
     if name == "RVTransform":
         warnings.warn("RVTransform has been renamed to Transform", FutureWarning)
         return Transform
