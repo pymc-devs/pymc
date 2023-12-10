@@ -790,6 +790,28 @@ class Periodic(Stationary):
         r2 = dist if squared else dist**2
         return pt.exp(-0.5 * r2)
 
+    def power_spectral_density_approx(self, J: TensorLike) -> TensorVariable:
+        """
+        Technically, this is not a spectral density but these are the first `m` coefficients of
+        the low rank approximation for the periodic kernel, which are used in the same way.
+        `J` is a vector of `np.arange(m)`.
+
+        The coefficients of the HSGP approximation for the `Periodic` kernel are given by:
+
+        .. math::
+
+            \tilde{q}_j^2 = \frac{2 \text{I}_j (\\ell^{-2})}{\\exp(\\ell^{-2})} \\
+            \tilde{q}_0^2 = \frac{\text{I}_0 (\\ell^{-2})}{\\exp(\\ell^{-2})}
+
+        where $\text{I}_j$ is the modified Bessel function of the first kind.
+        """
+        a = 1 / pt.square(self.ls)
+        c = pt.where(J > 0, 2, 1)
+
+        q2 = c * pt.iv(J, a) / pt.exp(a)
+
+        return q2
+
 
 class Linear(Covariance):
     r"""
