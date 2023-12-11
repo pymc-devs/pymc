@@ -483,5 +483,5 @@ def test_sample_numpyro_nuts_block_adapt():
                 dense_mass=[
                     ("a", "a_g"),
                 ]
-            )
+            ),
         )
