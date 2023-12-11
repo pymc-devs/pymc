@@ -2,6 +2,10 @@ name: devcontainer-docker-image
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "48 19 * * 5"  # Fridays at 19:48 UTC
+  release:
+    types: [published]
 
 env:
   REGISTRY: ghcr.io

@@ -156,8 +156,8 @@ class TestDataPyMC:
         }
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
-        chains = inference_data.posterior.dims["chain"]
-        draws = inference_data.posterior.dims["draw"]
+        chains = inference_data.posterior.sizes["chain"]
+        draws = inference_data.posterior.sizes["draw"]
         obs = inference_data.observed_data["obs"]
         assert inference_data.log_likelihood["obs"].shape == (chains, draws) + obs.shape
 
@@ -177,7 +177,7 @@ class TestDataPyMC:
         assert not fails
         for key, ivalues in inference_data.predictions.items():
             assert (
-                len(ivalues["chain"]) == inference_data.posterior.dims["chain"]
+                len(ivalues["chain"]) == inference_data.posterior.sizes["chain"]
             )  # same chains as in posterior
 
         # check adding in place
@@ -188,7 +188,7 @@ class TestDataPyMC:
         assert not fails
         for key, ivalues in inference_data.predictions.items():
             assert (
-                len(ivalues["chain"]) == inference_data.posterior.dims["chain"]
+                len(ivalues["chain"]) == inference_data.posterior.sizes["chain"]
             )  # same chains as in posterior
 
     def test_predictions_to_idata_new(self, data, eight_schools_params):
@@ -241,10 +241,10 @@ class TestDataPyMC:
         }
         fails = check_multiple_attrs(test_dict, idata)
         assert not fails
-        assert idata.posterior.dims["chain"] == 2
-        assert idata.posterior.dims["draw"] == draws
-        assert idata.posterior_predictive.dims["chain"] == 2
-        assert idata.posterior_predictive.dims["draw"] == draws / thin_by
+        assert idata.posterior.sizes["chain"] == 2
+        assert idata.posterior.sizes["draw"] == draws
+        assert idata.posterior_predictive.sizes["chain"] == 2
+        assert idata.posterior_predictive.sizes["draw"] == draws / thin_by
         assert np.allclose(idata.posterior["draw"], np.arange(draws))
         assert np.allclose(idata.posterior_predictive["draw"], np.arange(draws, step=thin_by))
 
@@ -723,11 +723,11 @@ class TestPyMCWarmupHandling:
         fails = check_multiple_attrs(test_dict, idata)
         assert not fails
         if hasattr(idata, "posterior"):
-            assert idata.posterior.dims["chain"] == chains
-            assert idata.posterior.dims["draw"] == draws
+            assert idata.posterior.sizes["chain"] == chains
+            assert idata.posterior.sizes["draw"] == draws
         if hasattr(idata, "warmup_posterior"):
-            assert idata.warmup_posterior.dims["chain"] == chains
-            assert idata.warmup_posterior.dims["draw"] == tune
+            assert idata.warmup_posterior.sizes["chain"] == chains
+            assert idata.warmup_posterior.sizes["draw"] == tune
 
     def test_save_warmup_issue_1208_after_3_9(self):
         with pm.Model():
@@ -757,8 +757,8 @@ class TestPyMCWarmupHandling:
             }
             fails = check_multiple_attrs(test_dict, idata)
             assert not fails
-            assert idata.posterior.dims["chain"] == 2
-            assert idata.posterior.dims["draw"] == 200
+            assert idata.posterior.sizes["chain"] == 2
+            assert idata.posterior.sizes["draw"] == 200
 
             # manually sliced trace triggers the same warning as <=3.8
             with pytest.warns(UserWarning, match="Warmup samples"):
@@ -771,5 +771,5 @@ class TestPyMCWarmupHandling:
             }
             fails = check_multiple_attrs(test_dict, idata)
             assert not fails
-            assert idata.posterior.dims["chain"] == 2
-            assert idata.posterior.dims["draw"] == 30
+            assert idata.posterior.sizes["chain"] == 2
+            assert idata.posterior.sizes["draw"] == 30

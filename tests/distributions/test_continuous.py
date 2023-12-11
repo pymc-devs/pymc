@@ -1133,19 +1133,6 @@ class TestMoments:
         assert_moment_is_expected(model, expected)
 
     @pytest.mark.parametrize(
-        "nu, size, expected",
-        [
-            (1, None, 1),
-            (1, 5, np.full(5, 1)),
-            (np.arange(1, 6), None, np.arange(1, 6)),
-        ],
-    )
-    def test_chisquared_moment(self, nu, size, expected):
-        with pm.Model() as model:
-            pm.ChiSquared("x", nu=nu, size=size)
-        assert_moment_is_expected(model, expected)
-
-    @pytest.mark.parametrize(
         "lam, size, expected",
         [
             (2, None, 0.5),
@@ -2241,19 +2228,6 @@ class TestInverseGammaMuSigma(BaseTestDistributionRandom):
     )
     expected_rv_op_params = {"alpha": expected_alpha, "beta": expected_beta}
     checks_to_run = ["check_pymc_params_match_rv_op"]
-
-
-class TestChiSquared(BaseTestDistributionRandom):
-    pymc_dist = pm.ChiSquared
-    pymc_dist_params = {"nu": 2.0}
-    expected_rv_op_params = {"nu": 2.0}
-    reference_dist_params = {"df": 2.0}
-    reference_dist = seeded_numpy_distribution_builder("chisquare")
-    checks_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
-        "check_rv_size",
-    ]
 
 
 class TestLogistic(BaseTestDistributionRandom):

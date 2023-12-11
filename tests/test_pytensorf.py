@@ -23,10 +23,10 @@ import pytest
 import scipy.sparse as sps
 
 from pytensor import scan, shared
+from pytensor.compile import UnusedInputError
 from pytensor.compile.builders import OpFromGraph
-from pytensor.graph.basic import Variable, equal_computations
+from pytensor.graph.basic import Variable
 from pytensor.tensor.random.basic import normal, uniform
-from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.var import RandomStateSharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from pytensor.tensor.variable import TensorVariable
@@ -35,23 +35,19 @@ import pymc as pm
 
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import SymbolicRandomVariable
-from pymc.distributions.transforms import Interval
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
-    _replace_vars_in_graphs,
     collect_default_updates,
     compile_pymc,
     constant_fold,
     convert_observed_data,
     extract_obs_data,
     replace_rng_nodes,
-    replace_rvs_by_values,
+    replace_vars_in_graphs,
     reseed_rngs,
-    rvs_to_value_vars,
     walk_model,
 )
-from pymc.testing import assert_no_rvs
 from pymc.vartypes import int_types
 
 
@@ -286,21 +282,24 @@ def test_walk_model():
 
     test_graph = pt.exp(e + 1)
 
-    res = list(walk_model((test_graph,)))
+    with pytest.warns(FutureWarning):
+        res = list(walk_model((test_graph,)))
     assert a in res
     assert b in res
     assert c in res
     assert d in res
     assert e in res
 
-    res = list(walk_model((test_graph,), stop_at_vars={c}))
+    with pytest.warns(FutureWarning):
+        res = list(walk_model((test_graph,), stop_at_vars={c}))
     assert a not in res
     assert b not in res
     assert c in res
     assert d in res
     assert e in res
 
-    res = list(walk_model((test_graph,), stop_at_vars={b}))
+    with pytest.warns(FutureWarning):
+        res = list(walk_model((test_graph,), stop_at_vars={b}))
     assert a not in res
     assert b in res
     assert c in res
@@ -668,211 +667,67 @@ def test_constant_fold_raises():
     assert tuple(res[1].eval()) == (5,)
 
 
-class TestReplaceRVsByValues:
-    @pytest.mark.parametrize("symbolic_rv", (False, True))
-    @pytest.mark.parametrize("apply_transforms", (True, False))
-    @pytest.mark.parametrize("test_deprecated_fn", (True, False))
-    def test_basic(self, symbolic_rv, apply_transforms, test_deprecated_fn):
-        # Interval transform between last two arguments
-        interval = (
-            Interval(bounds_fn=lambda *args: (args[-2], args[-1])) if apply_transforms else None
-        )
+def test_replace_vars_in_graphs():
+    inp = shared(0.0, name="inp")
+    x = pm.Normal.dist(inp)
 
-        with pm.Model() as m:
-            a = pm.Uniform("a", 0.0, 1.0)
-            if symbolic_rv:
-                raw_b = pm.Uniform.dist(0, a + 1.0)
-                b = pm.Censored("b", raw_b, lower=0, upper=a + 1.0, transform=interval)
-                # If not True, another distribution has to be used
-                assert isinstance(b.owner.op, SymbolicRandomVariable)
-            else:
-                b = pm.Uniform("b", 0, a + 1.0, transform=interval)
-            c = pm.Normal("c")
-            d = pt.log(c + b) + 2.0
+    replacements = {inp: inp + 100}
+    [new_x] = replace_vars_in_graphs([x], replacements=replacements)
 
-        a_value_var = m.rvs_to_values[a]
-        assert m.rvs_to_transforms[a] is not None
+    assert x.eval() < 50
+    assert new_x.eval() > 50
 
-        b_value_var = m.rvs_to_values[b]
-        c_value_var = m.rvs_to_values[c]
 
-        if test_deprecated_fn:
-            with pytest.warns(FutureWarning, match="Use model.replace_rvs_by_values instead"):
-                (res,) = rvs_to_value_vars((d,), apply_transforms=apply_transforms)
-        else:
-            (res,) = replace_rvs_by_values(
-                (d,),
-                rvs_to_values=m.rvs_to_values,
-                rvs_to_transforms=m.rvs_to_transforms,
-            )
+def test_replace_vars_in_graphs_nested_reference():
+    # Replace both `x` and `y`, where the replacement of y references `x`
+    x = pm.HalfNormal.dist(1e-3, name="x")
+    neg_x = -x
+    y = pm.Uniform.dist(neg_x, x, name="y")
+    x_value = x.clone()
+    y_value = y.clone()
+    replacements = {x: x_value, y: neg_x + y_value}
+    [new_x, new_y] = replace_vars_in_graphs([x, y], replacements=replacements)
+    assert new_x.eval({x_value: 100}) == 100
+    assert new_y.eval({x_value: 100, y_value: 1}) == -99
+    assert new_y.eval({neg_x: 100, y_value: 1}) == 101
+    assert np.abs(x.eval()) < 1
+    # Confirm the original `y` variable is changed in place
+    # This is unavoidable if we want to respect the identity of the replacement variables
+    # As when imputing `neg_x` and `x` while evaluating `new_y` above and below.
+    assert np.abs(y.eval({x_value: 100})) > 1
 
-        assert res.owner.op == pt.add
-        log_output = res.owner.inputs[0]
-        assert log_output.owner.op == pt.log
-        log_add_output = res.owner.inputs[0].owner.inputs[0]
-        assert log_add_output.owner.op == pt.add
-        c_output = log_add_output.owner.inputs[0]
+    # Only replace `y`, same replacement as before
+    x = pm.HalfNormal.dist(1e-3, name="x")
+    neg_x = -x
+    y = pm.Uniform.dist(neg_x, x, name="y")
+    y_value = y.clone()
+    replacements = {y: neg_x + y_value}
+    [new_y] = replace_vars_in_graphs([y], replacements=replacements)
+    assert np.abs(new_y.eval({y_value: 0})) < 1
+    # Confirm that `x` and `neg_x` are still in the graph of `new_y` and that we can impute either
+    assert new_y.eval({x: 100, y_value: 1}) == -99
+    assert new_y.eval({neg_x: 100, y_value: 1}) == 101
+    assert np.abs(x.eval()) < 1
+    # In this case the original `y` is not altered, because we did not replace `x`
+    assert np.abs(y.eval()) < 1
 
-        # We make sure that the random variables were replaced
-        # with their value variables
-        assert c_output == c_value_var
-        b_output = log_add_output.owner.inputs[1]
-        # When transforms are applied, the input is the back-transformation of the value_var,
-        # otherwise it is the value_var itself
-        if apply_transforms:
-            assert b_output != b_value_var
-        else:
-            assert b_output == b_value_var
-
-        res_ancestors = list(walk_model((res,)))
-        res_rv_ancestors = [
-            v for v in res_ancestors if v.owner and isinstance(v.owner.op, RandomVariable)
-        ]
-
-        # There shouldn't be any `RandomVariable`s in the resulting graph
-        assert len(res_rv_ancestors) == 0
-        assert b_value_var in res_ancestors
-        assert c_value_var in res_ancestors
-        # When transforms are used, `d` depends on `a` through the back-transformation of
-        # `b`, otherwise there is no direct connection between `d` and `a`
-        if apply_transforms:
-            assert a_value_var in res_ancestors
-        else:
-            assert a_value_var not in res_ancestors
-
-    @pytest.mark.parametrize("test_deprecated_fn", (True, False))
-    def test_unvalued_rv(self, test_deprecated_fn):
-        with pm.Model() as m:
-            x = pm.Normal("x")
-            y = pm.Normal.dist(x)
-            z = pm.Normal("z", y)
-            out = z + y
-
-        x_value = m.rvs_to_values[x]
-        z_value = m.rvs_to_values[z]
-
-        if test_deprecated_fn:
-            with pytest.warns(FutureWarning, match="Use model.replace_rvs_by_values instead"):
-                (res,) = rvs_to_value_vars((out,))
-        else:
-            (res,) = replace_rvs_by_values(
-                (out,),
-                rvs_to_values=m.rvs_to_values,
-                rvs_to_transforms=m.rvs_to_transforms,
-            )
-
-        assert res.owner.op == pt.add
-        assert res.owner.inputs[0] is z_value
-        res_y = res.owner.inputs[1]
-        # Graph should have be cloned, and therefore y and res_y should have different ids
-        assert res_y is not y
-        assert res_y.owner.op == pt.random.normal
-        assert res_y.owner.inputs[3] is x_value
-
-    @pytest.mark.parametrize("test_deprecated_fn", (True, False))
-    def test_no_change_inplace(self, test_deprecated_fn):
-        # Test that calling rvs_to_value_vars in models with nested transformations
-        # does not change the original rvs in place. See issue #5172
-        with pm.Model() as m:
-            one = pm.LogNormal("one", mu=0)
-            two = pm.LogNormal("two", mu=pt.log(one))
-
-            # We add potentials or deterministics that are not in topological order
-            pm.Potential("two_pot", two)
-            pm.Potential("one_pot", one)
-
-        before = pytensor.clone_replace(m.free_RVs)
-
-        # This call would change the model free_RVs in place in #5172
-        if test_deprecated_fn:
-            with pytest.warns(FutureWarning, match="Use model.replace_rvs_by_values instead"):
-                rvs_to_value_vars(m.potentials)
-        else:
-            replace_rvs_by_values(
-                m.potentials,
-                rvs_to_values=m.rvs_to_values,
-                rvs_to_transforms=m.rvs_to_transforms,
-            )
-
-        after = pytensor.clone_replace(m.free_RVs)
-        assert equal_computations(before, after)
-
-    @pytest.mark.parametrize("test_deprecated_fn", (True, False))
-    @pytest.mark.parametrize("reversed", (False, True))
-    def test_interdependent_transformed_rvs(self, reversed, test_deprecated_fn):
-        # Test that nested transformed variables, whose transformed values depend on other
-        # RVs are properly replaced
-        with pm.Model() as m:
-            transform = pm.distributions.transforms.Interval(
-                bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
-            )
-            x = pm.Uniform("x", lower=0, upper=1, transform=transform)
-            y = pm.Uniform("y", lower=0, upper=x, transform=transform)
-            z = pm.Uniform("z", lower=0, upper=y, transform=transform)
-            w = pm.Uniform("w", lower=0, upper=z, transform=transform)
-
-        rvs = [x, y, z, w]
-        if reversed:
-            rvs = rvs[::-1]
-
-        if test_deprecated_fn:
-            with pytest.warns(FutureWarning, match="Use model.replace_rvs_by_values instead"):
-                transform_values = rvs_to_value_vars(rvs)
-        else:
-            transform_values = replace_rvs_by_values(
-                rvs,
-                rvs_to_values=m.rvs_to_values,
-                rvs_to_transforms=m.rvs_to_transforms,
-            )
-
-        for transform_value in transform_values:
-            assert_no_rvs(transform_value)
-
-        if reversed:
-            transform_values = transform_values[::-1]
-        transform_values_fn = m.compile_fn(transform_values, point_fn=False)
-
-        x_interval_test_value = np.random.rand()
-        y_interval_test_value = np.random.rand()
-        z_interval_test_value = np.random.rand()
-        w_interval_test_value = np.random.rand()
-
-        # The 3 Nones correspond to unused rng, dtype and size arguments
-        expected_x = transform.backward(x_interval_test_value, None, None, None, 0, 1).eval()
-        expected_y = transform.backward(
-            y_interval_test_value, None, None, None, 0, expected_x
-        ).eval()
-        expected_z = transform.backward(
-            z_interval_test_value, None, None, None, 0, expected_y
-        ).eval()
-        expected_w = transform.backward(
-            w_interval_test_value, None, None, None, 0, expected_z
-        ).eval()
-
-        np.testing.assert_allclose(
-            transform_values_fn(
-                x_interval__=x_interval_test_value,
-                y_interval__=y_interval_test_value,
-                z_interval__=z_interval_test_value,
-                w_interval__=w_interval_test_value,
-            ),
-            [expected_x, expected_y, expected_z, expected_w],
-        )
-
-    def test_replace_input(self):
-        inp = shared(0.0, name="inp")
-        x = pm.Normal.dist(inp)
-
-        assert x.eval() < 50
-
-        new_inp = inp + 100
-
-        def replacement_fn(var, replacements):
-            if var is x:
-                replacements[x.owner.inputs[3]] = new_inp
-
-            return []
-
-        [new_x], _ = _replace_vars_in_graphs([x], replacement_fn=replacement_fn)
-
-        assert new_x.eval() > 50
+    # Replacement introduces equivalent but not identical operations
+    x = pm.HalfNormal.dist(1e-3, name="x")
+    neg_x = -x
+    neg_x.name = "neg_x"
+    y = pm.Uniform.dist(neg_x, x, name="y")
+    x_value = x.clone()
+    y_value = y.clone()
+    # We clone neg_x!
+    replacements = {x: x_value, y: neg_x.owner.clone().outputs[0] + y_value}
+    [new_x, new_y] = replace_vars_in_graphs([x, y], replacements=replacements)
+    assert new_x.eval({x_value: 100}) == 100
+    assert new_y.eval({x_value: 100, y_value: 1}) == -99
+    # This now fails because the original `neg_x` is not in the replaced graph!
+    with pytest.raises(UnusedInputError, match="neg_x"):
+        new_y.eval({neg_x: 100, y_value: 1})
+    # We can retrieve the cloned variable by name
+    assert new_y.eval({"neg_x": 100, y_value: 1}) == 101
+    assert np.abs(x.eval()) < 1
+    # Confirm the original `y` variable is not changed in place
+    assert np.abs(y.eval()) < 1

@@ -65,7 +65,7 @@ from pymc.exceptions import (
 )
 from pymc.initial_point import make_initial_point_fn
 from pymc.logprob.basic import transformed_conditional_logp
-from pymc.logprob.utils import ParameterValueError
+from pymc.logprob.utils import ParameterValueError, replace_rvs_by_values
 from pymc.model_graph import model_to_graphviz
 from pymc.pytensorf import (
     PointFunc,
@@ -75,7 +75,6 @@ from pymc.pytensorf import (
     gradient,
     hessian,
     inputvars,
-    replace_rvs_by_values,
     rewrite_pregrad,
 )
 from pymc.util import (
@@ -497,7 +496,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
             instance._parent = kwargs.get("model")
         else:
             instance._parent = cls.get_context(error_if_none=False)
-        instance._pytensor_config = kwargs.get("pytensor_config", {})
+        pytensor_config = kwargs.get("pytensor_config", {})
+        if pytensor_config:
+            warnings.warn(
+                "pytensor_config is deprecated. Use pytensor.config or pytensor.config.change_flags context manager instead.",
+                FutureWarning,
+            )
+        instance._pytensor_config = pytensor_config
         return instance
 
     @staticmethod
@@ -560,6 +565,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     @property
     def model(self):
+        warnings.warn("Model.model property is deprecated. Just use Model.", FutureWarning)
         return self
 
     @property
@@ -630,7 +636,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Whether to sum all logp terms or return elemwise logp for each variable.
             Defaults to True.
         """
-        return self.model.compile_fn(self.logp(vars=vars, jacobian=jacobian, sum=sum))
+        return self.compile_fn(self.logp(vars=vars, jacobian=jacobian, sum=sum))
 
     def compile_dlogp(
         self,
@@ -647,7 +653,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian:
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.model.compile_fn(self.dlogp(vars=vars, jacobian=jacobian))
+        return self.compile_fn(self.dlogp(vars=vars, jacobian=jacobian))
 
     def compile_d2logp(
         self,
@@ -664,7 +670,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian:
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.model.compile_fn(self.d2logp(vars=vars, jacobian=jacobian))
+        return self.compile_fn(self.d2logp(vars=vars, jacobian=jacobian))
 
     def logp(
         self,
@@ -888,25 +894,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return vars + untransformed_vars + deterministics
 
     @property
-    def disc_vars(self):
-        warnings.warn(
-            "Model.disc_vars has been deprecated. Use Model.discrete_value_vars instead.",
-            FutureWarning,
-        )
-        return self.discrete_value_vars
-
-    @property
     def discrete_value_vars(self):
         """All the discrete value variables in the model"""
         return list(typefilter(self.value_vars, discrete_types))
-
-    @property
-    def cont_vars(self):
-        warnings.warn(
-            "Model.cont_vars has been deprecated. Use Model.continuous_value_vars instead.",
-            FutureWarning,
-        )
-        return self.continuous_value_vars
 
     @property
     def continuous_value_vars(self):
@@ -935,18 +925,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         use `var.unobserved_value_vars` instead.
         """
         return self.free_RVs + self.deterministics
-
-    @property
-    def RV_dims(self) -> Dict[str, Tuple[Union[str, None], ...]]:
-        """Tuples of dimension names for specific model variables.
-
-        Entries in the tuples may be ``None``, if the RV dimension was not given a name.
-        """
-        warnings.warn(
-            "Model.RV_dims is deprecated. Use Model.named_vars_to_dims instead.",
-            FutureWarning,
-        )
-        return self.named_vars_to_dims
 
     @property
     def coords(self) -> Dict[str, Union[Tuple, None]]:
@@ -1090,18 +1068,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         fn = make_initial_point_fn(model=self, return_transformed=True)
         return Point(fn(random_seed), model=self)
-
-    @property
-    def initial_values(self) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
-        """Maps transformed variables to initial value placeholders.
-
-        Keys are the random variables (as returned by e.g. ``pm.Uniform()``) and
-        values are the numeric/symbolic initial values, strings denoting the strategy to get them, or None.
-        """
-        warnings.warn(
-            "Model.initial_values is deprecated. Use Model.rvs_to_initial_values instead."
-        )
-        return self.rvs_to_initial_values
 
     def set_initval(self, rv_var, initval):
         """Sets an initial value (strategy) for a random variable."""

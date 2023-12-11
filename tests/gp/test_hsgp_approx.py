@@ -76,7 +76,7 @@ def two_sample_test(sample1, sample2, n_sims=1000, alpha=0.05):
     return h0, mmd, critical_value, mmd > critical_value
 
 
-class TestHSGP:
+class _BaseFixtures:
     @pytest.fixture
     def rng(self):
         return np.random.RandomState(10)
@@ -105,15 +105,8 @@ class TestHSGP:
     def model(self):
         return pm.Model()
 
-    @pytest.fixture
-    def cov_func(self):
-        return pm.gp.cov.ExpQuad(1, ls=1)
 
-    @pytest.fixture
-    def gp(self, cov_func):
-        gp = pm.gp.Latent(cov_func=cov_func)
-        return gp
-
+class TestHSGP(_BaseFixtures):
     def test_set_boundaries_1d(self, X1):
         X1s = X1 - np.mean(X1, axis=0)
         L = pm.gp.hsgp_approx.set_boundary(X1s, c=2).eval()
@@ -125,7 +118,13 @@ class TestHSGP:
         assert np.all(L == 10)
 
     def test_parametrization(self):
-        err_msg = "`m` and L, if provided, must be sequences with one element per active dimension"
+        err_msg = (
+            "`m` and `L`, if provided, must be sequences with one element per active dimension"
+        )
+
+        with pytest.raises(ValueError, match="Provide one of `c` or `L`"):
+            cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
+            pm.gp.HSGP(m=[500], c=2, L=[12], cov_func=cov_func)
 
         with pytest.raises(ValueError, match=err_msg):
             # m must be a list
@@ -142,6 +141,12 @@ class TestHSGP:
             cov_func = pm.gp.cov.ExpQuad(1, ls=0.1)
             pm.gp.HSGP(m=[500], L=[12, 12], cov_func=cov_func)
 
+        with pytest.raises(
+            ValueError, match="`parameterization` must be either 'centered' or 'noncentered'."
+        ):
+            cov_func = pm.gp.cov.ExpQuad(2, ls=[1, 2])
+            pm.gp.HSGP(m=[50, 50], L=[12, 12], parameterization="wrong", cov_func=cov_func)
+
         # pass without error, cov_func has 2 active dimensions, c given as scalar
         cov_func = pm.gp.cov.ExpQuad(3, ls=[1, 2], active_dims=[0, 2])
         pm.gp.HSGP(m=[50, 50], c=2, cov_func=cov_func)
@@ -150,6 +155,7 @@ class TestHSGP:
         cov_func = pm.gp.cov.ExpQuad(2, ls=[1, 2])
         pm.gp.HSGP(m=[50, 50], L=[12, 12], cov_func=cov_func)
 
+    @pytest.mark.parametrize("cov_func", [pm.gp.cov.ExpQuad(1, ls=1)])
     @pytest.mark.parametrize("drop_first", [True, False])
     def test_parametrization_drop_first(self, model, cov_func, X1, drop_first):
         n_basis = 100
@@ -165,7 +171,13 @@ class TestHSGP:
             else:
                 assert n_coeffs == n_basis, "one was dropped when it shouldn't have been"
 
-    @pytest.mark.parametrize("parameterization", ["centered", "noncentered"])
+    @pytest.mark.parametrize(
+        "cov_func,parameterization",
+        [
+            (pm.gp.cov.ExpQuad(1, ls=1), "centered"),
+            (pm.gp.cov.ExpQuad(1, ls=1), "noncentered"),
+        ],
+    )
     def test_prior(self, model, cov_func, X1, parameterization, rng):
         """Compare HSGP prior to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
         prior and compare them using MMD two sample test.  Tests both centered and non-centered
@@ -186,9 +198,15 @@ class TestHSGP:
         h0, mmd, critical_value, reject = two_sample_test(
             samples1, samples2, n_sims=500, alpha=0.01
         )
-        assert not reject, "H0 was rejected, even though HSGP and GP priors should match."
+        assert not reject, f"H0 was rejected, even though HSGP and GP priors should match."
 
-    @pytest.mark.parametrize("parameterization", ["centered", "noncentered"])
+    @pytest.mark.parametrize(
+        "cov_func,parameterization",
+        [
+            (pm.gp.cov.ExpQuad(1, ls=1), "centered"),
+            (pm.gp.cov.ExpQuad(1, ls=1), "noncentered"),
+        ],
+    )
     def test_conditional(self, model, cov_func, X1, parameterization):
         """Compare HSGP conditional to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
         prior and compare them using MMD two sample test.  Tests both centered and non-centered
@@ -196,6 +214,87 @@ class TestHSGP:
         """
         with model:
             hsgp = pm.gp.HSGP(m=[100], c=2.0, parameterization=parameterization, cov_func=cov_func)
+            f = hsgp.prior("f", X=X1)
+            fc = hsgp.conditional("fc", Xnew=X1)
+
+            idata = pm.sample_prior_predictive(samples=1000)
+
+        samples1 = az.extract(idata.prior["f"])["f"].values.T
+        samples2 = az.extract(idata.prior["fc"])["fc"].values.T
+
+        h0, mmd, critical_value, reject = two_sample_test(
+            samples1, samples2, n_sims=500, alpha=0.01
+        )
+        assert not reject, "H0 was rejected, even though HSGP prior and conditional should match."
+
+
+class TestHSGPPeriodic(_BaseFixtures):
+    def test_parametrization(self):
+        err_msg = "`m` must be a positive integer as the `Periodic` kernel approximation is only implemented for 1-dimensional case."
+
+        with pytest.raises(ValueError, match=err_msg):
+            # `m` must be a positive integer, not a list
+            cov_func = pm.gp.cov.Periodic(1, period=1, ls=0.1)
+            pm.gp.HSGPPeriodic(m=[500], cov_func=cov_func)
+
+        with pytest.raises(ValueError, match=err_msg):
+            # `m`` must be a positive integer
+            cov_func = pm.gp.cov.Periodic(1, period=1, ls=0.1)
+            pm.gp.HSGPPeriodic(m=-1, cov_func=cov_func)
+
+        with pytest.raises(
+            ValueError,
+            match="`cov_func` must be an instance of a `Periodic` kernel only. Use the `scale` parameter to control the variance.",
+        ):
+            # `cov_func` must be `Periodic` only
+            cov_func = 5.0 * pm.gp.cov.Periodic(1, period=1, ls=0.1)
+            pm.gp.HSGPPeriodic(m=500, cov_func=cov_func)
+
+        with pytest.raises(
+            ValueError,
+            match="HSGP approximation for `Periodic` kernel only implemented for 1-dimensional case.",
+        ):
+            cov_func = pm.gp.cov.Periodic(2, period=1, ls=[1, 2])
+            pm.gp.HSGPPeriodic(m=500, scale=0.5, cov_func=cov_func)
+
+    @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
+    @pytest.mark.parametrize("eta", [100.0])
+    @pytest.mark.xfail(
+        reason="For `pm.gp.cov.Periodic`, this test does not pass.\
+        The mmd is around `0.0468`.\
+        The test passes more often when subtracting the mean from the mean from the samples.\
+        It might be that the period is slightly off for the approximate power spectral density.\
+        See https://github.com/pymc-devs/pymc/pull/6877/ for the full discussion."
+    )
+    def test_prior(self, model, cov_func, eta, X1, rng):
+        """Compare HSGPPeriodic prior to unapproximated GP prior, pm.gp.Latent. Draw samples from the
+        prior and compare them using MMD two sample test.
+        """
+        with model:
+            hsgp = pm.gp.HSGPPeriodic(m=200, scale=eta, cov_func=cov_func)
+            f1 = hsgp.prior("f1", X=X1)
+
+            gp = pm.gp.Latent(cov_func=eta**2 * cov_func)
+            f2 = gp.prior("f2", X=X1)
+
+            idata = pm.sample_prior_predictive(samples=1000, random_seed=rng)
+
+        samples1 = az.extract(idata.prior["f1"])["f1"].values.T
+        samples2 = az.extract(idata.prior["f2"])["f2"].values.T
+
+        h0, mmd, critical_value, reject = two_sample_test(
+            samples1, samples2, n_sims=500, alpha=0.01
+        )
+        assert not reject, f"H0 was rejected, {mmd} even though HSGP and GP priors should match."
+
+    @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
+    def test_conditional_periodic(self, model, cov_func, X1):
+        """Compare HSGPPeriodic conditional to HSGPPeriodic prior. Draw samples
+        from the prior and compare them using MMD two sample test. The conditional should match the
+        prior when no data is observed.
+        """
+        with model:
+            hsgp = pm.gp.HSGPPeriodic(m=100, cov_func=cov_func)
             f = hsgp.prior("f", X=X1)
             fc = hsgp.conditional("fc", Xnew=X1)
 

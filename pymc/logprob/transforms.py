@@ -120,7 +120,7 @@ from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import CheckParameterValue, check_potential_measurability
 
 
-class RVTransform(abc.ABC):
+class Transform(abc.ABC):
     ndim_supp = None
 
     @abc.abstractmethod
@@ -174,10 +174,10 @@ class MeasurableTransform(MeasurableElemwise):
 
     # Cannot use `transform` as name because it would clash with the property added by
     # the `TransformValuesRewrite`
-    transform_elemwise: RVTransform
+    transform_elemwise: Transform
     measurable_input_idx: int
 
-    def __init__(self, *args, transform: RVTransform, measurable_input_idx: int, **kwargs):
+    def __init__(self, *args, transform: Transform, measurable_input_idx: int, **kwargs):
         self.transform_elemwise = transform
         self.measurable_input_idx = measurable_input_idx
         super().__init__(*args, **kwargs)
@@ -444,7 +444,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
     scalar_op = node.op.scalar_op
     measurable_input_idx = 0
     transform_inputs: Tuple[TensorVariable, ...] = (measurable_input,)
-    transform: RVTransform
+    transform: Transform
 
     transform_dict = {
         Exp: ExpTransform(),
@@ -559,7 +559,7 @@ measurable_ir_rewrites_db.register(
 )
 
 
-class SinhTransform(RVTransform):
+class SinhTransform(Transform):
     name = "sinh"
     ndim_supp = 0
 
@@ -570,7 +570,7 @@ class SinhTransform(RVTransform):
         return pt.arcsinh(value)
 
 
-class CoshTransform(RVTransform):
+class CoshTransform(Transform):
     name = "cosh"
     ndim_supp = 0
 
@@ -589,7 +589,7 @@ class CoshTransform(RVTransform):
         )
 
 
-class TanhTransform(RVTransform):
+class TanhTransform(Transform):
     name = "tanh"
     ndim_supp = 0
 
@@ -600,7 +600,7 @@ class TanhTransform(RVTransform):
         return pt.arctanh(value)
 
 
-class ArcsinhTransform(RVTransform):
+class ArcsinhTransform(Transform):
     name = "arcsinh"
     ndim_supp = 0
 
@@ -611,7 +611,7 @@ class ArcsinhTransform(RVTransform):
         return pt.sinh(value)
 
 
-class ArccoshTransform(RVTransform):
+class ArccoshTransform(Transform):
     name = "arccosh"
     ndim_supp = 0
 
@@ -622,7 +622,7 @@ class ArccoshTransform(RVTransform):
         return pt.cosh(value)
 
 
-class ArctanhTransform(RVTransform):
+class ArctanhTransform(Transform):
     name = "arctanh"
     ndim_supp = 0
 
@@ -633,7 +633,7 @@ class ArctanhTransform(RVTransform):
         return pt.tanh(value)
 
 
-class ErfTransform(RVTransform):
+class ErfTransform(Transform):
     name = "erf"
     ndim_supp = 0
 
@@ -644,7 +644,7 @@ class ErfTransform(RVTransform):
         return pt.erfinv(value)
 
 
-class ErfcTransform(RVTransform):
+class ErfcTransform(Transform):
     name = "erfc"
     ndim_supp = 0
 
@@ -655,7 +655,7 @@ class ErfcTransform(RVTransform):
         return pt.erfcinv(value)
 
 
-class ErfcxTransform(RVTransform):
+class ErfcxTransform(Transform):
     name = "erfcx"
     ndim_supp = 0
 
@@ -681,7 +681,7 @@ class ErfcxTransform(RVTransform):
         return result[-1]
 
 
-class LocTransform(RVTransform):
+class LocTransform(Transform):
     name = "loc"
 
     def __init__(self, transform_args_fn):
@@ -699,7 +699,7 @@ class LocTransform(RVTransform):
         return pt.zeros_like(value)
 
 
-class ScaleTransform(RVTransform):
+class ScaleTransform(Transform):
     name = "scale"
 
     def __init__(self, transform_args_fn):
@@ -718,7 +718,7 @@ class ScaleTransform(RVTransform):
         return -pt.log(pt.abs(pt.broadcast_to(scale, value.shape)))
 
 
-class LogTransform(RVTransform):
+class LogTransform(Transform):
     name = "log"
 
     def forward(self, value, *inputs):
@@ -731,7 +731,7 @@ class LogTransform(RVTransform):
         return value
 
 
-class ExpTransform(RVTransform):
+class ExpTransform(Transform):
     name = "exp"
 
     def forward(self, value, *inputs):
@@ -744,7 +744,7 @@ class ExpTransform(RVTransform):
         return -pt.log(value)
 
 
-class AbsTransform(RVTransform):
+class AbsTransform(Transform):
     name = "abs"
 
     def forward(self, value, *inputs):
@@ -758,7 +758,7 @@ class AbsTransform(RVTransform):
         return pt.switch(value >= 0, 0, np.nan)
 
 
-class PowerTransform(RVTransform):
+class PowerTransform(Transform):
     name = "power"
 
     def __init__(self, power=None):
@@ -801,7 +801,7 @@ class PowerTransform(RVTransform):
         return res
 
 
-class IntervalTransform(RVTransform):
+class IntervalTransform(Transform):
     name = "interval"
 
     def __init__(self, args_fn: Callable[..., Tuple[Optional[Variable], Optional[Variable]]]):
@@ -909,7 +909,7 @@ class IntervalTransform(RVTransform):
             return pt.zeros_like(value)
 
 
-class LogOddsTransform(RVTransform):
+class LogOddsTransform(Transform):
     name = "logodds"
 
     def backward(self, value, *inputs):
@@ -923,7 +923,7 @@ class LogOddsTransform(RVTransform):
         return pt.log(sigmoid_value) + pt.log1p(-sigmoid_value)
 
 
-class SimplexTransform(RVTransform):
+class SimplexTransform(Transform):
     name = "simplex"
 
     def forward(self, value, *inputs):
@@ -950,7 +950,7 @@ class SimplexTransform(RVTransform):
         return pt.sum(res, -1)
 
 
-class CircularTransform(RVTransform):
+class CircularTransform(Transform):
     name = "circular"
 
     def backward(self, value, *inputs):
@@ -963,12 +963,11 @@ class CircularTransform(RVTransform):
         return pt.zeros(value.shape)
 
 
-class ChainedTransform(RVTransform):
+class ChainedTransform(Transform):
     name = "chain"
 
-    def __init__(self, transform_list, base_op):
+    def __init__(self, transform_list):
         self.transform_list = transform_list
-        self.base_op = base_op
 
     def forward(self, value, *inputs):
         for transform in self.transform_list:

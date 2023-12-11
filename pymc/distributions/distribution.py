@@ -25,14 +25,16 @@ import numpy as np
 
 from pytensor import tensor as pt
 from pytensor.compile.builders import OpFromGraph
-from pytensor.graph import FunctionGraph, node_rewriter
-from pytensor.graph.basic import Node, Variable
-from pytensor.graph.replace import clone_replace
-from pytensor.graph.rewriting.basic import in2out
+from pytensor.graph import FunctionGraph, clone_replace, node_rewriter
+from pytensor.graph.basic import Node, Variable, io_toposort
+from pytensor.graph.features import ReplaceValidate
+from pytensor.graph.rewriting.basic import GraphRewriter, in2out
 from pytensor.graph.utils import MetaType
+from pytensor.scan.op import Scan
 from pytensor.tensor.basic import as_tensor_variable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
+from pytensor.tensor.random.type import RandomGeneratorType, RandomType
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.variable import TensorVariable
@@ -81,6 +83,59 @@ vectorized_ppc: contextvars.ContextVar[Optional[Callable]] = contextvars.Context
 )
 
 PLATFORM = sys.platform
+
+
+class MomentRewrite(GraphRewriter):
+    def rewrite_moment_scan_node(self, node):
+        if not isinstance(node.op, Scan):
+            return
+
+        node_inputs, node_outputs = node.op.inner_inputs, node.op.inner_outputs
+        op = node.op
+
+        local_fgraph_topo = io_toposort(node_inputs, node_outputs)
+
+        replace_with_moment = []
+        to_replace_set = set()
+
+        for nd in local_fgraph_topo:
+            if nd not in to_replace_set and isinstance(
+                nd.op, (RandomVariable, SymbolicRandomVariable)
+            ):
+                replace_with_moment.append(nd.out)
+                to_replace_set.add(nd)
+        givens = {}
+        if len(replace_with_moment) > 0:
+            for item in replace_with_moment:
+                givens[item] = moment(item)
+        else:
+            return
+        op_outs = clone_replace(node_outputs, replace=givens)
+
+        nwScan = Scan(
+            node_inputs,
+            op_outs,
+            op.info,
+            mode=op.mode,
+            profile=op.profile,
+            truncate_gradient=op.truncate_gradient,
+            name=op.name,
+            allow_gc=op.allow_gc,
+        )
+        nw_node = nwScan(*(node.inputs), return_list=True)[0].owner
+        return nw_node
+
+    def add_requirements(self, fgraph):
+        fgraph.attach_feature(ReplaceValidate())
+
+    def apply(self, fgraph):
+        for node in fgraph.toposort():
+            if isinstance(node.op, (RandomVariable, SymbolicRandomVariable)):
+                fgraph.replace(node.out, moment(node.out))
+            elif isinstance(node.op, Scan):
+                new_node = self.rewrite_moment_scan_node(node)
+                if new_node is not None:
+                    fgraph.replace_all(tuple(zip(node.outputs, new_node.outputs)))
 
 
 class _Unpickling:
@@ -601,6 +656,20 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
         return updates
 
 
+@_moment.register(CustomSymbolicDistRV)
+def dist_moment(op, rv, *args):
+    node = rv.owner
+    rv_out_idx = node.outputs.index(rv)
+
+    fgraph = op.fgraph.clone()
+    replace_moments = MomentRewrite()
+    replace_moments.rewrite(fgraph)
+    # Replace dummy inner inputs by outer inputs
+    fgraph.replace_all(tuple(zip(op.inner_inputs, args)), import_missing=True)
+    moment = fgraph.outputs[rv_out_idx]
+    return moment
+
+
 class _CustomSymbolicDist(Distribution):
     rv_type = CustomSymbolicDistRV
 
@@ -621,14 +690,6 @@ class _CustomSymbolicDist(Distribution):
 
         if logcdf is None:
             logcdf = default_not_implemented(class_name, "logcdf")
-
-        if moment is None:
-            moment = functools.partial(
-                default_moment,
-                rv_name=class_name,
-                has_fallback=True,
-                ndim_supp=ndim_supp,
-            )
 
         return super().dist(
             dist_params,
@@ -685,9 +746,19 @@ class _CustomSymbolicDist(Distribution):
             def custom_dist_logcdf(op, value, size, *params, **kwargs):
                 return logcdf(value, *params[: len(dist_params)])
 
-        @_moment.register(rv_type)
-        def custom_dist_get_moment(op, rv, size, *params):
-            return moment(rv, size, *params[: len(params)])
+        if moment is not None:
+
+            @_moment.register(rv_type)
+            def custom_dist_get_moment(op, rv, size, *params):
+                return moment(
+                    rv,
+                    size,
+                    *[
+                        p
+                        for p in params
+                        if not isinstance(p.type, (RandomType, RandomGeneratorType))
+                    ],
+                )
 
         @_change_dist_size.register(rv_type)
         def change_custom_symbolic_dist_size(op, rv, new_size, expand):

@@ -35,7 +35,7 @@ import scipy.sparse as sps
 from pytensor import scalar
 from pytensor.compile import Function, Mode, get_mode
 from pytensor.gradient import grad
-from pytensor.graph import Type, node_rewriter, rewrite_graph
+from pytensor.graph import Type, rewrite_graph
 from pytensor.graph.basic import (
     Apply,
     Constant,
@@ -63,8 +63,6 @@ from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 from pymc.exceptions import NotConstantValueError
-from pymc.logprob.transforms import RVTransform
-from pymc.logprob.utils import CheckParameterValue
 from pymc.util import makeiter
 from pymc.vartypes import continuous_types, isgenerator, typefilter
 
@@ -192,6 +190,8 @@ def walk_model(
     expand_fn
         A function that returns the next variable(s) to be traversed.
     """
+    warnings.warn("walk_model will be removed in a future relase of PyMC", FutureWarning)
+
     if stop_at_vars is None:
         stop_at_vars = set()
 
@@ -206,197 +206,35 @@ def walk_model(
     yield from walk(graphs, expand, bfs=False)
 
 
-def _replace_vars_in_graphs(
-    graphs: Iterable[TensorVariable],
-    replacement_fn: Callable[[TensorVariable], Dict[TensorVariable, TensorVariable]],
-    **kwargs,
-) -> Tuple[List[TensorVariable], Dict[TensorVariable, TensorVariable]]:
+def replace_vars_in_graphs(
+    graphs: Iterable[Variable],
+    replacements: Dict[Variable, Variable],
+) -> List[Variable]:
     """Replace variables in graphs.
 
-    This will *not* recompute test values.
+    Graphs are cloned and not modified in place, unless the replacement expressions include variables from the original graphs.
 
-    Parameters
-    ----------
-    graphs
-        The graphs in which random variables are to be replaced.
-    replacement_fn
-        A callable called on each graph output that populates a replacement dictionary and returns
-        nodes that should be investigated further.
-
-    Returns
-    -------
-    Tuple containing the transformed graphs and a ``dict`` of the replacements
-    that were made.
     """
-    replacements = {}
-
-    def expand_replace(var):
-        new_nodes = []
-        if var.owner:
-            # Call replacement_fn to update replacements dict inplace and, optionally,
-            # specify new nodes that should also be walked for replacements. This
-            # includes `value` variables that are not simple input variables, and may
-            # contain other `random` variables in their graphs (e.g., IntervalTransform)
-            new_nodes.extend(replacement_fn(var, replacements))
-        return new_nodes
-
-    # This iteration populates the replacements
-    for var in walk_model(graphs, expand_fn=expand_replace, **kwargs):
-        pass
-
-    if replacements:
-        inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
-        equiv = {k: k for k in replacements.keys()}
-        equiv = clone_get_equiv(inputs, graphs, False, False, equiv)
-
-        fg = FunctionGraph(
-            [equiv[i] for i in inputs],
-            [equiv[o] for o in graphs],
-            clone=False,
-        )
-
-        # replacements have to be done in reverse topological order so that nested
-        # expressions get recursively replaced correctly
-        toposort = fg.toposort()
-        sorted_replacements = sorted(
-            tuple(replacements.items()),
-            # Root inputs don't have owner, we give them negative priority -1
-            key=lambda pair: toposort.index(pair[0].owner) if pair[0].owner is not None else -1,
-            reverse=True,
-        )
-        fg.replace_all(sorted_replacements, import_missing=True)
-
-        graphs = list(fg.outputs)
-
-    return graphs, replacements
-
-
-def rvs_to_value_vars(
-    graphs: Iterable[Variable],
-    apply_transforms: bool = True,
-    **kwargs,
-) -> List[Variable]:
-    """Clone and replace random variables in graphs with their value variables.
-
-    This will *not* recompute test values in the resulting graphs.
-
-    Parameters
-    ----------
-    graphs
-        The graphs in which to perform the replacements.
-    apply_transforms
-        If ``True``, apply each value variable's transform.
-    """
-    warnings.warn(
-        "rvs_to_value_vars is deprecated. Use model.replace_rvs_by_values instead",
-        FutureWarning,
-    )
-
-    def populate_replacements(
-        random_var: TensorVariable, replacements: Dict[TensorVariable, TensorVariable]
-    ) -> List[TensorVariable]:
-        # Populate replacements dict with {rv: value} pairs indicating which graph
-        # RVs should be replaced by what value variables.
-
-        value_var = getattr(
-            random_var.tag, "observations", getattr(random_var.tag, "value_var", None)
-        )
-
-        # No value variable to replace RV with
-        if value_var is None:
-            return []
-
-        transform = getattr(value_var.tag, "transform", None)
-        if transform is not None and apply_transforms:
-            # We want to replace uses of the RV by the back-transformation of its value
-            value_var = transform.backward(value_var, *random_var.owner.inputs)
-
-        replacements[random_var] = value_var
-
-        # Also walk the graph of the value variable to make any additional replacements
-        # if that is not a simple input variable
-        return [value_var]
-
-    # Clone original graphs
+    # Clone graphs and get equivalences
     inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
-    equiv = clone_get_equiv(inputs, graphs, False, False, {})
-    graphs = [equiv[n] for n in graphs]
+    equiv = {k: k for k in replacements.keys()}
+    equiv = clone_get_equiv(inputs, graphs, False, False, equiv)
 
-    graphs, _ = _replace_vars_in_graphs(
-        graphs,
-        replacement_fn=populate_replacements,
-        **kwargs,
+    fg = FunctionGraph(
+        [equiv[i] for i in inputs],
+        [equiv[o] for o in graphs],
+        clone=False,
     )
 
-    return graphs
+    # Filter replacement keys that are actually present in the graph
+    vars = fg.variables
+    final_replacements = tuple((k, v) for k, v in replacements.items() if k in vars)
 
+    # Replacements have to be done in reverse topological order so that nested
+    # expressions get recursively replaced correctly
+    toposort_replace(fg, final_replacements, reverse=True)
 
-def replace_rvs_by_values(
-    graphs: Sequence[TensorVariable],
-    *,
-    rvs_to_values: Dict[TensorVariable, TensorVariable],
-    rvs_to_transforms: Optional[Dict[TensorVariable, RVTransform]] = None,
-    **kwargs,
-) -> List[TensorVariable]:
-    """Clone and replace random variables in graphs with their value variables.
-
-    This will *not* recompute test values in the resulting graphs.
-
-    Parameters
-    ----------
-    graphs
-        The graphs in which to perform the replacements.
-    rvs_to_values
-        Mapping between the original graph RVs and respective value variables
-    rvs_to_transforms, optional
-        Mapping between the original graph RVs and respective value transforms
-    """
-
-    # Clone original graphs so that we don't modify variables in place
-    inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
-    equiv = clone_get_equiv(inputs, graphs, False, False, {})
-    graphs = [equiv[n] for n in graphs]
-
-    # Get needed mappings for equivalent cloned variables
-    equiv_rvs_to_values = {}
-    equiv_rvs_to_transforms = {}
-    for rv, value in rvs_to_values.items():
-        equiv_rv = equiv.get(rv, rv)
-        equiv_rvs_to_values[equiv_rv] = equiv.get(value, value)
-        if rvs_to_transforms is not None:
-            equiv_rvs_to_transforms[equiv_rv] = rvs_to_transforms[rv]
-
-    def poulate_replacements(rv, replacements):
-        # Populate replacements dict with {rv: value} pairs indicating which graph
-        # RVs should be replaced by what value variables.
-
-        # No value variable to replace RV with
-        value = equiv_rvs_to_values.get(rv, None)
-        if value is None:
-            return []
-
-        if rvs_to_transforms is not None:
-            transform = equiv_rvs_to_transforms.get(rv, None)
-            if transform is not None:
-                # We want to replace uses of the RV by the back-transformation of its value
-                value = transform.backward(value, *rv.owner.inputs)
-                # The value may have a less precise type than the rv. In this case
-                # filter_variable will add a SpecifyShape to ensure they are consistent
-                value = rv.type.filter_variable(value, allow_convert=True)
-                value.name = rv.name
-
-        replacements[rv] = value
-        # Also walk the graph of the value variable to make any additional
-        # replacements if that is not a simple input variable
-        return [value]
-
-    graphs, _ = _replace_vars_in_graphs(
-        graphs,
-        replacement_fn=poulate_replacements,
-        **kwargs,
-    )
-
-    return graphs
+    return list(fg.outputs)
 
 
 def inputvars(a):
@@ -899,48 +737,6 @@ def largest_common_dtype(tensors):
     return np.stack([np.ones((), dtype=dtype) for dtype in dtypes]).dtype
 
 
-@node_rewriter(tracks=[CheckParameterValue])
-def local_remove_check_parameter(fgraph, node):
-    """Rewrite that removes CheckParameterValue
-
-    This is used when compile_rv_inplace
-    """
-    if isinstance(node.op, CheckParameterValue):
-        return [node.inputs[0]]
-
-
-@node_rewriter(tracks=[CheckParameterValue])
-def local_check_parameter_to_ninf_switch(fgraph, node):
-    if not node.op.can_be_replaced_by_ninf:
-        return None
-
-    logp_expr, *logp_conds = node.inputs
-    if len(logp_conds) > 1:
-        logp_cond = pt.all(logp_conds)
-    else:
-        (logp_cond,) = logp_conds
-    out = pt.switch(logp_cond, logp_expr, -np.inf)
-    out.name = node.op.msg
-
-    if out.dtype != node.outputs[0].dtype:
-        out = pt.cast(out, node.outputs[0].dtype)
-
-    return [out]
-
-
-pytensor.compile.optdb["canonicalize"].register(
-    "local_remove_check_parameter",
-    local_remove_check_parameter,
-    use_db_name_as_tag=False,
-)
-
-pytensor.compile.optdb["canonicalize"].register(
-    "local_check_parameter_to_ninf_switch",
-    local_check_parameter_to_ninf_switch,
-    use_db_name_as_tag=False,
-)
-
-
 def find_rng_nodes(
     variables: Iterable[Variable],
 ) -> List[Union[RandomStateSharedVariable, RandomGeneratorSharedVariable]]:
@@ -1269,7 +1065,7 @@ def as_symbolic_string(x, **kwargs):
 def toposort_replace(
     fgraph: FunctionGraph, replacements: Sequence[Tuple[Variable, Variable]], reverse: bool = False
 ) -> None:
-    """Replace multiple variables in topological order."""
+    """Replace multiple variables in place in topological order."""
     toposort = fgraph.toposort()
     sorted_replacements = sorted(
         replacements,

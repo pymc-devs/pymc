@@ -1,7 +1,7 @@
 PyTensor utils
 **************
 
-.. currentmodule:: pymc
+.. currentmodule:: pymc.pytensorf
 
 .. autosummary::
    :toctree: generated/

@@ -44,6 +44,7 @@ from pytensor.tensor.shape import SpecifyShape
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
+from pymc.logprob.utils import replace_rvs_by_values
 
 
 class MeasurableSpecifyShape(SpecifyShape):
@@ -107,8 +108,6 @@ MeasurableVariable.register(MeasurableCheckAndRaise)
 
 @_logprob.register(MeasurableCheckAndRaise)
 def logprob_check_and_raise(op, values, inner_rv, *assertions, **kwargs):
-    from pymc.pytensorf import replace_rvs_by_values
-
     (value,) = values
     # transfer assertion from rv to value
     assertions = replace_rvs_by_values(assertions, rvs_to_values={inner_rv: value})

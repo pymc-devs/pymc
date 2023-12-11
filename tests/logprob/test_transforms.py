@@ -43,7 +43,7 @@ import scipy.special
 
 from pytensor.graph.basic import equal_computations
 
-from pymc.distributions.continuous import Cauchy
+from pymc.distributions.continuous import Cauchy, ChiSquared
 from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
 from pymc.logprob.transforms import (
     ArccoshTransform,
@@ -57,10 +57,10 @@ from pymc.logprob.transforms import (
     ExpTransform,
     LocTransform,
     LogTransform,
-    RVTransform,
     ScaleTransform,
     SinhTransform,
     TanhTransform,
+    Transform,
 )
 from pymc.logprob.utils import ParameterValueError
 from pymc.testing import Rplusbig, Vector, assert_no_rvs
@@ -91,7 +91,7 @@ class DirichletScipyDist:
         return res
 
 
-class TestRVTransform:
+class TestTransform:
     @pytest.mark.parametrize("ndim", (0, 1))
     def test_fallback_log_jac_det(self, ndim):
         """
@@ -99,7 +99,7 @@ class TestRVTransform:
         simple transformation: x**2 -> -log(2*x)
         """
 
-        class SquareTransform(RVTransform):
+        class SquareTransform(Transform):
             name = "square"
             ndim_supp = ndim
 
@@ -123,7 +123,7 @@ class TestRVTransform:
 
     @pytest.mark.parametrize("ndim", (None, 2))
     def test_fallback_log_jac_det_undefined_ndim(self, ndim):
-        class SquareTransform(RVTransform):
+        class SquareTransform(Transform):
             name = "square"
             ndim_supp = ndim
 
@@ -152,7 +152,6 @@ class TestRVTransform:
                     transform_args_fn=lambda *inputs: pt.constant(loc),
                 ),
             ],
-            base_op=pt.random.multivariate_normal,
         )
 
         x = pt.random.multivariate_normal(np.zeros(3), np.eye(3))
@@ -431,7 +430,7 @@ class TestPowerRVTransform:
 
     def test_sqrt_transform(self):
         # The sqrt of a chisquare with n df is a chi distribution with n df
-        x_rv = pt.sqrt(pt.random.chisquare(df=3, size=(4,)))
+        x_rv = pt.sqrt(ChiSquared.dist(nu=3, size=(4,)))
         x_rv.name = "x"
 
         x_vv = x_rv.clone()

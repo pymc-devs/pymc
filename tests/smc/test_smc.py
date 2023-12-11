@@ -222,8 +222,8 @@ class TestSMC:
 
         assert isinstance(idata, InferenceData)
         assert "sample_stats" in idata
-        assert idata.posterior.dims["chain"] == chains
-        assert idata.posterior.dims["draw"] == draws
+        assert idata.posterior.sizes["chain"] == chains
+        assert idata.posterior.sizes["draw"] == draws
 
         assert isinstance(mt, MultiTrace)
         assert mt.nchains == chains

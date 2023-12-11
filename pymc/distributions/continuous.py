@@ -38,7 +38,6 @@ from pytensor.tensor.random.basic import (
     BetaRV,
     _gamma,
     cauchy,
-    chisquare,
     exponential,
     gumbel,
     halfcauchy,
@@ -49,6 +48,7 @@ from pytensor.tensor.random.basic import (
     lognormal,
     normal,
     pareto,
+    t,
     triangular,
     uniform,
     vonmises,
@@ -56,7 +56,7 @@ from pytensor.tensor.random.basic import (
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorConstant
 
-from pymc.logprob.abstract import _logcdf_helper, _logprob_helper
+from pymc.logprob.abstract import _logprob_helper
 from pymc.logprob.basic import icdf
 
 try:
@@ -568,11 +568,13 @@ class TruncatedNormalRV(RandomVariable):
         upper: Union[np.ndarray, float],
         size: Optional[Union[List[int], int]],
     ) -> np.ndarray:
+        # Upcast to float64. (Caller will downcast to desired dtype if needed)
+        #   (Work-around for https://github.com/scipy/scipy/issues/15928)
         return stats.truncnorm.rvs(
-            a=(lower - mu) / sigma,
-            b=(upper - mu) / sigma,
-            loc=mu,
-            scale=sigma,
+            a=((lower - mu) / sigma).astype("float64"),
+            b=((upper - mu) / sigma).astype("float64"),
+            loc=(mu).astype("float64"),
+            scale=(sigma).astype("float64"),
             size=size,
             random_state=rng,
         )
@@ -1734,21 +1736,6 @@ class LogNormal(PositiveContinuous):
 Lognormal = LogNormal
 
 
-class StudentTRV(RandomVariable):
-    name = "studentt"
-    ndim_supp = 0
-    ndims_params = [0, 0, 0]
-    dtype = "floatX"
-    _print_name = ("StudentT", "\\operatorname{StudentT}")
-
-    @classmethod
-    def rng_fn(cls, rng, nu, mu, sigma, size=None) -> np.ndarray:
-        return np.asarray(stats.t.rvs(nu, mu, sigma, size=size, random_state=rng))
-
-
-studentt = StudentTRV()
-
-
 class StudentT(Continuous):
     r"""
     Student's T log-likelihood.
@@ -1813,7 +1800,7 @@ class StudentT(Continuous):
         with pm.Model():
             x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
     """
-    rv_op = studentt
+    rv_op = t
 
     @classmethod
     def dist(cls, nu, mu=0, *, sigma=None, lam=None, **kwargs):
@@ -2374,15 +2361,20 @@ class InverseGamma(PositiveContinuous):
         )
 
 
-class ChiSquared(PositiveContinuous):
+class ChiSquared:
     r"""
     :math:`\chi^2` log-likelihood.
+
+    This is the distribution from the sum of the squares of :math:`\nu` independent standard normal random variables or a special
+    case of the gamma distribution with :math:`\alpha = \nu/2` and :math:`\beta = 1/2`.
 
     The pdf of this distribution is
 
     .. math::
 
        f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
+
+    Read more about the :math:`\chi^2` distribution at https://en.wikipedia.org/wiki/Chi-squared_distribution
 
     .. plot::
         :context: close-figs
@@ -2413,24 +2405,13 @@ class ChiSquared(PositiveContinuous):
     nu : tensor_like of float
         Degrees of freedom (nu > 0).
     """
-    rv_op = chisquare
+
+    def __new__(cls, name, nu, **kwargs):
+        return Gamma(name, alpha=nu / 2, beta=1 / 2, **kwargs)
 
     @classmethod
-    def dist(cls, nu, *args, **kwargs):
-        nu = pt.as_tensor_variable(floatX(nu))
-        return super().dist([nu], *args, **kwargs)
-
-    def moment(rv, size, nu):
-        moment = nu
-        if not rv_size_is_none(size):
-            moment = pt.full(size, moment)
-        return moment
-
-    def logp(value, nu):
-        return _logprob_helper(Gamma.dist(alpha=nu / 2, beta=0.5), value)
-
-    def logcdf(value, nu):
-        return _logcdf_helper(Gamma.dist(alpha=nu / 2, beta=0.5), value)
+    def dist(cls, nu, **kwargs):
+        return Gamma.dist(alpha=nu / 2, beta=1 / 2, **kwargs)
 
 
 # TODO: Remove this once logp for multiplication is working!
