@@ -85,6 +85,7 @@ from pymc.distributions.dist_math import (
     check_parameters,
     clipped_beta_rvs,
     i0e,
+    log_diff_normal_cdf,
     log_normal,
     logpow,
     normal_lccdf,
@@ -742,6 +743,31 @@ class TruncatedNormal(BoundedContinuous):
             )
 
         return logp
+
+    def logcdf(value, mu, sigma, lower, upper):
+        logcdf = log_diff_normal_cdf(mu, sigma, value, lower) - log_diff_normal_cdf(
+            mu, sigma, upper, lower
+        )
+
+        is_lower_bounded = not (
+            isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value))
+        )
+        is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
+
+        if is_lower_bounded:
+            logcdf = pt.switch(value < lower, -np.inf, logcdf)
+
+        if is_upper_bounded:
+            logcdf = pt.switch(value <= upper, logcdf, 0.0)
+
+        if is_lower_bounded and is_upper_bounded:
+            logcdf = check_parameters(
+                logcdf,
+                pt.le(lower, upper),
+                msg="lower_bound <= upper_bound",
+            )
+
+        return logcdf
 
 
 @_default_transform.register(TruncatedNormal)

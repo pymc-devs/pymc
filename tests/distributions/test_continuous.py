@@ -37,6 +37,7 @@ from pymc.testing import (
     Circ,
     Domain,
     R,
+    Rminusbig,
     Rplus,
     Rplusbig,
     Rplusunif,
@@ -934,6 +935,11 @@ class TestMatchesScipy:
                 value, (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma
             )
 
+        def scipy_logcdf(value, mu, sigma, lower, upper):
+            return st.truncnorm.logcdf(
+                value, (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma
+            )
+
         check_logp(
             pm.TruncatedNormal,
             R,
@@ -957,6 +963,33 @@ class TestMatchesScipy:
             R,
             {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig},
             ft.partial(scipy_logp, upper=np.inf),
+            decimal=select_by_precision(float64=6, float32=1),
+            skip_paramdomain_outside_edge_test=True,
+        )
+
+        check_logcdf(
+            pm.TruncatedNormal,
+            R,
+            {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig, "upper": Rplusbig},
+            scipy_logcdf,
+            decimal=select_by_precision(float64=6, float32=1),
+            skip_paramdomain_outside_edge_test=True,
+        )
+
+        check_logcdf(
+            pm.TruncatedNormal,
+            R,
+            {"mu": R, "sigma": Rplusbig, "upper": Rplusbig},
+            ft.partial(scipy_logcdf, lower=-np.inf),
+            decimal=select_by_precision(float64=6, float32=1),
+            skip_paramdomain_outside_edge_test=True,
+        )
+
+        check_logcdf(
+            pm.TruncatedNormal,
+            R,
+            {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig},
+            ft.partial(scipy_logcdf, upper=np.inf),
             decimal=select_by_precision(float64=6, float32=1),
             skip_paramdomain_outside_edge_test=True,
         )
