@@ -58,6 +58,7 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.logprob.abstract import (
     MeasurableVariable,
     _icdf_helper,
+    _kl_div_helper,
     _logcdf_helper,
     _logprob,
     _logprob_helper,
@@ -630,6 +631,27 @@ def transformed_conditional_logp(
         raise ValueError(RVS_IN_JOINT_LOGP_GRAPH_MSG % rvs_in_logp_expressions)
 
     return logp_terms_list
+
+
+def kl_div(
+    q_rv: TensorVariable,
+    p_rv: TensorVariable,
+) -> TensorVariable:
+    r"""KL Divergence
+
+    Parameters
+    ----------
+    q_rv : TensorVariable
+        :math:`Q` Distribution
+    p_rv : TensorVariable
+        :math:`P` Distribution
+
+    Returns
+    -------
+    TensorVariable
+        :math::KL\{Q||P\}
+    """
+    return _kl_div_helper(q_rv, p_rv)
 
 
 def factorized_joint_logprob(*args, **kwargs):

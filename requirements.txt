@@ -1,6 +1,7 @@
 arviz>=0.13.0
 cachetools>=4.2.1
 cloudpickle
+multipledispatch>=1.0.0
 numpy>=1.15.0
 pandas>=0.24.0
 pytensor>=2.23,<2.24
