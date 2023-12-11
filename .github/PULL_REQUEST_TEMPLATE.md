@@ -9,8 +9,8 @@
 ## Related Issue
 <!--- It is good practice to first open an issue explaining the bug / new feature that is addressed by this PR -->
 <!--- Please type an `x` in one of the boxes below and provide the issue number after the # sign: -->
-- [ ] Closes issue: #
-- [ ] Related issue (not closed by this PR): #
+- [ ] Closes #
+- [ ] Related to #
 
 ## Checklist
 <!--- Make sure you have completed the following steps before submitting your PR -->
