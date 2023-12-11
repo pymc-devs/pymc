@@ -477,6 +477,8 @@ def test_sample_numpyro_nuts_block_adapt():
         s_g = pm.HalfNormal("s_g")
         a_ig = pm.Normal("a_ig", a_g, s_g, dims=("county", "level"))
         trace = sample_numpyro_nuts(
+            tune=10,
+            draws=10,
             nuts_kwargs=dict(
                 dense_mass=[
                     ("a", "a_g"),
