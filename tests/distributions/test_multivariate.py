@@ -1704,6 +1704,41 @@ class TestZeroSumNormal:
                 pm.ZeroSumNormal("b", sigma=1, shape=(2,))
             m.logp()
 
+    def test_batched_sigma(self):
+        sigma = pt.scalar("sigma")
+        core_zsn = pm.ZeroSumNormal.dist(sigma=sigma, n_zerosum_axes=2, support_shape=(3, 2))
+        core_test_value = pm.draw(core_zsn, random_seed=1709, givens={sigma: 2.5})
+        batch_test_value = np.broadcast_to(core_test_value, (5, 3, 2))
+        batch_test_sigma = np.arange(1, 6).astype(core_zsn.type.dtype)
+        ref_logp = pm.logp(core_zsn, core_test_value)
+        ref_logp_fn = pytensor.function([sigma], ref_logp)
+        expected_logp = np.stack([ref_logp_fn(test_sigma) for test_sigma in batch_test_sigma])
+
+        # Explicit batch dim from shape
+        batch_zsn = pm.ZeroSumNormal.dist(
+            sigma=batch_test_sigma[:, None, None], n_zerosum_axes=2, shape=(5, 3, 2)
+        )
+        assert pm.draw(batch_zsn).shape == (5, 3, 2)
+        np.testing.assert_allclose(
+            pm.logp(batch_zsn, batch_test_value).eval(),
+            expected_logp,
+        )
+
+        # Implicit batch dim from sigma
+        batch_zsn = pm.ZeroSumNormal.dist(
+            sigma=batch_test_sigma[:, None, None], n_zerosum_axes=2, support_shape=(3, 2)
+        )
+        assert pm.draw(batch_zsn).shape == (5, 3, 2)
+        np.testing.assert_allclose(
+            pm.logp(batch_zsn, batch_test_value).eval(),
+            expected_logp,
+        )
+
+        with pytest.raises(ValueError, match="sigma must have length one across the zero-sum axes"):
+            pm.ZeroSumNormal.dist(
+                sigma=batch_test_sigma[None, :, None], n_zerosum_axes=2, support_shape=(3, 2)
+            )
+
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
     def mvstudentt_rng_fn(self, size, nu, mu, scale, rng):
