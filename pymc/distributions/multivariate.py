@@ -2591,8 +2591,7 @@ class ZeroSumNormal(Distribution):
     sigma : tensor_like of float
         Scale parameter (sigma > 0).
         It's actually the standard deviation of the underlying, unconstrained Normal distribution.
-        Defaults to 1 if not specified.
-        For now, ``sigma`` has to be a scalar, to ensure the zero-sum constraint.
+        Defaults to 1 if not specified. ``sigma`` cannot have length > 1 across the zero-sum axes.
     n_zerosum_axes: int, defaults to 1
         Number of axes along which the zero-sum constraint is enforced, starting from the rightmost position.
         Defaults to 1, i.e the rightmost axis.
@@ -2606,8 +2605,7 @@ class ZeroSumNormal(Distribution):
 
     Warnings
     --------
-    ``sigma`` has to be a scalar, to ensure the zero-sum constraint.
-    The ability to specify a vector of ``sigma`` may be added in future versions.
+    Currently, ``sigma``cannot have length > 1 across the zero-sum axes to ensure the zero-sum constraint.
 
     ``n_zerosum_axes`` has to be > 0. If you want the behavior of ``n_zerosum_axes = 0``,
     just use ``pm.Normal``.
@@ -2669,8 +2667,8 @@ class ZeroSumNormal(Distribution):
         n_zerosum_axes = cls.check_zerosum_axes(n_zerosum_axes)
 
         sigma = pt.as_tensor_variable(floatX(sigma))
-        if sigma.ndim > 0:
-            raise ValueError("sigma has to be a scalar")
+        if not all(sigma.type.broadcastable[-n_zerosum_axes:]):
+            raise ValueError("sigma must have length one across the zero-sum axes")
 
         support_shape = get_support_shape(
             support_shape=support_shape,
@@ -2681,9 +2679,7 @@ class ZeroSumNormal(Distribution):
         if support_shape is None:
             if n_zerosum_axes > 0:
                 raise ValueError("You must specify dims, shape or support_shape parameter")
-            # TODO: edge-case doesn't work for now, because pt.stack in get_support_shape fails
-            # else:
-            #     support_shape = () # because it's just a Normal in that case
+
         support_shape = pt.as_tensor_variable(intX(support_shape))
 
         assert n_zerosum_axes == pt.get_vector_length(
@@ -2706,7 +2702,12 @@ class ZeroSumNormal(Distribution):
 
     @classmethod
     def rv_op(cls, sigma, n_zerosum_axes, support_shape, size=None):
-        shape = to_tuple(size) + tuple(support_shape)
+        if size is not None:
+            shape = tuple(size) + tuple(support_shape)
+        else:
+            # Size is implied by shape of sigma
+            shape = tuple(sigma.shape[:-n_zerosum_axes]) + tuple(support_shape)
+
         normal_dist = pm.Normal.dist(sigma=sigma, shape=shape)
 
         if n_zerosum_axes > normal_dist.ndim:
