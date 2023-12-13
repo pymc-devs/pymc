@@ -2122,12 +2122,11 @@ class TestLKJCorr(BaseTestDistributionRandom):
         )
 
     @pytest.mark.parametrize(
-        argnames="shape, expected_shape",
+        argnames="shape",
         argvalues=[
-            ((2,), ()),
+            (2,),
             pytest.param(
                 (3, 2),
-                (3,),
                 marks=pytest.mark.xfail(
                     raises=NotImplementedError,
                     reason="We do not support batch dimensions for pm.LKJCorr yet.",
@@ -2135,7 +2134,7 @@ class TestLKJCorr(BaseTestDistributionRandom):
             ),
         ],
     )
-    def test_default_transform(self, shape, expected_shape):
+    def test_default_transform(self, shape):
         with pm.Model() as m:
             x = pm.LKJCorr("x", n=2, eta=1, shape=shape)
         assert isinstance(m.rvs_to_transforms[x], MultivariateIntervalTransform)
