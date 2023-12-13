@@ -2121,24 +2121,25 @@ class TestLKJCorr(BaseTestDistributionRandom):
             size=1000,
         )
 
-    @pytest.mark.parametrize(
-        argnames="shape",
-        argvalues=[
-            (2,),
-            pytest.param(
-                (3, 2),
-                marks=pytest.mark.xfail(
-                    raises=NotImplementedError,
-                    reason="LKJCorr logp is only implemented for vector values (ndim=1)",
-                ),
+
+@pytest.mark.parametrize(
+    argnames="shape",
+    argvalues=[
+        (2,),
+        pytest.param(
+            (3, 2),
+            marks=pytest.mark.xfail(
+                raises=NotImplementedError,
+                reason="LKJCorr logp is only implemented for vector values (ndim=1)",
             ),
-        ],
-    )
-    def test_default_transform(self, shape):
-        with pm.Model() as m:
-            x = pm.LKJCorr("x", n=2, eta=1, shape=shape)
-        assert isinstance(m.rvs_to_transforms[x], MultivariateIntervalTransform)
-        assert m.logp(sum=False)[0].type.shape == shape[:-1]
+        ),
+    ],
+)
+def test_default_transform(shape):
+    with pm.Model() as m:
+        x = pm.LKJCorr("x", n=2, eta=1, shape=shape)
+    assert isinstance(m.rvs_to_transforms[x], MultivariateIntervalTransform)
+    assert m.logp(sum=False)[0].type.shape == shape[:-1]
 
 
 class TestLKJCholeskyCov(BaseTestDistributionRandom):
