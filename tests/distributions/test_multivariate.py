@@ -2139,7 +2139,7 @@ class TestLKJCorr(BaseTestDistributionRandom):
         with pm.Model() as m:
             x = pm.LKJCorr("x", n=2, eta=1, shape=shape)
         assert isinstance(m.rvs_to_transforms[x], MultivariateIntervalTransform)
-        assert m.logp(sum=False)[0].type.shape == expected_shape
+        assert m.logp(sum=False)[0].type.shape == shape[:-1]
 
 
 class TestLKJCholeskyCov(BaseTestDistributionRandom):
