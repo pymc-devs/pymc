@@ -2135,7 +2135,7 @@ class TestLKJCorr(BaseTestDistributionRandom):
         ),
     ],
 )
-def test_default_transform(shape):
+def test_LKJCorr_default_transform(shape):
     with pm.Model() as m:
         x = pm.LKJCorr("x", n=2, eta=1, shape=shape)
     assert isinstance(m.rvs_to_transforms[x], MultivariateIntervalTransform)
