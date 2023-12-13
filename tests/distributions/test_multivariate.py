@@ -2121,6 +2121,12 @@ class TestLKJCorr(BaseTestDistributionRandom):
             size=1000,
         )
 
+    @pytest.mark.parametrize(argnames="n", argvalues=[2, 3], ids=["n=2", "n=3"])
+    def test_default_transform(self, n):
+        with pm.Model() as m:
+            pm.LKJCorr("x", n=n, eta=1)
+        m.logp()
+
 
 class TestLKJCholeskyCov(BaseTestDistributionRandom):
     pymc_dist = _LKJCholeskyCov
