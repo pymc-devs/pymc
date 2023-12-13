@@ -33,6 +33,7 @@ from pytensor.tensor.slinalg import Cholesky
 import pymc as pm
 
 from pymc.distributions.multivariate import (
+    MultivariateIntervalTransform,
     _LKJCholeskyCov,
     _OrderedMultinomial,
     posdef,
