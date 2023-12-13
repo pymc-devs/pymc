@@ -1306,8 +1306,26 @@ class TestMoments:
         [
             (3, 1, None, np.zeros(3)),
             (5, 1, None, np.zeros(10)),
-            (3, 1, 1, np.zeros((1, 3))),
-            (5, 1, (2, 3), np.zeros((2, 3, 10))),
+            pytest.param(
+                3,
+                1,
+                1,
+                np.zeros((1, 3)),
+                marks=pytest.mark.xfail(
+                    raises=NotImplementedError,
+                    reason="LKJCorr logp is only implemented for vector values (ndim=1)",
+                ),
+            ),
+            pytest.param(
+                5,
+                1,
+                (2, 3),
+                np.zeros((2, 3, 10)),
+                marks=pytest.mark.xfail(
+                    raises=NotImplementedError,
+                    reason="LKJCorr logp is only implemented for vector values (ndim=1)",
+                ),
+            ),
         ],
     )
     def test_lkjcorr_moment(self, n, eta, size, expected):
