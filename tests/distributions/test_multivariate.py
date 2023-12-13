@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import functools as ft
-import re
 import warnings
 
 import numpy as np
@@ -2122,11 +2121,25 @@ class TestLKJCorr(BaseTestDistributionRandom):
             size=1000,
         )
 
-    def test_default_transform(self):
+    @pytest.mark.parametrize(
+        argnames="shape, expected_shape",
+        argvalues=[
+            ((2,), ()),
+            pytest.param(
+                (3, 2),
+                (3,),
+                marks=pytest.mark.xfail(
+                    raises=NotImplementedError,
+                    reason="We do not support batch dimensions for pm.LKJCorr yet.",
+                ),
+            ),
+        ],
+    )
+    def test_default_transform(self, shape, expected_shape):
         with pm.Model() as m:
-            x = pm.LKJCorr("x", n=2, eta=1, shape=(3, 2))
+            x = pm.LKJCorr("x", n=2, eta=1, shape=shape)
         assert isinstance(m.rvs_to_transforms[x], MultivariateIntervalTransform)
-        assert m.logp(sum=False)[0].shape == (3,)
+        assert m.logp(sum=False)[0].type.shape == expected_shape
 
 
 class TestLKJCholeskyCov(BaseTestDistributionRandom):
