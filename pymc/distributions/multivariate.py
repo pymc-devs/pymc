@@ -1599,6 +1599,9 @@ class LKJCorr(BoundedContinuous):
         TensorVariable
         """
 
+        if value.ndim > 1:
+            raise NotImplementedError("LKJCorr logp is only implemented for vector values (ndim=1)")
+
         # TODO: PyTensor does not have a `triu_indices`, so we can only work with constant
         #  n (or else find a different expression)
         if not isinstance(n, Constant):

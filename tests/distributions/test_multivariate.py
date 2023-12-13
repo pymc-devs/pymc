@@ -2129,7 +2129,7 @@ class TestLKJCorr(BaseTestDistributionRandom):
                 (3, 2),
                 marks=pytest.mark.xfail(
                     raises=NotImplementedError,
-                    reason="We do not support batch dimensions for pm.LKJCorr yet.",
+                    reason="LKJCorr logp is only implemented for vector values (ndim=1)",
                 ),
             ),
         ],
