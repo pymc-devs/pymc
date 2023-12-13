@@ -675,3 +675,6 @@ def test_deprecated_ndim_supp_transforms():
 
     with pytest.warns(FutureWarning, match="deprecated"):
         assert tr.multivariate_sum_to_1 == tr.sum_to_1
+
+    with pytest.warns(FutureWarning, match="deprecated"):
+        assert tr.sum_to_1 == tr.simplex

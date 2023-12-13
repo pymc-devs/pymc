@@ -61,9 +61,9 @@ def __getattr__(name):
         warnings.warn(f"{name} has been deprecated, use sum_to_1 instead.", FutureWarning)
         return sum_to_1
 
-    # if name == "sum_to_1":
-    #     warnings.warn("sum_to_1 will be deprecated, use simplex instead.", FutureWarning)
-    #     return sum_to_1
+    if name == "sum_to_1":
+        warnings.warn("sum_to_1 has been deprecated, use simplex instead.", FutureWarning)
+        return simplex
 
     if name == "RVTransform":
         warnings.warn("RVTransform has been renamed to Transform", FutureWarning)
@@ -338,6 +338,7 @@ log.__doc__ = """
 Instantiation of :class:`pymc.logprob.transforms.LogTransform`
 for use in the ``transform`` argument of a random variable."""
 
+# Deprecated
 sum_to_1 = SumTo1()
 sum_to_1.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.SumTo1`
