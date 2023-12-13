@@ -2121,11 +2121,11 @@ class TestLKJCorr(BaseTestDistributionRandom):
             size=1000,
         )
 
-    @pytest.mark.parametrize(argnames="n", argvalues=[2, 3], ids=["n=2", "n=3"])
-    def test_default_transform(self, n):
+    def test_default_transform(self):
         with pm.Model() as m:
-            pm.LKJCorr("x", n=n, eta=1)
-        m.logp()
+            x = pm.LKJCorr("x", n=2, eta=1, shape=(3, 2))
+        assert isinstance(m.rvs_to_transforms[x], MultivariateIntervalTransform)
+        assert m.logp(sum=False)[0].shape == (3,)
 
 
 class TestLKJCholeskyCov(BaseTestDistributionRandom):
