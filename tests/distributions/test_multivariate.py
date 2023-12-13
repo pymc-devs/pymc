@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import functools as ft
-import re
 import warnings
 
 import numpy as np
@@ -33,6 +32,7 @@ from pytensor.tensor.slinalg import Cholesky
 import pymc as pm
 
 from pymc.distributions.multivariate import (
+    MultivariateIntervalTransform,
     _LKJCholeskyCov,
     _OrderedMultinomial,
     posdef,
@@ -1306,8 +1306,26 @@ class TestMoments:
         [
             (3, 1, None, np.zeros(3)),
             (5, 1, None, np.zeros(10)),
-            (3, 1, 1, np.zeros((1, 3))),
-            (5, 1, (2, 3), np.zeros((2, 3, 10))),
+            pytest.param(
+                3,
+                1,
+                1,
+                np.zeros((1, 3)),
+                marks=pytest.mark.xfail(
+                    raises=NotImplementedError,
+                    reason="LKJCorr logp is only implemented for vector values (ndim=1)",
+                ),
+            ),
+            pytest.param(
+                5,
+                1,
+                (2, 3),
+                np.zeros((2, 3, 10)),
+                marks=pytest.mark.xfail(
+                    raises=NotImplementedError,
+                    reason="LKJCorr logp is only implemented for vector values (ndim=1)",
+                ),
+            ),
         ],
     )
     def test_lkjcorr_moment(self, n, eta, size, expected):
@@ -2155,6 +2173,26 @@ class TestLKJCorr(BaseTestDistributionRandom):
             ref_rand=ref_rand,
             size=1000,
         )
+
+
+@pytest.mark.parametrize(
+    argnames="shape",
+    argvalues=[
+        (2,),
+        pytest.param(
+            (3, 2),
+            marks=pytest.mark.xfail(
+                raises=NotImplementedError,
+                reason="LKJCorr logp is only implemented for vector values (ndim=1)",
+            ),
+        ),
+    ],
+)
+def test_LKJCorr_default_transform(shape):
+    with pm.Model() as m:
+        x = pm.LKJCorr("x", n=2, eta=1, shape=shape)
+    assert isinstance(m.rvs_to_transforms[x], MultivariateIntervalTransform)
+    assert m.logp(sum=False)[0].type.shape == shape[:-1]
 
 
 class TestLKJCholeskyCov(BaseTestDistributionRandom):

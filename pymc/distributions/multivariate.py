@@ -1524,6 +1524,13 @@ class LKJCorrRV(RandomVariable):
 lkjcorr = LKJCorrRV()
 
 
+class MultivariateIntervalTransform(Interval):
+    name = "interval"
+
+    def log_jac_det(self, *args):
+        return super().log_jac_det(*args).sum(-1)
+
+
 class LKJCorr(BoundedContinuous):
     r"""
     The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
@@ -1592,6 +1599,9 @@ class LKJCorr(BoundedContinuous):
         TensorVariable
         """
 
+        if value.ndim > 1:
+            raise NotImplementedError("LKJCorr logp is only implemented for vector values (ndim=1)")
+
         # TODO: PyTensor does not have a `triu_indices`, so we can only work with constant
         #  n (or else find a different expression)
         if not isinstance(n, Constant):
@@ -1623,7 +1633,7 @@ class LKJCorr(BoundedContinuous):
 
 @_default_transform.register(LKJCorr)
 def lkjcorr_default_transform(op, rv):
-    return Interval(floatX(-1.0), floatX(1.0))
+    return MultivariateIntervalTransform(floatX(-1.0), floatX(1.0))
 
 
 class MatrixNormalRV(RandomVariable):
