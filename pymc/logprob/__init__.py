@@ -53,7 +53,6 @@ import pymc.logprob.order
 import pymc.logprob.scan
 import pymc.logprob.tensor
 import pymc.logprob.transforms
-import pymc.logprob.kl_divergence
 
 
 __all__ = (

@@ -57,7 +57,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.variable import TensorConstant
 
-from pymc.logprob.abstract import _logprob_helper
+from pymc.logprob.abstract import _kl_div, _logprob_helper
 from pymc.logprob.basic import icdf
 from pymc.pytensorf import normalize_rng_param
 
@@ -536,6 +536,23 @@ class Normal(Continuous):
             sigma > 0,
             msg="sigma > 0",
         )
+
+
+@_kl_div.register(Normal, Normal)
+def _normal_normal_kl(
+    q_dist: Normal,
+    p_dist: Normal,
+    q_inputs: List[pt.TensorVariable],
+    p_inputs: List[pt.TensorVariable],
+):
+    _, _, _, q_mu, q_sigma = q_inputs
+    _, _, _, p_mu, p_sigma = p_inputs
+    diff_log_scale = pt.log(q_sigma) - pt.log(p_sigma)
+    return (
+        0.5 * (q_mu / p_sigma - p_mu / p_sigma) ** 2
+        + 0.5 * pt.expm1(2.0 * diff_log_scale)
+        - diff_log_scale
+    )
 
 
 class TruncatedNormalRV(RandomVariable):
