@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import functools as ft
-import re
 import warnings
 
 import numpy as np
@@ -33,6 +32,7 @@ from pytensor.tensor.slinalg import Cholesky
 import pymc as pm
 
 from pymc.distributions.multivariate import (
+    MultivariateIntervalTransform,
     _LKJCholeskyCov,
     _OrderedMultinomial,
     posdef,
@@ -1306,8 +1306,26 @@ class TestMoments:
         [
             (3, 1, None, np.zeros(3)),
             (5, 1, None, np.zeros(10)),
-            (3, 1, 1, np.zeros((1, 3))),
-            (5, 1, (2, 3), np.zeros((2, 3, 10))),
+            pytest.param(
+                3,
+                1,
+                1,
+                np.zeros((1, 3)),
+                marks=pytest.mark.xfail(
+                    raises=NotImplementedError,
+                    reason="LKJCorr logp is only implemented for vector values (ndim=1)",
+                ),
+            ),
+            pytest.param(
+                5,
+                1,
+                (2, 3),
+                np.zeros((2, 3, 10)),
+                marks=pytest.mark.xfail(
+                    raises=NotImplementedError,
+                    reason="LKJCorr logp is only implemented for vector values (ndim=1)",
+                ),
+            ),
         ],
     )
     def test_lkjcorr_moment(self, n, eta, size, expected):
@@ -1703,6 +1721,41 @@ class TestZeroSumNormal:
             with pm.Model() as m:
                 pm.ZeroSumNormal("b", sigma=1, shape=(2,))
             m.logp()
+
+    def test_batched_sigma(self):
+        sigma = pt.scalar("sigma")
+        core_zsn = pm.ZeroSumNormal.dist(sigma=sigma, n_zerosum_axes=2, support_shape=(3, 2))
+        core_test_value = pm.draw(core_zsn, random_seed=1709, givens={sigma: 2.5})
+        batch_test_value = np.broadcast_to(core_test_value, (5, 3, 2))
+        batch_test_sigma = np.arange(1, 6).astype(core_zsn.type.dtype)
+        ref_logp = pm.logp(core_zsn, core_test_value)
+        ref_logp_fn = pytensor.function([sigma], ref_logp)
+        expected_logp = np.stack([ref_logp_fn(test_sigma) for test_sigma in batch_test_sigma])
+
+        # Explicit batch dim from shape
+        batch_zsn = pm.ZeroSumNormal.dist(
+            sigma=batch_test_sigma[:, None, None], n_zerosum_axes=2, shape=(5, 3, 2)
+        )
+        assert pm.draw(batch_zsn).shape == (5, 3, 2)
+        np.testing.assert_allclose(
+            pm.logp(batch_zsn, batch_test_value).eval(),
+            expected_logp,
+        )
+
+        # Implicit batch dim from sigma
+        batch_zsn = pm.ZeroSumNormal.dist(
+            sigma=batch_test_sigma[:, None, None], n_zerosum_axes=2, support_shape=(3, 2)
+        )
+        assert pm.draw(batch_zsn).shape == (5, 3, 2)
+        np.testing.assert_allclose(
+            pm.logp(batch_zsn, batch_test_value).eval(),
+            expected_logp,
+        )
+
+        with pytest.raises(ValueError, match="sigma must have length one across the zero-sum axes"):
+            pm.ZeroSumNormal.dist(
+                sigma=batch_test_sigma[None, :, None], n_zerosum_axes=2, support_shape=(3, 2)
+            )
 
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
@@ -2120,6 +2173,26 @@ class TestLKJCorr(BaseTestDistributionRandom):
             ref_rand=ref_rand,
             size=1000,
         )
+
+
+@pytest.mark.parametrize(
+    argnames="shape",
+    argvalues=[
+        (2,),
+        pytest.param(
+            (3, 2),
+            marks=pytest.mark.xfail(
+                raises=NotImplementedError,
+                reason="LKJCorr logp is only implemented for vector values (ndim=1)",
+            ),
+        ),
+    ],
+)
+def test_LKJCorr_default_transform(shape):
+    with pm.Model() as m:
+        x = pm.LKJCorr("x", n=2, eta=1, shape=shape)
+    assert isinstance(m.rvs_to_transforms[x], MultivariateIntervalTransform)
+    assert m.logp(sum=False)[0].type.shape == shape[:-1]
 
 
 class TestLKJCholeskyCov(BaseTestDistributionRandom):
