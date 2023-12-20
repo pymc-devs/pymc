@@ -56,7 +56,6 @@ from pytensor.tensor.random.var import (
     RandomGeneratorSharedVariable,
     RandomStateSharedVariable,
 )
-from pytensor.tensor.rewriting.basic import topo_constant_folding
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
@@ -1015,7 +1014,8 @@ def constant_fold(
     """
     fg = FunctionGraph(outputs=xs, features=[ShapeFeature()], clone=True)
 
-    folded_xs = rewrite_graph(fg, custom_rewrite=topo_constant_folding).outputs
+    # By default, rewrite_graph includes canonicalize which includes constant-folding as the final rewrite
+    folded_xs = rewrite_graph(fg).outputs
 
     if raise_not_constant and not all(isinstance(folded_x, Constant) for folded_x in folded_xs):
         raise NotConstantValueError
