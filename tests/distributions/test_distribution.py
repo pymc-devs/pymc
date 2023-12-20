@@ -1061,3 +1061,17 @@ class TestPartialObservedRV:
         invalid_mask = np.zeros((1, 5), dtype=bool)
         with pytest.raises(ValueError, match="mask can't have more dims than rv"):
             create_partial_observed_rv(rv, invalid_mask)
+
+    @pytest.mark.filterwarnings("error")
+    def test_default_updates(self):
+        mask = np.array([True, True, False])
+        rv = pm.Normal.dist(shape=(3,))
+        (obs_rv, _), (unobs_rv, _), joined_rv = create_partial_observed_rv(rv, mask)
+
+        draws_obs_rv, draws_unobs_rv, draws_joined_rv = pm.draw(
+            [obs_rv, unobs_rv, joined_rv], draws=2
+        )
+
+        assert np.all(draws_obs_rv[0] != draws_obs_rv[1])
+        assert np.all(draws_unobs_rv[0] != draws_unobs_rv[1])
+        assert np.all(draws_joined_rv[0] != draws_joined_rv[1])
