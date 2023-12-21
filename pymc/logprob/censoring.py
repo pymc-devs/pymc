@@ -265,7 +265,7 @@ def round_logprob(op, values, base_rv, **kwargs):
 
 
 class FlatSwitches(Op):
-    __props__ = ("out_dtype",)
+    __props__ = ("out_dtype", "rv_idx")
 
     def __init__(self, *args, out_dtype, rv_idx, **kwargs):
         super().__init__(*args, **kwargs)
@@ -449,14 +449,15 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
 
     encoding_list = flat_switch_helper(node, valued_rvs, encoding_list, initial_interval, base_rv)
 
-    encodings, intervals, rv_idx = [], [], []
+    encodings, intervals = [], []
+    rv_idx = ()
 
     # TODO: Some alternative cleaner way to do this
     for idx, item in enumerate(encoding_list):
         encoding = item["encoding"]
         # indices of intervals having base_rv as their "encoding"
         if encoding == base_rv:
-            rv_idx.append(idx)
+            rv_idx += (idx,)
 
         encodings.append(encoding)
         intervals.extend((item["lower"], item["upper"]))
