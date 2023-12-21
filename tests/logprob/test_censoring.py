@@ -264,32 +264,35 @@ def test_rounding(rounding_op):
     )
 
 
-@pytest.mark.parametrize(
-    "measurable_idx, test_values, exp_logp",
-    [
-        (1, (0.9, 1, 1.5), (-np.inf, st.norm(0.5, 1).logcdf(1), st.norm(0.5, 1).logpdf(1.5))),
-        (0, (1.5, 1, 0.9), (-np.inf, st.norm(0.5, 1).logsf(1), st.norm(0.5, 1).logpdf(0.9))),
-    ],
-)
-def test_switch_encoding_one_branch_measurable(measurable_idx, test_values, exp_logp):
-    x_rv = pt.random.normal(0.5, 1)
-    branches = (1, x_rv) if measurable_idx == 1 else (x_rv, 1)
+def test_switch_encoding_one_branch_measurable():
+    x_rv = pt.random.normal(0.5, 1, size=3)
 
-    y_rv = pt.switch(x_rv < 1, *branches)
+    y_rv1 = pt.switch(x_rv < 1, x_rv, 1)
+    y_rv2 = pt.switch(x_rv < 1, 1, x_rv)
 
-    y_vv = y_rv.clone()
+    y_vv1 = y_rv1.clone()
+    y_vv2 = y_rv2.clone()
 
-    logprob = logp(y_rv, y_vv)
+    logprob1 = logp(y_rv1, y_vv1)
+    logprob2 = logp(y_rv2, y_vv2)
 
-    logp_fn = pytensor.function([y_vv], logprob)
+    logp_fn1 = pytensor.function([y_vv1], logprob1)
+    logp_fn2 = pytensor.function([y_vv2], logprob2)
 
-    for i, j in zip(test_values, exp_logp):
-        assert np.isclose(logp_fn(i), j)
+    ref_scipy = st.norm(0.5, 1)
+
+    np.testing.assert_allclose(
+        logp_fn1([1.5, 1, 0.9]),
+        np.array([-np.inf, st.norm(0.5, 1).logsf(1), st.norm(0.5, 1).logpdf(0.9)]),
+    )
+
+    np.testing.assert_allclose(
+        logp_fn2([0.9, 1, 1.5]), np.array([-np.inf, ref_scipy.logcdf(1), ref_scipy.logpdf(1.5)])
+    )
 
 
-@pytest.mark.parametrize("test_values", [-1, 0, 1, 1.5])
-def test_switch_encoding_two_branches(test_values):
-    x_rv = pt.random.normal(0.5, 1)
+def test_switch_encoding_two_branches():
+    x_rv = pt.random.normal(0.5, 1, size=4)
 
     y_rv = pt.switch(x_rv < -1, -1, pt.switch(x_rv < 1, x_rv, 1))
     clip_rv = pt.clip(x_rv, -1, 1)
@@ -303,7 +306,8 @@ def test_switch_encoding_two_branches(test_values):
     logp_fn_switch = pytensor.function([y_vv], logp_switch)
     logp_fn_clip = pytensor.function([clip_vv], logp_clip)
 
-    assert np.isclose(logp_fn_switch(test_values), logp_fn_clip(test_values))
+    test_values = [-1, 0, 1, 1.5]
+    np.testing.assert_allclose(logp_fn_switch(test_values), logp_fn_clip(test_values))
 
 
 @pytest.mark.parametrize(
