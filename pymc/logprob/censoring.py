@@ -482,7 +482,7 @@ def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
     encodings = pt.broadcast_arrays(*encodings)
 
     encodings = Assert(msg="all encodings should be unique")(
-        encodings, pt.eq(pt.unique(encodings).shape[0], len(encodings))
+        encodings, pt.eq(pt.unique(encodings, axis=0).shape[0], len(encodings))
     )
 
     # TODO: Assert that the base_rv is not discrete
