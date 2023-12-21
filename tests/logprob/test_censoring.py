@@ -340,3 +340,35 @@ def test_switch_encoding_nested_branches(value, exp_logp):
     logp_fn_switch = pytensor.function([y_vv], logp_switch)
 
     assert np.isclose(logp_fn_switch(value), exp_logp)
+
+
+def test_switch_encoding_broadcastability():
+    x_rv = pt.random.normal(0.5, 1, size=2)
+
+    y_rv_valid = pt.switch(x_rv < [0.3, 0.3], pt.switch(x_rv > -0.5, x_rv, [0.1, 0.2]), 1.0)
+
+    y_rv_invalid1 = pt.switch(x_rv < [[0.3, 0.3], [0.1, 0.1]], 1.0, [0.0, 0.5])
+    y_rv_invalid2 = pt.switch(x_rv < [0.3, 0.3], x_rv, [[0.0, 0.5], x_rv])
+
+    y_vv_valid = y_rv_valid.clone()
+    y_vv_invalid1 = y_rv_invalid1.clone()
+    y_vv_invalid2 = y_rv_invalid2.clone()
+
+    y_test = [0.1, 0.2]
+    ref_scipy = st.norm(0.5, 1)
+    np.testing.assert_allclose(
+        logp(y_rv_valid, y_vv_valid).eval({y_vv_valid: y_test}),
+        np.array([ref_scipy.logcdf(-0.5)] * 2),
+    )
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Logprob method not implemented",
+    ):
+        logp(y_rv_invalid1, y_vv_invalid1).eval({y_vv_invalid1: y_test})
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Logprob method not implemented",
+    ):
+        logp(y_rv_invalid2, y_vv_invalid2).eval({y_vv_invalid2: y_test})
