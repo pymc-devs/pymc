@@ -343,6 +343,7 @@ def test_switch_encoding_nested_branches(value, exp_logp):
 
 
 def test_switch_encoding_broadcastability():
+    """Test that measurable branches and switch conditions are not allowed to be broadcasted"""
     x_rv = pt.random.normal(0.5, 1, size=2)
 
     y_rv_valid = pt.switch(x_rv < [0.3, 0.3], pt.switch(x_rv > -0.5, x_rv, [0.1, 0.2]), 1.0)
@@ -372,3 +373,39 @@ def test_switch_encoding_broadcastability():
         match="Logprob method not implemented",
     ):
         logp(y_rv_invalid2, y_vv_invalid2).eval({y_vv_invalid2: y_test})
+
+
+def test_switch_measurability_source():
+    """Test failure when more than one sources of measurability are present"""
+    x_rv1 = pt.random.normal(0.5, 1)
+    x_rv2 = pt.random.halfnormal(0.5, 1)
+
+    y_rv = pt.switch(x_rv1 > 1, x_rv2, 2)
+    y_vv = y_rv.clone()
+    y_vv.name = "cens_x"
+
+    x_vv1 = x_rv1.clone()
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Logprob method not implemented",
+    ):
+        logp(y_rv, y_vv)
+
+    with pytest.raises(RuntimeError, match="could not be derived: {cens_x}"):
+        conditional_logp({y_rv: y_vv, x_rv1: x_vv1})
+
+
+def test_switch_discrete_fail():
+    """Test failure when discrete RVs are used in the graph"""
+    x_rv = pt.random.poisson(2)
+    y_rv = pt.switch(x_rv > 3, x_rv, 1)
+
+    y_vv = x_rv.clone()
+    y_vv_test = 1
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Logprob method not implemented",
+    ):
+        logp(y_rv, y_vv).eval({y_vv: y_vv_test})
