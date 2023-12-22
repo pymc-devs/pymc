@@ -448,6 +448,8 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
         return None
 
     encoding_list = flat_switch_helper(node, valued_rvs, encoding_list, initial_interval, base_rv)
+    if encoding_list is None:
+        return None
 
     encodings, intervals = [], []
     rv_idx = ()
@@ -485,7 +487,7 @@ def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
         encodings, pt.eq(pt.unique(encodings, axis=0).shape[0], len(encodings))
     )
 
-    # TODO: Assert that the base_rv is not discrete
+    # TODO: We do not support the encoding graphs of discrete RVs yet
 
     interval_bounds = pt.broadcast_arrays(*inputs[0 : 2 * encodings_count])
     lower_interval_bounds = interval_bounds[::2]
