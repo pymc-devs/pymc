@@ -64,9 +64,17 @@ class MeasurableMax(MeasurableVariable, Max):
 
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
+    def clone(self, **kwargs):
+        axis = kwargs.get("axis", self.axis)
+        ndim_supp = kwargs.get("ndim_supp", self.ndim_supp)
+        supp_axes = kwargs.get("supp_axes", self.supp_axes)
+        measure_type = kwargs.get("measure_type", self.measure_type)
+        return type(self)(
+            axis=axis, ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+        )
 
 
-MeasurableVariable.register(MeasurableMax)
+# MeasurableVariable.register(MeasurableMax) remove this for all
 
 
 class MeasurableMaxDiscrete(Max):
@@ -166,8 +174,14 @@ class MeasurableMaxNeg(Max):
     """A placeholder used to specify a log-likelihood for a max(neg(x)) sub-graph.
     This shows up in the graph of min, which is (neg(max(neg(x)))."""
 
-
-MeasurableVariable.register(MeasurableMaxNeg)
+    def clone(self, **kwargs):
+        axis = kwargs.get("axis", self.axis)
+        ndim_supp = kwargs.get("ndim_supp", self.ndim_supp)
+        supp_axes = kwargs.get("supp_axes", self.supp_axes)
+        measure_type = kwargs.get("measure_type", self.measure_type)
+        return type(self)(
+            axis=axis, ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+        )
 
 
 class MeasurableDiscreteMaxNeg(Max):
@@ -216,12 +230,14 @@ def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> Optional[list[
 
     if not rv_map_feature.request_measurable([base_rv]):
         return None
+    
+    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_var)
 
     # distinguish measurable discrete and continuous (because logprob is different)
     if base_rv.owner.op.dtype.startswith("int"):
-        measurable_min = MeasurableDiscreteMaxNeg(list(axis))
+        measurable_min = MeasurableDiscreteMaxNeg(list(axis), ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type)
     else:
-        measurable_min = MeasurableMaxNeg(list(axis))
+        measurable_min = MeasurableMaxNeg(list(axis), ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type)
 
     return measurable_min.make_node(base_rv).outputs
 
