@@ -555,8 +555,14 @@ def find_measurable_ifelse_mixture(fgraph, node):
     supp_axes_all = ()
     measure_type_all = ()
 
-    for i in range(0, len(base_rvs)):
-        ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_rvs[i])
+    half_len = int(len(base_rvs) / 2)
+    length = len(base_rvs)
+
+    for base_rv1, base_rv2 in zip(base_rvs[0:half_len], base_rvs[half_len + 1 : length - 1]):
+        meta_info = get_measurable_meta_info(base_rv1)
+        if meta_info != get_measurable_meta_info(base_rv2):
+            return None
+        ndim_supp, supp_axes, measure_type = meta_info
         ndim_supp_all += (ndim_supp,)
         supp_axes_all += (supp_axes,)
         measure_type_all += (measure_type,)

@@ -45,7 +45,9 @@ import scipy.stats as sp
 import pymc as pm
 
 from pymc import logp
+from pymc.logprob.abstract import get_measurable_meta_info
 from pymc.testing import assert_no_rvs
+from tests.logprob.utils import meta_info_helper
 
 
 def test_argmax():
@@ -183,6 +185,43 @@ def test_max_logprob(shape, value, axis):
         (x_max_logprob.eval({x_max_value: test_value})),
         rtol=1e-06,
     )
+
+
+def test_meta_info_order():
+    """Test whether the logprob for ```pt.max``` produces the corrected
+
+    The fact that order statistics of i.i.d. uniform RVs ~ Beta is used here:
+        U_1, \\dots, U_n \\stackrel{\text{i.i.d.}}{\\sim} \text{Uniform}(0, 1) \\Rightarrow U_{(k)} \\sim \text{Beta}(k, n + 1- k)
+    for all 1<=k<=n
+    """
+    x = pt.random.uniform(0, 1, size=(3,))
+    x.name = "x"
+    x_max = pt.max(x, axis=-1)
+    x_max_vv = x_max.clone()
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(x)
+
+    ndim_supp, supp_axes, measure_type = meta_info_helper(x_max, x_max_vv)
+
+    assert np.isclose(
+        ndim_supp_base,
+        ndim_supp,
+    )
+    assert supp_axes_base == supp_axes
+
+    assert measure_type_base == measure_type
+
+    x_min = pt.min(x, axis=-1)
+    x_min_vv = x_min.clone()
+
+    ndim_supp_min, supp_axes_min, measure_type_min = meta_info_helper(x_min, x_min_vv)
+
+    assert np.isclose(
+        ndim_supp_base,
+        ndim_supp_min,
+    )
+    assert supp_axes_base == supp_axes_min
+
+    assert measure_type_base == measure_type_min
 
 
 @pytest.mark.parametrize(

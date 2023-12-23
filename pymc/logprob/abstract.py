@@ -36,6 +36,7 @@
 
 import abc
 
+from typing import Tuple, Union
 from collections.abc import Sequence
 from functools import singledispatch
 
@@ -179,6 +180,8 @@ def get_measurable_meta_info(
 ) -> Tuple[
     Union[int, Tuple[int]], Tuple[Union[int, Tuple[int]]], Union[MeasureType, Tuple[MeasureType]]
 ]:
+    from pymc.logprob.utils import DiracDelta
+
     # instead of taking base_op, take base_var as input
     # Get base_op from base_var.owner.op
     # index= base_var.owner.outputs.index(base_var) gives the output
@@ -193,7 +196,11 @@ def get_measurable_meta_info(
     # Add a test for pm.mixture, exponentiate it. Ask for logprob of this as this is not a rv and also does not have ndim_supp and properties. Such a test might exist in distributions. Do check.
     # TODO: Handle Symbolic random variables
 
-    # Handle Diracdelta specially
+    if isinstance(base_op, DiracDelta):
+        ndim_supp = 0
+        supp_axes = ()
+        measure_type = MeasureType.Discrete
+        return ndim_supp, supp_axes, measure_type
 
     if isinstance(base_op, RandomVariable):
         ndim_supp = base_op.ndim_supp
@@ -203,10 +210,9 @@ def get_measurable_meta_info(
         )
         return base_op.ndim_supp, supp_axes, measure_type
     else:
+        # We'll need this for scan or IfElse
         if isinstance(base_op.ndim_supp, tuple):
             if len(base_var.owner.outputs) != len(base_op.ndim_supp):
                 raise NotImplementedError("length of outputs and meta-properties is different")
             return base_op.ndim_supp[index], base_op.supp_axes, base_op.measure_type
-        # check if base_var.owner.outputs length is same as length of each prop( length of the tuple). If not , raise an error.
-        # We'll need this for scan or IfElse
         return base_op.ndim_supp, base_op.supp_axes, base_op.measure_type

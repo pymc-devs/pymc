@@ -47,7 +47,7 @@ from scipy import stats as st
 
 import pymc as pm
 
-from pymc.logprob.abstract import get_measurable_meta_info
+from pymc.logprob.abstract import MeasureType, get_measurable_meta_info
 from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.logprob.tensor import naive_bcast_rv_lift
@@ -428,14 +428,14 @@ def test_join_mixed_ndim_supp():
         (2, 1, 0),  # Swap
         (1, 2, 0),  # Swap
         (0, 1, 2, "x"),  # Expand
-        # ("x", 0, 1, 2),  # Expand
-        # (
-        #     0,
-        #     2,
-        # ),  # Drop
-        # (2, 0),  # Swap and drop
+        ("x", 0, 1, 2),  # Expand
+        (
+            0,
+            2,
+        ),  # Drop
+        (2, 0),  # Swap and drop
         (2, 1, "x", 0),  # Swap and expand
-        # ("x", 0, 2),  # Expand and drop
+        ("x", 0, 2),  # Expand and drop
         (2, "x", 0),  # Swap, expand and drop
     ],
 )
@@ -478,25 +478,19 @@ def test_measurable_dimshuffle(ds_order, multivariate):
 # TODO: seperate test for univariate and matrixNormal
 @pytensor.config.change_flags(cxx="")
 @pytest.mark.parametrize(
-    "ds_order",
+    "ds_order, ans_ndim_supp, ans_supp_axes, ans_measure_type",
     [
-        # (2, 0, 1),  # Swap
-        # (0, 2, 1),  # Swap
-        # (2, 1, 0),  # Swap
-        # (1, 2, 0),  # Swap
-        # (0, 1, 2, "x"),  # Expand
-        (
-            0,
-            2,
-        ),  # Drop
-        (2, 0),  # Swap and drop
-        (2, 1, "x", 0),  # Swap and expand
-        ("x", 0, 2),  # Expand and drop
-        (2, "x", 0),  # Swap, expand and drop
+        ((0, 2), 1, (-1,), MeasureType.Continuous),  # Drop
+        ((2, 0), 1, (-2,), MeasureType.Continuous),  # Swap and drop
+        ((2, 1, "x", 0), 1, (-4,), MeasureType.Continuous),  # Swap and expand
+        (("x", 0, 2), 1, (-1,), MeasureType.Continuous),  # Expand and drop
+        ((2, "x", 0), 1, (-3,), MeasureType.Continuous),  # Swap, expand and drop
     ],
 )
 @pytest.mark.parametrize("multivariate", (False, True))
-def test_meta_measurable_dimshuffle(ds_order, multivariate):
+def test_meta_measurable_dimshuffle(
+    ds_order, ans_ndim_supp, ans_supp_axes, ans_measure_type, multivariate
+):
     # hardcore the answer in parameter and test
     if multivariate:
         base_rv = pm.Dirichlet.dist([1, 1, 1], shape=(7, 1, 3))
@@ -521,8 +515,13 @@ def test_meta_measurable_dimshuffle(ds_order, multivariate):
     print(ndim_supp)
     print(supp_axes)
     print(measure_type)
+    assert np.isclose(
+        ndim_supp,
+        ans_ndim_supp,
+    )
+    assert supp_axes == ans_supp_axes
 
-    assert 0
+    assert measure_type == ans_measure_type
 
 
 def test_unmeargeable_dimshuffles():

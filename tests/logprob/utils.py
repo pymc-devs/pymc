@@ -42,6 +42,7 @@ from pytensor import tensor as pt
 from scipy import stats as stats
 
 from pymc.logprob import icdf, logcdf, logp
+from pymc.logprob.abstract import MeasurableVariable
 from pymc.logprob.rewriting import construct_ir_fgraph
 
 
@@ -121,7 +122,8 @@ def meta_info_helper(rv, vv):
     # ir_rewriter = logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"]), exclude=)
     fgraph, _, _ = construct_ir_fgraph({rv: vv})
     node = fgraph.outputs[0].owner
-    pytensor.dprint(node)
+    # pytensor.dprint(node)
+    # if isinstance(node, MeasurableVariable):
     ndim_supp = node.op.ndim_supp
     supp_axes = node.op.supp_axes
     measure_type = node.op.measure_type
