@@ -71,7 +71,7 @@ from pymc.logprob.abstract import (
     MeasureType,
     _logprob,
     _logprob_helper,
-    get_measurable_meta_info,
+    get_measure_type_info,
 )
 from pymc.logprob.rewriting import (
     PreserveRVMappings,
@@ -238,9 +238,6 @@ class MixtureRV(MeasurableVariable, Op):
         raise NotImplementedError("This is a stand-in Op.")  # pragma: no cover
 
 
-MeasurableVariable.register(MixtureRV)
-
-
 def get_stack_mixture_vars(
     node: Apply,
 ) -> tuple[Optional[list[TensorVariable]], Optional[int]]:
@@ -311,7 +308,7 @@ def find_measurable_index_mixture(fgraph, node):
     all_supp_axes = []
     all_measure_type = []
     for i in range(0, len(mixture_rvs)):
-        ndim_supp, supp_axes, measure_type = get_measurable_meta_info(mixture_rvs[i])
+        ndim_supp, supp_axes, measure_type = get_measure_type_info(mixture_rvs[i])
         all_ndim_supp.append(ndim_supp)
         all_supp_axes.append(supp_axes)
         all_measure_type.append(measure_type)
@@ -451,7 +448,7 @@ def find_measurable_switch_mixture(fgraph, node):
     all_supp_axes = []
     all_measure_type = []
     for i in range(0, len(components)):
-        ndim_supp, supp_axes, measure_type = get_measurable_meta_info(components[i])
+        ndim_supp, supp_axes, measure_type = get_measure_type_info(components[i])
         all_ndim_supp.append(ndim_supp)
         all_supp_axes.append(supp_axes)
         all_measure_type.append(measure_type)
@@ -460,8 +457,6 @@ def find_measurable_switch_mixture(fgraph, node):
         m_type = all_measure_type[0]
     else:
         m_type = MeasureType.Mixed
-
-    # ndim_supp, supp_axes, measure_type = get_measurable_meta_info(components[0])
 
     measurable_switch_mixture = MeasurableSwitchMixture(
         scalar_switch, ndim_supp=all_ndim_supp[0], supp_axes=all_supp_axes[0], measure_type=m_type
@@ -559,8 +554,8 @@ def find_measurable_ifelse_mixture(fgraph, node):
     length = len(base_rvs)
 
     for base_rv1, base_rv2 in zip(base_rvs[0:half_len], base_rvs[half_len + 1 : length - 1]):
-        meta_info = get_measurable_meta_info(base_rv1)
-        if meta_info != get_measurable_meta_info(base_rv2):
+        meta_info = get_measure_type_info(base_rv1)
+        if meta_info != get_measure_type_info(base_rv2):
             return None
         ndim_supp, supp_axes, measure_type = meta_info
         ndim_supp_all += (ndim_supp,)

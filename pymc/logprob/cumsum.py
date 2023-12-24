@@ -46,16 +46,13 @@ from pymc.logprob.abstract import (
     MeasurableVariable,
     _logprob,
     _logprob_helper,
-    get_measurable_meta_info,
+    get_measure_type_info,
 )
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 
 
 class MeasurableCumsum(MeasurableVariable, CumOp):
     """A placeholder used to specify a log-likelihood for a cumsum sub-graph."""
-
-
-MeasurableVariable.register(MeasurableCumsum)
 
 
 @_logprob.register(MeasurableCumsum)
@@ -106,7 +103,7 @@ def find_measurable_cumsums(fgraph, node) -> Optional[list[TensorVariable]]:
     if not rv_map_feature.request_measurable(node.inputs):
         return None
 
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_rv)
+    ndim_supp, supp_axes, measure_type = get_measure_type_info(base_rv)
     new_op = MeasurableCumsum(
         axis=node.op.axis or 0,
         mode="add",

@@ -54,7 +54,7 @@ from pytensor.tensor.subtensor import Subtensor, indices_from_subtensor
 from pytensor.tensor.variable import TensorVariable
 from pytensor.updates import OrderedUpdates
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob, get_measurable_meta_info
+from pymc.logprob.abstract import MeasurableVariable, _logprob, get_measure_type_info
 from pymc.logprob.basic import conditional_logp
 from pymc.logprob.rewriting import (
     PreserveRVMappings,
@@ -71,9 +71,6 @@ class MeasurableScan(MeasurableVariable, Scan):
 
     def __str__(self):
         return f"Measurable({super().__str__()})"
-
-
-MeasurableVariable.register(MeasurableScan)
 
 
 def convert_outer_out_to_in(
@@ -482,7 +479,7 @@ def find_measurable_scans(fgraph, node):
         if var.owner.op is None:
             continue
         if isinstance(var.owner.op, MeasurableVariable):
-            ndim_supp, supp_axes, measure_type = get_measurable_meta_info(var)
+            ndim_supp, supp_axes, measure_type = get_measure_type_info(var)
             all_ndim_supp += (ndim_supp,)
             all_supp_axes += (supp_axes,)
             all_measure_type += (measure_type,)

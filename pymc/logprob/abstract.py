@@ -175,16 +175,13 @@ class MeasurableElemwise(MeasurableVariable, Elemwise):
         super().__init__(scalar_op, *args, **kwargs)
 
 
-def get_measurable_meta_info(
+def get_measure_type_info(
     base_var,
 ) -> Tuple[
     Union[int, Tuple[int]], Tuple[Union[int, Tuple[int]]], Union[MeasureType, Tuple[MeasureType]]
 ]:
     from pymc.logprob.utils import DiracDelta
 
-    # instead of taking base_op, take base_var as input
-    # Get base_op from base_var.owner.op
-    # index= base_var.owner.outputs.index(base_var) gives the output
     if not isinstance(base_var, MeasurableVariable):
         base_op = base_var.owner.op
         index = base_var.owner.outputs.index(base_var)
@@ -192,9 +189,6 @@ def get_measurable_meta_info(
         base_op = base_var
     if not isinstance(base_op, MeasurableVariable):
         raise TypeError("base_op must be a RandomVariable or MeasurableVariable")
-
-    # Add a test for pm.mixture, exponentiate it. Ask for logprob of this as this is not a rv and also does not have ndim_supp and properties. Such a test might exist in distributions. Do check.
-    # TODO: Handle Symbolic random variables
 
     if isinstance(base_op, DiracDelta):
         ndim_supp = 0
@@ -210,7 +204,7 @@ def get_measurable_meta_info(
         )
         return base_op.ndim_supp, supp_axes, measure_type
     else:
-        # We'll need this for scan or IfElse
+        # We'll need this for operators like scan and IfElse
         if isinstance(base_op.ndim_supp, tuple):
             if len(base_var.owner.outputs) != len(base_op.ndim_supp):
                 raise NotImplementedError("length of outputs and meta-properties is different")

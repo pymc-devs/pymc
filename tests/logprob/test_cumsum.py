@@ -41,10 +41,10 @@ import pytest
 import scipy.stats as st
 
 from pymc import logp
-from pymc.logprob.abstract import get_measurable_meta_info
+from pymc.logprob.abstract import get_measure_type_info
 from pymc.logprob.basic import conditional_logp
 from pymc.testing import assert_no_rvs
-from tests.logprob.utils import meta_info_helper
+from tests.logprob.utils import measure_type_info_helper
 
 
 @pytest.mark.parametrize(
@@ -83,14 +83,14 @@ def test_normal_cumsum(size, axis):
         ((3, 2, 10), 2),
     ],
 )
-def test_meta_info(size, axis):
+def test_measure_type_info(size, axis):
     rv = pt.random.normal(0, 1, size=size).cumsum(axis)
     vv = rv.clone()
     base_rv = pt.random.normal(0, 1, size=size)
     base_vv = base_rv.clone()
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(base_rv)
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measure_type_info(base_rv)
 
-    ndim_supp, supp_axes, measure_type = meta_info_helper(rv, vv)
+    ndim_supp, supp_axes, measure_type = measure_type_info_helper(rv, vv)
 
     assert np.isclose(
         ndim_supp_base,

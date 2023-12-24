@@ -51,7 +51,7 @@ from pymc.logprob.abstract import (
     _logcdf_helper,
     _logprob,
     _logprob_helper,
-    get_measurable_meta_info,
+    get_measure_type_info,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import find_negated_var
@@ -62,8 +62,6 @@ from pymc.pytensorf import constant_fold
 class MeasurableMax(MeasurableVariable, Max):
     """A placeholder used to specify a log-likelihood for a max sub-graph."""
 
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
     def clone(self, **kwargs):
         axis = kwargs.get("axis", self.axis)
         ndim_supp = kwargs.get("ndim_supp", self.ndim_supp)
@@ -74,14 +72,17 @@ class MeasurableMax(MeasurableVariable, Max):
         )
 
 
-# MeasurableVariable.register(MeasurableMax) remove this for all
-
-
-class MeasurableMaxDiscrete(Max):
+class MeasurableMaxDiscrete(MeasurableVariable, Max):
     """A placeholder used to specify a log-likelihood for sub-graphs of maxima of discrete variables"""
 
-
-MeasurableVariable.register(MeasurableMaxDiscrete)
+    def clone(self, **kwargs):
+        axis = kwargs.get("axis", self.axis)
+        ndim_supp = kwargs.get("ndim_supp", self.ndim_supp)
+        supp_axes = kwargs.get("supp_axes", self.supp_axes)
+        measure_type = kwargs.get("measure_type", self.measure_type)
+        return type(self)(
+            axis=axis, ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+        )
 
 
 @node_rewriter([Max])
@@ -116,11 +117,17 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[list[Tens
     if axis != base_var_dims:
         return None
 
+    ndim_supp, supp_axes, measure_type = get_measure_type_info(base_var)
+
     # distinguish measurable discrete and continuous (because logprob is different)
     if base_var.owner.op.dtype.startswith("int"):
-        measurable_max = MeasurableMaxDiscrete(list(axis))
+        measurable_max = MeasurableMaxDiscrete(
+            axis=list(axis), ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+        )
     else:
-        measurable_max = MeasurableMax(list(axis))
+        measurable_max = MeasurableMax(
+            axis=list(axis), ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+        )
 
     max_rv_node = measurable_max.make_node(base_var)
     max_rv = max_rv_node.outputs
@@ -170,7 +177,7 @@ def max_logprob_discrete(op, values, base_rv, **kwargs):
     return logprob
 
 
-class MeasurableMaxNeg(Max):
+class MeasurableMaxNeg(MeasurableVariable, Max):
     """A placeholder used to specify a log-likelihood for a max(neg(x)) sub-graph.
     This shows up in the graph of min, which is (neg(max(neg(x)))."""
 
@@ -230,8 +237,8 @@ def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> Optional[list[
 
     if not rv_map_feature.request_measurable([base_rv]):
         return None
-    
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_var)
+ 
+    ndim_supp, supp_axes, measure_type = get_measure_type_info(base_var)
 
     # distinguish measurable discrete and continuous (because logprob is different)
     if base_rv.owner.op.dtype.startswith("int"):

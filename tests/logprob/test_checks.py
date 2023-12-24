@@ -35,23 +35,19 @@
 #   SOFTWARE.
 import re
 
-from collections import deque
-
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
 import pytest
 
-from pytensor.graph.basic import io_toposort
 from pytensor.raise_op import Assert
 from scipy import stats
 
 from pymc.distributions import Dirichlet
-from pymc.logprob.abstract import get_measurable_meta_info
+from pymc.logprob.abstract import get_measure_type_info
 from pymc.logprob.basic import conditional_logp
-from pymc.logprob.rewriting import construct_ir_fgraph
 from tests.distributions.test_multivariate import dirichlet_logpdf
-from tests.logprob.utils import meta_info_helper
+from tests.logprob.utils import measure_type_info_helper
 
 
 def test_specify_shape_logprob():
@@ -90,11 +86,10 @@ def test_shape_meta_info():
     x_rv = pt.specify_shape(x_base, shape=(5, 3))
     x_rv.name = "x"
 
-    # 2. Request logp
     x_vv = x_rv.clone()
-    ndim_supp, supp_axes, measure_type = meta_info_helper(x_rv, x_vv)
+    ndim_supp, supp_axes, measure_type = measure_type_info_helper(x_rv, x_vv)
 
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(x_base)
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measure_type_info(x_base)
 
     assert np.isclose(
         ndim_supp_base,
@@ -137,9 +132,9 @@ def test_assert_meta_info():
     assert_rv.name = "assert_rv"
 
     assert_vv = assert_rv.clone()
-    ndim_supp, supp_axes, measure_type = meta_info_helper(assert_rv, assert_vv)
+    ndim_supp, supp_axes, measure_type = measure_type_info_helper(assert_rv, assert_vv)
 
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(rv)
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measure_type_info(rv)
 
     assert np.isclose(
         ndim_supp_base,

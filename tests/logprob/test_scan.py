@@ -53,7 +53,7 @@ from pymc.logprob.scan import (
     get_random_outer_outputs,
 )
 from pymc.testing import assert_no_rvs
-from tests.logprob.utils import meta_info_helper
+from tests.logprob.utils import measure_type_info_helper
 
 
 def create_inner_out_logp(value_map):
@@ -516,7 +516,6 @@ def test_measure_type_scan_non_pure_rv_output():
 
     grw1_vv = grw[0].clone()
 
-    # rename meta to measure_type
     fgraph, _, _ = construct_ir_fgraph({grw[0]: grw1_vv})
     node = fgraph.outputs[0].owner
     ndim_supp = node.inputs[0].owner.op.ndim_supp
@@ -542,7 +541,7 @@ def test_measure_type_scan_over_seqs():
     )
     ys1_vv = ys[0].clone()
 
-    ndim_supp, supp_axes, measure_type = meta_info_helper(ys[0], ys1_vv)
+    ndim_supp, supp_axes, measure_type = measure_type_info_helper(ys[0], ys1_vv)
 
     if (
         not ndim_supp == (1, 0)

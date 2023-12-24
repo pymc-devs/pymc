@@ -43,10 +43,11 @@ import scipy.stats as st
 
 from pymc import logp
 from pymc.logprob import conditional_logp
+from pymc.logprob.abstract import get_measure_type_info
 from pymc.logprob.transform_value import TransformValuesRewrite
 from pymc.logprob.transforms import LogTransform
 from pymc.testing import assert_no_rvs
-from tests.logprob.utils import meta_info_helper
+from tests.logprob.utils import measure_type_info_helper
 
 
 @pytensor.config.change_flags(compute_test_value="raise")
@@ -75,8 +76,7 @@ def test_continuous_rv_clip():
     "measure_type",
     [("Discrete"), ("Continuous")],
 )
-def test_clip_meta_info(measure_type):
-    # use true and false
+def test_clip_measure_type_info(measure_type):
     if measure_type == "Continuous":
         base_rv = pt.random.normal(0.5, 1)
         rv = pt.clip(base_rv, -2, 2)
@@ -86,9 +86,9 @@ def test_clip_meta_info(measure_type):
 
     vv = rv.clone()
 
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(base_rv)
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measure_type_info(base_rv)
 
-    ndim_supp, supp_axes, measure_type = meta_info_helper(rv, vv)
+    ndim_supp, supp_axes, measure_type = measure_type_info_helper(rv, vv)
 
     assert np.isclose(
         ndim_supp_base,
@@ -294,7 +294,7 @@ def test_rounding(rounding_op):
 
 
 @pytest.mark.parametrize("rounding_op", (pt.round, pt.floor, pt.ceil))
-def test_round_meta_info(rounding_op):
+def test_round_measure_type_info(rounding_op):
     loc = 1
     scale = 2
     test_value = np.arange(-3, 4)
@@ -304,9 +304,9 @@ def test_round_meta_info(rounding_op):
     xr.name = "xr"
 
     xr_vv = xr.clone()
-    ndim_supp, supp_axes, measure_type = meta_info_helper(xr, xr_vv)
+    ndim_supp, supp_axes, measure_type = measure_type_info_helper(xr, xr_vv)
 
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(x)
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measure_type_info(x)
 
     assert np.isclose(
         ndim_supp_base,
