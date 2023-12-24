@@ -79,7 +79,7 @@ def test_specify_shape_logprob():
         x_logp_fn(last_dim=1, x=x_vv_test_invalid)
 
 
-def test_shape_meta_info():
+def test_shape_measure_type_info():
     last_dim = pt.scalar(name="last_dim", dtype="int64")
     x_base = Dirichlet.dist(pt.ones((last_dim,)), shape=(5, last_dim))
     x_base.name = "x"
@@ -124,7 +124,7 @@ def test_assert_logprob():
         assert_logp.eval({assert_vv: -5.0})
 
 
-def test_assert_meta_info():
+def test_assert_measure_type_info():
     rv = pt.random.normal()
     assert_op = Assert("Test assert")
     # Example: Add assert that rv must be positive

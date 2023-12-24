@@ -43,7 +43,7 @@ import scipy.stats as st
 
 from pymc import logp
 from pymc.logprob import conditional_logp
-from pymc.logprob.abstract import get_measure_type_info
+from pymc.logprob.abstract import MeasureType, get_measure_type_info
 from pymc.logprob.transform_value import TransformValuesRewrite
 from pymc.logprob.transforms import LogTransform
 from pymc.testing import assert_no_rvs
@@ -96,7 +96,10 @@ def test_clip_measure_type_info(measure_type):
     )
     assert supp_axes_base == supp_axes
 
-    assert measure_type_base == measure_type
+    if measure_type_base == MeasureType.Continuous:
+        assert measure_type_base != measure_type
+    else:
+        assert measure_type_base == measure_type
 
 
 def test_discrete_rv_clip():
@@ -314,4 +317,4 @@ def test_round_measure_type_info(rounding_op):
     )
     assert supp_axes_base == supp_axes
 
-    assert str(measure_type) == "MeasureType.Discrete"
+    assert measure_type == MeasureType.Discrete
