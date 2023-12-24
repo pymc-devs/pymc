@@ -117,27 +117,12 @@ def scipy_logprob_tester(
     np.testing.assert_array_almost_equal(pytensor_res_val, numpy_res, 4)
 
 
-def meta_info_helper(rv, vv):
-    # pytensor.config.optimizer_verbose=True
-    # ir_rewriter = logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"]), exclude=)
+def measure_type_info_helper(rv, vv):
+    """Extract measurable information from rv"""
     fgraph, _, _ = construct_ir_fgraph({rv: vv})
     node = fgraph.outputs[0].owner
-    # pytensor.dprint(node)
-    # if isinstance(node, MeasurableVariable):
     ndim_supp = node.op.ndim_supp
     supp_axes = node.op.supp_axes
     measure_type = node.op.measure_type
 
     return ndim_supp, supp_axes, measure_type
-
-
-def get_measurable_meta_infos(
-    base_op,
-):
-    # if not isinstance(base_op, MeasurableVariable):
-    #     raise TypeError("base_op must be a RandomVariable or MeasurableVariable")
-
-    # if isinstance(base_op, RandomVariable):
-    ndim_supp = base_op.ndim_supp
-    supp_axes = tuple(range(-ndim_supp, 0))
-    return base_op.ndim_supp, supp_axes

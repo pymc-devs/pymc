@@ -21,9 +21,9 @@ from pytensor import function
 
 from pymc import logp
 from pymc.logprob import conditional_logp
-from pymc.logprob.abstract import MeasureType, get_measurable_meta_info
+from pymc.logprob.abstract import MeasureType, get_measure_type_info
 from pymc.testing import assert_no_rvs
-from tests.logprob.utils import meta_info_helper
+from tests.logprob.utils import measure_type_info_helper
 
 
 @pytest.mark.parametrize(
@@ -71,7 +71,7 @@ def test_continuous_rv_comparison_bitwise(comparison_op, exp_logp_true, exp_logp
         ((pt.gt, pt.ge), "logcdf", "logsf", (0.5, pt.random.normal(0, 1))),
     ],
 )
-def test_meta_info(comparison_op, exp_logp_true, exp_logp_false, inputs):
+def test_measure_type_info(comparison_op, exp_logp_true, exp_logp_false, inputs):
     for op in comparison_op:
         comp_x_rv = op(*inputs)
 
@@ -81,9 +81,9 @@ def test_meta_info(comparison_op, exp_logp_true, exp_logp_false, inputs):
             base_rv = inputs[0]
 
         comp_x_vv = comp_x_rv.clone()
-        ndim_supp, supp_axes, measure_type = meta_info_helper(comp_x_rv, comp_x_vv)
+        ndim_supp, supp_axes, measure_type = measure_type_info_helper(comp_x_rv, comp_x_vv)
 
-        ndim_supp_base, supp_axes_base, _ = get_measurable_meta_info(base_rv)
+        ndim_supp_base, supp_axes_base, _ = get_measure_type_info(base_rv)
 
         assert np.isclose(
             ndim_supp_base,

@@ -29,7 +29,7 @@ from pymc.logprob.abstract import (
     _logcdf_helper,
     _logprob,
     _logprob_helper,
-    get_measurable_meta_info,
+    get_measure_type_info,
 )
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import check_potential_measurability
@@ -83,7 +83,7 @@ def find_measurable_comparisons(
         elif isinstance(node_scalar_op, LE):
             node_scalar_op = GE()
 
-    ndim_supp, supp_axes, _ = get_measurable_meta_info(measurable_var)
+    ndim_supp, supp_axes, _ = get_measure_type_info(measurable_var)
 
     compared_op = MeasurableComparison(
         scalar_op=node_scalar_op,
@@ -157,7 +157,7 @@ def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> Optional[list[
         return None
 
     node_scalar_op = node.op.scalar_op
-    ndim_supp, supp_axis, measure_type = get_measurable_meta_info(base_var)
+    ndim_supp, supp_axis, measure_type = get_measure_type_info(base_var)
     bitwise_op = MeasurableBitwise(
         scalar_op=node_scalar_op,
         ndim_supp=ndim_supp,

@@ -55,7 +55,6 @@ from pymc.logprob.basic import conditional_logp
 from pymc.logprob.rewriting import cleanup_ir, local_lift_DiracDelta
 from pymc.logprob.transform_value import TransformedValue, TransformValuesRewrite
 from pymc.logprob.utils import DiracDelta, dirac_delta
-from tests.logprob.utils import scipy_logprob
 
 
 def test_local_lift_DiracDelta():

@@ -47,7 +47,7 @@ from pymc.logprob.abstract import (
     MeasurableVariable,
     _logprob,
     _logprob_helper,
-    get_measurable_meta_info,
+    get_measure_type_info,
 )
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import replace_rvs_by_values
@@ -55,9 +55,6 @@ from pymc.logprob.utils import replace_rvs_by_values
 
 class MeasurableSpecifyShape(MeasurableVariable, SpecifyShape):
     """A placeholder used to specify a log-likelihood for a specify-shape sub-graph."""
-
-
-MeasurableVariable.register(MeasurableSpecifyShape)
 
 
 @_logprob.register(MeasurableSpecifyShape)
@@ -91,7 +88,7 @@ def find_measurable_specify_shapes(fgraph, node) -> Optional[list[TensorVariable
     ):
         return None  # pragma: no cover
 
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_rv)
+    ndim_supp, supp_axes, measure_type = get_measure_type_info(base_rv)
 
     new_op = MeasurableSpecifyShape(
         ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
@@ -111,9 +108,6 @@ measurable_ir_rewrites_db.register(
 
 class MeasurableCheckAndRaise(MeasurableVariable, CheckAndRaise):
     """A placeholder used to specify a log-likelihood for an assert sub-graph."""
-
-
-MeasurableVariable.register(MeasurableCheckAndRaise)
 
 
 @_logprob.register(MeasurableCheckAndRaise)
@@ -142,7 +136,7 @@ def find_measurable_check_and_raise(fgraph, node) -> Optional[list[TensorVariabl
         return None
 
     op = node.op
-    ndim_supp, supp_axis, d_type = get_measurable_meta_info(base_rv)
+    ndim_supp, supp_axis, d_type = get_measure_type_info(base_rv)
     new_op = MeasurableCheckAndRaise(
         exc_type=op.exc_type,
         msg=op.msg,

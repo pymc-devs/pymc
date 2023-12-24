@@ -44,7 +44,11 @@ import scipy.special
 from pytensor.graph.basic import equal_computations
 
 from pymc.distributions.continuous import Cauchy, ChiSquared
+<<<<<<< HEAD
 from pymc.distributions.discrete import Bernoulli
+=======
+from pymc.logprob.abstract import get_measure_type_info
+>>>>>>> Measure type information for all logps added
 from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
 from pymc.logprob.transforms import (
     ArccoshTransform,
@@ -66,6 +70,7 @@ from pymc.logprob.transforms import (
 from pymc.logprob.utils import ParameterValueError
 from pymc.testing import Rplusbig, Vector, assert_no_rvs
 from tests.distributions.test_transform import check_jacobian_det
+from tests.logprob.utils import measure_type_info_helper
 
 
 class DirichletScipyDist:
@@ -229,16 +234,16 @@ def test_exp_transform_rv():
     )
 
 
-def test_meta_exp_transform_rv():
+def test_measure_type_exp_transform_rv():
     base_rv = pt.random.normal(0, 1, size=3, name="base_rv")
     y_rv = pt.exp(base_rv)
     y_rv.name = "y"
 
     y_vv = y_rv.clone()
 
-    ndim_supp_base, supp_axes_base, measure_type_base = get_measurable_meta_info(base_rv)
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measure_type_info(base_rv)
 
-    ndim_supp, supp_axes, measure_type = meta_info_helper(y_rv, y_vv)
+    ndim_supp, supp_axes, measure_type = measure_type_info_helper(y_rv, y_vv)
 
     assert np.isclose(
         ndim_supp_base,

@@ -115,7 +115,7 @@ from pymc.logprob.abstract import (
     _logcdf_helper,
     _logprob,
     _logprob_helper,
-    get_measurable_meta_info,
+    get_measure_type_info,
 )
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import (
@@ -502,7 +502,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[li
             transform_args_fn=lambda *inputs: inputs[-1],
         )
 
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(measurable_input)
+    ndim_supp, supp_axes, measure_type = get_measure_type_info(measurable_input)
     transform_op = MeasurableTransform(
         scalar_op=scalar_op,
         transform=transform,

@@ -54,7 +54,7 @@ from pymc.logprob.abstract import (
     MeasurableVariable,
     _logprob,
     _logprob_helper,
-    get_measurable_meta_info,
+    get_measure_type_info,
 )
 from pymc.logprob.rewriting import (
     PreserveRVMappings,
@@ -131,9 +131,6 @@ class MeasurableMakeVector(MeasurableVariable, MakeVector):
     """A placeholder used to specify a log-likelihood for a cumsum sub-graph."""
 
 
-MeasurableVariable.register(MeasurableMakeVector)
-
-
 @_logprob.register(MeasurableMakeVector)
 def logprob_make_vector(op, values, *base_rvs, **kwargs):
     """Compute the log-likelihood graph for a `MeasurableMakeVector`."""
@@ -156,9 +153,6 @@ def logprob_make_vector(op, values, *base_rvs, **kwargs):
 
 class MeasurableJoin(MeasurableVariable, Join):
     """A placeholder used to specify a log-likelihood for a join sub-graph."""
-
-
-MeasurableVariable.register(MeasurableJoin)
 
 
 @_logprob.register(MeasurableJoin)
@@ -226,7 +220,7 @@ def find_measurable_stacks(fgraph, node) -> Optional[list[TensorVariable]]:
     if not all(var.owner and isinstance(var.owner.op, MeasurableVariable) for var in base_vars):
         return None
 
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_vars[0])
+    ndim_supp, supp_axes, measure_type = get_measure_type_info(base_vars[0])
 
     if is_join:
         measurable_stack = MeasurableJoin(
@@ -246,9 +240,6 @@ class MeasurableDimShuffle(MeasurableVariable, DimShuffle):
     # Need to get the absolute path of `c_func_file`, otherwise it tries to
     # find it locally and fails when a new `Op` is initialized
     c_func_file = DimShuffle.get_path(DimShuffle.c_func_file)
-
-
-MeasurableVariable.register(MeasurableDimShuffle)
 
 
 @_logprob.register(MeasurableDimShuffle)
@@ -279,7 +270,6 @@ def logprob_dimshuffle(op, values, base_var, **kwargs):
     # indexes in the original dimshuffle order. Otherwise, there is no way of
     # knowing which dimensions were consumed by the logprob function.
     redo_ds = [o for o in op.new_order if o == "x" or o < raw_logp.ndim]
-    # pytensor.dprint(values[0].shape)
     return raw_logp.dimshuffle(redo_ds)
 
 
@@ -288,7 +278,7 @@ def find_measurable_dimshuffles(fgraph, node) -> Optional[list[TensorVariable]]:
     r"""Finds `Dimshuffle`\s for which a `logprob` can be computed."""
 
     rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-    # pytensor.dprint(fgraph)
+
     if rv_map_feature is None:
         return None  # pragma: no cover
 
@@ -308,40 +298,19 @@ def find_measurable_dimshuffles(fgraph, node) -> Optional[list[TensorVariable]]:
     if not isinstance(base_var.owner.op, RandomVariable):
         return None  # pragma: no cover
 
-    # parameter for drop and expand exists in dimshuffle
-    # if(len(node.op.new_order) != len(list(base_var.owner.inputs[1]))+1): # if there is expand/drop, we fails
-    #     return None
-
-    # use base_var.type.ndim instead of base_var.owner.inputs[1])
-    # ref = list(range(0, len(list(base_var.owner.inputs[1]))+1)) # creating reference list : [0, 1, 2]
     ref = list(range(0, base_var.type.ndim))
 
-    ndim_supp, supp_axes, measure_type = get_measurable_meta_info(base_var)  # (-1,)
-    new_supp_axes = list(supp_axes)  # [-1] use empty list and append ( eliminate x ) and sort
+    ndim_supp, supp_axes, measure_type = get_measure_type_info(base_var)
+    new_supp_axes = list(supp_axes)
 
-    # check that if dropped dimensions is the supp axes
-    # add test for this case in cases that already failed
     for x in supp_axes:
         if base_var.type.ndim + x not in node.op.new_order:
             return None
 
-    # for x in range(0, len(new_supp_axes)):
-    #     i = new_supp_axes[x] # i = -1
-    #     # print("a")
-    #     # print(i)
-    #     shift = ref[i] - node.op.new_order.index(ref[i]) # [0, 1, 2] and [2, 0, 1] : shift = 2-0 = 2
-
-    #     # [0, 2 , 1] supp_axes = -2
-
-    #     #  node.op.new_order.index(ref[i]) from reverse
-    #     # -(no.of dim - node.op.new_order.index(ref[i]) from reverse)
-    #     new_supp_axes[x] = i-shift # supp_axis = -1-2 = -3 # [-3]
-
-    # list comprehension
     for x in new_supp_axes:
         new_supp_axes[x] = node.op.new_order.index(ref[x]) - node.outputs[0].type.ndim
 
-    supp_axes = tuple(new_supp_axes)  # (-3,)
+    supp_axes = tuple(new_supp_axes)
 
     measurable_dimshuffle = MeasurableDimShuffle(
         node.op.input_broadcastable,
