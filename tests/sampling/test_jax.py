@@ -30,6 +30,7 @@ from pytensor.graph import graph_inputs
 
 import pymc as pm
 
+from pymc import ImputationWarning
 from pymc.distributions.multivariate import PosDefMatrix
 from pymc.sampling.jax import (
     _get_batched_jittered_initial_points,
@@ -459,3 +460,14 @@ def test_idata_contains_stats(sampler_name: str):
     for stat_var, stat_var_dims in stat_vars.items():
         assert stat_var in stats.variables
         assert stats.get(stat_var).values.shape == stat_var_dims
+
+
+def test_sample_partially_observed():
+    with pm.Model() as m:
+        with pytest.warns(ImputationWarning):
+            x = pm.Normal("x", observed=np.array([0, 1, np.nan]))
+        idata = pm.sample(nuts_sampler="numpyro", chains=1, draws=10, tune=10)
+
+    assert idata.observed_data["x_observed"].shape == (2,)
+    assert idata.posterior["x_unobserved"].shape == (1, 10, 1)
+    assert idata.posterior["x"].shape == (1, 10, 3)

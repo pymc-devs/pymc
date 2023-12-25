@@ -1337,7 +1337,8 @@ def create_partial_observed_rv(
             ndim_supp=rv.owner.op.ndim_supp,
         )(rv, mask)
 
-    joined_rv = pt.empty(rv.shape, dtype=rv.type.dtype)
+    [rv_shape] = constant_fold([rv.shape], raise_not_constant=False)
+    joined_rv = pt.empty(rv_shape, dtype=rv.type.dtype)
     joined_rv = pt.set_subtensor(joined_rv[mask], unobserved_rv)
     joined_rv = pt.set_subtensor(joined_rv[antimask], observed_rv)
 
