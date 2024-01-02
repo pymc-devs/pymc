@@ -1,7 +1,7 @@
 exclude: ^(docs/logos|pymc/tests/data)/
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v4.5.0
   hooks:
     -   id: check-merge-conflict
     -   id: check-toml
@@ -24,22 +24,22 @@ repos:
         - --exclude=binder/
         - --exclude=versioneer.py
 - repo: https://github.com/PyCQA/isort
-  rev: 5.12.0
+  rev: 5.13.2
   hooks:
     - id: isort
       name: isort
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.10.1
+  rev: v3.15.0
   hooks:
     - id: pyupgrade
       args: [--py37-plus]
 - repo: https://github.com/psf/black
-  rev: 23.9.1
+  rev: 23.12.1
   hooks:
     - id: black
     - id: black-jupyter
 - repo: https://github.com/PyCQA/pylint
-  rev: v3.0.0a7
+  rev: v3.0.3
   hooks:
     - id: pylint
       args: [--rcfile=.pylintrc]
