@@ -264,6 +264,25 @@ def test_rounding(rounding_op):
     )
 
 
+def test_switch_encoding_no_branch_measurable():
+    x_rv = pt.random.normal(0.5, 1, size=2)
+
+    y_rv = pt.switch(x_rv < 1, [2.0, 2.5], 3.0)
+
+    y_vv1 = y_rv.clone()
+
+    logprob1 = logp(y_rv, y_vv1)
+
+    logp_fn1 = pytensor.function([y_vv1], logprob1)
+
+    ref_scipy = st.norm(0.5, 1)
+
+    np.testing.assert_allclose(
+        logp_fn1([2.0, 1.5]),
+        np.array([ref_scipy.logcdf(1), -np.inf]),
+    )
+
+
 def test_switch_encoding_one_branch_measurable():
     x_rv = pt.random.normal(0.5, 1, size=3)
 
