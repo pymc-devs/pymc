@@ -464,7 +464,7 @@ def find_measurable_flat_switch_encoding(fgraph: FunctionGraph, node: Node):
         encodings.append(encoding)
         intervals.extend((item["lower"], item["upper"]))
 
-    flat_switch_op = FlatSwitches(out_dtype=base_rv.dtype, rv_idx=rv_idx)
+    flat_switch_op = FlatSwitches(out_dtype=node.outputs[0].dtype, rv_idx=rv_idx)
 
     new_outs = flat_switch_op.make_node(base_rv, *intervals, *encodings).default_output()
     return [new_outs]
