@@ -510,15 +510,19 @@ def flat_switches_logprob(op, values, base_rv, *inputs, **kwargs):
         logcdf_interval_bounds[1, ...], logcdf_interval_bounds[0, ...]
     )  # (encoding, *base_rv.shape)
 
-    # default logprob is -inf for when there are no rvs and no matching encodings
-    logprob = _logprob_helper(base_rv, value, **kwargs)
-    # Add rv branch (and checks whether it is possible)
-    for i in op.rv_idx:
-        logprob = pt.where(
-            pt.and_(value <= upper_interval_bounds[i], value >= lower_interval_bounds[i]),
-            logprob,
-            -np.inf,
-        )
+    # default logprob is -inf if there is no RV in branches
+    if op.rv_idx:
+        logprob = _logprob_helper(base_rv, value, **kwargs)
+
+        # Add rv branch (and checks whether it is possible)
+        for i in op.rv_idx:
+            logprob = pt.where(
+                pt.and_(value <= upper_interval_bounds[i], value >= lower_interval_bounds[i]),
+                logprob,
+                -np.inf,
+            )
+    else:
+        logprob = -np.inf
 
     for i in range(encodings_count):
         # if encoding found in interval (Lower, Upper), then Prob = CDF(Upper) - CDF(Lower)
