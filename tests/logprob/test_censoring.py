@@ -329,24 +329,8 @@ def test_switch_encoding_two_branches():
     np.testing.assert_allclose(logp_fn_switch(test_values), logp_fn_clip(test_values))
 
 
-@pytest.mark.parametrize(
-    "value, exp_logp",
-    [
-        (-2, -np.inf),
-        (-1.0, st.norm(0.5, 1).logcdf(-1)),
-        (0, st.norm(0.5, 1).logpdf(0)),
-        (
-            1,
-            st.norm(0.5, 1).logcdf(2.5)
-            + np.log(1 - np.exp(st.norm(0.5, 1).logcdf(2) - st.norm(0.5, 1).logcdf(2.5))),
-        ),
-        (1.5, st.norm(0.5, 1).logpdf(1.5)),
-        (2, st.norm(0.5, 1).logsf(2.5)),
-        (2.5, -np.inf),
-    ],
-)
-def test_switch_encoding_nested_branches(value, exp_logp):
-    x_rv = pt.random.normal(0.5, 1)
+def test_switch_encoding_nested_branches():
+    x_rv = pt.random.normal(0.5, 1, size=3)
     y_rv = pt.switch(x_rv < -1, -1, pt.switch(x_rv < 2, x_rv, pt.switch(x_rv >= 2.5, 2, 1)))
     # -inf to -1: -1
     # -1 to 2: x
@@ -355,10 +339,16 @@ def test_switch_encoding_nested_branches(value, exp_logp):
     y_vv = y_rv.clone()
 
     logp_switch = logp(y_rv, y_vv)
-
     logp_fn_switch = pytensor.function([y_vv], logp_switch)
 
-    assert np.isclose(logp_fn_switch(value), exp_logp)
+    ref_scipy = st.norm(0.5, 1)
+
+    np.testing.assert_allclose(
+        logp_fn_switch([-2, -1.0, 0]), [-np.inf, ref_scipy.logcdf(-1), ref_scipy.logpdf(0)]
+    )
+    np.testing.assert_allclose(
+        logp_fn_switch([1.5, 2, 2.5]), [ref_scipy.logpdf(1.5), ref_scipy.logsf(2.5), -np.inf]
+    )
 
 
 def test_switch_encoding_broadcastability():
