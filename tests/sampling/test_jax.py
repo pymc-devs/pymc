@@ -173,17 +173,26 @@ def test_initvals_without_jitter(sampler):
         b = pm.Deterministic("b", a / 2.0)
         c = pm.Normal("c", a, sigma=1.0, observed=obs_at)
 
-        trace = sampler(
+        trace1 = sampler(
             chains=1,
-            tune=0,
+            tune=1,
             draws=1,
             random_seed=1322,
             initvals=initvals,
             jitter=False,
             keep_untransformed=True,
         )
+        trace2 = sampler(
+            chains=1,
+            tune=1,
+            draws=1,
+            random_seed=1322,
+            initvals=initvals,
+            keep_untransformed=True,
+        )
 
-    assert np.allclose(trace.posterior["a"].values[0], -3)
+    assert np.allclose(trace1.posterior["a"].values[0], -3)
+    assert not np.allclose(trace2.posterior["a"].values[0], -3)
 
 
 def test_get_jaxified_graph():
