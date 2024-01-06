@@ -157,11 +157,10 @@ def test_deterministic_samples(sampler):
 @pytest.mark.parametrize(
     "sampler",
     [
-        # sample_blackjax_nuts,
+        sample_blackjax_nuts,
         sample_numpyro_nuts,
     ],
 )
-@pytest.mark.skipif(len(jax.devices()) < 2, reason="not enough devices")
 def test_initvals_without_jitter(sampler):
     pytensor.config.on_opt_error = "raise"
     np.random.seed(13244)
@@ -175,9 +174,9 @@ def test_initvals_without_jitter(sampler):
         c = pm.Normal("c", a, sigma=1.0, observed=obs_at)
 
         trace = sampler(
-            chains=2,
+            chains=1,
             tune=0,
-            draws=2,
+            draws=1,
             random_seed=1322,
             initvals=initvals,
             jitter=False,
