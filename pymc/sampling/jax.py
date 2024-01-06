@@ -256,7 +256,7 @@ def _get_batched_jittered_initial_points(
     chains: int,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
     random_seed: RandomSeed,
-    jitter: bool,
+    jitter: Optional[bool] = True,
     jitter_max_retries: int = 10,
 ) -> Union[np.ndarray, List[np.ndarray]]:
     """Get jittered initial point in format expected by NumPyro MCMC kernel
@@ -340,6 +340,7 @@ def sample_blackjax_nuts(
     target_accept: float = 0.8,
     random_seed: Optional[RandomState] = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    jitter: Optional[bool] = True,
     model: Optional[Model] = None,
     var_names: Optional[Sequence[str]] = None,
     progress_bar: bool = False,
@@ -374,6 +375,8 @@ def sample_blackjax_nuts(
         Initial values for random variables provided as a dictionary (or sequence of
         dictionaries) mapping the random variable (by name or reference) to desired
         starting values.
+    jitter: bool, default True
+        If True, add jitter to initial points.
     model : Model, optional
         Model to sample from. The model needs to have free random variables. When inside
         a ``with`` model context, it defaults to that model, otherwise the model must be
@@ -432,7 +435,7 @@ def sample_blackjax_nuts(
         chains=chains,
         initvals=initvals,
         random_seed=random_seed,
-        jitter=nuts_sampler_kwargs.get("jitter", True),
+        jitter=jitter,
     )
 
     if chains == 1:
@@ -565,6 +568,7 @@ def sample_numpyro_nuts(
     target_accept: float = 0.8,
     random_seed: Optional[RandomState] = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    jitter: Optional[bool] = True,
     model: Optional[Model] = None,
     var_names: Optional[Sequence[str]] = None,
     progressbar: bool = True,
@@ -599,6 +603,8 @@ def sample_numpyro_nuts(
         Initial values for random variables provided as a dictionary (or sequence of
         dictionaries) mapping the random variable (by name or reference) to desired
         starting values.
+    jitter: bool, default True
+        If True, add jitter to initial points.
     model : Model, optional
         Model to sample from. The model needs to have free random variables. When inside
         a ``with`` model context, it defaults to that model, otherwise the model must be
@@ -665,7 +671,7 @@ def sample_numpyro_nuts(
         chains=chains,
         initvals=initvals,
         random_seed=random_seed,
-        jitter=nuts_sampler_kwargs.get("jitter", True),
+        jitter=jitter,
     )
 
     logp_fn = get_jaxified_logp(model, negative_logp=False)
