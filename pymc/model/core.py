@@ -1738,7 +1738,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             done = {}
             used_ids = {}
             for i, out in enumerate(rv_inputs.maker.fgraph.outputs):
-                (print_(f"{i}: ", end=""),)
+                print_(f"{i}: ", end="")
                 # Don't print useless deepcopys
                 if out.owner and isinstance(out.owner.op, DeepCopyOp):
                     out = out.owner.inputs[0]
