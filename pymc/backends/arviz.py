@@ -241,9 +241,7 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
 
         self.observations = find_observations(self.model)
 
-    def split_trace(
-        self,
-    ) -> Tuple[Union[None, "MultiTrace"], Union[None, "MultiTrace"]]:
+    def split_trace(self) -> Tuple[Union[None, "MultiTrace"], Union[None, "MultiTrace"]]:
         """Split MultiTrace object into posterior and warmup.
 
         Returns

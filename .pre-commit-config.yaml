@@ -34,6 +34,7 @@ repos:
     - id: ruff
       args: ["--fix", "--show-source"]
     - id: ruff-format
+      args: ["--line-length=100"]
 - repo: https://github.com/PyCQA/pydocstyle
   rev: 6.3.0
   hooks:
