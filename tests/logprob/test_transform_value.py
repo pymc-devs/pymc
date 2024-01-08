@@ -550,7 +550,7 @@ def test_scan_transform():
     innov = []
     prev_innov = init
     for i in range(4):
-        next_innov = pt.random.beta(prev_innov * 10, (1 - prev_innov) * 10, name=f"innov[i]")
+        next_innov = pt.random.beta(prev_innov * 10, (1 - prev_innov) * 10, name="innov[i]")
         innov.append(next_innov)
         prev_innov = next_innov
     innov = pt.stack(innov)

@@ -16,7 +16,6 @@ import unittest.mock as mock
 import warnings
 
 from contextlib import ExitStack as does_not_raise
-from copy import copy
 
 import numpy as np
 import numpy.testing as npt

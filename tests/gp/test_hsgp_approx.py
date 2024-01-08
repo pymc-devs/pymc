@@ -17,7 +17,6 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 import pytest
-import scipy as sp
 
 from scipy.spatial import distance
 
@@ -198,7 +197,7 @@ class TestHSGP(_BaseFixtures):
         h0, mmd, critical_value, reject = two_sample_test(
             samples1, samples2, n_sims=500, alpha=0.01
         )
-        assert not reject, f"H0 was rejected, even though HSGP and GP priors should match."
+        assert not reject, "H0 was rejected, even though HSGP and GP priors should match."
 
     @pytest.mark.parametrize(
         "cov_func,parameterization",

@@ -41,7 +41,7 @@ import pytest
 import scipy.stats.distributions as sp
 
 from pytensor import function
-from pytensor.graph.basic import Variable, equal_computations
+from pytensor.graph.basic import Variable
 from pytensor.ifelse import ifelse
 from pytensor.tensor.random.basic import CategoricalRV
 from pytensor.tensor.shape import shape_tuple
@@ -54,7 +54,7 @@ from pytensor.tensor.subtensor import (
 
 from pymc.logprob.abstract import MeasurableVariable
 from pymc.logprob.basic import conditional_logp, logp
-from pymc.logprob.mixture import MeasurableSwitchMixture, MixtureRV, expand_indices
+from pymc.logprob.mixture import MeasurableSwitchMixture, expand_indices
 from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.logprob.utils import dirac_delta
 from pymc.testing import assert_no_rvs

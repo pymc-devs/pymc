@@ -14,7 +14,6 @@
 
 import warnings
 
-from contextlib import ExitStack as does_not_raise
 
 import numpy as np
 import pytensor

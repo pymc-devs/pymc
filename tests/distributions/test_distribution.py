@@ -30,7 +30,6 @@ import pymc as pm
 
 from pymc.distributions import (
     Censored,
-    DiracDelta,
     Flat,
     HalfNormal,
     LogNormal,

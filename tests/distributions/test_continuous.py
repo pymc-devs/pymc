@@ -27,7 +27,7 @@ from pytensor.compile.mode import Mode
 
 import pymc as pm
 
-from pymc.distributions.continuous import Normal, Uniform, get_tau_sigma, interpolated
+from pymc.distributions.continuous import get_tau_sigma, interpolated
 from pymc.distributions.dist_math import clipped_beta_rvs
 from pymc.logprob.basic import icdf, logcdf, logp
 from pymc.logprob.utils import ParameterValueError
@@ -37,7 +37,6 @@ from pymc.testing import (
     Circ,
     Domain,
     R,
-    Rminusbig,
     Rplus,
     Rplusbig,
     Rplusunif,
@@ -52,7 +51,6 @@ from pymc.testing import (
     seeded_scipy_distribution_builder,
     select_by_precision,
 )
-from tests.logprob.utils import create_pytensor_params, scipy_logprob_tester
 
 try:
     from polyagamma import polyagamma_cdf, polyagamma_pdf, random_polyagamma
@@ -417,9 +415,7 @@ class TestMatchesScipy:
     def test_kumaraswamy(self):
         # Scipy does not have a built-in Kumaraswamy
         def scipy_log_pdf(value, a, b):
-            return (
-                np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value**a)
-            )
+            return np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value**a)
 
         def scipy_log_cdf(value, a, b):
             return pm.math.log1mexp_numpy(b * np.log1p(-(value**a)), negative_input=True)
