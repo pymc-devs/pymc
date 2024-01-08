@@ -301,7 +301,7 @@ class TestCustomDist:
     )
     def test_custom_dist_default_moment_univariate(self, moment, size, expected):
         if moment == "custom_moment":
-            moment = lambda rv, size, *rv_inputs: 5 * pt.ones(size, dtype=rv.dtype)
+            moment = lambda rv, size, *rv_inputs: 5 * pt.ones(size, dtype=rv.dtype)  # noqa E731
         with pm.Model() as model:
             x = CustomDist("x", moment=moment, size=size)
         assert isinstance(x.owner.op, CustomDistRV)
@@ -821,7 +821,7 @@ class TestDiracDelta:
         pymc_dist_params = {"c": 3}
         expected_rv_op_params = {"c": 3}
         reference_dist_params = {"c": 3}
-        reference_dist = lambda self: self.diracdelta_rng_fn
+        reference_dist = lambda self: self.diracdelta_rng_fn  # noqa E731
         checks_to_run = [
             "check_pymc_params_match_rv_op",
             "check_pymc_draws_match_reference",
