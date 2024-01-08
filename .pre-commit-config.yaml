@@ -23,28 +23,21 @@ repos:
         - --exclude=scripts/
         - --exclude=binder/
         - --exclude=versioneer.py
-- repo: https://github.com/PyCQA/isort
-  rev: 5.13.2
-  hooks:
-    - id: isort
-      name: isort
 - repo: https://github.com/asottile/pyupgrade
   rev: v3.15.0
   hooks:
     - id: pyupgrade
       args: [--py37-plus]
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.1.11
+  hooks:
+    - id: ruff
+      args: ["--fix", "--show-source"]
+    - id: ruff-format
 - repo: https://github.com/psf/black
   rev: 23.12.1
   hooks:
-    - id: black
     - id: black-jupyter
-- repo: https://github.com/PyCQA/pylint
-  rev: v3.0.3
-  hooks:
-    - id: pylint
-      args: [--rcfile=.pylintrc]
-      files: ^pymc/
-      exclude: (?x)(pymc/_version.py)
 - repo: https://github.com/PyCQA/pydocstyle
   rev: 6.3.0
   hooks:
