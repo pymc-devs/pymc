@@ -1,4 +1,5 @@
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 minversion = "6.0"
 xfail_strict = true
 addopts = ["--color=yes"]
@@ -9,7 +10,6 @@ line-length = 100
 [tool.ruff.lint]
 ignore-init-module-imports = true
 ignore = [
-  "E731", # Do not assign a lambda expression, use a def
   "F841", # Local variable name is assigned to but never used
 ]
 
@@ -22,3 +22,13 @@ exclude_lines = [
   "raise NotImplementedError",
   "if TYPE_CHECKING:",
 ]
+
+[tool.coverage.run]
+omit = ["*examples*"]
+
+[tool.versioneer]
+VCS = "git"
+style = "pep440"
+versionfile_source = "pymc/_version.py"
+versionfile_build = "pymc/_version.py"
+tag_prefix = "v"
