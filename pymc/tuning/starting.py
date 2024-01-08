@@ -52,7 +52,7 @@ def find_MAP(
     model=None,
     *args,
     seed: Optional[int] = None,
-    **kwargs
+    **kwargs,
 ):
     """Finds the local maximum a posteriori point given a model.
 

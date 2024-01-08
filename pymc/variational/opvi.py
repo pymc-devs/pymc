@@ -663,6 +663,7 @@ class Group(WithMemoization):
     -   Kingma, D. P., & Welling, M. (2014).
         `Auto-Encoding Variational Bayes. stat, 1050, 1. <https://arxiv.org/abs/1312.6114>`_
     """
+
     # needs to be defined in init
     shared_params = None
     symbolic_initial = None
@@ -709,8 +710,9 @@ class Group(WithMemoization):
     def group_for_short_name(cls, name):
         if name.lower() not in cls.__name_registry:
             raise KeyError(
-                "No such group: {!r}, "
-                "only the following are supported\n\n{}".format(name, cls.__name_registry)
+                "No such group: {!r}, " "only the following are supported\n\n{}".format(
+                    name, cls.__name_registry
+                )
             )
         return cls.__name_registry[name.lower()]
 

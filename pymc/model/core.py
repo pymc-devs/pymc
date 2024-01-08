@@ -138,9 +138,7 @@ class ContextMeta(type):
 
     # FIXME: is there a more elegant way to automatically add methods to the class that
     # are instance methods instead of class methods?
-    def __init__(
-        cls, name, bases, nmspc, context_class: Optional[Type] = None, **kwargs
-    ):  # pylint: disable=unused-argument
+    def __init__(cls, name, bases, nmspc, context_class: Optional[Type] = None, **kwargs):  # pylint: disable=unused-argument
         """Add ``__enter__`` and ``__exit__`` methods to the new class automatically."""
         if context_class is not None:
             cls._context_class = context_class
@@ -1740,7 +1738,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             done = {}
             used_ids = {}
             for i, out in enumerate(rv_inputs.maker.fgraph.outputs):
-                print_(f"{i}: ", end=""),
+                (print_(f"{i}: ", end=""),)
                 # Don't print useless deepcopys
                 if out.owner and isinstance(out.owner.op, DeepCopyOp):
                     out = out.owner.inputs[0]
