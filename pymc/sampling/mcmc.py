@@ -1104,9 +1104,7 @@ def _iter_sample(
             point, stats = step.step(point)
             trace.record(point, stats)
             log_warning_stats(stats)
-            diverging = (
-                i > tune and len(stats) > 0 and (stats[0].get("diverging") == True)  # noqa E712
-            )  # noqa E712
+            diverging = i > tune and len(stats) > 0 and (stats[0].get("diverging") is True)
             if callback is not None:
                 callback(
                     trace=trace,

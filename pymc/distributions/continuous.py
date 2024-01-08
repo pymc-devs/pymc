@@ -401,9 +401,7 @@ class Flat(Continuous):
 
     def logcdf(value):
         return pt.switch(
-            pt.eq(value, -np.inf),
-            -np.inf,
-            pt.switch(pt.eq(value, np.inf), 0, pt.log(0.5)),
+            pt.eq(value, -np.inf), -np.inf, pt.switch(pt.eq(value, np.inf), 0, pt.log(0.5))
         )
 
 
@@ -1056,11 +1054,11 @@ class Wald(PositiveContinuous):
     def logcdf(value, mu, lam, alpha):
         value -= alpha
         q = value / mu
-        l = lam * mu  # noqa E741
+        ell = lam * mu
         r = pt.sqrt(value * lam)
 
         a = normal_lcdf(0, 1, (q - 1.0) / r)
-        b = 2.0 / l + normal_lcdf(0, 1, -(q + 1.0) / r)
+        b = 2.0 / ell + normal_lcdf(0, 1, -(q + 1.0) / r)
 
         logcdf = pt.switch(
             pt.le(value, 0),
@@ -1533,9 +1531,7 @@ class Laplace(Continuous):
 
     def icdf(value, mu, b):
         res = pt.switch(
-            pt.le(value, 0.5),
-            mu + b * np.log(2 * value),
-            mu - b * np.log(2 - 2 * value),
+            pt.le(value, 0.5), mu + b * np.log(2 * value), mu - b * np.log(2 - 2 * value)
         )
         res = check_icdf_value(res, value)
         return check_icdf_parameters(res, b > 0, msg="b > 0")

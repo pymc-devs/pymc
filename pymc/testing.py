@@ -211,7 +211,7 @@ Runif = Domain([-np.inf, -0.4, 0, 0.4, np.inf])
 Rdunif = Domain([-np.inf, -1, 0, 1, np.inf], "int64")
 Rplusunif = Domain([0, 0.5, np.inf])
 Rplusdunif = Domain([0, 10, np.inf], "int64")
-I = Domain([-np.inf, -3, -2, -1, 0, 1, 2, 3, np.inf], "int64")  # noqa E741
+I = Domain([-np.inf, -3, -2, -1, 0, 1, 2, 3, np.inf], "int64")  # noqa: E741
 NatSmall = Domain([0, 3, 4, 5, np.inf], "int64")
 Nat = Domain([0, 1, 2, 3, np.inf], "int64")
 NatBig = Domain([0, 1, 2, 3, 5000, np.inf], "int64")
@@ -875,9 +875,7 @@ class BaseTestDistributionRandom:
     def _instantiate_pymc_rv(self, dist_params=None):
         params = dist_params if dist_params else self.pymc_dist_params
         self.pymc_rv = self.pymc_dist.dist(
-            **params,
-            size=self.size,
-            rng=pytensor.shared(self.get_random_state(reset=True)),
+            **params, size=self.size, rng=pytensor.shared(self.get_random_state(reset=True))
         )
 
     def check_pymc_draws_match_reference(self):
@@ -901,24 +899,8 @@ class BaseTestDistributionRandom:
 
     def check_rv_size(self):
         # test sizes
-        sizes_to_check = self.sizes_to_check or [
-            None,
-            (),
-            1,
-            (1,),
-            5,
-            (4, 5),
-            (2, 4, 2),
-        ]
-        sizes_expected = self.sizes_expected or [
-            (),
-            (),
-            (1,),
-            (1,),
-            (5,),
-            (4, 5),
-            (2, 4, 2),
-        ]
+        sizes_to_check = self.sizes_to_check or [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
+        sizes_expected = self.sizes_expected or [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
         for size, expected in zip(sizes_to_check, sizes_expected):
             pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
             expected_symbolic = tuple(pymc_rv.shape.eval())
@@ -936,11 +918,7 @@ class BaseTestDistributionRandom:
                 k: p * np.ones(self.repeated_params_shape) for k, p in self.pymc_dist_params.items()
             }
             self._instantiate_pymc_rv(params)
-            sizes_to_check = [
-                None,
-                self.repeated_params_shape,
-                (5, self.repeated_params_shape),
-            ]
+            sizes_to_check = [None, self.repeated_params_shape, (5, self.repeated_params_shape)]
             sizes_expected = [
                 (self.repeated_params_shape,),
                 (self.repeated_params_shape,),

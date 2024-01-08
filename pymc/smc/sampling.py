@@ -211,13 +211,7 @@ def sample_smc(
 
     if cores > 1:
         results = run_chains_parallel(
-            chains,
-            progressbar,
-            _sample_smc_int,
-            params,
-            random_seed,
-            kernel_kwargs,
-            cores,
+            chains, progressbar, _sample_smc_int, params, random_seed, kernel_kwargs, cores
         )
     else:
         results = run_chains_sequential(

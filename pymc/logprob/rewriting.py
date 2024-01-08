@@ -145,9 +145,7 @@ class MeasurableEquilibriumGraphRewriter(EquilibriumGraphRewriter):
                     continue
                 if not any(out in rv_map_feature.needs_measuring for out in node.outputs):
                     continue
-                for node_rewriter in self.node_tracker.get_trackers(  # noqa: F402
-                    node.op
-                ):  # noqa: F402
+                for node_rewriter in self.node_tracker.get_trackers(node.op):  # noqa: F402
                     node_rewriter_change = self.process_node(fgraph, node, node_rewriter)
                     if not node_rewriter_change:
                         continue
@@ -391,12 +389,7 @@ cleanup_ir_rewrites_db = LocalGroupDB()
 cleanup_ir_rewrites_db.name = "cleanup_ir_rewrites_db"
 logprob_rewrites_db.register(
     "cleanup_ir_rewrites",
-    TopoDB(
-        cleanup_ir_rewrites_db,
-        order="out_to_in",
-        ignore_newtrees=True,
-        failure_callback=None,
-    ),
+    TopoDB(cleanup_ir_rewrites_db, order="out_to_in", ignore_newtrees=True, failure_callback=None),
     "cleanup",
 )
 

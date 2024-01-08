@@ -42,6 +42,7 @@ from pymc.logprob.basic import (
     transformed_conditional_logp,
 )
 
+# isort: off
 # Add rewrites to the DBs
 import pymc.logprob.binary
 import pymc.logprob.censoring
@@ -53,6 +54,7 @@ import pymc.logprob.scan
 import pymc.logprob.tensor
 import pymc.logprob.transforms
 
+# isort: on
 
 __all__ = (
     "logp",
