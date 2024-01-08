@@ -23,7 +23,6 @@ from typing import (  # pylint: disable=unused-import
     List,
     Mapping,
     Optional,
-    Sequence,
     Tuple,
     Union,
 )
@@ -100,7 +99,9 @@ def find_constants(model: "Model") -> Dict[str, Var]:
     return constant_data
 
 
-def coords_and_dims_for_inferencedata(model: Model) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def coords_and_dims_for_inferencedata(
+    model: Model,
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Parse PyMC model coords and dims format to one accepted by InferenceData."""
     coords = {
         cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
@@ -240,7 +241,9 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
 
         self.observations = find_observations(self.model)
 
-    def split_trace(self) -> Tuple[Union[None, "MultiTrace"], Union[None, "MultiTrace"]]:
+    def split_trace(
+        self,
+    ) -> Tuple[Union[None, "MultiTrace"], Union[None, "MultiTrace"]]:
         """Split MultiTrace object into posterior and warmup.
 
         Returns
@@ -342,7 +345,11 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         data = self.posterior_predictive
         dims = {var_name: self.sample_dims + self.dims.get(var_name, []) for var_name in data}
         return dict_to_dataset(
-            data, library=pymc, coords=self.coords, dims=dims, default_dims=self.sample_dims
+            data,
+            library=pymc,
+            coords=self.coords,
+            dims=dims,
+            default_dims=self.sample_dims,
         )
 
     @requires(["predictions"])
@@ -351,7 +358,11 @@ class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
         data = self.predictions
         dims = {var_name: self.sample_dims + self.dims.get(var_name, []) for var_name in data}
         return dict_to_dataset(
-            data, library=pymc, coords=self.coords, dims=dims, default_dims=self.sample_dims
+            data,
+            library=pymc,
+            coords=self.coords,
+            dims=dims,
+            default_dims=self.sample_dims,
         )
 
     def priors_to_xarray(self):

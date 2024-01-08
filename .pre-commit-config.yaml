@@ -34,10 +34,6 @@ repos:
     - id: ruff
       args: ["--fix", "--show-source"]
     - id: ruff-format
-- repo: https://github.com/psf/black
-  rev: 23.12.1
-  hooks:
-    - id: black-jupyter
 - repo: https://github.com/PyCQA/pydocstyle
   rev: 6.3.0
   hooks:

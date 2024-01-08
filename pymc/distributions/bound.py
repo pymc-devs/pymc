@@ -286,9 +286,9 @@ class Bound:
             size = shape
 
         lower = np.asarray(lower)
-        lower = floatX(np.where(lower == None, -np.inf, lower))
+        lower = floatX(np.where(lower == None, -np.inf, lower))  # noqa E711
         upper = np.asarray(upper)
-        upper = floatX(np.where(upper == None, np.inf, upper))
+        upper = floatX(np.where(upper == None, np.inf, upper))  # noqa E711
 
         if initval is None:
             _size = np.broadcast_shapes(to_tuple(size), np.shape(lower), np.shape(upper))

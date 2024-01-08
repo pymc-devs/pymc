@@ -211,7 +211,13 @@ def sample_smc(
 
     if cores > 1:
         results = run_chains_parallel(
-            chains, progressbar, _sample_smc_int, params, random_seed, kernel_kwargs, cores
+            chains,
+            progressbar,
+            _sample_smc_int,
+            params,
+            random_seed,
+            kernel_kwargs,
+            cores,
         )
     else:
         results = run_chains_sequential(
@@ -314,7 +320,7 @@ def _sample_smc_int(
     **kernel_kwargs,
 ):
     """Run one SMC instance."""
-    in_out_pickled = type(model) == bytes
+    in_out_pickled = isinstance(model, bytes)
     if in_out_pickled:
         # function was called in multiprocessing context, deserialize first
         (draws, kernel, start, model) = map(

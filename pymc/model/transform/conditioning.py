@@ -96,7 +96,7 @@ def observe(
 
     valid_model_vars = set(model.free_RVs + model.deterministics)
     if any(var not in valid_model_vars for var in vars_to_observations):
-        raise ValueError(f"At least one var is not a free variable or deterministic in the model")
+        raise ValueError("At least one var is not a free variable or deterministic in the model")
 
     fgraph, memo = fgraph_from_model(model)
 
@@ -177,7 +177,7 @@ def do(
             ) from err
 
     if any(var not in model.named_vars.values() for var in do_mapping):
-        raise ValueError(f"At least one var is not a named variable in the model")
+        raise ValueError("At least one var is not a named variable in the model")
 
     fgraph, memo = fgraph_from_model(model, inlined_views=True)
 

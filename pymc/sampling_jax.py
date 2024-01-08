@@ -19,4 +19,4 @@
 import warnings
 
 warnings.warn("This module is deprecated, use pymc.sampling.jax", DeprecationWarning)
-from pymc.sampling.jax import *
+from pymc.sampling.jax import *  # noqa: E402, F403
