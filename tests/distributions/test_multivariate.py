@@ -1443,11 +1443,9 @@ class TestMvNormalMisc:
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0, size=3)
             sd_dist = pm.Exponential.dist(1.0, size=3)
-            # pylint: disable=unpacking-non-sequence
             chol, _, _ = pm.LKJCholeskyCov(
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
-            # pylint: enable=unpacking-non-sequence
             mv = pm.MvNormal("mv", mu, chol=chol, size=4)
             prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
 
@@ -1459,11 +1457,9 @@ class TestMvNormalMisc:
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0, shape=3)
             sd_dist = pm.Exponential.dist(1.0, shape=3)
-            # pylint: disable=unpacking-non-sequence
             chol, corr, stds = pm.LKJCholeskyCov(
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
-            # pylint: enable=unpacking-non-sequence
             mv = pm.MvNormal("mv", mu, cov=pm.math.dot(chol, chol.T), size=4)
             prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
 

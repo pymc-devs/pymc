@@ -888,7 +888,6 @@ class TestMatchesScipy:
     def test_interpolated(self):
         for mu in R.vals:
             for sigma in Rplus.vals:
-                # pylint: disable=cell-var-from-loop
                 xmin = mu - 5 * sigma
                 xmax = mu + 5 * sigma
 
@@ -2371,7 +2370,6 @@ class TestInterpolated(BaseTestDistributionRandom):
     def check_draws(self):
         for mu in R.vals:
             for sigma in Rplus.vals:
-                # pylint: disable=cell-var-from-loop
                 rng = self.get_random_state()
 
                 def ref_rand(size):

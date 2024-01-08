@@ -69,7 +69,6 @@ def compute_log_likelihood(
             raise ValueError(f"var_names must refer to observed_RVs in the model. Got: {var_names}")
 
     # We need to temporarily disable transforms, because the InferenceData only keeps the untransformed values
-    # pylint: disable=used-before-assignment
     try:
         original_rvs_to_values = model.rvs_to_values
         original_rvs_to_transforms = model.rvs_to_transforms
@@ -89,7 +88,6 @@ def compute_log_likelihood(
     finally:
         model.rvs_to_values = original_rvs_to_values
         model.rvs_to_transforms = original_rvs_to_transforms
-    # pylint: enable=used-before-assignment
 
     # Ignore Deterministics
     posterior_values = posterior[[rv.name for rv in model.free_RVs]]

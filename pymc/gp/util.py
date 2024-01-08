@@ -27,7 +27,7 @@ from pymc.distributions.distribution import Distribution
 from pymc.model import modelcontext
 from pymc.pytensorf import compile_pymc
 
-_ = Distribution  # keep both pylint and black happy
+_ = Distribution
 
 JITTER_DEFAULT = 1e-6
 

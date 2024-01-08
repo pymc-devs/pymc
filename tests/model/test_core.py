@@ -416,7 +416,7 @@ def test_multiple_observed_rv():
     y2_data = np.random.randn(100)
     with pm.Model() as model:
         mu = pm.Normal("mu")
-        x = pm.CustomDist(  # pylint: disable=unused-variable
+        x = pm.CustomDist(
             "x", mu, logp=lambda value, mu: pm.Normal.logp(value, mu, 1.0), observed=0.1
         )
     assert not model["x"] == model["mu"]

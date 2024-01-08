@@ -257,7 +257,7 @@ def test_default_value_transform_logprob(pt_dist, dist_params, sp_dist, size):
         if a_val.ndim > 0:
 
             def jacobian_estimate_novec(value):
-                dim_diff = a_val.ndim - value.ndim  # pylint: disable=cell-var-from-loop
+                dim_diff = a_val.ndim - value.ndim
                 if dim_diff > 0:
                     # Make sure the dimensions match the expected input
                     # dimensions for the compiled backward transform function

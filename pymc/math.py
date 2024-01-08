@@ -21,14 +21,13 @@ import numpy as np
 import pytensor
 import pytensor.sparse
 import pytensor.tensor as pt
-import pytensor.tensor.slinalg  # pylint: disable=unused-import
+import pytensor.tensor.slinalg
 import scipy as sp
-import scipy.sparse  # pylint: disable=unused-import
+import scipy.sparse
 
 from pytensor.graph.basic import Apply
 from pytensor.graph.op import Op
 
-# pylint: disable=unused-import
 from pytensor.tensor import (
     abs,
     and_,
@@ -99,7 +98,6 @@ from scipy.linalg import block_diag as scipy_block_diag
 
 from pymc.pytensorf import floatX, ix_, largest_common_dtype
 
-# pylint: enable=unused-import
 
 __all__ = [
     "abs",

@@ -429,11 +429,9 @@ class TestPredefinedRandomWalk:
         with pm.Model() as model:
             mu = Normal("mu", 0.0, 1.0, shape=3)
             sd_dist = Exponential.dist(1.0, shape=3)
-            # pylint: disable=unpacking-non-sequence
             chol, corr, stds = LKJCholeskyCov(
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
-            # pylint: enable=unpacking-non-sequence
             with pytest.warns(UserWarning, match="Initial distribution not specified"):
                 if param == "chol":
                     mv = MvGaussianRandomWalk("mv", mu, chol=chol, shape=(10, 7, 3))

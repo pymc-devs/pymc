@@ -1,6 +1,5 @@
 """ Sphinx configuration file.
 
-   isort:skip_file
 """
 #!/usr/bin/env python3
 #
@@ -19,7 +18,7 @@
 import os
 from pathlib import Path
 
-import pymc  # isort:skip
+import pymc
 
 # -- General configuration ------------------------------------------------
 
