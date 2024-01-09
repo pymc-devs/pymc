@@ -44,6 +44,7 @@ import scipy.special
 from pytensor.graph.basic import equal_computations
 
 from pymc.distributions.continuous import Cauchy, ChiSquared
+from pymc.distributions.discrete import Bernoulli
 from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
 from pymc.logprob.transforms import (
     ArccoshTransform,
@@ -680,16 +681,49 @@ def test_multivariate_rv_transform(shift, scale):
     )
 
 
-def test_discrete_rv_unary_transform_fails():
+def test_not_implemented_discrete_rv_transform():
     y_rv = pt.exp(pt.random.poisson(1))
     with pytest.raises(RuntimeError, match="could not be derived"):
         conditional_logp({y_rv: y_rv.clone()})
 
-
-def test_discrete_rv_multinary_transform_fails():
-    y_rv = 5 + pt.random.poisson(1)
+    y_rv = 5 * pt.random.poisson(1)
     with pytest.raises(RuntimeError, match="could not be derived"):
         conditional_logp({y_rv: y_rv.clone()})
+
+
+def test_negated_discrete_rv_transform():
+    p = 0.7
+    rv = -Bernoulli.dist(p=p)
+    vv = rv.type()
+    logp_fn = pytensor.function([vv], logp(rv, vv))
+
+    # A negated Bernoulli has pmf {p if x == -1; 1-p if x == 0; 0 otherwise}
+    assert logp_fn(-2) == -np.inf
+    np.testing.assert_allclose(logp_fn(-1), np.log(p))
+    np.testing.assert_allclose(logp_fn(0), np.log(1 - p))
+    assert logp_fn(1) == -np.inf
+
+    # Logcdf and icdf not supported yet
+    for func in (logcdf, icdf):
+        with pytest.raises(NotImplementedError):
+            func(rv, 0)
+
+
+def test_shifted_discrete_rv_transform():
+    p = 0.7
+    rv = Bernoulli.dist(p=p) + 5
+    vv = rv.type()
+    rv_logp_fn = pytensor.function([vv], logp(rv, vv))
+
+    assert rv_logp_fn(4) == -np.inf
+    np.testing.assert_allclose(rv_logp_fn(5), np.log(1 - p))
+    np.testing.assert_allclose(rv_logp_fn(6), np.log(p))
+    assert rv_logp_fn(7) == -np.inf
+
+    # Logcdf and icdf not supported yet
+    for func in (logcdf, icdf):
+        with pytest.raises(NotImplementedError):
+            func(rv, 0)
 
 
 @pytest.mark.xfail(reason="Check not implemented yet")
