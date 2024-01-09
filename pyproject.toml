@@ -8,16 +8,28 @@ addopts = ["--color=yes"]
 line-length = 100
 
 [tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
 ignore-init-module-imports = true
 ignore = [
   "F841", # Local variable name is assigned to but never used
 ]
 
+[tool.ruff.lint.isort]
+lines-between-types = 1
+
 [tool.ruff.extend-per-file-ignores]
 "__init__.py" = [
-  "E402", # Module level import not at top of file
   "F401", # Module imported but unused
   "F403", # 'from module import *' used; unable to detect undefined names
+]
+"pymc/__init__.py" = [
+  "E402", # Module level import not at top of file
+]
+"pymc/stats/__init__.py" = [
+  "E402", # Module level import not at top of file
+]
+"pymc/logprob/__init__.py" = [
+  "I001", # Import block is un-sorted or un-formatted
 ]
 
 [tool.coverage.report]
