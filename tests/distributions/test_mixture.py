@@ -14,7 +14,6 @@
 
 import warnings
 
-
 import numpy as np
 import pytensor
 import pytest
