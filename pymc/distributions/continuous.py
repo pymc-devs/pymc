@@ -2088,7 +2088,7 @@ class Cauchy(Continuous):
     def icdf(value, alpha, beta):
         res = alpha + beta * pt.tan(np.pi * (value - 0.5))
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             beta > 0,
             msg="beta > 0",
@@ -2172,7 +2172,7 @@ class HalfCauchy(PositiveContinuous):
     def icdf(value, loc, beta):
         res = loc + beta * pt.tan(np.pi * (value) / 2.0)
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             beta > 0,
             msg="beta > 0",
@@ -2591,7 +2591,7 @@ class Weibull(PositiveContinuous):
     def icdf(value, alpha, beta):
         res = beta * (-pt.log(1 - value)) ** (1 / alpha)
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             alpha > 0,
             beta > 0,
@@ -3151,7 +3151,7 @@ class Triangular(BoundedContinuous):
             upper - np.sqrt((upper - lower) * (upper - c) * (1 - value)),
         )
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             lower <= c,
             c <= upper,
@@ -3254,7 +3254,7 @@ class Gumbel(Continuous):
     def icdf(value, mu, beta):
         res = mu - beta * pt.log(-pt.log(value))
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             beta > 0,
             msg="beta > 0",
@@ -3472,7 +3472,7 @@ class Logistic(Continuous):
     def icdf(value, mu, s):
         res = mu + s * pt.log(value / (1 - value))
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             s > 0,
             msg="s > 0",
@@ -3822,7 +3822,7 @@ class Moyal(Continuous):
     def icdf(value, mu, sigma):
         res = sigma * -pt.log(2.0 * pt.erfcinv(value) ** 2) + mu
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             sigma > 0,
             msg="sigma > 0",
