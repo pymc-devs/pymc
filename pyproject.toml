@@ -14,7 +14,11 @@ ignore = [
 ]
 
 [tool.ruff.extend-per-file-ignores]
-"__init__.py" = ["E402", "F401", "F403"]
+"__init__.py" = [
+  "E402", # Module level import not at top of file
+  "F401", # Module imported but unused
+  "F403", # 'from module import *' used; unable to detect undefined names
+]
 
 [tool.coverage.report]
 exclude_lines = [
