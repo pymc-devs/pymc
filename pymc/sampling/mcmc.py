@@ -342,8 +342,6 @@ def _sample_external_nuts(
             coords=coords,
             dims=dims,
         )
-        warns = run_convergence_checks(idata, model)
-        log_warnings(warns)
         return idata
 
     elif sampler == "numpyro":
