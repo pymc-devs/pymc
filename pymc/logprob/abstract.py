@@ -177,9 +177,7 @@ class MeasurableElemwise(MeasurableVariable, Elemwise):
 
 def get_measure_type_info(
     base_var,
-) -> Tuple[
-    Union[int, Tuple[int]], Tuple[Union[int, Tuple[int]]], Union[MeasureType, Tuple[MeasureType]]
-]:
+):
     from pymc.logprob.utils import DiracDelta
 
     if not isinstance(base_var, MeasurableVariable):
