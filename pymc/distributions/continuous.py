@@ -76,6 +76,9 @@ except ImportError:  # pragma: no cover
 from scipy import stats
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.special import expit
+from scipy.stats import norm
+from scipy.optimize import newton
+from scipy.special import ive, iv
 
 from pymc.distributions import transforms
 from pymc.distributions.dist_math import (
@@ -2993,6 +2996,23 @@ class SkewNormal(Continuous):
             tau > 0,
             msg="tau > 0",
         )
+    def icdf(prob, mu, sigma, alpha, max_iter=100, tol=1e-8):
+        def cdf_difference(x):
+            return norm.cdf(x) - 2 * norm.cdf(alpha * x) - prob
+        
+        x0 = norm.ppf(prob)
+        x = x0
+        
+        for _ in range(max_iter):
+            diff = cdf_difference(x)
+            
+            if np.abs(diff) < tol:
+                return mu + sigma * x
+            
+            derivative = norm.pdf(x) - 2 * alpha * norm.pdf(alpha * x)
+            x -= derivative
+        
+        return mu + sigma * x
 
 
 class Triangular(BoundedContinuous):
@@ -3348,6 +3368,17 @@ class Rice(PositiveContinuous):
             b >= 0,
             msg="sigma >= 0, b >= 0",
         )
+    def icdf(prob, nu, sigma, x0=1.0, max_iter=100, tol=1e-8):
+        def cdf(x):
+            return (1 + x / sigma**2) * np.exp(-x**2 / (2 * sigma**2)) * iv(0, x * nu / sigma**2) - prob
+        
+        def cdf_derivative(x):
+            return ((1 - x**2 / sigma**2) * np.exp(-x**2 / (2 * sigma**2)) * iv(0, x * nu / sigma**2)
+                + (x / sigma**2) * np.exp(-x**2 / (2 * sigma**2)) * ive(0, x * nu / sigma**2)) * nu / sigma**2
+        
+        approx_icdf = newton(cdf, x0, fprime=cdf_derivative, tol=tol, maxiter=max_iter)
+
+        return approx_icdf
 
 
 class Logistic(Continuous):
