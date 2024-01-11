@@ -23,11 +23,6 @@ repos:
         - --exclude=scripts/
         - --exclude=binder/
         - --exclude=versioneer.py
-- repo: https://github.com/asottile/pyupgrade
-  rev: v3.15.0
-  hooks:
-    - id: pyupgrade
-      args: [--py37-plus]
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.1.11
   hooks:
