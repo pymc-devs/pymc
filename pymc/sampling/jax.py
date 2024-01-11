@@ -568,7 +568,7 @@ def sample_numpyro_nuts(
     target_accept: float = 0.8,
     random_seed: Optional[RandomState] = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
-    jitter: Optional[bool] = True,
+    jitter: bool = True,
     model: Optional[Model] = None,
     var_names: Optional[Sequence[str]] = None,
     progressbar: bool = True,
