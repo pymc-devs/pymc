@@ -1597,7 +1597,6 @@ def lkjcorr_default_transform(op, rv):
     return MultivariateIntervalTransform(floatX(-1.0), floatX(1.0))
 
 
-# Thin wrapper around _LKJCorr
 class LKJCorr:
     r"""
     The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
@@ -1619,9 +1618,9 @@ class LKJCorr:
         implies a uniform distribution of the correlation matrices;
         larger values put more weight on matrices with few correlations.
     return_matrix : bool, default=False
-        If True, returns the full correllation matrix.
+        If True, returns the full correlation matrix.
         False only returns the values of the upper triangular matrix excluding
-        diagonal in a single vector of length n(n-1)/2 for backwards compatibility
+        diagonal in a single vector of length n(n-1)/2 for memory efficiency
 
     Notes
     -----
@@ -1641,13 +1640,17 @@ class LKJCorr:
                 'corr', eta=4, n=10, return_matrix=True
             )
 
-            # Define a new MvNormal with the given correllation matrix
+            # Define a new MvNormal with the given correlation matrix
             vals = sds*pm.MvNormal('vals', mu=np.zeros(10), cov=corr, shape=10)
 
             # Or transform an uncorrelated normal distribution:
             vals_raw = pm.Normal('vals_raw', shape=10)
             chol = pt.linalg.cholesky(corr)
             vals = sds*pt.dot(chol,vals_raw)
+
+            # The matrix is internally still sampled as a upper triangular vector
+            # If you want access to it in matrix form in the trace, add
+            pm.Deterministic('corr_mat', corr)
 
 
     References
@@ -1659,15 +1662,14 @@ class LKJCorr:
     """
 
     def __new__(cls, name, n, eta, *, return_matrix=False, **kwargs):
+        c_vec = _LKJCorr(name, eta=eta, n=n, **kwargs)
         if not return_matrix:
-            return _LKJCorr(name, eta=eta, n=n, **kwargs)
+            return c_vec
         else:
-            c_vec = _LKJCorr(name + "_raw", eta=eta, n=n, **kwargs)
-            return pm.Deterministic(name, cls.vec_to_corr_mat(c_vec, n))
+            return cls.vec_to_corr_mat(c_vec, n)
 
     @classmethod
-    def dist(cls, n, eta, *, return_matrix=True, **kwargs):
-        # compute Cholesky decomposition
+    def dist(cls, n, eta, *, return_matrix=False, **kwargs):
         c_vec = _LKJCorr.dist(eta=eta, n=n, **kwargs)
         if not return_matrix:
             return c_vec

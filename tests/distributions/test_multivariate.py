@@ -1474,15 +1474,17 @@ class TestMvNormalMisc:
         self,
     ):
         with pm.Model() as model:
-            mu = pm.Normal("mu", 0.0, 1.0, shape=3)
-            sd = pm.Exponential("sd", 1.0, shape=3)
-
             corr = pm.LKJCorr("corr", n=3, eta=2, return_matrix=True)
-            # pylint: enable=unpacking-non-sequence
-            mv = pm.MvNormal("mv", mu, cov=sd * (sd * corr).T, size=4)
+            pm.Deterministic("corr_mat", corr)
+            mv = pm.MvNormal("mv", 0.0, cov=corr, size=4)
             prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
 
-        assert prior["mv"].shape == (10, 4, 3)
+        assert prior["corr_mat"].shape == (10, 3, 3)  # square
+        assert (prior["corr_mat"][:, [0, 1, 2], [0, 1, 2]] == 1.0).all()  # 1.0 on diagonal
+        assert (prior["corr_mat"] == prior["corr_mat"].transpose(0, 2, 1)).all()  # symmetric
+        assert (
+            prior["corr_mat"].max() <= 1.0 and prior["corr_mat"].min() >= -1.0
+        )  # constrained between -1 and 1
 
     def test_issue_3758(self):
         np.random.seed(42)
