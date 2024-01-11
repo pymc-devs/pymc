@@ -504,7 +504,7 @@ def sample_blackjax_nuts(
 
     if idata_kwargs.pop("log_likelihood", False):
         tic5 = datetime.now()
-        logger.info(f"Computing Log Likelihood...")
+        logger.info("Computing Log Likelihood...")
         log_likelihood = _get_log_likelihood(
             model,
             raw_mcmc_samples,
@@ -732,7 +732,7 @@ def sample_numpyro_nuts(
 
     if idata_kwargs.pop("log_likelihood", False):
         tic5 = datetime.now()
-        logger.info(f"Computing Log Likelihood...")
+        logger.info("Computing Log Likelihood...")
         log_likelihood = _get_log_likelihood(
             model,
             raw_mcmc_samples,

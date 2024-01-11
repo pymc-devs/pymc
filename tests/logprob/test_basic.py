@@ -47,10 +47,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
-    AdvancedSubtensor,
-    AdvancedSubtensor1,
     IncSubtensor,
-    Subtensor,
 )
 
 import pymc as pm

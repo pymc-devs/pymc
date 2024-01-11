@@ -17,7 +17,7 @@ import traceback
 import unittest
 import warnings
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import arviz as az
 import cloudpickle
@@ -32,7 +32,7 @@ import scipy.sparse as sps
 import scipy.stats as st
 
 from pytensor.graph import graph_inputs
-from pytensor.raise_op import Assert, assert_op
+from pytensor.raise_op import Assert
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.sharedvar import ScalarSharedVariable
@@ -416,7 +416,7 @@ def test_multiple_observed_rv():
     y2_data = np.random.randn(100)
     with pm.Model() as model:
         mu = pm.Normal("mu")
-        x = pm.CustomDist(  # pylint: disable=unused-variable
+        x = pm.CustomDist(
             "x", mu, logp=lambda value, mu: pm.Normal.logp(value, mu, 1.0), observed=0.1
         )
     assert not model["x"] == model["mu"]
@@ -1418,8 +1418,8 @@ class TestImputationMissingData:
                     a=[1, 2, 3],
                     observed=np.array([[0.3, 0.3, 0.4], [np.nan, np.nan, np.nan]]),
                 )
-        assert (m_miss["x_unobserved"].owner.op, pm.Dirichlet)
-        assert (m_miss["x_observed"].owner.op, pm.Dirichlet)
+        assert isinstance(m_miss["x_unobserved"].owner.op, pm.Dirichlet)
+        assert isinstance(m_miss["x_observed"].owner.op, pm.Dirichlet)
 
         with pm.Model() as m_unobs:
             x = pm.Dirichlet("x", a=[1, 2, 3], shape=(1, 3))

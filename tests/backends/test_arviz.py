@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-# pylint: disable=no-member, invalid-name, redefined-outer-name, protected-access, too-many-public-methods
 import warnings
 
 from typing import Dict, Tuple
@@ -359,9 +358,7 @@ class TestDataPyMC:
         with model:
             mu = pm.Normal("mu", 0, 1, size=2)
             sd_dist = pm.HalfNormal.dist(1.0, size=2)
-            # pylint: disable=unpacking-non-sequence
             chol, *_ = pm.LKJCholeskyCov("chol_cov", n=2, eta=1, sd_dist=sd_dist)
-            # pylint: enable=unpacking-non-sequence
             with pytest.warns(ImputationWarning):
                 y = pm.MvNormal("y", mu=mu, chol=chol, observed=data)
             inference_data = pm.sample(
@@ -443,7 +440,7 @@ class TestDataPyMC:
             y = pm.MutableData("y", [1.0, 2.0, 3.0])
             beta_sigma = pm.MutableData("beta_sigma", 1)
             beta = pm.Normal("beta", 0, beta_sigma)
-            obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
+            obs = pm.Normal("obs", x * beta, 1, observed=y)
             trace = pm.sample(100, chains=2, tune=100, return_inferencedata=False)
             if use_context:
                 inference_data = to_inference_data(trace=trace, log_likelihood=True)
@@ -466,7 +463,7 @@ class TestDataPyMC:
             x = pm.ConstantData("x", [1.0, 2.0, 3.0])
             y = pm.MutableData("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
-            obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
+            obs = pm.Normal("obs", x * beta, 1, observed=y)
             trace = pm.sample(100, tune=100, return_inferencedata=False)
             inference_data = to_inference_data(trace)
 
@@ -478,7 +475,7 @@ class TestDataPyMC:
             x = pm.MutableData("x", [1.0, 2.0])
             y = pm.ConstantData("y", [1.0, 2.0])
             beta = pm.Normal("beta", 0, 1)
-            obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
+            obs = pm.Normal("obs", x * beta, 1, observed=y)
             predictive_trace = pm.sample_posterior_predictive(
                 inference_data, return_inferencedata=False
             )
@@ -506,7 +503,7 @@ class TestDataPyMC:
             x = pm.ConstantData("x", [1.0, 2.0, 3.0])
             y = pm.MutableData("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
-            obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
+            obs = pm.Normal("obs", x * beta, 1, observed=y)
             idata = pm.sample(100, tune=100)
             prior = pm.sample_prior_predictive(return_inferencedata=False)
             posterior_predictive = pm.sample_posterior_predictive(idata, return_inferencedata=False)
@@ -540,7 +537,7 @@ class TestDataPyMC:
             x = pm.MutableData("x", [1.0, 2.0, 3.0])
             y = pm.ConstantData("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
-            obs = pm.Normal("obs", x * beta, 1, observed=y)  # pylint: disable=unused-variable
+            obs = pm.Normal("obs", x * beta, 1, observed=y)
             prior = pm.sample_prior_predictive(return_inferencedata=False)
 
         test_dict = {

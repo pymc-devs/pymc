@@ -294,7 +294,7 @@ class TestCompileForwardSampler:
         with pm.Model() as model:
             mu = np.zeros(3)
             sd_dist = pm.Exponential.dist(1.0, size=3)
-            chol, corr, stds = pm.LKJCholeskyCov(  # pylint: disable=unpacking-non-sequence
+            chol, corr, stds = pm.LKJCholeskyCov(
                 "chol_packed", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
             chol_packed = model["chol_packed"]

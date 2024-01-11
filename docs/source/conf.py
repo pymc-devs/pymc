@@ -1,6 +1,5 @@
 """ Sphinx configuration file.
 
-   isort:skip_file
 """
 #!/usr/bin/env python3
 #
@@ -17,9 +16,10 @@
 # serve to show the default.
 
 import os
+
 from pathlib import Path
 
-import pymc  # isort:skip
+import pymc
 
 # -- General configuration ------------------------------------------------
 

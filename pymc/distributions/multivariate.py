@@ -30,9 +30,8 @@ from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
 from pytensor.sparse.basic import sp_sum
 from pytensor.tensor import TensorConstant, gammaln, sigmoid
-from pytensor.tensor.linalg import cholesky, det, eigh
+from pytensor.tensor.linalg import cholesky, det, eigh, solve_triangular, trace
 from pytensor.tensor.linalg import inv as matrix_inverse
-from pytensor.tensor.linalg import solve_triangular, trace
 from pytensor.tensor.random.basic import dirichlet, multinomial, multivariate_normal
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import (
@@ -235,6 +234,7 @@ class MvNormal(Continuous):
         vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=(5, 3))
         vals = pm.Deterministic('vals', pt.dot(chol, vals_raw.T).T)
     """
+
     rv_op = multivariate_normal
 
     @classmethod
@@ -355,6 +355,7 @@ class MvStudentT(Continuous):
     lower : bool, default=True
         Whether the cholesky fatcor is given as a lower triangular matrix.
     """
+
     rv_op = mv_studentt
 
     @classmethod
@@ -436,6 +437,7 @@ class Dirichlet(SimplexContinuous):
         Concentration parameters (a > 0). The number of categories is given by the
         length of the last axis.
     """
+
     rv_op = dirichlet
 
     @classmethod
@@ -515,6 +517,7 @@ class Multinomial(Discrete):
         categories is given by the length of the last axis. Elements are expected to sum
         to 1 along the last axis.
     """
+
     rv_op = multinomial
 
     @classmethod
@@ -662,6 +665,7 @@ class DirichletMultinomial(Discrete):
         Dirichlet concentration parameters (a > 0). The number of categories is given by
         the length of the last axis.
     """
+
     rv_op = dirichlet_multinomial
 
     @classmethod
@@ -716,6 +720,7 @@ class _OrderedMultinomial(Multinomial):
     Underlying class for ordered multinomial distributions.
     See docs for the OrderedMultinomial wrapper class for more details on how to use it in models.
     """
+
     rv_op = multinomial
 
     @classmethod
@@ -940,6 +945,7 @@ class Wishart(Continuous):
     This distribution is unusable in a PyMC model. You should instead
     use LKJCholeskyCov or LKJCorr.
     """
+
     rv_op = wishart
 
     @classmethod
@@ -1763,6 +1769,7 @@ class MatrixNormal(Continuous):
             vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,
                                    observed=data)
     """
+
     rv_op = matrixnormal
 
     @classmethod
@@ -1977,6 +1984,7 @@ class KroneckerNormal(Continuous):
     ----------
     .. [1] Saatchi, Y. (2011). "Scalable inference for structured Gaussian process models"
     """
+
     rv_op = kroneckernormal
 
     @classmethod
@@ -2183,6 +2191,7 @@ class CAR(Continuous):
         "Generalized Hierarchical Multivariate CAR Models for Areal Data"
         Biometrics, Vol. 61, No. 4 (Dec., 2005), pp. 950-961
     """
+
     rv_op = car
 
     @classmethod
@@ -2400,9 +2409,7 @@ class ICAR(Continuous):
         return pt.zeros(N)
 
     def logp(value, W, node1, node2, N, sigma, zero_sum_stdev):
-        pairwise_difference = (-1 / (2 * sigma**2)) * pt.sum(
-            pt.square(value[node1] - value[node2])
-        )
+        pairwise_difference = (-1 / (2 * sigma**2)) * pt.sum(pt.square(value[node1] - value[node2]))
         zero_sum = (
             -0.5 * pt.pow(pt.sum(value) / (zero_sum_stdev * N), 2)
             - pt.log(pt.sqrt(2.0 * np.pi))
@@ -2498,6 +2505,7 @@ class StickBreakingWeights(SimplexContinuous):
     .. [2] Müller, P., Quintana, F. A., Jara, A., & Hanson, T. (2015). Bayesian nonparametric data
            analysis. New York: Springer.
     """
+
     rv_op = stickbreakingweights
 
     @classmethod
@@ -2641,6 +2649,7 @@ class ZeroSumNormal(Distribution):
             # the zero sum axes will be the last two
             v = pm.ZeroSumNormal("v", shape=(3, 4, 5), n_zerosum_axes=2)
     """
+
     rv_type = ZeroSumNormalRV
 
     def __new__(

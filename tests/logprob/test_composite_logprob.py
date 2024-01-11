@@ -43,7 +43,6 @@ import scipy.stats as st
 from pymc import draw, logp
 from pymc.logprob.abstract import MeasurableVariable
 from pymc.logprob.basic import conditional_logp
-from pymc.logprob.censoring import MeasurableClip
 from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.testing import assert_no_rvs
 

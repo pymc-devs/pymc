@@ -46,6 +46,7 @@ class MeanFieldGroup(Group):
     that latent space variables are uncorrelated that is the main drawback
     of the method
     """
+
     __param_spec__ = dict(mu=("d",), rho=("d",))
     short_name = "mean_field"
     alias_names = frozenset(["mf"])
@@ -350,27 +351,21 @@ class SingleGroupApproximation(Approximation):
 class MeanField(SingleGroupApproximation):
     __doc__ = """**Single Group Mean Field Approximation**
 
-    """ + str(
-        MeanFieldGroup.__doc__
-    )
+    """ + str(MeanFieldGroup.__doc__)
     _group_class = MeanFieldGroup
 
 
 class FullRank(SingleGroupApproximation):
     __doc__ = """**Single Group Full Rank Approximation**
 
-    """ + str(
-        FullRankGroup.__doc__
-    )
+    """ + str(FullRankGroup.__doc__)
     _group_class = FullRankGroup
 
 
 class Empirical(SingleGroupApproximation):
     __doc__ = """**Single Group Full Rank Approximation**
 
-    """ + str(
-        EmpiricalGroup.__doc__
-    )
+    """ + str(EmpiricalGroup.__doc__)
     _group_class = EmpiricalGroup
 
     def __init__(self, trace=None, size=None, **kwargs):

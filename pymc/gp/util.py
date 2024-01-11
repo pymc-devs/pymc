@@ -27,7 +27,7 @@ from pymc.distributions.distribution import Distribution
 from pymc.model import modelcontext
 from pymc.pytensorf import compile_pymc
 
-_ = Distribution  # keep both pylint and black happy
+_ = Distribution
 
 JITTER_DEFAULT = 1e-6
 
@@ -120,7 +120,7 @@ def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
             "To use K-means initialization, "
             "please provide X as a type that "
             "can be cast to np.ndarray, instead "
-            "of {}".format(type(X))
+            f"of {type(X)}"
         )
     scaling = np.std(X, 0)
     # if std of a column is very small (zero), don't normalize that column

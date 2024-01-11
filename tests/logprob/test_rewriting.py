@@ -35,7 +35,6 @@
 #   SOFTWARE.
 
 import numpy as np
-import pytensor
 import pytensor.tensor as pt
 import pytest
 import scipy.stats.distributions as sp

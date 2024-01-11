@@ -27,7 +27,7 @@ from pytensor.compile.mode import Mode
 
 import pymc as pm
 
-from pymc.distributions.continuous import Normal, Uniform, get_tau_sigma, interpolated
+from pymc.distributions.continuous import get_tau_sigma, interpolated
 from pymc.distributions.dist_math import clipped_beta_rvs
 from pymc.logprob.basic import icdf, logcdf, logp
 from pymc.logprob.utils import ParameterValueError
@@ -37,7 +37,6 @@ from pymc.testing import (
     Circ,
     Domain,
     R,
-    Rminusbig,
     Rplus,
     Rplusbig,
     Rplusunif,
@@ -52,7 +51,6 @@ from pymc.testing import (
     seeded_scipy_distribution_builder,
     select_by_precision,
 )
-from tests.logprob.utils import create_pytensor_params, scipy_logprob_tester
 
 try:
     from polyagamma import polyagamma_cdf, polyagamma_pdf, random_polyagamma
@@ -417,9 +415,7 @@ class TestMatchesScipy:
     def test_kumaraswamy(self):
         # Scipy does not have a built-in Kumaraswamy
         def scipy_log_pdf(value, a, b):
-            return (
-                np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value**a)
-            )
+            return np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value**a)
 
         def scipy_log_cdf(value, a, b):
             return pm.math.log1mexp_numpy(b * np.log1p(-(value**a)), negative_input=True)
@@ -892,7 +888,6 @@ class TestMatchesScipy:
     def test_interpolated(self):
         for mu in R.vals:
             for sigma in Rplus.vals:
-                # pylint: disable=cell-var-from-loop
                 xmin = mu - 5 * sigma
                 xmax = mu + 5 * sigma
 
@@ -1851,7 +1846,7 @@ class TestHalfStudentT(BaseTestDistributionRandom):
     pymc_dist_params = {"nu": 5.0, "sigma": 2.0}
     expected_rv_op_params = {"nu": 5.0, "sigma": 2.0}
     reference_dist_params = {"df": 5.0, "loc": 0, "scale": 2.0}
-    reference_dist = lambda self: ft.partial(self.halfstudentt_rng_fn, rng=self.get_random_state())
+    reference_dist = lambda self: ft.partial(self.halfstudentt_rng_fn, rng=self.get_random_state())  # noqa E731
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -2074,7 +2069,7 @@ class TestLogitNormal(BaseTestDistributionRandom):
     pymc_dist_params = {"mu": 5.0, "sigma": 10.0}
     expected_rv_op_params = {"mu": 5.0, "sigma": 10.0}
     reference_dist_params = {"loc": 5.0, "scale": 10.0}
-    reference_dist = lambda self: ft.partial(self.logit_normal_rng_fn, rng=self.get_random_state())
+    reference_dist = lambda self: ft.partial(self.logit_normal_rng_fn, rng=self.get_random_state())  # noqa E731
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -2145,7 +2140,7 @@ class TestBeta(BaseTestDistributionRandom):
     expected_rv_op_params = {"alpha": 2.0, "beta": 5.0}
     reference_dist_params = {"a": 2.0, "b": 5.0}
     size = 15
-    reference_dist = lambda self: ft.partial(clipped_beta_rvs, random_state=self.get_random_state())
+    reference_dist = lambda self: ft.partial(clipped_beta_rvs, random_state=self.get_random_state())  # noqa E731
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -2345,7 +2340,7 @@ class TestPolyaGamma(BaseTestDistributionRandom):
     pymc_dist_params = {"h": 1.0, "z": 0.0}
     expected_rv_op_params = {"h": 1.0, "z": 0.0}
     reference_dist_params = {"h": 1.0, "z": 0.0}
-    reference_dist = lambda self: ft.partial(self.polyagamma_rng_fn, rng=self.get_random_state())
+    reference_dist = lambda self: ft.partial(self.polyagamma_rng_fn, rng=self.get_random_state())  # noqa E731
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -2366,7 +2361,7 @@ class TestInterpolated(BaseTestDistributionRandom):
     pymc_dist_params = {"x_points": x_points, "pdf_points": pdf_points}
     reference_dist_params = {"mu": mu, "sigma": sigma}
 
-    reference_dist = lambda self: ft.partial(self.interpolated_rng_fn, rng=self.get_random_state())
+    reference_dist = lambda self: ft.partial(self.interpolated_rng_fn, rng=self.get_random_state())  # noqa E731
     checks_to_run = [
         "check_rv_size",
         "check_draws",
@@ -2375,7 +2370,6 @@ class TestInterpolated(BaseTestDistributionRandom):
     def check_draws(self):
         for mu in R.vals:
             for sigma in Rplus.vals:
-                # pylint: disable=cell-var-from-loop
                 rng = self.get_random_state()
 
                 def ref_rand(size):

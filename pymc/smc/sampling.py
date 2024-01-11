@@ -314,7 +314,7 @@ def _sample_smc_int(
     **kernel_kwargs,
 ):
     """Run one SMC instance."""
-    in_out_pickled = type(model) == bytes
+    in_out_pickled = isinstance(model, bytes)
     if in_out_pickled:
         # function was called in multiprocessing context, deserialize first
         (draws, kernel, start, model) = map(

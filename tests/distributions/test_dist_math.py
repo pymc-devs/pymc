@@ -19,7 +19,7 @@ import scipy.special
 
 from pytensor import config, function
 from pytensor.tensor.random.basic import multinomial
-from scipy import interpolate, stats
+from scipy import interpolate
 
 import pymc as pm
 

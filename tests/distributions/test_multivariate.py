@@ -1443,11 +1443,9 @@ class TestMvNormalMisc:
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0, size=3)
             sd_dist = pm.Exponential.dist(1.0, size=3)
-            # pylint: disable=unpacking-non-sequence
             chol, _, _ = pm.LKJCholeskyCov(
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
-            # pylint: enable=unpacking-non-sequence
             mv = pm.MvNormal("mv", mu, chol=chol, size=4)
             prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
 
@@ -1459,11 +1457,9 @@ class TestMvNormalMisc:
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0, shape=3)
             sd_dist = pm.Exponential.dist(1.0, shape=3)
-            # pylint: disable=unpacking-non-sequence
             chol, corr, stds = pm.LKJCholeskyCov(
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
-            # pylint: enable=unpacking-non-sequence
             mv = pm.MvNormal("mv", mu, cov=pm.math.dot(chol, chol.T), size=4)
             prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
 
@@ -1782,7 +1778,7 @@ class TestMvStudentTCov(BaseTestDistributionRandom):
         "mu": np.array([1.0, 2.0]),
         "scale": np.array([[2.0, 0.0], [0.0, 3.5]]),
     }
-    reference_dist = lambda self: ft.partial(self.mvstudentt_rng_fn, rng=self.get_random_state())
+    reference_dist = lambda self: ft.partial(self.mvstudentt_rng_fn, rng=self.get_random_state())  # noqa E731
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -1985,7 +1981,7 @@ class TestWishart(BaseTestDistributionRandom):
         (1, 3, 3),
         (4, 5, 3, 3),
     ]
-    reference_dist = lambda self: ft.partial(self.wishart_rng_fn, rng=self.get_random_state())
+    reference_dist = lambda self: ft.partial(self.wishart_rng_fn, rng=self.get_random_state())  # noqa E731
     checks_to_run = [
         "check_rv_size",
         "check_pymc_params_match_rv_op",
@@ -2114,7 +2110,7 @@ class TestKroneckerNormal(BaseTestDistributionRandom):
     sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
     sizes_expected = [(N,), (N,), (1, N), (1, N), (5, N), (4, 5, N), (2, 4, 2, N)]
 
-    reference_dist = lambda self: ft.partial(self.kronecker_rng_fn, rng=self.get_random_state())
+    reference_dist = lambda self: ft.partial(self.kronecker_rng_fn, rng=self.get_random_state())  # noqa E731
     checks_to_run = [
         "check_pymc_draws_match_reference",
         "check_rv_size",
@@ -2370,7 +2366,7 @@ def test_mvnormal_no_cholesky_in_model_logp():
         data = np.ones((batch_size, n))
         pm.MvNormal("y", mu=mu, chol=pt.broadcast_to(chol, (batch_size, n, n)), observed=data)
 
-    contains_cholesky_op = lambda fgraph: any(
+    contains_cholesky_op = lambda fgraph: any(  # noqa E731
         isinstance(node.op, Cholesky) for node in fgraph.apply_nodes
     )
 

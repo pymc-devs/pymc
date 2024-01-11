@@ -145,7 +145,7 @@ class MeasurableEquilibriumGraphRewriter(EquilibriumGraphRewriter):
                     continue
                 if not any(out in rv_map_feature.needs_measuring for out in node.outputs):
                     continue
-                for node_rewriter in self.node_tracker.get_trackers(node.op):
+                for node_rewriter in self.node_tracker.get_trackers(node.op):  # noqa F402
                     node_rewriter_change = self.process_node(fgraph, node, node_rewriter)
                     if not node_rewriter_change:
                         continue
