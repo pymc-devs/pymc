@@ -256,7 +256,7 @@ def _get_batched_jittered_initial_points(
     chains: int,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
     random_seed: RandomSeed,
-    jitter: Optional[bool] = True,
+    jitter: bool = True,
     jitter_max_retries: int = 10,
 ) -> Union[np.ndarray, List[np.ndarray]]:
     """Get jittered initial point in format expected by NumPyro MCMC kernel
@@ -340,7 +340,7 @@ def sample_blackjax_nuts(
     target_accept: float = 0.8,
     random_seed: Optional[RandomState] = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
-    jitter: Optional[bool] = True,
+    jitter: bool = True,
     model: Optional[Model] = None,
     var_names: Optional[Sequence[str]] = None,
     progress_bar: bool = False,
