@@ -61,11 +61,12 @@ def product(domains, n_samples=-1):
     """Get an iterator over a product of domains.
 
     Args:
+    ----
         domains: a dictionary of (name, object) pairs, where the objects
                  must be "domain-like", as in, have a `.vals` property
         n_samples: int, maximum samples to return.  -1 to return whole product
 
-    Returns
+    Returns:
     -------
         list of the cartesian product of the domains
     """

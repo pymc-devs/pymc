@@ -815,6 +815,7 @@ class Group(WithMemoization):
         ----------
         name: str
             name for tensor
+
         Returns
         -------
         tensor
@@ -828,6 +829,7 @@ class Group(WithMemoization):
         ----------
         name: str
             name for tensor
+
         Returns
         -------
         tensor

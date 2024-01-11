@@ -8,10 +8,32 @@ addopts = ["--color=yes"]
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I", "UP"]
+select = ["D", "E4", "E7", "E9", "F", "I", "UP"]
 ignore-init-module-imports = true
 ignore = [
   "F841", # Local variable name is assigned to but never used
+  "D100",
+  "D101",
+  "D102",
+  "D103",
+  "D104",
+  "D105",
+  "D107",
+  "D200",
+  "D202",
+  "D203",
+  "D204",
+  "D205",
+  "D209",
+  "D212",
+  "D213",
+  "D301",
+  "D400",
+  "D401",
+  "D403",
+  "D413",
+  "D415",
+  "D417",
 ]
 
 [tool.ruff.lint.isort]
@@ -22,6 +44,7 @@ lines-between-types = 1
   "F401", # Module imported but unused
   "F403", # 'from module import *' used; unable to detect undefined names
 ]
+"docs/source/*" = ["D"]
 "pymc/__init__.py" = [
   "E402", # Module level import not at top of file
 ]
@@ -31,6 +54,7 @@ lines-between-types = 1
 "pymc/logprob/__init__.py" = [
   "I001", # Import block is un-sorted or un-formatted
 ]
+"tests/*" = ["D"]
 
 [tool.coverage.report]
 exclude_lines = [
