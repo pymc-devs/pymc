@@ -458,8 +458,8 @@ class Operator:
         self.approx = approx
         if self.require_logq and not approx.has_logq:
             raise ExplicitInferenceError(
-                "%s requires logq, but %s does not implement it"
-                "please change inference method" % (self, approx)
+                f"{self} requires logq, but {approx} does not implement it"
+                "please change inference method"
             )
 
     inputs = property(lambda self: self.approx.inputs)
@@ -510,9 +510,7 @@ class Operator:
         return self.objective_class(self, f)
 
     def __str__(self):  # pragma: no cover
-        return "%(op)s[%(ap)s]" % dict(
-            op=self.__class__.__name__, ap=self.approx.__class__.__name__
-        )
+        return f"{self.__class__.__name__}[{self.approx.__class__.__name__}]"
 
 
 def collect_shared_to_list(params):
@@ -701,8 +699,8 @@ class Group(WithMemoization):
     def group_for_params(cls, params):
         if frozenset(params) not in cls.__param_registry:
             raise KeyError(
-                "No such group for the following params: {!r}, "
-                "only the following are supported\n\n{}".format(params, cls.__param_registry)
+                f"No such group for the following params: {params!r}, "
+                f"only the following are supported\n\n{cls.__param_registry}"
             )
         return cls.__param_registry[frozenset(params)]
 
@@ -801,9 +799,7 @@ class Group(WithMemoization):
         if givens != needed:
             raise ParametrizationError(
                 "Passed parameters do not have a needed set of keys, "
-                "they should be equal, got {givens}, needed {needed}".format(
-                    givens=givens, needed=needed
-                )
+                f"they should be equal, got {givens}, needed {needed}"
             )
         self._user_params = dict()
         spec = self.get_param_spec_for(d=self.ddim, **kwargs.pop("spec_kw", {}))

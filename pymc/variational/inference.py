@@ -244,17 +244,11 @@ class Inference:
             if isinstance(e, StopIteration):
                 logger.info(str(e))
             if n < 10:
-                logger.info(
-                    "Interrupted at {:,d} [{:.0f}%]: Loss = {:,.5g}".format(
-                        i, 100 * i // n, scores[i]
-                    )
-                )
+                logger.info(f"Interrupted at {i:,d} [{100 * i // n:.0f}%]: Loss = {scores[i]:,.5g}")
             else:
                 avg_loss = _infmean(scores[min(0, i - 1000) : i + 1])
                 logger.info(
-                    "Interrupted at {:,d} [{:.0f}%]: Average Loss = {:,.5g}".format(
-                        i, 100 * i // n, avg_loss
-                    )
+                    f"Interrupted at {i:,d} [{100 * i // n:.0f}%]: Average Loss = {avg_loss:,.5g}"
                 )
         else:
             if n == 0:
