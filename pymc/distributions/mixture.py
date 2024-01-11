@@ -524,10 +524,6 @@ class NormalMixture:
         the component standard deviations
     tau : tensor_like of float
         the component precisions
-    comp_shape : shape of the Normal component
-        notice that it should be different than the shape
-        of the mixture distribution, with the last axis representing
-        the number of components.
 
     Notes
     -----
@@ -554,16 +550,16 @@ class NormalMixture:
             y = pm.NormalMixture("y", w=weights, mu=μ, sigma=σ, observed=data)
     """
 
-    def __new__(cls, name, w, mu, sigma=None, tau=None, comp_shape=(), **kwargs):
+    def __new__(cls, name, w, mu, sigma=None, tau=None, **kwargs):
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        return Mixture(name, w, Normal.dist(mu, sigma=sigma, size=comp_shape), **kwargs)
+        return Mixture(name, w, Normal.dist(mu, sigma=sigma), **kwargs)
 
     @classmethod
-    def dist(cls, w, mu, sigma=None, tau=None, comp_shape=(), **kwargs):
+    def dist(cls, w, mu, sigma=None, tau=None, **kwargs):
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        return Mixture.dist(w, Normal.dist(mu, sigma=sigma, size=comp_shape), **kwargs)
+        return Mixture.dist(w, Normal.dist(mu, sigma=sigma), **kwargs)
 
 
 def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):

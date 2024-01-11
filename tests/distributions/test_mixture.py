@@ -820,10 +820,8 @@ class TestNormalMixture:
             mus = Normal("mus", shape=comp_shape)
             taus = Gamma("taus", alpha=1, beta=1, shape=comp_shape)
             ws = Dirichlet("ws", np.ones(ncomp), shape=(ncomp,))
-            mixture0 = NormalMixture("m", w=ws, mu=mus, tau=taus, shape=nd, comp_shape=comp_shape)
-            obs0 = NormalMixture(
-                "obs", w=ws, mu=mus, tau=taus, comp_shape=comp_shape, observed=observed
-            )
+            mixture0 = NormalMixture("m", w=ws, mu=mus, tau=taus, shape=nd)
+            obs0 = NormalMixture("obs", w=ws, mu=mus, tau=taus, observed=observed)
 
         with Model() as model1:
             mus = Normal("mus", shape=comp_shape)
@@ -867,7 +865,6 @@ class TestNormalMixture:
                 "mu": Domain([[0.05, 2.5], [-5.0, 1.0]], edges=(None, None)),
                 "sigma": Domain([[1, 1], [1.5, 2.0]], edges=(None, None)),
             },
-            extra_args={"comp_shape": 2},
             size=1000,
             ref_rand=ref_rand,
         )
@@ -878,7 +875,6 @@ class TestNormalMixture:
                 "mu": Domain([[-5.0, 1.0, 2.5]], edges=(None, None)),
                 "sigma": Domain([[1.5, 2.0, 3.0]], edges=(None, None)),
             },
-            extra_args={"comp_shape": 3},
             size=1000,
             ref_rand=ref_rand,
         )
@@ -902,7 +898,6 @@ class TestMixtureVsLatent:
                 w=np.ones(npop) / npop,
                 mu=mus,
                 sigma=1e-5,
-                comp_shape=(nd, npop),
                 shape=nd,
             )
             z = Categorical("z", p=np.ones(npop) / npop, shape=nd)
