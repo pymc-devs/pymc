@@ -3012,7 +3012,13 @@ class SkewNormal(Continuous):
             derivative = norm.pdf(x) - 2 * alpha * norm.pdf(alpha * x)
             x -= derivative
         
-        return mu + sigma * x
+        res = mu + sigma * x
+        res = check_icdf_value(res, prob)
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0"
+        )
 
 
 class Triangular(BoundedContinuous):
@@ -3377,8 +3383,13 @@ class Rice(PositiveContinuous):
                 + (x / sigma**2) * pt.exp(-x**2 / (2 * sigma**2)) * ive(0, x * nu / sigma**2)) * nu / sigma**2
         
         approx_icdf = newton(cdf, x0, fprime=cdf_derivative, tol=tol, maxiter=max_iter)
-
-        return approx_icdf
+        res = approx_icdf
+        res = check_icdf_value(res, prob)
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0"
+        )
 
 class Logistic(Continuous):
     r"""
