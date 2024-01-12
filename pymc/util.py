@@ -242,7 +242,7 @@ def dataset_to_point_list(
     ds: Union[xarray.Dataset, dict[str, xarray.DataArray]], sample_dims: Sequence[str]
 ) -> Tuple[List[Dict[str, np.ndarray]], Dict[str, Any]]:
     # All keys of the dataset must be a str
-    var_names = list(ds.keys())
+    var_names = cast(List[str], list(ds.keys()))
     for vn in var_names:
         if not isinstance(vn, str):
             raise ValueError(f"Variable names must be str, but dataset key {vn} is a {type(vn)}.")
