@@ -3006,7 +3006,7 @@ class SkewNormal(Continuous):
         for _ in range(max_iter):
             diff = cdf_difference(x)
             
-            if np.abs(diff) < tol:
+            if pt.abs(diff) < tol:
                 return mu + sigma * x
             
             derivative = norm.pdf(x) - 2 * alpha * norm.pdf(alpha * x)
@@ -3370,16 +3370,15 @@ class Rice(PositiveContinuous):
         )
     def icdf(prob, nu, sigma, x0=1.0, max_iter=100, tol=1e-8):
         def cdf(x):
-            return (1 + x / sigma**2) * np.exp(-x**2 / (2 * sigma**2)) * iv(0, x * nu / sigma**2) - prob
+            return (1 + x / sigma**2) * pt.exp(-x**2 / (2 * sigma**2)) * iv(0, x * nu / sigma**2) - prob
         
         def cdf_derivative(x):
-            return ((1 - x**2 / sigma**2) * np.exp(-x**2 / (2 * sigma**2)) * iv(0, x * nu / sigma**2)
-                + (x / sigma**2) * np.exp(-x**2 / (2 * sigma**2)) * ive(0, x * nu / sigma**2)) * nu / sigma**2
+            return ((1 - x**2 / sigma**2) * pt.exp(-x**2 / (2 * sigma**2)) * iv(0, x * nu / sigma**2)
+                + (x / sigma**2) * pt.exp(-x**2 / (2 * sigma**2)) * ive(0, x * nu / sigma**2)) * nu / sigma**2
         
         approx_icdf = newton(cdf, x0, fprime=cdf_derivative, tol=tol, maxiter=max_iter)
 
         return approx_icdf
-
 
 class Logistic(Continuous):
     r"""
