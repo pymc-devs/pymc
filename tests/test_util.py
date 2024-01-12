@@ -156,8 +156,12 @@ def test_unset_repr(capsys):
     assert "a=UNSET" in captured.out
 
 
-def test_dataset_to_point_list():
-    ds = xarray.Dataset()
+@pytest.mark.parametrize("input_type", ("dict", "Dataset"))
+def test_dataset_to_point_list(input_type):
+    if input_type == "dict":
+        ds = {}
+    elif input_type == "Dataset":
+        ds = xarray.Dataset()
     ds["A"] = xarray.DataArray([[1, 2, 3]] * 2, dims=("chain", "draw"))
     pl, _ = dataset_to_point_list(ds, sample_dims=["chain", "draw"])
     assert isinstance(pl, list)
@@ -165,7 +169,10 @@ def test_dataset_to_point_list():
     assert isinstance(pl[0], dict)
     assert isinstance(pl[0]["A"], np.ndarray)
 
+
+def test_dataset_to_point_list_str_key():
     # Check that non-str keys are caught
+    ds = xarray.Dataset()
     ds[3] = xarray.DataArray([1, 2, 3])
     with pytest.raises(ValueError, match="must be str"):
         dataset_to_point_list(ds, sample_dims=["chain", "draw"])
