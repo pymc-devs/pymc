@@ -98,6 +98,22 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
     Python 3.11.0
     ```
 
+8. Syncing the repository
+
+    ```console
+    cd /workspace/pymc
+    git checkout main
+
+    # sync the repo
+    git pull upstream main
+
+    # rebuild the source code
+    pip install -e .
+
+    # print PyMC version being used
+    python -c "import pymc; print(pymc.__version__)"
+    ```
+
 ### Reminder: Git Workflow
 
 :::{attention}
