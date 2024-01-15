@@ -228,7 +228,13 @@ class EmpiricalGroup(Group):
                 for j in range(len(trace)):
                     histogram[i] = DictToArrayBijection.map(trace.point(j, t)).data
                     i += 1
-        return dict(histogram=pytensor.shared(pm.floatX(histogram), "histogram"))
+        return dict(
+            histogram=pytensor.shared(
+                pm.floatX(histogram),
+                "histogram",
+                shape=histogram.shape,
+            )
+        )
 
     def _check_trace(self):
         trace = self._kwargs.get("trace", None)
