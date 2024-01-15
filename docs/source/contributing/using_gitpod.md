@@ -105,7 +105,7 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
     cd /workspace/pymc
     git checkout main
     ```
-    
+
     Sync the repository code: `git pull upstream main`
 
     Rebuild the source code: `pip install -e .`
