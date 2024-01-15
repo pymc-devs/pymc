@@ -106,9 +106,9 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
     git checkout main
     ```
 
-    Sync the repository code: `git pull upstream main`
+    Sync the repository code and version tags: `git pull upstream main --tags`
 
-    Rebuild the source code: `pip install -e .`
+    Update installed version number: `pip install -e .`
 
     Example:
     ```console
