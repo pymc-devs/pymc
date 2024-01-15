@@ -46,6 +46,7 @@ from pymc.backends.arviz import (
 from pymc.distributions.multivariate import PosDefMatrix
 from pymc.initial_point import StartDict
 from pymc.logprob.utils import CheckParameterValue
+from pymc.pytensorf import IdentityOp
 from pymc.sampling.mcmc import _init_jitter
 from pymc.stats.convergence import log_warnings, run_convergence_checks
 from pymc.util import (
@@ -67,6 +68,14 @@ __all__ = (
     "sample_blackjax_nuts",
     "sample_numpyro_nuts",
 )
+
+
+@jax_funcify.register(IdentityOp)
+def jax_funcify_Identity(op, **kwargs):
+    def identity_fn(value):
+        return value
+
+    return identity_fn
 
 
 @jax_funcify.register(Assert)

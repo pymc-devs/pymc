@@ -93,8 +93,8 @@ class MeanFieldGroup(Group):
         rho = rho1
 
         return {
-            "mu": pytensor.shared(pm.floatX(start), "mu"),
-            "rho": pytensor.shared(pm.floatX(rho), "rho"),
+            "mu": pytensor.shared(pm.floatX(start), "mu", shape=start.shape),
+            "rho": pytensor.shared(pm.floatX(rho), "rho", shape=rho.shape),
         }
 
     @node_property
@@ -137,7 +137,10 @@ class FullRankGroup(Group):
         start = self._prepare_start(start)
         n = self.ddim
         L_tril = np.eye(n)[np.tril_indices(n)].astype(pytensor.config.floatX)
-        return {"mu": pytensor.shared(start, "mu"), "L_tril": pytensor.shared(L_tril, "L_tril")}
+        return {
+            "mu": pytensor.shared(start, "mu", shape=start.shape),
+            "L_tril": pytensor.shared(L_tril, "L_tril", shape=L_tril.shape),
+        }
 
     @node_property
     def L(self):
