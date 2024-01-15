@@ -100,7 +100,7 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
 
 8. Syncing the repository
 
-    Ensure you are in the correct place: 
+    Ensure you are in the correct place:
     ```console
     cd /workspace/pymc
     git checkout main
