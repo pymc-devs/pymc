@@ -572,3 +572,10 @@ def test_vi_sampling_jax(method):
     with pm.Model() as model:
         x = pm.Normal("x")
         pm.fit(10, method=method, fn_kwargs=dict(mode="JAX"))
+
+
+@pytest.mark.xfail(reason="Due to https://github.com/pymc-devs/pytensor/issues/595")
+def test_vi_sampling_jax_svgd():
+    with pm.Model():
+        x = pm.Normal("x")
+        pm.fit(10, method="svgd", fn_kwargs=dict(mode="JAX"))
