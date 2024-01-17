@@ -37,9 +37,8 @@ from pytensor.graph.basic import (
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
 from pytensor.scalar.basic import Cast
-from pytensor.scalar.basic import identity as scalar_identity
 from pytensor.scan.op import Scan
-from pytensor.tensor.basic import _as_tensor_variable
+from pytensor.tensor.basic import _as_tensor_variable, tensor_copy
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
@@ -412,7 +411,7 @@ def hessian_diag(f, vars=None, negate_output=True):
         return empty_gradient
 
 
-identity = Elemwise(scalar_identity, name="identity")
+identity = tensor_copy
 
 
 def make_shared_replacements(point, vars, model):
