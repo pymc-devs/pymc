@@ -77,6 +77,7 @@ jobs:
             tests/stats/test_log_density.py
             tests/distributions/test_distribution.py
             tests/distributions/test_discrete.py
+            tests/distributions/stats/test_kl_divergence.py
 
           - |
             tests/tuning/test_scaling.py
