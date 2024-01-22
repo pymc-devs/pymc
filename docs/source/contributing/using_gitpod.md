@@ -98,6 +98,47 @@ These instructions are for contributing specifically to the [pymc-devs/pymc](htt
     Python 3.11.0
     ```
 
+8. Syncing the repository
+
+    Ensure you are in the correct place:
+    ```console
+    cd /workspace/pymc
+    git checkout main
+    ```
+
+    Sync the repository code and version tags: `git pull upstream main --tags`
+
+    Update installed version number: `pip install -e .`
+
+    Example:
+    ```console
+    Obtaining file:///workspace/pymc
+    Installing build dependencies ... done
+    Checking if build backend supports build_editable ... done
+    Getting requirements to build editable ... done
+    Preparing editable metadata (pyproject.toml) ... done
+    Requirement already satisfied: arviz>=0.13.0 in /opt/conda/lib/python3.11/site-packages (from pymc==5.1.1+303.g6f8f9eef) (0.15.1)
+    ...
+    Building editable for pymc (pyproject.toml) ... done
+    Created wheel for pymc: filename=pymc-5.1.1+303.g6f8f9eef-0.editable-py3-none-any.whl size=11527 sha256=6211b7149b3ab09813b2badb3010f54d2d4ab014f75054d73f204ac5ea82ed82
+    Stored in directory: /tmp/pip-ephem-wheel-cache-wmkfx8pd/wheels/73/bf/14/341b7fa040e9af1991e12077c13913921be3069fe3bdf78752
+    Successfully built pymc
+    Installing collected packages: pytensor, pymc
+    Attempting uninstall: pytensor
+    Found existing installation: pytensor 2.10.1
+    Uninstalling pytensor-2.10.1:
+      Successfully uninstalled pytensor-2.10.1
+    Successfully installed pymc-5.1.1+303.g6f8f9eef pytensor-2.18.6
+    ```
+
+    Check the PyMC version being used: `python -c "import pymc; print(pymc.__version__)"`
+
+    Example:
+    ```console
+    (base) gitpod@reshamas-pymc-syxfrf90fp0:/workspace/pymc$ python -c "import pymc; print(pymc.__version__)"
+    5.1.1+303.g6f8f9eef
+    ```
+
 ### Reminder: Git Workflow
 
 :::{attention}
