@@ -18,7 +18,13 @@ from typing import Callable, Dict
 
 import numpy as np
 
-__all__ = ["Callback", "CheckParametersConvergence", "Tracker"]
+__all__ = [
+    "Callback",
+    "CheckParametersConvergence",
+    "ExponentialDecay",
+    "ReduceLROnPlateau",
+    "Tracker",
+]
 
 
 class Callback:
@@ -91,6 +97,125 @@ class CheckParametersConvergence(Callback):
     @staticmethod
     def flatten_shared(shared_list):
         return np.concatenate([sh.get_value().flatten() for sh in shared_list])
+
+
+class LearningRateScheduler(Callback):
+    """Baseclass for learning rate schedulers."""
+
+    def __init__(self, optimizer):
+        self.optimizer = optimizer
+
+    def __call__(self, approx, loss_hist, i):
+        raise NotImplementedError("Must be implemented in subclass.")
+
+    def _set_new_lr(self, new_lr):
+        self.optimizer.keywords["learning_rate"] = new_lr
+
+
+class ExponentialDecay(LearningRateScheduler):
+    """
+    Exponentially decays the learning rate.
+
+    This is inspired by Keras' homonymous callback:
+    https://github.com/keras-team/keras/blob/v2.14.0/keras/optimizers/schedules/learning_rate_schedule.py
+
+    Parameters
+    ----------
+    decay_steps : int
+        Number of steps at which the learning rate decay happens.
+    decay_rate : float
+        Rate of decay.
+    min_lr: float
+        lower bound on the learning rate
+    staircase : bool
+        If True, decay the learning rate at discrete intervals.
+    """
+
+    def __init__(self, optimizer, decay_steps, decay_rate, min_lr=1e-6, staircase=False):
+        super().__init__(optimizer)
+        self.decay_steps = decay_steps
+        self.decay_rate = decay_rate
+        self.staircase = staircase
+        self.min_lr = min_lr
+
+        self.initial_learning_rate = float(self.optimizer.keywords["learning_rate"])
+
+    def __call__(self, approx, loss_hist, i):
+        if self.staircase:
+            new_lr = self.initial_learning_rate * self.decay_rate ** (i // self.decay_steps)
+        else:
+            new_lr = self.initial_learning_rate * self.decay_rate ** (i / self.decay_steps)
+        if new_lr >= self.min_lr:
+            self._set_new_lr(new_lr)
+
+
+class ReduceLROnPlateau(LearningRateScheduler):
+    """
+    Reduce learning rate when the loss has stopped improving.
+
+    This is inspired by Keras' homonymous callback:
+    https://github.com/keras-team/keras/blob/v2.14.0/keras/callbacks.py
+
+    Parameters
+    ----------
+    optimizer: callable
+        PyMC optimizer
+    factor: float
+        factor by which the learning rate will be reduced: `new_lr = lr * factor`
+    patience: int
+        number of epochs with no improvement after which learning rate will be reduced
+    min_lr: float
+        lower bound on the learning rate
+    cooldown: int
+        number of iterations to wait before resuming normal operation after lr has been reduced
+    """
+
+    def __init__(
+        self,
+        optimizer,
+        factor=0.1,
+        patience=10,
+        min_lr=1e-6,
+        cooldown=0,
+    ):
+        super().__init__(optimizer)
+        self.factor = factor
+        self.patience = patience
+        self.min_lr = min_lr
+        self.cooldown = cooldown
+        self.cooldown_counter = 0
+        self.wait = 0
+        self.best = float("inf")
+
+    def _in_cooldown(self):
+        return self.cooldown_counter > 0
+
+    def _reduce_lr(self):
+        old_lr = float(self.optimizer.keywords["learning_rate"])
+        new_lr = max(old_lr * self.factor, self.min_lr)
+        if new_lr >= self.min_lr:
+            self._set_new_lr(new_lr)
+
+    def __call__(self, approx, loss_hist, i):
+        current = loss_hist[-1]
+
+        if np.isinf(current):
+            return
+
+        if self._in_cooldown():
+            self.cooldown_counter -= 1
+            self.wait = 0
+            return
+
+        if current < self.best:
+            self.best = current
+            self.wait = 0
+        elif not np.isinf(self.best):
+            self.wait += 1
+            if self.wait >= self.patience:
+                self._reduce_lr()
+                self.cooldown_counter = self.cooldown
+                self.wait = 0
 
 
 class Tracker(Callback):

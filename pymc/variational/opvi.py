@@ -251,6 +251,7 @@ class ObjectiveFunction:
         if more_updates is None:
             more_updates = dict()
         resulting_updates = ObjectiveUpdates()
+
         if self.test_params:
             self.add_test_updates(
                 resulting_updates,
@@ -313,10 +314,14 @@ class ObjectiveFunction:
         obj_target = self(
             obj_n_mc, more_obj_params=more_obj_params, more_replacements=more_replacements
         )
+
         grads = pm.updates.get_or_compute_grads(obj_target, self.obj_params + more_obj_params)
         if total_grad_norm_constraint is not None:
             grads = pm.total_norm_constraint(grads, total_grad_norm_constraint)
-        updates.update(obj_optimizer(grads, self.obj_params + more_obj_params))
+
+        # Pass the loss plus the gradients to the optimizer, so that schedulers can use the loss if need.
+        updates.update(obj_optimizer((obj_target, grads), self.obj_params + more_obj_params))
+
         if self.op.returns_loss:
             updates.loss = obj_target
 
