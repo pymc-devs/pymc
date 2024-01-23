@@ -34,6 +34,7 @@ import pymc as pm
 from pymc.distributions.multivariate import (
     MultivariateIntervalTransform,
     _LKJCholeskyCov,
+    _LKJCorr,
     _OrderedMultinomial,
     posdef,
     quaddist_matrix,
@@ -558,7 +559,7 @@ class TestMatchesScipy:
     @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
     def test_lkjcorr(self, x, eta, n, lp):
         with pm.Model() as model:
-            pm.LKJCorr("lkj", eta=eta, n=n, transform=None)
+            pm.LKJCorr("lkj", eta=eta, n=n, transform=None, return_matrix=False)
 
         point = {"lkj": x}
         decimals = select_by_precision(float64=6, float32=4)
@@ -1330,7 +1331,7 @@ class TestMoments:
     )
     def test_lkjcorr_moment(self, n, eta, size, expected):
         with pm.Model() as model:
-            pm.LKJCorr("x", n=n, eta=eta, size=size)
+            pm.LKJCorr("x", n=n, eta=eta, size=size, return_matrix=False)
         assert_moment_is_expected(model, expected)
 
     @pytest.mark.parametrize(
@@ -1464,6 +1465,22 @@ class TestMvNormalMisc:
             prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
 
         assert prior["mv"].shape == (10, 4, 3)
+
+    def test_with_lkjcorr_matrix(
+        self,
+    ):
+        with pm.Model() as model:
+            corr = pm.LKJCorr("corr", n=3, eta=2, return_matrix=True)
+            pm.Deterministic("corr_mat", corr)
+            mv = pm.MvNormal("mv", 0.0, cov=corr, size=4)
+            prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
+
+        assert prior["corr_mat"].shape == (10, 3, 3)  # square
+        assert (prior["corr_mat"][:, [0, 1, 2], [0, 1, 2]] == 1.0).all()  # 1.0 on diagonal
+        assert (prior["corr_mat"] == prior["corr_mat"].transpose(0, 2, 1)).all()  # symmetric
+        assert (
+            prior["corr_mat"].max() <= 1.0 and prior["corr_mat"].min() >= -1.0
+        )  # constrained between -1 and 1
 
     def test_issue_3758(self):
         np.random.seed(42)
@@ -2133,7 +2150,7 @@ class TestOrderedMultinomial(BaseTestDistributionRandom):
 
 
 class TestLKJCorr(BaseTestDistributionRandom):
-    pymc_dist = pm.LKJCorr
+    pymc_dist = _LKJCorr
     pymc_dist_params = {"n": 3, "eta": 1.0}
     expected_rv_op_params = {"n": 3, "eta": 1.0}
 
@@ -2161,7 +2178,7 @@ class TestLKJCorr(BaseTestDistributionRandom):
             return (st.beta.rvs(size=(size, shape), a=beta, b=beta) - 0.5) * 2
 
         continuous_random_tester(
-            pm.LKJCorr,
+            _LKJCorr,
             {
                 "n": Domain([2, 10, 50], edges=(None, None)),
                 "eta": Domain([1.0, 10.0, 100.0], edges=(None, None)),
@@ -2186,7 +2203,7 @@ class TestLKJCorr(BaseTestDistributionRandom):
 )
 def test_LKJCorr_default_transform(shape):
     with pm.Model() as m:
-        x = pm.LKJCorr("x", n=2, eta=1, shape=shape)
+        x = pm.LKJCorr("x", n=2, eta=1, shape=shape, return_matrix=False)
     assert isinstance(m.rvs_to_transforms[x], MultivariateIntervalTransform)
     assert m.logp(sum=False)[0].type.shape == shape[:-1]
 
