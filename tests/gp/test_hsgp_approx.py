@@ -252,7 +252,7 @@ class TestHSGPPeriodic(_BaseFixtures):
             ),
         ):
             # `cov_func` must be `Periodic` only
-            cov_func = 5.0 * pm.gp.cov.Periodic(1, period=1, ls=0.1)
+            cov_func = 5.0 * pm.gp.cov.Periodic(1, period=1, ls=1.0)
             pm.gp.HSGPPeriodic(m=500, cov_func=cov_func)
 
         with pytest.raises(
@@ -265,20 +265,20 @@ class TestHSGPPeriodic(_BaseFixtures):
             pm.gp.HSGPPeriodic(m=500, scale=0.5, cov_func=cov_func)
 
     @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
-    @pytest.mark.parametrize("eta", [100.0])
-    @pytest.mark.xfail(
-        reason="For `pm.gp.cov.Periodic`, this test does not pass.\
-        The mmd is around `0.0468`.\
-        The test passes more often when subtracting the mean from the mean from the samples.\
-        It might be that the period is slightly off for the approximate power spectral density.\
-        See https://github.com/pymc-devs/pymc/pull/6877/ for the full discussion."
-    )
+    @pytest.mark.parametrize("eta", [2.0])
+    # @pytest.mark.xfail(
+    #    reason="For `pm.gp.cov.Periodic`, this test does not pass.\
+    #    The mmd is around `0.0468`.\
+    #    The test passes more often when subtracting the mean from the mean from the samples.\
+    #    It might be that the period is slightly off for the approximate power spectral density.\
+    #    See https://github.com/pymc-devs/pymc/pull/6877/ for the full discussion."
+    # )
     def test_prior(self, model, cov_func, eta, X1, rng):
-        """Compare HSGPPeriodic prior to unapproximated GP prior, pm.gp.Latent. Draw samples from the
-        prior and compare them using MMD two sample test.
+        """Compare HSGPPeriodic prior to unapproximated GP prior, pm.gp.Latent. Draw samples from
+        the prior and compare them using MMD two sample test.
         """
         with model:
-            hsgp = pm.gp.HSGPPeriodic(m=200, scale=eta, cov_func=cov_func)
+            hsgp = pm.gp.HSGPPeriodic(m=200, scale=eta, drop_first=False, cov_func=cov_func)
             f1 = hsgp.prior("f1", X=X1)
 
             gp = pm.gp.Latent(cov_func=eta**2 * cov_func)
@@ -292,7 +292,10 @@ class TestHSGPPeriodic(_BaseFixtures):
         h0, mmd, critical_value, reject = two_sample_test(
             samples1, samples2, n_sims=500, alpha=0.01
         )
-        assert not reject, f"H0 was rejected, {mmd} even though HSGP and GP priors should match."
+        assert not reject, (
+            f"H0 was rejected, MMD {mmd:.3f} > {critical_value:.3f} even though HSGP and GP priors "
+            "should match."
+        )
 
     @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
     def test_conditional_periodic(self, model, cov_func, X1):
