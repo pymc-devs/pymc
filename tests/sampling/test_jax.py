@@ -154,6 +154,47 @@ def test_deterministic_samples(sampler):
     assert np.allclose(trace.posterior["b"].values, trace.posterior["a"].values / 2)
 
 
+@pytest.mark.parametrize(
+    "sampler",
+    [
+        sample_blackjax_nuts,
+        sample_numpyro_nuts,
+    ],
+)
+def test_initvals_without_jitter(sampler):
+    pytensor.config.on_opt_error = "raise"
+    np.random.seed(13244)
+
+    obs = np.random.normal(10, 2, size=100)
+    obs_at = pytensor.shared(obs, borrow=True, name="obs")
+    initvals = {"a": -3}
+    with pm.Model() as model:
+        a = pm.Uniform("a", -20, 20)
+        b = pm.Deterministic("b", a / 2.0)
+        c = pm.Normal("c", a, sigma=1.0, observed=obs_at)
+
+        trace1 = sampler(
+            chains=1,
+            tune=1,
+            draws=1,
+            random_seed=1322,
+            initvals=initvals,
+            jitter=False,
+            keep_untransformed=True,
+        )
+        trace2 = sampler(
+            chains=1,
+            tune=1,
+            draws=1,
+            random_seed=1322,
+            initvals=initvals,
+            keep_untransformed=True,
+        )
+
+    assert np.allclose(trace1.posterior["a"].values[0], -3)
+    assert not np.allclose(trace2.posterior["a"].values[0], -3)
+
+
 def test_get_jaxified_graph():
     # Check that jaxifying a graph does not emit the Supervisor Warning. This test can
     # be removed once https://github.com/aesara-devs/aesara/issues/637 is sorted.
