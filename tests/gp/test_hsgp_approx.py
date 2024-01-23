@@ -229,21 +229,27 @@ class TestHSGP(_BaseFixtures):
 
 class TestHSGPPeriodic(_BaseFixtures):
     def test_parametrization(self):
-        err_msg = "`m` must be a positive integer as the `Periodic` kernel approximation is only implemented for 1-dimensional case."
+        err_msg = (
+            "`m` must be a positive integer as the `Periodic` kernel approximation is only "
+            "implemented for 1-dimensional case."
+        )
 
         with pytest.raises(ValueError, match=err_msg):
             # `m` must be a positive integer, not a list
-            cov_func = pm.gp.cov.Periodic(1, period=1, ls=0.1)
+            cov_func = pm.gp.cov.Periodic(1, period=1, ls=1.0)
             pm.gp.HSGPPeriodic(m=[500], cov_func=cov_func)
 
         with pytest.raises(ValueError, match=err_msg):
             # `m`` must be a positive integer
-            cov_func = pm.gp.cov.Periodic(1, period=1, ls=0.1)
+            cov_func = pm.gp.cov.Periodic(1, period=1, ls=1.0)
             pm.gp.HSGPPeriodic(m=-1, cov_func=cov_func)
 
         with pytest.raises(
             ValueError,
-            match="`cov_func` must be an instance of a `Periodic` kernel only. Use the `scale` parameter to control the variance.",
+            match=(
+                "`cov_func` must be an instance of a `Periodic` kernel only. Use the `scale` "
+                "parameter to control the variance."
+            ),
         ):
             # `cov_func` must be `Periodic` only
             cov_func = 5.0 * pm.gp.cov.Periodic(1, period=1, ls=0.1)
@@ -251,7 +257,9 @@ class TestHSGPPeriodic(_BaseFixtures):
 
         with pytest.raises(
             ValueError,
-            match="HSGP approximation for `Periodic` kernel only implemented for 1-dimensional case.",
+            match=(
+                "HSGP approximation for `Periodic` kernel only implemented for 1-dimensional case."
+            ),
         ):
             cov_func = pm.gp.cov.Periodic(2, period=1, ls=[1, 2])
             pm.gp.HSGPPeriodic(m=500, scale=0.5, cov_func=cov_func)
@@ -278,8 +286,8 @@ class TestHSGPPeriodic(_BaseFixtures):
 
             idata = pm.sample_prior_predictive(samples=1000, random_seed=rng)
 
-        samples1 = az.extract(idata.prior["f1"])["f1"].values.T
-        samples2 = az.extract(idata.prior["f2"])["f2"].values.T
+        samples1 = az.extract(idata.prior, var_names="f1").values.T
+        samples2 = az.extract(idata.prior, var_names="f2").values.T
 
         h0, mmd, critical_value, reject = two_sample_test(
             samples1, samples2, n_sims=500, alpha=0.01
@@ -299,8 +307,8 @@ class TestHSGPPeriodic(_BaseFixtures):
 
             idata = pm.sample_prior_predictive(samples=1000)
 
-        samples1 = az.extract(idata.prior["f"])["f"].values.T
-        samples2 = az.extract(idata.prior["fc"])["fc"].values.T
+        samples1 = az.extract(idata.prior, var_names="f").values.T
+        samples2 = az.extract(idata.prior, var_names="fc").values.T
 
         h0, mmd, critical_value, reject = two_sample_test(
             samples1, samples2, n_sims=500, alpha=0.01

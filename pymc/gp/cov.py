@@ -185,7 +185,7 @@ class Covariance(BaseCovariance):
     def _slice(self, X, Xs=None):
         xdims = X.shape[-1]
         if isinstance(xdims, Variable):
-            [xdims] = constant_fold([xdims])
+            [xdims] = constant_fold([xdims], raise_not_constant=False)
         if self.input_dim != xdims:
             warnings.warn(
                 f"Only {self.input_dim} column(s) out of {xdims} are"

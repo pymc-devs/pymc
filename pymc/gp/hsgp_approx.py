@@ -70,18 +70,17 @@ def calc_basis_periodic(
     Xs: TensorLike,
     period: TensorLike,
     m: int,
-    tl: ModuleType = np,
 ):
     """
     Calculate basis vectors for the cosine series expansion of the periodic covariance function.
     These are derived from the Taylor series representation of the covariance.
     """
     w0 = (2 * np.pi) / period  # angular frequency defining the periodicity
-    m1 = tl.tile(w0 * Xs, m)
-    m2 = tl.diag(tl.arange(0, m, 1))
+    m1 = np.tile(w0 * Xs, m)
+    m2 = np.diag(np.arange(0, m, 1))
     mw0x = m1 @ m2
-    phi_cos = tl.cos(mw0x)
-    phi_sin = tl.sin(mw0x)
+    phi_cos = np.cos(mw0x)
+    phi_sin = np.sin(mw0x)
     return phi_cos, phi_sin
 
 
@@ -473,11 +472,15 @@ class HSGPPeriodic(Base):
         self,
         m: int,
         scale: Optional[Union[float, TensorLike]] = 1.0,
+        drop_intercept=True,
         *,
         mean_func: Mean = Zero(),
         cov_func: Periodic,
     ):
-        arg_err_msg = "`m` must be a positive integer as the `Periodic` kernel approximation is only implemented for 1-dimensional case."
+        arg_err_msg = (
+            "`m` must be a positive integer as the `Periodic` kernel approximation is "
+            "only implemented for 1-dimensional case."
+        )
 
         if not isinstance(m, int):
             raise ValueError(arg_err_msg)
@@ -487,7 +490,8 @@ class HSGPPeriodic(Base):
 
         if not isinstance(cov_func, Periodic):
             raise ValueError(
-                "`cov_func` must be an instance of a `Periodic` kernel only. Use the `scale` parameter to control the variance."
+                "`cov_func` must be an instance of a `Periodic` kernel only. Use the `scale` "
+                "parameter to control the variance."
             )
 
         if cov_func.n_dims > 1:
@@ -497,6 +501,8 @@ class HSGPPeriodic(Base):
 
         self._m = m
         self.scale = scale
+        self.drop_intercept = drop_intercept
+        self.drop_first_sin = False
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
@@ -576,8 +582,7 @@ class HSGPPeriodic(Base):
                 ppc = pm.sample_posterior_predictive(idata, var_names=["f"])
         """
         Xs, _ = self.cov_func._slice(Xs)
-
-        phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m, tl=pt)
+        phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m)
         J = pt.arange(0, self._m, 1)
         # rescale basis coefficients by the sqrt variance term
         psd = self.scale * self.cov_func.power_spectral_density_approx(J)
@@ -602,21 +607,47 @@ class HSGPPeriodic(Base):
         (phi_cos, phi_sin), psd = self.prior_linearized(X - self._X_mean)
 
         m = self._m
-        self._beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m * 2 - 1))
-        # The first eigenfunction for the sine component is zero
-        # and so does not contribute to the approximation.
-        f = (
-            self.mean_func(X)
-            + phi_cos @ (psd * self._beta[:m])  # type: ignore
-            + phi_sin[..., 1:] @ (psd[1:] * self._beta[m:])  # type: ignore
-        )
 
-        self.f = pm.Deterministic(name, f, dims=dims)
+        if self.drop_intercept and not np.all(phi_cos[:, 0] == 1.0):
+            warnings.warn("Dropping the first cosine term, but its values are not all one.")
+
+        if not self.drop_intercept and np.all(phi_cos[:, 0] == 1.0):
+            warnings.warn(
+                "First cosine term is all ones.  If an additional intercept is added to the model "
+                "it will be overparameterized and more difficult to fit."
+            )
+
+        # Check if first sine is all zeros.  If so, drop because it doesn't contribute to the model
+        # and leaves an extra beta parameter that can't be constrained.
+        if np.sum(phi_sin[:, 0]) == 0.0:
+            self.drop_first_sin = True
+
+        if self.drop_first_sin and self.drop_intercept:
+            # Drop first sine term (all zeros), drop first cos term (all ones)
+            beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m * 2) - 2)
+            self._beta_cos = pt.concatenate(([0.0], beta[: m - 1]))
+            self._beta_sin = pt.concatenate(([0.0], beta[m - 1 :]))
+
+        elif self.drop_first_sin:
+            # Drop first sine term, keep cosine term (keep intercept)
+            beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m * 2) - 1)
+            self._beta_cos = beta[:m]
+            self._beta_sin = pt.concatenate(([0.0], beta[m:]))
+
+        else:
+            # Keep all terms
+            beta = pm.Normal(f"{name}_hsgp_coeffs_", size=m * 2)
+            self._beta_cos = beta[:m]
+            self._beta_sin = beta[m:]
+
+        cos_term = phi_cos @ (psd * self._beta_cos)
+        sin_term = phi_sin @ (psd * self._beta_sin)
+        self.f = pm.Deterministic(name, self.mean_func(X) + cos_term + sin_term, dims=dims)
         return self.f
 
     def _build_conditional(self, Xnew):
         try:
-            beta, X_mean = self._beta, self._X_mean
+            X_mean = self._X_mean
 
         except AttributeError:
             raise ValueError(
@@ -625,14 +656,15 @@ class HSGPPeriodic(Base):
 
         Xnew, _ = self.cov_func._slice(Xnew)
 
-        phi_cos, phi_sin = calc_basis_periodic(Xnew - X_mean, self.cov_func.period, self._m, tl=pt)
+        phi_cos, phi_sin = calc_basis_periodic(Xnew - X_mean, self.cov_func.period, self._m)
         m = self._m
         J = pt.arange(0, m, 1)
         # rescale basis coefficients by the sqrt variance term
         psd = self.scale * self.cov_func.power_spectral_density_approx(J)
 
-        phi = phi_cos @ (psd * beta[:m]) + phi_sin[..., 1:] @ (psd[1:] * beta[m:])
-        return self.mean_func(Xnew) + phi
+        cos_term = phi_cos @ (psd * self._beta_cos)
+        sin_term = phi_sin @ (psd * self._beta_sin)
+        return self.mean_func(Xnew) + cos_term + sin_term
 
     def conditional(self, name: str, Xnew: TensorLike, dims: Optional[str] = None):  # type: ignore
         R"""
