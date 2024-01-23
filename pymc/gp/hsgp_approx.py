@@ -75,12 +75,12 @@ def calc_basis_periodic(
     Calculate basis vectors for the cosine series expansion of the periodic covariance function.
     These are derived from the Taylor series representation of the covariance.
     """
-    w0 = (2 * np.pi) / period  # angular frequency defining the periodicity
-    m1 = np.tile(w0 * Xs, m)
-    m2 = np.diag(np.arange(0, m, 1))
+    w0 = (2 * pt.pi) / period  # angular frequency defining the periodicity
+    m1 = pt.tile(w0 * Xs, m)
+    m2 = pt.diag(pt.arange(0, m, 1))
     mw0x = m1 @ m2
-    phi_cos = np.cos(mw0x)
-    phi_sin = np.sin(mw0x)
+    phi_cos = pt.cos(mw0x)
+    phi_sin = pt.sin(mw0x)
     return phi_cos, phi_sin
 
 
@@ -472,7 +472,7 @@ class HSGPPeriodic(Base):
         self,
         m: int,
         scale: Optional[Union[float, TensorLike]] = 1.0,
-        drop_intercept=True,
+        drop_first=False,
         *,
         mean_func: Mean = Zero(),
         cov_func: Periodic,
@@ -501,8 +501,7 @@ class HSGPPeriodic(Base):
 
         self._m = m
         self.scale = scale
-        self.drop_intercept = drop_intercept
-        self.drop_first_sin = False
+        self.drop_first = drop_first
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
@@ -608,31 +607,11 @@ class HSGPPeriodic(Base):
 
         m = self._m
 
-        if self.drop_intercept and not np.all(phi_cos[:, 0] == 1.0):
-            warnings.warn("Dropping the first cosine term, but its values are not all one.")
-
-        if not self.drop_intercept and np.all(phi_cos[:, 0] == 1.0):
-            warnings.warn(
-                "First cosine term is all ones.  If an additional intercept is added to the model "
-                "it will be overparameterized and more difficult to fit."
-            )
-
-        # Check if first sine is all zeros.  If so, drop because it doesn't contribute to the model
-        # and leaves an extra beta parameter that can't be constrained.
-        if np.sum(phi_sin[:, 0]) == 0.0:
-            self.drop_first_sin = True
-
-        if self.drop_first_sin and self.drop_intercept:
+        if self.drop_first:
             # Drop first sine term (all zeros), drop first cos term (all ones)
             beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m * 2) - 2)
             self._beta_cos = pt.concatenate(([0.0], beta[: m - 1]))
             self._beta_sin = pt.concatenate(([0.0], beta[m - 1 :]))
-
-        elif self.drop_first_sin:
-            # Drop first sine term, keep cosine term (keep intercept)
-            beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m * 2) - 1)
-            self._beta_cos = beta[:m]
-            self._beta_sin = pt.concatenate(([0.0], beta[m:]))
 
         else:
             # Keep all terms
