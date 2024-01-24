@@ -49,7 +49,6 @@ from pymc.distributions.distribution import Discrete
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.logprob.basic import logcdf, logp
 from pymc.math import sigmoid
-from pymc.pytensorf import floatX, intX
 
 __all__ = [
     "Binomial",
@@ -125,8 +124,8 @@ class Binomial(Discrete):
         if logit_p is not None:
             p = pt.sigmoid(logit_p)
 
-        n = pt.as_tensor_variable(intX(n))
-        p = pt.as_tensor_variable(floatX(p))
+        n = pt.as_tensor_variable(n, dtype=int)
+        p = pt.as_tensor_variable(p)
         return super().dist([n, p], **kwargs)
 
     def moment(rv, size, n, p):
@@ -233,9 +232,9 @@ class BetaBinomial(Discrete):
 
     @classmethod
     def dist(cls, alpha, beta, n, *args, **kwargs):
-        alpha = pt.as_tensor_variable(floatX(alpha))
-        beta = pt.as_tensor_variable(floatX(beta))
-        n = pt.as_tensor_variable(intX(n))
+        alpha = pt.as_tensor_variable(alpha)
+        beta = pt.as_tensor_variable(beta)
+        n = pt.as_tensor_variable(n, dtype=int)
         return super().dist([n, alpha, beta], **kwargs)
 
     def moment(rv, size, n, alpha, beta):
@@ -348,7 +347,7 @@ class Bernoulli(Discrete):
         if logit_p is not None:
             p = pt.sigmoid(logit_p)
 
-        p = pt.as_tensor_variable(floatX(p))
+        p = pt.as_tensor_variable(p)
         return super().dist([p], **kwargs)
 
     def moment(rv, size, p):
@@ -457,8 +456,8 @@ class DiscreteWeibull(Discrete):
 
     @classmethod
     def dist(cls, q, beta, *args, **kwargs):
-        q = pt.as_tensor_variable(floatX(q))
-        beta = pt.as_tensor_variable(floatX(beta))
+        q = pt.as_tensor_variable(q)
+        beta = pt.as_tensor_variable(beta)
         return super().dist([q, beta], **kwargs)
 
     def moment(rv, size, q, beta):
@@ -547,7 +546,7 @@ class Poisson(Discrete):
 
     @classmethod
     def dist(cls, mu, *args, **kwargs):
-        mu = pt.as_tensor_variable(floatX(mu))
+        mu = pt.as_tensor_variable(mu)
         return super().dist([mu], *args, **kwargs)
 
     def moment(rv, size, mu):
@@ -672,8 +671,8 @@ class NegativeBinomial(Discrete):
     @classmethod
     def dist(cls, mu=None, alpha=None, p=None, n=None, *args, **kwargs):
         n, p = cls.get_n_p(mu=mu, alpha=alpha, p=p, n=n)
-        n = pt.as_tensor_variable(floatX(n))
-        p = pt.as_tensor_variable(floatX(p))
+        n = pt.as_tensor_variable(n)
+        p = pt.as_tensor_variable(p)
         return super().dist([n, p], *args, **kwargs)
 
     @classmethod
@@ -784,7 +783,7 @@ class Geometric(Discrete):
 
     @classmethod
     def dist(cls, p, *args, **kwargs):
-        p = pt.as_tensor_variable(floatX(p))
+        p = pt.as_tensor_variable(p)
         return super().dist([p], *args, **kwargs)
 
     def moment(rv, size, p):
@@ -885,9 +884,9 @@ class HyperGeometric(Discrete):
 
     @classmethod
     def dist(cls, N, k, n, *args, **kwargs):
-        good = pt.as_tensor_variable(intX(k))
-        bad = pt.as_tensor_variable(intX(N - k))
-        n = pt.as_tensor_variable(intX(n))
+        good = pt.as_tensor_variable(k, dtype=int)
+        bad = pt.as_tensor_variable(N - k, dtype=int)
+        n = pt.as_tensor_variable(n, dtype=int)
         return super().dist([good, bad, n], *args, **kwargs)
 
     def moment(rv, size, good, bad, n):
@@ -1022,8 +1021,8 @@ class DiscreteUniform(Discrete):
 
     @classmethod
     def dist(cls, lower, upper, *args, **kwargs):
-        lower = intX(pt.floor(lower))
-        upper = intX(pt.floor(upper))
+        lower = pt.floor(lower)
+        upper = pt.floor(upper)
         return super().dist([lower, upper], **kwargs)
 
     def moment(rv, size, lower, upper):
@@ -1194,7 +1193,7 @@ class _OrderedLogistic(Categorical):
 
     @classmethod
     def dist(cls, eta, cutpoints, *args, **kwargs):
-        eta = pt.as_tensor_variable(floatX(eta))
+        eta = pt.as_tensor_variable(eta)
         cutpoints = pt.as_tensor_variable(cutpoints)
 
         pa = sigmoid(cutpoints - pt.shape_padright(eta))
@@ -1301,7 +1300,7 @@ class _OrderedProbit(Categorical):
 
     @classmethod
     def dist(cls, eta, cutpoints, sigma=1, *args, **kwargs):
-        eta = pt.as_tensor_variable(floatX(eta))
+        eta = pt.as_tensor_variable(eta)
         cutpoints = pt.as_tensor_variable(cutpoints)
 
         probits = pt.shape_padright(eta) - cutpoints
@@ -1315,7 +1314,7 @@ class _OrderedProbit(Categorical):
             ],
             axis=-1,
         )
-        _log_p = pt.as_tensor_variable(floatX(_log_p))
+        _log_p = pt.as_tensor_variable(_log_p)
         p = pt.exp(_log_p)
 
         return super().dist(p, *args, **kwargs)
