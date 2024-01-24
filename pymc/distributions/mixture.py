@@ -38,7 +38,6 @@ from pymc.distributions.truncated import Truncated
 from pymc.logprob.abstract import _logcdf, _logcdf_helper, _logprob
 from pymc.logprob.basic import logp
 from pymc.logprob.transforms import IntervalTransform
-from pymc.pytensorf import floatX
 from pymc.util import check_dist_not_registered
 from pymc.vartypes import continuous_types, discrete_types
 
@@ -565,7 +564,7 @@ def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):
 
     If name is `None`, this function returns an unregistered variable
     """
-    nonzero_p = pt.as_tensor_variable(floatX(nonzero_p))
+    nonzero_p = pt.as_tensor_variable(nonzero_p)
     weights = pt.stack([1 - nonzero_p, nonzero_p], axis=-1)
     comp_dists = [
         DiracDelta.dist(0),
@@ -819,7 +818,7 @@ def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, **kwargs):
     else:
         raise ValueError("dtype must be 'float' or 'int'")
 
-    nonzero_p = pt.as_tensor_variable(floatX(nonzero_p))
+    nonzero_p = pt.as_tensor_variable(nonzero_p)
     weights = pt.stack([1 - nonzero_p, nonzero_p], axis=-1)
     comp_dists = [
         DiracDelta.dist(zero),
