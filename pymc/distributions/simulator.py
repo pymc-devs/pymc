@@ -25,7 +25,6 @@ from scipy.spatial import cKDTree
 
 from pymc.distributions.distribution import Distribution, _moment
 from pymc.logprob.abstract import _logprob
-from pymc.pytensorf import floatX
 
 __all__ = ["Simulator"]
 
@@ -192,7 +191,7 @@ class Simulator(Distribution):
             else:
                 raise ValueError(f"The summary statistic {sum_stat} is not implemented")
 
-        epsilon = pt.as_tensor_variable(floatX(epsilon))
+        epsilon = pt.as_tensor_variable(epsilon)
 
         if params is None:
             params = unnamed_params

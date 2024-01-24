@@ -43,7 +43,7 @@ from pymc.distributions.shape_utils import (
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.abstract import _logprob
 from pymc.logprob.basic import logp
-from pymc.pytensorf import constant_fold, floatX, intX
+from pymc.pytensorf import constant_fold, intX
 from pymc.util import check_dist_not_registered
 
 __all__ = [
@@ -495,7 +495,7 @@ class AR(Distribution):
     rv_type = AutoRegressiveRV
 
     def __new__(cls, name, rho, *args, steps=None, constant=False, ar_order=None, **kwargs):
-        rhos = pt.atleast_1d(pt.as_tensor_variable(floatX(rho)))
+        rhos = pt.atleast_1d(pt.as_tensor_variable(rho))
         ar_order = cls._get_ar_order(rhos=rhos, constant=constant, ar_order=ar_order)
         steps = get_support_shape_1d(
             support_shape=steps,
@@ -522,8 +522,8 @@ class AR(Distribution):
         **kwargs,
     ):
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        sigma = pt.as_tensor_variable(floatX(sigma))
-        rhos = pt.atleast_1d(pt.as_tensor_variable(floatX(rho)))
+        sigma = pt.as_tensor_variable(sigma)
+        rhos = pt.atleast_1d(pt.as_tensor_variable(rho))
 
         if "init" in kwargs:
             warnings.warn(
@@ -916,7 +916,7 @@ class EulerMaruyama(Distribution):
     rv_type = EulerMaruyamaRV
 
     def __new__(cls, name, dt, sde_fn, *args, steps=None, **kwargs):
-        dt = pt.as_tensor_variable(floatX(dt))
+        dt = pt.as_tensor_variable(dt)
         steps = get_support_shape_1d(
             support_shape=steps,
             shape=None,  # Shape will be checked in `cls.dist`
@@ -935,7 +935,7 @@ class EulerMaruyama(Distribution):
             raise ValueError("Must specify steps or shape parameter")
         steps = pt.as_tensor_variable(intX(steps), ndim=0)
 
-        dt = pt.as_tensor_variable(floatX(dt))
+        dt = pt.as_tensor_variable(dt)
         sde_pars = [pt.as_tensor_variable(x) for x in sde_pars]
 
         if init_dist is not None:
