@@ -188,14 +188,13 @@ def _postprocess_samples(
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
 ) -> List[TensorVariable]:
     if postprocessing_vectorize == "scan":
-        t_raw_mcmc_samples = [jnp.swapaxes(t, 0, 1) for t in raw_mcmc_samples]
         jax_vfn = jax.vmap(jax_fn)
         _, outs = scan(
             lambda _, x: ((), jax_vfn(*x)),
             (),
-            _device_put(t_raw_mcmc_samples, postprocessing_backend),
+            _device_put(raw_mcmc_samples, postprocessing_backend),
         )
-        return [jnp.swapaxes(t, 0, 1) for t in outs]
+        return outs
     elif postprocessing_vectorize == "vmap":
         return jax.vmap(jax.vmap(jax_fn))(*_device_put(raw_mcmc_samples, postprocessing_backend))
     else:
