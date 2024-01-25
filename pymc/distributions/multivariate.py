@@ -2119,7 +2119,7 @@ class CARRV(RandomVariable):
     def make_node(self, rng, size, dtype, mu, W, alpha, tau):
         mu = pt.as_tensor_variable(mu)
 
-        W = pytensor.sparse.as_sparse_or_tensor_variable(W)
+        W = pytensor.sparse.as_sparse_or_tensor_variable(pm.floatX(W))
         if not W.ndim == 2:
             raise ValueError("W must be a matrix (ndim=2).")
 
