@@ -11,7 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import List, Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 from pytensor import Variable
 from pytensor.graph import ancestors
@@ -53,7 +54,7 @@ def prune_vars_detached_from_observed(model: Model) -> Model:
     return model_from_fgraph(fgraph)
 
 
-def parse_vars(model: Model, vars: Union[ModelVariable, Sequence[ModelVariable]]) -> List[Variable]:
+def parse_vars(model: Model, vars: Union[ModelVariable, Sequence[ModelVariable]]) -> list[Variable]:
     if isinstance(vars, (list, tuple)):
         vars_seq = vars
     else:

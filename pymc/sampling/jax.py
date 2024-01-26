@@ -15,9 +15,10 @@ import logging
 import os
 import re
 
+from collections.abc import Sequence
 from datetime import datetime
 from functools import partial
-from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Union
+from typing import Any, Callable, Literal, Optional, Union
 
 import arviz as az
 import jax
@@ -89,7 +90,7 @@ def jax_funcify_PosDefMatrix(op, **kwargs):
     return posdefmatrix_fn
 
 
-def _replace_shared_variables(graph: List[TensorVariable]) -> List[TensorVariable]:
+def _replace_shared_variables(graph: list[TensorVariable]) -> list[TensorVariable]:
     """Replace shared variables in graph by their constant values
 
     Raises
@@ -118,9 +119,9 @@ def _replace_shared_variables(graph: List[TensorVariable]) -> List[TensorVariabl
 
 
 def get_jaxified_graph(
-    inputs: Optional[List[TensorVariable]] = None,
-    outputs: Optional[List[TensorVariable]] = None,
-) -> List[TensorVariable]:
+    inputs: Optional[list[TensorVariable]] = None,
+    outputs: Optional[list[TensorVariable]] = None,
+) -> list[TensorVariable]:
     """Compile an PyTensor graph into an optimized JAX function"""
 
     graph = _replace_shared_variables(outputs) if outputs is not None else None
@@ -183,10 +184,10 @@ def _device_put(input, device: str):
 
 def _postprocess_samples(
     jax_fn: Callable,
-    raw_mcmc_samples: List[TensorVariable],
+    raw_mcmc_samples: list[TensorVariable],
     postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
-) -> List[TensorVariable]:
+) -> list[TensorVariable]:
     if postprocessing_vectorize == "scan":
         t_raw_mcmc_samples = [jnp.swapaxes(t, 0, 1) for t in raw_mcmc_samples]
         jax_vfn = jax.vmap(jax_fn)
@@ -202,7 +203,7 @@ def _postprocess_samples(
         raise ValueError(f"Unrecognized postprocessing_vectorize: {postprocessing_vectorize}")
 
 
-def _blackjax_stats_to_dict(sample_stats, potential_energy) -> Dict:
+def _blackjax_stats_to_dict(sample_stats, potential_energy) -> dict:
     """Extract compatible stats from blackjax NUTS sampler
     with PyMC/Arviz naming conventions.
 
@@ -241,7 +242,7 @@ def _get_log_likelihood(
     samples,
     backend: Optional[Literal["cpu", "gpu"]] = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
-) -> Dict:
+) -> dict:
     """Compute log-likelihood for all observations"""
     elemwise_logp = model.logp(model.observed_RVs, sum=False)
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=elemwise_logp)
@@ -258,7 +259,7 @@ def _get_batched_jittered_initial_points(
     random_seed: RandomSeed,
     jitter: bool = True,
     jitter_max_retries: int = 10,
-) -> Union[np.ndarray, List[np.ndarray]]:
+) -> Union[np.ndarray, list[np.ndarray]]:
     """Get jittered initial point in format expected by NumPyro MCMC kernel
 
     Returns
@@ -282,7 +283,7 @@ def _get_batched_jittered_initial_points(
 
 
 def _update_coords_and_dims(
-    coords: Dict[str, Any], dims: Dict[str, Any], idata_kwargs: Dict[str, Any]
+    coords: dict[str, Any], dims: dict[str, Any], idata_kwargs: dict[str, Any]
 ) -> None:
     """Update 'coords' and 'dims' dicts with values in 'idata_kwargs'."""
     if "coords" in idata_kwargs:
@@ -348,8 +349,8 @@ def sample_blackjax_nuts(
     chain_method: str = "parallel",
     postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
-    idata_kwargs: Optional[Dict[str, Any]] = None,
-    adaptation_kwargs: Optional[Dict[str, Any]] = None,
+    idata_kwargs: Optional[dict[str, Any]] = None,
+    adaptation_kwargs: Optional[dict[str, Any]] = None,
     postprocessing_chunks=None,  # deprecated
 ) -> az.InferenceData:
     """
@@ -544,7 +545,7 @@ def sample_blackjax_nuts(
     return az_trace
 
 
-def _numpyro_nuts_defaults() -> Dict[str, Any]:
+def _numpyro_nuts_defaults() -> dict[str, Any]:
     """Defaults parameters for Numpyro NUTS."""
     return {
         "adapt_step_size": True,
@@ -553,7 +554,7 @@ def _numpyro_nuts_defaults() -> Dict[str, Any]:
     }
 
 
-def _update_numpyro_nuts_kwargs(nuts_kwargs: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def _update_numpyro_nuts_kwargs(nuts_kwargs: Optional[dict[str, Any]]) -> dict[str, Any]:
     """Update default Numpyro NUTS parameters with new values."""
     nuts_kwargs_defaults = _numpyro_nuts_defaults()
     if nuts_kwargs is not None:
@@ -576,8 +577,8 @@ def sample_numpyro_nuts(
     chain_method: str = "parallel",
     postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
-    idata_kwargs: Optional[Dict] = None,
-    nuts_kwargs: Optional[Dict] = None,
+    idata_kwargs: Optional[dict] = None,
+    nuts_kwargs: Optional[dict] = None,
     postprocessing_chunks=None,
 ) -> az.InferenceData:
     """

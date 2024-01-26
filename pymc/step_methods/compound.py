@@ -21,8 +21,9 @@ Created on Mar 7, 2011
 import warnings
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Mapping, Sequence
 from enum import IntEnum, unique
-from typing import Any, Dict, Iterable, List, Mapping, Sequence, Tuple, Union
+from typing import Any, Union
 
 import numpy as np
 
@@ -51,10 +52,10 @@ class Competence(IntEnum):
 
 
 def infer_warn_stats_info(
-    stats_dtypes: List[Dict[str, StatDtype]],
-    sds: Dict[str, Tuple[StatDtype, StatShape]],
+    stats_dtypes: list[dict[str, StatDtype]],
+    sds: dict[str, tuple[StatDtype, StatShape]],
     stepname: str,
-) -> Tuple[List[Dict[str, StatDtype]], Dict[str, Tuple[StatDtype, StatShape]]]:
+) -> tuple[list[dict[str, StatDtype]], dict[str, tuple[StatDtype, StatShape]]]:
     """Helper function to get `stats_dtypes` and `stats_dtypes_shapes` from either of them."""
     # Avoid side-effects on the original lists/dicts
     stats_dtypes = [d.copy() for d in stats_dtypes]
@@ -86,14 +87,14 @@ def infer_warn_stats_info(
 
 
 class BlockedStep(ABC):
-    stats_dtypes: List[Dict[str, type]] = []
+    stats_dtypes: list[dict[str, type]] = []
     """A list containing <=1 dictionary that maps stat names to dtypes.
 
     This attribute is deprecated.
     Use `stats_dtypes_shapes` instead.
     """
 
-    stats_dtypes_shapes: Dict[str, Tuple[StatDtype, StatShape]] = {}
+    stats_dtypes_shapes: dict[str, tuple[StatDtype, StatShape]] = {}
     """Maps stat names to dtypes and shapes.
 
     Shapes are interpreted in the following ways:
@@ -103,7 +104,7 @@ class BlockedStep(ABC):
     - `None` is a sparse stat (i.e. not always present) or a NumPy array with varying `ndim`.
     """
 
-    vars: List[Variable] = []
+    vars: list[Variable] = []
     """Variables that the step method is assigned to."""
 
     def __new__(cls, *args, **kwargs):
@@ -167,7 +168,7 @@ class BlockedStep(ABC):
         return self.__newargs
 
     @abstractmethod
-    def step(self, point: PointType) -> Tuple[PointType, StatsType]:
+    def step(self, point: PointType) -> tuple[PointType, StatsType]:
         """Perform a single step of the sampler."""
 
     @staticmethod
@@ -198,7 +199,7 @@ def flat_statname(sampler_idx: int, sname: str) -> str:
 
 def get_stats_dtypes_shapes_from_steps(
     steps: Iterable[BlockedStep],
-) -> Dict[str, Tuple[StatDtype, StatShape]]:
+) -> dict[str, tuple[StatDtype, StatShape]]:
     """Combines stats dtype shape dictionaries from multiple step methods.
 
     In the resulting stats dict, each sampler stat is prefixed by `sampler_#__`.
@@ -225,7 +226,7 @@ class CompoundStep:
         )
         self.tune = True
 
-    def step(self, point) -> Tuple[PointType, StatsType]:
+    def step(self, point) -> tuple[PointType, StatsType]:
         stats = []
         for method in self.methods:
             point, sts = method.step(point)
@@ -246,11 +247,11 @@ class CompoundStep:
                 method.reset_tuning()
 
     @property
-    def vars(self) -> List[Variable]:
+    def vars(self) -> list[Variable]:
         return [var for method in self.methods for var in method.vars]
 
 
-def flatten_steps(step: Union[BlockedStep, CompoundStep]) -> List[BlockedStep]:
+def flatten_steps(step: Union[BlockedStep, CompoundStep]) -> list[BlockedStep]:
     """Flatten a hierarchy of step methods to a list."""
     if isinstance(step, BlockedStep):
         return [step]
@@ -285,7 +286,7 @@ class StatsBijection:
                 is_obj = np.dtype(dtype) == np.dtype(object)
                 group.append((flatname, statname, is_obj))
             stat_groups.append(group)
-        self._stat_groups: List[List[Tuple[str, str, bool]]] = stat_groups
+        self._stat_groups: list[list[tuple[str, str, bool]]] = stat_groups
         self.object_stats = {
             fname: (s, sname)
             for s, group in enumerate(self._stat_groups)

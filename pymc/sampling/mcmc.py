@@ -20,18 +20,11 @@ import sys
 import time
 import warnings
 
+from collections.abc import Iterator, Mapping, Sequence
 from typing import (
     Any,
-    Dict,
-    Iterator,
-    List,
     Literal,
-    Mapping,
     Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Type,
     Union,
     overload,
 )
@@ -100,10 +93,10 @@ _log = logging.getLogger(__name__)
 
 def instantiate_steppers(
     model: Model,
-    steps: List[Step],
-    selected_steps: Mapping[Type[BlockedStep], List[Any]],
-    step_kwargs: Optional[Dict[str, Dict]] = None,
-) -> Union[Step, List[Step]]:
+    steps: list[Step],
+    selected_steps: Mapping[type[BlockedStep], list[Any]],
+    step_kwargs: Optional[dict[str, dict]] = None,
+) -> Union[Step, list[Step]]:
     """Instantiate steppers assigned to the model variables.
 
     This function is intended to be called automatically from ``sample()``, but
@@ -161,9 +154,9 @@ def instantiate_steppers(
 def assign_step_methods(
     model: Model,
     step: Optional[Union[Step, Sequence[Step]]] = None,
-    methods: Optional[Sequence[Type[BlockedStep]]] = None,
-    step_kwargs: Optional[Dict[str, Any]] = None,
-) -> Union[Step, List[Step]]:
+    methods: Optional[Sequence[type[BlockedStep]]] = None,
+    step_kwargs: Optional[dict[str, Any]] = None,
+) -> Union[Step, list[Step]]:
     """Assign model variables to appropriate step methods.
 
     Passing a specified model will auto-assign its constituent stochastic
@@ -193,8 +186,8 @@ def assign_step_methods(
     methods : list
         List of step methods associated with the model's variables.
     """
-    steps: List[Step] = []
-    assigned_vars: Set[Variable] = set()
+    steps: list[Step] = []
+    assigned_vars: set[Variable] = set()
 
     if step is not None:
         if isinstance(step, (BlockedStep, CompoundStep)):
@@ -212,8 +205,8 @@ def assign_step_methods(
 
     # Use competence classmethods to select step methods for remaining
     # variables
-    methods_list: List[Type[BlockedStep]] = list(methods or pm.STEP_METHODS)
-    selected_steps: Dict[Type[BlockedStep], List] = {}
+    methods_list: list[type[BlockedStep]] = list(methods or pm.STEP_METHODS)
+    selected_steps: dict[type[BlockedStep], list] = {}
     model_logp = model.logp()
 
     for var in model.value_vars:
@@ -272,8 +265,8 @@ def _sample_external_nuts(
     initvals: Union[StartDict, Sequence[Optional[StartDict]], None],
     model: Model,
     progressbar: bool,
-    idata_kwargs: Optional[Dict],
-    nuts_sampler_kwargs: Optional[Dict],
+    idata_kwargs: Optional[dict],
+    nuts_sampler_kwargs: Optional[dict],
     **kwargs,
 ):
     if nuts_sampler_kwargs is None:
@@ -404,8 +397,8 @@ def sample(
     compute_convergence_checks: bool = True,
     keep_warning_stat: bool = False,
     return_inferencedata: Literal[True] = True,
-    idata_kwargs: Optional[Dict[str, Any]] = None,
-    nuts_sampler_kwargs: Optional[Dict[str, Any]] = None,
+    idata_kwargs: Optional[dict[str, Any]] = None,
+    nuts_sampler_kwargs: Optional[dict[str, Any]] = None,
     callback=None,
     mp_ctx=None,
     **kwargs,
@@ -433,8 +426,8 @@ def sample(
     compute_convergence_checks: bool = True,
     keep_warning_stat: bool = False,
     return_inferencedata: Literal[False],
-    idata_kwargs: Optional[Dict[str, Any]] = None,
-    nuts_sampler_kwargs: Optional[Dict[str, Any]] = None,
+    idata_kwargs: Optional[dict[str, Any]] = None,
+    nuts_sampler_kwargs: Optional[dict[str, Any]] = None,
     callback=None,
     mp_ctx=None,
     model: Optional[Model] = None,
@@ -462,8 +455,8 @@ def sample(
     compute_convergence_checks: bool = True,
     keep_warning_stat: bool = False,
     return_inferencedata: bool = True,
-    idata_kwargs: Optional[Dict[str, Any]] = None,
-    nuts_sampler_kwargs: Optional[Dict[str, Any]] = None,
+    idata_kwargs: Optional[dict[str, Any]] = None,
+    nuts_sampler_kwargs: Optional[dict[str, Any]] = None,
     callback=None,
     mp_ctx=None,
     model: Optional[Model] = None,
@@ -739,7 +732,7 @@ def sample(
         initial_points = [ipfn(seed) for ipfn, seed in zip(ipfns, random_seed_list)]
 
     # One final check that shapes and logps at the starting points are okay.
-    ip: Dict[str, np.ndarray]
+    ip: dict[str, np.ndarray]
     for ip in initial_points:
         model.check_start_vals(ip)
         _check_start_shape(model, ip)
@@ -848,7 +841,7 @@ def _sample_return(
     compute_convergence_checks: bool,
     return_inferencedata: bool,
     keep_warning_stat: bool,
-    idata_kwargs: Dict[str, Any],
+    idata_kwargs: dict[str, Any],
     model: Model,
 ) -> Union[InferenceData, MultiTrace]:
     """Final step of `pm.sampler` that picks/slices chains,
@@ -890,7 +883,7 @@ def _sample_return(
 
     idata = None
     if compute_convergence_checks or return_inferencedata:
-        ikwargs: Dict[str, Any] = dict(model=model, save_warmup=not discard_tuned_samples)
+        ikwargs: dict[str, Any] = dict(model=model, save_warmup=not discard_tuned_samples)
         ikwargs.update(idata_kwargs)
         idata = pm.to_inference_data(mtrace, **ikwargs)
 
@@ -1216,7 +1209,7 @@ def _init_jitter(
     seeds: Union[Sequence[int], np.ndarray],
     jitter: bool,
     jitter_max_retries: int,
-) -> List[PointType]:
+) -> list[PointType]:
     """Apply a uniform jitter in [-1, 1] to the test value as starting point in each chain.
 
     ``model.check_start_vals`` is used to test whether the jittered starting
@@ -1276,7 +1269,7 @@ def init_nuts(
     tune: Optional[int] = None,
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     **kwargs,
-) -> Tuple[Sequence[PointType], NUTS]:
+) -> tuple[Sequence[PointType], NUTS]:
     """Set up the mass matrix initialization for NUTS.
 
     NUTS convergence and sampling speed is extremely dependent on the

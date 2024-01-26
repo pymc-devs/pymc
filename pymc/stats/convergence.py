@@ -15,7 +15,8 @@ import dataclasses
 import enum
 import logging
 
-from typing import Any, Dict, List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any, Optional
 
 import arviz
 
@@ -60,7 +61,7 @@ class SamplerWarning:
     divergence_info: Optional[Any] = None
 
 
-def run_convergence_checks(idata: arviz.InferenceData, model) -> List[SamplerWarning]:
+def run_convergence_checks(idata: arviz.InferenceData, model) -> list[SamplerWarning]:
     if not hasattr(idata, "posterior"):
         msg = "No posterior samples. Unable to run convergence checks"
         warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info", None, None, None)
@@ -84,7 +85,7 @@ def run_convergence_checks(idata: arviz.InferenceData, model) -> List[SamplerWar
         warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info")
         return [warn]
 
-    warnings: List[SamplerWarning] = []
+    warnings: list[SamplerWarning] = []
     valid_name = [rv.name for rv in model.free_RVs + model.deterministics]
     varnames = []
     for rv in model.free_RVs:
@@ -126,7 +127,7 @@ def run_convergence_checks(idata: arviz.InferenceData, model) -> List[SamplerWar
     return warnings
 
 
-def warn_divergences(idata: arviz.InferenceData) -> List[SamplerWarning]:
+def warn_divergences(idata: arviz.InferenceData) -> list[SamplerWarning]:
     """Checks sampler stats and creates a list of warnings about divergences."""
     sampler_stats = idata.get("sample_stats", None)
     if sampler_stats is None:
@@ -148,7 +149,7 @@ def warn_divergences(idata: arviz.InferenceData) -> List[SamplerWarning]:
     return [warning]
 
 
-def warn_treedepth(idata: arviz.InferenceData) -> List[SamplerWarning]:
+def warn_treedepth(idata: arviz.InferenceData) -> list[SamplerWarning]:
     """Checks sampler stats and creates a list of warnings about tree depth."""
     sampler_stats = idata.get("sample_stats", None)
     if sampler_stats is None:
@@ -182,7 +183,7 @@ def log_warnings(warnings: Sequence[SamplerWarning]):
         log_warning(warn)
 
 
-def log_warning_stats(stats: Sequence[Dict[str, Any]]):
+def log_warning_stats(stats: Sequence[dict[str, Any]]):
     """Logs 'warning' stats if present."""
     if stats is None:
         return

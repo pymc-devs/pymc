@@ -14,8 +14,6 @@
 import logging
 import warnings
 
-from typing import Tuple
-
 import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
@@ -1029,7 +1027,7 @@ class TestSamplePPC:
 
 
 @pytest.fixture(scope="class")
-def point_list_arg_bug_fixture() -> Tuple[pm.Model, pm.backends.base.MultiTrace]:
+def point_list_arg_bug_fixture() -> tuple[pm.Model, pm.backends.base.MultiTrace]:
     with pm.Model() as pmodel:
         n = pm.Normal("n")
         trace = pm.sample(return_inferencedata=False)

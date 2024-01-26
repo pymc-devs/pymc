@@ -16,7 +16,8 @@ import base64
 import logging
 import pickle
 
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union, cast
+from collections.abc import Mapping, Sequence
+from typing import Any, Optional, Union, cast
 
 import hagelkorn
 import mcbackend as mcb
@@ -41,7 +42,7 @@ from pymc.step_methods.compound import (
 _log = logging.getLogger(__name__)
 
 
-def find_data(pmodel: Model) -> List[mcb.DataVariable]:
+def find_data(pmodel: Model) -> list[mcb.DataVariable]:
     """Extracts data variables from a model."""
     observed_rvs = {pmodel.rvs_to_values[rv] for rv in pmodel.observed_RVs}
     dvars = []
@@ -62,7 +63,7 @@ def find_data(pmodel: Model) -> List[mcb.DataVariable]:
 
 def get_variables_and_point_fn(
     model: Model, initial_point: Mapping[str, np.ndarray]
-) -> Tuple[List[mcb.Variable], PointFunc]:
+) -> tuple[list[mcb.Variable], PointFunc]:
     """Get metadata on free, value and deterministic model variables."""
     # The samplers act only on the inputs needed for the log-likelihood,
     # but the user is interested in transformed variables and deterministics.
@@ -196,7 +197,7 @@ class ChainRecordAdapter(IBaseTrace):
             nchain.append(draw, stats)
         return ChainRecordAdapter(nchain, self._point_fn, self._statsbj)
 
-    def point(self, idx: int) -> Dict[str, np.ndarray]:
+    def point(self, idx: int) -> dict[str, np.ndarray]:
         return self._chain.get_draws_at(idx, [v.name for v in self._chain.variables.values()])
 
 
@@ -205,7 +206,7 @@ def make_runmeta_and_point_fn(
     initial_point: Mapping[str, np.ndarray],
     step: Union[CompoundStep, BlockedStep],
     model: Model,
-) -> Tuple[mcb.RunMeta, PointFunc]:
+) -> tuple[mcb.RunMeta, PointFunc]:
     variables, point_fn = get_variables_and_point_fn(model, initial_point)
 
     check_step_emits_tune(step)
@@ -255,7 +256,7 @@ def init_chain_adapters(
     initial_point: Mapping[str, np.ndarray],
     step: Union[CompoundStep, BlockedStep],
     model: Model,
-) -> Tuple[mcb.Run, List[ChainRecordAdapter]]:
+) -> tuple[mcb.Run, list[ChainRecordAdapter]]:
     """Create an McBackend metadata description for the MCMC run.
 
     Parameters

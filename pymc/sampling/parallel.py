@@ -21,7 +21,7 @@ import time
 import traceback
 
 from collections import namedtuple
-from typing import Dict, List, Sequence
+from collections.abc import Sequence
 
 import cloudpickle
 import numpy as np
@@ -205,7 +205,7 @@ class ProcessAdapter:
         step_method_pickled,
         chain: int,
         seed,
-        start: Dict[str, np.ndarray],
+        start: dict[str, np.ndarray],
         mp_ctx,
     ):
         self.chain = chain
@@ -372,7 +372,7 @@ class ParallelSampler:
         chains: int,
         cores: int,
         seeds: Sequence["RandomSeed"],
-        start_points: Sequence[Dict[str, np.ndarray]],
+        start_points: Sequence[dict[str, np.ndarray]],
         step_method,
         progressbar: bool = True,
         mp_ctx=None,
@@ -414,8 +414,8 @@ class ParallelSampler:
         ]
 
         self._inactive = self._samplers.copy()
-        self._finished: List[ProcessAdapter] = []
-        self._active: List[ProcessAdapter] = []
+        self._finished: list[ProcessAdapter] = []
+        self._active: list[ProcessAdapter] = []
         self._max_active = cores
 
         self._in_context = False

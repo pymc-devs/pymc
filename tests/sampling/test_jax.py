@@ -13,7 +13,7 @@
 #   limitations under the License.
 import warnings
 
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Optional
 from unittest import mock
 
 import arviz as az
@@ -297,7 +297,7 @@ def model_test_idata_kwargs() -> pm.Model:
 def test_idata_kwargs(
     model_test_idata_kwargs: pm.Model,
     sampler: Callable[..., az.InferenceData],
-    idata_kwargs: Dict[str, Any],
+    idata_kwargs: dict[str, Any],
     postprocessing_backend: Optional[str],
 ):
     idata: Optional[az.InferenceData] = None
@@ -410,7 +410,7 @@ def test_seeding(chains, random_seed, sampler):
         {"fake-key": "fake-value"},
     ],
 )
-def test_update_numpyro_nuts_kwargs(nuts_kwargs: Dict[str, Any]):
+def test_update_numpyro_nuts_kwargs(nuts_kwargs: dict[str, Any]):
     original_kwargs = nuts_kwargs.copy()
     new_kwargs = _update_numpyro_nuts_kwargs(nuts_kwargs)
 

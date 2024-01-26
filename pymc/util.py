@@ -15,7 +15,8 @@
 import functools
 import warnings
 
-from typing import Any, Dict, List, NewType, Optional, Sequence, Tuple, Union, cast
+from collections.abc import Sequence
+from typing import Any, NewType, Optional, Union, cast
 
 import arviz
 import cloudpickle
@@ -240,9 +241,9 @@ def biwrap(wrapper):
 
 def dataset_to_point_list(
     ds: Union[xarray.Dataset, dict[str, xarray.DataArray]], sample_dims: Sequence[str]
-) -> Tuple[List[Dict[str, np.ndarray]], Dict[str, Any]]:
+) -> tuple[list[dict[str, np.ndarray]], dict[str, Any]]:
     # All keys of the dataset must be a str
-    var_names = cast(List[str], list(ds.keys()))
+    var_names = cast(list[str], list(ds.keys()))
     for vn in var_names:
         if not isinstance(vn, str):
             raise ValueError(f"Variable names must be str, but dataset key {vn} is a {type(vn)}.")
@@ -257,7 +258,7 @@ def dataset_to_point_list(
         for i in range(np.prod([len(coords) for coords in stacked_dims.values()]))
     ]
     # use the list of points
-    return cast(List[Dict[str, np.ndarray]], points), stacked_dims
+    return cast(list[dict[str, np.ndarray]], points), stacked_dims
 
 
 def drop_warning_stat(idata: arviz.InferenceData) -> arviz.InferenceData:
@@ -274,7 +275,7 @@ def drop_warning_stat(idata: arviz.InferenceData) -> arviz.InferenceData:
     return nidata
 
 
-def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> Tuple[int, int]:
+def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> tuple[int, int]:
     """Extract and return number of chains and samples in xarray or arviz traces."""
     dataset: xarray.Dataset
     if isinstance(data, xarray.Dataset):
@@ -451,7 +452,7 @@ def _get_seeds_per_chain(
 
 def get_value_vars_from_user_vars(
     vars: Union[Variable, Sequence[Variable]], model
-) -> List[Variable]:
+) -> list[Variable]:
     """Converts user "vars" input into value variables.
 
     More often than not, users will pass random variables, and we will extract the

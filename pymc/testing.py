@@ -14,7 +14,8 @@
 import functools as ft
 import itertools as it
 
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Any, Callable, Optional, Union
 
 import numpy as np
 import pytensor
@@ -247,8 +248,8 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
 
 def create_dist_from_paramdomains(
     pymc_dist: Distribution,
-    paramdomains: Dict[str, Domain],
-    extra_args: Optional[Dict[str, Any]] = None,
+    paramdomains: dict[str, Domain],
+    extra_args: Optional[dict[str, Any]] = None,
 ) -> TensorVariable:
     """Create a PyMC distribution from a dictionary of parameter domains.
 
@@ -270,8 +271,8 @@ def create_dist_from_paramdomains(
 
 
 def find_invalid_scalar_params(
-    paramdomains: Dict["str", Domain],
-) -> Dict["str", Tuple[Union[None, float], Union[None, float]]]:
+    paramdomains: dict["str", Domain],
+) -> dict["str", tuple[Union[None, float], Union[None, float]]]:
     """Find invalid parameter values from bounded scalar parameter domains.
 
     For use in `check_logp`-like testing helpers.
@@ -300,12 +301,12 @@ def find_invalid_scalar_params(
 def check_logp(
     pymc_dist: Distribution,
     domain: Domain,
-    paramdomains: Dict[str, Domain],
+    paramdomains: dict[str, Domain],
     scipy_logp: Callable,
     decimal: Optional[int] = None,
     n_samples: int = 100,
-    extra_args: Optional[Dict[str, Any]] = None,
-    scipy_args: Optional[Dict[str, Any]] = None,
+    extra_args: Optional[dict[str, Any]] = None,
+    scipy_args: Optional[dict[str, Any]] = None,
     skip_paramdomain_outside_edge_test: bool = False,
 ) -> None:
     """
@@ -406,7 +407,7 @@ def check_logp(
 def check_logcdf(
     pymc_dist: Distribution,
     domain: Domain,
-    paramdomains: Dict[str, Domain],
+    paramdomains: dict[str, Domain],
     scipy_logcdf: Callable,
     decimal: Optional[int] = None,
     n_samples: int = 100,
@@ -519,7 +520,7 @@ def check_logcdf(
 
 def check_icdf(
     pymc_dist: Distribution,
-    paramdomains: Dict[str, Domain],
+    paramdomains: dict[str, Domain],
     scipy_icdf: Callable,
     skip_paramdomain_outside_edge_test=False,
     decimal: Optional[int] = None,
@@ -616,7 +617,7 @@ def check_icdf(
 def check_selfconsistency_discrete_logcdf(
     distribution: Distribution,
     domain: Domain,
-    paramdomains: Dict[str, Domain],
+    paramdomains: dict[str, Domain],
     decimal: Optional[int] = None,
     n_samples: int = 100,
 ) -> None:
@@ -837,12 +838,12 @@ class BaseTestDistributionRandom:
     reference_dist: Optional[Callable] = None
     reference_dist_params: Optional[dict] = None
     expected_rv_op_params: Optional[dict] = None
-    checks_to_run: List[str] = []
+    checks_to_run: list[str] = []
     size = 15
     decimal = select_by_precision(float64=6, float32=3)
 
-    sizes_to_check: Optional[List] = None
-    sizes_expected: Optional[List] = None
+    sizes_to_check: Optional[list] = None
+    sizes_expected: Optional[list] = None
     repeated_params_shape = 5
     random_state = None
 

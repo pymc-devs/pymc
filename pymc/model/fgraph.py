@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from copy import copy
-from typing import Dict, Optional, Tuple
+from typing import Optional
 
 import pytensor
 
@@ -115,7 +115,7 @@ remove_identity_rewrite = out2in(local_remove_identity)
 
 def fgraph_from_model(
     model: Model, inlined_views=False
-) -> Tuple[FunctionGraph, Dict[Variable, Variable]]:
+) -> tuple[FunctionGraph, dict[Variable, Variable]]:
     """Convert Model to FunctionGraph.
 
     See: model_from_fgraph
@@ -378,7 +378,7 @@ def clone_model(model: Model) -> Model:
     return model_from_fgraph(fgraph_from_model(model)[0])
 
 
-def extract_dims(var) -> Tuple:
+def extract_dims(var) -> tuple:
     dims = ()
     node = var.owner
     if node and isinstance(node.op, ModelVar):

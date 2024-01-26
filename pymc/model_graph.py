@@ -14,7 +14,8 @@
 import warnings
 
 from collections import defaultdict
-from typing import Dict, Iterable, List, Optional, Sequence, Set
+from collections.abc import Iterable, Sequence
+from typing import Optional
 
 from pytensor import function
 from pytensor.compile.sharedvalue import SharedVariable
@@ -47,7 +48,7 @@ class ModelGraph:
         self._all_var_names = get_default_varnames(self.model.named_vars, include_transformed=False)
         self.var_list = self.model.named_vars.values()
 
-    def get_parent_names(self, var: TensorVariable) -> Set[VarName]:
+    def get_parent_names(self, var: TensorVariable) -> set[VarName]:
         if var.owner is None or var.owner.inputs is None:
             return set()
 
@@ -82,7 +83,7 @@ class ModelGraph:
 
         return parents
 
-    def vars_to_plot(self, var_names: Optional[Iterable[VarName]] = None) -> List[VarName]:
+    def vars_to_plot(self, var_names: Optional[Iterable[VarName]] = None) -> list[VarName]:
         if var_names is None:
             return self._all_var_names
 
@@ -114,9 +115,9 @@ class ModelGraph:
 
     def make_compute_graph(
         self, var_names: Optional[Iterable[VarName]] = None
-    ) -> Dict[VarName, Set[VarName]]:
+    ) -> dict[VarName, set[VarName]]:
         """Get map of var_name -> set(input var names) for the model"""
-        input_map: Dict[VarName, Set[VarName]] = defaultdict(set)
+        input_map: dict[VarName, set[VarName]] = defaultdict(set)
 
         for var_name in self.vars_to_plot(var_names):
             var = self.model[var_name]
@@ -197,7 +198,7 @@ class ModelGraph:
         else:
             graph.node(var_name.replace(":", "&"), **kwargs)
 
-    def get_plates(self, var_names: Optional[Iterable[VarName]] = None) -> Dict[str, Set[VarName]]:
+    def get_plates(self, var_names: Optional[Iterable[VarName]] = None) -> dict[str, set[VarName]]:
         """Rough but surprisingly accurate plate detection.
 
         Just groups by the shape of the underlying distribution.  Will be wrong

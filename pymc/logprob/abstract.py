@@ -36,8 +36,8 @@
 
 import abc
 
+from collections.abc import Sequence
 from functools import singledispatch
-from typing import Sequence, Tuple
 
 from pytensor.graph.op import Op
 from pytensor.graph.utils import MetaType
@@ -141,7 +141,7 @@ MeasurableVariable.register(RandomVariable)
 class MeasurableElemwise(Elemwise):
     """Base class for Measurable Elemwise variables"""
 
-    valid_scalar_types: Tuple[MetaType, ...] = ()
+    valid_scalar_types: tuple[MetaType, ...] = ()
 
     def __init__(self, scalar_op, *args, **kwargs):
         if not isinstance(scalar_op, self.valid_scalar_types):
