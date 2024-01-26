@@ -315,7 +315,7 @@ def test_sample_replacements(binomial_model_inference):
     p_t = p**3
     p_s = approx.sample_node(p_t, size=100)
     if pytensor.config.compute_test_value != "off":
-        assert p_s.tag.test_value.shape == (100,) + p_t.tag.test_value.shape
+        assert p_s.tag.test_value.shape == (100, *p_t.tag.test_value.shape)
     sampled = p_s.eval()
     assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
     assert sampled.shape[0] == 100

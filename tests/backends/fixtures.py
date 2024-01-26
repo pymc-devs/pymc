@@ -60,7 +60,7 @@ class ModelBackendSetupTestCase:
             with pytest.raises(ValueError):
                 self.strace.setup(self.draws, self.chain)
             with pytest.raises(ValueError):
-                vars = self.sampler_vars + [{"a": bool}]
+                vars = [*self.sampler_vars, {"a": bool}]
                 self.strace.setup(self.draws, self.chain, vars)
         else:
             with pytest.raises((ValueError, TypeError)):

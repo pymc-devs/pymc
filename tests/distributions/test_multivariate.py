@@ -2013,7 +2013,7 @@ class TestWishart(BaseTestDistributionRandom):
             if size is None:
                 expected_shape = (2, 3, 3)
             else:
-                expected_shape = size + (3, 3)
+                expected_shape = (*size, 3, 3)
 
             assert tuple(x.shape.eval()) == expected_shape
 

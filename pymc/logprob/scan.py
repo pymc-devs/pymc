@@ -164,14 +164,14 @@ def convert_outer_out_to_in(
             inner_in_mit_sot_var = cast(
                 tuple[int, ...], tuple(output_scan_args.inner_in_mit_sot[var_idx])
             )
-            new_inner_in_seqs = inner_in_mit_sot_var + (new_inner_in_var,)
+            new_inner_in_seqs = (*inner_in_mit_sot_var, new_inner_in_var)
             new_inner_in_mit_sot = remove(output_scan_args.inner_in_mit_sot, var_idx)
             new_outer_in_mit_sot = remove(output_scan_args.outer_in_mit_sot, var_idx)
             new_inner_in_sit_sot = tuple(output_scan_args.inner_in_sit_sot)
             new_outer_in_sit_sot = tuple(output_scan_args.outer_in_sit_sot)
             add_nit_sot = True
         elif inner_out_info.name.endswith("sit_sot"):
-            new_inner_in_seqs = (output_scan_args.inner_in_sit_sot[var_idx],) + (new_inner_in_var,)
+            new_inner_in_seqs = (output_scan_args.inner_in_sit_sot[var_idx], new_inner_in_var)
             new_inner_in_sit_sot = remove(output_scan_args.inner_in_sit_sot, var_idx)
             new_outer_in_sit_sot = remove(output_scan_args.outer_in_sit_sot, var_idx)
             new_inner_in_mit_sot = tuple(output_scan_args.inner_in_mit_sot)
@@ -193,7 +193,7 @@ def convert_outer_out_to_in(
             mit_sot_var_taps = cast(
                 tuple[int, ...], tuple(output_scan_args.mit_sot_in_slices[var_idx])
             )
-            taps = mit_sot_var_taps + (0,)
+            taps = (*mit_sot_var_taps, 0)
             new_mit_sot_in_slices = remove(output_scan_args.mit_sot_in_slices, var_idx)
         elif inner_out_info.name.endswith("sit_sot"):
             taps = (-1, 0)
@@ -230,7 +230,7 @@ def convert_outer_out_to_in(
         output_scan_args.outer_in_seqs = list(new_outer_in_seqs)
 
         if add_nit_sot:
-            new_outer_in_nit_sot = tuple(output_scan_args.outer_in_nit_sot) + (n_steps,)
+            new_outer_in_nit_sot = (*output_scan_args.outer_in_nit_sot, n_steps)
         else:
             new_outer_in_nit_sot = tuple(output_scan_args.outer_in_nit_sot)
 

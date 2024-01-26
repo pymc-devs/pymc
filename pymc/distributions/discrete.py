@@ -1159,7 +1159,7 @@ class Categorical(Discrete):
                 value_clip = pt.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
             elif p.ndim < value_clip.ndim:
                 p = pt.shape_padleft(p, value_clip.ndim - p_.ndim)
-            pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
+            pattern = (p.ndim - 1, *range(p.ndim - 1))
             a = pt.log(
                 pt.take_along_axis(
                     p.dimshuffle(pattern),

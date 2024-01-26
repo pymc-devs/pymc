@@ -303,7 +303,7 @@ class ZeroSumTransform(Transform):
         norm = sum_vals / (pt.sqrt(n) + n)
         slice_before = (slice(None, None),) * normalized_axis
 
-        return array[slice_before + (slice(None, -1),)] + norm
+        return array[(*slice_before, slice(None, -1))] + norm
 
     def forward(self, value, *rv_inputs):
         for axis in self.zerosum_axes:

@@ -616,7 +616,7 @@ class DirichletMultinomialRV(RandomVariable):
 
             if size:
                 n = np.broadcast_to(n, size)
-                a = np.broadcast_to(a, size + (a.shape[-1],))
+                a = np.broadcast_to(a, (*size, a.shape[-1]))
 
             res = np.empty(a.shape)
             for idx in np.ndindex(a.shape[:-1]):
@@ -1205,7 +1205,7 @@ class _LKJCholeskyCov(Distribution):
         # implied batched dimensions from those for the time being.
         if size is None:
             size = sd_dist.shape[:-1]
-        shape = tuple(size) + (n,)
+        shape = (*size, n)
         if sd_dist.owner.op.ndim_supp == 0:
             sd_dist = change_dist_size(sd_dist, shape)
         else:
@@ -1685,7 +1685,7 @@ class LKJCorr:
     @classmethod
     def vec_to_corr_mat(cls, vec, n):
         tri = pt.zeros(pt.concatenate([vec.shape[:-1], (n, n)]))
-        tri = pt.subtensor.set_subtensor(tri[(...,) + np.triu_indices(n, 1)], vec)
+        tri = pt.subtensor.set_subtensor(tri[(..., *np.triu_indices(n, 1))], vec)
         return tri + pt.moveaxis(tri, -2, -1) + pt.diag(pt.ones(n))
 
 
@@ -2183,7 +2183,7 @@ class CARRV(RandomVariable):
 
         size = tuple(size or ())
         if size:
-            mu = np.broadcast_to(mu, size + (mu.shape[-1],))
+            mu = np.broadcast_to(mu, (*size, mu.shape[-1]))
         z = rng.normal(size=mu.shape)
         samples = np.empty(z.shape)
         for idx in np.ndindex(mu.shape[:-1]):
@@ -2492,7 +2492,7 @@ class StickBreakingWeightsRV(RandomVariable):
             raise ValueError("K needs to be positive.")
 
         size = to_tuple(size) if size is not None else alpha.shape
-        size = size + (K,)
+        size = (*size, K)
         alpha = alpha[..., np.newaxis]
 
         betas = rng.beta(1, alpha, size=size)

@@ -177,7 +177,7 @@ class TestCustomDist:
                 observed=np.random.randn(100, *size),
             )
         assert isinstance(obs.owner.op, CustomDistRV)
-        assert obs.eval().shape == (100,) + size
+        assert obs.eval().shape == (100, *size)
 
     def test_custom_dist_with_random_invalid_observed(self):
         with pytest.raises(
@@ -237,7 +237,7 @@ class TestCustomDist:
             )
 
         assert isinstance(obs.owner.op, CustomDistRV)
-        assert obs.eval().shape == (100,) + size + (supp_shape,)
+        assert obs.eval().shape == (100, *size, supp_shape)
 
     def test_serialize_custom_dist(self):
         def func(x):
@@ -285,7 +285,7 @@ class TestCustomDist:
         assert isinstance(a.owner.op, CustomDistRV)
         mu_test_value = npr.normal(loc=0, scale=1, size=supp_shape).astype(pytensor.config.floatX)
         a_test_value = npr.normal(
-            loc=mu_test_value, scale=1, size=to_tuple(size) + (supp_shape,)
+            loc=mu_test_value, scale=1, size=(*to_tuple(size), supp_shape)
         ).astype(pytensor.config.floatX)
         log_densityf = model.compile_logp(vars=[a], sum=False)
         assert log_densityf({"a": a_test_value, "mu": mu_test_value})[0].shape == to_tuple(size)
@@ -336,7 +336,7 @@ class TestCustomDist:
             a = CustomDist("a", mu, moment=density_moment, ndims_params=[1], ndim_supp=1, size=size)
         assert isinstance(a.owner.op, CustomDistRV)
         evaled_moment = moment(a).eval({mu: mu_val})
-        assert evaled_moment.shape == to_tuple(size) + (5,)
+        assert evaled_moment.shape == (*to_tuple(size), 5)
         assert np.all(evaled_moment == mu_val)
 
     @pytest.mark.xfail(
@@ -369,7 +369,7 @@ class TestCustomDist:
         assert isinstance(a.owner.op, CustomDistRV)
         if with_random:
             evaled_moment = moment(a).eval({mu: mu_val})
-            assert evaled_moment.shape == to_tuple(size) + (5,)
+            assert evaled_moment.shape == (*to_tuple(size), 5)
             assert np.all(evaled_moment == 0)
         else:
             with pytest.raises(
@@ -441,7 +441,7 @@ class TestCustomSymbolicDist:
             (
                 (2, np.ones(5)),
                 None,
-                np.exp([2, 2, 2, 2, 2] + np.ones(5)),
+                np.exp(2 + np.ones(5)),
                 lambda mu, sigma, size: pt.exp(
                     pm.Normal.dist(mu, sigma, size=size) + pt.ones(size)
                 ),

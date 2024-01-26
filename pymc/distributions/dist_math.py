@@ -334,7 +334,7 @@ def random_choice(p, size):
         # probability. We must iterate over the elements of all the other
         # dimensions.
         # We first ensure that p is broadcasted to the output's shape
-        size = to_tuple(size) + (1,)
+        size = (*to_tuple(size), 1)
         p = np.broadcast_arrays(p, np.empty(size))[0]
         out_shape = p.shape[:-1]
         # np.random.choice accepts 1D p arrays, so we semiflatten p to

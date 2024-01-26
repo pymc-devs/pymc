@@ -117,7 +117,7 @@ def _make_along_axis_idx(arr_shape, indices, axis):
     if str(indices.dtype) not in int_types:
         raise IndexError("`indices` must be an integer array")
     shape_ones = (1,) * indices.ndim
-    dest_dims = list(range(axis)) + [None] + list(range(axis + 1, indices.ndim))
+    dest_dims = [*list(range(axis)), None, *list(range(axis + 1, indices.ndim))]
 
     # build a fancy index, consisting of orthogonal aranges, with the
     # requested index inserted at the right location

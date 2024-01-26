@@ -334,7 +334,7 @@ class ValueGradFunction:
             grads = pytensor.grad(cost, grad_vars, disconnected_inputs="ignore")
             for grad_wrt, var in zip(grads, grad_vars):
                 grad_wrt.name = f"{var.name}_grad"
-            outputs = [cost] + grads
+            outputs = [cost, *grads]
         else:
             outputs = [cost]
 
