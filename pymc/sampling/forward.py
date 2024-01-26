@@ -345,8 +345,8 @@ def sample_prior_predictive(
     var_names: Optional[Iterable[str]] = None,
     random_seed: RandomState = None,
     return_inferencedata: bool = True,
-    idata_kwargs: dict = None,
-    compile_kwargs: dict = None,
+    idata_kwargs: Optional[dict] = None,
+    compile_kwargs: Optional[dict] = None,
 ) -> Union[InferenceData, dict[str, np.ndarray]]:
     """Generate samples from the prior predictive distribution.
 
@@ -446,8 +446,8 @@ def sample_posterior_predictive(
     return_inferencedata: bool = True,
     extend_inferencedata: bool = False,
     predictions: bool = False,
-    idata_kwargs: dict = None,
-    compile_kwargs: dict = None,
+    idata_kwargs: Optional[dict] = None,
+    compile_kwargs: Optional[dict] = None,
 ) -> Union[InferenceData, dict[str, np.ndarray]]:
     """Generate posterior predictive samples from a model given a trace.
 
@@ -681,7 +681,7 @@ def sample_posterior_predictive_w(
     random_seed: RandomState = None,
     progressbar: bool = True,
     return_inferencedata: bool = True,
-    idata_kwargs: dict = None,
+    idata_kwargs: Optional[dict] = None,
 ):
     """Generate weighted posterior predictive samples from a list of models and
     a list of traces according to a set of weights.

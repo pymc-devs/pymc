@@ -180,7 +180,7 @@ def make_initial_point_expression(
     free_rvs: Sequence[TensorVariable],
     rvs_to_transforms: dict[TensorVariable, Transform],
     initval_strategies: dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]],
-    jitter_rvs: set[TensorVariable] = None,
+    jitter_rvs: Optional[set[TensorVariable]] = None,
     default_strategy: str = "moment",
     return_transformed: bool = False,
 ) -> list[TensorVariable]:
