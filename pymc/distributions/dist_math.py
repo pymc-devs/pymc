@@ -19,8 +19,8 @@ Created on Mar 7, 2011
 """
 import warnings
 
+from collections.abc import Iterable
 from functools import partial
-from typing import Iterable
 
 import numpy as np
 import pytensor

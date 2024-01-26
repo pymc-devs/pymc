@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 from abc import abstractmethod
-from typing import Callable, List, Tuple, Union, cast
+from typing import Callable, Union, cast
 
 import numpy as np
 
@@ -46,8 +46,8 @@ class ArrayStep(BlockedStep):
         self.allvars = allvars
         self.blocked = blocked
 
-    def step(self, point: PointType) -> Tuple[PointType, StatsType]:
-        partial_funcs_and_point: List[Union[Callable, PointType]] = [
+    def step(self, point: PointType) -> tuple[PointType, StatsType]:
+        partial_funcs_and_point: list[Union[Callable, PointType]] = [
             DictToArrayBijection.mapf(x, start_point=point) for x in self.fs
         ]
         if self.allvars:
@@ -66,7 +66,7 @@ class ArrayStep(BlockedStep):
         return point_new, stats
 
     @abstractmethod
-    def astep(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+    def astep(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         """Perform a single sample step in a raveled and concatenated parameter space."""
 
 
@@ -90,7 +90,7 @@ class ArrayStepShared(BlockedStep):
         self.shared = {get_var_name(var): shared for var, shared in shared.items()}
         self.blocked = blocked
 
-    def step(self, point: PointType) -> Tuple[PointType, StatsType]:
+    def step(self, point: PointType) -> tuple[PointType, StatsType]:
         for name, shared_var in self.shared.items():
             shared_var.set_value(point[name])
 
@@ -108,7 +108,7 @@ class ArrayStepShared(BlockedStep):
         return new_point, stats
 
     @abstractmethod
-    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, StatsType]:
+    def astep(self, q0: RaveledVars) -> tuple[RaveledVars, StatsType]:
         """Perform a single sample step in a raveled and concatenated parameter space."""
 
 
@@ -167,12 +167,12 @@ class GradientSharedStep(ArrayStepShared):
 
         super().__init__(vars, func._extra_vars_shared, blocked)
 
-    def step(self, point) -> Tuple[PointType, StatsType]:
+    def step(self, point) -> tuple[PointType, StatsType]:
         self._logp_dlogp_func._extra_are_set = True
         return super().step(point)
 
 
-def metrop_select(mr: np.ndarray, q: np.ndarray, q0: np.ndarray) -> Tuple[np.ndarray, bool]:
+def metrop_select(mr: np.ndarray, q: np.ndarray, q0: np.ndarray) -> tuple[np.ndarray, bool]:
     """Perform rejection/acceptance step for Metropolis class samplers.
 
     Returns the new sample q if a uniform random number is less than the

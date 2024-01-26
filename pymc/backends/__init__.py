@@ -60,8 +60,9 @@ Loading a saved backend
 Saved backends can be loaded using `arviz.from_netcdf`
 
 """
+from collections.abc import Mapping, Sequence
 from copy import copy
-from typing import Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -94,7 +95,7 @@ def _init_trace(
     *,
     expected_length: int,
     chain_number: int,
-    stats_dtypes: List[Dict[str, type]],
+    stats_dtypes: list[dict[str, type]],
     trace: Optional[BaseTrace],
     model: Model,
 ) -> BaseTrace:
@@ -121,7 +122,7 @@ def init_traces(
     step: Union[BlockedStep, CompoundStep],
     initial_point: Mapping[str, np.ndarray],
     model: Model,
-) -> Tuple[Optional[RunType], Sequence[IBaseTrace]]:
+) -> tuple[Optional[RunType], Sequence[IBaseTrace]]:
     """Initializes a trace recorder for each chain."""
     if HAS_MCB and isinstance(backend, Backend):
         return init_chain_adapters(

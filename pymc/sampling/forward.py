@@ -17,16 +17,11 @@
 import logging
 import warnings
 
+from collections.abc import Iterable, Sequence
 from typing import (
     Any,
     Callable,
-    Dict,
-    Iterable,
-    List,
     Optional,
-    Sequence,
-    Set,
-    Tuple,
     Union,
     cast,
 )
@@ -77,8 +72,8 @@ __all__ = (
 )
 
 
-ArrayLike: TypeAlias = Union[np.ndarray, List[float]]
-PointList: TypeAlias = List[PointType]
+ArrayLike: TypeAlias = Union[np.ndarray, list[float]]
+PointList: TypeAlias = list[PointType]
 
 _log = logging.getLogger(__name__)
 
@@ -95,14 +90,14 @@ def get_vars_in_point_list(trace, model):
 
 
 def compile_forward_sampling_function(
-    outputs: List[Variable],
-    vars_in_trace: List[Variable],
-    basic_rvs: Optional[List[Variable]] = None,
-    givens_dict: Optional[Dict[Variable, Any]] = None,
-    constant_data: Optional[Dict[str, np.ndarray]] = None,
-    constant_coords: Optional[Set[str]] = None,
+    outputs: list[Variable],
+    vars_in_trace: list[Variable],
+    basic_rvs: Optional[list[Variable]] = None,
+    givens_dict: Optional[dict[Variable, Any]] = None,
+    constant_data: Optional[dict[str, np.ndarray]] = None,
+    constant_coords: Optional[set[str]] = None,
     **kwargs,
-) -> Tuple[Callable[..., Union[np.ndarray, List[np.ndarray]]], Set[Variable]]:
+) -> tuple[Callable[..., Union[np.ndarray, list[np.ndarray]]], set[Variable]]:
     """Compile a function to draw samples, conditioned on the values of some variables.
 
     The goal of this function is to walk the pytensor computational graph from the list
@@ -204,10 +199,10 @@ def compile_forward_sampling_function(
     fg = FunctionGraph(outputs=outputs, clone=False)
 
     # Walk the graph from inputs to outputs and tag the volatile variables
-    nodes: List[Variable] = general_toposort(
+    nodes: list[Variable] = general_toposort(
         fg.outputs, deps=lambda x: x.owner.inputs if x.owner else []
     )
-    volatile_nodes: Set[Any] = set()
+    volatile_nodes: set[Any] = set()
     for node in nodes:
         if (
             node in fg.outputs
@@ -270,7 +265,7 @@ def draw(
     draws: int = 1,
     random_seed: RandomState = None,
     **kwargs,
-) -> Union[np.ndarray, List[np.ndarray]]:
+) -> Union[np.ndarray, list[np.ndarray]]:
     """Draw samples for one variable or a list of variables
 
     Parameters
@@ -327,7 +322,7 @@ def draw(
         return np.stack([draw_fn() for _ in range(draws)])
 
     # Multiple variable output
-    cast(Callable[[], List[np.ndarray]], draw_fn)
+    cast(Callable[[], list[np.ndarray]], draw_fn)
     drawn_values = zip(*(draw_fn() for _ in range(draws)))
     return [np.stack(v) for v in drawn_values]
 
@@ -352,7 +347,7 @@ def sample_prior_predictive(
     return_inferencedata: bool = True,
     idata_kwargs: dict = None,
     compile_kwargs: dict = None,
-) -> Union[InferenceData, Dict[str, np.ndarray]]:
+) -> Union[InferenceData, dict[str, np.ndarray]]:
     """Generate samples from the prior predictive distribution.
 
     Parameters
@@ -391,7 +386,7 @@ def sample_prior_predictive(
         )
 
     if var_names is None:
-        vars_: Set[str] = {var.name for var in model.basic_RVs + model.deterministics}
+        vars_: set[str] = {var.name for var in model.basic_RVs + model.deterministics}
     else:
         vars_ = set(var_names)
 
@@ -428,14 +423,14 @@ def sample_prior_predictive(
     if data is None:
         raise AssertionError("No variables sampled: attempting to sample %s" % names)
 
-    prior: Dict[str, np.ndarray] = {}
+    prior: dict[str, np.ndarray] = {}
     for var_name in vars_:
         if var_name in data:
             prior[var_name] = data[var_name]
 
     if not return_inferencedata:
         return prior
-    ikwargs: Dict[str, Any] = dict(model=model)
+    ikwargs: dict[str, Any] = dict(model=model)
     if idata_kwargs:
         ikwargs.update(idata_kwargs)
     return pm.to_inference_data(prior=prior, **ikwargs)
@@ -444,8 +439,8 @@ def sample_prior_predictive(
 def sample_posterior_predictive(
     trace,
     model: Optional[Model] = None,
-    var_names: Optional[List[str]] = None,
-    sample_dims: Optional[List[str]] = None,
+    var_names: Optional[list[str]] = None,
+    sample_dims: Optional[list[str]] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
     return_inferencedata: bool = True,
@@ -453,7 +448,7 @@ def sample_posterior_predictive(
     predictions: bool = False,
     idata_kwargs: dict = None,
     compile_kwargs: dict = None,
-) -> Union[InferenceData, Dict[str, np.ndarray]]:
+) -> Union[InferenceData, dict[str, np.ndarray]]:
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -523,8 +518,8 @@ def sample_posterior_predictive(
         idata_kwargs = idata_kwargs.copy()
     if sample_dims is None:
         sample_dims = ["chain", "draw"]
-    constant_data: Dict[str, np.ndarray] = {}
-    trace_coords: Dict[str, np.ndarray] = {}
+    constant_data: dict[str, np.ndarray] = {}
+    trace_coords: dict[str, np.ndarray] = {}
     if "coords" not in idata_kwargs:
         idata_kwargs["coords"] = {}
     idata: Optional[InferenceData] = None
@@ -660,7 +655,7 @@ def sample_posterior_predictive(
 
     if not return_inferencedata:
         return ppc_trace
-    ikwargs: Dict[str, Any] = dict(model=model, **idata_kwargs)
+    ikwargs: dict[str, Any] = dict(model=model, **idata_kwargs)
     ikwargs.setdefault("sample_dims", sample_dims)
     if stacked_dims is not None:
         coords = ikwargs.get("coords", {})
@@ -681,7 +676,7 @@ def sample_posterior_predictive(
 def sample_posterior_predictive_w(
     traces,
     samples: Optional[int] = None,
-    models: Optional[List[Model]] = None,
+    models: Optional[list[Model]] = None,
     weights: Optional[ArrayLike] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,

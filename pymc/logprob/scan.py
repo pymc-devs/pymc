@@ -34,8 +34,9 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
+from collections.abc import Iterable
 from copy import copy
-from typing import Callable, Dict, Iterable, List, Optional, Tuple, cast
+from typing import Callable, Optional, cast
 
 import numpy as np
 import pytensor
@@ -78,8 +79,8 @@ MeasurableVariable.register(MeasurableScan)
 def convert_outer_out_to_in(
     input_scan_args: ScanArgs,
     outer_out_vars: Iterable[TensorVariable],
-    new_outer_input_vars: Dict[TensorVariable, TensorVariable],
-    inner_out_fn: Callable[[Dict[TensorVariable, TensorVariable]], Iterable[TensorVariable]],
+    new_outer_input_vars: dict[TensorVariable, TensorVariable],
+    inner_out_fn: Callable[[dict[TensorVariable, TensorVariable]], Iterable[TensorVariable]],
 ) -> ScanArgs:
     r"""Convert outer-graph outputs into outer-graph inputs.
 
@@ -161,7 +162,7 @@ def convert_outer_out_to_in(
         add_nit_sot = False
         if inner_out_info.name.endswith("mit_sot"):
             inner_in_mit_sot_var = cast(
-                Tuple[int, ...], tuple(output_scan_args.inner_in_mit_sot[var_idx])
+                tuple[int, ...], tuple(output_scan_args.inner_in_mit_sot[var_idx])
             )
             new_inner_in_seqs = inner_in_mit_sot_var + (new_inner_in_var,)
             new_inner_in_mit_sot = remove(output_scan_args.inner_in_mit_sot, var_idx)
@@ -190,7 +191,7 @@ def convert_outer_out_to_in(
 
         if inner_out_info.name.endswith("mit_sot"):
             mit_sot_var_taps = cast(
-                Tuple[int, ...], tuple(output_scan_args.mit_sot_in_slices[var_idx])
+                tuple[int, ...], tuple(output_scan_args.mit_sot_in_slices[var_idx])
             )
             taps = mit_sot_var_taps + (0,)
             new_mit_sot_in_slices = remove(output_scan_args.mit_sot_in_slices, var_idx)
@@ -270,7 +271,7 @@ def convert_outer_out_to_in(
 
 def get_random_outer_outputs(
     scan_args: ScanArgs,
-) -> List[Tuple[int, TensorVariable, TensorVariable]]:
+) -> list[tuple[int, TensorVariable, TensorVariable]]:
     """Get the `MeasurableVariable` outputs of a `Scan` (well, its `ScanArgs`).
 
     Returns
@@ -292,7 +293,7 @@ def get_random_outer_outputs(
     return rv_vars
 
 
-def construct_scan(scan_args: ScanArgs, **kwargs) -> Tuple[List[TensorVariable], OrderedUpdates]:
+def construct_scan(scan_args: ScanArgs, **kwargs) -> tuple[list[TensorVariable], OrderedUpdates]:
     scan_op = Scan(scan_args.inner_inputs, scan_args.inner_outputs, scan_args.info, **kwargs)
     node = scan_op.make_node(*scan_args.outer_inputs)
     updates = OrderedUpdates(zip(scan_args.outer_in_shared, scan_args.outer_out_shared))
@@ -308,7 +309,7 @@ def logprob_ScanRV(op, values, *inputs, name=None, **kwargs):
     var_indices, rv_vars, io_vars = zip(*rv_outer_outs)
     value_map = {_rv: _val for _rv, _val in zip(rv_vars, values)}
 
-    def create_inner_out_logp(value_map: Dict[TensorVariable, TensorVariable]) -> TensorVariable:
+    def create_inner_out_logp(value_map: dict[TensorVariable, TensorVariable]) -> TensorVariable:
         """Create a log-likelihood inner-output for a `Scan`."""
         logp_parts = conditional_logp(value_map, warn_rvs=False)
         return logp_parts.values()
@@ -394,7 +395,7 @@ def find_measurable_scans(fgraph, node):
         # Get any `Subtensor` outputs that have been applied to outputs of this
         # `Scan` (and get the corresponding indices of the outputs from this
         # `Scan`)
-        output_clients: List[Tuple[Variable, int]] = sum(
+        output_clients: list[tuple[Variable, int]] = sum(
             [
                 [
                     # This is expected to work for `Subtensor` `Op`s,

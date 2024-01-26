@@ -14,7 +14,7 @@
 
 import collections
 
-from typing import Callable, Dict
+from typing import Callable
 
 import numpy as np
 
@@ -36,7 +36,7 @@ def absolute(current: np.ndarray, prev: np.ndarray) -> np.ndarray:
     return np.abs(diff)
 
 
-_diff: Dict[str, Callable[[np.ndarray, np.ndarray], np.ndarray]] = dict(
+_diff: dict[str, Callable[[np.ndarray, np.ndarray], np.ndarray]] = dict(
     relative=relative, absolute=absolute
 )
 

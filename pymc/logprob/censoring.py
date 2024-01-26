@@ -34,7 +34,7 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 import pytensor.tensor as pt
@@ -62,7 +62,7 @@ measurable_clip = MeasurableClip(scalar_clip)
 
 
 @node_rewriter(tracks=[clip])
-def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableClip]]:
+def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[list[MeasurableClip]]:
     # TODO: Canonicalize x[x>ub] = ub -> clip(x, x, ub)
 
     rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
@@ -157,7 +157,7 @@ class MeasurableRound(MeasurableElemwise):
 
 
 @node_rewriter(tracks=[ceil, floor, round_half_to_even])
-def find_measurable_roundings(fgraph: FunctionGraph, node: Node) -> Optional[List[MeasurableRound]]:
+def find_measurable_roundings(fgraph: FunctionGraph, node: Node) -> Optional[list[MeasurableRound]]:
     rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover

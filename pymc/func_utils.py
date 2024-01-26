@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Callable, Dict, Optional, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 import pytensor.tensor as pt
@@ -28,12 +28,12 @@ def find_constrained_prior(
     distribution: pm.Distribution,
     lower: float,
     upper: float,
-    init_guess: Dict[str, float],
+    init_guess: dict[str, float],
     mass: float = 0.95,
-    fixed_params: Optional[Dict[str, float]] = None,
+    fixed_params: Optional[dict[str, float]] = None,
     mass_below_lower: Optional[float] = None,
     **kwargs,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Find optimal parameters to get `mass` % of probability
     of a :ref:`distribution <api_distributions>` between `lower` and `upper`.

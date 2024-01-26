@@ -18,19 +18,14 @@ import threading
 import types
 import warnings
 
+from collections.abc import Iterable, Sequence
 from sys import modules
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
-    Iterable,
-    List,
     Literal,
     Optional,
-    Sequence,
-    Tuple,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -138,7 +133,7 @@ class ContextMeta(type):
 
     # FIXME: is there a more elegant way to automatically add methods to the class that
     # are instance methods instead of class methods?
-    def __init__(cls, name, bases, nmspc, context_class: Optional[Type] = None, **kwargs):
+    def __init__(cls, name, bases, nmspc, context_class: Optional[type] = None, **kwargs):
         """Add ``__enter__`` and ``__exit__`` methods to the new class automatically."""
         if context_class is not None:
             cls._context_class = context_class
@@ -160,7 +155,7 @@ class ContextMeta(type):
             raise BlockModelAccessError(candidate.error_msg_on_access)
         return candidate
 
-    def get_contexts(cls) -> List[T]:
+    def get_contexts(cls) -> list[T]:
         """Return a stack of context instances for the ``context_class``
         of ``cls``."""
         # This lazily creates the context class's contexts
@@ -189,8 +184,8 @@ class ContextMeta(type):
     # specified, so the context_class may be a class *name* rather
     # than a class.
     @property
-    def context_class(cls) -> Type:
-        def resolve_type(c: Union[Type, str]) -> Type:
+    def context_class(cls) -> type:
+        def resolve_type(c: Union[type, str]) -> type:
             if isinstance(c, str):
                 c = getattr(modules[cls.__module__], c)
             if isinstance(c, type):
@@ -675,7 +670,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         vars: Optional[Union[Variable, Sequence[Variable]]] = None,
         jacobian: bool = True,
         sum: bool = True,
-    ) -> Union[Variable, List[Variable]]:
+    ) -> Union[Variable, list[Variable]]:
         """Elemwise log-probability of the model.
 
         Parameters
@@ -693,13 +688,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
         -------
         Logp graph(s)
         """
-        varlist: List[TensorVariable]
+        varlist: list[TensorVariable]
         if vars is None:
             varlist = self.free_RVs + self.observed_RVs + self.potentials
         elif not isinstance(vars, (list, tuple)):
             varlist = [vars]
         else:
-            varlist = cast(List[TensorVariable], vars)
+            varlist = cast(list[TensorVariable], vars)
 
         # We need to separate random variables from potential terms, and remember their
         # original order so that we can merge them together in the same order at the end
@@ -720,7 +715,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         f"Requested variable {var} not found among the model variables"
                     )
 
-        rv_logps: List[TensorVariable] = []
+        rv_logps: list[TensorVariable] = []
         if rvs:
             rv_logps = transformed_conditional_logp(
                 rvs=rvs,
@@ -925,12 +920,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self.free_RVs + self.deterministics
 
     @property
-    def coords(self) -> Dict[str, Union[Tuple, None]]:
+    def coords(self) -> dict[str, Union[tuple, None]]:
         """Coordinate values for model dimensions."""
         return self._coords
 
     @property
-    def dim_lengths(self) -> Dict[str, Variable]:
+    def dim_lengths(self) -> dict[str, Variable]:
         """The symbolic lengths of dimensions in the model.
 
         The values are typically instances of ``TensorVariable`` or ``ScalarSharedVariable``.
@@ -1009,9 +1004,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def add_coords(
         self,
-        coords: Dict[str, Optional[Sequence]],
+        coords: dict[str, Optional[Sequence]],
         *,
-        lengths: Optional[Dict[str, Optional[Union[int, Variable]]]] = None,
+        lengths: Optional[dict[str, Optional[Union[int, Variable]]]] = None,
     ):
         """Vectorized version of ``Model.add_coord``."""
         if coords is None:
@@ -1051,7 +1046,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self.dim_lengths[name].set_value(new_length)
         return
 
-    def initial_point(self, random_seed: SeedSequenceSeed = None) -> Dict[str, np.ndarray]:
+    def initial_point(self, random_seed: SeedSequenceSeed = None) -> dict[str, np.ndarray]:
         """Computes the initial point of the model.
 
         Parameters
@@ -1079,7 +1074,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         name: str,
         values: Union[Sequence, np.ndarray],
-        coords: Optional[Dict[str, Sequence]] = None,
+        coords: Optional[dict[str, Sequence]] = None,
     ):
         """Changes the values of a data variable in the model.
 
@@ -1414,7 +1409,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return value_var
 
-    def add_named_variable(self, var, dims: Optional[Tuple[Union[str, None], ...]] = None):
+    def add_named_variable(self, var, dims: Optional[tuple[Union[str, None], ...]] = None):
         """Add a random graph variable to the named variables of the model.
 
         This can include several types of variables such basic_RVs, Data, Deterministics,
@@ -1484,7 +1479,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         graphs: Sequence[TensorVariable],
         **kwargs,
-    ) -> List[TensorVariable]:
+    ) -> list[TensorVariable]:
         """Clone and replace random variables in graphs with their value variables.
 
         This will *not* recompute test values in the resulting graphs.
@@ -1574,7 +1569,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return f.profile
 
-    def update_start_vals(self, a: Dict[str, np.ndarray], b: Dict[str, np.ndarray]):
+    def update_start_vals(self, a: dict[str, np.ndarray], b: dict[str, np.ndarray]):
         r"""Update point `a` with `b`, without overwriting existing keys.
 
         Values specified for transformed variables in `a` will be recomputed
@@ -1586,7 +1581,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             " To change initial values you may set the items of `Model.initial_values` directly."
         )
 
-    def eval_rv_shapes(self) -> Dict[str, Tuple[int, ...]]:
+    def eval_rv_shapes(self) -> dict[str, tuple[int, ...]]:
         """Evaluates shapes of untransformed AND transformed free variables.
 
         Returns
@@ -1693,7 +1688,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def debug(
         self,
-        point: Optional[Dict[str, np.ndarray]] = None,
+        point: Optional[dict[str, np.ndarray]] = None,
         fn: Literal["logp", "dlogp", "random"] = "logp",
         verbose: bool = False,
     ):
@@ -2017,7 +2012,7 @@ def compile_fn(
     )
 
 
-def Point(*args, filter_model_vars=False, **kwargs) -> Dict[VarName, np.ndarray]:
+def Point(*args, filter_model_vars=False, **kwargs) -> dict[VarName, np.ndarray]:
     """Build a point. Uses same args as dict() does.
     Filters out variables not in the model. All keys are strings.
 

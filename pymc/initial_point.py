@@ -14,7 +14,8 @@
 import functools
 import warnings
 
-from typing import Callable, Dict, List, Optional, Sequence, Set, Union
+from collections.abc import Sequence
+from typing import Callable, Optional, Union
 
 import numpy as np
 import pytensor
@@ -28,13 +29,13 @@ from pymc.logprob.transforms import Transform
 from pymc.pytensorf import compile_pymc, find_rng_nodes, replace_rng_nodes, reseed_rngs
 from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
 
-StartDict = Dict[Union[Variable, str], Union[np.ndarray, Variable, str]]
-PointType = Dict[str, np.ndarray]
+StartDict = dict[Union[Variable, str], Union[np.ndarray, Variable, str]]
+PointType = dict[str, np.ndarray]
 
 
 def convert_str_to_rv_dict(
     model, start: StartDict
-) -> Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
+) -> dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
     """Helper function for converting a user-provided start dict with str keys of (transformed) variable names
     to a dict mapping the RV tensors to untransformed initvals.
     TODO: Deprecate this functionality and only accept TensorVariables as keys
@@ -56,9 +57,9 @@ def make_initial_point_fns_per_chain(
     *,
     model,
     overrides: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
-    jitter_rvs: Optional[Set[TensorVariable]] = None,
+    jitter_rvs: Optional[set[TensorVariable]] = None,
     chains: int,
-) -> List[Callable]:
+) -> list[Callable]:
     """Create an initial point function for each chain, as defined by initvals
 
     If a single initval dictionary is passed, the function is replicated for each
@@ -112,7 +113,7 @@ def make_initial_point_fn(
     *,
     model,
     overrides: Optional[StartDict] = None,
-    jitter_rvs: Optional[Set[TensorVariable]] = None,
+    jitter_rvs: Optional[set[TensorVariable]] = None,
     default_strategy: str = "moment",
     return_transformed: bool = True,
 ) -> Callable:
@@ -177,12 +178,12 @@ def make_initial_point_fn(
 def make_initial_point_expression(
     *,
     free_rvs: Sequence[TensorVariable],
-    rvs_to_transforms: Dict[TensorVariable, Transform],
-    initval_strategies: Dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]],
-    jitter_rvs: Set[TensorVariable] = None,
+    rvs_to_transforms: dict[TensorVariable, Transform],
+    initval_strategies: dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]],
+    jitter_rvs: set[TensorVariable] = None,
     default_strategy: str = "moment",
     return_transformed: bool = False,
-) -> List[TensorVariable]:
+) -> list[TensorVariable]:
     """Creates the tensor variables that need to be evaluated to obtain an initial point.
 
     Parameters
@@ -263,7 +264,7 @@ def make_initial_point_expression(
 
         initial_values.append(value)
 
-    all_outputs: List[TensorVariable] = []
+    all_outputs: list[TensorVariable] = []
     all_outputs.extend(free_rvs)
     all_outputs.extend(initial_values)
     all_outputs.extend(initial_values_transformed)

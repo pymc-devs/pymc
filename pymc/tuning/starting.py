@@ -20,7 +20,8 @@ Created on Mar 12, 2011
 import sys
 import warnings
 
-from typing import Optional, Sequence
+from collections.abc import Sequence
+from typing import Optional
 
 import numpy as np
 import pytensor.gradient as tg

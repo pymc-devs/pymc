@@ -13,16 +13,10 @@
 #   limitations under the License.
 import warnings
 
+from collections.abc import Generator, Iterable, Sequence
 from typing import (
     Callable,
-    Dict,
-    Generator,
-    Iterable,
-    List,
     Optional,
-    Sequence,
-    Set,
-    Tuple,
     Union,
 )
 
@@ -175,7 +169,7 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
 
 def walk_model(
     graphs: Iterable[TensorVariable],
-    stop_at_vars: Optional[Set[TensorVariable]] = None,
+    stop_at_vars: Optional[set[TensorVariable]] = None,
     expand_fn: Callable[[TensorVariable], Iterable[TensorVariable]] = lambda var: [],
 ) -> Generator[TensorVariable, None, None]:
     """Walk model graphs and yield their nodes.
@@ -207,8 +201,8 @@ def walk_model(
 
 def replace_vars_in_graphs(
     graphs: Iterable[Variable],
-    replacements: Dict[Variable, Variable],
-) -> List[Variable]:
+    replacements: dict[Variable, Variable],
+) -> list[Variable]:
     """Replace variables in graphs.
 
     Graphs are cloned and not modified in place, unless the replacement expressions include variables from the original graphs.
@@ -437,12 +431,12 @@ def make_shared_replacements(point, vars, model):
 
 
 def join_nonshared_inputs(
-    point: Dict[str, np.ndarray],
-    outputs: List[TensorVariable],
-    inputs: List[TensorVariable],
-    shared_inputs: Optional[Dict[TensorVariable, TensorSharedVariable]] = None,
+    point: dict[str, np.ndarray],
+    outputs: list[TensorVariable],
+    inputs: list[TensorVariable],
+    shared_inputs: Optional[dict[TensorVariable, TensorSharedVariable]] = None,
     make_inputs_shared: bool = False,
-) -> Tuple[List[TensorVariable], TensorVariable]:
+) -> tuple[list[TensorVariable], TensorVariable]:
     """
     Create new outputs and input TensorVariables where the non-shared inputs are joined
     in a single raveled vector input.
@@ -572,7 +566,7 @@ def join_nonshared_inputs(
     if pytensor.config.compute_test_value != "off":
         joined_inputs.tag.test_value = raveled_inputs.tag.test_value
 
-    replace: Dict[TensorVariable, TensorVariable] = {}
+    replace: dict[TensorVariable, TensorVariable] = {}
     last_idx = 0
     for var in inputs:
         shape = point[var.name].shape
@@ -738,7 +732,7 @@ def largest_common_dtype(tensors):
 
 def find_rng_nodes(
     variables: Iterable[Variable],
-) -> List[Union[RandomStateSharedVariable, RandomGeneratorSharedVariable]]:
+) -> list[Union[RandomStateSharedVariable, RandomGeneratorSharedVariable]]:
     """Return RNG variables in a graph"""
     return [
         node
@@ -760,7 +754,7 @@ def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVaria
         return outputs
 
     graph = FunctionGraph(outputs=outputs, clone=False)
-    new_rng_nodes: List[Union[np.random.RandomState, np.random.Generator]] = []
+    new_rng_nodes: list[Union[np.random.RandomState, np.random.Generator]] = []
     for rng_node in rng_nodes:
         rng_cls: type
         if isinstance(rng_node, pt.random.var.RandomStateSharedVariable):
@@ -797,7 +791,7 @@ def collect_default_updates(
     *,
     inputs: Optional[Sequence[Variable]] = None,
     must_be_shared: bool = True,
-) -> Dict[Variable, Variable]:
+) -> dict[Variable, Variable]:
     """Collect default update expression for shared-variable RNGs used by RVs between inputs and outputs.
 
     Parameters
@@ -999,7 +993,7 @@ def compile_pymc(
 
 def constant_fold(
     xs: Sequence[TensorVariable], raise_not_constant: bool = True
-) -> Tuple[np.ndarray, ...]:
+) -> tuple[np.ndarray, ...]:
     """Use constant folding to get constant values of a graph.
 
     Parameters
@@ -1063,7 +1057,7 @@ def as_symbolic_string(x, **kwargs):
 
 
 def toposort_replace(
-    fgraph: FunctionGraph, replacements: Sequence[Tuple[Variable, Variable]], reverse: bool = False
+    fgraph: FunctionGraph, replacements: Sequence[tuple[Variable, Variable]], reverse: bool = False
 ) -> None:
     """Replace multiple variables in place in topological order."""
     toposort = fgraph.toposort()

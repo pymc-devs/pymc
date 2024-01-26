@@ -16,8 +16,9 @@ import io
 import urllib.request
 import warnings
 
+from collections.abc import Sequence
 from copy import copy
-from typing import Dict, Optional, Sequence, Tuple, Union, cast
+from typing import Optional, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -204,8 +205,8 @@ def determine_coords(
     model,
     value: Union[pd.DataFrame, pd.Series, xr.DataArray],
     dims: Optional[Sequence[Optional[str]]] = None,
-    coords: Optional[Dict[str, Union[Sequence, np.ndarray]]] = None,
-) -> Tuple[Dict[str, Union[Sequence, np.ndarray]], Sequence[Optional[str]]]:
+    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
+) -> tuple[dict[str, Union[Sequence, np.ndarray]], Sequence[Optional[str]]]:
     """Determines coordinate values from data or the model (via ``dims``)."""
     if coords is None:
         coords = {}
@@ -260,7 +261,7 @@ def ConstantData(
     value,
     *,
     dims: Optional[Sequence[str]] = None,
-    coords: Optional[Dict[str, Union[Sequence, np.ndarray]]] = None,
+    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
     export_index_as_coords=False,
     infer_dims_and_coords=False,
     **kwargs,
@@ -294,7 +295,7 @@ def MutableData(
     value,
     *,
     dims: Optional[Sequence[str]] = None,
-    coords: Optional[Dict[str, Union[Sequence, np.ndarray]]] = None,
+    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
     export_index_as_coords=False,
     infer_dims_and_coords=False,
     **kwargs,
@@ -328,7 +329,7 @@ def Data(
     value,
     *,
     dims: Optional[Sequence[str]] = None,
-    coords: Optional[Dict[str, Union[Sequence, np.ndarray]]] = None,
+    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
     export_index_as_coords=False,
     infer_dims_and_coords=False,
     mutable: Optional[bool] = None,

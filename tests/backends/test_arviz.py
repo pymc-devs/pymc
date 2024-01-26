@@ -13,8 +13,6 @@
 #   limitations under the License.
 import warnings
 
-from typing import Dict, Tuple
-
 import numpy as np
 import pytensor.tensor as pt
 import pytest
@@ -105,7 +103,7 @@ class TestDataPyMC:
 
     def get_predictions_inference_data(
         self, data, eight_schools_params, inplace
-    ) -> Tuple[InferenceData, Dict[str, np.ndarray]]:
+    ) -> tuple[InferenceData, dict[str, np.ndarray]]:
         with data.model:
             prior = pm.sample_prior_predictive(return_inferencedata=False)
             posterior_predictive = pm.sample_posterior_predictive(
@@ -128,7 +126,7 @@ class TestDataPyMC:
 
     def make_predictions_inference_data(
         self, data, eight_schools_params
-    ) -> Tuple[InferenceData, Dict[str, np.ndarray]]:
+    ) -> tuple[InferenceData, dict[str, np.ndarray]]:
         with data.model:
             posterior_predictive = pm.sample_posterior_predictive(
                 data.obj, return_inferencedata=False
