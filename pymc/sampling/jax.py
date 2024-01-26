@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 
 xla_flags_env = os.getenv("XLA_FLAGS", "")
 xla_flags = re.sub(r"--xla_force_host_platform_device_count=.+\s", "", xla_flags_env).split()
-os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}"] + xla_flags)
+os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={100}", *xla_flags])
 
 __all__ = (
     "get_jaxified_graph",

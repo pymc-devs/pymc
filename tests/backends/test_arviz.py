@@ -156,7 +156,7 @@ class TestDataPyMC:
         chains = inference_data.posterior.sizes["chain"]
         draws = inference_data.posterior.sizes["draw"]
         obs = inference_data.observed_data["obs"]
-        assert inference_data.log_likelihood["obs"].shape == (chains, draws) + obs.shape
+        assert inference_data.log_likelihood["obs"].shape == (chains, draws, *obs.shape)
 
     def test_predictions_to_idata(self, data, eight_schools_params):
         "Test that we can add predictions to a previously-existing InferenceData."

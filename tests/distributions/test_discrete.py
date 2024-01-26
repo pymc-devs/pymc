@@ -455,9 +455,9 @@ def test_orderedlogistic_dimensions(shape):
     # Test for issue #3535
     loge = np.log10(np.exp(1))
     size = 7
-    p = np.ones(shape + (10,)) / 10
-    cutpoints = np.tile(sp.logit(np.linspace(0, 1, 11)[1:-1]), shape + (1,))
-    obs = np.random.randint(0, 2, size=(size,) + shape)
+    p = np.ones((*shape, 10)) / 10
+    cutpoints = np.tile(sp.logit(np.linspace(0, 1, 11)[1:-1]), (*shape, 1))
+    obs = np.random.randint(0, 2, size=(size, *shape))
     with pm.Model():
         ol = pm.OrderedLogistic(
             "ol",
@@ -472,7 +472,7 @@ def test_orderedlogistic_dimensions(shape):
         )
     ologp = pm.logp(ol, np.ones_like(obs)).sum().eval() * loge
     clogp = pm.logp(c, np.ones_like(obs)).sum().eval() * loge
-    expected = -np.prod((size,) + shape)
+    expected = -np.prod((size, *shape))
 
     assert c.owner.inputs[3].ndim == (len(shape) + 1)
     assert np.allclose(clogp, expected)

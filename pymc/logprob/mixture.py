@@ -310,7 +310,7 @@ def find_measurable_index_mixture(fgraph, node):
         old_mixture_rv.dtype,
         old_mixture_rv.broadcastable,
     )
-    new_node = mix_op.make_node(*([join_axis] + mixing_indices + mixture_rvs))
+    new_node = mix_op.make_node(*([join_axis, *mixing_indices, *mixture_rvs]))
 
     new_mixture_rv = new_node.default_output()
 

@@ -143,7 +143,7 @@ class Domain:
 class ProductDomain:
     def __init__(self, domains):
         self.vals = list(it.product(*(d.vals for d in domains)))
-        self.shape = (len(domains),) + domains[0].shape
+        self.shape = (len(domains), *domains[0].shape)
         self.lower = [d.lower for d in domains]
         self.upper = [d.upper for d in domains]
         self.dtype = domains[0].dtype

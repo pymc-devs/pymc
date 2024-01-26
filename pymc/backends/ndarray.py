@@ -72,12 +72,12 @@ class NDArray(base.BaseTrace):
             self.draw_idx = old_draws
             for varname, shape in self.var_shapes.items():
                 old_var_samples = self.samples[varname]
-                new_var_samples = np.zeros((draws,) + shape, self.var_dtypes[varname])
+                new_var_samples = np.zeros((draws, *shape), self.var_dtypes[varname])
                 self.samples[varname] = np.concatenate((old_var_samples, new_var_samples), axis=0)
         else:  # Otherwise, make array of zeros for each variable.
             self.draws = draws
             for varname, shape in self.var_shapes.items():
-                self.samples[varname] = np.zeros((draws,) + shape, dtype=self.var_dtypes[varname])
+                self.samples[varname] = np.zeros((draws, *shape), dtype=self.var_dtypes[varname])
 
         if sampler_vars is None:
             return

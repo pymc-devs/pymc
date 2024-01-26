@@ -570,7 +570,7 @@ def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon
         i = pytensor.shared(pm.floatX(0))
         i_int = i.astype("int32")
         value = param.get_value(borrow=True)
-        accu = pytensor.shared(np.zeros(value.shape + (n_win,), dtype=value.dtype))
+        accu = pytensor.shared(np.zeros((*value.shape, n_win), dtype=value.dtype))
 
         # Append squared gradient vector to accu_new
         accu_new = pt.set_subtensor(accu[..., i_int], grad**2)

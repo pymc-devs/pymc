@@ -285,7 +285,7 @@ class PreserveRVMappings(Feature):
 
 
 @register_canonicalize
-@node_rewriter((Elemwise, Alloc, DimShuffle) + subtensor_ops)
+@node_rewriter((Elemwise, Alloc, DimShuffle, *subtensor_ops))
 def local_lift_DiracDelta(fgraph, node):
     r"""Lift basic `Op`\s through `DiracDelta`\s."""
 

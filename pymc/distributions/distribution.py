@@ -722,7 +722,7 @@ class _CustomSymbolicDist(Distribution):
             error_msg_on_access="Model variables cannot be created in the dist function. Use the `.dist` API"
         ):
             dummy_rv = dist(*dummy_dist_params, dummy_size_param)
-        dummy_params = [dummy_size_param] + dummy_dist_params
+        dummy_params = [dummy_size_param, *dummy_dist_params]
         dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
 
         rv_type = type(
@@ -777,7 +777,7 @@ class _CustomSymbolicDist(Distribution):
             dummy_size_param = new_size.type()
             dummy_dist_params = [dist_param.type() for dist_param in old_dist_params]
             dummy_rv = dist(*dummy_dist_params, dummy_size_param)
-            dummy_params = [dummy_size_param] + dummy_dist_params
+            dummy_params = [dummy_size_param, *dummy_dist_params]
             dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
             new_rv_op = rv_type(
                 inputs=dummy_params,

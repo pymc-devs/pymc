@@ -151,7 +151,7 @@ class BlockedStep(ABC):
                 # call __init__
                 step.__init__([var], *args, **kwargs)
                 # Hack for creating the class correctly when unpickling.
-                step.__newargs = ([var],) + args, kwargs
+                step.__newargs = ([var], *args), kwargs
                 steps.append(step)
 
             return CompoundStep(steps)
@@ -160,7 +160,7 @@ class BlockedStep(ABC):
             step.stats_dtypes = stats_dtypes
             step.stats_dtypes_shapes = stats_dtypes_shapes
             # Hack for creating the class correctly when unpickling.
-            step.__newargs = (vars,) + args, kwargs
+            step.__newargs = (vars, *args), kwargs
             return step
 
     # Hack for creating the class correctly when unpickling.
