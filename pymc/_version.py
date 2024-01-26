@@ -153,7 +153,7 @@ def versions_from_parentdir(parentdir_prefix, root, verbose):
         root = os.path.dirname(root)  # up a level
 
     if verbose:
-        print(f"Tried directories {str(rootdirs)} but none started with prefix {parentdir_prefix}")
+        print(f"Tried directories {rootdirs} but none started with prefix {parentdir_prefix}")
     raise NotThisMethod("rootdir doesn't start with parentdir_prefix")
 
 
