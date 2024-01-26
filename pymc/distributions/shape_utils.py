@@ -420,7 +420,7 @@ def get_support_shape(
     shape: Optional[Shape] = None,
     dims: Optional[Dims] = None,
     observed: Optional[Any] = None,
-    support_shape_offset: Sequence[int] = None,
+    support_shape_offset: Optional[Sequence[int]] = None,
     ndim_supp: int = 1,
 ) -> Optional[TensorVariable]:
     """Extract the support shapes from shape / dims / observed information
