@@ -169,7 +169,7 @@ class ChainRecordAdapter(IBaseTrace):
                 is_ragged = True
                 continue
             else:
-                stats_arrays.append(tuple(sd.values())[0])
+                stats_arrays.append(next(iter(sd.values())))
 
         if is_ragged:
             _log.debug("Stat '%s' was not recorded by all samplers.", stat_name)
