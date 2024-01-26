@@ -583,7 +583,7 @@ class TestCompilePyMC:
             n_steps=10,
         )
 
-        assert collect_default_updates([ys]) == {rng: tuple(next_rng.values())[0]}
+        assert collect_default_updates([ys]) == {rng: next(iter(next_rng.values()))}
 
         fn = compile_pymc([], ys, random_seed=1)
         assert not (set(fn()) & set(fn()))
