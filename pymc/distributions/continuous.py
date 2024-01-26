@@ -2231,8 +2231,8 @@ class Gamma(PositiveContinuous):
     @classmethod
     def dist(cls, alpha=None, beta=None, mu=None, sigma=None, **kwargs):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma)
-        alpha = pt.as_tensor_variable(alpha)
-        beta = pt.as_tensor_variable(beta)
+        alpha = pt.as_tensor_variable(alpha).astype("floatX")
+        beta = pt.as_tensor_variable(beta).astype("floatX")
         # PyTensor gamma op is parametrized in terms of scale (1/beta)
         scale = pt.reciprocal(beta)
         return super().dist([alpha, scale], **kwargs)
