@@ -13,8 +13,6 @@
 #   limitations under the License.
 
 
-from typing import Union
-
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
@@ -623,12 +621,12 @@ def test_univariate_transform_multivariate_dist_raises():
     with pm.Model() as m:
         pm.Dirichlet("x", [1, 1, 1], transform=tr.log)
 
-    for jacobian in (True, False):
+    for jacobian_val in (True, False):
         with pytest.raises(
             NotImplementedError,
             match="Univariate transform LogTransform cannot be applied to multivariate",
         ):
-            m.logp(jacobian=jacobian)
+            m.logp(jacobian=jacobian_val)
 
 
 def test_invalid_jacobian_broadcast_raises():
@@ -649,12 +647,12 @@ def test_invalid_jacobian_broadcast_raises():
     with pm.Model() as m:
         pm.Uniform("x", shape=(4, 3), transform=buggy_transform)
 
-    for jacobian in (True, False):
+    for jacobian_val in (True, False):
         with pytest.raises(
             ValueError,
             match="are not allowed to broadcast together. There is a bug in the implementation of either one",
         ):
-            m.logp(jacobian=jacobian)
+            m.logp(jacobian=jacobian_val)
 
 
 def test_deprecated_ndim_supp_transforms():

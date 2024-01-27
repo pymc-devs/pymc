@@ -33,7 +33,7 @@ git commit -m "wip lol" --no-verify
 To skip one particular hook, you can set the `SKIP` environment variable. E.g. (on Linux):
 
 ```bash
-SKIP=pyupgrade git commit -m "<descriptive message>"
+SKIP=ruff git commit -m "<descriptive message>"
 ```
 
 You can manually run all `pre-commit` hooks on all files with

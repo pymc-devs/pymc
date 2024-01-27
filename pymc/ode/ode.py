@@ -67,6 +67,7 @@ class DifferentialEquation(Op):
         ode_model = DifferentialEquation(func=odefunc, times=times, n_states=1, n_theta=1, t0=0)
 
     """
+
     _itypes = [
         TensorType(floatX, (False,)),  # y0 as 1D floatX vector
         TensorType(floatX, (False,)),  # theta as 1D floatX vector

@@ -1,12 +1,61 @@
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 minversion = "6.0"
-xfail_strict=true
-addopts = [
-    "--color=yes",
+xfail_strict = true
+addopts = ["--color=yes"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["D", "E", "F", "I", "UP", "W"]
+ignore-init-module-imports = true
+ignore = [
+  "E501",
+  "F841", # Local variable name is assigned to but never used
+  "D100",
+  "D101",
+  "D102",
+  "D103",
+  "D104",
+  "D105",
+  "D107",
+  "D200",
+  "D202",
+  "D203",
+  "D204",
+  "D205",
+  "D209",
+  "D212",
+  "D213",
+  "D301",
+  "D400",
+  "D401",
+  "D403",
+  "D413",
+  "D415",
+  "D417",
 ]
 
-[tool.black]
-line-length = 100
+[tool.ruff.lint.isort]
+lines-between-types = 1
+
+[tool.ruff.extend-per-file-ignores]
+"__init__.py" = [
+  "F401", # Module imported but unused
+  "F403", # 'from module import *' used; unable to detect undefined names
+]
+"docs/source/*" = ["D"]
+"pymc/__init__.py" = [
+  "E402", # Module level import not at top of file
+]
+"pymc/stats/__init__.py" = [
+  "E402", # Module level import not at top of file
+]
+"pymc/logprob/__init__.py" = [
+  "I001", # Import block is un-sorted or un-formatted
+]
+"tests/*" = ["D"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -15,7 +64,5 @@ exclude_lines = [
   "if TYPE_CHECKING:",
 ]
 
-[tool.nbqa.mutate]
-isort = 1
-black = 1
-pyupgrade = 1
+[tool.coverage.run]
+omit = ["*examples*"]

@@ -23,36 +23,13 @@ repos:
         - --exclude=scripts/
         - --exclude=binder/
         - --exclude=versioneer.py
-- repo: https://github.com/PyCQA/isort
-  rev: 5.13.2
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.1.14
   hooks:
-    - id: isort
-      name: isort
-- repo: https://github.com/asottile/pyupgrade
-  rev: v3.15.0
-  hooks:
-    - id: pyupgrade
-      args: [--py37-plus]
-- repo: https://github.com/psf/black
-  rev: 23.12.1
-  hooks:
-    - id: black
-    - id: black-jupyter
-- repo: https://github.com/PyCQA/pylint
-  rev: v3.0.3
-  hooks:
-    - id: pylint
-      args: [--rcfile=.pylintrc]
-      files: ^pymc/
-      exclude: (?x)(pymc/_version.py)
-- repo: https://github.com/PyCQA/pydocstyle
-  rev: 6.3.0
-  hooks:
-    - id: pydocstyle
-      args:
-      - --ignore=D100,D101,D102,D103,D104,D105,D107,D200,D202,D203,D204,D205,D209,D212,D213,D301,D400,D401,D403,D413,D415,D417
-      files: ^pymc/
-      exclude: ^pymc/tests/
+    - id: ruff
+      args: ["--fix", "--show-source"]
+    - id: ruff-format
+      args: ["--line-length=100"]
 - repo: https://github.com/MarcoGorelli/madforhooks
   rev: 0.4.1
   hooks:

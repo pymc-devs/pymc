@@ -1005,9 +1005,7 @@ def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
     elif ndim in [3, 4, 5]:  # Conv{1,2,3}DLayer
         sum_over = tuple(range(1, ndim))
     else:
-        raise ValueError(
-            "Unsupported tensor dimensionality {}." "Must specify `norm_axes`".format(ndim)
-        )
+        raise ValueError(f"Unsupported tensor dimensionality {ndim}." "Must specify `norm_axes`")
 
     dtype = np.dtype(pytensor.config.floatX).type
     norms = pt.sqrt(pt.sum(pt.sqr(tensor_var), axis=sum_over, keepdims=True))

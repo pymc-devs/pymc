@@ -273,11 +273,6 @@ https://img.shields.io/travis/com/python-versioneer/python-versioneer.svg
 [travis-url]: https://travis-ci.com/github/python-versioneer/python-versioneer
 
 """
-# pylint:disable=invalid-name,import-outside-toplevel,missing-function-docstring
-# pylint:disable=missing-class-docstring,too-many-branches,too-many-statements
-# pylint:disable=raise-missing-from,too-many-lines,too-many-locals,import-error
-# pylint:disable=too-few-public-methods,redefined-outer-name,consider-using-with
-# pylint:disable=attribute-defined-outside-init,too-many-arguments
 
 import configparser
 import errno
@@ -330,8 +325,7 @@ def get_root():
         vsr_dir = os.path.normcase(os.path.splitext(versioneer_py)[0])
         if me_dir != vsr_dir:
             print(
-                "Warning: build in %s is using versioneer.py from %s"
-                % (os.path.dirname(my_path), versioneer_py)
+                f"Warning: build in {os.path.dirname(my_path)} is using versioneer.py from {versioneer_py}"
             )
     except NameError:
         pass
@@ -432,9 +426,7 @@ def run_command(commands, args, cwd=None, verbose=False, hide_stderr=False, env=
     return stdout, process.returncode
 
 
-LONG_VERSION_PY[
-    "git"
-] = r'''
+LONG_VERSION_PY["git"] = r'''
 # This file helps to compute a version number in source trees obtained from
 # git-archive tarball (such as those provided by githubs download-from-tag
 # feature). Distribution tarballs (built by setup.py sdist) and build
@@ -1391,10 +1383,7 @@ def versions_from_parentdir(parentdir_prefix, root, verbose):
         root = os.path.dirname(root)  # up a level
 
     if verbose:
-        print(
-            "Tried directories %s but none started with prefix %s"
-            % (str(rootdirs), parentdir_prefix)
-        )
+        print(f"Tried directories {str(rootdirs)} but none started with prefix {parentdir_prefix}")
     raise NotThisMethod("rootdir doesn't start with parentdir_prefix")
 
 

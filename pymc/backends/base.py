@@ -197,7 +197,6 @@ class BaseTrace(IBaseTrace):
 
         self.sampler_vars = sampler_vars
 
-    # pylint: disable=unused-argument
     def setup(self, draws, chain, sampler_vars=None) -> None:
         """Perform chain-specific setup.
 

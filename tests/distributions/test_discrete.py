@@ -28,7 +28,7 @@ from pytensor.tensor import TensorVariable
 
 import pymc as pm
 
-from pymc.distributions.discrete import Geometric, _OrderedLogistic, _OrderedProbit
+from pymc.distributions.discrete import _OrderedLogistic, _OrderedProbit
 from pymc.logprob.basic import icdf, logcdf, logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
@@ -842,7 +842,7 @@ class TestDiscreteUniform(BaseTestDistributionRandom):
     pymc_dist_params = {"lower": -1, "upper": 9}
     expected_rv_op_params = {"lower": -1, "upper": 9}
     reference_dist_params = {"lower": -1, "upper": 9}
-    reference_dist = lambda self: ft.partial(
+    reference_dist = lambda self: ft.partial(  # noqa E731
         self.discrete_uniform_rng_fn, rng=self.get_random_state()
     )
     checks_to_run = [

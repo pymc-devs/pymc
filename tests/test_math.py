@@ -24,19 +24,16 @@ from pymc.math import (
     LogDet,
     cartesian,
     expand_packed_triangular,
-    invlogit,
     invprobit,
     kron_dot,
     kron_solve_lower,
     kronecker,
     log1mexp,
     log1mexp_numpy,
-    log_softmax,
     logdet,
     logdiffexp,
     logdiffexp_numpy,
     probit,
-    softmax,
 )
 from pymc.pytensorf import floatX
 from tests.helpers import verify_grad

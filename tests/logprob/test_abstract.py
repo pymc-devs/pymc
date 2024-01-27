@@ -42,7 +42,6 @@ import pytest
 import scipy.stats.distributions as sp
 
 from pytensor.scalar import Exp, exp
-from pytensor.tensor.random.basic import NormalRV
 
 import pymc as pm
 
