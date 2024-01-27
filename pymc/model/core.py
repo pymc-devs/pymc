@@ -1297,7 +1297,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         rv_var : TensorVariable
             The random variable that is observed.
             Its dimensionality must be compatible with the data already.
-        data : ndarray
+        data : array_like
             The observed data.
         dims : tuple
             Dimension names for the variable.
