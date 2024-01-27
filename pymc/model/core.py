@@ -1223,7 +1223,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         rv_var : TensorVariable
         name : str
             Intended name for the model variable.
-        observed : array_like (optional)
+        observed : array_like, optional
             Data values for observed variables.
         total_size : scalar
             upscales logp of variable with ``coef = total_size/var.shape[0]``
