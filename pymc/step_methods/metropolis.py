@@ -134,7 +134,7 @@ class Metropolis(ArrayStepShared):
         tune_interval=100,
         model=None,
         mode=None,
-        **kwargs
+        **kwargs,
     ):
         """Create an instance of a Metropolis stepper
 
@@ -771,7 +771,7 @@ class DEMetropolis(PopulationArrayStepShared):
         tune_interval=100,
         model=None,
         mode=None,
-        **kwargs
+        **kwargs,
     ):
         model = pm.modelcontext(model)
         initial_values = model.initial_point()
@@ -915,7 +915,7 @@ class DEMetropolisZ(ArrayStepShared):
         tune_drop_fraction: float = 0.9,
         model=None,
         mode=None,
-        **kwargs
+        **kwargs,
     ):
         model = pm.modelcontext(model)
         initial_values = model.initial_point()

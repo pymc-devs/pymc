@@ -34,6 +34,7 @@ import pymc as pm
 from pymc.distributions.multivariate import (
     MultivariateIntervalTransform,
     _LKJCholeskyCov,
+    _LKJCorr,
     _OrderedMultinomial,
     posdef,
     quaddist_matrix,
@@ -558,7 +559,7 @@ class TestMatchesScipy:
     @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
     def test_lkjcorr(self, x, eta, n, lp):
         with pm.Model() as model:
-            pm.LKJCorr("lkj", eta=eta, n=n, transform=None)
+            pm.LKJCorr("lkj", eta=eta, n=n, transform=None, return_matrix=False)
 
         point = {"lkj": x}
         decimals = select_by_precision(float64=6, float32=4)
@@ -1330,7 +1331,7 @@ class TestMoments:
     )
     def test_lkjcorr_moment(self, n, eta, size, expected):
         with pm.Model() as model:
-            pm.LKJCorr("x", n=n, eta=eta, size=size)
+            pm.LKJCorr("x", n=n, eta=eta, size=size, return_matrix=False)
         assert_moment_is_expected(model, expected)
 
     @pytest.mark.parametrize(
@@ -1443,11 +1444,9 @@ class TestMvNormalMisc:
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0, size=3)
             sd_dist = pm.Exponential.dist(1.0, size=3)
-            # pylint: disable=unpacking-non-sequence
             chol, _, _ = pm.LKJCholeskyCov(
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
-            # pylint: enable=unpacking-non-sequence
             mv = pm.MvNormal("mv", mu, chol=chol, size=4)
             prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
 
@@ -1459,15 +1458,29 @@ class TestMvNormalMisc:
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0, shape=3)
             sd_dist = pm.Exponential.dist(1.0, shape=3)
-            # pylint: disable=unpacking-non-sequence
             chol, corr, stds = pm.LKJCholeskyCov(
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
-            # pylint: enable=unpacking-non-sequence
             mv = pm.MvNormal("mv", mu, cov=pm.math.dot(chol, chol.T), size=4)
             prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
 
         assert prior["mv"].shape == (10, 4, 3)
+
+    def test_with_lkjcorr_matrix(
+        self,
+    ):
+        with pm.Model() as model:
+            corr = pm.LKJCorr("corr", n=3, eta=2, return_matrix=True)
+            pm.Deterministic("corr_mat", corr)
+            mv = pm.MvNormal("mv", 0.0, cov=corr, size=4)
+            prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
+
+        assert prior["corr_mat"].shape == (10, 3, 3)  # square
+        assert (prior["corr_mat"][:, [0, 1, 2], [0, 1, 2]] == 1.0).all()  # 1.0 on diagonal
+        assert (prior["corr_mat"] == prior["corr_mat"].transpose(0, 2, 1)).all()  # symmetric
+        assert (
+            prior["corr_mat"].max() <= 1.0 and prior["corr_mat"].min() >= -1.0
+        )  # constrained between -1 and 1
 
     def test_issue_3758(self):
         np.random.seed(42)
@@ -1782,7 +1795,7 @@ class TestMvStudentTCov(BaseTestDistributionRandom):
         "mu": np.array([1.0, 2.0]),
         "scale": np.array([[2.0, 0.0], [0.0, 3.5]]),
     }
-    reference_dist = lambda self: ft.partial(self.mvstudentt_rng_fn, rng=self.get_random_state())
+    reference_dist = lambda self: ft.partial(self.mvstudentt_rng_fn, rng=self.get_random_state())  # noqa E731
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -1985,7 +1998,7 @@ class TestWishart(BaseTestDistributionRandom):
         (1, 3, 3),
         (4, 5, 3, 3),
     ]
-    reference_dist = lambda self: ft.partial(self.wishart_rng_fn, rng=self.get_random_state())
+    reference_dist = lambda self: ft.partial(self.wishart_rng_fn, rng=self.get_random_state())  # noqa E731
     checks_to_run = [
         "check_rv_size",
         "check_pymc_params_match_rv_op",
@@ -2114,7 +2127,7 @@ class TestKroneckerNormal(BaseTestDistributionRandom):
     sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
     sizes_expected = [(N,), (N,), (1, N), (1, N), (5, N), (4, 5, N), (2, 4, 2, N)]
 
-    reference_dist = lambda self: ft.partial(self.kronecker_rng_fn, rng=self.get_random_state())
+    reference_dist = lambda self: ft.partial(self.kronecker_rng_fn, rng=self.get_random_state())  # noqa E731
     checks_to_run = [
         "check_pymc_draws_match_reference",
         "check_rv_size",
@@ -2137,7 +2150,7 @@ class TestOrderedMultinomial(BaseTestDistributionRandom):
 
 
 class TestLKJCorr(BaseTestDistributionRandom):
-    pymc_dist = pm.LKJCorr
+    pymc_dist = _LKJCorr
     pymc_dist_params = {"n": 3, "eta": 1.0}
     expected_rv_op_params = {"n": 3, "eta": 1.0}
 
@@ -2165,7 +2178,7 @@ class TestLKJCorr(BaseTestDistributionRandom):
             return (st.beta.rvs(size=(size, shape), a=beta, b=beta) - 0.5) * 2
 
         continuous_random_tester(
-            pm.LKJCorr,
+            _LKJCorr,
             {
                 "n": Domain([2, 10, 50], edges=(None, None)),
                 "eta": Domain([1.0, 10.0, 100.0], edges=(None, None)),
@@ -2190,7 +2203,7 @@ class TestLKJCorr(BaseTestDistributionRandom):
 )
 def test_LKJCorr_default_transform(shape):
     with pm.Model() as m:
-        x = pm.LKJCorr("x", n=2, eta=1, shape=shape)
+        x = pm.LKJCorr("x", n=2, eta=1, shape=shape, return_matrix=False)
     assert isinstance(m.rvs_to_transforms[x], MultivariateIntervalTransform)
     assert m.logp(sum=False)[0].type.shape == shape[:-1]
 
@@ -2370,7 +2383,7 @@ def test_mvnormal_no_cholesky_in_model_logp():
         data = np.ones((batch_size, n))
         pm.MvNormal("y", mu=mu, chol=pt.broadcast_to(chol, (batch_size, n, n)), observed=data)
 
-    contains_cholesky_op = lambda fgraph: any(
+    contains_cholesky_op = lambda fgraph: any(  # noqa E731
         isinstance(node.op, Cholesky) for node in fgraph.apply_nodes
     )
 

@@ -332,7 +332,7 @@ class HSGP(Base):
         omega = pt.sqrt(eigvals)
         psd = self.cov_func.power_spectral_density(omega)
 
-        i = int(self._drop_first == True)
+        i = int(self._drop_first is True)
         return phi[:, i:], pt.sqrt(psd[i:])
 
     def prior(self, name: str, X: TensorLike, dims: Optional[str] = None):  # type: ignore
@@ -382,7 +382,7 @@ class HSGP(Base):
 
         eigvals = calc_eigenvalues(self.L, self._m, tl=pt)
         phi = calc_eigenvectors(Xnew - X_mean, self.L, eigvals, self._m, tl=pt)
-        i = int(self._drop_first == True)
+        i = int(self._drop_first is True)
 
         if self._parameterization == "noncentered":
             return self.mean_func(Xnew) + phi[:, i:] @ (beta * sqrt_psd)

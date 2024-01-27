@@ -112,6 +112,7 @@ class Binomial(Discrete):
     logit_p : tensor_like of float
         Alternative log odds for the probability of success.
     """
+
     rv_op = binomial
 
     @classmethod
@@ -334,6 +335,7 @@ class Bernoulli(Discrete):
     logit_p : tensor_like of float
         Alternative log odds for the probability of success.
     """
+
     rv_op = bernoulli
 
     @classmethod
@@ -450,6 +452,7 @@ class DiscreteWeibull(Discrete):
         Shape parameter (beta > 0).
 
     """
+
     rv_op = discrete_weibull
 
     @classmethod
@@ -539,6 +542,7 @@ class Poisson(Discrete):
     The Poisson distribution can be derived as a limiting case of the
     binomial distribution.
     """
+
     rv_op = poisson
 
     @classmethod
@@ -662,6 +666,7 @@ class NegativeBinomial(Discrete):
     n : tensor_like of float
         Alternative number of target success trials (n > 0)
     """
+
     rv_op = nbinom
 
     @classmethod
@@ -1108,6 +1113,7 @@ class Categorical(Discrete):
     logit_p : float
         Alternative log odds for the probability of success.
     """
+
     rv_op = categorical
 
     @classmethod
@@ -1183,6 +1189,7 @@ class _OrderedLogistic(Categorical):
     Underlying class for ordered logistic distributions.
     See docs for the OrderedLogistic wrapper class for more details on how to use it in models.
     """
+
     rv_op = categorical
 
     @classmethod
@@ -1289,6 +1296,7 @@ class _OrderedProbit(Categorical):
     Underlying class for ordered probit distributions.
     See docs for the OrderedProbit wrapper class for more details on how to use it in models.
     """
+
     rv_op = categorical
 
     @classmethod

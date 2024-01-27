@@ -123,9 +123,7 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
             \begin{{array}}{{rcl}}
             {}
             \end{{array}}
-            $$""".format(
-            "\\\\".join(var_reprs)
-        )
+            $$""".format("\\\\".join(var_reprs))
     else:
         # align vars on their ~
         names = [s[: s.index("~") - 1] for s in var_reprs]

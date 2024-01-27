@@ -52,9 +52,8 @@ fast_unstable_sampling_mode = (
     # Remove slow rewrite phases
     .excluding("canonicalize", "specialize")
     # Include necessary rewrites for proper logp handling
-    .including("remove_TransformedVariables").register(
-        (in2out(local_check_parameter_to_ninf_switch), -1)
-    )
+    .including("remove_TransformedVariables")
+    .register((in2out(local_check_parameter_to_ninf_switch), -1))
 )
 
 
@@ -62,11 +61,12 @@ def product(domains, n_samples=-1):
     """Get an iterator over a product of domains.
 
     Args:
+    ----
         domains: a dictionary of (name, object) pairs, where the objects
                  must be "domain-like", as in, have a `.vals` property
         n_samples: int, maximum samples to return.  -1 to return whole product
 
-    Returns
+    Returns:
     -------
         list of the cartesian product of the domains
     """
@@ -212,7 +212,7 @@ Runif = Domain([-np.inf, -0.4, 0, 0.4, np.inf])
 Rdunif = Domain([-np.inf, -1, 0, 1, np.inf], "int64")
 Rplusunif = Domain([0, 0.5, np.inf])
 Rplusdunif = Domain([0, 10, np.inf], "int64")
-I = Domain([-np.inf, -3, -2, -1, 0, 1, 2, 3, np.inf], "int64")
+I = Domain([-np.inf, -3, -2, -1, 0, 1, 2, 3, np.inf], "int64")  # noqa E741
 NatSmall = Domain([0, 3, 4, 5, np.inf], "int64")
 Nat = Domain([0, 1, 2, 3, np.inf], "int64")
 NatBig = Domain([0, 1, 2, 3, 5000, np.inf], "int64")
@@ -270,7 +270,7 @@ def create_dist_from_paramdomains(
 
 
 def find_invalid_scalar_params(
-    paramdomains: Dict["str", Domain]
+    paramdomains: Dict["str", Domain],
 ) -> Dict["str", Tuple[Union[None, float], Union[None, float]]]:
     """Find invalid parameter values from bounded scalar parameter domains.
 

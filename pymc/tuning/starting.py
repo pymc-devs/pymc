@@ -52,7 +52,7 @@ def find_MAP(
     model=None,
     *args,
     seed: Optional[int] = None,
-    **kwargs
+    **kwargs,
 ):
     """Finds the local maximum a posteriori point given a model.
 
@@ -132,7 +132,7 @@ def find_MAP(
     # TODO: If the mapping is fixed, we can simply create graphs for the
     # mapping and avoid all this bijection overhead
     compiled_logp_func = DictToArrayBijection.mapf(model.compile_logp(jacobian=False), start)
-    logp_func = lambda x: compiled_logp_func(RaveledVars(x, x0.point_map_info))
+    logp_func = lambda x: compiled_logp_func(RaveledVars(x, x0.point_map_info))  # noqa E731
 
     rvs = [model.values_to_rvs[vars_dict[name]] for name, _, _ in x0.point_map_info]
     try:
@@ -141,7 +141,7 @@ def find_MAP(
         compiled_dlogp_func = DictToArrayBijection.mapf(
             model.compile_dlogp(rvs, jacobian=False), start
         )
-        dlogp_func = lambda x: compiled_dlogp_func(RaveledVars(x, x0.point_map_info))
+        dlogp_func = lambda x: compiled_dlogp_func(RaveledVars(x, x0.point_map_info))  # noqa E731
         compute_gradient = True
     except (AttributeError, NotImplementedError, tg.NullTypeGradError):
         compute_gradient = False

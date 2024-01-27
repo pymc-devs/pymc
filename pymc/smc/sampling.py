@@ -25,7 +25,7 @@ import cloudpickle
 import numpy as np
 
 from arviz import InferenceData
-from fastprogress.fastprogress import progress_bar
+from fastprogress.fastprogress import force_console_behavior, progress_bar
 
 import pymc
 
@@ -314,7 +314,7 @@ def _sample_smc_int(
     **kernel_kwargs,
 ):
     """Run one SMC instance."""
-    in_out_pickled = type(model) == bytes
+    in_out_pickled = isinstance(model, bytes)
     if in_out_pickled:
         # function was called in multiprocessing context, deserialize first
         (draws, kernel, start, model) = map(
@@ -376,6 +376,8 @@ def _sample_smc_int(
 
 
 def run_chains_parallel(chains, progressbar, to_run, params, random_seed, kernel_kwargs, cores):
+    # fastprogress HTML progress bar does not support multiprocessing
+    _, progress_bar = force_console_behavior()
     pbar = progress_bar((), total=100, display=progressbar)
     pbar.update(0)
     pbars = [pbar] + [None] * (chains - 1)

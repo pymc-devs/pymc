@@ -69,14 +69,14 @@ def from_yaml():
         for os_, floatX, subset in itertools.product(
             matrix["os"], matrix["floatx"], matrix["test-subset"]
         ):
-            lines = [l for l in subset.split("\n") if l]
+            lines = [k for k in subset.split("\n") if k]
             if "windows" in os_:
                 # Windows jobs need \ in line breaks within the test-subset!
                 # The following checks that these trailing \ are present in
                 # all items except the last.
                 if lines and lines[-1].endswith(" \\"):
                     raise Exception(
-                        f"Last entry '{line}' in Windows test subset should end WITHOUT ' \\'."
+                        f"Last entry '{lines}' in Windows test subset should end WITHOUT ' \\'."
                     )
                 for line in lines[:-1]:
                     if not line.endswith(" \\"):

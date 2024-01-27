@@ -303,6 +303,7 @@ class Uniform(BoundedContinuous):
     upper : tensor_like of float, default 1
         Upper limit.
     """
+
     rv_op = uniform
     bound_args_indices = (3, 4)  # Lower, Upper
 
@@ -508,6 +509,7 @@ class Normal(Continuous):
         with pm.Model():
             x = pm.Normal('x', mu=0, tau=1/23)
     """
+
     rv_op = normal
 
     @classmethod
@@ -841,6 +843,7 @@ class HalfNormal(PositiveContinuous):
         with pm.Model():
             x = pm.HalfNormal('x', tau=1/15)
     """
+
     rv_op = halfnormal
 
     @classmethod
@@ -984,6 +987,7 @@ class Wald(PositiveContinuous):
     .. [Giner2016] Göknur Giner, Gordon K. Smyth (2016)
        statmod: Probability Calculations for the Inverse Gaussian Distribution
     """
+
     rv_op = wald
 
     @classmethod
@@ -1050,11 +1054,11 @@ class Wald(PositiveContinuous):
     def logcdf(value, mu, lam, alpha):
         value -= alpha
         q = value / mu
-        l = lam * mu
+        ell = lam * mu
         r = pt.sqrt(value * lam)
 
         a = normal_lcdf(0, 1, (q - 1.0) / r)
-        b = 2.0 / l + normal_lcdf(0, 1, -(q + 1.0) / r)
+        b = 2.0 / ell + normal_lcdf(0, 1, -(q + 1.0) / r)
 
         logcdf = pt.switch(
             pt.le(value, 0),
@@ -1295,6 +1299,7 @@ class Kumaraswamy(UnitContinuous):
     b : tensor_like of float
         b > 0.
     """
+
     rv_op = kumaraswamy
 
     @classmethod
@@ -1383,6 +1388,7 @@ class Exponential(PositiveContinuous):
     scale: tensor_like of float
         Alternative parameter (scale = 1/lam).
     """
+
     rv_op = exponential
 
     @classmethod
@@ -1480,6 +1486,7 @@ class Laplace(Continuous):
     b : tensor_like of float
         Scale parameter (b > 0).
     """
+
     rv_op = laplace
 
     @classmethod
@@ -1595,6 +1602,7 @@ class AsymmetricLaplace(Continuous):
     The parametrization in terms of q is useful for quantile regression with q being the quantile
     of interest.
     """
+
     rv_op = asymmetriclaplace
 
     @classmethod
@@ -1826,6 +1834,7 @@ class StudentT(Continuous):
         with pm.Model():
             x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
     """
+
     rv_op = t
 
     @classmethod
@@ -1922,6 +1931,7 @@ class Pareto(BoundedContinuous):
     m : tensor_like of float
         Scale parameter (m > 0).
     """
+
     rv_op = pareto
     bound_args_indices = (4, None)  # lower-bounded by `m`
 
@@ -2030,6 +2040,7 @@ class Cauchy(Continuous):
     beta : tensor_like of float
         Scale parameter > 0.
     """
+
     rv_op = cauchy
 
     @classmethod
@@ -2110,6 +2121,7 @@ class HalfCauchy(PositiveContinuous):
     beta : tensor_like of float
         Scale parameter (beta > 0).
     """
+
     rv_op = halfcauchy
 
     @classmethod
@@ -2213,6 +2225,7 @@ class Gamma(PositiveContinuous):
     sigma : tensor_like of float, optional
         Alternative scale parameter (sigma > 0).
     """
+
     # gamma is temporarily a deprecation wrapper in PyTensor
     rv_op = _gamma
 
@@ -2321,6 +2334,7 @@ class InverseGamma(PositiveContinuous):
     sigma : tensor_like of float, optional
         Alternative scale parameter (sigma > 0).
     """
+
     rv_op = invgamma
 
     @classmethod
@@ -2635,6 +2649,7 @@ class HalfStudentT(PositiveContinuous):
         with pm.Model():
             x = pm.HalfStudentT('x', lam=4, nu=10)
     """
+
     rv_op = halfstudentt
 
     @classmethod
@@ -2755,6 +2770,7 @@ class ExGaussian(Continuous):
         Tutorials in Quantitative Methods for Psychology,
         Vol. 4, No. 1, pp 35-45.
     """
+
     rv_op = exgaussian
 
     @classmethod
@@ -2962,6 +2978,7 @@ class SkewNormal(Continuous):
     approaching plus/minus infinite we get a half-normal distribution.
 
     """
+
     rv_op = skewnormal
 
     @classmethod
@@ -3177,6 +3194,7 @@ class Gumbel(Continuous):
     beta : tensor_like of float
         Scale parameter (beta > 0).
     """
+
     rv_op = gumbel
 
     @classmethod
@@ -3295,6 +3313,7 @@ class Rice(PositiveContinuous):
        b = \dfrac{\nu}{\sigma}
 
     """
+
     rv_op = rice
 
     @classmethod
@@ -3499,6 +3518,7 @@ class LogitNormal(UnitContinuous):
         Scale parameter (tau > 0).
         Defaults to 1.
     """
+
     rv_op = logit_normal
 
     @classmethod
@@ -3741,6 +3761,7 @@ class Moyal(Continuous):
     sigma : tensor_like of float, default 1
         Scale parameter (sigma > 0).
     """
+
     rv_op = moyal
 
     @classmethod
@@ -3939,6 +3960,7 @@ class PolyaGamma(PositiveContinuous):
            from logistic likelihoods.(PhD thesis). Retrieved from
            http://hdl.handle.net/2152/21842
     """
+
     rv_op = polyagamma
 
     @classmethod

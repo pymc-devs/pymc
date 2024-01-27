@@ -15,7 +15,7 @@
 import logging
 import warnings
 
-from typing import (  # pylint: disable=unused-import
+from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
@@ -23,7 +23,6 @@ from typing import (  # pylint: disable=unused-import
     List,
     Mapping,
     Optional,
-    Sequence,
     Tuple,
     Union,
 )
@@ -42,14 +41,14 @@ from pymc.pytensorf import extract_obs_data
 from pymc.util import get_default_varnames
 
 if TYPE_CHECKING:
-    from pymc.backends.base import MultiTrace  # pylint: disable=invalid-name
+    from pymc.backends.base import MultiTrace
 
 ___all__ = [""]
 
 _log = logging.getLogger(__name__)
 
 # random variable object ...
-Var = Any  # pylint: disable=invalid-name
+Var = Any
 
 
 def find_observations(model: "Model") -> Dict[str, Var]:
@@ -164,7 +163,7 @@ class _DefaultTrace:
             self.trace_dict[k][idx, :] = v
 
 
-class InferenceDataConverter:  # pylint: disable=too-many-instance-attributes
+class InferenceDataConverter:
     """Encapsulate InferenceData specific logic."""
 
     model: Optional[Model] = None
