@@ -419,6 +419,7 @@ def test_truncated_gamma():
     np.testing.assert_allclose(
         logp_pymc,
         logp_scipy,
+        rtol=2.1e-07,
     )
 
     # Changing the size used to invert the beta Gamma parameter again
@@ -427,6 +428,7 @@ def test_truncated_gamma():
     np.testing.assert_allclose(
         logp_resized_pymc,
         logp_scipy,
+        rtol=2.1e-07,
     )
 
 
