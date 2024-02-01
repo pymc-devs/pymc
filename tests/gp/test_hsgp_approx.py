@@ -264,20 +264,23 @@ class TestHSGPPeriodic(_BaseFixtures):
             cov_func = pm.gp.cov.Periodic(2, period=1, ls=[1, 2])
             pm.gp.HSGPPeriodic(m=500, scale=0.5, cov_func=cov_func)
 
+    @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
     @pytest.mark.parametrize("drop_first", [True, False])
     def test_parametrization_drop_first(self, model, cov_func, X1, drop_first):
         n_basis = 101
         with model:
             gp = pm.gp.HSGPPeriodic(m=n_basis, scale=1.0, drop_first=drop_first, cov_func=cov_func)
             gp.prior("f1", X1)
-
-            n_coeffs = model.f1_hsgp_coeffs_.type.shape[0]
+            first_cos_zero = gp._beta_cos[0].eval() == 0.0
+            first_sin_zero = gp._beta_sin[0].eval() == 0.0
             if drop_first:
                 assert (
-                    n_coeffs == n_basis - 1
-                ), f"one basis vector should have been dropped, {n_coeffs}"
+                    first_cos_zero and first_sin_zero
+                ), "First element of both coefficient vectors should be zero."
             else:
-                assert n_coeffs == n_basis, "one was dropped when it shouldn't have been"
+                assert (
+                    not first_cos_zero and first_sin_zero
+                ), "Only the first element of the sine coefficent vectors should be zero."
 
     @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
     @pytest.mark.parametrize("eta", [2.0])
