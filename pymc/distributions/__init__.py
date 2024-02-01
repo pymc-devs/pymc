@@ -115,7 +115,7 @@ from pymc.distributions.truncated import Truncated
 
 # no dispatched stats are being initialized
 # isort: off
-import pymc.distributions._stats
+import pymc.distributions.stats
 
 # isort: on
 
