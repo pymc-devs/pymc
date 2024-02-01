@@ -56,7 +56,8 @@ traceplot = alias_deprecation(az.plot_trace, alias="traceplot")
 compareplot = alias_deprecation(az.plot_compare, alias="compareplot")
 
 
-__all__ = tuple(az.plots.__all__) + (
+__all__ = (
+    *az.plots.__all__,
     "autocorrplot",
     "compareplot",
     "forestplot",

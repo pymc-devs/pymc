@@ -71,7 +71,7 @@ def test_factorized_joint_logprob_basic():
     a_value_var = a.clone()
 
     a_logp = conditional_logp({a: a_value_var})
-    a_logp_comb = tuple(a_logp.values())[0]
+    a_logp_comb = next(iter(a_logp.values()))
     a_logp_exp = logp(a, a_value_var)
 
     assert equal_computations([a_logp_comb], [a_logp_exp])

@@ -767,7 +767,7 @@ class TestAssignStepMethods:
         assert not isinstance(steps, NUTS)
 
         # add back nuts
-        pm.STEP_METHODS = step_methods + [NUTS]
+        pm.STEP_METHODS = [*step_methods, NUTS]
 
         with pm.Model() as model:
             pm.Normal("x", 0, 1)

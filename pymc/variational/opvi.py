@@ -1511,7 +1511,7 @@ class Approximation(WithMemoization):
         ):
             if name in vars_names(vars_):
                 name_, slc, shape, dtype = ordering[name]
-                found = random[..., slc].reshape((random.shape[0],) + shape).astype(dtype)
+                found = random[..., slc].reshape((random.shape[0], *shape)).astype(dtype)
                 found.name = name + "_vi_random_slice"
                 break
         else:

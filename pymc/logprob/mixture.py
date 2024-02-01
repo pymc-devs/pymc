@@ -34,7 +34,7 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from typing import List, Optional, Tuple, Union, cast
+from typing import Optional, Union, cast
 
 import pytensor
 import pytensor.tensor as pt
@@ -87,8 +87,8 @@ def is_newaxis(x):
 
 
 def expand_indices(
-    indices: Tuple[Optional[Union[Variable, slice]], ...], shape: Tuple[TensorVariable]
-) -> Tuple[TensorVariable]:
+    indices: tuple[Optional[Union[Variable, slice]], ...], shape: tuple[TensorVariable]
+) -> tuple[TensorVariable]:
     """Convert basic and/or advanced indices into a single, broadcasted advanced indexing operation.
 
     Parameters
@@ -201,7 +201,7 @@ def expand_indices(
 
         adv_indices.append(expanded_idx)
 
-    return cast(Tuple[TensorVariable], tuple(pt.broadcast_arrays(*adv_indices)))
+    return cast(tuple[TensorVariable], tuple(pt.broadcast_arrays(*adv_indices)))
 
 
 def rv_pull_down(x: TensorVariable) -> TensorVariable:
@@ -240,7 +240,7 @@ MeasurableVariable.register(MixtureRV)
 
 def get_stack_mixture_vars(
     node: Apply,
-) -> Tuple[Optional[List[TensorVariable]], Optional[int]]:
+) -> tuple[Optional[list[TensorVariable]], Optional[int]]:
     r"""Extract the mixture terms from a `*Subtensor*` applied to stacked `MeasurableVariable`\s."""
 
     assert isinstance(node.op, subtensor_ops)
@@ -310,7 +310,7 @@ def find_measurable_index_mixture(fgraph, node):
         old_mixture_rv.dtype,
         old_mixture_rv.broadcastable,
     )
-    new_node = mix_op.make_node(*([join_axis] + mixing_indices + mixture_rvs))
+    new_node = mix_op.make_node(*([join_axis, *mixing_indices, *mixture_rvs]))
 
     new_mixture_rv = new_node.default_output()
 

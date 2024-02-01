@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Optional
 
 import numpy as np
 import numpy.random as nr
@@ -232,7 +232,7 @@ class Metropolis(ArrayStepShared):
         self.accepted_sum[:] = 0
         return
 
-    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, StatsType]:
+    def astep(self, q0: RaveledVars) -> tuple[RaveledVars, StatsType]:
         point_map_info = q0.point_map_info
         q0d = q0.data
 
@@ -384,7 +384,7 @@ class BinaryMetropolis(ArrayStep):
 
         super().__init__(vars, [model.compile_logp()])
 
-    def astep(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+    def astep(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         logp = args[0]
         logp_q0 = logp(apoint)
         point_map_info = apoint.point_map_info
@@ -494,7 +494,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         # There are no tuning parameters in this step method.
         return
 
-    def astep(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+    def astep(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         logp: Callable[[RaveledVars], np.ndarray] = args[0]
         order = self.order
         if self.shuffle_dims:
@@ -621,7 +621,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
         # There are no tuning parameters in this step method.
         return
 
-    def astep_unif(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+    def astep_unif(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         logp = args[0]
         point_map_info = apoint.point_map_info
         q0 = apoint.data
@@ -645,7 +645,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
         }
         return q, [stats]
 
-    def astep_prop(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+    def astep_prop(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         logp = args[0]
         point_map_info = apoint.point_map_info
         q0 = apoint.data
@@ -662,7 +662,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         return q, []
 
-    def astep(self, apoint: RaveledVars, *args) -> Tuple[RaveledVars, StatsType]:
+    def astep(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         raise NotImplementedError()
 
     def metropolis_proportional(self, q, logp, logp_curr, dim, k):
@@ -808,7 +808,7 @@ class DEMetropolis(PopulationArrayStepShared):
         self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
         super().__init__(vars, shared)
 
-    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, StatsType]:
+    def astep(self, q0: RaveledVars) -> tuple[RaveledVars, StatsType]:
         point_map_info = q0.point_map_info
         q0d = q0.data
 
@@ -949,7 +949,7 @@ class DEMetropolisZ(ArrayStepShared):
         self.accepted = 0
 
         # cache local history for the Z-proposals
-        self._history: List[np.ndarray] = []
+        self._history: list[np.ndarray] = []
         # remember initial settings before tuning so they can be reset
         self._untuned_settings = dict(
             scaling=self.scaling,
@@ -972,7 +972,7 @@ class DEMetropolisZ(ArrayStepShared):
             setattr(self, attr, initial_value)
         return
 
-    def astep(self, q0: RaveledVars) -> Tuple[RaveledVars, StatsType]:
+    def astep(self, q0: RaveledVars) -> tuple[RaveledVars, StatsType]:
         point_map_info = q0.point_map_info
         q0d = q0.data
 
@@ -1047,10 +1047,10 @@ def sample_except(limit, excluded):
 
 
 def delta_logp(
-    point: Dict[str, np.ndarray],
+    point: dict[str, np.ndarray],
     logp: pt.TensorVariable,
-    vars: List[pt.TensorVariable],
-    shared: Dict[pt.TensorVariable, pt.sharedvar.TensorSharedVariable],
+    vars: list[pt.TensorVariable],
+    shared: dict[pt.TensorVariable, pt.sharedvar.TensorSharedVariable],
 ) -> pytensor.compile.Function:
     [logp0], inarray0 = join_nonshared_inputs(
         point=point, outputs=[logp], inputs=vars, shared_inputs=shared

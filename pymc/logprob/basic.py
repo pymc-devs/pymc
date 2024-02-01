@@ -37,7 +37,8 @@
 import warnings
 
 from collections import deque
-from typing import Dict, List, Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Optional, Union
 
 import numpy as np
 import pytensor.tensor as pt
@@ -407,12 +408,12 @@ RVS_IN_JOINT_LOGP_GRAPH_MSG = (
 
 
 def conditional_logp(
-    rv_values: Dict[TensorVariable, TensorVariable],
+    rv_values: dict[TensorVariable, TensorVariable],
     warn_rvs=None,
     ir_rewriter: Optional[GraphRewriter] = None,
     extra_rewrites: Optional[Union[GraphRewriter, NodeRewriter]] = None,
     **kwargs,
-) -> Dict[TensorVariable, TensorVariable]:
+) -> dict[TensorVariable, TensorVariable]:
     r"""Create a map between variables and conditional log-probabilities
     such that the sum is their joint log-probability.
 
@@ -586,11 +587,11 @@ def conditional_logp(
 def transformed_conditional_logp(
     rvs: Sequence[TensorVariable],
     *,
-    rvs_to_values: Dict[TensorVariable, TensorVariable],
-    rvs_to_transforms: Dict[TensorVariable, Transform],
+    rvs_to_values: dict[TensorVariable, TensorVariable],
+    rvs_to_transforms: dict[TensorVariable, Transform],
     jacobian: bool = True,
     **kwargs,
-) -> List[TensorVariable]:
+) -> list[TensorVariable]:
     """Thin wrapper around conditional_logprob, which creates a value transform rewrite.
 
     This helper will only return the subset of logprob terms corresponding to `rvs`.

@@ -14,8 +14,6 @@
 import logging
 import warnings
 
-from typing import Tuple
-
 import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
@@ -1029,7 +1027,7 @@ class TestSamplePPC:
 
 
 @pytest.fixture(scope="class")
-def point_list_arg_bug_fixture() -> Tuple[pm.Model, pm.backends.base.MultiTrace]:
+def point_list_arg_bug_fixture() -> tuple[pm.Model, pm.backends.base.MultiTrace]:
     with pm.Model() as pmodel:
         n = pm.Normal("n")
         trace = pm.sample(return_inferencedata=False)
@@ -1071,8 +1069,8 @@ class TestSamplePriorPredictive:
                 )
             if shape == 2:  # want to test shape as an int
                 shape = (2,)
-            assert trace1["goals"].shape == (10,) + shape
-            assert trace2["goals"].shape == (10,) + shape
+            assert trace1["goals"].shape == (10, *shape)
+            assert trace2["goals"].shape == (10, *shape)
 
     def test_multivariate(self):
         with pm.Model():
@@ -1102,8 +1100,8 @@ class TestSamplePriorPredictive:
             burned_trace, return_inferencedata=False, model=dm_model
         )
         assert sim_priors["probs"].shape == (20, 6)
-        assert sim_priors["obs"].shape == (20,) + mn_data.shape
-        assert sim_ppc["obs"].shape == (1, 20) + mn_data.shape
+        assert sim_priors["obs"].shape == (20, *mn_data.shape)
+        assert sim_ppc["obs"].shape == (1, 20, *mn_data.shape)
 
     def test_layers(self):
         with pm.Model() as model:
@@ -1418,7 +1416,7 @@ class TestNestedRandom:
             nested_rvs_info=dict(mu=mu, alpha=alpha),
             prior_samples=prior_samples,
         )
-        assert prior["target"].shape == (prior_samples,) + shape
+        assert prior["target"].shape == (prior_samples, *shape)
 
     @pytest.mark.parametrize(
         ["prior_samples", "shape", "psi", "mu", "alpha"],
@@ -1464,7 +1462,7 @@ class TestNestedRandom:
             nested_rvs_info=dict(psi=psi, mu=mu, alpha=alpha),
             prior_samples=prior_samples,
         )
-        assert prior["target"].shape == (prior_samples,) + shape
+        assert prior["target"].shape == (prior_samples, *shape)
 
     @pytest.mark.parametrize(
         ["prior_samples", "shape", "nu", "sigma"],
@@ -1507,7 +1505,7 @@ class TestNestedRandom:
             nested_rvs_info=dict(nu=nu, sigma=sigma),
             prior_samples=prior_samples,
         )
-        assert prior["target"].shape == (prior_samples,) + shape
+        assert prior["target"].shape == (prior_samples, *shape)
 
     @pytest.mark.parametrize(
         ["prior_samples", "shape", "mu", "sigma", "lower", "upper"],
@@ -1582,7 +1580,7 @@ class TestNestedRandom:
             nested_rvs_info=dict(mu=mu, sigma=sigma, lower=lower, upper=upper),
             prior_samples=prior_samples,
         )
-        assert prior["target"].shape == (prior_samples,) + shape
+        assert prior["target"].shape == (prior_samples, *shape)
 
     @pytest.mark.parametrize(
         ["prior_samples", "shape", "c", "lower", "upper"],
@@ -1627,7 +1625,7 @@ class TestNestedRandom:
             nested_rvs_info=dict(c=c, lower=lower, upper=upper),
             prior_samples=prior_samples,
         )
-        assert prior["target"].shape == (prior_samples,) + shape
+        assert prior["target"].shape == (prior_samples, *shape)
 
 
 def test_get_vars_in_point_list():

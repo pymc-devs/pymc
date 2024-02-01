@@ -19,8 +19,9 @@ samples from probability distributions for stochastic nodes in PyMC.
 """
 import warnings
 
+from collections.abc import Sequence
 from functools import singledispatch
-from typing import Any, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Optional, Union, cast
 
 import numpy as np
 
@@ -175,9 +176,9 @@ Dims: TypeAlias = Union[str, Sequence[Optional[str]]]
 Size: TypeAlias = Union[int, TensorVariable, Sequence[Union[int, Variable]]]
 
 # After conversion to vectors
-StrongShape: TypeAlias = Union[TensorVariable, Tuple[Union[int, Variable], ...]]
+StrongShape: TypeAlias = Union[TensorVariable, tuple[Union[int, Variable], ...]]
 StrongDims: TypeAlias = Sequence[Optional[str]]
-StrongSize: TypeAlias = Union[TensorVariable, Tuple[Union[int, Variable], ...]]
+StrongSize: TypeAlias = Union[TensorVariable, tuple[Union[int, Variable], ...]]
 
 
 def convert_dims(dims: Optional[Dims]) -> Optional[StrongDims]:
@@ -419,7 +420,7 @@ def get_support_shape(
     shape: Optional[Shape] = None,
     dims: Optional[Dims] = None,
     observed: Optional[Any] = None,
-    support_shape_offset: Sequence[int] = None,
+    support_shape_offset: Optional[Sequence[int]] = None,
     ndim_supp: int = 1,
 ) -> Optional[TensorVariable]:
     """Extract the support shapes from shape / dims / observed information

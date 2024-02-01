@@ -18,8 +18,9 @@ import types
 import warnings
 
 from abc import ABCMeta
+from collections.abc import Sequence
 from functools import singledispatch
-from typing import Callable, Optional, Sequence, Tuple, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 
@@ -255,7 +256,7 @@ class SymbolicRandomVariable(OpFromGraph):
     If `False`, a logprob function must be dispatched directly to the subclass type.
     """
 
-    _print_name: Tuple[str, str] = ("Unknown", "\\operatorname{Unknown}")
+    _print_name: tuple[str, str] = ("Unknown", "\\operatorname{Unknown}")
     """Tuple of (name, latex name) used for for pretty-printing variables of this type"""
 
     def __init__(self, *args, ndim_supp, **kwargs):
@@ -721,7 +722,7 @@ class _CustomSymbolicDist(Distribution):
             error_msg_on_access="Model variables cannot be created in the dist function. Use the `.dist` API"
         ):
             dummy_rv = dist(*dummy_dist_params, dummy_size_param)
-        dummy_params = [dummy_size_param] + dummy_dist_params
+        dummy_params = [dummy_size_param, *dummy_dist_params]
         dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
 
         rv_type = type(
@@ -776,7 +777,7 @@ class _CustomSymbolicDist(Distribution):
             dummy_size_param = new_size.type()
             dummy_dist_params = [dist_param.type() for dist_param in old_dist_params]
             dummy_rv = dist(*dummy_dist_params, dummy_size_param)
-            dummy_params = [dummy_size_param] + dummy_dist_params
+            dummy_params = [dummy_size_param, *dummy_dist_params]
             dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
             new_rv_op = rv_type(
                 inputs=dummy_params,
@@ -1244,8 +1245,8 @@ class PartialObservedRV(SymbolicRandomVariable):
 def create_partial_observed_rv(
     rv: TensorVariable,
     mask: Union[np.ndarray, TensorVariable],
-) -> Tuple[
-    Tuple[TensorVariable, TensorVariable], Tuple[TensorVariable, TensorVariable], TensorVariable
+) -> tuple[
+    tuple[TensorVariable, TensorVariable], tuple[TensorVariable, TensorVariable], TensorVariable
 ]:
     """Separate observed and unobserved components of a RandomVariable.
 

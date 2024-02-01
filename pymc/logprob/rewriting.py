@@ -36,7 +36,8 @@
 import warnings
 
 from collections import deque
-from typing import Dict, List, Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Optional
 
 import pytensor.tensor as pt
 
@@ -208,7 +209,7 @@ class PreserveRVMappings(Feature):
 
     """
 
-    def __init__(self, rv_values: Dict[TensorVariable, TensorVariable]):
+    def __init__(self, rv_values: dict[TensorVariable, TensorVariable]):
         """
         Parameters
         ----------
@@ -270,7 +271,7 @@ class PreserveRVMappings(Feature):
             if new_r.name is None:
                 new_r.name = r.name
 
-    def request_measurable(self, vars: Sequence[Variable]) -> List[Variable]:
+    def request_measurable(self, vars: Sequence[Variable]) -> list[Variable]:
         measurable = []
         for var in vars:
             # Input vars or valued vars can't be measured for derived expressions
@@ -284,7 +285,7 @@ class PreserveRVMappings(Feature):
 
 
 @register_canonicalize
-@node_rewriter((Elemwise, Alloc, DimShuffle) + subtensor_ops)
+@node_rewriter((Elemwise, Alloc, DimShuffle, *subtensor_ops))
 def local_lift_DiracDelta(fgraph, node):
     r"""Lift basic `Op`\s through `DiracDelta`\s."""
 
@@ -397,9 +398,9 @@ cleanup_ir_rewrites_db.register("remove_DiracDelta", remove_DiracDelta, "cleanup
 
 
 def construct_ir_fgraph(
-    rv_values: Dict[Variable, Variable],
+    rv_values: dict[Variable, Variable],
     ir_rewriter: Optional[GraphRewriter] = None,
-) -> Tuple[FunctionGraph, Dict[Variable, Variable], Dict[Variable, Variable]]:
+) -> tuple[FunctionGraph, dict[Variable, Variable], dict[Variable, Variable]]:
     r"""Construct a `FunctionGraph` in measurable IR form for the keys in `rv_values`.
 
     A custom IR rewriter can be specified. By default,

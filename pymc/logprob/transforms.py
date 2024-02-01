@@ -35,7 +35,7 @@
 #   SOFTWARE.
 import abc
 
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 import pytensor.tensor as pt
@@ -130,7 +130,7 @@ class Transform(abc.ABC):
     @abc.abstractmethod
     def backward(
         self, value: TensorVariable, *inputs: Variable
-    ) -> Union[TensorVariable, Tuple[TensorVariable, ...]]:
+    ) -> Union[TensorVariable, tuple[TensorVariable, ...]]:
         """Invert the transformation. Multiple values may be returned when the
         transformation is not 1-to-1"""
 
@@ -411,7 +411,7 @@ def measurable_power_exponent_to_exp(fgraph, node):
         erfcx,
     ]
 )
-def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[List[Node]]:
+def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[list[Node]]:
     """Find measurable transformations from Elemwise operators."""
 
     # Node was already converted
@@ -443,7 +443,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[Li
 
     scalar_op = node.op.scalar_op
     measurable_input_idx = 0
-    transform_inputs: Tuple[TensorVariable, ...] = (measurable_input,)
+    transform_inputs: tuple[TensorVariable, ...] = (measurable_input,)
     transform: Transform
 
     transform_dict = {
@@ -804,7 +804,7 @@ class PowerTransform(Transform):
 class IntervalTransform(Transform):
     name = "interval"
 
-    def __init__(self, args_fn: Callable[..., Tuple[Optional[Variable], Optional[Variable]]]):
+    def __init__(self, args_fn: Callable[..., tuple[Optional[Variable], Optional[Variable]]]):
         """
 
         Parameters

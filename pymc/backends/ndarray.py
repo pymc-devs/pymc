@@ -18,7 +18,7 @@ Store sampling values in memory as a NumPy array.
 """
 
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import numpy as np
 
@@ -72,12 +72,12 @@ class NDArray(base.BaseTrace):
             self.draw_idx = old_draws
             for varname, shape in self.var_shapes.items():
                 old_var_samples = self.samples[varname]
-                new_var_samples = np.zeros((draws,) + shape, self.var_dtypes[varname])
+                new_var_samples = np.zeros((draws, *shape), self.var_dtypes[varname])
                 self.samples[varname] = np.concatenate((old_var_samples, new_var_samples), axis=0)
         else:  # Otherwise, make array of zeros for each variable.
             self.draws = draws
             for varname, shape in self.var_shapes.items():
-                self.samples[varname] = np.zeros((draws,) + shape, dtype=self.var_dtypes[varname])
+                self.samples[varname] = np.zeros((draws, *shape), dtype=self.var_dtypes[varname])
 
         if sampler_vars is None:
             return
@@ -85,7 +85,7 @@ class NDArray(base.BaseTrace):
         if self._stats is None:
             self._stats = []
             for sampler in sampler_vars:
-                data: Dict[str, np.ndarray] = dict()
+                data: dict[str, np.ndarray] = dict()
                 self._stats.append(data)
                 for varname, dtype in sampler.items():
                     data[varname] = np.zeros(draws, dtype=dtype)
@@ -176,14 +176,14 @@ class NDArray(base.BaseTrace):
             return sliced
         sliced._stats = []
         for vars in self._stats:
-            var_sliced: Dict[str, np.ndarray] = {}
+            var_sliced: dict[str, np.ndarray] = {}
             sliced._stats.append(var_sliced)
             for key, vals in vars.items():
                 var_sliced[key] = vals[idx]
 
         return sliced
 
-    def point(self, idx) -> Dict[str, Any]:
+    def point(self, idx) -> dict[str, Any]:
         """Return dictionary of point values at `idx` for current chain
         with variable names as keys.
         """
@@ -211,7 +211,7 @@ def _slice_as_ndarray(strace, idx):
 
 
 def point_list_to_multitrace(
-    point_list: List[Dict[str, np.ndarray]], model: Optional[Model] = None
+    point_list: list[dict[str, np.ndarray]], model: Optional[Model] = None
 ) -> MultiTrace:
     """transform point list into MultiTrace"""
     _model = modelcontext(model)

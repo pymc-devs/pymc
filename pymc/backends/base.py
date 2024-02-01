@@ -21,16 +21,10 @@ import logging
 import warnings
 
 from abc import ABC
+from collections.abc import Mapping, Sequence, Sized
 from typing import (
     Any,
-    Dict,
-    List,
-    Mapping,
     Optional,
-    Sequence,
-    Set,
-    Sized,
-    Tuple,
     TypeVar,
     Union,
     cast,
@@ -55,10 +49,10 @@ class IBaseTrace(ABC, Sized):
     chain: int
     """Chain number."""
 
-    varnames: List[str]
+    varnames: list[str]
     """Names of tracked variables."""
 
-    sampler_vars: List[Dict[str, Union[type, np.dtype]]]
+    sampler_vars: list[dict[str, Union[type, np.dtype]]]
     """Sampler stats for each sampler."""
 
     def __len__(self):
@@ -107,7 +101,7 @@ class IBaseTrace(ABC, Sized):
         """Slice trace object."""
         raise NotImplementedError()
 
-    def point(self, idx: int) -> Dict[str, np.ndarray]:
+    def point(self, idx: int) -> dict[str, np.ndarray]:
         """Return dictionary of point values at `idx` for current chain
         with variables names as keys.
         """
@@ -279,8 +273,8 @@ class BaseTrace(IBaseTrace):
         raise NotImplementedError()
 
     @property
-    def stat_names(self) -> Set[str]:
-        names: Set[str] = set()
+    def stat_names(self) -> set[str]:
+        names: set[str] = set()
         for vars in self.sampler_vars or []:
             names.update(vars.keys())
 
@@ -354,7 +348,7 @@ class MultiTrace:
         return len(self._straces)
 
     @property
-    def chains(self) -> List[int]:
+    def chains(self) -> list[int]:
         return list(sorted(self._straces.keys()))
 
     @property
@@ -423,18 +417,18 @@ class MultiTrace:
         return len(self._straces[chain])
 
     @property
-    def varnames(self) -> List[str]:
+    def varnames(self) -> list[str]:
         chain = self.chains[-1]
         return self._straces[chain].varnames
 
     @property
-    def stat_names(self) -> Set[str]:
+    def stat_names(self) -> set[str]:
         if not self._straces:
             return set()
         sampler_vars = [s.sampler_vars for s in self._straces.values()]
         if not all(svars == sampler_vars[0] for svars in sampler_vars):
             raise ValueError("Inividual chains contain different sampler stats")
-        names: Set[str] = set()
+        names: set[str] = set()
         for trace in self._straces.values():
             if trace.sampler_vars is None:
                 continue
@@ -450,7 +444,7 @@ class MultiTrace:
         combine: bool = True,
         chains: Optional[Union[int, Sequence[int]]] = None,
         squeeze: bool = True,
-    ) -> List[np.ndarray]:
+    ) -> list[np.ndarray]:
         """Get values from traces.
 
         Parameters
@@ -489,7 +483,7 @@ class MultiTrace:
         combine: bool = True,
         chains: Optional[Union[int, Sequence[int]]] = None,
         squeeze: bool = True,
-    ) -> Union[List[np.ndarray], np.ndarray]:
+    ) -> Union[list[np.ndarray], np.ndarray]:
         """Get sampler statistics from the trace.
 
         Note: This implementation attempts to squeeze object arrays into a consistent dtype,
@@ -539,7 +533,7 @@ class MultiTrace:
         trace._report = self._report._slice(*idxs)
         return trace
 
-    def point(self, idx: int, chain: Optional[int] = None) -> Dict[str, np.ndarray]:
+    def point(self, idx: int, chain: Optional[int] = None) -> dict[str, np.ndarray]:
         """Return a dictionary of point values at `idx`.
 
         Parameters
@@ -583,7 +577,7 @@ def _squeeze_cat(results, combine: bool, squeeze: bool):
 S = TypeVar("S", bound=Sized)
 
 
-def _choose_chains(traces: Sequence[S], tune: int) -> Tuple[List[S], int]:
+def _choose_chains(traces: Sequence[S], tune: int) -> tuple[list[S], int]:
     """
     Filter and slice traces such that (n_traces * len(shortest_trace)) is maximized.
 

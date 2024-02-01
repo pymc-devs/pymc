@@ -91,12 +91,12 @@ pr_tutorial
 :maxdepth: 1
 :caption: How-to guides
 
-implementing_distribution
 build_docs
 docker_container
 running_the_test_suite
 review_pr_pymc_examples
 using_gitpod
+implementing_distribution
 :::
 
 :::{toctree}

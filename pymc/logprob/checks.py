@@ -34,7 +34,7 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from typing import List, Optional
+from typing import Optional
 
 import pytensor.tensor as pt
 
@@ -63,7 +63,7 @@ def logprob_specify_shape(op, values, inner_rv, *shapes, **kwargs):
 
 
 @node_rewriter([SpecifyShape])
-def find_measurable_specify_shapes(fgraph, node) -> Optional[List[MeasurableSpecifyShape]]:
+def find_measurable_specify_shapes(fgraph, node) -> Optional[list[MeasurableSpecifyShape]]:
     r"""Finds `SpecifyShapeOp`\s for which a `logprob` can be computed."""
 
     if isinstance(node.op, MeasurableSpecifyShape):
@@ -116,7 +116,7 @@ def logprob_check_and_raise(op, values, inner_rv, *assertions, **kwargs):
 
 
 @node_rewriter([CheckAndRaise])
-def find_measurable_check_and_raise(fgraph, node) -> Optional[List[MeasurableCheckAndRaise]]:
+def find_measurable_check_and_raise(fgraph, node) -> Optional[list[MeasurableCheckAndRaise]]:
     r"""Finds `AssertOp`\s for which a `logprob` can be computed."""
 
     if isinstance(node.op, MeasurableCheckAndRaise):

@@ -12,7 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from typing import Dict, Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Optional, Union
 
 import numpy as np
 
@@ -319,7 +320,7 @@ class TransformValuesRewrite(GraphRewriter):
 
     def __init__(
         self,
-        values_to_transforms: Dict[TensorVariable, Union[Transform, None]],
+        values_to_transforms: dict[TensorVariable, Union[Transform, None]],
     ):
         """
         Parameters

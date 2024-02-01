@@ -29,7 +29,7 @@ import re
 import subprocess
 import sys
 
-from typing import Callable, Dict
+from typing import Callable
 
 
 def get_keywords():
@@ -67,8 +67,8 @@ class NotThisMethod(Exception):
     """Exception raised if a method is not valid for the current scenario."""
 
 
-LONG_VERSION_PY: Dict[str, str] = {}
-HANDLERS: Dict[str, Dict[str, Callable]] = {}
+LONG_VERSION_PY: dict[str, str] = {}
+HANDLERS: dict[str, dict[str, Callable]] = {}
 
 
 def register_vcs_handler(vcs, method):  # decorator
@@ -98,10 +98,10 @@ def run_command(commands, args, cwd=None, verbose=False, hide_stderr=False, env=
 
     for command in commands:
         try:
-            dispcmd = str([command] + args)
+            dispcmd = str([command, *args])
             # remember shell=False, so use git.cmd on windows, not just git
             process = subprocess.Popen(
-                [command] + args,
+                [command, *args],
                 cwd=cwd,
                 env=env,
                 stdout=subprocess.PIPE,
@@ -153,7 +153,7 @@ def versions_from_parentdir(parentdir_prefix, root, verbose):
         root = os.path.dirname(root)  # up a level
 
     if verbose:
-        print(f"Tried directories {str(rootdirs)} but none started with prefix {parentdir_prefix}")
+        print(f"Tried directories {rootdirs} but none started with prefix {parentdir_prefix}")
     raise NotThisMethod("rootdir doesn't start with parentdir_prefix")
 
 

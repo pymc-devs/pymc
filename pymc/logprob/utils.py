@@ -36,7 +36,8 @@
 import typing
 import warnings
 
-from typing import Container, Dict, List, Optional, Sequence, Set, Tuple, Union
+from collections.abc import Container, Sequence
+from typing import Optional, Union
 
 import numpy as np
 import pytensor
@@ -62,9 +63,9 @@ if typing.TYPE_CHECKING:
 def replace_rvs_by_values(
     graphs: Sequence[TensorVariable],
     *,
-    rvs_to_values: Dict[TensorVariable, TensorVariable],
-    rvs_to_transforms: Optional[Dict[TensorVariable, "Transform"]] = None,
-) -> List[TensorVariable]:
+    rvs_to_values: dict[TensorVariable, TensorVariable],
+    rvs_to_transforms: Optional[dict[TensorVariable, "Transform"]] = None,
+) -> list[TensorVariable]:
     """Clone and replace random variables in graphs with their value variables.
 
     Parameters
@@ -127,7 +128,7 @@ def replace_rvs_by_values(
     return replace_vars_in_graphs(graphs, replacements)
 
 
-def rvs_in_graph(vars: Union[Variable, Sequence[Variable]]) -> Set[Variable]:
+def rvs_in_graph(vars: Union[Variable, Sequence[Variable]]) -> set[Variable]:
     """Assert that there are no `MeasurableVariable` nodes in a graph."""
 
     def expand(r):
@@ -169,7 +170,7 @@ def indices_from_subtensor(idx_list, indices):
 
 
 def check_potential_measurability(
-    inputs: Tuple[TensorVariable], valued_rvs: Container[TensorVariable]
+    inputs: tuple[TensorVariable], valued_rvs: Container[TensorVariable]
 ) -> bool:
     valued_rvs = set(valued_rvs)
 

@@ -315,7 +315,7 @@ class Mixture(Distribution):
             # axis intact, because that's what determines the number of mixture components
             mix_axis = -components[0].owner.op.ndim_supp - 1
             mix_size = components[0].shape[mix_axis]
-            size = tuple(size) + (mix_size,)
+            size = (*size, mix_size)
 
         return [change_dist_size(component, size) for component in components]
 

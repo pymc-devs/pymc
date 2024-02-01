@@ -34,7 +34,7 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from typing import List, Optional
+from typing import Optional
 
 import pytensor.tensor as pt
 
@@ -77,7 +77,7 @@ def logprob_cumsum(op, values, base_rv, **kwargs):
 
 
 @node_rewriter([CumOp])
-def find_measurable_cumsums(fgraph, node) -> Optional[List[MeasurableCumsum]]:
+def find_measurable_cumsums(fgraph, node) -> Optional[list[MeasurableCumsum]]:
     r"""Finds `Cumsums`\s for which a `logprob` can be computed."""
 
     if not (isinstance(node.op, CumOp) and node.op.mode == "add"):
