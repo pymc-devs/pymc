@@ -41,6 +41,7 @@ import pytensor
 from pytensor import tensor as pt
 from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.tensor import TensorVariable
 from pytensor.tensor.basic import Alloc, Join, MakeVector
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.random.op import RandomVariable
@@ -197,9 +198,7 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
 
 
 @node_rewriter([MakeVector, Join])
-def find_measurable_stacks(
-    fgraph, node
-) -> Optional[list[Union[MeasurableMakeVector, MeasurableJoin]]]:
+def find_measurable_stacks(fgraph, node) -> Optional[list[TensorVariable]]:
     r"""Finds `Joins`\s and `MakeVector`\s for which a `logprob` can be computed."""
 
     rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
@@ -273,7 +272,7 @@ def logprob_dimshuffle(op, values, base_var, **kwargs):
 
 
 @node_rewriter([DimShuffle])
-def find_measurable_dimshuffles(fgraph, node) -> Optional[list[MeasurableDimShuffle]]:
+def find_measurable_dimshuffles(fgraph, node) -> Optional[list[TensorVariable]]:
     r"""Finds `Dimshuffle`\s for which a `logprob` can be computed."""
 
     rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)

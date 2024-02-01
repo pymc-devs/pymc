@@ -39,6 +39,7 @@ from typing import Optional
 import pytensor.tensor as pt
 
 from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.tensor import TensorVariable
 from pytensor.tensor.extra_ops import CumOp
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
@@ -77,7 +78,7 @@ def logprob_cumsum(op, values, base_rv, **kwargs):
 
 
 @node_rewriter([CumOp])
-def find_measurable_cumsums(fgraph, node) -> Optional[list[MeasurableCumsum]]:
+def find_measurable_cumsums(fgraph, node) -> Optional[list[TensorVariable]]:
     r"""Finds `Cumsums`\s for which a `logprob` can be computed."""
 
     if not (isinstance(node.op, CumOp) and node.op.mode == "add"):
