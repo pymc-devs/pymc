@@ -264,15 +264,30 @@ class TestHSGPPeriodic(_BaseFixtures):
             cov_func = pm.gp.cov.Periodic(2, period=1, ls=[1, 2])
             pm.gp.HSGPPeriodic(m=500, scale=0.5, cov_func=cov_func)
 
+    @pytest.mark.parametrize("drop_first", [True, False])
+    def test_parametrization_drop_first(self, model, cov_func, X1, drop_first):
+        n_basis = 101
+        with model:
+            gp = pm.gp.HSGPPeriodic(m=n_basis, scale=1.0, drop_first=drop_first, cov_func=cov_func)
+            gp.prior("f1", X1)
+
+            n_coeffs = model.f1_hsgp_coeffs_.type.shape[0]
+            if drop_first:
+                assert (
+                    n_coeffs == n_basis - 1
+                ), f"one basis vector should have been dropped, {n_coeffs}"
+            else:
+                assert n_coeffs == n_basis, "one was dropped when it shouldn't have been"
+
     @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
     @pytest.mark.parametrize("eta", [2.0])
-    # @pytest.mark.xfail(
-    #    reason="For `pm.gp.cov.Periodic`, this test does not pass.\
-    #    The mmd is around `0.0468`.\
-    #    The test passes more often when subtracting the mean from the mean from the samples.\
-    #    It might be that the period is slightly off for the approximate power spectral density.\
-    #    See https://github.com/pymc-devs/pymc/pull/6877/ for the full discussion."
-    # )
+    @pytest.mark.xfail(
+        reason="For `pm.gp.cov.Periodic`, this test does not pass.\
+        The mmd is around `0.0468`.\
+        The test passes more often when subtracting the mean from the mean from the samples.\
+        It might be that the period is slightly off for the approximate power spectral density.\
+        See https://github.com/pymc-devs/pymc/pull/6877/ for the full discussion."
+    )
     def test_prior(self, model, cov_func, eta, X1, rng):
         """Compare HSGPPeriodic prior to unapproximated GP prior, pm.gp.Latent. Draw samples from
         the prior and compare them using MMD two sample test.

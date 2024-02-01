@@ -119,8 +119,8 @@ class HSGP(Base):
         provided.  Further information can be found in Ruitort-Mayol et al.
     drop_first: bool
         Default `False`. Sometimes the first basis vector is quite "flat" and very similar to
-        the intercept term.  When there is an intercept in the model, ignoring the first basis
-        vector may improve sampling. This argument will be deprecated in future versions.
+        the intercept term.  When there is an intercept in the model, removing the first basis
+        vector may improve sampling.
     parameterization: str
         Whether to use `centred` or `noncentered` parameterization when multiplying the
         basis by the coefficients.
@@ -207,13 +207,6 @@ class HSGP(Base):
             parameterization = parameterization.lower().replace("-", "").replace("_", "")
         if parameterization not in ["centered", "noncentered"]:
             raise ValueError("`parameterization` must be either 'centered' or 'noncentered'.")
-
-        if drop_first:
-            warnings.warn(
-                "The drop_first argument will be deprecated in future versions."
-                " See https://github.com/pymc-devs/pymc/pull/6877",
-                DeprecationWarning,
-            )
 
         self._drop_first = drop_first
         self._m = m
@@ -614,10 +607,11 @@ class HSGPPeriodic(Base):
             self._beta_sin = pt.concatenate(([0.0], beta[m - 1 :]))
 
         else:
-            # Keep all terms
-            beta = pm.Normal(f"{name}_hsgp_coeffs_", size=m * 2)
+            # The first eigenfunction for the sine component is zero
+            # and so does not contribute to the approximation.
+            beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m * 2) - 1)
             self._beta_cos = beta[:m]
-            self._beta_sin = beta[m:]
+            self._beta_sin = pt.concatenate(([0.0], beta[m:]))
 
         cos_term = phi_cos @ (psd * self._beta_cos)
         sin_term = phi_sin @ (psd * self._beta_sin)
