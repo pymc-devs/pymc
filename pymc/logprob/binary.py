@@ -20,6 +20,7 @@ from pytensor.graph.basic import Node
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scalar.basic import GE, GT, LE, LT, Invert
+from pytensor.tensor import TensorVariable
 from pytensor.tensor.math import ge, gt, invert, le, lt
 
 from pymc.logprob.abstract import (
@@ -41,7 +42,7 @@ class MeasurableComparison(MeasurableElemwise):
 @node_rewriter(tracks=[gt, lt, ge, le])
 def find_measurable_comparisons(
     fgraph: FunctionGraph, node: Node
-) -> Optional[list[MeasurableComparison]]:
+) -> Optional[list[TensorVariable]]:
     rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -133,7 +134,7 @@ class MeasurableBitwise(MeasurableElemwise):
 
 
 @node_rewriter(tracks=[invert])
-def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> Optional[list[MeasurableBitwise]]:
+def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> Optional[list[TensorVariable]]:
     rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
