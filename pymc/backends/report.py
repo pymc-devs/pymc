@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import dataclasses
+import itertools
 import logging
 
 from typing import Optional
@@ -34,7 +35,7 @@ class SamplerReport:
 
     @property
     def _warnings(self):
-        chains = sum(self._chain_warnings.values(), [])
+        chains = list(itertools.chain.from_iterable(self._chain_warnings.values()))
         return chains + self._global_warnings
 
     @property

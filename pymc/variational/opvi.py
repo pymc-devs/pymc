@@ -1615,4 +1615,4 @@ class Approximation(WithMemoization):
 
     @property
     def params(self):
-        return sum(self.collect("params"), [])
+        return list(itertools.chain.from_iterable(self.collect("params")))
