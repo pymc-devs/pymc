@@ -395,19 +395,14 @@ def find_measurable_scans(fgraph, node):
         # Get any `Subtensor` outputs that have been applied to outputs of this
         # `Scan` (and get the corresponding indices of the outputs from this
         # `Scan`)
-        output_clients: list[tuple[Variable, int]] = sum(
-            [
-                [
-                    # This is expected to work for `Subtensor` `Op`s,
-                    # because they only ever have one output
-                    (cl.default_output(), i)
-                    for cl, _ in fgraph.get_clients(out)
-                    if isinstance(cl.op, Subtensor)
-                ]
-                for i, out in enumerate(node.outputs)
-            ],
-            [],
-        )
+        output_clients: list[tuple[Variable, int]] = [
+            # This is expected to work for `Subtensor` `Op`s,
+            # because they only ever have one output
+            (cl.default_output(), i)
+            for i, out in enumerate(node.outputs)
+            for cl, _ in fgraph.get_clients(out)
+            if isinstance(cl.op, Subtensor)
+        ]
 
         # The second items in these tuples are the value variables mapped to
         # the *user-specified* measurable variables (i.e. the first items) that

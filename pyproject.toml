@@ -45,7 +45,7 @@ ignore = [
 [tool.ruff.lint.isort]
 lines-between-types = 1
 
-[tool.ruff.extend-per-file-ignores]
+[tool.ruff.lint.extend-per-file-ignores]
 "__init__.py" = [
   "F401", # Module imported but unused
   "F403", # 'from module import *' used; unable to detect undefined names
