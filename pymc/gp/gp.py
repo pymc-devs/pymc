@@ -587,7 +587,7 @@ class Marginal(Base):
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens, jitter)
         return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
 
-    def predict(
+    def compile_predict(
         self,
         Xnew,
         point=None,
