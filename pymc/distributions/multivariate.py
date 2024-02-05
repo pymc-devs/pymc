@@ -2119,11 +2119,11 @@ class CARRV(RandomVariable):
     def make_node(self, rng, size, dtype, mu, W, alpha, tau):
         mu = pt.as_tensor_variable(mu)
 
-        W = pytensor.sparse.as_sparse_or_tensor_variable(pm.floatX(W))
+        W = pytensor.sparse.as_sparse_or_tensor_variable(W)
         if not W.ndim == 2:
             raise ValueError("W must be a matrix (ndim=2).")
 
-        sparse = isinstance(W, pytensor.sparse.SparseVariable)
+        sparse = isinstance(W.type, pytensor.sparse.SparseTensorType)
         msg = "W must be a symmetric adjacency matrix."
         if sparse:
             abs_diff = pytensor.sparse.basic.mul(pytensor.sparse.sign(W - W.T), W - W.T)
