@@ -142,6 +142,7 @@ class KSD(Operator):
 
     def apply(self, f):
         # f: kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
+        pytensor.dprint(self.approx.model.logp())
         if _known_scan_ignored_inputs([self.approx.model.logp()]):
             raise NotImplementedInference(
                 "SVGD does not currently support Minibatch or Simulator RV"
