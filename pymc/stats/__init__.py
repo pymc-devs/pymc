@@ -29,4 +29,4 @@ for attr in az.stats.__all__:
 
 from pymc.stats.log_likelihood import compute_log_likelihood
 
-__all__ = ("compute_log_likelihood",) + tuple(az.stats.__all__)
+__all__ = ("compute_log_likelihood", *az.stats.__all__)

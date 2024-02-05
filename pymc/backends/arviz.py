@@ -15,15 +15,11 @@
 import logging
 import warnings
 
+from collections.abc import Iterable, Mapping
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
     Optional,
-    Tuple,
     Union,
 )
 
@@ -51,7 +47,7 @@ _log = logging.getLogger(__name__)
 Var = Any
 
 
-def find_observations(model: "Model") -> Dict[str, Var]:
+def find_observations(model: "Model") -> dict[str, Var]:
     """If there are observations available, return them as a dictionary."""
     observations = {}
     for obs in model.observed_RVs:
@@ -68,7 +64,7 @@ def find_observations(model: "Model") -> Dict[str, Var]:
     return observations
 
 
-def find_constants(model: "Model") -> Dict[str, Var]:
+def find_constants(model: "Model") -> dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
 
     # The constant data vars must be either pm.Data or TensorConstant or SharedVariable
@@ -99,7 +95,7 @@ def find_constants(model: "Model") -> Dict[str, Var]:
     return constant_data
 
 
-def coords_and_dims_for_inferencedata(model: Model) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def coords_and_dims_for_inferencedata(model: Model) -> tuple[dict[str, Any], dict[str, Any]]:
     """Parse PyMC model coords and dims format to one accepted by InferenceData."""
     coords = {
         cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
@@ -134,7 +130,7 @@ class _DefaultTrace:
 
     def __init__(self, samples: int):
         self._len: int = samples
-        self.trace_dict: Dict[str, np.ndarray] = {}
+        self.trace_dict: dict[str, np.ndarray] = {}
 
     def insert(self, k: str, v, idx: int):
         """
@@ -153,7 +149,7 @@ class _DefaultTrace:
 
         # initialize if necessary
         if k not in self.trace_dict:
-            array_shape = (self._len,) + value_shape
+            array_shape = (self._len, *value_shape)
             self.trace_dict[k] = np.empty(array_shape, dtype=np.array(v).dtype)
 
         # do the actual insertion
@@ -181,7 +177,7 @@ class InferenceDataConverter:
         predictions=None,
         coords: Optional[CoordSpec] = None,
         dims: Optional[DimSpec] = None,
-        sample_dims: Optional[List] = None,
+        sample_dims: Optional[list] = None,
         model=None,
         save_warmup: Optional[bool] = None,
         include_transformed: bool = False,
@@ -239,7 +235,7 @@ class InferenceDataConverter:
 
         self.observations = find_observations(self.model)
 
-    def split_trace(self) -> Tuple[Union[None, "MultiTrace"], Union[None, "MultiTrace"]]:
+    def split_trace(self) -> tuple[Union[None, "MultiTrace"], Union[None, "MultiTrace"]]:
         """Split MultiTrace object into posterior and warmup.
 
         Returns
@@ -461,7 +457,7 @@ def to_inference_data(
     log_likelihood: Union[bool, Iterable[str]] = False,
     coords: Optional[CoordSpec] = None,
     dims: Optional[DimSpec] = None,
-    sample_dims: Optional[List] = None,
+    sample_dims: Optional[list] = None,
     model: Optional["Model"] = None,
     save_warmup: Optional[bool] = None,
     include_transformed: bool = False,
@@ -530,7 +526,7 @@ def predictions_to_inference_data(
     model: Optional["Model"] = None,
     coords: Optional[CoordSpec] = None,
     dims: Optional[DimSpec] = None,
-    sample_dims: Optional[List] = None,
+    sample_dims: Optional[list] = None,
     idata_orig: Optional[InferenceData] = None,
     inplace: bool = False,
 ) -> InferenceData:

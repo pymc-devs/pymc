@@ -14,7 +14,6 @@
 
 # Modified from original implementation by Dominik Wabersich (2013)
 
-from typing import Tuple
 
 import numpy as np
 import numpy.random as nr
@@ -79,7 +78,7 @@ class Slice(ArrayStepShared):
 
         super().__init__(vars, shared)
 
-    def astep(self, apoint: RaveledVars) -> Tuple[RaveledVars, StatsType]:
+    def astep(self, apoint: RaveledVars) -> tuple[RaveledVars, StatsType]:
         # The arguments are determined by the list passed via `super().__init__(..., fs, ...)`
         q0_val = apoint.data
 

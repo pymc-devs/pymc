@@ -22,7 +22,7 @@ nodes in PyMC.
 
 import warnings
 
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 import pytensor
@@ -151,7 +151,7 @@ class BoundedContinuous(Continuous):
     """Base class for bounded continuous distributions"""
 
     # Indices of the arguments that define the lower and upper bounds of the distribution
-    bound_args_indices: Optional[List[int]] = None
+    bound_args_indices: Optional[list[int]] = None
 
 
 @_default_transform.register(PositiveContinuous)
@@ -569,7 +569,7 @@ class TruncatedNormalRV(RandomVariable):
         sigma: Union[np.ndarray, float],
         lower: Union[np.ndarray, float],
         upper: Union[np.ndarray, float],
-        size: Optional[Union[List[int], int]],
+        size: Optional[Union[list[int], int]],
     ) -> np.ndarray:
         # Upcast to float64. (Caller will downcast to desired dtype if needed)
         #   (Work-around for https://github.com/scipy/scipy/issues/15928)

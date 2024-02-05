@@ -819,7 +819,7 @@ class GARCH11(Distribution):
         (noise_next_rng,) = tuple(innov_updates_.values())
 
         garch11_ = pt.concatenate([init_[None, ...], y_t], axis=0).dimshuffle(
-            tuple(range(1, y_t.ndim)) + (0,)
+            (*range(1, y_t.ndim), 0)
         )
 
         garch11_op = GARCH11RV(
@@ -850,7 +850,7 @@ def garch11_logp(
 ):
     (value,) = values
     # Move the time axis to the first dimension
-    value_dimswapped = value.dimshuffle((value.ndim - 1,) + tuple(range(0, value.ndim - 1)))
+    value_dimswapped = value.dimshuffle((value.ndim - 1, *range(0, value.ndim - 1)))
     initial_vol = initial_vol * pt.ones_like(value_dimswapped[0])
 
     def volatility_update(x, vol, w, a, b):
@@ -991,18 +991,18 @@ class EulerMaruyama(Distribution):
         y_t, innov_updates_ = pytensor.scan(
             fn=step,
             outputs_info=[init_],
-            non_sequences=sde_pars_ + [noise_rng],
+            non_sequences=[*sde_pars_, noise_rng],
             n_steps=steps_,
             strict=True,
         )
         (noise_next_rng,) = tuple(innov_updates_.values())
 
         sde_out_ = pt.concatenate([init_[None, ...], y_t], axis=0).dimshuffle(
-            tuple(range(1, y_t.ndim)) + (0,)
+            (*range(1, y_t.ndim), 0)
         )
 
         eulermaruyama_op = EulerMaruyamaRV(
-            inputs=[init_, steps_] + sde_pars_,
+            inputs=[init_, steps_, *sde_pars_],
             outputs=[noise_next_rng, sde_out_],
             dt=dt,
             sde_fn=sde_fn,

@@ -50,7 +50,7 @@ def scipy_logprob(obs, p):
         elif p.ndim < obs.ndim:
             p = p[((None,) * (obs.ndim - p.ndim) + (Ellipsis,))]
 
-        pattern = (p.ndim - 1,) + tuple(range(p.ndim - 1))
+        pattern = (p.ndim - 1, *range(p.ndim - 1))
         return np.log(np.take_along_axis(p.transpose(pattern), obs, 0))
     else:
         return np.log(p[obs])

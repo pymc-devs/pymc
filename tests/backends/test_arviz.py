@@ -13,8 +13,6 @@
 #   limitations under the License.
 import warnings
 
-from typing import Dict, Tuple
-
 import numpy as np
 import pytensor.tensor as pt
 import pytest
@@ -105,7 +103,7 @@ class TestDataPyMC:
 
     def get_predictions_inference_data(
         self, data, eight_schools_params, inplace
-    ) -> Tuple[InferenceData, Dict[str, np.ndarray]]:
+    ) -> tuple[InferenceData, dict[str, np.ndarray]]:
         with data.model:
             prior = pm.sample_prior_predictive(return_inferencedata=False)
             posterior_predictive = pm.sample_posterior_predictive(
@@ -128,7 +126,7 @@ class TestDataPyMC:
 
     def make_predictions_inference_data(
         self, data, eight_schools_params
-    ) -> Tuple[InferenceData, Dict[str, np.ndarray]]:
+    ) -> tuple[InferenceData, dict[str, np.ndarray]]:
         with data.model:
             posterior_predictive = pm.sample_posterior_predictive(
                 data.obj, return_inferencedata=False
@@ -158,7 +156,7 @@ class TestDataPyMC:
         chains = inference_data.posterior.sizes["chain"]
         draws = inference_data.posterior.sizes["draw"]
         obs = inference_data.observed_data["obs"]
-        assert inference_data.log_likelihood["obs"].shape == (chains, draws) + obs.shape
+        assert inference_data.log_likelihood["obs"].shape == (chains, draws, *obs.shape)
 
     def test_predictions_to_idata(self, data, eight_schools_params):
         "Test that we can add predictions to a previously-existing InferenceData."

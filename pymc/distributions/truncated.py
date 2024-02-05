@@ -247,7 +247,7 @@ class Truncated(Distribution):
         return TruncatedRV(
             base_rv_op=dist.owner.op,
             inputs=graph_inputs_,
-            outputs=[tuple(updates.values())[0], truncated_rv_],
+            outputs=[next(iter(updates.values())), truncated_rv_],
             ndim_supp=0,
             max_n_steps=max_n_steps,
         )(*graph_inputs)

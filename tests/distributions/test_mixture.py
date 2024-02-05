@@ -264,7 +264,7 @@ class TestMixture:
         # component shape is either (4, 2, 3), (2, 3)
         # weights shape is either (4, 2) or (2,)
         if size is not None:
-            expected_shape = size + (3,)
+            expected_shape = (*size, 3)
         elif component.ndim == 3 or weights.ndim == 2:
             expected_shape = (4, 3)
         else:
@@ -316,7 +316,7 @@ class TestMixture:
         # components[0] shape is either (4, 3) or (3,)
         # weights shape is either (4, 2) or (2,)
         if size is not None:
-            expected_shape = size + (3,)
+            expected_shape = (*size, 3)
         elif components[0].ndim == 2 or weights.ndim == 2:
             expected_shape = (4, 3)
         else:
@@ -422,7 +422,7 @@ class TestMixture:
         draws = mix.eval()
         expected_shape = (5, 4) if univariate else (5, 4, 3)
         if expand:
-            expected_shape = expected_shape + (3,)
+            expected_shape = (*expected_shape, 3)
         assert draws.shape == expected_shape
         assert np.unique(draws).size == draws.size
 
@@ -611,15 +611,8 @@ class TestMixture:
             ppc = sample_posterior_predictive(
                 n_samples * [self.get_initial_point(model)], return_inferencedata=False
             )
-        assert (
-            ppc["x_obs"].shape
-            == (
-                1,
-                n_samples,
-            )
-            + X.shape
-        )
-        assert prior["x_obs"].shape == (n_samples,) + X.shape
+        assert ppc["x_obs"].shape == (1, n_samples, *X.shape)
+        assert prior["x_obs"].shape == (n_samples, *X.shape)
         assert prior["mu0"].shape == (n_samples, D)
         assert prior["chol_cov_0"].shape == (n_samples, D * (D + 1) // 2)
 
@@ -816,7 +809,7 @@ class TestNormalMixture:
     def test_normal_mixture_nd(self, seeded_test, nd, ncomp):
         nd = to_tuple(nd)
         ncomp = int(ncomp)
-        comp_shape = nd + (ncomp,)
+        comp_shape = (*nd, ncomp)
         test_mus = np.random.randn(*comp_shape)
         test_taus = np.random.gamma(1, 1, size=comp_shape)
         observed = generate_normal_mixture_data(

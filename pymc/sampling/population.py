@@ -17,8 +17,9 @@
 import logging
 import warnings
 
+from collections.abc import Iterator, Sequence
 from copy import copy
-from typing import Iterator, List, Sequence, Tuple, Union
+from typing import Union
 
 import cloudpickle
 import numpy as np
@@ -265,7 +266,7 @@ class PopulationStepper:
             _log.exception(f"ChainWalker{c}")
         return
 
-    def step(self, tune_stop: bool, population) -> List[Tuple[PointType, StatsType]]:
+    def step(self, tune_stop: bool, population) -> list[tuple[PointType, StatsType]]:
         """Step the entire population of chains.
 
         Parameters
@@ -280,7 +281,7 @@ class PopulationStepper:
         update : list
             List of (Point, stats) tuples for all chains
         """
-        updates: List[Tuple[PointType, StatsType]] = []
+        updates: list[tuple[PointType, StatsType]] = []
         if self.is_parallelized:
             for c in range(self.nchains):
                 self._primary_ends[c].send((tune_stop, population))
@@ -351,7 +352,7 @@ def _prepare_iter_population(
     population = [start[c] for c in range(nchains)]
 
     # 2. Set up the steppers
-    steppers: List[Step] = []
+    steppers: list[Step] = []
     for c in range(nchains):
         # need independent samplers for each chain
         # it is important to copy the actual steppers (but not the delta_logp)

@@ -16,7 +16,7 @@ import sys
 import warnings
 
 from abc import ABC
-from typing import Dict, Union, cast
+from typing import Union, cast
 
 import numpy as np
 import pytensor.tensor as pt
@@ -40,8 +40,8 @@ from pymc.sampling.forward import draw
 from pymc.step_methods.metropolis import MultivariateNormalProposal
 from pymc.vartypes import discrete_types
 
-SMCStats: TypeAlias = Dict[str, Union[int, float]]
-SMCSettings: TypeAlias = Dict[str, Union[int, float]]
+SMCStats: TypeAlias = dict[str, Union[int, float]]
+SMCSettings: TypeAlias = dict[str, Union[int, float]]
 
 
 class SMC_KERNEL(ABC):
@@ -185,7 +185,7 @@ class SMC_KERNEL(ABC):
         self.resampling_indexes = None
         self.weights = np.ones(self.draws) / self.draws
 
-    def initialize_population(self) -> Dict[str, np.ndarray]:
+    def initialize_population(self) -> dict[str, np.ndarray]:
         """Create an initial population from the prior distribution"""
         sys.stdout.write(" ")  # see issue #5828
         with warnings.catch_warnings():
@@ -206,7 +206,7 @@ class SMC_KERNEL(ABC):
             names = [model.rvs_to_values[rv].name for rv in model.free_RVs]
             dict_prior = {k: np.stack(v) for k, v in zip(names, prior_values)}
 
-        return cast(Dict[str, np.ndarray], dict_prior)
+        return cast(dict[str, np.ndarray], dict_prior)
 
     def _initialize_kernel(self):
         """Create variables and logp function necessary to run SMC kernel

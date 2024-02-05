@@ -16,9 +16,10 @@ import numbers
 import warnings
 
 from collections import Counter
+from collections.abc import Sequence
 from functools import reduce
 from operator import add, mul
-from typing import Any, Callable, List, Optional, Sequence, Union
+from typing import Any, Callable, Optional, Union
 
 import numpy as np
 import pytensor.tensor as pt
@@ -229,7 +230,7 @@ class Combination(Covariance):
         super().__init__(input_dim=input_dim, active_dims=active_dims)
 
         # Set up combination kernel, flatten out factor_list so that
-        self._factor_list: List[Any] = []
+        self._factor_list: list[Any] = []
         for factor in factor_list:
             if isinstance(factor, self.__class__):
                 self._factor_list.extend(factor._factor_list)

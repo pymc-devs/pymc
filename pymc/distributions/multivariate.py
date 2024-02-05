@@ -616,7 +616,7 @@ class DirichletMultinomialRV(RandomVariable):
 
             if size:
                 n = np.broadcast_to(n, size)
-                a = np.broadcast_to(a, size + (a.shape[-1],))
+                a = np.broadcast_to(a, (*size, a.shape[-1]))
 
             res = np.empty(a.shape)
             for idx in np.ndindex(a.shape[:-1]):
@@ -1205,7 +1205,7 @@ class _LKJCholeskyCov(Distribution):
         # implied batched dimensions from those for the time being.
         if size is None:
             size = sd_dist.shape[:-1]
-        shape = tuple(size) + (n,)
+        shape = (*size, n)
         if sd_dist.owner.op.ndim_supp == 0:
             sd_dist = change_dist_size(sd_dist, shape)
         else:
@@ -1511,6 +1511,7 @@ class LKJCorrRV(RandomVariable):
     def _random_corr_matrix(cls, rng, n, eta, flat_size):
         # original implementation in R see:
         # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
+
         beta = eta - 1.0 + n / 2.0
         r12 = 2.0 * stats.beta.rvs(a=beta, b=beta, size=flat_size, random_state=rng) - 1.0
         P = np.full((flat_size, n, n), np.eye(n))
@@ -1537,48 +1538,8 @@ class MultivariateIntervalTransform(Interval):
         return super().log_jac_det(*args).sum(-1)
 
 
-class LKJCorr(BoundedContinuous):
-    r"""
-    The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
-
-    The LKJ distribution is a prior distribution for correlation matrices.
-    If eta = 1 this corresponds to the uniform distribution over correlation
-    matrices. For eta -> oo the LKJ prior approaches the identity matrix.
-
-    ========  ==============================================
-    Support   Upper triangular matrix with values in [-1, 1]
-    ========  ==============================================
-
-    Parameters
-    ----------
-    n : tensor_like of int
-        Dimension of the covariance matrix (n > 1).
-    eta : tensor_like of float
-        The shape parameter (eta > 0) of the LKJ distribution. eta = 1
-        implies a uniform distribution of the correlation matrices;
-        larger values put more weight on matrices with few correlations.
-
-    Notes
-    -----
-    This implementation only returns the values of the upper triangular
-    matrix excluding the diagonal. Here is a schematic for n = 5, showing
-    the indexes of the elements::
-
-        [[- 0 1 2 3]
-         [- - 4 5 6]
-         [- - - 7 8]
-         [- - - - 9]
-         [- - - - -]]
-
-
-    References
-    ----------
-    .. [LKJ2009] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
-        "Generating random correlation matrices based on vines and
-        extended onion method." Journal of multivariate analysis,
-        100(9), pp.1989-2001.
-    """
-
+# Returns list of upper triangular values
+class _LKJCorr(BoundedContinuous):
     rv_op = lkjcorr
 
     @classmethod
@@ -1637,9 +1598,95 @@ class LKJCorr(BoundedContinuous):
         )
 
 
-@_default_transform.register(LKJCorr)
+@_default_transform.register(_LKJCorr)
 def lkjcorr_default_transform(op, rv):
     return MultivariateIntervalTransform(floatX(-1.0), floatX(1.0))
+
+
+class LKJCorr:
+    r"""
+    The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
+
+    The LKJ distribution is a prior distribution for correlation matrices.
+    If eta = 1 this corresponds to the uniform distribution over correlation
+    matrices. For eta -> oo the LKJ prior approaches the identity matrix.
+
+    ========  ==============================================
+    Support   Upper triangular matrix with values in [-1, 1]
+    ========  ==============================================
+
+    Parameters
+    ----------
+    n : tensor_like of int
+        Dimension of the covariance matrix (n > 1).
+    eta : tensor_like of float
+        The shape parameter (eta > 0) of the LKJ distribution. eta = 1
+        implies a uniform distribution of the correlation matrices;
+        larger values put more weight on matrices with few correlations.
+    return_matrix : bool, default=False
+        If True, returns the full correlation matrix.
+        False only returns the values of the upper triangular matrix excluding
+        diagonal in a single vector of length n(n-1)/2 for memory efficiency
+
+    Notes
+    -----
+    This is mainly useful if you want the standard deviations to be fixed, as
+    LKJCholsekyCov is optimized for the case where they come from a distribution.
+
+    Examples
+    --------
+    .. code:: python
+
+        with pm.Model() as model:
+
+            # Define the vector of fixed standard deviations
+            sds = 3*np.ones(10)
+
+            corr = pm.LKJCorr(
+                'corr', eta=4, n=10, return_matrix=True
+            )
+
+            # Define a new MvNormal with the given correlation matrix
+            vals = sds*pm.MvNormal('vals', mu=np.zeros(10), cov=corr, shape=10)
+
+            # Or transform an uncorrelated normal distribution:
+            vals_raw = pm.Normal('vals_raw', shape=10)
+            chol = pt.linalg.cholesky(corr)
+            vals = sds*pt.dot(chol,vals_raw)
+
+            # The matrix is internally still sampled as a upper triangular vector
+            # If you want access to it in matrix form in the trace, add
+            pm.Deterministic('corr_mat', corr)
+
+
+    References
+    ----------
+    .. [LKJ2009] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
+        "Generating random correlation matrices based on vines and
+        extended onion method." Journal of multivariate analysis,
+        100(9), pp.1989-2001.
+    """
+
+    def __new__(cls, name, n, eta, *, return_matrix=False, **kwargs):
+        c_vec = _LKJCorr(name, eta=eta, n=n, **kwargs)
+        if not return_matrix:
+            return c_vec
+        else:
+            return cls.vec_to_corr_mat(c_vec, n)
+
+    @classmethod
+    def dist(cls, n, eta, *, return_matrix=False, **kwargs):
+        c_vec = _LKJCorr.dist(eta=eta, n=n, **kwargs)
+        if not return_matrix:
+            return c_vec
+        else:
+            return cls.vec_to_corr_mat(c_vec, n)
+
+    @classmethod
+    def vec_to_corr_mat(cls, vec, n):
+        tri = pt.zeros(pt.concatenate([vec.shape[:-1], (n, n)]))
+        tri = pt.subtensor.set_subtensor(tri[(..., *np.triu_indices(n, 1))], vec)
+        return tri + pt.moveaxis(tri, -2, -1) + pt.diag(pt.ones(n))
 
 
 class MatrixNormalRV(RandomVariable):
@@ -2136,7 +2183,7 @@ class CARRV(RandomVariable):
 
         size = tuple(size or ())
         if size:
-            mu = np.broadcast_to(mu, size + (mu.shape[-1],))
+            mu = np.broadcast_to(mu, (*size, mu.shape[-1]))
         z = rng.normal(size=mu.shape)
         samples = np.empty(z.shape)
         for idx in np.ndindex(mu.shape[:-1]):
@@ -2445,7 +2492,7 @@ class StickBreakingWeightsRV(RandomVariable):
             raise ValueError("K needs to be positive.")
 
         size = to_tuple(size) if size is not None else alpha.shape
-        size = size + (K,)
+        size = (*size, K)
         alpha = alpha[..., np.newaxis]
 
         betas = rng.beta(1, alpha, size=size)

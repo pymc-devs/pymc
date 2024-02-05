@@ -6,13 +6,18 @@ addopts = ["--color=yes"]
 
 [tool.ruff]
 line-length = 100
+target-version = "py39"
+exclude = ["versioneer.py"]
 
 [tool.ruff.lint]
-select = ["D", "E", "F", "I", "UP", "W"]
+select = ["D", "E", "F", "I", "UP", "W", "RUF"]
 ignore-init-module-imports = true
 ignore = [
   "E501",
   "F841", # Local variable name is assigned to but never used
+  "RUF001", # String contains ambiguous character (such as Greek letters)
+  "RUF002", # Docstring contains ambiguous character (such as Greek letters)
+  "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
   "D100",
   "D101",
   "D102",

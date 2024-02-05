@@ -19,16 +19,14 @@ Classes for working with subsets of parameters.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from functools import partial
 from typing import (
     Any,
     Callable,
-    Dict,
     Generic,
-    List,
     NamedTuple,
     Optional,
-    Sequence,
     TypeVar,
     Union,
 )
@@ -41,9 +39,9 @@ __all__ = ["DictToArrayBijection"]
 
 
 T = TypeVar("T")
-PointType: TypeAlias = Dict[str, np.ndarray]
-StatsDict: TypeAlias = Dict[str, Any]
-StatsType: TypeAlias = List[StatsDict]
+PointType: TypeAlias = dict[str, np.ndarray]
+StatsDict: TypeAlias = dict[str, Any]
+StatsType: TypeAlias = list[StatsDict]
 StatDtype: TypeAlias = Union[type, np.dtype]
 StatShape: TypeAlias = Optional[Sequence[Optional[int]]]
 

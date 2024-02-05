@@ -15,7 +15,7 @@
 import dataclasses
 import logging
 
-from typing import Dict, List, Optional
+from typing import Optional
 
 from pymc.stats.convergence import _LEVELS, SamplerWarning
 
@@ -26,8 +26,8 @@ class SamplerReport:
     """Bundle warnings, convergence stats and metadata of a sampling run."""
 
     def __init__(self) -> None:
-        self._chain_warnings: Dict[int, List[SamplerWarning]] = {}
-        self._global_warnings: List[SamplerWarning] = []
+        self._chain_warnings: dict[int, list[SamplerWarning]] = {}
+        self._global_warnings: list[SamplerWarning] = []
         self._n_tune = None
         self._n_draws = None
         self._t_sampling = None

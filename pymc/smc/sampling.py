@@ -19,7 +19,7 @@ import warnings
 
 from collections import defaultdict
 from itertools import repeat
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import cloudpickle
 import numpy as np
@@ -259,7 +259,7 @@ def _save_sample_stats(
     _t_sampling,
     idata_kwargs,
     model: Model,
-) -> Tuple[Optional[Any], Optional[InferenceData]]:
+) -> tuple[Optional[Any], Optional[InferenceData]]:
     sample_settings_dict = sample_settings[0]
     sample_settings_dict["_t_sampling"] = _t_sampling
     sample_stats_dict = sample_stats[0]
@@ -294,7 +294,7 @@ def _save_sample_stats(
             library=pymc,
         )
 
-        ikwargs: Dict[str, Any] = dict(model=model)
+        ikwargs: dict[str, Any] = dict(model=model)
         if idata_kwargs is not None:
             ikwargs.update(idata_kwargs)
         idata = to_inference_data(trace, **ikwargs)
