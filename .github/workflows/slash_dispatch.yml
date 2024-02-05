@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Slash Command Dispatch
-        uses: peter-evans/slash-command-dispatch@v3
+        uses: peter-evans/slash-command-dispatch@v4
         with:
           token: ${{ secrets.ACTION_TRIGGER_TOKEN }}
           issue-type: pull-request
