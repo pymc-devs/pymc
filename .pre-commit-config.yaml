@@ -1,3 +1,6 @@
+ci:
+  autofix_prs: false
+
 exclude: ^(docs/logos|pymc/tests/data)/
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
