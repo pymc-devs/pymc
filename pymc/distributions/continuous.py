@@ -1641,7 +1641,14 @@ class AsymmetricLaplace(Continuous):
             kappa > 0,
             msg="b > 0, kappa > 0",
         )
-
+    def icdf(p, mu, b, kappa):
+        if b <= 0:
+            raise ValueError("Scale Parameter sigma must be positive")
+        if p <= 0.5:
+            res = mu - (b / kappa) * pt.log(2 * p)
+        if p > 0.5:
+            res = mu + (b / kappa) * pt.log(2 * (1 - p))
+        return res
 
 class LogNormal(PositiveContinuous):
     r"""
