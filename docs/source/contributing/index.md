@@ -5,6 +5,7 @@ There are many ways in which you can help make it better.
 And all of them are welcome!
 
 ## Contribute as an individual
+
 PyMC is a joint effort of many people, each contributing to the areas they like
 and have some expertise in, coordinating to try and cover all tasks.
 
