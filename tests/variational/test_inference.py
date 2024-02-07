@@ -201,23 +201,22 @@ def test_fit_start(inference_spec, simple_model):
     # We can`t use pytest.warns here because after version 8.0 it`s still check for warning when
     # exception raised and test failed instead being skipped
     warning_raised = False
-    with warnings.catch_warnings(record=True) as w:
+    expected_warning = observed_value.name.startswith("minibatch")
+    with warnings.catch_warnings(record=True) as record:
         warnings.simplefilter("always")
         try:
             trace = inference.fit(n=0).sample(10000)
         except NotImplementedInference as e:
             pytest.skip(str(e))
 
-    if len(w) > 0:
-        for item in w:
-            if issubclass(
-                item.category, UserWarning
-            ) and "Could not extract data from symbolic observation" in str(item.message):
-                warning_raised = True
-    if observed_value.name.startswith("minibatch"):
-        assert warning_raised
-    else:
-        assert not warning_raised
+    if expected_warning:
+        assert len(record) > 1
+        for item in record:
+            assert issubclass(item.category, UserWarning)
+            assert "Could not extract data from symbolic observation" in str(item.message)
+    if not expected_warning:
+        assert not record
+
     np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_init, rtol=0.05)
     if has_start_sigma:
         np.testing.assert_allclose(np.std(trace.posterior["mu"]), mu_sigma_init, rtol=0.05)
