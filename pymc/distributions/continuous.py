@@ -1643,7 +1643,7 @@ class AsymmetricLaplace(Continuous):
         )
     def icdf(value, b, kappa, mu):
         if b <= 0:
-            raise ValueError("Scale Parameter sigma must be positive")
+            raise ValueError("Scale Parameter b must be positive")
         if value <= 0.5:
             res = mu - (b / kappa) * pt.log(2 * value)
         if value > 0.5:
