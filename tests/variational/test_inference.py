@@ -14,6 +14,7 @@
 
 import io
 import operator
+import warnings
 
 from contextlib import nullcontext
 
@@ -204,13 +205,19 @@ def test_fit_start(inference_spec, simple_model):
         warn_ctxt = nullcontext()
 
     warning_raised = False
-    try:
-        trace = inference.fit(n=0).sample(10000)
-    except NotImplementedInference as e:
-        pytest.skip(str(e))
-    except UserWarning as w:
-        if "Could not extract data from symbolic observation" in str(w):
-            warning_raised = True
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        try:
+            trace = inference.fit(n=0).sample(10000)
+        except NotImplementedInference as e:
+            pytest.skip(str(e))
+
+    if len(w) > 0:
+        for item in w:
+            if issubclass(
+                item.category, UserWarning
+            ) and "Could not extract data from symbolic observation" in str(item.message):
+                warning_raised = True
     if observed_value.name.startswith("minibatch"):
         assert warning_raised
     else:
