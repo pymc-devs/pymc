@@ -213,6 +213,8 @@ def test_fit_start(inference_spec, simple_model):
             warning_raised = True
     if observed_value.name.startswith("minibatch"):
         assert warning_raised
+    else:
+        assert not warning_raised
     np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_init, rtol=0.05)
     if has_start_sigma:
         np.testing.assert_allclose(np.std(trace.posterior["mu"]), mu_sigma_init, rtol=0.05)
