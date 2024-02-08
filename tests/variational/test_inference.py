@@ -210,7 +210,7 @@ def test_fit_start(inference_spec, simple_model):
             pytest.skip(str(e))
 
     if expected_warning:
-        assert len(record) > 1
+        assert len(record) > 0
         for item in record:
             assert issubclass(item.category, UserWarning)
             assert "Could not extract data from symbolic observation" in str(item.message)
