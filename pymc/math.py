@@ -527,9 +527,7 @@ def block_diagonal(*matrices, sparse=False, format="csr"):
     matrix
     """
     warnings.warn(
-        "The behavior of block_diagonal when only one matrix is provided is deprecated. Use pytensor function instead.",
-        FutureWarning,
-        stacklevel=2,
+        "pymc.math.block_diagonal is deprecated in favor of `pytensor.tensor.linalg.block_diag` and `pytensor.sparse.block_diag` functions. This function will be removed in a future release",
     )
     if len(matrices) == 1:  # graph optimization
         return matrices[0]
