@@ -526,12 +526,12 @@ def block_diagonal(*matrices, sparse=False, format="csr"):
     -------
     matrix
     """
+    warnings.warn(
+        "The behavior of block_diagonal when only one matrix is provided is deprecated. Use pytensor function instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
     if len(matrices) == 1:  # graph optimization
-        warnings.warn(
-            "The behavior of block_diagonal when only one matrix is provided is deprecated. Use pytensor function instead.",
-            FutureWarning,
-            stacklevel=2,
-        )
         return matrices[0]
     if sparse:
         return pytensor.sparse.basic.block_diag(*matrices, format=format)
