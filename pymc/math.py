@@ -510,7 +510,7 @@ def batched_diag(C):
         raise ValueError("Input should be 2 or 3 dimensional")
 
 
-def block_diagonal(*matrices, sparse=False, format="csr"):
+def block_diagonal(matrices, sparse=False, format="csr"):
     r"""See pt.slinalg.block_diag or
     pytensor.sparse.basic.block_diag for reference
 
