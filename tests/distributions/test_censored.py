@@ -18,6 +18,7 @@ import pytest
 import pymc as pm
 
 from pymc.distributions.shape_utils import change_dist_size
+from pymc.logprob.basic import logcdf
 
 
 class TestCensored:
@@ -110,3 +111,45 @@ class TestCensored:
             pm.Normal.dist(size=(3, 4, 2)), lower=np.zeros((2,)), upper=np.zeros((4, 2))
         )
         assert tuple(x.owner.inputs[0].shape.eval()) == (3, 4, 2)
+
+    @pytest.mark.parametrize("lower, upper", [(-1, np.inf), (-1, 1.5), (-np.inf, 1.5)])
+    @pytest.mark.parametrize("op_type", ["icdf", "rejection"])
+    def test_censoring_continuous_logcdf(op_type, lower, upper):
+        loc = 0.15
+        scale = 10
+        op = icdf_normal if op_type == "icdf" else rejection_normal
+    
+        x = op(loc, scale, name="x")
+        xt = pm.Censored.dist(x, lower=lower, upper=upper)
+        assert isinstance(xt.owner.op, pm.CensoredRV)
+    
+        xt_vv = xt.clone()
+        xt_logcdf_fn = pytensor.function([xt_vv], logcdf(xt, xt_vv))
+    
+        for bound in (lower, upper):
+            if np.isinf(bound):
+                return
+            for offset in (-1, 0, 1):
+                test_xt_v = bound + offset
+                assert xt_logcdf_fn(test_xt_v) is not None
+
+
+    @pytest.mark.parametrize("lower, upper", [(2, np.inf), (2, 5), (-np.inf, 5)])
+    @pytest.mark.parametrize("op_type", ["icdf", "rejection"])
+    def test_censoring_discrete_logcdf(op_type, lower, upper):
+        p = 0.7
+        op = icdf_geometric if op_type == "icdf" else rejection_geometric
+    
+        x = op(p, name="x")
+        xt = pm.Censored.dist(x, lower=lower, upper=upper)
+        assert isinstance(xt.owner.op, pm.CensoredRV)
+    
+        xt_vv = xt.clone()
+        xt_logcdf_fn = pytensor.function([xt_vv], logcdf(xt, xt_vv))
+    
+        for bound in (lower, upper):
+            if np.isinf(bound):
+                continue
+            for offset in (-1, 0, 1):
+                test_xt_v = bound + offset
+                assert xt_logcdf_fn(test_xt_v) is not None
