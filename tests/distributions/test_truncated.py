@@ -412,14 +412,16 @@ def test_truncated_gamma():
     logp_scipy[x > upper] = -np.inf
 
     gamma_trunc_pymc = Truncated.dist(
-        Gamma.dist(alpha=alpha, beta=beta),
+        Gamma.dist(
+            alpha=pt.as_tensor_variable(alpha).astype("floatX"),
+            beta=pt.as_tensor_variable(beta).astype("floatX"),
+        ),
         upper=upper,
     )
     logp_pymc = logp(gamma_trunc_pymc, x).eval()
     np.testing.assert_allclose(
         logp_pymc,
         logp_scipy,
-        rtol=2.1e-07,
     )
 
     # Changing the size used to invert the beta Gamma parameter again
@@ -428,7 +430,6 @@ def test_truncated_gamma():
     np.testing.assert_allclose(
         logp_resized_pymc,
         logp_scipy,
-        rtol=2.1e-07,
     )
 
 
