@@ -268,7 +268,7 @@ class MvNormal(Continuous):
         TensorVariable
         """
         quaddist, logdet, ok = quaddist_chol(value, mu, cov)
-        k = value.shape[-1]
+        k = value.shape[-1].astype("floatX")
         norm = -0.5 * k * np.log(2 * np.pi)
         return check_parameters(
             norm - 0.5 * quaddist - logdet,
