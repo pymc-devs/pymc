@@ -404,7 +404,7 @@ class MvStudentT(Continuous):
         TensorVariable
         """
         quaddist, logdet, ok = quaddist_chol(value, mu, scale)
-        k = value.shape[-1]
+        k = value.shape[-1].astype("floatX")
 
         norm = gammaln((nu + k) / 2.0) - gammaln(nu / 2.0) - 0.5 * k * pt.log(nu * np.pi)
         inner = -(nu + k) / 2.0 * pt.log1p(quaddist / nu)
