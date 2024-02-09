@@ -1638,7 +1638,6 @@ class TestHurdleMixtures:
         ],
     )
     def test_hurdle_logp_at_zero(self, dist, psi, non_psi_args):
-        # assert logp(dist(psi=psi, **non_psi_args), 0).eval() == np.log(1 - psi)
         assert_almost_equal(logp(dist(psi=psi, **non_psi_args), 0).eval(), np.log(1 - psi))
 
     @pytest.mark.parametrize(
