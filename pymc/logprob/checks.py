@@ -40,6 +40,7 @@ import pytensor.tensor as pt
 
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.raise_op import CheckAndRaise
+from pytensor.tensor import TensorVariable
 from pytensor.tensor.shape import SpecifyShape
 
 from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
@@ -63,7 +64,7 @@ def logprob_specify_shape(op, values, inner_rv, *shapes, **kwargs):
 
 
 @node_rewriter([SpecifyShape])
-def find_measurable_specify_shapes(fgraph, node) -> Optional[list[MeasurableSpecifyShape]]:
+def find_measurable_specify_shapes(fgraph, node) -> Optional[list[TensorVariable]]:
     r"""Finds `SpecifyShapeOp`\s for which a `logprob` can be computed."""
 
     if isinstance(node.op, MeasurableSpecifyShape):
@@ -116,7 +117,7 @@ def logprob_check_and_raise(op, values, inner_rv, *assertions, **kwargs):
 
 
 @node_rewriter([CheckAndRaise])
-def find_measurable_check_and_raise(fgraph, node) -> Optional[list[MeasurableCheckAndRaise]]:
+def find_measurable_check_and_raise(fgraph, node) -> Optional[list[TensorVariable]]:
     r"""Finds `AssertOp`\s for which a `logprob` can be computed."""
 
     if isinstance(node.op, MeasurableCheckAndRaise):

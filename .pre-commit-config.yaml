@@ -1,3 +1,6 @@
+ci:
+  autofix_prs: false
+
 exclude: ^(docs/logos|pymc/tests/data)/
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -24,12 +27,11 @@ repos:
         - --exclude=binder/
         - --exclude=versioneer.py
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.1.14
+  rev: v0.2.0
   hooks:
     - id: ruff
-      args: ["--fix", "--show-source"]
+      args: ["--fix", "--output-format=full"]
     - id: ruff-format
-      args: ["--line-length=100"]
 - repo: https://github.com/MarcoGorelli/madforhooks
   rev: 0.4.1
   hooks:

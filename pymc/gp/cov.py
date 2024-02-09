@@ -180,14 +180,15 @@ class Covariance(BaseCovariance):
         """The dimensionality of the input, as taken from the
         `active_dims`.
         """
-        # Evaluate lazily in-case this changes.
+        # Evaluate lazily in case this changes.
         return len(self.active_dims)
 
     def _slice(self, X, Xs=None):
         xdims = X.shape[-1]
         if isinstance(xdims, Variable):
             [xdims] = constant_fold([xdims], raise_not_constant=False)
-        if self.input_dim != xdims:
+        # If xdims can't be fully constant folded, it will be a TensorVariable
+        if isinstance(xdims, int) and self.input_dim != xdims:
             warnings.warn(
                 f"Only {self.input_dim} column(s) out of {xdims} are"
                 " being used to compute the covariance function. If this"

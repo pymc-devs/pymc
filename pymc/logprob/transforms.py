@@ -117,7 +117,11 @@ from pymc.logprob.abstract import (
     _logprob_helper,
 )
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
-from pymc.logprob.utils import CheckParameterValue, check_potential_measurability
+from pymc.logprob.utils import (
+    CheckParameterValue,
+    check_potential_measurability,
+    find_negated_var,
+)
 
 
 class Transform(abc.ABC):
@@ -229,6 +233,10 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
     other_inputs = list(inputs)
     measurable_input = other_inputs.pop(op.measurable_input_idx)
 
+    # Do not apply rewrite to discrete variables
+    if measurable_input.type.dtype.startswith("int"):
+        raise NotImplementedError("logcdf of transformed discrete variables not implemented")
+
     backward_value = op.transform_elemwise.backward(value, *other_inputs)
 
     # Fail if transformation is not injective
@@ -272,6 +280,10 @@ def measurable_transform_icdf(op: MeasurableTransform, value, *inputs, **kwargs)
     """Compute the inverse CDF graph for a `MeasurabeTransform`."""
     other_inputs = list(inputs)
     measurable_input = other_inputs.pop(op.measurable_input_idx)
+
+    # Do not apply rewrite to discrete variables
+    if measurable_input.type.dtype.startswith("int"):
+        raise NotImplementedError("icdf of transformed discrete variables not implemented")
 
     if isinstance(op.scalar_op, MONOTONICALLY_INCREASING_OPS):
         pass
@@ -429,10 +441,15 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[li
         return None
 
     [measurable_input] = measurable_inputs
+    [measurable_output] = node.outputs
 
-    # Do not apply rewrite to discrete variables
+    # Do not apply rewrite to discrete variables except for their addition and negation
     if measurable_input.type.dtype.startswith("int"):
-        return None
+        if not (find_negated_var(measurable_output) or isinstance(node.op.scalar_op, Add)):
+            return None
+        # Do not allow rewrite if output is cast to a float, because we don't have meta-info on the type of the MeasurableVariable
+        if not measurable_output.type.dtype.startswith("int"):
+            return None
 
     # Check that other inputs are not potentially measurable, in which case this rewrite
     # would be invalid
