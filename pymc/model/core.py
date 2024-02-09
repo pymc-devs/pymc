@@ -46,6 +46,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.sharedvar import ScalarSharedVariable
 from pytensor.tensor.variable import TensorConstant, TensorVariable
+from pytensor.printing import Print
 from typing_extensions import Self
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
@@ -2245,3 +2246,11 @@ def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariabl
     )
 
     return var
+
+def print_value(var, name=None):
+    """Print value of variable when it is computed during sampling.
+    This is likely to affect sampling performance.
+    """
+    if name is None:
+        name = var.name
+    return Print(name)(var)
