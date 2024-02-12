@@ -436,7 +436,7 @@ class InferenceDataConverter:
             id_dict["constant_data"] = self.constant_data_to_xarray()
         idata = InferenceData(save_warmup=self.save_warmup, **id_dict)
         if self.log_likelihood:
-            from pymc.stats.log_likelihood import compute_log_likelihood
+            from pymc.stats.log_density import compute_log_likelihood
 
             idata = compute_log_likelihood(
                 idata,
