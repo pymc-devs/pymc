@@ -174,6 +174,7 @@ class InferenceDataConverter:
         prior=None,
         posterior_predictive=None,
         log_likelihood=False,
+        log_prior=False,
         predictions=None,
         coords: Optional[CoordSpec] = None,
         dims: Optional[DimSpec] = None,
@@ -215,6 +216,7 @@ class InferenceDataConverter:
         self.prior = prior
         self.posterior_predictive = posterior_predictive
         self.log_likelihood = log_likelihood
+        self.log_prior = log_prior
         self.predictions = predictions
 
         if all(elem is None for elem in (trace, predictions, posterior_predictive, prior)):
@@ -446,6 +448,17 @@ class InferenceDataConverter:
                 sample_dims=self.sample_dims,
                 progressbar=False,
             )
+        if self.log_prior:
+            from pymc.stats.log_density import compute_log_prior
+
+            idata = compute_log_prior(
+                idata,
+                var_names=None if self.log_prior is True else self.log_prior,
+                extend_inferencedata=True,
+                model=self.model,
+                sample_dims=self.sample_dims,
+                progressbar=False,
+            )
         return idata
 
 
@@ -455,6 +468,7 @@ def to_inference_data(
     prior: Optional[Mapping[str, Any]] = None,
     posterior_predictive: Optional[Mapping[str, Any]] = None,
     log_likelihood: Union[bool, Iterable[str]] = False,
+    log_prior: Union[bool, Iterable[str]] = False,
     coords: Optional[CoordSpec] = None,
     dims: Optional[DimSpec] = None,
     sample_dims: Optional[list] = None,
@@ -481,8 +495,11 @@ def to_inference_data(
         Dictionary with the variable names as keys, and values numpy arrays
         containing posterior predictive samples.
     log_likelihood : bool or array_like of str, optional
-        List of variables to calculate `log_likelihood`. Defaults to True which calculates
-        `log_likelihood` for all observed variables. If set to False, log_likelihood is skipped.
+        List of variables to calculate `log_likelihood`. Defaults to False.
+        If set to True, computes `log_likelihood` for all observed variables.
+    log_prior : bool or array_like of str, optional
+        List of variables to calculate `log_prior`. Defaults to False.
+        If set to True, computes `log_prior` for all unobserved variables.
     coords : dict of {str: array-like}, optional
         Map of coordinate names to coordinate values
     dims : dict of {str: list of str}, optional
@@ -509,6 +526,7 @@ def to_inference_data(
         prior=prior,
         posterior_predictive=posterior_predictive,
         log_likelihood=log_likelihood,
+        log_prior=log_prior,
         coords=coords,
         dims=dims,
         sample_dims=sample_dims,
