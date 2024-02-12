@@ -24,6 +24,48 @@ from pymc.model import Model, modelcontext
 from pymc.pytensorf import PointFunc
 from pymc.util import dataset_to_point_list
 
+__all__ = ("compute_log_likelihood", "compute_log_prior")
+
+
+def compute_log_likelihood(
+    idata: InferenceData,
+    *,
+    var_names: Optional[Sequence[str]] = None,
+    extend_inferencedata: bool = True,
+    model: Optional[Model] = None,
+    sample_dims: Sequence[str] = ("chain", "draw"),
+    progressbar=True,
+):
+    """Compute elemwise log_likelihood of model given InferenceData with posterior group
+
+    Parameters
+    ----------
+    idata : InferenceData
+        InferenceData with posterior group
+    var_names : sequence of str, optional
+        List of Observed variable names for which to compute log_likelihood.
+        Defaults to all observed variables.
+    extend_inferencedata : bool, default True
+        Whether to extend the original InferenceData or return a new one
+    model : Model, optional
+    sample_dims : sequence of str, default ("chain", "draw")
+    progressbar : bool, default True
+
+    Returns
+    -------
+    idata : InferenceData
+        InferenceData with log_likelihood group
+    """
+    return compute_log_density(
+        idata=idata,
+        var_names=var_names,
+        extend_inferencedata=extend_inferencedata,
+        model=model,
+        kind="likelihood",
+        sample_dims=sample_dims,
+        progressbar=progressbar,
+    )
+
 
 def compute_log_prior(
     idata: InferenceData,

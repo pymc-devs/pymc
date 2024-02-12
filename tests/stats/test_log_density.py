@@ -20,7 +20,7 @@ from arviz import InferenceData, dict_to_dataset, from_dict
 from pymc.distributions import Dirichlet, Normal
 from pymc.distributions.transforms import log
 from pymc.model import Model
-from pymc.stats.log_likelihood import compute_log_likelihood
+from pymc.stats.log_density import compute_log_likelihood, compute_log_prior
 from tests.distributions.test_multivariate import dirichlet_logpdf
 
 
@@ -131,4 +131,27 @@ class TestComputeLogLikelihood:
         np.testing.assert_allclose(
             llike.log_likelihood["y"].values,
             st.norm.logpdf([[[0, 0, 0], [1, 1, 1]]]),
+        )
+
+    @pytest.mark.parametrize("transform", (False, True))
+    def test_basic_log_prior(self, transform):
+        transform = log if transform else None
+        with Model() as m:
+            x = Normal("x", transform=transform)
+            x_value_var = m.rvs_to_values[x]
+            Normal("y", x, observed=[0, 1, 2])
+
+            idata = InferenceData(posterior=dict_to_dataset({"x": np.arange(100).reshape(4, 25)}))
+            res = compute_log_prior(idata)
+
+        # Check we didn't erase the original mappings
+        assert m.rvs_to_values[x] is x_value_var
+        assert m.rvs_to_transforms[x] is transform
+
+        assert res is idata
+        assert res.log_prior.dims == {"chain": 4, "draw": 25}
+
+        np.testing.assert_allclose(
+            res.log_prior["x"].values,
+            st.norm(0, 1).logpdf(idata.posterior["x"].values),
         )

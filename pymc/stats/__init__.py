@@ -27,7 +27,6 @@ for attr in az.stats.__all__:
     if not attr.startswith("__"):
         setattr(sys.modules[__name__], attr, obj)
 
-from pymc.stats.log_likelihood import compute_log_likelihood
-from pymc.stats.log_prior import compute_log_prior
+from pymc.stats.log_density import compute_log_likelihood, compute_log_prior
 
 __all__ = ("compute_log_likelihood", "compute_log_prior", *az.stats.__all__)
