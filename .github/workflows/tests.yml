@@ -73,7 +73,7 @@ jobs:
             tests/sampling/test_forward.py
             tests/sampling/test_population.py
             tests/stats/test_convergence.py
-            tests/stats/test_log_likelihood.py
+            tests/stats/test_log_density.py
             tests/distributions/test_distribution.py
             tests/distributions/test_discrete.py
 
