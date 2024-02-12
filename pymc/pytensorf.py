@@ -40,6 +40,7 @@ from pytensor.graph.basic import (
 )
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
+from pytensor.printing import Print
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
 from pytensor.tensor.basic import _as_tensor_variable
@@ -273,6 +274,15 @@ def floatX(X):
     except AttributeError:
         # Scalar passed
         return np.asarray(X, dtype=pytensor.config.floatX)
+
+
+def print_value(var, name=None):
+    """Print value of variable when it is computed during sampling.
+    This is likely to affect sampling performance.
+    """
+    if name is None:
+        name = var.name
+    return Print(name)(var)
 
 
 _conversion_map = {"float64": "int32", "float32": "int16", "float16": "int8", "float8": "int8"}
