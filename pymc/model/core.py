@@ -40,7 +40,6 @@ import scipy.sparse as sps
 from pytensor.compile import DeepCopyOp, get_mode
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Constant, Variable, graph_inputs
-from pytensor.printing import Print
 from pytensor.scalar import Cast
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
@@ -2246,12 +2245,3 @@ def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariabl
     )
 
     return var
-
-
-def print_value(var, name=None):
-    """Print value of variable when it is computed during sampling.
-    This is likely to affect sampling performance.
-    """
-    if name is None:
-        name = var.name
-    return Print(name)(var)
