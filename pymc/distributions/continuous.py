@@ -1641,7 +1641,6 @@ class AsymmetricLaplace(Continuous):
             kappa > 0,
             msg="b > 0, kappa > 0",
         )
-        
     def icdf(value, b, kappa, mu):
         if pt.le(b, 0):
             raise ValueError("Scale Parameter b must be positive")
