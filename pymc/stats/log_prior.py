@@ -19,27 +19,26 @@ from arviz import InferenceData
 from pymc.model import Model
 from pymc.stats.log_density import compute_log_density
 
-__all__ = "compute_log_likelihood"
+__all__ = "compute_log_prior"
 
 
-def compute_log_likelihood(
+def compute_log_prior(
     idata: InferenceData,
-    *,
     var_names: Optional[Sequence[str]] = None,
     extend_inferencedata: bool = True,
     model: Optional[Model] = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
 ):
-    """Compute elemwise log_likelihood of model given InferenceData with posterior group
+    """Compute elemwise log_prior of model given InferenceData with posterior group
 
     Parameters
     ----------
     idata : InferenceData
         InferenceData with posterior group
     var_names : sequence of str, optional
-        List of Observed variable names for which to compute log_likelihood.
-        Defaults to all observed variables.
+        List of Observed variable names for which to compute log_prior.
+        Defaults to all all free variables.
     extend_inferencedata : bool, default True
         Whether to extend the original InferenceData or return a new one
     model : Model, optional
@@ -49,14 +48,14 @@ def compute_log_likelihood(
     Returns
     -------
     idata : InferenceData
-        InferenceData with log_likelihood group
+        InferenceData with log_prior group
     """
     return compute_log_density(
         idata=idata,
         var_names=var_names,
         extend_inferencedata=extend_inferencedata,
         model=model,
-        kind="likelihood",
+        kind="prior",
         sample_dims=sample_dims,
         progressbar=progressbar,
     )
