@@ -126,7 +126,7 @@ Please contact us if your software is not listed here.
 Papers citing PyMC
 ==================
 
-See `Google Scholar <https://scholar.google.de/scholar?oi=bibs&hl=en&authuser=1&cites=6936955228135731011>`__ for a continuously updated list.
+See Google Scholar `here <https://scholar.google.com/scholar?cites=6357998555684300962>`__ and `here <https://scholar.google.com/scholar?cites=6936955228135731011>`__ for a continuously updated list.
 
 Contributors
 ============
