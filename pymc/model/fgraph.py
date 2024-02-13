@@ -11,18 +11,17 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from copy import copy
+from copy import copy, deepcopy
 from typing import Optional
 
 import pytensor
 
-from pytensor import Variable, shared
+from pytensor import Variable
 from pytensor.compile import SharedVariable
 from pytensor.graph import Apply, FunctionGraph, Op, node_rewriter
 from pytensor.graph.rewriting.basic import out2in
 from pytensor.scalar import Identity
 from pytensor.tensor.elemwise import Elemwise
-from pytensor.tensor.sharedvar import ScalarSharedVariable
 
 from pymc.logprob.transforms import Transform
 from pymc.model.core import Model
@@ -113,6 +112,21 @@ def local_remove_identity(fgraph, node):
 remove_identity_rewrite = out2in(local_remove_identity)
 
 
+def deepcopy_shared_variable(var: SharedVariable) -> SharedVariable:
+    # Shared variables don't have a deepcopy method (SharedVariable.clone reuses the old container and contents).
+    # We recreate Shared Variables manually after deepcopying their container.
+    new_var = type(var)(
+        type=var.type,
+        value=None,
+        strict=None,
+        container=deepcopy(var.container),
+        name=var.name,
+    )
+    assert new_var.type == var.type
+    new_var.tag = copy(var.tag)
+    return new_var
+
+
 def fgraph_from_model(
     model: Model, inlined_views=False
 ) -> tuple[FunctionGraph, dict[Variable, Variable]]:
@@ -192,18 +206,7 @@ def fgraph_from_model(
     shared_vars_to_copy += [v for v in model.dim_lengths.values() if isinstance(v, SharedVariable)]
     shared_vars_to_copy += [v for v in model.named_vars.values() if isinstance(v, SharedVariable)]
     for var in shared_vars_to_copy:
-        # FIXME: ScalarSharedVariables are converted to 0d numpy arrays internally,
-        #  so calling shared(shared(5).get_value()) returns a different type: TensorSharedVariables!
-        #  Furthermore, PyMC silently ignores mutable dim changes that are SharedTensorVariables...
-        #  https://github.com/pymc-devs/pytensor/issues/396
-        if isinstance(var, ScalarSharedVariable):
-            new_var = shared(var.get_value(borrow=False).item())
-        else:
-            new_var = shared(var.get_value(borrow=False))
-
-        assert new_var.type == var.type
-        new_var.name = var.name
-        new_var.tag = copy(var.tag)
+        new_var = deepcopy_shared_variable(var)
         # We can replace input variables by placing them in the memo
         memo[var] = new_var
 

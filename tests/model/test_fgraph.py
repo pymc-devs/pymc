@@ -107,14 +107,16 @@ def test_data(inline_views):
     with pm.Model(coords_mutable={"test_dim": range(3)}) as m_old:
         x = pm.MutableData("x", [0.0, 1.0, 2.0], dims=("test_dim",))
         y = pm.MutableData("y", [10.0, 11.0, 12.0], dims=("test_dim",))
+        sigma = pm.MutableData("sigma", [1.0], shape=(1,))
         b0 = pm.ConstantData("b0", np.zeros((1,)))
         b1 = pm.DiracDelta("b1", 1.0)
         mu = pm.Deterministic("mu", b0 + b1 * x, dims=("test_dim",))
-        obs = pm.Normal("obs", mu, sigma=1e-5, observed=y, dims=("test_dim",))
+        obs = pm.Normal("obs", mu=mu, sigma=sigma, observed=y, dims=("test_dim",))
 
     m_fgraph, memo = fgraph_from_model(m_old, inlined_views=inline_views)
     assert isinstance(memo[x].owner.op, ModelNamed)
     assert isinstance(memo[y].owner.op, ModelNamed)
+    assert isinstance(memo[sigma].owner.op, ModelNamed)
     assert isinstance(memo[b0].owner.op, ModelNamed)
     mu_inp = memo[mu].owner.inputs[0]
     obs = memo[obs]
@@ -124,10 +126,13 @@ def test_data(inline_views):
         assert mu_inp.owner.inputs[1].owner.inputs[1] is memo[x].owner.inputs[0]
         # ObservedRV(obs, y, *dims) not ObservedRV(obs, Named(y), *dims)
         assert obs.owner.inputs[1] is memo[y].owner.inputs[0]
+        # ObservedRV(Normal(..., sigma), ...) not ObservedRV(Normal(..., Named(sigma)), ...)
+        assert obs.owner.inputs[0].owner.inputs[4] is memo[sigma].owner.inputs[0]
     else:
         assert mu_inp.owner.inputs[0] is memo[b0]
         assert mu_inp.owner.inputs[1].owner.inputs[1] is memo[x]
         assert obs.owner.inputs[1] is memo[y]
+        assert obs.owner.inputs[0].owner.inputs[4] is memo[sigma]
 
     m_new = model_from_fgraph(m_fgraph)
 
@@ -140,8 +145,16 @@ def test_data(inline_views):
     # Shared model variables, dim lengths, and rngs are copied and no longer point to the same memory
     assert not same_storage(m_new["x"], x)
     assert not same_storage(m_new["y"], y)
+    assert not same_storage(m_new["sigma"], sigma)
     assert not same_storage(m_new["b1"].owner.inputs[0], b1.owner.inputs[0])
     assert not same_storage(m_new.dim_lengths["test_dim"], m_old.dim_lengths["test_dim"])
+
+    # Check they have the same type
+    assert m_new["x"].type == x.type
+    assert m_new["y"].type == y.type
+    assert m_new["sigma"].type == sigma.type
+    assert m_new["b1"].owner.inputs[0].type == b1.owner.inputs[0].type
+    assert m_new.dim_lengths["test_dim"].type == m_old.dim_lengths["test_dim"].type
 
     # Updating model shared variables in new model, doesn't affect old one
     with m_new:
@@ -155,22 +168,31 @@ def test_data(inline_views):
 @config.change_flags(floatX="float64")  # Avoid downcasting Ops in the graph
 def test_shared_variable():
     """Test that user defined shared variables (other than RNGs) aren't copied."""
-    x = shared(np.array([1, 2, 3.0]), name="x")
-    y = shared(np.array([1, 2, 3.0]), name="y")
+    mu = shared(np.array([1, 2, 3.0]), shape=(None,), name="mu")
+    sigma = shared(np.array([1.0]), shape=(1,), name="sigma")
+    obs = shared(np.array([1, 2, 3.0]), shape=(3,), name="obs")
 
     with pm.Model() as m_old:
-        test = pm.Normal("test", mu=x, observed=y)
+        test = pm.Normal("test", mu=mu, sigma=sigma, observed=obs)
 
-    assert test.owner.inputs[3] is x
-    assert m_old.rvs_to_values[test] is y
+    assert test.owner.inputs[3] is mu
+    assert test.owner.inputs[4] is sigma
+    assert m_old.rvs_to_values[test] is obs
 
     m_new = clone_model(m_old)
     test_new = m_new["test"]
     # Shared Variables are cloned but still point to the same memory
-    assert test_new.owner.inputs[3] is not x
-    assert m_new.rvs_to_values[test_new] is not y
-    assert same_storage(test_new.owner.inputs[3], x)
-    assert same_storage(m_new.rvs_to_values[test_new], y)
+    mu_new, sigma_new = test_new.owner.inputs[3:5]
+    obs_new = m_new.rvs_to_values[test_new]
+    assert mu_new is not mu
+    assert sigma_new is not sigma
+    assert obs_new is not obs
+    assert mu_new.type == mu.type
+    assert sigma_new.type == sigma.type
+    assert obs_new.type == obs.type
+    assert same_storage(mu, mu_new)
+    assert same_storage(sigma, sigma_new)
+    assert same_storage(obs, obs_new)
 
 
 @pytest.mark.parametrize("inline_views", (False, True))
