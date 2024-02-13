@@ -35,7 +35,7 @@ from pytensor.graph import graph_inputs
 from pytensor.raise_op import Assert
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.sharedvar import ScalarSharedVariable
+from pytensor.tensor.sharedvar import TensorSharedVariable
 from pytensor.tensor.variable import TensorConstant
 
 import pymc as pm
@@ -823,7 +823,7 @@ def test_add_coord_mutable_kwarg():
         m.add_coord("fixed", values=[1], mutable=False)
         m.add_coord("mutable1", values=[1, 2], mutable=True)
         assert isinstance(m._dim_lengths["fixed"], TensorConstant)
-        assert isinstance(m._dim_lengths["mutable1"], ScalarSharedVariable)
+        assert isinstance(m._dim_lengths["mutable1"], TensorSharedVariable)
         pm.MutableData("mdata", np.ones((1, 2, 3)), dims=("fixed", "mutable1", "mutable2"))
         assert isinstance(m._dim_lengths["mutable2"], TensorVariable)
 

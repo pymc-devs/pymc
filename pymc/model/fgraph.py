@@ -22,7 +22,6 @@ from pytensor.graph import Apply, FunctionGraph, Op, node_rewriter
 from pytensor.graph.rewriting.basic import out2in
 from pytensor.scalar import Identity
 from pytensor.tensor.elemwise import Elemwise
-from pytensor.tensor.sharedvar import ScalarSharedVariable
 
 from pymc.logprob.transforms import Transform
 from pymc.model.core import Model
@@ -192,15 +191,7 @@ def fgraph_from_model(
     shared_vars_to_copy += [v for v in model.dim_lengths.values() if isinstance(v, SharedVariable)]
     shared_vars_to_copy += [v for v in model.named_vars.values() if isinstance(v, SharedVariable)]
     for var in shared_vars_to_copy:
-        # FIXME: ScalarSharedVariables are converted to 0d numpy arrays internally,
-        #  so calling shared(shared(5).get_value()) returns a different type: TensorSharedVariables!
-        #  Furthermore, PyMC silently ignores mutable dim changes that are SharedTensorVariables...
-        #  https://github.com/pymc-devs/pytensor/issues/396
-        if isinstance(var, ScalarSharedVariable):
-            new_var = shared(var.get_value(borrow=False).item())
-        else:
-            new_var = shared(var.get_value(borrow=False))
-
+        new_var = shared(var.get_value(borrow=False))
         assert new_var.type == var.type
         new_var.name = var.name
         new_var.tag = copy(var.tag)

@@ -44,7 +44,6 @@ from pytensor.scalar import Cast
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
-from pytensor.tensor.sharedvar import ScalarSharedVariable
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 from typing_extensions import Self
 
@@ -999,6 +998,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 length = pytensor.shared(length, name=name)
             else:
                 length = pytensor.tensor.constant(length)
+        assert length.type.ndim == 0
         self._dim_lengths[name] = length
         self._coords[name] = values
 
@@ -1028,7 +1028,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         coord_values
             Optional sequence of coordinate values.
         """
-        if not isinstance(self.dim_lengths[name], ScalarSharedVariable):
+        if not isinstance(self.dim_lengths[name], SharedVariable):
             raise ValueError(f"The dimension '{name}' is immutable.")
         if coord_values is None and self.coords.get(name, None) is not None:
             raise ValueError(
@@ -1188,7 +1188,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                             actual=new_length,
                             expected=old_length,
                         )
-                if isinstance(length_tensor, ScalarSharedVariable):
+                if isinstance(length_tensor, SharedVariable):
                     # The dimension is mutable, but was defined without being linked
                     # to a shared variable. This is allowed, but a little less robust.
                     self.set_dim(dname, new_length, coord_values=new_coords)
