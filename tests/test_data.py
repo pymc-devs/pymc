@@ -16,6 +16,8 @@ import io
 import itertools as it
 import re
 
+from os import path
+
 import cloudpickle
 import numpy as np
 import pytensor
@@ -306,6 +308,11 @@ class TestData:
             # check formatting of RV nodes
             for expected in expected_substrings:
                 assert expected in g.source
+
+        pm.model_to_graphviz(model, save="model.png")
+        assert path.exists("model.png")
+        pm.model_to_graphviz(model, save="a_model", dpi=100)
+        assert path.exists("a_model.png")
 
     def test_explicit_coords(self, seeded_test):
         N_rows = 5

@@ -1833,7 +1833,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
             print_("You can set `verbose=True` for more details")
 
     def to_graphviz(
-        self, *, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
+        self,
+        *,
+        var_names: Optional[Iterable[VarName]] = None,
+        formatting: str = "plain",
+        save: Optional[str] = None,
+        figsize: Optional[tuple[int, int]] = None,
+        dpi: int = 300,
     ):
         """Produce a graphviz Digraph from a PyMC model.
 
@@ -1851,6 +1857,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Subset of variables to be plotted that identify a subgraph with respect to the entire model graph
         formatting : str, optional
             one of { "plain" }
+        save : str, optional
+            If provided, an image of the graph will be saved to this location. The format is inferred from
+            the file extension.
+        figsize : tuple[int, int], optional
+            Width and height of the figure in inches. If not provided, uses the default figure size. It only affect
+            the size of the saved figure.
+        dpi : int, optional
+            Dots per inch. It only affects the resolution of the saved figure. The default is 300.
 
         Examples
         --------
@@ -1877,7 +1891,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             schools.to_graphviz()
         """
-        return model_to_graphviz(model=self, var_names=var_names, formatting=formatting)
+        return model_to_graphviz(
+            model=self,
+            var_names=var_names,
+            formatting=formatting,
+            save=save,
+            figsize=figsize,
+            dpi=dpi,
+        )
 
 
 # this is really disgusting, but it breaks a self-loop: I can't pass Model
