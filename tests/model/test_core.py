@@ -1704,4 +1704,6 @@ class TestModelGraphs:
                 var_names=var_names,
                 formatting="plain",
                 save=filenames,
+                figsize=None,
+                dpi=300,
             )
