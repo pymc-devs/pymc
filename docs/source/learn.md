@@ -13,8 +13,9 @@ glossary
 
 ## At a glance
 ### Beginner
+  - Book: [Bayesian Analysis with Python](http://bap.com.ar/)
   - Book: [Bayesian Methods for Hackers](https://github.com/CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers)
-  - Book: [Bayesian Analysis with Python](https://www.packtpub.com/big-data-and-business-intelligence/bayesian-analysis-python-second-edition)
+
 
 ### Intermediate
   - {ref}`pymc_overview` shows PyMC 4.0 code in action

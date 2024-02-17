@@ -13,6 +13,7 @@
 #   limitations under the License.
 import cloudpickle
 import numpy as np
+import numpy.testing as npt
 import pytensor
 import pytensor.tensor as pt
 import pytest
@@ -48,7 +49,9 @@ class TestInitvalAssignment:
             with pytest.warns(FutureWarning, match="`testval` argument is deprecated"):
                 rv = pm.Uniform("u", 0, 1, testval=0.75)
                 initial_point = pmodel.initial_point(random_seed=0)
-                assert initial_point["u_interval__"] == transform_fwd(rv, 0.75, model=pmodel)
+                npt.assert_allclose(
+                    initial_point["u_interval__"], transform_fwd(rv, 0.75, model=pmodel)
+                )
                 assert not hasattr(rv.tag, "test_value")
         pass
 

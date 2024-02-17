@@ -16,6 +16,8 @@ import io
 import itertools as it
 import re
 
+from os import path
+
 import cloudpickle
 import numpy as np
 import pytensor
@@ -268,7 +270,7 @@ class TestData:
         error.match("The variable `beta` must be a `SharedVariable`")
 
     @pytest.mark.xfail(reason="Depends on ModelGraph")
-    def test_model_to_graphviz_for_model_with_data_container(self):
+    def test_model_to_graphviz_for_model_with_data_container(self, tmp_path):
         with pm.Model() as model:
             x = pm.ConstantData("x", [1.0, 2.0, 3.0])
             y = pm.MutableData("y", [1.0, 2.0, 3.0])
@@ -306,6 +308,11 @@ class TestData:
             # check formatting of RV nodes
             for expected in expected_substrings:
                 assert expected in g.source
+
+        pm.model_to_graphviz(model, save=tmp_path / "model.png")
+        assert path.exists(tmp_path / "model.png")
+        pm.model_to_graphviz(model, save=tmp_path / "a_model", dpi=100)
+        assert path.exists(tmp_path / "a_model.png")
 
     def test_explicit_coords(self, seeded_test):
         N_rows = 5
