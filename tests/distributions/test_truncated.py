@@ -412,7 +412,10 @@ def test_truncated_gamma():
     logp_scipy[x > upper] = -np.inf
 
     gamma_trunc_pymc = Truncated.dist(
-        Gamma.dist(alpha=alpha, beta=beta),
+        Gamma.dist(
+            alpha=pt.as_tensor_variable(alpha).astype("floatX"),
+            beta=pt.as_tensor_variable(beta).astype("floatX"),
+        ),
         upper=upper,
     )
     logp_pymc = logp(gamma_trunc_pymc, x).eval()

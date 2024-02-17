@@ -96,7 +96,6 @@ from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous
 from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.distributions.transforms import _default_transform
 from pymc.math import invlogit, logdiffexp, logit
-from pymc.pytensorf import floatX
 
 __all__ = [
     "Uniform",
@@ -257,7 +256,7 @@ def get_tau_sigma(tau=None, sigma=None):
                     raise ValueError("tau must be positive")
                 sigma = tau_**-0.5
 
-    return floatX(tau), floatX(sigma)
+    return tau, sigma
 
 
 class Uniform(BoundedContinuous):
@@ -309,8 +308,8 @@ class Uniform(BoundedContinuous):
 
     @classmethod
     def dist(cls, lower=0, upper=1, **kwargs):
-        lower = pt.as_tensor_variable(floatX(lower))
-        upper = pt.as_tensor_variable(floatX(upper))
+        lower = pt.as_tensor_variable(lower)
+        upper = pt.as_tensor_variable(upper)
         return super().dist([lower, upper], **kwargs)
 
     def moment(rv, size, lower, upper):
@@ -679,10 +678,10 @@ class TruncatedNormal(BoundedContinuous):
     ) -> RandomVariable:
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         sigma = pt.as_tensor_variable(sigma)
-        mu = pt.as_tensor_variable(floatX(mu))
+        mu = pt.as_tensor_variable(mu)
 
-        lower = pt.as_tensor_variable(floatX(lower)) if lower is not None else pt.constant(-np.inf)
-        upper = pt.as_tensor_variable(floatX(upper)) if upper is not None else pt.constant(np.inf)
+        lower = pt.as_tensor_variable(lower) if lower is not None else pt.constant(-np.inf)
+        upper = pt.as_tensor_variable(upper) if upper is not None else pt.constant(np.inf)
         return super().dist([mu, sigma, lower, upper], **kwargs)
 
     def moment(rv, size, mu, sigma, lower, upper):
@@ -1000,9 +999,9 @@ class Wald(PositiveContinuous):
         **kwargs,
     ):
         mu, lam, phi = cls.get_mu_lam_phi(mu, lam, phi)
-        alpha = pt.as_tensor_variable(floatX(alpha))
-        mu = pt.as_tensor_variable(floatX(mu))
-        lam = pt.as_tensor_variable(floatX(lam))
+        alpha = pt.as_tensor_variable(alpha)
+        mu = pt.as_tensor_variable(mu)
+        lam = pt.as_tensor_variable(lam)
         return super().dist([mu, lam, alpha], **kwargs)
 
     def moment(rv, size, mu, lam, alpha):
@@ -1176,8 +1175,8 @@ class Beta(UnitContinuous):
         **kwargs,
     ):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma, nu)
-        alpha = pt.as_tensor_variable(floatX(alpha))
-        beta = pt.as_tensor_variable(floatX(beta))
+        alpha = pt.as_tensor_variable(alpha)
+        beta = pt.as_tensor_variable(beta)
 
         return super().dist([alpha, beta], **kwargs)
 
@@ -1304,8 +1303,8 @@ class Kumaraswamy(UnitContinuous):
 
     @classmethod
     def dist(cls, a: DIST_PARAMETER_TYPES, b: DIST_PARAMETER_TYPES, *args, **kwargs):
-        a = pt.as_tensor_variable(floatX(a))
-        b = pt.as_tensor_variable(floatX(b))
+        a = pt.as_tensor_variable(a)
+        b = pt.as_tensor_variable(b)
 
         return super().dist([a, b], *args, **kwargs)
 
@@ -1401,7 +1400,7 @@ class Exponential(PositiveContinuous):
         if scale is None:
             scale = pt.reciprocal(lam)
 
-        scale = pt.as_tensor_variable(floatX(scale))
+        scale = pt.as_tensor_variable(scale)
         # PyTensor exponential op is parametrized in terms of mu (1/lam)
         return super().dist([scale], **kwargs)
 
@@ -1491,8 +1490,8 @@ class Laplace(Continuous):
 
     @classmethod
     def dist(cls, mu, b, *args, **kwargs):
-        b = pt.as_tensor_variable(floatX(b))
-        mu = pt.as_tensor_variable(floatX(mu))
+        b = pt.as_tensor_variable(b)
+        mu = pt.as_tensor_variable(mu)
 
         return super().dist([mu, b], *args, **kwargs)
 
@@ -1608,9 +1607,9 @@ class AsymmetricLaplace(Continuous):
     @classmethod
     def dist(cls, kappa=None, mu=None, b=None, q=None, *args, **kwargs):
         kappa = cls.get_kappa(kappa, q)
-        b = pt.as_tensor_variable(floatX(b))
-        kappa = pt.as_tensor_variable(floatX(kappa))
-        mu = pt.as_tensor_variable(floatX(mu))
+        b = pt.as_tensor_variable(b)
+        kappa = pt.as_tensor_variable(kappa)
+        mu = pt.as_tensor_variable(mu)
 
         return super().dist([b, kappa, mu], *args, **kwargs)
 
@@ -1724,8 +1723,8 @@ class LogNormal(PositiveContinuous):
     def dist(cls, mu=0, sigma=None, tau=None, *args, **kwargs):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        mu = pt.as_tensor_variable(floatX(mu))
-        sigma = pt.as_tensor_variable(floatX(sigma))
+        mu = pt.as_tensor_variable(mu)
+        sigma = pt.as_tensor_variable(sigma)
 
         return super().dist([mu, sigma], *args, **kwargs)
 
@@ -1839,7 +1838,7 @@ class StudentT(Continuous):
 
     @classmethod
     def dist(cls, nu, mu=0, *, sigma=None, lam=None, **kwargs):
-        nu = pt.as_tensor_variable(floatX(nu))
+        nu = pt.as_tensor_variable(nu)
         lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
         sigma = pt.as_tensor_variable(sigma)
 
@@ -1937,8 +1936,8 @@ class Pareto(BoundedContinuous):
 
     @classmethod
     def dist(cls, alpha, m, **kwargs):
-        alpha = pt.as_tensor_variable(floatX(alpha))
-        m = pt.as_tensor_variable(floatX(m))
+        alpha = pt.as_tensor_variable(alpha)
+        m = pt.as_tensor_variable(m)
 
         return super().dist([alpha, m], **kwargs)
 
@@ -2045,8 +2044,8 @@ class Cauchy(Continuous):
 
     @classmethod
     def dist(cls, alpha, beta, *args, **kwargs):
-        alpha = pt.as_tensor_variable(floatX(alpha))
-        beta = pt.as_tensor_variable(floatX(beta))
+        alpha = pt.as_tensor_variable(alpha)
+        beta = pt.as_tensor_variable(beta)
 
         return super().dist([alpha, beta], **kwargs)
 
@@ -2126,7 +2125,7 @@ class HalfCauchy(PositiveContinuous):
 
     @classmethod
     def dist(cls, beta, *args, **kwargs):
-        beta = pt.as_tensor_variable(floatX(beta))
+        beta = pt.as_tensor_variable(beta)
         return super().dist([0.0, beta], **kwargs)
 
     def moment(rv, size, loc, beta):
@@ -2232,8 +2231,8 @@ class Gamma(PositiveContinuous):
     @classmethod
     def dist(cls, alpha=None, beta=None, mu=None, sigma=None, **kwargs):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma)
-        alpha = pt.as_tensor_variable(floatX(alpha))
-        beta = pt.as_tensor_variable(floatX(beta))
+        alpha = pt.as_tensor_variable(alpha)
+        beta = pt.as_tensor_variable(beta)
         # PyTensor gamma op is parametrized in terms of scale (1/beta)
         scale = pt.reciprocal(beta)
         return super().dist([alpha, scale], **kwargs)
@@ -2340,8 +2339,8 @@ class InverseGamma(PositiveContinuous):
     @classmethod
     def dist(cls, alpha=None, beta=None, mu=None, sigma=None, *args, **kwargs):
         alpha, beta = cls._get_alpha_beta(alpha, beta, mu, sigma)
-        alpha = pt.as_tensor_variable(floatX(alpha))
-        beta = pt.as_tensor_variable(floatX(beta))
+        alpha = pt.as_tensor_variable(alpha)
+        beta = pt.as_tensor_variable(beta)
 
         return super().dist([alpha, beta], **kwargs)
 
@@ -2523,8 +2522,8 @@ class Weibull(PositiveContinuous):
 
     @classmethod
     def dist(cls, alpha, beta, *args, **kwargs):
-        alpha = pt.as_tensor_variable(floatX(alpha))
-        beta = pt.as_tensor_variable(floatX(beta))
+        alpha = pt.as_tensor_variable(alpha)
+        beta = pt.as_tensor_variable(beta)
 
         return super().dist([alpha, beta], *args, **kwargs)
 
@@ -2654,7 +2653,7 @@ class HalfStudentT(PositiveContinuous):
 
     @classmethod
     def dist(cls, nu, sigma=None, lam=None, *args, **kwargs):
-        nu = pt.as_tensor_variable(floatX(nu))
+        nu = pt.as_tensor_variable(nu)
         lam, sigma = get_tau_sigma(lam, sigma)
         sigma = pt.as_tensor_variable(sigma)
 
@@ -2775,9 +2774,9 @@ class ExGaussian(Continuous):
 
     @classmethod
     def dist(cls, mu=0.0, sigma=None, nu=None, *args, **kwargs):
-        mu = pt.as_tensor_variable(floatX(mu))
-        sigma = pt.as_tensor_variable(floatX(sigma))
-        nu = pt.as_tensor_variable(floatX(nu))
+        mu = pt.as_tensor_variable(mu)
+        sigma = pt.as_tensor_variable(sigma)
+        nu = pt.as_tensor_variable(nu)
 
         return super().dist([mu, sigma, nu], *args, **kwargs)
 
@@ -2880,8 +2879,8 @@ class VonMises(CircularContinuous):
 
     @classmethod
     def dist(cls, mu=0.0, kappa=1.0, *args, **kwargs):
-        mu = pt.as_tensor_variable(floatX(mu))
-        kappa = pt.as_tensor_variable(floatX(kappa))
+        mu = pt.as_tensor_variable(mu)
+        kappa = pt.as_tensor_variable(kappa)
         return super().dist([mu, kappa], *args, **kwargs)
 
     def moment(rv, size, mu, kappa):
@@ -2984,8 +2983,8 @@ class SkewNormal(Continuous):
     @classmethod
     def dist(cls, alpha=1, mu=0.0, sigma=None, tau=None, *args, **kwargs):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        alpha = pt.as_tensor_variable(floatX(alpha))
-        mu = pt.as_tensor_variable(floatX(mu))
+        alpha = pt.as_tensor_variable(alpha)
+        mu = pt.as_tensor_variable(mu)
         tau = pt.as_tensor_variable(tau)
         sigma = pt.as_tensor_variable(sigma)
 
@@ -3073,9 +3072,9 @@ class Triangular(BoundedContinuous):
 
     @classmethod
     def dist(cls, lower=0, upper=1, c=0.5, *args, **kwargs):
-        lower = pt.as_tensor_variable(floatX(lower))
-        upper = pt.as_tensor_variable(floatX(upper))
-        c = pt.as_tensor_variable(floatX(c))
+        lower = pt.as_tensor_variable(lower)
+        upper = pt.as_tensor_variable(upper)
+        c = pt.as_tensor_variable(c)
 
         return super().dist([lower, c, upper], *args, **kwargs)
 
@@ -3199,8 +3198,8 @@ class Gumbel(Continuous):
 
     @classmethod
     def dist(cls, mu, beta, **kwargs):
-        mu = pt.as_tensor_variable(floatX(mu))
-        beta = pt.as_tensor_variable(floatX(beta))
+        mu = pt.as_tensor_variable(mu)
+        beta = pt.as_tensor_variable(beta)
 
         return super().dist([mu, beta], **kwargs)
 
@@ -3319,8 +3318,8 @@ class Rice(PositiveContinuous):
     @classmethod
     def dist(cls, nu=None, sigma=None, b=None, *args, **kwargs):
         nu, b, sigma = cls.get_nu_b(nu, b, sigma)
-        b = pt.as_tensor_variable(floatX(b))
-        sigma = pt.as_tensor_variable(floatX(sigma))
+        b = pt.as_tensor_variable(b)
+        sigma = pt.as_tensor_variable(sigma)
 
         return super().dist([b, sigma], *args, **kwargs)
 
@@ -3418,8 +3417,8 @@ class Logistic(Continuous):
 
     @classmethod
     def dist(cls, mu=0.0, s=1.0, *args, **kwargs):
-        mu = pt.as_tensor_variable(floatX(mu))
-        s = pt.as_tensor_variable(floatX(s))
+        mu = pt.as_tensor_variable(mu)
+        s = pt.as_tensor_variable(s)
         return super().dist([mu, s], *args, **kwargs)
 
     def moment(rv, size, mu, s):
@@ -3523,7 +3522,7 @@ class LogitNormal(UnitContinuous):
 
     @classmethod
     def dist(cls, mu=0, sigma=None, tau=None, **kwargs):
-        mu = pt.as_tensor_variable(floatX(mu))
+        mu = pt.as_tensor_variable(mu)
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         sigma = pt.as_tensor_variable(sigma)
         tau = pt.as_tensor_variable(tau)
@@ -3654,9 +3653,9 @@ class Interpolated(BoundedContinuous):
         cdf_points = interp.antiderivative()(x_points) / Z
         pdf_points = pdf_points / Z
 
-        x_points = pt.constant(floatX(x_points))
-        pdf_points = pt.constant(floatX(pdf_points))
-        cdf_points = pt.constant(floatX(cdf_points))
+        x_points = pt.constant(x_points)
+        pdf_points = pt.constant(pdf_points)
+        cdf_points = pt.constant(cdf_points)
 
         # lower = pt.as_tensor_variable(x_points[0])
         # upper = pt.as_tensor_variable(x_points[-1])
@@ -3693,7 +3692,7 @@ class Interpolated(BoundedContinuous):
 def interpolated_default_transform(op, rv):
     def transform_params(*params):
         _, _, _, x_points, _, _ = params
-        return floatX(x_points[0]), floatX(x_points[-1])
+        return x_points[0], x_points[-1]
 
     return transforms.Interval(bounds_fn=transform_params)
 
@@ -3766,8 +3765,8 @@ class Moyal(Continuous):
 
     @classmethod
     def dist(cls, mu=0, sigma=1.0, *args, **kwargs):
-        mu = pt.as_tensor_variable(floatX(mu))
-        sigma = pt.as_tensor_variable(floatX(sigma))
+        mu = pt.as_tensor_variable(mu)
+        sigma = pt.as_tensor_variable(sigma)
 
         return super().dist([mu, sigma], *args, **kwargs)
 
@@ -3862,9 +3861,9 @@ class _PolyaGammaLogDistFunc(Op):
         self.get_pdf = get_pdf
 
     def make_node(self, x, h, z):
-        x = pt.as_tensor_variable(floatX(x))
-        h = pt.as_tensor_variable(floatX(h))
-        z = pt.as_tensor_variable(floatX(z))
+        x = pt.as_tensor_variable(x)
+        h = pt.as_tensor_variable(h)
+        z = pt.as_tensor_variable(z)
         bshape = broadcast_shape(x, h, z)
         shape = [None] * len(bshape)
         return Apply(self, [x, h, z], [pt.TensorType(pytensor.config.floatX, shape)()])
@@ -3965,8 +3964,8 @@ class PolyaGamma(PositiveContinuous):
 
     @classmethod
     def dist(cls, h=1.0, z=0.0, **kwargs):
-        h = pt.as_tensor_variable(floatX(h))
-        z = pt.as_tensor_variable(floatX(z))
+        h = pt.as_tensor_variable(h)
+        z = pt.as_tensor_variable(z)
 
         msg = f"The variable {h} specified for PolyaGamma has non-positive "
         msg += "values, making it unsuitable for this parameter."

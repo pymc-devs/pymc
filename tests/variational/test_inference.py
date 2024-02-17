@@ -81,12 +81,15 @@ def simple_model_data(use_minibatch):
 def simple_model(simple_model_data):
     with pm.Model() as model:
         mu_ = pm.Normal(
-            "mu", mu=simple_model_data["mu0"], sigma=simple_model_data["sigma0"], initval=0
+            "mu",
+            mu=pt.as_tensor_variable(simple_model_data["mu0"]).astype("floatX"),
+            sigma=pt.as_tensor_variable(simple_model_data["sigma0"]).astype("floatX"),
+            initval=0,
         )
         pm.Normal(
             "x",
             mu=mu_,
-            sigma=simple_model_data["sigma"],
+            sigma=pt.as_tensor_variable(simple_model_data["sigma"]).astype("floatX"),
             observed=simple_model_data["data"],
             total_size=simple_model_data["n"],
         )

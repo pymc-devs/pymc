@@ -25,8 +25,6 @@ from numpy.core.numeric import normalize_axis_tuple  # type: ignore
 from pytensor.graph import Op
 from pytensor.tensor import TensorVariable
 
-import pymc as pm
-
 from pymc.logprob.transforms import (
     ChainedTransform,
     CircularTransform,
@@ -284,7 +282,7 @@ class ZeroSumTransform(Transform):
 
     @staticmethod
     def extend_axis(array, axis):
-        n = pm.floatX(array.shape[axis] + 1)
+        n = (array.shape[axis] + 1).astype("floatX")
         sum_vals = array.sum(axis, keepdims=True)
         norm = sum_vals / (pt.sqrt(n) + n)
         fill_val = norm - sum_vals / pt.sqrt(n)
@@ -296,7 +294,7 @@ class ZeroSumTransform(Transform):
     def extend_axis_rev(array, axis):
         normalized_axis = normalize_axis_tuple(axis, array.ndim)[0]
 
-        n = pm.floatX(array.shape[normalized_axis])
+        n = array.shape[normalized_axis].astype("floatX")
         last = pt.take(array, [-1], axis=normalized_axis)
 
         sum_vals = -last * pt.sqrt(n)

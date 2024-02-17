@@ -27,7 +27,6 @@ from pymc.distributions.shape_utils import to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.logprob.basic import logp
 from pymc.model import modelcontext
-from pymc.pytensorf import floatX, intX
 from pymc.util import check_dist_not_registered
 
 __all__ = ["Bound"]
@@ -206,7 +205,7 @@ class Bound:
             res = _ContinuousBounded(
                 name,
                 [dist, lower, upper],
-                initval=floatX(initval),
+                initval=initval.astype("float"),
                 size=size,
                 shape=shape,
                 **kwargs,
@@ -215,7 +214,7 @@ class Bound:
             res = _DiscreteBounded(
                 name,
                 [dist, lower, upper],
-                initval=intX(initval),
+                initval=initval.astype("int"),
                 size=size,
                 shape=shape,
                 **kwargs,
@@ -241,7 +240,7 @@ class Bound:
                 shape=shape,
                 **kwargs,
             )
-            res.tag.test_value = floatX(initval)
+            res.tag.test_value = initval
         else:
             res = _DiscreteBounded.dist(
                 [dist, lower, upper],
@@ -249,7 +248,7 @@ class Bound:
                 shape=shape,
                 **kwargs,
             )
-            res.tag.test_value = intX(initval)
+            res.tag.test_value = initval.astype("int")
         return res
 
     @classmethod
@@ -286,9 +285,9 @@ class Bound:
             size = shape
 
         lower = np.asarray(lower)
-        lower = floatX(np.where(lower == None, -np.inf, lower))  # noqa E711
+        lower = np.where(lower == None, -np.inf, lower)  # noqa E711
         upper = np.asarray(upper)
-        upper = floatX(np.where(upper == None, np.inf, upper))  # noqa E711
+        upper = np.where(upper == None, np.inf, upper)  # noqa E711
 
         if initval is None:
             _size = np.broadcast_shapes(to_tuple(size), np.shape(lower), np.shape(upper))
@@ -303,7 +302,6 @@ class Bound:
                     np.where(_upper == np.inf, _lower + 1, (_lower + _upper) / 2),
                 ),
             )
-
-        lower = as_tensor_variable(floatX(lower))
-        upper = as_tensor_variable(floatX(upper))
+        lower = as_tensor_variable(lower, dtype="floatX")
+        upper = as_tensor_variable(upper, dtype="floatX")
         return lower, upper, initval

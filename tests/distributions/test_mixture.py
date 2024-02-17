@@ -19,7 +19,7 @@ import pytensor
 import pytest
 import scipy.stats as st
 
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal
 from pytensor import tensor as pt
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
@@ -1638,7 +1638,7 @@ class TestHurdleMixtures:
         ],
     )
     def test_hurdle_logp_at_zero(self, dist, psi, non_psi_args):
-        assert logp(dist(psi=psi, **non_psi_args), 0).eval() == np.log(1 - psi)
+        assert_almost_equal(logp(dist(psi=psi, **non_psi_args), 0).eval(), np.log(1 - psi))
 
     @pytest.mark.parametrize(
         "dist, psi, non_psi_args",
