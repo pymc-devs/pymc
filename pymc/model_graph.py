@@ -15,6 +15,7 @@ import warnings
 
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
+from os import path
 from typing import Optional
 
 from pytensor import function
@@ -238,7 +239,14 @@ class ModelGraph:
 
         return dict(plates)
 
-    def make_graph(self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"):
+    def make_graph(
+        self,
+        var_names: Optional[Iterable[VarName]] = None,
+        formatting: str = "plain",
+        save=None,
+        figsize=None,
+        dpi=300,
+    ):
         """Make graphviz Digraph of PyMC model
 
         Returns
@@ -270,6 +278,18 @@ class ModelGraph:
             # parents is a set of rv names that precede child rv nodes
             for parent in parents:
                 graph.edge(parent.replace(":", "&"), child.replace(":", "&"))
+
+        if save is not None:
+            width, height = (None, None) if figsize is None else figsize
+            base, ext = path.splitext(save)
+            if ext:
+                ext = ext.replace(".", "")
+            else:
+                ext = "png"
+            graph_c = graph.copy()
+            graph_c.graph_attr.update(size=f"{width},{height}!")
+            graph_c.graph_attr.update(dpi=str(dpi))
+            graph_c.render(filename=base, format=ext, cleanup=True)
 
         return graph
 
@@ -399,6 +419,9 @@ def model_to_graphviz(
     *,
     var_names: Optional[Iterable[VarName]] = None,
     formatting: str = "plain",
+    save: Optional[str] = None,
+    figsize: Optional[tuple[int, int]] = None,
+    dpi: int = 300,
 ):
     """Produce a graphviz Digraph from a PyMC model.
 
@@ -418,6 +441,14 @@ def model_to_graphviz(
         Subset of variables to be plotted that identify a subgraph with respect to the entire model graph
     formatting : str, optional
         one of { "plain" }
+    save : str, optional
+        If provided, an image of the graph will be saved to this location. The format is inferred from
+        the file extension.
+    figsize : tuple[int, int], optional
+        Width and height of the figure in inches. If not provided, uses the default figure size. It only affect
+        the size of the saved figure.
+    dpi : int, optional
+        Dots per inch. It only affects the resolution of the saved figure. The default is 300.
 
     Examples
     --------
@@ -453,4 +484,10 @@ def model_to_graphviz(
             stacklevel=2,
         )
     model = pm.modelcontext(model)
-    return ModelGraph(model).make_graph(var_names=var_names, formatting=formatting)
+    return ModelGraph(model).make_graph(
+        var_names=var_names,
+        formatting=formatting,
+        save=save,
+        figsize=figsize,
+        dpi=dpi,
+    )

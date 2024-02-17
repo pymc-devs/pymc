@@ -1690,10 +1690,20 @@ class TestModelGraphs:
     @pytest.mark.parametrize(
         argnames="var_names", argvalues=[None, ["mu", "tau"]], ids=["all", "subset"]
     )
-    def test_graphviz_call_function(self, var_names) -> None:
+    @pytest.mark.parametrize(
+        argnames="filenames",
+        argvalues=["model.png", "model"],
+        ids=["ext", "no_ext"],
+    )
+    def test_graphviz_call_function(self, var_names, filenames) -> None:
         model = self.school_model(J=8)
         with patch("pymc.model.core.model_to_graphviz") as mock_model_to_graphviz:
-            model.to_graphviz(var_names=var_names)
+            model.to_graphviz(var_names=var_names, save=filenames)
             mock_model_to_graphviz.assert_called_once_with(
-                model=model, var_names=var_names, formatting="plain"
+                model=model,
+                var_names=var_names,
+                formatting="plain",
+                save=filenames,
+                figsize=None,
+                dpi=300,
             )
