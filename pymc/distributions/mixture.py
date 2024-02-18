@@ -296,10 +296,17 @@ class Mixture(Distribution):
         # Output mix_indexes rng update so that it can be updated in place
         mix_indexes_rng_next_ = mix_indexes_.owner.outputs[0]
 
+        s = ",".join(f"s{i}" for i in range(components[0].owner.op.ndim_supp))
+        if len(components) == 1:
+            comp_s = ",".join((*s, "w"))
+            signature = f"(),(w),({comp_s})->({s})"
+        else:
+            comps_s = ",".join(f"({s})" for _ in components)
+            signature = f"(),(w),{comps_s}->({s})"
         mix_op = MarginalMixtureRV(
             inputs=[mix_indexes_rng_, weights_, *components_],
             outputs=[mix_indexes_rng_next_, mix_out_],
-            ndim_supp=components[0].owner.op.ndim_supp,
+            signature=signature,
         )
 
         # Create the actual MarginalMixture variable

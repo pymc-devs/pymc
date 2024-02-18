@@ -30,6 +30,8 @@ class CensoredRV(SymbolicRandomVariable):
     """Censored random variable"""
 
     inline_logprob = True
+    signature = "(),(),()->()"
+    ndim_supp = 0
     _print_name = ("Censored", "\\operatorname{Censored}")
 
 
@@ -115,7 +117,6 @@ class Censored(Distribution):
         return CensoredRV(
             inputs=[dist_, lower_, upper_],
             outputs=[censored_rv_],
-            ndim_supp=0,
         )(dist, lower, upper)
 
 

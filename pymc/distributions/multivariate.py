@@ -1163,6 +1163,8 @@ _ljk_cholesky_cov_base = _LKJCholeskyCovBaseRV()
 # be safely resized. Because of this, we add the thin SymbolicRandomVariable wrapper
 class _LKJCholeskyCovRV(SymbolicRandomVariable):
     default_output = 1
+    signature = "(),(),(),(n)->(),(n)"
+    ndim_supp = 1
     _print_name = ("_lkjcholeskycov", "\\operatorname{_lkjcholeskycov}")
 
     def update(self, node):
@@ -1218,7 +1220,6 @@ class _LKJCholeskyCov(Distribution):
         return _LKJCholeskyCovRV(
             inputs=[rng_, n_, eta_, sd_dist_],
             outputs=[next_rng_, lkjcov_],
-            ndim_supp=1,
         )(rng, n, eta, sd_dist)
 
 
@@ -2787,10 +2788,12 @@ class ZeroSumNormal(Distribution):
         for axis in range(n_zerosum_axes):
             zerosum_rv_ -= zerosum_rv_.mean(axis=-axis - 1, keepdims=True)
 
+        support_str = ",".join([f"d{i}" for i in range(n_zerosum_axes)])
+        signature = f"({support_str}),(),(s)->({support_str})"
         return ZeroSumNormalRV(
             inputs=[normal_dist_, sigma_, support_shape_],
-            outputs=[zerosum_rv_, support_shape_],
-            ndim_supp=n_zerosum_axes,
+            outputs=[zerosum_rv_],
+            signature=signature,
         )(normal_dist, sigma, support_shape)
 
 

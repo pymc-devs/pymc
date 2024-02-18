@@ -195,12 +195,17 @@ class RandomWalk(Distribution):
         # shape = (B, T, S)
         grw_ = pt.concatenate([init_dist_dimswapped_, innovation_dist_dimswapped_], axis=-ndim_supp)
         grw_ = pt.cumsum(grw_, axis=-ndim_supp)
+
+        innov_supp_dims = [f"d{i}" for i in range(dist_ndim_supp)]
+        innov_supp_str = ",".join(innov_supp_dims)
+        out_supp_str = ",".join(["t", *innov_supp_dims])
+        signature = f"({innov_supp_str}),({innov_supp_str}),(s)->({out_supp_str})"
         return RandomWalkRV(
             [init_dist_, innovation_dist_, steps_],
             # We pass steps_ through just so we can keep a reference to it, even though
             # it's no longer needed at this point
-            [grw_, steps_],
-            ndim_supp=ndim_supp,
+            [grw_],
+            signature=signature,
         )(init_dist, innovation_dist, steps)
 
 
@@ -417,6 +422,8 @@ class MvStudentTRandomWalk(PredefinedRandomWalk):
 class AutoRegressiveRV(SymbolicRandomVariable):
     """A placeholder used to specify a log-likelihood for an AR sub-graph."""
 
+    signature = "(o),(),(o),(s)->(),(t)"
+    ndim_supp = 1
     default_output = 1
     ar_order: int
     constant_term: bool
@@ -655,7 +662,6 @@ class AR(Distribution):
             outputs=[noise_next_rng, ar_],
             ar_order=ar_order,
             constant_term=constant_term,
-            ndim_supp=1,
         )
 
         ar = ar_op(rhos, sigma, init_dist, steps)
@@ -719,6 +725,8 @@ class GARCH11RV(SymbolicRandomVariable):
     """A placeholder used to specify a GARCH11 graph."""
 
     default_output = 1
+    signature = "(),(),(),(),(),(s)->(),(t)"
+    ndim_supp = 1
     _print_name = ("GARCH11", "\\operatorname{GARCH11}")
 
     def update(self, node: Node):
@@ -825,7 +833,6 @@ class GARCH11(Distribution):
         garch11_op = GARCH11RV(
             inputs=[omega_, alpha_1_, beta_1_, initial_vol_, init_, steps_],
             outputs=[noise_next_rng, garch11_],
-            ndim_supp=1,
         )
 
         garch11 = garch11_op(omega, alpha_1, beta_1, initial_vol, init_dist, steps)
@@ -881,6 +888,7 @@ class EulerMaruyamaRV(SymbolicRandomVariable):
     default_output = 1
     dt: float
     sde_fn: Callable
+    ndim_supp = 1
     _print_name = ("EulerMaruyama", "\\operatorname{EulerMaruyama}")
 
     def __init__(self, *args, dt, sde_fn, **kwargs):
@@ -1006,7 +1014,7 @@ class EulerMaruyama(Distribution):
             outputs=[noise_next_rng, sde_out_],
             dt=dt,
             sde_fn=sde_fn,
-            ndim_supp=1,
+            signature=f"(),(s),{','.join('()' for _ in sde_pars_)}->(),(t)",
         )
 
         eulermaruyama = eulermaruyama_op(init_dist, steps, *sde_pars)
