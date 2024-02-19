@@ -665,8 +665,11 @@ def sample(
     if draws == 0:
         msg = "Tuning was enabled throughout the whole trace."
         _log.warning(msg)
-    elif draws < 500:
-        msg = "Only %s samples in chain." % draws
+    elif draws < 100:
+        msg = (
+            "Only %s samples per chain. Reliable r-hat and ESS diagnostics require longer chains for accurate estimate."
+            % draws
+        )
         _log.warning(msg)
 
     auto_nuts_init = True
