@@ -256,7 +256,7 @@ def all_continuous(vars):
 
 
 def _sample_external_nuts(
-    sampler: str,
+    sampler: Literal["nutpie", "numpyro", "blackjax"],
     draws: int,
     tune: int,
     chains: int,
@@ -337,10 +337,10 @@ def _sample_external_nuts(
         )
         return idata
 
-    elif sampler == "numpyro":
+    elif sampler in ("numpyro", "blackjax"):
         import pymc.sampling.jax as pymc_jax
 
-        idata = pymc_jax.sample_numpyro_nuts(
+        idata = pymc_jax.sample_jax_nuts(
             draws=draws,
             tune=tune,
             chains=chains,
@@ -349,23 +349,7 @@ def _sample_external_nuts(
             initvals=initvals,
             model=model,
             progressbar=progressbar,
-            idata_kwargs=idata_kwargs,
-            **nuts_sampler_kwargs,
-        )
-        return idata
-
-    elif sampler == "blackjax":
-        import pymc.sampling.jax as pymc_jax
-
-        idata = pymc_jax.sample_blackjax_nuts(
-            draws=draws,
-            tune=tune,
-            chains=chains,
-            target_accept=target_accept,
-            random_seed=random_seed,
-            initvals=initvals,
-            model=model,
-            progress_bar=progressbar,
+            nuts_sampler=sampler,
             idata_kwargs=idata_kwargs,
             **nuts_sampler_kwargs,
         )
@@ -387,7 +371,7 @@ def sample(
     random_seed: RandomState = None,
     progressbar: bool = True,
     step=None,
-    nuts_sampler: str = "pymc",
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -416,7 +400,7 @@ def sample(
     random_seed: RandomState = None,
     progressbar: bool = True,
     step=None,
-    nuts_sampler: str = "pymc",
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -445,7 +429,7 @@ def sample(
     random_seed: RandomState = None,
     progressbar: bool = True,
     step=None,
-    nuts_sampler: str = "pymc",
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
