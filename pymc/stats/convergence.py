@@ -62,20 +62,28 @@ class SamplerWarning:
 
 
 def run_convergence_checks(idata: arviz.InferenceData, model) -> list[SamplerWarning]:
+    warnings: list[SamplerWarning] = []
+
     if not hasattr(idata, "posterior"):
         msg = "No posterior samples. Unable to run convergence checks"
         warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info", None, None, None)
-        return [warn]
+        warnings.append(warn)
+        return warnings
+
+    warnings += warn_divergences(idata)
+    warnings += warn_treedepth(idata)
 
     if idata["posterior"].sizes["draw"] < 100:
         msg = "The number of samples is too small to check convergence reliably."
         warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info", None, None, None)
-        return [warn]
+        warnings.append(warn)
+        return warnings
 
     if idata["posterior"].sizes["chain"] == 1:
         msg = "Only one chain was sampled, this makes it impossible to run some convergence checks"
         warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info")
-        return [warn]
+        warnings.append(warn)
+        return warnings
 
     elif idata["posterior"].sizes["chain"] < 4:
         msg = (
@@ -83,9 +91,8 @@ def run_convergence_checks(idata: arviz.InferenceData, model) -> list[SamplerWar
             "convergence diagnostics"
         )
         warn = SamplerWarning(WarningType.BAD_PARAMS, msg, "info")
-        return [warn]
+        warnings.append(warn)
 
-    warnings: list[SamplerWarning] = []
     valid_name = [rv.name for rv in model.free_RVs + model.deterministics]
     varnames = []
     for rv in model.free_RVs:
@@ -99,7 +106,6 @@ def run_convergence_checks(idata: arviz.InferenceData, model) -> list[SamplerWar
     ess = arviz.ess(idata, var_names=varnames)
     rhat = arviz.rhat(idata, var_names=varnames)
 
-    warnings = []
     rhat_max = max(val.max() for val in rhat.values())
     if rhat_max > 1.01:
         msg = (
@@ -120,9 +126,6 @@ def run_convergence_checks(idata: arviz.InferenceData, model) -> list[SamplerWar
         )
         warn = SamplerWarning(WarningType.CONVERGENCE, msg, "error", extra=ess)
         warnings.append(warn)
-
-    warnings += warn_divergences(idata)
-    warnings += warn_treedepth(idata)
 
     return warnings
 
