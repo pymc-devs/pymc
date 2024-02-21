@@ -86,8 +86,8 @@ vectorized_ppc: contextvars.ContextVar[Optional[Callable]] = contextvars.Context
 PLATFORM = sys.platform
 
 
-class MomentRewrite(GraphRewriter):
-    def rewrite_moment_scan_node(self, node):
+class FiniteLogpPointRewrite(GraphRewriter):
+    def rewrite_finet_logp_point_scan_node(self, node):
         if not isinstance(node.op, Scan):
             return
 
@@ -96,19 +96,19 @@ class MomentRewrite(GraphRewriter):
 
         local_fgraph_topo = io_toposort(node_inputs, node_outputs)
 
-        replace_with_moment = []
+        replace_with_finite_logp_point = []
         to_replace_set = set()
 
         for nd in local_fgraph_topo:
             if nd not in to_replace_set and isinstance(
                 nd.op, (RandomVariable, SymbolicRandomVariable)
             ):
-                replace_with_moment.append(nd.out)
+                replace_with_finite_logp_point.append(nd.out)
                 to_replace_set.add(nd)
         givens = {}
-        if len(replace_with_moment) > 0:
-            for item in replace_with_moment:
-                givens[item] = moment(item)
+        if len(replace_with_finite_logp_point) > 0:
+            for item in replace_with_finite_logp_point:
+                givens[item] = finite_logp_point(item)
         else:
             return
         op_outs = clone_replace(node_outputs, replace=givens)
@@ -132,9 +132,9 @@ class MomentRewrite(GraphRewriter):
     def apply(self, fgraph):
         for node in fgraph.toposort():
             if isinstance(node.op, (RandomVariable, SymbolicRandomVariable)):
-                fgraph.replace(node.out, moment(node.out))
+                fgraph.replace(node.out, finite_logp_point(node.out))
             elif isinstance(node.op, Scan):
-                new_node = self.rewrite_moment_scan_node(node)
+                new_node = self.rewrite_finite_logp_point_scan_node(node)
                 if new_node is not None:
                     fgraph.replace_all(tuple(zip(node.outputs, new_node.outputs)))
 
@@ -209,12 +209,12 @@ class DistributionMeta(ABCMeta):
                     dist_params = dist_params[3:]
                     return class_icdf(value, *dist_params)
 
-            class_moment = clsdict.get("moment")
-            if class_moment:
+            class_finite_logp_point = clsdict.get("finite_logp_point")
+            if class_finite_logp_point:
 
-                @_moment.register(rv_type)
-                def moment(op, rv, rng, size, dtype, *dist_params):
-                    return class_moment(rv, size, *dist_params)
+                @_finite_logp_point.register(rv_type)
+                def finite_logp_poin(op, rv, rng, size, dtype, *dist_params):
+                    return class_finite_logp_point(rv, size, *dist_params)
 
             # Register the PyTensor rv_type as a subclass of this
             # PyMC Distribution type.
@@ -310,9 +310,9 @@ class Distribution(metaclass=DistributionMeta):
             the shape of dims is used to define the shape of the variable.
         initval : optional
             Numeric or symbolic untransformed initial value of matching shape,
-            or one of the following initial value strategies: "moment", "prior".
+            or one of the following initial value strategies: "finite_logp_point", "prior".
             Depending on the sampler's settings, a random jitter may be added to numeric, symbolic
-            or moment-based initial values in the transformed space.
+            or finite_logp_point-based initial values in the transformed space.
         observed : optional
             Observed data to be passed when registering the random variable in the model.
             When neither shape nor dims is provided, the shape of observed is used to
@@ -480,18 +480,20 @@ logprob_rewrites_db.register(
 
 
 @singledispatch
-def _moment(op, rv, *rv_inputs) -> TensorVariable:
-    raise NotImplementedError(f"Variable {rv} of type {op} has no moment implementation.")
+def _finite_logp_point(op, rv, *rv_inputs) -> TensorVariable:
+    raise NotImplementedError(
+        f"Variable {rv} of type {op} has no finite_logp_point implementation."
+    )
 
 
-def moment(rv: TensorVariable) -> TensorVariable:
+def finite_logp_point(rv: TensorVariable) -> TensorVariable:
     """Method for choosing a representative point/value
     that can be used to start optimization or MCMC sampling.
 
     The only parameter to this function is the RandomVariable
     for which the value is to be derived.
     """
-    return _moment(rv.owner.op, rv, *rv.owner.inputs).astype(rv.dtype)
+    return _finite_logp_point(rv.owner.op, rv, *rv.owner.inputs).astype(rv.dtype)
 
 
 class Discrete(Distribution):
@@ -537,7 +539,7 @@ class _CustomDist(Distribution):
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
         random: Optional[Callable] = None,
-        moment: Optional[Callable] = None,
+        finite_logp_point: Optional[Callable] = None,
         ndim_supp: int = 0,
         ndims_params: Optional[Sequence[int]] = None,
         dtype: str = "floatX",
@@ -561,9 +563,9 @@ class _CustomDist(Distribution):
         if logcdf is None:
             logcdf = default_not_implemented(class_name, "logcdf")
 
-        if moment is None:
-            moment = functools.partial(
-                default_moment,
+        if finite_logp_point is None:
+            finite_logp_point = functools.partial(
+                default_finite_logp_point,
                 rv_name=class_name,
                 has_fallback=random is not None,
                 ndim_supp=ndim_supp,
@@ -577,7 +579,7 @@ class _CustomDist(Distribution):
             logp=logp,
             logcdf=logcdf,
             random=random,
-            moment=moment,
+            finite_logp_point=finite_logp_point,
             ndim_supp=ndim_supp,
             ndims_params=ndims_params,
             dtype=dtype,
@@ -592,7 +594,7 @@ class _CustomDist(Distribution):
         logp: Optional[Callable],
         logcdf: Optional[Callable],
         random: Optional[Callable],
-        moment: Optional[Callable],
+        finite_logp_point: Optional[Callable],
         ndim_supp: int,
         ndims_params: Optional[Sequence[int]],
         dtype: str,
@@ -622,9 +624,9 @@ class _CustomDist(Distribution):
         def density_dist_logcdf(op, value, rng, size, dtype, *dist_params, **kwargs):
             return logcdf(value, *dist_params, **kwargs)
 
-        @_moment.register(rv_type)
-        def density_dist_get_moment(op, rv, rng, size, dtype, *dist_params):
-            return moment(rv, size, *dist_params)
+        @_finite_logp_point.register(rv_type)
+        def density_dist_get_finite_logp_point(op, rv, rng, size, dtype, *dist_params):
+            return finite_logp_point(rv, size, *dist_params)
 
         rv_op = rv_type()
         return rv_op(*dist_params, **kwargs)
@@ -657,18 +659,18 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
         return updates
 
 
-@_moment.register(CustomSymbolicDistRV)
-def dist_moment(op, rv, *args):
+@_finite_logp_point.register(CustomSymbolicDistRV)
+def dist_finite_logp_point(op, rv, *args):
     node = rv.owner
     rv_out_idx = node.outputs.index(rv)
 
     fgraph = op.fgraph.clone()
-    replace_moments = MomentRewrite()
-    replace_moments.rewrite(fgraph)
+    replace_finite_logp_point = FiniteLogpPointRewrite()
+    replace_finite_logp_point.rewrite(fgraph)
     # Replace dummy inner inputs by outer inputs
     fgraph.replace_all(tuple(zip(op.inner_inputs, args)), import_missing=True)
-    moment = fgraph.outputs[rv_out_idx]
-    return moment
+    finite_logp_point = fgraph.outputs[rv_out_idx]
+    return finite_logp_point
 
 
 class _CustomSymbolicDist(Distribution):
@@ -681,7 +683,7 @@ class _CustomSymbolicDist(Distribution):
         dist: Callable,
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
-        moment: Optional[Callable] = None,
+        finite_logp_point: Optional[Callable] = None,
         ndim_supp: int = 0,
         dtype: str = "floatX",
         class_name: str = "CustomDist",
@@ -698,7 +700,7 @@ class _CustomSymbolicDist(Distribution):
             logp=logp,
             logcdf=logcdf,
             dist=dist,
-            moment=moment,
+            finite_logp_point=finite_logp_point,
             ndim_supp=ndim_supp,
             **kwargs,
         )
@@ -710,7 +712,7 @@ class _CustomSymbolicDist(Distribution):
         dist: Callable,
         logp: Optional[Callable],
         logcdf: Optional[Callable],
-        moment: Optional[Callable],
+        finite_logp_point: Optional[Callable],
         size=None,
         ndim_supp: int,
         class_name: str,
@@ -747,11 +749,11 @@ class _CustomSymbolicDist(Distribution):
             def custom_dist_logcdf(op, value, size, *params, **kwargs):
                 return logcdf(value, *params[: len(dist_params)])
 
-        if moment is not None:
+        if finite_logp_point is not None:
 
-            @_moment.register(rv_type)
-            def custom_dist_get_moment(op, rv, size, *params):
-                return moment(
+            @_finite_logp_point.register(rv_type)
+            def custom_dist_get_finite_logp_point(op, rv, size, *params):
+                return finite_logp_point(
                     rv,
                     size,
                     *[
@@ -812,7 +814,7 @@ class CustomDist:
     Python graph that represents the logp graph when evaluated. This is used for
     mcmc sampling.
 
-    Additionally, a user can provide a `logcdf` and `moment` functions that must return
+    Additionally, a user can provide a `logcdf` and `finite_logp_point` functions that must return
     an PyTensor graph that computes those quantities. These may be used by other PyMC
     routines.
 
@@ -865,14 +867,14 @@ class CustomDist:
         are the tensors that hold the values of the distribution parameters.
         This function must return an PyTensor tensor. If ``None``, a ``NotImplementedError``
         will be raised when trying to compute the distribution's logcdf.
-    moment : Optional[Callable]
-        A callable that can be used to compute the moments of the distribution.
-        It must have the following signature: ``moment(rv, size, *rv_inputs)``.
+    finite_logp_point : Optional[Callable]
+        A callable that can be used to compute the finete logp point of the distribution.
+        It must have the following signature: ``finite_logp_point(rv, size, *rv_inputs)``.
         The distribution's variable is passed as the first argument ``rv``. ``size``
         is the random variable's size implied by the ``dims``, ``size`` and parameters
         supplied to the distribution. Finally, ``rv_inputs`` is the sequence of the
         distribution parameters, in the same order as they were supplied when the
-        CustomDist was created. If ``None``, a default  ``moment`` function will be
+        CustomDist was created. If ``None``, a default  ``finite_logp_point`` function will be
         assigned that will always return 0, or an array of zeros.
     ndim_supp : int
         The number of dimensions in the support of the distribution. Defaults to assuming
@@ -1020,7 +1022,7 @@ class CustomDist:
         random: Optional[Callable] = None,
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
-        moment: Optional[Callable] = None,
+        finite_logp_point: Optional[Callable] = None,
         ndim_supp: int = 0,
         ndims_params: Optional[Sequence[int]] = None,
         dtype: str = "floatX",
@@ -1044,7 +1046,7 @@ class CustomDist:
                 dist=dist,
                 logp=logp,
                 logcdf=logcdf,
-                moment=moment,
+                finite_logp_point=finite_logp_point,
                 ndim_supp=ndim_supp,
                 **kwargs,
             )
@@ -1056,7 +1058,7 @@ class CustomDist:
                 random=random,
                 logp=logp,
                 logcdf=logcdf,
-                moment=moment,
+                finite_logp_point=finite_logp_point,
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
                 dtype=dtype,
@@ -1071,7 +1073,7 @@ class CustomDist:
         random: Optional[Callable] = None,
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
-        moment: Optional[Callable] = None,
+        finite_logp_point: Optional[Callable] = None,
         ndim_supp: int = 0,
         ndims_params: Optional[Sequence[int]] = None,
         dtype: str = "floatX",
@@ -1085,7 +1087,7 @@ class CustomDist:
                 dist=dist,
                 logp=logp,
                 logcdf=logcdf,
-                moment=moment,
+                finite_logp_point=finite_logp_point,
                 ndim_supp=ndim_supp,
                 **kwargs,
             )
@@ -1095,7 +1097,7 @@ class CustomDist:
                 random=random,
                 logp=logp,
                 logcdf=logcdf,
-                moment=moment,
+                finite_logp_point=finite_logp_point,
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
                 dtype=dtype,
@@ -1161,15 +1163,15 @@ def default_not_implemented(rv_name, method_name):
     return func
 
 
-def default_moment(rv, size, *rv_inputs, rv_name=None, has_fallback=False, ndim_supp=0):
+def default_finite_logp_point(rv, size, *rv_inputs, rv_name=None, has_fallback=False, ndim_supp=0):
     if ndim_supp == 0:
         return pt.zeros(size, dtype=rv.dtype)
     elif has_fallback:
         return pt.zeros_like(rv)
     else:
         raise TypeError(
-            "Cannot safely infer the size of a multivariate random variable's moment. "
-            f"Please provide a moment function when instantiating the {rv_name} "
+            "Cannot safely infer the size of a multivariate random variable's finite_logp_point. "
+            f"Please provide a finite_logp_point function when instantiating the {rv_name} "
             "random variable."
         )
 
@@ -1215,7 +1217,7 @@ class DiracDelta(Discrete):
             c = floatX(c)
         return super().dist([c], **kwargs)
 
-    def moment(rv, size, c):
+    def finite_logp_point(rv, size, c):
         if not rv_size_is_none(size):
             c = pt.full(size, c)
         return c
@@ -1365,11 +1367,11 @@ def partial_observed_rv_logprob(op, values, dist, mask, **kwargs):
         return joined_logp.ravel(), pt.zeros((0,), dtype=joined_logp.type.dtype)
 
 
-@_moment.register(PartialObservedRV)
-def partial_observed_rv_moment(op, partial_obs_rv, rv, mask):
+@_finite_logp_point.register(PartialObservedRV)
+def partial_observed_rv_finite_logp_point(op, partial_obs_rv, rv, mask):
     # Unobserved output
     if partial_obs_rv.owner.outputs.index(partial_obs_rv) == 1:
-        return moment(rv)[mask]
+        return finite_logp_point(rv)[mask]
     # Observed output
     else:
-        return moment(rv)[~mask]
+        return finite_logp_point(rv)[~mask]
