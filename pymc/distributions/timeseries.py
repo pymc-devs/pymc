@@ -30,8 +30,8 @@ from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.distribution import (
     Distribution,
     SymbolicRandomVariable,
-    _moment,
-    moment,
+    _finite_logp_point,
+    finite_logp_point,
 )
 from pymc.distributions.multivariate import MvNormal, MvStudentT
 from pymc.distributions.shape_utils import (
@@ -214,18 +214,20 @@ def change_random_walk_size(op, dist, new_size, expand):
     return RandomWalk.rv_op(init_dist, innovation_dist, steps, size=new_size)
 
 
-@_moment.register(RandomWalkRV)
-def random_walk_moment(op, rv, init_dist, innovation_dist, steps):
+@_finite_logp_point.register(RandomWalkRV)
+def random_walk_finite_logp_point(op, rv, init_dist, innovation_dist, steps):
     # shape = (1, B, S)
-    init_moment = moment(init_dist)
+    init_finite_logp_point = finite_logp_point(init_dist)
     # shape = (T-1, B, S)
-    innovation_moment = moment(innovation_dist)
+    innovation_finite_logp_point = finite_logp_point(innovation_dist)
     # shape = (T, B, S)
-    grw_moment = pt.concatenate([init_moment, innovation_moment], axis=0)
-    grw_moment = pt.cumsum(grw_moment, axis=0)
+    grw_finite_logp_point = pt.concatenate(
+        [init_finite_logp_point, innovation_finite_logp_point], axis=0
+    )
+    grw_finite_logp_point = pt.cumsum(grw_finite_logp_point, axis=0)
     # shape = (B, T, S)
-    grw_moment = pt.moveaxis(grw_moment, 0, -op.ndim_supp)
-    return grw_moment
+    grw_finite_logp_point = pt.moveaxis(grw_finite_logp_point, 0, -op.ndim_supp)
+    return grw_finite_logp_point
 
 
 @_logprob.register(RandomWalkRV)
@@ -709,10 +711,10 @@ def ar_logp(op, values, rhos, sigma, init_dist, steps, noise_rng, **kwargs):
     return init_logp + innov_logp
 
 
-@_moment.register(AutoRegressiveRV)
-def ar_moment(op, rv, rhos, sigma, init_dist, steps, noise_rng):
-    # Use last entry of init_dist moment as the moment for the whole AR
-    return pt.full_like(rv, moment(init_dist)[..., -1, None])
+@_finite_logp_point.register(AutoRegressiveRV)
+def ar_finite_logp_point(op, rv, rhos, sigma, init_dist, steps, noise_rng):
+    # Use last entry of init_dist finite_logp_point as the moment for the whole AR
+    return pt.full_like(rv, finite_logp_point(init_dist)[..., -1, None])
 
 
 class GARCH11RV(SymbolicRandomVariable):
@@ -869,8 +871,10 @@ def garch11_logp(
     return innov_logp
 
 
-@_moment.register(GARCH11RV)
-def garch11_moment(op, rv, omega, alpha_1, beta_1, initial_vol, init_dist, steps, noise_rng):
+@_finite_logp_point.register(GARCH11RV)
+def garch11_finite_logp_point(
+    op, rv, omega, alpha_1, beta_1, initial_vol, init_dist, steps, noise_rng
+):
     # GARCH(1,1) mean is zero
     return pt.zeros_like(rv)
 
