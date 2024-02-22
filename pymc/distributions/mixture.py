@@ -29,8 +29,8 @@ from pymc.distributions.distribution import (
     DiracDelta,
     Distribution,
     SymbolicRandomVariable,
-    _moment,
-    moment,
+    _finite_logp_point,
+    finite_logp_point,
 )
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
 from pymc.distributions.transforms import _default_transform
@@ -391,25 +391,25 @@ def marginal_mixture_logcdf(op, value, rng, weights, *components, **kwargs):
     return mix_logcdf
 
 
-@_moment.register(MarginalMixtureRV)
-def marginal_mixture_moment(op, rv, rng, weights, *components):
+@_finite_logp_point.register(MarginalMixtureRV)
+def marginal_mixture_finite_logp_point(op, rv, rng, weights, *components):
     ndim_supp = components[0].owner.op.ndim_supp
     weights = pt.shape_padright(weights, ndim_supp)
     mix_axis = -ndim_supp - 1
 
     if len(components) == 1:
-        moment_components = moment(components[0])
+        finite_logp_point_components = finite_logp_point(components[0])
 
     else:
-        moment_components = pt.stack(
-            [moment(component) for component in components],
+        finite_logp_point_components = pt.stack(
+            [finite_logp_point(component) for component in components],
             axis=mix_axis,
         )
 
-    mix_moment = pt.sum(weights * moment_components, axis=mix_axis)
+    mix_finite_logp_point = pt.sum(weights * finite_logp_point_components, axis=mix_axis)
     if components[0].dtype in discrete_types:
-        mix_moment = pt.round(mix_moment)
-    return mix_moment
+        mix_finite_logp_point = pt.round(mix_finite_logp_point)
+    return mix_finite_logp_point
 
 
 # List of transforms that can be used by Mixture, either because they do not require
