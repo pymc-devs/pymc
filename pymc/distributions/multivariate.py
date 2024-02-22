@@ -57,8 +57,8 @@ from pymc.distributions.distribution import (
     Discrete,
     Distribution,
     SymbolicRandomVariable,
-    _moment,
-    moment,
+    _finite_logp_point,
+    finite_logp_point,
 )
 from pymc.distributions.shape_utils import (
     _change_dist_size,
@@ -245,13 +245,13 @@ class MvNormal(Continuous):
         mu, _ = pt.broadcast_arrays(mu, cov[..., -1])
         return super().dist([mu, cov], **kwargs)
 
-    def moment(rv, size, mu, cov):
+    def finite_logp_point(rv, size, mu, cov):
         # mu is broadcasted to the potential length of cov in `dist`
-        moment = mu
+        finite_logp_point = mu
         if not rv_size_is_none(size):
-            moment_size = pt.concatenate([size, [mu.shape[-1]]])
-            moment = pt.full(moment_size, mu)
-        return moment
+            finite_logp_point_size = pt.concatenate([size, [mu.shape[-1]]])
+            finite_logp_point = pt.full(finite_logp_point_size, mu)
+        return finite_logp_point
 
     def logp(value, mu, cov):
         """
@@ -380,14 +380,14 @@ class MvStudentT(Continuous):
 
         return super().dist([nu, mu, scale], **kwargs)
 
-    def moment(rv, size, nu, mu, scale):
+    def finite_logp_point(rv, size, nu, mu, scale):
         # mu is broadcasted to the potential length of scale in `dist`
         mu, _ = pt.random.utils.broadcast_params([mu, nu], ndims_params=[1, 0])
-        moment = mu
+        finite_logp_point = mu
         if not rv_size_is_none(size):
-            moment_size = pt.concatenate([size, [mu.shape[-1]]])
-            moment = pt.full(moment_size, moment)
-        return moment
+            finite_logp_point_size = pt.concatenate([size, [mu.shape[-1]]])
+            finite_logp_point = pt.full(finite_logp_point_size, finite_logp_point)
+        return finite_logp_point
 
     def logp(value, nu, mu, scale):
         """
@@ -448,12 +448,12 @@ class Dirichlet(SimplexContinuous):
 
         return super().dist([a], **kwargs)
 
-    def moment(rv, size, a):
+    def finite_logp_point(rv, size, a):
         norm_constant = pt.sum(a, axis=-1)[..., None]
-        moment = a / norm_constant
+        finite_logp_point = a / norm_constant
         if not rv_size_is_none(size):
-            moment = pt.full(pt.concatenate([size, [a.shape[-1]]]), moment)
-        return moment
+            finite_logp_point = pt.full(pt.concatenate([size, [a.shape[-1]]]), finite_logp_point)
+        return finite_logp_point
 
     def logp(value, a):
         """
@@ -541,7 +541,7 @@ class Multinomial(Discrete):
         p = pt.as_tensor_variable(p)
         return super().dist([n, p], *args, **kwargs)
 
-    def moment(rv, size, n, p):
+    def finite_logp_point(rv, size, n, p):
         n = pt.shape_padright(n)
         mean = n * p
         mode = pt.round(mean)
@@ -557,7 +557,7 @@ class Multinomial(Discrete):
             output_size = pt.concatenate([size, [p.shape[-1]]])
             mode = pt.full(output_size, mode)
         return Assert(
-            "Negative value in computed moment of Multinomial."
+            "Negative value in computed finite_logp_point of Multinomial."
             "It is a known limitation that can arise when the expected largest count is small."
             "Please provide an initial value manually."
         )(mode, pt.all(mode >= 0))
@@ -672,9 +672,9 @@ class DirichletMultinomial(Discrete):
     def dist(cls, n, a, *args, **kwargs):
         return super().dist([n, a], **kwargs)
 
-    def moment(rv, size, n, a):
+    def finite_logp_point(rv, size, n, a):
         p = a / pt.sum(a, axis=-1, keepdims=True)
-        return moment(Multinomial.dist(n=n, p=p, size=size))
+        return finite_logp_point(Multinomial.dist(n=n, p=p, size=size))
 
     def logp(value, n, a):
         """
@@ -1233,12 +1233,12 @@ def change_LKJCholeksyCovRV_size(op, dist, new_size, expand=False):
     return _LKJCholeskyCov.rv_op(n, eta, sd_dist, size=new_size)
 
 
-@_moment.register(_LKJCholeskyCovRV)
-def _LKJCholeksyCovRV_moment(op, rv, rng, n, eta, sd_dist):
+@_finite_logp_point.register(_LKJCholeskyCovRV)
+def _LKJCholeksyCovRV_finite_logp_point(op, rv, rng, n, eta, sd_dist):
     diag_idxs = (pt.cumsum(pt.arange(1, n + 1)) - 1).astype("int32")
-    moment = pt.zeros_like(rv)
-    moment = pt.set_subtensor(moment[..., diag_idxs], 1)
-    return moment
+    finite_logp_point = pt.zeros_like(rv)
+    finite_logp_point = pt.set_subtensor(finite_logp_point[..., diag_idxs], 1)
+    return finite_logp_point
 
 
 @_default_transform.register(_LKJCholeskyCovRV)
@@ -1545,7 +1545,7 @@ class _LKJCorr(BoundedContinuous):
         eta = pt.as_tensor_variable(eta)
         return super().dist([n, eta], **kwargs)
 
-    def moment(rv, *args):
+    def finite_logp_point(rv, *args):
         return pt.zeros_like(rv)
 
     def logp(value, n, eta):
@@ -1866,7 +1866,7 @@ class MatrixNormal(Continuous):
 
         return super().dist([mu, rowchol_cov, colchol_cov], **kwargs)
 
-    def moment(rv, size, mu, rowchol, colchol):
+    def finite_logp_point(rv, size, mu, rowchol, colchol):
         return pt.full_like(rv, mu)
 
     def logp(value, mu, rowchol, colchol):
@@ -2054,11 +2054,11 @@ class KroneckerNormal(Continuous):
 
         return super().dist([mu, sigma, *covs], **kwargs)
 
-    def moment(rv, size, mu, covs, chols, evds):
+    def finite_logp_point(rv, size, mu, covs, chols, evds):
         mean = mu
         if not rv_size_is_none(size):
-            moment_size = pt.concatenate([size, mu.shape])
-            mean = pt.full(moment_size, mu)
+            finite_logp_point_size = pt.concatenate([size, mu.shape])
+            mean = pt.full(finite_logp_point_size, mu)
         return mean
 
     def logp(value, mu, sigma, *covs):
@@ -2242,7 +2242,7 @@ class CAR(Continuous):
     def dist(cls, mu, W, alpha, tau, *args, **kwargs):
         return super().dist([mu, W, alpha, tau], **kwargs)
 
-    def moment(rv, size, mu, W, alpha, tau):
+    def finite_logp_point(rv, size, mu, W, alpha, tau):
         return pt.full_like(rv, mu)
 
     def logp(value, mu, W, alpha, tau):
@@ -2449,7 +2449,7 @@ class ICAR(Continuous):
 
         return super().dist([W, node1, node2, N, sigma, zero_sum_stdev], **kwargs)
 
-    def moment(rv, size, W, node1, node2, N, sigma, zero_sum_stdev):
+    def finite_logp_point(rv, size, W, node1, node2, N, sigma, zero_sum_stdev):
         return pt.zeros(N)
 
     def logp(value, W, node1, node2, N, sigma, zero_sum_stdev):
@@ -2559,13 +2559,13 @@ class StickBreakingWeights(SimplexContinuous):
 
         return super().dist([alpha, K], **kwargs)
 
-    def moment(rv, size, alpha, K):
+    def finite_logp_point(rv, size, alpha, K):
         alpha = alpha[..., np.newaxis]
-        moment = (alpha / (1 + alpha)) ** pt.arange(K)
-        moment *= 1 / (1 + alpha)
-        moment = pt.concatenate([moment, (alpha / (1 + alpha)) ** K], axis=-1)
+        finite_logp_point = (alpha / (1 + alpha)) ** pt.arange(K)
+        finite_logp_point *= 1 / (1 + alpha)
+        finite_logp_point = pt.concatenate([finite_logp_point, (alpha / (1 + alpha)) ** K], axis=-1)
         if not rv_size_is_none(size):
-            moment_size = pt.concatenate(
+            finite_logp_point_size = pt.concatenate(
                 [
                     size,
                     [
@@ -2573,9 +2573,9 @@ class StickBreakingWeights(SimplexContinuous):
                     ],
                 ]
             )
-            moment = pt.full(moment_size, moment)
+            finite_logp_point = pt.full(finite_logp_point_size, finite_logp_point)
 
-        return moment
+        return finite_logp_point
 
     def logp(value, alpha, K):
         """
@@ -2808,8 +2808,8 @@ def change_zerosum_size(op, normal_dist, new_size, expand=False):
     )
 
 
-@_moment.register(ZeroSumNormalRV)
-def zerosumnormal_moment(op, rv, *rv_inputs):
+@_finite_logp_point.register(ZeroSumNormalRV)
+def zerosumnormal_finite_logp_point(op, rv, *rv_inputs):
     return pt.zeros_like(rv)
 
 
