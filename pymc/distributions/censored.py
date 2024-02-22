@@ -20,7 +20,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pymc.distributions.distribution import (
     Distribution,
     SymbolicRandomVariable,
-    _moment,
+    _finite_logp_point,
 )
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
 from pymc.util import check_dist_not_registered
@@ -127,9 +127,9 @@ def change_censored_size(cls, dist, new_size, expand=False):
     return Censored.rv_op(uncensored_dist, lower, upper, size=new_size)
 
 
-@_moment.register(CensoredRV)
-def moment_censored(op, rv, dist, lower, upper):
-    moment = pt.switch(
+@_finite_logp_point.register(CensoredRV)
+def finite_logp_point_censored(op, rv, dist, lower, upper):
+    finite_logp_point = pt.switch(
         pt.eq(lower, -np.inf),
         pt.switch(
             pt.isinf(upper),
@@ -146,5 +146,5 @@ def moment_censored(op, rv, dist, lower, upper):
             (lower + upper) / 2,
         ),
     )
-    moment = pt.full_like(dist, moment)
-    return moment
+    finite_logp_point = pt.full_like(dist, finite_logp_point)
+    return finite_logp_point
