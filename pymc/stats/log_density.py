@@ -131,7 +131,7 @@ def compute_log_density(
         target_rvs = model.observed_RVs
         target_str = "observed_RVs"
     else:
-        target_rvs = model.unobserved_RVs
+        target_rvs = model.free_RVs
         target_str = "free_RVs"
 
     if var_names is None:
