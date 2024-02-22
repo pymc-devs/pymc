@@ -31,8 +31,8 @@ from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import (
     Distribution,
     SymbolicRandomVariable,
-    _moment,
-    moment,
+    _finite_logp_point,
+    finite_logp_point,
 )
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size, to_tuple
 from pymc.distributions.transforms import _default_transform
@@ -270,15 +270,15 @@ def change_truncated_size(op, dist, new_size, expand):
     )
 
 
-@_moment.register(TruncatedRV)
-def truncated_moment(op, rv, *inputs):
+@_finite_logp_point.register(TruncatedRV)
+def truncated_finite_logp_point(op, rv, *inputs):
     *rv_inputs, lower, upper, rng = inputs
 
-    # recreate untruncated rv and respective moment
+    # recreate untruncated rv and respective finite_logp_point
     untruncated_rv = op.base_rv_op.make_node(rng, *rv_inputs).default_output()
-    untruncated_moment = moment(untruncated_rv)
+    untruncated_finite_logp_point = finite_logp_point(untruncated_rv)
 
-    fallback_moment = pt.switch(
+    fallback_finite_logp_point = pt.switch(
         pt.and_(pt.bitwise_not(pt.isinf(lower)), pt.bitwise_not(pt.isinf(upper))),
         (upper - lower) / 2,  # lower and upper are finite
         pt.switch(
@@ -289,9 +289,11 @@ def truncated_moment(op, rv, *inputs):
     )
 
     return pt.switch(
-        pt.and_(pt.ge(untruncated_moment, lower), pt.le(untruncated_moment, upper)),
-        untruncated_moment,  # untruncated moment is between lower and upper
-        fallback_moment,
+        pt.and_(
+            pt.ge(untruncated_finite_logp_point, lower), pt.le(untruncated_finite_logp_point, upper)
+        ),
+        untruncated_finite_logp_point,  # untruncated finite_logp_point is between lower and upper
+        fallback_finite_logp_point,
     )
 
 
