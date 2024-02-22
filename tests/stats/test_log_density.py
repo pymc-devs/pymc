@@ -19,7 +19,7 @@ from arviz import InferenceData, dict_to_dataset, from_dict
 
 from pymc.distributions import Dirichlet, Normal
 from pymc.distributions.transforms import log
-from pymc.model import Model
+from pymc.model import Model, Deterministic
 from pymc.stats.log_density import compute_log_likelihood, compute_log_prior
 from tests.distributions.test_multivariate import dirichlet_logpdf
 
@@ -41,7 +41,7 @@ class TestComputeLogLikelihood:
         assert m.rvs_to_transforms[x] is transform
 
         assert res is idata
-        assert res.log_likelihood.dims == {"chain": 4, "draw": 25, "test_dim": 3}
+        assert res.log_likelihood.sizes == {"chain": 4, "draw": 25, "test_dim": 3}
 
         np.testing.assert_allclose(
             res.log_likelihood["y"].values,
@@ -62,7 +62,7 @@ class TestComputeLogLikelihood:
             idata = InferenceData(posterior=dict_to_dataset({"p": p_draws}))
             res = compute_log_likelihood(idata)
 
-        assert res.log_likelihood.dims == {"chain": 4, "draw": 25, "test_event_dim": 10}
+        assert res.log_likelihood.sizes == {"chain": 4, "draw": 25, "test_event_dim": 10}
 
         np.testing.assert_allclose(
             res.log_likelihood["y"].values,
@@ -149,7 +149,27 @@ class TestComputeLogLikelihood:
         assert m.rvs_to_transforms[x] is transform
 
         assert res is idata
-        assert res.log_prior.dims == {"chain": 4, "draw": 25}
+        assert res.log_prior.sizes == {"chain": 4, "draw": 25}
+
+        np.testing.assert_allclose(
+            res.log_prior["x"].values,
+            st.norm(0, 1).logpdf(idata.posterior["x"].values),
+        )
+
+
+    def test_deterministic_log_prior(self):
+        with Model() as m:
+            x = Normal("x")
+            Deterministic("d", 2*x)
+            Normal("y", x, observed=[0, 1, 2])
+
+            idata = InferenceData(posterior=dict_to_dataset({"x": np.arange(100).reshape(4, 25)}))
+            res = compute_log_prior(idata)
+
+        assert res is idata
+        assert "x" in res.log_prior
+        assert "d" not in res.log_prior
+        assert res.log_prior.sizes == {"chain": 4, "draw": 25}
 
         np.testing.assert_allclose(
             res.log_prior["x"].values,
