@@ -87,7 +87,7 @@ PLATFORM = sys.platform
 
 
 class FiniteLogpPointRewrite(GraphRewriter):
-    def rewrite_finet_logp_point_scan_node(self, node):
+    def rewrite_finite_logp_point_scan_node(self, node):
         if not isinstance(node.op, Scan):
             return
 
