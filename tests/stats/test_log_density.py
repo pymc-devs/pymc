@@ -19,7 +19,7 @@ from arviz import InferenceData, dict_to_dataset, from_dict
 
 from pymc.distributions import Dirichlet, Normal
 from pymc.distributions.transforms import log
-from pymc.model import Model, Deterministic
+from pymc.model import Deterministic, Model
 from pymc.stats.log_density import compute_log_likelihood, compute_log_prior
 from tests.distributions.test_multivariate import dirichlet_logpdf
 
@@ -156,11 +156,10 @@ class TestComputeLogLikelihood:
             st.norm(0, 1).logpdf(idata.posterior["x"].values),
         )
 
-
     def test_deterministic_log_prior(self):
         with Model() as m:
             x = Normal("x")
-            Deterministic("d", 2*x)
+            Deterministic("d", 2 * x)
             Normal("y", x, observed=[0, 1, 2])
 
             idata = InferenceData(posterior=dict_to_dataset({"x": np.arange(100).reshape(4, 25)}))
