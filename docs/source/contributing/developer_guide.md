@@ -66,7 +66,7 @@ We can, of course, also work out the math by hand:
 $$
 \begin{aligned}
 pdf_{\mathcal{N}}(\mu, \sigma, x) &= \frac{1}{\sigma \sqrt{2 \pi}} \exp^{- 0.5 (\frac{x - \mu}{\sigma})^2} \\
-pdf_{\mathcal{N}}(0, 5, 0.3) &= 0.070413 \\
+pdf_{\mathcal{N}}(0, 5, 2.5) &= 0.070413 \\
 ln(0.070413) &= -2.6533
 \end{aligned}
 $$
