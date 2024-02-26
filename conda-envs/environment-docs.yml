@@ -28,6 +28,7 @@ dependencies:
 - sphinx-copybutton
 - sphinx-design
 - sphinx-notfound-page
+- sphinx-sitemap
 - sphinx>=5
 - sphinxext-rediraffe
 - watermark

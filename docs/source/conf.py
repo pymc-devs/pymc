@@ -46,6 +46,7 @@ extensions = [
     "sphinx_remove_toctrees",
     "jupyter_sphinx",
     "sphinxext.rediraffe",
+    "sphinx_sitemap",
 ]
 
 # Don't auto-generate summary for class members.
@@ -108,8 +109,8 @@ author = "PyMC contributors"
 
 version = pymc.__version__
 on_readthedocs = os.environ.get("READTHEDOCS", False)
+rtd_version = os.environ.get("READTHEDOCS_VERSION", "")
 if on_readthedocs:
-    rtd_version = os.environ.get("READTHEDOCS_VERSION", "")
     if rtd_version.lower() == "stable":
         version = pymc.__version__.split("+")[0]
     elif rtd_version.lower() == "latest":
@@ -337,6 +338,8 @@ def setup(app):
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = "pymc_sphinx_theme"
+html_baseurl = "https://www.pymc.io/projects/docs/"
+sitemap_url_scheme = f"{{lang}}{rtd_version}/{{link}}"
 
 
 # Theme options are theme-specific and customize the look and feel of a theme
