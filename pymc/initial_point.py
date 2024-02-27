@@ -223,6 +223,12 @@ def make_initial_point_expression(
             strategy = default_strategy
 
         if isinstance(strategy, str):
+            if strategy == "moment":
+                strategy = "support_point"
+                warnings.warn(
+                    "The 'moment' strategy is deprecated. Use 'support_point' instead.",
+                    FutureWarning,
+                )
             if strategy == "support_point":
                 try:
                     value = support_point(variable)

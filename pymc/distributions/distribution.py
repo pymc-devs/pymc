@@ -209,11 +209,23 @@ class DistributionMeta(ABCMeta):
                     dist_params = dist_params[3:]
                     return class_icdf(value, *dist_params)
 
+            class_moment = clsdict.get("moment")
+            if class_moment:
+                warnings.warn(
+                    "The moment() method is deprecated. Use support_point() instead.",
+                    DeprecationWarning,
+                )
+
+                @_support_point.register(rv_type)
+                def support_point(op, rv, rng, size, dtype, *dist_params):
+                    return class_moment(rv, size, *dist_params)
+
             class_support_point = clsdict.get("support_point")
+
             if class_support_point:
 
                 @_support_point.register(rv_type)
-                def finite_logp_poin(op, rv, rng, size, dtype, *dist_params):
+                def support_point(op, rv, rng, size, dtype, *dist_params):
                     return class_support_point(rv, size, *dist_params)
 
             # Register the PyTensor rv_type as a subclass of this
@@ -492,6 +504,14 @@ def support_point(rv: TensorVariable) -> TensorVariable:
     for which the value is to be derived.
     """
     return _support_point(rv.owner.op, rv, *rv.owner.inputs).astype(rv.dtype)
+
+
+def moment(rv: TensorVariable) -> TensorVariable:
+    warnings.warn(
+        "The moment() method is deprecated. Use support_point() instead.",
+        DeprecationWarning,
+    )
+    return support_point(rv)
 
 
 class Discrete(Distribution):
