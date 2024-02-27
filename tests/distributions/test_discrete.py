@@ -47,7 +47,7 @@ from pymc.testing import (
     Unit,
     UnitSortedVector,
     Vector,
-    assert_finite_logp_point_is_expected,
+    assert_support_point_is_expected,
     check_icdf,
     check_logcdf,
     check_logp,
@@ -510,10 +510,10 @@ class TestMoments:
             (np.linspace(0, 1, 4), (2, 4), np.full((2, 4), [0, 0, 1, 1])),
         ],
     )
-    def test_bernoulli_finite_logp_point(self, p, size, expected):
+    def test_bernoulli_support_point(self, p, size, expected):
         with pm.Model() as model:
             pm.Bernoulli("x", p=p, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "n, alpha, beta, size, expected",
@@ -524,10 +524,10 @@ class TestMoments:
             (10, 1, np.arange(1, 6), (2, 5), np.full((2, 5), np.round(10 / np.arange(2, 7)))),
         ],
     )
-    def test_beta_binomial_finite_logp_point(self, alpha, beta, n, size, expected):
+    def test_beta_binomial_support_point(self, alpha, beta, n, size, expected):
         with pm.Model() as model:
             pm.BetaBinomial("x", alpha=alpha, beta=beta, n=n, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "n, p, size, expected",
@@ -538,10 +538,10 @@ class TestMoments:
             (10, np.arange(1, 6) / 10, (2, 5), np.full((2, 5), np.arange(1, 6))),
         ],
     )
-    def test_binomial_finite_logp_point(self, n, p, size, expected):
+    def test_binomial_support_point(self, n, p, size, expected):
         with pm.Model() as model:
             pm.Binomial("x", n=n, p=p, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, size, expected",
@@ -552,10 +552,10 @@ class TestMoments:
             (np.arange(1, 5), (2, 4), np.full((2, 4), np.arange(1, 5))),
         ],
     )
-    def test_poisson_finite_logp_point(self, mu, size, expected):
+    def test_poisson_support_point(self, mu, size, expected):
         with pm.Model() as model:
             pm.Poisson("x", mu=mu, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "n, p, size, expected",
@@ -571,10 +571,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_negative_binomial_finite_logp_point(self, n, p, size, expected):
+    def test_negative_binomial_support_point(self, n, p, size, expected):
         with pm.Model() as model:
             pm.NegativeBinomial("x", n=n, p=p, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "p, size, expected",
@@ -585,10 +585,10 @@ class TestMoments:
             (np.linspace(0.25, 1, 4), (2, 4), np.full((2, 4), [4, 2, 1, 1])),
         ],
     )
-    def test_geometric_finite_logp_point(self, p, size, expected):
+    def test_geometric_support_point(self, p, size, expected):
         with pm.Model() as model:
             pm.Geometric("x", p=p, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "N, k, n, size, expected",
@@ -605,10 +605,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_hyper_geometric_finite_logp_point(self, N, k, n, size, expected):
+    def test_hyper_geometric_support_point(self, N, k, n, size, expected):
         with pm.Model() as model:
             pm.HyperGeometric("x", N=N, k=k, n=n, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "lower, upper, size, expected",
@@ -624,10 +624,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_discrete_uniform_finite_logp_point(self, lower, upper, size, expected):
+    def test_discrete_uniform_support_point(self, lower, upper, size, expected):
         with pm.Model() as model:
             pm.DiscreteUniform("x", lower=lower, upper=upper, size=size)
-            assert_finite_logp_point_is_expected(model, expected)
+            assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "q, beta, size, expected",
@@ -643,10 +643,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_discrete_weibull_finite_logp_point(self, q, beta, size, expected):
+    def test_discrete_weibull_support_point(self, q, beta, size, expected):
         with pm.Model() as model:
             pm.DiscreteWeibull("x", q=q, beta=beta, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "p, size, expected",
@@ -661,10 +661,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_categorical_finite_logp_point(self, p, size, expected):
+    def test_categorical_support_point(self, p, size, expected):
         with pm.Model() as model:
             pm.Categorical("x", p=p, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
 
 class TestDiscreteWeibull(BaseTestDistributionRandom):

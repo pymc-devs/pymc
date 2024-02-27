@@ -55,7 +55,7 @@ from pymc.testing import (
     Rplus,
     Simplex,
     Vector,
-    assert_finite_logp_point_is_expected,
+    assert_support_point_is_expected,
     check_logp,
     continuous_random_tester,
     seeded_numpy_distribution_builder,
@@ -1003,7 +1003,7 @@ class TestLKJCholeskCov:
         assert draw_x3.shape == (3, 10, 3, 6)
 
 
-# Used for MvStudentT finite_logp_point test
+# Used for MvStudentT support_point test
 rand1d = np.random.rand(2)
 rand2d = np.random.rand(2, 3)
 
@@ -1056,10 +1056,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_multinomial_finite_logp_point(self, p, n, size, expected):
+    def test_multinomial_support_point(self, p, n, size, expected):
         with pm.Model() as model:
             pm.Multinomial("x", n=n, p=p, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "a, size, expected",
@@ -1090,10 +1090,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_dirichlet_finite_logp_point(self, a, size, expected):
+    def test_dirichlet_support_point(self, a, size, expected):
         with pm.Model() as model:
             pm.Dirichlet("x", a=a, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, cov, size, expected",
@@ -1123,11 +1123,11 @@ class TestMoments:
             ),
         ],
     )
-    def test_mv_normal_finite_logp_point(self, mu, cov, size, expected):
+    def test_mv_normal_support_point(self, mu, cov, size, expected):
         with pm.Model() as model:
             x = pm.MvNormal("x", mu=mu, cov=cov, size=size)
 
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "shape, n_zerosum_axes, expected",
@@ -1137,10 +1137,10 @@ class TestMoments:
             ((2, 5, 6), 3, np.zeros((2, 5, 6))),
         ],
     )
-    def test_zerosum_normal_finite_logp_point(self, shape, n_zerosum_axes, expected):
+    def test_zerosum_normal_support_point(self, shape, n_zerosum_axes, expected):
         with pm.Model() as model:
             pm.ZeroSumNormal("x", shape=shape, n_zerosum_axes=n_zerosum_axes)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, size, expected",
@@ -1159,7 +1159,7 @@ class TestMoments:
             ),
         ],
     )
-    def test_car_finite_logp_point(self, mu, size, expected):
+    def test_car_support_point(self, mu, size, expected):
         W = np.array(
             [[0.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
         )
@@ -1167,7 +1167,7 @@ class TestMoments:
         alpha = 0.5
         with pm.Model() as model:
             pm.CAR("x", mu=mu, W=W, alpha=alpha, tau=tau, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "W, expected",
@@ -1176,10 +1176,10 @@ class TestMoments:
             (np.array([[0, 1], [1, 0]]), np.array([0, 0])),
         ],
     )
-    def test_icar_finite_logp_point(self, W, expected):
+    def test_icar_support_point(self, W, expected):
         with pm.Model() as model:
             RV = pm.ICAR("x", W=W)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "nu, mu, cov, size, expected",
@@ -1194,11 +1194,11 @@ class TestMoments:
             ([2, 4], 0, np.eye(3), None, np.zeros((2, 3))),
         ],
     )
-    def test_mvstudentt_finite_logp_point(self, nu, mu, cov, size, expected):
+    def test_mvstudentt_support_point(self, nu, mu, cov, size, expected):
         with pm.Model() as model:
             x = pm.MvStudentT("x", nu=nu, mu=mu, scale=cov, size=size)
 
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, rowchol, colchol, size, expected",
@@ -1210,13 +1210,13 @@ class TestMoments:
             (rand2d, np.eye(2), np.eye(3), (2, 5), np.full((2, 5, 2, 3), rand2d)),
         ],
     )
-    def test_matrixnormal_finite_logp_point(self, mu, rowchol, colchol, size, expected):
+    def test_matrixnormal_support_point(self, mu, rowchol, colchol, size, expected):
         with pm.Model() as model:
             x = pm.MatrixNormal("x", mu=mu, rowchol=rowchol, colchol=colchol, size=size)
 
         # MatrixNormal logp is only implemented for 2d values
         check_logp = x.ndim == 2
-        assert_finite_logp_point_is_expected(model, expected, check_finite_logp=check_logp)
+        assert_support_point_is_expected(model, expected, check_finite_logp=check_logp)
 
     @pytest.mark.parametrize(
         "alpha, K, size, expected",
@@ -1269,10 +1269,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_stickbreakingweights_finite_logp_point(self, alpha, K, size, expected):
+    def test_stickbreakingweights_support_point(self, alpha, K, size, expected):
         with pm.Model() as model:
             pm.StickBreakingWeights("x", alpha=alpha, K=K, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, covs, size, expected",
@@ -1297,10 +1297,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_kronecker_normal_finite_logp_point(self, mu, covs, size, expected):
+    def test_kronecker_normal_support_point(self, mu, covs, size, expected):
         with pm.Model() as model:
             pm.KroneckerNormal("x", mu=mu, covs=covs, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "n, eta, size, expected",
@@ -1329,10 +1329,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_lkjcorr_finite_logp_point(self, n, eta, size, expected):
+    def test_lkjcorr_support_point(self, n, eta, size, expected):
         with pm.Model() as model:
             pm.LKJCorr("x", n=n, eta=eta, size=size, return_matrix=False)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "n, eta, size, expected",
@@ -1348,11 +1348,11 @@ class TestMoments:
             ),
         ],
     )
-    def test_lkjcholeskycov_finite_logp_point(self, n, eta, size, expected):
+    def test_lkjcholeskycov_support_point(self, n, eta, size, expected):
         with pm.Model() as model:
             sd_dist = pm.Exponential.dist(1, size=(*to_tuple(size), n))
             pm.LKJCholeskyCov("x", n=n, eta=eta, sd_dist=sd_dist, size=size, compute_corr=False)
-        assert_finite_logp_point_is_expected(model, expected, check_finite_logp=size is None)
+        assert_support_point_is_expected(model, expected, check_finite_logp=size is None)
 
     @pytest.mark.parametrize(
         "a, n, size, expected",
@@ -1383,10 +1383,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_dirichlet_multinomial_finite_logp_point(self, a, n, size, expected):
+    def test_dirichlet_multinomial_support_point(self, a, n, size, expected):
         with pm.Model() as model:
             pm.DirichletMultinomial("x", n=n, a=a, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
 
 class TestMvNormalCov(BaseTestDistributionRandom):

@@ -34,7 +34,7 @@ from pymc.logprob.abstract import _icdf
 from pymc.logprob.basic import logcdf, logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.logprob.utils import ParameterValueError
-from pymc.testing import assert_finite_logp_point_is_expected
+from pymc.testing import assert_support_point_is_expected
 
 
 class IcdfNormalRV(NormalRV):
@@ -53,7 +53,7 @@ class RejectionGeometricRV(GeometricRV):
     """Geometric RV that has neither icdf nor truncated dispatching."""
 
 
-icdf_normal = no_finite_logp_point_normal = IcdfNormalRV()
+icdf_normal = no_support_point_normal = IcdfNormalRV()
 rejection_normal = RejectionNormalRV()
 icdf_geometric = IcdfGeometricRV()
 rejection_geometric = RejectionGeometricRV()
@@ -369,10 +369,10 @@ def test_truncated_transform_logp():
         (icdf_normal([0, 3, 3], 1), None, [2, 2, 4], (4, 3), np.full((4, 3), [0, 1, 3])),
     ],
 )
-def test_truncated_finite_logp_point(truncated_dist, lower, upper, shape, expected):
+def test_truncated_support_point(truncated_dist, lower, upper, shape, expected):
     with Model() as model:
         Truncated("x", dist=truncated_dist, lower=lower, upper=upper, shape=shape)
-    assert_finite_logp_point_is_expected(model, expected)
+    assert_support_point_is_expected(model, expected)
 
 
 def test_truncated_inference():

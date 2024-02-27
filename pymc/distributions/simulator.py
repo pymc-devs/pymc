@@ -23,7 +23,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 from scipy.spatial import cKDTree
 
-from pymc.distributions.distribution import Distribution, _finite_logp_point
+from pymc.distributions.distribution import Distribution, _support_point
 from pymc.logprob.abstract import _logprob
 
 __all__ = ["Simulator"]
@@ -248,8 +248,8 @@ class Simulator(Distribution):
         return sim_op(*params, **kwargs)
 
 
-@_finite_logp_point.register(SimulatorRV)  # type: ignore
-def simulator_finite_logp_point(op, rv, *inputs):
+@_support_point.register(SimulatorRV)  # type: ignore
+def simulator_support_point(op, rv, *inputs):
     sim_inputs = inputs[3:]
     # Take the mean of 10 draws
     multiple_sim = rv.owner.op(*sim_inputs, size=pt.concatenate([[10], rv.shape]))

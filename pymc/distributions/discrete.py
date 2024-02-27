@@ -128,7 +128,7 @@ class Binomial(Discrete):
         p = pt.as_tensor_variable(p)
         return super().dist([n, p], **kwargs)
 
-    def finite_logp_point(rv, size, n, p):
+    def support_point(rv, size, n, p):
         mean = pt.round(n * p)
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)
@@ -237,7 +237,7 @@ class BetaBinomial(Discrete):
         n = pt.as_tensor_variable(n, dtype=int)
         return super().dist([n, alpha, beta], **kwargs)
 
-    def finite_logp_point(rv, size, n, alpha, beta):
+    def support_point(rv, size, n, alpha, beta):
         mean = pt.round((n * alpha) / (alpha + beta))
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)
@@ -350,7 +350,7 @@ class Bernoulli(Discrete):
         p = pt.as_tensor_variable(p)
         return super().dist([p], **kwargs)
 
-    def finite_logp_point(rv, size, p):
+    def support_point(rv, size, p):
         if not rv_size_is_none(size):
             p = pt.full(size, p)
         return pt.switch(p < 0.5, 0, 1)
@@ -460,7 +460,7 @@ class DiscreteWeibull(Discrete):
         beta = pt.as_tensor_variable(beta)
         return super().dist([q, beta], **kwargs)
 
-    def finite_logp_point(rv, size, q, beta):
+    def support_point(rv, size, q, beta):
         median = pt.power(pt.log(0.5) / pt.log(q), 1 / beta) - 1
         if not rv_size_is_none(size):
             median = pt.full(size, median)
@@ -549,7 +549,7 @@ class Poisson(Discrete):
         mu = pt.as_tensor_variable(mu)
         return super().dist([mu], *args, **kwargs)
 
-    def finite_logp_point(rv, size, mu):
+    def support_point(rv, size, mu):
         mu = pt.floor(mu)
         if not rv_size_is_none(size):
             mu = pt.full(size, mu)
@@ -695,7 +695,7 @@ class NegativeBinomial(Discrete):
 
         return n, p
 
-    def finite_logp_point(rv, size, n, p):
+    def support_point(rv, size, n, p):
         mu = pt.floor(n * (1 - p) / p)
         if not rv_size_is_none(size):
             mu = pt.full(size, mu)
@@ -786,7 +786,7 @@ class Geometric(Discrete):
         p = pt.as_tensor_variable(p)
         return super().dist([p], *args, **kwargs)
 
-    def finite_logp_point(rv, size, p):
+    def support_point(rv, size, p):
         mean = pt.round(1.0 / p)
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)
@@ -889,7 +889,7 @@ class HyperGeometric(Discrete):
         n = pt.as_tensor_variable(n, dtype=int)
         return super().dist([good, bad, n], *args, **kwargs)
 
-    def finite_logp_point(rv, size, good, bad, n):
+    def support_point(rv, size, good, bad, n):
         N, k = good + bad, good
         mode = pt.floor((n + 1) * (k + 1) / (N + 2))
         if not rv_size_is_none(size):
@@ -1025,7 +1025,7 @@ class DiscreteUniform(Discrete):
         upper = pt.floor(upper)
         return super().dist([lower, upper], **kwargs)
 
-    def finite_logp_point(rv, size, lower, upper):
+    def support_point(rv, size, lower, upper):
         mode = pt.maximum(pt.floor((upper + lower) / 2.0), lower)
         if not rv_size_is_none(size):
             mode = pt.full(size, mode)
@@ -1142,7 +1142,7 @@ class Categorical(Discrete):
                 p = pt.as_tensor_variable(p_)
         return super().dist([p], **kwargs)
 
-    def finite_logp_point(rv, size, p):
+    def support_point(rv, size, p):
         mode = pt.argmax(p, axis=-1)
         if not rv_size_is_none(size):
             mode = pt.full(size, mode)

@@ -321,7 +321,7 @@ class TestSimulator:
     @pytest.mark.parametrize("mu", [0, np.arange(3)], ids=str)
     @pytest.mark.parametrize("sigma", [1, np.array([1, 2, 5])], ids=str)
     @pytest.mark.parametrize("size", [None, 3, (5, 3)], ids=str)
-    def test_simulator_finite_logp_point(self, seeded_test, mu, sigma, size):
+    def test_simulator_support_point(self, seeded_test, mu, sigma, size):
         def normal_sim(rng, mu, sigma, size):
             return rng.normal(mu, sigma, size=size)
 
@@ -331,15 +331,15 @@ class TestSimulator:
         fn = make_initial_point_fn(
             model=model,
             return_transformed=False,
-            default_strategy="finite_logp_point",
+            default_strategy="support_point",
         )
 
         random_draw = model["x"].eval()
         result = fn(0)["x"]
         assert result.shape == random_draw.shape
 
-        # We perform a z-test between the finite_logp_point and expected mean from a sample of 10 draws
-        # This test fails if the number of samples averaged in finite_logp_point(Simulator)
+        # We perform a z-test between the support_point and expected mean from a sample of 10 draws
+        # This test fails if the number of samples averaged in support_point(Simulator)
         # is much smaller than 10, but would not catch the case where the number of samples
         # is higher than the expected 10
 

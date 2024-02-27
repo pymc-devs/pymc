@@ -44,7 +44,7 @@ from pymc.model import Model
 from pymc.pytensorf import floatX
 from pymc.sampling.forward import draw, sample_posterior_predictive
 from pymc.sampling.mcmc import sample
-from pymc.testing import assert_finite_logp_point_is_expected, select_by_precision
+from pymc.testing import assert_support_point_is_expected, select_by_precision
 
 # Turn all warnings into errors for this module
 # Ignoring NumPy deprecation warning tracked in https://github.com/pymc-devs/pytensor/issues/146
@@ -378,14 +378,14 @@ class TestRandomWalk:
             ),
         ],
     )
-    def test_finite_logp_point(
+    def test_support_point(
         self, init_dist, innovation_dist, steps, size, expected, check_finite_logp
     ):
         with Model() as model:
             RandomWalk(
                 "x", init_dist=init_dist, innovation_dist=innovation_dist, steps=steps, size=size
             )
-        assert_finite_logp_point_is_expected(model, expected, check_finite_logp=check_finite_logp)
+        assert_support_point_is_expected(model, expected, check_finite_logp=check_finite_logp)
 
 
 class TestPredefinedRandomWalk:
@@ -700,11 +700,11 @@ class TestAR:
             ((5, 2), np.full((5, 2, 7), [[2.0], [4.0]])),
         ],
     )
-    def test_finite_logp_point(self, size, expected):
+    def test_support_point(self, size, expected):
         with Model() as model:
             init_dist = DiracDelta.dist([[1.0, 2.0], [3.0, 4.0]])
             AR("x", rho=[0, 0], init_dist=init_dist, steps=5, size=size)
-        assert_finite_logp_point_is_expected(model, expected, check_finite_logp=False)
+        assert_support_point_is_expected(model, expected, check_finite_logp=False)
 
     def test_init_deprecated_arg(self):
         with pytest.warns(FutureWarning, match="init parameter is now called init_dist"):
@@ -820,7 +820,7 @@ class TestGARCH11:
             ((5, 2), np.zeros((5, 2, 8))),
         ],
     )
-    def test_finite_logp_point(self, size, expected):
+    def test_support_point(self, size, expected):
         with Model() as model:
             GARCH11(
                 "x",
@@ -831,7 +831,7 @@ class TestGARCH11:
                 steps=7,
                 size=size,
             )
-        assert_finite_logp_point_is_expected(model, expected, check_finite_logp=True)
+        assert_support_point_is_expected(model, expected, check_finite_logp=True)
 
     def test_change_dist_size(self):
         base_dist = GARCH11.dist(

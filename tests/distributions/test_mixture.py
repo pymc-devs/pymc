@@ -79,7 +79,7 @@ from pymc.testing import (
     Rplusbig,
     Simplex,
     Unit,
-    assert_finite_logp_point_is_expected,
+    assert_support_point_is_expected,
     check_logcdf,
     check_logp,
     check_selfconsistency_discrete_logcdf,
@@ -1146,7 +1146,7 @@ class TestMixtureMoments:
     def test_single_univariate_component(self, weights, comp_dists, size, expected):
         with Model() as model:
             Mixture("x", weights, comp_dists, size=size)
-        assert_finite_logp_point_is_expected(model, expected, check_finite_logp=False)
+        assert_support_point_is_expected(model, expected, check_finite_logp=False)
 
     @pytest.mark.parametrize(
         "weights, comp_dists, size, expected",
@@ -1199,7 +1199,7 @@ class TestMixtureMoments:
     def test_list_univariate_components(self, weights, comp_dists, size, expected):
         with Model() as model:
             Mixture("x", weights, comp_dists, size=size)
-        assert_finite_logp_point_is_expected(model, expected, check_finite_logp=False)
+        assert_support_point_is_expected(model, expected, check_finite_logp=False)
 
     @pytest.mark.parametrize(
         "weights, comp_dists, size, expected",
@@ -1235,7 +1235,7 @@ class TestMixtureMoments:
     def test_single_multivariate_component(self, weights, comp_dists, size, expected):
         with Model() as model:
             Mixture("x", weights, comp_dists, size=size)
-        assert_finite_logp_point_is_expected(model, expected, check_finite_logp=False)
+        assert_support_point_is_expected(model, expected, check_finite_logp=False)
 
     @pytest.mark.parametrize(
         "weights, comp_dists, size, expected",
@@ -1281,7 +1281,7 @@ class TestMixtureMoments:
     def test_list_multivariate_components(self, weights, comp_dists, size, expected):
         with Model() as model:
             Mixture("x", weights, comp_dists, size=size)
-        assert_finite_logp_point_is_expected(model, expected, check_finite_logp=False)
+        assert_support_point_is_expected(model, expected, check_finite_logp=False)
 
 
 class TestMixtureDefaultTransforms:
@@ -1323,7 +1323,7 @@ class TestMixtureDefaultTransforms:
             mix2 = Mixture("mix2", [0.3, 0.7][::-1], comp_dists[::-1])
 
         ip = model.initial_point()
-        # We want an informative finite_logp_point, other than zero
+        # We want an informative support_point, other than zero
         assert ip["mix1_interval__"] != 0
 
         expected_mix_ip = (
@@ -1495,10 +1495,10 @@ class TestZeroInflatedMixture:
             (0.2, np.arange(1, 5) * 5, (2, 4), np.full((2, 4), np.arange(1, 5))),
         ],
     )
-    def test_zero_inflated_poisson_finite_logp_point(self, psi, mu, size, expected):
+    def test_zero_inflated_poisson_support_point(self, psi, mu, size, expected):
         with Model() as model:
             ZeroInflatedPoisson("x", psi=psi, mu=mu, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "psi, n, p, size, expected",
@@ -1515,10 +1515,10 @@ class TestZeroInflatedMixture:
             ),
         ],
     )
-    def test_zero_inflated_binomial_finite_logp_point(self, psi, n, p, size, expected):
+    def test_zero_inflated_binomial_support_point(self, psi, n, p, size, expected):
         with Model() as model:
             ZeroInflatedBinomial("x", psi=psi, n=n, p=p, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "psi, mu, alpha, size, expected",
@@ -1541,12 +1541,10 @@ class TestZeroInflatedMixture:
             ),
         ],
     )
-    def test_zero_inflated_negative_binomial_finite_logp_point(
-        self, psi, mu, alpha, size, expected
-    ):
+    def test_zero_inflated_negative_binomial_support_point(self, psi, mu, alpha, size, expected):
         with Model() as model:
             ZeroInflatedNegativeBinomial("x", psi=psi, mu=mu, alpha=alpha, size=size)
-        assert_finite_logp_point_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "dist, non_psi_args",

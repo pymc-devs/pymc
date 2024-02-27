@@ -114,7 +114,7 @@ def make_initial_point_fn(
     model,
     overrides: Optional[StartDict] = None,
     jitter_rvs: Optional[set[TensorVariable]] = None,
-    default_strategy: str = "finite_logp_point",
+    default_strategy: str = "support_point",
     return_transformed: bool = True,
 ) -> Callable:
     """Create seeded function that computes initial values for all free model variables.
@@ -125,7 +125,7 @@ def make_initial_point_fn(
         The set (or list or tuple) of random variables for which a U(-1, +1) jitter should be
         added to the initial value. Only available for variables that have a transform or real-valued support.
     default_strategy : str
-        Which of { "finite_logp_point", "prior" } to prefer if the initval setting for an RV is None.
+        Which of { "support_point", "prior" } to prefer if the initval setting for an RV is None.
     overrides : dict
         Initial value (strategies) to use instead of what's specified in `Model.initial_values`.
     return_transformed : bool
@@ -181,7 +181,7 @@ def make_initial_point_expression(
     rvs_to_transforms: dict[TensorVariable, Transform],
     initval_strategies: dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]],
     jitter_rvs: Optional[set[TensorVariable]] = None,
-    default_strategy: str = "finite_logp_point",
+    default_strategy: str = "support_point",
     return_transformed: bool = False,
 ) -> list[TensorVariable]:
     """Creates the tensor variables that need to be evaluated to obtain an initial point.
@@ -199,7 +199,7 @@ def make_initial_point_expression(
         The set (or list or tuple) of random variables for which a U(-1, +1) jitter should be
         added to the initial value. Only available for variables that have a transform or real-valued support.
     default_strategy : str
-        Which of { "finite_logp_point", "prior" } to prefer if the initval strategy setting for an RV is None.
+        Which of { "support_point", "prior" } to prefer if the initval strategy setting for an RV is None.
     return_transformed : bool
         Switches between returning the tensors for untransformed or transformed initial points.
 
@@ -208,7 +208,7 @@ def make_initial_point_expression(
     initial_points : list of TensorVariable
         PyTensor expressions for initial values of the free random variables.
     """
-    from pymc.distributions.distribution import finite_logp_point
+    from pymc.distributions.distribution import support_point
 
     if jitter_rvs is None:
         jitter_rvs = set()
@@ -223,16 +223,16 @@ def make_initial_point_expression(
             strategy = default_strategy
 
         if isinstance(strategy, str):
-            if strategy == "finite_logp_point":
+            if strategy == "support_point":
                 try:
-                    value = finite_logp_point(variable)
+                    value = support_point(variable)
                 except NotImplementedError:
                     warnings.warn(
                         f"Moment not defined for variable {variable} of type "
                         f"{variable.owner.op.__class__.__name__}, defaulting to "
                         f"a draw from the prior. This can lead to difficulties "
                         f"during tuning. You can manually define an initval or "
-                        f"implement a finite_logp_point dispatched function for this "
+                        f"implement a support_point dispatched function for this "
                         f"distribution.",
                         UserWarning,
                     )
@@ -241,7 +241,7 @@ def make_initial_point_expression(
                 value = variable
             else:
                 raise ValueError(
-                    f'Invalid string strategy: {strategy}. It must be one of ["finite_logp_point", "prior"]'
+                    f'Invalid string strategy: {strategy}. It must be one of ["support_point", "prior"]'
                 )
         else:
             value = pt.as_tensor(strategy, dtype=variable.dtype).astype(variable.dtype)

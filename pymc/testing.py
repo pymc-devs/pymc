@@ -653,34 +653,34 @@ def check_selfconsistency_discrete_logcdf(
             )
 
 
-def assert_finite_logp_point_is_expected(model, expected, check_finite_logp=True):
+def assert_support_point_is_expected(model, expected, check_finite_logp=True):
     fn = make_initial_point_fn(
         model=model,
         return_transformed=False,
-        default_strategy="finite_logp_point",
+        default_strategy="support_point",
     )
-    finite_logp_point = fn(0)["x"]
+    support_point = fn(0)["x"]
     expected = np.asarray(expected)
     try:
         random_draw = model["x"].eval()
     except NotImplementedError:
-        random_draw = finite_logp_point
+        random_draw = support_point
 
-    assert finite_logp_point.shape == expected.shape
+    assert support_point.shape == expected.shape
     assert expected.shape == random_draw.shape
-    assert np.allclose(finite_logp_point, expected)
+    assert np.allclose(support_point, expected)
 
     if check_finite_logp:
-        logp_finite_logp_point = (
+        logp_support_point = (
             transformed_conditional_logp(
                 (model["x"],),
-                rvs_to_values={model["x"]: pt.constant(finite_logp_point)},
+                rvs_to_values={model["x"]: pt.constant(support_point)},
                 rvs_to_transforms={},
             )[0]
             .sum()
             .eval()
         )
-        assert np.isfinite(logp_finite_logp_point)
+        assert np.isfinite(logp_support_point)
 
 
 def continuous_random_tester(

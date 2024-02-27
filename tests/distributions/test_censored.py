@@ -44,9 +44,9 @@ class TestCensored:
                 "mu",
                 mu=((high - low) / 2) + low,
                 sigma=(high - low) / 2.0,
-                initval="finite_logp_point",
+                initval="support_point",
             )
-            sigma = pm.HalfNormal("sigma", sigma=(high - low) / 2.0, initval="finite_logp_point")
+            sigma = pm.HalfNormal("sigma", sigma=(high - low) / 2.0, initval="support_point")
             observed = pm.Censored(
                 "observed",
                 pm.Normal.dist(mu=mu, sigma=sigma),

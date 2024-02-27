@@ -22,7 +22,7 @@ from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
 
-from pymc.distributions.distribution import finite_logp_point
+from pymc.distributions.distribution import support_point
 from pymc.initial_point import make_initial_point_fn, make_initial_point_fns_per_chain
 
 
@@ -66,7 +66,7 @@ class TestInitvalEvaluation:
     def test_make_initial_point_fns_per_chain_checks_kwargs(self):
         with pm.Model() as pmodel:
             A = pm.Uniform("A", 0, 1, initval=0.5)
-            B = pm.Uniform("B", lower=A, upper=1.5, transform=None, initval="finite_logp_point")
+            B = pm.Uniform("B", lower=A, upper=1.5, transform=None, initval="support_point")
         with pytest.raises(ValueError, match="Number of initval dicts"):
             make_initial_point_fns_per_chain(
                 model=pmodel,
@@ -136,7 +136,7 @@ class TestInitvalEvaluation:
         with pm.Model() as pmodel:
             pm.Normal("A", initval="prior")
             pm.Uniform("B", initval="prior")
-            pm.Normal("C", initval="finite_logp_point")
+            pm.Normal("C", initval="support_point")
             ip1 = pmodel.initial_point(random_seed=42)
             ip2 = pmodel.initial_point(random_seed=42)
             ip3 = pmodel.initial_point(random_seed=15)
@@ -146,8 +146,8 @@ class TestInitvalEvaluation:
 
     def test_untransformed_initial_point(self):
         with pm.Model() as pmodel:
-            pm.Flat("A", initval="finite_logp_point")
-            pm.HalfFlat("B", initval="finite_logp_point")
+            pm.Flat("A", initval="support_point")
+            pm.HalfFlat("B", initval="support_point")
         fn = make_initial_point_fn(model=pmodel, jitter_rvs={}, return_transformed=False)
         iv = fn(0)
         assert iv["A"] == 0
@@ -156,9 +156,9 @@ class TestInitvalEvaluation:
 
     def test_adds_jitter(self):
         with pm.Model() as pmodel:
-            A = pm.Flat("A", initval="finite_logp_point")
-            B = pm.HalfFlat("B", initval="finite_logp_point")
-            C = pm.Normal("C", mu=A + B, initval="finite_logp_point")
+            A = pm.Flat("A", initval="support_point")
+            B = pm.HalfFlat("B", initval="support_point")
+            C = pm.Normal("C", mu=A + B, initval="support_point")
         fn = make_initial_point_fn(model=pmodel, jitter_rvs={B}, return_transformed=True)
         iv = fn(0)
         # Moment of the Flat is 0
@@ -177,9 +177,9 @@ class TestInitvalEvaluation:
 
     def test_respects_overrides(self):
         with pm.Model() as pmodel:
-            A = pm.Flat("A", initval="finite_logp_point")
+            A = pm.Flat("A", initval="support_point")
             B = pm.HalfFlat("B", initval=4)
-            C = pm.Normal("C", mu=A + B, initval="finite_logp_point")
+            C = pm.Normal("C", mu=A + B, initval="support_point")
         fn = make_initial_point_fn(
             model=pmodel,
             jitter_rvs={},
@@ -221,34 +221,34 @@ class TestMoment:
     def test_basic(self):
         # Standard distributions
         rv = pm.Normal.dist(mu=2.3)
-        np.testing.assert_allclose(finite_logp_point(rv).eval(), 2.3)
+        np.testing.assert_allclose(support_point(rv).eval(), 2.3)
 
         # Special distributions
         rv = pm.Flat.dist()
-        assert finite_logp_point(rv).eval() == np.zeros(())
+        assert support_point(rv).eval() == np.zeros(())
         rv = pm.HalfFlat.dist()
-        assert finite_logp_point(rv).eval() == np.ones(())
+        assert support_point(rv).eval() == np.ones(())
         rv = pm.Flat.dist(size=(2, 4))
-        assert np.all(finite_logp_point(rv).eval() == np.zeros((2, 4)))
+        assert np.all(support_point(rv).eval() == np.zeros((2, 4)))
         rv = pm.HalfFlat.dist(size=(2, 4))
-        assert np.all(finite_logp_point(rv).eval() == np.ones((2, 4)))
+        assert np.all(support_point(rv).eval() == np.ones((2, 4)))
 
     @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
-    def test_numeric_finite_logp_point_shape(self, rv_cls):
+    def test_numeric_support_point_shape(self, rv_cls):
         rv = rv_cls.dist(shape=(2,))
         assert not hasattr(rv.tag, "test_value")
-        assert tuple(finite_logp_point(rv).shape.eval()) == (2,)
+        assert tuple(support_point(rv).shape.eval()) == (2,)
 
     @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
-    def test_symbolic_finite_logp_point_shape(self, rv_cls):
+    def test_symbolic_support_point_shape(self, rv_cls):
         s = pt.scalar(dtype="int64")
         rv = rv_cls.dist(shape=(s,))
         assert not hasattr(rv.tag, "test_value")
-        assert tuple(finite_logp_point(rv).shape.eval({s: 4})) == (4,)
+        assert tuple(support_point(rv).shape.eval({s: 4})) == (4,)
         pass
 
     @pytest.mark.parametrize("rv_cls", [pm.Flat, pm.HalfFlat])
-    def test_finite_logp_point_from_dims(self, rv_cls):
+    def test_support_point_from_dims(self, rv_cls):
         with pm.Model(
             coords={
                 "year": [2019, 2020, 2021, 2022],
@@ -257,10 +257,10 @@ class TestMoment:
         ):
             rv = rv_cls("rv", dims=("year", "city"))
             assert not hasattr(rv.tag, "test_value")
-            assert tuple(finite_logp_point(rv).shape.eval()) == (4, 3)
+            assert tuple(support_point(rv).shape.eval()) == (4, 3)
         pass
 
-    def test_finite_logp_point_not_implemented_fallback(self):
+    def test_support_point_not_implemented_fallback(self):
         class MyNormalRV(RandomVariable):
             name = "my_normal"
             ndim_supp = 0
@@ -275,7 +275,7 @@ class TestMoment:
             rv_op = MyNormalRV()
 
         with pm.Model() as m:
-            x = MyNormalDistribution("x", 0, 1, initval="finite_logp_point")
+            x = MyNormalDistribution("x", 0, 1, initval="support_point")
 
         with pytest.warns(
             UserWarning, match="Moment not defined for variable x of type MyNormalRV"
