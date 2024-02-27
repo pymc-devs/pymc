@@ -694,7 +694,8 @@ def test_replace_vars_in_graphs_nested_reference():
     # Confirm the original `y` variable is changed in place
     # This is unavoidable if we want to respect the identity of the replacement variables
     # As when imputing `neg_x` and `x` while evaluating `new_y` above and below.
-    assert np.abs(y.eval({x_value: 100})) > 1
+    # This assertion could fail with probability 1/10000 when y is drawn in -1, 1 range.
+    assert np.abs(y.eval({x_value: 10000})) > 1
 
     # Only replace `y`, same replacement as before
     x = pm.HalfNormal.dist(1e-3, name="x")
