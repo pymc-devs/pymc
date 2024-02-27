@@ -1040,6 +1040,7 @@ class CustomDist:
         random: Optional[Callable] = None,
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
+        moment: Optional[Callable] = None,
         support_point: Optional[Callable] = None,
         ndim_supp: int = 0,
         ndims_params: Optional[Sequence[int]] = None,
@@ -1056,6 +1057,12 @@ class CustomDist:
             )
         dist_params = cls.parse_dist_params(dist_params)
         cls.check_valid_dist_random(dist, random, dist_params)
+        if moment is not None:
+            warnings.warn(
+                "`moment` argument is deprecated. Use `support_point` instead.",
+                FutureWarning,
+            )
+            support_point = moment
         if dist is not None:
             kwargs.setdefault("class_name", f"CustomDist_{name}")
             return _CustomSymbolicDist(

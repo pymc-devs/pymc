@@ -307,6 +307,15 @@ class TestCustomDist:
         assert isinstance(x.owner.op, CustomDistRV)
         assert_support_point_is_expected(model, expected, check_finite_logp=False)
 
+    def test_custom_dist_moment_future_warning(self):
+        moment = lambda rv, size, *rv_inputs: 5 * pt.ones(size, dtype=rv.dtype)  # noqa E731
+        with pm.Model() as model:
+            with pytest.warns(
+                FutureWarning, match="`moment` argument is deprecated. Use `support_point` instead."
+            ):
+                x = CustomDist("x", moment=moment)
+        assert_support_point_is_expected(model, 5, check_finite_logp=False)
+
     @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
     def test_custom_dist_custom_support_point_univariate(self, size):
         def density_support_point(rv, size, mu):
