@@ -5,7 +5,7 @@ This guide provides an overview on how to implement a distribution for PyMC.
 It is designed for developers who wish to add a new distribution to the library.
 Users will not be aware of all this complexity and should instead make use of helper methods such as `~pymc.CustomDist`.
 
-PyMC {class}`~pymc.Distribution` builds on top of PyTensor's {class}`~pytensor.tensor.random.op.RandomVariable`, and implements `logp`, `logcdf`, `icdf` and `moment` methods as well as other initialization and validation helpers.
+PyMC {class}`~pymc.Distribution` builds on top of PyTensor's {class}`~pytensor.tensor.random.op.RandomVariable`, and implements `logp`, `logcdf`, `icdf` and `support_point` methods as well as other initialization and validation helpers.
 Most notably `shape/dims/observed` kwargs, alternative parametrizations, and default `transform`.
 
 Here is a summary check-list of the steps needed to implement a new distribution.
@@ -14,7 +14,7 @@ Each section will be expanded below:
 1. Creating a new `RandomVariable` `Op`
 1. Implementing the corresponding `Distribution` class
 1. Adding tests for the new `RandomVariable`
-1. Adding tests for `logp` / `logcdf` / `icdf` and `moment` methods
+1. Adding tests for `logp` / `logcdf` / `icdf` and `support_point` methods
 1. Documenting the new `Distribution`.
 
 This guide does not attempt to explain the rationale behind the `Distributions` current implementation, and details are provided only insofar as they help to implement new "standard" distributions.
@@ -120,7 +120,7 @@ After implementing the new `RandomVariable` `Op`, it's time to make use of it in
 PyMC works in a very {term}`functional <Functional Programming>` way, and the `distribution` classes are there mostly to add PyMC API features and keep related methods organized together.
 In practice, they take care of:
 
-1. Linking ({term}`Dispatching`) an `rv_op` class with the corresponding `moment`, `logp`, `logcdf` and `icdf` methods.
+1. Linking ({term}`Dispatching`) an `rv_op` class with the corresponding `support_point`, `logp`, `logcdf` and `icdf` methods.
 1. Defining a standard transformation (for continuous distributions) that converts a bounded variable domain (e.g., positive line) to an unbounded domain (i.e., the real line), which many samplers prefer.
 1. Validating the parametrization of a distribution and converting non-symbolic inputs (i.e., numeric literals or NumPy arrays) to symbolic variables.
 1. Converting multiple alternative parametrizations to the standard parametrization that the `RandomVariable` is defined in terms of.
@@ -156,14 +156,14 @@ class Blah(PositiveContinuous):
         # the rv_op needs in order to be instantiated
         return super().dist([param1, param2], **kwargs)
 
-    # moment returns a symbolic expression for the stable moment from which to start sampling
+    # support_point returns a symbolic expression for the stable point from which to start sampling
     # the variable, given the implicit `rv`, `size` and `param1` ... `paramN`.
     # This is typically a "representative" point such as the the mean or mode.
-    def moment(rv, size, param1, param2):
-        moment, _ = pt.broadcast_arrays(param1, param2)
+    def support_point(rv, size, param1, param2):
+        support_point, _ = pt.broadcast_arrays(param1, param2)
         if not rv_size_is_none(size):
-            moment = pt.full(size, moment)
-        return moment
+            support_point = pt.full(size, support_point)
+        return support_point
 
     # Logp returns a symbolic expression for the elementwise log-pdf or log-pmf evaluation
     # of the variable given the `value` of the variable and the parameters `param1` ... `paramN`.
@@ -200,18 +200,18 @@ class Blah(PositiveContinuous):
 Some notes:
 
 1. A distribution should at the very least inherit from {class}`~pymc.Discrete` or {class}`~pymc.Continuous`. For the latter, more specific subclasses exist: `PositiveContinuous`, `UnitContinuous`, `BoundedContinuous`, `CircularContinuous`, `SimplexContinuous`, which specify default transformations for the variables. If you need to specify a one-time custom transform you can also create a `_default_transform` dispatch function as is done for the {class}`~pymc.distributions.multivariate.LKJCholeskyCov`.
-1. If a distribution does not have a corresponding `rng_fn` implementation, a `RandomVariable` should still be created to raise a `NotImplementedError`. This is, for example, the case in {class}`~pymc.distributions.continuous.Flat`. In this case it will be necessary to provide a `moment` method, because without a `rng_fn`, PyMC can't fall back to a random draw to use as an initial point for MCMC.
-1. As mentioned above, PyMC works in a very {term}`functional <Functional Programming>` way, and all the information that is needed in the `logp`, `logcdf`, `icdf` and `moment` methods is expected to be "carried" via the `RandomVariable` inputs. You may pass numerical arguments that are not strictly needed for the `rng_fn` method but are used in the those methods. Just keep in mind whether this affects the correct shape inference behavior of the `RandomVariable`.
+1. If a distribution does not have a corresponding `rng_fn` implementation, a `RandomVariable` should still be created to raise a `NotImplementedError`. This is, for example, the case in {class}`~pymc.distributions.continuous.Flat`. In this case it will be necessary to provide a `support_point` method, because without a `rng_fn`, PyMC can't fall back to a random draw to use as an initial point for MCMC.
+1. As mentioned above, PyMC works in a very {term}`functional <Functional Programming>` way, and all the information that is needed in the `logp`, `logcdf`, `icdf` and `support_point` methods is expected to be "carried" via the `RandomVariable` inputs. You may pass numerical arguments that are not strictly needed for the `rng_fn` method but are used in the those methods. Just keep in mind whether this affects the correct shape inference behavior of the `RandomVariable`.
 1. The `logcdf`, and `icdf` methods is not a requirement, but it's a nice plus!
-1. Currently, only one moment is supported in the `moment` method, and probably the "higher-order" one is the most useful (that is `mean` > `median` > `mode`)... You might need to truncate the moment if you are dealing with a discrete distribution. `moment` should return a valid point for the random variable (i.e., it always has non-zero probability when evaluated at that point)
-1. When creating the `moment` method, be careful with `size != None` and broadcast properly also based on parameters that are not necessarily used to calculate the moment. For example, the `sigma` in `pm.Normal.dist(mu=0, sigma=np.arange(1, 6))` is irrelevant for the moment, but may nevertheless inform about the shape. In this case, the `moment` should return `[mu, mu, mu, mu, mu]`.
+1. Currently, only one moment is supported in the `support_point` method, and probably the "higher-order" one is the most useful (that is `mean` > `median` > `mode`)... You might need to truncate the moment if you are dealing with a discrete distribution. `support_point` should return a valid point for the random variable (i.e., it always has non-zero probability when evaluated at that point)
+1. When creating the `support_point` method, be careful with `size != None` and broadcast properly also based on parameters that are not necessarily used to calculate the moment. For example, the `sigma` in `pm.Normal.dist(mu=0, sigma=np.arange(1, 6))` is irrelevant for the moment, but may nevertheless inform about the shape. In this case, the `support_point` should return `[mu, mu, mu, mu, mu]`.
 
 For a quick check that things are working you can try the following:
 
 ```python
 
 import pymc as pm
-from pymc.distributions.distribution import moment
+from pymc.distributions.distribution import support_point
 
 # pm.blah = pm.Normal in this example
 blah = pm.blah.dist(mu=0, sigma=1)
@@ -220,8 +220,8 @@ blah = pm.blah.dist(mu=0, sigma=1)
 pm.draw(blah, random_seed=1)
 # array(-1.01397228)
 
-# Test the moment method
-moment(blah).eval()
+# Test the support_point method
+support_point(blah).eval()
 # array(0.)
 
 # Test the logp method
@@ -371,9 +371,9 @@ def test_blah_logcdf(self):
 
 ```
 
-## 5. Adding tests for the `moment` method
+## 5. Adding tests for the `support_point` method
 
-Tests for the `moment` make use of the function `assert_moment_is_expected`
+Tests for the `support_point` make use of the function `assert_support_point_is_expected`
 which checks if:
 1. Moments return the `expected` values
 1. Moments have the expected size and shape
@@ -383,7 +383,7 @@ which checks if:
 
 import pytest
 from pymc.distributions import Blah
-from pymc.testing import assert_moment_is_expected
+from pymc.testing import assert_support_point_is_expected
 
 
 @pytest.mark.parametrize(
@@ -395,10 +395,10 @@ from pymc.testing import assert_moment_is_expected
         (np.arange(5), np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(5))),
     ],
 )
-def test_blah_moment(param1, param2, size, expected):
+def test_blah_support_point(param1, param2, size, expected):
     with Model() as model:
         Blah("x", param1=param1, param2=param2, size=size)
-    assert_moment_is_expected(model, expected)
+    assert_support_point_is_expected(model, expected)
 
 ```
 

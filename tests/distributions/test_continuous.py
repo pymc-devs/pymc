@@ -42,7 +42,7 @@ from pymc.testing import (
     Rplusunif,
     Runif,
     Unit,
-    assert_moment_is_expected,
+    assert_support_point_is_expected,
     check_icdf,
     check_logcdf,
     check_logp,
@@ -1058,10 +1058,10 @@ class TestMoments:
             ((2, 5), np.zeros((2, 5))),
         ],
     )
-    def test_flat_moment(self, size, expected):
+    def test_flat_support_point(self, size, expected):
         with pm.Model() as model:
             pm.Flat("x", size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "size, expected",
@@ -1071,10 +1071,10 @@ class TestMoments:
             ((2, 5), np.ones((2, 5))),
         ],
     )
-    def test_halfflat_moment(self, size, expected):
+    def test_halfflat_support_point(self, size, expected):
         with pm.Model() as model:
             pm.HalfFlat("x", size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "lower, upper, size, expected",
@@ -1085,10 +1085,10 @@ class TestMoments:
             (0, np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(1, 6) / 2)),
         ],
     )
-    def test_uniform_moment(self, lower, upper, size, expected):
+    def test_uniform_support_point(self, lower, upper, size, expected):
         with pm.Model() as model:
             pm.Uniform("x", lower=lower, upper=upper, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, sigma, size, expected",
@@ -1099,10 +1099,10 @@ class TestMoments:
             (np.arange(5), np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(5))),
         ],
     )
-    def test_normal_moment(self, mu, sigma, size, expected):
+    def test_normal_support_point(self, mu, sigma, size, expected):
         with pm.Model() as model:
             pm.Normal("x", mu=mu, sigma=sigma, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "sigma, size, expected",
@@ -1113,10 +1113,10 @@ class TestMoments:
             (np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(1, 6))),
         ],
     )
-    def test_halfnormal_moment(self, sigma, size, expected):
+    def test_halfnormal_support_point(self, sigma, size, expected):
         with pm.Model() as model:
             pm.HalfNormal("x", sigma=sigma, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "nu, sigma, size, expected",
@@ -1127,10 +1127,10 @@ class TestMoments:
             (np.arange(1, 6), 1, None, np.full(5, 1)),
         ],
     )
-    def test_halfstudentt_moment(self, nu, sigma, size, expected):
+    def test_halfstudentt_support_point(self, nu, sigma, size, expected):
         with pm.Model() as model:
             pm.HalfStudentT("x", nu=nu, sigma=sigma, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, sigma, lower, upper, size, expected",
@@ -1141,10 +1141,10 @@ class TestMoments:
             (1, 1, [-np.inf, -np.inf, -np.inf], 10, None, np.full(3, 9)),
         ],
     )
-    def test_truncatednormal_moment(self, mu, sigma, lower, upper, size, expected):
+    def test_truncatednormal_support_point(self, mu, sigma, lower, upper, size, expected):
         with pm.Model() as model:
             pm.TruncatedNormal("x", mu=mu, sigma=sigma, lower=lower, upper=upper, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "alpha, beta, size, expected",
@@ -1155,10 +1155,10 @@ class TestMoments:
             (1, np.arange(1, 6), (2, 5), np.full((2, 5), 1 / np.arange(2, 7))),
         ],
     )
-    def test_beta_moment(self, alpha, beta, size, expected):
+    def test_beta_support_point(self, alpha, beta, size, expected):
         with pm.Model() as model:
             pm.Beta("x", alpha=alpha, beta=beta, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "lam, size, expected",
@@ -1169,10 +1169,10 @@ class TestMoments:
             (np.arange(1, 5), (2, 4), np.full((2, 4), 1 / np.arange(1, 5))),
         ],
     )
-    def test_exponential_moment(self, lam, size, expected):
+    def test_exponential_support_point(self, lam, size, expected):
         with pm.Model() as model:
             pm.Exponential("x", lam=lam, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, b, size, expected",
@@ -1183,10 +1183,10 @@ class TestMoments:
             (np.arange(5), np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(5))),
         ],
     )
-    def test_laplace_moment(self, mu, b, size, expected):
+    def test_laplace_support_point(self, mu, b, size, expected):
         with pm.Model() as model:
             pm.Laplace("x", mu=mu, b=b, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, nu, sigma, size, expected",
@@ -1203,10 +1203,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_studentt_moment(self, mu, nu, sigma, size, expected):
+    def test_studentt_support_point(self, mu, nu, sigma, size, expected):
         with pm.Model() as model:
             pm.StudentT("x", mu=mu, nu=nu, sigma=sigma, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "alpha, beta, size, expected",
@@ -1217,10 +1217,10 @@ class TestMoments:
             (np.arange(5), np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(5))),
         ],
     )
-    def test_cauchy_moment(self, alpha, beta, size, expected):
+    def test_cauchy_support_point(self, alpha, beta, size, expected):
         with pm.Model() as model:
             pm.Cauchy("x", alpha=alpha, beta=beta, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "a, b, size, expected",
@@ -1232,10 +1232,10 @@ class TestMoments:
             (1, np.arange(1, 6), (2, 5), np.full((2, 5), 1 / np.arange(2, 7))),
         ],
     )
-    def test_kumaraswamy_moment(self, a, b, size, expected):
+    def test_kumaraswamy_support_point(self, a, b, size, expected):
         with pm.Model() as model:
             pm.Kumaraswamy("x", a=a, b=b, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, sigma, size, expected",
@@ -1251,10 +1251,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_lognormal_moment(self, mu, sigma, size, expected):
+    def test_lognormal_support_point(self, mu, sigma, size, expected):
         with pm.Model() as model:
             pm.LogNormal("x", mu=mu, sigma=sigma, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "beta, size, expected",
@@ -1269,10 +1269,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_halfcauchy_moment(self, beta, size, expected):
+    def test_halfcauchy_support_point(self, beta, size, expected):
         with pm.Model() as model:
             pm.HalfCauchy("x", beta=beta, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "alpha, beta, size, expected",
@@ -1288,10 +1288,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_gamma_moment(self, alpha, beta, size, expected):
+    def test_gamma_support_point(self, alpha, beta, size, expected):
         with pm.Model() as model:
             pm.Gamma("x", alpha=alpha, beta=beta, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "alpha, beta, size, expected",
@@ -1302,10 +1302,10 @@ class TestMoments:
             (np.arange(1, 6), 1, None, np.array([0.5, 1, 1 / 2, 1 / 3, 1 / 4])),
         ],
     )
-    def test_inverse_gamma_moment(self, alpha, beta, size, expected):
+    def test_inverse_gamma_support_point(self, alpha, beta, size, expected):
         with pm.Model() as model:
             pm.InverseGamma("x", alpha=alpha, beta=beta, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "alpha, m, size, expected",
@@ -1321,10 +1321,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_pareto_moment(self, alpha, m, size, expected):
+    def test_pareto_support_point(self, alpha, m, size, expected):
         with pm.Model() as model:
             pm.Pareto("x", alpha=alpha, m=m, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, kappa, size, expected",
@@ -1335,10 +1335,10 @@ class TestMoments:
             (np.arange(4), np.arange(1, 5), (2, 4), np.full((2, 4), np.arange(4))),
         ],
     )
-    def test_vonmises_moment(self, mu, kappa, size, expected):
+    def test_vonmises_support_point(self, mu, kappa, size, expected):
         with pm.Model() as model:
             pm.VonMises("x", mu=mu, kappa=kappa, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, lam, phi, size, expected",
@@ -1350,10 +1350,10 @@ class TestMoments:
             (np.arange(1, 6), None, np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(1, 6))),
         ],
     )
-    def test_wald_moment(self, mu, lam, phi, size, expected):
+    def test_wald_support_point(self, mu, lam, phi, size, expected):
         with pm.Model() as model:
             pm.Wald("x", mu=mu, lam=lam, phi=phi, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "alpha, beta, size, expected",
@@ -1372,10 +1372,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_weibull_moment(self, alpha, beta, size, expected):
+    def test_weibull_support_point(self, alpha, beta, size, expected):
         with pm.Model() as model:
             pm.Weibull("x", alpha=alpha, beta=beta, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, s, size, expected",
@@ -1391,10 +1391,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_logistic_moment(self, mu, s, size, expected):
+    def test_logistic_support_point(self, mu, s, size, expected):
         with pm.Model() as model:
             pm.Logistic("x", mu=mu, s=s, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, nu, sigma, size, expected",
@@ -1406,10 +1406,10 @@ class TestMoments:
             (1, np.arange(1, 6), 1, (2, 5), np.full((2, 5), np.arange(2, 7))),
         ],
     )
-    def test_exgaussian_moment(self, mu, nu, sigma, size, expected):
+    def test_exgaussian_support_point(self, mu, nu, sigma, size, expected):
         with pm.Model() as model:
             pm.ExGaussian("x", mu=mu, sigma=sigma, nu=nu, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, beta, size, expected",
@@ -1426,10 +1426,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_gumbel_moment(self, mu, beta, size, expected):
+    def test_gumbel_support_point(self, mu, beta, size, expected):
         with pm.Model() as model:
             pm.Gumbel("x", mu=mu, beta=beta, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "c, lower, upper, size, expected",
@@ -1447,10 +1447,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_triangular_moment(self, c, lower, upper, size, expected):
+    def test_triangular_support_point(self, c, lower, upper, size, expected):
         with pm.Model() as model:
             pm.Triangular("x", c=c, lower=lower, upper=upper, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, sigma, size, expected",
@@ -1462,10 +1462,10 @@ class TestMoments:
             (np.arange(4), np.arange(1, 5), (2, 4), np.full((2, 4), sp.expit(np.arange(4)))),
         ],
     )
-    def test_logitnormal_moment(self, mu, sigma, size, expected):
+    def test_logitnormal_support_point(self, mu, sigma, size, expected):
         with pm.Model() as model:
             pm.LogitNormal("x", mu=mu, sigma=sigma, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "x_points, pdf_points, size, expected",
@@ -1504,10 +1504,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_interpolated_moment(self, x_points, pdf_points, size, expected):
+    def test_interpolated_support_point(self, x_points, pdf_points, size, expected):
         with pm.Model() as model:
             pm.Interpolated("x", x_points=x_points, pdf_points=pdf_points, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "mu, sigma, size, expected",
@@ -1518,10 +1518,10 @@ class TestMoments:
             (np.arange(5), np.ones(5), (2, 5), np.full((2, 5), np.arange(5) + 1.2703628454614782)),
         ],
     )
-    def test_moyal_moment(self, mu, sigma, size, expected):
+    def test_moyal_support_point(self, mu, sigma, size, expected):
         with pm.Model() as model:
             pm.Moyal("x", mu=mu, sigma=sigma, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "alpha, mu, sigma, size, expected",
@@ -1545,10 +1545,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_skewnormal_moment(self, alpha, mu, sigma, size, expected):
+    def test_skewnormal_support_point(self, alpha, mu, sigma, size, expected):
         with pm.Model() as model:
             pm.SkewNormal("x", alpha=alpha, mu=mu, sigma=sigma, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "b, kappa, mu, size, expected",
@@ -1572,10 +1572,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_asymmetriclaplace_moment(self, b, kappa, mu, size, expected):
+    def test_asymmetriclaplace_support_point(self, b, kappa, mu, size, expected):
         with pm.Model() as model:
             pm.AsymmetricLaplace("x", b=b, kappa=kappa, mu=mu, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "nu, sigma, size, expected",
@@ -1611,7 +1611,7 @@ class TestMoments:
             ),
         ],
     )
-    def test_rice_moment(self, nu, sigma, size, expected):
+    def test_rice_support_point(self, nu, sigma, size, expected):
         with pm.Model() as model:
             pm.Rice("x", nu=nu, sigma=sigma, size=size)
 
@@ -1664,10 +1664,10 @@ class TestMoments:
             ),
         ],
     )
-    def test_polyagamma_moment(self, h, z, size, expected):
+    def test_polyagamma_support_point(self, h, z, size, expected):
         with pm.Model() as model:
             pm.PolyaGamma("x", h=h, z=z, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
 
 class TestFlat(BaseTestDistributionRandom):
