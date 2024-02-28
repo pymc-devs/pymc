@@ -13,6 +13,7 @@
 #   limitations under the License.
 import functools as ft
 import itertools as it
+import warnings
 
 from collections.abc import Sequence
 from typing import Any, Callable, Optional, Union
@@ -651,6 +652,14 @@ def check_selfconsistency_discrete_logcdf(
                 decimal=decimal,
                 err_msg=str(point),
             )
+
+
+def assert_moment_is_expected(model, expected, check_finite_logp=True):
+    warnings.warn(
+        "assert_moment_is_expected is deprecated. Use assert_support_point_is_expected instead.",
+        FutureWarning,
+    )
+    assert_support_point_is_expected(model, expected, check_finite_logp=check_finite_logp)
 
 
 def assert_support_point_is_expected(model, expected, check_finite_logp=True):
