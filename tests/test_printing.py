@@ -102,9 +102,6 @@ class TestMonolith(BaseTestStrAndLatexRepr):
             # Expected value of outcome
             mu = Deterministic("mu", floatX(alpha + dot(X, b)))
 
-            # add a bounded variable as well
-            # bound_var = Bound(Normal, lower=1.0)("bound_var", mu=0, sigma=10)
-
             # KroneckerNormal
             n, m = 3, 4
             covs = [np.eye(n), np.eye(m)]
