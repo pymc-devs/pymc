@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc.distributions.bound import Bound
 from pymc.distributions.censored import Censored
 from pymc.distributions.continuous import (
     AsymmetricLaplace,
@@ -129,7 +128,6 @@ __all__ = [
     "HalfCauchy",
     "Gamma",
     "Weibull",
-    "Bound",
     "LogNormal",
     "Lognormal",
     "HalfStudentT",
@@ -192,7 +190,6 @@ __all__ = [
     "Logistic",
     "LogitNormal",
     "Interpolated",
-    "Bound",
     "Rice",
     "Moyal",
     "Simulator",

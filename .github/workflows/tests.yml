@@ -67,7 +67,6 @@ jobs:
             tests/distributions/test_multivariate.py
 
           - |
-            tests/distributions/test_bound.py
             tests/distributions/test_censored.py
             tests/distributions/test_simulator.py
             tests/sampling/test_forward.py
