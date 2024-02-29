@@ -68,7 +68,6 @@ __all__ = (
     "draw",
     "sample_prior_predictive",
     "sample_posterior_predictive",
-    "sample_posterior_predictive_w",
 )
 
 
@@ -671,57 +670,3 @@ def sample_posterior_predictive(
         idata.extend(idata_pp)
         return idata
     return idata_pp
-
-
-def sample_posterior_predictive_w(
-    traces,
-    samples: Optional[int] = None,
-    models: Optional[list[Model]] = None,
-    weights: Optional[ArrayLike] = None,
-    random_seed: RandomState = None,
-    progressbar: bool = True,
-    return_inferencedata: bool = True,
-    idata_kwargs: Optional[dict] = None,
-):
-    """Generate weighted posterior predictive samples from a list of models and
-    a list of traces according to a set of weights.
-
-    Parameters
-    ----------
-    traces : list or list of lists
-        List of traces generated from MCMC sampling (xarray.Dataset, arviz.InferenceData, or
-        MultiTrace), or a list of list containing dicts from find_MAP() or points. The number of
-        traces should be equal to the number of weights.
-    samples : int, optional
-        Number of posterior predictive samples to generate. Defaults to the
-        length of the shorter trace in traces.
-    models : list of Model
-        List of models used to generate the list of traces. The number of models should be equal to
-        the number of weights and the number of observed RVs should be the same for all models.
-        By default a single model will be inferred from ``with`` context, in this case results will
-        only be meaningful if all models share the same distributions for the observed RVs.
-    weights : array-like, optional
-        Individual weights for each trace. Default, same weight for each model.
-    random_seed : int, RandomState or Generator, optional
-        Seed for the random number generator.
-    progressbar : bool, optional default True
-        Whether or not to display a progress bar in the command line. The bar shows the percentage
-        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
-        time until completion ("expected time of arrival"; ETA).
-    return_inferencedata : bool
-        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
-        Defaults to True.
-    idata_kwargs : dict, optional
-        Keyword arguments for :func:`pymc.to_inference_data`
-
-    Returns
-    -------
-    arviz.InferenceData or Dict
-        An ArviZ ``InferenceData`` object containing the posterior predictive samples from the
-        weighted models (default), or a dictionary with variable names as keys, and samples as
-        numpy arrays.
-    """
-    raise FutureWarning(
-        "The function `sample_posterior_predictive_w` has been removed in PyMC 4.3.0. "
-        "Switch to `arviz.stats.weight_predictions`"
-    )
