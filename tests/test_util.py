@@ -170,6 +170,16 @@ def test_dataset_to_point_list(input_type):
     assert isinstance(pl[0]["A"], np.ndarray)
 
 
+def test_transposed_dataset_to_point_list():
+    ds = xarray.Dataset()
+    ds["A"] = xarray.DataArray([[[1, 2, 3], [2, 3, 4]]] * 5, dims=("team", "draw", "chain"))
+    pl, _ = dataset_to_point_list(ds, sample_dims=["chain", "draw"])
+    assert isinstance(pl, list)
+    assert len(pl) == 6
+    assert isinstance(pl[0], dict)
+    assert isinstance(pl[0]["A"], np.ndarray)
+
+
 def test_dataset_to_point_list_str_key():
     # Check that non-str keys are caught
     ds = xarray.Dataset()
