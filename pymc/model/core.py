@@ -1873,7 +1873,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         .. code-block:: python
 
             import numpy as np
-            from pymc import HalfCauchy, Model, Normal, model_to_graphviz
+            from pymc import HalfCauchy, Model, Normal
 
             J = 8
             y = np.array([28, 8, -3, 7, -1, 1, 18, 12])
@@ -1890,6 +1890,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 obs = Normal("obs", theta, sigma=sigma, observed=y)
 
             schools.to_graphviz()
+
+        Note that this code automatically plots the graph if executed in a Jupyter notebook.
+        If executed non-interactively, such as in a script or python console, the graph
+        needs to be rendered explicitly:
+
+        .. code-block:: python
+
+            # creates the file `schools.pdf`
+            schools.to_graphviz().render("schools")
         """
         return model_to_graphviz(
             model=self,

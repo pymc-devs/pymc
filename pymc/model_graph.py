@@ -474,6 +474,15 @@ def model_to_graphviz(
             obs = Normal("obs", theta, sigma=sigma, observed=y)
 
         model_to_graphviz(schools)
+
+    Note that this code automatically plots the graph if executed in a Jupyter notebook.
+    If executed non-interactively, such as in a script or python console, the graph
+    needs to be rendered explicitly:
+
+    .. code-block:: python
+
+        # creates the file `schools.pdf`
+        model_to_graphviz(schools).render("schools")
     """
     if "plain" not in formatting:
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
