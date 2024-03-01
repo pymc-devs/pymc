@@ -808,6 +808,7 @@ def collect_default_updates(
     Examples
     --------
     .. code:: python
+
         import pymc as pm
         from pytensor.scan import scan
         from pymc.pytensorf import collect_default_updates
