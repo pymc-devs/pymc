@@ -666,9 +666,8 @@ def sample_posterior_predictive(
             # Sampling: [x, y, z, obs]
 
 
-    Note that "sampling" a :func:`~pymc.Deterministic` does not force random variables
-    that depend on this quantity to be sampled too. In the following example ``z`` will not
-    be resampled even though it depends on ``det_xy``:
+    .. danger:: Including a :func:`~pymc.Deterministic` in `var_names` may incorrectly force a random variable to be resampled, as happens with ``z`` in the following example:
+
 
     .. code :: python
 
@@ -683,7 +682,7 @@ def sample_posterior_predictive(
           idata = pm.sample(tune=10, draws=10, chains=2, **kwargs)
 
           pm.sample_posterior_predictive(idata, var_names=["det_xy", "det_z"], **kwargs)
-          # Sampling: []
+          # Sampling: [z]
 
 
     Controlling the number of samples
