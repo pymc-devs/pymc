@@ -198,7 +198,7 @@ class NUTS(BaseHMC):
 
             if divergence_info or turning:
                 break
-        else:
+        else:  # no-break
             reached_max_treedepth = not self.tune
 
         stats = tree.stats()

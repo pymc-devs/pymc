@@ -164,7 +164,7 @@ def warn_treedepth(idata: arviz.InferenceData) -> list[SamplerWarning]:
 
     warnings = []
     for c in rmtd.chain:
-        if sum(rmtd.sel(chain=c)) / rmtd.sizes["draw"] > 0.05:
+        if (rmtd.sel(chain=c).mean("draw") > 0.05).any():
             warnings.append(
                 SamplerWarning(
                     WarningType.TREEDEPTH,
