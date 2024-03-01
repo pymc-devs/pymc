@@ -42,6 +42,22 @@ def test_warn_treedepth():
     assert "Chain 1 reached the maximum tree depth" in warns[0].message
 
 
+def test_warn_treedepth_multiple_samplers():
+    """Check we handle cases when sampling with multiple NUTS samplers, each of which reports max_treedepth."""
+    max_treedepth = np.zeros((3, 2, 2), dtype=bool)
+    max_treedepth[0, 0, 0] = True
+    max_treedepth[2, 1, 1] = True
+    idata = arviz.from_dict(
+        sample_stats={
+            "reached_max_treedepth": max_treedepth,
+        }
+    )
+    warns = convergence.warn_treedepth(idata)
+    assert len(warns) == 2
+    assert "Chain 0 reached the maximum tree depth" in warns[0].message
+    assert "Chain 2 reached the maximum tree depth" in warns[1].message
+
+
 def test_log_warning_stats(caplog):
     s1 = dict(warning="Temperature too low!")
     s2 = dict(warning="Temperature too high!")
