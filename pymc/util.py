@@ -249,9 +249,9 @@ def dataset_to_point_list(
             raise ValueError(f"Variable names must be str, but dataset key {vn} is a {type(vn)}.")
     num_sample_dims = len(sample_dims)
     stacked_dims = {dim_name: ds[var_names[0]][dim_name] for dim_name in sample_dims}
-    stacked_dict = {vn: da.transpose(*sample_dims, ...) for vn, da in ds.items()}
+    transposed_dict = {vn: da.transpose(*sample_dims, ...) for vn, da in ds.items()}
     stacked_dict = {
-        vn: da.values.reshape((-1, *da.shape[num_sample_dims:])) for vn, da in ds.items()
+        vn: da.values.reshape((-1, *da.shape[num_sample_dims:])) for vn, da in transposed_dict.items()
     }
     points = [
         {vn: stacked_dict[vn][i, ...] for vn in var_names}
