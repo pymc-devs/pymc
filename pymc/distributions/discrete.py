@@ -920,9 +920,9 @@ class HyperGeometric(Discrete):
     @classmethod
     def dist(
         cls,
-        N: Optional[DISCRETE_DIST_PARAMETER_TYPES],
-        k: Optional[DISCRETE_DIST_PARAMETER_TYPES],
-        n: Optional[DISCRETE_DIST_PARAMETER_TYPES],
+        N: DISCRETE_DIST_PARAMETER_TYPES,
+        k: DISCRETE_DIST_PARAMETER_TYPES,
+        n: DISCRETE_DIST_PARAMETER_TYPES,
         *args,
         **kwargs,
     ):
