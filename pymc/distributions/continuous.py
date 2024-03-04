@@ -229,32 +229,21 @@ def get_tau_sigma(tau=None, sigma=None):
     -----
     If neither tau nor sigma is provided, returns (1., 1.)
     """
-    if tau is None:
-        if sigma is None:
-            sigma = 1.0
-            tau = 1.0
-        else:
-            if isinstance(sigma, Variable):
-                # Keep tau negative, if sigma was negative, so that it will fail when used
-                tau = (sigma**-2.0) * pt.sign(sigma)
-            else:
-                sigma_ = np.asarray(sigma)
-                if np.any(sigma_ <= 0):
-                    raise ValueError("sigma must be positive")
-                tau = sigma_**-2.0
-
+    if tau is not None and sigma is not None:
+        raise ValueError("Can't pass both tau and sigma")
+    if tau is None and sigma is None:
+        sigma = pt.as_tensor_variable(1.0)
+        tau = pt.as_tensor_variable(1.0)
+    elif tau is None:
+        sigma = pt.as_tensor_variable(sigma)
+        # Keep tau negative, if sigma was negative, so that it will
+        # fail when used
+        tau = (sigma**-2.0) * pt.sign(sigma)
     else:
-        if sigma is not None:
-            raise ValueError("Can't pass both tau and sigma")
-        else:
-            if isinstance(tau, Variable):
-                # Keep sigma negative, if tau was negative, so that it will fail when used
-                sigma = pt.abs(tau) ** (-0.5) * pt.sign(tau)
-            else:
-                tau_ = np.asarray(tau)
-                if np.any(tau_ <= 0):
-                    raise ValueError("tau must be positive")
-                sigma = tau_**-0.5
+        tau = pt.as_tensor_variable(tau)
+        # Keep tau negative, if sigma was negative, so that it will
+        # fail when used
+        sigma = pt.abs(tau) ** -0.5 * pt.sign(tau)
 
     return tau, sigma
 
