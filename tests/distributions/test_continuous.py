@@ -1009,7 +1009,7 @@ class TestMatchesScipy:
         npt.assert_almost_equal(tau.eval(), -0.25)
 
         _, sigma = get_tau_sigma(tau=pt.constant(-2))
-        npt.assert_almost_equal(sigma.eval(), np.nan)
+        npt.assert_almost_equal(sigma.eval(), -1.0 / np.sqrt(2.0))
 
         sigma = [1, 2]
         tau, _ = get_tau_sigma(sigma=sigma)

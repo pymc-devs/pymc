@@ -241,7 +241,9 @@ def get_tau_sigma(tau=None, sigma=None):
         tau = (sigma**-2.0) * pt.sign(sigma)
     else:
         tau = pt.as_tensor_variable(tau)
-        sigma = tau**-0.5
+        # Keep tau negative, if sigma was negative, so that it will
+        # fail when used
+        sigma = pt.abs(tau) ** -0.5 * pt.sign(tau)
 
     return tau, sigma
 
