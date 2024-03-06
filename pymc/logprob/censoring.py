@@ -57,9 +57,7 @@ from pytensor.scalar.basic import (
     Switch,
 )
 from pytensor.scalar.basic import clip as scalar_clip
-
-from pytensor.tensor import TensorVariable
-from pytensor.tensor import TensorType
+from pytensor.tensor import TensorType, TensorVariable
 from pytensor.tensor.basic import switch as switch
 from pytensor.tensor.math import ceil, clip, floor, round_half_to_even
 from pytensor.tensor.random.op import RandomVariable
