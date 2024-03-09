@@ -20,7 +20,7 @@ from pytensor.graph import ancestors
 from pytensor.tensor import TensorVariable
 
 from pymc import Model
-from pymc.logprob.transforms import Transform
+from pymc.logprob.abstract import Transform
 from pymc.logprob.utils import rvs_in_graph
 from pymc.model.fgraph import (
     ModelDeterministic,
