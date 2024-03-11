@@ -629,7 +629,7 @@ class ZeroInflatedPoisson:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of Poisson variates (0 < psi < 1)
+        Expected proportion of Poisson draws (0 < psi < 1)
     mu : tensor_like of float
         Expected number of occurrences during the given interval
         (mu >= 0).
@@ -692,7 +692,7 @@ class ZeroInflatedBinomial:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of Binomial variates (0 < psi < 1)
+        Expected proportion of Binomial draws (0 < psi < 1)
     n : tensor_like of int
         Number of Bernoulli trials (n >= 0).
     p : tensor_like of float
@@ -779,7 +779,7 @@ class ZeroInflatedNegativeBinomial:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of NegativeBinomial variates (0 < psi < 1)
+        Expected proportion of NegativeBinomial draws (0 < psi < 1)
     mu : tensor_like of float
         Poisson distribution parameter (mu > 0).
     alpha : tensor_like of float
@@ -867,7 +867,7 @@ class HurdlePoisson:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of Poisson variates (0 < psi < 1)
+        Expected proportion of Poisson draws (0 < psi < 1)
     mu : tensor_like of float
         Expected number of occurrences (mu >= 0).
     """
@@ -911,7 +911,7 @@ class HurdleNegativeBinomial:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of Negative Binomial variates (0 < psi < 1)
+        Expected proportion of Negative Binomial draws (0 < psi < 1)
     alpha : tensor_like of float
         Gamma distribution shape parameter (alpha > 0).
     mu : tensor_like of float
@@ -963,7 +963,7 @@ class HurdleGamma:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of Gamma variates (0 < psi < 1)
+        Expected proportion of Gamma draws (0 < psi < 1)
     alpha : tensor_like of float, optional
         Shape parameter (alpha > 0).
     beta : tensor_like of float, optional
@@ -1015,7 +1015,7 @@ class HurdleLogNormal:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of LogNormal variates (0 < psi < 1)
+        Expected proportion of LogNormal draws (0 < psi < 1)
     mu : tensor_like of float, default 0
         Location parameter.
     sigma : tensor_like of float, optional
