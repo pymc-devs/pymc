@@ -92,7 +92,7 @@ class HSGP(Base):
 
     The `gp.HSGP` class is an implementation of the Hilbert Space Gaussian process.  It is a
     reduced rank GP approximation that uses a fixed set of basis vectors whose coefficients are
-    random functions of a stationary covariance function's power spectral density.  It's usage
+    random functions of a stationary covariance function's power spectral density.  Its usage
     is largely similar to `gp.Latent`.  Like `gp.Latent`, it does not assume a Gaussian noise model
     and can be used with any likelihood, or as a component anywhere within a model.  Also like
     `gp.Latent`, it has `prior` and `conditional` methods.  It supports any sum of covariance
@@ -100,7 +100,7 @@ class HSGP(Base):
     `Periodic` covariance function, which uses a different set of basis functions for a
     low rank approximation, as described in `HSGPPeriodic`.).
 
-    For information on choosing appropriate `m`, `L`, and `c`, refer Ruitort-Mayol et al. or to
+    For information on choosing appropriate `m`, `L`, and `c`, refer to Ruitort-Mayol et al. or to
     the PyMC examples that use HSGP.
 
     To work with the HSGP in its "linearized" form, as a matrix of basis vectors and a vector of
@@ -117,14 +117,14 @@ class HSGP(Base):
         `active_dim`.
     c: float
         The proportion extension factor.  Used to construct L from X.  Defined as `S = max|X|` such
-        that `X` is in `[-S, S]`.  `L` is the calculated as `c * S`.  One of `c` or `L` must be
+        that `X` is in `[-S, S]`.  `L` is calculated as `c * S`.  One of `c` or `L` must be
         provided.  Further information can be found in Ruitort-Mayol et al.
     drop_first: bool
         Default `False`. Sometimes the first basis vector is quite "flat" and very similar to
         the intercept term.  When there is an intercept in the model, ignoring the first basis
         vector may improve sampling. This argument will be deprecated in future versions.
     parameterization: str
-        Whether to use `centred` or `noncentered` parameterization when multiplying the
+        Whether to use the `centered` or `noncentered` parameterization when multiplying the
         basis by the coefficients.
     cov_func: Covariance function, must be an instance of `Stationary` and implement a
         `power_spectral_density` method.
@@ -245,16 +245,16 @@ class HSGP(Base):
         """Linearized version of the HSGP.  Returns the Laplace eigenfunctions and the square root
         of the power spectral density needed to create the GP.
 
-        This function allows the user to bypass the GP interface and work directly with the basis
+        This function allows the user to bypass the GP interface and work with the basis
         and coefficients directly.  This format allows the user to create predictions using
         `pm.set_data` similarly to a linear model.  It also enables computational speed ups in
-        multi-GP models since they may share the same basis.  The return values are the Laplace
+        multi-GP models, since they may share the same basis.  The return values are the Laplace
         eigenfunctions `phi`, and the square root of the power spectral density.
 
         Correct results when using `prior_linearized` in tandem with `pm.set_data` and
         `pm.MutableData` require two conditions.  First, one must specify `L` instead of `c` when
         the GP is constructed.  If not, a RuntimeError is raised.  Second, the `Xs` needs to be
-        zero-centered, so it's mean must be subtracted.  An example is given below.
+        zero-centered, so its mean must be subtracted.  An example is given below.
 
         Parameters
         ----------
@@ -286,9 +286,9 @@ class HSGP(Base):
                 # L = [10] means the approximation is valid from Xs = [-10, 10]
                 gp = pm.gp.HSGP(m=[200], L=[10], cov_func=cov_func)
 
-                # Order is important.  First calculate the mean, then make X a shared variable,
-                # then subtract the mean.  When X is mutated later, the correct mean will be
-                # subtracted.
+                # Order is important.
+                # First calculate the mean, then make X a shared variable, then subtract the mean.
+                #  When X is mutated later, the correct mean will be subtracted.
                 X_mean = np.mean(X, axis=0)
                 X = pm.MutableData("X", X)
                 Xs = X - X_mean
@@ -301,8 +301,13 @@ class HSGP(Base):
                 # as m_star.
                 beta = pm.Normal("beta", size=gp._m_star)
 
-                # The (non-centered) GP approximation is given by
+                # The (non-centered) GP approximation is given by:
                 f = pm.Deterministic("f", phi @ (beta * sqrt_psd))
+
+                # The centered approximation can be more efficient when
+                # the GP is stronger than the noise
+                # beta = pm.Normal("beta", sigma=sqrt_psd, size=gp._m_star)
+                # f = pm.Deterministic("f", phi @ beta)
 
                 ...
 
