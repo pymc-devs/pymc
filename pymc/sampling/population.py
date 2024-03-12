@@ -129,9 +129,7 @@ def warn_population_size(
     if has_demcmc and chains < 3:
         raise ValueError(
             "DEMetropolis requires at least 3 chains. "
-            "For this {}-dimensional model you should use ≥{} chains".format(
-                initial_point_model_size, initial_point_model_size + 1
-            )
+            f"For this {initial_point_model_size}-dimensional model you should use ≥{initial_point_model_size + 1} chains"
         )
     if has_demcmc and chains <= initial_point_model_size:
         warnings.warn(

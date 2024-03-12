@@ -17,6 +17,7 @@
 A collection of common shape operations needed for broadcasting
 samples from probability distributions for stochastic nodes in PyMC.
 """
+
 import warnings
 
 from collections.abc import Sequence

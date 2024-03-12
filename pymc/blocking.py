@@ -17,6 +17,7 @@ pymc.blocking
 
 Classes for working with subsets of parameters.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence

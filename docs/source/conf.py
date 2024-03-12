@@ -1,6 +1,4 @@
-""" Sphinx configuration file.
-
-"""
+"""Sphinx configuration file."""
 #!/usr/bin/env python3
 #
 # pymc documentation build configuration file, created by
