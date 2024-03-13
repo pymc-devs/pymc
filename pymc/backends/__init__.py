@@ -60,6 +60,7 @@ Loading a saved backend
 Saved backends can be loaded using `arviz.from_netcdf`
 
 """
+
 from collections.abc import Mapping, Sequence
 from copy import copy
 from typing import Optional, Union

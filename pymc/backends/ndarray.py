@@ -17,7 +17,6 @@
 Store sampling values in memory as a NumPy array.
 """
 
-
 from typing import Any, Optional
 
 import numpy as np

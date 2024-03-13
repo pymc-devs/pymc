@@ -475,11 +475,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     if TYPE_CHECKING:
 
-        def __enter__(self: Self) -> Self:
-            ...
+        def __enter__(self: Self) -> Self: ...
 
-        def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
-            ...
+        def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None: ...
 
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance

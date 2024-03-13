@@ -108,6 +108,7 @@ Notes
 Taken from the Lasagne project: http://lasagne.readthedocs.io/en/latest/
 
 """
+
 from collections import OrderedDict
 from functools import partial
 

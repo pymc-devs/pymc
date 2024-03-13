@@ -708,9 +708,8 @@ class Group(WithMemoization):
     def group_for_short_name(cls, name):
         if name.lower() not in cls.__name_registry:
             raise KeyError(
-                "No such group: {!r}, " "only the following are supported\n\n{}".format(
-                    name, cls.__name_registry
-                )
+                f"No such group: {name!r}, "
+                f"only the following are supported\n\n{cls.__name_registry}"
             )
         return cls.__name_registry[name.lower()]
 
@@ -983,14 +982,12 @@ class Group(WithMemoization):
     @overload
     def set_size_and_deterministic(
         self, node: Variable, s, d: bool, more_replacements: dict | None = None
-    ) -> Variable:
-        ...
+    ) -> Variable: ...
 
     @overload
     def set_size_and_deterministic(
         self, node: list[Variable], s, d: bool, more_replacements: dict | None = None
-    ) -> list[Variable]:
-        ...
+    ) -> list[Variable]: ...
 
     @pytensor.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(

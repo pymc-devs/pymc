@@ -8,6 +8,7 @@ Usage
 -----
 python scripts/run_mypy.py [--verbose]
 """
+
 import argparse
 import importlib
 import os

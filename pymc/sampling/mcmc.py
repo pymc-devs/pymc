@@ -386,8 +386,7 @@ def sample(
     callback=None,
     mp_ctx=None,
     **kwargs,
-) -> InferenceData:
-    ...
+) -> InferenceData: ...
 
 
 @overload
@@ -416,8 +415,7 @@ def sample(
     mp_ctx=None,
     model: Optional[Model] = None,
     **kwargs,
-) -> MultiTrace:
-    ...
+) -> MultiTrace: ...
 
 
 def sample(
