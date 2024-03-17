@@ -87,16 +87,12 @@ def test_jax_PosDefMatrix():
         pytest.param(1),
         pytest.param(
             2,
-            marks=pytest.mark.skipif(
-                len(jax.devices()) < 2, reason="not enough devices"
-            ),
+            marks=pytest.mark.skipif(len(jax.devices()) < 2, reason="not enough devices"),
         ),
     ],
 )
 @pytest.mark.parametrize("postprocessing_vectorize", ["scan", "vmap"])
-def test_transform_samples(
-    sampler, postprocessing_backend, chains, postprocessing_vectorize
-):
+def test_transform_samples(sampler, postprocessing_backend, chains, postprocessing_vectorize):
     pytensor.config.on_opt_error = "raise"
     np.random.seed(13244)
 
@@ -243,9 +239,7 @@ def test_replace_shared_variables():
     x = pytensor.shared(5, name="shared_x")
 
     new_x = _replace_shared_variables([x])
-    shared_variables = [
-        var for var in graph_inputs(new_x) if isinstance(var, SharedVariable)
-    ]
+    shared_variables = [var for var in graph_inputs(new_x) if isinstance(var, SharedVariable)]
     assert not shared_variables
 
     x.default_update = x + 1
@@ -333,30 +327,23 @@ def test_idata_kwargs(
 
     posterior = idata.get("posterior")
     assert posterior is not None
-    x_dim_expected = idata_kwargs.get(
-        "dims", model_test_idata_kwargs.named_vars_to_dims
-    )["x"][0]
+    x_dim_expected = idata_kwargs.get("dims", model_test_idata_kwargs.named_vars_to_dims)["x"][0]
     assert x_dim_expected is not None
     assert posterior["x"].dims[-1] == x_dim_expected
 
-    x_coords_expected = idata_kwargs.get("coords", model_test_idata_kwargs.coords)[
-        x_dim_expected
-    ]
+    x_coords_expected = idata_kwargs.get("coords", model_test_idata_kwargs.coords)[x_dim_expected]
     assert x_coords_expected is not None
     assert list(x_coords_expected) == list(posterior["x"].coords[x_dim_expected].values)
 
     assert posterior["z"].dims[2] == "z_coord"
     assert np.all(
-        posterior["z"].coords["z_coord"].values
-        == np.array(["apple", "banana", "orange"])
+        posterior["z"].coords["z_coord"].values == np.array(["apple", "banana", "orange"])
     )
 
 
 def test_get_batched_jittered_initial_points():
     with pm.Model() as model:
-        x = pm.MvNormal(
-            "x", mu=np.zeros(3), cov=np.eye(3), shape=(2, 3), initval=np.zeros((2, 3))
-        )
+        x = pm.MvNormal("x", mu=np.zeros(3), cov=np.eye(3), shape=(2, 3), initval=np.zeros((2, 3)))
 
     # No jitter
     ips = _get_batched_jittered_initial_points(
@@ -365,17 +352,13 @@ def test_get_batched_jittered_initial_points():
     assert np.all(ips[0] == 0)
 
     # Single chain
-    ips = _get_batched_jittered_initial_points(
-        model=model, chains=1, random_seed=1, initvals=None
-    )
+    ips = _get_batched_jittered_initial_points(model=model, chains=1, random_seed=1, initvals=None)
 
     assert ips[0].shape == (2, 3)
     assert np.all(ips[0] != 0)
 
     # Multiple chains
-    ips = _get_batched_jittered_initial_points(
-        model=model, chains=2, random_seed=1, initvals=None
-    )
+    ips = _get_batched_jittered_initial_points(model=model, chains=2, random_seed=1, initvals=None)
 
     assert ips[0].shape == (2, 2, 3)
     assert np.all(ips[0][0] != ips[0][1])
@@ -395,9 +378,7 @@ def test_get_batched_jittered_initial_points():
         pytest.param(1),
         pytest.param(
             2,
-            marks=pytest.mark.skipif(
-                len(jax.devices()) < 2, reason="not enough devices"
-            ),
+            marks=pytest.mark.skipif(len(jax.devices()) < 2, reason="not enough devices"),
         ),
     ],
 )
@@ -421,12 +402,8 @@ def test_seeding(chains, random_seed, sampler):
         assert all_equal
 
     if chains > 1:
-        assert np.all(
-            result1.posterior["x"].sel(chain=0) != result1.posterior["x"].sel(chain=1)
-        )
-        assert np.all(
-            result2.posterior["x"].sel(chain=0) != result2.posterior["x"].sel(chain=1)
-        )
+        assert np.all(result1.posterior["x"].sel(chain=0) != result1.posterior["x"].sel(chain=1))
+        assert np.all(result2.posterior["x"].sel(chain=0) != result2.posterior["x"].sel(chain=1))
 
 
 @mock.patch("numpyro.infer.MCMC")
@@ -574,7 +551,21 @@ def test_vi_sampling_jax(method):
         pm.fit(10, method=method, fn_kwargs=dict(mode="JAX"))
 
 
-@pytest.mark.xfail(reason="Due to https://github.com/pymc-devs/pytensor/issues/595")
+@pytest.mark.xfail(
+    reason="""
+During equilibrium rewriter this error happens. Probably one of the routines in SVGD is problematic.
+
+TypeError: The broadcast pattern of the output of scan
+(Matrix(float64, shape=(?, 1))) is inconsistent with the one provided in `output_info`
+(Vector(float64, shape=(?,))). The output on axis 0 is `True`, but it is `False` on axis
+1 in `output_info`. This can happen if one of the dimension is fixed to 1 in the input,
+while it is still variable in the output, or vice-verca. You have to make them consistent,
+e.g. using pytensor.tensor.{unbroadcast, specify_broadcastable}.
+
+Instead of fixing this error it makes sense to rework the internals of the variational to utilize
+pytensor vectorize instead of scan.
+"""
+)
 def test_vi_sampling_jax_svgd():
     with pm.Model():
         x = pm.Normal("x")
