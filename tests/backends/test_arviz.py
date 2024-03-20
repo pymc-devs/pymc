@@ -32,7 +32,11 @@ from pymc.backends.arviz import (
 from pymc.exceptions import ImputationWarning
 
 # Turn all warnings into errors for this module
-pytestmark = pytest.mark.filterwarnings("error")
+pytestmark = pytest.mark.filterwarnings(
+    "error",
+    # Related to https://github.com/arviz-devs/arviz/issues/2327
+    "ignore:datetime.datetime.utcnow():DeprecationWarning",
+)
 
 
 @pytest.fixture(scope="module")
@@ -672,13 +676,17 @@ class TestDataPyMC:
             )
             assert "p_interval__" in inference_data.posterior
 
+    @pytest.mark.filterwarnings(
+        "error",
+        # Related to https://github.com/arviz-devs/arviz/issues/2327
+        "ignore:datetime.datetime.utcnow():DeprecationWarning",
+    )
     @pytest.mark.parametrize("chains", (1, 2))
     def test_single_chain(self, chains):
         # Test that no UserWarning is raised when sampling with NUTS defaults
 
         # When this test was added, a `UserWarning: More chains (500) than draws (1)` used to be issued
         # when sampling with a single chain
-        warnings.simplefilter("error")
         with pm.Model():
             pm.Normal("x")
             pm.sample(chains=chains, return_inferencedata=True)

@@ -172,7 +172,13 @@ def test_fit_oo(inference, fit_kwargs, simple_model_data):
         warn_ctxt = nullcontext()
 
     with warn_ctxt:
-        trace = inference.fit(**fit_kwargs).sample(10000)
+        with warnings.catch_warnings():
+            # Related to https://github.com/arviz-devs/arviz/issues/2327
+            warnings.filterwarnings(
+                "ignore", message="datetime.datetime.utcnow()", category=DeprecationWarning
+            )
+
+            trace = inference.fit(**fit_kwargs).sample(10000)
     mu_post = simple_model_data["mu_post"]
     d = simple_model_data["d"]
     np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_post, rtol=0.05)
@@ -207,10 +213,16 @@ def test_fit_start(inference_spec, simple_model):
     expected_warning = observed_value.name.startswith("minibatch")
     with warnings.catch_warnings(record=True) as record:
         warnings.simplefilter("always")
-        try:
-            trace = inference.fit(n=0).sample(10000)
-        except NotImplementedInference as e:
-            pytest.skip(str(e))
+        with warnings.catch_warnings():
+            # Related to https://github.com/arviz-devs/arviz/issues/2327
+            warnings.filterwarnings(
+                "ignore", message="datetime.datetime.utcnow()", category=DeprecationWarning
+            )
+
+            try:
+                trace = inference.fit(n=0).sample(10000)
+            except NotImplementedInference as e:
+                pytest.skip(str(e))
 
     if expected_warning:
         assert len(record) > 0
