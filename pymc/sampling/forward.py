@@ -200,7 +200,7 @@ def compile_forward_sampling_function(
     # Walk the graph from inputs to outputs and tag the volatile variables
     nodes: list[Variable] = general_toposort(
         fg.outputs, deps=lambda x: x.owner.inputs if x.owner else []
-    )
+    )  # type: ignore
     volatile_nodes: set[Any] = set()
     for node in nodes:
         if (
