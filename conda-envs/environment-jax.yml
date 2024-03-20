@@ -13,8 +13,8 @@ dependencies:
 - h5py>=2.7
 # Jaxlib version must not be greater than jax version!
 - blackjax>=1.0.0
-- jaxlib==0.4.14
-- jax==0.4.16
+- jaxlib==0.4.23
+- jax==0.4.23
 - libblas=*=*mkl
 - mkl-service
 - numpy>=1.15.0
