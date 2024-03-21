@@ -44,11 +44,8 @@ import scipy.special
 from pytensor.graph.basic import equal_computations
 
 from pymc.distributions.continuous import Cauchy, ChiSquared
-<<<<<<< HEAD
 from pymc.distributions.discrete import Bernoulli
-=======
 from pymc.logprob.abstract import get_measure_type_info
->>>>>>> Measure type information for all logps added
 from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
 from pymc.logprob.transforms import (
     ArccoshTransform,

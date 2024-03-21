@@ -191,8 +191,17 @@ class MeasurableMaxNeg(MeasurableVariable, Max):
         )
 
 
-class MeasurableDiscreteMaxNeg(Max):
+class MeasurableDiscreteMaxNeg(MeasurableVariable, Max):
     """A placeholder used to specify a log-likelihood for sub-graphs of negative maxima of discrete variables"""
+
+    def clone(self, **kwargs):
+        axis = kwargs.get("axis", self.axis)
+        ndim_supp = kwargs.get("ndim_supp", self.ndim_supp)
+        supp_axes = kwargs.get("supp_axes", self.supp_axes)
+        measure_type = kwargs.get("measure_type", self.measure_type)
+        return type(self)(
+            axis=axis, ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+        )
 
 
 MeasurableVariable.register(MeasurableDiscreteMaxNeg)
@@ -237,14 +246,18 @@ def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> Optional[list[
 
     if not rv_map_feature.request_measurable([base_rv]):
         return None
- 
-    ndim_supp, supp_axes, measure_type = get_measure_type_info(base_var)
+
+    ndim_supp, supp_axes, measure_type = get_measure_type_info(base_rv)
 
     # distinguish measurable discrete and continuous (because logprob is different)
     if base_rv.owner.op.dtype.startswith("int"):
-        measurable_min = MeasurableDiscreteMaxNeg(list(axis), ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type)
+        measurable_min = MeasurableDiscreteMaxNeg(
+            list(axis), ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+        )
     else:
-        measurable_min = MeasurableMaxNeg(list(axis), ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type)
+        measurable_min = MeasurableMaxNeg(
+            list(axis), ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+        )
 
     return measurable_min.make_node(base_rv).outputs
 
