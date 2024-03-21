@@ -333,6 +333,7 @@ class Distribution(metaclass=DistributionMeta):
         observed=None,
         total_size=None,
         transform=UNSET,
+        default_transform=UNSET,
         **kwargs,
     ) -> TensorVariable:
         """Adds a tensor variable corresponding to a PyMC distribution to the current model.
@@ -418,6 +419,7 @@ class Distribution(metaclass=DistributionMeta):
             total_size,
             dims=dims,
             transform=transform,
+            default_transform=default_transform,
             initval=initval,
         )
 
