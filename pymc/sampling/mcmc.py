@@ -729,6 +729,7 @@ def sample(
 
     if var_names is not None:
         trace_vars = [v for v in model.unobserved_RVs if v.name in var_names]
+        assert len(trace_vars) == len(var_names), "Not all var_names were found in the model"
     else:
         trace_vars = None
 
