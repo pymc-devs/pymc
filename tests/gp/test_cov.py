@@ -410,8 +410,34 @@ class TestStability:
         X = np.random.uniform(low=320.0, high=400.0, size=[2000, 2])
         with pm.Model() as model:
             cov = pm.gp.cov.ExpQuad(2, 0.1)
-        dists = cov.square_dist(X, X).eval()
+        dists = cov.square_dist(X, X, ls=cov.ls).eval()
         assert not np.any(dists < 0)
+
+
+class TestDistance:
+    def test_alt_distance(self):
+        """square_dist below is the same as the default. Check if we get the same
+        result by passing it as an argument to covariance func that inherets from
+        Stationary.
+        """
+
+        def square_dist(X, Xs, ls):
+            X = pt.mul(X, 1.0 / ls)
+            Xs = pt.mul(Xs, 1.0 / ls)
+            X2 = pt.sum(pt.square(X), 1)
+            Xs2 = pt.sum(pt.square(Xs), 1)
+            sqd = -2.0 * pt.dot(X, pt.transpose(Xs)) + (
+                pt.reshape(X2, (-1, 1)) + pt.reshape(Xs2, (1, -1))
+            )
+            return pt.clip(sqd, 0.0, np.inf)
+
+        X = np.linspace(-5, 5, 100)[:, None]
+        with pm.Model() as model:
+            cov1 = pm.gp.cov.Matern32(1, ls=1)
+            cov2 = pm.gp.cov.Matern32(1, ls=1, square_dist=square_dist)
+        K1 = cov1(X).eval()
+        K2 = cov2(X, X).eval()
+        npt.assert_allclose(K1, K2, atol=1e-5)
 
 
 class TestExpQuad:
