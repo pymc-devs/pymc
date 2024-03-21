@@ -694,6 +694,15 @@ def test_no_init_nuts_compound(caplog):
         assert "Initializing NUTS" not in caplog.text
 
 
+def test_sample_var_names():
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        b = pm.Deterministic("b", a**2)
+        idata = pm.sample(10, tune=10, var_names=["a"])
+        assert "a" in idata.posterior
+        assert "b" not in idata.posterior
+
+
 class TestAssignStepMethods:
     def test_bernoulli(self):
         """Test bernoulli distribution is assigned binary gibbs metropolis method"""
