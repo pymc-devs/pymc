@@ -371,6 +371,7 @@ def sample(
     random_seed: RandomState = None,
     progressbar: bool = True,
     step=None,
+    var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     init: str = "auto",
@@ -399,6 +400,7 @@ def sample(
     random_seed: RandomState = None,
     progressbar: bool = True,
     step=None,
+    var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     init: str = "auto",
@@ -427,6 +429,7 @@ def sample(
     random_seed: RandomState = None,
     progressbar: bool = True,
     step=None,
+    var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     init: str = "auto",
@@ -478,6 +481,8 @@ def sample(
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically. By default the NUTS step
         method will be used, if appropriate to the model.
+    var_names : list of str
+        Names of variables to be monitored. If None, all named variables are selected automatically.
     nuts_sampler : str
         Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"].
         This requires the chosen sampler to be installed.
@@ -722,12 +727,18 @@ def sample(
         model.check_start_vals(ip)
         _check_start_shape(model, ip)
 
+    if var_names is not None:
+        trace_vars = [v for v in model.unobserved_RVs if v.name in var_names]
+    else:
+        trace_vars = None
+
     # Create trace backends for each chain
     run, traces = init_traces(
         backend=trace,
         chains=chains,
         expected_length=draws + tune,
         step=step,
+        trace_vars=trace_vars,
         initial_point=ip,
         model=model,
     )
@@ -739,6 +750,7 @@ def sample(
         "traces": traces,
         "chains": chains,
         "tune": tune,
+        "var_names": var_names,
         "progressbar": progressbar,
         "model": model,
         "cores": cores,
