@@ -663,6 +663,7 @@ class _CustomDist(Distribution):
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
                 dtype=dtype,
+                _print_name=(class_name, f"\\operatorname{{{class_name}}}"),
                 # Specific to CustomDist
                 _random_fn=random,
             ),
@@ -802,6 +803,7 @@ class _CustomSymbolicDist(Distribution):
             # If logp is not provided, we try to infer it from the dist graph
             dict(
                 inline_logprob=logp is None,
+                _print_name=(class_name, f"\\operatorname{{{class_name}}}"),
             ),
         )
 
