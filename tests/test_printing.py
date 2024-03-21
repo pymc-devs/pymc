@@ -15,7 +15,7 @@ import numpy as np
 
 from pytensor.tensor.random import normal
 
-from pymc import Bernoulli, Censored, HalfCauchy, Mixture, StudentT
+from pymc import Bernoulli, Censored, CustomDist, Gamma, HalfCauchy, Mixture, StudentT, Truncated
 from pymc.distributions import (
     Dirichlet,
     DirichletMultinomial,
@@ -285,3 +285,27 @@ def test_model_repr_variables_without_monkey_patched_repr():
 
     str_repr = model.str_repr()
     assert str_repr == "x ~ Normal(0, 1)"
+
+
+def test_truncated_repr():
+    with Model() as model:
+        x = Truncated("x", Gamma.dist(1, 1), lower=0, upper=20)
+
+    str_repr = model.str_repr(include_params=False)
+    assert str_repr == "x ~ TruncatedGamma"
+
+
+def test_custom_dist_repr():
+    with Model() as model:
+
+        def dist(mu, size):
+            return Normal.dist(mu, 1, size=size)
+
+        def random(rng, mu, size):
+            return rng.normal(mu, size=size)
+
+        x = CustomDist("x", 0, dist=dist, class_name="CustomDistNormal")
+        x = CustomDist("y", 0, random=random, class_name="CustomRandomNormal")
+
+    str_repr = model.str_repr(include_params=False)
+    assert str_repr == "\n".join(["x ~ CustomDistNormal", "y ~ CustomRandomNormal"])

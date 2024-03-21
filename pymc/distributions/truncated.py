@@ -56,6 +56,10 @@ class TruncatedRV(SymbolicRandomVariable):
     def __init__(self, *args, base_rv_op: Op, max_n_steps: int, **kwargs):
         self.base_rv_op = base_rv_op
         self.max_n_steps = max_n_steps
+        self._print_name = (
+            f"Truncated{self.base_rv_op._print_name[0]}",
+            f"\\operatorname{{{self.base_rv_op._print_name[1]}}}",
+        )
         super().__init__(*args, **kwargs)
 
     def update(self, node: Node):
