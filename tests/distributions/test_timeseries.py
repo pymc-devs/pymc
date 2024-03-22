@@ -47,10 +47,8 @@ from pymc.sampling.mcmc import sample
 from pymc.testing import assert_support_point_is_expected, select_by_precision
 
 # Turn all warnings into errors for this module
-# Ignoring NumPy deprecation warning tracked in https://github.com/pymc-devs/pytensor/issues/146
 pytestmark = pytest.mark.filterwarnings(
     "error",
-    "ignore: NumPy will stop allowing conversion",
     # Related to https://github.com/arviz-devs/arviz/issues/2327
     "ignore:datetime.datetime.utcnow():DeprecationWarning",
 )
