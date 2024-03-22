@@ -619,7 +619,7 @@ def test_transform_univariate_dist_logp_shape():
 
 def test_univariate_transform_multivariate_dist_raises():
     with pm.Model() as m:
-        pm.Dirichlet("x", [1, 1, 1], transform=tr.log)
+        pm.Dirichlet("x", [1, 1, 1], transform=tr.log, default_transform=None)
 
     for jacobian_val in (True, False):
         with pytest.raises(
@@ -645,7 +645,7 @@ def test_invalid_jacobian_broadcast_raises():
     buggy_transform = BuggyTransform()
 
     with pm.Model() as m:
-        pm.Uniform("x", shape=(4, 3), transform=buggy_transform)
+        pm.Uniform("x", shape=(4, 3), transform=buggy_transform, default_transform=None)
 
     for jacobian_val in (True, False):
         with pytest.raises(

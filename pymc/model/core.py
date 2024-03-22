@@ -1351,7 +1351,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             # Register ObservedRV corresponding to observed component
             observed_rv.name = f"{name}_observed"
-            self.create_value_var(observed_rv, transform=None, value_var=observed_data)
+            self.create_value_var(
+                observed_rv, transform=transform, default_transform=None, value_var=observed_data
+            )
             self.add_named_variable(observed_rv)
             self.observed_RVs.append(observed_rv)
 
@@ -1428,7 +1430,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         if transform is UNSET:
             transform = default_transform
-        else:
+        elif transform and default_transform:
             transform = ChainedTransform([default_transform, transform])
 
         if value_var is None:
