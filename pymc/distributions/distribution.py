@@ -398,6 +398,16 @@ class Distribution(metaclass=DistributionMeta):
         if not isinstance(name, string_types):
             raise TypeError(f"Name needs to be a string but got: {name}")
 
+        if transform is None:
+            transform = UNSET
+            default_transform = None
+            warnings.warn(
+                "To disable default transform, please use default_transform=None"
+                " instead of transform=None. Setting transform to None will"
+                " not take effect in future.",
+                UserWarning,
+            )
+
         dims = convert_dims(dims)
         if observed is not None:
             observed = convert_observed_data(observed)
