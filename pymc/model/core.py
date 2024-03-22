@@ -1264,7 +1264,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             if total_size is not None:
                 raise ValueError("total_size can only be passed to observed RVs")
             self.free_RVs.append(rv_var)
-            self.create_value_var(rv_var, transform, default_transform)
+            self.create_value_var(rv_var, transform=transform, default_transform=default_transform)
             self.add_named_variable(rv_var, dims)
             self.set_initval(rv_var, initval)
         else:
@@ -1380,7 +1380,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 rv_var.name = name
 
             rv_var.tag.observations = data
-            self.create_value_var(rv_var, transform=None, value_var=data)
+            self.create_value_var(
+                rv_var, transform=transform, default_transform=default_transform, value_var=data
+            )
             self.add_named_variable(rv_var, dims)
             self.observed_RVs.append(rv_var)
 
@@ -1418,7 +1420,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         # Make the value variable a transformed value variable,
         # if there's an applicable transform
-
         if default_transform is UNSET:
             if rv_var.owner is None:
                 default_transform = None

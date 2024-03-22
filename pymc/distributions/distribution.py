@@ -415,8 +415,8 @@ class Distribution(metaclass=DistributionMeta):
         rv_out = model.register_rv(
             rv_out,
             name,
-            observed,
-            total_size,
+            observed=observed,
+            total_size=total_size,
             dims=dims,
             transform=transform,
             default_transform=default_transform,
