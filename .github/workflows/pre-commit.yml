@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+defaults:
+  run:
+    shell: bash -leo pipefail {0}
 jobs:
   pre-commit:
     runs-on: ubuntu-latest
@@ -18,50 +21,21 @@ jobs:
     - uses: pre-commit/action@v3.0.1
   mypy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
     steps:
       - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
-      - name: Cache conda
-        uses: actions/cache@v4
-        env:
-          # Increase this value to reset cache if environment-test.yml has not changed
-          CACHE_NUMBER: 0
+      - uses: mamba-org/setup-micromamba@v1
         with:
-          path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-py39-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/environment-test.yml') }}
-      - name: Cache multiple paths
-        uses: actions/cache@v4
-        env:
-          # Increase this value to reset cache if requirements.txt has not changed
-          CACHE_NUMBER: 0
-        with:
-          path: |
-            ~/.cache/pip
-            $RUNNER_TOOL_CACHE/Python/*
-            ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('requirements.txt') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          mamba-version: "*"
-          activate-environment: pymc-test
-          channel-priority: strict
           environment-file: conda-envs/environment-test.yml
-          python-version: "3.9"  # Run pre-commit on oldest supported Python version
-          use-mamba: true
-          use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
+          create-args: >-
+            python=3.9
+          environment-name: pymc-test
+          init-shell: bash
+          cache-environment: true
       - name: Install-pymc and mypy dependencies
         run: |
-          conda activate pymc-test
           pip install -e .
           pip install --pre -U polyagamma
           python --version
       - name: Run mypy
         run: |
-          conda activate pymc-test
           python ./scripts/run_mypy.py --verbose
