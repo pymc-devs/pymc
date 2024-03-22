@@ -532,15 +532,17 @@ def sample_jax_nuts(
 
     model = modelcontext(model)
 
-    if var_names is None:
-        var_names = model.unobserved_value_vars
+    if var_names is not None:
+        vars_ = [v for v in model.unobserved_value_vars if v.name in var_names]
+    else:
+        vars_ = model.unobserved_value_vars
 
     if nuts_kwargs is None:
         nuts_kwargs = {}
     else:
         nuts_kwargs = nuts_kwargs.copy()
 
-    vars_to_sample = list(get_default_varnames(var_names, include_transformed=keep_untransformed))
+    vars_to_sample = list(get_default_varnames(vars_, include_transformed=keep_untransformed))
 
     (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
