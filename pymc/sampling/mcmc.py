@@ -483,8 +483,8 @@ def sample(
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically. By default the NUTS step
         method will be used, if appropriate to the model.
-    var_names : list of str
-        Names of variables to be monitored. If None, all named variables are selected automatically.
+    var_names : list of str, optional
+        Names of variables to be stored in the trace. Defaults to all free variables and deterministics.
     nuts_sampler : str
         Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"].
         This requires the chosen sampler to be installed.
