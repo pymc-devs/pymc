@@ -1217,6 +1217,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         rv_var,
         name,
+        *,
         observed=None,
         total_size=None,
         dims=None,
@@ -1388,6 +1389,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def create_value_var(
         self,
         rv_var: TensorVariable,
+        *,
         transform: Any,
         default_transform: Any,
         value_var: Variable | None = None,
