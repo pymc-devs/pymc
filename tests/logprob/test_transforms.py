@@ -45,6 +45,7 @@ from pytensor.graph.basic import equal_computations
 
 from pymc.distributions.continuous import Cauchy, ChiSquared
 from pymc.distributions.discrete import Bernoulli
+from pymc.logprob.abstract import get_measure_type_info
 from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
 from pymc.logprob.transforms import (
     ArccoshTransform,
@@ -66,6 +67,7 @@ from pymc.logprob.transforms import (
 from pymc.logprob.utils import ParameterValueError
 from pymc.testing import Rplusbig, Vector, assert_no_rvs
 from tests.distributions.test_transform import check_jacobian_det
+from tests.logprob.utils import measure_type_info_helper
 
 
 class DirichletScipyDist:
@@ -227,6 +229,26 @@ def test_exp_transform_rv():
         icdf_fn(q_val),
         sp.stats.lognorm(s=1).ppf(q_val),
     )
+
+
+def test_measure_type_exp_transform_rv():
+    base_rv = pt.random.normal(0, 1, size=3, name="base_rv")
+    y_rv = pt.exp(base_rv)
+    y_rv.name = "y"
+
+    y_vv = y_rv.clone()
+
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measure_type_info(base_rv)
+
+    ndim_supp, supp_axes, measure_type = measure_type_info_helper(y_rv, y_vv)
+
+    assert np.isclose(
+        ndim_supp_base,
+        ndim_supp,
+    )
+    assert supp_axes_base == supp_axes
+
+    assert measure_type_base == measure_type
 
 
 def test_log_transform_rv():

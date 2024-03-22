@@ -48,7 +48,13 @@ from pytensor.tensor import TensorVariable
 from pytensor.tensor.math import ceil, clip, floor, round_half_to_even
 from pytensor.tensor.variable import TensorConstant
 
-from pymc.logprob.abstract import MeasurableElemwise, _logcdf, _logprob
+from pymc.logprob.abstract import (
+    MeasurableElemwise,
+    MeasureType,
+    _logcdf,
+    _logprob,
+    get_measure_type_info,
+)
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import CheckParameterValue
 
@@ -57,9 +63,6 @@ class MeasurableClip(MeasurableElemwise):
     """A placeholder used to specify a log-likelihood for a clipped RV sub-graph."""
 
     valid_scalar_types = (Clip,)
-
-
-measurable_clip = MeasurableClip(scalar_clip)
 
 
 @node_rewriter(tracks=[clip])
@@ -80,6 +83,15 @@ def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> Optional[list[Te
     # for one-sided clipped random variables
     lower_bound = lower_bound if (lower_bound is not base_var) else pt.constant(-np.inf)
     upper_bound = upper_bound if (upper_bound is not base_var) else pt.constant(np.inf)
+
+    ndim_supp, supp_axes, measure_type = get_measure_type_info(base_var)
+
+    if measure_type == MeasureType.Continuous:
+        measure_type = MeasureType.Mixed
+
+    measurable_clip = MeasurableClip(
+        scalar_clip, ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+    )
 
     clipped_rv = measurable_clip.make_node(base_var, lower_bound, upper_bound).outputs[0]
     return [clipped_rv]
@@ -167,7 +179,11 @@ def find_measurable_roundings(fgraph: FunctionGraph, node: Node) -> Optional[lis
         return None
 
     [base_var] = node.inputs
-    rounded_op = MeasurableRound(node.op.scalar_op)
+    ndim_supp, supp_axis, _ = get_measure_type_info(base_var)
+    measure_type = MeasureType.Discrete
+    rounded_op = MeasurableRound(
+        node.op.scalar_op, ndim_supp=ndim_supp, supp_axes=supp_axis, measure_type=measure_type
+    )
     rounded_rv = rounded_op.make_node(base_var).default_output()
     rounded_rv.name = node.outputs[0].name
     return [rounded_rv]
