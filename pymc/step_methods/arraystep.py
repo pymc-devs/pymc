@@ -181,7 +181,13 @@ def metrop_select(mr: np.ndarray, q: np.ndarray, q0: np.ndarray) -> tuple[np.nda
 
     Parameters
     ----------
-    mr: float, Metropolis acceptance rate
+    mr: float, Metropolis acceptance rate. In theory, this acceptance rate is the
+               ratio of two probabilities, but as is common in implementations of 
+               MCMC samplers, this function instead works with logarithms. Specifically,
+               mr is the logarithm of the ratio of probabilities associated with q
+               and q0. A logarithmic identity then provides that this is equal to the
+               logarithm of the probability associated with q minus the logarithm of the
+               probability associated with q0.
     q: proposed sample
     q0: current sample
 
