@@ -335,7 +335,7 @@ def log1mexp_numpy(x, *, negative_input=False):
     https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
     """
     warnings.warn(
-        "pymc.math.log1mexp_numpy is being deprecated. Use log1mexp instead.",
+        "pymc.math.log1mexp_numpy is being deprecated.",
         FutureWarning,
         stacklevel=2,
     )
