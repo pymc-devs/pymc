@@ -417,15 +417,11 @@ class TestMatchesScipy:
         def scipy_log_pdf(value, a, b):
             return np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value**a)
 
+        def log1mexp(x):
+            return np.log1p(-np.exp(x)) if x < np.log(0.5) else np.log(-np.expm1(x))
+
         def scipy_log_cdf(value, a, b):
-            x = b * np.log1p(-(value**a))
-            x = np.asarray(x, dtype="float")
-            out = np.empty_like(x)
-            mask = x < -0.6931471805599453  # log(1/2)
-            out[mask] = np.log1p(-np.exp(x[mask]))
-            mask = ~mask
-            out[mask] = np.log(-np.expm1(x[mask]))
-            return out
+            return log1mexp(b * np.log1p(-(value**a)))
 
         check_logp(
             pm.Kumaraswamy,
