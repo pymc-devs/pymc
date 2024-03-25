@@ -18,13 +18,19 @@ import pytest
 import scipy
 
 from pytensor.tensor.random.basic import GeometricRV, NormalRV
+from pytensor.tensor.random.type import RandomType
 
-from pymc import Censored, Model, draw, find_MAP
-from pymc.distributions.continuous import (
+from pymc import Model, draw, find_MAP
+from pymc.distributions import (
+    Censored,
+    ChiSquared,
+    CustomDist,
     Exponential,
     Gamma,
+    HalfNormal,
+    LogNormal,
+    Mixture,
     TruncatedNormal,
-    TruncatedNormalRV,
 )
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.distributions.transforms import _default_transform
@@ -57,6 +63,24 @@ icdf_normal = no_support_point_normal = IcdfNormalRV()
 rejection_normal = RejectionNormalRV()
 icdf_geometric = IcdfGeometricRV()
 rejection_geometric = RejectionGeometricRV()
+
+
+def icdf_normal_customdist(loc, scale, name=None, size=None):
+    def dist(loc, scale, size):
+        return loc + icdf_normal(size=size) * scale
+
+    x = CustomDist.dist(loc, scale, dist=dist, size=size)
+    x.name = name
+    return x
+
+
+def rejection_normal_customdist(loc, scale, name=None, size=None):
+    def dist(loc, scale, size):
+        return loc + rejection_normal(size=size) * scale
+
+    x = CustomDist.dist(loc, scale, dist=dist, size=size)
+    x.name = name
+    return x
 
 
 @_truncated.register(IcdfNormalRV)
@@ -94,7 +118,7 @@ def test_truncation_specialized_op(shape_info):
         else:
             raise ValueError(f"Not a valid shape_info parametrization: {shape_info}")
 
-    assert isinstance(xt.owner.op, TruncatedNormalRV)
+    assert isinstance(xt.owner.op, TruncatedNormal.rv_type)
     assert xt.shape.eval() == (100,)
 
     # Test RNG is not reused
@@ -107,10 +131,14 @@ def test_truncation_specialized_op(shape_info):
 @pytest.mark.parametrize("lower, upper", [(-1, np.inf), (-1, 1.5), (-np.inf, 1.5)])
 @pytest.mark.parametrize("op_type", ["icdf", "rejection"])
 @pytest.mark.parametrize("scalar", [True, False])
-def test_truncation_continuous_random(op_type, lower, upper, scalar):
+@pytest.mark.parametrize("custom_dist", [False, True])
+def test_truncation_continuous_random(op_type, lower, upper, scalar, custom_dist):
     loc = 0.15
     scale = 10
-    normal_op = icdf_normal if op_type == "icdf" else rejection_normal
+    if custom_dist:
+        normal_op = icdf_normal_customdist if op_type == "icdf" else rejection_normal_customdist
+    else:
+        normal_op = icdf_normal if op_type == "icdf" else rejection_normal
     x = normal_op(loc, scale, name="x", size=() if scalar else (100,))
 
     xt = Truncated.dist(x, lower=lower, upper=upper)
@@ -145,10 +173,14 @@ def test_truncation_continuous_random(op_type, lower, upper, scalar):
 
 @pytest.mark.parametrize("lower, upper", [(-1, np.inf), (-1, 1.5), (-np.inf, 1.5)])
 @pytest.mark.parametrize("op_type", ["icdf", "rejection"])
-def test_truncation_continuous_logp(op_type, lower, upper):
+@pytest.mark.parametrize("custom_dist", [False, True])
+def test_truncation_continuous_logp(op_type, lower, upper, custom_dist):
     loc = 0.15
     scale = 10
-    op = icdf_normal if op_type == "icdf" else rejection_normal
+    if custom_dist:
+        op = icdf_normal_customdist if op_type == "icdf" else rejection_normal_customdist
+    else:
+        op = icdf_normal if op_type == "icdf" else rejection_normal
 
     x = op(loc, scale, name="x")
     xt = Truncated.dist(x, lower=lower, upper=upper)
@@ -173,10 +205,14 @@ def test_truncation_continuous_logp(op_type, lower, upper):
 
 @pytest.mark.parametrize("lower, upper", [(-1, np.inf), (-1, 1.5), (-np.inf, 1.5)])
 @pytest.mark.parametrize("op_type", ["icdf", "rejection"])
-def test_truncation_continuous_logcdf(op_type, lower, upper):
+@pytest.mark.parametrize("custom_dist", [False, True])
+def test_truncation_continuous_logcdf(op_type, lower, upper, custom_dist):
     loc = 0.15
     scale = 10
-    op = icdf_normal if op_type == "icdf" else rejection_normal
+    if custom_dist:
+        op = icdf_normal_customdist if op_type == "icdf" else rejection_normal_customdist
+    else:
+        op = icdf_normal if op_type == "icdf" else rejection_normal
 
     x = op(loc, scale, name="x")
     xt = Truncated.dist(x, lower=lower, upper=upper)
@@ -480,4 +516,60 @@ def test_vectorized_bounds():
     np.testing.assert_allclose(
         xs_logp,
         xs_sym_logp,
+    )
+
+
+def test_truncated_multiple_rngs():
+    def mix_dist_fn(size):
+        return Mixture.dist(
+            w=[0.3, 0.7], comp_dists=[HalfNormal.dist(), LogNormal.dist()], shape=size
+        )
+
+    upper = 0.1
+    x = CustomDist.dist(dist=mix_dist_fn)
+    x_trunc = Truncated.dist(x, lower=0, upper=upper, shape=(5,))
+
+    # Mixture doesn't have an icdf method, so TruncatedRV uses a RejectionSampling representation
+    # Check that RNGs updates are correct
+    # TODO: Find out way of testing updates were not mixed
+    rngs = [inp for inp in x_trunc.owner.inputs if isinstance(inp.type, RandomType)]
+    next_rngs = [out for out in x_trunc.owner.outputs if isinstance(out.type, RandomType)]
+    assert len(set(rngs)) == len(set(next_rngs)) == 3
+
+    draws1 = draw(x_trunc, random_seed=1)
+    draws2 = draw(x_trunc, random_seed=1)
+    draws3 = draw(x_trunc, random_seed=2)
+    assert np.unique(draws1).size == 5
+    assert np.unique(draws3).size == 5
+    assert np.all(draws1 == draws2)
+    assert np.all(draws1 != draws3)
+
+    test_x = np.array([-1, 0, 1, 2, 3])
+    mix_rv = mix_dist_fn((5,))
+    expected_logp = logp(mix_rv, test_x) - logcdf(mix_rv, upper)
+    expected_logp = pt.where(test_x <= upper, expected_logp, -np.inf)
+    np.testing.assert_allclose(
+        logp(x_trunc, test_x).eval(),
+        expected_logp.eval(),
+    )
+
+
+def test_truncated_maxwell_dist():
+    def maxwell_dist(scale, size):
+        return pt.sqrt(ChiSquared.dist(nu=3, size=size)) * scale
+
+    scale = 5.0
+    upper = 2.0
+    x = CustomDist.dist(scale, dist=maxwell_dist)
+    trunc_x = Truncated.dist(x, lower=None, upper=upper, size=(5,))
+    assert np.all(draw(trunc_x, draws=20) < 2)
+
+    test_value = np.array([-0.5, 0.0, 0.5, 1.5, 2.5])
+    expected_logp = scipy.stats.maxwell.logpdf(
+        test_value, scale=scale
+    ) - scipy.stats.maxwell.logcdf(upper, scale=scale)
+    expected_logp[(test_value <= 0) | (test_value > upper)] = -np.inf
+    np.testing.assert_allclose(
+        logp(trunc_x, test_value).eval(),
+        expected_logp,
     )
