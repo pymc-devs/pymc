@@ -293,6 +293,11 @@ def _sample_external_nuts(
                 "`idata_kwargs` are currently ignored by the nutpie sampler",
                 UserWarning,
             )
+        if var_names is not None:
+            warnings.warn(
+                "`var_names` are currently ignored by the nutpie sampler",
+                UserWarning,
+            )
         compiled_model = nutpie.compile_pymc_model(model)
         t_start = time.time()
         idata = nutpie.sample(
