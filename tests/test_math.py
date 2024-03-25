@@ -196,7 +196,6 @@ def test_logdiffexp():
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
         b = np.log([0, 1, 2, 3])
-    warnings.warn("pymc.math.logdiffexp_numpy is being deprecated.", FutureWarning)
     assert np.allclose(logdiffexp_numpy(a, b), 0)
     assert np.allclose(logdiffexp(a, b).eval(), 0)
 
