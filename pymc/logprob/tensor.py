@@ -187,10 +187,12 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
     # If the stacked variables depend on each other, we have to replace them by the respective values
     logps = replace_rvs_by_values(logps, rvs_to_values=base_rvs_to_split_values)
 
-    base_vars_ndim_supp = split_values[0].ndim - logps[0].ndim
+    # Make axis positive and adjust for multivariate logp fewer dimensions to the right
+    axis = pt.switch(axis >= 0, axis, value.ndim + axis)
+    axis = pt.minimum(axis, logps[0].ndim - 1)
     join_logprob = pt.concatenate(
         [pt.atleast_1d(logp) for logp in logps],
-        axis=axis - base_vars_ndim_supp,
+        axis=axis,
     )
 
     return join_logprob
