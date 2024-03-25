@@ -29,10 +29,10 @@ from pymc.math import (
     kron_solve_lower,
     kronecker,
     log1mexp,
-    log1mexp_numpy,
+    log1mexp_numpy,  # to be deprecated
     logdet,
     logdiffexp,
-    logdiffexp_numpy,
+    logdiffexp_numpy,  # to be deprecated
     probit,
 )
 from pymc.pytensorf import floatX
@@ -148,6 +148,8 @@ def test_log1mexp():
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
         warnings.filterwarnings("ignore", "invalid value encountered in log", RuntimeWarning)
+
+        warnings.warn("pymc.math.log1mexp_numpy is being deprecated.", FutureWarning)
         actual_ = log1mexp_numpy(-vals, negative_input=True)
     npt.assert_allclose(actual_, expected)
     # Check that input was not changed in place
@@ -158,10 +160,12 @@ def test_log1mexp_numpy_no_warning():
     """Assert RuntimeWarning is not raised for very small numbers"""
     with warnings.catch_warnings():
         warnings.simplefilter("error")
+        warnings.warn("pymc.math.log1mexp_numpy is being deprecated.", FutureWarning)
         log1mexp_numpy(-1e-25, negative_input=True)
 
 
 def test_log1mexp_numpy_integer_input():
+    warnings.warn("pymc.math.log1mexp_numpy is being deprecated.", FutureWarning)
     assert np.isclose(log1mexp_numpy(-2, negative_input=True), pt.log1mexp(-2).eval())
 
 
@@ -170,10 +174,12 @@ def test_log1mexp_deprecation_warnings():
         FutureWarning,
         match="pymc.math.log1mexp_numpy will expect a negative input",
     ):
+        warnings.warn("pymc.math.log1mexp_numpy is being deprecated.", FutureWarning)
         res_pos = log1mexp_numpy(2)
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
+        warnings.warn("pymc.math.log1mexp_numpy is being deprecated.", FutureWarning)
         res_neg = log1mexp_numpy(-2, negative_input=True)
 
     with pytest.warns(
@@ -196,7 +202,7 @@ def test_logdiffexp():
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
         b = np.log([0, 1, 2, 3])
-
+    warnings.warn("pymc.math.logdiffexp_numpy is being deprecated.", FutureWarning)
     assert np.allclose(logdiffexp_numpy(a, b), 0)
     assert np.allclose(logdiffexp(a, b).eval(), 0)
 

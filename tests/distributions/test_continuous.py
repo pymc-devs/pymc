@@ -418,6 +418,7 @@ class TestMatchesScipy:
             return np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value**a)
 
         def scipy_log_cdf(value, a, b):
+            warnings.warn("pymc.math.log1mexp_numpy is being deprecated.", FutureWarning)
             return pm.math.log1mexp_numpy(b * np.log1p(-(value**a)), negative_input=True)
 
         check_logp(
