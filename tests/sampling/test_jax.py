@@ -491,6 +491,15 @@ def test_sample_partially_observed():
     assert idata.posterior["x"].shape == (1, 10, 3)
 
 
+def test_sample_var_names():
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        b = pm.Deterministic("b", a**2)
+        idata = pm.sample(10, tune=10, nuts_sampler="numpyro", var_names=["a"])
+        assert "a" in idata.posterior
+        assert "b" not in idata.posterior
+
+
 @pytest.mark.parametrize("nuts_sampler", ("numpyro", "blackjax"))
 def test_convergence_warnings(caplog, nuts_sampler):
     with pm.Model() as m:

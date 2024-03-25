@@ -264,6 +264,7 @@ def _sample_external_nuts(
     random_seed: Union[RandomState, None],
     initvals: Union[StartDict, Sequence[Optional[StartDict]], None],
     model: Model,
+    var_names: Optional[Sequence[str]],
     progressbar: bool,
     idata_kwargs: Optional[dict],
     nuts_sampler_kwargs: Optional[dict],
@@ -290,6 +291,11 @@ def _sample_external_nuts(
         if idata_kwargs is not None:
             warnings.warn(
                 "`idata_kwargs` are currently ignored by the nutpie sampler",
+                UserWarning,
+            )
+        if var_names is not None:
+            warnings.warn(
+                "`var_names` are currently ignored by the nutpie sampler",
                 UserWarning,
             )
         compiled_model = nutpie.compile_pymc_model(model)
@@ -348,6 +354,7 @@ def _sample_external_nuts(
             random_seed=random_seed,
             initvals=initvals,
             model=model,
+            var_names=var_names,
             progressbar=progressbar,
             nuts_sampler=sampler,
             idata_kwargs=idata_kwargs,
@@ -371,6 +378,7 @@ def sample(
     random_seed: RandomState = None,
     progressbar: bool = True,
     step=None,
+    var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     init: str = "auto",
@@ -399,6 +407,7 @@ def sample(
     random_seed: RandomState = None,
     progressbar: bool = True,
     step=None,
+    var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     init: str = "auto",
@@ -427,6 +436,7 @@ def sample(
     random_seed: RandomState = None,
     progressbar: bool = True,
     step=None,
+    var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     init: str = "auto",
@@ -478,6 +488,8 @@ def sample(
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically. By default the NUTS step
         method will be used, if appropriate to the model.
+    var_names : list of str, optional
+        Names of variables to be stored in the trace. Defaults to all free variables and deterministics.
     nuts_sampler : str
         Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"].
         This requires the chosen sampler to be installed.
@@ -680,6 +692,7 @@ def sample(
             random_seed=random_seed,
             initvals=initvals,
             model=model,
+            var_names=var_names,
             progressbar=progressbar,
             idata_kwargs=idata_kwargs,
             nuts_sampler_kwargs=nuts_sampler_kwargs,
@@ -722,12 +735,19 @@ def sample(
         model.check_start_vals(ip)
         _check_start_shape(model, ip)
 
+    if var_names is not None:
+        trace_vars = [v for v in model.unobserved_RVs if v.name in var_names]
+        assert len(trace_vars) == len(var_names), "Not all var_names were found in the model"
+    else:
+        trace_vars = None
+
     # Create trace backends for each chain
     run, traces = init_traces(
         backend=trace,
         chains=chains,
         expected_length=draws + tune,
         step=step,
+        trace_vars=trace_vars,
         initial_point=ip,
         model=model,
     )
@@ -739,6 +759,7 @@ def sample(
         "traces": traces,
         "chains": chains,
         "tune": tune,
+        "var_names": var_names,
         "progressbar": progressbar,
         "model": model,
         "cores": cores,
