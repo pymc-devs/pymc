@@ -79,18 +79,15 @@ Functions exposed in pymc.math
    min
    minimum
    round
-   tround
    erf
    erfc
    erfcinv
    erfinv
    log1pexp
    log1mexp
-   log1mexp_numpy
    logaddexp
    logsumexp
    logdiffexp
-   logdiffexp_numpy
    logit
    invlogit
    probit
