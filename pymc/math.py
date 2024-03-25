@@ -282,7 +282,7 @@ def logdiffexp(a, b):
 def logdiffexp_numpy(a, b):
     """log(exp(a) - exp(b))"""
     warnings.warn(
-        "pymc.math.logdiffexp_numpy is being deprecated. Use logdiffexp instead.",
+        "pymc.math.logdiffexp_numpy is being deprecated.",
         FutureWarning,
         stacklevel=2,
     )
