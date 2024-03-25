@@ -828,6 +828,13 @@ def test_add_coord_mutable_kwarg():
         assert isinstance(m._dim_lengths["mutable2"], TensorVariable)
 
 
+def test_add_coords():
+    """Test the changing of coords"""
+    with pm.Model() as pmodel:
+        pm.add_coords(coords={"a": range(5)})
+    assert list(pmodel.coords["a"]) == list(range(5))
+
+
 def test_set_dim():
     """Test the conscious re-sizing of dims created through add_coord()."""
     with pm.Model() as pmodel:

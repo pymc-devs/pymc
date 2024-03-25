@@ -89,6 +89,7 @@ __all__ = [
     "modelcontext",
     "Deterministic",
     "Potential",
+    "add_coords",
     "set_data",
     "Point",
     "compile_fn",
@@ -1956,6 +1957,25 @@ def new_or_existing_block_model_access(*args, **kwargs):
     if isinstance(model, BlockModelAccess):
         return model
     return BlockModelAccess(*args, **kwargs)
+
+
+def add_coords(coords, lengths=None, model=None):
+    """Adds coords to the model
+
+    Parameters
+    ----------
+    coords: dict
+        New coordinate values for dimensions of the shared variable.
+        Must be provided for all named dimensions that change in length
+        and already have coordinate values.
+
+    lengths: dict, optional
+        Dictionary of lengths for the dimensions of each coord
+
+    model: Model (optional if in `with` context)
+    """
+    model = modelcontext(model)
+    model.add_coords(coords=coords, lengths=lengths)
 
 
 def set_data(new_data, model=None, *, coords=None):
