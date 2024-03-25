@@ -535,6 +535,14 @@ def support_point(rv: TensorVariable) -> TensorVariable:
     return _support_point(rv.owner.op, rv, *rv.owner.inputs).astype(rv.dtype)
 
 
+def _moment(op, rv, *rv_inputs) -> TensorVariable:
+    warnings.warn(
+        "The moment() method is deprecated. Use support_point() instead.",
+        DeprecationWarning,
+    )
+    return _support_point(op, rv, *rv_inputs)
+
+
 def moment(rv: TensorVariable) -> TensorVariable:
     warnings.warn(
         "The moment() method is deprecated. Use support_point() instead.",
