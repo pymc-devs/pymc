@@ -1588,8 +1588,8 @@ class TestHurdleMixtures:
         _, nonzero_dist = self.check_hurdle_mixture_graph(dist)
 
         assert isinstance(nonzero_dist.owner.op.base_rv_op, NegativeBinomial)
-        assert nonzero_dist.owner.inputs[2].data == n
-        assert nonzero_dist.owner.inputs[3].data == p
+        assert nonzero_dist.owner.inputs[-4].data == n
+        assert nonzero_dist.owner.inputs[-3].data == p
 
     def test_hurdle_gamma_graph(self):
         psi, alpha, beta = 0.25, 3, 4
@@ -1599,8 +1599,8 @@ class TestHurdleMixtures:
         # Under the hood it uses the shape-scale parametrization of the Gamma distribution.
         # So the second value is the reciprocal of the rate (i.e. 1 / beta)
         assert isinstance(nonzero_dist.owner.op.base_rv_op, Gamma)
-        assert nonzero_dist.owner.inputs[2].data == alpha
-        assert nonzero_dist.owner.inputs[3].eval() == 1 / beta
+        assert nonzero_dist.owner.inputs[-4].data == alpha
+        assert nonzero_dist.owner.inputs[-3].eval() == 1 / beta
 
     def test_hurdle_lognormal_graph(self):
         psi, mu, sigma = 0.1, 2, 2.5
@@ -1608,8 +1608,8 @@ class TestHurdleMixtures:
         _, nonzero_dist = self.check_hurdle_mixture_graph(dist)
 
         assert isinstance(nonzero_dist.owner.op.base_rv_op, LogNormal)
-        assert nonzero_dist.owner.inputs[2].data == mu
-        assert nonzero_dist.owner.inputs[3].data == sigma
+        assert nonzero_dist.owner.inputs[-4].data == mu
+        assert nonzero_dist.owner.inputs[-3].data == sigma
 
     @pytest.mark.parametrize(
         "dist, psi, non_psi_args",
