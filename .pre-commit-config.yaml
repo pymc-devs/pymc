@@ -27,7 +27,7 @@ repos:
         - --exclude=binder/
         - --exclude=versioneer.py
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.3.3
+  rev: v0.3.4
   hooks:
     - id: ruff
       args: ["--fix", "--output-format=full"]
