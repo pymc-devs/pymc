@@ -38,10 +38,15 @@ import abc
 
 from collections.abc import Sequence
 from functools import singledispatch
+from typing import Union
 
+import multipledispatch
+import pytensor.tensor as pt
+
+from pytensor.gradient import jacobian
 from pytensor.graph.op import Op
 from pytensor.graph.utils import MetaType
-from pytensor.tensor import TensorVariable
+from pytensor.tensor import TensorVariable, Variable
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 
@@ -153,3 +158,52 @@ class MeasurableElemwise(Elemwise):
 
 
 MeasurableVariable.register(MeasurableElemwise)
+
+
+class Transform(abc.ABC):
+    ndim_supp = None
+
+    @abc.abstractmethod
+    def forward(self, value: TensorVariable, *inputs: Variable) -> TensorVariable:
+        """Apply the transformation."""
+
+    @abc.abstractmethod
+    def backward(
+        self, value: TensorVariable, *inputs: Variable
+    ) -> Union[TensorVariable, tuple[TensorVariable, ...]]:
+        """Invert the transformation. Multiple values may be returned when the
+        transformation is not 1-to-1"""
+
+    def log_jac_det(self, value: TensorVariable, *inputs) -> TensorVariable:
+        """Construct the log of the absolute value of the Jacobian determinant."""
+        if self.ndim_supp not in (0, 1):
+            raise NotImplementedError(
+                f"RVTransform default log_jac_det only implemented for ndim_supp in (0, 1), got {self.ndim_supp=}"
+            )
+        if self.ndim_supp == 0:
+            jac = pt.reshape(pt.grad(pt.sum(self.backward(value, *inputs)), [value]), value.shape)
+            return pt.log(pt.abs(jac))
+        else:
+            phi_inv = self.backward(value, *inputs)
+            return pt.log(pt.abs(pt.nlinalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
+
+    def __str__(self):
+        return f"{self.__class__.__name__}"
+
+
+@multipledispatch.dispatch(Op, Transform)
+def _transformed_logprob(
+    op: Op,
+    transform: Transform,
+    unconstrained_value: TensorVariable,
+    rv_inputs: Sequence[TensorVariable],
+):
+    """Create a graph for the log-density/mass of a transformed ``RandomVariable``.
+
+    This function dispatches on the type of ``op``, which should be a subclass
+    of ``RandomVariable`` and ``transform``, which should be a subclass of ``Transform``.
+
+    """
+    raise NotImplementedError(
+        f"Transformed logprob method not implemented for {op} with transform {transform}"
+    )

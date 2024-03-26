@@ -24,8 +24,8 @@ from pytensor.tensor.variable import TensorConstant
 import pymc as pm
 import pymc.distributions.transforms as tr
 
+from pymc.logprob.abstract import Transform
 from pymc.logprob.basic import transformed_conditional_logp
-from pymc.logprob.transforms import Transform
 from pymc.pytensorf import floatX, jacobian
 from pymc.testing import (
     Circ,

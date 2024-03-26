@@ -23,7 +23,7 @@ from pytensor.graph.rewriting.basic import out2in
 from pytensor.scalar import Identity
 from pytensor.tensor.elemwise import Elemwise
 
-from pymc.logprob.transforms import Transform
+from pymc.logprob.abstract import Transform
 from pymc.model.core import Model
 from pymc.pytensorf import StringType, find_rng_nodes, toposort_replace
 

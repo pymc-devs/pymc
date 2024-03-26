@@ -25,6 +25,7 @@ from numpy.core.numeric import normalize_axis_tuple  # type: ignore
 from pytensor.graph import Op
 from pytensor.tensor import TensorVariable
 
+from pymc.logprob.abstract import Transform
 from pymc.logprob.transforms import (
     ChainedTransform,
     CircularTransform,
@@ -32,11 +33,9 @@ from pymc.logprob.transforms import (
     LogOddsTransform,
     LogTransform,
     SimplexTransform,
-    Transform,
 )
 
 __all__ = [
-    "Transform",
     "simplex",
     "logodds",
     "Interval",
@@ -277,8 +276,10 @@ class ZeroSumTransform(Transform):
 
     __props__ = ("zerosum_axes",)
 
-    def __init__(self, zerosum_axes):
-        self.zerosum_axes = tuple(int(axis) for axis in zerosum_axes)
+    def __init__(self, n_zerosum_axes: int):
+        if not n_zerosum_axes > 0:
+            raise ValueError("Transform is only valid for n_zerosum_axes > 0")
+        self.zerosum_axes = tuple(range(-n_zerosum_axes, 0))
 
     @staticmethod
     def extend_axis(array, axis):
@@ -314,7 +315,7 @@ class ZeroSumTransform(Transform):
         return value
 
     def log_jac_det(self, value, *rv_inputs):
-        return pt.constant(0.0)
+        return pt.zeros(value.shape[: -len(self.zerosum_axes)])
 
 
 log_exp_m1 = LogExpM1()

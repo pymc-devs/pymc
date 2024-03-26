@@ -23,12 +23,12 @@ from pytensor.graph.features import AlreadyThere, Feature
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
+from pytensor.graph.rewriting.db import RewriteDatabaseQuery, SequenceDB
 from pytensor.scan.op import Scan
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.logprob.abstract import MeasurableVariable, Transform, _logprob, _transformed_logprob
 from pymc.logprob.rewriting import PreserveRVMappings, cleanup_ir_rewrites_db
-from pymc.logprob.transforms import Transform
 
 
 class TransformedValue(Op):
@@ -97,7 +97,26 @@ def transformed_value_logprob(op, values, *rv_outs, use_jacobian=True, **kwargs)
     This is introduced by the `TransformValuesRewrite`
     """
     rv_op = rv_outs[0].owner.op
+    transforms = op.transforms
     rv_inputs = rv_outs[0].owner.inputs
+
+    if use_jacobian and len(values) == 1 and len(transforms) == 1:
+        # Check if there's a specialized transform logp implemented
+        [value] = values
+        assert isinstance(value.owner.op, TransformedValue)
+        unconstrained_value = value.owner.inputs[1]
+        [transform] = transforms
+        try:
+            return _transformed_logprob(
+                rv_op,
+                transform,
+                unconstrained_value=unconstrained_value,
+                rv_inputs=rv_inputs,
+                **kwargs,
+            )
+        except NotImplementedError:
+            pass
+
     logprobs = _logprob(rv_op, values, *rv_inputs, **kwargs)
 
     if not isinstance(logprobs, Sequence):
@@ -112,8 +131,8 @@ def transformed_value_logprob(op, values, *rv_outs, use_jacobian=True, **kwargs)
             continue
 
         assert isinstance(value.owner.op, TransformedValue)
-        original_forward_value = value.owner.inputs[1]
-        log_jac_det = transform.log_jac_det(original_forward_value, *rv_inputs).copy()
+        unconstrained_value = value.owner.inputs[1]
+        log_jac_det = transform.log_jac_det(unconstrained_value, *rv_inputs).copy()
         # The jacobian determinant has less dims than the logp
         # when a multivariate transform (like Simplex or Ordered) is applied to univariate distributions.
         # In this case we have to reduce the last logp dimensions, as they are no longer independent
@@ -299,6 +318,17 @@ def transform_scan_values(fgraph: FunctionGraph, node: Apply) -> Optional[list[A
     return transformed_rv_node.outputs
 
 
+transform_values_rewrites_db = SequenceDB()
+transform_values_rewrites_db.name = "transform_values_rewrites_db"
+
+transform_values_rewrites_db.register(
+    "transform_values", in2out(transform_values, ignore_newtrees=True), "basic"
+)
+transform_values_rewrites_db.register(
+    "transform_scan_values", in2out(transform_scan_values, ignore_newtrees=True), "basic"
+)
+
+
 class TransformValuesMapping(Feature):
     r"""A `Feature` that maintains a map between value variables and their transforms."""
 
@@ -314,9 +344,6 @@ class TransformValuesMapping(Feature):
 
 class TransformValuesRewrite(GraphRewriter):
     r"""Transforms value variables according to a map."""
-
-    transform_rewrite = in2out(transform_values, ignore_newtrees=True)
-    scan_transform_rewrite = in2out(transform_scan_values, ignore_newtrees=True)
 
     def __init__(
         self,
@@ -340,8 +367,8 @@ class TransformValuesRewrite(GraphRewriter):
         fgraph.attach_feature(values_transforms_feature)
 
     def apply(self, fgraph: FunctionGraph):
-        self.transform_rewrite.rewrite(fgraph)
-        self.scan_transform_rewrite.rewrite(fgraph)
+        query = RewriteDatabaseQuery(include=["basic"])
+        transform_values_rewrites_db.query(query).rewrite(fgraph)
 
 
 @node_rewriter([TransformedValue])

@@ -1770,6 +1770,21 @@ class TestZeroSumNormal:
                 sigma=batch_test_sigma[None, :, None], n_zerosum_axes=2, support_shape=(3, 2)
             )
 
+    def test_transformed_logprob(self):
+        with pm.Model() as m:
+            x = pm.ZeroSumNormal("x", sigma=np.pi, shape=(5, 3), n_zerosum_axes=1)
+        pytensor.dprint(m.compile_logp().f)
+
+        [transformed_logp] = m.logp(sum=False)
+
+        unconstrained_value = m.rvs_to_values[x]
+        transform = m.rvs_to_transforms[x]
+        constrained_value = transform.backward(unconstrained_value)
+        reference_logp = pm.logp(x, constrained_value)
+
+        test_dict = {unconstrained_value: pm.draw(transform.forward(x))}
+        np.testing.assert_allclose(transformed_logp.eval(test_dict), reference_logp.eval(test_dict))
+
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
     def mvstudentt_rng_fn(self, size, nu, mu, scale, rng):

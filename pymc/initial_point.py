@@ -25,7 +25,7 @@ from pytensor.graph.basic import Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.transforms import Transform
+from pymc.logprob.abstract import Transform
 from pymc.pytensorf import compile_pymc, find_rng_nodes, replace_rng_nodes, reseed_rngs
 from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
 

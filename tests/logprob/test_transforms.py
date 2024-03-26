@@ -45,6 +45,7 @@ from pytensor.graph.basic import equal_computations
 
 from pymc.distributions.continuous import Cauchy, ChiSquared
 from pymc.distributions.discrete import Bernoulli
+from pymc.logprob.abstract import Transform
 from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
 from pymc.logprob.transforms import (
     ArccoshTransform,
@@ -61,7 +62,6 @@ from pymc.logprob.transforms import (
     ScaleTransform,
     SinhTransform,
     TanhTransform,
-    Transform,
 )
 from pymc.logprob.utils import ParameterValueError
 from pymc.testing import Rplusbig, Vector, assert_no_rvs

@@ -33,15 +33,13 @@
 #   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
-import abc
 
-from typing import Callable, Optional, Union
+from typing import Callable, Optional
 
 import numpy as np
 import pytensor.tensor as pt
 
 from pytensor import scan
-from pytensor.gradient import jacobian
 from pytensor.graph.basic import Node, Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
@@ -109,6 +107,7 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableVariable,
+    Transform,
     _icdf,
     _icdf_helper,
     _logcdf,
@@ -122,37 +121,6 @@ from pymc.logprob.utils import (
     check_potential_measurability,
     find_negated_var,
 )
-
-
-class Transform(abc.ABC):
-    ndim_supp = None
-
-    @abc.abstractmethod
-    def forward(self, value: TensorVariable, *inputs: Variable) -> TensorVariable:
-        """Apply the transformation."""
-
-    @abc.abstractmethod
-    def backward(
-        self, value: TensorVariable, *inputs: Variable
-    ) -> Union[TensorVariable, tuple[TensorVariable, ...]]:
-        """Invert the transformation. Multiple values may be returned when the
-        transformation is not 1-to-1"""
-
-    def log_jac_det(self, value: TensorVariable, *inputs) -> TensorVariable:
-        """Construct the log of the absolute value of the Jacobian determinant."""
-        if self.ndim_supp not in (0, 1):
-            raise NotImplementedError(
-                f"RVTransform default log_jac_det only implemented for ndim_supp in (0, 1), got {self.ndim_supp=}"
-            )
-        if self.ndim_supp == 0:
-            jac = pt.reshape(pt.grad(pt.sum(self.backward(value, *inputs)), [value]), value.shape)
-            return pt.log(pt.abs(jac))
-        else:
-            phi_inv = self.backward(value, *inputs)
-            return pt.log(pt.abs(pt.nlinalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
-
-    def __str__(self):
-        return f"{self.__class__.__name__}"
 
 
 class MeasurableTransform(MeasurableElemwise):

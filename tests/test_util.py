@@ -22,7 +22,7 @@ from cachetools import cached
 
 import pymc as pm
 
-from pymc.distributions.transforms import Transform
+from pymc.logprob.abstract import Transform
 from pymc.util import (
     UNSET,
     _get_seeds_per_chain,

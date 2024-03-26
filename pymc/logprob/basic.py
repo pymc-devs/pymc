@@ -58,6 +58,7 @@ from typing_extensions import TypeAlias
 
 from pymc.logprob.abstract import (
     MeasurableVariable,
+    Transform,
     _icdf_helper,
     _logcdf_helper,
     _logprob,
@@ -65,7 +66,6 @@ from pymc.logprob.abstract import (
 )
 from pymc.logprob.rewriting import cleanup_ir, construct_ir_fgraph
 from pymc.logprob.transform_value import TransformValuesRewrite
-from pymc.logprob.transforms import Transform
 from pymc.logprob.utils import rvs_in_graph
 from pymc.pytensorf import replace_vars_in_graphs
 
