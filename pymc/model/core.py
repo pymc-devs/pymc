@@ -398,10 +398,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     Parameters
     ----------
-    name: str
+    name : str
         name that will be used as prefix for names of all random
         variables defined within model
-    check_bounds: bool
+    check_bounds : bool
         Ensure that input parameters to distributions are in a valid
         range. If your model is built in a way where you know your
         parameters can only take on valid values you can set this to
@@ -475,11 +475,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     if TYPE_CHECKING:
 
-        def __enter__(self: Self) -> Self:
-            ...
+        def __enter__(self: Self) -> Self: ...
 
-        def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
-            ...
+        def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None: ...
 
     def __new__(cls, *args, **kwargs):
         # resolves the parent instance
@@ -580,10 +578,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        grad_vars: list of random variables, optional
+        grad_vars : list of random variables, optional
             Compute the gradient with respect to those variables. If None,
             use all free random variables of this model.
-        tempered: bool
+        tempered : bool
             Compute the tempered logp `free_logp + alpha * observed_logp`.
             `alpha` can be changed using `ValueGradFunction.set_weights([alpha])`.
         """
@@ -619,12 +617,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        vars: list of random variables or potential terms, optional
+        vars : list of random variables or potential terms, optional
             Compute the gradient with respect to those variables. If None, use all
             free and observed random variables, as well as potential terms in model.
-        jacobian:
+        jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
-        sum:
+        sum : bool
             Whether to sum all logp terms or return elemwise logp for each variable.
             Defaults to True.
         """
@@ -639,10 +637,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        vars: list of random variables or potential terms, optional
+        vars : list of random variables or potential terms, optional
             Compute the gradient with respect to those variables. If None, use all
             free and observed random variables, as well as potential terms in model.
-        jacobian:
+        jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
         return self.compile_fn(self.dlogp(vars=vars, jacobian=jacobian))
@@ -656,10 +654,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        vars: list of random variables or potential terms, optional
+        vars : list of random variables or potential terms, optional
             Compute the gradient with respect to those variables. If None, use all
             free and observed random variables, as well as potential terms in model.
-        jacobian:
+        jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
         return self.compile_fn(self.d2logp(vars=vars, jacobian=jacobian))
@@ -674,12 +672,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        vars: list of random variables or potential terms, optional
+        vars : list of random variables or potential terms, optional
             Compute the gradient with respect to those variables. If None, use all
             free and observed random variables, as well as potential terms in model.
-        jacobian:
+        jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
-        sum:
+        sum : bool
             Whether to sum all logp terms or return elemwise logp for each variable.
             Defaults to True.
 
@@ -752,10 +750,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        vars: list of random variables or potential terms, optional
+        vars : list of random variables or potential terms, optional
             Compute the gradient with respect to those variables. If None, use all
             free and observed random variables, as well as potential terms in model.
-        jacobian:
+        jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
 
         Returns
@@ -791,10 +789,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        vars: list of random variables or potential terms, optional
+        vars : list of random variables or potential terms, optional
             Compute the gradient with respect to those variables. If None, use all
             free and observed random variables, as well as potential terms in model.
-        jacobian:
+        jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
 
         Returns
@@ -961,7 +959,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         name : str
             Name of the dimension.
             Forbidden: {"chain", "draw", "__sample__"}
-        values : optional, array-like
+        values : optional, array_like
             Coordinate values or ``None`` (for auto-numbering).
             If ``None`` is passed, a ``length`` must be specified.
         mutable : bool
@@ -1021,11 +1019,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        name
+        name : str
             Name of the dimension.
-        new_length
+        new_length : int
             New length of the dimension.
-        coord_values
+        coord_values : array_like, optional
             Optional sequence of coordinate values.
         """
         if not isinstance(self.dim_lengths[name], SharedVariable):
@@ -1085,7 +1083,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         ----------
         name : str
             Name of a shared variable in the model.
-        values : array-like
+        values : array_like
             New values for the shared variable.
         coords : optional, dict
             New coordinate values for dimensions of the shared variable.
@@ -1213,14 +1211,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        rv_var: TensorVariable
-        name: str
+        rv_var : TensorVariable
+        name : str
             Intended name for the model variable.
-        observed: array_like (optional)
+        observed : array_like, optional
             Data values for observed variables.
-        total_size: scalar
+        total_size : scalar
             upscales logp of variable with ``coef = total_size/var.shape[0]``
-        dims: tuple
+        dims : tuple
             Dimension names for the variable.
         transform
             A transform for the random variable in log-likelihood space.
@@ -1287,16 +1285,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        rv_var
+        rv_var : TensorVariable
             The random variable that is observed.
             Its dimensionality must be compatible with the data already.
-        data
+        data : array_like
             The observed data.
-        dims: tuple
+        dims : tuple
             Dimension names for the variable.
-        transform
+        transform : int, optional
             A transform for the random variable in log-likelihood space.
 
+        Returns
+        -------
+        TensorVariable
         """
         name = rv_var.name
         data = convert_observed_data(data).astype(rv_var.dtype)
@@ -1371,6 +1372,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
         observed data. That's why value variables are only referenced in
         this branch of the conditional.
 
+        Parameters
+        ----------
+        rv_var : TensorVariable
+
+        transform : Any
+
+        value_var : Variable, optional
+
+        Returns
+        -------
+        TensorVariable
         """
 
         # Make the value variable a transformed value variable,
@@ -1414,6 +1426,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         This can include several types of variables such basic_RVs, Data, Deterministics,
         and Potentials.
+
+        Parameters
+        ----------
+        var
+
+        dims : tuple, optional
+
         """
         if var.name is None:
             raise ValueError("Variable is unnamed.")
@@ -1486,8 +1505,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        graphs
+        graphs : array_like
             The graphs in which to perform the replacements.
+
+        Returns
+        -------
+        array_like
         """
         return replace_rvs_by_values(
             graphs,
@@ -1508,9 +1531,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        outs
+        outs : Variable or sequence of Variables
             PyTensor variable or iterable of PyTensor variables.
-        inputs
+        inputs : sequence of Variables, optional
             PyTensor input variables, defaults to pytensorf.inputvars(outs).
         mode
             PyTensor compilation mode, default=None.
@@ -1545,12 +1568,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        outs: PyTensor variable or iterable of PyTensor variables
-        n: int, default 1000
+        outs : PyTensor variable or iterable of PyTensor variables
+        n : int, default 1000
             Number of iterations to run
-        point: point
+        point : Point
             Point to pass to the function
-        profile: True or ProfileStats
+        profile : True or ProfileStats
         args, kwargs
             Compilation args
 
@@ -1575,6 +1598,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
         Values specified for transformed variables in `a` will be recomputed
         conditional on the values of `b` and stored in `b`.
 
+        Parameters
+        ----------
+        a : dict
+
+        b : dict
         """
         raise FutureWarning(
             "The `Model.update_start_vals` method was removed."
@@ -1662,10 +1690,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        point: Point, optional
+        point : Point, optional
             Point to be evaluated.  If ``None``, then ``model.initial_point``
             is used.
-        round_vals: int, default 2
+        round_vals : int, default 2
             Number of decimals to round log-probabilities.
 
         Returns
@@ -1704,7 +1732,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         Parameters
         ----------
-        point : Point
+        point : Point, optional
             Point at which model function should be evaluated
         fn : str, default "logp"
             Function to be used for debugging. Can be one of [logp, dlogp, random].
@@ -1873,7 +1901,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         .. code-block:: python
 
             import numpy as np
-            from pymc import HalfCauchy, Model, Normal, model_to_graphviz
+            from pymc import HalfCauchy, Model, Normal
 
             J = 8
             y = np.array([28, 8, -3, 7, -1, 1, 18, 12])
@@ -1890,6 +1918,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 obs = Normal("obs", theta, sigma=sigma, observed=y)
 
             schools.to_graphviz()
+
+        Note that this code automatically plots the graph if executed in a Jupyter notebook.
+        If executed non-interactively, such as in a script or python console, the graph
+        needs to be rendered explicitly:
+
+        .. code-block:: python
+
+            # creates the file `schools.pdf`
+            schools.to_graphviz().render("schools")
         """
         return model_to_graphviz(
             model=self,

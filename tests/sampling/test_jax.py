@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import logging
+import re
 import warnings
 
 from typing import Any, Callable, Optional
@@ -35,9 +37,7 @@ from pymc.distributions.multivariate import PosDefMatrix
 from pymc.sampling.jax import (
     _get_batched_jittered_initial_points,
     _get_log_likelihood,
-    _numpyro_nuts_defaults,
     _replace_shared_variables,
-    _update_numpyro_nuts_kwargs,
     get_jaxified_graph,
     get_jaxified_logp,
     sample_blackjax_nuts,
@@ -400,29 +400,6 @@ def test_seeding(chains, random_seed, sampler):
         assert np.all(result2.posterior["x"].sel(chain=0) != result2.posterior["x"].sel(chain=1))
 
 
-@pytest.mark.parametrize(
-    "nuts_kwargs",
-    [
-        {"adapt_step_size": False},
-        {"adapt_mass_matrix": True},
-        {"dense_mass": True},
-        {"adapt_step_size": False, "adapt_mass_matrix": True, "dense_mass": True},
-        {"fake-key": "fake-value"},
-    ],
-)
-def test_update_numpyro_nuts_kwargs(nuts_kwargs: dict[str, Any]):
-    original_kwargs = nuts_kwargs.copy()
-    new_kwargs = _update_numpyro_nuts_kwargs(nuts_kwargs)
-
-    # Maintains original key-value pairs.
-    for k, v in original_kwargs.items():
-        assert new_kwargs[k] == v
-
-    for k, v in _numpyro_nuts_defaults().items():
-        if k not in original_kwargs:
-            assert new_kwargs[k] == v
-
-
 @mock.patch("numpyro.infer.MCMC")
 def test_numpyro_nuts_kwargs_are_used(mocked: mock.MagicMock):
     mocked.side_effect = MCMC
@@ -512,3 +489,26 @@ def test_sample_partially_observed():
     assert idata.observed_data["x_observed"].shape == (2,)
     assert idata.posterior["x_unobserved"].shape == (1, 10, 1)
     assert idata.posterior["x"].shape == (1, 10, 3)
+
+
+def test_sample_var_names():
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        b = pm.Deterministic("b", a**2)
+        idata = pm.sample(10, tune=10, nuts_sampler="numpyro", var_names=["a"])
+        assert "a" in idata.posterior
+        assert "b" not in idata.posterior
+
+
+@pytest.mark.parametrize("nuts_sampler", ("numpyro", "blackjax"))
+def test_convergence_warnings(caplog, nuts_sampler):
+    with pm.Model() as m:
+        # Model that should diverge
+        sigma = pm.Normal("sigma", initval=3, transform=None)
+        pm.Normal("obs", mu=0, sigma=sigma, observed=[0.99, 1.0, 1.01])
+
+        with caplog.at_level(logging.WARNING, logger="pymc"):
+            pm.sample(nuts_sampler=nuts_sampler, random_seed=581)
+
+    [record] = caplog.records
+    assert re.match(r"There were \d+ divergences after tuning", record.message)

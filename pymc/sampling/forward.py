@@ -68,7 +68,6 @@ __all__ = (
     "draw",
     "sample_prior_predictive",
     "sample_posterior_predictive",
-    "sample_posterior_predictive_w",
 )
 
 
@@ -201,7 +200,7 @@ def compile_forward_sampling_function(
     # Walk the graph from inputs to outputs and tag the volatile variables
     nodes: list[Variable] = general_toposort(
         fg.outputs, deps=lambda x: x.owner.inputs if x.owner else []
-    )
+    )  # type: ignore
     volatile_nodes: set[Any] = set()
     for node in nodes:
         if (
@@ -449,35 +448,48 @@ def sample_posterior_predictive(
     idata_kwargs: Optional[dict] = None,
     compile_kwargs: Optional[dict] = None,
 ) -> Union[InferenceData, dict[str, np.ndarray]]:
-    """Generate posterior predictive samples from a model given a trace.
+    """Generate forward samples for `var_names`, conditioned on the posterior samples of variables found in the `trace`.
+
+    This method can be used to perform different kinds of model predictions, including posterior predictive checks.
+
+    The matching of unobserved model variables, and posterior samples in the `trace` is made based on the variable
+    names. Therefore, a different model than the one used for posterior sampling may be used for posterior predictive
+    sampling, as long as the variables whose posterior we want to condition on have the same name, and compatible shape
+    and coordinates.
+
 
     Parameters
     ----------
     trace : backend, list, xarray.Dataset, arviz.InferenceData, or MultiTrace
-        Trace generated from MCMC sampling, or a list of dicts (eg. points or from find_MAP()),
-        or xarray.Dataset (eg. InferenceData.posterior or InferenceData.prior)
+        Trace generated from MCMC sampling, or a list of dicts (eg. points or from :func:`~pymc.find_MAP`),
+        or :class:`xarray.Dataset` (eg. InferenceData.posterior or InferenceData.prior)
     model : Model (optional if in ``with`` context)
         Model to be used to generate the posterior predictive samples. It will
-        generally be the model used to generate the ``trace``, but it doesn't need to be.
-    var_names : Iterable[str]
+        generally be the model used to generate the `trace`, but it doesn't need to be.
+    var_names : Iterable[str], optional
         Names of variables for which to compute the posterior predictive samples.
+        By default, only observed variables are sampled.
+        See the example below for what happens when this argument is customized.
     sample_dims : list of str, optional
         Dimensions over which to loop and generate posterior predictive samples.
-        When `sample_dims` is ``None`` (default) both "chain" and "draw" are considered sample
+        When ``sample_dims`` is ``None`` (default) both "chain" and "draw" are considered sample
         dimensions. Only taken into account when `trace` is InferenceData or Dataset.
     random_seed : int, RandomState or Generator, optional
         Seed for the random number generator.
     progressbar : bool
-        Whether or not to display a progress bar in the command line. The bar shows the percentage
+        Whether to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
     return_inferencedata : bool, default True
         Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
     extend_inferencedata : bool, default False
         Whether to automatically use :meth:`arviz.InferenceData.extend` to add the posterior predictive samples to
-        ``trace`` or not. If True, ``trace`` is modified inplace but still returned.
+        `trace` or not. If True, `trace` is modified inplace but still returned.
     predictions : bool, default False
-        Flag used to set the location of posterior predictive samples within the returned ``arviz.InferenceData`` object. If False, assumes samples are generated based on the fitting data to be used for posterior predictive checks, and samples are stored in the ``posterior_predictive``. If True, assumes samples are generated based on out-of-sample data as predictions, and samples are stored in the ``predictions`` group.
+        Flag used to set the location of posterior predictive samples within the returned ``arviz.InferenceData`` object.
+        If False, assumes samples are generated based on the fitting data to be used for posterior predictive checks,
+        and samples are stored in the ``posterior_predictive``. If True, assumes samples are generated based on
+        out-of-sample data as predictions, and samples are stored in the ``predictions`` group.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data` if ``predictions=False`` or to
         :func:`pymc.predictions_to_inference_data` otherwise.
@@ -490,24 +502,220 @@ def sample_posterior_predictive(
         An ArviZ ``InferenceData`` object containing the posterior predictive samples (default), or
         a dictionary with variable names as keys, and samples as numpy arrays.
 
+
     Examples
     --------
-    Thin a sampled inferencedata by keeping 1 out of every 5 draws
-    before passing it to sample_posterior_predictive
+    Posterior predictive checks and predictions
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    The most common use of `sample_posterior_predictive` is to perform posterior predictive checks (in-sample predictions)
+    and new model predictions (out-of-sample predictions).
+
+    .. code:: python
+
+        import pymc as pm
+
+        with pm.Model(coords_mutable={"trial": [0, 1, 2]}) as model:
+            x = pm.MutableData("x", [-1, 0, 1], dims=["trial"])
+            beta = pm.Normal("beta")
+            noise = pm.HalfNormal("noise")
+            y = pm.Normal("y", mu=x * beta, sigma=noise, observed=[-2, 0, 3], dims=["trial"])
+
+            idata = pm.sample()
+            # in-sample predictions
+            posterior_predictive = pm.sample_posterior_predictive(idata).posterior_predictive
+
+        with model:
+            pm.set_data({"x": [-2, 2]}, coords={"trial": [3, 4]})
+            # out-of-sample predictions
+            predictions = pm.sample_posterior_predictive(idata, predictions=True).predictions
+
+
+    Using different models
+    ^^^^^^^^^^^^^^^^^^^^^^
+
+    It's common to use the same model for posterior and posterior predictive sampling, but this is not required.
+    The matching between unobserved model variables and posterior samples is based on the name alone.
+
+    For the last example we could have created a new predictions model. Note that we have to specify
+    `var_names` explicitly, because the newly defined `y` was not given any observations:
+
+    .. code:: python
+
+        with pm.Model(coords_mutable={"trial": [3, 4]}) as predictions_model:
+            x = pm.MutableData("x", [-2, 2], dims=["trial"])
+            beta = pm.Normal("beta")
+            noise = pm.HalfNormal("noise")
+            y = pm.Normal("y", mu=x * beta, sigma=noise, dims=["trial"])
+
+            predictions = pm.sample_posterior_predictive(idata, var_names=["y"], predictions=True).predictions
+
+
+    The new model may even have a different structure and unobserved variables that don't exist in the trace.
+    These variables will also be forward sampled. In the following example we added a new ``extra_noise``
+    variable between the inferred posterior ``noise`` and the new StudentT observational distribution  ``y``:
+
+    .. code:: python
+
+        with pm.Model(coords_mutable={"trial": [3, 4]}) as distinct_predictions_model:
+            x = pm.MutableData("x", [-2, 2], dims=["trial"])
+            beta = pm.Normal("beta")
+            noise = pm.HalfNormal("noise")
+            extra_noise = pm.HalfNormal("extra_noise", sigma=noise)
+            y = pm.StudentT("y", nu=4, mu=x * beta, sigma=extra_noise, dims=["trial"])
+
+            predictions = pm.sample_posterior_predictive(idata, var_names=["y"], predictions=True).predictions
+
+
+    For more about out-of-model predictions, see this `blog post <https://www.pymc-labs.com/blog-posts/out-of-model-predictions-with-pymc/>`_.
+
+    The behavior of `var_names`
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    The function returns forward samples for any variable included in `var_names`,
+    conditioned on the values of other random variables found in the trace.
+
+    To ensure the samples are internally consistent, any random variable that depends
+    on another random variable that is being sampled is itself sampled, even if
+    this variable is present in the trace and was not included in `var_names`.
+    The final list of variables being sampled is shown in the log output.
+
+    Note that if a random variable has no dependency on other random variables,
+    these forward samples are equivalent to their prior samples.
+    Likewise, if all random variables are being sampled, the behavior of this function
+    is equivalent to that of :func:`~pymc.sample_prior_predictive`.
+
+    .. warning:: A random variable included in `var_names` will never be copied from the posterior group. It will always be sampled as described above. If you want, you can copy manually via ``idata.posterior_predictive["var_name"] = idata.posterior["var_name"]``.
+
+
+    The following code block explores how the behavior changes with different `var_names`:
+
+    .. code:: python
+
+        from logging import getLogger
+        import pymc as pm
+
+        # Some environments like google colab suppress
+        # the default logging output of PyMC
+        getLogger("pymc").setLevel("INFO")
+
+        kwargs = {"progressbar": False, "random_seed": 0}
+
+        with pm.Model() as model:
+            x = pm.Normal("x")
+            y = pm.Normal("y")
+            z = pm.Normal("z", x + y**2)
+            det = pm.Deterministic("det", pm.math.exp(z))
+            obs = pm.Normal("obs", det, 1, observed=[20])
+
+            idata = pm.sample(tune=10, draws=10, chains=2, **kwargs)
+
+    Default behavior. Generate samples of ``obs``, conditioned on the posterior samples of ``z`` found in the trace.
+    These are often referred to as posterior predictive samples in the literature:
+
+    .. code:: python
+
+        with model:
+            pm.sample_posterior_predictive(idata, var_names=["obs"], **kwargs)
+            # Sampling: [obs]
+
+    Re-compute the deterministic variable ``det``, conditioned on the posterior samples of ``z`` found in the trace:
+
+    .. code :: python
+
+          pm.sample_posterior_predictive(idata, var_names=["det"], **kwargs)
+          # Sampling: []
+
+    Generate samples of ``z`` and ``det``, conditioned on the posterior samples of ``x`` and ``y`` found in the trace.
+
+    .. code :: python
+
+        with model:
+            pm.sample_posterior_predictive(idata, var_names=["z", "det"], **kwargs)
+            # Sampling: [z]
+
+
+    Generate samples of ``y``, ``z`` and ``det``, conditioned on the posterior samples of ``x`` found in the trace.
+
+    Note: The samples of ``y`` are equivalent to its prior, since it does not depend on any other variables.
+    In contrast, the samples of ``z`` and ``det`` depend on the new samples of ``y`` and the posterior samples of
+    ``x`` found in the trace.
+
+    .. code :: python
+
+        with model:
+            pm.sample_posterior_predictive(idata, var_names=["y", "z", "det"], **kwargs)
+            # Sampling: [y, z]
+
+
+    Same as before, except ``z`` is not stored in the returned trace.
+    For computing ``det`` we still have to sample ``z`` as it depends on ``y``, which is also being sampled.
+
+    .. code :: python
+
+        with model:
+            pm.sample_posterior_predictive(idata, var_names=["y", "det"], **kwargs)
+            # Sampling: [y, z]
+
+    Every random variable is sampled. This is equivalent to calling :func:`~pymc.sample_prior_predictive`
+
+    .. code :: python
+
+        with model:
+            pm.sample_posterior_predictive(idata, var_names=["x", "y", "z", "det", "obs"], **kwargs)
+            # Sampling: [x, y, z, obs]
+
+
+    .. danger:: Including a :func:`~pymc.Deterministic` in `var_names` may incorrectly force a random variable to be resampled, as happens with ``z`` in the following example:
+
+
+    .. code :: python
+
+        with pm.Model() as model:
+          x = pm.Normal("x")
+          y = pm.Normal("y")
+          det_xy = pm.Deterministic("det_xy", x + y**2)
+          z = pm.Normal("z", det_xy)
+          det_z = pm.Deterministic("det_z", pm.math.exp(z))
+          obs = pm.Normal("obs", det_z, 1, observed=[20])
+
+          idata = pm.sample(tune=10, draws=10, chains=2, **kwargs)
+
+          pm.sample_posterior_predictive(idata, var_names=["det_xy", "det_z"], **kwargs)
+          # Sampling: [z]
+
+
+    Controlling the number of samples
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    You can manipulate the InferenceData to control the number of samples
+
+    .. code:: python
+
+        import pymc as pm
+
+        with pm.Model() as model:
+            ...
+            idata = pm.sample()
+
+    Generate 1 posterior predictive sample for every 5 posterior samples.
 
     .. code:: python
 
         thinned_idata = idata.sel(draw=slice(None, None, 5))
         with model:
-            idata.extend(pymc.sample_posterior_predictive(thinned_idata))
+            idata.extend(pm.sample_posterior_predictive(thinned_idata))
 
-    Generate 5 posterior predictive samples per posterior sample.
+
+    Generate 5 posterior predictive samples for every posterior sample.
 
     .. code:: python
 
         expanded_data = idata.posterior.expand_dims(pred_id=5)
         with model:
-            idata.extend(pymc.sample_posterior_predictive(expanded_data))
+            idata.extend(pm.sample_posterior_predictive(expanded_data))
+
+
     """
 
     _trace: Union[MultiTrace, PointList]
@@ -671,57 +879,3 @@ def sample_posterior_predictive(
         idata.extend(idata_pp)
         return idata
     return idata_pp
-
-
-def sample_posterior_predictive_w(
-    traces,
-    samples: Optional[int] = None,
-    models: Optional[list[Model]] = None,
-    weights: Optional[ArrayLike] = None,
-    random_seed: RandomState = None,
-    progressbar: bool = True,
-    return_inferencedata: bool = True,
-    idata_kwargs: Optional[dict] = None,
-):
-    """Generate weighted posterior predictive samples from a list of models and
-    a list of traces according to a set of weights.
-
-    Parameters
-    ----------
-    traces : list or list of lists
-        List of traces generated from MCMC sampling (xarray.Dataset, arviz.InferenceData, or
-        MultiTrace), or a list of list containing dicts from find_MAP() or points. The number of
-        traces should be equal to the number of weights.
-    samples : int, optional
-        Number of posterior predictive samples to generate. Defaults to the
-        length of the shorter trace in traces.
-    models : list of Model
-        List of models used to generate the list of traces. The number of models should be equal to
-        the number of weights and the number of observed RVs should be the same for all models.
-        By default a single model will be inferred from ``with`` context, in this case results will
-        only be meaningful if all models share the same distributions for the observed RVs.
-    weights : array-like, optional
-        Individual weights for each trace. Default, same weight for each model.
-    random_seed : int, RandomState or Generator, optional
-        Seed for the random number generator.
-    progressbar : bool, optional default True
-        Whether or not to display a progress bar in the command line. The bar shows the percentage
-        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
-        time until completion ("expected time of arrival"; ETA).
-    return_inferencedata : bool
-        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
-        Defaults to True.
-    idata_kwargs : dict, optional
-        Keyword arguments for :func:`pymc.to_inference_data`
-
-    Returns
-    -------
-    arviz.InferenceData or Dict
-        An ArviZ ``InferenceData`` object containing the posterior predictive samples from the
-        weighted models (default), or a dictionary with variable names as keys, and samples as
-        numpy arrays.
-    """
-    raise FutureWarning(
-        "The function `sample_posterior_predictive_w` has been removed in PyMC 4.3.0. "
-        "Switch to `arviz.stats.weight_predictions`"
-    )

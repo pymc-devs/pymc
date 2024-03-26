@@ -20,7 +20,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pymc.distributions.distribution import (
     Distribution,
     SymbolicRandomVariable,
-    _moment,
+    _support_point,
 )
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
 from pymc.util import check_dist_not_registered
@@ -30,6 +30,8 @@ class CensoredRV(SymbolicRandomVariable):
     """Censored random variable"""
 
     inline_logprob = True
+    signature = "(),(),()->()"
+    ndim_supp = 0
     _print_name = ("Censored", "\\operatorname{Censored}")
 
 
@@ -115,7 +117,6 @@ class Censored(Distribution):
         return CensoredRV(
             inputs=[dist_, lower_, upper_],
             outputs=[censored_rv_],
-            ndim_supp=0,
         )(dist, lower, upper)
 
 
@@ -127,9 +128,9 @@ def change_censored_size(cls, dist, new_size, expand=False):
     return Censored.rv_op(uncensored_dist, lower, upper, size=new_size)
 
 
-@_moment.register(CensoredRV)
-def moment_censored(op, rv, dist, lower, upper):
-    moment = pt.switch(
+@_support_point.register(CensoredRV)
+def support_point_censored(op, rv, dist, lower, upper):
+    support_point = pt.switch(
         pt.eq(lower, -np.inf),
         pt.switch(
             pt.isinf(upper),
@@ -146,5 +147,5 @@ def moment_censored(op, rv, dist, lower, upper):
             (lower + upper) / 2,
         ),
     )
-    moment = pt.full_like(dist, moment)
-    return moment
+    support_point = pt.full_like(dist, support_point)
+    return support_point

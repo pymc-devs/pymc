@@ -17,6 +17,7 @@
 A collection of common shape operations needed for broadcasting
 samples from probability distributions for stochastic nodes in PyMC.
 """
+
 import warnings
 
 from collections.abc import Sequence
@@ -109,6 +110,7 @@ def broadcast_dist_samples_shape(shapes, size=None):
     Examples
     --------
     .. code-block:: python
+
         size = 100
         shape0 = (size,)
         shape1 = (size, 5)
@@ -116,7 +118,9 @@ def broadcast_dist_samples_shape(shapes, size=None):
         out = broadcast_dist_samples_shape([shape0, shape1, shape2],
                                            size=size)
         assert out == (size, 4, 5)
+
     .. code-block:: python
+
         size = 100
         shape0 = (size,)
         shape1 = (5,)
@@ -124,7 +128,9 @@ def broadcast_dist_samples_shape(shapes, size=None):
         out = broadcast_dist_samples_shape([shape0, shape1, shape2],
                                            size=size)
         assert out == (size, 4, 5)
+
     .. code-block:: python
+
         size = 100
         shape0 = (1,)
         shape1 = (5,)

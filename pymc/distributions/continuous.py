@@ -33,7 +33,7 @@ from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
 from pytensor.tensor import gammaln
 from pytensor.tensor.extra_ops import broadcast_shape
-from pytensor.tensor.math import tanh
+from pytensor.tensor.math import betaincinv, gammaincinv, tanh
 from pytensor.tensor.random.basic import (
     BetaRV,
     _gamma,
@@ -229,32 +229,21 @@ def get_tau_sigma(tau=None, sigma=None):
     -----
     If neither tau nor sigma is provided, returns (1., 1.)
     """
-    if tau is None:
-        if sigma is None:
-            sigma = 1.0
-            tau = 1.0
-        else:
-            if isinstance(sigma, Variable):
-                # Keep tau negative, if sigma was negative, so that it will fail when used
-                tau = (sigma**-2.0) * pt.sign(sigma)
-            else:
-                sigma_ = np.asarray(sigma)
-                if np.any(sigma_ <= 0):
-                    raise ValueError("sigma must be positive")
-                tau = sigma_**-2.0
-
+    if tau is not None and sigma is not None:
+        raise ValueError("Can't pass both tau and sigma")
+    if tau is None and sigma is None:
+        sigma = pt.as_tensor_variable(1.0)
+        tau = pt.as_tensor_variable(1.0)
+    elif tau is None:
+        sigma = pt.as_tensor_variable(sigma)
+        # Keep tau negative, if sigma was negative, so that it will
+        # fail when used
+        tau = (sigma**-2.0) * pt.sign(sigma)
     else:
-        if sigma is not None:
-            raise ValueError("Can't pass both tau and sigma")
-        else:
-            if isinstance(tau, Variable):
-                # Keep sigma negative, if tau was negative, so that it will fail when used
-                sigma = pt.abs(tau) ** (-0.5) * pt.sign(tau)
-            else:
-                tau_ = np.asarray(tau)
-                if np.any(tau_ <= 0):
-                    raise ValueError("tau must be positive")
-                sigma = tau_**-0.5
+        tau = pt.as_tensor_variable(tau)
+        # Keep tau negative, if sigma was negative, so that it will
+        # fail when used
+        sigma = pt.abs(tau) ** -0.5 * pt.sign(tau)
 
     return tau, sigma
 
@@ -312,12 +301,12 @@ class Uniform(BoundedContinuous):
         upper = pt.as_tensor_variable(upper)
         return super().dist([lower, upper], **kwargs)
 
-    def moment(rv, size, lower, upper):
+    def support_point(rv, size, lower, upper):
         lower, upper = pt.broadcast_arrays(lower, upper)
-        moment = (lower + upper) / 2
+        support_point = (lower + upper) / 2
         if not rv_size_is_none(size):
-            moment = pt.full(size, moment)
-        return moment
+            support_point = pt.full(size, support_point)
+        return support_point
 
     def logp(value, lower, upper):
         res = pt.switch(
@@ -384,7 +373,7 @@ class Flat(Continuous):
     rv_op = flat
 
     def __new__(cls, *args, **kwargs):
-        kwargs.setdefault("initval", "moment")
+        kwargs.setdefault("initval", "support_point")
         return super().__new__(cls, *args, **kwargs)
 
     @classmethod
@@ -392,7 +381,7 @@ class Flat(Continuous):
         res = super().dist([], **kwargs)
         return res
 
-    def moment(rv, size):
+    def support_point(rv, size):
         return pt.zeros(size)
 
     def logp(value):
@@ -425,7 +414,7 @@ class HalfFlat(PositiveContinuous):
     rv_op = halfflat
 
     def __new__(cls, *args, **kwargs):
-        kwargs.setdefault("initval", "moment")
+        kwargs.setdefault("initval", "support_point")
         return super().__new__(cls, *args, **kwargs)
 
     @classmethod
@@ -433,7 +422,7 @@ class HalfFlat(PositiveContinuous):
         res = super().dist([], **kwargs)
         return res
 
-    def moment(rv, size):
+    def support_point(rv, size):
         return pt.ones(size)
 
     def logp(value):
@@ -522,7 +511,7 @@ class Normal(Continuous):
 
         return super().dist([mu, sigma], **kwargs)
 
-    def moment(rv, size, mu, sigma):
+    def support_point(rv, size, mu, sigma):
         mu, _ = pt.broadcast_arrays(mu, sigma)
         if not rv_size_is_none(size):
             mu = pt.full(size, mu)
@@ -684,9 +673,9 @@ class TruncatedNormal(BoundedContinuous):
         upper = pt.as_tensor_variable(upper) if upper is not None else pt.constant(np.inf)
         return super().dist([mu, sigma, lower, upper], **kwargs)
 
-    def moment(rv, size, mu, sigma, lower, upper):
+    def support_point(rv, size, mu, sigma, lower, upper):
         mu, _, lower, upper = pt.broadcast_arrays(mu, sigma, lower, upper)
-        moment = pt.switch(
+        support_point = pt.switch(
             pt.eq(lower, -np.inf),
             pt.switch(
                 pt.eq(upper, np.inf),
@@ -705,9 +694,9 @@ class TruncatedNormal(BoundedContinuous):
         )
 
         if not rv_size_is_none(size):
-            moment = pt.full(size, moment)
+            support_point = pt.full(size, support_point)
 
-        return moment
+        return support_point
 
     def logp(value, mu, sigma, lower, upper):
         is_lower_bounded = not (
@@ -857,11 +846,11 @@ class HalfNormal(PositiveContinuous):
 
         return super().dist([0.0, sigma], **kwargs)
 
-    def moment(rv, size, loc, sigma):
-        moment = loc + sigma
+    def support_point(rv, size, loc, sigma):
+        support_point = loc + sigma
         if not rv_size_is_none(size):
-            moment = pt.full(size, moment)
-        return moment
+            support_point = pt.full(size, support_point)
+        return support_point
 
     def logp(value, loc, sigma):
         res = -0.5 * pt.pow((value - loc) / sigma, 2) + pt.log(pt.sqrt(2.0 / np.pi)) - pt.log(sigma)
@@ -1004,7 +993,7 @@ class Wald(PositiveContinuous):
         lam = pt.as_tensor_variable(lam)
         return super().dist([mu, lam, alpha], **kwargs)
 
-    def moment(rv, size, mu, lam, alpha):
+    def support_point(rv, size, mu, lam, alpha):
         mu, _, _ = pt.broadcast_arrays(mu, lam, alpha)
         if not rv_size_is_none(size):
             mu = pt.full(size, mu)
@@ -1180,7 +1169,7 @@ class Beta(UnitContinuous):
 
         return super().dist([alpha, beta], **kwargs)
 
-    def moment(rv, size, alpha, beta):
+    def support_point(rv, size, alpha, beta):
         mean = alpha / (alpha + beta)
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)
@@ -1233,6 +1222,16 @@ class Beta(UnitContinuous):
 
         return check_parameters(
             logcdf,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
+
+    def icdf(value, alpha, beta):
+        res = betaincinv(alpha, beta, value)
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
             alpha > 0,
             beta > 0,
             msg="alpha > 0, beta > 0",
@@ -1308,7 +1307,7 @@ class Kumaraswamy(UnitContinuous):
 
         return super().dist([a, b], *args, **kwargs)
 
-    def moment(rv, size, a, b):
+    def support_point(rv, size, a, b):
         mean = pt.exp(pt.log(b) + pt.gammaln(1 + 1 / a) + pt.gammaln(b) - pt.gammaln(1 + 1 / a + b))
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)
@@ -1404,7 +1403,7 @@ class Exponential(PositiveContinuous):
         # PyTensor exponential op is parametrized in terms of mu (1/lam)
         return super().dist([scale], **kwargs)
 
-    def moment(rv, size, mu):
+    def support_point(rv, size, mu):
         if not rv_size_is_none(size):
             mu = pt.full(size, mu)
         return mu
@@ -1495,7 +1494,7 @@ class Laplace(Continuous):
 
         return super().dist([mu, b], *args, **kwargs)
 
-    def moment(rv, size, mu, b):
+    def support_point(rv, size, mu, b):
         mu, _ = pt.broadcast_arrays(mu, b)
         if not rv_size_is_none(size):
             mu = pt.full(size, mu)
@@ -1629,7 +1628,7 @@ class AsymmetricLaplace(Continuous):
 
         return kappa
 
-    def moment(rv, size, b, kappa, mu):
+    def support_point(rv, size, b, kappa, mu):
         mean = mu - (kappa - 1 / kappa) / b
 
         if not rv_size_is_none(size):
@@ -1728,7 +1727,7 @@ class LogNormal(PositiveContinuous):
 
         return super().dist([mu, sigma], *args, **kwargs)
 
-    def moment(rv, size, mu, sigma):
+    def support_point(rv, size, mu, sigma):
         mean = pt.exp(mu + 0.5 * sigma**2)
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)
@@ -1844,7 +1843,7 @@ class StudentT(Continuous):
 
         return super().dist([nu, mu, sigma], **kwargs)
 
-    def moment(rv, size, nu, mu, sigma):
+    def support_point(rv, size, nu, mu, sigma):
         mu, _, _ = pt.broadcast_arrays(mu, nu, sigma)
         if not rv_size_is_none(size):
             mu = pt.full(size, mu)
@@ -1877,6 +1876,21 @@ class StudentT(Continuous):
         res = pt.log(pt.betainc(nu / 2.0, nu / 2.0, x))
 
         return check_parameters(
+            res,
+            nu > 0,
+            sigma > 0,
+            msg="nu > 0, sigma > 0",
+        )
+
+    def icdf(value, nu, mu, sigma):
+        res = pt.switch(
+            pt.lt(value, 0.5),
+            -pt.sqrt(nu) * pt.sqrt((1.0 / betaincinv(nu * 0.5, 0.5, 2.0 * value)) - 1.0),
+            pt.sqrt(nu) * pt.sqrt((1.0 / betaincinv(nu * 0.5, 0.5, 2.0 * (1 - value))) - 1.0),
+        )
+        res = mu + res * sigma
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
             res,
             nu > 0,
             sigma > 0,
@@ -1941,7 +1955,7 @@ class Pareto(BoundedContinuous):
 
         return super().dist([alpha, m], **kwargs)
 
-    def moment(rv, size, alpha, m):
+    def support_point(rv, size, alpha, m):
         median = m * 2 ** (1 / alpha)
         if not rv_size_is_none(size):
             median = pt.full(size, median)
@@ -2049,7 +2063,7 @@ class Cauchy(Continuous):
 
         return super().dist([alpha, beta], **kwargs)
 
-    def moment(rv, size, alpha, beta):
+    def support_point(rv, size, alpha, beta):
         alpha, _ = pt.broadcast_arrays(alpha, beta)
         if not rv_size_is_none(size):
             alpha = pt.full(size, alpha)
@@ -2074,7 +2088,7 @@ class Cauchy(Continuous):
     def icdf(value, alpha, beta):
         res = alpha + beta * pt.tan(np.pi * (value - 0.5))
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             beta > 0,
             msg="beta > 0",
@@ -2128,7 +2142,7 @@ class HalfCauchy(PositiveContinuous):
         beta = pt.as_tensor_variable(beta)
         return super().dist([0.0, beta], **kwargs)
 
-    def moment(rv, size, loc, beta):
+    def support_point(rv, size, loc, beta):
         if not rv_size_is_none(size):
             beta = pt.full(size, beta)
         return beta
@@ -2158,7 +2172,7 @@ class HalfCauchy(PositiveContinuous):
     def icdf(value, loc, beta):
         res = loc + beta * pt.tan(np.pi * (value) / 2.0)
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             beta > 0,
             msg="beta > 0",
@@ -2257,7 +2271,7 @@ class Gamma(PositiveContinuous):
 
         return alpha, beta
 
-    def moment(rv, size, alpha, scale):
+    def support_point(rv, size, alpha, scale):
         mean = alpha * scale
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)
@@ -2282,6 +2296,16 @@ class Gamma(PositiveContinuous):
             pt.log(pt.gammainc(alpha, beta * value)),
         )
         return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
+
+    def icdf(value, alpha, scale):
+        res = scale * gammaincinv(alpha, value)
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            alpha > 0,
+            scale > 0,
+            msg="alpha > 0, beta > 0",
+        )
 
 
 class InverseGamma(PositiveContinuous):
@@ -2344,13 +2368,13 @@ class InverseGamma(PositiveContinuous):
 
         return super().dist([alpha, beta], **kwargs)
 
-    def moment(rv, size, alpha, beta):
+    def support_point(rv, size, alpha, beta):
         mean = beta / (alpha - 1.0)
         mode = beta / (alpha + 1.0)
-        moment = pt.switch(alpha > 1, mean, mode)
+        support_point = pt.switch(alpha > 1, mean, mode)
         if not rv_size_is_none(size):
-            moment = pt.full(size, moment)
-        return moment
+            support_point = pt.full(size, support_point)
+        return support_point
 
     @classmethod
     def _get_alpha_beta(cls, alpha, beta, mu, sigma):
@@ -2527,7 +2551,7 @@ class Weibull(PositiveContinuous):
 
         return super().dist([alpha, beta], *args, **kwargs)
 
-    def moment(rv, size, alpha, beta):
+    def support_point(rv, size, alpha, beta):
         mean = beta * pt.gamma(1 + 1 / alpha)
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)
@@ -2567,7 +2591,7 @@ class Weibull(PositiveContinuous):
     def icdf(value, alpha, beta):
         res = beta * (-pt.log(1 - value)) ** (1 / alpha)
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             alpha > 0,
             beta > 0,
@@ -2659,7 +2683,7 @@ class HalfStudentT(PositiveContinuous):
 
         return super().dist([nu, sigma], *args, **kwargs)
 
-    def moment(rv, size, nu, sigma):
+    def support_point(rv, size, nu, sigma):
         sigma, _ = pt.broadcast_arrays(sigma, nu)
         if not rv_size_is_none(size):
             sigma = pt.full(size, sigma)
@@ -2780,12 +2804,12 @@ class ExGaussian(Continuous):
 
         return super().dist([mu, sigma, nu], *args, **kwargs)
 
-    def moment(rv, size, mu, sigma, nu):
+    def support_point(rv, size, mu, sigma, nu):
         mu, nu, _ = pt.broadcast_arrays(mu, nu, sigma)
-        moment = mu + nu
+        support_point = mu + nu
         if not rv_size_is_none(size):
-            moment = pt.full(size, moment)
-        return moment
+            support_point = pt.full(size, support_point)
+        return support_point
 
     def logp(value, mu, sigma, nu):
         # Alogithm is adapted from dexGAUS.R from gamlss
@@ -2883,7 +2907,7 @@ class VonMises(CircularContinuous):
         kappa = pt.as_tensor_variable(kappa)
         return super().dist([mu, kappa], *args, **kwargs)
 
-    def moment(rv, size, mu, kappa):
+    def support_point(rv, size, mu, kappa):
         mu, _ = pt.broadcast_arrays(mu, kappa)
         if not rv_size_is_none(size):
             mu = pt.full(size, mu)
@@ -2990,7 +3014,7 @@ class SkewNormal(Continuous):
 
         return super().dist([mu, sigma, alpha], *args, **kwargs)
 
-    def moment(rv, size, mu, sigma, alpha):
+    def support_point(rv, size, mu, sigma, alpha):
         mean = mu + sigma * (2 / np.pi) ** 0.5 * alpha / (1 + alpha**2) ** 0.5
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)
@@ -3078,7 +3102,7 @@ class Triangular(BoundedContinuous):
 
         return super().dist([lower, c, upper], *args, **kwargs)
 
-    def moment(rv, size, lower, c, upper):
+    def support_point(rv, size, lower, c, upper):
         mean = (lower + upper + c) / 3
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)
@@ -3127,7 +3151,7 @@ class Triangular(BoundedContinuous):
             upper - np.sqrt((upper - lower) * (upper - c) * (1 - value)),
         )
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             lower <= c,
             c <= upper,
@@ -3203,7 +3227,7 @@ class Gumbel(Continuous):
 
         return super().dist([mu, beta], **kwargs)
 
-    def moment(rv, size, mu, beta):
+    def support_point(rv, size, mu, beta):
         mean = mu + beta * np.euler_gamma
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)
@@ -3230,7 +3254,7 @@ class Gumbel(Continuous):
     def icdf(value, mu, beta):
         res = mu - beta * pt.log(-pt.log(value))
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             beta > 0,
             msg="beta > 0",
@@ -3335,7 +3359,7 @@ class Rice(PositiveContinuous):
             return nu, b, sigma
         raise ValueError("Rice distribution must specify either nu" " or b.")
 
-    def moment(rv, size, nu, sigma):
+    def support_point(rv, size, nu, sigma):
         nu_sigma_ratio = -(nu**2) / (2 * sigma**2)
         mean = (
             sigma
@@ -3421,7 +3445,7 @@ class Logistic(Continuous):
         s = pt.as_tensor_variable(s)
         return super().dist([mu, s], *args, **kwargs)
 
-    def moment(rv, size, mu, s):
+    def support_point(rv, size, mu, s):
         mu, _ = pt.broadcast_arrays(mu, s)
         if not rv_size_is_none(size):
             mu = pt.full(size, mu)
@@ -3448,7 +3472,7 @@ class Logistic(Continuous):
     def icdf(value, mu, s):
         res = mu + s * pt.log(value / (1 - value))
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             s > 0,
             msg="s > 0",
@@ -3529,7 +3553,7 @@ class LogitNormal(UnitContinuous):
 
         return super().dist([mu, sigma], **kwargs)
 
-    def moment(rv, size, mu, sigma):
+    def support_point(rv, size, mu, sigma):
         median, _ = pt.broadcast_arrays(invlogit(mu), sigma)
         if not rv_size_is_none(size):
             median = pt.full(size, median)
@@ -3663,17 +3687,17 @@ class Interpolated(BoundedContinuous):
 
         return super().dist([x_points, pdf_points, cdf_points], **kwargs)
 
-    def moment(rv, size, x_points, pdf_points, cdf_points):
+    def support_point(rv, size, x_points, pdf_points, cdf_points):
         """
         Estimates the expectation integral using the trapezoid rule; cdf_points are not used.
         """
         x_fx = pt.mul(x_points, pdf_points)  # x_i * f(x_i) for all xi's in x_points
-        moment = pt.sum(pt.mul(pt.diff(x_points), x_fx[1:] + x_fx[:-1])) / 2
+        support_point = pt.sum(pt.mul(pt.diff(x_points), x_fx[1:] + x_fx[:-1])) / 2
 
         if not rv_size_is_none(size):
-            moment = pt.full(size, moment)
+            support_point = pt.full(size, support_point)
 
-        return moment
+        return support_point
 
     def logp(value, x_points, pdf_points, cdf_points):
         # x_points and pdf_points are expected to be non-symbolic arrays wrapped
@@ -3770,7 +3794,7 @@ class Moyal(Continuous):
 
         return super().dist([mu, sigma], *args, **kwargs)
 
-    def moment(rv, size, mu, sigma):
+    def support_point(rv, size, mu, sigma):
         mean = mu + sigma * (np.euler_gamma + pt.log(2))
 
         if not rv_size_is_none(size):
@@ -3798,7 +3822,7 @@ class Moyal(Continuous):
     def icdf(value, mu, sigma):
         res = sigma * -pt.log(2.0 * pt.erfcinv(value) ** 2) + mu
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             sigma > 0,
             msg="sigma > 0",
@@ -3973,7 +3997,7 @@ class PolyaGamma(PositiveContinuous):
 
         return super().dist([h, z], **kwargs)
 
-    def moment(rv, size, h, z):
+    def support_point(rv, size, h, z):
         mean = pt.switch(pt.eq(z, 0), h / 4, tanh(z / 2) * (h / (2 * z)))
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)

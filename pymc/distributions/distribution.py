@@ -33,11 +33,13 @@ from pytensor.graph.rewriting.basic import GraphRewriter, in2out
 from pytensor.graph.utils import MetaType
 from pytensor.scan.op import Scan
 from pytensor.tensor.basic import as_tensor_variable
+from pytensor.tensor.blockwise import safe_signature
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.random.type import RandomGeneratorType, RandomType
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.rewriting.shape import ShapeFeature
+from pytensor.tensor.utils import _parse_gufunc_signature
 from pytensor.tensor.variable import TensorVariable
 from typing_extensions import TypeAlias
 
@@ -86,8 +88,8 @@ vectorized_ppc: contextvars.ContextVar[Optional[Callable]] = contextvars.Context
 PLATFORM = sys.platform
 
 
-class MomentRewrite(GraphRewriter):
-    def rewrite_moment_scan_node(self, node):
+class FiniteLogpPointRewrite(GraphRewriter):
+    def rewrite_support_point_scan_node(self, node):
         if not isinstance(node.op, Scan):
             return
 
@@ -96,19 +98,19 @@ class MomentRewrite(GraphRewriter):
 
         local_fgraph_topo = io_toposort(node_inputs, node_outputs)
 
-        replace_with_moment = []
+        replace_with_support_point = []
         to_replace_set = set()
 
         for nd in local_fgraph_topo:
             if nd not in to_replace_set and isinstance(
                 nd.op, (RandomVariable, SymbolicRandomVariable)
             ):
-                replace_with_moment.append(nd.out)
+                replace_with_support_point.append(nd.out)
                 to_replace_set.add(nd)
         givens = {}
-        if len(replace_with_moment) > 0:
-            for item in replace_with_moment:
-                givens[item] = moment(item)
+        if len(replace_with_support_point) > 0:
+            for item in replace_with_support_point:
+                givens[item] = support_point(item)
         else:
             return
         op_outs = clone_replace(node_outputs, replace=givens)
@@ -132,9 +134,9 @@ class MomentRewrite(GraphRewriter):
     def apply(self, fgraph):
         for node in fgraph.toposort():
             if isinstance(node.op, (RandomVariable, SymbolicRandomVariable)):
-                fgraph.replace(node.out, moment(node.out))
+                fgraph.replace(node.out, support_point(node.out))
             elif isinstance(node.op, Scan):
-                new_node = self.rewrite_moment_scan_node(node)
+                new_node = self.rewrite_support_point_scan_node(node)
                 if new_node is not None:
                     fgraph.replace_all(tuple(zip(node.outputs, new_node.outputs)))
 
@@ -211,10 +213,22 @@ class DistributionMeta(ABCMeta):
 
             class_moment = clsdict.get("moment")
             if class_moment:
+                warnings.warn(
+                    "The moment() method is deprecated. Use support_point() instead.",
+                    DeprecationWarning,
+                )
 
-                @_moment.register(rv_type)
-                def moment(op, rv, rng, size, dtype, *dist_params):
+                @_support_point.register(rv_type)
+                def support_point(op, rv, rng, size, dtype, *dist_params):
                     return class_moment(rv, size, *dist_params)
+
+            class_support_point = clsdict.get("support_point")
+
+            if class_support_point:
+
+                @_support_point.register(rv_type)
+                def support_point(op, rv, rng, size, dtype, *dist_params):
+                    return class_support_point(rv, size, *dist_params)
 
             # Register the PyTensor rv_type as a subclass of this
             # PyMC Distribution type.
@@ -249,6 +263,12 @@ class SymbolicRandomVariable(OpFromGraph):
     (0 for scalar, 1 for vector, ...)
      """
 
+    ndims_params: Optional[Sequence[int]] = None
+    """Number of core dimensions of the distribution's parameters."""
+
+    signature: str = None
+    """Numpy-like vectorized signature of the distribution."""
+
     inline_logprob: bool = False
     """Specifies whether the logprob function is derived automatically by introspection
     of the inner graph.
@@ -259,9 +279,25 @@ class SymbolicRandomVariable(OpFromGraph):
     _print_name: tuple[str, str] = ("Unknown", "\\operatorname{Unknown}")
     """Tuple of (name, latex name) used for for pretty-printing variables of this type"""
 
-    def __init__(self, *args, ndim_supp, **kwargs):
-        """Initialitze a SymbolicRandomVariable class."""
-        self.ndim_supp = ndim_supp
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        """Initialize a SymbolicRandomVariable class."""
+        if self.signature is None:
+            self.signature = kwargs.get("signature", None)
+
+        if self.signature is not None:
+            inputs_sig, outputs_sig = _parse_gufunc_signature(self.signature)
+            self.ndims_params = [len(sig) for sig in inputs_sig]
+            self.ndim_supp = max(len(out_sig) for out_sig in outputs_sig)
+
+        if self.ndim_supp is None:
+            self.ndim_supp = kwargs.get("ndim_supp", None)
+            if self.ndim_supp is None:
+                raise ValueError("ndim_supp or gufunc_signature must be provided")
+
         kwargs.setdefault("inline", True)
         super().__init__(*args, **kwargs)
 
@@ -273,6 +309,11 @@ class SymbolicRandomVariable(OpFromGraph):
         `pytensorf.compile_pymc`.
         """
         return {}
+
+    def batch_ndim(self, node: Node) -> int:
+        """Number of dimensions of the distribution's batch shape."""
+        out_ndim = max(getattr(out.type, "ndim", 0) for out in node.outputs)
+        return out_ndim - self.ndim_supp
 
 
 class Distribution(metaclass=DistributionMeta):
@@ -310,9 +351,9 @@ class Distribution(metaclass=DistributionMeta):
             the shape of dims is used to define the shape of the variable.
         initval : optional
             Numeric or symbolic untransformed initial value of matching shape,
-            or one of the following initial value strategies: "moment", "prior".
+            or one of the following initial value strategies: "support_point", "prior".
             Depending on the sampler's settings, a random jitter may be added to numeric, symbolic
-            or moment-based initial values in the transformed space.
+            or support_point-based initial values in the transformed space.
         observed : optional
             Observed data to be passed when registering the random variable in the model.
             When neither shape nor dims is provided, the shape of observed is used to
@@ -480,18 +521,34 @@ logprob_rewrites_db.register(
 
 
 @singledispatch
-def _moment(op, rv, *rv_inputs) -> TensorVariable:
-    raise NotImplementedError(f"Variable {rv} of type {op} has no moment implementation.")
+def _support_point(op, rv, *rv_inputs) -> TensorVariable:
+    raise NotImplementedError(f"Variable {rv} of type {op} has no support_point implementation.")
 
 
-def moment(rv: TensorVariable) -> TensorVariable:
+def support_point(rv: TensorVariable) -> TensorVariable:
     """Method for choosing a representative point/value
     that can be used to start optimization or MCMC sampling.
 
     The only parameter to this function is the RandomVariable
     for which the value is to be derived.
     """
-    return _moment(rv.owner.op, rv, *rv.owner.inputs).astype(rv.dtype)
+    return _support_point(rv.owner.op, rv, *rv.owner.inputs).astype(rv.dtype)
+
+
+def _moment(op, rv, *rv_inputs) -> TensorVariable:
+    warnings.warn(
+        "The moment() method is deprecated. Use support_point() instead.",
+        DeprecationWarning,
+    )
+    return _support_point(op, rv, *rv_inputs)
+
+
+def moment(rv: TensorVariable) -> TensorVariable:
+    warnings.warn(
+        "The moment() method is deprecated. Use support_point() instead.",
+        DeprecationWarning,
+    )
+    return support_point(rv)
 
 
 class Discrete(Distribution):
@@ -537,13 +594,23 @@ class _CustomDist(Distribution):
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
         random: Optional[Callable] = None,
-        moment: Optional[Callable] = None,
-        ndim_supp: int = 0,
+        support_point: Optional[Callable] = None,
+        ndim_supp: Optional[int] = None,
         ndims_params: Optional[Sequence[int]] = None,
+        signature: Optional[str] = None,
         dtype: str = "floatX",
         class_name: str = "CustomDist",
         **kwargs,
     ):
+        if ndim_supp is None or ndims_params is None:
+            if signature is None:
+                ndim_supp = 0
+                ndims_params = [0] * len(dist_params)
+            else:
+                inputs, outputs = _parse_gufunc_signature(signature)
+                ndim_supp = max(len(out) for out in outputs)
+                ndims_params = [len(inp) for inp in inputs]
+
         if ndim_supp > 0:
             raise NotImplementedError(
                 "CustomDist with ndim_supp > 0 and without a `dist` function are not supported."
@@ -551,19 +618,15 @@ class _CustomDist(Distribution):
 
         dist_params = [as_tensor_variable(param) for param in dist_params]
 
-        # Assume scalar ndims_params
-        if ndims_params is None:
-            ndims_params = [0] * len(dist_params)
-
         if logp is None:
             logp = default_not_implemented(class_name, "logp")
 
         if logcdf is None:
             logcdf = default_not_implemented(class_name, "logcdf")
 
-        if moment is None:
-            moment = functools.partial(
-                default_moment,
+        if support_point is None:
+            support_point = functools.partial(
+                default_support_point,
                 rv_name=class_name,
                 has_fallback=random is not None,
                 ndim_supp=ndim_supp,
@@ -577,7 +640,7 @@ class _CustomDist(Distribution):
             logp=logp,
             logcdf=logcdf,
             random=random,
-            moment=moment,
+            support_point=support_point,
             ndim_supp=ndim_supp,
             ndims_params=ndims_params,
             dtype=dtype,
@@ -592,9 +655,9 @@ class _CustomDist(Distribution):
         logp: Optional[Callable],
         logcdf: Optional[Callable],
         random: Optional[Callable],
-        moment: Optional[Callable],
+        support_point: Optional[Callable],
         ndim_supp: int,
-        ndims_params: Optional[Sequence[int]],
+        ndims_params: Sequence[int],
         dtype: str,
         class_name: str,
         **kwargs,
@@ -608,6 +671,7 @@ class _CustomDist(Distribution):
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
                 dtype=dtype,
+                _print_name=(class_name, f"\\operatorname{{{class_name}}}"),
                 # Specific to CustomDist
                 _random_fn=random,
             ),
@@ -622,9 +686,9 @@ class _CustomDist(Distribution):
         def density_dist_logcdf(op, value, rng, size, dtype, *dist_params, **kwargs):
             return logcdf(value, *dist_params, **kwargs)
 
-        @_moment.register(rv_type)
-        def density_dist_get_moment(op, rv, rng, size, dtype, *dist_params):
-            return moment(rv, size, *dist_params)
+        @_support_point.register(rv_type)
+        def density_dist_get_support_point(op, rv, rng, size, dtype, *dist_params):
+            return support_point(rv, size, *dist_params)
 
         rv_op = rv_type()
         return rv_op(*dist_params, **kwargs)
@@ -657,18 +721,18 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
         return updates
 
 
-@_moment.register(CustomSymbolicDistRV)
-def dist_moment(op, rv, *args):
+@_support_point.register(CustomSymbolicDistRV)
+def dist_support_point(op, rv, *args):
     node = rv.owner
     rv_out_idx = node.outputs.index(rv)
 
     fgraph = op.fgraph.clone()
-    replace_moments = MomentRewrite()
-    replace_moments.rewrite(fgraph)
+    replace_support_point = FiniteLogpPointRewrite()
+    replace_support_point.rewrite(fgraph)
     # Replace dummy inner inputs by outer inputs
     fgraph.replace_all(tuple(zip(op.inner_inputs, args)), import_missing=True)
-    moment = fgraph.outputs[rv_out_idx]
-    return moment
+    support_point = fgraph.outputs[rv_out_idx]
+    return support_point
 
 
 class _CustomSymbolicDist(Distribution):
@@ -681,8 +745,10 @@ class _CustomSymbolicDist(Distribution):
         dist: Callable,
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
-        moment: Optional[Callable] = None,
-        ndim_supp: int = 0,
+        support_point: Optional[Callable] = None,
+        ndim_supp: Optional[int] = None,
+        ndims_params: Optional[Sequence[int]] = None,
+        signature: Optional[str] = None,
         dtype: str = "floatX",
         class_name: str = "CustomDist",
         **kwargs,
@@ -692,14 +758,24 @@ class _CustomSymbolicDist(Distribution):
         if logcdf is None:
             logcdf = default_not_implemented(class_name, "logcdf")
 
+        if signature is None:
+            if ndim_supp is None:
+                ndim_supp = 0
+            if ndims_params is None:
+                ndims_params = [0] * len(dist_params)
+            signature = safe_signature(
+                core_inputs=[pt.tensor(shape=(None,) * ndim_param) for ndim_param in ndims_params],
+                core_outputs=[pt.tensor(shape=(None,) * ndim_supp)],
+            )
+
         return super().dist(
             dist_params,
             class_name=class_name,
             logp=logp,
             logcdf=logcdf,
             dist=dist,
-            moment=moment,
-            ndim_supp=ndim_supp,
+            support_point=support_point,
+            signature=signature,
             **kwargs,
         )
 
@@ -710,9 +786,9 @@ class _CustomSymbolicDist(Distribution):
         dist: Callable,
         logp: Optional[Callable],
         logcdf: Optional[Callable],
-        moment: Optional[Callable],
+        support_point: Optional[Callable],
         size=None,
-        ndim_supp: int,
+        signature: str,
         class_name: str,
     ):
         size = normalize_size_param(size)
@@ -725,12 +801,17 @@ class _CustomSymbolicDist(Distribution):
         dummy_params = [dummy_size_param, *dummy_dist_params]
         dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
 
+        signature = cls._infer_final_signature(
+            signature, len(dummy_params), len(dummy_updates_dict)
+        )
+
         rv_type = type(
             class_name,
             (CustomSymbolicDistRV,),
             # If logp is not provided, we try to infer it from the dist graph
             dict(
                 inline_logprob=logp is None,
+                _print_name=(class_name, f"\\operatorname{{{class_name}}}"),
             ),
         )
 
@@ -747,11 +828,11 @@ class _CustomSymbolicDist(Distribution):
             def custom_dist_logcdf(op, value, size, *params, **kwargs):
                 return logcdf(value, *params[: len(dist_params)])
 
-        if moment is not None:
+        if support_point is not None:
 
-            @_moment.register(rv_type)
-            def custom_dist_get_moment(op, rv, size, *params):
-                return moment(
+            @_support_point.register(rv_type)
+            def custom_dist_get_support_point(op, rv, size, *params):
+                return support_point(
                     rv,
                     size,
                     *[
@@ -782,7 +863,7 @@ class _CustomSymbolicDist(Distribution):
             new_rv_op = rv_type(
                 inputs=dummy_params,
                 outputs=[*dummy_updates_dict.values(), dummy_rv],
-                ndim_supp=ndim_supp,
+                signature=signature,
             )
             new_rv = new_rv_op(new_size, *dist_params)
 
@@ -791,9 +872,29 @@ class _CustomSymbolicDist(Distribution):
         rv_op = rv_type(
             inputs=dummy_params,
             outputs=[*dummy_updates_dict.values(), dummy_rv],
-            ndim_supp=ndim_supp,
+            signature=signature,
         )
         return rv_op(size, *dist_params)
+
+    @staticmethod
+    def _infer_final_signature(signature: str, n_inputs, n_updates) -> str:
+        """Add size and updates to user provided gufunc signature if they are missing."""
+        input_sig, output_sig = signature.split("->")
+        # Numpy parser does not accept (constant) functions without inputs like "->()"
+        # We work around as this makes sense for distributions like Flat that have no inputs
+        if input_sig.strip() == "":
+            inputs = ()
+            _, outputs = _parse_gufunc_signature("()" + signature)
+        else:
+            inputs, outputs = _parse_gufunc_signature(signature)
+        if len(inputs) == n_inputs - 1:
+            # Assume size is missing
+            input_sig = ("()," if input_sig else "()") + input_sig
+        if len(outputs) == 1:
+            # Assume updates are missing
+            output_sig = "()," * n_updates + output_sig
+        signature = "->".join((input_sig, output_sig))
+        return signature
 
 
 class CustomDist:
@@ -808,12 +909,12 @@ class CustomDist:
     when not provided by the user.
 
     Alternatively, a user can provide a `random` function that returns numerical
-    draws (e.g., via NumPy routines), and a `logp` function that must return an
-    Python graph that represents the logp graph when evaluated. This is used for
+    draws (e.g., via NumPy routines), and a `logp` function that must return a
+    PyTensor graph that represents the logp graph when evaluated. This is used for
     mcmc sampling.
 
-    Additionally, a user can provide a `logcdf` and `moment` functions that must return
-    an PyTensor graph that computes those quantities. These may be used by other PyMC
+    Additionally, a user can provide a `logcdf` and `support_point` functions that must return
+    PyTensor graphs that computes those quantities. These may be used by other PyMC
     routines.
 
     Parameters
@@ -865,23 +966,27 @@ class CustomDist:
         are the tensors that hold the values of the distribution parameters.
         This function must return an PyTensor tensor. If ``None``, a ``NotImplementedError``
         will be raised when trying to compute the distribution's logcdf.
-    moment : Optional[Callable]
-        A callable that can be used to compute the moments of the distribution.
-        It must have the following signature: ``moment(rv, size, *rv_inputs)``.
+    support_point : Optional[Callable]
+        A callable that can be used to compute the finete logp point of the distribution.
+        It must have the following signature: ``support_point(rv, size, *rv_inputs)``.
         The distribution's variable is passed as the first argument ``rv``. ``size``
         is the random variable's size implied by the ``dims``, ``size`` and parameters
         supplied to the distribution. Finally, ``rv_inputs`` is the sequence of the
         distribution parameters, in the same order as they were supplied when the
-        CustomDist was created. If ``None``, a default  ``moment`` function will be
+        CustomDist was created. If ``None``, a default  ``support_point`` function will be
         assigned that will always return 0, or an array of zeros.
-    ndim_supp : int
-        The number of dimensions in the support of the distribution. Defaults to assuming
-        a scalar distribution, i.e. ``ndim_supp = 0``.
+    ndim_supp : Optional[int]
+        The number of dimensions in the support of the distribution.
+        Inferred from signature, if provided. Defaults to assuming
+        a scalar distribution, i.e. ``ndim_supp = 0``
     ndims_params : Optional[Sequence[int]]
         The list of number of dimensions in the support of each of the distribution's
-        parameters. If ``None``, it is assumed that all parameters are scalars, hence
-        the number of dimensions of their support will be 0. This is not needed if an
-        PyTensor dist function is provided.
+        parameters. Inferred from signature, if provided. Defaults to assuming
+        all parameters are scalars, i.e. ``ndims_params=[0, ...]``.
+    signature : Optional[str]
+        A numpy vectorize-like signature that indicates the number and core dimensionality
+        of the input parameters and sample outputs of the CustomDist.
+        When specified, `ndim_supp` and `ndims_params` are not needed. See examples below.
     dtype : str
         The dtype of the distribution. All draws and observations passed into the
         distribution will be cast onto this dtype. This is not needed if an PyTensor
@@ -919,6 +1024,7 @@ class CustomDist:
 
     Provide a random function that return numerical draws. This allows one to use a
     CustomDist in prior and posterior predictive sampling.
+    A gufunc signature was also provided, which may be used by other routines.
 
     .. code-block:: python
 
@@ -945,6 +1051,7 @@ class CustomDist:
                 mu,
                 logp=logp,
                 random=random,
+                signature="()->()",
                 observed=np.random.randn(100, 3),
                 size=(100, 3),
             )
@@ -953,6 +1060,7 @@ class CustomDist:
     Provide a dist function that creates a PyTensor graph built from other
     PyMC distributions. PyMC can automatically infer that the logp of this
     variable corresponds to a shifted Exponential distribution.
+    A gufunc signature was also provided, which may be used by other routines.
 
     .. code-block:: python
 
@@ -974,6 +1082,7 @@ class CustomDist:
                 lam,
                 shift,
                 dist=dist,
+                signature="(),()->()",
                 observed=[-1, -1, 0],
             )
 
@@ -1020,9 +1129,11 @@ class CustomDist:
         random: Optional[Callable] = None,
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
-        moment: Optional[Callable] = None,
-        ndim_supp: int = 0,
+        support_point: Optional[Callable] = None,
+        # TODO: Deprecate ndim_supp / ndims_params in favor of signature?
+        ndim_supp: Optional[int] = None,
         ndims_params: Optional[Sequence[int]] = None,
+        signature: Optional[str] = None,
         dtype: str = "floatX",
         **kwargs,
     ):
@@ -1036,6 +1147,13 @@ class CustomDist:
             )
         dist_params = cls.parse_dist_params(dist_params)
         cls.check_valid_dist_random(dist, random, dist_params)
+        moment = kwargs.pop("moment", None)
+        if moment is not None:
+            warnings.warn(
+                "`moment` argument is deprecated. Use `support_point` instead.",
+                FutureWarning,
+            )
+            support_point = moment
         if dist is not None:
             kwargs.setdefault("class_name", f"CustomDist_{name}")
             return _CustomSymbolicDist(
@@ -1044,8 +1162,10 @@ class CustomDist:
                 dist=dist,
                 logp=logp,
                 logcdf=logcdf,
-                moment=moment,
+                support_point=support_point,
                 ndim_supp=ndim_supp,
+                ndims_params=ndims_params,
+                signature=signature,
                 **kwargs,
             )
         else:
@@ -1056,9 +1176,10 @@ class CustomDist:
                 random=random,
                 logp=logp,
                 logcdf=logcdf,
-                moment=moment,
+                support_point=support_point,
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
+                signature=signature,
                 dtype=dtype,
                 **kwargs,
             )
@@ -1071,9 +1192,10 @@ class CustomDist:
         random: Optional[Callable] = None,
         logp: Optional[Callable] = None,
         logcdf: Optional[Callable] = None,
-        moment: Optional[Callable] = None,
-        ndim_supp: int = 0,
+        support_point: Optional[Callable] = None,
+        ndim_supp: Optional[int] = None,
         ndims_params: Optional[Sequence[int]] = None,
+        signature: Optional[str] = None,
         dtype: str = "floatX",
         **kwargs,
     ):
@@ -1085,8 +1207,10 @@ class CustomDist:
                 dist=dist,
                 logp=logp,
                 logcdf=logcdf,
-                moment=moment,
+                support_point=support_point,
                 ndim_supp=ndim_supp,
+                ndims_params=ndims_params,
+                signature=signature,
                 **kwargs,
             )
         else:
@@ -1095,9 +1219,10 @@ class CustomDist:
                 random=random,
                 logp=logp,
                 logcdf=logcdf,
-                moment=moment,
+                support_point=support_point,
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
+                signature=signature,
                 dtype=dtype,
                 **kwargs,
             )
@@ -1161,15 +1286,15 @@ def default_not_implemented(rv_name, method_name):
     return func
 
 
-def default_moment(rv, size, *rv_inputs, rv_name=None, has_fallback=False, ndim_supp=0):
+def default_support_point(rv, size, *rv_inputs, rv_name=None, has_fallback=False, ndim_supp=0):
     if ndim_supp == 0:
         return pt.zeros(size, dtype=rv.dtype)
     elif has_fallback:
         return pt.zeros_like(rv)
     else:
         raise TypeError(
-            "Cannot safely infer the size of a multivariate random variable's moment. "
-            f"Please provide a moment function when instantiating the {rv_name} "
+            "Cannot safely infer the size of a multivariate random variable's support_point. "
+            f"Please provide a support_point function when instantiating the {rv_name} "
             "random variable."
         )
 
@@ -1215,7 +1340,7 @@ class DiracDelta(Discrete):
             c = floatX(c)
         return super().dist([c], **kwargs)
 
-    def moment(rv, size, c):
+    def support_point(rv, size, c):
         if not rv_size_is_none(size):
             c = pt.full(size, c)
         return c
@@ -1365,11 +1490,11 @@ def partial_observed_rv_logprob(op, values, dist, mask, **kwargs):
         return joined_logp.ravel(), pt.zeros((0,), dtype=joined_logp.type.dtype)
 
 
-@_moment.register(PartialObservedRV)
-def partial_observed_rv_moment(op, partial_obs_rv, rv, mask):
+@_support_point.register(PartialObservedRV)
+def partial_observed_rv_support_point(op, partial_obs_rv, rv, mask):
     # Unobserved output
     if partial_obs_rv.owner.outputs.index(partial_obs_rv) == 1:
-        return moment(rv)[mask]
+        return support_point(rv)[mask]
     # Observed output
     else:
-        return moment(rv)[~mask]
+        return support_point(rv)[~mask]

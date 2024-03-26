@@ -79,7 +79,7 @@ from pymc.testing import (
     Rplusbig,
     Simplex,
     Unit,
-    assert_moment_is_expected,
+    assert_support_point_is_expected,
     check_logcdf,
     check_logp,
     check_selfconsistency_discrete_logcdf,
@@ -820,10 +820,8 @@ class TestNormalMixture:
             mus = Normal("mus", shape=comp_shape)
             taus = Gamma("taus", alpha=1, beta=1, shape=comp_shape)
             ws = Dirichlet("ws", np.ones(ncomp), shape=(ncomp,))
-            mixture0 = NormalMixture("m", w=ws, mu=mus, tau=taus, shape=nd, comp_shape=comp_shape)
-            obs0 = NormalMixture(
-                "obs", w=ws, mu=mus, tau=taus, comp_shape=comp_shape, observed=observed
-            )
+            mixture0 = NormalMixture("m", w=ws, mu=mus, tau=taus, shape=nd)
+            obs0 = NormalMixture("obs", w=ws, mu=mus, tau=taus, observed=observed)
 
         with Model() as model1:
             mus = Normal("mus", shape=comp_shape)
@@ -867,7 +865,6 @@ class TestNormalMixture:
                 "mu": Domain([[0.05, 2.5], [-5.0, 1.0]], edges=(None, None)),
                 "sigma": Domain([[1, 1], [1.5, 2.0]], edges=(None, None)),
             },
-            extra_args={"comp_shape": 2},
             size=1000,
             ref_rand=ref_rand,
         )
@@ -878,7 +875,6 @@ class TestNormalMixture:
                 "mu": Domain([[-5.0, 1.0, 2.5]], edges=(None, None)),
                 "sigma": Domain([[1.5, 2.0, 3.0]], edges=(None, None)),
             },
-            extra_args={"comp_shape": 3},
             size=1000,
             ref_rand=ref_rand,
         )
@@ -902,7 +898,6 @@ class TestMixtureVsLatent:
                 w=np.ones(npop) / npop,
                 mu=mus,
                 sigma=1e-5,
-                comp_shape=(nd, npop),
                 shape=nd,
             )
             z = Categorical("z", p=np.ones(npop) / npop, shape=nd)
@@ -1146,7 +1141,7 @@ class TestMixtureMoments:
     def test_single_univariate_component(self, weights, comp_dists, size, expected):
         with Model() as model:
             Mixture("x", weights, comp_dists, size=size)
-        assert_moment_is_expected(model, expected, check_finite_logp=False)
+        assert_support_point_is_expected(model, expected, check_finite_logp=False)
 
     @pytest.mark.parametrize(
         "weights, comp_dists, size, expected",
@@ -1199,7 +1194,7 @@ class TestMixtureMoments:
     def test_list_univariate_components(self, weights, comp_dists, size, expected):
         with Model() as model:
             Mixture("x", weights, comp_dists, size=size)
-        assert_moment_is_expected(model, expected, check_finite_logp=False)
+        assert_support_point_is_expected(model, expected, check_finite_logp=False)
 
     @pytest.mark.parametrize(
         "weights, comp_dists, size, expected",
@@ -1235,7 +1230,7 @@ class TestMixtureMoments:
     def test_single_multivariate_component(self, weights, comp_dists, size, expected):
         with Model() as model:
             Mixture("x", weights, comp_dists, size=size)
-        assert_moment_is_expected(model, expected, check_finite_logp=False)
+        assert_support_point_is_expected(model, expected, check_finite_logp=False)
 
     @pytest.mark.parametrize(
         "weights, comp_dists, size, expected",
@@ -1281,7 +1276,7 @@ class TestMixtureMoments:
     def test_list_multivariate_components(self, weights, comp_dists, size, expected):
         with Model() as model:
             Mixture("x", weights, comp_dists, size=size)
-        assert_moment_is_expected(model, expected, check_finite_logp=False)
+        assert_support_point_is_expected(model, expected, check_finite_logp=False)
 
 
 class TestMixtureDefaultTransforms:
@@ -1323,7 +1318,7 @@ class TestMixtureDefaultTransforms:
             mix2 = Mixture("mix2", [0.3, 0.7][::-1], comp_dists[::-1])
 
         ip = model.initial_point()
-        # We want an informative moment, other than zero
+        # We want an informative support_point, other than zero
         assert ip["mix1_interval__"] != 0
 
         expected_mix_ip = (
@@ -1495,10 +1490,10 @@ class TestZeroInflatedMixture:
             (0.2, np.arange(1, 5) * 5, (2, 4), np.full((2, 4), np.arange(1, 5))),
         ],
     )
-    def test_zero_inflated_poisson_moment(self, psi, mu, size, expected):
+    def test_zero_inflated_poisson_support_point(self, psi, mu, size, expected):
         with Model() as model:
             ZeroInflatedPoisson("x", psi=psi, mu=mu, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "psi, n, p, size, expected",
@@ -1515,10 +1510,10 @@ class TestZeroInflatedMixture:
             ),
         ],
     )
-    def test_zero_inflated_binomial_moment(self, psi, n, p, size, expected):
+    def test_zero_inflated_binomial_support_point(self, psi, n, p, size, expected):
         with Model() as model:
             ZeroInflatedBinomial("x", psi=psi, n=n, p=p, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "psi, mu, alpha, size, expected",
@@ -1541,10 +1536,10 @@ class TestZeroInflatedMixture:
             ),
         ],
     )
-    def test_zero_inflated_negative_binomial_moment(self, psi, mu, alpha, size, expected):
+    def test_zero_inflated_negative_binomial_support_point(self, psi, mu, alpha, size, expected):
         with Model() as model:
             ZeroInflatedNegativeBinomial("x", psi=psi, mu=mu, alpha=alpha, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "dist, non_psi_args",

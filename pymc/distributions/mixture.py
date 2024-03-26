@@ -29,8 +29,8 @@ from pymc.distributions.distribution import (
     DiracDelta,
     Distribution,
     SymbolicRandomVariable,
-    _moment,
-    moment,
+    _support_point,
+    support_point,
 )
 from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
 from pymc.distributions.transforms import _default_transform
@@ -296,10 +296,17 @@ class Mixture(Distribution):
         # Output mix_indexes rng update so that it can be updated in place
         mix_indexes_rng_next_ = mix_indexes_.owner.outputs[0]
 
+        s = ",".join(f"s{i}" for i in range(components[0].owner.op.ndim_supp))
+        if len(components) == 1:
+            comp_s = ",".join((*s, "w"))
+            signature = f"(),(w),({comp_s})->({s})"
+        else:
+            comps_s = ",".join(f"({s})" for _ in components)
+            signature = f"(),(w),{comps_s}->({s})"
         mix_op = MarginalMixtureRV(
             inputs=[mix_indexes_rng_, weights_, *components_],
             outputs=[mix_indexes_rng_next_, mix_out_],
-            ndim_supp=components[0].owner.op.ndim_supp,
+            signature=signature,
         )
 
         # Create the actual MarginalMixture variable
@@ -391,25 +398,25 @@ def marginal_mixture_logcdf(op, value, rng, weights, *components, **kwargs):
     return mix_logcdf
 
 
-@_moment.register(MarginalMixtureRV)
-def marginal_mixture_moment(op, rv, rng, weights, *components):
+@_support_point.register(MarginalMixtureRV)
+def marginal_mixture_support_point(op, rv, rng, weights, *components):
     ndim_supp = components[0].owner.op.ndim_supp
     weights = pt.shape_padright(weights, ndim_supp)
     mix_axis = -ndim_supp - 1
 
     if len(components) == 1:
-        moment_components = moment(components[0])
+        support_point_components = support_point(components[0])
 
     else:
-        moment_components = pt.stack(
-            [moment(component) for component in components],
+        support_point_components = pt.stack(
+            [support_point(component) for component in components],
             axis=mix_axis,
         )
 
-    mix_moment = pt.sum(weights * moment_components, axis=mix_axis)
+    mix_support_point = pt.sum(weights * support_point_components, axis=mix_axis)
     if components[0].dtype in discrete_types:
-        mix_moment = pt.round(mix_moment)
-    return mix_moment
+        mix_support_point = pt.round(mix_support_point)
+    return mix_support_point
 
 
 # List of transforms that can be used by Mixture, either because they do not require
@@ -517,10 +524,6 @@ class NormalMixture:
         the component standard deviations
     tau : tensor_like of float
         the component precisions
-    comp_shape : shape of the Normal component
-        notice that it should be different than the shape
-        of the mixture distribution, with the last axis representing
-        the number of components.
 
     Notes
     -----
@@ -547,16 +550,16 @@ class NormalMixture:
             y = pm.NormalMixture("y", w=weights, mu=μ, sigma=σ, observed=data)
     """
 
-    def __new__(cls, name, w, mu, sigma=None, tau=None, comp_shape=(), **kwargs):
+    def __new__(cls, name, w, mu, sigma=None, tau=None, **kwargs):
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        return Mixture(name, w, Normal.dist(mu, sigma=sigma, size=comp_shape), **kwargs)
+        return Mixture(name, w, Normal.dist(mu, sigma=sigma), **kwargs)
 
     @classmethod
-    def dist(cls, w, mu, sigma=None, tau=None, comp_shape=(), **kwargs):
+    def dist(cls, w, mu, sigma=None, tau=None, **kwargs):
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        return Mixture.dist(w, Normal.dist(mu, sigma=sigma, size=comp_shape), **kwargs)
+        return Mixture.dist(w, Normal.dist(mu, sigma=sigma), **kwargs)
 
 
 def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):
@@ -622,7 +625,7 @@ class ZeroInflatedPoisson:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of Poisson variates (0 < psi < 1)
+        Expected proportion of Poisson draws (0 < psi < 1)
     mu : tensor_like of float
         Expected number of occurrences during the given interval
         (mu >= 0).
@@ -685,7 +688,7 @@ class ZeroInflatedBinomial:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of Binomial variates (0 < psi < 1)
+        Expected proportion of Binomial draws (0 < psi < 1)
     n : tensor_like of int
         Number of Bernoulli trials (n >= 0).
     p : tensor_like of float
@@ -757,7 +760,9 @@ class ZeroInflatedNegativeBinomial:
     ========  ==========================
     Support   :math:`x \in \mathbb{N}_0`
     Mean      :math:`\psi\mu`
-    Var       :math:`\psi\mu +  \left (1 + \frac{\mu}{\alpha} + \frac{1-\psi}{\mu} \right)`
+    Var       .. math::
+                  \psi \left(\frac{{\mu^2}}{{\alpha}}\right) +\
+                  \psi \mu + \psi \mu^2 - \psi^2 \mu^2
     ========  ==========================
 
     The zero inflated negative binomial distribution can be parametrized
@@ -772,7 +777,7 @@ class ZeroInflatedNegativeBinomial:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of NegativeBinomial variates (0 < psi < 1)
+        Expected proportion of NegativeBinomial draws (0 < psi < 1)
     mu : tensor_like of float
         Poisson distribution parameter (mu > 0).
     alpha : tensor_like of float
@@ -860,7 +865,7 @@ class HurdlePoisson:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of Poisson variates (0 < psi < 1)
+        Expected proportion of Poisson draws (0 < psi < 1)
     mu : tensor_like of float
         Expected number of occurrences (mu >= 0).
     """
@@ -904,7 +909,7 @@ class HurdleNegativeBinomial:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of Negative Binomial variates (0 < psi < 1)
+        Expected proportion of Negative Binomial draws (0 < psi < 1)
     alpha : tensor_like of float
         Gamma distribution shape parameter (alpha > 0).
     mu : tensor_like of float
@@ -956,7 +961,7 @@ class HurdleGamma:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of Gamma variates (0 < psi < 1)
+        Expected proportion of Gamma draws (0 < psi < 1)
     alpha : tensor_like of float, optional
         Shape parameter (alpha > 0).
     beta : tensor_like of float, optional
@@ -1008,7 +1013,7 @@ class HurdleLogNormal:
     Parameters
     ----------
     psi : tensor_like of float
-        Expected proportion of LogNormal variates (0 < psi < 1)
+        Expected proportion of LogNormal draws (0 < psi < 1)
     mu : tensor_like of float, default 0
         Location parameter.
     sigma : tensor_like of float, optional

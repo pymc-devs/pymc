@@ -47,6 +47,7 @@ from pymc.distributions.multivariate import PosDefMatrix
 from pymc.initial_point import StartDict
 from pymc.logprob.utils import CheckParameterValue
 from pymc.sampling.mcmc import _init_jitter
+from pymc.stats.convergence import log_warnings, run_convergence_checks
 from pymc.util import (
     RandomSeed,
     RandomState,
@@ -157,25 +158,19 @@ def get_jaxified_logp(model: Model, negative_logp=True) -> Callable:
     return logp_fn_wrap
 
 
-# Adopted from arviz numpyro extractor
-def _sample_stats_to_xarray(posterior):
-    """Extract sample_stats from NumPyro posterior."""
-    rename_key = {
-        "potential_energy": "lp",
-        "adapt_state.step_size": "step_size",
-        "num_steps": "n_steps",
-        "accept_prob": "acceptance_rate",
-    }
-    data = {}
-    for stat, value in posterior.get_extra_fields(group_by_chain=True).items():
-        if isinstance(value, (dict, tuple)):
-            continue
-        name = rename_key.get(stat, stat)
-        value = value.copy()
-        data[name] = value
-        if stat == "num_steps":
-            data["tree_depth"] = np.log2(value).astype(int) + 1
-    return data
+def _get_log_likelihood(
+    model: Model,
+    samples,
+    backend: Optional[Literal["cpu", "gpu"]] = None,
+    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
+) -> dict:
+    """Compute log-likelihood for all observations"""
+    elemwise_logp = model.logp(model.observed_RVs, sum=False)
+    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=elemwise_logp)
+    result = _postprocess_samples(
+        jax_fn, samples, backend, postprocessing_vectorize=postprocessing_vectorize
+    )
+    return {v.name: r for v, r in zip(model.observed_RVs, result)}
 
 
 def _device_put(input, device: str):
@@ -201,6 +196,77 @@ def _postprocess_samples(
         return jax.vmap(jax.vmap(jax_fn))(*_device_put(raw_mcmc_samples, postprocessing_backend))
     else:
         raise ValueError(f"Unrecognized postprocessing_vectorize: {postprocessing_vectorize}")
+
+
+def _get_batched_jittered_initial_points(
+    model: Model,
+    chains: int,
+    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
+    random_seed: RandomSeed,
+    jitter: bool = True,
+    jitter_max_retries: int = 10,
+) -> Union[np.ndarray, list[np.ndarray]]:
+    """Get jittered initial point in format expected by NumPyro MCMC kernel
+
+    Returns
+    -------
+    out: list of ndarrays
+        list with one item per variable and number of chains as batch dimension.
+        Each item has shape `(chains, *var.shape)`
+    """
+
+    initial_points = _init_jitter(
+        model,
+        initvals,
+        seeds=_get_seeds_per_chain(random_seed, chains),
+        jitter=jitter,
+        jitter_max_retries=jitter_max_retries,
+    )
+    initial_points_values = [list(initial_point.values()) for initial_point in initial_points]
+    if chains == 1:
+        return initial_points_values[0]
+    return [np.stack(init_state) for init_state in zip(*initial_points_values)]
+
+
+def _blackjax_inference_loop(
+    seed, init_position, logprob_fn, draws, tune, target_accept, **adaptation_kwargs
+):
+    import blackjax
+
+    algorithm_name = adaptation_kwargs.pop("algorithm", "nuts")
+    if algorithm_name == "nuts":
+        algorithm = blackjax.nuts
+    elif algorithm_name == "hmc":
+        algorithm = blackjax.hmc
+    else:
+        raise ValueError("Only supporting 'nuts' or 'hmc' as algorithm to draw samples.")
+
+    adapt = blackjax.window_adaptation(
+        algorithm=algorithm,
+        logdensity_fn=logprob_fn,
+        target_acceptance_rate=target_accept,
+        **adaptation_kwargs,
+    )
+    (last_state, tuned_params), _ = adapt.run(seed, init_position, num_steps=tune)
+    kernel = algorithm(logprob_fn, **tuned_params).step
+
+    def _one_step(state, xs):
+        _, rng_key = xs
+        state, info = kernel(rng_key, state)
+        return state, (state, info)
+
+    progress_bar = adaptation_kwargs.pop("progress_bar", False)
+    if progress_bar:
+        from blackjax.progress_bar import progress_bar_scan
+
+        one_step = jax.jit(progress_bar_scan(draws)(_one_step))
+    else:
+        one_step = jax.jit(_one_step)
+
+    keys = jax.random.split(seed, draws)
+    _, (states, infos) = jax.lax.scan(one_step, last_state, (jnp.arange(draws), keys))
+
+    return states, infos
 
 
 def _blackjax_stats_to_dict(sample_stats, potential_energy) -> dict:
@@ -237,121 +303,17 @@ def _blackjax_stats_to_dict(sample_stats, potential_energy) -> dict:
     return converted_stats
 
 
-def _get_log_likelihood(
+def _sample_blackjax_nuts(
     model: Model,
-    samples,
-    backend: Optional[Literal["cpu", "gpu"]] = None,
-    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
-) -> dict:
-    """Compute log-likelihood for all observations"""
-    elemwise_logp = model.logp(model.observed_RVs, sum=False)
-    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=elemwise_logp)
-    result = _postprocess_samples(
-        jax_fn, samples, backend, postprocessing_vectorize=postprocessing_vectorize
-    )
-    return {v.name: r for v, r in zip(model.observed_RVs, result)}
-
-
-def _get_batched_jittered_initial_points(
-    model: Model,
+    target_accept: float,
+    tune: int,
+    draws: int,
     chains: int,
-    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
-    random_seed: RandomSeed,
-    jitter: bool = True,
-    jitter_max_retries: int = 10,
-) -> Union[np.ndarray, list[np.ndarray]]:
-    """Get jittered initial point in format expected by NumPyro MCMC kernel
-
-    Returns
-    -------
-    out: list of ndarrays
-        list with one item per variable and number of chains as batch dimension.
-        Each item has shape `(chains, *var.shape)`
-    """
-
-    initial_points = _init_jitter(
-        model,
-        initvals,
-        seeds=_get_seeds_per_chain(random_seed, chains),
-        jitter=jitter,
-        jitter_max_retries=jitter_max_retries,
-    )
-    initial_points_values = [list(initial_point.values()) for initial_point in initial_points]
-    if chains == 1:
-        return initial_points_values[0]
-    return [np.stack(init_state) for init_state in zip(*initial_points_values)]
-
-
-def _update_coords_and_dims(
-    coords: dict[str, Any], dims: dict[str, Any], idata_kwargs: dict[str, Any]
-) -> None:
-    """Update 'coords' and 'dims' dicts with values in 'idata_kwargs'."""
-    if "coords" in idata_kwargs:
-        coords.update(idata_kwargs.pop("coords"))
-    if "dims" in idata_kwargs:
-        dims.update(idata_kwargs.pop("dims"))
-
-
-def _blackjax_inference_loop(
-    seed, init_position, logprob_fn, draws, tune, target_accept, **adaptation_kwargs
-):
-    import blackjax
-
-    algorithm_name = adaptation_kwargs.pop("algorithm", "nuts")
-    if algorithm_name == "nuts":
-        algorithm = blackjax.nuts
-    elif algorithm_name == "hmc":
-        algorithm = blackjax.hmc
-    else:
-        raise ValueError("Only supporting 'nuts' or 'hmc' as algorithm to draw samples.")
-
-    adapt = blackjax.window_adaptation(
-        algorithm=algorithm,
-        logdensity_fn=logprob_fn,
-        target_acceptance_rate=target_accept,
-        **adaptation_kwargs,
-    )
-    (last_state, tuned_params), _ = adapt.run(seed, init_position, num_steps=tune)
-    kernel = algorithm(logprob_fn, **tuned_params).step
-
-    def _one_step(state, xs):
-        _, rng_key = xs
-        state, info = kernel(rng_key, state)
-        return state, (state, info)
-
-    progress_bar = adaptation_kwargs.pop("progress_bar", False)
-    if progress_bar:
-        from blackjax.progress_bar import progress_bar_scan
-
-        logger.info("Sample with tuned parameters")
-        one_step = jax.jit(progress_bar_scan(draws)(_one_step))
-    else:
-        one_step = jax.jit(_one_step)
-
-    keys = jax.random.split(seed, draws)
-    _, (states, infos) = jax.lax.scan(one_step, last_state, (jnp.arange(draws), keys))
-
-    return states, infos
-
-
-def sample_blackjax_nuts(
-    draws: int = 1000,
-    tune: int = 1000,
-    chains: int = 4,
-    target_accept: float = 0.8,
-    random_seed: Optional[RandomState] = None,
-    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
-    jitter: bool = True,
-    model: Optional[Model] = None,
-    var_names: Optional[Sequence[str]] = None,
-    progress_bar: bool = False,
-    keep_untransformed: bool = False,
-    chain_method: str = "parallel",
-    postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
-    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
-    idata_kwargs: Optional[dict[str, Any]] = None,
-    adaptation_kwargs: Optional[dict[str, Any]] = None,
-    postprocessing_chunks=None,  # deprecated
+    chain_method: Optional[str],
+    progressbar: bool,
+    random_seed: int,
+    initial_points,
+    nuts_kwargs,
 ) -> az.InferenceData:
     """
     Draw samples from the posterior using the NUTS method from the ``blackjax`` library.
@@ -409,58 +371,20 @@ def sample_blackjax_nuts(
         with their respective sample stats and pointwise log likeihood values (unless
         skipped with ``idata_kwargs``).
     """
-    if postprocessing_chunks is not None:
-        import warnings
 
-        warnings.warn(
-            "postprocessing_chunks is deprecated due to being unstable, "
-            "using postprocessing_vectorize='scan' instead",
-            DeprecationWarning,
-        )
     import blackjax
-
-    model = modelcontext(model)
-
-    if var_names is None:
-        var_names = model.unobserved_value_vars
-
-    vars_to_sample = list(get_default_varnames(var_names, include_transformed=keep_untransformed))
-
-    (random_seed,) = _get_seeds_per_chain(random_seed, 1)
-
-    tic1 = datetime.now()
-    logger.info("Compiling...")
-
-    init_params = _get_batched_jittered_initial_points(
-        model=model,
-        chains=chains,
-        initvals=initvals,
-        random_seed=random_seed,
-        jitter=jitter,
-    )
-
-    if chains == 1:
-        init_params = [np.stack(init_state) for init_state in zip(init_params)]
-
-    logprob_fn = get_jaxified_logp(model)
-
-    seed = jax.random.PRNGKey(random_seed)
-    keys = jax.random.split(seed, chains)
-
-    if adaptation_kwargs is None:
-        adaptation_kwargs = {}
 
     # Adapted from numpyro
     if chain_method == "parallel":
         map_fn = jax.pmap
-        if progress_bar:
+        if progressbar:
             import warnings
 
             warnings.warn(
                 "BlackJax currently only display progress bar correctly under "
                 "`chain_method == 'vectorized'`. Setting `progressbar=False`."
             )
-            progress_bar = False
+            progressbar = False
     elif chain_method == "vectorized":
         map_fn = jax.vmap
     else:
@@ -468,216 +392,75 @@ def sample_blackjax_nuts(
             "Only supporting the following methods to draw chains:" ' "parallel" or "vectorized"'
         )
 
-    adaptation_kwargs["progress_bar"] = progress_bar
+    if chains == 1:
+        initial_points = [np.stack(init_state) for init_state in zip(initial_points)]
+
+    logprob_fn = get_jaxified_logp(model)
+
+    seed = jax.random.PRNGKey(random_seed)
+    keys = jax.random.split(seed, chains)
+
+    nuts_kwargs["progress_bar"] = progressbar
     get_posterior_samples = partial(
         _blackjax_inference_loop,
         logprob_fn=logprob_fn,
         tune=tune,
         draws=draws,
         target_accept=target_accept,
-        **adaptation_kwargs,
+        **nuts_kwargs,
     )
 
-    tic2 = datetime.now()
-    logger.info(f"Compilation time = {tic2 - tic1}")
-
-    logger.info("Sampling...")
-
-    states, stats = map_fn(get_posterior_samples)(keys, init_params)
+    states, stats = map_fn(get_posterior_samples)(keys, initial_points)
     raw_mcmc_samples = states.position
     potential_energy = states.logdensity.block_until_ready()
-    tic3 = datetime.now()
-    logger.info(f"Sampling time = {tic3 - tic2}")
+    sample_stats = _blackjax_stats_to_dict(stats, potential_energy)
 
-    logger.info("Transforming variables...")
-    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
-    result = _postprocess_samples(
-        jax_fn,
-        raw_mcmc_samples,
-        postprocessing_backend=postprocessing_backend,
-        postprocessing_vectorize=postprocessing_vectorize,
-    )
-    mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
-    mcmc_stats = _blackjax_stats_to_dict(stats, potential_energy)
-    tic4 = datetime.now()
-    logger.info(f"Transformation time = {tic4 - tic3}")
+    return raw_mcmc_samples, sample_stats, blackjax
 
-    if idata_kwargs is None:
-        idata_kwargs = {}
-    else:
-        idata_kwargs = idata_kwargs.copy()
 
-    if idata_kwargs.pop("log_likelihood", False):
-        tic5 = datetime.now()
-        logger.info("Computing Log Likelihood...")
-        log_likelihood = _get_log_likelihood(
-            model,
-            raw_mcmc_samples,
-            backend=postprocessing_backend,
-            postprocessing_vectorize=postprocessing_vectorize,
-        )
-        tic6 = datetime.now()
-        logger.info(f"Log Likelihood time = {tic6 - tic5}")
-    else:
-        log_likelihood = None
-
-    attrs = {
-        "sampling_time": (tic3 - tic2).total_seconds(),
+# Adopted from arviz numpyro extractor
+def _numpyro_stats_to_dict(posterior):
+    """Extract sample_stats from NumPyro posterior."""
+    rename_key = {
+        "potential_energy": "lp",
+        "adapt_state.step_size": "step_size",
+        "num_steps": "n_steps",
+        "accept_prob": "acceptance_rate",
     }
-
-    coords, dims = coords_and_dims_for_inferencedata(model)
-    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
-    # and drop keys 'coords' and 'dims' from 'idata_kwargs' if present.
-    _update_coords_and_dims(coords=coords, dims=dims, idata_kwargs=idata_kwargs)
-    # Use 'partial' to set default arguments before passing 'idata_kwargs'
-    to_trace = partial(
-        az.from_dict,
-        log_likelihood=log_likelihood,
-        observed_data=find_observations(model),
-        constant_data=find_constants(model),
-        sample_stats=mcmc_stats,
-        coords=coords,
-        dims=dims,
-        attrs=make_attrs(attrs, library=blackjax),
-    )
-    az_trace = to_trace(posterior=mcmc_samples, **idata_kwargs)
-
-    return az_trace
+    data = {}
+    for stat, value in posterior.get_extra_fields(group_by_chain=True).items():
+        if isinstance(value, (dict, tuple)):
+            continue
+        name = rename_key.get(stat, stat)
+        value = value.copy()
+        data[name] = value
+        if stat == "num_steps":
+            data["tree_depth"] = np.log2(value).astype(int) + 1
+    return data
 
 
-def _numpyro_nuts_defaults() -> dict[str, Any]:
-    """Defaults parameters for Numpyro NUTS."""
-    return {
-        "adapt_step_size": True,
-        "adapt_mass_matrix": True,
-        "dense_mass": False,
-    }
-
-
-def _update_numpyro_nuts_kwargs(nuts_kwargs: Optional[dict[str, Any]]) -> dict[str, Any]:
-    """Update default Numpyro NUTS parameters with new values."""
-    nuts_kwargs_defaults = _numpyro_nuts_defaults()
-    if nuts_kwargs is not None:
-        nuts_kwargs_defaults.update(nuts_kwargs)
-    return nuts_kwargs_defaults
-
-
-def sample_numpyro_nuts(
-    draws: int = 1000,
-    tune: int = 1000,
-    chains: int = 4,
-    target_accept: float = 0.8,
-    random_seed: Optional[RandomState] = None,
-    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
-    jitter: bool = True,
-    model: Optional[Model] = None,
-    var_names: Optional[Sequence[str]] = None,
-    progressbar: bool = True,
-    keep_untransformed: bool = False,
-    chain_method: str = "parallel",
-    postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
-    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
-    idata_kwargs: Optional[dict] = None,
-    nuts_kwargs: Optional[dict] = None,
-    postprocessing_chunks=None,
-) -> az.InferenceData:
-    """
-    Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
-
-    Parameters
-    ----------
-    draws : int, default 1000
-        The number of samples to draw. The number of tuned samples are discarded by
-        default.
-    tune : int, default 1000
-        Number of iterations to tune. Samplers adjust the step sizes, scalings or
-        similar during tuning. Tuning samples will be drawn in addition to the number
-        specified in the ``draws`` argument.
-    chains : int, default 4
-        The number of chains to sample.
-    target_accept : float in [0, 1].
-        The step size is tuned such that we approximate this acceptance rate. Higher
-        values like 0.9 or 0.95 often work better for problematic posteriors.
-    random_seed : int, RandomState or Generator, optional
-        Random seed used by the sampling steps.
-    initvals: StartDict or Sequence[Optional[StartDict]], optional
-        Initial values for random variables provided as a dictionary (or sequence of
-        dictionaries) mapping the random variable (by name or reference) to desired
-        starting values.
-    jitter: bool, default True
-        If True, add jitter to initial points.
-    model : Model, optional
-        Model to sample from. The model needs to have free random variables. When inside
-        a ``with`` model context, it defaults to that model, otherwise the model must be
-        passed explicitly.
-    var_names : sequence of str, optional
-        Names of variables for which to compute the posterior samples. Defaults to all
-        variables in the posterior.
-    progressbar : bool, default True
-        Whether or not to display a progress bar in the command line. The bar shows the
-        percentage of completion, the sampling speed in samples per second (SPS), and
-        the estimated remaining time until completion ("expected time of arrival"; ETA).
-    keep_untransformed : bool, default False
-        Include untransformed variables in the posterior samples. Defaults to False.
-    chain_method : str, default "parallel"
-        Specify how samples should be drawn. The choices include "sequential",
-        "parallel", and "vectorized".
-    postprocessing_backend: Optional[Literal["cpu", "gpu"]], default None,
-        Specify how postprocessing should be computed. gpu or cpu
-    postprocessing_vectorize: Literal["vmap", "scan"], default "scan"
-        How to vectorize the postprocessing: vmap or sequential scan
-    idata_kwargs : dict, optional
-        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
-        value for the ``log_likelihood`` key to indicate that the pointwise log
-        likelihood should not be included in the returned object. Values for
-        ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
-        the ``model`` argument if not provided in ``idata_kwargs``. If ``coords`` and
-        ``dims`` are provided, they are used to update the inferred dictionaries.
-    nuts_kwargs: dict, optional
-        Keyword arguments for :func:`numpyro.infer.NUTS`.
-
-    Returns
-    -------
-    InferenceData
-        ArviZ ``InferenceData`` object that contains the posterior samples, together
-        with their respective sample stats and pointwise log likeihood values (unless
-        skipped with ``idata_kwargs``).
-    """
-    if postprocessing_chunks is not None:
-        import warnings
-
-        warnings.warn(
-            "postprocessing_chunks is deprecated due to being unstable, "
-            "using postprocessing_vectorize='scan' instead",
-            DeprecationWarning,
-        )
+def _sample_numpyro_nuts(
+    model: Model,
+    target_accept: float,
+    tune: int,
+    draws: int,
+    chains: int,
+    chain_method: Optional[str],
+    progressbar: bool,
+    random_seed: int,
+    initial_points,
+    nuts_kwargs: dict[str, Any],
+):
     import numpyro
 
     from numpyro.infer import MCMC, NUTS
 
-    model = modelcontext(model)
-
-    if var_names is None:
-        var_names = model.unobserved_value_vars
-
-    vars_to_sample = list(get_default_varnames(var_names, include_transformed=keep_untransformed))
-
-    (random_seed,) = _get_seeds_per_chain(random_seed, 1)
-
-    tic1 = datetime.now()
-    logger.info("Compiling...")
-
-    init_params = _get_batched_jittered_initial_points(
-        model=model,
-        chains=chains,
-        initvals=initvals,
-        random_seed=random_seed,
-        jitter=jitter,
-    )
-
     logp_fn = get_jaxified_logp(model, negative_logp=False)
 
-    nuts_kwargs = _update_numpyro_nuts_kwargs(nuts_kwargs)
+    nuts_kwargs.setdefault("adapt_step_size", True)
+    nuts_kwargs.setdefault("adapt_mass_matrix", True)
+    nuts_kwargs.setdefault("dense_mass", False)
+
     nuts_kernel = NUTS(
         potential_fn=logp_fn,
         target_accept_prob=target_accept,
@@ -694,18 +477,13 @@ def sample_numpyro_nuts(
         progress_bar=progressbar,
     )
 
-    tic2 = datetime.now()
-    logger.info(f"Compilation time = {tic2 - tic1}")
-
-    logger.info("Sampling...")
-
     map_seed = jax.random.PRNGKey(random_seed)
     if chains > 1:
         map_seed = jax.random.split(map_seed, chains)
 
     pmap_numpyro.run(
         map_seed,
-        init_params=init_params,
+        init_params=initial_points,
         extra_fields=(
             "num_steps",
             "potential_energy",
@@ -717,11 +495,89 @@ def sample_numpyro_nuts(
     )
 
     raw_mcmc_samples = pmap_numpyro.get_samples(group_by_chain=True)
+    sample_stats = _numpyro_stats_to_dict(pmap_numpyro)
+    return raw_mcmc_samples, sample_stats, numpyro
 
-    tic3 = datetime.now()
-    logger.info(f"Sampling time = {tic3 - tic2}")
 
-    logger.info("Transforming variables...")
+def sample_jax_nuts(
+    draws: int = 1000,
+    *,
+    tune: int = 1000,
+    chains: int = 4,
+    target_accept: float = 0.8,
+    random_seed: Optional[RandomState] = None,
+    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    jitter: bool = True,
+    model: Optional[Model] = None,
+    var_names: Optional[Sequence[str]] = None,
+    nuts_kwargs: Optional[dict] = None,
+    progressbar: bool = True,
+    keep_untransformed: bool = False,
+    chain_method: str = "parallel",
+    postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
+    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
+    postprocessing_chunks=None,
+    idata_kwargs: Optional[dict] = None,
+    compute_convergence_checks: bool = True,
+    nuts_sampler: Literal["numpyro", "blackjax"],
+) -> az.InferenceData:
+    if postprocessing_chunks is not None:
+        import warnings
+
+        warnings.warn(
+            "postprocessing_chunks is deprecated due to being unstable, "
+            "using postprocessing_vectorize='scan' instead",
+            DeprecationWarning,
+        )
+
+    model = modelcontext(model)
+
+    if var_names is not None:
+        filtered_var_names = [v for v in model.unobserved_value_vars if v.name in var_names]
+    else:
+        filtered_var_names = model.unobserved_value_vars
+
+    if nuts_kwargs is None:
+        nuts_kwargs = {}
+    else:
+        nuts_kwargs = nuts_kwargs.copy()
+
+    vars_to_sample = list(
+        get_default_varnames(filtered_var_names, include_transformed=keep_untransformed)
+    )
+
+    (random_seed,) = _get_seeds_per_chain(random_seed, 1)
+
+    initial_points = _get_batched_jittered_initial_points(
+        model=model,
+        chains=chains,
+        initvals=initvals,
+        random_seed=random_seed,
+        jitter=jitter,
+    )
+
+    if nuts_sampler == "numpyro":
+        sampler_fn = _sample_numpyro_nuts
+    elif nuts_sampler == "blackjax":
+        sampler_fn = _sample_blackjax_nuts
+    else:
+        raise ValueError(f"{nuts_sampler=} not recognized")
+
+    tic1 = datetime.now()
+    raw_mcmc_samples, sample_stats, library = sampler_fn(
+        model=model,
+        target_accept=target_accept,
+        tune=tune,
+        draws=draws,
+        chains=chains,
+        chain_method=chain_method,
+        progressbar=progressbar,
+        random_seed=random_seed,
+        initial_points=initial_points,
+        nuts_kwargs=nuts_kwargs,
+    )
+    tic2 = datetime.now()
+
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
     result = _postprocess_samples(
         jax_fn,
@@ -731,48 +587,51 @@ def sample_numpyro_nuts(
     )
     mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
 
-    tic4 = datetime.now()
-    logger.info(f"Transformation time = {tic4 - tic3}")
-
     if idata_kwargs is None:
         idata_kwargs = {}
     else:
         idata_kwargs = idata_kwargs.copy()
 
     if idata_kwargs.pop("log_likelihood", False):
-        tic5 = datetime.now()
-        logger.info("Computing Log Likelihood...")
         log_likelihood = _get_log_likelihood(
             model,
             raw_mcmc_samples,
             backend=postprocessing_backend,
             postprocessing_vectorize=postprocessing_vectorize,
         )
-        tic6 = datetime.now()
-        logger.info(
-            f"Log Likelihood time = {tic6 - tic5}",
-        )
     else:
         log_likelihood = None
 
     attrs = {
-        "sampling_time": (tic3 - tic2).total_seconds(),
+        "sampling_time": (tic2 - tic1).total_seconds(),
     }
 
     coords, dims = coords_and_dims_for_inferencedata(model)
     # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
     # and drop keys 'coords' and 'dims' from 'idata_kwargs' if present.
-    _update_coords_and_dims(coords=coords, dims=dims, idata_kwargs=idata_kwargs)
+    if "coords" in idata_kwargs:
+        coords.update(idata_kwargs.pop("coords"))
+    if "dims" in idata_kwargs:
+        dims.update(idata_kwargs.pop("dims"))
     # Use 'partial' to set default arguments before passing 'idata_kwargs'
     to_trace = partial(
         az.from_dict,
         log_likelihood=log_likelihood,
         observed_data=find_observations(model),
         constant_data=find_constants(model),
-        sample_stats=_sample_stats_to_xarray(pmap_numpyro),
+        sample_stats=sample_stats,
         coords=coords,
         dims=dims,
-        attrs=make_attrs(attrs, library=numpyro),
+        attrs=make_attrs(attrs, library=library),
     )
     az_trace = to_trace(posterior=mcmc_samples, **idata_kwargs)
+
+    if compute_convergence_checks:
+        warns = run_convergence_checks(az_trace, model)
+        log_warnings(warns)
+
     return az_trace
+
+
+sample_numpyro_nuts = partial(sample_jax_nuts, nuts_sampler="numpyro")
+sample_blackjax_nuts = partial(sample_jax_nuts, nuts_sampler="blackjax")

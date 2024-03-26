@@ -60,12 +60,14 @@ Loading a saved backend
 Saved backends can be loaded using `arviz.from_netcdf`
 
 """
+
 from collections.abc import Mapping, Sequence
 from copy import copy
 from typing import Optional, Union
 
 import numpy as np
 
+from pytensor.tensor.variable import TensorVariable
 from typing_extensions import TypeAlias
 
 from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
@@ -98,11 +100,12 @@ def _init_trace(
     stats_dtypes: list[dict[str, type]],
     trace: Optional[BaseTrace],
     model: Model,
+    trace_vars: Optional[list[TensorVariable]] = None,
 ) -> BaseTrace:
     """Initializes a trace backend for a chain."""
     strace: BaseTrace
     if trace is None:
-        strace = NDArray(model=model)
+        strace = NDArray(model=model, vars=trace_vars)
     elif isinstance(trace, BaseTrace):
         if len(trace) > 0:
             raise ValueError("Continuation of traces is no longer supported.")
@@ -122,6 +125,7 @@ def init_traces(
     step: Union[BlockedStep, CompoundStep],
     initial_point: Mapping[str, np.ndarray],
     model: Model,
+    trace_vars: Optional[list[TensorVariable]] = None,
 ) -> tuple[Optional[RunType], Sequence[IBaseTrace]]:
     """Initializes a trace recorder for each chain."""
     if HAS_MCB and isinstance(backend, Backend):
@@ -141,6 +145,7 @@ def init_traces(
             chain_number=chain_number,
             trace=backend,
             model=model,
+            trace_vars=trace_vars,
         )
         for chain_number in range(chains)
     ]

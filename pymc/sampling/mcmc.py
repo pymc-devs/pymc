@@ -256,7 +256,7 @@ def all_continuous(vars):
 
 
 def _sample_external_nuts(
-    sampler: str,
+    sampler: Literal["nutpie", "numpyro", "blackjax"],
     draws: int,
     tune: int,
     chains: int,
@@ -264,6 +264,7 @@ def _sample_external_nuts(
     random_seed: Union[RandomState, None],
     initvals: Union[StartDict, Sequence[Optional[StartDict]], None],
     model: Model,
+    var_names: Optional[Sequence[str]],
     progressbar: bool,
     idata_kwargs: Optional[dict],
     nuts_sampler_kwargs: Optional[dict],
@@ -290,6 +291,11 @@ def _sample_external_nuts(
         if idata_kwargs is not None:
             warnings.warn(
                 "`idata_kwargs` are currently ignored by the nutpie sampler",
+                UserWarning,
+            )
+        if var_names is not None:
+            warnings.warn(
+                "`var_names` are currently ignored by the nutpie sampler",
                 UserWarning,
             )
         compiled_model = nutpie.compile_pymc_model(model)
@@ -337,10 +343,10 @@ def _sample_external_nuts(
         )
         return idata
 
-    elif sampler == "numpyro":
+    elif sampler in ("numpyro", "blackjax"):
         import pymc.sampling.jax as pymc_jax
 
-        idata = pymc_jax.sample_numpyro_nuts(
+        idata = pymc_jax.sample_jax_nuts(
             draws=draws,
             tune=tune,
             chains=chains,
@@ -348,24 +354,9 @@ def _sample_external_nuts(
             random_seed=random_seed,
             initvals=initvals,
             model=model,
+            var_names=var_names,
             progressbar=progressbar,
-            idata_kwargs=idata_kwargs,
-            **nuts_sampler_kwargs,
-        )
-        return idata
-
-    elif sampler == "blackjax":
-        import pymc.sampling.jax as pymc_jax
-
-        idata = pymc_jax.sample_blackjax_nuts(
-            draws=draws,
-            tune=tune,
-            chains=chains,
-            target_accept=target_accept,
-            random_seed=random_seed,
-            initvals=initvals,
-            model=model,
-            progress_bar=progressbar,
+            nuts_sampler=sampler,
             idata_kwargs=idata_kwargs,
             **nuts_sampler_kwargs,
         )
@@ -387,7 +378,8 @@ def sample(
     random_seed: RandomState = None,
     progressbar: bool = True,
     step=None,
-    nuts_sampler: str = "pymc",
+    var_names: Optional[Sequence[str]] = None,
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -402,8 +394,7 @@ def sample(
     callback=None,
     mp_ctx=None,
     **kwargs,
-) -> InferenceData:
-    ...
+) -> InferenceData: ...
 
 
 @overload
@@ -416,7 +407,8 @@ def sample(
     random_seed: RandomState = None,
     progressbar: bool = True,
     step=None,
-    nuts_sampler: str = "pymc",
+    var_names: Optional[Sequence[str]] = None,
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -432,8 +424,7 @@ def sample(
     mp_ctx=None,
     model: Optional[Model] = None,
     **kwargs,
-) -> MultiTrace:
-    ...
+) -> MultiTrace: ...
 
 
 def sample(
@@ -445,7 +436,8 @@ def sample(
     random_seed: RandomState = None,
     progressbar: bool = True,
     step=None,
-    nuts_sampler: str = "pymc",
+    var_names: Optional[Sequence[str]] = None,
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -496,6 +488,8 @@ def sample(
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically. By default the NUTS step
         method will be used, if appropriate to the model.
+    var_names : list of str, optional
+        Names of variables to be stored in the trace. Defaults to all free variables and deterministics.
     nuts_sampler : str
         Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"].
         This requires the chosen sampler to be installed.
@@ -665,8 +659,11 @@ def sample(
     if draws == 0:
         msg = "Tuning was enabled throughout the whole trace."
         _log.warning(msg)
-    elif draws < 500:
-        msg = "Only %s samples in chain." % draws
+    elif draws < 100:
+        msg = (
+            "Only %s samples per chain. Reliable r-hat and ESS diagnostics require longer chains for accurate estimate."
+            % draws
+        )
         _log.warning(msg)
 
     auto_nuts_init = True
@@ -695,6 +692,7 @@ def sample(
             random_seed=random_seed,
             initvals=initvals,
             model=model,
+            var_names=var_names,
             progressbar=progressbar,
             idata_kwargs=idata_kwargs,
             nuts_sampler_kwargs=nuts_sampler_kwargs,
@@ -737,12 +735,19 @@ def sample(
         model.check_start_vals(ip)
         _check_start_shape(model, ip)
 
+    if var_names is not None:
+        trace_vars = [v for v in model.unobserved_RVs if v.name in var_names]
+        assert len(trace_vars) == len(var_names), "Not all var_names were found in the model"
+    else:
+        trace_vars = None
+
     # Create trace backends for each chain
     run, traces = init_traces(
         backend=trace,
         chains=chains,
         expected_length=draws + tune,
         step=step,
+        trace_vars=trace_vars,
         initial_point=ip,
         model=model,
     )
@@ -754,6 +759,7 @@ def sample(
         "traces": traces,
         "chains": chains,
         "tune": tune,
+        "var_names": var_names,
         "progressbar": progressbar,
         "model": model,
         "cores": cores,

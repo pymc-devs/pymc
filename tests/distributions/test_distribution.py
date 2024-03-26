@@ -43,9 +43,9 @@ from pymc.distributions.distribution import (
     CustomSymbolicDistRV,
     PartialObservedRV,
     SymbolicRandomVariable,
-    _moment,
+    _support_point,
     create_partial_observed_rv,
-    moment,
+    support_point,
 )
 from pymc.distributions.shape_utils import change_dist_size, rv_size_is_none, to_tuple
 from pymc.distributions.transforms import log
@@ -57,7 +57,7 @@ from pymc.sampling import draw, sample
 from pymc.testing import (
     BaseTestDistributionRandom,
     I,
-    assert_moment_is_expected,
+    assert_support_point_is_expected,
     check_logcdf,
     check_logp,
 )
@@ -119,19 +119,19 @@ def test_logp_gives_migration_instructions(method, newcode):
     pass
 
 
-def test_all_distributions_have_moments():
+def test_all_distributions_have_support_points():
     import pymc.distributions as dist_module
 
     from pymc.distributions.distribution import DistributionMeta
 
     dists = (getattr(dist_module, dist) for dist in dist_module.__all__)
     dists = (dist for dist in dists if isinstance(dist, DistributionMeta))
-    missing_moments = {
-        dist for dist in dists if getattr(dist, "rv_type", None) not in _moment.registry
+    missing_support_points = {
+        dist for dist in dists if getattr(dist, "rv_type", None) not in _support_point.registry
     }
 
     # Ignore super classes
-    missing_moments -= {
+    missing_support_points -= {
         dist_module.Distribution,
         dist_module.Discrete,
         dist_module.Continuous,
@@ -144,23 +144,23 @@ def test_all_distributions_have_moments():
         dist_module.timeseries.EulerMaruyama,
     }
 
-    # Distributions that have been refactored but don't yet have moments
+    # Distributions that have been refactored but don't yet have support_points
     not_implemented |= {
         dist_module.multivariate.Wishart,
     }
 
-    unexpected_implemented = not_implemented - missing_moments
+    unexpected_implemented = not_implemented - missing_support_points
     if unexpected_implemented:
         raise Exception(
-            f"Distributions {unexpected_implemented} have a `moment` implemented. "
+            f"Distributions {unexpected_implemented} have a `support_point` implemented. "
             "This test must be updated to expect this."
         )
 
-    unexpected_not_implemented = missing_moments - not_implemented
+    unexpected_not_implemented = missing_support_points - not_implemented
     if unexpected_not_implemented:
         raise NotImplementedError(
             f"Unexpected by this test, distributions {unexpected_not_implemented} do "
-            "not have a `moment` implementation. Either add a moment or filter "
+            "not have a `support_point` implementation. Either add a support_point or filter "
             "these distributions in this test."
         )
 
@@ -291,53 +291,69 @@ class TestCustomDist:
         assert log_densityf({"a": a_test_value, "mu": mu_test_value})[0].shape == to_tuple(size)
 
     @pytest.mark.parametrize(
-        "moment, size, expected",
+        "support_point, size, expected",
         [
             (None, None, 0.0),
             (None, 5, np.zeros(5)),
-            ("custom_moment", None, 5),
-            ("custom_moment", (2, 5), np.full((2, 5), 5)),
+            ("custom_support_point", None, 5),
+            ("custom_support_point", (2, 5), np.full((2, 5), 5)),
         ],
     )
-    def test_custom_dist_default_moment_univariate(self, moment, size, expected):
-        if moment == "custom_moment":
-            moment = lambda rv, size, *rv_inputs: 5 * pt.ones(size, dtype=rv.dtype)  # noqa E731
+    def test_custom_dist_default_support_point_univariate(self, support_point, size, expected):
+        if support_point == "custom_support_point":
+            support_point = lambda rv, size, *rv_inputs: 5 * pt.ones(size, dtype=rv.dtype)  # noqa E731
         with pm.Model() as model:
-            x = CustomDist("x", moment=moment, size=size)
+            x = CustomDist("x", support_point=support_point, size=size)
         assert isinstance(x.owner.op, CustomDistRV)
-        assert_moment_is_expected(model, expected, check_finite_logp=False)
+        assert_support_point_is_expected(model, expected, check_finite_logp=False)
+
+    def test_custom_dist_moment_future_warning(self):
+        moment = lambda rv, size, *rv_inputs: 5 * pt.ones(size, dtype=rv.dtype)  # noqa E731
+        with pm.Model() as model:
+            with pytest.warns(
+                FutureWarning, match="`moment` argument is deprecated. Use `support_point` instead."
+            ):
+                x = CustomDist("x", moment=moment)
+        assert_support_point_is_expected(model, 5, check_finite_logp=False)
 
     @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
-    def test_custom_dist_custom_moment_univariate(self, size):
-        def density_moment(rv, size, mu):
+    def test_custom_dist_custom_support_point_univariate(self, size):
+        def density_support_point(rv, size, mu):
             return (pt.ones(size) * mu).astype(rv.dtype)
 
         mu_val = np.array(np.random.normal(loc=2, scale=1)).astype(pytensor.config.floatX)
         with Model():
             mu = Normal("mu")
-            a = CustomDist("a", mu, moment=density_moment, size=size)
+            a = CustomDist("a", mu, support_point=density_support_point, size=size)
         assert isinstance(a.owner.op, CustomDistRV)
-        evaled_moment = moment(a).eval({mu: mu_val})
-        assert evaled_moment.shape == to_tuple(size)
-        assert np.all(evaled_moment == mu_val)
+        evaled_support_point = support_point(a).eval({mu: mu_val})
+        assert evaled_support_point.shape == to_tuple(size)
+        assert np.all(evaled_support_point == mu_val)
 
     @pytest.mark.xfail(
         NotImplementedError,
         reason="Support shape of multivariate CustomDist cannot be inferred. See https://github.com/pymc-devs/pytensor/pull/388",
     )
     @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
-    def test_custom_dist_custom_moment_multivariate(self, size):
-        def density_moment(rv, size, mu):
+    def test_custom_dist_custom_support_point_multivariate(self, size):
+        def density_support_point(rv, size, mu):
             return (pt.ones(size)[..., None] * mu).astype(rv.dtype)
 
         mu_val = np.random.normal(loc=2, scale=1, size=5).astype(pytensor.config.floatX)
         with Model():
             mu = Normal("mu", size=5)
-            a = CustomDist("a", mu, moment=density_moment, ndims_params=[1], ndim_supp=1, size=size)
+            a = CustomDist(
+                "a",
+                mu,
+                support_point=density_support_point,
+                ndims_params=[1],
+                ndim_supp=1,
+                size=size,
+            )
         assert isinstance(a.owner.op, CustomDistRV)
-        evaled_moment = moment(a).eval({mu: mu_val})
-        assert evaled_moment.shape == (*to_tuple(size), 5)
-        assert np.all(evaled_moment == mu_val)
+        evaled_support_point = support_point(a).eval({mu: mu_val})
+        assert evaled_support_point.shape == (*to_tuple(size), 5)
+        assert np.all(evaled_support_point == mu_val)
 
     @pytest.mark.xfail(
         NotImplementedError,
@@ -353,7 +369,7 @@ class TestCustomDist:
             (False, (2,)),
         ],
     )
-    def test_custom_dist_default_moment_multivariate(self, with_random, size):
+    def test_custom_dist_default_support_point_multivariate(self, with_random, size):
         def _random(mu, rng=None, size=None):
             return rng.normal(mu, scale=1, size=to_tuple(size) + mu.shape)
 
@@ -368,15 +384,15 @@ class TestCustomDist:
             a = CustomDist("a", mu, random=random, ndims_params=[1], ndim_supp=1, size=size)
         assert isinstance(a.owner.op, CustomDistRV)
         if with_random:
-            evaled_moment = moment(a).eval({mu: mu_val})
-            assert evaled_moment.shape == (*to_tuple(size), 5)
-            assert np.all(evaled_moment == 0)
+            evaled_support_point = support_point(a).eval({mu: mu_val})
+            assert evaled_support_point.shape == (*to_tuple(size), 5)
+            assert np.all(evaled_support_point == 0)
         else:
             with pytest.raises(
                 TypeError,
-                match="Cannot safely infer the size of a multivariate random variable's moment.",
+                match="Cannot safely infer the size of a multivariate random variable's support_point.",
             ):
-                evaled_moment = moment(a).eval({mu: mu_val})
+                evaled_support_point = support_point(a).eval({mu: mu_val})
 
     def test_dist(self):
         mu = 1
@@ -466,12 +482,12 @@ class TestCustomSymbolicDist:
             ),
         ],
     )
-    def test_custom_dist_default_moment(self, dist_params, size, expected, dist_fn):
+    def test_custom_dist_default_support_point(self, dist_params, size, expected, dist_fn):
         with Model() as model:
             CustomDist("x", *dist_params, dist=dist_fn, size=size)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
-    def test_custom_dist_default_moment_scan(self):
+    def test_custom_dist_default_support_point_scan(self):
         def scan_step(left, right):
             x = pm.Uniform.dist(left, right)
             x_update = collect_default_updates([x])
@@ -490,9 +506,9 @@ class TestCustomSymbolicDist:
 
         with Model() as model:
             CustomDist("x", dist=dist)
-        assert_moment_is_expected(model, np.array([-3, -2]))
+        assert_support_point_is_expected(model, np.array([-3, -2]))
 
-    def test_custom_dist_default_moment_scan_recurring(self):
+    def test_custom_dist_default_support_point_scan_recurring(self):
         def scan_step(xtm1):
             x = pm.Normal.dist(xtm1 + 1)
             x_update = collect_default_updates([x])
@@ -509,7 +525,7 @@ class TestCustomSymbolicDist:
 
         with Model() as model:
             CustomDist("x", dist=dist)
-        assert_moment_is_expected(model, np.array([[1], [2], [3]]))
+        assert_support_point_is_expected(model, np.array([[1], [2], [3]]))
 
     @pytest.mark.parametrize(
         "left, right, size, expected",
@@ -519,13 +535,13 @@ class TestCustomSymbolicDist:
             (-3, 1, (3,), np.array([-1 + 5, -1 + 5, -1 + 5])),
         ],
     )
-    def test_custom_dist_default_moment_nested(self, left, right, size, expected):
+    def test_custom_dist_default_support_point_nested(self, left, right, size, expected):
         def dist_fn(left, right, size):
             return pm.Truncated.dist(pm.Normal.dist(0, 1), left, right, size=size) + 5
 
         with Model() as model:
             CustomDist("x", left, right, size=size, dist=dist_fn)
-        assert_moment_is_expected(model, expected)
+        assert_support_point_is_expected(model, expected)
 
     def test_logcdf_inference(self):
         def custom_dist(mu, sigma, size):
@@ -572,7 +588,7 @@ class TestCustomSymbolicDist:
                 return mu
             return pt.full(size, mu)
 
-        def custom_moment(rv, size, mu):
+        def custom_support_point(rv, size, mu):
             return pt.full_like(rv, mu + 1)
 
         def custom_logp(value, mu):
@@ -584,7 +600,7 @@ class TestCustomSymbolicDist:
         customdist = CustomDist.dist(
             [np.e, np.e],
             dist=custom_dist,
-            moment=custom_moment,
+            support_point=custom_support_point,
             logp=custom_logp,
             logcdf=custom_logcdf,
         )
@@ -592,7 +608,7 @@ class TestCustomSymbolicDist:
         assert isinstance(customdist.owner.op, CustomSymbolicDistRV)
 
         np.testing.assert_allclose(draw(customdist), [np.e, np.e])
-        np.testing.assert_allclose(moment(customdist).eval(), [np.e + 1, np.e + 1])
+        np.testing.assert_allclose(support_point(customdist).eval(), [np.e + 1, np.e + 1])
         np.testing.assert_allclose(logp(customdist, [0, 0]).eval(), [np.e + 2, np.e + 2])
         np.testing.assert_allclose(logcdf(customdist, [0, 0]).eval(), [np.e + 3, np.e + 3])
 
@@ -728,6 +744,34 @@ class TestCustomSymbolicDist:
             pm.logp(pm.LogNormal.dist(), 1.0).eval(),
         )
 
+    def test_signature(self):
+        def dist(p, size):
+            return -pm.Categorical.dist(p=p, size=size)
+
+        out = CustomDist.dist([0.25, 0.75], dist=dist, signature="(p)->()")
+        # Size and updates are added automatically to the signature
+        assert out.owner.op.signature == "(),(p)->(),()"
+        assert out.owner.op.ndim_supp == 0
+        assert out.owner.op.ndims_params == [0, 1]
+
+        # When recreated internally, the whole signature may already be known
+        out = CustomDist.dist([0.25, 0.75], dist=dist, signature="(),(p)->(),()")
+        assert out.owner.op.signature == "(),(p)->(),()"
+        assert out.owner.op.ndim_supp == 0
+        assert out.owner.op.ndims_params == [0, 1]
+
+        # A safe signature can be inferred from ndim_supp and ndims_params
+        out = CustomDist.dist([0.25, 0.75], dist=dist, ndim_supp=0, ndims_params=[0, 1])
+        assert out.owner.op.signature == "(),(i10)->(),()"
+        assert out.owner.op.ndim_supp == 0
+        assert out.owner.op.ndims_params == [0, 1]
+
+        # Otherwise be default we assume everything is scalar, even though it's wrong in this case
+        out = CustomDist.dist([0.25, 0.75], dist=dist)
+        assert out.owner.op.signature == "(),()->(),()"
+        assert out.owner.op.ndim_supp == 0
+        assert out.owner.op.ndims_params == [0, 0]
+
 
 class TestSymbolicRandomVariable:
     def test_inline(self):
@@ -806,10 +850,10 @@ class TestDiracDelta:
                 (np.arange(1, 6), None, np.arange(1, 6)),
             ],
         )
-        def test_moment(self, c, size, expected):
+        def test_support_point(self, c, size, expected):
             with pm.Model() as model:
                 pm.DiracDelta("x", c=c, size=size)
-            assert_moment_is_expected(model, expected)
+            assert_support_point_is_expected(model, expected)
 
     class TestDiracDelta(BaseTestDistributionRandom):
         def diracdelta_rng_fn(self, size, c):
@@ -1039,16 +1083,18 @@ class TestPartialObservedRV:
         np.testing.assert_almost_equal(obs_logp, new_expected_logp)
         np.testing.assert_array_equal(unobs_logp, [])
 
-    def test_moment(self):
+    def test_support_point(self):
         x = pm.GaussianRandomWalk.dist(init_dist=pm.Normal.dist(-5), mu=1, steps=9)
-        ref_moment = moment(x).eval()
-        assert not np.allclose(ref_moment[::2], ref_moment[1::2])  # Otherwise test is weak
+        ref_support_point = support_point(x).eval()
+        assert not np.allclose(
+            ref_support_point[::2], ref_support_point[1::2]
+        )  # Otherwise test is weak
 
         (obs_x, _), (unobs_x, _), _ = create_partial_observed_rv(
             x, mask=np.array([False, True] * 5)
         )
-        np.testing.assert_allclose(moment(obs_x).eval(), ref_moment[::2])
-        np.testing.assert_allclose(moment(unobs_x).eval(), ref_moment[1::2])
+        np.testing.assert_allclose(support_point(obs_x).eval(), ref_support_point[::2])
+        np.testing.assert_allclose(support_point(unobs_x).eval(), ref_support_point[1::2])
 
     def test_wrong_mask(self):
         rv = pm.Normal.dist(shape=(5,))

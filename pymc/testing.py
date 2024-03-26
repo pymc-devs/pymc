@@ -13,6 +13,7 @@
 #   limitations under the License.
 import functools as ft
 import itertools as it
+import warnings
 
 from collections.abc import Sequence
 from typing import Any, Callable, Optional, Union
@@ -654,33 +655,41 @@ def check_selfconsistency_discrete_logcdf(
 
 
 def assert_moment_is_expected(model, expected, check_finite_logp=True):
+    warnings.warn(
+        "assert_moment_is_expected is deprecated. Use assert_support_point_is_expected instead.",
+        FutureWarning,
+    )
+    assert_support_point_is_expected(model, expected, check_finite_logp=check_finite_logp)
+
+
+def assert_support_point_is_expected(model, expected, check_finite_logp=True):
     fn = make_initial_point_fn(
         model=model,
         return_transformed=False,
-        default_strategy="moment",
+        default_strategy="support_point",
     )
-    moment = fn(0)["x"]
+    support_point = fn(0)["x"]
     expected = np.asarray(expected)
     try:
         random_draw = model["x"].eval()
     except NotImplementedError:
-        random_draw = moment
+        random_draw = support_point
 
-    assert moment.shape == expected.shape
+    assert support_point.shape == expected.shape
     assert expected.shape == random_draw.shape
-    assert np.allclose(moment, expected)
+    assert np.allclose(support_point, expected)
 
     if check_finite_logp:
-        logp_moment = (
+        logp_support_point = (
             transformed_conditional_logp(
                 (model["x"],),
-                rvs_to_values={model["x"]: pt.constant(moment)},
+                rvs_to_values={model["x"]: pt.constant(support_point)},
                 rvs_to_transforms={},
             )[0]
             .sum()
             .eval()
         )
-        assert np.isfinite(logp_moment)
+        assert np.isfinite(logp_support_point)
 
 
 def continuous_random_tester(
