@@ -1383,7 +1383,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             rv_var.tag.observations = data
             self.create_value_var(
-                rv_var, transform=transform, default_transform=default_transform, value_var=data
+                rv_var, transform=transform, default_transform=None, value_var=data
             )
             self.add_named_variable(rv_var, dims)
             self.observed_RVs.append(rv_var)

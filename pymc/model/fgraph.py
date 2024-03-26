@@ -320,12 +320,12 @@ def model_from_fgraph(fgraph: FunctionGraph) -> Model:
             var, value, *dims = model_var.owner.inputs
             transform = model_var.owner.op.transform
             model.free_RVs.append(var)
-            model.create_value_var(var, transform=transform, value_var=value)
+            model.create_value_var(var, transform=transform, default_transform=None, value_var=value)
             model.set_initval(var, initval=None)
         elif isinstance(model_var.owner.op, ModelObservedRV):
             var, value, *dims = model_var.owner.inputs
             model.observed_RVs.append(var)
-            model.create_value_var(var, transform=None, value_var=value)
+            model.create_value_var(var, transform=None, default_transform=None, value_var=value)
         elif isinstance(model_var.owner.op, ModelPotential):
             var, *dims = model_var.owner.inputs
             model.potentials.append(var)
