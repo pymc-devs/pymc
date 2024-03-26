@@ -286,8 +286,8 @@ def test_change_value_transforms_error():
 
 def test_remove_value_transforms():
     with pm.Model() as base_m:
-        p = pm.Uniform("p", transform=logodds)
-        q = pm.Uniform("q", transform=logodds)
+        p = pm.Uniform("p", transform=logodds, default_transform=None)
+        q = pm.Uniform("q", transform=logodds, default_transform=None)
 
     new_m = remove_value_transforms(base_m)
     new_p = new_m["p"]
