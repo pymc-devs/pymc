@@ -423,8 +423,11 @@ class TestMatchesScipy:
         def scipy_log_pdf(value, a, b):
             return np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value**a)
 
+        def log1mexp(x):
+            return np.log1p(-np.exp(x)) if x < np.log(0.5) else np.log(-np.expm1(x))
+
         def scipy_log_cdf(value, a, b):
-            return pm.math.log1mexp_numpy(b * np.log1p(-(value**a)), negative_input=True)
+            return log1mexp(b * np.log1p(-(value**a)))
 
         check_logp(
             pm.Kumaraswamy,
