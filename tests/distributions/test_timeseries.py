@@ -20,7 +20,7 @@ from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
 
-from pymc import MutableData
+from pymc import Data
 from pymc.distributions.continuous import Exponential, Flat, HalfNormal, Normal, Uniform
 from pymc.distributions.distribution import DiracDelta
 from pymc.distributions.multivariate import (
@@ -406,7 +406,7 @@ class TestPredefinedRandomWalk:
             _mu = Uniform("mu", -10, 10)
             _sigma = Uniform("sigma", 0, 10)
 
-            obs_data = MutableData("obs_data", obs)
+            obs_data = Data("obs_data", obs)
             grw = GaussianRandomWalk(
                 "grw", _mu, _sigma, steps=steps, observed=obs_data, init_dist=Normal.dist(0, 100)
             )

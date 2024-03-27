@@ -19,14 +19,13 @@ from os import path
 from typing import Optional
 
 from pytensor import function
-from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph import Apply
 from pytensor.graph.basic import ancestors, walk
 from pytensor.scalar.basic import Cast
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.shape import Shape
-from pytensor.tensor.variable import TensorConstant, TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 import pymc as pm
 
@@ -162,14 +161,6 @@ class ModelGraph:
             shape = "octagon"
             style = "filled"
             label = f"{var_name}\n~\nPotential"
-        elif isinstance(v, TensorConstant):
-            shape = "box"
-            style = "rounded, filled"
-            label = f"{var_name}\n~\nConstantData"
-        elif isinstance(v, SharedVariable):
-            shape = "box"
-            style = "rounded, filled"
-            label = f"{var_name}\n~\nMutableData"
         elif v in self.model.basic_RVs:
             shape = "ellipse"
             if v in self.model.observed_RVs:
@@ -180,10 +171,14 @@ class ModelGraph:
             if symbol.endswith("RV"):
                 symbol = symbol[:-2]
             label = f"{var_name}\n~\n{symbol}"
-        else:
+        elif v in self.model.deterministics:
             shape = "box"
             style = None
             label = f"{var_name}\n~\nDeterministic"
+        else:
+            shape = "box"
+            style = "rounded, filled"
+            label = f"{var_name}\n~\nCData"
 
         kwargs = {
             "shape": shape,

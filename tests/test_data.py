@@ -37,7 +37,7 @@ class TestData:
     def test_deterministic(self):
         data_values = np.array([0.5, 0.4, 5, 2])
         with pm.Model() as model:
-            X = pm.MutableData("X", data_values)
+            X = pm.Data("X", data_values)
             pm.Normal("y", 0, 1, observed=X)
             model.compile_logp()(model.initial_point())
 
@@ -48,7 +48,7 @@ class TestData:
         x_pred = np.linspace(-3, 3, 200, dtype="float32")
 
         with pm.Model():
-            x_shared = pm.MutableData("x_shared", x)
+            x_shared = pm.Data("x_shared", x)
             b = pm.Normal("b", 0.0, 10.0)
             pm.Normal("obs", b * x_shared, np.sqrt(1e-2), observed=y, shape=x_shared.shape)
 
@@ -76,8 +76,8 @@ class TestData:
 
     def test_sample_posterior_predictive_after_set_data(self):
         with pm.Model() as model:
-            x = pm.MutableData("x", [1.0, 2.0, 3.0])
-            y = pm.ConstantData("y", [1.0, 2.0, 3.0])
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 10.0)
             pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y)
             trace = pm.sample(
@@ -101,7 +101,7 @@ class TestData:
     def test_sample_posterior_predictive_after_set_data_with_coords(self):
         y = np.array([1.0, 2.0, 3.0])
         with pm.Model() as model:
-            x = pm.MutableData("x", [1.0, 2.0, 3.0], dims="obs_id")
+            x = pm.Data("x", [1.0, 2.0, 3.0], dims="obs_id")
             beta = pm.Normal("beta", 0, 10.0)
             pm.Normal("obs", beta * x, np.sqrt(1e-3), observed=y, dims="obs_id")
             idata = pm.sample(
@@ -125,8 +125,8 @@ class TestData:
 
     def test_sample_after_set_data(self):
         with pm.Model() as model:
-            x = pm.MutableData("x", [1.0, 2.0, 3.0])
-            y = pm.MutableData("y", [1.0, 2.0, 3.0])
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 10.0)
             pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y)
             pm.sample(
@@ -159,8 +159,8 @@ class TestData:
         See https://github.com/pymc-devs/pymc/issues/3813
         """
         with pm.Model() as model:
-            index = pm.MutableData("index", [2, 0, 1, 0, 2])
-            y = pm.MutableData("y", [1.0, 2.0, 3.0, 2.0, 1.0])
+            index = pm.Data("index", [2, 0, 1, 0, 2])
+            y = pm.Data("y", [1.0, 2.0, 3.0, 2.0, 1.0])
             alpha = pm.Normal("alpha", 0, 1.5, size=3)
             pm.Normal("obs", alpha[index], np.sqrt(1e-2), observed=y)
 
@@ -190,7 +190,7 @@ class TestData:
         See https://github.com/pymc-devs/pymc/issues/3842
         """
         with pm.Model() as m:
-            x = pm.MutableData("x", [1.0, 2.0, 3.0])
+            x = pm.Data("x", [1.0, 2.0, 3.0])
             y = pm.Normal("y", mu=x, size=(2, 3))
             assert y.eval().shape == (2, 3)
             idata = pm.sample(
@@ -250,7 +250,7 @@ class TestData:
 
     def test_creation_of_data_outside_model_context(self):
         with pytest.raises((IndexError, TypeError)) as error:
-            pm.ConstantData("data", [1.1, 2.2, 3.3])
+            pm.Data("data", [1.1, 2.2, 3.3])
         error.match("No model on context stack")
 
     def test_set_data_to_non_data_container_variables(self):
@@ -272,8 +272,8 @@ class TestData:
     @pytest.mark.xfail(reason="Depends on ModelGraph")
     def test_model_to_graphviz_for_model_with_data_container(self, tmp_path):
         with pm.Model() as model:
-            x = pm.ConstantData("x", [1.0, 2.0, 3.0])
-            y = pm.MutableData("y", [1.0, 2.0, 3.0])
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 10.0)
             obs_sigma = floatX(np.sqrt(1e-2))
             pm.Normal("obs", beta * x, obs_sigma, observed=y)
@@ -289,14 +289,14 @@ class TestData:
                 pm.model_to_graphviz(model, formatting=formatting)
 
         exp_without = [
-            'x [label="x\n~\nConstantData" shape=box style="rounded, filled"]',
-            'y [label="x\n~\nMutableData" shape=box style="rounded, filled"]',
+            'x [label="x\n~\\Data" shape=box style="rounded, filled"]',
+            'y [label="x\n~\nData" shape=box style="rounded, filled"]',
             'beta [label="beta\n~\nNormal"]',
             'obs [label="obs\n~\nNormal" style=filled]',
         ]
         exp_with = [
-            'x [label="x\n~\nConstantData" shape=box style="rounded, filled"]',
-            'y [label="x\n~\nMutableData" shape=box style="rounded, filled"]',
+            'x [label="x\n~\nData" shape=box style="rounded, filled"]',
+            'y [label="x\n~\nData" shape=box style="rounded, filled"]',
             'beta [label="beta\n~\nNormal(mu=0.0, sigma=10.0)"]',
             f'obs [label="obs\n~\nNormal(mu=f(f(beta), x), sigma={obs_sigma})" style=filled]',
         ]
@@ -324,10 +324,7 @@ class TestData:
         }
         # pass coordinates explicitly, use numpy array in Data container
         with pm.Model(coords=coords) as pmodel:
-            # Dims created from coords are constant by default
-            assert isinstance(pmodel.dim_lengths["rows"], pt.TensorConstant)
-            assert isinstance(pmodel.dim_lengths["columns"], pt.TensorConstant)
-            pm.MutableData("observations", data, dims=("rows", "columns"))
+            pm.Data("observations", data, dims=("rows", "columns"))
             # new data with same (!) shape
             pm.set_data({"observations": data + 1})
             # new data with same (!) shape and coords
@@ -344,10 +341,8 @@ class TestData:
 
     def test_set_coords_through_pmdata(self):
         with pm.Model() as pmodel:
-            pm.ConstantData(
-                "population", [100, 200], dims="city", coords={"city": ["Tinyvil", "Minitown"]}
-            )
-            pm.MutableData(
+            pm.Data("population", [100, 200], dims="city", coords={"city": ["Tinyvil", "Minitown"]})
+            pm.Data(
                 "temperature",
                 [[15, 20, 22, 17], [18, 22, 21, 12]],
                 dims=("city", "season"),
@@ -360,12 +355,12 @@ class TestData:
 
     def test_symbolic_coords(self):
         """
-        In v4 dimensions can be created without passing coordinate values.
+        Since v4 dimensions can be created without passing coordinate values.
         Their lengths are then automatically linked to the corresponding Tensor dimension.
         """
         with pm.Model() as pmodel:
-            # Dims created from MutableData are TensorVariables linked to the SharedVariable.shape
-            intensity = pm.MutableData("intensity", np.ones((2, 3)), dims=("row", "column"))
+            # Dims created from Data are TensorVariables linked to the SharedVariable.shape
+            intensity = pm.Data("intensity", np.ones((2, 3)), dims=("row", "column"))
             assert "row" in pmodel.dim_lengths
             assert "column" in pmodel.dim_lengths
             assert isinstance(pmodel.dim_lengths["row"], TensorVariable)
@@ -385,7 +380,7 @@ class TestData:
             name="sales",
         )
         with pm.Model() as pmodel:
-            pm.ConstantData("sales", ser_sales, dims="date", export_index_as_coords=True)
+            pm.Data("sales", ser_sales, dims="date", infer_dims_and_coords=True)
 
         assert "date" in pmodel.coords
         assert len(pmodel.coords["date"]) == 22
@@ -403,9 +398,7 @@ class TestData:
 
         # infer coordinates from index and columns of the DataFrame
         with pm.Model() as pmodel:
-            pm.ConstantData(
-                "observations", df_data, dims=("rows", "columns"), export_index_as_coords=True
-            )
+            pm.Data("observations", df_data, dims=("rows", "columns"), infer_dims_and_coords=True)
 
         assert "rows" in pmodel.coords
         assert "columns" in pmodel.coords
@@ -415,8 +408,7 @@ class TestData:
         xr = pytest.importorskip("xarray")
         data = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("y", "x"))
         with pm.Model() as pmodel:
-            with pytest.warns(DeprecationWarning):
-                pm.ConstantData("observations", data, dims=("x", "y"), export_index_as_coords=True)
+            pm.Data("observations", data, dims=("x", "y"), infer_dims_and_coords=True)
         assert "x" in pmodel.coords
         assert "y" in pmodel.coords
         assert pmodel.named_vars_to_dims == {"observations": ("x", "y")}
@@ -427,7 +419,7 @@ class TestData:
         strict_value = True
         allow_downcast_value = False
         with pm.Model():
-            data = pm.MutableData(
+            data = pm.Data(
                 "mdata",
                 value=[[1.0], [2.0], [3.0]],
                 strict=strict_value,
@@ -436,20 +428,13 @@ class TestData:
         assert data.container.strict is strict_value
         assert data.container.allow_downcast is allow_downcast_value
 
-    def test_data_mutable_default_warning(self):
-        with pm.Model():
-            with pytest.warns(UserWarning, match="`mutable` kwarg was not specified"):
-                data = pm.Data("x", [1, 2, 3])
-            assert isinstance(data, pt.TensorConstant)
-        pass
-
     def test_masked_array_error(self):
         with pm.Model():
             with pytest.raises(
                 NotImplementedError,
                 match="Masked arrays or arrays with `nan` entries are not supported.",
             ):
-                pm.ConstantData("x", [0, 1, np.nan, 2])
+                pm.Data("x", [0, 1, np.nan, 2])
 
 
 def test_data_naming():
@@ -458,7 +443,7 @@ def test_data_naming():
     not given model-relative names.
     """
     with pm.Model("named_model") as model:
-        x = pm.ConstantData("x", [1.0, 2.0, 3.0])
+        x = pm.Data("x", [1.0, 2.0, 3.0])
         y = pm.Normal("y")
     assert y.name == "named_model::y"
     assert x.name == "named_model::x"

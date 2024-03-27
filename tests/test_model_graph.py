@@ -102,9 +102,9 @@ def radon_model():
 
         # Anonymous SharedVariables don't show up
         floor_measure = pytensor.shared(floor_measure)
-        floor_measure_offset = pm.MutableData("floor_measure_offset", 1)
+        floor_measure_offset = pm.Data("floor_measure_offset", 1)
         y_hat = a + b * floor_measure + floor_measure_offset
-        log_radon = pm.MutableData("log_radon", np.random.normal(1, 1, size=n_homes))
+        log_radon = pm.Data("log_radon", np.random.normal(1, 1, size=n_homes))
         y_like = pm.Normal("y_like", mu=y_hat, sigma=sigma_y, observed=log_radon)
 
     compute_graph = {
@@ -163,13 +163,13 @@ def model_with_dims():
 
         population = pm.HalfNormal("population", sigma=5, dims=("city"))
 
-        time = pm.ConstantData("time", [2014, 2015, 2016], dims="year")
+        time = pm.Data("time", [2014, 2015, 2016], dims="year")
 
         n = pm.Deterministic(
             "tax revenue", economics * population[None, :] * time[:, None], dims=("year", "city")
         )
 
-        yobs = pm.MutableData("observed", np.ones((3, 4)))
+        yobs = pm.Data("observed", np.ones((3, 4)))
         L = pm.Normal("L", n, observed=yobs)
 
     compute_graph = {
@@ -218,7 +218,7 @@ def model_observation_dtype_casting():
     Model at the source of the following issue: https://github.com/pymc-devs/pymc/issues/5795
     """
     with pm.Model() as model:
-        data = pm.ConstantData("data", [0, 0, 1, 1], dtype=int)
+        data = pm.Data("data", np.array([0, 0, 1, 1], dtype=int))
         p = pm.Beta("p", 1, 1)
         bern = pm.Bernoulli("response", p, observed=data)
 
@@ -326,7 +326,7 @@ def model_with_different_descendants():
         intermediate = pm.Deterministic("intermediate", a + b)
         pred = pm.Deterministic("pred", intermediate * 3)
 
-        obs = pm.ConstantData("obs", 1.75)
+        obs = pm.Data("obs", 1.75)
 
         L = pm.Normal("L", mu=1 + 0.5 * pred, observed=obs)
 

@@ -124,8 +124,8 @@ class TestCompileForwardSampler:
 
     def test_linear_model(self):
         with pm.Model() as model:
-            x = pm.MutableData("x", np.linspace(0, 1, 10))
-            y = pm.MutableData("y", np.ones(10))
+            x = pm.Data("x", np.linspace(0, 1, 10))
+            y = pm.Data("y", np.ones(10))
 
             alpha = pm.Normal("alpha", 0, 0.1)
             beta = pm.Normal("beta", 0, 0.1)
@@ -142,30 +142,11 @@ class TestCompileForwardSampler:
         assert {i.name for i in self.get_function_inputs(f)} == {"alpha", "beta", "sigma"}
         assert {i.name for i in self.get_function_roots(f)} == {"x", "alpha", "beta", "sigma"}
 
-        with pm.Model() as model:
-            x = pm.ConstantData("x", np.linspace(0, 1, 10))
-            y = pm.MutableData("y", np.ones(10))
-
-            alpha = pm.Normal("alpha", 0, 0.1)
-            beta = pm.Normal("beta", 0, 0.1)
-            mu = pm.Deterministic("mu", alpha + beta * x)
-            sigma = pm.HalfNormal("sigma", 0.1)
-            obs = pm.Normal("obs", mu, sigma, observed=y, shape=x.shape)
-
-        f, volatile_rvs = compile_forward_sampling_function(
-            [obs],
-            vars_in_trace=[alpha, beta, sigma, mu],
-            basic_rvs=model.basic_RVs,
-        )
-        assert volatile_rvs == {obs}
-        assert {i.name for i in self.get_function_inputs(f)} == {"alpha", "beta", "sigma", "mu"}
-        assert {i.name for i in self.get_function_roots(f)} == {"mu", "sigma"}
-
     def test_nested_observed_model(self):
         with pm.Model() as model:
-            p = pm.ConstantData("p", np.array([0.25, 0.5, 0.25]))
-            x = pm.MutableData("x", np.zeros(10))
-            y = pm.MutableData("y", np.ones(10))
+            p = pm.Data("p", np.array([0.25, 0.5, 0.25]))
+            x = pm.Data("x", np.zeros(10))
+            y = pm.Data("y", np.ones(10))
 
             category = pm.Categorical("category", p, observed=x)
             beta = pm.Normal("beta", 0, 0.1, size=p.shape)
@@ -178,6 +159,16 @@ class TestCompileForwardSampler:
             vars_in_trace=[beta, mu, sigma],
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {category, beta, obs}
+        assert {i.name for i in self.get_function_inputs(f)} == {"sigma"}
+        assert {i.name for i in self.get_function_roots(f)} == {"x", "p", "sigma"}
+
+        f, volatile_rvs = compile_forward_sampling_function(
+            outputs=model.observed_RVs,
+            vars_in_trace=[beta, mu, sigma],
+            constant_data={"p": p.get_value()},
+            basic_rvs=model.basic_RVs,
+        )
         assert volatile_rvs == {category, obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"beta", "sigma"}
         assert {i.name for i in self.get_function_roots(f)} == {"x", "p", "beta", "sigma"}
@@ -185,6 +176,7 @@ class TestCompileForwardSampler:
         f, volatile_rvs = compile_forward_sampling_function(
             outputs=model.observed_RVs,
             vars_in_trace=[beta, mu, sigma],
+            constant_data={"p": p.get_value()},
             basic_rvs=model.basic_RVs,
             givens_dict={category: np.zeros(10, dtype=category.dtype)},
         )
@@ -200,7 +192,7 @@ class TestCompileForwardSampler:
 
     def test_volatile_parameters(self):
         with pm.Model() as model:
-            y = pm.MutableData("y", np.ones(10))
+            y = pm.Data("y", np.ones(10))
             mu = pm.Normal("mu", 0, 1)
             nested_mu = pm.Normal("nested_mu", mu, 1, size=10)
             sigma = pm.HalfNormal("sigma", 1)
@@ -352,13 +344,13 @@ class TestCompileForwardSampler:
         with pm.Model() as model:
             model.add_coord("name", ["A", "B", "C"], mutable=True)
             model.add_coord("obs", list(range(10, 20)), mutable=True)
-            offsets = pm.MutableData("offsets", rng.normal(0, 1, size=(10,)))
+            offsets = pm.Data("offsets", rng.normal(0, 1, size=(10,)))
             a = pm.Normal("a", mu=0, sigma=1, dims=["name"])
             b = pm.Normal("b", mu=offsets, sigma=1)
             mu = pm.Deterministic("mu", a + b[..., None], dims=["obs", "name"])
             sigma = pm.HalfNormal("sigma", sigma=1, dims=["name"])
 
-            data = pm.MutableData(
+            data = pm.Data(
                 "y_obs",
                 data,
                 dims=["obs", "name"],
@@ -883,13 +875,13 @@ class TestSamplePPC:
         with pm.Model() as model:
             model.add_coord("name", ["A", "B", "C"], mutable=True)
             model.add_coord("obs", list(range(10, 20)), mutable=True)
-            offsets = pm.MutableData("offsets", rng.normal(0, 1, size=(10,)))
+            offsets = pm.Data("offsets", rng.normal(0, 1, size=(10,)))
             a = pm.Normal("a", mu=0, sigma=1, dims=["name"])
             b = pm.Normal("b", mu=offsets, sigma=1)
             mu = pm.Deterministic("mu", a + b[..., None], dims=["obs", "name"])
             sigma = pm.HalfNormal("sigma", sigma=1, dims=["name"])
 
-            data = pm.MutableData(
+            data = pm.Data(
                 "y_obs",
                 data,
                 dims=["obs", "name"],
@@ -938,7 +930,7 @@ class TestSamplePPC:
             pm.sample_posterior_predictive(samples)
         if kind == "MultiTrace":
             # MultiTrace will only have the actual MCMC posterior samples but no information on
-            # the MutableData and mutable coordinate values, so it will always assume they are volatile
+            # the Data and coordinate values, so it will always assume they are volatile
             # and resample their descendants
             assert caplog.record_tuples == [
                 ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
@@ -1042,7 +1034,7 @@ class TestSamplePriorPredictive:
         observed = np.random.normal(10, 1, size=200)
         with pm.Model():
             # Use a prior that's way off to show we're ignoring the observed variables
-            observed_data = pm.MutableData("observed_data", observed)
+            observed_data = pm.Data("observed_data", observed)
             mu = pm.Normal("mu", mu=-100, sigma=1)
             positive_mu = pm.Deterministic("positive_mu", np.abs(mu))
             z = -1 - positive_mu
@@ -1636,7 +1628,7 @@ def test_get_vars_in_point_list():
     with pm.Model() as modelB:
         a = pm.Normal("a", 0, 1)
         pm.Normal("c", 0, 1)
-        pm.ConstantData("d", 0)
+        pm.Data("d", 0)
 
     point_list = [{"a": 0, "b": 0, "d": 0}]
     vars_in_trace = get_vars_in_point_list(point_list, modelB)
