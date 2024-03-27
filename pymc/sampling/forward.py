@@ -711,9 +711,14 @@ def sample_posterior_predictive(
 
     .. code:: python
 
-        expanded_data = idata.posterior.expand_dims(pred_id=5)
+        expanded_idata = idata.copy()
+        expanded_idata.posterior = idata.posterior.expand_dims(pred_id=5)
         with model:
-            idata.extend(pm.sample_posterior_predictive(expanded_data))
+            pm.sample_posterior_predictive(
+                expanded_idata,
+                sample_dims=["chain", "draw", "pred_id"],
+                extend_inferencedata=True,
+            )
 
 
     """
