@@ -102,7 +102,7 @@ class FiniteLogpPointRewrite(GraphRewriter):
 
         for nd in local_fgraph_topo:
             if nd not in to_replace_set and isinstance(
-                nd.op, (RandomVariable, SymbolicRandomVariable)
+                nd.op, RandomVariable | SymbolicRandomVariable
             ):
                 replace_with_support_point.append(nd.out)
                 to_replace_set.add(nd)
@@ -132,7 +132,7 @@ class FiniteLogpPointRewrite(GraphRewriter):
 
     def apply(self, fgraph):
         for node in fgraph.toposort():
-            if isinstance(node.op, (RandomVariable, SymbolicRandomVariable)):
+            if isinstance(node.op, RandomVariable | SymbolicRandomVariable):
                 fgraph.replace(node.out, support_point(node.out))
             elif isinstance(node.op, Scan):
                 new_node = self.rewrite_support_point_scan_node(node)
@@ -837,7 +837,7 @@ class _CustomSymbolicDist(Distribution):
                     *[
                         p
                         for p in params
-                        if not isinstance(p.type, (RandomType, RandomGeneratorType))
+                        if not isinstance(p.type, RandomType | RandomGeneratorType)
                     ],
                 )
 

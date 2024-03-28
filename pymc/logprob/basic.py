@@ -78,7 +78,7 @@ def _find_unallowed_rvs_in_graph(graph):
     return {
         rv
         for rv in rvs_in_graph(graph)
-        if not isinstance(rv.owner.op, (SimulatorRV, MinibatchIndexRV))
+        if not isinstance(rv.owner.op, SimulatorRV | MinibatchIndexRV)
     }
 
 
@@ -545,7 +545,7 @@ def conditional_logp(
             **kwargs,
         )
 
-        if not isinstance(q_logprob_vars, (list, tuple)):
+        if not isinstance(q_logprob_vars, list | tuple):
             q_logprob_vars = [q_logprob_vars]
 
         for q_value_var, q_logprob_var in zip(q_values, q_logprob_vars):

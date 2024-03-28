@@ -126,7 +126,7 @@ class BlockedStep(ABC):
         else:  # Assume all model variables
             vars = model.value_vars
 
-        if not isinstance(vars, (tuple, list)):
+        if not isinstance(vars, tuple | list):
             vars = [vars]
 
         if len(vars) == 0:

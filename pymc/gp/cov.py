@@ -256,11 +256,7 @@ class Combination(Covariance):
 
             elif isinstance(
                 factor,
-                (
-                    TensorConstant,
-                    TensorVariable,
-                    TensorSharedVariable,
-                ),
+                TensorConstant | TensorVariable | TensorSharedVariable,
             ):
                 if factor.ndim == 2 and diag:
                     factor_list.append(pt.diag(factor))
@@ -524,7 +520,7 @@ class Stationary(Covariance):
         if (ls is None and ls_inv is None) or (ls is not None and ls_inv is not None):
             raise ValueError("Only one of 'ls' or 'ls_inv' must be provided")
         elif ls_inv is not None:
-            if isinstance(ls_inv, (list, tuple)):
+            if isinstance(ls_inv, list | tuple):
                 ls = 1.0 / np.asarray(ls_inv)
             else:
                 ls = 1.0 / ls_inv

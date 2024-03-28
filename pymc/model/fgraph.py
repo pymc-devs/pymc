@@ -260,7 +260,7 @@ def fgraph_from_model(
     inverse_memo = {v: k for k, v in memo.items()}
     for var, model_var in replacements:
         if not inlined_views and (
-            model_var.owner and isinstance(model_var.owner.op, (ModelDeterministic, ModelNamed))
+            model_var.owner and isinstance(model_var.owner.op, ModelDeterministic | ModelNamed)
         ):
             # Ignore extra identity that will be removed at the end
             var = var.owner.inputs[0]

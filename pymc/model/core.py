@@ -192,7 +192,7 @@ class ContextMeta(type):
         assert cls is not None
         if isinstance(cls._context_class, str):
             cls._context_class = resolve_type(cls._context_class)
-        if not isinstance(cls._context_class, (str, type)):
+        if not isinstance(cls._context_class, str | type):
             raise ValueError(
                 f"Context class for {cls.__name__}, {cls._context_class}, is not of the right type"
             )
@@ -695,7 +695,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         varlist: list[TensorVariable]
         if vars is None:
             varlist = self.free_RVs + self.observed_RVs + self.potentials
-        elif not isinstance(vars, (list, tuple)):
+        elif not isinstance(vars, list | tuple):
             varlist = [vars]
         else:
             varlist = cast(list[TensorVariable], vars)
@@ -770,7 +770,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if vars is None:
             value_vars = None
         else:
-            if not isinstance(vars, (list, tuple)):
+            if not isinstance(vars, list | tuple):
                 vars = [vars]
 
             value_vars = []
@@ -809,7 +809,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if vars is None:
             value_vars = None
         else:
-            if not isinstance(vars, (list, tuple)):
+            if not isinstance(vars, list | tuple):
                 vars = [vars]
 
             value_vars = []
@@ -998,7 +998,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if name in self.coords:
             if not np.array_equal(values, self.coords[name]):
                 raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
-        if length is not None and not isinstance(length, (int, Variable)):
+        if length is not None and not isinstance(length, int | Variable):
             raise ValueError(
                 f"The `length` passed for the '{name}' coord must be an int, PyTensor Variable or None."
             )
@@ -1070,7 +1070,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def set_initval(self, rv_var, initval):
         """Sets an initial value (strategy) for a random variable."""
-        if initval is not None and not isinstance(initval, (Variable, str)):
+        if initval is not None and not isinstance(initval, Variable | str):
             # Convert scalars or array-like inputs to ndarrays
             initval = rv_var.type.filter(initval)
 

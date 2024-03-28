@@ -207,7 +207,7 @@ def compile_forward_sampling_function(
             or node in givens_dict
             or (  # SharedVariables, except RandomState/Generators
                 isinstance(node, SharedVariable)
-                and not isinstance(node, (RandomStateSharedVariable, RandomGeneratorSharedVariable))
+                and not isinstance(node, RandomStateSharedVariable | RandomGeneratorSharedVariable)
                 and not shared_value_matches(node)
             )
             or (  # Basic RVs that are not in the trace
@@ -227,7 +227,7 @@ def compile_forward_sampling_function(
     def expand(node):
         if (
             (
-                node.owner is None and not isinstance(node, (Constant, SharedVariable))
+                node.owner is None and not isinstance(node, Constant | SharedVariable)
             )  # Variables without owners that are not constant or shared
             or node in vars_in_trace  # Variables in the trace
         ) and node not in volatile_nodes:
@@ -246,7 +246,7 @@ def compile_forward_sampling_function(
         (
             node,
             value
-            if isinstance(value, (Variable, Apply))
+            if isinstance(value, Variable | Apply)
             else pt.constant(value, dtype=getattr(node, "dtype", None), name=node.name),
         )
         for node, value in givens_dict.items()
@@ -315,7 +315,7 @@ def draw(
         return draw_fn()
 
     # Single variable output
-    if not isinstance(vars, (list, tuple)):
+    if not isinstance(vars, list | tuple):
         cast(Callable[[], np.ndarray], draw_fn)
         return np.stack([draw_fn() for _ in range(draws)])
 

@@ -193,7 +193,7 @@ def convert_dims(dims: Dims | None) -> StrongDims | None:
 
     if isinstance(dims, str):
         dims = (dims,)
-    elif isinstance(dims, (list, tuple)):
+    elif isinstance(dims, list | tuple):
         dims = tuple(dims)
     else:
         raise ValueError(f"The `dims` parameter must be a tuple, str or list. Actual: {type(dims)}")
@@ -209,7 +209,7 @@ def convert_shape(shape: Shape) -> StrongShape | None:
         shape = (shape,)
     elif isinstance(shape, TensorVariable) and shape.ndim == 1:
         shape = tuple(shape)
-    elif isinstance(shape, (list, tuple)):
+    elif isinstance(shape, list | tuple):
         shape = tuple(shape)
     else:
         raise ValueError(
@@ -227,7 +227,7 @@ def convert_size(size: Size) -> StrongSize | None:
         size = (size,)
     elif isinstance(size, TensorVariable) and size.ndim == 1:
         size = tuple(size)
-    elif isinstance(size, (list, tuple)):
+    elif isinstance(size, list | tuple):
         size = tuple(size)
     else:
         raise ValueError(

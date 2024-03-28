@@ -78,7 +78,7 @@ def find_constants(model: "Model") -> dict[str, Var]:
             and var not in model.potentials
             and var not in model.value_vars
             and name not in observations
-            and isinstance(var, (Constant, SharedVariable))
+            and isinstance(var, Constant | SharedVariable)
         )
 
     # The assumption is that constants (like pm.Data) are named

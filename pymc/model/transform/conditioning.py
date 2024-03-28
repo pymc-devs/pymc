@@ -106,7 +106,7 @@ def observe(
         model_var = memo[var]
 
         # Just a sanity check
-        assert isinstance(model_var.owner.op, (ModelFreeRV, ModelDeterministic))
+        assert isinstance(model_var.owner.op, ModelFreeRV | ModelDeterministic)
         assert model_var in fgraph.variables
 
         var = model_var.owner.inputs[0]

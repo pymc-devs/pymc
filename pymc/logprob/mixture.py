@@ -248,7 +248,7 @@ def get_stack_mixture_vars(
     joined_rvs = node.inputs[0]
 
     # First, make sure that it's some sort of concatenation
-    if not (joined_rvs.owner and isinstance(joined_rvs.owner.op, (MakeVector, Join))):
+    if not (joined_rvs.owner and isinstance(joined_rvs.owner.op, MakeVector | Join)):
         return None, None
 
     if isinstance(joined_rvs.owner.op, MakeVector):
@@ -284,7 +284,7 @@ def find_measurable_index_mixture(fgraph, node):
     mixing_indices = node.inputs[1:]
 
     # TODO: Add check / test case for Advanced Boolean indexing
-    if isinstance(node.op, (AdvancedSubtensor, AdvancedSubtensor1)):
+    if isinstance(node.op, AdvancedSubtensor | AdvancedSubtensor1):
         # We don't support (non-scalar) integer array indexing as it can pick repeated values,
         # but the Mixture logprob assumes all mixture values are independent
         if any(
@@ -298,7 +298,7 @@ def find_measurable_index_mixture(fgraph, node):
     mixture_rvs, join_axis = get_stack_mixture_vars(node)
 
     # We don't support symbolic join axis
-    if mixture_rvs is None or not isinstance(join_axis, (NoneTypeT, Constant)):
+    if mixture_rvs is None or not isinstance(join_axis, NoneTypeT | Constant):
         return None
 
     if rv_map_feature.request_measurable(mixture_rvs) != mixture_rvs:

@@ -274,7 +274,7 @@ class BaseModelGraphTest:
         for child, parents_in_plot in self.compute_graph.items():
             var = self.model[child]
             parents_in_graph = self.model_graph.get_parent_names(var)
-            if isinstance(var, (SharedVariable, TensorConstant)):
+            if isinstance(var, SharedVariable | TensorConstant):
                 # observed data also doesn't have parents in the compute graph!
                 # But for the visualization we like them to become descendants of the
                 # RVs that these observations belong to.

@@ -429,7 +429,7 @@ def _numpyro_stats_to_dict(posterior):
     }
     data = {}
     for stat, value in posterior.get_extra_fields(group_by_chain=True).items():
-        if isinstance(value, (dict, tuple)):
+        if isinstance(value, dict | tuple):
             continue
         name = rename_key.get(stat, stat)
         value = value.copy()

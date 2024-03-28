@@ -156,7 +156,7 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
     if x.owner and isinstance(x.owner.op, Elemwise) and isinstance(x.owner.op.scalar_op, Cast):
         array_data = extract_obs_data(x.owner.inputs[0])
         return array_data.astype(x.type.dtype)
-    if x.owner and isinstance(x.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1)):
+    if x.owner and isinstance(x.owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1):
         array_data = extract_obs_data(x.owner.inputs[0])
         mask_idx = tuple(extract_obs_data(i) for i in x.owner.inputs[2:])
         mask = np.zeros_like(array_data)
@@ -736,7 +736,7 @@ def find_rng_nodes(
     return [
         node
         for node in graph_inputs(variables)
-        if isinstance(node, (RandomStateSharedVariable, RandomGeneratorSharedVariable))
+        if isinstance(node, RandomStateSharedVariable | RandomGeneratorSharedVariable)
     ]
 
 
