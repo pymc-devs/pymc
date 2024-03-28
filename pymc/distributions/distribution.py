@@ -62,6 +62,7 @@ from pymc.model.core import new_or_existing_block_model_access
 from pymc.printing import str_for_dist
 from pymc.pytensorf import (
     collect_default_updates,
+    collect_default_updates_inner_fgraph,
     constant_fold,
     convert_observed_data,
     floatX,
@@ -299,16 +300,16 @@ class SymbolicRandomVariable(OpFromGraph):
                 raise ValueError("ndim_supp or gufunc_signature must be provided")
 
         kwargs.setdefault("inline", True)
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, strict=True, **kwargs)
 
-    def update(self, node: Node):
+    def update(self, node: Node) -> dict[Variable, Variable]:
         """Symbolic update expression for input random state variables
 
         Returns a dictionary with the symbolic expressions required for correct updating
         of random state input variables repeated function evaluations. This is used by
         `pytensorf.compile_pymc`.
         """
-        return {}
+        return collect_default_updates_inner_fgraph(node)
 
     def batch_ndim(self, node: Node) -> int:
         """Number of dimensions of the distribution's batch shape."""
@@ -702,23 +703,9 @@ class CustomSymbolicDistRV(SymbolicRandomVariable):
     symbolic random methods.
     """
 
-    default_output = -1
+    default_output = 0
 
     _print_name = ("CustomSymbolicDist", "\\operatorname{CustomSymbolicDist}")
-
-    def update(self, node: Node):
-        op = node.op
-        inner_updates = collect_default_updates(
-            inputs=op.inner_inputs, outputs=op.inner_outputs, must_be_shared=False
-        )
-
-        # Map inner updates to outer inputs/outputs
-        updates = {}
-        for rng, update in inner_updates.items():
-            inp_idx = op.inner_inputs.index(rng)
-            out_idx = op.inner_outputs.index(update)
-            updates[node.inputs[inp_idx]] = node.outputs[out_idx]
-        return updates
 
 
 @_support_point.register(CustomSymbolicDistRV)
@@ -819,14 +806,17 @@ class _CustomSymbolicDist(Distribution):
         if logp is not None:
 
             @_logprob.register(rv_type)
-            def custom_dist_logp(op, values, size, *params, **kwargs):
-                return logp(values[0], *params[: len(dist_params)])
+            def custom_dist_logp(op, values, size, *inputs, **kwargs):
+                [value] = values
+                rv_params = inputs[: len(dist_params)]
+                return logp(value, *rv_params)
 
         if logcdf is not None:
 
             @_logcdf.register(rv_type)
-            def custom_dist_logcdf(op, value, size, *params, **kwargs):
-                return logcdf(value, *params[: len(dist_params)])
+            def custom_dist_logcdf(op, value, size, *inputs, **kwargs):
+                rv_params = inputs[: len(dist_params)]
+                return logcdf(value, *rv_params)
 
         if support_point is not None:
 
@@ -859,22 +849,29 @@ class _CustomSymbolicDist(Distribution):
             dummy_dist_params = [dist_param.type() for dist_param in old_dist_params]
             dummy_rv = dist(*dummy_dist_params, dummy_size_param)
             dummy_params = [dummy_size_param, *dummy_dist_params]
-            dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
+            updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
+            rngs = updates_dict.keys()
+            rngs_updates = updates_dict.values()
             new_rv_op = rv_type(
-                inputs=dummy_params,
-                outputs=[*dummy_updates_dict.values(), dummy_rv],
+                inputs=[*dummy_params, *rngs],
+                outputs=[dummy_rv, *rngs_updates],
                 signature=signature,
             )
-            new_rv = new_rv_op(new_size, *dist_params)
+            new_rv = new_rv_op(new_size, *dist_params, *rngs)
 
             return new_rv
 
+        # RNGs are not passed as explicit inputs (because we usually don't know how many are needed)
+        # We retrieve them here
+        updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
+        rngs = updates_dict.keys()
+        rngs_updates = updates_dict.values()
         rv_op = rv_type(
-            inputs=dummy_params,
-            outputs=[*dummy_updates_dict.values(), dummy_rv],
+            inputs=[*dummy_params, *rngs],
+            outputs=[dummy_rv, *rngs_updates],
             signature=signature,
         )
-        return rv_op(size, *dist_params)
+        return rv_op(size, *dist_params, *rngs)
 
     @staticmethod
     def _infer_final_signature(signature: str, n_inputs, n_updates) -> str:

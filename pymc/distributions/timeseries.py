@@ -436,7 +436,6 @@ class AutoRegressiveRV(SymbolicRandomVariable):
 
     def update(self, node: Node):
         """Return the update mapping for the noise RV."""
-        # Since noise is a shared variable it shows up as the last node input
         return {node.inputs[-1]: node.outputs[0]}
 
 
@@ -658,13 +657,13 @@ class AR(Distribution):
         ar_ = pt.concatenate([init_, innov_.T], axis=-1)
 
         ar_op = AutoRegressiveRV(
-            inputs=[rhos_, sigma_, init_, steps_],
+            inputs=[rhos_, sigma_, init_, steps_, noise_rng],
             outputs=[noise_next_rng, ar_],
             ar_order=ar_order,
             constant_term=constant_term,
         )
 
-        ar = ar_op(rhos, sigma, init_dist, steps)
+        ar = ar_op(rhos, sigma, init_dist, steps, noise_rng)
         return ar
 
 
@@ -731,7 +730,6 @@ class GARCH11RV(SymbolicRandomVariable):
 
     def update(self, node: Node):
         """Return the update mapping for the noise RV."""
-        # Since noise is a shared variable it shows up as the last node input
         return {node.inputs[-1]: node.outputs[0]}
 
 
@@ -819,7 +817,7 @@ class GARCH11(Distribution):
 
         (y_t, _), innov_updates_ = pytensor.scan(
             fn=step,
-            outputs_info=[init_, initial_vol_ * pt.ones(batch_size)],
+            outputs_info=[init_, initial_vol_ * pt.ones_like(init_)],
             non_sequences=[omega_, alpha_1_, beta_1_, noise_rng],
             n_steps=steps_,
             strict=True,
@@ -831,11 +829,11 @@ class GARCH11(Distribution):
         )
 
         garch11_op = GARCH11RV(
-            inputs=[omega_, alpha_1_, beta_1_, initial_vol_, init_, steps_],
+            inputs=[omega_, alpha_1_, beta_1_, initial_vol_, init_, steps_, noise_rng],
             outputs=[noise_next_rng, garch11_],
         )
 
-        garch11 = garch11_op(omega, alpha_1, beta_1, initial_vol, init_dist, steps)
+        garch11 = garch11_op(omega, alpha_1, beta_1, initial_vol, init_dist, steps, noise_rng)
         return garch11
 
 
@@ -891,14 +889,13 @@ class EulerMaruyamaRV(SymbolicRandomVariable):
     ndim_supp = 1
     _print_name = ("EulerMaruyama", "\\operatorname{EulerMaruyama}")
 
-    def __init__(self, *args, dt, sde_fn, **kwargs):
+    def __init__(self, *args, dt: float, sde_fn: Callable, **kwargs):
         self.dt = dt
         self.sde_fn = sde_fn
         super().__init__(*args, **kwargs)
 
     def update(self, node: Node):
         """Return the update mapping for the noise RV."""
-        # Since noise is a shared variable it shows up as the last node input
         return {node.inputs[-1]: node.outputs[0]}
 
 
@@ -1010,14 +1007,14 @@ class EulerMaruyama(Distribution):
         )
 
         eulermaruyama_op = EulerMaruyamaRV(
-            inputs=[init_, steps_, *sde_pars_],
+            inputs=[init_, steps_, *sde_pars_, noise_rng],
             outputs=[noise_next_rng, sde_out_],
             dt=dt,
             sde_fn=sde_fn,
             signature=f"(),(s),{','.join('()' for _ in sde_pars_)}->(),(t)",
         )
 
-        eulermaruyama = eulermaruyama_op(init_dist, steps, *sde_pars)
+        eulermaruyama = eulermaruyama_op(init_dist, steps, *sde_pars, noise_rng)
         return eulermaruyama
 
 
