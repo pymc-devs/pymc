@@ -14,7 +14,7 @@ jobs:
     - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
     - uses: actions/setup-python@v5
       with:
-        python-version: "3.9"  # Run pre-commit on oldest supported Python version
+        python-version: "3.10"  # Run pre-commit on oldest supported Python version
     - uses: pre-commit/action@v3.0.1
   mypy:
     runs-on: ubuntu-latest
@@ -52,7 +52,7 @@ jobs:
           activate-environment: pymc-test
           channel-priority: strict
           environment-file: conda-envs/environment-test.yml
-          python-version: "3.9"  # Run pre-commit on oldest supported Python version
+          python-version: "3.10"  # Run pre-commit on oldest supported Python version
           use-mamba: true
           use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
       - name: Install-pymc and mypy dependencies
