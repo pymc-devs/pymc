@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import functools as ft
+import itertools
 import sys
 import warnings
 
@@ -76,7 +77,7 @@ def invlogit(x, eps=sys.float_info.epsilon):
 
 def orderedlogistic_logpdf(value, eta, cutpoints):
     c = np.concatenate(([-np.inf], cutpoints, [np.inf]))
-    ps = np.array([invlogit(eta - cc) - invlogit(eta - cc1) for cc, cc1 in zip(c[:-1], c[1:])])
+    ps = np.array([invlogit(eta - cc) - invlogit(eta - cc1) for cc, cc1 in itertools.pairwise(c)])
     p = ps[value]
     return np.where(np.all(ps >= 0), np.log(p), -np.inf)
 
@@ -87,7 +88,7 @@ def invprobit(x):
 
 def orderedprobit_logpdf(value, eta, cutpoints):
     c = np.concatenate(([-np.inf], cutpoints, [np.inf]))
-    ps = np.array([invprobit(eta - cc) - invprobit(eta - cc1) for cc, cc1 in zip(c[:-1], c[1:])])
+    ps = np.array([invprobit(eta - cc) - invprobit(eta - cc1) for cc, cc1 in itertools.pairwise(c)])
     p = ps[value]
     return np.where(np.all(ps >= 0), np.log(p), -np.inf)
 
