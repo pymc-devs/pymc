@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import itertools
 import warnings
 
 import numpy as np
@@ -480,7 +481,7 @@ def marginal_mixture_default_transform(op, rv):
                 transform.backward(value, *component.owner.inputs)
                 for transform, component in zip(default_transforms, components)
             ]
-            for expr1, expr2 in zip(backward_expressions[:-1], backward_expressions[1:]):
+            for expr1, expr2 in itertools.pairwise(backward_expressions):
                 if not equal_computations([expr1], [expr2]):
                     transform_warning()
                     return None
