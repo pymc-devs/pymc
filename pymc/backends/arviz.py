@@ -163,10 +163,10 @@ class _DefaultTrace:
 class InferenceDataConverter:
     """Encapsulate InferenceData specific logic."""
 
-    model: Optional[Model] = None
-    posterior_predictive: Optional[Mapping[str, np.ndarray]] = None
-    predictions: Optional[Mapping[str, np.ndarray]] = None
-    prior: Optional[Mapping[str, np.ndarray]] = None
+    model: Model | None = None
+    posterior_predictive: Mapping[str, np.ndarray] | None = None
+    predictions: Mapping[str, np.ndarray] | None = None
+    prior: Mapping[str, np.ndarray] | None = None
 
     def __init__(
         self,
@@ -177,11 +177,11 @@ class InferenceDataConverter:
         log_likelihood=False,
         log_prior=False,
         predictions=None,
-        coords: Optional[CoordSpec] = None,
-        dims: Optional[DimSpec] = None,
-        sample_dims: Optional[list] = None,
+        coords: CoordSpec | None = None,
+        dims: DimSpec | None = None,
+        sample_dims: list | None = None,
         model=None,
-        save_warmup: Optional[bool] = None,
+        save_warmup: bool | None = None,
         include_transformed: bool = False,
     ):
         self.save_warmup = rcParams["data.save_warmup"] if save_warmup is None else save_warmup
@@ -466,15 +466,15 @@ class InferenceDataConverter:
 def to_inference_data(
     trace: Optional["MultiTrace"] = None,
     *,
-    prior: Optional[Mapping[str, Any]] = None,
-    posterior_predictive: Optional[Mapping[str, Any]] = None,
-    log_likelihood: Union[bool, Iterable[str]] = False,
-    log_prior: Union[bool, Iterable[str]] = False,
-    coords: Optional[CoordSpec] = None,
-    dims: Optional[DimSpec] = None,
-    sample_dims: Optional[list] = None,
+    prior: Mapping[str, Any] | None = None,
+    posterior_predictive: Mapping[str, Any] | None = None,
+    log_likelihood: bool | Iterable[str] = False,
+    log_prior: bool | Iterable[str] = False,
+    coords: CoordSpec | None = None,
+    dims: DimSpec | None = None,
+    sample_dims: list | None = None,
     model: Optional["Model"] = None,
-    save_warmup: Optional[bool] = None,
+    save_warmup: bool | None = None,
     include_transformed: bool = False,
 ) -> InferenceData:
     """Convert pymc data into an InferenceData object.
@@ -543,10 +543,10 @@ def predictions_to_inference_data(
     predictions,
     posterior_trace: Optional["MultiTrace"] = None,
     model: Optional["Model"] = None,
-    coords: Optional[CoordSpec] = None,
-    dims: Optional[DimSpec] = None,
-    sample_dims: Optional[list] = None,
-    idata_orig: Optional[InferenceData] = None,
+    coords: CoordSpec | None = None,
+    dims: DimSpec | None = None,
+    sample_dims: list | None = None,
+    idata_orig: InferenceData | None = None,
     inplace: bool = False,
 ) -> InferenceData:
     """Translate out-of-sample predictions into ``InferenceData``.

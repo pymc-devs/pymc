@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from collections.abc import Sequence
-from typing import Optional, cast
+from typing import cast
 
 from arviz import InferenceData, dict_to_dataset
 from rich.console import Console
@@ -31,9 +31,9 @@ __all__ = ("compute_log_likelihood", "compute_log_prior")
 def compute_log_likelihood(
     idata: InferenceData,
     *,
-    var_names: Optional[Sequence[str]] = None,
+    var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
-    model: Optional[Model] = None,
+    model: Model | None = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
 ):
@@ -70,9 +70,9 @@ def compute_log_likelihood(
 
 def compute_log_prior(
     idata: InferenceData,
-    var_names: Optional[Sequence[str]] = None,
+    var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
-    model: Optional[Model] = None,
+    model: Model | None = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
 ):
@@ -110,9 +110,9 @@ def compute_log_prior(
 def compute_log_density(
     idata: InferenceData,
     *,
-    var_names: Optional[Sequence[str]] = None,
+    var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
-    model: Optional[Model] = None,
+    model: Model | None = None,
     kind="likelihood",
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,

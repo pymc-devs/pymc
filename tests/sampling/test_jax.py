@@ -15,7 +15,8 @@ import logging
 import re
 import warnings
 
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 from unittest import mock
 
 import arviz as az
@@ -297,9 +298,9 @@ def test_idata_kwargs(
     model_test_idata_kwargs: pm.Model,
     sampler: Callable[..., az.InferenceData],
     idata_kwargs: dict[str, Any],
-    postprocessing_backend: Optional[str],
+    postprocessing_backend: str | None,
 ):
-    idata: Optional[az.InferenceData] = None
+    idata: az.InferenceData | None = None
     with model_test_idata_kwargs:
         idata = sampler(
             tune=50,

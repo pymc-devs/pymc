@@ -19,7 +19,7 @@ import warnings
 
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
-from typing import Any, Optional, Union
+from typing import Any
 
 import cloudpickle
 import numpy as np
@@ -52,7 +52,7 @@ def sample_smc(
     idata_kwargs=None,
     progressbar=True,
     **kernel_kwargs,
-) -> Union[InferenceData, MultiTrace]:
+) -> InferenceData | MultiTrace:
     r"""
     Sequential Monte Carlo based sampling.
 
@@ -253,7 +253,7 @@ def _save_sample_stats(
     _t_sampling,
     idata_kwargs,
     model: Model,
-) -> tuple[Optional[Any], Optional[InferenceData]]:
+) -> tuple[Any | None, InferenceData | None]:
     sample_settings_dict = sample_settings[0]
     sample_settings_dict["_t_sampling"] = _t_sampling
     sample_stats_dict = sample_stats[0]
@@ -266,7 +266,7 @@ def _save_sample_stats(
                 value_list.append(chain_sample_stats[stat])
             sample_stats_dict[stat] = value_list
 
-    idata: Optional[InferenceData] = None
+    idata: InferenceData | None = None
     if not return_inferencedata:
         for stat, value in sample_stats_dict.items():
             setattr(trace.report, stat, value)

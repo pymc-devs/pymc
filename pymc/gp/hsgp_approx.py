@@ -17,7 +17,7 @@ import warnings
 
 from collections.abc import Sequence
 from types import ModuleType
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import pytensor.tensor as pt
@@ -31,7 +31,7 @@ from pymc.gp.mean import Mean, Zero
 TensorLike = Union[np.ndarray, pt.TensorVariable]
 
 
-def set_boundary(Xs: TensorLike, c: Union[numbers.Real, TensorLike]) -> TensorLike:
+def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> TensorLike:
     """Set the boundary using the mean-subtracted `Xs` and `c`.  `c` is usually a scalar
     multiplyer greater than 1.0, but it may be one value per dimension or column of `Xs`.
     """
@@ -176,10 +176,10 @@ class HSGP(Base):
     def __init__(
         self,
         m: Sequence[int],
-        L: Optional[Sequence[float]] = None,
-        c: Optional[numbers.Real] = None,
+        L: Sequence[float] | None = None,
+        c: numbers.Real | None = None,
         drop_first: bool = False,
-        parameterization: Optional[str] = "noncentered",
+        parameterization: str | None = "noncentered",
         *,
         mean_func: Mean = Zero(),
         cov_func: Covariance,
@@ -220,7 +220,7 @@ class HSGP(Base):
         self._drop_first = drop_first
         self._m = m
         self._m_star = int(np.prod(self._m))
-        self._L: Optional[pt.TensorVariable] = None
+        self._L: pt.TensorVariable | None = None
         if L is not None:
             self._L = pt.as_tensor(L)
         self._c = c
@@ -341,7 +341,7 @@ class HSGP(Base):
         i = int(self._drop_first is True)
         return phi[:, i:], pt.sqrt(psd[i:])
 
-    def prior(self, name: str, X: TensorLike, dims: Optional[str] = None):  # type: ignore
+    def prior(self, name: str, X: TensorLike, dims: str | None = None):  # type: ignore
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
         For usage examples, refer to `pm.gp.Latent`.
@@ -396,7 +396,7 @@ class HSGP(Base):
         elif self._parameterization == "centered":
             return self.mean_func(Xnew) + phi[:, i:] @ beta
 
-    def conditional(self, name: str, Xnew: TensorLike, dims: Optional[str] = None):  # type: ignore
+    def conditional(self, name: str, Xnew: TensorLike, dims: str | None = None):  # type: ignore
         R"""
         Returns the (approximate) conditional distribution evaluated over new input locations
         `Xnew`.
@@ -478,7 +478,7 @@ class HSGPPeriodic(Base):
     def __init__(
         self,
         m: int,
-        scale: Optional[Union[float, TensorLike]] = 1.0,
+        scale: float | TensorLike | None = 1.0,
         *,
         mean_func: Mean = Zero(),
         cov_func: Periodic,
@@ -589,7 +589,7 @@ class HSGPPeriodic(Base):
         psd = self.scale * self.cov_func.power_spectral_density_approx(J)
         return (phi_cos, phi_sin), psd
 
-    def prior(self, name: str, X: TensorLike, dims: Optional[str] = None):  # type: ignore
+    def prior(self, name: str, X: TensorLike, dims: str | None = None):  # type: ignore
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
         For usage examples, refer to `pm.gp.Latent`.
@@ -640,7 +640,7 @@ class HSGPPeriodic(Base):
         phi = phi_cos @ (psd * beta[:m]) + phi_sin[..., 1:] @ (psd[1:] * beta[m:])
         return self.mean_func(Xnew) + phi
 
-    def conditional(self, name: str, Xnew: TensorLike, dims: Optional[str] = None):  # type: ignore
+    def conditional(self, name: str, Xnew: TensorLike, dims: str | None = None):  # type: ignore
         R"""
         Returns the (approximate) conditional distribution evaluated over new input locations
         `Xnew`.

@@ -38,7 +38,7 @@ import warnings
 
 from collections import deque
 from collections.abc import Sequence
-from typing import Optional, Union
+from typing import TypeAlias
 
 import numpy as np
 import pytensor.tensor as pt
@@ -54,7 +54,6 @@ from pytensor.graph.basic import (
 from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
 from pytensor.tensor.variable import TensorVariable
-from typing_extensions import TypeAlias
 
 from pymc.logprob.abstract import (
     MeasurableVariable,
@@ -69,7 +68,7 @@ from pymc.logprob.transforms import Transform
 from pymc.logprob.utils import rvs_in_graph
 from pymc.pytensorf import replace_vars_in_graphs
 
-TensorLike: TypeAlias = Union[Variable, float, np.ndarray]
+TensorLike: TypeAlias = Variable | float | np.ndarray
 
 
 def _find_unallowed_rvs_in_graph(graph):
@@ -83,7 +82,7 @@ def _find_unallowed_rvs_in_graph(graph):
     }
 
 
-def _warn_rvs_in_inferred_graph(graph: Union[TensorVariable, Sequence[TensorVariable]]):
+def _warn_rvs_in_inferred_graph(graph: TensorVariable | Sequence[TensorVariable]):
     """Issue warning if any RVs are found in graph.
 
     RVs are usually an (implicit) conditional input of the derived probability expression,
@@ -410,8 +409,8 @@ RVS_IN_JOINT_LOGP_GRAPH_MSG = (
 def conditional_logp(
     rv_values: dict[TensorVariable, TensorVariable],
     warn_rvs=None,
-    ir_rewriter: Optional[GraphRewriter] = None,
-    extra_rewrites: Optional[Union[GraphRewriter, NodeRewriter]] = None,
+    ir_rewriter: GraphRewriter | None = None,
+    extra_rewrites: GraphRewriter | NodeRewriter | None = None,
     **kwargs,
 ) -> dict[TensorVariable, TensorVariable]:
     r"""Create a map between variables and conditional log-probabilities

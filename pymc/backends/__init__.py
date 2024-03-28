@@ -63,12 +63,11 @@ Saved backends can be loaded using `arviz.from_netcdf`
 
 from collections.abc import Mapping, Sequence
 from copy import copy
-from typing import Optional, Union
+from typing import Optional, TypeAlias, Union
 
 import numpy as np
 
 from pytensor.tensor.variable import TensorVariable
-from typing_extensions import TypeAlias
 
 from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
 from pymc.backends.base import BaseTrace, IBaseTrace
@@ -98,9 +97,9 @@ def _init_trace(
     expected_length: int,
     chain_number: int,
     stats_dtypes: list[dict[str, type]],
-    trace: Optional[BaseTrace],
+    trace: BaseTrace | None,
     model: Model,
-    trace_vars: Optional[list[TensorVariable]] = None,
+    trace_vars: list[TensorVariable] | None = None,
 ) -> BaseTrace:
     """Initializes a trace backend for a chain."""
     strace: BaseTrace
@@ -119,14 +118,14 @@ def _init_trace(
 
 def init_traces(
     *,
-    backend: Optional[TraceOrBackend],
+    backend: TraceOrBackend | None,
     chains: int,
     expected_length: int,
-    step: Union[BlockedStep, CompoundStep],
+    step: BlockedStep | CompoundStep,
     initial_point: Mapping[str, np.ndarray],
     model: Model,
-    trace_vars: Optional[list[TensorVariable]] = None,
-) -> tuple[Optional[RunType], Sequence[IBaseTrace]]:
+    trace_vars: list[TensorVariable] | None = None,
+) -> tuple[RunType | None, Sequence[IBaseTrace]]:
     """Initializes a trace recorder for each chain."""
     if HAS_MCB and isinstance(backend, Backend):
         return init_chain_adapters(

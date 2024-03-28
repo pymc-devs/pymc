@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from copy import copy, deepcopy
-from typing import Optional
 
 import pytensor
 
@@ -58,7 +57,7 @@ class ModelVar(Op):
 class ModelValuedVar(ModelVar):
     __props__ = ("transform",)
 
-    def __init__(self, transform: Optional[Transform] = None):
+    def __init__(self, transform: Transform | None = None):
         if transform is not None and not isinstance(transform, Transform):
             raise TypeError(f"transform must be None or RVTransform type, got {type(transform)}")
         self.transform = transform

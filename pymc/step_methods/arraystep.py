@@ -13,7 +13,8 @@
 #   limitations under the License.
 
 from abc import abstractmethod
-from typing import Callable, Union, cast
+from collections.abc import Callable
+from typing import cast
 
 import numpy as np
 
@@ -47,7 +48,7 @@ class ArrayStep(BlockedStep):
         self.blocked = blocked
 
     def step(self, point: PointType) -> tuple[PointType, StatsType]:
-        partial_funcs_and_point: list[Union[Callable, PointType]] = [
+        partial_funcs_and_point: list[Callable | PointType] = [
             DictToArrayBijection.mapf(x, start_point=point) for x in self.fs
         ]
         if self.allvars:

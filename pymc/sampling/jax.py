@@ -15,10 +15,10 @@ import logging
 import os
 import re
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import datetime
 from functools import partial
-from typing import Any, Callable, Literal, Optional, Union
+from typing import Any, Literal
 
 import arviz as az
 import jax
@@ -120,8 +120,8 @@ def _replace_shared_variables(graph: list[TensorVariable]) -> list[TensorVariabl
 
 
 def get_jaxified_graph(
-    inputs: Optional[list[TensorVariable]] = None,
-    outputs: Optional[list[TensorVariable]] = None,
+    inputs: list[TensorVariable] | None = None,
+    outputs: list[TensorVariable] | None = None,
 ) -> list[TensorVariable]:
     """Compile an PyTensor graph into an optimized JAX function"""
 
@@ -161,7 +161,7 @@ def get_jaxified_logp(model: Model, negative_logp=True) -> Callable:
 def _get_log_likelihood(
     model: Model,
     samples,
-    backend: Optional[Literal["cpu", "gpu"]] = None,
+    backend: Literal["cpu", "gpu"] | None = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
 ) -> dict:
     """Compute log-likelihood for all observations"""
@@ -180,7 +180,7 @@ def _device_put(input, device: str):
 def _postprocess_samples(
     jax_fn: Callable,
     raw_mcmc_samples: list[TensorVariable],
-    postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
+    postprocessing_backend: Literal["cpu", "gpu"] | None = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
 ) -> list[TensorVariable]:
     if postprocessing_vectorize == "scan":
@@ -201,11 +201,11 @@ def _postprocess_samples(
 def _get_batched_jittered_initial_points(
     model: Model,
     chains: int,
-    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
+    initvals: StartDict | Sequence[StartDict | None] | None,
     random_seed: RandomSeed,
     jitter: bool = True,
     jitter_max_retries: int = 10,
-) -> Union[np.ndarray, list[np.ndarray]]:
+) -> np.ndarray | list[np.ndarray]:
     """Get jittered initial point in format expected by NumPyro MCMC kernel
 
     Returns
@@ -309,7 +309,7 @@ def _sample_blackjax_nuts(
     tune: int,
     draws: int,
     chains: int,
-    chain_method: Optional[str],
+    chain_method: str | None,
     progressbar: bool,
     random_seed: int,
     initial_points,
@@ -445,7 +445,7 @@ def _sample_numpyro_nuts(
     tune: int,
     draws: int,
     chains: int,
-    chain_method: Optional[str],
+    chain_method: str | None,
     progressbar: bool,
     random_seed: int,
     initial_points,
@@ -505,19 +505,19 @@ def sample_jax_nuts(
     tune: int = 1000,
     chains: int = 4,
     target_accept: float = 0.8,
-    random_seed: Optional[RandomState] = None,
-    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    random_seed: RandomState | None = None,
+    initvals: StartDict | Sequence[StartDict | None] | None = None,
     jitter: bool = True,
-    model: Optional[Model] = None,
-    var_names: Optional[Sequence[str]] = None,
-    nuts_kwargs: Optional[dict] = None,
+    model: Model | None = None,
+    var_names: Sequence[str] | None = None,
+    nuts_kwargs: dict | None = None,
     progressbar: bool = True,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
-    postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
+    postprocessing_backend: Literal["cpu", "gpu"] | None = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
     postprocessing_chunks=None,
-    idata_kwargs: Optional[dict] = None,
+    idata_kwargs: dict | None = None,
     compute_convergence_checks: bool = True,
     nuts_sampler: Literal["numpyro", "blackjax"],
 ) -> az.InferenceData:
