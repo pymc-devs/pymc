@@ -25,9 +25,7 @@ from abc import ABC
 from collections.abc import Mapping, Sequence, Sized
 from typing import (
     Any,
-    Optional,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -53,7 +51,7 @@ class IBaseTrace(ABC, Sized):
     varnames: list[str]
     """Names of tracked variables."""
 
-    sampler_vars: list[dict[str, Union[type, np.dtype]]]
+    sampler_vars: list[dict[str, type | np.dtype]]
     """Sampler stats for each sampler."""
 
     def __len__(self):
@@ -75,7 +73,7 @@ class IBaseTrace(ABC, Sized):
         raise NotImplementedError()
 
     def get_sampler_stats(
-        self, stat_name: str, sampler_idx: Optional[int] = None, burn=0, thin=1
+        self, stat_name: str, sampler_idx: int | None = None, burn=0, thin=1
     ) -> np.ndarray:
         """Get sampler statistics from the trace.
 
@@ -219,7 +217,7 @@ class BaseTrace(IBaseTrace):
             raise ValueError("Can only index with slice or integer")
 
     def get_sampler_stats(
-        self, stat_name: str, sampler_idx: Optional[int] = None, burn=0, thin=1
+        self, stat_name: str, sampler_idx: int | None = None, burn=0, thin=1
     ) -> np.ndarray:
         """Get sampler statistics from the trace.
 
@@ -443,7 +441,7 @@ class MultiTrace:
         burn: int = 0,
         thin: int = 1,
         combine: bool = True,
-        chains: Optional[Union[int, Sequence[int]]] = None,
+        chains: int | Sequence[int] | None = None,
         squeeze: bool = True,
     ) -> list[np.ndarray]:
         """Get values from traces.
@@ -482,9 +480,9 @@ class MultiTrace:
         burn: int = 0,
         thin: int = 1,
         combine: bool = True,
-        chains: Optional[Union[int, Sequence[int]]] = None,
+        chains: int | Sequence[int] | None = None,
         squeeze: bool = True,
-    ) -> Union[list[np.ndarray], np.ndarray]:
+    ) -> list[np.ndarray] | np.ndarray:
         """Get sampler statistics from the trace.
 
         Note: This implementation attempts to squeeze object arrays into a consistent dtype,
@@ -534,7 +532,7 @@ class MultiTrace:
         trace._report = self._report._slice(*idxs)
         return trace
 
-    def point(self, idx: int, chain: Optional[int] = None) -> dict[str, np.ndarray]:
+    def point(self, idx: int, chain: int | None = None) -> dict[str, np.ndarray]:
         """Return a dictionary of point values at `idx`.
 
         Parameters

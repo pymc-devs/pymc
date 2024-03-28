@@ -22,7 +22,6 @@ import sys
 import warnings
 
 from collections.abc import Sequence
-from typing import Optional
 
 import numpy as np
 import pytensor.gradient as tg
@@ -46,7 +45,7 @@ __all__ = ["find_MAP"]
 
 def find_MAP(
     start=None,
-    vars: Optional[Sequence[Variable]] = None,
+    vars: Sequence[Variable] | None = None,
     method="L-BFGS-B",
     return_raw=False,
     include_transformed=True,
@@ -55,7 +54,7 @@ def find_MAP(
     maxeval=5000,
     model=None,
     *args,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     **kwargs,
 ):
     """Finds the local maximum a posteriori point given a model.

@@ -18,7 +18,6 @@
 import warnings
 
 from functools import partial, reduce
-from typing import Optional
 
 import numpy as np
 import pytensor
@@ -2755,7 +2754,7 @@ class ZeroSumNormal(Distribution):
         )
 
     @classmethod
-    def check_zerosum_axes(cls, n_zerosum_axes: Optional[int]) -> int:
+    def check_zerosum_axes(cls, n_zerosum_axes: int | None) -> int:
         if n_zerosum_axes is None:
             n_zerosum_axes = 1
         if not isinstance(n_zerosum_axes, int):

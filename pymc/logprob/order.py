@@ -34,7 +34,6 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from typing import Optional
 
 import pytensor.tensor as pt
 
@@ -73,7 +72,7 @@ MeasurableVariable.register(MeasurableMaxDiscrete)
 
 
 @node_rewriter([Max])
-def find_measurable_max(fgraph: FunctionGraph, node: Node) -> Optional[list[TensorVariable]]:
+def find_measurable_max(fgraph: FunctionGraph, node: Node) -> list[TensorVariable] | None:
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -174,7 +173,7 @@ MeasurableVariable.register(MeasurableDiscreteMaxNeg)
 
 
 @node_rewriter(tracks=[Max])
-def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> Optional[list[TensorVariable]]:
+def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> list[TensorVariable] | None:
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:

@@ -22,7 +22,7 @@ import warnings
 
 from collections.abc import Sequence
 from functools import singledispatch
-from typing import Any, Optional, Union, cast
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 
@@ -34,7 +34,6 @@ from pytensor.raise_op import Assert
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.shape import SpecifyShape
 from pytensor.tensor.variable import TensorVariable
-from typing_extensions import TypeAlias
 
 from pymc.model import modelcontext
 from pymc.pytensorf import convert_observed_data
@@ -177,17 +176,17 @@ def broadcast_dist_samples_shape(shapes, size=None):
 
 
 # User-provided can be lazily specified as scalars
-Shape: TypeAlias = Union[int, TensorVariable, Sequence[Union[int, Variable]]]
-Dims: TypeAlias = Union[str, Sequence[Optional[str]]]
-Size: TypeAlias = Union[int, TensorVariable, Sequence[Union[int, Variable]]]
+Shape: TypeAlias = int | TensorVariable | Sequence[int | Variable]
+Dims: TypeAlias = str | Sequence[str | None]
+Size: TypeAlias = int | TensorVariable | Sequence[int | Variable]
 
 # After conversion to vectors
-StrongShape: TypeAlias = Union[TensorVariable, tuple[Union[int, Variable], ...]]
-StrongDims: TypeAlias = Sequence[Optional[str]]
-StrongSize: TypeAlias = Union[TensorVariable, tuple[Union[int, Variable], ...]]
+StrongShape: TypeAlias = TensorVariable | tuple[int | Variable, ...]
+StrongDims: TypeAlias = Sequence[str | None]
+StrongSize: TypeAlias = TensorVariable | tuple[int | Variable, ...]
 
 
-def convert_dims(dims: Optional[Dims]) -> Optional[StrongDims]:
+def convert_dims(dims: Dims | None) -> StrongDims | None:
     """Process a user-provided dims variable into None or a valid dims tuple."""
     if dims is None:
         return None
@@ -202,7 +201,7 @@ def convert_dims(dims: Optional[Dims]) -> Optional[StrongDims]:
     return dims
 
 
-def convert_shape(shape: Shape) -> Optional[StrongShape]:
+def convert_shape(shape: Shape) -> StrongShape | None:
     """Process a user-provided shape variable into None or a valid shape object."""
     if shape is None:
         return None
@@ -220,7 +219,7 @@ def convert_shape(shape: Shape) -> Optional[StrongShape]:
     return shape
 
 
-def convert_size(size: Size) -> Optional[StrongSize]:
+def convert_size(size: Size) -> StrongSize | None:
     """Process a user-provided size variable into None or a valid size object."""
     if size is None:
         return None
@@ -265,10 +264,10 @@ def shape_from_dims(dims: StrongDims, model) -> StrongShape:
 
 
 def find_size(
-    shape: Optional[StrongShape],
-    size: Optional[StrongSize],
+    shape: StrongShape | None,
+    size: StrongSize | None,
     ndim_supp: int,
-) -> Optional[StrongSize]:
+) -> StrongSize | None:
     """Determines the size keyword argument for creating a Distribution.
 
     Parameters
@@ -421,14 +420,14 @@ def change_specify_shape_size(op, ss, new_size, expand) -> TensorVariable:
 
 
 def get_support_shape(
-    support_shape: Optional[Sequence[Union[int, np.ndarray, TensorVariable]]],
+    support_shape: Sequence[int | np.ndarray | TensorVariable] | None,
     *,
-    shape: Optional[Shape] = None,
-    dims: Optional[Dims] = None,
-    observed: Optional[Any] = None,
-    support_shape_offset: Optional[Sequence[int]] = None,
+    shape: Shape | None = None,
+    dims: Dims | None = None,
+    observed: Any | None = None,
+    support_shape_offset: Sequence[int] | None = None,
     ndim_supp: int = 1,
-) -> Optional[TensorVariable]:
+) -> TensorVariable | None:
     """Extract the support shapes from shape / dims / observed information
 
     Parameters
@@ -461,7 +460,7 @@ def get_support_shape(
         support_shape_offset = [0] * ndim_supp
     elif isinstance(support_shape_offset, int):
         support_shape_offset = [support_shape_offset] * ndim_supp
-    inferred_support_shape: Optional[Sequence[Union[int, np.ndarray, Variable]]] = None
+    inferred_support_shape: Sequence[int | np.ndarray | Variable] | None = None
 
     if shape is not None:
         shape = to_tuple(shape)
@@ -518,13 +517,13 @@ def get_support_shape(
 
 
 def get_support_shape_1d(
-    support_shape: Optional[Union[int, np.ndarray, TensorVariable]],
+    support_shape: int | np.ndarray | TensorVariable | None,
     *,
-    shape: Optional[Shape] = None,
-    dims: Optional[Dims] = None,
-    observed: Optional[Any] = None,
+    shape: Shape | None = None,
+    dims: Dims | None = None,
+    observed: Any | None = None,
     support_shape_offset: int = 0,
-) -> Optional[TensorVariable]:
+) -> TensorVariable | None:
     """Helper function for cases when you just care about one dimension."""
     support_shape_tuple = get_support_shape(
         support_shape=(support_shape,) if support_shape is not None else None,

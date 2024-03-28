@@ -16,7 +16,6 @@ import warnings
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from os import path
-from typing import Optional
 
 from pytensor import function
 from pytensor.graph import Apply
@@ -83,7 +82,7 @@ class ModelGraph:
 
         return parents
 
-    def vars_to_plot(self, var_names: Optional[Iterable[VarName]] = None) -> list[VarName]:
+    def vars_to_plot(self, var_names: Iterable[VarName] | None = None) -> list[VarName]:
         if var_names is None:
             return self._all_var_names
 
@@ -114,7 +113,7 @@ class ModelGraph:
         return [get_var_name(var) for var in selected_ancestors]
 
     def make_compute_graph(
-        self, var_names: Optional[Iterable[VarName]] = None
+        self, var_names: Iterable[VarName] | None = None
     ) -> dict[VarName, set[VarName]]:
         """Get map of var_name -> set(input var names) for the model"""
         input_map: dict[VarName, set[VarName]] = defaultdict(set)
@@ -194,7 +193,7 @@ class ModelGraph:
         else:
             graph.node(var_name.replace(":", "&"), **kwargs)
 
-    def get_plates(self, var_names: Optional[Iterable[VarName]] = None) -> dict[str, set[VarName]]:
+    def get_plates(self, var_names: Iterable[VarName] | None = None) -> dict[str, set[VarName]]:
         """Rough but surprisingly accurate plate detection.
 
         Just groups by the shape of the underlying distribution.  Will be wrong
@@ -236,7 +235,7 @@ class ModelGraph:
 
     def make_graph(
         self,
-        var_names: Optional[Iterable[VarName]] = None,
+        var_names: Iterable[VarName] | None = None,
         formatting: str = "plain",
         save=None,
         figsize=None,
@@ -288,9 +287,7 @@ class ModelGraph:
 
         return graph
 
-    def make_networkx(
-        self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
-    ):
+    def make_networkx(self, var_names: Iterable[VarName] | None = None, formatting: str = "plain"):
         """Make networkx Digraph of PyMC model
 
         Returns
@@ -347,7 +344,7 @@ class ModelGraph:
 def model_to_networkx(
     model=None,
     *,
-    var_names: Optional[Iterable[VarName]] = None,
+    var_names: Iterable[VarName] | None = None,
     formatting: str = "plain",
 ):
     """Produce a networkx Digraph from a PyMC model.
@@ -412,10 +409,10 @@ def model_to_networkx(
 def model_to_graphviz(
     model=None,
     *,
-    var_names: Optional[Iterable[VarName]] = None,
+    var_names: Iterable[VarName] | None = None,
     formatting: str = "plain",
-    save: Optional[str] = None,
-    figsize: Optional[tuple[int, int]] = None,
+    save: str | None = None,
+    figsize: tuple[int, int] | None = None,
     dpi: int = 300,
 ):
     """Produce a graphviz Digraph from a PyMC model.

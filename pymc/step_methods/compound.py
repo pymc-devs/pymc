@@ -23,7 +23,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping, Sequence
 from enum import IntEnum, unique
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 
@@ -251,7 +251,7 @@ class CompoundStep:
         return [var for method in self.methods for var in method.vars]
 
 
-def flatten_steps(step: Union[BlockedStep, CompoundStep]) -> list[BlockedStep]:
+def flatten_steps(step: BlockedStep | CompoundStep) -> list[BlockedStep]:
     """Flatten a hierarchy of step methods to a list."""
     if isinstance(step, BlockedStep):
         return [step]
@@ -263,7 +263,7 @@ def flatten_steps(step: Union[BlockedStep, CompoundStep]) -> list[BlockedStep]:
     return steps
 
 
-def check_step_emits_tune(step: Union[CompoundStep, BlockedStep]):
+def check_step_emits_tune(step: CompoundStep | BlockedStep):
     if isinstance(step, BlockedStep) and "tune" not in step.stats_dtypes_shapes:
         raise TypeError(f"{type(step)} does not emit the required 'tune' stat.")
     elif isinstance(step, CompoundStep):

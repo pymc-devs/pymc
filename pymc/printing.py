@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from typing import Union
 
 from pytensor.compile import SharedVariable
 from pytensor.graph.basic import Constant, walk
@@ -195,7 +194,7 @@ def _str_for_input_rv(var: Variable, formatting: str) -> str:
         return _str
 
 
-def _str_for_constant(var: Union[Constant, SharedVariable], formatting: str) -> str:
+def _str_for_constant(var: Constant | SharedVariable, formatting: str) -> str:
     if isinstance(var, Constant):
         var_data = var.data
         var_type = "constant"
@@ -254,7 +253,7 @@ def _latex_escape(text: str) -> str:
     return text.replace("$", r"\$")
 
 
-def _default_repr_pretty(obj: Union[TensorVariable, Model], p, cycle):
+def _default_repr_pretty(obj: TensorVariable | Model, p, cycle):
     """Handy plug-in method to instruct IPython-like REPLs to use our str_repr above."""
     # we know that our str_repr does not recurse, so we can ignore cycle
     try:

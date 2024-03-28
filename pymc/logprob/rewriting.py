@@ -37,7 +37,6 @@ import warnings
 
 from collections import deque
 from collections.abc import Sequence
-from typing import Optional
 
 import pytensor.tensor as pt
 
@@ -101,7 +100,7 @@ class MeasurableEquilibriumGraphRewriter(EquilibriumGraphRewriter):
     """
 
     def apply(self, fgraph):
-        rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+        rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
         if not rv_map_feature:
             return None
 
@@ -232,7 +231,7 @@ class PreserveRVMappings(Feature):
         self,
         old_rv: TensorVariable,
         new_value: TensorVariable,
-        new_rv: Optional[TensorVariable] = None,
+        new_rv: TensorVariable | None = None,
     ):
         """Update mappings for a random variable.
 
@@ -333,7 +332,7 @@ def incsubtensor_rv_replace(fgraph, node):
 
     This provides a means of specifying "missing data", for instance.
     """
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -399,7 +398,7 @@ cleanup_ir_rewrites_db.register("remove_DiracDelta", remove_DiracDelta, "cleanup
 
 def construct_ir_fgraph(
     rv_values: dict[Variable, Variable],
-    ir_rewriter: Optional[GraphRewriter] = None,
+    ir_rewriter: GraphRewriter | None = None,
 ) -> tuple[FunctionGraph, dict[Variable, Variable], dict[Variable, Variable]]:
     r"""Construct a `FunctionGraph` in measurable IR form for the keys in `rv_values`.
 

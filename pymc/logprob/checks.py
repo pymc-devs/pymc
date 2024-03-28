@@ -34,7 +34,6 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from typing import Optional
 
 import pytensor.tensor as pt
 
@@ -64,13 +63,13 @@ def logprob_specify_shape(op, values, inner_rv, *shapes, **kwargs):
 
 
 @node_rewriter([SpecifyShape])
-def find_measurable_specify_shapes(fgraph, node) -> Optional[list[TensorVariable]]:
+def find_measurable_specify_shapes(fgraph, node) -> list[TensorVariable] | None:
     r"""Finds `SpecifyShapeOp`\s for which a `logprob` can be computed."""
 
     if isinstance(node.op, MeasurableSpecifyShape):
         return None  # pragma: no cover
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -117,13 +116,13 @@ def logprob_check_and_raise(op, values, inner_rv, *assertions, **kwargs):
 
 
 @node_rewriter([CheckAndRaise])
-def find_measurable_check_and_raise(fgraph, node) -> Optional[list[TensorVariable]]:
+def find_measurable_check_and_raise(fgraph, node) -> list[TensorVariable] | None:
     r"""Finds `AssertOp`\s for which a `logprob` can be computed."""
 
     if isinstance(node.op, MeasurableCheckAndRaise):
         return None  # pragma: no cover
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover

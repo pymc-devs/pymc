@@ -18,16 +18,14 @@ import threading
 import types
 import warnings
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from sys import modules
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Literal,
     Optional,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -132,18 +130,18 @@ class ContextMeta(type):
 
     # FIXME: is there a more elegant way to automatically add methods to the class that
     # are instance methods instead of class methods?
-    def __init__(cls, name, bases, nmspc, context_class: Optional[type] = None, **kwargs):
+    def __init__(cls, name, bases, nmspc, context_class: type | None = None, **kwargs):
         """Add ``__enter__`` and ``__exit__`` methods to the new class automatically."""
         if context_class is not None:
             cls._context_class = context_class
         super().__init__(name, bases, nmspc)
 
-    def get_context(cls, error_if_none=True, allow_block_model_access=False) -> Optional[T]:
+    def get_context(cls, error_if_none=True, allow_block_model_access=False) -> T | None:
         """Return the most recently pushed context object of type ``cls``
         on the stack, or ``None``. If ``error_if_none`` is True (default),
         raise a ``TypeError`` instead of returning ``None``."""
         try:
-            candidate: Optional[T] = cls.get_contexts()[-1]
+            candidate: T | None = cls.get_contexts()[-1]
         except IndexError:
             # Calling code expects to get a TypeError if the entity
             # is unfound, and there's too much to fix.
@@ -184,7 +182,7 @@ class ContextMeta(type):
     # than a class.
     @property
     def context_class(cls) -> type:
-        def resolve_type(c: Union[type, str]) -> type:
+        def resolve_type(c: type | str) -> type:
             if isinstance(c, str):
                 c = getattr(modules[cls.__module__], c)
             if isinstance(c, type):
@@ -615,7 +613,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def compile_logp(
         self,
-        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
         sum: bool = True,
         **compile_kwargs,
@@ -637,7 +635,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def compile_dlogp(
         self,
-        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
         **compile_kwargs,
     ) -> PointFunc:
@@ -655,7 +653,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def compile_d2logp(
         self,
-        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
         **compile_kwargs,
     ) -> PointFunc:
@@ -673,10 +671,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def logp(
         self,
-        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
         sum: bool = True,
-    ) -> Union[Variable, list[Variable]]:
+    ) -> Variable | list[Variable]:
         """Elemwise log-probability of the model.
 
         Parameters
@@ -752,7 +750,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def dlogp(
         self,
-        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
     ) -> Variable:
         """Gradient of the models log-probability w.r.t. ``vars``.
@@ -791,7 +789,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def d2logp(
         self,
-        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
     ) -> Variable:
         """Hessian of the models log-probability w.r.t. ``vars``.
@@ -926,7 +924,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self.free_RVs + self.deterministics
 
     @property
-    def coords(self) -> dict[str, Union[tuple, None]]:
+    def coords(self) -> dict[str, tuple | None]:
         """Coordinate values for model dimensions."""
         return self._coords
 
@@ -956,10 +954,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def add_coord(
         self,
         name: str,
-        values: Optional[Sequence] = None,
-        mutable: Optional[bool] = None,
+        values: Sequence | None = None,
+        mutable: bool | None = None,
         *,
-        length: Optional[Union[int, Variable]] = None,
+        length: int | Variable | None = None,
     ):
         """Registers a dimension coordinate with the model.
 
@@ -1014,9 +1012,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def add_coords(
         self,
-        coords: dict[str, Optional[Sequence]],
+        coords: dict[str, Sequence | None],
         *,
-        lengths: Optional[dict[str, Optional[Union[int, Variable]]]] = None,
+        lengths: dict[str, int | Variable | None] | None = None,
     ):
         """Vectorized version of ``Model.add_coord``."""
         if coords is None:
@@ -1026,7 +1024,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         for name, values in coords.items():
             self.add_coord(name, values, length=lengths.get(name, None))
 
-    def set_dim(self, name: str, new_length: int, coord_values: Optional[Sequence] = None):
+    def set_dim(self, name: str, new_length: int, coord_values: Sequence | None = None):
         """Update a mutable dimension.
 
         Parameters
@@ -1081,8 +1079,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def set_data(
         self,
         name: str,
-        values: Union[Sequence, np.ndarray],
-        coords: Optional[dict[str, Sequence]] = None,
+        values: Sequence | np.ndarray,
+        coords: dict[str, Sequence] | None = None,
     ):
         """Changes the values of a data variable in the model.
 
@@ -1288,8 +1286,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         rv_var: TensorVariable,
         data: np.ndarray,
         dims,
-        transform: Union[Any, None],
-        total_size: Union[int, None],
+        transform: Any | None,
+        total_size: int | None,
     ) -> TensorVariable:
         """Create a `TensorVariable` for an observed random variable.
 
@@ -1371,7 +1369,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return rv_var
 
     def create_value_var(
-        self, rv_var: TensorVariable, transform: Any, value_var: Optional[Variable] = None
+        self, rv_var: TensorVariable, transform: Any, value_var: Variable | None = None
     ) -> TensorVariable:
         """Create a ``TensorVariable`` that will be used as the random
         variable's "value" in log-likelihood graphs.
@@ -1429,7 +1427,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return value_var
 
-    def add_named_variable(self, var, dims: Optional[tuple[Union[str, None], ...]] = None):
+    def add_named_variable(self, var, dims: tuple[str | None, ...] | None = None):
         """Add a random graph variable to the named variables of the model.
 
         This can include several types of variables such basic_RVs, Data, Deterministics,
@@ -1528,13 +1526,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def compile_fn(
         self,
-        outs: Union[Variable, Sequence[Variable]],
+        outs: Variable | Sequence[Variable],
         *,
-        inputs: Optional[Sequence[Variable]] = None,
+        inputs: Sequence[Variable] | None = None,
         mode=None,
         point_fn: bool = True,
         **kwargs,
-    ) -> Union[PointFunc, Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]]:
+    ) -> PointFunc | Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]:
         """Compiles an PyTensor function
 
         Parameters
@@ -1724,7 +1722,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def debug(
         self,
-        point: Optional[dict[str, np.ndarray]] = None,
+        point: dict[str, np.ndarray] | None = None,
         fn: Literal["logp", "dlogp", "random"] = "logp",
         verbose: bool = False,
     ):
@@ -1871,10 +1869,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def to_graphviz(
         self,
         *,
-        var_names: Optional[Iterable[VarName]] = None,
+        var_names: Iterable[VarName] | None = None,
         formatting: str = "plain",
-        save: Optional[str] = None,
-        figsize: Optional[tuple[int, int]] = None,
+        save: str | None = None,
+        figsize: tuple[int, int] | None = None,
         dpi: int = 300,
     ):
         """Produce a graphviz Digraph from a PyMC model.
@@ -2039,14 +2037,14 @@ def set_data(new_data, model=None, *, coords=None):
 
 
 def compile_fn(
-    outs: Union[Variable, Sequence[Variable]],
+    outs: Variable | Sequence[Variable],
     *,
-    inputs: Optional[Sequence[Variable]] = None,
+    inputs: Sequence[Variable] | None = None,
     mode=None,
     point_fn: bool = True,
-    model: Optional[Model] = None,
+    model: Model | None = None,
     **kwargs,
-) -> Union[PointFunc, Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]]:
+) -> PointFunc | Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]:
     """Compiles an PyTensor function
 
     Parameters

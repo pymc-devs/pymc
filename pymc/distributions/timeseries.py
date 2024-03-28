@@ -15,7 +15,7 @@ import abc
 import warnings
 
 from abc import ABCMeta
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import numpy as np
 import pytensor
@@ -573,7 +573,7 @@ class AR(Distribution):
         return super().dist([rhos, sigma, init_dist, steps, ar_order, constant], **kwargs)
 
     @classmethod
-    def _get_ar_order(cls, rhos: TensorVariable, ar_order: Optional[int], constant: bool) -> int:
+    def _get_ar_order(cls, rhos: TensorVariable, ar_order: int | None, constant: bool) -> int:
         """Compute ar_order given inputs
 
         If ar_order is not specified we do constant folding on the shape of rhos

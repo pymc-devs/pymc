@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from collections.abc import Sequence
-from typing import Any, Union, cast
+from typing import Any, cast
 
 import pytensor.tensor as pt
 
@@ -51,7 +51,7 @@ EllipsisType = Any  # EllipsisType is not present in Python 3.8 yet
 
 def create_minibatch_rv(
     rv: TensorVariable,
-    total_size: Union[int, None, Sequence[Union[int, EllipsisType, None]]],
+    total_size: int | None | Sequence[int | EllipsisType | None],
 ) -> TensorVariable:
     """Create variable whose logp is rescaled by total_size."""
     if isinstance(total_size, int):

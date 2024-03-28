@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import numpy as np
 import numpy.random as nr
@@ -67,29 +67,29 @@ class Proposal:
 
 
 class NormalProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).normal(scale=self.s)
 
 
 class UniformProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).uniform(low=-self.s, high=self.s, size=len(self.s))
 
 
 class CauchyProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).standard_cauchy(size=np.size(self.s)) * self.s
 
 
 class LaplaceProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         size = np.size(self.s)
         r = rng or nr
         return (r.standard_exponential(size=size) - r.standard_exponential(size=size)) * self.s
 
 
 class PoissonProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).poisson(lam=self.s, size=np.size(self.s)) - self.s
 
 
@@ -101,7 +101,7 @@ class MultivariateNormalProposal(Proposal):
         self.n = n
         self.chol = scipy.linalg.cholesky(s, lower=True)
 
-    def __call__(self, num_draws=None, rng: Optional[np.random.Generator] = None):
+    def __call__(self, num_draws=None, rng: np.random.Generator | None = None):
         rng_ = rng or nr
         if num_draws is not None:
             b = rng_.normal(size=(self.n, num_draws))
@@ -767,7 +767,7 @@ class DEMetropolis(PopulationArrayStepShared):
         proposal_dist=None,
         lamb=None,
         scaling=0.001,
-        tune: Optional[str] = "scaling",
+        tune: str | None = "scaling",
         tune_interval=100,
         model=None,
         mode=None,
@@ -910,7 +910,7 @@ class DEMetropolisZ(ArrayStepShared):
         proposal_dist=None,
         lamb=None,
         scaling=0.001,
-        tune: Optional[str] = "scaling",
+        tune: str | None = "scaling",
         tune_interval=100,
         tune_drop_fraction: float = 0.9,
         model=None,

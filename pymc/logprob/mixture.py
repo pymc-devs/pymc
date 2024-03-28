@@ -34,7 +34,7 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from typing import Optional, Union, cast
+from typing import cast
 
 import pytensor
 import pytensor.tensor as pt
@@ -87,7 +87,7 @@ def is_newaxis(x):
 
 
 def expand_indices(
-    indices: tuple[Optional[Union[Variable, slice]], ...], shape: tuple[TensorVariable]
+    indices: tuple[Variable | slice | None, ...], shape: tuple[TensorVariable]
 ) -> tuple[TensorVariable]:
     """Convert basic and/or advanced indices into a single, broadcasted advanced indexing operation.
 
@@ -240,7 +240,7 @@ MeasurableVariable.register(MixtureRV)
 
 def get_stack_mixture_vars(
     node: Apply,
-) -> tuple[Optional[list[TensorVariable]], Optional[int]]:
+) -> tuple[list[TensorVariable] | None, int | None]:
     r"""Extract the mixture terms from a `*Subtensor*` applied to stacked `MeasurableVariable`\s."""
 
     assert isinstance(node.op, subtensor_ops)
@@ -276,7 +276,7 @@ def find_measurable_index_mixture(fgraph, node):
     From these terms, new terms ``Z_rv[i] = mixture_comps[i][i == I_rv]`` are
     created for each ``i`` in ``enumerate(mixture_comps)``.
     """
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -326,9 +326,7 @@ def find_measurable_index_mixture(fgraph, node):
 
 
 @_logprob.register(MixtureRV)
-def logprob_MixtureRV(
-    op, values, *inputs: Optional[Union[TensorVariable, slice]], name=None, **kwargs
-):
+def logprob_MixtureRV(op, values, *inputs: TensorVariable | slice | None, name=None, **kwargs):
     (value,) = values
 
     join_axis = cast(Variable, inputs[0])
@@ -408,7 +406,7 @@ measurable_switch_mixture = MeasurableSwitchMixture(scalar_switch)
 
 @node_rewriter([switch])
 def find_measurable_switch_mixture(fgraph, node):
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -499,7 +497,7 @@ def useless_ifelse_outputs(fgraph, node):
 
 @node_rewriter([IfElse])
 def find_measurable_ifelse_mixture(fgraph, node):
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover

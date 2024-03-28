@@ -19,13 +19,12 @@ import warnings
 
 from collections.abc import Iterator, Sequence
 from copy import copy
-from typing import Union
+from typing import TypeAlias
 
 import cloudpickle
 import numpy as np
 
 from rich.progress import BarColumn, Progress, TimeRemainingColumn
-from typing_extensions import TypeAlias
 
 from pymc.backends.base import BaseTrace
 from pymc.initial_point import PointType
@@ -43,7 +42,7 @@ from pymc.util import RandomSeed
 __all__ = ()
 
 
-Step: TypeAlias = Union[BlockedStep, CompoundStep]
+Step: TypeAlias = BlockedStep | CompoundStep
 
 
 _log = logging.getLogger(__name__)
@@ -55,7 +54,7 @@ def _sample_population(
     draws: int,
     start: Sequence[PointType],
     random_seed: RandomSeed,
-    step: Union[BlockedStep, CompoundStep],
+    step: BlockedStep | CompoundStep,
     tune: int,
     model: Model,
     progressbar: bool = True,
@@ -112,7 +111,7 @@ def _sample_population(
 
 def warn_population_size(
     *,
-    step: Union[BlockedStep, CompoundStep],
+    step: BlockedStep | CompoundStep,
     initial_points: Sequence[PointType],
     model: Model,
     chains: int,

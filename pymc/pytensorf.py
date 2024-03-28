@@ -13,9 +13,8 @@
 #   limitations under the License.
 import warnings
 
-from collections.abc import Generator, Iterable, Sequence
+from collections.abc import Callable, Generator, Iterable, Sequence
 from typing import (
-    Callable,
     Optional,
     Union,
 )
@@ -59,7 +58,7 @@ from pymc.exceptions import NotConstantValueError
 from pymc.util import makeiter
 from pymc.vartypes import continuous_types, isgenerator, typefilter
 
-PotentialShapeType = Union[int, np.ndarray, Sequence[Union[int, Variable]], TensorVariable]
+PotentialShapeType = Union[int, np.ndarray, Sequence[int | Variable], TensorVariable]
 
 
 __all__ = [
@@ -169,7 +168,7 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
 
 def walk_model(
     graphs: Iterable[TensorVariable],
-    stop_at_vars: Optional[set[TensorVariable]] = None,
+    stop_at_vars: set[TensorVariable] | None = None,
     expand_fn: Callable[[TensorVariable], Iterable[TensorVariable]] = lambda var: [],
 ) -> Generator[TensorVariable, None, None]:
     """Walk model graphs and yield their nodes.
@@ -434,7 +433,7 @@ def join_nonshared_inputs(
     point: dict[str, np.ndarray],
     outputs: list[TensorVariable],
     inputs: list[TensorVariable],
-    shared_inputs: Optional[dict[TensorVariable, TensorSharedVariable]] = None,
+    shared_inputs: dict[TensorVariable, TensorSharedVariable] | None = None,
     make_inputs_shared: bool = False,
 ) -> tuple[list[TensorVariable], TensorVariable]:
     """
@@ -732,7 +731,7 @@ def largest_common_dtype(tensors):
 
 def find_rng_nodes(
     variables: Iterable[Variable],
-) -> list[Union[RandomStateSharedVariable, RandomGeneratorSharedVariable]]:
+) -> list[RandomStateSharedVariable | RandomGeneratorSharedVariable]:
     """Return RNG variables in a graph"""
     return [
         node
@@ -754,7 +753,7 @@ def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVaria
         return outputs
 
     graph = FunctionGraph(outputs=outputs, clone=False)
-    new_rng_nodes: list[Union[np.random.RandomState, np.random.Generator]] = []
+    new_rng_nodes: list[np.random.RandomState | np.random.Generator] = []
     for rng_node in rng_nodes:
         rng_cls: type
         if isinstance(rng_node, pt.random.var.RandomStateSharedVariable):
@@ -766,7 +765,7 @@ def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVaria
     return graph.outputs
 
 
-SeedSequenceSeed = Optional[Union[int, Sequence[int], np.ndarray, np.random.SeedSequence]]
+SeedSequenceSeed = Optional[int | Sequence[int] | np.ndarray | np.random.SeedSequence]
 
 
 def reseed_rngs(
@@ -778,7 +777,7 @@ def reseed_rngs(
         np.random.PCG64(sub_seed) for sub_seed in np.random.SeedSequence(seed).spawn(len(rngs))
     ]
     for rng, bit_generator in zip(rngs, bit_generators):
-        new_rng: Union[np.random.RandomState, np.random.Generator]
+        new_rng: np.random.RandomState | np.random.Generator
         if isinstance(rng, pt.random.var.RandomStateSharedVariable):
             new_rng = np.random.RandomState(bit_generator)
         else:
@@ -789,7 +788,7 @@ def reseed_rngs(
 def collect_default_updates(
     outputs: Sequence[Variable],
     *,
-    inputs: Optional[Sequence[Variable]] = None,
+    inputs: Sequence[Variable] | None = None,
     must_be_shared: bool = True,
 ) -> dict[Variable, Variable]:
     """Collect default update expression for shared-variable RNGs used by RVs between inputs and outputs.
@@ -834,7 +833,7 @@ def collect_default_updates(
     # Avoid circular import
     from pymc.distributions.distribution import SymbolicRandomVariable
 
-    def find_default_update(clients, rng: Variable) -> Union[None, Variable]:
+    def find_default_update(clients, rng: Variable) -> None | Variable:
         rng_clients = clients.get(rng, None)
 
         # Root case, RNG is not used elsewhere
