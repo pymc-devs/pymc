@@ -53,7 +53,7 @@ from pytensor.tensor.random.var import (
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
-from pytensor.tensor.variable import TensorConstant, TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.exceptions import NotConstantValueError
 from pymc.util import makeiter
@@ -245,7 +245,7 @@ def inputvars(a):
     return [
         v
         for v in graph_inputs(makeiter(a))
-        if isinstance(v, TensorVariable) and not isinstance(v, TensorConstant)
+        if isinstance(v, Variable) and not isinstance(v, Constant | SharedVariable)
     ]
 
 

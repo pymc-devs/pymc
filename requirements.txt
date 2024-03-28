@@ -3,7 +3,7 @@ cachetools>=4.2.1
 cloudpickle
 numpy>=1.15.0
 pandas>=0.24.0
-pytensor>=2.19,<2.20
+pytensor>=2.20,<2.21
 rich>=13.7.1
 scipy>=1.4.1
 typing-extensions>=3.7.4
