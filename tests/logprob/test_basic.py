@@ -301,7 +301,7 @@ def test_joint_logp_incsubtensor(indices, size):
 
     a_idx = pt.set_subtensor(a[indices], data)
 
-    assert isinstance(a_idx.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1))
+    assert isinstance(a_idx.owner.op, IncSubtensor | AdvancedIncSubtensor | AdvancedIncSubtensor1)
 
     a_idx_value_var = a_idx.type()
     a_idx_value_var.name = "a_idx_value"

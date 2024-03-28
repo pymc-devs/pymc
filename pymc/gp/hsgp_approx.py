@@ -328,7 +328,7 @@ class HSGP(Base):
 
         # If not provided, use Xs and c to set L
         if self._L is None:
-            assert isinstance(self._c, (numbers.Real, np.ndarray, pt.TensorVariable))
+            assert isinstance(self._c, numbers.Real | np.ndarray | pt.TensorVariable)
             self.L = pt.as_tensor(set_boundary(Xs, self._c))
         else:
             self.L = self._L

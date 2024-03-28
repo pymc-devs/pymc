@@ -779,7 +779,7 @@ class PowerTransform(Transform):
     name = "power"
 
     def __init__(self, power=None):
-        if not isinstance(power, (int, float)):
+        if not isinstance(power, int | float):
             raise TypeError(f"Power must be integer or float, got {type(power)}")
         if power == 0:
             raise ValueError("Power cannot be 0")

@@ -48,7 +48,7 @@ def str_for_dist(
             dist_args = [
                 _str_for_input_var(x, formatting=formatting)
                 for x in dist.owner.inputs
-                if not isinstance(x, (RandomStateSharedVariable, RandomGeneratorSharedVariable))
+                if not isinstance(x, RandomStateSharedVariable | RandomGeneratorSharedVariable)
             ]
 
     print_name = dist.name
@@ -168,10 +168,10 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
             # in case other code overrides str_repr, fallback
             return False
 
-    if isinstance(var, (Constant, SharedVariable)):
+    if isinstance(var, Constant | SharedVariable):
         return _str_for_constant(var, formatting)
     elif isinstance(
-        var.owner.op, (RandomVariable, SymbolicRandomVariable)
+        var.owner.op, RandomVariable | SymbolicRandomVariable
     ) or _is_potential_or_deterministic(var):
         # show the names for RandomVariables, Deterministics, and Potentials, rather
         # than the full expression
@@ -218,13 +218,13 @@ def _str_for_expression(var: Variable, formatting: str) -> str:
 
     # construct a string like f(a1, ..., aN) listing all random variables a as arguments
     def _expand(x):
-        if x.owner and (not isinstance(x.owner.op, (RandomVariable, SymbolicRandomVariable))):
+        if x.owner and (not isinstance(x.owner.op, RandomVariable | SymbolicRandomVariable)):
             return reversed(x.owner.inputs)
 
     parents = [
         x
         for x in walk(nodes=var.owner.inputs, expand=_expand)
-        if x.owner and isinstance(x.owner.op, (RandomVariable, SymbolicRandomVariable))
+        if x.owner and isinstance(x.owner.op, RandomVariable | SymbolicRandomVariable)
     ]
     names = [x.name for x in parents]
 

@@ -178,7 +178,7 @@ class Mixture(Distribution):
 
     @classmethod
     def dist(cls, w, comp_dists, **kwargs):
-        if not isinstance(comp_dists, (tuple, list)):
+        if not isinstance(comp_dists, tuple | list):
             # comp_dists is a single component
             comp_dists = [comp_dists]
         elif len(comp_dists) == 1:
@@ -204,7 +204,7 @@ class Mixture(Distribution):
             # TODO: Allow these to not be a RandomVariable as long as we can call `ndim_supp` on them
             #  and resize them
             if not isinstance(dist, TensorVariable) or not isinstance(
-                dist.owner.op, (RandomVariable, SymbolicRandomVariable)
+                dist.owner.op, RandomVariable | SymbolicRandomVariable
             ):
                 raise ValueError(
                     f"Component dist must be a distribution created via the `.dist()` API, got {type(dist)}"

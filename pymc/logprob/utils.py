@@ -147,7 +147,7 @@ def rvs_in_graph(vars: Variable | Sequence[Variable]) -> set[Variable]:
     return {
         node
         for node in walk(makeiter(vars), expand, False)
-        if node.owner and isinstance(node.owner.op, (RandomVariable, MeasurableVariable))
+        if node.owner and isinstance(node.owner.op, RandomVariable | MeasurableVariable)
     }
 
 

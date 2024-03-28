@@ -102,9 +102,9 @@ def comparison_logprob(op, values, base_rv, operand, **kwargs):
 
     condn_exp = pt.eq(value, np.array(True))
 
-    if isinstance(op.scalar_op, (GT, GE)):
+    if isinstance(op.scalar_op, GT | GE):
         logprob = pt.switch(condn_exp, logccdf, logcdf)
-    elif isinstance(op.scalar_op, (LT, LE)):
+    elif isinstance(op.scalar_op, LT | LE):
         logprob = pt.switch(condn_exp, logcdf, logccdf)
     else:
         raise TypeError(f"Unsupported scalar_op {op.scalar_op}")

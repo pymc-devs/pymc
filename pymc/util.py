@@ -312,7 +312,7 @@ def hashable(a=None) -> int:
         # first hash the keys and values with hashable
         # then hash the tuple of int-tuples with the builtin
         return hash(tuple((hashable(k), hashable(v)) for k, v in a.items()))
-    if isinstance(a, (tuple, list)):
+    if isinstance(a, tuple | list):
         # lists are mutable and not hashable by default
         # for memoization, we need the hash to depend on the items
         return hash(tuple(hashable(i) for i in a))
@@ -448,7 +448,7 @@ def _get_seeds_per_chain(
     if isinstance(random_state, np.random.RandomState):
         return _get_unique_seeds_per_chain(random_state.randint)
 
-    if not isinstance(random_state, (list, tuple, np.ndarray)):
+    if not isinstance(random_state, list | tuple | np.ndarray):
         raise ValueError(f"The `seeds` must be array-like. Got {type(random_state)} instead.")
 
     if len(random_state) != chains:
@@ -525,7 +525,7 @@ def _add_future_warning_tag(var) -> None:
 
 
 def makeiter(a):
-    if isinstance(a, (tuple, list)):
+    if isinstance(a, tuple | list):
         return a
     else:
         return [a]

@@ -60,7 +60,7 @@ def create_minibatch_rv(
         else:
             missing_ndims = rv.ndim - 1
             total_size = [total_size] + [None] * missing_ndims
-    elif isinstance(total_size, (list, tuple)):
+    elif isinstance(total_size, list | tuple):
         total_size = list(total_size)
         if Ellipsis in total_size:
             # Replace Ellipsis by None

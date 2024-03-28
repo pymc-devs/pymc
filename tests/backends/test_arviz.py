@@ -372,7 +372,7 @@ class TestDataPyMC:
             )
 
         # make sure that data is really missing
-        assert isinstance(y.owner.inputs[0].owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1))
+        assert isinstance(y.owner.inputs[0].owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1)
 
         test_dict = {
             "posterior": ["mu", "chol_cov"],

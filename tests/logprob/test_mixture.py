@@ -1136,7 +1136,7 @@ def test_joint_logprob_subtensor():
     #  (e.g., at least one of the advanced indexes has non-repeating values)
     A_idx = A_rv[I_rv, pt.ogrid[A_rv.shape[-1] :]]
 
-    assert isinstance(A_idx.owner.op, (Subtensor, AdvancedSubtensor, AdvancedSubtensor1))
+    assert isinstance(A_idx.owner.op, Subtensor | AdvancedSubtensor | AdvancedSubtensor1)
 
     A_idx_value_var = A_idx.type()
     A_idx_value_var.name = "A_idx_value"

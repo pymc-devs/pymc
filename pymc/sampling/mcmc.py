@@ -192,7 +192,7 @@ def assign_step_methods(
     assigned_vars: set[Variable] = set()
 
     if step is not None:
-        if isinstance(step, (BlockedStep, CompoundStep)):
+        if isinstance(step, BlockedStep | CompoundStep):
             steps.append(step)
         else:
             steps.extend(step)
