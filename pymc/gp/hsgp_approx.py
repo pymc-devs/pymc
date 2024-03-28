@@ -17,7 +17,6 @@ import warnings
 
 from collections.abc import Sequence
 from types import ModuleType
-from typing import Union
 
 import numpy as np
 import pytensor.tensor as pt
@@ -28,7 +27,7 @@ from pymc.gp.cov import Covariance, Periodic
 from pymc.gp.gp import Base
 from pymc.gp.mean import Mean, Zero
 
-TensorLike = Union[np.ndarray, pt.TensorVariable]
+TensorLike = np.ndarray | pt.TensorVariable
 
 
 def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> TensorLike:
