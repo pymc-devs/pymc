@@ -69,7 +69,7 @@ from pymc.distributions.shape_utils import (
     to_tuple,
 )
 from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
-from pymc.logprob.abstract import _logprob
+from pymc.logprob.abstract import _logprob, _transformed_logprob
 from pymc.math import kron_diag, kron_dot
 from pymc.pytensorf import intX
 from pymc.util import check_dist_not_registered
@@ -2818,8 +2818,7 @@ def zerosumnormal_support_point(op, rv, *rv_inputs):
 
 @_default_transform.register(ZeroSumNormalRV)
 def zerosum_default_transform(op, rv):
-    n_zerosum_axes = tuple(np.arange(-op.ndim_supp, 0))
-    return ZeroSumTransform(n_zerosum_axes)
+    return ZeroSumTransform(n_zerosum_axes=op.ndim_supp)
 
 
 @_logprob.register(ZeroSumNormalRV)
@@ -2845,3 +2844,12 @@ def zerosumnormal_logp(op, values, normal_dist, sigma, support_shape, **kwargs):
     )
 
     return check_parameters(out, *zerosums, msg="mean(value, axis=n_zerosum_axes) = 0")
+
+
+@_transformed_logprob.register(ZeroSumNormalRV, ZeroSumTransform)
+def transformed_zerosumnormal_logp(op, transform, unconstrained_value, rv_inputs):
+    _, sigma, _ = rv_inputs
+    zerosum_axes = transform.zerosum_axes
+    if len(zerosum_axes) != op.ndim_supp:
+        raise NotImplementedError
+    return pm.logp(Normal.dist(0, sigma), unconstrained_value).sum(zerosum_axes)

@@ -33,7 +33,6 @@
 #   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
-import typing
 import warnings
 
 from collections.abc import Container, Sequence
@@ -56,12 +55,9 @@ from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.logprob.abstract import MeasurableVariable, Transform, _logprob
 from pymc.pytensorf import replace_vars_in_graphs
 from pymc.util import makeiter
-
-if typing.TYPE_CHECKING:
-    from pymc.logprob.transforms import Transform
 
 
 def replace_rvs_by_values(
