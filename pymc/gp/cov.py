@@ -19,7 +19,7 @@ from collections import Counter
 from collections.abc import Callable, Sequence
 from functools import reduce
 from operator import add, mul
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import pytensor.tensor as pt
@@ -51,8 +51,8 @@ __all__ = [
 
 from pymc.pytensorf import constant_fold
 
-TensorLike = Union[np.ndarray, TensorVariable]
-IntSequence = Union[np.ndarray, Sequence[int]]
+TensorLike = np.ndarray | TensorVariable
+IntSequence = np.ndarray | Sequence[int]
 
 
 class BaseCovariance:

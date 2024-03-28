@@ -16,7 +16,7 @@ import functools
 import warnings
 
 from collections.abc import Sequence
-from typing import Any, NewType, Optional, Union, cast
+from typing import Any, NewType, cast
 
 import arviz
 import cloudpickle
@@ -405,8 +405,8 @@ def point_wrapper(core_function):
     return wrapped
 
 
-RandomSeed = Optional[int | Sequence[int] | np.ndarray]
-RandomState = Union[RandomSeed, np.random.RandomState, np.random.Generator]
+RandomSeed = None | int | Sequence[int] | np.ndarray
+RandomState = RandomSeed | np.random.RandomState | np.random.Generator
 
 
 def _get_seeds_per_chain(

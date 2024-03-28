@@ -14,10 +14,6 @@
 import warnings
 
 from collections.abc import Callable, Generator, Iterable, Sequence
-from typing import (
-    Optional,
-    Union,
-)
 
 import numpy as np
 import pandas as pd
@@ -58,7 +54,7 @@ from pymc.exceptions import NotConstantValueError
 from pymc.util import makeiter
 from pymc.vartypes import continuous_types, isgenerator, typefilter
 
-PotentialShapeType = Union[int, np.ndarray, Sequence[int | Variable], TensorVariable]
+PotentialShapeType = int | np.ndarray | Sequence[int | Variable] | TensorVariable
 
 
 __all__ = [
@@ -765,7 +761,7 @@ def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVaria
     return graph.outputs
 
 
-SeedSequenceSeed = Optional[int | Sequence[int] | np.ndarray | np.random.SeedSequence]
+SeedSequenceSeed = None | int | Sequence[int] | np.ndarray | np.random.SeedSequence
 
 
 def reseed_rngs(
