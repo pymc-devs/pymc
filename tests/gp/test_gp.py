@@ -17,6 +17,7 @@ from operator import add
 
 import numpy as np
 import numpy.testing as npt
+import pytensor.tensor as pt
 import pytest
 
 import pymc as pm
@@ -351,6 +352,37 @@ class TestMarginalVsLatent:
         y_rotated = np.linalg.solve(chol, self.y - 0.5)
         latent_logp = model.compile_logp()({"f_rotated_": y_rotated, "p": self.pnew})
         npt.assert_allclose(latent_logp, self.logp, atol=5)
+
+    def testLatentMultioutput(self):
+        num_outputs = 2
+        X = np.random.randn(20, 3)
+        y = np.random.randn(num_outputs, 20)
+        Xnew = np.random.randn(30, 3)
+        pnew = np.random.randn(num_outputs, 30)
+
+        with pm.Model() as latent_model:
+            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
+            mean_func = pm.gp.mean.Constant(0.5)
+            latent_gp = pm.gp.Latent(mean_func=mean_func, cov_func=cov_func)
+            latent_f = latent_gp.prior("f", X, num_outputs=num_outputs, reparameterize=True)
+            latent_p = latent_gp.conditional("p", Xnew)
+
+        assert tuple(latent_f.shape.eval()) == y.shape
+        assert tuple(latent_p.shape.eval()) == pnew.shape
+
+        chol = np.linalg.cholesky(cov_func(X).eval())
+        v = np.linalg.solve(chol, (y - 0.5).T)
+        A = np.linalg.solve(chol, cov_func(X, Xnew).eval()).T
+        mu_cond = mean_func(Xnew).eval() + (A @ v).T
+        cov_cond = cov_func(Xnew, Xnew).eval() - A @ A.T
+
+        with pm.Model() as numpy_model:
+            numpy_p = pm.MvNormal.dist(mu=pt.as_tensor(mu_cond), cov=pt.as_tensor(cov_cond))
+
+        latent_rv_logp = pm.logp(latent_p, pnew)
+        numpy_rv_logp = pm.logp(numpy_p, pnew)
+        assert latent_rv_logp.shape.eval() == numpy_rv_logp.shape.eval()
+        npt.assert_allclose(latent_rv_logp.eval(), numpy_rv_logp.eval(), atol=5)
 
 
 class TestTP:
