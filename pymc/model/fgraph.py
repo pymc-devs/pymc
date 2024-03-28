@@ -323,13 +323,13 @@ def model_from_fgraph(fgraph: FunctionGraph) -> Model:
             transform = model_var.owner.op.transform
             model.free_RVs.append(var)
             # PyMC does not allow setting transform when we pass a value_var. Why?
-            model.create_value_var(var, transform=None, value_var=value)
+            model.create_value_var(var, transform=None, default_transform=None, value_var=value)
             model.rvs_to_transforms[var] = transform
             model.set_initval(var, initval=None)
         elif isinstance(model_var.owner.op, ModelObservedRV):
             var, value, *dims = model_var.owner.inputs
             model.observed_RVs.append(var)
-            model.create_value_var(var, transform=None, value_var=value)
+            model.create_value_var(var, transform=None, default_transform=None, value_var=value)
         elif isinstance(model_var.owner.op, ModelPotential):
             var, *dims = model_var.owner.inputs
             model.potentials.append(var)

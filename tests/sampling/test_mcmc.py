@@ -303,7 +303,7 @@ class TestSample:
             transform = pm.distributions.transforms.Interval(
                 bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
             )
-            y = pm.Uniform("y", lower=0, upper=x, transform=transform)
+            y = pm.Uniform("y", lower=0, upper=x, transform=transform, default_transform=None)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 trace = pm.sample(tune=10, draws=50, return_inferencedata=False, random_seed=336)
