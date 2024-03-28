@@ -543,7 +543,7 @@ The base class for most MCMC sampler (except SMC) is in [ArrayStep](https://gith
 You can see that the ``step.step()`` is mapping the ``point`` into an array, and call ``self.astep()``, which is an array in, array out function.
 A PyMC model compiles a conditional logp/dlogp function that replace the input RVs with a shared 1D tensor (flatten and stack view of the original RVs).
 And the transition kernel (i.e., ``.astep()``) takes an array as input and outputs an array.
-See for example in the [MH sampler](https://github.com/pymc-devs/pymc/blob/89f6fcf751774fb50016561dc448a87fba7ed3aa/pymc/step_methods/metropolis.py#L235-L289).
+For example, see the [MH sampler](https://github.com/pymc-devs/pymc/blob/89f6fcf751774fb50016561dc448a87fba7ed3aa/pymc/step_methods/metropolis.py#L235-L289).
 
 This is of course very different compared to the transition kernel in e.g. TFP, which is a tenor in tensor out function.
 Moreover, transition kernels in TFP do not flatten the tensors, see eg docstring of [tensorflow\_probability/python/mcmc/random\_walk\_metropolis.py](https://github.com/tensorflow/probability/blob/master/tensorflow_probability/python/mcmc/random_walk_metropolis.py):
