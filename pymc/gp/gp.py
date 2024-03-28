@@ -148,18 +148,23 @@ class Latent(Base):
     def __init__(self, *, mean_func=Zero(), cov_func=Constant(0.0)):
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
-    def _build_prior(self, name, X, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs):
+    def _build_prior(
+        self, name, X, num_outputs=1, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs
+    ):
         mu = self.mean_func(X)
         cov = stabilize(self.cov_func(X), jitter)
         if reparameterize:
             size = np.shape(X)[0]
             v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=size, **kwargs)
-            f = pm.Deterministic(name, mu + cholesky(cov).dot(v), dims=kwargs.get("dims", None))
+            f_single = pm.Deterministic(
+                name, mu + cholesky(cov).dot(v), dims=kwargs.get("dims", None)
+            )
         else:
-            f = pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
+            f_single = pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
+        f = pt.stack([f_single] * num_outputs, axis=0) if num_outputs > 1 else f_single
         return f
 
-    def prior(self, name, X, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs):
+    def prior(self, name, X, num_outputs=1, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs):
         R"""
         Returns the GP prior distribution evaluated over the input
         locations `X`.
@@ -178,6 +183,8 @@ class Latent(Base):
         X : array-like
             Function input values. If one-dimensional, must be a column
             vector with shape `(n, 1)`.
+        num_outputs : int, default 1
+            Number of output GPs.
         reparameterize : bool, default True
             Reparameterize the distribution by rotating the random
             variable by the Cholesky factor of the covariance matrix.
@@ -189,9 +196,10 @@ class Latent(Base):
             distribution constructor.
         """
 
-        f = self._build_prior(name, X, reparameterize, jitter, **kwargs)
+        f = self._build_prior(name, X, num_outputs, reparameterize, jitter, **kwargs)
         self.X = X
         self.f = f
+        self.num_outputs = num_outputs
         return f
 
     def _get_given_vals(self, given):
@@ -214,8 +222,8 @@ class Latent(Base):
         Kxs = self.cov_func(X, Xnew)
         L = cholesky(stabilize(Kxx, jitter))
         A = solve_lower(L, Kxs)
-        v = solve_lower(L, f - mean_total(X))
-        mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v)
+        v = solve_lower(L, (f - mean_total(X)).T)
+        mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v).T
         Kss = self.cov_func(Xnew)
         cov = Kss - pt.dot(pt.transpose(A), A)
         return mu, cov
@@ -255,7 +263,8 @@ class Latent(Base):
         """
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, *givens, jitter)
-        return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
+        f = pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
+        return f
 
 
 @conditioned_vars(["X", "f", "nu"])
