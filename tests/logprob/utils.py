@@ -36,13 +36,11 @@
 
 
 import numpy as np
-import pytensor
 
 from pytensor import tensor as pt
 from scipy import stats as stats
 
 from pymc.logprob import icdf, logcdf, logp
-from pymc.logprob.abstract import MeasurableVariable
 from pymc.logprob.rewriting import construct_ir_fgraph
 
 

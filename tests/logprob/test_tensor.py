@@ -52,7 +52,7 @@ from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.logprob.tensor import naive_bcast_rv_lift
 from pymc.testing import assert_no_rvs
-from tests.logprob.utils import measure_type_info_helper, scipy_logprob
+from tests.logprob.utils import measure_type_info_helper
 
 
 def test_naive_bcast_rv_lift():

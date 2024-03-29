@@ -36,9 +36,10 @@
 
 import abc
 
-from typing import Tuple, Union
 from collections.abc import Sequence
+from enum import Enum, auto
 from functools import singledispatch
+from typing import Union
 
 from pytensor.graph.op import Op
 from pytensor.graph.utils import MetaType
@@ -132,9 +133,6 @@ def _icdf_helper(rv, value, **kwargs):
     return rv_icdf
 
 
-from enum import Enum, auto
-
-
 class MeasureType(Enum):
     Discrete = auto()
     Continuous = auto()
@@ -147,9 +145,9 @@ class MeasurableVariable(abc.ABC):
     def __init__(
         self,
         *args,
-        ndim_supp: Union[int, Tuple[int]],
-        supp_axes: Tuple[Union[int, Tuple[int]]],
-        measure_type: Union[MeasureType, Tuple[MeasureType]],
+        ndim_supp: Union[int, tuple],
+        supp_axes: tuple,
+        measure_type: Union[MeasureType, tuple],
         **kwargs,
     ):
         self.ndim_supp = ndim_supp

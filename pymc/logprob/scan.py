@@ -466,7 +466,7 @@ def find_measurable_scans(fgraph, node):
             # Replace the mapping
             rv_map_feature.update_rv_maps(rv_var, new_val_var, full_out)
 
-    clients: Dict[Variable, List[Variable]] = {}
+    clients: dict[Variable, list[Variable]] = {}
     local_fgraph_topo = pytensor.graph.basic.io_toposort(
         curr_scanargs.inner_inputs,
         [o for o in curr_scanargs.inner_outputs if not isinstance(o.type, RandomType)],
