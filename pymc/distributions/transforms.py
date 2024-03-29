@@ -322,7 +322,6 @@ log_exp_m1.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.LogExpM1`
 for use in the ``transform`` argument of a random variable."""
 
-# Deprecated
 ordered = Ordered()
 ordered.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.Ordered`
