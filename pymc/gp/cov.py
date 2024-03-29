@@ -810,7 +810,7 @@ class Periodic(Stationary):
         a = 1 / pt.square(self.ls)
         c = pt.where(J > 0, 2, 1)
 
-        q2 = c * pt.iv(J, a) / pt.exp(a)
+        q2 = c * pt.ive(J, a)
 
         return q2
 
