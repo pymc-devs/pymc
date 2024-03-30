@@ -31,7 +31,7 @@ import pytensor.gradient as tg
 # from fastprogress.fastprogress import ProgressBar, progress_bar
 from numpy import isfinite
 from pytensor import Variable
-from rich import progress
+from rich.progress import Progress, TextColumn
 from scipy.optimize import minimize
 
 import pymc as pm
@@ -166,18 +166,19 @@ def find_MAP(
         cost_func = CostFuncWrapper(maxeval, progressbar, logp_func)
         compute_gradient = False
 
-    try:
-        opt_result = minimize(
-            cost_func, x0.data, method=method, jac=compute_gradient, *args, **kwargs
-        )
-        mx0 = opt_result["x"]  # r -> opt_result
-    except (KeyboardInterrupt, StopIteration) as e:
-        mx0, opt_result = cost_func.previous_x, None
-        if isinstance(e, StopIteration):
-            pm._log.info(e)
-    finally:
-        cost_func.progress.update(cost_func.task, total=cost_func.n_eval)
-        print(file=sys.stdout)
+    with cost_func.progress:
+        try:
+            opt_result = minimize(
+                cost_func, x0.data, method=method, jac=compute_gradient, *args, **kwargs
+            )
+            mx0 = opt_result["x"]  # r -> opt_result
+        except (KeyboardInterrupt, StopIteration) as e:
+            mx0, opt_result = cost_func.previous_x, None
+            if isinstance(e, StopIteration):
+                pm._log.info(e)
+        finally:
+            cost_func.progress.update(cost_func.task, total=cost_func.n_eval)
+            print(file=sys.stdout)
 
     mx0 = RaveledVars(mx0, x0.point_map_info)
     unobserved_vars = get_default_varnames(model.unobserved_value_vars, include_transformed)
@@ -210,8 +211,11 @@ class CostFuncWrapper:
             self.desc = "logp = {:,.5g}, ||grad|| = {:,.5g}"
         self.previous_x = None
         self.progressbar = progressbar
-        self.progress = progress.Progress()
-        self.task = self.progress.add_task("MAP", total=maxeval, visible=progressbar)
+        self.progress = Progress(
+            *Progress.get_default_columns(),
+            TextColumn("{task.fields[loss]}"),
+        )
+        self.task = self.progress.add_task("MAP", total=maxeval, visible=progressbar, loss="")
 
     def __call__(self, x):
         neg_value = np.float64(self.logp_func(pm.floatX(x)))
@@ -227,10 +231,10 @@ class CostFuncWrapper:
             grad = None
 
         if self.n_eval % 10 == 0:
-            self.progress.update(self.task, description=self.update_progress_desc(neg_value, grad))
+            self.progress.update(self.task, loss=self.update_progress_desc(neg_value, grad))
 
         if self.n_eval > self.maxeval:
-            self.progress.update(self.task, description=self.update_progress_desc(neg_value, grad))
+            self.progress.update(self.task, loss=self.update_progress_desc(neg_value, grad))
             raise StopIteration
 
         self.n_eval += 1
