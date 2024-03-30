@@ -27,7 +27,7 @@ import numpy as np
 from arviz import InferenceData
 
 # from fastprogress.fastprogress import force_console_behavior, progress_bar
-from rich.progress import Progress, TextColumn, get_default_columns
+from rich.progress import Progress, TextColumn
 
 import pymc
 
@@ -376,7 +376,7 @@ def _sample_smc_int(
 
 def run_chains_parallel(chains, progressbar, to_run, params, random_seed, kernel_kwargs, cores):
     with Progress(
-        *get_default_columns(),
+        *Progress.get_default_columns(),
         TextColumn("{task.comment}"),
     ) as pbar:
         pool = mp.Pool(cores)
@@ -399,7 +399,7 @@ def run_chains_parallel(chains, progressbar, to_run, params, random_seed, kernel
 def run_chains_sequential(chains, progressbar, to_run, params, random_seed, kernel_kwargs):
     results = []
     with Progress(
-        *get_default_columns(),
+        *Progress.get_default_columns(),
         TextColumn("{task.comment}"),
     ) as pbar:
         for chain in range(chains):

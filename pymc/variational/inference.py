@@ -18,7 +18,7 @@ import warnings
 
 import numpy as np
 
-from rich.progress import Progress, track
+from rich.progress import Progress, TextColumn, track
 
 import pymc as pm
 
@@ -201,9 +201,9 @@ class Inference:
         try:
             with Progress(
                 *Progress.get_default_columns(),
-                Progress.TextColumn("{task.loss}"),
+                TextColumn("{task.fields[loss]}"),
             ) as progress:
-                task = progress.add_task("Fitting:", total=n, visible=progressbar)
+                task = progress.add_task("Fitting:", total=n, visible=progressbar, loss="")
                 for i in range(n):
                     e = step_func()
                     progress.update(task, advance=1)
