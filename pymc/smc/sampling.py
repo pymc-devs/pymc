@@ -25,7 +25,9 @@ import cloudpickle
 import numpy as np
 
 from arviz import InferenceData
-from fastprogress.fastprogress import force_console_behavior, progress_bar
+
+# from fastprogress.fastprogress import force_console_behavior, progress_bar
+from rich.progress import Progress, TextColumn, get_default_columns
 
 import pymc
 
@@ -310,7 +312,8 @@ def _sample_smc_int(
     model,
     random_seed,
     chain,
-    progressbar=None,
+    pbar,
+    pbar_visible,
     **kernel_kwargs,
 ):
     """Run one SMC instance."""
@@ -337,9 +340,9 @@ def _sample_smc_int(
         **kernel_kwargs,
     )
 
-    if progressbar:
-        progressbar.comment = f"{getattr(progressbar, 'base_comment', '')} Stage: 0 Beta: 0"
-        progressbar.update_bar(getattr(progressbar, "offset", 0) + 0)
+    task = pbar.add_task(
+        f"Chain: {chain + 1}", total=100, comment="Stage: 0 Beta: 0", visible=pbar_visible
+    )
 
     smc._initialize_kernel()
     smc.setup_kernel()
@@ -349,11 +352,7 @@ def _sample_smc_int(
     while smc.beta < 1:
         smc.update_beta_and_weights()
 
-        if progressbar:
-            progressbar.comment = (
-                f"{getattr(progressbar, 'base_comment', '')} Stage: {stage} Beta: {smc.beta:.3f}"
-            )
-            progressbar.update_bar(getattr(progressbar, "offset", 0) + int(smc.beta * 100))
+        pbar.update(task, advance=1, comment=f"Stage: {stage} Beta: {smc.beta:.3f}")
 
         smc.resample()
         smc.tune()
@@ -376,38 +375,36 @@ def _sample_smc_int(
 
 
 def run_chains_parallel(chains, progressbar, to_run, params, random_seed, kernel_kwargs, cores):
-    # fastprogress HTML progress bar does not support multiprocessing
-    _, progress_bar = force_console_behavior()
-    pbar = progress_bar((), total=100, display=progressbar)
-    pbar.update(0)
-    pbars = [pbar] + [None] * (chains - 1)
+    with Progress(
+        *get_default_columns(),
+        TextColumn("{task.comment}"),
+    ) as pbar:
+        pool = mp.Pool(cores)
 
-    pool = mp.Pool(cores)
-
-    # "manually" (de)serialize params before/after multiprocessing
-    params = tuple(cloudpickle.dumps(p) for p in params)
-    kernel_kwargs = {key: cloudpickle.dumps(value) for key, value in kernel_kwargs.items()}
-    results = _starmap_with_kwargs(
-        pool,
-        to_run,
-        [(*params, random_seed[chain], chain, pbars[chain]) for chain in range(chains)],
-        repeat(kernel_kwargs),
-    )
-    results = tuple(cloudpickle.loads(r) for r in results)
-    pool.close()
-    pool.join()
-    return results
+        # "manually" (de)serialize params before/after multiprocessing
+        params = tuple(cloudpickle.dumps(p) for p in params)
+        kernel_kwargs = {key: cloudpickle.dumps(value) for key, value in kernel_kwargs.items()}
+        results = _starmap_with_kwargs(
+            pool,
+            to_run,
+            [(*params, random_seed[chain], chain, pbar, progressbar) for chain in range(chains)],
+            repeat(kernel_kwargs),
+        )
+        results = tuple(cloudpickle.loads(r) for r in results)
+        pool.close()
+        pool.join()
+        return results
 
 
 def run_chains_sequential(chains, progressbar, to_run, params, random_seed, kernel_kwargs):
     results = []
-    pbar = progress_bar((), total=100 * chains, display=progressbar)
-    pbar.update(0)
-    for chain in range(chains):
-        pbar.offset = 100 * chain
-        pbar.base_comment = f"Chain: {chain + 1}/{chains}"
-        results.append(to_run(*params, random_seed[chain], chain, pbar, **kernel_kwargs))
-    return results
+    with Progress(
+        *get_default_columns(),
+        TextColumn("{task.comment}"),
+    ) as pbar:
+        for chain in range(chains):
+            results.append(to_run(*params, random_seed[chain], chain, pbar, **kernel_kwargs))
+        return results
 
 
 def _starmap_with_kwargs(pool, fn, args_iter, kwargs_iter):

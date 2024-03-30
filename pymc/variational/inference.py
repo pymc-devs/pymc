@@ -18,7 +18,7 @@ import warnings
 
 import numpy as np
 
-from fastprogress.fastprogress import progress_bar
+from rich.progress import Progress, track
 
 import pymc as pm
 
@@ -83,9 +83,8 @@ class Inference:
         fn_kwargs = kwargs.pop("fn_kwargs", dict())
         fn_kwargs["profile"] = True
         step_func = self.objective.step_function(score=score, fn_kwargs=fn_kwargs, **kwargs)
-        progress = progress_bar(range(n))
         try:
-            for _ in progress:
+            for _ in track(range(n)):
                 step_func()
         except KeyboardInterrupt:
             pass
@@ -136,14 +135,11 @@ class Inference:
             callbacks = []
         score = self._maybe_score(score)
         step_func = self.objective.step_function(score=score, **kwargs)
-        if progressbar:
-            progress = progress_bar(range(n), display=progressbar)
-        else:
-            progress = range(n)
+
         if score:
-            state = self._iterate_with_loss(0, n, step_func, progress, callbacks)
+            state = self._iterate_with_loss(0, n, step_func, progressbar, callbacks)
         else:
-            state = self._iterate_without_loss(0, n, step_func, progress, callbacks)
+            state = self._iterate_without_loss(0, n, step_func, progressbar, callbacks)
 
         # hack to allow pm.fit() access to loss hist
         self.approx.hist = self.hist
@@ -151,43 +147,46 @@ class Inference:
 
         return self.approx
 
-    def _iterate_without_loss(self, s, _, step_func, progress, callbacks):
+    def _iterate_without_loss(self, s, n, step_func, progressbar, callbacks):
         i = 0
         try:
-            for i in progress:
-                step_func()
-                current_param = self.approx.params[0].get_value()
-                if np.isnan(current_param).any():
-                    name_slc = []
-                    tmp_hold = list(range(current_param.size))
-                    for varname, slice_info in self.approx.groups[0].ordering.items():
-                        slclen = len(tmp_hold[slice_info[1]])
-                        for j in range(slclen):
-                            name_slc.append((varname, j))
-                    index = np.where(np.isnan(current_param))[0]
-                    errmsg = ["NaN occurred in optimization. "]
-                    suggest_solution = (
-                        "Try tracking this parameter: "
-                        "http://docs.pymc.io/notebooks/variational_api_quickstart.html#Tracking-parameters"
-                    )
-                    try:
-                        for ii in index:
-                            errmsg.append(
-                                "The current approximation of RV `{}`.ravel()[{}]"
-                                " is NaN.".format(*name_slc[ii])
-                            )
-                        errmsg.append(suggest_solution)
-                    except IndexError:
-                        pass
-                    raise FloatingPointError("\n".join(errmsg))
-                for callback in callbacks:
-                    callback(self.approx, None, i + s + 1)
+            with Progress() as progress:
+                task = progress.add_task("Fitting", total=n, visible=progressbar)
+                for i in range(n):
+                    step_func()
+                    progress.update(task, advance=1)
+                    current_param = self.approx.params[0].get_value()
+                    if np.isnan(current_param).any():
+                        name_slc = []
+                        tmp_hold = list(range(current_param.size))
+                        for varname, slice_info in self.approx.groups[0].ordering.items():
+                            slclen = len(tmp_hold[slice_info[1]])
+                            for j in range(slclen):
+                                name_slc.append((varname, j))
+                        index = np.where(np.isnan(current_param))[0]
+                        errmsg = ["NaN occurred in optimization. "]
+                        suggest_solution = (
+                            "Try tracking this parameter: "
+                            "http://docs.pymc.io/notebooks/variational_api_quickstart.html#Tracking-parameters"
+                        )
+                        try:
+                            for ii in index:
+                                errmsg.append(
+                                    "The current approximation of RV `{}`.ravel()[{}]"
+                                    " is NaN.".format(*name_slc[ii])
+                                )
+                            errmsg.append(suggest_solution)
+                        except IndexError:
+                            pass
+                        raise FloatingPointError("\n".join(errmsg))
+                    for callback in callbacks:
+                        callback(self.approx, None, i + s + 1)
         except (KeyboardInterrupt, StopIteration) as e:
             if isinstance(e, StopIteration):
                 logger.info(str(e))
         return State(i + s, step=step_func, callbacks=callbacks, score=False)
 
-    def _iterate_with_loss(self, s, n, step_func, progress, callbacks):
+    def _iterate_with_loss(self, s, n, step_func, progressbar, callbacks):
         def _infmean(input_array):
             """Return the mean of the finite values of the array"""
             input_array = input_array[np.isfinite(input_array)].astype("float64")
@@ -200,44 +199,48 @@ class Inference:
         scores[:] = np.nan
         i = 0
         try:
-            for i in progress:
-                e = step_func()
-                if np.isnan(e):
-                    scores = scores[:i]
-                    self.hist = np.concatenate([self.hist, scores])
-                    current_param = self.approx.params[0].get_value()
-                    name_slc = []
-                    tmp_hold = list(range(current_param.size))
-                    for varname, slice_info in self.approx.groups[0].ordering.items():
-                        slclen = len(tmp_hold[slice_info[1]])
-                        for j in range(slclen):
-                            name_slc.append((varname, j))
-                    index = np.where(np.isnan(current_param))[0]
-                    errmsg = ["NaN occurred in optimization. "]
-                    suggest_solution = (
-                        "Try tracking this parameter: "
-                        "http://docs.pymc.io/notebooks/variational_api_quickstart.html#Tracking-parameters"
-                    )
-                    try:
-                        for ii in index:
-                            errmsg.append(
-                                "The current approximation of RV `{}`.ravel()[{}]"
-                                " is NaN.".format(*name_slc[ii])
-                            )
-                        errmsg.append(suggest_solution)
-                    except IndexError:
-                        pass
-                    raise FloatingPointError("\n".join(errmsg))
-                scores[i] = e
-                if i % 10 == 0:
-                    avg_loss = _infmean(scores[max(0, i - 1000) : i + 1])
-                    if hasattr(progress, "comment"):
-                        progress.comment = f"Average Loss = {avg_loss:,.5g}"
-                    avg_loss = scores[max(0, i - 1000) : i + 1].mean()
-                    if hasattr(progress, "comment"):
-                        progress.comment = f"Average Loss = {avg_loss:,.5g}"
-                for callback in callbacks:
-                    callback(self.approx, scores[: i + 1], i + s + 1)
+            with Progress(
+                *Progress.get_default_columns(),
+                Progress.TextColumn("{task.loss}"),
+            ) as progress:
+                task = progress.add_task("Fitting:", total=n, visible=progressbar)
+                for i in range(n):
+                    e = step_func()
+                    progress.update(task, advance=1)
+                    if np.isnan(e):
+                        scores = scores[:i]
+                        self.hist = np.concatenate([self.hist, scores])
+                        current_param = self.approx.params[0].get_value()
+                        name_slc = []
+                        tmp_hold = list(range(current_param.size))
+                        for varname, slice_info in self.approx.groups[0].ordering.items():
+                            slclen = len(tmp_hold[slice_info[1]])
+                            for j in range(slclen):
+                                name_slc.append((varname, j))
+                        index = np.where(np.isnan(current_param))[0]
+                        errmsg = ["NaN occurred in optimization. "]
+                        suggest_solution = (
+                            "Try tracking this parameter: "
+                            "http://docs.pymc.io/notebooks/variational_api_quickstart.html#Tracking-parameters"
+                        )
+                        try:
+                            for ii in index:
+                                errmsg.append(
+                                    "The current approximation of RV `{}`.ravel()[{}]"
+                                    " is NaN.".format(*name_slc[ii])
+                                )
+                            errmsg.append(suggest_solution)
+                        except IndexError:
+                            pass
+                        raise FloatingPointError("\n".join(errmsg))
+                    scores[i] = e
+                    if i % 10 == 0:
+                        avg_loss = _infmean(scores[max(0, i - 1000) : i + 1])
+                        progress.update(task, loss=f"Average Loss = {avg_loss:,.5g}")
+                        avg_loss = scores[max(0, i - 1000) : i + 1].mean()
+                        progress.update(task, loss=f"Average Loss = {avg_loss:,.5g}")
+                    for callback in callbacks:
+                        callback(self.approx, scores[: i + 1], i + s + 1)
         except (KeyboardInterrupt, StopIteration) as e:  # pragma: no cover
             # do not print log on the same line
             scores = scores[:i]
@@ -266,14 +269,10 @@ class Inference:
         if self.state is None:
             raise TypeError("Need to call `.fit` first")
         i, step, callbacks, score = self.state
-        if progressbar:
-            progress = progress_bar(range(n), display=progressbar)
-        else:
-            progress = range(n)  # This is a guess at what progress_bar(n) does.
         if score:
-            state = self._iterate_with_loss(i, n, step, progress, callbacks)
+            state = self._iterate_with_loss(i, n, step, progressbar, callbacks)
         else:
-            state = self._iterate_without_loss(i, n, step, progress, callbacks)
+            state = self._iterate_without_loss(i, n, step, progressbar, callbacks)
         self.state = state
 
 

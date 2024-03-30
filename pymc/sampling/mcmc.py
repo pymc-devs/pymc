@@ -34,8 +34,8 @@ import pytensor.gradient as tg
 
 from arviz import InferenceData, dict_to_dataset
 from arviz.data.base import make_attrs
-from fastprogress.fastprogress import progress_bar
 from pytensor.graph.basic import Variable
+from rich.progress import Progress
 from typing_extensions import Protocol, TypeAlias
 
 import pymc as pm
@@ -1026,19 +1026,20 @@ def _sample(
     )
     _pbar_data = {"chain": chain, "divergences": 0}
     _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
-    if progressbar:
-        sampling = progress_bar(sampling_gen, total=draws, display=progressbar)
-        sampling.comment = _desc.format(**_pbar_data)
-    else:
-        sampling = sampling_gen
-    try:
-        for it, diverging in enumerate(sampling):
-            if it >= skip_first and diverging:
-                _pbar_data["divergences"] += 1
-                if progressbar:
-                    sampling.comment = _desc.format(**_pbar_data)
-    except KeyboardInterrupt:
-        pass
+    # if progressbar:
+    #     sampling = progress_bar(sampling_gen, total=draws, display=progressbar)
+    #     sampling.comment = _desc.format(**_pbar_data)
+    # else:
+    #     sampling = sampling_gen
+    with Progress() as progress:
+        try:
+            task = progress.add_task(_desc.format(**_pbar_data), total=draws)
+            for it, diverging in enumerate(sampling_gen):
+                if it >= skip_first and diverging:
+                    _pbar_data["divergences"] += 1
+                progress.update(task, advance=1)
+        except KeyboardInterrupt:
+            pass
 
 
 def _iter_sample(

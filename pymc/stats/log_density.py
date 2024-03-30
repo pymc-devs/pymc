@@ -15,7 +15,7 @@ from collections.abc import Sequence
 from typing import Optional, cast
 
 from arviz import InferenceData, dict_to_dataset
-from fastprogress import progress_bar
+from rich.progress import track
 
 import pymc
 
@@ -169,9 +169,10 @@ def compute_log_density(
 
     n_pts = len(posterior_pts)
     logdens_dict = _DefaultTrace(n_pts)
-    indices = range(n_pts)
     if progressbar:
-        indices = progress_bar(indices, total=n_pts, display=progressbar)
+        indices = track(range(n_pts), description="Computing log density")
+    else:
+        indices = range(n_pts)
 
     for idx in indices:
         logdenss_pts = elemwise_logdens_fn(posterior_pts[idx])

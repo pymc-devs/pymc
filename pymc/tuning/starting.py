@@ -27,9 +27,11 @@ from typing import Optional
 import numpy as np
 import pytensor.gradient as tg
 
-from fastprogress.fastprogress import ProgressBar, progress_bar
+
+# from fastprogress.fastprogress import ProgressBar, progress_bar
 from numpy import isfinite
 from pytensor import Variable
+from rich import progress
 from scipy.optimize import minimize
 
 import pymc as pm
@@ -174,12 +176,8 @@ def find_MAP(
         if isinstance(e, StopIteration):
             pm._log.info(e)
     finally:
-        last_v = cost_func.n_eval
-        if progressbar:
-            assert isinstance(cost_func.progress, ProgressBar)
-            cost_func.progress.total = last_v
-            cost_func.progress.update(last_v)
-            print(file=sys.stdout)
+        cost_func.progress.update(cost_func.task, total=cost_func.n_eval)
+        print(file=sys.stdout)
 
     mx0 = RaveledVars(mx0, x0.point_map_info)
     unobserved_vars = get_default_varnames(model.unobserved_value_vars, include_transformed)
@@ -212,11 +210,8 @@ class CostFuncWrapper:
             self.desc = "logp = {:,.5g}, ||grad|| = {:,.5g}"
         self.previous_x = None
         self.progressbar = progressbar
-        if progressbar:
-            self.progress = progress_bar(range(maxeval), total=maxeval, display=progressbar)
-            self.progress.update(0)
-        else:
-            self.progress = range(maxeval)
+        self.progress = progress.Progress()
+        self.task = self.progress.add_task("MAP", total=maxeval, visible=progressbar)
 
     def __call__(self, x):
         neg_value = np.float64(self.logp_func(pm.floatX(x)))
@@ -232,16 +227,14 @@ class CostFuncWrapper:
             grad = None
 
         if self.n_eval % 10 == 0:
-            self.update_progress_desc(neg_value, grad)
+            self.progress.update(self.task, description=self.update_progress_desc(neg_value, grad))
 
         if self.n_eval > self.maxeval:
-            self.update_progress_desc(neg_value, grad)
+            self.progress.update(self.task, description=self.update_progress_desc(neg_value, grad))
             raise StopIteration
 
         self.n_eval += 1
-        if self.progressbar:
-            assert isinstance(self.progress, ProgressBar)
-            self.progress.update_bar(self.n_eval)
+        self.progress.advance(self.task, 1)
 
         if self.use_gradient:
             return value, grad
@@ -251,7 +244,7 @@ class CostFuncWrapper:
     def update_progress_desc(self, neg_value: float, grad: np.float64 = None) -> None:
         if self.progressbar:
             if grad is None:
-                self.progress.comment = self.desc.format(neg_value)
+                return self.desc.format(neg_value)
             else:
                 norm_grad = np.linalg.norm(grad)
-                self.progress.comment = self.desc.format(neg_value, norm_grad)
+                return self.desc.format(neg_value, norm_grad)
