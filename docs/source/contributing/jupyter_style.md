@@ -35,6 +35,8 @@ This guide does not teach nor cover MyST extensively, only gives some opinionate
   libraries documentations. Use [sphinx cross-references](https://docs.readthedocs.io/en/stable/guides/cross-referencing-with-sphinx.html)
   instead.
 
+  * For instance, to link to another notebook, you could use an explicit link in the markdown text: "this model uses the \[Kronecker product](GP-Kron.myst.md)". This {ref}`this page <myst:syntax/targets>` for more details.
+
   :::{caution}
   Using urls links breaks self referencing in versioned docs! And at the same time they are
   less robust than sphinx cross-references.
