@@ -177,7 +177,7 @@ def find_MAP(
             if isinstance(e, StopIteration):
                 pm._log.info(e)
         finally:
-            cost_func.progress.update(cost_func.task, total=cost_func.n_eval)
+            cost_func.progress.update(cost_func.task, completed=cost_func.n_eval)
             print(file=sys.stdout)
 
     mx0 = RaveledVars(mx0, x0.point_map_info)
@@ -238,7 +238,7 @@ class CostFuncWrapper:
             raise StopIteration
 
         self.n_eval += 1
-        self.progress.advance(self.task, 1)
+        self.progress.update(self.task, completed=self.n_eval)
 
         if self.use_gradient:
             return value, grad
