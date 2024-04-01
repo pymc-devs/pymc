@@ -831,9 +831,7 @@ def sample_posterior_predictive(
     ppc_trace_t = _DefaultTrace(samples)
     try:
         with Progress() as progress:
-            task = progress.add_task("Sampling", visible=progressbar, total=samples)
-            for idx in np.arange(samples):
-                progress.update(task, advance=1)
+            for idx in progress.track(np.arange(samples), description="Sampling ..."):
                 if nchain > 1:
                     # the trace object will either be a MultiTrace (and have _straces)...
                     if hasattr(_trace, "_straces"):
@@ -852,6 +850,7 @@ def sample_posterior_predictive(
 
                 for k, v in zip(vars_, values):
                     ppc_trace_t.insert(k.name, v, idx)
+
     except KeyboardInterrupt:
         pass
 
