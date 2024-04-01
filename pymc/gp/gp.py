@@ -149,22 +149,20 @@ class Latent(Base):
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def _build_prior(
-        self, name, X, num_outputs=1, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs
+        self, name, X, n_outputs=1, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs
     ):
         mu = self.mean_func(X)
         cov = stabilize(self.cov_func(X), jitter)
         if reparameterize:
-            size = np.shape(X)[0]
+            size = (X.shape[0], n_outputs) if n_outputs > 1 else X.shape[0]
             v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=size, **kwargs)
-            f_single = pm.Deterministic(
-                name, mu + cholesky(cov).dot(v), dims=kwargs.get("dims", None)
-            )
+            f = pm.Deterministic(name, mu + cholesky(cov).dot(v).transpose(), dims=kwargs.get("dims", None))
         else:
-            f_single = pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
-        f = pt.stack([f_single] * num_outputs, axis=0) if num_outputs > 1 else f_single
+            mu_stack = pt.stack([mu] * n_outputs, axis=0) if n_outputs >1 else mu
+            f = pm.MvNormal(name, mu=mu_stack, cov=cov, **kwargs)
         return f
 
-    def prior(self, name, X, num_outputs=1, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs):
+    def prior(self, name, X, n_outputs=1, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs):
         R"""
         Returns the GP prior distribution evaluated over the input
         locations `X`.
@@ -183,7 +181,7 @@ class Latent(Base):
         X : array-like
             Function input values. If one-dimensional, must be a column
             vector with shape `(n, 1)`.
-        num_outputs : int, default 1
+        n_outputs : int, default 1
             Number of output GPs.
         reparameterize : bool, default True
             Reparameterize the distribution by rotating the random
@@ -196,10 +194,10 @@ class Latent(Base):
             distribution constructor.
         """
 
-        f = self._build_prior(name, X, num_outputs, reparameterize, jitter, **kwargs)
+        f = self._build_prior(name, X, n_outputs, reparameterize, jitter, **kwargs)
         self.X = X
         self.f = f
-        self.num_outputs = num_outputs
+        self.n_outputs = n_outputs
         return f
 
     def _get_given_vals(self, given):
@@ -540,8 +538,8 @@ class Marginal(Base):
         rxx = y - mean_total(X)
         L = cholesky(stabilize(Kxx, jitter) + Knx)
         A = solve_lower(L, Kxs)
-        v = solve_lower(L, rxx)
-        mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v)
+        v = solve_lower(L, rxx.T)
+        mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v).T
         if diag:
             Kss = self.cov_func(Xnew, diag=True)
             var = Kss - pt.sum(pt.square(A), 0)
