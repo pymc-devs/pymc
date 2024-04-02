@@ -72,7 +72,7 @@ __all__ = (
     "sample_posterior_predictive",
 )
 
-custom_theme = Theme(
+default_theme = Theme(
     {
         "bar.complete": "#1764f4",
         "bar.finished": "green",
@@ -450,6 +450,7 @@ def sample_posterior_predictive(
     sample_dims: Optional[list[str]] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
+    progressbar_theme: Optional[Theme] = None,
     return_inferencedata: bool = True,
     extend_inferencedata: bool = False,
     predictions: bool = False,
@@ -838,8 +839,9 @@ def sample_posterior_predictive(
     _log.info(f"Sampling: {list(sorted(volatile_basic_rvs, key=lambda var: var.name))}")  # type: ignore
     ppc_trace_t = _DefaultTrace(samples)
     try:
-        with Progress(console=Console(theme=custom_theme)) as progress:
-            for idx in progress.track(np.arange(samples), description="Sampling ..."):
+        with Progress(console=Console(theme=progressbar_theme or default_theme)) as progress:
+            task = progress.add_task("Sampling ...", total=samples, visible=progressbar)
+            for idx in np.arange(samples):
                 if nchain > 1:
                     # the trace object will either be a MultiTrace (and have _straces)...
                     if hasattr(_trace, "_straces"):
@@ -858,6 +860,8 @@ def sample_posterior_predictive(
 
                 for k, v in zip(vars_, values):
                     ppc_trace_t.insert(k.name, v, idx)
+
+                progress.advance(task)
 
     except KeyboardInterrupt:
         pass

@@ -82,7 +82,7 @@ __all__ = [
 
 Step: TypeAlias = Union[BlockedStep, CompoundStep]
 
-custom_theme = Theme(
+default_theme = Theme(
     {
         "bar.complete": "#1764f4",
         "bar.finished": "green",
@@ -386,6 +386,7 @@ def sample(
     cores: Optional[int] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
+    progressbar_theme: Optional[Theme] = None,
     step=None,
     var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
@@ -415,6 +416,7 @@ def sample(
     cores: Optional[int] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
+    progressbar_theme: Optional[Theme] = None,
     step=None,
     var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
@@ -444,6 +446,7 @@ def sample(
     cores: Optional[int] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
+    progressbar_theme: Optional[Theme] = None,
     step=None,
     var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
@@ -770,6 +773,7 @@ def sample(
         "tune": tune,
         "var_names": var_names,
         "progressbar": progressbar,
+        "progressbar_theme": progressbar_theme,
         "model": model,
         "cores": cores,
         "callback": callback,
@@ -992,6 +996,7 @@ def _sample(
     trace: IBaseTrace,
     tune: int,
     model: Optional[Model] = None,
+    progressbar_theme: Optional[Theme] = None,
     callback=None,
     **kwargs,
 ) -> None:
@@ -1019,6 +1024,8 @@ def _sample(
     tune : int
         Number of iterations to tune.
     model : Model (optional if in ``with`` context)
+    progressbar_theme : Theme
+        Optional custom theme for the progress bar.
     """
     skip_first = kwargs.get("skip_first", 0)
 
@@ -1035,7 +1042,7 @@ def _sample(
     )
     _pbar_data = {"chain": chain, "divergences": 0}
     _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
-    with Progress(console=Console(theme=custom_theme)) as progress:
+    with Progress(console=Console(theme=progressbar_theme or default_theme)) as progress:
         try:
             task = progress.add_task(_desc.format(**_pbar_data), total=draws, visible=progressbar)
             for it, diverging in enumerate(sampling_gen):
@@ -1137,6 +1144,7 @@ def _mp_sample(
     random_seed: Sequence[RandomSeed],
     start: Sequence[PointType],
     progressbar: bool = True,
+    progressbar_theme: Optional[Theme] = None,
     traces: Sequence[IBaseTrace],
     model: Optional[Model] = None,
     callback: Optional[SamplingIteratorCallback] = None,
@@ -1164,6 +1172,8 @@ def _mp_sample(
         Dicts must contain numeric (transformed) initial values for all (transformed) free variables.
     progressbar : bool
         Whether or not to display a progress bar in the command line.
+    progressbar_theme : Theme
+        Optional custom theme for the progress bar.
     traces
         Recording backends for each chain.
     model : Model (optional if in ``with`` context)
@@ -1188,6 +1198,7 @@ def _mp_sample(
         start_points=start,
         step_method=step,
         progressbar=progressbar,
+        progressbar_theme=progressbar_theme,
         mp_ctx=mp_ctx,
     )
     try:

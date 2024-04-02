@@ -44,7 +44,7 @@ from pymc.vartypes import discrete_types, typefilter
 
 __all__ = ["find_MAP"]
 
-custom_theme = Theme(
+default_theme = Theme(
     {
         "bar.complete": "#1764f4",
         "bar.finished": "green",
@@ -59,6 +59,7 @@ def find_MAP(
     return_raw=False,
     include_transformed=True,
     progressbar=True,
+    progressbar_theme=None,
     maxeval=5000,
     model=None,
     *args,
@@ -91,6 +92,8 @@ def find_MAP(
         to the constrained values
     progressbar: bool, optional defaults to True
         Whether to display a progress bar in the command line.
+    progressbar_theme: Theme, optional
+        Custom theme for the progress bar.
     maxeval: int, optional, defaults to 5000
         The maximum number of times the posterior distribution is evaluated.
     model: Model (optional if in `with` context)
@@ -168,9 +171,9 @@ def find_MAP(
         method = "Powell"
 
     if compute_gradient and method != "Powell":
-        cost_func = CostFuncWrapper(maxeval, progressbar, logp_func, dlogp_func)
+        cost_func = CostFuncWrapper(maxeval, progressbar, progressbar_theme, logp_func, dlogp_func)
     else:
-        cost_func = CostFuncWrapper(maxeval, progressbar, logp_func)
+        cost_func = CostFuncWrapper(maxeval, progressbar, progressbar_theme, logp_func)
         compute_gradient = False
 
     with cost_func.progress:
@@ -205,7 +208,14 @@ def allfinite(x):
 
 
 class CostFuncWrapper:
-    def __init__(self, maxeval=5000, progressbar=True, logp_func=None, dlogp_func=None):
+    def __init__(
+        self,
+        maxeval=5000,
+        progressbar=True,
+        progressbar_theme=None,
+        logp_func=None,
+        dlogp_func=None,
+    ):
         self.n_eval = 0
         self.maxeval = maxeval
         self.logp_func = logp_func
@@ -221,7 +231,7 @@ class CostFuncWrapper:
         self.progress = Progress(
             *Progress.get_default_columns(),
             TextColumn("{task.fields[loss]}"),
-            console=Console(theme=custom_theme),
+            console=Console(theme=progressbar_theme or default_theme),
         )
         self.task = self.progress.add_task("MAP", total=maxeval, visible=progressbar, loss="")
 

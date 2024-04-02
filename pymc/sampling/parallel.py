@@ -36,7 +36,7 @@ from pymc.util import RandomSeed
 
 logger = logging.getLogger(__name__)
 
-custom_theme = Theme(
+default_theme = Theme(
     {
         "bar.complete": "#1764f4",
         "bar.finished": "green",
@@ -384,6 +384,7 @@ class ParallelSampler:
         start_points: Sequence[dict[str, np.ndarray]],
         step_method,
         progressbar: bool = True,
+        progressbar_theme: Theme = default_theme,
         mp_ctx=None,
     ):
         if any(len(arg) != chains for arg in [seeds, start_points]):
@@ -434,7 +435,7 @@ class ParallelSampler:
             BarColumn(),
             "[progress.percentage]{task.percentage:>3.0f}%",
             TimeRemainingColumn(),
-            console=Console(theme=custom_theme),
+            console=Console(theme=progressbar_theme or default_theme),
         )
         self._show_progress = progressbar
         self._divergences = 0

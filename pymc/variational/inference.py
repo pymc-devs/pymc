@@ -43,7 +43,7 @@ __all__ = [
 
 State = collections.namedtuple("State", "i,step,callbacks,score")
 
-custom_theme = Theme(
+default_theme = Theme(
     {
         "bar.complete": "#1764f4",
         "bar.finished": "green",
@@ -99,7 +99,15 @@ class Inference:
             pass
         return step_func.profile
 
-    def fit(self, n=10000, score=None, callbacks=None, progressbar=True, **kwargs):
+    def fit(
+        self,
+        n=10000,
+        score=None,
+        callbacks=None,
+        progressbar=True,
+        progressbar_theme=None,
+        **kwargs,
+    ):
         """Perform Operator Variational Inference
 
         Parameters
@@ -112,6 +120,8 @@ class Inference:
             calls provided functions after each iteration step
         progressbar : bool
             whether to show progressbar or not
+        progressbar_theme : Theme
+            Custom theme for the progress bar
 
         Other Parameters
         ----------------
@@ -146,9 +156,13 @@ class Inference:
         step_func = self.objective.step_function(score=score, **kwargs)
 
         if score:
-            state = self._iterate_with_loss(0, n, step_func, progressbar, callbacks)
+            state = self._iterate_with_loss(
+                0, n, step_func, progressbar, progressbar_theme, callbacks
+            )
         else:
-            state = self._iterate_without_loss(0, n, step_func, progressbar, callbacks)
+            state = self._iterate_without_loss(
+                0, n, step_func, progressbar, progressbar_theme, callbacks
+            )
 
         # hack to allow pm.fit() access to loss hist
         self.approx.hist = self.hist
@@ -156,10 +170,10 @@ class Inference:
 
         return self.approx
 
-    def _iterate_without_loss(self, s, n, step_func, progressbar, callbacks):
+    def _iterate_without_loss(self, s, n, step_func, progressbar, progressbar_theme, callbacks):
         i = 0
         try:
-            with Progress(console=Console(theme=custom_theme)) as progress:
+            with Progress(console=Console(theme=progressbar_theme or default_theme)) as progress:
                 task = progress.add_task("Fitting", total=n, visible=progressbar)
                 for i in range(n):
                     step_func()
@@ -195,7 +209,7 @@ class Inference:
                 logger.info(str(e))
         return State(i + s, step=step_func, callbacks=callbacks, score=False)
 
-    def _iterate_with_loss(self, s, n, step_func, progressbar, callbacks):
+    def _iterate_with_loss(self, s, n, step_func, progressbar, progressbar_theme, callbacks):
         def _infmean(input_array):
             """Return the mean of the finite values of the array"""
             input_array = input_array[np.isfinite(input_array)].astype("float64")
@@ -211,7 +225,7 @@ class Inference:
             with Progress(
                 *Progress.get_default_columns(),
                 TextColumn("{task.fields[loss]}"),
-                console=Console(theme=custom_theme),
+                console=Console(theme=progressbar_theme or default_theme),
             ) as progress:
                 task = progress.add_task("Fitting:", total=n, visible=progressbar, loss="")
                 for i in range(n):
@@ -274,15 +288,17 @@ class Inference:
         self.hist = np.concatenate([self.hist, scores])
         return State(i + s, step=step_func, callbacks=callbacks, score=True)
 
-    def refine(self, n, progressbar=True):
+    def refine(self, n, progressbar=True, progressbar_theme=None):
         """Refine the solution using the last compiled step function"""
         if self.state is None:
             raise TypeError("Need to call `.fit` first")
         i, step, callbacks, score = self.state
         if score:
-            state = self._iterate_with_loss(i, n, step, progressbar, callbacks)
+            state = self._iterate_with_loss(i, n, step, progressbar, progressbar_theme, callbacks)
         else:
-            state = self._iterate_without_loss(i, n, step, progressbar, callbacks)
+            state = self._iterate_without_loss(
+                i, n, step, progressbar, progressbar_theme, callbacks
+            )
         self.state = state
 
 
@@ -639,6 +655,7 @@ class ASVGD(ImplicitGradient):
         score=None,
         callbacks=None,
         progressbar=True,
+        progressbar_theme=None,
         obj_n_mc=500,
         **kwargs,
     ):
@@ -647,6 +664,7 @@ class ASVGD(ImplicitGradient):
             score=score,
             callbacks=callbacks,
             progressbar=progressbar,
+            progressbar_theme=progressbar_theme,
             obj_n_mc=obj_n_mc,
             **kwargs,
         )
@@ -697,6 +715,8 @@ def fit(
         calls provided functions after each iteration step
     progressbar: bool
         whether to show progressbar or not
+    progressbar_theme: Theme
+        Custom theme for the progress bar
     obj_n_mc: `int`
         Number of monte carlo samples used for approximation of objective gradients
     tf_n_mc: `int`
