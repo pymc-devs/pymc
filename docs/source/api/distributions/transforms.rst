@@ -19,7 +19,7 @@ The main use-cases for setting custom transforms include the following:
 
 #. The ``default_transform`` may need to be replaced with an alternative transform on the same constained space. For example, the ``default_transform`` for positive-valued random variables is the :class:`log` transform but in some cases it may be advantageous to use the :class:`log_exp_m1` transform instead.
 #. The ``default_transform`` may be removed entirely in some cases when using non-HMC samplers.
-#. Exceptionally, transforms can be used to add constraints to the model specification. However this should not be viewed as a default use-case and, in practice, this is mostly limited to using :class:`ordered` in mixture models.
+#. Exceptionally, transforms can be used to *add* constraints to the model specification without modifying the ``default_transform``. This can be done by specifying the additional transform via the ``transform`` parameter. However this should not be viewed as a default use-case and, in practice, this is mostly limited to using :class:`ordered` in mixture models.
 
    * NB: :class:`ordered` is not guaranteed to work correctly when used in combination with other transforms, such as :class:`simplex` and :class:`ZeroSumTransform`.
 
@@ -38,7 +38,8 @@ Transform Instances
 ~~~~~~~~~~~~~~~~~~~
 
 Transform instances are the entities that should be used in the
-``transform`` parameter to a random variable constructor.
+``default_transform`` or ``transform`` parameters to a random variable
+constructor.
 
 .. autosummary::
    :toctree: generated
@@ -55,7 +56,8 @@ Specific Transform Classes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 An instance of these classes needs to be created before being used
-in the ``transform`` parameter to a random variable constructor.
+in the ``default_transform`` or ``transform`` parameters to a random variable
+constructor.
 
 .. autosummary::
    :toctree: generated
@@ -73,6 +75,14 @@ in the ``transform`` parameter to a random variable constructor.
 
 Transform Composition Classes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An instance of this class needs to be created from a list of transforms before
+being used in the ``transform`` parameter to a random variable constructor.
+
+If a random variable has a ``default_transform`` and an additional transform
+is provided through the ``transform`` parameter, PyMC will automatically
+create an instance of the :class:`Chain` transform that applies the
+user-provided transform on top of the default one.
 
 .. autosummary::
    :toctree: generated
