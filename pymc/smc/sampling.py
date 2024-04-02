@@ -25,9 +25,9 @@ import cloudpickle
 import numpy as np
 
 from arviz import InferenceData
-
-# from fastprogress.fastprogress import force_console_behavior, progress_bar
+from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+from rich.theme import Theme
 
 import pymc
 
@@ -38,6 +38,13 @@ from pymc.sampling.parallel import _cpu_count
 from pymc.smc.kernels import IMH
 from pymc.stats.convergence import log_warnings, run_convergence_checks
 from pymc.util import RandomState, _get_seeds_per_chain
+
+custom_theme = Theme(
+    {
+        "bar.complete": "#1764f4",
+        "bar.finished": "green",
+    }
+)
 
 
 def sample_smc(
@@ -370,6 +377,7 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
         SpinnerColumn(),
         TimeElapsedColumn(),
         TextColumn("{task.fields[status]}"),
+        console=Console(theme=custom_theme),
     ) as progress:
         futures = []  # keep track of the jobs
         with multiprocessing.Manager() as manager:

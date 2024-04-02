@@ -26,13 +26,22 @@ from collections.abc import Sequence
 import cloudpickle
 import numpy as np
 
-from rich import progress
+from rich.console import Console
+from rich.progress import BarColumn, Progress, TimeRemainingColumn
+from rich.theme import Theme
 
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.util import RandomSeed
 
 logger = logging.getLogger(__name__)
+
+custom_theme = Theme(
+    {
+        "bar.complete": "#1764f4",
+        "bar.finished": "green",
+    }
+)
 
 
 class ParallelSamplingError(Exception):
@@ -420,11 +429,12 @@ class ParallelSampler:
 
         self._in_context = False
 
-        self._progress = progress.Progress(
+        self._progress = Progress(
             "[progress.description]{task.description}",
-            progress.BarColumn(),
+            BarColumn(),
             "[progress.percentage]{task.percentage:>3.0f}%",
-            progress.TimeRemainingColumn(),
+            TimeRemainingColumn(),
+            console=Console(theme=custom_theme),
         )
         self._show_progress = progressbar
         self._divergences = 0
@@ -432,9 +442,6 @@ class ParallelSampler:
         self._total_draws = chains * (draws + tune)
         self._desc = "Sampling {0._chains:d} chains, {0._divergences:,d} divergences"
         self._chains = chains
-        # if progressbar:
-        #     self._progress = progress_bar(range(chains * (draws + tune)), display=progressbar)
-        #     self._progress.comment = self._desc.format(self)
 
     def _make_active(self):
         while self._inactive and len(self._active) < self._max_active:
@@ -456,12 +463,6 @@ class ParallelSampler:
                 visible=self._show_progress,
             )
 
-            # if self._active and self._progress:
-            # self._progress.update(self._total_draws)
-            # progress.update(
-            #         task, divergences=self._divergences
-            #     )
-
             while self._active:
                 draw = ProcessAdapter.recv_draw(self._active)
                 proc, is_last, draw, tuning, stats = draw
@@ -480,6 +481,7 @@ class ParallelSampler:
                     self._active.remove(proc)
                     self._finished.append(proc)
                     self._make_active()
+                    progress.update(task, description=self._desc.format(self), refresh=True)
 
                 # We could also yield proc.shared_point_view directly,
                 # and only call proc.write_next() after the yield returns.

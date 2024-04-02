@@ -27,11 +27,11 @@ from typing import Optional
 import numpy as np
 import pytensor.gradient as tg
 
-
-# from fastprogress.fastprogress import ProgressBar, progress_bar
 from numpy import isfinite
 from pytensor import Variable
+from rich.console import Console
 from rich.progress import Progress, TextColumn
+from rich.theme import Theme
 from scipy.optimize import minimize
 
 import pymc as pm
@@ -43,6 +43,13 @@ from pymc.util import get_default_varnames, get_value_vars_from_user_vars
 from pymc.vartypes import discrete_types, typefilter
 
 __all__ = ["find_MAP"]
+
+custom_theme = Theme(
+    {
+        "bar.complete": "#1764f4",
+        "bar.finished": "green",
+    }
+)
 
 
 def find_MAP(
@@ -214,6 +221,7 @@ class CostFuncWrapper:
         self.progress = Progress(
             *Progress.get_default_columns(),
             TextColumn("{task.fields[loss]}"),
+            console=Console(theme=custom_theme),
         )
         self.task = self.progress.add_task("MAP", total=maxeval, visible=progressbar, loss="")
 

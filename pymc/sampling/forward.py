@@ -45,7 +45,9 @@ from pytensor.tensor.random.var import (
     RandomStateSharedVariable,
 )
 from pytensor.tensor.sharedvar import SharedVariable
+from rich.console import Console
 from rich.progress import Progress
+from rich.theme import Theme
 from typing_extensions import TypeAlias
 
 import pymc as pm
@@ -70,6 +72,12 @@ __all__ = (
     "sample_posterior_predictive",
 )
 
+custom_theme = Theme(
+    {
+        "bar.complete": "#1764f4",
+        "bar.finished": "green",
+    }
+)
 
 ArrayLike: TypeAlias = Union[np.ndarray, list[float]]
 PointList: TypeAlias = list[PointType]
@@ -830,7 +838,7 @@ def sample_posterior_predictive(
     _log.info(f"Sampling: {list(sorted(volatile_basic_rvs, key=lambda var: var.name))}")  # type: ignore
     ppc_trace_t = _DefaultTrace(samples)
     try:
-        with Progress() as progress:
+        with Progress(console=Console(theme=custom_theme)) as progress:
             for idx in progress.track(np.arange(samples), description="Sampling ..."):
                 if nchain > 1:
                     # the trace object will either be a MultiTrace (and have _straces)...

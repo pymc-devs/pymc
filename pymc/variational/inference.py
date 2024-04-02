@@ -18,7 +18,9 @@ import warnings
 
 import numpy as np
 
+from rich.console import Console
 from rich.progress import Progress, TextColumn, track
+from rich.theme import Theme
 
 import pymc as pm
 
@@ -40,6 +42,13 @@ __all__ = [
 ]
 
 State = collections.namedtuple("State", "i,step,callbacks,score")
+
+custom_theme = Theme(
+    {
+        "bar.complete": "#1764f4",
+        "bar.finished": "green",
+    }
+)
 
 
 class Inference:
@@ -150,7 +159,7 @@ class Inference:
     def _iterate_without_loss(self, s, n, step_func, progressbar, callbacks):
         i = 0
         try:
-            with Progress() as progress:
+            with Progress(console=Console(theme=custom_theme)) as progress:
                 task = progress.add_task("Fitting", total=n, visible=progressbar)
                 for i in range(n):
                     step_func()
@@ -202,6 +211,7 @@ class Inference:
             with Progress(
                 *Progress.get_default_columns(),
                 TextColumn("{task.fields[loss]}"),
+                console=Console(theme=custom_theme),
             ) as progress:
                 task = progress.add_task("Fitting:", total=n, visible=progressbar, loss="")
                 for i in range(n):

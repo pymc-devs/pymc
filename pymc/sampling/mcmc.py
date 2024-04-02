@@ -35,7 +35,9 @@ import pytensor.gradient as tg
 from arviz import InferenceData, dict_to_dataset
 from arviz.data.base import make_attrs
 from pytensor.graph.basic import Variable
+from rich.console import Console
 from rich.progress import Progress
+from rich.theme import Theme
 from typing_extensions import Protocol, TypeAlias
 
 import pymc as pm
@@ -79,6 +81,13 @@ __all__ = [
 ]
 
 Step: TypeAlias = Union[BlockedStep, CompoundStep]
+
+custom_theme = Theme(
+    {
+        "bar.complete": "#1764f4",
+        "bar.finished": "green",
+    }
+)
 
 
 class SamplingIteratorCallback(Protocol):
@@ -1026,14 +1035,9 @@ def _sample(
     )
     _pbar_data = {"chain": chain, "divergences": 0}
     _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
-    # if progressbar:
-    #     sampling = progress_bar(sampling_gen, total=draws, display=progressbar)
-    #     sampling.comment = _desc.format(**_pbar_data)
-    # else:
-    #     sampling = sampling_gen
-    with Progress() as progress:
+    with Progress(console=Console(theme=custom_theme)) as progress:
         try:
-            task = progress.add_task(_desc.format(**_pbar_data), total=draws)
+            task = progress.add_task(_desc.format(**_pbar_data), total=draws, visible=progressbar)
             for it, diverging in enumerate(sampling_gen):
                 if it >= skip_first and diverging:
                     _pbar_data["divergences"] += 1
