@@ -15,14 +15,15 @@ from collections.abc import Sequence
 from typing import Optional, cast
 
 from arviz import InferenceData, dict_to_dataset
-from rich.progress import track
+from rich.console import Console
+from rich.progress import Progress
 
 import pymc
 
 from pymc.backends.arviz import _DefaultTrace, coords_and_dims_for_inferencedata
 from pymc.model import Model, modelcontext
 from pymc.pytensorf import PointFunc
-from pymc.util import dataset_to_point_list
+from pymc.util import dataset_to_point_list, default_progress_theme
 
 __all__ = ("compute_log_likelihood", "compute_log_prior")
 
@@ -169,15 +170,14 @@ def compute_log_density(
 
     n_pts = len(posterior_pts)
     logdens_dict = _DefaultTrace(n_pts)
-    if progressbar:
-        indices = track(range(n_pts), description="Computing log density")
-    else:
-        indices = range(n_pts)
 
-    for idx in indices:
-        logdenss_pts = elemwise_logdens_fn(posterior_pts[idx])
-        for rv_name, rv_logdens in zip(var_names, logdenss_pts):
-            logdens_dict.insert(rv_name, rv_logdens, idx)
+    with Progress(console=Console(theme=default_progress_theme)) as progress:
+        task = progress.add_task("Computing log density...", total=n_pts, visible=progressbar)
+        for idx in range(n_pts):
+            logdenss_pts = elemwise_logdens_fn(posterior_pts[idx])
+            for rv_name, rv_logdens in zip(var_names, logdenss_pts):
+                logdens_dict.insert(rv_name, rv_logdens, idx)
+            progress.update(task, advance=1)
 
     logdens_trace = logdens_dict.trace_dict
     for key, array in logdens_trace.items():
