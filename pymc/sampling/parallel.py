@@ -32,16 +32,9 @@ from rich.theme import Theme
 
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
-from pymc.util import RandomSeed
+from pymc.util import RandomSeed, default_progress_theme
 
 logger = logging.getLogger(__name__)
-
-default_theme = Theme(
-    {
-        "bar.complete": "#1764f4",
-        "bar.finished": "green",
-    }
-)
 
 
 class ParallelSamplingError(Exception):
@@ -384,7 +377,7 @@ class ParallelSampler:
         start_points: Sequence[dict[str, np.ndarray]],
         step_method,
         progressbar: bool = True,
-        progressbar_theme: Theme = default_theme,
+        progressbar_theme: Theme = default_progress_theme,
         mp_ctx=None,
     ):
         if any(len(arg) != chains for arg in [seeds, start_points]):
@@ -435,7 +428,7 @@ class ParallelSampler:
             BarColumn(),
             "[progress.percentage]{task.percentage:>3.0f}%",
             TimeRemainingColumn(),
-            console=Console(theme=progressbar_theme or default_theme),
+            console=Console(theme=progressbar_theme),
         )
         self._show_progress = progressbar
         self._divergences = 0

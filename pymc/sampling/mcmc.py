@@ -67,6 +67,7 @@ from pymc.util import (
     RandomSeed,
     RandomState,
     _get_seeds_per_chain,
+    default_progress_theme,
     drop_warning_stat,
     get_untransformed_name,
     is_transformed_name,
@@ -81,13 +82,6 @@ __all__ = [
 ]
 
 Step: TypeAlias = Union[BlockedStep, CompoundStep]
-
-default_theme = Theme(
-    {
-        "bar.complete": "#1764f4",
-        "bar.finished": "green",
-    }
-)
 
 
 class SamplingIteratorCallback(Protocol):
@@ -386,7 +380,7 @@ def sample(
     cores: Optional[int] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
-    progressbar_theme: Optional[Theme] = None,
+    progressbar_theme: Optional[Theme] = default_progress_theme,
     step=None,
     var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
@@ -416,7 +410,7 @@ def sample(
     cores: Optional[int] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
-    progressbar_theme: Optional[Theme] = None,
+    progressbar_theme: Optional[Theme] = default_progress_theme,
     step=None,
     var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
@@ -446,7 +440,7 @@ def sample(
     cores: Optional[int] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
-    progressbar_theme: Optional[Theme] = None,
+    progressbar_theme: Optional[Theme] = default_progress_theme,
     step=None,
     var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
@@ -996,7 +990,7 @@ def _sample(
     trace: IBaseTrace,
     tune: int,
     model: Optional[Model] = None,
-    progressbar_theme: Optional[Theme] = None,
+    progressbar_theme: Optional[Theme] = default_progress_theme,
     callback=None,
     **kwargs,
 ) -> None:
@@ -1042,7 +1036,7 @@ def _sample(
     )
     _pbar_data = {"chain": chain, "divergences": 0}
     _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
-    with Progress(console=Console(theme=progressbar_theme or default_theme)) as progress:
+    with Progress(console=Console(theme=progressbar_theme)) as progress:
         try:
             task = progress.add_task(_desc.format(**_pbar_data), total=draws, visible=progressbar)
             for it, diverging in enumerate(sampling_gen):
@@ -1144,7 +1138,7 @@ def _mp_sample(
     random_seed: Sequence[RandomSeed],
     start: Sequence[PointType],
     progressbar: bool = True,
-    progressbar_theme: Optional[Theme] = None,
+    progressbar_theme: Optional[Theme] = default_progress_theme,
     traces: Sequence[IBaseTrace],
     model: Optional[Model] = None,
     callback: Optional[SamplingIteratorCallback] = None,

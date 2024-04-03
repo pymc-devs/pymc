@@ -61,6 +61,7 @@ from pymc.util import (
     RandomState,
     _get_seeds_per_chain,
     dataset_to_point_list,
+    default_progress_theme,
     get_default_varnames,
     point_wrapper,
 )
@@ -70,13 +71,6 @@ __all__ = (
     "draw",
     "sample_prior_predictive",
     "sample_posterior_predictive",
-)
-
-default_theme = Theme(
-    {
-        "bar.complete": "#1764f4",
-        "bar.finished": "green",
-    }
 )
 
 ArrayLike: TypeAlias = Union[np.ndarray, list[float]]
@@ -450,7 +444,7 @@ def sample_posterior_predictive(
     sample_dims: Optional[list[str]] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
-    progressbar_theme: Optional[Theme] = None,
+    progressbar_theme: Optional[Theme] = default_progress_theme,
     return_inferencedata: bool = True,
     extend_inferencedata: bool = False,
     predictions: bool = False,
@@ -839,7 +833,7 @@ def sample_posterior_predictive(
     _log.info(f"Sampling: {list(sorted(volatile_basic_rvs, key=lambda var: var.name))}")  # type: ignore
     ppc_trace_t = _DefaultTrace(samples)
     try:
-        with Progress(console=Console(theme=progressbar_theme or default_theme)) as progress:
+        with Progress(console=Console(theme=progressbar_theme)) as progress:
             task = progress.add_task("Sampling ...", total=samples, visible=progressbar)
             for idx in np.arange(samples):
                 if nchain > 1:

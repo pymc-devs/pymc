@@ -27,10 +27,18 @@ from cachetools import LRUCache, cachedmethod
 from pytensor import Variable
 from pytensor.compile import SharedVariable
 from pytensor.graph.utils import ValidatingScratchpad
+from rich.theme import Theme
 
 from pymc.exceptions import BlockModelAccessError
 
 VarName = NewType("VarName", str)
+
+default_progress_theme = Theme(
+    {
+        "bar.complete": "#1764f4",
+        "bar.finished": "green",
+    }
+)
 
 
 class _UnsetType:

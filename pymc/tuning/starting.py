@@ -31,7 +31,6 @@ from numpy import isfinite
 from pytensor import Variable
 from rich.console import Console
 from rich.progress import Progress, TextColumn
-from rich.theme import Theme
 from scipy.optimize import minimize
 
 import pymc as pm
@@ -39,17 +38,10 @@ import pymc as pm
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
-from pymc.util import get_default_varnames, get_value_vars_from_user_vars
+from pymc.util import default_progress_theme, get_default_varnames, get_value_vars_from_user_vars
 from pymc.vartypes import discrete_types, typefilter
 
 __all__ = ["find_MAP"]
-
-default_theme = Theme(
-    {
-        "bar.complete": "#1764f4",
-        "bar.finished": "green",
-    }
-)
 
 
 def find_MAP(
@@ -59,7 +51,7 @@ def find_MAP(
     return_raw=False,
     include_transformed=True,
     progressbar=True,
-    progressbar_theme=None,
+    progressbar_theme=default_progress_theme,
     maxeval=5000,
     model=None,
     *args,
@@ -212,7 +204,7 @@ class CostFuncWrapper:
         self,
         maxeval=5000,
         progressbar=True,
-        progressbar_theme=None,
+        progressbar_theme=default_progress_theme,
         logp_func=None,
         dlogp_func=None,
     ):
@@ -231,7 +223,7 @@ class CostFuncWrapper:
         self.progress = Progress(
             *Progress.get_default_columns(),
             TextColumn("{task.fields[loss]}"),
-            console=Console(theme=progressbar_theme or default_theme),
+            console=Console(theme=progressbar_theme),
         )
         self.task = self.progress.add_task("MAP", total=maxeval, visible=progressbar, loss="")
 

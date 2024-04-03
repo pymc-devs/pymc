@@ -20,10 +20,10 @@ import numpy as np
 
 from rich.console import Console
 from rich.progress import Progress, TextColumn, track
-from rich.theme import Theme
 
 import pymc as pm
 
+from pymc.util import default_progress_theme
 from pymc.variational import test_functions
 from pymc.variational.approximations import Empirical, FullRank, MeanField
 from pymc.variational.operators import KL, KSD
@@ -42,13 +42,6 @@ __all__ = [
 ]
 
 State = collections.namedtuple("State", "i,step,callbacks,score")
-
-default_theme = Theme(
-    {
-        "bar.complete": "#1764f4",
-        "bar.finished": "green",
-    }
-)
 
 
 class Inference:
@@ -105,7 +98,7 @@ class Inference:
         score=None,
         callbacks=None,
         progressbar=True,
-        progressbar_theme=None,
+        progressbar_theme=default_progress_theme,
         **kwargs,
     ):
         """Perform Operator Variational Inference
@@ -173,7 +166,7 @@ class Inference:
     def _iterate_without_loss(self, s, n, step_func, progressbar, progressbar_theme, callbacks):
         i = 0
         try:
-            with Progress(console=Console(theme=progressbar_theme or default_theme)) as progress:
+            with Progress(console=Console(theme=progressbar_theme)) as progress:
                 task = progress.add_task("Fitting", total=n, visible=progressbar)
                 for i in range(n):
                     step_func()
@@ -225,7 +218,7 @@ class Inference:
             with Progress(
                 *Progress.get_default_columns(),
                 TextColumn("{task.fields[loss]}"),
-                console=Console(theme=progressbar_theme or default_theme),
+                console=Console(theme=progressbar_theme),
             ) as progress:
                 task = progress.add_task("Fitting:", total=n, visible=progressbar, loss="")
                 for i in range(n):
@@ -288,7 +281,7 @@ class Inference:
         self.hist = np.concatenate([self.hist, scores])
         return State(i + s, step=step_func, callbacks=callbacks, score=True)
 
-    def refine(self, n, progressbar=True, progressbar_theme=None):
+    def refine(self, n, progressbar=True, progressbar_theme=default_progress_theme):
         """Refine the solution using the last compiled step function"""
         if self.state is None:
             raise TypeError("Need to call `.fit` first")
@@ -655,7 +648,7 @@ class ASVGD(ImplicitGradient):
         score=None,
         callbacks=None,
         progressbar=True,
-        progressbar_theme=None,
+        progressbar_theme=default_progress_theme,
         obj_n_mc=500,
         **kwargs,
     ):
