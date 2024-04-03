@@ -22,15 +22,18 @@ import traceback
 
 from collections import namedtuple
 from collections.abc import Sequence
+from typing import Optional
 
 import cloudpickle
 import numpy as np
 
-from fastprogress.fastprogress import progress_bar
+from rich.console import Console
+from rich.progress import BarColumn, Progress, TimeRemainingColumn
+from rich.theme import Theme
 
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
-from pymc.util import RandomSeed
+from pymc.util import RandomSeed, default_progress_theme
 
 logger = logging.getLogger(__name__)
 
@@ -375,6 +378,7 @@ class ParallelSampler:
         start_points: Sequence[dict[str, np.ndarray]],
         step_method,
         progressbar: bool = True,
+        progressbar_theme: Optional[Theme] = default_progress_theme,
         mp_ctx=None,
     ):
         if any(len(arg) != chains for arg in [seeds, start_points]):
@@ -420,14 +424,19 @@ class ParallelSampler:
 
         self._in_context = False
 
-        self._progress = None
+        self._progress = Progress(
+            "[progress.description]{task.description}",
+            BarColumn(),
+            "[progress.percentage]{task.percentage:>3.0f}%",
+            TimeRemainingColumn(),
+            console=Console(theme=progressbar_theme),
+        )
+        self._show_progress = progressbar
         self._divergences = 0
-        self._total_draws = 0
+        self._completed_draws = 0
+        self._total_draws = chains * (draws + tune)
         self._desc = "Sampling {0._chains:d} chains, {0._divergences:,d} divergences"
         self._chains = chains
-        if progressbar:
-            self._progress = progress_bar(range(chains * (draws + tune)), display=progressbar)
-            self._progress.comment = self._desc.format(self)
 
     def _make_active(self):
         while self._inactive and len(self._active) < self._max_active:
@@ -441,37 +450,45 @@ class ParallelSampler:
             raise ValueError("Use ParallelSampler as context manager.")
         self._make_active()
 
-        if self._active and self._progress:
-            self._progress.update(self._total_draws)
+        with self._progress as progress:
+            task = progress.add_task(
+                self._desc.format(self),
+                completed=self._completed_draws,
+                total=self._total_draws,
+                visible=self._show_progress,
+            )
 
-        while self._active:
-            draw = ProcessAdapter.recv_draw(self._active)
-            proc, is_last, draw, tuning, stats = draw
-            self._total_draws += 1
-            if not tuning and stats and stats[0].get("diverging"):
-                self._divergences += 1
-                if self._progress:
-                    self._progress.comment = self._desc.format(self)
-            if self._progress:
-                self._progress.update(self._total_draws)
+            while self._active:
+                draw = ProcessAdapter.recv_draw(self._active)
+                proc, is_last, draw, tuning, stats = draw
+                self._completed_draws += 1
+                if not tuning and stats and stats[0].get("diverging"):
+                    self._divergences += 1
+                progress.update(
+                    task,
+                    completed=self._completed_draws,
+                    total=self._total_draws,
+                    description=self._desc.format(self),
+                )
 
-            if is_last:
-                proc.join()
-                self._active.remove(proc)
-                self._finished.append(proc)
-                self._make_active()
+                if is_last:
+                    proc.join()
+                    self._active.remove(proc)
+                    self._finished.append(proc)
+                    self._make_active()
+                    progress.update(task, description=self._desc.format(self), refresh=True)
 
-            # We could also yield proc.shared_point_view directly,
-            # and only call proc.write_next() after the yield returns.
-            # This seems to be faster overally though, as the worker
-            # loses less time waiting.
-            point = {name: val.copy() for name, val in proc.shared_point_view.items()}
+                # We could also yield proc.shared_point_view directly,
+                # and only call proc.write_next() after the yield returns.
+                # This seems to be faster overally though, as the worker
+                # loses less time waiting.
+                point = {name: val.copy() for name, val in proc.shared_point_view.items()}
 
-            # Already called for new proc in _make_active
-            if not is_last:
-                proc.write_next()
+                # Already called for new proc in _make_active
+                if not is_last:
+                    proc.write_next()
 
-            yield Draw(proc.chain, is_last, draw, tuning, stats, point)
+                yield Draw(proc.chain, is_last, draw, tuning, stats, point)
 
     def __enter__(self):
         self._in_context = True

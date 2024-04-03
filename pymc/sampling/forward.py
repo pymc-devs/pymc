@@ -30,7 +30,6 @@ import numpy as np
 import xarray
 
 from arviz import InferenceData
-from fastprogress.fastprogress import progress_bar
 from pytensor import tensor as pt
 from pytensor.graph.basic import (
     Apply,
@@ -46,6 +45,9 @@ from pytensor.tensor.random.var import (
     RandomStateSharedVariable,
 )
 from pytensor.tensor.sharedvar import SharedVariable
+from rich.console import Console
+from rich.progress import Progress
+from rich.theme import Theme
 from typing_extensions import TypeAlias
 
 import pymc as pm
@@ -59,6 +61,7 @@ from pymc.util import (
     RandomState,
     _get_seeds_per_chain,
     dataset_to_point_list,
+    default_progress_theme,
     get_default_varnames,
     point_wrapper,
 )
@@ -69,7 +72,6 @@ __all__ = (
     "sample_prior_predictive",
     "sample_posterior_predictive",
 )
-
 
 ArrayLike: TypeAlias = Union[np.ndarray, list[float]]
 PointList: TypeAlias = list[PointType]
@@ -442,6 +444,7 @@ def sample_posterior_predictive(
     sample_dims: Optional[list[str]] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
+    progressbar_theme: Optional[Theme] = default_progress_theme,
     return_inferencedata: bool = True,
     extend_inferencedata: bool = False,
     predictions: bool = False,
@@ -796,10 +799,6 @@ def sample_posterior_predictive(
     else:
         vars_ = model.observed_RVs + observed_dependent_deterministics(model)
 
-    indices = np.arange(samples)
-    if progressbar:
-        indices = progress_bar(indices, total=samples, display=progressbar)
-
     vars_to_sample = list(get_default_varnames(vars_, include_transformed=False))
 
     if not vars_to_sample:
@@ -834,25 +833,30 @@ def sample_posterior_predictive(
     _log.info(f"Sampling: {list(sorted(volatile_basic_rvs, key=lambda var: var.name))}")  # type: ignore
     ppc_trace_t = _DefaultTrace(samples)
     try:
-        for idx in indices:
-            if nchain > 1:
-                # the trace object will either be a MultiTrace (and have _straces)...
-                if hasattr(_trace, "_straces"):
-                    chain_idx, point_idx = np.divmod(idx, len_trace)
-                    chain_idx = chain_idx % nchain
-                    param = cast(MultiTrace, _trace)._straces[chain_idx].point(point_idx)
-                # ... or a PointList
+        with Progress(console=Console(theme=progressbar_theme)) as progress:
+            task = progress.add_task("Sampling ...", total=samples, visible=progressbar)
+            for idx in np.arange(samples):
+                if nchain > 1:
+                    # the trace object will either be a MultiTrace (and have _straces)...
+                    if hasattr(_trace, "_straces"):
+                        chain_idx, point_idx = np.divmod(idx, len_trace)
+                        chain_idx = chain_idx % nchain
+                        param = cast(MultiTrace, _trace)._straces[chain_idx].point(point_idx)
+                    # ... or a PointList
+                    else:
+                        param = cast(PointList, _trace)[idx % (len_trace * nchain)]
+                # there's only a single chain, but the index might hit it multiple times if
+                # the number of indices is greater than the length of the trace.
                 else:
-                    param = cast(PointList, _trace)[idx % (len_trace * nchain)]
-            # there's only a single chain, but the index might hit it multiple times if
-            # the number of indices is greater than the length of the trace.
-            else:
-                param = _trace[idx % len_trace]
+                    param = _trace[idx % len_trace]
 
-            values = sampler_fn(**param)
+                values = sampler_fn(**param)
 
-            for k, v in zip(vars_, values):
-                ppc_trace_t.insert(k.name, v, idx)
+                for k, v in zip(vars_, values):
+                    ppc_trace_t.insert(k.name, v, idx)
+
+                progress.advance(task)
+
     except KeyboardInterrupt:
         pass
 
