@@ -22,6 +22,7 @@ import traceback
 
 from collections import namedtuple
 from collections.abc import Sequence
+from typing import Optional
 
 import cloudpickle
 import numpy as np
@@ -377,7 +378,7 @@ class ParallelSampler:
         start_points: Sequence[dict[str, np.ndarray]],
         step_method,
         progressbar: bool = True,
-        progressbar_theme: Theme = default_progress_theme,
+        progressbar_theme: Optional[Theme] = default_progress_theme,
         mp_ctx=None,
     ):
         if any(len(arg) != chains for arg in [seeds, start_points]):
