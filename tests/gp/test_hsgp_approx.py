@@ -229,35 +229,61 @@ class TestHSGP(_BaseFixtures):
 
 class TestHSGPPeriodic(_BaseFixtures):
     def test_parametrization(self):
-        err_msg = "`m` must be a positive integer as the `Periodic` kernel approximation is only implemented for 1-dimensional case."
+        err_msg = (
+            "`m` must be a positive integer as the `Periodic` kernel approximation is only "
+            "implemented for 1-dimensional case."
+        )
 
         with pytest.raises(ValueError, match=err_msg):
             # `m` must be a positive integer, not a list
-            cov_func = pm.gp.cov.Periodic(1, period=1, ls=0.1)
+            cov_func = pm.gp.cov.Periodic(1, period=1, ls=1.0)
             pm.gp.HSGPPeriodic(m=[500], cov_func=cov_func)
 
         with pytest.raises(ValueError, match=err_msg):
             # `m`` must be a positive integer
-            cov_func = pm.gp.cov.Periodic(1, period=1, ls=0.1)
+            cov_func = pm.gp.cov.Periodic(1, period=1, ls=1.0)
             pm.gp.HSGPPeriodic(m=-1, cov_func=cov_func)
 
         with pytest.raises(
             ValueError,
-            match="`cov_func` must be an instance of a `Periodic` kernel only. Use the `scale` parameter to control the variance.",
+            match=(
+                "`cov_func` must be an instance of a `Periodic` kernel only. Use the `scale` "
+                "parameter to control the variance."
+            ),
         ):
             # `cov_func` must be `Periodic` only
-            cov_func = 5.0 * pm.gp.cov.Periodic(1, period=1, ls=0.1)
+            cov_func = 5.0 * pm.gp.cov.Periodic(1, period=1, ls=1.0)
             pm.gp.HSGPPeriodic(m=500, cov_func=cov_func)
 
         with pytest.raises(
             ValueError,
-            match="HSGP approximation for `Periodic` kernel only implemented for 1-dimensional case.",
+            match=(
+                "HSGP approximation for `Periodic` kernel only implemented for 1-dimensional case."
+            ),
         ):
             cov_func = pm.gp.cov.Periodic(2, period=1, ls=[1, 2])
             pm.gp.HSGPPeriodic(m=500, scale=0.5, cov_func=cov_func)
 
     @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
-    @pytest.mark.parametrize("eta", [100.0])
+    @pytest.mark.parametrize("drop_first", [True, False])
+    def test_parametrization_drop_first(self, model, cov_func, X1, drop_first):
+        n_basis = 101
+        with model:
+            gp = pm.gp.HSGPPeriodic(m=n_basis, scale=1.0, drop_first=drop_first, cov_func=cov_func)
+            gp.prior("f1", X1)
+            first_cos_zero = gp._beta_cos[0].eval() == 0.0
+            first_sin_zero = gp._beta_sin[0].eval() == 0.0
+            if drop_first:
+                assert (
+                    first_cos_zero and first_sin_zero
+                ), "First element of both coefficient vectors should be zero."
+            else:
+                assert (
+                    not first_cos_zero and first_sin_zero
+                ), "Only the first element of the sine coefficent vectors should be zero."
+
+    @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
+    @pytest.mark.parametrize("eta", [2.0])
     @pytest.mark.xfail(
         reason="For `pm.gp.cov.Periodic`, this test does not pass.\
         The mmd is around `0.0468`.\
@@ -266,11 +292,11 @@ class TestHSGPPeriodic(_BaseFixtures):
         See https://github.com/pymc-devs/pymc/pull/6877/ for the full discussion."
     )
     def test_prior(self, model, cov_func, eta, X1, rng):
-        """Compare HSGPPeriodic prior to unapproximated GP prior, pm.gp.Latent. Draw samples from the
-        prior and compare them using MMD two sample test.
+        """Compare HSGPPeriodic prior to unapproximated GP prior, pm.gp.Latent. Draw samples from
+        the prior and compare them using MMD two sample test.
         """
         with model:
-            hsgp = pm.gp.HSGPPeriodic(m=200, scale=eta, cov_func=cov_func)
+            hsgp = pm.gp.HSGPPeriodic(m=200, scale=eta, drop_first=False, cov_func=cov_func)
             f1 = hsgp.prior("f1", X=X1)
 
             gp = pm.gp.Latent(cov_func=eta**2 * cov_func)
@@ -278,13 +304,16 @@ class TestHSGPPeriodic(_BaseFixtures):
 
             idata = pm.sample_prior_predictive(samples=1000, random_seed=rng)
 
-        samples1 = az.extract(idata.prior["f1"])["f1"].values.T
-        samples2 = az.extract(idata.prior["f2"])["f2"].values.T
+        samples1 = az.extract(idata.prior, var_names="f1").values.T
+        samples2 = az.extract(idata.prior, var_names="f2").values.T
 
         h0, mmd, critical_value, reject = two_sample_test(
             samples1, samples2, n_sims=500, alpha=0.01
         )
-        assert not reject, f"H0 was rejected, {mmd} even though HSGP and GP priors should match."
+        assert not reject, (
+            f"H0 was rejected, MMD {mmd:.3f} > {critical_value:.3f} even though HSGP and GP priors "
+            "should match."
+        )
 
     @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
     def test_conditional_periodic(self, model, cov_func, X1):
@@ -299,8 +328,8 @@ class TestHSGPPeriodic(_BaseFixtures):
 
             idata = pm.sample_prior_predictive(samples=1000)
 
-        samples1 = az.extract(idata.prior["f"])["f"].values.T
-        samples2 = az.extract(idata.prior["fc"])["fc"].values.T
+        samples1 = az.extract(idata.prior, var_names="f").values.T
+        samples2 = az.extract(idata.prior, var_names="fc").values.T
 
         h0, mmd, critical_value, reject = two_sample_test(
             samples1, samples2, n_sims=500, alpha=0.01
