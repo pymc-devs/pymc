@@ -188,7 +188,7 @@ class TestSizeShapeDimsObserved:
 
     def test_simultaneous_shape_and_dims(self):
         with pm.Model() as pmodel:
-            x = pm.ConstantData("x", [1, 2, 3], dims="ddata")
+            x = pm.Data("x", [1, 2, 3], dims="ddata")
 
             # The shape and dims tuples correspond to each other.
             # Note: No checks are performed that implied shape (x), shape and dims actually match.
@@ -200,7 +200,7 @@ class TestSizeShapeDimsObserved:
 
     def test_simultaneous_size_and_dims(self):
         with pm.Model() as pmodel:
-            x = pm.ConstantData("x", [1, 2, 3], dims="ddata")
+            x = pm.Data("x", [1, 2, 3], dims="ddata")
             assert "ddata" in pmodel.dim_lengths
 
             # Size does not include support dims, so this test must use a dist with support dims.
@@ -213,7 +213,7 @@ class TestSizeShapeDimsObserved:
 
     def test_simultaneous_dims_and_observed(self):
         with pm.Model() as pmodel:
-            x = pm.ConstantData("x", [1, 2, 3], dims="ddata")
+            x = pm.Data("x", [1, 2, 3], dims="ddata")
             assert "ddata" in pmodel.dim_lengths
 
             # Note: No checks are performed that observed and dims actually match.
@@ -234,7 +234,7 @@ class TestSizeShapeDimsObserved:
 
     def test_can_resize_data_defined_size(self):
         with pm.Model() as pmodel:
-            x = pm.MutableData("x", [[1, 2, 3, 4]], dims=("first", "second"))
+            x = pm.Data("x", [[1, 2, 3, 4]], dims=("first", "second"))
             y = pm.Normal("y", mu=0, dims=("first", "second"))
             z = pm.Normal("z", mu=y, observed=np.ones((1, 4)), size=y.shape)
             assert x.eval().shape == (1, 4)

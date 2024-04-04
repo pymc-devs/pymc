@@ -268,8 +268,7 @@ def model_test_idata_kwargs() -> pm.Model:
         x = pm.Normal("x", shape=(2,), dims=["x_coord"])
         _ = pm.Normal("y", x, observed=[0, 0])
         _ = pm.Normal("z", 0, 1, dims="z_coord")
-        pm.ConstantData("constantdata", [1, 2, 3])
-        pm.MutableData("mutabledata", 2)
+        pm.Data("data", [1, 2, 3])
     return m
 
 
@@ -312,8 +311,7 @@ def test_idata_kwargs(
     assert idata is not None
     const_data = idata.get("constant_data")
     assert const_data is not None
-    assert "constantdata" in const_data
-    assert "mutabledata" in const_data
+    assert "data" in const_data
 
     if idata_kwargs.get("log_likelihood", False):
         assert "log_likelihood" in idata

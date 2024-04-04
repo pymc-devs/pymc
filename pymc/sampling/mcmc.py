@@ -34,8 +34,10 @@ import pytensor.gradient as tg
 
 from arviz import InferenceData, dict_to_dataset
 from arviz.data.base import make_attrs
-from fastprogress.fastprogress import progress_bar
 from pytensor.graph.basic import Variable
+from rich.console import Console
+from rich.progress import Progress
+from rich.theme import Theme
 from typing_extensions import Protocol, TypeAlias
 
 import pymc as pm
@@ -65,6 +67,7 @@ from pymc.util import (
     RandomSeed,
     RandomState,
     _get_seeds_per_chain,
+    default_progress_theme,
     drop_warning_stat,
     get_untransformed_name,
     is_transformed_name,
@@ -377,6 +380,7 @@ def sample(
     cores: Optional[int] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
+    progressbar_theme: Optional[Theme] = default_progress_theme,
     step=None,
     var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
@@ -406,6 +410,7 @@ def sample(
     cores: Optional[int] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
+    progressbar_theme: Optional[Theme] = default_progress_theme,
     step=None,
     var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
@@ -435,6 +440,7 @@ def sample(
     cores: Optional[int] = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
+    progressbar_theme: Optional[Theme] = default_progress_theme,
     step=None,
     var_names: Optional[Sequence[str]] = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
@@ -761,6 +767,7 @@ def sample(
         "tune": tune,
         "var_names": var_names,
         "progressbar": progressbar,
+        "progressbar_theme": progressbar_theme,
         "model": model,
         "cores": cores,
         "callback": callback,
@@ -983,6 +990,7 @@ def _sample(
     trace: IBaseTrace,
     tune: int,
     model: Optional[Model] = None,
+    progressbar_theme: Optional[Theme] = default_progress_theme,
     callback=None,
     **kwargs,
 ) -> None:
@@ -1010,6 +1018,8 @@ def _sample(
     tune : int
         Number of iterations to tune.
     model : Model (optional if in ``with`` context)
+    progressbar_theme : Theme
+        Optional custom theme for the progress bar.
     """
     skip_first = kwargs.get("skip_first", 0)
 
@@ -1026,19 +1036,16 @@ def _sample(
     )
     _pbar_data = {"chain": chain, "divergences": 0}
     _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
-    if progressbar:
-        sampling = progress_bar(sampling_gen, total=draws, display=progressbar)
-        sampling.comment = _desc.format(**_pbar_data)
-    else:
-        sampling = sampling_gen
-    try:
-        for it, diverging in enumerate(sampling):
-            if it >= skip_first and diverging:
-                _pbar_data["divergences"] += 1
-                if progressbar:
-                    sampling.comment = _desc.format(**_pbar_data)
-    except KeyboardInterrupt:
-        pass
+    with Progress(console=Console(theme=progressbar_theme)) as progress:
+        try:
+            task = progress.add_task(_desc.format(**_pbar_data), total=draws, visible=progressbar)
+            for it, diverging in enumerate(sampling_gen):
+                if it >= skip_first and diverging:
+                    _pbar_data["divergences"] += 1
+                progress.update(task, advance=1)
+            progress.update(task, advance=1, completed=True)
+        except KeyboardInterrupt:
+            pass
 
 
 def _iter_sample(
@@ -1131,6 +1138,7 @@ def _mp_sample(
     random_seed: Sequence[RandomSeed],
     start: Sequence[PointType],
     progressbar: bool = True,
+    progressbar_theme: Optional[Theme] = default_progress_theme,
     traces: Sequence[IBaseTrace],
     model: Optional[Model] = None,
     callback: Optional[SamplingIteratorCallback] = None,
@@ -1158,6 +1166,8 @@ def _mp_sample(
         Dicts must contain numeric (transformed) initial values for all (transformed) free variables.
     progressbar : bool
         Whether or not to display a progress bar in the command line.
+    progressbar_theme : Theme
+        Optional custom theme for the progress bar.
     traces
         Recording backends for each chain.
     model : Model (optional if in ``with`` context)
@@ -1182,6 +1192,7 @@ def _mp_sample(
         start_points=start,
         step_method=step,
         progressbar=progressbar,
+        progressbar_theme=progressbar_theme,
         mp_ctx=mp_ctx,
     )
     try:

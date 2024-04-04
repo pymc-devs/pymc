@@ -268,7 +268,7 @@ class TestDataPyMC:
             )
 
             data_dims = ("date", "city")
-            data = pm.ConstantData("data", df_data, dims=data_dims)
+            data = pm.Data("data", df_data, dims=data_dims)
             _ = pm.Normal(
                 "likelihood", mu=city_temperature, sigma=0.5, observed=data, dims=data_dims
             )
@@ -307,7 +307,7 @@ class TestDataPyMC:
         x_data = np.arange(4).reshape((2, 2))
         y = x_data + np.random.normal(size=(2, 2))
         with pm.Model(coords=coords):
-            x = pm.ConstantData("x", x_data, dims=("dim1", "dim2"))
+            x = pm.Data("x", x_data, dims=("dim1", "dim2"))
             beta = pm.Normal("beta", 0, 1, dims="dim1")
             _ = pm.Normal("obs", x * beta, 1, observed=y, dims=("dim1", "dim2"))
             trace = pm.sample(100, tune=100, return_inferencedata=False)
@@ -438,9 +438,9 @@ class TestDataPyMC:
     def test_constant_data(self, use_context):
         """Test constant_data group behaviour."""
         with pm.Model() as model:
-            x = pm.ConstantData("x", [1.0, 2.0, 3.0])
-            y = pm.MutableData("y", [1.0, 2.0, 3.0])
-            beta_sigma = pm.MutableData("beta_sigma", 1)
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            y = pm.Data("y", [1.0, 2.0, 3.0])
+            beta_sigma = pm.Data("beta_sigma", 1)
             beta = pm.Normal("beta", 0, beta_sigma)
             obs = pm.Normal("obs", x * beta, 1, observed=y)
             trace = pm.sample(100, chains=2, tune=100, return_inferencedata=False)
@@ -462,8 +462,8 @@ class TestDataPyMC:
 
     def test_predictions_constant_data(self):
         with pm.Model():
-            x = pm.ConstantData("x", [1.0, 2.0, 3.0])
-            y = pm.MutableData("y", [1.0, 2.0, 3.0])
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)
             trace = pm.sample(100, tune=100, return_inferencedata=False)
@@ -474,8 +474,8 @@ class TestDataPyMC:
         assert not fails
 
         with pm.Model():
-            x = pm.MutableData("x", [1.0, 2.0])
-            y = pm.ConstantData("y", [1.0, 2.0])
+            x = pm.Data("x", [1.0, 2.0])
+            y = pm.Data("y", [1.0, 2.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)
             predictive_trace = pm.sample_posterior_predictive(
@@ -502,8 +502,8 @@ class TestDataPyMC:
 
     def test_no_trace(self):
         with pm.Model() as model:
-            x = pm.ConstantData("x", [1.0, 2.0, 3.0])
-            y = pm.MutableData("y", [1.0, 2.0, 3.0])
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)
             idata = pm.sample(100, tune=100)
@@ -536,8 +536,8 @@ class TestDataPyMC:
     def test_priors_separation(self, use_context):
         """Test model is enough to get prior, prior predictive, constant_data and observed_data."""
         with pm.Model() as model:
-            x = pm.MutableData("x", [1.0, 2.0, 3.0])
-            y = pm.ConstantData("y", [1.0, 2.0, 3.0])
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)
             prior = pm.sample_prior_predictive(return_inferencedata=False)

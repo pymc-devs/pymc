@@ -9,7 +9,6 @@ dependencies:
 - blas
 - cachetools>=4.2.1
 - cloudpickle
-- fastprogress>=0.2.0
 - h5py>=2.7
 # Jaxlib version must not be greater than jax version!
 - blackjax>=1.0.0
@@ -24,6 +23,7 @@ dependencies:
 - pytensor>=2.19,<2.20
 - python-graphviz
 - networkx
+- rich>=13.7.1
 - scipy>=1.4.1
 - typing-extensions>=3.7.4
 # Extra dependencies for testing

@@ -100,15 +100,15 @@ def same_storage(shared_1, shared_2) -> bool:
 
 @pytest.mark.parametrize("inline_views", (False, True))
 def test_data(inline_views):
-    """Test shared RNGs, MutableData, ConstantData and dim lengths are handled correctly.
+    """Test shared RNGs, Data, and dim lengths are handled correctly.
 
     All model-related shared variables should be copied to become independent across models.
     """
-    with pm.Model(coords_mutable={"test_dim": range(3)}) as m_old:
-        x = pm.MutableData("x", [0.0, 1.0, 2.0], dims=("test_dim",))
-        y = pm.MutableData("y", [10.0, 11.0, 12.0], dims=("test_dim",))
+    with pm.Model(coords={"test_dim": range(3)}) as m_old:
+        x = pm.Data("x", [0.0, 1.0, 2.0], dims=("test_dim",))
+        y = pm.Data("y", [10.0, 11.0, 12.0], dims=("test_dim",))
         sigma = pm.MutableData("sigma", [1.0], shape=(1,))
-        b0 = pm.ConstantData("b0", np.zeros((1,)))
+        b0 = pm.Data("b0", np.zeros((1,)), shape=((1,)))
         b1 = pm.DiracDelta("b1", 1.0)
         mu = pm.Deterministic("mu", b0 + b1 * x, dims=("test_dim",))
         obs = pm.Normal("obs", mu=mu, sigma=sigma, observed=y, dims=("test_dim",))
@@ -139,8 +139,8 @@ def test_data(inline_views):
     # The rv-data mapping is preserved
     assert m_new.rvs_to_values[m_new["obs"]] is m_new["y"]
 
-    # ConstantData is still accessible as a model variable
-    np.testing.assert_array_equal(m_new["b0"], m_old["b0"])
+    # Data is still accessible as a model variable
+    np.testing.assert_array_equal(m_new["b0"].get_value(), m_old["b0"].get_value())
 
     # Shared model variables, dim lengths, and rngs are copied and no longer point to the same memory
     assert not same_storage(m_new["x"], x)

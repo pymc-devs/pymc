@@ -252,7 +252,7 @@ class HSGP(Base):
         eigenfunctions `phi`, and the square root of the power spectral density.
 
         Correct results when using `prior_linearized` in tandem with `pm.set_data` and
-        `pm.MutableData` require two conditions.  First, one must specify `L` instead of `c` when
+        `pm.Data` require two conditions.  First, one must specify `L` instead of `c` when
         the GP is constructed.  If not, a RuntimeError is raised.  Second, the `Xs` needs to be
         zero-centered, so its mean must be subtracted.  An example is given below.
 
@@ -290,7 +290,7 @@ class HSGP(Base):
                 # First calculate the mean, then make X a shared variable, then subtract the mean.
                 #  When X is mutated later, the correct mean will be subtracted.
                 X_mean = np.mean(X, axis=0)
-                X = pm.MutableData("X", X)
+                X = pm.Data("X", X)
                 Xs = X - X_mean
 
                 # Pass the zero-subtracted Xs in to the GP
