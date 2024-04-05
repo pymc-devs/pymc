@@ -18,7 +18,7 @@ import threading
 import types
 import warnings
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 from sys import modules
 from typing import (
     TYPE_CHECKING,
@@ -27,6 +27,7 @@ from typing import (
     Optional,
     TypeVar,
     cast,
+    overload,
 )
 
 import numpy as np
@@ -35,7 +36,7 @@ import pytensor.sparse as sparse
 import pytensor.tensor as pt
 import scipy.sparse as sps
 
-from pytensor.compile import DeepCopyOp, get_mode
+from pytensor.compile import DeepCopyOp, Function, get_mode
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Constant, Variable, graph_inputs
 from pytensor.scalar import Cast
@@ -1524,6 +1525,28 @@ class Model(WithMemoization, metaclass=ContextMeta):
             rvs_to_transforms=self.rvs_to_transforms,
         )
 
+    @overload
+    def compile_fn(
+        self,
+        outs: Variable | Sequence[Variable],
+        *,
+        inputs: Sequence[Variable] | None = None,
+        mode=None,
+        point_fn: Literal[True] = True,
+        **kwargs,
+    ) -> PointFunc: ...
+
+    @overload
+    def compile_fn(
+        self,
+        outs: Variable | Sequence[Variable],
+        *,
+        inputs: Sequence[Variable] | None = None,
+        mode=None,
+        point_fn: Literal[False],
+        **kwargs,
+    ) -> Function: ...
+
     def compile_fn(
         self,
         outs: Variable | Sequence[Variable],
@@ -1532,7 +1555,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         mode=None,
         point_fn: bool = True,
         **kwargs,
-    ) -> PointFunc | Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]:
+    ) -> PointFunc | Function:
         """Compiles an PyTensor function
 
         Parameters
@@ -2044,7 +2067,7 @@ def compile_fn(
     point_fn: bool = True,
     model: Model | None = None,
     **kwargs,
-) -> PointFunc | Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]:
+) -> PointFunc | Function:
     """Compiles an PyTensor function
 
     Parameters
