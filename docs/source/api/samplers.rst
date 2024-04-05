@@ -13,6 +13,9 @@ This submodule contains functions for MCMC and forward sampling.
    sample_posterior_predictive
    draw
 
+.. currentmodule:: pymc.sampling.deterministic
+   compute_deterministics
+
 
 .. currentmodule:: pymc.sampling.mcmc
 
