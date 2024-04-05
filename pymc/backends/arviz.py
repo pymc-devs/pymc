@@ -32,12 +32,15 @@ from arviz import InferenceData, concat, rcParams
 from arviz.data.base import CoordSpec, DimSpec, dict_to_dataset, requires
 from pytensor.graph.basic import Constant
 from pytensor.tensor.sharedvar import SharedVariable
+from rich.progress import Console, Progress
+from rich.theme import Theme
+from xarray import Dataset
 
 import pymc
 
 from pymc.model import Model, modelcontext
-from pymc.pytensorf import extract_obs_data
-from pymc.util import get_default_varnames
+from pymc.pytensorf import PointFunc, extract_obs_data
+from pymc.util import default_progress_theme, get_default_varnames
 
 if TYPE_CHECKING:
     from pymc.backends.base import MultiTrace
@@ -637,3 +640,49 @@ def dataset_to_point_list(
     ]
     # use the list of points
     return cast(list[dict[str, np.ndarray]], points), stacked_dims
+
+
+def apply_function_over_dataset(
+    fn: PointFunc,
+    dataset: Dataset,
+    *,
+    output_var_names: Sequence[str],
+    coords,
+    dims,
+    sample_dims: Sequence[str] = ("chain", "draw"),
+    progressbar: bool = True,
+    progressbar_theme: Theme | None = default_progress_theme,
+) -> Dataset:
+    posterior_pts, stacked_dims = dataset_to_point_list(dataset, sample_dims)
+
+    n_pts = len(posterior_pts)
+    out_dict = _DefaultTrace(n_pts)
+    indices = range(n_pts)
+
+    with Progress(console=Console(theme=progressbar_theme)) as progress:
+        task = progress.add_task("Computinng ...", total=n_pts, visible=progressbar)
+        for idx in indices:
+            out = fn(posterior_pts[idx])
+            fn.f.trust_input = True  # If we arrive here the dtypes are valid
+            for var_name, val in zip(output_var_names, out):
+                out_dict.insert(var_name, val, idx)
+
+            progress.advance(task)
+
+    out_trace = out_dict.trace_dict
+    for key, val in out_trace.items():
+        out_trace[key] = val.reshape(
+            (
+                *[len(coord) for coord in stacked_dims.values()],
+                *val.shape[1:],
+            )
+        )
+
+    return dict_to_dataset(
+        out_trace,
+        library=pymc,
+        dims=dims,
+        coords=coords,
+        default_dims=list(sample_dims),
+        skip_event_dims=True,
+    )
