@@ -20,10 +20,14 @@ from rich.progress import Progress
 
 import pymc
 
-from pymc.backends.arviz import _DefaultTrace, coords_and_dims_for_inferencedata
+from pymc.backends.arviz import (
+    _DefaultTrace,
+    coords_and_dims_for_inferencedata,
+    dataset_to_point_list,
+)
 from pymc.model import Model, modelcontext
 from pymc.pytensorf import PointFunc
-from pymc.util import dataset_to_point_list, default_progress_theme
+from pymc.util import default_progress_theme
 
 __all__ = ("compute_log_likelihood", "compute_log_prior")
 

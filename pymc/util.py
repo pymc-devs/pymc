@@ -16,7 +16,7 @@ import functools
 import warnings
 
 from collections.abc import Sequence
-from typing import Any, NewType, cast
+from typing import NewType, cast
 
 import arviz
 import cloudpickle
@@ -30,6 +30,20 @@ from pytensor.graph.utils import ValidatingScratchpad
 from rich.theme import Theme
 
 from pymc.exceptions import BlockModelAccessError
+
+
+def __getattr__(name):
+    if name == "dataset_to_point_list":
+        warnings.warn(
+            f"{name} has been moved to backends.arviz. Importing from util will fail in a future release.",
+            FutureWarning,
+        )
+        from pymc.backends.arviz import dataset_to_point_list
+
+        return dataset_to_point_list
+
+    raise AttributeError(f"module {__name__} has no attribute {name}")
+
 
 VarName = NewType("VarName", str)
 
@@ -245,29 +259,6 @@ def biwrap(wrapper):
             return newwrapper
 
     return enhanced
-
-
-def dataset_to_point_list(
-    ds: xarray.Dataset | dict[str, xarray.DataArray], sample_dims: Sequence[str]
-) -> tuple[list[dict[str, np.ndarray]], dict[str, Any]]:
-    # All keys of the dataset must be a str
-    var_names = cast(list[str], list(ds.keys()))
-    for vn in var_names:
-        if not isinstance(vn, str):
-            raise ValueError(f"Variable names must be str, but dataset key {vn} is a {type(vn)}.")
-    num_sample_dims = len(sample_dims)
-    stacked_dims = {dim_name: ds[var_names[0]][dim_name] for dim_name in sample_dims}
-    transposed_dict = {vn: da.transpose(*sample_dims, ...) for vn, da in ds.items()}
-    stacked_dict = {
-        vn: da.values.reshape((-1, *da.shape[num_sample_dims:]))
-        for vn, da in transposed_dict.items()
-    }
-    points = [
-        {vn: stacked_dict[vn][i, ...] for vn in var_names}
-        for i in range(np.prod([len(coords) for coords in stacked_dims.values()]))
-    ]
-    # use the list of points
-    return cast(list[dict[str, np.ndarray]], points), stacked_dims
 
 
 def drop_warning_stat(idata: arviz.InferenceData) -> arviz.InferenceData:
