@@ -16,15 +16,17 @@
 import logging
 import warnings
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     Optional,
     Union,
+    cast,
 )
 
 import numpy as np
+import xarray
 
 from arviz import InferenceData, concat, rcParams
 from arviz.data.base import CoordSpec, DimSpec, dict_to_dataset, requires
@@ -612,3 +614,26 @@ def predictions_to_inference_data(
         # data and return that.
         concat([new_idata, idata_orig], dim=None, copy=True, inplace=True)
         return new_idata
+
+
+def dataset_to_point_list(
+    ds: xarray.Dataset | dict[str, xarray.DataArray], sample_dims: Sequence[str]
+) -> tuple[list[dict[str, np.ndarray]], dict[str, Any]]:
+    # All keys of the dataset must be a str
+    var_names = cast(list[str], list(ds.keys()))
+    for vn in var_names:
+        if not isinstance(vn, str):
+            raise ValueError(f"Variable names must be str, but dataset key {vn} is a {type(vn)}.")
+    num_sample_dims = len(sample_dims)
+    stacked_dims = {dim_name: ds[var_names[0]][dim_name] for dim_name in sample_dims}
+    transposed_dict = {vn: da.transpose(*sample_dims, ...) for vn, da in ds.items()}
+    stacked_dict = {
+        vn: da.values.reshape((-1, *da.shape[num_sample_dims:]))
+        for vn, da in transposed_dict.items()
+    }
+    points = [
+        {vn: stacked_dict[vn][i, ...] for vn in var_names}
+        for i in range(np.prod([len(coords) for coords in stacked_dims.values()]))
+    ]
+    # use the list of points
+    return cast(list[dict[str, np.ndarray]], points), stacked_dims

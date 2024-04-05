@@ -16,6 +16,7 @@ import warnings
 import numpy as np
 import pytensor.tensor as pt
 import pytest
+import xarray
 
 from arviz import InferenceData
 from arviz.tests.helpers import check_multiple_attrs
@@ -26,6 +27,7 @@ import pymc as pm
 
 from pymc.backends.arviz import (
     InferenceDataConverter,
+    dataset_to_point_list,
     predictions_to_inference_data,
     to_inference_data,
 )
@@ -776,3 +778,34 @@ class TestPyMCWarmupHandling:
             assert not fails
             assert idata.posterior.sizes["chain"] == 2
             assert idata.posterior.sizes["draw"] == 30
+
+
+class TestDatasetToPointList:
+    @pytest.mark.parametrize("input_type", ("dict", "Dataset"))
+    def test_dataset_to_point_list(self, input_type):
+        if input_type == "dict":
+            ds = {}
+        elif input_type == "Dataset":
+            ds = xarray.Dataset()
+        ds["A"] = xarray.DataArray([[1, 2, 3]] * 2, dims=("chain", "draw"))
+        pl, _ = dataset_to_point_list(ds, sample_dims=["chain", "draw"])
+        assert isinstance(pl, list)
+        assert len(pl) == 6
+        assert isinstance(pl[0], dict)
+        assert isinstance(pl[0]["A"], np.ndarray)
+
+    def test_transposed_dataset_to_point_list(self):
+        ds = xarray.Dataset()
+        ds["A"] = xarray.DataArray([[[1, 2, 3], [2, 3, 4]]] * 5, dims=("team", "draw", "chain"))
+        pl, _ = dataset_to_point_list(ds, sample_dims=["chain", "draw"])
+        assert isinstance(pl, list)
+        assert len(pl) == 6
+        assert isinstance(pl[0], dict)
+        assert isinstance(pl[0]["A"], np.ndarray)
+
+    def test_dataset_to_point_list_str_key(self):
+        # Check that non-str keys are caught
+        ds = xarray.Dataset()
+        ds[3] = xarray.DataArray([1, 2, 3])
+        with pytest.raises(ValueError, match="must be str"):
+            dataset_to_point_list(ds, sample_dims=["chain", "draw"])
