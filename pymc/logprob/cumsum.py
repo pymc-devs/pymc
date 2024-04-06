@@ -34,7 +34,6 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from typing import Optional
 
 import pytensor.tensor as pt
 
@@ -78,7 +77,7 @@ def logprob_cumsum(op, values, base_rv, **kwargs):
 
 
 @node_rewriter([CumOp])
-def find_measurable_cumsums(fgraph, node) -> Optional[list[TensorVariable]]:
+def find_measurable_cumsums(fgraph, node) -> list[TensorVariable] | None:
     r"""Finds `Cumsums`\s for which a `logprob` can be computed."""
 
     if not (isinstance(node.op, CumOp) and node.op.mode == "add"):
@@ -87,7 +86,7 @@ def find_measurable_cumsums(fgraph, node) -> Optional[list[TensorVariable]]:
     if isinstance(node.op, MeasurableCumsum):
         return None  # pragma: no cover
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover

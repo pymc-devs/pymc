@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Callable, Optional, Union
+from collections.abc import Callable
 
 import numpy as np
 import pytensor.tensor as pt
@@ -30,8 +30,8 @@ def find_constrained_prior(
     upper: float,
     init_guess: dict[str, float],
     mass: float = 0.95,
-    fixed_params: Optional[dict[str, float]] = None,
-    mass_below_lower: Optional[float] = None,
+    fixed_params: dict[str, float] | None = None,
+    mass_below_lower: float | None = None,
     **kwargs,
 ) -> dict[str, float]:
     """
@@ -165,8 +165,8 @@ def find_constrained_prior(
     constraint = pt.exp(logcdf_upper) - pt.exp(logcdf_lower)
     constraint_fn = pm.pytensorf.compile_pymc([dist_params], constraint, allow_input_downcast=True)
 
-    jac: Union[str, Callable]
-    constraint_jac: Union[str, Callable]
+    jac: str | Callable
+    constraint_jac: str | Callable
     try:
         pytensor_jac = pm.gradient(target, [dist_params])
         jac = pm.pytensorf.compile_pymc([dist_params], pytensor_jac, allow_input_downcast=True)

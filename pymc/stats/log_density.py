@@ -12,18 +12,16 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from collections.abc import Sequence
-from typing import Optional, cast
+from typing import Literal
 
-from arviz import InferenceData, dict_to_dataset
-from rich.console import Console
-from rich.progress import Progress
+from arviz import InferenceData
+from xarray import Dataset
 
-import pymc
-
-from pymc.backends.arviz import _DefaultTrace, coords_and_dims_for_inferencedata
+from pymc.backends.arviz import (
+    apply_function_over_dataset,
+    coords_and_dims_for_inferencedata,
+)
 from pymc.model import Model, modelcontext
-from pymc.pytensorf import PointFunc
-from pymc.util import dataset_to_point_list, default_progress_theme
 
 __all__ = ("compute_log_likelihood", "compute_log_prior")
 
@@ -31,9 +29,9 @@ __all__ = ("compute_log_likelihood", "compute_log_prior")
 def compute_log_likelihood(
     idata: InferenceData,
     *,
-    var_names: Optional[Sequence[str]] = None,
+    var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
-    model: Optional[Model] = None,
+    model: Model | None = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
 ):
@@ -70,9 +68,9 @@ def compute_log_likelihood(
 
 def compute_log_prior(
     idata: InferenceData,
-    var_names: Optional[Sequence[str]] = None,
+    var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
-    model: Optional[Model] = None,
+    model: Model | None = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
 ):
@@ -110,13 +108,13 @@ def compute_log_prior(
 def compute_log_density(
     idata: InferenceData,
     *,
-    var_names: Optional[Sequence[str]] = None,
+    var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
-    model: Optional[Model] = None,
-    kind="likelihood",
+    model: Model | None = None,
+    kind: Literal["likelihood", "prior"] = "likelihood",
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
-):
+) -> InferenceData | Dataset:
     """
     Compute elemwise log_likelihood or log_prior of model given InferenceData with posterior group
     """
@@ -159,40 +157,20 @@ def compute_log_density(
             outs=model.logp(vars=vars, sum=False),
             on_unused_input="ignore",
         )
-        elemwise_logdens_fn = cast(PointFunc, elemwise_logdens_fn)
     finally:
         model.rvs_to_values = original_rvs_to_values
         model.rvs_to_transforms = original_rvs_to_transforms
 
-    # Ignore Deterministics
-    posterior_values = posterior[[rv.name for rv in model.free_RVs]]
-    posterior_pts, stacked_dims = dataset_to_point_list(posterior_values, sample_dims)
-
-    n_pts = len(posterior_pts)
-    logdens_dict = _DefaultTrace(n_pts)
-
-    with Progress(console=Console(theme=default_progress_theme)) as progress:
-        task = progress.add_task("Computing log density...", total=n_pts, visible=progressbar)
-        for idx in range(n_pts):
-            logdenss_pts = elemwise_logdens_fn(posterior_pts[idx])
-            for rv_name, rv_logdens in zip(var_names, logdenss_pts):
-                logdens_dict.insert(rv_name, rv_logdens, idx)
-            progress.update(task, advance=1)
-
-    logdens_trace = logdens_dict.trace_dict
-    for key, array in logdens_trace.items():
-        logdens_trace[key] = array.reshape(
-            (*[len(coord) for coord in stacked_dims.values()], *array.shape[1:])
-        )
-
     coords, dims = coords_and_dims_for_inferencedata(model)
-    logdens_dataset = dict_to_dataset(
-        logdens_trace,
-        library=pymc,
+
+    logdens_dataset = apply_function_over_dataset(
+        elemwise_logdens_fn,
+        posterior[[rv.name for rv in model.free_RVs]],
+        output_var_names=var_names,
+        sample_dims=sample_dims,
         dims=dims,
         coords=coords,
-        default_dims=list(sample_dims),
-        skip_event_dims=True,
+        progressbar=progressbar,
     )
 
     if extend_inferencedata:

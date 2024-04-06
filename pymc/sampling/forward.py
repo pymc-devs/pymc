@@ -17,12 +17,10 @@
 import logging
 import warnings
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from typing import (
     Any,
-    Callable,
-    Optional,
-    Union,
+    TypeAlias,
     cast,
 )
 
@@ -48,11 +46,10 @@ from pytensor.tensor.sharedvar import SharedVariable
 from rich.console import Console
 from rich.progress import Progress
 from rich.theme import Theme
-from typing_extensions import TypeAlias
 
 import pymc as pm
 
-from pymc.backends.arviz import _DefaultTrace
+from pymc.backends.arviz import _DefaultTrace, dataset_to_point_list
 from pymc.backends.base import MultiTrace
 from pymc.blocking import PointType
 from pymc.model import Model, modelcontext
@@ -60,7 +57,6 @@ from pymc.pytensorf import compile_pymc
 from pymc.util import (
     RandomState,
     _get_seeds_per_chain,
-    dataset_to_point_list,
     default_progress_theme,
     get_default_varnames,
     point_wrapper,
@@ -73,7 +69,7 @@ __all__ = (
     "sample_posterior_predictive",
 )
 
-ArrayLike: TypeAlias = Union[np.ndarray, list[float]]
+ArrayLike: TypeAlias = np.ndarray | list[float]
 PointList: TypeAlias = list[PointType]
 
 _log = logging.getLogger(__name__)
@@ -93,12 +89,12 @@ def get_vars_in_point_list(trace, model):
 def compile_forward_sampling_function(
     outputs: list[Variable],
     vars_in_trace: list[Variable],
-    basic_rvs: Optional[list[Variable]] = None,
-    givens_dict: Optional[dict[Variable, Any]] = None,
-    constant_data: Optional[dict[str, np.ndarray]] = None,
-    constant_coords: Optional[set[str]] = None,
+    basic_rvs: list[Variable] | None = None,
+    givens_dict: dict[Variable, Any] | None = None,
+    constant_data: dict[str, np.ndarray] | None = None,
+    constant_coords: set[str] | None = None,
     **kwargs,
-) -> tuple[Callable[..., Union[np.ndarray, list[np.ndarray]]], set[Variable]]:
+) -> tuple[Callable[..., np.ndarray | list[np.ndarray]], set[Variable]]:
     """Compile a function to draw samples, conditioned on the values of some variables.
 
     The goal of this function is to walk the pytensor computational graph from the list
@@ -210,7 +206,7 @@ def compile_forward_sampling_function(
             or node in givens_dict
             or (  # SharedVariables, except RandomState/Generators
                 isinstance(node, SharedVariable)
-                and not isinstance(node, (RandomStateSharedVariable, RandomGeneratorSharedVariable))
+                and not isinstance(node, RandomStateSharedVariable | RandomGeneratorSharedVariable)
                 and not shared_value_matches(node)
             )
             or (  # Basic RVs that are not in the trace
@@ -230,7 +226,7 @@ def compile_forward_sampling_function(
     def expand(node):
         if (
             (
-                node.owner is None and not isinstance(node, (Constant, SharedVariable))
+                node.owner is None and not isinstance(node, Constant | SharedVariable)
             )  # Variables without owners that are not constant or shared
             or node in vars_in_trace  # Variables in the trace
         ) and node not in volatile_nodes:
@@ -249,7 +245,7 @@ def compile_forward_sampling_function(
         (
             node,
             value
-            if isinstance(value, (Variable, Apply))
+            if isinstance(value, Variable | Apply)
             else pt.constant(value, dtype=getattr(node, "dtype", None), name=node.name),
         )
         for node, value in givens_dict.items()
@@ -262,11 +258,11 @@ def compile_forward_sampling_function(
 
 
 def draw(
-    vars: Union[Variable, Sequence[Variable]],
+    vars: Variable | Sequence[Variable],
     draws: int = 1,
     random_seed: RandomState = None,
     **kwargs,
-) -> Union[np.ndarray, list[np.ndarray]]:
+) -> np.ndarray | list[np.ndarray]:
     """Draw samples for one variable or a list of variables
 
     Parameters
@@ -318,7 +314,7 @@ def draw(
         return draw_fn()
 
     # Single variable output
-    if not isinstance(vars, (list, tuple)):
+    if not isinstance(vars, list | tuple):
         cast(Callable[[], np.ndarray], draw_fn)
         return np.stack([draw_fn() for _ in range(draws)])
 
@@ -342,13 +338,13 @@ def observed_dependent_deterministics(model: Model):
 
 def sample_prior_predictive(
     samples: int = 500,
-    model: Optional[Model] = None,
-    var_names: Optional[Iterable[str]] = None,
+    model: Model | None = None,
+    var_names: Iterable[str] | None = None,
     random_seed: RandomState = None,
     return_inferencedata: bool = True,
-    idata_kwargs: Optional[dict] = None,
-    compile_kwargs: Optional[dict] = None,
-) -> Union[InferenceData, dict[str, np.ndarray]]:
+    idata_kwargs: dict | None = None,
+    compile_kwargs: dict | None = None,
+) -> InferenceData | dict[str, np.ndarray]:
     """Generate samples from the prior predictive distribution.
 
     Parameters
@@ -439,18 +435,18 @@ def sample_prior_predictive(
 
 def sample_posterior_predictive(
     trace,
-    model: Optional[Model] = None,
-    var_names: Optional[list[str]] = None,
-    sample_dims: Optional[list[str]] = None,
+    model: Model | None = None,
+    var_names: list[str] | None = None,
+    sample_dims: list[str] | None = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
-    progressbar_theme: Optional[Theme] = default_progress_theme,
+    progressbar_theme: Theme | None = default_progress_theme,
     return_inferencedata: bool = True,
     extend_inferencedata: bool = False,
     predictions: bool = False,
-    idata_kwargs: Optional[dict] = None,
-    compile_kwargs: Optional[dict] = None,
-) -> Union[InferenceData, dict[str, np.ndarray]]:
+    idata_kwargs: dict | None = None,
+    compile_kwargs: dict | None = None,
+) -> InferenceData | dict[str, np.ndarray]:
     """Generate forward samples for `var_names`, conditioned on the posterior samples of variables found in the `trace`.
 
     This method can be used to perform different kinds of model predictions, including posterior predictive checks.
@@ -726,7 +722,7 @@ def sample_posterior_predictive(
 
     """
 
-    _trace: Union[MultiTrace, PointList]
+    _trace: MultiTrace | PointList
     nchain: int
     if idata_kwargs is None:
         idata_kwargs = {}
@@ -738,7 +734,7 @@ def sample_posterior_predictive(
     trace_coords: dict[str, np.ndarray] = {}
     if "coords" not in idata_kwargs:
         idata_kwargs["coords"] = {}
-    idata: Optional[InferenceData] = None
+    idata: InferenceData | None = None
     stacked_dims = None
     if isinstance(trace, InferenceData):
         _constant_data = getattr(trace, "constant_data", None)

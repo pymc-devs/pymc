@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from copy import copy, deepcopy
-from typing import Optional
 
 import pytensor
 
@@ -58,7 +57,7 @@ class ModelVar(Op):
 class ModelValuedVar(ModelVar):
     __props__ = ("transform",)
 
-    def __init__(self, transform: Optional[Transform] = None):
+    def __init__(self, transform: Transform | None = None):
         if transform is not None and not isinstance(transform, Transform):
             raise TypeError(f"transform must be None or RVTransform type, got {type(transform)}")
         self.transform = transform
@@ -261,7 +260,7 @@ def fgraph_from_model(
     inverse_memo = {v: k for k, v in memo.items()}
     for var, model_var in replacements:
         if not inlined_views and (
-            model_var.owner and isinstance(model_var.owner.op, (ModelDeterministic, ModelNamed))
+            model_var.owner and isinstance(model_var.owner.op, ModelDeterministic | ModelNamed)
         ):
             # Ignore extra identity that will be removed at the end
             var = var.owner.inputs[0]

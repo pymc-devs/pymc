@@ -18,7 +18,7 @@ import warnings
 
 from collections.abc import Sequence
 from copy import copy
-from typing import Optional, Union, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -203,10 +203,10 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
 
 def determine_coords(
     model,
-    value: Union[pd.DataFrame, pd.Series, xr.DataArray],
-    dims: Optional[Sequence[Optional[str]]] = None,
-    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
-) -> tuple[dict[str, Union[Sequence, np.ndarray]], Sequence[Optional[str]]]:
+    value: pd.DataFrame | pd.Series | xr.DataArray,
+    dims: Sequence[str | None] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None]]:
     """Determines coordinate values from data or the model (via ``dims``)."""
     if coords is None:
         coords = {}
@@ -260,8 +260,8 @@ def ConstantData(
     name: str,
     value,
     *,
-    dims: Optional[Sequence[str]] = None,
-    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
+    dims: Sequence[str] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
     infer_dims_and_coords=False,
     **kwargs,
 ) -> TensorConstant:
@@ -290,8 +290,8 @@ def MutableData(
     name: str,
     value,
     *,
-    dims: Optional[Sequence[str]] = None,
-    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
+    dims: Sequence[str] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
     infer_dims_and_coords=False,
     **kwargs,
 ) -> SharedVariable:
@@ -320,12 +320,12 @@ def Data(
     name: str,
     value,
     *,
-    dims: Optional[Sequence[str]] = None,
-    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
+    dims: Sequence[str] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
     infer_dims_and_coords=False,
-    mutable: Optional[bool] = None,
+    mutable: bool | None = None,
     **kwargs,
-) -> Union[SharedVariable, TensorConstant]:
+) -> SharedVariable | TensorConstant:
     """Data container that registers a data variable with the model.
 
     Depending on the ``mutable`` setting (default: True), the variable

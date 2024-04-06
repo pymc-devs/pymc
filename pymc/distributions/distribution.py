@@ -18,9 +18,9 @@ import types
 import warnings
 
 from abc import ABCMeta
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from functools import singledispatch
-from typing import Callable, Optional, Union
+from typing import TypeAlias
 
 import numpy as np
 
@@ -41,7 +41,6 @@ from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.utils import _parse_gufunc_signature
 from pytensor.tensor.variable import TensorVariable
-from typing_extensions import TypeAlias
 
 from pymc.distributions.shape_utils import (
     Dims,
@@ -79,9 +78,9 @@ __all__ = [
     "SymbolicRandomVariable",
 ]
 
-DIST_PARAMETER_TYPES: TypeAlias = Union[np.ndarray, int, float, TensorVariable]
+DIST_PARAMETER_TYPES: TypeAlias = np.ndarray | int | float | TensorVariable
 
-vectorized_ppc: contextvars.ContextVar[Optional[Callable]] = contextvars.ContextVar(
+vectorized_ppc: contextvars.ContextVar[Callable | None] = contextvars.ContextVar(
     "vectorized_ppc", default=None
 )
 
@@ -103,7 +102,7 @@ class FiniteLogpPointRewrite(GraphRewriter):
 
         for nd in local_fgraph_topo:
             if nd not in to_replace_set and isinstance(
-                nd.op, (RandomVariable, SymbolicRandomVariable)
+                nd.op, RandomVariable | SymbolicRandomVariable
             ):
                 replace_with_support_point.append(nd.out)
                 to_replace_set.add(nd)
@@ -133,7 +132,7 @@ class FiniteLogpPointRewrite(GraphRewriter):
 
     def apply(self, fgraph):
         for node in fgraph.toposort():
-            if isinstance(node.op, (RandomVariable, SymbolicRandomVariable)):
+            if isinstance(node.op, RandomVariable | SymbolicRandomVariable):
                 fgraph.replace(node.out, support_point(node.out))
             elif isinstance(node.op, Scan):
                 new_node = self.rewrite_support_point_scan_node(node)
@@ -263,7 +262,7 @@ class SymbolicRandomVariable(OpFromGraph):
     (0 for scalar, 1 for vector, ...)
      """
 
-    ndims_params: Optional[Sequence[int]] = None
+    ndims_params: Sequence[int] | None = None
     """Number of core dimensions of the distribution's parameters."""
 
     signature: str = None
@@ -327,7 +326,7 @@ class Distribution(metaclass=DistributionMeta):
         name: str,
         *args,
         rng=None,
-        dims: Optional[Dims] = None,
+        dims: Dims | None = None,
         initval=None,
         observed=None,
         total_size=None,
@@ -436,7 +435,7 @@ class Distribution(metaclass=DistributionMeta):
         cls,
         dist_params,
         *,
-        shape: Optional[Shape] = None,
+        shape: Shape | None = None,
         **kwargs,
     ) -> TensorVariable:
         """Creates a tensor variable corresponding to the `cls` distribution.
@@ -591,13 +590,13 @@ class _CustomDist(Distribution):
     def dist(
         cls,
         *dist_params,
-        logp: Optional[Callable] = None,
-        logcdf: Optional[Callable] = None,
-        random: Optional[Callable] = None,
-        support_point: Optional[Callable] = None,
-        ndim_supp: Optional[int] = None,
-        ndims_params: Optional[Sequence[int]] = None,
-        signature: Optional[str] = None,
+        logp: Callable | None = None,
+        logcdf: Callable | None = None,
+        random: Callable | None = None,
+        support_point: Callable | None = None,
+        ndim_supp: int | None = None,
+        ndims_params: Sequence[int] | None = None,
+        signature: str | None = None,
         dtype: str = "floatX",
         class_name: str = "CustomDist",
         **kwargs,
@@ -652,10 +651,10 @@ class _CustomDist(Distribution):
     def rv_op(
         cls,
         *dist_params,
-        logp: Optional[Callable],
-        logcdf: Optional[Callable],
-        random: Optional[Callable],
-        support_point: Optional[Callable],
+        logp: Callable | None,
+        logcdf: Callable | None,
+        random: Callable | None,
+        support_point: Callable | None,
         ndim_supp: int,
         ndims_params: Sequence[int],
         dtype: str,
@@ -743,12 +742,12 @@ class _CustomSymbolicDist(Distribution):
         cls,
         *dist_params,
         dist: Callable,
-        logp: Optional[Callable] = None,
-        logcdf: Optional[Callable] = None,
-        support_point: Optional[Callable] = None,
-        ndim_supp: Optional[int] = None,
-        ndims_params: Optional[Sequence[int]] = None,
-        signature: Optional[str] = None,
+        logp: Callable | None = None,
+        logcdf: Callable | None = None,
+        support_point: Callable | None = None,
+        ndim_supp: int | None = None,
+        ndims_params: Sequence[int] | None = None,
+        signature: str | None = None,
         dtype: str = "floatX",
         class_name: str = "CustomDist",
         **kwargs,
@@ -784,9 +783,9 @@ class _CustomSymbolicDist(Distribution):
         cls,
         *dist_params,
         dist: Callable,
-        logp: Optional[Callable],
-        logcdf: Optional[Callable],
-        support_point: Optional[Callable],
+        logp: Callable | None,
+        logcdf: Callable | None,
+        support_point: Callable | None,
         size=None,
         signature: str,
         class_name: str,
@@ -838,7 +837,7 @@ class _CustomSymbolicDist(Distribution):
                     *[
                         p
                         for p in params
-                        if not isinstance(p.type, (RandomType, RandomGeneratorType))
+                        if not isinstance(p.type, RandomType | RandomGeneratorType)
                     ],
                 )
 
@@ -1125,15 +1124,15 @@ class CustomDist:
         cls,
         name,
         *dist_params,
-        dist: Optional[Callable] = None,
-        random: Optional[Callable] = None,
-        logp: Optional[Callable] = None,
-        logcdf: Optional[Callable] = None,
-        support_point: Optional[Callable] = None,
+        dist: Callable | None = None,
+        random: Callable | None = None,
+        logp: Callable | None = None,
+        logcdf: Callable | None = None,
+        support_point: Callable | None = None,
         # TODO: Deprecate ndim_supp / ndims_params in favor of signature?
-        ndim_supp: Optional[int] = None,
-        ndims_params: Optional[Sequence[int]] = None,
-        signature: Optional[str] = None,
+        ndim_supp: int | None = None,
+        ndims_params: Sequence[int] | None = None,
+        signature: str | None = None,
         dtype: str = "floatX",
         **kwargs,
     ):
@@ -1188,14 +1187,14 @@ class CustomDist:
     def dist(
         cls,
         *dist_params,
-        dist: Optional[Callable] = None,
-        random: Optional[Callable] = None,
-        logp: Optional[Callable] = None,
-        logcdf: Optional[Callable] = None,
-        support_point: Optional[Callable] = None,
-        ndim_supp: Optional[int] = None,
-        ndims_params: Optional[Sequence[int]] = None,
-        signature: Optional[str] = None,
+        dist: Callable | None = None,
+        random: Callable | None = None,
+        logp: Callable | None = None,
+        logcdf: Callable | None = None,
+        support_point: Callable | None = None,
+        ndim_supp: int | None = None,
+        ndims_params: Sequence[int] | None = None,
+        signature: str | None = None,
         dtype: str = "floatX",
         **kwargs,
     ):
@@ -1369,7 +1368,7 @@ class PartialObservedRV(SymbolicRandomVariable):
 
 def create_partial_observed_rv(
     rv: TensorVariable,
-    mask: Union[np.ndarray, TensorVariable],
+    mask: np.ndarray | TensorVariable,
 ) -> tuple[
     tuple[TensorVariable, TensorVariable], tuple[TensorVariable, TensorVariable], TensorVariable
 ]:

@@ -12,5 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from pymc.sampling.deterministic import compute_deterministics
 from pymc.sampling.forward import *
 from pymc.sampling.mcmc import *

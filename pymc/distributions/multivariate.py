@@ -18,7 +18,6 @@
 import warnings
 
 from functools import partial, reduce
-from typing import Optional
 
 import numpy as np
 import pytensor
@@ -1084,7 +1083,7 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initv
 
 def _lkj_normalizing_constant(eta, n):
     # TODO: This is mixing python branching with the potentially symbolic n and eta variables
-    if not isinstance(eta, (int, float)):
+    if not isinstance(eta, int | float):
         raise NotImplementedError("eta must be an int or float")
     if not isinstance(n, int):
         raise NotImplementedError("n must be an integer")
@@ -1186,7 +1185,7 @@ class _LKJCholeskyCov(Distribution):
         if not (
             isinstance(sd_dist, Variable)
             and sd_dist.owner is not None
-            and isinstance(sd_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
+            and isinstance(sd_dist.owner.op, RandomVariable | SymbolicRandomVariable)
             and sd_dist.owner.op.ndim_supp < 2
         ):
             raise TypeError("sd_dist must be a scalar or vector distribution variable")
@@ -2263,7 +2262,7 @@ class CAR(Continuous):
         TensorVariable
         """
 
-        sparse = isinstance(W, (pytensor.sparse.SparseConstant, pytensor.sparse.SparseVariable))
+        sparse = isinstance(W, pytensor.sparse.SparseConstant | pytensor.sparse.SparseVariable)
 
         if sparse:
             D = sp_sum(W, axis=0)
@@ -2755,7 +2754,7 @@ class ZeroSumNormal(Distribution):
         )
 
     @classmethod
-    def check_zerosum_axes(cls, n_zerosum_axes: Optional[int]) -> int:
+    def check_zerosum_axes(cls, n_zerosum_axes: int | None) -> int:
         if n_zerosum_axes is None:
             n_zerosum_axes = 1
         if not isinstance(n_zerosum_axes, int):

@@ -257,7 +257,7 @@ class TestSimulator:
         shared_rng_vars = [
             node
             for node in ancestors(compiled_graph)
-            if isinstance(node, (RandomStateSharedVariable, RandomGeneratorSharedVariable))
+            if isinstance(node, RandomStateSharedVariable | RandomGeneratorSharedVariable)
         ]
         assert len(shared_rng_vars) == 1
 

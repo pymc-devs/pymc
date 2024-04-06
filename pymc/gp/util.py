@@ -113,7 +113,7 @@ def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
     # first whiten X
     if isinstance(X, TensorConstant):
         X = X.value
-    elif isinstance(X, (np.ndarray, tuple, list)):
+    elif isinstance(X, np.ndarray | tuple | list):
         X = np.asarray(X)
     else:
         raise TypeError(

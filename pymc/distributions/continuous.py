@@ -22,8 +22,6 @@ nodes in PyMC.
 
 import warnings
 
-from typing import Optional, Union
-
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
@@ -150,7 +148,7 @@ class BoundedContinuous(Continuous):
     """Base class for bounded continuous distributions"""
 
     # Indices of the arguments that define the lower and upper bounds of the distribution
-    bound_args_indices: Optional[list[int]] = None
+    bound_args_indices: list[int] | None = None
 
 
 @_default_transform.register(PositiveContinuous)
@@ -553,11 +551,11 @@ class TruncatedNormalRV(RandomVariable):
     def rng_fn(
         cls,
         rng: np.random.RandomState,
-        mu: Union[np.ndarray, float],
-        sigma: Union[np.ndarray, float],
-        lower: Union[np.ndarray, float],
-        upper: Union[np.ndarray, float],
-        size: Optional[Union[list[int], int]],
+        mu: np.ndarray | float,
+        sigma: np.ndarray | float,
+        lower: np.ndarray | float,
+        upper: np.ndarray | float,
+        size: list[int] | int | None,
     ) -> np.ndarray:
         # Upcast to float64. (Caller will downcast to desired dtype if needed)
         #   (Work-around for https://github.com/scipy/scipy/issues/15928)
@@ -657,12 +655,12 @@ class TruncatedNormal(BoundedContinuous):
     @classmethod
     def dist(
         cls,
-        mu: Optional[DIST_PARAMETER_TYPES] = 0,
-        sigma: Optional[DIST_PARAMETER_TYPES] = None,
+        mu: DIST_PARAMETER_TYPES | None = 0,
+        sigma: DIST_PARAMETER_TYPES | None = None,
         *,
-        tau: Optional[DIST_PARAMETER_TYPES] = None,
-        lower: Optional[DIST_PARAMETER_TYPES] = None,
-        upper: Optional[DIST_PARAMETER_TYPES] = None,
+        tau: DIST_PARAMETER_TYPES | None = None,
+        lower: DIST_PARAMETER_TYPES | None = None,
+        upper: DIST_PARAMETER_TYPES | None = None,
         **kwargs,
     ) -> RandomVariable:
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
@@ -837,8 +835,8 @@ class HalfNormal(PositiveContinuous):
     @classmethod
     def dist(
         cls,
-        sigma: Optional[DIST_PARAMETER_TYPES] = None,
-        tau: Optional[DIST_PARAMETER_TYPES] = None,
+        sigma: DIST_PARAMETER_TYPES | None = None,
+        tau: DIST_PARAMETER_TYPES | None = None,
         *args,
         **kwargs,
     ):
@@ -981,10 +979,10 @@ class Wald(PositiveContinuous):
     @classmethod
     def dist(
         cls,
-        mu: Optional[DIST_PARAMETER_TYPES] = None,
-        lam: Optional[DIST_PARAMETER_TYPES] = None,
-        phi: Optional[DIST_PARAMETER_TYPES] = None,
-        alpha: Optional[DIST_PARAMETER_TYPES] = 0.0,
+        mu: DIST_PARAMETER_TYPES | None = None,
+        lam: DIST_PARAMETER_TYPES | None = None,
+        phi: DIST_PARAMETER_TYPES | None = None,
+        alpha: DIST_PARAMETER_TYPES | None = 0.0,
         **kwargs,
     ):
         mu, lam, phi = cls.get_mu_lam_phi(mu, lam, phi)
@@ -1155,11 +1153,11 @@ class Beta(UnitContinuous):
     @classmethod
     def dist(
         cls,
-        alpha: Optional[DIST_PARAMETER_TYPES] = None,
-        beta: Optional[DIST_PARAMETER_TYPES] = None,
-        mu: Optional[DIST_PARAMETER_TYPES] = None,
-        sigma: Optional[DIST_PARAMETER_TYPES] = None,
-        nu: Optional[DIST_PARAMETER_TYPES] = None,
+        alpha: DIST_PARAMETER_TYPES | None = None,
+        beta: DIST_PARAMETER_TYPES | None = None,
+        mu: DIST_PARAMETER_TYPES | None = None,
+        sigma: DIST_PARAMETER_TYPES | None = None,
+        nu: DIST_PARAMETER_TYPES | None = None,
         *args,
         **kwargs,
     ):

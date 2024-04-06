@@ -4,31 +4,19 @@ Samplers
 This submodule contains functions for MCMC and forward sampling.
 
 
-.. currentmodule:: pymc.sampling.forward
-
-.. autosummary::
-   :toctree: generated/
-
-   sample_prior_predictive
-   sample_posterior_predictive
-   draw
-
-
-.. currentmodule:: pymc.sampling.mcmc
+.. currentmodule:: pymc
 
 .. autosummary::
    :toctree: generated/
 
    sample
+   sample_prior_predictive
+   sample_posterior_predictive
+   draw
+   compute_deterministics
    init_nuts
-
-.. currentmodule:: pymc.sampling.jax
-
-.. autosummary::
-   :toctree: generated/
-
-   sample_blackjax_nuts
-   sample_numpyro_nuts
+   sampling.jax.sample_blackjax_nuts
+   sampling.jax.sample_numpyro_nuts
 
 
 Step methods

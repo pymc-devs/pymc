@@ -16,10 +16,10 @@ import numbers
 import warnings
 
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from functools import reduce
 from operator import add, mul
-from typing import Any, Callable, Optional, Union
+from typing import Any
 
 import numpy as np
 import pytensor.tensor as pt
@@ -51,8 +51,8 @@ __all__ = [
 
 from pymc.pytensorf import constant_fold
 
-TensorLike = Union[np.ndarray, TensorVariable]
-IntSequence = Union[np.ndarray, Sequence[int]]
+TensorLike = np.ndarray | TensorVariable
+IntSequence = np.ndarray | Sequence[int]
 
 
 class BaseCovariance:
@@ -63,7 +63,7 @@ class BaseCovariance:
     def __call__(
         self,
         X: TensorLike,
-        Xs: Optional[TensorLike] = None,
+        Xs: TensorLike | None = None,
         diag: bool = False,
     ) -> TensorVariable:
         r"""
@@ -86,7 +86,7 @@ class BaseCovariance:
     def diag(self, X: TensorLike) -> TensorVariable:
         raise NotImplementedError
 
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: TensorLike | None = None) -> TensorVariable:
         raise NotImplementedError
 
     def __add__(self, other) -> "Add":
@@ -165,7 +165,7 @@ class Covariance(BaseCovariance):
         function operates on.
     """
 
-    def __init__(self, input_dim: int, active_dims: Optional[IntSequence] = None):
+    def __init__(self, input_dim: int, active_dims: IntSequence | None = None):
         self.input_dim = input_dim
         if active_dims is None:
             self.active_dims = np.arange(input_dim)
@@ -256,11 +256,7 @@ class Combination(Covariance):
 
             elif isinstance(
                 factor,
-                (
-                    TensorConstant,
-                    TensorVariable,
-                    TensorSharedVariable,
-                ),
+                TensorConstant | TensorVariable | TensorSharedVariable,
             ):
                 if factor.ndim == 2 and diag:
                     factor_list.append(pt.diag(factor))
@@ -318,7 +314,7 @@ class Add(Combination):
     def __call__(
         self,
         X: TensorLike,
-        Xs: Optional[TensorLike] = None,
+        Xs: TensorLike | None = None,
         diag: bool = False,
     ) -> TensorVariable:
         return reduce(add, self._merge_factors_cov(X, Xs, diag))
@@ -331,7 +327,7 @@ class Prod(Combination):
     def __call__(
         self,
         X: TensorLike,
-        Xs: Optional[TensorLike] = None,
+        Xs: TensorLike | None = None,
         diag: bool = False,
     ) -> TensorVariable:
         return reduce(mul, self._merge_factors_cov(X, Xs, diag))
@@ -353,7 +349,7 @@ class Exponentiated(Covariance):
         super().__init__(input_dim=self.kernel.input_dim, active_dims=self.kernel.active_dims)
 
     def __call__(
-        self, X: TensorLike, Xs: Optional[TensorLike] = None, diag: bool = False
+        self, X: TensorLike, Xs: TensorLike | None = None, diag: bool = False
     ) -> TensorVariable:
         return self.kernel(X, Xs, diag=diag) ** self.power
 
@@ -390,7 +386,7 @@ class Kron(Covariance):
         return X_split, Xs_split
 
     def __call__(
-        self, X: TensorLike, Xs: Optional[TensorLike] = None, diag: bool = False
+        self, X: TensorLike, Xs: TensorLike | None = None, diag: bool = False
     ) -> TensorVariable:
         X_split, Xs_split = self._split(X, Xs)
         covs = [cov(x, xs, diag) for cov, x, xs in zip(self._factor_list, X_split, Xs_split)]
@@ -412,7 +408,7 @@ class Constant(BaseCovariance):
     def diag(self, X: TensorLike) -> TensorVariable:
         return self._alloc(self.c, X.shape[0])
 
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: TensorLike | None = None) -> TensorVariable:
         if Xs is None:
             return self._alloc(self.c, X.shape[0], X.shape[0])
         else:
@@ -434,7 +430,7 @@ class WhiteNoise(BaseCovariance):
     def diag(self, X: TensorLike) -> TensorVariable:
         return self._alloc(pt.square(self.sigma), X.shape[0])
 
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: TensorLike | None = None) -> TensorVariable:
         if Xs is None:
             return pt.diag(self.diag(X))
         else:
@@ -478,7 +474,7 @@ class Circular(Covariance):
         input_dim: int,
         period,
         tau=4,
-        active_dims: Optional[IntSequence] = None,
+        active_dims: IntSequence | None = None,
     ):
         super().__init__(input_dim, active_dims)
         self.c = pt.as_tensor_variable(period / 2)
@@ -494,7 +490,7 @@ class Circular(Covariance):
     def weinland(self, t):
         return (1 + self.tau * t / self.c) * pt.clip(1 - t / self.c, 0, np.inf) ** self.tau
 
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: TensorLike | None = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         return self.weinland(self.dist(X, Xs))
 
@@ -518,13 +514,13 @@ class Stationary(Covariance):
         input_dim: int,
         ls=None,
         ls_inv=None,
-        active_dims: Optional[IntSequence] = None,
+        active_dims: IntSequence | None = None,
     ):
         super().__init__(input_dim, active_dims)
         if (ls is None and ls_inv is None) or (ls is not None and ls_inv is not None):
             raise ValueError("Only one of 'ls' or 'ls_inv' must be provided")
         elif ls_inv is not None:
-            if isinstance(ls_inv, (list, tuple)):
+            if isinstance(ls_inv, list | tuple):
                 ls = 1.0 / np.asarray(ls_inv)
             else:
                 ls = 1.0 / ls_inv
@@ -555,7 +551,7 @@ class Stationary(Covariance):
     def diag(self, X: TensorLike) -> TensorVariable:
         return self._alloc(1.0, X.shape[0])
 
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: TensorLike | None = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         r2 = self.square_dist(X, Xs)
         return self.full_from_distance(r2, squared=True)
@@ -613,7 +609,7 @@ class RatQuad(Stationary):
         alpha,
         ls=None,
         ls_inv=None,
-        active_dims: Optional[IntSequence] = None,
+        active_dims: IntSequence | None = None,
     ):
         super().__init__(input_dim, ls, ls_inv, active_dims)
         self.alpha = alpha
@@ -771,12 +767,12 @@ class Periodic(Stationary):
         period,
         ls=None,
         ls_inv=None,
-        active_dims: Optional[IntSequence] = None,
+        active_dims: IntSequence | None = None,
     ):
         super().__init__(input_dim, ls, ls_inv, active_dims)
         self.period = period
 
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: TensorLike | None = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         if Xs is None:
             Xs = X
@@ -823,7 +819,7 @@ class Linear(Covariance):
        k(x, x') = (x - c)(x' - c)
     """
 
-    def __init__(self, input_dim: int, c, active_dims: Optional[IntSequence] = None):
+    def __init__(self, input_dim: int, c, active_dims: IntSequence | None = None):
         super().__init__(input_dim, active_dims)
         self.c = c
 
@@ -832,7 +828,7 @@ class Linear(Covariance):
         Xc = pt.sub(X, self.c)
         return X, Xc, Xs
 
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: TensorLike | None = None) -> TensorVariable:
         X, Xc, Xs = self._common(X, Xs)
         if Xs is None:
             return pt.dot(Xc, pt.transpose(Xc))
@@ -853,12 +849,12 @@ class Polynomial(Linear):
        k(x, x') = [(x - c)(x' - c) + \mathrm{offset}]^{d}
     """
 
-    def __init__(self, input_dim: int, c, d, offset, active_dims: Optional[IntSequence] = None):
+    def __init__(self, input_dim: int, c, d, offset, active_dims: IntSequence | None = None):
         super().__init__(input_dim, c, active_dims)
         self.d = d
         self.offset = offset
 
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: TensorLike | None = None) -> TensorVariable:
         linear = super().full(X, Xs)
         return pt.power(linear + self.offset, self.d)
 
@@ -890,7 +886,7 @@ class WarpedInput(Covariance):
         cov_func: Covariance,
         warp_func: Callable,
         args=None,
-        active_dims: Optional[IntSequence] = None,
+        active_dims: IntSequence | None = None,
     ):
         super().__init__(input_dim, active_dims)
         if not callable(warp_func):
@@ -901,7 +897,7 @@ class WarpedInput(Covariance):
         self.args = args
         self.cov_func = cov_func
 
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: TensorLike | None = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         if Xs is None:
             return self.cov_func(self.w(X, self.args), Xs)
@@ -965,7 +961,7 @@ class WrappedPeriodic(Covariance):
         self.cov_func = cov_func
         self.period = period
 
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: TensorLike | None = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         if Xs is None:
             Xs = X
@@ -1002,7 +998,7 @@ class Gibbs(Covariance):
         input_dim: int,
         lengthscale_func: Callable,
         args=None,
-        active_dims: Optional[IntSequence] = None,
+        active_dims: IntSequence | None = None,
     ):
         super().__init__(input_dim, active_dims)
         if active_dims is not None:
@@ -1029,7 +1025,7 @@ class Gibbs(Covariance):
             )
         return pt.clip(sqd, 0.0, np.inf)
 
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: TensorLike | None = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         rx = self.lfunc(pt.as_tensor_variable(X), self.args)
         if Xs is None:
@@ -1071,7 +1067,7 @@ class ScaledCov(Covariance):
         cov_func: Covariance,
         scaling_func: Callable,
         args=None,
-        active_dims: Optional[IntSequence] = None,
+        active_dims: IntSequence | None = None,
     ):
         super().__init__(input_dim, active_dims)
         if not callable(scaling_func):
@@ -1088,7 +1084,7 @@ class ScaledCov(Covariance):
         scf_diag = pt.square(pt.flatten(self.scaling_func(X, self.args)))
         return cov_diag * scf_diag
 
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: TensorLike | None = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         scf_x = self.scaling_func(X, self.args)
         if Xs is None:
@@ -1137,7 +1133,7 @@ class Coregion(Covariance):
         W=None,
         kappa=None,
         B=None,
-        active_dims: Optional[IntSequence] = None,
+        active_dims: IntSequence | None = None,
     ):
         super().__init__(input_dim, active_dims)
         if len(self.active_dims) != 1:
@@ -1154,7 +1150,7 @@ class Coregion(Covariance):
         else:
             raise ValueError("Exactly one of (W, kappa) and B must be provided to Coregion")
 
-    def full(self, X: TensorLike, Xs: Optional[TensorLike] = None) -> TensorVariable:
+    def full(self, X: TensorLike, Xs: TensorLike | None = None) -> TensorVariable:
         X, Xs = self._slice(X, Xs)
         index = pt.cast(X, "int32")
         if Xs is None:
