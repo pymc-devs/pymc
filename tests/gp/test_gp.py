@@ -366,7 +366,7 @@ class TestMarginalVsLatent:
             latent_gp = pm.gp.Latent(mean_func=mean_func, cov_func=cov_func)
             latent_f = latent_gp.prior("f", X, n_outputs=n_outputs, reparameterize=True)
             latent_p = latent_gp.conditional("p", Xnew)
-        
+
         with pm.Model() as marginal_model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
@@ -389,8 +389,12 @@ class TestMarginalVsLatent:
         latent_rv_logp = pm.logp(latent_p, pnew)
         marginal_rv_logp = pm.logp(marginal_p, pnew)
         numpy_rv_logp = pm.logp(numpy_p, pnew)
-        
-        assert latent_rv_logp.shape.eval() == marginal_rv_logp.shape.eval() == numpy_rv_logp.shape.eval()
+
+        assert (
+            latent_rv_logp.shape.eval()
+            == marginal_rv_logp.shape.eval()
+            == numpy_rv_logp.shape.eval()
+        )
 
         npt.assert_allclose(latent_rv_logp.eval(), marginal_rv_logp.eval(), atol=5)
         npt.assert_allclose(latent_rv_logp.eval(), numpy_rv_logp.eval(), atol=5)

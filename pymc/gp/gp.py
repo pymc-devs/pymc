@@ -156,9 +156,11 @@ class Latent(Base):
         if reparameterize:
             size = (X.shape[0], n_outputs) if n_outputs > 1 else X.shape[0]
             v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=size, **kwargs)
-            f = pm.Deterministic(name, mu + cholesky(cov).dot(v).transpose(), dims=kwargs.get("dims", None))
+            f = pm.Deterministic(
+                name, mu + cholesky(cov).dot(v).transpose(), dims=kwargs.get("dims", None)
+            )
         else:
-            mu_stack = pt.stack([mu] * n_outputs, axis=0) if n_outputs >1 else mu
+            mu_stack = pt.stack([mu] * n_outputs, axis=0) if n_outputs > 1 else mu
             f = pm.MvNormal(name, mu=mu_stack, cov=cov, **kwargs)
         return f
 
