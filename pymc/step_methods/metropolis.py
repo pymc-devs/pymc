@@ -447,13 +447,17 @@ class BinaryGibbsMetropolis(ArrayStep):
     Parameters
     ----------
     vars : list
+    vars : list
         List of value variables for sampler
+    order : list or 'random'
     order : list or 'random'
         List of integers indicating the Gibbs update order
         e.g., [0, 2, 1, ...]. Default is random
     transit_p : float
+    transit_p : float
         The diagonal of the transition kernel. A value > .5 gives anticorrelated proposals,
         which resulting in more efficient antithetical sampling. Default is 0.8
+    model : PyMC Model
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
 
