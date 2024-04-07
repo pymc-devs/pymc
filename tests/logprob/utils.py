@@ -41,6 +41,7 @@ from pytensor import tensor as pt
 from scipy import stats as stats
 
 from pymc.logprob import icdf, logcdf, logp
+from pymc.logprob.rewriting import construct_ir_fgraph
 
 
 def scipy_logprob(obs, p):
@@ -112,3 +113,14 @@ def scipy_logprob_tester(
     np.testing.assert_array_equal(pytensor_res_val.shape, numpy_res.shape)
 
     np.testing.assert_array_almost_equal(pytensor_res_val, numpy_res, 4)
+
+
+def measure_type_info_helper(rv, vv):
+    """Extract measurable information from rv"""
+    fgraph, _, _ = construct_ir_fgraph({rv: vv})
+    node = fgraph.outputs[0].owner
+    ndim_supp = node.op.ndim_supp
+    supp_axes = node.op.supp_axes
+    measure_type = node.op.measure_type
+
+    return ndim_supp, supp_axes, measure_type

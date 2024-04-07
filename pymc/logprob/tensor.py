@@ -49,7 +49,12 @@ from pytensor.tensor.random.rewriting import (
     local_rv_size_lift,
 )
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    _logprob,
+    _logprob_helper,
+    get_measure_type_info,
+)
 from pymc.logprob.rewriting import (
     PreserveRVMappings,
     assume_measured_ir_outputs,
@@ -61,7 +66,7 @@ from pymc.pytensorf import constant_fold
 
 @node_rewriter([Alloc])
 def naive_bcast_rv_lift(fgraph, node):
-    """Lift an ``Alloc`` through a ``RandomVariable`` ``Op``.
+    """Lift a ``Alloc`` through a ``RandomVariable`` ``Op``.
 
     XXX: This implementation simply broadcasts the ``RandomVariable``'s
     parameters, which won't always work (e.g. multivariate distributions).
@@ -121,11 +126,8 @@ def naive_bcast_rv_lift(fgraph, node):
     return [bcasted_node.outputs[1]]
 
 
-class MeasurableMakeVector(MakeVector):
+class MeasurableMakeVector(MeasurableVariable, MakeVector):
     """A placeholder used to specify a log-likelihood for a cumsum sub-graph."""
-
-
-MeasurableVariable.register(MeasurableMakeVector)
 
 
 @_logprob.register(MeasurableMakeVector)
@@ -148,11 +150,8 @@ def logprob_make_vector(op, values, *base_rvs, **kwargs):
     return pt.stack(logps)
 
 
-class MeasurableJoin(Join):
+class MeasurableJoin(MeasurableVariable, Join):
     """A placeholder used to specify a log-likelihood for a join sub-graph."""
-
-
-MeasurableVariable.register(MeasurableJoin)
 
 
 @_logprob.register(MeasurableJoin)
@@ -220,23 +219,26 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
     if not all(var.owner and isinstance(var.owner.op, MeasurableVariable) for var in base_vars):
         return None
 
+    ndim_supp, supp_axes, measure_type = get_measure_type_info(base_vars[0])
+
     if is_join:
-        measurable_stack = MeasurableJoin()(axis, *base_vars)
+        measurable_stack = MeasurableJoin(
+            ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+        )(axis, *base_vars)
     else:
-        measurable_stack = MeasurableMakeVector(node.op.dtype)(*base_vars)
+        measurable_stack = MeasurableMakeVector(
+            node.op.dtype, ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+        )(*base_vars)
 
     return [measurable_stack]
 
 
-class MeasurableDimShuffle(DimShuffle):
+class MeasurableDimShuffle(MeasurableVariable, DimShuffle):
     """A placeholder used to specify a log-likelihood for a dimshuffle sub-graph."""
 
     # Need to get the absolute path of `c_func_file`, otherwise it tries to
     # find it locally and fails when a new `Op` is initialized
     c_func_file = DimShuffle.get_path(DimShuffle.c_func_file)
-
-
-MeasurableVariable.register(MeasurableDimShuffle)
 
 
 @_logprob.register(MeasurableDimShuffle)
@@ -295,10 +297,27 @@ def find_measurable_dimshuffles(fgraph, node) -> list[TensorVariable] | None:
     if not isinstance(base_var.owner.op, RandomVariable):
         return None  # pragma: no cover
 
-    measurable_dimshuffle = MeasurableDimShuffle(node.op.input_broadcastable, node.op.new_order)(
-        base_var
-    )
+    ref = list(range(0, base_var.type.ndim))
 
+    ndim_supp, supp_axes, measure_type = get_measure_type_info(base_var)
+    new_supp_axes = list(supp_axes)
+
+    for x in supp_axes:
+        if base_var.type.ndim + x not in node.op.new_order:
+            return None
+
+    for x in new_supp_axes:
+        new_supp_axes[x] = node.op.new_order.index(ref[x]) - node.outputs[0].type.ndim
+
+    supp_axes = tuple(new_supp_axes)
+
+    measurable_dimshuffle = MeasurableDimShuffle(
+        node.op.input_broadcastable,
+        node.op.new_order,
+        ndim_supp=ndim_supp,
+        supp_axes=supp_axes,
+        measure_type=measure_type,
+    )(base_var)
     return [measurable_dimshuffle]
 
 

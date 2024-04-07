@@ -24,9 +24,11 @@ from pytensor.tensor.math import ge, gt, invert, le, lt
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,
+    MeasureType,
     _logcdf_helper,
     _logprob,
     _logprob_helper,
+    get_measure_type_info,
 )
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import check_potential_measurability
@@ -78,7 +80,14 @@ def find_measurable_comparisons(fgraph: FunctionGraph, node: Node) -> list[Tenso
         elif isinstance(node_scalar_op, LE):
             node_scalar_op = GE()
 
-    compared_op = MeasurableComparison(node_scalar_op)
+    ndim_supp, supp_axes, _ = get_measure_type_info(measurable_var)
+
+    compared_op = MeasurableComparison(
+        scalar_op=node_scalar_op,
+        ndim_supp=ndim_supp,
+        supp_axes=supp_axes,
+        measure_type=MeasureType.Discrete,
+    )
     compared_rv = compared_op.make_node(measurable_var, const).default_output()
     return [compared_rv]
 
@@ -145,7 +154,13 @@ def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> list[TensorVar
         return None
 
     node_scalar_op = node.op.scalar_op
-    bitwise_op = MeasurableBitwise(node_scalar_op)
+    ndim_supp, supp_axis, measure_type = get_measure_type_info(base_var)
+    bitwise_op = MeasurableBitwise(
+        scalar_op=node_scalar_op,
+        ndim_supp=ndim_supp,
+        supp_axes=supp_axis,
+        measure_type=MeasureType.Discrete,
+    )
     bitwise_rv = bitwise_op.make_node(base_var).default_output()
     return [bitwise_rv]
 

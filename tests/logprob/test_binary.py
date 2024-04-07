@@ -21,7 +21,9 @@ from pytensor import function
 
 from pymc import logp
 from pymc.logprob import conditional_logp
+from pymc.logprob.abstract import MeasureType, get_measure_type_info
 from pymc.testing import assert_no_rvs
+from tests.logprob.utils import measure_type_info_helper
 
 
 @pytest.mark.parametrize(
@@ -58,6 +60,38 @@ def test_continuous_rv_comparison_bitwise(comparison_op, exp_logp_true, exp_logp
 
         assert np.isclose(logp_fn_not(0), getattr(ref_scipy, exp_logp_true)(0.5))
         assert np.isclose(logp_fn_not(1), getattr(ref_scipy, exp_logp_false)(0.5))
+
+
+@pytest.mark.parametrize(
+    "comparison_op, exp_logp_true, exp_logp_false, inputs",
+    [
+        ((pt.lt, pt.le), "logcdf", "logsf", (pt.random.normal(0, 1), 0.5)),
+        ((pt.gt, pt.ge), "logsf", "logcdf", (pt.random.normal(0, 1), 0.5)),
+        ((pt.lt, pt.le), "logsf", "logcdf", (0.5, pt.random.normal(0, 1))),
+        ((pt.gt, pt.ge), "logcdf", "logsf", (0.5, pt.random.normal(0, 1))),
+    ],
+)
+def test_measure_type_info(comparison_op, exp_logp_true, exp_logp_false, inputs):
+    for op in comparison_op:
+        comp_x_rv = op(*inputs)
+
+        if inputs[0] == 0.5:
+            base_rv = inputs[1]
+        else:
+            base_rv = inputs[0]
+
+        comp_x_vv = comp_x_rv.clone()
+        ndim_supp, supp_axes, measure_type = measure_type_info_helper(comp_x_rv, comp_x_vv)
+
+        ndim_supp_base, supp_axes_base, _ = get_measure_type_info(base_rv)
+
+        assert np.isclose(
+            ndim_supp_base,
+            ndim_supp,
+        )
+        assert supp_axes_base == supp_axes
+
+        assert measure_type == MeasureType.Discrete
 
 
 @pytest.mark.parametrize(

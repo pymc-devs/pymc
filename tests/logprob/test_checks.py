@@ -44,8 +44,10 @@ from pytensor.raise_op import Assert
 from scipy import stats
 
 from pymc.distributions import Dirichlet
+from pymc.logprob.abstract import get_measure_type_info
 from pymc.logprob.basic import conditional_logp
 from tests.distributions.test_multivariate import dirichlet_logpdf
+from tests.logprob.utils import measure_type_info_helper
 
 
 def test_specify_shape_logprob():
@@ -77,6 +79,27 @@ def test_specify_shape_logprob():
         x_logp_fn(last_dim=1, x=x_vv_test_invalid)
 
 
+def test_shape_measure_type_info():
+    last_dim = pt.scalar(name="last_dim", dtype="int64")
+    x_base = Dirichlet.dist(pt.ones((last_dim,)), shape=(5, last_dim))
+    x_base.name = "x"
+    x_rv = pt.specify_shape(x_base, shape=(5, 3))
+    x_rv.name = "x"
+
+    x_vv = x_rv.clone()
+    ndim_supp, supp_axes, measure_type = measure_type_info_helper(x_rv, x_vv)
+
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measure_type_info(x_base)
+
+    assert np.isclose(
+        ndim_supp_base,
+        ndim_supp,
+    )
+    assert supp_axes_base == supp_axes
+
+    assert measure_type_base == measure_type
+
+
 def test_assert_logprob():
     rv = pt.random.normal()
     assert_op = Assert("Test assert")
@@ -99,3 +122,24 @@ def test_assert_logprob():
     # Since here the value to the rv is negative, an exception is raised as the condition is not met
     with pytest.raises(AssertionError, match="Test assert"):
         assert_logp.eval({assert_vv: -5.0})
+
+
+def test_assert_measure_type_info():
+    rv = pt.random.normal()
+    assert_op = Assert("Test assert")
+    # Example: Add assert that rv must be positive
+    assert_rv = assert_op(rv, rv > 0)
+    assert_rv.name = "assert_rv"
+
+    assert_vv = assert_rv.clone()
+    ndim_supp, supp_axes, measure_type = measure_type_info_helper(assert_rv, assert_vv)
+
+    ndim_supp_base, supp_axes_base, measure_type_base = get_measure_type_info(rv)
+
+    assert np.isclose(
+        ndim_supp_base,
+        ndim_supp,
+    )
+    assert supp_axes_base == supp_axes
+
+    assert measure_type_base == measure_type

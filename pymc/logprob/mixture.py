@@ -68,8 +68,10 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableVariable,
+    MeasureType,
     _logprob,
     _logprob_helper,
+    get_measure_type_info,
 )
 from pymc.logprob.rewriting import (
     PreserveRVMappings,
@@ -217,25 +219,23 @@ def rv_pull_down(x: TensorVariable) -> TensorVariable:
     return fgraph.outputs[0]
 
 
-class MixtureRV(Op):
+class MixtureRV(MeasurableVariable, Op):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
 
     __props__ = ("indices_end_idx", "out_dtype", "out_broadcastable")
 
-    def __init__(self, indices_end_idx, out_dtype, out_broadcastable):
-        super().__init__()
+    def __init__(self, *args, indices_end_idx, out_dtype, out_broadcastable, **kwargs):
+        # super().__init__(*args, **kwargs)
         self.indices_end_idx = indices_end_idx
         self.out_dtype = out_dtype
         self.out_broadcastable = out_broadcastable
+        super().__init__(*args, **kwargs)
 
     def make_node(self, *inputs):
         return Apply(self, list(inputs), [TensorType(self.out_dtype, self.out_broadcastable)()])
 
     def perform(self, node, inputs, outputs):
         raise NotImplementedError("This is a stand-in Op.")  # pragma: no cover
-
-
-MeasurableVariable.register(MixtureRV)
 
 
 def get_stack_mixture_vars(
@@ -304,11 +304,28 @@ def find_measurable_index_mixture(fgraph, node):
     if rv_map_feature.request_measurable(mixture_rvs) != mixture_rvs:
         return None
 
+    all_ndim_supp = []
+    all_supp_axes = []
+    all_measure_type = []
+    for i in range(0, len(mixture_rvs)):
+        ndim_supp, supp_axes, measure_type = get_measure_type_info(mixture_rvs[i])
+        all_ndim_supp.append(ndim_supp)
+        all_supp_axes.append(supp_axes)
+        all_measure_type.append(measure_type)
+
+    if all_measure_type[1:] == all_measure_type[:-1]:
+        m_type = all_measure_type[0]
+    else:
+        m_type = MeasureType.Mixed
+
     # Replace this sub-graph with a `MixtureRV`
     mix_op = MixtureRV(
-        1 + len(mixing_indices),
-        old_mixture_rv.dtype,
-        old_mixture_rv.broadcastable,
+        ndim_supp=all_ndim_supp[0],
+        supp_axes=all_supp_axes[0],
+        measure_type=all_measure_type,
+        indices_end_idx=1 + len(mixing_indices),
+        out_dtype=old_mixture_rv.dtype,
+        out_broadcastable=old_mixture_rv.broadcastable,
     )
     new_node = mix_op.make_node(*([join_axis, *mixing_indices, *mixture_rvs]))
 
@@ -401,9 +418,6 @@ class MeasurableSwitchMixture(MeasurableElemwise):
     valid_scalar_types = (Switch,)
 
 
-measurable_switch_mixture = MeasurableSwitchMixture(scalar_switch)
-
-
 @node_rewriter([switch])
 def find_measurable_switch_mixture(fgraph, node):
     rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
@@ -427,6 +441,24 @@ def find_measurable_switch_mixture(fgraph, node):
 
     if rv_map_feature.request_measurable(components) != components:
         return None
+
+    all_ndim_supp = []
+    all_supp_axes = []
+    all_measure_type = []
+    for i in range(0, len(components)):
+        ndim_supp, supp_axes, measure_type = get_measure_type_info(components[i])
+        all_ndim_supp.append(ndim_supp)
+        all_supp_axes.append(supp_axes)
+        all_measure_type.append(measure_type)
+
+    if all_measure_type[1:] == all_measure_type[:-1]:
+        m_type = all_measure_type[0]
+    else:
+        m_type = MeasureType.Mixed
+
+    measurable_switch_mixture = MeasurableSwitchMixture(
+        scalar_switch, ndim_supp=all_ndim_supp[0], supp_axes=all_supp_axes[0], measure_type=m_type
+    )
 
     return [measurable_switch_mixture(switch_cond, *components)]
 
@@ -457,11 +489,8 @@ measurable_ir_rewrites_db.register(
 )
 
 
-class MeasurableIfElse(IfElse):
+class MeasurableIfElse(MeasurableVariable, IfElse):
     """Measurable subclass of IfElse operator."""
-
-
-MeasurableVariable.register(MeasurableIfElse)
 
 
 @node_rewriter([IfElse])
@@ -515,7 +544,32 @@ def find_measurable_ifelse_mixture(fgraph, node):
     if not all(var.owner and isinstance(var.owner.op, MeasurableVariable) for var in base_rvs):
         return None
 
-    return MeasurableIfElse(n_outs=op.n_outs).make_node(if_var, *base_rvs).outputs
+    ndim_supp_all = ()
+    supp_axes_all = ()
+    measure_type_all = ()
+
+    half_len = int(len(base_rvs) / 2)
+    length = len(base_rvs)
+
+    for base_rv1, base_rv2 in zip(base_rvs[0:half_len], base_rvs[half_len + 1 : length - 1]):
+        meta_info = get_measure_type_info(base_rv1)
+        if meta_info != get_measure_type_info(base_rv2):
+            return None
+        ndim_supp, supp_axes, measure_type = meta_info
+        ndim_supp_all += (ndim_supp,)
+        supp_axes_all += (supp_axes,)
+        measure_type_all += (measure_type,)
+
+    return (
+        MeasurableIfElse(
+            n_outs=op.n_outs,
+            ndim_supp=ndim_supp_all,
+            supp_axes=supp_axes_all,
+            measure_type=measure_type_all,
+        )
+        .make_node(if_var, *base_rvs)
+        .outputs
+    )
 
 
 measurable_ir_rewrites_db.register(

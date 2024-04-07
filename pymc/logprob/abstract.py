@@ -37,7 +37,9 @@
 import abc
 
 from collections.abc import Sequence
+from enum import Enum, auto
 from functools import singledispatch
+from typing import Union
 
 from pytensor.graph.op import Op
 from pytensor.graph.utils import MetaType
@@ -131,14 +133,33 @@ def _icdf_helper(rv, value, **kwargs):
     return rv_icdf
 
 
+class MeasureType(Enum):
+    Discrete = auto()
+    Continuous = auto()
+    Mixed = auto()
+
+
 class MeasurableVariable(abc.ABC):
     """A variable that can be assigned a measure/log-probability"""
+
+    def __init__(
+        self,
+        *args,
+        ndim_supp: Union[int, tuple],
+        supp_axes: tuple,
+        measure_type: Union[MeasureType, tuple],
+        **kwargs,
+    ):
+        self.ndim_supp = ndim_supp
+        self.supp_axes = supp_axes
+        self.measure_type = measure_type
+        super().__init__(*args, **kwargs)
 
 
 MeasurableVariable.register(RandomVariable)
 
 
-class MeasurableElemwise(Elemwise):
+class MeasurableElemwise(MeasurableVariable, Elemwise):
     """Base class for Measurable Elemwise variables"""
 
     valid_scalar_types: tuple[MetaType, ...] = ()
@@ -152,4 +173,36 @@ class MeasurableElemwise(Elemwise):
         super().__init__(scalar_op, *args, **kwargs)
 
 
-MeasurableVariable.register(MeasurableElemwise)
+def get_measure_type_info(
+    base_var,
+):
+    from pymc.logprob.utils import DiracDelta
+
+    if not isinstance(base_var, MeasurableVariable):
+        base_op = base_var.owner.op
+        index = base_var.owner.outputs.index(base_var)
+    else:
+        base_op = base_var
+    if not isinstance(base_op, MeasurableVariable):
+        raise TypeError("base_op must be a RandomVariable or MeasurableVariable")
+
+    if isinstance(base_op, DiracDelta):
+        ndim_supp = 0
+        supp_axes = ()
+        measure_type = MeasureType.Discrete
+        return ndim_supp, supp_axes, measure_type
+
+    if isinstance(base_op, RandomVariable):
+        ndim_supp = base_op.ndim_supp
+        supp_axes = tuple(range(-ndim_supp, 0))
+        measure_type = (
+            MeasureType.Continuous if base_op.dtype.startswith("float") else MeasureType.Discrete
+        )
+        return base_op.ndim_supp, supp_axes, measure_type
+    else:
+        # We'll need this for operators like scan and IfElse
+        if isinstance(base_op.ndim_supp, tuple):
+            if len(base_var.owner.outputs) != len(base_op.ndim_supp):
+                raise NotImplementedError("length of outputs and meta-properties is different")
+            return base_op.ndim_supp[index], base_op.supp_axes, base_op.measure_type
+        return base_op.ndim_supp, base_op.supp_axes, base_op.measure_type

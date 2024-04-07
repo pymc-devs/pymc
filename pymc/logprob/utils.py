@@ -260,7 +260,7 @@ pytensor.compile.optdb["canonicalize"].register(
 
 
 class DiracDelta(Op):
-    """An `Op` that represents a Dirac-delta distribution."""
+    """An `Op` that represents a Dirac-Delta distribution."""
 
     __props__ = ("rtol", "atol")
 

@@ -42,16 +42,18 @@ from pytensor.raise_op import CheckAndRaise
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.shape import SpecifyShape
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
+from pymc.logprob.abstract import (
+    MeasurableVariable,
+    _logprob,
+    _logprob_helper,
+    get_measure_type_info,
+)
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import replace_rvs_by_values
 
 
-class MeasurableSpecifyShape(SpecifyShape):
+class MeasurableSpecifyShape(MeasurableVariable, SpecifyShape):
     """A placeholder used to specify a log-likelihood for a specify-shape sub-graph."""
-
-
-MeasurableVariable.register(MeasurableSpecifyShape)
 
 
 @_logprob.register(MeasurableSpecifyShape)
@@ -85,7 +87,11 @@ def find_measurable_specify_shapes(fgraph, node) -> list[TensorVariable] | None:
     ):
         return None  # pragma: no cover
 
-    new_op = MeasurableSpecifyShape()
+    ndim_supp, supp_axes, measure_type = get_measure_type_info(base_rv)
+
+    new_op = MeasurableSpecifyShape(
+        ndim_supp=ndim_supp, supp_axes=supp_axes, measure_type=measure_type
+    )
     new_rv = new_op.make_node(base_rv, *shape).default_output()
 
     return [new_rv]
@@ -99,11 +105,8 @@ measurable_ir_rewrites_db.register(
 )
 
 
-class MeasurableCheckAndRaise(CheckAndRaise):
+class MeasurableCheckAndRaise(MeasurableVariable, CheckAndRaise):
     """A placeholder used to specify a log-likelihood for an assert sub-graph."""
-
-
-MeasurableVariable.register(MeasurableCheckAndRaise)
 
 
 @_logprob.register(MeasurableCheckAndRaise)
@@ -132,7 +135,14 @@ def find_measurable_check_and_raise(fgraph, node) -> list[TensorVariable] | None
         return None
 
     op = node.op
-    new_op = MeasurableCheckAndRaise(exc_type=op.exc_type, msg=op.msg)
+    ndim_supp, supp_axis, d_type = get_measure_type_info(base_rv)
+    new_op = MeasurableCheckAndRaise(
+        exc_type=op.exc_type,
+        msg=op.msg,
+        ndim_supp=ndim_supp,
+        supp_axes=supp_axis,
+        measure_type=d_type,
+    )
     new_rv = new_op.make_node(base_rv, *conds).default_output()
 
     return [new_rv]

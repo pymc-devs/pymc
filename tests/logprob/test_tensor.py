@@ -45,10 +45,14 @@ from pytensor.graph.rewriting.utils import rewrite_graph
 from pytensor.tensor.basic import Alloc
 from scipy import stats as st
 
+import pymc as pm
+
+from pymc.logprob.abstract import MeasureType, get_measure_type_info
 from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.logprob.tensor import naive_bcast_rv_lift
 from pymc.testing import assert_no_rvs
+from tests.logprob.utils import measure_type_info_helper
 
 
 def test_naive_bcast_rv_lift():
@@ -132,6 +136,35 @@ def test_measurable_make_vector():
 
     assert make_vector_logp_eval.shape == y_testval.shape
     assert np.isclose(make_vector_logp_eval.sum(), ref_logp_eval_eval)
+
+
+def test_measure_type_make_vector():
+    base1_rv = pt.random.normal(name="base1")
+    base2_rv = pt.random.halfnormal(name="base2")
+    base3_rv = pt.random.exponential(name="base3")
+    y_rv = pt.stack((base1_rv, base2_rv, base3_rv))
+    y_rv.name = "y"
+
+    ndim_supp_base_1, supp_axes_base_1, measure_type_base_1 = get_measure_type_info(base1_rv)
+    ndim_supp_base_2, supp_axes_base_2, measure_type_base_2 = get_measure_type_info(base2_rv)
+    ndim_supp_base_3, supp_axes_base_3, measure_type_base_3 = get_measure_type_info(base3_rv)
+
+    base1_vv = base1_rv.clone()
+    base2_vv = base2_rv.clone()
+    base3_vv = base3_rv.clone()
+    y_vv = y_rv.clone()
+
+    ndim_supp, supp_axes, measure_type = measure_type_info_helper(y_rv, y_vv)
+
+    assert np.isclose(
+        ndim_supp_base_1,
+        ndim_supp_base_2,
+        ndim_supp_base_3,
+        ndim_supp,
+    )
+    assert supp_axes_base_1 == supp_axes_base_2 == supp_axes_base_3 == supp_axes
+
+    assert measure_type_base_1 == measure_type_base_2 == measure_type_base_3 == measure_type
 
 
 @pytest.mark.parametrize("reverse", (False, True))
@@ -269,6 +302,43 @@ def test_measurable_join_univariate(size1, size2, axis, concatenate):
 
 
 @pytest.mark.parametrize(
+    "size1, size2, axis, concatenate",
+    [
+        ((5,), (3,), 0, True),
+        ((5,), (3,), -1, True),
+        ((5, 2), (3, 2), 0, True),
+        ((2, 5), (2, 3), 1, True),
+        ((2, 5), (2, 5), 0, False),
+        ((2, 5), (2, 5), 1, False),
+        ((2, 5), (2, 5), 2, False),
+    ],
+)
+def test_measure_type_join_univariate(size1, size2, axis, concatenate):
+    base1_rv = pt.random.normal(size=size1, name="base1")
+    base2_rv = pt.random.exponential(size=size2, name="base2")
+    if concatenate:
+        y_rv = pt.concatenate((base1_rv, base2_rv), axis=axis)
+    else:
+        y_rv = pt.stack((base1_rv, base2_rv), axis=axis)
+    y_rv.name = "y"
+
+    ndim_supp_base_1, supp_axes_base_1, measure_type_base_1 = get_measure_type_info(base1_rv)
+    ndim_supp_base_2, supp_axes_base_2, measure_type_base_2 = get_measure_type_info(base2_rv)
+
+    y_vv = y_rv.clone()
+    ndim_supp, supp_axes, measure_type = measure_type_info_helper(y_rv, y_vv)
+
+    assert np.isclose(
+        ndim_supp_base_1,
+        ndim_supp_base_2,
+        ndim_supp,
+    )
+    assert supp_axes_base_1 == supp_axes_base_2 == supp_axes
+
+    assert measure_type_base_1 == measure_type_base_2 == measure_type
+
+
+@pytest.mark.parametrize(
     "size1, supp_size1, size2, supp_size2, axis, concatenate",
     [
         (None, 2, None, 2, 0, True),
@@ -399,6 +469,43 @@ def test_measurable_dimshuffle(ds_order, multivariate):
     ds_test_value = pt.constant(base_test_value).dimshuffle(ds_order).eval()
 
     np.testing.assert_array_equal(ref_logp_fn(base_test_value), ds_logp_fn(ds_test_value))
+
+
+@pytensor.config.change_flags(cxx="")
+@pytest.mark.parametrize(
+    "multivariate, ds_order, ans_ndim_supp, ans_supp_axes, ans_measure_type",
+    [
+        (True, (0, 2), 1, (-1,), MeasureType.Continuous),  # Drop
+        (True, (2, 0), 1, (-2,), MeasureType.Continuous),  # Swap and drop
+        (True, (2, 1, "x", 0), 1, (-4,), MeasureType.Continuous),  # Swap and expand
+        (True, ("x", 0, 2), 1, (-1,), MeasureType.Continuous),  # Expand and drop
+        (True, (2, "x", 0), 1, (-3,), MeasureType.Continuous),  # Swap, expand and drop
+        (False, (0, 2), 0, (), MeasureType.Continuous),
+        (False, (2, 1, "x", 0), 0, (), MeasureType.Continuous),
+    ],
+)
+def test_measure_type_dimshuffle(
+    multivariate, ds_order, ans_ndim_supp, ans_supp_axes, ans_measure_type
+):
+    if multivariate:
+        base_rv = pm.Dirichlet.dist([1, 1, 1], shape=(7, 1, 3))
+        ds_rv = base_rv.dimshuffle(ds_order)
+        base_vv = base_rv.clone()
+
+    else:
+        base_rv = pt.random.beta(1, 2, size=(2, 1, 3))
+        base_rv_1 = pt.exp(base_rv)
+        ds_rv = base_rv_1.dimshuffle(ds_order)
+
+    ds_vv = ds_rv.clone()
+
+    ndim_supp, supp_axes, measure_type = measure_type_info_helper(ds_rv, ds_vv)
+
+    assert ndim_supp == ans_ndim_supp
+
+    assert supp_axes == ans_supp_axes
+
+    assert measure_type == ans_measure_type
 
 
 def test_unmeargeable_dimshuffles():
