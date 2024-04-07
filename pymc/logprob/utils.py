@@ -37,7 +37,6 @@ import typing
 import warnings
 
 from collections.abc import Container, Sequence
-from typing import Optional, Union
 
 import numpy as np
 import pytensor
@@ -68,7 +67,7 @@ def replace_rvs_by_values(
     graphs: Sequence[TensorVariable],
     *,
     rvs_to_values: dict[TensorVariable, TensorVariable],
-    rvs_to_transforms: Optional[dict[TensorVariable, "Transform"]] = None,
+    rvs_to_transforms: dict[TensorVariable, "Transform"] | None = None,
 ) -> list[TensorVariable]:
     """Clone and replace random variables in graphs with their value variables.
 
@@ -132,7 +131,7 @@ def replace_rvs_by_values(
     return replace_vars_in_graphs(graphs, replacements)
 
 
-def rvs_in_graph(vars: Union[Variable, Sequence[Variable]]) -> set[Variable]:
+def rvs_in_graph(vars: Variable | Sequence[Variable]) -> set[Variable]:
     """Assert that there are no `MeasurableVariable` nodes in a graph."""
 
     def expand(r):
@@ -148,7 +147,7 @@ def rvs_in_graph(vars: Union[Variable, Sequence[Variable]]) -> set[Variable]:
     return {
         node
         for node in walk(makeiter(vars), expand, False)
-        if node.owner and isinstance(node.owner.op, (RandomVariable, MeasurableVariable))
+        if node.owner and isinstance(node.owner.op, RandomVariable | MeasurableVariable)
     }
 
 

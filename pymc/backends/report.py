@@ -16,8 +16,6 @@ import dataclasses
 import itertools
 import logging
 
-from typing import Optional
-
 from pymc.stats.convergence import _LEVELS, SamplerWarning
 
 logger = logging.getLogger(__name__)
@@ -44,17 +42,17 @@ class SamplerReport:
         return all(_LEVELS[warn.level] < _LEVELS["warn"] for warn in self._warnings)
 
     @property
-    def n_tune(self) -> Optional[int]:
+    def n_tune(self) -> int | None:
         """Number of tune iterations - not necessarily kept in trace!"""
         return self._n_tune
 
     @property
-    def n_draws(self) -> Optional[int]:
+    def n_draws(self) -> int | None:
         """Number of draw iterations."""
         return self._n_draws
 
     @property
-    def t_sampling(self) -> Optional[float]:
+    def t_sampling(self) -> float | None:
         """
         Number of seconds that the sampling procedure took.
 

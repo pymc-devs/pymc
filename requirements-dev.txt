@@ -4,7 +4,6 @@
 arviz>=0.13.0
 cachetools>=4.2.1
 cloudpickle
-fastprogress>=0.2.0
 git+https://github.com/pymc-devs/pymc-sphinx-theme
 h5py>=2.7
 ipython>=7.16
@@ -18,9 +17,10 @@ numpydoc
 pandas>=0.24.0
 polyagamma
 pre-commit>=2.8.0
-pytensor>=2.19,<2.20
+pytensor>=2.20,<2.21
 pytest-cov>=2.5
 pytest>=3.0
+rich>=13.7.1
 scipy>=1.4.1
 sphinx-copybutton
 sphinx-design

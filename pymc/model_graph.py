@@ -16,17 +16,15 @@ import warnings
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from os import path
-from typing import Optional
 
 from pytensor import function
-from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph import Apply
 from pytensor.graph.basic import ancestors, walk
 from pytensor.scalar.basic import Cast
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.shape import Shape
-from pytensor.tensor.variable import TensorConstant, TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 import pymc as pm
 
@@ -84,7 +82,7 @@ class ModelGraph:
 
         return parents
 
-    def vars_to_plot(self, var_names: Optional[Iterable[VarName]] = None) -> list[VarName]:
+    def vars_to_plot(self, var_names: Iterable[VarName] | None = None) -> list[VarName]:
         if var_names is None:
             return self._all_var_names
 
@@ -115,7 +113,7 @@ class ModelGraph:
         return [get_var_name(var) for var in selected_ancestors]
 
     def make_compute_graph(
-        self, var_names: Optional[Iterable[VarName]] = None
+        self, var_names: Iterable[VarName] | None = None
     ) -> dict[VarName, set[VarName]]:
         """Get map of var_name -> set(input var names) for the model"""
         input_map: dict[VarName, set[VarName]] = defaultdict(set)
@@ -162,14 +160,6 @@ class ModelGraph:
             shape = "octagon"
             style = "filled"
             label = f"{var_name}\n~\nPotential"
-        elif isinstance(v, TensorConstant):
-            shape = "box"
-            style = "rounded, filled"
-            label = f"{var_name}\n~\nConstantData"
-        elif isinstance(v, SharedVariable):
-            shape = "box"
-            style = "rounded, filled"
-            label = f"{var_name}\n~\nMutableData"
         elif v in self.model.basic_RVs:
             shape = "ellipse"
             if v in self.model.observed_RVs:
@@ -180,10 +170,14 @@ class ModelGraph:
             if symbol.endswith("RV"):
                 symbol = symbol[:-2]
             label = f"{var_name}\n~\n{symbol}"
-        else:
+        elif v in self.model.deterministics:
             shape = "box"
             style = None
             label = f"{var_name}\n~\nDeterministic"
+        else:
+            shape = "box"
+            style = "rounded, filled"
+            label = f"{var_name}\n~\nCData"
 
         kwargs = {
             "shape": shape,
@@ -199,7 +193,7 @@ class ModelGraph:
         else:
             graph.node(var_name.replace(":", "&"), **kwargs)
 
-    def get_plates(self, var_names: Optional[Iterable[VarName]] = None) -> dict[str, set[VarName]]:
+    def get_plates(self, var_names: Iterable[VarName] | None = None) -> dict[str, set[VarName]]:
         """Rough but surprisingly accurate plate detection.
 
         Just groups by the shape of the underlying distribution.  Will be wrong
@@ -241,7 +235,7 @@ class ModelGraph:
 
     def make_graph(
         self,
-        var_names: Optional[Iterable[VarName]] = None,
+        var_names: Iterable[VarName] | None = None,
         formatting: str = "plain",
         save=None,
         figsize=None,
@@ -293,9 +287,7 @@ class ModelGraph:
 
         return graph
 
-    def make_networkx(
-        self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
-    ):
+    def make_networkx(self, var_names: Iterable[VarName] | None = None, formatting: str = "plain"):
         """Make networkx Digraph of PyMC model
 
         Returns
@@ -352,7 +344,7 @@ class ModelGraph:
 def model_to_networkx(
     model=None,
     *,
-    var_names: Optional[Iterable[VarName]] = None,
+    var_names: Iterable[VarName] | None = None,
     formatting: str = "plain",
 ):
     """Produce a networkx Digraph from a PyMC model.
@@ -417,10 +409,10 @@ def model_to_networkx(
 def model_to_graphviz(
     model=None,
     *,
-    var_names: Optional[Iterable[VarName]] = None,
+    var_names: Iterable[VarName] | None = None,
     formatting: str = "plain",
-    save: Optional[str] = None,
-    figsize: Optional[tuple[int, int]] = None,
+    save: str | None = None,
+    figsize: tuple[int, int] | None = None,
     dpi: int = 300,
 ):
     """Produce a graphviz Digraph from a PyMC model.

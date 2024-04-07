@@ -694,6 +694,15 @@ def test_no_init_nuts_compound(caplog):
         assert "Initializing NUTS" not in caplog.text
 
 
+def test_sample_var_names():
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        b = pm.Deterministic("b", a**2)
+        idata = pm.sample(10, tune=10, var_names=["a"])
+        assert "a" in idata.posterior
+        assert "b" not in idata.posterior
+
+
 class TestAssignStepMethods:
     def test_bernoulli(self):
         """Test bernoulli distribution is assigned binary gibbs metropolis method"""
@@ -753,12 +762,18 @@ class TestAssignStepMethods:
                 steps = assign_step_methods(model, [])
         assert isinstance(steps, Slice)
 
-    def test_modify_step_methods(self):
+    @pytest.fixture
+    def step_methods(self):
+        """Make sure we reset the STEP_METHODS after the test is done."""
+        methods_copy = pm.STEP_METHODS.copy()
+        yield pm.STEP_METHODS
+        pm.STEP_METHODS.clear()
+        for method in methods_copy:
+            pm.STEP_METHODS.append(method)
+
+    def test_modify_step_methods(self, step_methods):
         """Test step methods can be changed"""
-        # remove nuts from step_methods
-        step_methods = list(pm.STEP_METHODS)
         step_methods.remove(NUTS)
-        pm.STEP_METHODS = step_methods
 
         with pm.Model() as model:
             pm.Normal("x", 0, 1)
@@ -767,7 +782,7 @@ class TestAssignStepMethods:
         assert not isinstance(steps, NUTS)
 
         # add back nuts
-        pm.STEP_METHODS = [*step_methods, NUTS]
+        step_methods.append(NUTS)
 
         with pm.Model() as model:
             pm.Normal("x", 0, 1)

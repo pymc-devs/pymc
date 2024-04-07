@@ -14,7 +14,7 @@
 import warnings
 
 from collections.abc import Mapping, Sequence
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 from pytensor.graph import ancestors
 from pytensor.tensor import TensorVariable
@@ -106,7 +106,7 @@ def observe(
         model_var = memo[var]
 
         # Just a sanity check
-        assert isinstance(model_var.owner.op, (ModelFreeRV, ModelDeterministic))
+        assert isinstance(model_var.owner.op, ModelFreeRV | ModelDeterministic)
         assert model_var in fgraph.variables
 
         var = model_var.owner.inputs[0]
@@ -223,7 +223,7 @@ def do(
 
 def change_value_transforms(
     model: Model,
-    vars_to_transforms: Mapping[ModelVariable, Union[Transform, None]],
+    vars_to_transforms: Mapping[ModelVariable, Transform | None],
 ) -> Model:
     """Change the value variables transforms in the model
 
@@ -307,7 +307,7 @@ def change_value_transforms(
 
 def remove_value_transforms(
     model: Model,
-    vars: Optional[Sequence[ModelVariable]] = None,
+    vars: Sequence[ModelVariable] | None = None,
 ) -> Model:
     """Remove the value variables transforms in the model
 

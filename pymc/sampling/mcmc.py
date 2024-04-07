@@ -24,8 +24,7 @@ from collections.abc import Iterator, Mapping, Sequence
 from typing import (
     Any,
     Literal,
-    Optional,
-    Union,
+    TypeAlias,
     overload,
 )
 
@@ -34,9 +33,11 @@ import pytensor.gradient as tg
 
 from arviz import InferenceData, dict_to_dataset
 from arviz.data.base import make_attrs
-from fastprogress.fastprogress import progress_bar
 from pytensor.graph.basic import Variable
-from typing_extensions import Protocol, TypeAlias
+from rich.console import Console
+from rich.progress import Progress
+from rich.theme import Theme
+from typing_extensions import Protocol
 
 import pymc as pm
 
@@ -65,6 +66,7 @@ from pymc.util import (
     RandomSeed,
     RandomState,
     _get_seeds_per_chain,
+    default_progress_theme,
     drop_warning_stat,
     get_untransformed_name,
     is_transformed_name,
@@ -78,7 +80,7 @@ __all__ = [
     "init_nuts",
 ]
 
-Step: TypeAlias = Union[BlockedStep, CompoundStep]
+Step: TypeAlias = BlockedStep | CompoundStep
 
 
 class SamplingIteratorCallback(Protocol):
@@ -95,8 +97,8 @@ def instantiate_steppers(
     model: Model,
     steps: list[Step],
     selected_steps: Mapping[type[BlockedStep], list[Any]],
-    step_kwargs: Optional[dict[str, dict]] = None,
-) -> Union[Step, list[Step]]:
+    step_kwargs: dict[str, dict] | None = None,
+) -> Step | list[Step]:
     """Instantiate steppers assigned to the model variables.
 
     This function is intended to be called automatically from ``sample()``, but
@@ -153,10 +155,10 @@ def instantiate_steppers(
 
 def assign_step_methods(
     model: Model,
-    step: Optional[Union[Step, Sequence[Step]]] = None,
-    methods: Optional[Sequence[type[BlockedStep]]] = None,
-    step_kwargs: Optional[dict[str, Any]] = None,
-) -> Union[Step, list[Step]]:
+    step: Step | Sequence[Step] | None = None,
+    methods: Sequence[type[BlockedStep]] | None = None,
+    step_kwargs: dict[str, Any] | None = None,
+) -> Step | list[Step]:
     """Assign model variables to appropriate step methods.
 
     Passing a specified model will auto-assign its constituent stochastic
@@ -190,7 +192,7 @@ def assign_step_methods(
     assigned_vars: set[Variable] = set()
 
     if step is not None:
-        if isinstance(step, (BlockedStep, CompoundStep)):
+        if isinstance(step, BlockedStep | CompoundStep):
             steps.append(step)
         else:
             steps.extend(step)
@@ -261,12 +263,13 @@ def _sample_external_nuts(
     tune: int,
     chains: int,
     target_accept: float,
-    random_seed: Union[RandomState, None],
-    initvals: Union[StartDict, Sequence[Optional[StartDict]], None],
+    random_seed: RandomState | None,
+    initvals: StartDict | Sequence[StartDict | None] | None,
     model: Model,
+    var_names: Sequence[str] | None,
     progressbar: bool,
-    idata_kwargs: Optional[dict],
-    nuts_sampler_kwargs: Optional[dict],
+    idata_kwargs: dict | None,
+    nuts_sampler_kwargs: dict | None,
     **kwargs,
 ):
     if nuts_sampler_kwargs is None:
@@ -290,6 +293,11 @@ def _sample_external_nuts(
         if idata_kwargs is not None:
             warnings.warn(
                 "`idata_kwargs` are currently ignored by the nutpie sampler",
+                UserWarning,
+            )
+        if var_names is not None:
+            warnings.warn(
+                "`var_names` are currently ignored by the nutpie sampler",
                 UserWarning,
             )
         compiled_model = nutpie.compile_pymc_model(model)
@@ -348,6 +356,7 @@ def _sample_external_nuts(
             random_seed=random_seed,
             initvals=initvals,
             model=model,
+            var_names=var_names,
             progressbar=progressbar,
             nuts_sampler=sampler,
             idata_kwargs=idata_kwargs,
@@ -366,23 +375,25 @@ def sample(
     draws: int = 1000,
     *,
     tune: int = 1000,
-    chains: Optional[int] = None,
-    cores: Optional[int] = None,
+    chains: int | None = None,
+    cores: int | None = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
+    progressbar_theme: Theme | None = default_progress_theme,
     step=None,
+    var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
-    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
     n_init: int = 200_000,
-    trace: Optional[TraceOrBackend] = None,
+    trace: TraceOrBackend | None = None,
     discard_tuned_samples: bool = True,
     compute_convergence_checks: bool = True,
     keep_warning_stat: bool = False,
     return_inferencedata: Literal[True] = True,
-    idata_kwargs: Optional[dict[str, Any]] = None,
-    nuts_sampler_kwargs: Optional[dict[str, Any]] = None,
+    idata_kwargs: dict[str, Any] | None = None,
+    nuts_sampler_kwargs: dict[str, Any] | None = None,
     callback=None,
     mp_ctx=None,
     **kwargs,
@@ -394,26 +405,28 @@ def sample(
     draws: int = 1000,
     *,
     tune: int = 1000,
-    chains: Optional[int] = None,
-    cores: Optional[int] = None,
+    chains: int | None = None,
+    cores: int | None = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
+    progressbar_theme: Theme | None = default_progress_theme,
     step=None,
+    var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
-    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
     n_init: int = 200_000,
-    trace: Optional[TraceOrBackend] = None,
+    trace: TraceOrBackend | None = None,
     discard_tuned_samples: bool = True,
     compute_convergence_checks: bool = True,
     keep_warning_stat: bool = False,
     return_inferencedata: Literal[False],
-    idata_kwargs: Optional[dict[str, Any]] = None,
-    nuts_sampler_kwargs: Optional[dict[str, Any]] = None,
+    idata_kwargs: dict[str, Any] | None = None,
+    nuts_sampler_kwargs: dict[str, Any] | None = None,
     callback=None,
     mp_ctx=None,
-    model: Optional[Model] = None,
+    model: Model | None = None,
     **kwargs,
 ) -> MultiTrace: ...
 
@@ -422,28 +435,30 @@ def sample(
     draws: int = 1000,
     *,
     tune: int = 1000,
-    chains: Optional[int] = None,
-    cores: Optional[int] = None,
+    chains: int | None = None,
+    cores: int | None = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
+    progressbar_theme: Theme | None = default_progress_theme,
     step=None,
+    var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
-    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
     n_init: int = 200_000,
-    trace: Optional[TraceOrBackend] = None,
+    trace: TraceOrBackend | None = None,
     discard_tuned_samples: bool = True,
     compute_convergence_checks: bool = True,
     keep_warning_stat: bool = False,
     return_inferencedata: bool = True,
-    idata_kwargs: Optional[dict[str, Any]] = None,
-    nuts_sampler_kwargs: Optional[dict[str, Any]] = None,
+    idata_kwargs: dict[str, Any] | None = None,
+    nuts_sampler_kwargs: dict[str, Any] | None = None,
     callback=None,
     mp_ctx=None,
-    model: Optional[Model] = None,
+    model: Model | None = None,
     **kwargs,
-) -> Union[InferenceData, MultiTrace]:
+) -> InferenceData | MultiTrace:
     r"""Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -478,6 +493,8 @@ def sample(
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically. By default the NUTS step
         method will be used, if appropriate to the model.
+    var_names : list of str, optional
+        Names of variables to be stored in the trace. Defaults to all free variables and deterministics.
     nuts_sampler : str
         Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"].
         This requires the chosen sampler to be installed.
@@ -680,6 +697,7 @@ def sample(
             random_seed=random_seed,
             initvals=initvals,
             model=model,
+            var_names=var_names,
             progressbar=progressbar,
             idata_kwargs=idata_kwargs,
             nuts_sampler_kwargs=nuts_sampler_kwargs,
@@ -722,12 +740,19 @@ def sample(
         model.check_start_vals(ip)
         _check_start_shape(model, ip)
 
+    if var_names is not None:
+        trace_vars = [v for v in model.unobserved_RVs if v.name in var_names]
+        assert len(trace_vars) == len(var_names), "Not all var_names were found in the model"
+    else:
+        trace_vars = None
+
     # Create trace backends for each chain
     run, traces = init_traces(
         backend=trace,
         chains=chains,
         expected_length=draws + tune,
         step=step,
+        trace_vars=trace_vars,
         initial_point=ip,
         model=model,
     )
@@ -739,7 +764,9 @@ def sample(
         "traces": traces,
         "chains": chains,
         "tune": tune,
+        "var_names": var_names,
         "progressbar": progressbar,
+        "progressbar_theme": progressbar_theme,
         "model": model,
         "cores": cores,
         "callback": callback,
@@ -818,7 +845,7 @@ def sample(
 
 def _sample_return(
     *,
-    run: Optional[RunType],
+    run: RunType | None,
     traces: Sequence[IBaseTrace],
     tune: int,
     t_sampling: float,
@@ -828,7 +855,7 @@ def _sample_return(
     keep_warning_stat: bool,
     idata_kwargs: dict[str, Any],
     model: Model,
-) -> Union[InferenceData, MultiTrace]:
+) -> InferenceData | MultiTrace:
     """Final step of `pm.sampler` that picks/slices chains,
     runs diagnostics and converts to the desired return type."""
     # Pick and slice chains to keep the maximum number of samples
@@ -917,9 +944,9 @@ def _sample_many(
     chains: int,
     traces: Sequence[IBaseTrace],
     start: Sequence[PointType],
-    random_seed: Optional[Sequence[RandomSeed]],
+    random_seed: Sequence[RandomSeed] | None,
     step: Step,
-    callback: Optional[SamplingIteratorCallback] = None,
+    callback: SamplingIteratorCallback | None = None,
     **kwargs,
 ):
     """Samples all chains sequentially.
@@ -961,7 +988,8 @@ def _sample(
     step: Step,
     trace: IBaseTrace,
     tune: int,
-    model: Optional[Model] = None,
+    model: Model | None = None,
+    progressbar_theme: Theme | None = default_progress_theme,
     callback=None,
     **kwargs,
 ) -> None:
@@ -989,6 +1017,8 @@ def _sample(
     tune : int
         Number of iterations to tune.
     model : Model (optional if in ``with`` context)
+    progressbar_theme : Theme
+        Optional custom theme for the progress bar.
     """
     skip_first = kwargs.get("skip_first", 0)
 
@@ -1005,19 +1035,16 @@ def _sample(
     )
     _pbar_data = {"chain": chain, "divergences": 0}
     _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
-    if progressbar:
-        sampling = progress_bar(sampling_gen, total=draws, display=progressbar)
-        sampling.comment = _desc.format(**_pbar_data)
-    else:
-        sampling = sampling_gen
-    try:
-        for it, diverging in enumerate(sampling):
-            if it >= skip_first and diverging:
-                _pbar_data["divergences"] += 1
-                if progressbar:
-                    sampling.comment = _desc.format(**_pbar_data)
-    except KeyboardInterrupt:
-        pass
+    with Progress(console=Console(theme=progressbar_theme)) as progress:
+        try:
+            task = progress.add_task(_desc.format(**_pbar_data), total=draws, visible=progressbar)
+            for it, diverging in enumerate(sampling_gen):
+                if it >= skip_first and diverging:
+                    _pbar_data["divergences"] += 1
+                progress.update(task, advance=1)
+            progress.update(task, advance=1, completed=True)
+        except KeyboardInterrupt:
+            pass
 
 
 def _iter_sample(
@@ -1028,9 +1055,9 @@ def _iter_sample(
     trace: IBaseTrace,
     chain: int = 0,
     tune: int = 0,
-    model: Optional[Model] = None,
+    model: Model | None = None,
     random_seed: RandomSeed = None,
-    callback: Optional[SamplingIteratorCallback] = None,
+    callback: SamplingIteratorCallback | None = None,
 ) -> Iterator[bool]:
     """Generator for sampling one chain. (Used in singleprocess sampling.)
 
@@ -1110,9 +1137,10 @@ def _mp_sample(
     random_seed: Sequence[RandomSeed],
     start: Sequence[PointType],
     progressbar: bool = True,
+    progressbar_theme: Theme | None = default_progress_theme,
     traces: Sequence[IBaseTrace],
-    model: Optional[Model] = None,
-    callback: Optional[SamplingIteratorCallback] = None,
+    model: Model | None = None,
+    callback: SamplingIteratorCallback | None = None,
     mp_ctx=None,
     **kwargs,
 ) -> None:
@@ -1137,6 +1165,8 @@ def _mp_sample(
         Dicts must contain numeric (transformed) initial values for all (transformed) free variables.
     progressbar : bool
         Whether or not to display a progress bar in the command line.
+    progressbar_theme : Theme
+        Optional custom theme for the progress bar.
     traces
         Recording backends for each chain.
     model : Model (optional if in ``with`` context)
@@ -1161,6 +1191,7 @@ def _mp_sample(
         start_points=start,
         step_method=step,
         progressbar=progressbar,
+        progressbar_theme=progressbar_theme,
         mp_ctx=mp_ctx,
     )
     try:
@@ -1190,8 +1221,8 @@ def _mp_sample(
 
 def _init_jitter(
     model: Model,
-    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
-    seeds: Union[Sequence[int], np.ndarray],
+    initvals: StartDict | Sequence[StartDict | None] | None,
+    seeds: Sequence[int] | np.ndarray,
     jitter: bool,
     jitter_max_retries: int,
 ) -> list[PointType]:
@@ -1247,12 +1278,12 @@ def init_nuts(
     init: str = "auto",
     chains: int = 1,
     n_init: int = 500_000,
-    model: Optional[Model] = None,
+    model: Model | None = None,
     random_seed: RandomSeed = None,
     progressbar=True,
     jitter_max_retries: int = 10,
-    tune: Optional[int] = None,
-    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    tune: int | None = None,
+    initvals: StartDict | Sequence[StartDict | None] | None = None,
     **kwargs,
 ) -> tuple[Sequence[PointType], NUTS]:
     """Set up the mass matrix initialization for NUTS.

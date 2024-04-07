@@ -15,7 +15,7 @@ import abc
 import warnings
 
 from abc import ABCMeta
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import numpy as np
 import pytensor
@@ -88,7 +88,7 @@ class RandomWalk(Distribution):
         if not (
             isinstance(init_dist, pt.TensorVariable)
             and init_dist.owner is not None
-            and isinstance(init_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
+            and isinstance(init_dist.owner.op, RandomVariable | SymbolicRandomVariable)
         ):
             raise TypeError("init_dist must be a distribution variable")
         check_dist_not_registered(init_dist)
@@ -96,7 +96,7 @@ class RandomWalk(Distribution):
         if not (
             isinstance(innovation_dist, pt.TensorVariable)
             and innovation_dist.owner is not None
-            and isinstance(innovation_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
+            and isinstance(innovation_dist.owner.op, RandomVariable | SymbolicRandomVariable)
         ):
             raise TypeError("innovation_dist must be a distribution variable")
         check_dist_not_registered(innovation_dist)
@@ -129,7 +129,7 @@ class RandomWalk(Distribution):
         if not (
             isinstance(innovation_dist, pt.TensorVariable)
             and innovation_dist.owner is not None
-            and isinstance(innovation_dist.owner.op, (RandomVariable, SymbolicRandomVariable))
+            and isinstance(innovation_dist.owner.op, RandomVariable | SymbolicRandomVariable)
         ):
             raise TypeError("innovation_dist must be a distribution variable")
 
@@ -549,7 +549,7 @@ class AR(Distribution):
 
         if init_dist is not None:
             if not isinstance(init_dist, TensorVariable) or not isinstance(
-                init_dist.owner.op, (RandomVariable, SymbolicRandomVariable)
+                init_dist.owner.op, RandomVariable | SymbolicRandomVariable
             ):
                 raise ValueError(
                     f"Init dist must be a distribution created via the `.dist()` API, "
@@ -573,7 +573,7 @@ class AR(Distribution):
         return super().dist([rhos, sigma, init_dist, steps, ar_order, constant], **kwargs)
 
     @classmethod
-    def _get_ar_order(cls, rhos: TensorVariable, ar_order: Optional[int], constant: bool) -> int:
+    def _get_ar_order(cls, rhos: TensorVariable, ar_order: int | None, constant: bool) -> int:
         """Compute ar_order given inputs
 
         If ar_order is not specified we do constant folding on the shape of rhos
@@ -948,7 +948,7 @@ class EulerMaruyama(Distribution):
 
         if init_dist is not None:
             if not isinstance(init_dist, TensorVariable) or not isinstance(
-                init_dist.owner.op, (RandomVariable, SymbolicRandomVariable)
+                init_dist.owner.op, RandomVariable | SymbolicRandomVariable
             ):
                 raise ValueError(
                     f"Init dist must be a distribution created via the `.dist()` API, "

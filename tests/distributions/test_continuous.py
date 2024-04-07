@@ -411,13 +411,23 @@ class TestMatchesScipy:
             lambda value, alpha, beta: st.beta.logcdf(value, alpha, beta),
         )
 
+    def test_beta_icdf(self):
+        check_icdf(
+            pm.Beta,
+            {"alpha": Rplus, "beta": Rplus},
+            lambda q, alpha, beta: st.beta.ppf(q, alpha, beta),
+        )
+
     def test_kumaraswamy(self):
         # Scipy does not have a built-in Kumaraswamy
         def scipy_log_pdf(value, a, b):
             return np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value**a)
 
+        def log1mexp(x):
+            return np.log1p(-np.exp(x)) if x < np.log(0.5) else np.log(-np.expm1(x))
+
         def scipy_log_cdf(value, a, b):
-            return pm.math.log1mexp_numpy(b * np.log1p(-(value**a)), negative_input=True)
+            return log1mexp(b * np.log1p(-(value**a)))
 
         check_logp(
             pm.Kumaraswamy,
@@ -557,6 +567,13 @@ class TestMatchesScipy:
             lambda value, nu, mu, sigma: st.t.logcdf(value, nu, mu, sigma),
         )
 
+    def test_studentt_icdf(self):
+        check_icdf(
+            pm.StudentT,
+            {"nu": Rplusbig, "mu": R, "sigma": Rplusbig},
+            lambda q, nu, mu, sigma: st.t.ppf(q, nu, mu, sigma),
+        )
+
     def test_cauchy(self):
         check_logp(
             pm.Cauchy,
@@ -621,6 +638,13 @@ class TestMatchesScipy:
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
             lambda value, alpha, beta: st.gamma.logcdf(value, alpha, scale=1.0 / beta),
+        )
+
+    def test_gamma_icdf(self):
+        check_icdf(
+            pm.Gamma,
+            {"alpha": Rplusbig, "beta": Rplusbig},
+            lambda q, alpha, beta: st.gamma.ppf(q, alpha, scale=1.0 / beta),
         )
 
     def test_inverse_gamma_logp(self):

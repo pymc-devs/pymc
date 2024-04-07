@@ -17,7 +17,7 @@
 Store sampling values in memory as a NumPy array.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
@@ -210,7 +210,7 @@ def _slice_as_ndarray(strace, idx):
 
 
 def point_list_to_multitrace(
-    point_list: list[dict[str, np.ndarray]], model: Optional[Model] = None
+    point_list: list[dict[str, np.ndarray]], model: Model | None = None
 ) -> MultiTrace:
     """transform point list into MultiTrace"""
     _model = modelcontext(model)

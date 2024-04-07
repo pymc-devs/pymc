@@ -69,6 +69,7 @@ jobs:
           - |
             tests/distributions/test_censored.py
             tests/distributions/test_simulator.py
+            tests/sampling/test_deterministic.py
             tests/sampling/test_forward.py
             tests/sampling/test_population.py
             tests/stats/test_convergence.py
@@ -96,6 +97,7 @@ jobs:
             tests/model/test_fgraph.py
             tests/model/transform/test_basic.py
             tests/model/transform/test_conditioning.py
+            tests/model/transform/test_optimization.py
             tests/test_model_graph.py
             tests/ode/test_ode.py
             tests/ode/test_utils.py
@@ -187,7 +189,7 @@ jobs:
       matrix:
         os: [windows-latest]
         floatx: [float64]
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         test-subset:
           - tests/variational/test_approximations.py tests/variational/test_callbacks.py tests/variational/test_inference.py tests/variational/test_opvi.py tests/test_initial_point.py
           - tests/model/test_core.py tests/sampling/test_mcmc.py

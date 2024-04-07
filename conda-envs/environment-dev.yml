@@ -9,12 +9,11 @@ dependencies:
 - blas
 - cachetools>=4.2.1
 - cloudpickle
-- fastprogress>=0.2.0
 - h5py>=2.7
 - numpy>=1.15.0
 - pandas>=0.24.0
 - pip
-- pytensor>=2.19,<2.20
+- pytensor>=2.20,<2.21
 - python-graphviz
 - networkx
 - scipy>=1.4.1
@@ -28,6 +27,7 @@ dependencies:
 - pre-commit>=2.8.0
 - pytest-cov>=2.5
 - pytest>=3.0
+- rich>=13.7.1
 - sphinx-copybutton
 - sphinx-design
 - sphinx-notfound-page

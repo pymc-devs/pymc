@@ -71,7 +71,7 @@ def _logprob_helper(rv, *values, **kwargs):
     if (not name) and (len(values) == 1):
         name = values[0].name
     if name:
-        if isinstance(logprob, (list, tuple)):
+        if isinstance(logprob, list | tuple):
             for i, term in enumerate(logprob):
                 term.name = f"{name}_logprob.{i}"
         else:

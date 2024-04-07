@@ -22,8 +22,6 @@ nodes in PyMC.
 
 import warnings
 
-from typing import Optional, Union
-
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
@@ -33,7 +31,7 @@ from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
 from pytensor.tensor import gammaln
 from pytensor.tensor.extra_ops import broadcast_shape
-from pytensor.tensor.math import tanh
+from pytensor.tensor.math import betaincinv, gammaincinv, tanh
 from pytensor.tensor.random.basic import (
     BetaRV,
     _gamma,
@@ -150,7 +148,7 @@ class BoundedContinuous(Continuous):
     """Base class for bounded continuous distributions"""
 
     # Indices of the arguments that define the lower and upper bounds of the distribution
-    bound_args_indices: Optional[list[int]] = None
+    bound_args_indices: list[int] | None = None
 
 
 @_default_transform.register(PositiveContinuous)
@@ -553,11 +551,11 @@ class TruncatedNormalRV(RandomVariable):
     def rng_fn(
         cls,
         rng: np.random.RandomState,
-        mu: Union[np.ndarray, float],
-        sigma: Union[np.ndarray, float],
-        lower: Union[np.ndarray, float],
-        upper: Union[np.ndarray, float],
-        size: Optional[Union[list[int], int]],
+        mu: np.ndarray | float,
+        sigma: np.ndarray | float,
+        lower: np.ndarray | float,
+        upper: np.ndarray | float,
+        size: list[int] | int | None,
     ) -> np.ndarray:
         # Upcast to float64. (Caller will downcast to desired dtype if needed)
         #   (Work-around for https://github.com/scipy/scipy/issues/15928)
@@ -657,12 +655,12 @@ class TruncatedNormal(BoundedContinuous):
     @classmethod
     def dist(
         cls,
-        mu: Optional[DIST_PARAMETER_TYPES] = 0,
-        sigma: Optional[DIST_PARAMETER_TYPES] = None,
+        mu: DIST_PARAMETER_TYPES | None = 0,
+        sigma: DIST_PARAMETER_TYPES | None = None,
         *,
-        tau: Optional[DIST_PARAMETER_TYPES] = None,
-        lower: Optional[DIST_PARAMETER_TYPES] = None,
-        upper: Optional[DIST_PARAMETER_TYPES] = None,
+        tau: DIST_PARAMETER_TYPES | None = None,
+        lower: DIST_PARAMETER_TYPES | None = None,
+        upper: DIST_PARAMETER_TYPES | None = None,
         **kwargs,
     ) -> RandomVariable:
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
@@ -837,8 +835,8 @@ class HalfNormal(PositiveContinuous):
     @classmethod
     def dist(
         cls,
-        sigma: Optional[DIST_PARAMETER_TYPES] = None,
-        tau: Optional[DIST_PARAMETER_TYPES] = None,
+        sigma: DIST_PARAMETER_TYPES | None = None,
+        tau: DIST_PARAMETER_TYPES | None = None,
         *args,
         **kwargs,
     ):
@@ -981,10 +979,10 @@ class Wald(PositiveContinuous):
     @classmethod
     def dist(
         cls,
-        mu: Optional[DIST_PARAMETER_TYPES] = None,
-        lam: Optional[DIST_PARAMETER_TYPES] = None,
-        phi: Optional[DIST_PARAMETER_TYPES] = None,
-        alpha: Optional[DIST_PARAMETER_TYPES] = 0.0,
+        mu: DIST_PARAMETER_TYPES | None = None,
+        lam: DIST_PARAMETER_TYPES | None = None,
+        phi: DIST_PARAMETER_TYPES | None = None,
+        alpha: DIST_PARAMETER_TYPES | None = 0.0,
         **kwargs,
     ):
         mu, lam, phi = cls.get_mu_lam_phi(mu, lam, phi)
@@ -1155,11 +1153,11 @@ class Beta(UnitContinuous):
     @classmethod
     def dist(
         cls,
-        alpha: Optional[DIST_PARAMETER_TYPES] = None,
-        beta: Optional[DIST_PARAMETER_TYPES] = None,
-        mu: Optional[DIST_PARAMETER_TYPES] = None,
-        sigma: Optional[DIST_PARAMETER_TYPES] = None,
-        nu: Optional[DIST_PARAMETER_TYPES] = None,
+        alpha: DIST_PARAMETER_TYPES | None = None,
+        beta: DIST_PARAMETER_TYPES | None = None,
+        mu: DIST_PARAMETER_TYPES | None = None,
+        sigma: DIST_PARAMETER_TYPES | None = None,
+        nu: DIST_PARAMETER_TYPES | None = None,
         *args,
         **kwargs,
     ):
@@ -1222,6 +1220,16 @@ class Beta(UnitContinuous):
 
         return check_parameters(
             logcdf,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
+
+    def icdf(value, alpha, beta):
+        res = betaincinv(alpha, beta, value)
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
             alpha > 0,
             beta > 0,
             msg="alpha > 0, beta > 0",
@@ -1872,6 +1880,21 @@ class StudentT(Continuous):
             msg="nu > 0, sigma > 0",
         )
 
+    def icdf(value, nu, mu, sigma):
+        res = pt.switch(
+            pt.lt(value, 0.5),
+            -pt.sqrt(nu) * pt.sqrt((1.0 / betaincinv(nu * 0.5, 0.5, 2.0 * value)) - 1.0),
+            pt.sqrt(nu) * pt.sqrt((1.0 / betaincinv(nu * 0.5, 0.5, 2.0 * (1 - value))) - 1.0),
+        )
+        res = mu + res * sigma
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            nu > 0,
+            sigma > 0,
+            msg="nu > 0, sigma > 0",
+        )
+
 
 class Pareto(BoundedContinuous):
     r"""
@@ -2063,7 +2086,7 @@ class Cauchy(Continuous):
     def icdf(value, alpha, beta):
         res = alpha + beta * pt.tan(np.pi * (value - 0.5))
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             beta > 0,
             msg="beta > 0",
@@ -2147,7 +2170,7 @@ class HalfCauchy(PositiveContinuous):
     def icdf(value, loc, beta):
         res = loc + beta * pt.tan(np.pi * (value) / 2.0)
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             beta > 0,
             msg="beta > 0",
@@ -2271,6 +2294,16 @@ class Gamma(PositiveContinuous):
             pt.log(pt.gammainc(alpha, beta * value)),
         )
         return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
+
+    def icdf(value, alpha, scale):
+        res = scale * gammaincinv(alpha, value)
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            alpha > 0,
+            scale > 0,
+            msg="alpha > 0, beta > 0",
+        )
 
 
 class InverseGamma(PositiveContinuous):
@@ -2556,7 +2589,7 @@ class Weibull(PositiveContinuous):
     def icdf(value, alpha, beta):
         res = beta * (-pt.log(1 - value)) ** (1 / alpha)
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             alpha > 0,
             beta > 0,
@@ -3116,7 +3149,7 @@ class Triangular(BoundedContinuous):
             upper - np.sqrt((upper - lower) * (upper - c) * (1 - value)),
         )
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             lower <= c,
             c <= upper,
@@ -3219,7 +3252,7 @@ class Gumbel(Continuous):
     def icdf(value, mu, beta):
         res = mu - beta * pt.log(-pt.log(value))
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             beta > 0,
             msg="beta > 0",
@@ -3437,7 +3470,7 @@ class Logistic(Continuous):
     def icdf(value, mu, s):
         res = mu + s * pt.log(value / (1 - value))
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             s > 0,
             msg="s > 0",
@@ -3787,7 +3820,7 @@ class Moyal(Continuous):
     def icdf(value, mu, sigma):
         res = sigma * -pt.log(2.0 * pt.erfcinv(value) ** 2) + mu
         res = check_icdf_value(res, value)
-        return check_parameters(
+        return check_icdf_parameters(
             res,
             sigma > 0,
             msg="sigma > 0",

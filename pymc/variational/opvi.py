@@ -122,7 +122,7 @@ def _known_scan_ignored_inputs(terms):
     return [
         n.owner.inputs[0]
         for n in pytensor.graph.ancestors(terms)
-        if n.owner is not None and isinstance(n.owner.op, (MinibatchIndexRV, SimulatorRV))
+        if n.owner is not None and isinstance(n.owner.op, MinibatchIndexRV | SimulatorRV)
     ]
 
 
@@ -163,9 +163,9 @@ def try_to_set_test_value(node_in, node_out, s):
     if s is None:
         s = 1
     s = pytensor.compile.view_op(pt.as_tensor(s))
-    if not isinstance(node_in, (list, tuple)):
+    if not isinstance(node_in, list | tuple):
         node_in = [node_in]
-    if not isinstance(node_out, (list, tuple)):
+    if not isinstance(node_out, list | tuple):
         node_out = [node_out]
     for i, o in zip(node_in, node_out):
         if hasattr(i.tag, "test_value"):
@@ -1482,10 +1482,10 @@ class Approximation(WithMemoization):
         node_in = node
         if more_replacements:
             node = graph_replace(node, more_replacements, strict=False)
-        if not isinstance(node, (list, tuple)):
+        if not isinstance(node, list | tuple):
             node = [node]
         node = self.model.replace_rvs_by_values(node)
-        if not isinstance(node_in, (list, tuple)):
+        if not isinstance(node_in, list | tuple):
             node = node[0]
         if size is None:
             node_out = self.symbolic_single_sample(node)

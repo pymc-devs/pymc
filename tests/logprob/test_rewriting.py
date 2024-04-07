@@ -131,7 +131,7 @@ def test_joint_logprob_incsubtensor(indices, size):
     y_value_var = Y_rv.clone()
     y_value_var.name = "y"
 
-    assert isinstance(Y_rv.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1))
+    assert isinstance(Y_rv.owner.op, IncSubtensor | AdvancedIncSubtensor | AdvancedIncSubtensor1)
 
     Y_rv_logp = conditional_logp({Y_rv: y_value_var})
     Y_rv_logp_combined = pt.add(*Y_rv_logp.values())

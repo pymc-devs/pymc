@@ -107,7 +107,7 @@ def augment_system(ode_func, n_states, n_theta):
         t_yhat = pt.atleast_1d(yhat)
     else:
         # Stack the results of the ode_func into a single tensor variable
-        if not isinstance(yhat, (list, tuple)):
+        if not isinstance(yhat, list | tuple):
             raise TypeError(
                 f"Unexpected type, {type(yhat)}, returned by ode_func. TensorVariable, list or tuple is expected."
             )

@@ -16,7 +16,7 @@ import enum
 import logging
 
 from collections.abc import Sequence
-from typing import Any, Optional
+from typing import Any
 
 import arviz
 
@@ -53,12 +53,12 @@ class SamplerWarning:
     kind: WarningType
     message: str
     level: str
-    step: Optional[int] = None
-    exec_info: Optional[Any] = None
-    extra: Optional[Any] = None
-    divergence_point_source: Optional[dict] = None
-    divergence_point_dest: Optional[dict] = None
-    divergence_info: Optional[Any] = None
+    step: int | None = None
+    exec_info: Any | None = None
+    extra: Any | None = None
+    divergence_point_source: dict | None = None
+    divergence_point_dest: dict | None = None
+    divergence_info: Any | None = None
 
 
 def run_convergence_checks(idata: arviz.InferenceData, model) -> list[SamplerWarning]:

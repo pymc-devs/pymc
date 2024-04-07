@@ -15,7 +15,8 @@ import logging
 import re
 import warnings
 
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 from unittest import mock
 
 import arviz as az
@@ -268,8 +269,7 @@ def model_test_idata_kwargs() -> pm.Model:
         x = pm.Normal("x", shape=(2,), dims=["x_coord"])
         _ = pm.Normal("y", x, observed=[0, 0])
         _ = pm.Normal("z", 0, 1, dims="z_coord")
-        pm.ConstantData("constantdata", [1, 2, 3])
-        pm.MutableData("mutabledata", 2)
+        pm.Data("data", [1, 2, 3])
     return m
 
 
@@ -298,9 +298,9 @@ def test_idata_kwargs(
     model_test_idata_kwargs: pm.Model,
     sampler: Callable[..., az.InferenceData],
     idata_kwargs: dict[str, Any],
-    postprocessing_backend: Optional[str],
+    postprocessing_backend: str | None,
 ):
-    idata: Optional[az.InferenceData] = None
+    idata: az.InferenceData | None = None
     with model_test_idata_kwargs:
         idata = sampler(
             tune=50,
@@ -312,8 +312,7 @@ def test_idata_kwargs(
     assert idata is not None
     const_data = idata.get("constant_data")
     assert const_data is not None
-    assert "constantdata" in const_data
-    assert "mutabledata" in const_data
+    assert "data" in const_data
 
     if idata_kwargs.get("log_likelihood", False):
         assert "log_likelihood" in idata
@@ -489,6 +488,15 @@ def test_sample_partially_observed():
     assert idata.observed_data["x_observed"].shape == (2,)
     assert idata.posterior["x_unobserved"].shape == (1, 10, 1)
     assert idata.posterior["x"].shape == (1, 10, 3)
+
+
+def test_sample_var_names():
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        b = pm.Deterministic("b", a**2)
+        idata = pm.sample(10, tune=10, nuts_sampler="numpyro", var_names=["a"])
+        assert "a" in idata.posterior
+        assert "b" not in idata.posterior
 
 
 @pytest.mark.parametrize("nuts_sampler", ("numpyro", "blackjax"))

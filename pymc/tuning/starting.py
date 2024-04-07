@@ -22,14 +22,14 @@ import sys
 import warnings
 
 from collections.abc import Sequence
-from typing import Optional
 
 import numpy as np
 import pytensor.gradient as tg
 
-from fastprogress.fastprogress import ProgressBar, progress_bar
 from numpy import isfinite
 from pytensor import Variable
+from rich.console import Console
+from rich.progress import Progress, TextColumn
 from scipy.optimize import minimize
 
 import pymc as pm
@@ -37,7 +37,7 @@ import pymc as pm
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
-from pymc.util import get_default_varnames, get_value_vars_from_user_vars
+from pymc.util import default_progress_theme, get_default_varnames, get_value_vars_from_user_vars
 from pymc.vartypes import discrete_types, typefilter
 
 __all__ = ["find_MAP"]
@@ -45,15 +45,16 @@ __all__ = ["find_MAP"]
 
 def find_MAP(
     start=None,
-    vars: Optional[Sequence[Variable]] = None,
+    vars: Sequence[Variable] | None = None,
     method="L-BFGS-B",
     return_raw=False,
     include_transformed=True,
     progressbar=True,
+    progressbar_theme=default_progress_theme,
     maxeval=5000,
     model=None,
     *args,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     **kwargs,
 ):
     """Finds the local maximum a posteriori point given a model.
@@ -82,6 +83,8 @@ def find_MAP(
         to the constrained values
     progressbar: bool, optional defaults to True
         Whether to display a progress bar in the command line.
+    progressbar_theme: Theme, optional
+        Custom theme for the progress bar.
     maxeval: int, optional, defaults to 5000
         The maximum number of times the posterior distribution is evaluated.
     model: Model (optional if in `with` context)
@@ -159,26 +162,23 @@ def find_MAP(
         method = "Powell"
 
     if compute_gradient and method != "Powell":
-        cost_func = CostFuncWrapper(maxeval, progressbar, logp_func, dlogp_func)
+        cost_func = CostFuncWrapper(maxeval, progressbar, progressbar_theme, logp_func, dlogp_func)
     else:
-        cost_func = CostFuncWrapper(maxeval, progressbar, logp_func)
+        cost_func = CostFuncWrapper(maxeval, progressbar, progressbar_theme, logp_func)
         compute_gradient = False
 
-    try:
-        opt_result = minimize(
-            cost_func, x0.data, method=method, jac=compute_gradient, *args, **kwargs
-        )
-        mx0 = opt_result["x"]  # r -> opt_result
-    except (KeyboardInterrupt, StopIteration) as e:
-        mx0, opt_result = cost_func.previous_x, None
-        if isinstance(e, StopIteration):
-            pm._log.info(e)
-    finally:
-        last_v = cost_func.n_eval
-        if progressbar:
-            assert isinstance(cost_func.progress, ProgressBar)
-            cost_func.progress.total = last_v
-            cost_func.progress.update(last_v)
+    with cost_func.progress:
+        try:
+            opt_result = minimize(
+                cost_func, x0.data, method=method, jac=compute_gradient, *args, **kwargs
+            )
+            mx0 = opt_result["x"]  # r -> opt_result
+        except (KeyboardInterrupt, StopIteration) as e:
+            mx0, opt_result = cost_func.previous_x, None
+            if isinstance(e, StopIteration):
+                pm._log.info(e)
+        finally:
+            cost_func.progress.update(cost_func.task, completed=cost_func.n_eval)
             print(file=sys.stdout)
 
     mx0 = RaveledVars(mx0, x0.point_map_info)
@@ -199,7 +199,14 @@ def allfinite(x):
 
 
 class CostFuncWrapper:
-    def __init__(self, maxeval=5000, progressbar=True, logp_func=None, dlogp_func=None):
+    def __init__(
+        self,
+        maxeval=5000,
+        progressbar=True,
+        progressbar_theme=default_progress_theme,
+        logp_func=None,
+        dlogp_func=None,
+    ):
         self.n_eval = 0
         self.maxeval = maxeval
         self.logp_func = logp_func
@@ -212,11 +219,12 @@ class CostFuncWrapper:
             self.desc = "logp = {:,.5g}, ||grad|| = {:,.5g}"
         self.previous_x = None
         self.progressbar = progressbar
-        if progressbar:
-            self.progress = progress_bar(range(maxeval), total=maxeval, display=progressbar)
-            self.progress.update(0)
-        else:
-            self.progress = range(maxeval)
+        self.progress = Progress(
+            *Progress.get_default_columns(),
+            TextColumn("{task.fields[loss]}"),
+            console=Console(theme=progressbar_theme),
+        )
+        self.task = self.progress.add_task("MAP", total=maxeval, visible=progressbar, loss="")
 
     def __call__(self, x):
         neg_value = np.float64(self.logp_func(pm.floatX(x)))
@@ -232,16 +240,14 @@ class CostFuncWrapper:
             grad = None
 
         if self.n_eval % 10 == 0:
-            self.update_progress_desc(neg_value, grad)
+            self.progress.update(self.task, loss=self.update_progress_desc(neg_value, grad))
 
         if self.n_eval > self.maxeval:
-            self.update_progress_desc(neg_value, grad)
+            self.progress.update(self.task, loss=self.update_progress_desc(neg_value, grad))
             raise StopIteration
 
         self.n_eval += 1
-        if self.progressbar:
-            assert isinstance(self.progress, ProgressBar)
-            self.progress.update_bar(self.n_eval)
+        self.progress.update(self.task, completed=self.n_eval)
 
         if self.use_gradient:
             return value, grad
@@ -251,7 +257,7 @@ class CostFuncWrapper:
     def update_progress_desc(self, neg_value: float, grad: np.float64 = None) -> None:
         if self.progressbar:
             if grad is None:
-                self.progress.comment = self.desc.format(neg_value)
+                return self.desc.format(neg_value)
             else:
                 norm_grad = np.linalg.norm(grad)
-                self.progress.comment = self.desc.format(neg_value, norm_grad)
+                return self.desc.format(neg_value, norm_grad)

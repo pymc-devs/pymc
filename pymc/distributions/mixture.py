@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import itertools
 import warnings
 
 import numpy as np
@@ -178,7 +179,7 @@ class Mixture(Distribution):
 
     @classmethod
     def dist(cls, w, comp_dists, **kwargs):
-        if not isinstance(comp_dists, (tuple, list)):
+        if not isinstance(comp_dists, tuple | list):
             # comp_dists is a single component
             comp_dists = [comp_dists]
         elif len(comp_dists) == 1:
@@ -204,7 +205,7 @@ class Mixture(Distribution):
             # TODO: Allow these to not be a RandomVariable as long as we can call `ndim_supp` on them
             #  and resize them
             if not isinstance(dist, TensorVariable) or not isinstance(
-                dist.owner.op, (RandomVariable, SymbolicRandomVariable)
+                dist.owner.op, RandomVariable | SymbolicRandomVariable
             ):
                 raise ValueError(
                     f"Component dist must be a distribution created via the `.dist()` API, got {type(dist)}"
@@ -480,7 +481,7 @@ def marginal_mixture_default_transform(op, rv):
                 transform.backward(value, *component.owner.inputs)
                 for transform, component in zip(default_transforms, components)
             ]
-            for expr1, expr2 in zip(backward_expressions[:-1], backward_expressions[1:]):
+            for expr1, expr2 in itertools.pairwise(backward_expressions):
                 if not equal_computations([expr1], [expr2]):
                     transform_warning()
                     return None
@@ -524,10 +525,6 @@ class NormalMixture:
         the component standard deviations
     tau : tensor_like of float
         the component precisions
-    comp_shape : shape of the Normal component
-        notice that it should be different than the shape
-        of the mixture distribution, with the last axis representing
-        the number of components.
 
     Notes
     -----
@@ -554,16 +551,16 @@ class NormalMixture:
             y = pm.NormalMixture("y", w=weights, mu=μ, sigma=σ, observed=data)
     """
 
-    def __new__(cls, name, w, mu, sigma=None, tau=None, comp_shape=(), **kwargs):
+    def __new__(cls, name, w, mu, sigma=None, tau=None, **kwargs):
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        return Mixture(name, w, Normal.dist(mu, sigma=sigma, size=comp_shape), **kwargs)
+        return Mixture(name, w, Normal.dist(mu, sigma=sigma), **kwargs)
 
     @classmethod
-    def dist(cls, w, mu, sigma=None, tau=None, comp_shape=(), **kwargs):
+    def dist(cls, w, mu, sigma=None, tau=None, **kwargs):
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
 
-        return Mixture.dist(w, Normal.dist(mu, sigma=sigma, size=comp_shape), **kwargs)
+        return Mixture.dist(w, Normal.dist(mu, sigma=sigma), **kwargs)
 
 
 def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):

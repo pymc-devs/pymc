@@ -34,7 +34,6 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from typing import Optional, Union
 
 import pytensor
 
@@ -89,7 +88,7 @@ def naive_bcast_rv_lift(fgraph, node):
         return None  # pragma: no cover
 
     # Do not replace RV if it is associated with a value variable
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is not None and rv_var in rv_map_feature.rv_values:
         return None
 
@@ -198,10 +197,10 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
 
 
 @node_rewriter([MakeVector, Join])
-def find_measurable_stacks(fgraph, node) -> Optional[list[TensorVariable]]:
+def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
     r"""Finds `Joins`\s and `MakeVector`\s for which a `logprob` can be computed."""
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -247,7 +246,7 @@ def logprob_dimshuffle(op, values, base_var, **kwargs):
 
     # Reverse the effects of dimshuffle on the value variable
     # First, drop any augmented dimensions and reinsert any dropped dimensions
-    undo_ds: list[Union[int, str]] = [i for i, o in enumerate(op.new_order) if o != "x"]
+    undo_ds: list[int | str] = [i for i, o in enumerate(op.new_order) if o != "x"]
     dropped_dims = tuple(sorted(set(op.transposition) - set(op.shuffle)))
     for dropped_dim in dropped_dims:
         undo_ds.insert(dropped_dim, "x")
@@ -272,10 +271,10 @@ def logprob_dimshuffle(op, values, base_var, **kwargs):
 
 
 @node_rewriter([DimShuffle])
-def find_measurable_dimshuffles(fgraph, node) -> Optional[list[TensorVariable]]:
+def find_measurable_dimshuffles(fgraph, node) -> list[TensorVariable] | None:
     r"""Finds `Dimshuffle`\s for which a `logprob` can be computed."""
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover

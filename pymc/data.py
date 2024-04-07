@@ -18,7 +18,7 @@ import warnings
 
 from collections.abc import Sequence
 from copy import copy
-from typing import Optional, Union, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -203,10 +203,10 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
 
 def determine_coords(
     model,
-    value: Union[pd.DataFrame, pd.Series, xr.DataArray],
-    dims: Optional[Sequence[Optional[str]]] = None,
-    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
-) -> tuple[dict[str, Union[Sequence, np.ndarray]], Sequence[Optional[str]]]:
+    value: pd.DataFrame | pd.Series | xr.DataArray,
+    dims: Sequence[str | None] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None]]:
     """Determines coordinate values from data or the model (via ``dims``)."""
     if coords is None:
         coords = {}
@@ -260,23 +260,20 @@ def ConstantData(
     name: str,
     value,
     *,
-    dims: Optional[Sequence[str]] = None,
-    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
-    export_index_as_coords=False,
+    dims: Sequence[str] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
     infer_dims_and_coords=False,
     **kwargs,
 ) -> TensorConstant:
-    """Alias for ``pm.Data(..., mutable=False)``.
+    """Alias for ``pm.Data``.
 
     Registers the ``value`` as a :class:`~pytensor.tensor.TensorConstant` with the model.
     For more information, please reference :class:`pymc.Data`.
     """
-    if export_index_as_coords:
-        infer_dims_and_coords = export_index_as_coords
-        warnings.warn(
-            "Deprecation warning: 'export_index_as_coords; is deprecated and will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
-            DeprecationWarning,
-        )
+    warnings.warn(
+        "ConstantData is deprecated. All Data variables are now mutable. Use Data instead.",
+        FutureWarning,
+    )
 
     var = Data(
         name,
@@ -284,7 +281,6 @@ def ConstantData(
         dims=dims,
         coords=coords,
         infer_dims_and_coords=infer_dims_and_coords,
-        mutable=False,
         **kwargs,
     )
     return cast(TensorConstant, var)
@@ -294,23 +290,20 @@ def MutableData(
     name: str,
     value,
     *,
-    dims: Optional[Sequence[str]] = None,
-    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
-    export_index_as_coords=False,
+    dims: Sequence[str] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
     infer_dims_and_coords=False,
     **kwargs,
 ) -> SharedVariable:
-    """Alias for ``pm.Data(..., mutable=True)``.
+    """Alias for ``pm.Data``.
 
     Registers the ``value`` as a :class:`~pytensor.compile.sharedvalue.SharedVariable`
     with the model. For more information, please reference :class:`pymc.Data`.
     """
-    if export_index_as_coords:
-        infer_dims_and_coords = export_index_as_coords
-        warnings.warn(
-            "Deprecation warning: 'export_index_as_coords; is deprecated and will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
-            DeprecationWarning,
-        )
+    warnings.warn(
+        "MutableData is deprecated. All Data variables are now mutable. Use Data instead.",
+        FutureWarning,
+    )
 
     var = Data(
         name,
@@ -318,7 +311,6 @@ def MutableData(
         dims=dims,
         coords=coords,
         infer_dims_and_coords=infer_dims_and_coords,
-        mutable=True,
         **kwargs,
     )
     return cast(SharedVariable, var)
@@ -328,13 +320,12 @@ def Data(
     name: str,
     value,
     *,
-    dims: Optional[Sequence[str]] = None,
-    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
-    export_index_as_coords=False,
+    dims: Sequence[str] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
     infer_dims_and_coords=False,
-    mutable: Optional[bool] = None,
+    mutable: bool | None = None,
     **kwargs,
-) -> Union[SharedVariable, TensorConstant]:
+) -> SharedVariable | TensorConstant:
     """Data container that registers a data variable with the model.
 
     Depending on the ``mutable`` setting (default: True), the variable
@@ -373,15 +364,6 @@ def Data(
     infer_dims_and_coords : bool, default=False
         If True, the ``Data`` container will try to infer what the coordinates
         and dimension names should be if there is an index in ``value``.
-    mutable : bool, optional
-        Switches between creating a :class:`~pytensor.compile.sharedvalue.SharedVariable`
-        (``mutable=True``) vs. creating a :class:`~pytensor.tensor.TensorConstant`
-        (``mutable=False``).
-        Consider using :class:`pymc.ConstantData` or :class:`pymc.MutableData` as less
-        verbose alternatives to ``pm.Data(..., mutable=...)``.
-        If this parameter is not specified, the value it takes will depend on the
-        version of the package. Since ``v4.1.0`` the default value is
-        ``mutable=False``, with previous versions having ``mutable=True``.
     **kwargs : dict, optional
         Extra arguments passed to :func:`pytensor.shared`.
 
@@ -394,7 +376,7 @@ def Data(
     >>> observed_data = [mu + np.random.randn(20) for mu in true_mu]
 
     >>> with pm.Model() as model:
-    ...     data = pm.MutableData('data', observed_data[0])
+    ...     data = pm.Data('data', observed_data[0])
     ...     mu = pm.Normal('mu', 0, 10)
     ...     pm.Normal('y', mu=mu, sigma=1, observed=data)
 
@@ -430,19 +412,12 @@ def Data(
             "Pass them directly to `observed` if you want to trigger auto-imputation"
         )
 
-    if mutable is None:
+    if mutable is not None:
         warnings.warn(
-            "The `mutable` kwarg was not specified. Before v4.1.0 it defaulted to `pm.Data(mutable=True)`,"
-            " which is equivalent to using `pm.MutableData()`."
-            " In v4.1.0 the default changed to `pm.Data(mutable=False)`, equivalent to `pm.ConstantData`."
-            " Use `pm.ConstantData`/`pm.MutableData` or pass `pm.Data(..., mutable=False/True)` to avoid this warning.",
-            UserWarning,
+            "Data is now always mutable. Specifying the `mutable` kwarg will raise an error in a future release",
+            FutureWarning,
         )
-        mutable = False
-    if mutable:
-        x = pytensor.shared(arr, name, **kwargs)
-    else:
-        x = pt.as_tensor_variable(arr, name, **kwargs)
+    x = pytensor.shared(arr, name, **kwargs)
 
     if isinstance(dims, str):
         dims = (dims,)
@@ -453,24 +428,11 @@ def Data(
             expected=x.ndim,
         )
 
-    # Optionally infer coords and dims from the input value.
-    if export_index_as_coords:
-        infer_dims_and_coords = export_index_as_coords
-        warnings.warn(
-            "Deprecation warning: 'export_index_as_coords; is deprecated and will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
-            DeprecationWarning,
-        )
-
     if infer_dims_and_coords:
         coords, dims = determine_coords(model, value, dims)
 
     if dims:
-        if not mutable:
-            # Use the dimension lengths from the before it was tensorified.
-            # These can still be tensors, but in many cases they are numeric.
-            xshape = np.shape(arr)
-        else:
-            xshape = x.shape
+        xshape = x.shape
         # Register new dimension lengths
         for d, dname in enumerate(dims):
             if dname not in model.dim_lengths:
@@ -479,7 +441,6 @@ def Data(
                     # Note: Coordinate values can't be taken from
                     # the value, because it could be N-dimensional.
                     values=coords.get(dname, None),
-                    mutable=mutable,
                     length=xshape[d],
                 )
 

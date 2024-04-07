@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from collections.abc import Sequence
-from typing import Union
 
 from pytensor import Variable
 from pytensor.graph import ancestors
@@ -25,7 +24,7 @@ from pymc.model.fgraph import (
     model_from_fgraph,
 )
 
-ModelVariable = Union[Variable, str]
+ModelVariable = Variable | str
 
 
 def prune_vars_detached_from_observed(model: Model) -> Model:
@@ -54,8 +53,8 @@ def prune_vars_detached_from_observed(model: Model) -> Model:
     return model_from_fgraph(fgraph)
 
 
-def parse_vars(model: Model, vars: Union[ModelVariable, Sequence[ModelVariable]]) -> list[Variable]:
-    if isinstance(vars, (list, tuple)):
+def parse_vars(model: Model, vars: ModelVariable | Sequence[ModelVariable]) -> list[Variable]:
+    if isinstance(vars, list | tuple):
         vars_seq = vars
     else:
         vars_seq = (vars,)
