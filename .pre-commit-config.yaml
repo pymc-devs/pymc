@@ -4,7 +4,7 @@ ci:
 exclude: ^(docs/logos|pymc/tests/data)/
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.5.0
+  rev: v4.6.0
   hooks:
     -   id: check-merge-conflict
     -   id: check-toml
@@ -27,7 +27,7 @@ repos:
         - --exclude=binder/
         - --exclude=versioneer.py
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.3.4
+  rev: v0.3.5
   hooks:
     - id: ruff
       args: ["--fix", "--output-format=full"]
