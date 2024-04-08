@@ -1098,12 +1098,12 @@ class CustomDist:
        from pytensor.tensor import TensorVariable
 
         def pert(
-            low: Tensorvariable,
-            peak: Tensorvariable,
-            high: Tensorvariable,
-            lmbda: Tensorvariable,
-            size: Tensorvariable,
-        ) -> Tensorvariable:
+            low: TensorVariable,
+            peak: TensorVariable,
+            high: TensorVariable,
+            lmbda: TensorVariable,
+            size: TensorVariable,
+        ) -> TensorVariable:
             range = (high - low)
             s_alpha = 1 + lmbda * (peak - low) / range
             s_beta = 1 + lmbda * (high - peak) / range
