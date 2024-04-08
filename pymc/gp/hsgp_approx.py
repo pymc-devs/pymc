@@ -34,8 +34,8 @@ def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> TensorLike:
     """Set the boundary using the mean-subtracted `Xs` and `c`.  `c` is usually a scalar
     multiplyer greater than 1.0, but it may be one value per dimension or column of `Xs`.
     """
-    S = pt.max(pt.abs(Xs), axis=0)
-    L = c * S
+    S = pt.max(Xs, axis=0)
+    L = (c * S).eval()  # to make sure L is not updated with out-of-sample preds
     return L
 
 
