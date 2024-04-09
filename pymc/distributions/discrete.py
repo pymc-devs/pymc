@@ -18,7 +18,6 @@ import pytensor.tensor as pt
 
 from pytensor.tensor import TensorConstant
 from pytensor.tensor.random.basic import (
-    RandomVariable,
     ScipyRandomVariable,
     bernoulli,
     betabinom,
@@ -28,7 +27,9 @@ from pytensor.tensor.random.basic import (
     hypergeometric,
     nbinom,
     poisson,
+    uniform,
 )
+from pytensor.tensor.random.utils import normalize_size_param
 from scipy import stats
 
 import pymc as pm
@@ -45,8 +46,8 @@ from pymc.distributions.dist_math import (
     normal_lccdf,
     normal_lcdf,
 )
-from pymc.distributions.distribution import Discrete
-from pymc.distributions.shape_utils import rv_size_is_none
+from pymc.distributions.distribution import Discrete, SymbolicRandomVariable
+from pymc.distributions.shape_utils import implicit_size_from_params, rv_size_is_none
 from pymc.logprob.basic import logcdf, logp
 from pymc.math import sigmoid
 
@@ -64,6 +65,8 @@ __all__ = [
     "OrderedLogistic",
     "OrderedProbit",
 ]
+
+from pymc.pytensorf import normalize_rng_param
 
 
 class Binomial(Discrete):
@@ -387,20 +390,26 @@ class Bernoulli(Discrete):
         )
 
 
-class DiscreteWeibullRV(RandomVariable):
+class DiscreteWeibullRV(SymbolicRandomVariable):
     name = "discrete_weibull"
-    ndim_supp = 0
-    ndims_params = [0, 0]
-    dtype = "int64"
+    signature = "[rng],[size],(),()->[rng],()"
     _print_name = ("dWeibull", "\\operatorname{dWeibull}")
 
     @classmethod
-    def rng_fn(cls, rng, q, beta, size):
-        p = rng.uniform(size=size)
-        return np.ceil(np.power(np.log(1 - p) / np.log(q), 1.0 / beta)) - 1
+    def rv_op(cls, q, beta, *, size=None, rng=None):
+        q = pt.as_tensor(q)
+        beta = pt.as_tensor(beta)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
 
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(q, beta, ndims_params=cls.ndims_params)
 
-discrete_weibull = DiscreteWeibullRV()
+        next_rng, p = uniform(size=size, rng=rng).owner.outputs
+        draws = pt.ceil(pt.power(pt.log(1 - p) / pt.log(q), 1.0 / beta)) - 1
+        draws = draws.astype("int64")
+
+        return cls(inputs=[rng, size, q, beta], outputs=[next_rng, draws])(rng, size, q, beta)
 
 
 class DiscreteWeibull(Discrete):
@@ -452,12 +461,11 @@ class DiscreteWeibull(Discrete):
 
     """
 
-    rv_op = discrete_weibull
+    rv_type = DiscreteWeibullRV
+    rv_op = DiscreteWeibullRV.rv_op
 
     @classmethod
     def dist(cls, q, beta, *args, **kwargs):
-        q = pt.as_tensor_variable(q)
-        beta = pt.as_tensor_variable(beta)
         return super().dist([q, beta], **kwargs)
 
     def support_point(rv, size, q, beta):

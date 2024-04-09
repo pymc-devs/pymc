@@ -65,6 +65,7 @@ from pymc.distributions.shape_utils import (
     broadcast_dist_samples_shape,
     change_dist_size,
     get_support_shape,
+    implicit_size_from_params,
     rv_size_is_none,
     to_tuple,
 )
@@ -593,48 +594,28 @@ class Multinomial(Discrete):
         )
 
 
-class DirichletMultinomialRV(RandomVariable):
+class DirichletMultinomialRV(SymbolicRandomVariable):
     name = "dirichlet_multinomial"
-    ndim_supp = 1
-    ndims_params = [0, 1]
-    dtype = "int64"
-    _print_name = ("DirichletMN", "\\operatorname{DirichletMN}")
-
-    def _supp_shape_from_params(self, dist_params, param_shapes=None):
-        return supp_shape_from_ref_param_shape(
-            ndim_supp=self.ndim_supp,
-            dist_params=dist_params,
-            param_shapes=param_shapes,
-            ref_param_idx=1,
-        )
+    signature = "[rng],[size],(),(p)->[rng],(p)"
+    _print_name = ("DirichletMultinomial", "\\operatorname{DirichletMultinomial}")
 
     @classmethod
-    def rng_fn(cls, rng, n, a, size):
-        if n.ndim > 0 or a.ndim > 1:
-            n, a = broadcast_params([n, a], cls.ndims_params)
-            size = tuple(size or ())
+    def rv_op(cls, n, a, *, size=None, rng=None):
+        n = pt.as_tensor(n, dtype=int)
+        a = pt.as_tensor(a)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
 
-            if size:
-                n = np.broadcast_to(n, size)
-                a = np.broadcast_to(a, (*size, a.shape[-1]))
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(n, a, ndims_params=cls.ndims_params)
 
-            res = np.empty(a.shape)
-            for idx in np.ndindex(a.shape[:-1]):
-                p = rng.dirichlet(a[idx])
-                res[idx] = rng.multinomial(n[idx], p)
-            return res
-        else:
-            # n is a scalar, a is a 1d array
-            p = rng.dirichlet(a, size=size)  # (size, a.shape)
+        next_rng, p = dirichlet(a, size=size, rng=rng).owner.outputs
+        final_rng, rv = multinomial(n, p, size=size, rng=next_rng).owner.outputs
 
-            res = np.empty(p.shape)
-            for idx in np.ndindex(p.shape[:-1]):
-                res[idx] = rng.multinomial(n, p[idx])
-
-            return res
-
-
-dirichlet_multinomial = DirichletMultinomialRV()
+        return cls(
+            inputs=[rng, size, n, a],
+            outputs=[final_rng, rv],
+        )(rng, size, n, a)
 
 
 class DirichletMultinomial(Discrete):
@@ -666,7 +647,8 @@ class DirichletMultinomial(Discrete):
         the length of the last axis.
     """
 
-    rv_op = dirichlet_multinomial
+    rv_type = DirichletMultinomialRV
+    rv_op = DirichletMultinomialRV.rv_op
 
     @classmethod
     def dist(cls, n, a, *args, **kwargs):
