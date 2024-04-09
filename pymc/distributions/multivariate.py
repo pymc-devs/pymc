@@ -35,6 +35,7 @@ from pytensor.tensor.random.basic import dirichlet, multinomial, multivariate_no
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import (
     broadcast_params,
+    normalize_size_param,
     supp_shape_from_ref_param_shape,
 )
 from pytensor.tensor.type import TensorType
@@ -70,7 +71,7 @@ from pymc.distributions.shape_utils import (
 from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
 from pymc.logprob.abstract import _logprob
 from pymc.math import kron_diag, kron_dot
-from pymc.pytensorf import intX
+from pymc.pytensorf import intX, normalize_rng_param
 from pymc.util import check_dist_not_registered
 
 __all__ = [
@@ -1161,10 +1162,39 @@ _ljk_cholesky_cov_base = _LKJCholeskyCovBaseRV()
 # _LKJCholeskyCovBaseRV requires a properly shaped `D`, which means the variable can't
 # be safely resized. Because of this, we add the thin SymbolicRandomVariable wrapper
 class _LKJCholeskyCovRV(SymbolicRandomVariable):
-    default_output = 1
-    signature = "(),(),(),(n)->(),(n)"
-    ndim_supp = 1
+    signature = "[rng],(),(),(n)->[rng],(n)"
     _print_name = ("_lkjcholeskycov", "\\operatorname{_lkjcholeskycov}")
+
+    @classmethod
+    def rv_op(cls, n, eta, sd_dist, *, size=None):
+        # We don't allow passing `rng` because we don't fully control the rng of the components!
+        n = pt.as_tensor(n, dtype="int64", ndim=0)
+        eta = pt.as_tensor_variable(eta, ndim=0)
+        rng = pytensor.shared(np.random.default_rng())
+        size = normalize_size_param(size)
+
+        # We resize the sd_dist automatically so that it has (size x n) independent
+        # draws which is what the `_LKJCholeskyCovBaseRV.rng_fn` expects. This makes the
+        # random and logp methods equivalent, as the latter also assumes a unique value
+        # for each diagonal element.
+        # Since `eta` and `n` are forced to be scalars we don't need to worry about
+        # implied batched dimensions from those for the time being.
+        if rv_size_is_none(size):
+            size = sd_dist.shape[:-1]
+
+        shape = (*size, n)
+        if sd_dist.owner.op.ndim_supp == 0:
+            sd_dist = change_dist_size(sd_dist, shape)
+        else:
+            # The support shape must be `n` but we have no way of controlling it
+            sd_dist = change_dist_size(sd_dist, shape[:-1])
+
+        next_rng, lkjcov = _ljk_cholesky_cov_base(n, eta, sd_dist, rng=rng).owner.outputs
+
+        return _LKJCholeskyCovRV(
+            inputs=[rng, n, eta, sd_dist],
+            outputs=[next_rng, lkjcov],
+        )(rng, n, eta, sd_dist)
 
     def update(self, node):
         return {node.inputs[0]: node.outputs[0]}
@@ -1176,12 +1206,10 @@ class _LKJCholeskyCov(Distribution):
     """
 
     rv_type = _LKJCholeskyCovRV
+    rv_op = _LKJCholeskyCovRV.rv_op
 
     @classmethod
     def dist(cls, n, eta, sd_dist, **kwargs):
-        n = pt.as_tensor_variable(n, dtype=int)
-        eta = pt.as_tensor_variable(eta)
-
         if not (
             isinstance(sd_dist, Variable)
             and sd_dist.owner is not None
@@ -1192,34 +1220,6 @@ class _LKJCholeskyCov(Distribution):
 
         check_dist_not_registered(sd_dist)
         return super().dist([n, eta, sd_dist], **kwargs)
-
-    @classmethod
-    def rv_op(cls, n, eta, sd_dist, size=None):
-        # We resize the sd_dist automatically so that it has (size x n) independent
-        # draws which is what the `_LKJCholeskyCovBaseRV.rng_fn` expects. This makes the
-        # random and logp methods equivalent, as the latter also assumes a unique value
-        # for each diagonal element.
-        # Since `eta` and `n` are forced to be scalars we don't need to worry about
-        # implied batched dimensions from those for the time being.
-        if size is None:
-            size = sd_dist.shape[:-1]
-        shape = (*size, n)
-        if sd_dist.owner.op.ndim_supp == 0:
-            sd_dist = change_dist_size(sd_dist, shape)
-        else:
-            # The support shape must be `n` but we have no way of controlling it
-            sd_dist = change_dist_size(sd_dist, shape[:-1])
-
-        # Create new rng for the _lkjcholeskycov internal RV
-        rng = pytensor.shared(np.random.default_rng())
-
-        rng_, n_, eta_, sd_dist_ = rng.type(), n.type(), eta.type(), sd_dist.type()
-        next_rng_, lkjcov_ = _ljk_cholesky_cov_base(n_, eta_, sd_dist_, rng=rng_).owner.outputs
-
-        return _LKJCholeskyCovRV(
-            inputs=[rng_, n_, eta_, sd_dist_],
-            outputs=[next_rng_, lkjcov_],
-        )(rng, n, eta, sd_dist)
 
 
 @_change_dist_size.register(_LKJCholeskyCovRV)
@@ -2630,7 +2630,34 @@ class ZeroSumNormalRV(SymbolicRandomVariable):
     """ZeroSumNormal random variable"""
 
     _print_name = ("ZeroSumNormal", "\\operatorname{ZeroSumNormal}")
-    default_output = 0
+
+    @classmethod
+    def rv_op(cls, sigma, support_shape, *, size=None, rng=None):
+        n_zerosum_axes = pt.get_vector_length(support_shape)
+        sigma = pt.as_tensor(sigma)
+        support_shape = pt.as_tensor(support_shape, ndim=1)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
+
+        if rv_size_is_none(size):
+            # Size is implied by shape of sigma
+            size = sigma.shape[:-n_zerosum_axes]
+
+        shape = tuple(size) + tuple(support_shape)
+        next_rng, normal_dist = pm.Normal.dist(sigma=sigma, shape=shape, rng=rng).owner.outputs
+
+        # Zerosum-normaling is achieved by subtracting the mean along the given n_zerosum_axes
+        zerosum_rv = normal_dist
+        for axis in range(n_zerosum_axes):
+            zerosum_rv -= zerosum_rv.mean(axis=-axis - 1, keepdims=True)
+
+        support_str = ",".join([f"d{i}" for i in range(n_zerosum_axes)])
+        signature = f"[rng],(),(s),[size]->[rng],({support_str})"
+        return ZeroSumNormalRV(
+            inputs=[rng, sigma, support_shape, size],
+            outputs=[next_rng, zerosum_rv],
+            signature=signature,
+        )(rng, sigma, support_shape, size)
 
 
 class ZeroSumNormal(Distribution):
@@ -2695,6 +2722,7 @@ class ZeroSumNormal(Distribution):
     """
 
     rv_type = ZeroSumNormalRV
+    rv_op = ZeroSumNormalRV.rv_op
 
     def __new__(
         cls, *args, zerosum_axes=None, n_zerosum_axes=None, support_shape=None, dims=None, **kwargs
@@ -2726,10 +2754,10 @@ class ZeroSumNormal(Distribution):
         )
 
     @classmethod
-    def dist(cls, sigma=1, n_zerosum_axes=None, support_shape=None, **kwargs):
+    def dist(cls, sigma=1.0, n_zerosum_axes=None, support_shape=None, **kwargs):
         n_zerosum_axes = cls.check_zerosum_axes(n_zerosum_axes)
 
-        sigma = pt.as_tensor_variable(sigma)
+        sigma = pt.as_tensor(sigma)
         if not all(sigma.type.broadcastable[-n_zerosum_axes:]):
             raise ValueError("sigma must have length one across the zero-sum axes")
 
@@ -2743,15 +2771,13 @@ class ZeroSumNormal(Distribution):
             if n_zerosum_axes > 0:
                 raise ValueError("You must specify dims, shape or support_shape parameter")
 
-        support_shape = pt.as_tensor_variable(intX(support_shape))
+        support_shape = pt.as_tensor(support_shape, dtype="int64", ndim=1)
 
         assert n_zerosum_axes == pt.get_vector_length(
             support_shape
         ), "support_shape has to be as long as n_zerosum_axes"
 
-        return super().dist(
-            [sigma], n_zerosum_axes=n_zerosum_axes, support_shape=support_shape, **kwargs
-        )
+        return super().dist([sigma, support_shape], **kwargs)
 
     @classmethod
     def check_zerosum_axes(cls, n_zerosum_axes: int | None) -> int:
@@ -2762,52 +2788,6 @@ class ZeroSumNormal(Distribution):
         if not n_zerosum_axes > 0:
             raise ValueError("n_zerosum_axes has to be > 0")
         return n_zerosum_axes
-
-    @classmethod
-    def rv_op(cls, sigma, n_zerosum_axes, support_shape, size=None):
-        if size is not None:
-            shape = tuple(size) + tuple(support_shape)
-        else:
-            # Size is implied by shape of sigma
-            shape = tuple(sigma.shape[:-n_zerosum_axes]) + tuple(support_shape)
-
-        normal_dist = pm.Normal.dist(sigma=sigma, shape=shape)
-
-        if n_zerosum_axes > normal_dist.ndim:
-            raise ValueError("Shape of distribution is too small for the number of zerosum axes")
-
-        normal_dist_, sigma_, support_shape_ = (
-            normal_dist.type(),
-            sigma.type(),
-            support_shape.type(),
-        )
-
-        # Zerosum-normaling is achieved by subtracting the mean along the given n_zerosum_axes
-        zerosum_rv_ = normal_dist_
-        for axis in range(n_zerosum_axes):
-            zerosum_rv_ -= zerosum_rv_.mean(axis=-axis - 1, keepdims=True)
-
-        support_str = ",".join([f"d{i}" for i in range(n_zerosum_axes)])
-        signature = f"({support_str}),(),(s)->({support_str})"
-        return ZeroSumNormalRV(
-            inputs=[normal_dist_, sigma_, support_shape_],
-            outputs=[zerosum_rv_],
-            signature=signature,
-        )(normal_dist, sigma, support_shape)
-
-
-@_change_dist_size.register(ZeroSumNormalRV)
-def change_zerosum_size(op, normal_dist, new_size, expand=False):
-    normal_dist, sigma, support_shape = normal_dist.owner.inputs
-
-    if expand:
-        original_shape = tuple(normal_dist.shape)
-        old_size = original_shape[: len(original_shape) - op.ndim_supp]
-        new_size = tuple(new_size) + old_size
-
-    return ZeroSumNormal.rv_op(
-        sigma=sigma, n_zerosum_axes=op.ndim_supp, support_shape=support_shape, size=new_size
-    )
 
 
 @_support_point.register(ZeroSumNormalRV)
@@ -2822,11 +2802,10 @@ def zerosum_default_transform(op, rv):
 
 
 @_logprob.register(ZeroSumNormalRV)
-def zerosumnormal_logp(op, values, normal_dist, sigma, support_shape, **kwargs):
+def zerosumnormal_logp(op, values, rng, sigma, support_shape, size, **kwargs):
     (value,) = values
     shape = value.shape
     n_zerosum_axes = op.ndim_supp
-    *_, sigma = normal_dist.owner.inputs
 
     _deg_free_support_shape = pt.inc_subtensor(shape[-n_zerosum_axes:], -1)
     _full_size = pt.prod(shape).astype("floatX")

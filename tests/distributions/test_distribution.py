@@ -749,27 +749,27 @@ class TestCustomSymbolicDist:
 
         out = CustomDist.dist([0.25, 0.75], dist=dist, signature="(p)->()")
         # Size and updates are added automatically to the signature
-        assert out.owner.op.signature == "(),(p)->(),()"
+        assert out.owner.op.signature == "[size],(p),[rng]->(),[rng]"
         assert out.owner.op.ndim_supp == 0
-        assert out.owner.op.ndims_params == [0, 1]
+        assert out.owner.op.ndims_params == [1]
 
         # When recreated internally, the whole signature may already be known
-        out = CustomDist.dist([0.25, 0.75], dist=dist, signature="(),(p)->(),()")
-        assert out.owner.op.signature == "(),(p)->(),()"
+        out = CustomDist.dist([0.25, 0.75], dist=dist, signature="[size],(p),[rng]->(),[rng]")
+        assert out.owner.op.signature == "[size],(p),[rng]->(),[rng]"
         assert out.owner.op.ndim_supp == 0
-        assert out.owner.op.ndims_params == [0, 1]
+        assert out.owner.op.ndims_params == [1]
 
         # A safe signature can be inferred from ndim_supp and ndims_params
-        out = CustomDist.dist([0.25, 0.75], dist=dist, ndim_supp=0, ndims_params=[0, 1])
-        assert out.owner.op.signature == "(),(i10)->(),()"
+        out = CustomDist.dist([0.25, 0.75], dist=dist, ndim_supp=0, ndims_params=[1])
+        assert out.owner.op.signature == "[size],(i00),[rng]->(),[rng]"
         assert out.owner.op.ndim_supp == 0
-        assert out.owner.op.ndims_params == [0, 1]
+        assert out.owner.op.ndims_params == [1]
 
         # Otherwise be default we assume everything is scalar, even though it's wrong in this case
         out = CustomDist.dist([0.25, 0.75], dist=dist)
-        assert out.owner.op.signature == "(),()->(),()"
+        assert out.owner.op.signature == "[size],(),[rng]->(),[rng]"
         assert out.owner.op.ndim_supp == 0
-        assert out.owner.op.ndims_params == [0, 0]
+        assert out.owner.op.ndims_params == [0]
 
 
 class TestSymbolicRandomVariable:

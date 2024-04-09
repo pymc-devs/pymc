@@ -1089,3 +1089,14 @@ def toposort_replace(
         reverse=reverse,
     )
     fgraph.replace_all(sorted_replacements, import_missing=True)
+
+
+def normalize_rng_param(rng: None | Variable) -> Variable:
+    """Validate rng is a valid type or create a new one if None"""
+    if rng is None:
+        rng = pytensor.shared(np.random.default_rng())
+    elif not isinstance(rng.type, RandomType):
+        raise TypeError(
+            "The type of rng should be an instance of either RandomGeneratorType or RandomStateType"
+        )
+    return rng

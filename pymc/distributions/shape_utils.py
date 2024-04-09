@@ -297,8 +297,10 @@ def find_size(
     return None
 
 
-def rv_size_is_none(size: Variable) -> bool:
+def rv_size_is_none(size: Variable | None) -> bool:
     """Check whether an rv size is None (ie., pt.Constant([]))"""
+    if size is None:
+        return True
     return size.type.shape == (0,)  # type: ignore [attr-defined]
 
 
@@ -354,6 +356,7 @@ def change_dist_size(
     else:
         new_size = tuple(new_size)  # type: ignore
 
+    # TODO: Get rid of unused expand argument
     new_dist = _change_dist_size(dist.owner.op, dist, new_size=new_size, expand=expand)
     _add_future_warning_tag(new_dist)
 
@@ -538,3 +541,25 @@ def get_support_shape_1d(
         return support_shape_
     else:
         return None
+
+
+def implicit_size_from_params(
+    *params: TensorVariable,
+    ndims_params: Sequence[int],
+) -> TensorVariable:
+    """Infer the size of a distribution from the batch dimenesions of its parameters."""
+    batch_shapes = []
+    for param, ndim in zip(params, ndims_params):
+        batch_shape = list(param.shape[:-ndim] if ndim > 0 else param.shape)
+        # Overwrite broadcastable dims
+        for i, broadcastable in enumerate(param.type.broadcastable):
+            if broadcastable:
+                batch_shape[i] = 1
+        batch_shapes.append(batch_shape)
+
+    return pt.as_tensor(
+        pt.broadcast_shape(
+            *batch_shapes,
+            arrays_are_shapes=True,
+        )
+    )
