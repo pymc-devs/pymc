@@ -72,7 +72,7 @@ Please choose from the following:
 - |DOIzenodo| A DOI for all versions.
 - DOIs for specific versions are shown on Zenodo and under `Releases <https://github.com/pymc-devs/pymc/releases>`_
 
-.. |DOIpaper| image:: https://img.shields.io/badge/DOI-10.7717%2Fpeerj--cs.1516-blue
+.. |DOIpaper| image:: https://img.shields.io/badge/DOI-10.7717%2Fpeerj--cs.1516-blue.svg
      :target: https://doi.org/10.7717/peerj-cs.1516
 .. |DOIzenodo| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4603970.svg
    :target: https://doi.org/10.5281/zenodo.4603970
