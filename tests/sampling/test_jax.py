@@ -34,7 +34,7 @@ from pytensor.graph import graph_inputs
 import pymc as pm
 
 from pymc import ImputationWarning
-from pymc.distributions.multivariate import PosDefMatrix
+from pymc.distributions.multivariate import DirichletMultinomial, PosDefMatrix
 from pymc.sampling.jax import (
     _get_batched_jittered_initial_points,
     _get_log_likelihood,
@@ -511,3 +511,9 @@ def test_convergence_warnings(caplog, nuts_sampler):
 
     [record] = caplog.records
     assert re.match(r"There were \d+ divergences after tuning", record.message)
+
+
+def test_dirichlet_multinomial():
+    dm = DirichletMultinomial.dist(n=5, a=np.eye(3) * 1e6 + 0.01)
+    dm_draws = pm.draw(dm, mode="JAX")
+    np.testing.assert_equal(dm_draws, np.eye(3) * 5)
