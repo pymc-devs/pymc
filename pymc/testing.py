@@ -928,7 +928,6 @@ class BaseTestDistributionRandom:
             params = {
                 k: p * np.ones(self.repeated_params_shape) for k, p in self.pymc_dist_params.items()
             }
-            self._instantiate_pymc_rv(params)
             sizes_to_check = [None, self.repeated_params_shape, (5, self.repeated_params_shape)]
             sizes_expected = [
                 (self.repeated_params_shape,),
