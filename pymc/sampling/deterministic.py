@@ -84,6 +84,7 @@ def compute_deterministics(
 
     if var_names is None:
         deterministics = model.deterministics
+        var_names = [det.name for det in deterministics]
     else:
         deterministics = [model[var_name] for var_name in var_names]
         if not set(deterministics).issubset(set(model.deterministics)):
@@ -101,7 +102,7 @@ def compute_deterministics(
     new_dataset = apply_function_over_dataset(
         fn,
         dataset[[rv.name for rv in model.free_RVs]],
-        output_var_names=[det.name for det in model.deterministics],
+        output_var_names=var_names,
         dims=dims,
         coords=coords,
         sample_dims=sample_dims,
