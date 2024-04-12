@@ -1050,7 +1050,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     expected=new_length,
                 )
             self._coords[name] = tuple(coord_values)
-        self.dim_lengths[name].set_value(new_length)
+        dim_length = self.dim_lengths[name]
+        if not isinstance(dim_length, SharedVariable):
+            raise TypeError(
+                f"The dim_length of `{name}` must be a `SharedVariable` "
+                "(created through `coords` to allow updating). "
+                f"The current type is: {type(dim_length)}"
+            )
+        dim_length.set_value(new_length)
         return
 
     def initial_point(self, random_seed: SeedSequenceSeed = None) -> dict[str, np.ndarray]:
@@ -1102,8 +1109,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         shared_object = self[name]
         if not isinstance(shared_object, SharedVariable):
             raise TypeError(
-                f"The variable `{name}` must be a `SharedVariable`"
-                " (created through `pm.Data()` or `pm.Data(mutable=True)`) to allow updating. "
+                f"The variable `{name}` must be a `SharedVariable` "
+                "(created through `pm.Data()` to allow updating.) "
                 f"The current type is: {type(shared_object)}"
             )
 
