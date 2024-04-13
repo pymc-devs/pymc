@@ -1981,7 +1981,11 @@ class SkewStudentT(Continuous):
 
         a_ = (a + 0.5) * pt.log(1 + x / pt.sqrt(a + b + x**2))
         b_ = (b + 0.5) * pt.log(1 - x / pt.sqrt(a + b + x**2))
-        c = (a + b - 1) * pt.log(2) + pt.log(pt.betainc(a, b)) + 0.5 * pt.log(a + b)
+        c = (
+            (a + b - 1) * pt.log(2)
+            + (pt.gammaln(a) + pt.gammaln(b) - pt.gammaln(a + b))
+            + 0.5 * pt.log(a + b)
+        )
 
         res = a_ + b_ - c
 
