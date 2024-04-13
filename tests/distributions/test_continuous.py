@@ -549,6 +549,20 @@ class TestMatchesScipy:
             lambda value, nu, mu, sigma: st.t.logpdf(value, nu, mu, sigma),
         )
 
+    def test_skewstudentt_logp(self):
+        check_logp(
+            pm.SkewStudentT,
+            R,
+            {"a": Rplus, "b": Rplus, "mu": R, "lam": Rplus},
+            lambda value, a, b, mu, lam: st.t.logpdf(value, a, b, mu, lam**-0.5),
+        )
+        check_logp(
+            pm.SkewStudentT,
+            R,
+            {"a": Rplus, "b": Rplus, "mu": R, "sigma": Rplus},
+            lambda value, a, b, mu, sigma: st.t.logpdf(value, a, b, mu, sigma),
+        )
+
     @pytest.mark.skipif(
         condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
@@ -572,6 +586,31 @@ class TestMatchesScipy:
             pm.StudentT,
             {"nu": Rplusbig, "mu": R, "sigma": Rplusbig},
             lambda q, nu, mu, sigma: st.t.ppf(q, nu, mu, sigma),
+        )
+
+    @pytest.mark.skipif(
+        condition=(pytensor.config.floatX == "float32"),
+        reason="Fails on float32 due to numerical issues",
+    )
+    def test_skewstudentt_logcdf(self):
+        check_logcdf(
+            pm.SkewStudentT,
+            R,
+            {"a": Rplus, "b": Rplus, "mu": R, "lam": Rplus},
+            lambda value, a, b, mu, lam: st.t.logcdf(value, a, b, mu, lam**-0.5),
+        )
+        check_logcdf(
+            pm.SkewStudentT,
+            R,
+            {"a": Rplus, "b": Rplus, "mu": R, "sigma": Rplus},
+            lambda value, a, b, mu, sigma: st.t.logcdf(value, a, b, mu, sigma),
+        )
+
+    def test_skewstudentt_icdf(self):
+        check_icdf(
+            pm.SkewStudentT,
+            {"a": Rplusbig, "b": Rplusbig, "mu": R, "sigma": Rplusbig},
+            lambda q, a, b, mu, sigma: st.t.ppf(q, a, b, mu, sigma),
         )
 
     def test_cauchy(self):

@@ -989,7 +989,7 @@ Thus, Thomas, Chris and I are pleased to announce that PyMC3 is now in Beta.
 * Benjamin Edwards <bedwards@cs.unm.edu>
 * Brian Naughton <briannaughton@gmail.com>
 * Chad Heyne <chadheyne@gmail.com>
-* Chris Fonnesbeck <chris.fonnesbeck@vanderbilt.edu>
+* Chris Fonnesbeck <fonnesbeck@gmail.com>
 * Corey Farwell <coreyf@rwell.org>
 * John Salvatier <jsalvatier@gmail.com>
 * Karlson Pfannschmidt <quietdeath@gmail.com>
