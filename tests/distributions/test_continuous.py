@@ -553,12 +553,6 @@ class TestMatchesScipy:
         check_logp(
             pm.SkewStudentT,
             R,
-            {"a": Rplus, "b": Rplus, "mu": R, "lam": Rplus},
-            lambda value, a, b, mu, lam: st.t.logpdf(value, a, b, mu, lam**-0.5),
-        )
-        check_logp(
-            pm.SkewStudentT,
-            R,
             {"a": Rplus, "b": Rplus, "mu": R, "sigma": Rplus},
             lambda value, a, b, mu, sigma: st.t.logpdf(value, a, b, mu, sigma),
         )
@@ -1287,6 +1281,27 @@ class TestMoments:
     def test_studentt_support_point(self, mu, nu, sigma, size, expected):
         with pm.Model() as model:
             pm.StudentT("x", mu=mu, nu=nu, sigma=sigma, size=size)
+        assert_support_point_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "a, b, mu, sigma, size, expected",
+        [
+            (1, 1, 0, 1, None, 0),
+            (np.ones(5), np.ones(5), 0, 1, None, np.zeros(5)),
+            (10, 10, np.arange(5), np.arange(1, 6), None, np.arange(5)),
+            (
+                10,
+                10,
+                np.arange(5),
+                np.arange(1, 6),
+                (2, 5),
+                np.full((2, 5), np.arange(5)),
+            ),
+        ],
+    )
+    def test_skewstudentt_support_point(self, a, b, mu, sigma, size, expected):
+        with pm.Model() as model:
+            pm.SkewStudentT("x", a=a, b=b, mu=mu, sigma=sigma, size=size)
         assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
