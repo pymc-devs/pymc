@@ -554,7 +554,7 @@ class TestMatchesScipy:
             pm.SkewStudentT,
             R,
             {"a": Rplus, "b": Rplus, "mu": R, "sigma": Rplus},
-            lambda value, a, b, mu, sigma: st.t.logpdf(value, a, b, mu, sigma),
+            lambda value, a, b, mu, sigma: st.jf_skew_t.logpdf(value, a, b, mu, sigma),
         )
 
     @pytest.mark.skipif(
@@ -591,20 +591,20 @@ class TestMatchesScipy:
             pm.SkewStudentT,
             R,
             {"a": Rplus, "b": Rplus, "mu": R, "lam": Rplus},
-            lambda value, a, b, mu, lam: st.t.logcdf(value, a, b, mu, lam**-0.5),
+            lambda value, a, b, mu, lam: st.jf_skew_t.logcdf(value, a, b, mu, lam**-0.5),
         )
         check_logcdf(
             pm.SkewStudentT,
             R,
             {"a": Rplus, "b": Rplus, "mu": R, "sigma": Rplus},
-            lambda value, a, b, mu, sigma: st.t.logcdf(value, a, b, mu, sigma),
+            lambda value, a, b, mu, sigma: st.jf_skew_t.logcdf(value, a, b, mu, sigma),
         )
 
     def test_skewstudentt_icdf(self):
         check_icdf(
             pm.SkewStudentT,
             {"a": Rplusbig, "b": Rplusbig, "mu": R, "sigma": Rplusbig},
-            lambda q, a, b, mu, sigma: st.t.ppf(q, a, b, mu, sigma),
+            lambda q, a, b, mu, sigma: st.jf_skew_t.ppf(q, a, b, mu, sigma),
         )
 
     def test_cauchy(self):
