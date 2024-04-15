@@ -645,7 +645,7 @@ def test_invalid_jacobian_broadcast_raises():
     buggy_transform = BuggyTransform()
 
     with pm.Model() as m:
-        pm.Uniform("x", shape=(4, 3), transform=buggy_transform, default_transform=None)
+        pm.Uniform("x", shape=(4, 3), default_transform=buggy_transform)
 
     for jacobian_val in (True, False):
         with pytest.raises(
