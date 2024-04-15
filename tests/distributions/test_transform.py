@@ -619,7 +619,7 @@ def test_transform_univariate_dist_logp_shape():
 
 def test_univariate_transform_multivariate_dist_raises():
     with pm.Model() as m:
-        pm.Dirichlet("x", [1, 1, 1], transform=tr.log, default_transform=None)
+        pm.Dirichlet("x", [1, 1, 1], default_transform=tr.log)
 
     for jacobian_val in (True, False):
         with pytest.raises(
