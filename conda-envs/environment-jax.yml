@@ -24,7 +24,9 @@ dependencies:
 - python-graphviz
 - networkx
 - rich>=13.7.1
-- scipy>=1.4.1
+# JAX is only compatible with Scipy 1.13.0 from >=0.4.26, but the respective version of
+# JAXlib is still not on conda: https://github.com/conda-forge/jaxlib-feedstock/pull/243
+- scipy>=1.4.1,<1.13.0
 - typing-extensions>=3.7.4
 # Extra dependencies for testing
 - ipython>=7.16
