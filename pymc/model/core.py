@@ -1430,7 +1430,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         if transform is UNSET:
             transform = default_transform
-        elif transform and default_transform:
+        elif transform is not None and default_transform is not None:
             transform = ChainedTransform([default_transform, transform])
 
         if value_var is None:
