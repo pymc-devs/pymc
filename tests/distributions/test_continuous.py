@@ -1945,7 +1945,7 @@ class TestHalfStudentT(BaseTestDistributionRandom):
 
 
 class TestSkewStudentT(BaseTestDistributionRandom):
-    pymc_dist = pm.SkewStudentTStudentT
+    pymc_dist = pm.SkewStudentT
     pymc_dist_params = {"a": 5.0, "b": 5.0, "mu": -1.0, "sigma": 2.0}
     expected_rv_op_params = {"a": 5.0, "b": 5.0, "mu": -1.0, "sigma": 2.0}
     reference_dist_params = {"a": 5.0, "b": 5.0, "loc": -1.0, "scale": 2.0}
