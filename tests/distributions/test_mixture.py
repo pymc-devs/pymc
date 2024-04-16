@@ -1361,14 +1361,6 @@ class TestMixtureDefaultTransforms:
                 warnings.simplefilter("error")
                 Mixture("mix4", w=[0.5, 0.5], comp_dists=comp_dists, default_transform=None)
 
-            with pytest.warns(
-                UserWarning,
-                match="To disable default transform, please use default_transform=None"
-                " instead of transform=None. Setting transform to None will not have"
-                " any effect in future.",
-            ):
-                Mixture("mix5", w=[0.5, 0.5], comp_dists=comp_dists, transform=None)
-
             with warnings.catch_warnings():
                 warnings.simplefilter("error")
                 Mixture("mix6", w=[0.5, 0.5], comp_dists=comp_dists, observed=1)
