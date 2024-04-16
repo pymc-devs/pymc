@@ -218,15 +218,11 @@ class TestReplaceRVsByValues:
             transform = pm.distributions.transforms.Interval(
                 bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
             )
-            x = pm.Uniform("x", lower=0, upper=1, transform=transform, default_transform=None)
+            x = pm.Uniform("x", lower=0, upper=1, default_transform=transform)
             # Operation between the variables provides a regression test for #7054
-            y = pm.Uniform(
-                "y", lower=0, upper=pt.exp(x), transform=transform, default_transform=None
-            )
-            z = pm.Uniform("z", lower=0, upper=y, transform=transform, default_transform=None)
-            w = pm.Uniform(
-                "w", lower=0, upper=pt.square(z), transform=transform, default_transform=None
-            )
+            y = pm.Uniform("y", lower=0, upper=pt.exp(x), default_transform=transform)
+            z = pm.Uniform("z", lower=0, upper=y, default_transform=transform)
+            w = pm.Uniform("w", lower=0, upper=pt.square(z), default_transform=transform)
 
         rvs = [x, y, z, w]
         if reversed:
