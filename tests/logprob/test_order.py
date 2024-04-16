@@ -45,6 +45,7 @@ import scipy.stats as sp
 import pymc as pm
 
 from pymc import logp
+from pymc.logprob import conditional_logp
 from pymc.testing import assert_no_rvs
 
 
@@ -293,3 +294,18 @@ def test_min_max_bernoulli():
     min_logp_fn = pytensor.function([value], pm.logp(pt.min(x), value))
     np.testing.assert_allclose(min_logp_fn(1), np.log(p**n))
     np.testing.assert_allclose(min_logp_fn(0), np.log(1 - p**n))
+
+
+def test_non_measurable_max_grad():
+    # Regression test for https://github.com/pymc-devs/pytensor/issues/711
+    x = pt.random.normal(0, 1, size=(3,))
+    max_x = x.max()
+    y = pt.random.normal(max_x, 1)
+
+    x_vv = x.type()
+    y_vv = y.type()
+    logp_terms = conditional_logp({x: x_vv, y: y_vv}).values()
+    joint_logp = pt.sum([term.sum() for term in logp_terms])
+
+    # Test that calling gradient does not raise a NotImplementedError
+    assert pt.grad(joint_logp, x_vv)
