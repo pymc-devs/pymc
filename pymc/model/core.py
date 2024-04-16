@@ -1422,6 +1422,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         # Make the value variable a transformed value variable,
         # if there's an applicable transform
+        if transform is None and default_transform is UNSET:
+            default_transform = None
+            warnings.warn(
+                "To disable default transform, please use default_transform=None"
+                " instead of transform=None. Setting transform to None will"
+                " not have any effect in future.",
+                UserWarning,
+            )
+
         if default_transform is UNSET:
             if rv_var.owner is None:
                 default_transform = None
