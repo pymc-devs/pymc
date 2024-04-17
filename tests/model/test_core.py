@@ -42,7 +42,7 @@ from pymc import Deterministic, Model, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
 from pymc.distributions.distribution import PartialObservedRV
-from pymc.distributions.transforms import Transform, log, simplex
+from pymc.distributions.transforms import Interval, LogTransform, log, simplex
 from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import IntervalTransform
@@ -540,27 +540,10 @@ class TestTransformArgs:
                 a = pm.Normal("a", transform=None)
 
     def test_transform_order(self):
-        transform_order = []
-
-        class DummyTransform(Transform):
-            name = "dummy1"
-            ndim_supp = 0
-
-            def __init__(self, marker) -> None:
-                super().__init__()
-                self.marker = marker
-
-            def forward(self, value, *inputs):
-                nonlocal transform_order
-                transform_order.append(self.marker)
-                return value
-
-            def backward(self, value, *inputs):
-                return value
-
         with pm.Model() as model:
-            x = pm.Normal("x", transform=DummyTransform(2), default_transform=DummyTransform(1))
-        assert transform_order == [1, 2]
+            x = pm.Normal("x", transform=Interval(0, 1), default_transform=log)
+        assert isinstance(model.rvs_to_transforms[x].transform_list[0], LogTransform)
+        assert isinstance(model.rvs_to_transforms[x].transform_list[1], Interval)
 
 
 def test_make_obs_var():
