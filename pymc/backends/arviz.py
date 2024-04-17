@@ -30,7 +30,7 @@ import xarray
 
 from arviz import InferenceData, concat, rcParams
 from arviz.data.base import CoordSpec, DimSpec, dict_to_dataset, requires
-from pytensor.graph.basic import Constant
+from pytensor.graph import ancestors
 from pytensor.tensor.sharedvar import SharedVariable
 from rich.progress import Console, Progress
 from rich.theme import Theme
@@ -72,31 +72,21 @@ def find_observations(model: "Model") -> dict[str, Var]:
 
 def find_constants(model: "Model") -> dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
+    model_vars = model.basic_RVs + model.deterministics + model.potentials
+    value_vars = set(model.rvs_to_values.values())
 
-    # The constant data vars must be either pm.Data or TensorConstant or SharedVariable
-    def is_data(name, var, model) -> bool:
-        observations = find_observations(model)
-        return (
-            var not in model.deterministics
-            and var not in model.observed_RVs
-            and var not in model.free_RVs
-            and var not in model.potentials
-            and var not in model.value_vars
-            and name not in observations
-            and isinstance(var, Constant | SharedVariable)
-        )
-
-    # The assumption is that constants (like pm.Data) are named
-    # variables that aren't observed or free RVs, nor are they
-    # deterministics, and then we eliminate observations.
     constant_data = {}
-    for name, var in model.named_vars.items():
-        if is_data(name, var, model):
-            if hasattr(var, "get_value"):
-                var = var.get_value()
-            elif hasattr(var, "data"):
-                var = var.data
-            constant_data[name] = var
+    for var in model.data_vars:
+        if var in value_vars:
+            # An observed value variable could also be part of the generative graph
+            if var not in ancestors(model_vars):
+                continue
+
+        if isinstance(var, SharedVariable):
+            var_value = var.get_value()
+        else:
+            var_value = var.data
+        constant_data[var.name] = var_value
 
     return constant_data
 

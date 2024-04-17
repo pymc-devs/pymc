@@ -531,6 +531,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.observed_RVs = treelist(parent=self.parent.observed_RVs)
             self.deterministics = treelist(parent=self.parent.deterministics)
             self.potentials = treelist(parent=self.parent.potentials)
+            self.data_vars = treelist(parent=self.parent.data_vars)
             self._coords = self.parent._coords
             self._dim_lengths = self.parent._dim_lengths
         else:
@@ -544,6 +545,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.observed_RVs = treelist()
             self.deterministics = treelist()
             self.potentials = treelist()
+            self.data_vars = treelist()
             self._coords = {}
             self._dim_lengths = {}
         self.add_coords(coords)
@@ -1482,6 +1484,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self.values_to_rvs[value_var] = rv_var
 
         return value_var
+
+    def register_data_var(self, data, dims=None):
+        """Register a data variable with the model."""
+        self.data_vars.append(data)
+        self.add_named_variable(data, dims=dims)
 
     def add_named_variable(self, var, dims: tuple[str | None, ...] | None = None):
         """Add a random graph variable to the named variables of the model.

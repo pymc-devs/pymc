@@ -164,16 +164,18 @@ def fgraph_from_model(
     free_rvs = model.free_RVs
     observed_rvs = model.observed_RVs
     potentials = model.potentials
-    named_vars = model.named_vars.values()
     # We copy Deterministics (Identity Op) so that they don't show in between "main" variables
     # We later remove these Identity Ops when we have a Deterministic ModelVar Op as a separator
     old_deterministics = model.deterministics
     deterministics = [det if inlined_views else det.copy(det.name) for det in old_deterministics]
     # Value variables (we also have to decide whether to inline named ones)
     old_value_vars = list(rvs_to_values.values())
-    unnamed_value_vars = [val for val in old_value_vars if val not in named_vars]
+    data_vars = model.data_vars
+    unnamed_value_vars = [val for val in old_value_vars if val not in data_vars]
     named_value_vars = [
-        val if inlined_views else val.copy(val.name) for val in old_value_vars if val in named_vars
+        val if inlined_views else val.copy(name=val.name)
+        for val in old_value_vars
+        if val in data_vars
     ]
     value_vars = old_value_vars.copy()
     if inlined_views:
@@ -181,13 +183,11 @@ def fgraph_from_model(
         for named_val in named_value_vars:
             idx = value_vars.index(named_val)
             value_vars[idx] = named_val
-    # Other variables that are in named_vars but are not any of the categories above (e.g., Data)
-    # We use the same trick as deterministics!
-    accounted_for = set(free_rvs + observed_rvs + potentials + old_deterministics + old_value_vars)
+    # Data vars that are not value vars
     other_named_vars = [
         var if inlined_views else var.copy(var.name)
-        for var in named_vars
-        if var not in accounted_for
+        for var in data_vars
+        if var not in old_value_vars
     ]
 
     model_vars = (
@@ -339,6 +339,7 @@ def model_from_fgraph(fgraph: FunctionGraph) -> Model:
             model.deterministics.append(var)
         elif isinstance(model_var.owner.op, ModelNamed):
             var, *dims = model_var.owner.inputs
+            model.data_vars.append(var)
         else:
             raise TypeError(f"Unexpected ModelVar type {type(model_var)}")
 
