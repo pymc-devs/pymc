@@ -22,7 +22,6 @@ from collections.abc import Iterable, Sequence
 from sys import modules
 from typing import (
     TYPE_CHECKING,
-    Any,
     Literal,
     Optional,
     TypeVar,
@@ -58,6 +57,7 @@ from pymc.exceptions import (
 )
 from pymc.initial_point import make_initial_point_fn
 from pymc.logprob.basic import transformed_conditional_logp
+from pymc.logprob.transforms import Transform
 from pymc.logprob.utils import ParameterValueError, replace_rvs_by_values
 from pymc.model_graph import model_to_graphviz
 from pymc.pytensorf import (
@@ -1239,7 +1239,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         dims : tuple
             Dimension names for the variable.
         transform
-            A transform for the random variable in log-likelihood space.
+            Additianal transform which may be applied after default transform.
+        default_transform
+            A default transform for the random variable in log-likelihood space.
         initval
             The initial value of the random variable.
 
@@ -1298,8 +1300,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         rv_var: TensorVariable,
         data: np.ndarray,
         dims,
-        transform: Any | None,
-        default_transform: Any | None,
+        transform: Transform | None,
+        default_transform: Transform | None,
         total_size: int | None,
     ) -> TensorVariable:
         """Create a `TensorVariable` for an observed random variable.
@@ -1313,7 +1315,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
             The observed data.
         dims : tuple
             Dimension names for the variable.
-        transform : int, optional
+        transform
+            Additianal transform which may be applied after default transform.
+        default_transform
             A transform for the random variable in log-likelihood space.
 
         Returns
@@ -1394,8 +1398,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         rv_var: TensorVariable,
         *,
-        transform: Any,
-        default_transform: Any,
+        transform: Transform,
+        default_transform: Transform,
         value_var: Variable | None = None,
     ) -> TensorVariable:
         """Create a ``TensorVariable`` that will be used as the random
@@ -1411,7 +1415,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
         ----------
         rv_var : TensorVariable
 
-        transform : Any
+        transform: Transform
+            Additianal transform which may be applied after default transform.
+
+        default_transform: Transform
+            A transform for the random variable in log-likelihood space.
 
         value_var : Variable, optional
 
