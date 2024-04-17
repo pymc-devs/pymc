@@ -444,6 +444,6 @@ def Data(
                     length=xshape[d],
                 )
 
-    model.add_named_variable(x, dims=dims)
+    model.register_data_var(x, dims=dims)
 
     return x
