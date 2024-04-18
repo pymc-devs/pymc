@@ -1239,7 +1239,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         dims : tuple
             Dimension names for the variable.
         transform
-            Additianal transform which may be applied after default transform.
+            Additional transform which may be applied after default transform.
         default_transform
             A default transform for the random variable in log-likelihood space.
         initval
