@@ -545,6 +545,14 @@ class TestTransformArgs:
         assert isinstance(model.rvs_to_transforms[x].transform_list[0], LogTransform)
         assert isinstance(model.rvs_to_transforms[x].transform_list[1], Interval)
 
+    def test_default_transform_is_applied(self):
+        with pm.Model() as model1:
+            x1 = pm.LogNormal("x1", 0, 1, transform=Interval(-2, 2), default_transform=None)
+        with pm.Model() as model3:
+            x2 = pm.LogNormal("x2", 0, 1, transform=Interval(-2, 2), default_transform=log)
+        assert np.isinf(model1.compile_logp()({"x1_interval__": -1}))
+        assert np.isfinite(model3.compile_logp()({"x2_chain__": -1}))
+
 
 def test_make_obs_var():
     """
