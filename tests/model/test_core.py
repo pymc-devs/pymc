@@ -549,9 +549,10 @@ class TestTransformArgs:
     def test_transform_order(self):
         with pm.Model() as model:
             x = pm.Normal("x", transform=Interval(0, 1), default_transform=log)
-        assert isinstance(model.rvs_to_transforms[x], ChainedTransform)
-        assert isinstance(model.rvs_to_transforms[x].transform_list[0], LogTransform)
-        assert isinstance(model.rvs_to_transforms[x].transform_list[1], Interval)
+        transform = model.rvs_to_transforms[x]
+        assert isinstance(transform, ChainedTransform)
+        assert isinstance(transform.transform_list[0], LogTransform)
+        assert isinstance(transform.transform_list[1], Interval)
 
     def test_default_transform_is_applied(self):
         with pm.Model() as model1:
@@ -559,7 +560,7 @@ class TestTransformArgs:
         with pm.Model() as model2:
             x2 = pm.LogNormal("x2", [0, 0], [1, 1], transform=ordered)
         assert np.isinf(model1.compile_logp()({"x1_ordered__": (-1, -1)}))
-        assert np.isfinite(model3.compile_logp()({"x2_chain__": (-1, -1)}))
+        assert np.isfinite(model2.compile_logp()({"x2_chain__": (-1, -1)}))
 
 
 def test_make_obs_var():
