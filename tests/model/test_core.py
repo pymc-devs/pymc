@@ -556,8 +556,8 @@ class TestTransformArgs:
     def test_default_transform_is_applied(self):
         with pm.Model() as model1:
             x1 = pm.LogNormal("x1", [0, 0], [1, 1], transform=ordered, default_transform=None)
-        with pm.Model() as model3:
-            x2 = pm.LogNormal("x2", [0, 0], [1, 1], transform=ordered, default_transform=log)
+        with pm.Model() as model2:
+            x2 = pm.LogNormal("x2", [0, 0], [1, 1], transform=ordered)
         assert np.isinf(model1.compile_logp()({"x1_ordered__": (-1, -1)}))
         assert np.isfinite(model3.compile_logp()({"x2_chain__": (-1, -1)}))
 
