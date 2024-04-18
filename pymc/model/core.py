@@ -1221,8 +1221,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         observed=None,
         total_size=None,
         dims=None,
-        transform=UNSET,
         default_transform=UNSET,
+        transform=UNSET,
         initval=None,
     ):
         """Register an (un)observed random variable with the model.
@@ -1238,10 +1238,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
             upscales logp of variable with ``coef = total_size/var.shape[0]``
         dims : tuple
             Dimension names for the variable.
-        transform
-            Additional transform which may be applied after default transform.
         default_transform
             A default transform for the random variable in log-likelihood space.
+        transform
+            Additional transform which may be applied after default transform.
         initval
             The initial value of the random variable.
 
@@ -1290,7 +1290,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # `rv_var` is potentially changed by `make_obs_var`,
             # for example into a new graph for imputation of missing data.
             rv_var = self.make_obs_var(
-                rv_var, observed, dims, transform, default_transform, total_size
+                rv_var, observed, dims, default_transform, transform, total_size
             )
 
         return rv_var
@@ -1300,8 +1300,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         rv_var: TensorVariable,
         data: np.ndarray,
         dims,
-        transform: Transform | None,
         default_transform: Transform | None,
+        transform: Transform | None,
         total_size: int | None,
     ) -> TensorVariable:
         """Create a `TensorVariable` for an observed random variable.
@@ -1315,10 +1315,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
             The observed data.
         dims : tuple
             Dimension names for the variable.
-        transform
-            Additianal transform which may be applied after default transform.
         default_transform
             A transform for the random variable in log-likelihood space.
+        transform
+            Additional transform which may be applied after default transform.
 
         Returns
         -------
@@ -1398,8 +1398,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         rv_var: TensorVariable,
         *,
-        transform: Transform,
         default_transform: Transform,
+        transform: Transform,
         value_var: Variable | None = None,
     ) -> TensorVariable:
         """Create a ``TensorVariable`` that will be used as the random
@@ -1415,11 +1415,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
         ----------
         rv_var : TensorVariable
 
-        transform: Transform
-            Additianal transform which may be applied after default transform.
-
         default_transform: Transform
             A transform for the random variable in log-likelihood space.
+
+        transform: Transform
+            Additional transform which may be applied after default transform.
 
         value_var : Variable, optional
 
