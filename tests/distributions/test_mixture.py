@@ -1359,17 +1359,17 @@ class TestMixtureDefaultTransforms:
 
             with warnings.catch_warnings():
                 warnings.simplefilter("error")
-                Mixture("mix4", w=[0.5, 0.5], comp_dists=comp_dists, transform=None)
+                Mixture("mix4", w=[0.5, 0.5], comp_dists=comp_dists, default_transform=None)
 
             with warnings.catch_warnings():
                 warnings.simplefilter("error")
-                Mixture("mix5", w=[0.5, 0.5], comp_dists=comp_dists, observed=1)
+                Mixture("mix6", w=[0.5, 0.5], comp_dists=comp_dists, observed=1)
 
             # Case where the appropriate default transform is None
             comp_dists = [Normal.dist(), Normal.dist()]
             with warnings.catch_warnings():
                 warnings.simplefilter("error")
-                Mixture("mix6", w=[0.5, 0.5], comp_dists=comp_dists)
+                Mixture("mix7", w=[0.5, 0.5], comp_dists=comp_dists)
 
 
 class TestZeroInflatedMixture:
