@@ -25,7 +25,7 @@ import cloudpickle
 import numpy as np
 
 from arviz import InferenceData
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 
 import pymc
 
@@ -367,6 +367,8 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
         TextColumn("{task.description}"),
         SpinnerColumn(),
         TimeElapsedColumn(),
+        TextColumn("/"),
+        TimeRemainingColumn(),
         TextColumn("{task.fields[status]}"),
     ) as progress:
         futures = []  # keep track of the jobs

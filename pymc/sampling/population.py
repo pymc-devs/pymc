@@ -24,7 +24,7 @@ from typing import TypeAlias
 import cloudpickle
 import numpy as np
 
-from rich.progress import BarColumn, Progress, TimeRemainingColumn
+from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn, TimeElaspedColumn
 
 from pymc.backends.base import BaseTrace
 from pymc.initial_point import PointType
@@ -180,6 +180,8 @@ class PopulationStepper:
                     BarColumn(),
                     "[progress.percentage]{task.percentage:>3.0f}%",
                     TimeRemainingColumn(),
+                    TextColumn("/"),
+                    TimeElaspedColumn(),
                 ) as self._progress:
                     for c, stepper in enumerate(steppers):
                         #     enumerate(progress_bar(steppers)) if progressbar else enumerate(steppers)
