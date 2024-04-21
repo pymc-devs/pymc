@@ -366,9 +366,9 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
     with Progress(
         TextColumn("{task.description}"),
         SpinnerColumn(),
-        TimeElapsedColumn(),
-        TextColumn("/"),
         TimeRemainingColumn(),
+        TextColumn("/"),
+        TimeElapsedColumn(),
         TextColumn("{task.fields[status]}"),
     ) as progress:
         futures = []  # keep track of the jobs
