@@ -25,7 +25,13 @@ import cloudpickle
 import numpy as np
 
 from arviz import InferenceData
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 
 import pymc
 
