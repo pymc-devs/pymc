@@ -429,7 +429,7 @@ class ParallelSampler:
             "[progress.percentage]{task.percentage:>3.0f}%",
             TimeRemainingColumn(),
             TextColumn("/"),
-            TimeElapsedColumn()
+            TimeElapsedColumn(),
             console=Console(theme=progressbar_theme),
         )
         self._show_progress = progressbar

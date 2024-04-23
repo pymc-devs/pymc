@@ -829,7 +829,7 @@ def sample_posterior_predictive(
     _log.info(f"Sampling: {list(sorted(volatile_basic_rvs, key=lambda var: var.name))}")  # type: ignore
     ppc_trace_t = _DefaultTrace(samples)
     try:
-        with Progress(console=Console(theme=progressbar_theme)) as progress:
+        with Progress(console=Console(theme=progressbar_theme), disable=not progressbar) as progress:
             task = progress.add_task("Sampling ...", total=samples, visible=progressbar)
             for idx in np.arange(samples):
                 if nchain > 1:
