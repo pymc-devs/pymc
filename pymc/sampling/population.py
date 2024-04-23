@@ -24,7 +24,7 @@ from typing import TypeAlias
 import cloudpickle
 import numpy as np
 
-from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn, TimeElapsedColumn
+from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 
 from pymc.backends.base import BaseTrace
 from pymc.initial_point import PointType

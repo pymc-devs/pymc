@@ -27,7 +27,7 @@ import cloudpickle
 import numpy as np
 
 from rich.console import Console
-from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn, TimeElapsedColumn
+from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
 
 from pymc.blocking import DictToArrayBijection
