@@ -223,6 +223,7 @@ class CostFuncWrapper:
             *Progress.get_default_columns(),
             TextColumn("{task.fields[loss]}"),
             console=Console(theme=progressbar_theme),
+            disable=not progressbar,
         )
         self.task = self.progress.add_task("MAP", total=maxeval, visible=progressbar, loss="")
 

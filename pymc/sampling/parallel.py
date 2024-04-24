@@ -431,6 +431,7 @@ class ParallelSampler:
             TextColumn("/"),
             TimeElapsedColumn(),
             console=Console(theme=progressbar_theme),
+            disable=not progressbar,
         )
         self._show_progress = progressbar
         self._divergences = 0
