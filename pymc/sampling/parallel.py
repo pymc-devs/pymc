@@ -468,6 +468,7 @@ class ParallelSampler:
                     self._divergences += 1
                 progress.update(
                     task,
+                    refresh=True,
                     completed=self._completed_draws,
                     total=self._total_draws,
                     description=self._desc.format(self),

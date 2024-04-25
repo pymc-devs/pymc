@@ -411,6 +411,8 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
                         stage = update_data["stage"]
                         beta = update_data["beta"]
                         # update the progress bar for this task:
-                        progress.update(status=f"Stage: {stage} Beta: {beta:.3f}", task_id=task_id)
+                        progress.update(
+                            status=f"Stage: {stage} Beta: {beta:.3f}", task_id=task_id, refresh=True
+                        )
 
         return tuple(cloudpickle.loads(r.result()) for r in futures)
