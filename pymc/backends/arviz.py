@@ -659,7 +659,7 @@ def apply_function_over_dataset(
     out_dict = _DefaultTrace(n_pts)
     indices = range(n_pts)
 
-    with Progress(console=Console(theme=progressbar_theme)) as progress:
+    with Progress(console=Console(theme=progressbar_theme), disable=not progressbar) as progress:
         task = progress.add_task("Computing ...", total=n_pts, visible=progressbar)
         for idx in indices:
             out = fn(posterior_pts[idx])

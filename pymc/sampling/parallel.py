@@ -27,7 +27,7 @@ import cloudpickle
 import numpy as np
 
 from rich.console import Console
-from rich.progress import BarColumn, Progress, TimeRemainingColumn
+from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
 
 from pymc.blocking import DictToArrayBijection
@@ -428,7 +428,10 @@ class ParallelSampler:
             BarColumn(),
             "[progress.percentage]{task.percentage:>3.0f}%",
             TimeRemainingColumn(),
+            TextColumn("/"),
+            TimeElapsedColumn(),
             console=Console(theme=progressbar_theme),
+            disable=not progressbar,
         )
         self._show_progress = progressbar
         self._divergences = 0
@@ -465,6 +468,7 @@ class ParallelSampler:
                     self._divergences += 1
                 progress.update(
                     task,
+                    refresh=True,
                     completed=self._completed_draws,
                     total=self._total_draws,
                     description=self._desc.format(self),
