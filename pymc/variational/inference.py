@@ -166,7 +166,9 @@ class Inference:
     def _iterate_without_loss(self, s, n, step_func, progressbar, progressbar_theme, callbacks):
         i = 0
         try:
-            with Progress(console=Console(theme=progressbar_theme)) as progress:
+            with Progress(
+                console=Console(theme=progressbar_theme), disable=not progressbar
+            ) as progress:
                 task = progress.add_task("Fitting", total=n, visible=progressbar)
                 for i in range(n):
                     step_func()

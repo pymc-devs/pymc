@@ -25,7 +25,13 @@ import cloudpickle
 import numpy as np
 
 from arviz import InferenceData
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 
 import pymc
 
@@ -366,6 +372,8 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
     with Progress(
         TextColumn("{task.description}"),
         SpinnerColumn(),
+        TimeRemainingColumn(),
+        TextColumn("/"),
         TimeElapsedColumn(),
         TextColumn("{task.fields[status]}"),
     ) as progress:
@@ -403,6 +411,8 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
                         stage = update_data["stage"]
                         beta = update_data["beta"]
                         # update the progress bar for this task:
-                        progress.update(status=f"Stage: {stage} Beta: {beta:.3f}", task_id=task_id)
+                        progress.update(
+                            status=f"Stage: {stage} Beta: {beta:.3f}", task_id=task_id, refresh=True
+                        )
 
         return tuple(cloudpickle.loads(r.result()) for r in futures)

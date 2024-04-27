@@ -22,7 +22,6 @@ from collections.abc import Iterable, Sequence
 from sys import modules
 from typing import (
     TYPE_CHECKING,
-    Any,
     Literal,
     Optional,
     TypeVar,
@@ -48,7 +47,7 @@ from typing_extensions import Self
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, is_minibatch
-from pymc.distributions.transforms import _default_transform
+from pymc.distributions.transforms import ChainedTransform, _default_transform
 from pymc.exceptions import (
     BlockModelAccessError,
     ImputationWarning,
@@ -58,6 +57,7 @@ from pymc.exceptions import (
 )
 from pymc.initial_point import make_initial_point_fn
 from pymc.logprob.basic import transformed_conditional_logp
+from pymc.logprob.transforms import Transform
 from pymc.logprob.utils import ParameterValueError, replace_rvs_by_values
 from pymc.model_graph import model_to_graphviz
 from pymc.pytensorf import (
@@ -1214,7 +1214,16 @@ class Model(WithMemoization, metaclass=ContextMeta):
         shared_object.set_value(values)
 
     def register_rv(
-        self, rv_var, name, observed=None, total_size=None, dims=None, transform=UNSET, initval=None
+        self,
+        rv_var,
+        name,
+        *,
+        observed=None,
+        total_size=None,
+        dims=None,
+        default_transform=UNSET,
+        transform=UNSET,
+        initval=None,
     ):
         """Register an (un)observed random variable with the model.
 
@@ -1229,8 +1238,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
             upscales logp of variable with ``coef = total_size/var.shape[0]``
         dims : tuple
             Dimension names for the variable.
+        default_transform
+            A default transform for the random variable in log-likelihood space.
         transform
-            A transform for the random variable in log-likelihood space.
+            Additional transform which may be applied after default transform.
         initval
             The initial value of the random variable.
 
@@ -1255,7 +1266,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             if total_size is not None:
                 raise ValueError("total_size can only be passed to observed RVs")
             self.free_RVs.append(rv_var)
-            self.create_value_var(rv_var, transform)
+            self.create_value_var(rv_var, transform=transform, default_transform=default_transform)
             self.add_named_variable(rv_var, dims)
             self.set_initval(rv_var, initval)
         else:
@@ -1278,7 +1289,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             # `rv_var` is potentially changed by `make_obs_var`,
             # for example into a new graph for imputation of missing data.
-            rv_var = self.make_obs_var(rv_var, observed, dims, transform, total_size)
+            rv_var = self.make_obs_var(
+                rv_var, observed, dims, default_transform, transform, total_size
+            )
 
         return rv_var
 
@@ -1287,7 +1300,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         rv_var: TensorVariable,
         data: np.ndarray,
         dims,
-        transform: Any | None,
+        default_transform: Transform | None,
+        transform: Transform | None,
         total_size: int | None,
     ) -> TensorVariable:
         """Create a `TensorVariable` for an observed random variable.
@@ -1301,8 +1315,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
             The observed data.
         dims : tuple
             Dimension names for the variable.
-        transform : int, optional
+        default_transform
             A transform for the random variable in log-likelihood space.
+        transform
+            Additional transform which may be applied after default transform.
 
         Returns
         -------
@@ -1339,12 +1355,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             # Register ObservedRV corresponding to observed component
             observed_rv.name = f"{name}_observed"
-            self.create_value_var(observed_rv, transform=None, value_var=observed_data)
+            self.create_value_var(
+                observed_rv, transform=transform, default_transform=None, value_var=observed_data
+            )
             self.add_named_variable(observed_rv)
             self.observed_RVs.append(observed_rv)
 
             # Register FreeRV corresponding to unobserved components
-            self.register_rv(unobserved_rv, f"{name}_unobserved", transform=transform)
+            self.register_rv(
+                unobserved_rv,
+                f"{name}_unobserved",
+                transform=transform,
+                default_transform=default_transform,
+            )
 
             # Register Deterministic that combines observed and missing
             # Note: This can widely increase memory consumption during sampling for large datasets
@@ -1363,14 +1386,21 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 rv_var.name = name
 
             rv_var.tag.observations = data
-            self.create_value_var(rv_var, transform=None, value_var=data)
+            self.create_value_var(
+                rv_var, transform=transform, default_transform=None, value_var=data
+            )
             self.add_named_variable(rv_var, dims)
             self.observed_RVs.append(rv_var)
 
         return rv_var
 
     def create_value_var(
-        self, rv_var: TensorVariable, transform: Any, value_var: Variable | None = None
+        self,
+        rv_var: TensorVariable,
+        *,
+        default_transform: Transform,
+        transform: Transform,
+        value_var: Variable | None = None,
     ) -> TensorVariable:
         """Create a ``TensorVariable`` that will be used as the random
         variable's "value" in log-likelihood graphs.
@@ -1385,7 +1415,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
         ----------
         rv_var : TensorVariable
 
-        transform : Any
+        default_transform: Transform
+            A transform for the random variable in log-likelihood space.
+
+        transform: Transform
+            Additional transform which may be applied after default transform.
 
         value_var : Variable, optional
 
@@ -1396,11 +1430,25 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         # Make the value variable a transformed value variable,
         # if there's an applicable transform
-        if transform is UNSET:
+        if transform is None and default_transform is UNSET:
+            default_transform = None
+            warnings.warn(
+                "To disable default transform, please use default_transform=None"
+                " instead of transform=None. Setting transform to None will"
+                " not have any effect in future.",
+                UserWarning,
+            )
+
+        if default_transform is UNSET:
             if rv_var.owner is None:
-                transform = None
+                default_transform = None
             else:
-                transform = _default_transform(rv_var.owner.op, rv_var)
+                default_transform = _default_transform(rv_var.owner.op, rv_var)
+
+        if transform is UNSET:
+            transform = default_transform
+        elif transform is not None and default_transform is not None:
+            transform = ChainedTransform([default_transform, transform])
 
         if value_var is None:
             if transform is None:

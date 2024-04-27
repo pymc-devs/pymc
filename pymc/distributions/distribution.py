@@ -13,6 +13,7 @@
 #   limitations under the License.
 import contextvars
 import functools
+import re
 import sys
 import types
 import warnings
@@ -186,13 +187,29 @@ class DistributionMeta(ABCMeta):
         if rv_type is not None:
             # Create dispatch functions
 
+            signature = getattr(rv_type, "signature", None)
+            size_idx: int | None = None
+            params_idxs: tuple[int] | None = None
+            if signature is not None:
+                _, size_idx, params_idxs = SymbolicRandomVariable.get_idxs(signature)
+
+            class_change_dist_size = clsdict.get("change_dist_size")
+            if class_change_dist_size:
+
+                @_change_dist_size.register(rv_type)
+                def change_dist_size(op, rv, new_size, expand):
+                    return class_change_dist_size(rv, new_size, expand)
+
             class_logp = clsdict.get("logp")
             if class_logp:
 
                 @_logprob.register(rv_type)
                 def logp(op, values, *dist_params, **kwargs):
-                    dist_params = dist_params[3:]
-                    (value,) = values
+                    if isinstance(op, RandomVariable):
+                        rng, size, dtype, *dist_params = dist_params
+                    elif params_idxs:
+                        dist_params = [dist_params[i] for i in params_idxs]
+                    [value] = values
                     return class_logp(value, *dist_params)
 
             class_logcdf = clsdict.get("logcdf")
@@ -200,7 +217,10 @@ class DistributionMeta(ABCMeta):
 
                 @_logcdf.register(rv_type)
                 def logcdf(op, value, *dist_params, **kwargs):
-                    dist_params = dist_params[3:]
+                    if isinstance(op, RandomVariable):
+                        rng, size, dtype, *dist_params = dist_params
+                    elif params_idxs:
+                        dist_params = [dist_params[i] for i in params_idxs]
                     return class_logcdf(value, *dist_params)
 
             class_icdf = clsdict.get("icdf")
@@ -208,7 +228,10 @@ class DistributionMeta(ABCMeta):
 
                 @_icdf.register(rv_type)
                 def icdf(op, value, *dist_params, **kwargs):
-                    dist_params = dist_params[3:]
+                    if isinstance(op, RandomVariable):
+                        rng, size, dtype, *dist_params = dist_params
+                    elif params_idxs:
+                        dist_params = [dist_params[i] for i in params_idxs]
                     return class_icdf(value, *dist_params)
 
             class_moment = clsdict.get("moment")
@@ -218,20 +241,25 @@ class DistributionMeta(ABCMeta):
                     DeprecationWarning,
                 )
 
-                @_support_point.register(rv_type)
-                def support_point(op, rv, rng, size, dtype, *dist_params):
-                    return class_moment(rv, size, *dist_params)
+                clsdict["support_point"] = class_moment
 
             class_support_point = clsdict.get("support_point")
 
             if class_support_point:
 
                 @_support_point.register(rv_type)
-                def support_point(op, rv, rng, size, dtype, *dist_params):
-                    return class_support_point(rv, size, *dist_params)
+                def support_point(op, rv, *dist_params):
+                    if isinstance(op, RandomVariable):
+                        rng, size, dtype, *dist_params = dist_params
+                        return class_support_point(rv, size, *dist_params)
+                    elif params_idxs and size_idx is not None:
+                        size = dist_params[size_idx]
+                        dist_params = [dist_params[i] for i in params_idxs]
+                        return class_support_point(rv, size, *dist_params)
+                    else:
+                        return class_support_point(rv, *dist_params)
 
-            # Register the PyTensor rv_type as a subclass of this
-            # PyMC Distribution type.
+            # Register the PyTensor rv_type as a subclass of this PyMC Distribution type.
             new_cls.register(rv_type)
 
         return new_cls
@@ -242,6 +270,21 @@ def _make_nice_attr_error(oldcode: str, newcode: str):
         raise AttributeError(f"The `{oldcode}` method was removed. Instead use `{newcode}`.`")
 
     return fn
+
+
+class _class_or_instancemethod(classmethod):
+    """Allow a method to be called both as a classmethod and an instancemethod,
+    giving priority to the instancemethod.
+
+    This is used to allow extracting information from the signature of a SymbolicRandomVariable
+    which may be provided either as a class attribute or as an instance attribute.
+
+    Adapted from https://stackoverflow.com/a/28238047
+    """
+
+    def __get__(self, instance, type_):
+        descr_get = super().__get__ if instance is None else self.__func__.__get__
+        return descr_get(instance, type_)
 
 
 class SymbolicRandomVariable(OpFromGraph):
@@ -258,16 +301,14 @@ class SymbolicRandomVariable(OpFromGraph):
     classmethod `cls.rv_op`, taking care to clone and resize random inputs, if needed.
     """
 
-    ndim_supp: int = None
-    """Number of support dimensions as in RandomVariables
-    (0 for scalar, 1 for vector, ...)
-     """
-
-    ndims_params: Sequence[int] | None = None
-    """Number of core dimensions of the distribution's parameters."""
-
     signature: str = None
-    """Numpy-like vectorized signature of the distribution."""
+    """Numpy-like vectorized signature of the distribution.
+
+    It allows tokens [rng], [size] to identify the special inputs.
+
+    The signature of a Normal RV with mu and scale scalar params looks like
+    `"[rng],[size],(),()->[rng],()"`
+    """
 
     inline_logprob: bool = False
     """Specifies whether the logprob function is derived automatically by introspection
@@ -279,24 +320,102 @@ class SymbolicRandomVariable(OpFromGraph):
     _print_name: tuple[str, str] = ("Unknown", "\\operatorname{Unknown}")
     """Tuple of (name, latex name) used for for pretty-printing variables of this type"""
 
+    @staticmethod
+    def _parse_signature(signature: str) -> tuple[str, str]:
+        """Parse signature as if special tokens were vector elements"""
+        # Regex to split across commas not inside parenthesis
+        # Copied from https://stackoverflow.com/a/26634150
+        fake_signature = signature.replace("[rng]", "(rng)").replace("[size]", "(size)")
+        return _parse_gufunc_signature(fake_signature)
+
+    @staticmethod
+    def _parse_params_signature(signature):
+        """Parse the signature of the distribution's parameters, ignoring rng and size tokens."""
+        special_tokens = r"|".join((r"\[rng\],?", r"\[size\],?"))
+        params_signature = re.sub(special_tokens, "", signature)
+        # Remove dandling commas
+        params_signature = re.sub(r",(?=[->])|,$", "", params_signature)
+
+        # Numpy gufunc signature doesn't accept empty inputs
+        if params_signature.startswith("->"):
+            # Pretent there was at least one scalar input and then discard that
+            return [], _parse_gufunc_signature("()" + params_signature)[1]
+        else:
+            return _parse_gufunc_signature(params_signature)
+
+    @_class_or_instancemethod
+    @property
+    def ndims_params(cls_or_self) -> Sequence[int] | None:
+        """Number of core dimensions of the distribution's parameters."""
+        signature = cls_or_self.signature
+        if signature is None:
+            return None
+        inputs_signature, _ = cls_or_self._parse_params_signature(signature)
+        return [len(sig) for sig in inputs_signature]
+
+    @_class_or_instancemethod
+    @property
+    def ndim_supp(cls_or_self) -> int | None:
+        """Number of support dimensions of the RandomVariable
+
+        (0 for scalar, 1 for vector, ...)
+        """
+        signature = cls_or_self.signature
+        if signature is None:
+            return None
+        _, outputs_params_signature = cls_or_self._parse_params_signature(signature)
+        return max(len(out_sig) for out_sig in outputs_params_signature)
+
+    @_class_or_instancemethod
+    @property
+    def default_output(cls_or_self) -> int | None:
+        signature = cls_or_self.signature
+        if signature is None:
+            return None
+
+        _, outputs_signature = cls_or_self._parse_signature(signature)
+
+        # If there is a single non `[rng]` outputs, that is the default one!
+        candidate_default_output = [
+            i for i, out_sig in enumerate(outputs_signature) if out_sig != ("rng",)
+        ]
+        if len(candidate_default_output) == 1:
+            return candidate_default_output[0]
+        else:
+            return None
+
+    @staticmethod
+    def get_idxs(signature: str) -> tuple[tuple[int], int | None, tuple[int]]:
+        """Parse signature and return indexes for *[rng], [size] and parameters"""
+        inputs_signature, outputs_signature = SymbolicRandomVariable._parse_signature(signature)
+        rng_idxs = []
+        size_idx = None
+        params_idxs = []
+        for i, inp_sig in enumerate(inputs_signature):
+            if inp_sig == ("size",):
+                size_idx = i
+            elif inp_sig == ("rng",):
+                rng_idxs.append(i)
+            else:
+                params_idxs.append(i)
+        return tuple(rng_idxs), size_idx, tuple(params_idxs)
+
     def __init__(
         self,
         *args,
         **kwargs,
     ):
         """Initialize a SymbolicRandomVariable class."""
-        if self.signature is None:
-            self.signature = kwargs.get("signature", None)
+        if "signature" in kwargs:
+            self.signature = kwargs.pop("signature")
 
-        if self.signature is not None:
-            inputs_sig, outputs_sig = _parse_gufunc_signature(self.signature)
-            self.ndims_params = [len(sig) for sig in inputs_sig]
-            self.ndim_supp = max(len(out_sig) for out_sig in outputs_sig)
+        if "ndim_supp" in kwargs:
+            # For backwards compatibility we allow passing ndim_supp without signature
+            # This is the only variable that PyMC absolutely needs to work with SymbolicRandomVariables
+            self.ndim_supp = kwargs.pop("ndim_supp")
 
         if self.ndim_supp is None:
-            self.ndim_supp = kwargs.get("ndim_supp", None)
-            if self.ndim_supp is None:
-                raise ValueError("ndim_supp or gufunc_signature must be provided")
+            raise ValueError("ndim_supp or signature must be provided")
 
         kwargs.setdefault("inline", True)
         kwargs.setdefault("strict", True)
@@ -317,6 +436,29 @@ class SymbolicRandomVariable(OpFromGraph):
         return out_ndim - self.ndim_supp
 
 
+@_change_dist_size.register(SymbolicRandomVariable)
+def change_symbolic_rv_size(op, rv, new_size, expand) -> TensorVariable:
+    if op.signature is None:
+        raise NotImplementedError(
+            f"SymbolicRandomVariable {op} without signature requires custom `_change_dist_size` implementation."
+        )
+    inputs_signature = op.signature.split("->")[0].split(",")
+    if "[size]" not in inputs_signature:
+        raise NotImplementedError(
+            f"SymbolicRandomVariable {op} without [size] in signature requires custom `_change_dist_size` implementation."
+        )
+    size_arg_idx = inputs_signature.index("[size]")
+    size = rv.owner.inputs[size_arg_idx]
+
+    if expand:
+        new_size = tuple(new_size) + tuple(size)
+
+    numerical_inputs = [
+        inp for inp, sig in zip(rv.owner.inputs, inputs_signature) if sig not in ("[size]", "[rng]")
+    ]
+    return op.rv_op(*numerical_inputs, size=new_size)
+
+
 class Distribution(metaclass=DistributionMeta):
     """Statistical distribution"""
 
@@ -333,6 +475,7 @@ class Distribution(metaclass=DistributionMeta):
         observed=None,
         total_size=None,
         transform=UNSET,
+        default_transform=UNSET,
         **kwargs,
     ) -> TensorVariable:
         """Adds a tensor variable corresponding to a PyMC distribution to the current model.
@@ -414,10 +557,11 @@ class Distribution(metaclass=DistributionMeta):
         rv_out = model.register_rv(
             rv_out,
             name,
-            observed,
-            total_size,
+            observed=observed,
+            total_size=total_size,
             dims=dims,
             transform=transform,
+            default_transform=default_transform,
             initval=initval,
         )
 
@@ -483,8 +627,8 @@ class Distribution(metaclass=DistributionMeta):
         shape = convert_shape(shape)
         size = convert_size(size)
 
-        # SymbolicRVs don't have `ndim_supp` until they are created
-        ndim_supp = getattr(cls.rv_op, "ndim_supp", None)
+        # SymbolicRVs don't always have `ndim_supp` until they are created
+        ndim_supp = getattr(cls.rv_type, "ndim_supp", None)
         if ndim_supp is None:
             ndim_supp = cls.rv_op(*dist_params, **kwargs).owner.op.ndim_supp
         create_size = find_size(shape=shape, size=size, ndim_supp=ndim_supp)
@@ -684,11 +828,11 @@ class _CustomDist(Distribution):
             return logp(values[0], *dist_params)
 
         @_logcdf.register(rv_type)
-        def density_dist_logcdf(op, value, rng, size, dtype, *dist_params, **kwargs):
+        def custom_dist_logcdf(op, value, rng, size, dtype, *dist_params, **kwargs):
             return logcdf(value, *dist_params, **kwargs)
 
         @_support_point.register(rv_type)
-        def density_dist_get_support_point(op, rv, rng, size, dtype, *dist_params):
+        def custom_dist_support_point(op, rv, rng, size, dtype, *dist_params):
             return support_point(rv, size, *dist_params)
 
         rv_op = rv_type()
@@ -788,10 +932,6 @@ class _CustomSymbolicDist(Distribution):
         dummy_params = [dummy_size_param, *dummy_dist_params]
         dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
 
-        signature = cls._infer_final_signature(
-            signature, len(dummy_params), len(dummy_updates_dict)
-        )
-
         rv_type = type(
             class_name,
             (CustomSymbolicDistRV,),
@@ -821,7 +961,7 @@ class _CustomSymbolicDist(Distribution):
         if support_point is not None:
 
             @_support_point.register(rv_type)
-            def custom_dist_get_support_point(op, rv, size, *params):
+            def custom_dist_support_point(op, rv, size, *params):
                 return support_point(
                     rv,
                     size,
@@ -833,14 +973,14 @@ class _CustomSymbolicDist(Distribution):
                 )
 
         @_change_dist_size.register(rv_type)
-        def change_custom_symbolic_dist_size(op, rv, new_size, expand):
+        def change_custom_dist_size(op, rv, new_size, expand):
             node = rv.owner
 
             if expand:
                 shape = tuple(rv.shape)
                 old_size = shape[: len(shape) - node.op.ndim_supp]
                 new_size = tuple(new_size) + tuple(old_size)
-            new_size = pt.as_tensor(new_size, ndim=1, dtype="int64")
+            new_size = pt.as_tensor(new_size, dtype="int64", ndim=1)
 
             old_size, *old_dist_params = node.inputs[: len(dist_params) + 1]
 
@@ -866,30 +1006,47 @@ class _CustomSymbolicDist(Distribution):
         updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
         rngs = updates_dict.keys()
         rngs_updates = updates_dict.values()
+
+        inputs = [*dummy_params, *rngs]
+        outputs = [dummy_rv, *rngs_updates]
+        signature = cls._infer_final_signature(
+            signature, n_inputs=len(inputs), n_outputs=len(outputs), n_rngs=len(rngs)
+        )
         rv_op = rv_type(
-            inputs=[*dummy_params, *rngs],
-            outputs=[dummy_rv, *rngs_updates],
+            inputs=inputs,
+            outputs=outputs,
             signature=signature,
         )
         return rv_op(size, *dist_params, *rngs)
 
     @staticmethod
-    def _infer_final_signature(signature: str, n_inputs, n_updates) -> str:
+    def _infer_final_signature(signature: str, n_inputs, n_outputs, n_rngs) -> str:
         """Add size and updates to user provided gufunc signature if they are missing."""
+
+        # Regex to split across outer commas
+        # Copied from https://stackoverflow.com/a/26634150
+        outer_commas = re.compile(r",\s*(?![^()]*\))")
+
         input_sig, output_sig = signature.split("->")
-        # Numpy parser does not accept (constant) functions without inputs like "->()"
-        # We work around as this makes sense for distributions like Flat that have no inputs
-        if input_sig.strip() == "":
-            inputs = ()
-            _, outputs = _parse_gufunc_signature("()" + signature)
-        else:
-            inputs, outputs = _parse_gufunc_signature(signature)
-        if len(inputs) == n_inputs - 1:
-            # Assume size is missing
-            input_sig = ("()," if input_sig else "()") + input_sig
-        if len(outputs) == 1:
+        # It's valid to have a signature without params inputs, as in a Flat RV
+        n_inputs_sig = len(outer_commas.split(input_sig)) if input_sig.strip() else 0
+        n_outputs_sig = len(outer_commas.split(output_sig))
+
+        if n_inputs_sig == n_inputs and n_outputs_sig == n_outputs:
+            # User provided a signature with no missing parts
+            return signature
+
+        size_sig = "[size]"
+        rngs_sig = ("[rng]",) * n_rngs
+        if n_inputs_sig == (n_inputs - n_rngs - 1):
+            # Assume size and rngs are missing
+            if input_sig.strip():
+                input_sig = ",".join((size_sig, input_sig, *rngs_sig))
+            else:
+                input_sig = ",".join((size_sig, *rngs_sig))
+        if n_outputs_sig == (n_outputs - n_rngs):
             # Assume updates are missing
-            output_sig = "()," * n_updates + output_sig
+            output_sig = ",".join((output_sig, *rngs_sig))
         signature = "->".join((input_sig, output_sig))
         return signature
 

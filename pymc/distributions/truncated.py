@@ -36,7 +36,12 @@ from pymc.distributions.distribution import (
     _support_point,
     support_point,
 )
-from pymc.distributions.shape_utils import _change_dist_size, change_dist_size, to_tuple
+from pymc.distributions.shape_utils import (
+    _change_dist_size,
+    change_dist_size,
+    rv_size_is_none,
+    to_tuple,
+)
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import TruncationError
 from pymc.logprob.abstract import _logcdf, _logprob
@@ -70,6 +75,137 @@ class TruncatedRV(SymbolicRandomVariable):
             f"\\operatorname{{{self.base_rv_op._print_name[1]}}}",
         )
         super().__init__(*args, **kwargs)
+
+    @classmethod
+    def rv_op(cls, dist, lower, upper, max_n_steps, *, size=None):
+        # We don't accept rng because we don't have control over it when using a specialized Op
+        # and there may be a need for multiple RNGs in dist.
+
+        # Try to use specialized Op
+        try:
+            return _truncated(dist.owner.op, lower, upper, size, *dist.owner.inputs)
+        except NotImplementedError:
+            pass
+
+        lower = pt.as_tensor_variable(lower) if lower is not None else pt.constant(-np.inf)
+        upper = pt.as_tensor_variable(upper) if upper is not None else pt.constant(np.inf)
+
+        if size is not None:
+            size = pt.as_tensor(size, dtype="int64", ndim=1)
+
+        if rv_size_is_none(size):
+            size = pt.broadcast_shape(dist, lower, upper)
+
+        dist = change_dist_size(dist, new_size=size)
+
+        rv_inputs = [
+            inp
+            if not isinstance(inp.type, RandomType)
+            else pytensor.shared(np.random.default_rng())
+            for inp in dist.owner.inputs
+        ]
+        graph_inputs = [*rv_inputs, lower, upper]
+
+        rv = dist.owner.op.make_node(*rv_inputs).default_output()
+
+        # Try to use inverted cdf sampling
+        # truncated_rv = icdf(rv, draw(uniform(cdf(lower), cdf(upper))))
+        try:
+            logcdf_lower, logcdf_upper = cls._create_logcdf_exprs(rv, rv, lower, upper)
+            # We use the first RNG from the base RV, so we don't have to introduce a new one
+            # This is not problematic because the RNG won't be used in the RV logcdf graph
+            uniform_rng = next(inp for inp in rv_inputs if isinstance(inp.type, RandomType))
+            uniform_next_rng, uniform = pt.random.uniform(
+                pt.exp(logcdf_lower),
+                pt.exp(logcdf_upper),
+                rng=uniform_rng,
+                size=rv.shape,
+            ).owner.outputs
+            truncated_rv = icdf(rv, uniform, warn_rvs=False)
+            return TruncatedRV(
+                base_rv_op=dist.owner.op,
+                inputs=graph_inputs,
+                outputs=[truncated_rv, uniform_next_rng],
+                ndim_supp=0,
+                max_n_steps=max_n_steps,
+            )(*graph_inputs)
+        except NotImplementedError:
+            pass
+
+        # Fallback to rejection sampling
+        # truncated_rv = zeros(rv.shape)
+        # reject_draws = ones(rv.shape, dtype=bool)
+        # while any(reject_draws):
+        #    truncated_rv[reject_draws] = draw(rv)[reject_draws]
+        #    reject_draws = (truncated_rv < lower) | (truncated_rv > upper)
+        def loop_fn(truncated_rv, reject_draws, lower, upper, *rv_inputs):
+            new_truncated_rv = dist.owner.op.make_node(*rv_inputs).default_output()
+            # Avoid scalar boolean indexing
+            if truncated_rv.type.ndim == 0:
+                truncated_rv = new_truncated_rv
+            else:
+                truncated_rv = pt.set_subtensor(
+                    truncated_rv[reject_draws],
+                    new_truncated_rv[reject_draws],
+                )
+            reject_draws = pt.or_((truncated_rv < lower), (truncated_rv > upper))
+
+            return (
+                (truncated_rv, reject_draws),
+                collect_default_updates(new_truncated_rv, inputs=rv_inputs),
+                until(~pt.any(reject_draws)),
+            )
+
+        (truncated_rv, reject_draws_), updates = scan(
+            loop_fn,
+            outputs_info=[
+                pt.zeros_like(rv),
+                pt.ones_like(rv, dtype=bool),
+            ],
+            non_sequences=[lower, upper, *rv_inputs],
+            n_steps=max_n_steps,
+            strict=True,
+        )
+
+        truncated_rv = truncated_rv[-1]
+        convergence = ~pt.any(reject_draws_[-1])
+        truncated_rv = TruncationCheck(f"Truncation did not converge in {max_n_steps} steps")(
+            truncated_rv, convergence
+        )
+
+        # Sort updates of each RNG so that they show in the same order as the input RNGs
+        def sort_updates(update):
+            rng, next_rng = update
+            return graph_inputs.index(rng)
+
+        next_rngs = [next_rng for rng, next_rng in sorted(updates.items(), key=sort_updates)]
+
+        return TruncatedRV(
+            base_rv_op=dist.owner.op,
+            inputs=graph_inputs,
+            outputs=[truncated_rv, *next_rngs],
+            ndim_supp=0,
+            max_n_steps=max_n_steps,
+        )(*graph_inputs)
+
+    @staticmethod
+    def _create_logcdf_exprs(
+        base_rv: TensorVariable,
+        value: TensorVariable,
+        lower: TensorVariable,
+        upper: TensorVariable,
+    ) -> tuple[TensorVariable, TensorVariable]:
+        """Create lower and upper logcdf expressions for base_rv.
+
+        Uses `value` as a template for broadcasting.
+        """
+        # For left truncated discrete RVs, we need to include the whole lower bound.
+        lower_value = lower - 1 if base_rv.type.dtype.startswith("int") else lower
+        lower_value = pt.full_like(value, lower_value, dtype=config.floatX)
+        upper_value = pt.full_like(value, upper, dtype=config.floatX)
+        lower_logcdf = logcdf(base_rv, lower_value, warn_rvs=False)
+        upper_logcdf = graph_replace(lower_logcdf, {lower_value: upper_value})
+        return lower_logcdf, upper_logcdf
 
     def update(self, node: Node):
         """Return the update mapping for the internal RNGs.
@@ -152,6 +288,7 @@ class Truncated(Distribution):
     """
 
     rv_type = TruncatedRV
+    rv_op = rv_type.rv_op
 
     @classmethod
     def dist(cls, dist, lower=None, upper=None, max_n_steps: int = 10_000, **kwargs):
@@ -177,135 +314,6 @@ class Truncated(Distribution):
             raise ValueError("lower and upper cannot both be None")
 
         return super().dist([dist, lower, upper, max_n_steps], **kwargs)
-
-    @classmethod
-    def rv_op(cls, dist, lower, upper, max_n_steps, size=None):
-        # Try to use specialized Op
-        try:
-            return _truncated(dist.owner.op, lower, upper, size, *dist.owner.inputs)
-        except NotImplementedError:
-            pass
-
-        lower = pt.as_tensor_variable(lower) if lower is not None else pt.constant(-np.inf)
-        upper = pt.as_tensor_variable(upper) if upper is not None else pt.constant(np.inf)
-
-        if size is None:
-            size = pt.broadcast_shape(dist, lower, upper)
-        dist = change_dist_size(dist, new_size=size)
-        rv_inputs = [
-            inp
-            if not isinstance(inp.type, RandomType)
-            else pytensor.shared(np.random.default_rng())
-            for inp in dist.owner.inputs
-        ]
-        graph_inputs = [*rv_inputs, lower, upper]
-
-        # Variables with `_` suffix identify dummy inputs for the OpFromGraph
-        graph_inputs_ = [
-            inp.type() if not isinstance(inp.type, RandomType) else inp for inp in graph_inputs
-        ]
-        *rv_inputs_, lower_, upper_ = graph_inputs_
-
-        rv_ = dist.owner.op.make_node(*rv_inputs_).default_output()
-
-        # Try to use inverted cdf sampling
-        # truncated_rv = icdf(rv, draw(uniform(cdf(lower), cdf(upper))))
-        try:
-            logcdf_lower_, logcdf_upper_ = Truncated._create_logcdf_exprs(rv_, rv_, lower_, upper_)
-            # We use the first RNG from the base RV, so we don't have to introduce a new one
-            # This is not problematic because the RNG won't be used in the RV logcdf graph
-            uniform_rng_ = next(inp_ for inp_ in rv_inputs_ if isinstance(inp_.type, RandomType))
-            uniform_next_rng_, uniform_ = pt.random.uniform(
-                pt.exp(logcdf_lower_),
-                pt.exp(logcdf_upper_),
-                rng=uniform_rng_,
-                size=rv_.shape,
-            ).owner.outputs
-            truncated_rv_ = icdf(rv_, uniform_, warn_rvs=False)
-            return TruncatedRV(
-                base_rv_op=dist.owner.op,
-                inputs=graph_inputs_,
-                outputs=[truncated_rv_, uniform_next_rng_],
-                ndim_supp=0,
-                max_n_steps=max_n_steps,
-            )(*graph_inputs)
-        except NotImplementedError:
-            pass
-
-        # Fallback to rejection sampling
-        # truncated_rv = zeros(rv.shape)
-        # reject_draws = ones(rv.shape, dtype=bool)
-        # while any(reject_draws):
-        #    truncated_rv[reject_draws] = draw(rv)[reject_draws]
-        #    reject_draws = (truncated_rv < lower) | (truncated_rv > upper)
-        def loop_fn(truncated_rv, reject_draws, lower, upper, *rv_inputs):
-            new_truncated_rv = dist.owner.op.make_node(*rv_inputs_).default_output()
-            # Avoid scalar boolean indexing
-            if truncated_rv.type.ndim == 0:
-                truncated_rv = new_truncated_rv
-            else:
-                truncated_rv = pt.set_subtensor(
-                    truncated_rv[reject_draws],
-                    new_truncated_rv[reject_draws],
-                )
-            reject_draws = pt.or_((truncated_rv < lower), (truncated_rv > upper))
-
-            return (
-                (truncated_rv, reject_draws),
-                collect_default_updates(new_truncated_rv),
-                until(~pt.any(reject_draws)),
-            )
-
-        (truncated_rv_, reject_draws_), updates = scan(
-            loop_fn,
-            outputs_info=[
-                pt.zeros_like(rv_),
-                pt.ones_like(rv_, dtype=bool),
-            ],
-            non_sequences=[lower_, upper_, *rv_inputs_],
-            n_steps=max_n_steps,
-            strict=True,
-        )
-
-        truncated_rv_ = truncated_rv_[-1]
-        convergence_ = ~pt.any(reject_draws_[-1])
-        truncated_rv_ = TruncationCheck(f"Truncation did not converge in {max_n_steps} steps")(
-            truncated_rv_, convergence_
-        )
-        # Sort updates of each RNG so that they show in the same order as the input RNGs
-
-        def sort_updates(update):
-            rng, next_rng = update
-            return graph_inputs.index(rng)
-
-        next_rngs = [next_rng for rng, next_rng in sorted(updates.items(), key=sort_updates)]
-
-        return TruncatedRV(
-            base_rv_op=dist.owner.op,
-            inputs=graph_inputs_,
-            outputs=[truncated_rv_, *next_rngs],
-            ndim_supp=0,
-            max_n_steps=max_n_steps,
-        )(*graph_inputs)
-
-    @staticmethod
-    def _create_logcdf_exprs(
-        base_rv: TensorVariable,
-        value: TensorVariable,
-        lower: TensorVariable,
-        upper: TensorVariable,
-    ) -> tuple[TensorVariable, TensorVariable]:
-        """Create lower and upper logcdf expressions for base_rv.
-
-        Uses `value` as a template for broadcasting.
-        """
-        # For left truncated discrete RVs, we need to include the whole lower bound.
-        lower_value = lower - 1 if base_rv.type.dtype.startswith("int") else lower
-        lower_value = pt.full_like(value, lower_value, dtype=config.floatX)
-        upper_value = pt.full_like(value, upper, dtype=config.floatX)
-        lower_logcdf = logcdf(base_rv, lower_value, warn_rvs=False)
-        upper_logcdf = graph_replace(lower_logcdf, {lower_value: upper_value})
-        return lower_logcdf, upper_logcdf
 
 
 @_change_dist_size.register(TruncatedRV)
@@ -367,7 +375,7 @@ def truncated_logprob(op, values, *inputs, **kwargs):
     base_rv_op = op.base_rv_op
     base_rv = base_rv_op.make_node(*rv_inputs).default_output()
     base_logp = logp(base_rv, value)
-    lower_logcdf, upper_logcdf = Truncated._create_logcdf_exprs(base_rv, value, lower, upper)
+    lower_logcdf, upper_logcdf = TruncatedRV._create_logcdf_exprs(base_rv, value, lower, upper)
     if base_rv_op.name:
         base_logp.name = f"{base_rv_op}_logprob"
         lower_logcdf.name = f"{base_rv_op}_lower_logcdf"
@@ -408,7 +416,7 @@ def truncated_logcdf(op: TruncatedRV, value, *inputs, **kwargs):
 
     base_rv = op.base_rv_op.make_node(*rv_inputs).default_output()
     base_logcdf = logcdf(base_rv, value)
-    lower_logcdf, upper_logcdf = Truncated._create_logcdf_exprs(base_rv, value, lower, upper)
+    lower_logcdf, upper_logcdf = TruncatedRV._create_logcdf_exprs(base_rv, value, lower, upper)
 
     is_lower_bounded = not (isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value)))
     is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))

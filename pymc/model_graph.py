@@ -177,7 +177,7 @@ class ModelGraph:
         else:
             shape = "box"
             style = "rounded, filled"
-            label = f"{var_name}\n~\nCData"
+            label = f"{var_name}\n~\nData"
 
         kwargs = {
             "shape": shape,

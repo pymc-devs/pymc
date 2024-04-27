@@ -24,7 +24,7 @@ from typing import TypeAlias
 import cloudpickle
 import numpy as np
 
-from rich.progress import BarColumn, Progress, TimeRemainingColumn
+from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 
 from pymc.backends.base import BaseTrace
 from pymc.initial_point import PointType
@@ -104,7 +104,7 @@ def _sample_population(
         task = progress.add_task("[red]Sampling...", total=draws, visible=progressbar)
 
         for _ in sampling:
-            progress.update(task, advance=1)
+            progress.update(task, advance=1, refresh=True)
 
     return
 
@@ -180,6 +180,8 @@ class PopulationStepper:
                     BarColumn(),
                     "[progress.percentage]{task.percentage:>3.0f}%",
                     TimeRemainingColumn(),
+                    TextColumn("/"),
+                    TimeElapsedColumn(),
                 ) as self._progress:
                     for c, stepper in enumerate(steppers):
                         #     enumerate(progress_bar(steppers)) if progressbar else enumerate(steppers)
