@@ -695,15 +695,6 @@ def test_no_init_nuts_compound(caplog):
 
 
 def test_sample_var_names():
-    with pm.Model() as model:
-        a = pm.Normal("a")
-        b = pm.Deterministic("b", a**2)
-        idata = pm.sample(10, tune=10, var_names=["a"])
-        assert "a" in idata.posterior
-        assert "b" not in idata.posterior
-
-
-def test_sample_var_names_draws():
     # Generate data
     seed = 1234
     rng = np.random.default_rng(seed)
