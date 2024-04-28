@@ -1995,7 +1995,7 @@ class SkewStudentT(Continuous):
         b_ = (b + 0.5) * pt.log(1 - x / pt.sqrt(a + b + x**2))
         c = (a + b - 1) * pt.log(2) + pt.special.betaln(a, b) + 0.5 * pt.log(a + b)
 
-        res = a_ + b_ - c
+        res = a_ + b_ - c - pt.log(sigma)
 
         return check_parameters(
             res,
