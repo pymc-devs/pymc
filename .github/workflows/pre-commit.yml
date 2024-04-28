@@ -6,16 +6,6 @@ on:
     branches: [main]
 
 jobs:
-  pre-commit:
-    runs-on: ubuntu-latest
-    env:
-      SKIP: no-commit-to-branch
-    steps:
-    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.10"  # Run pre-commit on oldest supported Python version
-    - uses: pre-commit/action@v3.0.1
   mypy:
     runs-on: ubuntu-latest
     defaults:
