@@ -712,7 +712,7 @@ def test_sample_var_names_draws():
     x = rng.normal(size=100)
     y = rng.normal(size=100)
 
-    group_values, group_idx  = np.unique(group, return_inverse=True)
+    group_values, group_idx = np.unique(group, return_inverse=True)
 
     coords = {"group": group_values}
 
@@ -721,7 +721,7 @@ def test_sample_var_names_draws():
         b_group = pm.Normal("b_group", dims="group")
         b_x = pm.Normal("b_x")
         mu = pm.Deterministic("mu", b_group[group_idx] + b_x * x)
-        sigma = pm.HalfNormal("sigma")    
+        sigma = pm.HalfNormal("sigma")
         pm.Normal("y", mu=mu, sigma=sigma, observed=y)
 
     # Sample with and without var_names, but always with the same seed
