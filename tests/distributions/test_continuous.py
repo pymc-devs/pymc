@@ -2369,24 +2369,13 @@ class TestWeibull(BaseTestDistributionRandom):
         "check_rv_size",
     ]
 
-    # See issue #7220
     def test_rng_different_shapes(self):
+        # See issue #7220
         rng = np.random.default_rng(123)
-
-        # Simulate mean from an only-intercept model. 2 chains, 100 draws, 5 observations.
-        # So 'mu' is the same for all the observations (because it's intercept-only)
-        mu_draws = np.abs(150 + np.dstack([rng.normal(size=(2, 100, 1))] * 5))
-
-        # Simulate some alpha values
-        alpha_draws = np.abs(rng.normal(size=(2, 100, 1)))
-
-        # With 'mu' and 'alpha' get 'beta', which is what pm.Weibull needs
-        beta_draws = mu_draws / sp.gamma(1 + 1 / alpha_draws)
-
-        # See the draws, for a given chain and draw, they look all the same!
-        weibull_draws = pm.draw(pm.Weibull.dist(alpha=alpha_draws, beta=beta_draws))
-
-        assert not (weibull_draws == weibull_draws[:, :, 0][..., None]).all()
+        alpha = np.abs(rng.normal(size=5))
+        beta = np.abs(rng.normal(size=(3, 1)))
+        draws = pm.draw(pm.Weibull.dist(alpha, beta), random_seed=rng)
+        assert len(np.unique(draws)) == draws.size
 
 
 @pytest.mark.skipif(
