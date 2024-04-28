@@ -44,7 +44,6 @@ from pytensor.tensor.random.var import (
 )
 from pytensor.tensor.sharedvar import SharedVariable
 from rich.console import Console
-from rich.progress import Progress
 from rich.theme import Theme
 
 import pymc as pm
@@ -55,6 +54,7 @@ from pymc.blocking import PointType
 from pymc.model import Model, modelcontext
 from pymc.pytensorf import compile_pymc
 from pymc.util import (
+    CustomProgress,
     RandomState,
     _get_seeds_per_chain,
     default_progress_theme,
@@ -829,10 +829,10 @@ def sample_posterior_predictive(
     _log.info(f"Sampling: {list(sorted(volatile_basic_rvs, key=lambda var: var.name))}")  # type: ignore
     ppc_trace_t = _DefaultTrace(samples)
     try:
-        with Progress(
+        with CustomProgress(
             console=Console(theme=progressbar_theme), disable=not progressbar
         ) as progress:
-            task = progress.add_task("Sampling ...", total=samples, visible=progressbar)
+            task = progress.add_task("Sampling ...", total=samples)
             for idx in np.arange(samples):
                 if nchain > 1:
                     # the trace object will either be a MultiTrace (and have _straces)...

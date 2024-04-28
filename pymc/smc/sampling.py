@@ -26,7 +26,6 @@ import numpy as np
 
 from arviz import InferenceData
 from rich.progress import (
-    Progress,
     SpinnerColumn,
     TextColumn,
     TimeElapsedColumn,
@@ -41,7 +40,7 @@ from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import _cpu_count
 from pymc.smc.kernels import IMH
 from pymc.stats.convergence import log_warnings, run_convergence_checks
-from pymc.util import RandomState, _get_seeds_per_chain
+from pymc.util import CustomProgress, RandomState, _get_seeds_per_chain
 
 
 def sample_smc(
@@ -369,13 +368,14 @@ def _sample_smc_int(
 
 
 def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
-    with Progress(
+    with CustomProgress(
         TextColumn("{task.description}"),
         SpinnerColumn(),
         TimeRemainingColumn(),
         TextColumn("/"),
         TimeElapsedColumn(),
         TextColumn("{task.fields[status]}"),
+        disable=not progressbar,
     ) as progress:
         futures = []  # keep track of the jobs
         with multiprocessing.Manager() as manager:
@@ -390,9 +390,7 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
             with ProcessPoolExecutor(max_workers=cores) as executor:
                 for c in range(chains):  # iterate over the jobs we need to run
                     # set visible false so we don't have a lot of bars all at once:
-                    task_id = progress.add_task(
-                        f"Chain {c}", status="Stage: 0 Beta: 0", visible=progressbar
-                    )
+                    task_id = progress.add_task(f"Chain {c}", status="Stage: 0 Beta: 0")
                     futures.append(
                         executor.submit(
                             _sample_smc_int,

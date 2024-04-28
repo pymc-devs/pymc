@@ -27,6 +27,7 @@ from cachetools import LRUCache, cachedmethod
 from pytensor import Variable
 from pytensor.compile import SharedVariable
 from pytensor.graph.utils import ValidatingScratchpad
+from rich.progress import Progress
 from rich.theme import Theme
 
 from pymc.exceptions import BlockModelAccessError
@@ -520,3 +521,36 @@ def makeiter(a):
         return a
     else:
         return [a]
+
+
+class CustomProgress(Progress):
+    """A child of Progress that allows to disable progress bars and its container
+
+    The implementation simply checks an `is_enabled` flag and generates the progress bar only if
+    it's `True`.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.is_enabled = not kwargs.get("disable", None) is True
+        if self.is_enabled:
+            super().__init__(*args, **kwargs)
+
+    def __enter__(self):
+        if self.is_enabled:
+            self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.is_enabled:
+            super().__exit__(exc_type, exc_val, exc_tb)
+
+    def add_task(self, *args, **kwargs):
+        if self.is_enabled:
+            return super().add_task(*args, **kwargs)
+        return None
+
+    def advance(self, task_id, advance=1) -> None:
+        if self.is_enabled:
+            super().advance(task_id, advance)
+            self.refresh()
+        return None

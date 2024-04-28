@@ -65,6 +65,7 @@ from pymc.step_methods import NUTS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
+    CustomProgress,
     RandomSeed,
     RandomState,
     _get_seeds_per_chain,
@@ -1075,9 +1076,11 @@ def _sample(
     )
     _pbar_data = {"chain": chain, "divergences": 0}
     _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
-    with Progress(console=Console(theme=progressbar_theme)) as progress:
+    with CustomProgress(
+        console=Console(theme=progressbar_theme), disable=not progressbar
+    ) as progress:
         try:
-            task = progress.add_task(_desc.format(**_pbar_data), total=draws, visible=progressbar)
+            task = progress.add_task(_desc.format(**_pbar_data), total=draws)
             for it, diverging in enumerate(sampling_gen):
                 if it >= skip_first and diverging:
                     _pbar_data["divergences"] += 1

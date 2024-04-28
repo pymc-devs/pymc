@@ -27,13 +27,13 @@ import cloudpickle
 import numpy as np
 
 from rich.console import Console
-from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn, TimeRemainingColumn
+from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
-from pymc.util import RandomSeed, default_progress_theme
+from pymc.util import CustomProgress, RandomSeed, default_progress_theme
 
 logger = logging.getLogger(__name__)
 
@@ -431,7 +431,7 @@ class ParallelSampler:
 
         self._in_context = False
 
-        self._progress = Progress(
+        self._progress = CustomProgress(
             "[progress.description]{task.description}",
             BarColumn(),
             "[progress.percentage]{task.percentage:>3.0f}%",
@@ -465,7 +465,6 @@ class ParallelSampler:
                 self._desc.format(self),
                 completed=self._completed_draws,
                 total=self._total_draws,
-                visible=self._show_progress,
             )
 
             while self._active:
@@ -474,20 +473,24 @@ class ParallelSampler:
                 self._completed_draws += 1
                 if not tuning and stats and stats[0].get("diverging"):
                     self._divergences += 1
-                progress.update(
-                    task,
-                    refresh=True,
-                    completed=self._completed_draws,
-                    total=self._total_draws,
-                    description=self._desc.format(self),
-                )
+
+                if self._progress.is_enabled:
+                    progress.update(
+                        task,
+                        refresh=True,
+                        completed=self._completed_draws,
+                        total=self._total_draws,
+                        description=self._desc.format(self),
+                    )
 
                 if is_last:
                     proc.join()
                     self._active.remove(proc)
                     self._finished.append(proc)
                     self._make_active()
-                    progress.update(task, description=self._desc.format(self), refresh=True)
+
+                    if self._progress.is_enabled:
+                        progress.update(task, description=self._desc.format(self), refresh=True)
 
                 # We could also yield proc.shared_point_view directly,
                 # and only call proc.write_next() after the yield returns.

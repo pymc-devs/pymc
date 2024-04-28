@@ -23,7 +23,7 @@ from rich.progress import Progress, TextColumn, track
 
 import pymc as pm
 
-from pymc.util import default_progress_theme
+from pymc.util import CustomProgress, default_progress_theme
 from pymc.variational import test_functions
 from pymc.variational.approximations import Empirical, FullRank, MeanField
 from pymc.variational.operators import KL, KSD
@@ -166,10 +166,10 @@ class Inference:
     def _iterate_without_loss(self, s, n, step_func, progressbar, progressbar_theme, callbacks):
         i = 0
         try:
-            with Progress(
+            with CustomProgress(
                 console=Console(theme=progressbar_theme), disable=not progressbar
             ) as progress:
-                task = progress.add_task("Fitting", total=n, visible=progressbar)
+                task = progress.add_task("Fitting", total=n)
                 for i in range(n):
                     step_func()
                     progress.update(task, advance=1)
@@ -217,12 +217,13 @@ class Inference:
         scores[:] = np.nan
         i = 0
         try:
-            with Progress(
+            with CustomProgress(
                 *Progress.get_default_columns(),
                 TextColumn("{task.fields[loss]}"),
                 console=Console(theme=progressbar_theme),
+                disable=not progressbar,
             ) as progress:
-                task = progress.add_task("Fitting:", total=n, visible=progressbar, loss="")
+                task = progress.add_task("Fitting:", total=n, loss="")
                 for i in range(n):
                     e = step_func()
                     progress.update(task, advance=1)
