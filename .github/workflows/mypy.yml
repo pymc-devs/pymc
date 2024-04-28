@@ -1,4 +1,4 @@
-name: pre-commit
+name: mypy
 
 on:
   pull_request:
