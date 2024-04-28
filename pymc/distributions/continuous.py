@@ -2499,6 +2499,8 @@ class WeibullBetaRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, alpha, beta, size) -> np.ndarray:
+        if size is None:
+            size = np.broadcast_shapes(alpha.shape, beta.shape)
         return np.asarray(beta * rng.weibull(alpha, size=size))
 
 

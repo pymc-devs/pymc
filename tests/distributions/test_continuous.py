@@ -2369,6 +2369,14 @@ class TestWeibull(BaseTestDistributionRandom):
         "check_rv_size",
     ]
 
+    def test_rng_different_shapes(self):
+        # See issue #7220
+        rng = np.random.default_rng(123)
+        alpha = np.abs(rng.normal(size=5))
+        beta = np.abs(rng.normal(size=(3, 1)))
+        draws = pm.draw(pm.Weibull.dist(alpha, beta), random_seed=rng)
+        assert len(np.unique(draws)) == draws.size
+
 
 @pytest.mark.skipif(
     condition=_polyagamma_not_installed,
