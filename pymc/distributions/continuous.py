@@ -1919,7 +1919,9 @@ class SkewStudentTRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, a, b, mu, sigma, size=None) -> np.ndarray:
-        return np.asarray(stats.jf_skew_t.rvs(a=a, b=b, size=size, random_state=rng)) * sigma + mu
+        return np.asarray(
+            stats.jf_skew_t.rvs(a=a, b=b, loc=mu, scale=sigma, size=size, random_state=rng)
+        )
 
 
 skewstudentt = SkewStudentTRV()
