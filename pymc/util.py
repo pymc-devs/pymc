@@ -531,7 +531,7 @@ class CustomProgress(Progress):
     """
 
     def __init__(self, *args, **kwargs):
-        self.is_enabled = not kwargs.get("disable", None) is True
+        self.is_enabled = kwargs.get("disable", None) is not True
         if self.is_enabled:
             super().__init__(*args, **kwargs)
 
@@ -552,5 +552,29 @@ class CustomProgress(Progress):
     def advance(self, task_id, advance=1) -> None:
         if self.is_enabled:
             super().advance(task_id, advance)
-            self.refresh()
+        return None
+
+    def update(
+        self,
+        task_id,
+        *,
+        total=None,
+        completed=None,
+        advance=None,
+        description=None,
+        visible=None,
+        refresh=False,
+        **fields,
+    ):
+        if self.is_enabled:
+            super().update(
+                task_id,
+                total=total,
+                completed=completed,
+                advance=advance,
+                description=description,
+                visible=visible,
+                refresh=refresh,
+                **fields,
+            )
         return None

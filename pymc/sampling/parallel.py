@@ -474,23 +474,20 @@ class ParallelSampler:
                 if not tuning and stats and stats[0].get("diverging"):
                     self._divergences += 1
 
-                if self._progress.is_enabled:
-                    progress.update(
-                        task,
-                        refresh=True,
-                        completed=self._completed_draws,
-                        total=self._total_draws,
-                        description=self._desc.format(self),
-                    )
+                progress.update(
+                    task,
+                    refresh=True,
+                    completed=self._completed_draws,
+                    total=self._total_draws,
+                    description=self._desc.format(self),
+                )
 
                 if is_last:
                     proc.join()
                     self._active.remove(proc)
                     self._finished.append(proc)
                     self._make_active()
-
-                    if self._progress.is_enabled:
-                        progress.update(task, description=self._desc.format(self), refresh=True)
+                    progress.update(task, description=self._desc.format(self), refresh=True)
 
                 # We could also yield proc.shared_point_view directly,
                 # and only call proc.write_next() after the yield returns.
