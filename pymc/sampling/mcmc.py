@@ -36,7 +36,6 @@ from arviz import InferenceData, dict_to_dataset
 from arviz.data.base import make_attrs
 from pytensor.graph.basic import Variable
 from rich.console import Console
-from rich.progress import Progress
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 from typing_extensions import Protocol
