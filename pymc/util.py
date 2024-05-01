@@ -531,7 +531,7 @@ class CustomProgress(Progress):
     """
 
     def __init__(self, *args, **kwargs):
-        self.is_enabled = not kwargs.get("disable", None) is True
+        self.is_enabled = kwargs.get("disable", None) is not True
         if self.is_enabled:
             super().__init__(*args, **kwargs)
 

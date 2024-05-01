@@ -487,9 +487,7 @@ class ParallelSampler:
                     self._active.remove(proc)
                     self._finished.append(proc)
                     self._make_active()
-
-                    if self._progress.is_enabled:
-                        progress.update(task, description=self._desc.format(self), refresh=True)
+                    progress.update(task, description=self._desc.format(self), refresh=True)
 
                 # We could also yield proc.shared_point_view directly,
                 # and only call proc.write_next() after the yield returns.
