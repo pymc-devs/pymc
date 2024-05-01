@@ -296,11 +296,20 @@ def model_from_fgraph(fgraph: FunctionGraph) -> Model:
     model = Model()
     if model.parent is not None:
         raise RuntimeError("model_to_fgraph cannot be called inside a PyMC model context")
-    model._coords = getattr(fgraph, "_coords", {})
-    model._dim_lengths = getattr(fgraph, "_dim_lengths", {})
+
+    _coords = getattr(fgraph, "_coords", {})
+    _dim_lengths = getattr(fgraph, "_dim_lengths", {})
+
+    fgraph, memo = fgraph.clone_get_equiv(check_integrity=False, attach_feature=False)
+    # Shared dim lengths are not extracted from the fgraph representation,
+    # so we need to update after we clone the fgraph
+    # TODO: Consider representing/extracting them from the fgraph!
+    _dim_lengths = {k: memo.get(v, v) for k, v in _dim_lengths.items()}
+
+    model._coords = _coords
+    model._dim_lengths = _dim_lengths
 
     # Replace dummy `ModelVar` Ops by the underlying variables,
-    fgraph = fgraph.clone()
     model_dummy_vars = [
         model_node.outputs[0]
         for model_node in fgraph.toposort()

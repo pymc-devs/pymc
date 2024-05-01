@@ -17,7 +17,7 @@ import pytest
 from pytensor.compile import SharedVariable
 from pytensor.graph import Constant
 
-from pymc import Deterministic
+from pymc import Deterministic, do
 from pymc.data import Data
 from pymc.distributions import HalfNormal, Normal
 from pymc.model import Model
@@ -132,3 +132,15 @@ def test_freeze_dims_and_data_subset():
     assert isinstance(new_m.dim_lengths["dim2"], SharedVariable)
     assert isinstance(new_m["data1"], SharedVariable)
     assert isinstance(new_m["data2"], Constant) and np.all(new_m["data2"].data == [1, 2, 3, 4, 5])
+
+
+def test_freeze_dim_after_do_intervention():
+    with Model(coords={"test_dim": range(5)}) as m:
+        mu = Data("mu", [0, 1, 2, 3, 4], dims="test_dim")
+        x = Normal("x", mu=mu, dims="test_dim")
+
+    do_m = do(m, {mu: mu * 100})
+    assert do_m["x"].type.shape == (None,)
+
+    frozen_do_m = freeze_dims_and_data(do_m)
+    assert frozen_do_m["x"].type.shape == (5,)
