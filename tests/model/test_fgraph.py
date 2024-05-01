@@ -16,7 +16,7 @@ import pytensor.tensor as pt
 import pytest
 
 from pytensor import config, shared
-from pytensor.graph import Constant, FunctionGraph, node_rewriter
+from pytensor.graph import Constant, FunctionGraph, graph_inputs, node_rewriter
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.tensor.exceptions import NotScalarConstantError
 
@@ -163,6 +163,11 @@ def test_data(inline_views):
     assert m_old.dim_lengths["test_dim"].eval() == 3
     np.testing.assert_allclose(pm.draw(m_new["mu"]), [100.0, 200.0])
     np.testing.assert_allclose(pm.draw(m_old["mu"]), [0.0, 1.0, 2.0], atol=1e-6)
+
+    # Check model dim_lengths contains the exact variables used in the graph of RVs
+    m_new_size_param = m_new["obs"].owner.inputs[1]
+    [m_new_dim_len] = graph_inputs([m_new_size_param])
+    assert m_new.dim_lengths["test_dim"] is m_new_dim_len
 
 
 @config.change_flags(floatX="float64")  # Avoid downcasting Ops in the graph
