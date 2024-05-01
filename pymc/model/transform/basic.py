@@ -50,7 +50,7 @@ def prune_vars_detached_from_observed(model: Model) -> Model:
     }
     for node_to_remove in nodes_to_remove:
         fgraph.remove_node(node_to_remove)
-    return model_from_fgraph(fgraph)
+    return model_from_fgraph(fgraph, mutate_fgraph=True)
 
 
 def parse_vars(model: Model, vars: ModelVariable | Sequence[ModelVariable]) -> list[Variable]:

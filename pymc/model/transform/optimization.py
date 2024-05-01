@@ -104,7 +104,7 @@ def freeze_dims_and_data(
         replacements[old_value] = new_value
     fg.replace_all(tuple(replacements.items()), import_missing=True)
 
-    return model_from_fgraph(fg)
+    return model_from_fgraph(fg, mutate_fgraph=True)
 
 
 __all__ = ("freeze_dims_and_data",)
