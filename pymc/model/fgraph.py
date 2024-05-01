@@ -278,12 +278,18 @@ def fgraph_from_model(
     return fgraph, memo
 
 
-def model_from_fgraph(fgraph: FunctionGraph) -> Model:
+def model_from_fgraph(fgraph: FunctionGraph, mutate_fgraph: bool = False) -> Model:
     """Convert FunctionGraph to PyMC model.
 
-    This requires nodes to be properly tagged with `ModelVar` dummy Ops.
+    Parameters
+    ----------
+    fgraph: FunctionGraph
+        fgraph representation of a PyMC model, with dummy `ModelVar` Ops.
+        See `fgraph_from_model` for more details.
 
-    See: fgraph_from_model
+    mutate_fgraph: bool, default False
+        Whether the function is allowed to modify the fgraph (and it's variables) in place.
+         This is useful if these are not needed anymore after the model is created.
     """
 
     def first_non_model_var(var):
@@ -300,11 +306,12 @@ def model_from_fgraph(fgraph: FunctionGraph) -> Model:
     _coords = getattr(fgraph, "_coords", {})
     _dim_lengths = getattr(fgraph, "_dim_lengths", {})
 
-    fgraph, memo = fgraph.clone_get_equiv(check_integrity=False, attach_feature=False)
-    # Shared dim lengths are not extracted from the fgraph representation,
-    # so we need to update after we clone the fgraph
-    # TODO: Consider representing/extracting them from the fgraph!
-    _dim_lengths = {k: memo.get(v, v) for k, v in _dim_lengths.items()}
+    if not mutate_fgraph:
+        fgraph, memo = fgraph.clone_get_equiv(check_integrity=False, attach_feature=False)
+        # Shared dim lengths are not extracted from the fgraph representation,
+        # so we need to update after we clone the fgraph
+        # TODO: Consider representing/extracting them from the fgraph!
+        _dim_lengths = {k: memo.get(v, v) for k, v in _dim_lengths.items()}
 
     model._coords = _coords
     model._dim_lengths = _dim_lengths
@@ -385,7 +392,7 @@ def clone_model(model: Model) -> Model:
             z = pm.Deterministic("z", clone_x + 1)
 
     """
-    return model_from_fgraph(fgraph_from_model(model)[0])
+    return model_from_fgraph(fgraph_from_model(model)[0], mutate_fgraph=True)
 
 
 def extract_dims(var) -> tuple:

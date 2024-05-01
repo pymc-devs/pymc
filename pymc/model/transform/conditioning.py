@@ -117,7 +117,7 @@ def observe(
 
     toposort_replace(fgraph, tuple(replacements.items()))
 
-    return model_from_fgraph(fgraph)
+    return model_from_fgraph(fgraph, mutate_fgraph=True)
 
 
 def do(
@@ -215,7 +215,7 @@ def do(
     # Replace variables by interventions
     toposort_replace(fgraph, tuple(replacements.items()))
 
-    model = model_from_fgraph(fgraph)
+    model = model_from_fgraph(fgraph, mutate_fgraph=True)
     if prune_vars:
         return prune_vars_detached_from_observed(model)
     return model
@@ -302,7 +302,7 @@ def change_value_transforms(
         replacements[dummy_rv] = new_dummy_rv
 
     toposort_replace(fgraph, tuple(replacements.items()))
-    return model_from_fgraph(fgraph)
+    return model_from_fgraph(fgraph, mutate_fgraph=True)
 
 
 def remove_value_transforms(
