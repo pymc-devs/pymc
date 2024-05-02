@@ -36,6 +36,13 @@ Features
 
 Linear Regression Example
 ==========================
+
+**Background**
+
+Plant growth can be influenced by multiple factors, and understanding these relationships is crucial for optimizing agricultural practices.
+
+In this experiment, we aim to predict the growth of a plant based on three different environmental variables.
+
 .. code-block:: python
 
    import pymc as pm
@@ -45,11 +52,20 @@ Linear Regression Example
    x_dist = pm.Normal.dist(shape=(100, 3))
    x_data = pm.draw(x_dist, random_seed=seed)
 
+   # Independent Variables:
+   # Sunlight Hours (X1): Number of hours the plant is exposed to sunlight daily.
+   # Water Amount (X2): Daily water amount given to the plant (in milliliters).
+   # Soil Nitrogen Content (X3): Percentage of nitrogen content in the soil.
+
+
+   # Dependent Variable:
+   # Plant Growth (y): Measured as the increase in plant height (in centimeters) over a certain period.
+
 
    # Define coordinate values for all dimensions of the data
    coords={
     "trial": range(100),
-    "features": ["hardness", "conductivity", "temperature"],
+    "features": ["X1", "X2", "X3"],
    }
 
    # Define generative model
@@ -69,7 +85,7 @@ Linear Regression Example
 
    # Generating data from model by fixing parameters
    fixed_parameters = {
-    "betas": [-2, 0, 2],
+    "betas": [5, 20, 2],
     "sigma": 0.5,
    }
    with pm.do(generative_model, fixed_parameters) as synthetic_model:
@@ -90,10 +106,10 @@ From the summary, we can see that the mean of the inferred parameters are very c
 ===================  ======  =====  ========  =========  ===========  =========  ==========  ==========  =======
 Params                mean     sd    hdi_3%    hdi_97%    mcse_mean    mcse_sd    ess_bulk    ess_tail    r_hat
 ===================  ======  =====  ========  =========  ===========  =========  ==========  ==========  =======
-betas[hardness]      -2.011  0.053    -2.113     -1.917        0.001      0.001        3108        1509        1
-betas[conductivity]   0.01   0.049    -0.085      0.1          0.001      0.001        2671        1503        1
-betas[temperature]    2.002  0.058     1.888      2.104        0.001      0.001        2410        1568        1
-sigma                 0.51   0.038     0.444      0.584        0.001      0.001        2339        1319        1
+betas[X1]             4.972  0.054     4.866      5.066        0.001      0.001        3003        1257        1
+betas[X2]            19.963  0.051    19.872     20.062        0.001      0.001        3112        1658        1
+betas[X3]             1.994  0.055     1.899      2.107        0.001      0.001        3221        1559        1
+sigma                 0.511  0.037     0.438      0.575        0.001      0            2945        1522        1
 ===================  ======  =====  ========  =========  ===========  =========  ==========  ==========  =======
 
 
