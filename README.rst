@@ -37,11 +37,10 @@ Features
 Linear Regression Example
 ==========================
 
-**Background**
 
 Plant growth can be influenced by multiple factors, and understanding these relationships is crucial for optimizing agricultural practices.
 
-In this experiment, we aim to predict the growth of a plant based on three different environmental variables.
+Imagine we conduct an experiment to predict the growth of a plant based on different environmental variables.
 
 .. code-block:: python
 
@@ -53,9 +52,9 @@ In this experiment, we aim to predict the growth of a plant based on three diffe
    x_data = pm.draw(x_dist, random_seed=seed)
 
    # Independent Variables:
-   # Sunlight Hours (X1): Number of hours the plant is exposed to sunlight daily.
-   # Water Amount (X2): Daily water amount given to the plant (in milliliters).
-   # Soil Nitrogen Content (X3): Percentage of nitrogen content in the soil.
+   # Sunlight Hours: Number of hours the plant is exposed to sunlight daily.
+   # Water Amount: Daily water amount given to the plant (in milliliters).
+   # Soil Nitrogen Content: Percentage of nitrogen content in the soil.
 
 
    # Dependent Variable:
@@ -65,7 +64,7 @@ In this experiment, we aim to predict the growth of a plant based on three diffe
    # Define coordinate values for all dimensions of the data
    coords={
     "trial": range(100),
-    "features": ["X1", "X2", "X3"],
+    "features": ["sunlight hours", "water amount", "soil nitrogen"],
    }
 
    # Define generative model
@@ -80,7 +79,7 @@ In this experiment, we aim to predict the growth of a plant based on three diffe
       mu = x @ betas
 
       # Likelihood
-      y = pm.Normal("y", mu, sigma, dims=["trial"])
+      plant_growth = pm.Normal("plant growth (z-scored)", mu, sigma, dims="trial")
 
 
    # Generating data from model by fixing parameters
@@ -90,11 +89,11 @@ In this experiment, we aim to predict the growth of a plant based on three diffe
    }
    with pm.do(generative_model, fixed_parameters) as synthetic_model:
       idata = pm.sample_prior_predictive(random_seed=seed) # Sample from prior predictive distribution.
-      synthetic_y = idata.prior["y"].sel(draw=0, chain=0)
+      synthetic_y = idata.prior["plant growth (z-scored)"].sel(draw=0, chain=0)
 
 
    # Infer parameters conditioned on observed data
-   with pm.observe(generative_model, {"y": synthetic_y}) as inference_model:
+   with pm.observe(generative_model, {"plant growth (z-scored)": synthetic_y}) as inference_model:
     idata = pm.sample(random_seed=seed)
 
    summary = pm.stats.summary(idata, var_names=["betas", "sigma"]))
@@ -103,15 +102,14 @@ In this experiment, we aim to predict the growth of a plant based on three diffe
 
 From the summary, we can see that the mean of the inferred parameters are very close to the fixed parameters
 
-===================  ======  =====  ========  =========  ===========  =========  ==========  ==========  =======
-Params                mean     sd    hdi_3%    hdi_97%    mcse_mean    mcse_sd    ess_bulk    ess_tail    r_hat
-===================  ======  =====  ========  =========  ===========  =========  ==========  ==========  =======
-betas[X1]             4.972  0.054     4.866      5.066        0.001      0.001        3003        1257        1
-betas[X2]            19.963  0.051    19.872     20.062        0.001      0.001        3112        1658        1
-betas[X3]             1.994  0.055     1.899      2.107        0.001      0.001        3221        1559        1
-sigma                 0.511  0.037     0.438      0.575        0.001      0            2945        1522        1
-===================  ======  =====  ========  =========  ===========  =========  ==========  ==========  =======
-
+=====================  ======  =====  ========  =========  ===========  =========  ==========  ==========  =======
+Params                  mean     sd    hdi_3%    hdi_97%    mcse_mean    mcse_sd    ess_bulk    ess_tail    r_hat
+=====================  ======  =====  ========  =========  ===========  =========  ==========  ==========  =======
+betas[sunlight hours]   4.972  0.054     4.866      5.066        0.001      0.001        3003        1257        1
+betas[water amount]    19.963  0.051    19.872     20.062        0.001      0.001        3112        1658        1
+betas[soil nitrogen]    1.994  0.055     1.899      2.107        0.001      0.001        3221        1559        1
+sigma                   0.511  0.037     0.438      0.575        0.001      0            2945        1522        1
+=====================  ======  =====  ========  =========  ===========  =========  ==========  ==========  =======
 
 .. code-block:: python
 
@@ -137,7 +135,7 @@ sigma                 0.511  0.037     0.438      0.575        0.001      0     
    with pm.do(
     inference_model,
     {inference_model["betas"]: inference_model["betas"] * [1, 1, 0]},
-   ) as heat_death_model:
+   ) as new_model:
       new_predictions = pm.sample_posterior_predictive(
          idata,
          predictions=True,
