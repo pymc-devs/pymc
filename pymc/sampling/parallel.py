@@ -476,7 +476,6 @@ class ParallelSampler:
 
                 progress.update(
                     task,
-                    refresh=True,
                     completed=self._completed_draws,
                     total=self._total_draws,
                     description=self._desc.format(self),

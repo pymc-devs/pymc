@@ -104,7 +104,7 @@ def _sample_population(
         task = progress.add_task("[red]Sampling...", total=draws)
 
         for _ in sampling:
-            progress.update(task, advance=1, refresh=True)
+            progress.update(task)
 
     return
 

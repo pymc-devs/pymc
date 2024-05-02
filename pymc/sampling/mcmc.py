@@ -1083,7 +1083,7 @@ def _sample(
             for it, diverging in enumerate(sampling_gen):
                 if it >= skip_first and diverging:
                     _pbar_data["divergences"] += 1
-                progress.update(task, refresh=True, advance=1)
+                progress.update(task)
             progress.update(task, refresh=True, advance=1, completed=True)
         except KeyboardInterrupt:
             pass
