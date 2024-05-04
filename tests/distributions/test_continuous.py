@@ -549,6 +549,14 @@ class TestMatchesScipy:
             lambda value, nu, mu, sigma: st.t.logpdf(value, nu, mu, sigma),
         )
 
+    def test_skewstudentt_logp(self):
+        check_logp(
+            pm.SkewStudentT,
+            R,
+            {"a": Rplus, "b": Rplus, "mu": R, "sigma": Rplus},
+            lambda value, a, b, mu, sigma: st.jf_skew_t.logpdf(value, a, b, mu, sigma),
+        )
+
     @pytest.mark.skipif(
         condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
@@ -572,6 +580,25 @@ class TestMatchesScipy:
             pm.StudentT,
             {"nu": Rplusbig, "mu": R, "sigma": Rplusbig},
             lambda q, nu, mu, sigma: st.t.ppf(q, nu, mu, sigma),
+        )
+
+    @pytest.mark.skipif(
+        condition=(pytensor.config.floatX == "float32"),
+        reason="Fails on float32 due to numerical issues",
+    )
+    def test_skewstudentt_logcdf(self):
+        check_logcdf(
+            pm.SkewStudentT,
+            R,
+            {"a": Rplus, "b": Rplus, "mu": R, "sigma": Rplus},
+            lambda value, a, b, mu, sigma: st.jf_skew_t.logcdf(value, a, b, mu, sigma),
+        )
+
+    def test_skewstudentt_icdf(self):
+        check_icdf(
+            pm.SkewStudentT,
+            {"a": Rplusbig, "b": Rplusbig, "mu": R, "sigma": Rplusbig},
+            lambda q, a, b, mu, sigma: st.jf_skew_t.ppf(q, a, b, mu, sigma),
         )
 
     def test_cauchy(self):
@@ -1251,6 +1278,27 @@ class TestMoments:
         assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
+        "a, b, mu, sigma, size, expected",
+        [
+            (1, 1, 0, 1, None, 0),
+            (np.ones(5), np.ones(5), 0, 1, None, np.zeros(5)),
+            (10, 10, np.arange(5), np.arange(1, 6), None, np.arange(5)),
+            (
+                10,
+                10,
+                np.arange(5),
+                np.arange(1, 6),
+                (2, 5),
+                np.full((2, 5), np.arange(5)),
+            ),
+        ],
+    )
+    def test_skewstudentt_support_point(self, a, b, mu, sigma, size, expected):
+        with pm.Model() as model:
+            pm.SkewStudentT("x", a=a, b=b, mu=mu, sigma=sigma, size=size)
+        assert_support_point_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
         "alpha, beta, size, expected",
         [
             (0, 1, None, 0),
@@ -1889,6 +1937,19 @@ class TestHalfStudentT(BaseTestDistributionRandom):
     expected_rv_op_params = {"nu": 5.0, "sigma": 2.0}
     reference_dist_params = {"df": 5.0, "loc": 0, "scale": 2.0}
     reference_dist = lambda self: ft.partial(self.halfstudentt_rng_fn, rng=self.get_random_state())  # noqa E731
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
+class TestSkewStudentT(BaseTestDistributionRandom):
+    pymc_dist = pm.SkewStudentT
+    pymc_dist_params = {"a": 5.0, "b": 5.0, "mu": -1.0, "sigma": 2.0}
+    expected_rv_op_params = {"a": 5.0, "b": 5.0, "mu": -1.0, "sigma": 2.0}
+    reference_dist_params = {"a": 5.0, "b": 5.0, "loc": -1.0, "scale": 2.0}
+    reference_dist = seeded_scipy_distribution_builder("jf_skew_t")
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",

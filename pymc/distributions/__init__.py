@@ -41,6 +41,7 @@ from pymc.distributions.continuous import (
     PolyaGamma,
     Rice,
     SkewNormal,
+    SkewStudentT,
     StudentT,
     Triangular,
     TruncatedNormal,
@@ -202,4 +203,5 @@ __all__ = [
     "HurdleLogNormal",
     "HurdleNegativeBinomial",
     "HurdlePoisson",
+    "SkewStudentT",
 ]

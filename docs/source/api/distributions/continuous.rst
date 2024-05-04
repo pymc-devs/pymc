@@ -33,6 +33,7 @@ Continuous
    PolyaGamma
    Rice
    SkewNormal
+   SkewStudentT
    StudentT
    Triangular
    TruncatedNormal

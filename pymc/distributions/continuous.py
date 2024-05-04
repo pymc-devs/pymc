@@ -29,6 +29,7 @@ import pytensor.tensor as pt
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
+from pytensor.tensor import gamma as gammafn
 from pytensor.tensor import gammaln
 from pytensor.tensor.extra_ops import broadcast_shape
 from pytensor.tensor.math import betaincinv, gammaincinv, tanh
@@ -130,6 +131,7 @@ __all__ = [
     "Moyal",
     "AsymmetricLaplace",
     "PolyaGamma",
+    "SkewStudentT",
 ]
 
 
@@ -1905,6 +1907,138 @@ class StudentT(Continuous):
             nu > 0,
             sigma > 0,
             msg="nu > 0, sigma > 0",
+        )
+
+
+class SkewStudentTRV(RandomVariable):
+    name = "skewstudentt"
+    ndim_supp = 0
+    ndims_params = [0, 0, 0, 0]
+    dtype = "floatX"
+    _print_name = ("SkewStudentT", "\\operatorname{SkewStudentT}")
+
+    @classmethod
+    def rng_fn(cls, rng, a, b, mu, sigma, size=None) -> np.ndarray:
+        return np.asarray(
+            stats.jf_skew_t.rvs(a=a, b=b, loc=mu, scale=sigma, size=size, random_state=rng)
+        )
+
+
+skewstudentt = SkewStudentTRV()
+
+
+class SkewStudentT(Continuous):
+    r"""
+    Skewed Student's T distribution log-likelihood.
+
+    This follows Jones and Faddy (2003)
+
+    The pdf of this distribution is
+
+    .. math::
+
+        f(t)=f(t ; a, b)=C_{a, b}^{-1}\left\{1+\frac{t}{\left(a+b+t^2\right)^{1 / 2}}\right\}^{a+1 / 2}\left\{1-\frac{t}{\left(a+b+t^2\right)^{1 / 2}}\right\}^{b+1 / 2}
+
+    where
+
+    .. math::
+
+        C_{a, b}=2^{a+b-1} B(a, b)(a+b)^{1 / 2}
+
+
+    ========  =============================================================
+    Support   :math:`x \in [\infty, \infty)`
+    Mean      :math:`E(T)=\frac{(a-b) \sqrt{(a+b)}}{2} \frac{\Gamma\left(a-\frac{1}{2}\right) \Gamma\left(b-\frac{1}{2}\right)}{\Gamma(a) \Gamma(b)}`
+    ========  =============================================================
+
+    Parameters
+    ----------
+    a : tensor_like of float
+        First kurtosis parameter (a > 0).
+    b : tensor_like of float
+        Second kurtosis parameter (b > 0).
+    mu : tensor_like of float
+        Location parameter.
+    sigma : tensor_like of float
+        Scale parameter (sigma > 0). Converges to the standard deviation as a and b
+        become close (only required if lam is not specified). Defaults to 1.
+    lam : tensor_like of float, optional
+        Scale parameter (lam > 0). Converges to the precision as a and b
+        become close (only required if sigma is not specified). Defaults to 1.
+
+    """
+
+    rv_op = skewstudentt
+
+    @classmethod
+    def dist(cls, a, b, *, mu=0, sigma=None, lam=None, **kwargs):
+        a = pt.as_tensor_variable(a)
+        b = pt.as_tensor_variable(b)
+        lam, sigma = get_tau_sigma(tau=lam, sigma=sigma)
+        sigma = pt.as_tensor_variable(sigma)
+
+        return super().dist([a, b, mu, sigma], **kwargs)
+
+    def support_point(rv, size, a, b, mu, sigma):
+        a, b, mu, _ = pt.broadcast_arrays(a, b, mu, sigma)
+        Et = mu + (a - b) * pt.sqrt(a + b) * gammafn(a - 0.5) * gammafn(b - 0.5) / (
+            2 * gammafn(a) * gammafn(b)
+        )
+        if not rv_size_is_none(size):
+            Et = pt.full(size, Et)
+        return Et
+
+    def logp(value, a, b, mu, sigma):
+        _, sigma = get_tau_sigma(sigma=sigma)
+
+        x = (value - mu) / sigma
+
+        a_ = (a + 0.5) * pt.log(1 + x / pt.sqrt(a + b + x**2))
+        b_ = (b + 0.5) * pt.log(1 - x / pt.sqrt(a + b + x**2))
+        c = (a + b - 1) * pt.log(2) + pt.special.betaln(a, b) + 0.5 * pt.log(a + b)
+
+        res = a_ + b_ - c - pt.log(sigma)
+
+        return check_parameters(
+            res,
+            a > 0,
+            b > 0,
+            sigma > 0,
+            msg="a > 0, b > 0, sigma > 0",
+        )
+
+    def logcdf(value, a, b, mu, sigma):
+        _, sigma = get_tau_sigma(sigma=sigma)
+
+        x = (value - mu) / sigma
+
+        y = (1 + x / pt.sqrt(a + b + x**2)) * 0.5
+        res = pt.log(pt.betainc(a, b, y))
+
+        return check_parameters(
+            res,
+            a > 0,
+            b > 0,
+            sigma > 0,
+            msg="a > 0, b > 0, sigma > 0",
+        )
+
+    def icdf(value, a, b, mu, sigma):
+        _, sigma = get_tau_sigma(sigma=sigma)
+
+        bval = betaincinv(a, b, value)
+        num = (2 * bval - 1) * pt.sqrt(a + b)
+        denom = 2 * pt.sqrt(bval * (1 - bval))
+        res = num / denom
+
+        res = mu + res * sigma
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            a > 0,
+            b > 0,
+            sigma > 0,
+            msg="a > 0, b > 0, sigma > 0",
         )
 
 
