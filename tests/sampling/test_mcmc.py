@@ -507,11 +507,11 @@ def test_empty_model():
         error.match("any free variables")
 
 
-def test_partial_trace_unsupported():
+def test_partial_trace_with_trace_unsupported():
     with pm.Model() as model:
         a = pm.Normal("a", mu=0, sigma=1)
         b = pm.Normal("b", mu=0, sigma=1)
-        with pytest.raises(DeprecationWarning, match="removed support"):
+        with pytest.raises(ValueError, match="var_names"):
             pm.sample(trace=[a])
 
 

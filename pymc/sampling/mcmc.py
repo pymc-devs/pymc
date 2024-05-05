@@ -630,10 +630,7 @@ def sample(
         else:
             kwargs["nuts"] = {"target_accept": kwargs.pop("target_accept")}
     if isinstance(trace, list):
-        raise DeprecationWarning(
-            "We have removed support for partial traces because it simplified things."
-            " Please open an issue if & why this is a problem for you."
-        )
+        raise ValueError("Please use `var_names` keyword argument for partial traces.")
 
     model = modelcontext(model)
     if not model.free_RVs:
