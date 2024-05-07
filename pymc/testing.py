@@ -385,7 +385,9 @@ def check_logp(
                     continue
 
                 point = valid_params.copy()  # Shallow copy should be okay
-                point[invalid_param] = invalid_edge
+                point[invalid_param] = np.asarray(
+                    invalid_edge, dtype=paramdomains[invalid_param].dtype
+                )
                 with pytest.raises(ParameterValueError):
                     pymc_logp(**point)
                     pytest.fail(f"test_params={point}")
