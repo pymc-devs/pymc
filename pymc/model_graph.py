@@ -142,7 +142,7 @@ DEFAULT_NODE_FORMATTERS: NodeTypeFormatterMapping = {
 }
 
 
-def update_node_formatters(node_formatters: NodeTypeFormatterMapping):
+def update_node_formatters(node_formatters: NodeTypeFormatterMapping) -> NodeTypeFormatterMapping:
     node_formatters = {**DEFAULT_NODE_FORMATTERS, **node_formatters}
 
     unknown_keys = set(node_formatters.keys()) - set(NodeType)
