@@ -79,7 +79,8 @@ Imagine we conduct an experiment to predict the growth of a plant based on diffe
       mu = x @ betas
 
       # Likelihood
-      plant_growth = pm.Normal("plant growth (z-scored)", mu, sigma, dims="trial")
+      # Assuming we measure deviation of each plant from baseline
+      plant_growth = pm.Normal("plant growth", mu, sigma, dims="trial")
 
 
    # Generating data from model by fixing parameters
@@ -135,7 +136,7 @@ sigma                   0.511  0.037     0.438      0.575        0.001      0   
    with pm.do(
     inference_model,
     {inference_model["betas"]: inference_model["betas"] * [1, 1, 0]},
-   ) as new_model:
+   ) as plant_growth_model:
       new_predictions = pm.sample_posterior_predictive(
          idata,
          predictions=True,
