@@ -550,10 +550,12 @@ class TestMatchesScipy:
         )
 
     def test_skewstudentt_logp(self):
+        # NOTE: Test with less extreme positive numbers
+        rplusnonzero = Domain([0, 0.01, 0.5, 2, 15, 69, np.inf])
         check_logp(
             pm.SkewStudentT,
             R,
-            {"a": Rplus, "b": Rplus, "mu": R, "sigma": Rplus},
+            {"a": rplusnonzero, "b": rplusnonzero, "mu": R, "sigma": rplusnonzero},
             lambda value, a, b, mu, sigma: st.jf_skew_t.logpdf(value, a, b, mu, sigma),
         )
 
