@@ -47,7 +47,7 @@ class NodeType(str, Enum):
     """Enum for the types of nodes in the graph."""
 
     POTENTIAL = "Potential"
-    FREE_RV = "Basic Random Variable"
+    FREE_RV = "Free Random Variable"
     OBSERVED_RV = "Observed Random Variable"
     DETERMINISTIC = "Deterministic"
     DATA = "Data"
@@ -58,7 +58,7 @@ NodeFormatter = Callable[[TensorVariable], GraphvizNodeKwargs]
 
 
 def default_potential(var: TensorVariable) -> GraphvizNodeKwargs:
-    """Default data for the node in the graph."""
+    """Default data for potential in the graph."""
     return {
         "shape": "octagon",
         "style": "filled",
@@ -67,7 +67,7 @@ def default_potential(var: TensorVariable) -> GraphvizNodeKwargs:
 
 
 def random_variable_symbol(var: TensorVariable) -> str:
-    """Get the name of the random variable."""
+    """Get the symbol of the random variable."""
     symbol = var.owner.op.__class__.__name__
 
     if symbol.endswith("RV"):
@@ -76,8 +76,8 @@ def random_variable_symbol(var: TensorVariable) -> str:
     return symbol
 
 
-def default_basic_rv(var: TensorVariable) -> GraphvizNodeKwargs:
-    """Default data for the node in the graph."""
+def default_free_rv(var: TensorVariable) -> GraphvizNodeKwargs:
+    """Default data for free RV in the graph."""
     symbol = random_variable_symbol(var)
 
     return {
@@ -88,7 +88,7 @@ def default_basic_rv(var: TensorVariable) -> GraphvizNodeKwargs:
 
 
 def default_observed_rv(var: TensorVariable) -> GraphvizNodeKwargs:
-    """Default data for the node in the graph."""
+    """Default data for observed RV in the graph."""
     symbol = random_variable_symbol(var)
 
     return {
@@ -99,7 +99,7 @@ def default_observed_rv(var: TensorVariable) -> GraphvizNodeKwargs:
 
 
 def default_deterministic(var: TensorVariable) -> GraphvizNodeKwargs:
-    """Default data for the node in the graph."""
+    """Default data for the deterministic in the graph."""
     return {
         "shape": "box",
         "style": None,
@@ -108,7 +108,7 @@ def default_deterministic(var: TensorVariable) -> GraphvizNodeKwargs:
 
 
 def default_data(var: TensorVariable) -> GraphvizNodeKwargs:
-    """Default data for the node in the graph."""
+    """Default data for the data in the graph."""
     return {
         "shape": "box",
         "style": "rounded, filled",
@@ -117,25 +117,26 @@ def default_data(var: TensorVariable) -> GraphvizNodeKwargs:
 
 
 def get_node_type(var_name: VarName, model) -> NodeType:
+    """Return the node type of the variable in the model."""
     v = model[var_name]
 
-    if v in model.potentials:
-        return NodeType.POTENTIAL
+    if v in model.deterministics:
+        return NodeType.DETERMINISTIC
+    elif v in model.free_RVs:
+        return NodeType.FREE_RV
     elif v in model.observed_RVs:
         return NodeType.OBSERVED_RV
-    elif v in model.Free_RVs:
-        return NodeType.Free_RV
-    elif v in model.deterministics:
-        return NodeType.DETERMINISTIC
-    else:
+    elif v in model.data_vars:
         return NodeType.DATA
+    else:
+        return NodeType.POTENTIAL
 
 
 NodeTypeFormatterMapping = dict[NodeType, NodeFormatter]
 
 DEFAULT_NODE_FORMATTERS: NodeTypeFormatterMapping = {
     NodeType.POTENTIAL: default_potential,
-    NodeType.BASIC_RV: default_basic_rv,
+    NodeType.FREE_RV: default_free_rv,
     NodeType.OBSERVED_RV: default_observed_rv,
     NodeType.DETERMINISTIC: default_deterministic,
     NodeType.DATA: default_data,
@@ -515,6 +516,17 @@ def model_to_networkx(
             obs = Normal("obs", theta, sigma=sigma, observed=y)
 
         model_to_networkx(schools)
+
+    Add custom attributes to Free Random Variables and Observed Random Variables nodes.
+
+    .. code-block:: python
+
+        node_formatters = {
+            "Free Random Variable": lambda var: {"shape": "circle", "label": var.name},
+            "Observed Random Variable": lambda var: {"shape": "square", "label": var.name},
+        }
+        model_to_networkx(schools, node_formatters=node_formatters)
+
     """
     if "plain" not in formatting:
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
@@ -569,6 +581,8 @@ def model_to_graphviz(
         Dots per inch. It only affects the resolution of the saved figure. The default is 300.
     node_formatters : dict, optional
         A dictionary mapping node types to functions that return a dictionary of node attributes.
+        Check out graphviz documentation for more information on available
+        attributes. https://graphviz.org/docs/nodes/
 
     Examples
     --------
@@ -603,6 +617,16 @@ def model_to_graphviz(
 
         # creates the file `schools.pdf`
         model_to_graphviz(schools).render("schools")
+
+    Display Free Random Variables and Observed Random Variables nodes with custom formatting.
+
+    .. code-block:: python
+
+        node_formatters = {
+            "Free Random Variable": lambda var: {"shape": "circle", "label": var.name},
+            "Observed Random Variable": lambda var: {"shape": "square", "label": var.name},
+        }
+        model_to_graphviz(schools, node_formatters=node_formatters)
     """
     if "plain" not in formatting:
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
