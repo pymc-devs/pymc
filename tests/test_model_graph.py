@@ -421,3 +421,47 @@ def test_model_graph_with_intermediate_named_variables():
         b.name = "b"
         pm.Normal("c", b, 1)
     assert dict(ModelGraph(m2).make_compute_graph()) == {"a": set(), "c": {"a"}}
+
+
+@pytest.fixture
+def simple_model() -> pm.Model:
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        b = pm.Normal("b", mu=a)
+        c = pm.Normal("c", mu=b)
+
+    return model
+
+
+def test_unknown_node_type(simple_model):
+    with pytest.raises(ValueError, match="Node formatters must be of type NodeType."):
+        model_to_graphviz(simple_model, node_formatters={"Unknown Node Type": "dummy"})
+
+
+def test_custom_node_formatting_networkx(simple_model):
+    node_formatters = {
+        "Free Random Variable": lambda var: {
+            "label": var.name,
+        },
+    }
+
+    G = model_to_networkx(simple_model, node_formatters=node_formatters)
+    assert G.__dict__["_node"] == {
+        "a": {"label": "a"},
+        "b": {"label": "b"},
+        "c": {"label": "c"},
+    }
+
+
+@pytest.mark.xfail(reason="Graphviz is not deterministic")
+def test_custom_node_formatting_graphviz(simple_model):
+    node_formatters = {
+        "Free Random Variable": lambda var: {
+            "label": var.name,
+        },
+    }
+
+    G = model_to_graphviz(simple_model, node_formatters=node_formatters)
+    assert G.source == (
+        "digraph {\n\ta [label=a]\n\tb [label=b]" "\n\tc [label=c]\n\ta -> b\n\tb -> c\n}\n"
+    )
