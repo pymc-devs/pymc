@@ -47,7 +47,7 @@ class NodeType(str, Enum):
     """Enum for the types of nodes in the graph."""
 
     POTENTIAL = "Potential"
-    BASIC_RV = "Basic Random Variable"
+    FREE_RV = "Basic Random Variable"
     OBSERVED_RV = "Observed Random Variable"
     DETERMINISTIC = "Deterministic"
     DATA = "Data"
@@ -121,10 +121,10 @@ def get_node_type(var_name: VarName, model) -> NodeType:
 
     if v in model.potentials:
         return NodeType.POTENTIAL
-    elif v in model.basic_RVs and v in model.observed_RVs:
+    elif v in model.observed_RVs:
         return NodeType.OBSERVED_RV
-    elif v in model.basic_RVs:
-        return NodeType.BASIC_RV
+    elif v in model.Free_RVs:
+        return NodeType.Free_RV
     elif v in model.deterministics:
         return NodeType.DETERMINISTIC
     else:
