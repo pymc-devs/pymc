@@ -453,7 +453,6 @@ def test_custom_node_formatting_networkx(simple_model):
     }
 
 
-@pytest.mark.xfail(reason="Graphviz is not deterministic")
 def test_custom_node_formatting_graphviz(simple_model):
     node_formatters = {
         "Free Random Variable": lambda var: {
@@ -462,6 +461,14 @@ def test_custom_node_formatting_graphviz(simple_model):
     }
 
     G = model_to_graphviz(simple_model, node_formatters=node_formatters)
-    assert G.source == (
-        "digraph {\n\ta [label=a]\n\tb [label=b]" "\n\tc [label=c]\n\ta -> b\n\tb -> c\n}\n"
-    )
+    body = [item.strip() for item in G.body]
+
+    items = [
+        "a [label=a]",
+        "b [label=b]",
+        "c [label=c]",
+        "a -> b",
+        "b -> c",
+    ]
+    for item in items:
+        assert item in body
