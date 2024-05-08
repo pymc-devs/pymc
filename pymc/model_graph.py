@@ -491,6 +491,8 @@ def model_to_networkx(
         one of { "plain" }
     node_formatters : dict, optional
         A dictionary mapping node types to functions that return a dictionary of node attributes.
+        Check out the networkx documentation for more information
+        how attributes are added to nodes: https://networkx.org/documentation/stable/reference/classes/generated/networkx.Graph.add_node.html
 
     Examples
     --------
