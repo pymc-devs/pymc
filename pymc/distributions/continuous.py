@@ -706,11 +706,7 @@ class TruncatedNormal(BoundedContinuous):
         is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
 
         if is_lower_bounded and is_upper_bounded:
-            lcdf_a = normal_lcdf(mu, sigma, lower)
-            lcdf_b = normal_lcdf(mu, sigma, upper)
-            lsf_a = normal_lccdf(mu, sigma, lower)
-            lsf_b = normal_lccdf(mu, sigma, upper)
-            norm = pt.switch(lower > 0, logdiffexp(lsf_a, lsf_b), logdiffexp(lcdf_b, lcdf_a))
+            norm = log_diff_normal_cdf(mu, sigma, upper, lower)
         elif is_lower_bounded:
             norm = normal_lccdf(mu, sigma, lower)
         elif is_upper_bounded:
