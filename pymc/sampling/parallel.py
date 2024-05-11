@@ -473,7 +473,6 @@ class ParallelSampler:
                 self._completed_draws += 1
                 if not tuning and stats and stats[0].get("diverging"):
                     self._divergences += 1
-
                 progress.update(
                     task,
                     completed=self._completed_draws,

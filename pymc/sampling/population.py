@@ -102,7 +102,6 @@ def _sample_population(
 
     with CustomProgress(disable=not progressbar) as progress:
         task = progress.add_task("[red]Sampling...", total=draws)
-
         for _ in sampling:
             progress.update(task)
 
