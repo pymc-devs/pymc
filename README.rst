@@ -132,10 +132,22 @@ sigma                   0.511  0.037     0.438      0.575        0.001      0   
 
    pm.stats.summary(idata.predictions, kind="stats")
 
-   # Simulate new data, under a scenario where the last beta is zero (heat death of the universe)
+The new data conditioned on inferred parameters would look like:
+
+==========================  ======  =====  ========  =========
+Output                       mean    sd     hdi_3%    hdi_97%
+==========================  ======  =====  ========  =========
+plant growth (z-scored)[0]  14.21   0.509    13.232     15.144
+plant growth (z-scored)[1]  24.43   0.518    23.347     25.32
+plant growth (z-scored)[2]  -6.743  0.515    -7.778     -5.834
+==========================  ======  =====  ========  =========
+
+.. code-block:: python
+
+   # Simulate new data, under a scenario where the first beta is zero
    with pm.do(
     inference_model,
-    {inference_model["betas"]: inference_model["betas"] * [1, 1, 0]},
+    {inference_model["betas"]: inference_model["betas"] * [0, 1, 1]},
    ) as plant_growth_model:
       new_predictions = pm.sample_posterior_predictive(
          idata,
@@ -144,6 +156,16 @@ sigma                   0.511  0.037     0.438      0.575        0.001      0   
       )
 
    pm.stats.summary(new_predictions, kind="stats")
+
+The new data, under the above scenario would look like:
+
+==========================  ======  =====  ========  =========
+Output                       mean    sd     hdi_3%    hdi_97%
+==========================  ======  =====  ========  =========
+plant growth (z-scored)[0]  14.153  0.509    13.181     15.096
+plant growth (z-scored)[1]  23.85   0.517    22.915     24.878
+plant growth (z-scored)[2]  -7.302  0.515    -8.315     -6.374
+==========================  ======  =====  ========  =========
 
 Getting started
 ===============
