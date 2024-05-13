@@ -532,7 +532,7 @@ def sample_jax_nuts(
     tune : int, default 1000
         Number of iterations to tune. Samplers adjust the step sizes, scalings or
         similar during tuning. Tuning samples will be drawn in addition to the number
-        specified in the ``draws`` argument.
+        specified in the ``draws`` argument.  Tuned samples are discarded.
     chains : int, default 4
         The number of chains to sample.
     target_accept : float in [0, 1].
@@ -554,11 +554,11 @@ def sample_jax_nuts(
         Names of variables for which to compute the posterior samples. Defaults to all
         variables in the posterior.
     nuts_kwargs : dict, optional
-        Keyword arguments for underlying nuts sampler
-    progressbar: bool, default True
-        If True, display progressbar while sampling
+        Keyword arguments for the underlying nuts sampler
+    progressbar : bool, default True
+        If True, display a progressbar while sampling
     keep_untransformed : bool, default False
-        Include untransformed variables in the posterior samples. Defaults to False.
+        Include untransformed variables in the posterior samples.
     chain_method : str, default "parallel"
         Specify how samples should be drawn. The choices include "parallel", and
         "vectorized".
@@ -575,10 +575,11 @@ def sample_jax_nuts(
         ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
         the ``model`` argument if not provided in ``idata_kwargs``. If ``coords`` and
         ``dims`` are provided, they are used to update the inferred dictionaries.
-    compute_convergence_checks: bool, default True
-        Compute ess and rhat values and warn if they indicate potential sampling issues.
+    compute_convergence_checks : bool, default True
+        If True, compute ess and rhat values and warn if they indicate potential sampling issues.
     nuts_sampler : Literal["numpyro", "blackjax"]
-        Nuts sampler library to use
+        Nuts sampler library to use - do not change - use sample_numpyro_nuts or
+        sample_blackjax_nuts as appropriate
 
     Returns
     -------
