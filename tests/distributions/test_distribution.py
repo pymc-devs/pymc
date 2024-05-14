@@ -979,8 +979,9 @@ class TestPartialObservedRV:
         np.testing.assert_allclose(obs_logp, st.norm([1, 2]).logpdf([0.25, 0.5]))
         np.testing.assert_allclose(unobs_logp, st.norm([3]).logpdf([0.25]))
 
+    @pytest.mark.parametrize("mutable_shape", (False, True))
     @pytest.mark.parametrize("obs_component_selected", (True, False))
-    def test_multivariate_constant_mask_separable(self, obs_component_selected):
+    def test_multivariate_constant_mask_separable(self, obs_component_selected, mutable_shape):
         if obs_component_selected:
             mask = np.zeros((1, 4), dtype=bool)
         else:
@@ -988,7 +989,11 @@ class TestPartialObservedRV:
         obs_data = np.array([[0.1, 0.4, 0.1, 0.4]])
         unobs_data = np.array([[0.4, 0.1, 0.4, 0.1]])
 
-        rv = pm.Dirichlet.dist([1, 2, 3, 4], shape=(1, 4))
+        if mutable_shape:
+            shape = (1, pytensor.shared(np.array(4, dtype=int)))
+        else:
+            shape = (1, 4)
+        rv = pm.Dirichlet.dist(pt.arange(shape[-1]) + 1, shape=shape)
         (obs_rv, obs_mask), (unobs_rv, unobs_mask), joined_rv = create_partial_observed_rv(rv, mask)
 
         # Test types
@@ -1022,6 +1027,10 @@ class TestPartialObservedRV:
             expected_unobs_logp = pm.logp(rv, unobs_data).eval()
         np.testing.assert_allclose(obs_logp, expected_obs_logp)
         np.testing.assert_allclose(unobs_logp, expected_unobs_logp)
+
+        if mutable_shape:
+            shape[-1].set_value(7)
+            assert tuple(joined_rv.shape.eval()) == (1, 7)
 
     def test_multivariate_constant_mask_unseparable(self):
         mask = pt.constant(np.array([[True, True, False, False]]))
@@ -1097,14 +1106,19 @@ class TestPartialObservedRV:
         np.testing.assert_almost_equal(obs_logp, new_expected_logp)
         np.testing.assert_array_equal(unobs_logp, [])
 
-    def test_multivariate_shared_mask_unseparable(self):
+    @pytest.mark.parametrize("mutable_shape", (False, True))
+    def test_multivariate_shared_mask_unseparable(self, mutable_shape):
         # Even if the mask is initially not mixing support dims,
         # it could later be changed in a way that does!
         mask = shared(np.array([[True, True, True, True]]))
         obs_data = np.array([[0.1, 0.4, 0.1, 0.4]])
         unobs_data = np.array([[0.4, 0.1, 0.4, 0.1]])
 
-        rv = pm.Dirichlet.dist([1, 2, 3, 4], shape=(1, 4))
+        if mutable_shape:
+            shape = mask.shape
+        else:
+            shape = (1, 4)
+        rv = pm.Dirichlet.dist([1, 2, 3, 4], shape=shape)
         (obs_rv, obs_mask), (unobs_rv, unobs_mask), joined_rv = create_partial_observed_rv(rv, mask)
 
         # Test types
@@ -1134,15 +1148,21 @@ class TestPartialObservedRV:
 
         # Test that we can update a shared mask
         mask.set_value(np.array([[False, False, True, True]]))
+        equivalent_value = np.array([0.1, 0.4, 0.4, 0.1])
 
         assert tuple(obs_rv.shape.eval()) == (2,)
         assert tuple(unobs_rv.shape.eval()) == (2,)
 
-        new_expected_logp = pm.logp(rv, [0.1, 0.4, 0.4, 0.1]).eval()
+        new_expected_logp = pm.logp(rv, equivalent_value).eval()
         assert not np.isclose(expected_logp, new_expected_logp)  # Otherwise test is weak
         obs_logp, unobs_logp = logp_fn()
         np.testing.assert_almost_equal(obs_logp, new_expected_logp)
         np.testing.assert_array_equal(unobs_logp, [])
+
+        if mutable_shape:
+            mask.set_value(np.array([[False, False, True, False], [False, False, False, True]]))
+            assert tuple(obs_rv.shape.eval()) == (6,)
+            assert tuple(unobs_rv.shape.eval()) == (2,)
 
     def test_support_point(self):
         x = pm.GaussianRandomWalk.dist(init_dist=pm.Normal.dist(-5), mu=1, steps=9)
