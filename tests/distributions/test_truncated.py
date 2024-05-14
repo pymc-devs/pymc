@@ -17,6 +17,7 @@ import pytensor.tensor as pt
 import pytest
 import scipy
 
+from pytensor.scalar import Identity
 from pytensor.tensor.random.basic import GeometricRV, NormalRV
 from pytensor.tensor.random.type import RandomType
 
@@ -573,3 +574,14 @@ def test_truncated_maxwell_dist():
         logp(trunc_x, test_value).eval(),
         expected_logp,
     )
+
+
+@pytest.mark.parametrize("dist_op", [icdf_normal, rejection_normal])
+def test_truncated_identity_input(dist_op):
+    # Regression test for https://github.com/pymc-devs/pymc/issues/7312
+    mu = Exponential.dist(scale=0.5)
+    mu_identity = mu.copy()
+    assert isinstance(mu_identity.owner.op.scalar_op, Identity)
+
+    rv_out = Truncated.dist(dist=dist_op(mu_identity, 5), lower=0, upper=1)
+    assert np.ptp(draw(rv_out, draws=500)) < 1
