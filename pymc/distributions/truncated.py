@@ -121,7 +121,9 @@ class TruncatedRV(SymbolicRandomVariable):
                 rng=uniform_rng,
                 size=rv.shape,
             ).owner.outputs
-            truncated_rv = icdf(rv, uniform, warn_rvs=False)
+            # So icdf does not see the random graph of uniform
+            uniform_type = uniform.type()
+            truncated_rv = graph_replace(icdf(rv, uniform_type), {uniform_type: uniform})
             return TruncatedRV(
                 base_rv_op=dist.owner.op,
                 inputs=graph_inputs,
