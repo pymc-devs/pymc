@@ -11,9 +11,9 @@ dependencies:
 - cloudpickle
 - h5py>=2.7
 # Jaxlib version must not be greater than jax version!
-- blackjax>=1.0.0
-- jaxlib==0.4.23
-- jax==0.4.23
+- blackjax>=1.2.0
+- jaxlib==0.4.25
+- jax==0.4.25
 - libblas=*=*mkl
 - mkl-service
 - numpy>=1.15.0
