@@ -28,6 +28,7 @@ import pytensor
 import pytensor.sparse as sparse
 import pytensor.tensor as pt
 import pytest
+import scipy
 import scipy.sparse as sps
 import scipy.stats as st
 
@@ -38,7 +39,7 @@ from pytensor.tensor.variable import TensorConstant
 
 import pymc as pm
 
-from pymc import Deterministic, Model, Potential
+from pymc import Deterministic, Model, MvNormal, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
 from pymc.distributions.distribution import PartialObservedRV
@@ -1504,10 +1505,38 @@ class TestImputationMissingData:
         """
         with Model() as m:
             mu = pm.TruncatedNormal("mu", mu=1, sigma=2, lower=0)
-            x = pm.TruncatedNormal(
-                "x", mu=mu, sigma=0.5, lower=0, observed=np.array([0.1, 0.2, 0.5, np.nan, np.nan])
-            )
+            with pytest.warns(ImputationWarning):
+                x = pm.TruncatedNormal(
+                    "x",
+                    mu=mu,
+                    sigma=0.5,
+                    lower=0,
+                    observed=np.array([0.1, 0.2, 0.5, np.nan, np.nan]),
+                )
         m.check_start_vals(m.initial_point())
+
+    def test_coordinates(self):
+        # Regression test for https://github.com/pymc-devs/pymc/issues/7304
+
+        coords = {"trial": range(30), "feature": range(2)}
+        observed = np.zeros((30, 2))
+        observed[0, 0] = np.nan
+
+        with Model(coords=coords) as model:
+            with pytest.warns(ImputationWarning):
+                MvNormal(
+                    "y",
+                    mu=np.zeros(2),
+                    cov=np.eye(2),
+                    observed=observed,
+                    dims=("trial", "feature"),
+                )
+
+        logp_fn = model.compile_logp()
+        np.testing.assert_allclose(
+            logp_fn({"y_unobserved": [0]}),
+            scipy.stats.multivariate_normal.logpdf([0, 0], cov=np.eye(2)) * 30,
+        )
 
 
 class TestShared:
