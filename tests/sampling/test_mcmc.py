@@ -507,6 +507,14 @@ def test_empty_model():
         error.match("any free variables")
 
 
+def test_blas_cores():
+    with pm.Model():
+        pm.Normal("a")
+        pm.sample(blas_cores="auto", tune=10, cores=2, draws=10)
+        pm.sample(blas_cores=None, tune=10, cores=2, draws=10)
+        pm.sample(blas_cores=2, tune=10, cores=2, draws=10)
+
+
 def test_partial_trace_with_trace_unsupported():
     with pm.Model() as model:
         a = pm.Normal("a", mu=0, sigma=1)

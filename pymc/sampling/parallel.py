@@ -29,6 +29,7 @@ import numpy as np
 from rich.console import Console
 from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
+from threadpoolctl import threadpool_limits
 
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
@@ -93,6 +94,7 @@ class _Process:
         draws: int,
         tune: int,
         seed,
+        blas_cores,
     ):
         self._msg_pipe = msg_pipe
         self._step_method = step_method
@@ -102,6 +104,7 @@ class _Process:
         self._at_seed = seed + 1
         self._draws = draws
         self._tune = tune
+        self._blas_cores = blas_cores
 
     def _unpickle_step_method(self):
         unpickle_error = (
@@ -116,22 +119,23 @@ class _Process:
                 raise ValueError(unpickle_error)
 
     def run(self):
-        try:
-            # We do not create this in __init__, as pickling this
-            # would destroy the shared memory.
-            self._unpickle_step_method()
-            self._point = self._make_numpy_refs()
-            self._start_loop()
-        except KeyboardInterrupt:
-            pass
-        except BaseException as e:
-            e = ExceptionWithTraceback(e, e.__traceback__)
-            # Send is not blocking so we have to force a wait for the abort
-            # message
-            self._msg_pipe.send(("error", e))
-            self._wait_for_abortion()
-        finally:
-            self._msg_pipe.close()
+        with threadpool_limits(limits=self._blas_cores):
+            try:
+                # We do not create this in __init__, as pickling this
+                # would destroy the shared memory.
+                self._unpickle_step_method()
+                self._point = self._make_numpy_refs()
+                self._start_loop()
+            except KeyboardInterrupt:
+                pass
+            except BaseException as e:
+                e = ExceptionWithTraceback(e, e.__traceback__)
+                # Send is not blocking so we have to force a wait for the abort
+                # message
+                self._msg_pipe.send(("error", e))
+                self._wait_for_abortion()
+            finally:
+                self._msg_pipe.close()
 
     def _wait_for_abortion(self):
         while True:
@@ -208,6 +212,7 @@ class ProcessAdapter:
         chain: int,
         seed,
         start: dict[str, np.ndarray],
+        blas_cores,
         mp_ctx,
     ):
         self.chain = chain
@@ -256,6 +261,7 @@ class ProcessAdapter:
                 draws,
                 tune,
                 seed,
+                blas_cores,
             ),
         )
         self._process.start()
@@ -378,6 +384,7 @@ class ParallelSampler:
         step_method,
         progressbar: bool = True,
         progressbar_theme: Theme | None = default_progress_theme,
+        blas_cores: int | None = None,
         mp_ctx=None,
     ):
         if any(len(arg) != chains for arg in [seeds, start_points]):
@@ -411,6 +418,7 @@ class ParallelSampler:
                 chain,
                 seed,
                 start,
+                blas_cores,
                 mp_ctx,
             )
             for chain, seed, start in zip(range(chains), seeds, start_points)
