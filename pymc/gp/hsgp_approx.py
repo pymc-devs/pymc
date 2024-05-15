@@ -16,7 +16,6 @@ import numbers
 import warnings
 
 from collections.abc import Sequence
-from types import ModuleType
 
 import numpy as np
 import pytensor.tensor as pt
@@ -30,7 +29,7 @@ from pymc.gp.mean import Mean, Zero
 TensorLike = np.ndarray | pt.TensorVariable
 
 
-def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> TensorLike:
+def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
     """Set the boundary using the mean-subtracted `Xs` and `c`.  `c` is usually a scalar
     multiplier greater than 1.0, but it may be one value per dimension or column of `Xs`.
     """
@@ -39,11 +38,11 @@ def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> TensorLike:
     return L
 
 
-def calc_eigenvalues(L: TensorLike, m: Sequence[int], tl: ModuleType = np):
+def calc_eigenvalues(L: TensorLike, m: Sequence[int]):
     """Calculate eigenvalues of the Laplacian."""
     S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(len(m))])
     S_arr = np.vstack([s.flatten() for s in S]).T
-    return tl.square((np.pi * S_arr) / (2 * L))
+    return np.square((np.pi * S_arr) / (2 * L))
 
 
 def calc_eigenvectors(
@@ -51,18 +50,21 @@ def calc_eigenvectors(
     L: TensorLike,
     eigvals: TensorLike,
     m: Sequence[int],
-    tl: ModuleType = np,
-):
+) -> np.ndarray:
     """Calculate eigenvectors of the Laplacian. These are used as basis vectors in the HSGP
     approximation.
     """
+    if isinstance(Xs, pt.TensorVariable):
+        Xs = Xs.eval()
     m_star = int(np.prod(m))
-    phi = tl.ones((Xs.shape[0], m_star))
+
+    phi = np.ones((Xs.shape[0], m_star))
     for d in range(len(m)):
-        c = 1.0 / tl.sqrt(L[d])
-        term1 = tl.sqrt(eigvals[:, d])
-        term2 = tl.tile(Xs[:, d][:, None], m_star) + L[d]
-        phi *= c * tl.sin(term1 * term2)
+        c = 1.0 / np.sqrt(L[d])
+        term1 = np.sqrt(eigvals[:, d])
+        term2 = np.tile(Xs[:, d][:, None], m_star) + L[d]
+        phi *= c * np.sin(term1 * term2)
+
     return phi
 
 
@@ -70,18 +72,22 @@ def calc_basis_periodic(
     Xs: TensorLike,
     period: TensorLike,
     m: int,
-    tl: ModuleType = np,
 ):
     """
     Calculate basis vectors for the cosine series expansion of the periodic covariance function.
     These are derived from the Taylor series representation of the covariance.
     """
+    if isinstance(Xs, pt.TensorVariable):
+        Xs = Xs.eval()
+
     w0 = (2 * np.pi) / period  # angular frequency defining the periodicity
-    m1 = tl.tile(w0 * Xs, m)
-    m2 = tl.diag(tl.arange(0, m, 1))
+    m1 = np.tile(w0 * Xs, m)
+    m2 = np.diag(np.arange(0, m, 1))
     mw0x = m1 @ m2
-    phi_cos = tl.cos(mw0x)
-    phi_sin = tl.sin(mw0x)
+
+    phi_cos = np.cos(mw0x)
+    phi_sin = np.sin(mw0x)
+
     return phi_cos, phi_sin
 
 
@@ -317,9 +323,11 @@ class HSGP(Base):
         """
         # Important: fix the computation of the mean. If X is mutated later,
         # the training mean will be subtracted, not the testing mean.
-        if not self._X_mean:
+        try:
+            Xs = Xs - self._X_mean
+        except AttributeError:
             self._X_mean = pt.mean(Xs, axis=0)
-        Xs = Xs - self._X_mean
+            Xs = Xs - self._X_mean
 
         # Index Xs using input_dim and active_dims of covariance function
         Xs, _ = self.cov_func._slice(Xs)
@@ -331,8 +339,8 @@ class HSGP(Base):
         else:
             self.L = self._L
 
-        eigvals = calc_eigenvalues(self.L, self._m, tl=pt)
-        phi = calc_eigenvectors(Xs, self.L, eigvals, self._m, tl=pt)
+        eigvals = calc_eigenvalues(self.L, self._m)
+        phi = calc_eigenvectors(Xs, self.L, eigvals, self._m)
         omega = pt.sqrt(eigvals)
         psd = self.cov_func.power_spectral_density(omega)
 
@@ -382,8 +390,8 @@ class HSGP(Base):
 
         Xnew, _ = self.cov_func._slice(Xnew)
 
-        eigvals = calc_eigenvalues(self.L, self._m, tl=pt)
-        phi = calc_eigenvectors(Xnew - X_mean, self.L, eigvals, self._m, tl=pt)
+        eigvals = calc_eigenvalues(self.L, self._m)
+        phi = calc_eigenvectors(Xnew - X_mean, self.L, eigvals, self._m)
         i = int(self._drop_first is True)
 
         if self._parameterization == "noncentered":
@@ -579,7 +587,7 @@ class HSGPPeriodic(Base):
         """
         Xs, _ = self.cov_func._slice(Xs)
 
-        phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m, tl=pt)
+        phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m)
         J = pt.arange(0, self._m, 1)
         # rescale basis coefficients by the sqrt variance term
         psd = self.scale * self.cov_func.power_spectral_density_approx(J)
@@ -627,7 +635,7 @@ class HSGPPeriodic(Base):
 
         Xnew, _ = self.cov_func._slice(Xnew)
 
-        phi_cos, phi_sin = calc_basis_periodic(Xnew - X_mean, self.cov_func.period, self._m, tl=pt)
+        phi_cos, phi_sin = calc_basis_periodic(Xnew - X_mean, self.cov_func.period, self._m)
         m = self._m
         J = pt.arange(0, m, 1)
         # rescale basis coefficients by the sqrt variance term
