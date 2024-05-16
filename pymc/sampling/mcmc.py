@@ -534,7 +534,7 @@ def sample(
         Whether to compute sampler statistics like Gelman-Rubin and ``effective_n``.
     keep_warning_stat : bool
         If ``True`` the "warning" stat emitted by, for example, HMC samplers will be kept
-        in the returned ``idata.sample_stat`` group.
+        in the returned ``idata.sample_stats`` group.
         This leads to the ``idata`` not supporting ``.to_netcdf()`` or ``.to_zarr()`` and
         should only be set to ``True`` if you intend to use the "warning" objects right away.
         Defaults to ``False`` such that ``pm.drop_warning_stat`` is applied automatically,
