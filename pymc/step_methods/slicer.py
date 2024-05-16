@@ -43,7 +43,7 @@ class Slice(ArrayStepShared):
         Initial width of slice.
     tune : bool, default True
         Flag for tuning.
-    model : PyMC Model, optional
+    model : Model, optional
         Optional model for sampling step. It will be taken from the context if not provided.
     iter_limit : int, default np.inf
         Maximum number of iterations for the slice sampler.
