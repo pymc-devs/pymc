@@ -168,7 +168,11 @@ def _get_log_likelihood(
     elemwise_logp = model.logp(model.observed_RVs, sum=False)
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=elemwise_logp)
     result = _postprocess_samples(
-        jax_fn, samples, backend, postprocessing_vectorize=postprocessing_vectorize
+        jax_fn,
+        samples,
+        backend,
+        postprocessing_vectorize=postprocessing_vectorize,
+        donate_samples=False,
     )
     return {v.name: r for v, r in zip(model.observed_RVs, result)}
 
@@ -181,7 +185,8 @@ def _postprocess_samples(
     jax_fn: Callable,
     raw_mcmc_samples: list[TensorVariable],
     postprocessing_backend: Literal["cpu", "gpu"] | None = None,
-    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
+    postprocessing_vectorize: Literal["vmap", "scan"] = "vmap",
+    donate_samples: bool = True,
 ) -> list[TensorVariable]:
     if postprocessing_vectorize == "scan":
         t_raw_mcmc_samples = [jnp.swapaxes(t, 0, 1) for t in raw_mcmc_samples]
@@ -197,7 +202,8 @@ def _postprocess_samples(
         def process_fn(x):
             return jax.vmap(jax.vmap(jax_fn))(*_device_put(x, postprocessing_backend))
 
-        return jax.jit(process_fn, donate_argnums=0)(raw_mcmc_samples)
+        return jax.jit(process_fn, donate_argnums=0 if donate_samples else None)(raw_mcmc_samples)
+
     else:
         raise ValueError(f"Unrecognized postprocessing_vectorize: {postprocessing_vectorize}")
 
@@ -490,7 +496,7 @@ def sample_jax_nuts(
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
     postprocessing_backend: Literal["cpu", "gpu"] | None = None,
-    postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
+    postprocessing_vectorize: Literal["vmap", "scan"] = "vmap",
     postprocessing_chunks=None,
     idata_kwargs: dict | None = None,
     compute_convergence_checks: bool = True,
@@ -503,6 +509,15 @@ def sample_jax_nuts(
             "postprocessing_chunks is deprecated due to being unstable, "
             "using postprocessing_vectorize='scan' instead",
             DeprecationWarning,
+        )
+
+    if postprocessing_vectorize == "scan":
+        import warnings
+
+        warnings.warn(
+            'postprocessing_vectorize="scan" will be removed in a future release. Use '
+            'postprocessing_vectorize="vmap" instead.',
+            FutureWarning,
         )
 
     model = modelcontext(model)
@@ -553,15 +568,6 @@ def sample_jax_nuts(
     )
     tic2 = datetime.now()
 
-    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
-    result = _postprocess_samples(
-        jax_fn,
-        raw_mcmc_samples,
-        postprocessing_backend=postprocessing_backend,
-        postprocessing_vectorize=postprocessing_vectorize,
-    )
-    mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
-
     if idata_kwargs is None:
         idata_kwargs = {}
     else:
@@ -576,6 +582,17 @@ def sample_jax_nuts(
         )
     else:
         log_likelihood = None
+
+    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
+    result = _postprocess_samples(
+        jax_fn,
+        raw_mcmc_samples,
+        postprocessing_backend=postprocessing_backend,
+        postprocessing_vectorize=postprocessing_vectorize,
+        donate_samples=True,
+    )
+    del raw_mcmc_samples
+    mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
 
     attrs = {
         "sampling_time": (tic2 - tic1).total_seconds(),
