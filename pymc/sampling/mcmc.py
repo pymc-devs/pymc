@@ -505,12 +505,12 @@ def sample(
         This requires the chosen sampler to be installed.
         All samplers, except "pymc", require the full model to be continuous.
     blas_cores: int or "auto" or None, default = "auto"
-        The total number of threads blas and openmp functions should use during sampling. If set to None,
-        this will keep the default behavior of whatever blas implementation is used at runtime.
-        Setting it to "auto" will set it so that the total number of active blas threads is the
+        The total number of threads blas and openmp functions should use during sampling.
+        Setting it to "auto" will ensure that the total number of active blas threads is the
         same as the `cores` argument. If set to an integer, the sampler will try to use that total
         number of blas threads. If `blas_cores` is not divisible by `cores`, it might get rounded
-        down.
+        down. If set to None, this will keep the default behavior of whatever blas implementation
+        is used at runtime.
     initvals : optional, dict, array of dict
         Dict or list of dicts with initial value strategies to use instead of the defaults from
         `Model.initial_values`. The keys should be names of transformed random variables.
@@ -660,15 +660,6 @@ def sample(
         blas_cores = cores
 
     cores = min(cores, chains)
-
-    if cores < 1:
-        raise ValueError("`cores` must be larger or equal to one")
-
-    if chains < 1:
-        raise ValueError("`chains` must be larger or equal to one")
-
-    if blas_cores is not None and blas_cores < 1:
-        raise ValueError("`blas_cores` must be larger or equal to one")
 
     num_blas_cores_per_chain: int | None
     joined_blas_limiter: Callable[[], Any]
