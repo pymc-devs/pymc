@@ -28,6 +28,7 @@ sphinx-notfound-page
 sphinx-remove-toctrees
 sphinx>=1.5
 sphinxext-rediraffe
+threadpoolctl>=3.1.0
 types-cachetools
 typing-extensions>=3.7.4
 watermark
