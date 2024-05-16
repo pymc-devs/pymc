@@ -11,8 +11,8 @@ dependencies:
 - cloudpickle
 - h5py>=2.7
 # Jaxlib version must not be greater than jax version!
-- blackjax>=1.0.0
-- jaxlib==0.4.23
+- blackjax==1.2.0  # Blackjax>=1.2.1 is incompatible with latest available version of jaxlib in conda-forge
+- jaxlib==0.4.23  # Latest available version in conda-forge, update when new version is available
 - jax==0.4.23
 - libblas=*=*mkl
 - mkl-service
