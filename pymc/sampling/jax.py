@@ -27,6 +27,7 @@ import numpy as np
 import pytensor.tensor as pt
 
 from arviz.data.base import make_attrs
+from blackjax.adaptation.base import get_filter_adapt_info_fn
 from jax.lax import scan
 from pytensor.compile import SharedVariable, Supervisor, mode
 from pytensor.graph.basic import graph_inputs
@@ -186,7 +187,7 @@ def _postprocess_samples(
     raw_mcmc_samples: list[TensorVariable],
     postprocessing_backend: Literal["cpu", "gpu"] | None = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "vmap",
-    donate_samples: bool = True,
+    donate_samples: bool = False,
 ) -> list[TensorVariable]:
     if postprocessing_vectorize == "scan":
         t_raw_mcmc_samples = [jnp.swapaxes(t, 0, 1) for t in raw_mcmc_samples]
@@ -392,6 +393,7 @@ def _sample_blackjax_nuts(
         tune=tune,
         draws=draws,
         target_accept=target_accept,
+        adaptation_info_fn=get_filter_adapt_info_fn(),
         **nuts_kwargs,
     )
 
@@ -496,7 +498,7 @@ def sample_jax_nuts(
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
     postprocessing_backend: Literal["cpu", "gpu"] | None = None,
-    postprocessing_vectorize: Literal["vmap", "scan"] = "vmap",
+    postprocessing_vectorize: Literal["vmap", "scan"] | None = None,
     postprocessing_chunks=None,
     idata_kwargs: dict | None = None,
     compute_convergence_checks: bool = True,
@@ -511,14 +513,15 @@ def sample_jax_nuts(
             DeprecationWarning,
         )
 
-    if postprocessing_vectorize == "scan":
+    if postprocessing_vectorize is not None:
         import warnings
 
         warnings.warn(
-            'postprocessing_vectorize="scan" will be removed in a future release. Use '
-            'postprocessing_vectorize="vmap" instead.',
+            'postprocessing_vectorize={"scan", "vmap"} will be removed in a future release.',
             FutureWarning,
         )
+    else:
+        postprocessing_vectorize = "vmap"
 
     model = modelcontext(model)
 
