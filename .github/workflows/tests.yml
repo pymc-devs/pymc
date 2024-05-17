@@ -170,6 +170,7 @@ jobs:
           pip install -e .
           pip install --pre -U polyagamma
           python --version
+          conda list
       - name: Run tests
         run: |
           conda activate pymc-test
@@ -244,6 +245,7 @@ jobs:
           pip install -e .
           pip install --pre -U polyagamma
           python --version
+          conda list
       - name: Run tests
         # This job uses a cmd shell, therefore the environment variable syntax is different!
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
@@ -326,6 +328,7 @@ jobs:
           conda activate pymc-test
           pip install -e .
           python --version
+          conda list
       - name: Run tests
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
@@ -394,6 +397,7 @@ jobs:
           conda activate pymc-test
           pip install -e .
           python --version
+          conda list
       - name: Run tests
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
@@ -463,6 +467,7 @@ jobs:
           pip install -e .
           pip install --pre -U polyagamma
           python --version
+          conda list
       - name: Run tests
         # This job uses a cmd shell, therefore the environment variable syntax is different!
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).

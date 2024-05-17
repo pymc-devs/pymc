@@ -11,8 +11,8 @@ dependencies:
 - cloudpickle
 - h5py>=2.7
 # Jaxlib version must not be greater than jax version!
-- blackjax>=1.0.0
-- jaxlib==0.4.23
+- blackjax==1.2.0  # Blackjax>=1.2.1 is incompatible with latest available version of jaxlib in conda-forge
+- jaxlib==0.4.23  # Latest available version in conda-forge, update when new version is available
 - jax==0.4.23
 - libblas=*=*mkl
 - mkl-service
@@ -24,6 +24,7 @@ dependencies:
 - python-graphviz
 - networkx
 - rich>=13.7.1
+- threadpoolctl>=3.1.0
 # JAX is only compatible with Scipy 1.13.0 from >=0.4.26, but the respective version of
 # JAXlib is still not on conda: https://github.com/conda-forge/jaxlib-feedstock/pull/243
 - scipy>=1.4.1,<1.13.0

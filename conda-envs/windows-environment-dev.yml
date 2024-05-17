@@ -19,6 +19,7 @@ dependencies:
 - rich>=13.7.1
 - scipy>=1.4.1
 - typing-extensions>=3.7.4
+- threadpoolctl>=3.1.0
 # Extra dependencies for dev, testing and docs build
 - ipython>=7.16
 - myst-nb
