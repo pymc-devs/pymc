@@ -27,13 +27,13 @@ import cloudpickle
 import numpy as np
 
 from rich.console import Console
-from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn, TimeRemainingColumn
+from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
-from pymc.util import RandomSeed, default_progress_theme
+from pymc.util import CustomProgress, RandomSeed, default_progress_theme
 
 logger = logging.getLogger(__name__)
 
@@ -431,7 +431,7 @@ class ParallelSampler:
 
         self._in_context = False
 
-        self._progress = Progress(
+        self._progress = CustomProgress(
             "[progress.description]{task.description}",
             BarColumn(),
             "[progress.percentage]{task.percentage:>3.0f}%",
@@ -465,7 +465,6 @@ class ParallelSampler:
                 self._desc.format(self),
                 completed=self._completed_draws,
                 total=self._total_draws,
-                visible=self._show_progress,
             )
 
             while self._active:
@@ -476,7 +475,6 @@ class ParallelSampler:
                     self._divergences += 1
                 progress.update(
                     task,
-                    refresh=True,
                     completed=self._completed_draws,
                     total=self._total_draws,
                     description=self._desc.format(self),

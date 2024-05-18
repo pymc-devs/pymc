@@ -24,7 +24,7 @@ from typing import TypeAlias
 import cloudpickle
 import numpy as np
 
-from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn, TimeRemainingColumn
+from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 
 from pymc.backends.base import BaseTrace
 from pymc.initial_point import PointType
@@ -37,7 +37,7 @@ from pymc.step_methods.arraystep import (
     StatsType,
 )
 from pymc.step_methods.metropolis import DEMetropolis
-from pymc.util import RandomSeed
+from pymc.util import CustomProgress, RandomSeed
 
 __all__ = ()
 
@@ -100,11 +100,10 @@ def _sample_population(
         progressbar=progressbar,
     )
 
-    with Progress() as progress:
-        task = progress.add_task("[red]Sampling...", total=draws, visible=progressbar)
-
+    with CustomProgress(disable=not progressbar) as progress:
+        task = progress.add_task("[red]Sampling...", total=draws)
         for _ in sampling:
-            progress.update(task, advance=1, refresh=True)
+            progress.update(task)
 
     return
 
@@ -175,20 +174,19 @@ class PopulationStepper:
                 )
                 import multiprocessing
 
-                with Progress(
+                with CustomProgress(
                     "[progress.description]{task.description}",
                     BarColumn(),
                     "[progress.percentage]{task.percentage:>3.0f}%",
                     TimeRemainingColumn(),
                     TextColumn("/"),
                     TimeElapsedColumn(),
+                    disable=not progressbar,
                 ) as self._progress:
                     for c, stepper in enumerate(steppers):
                         #     enumerate(progress_bar(steppers)) if progressbar else enumerate(steppers)
                         # ):
-                        task = self._progress.add_task(
-                            description=f"Chain {c}", visible=progressbar
-                        )
+                        task = self._progress.add_task(description=f"Chain {c}")
                         secondary_end, primary_end = multiprocessing.Pipe()
                         stepper_dumps = cloudpickle.dumps(stepper, protocol=4)
                         process = multiprocessing.Process(
