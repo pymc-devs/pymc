@@ -224,7 +224,7 @@ class HSGP(Base):
 
         self._drop_first = drop_first
         self._m = m
-        self._m_star = int(np.prod(self._m))
+        self._m_star = self.n_basis_vectors = int(np.prod(self._m))
         self._L: pt.TensorVariable | None = None
         if L is not None:
             self._L = pt.as_tensor(L).eval()  # make sure L cannot be changed
@@ -291,8 +291,13 @@ class HSGP(Base):
                 # L = [10] means the approximation is valid from Xs = [-10, 10]
                 gp = pm.gp.HSGP(m=[200], L=[10], cov_func=cov_func)
 
-                X = pm.Data("X", Xs)
-                # Pass the Xs in to the GP
+                # Order is important.
+                # First calculate the mean, then make X a shared variable, then subtract the mean.
+                # When X is mutated later, the correct mean will be subtracted.
+                X_mean = np.mean(X, axis=0)
+                X = pm.Data("X", X)
+                Xs = X - X_mean
+                # Pass the zero-subtracted Xs in to the GP
                 phi, sqrt_psd = gp.prior_linearized(Xs=X)
 
                 # Specify standard normal prior in the coefficients.  The number of which
@@ -321,16 +326,8 @@ class HSGP(Base):
             with model:
                 ppc = pm.sample_posterior_predictive(idata, var_names=["f"])
         """
-        # Important: fix the computation of the mean. If X is mutated later,
-        # the training mean will be subtracted, not the testing mean.
-        try:
-            Xs = Xs - self._X_mean
-        except AttributeError:
-            self._X_mean = pt.mean(Xs, axis=0)
-            Xs = Xs - self._X_mean
-
-        # Index Xs using input_dim and active_dims of covariance function
-        Xs, _ = self.cov_func._slice(Xs)
+        # Index Xc using input_dim and active_dims of covariance function
+        Xs = self.cov_func._slice(Xs)[0]
 
         # If not provided, use Xs and c to set L
         if self._L is None:
@@ -340,9 +337,9 @@ class HSGP(Base):
             self.L = self._L
 
         eigvals = calc_eigenvalues(self.L, self._m)
-        phi = calc_eigenvectors(Xs, self.L, eigvals, self._m)
         omega = pt.sqrt(eigvals)
         psd = self.cov_func.power_spectral_density(omega)
+        phi = calc_eigenvectors(Xs, self.L, eigvals, self._m)
 
         i = int(self._drop_first is True)
         return phi[:, i:], pt.sqrt(psd[i:])
@@ -361,7 +358,9 @@ class HSGP(Base):
         dims: None
             Dimension name for the GP random variable.
         """
-        phi, sqrt_psd = self.prior_linearized(X)
+        self._X_mean = pt.mean(X, axis=0)
+        phi, sqrt_psd = self.prior_linearized(X - self._X_mean)
+
         if self._parameterization == "noncentered":
             self._beta = pm.Normal(
                 f"{name}_hsgp_coeffs_", size=self._m_star - int(self._drop_first)
