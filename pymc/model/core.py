@@ -748,7 +748,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if not sum:
             return logp_factors
 
-        logp_scalar = pt.sum([pt.sum(factor) for factor in logp_factors])
+        logp_scalar = pt.add(*[pt.sum(factor) for factor in logp_factors])
         logp_scalar_name = "__logp" if jacobian else "__logp_nojac"
         if self.name:
             logp_scalar_name = f"{logp_scalar_name}_{self.name}"
