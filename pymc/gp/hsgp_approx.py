@@ -341,7 +341,13 @@ class HSGP(Base):
         i = int(self._drop_first is True)
         return phi[:, i:], pt.sqrt(psd[i:])
 
-    def prior(self, name: str, X: TensorLike, dims: str | None = None):  # type: ignore
+    def prior(
+        self,
+        name: str,
+        X: TensorLike,
+        hsgp_coeffs_dims: str | None = None,
+        gp_dims: str | None = None,
+    ):  # type: ignore
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
         For usage examples, refer to `pm.gp.Latent`.
@@ -352,7 +358,9 @@ class HSGP(Base):
             Name of the random variable
         X: array-like
             Function input values.
-        dims: None
+        hsgp_coeffs_dims: str, default None
+            Dimension name for the HSGP basis vectors.
+        gp_dims: str, default None
             Dimension name for the GP random variable.
         """
         self._X_mean = pt.mean(X, axis=0)
@@ -360,16 +368,18 @@ class HSGP(Base):
 
         if self._parameterization == "noncentered":
             self._beta = pm.Normal(
-                f"{name}_hsgp_coeffs_", size=self._m_star - int(self._drop_first)
+                f"{name}_hsgp_coeffs_",
+                size=self._m_star - int(self._drop_first),
+                dims=hsgp_coeffs_dims,
             )
             self._sqrt_psd = sqrt_psd
             f = self.mean_func(X) + phi @ (self._beta * self._sqrt_psd)
 
         elif self._parameterization == "centered":
-            self._beta = pm.Normal(f"{name}_hsgp_coeffs_", sigma=sqrt_psd)
+            self._beta = pm.Normal(f"{name}_hsgp_coeffs_", sigma=sqrt_psd, dims=hsgp_coeffs_dims)
             f = self.mean_func(X) + phi @ self._beta
 
-        self.f = pm.Deterministic(name, f, dims=dims)
+        self.f = pm.Deterministic(name, f, dims=gp_dims)
         return self.f
 
     def _build_conditional(self, Xnew):
