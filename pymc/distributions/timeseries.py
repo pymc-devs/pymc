@@ -45,7 +45,7 @@ from pymc.distributions.shape_utils import (
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.abstract import _logprob
 from pymc.logprob.basic import logp
-from pymc.pytensorf import constant_fold, intX
+from pymc.pytensorf import constant_fold
 from pymc.util import check_dist_not_registered
 
 __all__ = [
@@ -174,7 +174,7 @@ class RandomWalk(Distribution):
         )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
-        steps = pt.as_tensor_variable(intX(steps))
+        steps = pt.as_tensor_variable(steps, dtype=int)
 
         return super().dist([init_dist, innovation_dist, steps], **kwargs)
 
@@ -599,7 +599,7 @@ class AR(Distribution):
         )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
-        steps = pt.as_tensor_variable(intX(steps), ndim=0)
+        steps = pt.as_tensor_variable(steps, dtype=int, ndim=0)
 
         if init_dist is not None:
             if not isinstance(init_dist, TensorVariable) or not isinstance(
@@ -961,7 +961,7 @@ class EulerMaruyama(Distribution):
         )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
-        steps = pt.as_tensor_variable(intX(steps), ndim=0)
+        steps = pt.as_tensor_variable(steps, dtype=int, ndim=0)
 
         dt = pt.as_tensor_variable(dt)
         sde_pars = [pt.as_tensor_variable(x) for x in sde_pars]

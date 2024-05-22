@@ -44,7 +44,7 @@ from pymc.logprob.utils import (
     local_check_parameter_to_ninf_switch,
     rvs_in_graph,
 )
-from pymc.pytensorf import compile_pymc, floatX, inputvars, intX
+from pymc.pytensorf import compile_pymc, floatX, inputvars
 
 # This mode can be used for tests where model compilations takes the bulk of the runtime
 # AND where we don't care about posterior numerical or sampling stability (e.g., when
@@ -771,7 +771,7 @@ def discrete_random_tester(
         f = fails
         while p <= alpha and f > 0:
             o = pymc_rand()
-            e = intX(ref_rand(size=size, **point))
+            e = ref_rand(size=size, **point).astype(int)
             o = np.atleast_1d(o).flatten()
             e = np.atleast_1d(e).flatten()
             bins = min(20, max(len(set(e)), len(set(o))))

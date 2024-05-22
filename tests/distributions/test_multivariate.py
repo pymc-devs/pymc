@@ -43,7 +43,7 @@ from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.logprob.basic import logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.math import kronecker
-from pymc.pytensorf import compile_pymc, floatX, intX
+from pymc.pytensorf import compile_pymc, floatX
 from pymc.sampling.forward import draw
 from pymc.testing import (
     BaseTestDistributionRandom,
@@ -674,8 +674,8 @@ class TestMatchesScipy:
     )
     @pytest.mark.parametrize("extra_size", [(1,), (2,), (2, 3)])
     def test_multinomial_vectorized(self, n, p, extra_size):
-        n = intX(np.array(n))
-        p = floatX(np.array(p))
+        n = np.array(n)
+        p = np.array(p)
         p /= p.sum(axis=-1, keepdims=True)
 
         _, bcast_p = broadcast_params([n, p], ndims_params=[0, 1])
@@ -757,8 +757,8 @@ class TestMatchesScipy:
     )
     @pytest.mark.parametrize("extra_size", [(1,), (2,), (2, 3)])
     def test_dirichlet_multinomial_vectorized(self, n, a, extra_size):
-        n = intX(np.array(n))
-        a = floatX(np.array(a))
+        n = np.array(n)
+        a = np.array(a)
 
         _, bcast_a = broadcast_params([n, a], ndims_params=[0, 1])
         size = extra_size + bcast_a.shape[:-1]
