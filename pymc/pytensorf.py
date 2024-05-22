@@ -715,10 +715,6 @@ def generator(gen, default=None):
     return GeneratorOp(gen, default)()
 
 
-def floatX_array(x):
-    return floatX(np.array(x))
-
-
 def ix_(*args):
     """
     PyTensor np.ix_ analog
