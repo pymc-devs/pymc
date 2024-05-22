@@ -585,3 +585,17 @@ def test_truncated_identity_input(dist_op):
 
     rv_out = Truncated.dist(dist=dist_op(mu_identity, 5), lower=0, upper=1)
     assert np.ptp(draw(rv_out, draws=500)) < 1
+
+
+@pytest.mark.parametrize("rv_op", [icdf_normal, rejection_normal])
+def test_truncated_custom_dist_indexed_argument(rv_op):
+    # Regression test for https://github.com/pymc-devs/pymc/issues/7312
+
+    def dist(scale, size):
+        return pt.exp(rv_op(scale=scale, size=size))
+
+    scale = Exponential.dist(scale=[1, 2, 3])
+    latent = CustomDist.dist(scale[[0, 0, 1, 1, 2, 2]], dist=dist)
+    rv_out = Truncated.dist(latent, upper=7)
+
+    assert np.ptp(draw(rv_out, draws=100)) < 7
