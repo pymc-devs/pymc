@@ -218,7 +218,7 @@ class HSGP(Base):
 
         self._drop_first = drop_first
         self._m = m
-        self._m_star = int(np.prod(self._m))
+        self._m_star = self.n_basis_vectors = int(np.prod(self._m))
         self._L: pt.TensorVariable | None = None
         if L is not None:
             self._L = pt.as_tensor(L).eval()  # make sure L cannot be changed
