@@ -123,8 +123,8 @@ class HSGP(Base):
         Default `False`. Sometimes the first basis vector is quite "flat" and very similar to
         the intercept term.  When there is an intercept in the model, ignoring the first basis
         vector may improve sampling. This argument will be deprecated in future versions.
-    parameterization: str
-        Whether to use the `centered` or `noncentered` parameterization when multiplying the
+    parametrization: str
+        Whether to use the `centered` or `noncentered` parametrization when multiplying the
         basis by the coefficients.
     cov_func: Covariance function, must be an instance of `Stationary` and implement a
         `power_spectral_density` method.
@@ -179,7 +179,7 @@ class HSGP(Base):
         L: Sequence[float] | None = None,
         c: numbers.Real | None = None,
         drop_first: bool = False,
-        parameterization: str | None = "noncentered",
+        parametrization: str | None = "noncentered",
         *,
         mean_func: Mean = Zero(),
         cov_func: Covariance,
@@ -205,10 +205,10 @@ class HSGP(Base):
         if L is None and c is not None and c < 1.2:
             warnings.warn("For an adequate approximation `c >= 1.2` is recommended.")
 
-        if parameterization is not None:
-            parameterization = parameterization.lower().replace("-", "").replace("_", "")
-        if parameterization not in ["centered", "noncentered"]:
-            raise ValueError("`parameterization` must be either 'centered' or 'noncentered'.")
+        if parametrization is not None:
+            parametrization = parametrization.lower().replace("-", "").replace("_", "")
+        if parametrization not in ["centered", "noncentered"]:
+            raise ValueError("`parametrization` must be either 'centered' or 'noncentered'.")
 
         if drop_first:
             warnings.warn(
@@ -224,7 +224,7 @@ class HSGP(Base):
         if L is not None:
             self._L = pt.as_tensor(L).eval()  # make sure L cannot be changed
         self._c = c
-        self._parameterization = parameterization
+        self._parametrization = parametrization
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
@@ -366,7 +366,7 @@ class HSGP(Base):
         self._X_mean = pt.mean(X, axis=0)
         phi, sqrt_psd = self.prior_linearized(X - self._X_mean)
 
-        if self._parameterization == "noncentered":
+        if self._parametrization == "noncentered":
             self._beta = pm.Normal(
                 f"{name}_hsgp_coeffs_",
                 size=self._m_star - int(self._drop_first),
@@ -375,7 +375,7 @@ class HSGP(Base):
             self._sqrt_psd = sqrt_psd
             f = self.mean_func(X) + phi @ (self._beta * self._sqrt_psd)
 
-        elif self._parameterization == "centered":
+        elif self._parametrization == "centered":
             self._beta = pm.Normal(f"{name}_hsgp_coeffs_", sigma=sqrt_psd, dims=hsgp_coeffs_dims)
             f = self.mean_func(X) + phi @ self._beta
 
@@ -386,7 +386,7 @@ class HSGP(Base):
         try:
             beta, X_mean = self._beta, self._X_mean
 
-            if self._parameterization == "noncentered":
+            if self._parametrization == "noncentered":
                 sqrt_psd = self._sqrt_psd
 
         except AttributeError:
@@ -400,10 +400,10 @@ class HSGP(Base):
         phi = calc_eigenvectors(Xnew - X_mean, self.L, eigvals, self._m)
         i = int(self._drop_first is True)
 
-        if self._parameterization == "noncentered":
+        if self._parametrization == "noncentered":
             return self.mean_func(Xnew) + phi[:, i:] @ (beta * sqrt_psd)
 
-        elif self._parameterization == "centered":
+        elif self._parametrization == "centered":
             return self.mean_func(Xnew) + phi[:, i:] @ beta
 
     def conditional(self, name: str, Xnew: TensorLike, dims: str | None = None):  # type: ignore
