@@ -39,11 +39,11 @@ def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
     return L
 
 
-def calc_eigenvalues(L: TensorLike, m: Sequence[int], tl: ModuleType = np):
+def calc_eigenvalues(L: TensorLike, m: Sequence[int]):
     """Calculate eigenvalues of the Laplacian."""
     S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(len(m))])
     S_arr = np.vstack([s.flatten() for s in S]).T
-    return tl.square((np.pi * S_arr) / (2 * L))
+    return np.square((np.pi * S_arr) / (2 * L))
 
 
 def calc_eigenvectors(
@@ -51,18 +51,19 @@ def calc_eigenvectors(
     L: TensorLike,
     eigvals: TensorLike,
     m: Sequence[int],
-    tl: ModuleType = np,
 ):
     """Calculate eigenvectors of the Laplacian. These are used as basis vectors in the HSGP
     approximation.
     """
     m_star = int(np.prod(m))
-    phi = tl.ones((Xs.shape[0], m_star))
+
+    phi = pt.ones((Xs.shape[0], m_star))
     for d in range(len(m)):
-        c = 1.0 / tl.sqrt(L[d])
-        term1 = tl.sqrt(eigvals[:, d])
-        term2 = tl.tile(Xs[:, d][:, None], m_star) + L[d]
-        phi *= c * tl.sin(term1 * term2)
+        c = 1.0 / pt.sqrt(L[d])
+        term1 = pt.sqrt(eigvals[:, d])
+        term2 = pt.tile(Xs[:, d][:, None], m_star) + L[d]
+        phi *= c * pt.sin(term1 * term2)
+
     return phi
 
 
@@ -332,8 +333,8 @@ class HSGP(Base):
         else:
             self.L = self._L
 
-        eigvals = calc_eigenvalues(self.L, self._m, tl=pt)
-        phi = calc_eigenvectors(Xs, self.L, eigvals, self._m, tl=pt)
+        eigvals = calc_eigenvalues(self.L, self._m)
+        phi = calc_eigenvectors(Xs, self.L, eigvals, self._m)
         omega = pt.sqrt(eigvals)
         psd = self.cov_func.power_spectral_density(omega)
 
@@ -385,8 +386,8 @@ class HSGP(Base):
 
         Xnew, _ = self.cov_func._slice(Xnew)
 
-        eigvals = calc_eigenvalues(self.L, self._m, tl=pt)
-        phi = calc_eigenvectors(Xnew - X_mean, self.L, eigvals, self._m, tl=pt)
+        eigvals = calc_eigenvalues(self.L, self._m)
+        phi = calc_eigenvectors(Xnew - X_mean, self.L, eigvals, self._m)
         i = int(self._drop_first is True)
 
         if self._parameterization == "noncentered":
