@@ -930,6 +930,8 @@ class _CustomSymbolicDist(Distribution):
         ):
             dummy_rv = dist(*dummy_dist_params, dummy_size_param)
         dummy_params = [dummy_size_param, *dummy_dist_params]
+        # RNGs are not passed as explicit inputs (because we usually don't know how many are needed)
+        # We retrieve them here. This will also raise if the user forgot to specify some update in a Scan Op
         dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
 
         rv_type = type(
@@ -1001,12 +1003,7 @@ class _CustomSymbolicDist(Distribution):
 
             return new_rv
 
-        # RNGs are not passed as explicit inputs (because we usually don't know how many are needed)
-        # We retrieve them here
-        updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
-        rngs = updates_dict.keys()
-        rngs_updates = updates_dict.values()
-
+        rngs, rngs_updates = zip(*dummy_updates_dict.items())
         inputs = [*dummy_params, *rngs]
         outputs = [dummy_rv, *rngs_updates]
         signature = cls._infer_final_signature(
