@@ -30,12 +30,12 @@ from pymc.gp.mean import Mean, Zero
 TensorLike = np.ndarray | pt.TensorVariable
 
 
-def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> TensorLike:
+def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
     """Set the boundary using the mean-subtracted `Xs` and `c`.  `c` is usually a scalar
-    multiplyer greater than 1.0, but it may be one value per dimension or column of `Xs`.
+    multiplier greater than 1.0, but it may be one value per dimension or column of `Xs`.
     """
-    S = pt.max(pt.abs(Xs), axis=0)
-    L = c * S
+    S = pt.max(Xs, axis=0)
+    L = (c * S).eval()  # eval() makes sure L is not changed with out-of-sample preds
     return L
 
 
@@ -221,7 +221,7 @@ class HSGP(Base):
         self._m_star = int(np.prod(self._m))
         self._L: pt.TensorVariable | None = None
         if L is not None:
-            self._L = pt.as_tensor(L)
+            self._L = pt.as_tensor(L).eval()  # make sure L cannot be changed
         self._c = c
         self._parameterization = parameterization
 
@@ -287,7 +287,7 @@ class HSGP(Base):
 
                 # Order is important.
                 # First calculate the mean, then make X a shared variable, then subtract the mean.
-                #  When X is mutated later, the correct mean will be subtracted.
+                # When X is mutated later, the correct mean will be subtracted.
                 X_mean = np.mean(X, axis=0)
                 X = pm.Data("X", X)
                 Xs = X - X_mean
@@ -355,8 +355,8 @@ class HSGP(Base):
             Dimension name for the GP random variable.
         """
         self._X_mean = pt.mean(X, axis=0)
-
         phi, sqrt_psd = self.prior_linearized(X - self._X_mean)
+
         if self._parameterization == "noncentered":
             self._beta = pm.Normal(
                 f"{name}_hsgp_coeffs_", size=self._m_star - int(self._drop_first)
