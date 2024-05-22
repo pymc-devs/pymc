@@ -72,7 +72,7 @@ from pymc.distributions.shape_utils import (
 from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
 from pymc.logprob.abstract import _logprob
 from pymc.math import kron_diag, kron_dot
-from pymc.pytensorf import intX, normalize_rng_param
+from pymc.pytensorf import normalize_rng_param
 from pymc.util import check_dist_not_registered
 
 __all__ = [
@@ -929,7 +929,7 @@ class Wishart(Continuous):
 
     @classmethod
     def dist(cls, nu, V, *args, **kwargs):
-        nu = pt.as_tensor_variable(intX(nu))
+        nu = pt.as_tensor_variable(nu, dtype=int)
         V = pt.as_tensor_variable(V)
 
         warnings.warn(
@@ -2454,7 +2454,7 @@ class StickBreakingWeightsRV(RandomVariable):
 
     def make_node(self, rng, size, dtype, alpha, K):
         alpha = pt.as_tensor_variable(alpha)
-        K = pt.as_tensor_variable(intX(K))
+        K = pt.as_tensor_variable(K, dtype=int)
 
         if K.ndim > 0:
             raise ValueError("K must be a scalar.")
