@@ -28,7 +28,7 @@ import numpy as np
 from pytensor import tensor as pt
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph import FunctionGraph, clone_replace, node_rewriter
-from pytensor.graph.basic import Node, Variable, io_toposort
+from pytensor.graph.basic import Apply, Variable, io_toposort
 from pytensor.graph.features import ReplaceValidate
 from pytensor.graph.rewriting.basic import GraphRewriter, in2out
 from pytensor.graph.utils import MetaType
@@ -421,7 +421,7 @@ class SymbolicRandomVariable(OpFromGraph):
         kwargs.setdefault("strict", True)
         super().__init__(*args, **kwargs)
 
-    def update(self, node: Node) -> dict[Variable, Variable]:
+    def update(self, node: Apply) -> dict[Variable, Variable]:
         """Symbolic update expression for input random state variables
 
         Returns a dictionary with the symbolic expressions required for correct updating
@@ -430,7 +430,7 @@ class SymbolicRandomVariable(OpFromGraph):
         """
         return collect_default_updates_inner_fgraph(node)
 
-    def batch_ndim(self, node: Node) -> int:
+    def batch_ndim(self, node: Apply) -> int:
         """Number of dimensions of the distribution's batch shape."""
         out_ndim = max(getattr(out.type, "ndim", 0) for out in node.outputs)
         return out_ndim - self.ndim_supp

@@ -18,7 +18,7 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Node, equal_computations
+from pytensor.graph.basic import Apply, equal_computations
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import normalize_size_param
@@ -156,7 +156,7 @@ class MarginalMixtureRV(SymbolicRandomVariable):
 
         return [change_dist_size(component, size) for component in components]
 
-    def update(self, node: Node):
+    def update(self, node: Apply):
         # Update for the internal mix_indexes RV
         return {node.inputs[0]: node.outputs[0]}
 

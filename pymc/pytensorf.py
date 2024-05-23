@@ -926,15 +926,15 @@ def collect_default_updates(
     if inputs is None:
         inputs = []
 
-    outputs = makeiter(outputs)
-    fg = FunctionGraph(outputs=outputs, clone=False)
+    outs = makeiter(outputs)
+    fg = FunctionGraph(outputs=outs, clone=False)
     clients = fg.clients
 
     rng_updates = {}
     # Iterate over input RNGs. Only consider shared RNGs if `must_be_shared==True`
     for input_rng in (
         inp
-        for inp in graph_inputs(outputs, blockers=inputs)
+        for inp in graph_inputs(outs, blockers=inputs)
         if (
             (not must_be_shared or isinstance(inp, SharedVariable))
             and isinstance(inp.type, RandomType)
