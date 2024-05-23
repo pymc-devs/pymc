@@ -44,7 +44,6 @@ pymc/logprob/utils.py
 pymc/model/core.py
 pymc/model/fgraph.py
 pymc/model/transform/conditioning.py
-pymc/printing.py
 pymc/pytensorf.py
 pymc/sampling/jax.py
 """

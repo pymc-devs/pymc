@@ -14,6 +14,7 @@
 import warnings
 
 from collections.abc import Callable, Generator, Iterable, Sequence
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -29,7 +30,6 @@ from pytensor.graph import Type, rewrite_graph
 from pytensor.graph.basic import (
     Apply,
     Constant,
-    Node,
     Variable,
     clone_get_equiv,
     graph_inputs,
@@ -208,8 +208,8 @@ def replace_vars_in_graphs(
     """
     # Clone graphs and get equivalences
     inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
-    equiv = {k: k for k in replacements.keys()}
-    equiv = clone_get_equiv(inputs, graphs, False, False, equiv)
+    memo = {k: k for k in replacements.keys()}
+    equiv = clone_get_equiv(inputs, graphs, False, False, memo)
 
     fg = FunctionGraph(
         [equiv[i] for i in inputs],
@@ -753,7 +753,7 @@ def find_rng_nodes(
     ]
 
 
-def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVariable]:
+def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> list[TensorVariable]:
     """Replace any RNG nodes upstream of outputs by new RNGs of the same type
 
     This can be used when combining a pre-existing graph with a cloned one, to ensure
@@ -775,7 +775,7 @@ def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVaria
             rng_cls = np.random.Generator
         new_rng_nodes.append(pytensor.shared(rng_cls(np.random.PCG64())))
     graph.replace_all(zip(rng_nodes, new_rng_nodes), import_missing=True)
-    return graph.outputs
+    return cast(list[TensorVariable], graph.outputs)
 
 
 SeedSequenceSeed = None | int | Sequence[int] | np.ndarray | np.random.SeedSequence
@@ -798,7 +798,7 @@ def reseed_rngs(
         rng.set_value(new_rng, borrow=True)
 
 
-def collect_default_updates_inner_fgraph(node: Node) -> dict[Variable, Variable]:
+def collect_default_updates_inner_fgraph(node: Apply) -> dict[Variable, Variable]:
     """Collect default updates from node with inner fgraph."""
     op = node.op
     inner_updates = collect_default_updates(
@@ -945,7 +945,7 @@ def collect_default_updates(
         default_update = find_default_update(clients, input_rng)
 
         # Respect default update if provided
-        if getattr(input_rng, "default_update", None):
+        if hasattr(input_rng, "default_update") and input_rng.default_update is not None:
             rng_updates[input_rng] = input_rng.default_update
         else:
             if default_update is not None:
@@ -1001,7 +1001,8 @@ def compile_pymc(
 
     # We always reseed random variables as this provides RNGs with no chances of collision
     if rng_updates:
-        reseed_rngs(rng_updates.keys(), random_seed)
+        rngs = cast(list[SharedVariable], list(rng_updates))
+        reseed_rngs(rngs, random_seed)
 
     # If called inside a model context, see if check_bounds flag is set to False
     try:
