@@ -225,7 +225,7 @@ def sample_smc(
     trace = MultiTrace(traces)
 
     _t_sampling = time.time() - t1
-    sample_stats, idata = _save_sample_stats(
+    _, idata = _save_sample_stats(
         sample_settings,
         sample_stats,
         chains,
