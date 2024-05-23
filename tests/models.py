@@ -83,17 +83,6 @@ def simple_init():
     return model, start, step, moments
 
 
-def simple_2model():
-    mu = -2.1
-    tau = 1.3
-    p = 0.4
-    with Model() as model:
-        x = pm.Normal("x", mu, tau=tau, initval=0.1)
-        pm.Deterministic("logx", pt.log(x))
-        pm.Bernoulli("y", p)
-    return model.initial_point(), model
-
-
 def simple_2model_continuous():
     mu = -2.1
     tau = 1.3
@@ -174,13 +163,6 @@ def non_normal(n=2):
     with pm.Model() as model:
         pm.Beta("x", 3, 3, size=n, transform=None)
     return model.initial_point(), model, (np.tile([0.5], n), None)
-
-
-def exponential_beta(n=2):
-    with pm.Model() as model:
-        pm.Beta("x", 3, 1, size=n, transform=None)
-        pm.Exponential("y", 1, size=n, transform=None)
-    return model.initial_point(), model, None
 
 
 def beta_bernoulli(n=2):
