@@ -38,10 +38,12 @@ from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
+    GeneratorOp,
     collect_default_updates,
     compile_pymc,
     constant_fold,
-    convert_observed_data,
+    convert_data,
+    convert_generator_data,
     extract_obs_data,
     hessian,
     hessian_diag,
@@ -188,9 +190,9 @@ def test_extract_obs_data():
 
 
 @pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
-def test_convert_observed_data(input_dtype):
+def test_convert_data(input_dtype):
     """
-    Ensure that convert_observed_data returns the dense array, masked array,
+    Ensure that convert_data returns the dense array, masked array,
     graph variable, TensorVariable, or sparse matrix as appropriate.
     """
     # Create the various inputs to the function
@@ -206,12 +208,8 @@ def test_convert_observed_data(input_dtype):
     missing_pandas_input = pd.DataFrame(missing_numpy_input)
     masked_array_input = ma.array(dense_input, mask=(np.mod(dense_input, 2) == 0))
 
-    # Create a generator object. Apparently the generator object needs to
-    # yield numpy arrays.
-    square_generator = (np.array([i**2], dtype=int) for i in range(100))
-
     # Alias the function to be tested
-    func = convert_observed_data
+    func = convert_data
 
     #####
     # Perform the various tests
@@ -255,21 +253,35 @@ def test_convert_observed_data(input_dtype):
     else:
         assert pytensor_output.dtype == intX
 
-    # Check function behavior with generator data
-    generator_output = func(square_generator)
 
-    # Output is wrapped with `pm.floatX`, and this unwraps
-    wrapped = generator_output.owner.inputs[0]
-    # Make sure the returned object has .set_gen and .set_default methods
-    assert hasattr(wrapped, "set_gen")
-    assert hasattr(wrapped, "set_default")
+@pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
+def test_convert_generator_data(input_dtype):
+    # Create a generator object producing NumPy arrays with the intended dtype.
+    # This is required to infer the correct dtype.
+    square_generator = (np.array([i**2], dtype=input_dtype) for i in range(100))
+
+    # Output is NOT wrapped with `pm.floatX`/`intX`,
+    # but produced from calling a special Op.
+    result = convert_generator_data(square_generator)
+    apply = result.owner
+    op = apply.op
     # Make sure the returned object is an PyTensor TensorVariable
-    assert isinstance(wrapped, TensorVariable)
+    assert isinstance(result, TensorVariable)
+    assert isinstance(op, GeneratorOp), f"It's a {type(apply)}"
+    # There are no inputs - because it generates...
+    assert apply.inputs == []
+
+    # Evaluation results should have the correct* dtype!
+    # (*intX/floatX will be enforced!)
+    evaled = result.eval()
+    expected_dtype = pm.smarttypeX(np.array(1, dtype=input_dtype)).dtype
+    assert result.type.dtype == expected_dtype
+    assert evaled.dtype == np.dtype(expected_dtype)
 
 
 def test_pandas_to_array_pandas_index():
     data = pd.Index([1, 2, 3])
-    result = convert_observed_data(data)
+    result = convert_data(data)
     expected = np.array([1, 2, 3])
     np.testing.assert_array_equal(result, expected)
 

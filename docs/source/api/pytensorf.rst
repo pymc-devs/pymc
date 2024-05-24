@@ -22,4 +22,5 @@ PyTensor utils
    join_nonshared_inputs
    make_shared_replacements
    generator
-   convert_observed_data
+   convert_generator_data
+   convert_data
