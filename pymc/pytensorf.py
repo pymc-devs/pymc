@@ -89,6 +89,12 @@ def convert_observed_data(data) -> np.ndarray | Variable:
 
 
 def convert_generator_data(data) -> TensorVariable:
+    warnings.warn(
+        "Generator data is deprecated and we intend to remove it."
+        " If you disagree and need this, please get in touch via https://github.com/pymc-devs/pymc/issues.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return generator(data)
 
 

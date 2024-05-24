@@ -262,7 +262,8 @@ def test_convert_generator_data(input_dtype):
 
     # Output is NOT wrapped with `pm.floatX`/`intX`,
     # but produced from calling a special Op.
-    result = convert_generator_data(square_generator)
+    with pytest.warns(DeprecationWarning, match="get in touch"):
+        result = convert_generator_data(square_generator)
     apply = result.owner
     op = apply.op
     # Make sure the returned object is an PyTensor TensorVariable
