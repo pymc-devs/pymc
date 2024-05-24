@@ -68,6 +68,7 @@ __all__ = [
     "floatX",
     "intX",
     "smartfloatX",
+    "smarttypeX",
     "jacobian",
     "CallableTensor",
     "join_nonshared_inputs",
@@ -294,6 +295,14 @@ def smartfloatX(x):
     """
     if str(x.dtype).startswith("float"):
         x = floatX(x)
+    return x
+
+
+def smarttypeX(x):
+    if str(x.dtype).startswith("float"):
+        x = floatX(x)
+    elif str(x.dtype).startswith("int"):
+        x = intX(x)
     return x
 
 
