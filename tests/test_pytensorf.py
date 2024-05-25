@@ -50,6 +50,7 @@ from pymc.pytensorf import (
     replace_rng_nodes,
     replace_vars_in_graphs,
     reseed_rngs,
+    smarttypeX,
     walk_model,
 )
 from pymc.vartypes import int_types
@@ -275,7 +276,7 @@ def test_convert_generator_data(input_dtype):
     # Evaluation results should have the correct* dtype!
     # (*intX/floatX will be enforced!)
     evaled = result.eval()
-    expected_dtype = pm.smarttypeX(np.array(1, dtype=input_dtype)).dtype
+    expected_dtype = smarttypeX(np.array(1, dtype=input_dtype)).dtype
     assert result.type.dtype == expected_dtype
     assert evaled.dtype == np.dtype(expected_dtype)
 

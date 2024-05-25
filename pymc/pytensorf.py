@@ -67,8 +67,6 @@ __all__ = [
     "cont_inputs",
     "floatX",
     "intX",
-    "smartfloatX",
-    "smarttypeX",
     "jacobian",
     "CallableTensor",
     "join_nonshared_inputs",

@@ -37,7 +37,7 @@ from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 import pymc as pm
 
-from pymc.pytensorf import convert_data
+from pymc.pytensorf import convert_data, smarttypeX
 from pymc.vartypes import isgenerator
 
 __all__ = [
@@ -99,7 +99,7 @@ class GeneratorAdapter:
     def __init__(self, generator):
         if not pm.vartypes.isgenerator(generator):
             raise TypeError("Object should be generator like")
-        self.test_value = pm.smarttypeX(copy(next(generator)))
+        self.test_value = smarttypeX(copy(next(generator)))
         # make pickling potentially possible
         self._yielded_test_value = False
         self.gen = generator
@@ -111,7 +111,7 @@ class GeneratorAdapter:
             self._yielded_test_value = True
             return self.test_value
         else:
-            return pm.smarttypeX(copy(next(self.gen)))
+            return smarttypeX(copy(next(self.gen)))
 
     # python2 generator
     next = __next__

@@ -15,8 +15,6 @@ PyTensor utils
    cont_inputs
    floatX
    intX
-   smartfloatX
-   smarttypeX
    constant_fold
    CallableTensor
    join_nonshared_inputs
