@@ -41,8 +41,10 @@ def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
 
 def calc_eigenvalues(L: TensorLike, m: Sequence[int]):
     """Calculate eigenvalues of the Laplacian."""
+
     S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(len(m))])
     S_arr = np.vstack([s.flatten() for s in S]).T
+
     return np.square((np.pi * S_arr) / (2 * L))
 
 
@@ -84,6 +86,67 @@ def calc_basis_periodic(
     phi_cos = tl.cos(mw0x)
     phi_sin = tl.sin(mw0x)
     return phi_cos, phi_sin
+
+
+def approx_hsgp_hyperparams(x_range: list[float], lengthscale_range: list[float], cov_func: str):
+    """Utility function that uses heuristics to recommend minimum `m` and `c` values,
+    based on recommendations from Ruitort-Mayol et. al.
+
+    In practice, you need to choose `c` large enough to handle the largest lengthscales,
+    and `m` large enough to accommodate the smallest lengthscales.
+
+    NB: These recommendations are based on a one-dimensional GP.
+
+    Parameters
+    ----------
+    x_range : List[float]
+        The range of the input variable on which the GP is going to be evaluated.
+        Should be a list with two elements [x_min, x_max].
+    lengthscale_range : List[float]
+        The range of the lengthscales. Should be a list with two elements [lengthscale_min, lengthscale_max].
+    cov_func : str
+        The covariance function to use. Supported options are "expquad", "matern52", and "matern32".
+
+    Returns
+    -------
+    Tuple[int, float, float]
+        A tuple containing the recommended values for `m`, `c`, and `S`.
+        - `m` : int
+            Number of basis vectors. Increasing it helps approximate smaller lengthscales, but increases computational cost.
+        - `c` : float
+            Scaling factor such that L = c * S, where L is the boundary of the approximation.
+            Increasing it helps approximate larger lengthscales, but may require increasing m.
+        - `S` : float
+            The value of `S`, which is half the range of `x`.
+
+    Raises
+    ------
+    ValueError
+        If either `x_range` or `lengthscale_range` is not in the correct order.
+
+    References
+    ----------
+    - Ruitort-Mayol, G., Anderson, M., Solin, A., Vehtari, A. (2022).
+    Practical Hilbert Space Approximate Bayesian Gaussian Processes for Probabilistic Programming
+    """
+    if (x_range[0] >= x_range[1]) or (lengthscale_range[0] >= lengthscale_range[1]):
+        raise ValueError("One of the boundaries out of order")
+
+    S = (x_range[1] - x_range[0]) / 2
+
+    if cov_func.lower() == "expquad":
+        a1, a2 = 3.2, 1.75
+
+    elif cov_func.lower() == "matern52":
+        a1, a2 = 4.1, 2.65
+
+    elif cov_func.lower() == "matern32":
+        a1, a2 = 4.5, 3.42
+
+    c = max(a1 * (lengthscale_range[1] / S), 1.2)
+    m = int(a2 * c / (lengthscale_range[0] / S))
+
+    return m, c, S
 
 
 class HSGP(Base):
@@ -253,8 +316,8 @@ class HSGP(Base):
 
         Correct results when using `prior_linearized` in tandem with `pm.set_data` and
         `pm.Data` require two conditions.  First, one must specify `L` instead of `c` when
-        the GP is constructed.  If not, a RuntimeError is raised.  Second, the `Xs` needs to be
-        zero-centered, so its mean must be subtracted.  An example is given below.
+        the GP is constructed.  If not, a RuntimeError is raised.  Second, the `Xs` needs to be  ### CHECH WITH c INSTEAD!!
+        zero-centered, so its mean must be subtracted. An example is given below.
 
         Parameters
         ----------
@@ -283,7 +346,7 @@ class HSGP(Base):
                 cov_func = eta**2 * pm.gp.cov.ExpQuad(1, ls=ell)
 
                 # m = [200] means 200 basis vectors for the first dimension
-                # L = [10] means the approximation is valid from Xs = [-10, 10]
+                # L = [10] means the approximation is valid from Xs = [-10, 10] ### CHECH WITH c INSTEAD!!
                 gp = pm.gp.HSGP(m=[200], L=[10], cov_func=cov_func)
 
                 # Order is important.
