@@ -288,6 +288,7 @@ class HSGP(Base):
             self._L = pt.as_tensor(L).eval()  # make sure L cannot be changed
         self._c = c
         self._parametrization = parametrization
+        self._X_mean = None
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
@@ -349,15 +350,9 @@ class HSGP(Base):
                 # L = [10] means the approximation is valid from Xs = [-10, 10] ### CHECH WITH c INSTEAD!!
                 gp = pm.gp.HSGP(m=[200], L=[10], cov_func=cov_func)
 
-                # Order is important.
-                # First calculate the mean, then make X a shared variable, then subtract the mean.
-                # When X is mutated later, the correct mean will be subtracted.
-                X_mean = np.mean(X, axis=0)
                 X = pm.Data("X", X)
-                Xs = X - X_mean
-
-                # Pass the zero-subtracted Xs in to the GP
-                phi, sqrt_psd = gp.prior_linearized(Xs=Xs)
+                # Pass X to the GP
+                phi, sqrt_psd = gp.prior_linearized(Xs=X)
 
                 # Specify standard normal prior in the coefficients.  The number of which
                 # is given by the number of basis vectors, which is also saved in the GP object
@@ -385,6 +380,11 @@ class HSGP(Base):
             with model:
                 ppc = pm.sample_posterior_predictive(idata, var_names=["f"])
         """
+        # Important: fix the computation of the mean. If X is mutated later,
+        # the training mean will be subtracted, not the testing mean.
+        if self._X_mean is None:
+            self._X_mean = pt.mean(Xs, axis=0).eval()
+        Xs = Xs - self._X_mean
 
         # Index Xs using input_dim and active_dims of covariance function
         Xs, _ = self.cov_func._slice(Xs)
@@ -426,8 +426,8 @@ class HSGP(Base):
         gp_dims: str, default None
             Dimension name for the GP random variable.
         """
-        self._X_mean = pt.mean(X, axis=0)
-        phi, sqrt_psd = self.prior_linearized(X - self._X_mean)
+        # self._X_mean = pt.mean(X, axis=0)
+        phi, sqrt_psd = self.prior_linearized(X)
 
         if self._parametrization == "noncentered":
             self._beta = pm.Normal(
