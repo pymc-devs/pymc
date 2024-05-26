@@ -409,6 +409,8 @@ class HSGP(Base):
         X: TensorLike,
         hsgp_coeffs_dims: str | None = None,
         gp_dims: str | None = None,
+        *args,
+        **kwargs,
     ):  # type: ignore
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
@@ -425,7 +427,6 @@ class HSGP(Base):
         gp_dims: str, default None
             Dimension name for the GP random variable.
         """
-        # self._X_mean = pt.mean(X, axis=0)
         phi, sqrt_psd = self.prior_linearized(X)
 
         if self._parametrization == "noncentered":
