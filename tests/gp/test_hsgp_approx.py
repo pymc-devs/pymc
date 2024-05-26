@@ -108,12 +108,12 @@ class _BaseFixtures:
 class TestHSGP(_BaseFixtures):
     def test_set_boundaries_1d(self, X1):
         X1s = X1 - np.mean(X1, axis=0)
-        L = pm.gp.hsgp_approx.set_boundary(X1s, c=2).eval()
+        L = pm.gp.hsgp_approx.set_boundary(X1s, c=2)
         assert np.all(L == 10)
 
     def test_set_boundaries_3d(self, X2):
         X2s = X2 - np.mean(X2, axis=0)
-        L = pm.gp.hsgp_approx.set_boundary(X2s, c=2).eval()
+        L = pm.gp.hsgp_approx.set_boundary(X2s, c=2)
         assert np.all(L == 10)
 
     def test_parametrization(self):
@@ -141,10 +141,11 @@ class TestHSGP(_BaseFixtures):
             pm.gp.HSGP(m=[500], L=[12, 12], cov_func=cov_func)
 
         with pytest.raises(
-            ValueError, match="`parameterization` must be either 'centered' or 'noncentered'."
+            ValueError,
+            match="`parametrization` must be either 'centered' or 'noncentered'.",
         ):
             cov_func = pm.gp.cov.ExpQuad(2, ls=[1, 2])
-            pm.gp.HSGP(m=[50, 50], L=[12, 12], parameterization="wrong", cov_func=cov_func)
+            pm.gp.HSGP(m=[50, 50], L=[12, 12], parametrization="wrong", cov_func=cov_func)
 
         # pass without error, cov_func has 2 active dimensions, c given as scalar
         cov_func = pm.gp.cov.ExpQuad(3, ls=[1, 2], active_dims=[0, 2])
@@ -171,19 +172,19 @@ class TestHSGP(_BaseFixtures):
                 assert n_coeffs == n_basis, "one was dropped when it shouldn't have been"
 
     @pytest.mark.parametrize(
-        "cov_func,parameterization",
+        "cov_func,parametrization",
         [
             (pm.gp.cov.ExpQuad(1, ls=1), "centered"),
             (pm.gp.cov.ExpQuad(1, ls=1), "noncentered"),
         ],
     )
-    def test_prior(self, model, cov_func, X1, parameterization, rng):
+    def test_prior(self, model, cov_func, X1, parametrization, rng):
         """Compare HSGP prior to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
         prior and compare them using MMD two sample test.  Tests both centered and non-centered
-        parameterizations.
+        parametrization.
         """
         with model:
-            hsgp = pm.gp.HSGP(m=[200], c=2.0, parameterization=parameterization, cov_func=cov_func)
+            hsgp = pm.gp.HSGP(m=[200], c=2.0, parametrization=parametrization, cov_func=cov_func)
             f1 = hsgp.prior("f1", X=X1)
 
             gp = pm.gp.Latent(cov_func=cov_func)
@@ -200,19 +201,19 @@ class TestHSGP(_BaseFixtures):
         assert not reject, "H0 was rejected, even though HSGP and GP priors should match."
 
     @pytest.mark.parametrize(
-        "cov_func,parameterization",
+        "cov_func,parametrization",
         [
             (pm.gp.cov.ExpQuad(1, ls=1), "centered"),
             (pm.gp.cov.ExpQuad(1, ls=1), "noncentered"),
         ],
     )
-    def test_conditional(self, model, cov_func, X1, parameterization):
+    def test_conditional(self, model, cov_func, X1, parametrization):
         """Compare HSGP conditional to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
         prior and compare them using MMD two sample test.  Tests both centered and non-centered
-        parameterizations.  The conditional should match the prior when no data is observed.
+        parametrization.  The conditional should match the prior when no data is observed.
         """
         with model:
-            hsgp = pm.gp.HSGP(m=[100], c=2.0, parameterization=parameterization, cov_func=cov_func)
+            hsgp = pm.gp.HSGP(m=[100], c=2.0, parametrization=parametrization, cov_func=cov_func)
             f = hsgp.prior("f", X=X1)
             fc = hsgp.conditional("fc", Xnew=X1)
 
