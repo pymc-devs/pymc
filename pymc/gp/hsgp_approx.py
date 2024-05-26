@@ -354,17 +354,16 @@ class HSGP(Base):
                 # Pass X to the GP
                 phi, sqrt_psd = gp.prior_linearized(Xs=X)
 
-                # Specify standard normal prior in the coefficients.  The number of which
-                # is given by the number of basis vectors, which is also saved in the GP object
-                # as m_star.
-                beta = pm.Normal("beta", size=gp._m_star)
+                # Specify standard normal prior in the coefficients, the number of which
+                # is given by the number of basis vectors, saved in `n_basis_vectors`.
+                beta = pm.Normal("beta", size=gp.n_basis_vectors)
 
                 # The (non-centered) GP approximation is given by:
                 f = pm.Deterministic("f", phi @ (beta * sqrt_psd))
 
                 # The centered approximation can be more efficient when
                 # the GP is stronger than the noise
-                # beta = pm.Normal("beta", sigma=sqrt_psd, size=gp._m_star)
+                # beta = pm.Normal("beta", sigma=sqrt_psd, size=gp.n_basis_vectors)
                 # f = pm.Deterministic("f", phi @ beta)
 
                 ...
