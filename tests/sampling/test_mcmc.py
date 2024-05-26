@@ -303,7 +303,7 @@ class TestSample:
             transform = pm.distributions.transforms.Interval(
                 bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
             )
-            y = pm.Uniform("y", lower=0, upper=x, transform=transform)
+            y = pm.Uniform("y", lower=0, upper=x, transform=transform, default_transform=None)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 trace = pm.sample(tune=10, draws=50, return_inferencedata=False, random_seed=336)
@@ -507,11 +507,19 @@ def test_empty_model():
         error.match("any free variables")
 
 
-def test_partial_trace_unsupported():
+def test_blas_cores():
+    with pm.Model():
+        pm.Normal("a")
+        pm.sample(blas_cores="auto", tune=10, cores=2, draws=10)
+        pm.sample(blas_cores=None, tune=10, cores=2, draws=10)
+        pm.sample(blas_cores=2, tune=10, cores=2, draws=10)
+
+
+def test_partial_trace_with_trace_unsupported():
     with pm.Model() as model:
         a = pm.Normal("a", mu=0, sigma=1)
         b = pm.Normal("b", mu=0, sigma=1)
-        with pytest.raises(DeprecationWarning, match="removed support"):
+        with pytest.raises(ValueError, match="var_names"):
             pm.sample(trace=[a])
 
 
@@ -695,12 +703,39 @@ def test_no_init_nuts_compound(caplog):
 
 
 def test_sample_var_names():
-    with pm.Model() as model:
-        a = pm.Normal("a")
-        b = pm.Deterministic("b", a**2)
-        idata = pm.sample(10, tune=10, var_names=["a"])
-        assert "a" in idata.posterior
-        assert "b" not in idata.posterior
+    # Generate data
+    seed = 1234
+    rng = np.random.default_rng(seed)
+
+    group = rng.choice(list("ABCD"), size=100)
+    x = rng.normal(size=100)
+    y = rng.normal(size=100)
+
+    group_values, group_idx = np.unique(group, return_inverse=True)
+
+    coords = {"group": group_values}
+
+    # Create model
+    with pm.Model(coords=coords) as model:
+        b_group = pm.Normal("b_group", dims="group")
+        b_x = pm.Normal("b_x")
+        mu = pm.Deterministic("mu", b_group[group_idx] + b_x * x)
+        sigma = pm.HalfNormal("sigma")
+        pm.Normal("y", mu=mu, sigma=sigma, observed=y)
+
+    # Sample with and without var_names, but always with the same seed
+    with model:
+        idata_1 = pm.sample(tune=100, draws=100, random_seed=seed)
+        idata_2 = pm.sample(
+            tune=100, draws=100, var_names=["b_group", "b_x", "sigma"], random_seed=seed
+        )
+
+    assert "mu" in idata_1.posterior
+    assert "mu" not in idata_2.posterior
+
+    assert np.all(idata_1.posterior["b_group"] == idata_2.posterior["b_group"]).item()
+    assert np.all(idata_1.posterior["b_x"] == idata_2.posterior["b_x"]).item()
+    assert np.all(idata_1.posterior["sigma"] == idata_2.posterior["sigma"]).item()
 
 
 class TestAssignStepMethods:

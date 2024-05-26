@@ -1,4 +1,4 @@
-name: pre-commit
+name: mypy
 
 on:
   pull_request:
@@ -6,23 +6,13 @@ on:
     branches: [main]
 
 jobs:
-  pre-commit:
-    runs-on: ubuntu-latest
-    env:
-      SKIP: no-commit-to-branch
-    steps:
-    - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.10"  # Run pre-commit on oldest supported Python version
-    - uses: pre-commit/action@v3.0.1
   mypy:
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
       - name: Cache conda
         uses: actions/cache@v4
         env:

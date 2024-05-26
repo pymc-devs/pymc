@@ -59,6 +59,11 @@ def test_compute_deterministics():
     assert extended_with_mu["mu"].dims == ("chain", "draw", "group")
     assert_allclose(extended_with_mu["mu"], dataset["mu_raw"].cumsum("group"))
 
+    only_sigma = compute_deterministics(dataset, var_names=["sigma"], model=m, progressbar=False)
+    assert set(only_sigma.data_vars.variables) == {"sigma"}
+    assert only_sigma["sigma"].dims == ("chain", "draw")
+    assert_allclose(only_sigma["sigma"], np.exp(dataset["sigma_raw"]))
+
 
 def test_docstring_example():
     import pymc as pm

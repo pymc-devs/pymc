@@ -25,7 +25,7 @@ import scipy.sparse as sps
 from pytensor import scan, shared
 from pytensor.compile import UnusedInputError
 from pytensor.compile.builders import OpFromGraph
-from pytensor.graph.basic import Variable
+from pytensor.graph.basic import Variable, equal_computations
 from pytensor.tensor.random.basic import normal, uniform
 from pytensor.tensor.random.var import RandomStateSharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
@@ -43,6 +43,8 @@ from pymc.pytensorf import (
     constant_fold,
     convert_observed_data,
     extract_obs_data,
+    hessian,
+    hessian_diag,
     replace_rng_nodes,
     replace_vars_in_graphs,
     reseed_rngs,
@@ -408,28 +410,6 @@ class TestCompilePyMC:
             # Each RV adds a shared output for its rng
             assert len(fn_fgraph.outputs) == 1 + rvs_in_graph
 
-    def test_compile_pymc_symbolic_rv_update(self):
-        """Test that SymbolicRandomVariable Op update methods are used by compile_pymc"""
-
-        class NonSymbolicRV(OpFromGraph):
-            def update(self, node):
-                return {node.inputs[0]: node.outputs[0]}
-
-        rng = pytensor.shared(np.random.default_rng())
-        dummy_rng = rng.type()
-        dummy_next_rng, dummy_x = NonSymbolicRV(
-            [dummy_rng], pt.random.normal(rng=dummy_rng).owner.outputs
-        )(rng)
-
-        # Check that there are no updates at first
-        fn = compile_pymc(inputs=[], outputs=dummy_x)
-        assert fn() == fn()
-
-        # And they are enabled once the Op is registered as a SymbolicRV
-        SymbolicRandomVariable.register(NonSymbolicRV)
-        fn = compile_pymc(inputs=[], outputs=dummy_x, random_seed=431)
-        assert fn() != fn()
-
     def test_compile_pymc_symbolic_rv_missing_update(self):
         """Test that error is raised if SymbolicRandomVariable Op does not
         provide rule for updating RNG"""
@@ -588,6 +568,22 @@ class TestCompilePyMC:
         fn = compile_pymc([], ys, random_seed=1)
         assert not (set(fn()) & set(fn()))
 
+    def test_op_from_graph_updates(self):
+        rng = pytensor.shared(np.random.default_rng())
+        next_rng_, x_ = pt.random.normal(size=(10,), rng=rng).owner.outputs
+
+        x = OpFromGraph([], [x_])()
+        with pytest.raises(
+            ValueError,
+            match="No update found for at least one RNG used in OpFromGraph Op",
+        ):
+            collect_default_updates([x])
+
+        next_rng, x = OpFromGraph([], [next_rng_, x_])()
+        assert collect_default_updates([x]) == {rng: next_rng}
+        fn = compile_pymc([], x, random_seed=1)
+        assert not (set(fn()) & set(fn()))
+
 
 def test_replace_rng_nodes():
     rng = pytensor.shared(np.random.default_rng())
@@ -732,3 +728,17 @@ def test_replace_vars_in_graphs_nested_reference():
     assert np.abs(x.eval()) < 1
     # Confirm the original `y` variable is not changed in place
     assert np.abs(y.eval()) < 1
+
+
+@pytest.mark.filterwarnings("error")
+@pytest.mark.parametrize("func", (hessian, hessian_diag))
+def test_hessian_sign_change_warning(func):
+    x = pt.vector("x")
+    f = (x**2).sum()
+    with pytest.warns(
+        FutureWarning,
+        match="will stop negating the output",
+    ):
+        res_neg = func(f, vars=[x])
+    res = func(f, vars=[x], negate_output=False)
+    assert equal_computations([res_neg], [-res])

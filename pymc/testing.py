@@ -29,6 +29,7 @@ from pytensor.compile.mode import Mode
 from pytensor.graph.basic import Variable
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.tensor import TensorVariable
+from pytensor.tensor.random.op import RandomVariable
 from scipy import special as sp
 from scipy import stats as st
 
@@ -43,7 +44,7 @@ from pymc.logprob.utils import (
     local_check_parameter_to_ninf_switch,
     rvs_in_graph,
 )
-from pymc.pytensorf import compile_pymc, floatX, inputvars, intX
+from pymc.pytensorf import compile_pymc, floatX, inputvars
 
 # This mode can be used for tests where model compilations takes the bulk of the runtime
 # AND where we don't care about posterior numerical or sampling stability (e.g., when
@@ -384,7 +385,9 @@ def check_logp(
                     continue
 
                 point = valid_params.copy()  # Shallow copy should be okay
-                point[invalid_param] = invalid_edge
+                point[invalid_param] = np.asarray(
+                    invalid_edge, dtype=paramdomains[invalid_param].dtype
+                )
                 with pytest.raises(ParameterValueError):
                     pymc_logp(**point)
                     pytest.fail(f"test_params={point}")
@@ -768,7 +771,7 @@ def discrete_random_tester(
         f = fails
         while p <= alpha and f > 0:
             o = pymc_rand()
-            e = intX(ref_rand(size=size, **point))
+            e = ref_rand(size=size, **point).astype(int)
             o = np.atleast_1d(o).flatten()
             e = np.atleast_1d(e).flatten()
             bins = min(20, max(len(set(e)), len(set(o))))
@@ -897,7 +900,18 @@ class BaseTestDistributionRandom:
         )
 
     def check_pymc_params_match_rv_op(self):
-        pytensor_dist_inputs = self.pymc_rv.get_parents()[0].inputs[3:]
+        op = self.pymc_rv.owner.op
+        if isinstance(op, RandomVariable):
+            _, _, _, *pytensor_dist_inputs = self.pymc_rv.owner.inputs
+        else:
+            inputs_signature, _ = op.signature.split("->")
+            pytensor_dist_inputs = [
+                inp
+                for inp, inp_signature in zip(
+                    self.pymc_rv.owner.inputs, inputs_signature.split(",")
+                )
+                if inp_signature not in ("[rng]", "[size]")
+            ]
         assert len(self.expected_rv_op_params) == len(pytensor_dist_inputs)
         for (expected_name, expected_value), actual_variable in zip(
             self.expected_rv_op_params.items(), pytensor_dist_inputs
@@ -917,18 +931,17 @@ class BaseTestDistributionRandom:
             expected_symbolic = tuple(pymc_rv.shape.eval())
             actual = pymc_rv.eval().shape
             assert actual == expected_symbolic
-            assert expected_symbolic == expected
+            assert expected_symbolic == expected, (size, expected_symbolic, expected)
 
         # test multi-parameters sampling for univariate distributions (with univariate inputs)
         if (
-            self.pymc_dist.rv_op.ndim_supp == 0
-            and self.pymc_dist.rv_op.ndims_params
-            and sum(self.pymc_dist.rv_op.ndims_params) == 0
+            self.pymc_dist.rv_type.ndim_supp == 0
+            and self.pymc_dist.rv_type.ndims_params
+            and sum(self.pymc_dist.rv_type.ndims_params) == 0
         ):
             params = {
                 k: p * np.ones(self.repeated_params_shape) for k, p in self.pymc_dist_params.items()
             }
-            self._instantiate_pymc_rv(params)
             sizes_to_check = [None, self.repeated_params_shape, (5, self.repeated_params_shape)]
             sizes_expected = [
                 (self.repeated_params_shape,),

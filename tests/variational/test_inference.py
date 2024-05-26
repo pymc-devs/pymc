@@ -27,7 +27,6 @@ import pytest
 import pymc as pm
 import pymc.variational.opvi as opvi
 
-from pymc.pytensorf import intX
 from pymc.variational.inference import ADVI, ASVGD, SVGD, FullRankADVI
 from pymc.variational.opvi import NotImplementedInference
 from tests import models
@@ -278,7 +277,7 @@ def test_profile(inference):
 @pytest.fixture(scope="module")
 def binomial_model():
     n_samples = 100
-    xs = intX(np.random.binomial(n=1, p=0.2, size=n_samples))
+    xs = np.random.binomial(n=1, p=0.2, size=n_samples)
     with pm.Model() as model:
         p = pm.Beta("p", alpha=1, beta=1)
         pm.Binomial("xs", n=1, p=p, observed=xs)

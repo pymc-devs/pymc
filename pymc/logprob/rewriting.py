@@ -365,8 +365,6 @@ logprob_rewrites_db.register(
     "local_exp_over_1_plus_exp", out2in(local_exp_over_1_plus_exp), "basic"
 )
 logprob_rewrites_db.register("pre-canonicalize", optdb.query("+canonicalize"), "basic")
-# Split max_and_argmax
-logprob_rewrites_db.register("local_max_and_argmax", out2in(local_max_and_argmax), "basic")
 
 # These rewrites convert un-measurable variables into their measurable forms,
 # but they need to be reapplied, because some of the measurable forms require
@@ -375,6 +373,12 @@ measurable_ir_rewrites_db = MeasurableEquilibriumDB()
 measurable_ir_rewrites_db.name = "measurable_ir_rewrites_db"
 
 logprob_rewrites_db.register("measurable_ir_rewrites", measurable_ir_rewrites_db, "basic")
+
+# Split max_and_argmax
+# We only register this in the measurable IR db because max does not have a grad implemented
+# And running this on any MaxAndArgmax would lead to issues: https://github.com/pymc-devs/pymc/issues/7251
+# This special registering can be removed after https://github.com/pymc-devs/pytensor/issues/334 is fixed
+measurable_ir_rewrites_db.register("local_max_and_argmax", local_max_and_argmax, "basic")
 
 # These rewrites push random/measurable variables "down", making them closer to
 # (or eventually) the graph outputs.  Often this is done by lifting other `Op`s

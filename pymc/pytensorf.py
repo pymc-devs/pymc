@@ -14,6 +14,7 @@
 import warnings
 
 from collections.abc import Callable, Generator, Iterable, Sequence
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -23,6 +24,7 @@ import scipy.sparse as sps
 
 from pytensor import scalar
 from pytensor.compile import Function, Mode, get_mode
+from pytensor.compile.builders import OpFromGraph
 from pytensor.gradient import grad
 from pytensor.graph import Type, rewrite_graph
 from pytensor.graph.basic import (
@@ -76,8 +78,11 @@ __all__ = [
 ]
 
 
-def convert_observed_data(data):
+def convert_observed_data(data) -> np.ndarray | Variable:
     """Convert user provided dataset to accepted formats."""
+
+    if isgenerator(data):
+        return floatX(generator(data))
 
     if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
         # typically, but not limited to pandas objects
@@ -114,8 +119,6 @@ def convert_observed_data(data):
         ret = data
     elif sps.issparse(data):
         ret = data
-    elif isgenerator(data):
-        ret = generator(data)
     else:
         ret = np.asarray(data)
 
@@ -205,8 +208,8 @@ def replace_vars_in_graphs(
     """
     # Clone graphs and get equivalences
     inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
-    equiv = {k: k for k in replacements.keys()}
-    equiv = clone_get_equiv(inputs, graphs, False, False, equiv)
+    memo = {k: k for k in replacements.keys()}
+    equiv = clone_get_equiv(inputs, graphs, False, False, memo)
 
     fg = FunctionGraph(
         [equiv[i] for i in inputs],
@@ -350,8 +353,17 @@ def jacobian_diag(f, x):
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")
-def hessian(f, vars=None):
-    return -jacobian(gradient(f, vars), vars)
+def hessian(f, vars=None, negate_output=True):
+    res = jacobian(gradient(f, vars), vars)
+    if negate_output:
+        warnings.warn(
+            "hessian will stop negating the output in a future version of PyMC.\n"
+            "To suppress this warning set `negate_output=False`",
+            FutureWarning,
+            stacklevel=2,
+        )
+        res = -res
+    return res
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")
@@ -366,12 +378,21 @@ def hessian_diag1(f, v):
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")
-def hessian_diag(f, vars=None):
+def hessian_diag(f, vars=None, negate_output=True):
     if vars is None:
         vars = cont_inputs(f)
 
     if vars:
-        return -pt.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
+        res = pt.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
+        if negate_output:
+            warnings.warn(
+                "hessian_diag will stop negating the output in a future version of PyMC.\n"
+                "To suppress this warning set `negate_output=False`",
+                FutureWarning,
+                stacklevel=2,
+            )
+            res = -res
+        return res
     else:
         return empty_gradient
 
@@ -695,10 +716,6 @@ def generator(gen, default=None):
     return GeneratorOp(gen, default)()
 
 
-def floatX_array(x):
-    return floatX(np.array(x))
-
-
 def ix_(*args):
     """
     PyTensor np.ix_ analog
@@ -736,7 +753,7 @@ def find_rng_nodes(
     ]
 
 
-def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVariable]:
+def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> list[TensorVariable]:
     """Replace any RNG nodes upstream of outputs by new RNGs of the same type
 
     This can be used when combining a pre-existing graph with a cloned one, to ensure
@@ -758,7 +775,7 @@ def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVaria
             rng_cls = np.random.Generator
         new_rng_nodes.append(pytensor.shared(rng_cls(np.random.PCG64())))
     graph.replace_all(zip(rng_nodes, new_rng_nodes), import_missing=True)
-    return graph.outputs
+    return cast(list[TensorVariable], graph.outputs)
 
 
 SeedSequenceSeed = None | int | Sequence[int] | np.ndarray | np.random.SeedSequence
@@ -781,8 +798,25 @@ def reseed_rngs(
         rng.set_value(new_rng, borrow=True)
 
 
+def collect_default_updates_inner_fgraph(node: Apply) -> dict[Variable, Variable]:
+    """Collect default updates from node with inner fgraph."""
+    op = node.op
+    inner_updates = collect_default_updates(
+        inputs=op.inner_inputs, outputs=op.inner_outputs, must_be_shared=False
+    )
+
+    # Map inner updates to outer inputs/outputs
+    updates = {}
+    for rng, update in inner_updates.items():
+        inp_idx = op.inner_inputs.index(rng)
+        out_idx = op.inner_outputs.index(update)
+        updates[node.inputs[inp_idx]] = node.outputs[out_idx]
+
+    return updates
+
+
 def collect_default_updates(
-    outputs: Sequence[Variable],
+    outputs: Variable | Sequence[Variable],
     *,
     inputs: Sequence[Variable] | None = None,
     must_be_shared: bool = True,
@@ -874,9 +908,16 @@ def collect_default_updates(
                     f"No update found for at least one RNG used in Scan Op {client.op}.\n"
                     "You can use `pytensorf.collect_default_updates` inside the Scan function to return updates automatically."
                 )
+        elif isinstance(client.op, OpFromGraph):
+            try:
+                next_rng = collect_default_updates_inner_fgraph(client)[rng]
+            except (ValueError, KeyError):
+                raise ValueError(
+                    f"No update found for at least one RNG used in OpFromGraph Op {client.op}.\n"
+                    "You can use `pytensorf.collect_default_updates` and include those updates as outputs."
+                )
         else:
-            # We don't know how this RNG should be updated (e.g., OpFromGraph).
-            # The user should provide an update manually
+            # We don't know how this RNG should be updated. The user should provide an update manually
             return None
 
         # Recurse until we find final update for RNG
@@ -885,15 +926,15 @@ def collect_default_updates(
     if inputs is None:
         inputs = []
 
-    outputs = makeiter(outputs)
-    fg = FunctionGraph(outputs=outputs, clone=False)
+    outs = makeiter(outputs)
+    fg = FunctionGraph(outputs=outs, clone=False)
     clients = fg.clients
 
     rng_updates = {}
     # Iterate over input RNGs. Only consider shared RNGs if `must_be_shared==True`
     for input_rng in (
         inp
-        for inp in graph_inputs(outputs, blockers=inputs)
+        for inp in graph_inputs(outs, blockers=inputs)
         if (
             (not must_be_shared or isinstance(inp, SharedVariable))
             and isinstance(inp.type, RandomType)
@@ -904,7 +945,7 @@ def collect_default_updates(
         default_update = find_default_update(clients, input_rng)
 
         # Respect default update if provided
-        if getattr(input_rng, "default_update", None):
+        if hasattr(input_rng, "default_update") and input_rng.default_update is not None:
             rng_updates[input_rng] = input_rng.default_update
         else:
             if default_update is not None:
@@ -960,7 +1001,8 @@ def compile_pymc(
 
     # We always reseed random variables as this provides RNGs with no chances of collision
     if rng_updates:
-        reseed_rngs(rng_updates.keys(), random_seed)
+        rngs = cast(list[SharedVariable], list(rng_updates))
+        reseed_rngs(rngs, random_seed)
 
     # If called inside a model context, see if check_bounds flag is set to False
     try:
@@ -1063,3 +1105,14 @@ def toposort_replace(
         reverse=reverse,
     )
     fgraph.replace_all(sorted_replacements, import_missing=True)
+
+
+def normalize_rng_param(rng: None | Variable) -> Variable:
+    """Validate rng is a valid type or create a new one if None"""
+    if rng is None:
+        rng = pytensor.shared(np.random.default_rng())
+    elif not isinstance(rng.type, RandomType):
+        raise TypeError(
+            "The type of rng should be an instance of either RandomGeneratorType or RandomStateType"
+        )
+    return rng

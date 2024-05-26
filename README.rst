@@ -39,7 +39,7 @@ Getting started
 If you already know about Bayesian statistics:
 ----------------------------------------------
 
--  `API quickstart guide <https://www.pymc.io/projects/examples/en/latest/howto/api_quickstart.html>`__
+-  `API quickstart guide <https://www.pymc.io/projects/examples/en/latest/introductory/api_quickstart.html>`__
 -  The `PyMC tutorial <https://docs.pymc.io/en/latest/learn/core_notebooks/pymc_overview.html>`__
 -  `PyMC examples <https://www.pymc.io/projects/examples/en/latest/gallery.html>`__ and the `API reference <https://docs.pymc.io/en/stable/api.html>`__
 
@@ -72,7 +72,7 @@ Please choose from the following:
 - |DOIzenodo| A DOI for all versions.
 - DOIs for specific versions are shown on Zenodo and under `Releases <https://github.com/pymc-devs/pymc/releases>`_
 
-.. |DOIpaper| image:: https://img.shields.io/badge/DOI-10.7717%2Fpeerj--cs.1516-blue
+.. |DOIpaper| image:: https://img.shields.io/badge/DOI-10.7717%2Fpeerj--cs.1516-blue.svg
      :target: https://doi.org/10.7717/peerj-cs.1516
 .. |DOIzenodo| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4603970.svg
    :target: https://doi.org/10.5281/zenodo.4603970

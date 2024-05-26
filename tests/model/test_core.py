@@ -28,6 +28,7 @@ import pytensor
 import pytensor.sparse as sparse
 import pytensor.tensor as pt
 import pytest
+import scipy
 import scipy.sparse as sps
 import scipy.stats as st
 
@@ -38,11 +39,18 @@ from pytensor.tensor.variable import TensorConstant
 
 import pymc as pm
 
-from pymc import Deterministic, Model, Potential
+from pymc import Deterministic, Model, MvNormal, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
 from pymc.distributions.distribution import PartialObservedRV
-from pymc.distributions.transforms import log, simplex
+from pymc.distributions.transforms import (
+    ChainedTransform,
+    Interval,
+    LogTransform,
+    log,
+    ordered,
+    simplex,
+)
 from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import IntervalTransform
@@ -527,6 +535,35 @@ def test_model_var_maps():
     assert model.rvs_to_transforms[x] is None
 
 
+class TestTransformArgs:
+    def test_transform_warning(self):
+        with pm.Model():
+            with pytest.warns(
+                UserWarning,
+                match="To disable default transform,"
+                " please use default_transform=None"
+                " instead of transform=None. Setting transform to"
+                " None will not have any effect in future.",
+            ):
+                a = pm.Normal("a", transform=None)
+
+    def test_transform_order(self):
+        with pm.Model() as model:
+            x = pm.Normal("x", transform=Interval(0, 1), default_transform=log)
+        transform = model.rvs_to_transforms[x]
+        assert isinstance(transform, ChainedTransform)
+        assert isinstance(transform.transform_list[0], LogTransform)
+        assert isinstance(transform.transform_list[1], Interval)
+
+    def test_default_transform_is_applied(self):
+        with pm.Model() as model1:
+            x1 = pm.LogNormal("x1", [0, 0], [1, 1], transform=ordered, default_transform=None)
+        with pm.Model() as model2:
+            x2 = pm.LogNormal("x2", [0, 0], [1, 1], transform=ordered)
+        assert np.isinf(model1.compile_logp()({"x1_ordered__": (-1, -1)}))
+        assert np.isfinite(model2.compile_logp()({"x2_chain__": (-1, -1)}))
+
+
 def test_make_obs_var():
     """
     Check returned values for `data` given known inputs to `as_tensor()`.
@@ -549,18 +586,18 @@ def test_make_obs_var():
 
     # The function requires data and RV dimensionality to be compatible
     with pytest.raises(ShapeError, match="Dimensionality of data and RV don't match."):
-        fake_model.make_obs_var(fake_distribution, np.ones((3, 3, 1)), None, None, None)
+        fake_model.make_obs_var(fake_distribution, np.ones((3, 3, 1)), None, None, None, None)
 
     # Check function behavior using the various inputs
     # dense, sparse: Ensure that the missing values are appropriately set to None
     # masked: a deterministic variable is returned
 
-    dense_output = fake_model.make_obs_var(fake_distribution, dense_input, None, None, None)
+    dense_output = fake_model.make_obs_var(fake_distribution, dense_input, None, None, None, None)
     assert dense_output == fake_distribution
     assert isinstance(fake_model.rvs_to_values[dense_output], TensorConstant)
     del fake_model.named_vars[fake_distribution.name]
 
-    sparse_output = fake_model.make_obs_var(fake_distribution, sparse_input, None, None, None)
+    sparse_output = fake_model.make_obs_var(fake_distribution, sparse_input, None, None, None, None)
     assert sparse_output == fake_distribution
     assert sparse.basic._is_sparse_variable(fake_model.rvs_to_values[sparse_output])
     del fake_model.named_vars[fake_distribution.name]
@@ -568,7 +605,7 @@ def test_make_obs_var():
     # Here the RandomVariable is split into observed/imputed and a Deterministic is returned
     with pytest.warns(ImputationWarning):
         masked_output = fake_model.make_obs_var(
-            fake_distribution, masked_array_input, None, None, None
+            fake_distribution, masked_array_input, None, None, None, None
         )
     assert masked_output != fake_distribution
     assert not isinstance(masked_output, RandomVariable)
@@ -581,7 +618,7 @@ def test_make_obs_var():
 
     # Test that setting total_size returns a MinibatchRandomVariable
     scaled_outputs = fake_model.make_obs_var(
-        fake_distribution, dense_input, None, None, total_size=100
+        fake_distribution, dense_input, None, None, None, total_size=100
     )
     assert scaled_outputs != fake_distribution
     assert isinstance(scaled_outputs.owner.op, MinibatchRandomVariable)
@@ -976,16 +1013,16 @@ def test_model_d2logp(jacobian):
     test_vals = np.array([0.0, -1.0])
     state = {"x": test_vals, "y_log__": test_vals}
 
-    expected_x_d2logp = expected_y_d2logp = np.eye(2)
+    expected_x_d2logp = expected_y_d2logp = -np.eye(2)
 
-    dlogps = m.compile_d2logp(jacobian=jacobian)(state)
+    dlogps = m.compile_d2logp(jacobian=jacobian, negate_output=False)(state)
     assert np.all(np.isclose(dlogps[:2, :2], expected_x_d2logp))
     assert np.all(np.isclose(dlogps[2:, 2:], expected_y_d2logp))
 
-    x_dlogp2 = m.compile_d2logp(vars=[x], jacobian=jacobian)(state)
+    x_dlogp2 = m.compile_d2logp(vars=[x], jacobian=jacobian, negate_output=False)(state)
     assert np.all(np.isclose(x_dlogp2, expected_x_d2logp))
 
-    y_dlogp2 = m.compile_d2logp(vars=[y], jacobian=jacobian)(state)
+    y_dlogp2 = m.compile_d2logp(vars=[y], jacobian=jacobian, negate_output=False)(state)
     assert np.all(np.isclose(y_dlogp2, expected_y_d2logp))
 
 
@@ -1468,10 +1505,38 @@ class TestImputationMissingData:
         """
         with Model() as m:
             mu = pm.TruncatedNormal("mu", mu=1, sigma=2, lower=0)
-            x = pm.TruncatedNormal(
-                "x", mu=mu, sigma=0.5, lower=0, observed=np.array([0.1, 0.2, 0.5, np.nan, np.nan])
-            )
+            with pytest.warns(ImputationWarning):
+                x = pm.TruncatedNormal(
+                    "x",
+                    mu=mu,
+                    sigma=0.5,
+                    lower=0,
+                    observed=np.array([0.1, 0.2, 0.5, np.nan, np.nan]),
+                )
         m.check_start_vals(m.initial_point())
+
+    def test_coordinates(self):
+        # Regression test for https://github.com/pymc-devs/pymc/issues/7304
+
+        coords = {"trial": range(30), "feature": range(2)}
+        observed = np.zeros((30, 2))
+        observed[0, 0] = np.nan
+
+        with Model(coords=coords) as model:
+            with pytest.warns(ImputationWarning):
+                MvNormal(
+                    "y",
+                    mu=np.zeros(2),
+                    cov=np.eye(2),
+                    observed=observed,
+                    dims=("trial", "feature"),
+                )
+
+        logp_fn = model.compile_logp()
+        np.testing.assert_allclose(
+            logp_fn({"y_unobserved": [0]}),
+            scipy.stats.multivariate_normal.logpdf([0, 0], cov=np.eye(2)) * 30,
+        )
 
 
 class TestShared:

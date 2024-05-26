@@ -30,9 +30,9 @@ import xarray
 
 from arviz import InferenceData, concat, rcParams
 from arviz.data.base import CoordSpec, DimSpec, dict_to_dataset, requires
-from pytensor.graph.basic import Constant
+from pytensor.graph import ancestors
 from pytensor.tensor.sharedvar import SharedVariable
-from rich.progress import Console, Progress
+from rich.progress import Console
 from rich.theme import Theme
 from xarray import Dataset
 
@@ -40,7 +40,7 @@ import pymc
 
 from pymc.model import Model, modelcontext
 from pymc.pytensorf import PointFunc, extract_obs_data
-from pymc.util import default_progress_theme, get_default_varnames
+from pymc.util import CustomProgress, default_progress_theme, get_default_varnames
 
 if TYPE_CHECKING:
     from pymc.backends.base import MultiTrace
@@ -72,31 +72,21 @@ def find_observations(model: "Model") -> dict[str, Var]:
 
 def find_constants(model: "Model") -> dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
+    model_vars = model.basic_RVs + model.deterministics + model.potentials
+    value_vars = set(model.rvs_to_values.values())
 
-    # The constant data vars must be either pm.Data or TensorConstant or SharedVariable
-    def is_data(name, var, model) -> bool:
-        observations = find_observations(model)
-        return (
-            var not in model.deterministics
-            and var not in model.observed_RVs
-            and var not in model.free_RVs
-            and var not in model.potentials
-            and var not in model.value_vars
-            and name not in observations
-            and isinstance(var, Constant | SharedVariable)
-        )
-
-    # The assumption is that constants (like pm.Data) are named
-    # variables that aren't observed or free RVs, nor are they
-    # deterministics, and then we eliminate observations.
     constant_data = {}
-    for name, var in model.named_vars.items():
-        if is_data(name, var, model):
-            if hasattr(var, "get_value"):
-                var = var.get_value()
-            elif hasattr(var, "data"):
-                var = var.data
-            constant_data[name] = var
+    for var in model.data_vars:
+        if var in value_vars:
+            # An observed value variable could also be part of the generative graph
+            if var not in ancestors(model_vars):
+                continue
+
+        if isinstance(var, SharedVariable):
+            var_value = var.get_value()
+        else:
+            var_value = var.data
+        constant_data[var.name] = var_value
 
     return constant_data
 
@@ -659,8 +649,10 @@ def apply_function_over_dataset(
     out_dict = _DefaultTrace(n_pts)
     indices = range(n_pts)
 
-    with Progress(console=Console(theme=progressbar_theme)) as progress:
-        task = progress.add_task("Computinng ...", total=n_pts, visible=progressbar)
+    with CustomProgress(
+        console=Console(theme=progressbar_theme), disable=not progressbar
+    ) as progress:
+        task = progress.add_task("Computing ...", total=n_pts)
         for idx in indices:
             out = fn(posterior_pts[idx])
             fn.f.trust_input = True  # If we arrive here the dtypes are valid

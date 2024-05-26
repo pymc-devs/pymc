@@ -1017,6 +1017,55 @@ class TestSamplePPC:
             ]
             caplog.clear()
 
+    def test_observed_data_needed_in_pp(self):
+        # Model where y_data is not part of the generative graph.
+        # It shouldn't be needed to set a dummy value for posterior predictive sampling
+
+        with pm.Model(coords={"trial": range(5), "feature": range(3)}) as m:
+            x_data = pm.Data("x_data", np.random.normal(size=(5, 3)), dims=("trial", "feat"))
+            y_data = pm.Data("y_data", np.random.normal(size=(5,)), dims=("trial",))
+            sigma = pm.HalfNormal("sigma")
+            mu = x_data.sum(-1)
+            pm.Normal("y", mu=mu, sigma=sigma, observed=y_data, shape=mu.shape, dims=("trial",))
+
+            prior = pm.sample_prior_predictive(samples=25).prior
+
+        fake_idata = InferenceData(posterior=prior)
+
+        new_coords = {"trial": range(2), "feature": range(3)}
+        new_x_data = np.random.normal(size=(2, 3))
+        with m:
+            pm.set_data(
+                {
+                    "x_data": new_x_data,
+                },
+                coords=new_coords,
+            )
+            pp = pm.sample_posterior_predictive(fake_idata, predictions=True, progressbar=False)
+        assert pp.predictions["y"].shape == (1, 25, 2)
+
+        # In this case y_data is part of the generative graph, so we must set it to a compatible value
+        with pm.Model(coords={"trial": range(5), "feature": range(3)}) as m:
+            x_data = pm.Data("x_data", np.random.normal(size=(5, 3)), dims=("trial", "feat"))
+            y_data = pm.Data("y_data", np.random.normal(size=(5,)), dims=("trial",))
+            sigma = pm.HalfNormal("sigma")
+            mu = (y_data.sum() * x_data).sum(-1)
+            pm.Normal("y", mu=mu, sigma=sigma, observed=y_data, shape=mu.shape, dims=("trial",))
+
+            prior = pm.sample_prior_predictive(samples=25).prior
+
+        fake_idata = InferenceData(posterior=prior)
+
+        with m:
+            pm.set_data({"x_data": new_x_data}, coords=new_coords)
+            with pytest.raises(ValueError, match="conflicting sizes for dimension 'trial'"):
+                pm.sample_posterior_predictive(fake_idata, predictions=True, progressbar=False)
+
+        new_y_data = np.random.normal(size=(2,))
+        with m:
+            pm.set_data({"y_data": new_y_data})
+        assert pp.predictions["y"].shape == (1, 25, 2)
+
 
 @pytest.fixture(scope="class")
 def point_list_arg_bug_fixture() -> tuple[pm.Model, pm.backends.base.MultiTrace]:

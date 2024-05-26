@@ -37,7 +37,12 @@ import pymc as pm
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
-from pymc.util import default_progress_theme, get_default_varnames, get_value_vars_from_user_vars
+from pymc.util import (
+    CustomProgress,
+    default_progress_theme,
+    get_default_varnames,
+    get_value_vars_from_user_vars,
+)
 from pymc.vartypes import discrete_types, typefilter
 
 __all__ = ["find_MAP"]
@@ -178,7 +183,7 @@ def find_MAP(
             if isinstance(e, StopIteration):
                 pm._log.info(e)
         finally:
-            cost_func.progress.update(cost_func.task, completed=cost_func.n_eval)
+            cost_func.progress.update(cost_func.task, completed=cost_func.n_eval, refresh=True)
             print(file=sys.stdout)
 
     mx0 = RaveledVars(mx0, x0.point_map_info)
@@ -219,12 +224,13 @@ class CostFuncWrapper:
             self.desc = "logp = {:,.5g}, ||grad|| = {:,.5g}"
         self.previous_x = None
         self.progressbar = progressbar
-        self.progress = Progress(
+        self.progress = CustomProgress(
             *Progress.get_default_columns(),
             TextColumn("{task.fields[loss]}"),
             console=Console(theme=progressbar_theme),
+            disable=not progressbar,
         )
-        self.task = self.progress.add_task("MAP", total=maxeval, visible=progressbar, loss="")
+        self.task = self.progress.add_task("MAP", total=maxeval, loss="")
 
     def __call__(self, x):
         neg_value = np.float64(self.logp_func(pm.floatX(x)))

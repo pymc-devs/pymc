@@ -41,18 +41,19 @@ from pymc.distributions.distribution import (
     CustomDist,
     CustomDistRV,
     CustomSymbolicDistRV,
+    DiracDelta,
     PartialObservedRV,
     SymbolicRandomVariable,
     _support_point,
     create_partial_observed_rv,
     support_point,
 )
-from pymc.distributions.shape_utils import change_dist_size, rv_size_is_none, to_tuple
+from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.distributions.transforms import log
 from pymc.exceptions import BlockModelAccessError
 from pymc.logprob.basic import conditional_logp, logcdf, logp
 from pymc.model import Deterministic, Model
-from pymc.pytensorf import collect_default_updates
+from pymc.pytensorf import collect_default_updates, compile_pymc
 from pymc.sampling import draw, sample
 from pymc.testing import (
     BaseTestDistributionRandom,
@@ -584,9 +585,7 @@ class TestCustomSymbolicDist:
 
     def test_custom_methods(self):
         def custom_dist(mu, size):
-            if rv_size_is_none(size):
-                return mu
-            return pt.full(size, mu)
+            return DiracDelta.dist(mu, size=size)
 
         def custom_support_point(rv, size, mu):
             return pt.full_like(rv, mu + 1)
@@ -750,27 +749,27 @@ class TestCustomSymbolicDist:
 
         out = CustomDist.dist([0.25, 0.75], dist=dist, signature="(p)->()")
         # Size and updates are added automatically to the signature
-        assert out.owner.op.signature == "(),(p)->(),()"
+        assert out.owner.op.signature == "[size],(p),[rng]->(),[rng]"
         assert out.owner.op.ndim_supp == 0
-        assert out.owner.op.ndims_params == [0, 1]
+        assert out.owner.op.ndims_params == [1]
 
         # When recreated internally, the whole signature may already be known
-        out = CustomDist.dist([0.25, 0.75], dist=dist, signature="(),(p)->(),()")
-        assert out.owner.op.signature == "(),(p)->(),()"
+        out = CustomDist.dist([0.25, 0.75], dist=dist, signature="[size],(p),[rng]->(),[rng]")
+        assert out.owner.op.signature == "[size],(p),[rng]->(),[rng]"
         assert out.owner.op.ndim_supp == 0
-        assert out.owner.op.ndims_params == [0, 1]
+        assert out.owner.op.ndims_params == [1]
 
         # A safe signature can be inferred from ndim_supp and ndims_params
-        out = CustomDist.dist([0.25, 0.75], dist=dist, ndim_supp=0, ndims_params=[0, 1])
-        assert out.owner.op.signature == "(),(i10)->(),()"
+        out = CustomDist.dist([0.25, 0.75], dist=dist, ndim_supp=0, ndims_params=[1])
+        assert out.owner.op.signature == "[size],(i00),[rng]->(),[rng]"
         assert out.owner.op.ndim_supp == 0
-        assert out.owner.op.ndims_params == [0, 1]
+        assert out.owner.op.ndims_params == [1]
 
         # Otherwise be default we assume everything is scalar, even though it's wrong in this case
         out = CustomDist.dist([0.25, 0.75], dist=dist)
-        assert out.owner.op.signature == "(),()->(),()"
+        assert out.owner.op.signature == "[size],(),[rng]->(),[rng]"
         assert out.owner.op.ndim_supp == 0
-        assert out.owner.op.ndims_params == [0, 0]
+        assert out.owner.op.ndims_params == [0]
 
 
 class TestSymbolicRandomVariable:
@@ -778,7 +777,8 @@ class TestSymbolicRandomVariable:
         class TestSymbolicRV(SymbolicRandomVariable):
             pass
 
-        x = TestSymbolicRV([], [Flat.dist()], ndim_supp=0)()
+        rng = pytensor.shared(np.random.default_rng())
+        x = TestSymbolicRV([rng], [Flat.dist(rng=rng)], ndim_supp=0)(rng)
 
         # By default, the SymbolicRandomVariable will not be inlined. Because we did not
         # dispatch a custom logprob function it will raise next
@@ -788,8 +788,69 @@ class TestSymbolicRandomVariable:
         class TestInlinedSymbolicRV(SymbolicRandomVariable):
             inline_logprob = True
 
-        x_inline = TestInlinedSymbolicRV([], [Flat.dist()], ndim_supp=0)()
+        x_inline = TestInlinedSymbolicRV([rng], [Flat.dist(rng=rng)], ndim_supp=0)(rng)
         assert np.isclose(logp(x_inline, 0).eval(), 0)
+
+    def test_default_update(self):
+        """Test SymbolicRandomVariable Op default to updates from inner graph."""
+
+        class SymbolicRVDefaultUpdates(SymbolicRandomVariable):
+            pass
+
+        class SymbolicRVCustomUpdates(SymbolicRandomVariable):
+            def update(self, node):
+                return {}
+
+        rng = pytensor.shared(np.random.default_rng())
+        dummy_rng = rng.type()
+        dummy_next_rng, dummy_x = pt.random.normal(rng=dummy_rng).owner.outputs
+
+        # Check that default updates work
+        next_rng, x = SymbolicRVDefaultUpdates(
+            inputs=[dummy_rng],
+            outputs=[dummy_next_rng, dummy_x],
+            ndim_supp=0,
+        )(rng)
+        fn = compile_pymc(inputs=[], outputs=x, random_seed=431)
+        assert fn() != fn()
+
+        # Check that custom updates are respected, by using one that's broken
+        next_rng, x = SymbolicRVCustomUpdates(
+            inputs=[dummy_rng],
+            outputs=[dummy_next_rng, dummy_x],
+            ndim_supp=0,
+        )(rng)
+        with pytest.raises(
+            ValueError,
+            match="No update found for at least one RNG used in SymbolicRandomVariable Op SymbolicRVCustomUpdates",
+        ):
+            compile_pymc(inputs=[], outputs=x, random_seed=431)
+
+    def test_recreate_with_different_rng_inputs(self):
+        """Test that we can recreate a SymbolicRandomVariable with new RNG inputs.
+
+        Related to https://github.com/pymc-devs/pytensor/issues/473
+        """
+        rng = pytensor.shared(np.random.default_rng())
+
+        dummy_rng = rng.type()
+        dummy_next_rng, dummy_x = pt.random.normal(rng=dummy_rng).owner.outputs
+
+        op = SymbolicRandomVariable(
+            [dummy_rng],
+            [dummy_next_rng, dummy_x],
+            ndim_supp=0,
+        )
+
+        next_rng, x = op(rng)
+        assert op.update(x.owner) == {rng: next_rng}
+
+        new_rng = pytensor.shared(np.random.default_rng())
+        inputs = x.owner.inputs.copy()
+        inputs[0] = new_rng
+        # This would fail with the default OpFromGraph.__call__()
+        new_next_rng, new_x = x.owner.op(*inputs)
+        assert op.update(new_x.owner) == {new_rng: new_next_rng}
 
 
 def test_tag_future_warning_dist():
@@ -918,8 +979,9 @@ class TestPartialObservedRV:
         np.testing.assert_allclose(obs_logp, st.norm([1, 2]).logpdf([0.25, 0.5]))
         np.testing.assert_allclose(unobs_logp, st.norm([3]).logpdf([0.25]))
 
+    @pytest.mark.parametrize("mutable_shape", (False, True))
     @pytest.mark.parametrize("obs_component_selected", (True, False))
-    def test_multivariate_constant_mask_separable(self, obs_component_selected):
+    def test_multivariate_constant_mask_separable(self, obs_component_selected, mutable_shape):
         if obs_component_selected:
             mask = np.zeros((1, 4), dtype=bool)
         else:
@@ -927,7 +989,11 @@ class TestPartialObservedRV:
         obs_data = np.array([[0.1, 0.4, 0.1, 0.4]])
         unobs_data = np.array([[0.4, 0.1, 0.4, 0.1]])
 
-        rv = pm.Dirichlet.dist([1, 2, 3, 4], shape=(1, 4))
+        if mutable_shape:
+            shape = (1, pytensor.shared(np.array(4, dtype=int)))
+        else:
+            shape = (1, 4)
+        rv = pm.Dirichlet.dist(pt.arange(shape[-1]) + 1, shape=shape)
         (obs_rv, obs_mask), (unobs_rv, unobs_mask), joined_rv = create_partial_observed_rv(rv, mask)
 
         # Test types
@@ -961,6 +1027,10 @@ class TestPartialObservedRV:
             expected_unobs_logp = pm.logp(rv, unobs_data).eval()
         np.testing.assert_allclose(obs_logp, expected_obs_logp)
         np.testing.assert_allclose(unobs_logp, expected_unobs_logp)
+
+        if mutable_shape:
+            shape[-1].set_value(7)
+            assert tuple(joined_rv.shape.eval()) == (1, 7)
 
     def test_multivariate_constant_mask_unseparable(self):
         mask = pt.constant(np.array([[True, True, False, False]]))
@@ -1036,14 +1106,19 @@ class TestPartialObservedRV:
         np.testing.assert_almost_equal(obs_logp, new_expected_logp)
         np.testing.assert_array_equal(unobs_logp, [])
 
-    def test_multivariate_shared_mask_unseparable(self):
+    @pytest.mark.parametrize("mutable_shape", (False, True))
+    def test_multivariate_shared_mask_unseparable(self, mutable_shape):
         # Even if the mask is initially not mixing support dims,
         # it could later be changed in a way that does!
         mask = shared(np.array([[True, True, True, True]]))
         obs_data = np.array([[0.1, 0.4, 0.1, 0.4]])
         unobs_data = np.array([[0.4, 0.1, 0.4, 0.1]])
 
-        rv = pm.Dirichlet.dist([1, 2, 3, 4], shape=(1, 4))
+        if mutable_shape:
+            shape = mask.shape
+        else:
+            shape = (1, 4)
+        rv = pm.Dirichlet.dist([1, 2, 3, 4], shape=shape)
         (obs_rv, obs_mask), (unobs_rv, unobs_mask), joined_rv = create_partial_observed_rv(rv, mask)
 
         # Test types
@@ -1073,15 +1148,21 @@ class TestPartialObservedRV:
 
         # Test that we can update a shared mask
         mask.set_value(np.array([[False, False, True, True]]))
+        equivalent_value = np.array([0.1, 0.4, 0.4, 0.1])
 
         assert tuple(obs_rv.shape.eval()) == (2,)
         assert tuple(unobs_rv.shape.eval()) == (2,)
 
-        new_expected_logp = pm.logp(rv, [0.1, 0.4, 0.4, 0.1]).eval()
+        new_expected_logp = pm.logp(rv, equivalent_value).eval()
         assert not np.isclose(expected_logp, new_expected_logp)  # Otherwise test is weak
         obs_logp, unobs_logp = logp_fn()
         np.testing.assert_almost_equal(obs_logp, new_expected_logp)
         np.testing.assert_array_equal(unobs_logp, [])
+
+        if mutable_shape:
+            mask.set_value(np.array([[False, False, True, False], [False, False, False, True]]))
+            assert tuple(obs_rv.shape.eval()) == (6,)
+            assert tuple(unobs_rv.shape.eval()) == (2,)
 
     def test_support_point(self):
         x = pm.GaussianRandomWalk.dist(init_dist=pm.Normal.dist(-5), mu=1, steps=9)

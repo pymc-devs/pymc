@@ -37,14 +37,16 @@ class Slice(ArrayStepShared):
 
     Parameters
     ----------
-    vars: list
+    vars : list, optional
         List of value variables for sampler.
-    w: float
-        Initial width of slice (Defaults to 1).
-    tune: bool
-        Flag for tuning (Defaults to True).
-    model: PyMC Model
-        Optional model for sampling step. Defaults to None (taken from context).
+    w : float, default 1.0
+        Initial width of slice.
+    tune : bool, default True
+        Flag for tuning.
+    model : Model, optional
+        Optional model for sampling step. It will be taken from the context if not provided.
+    iter_limit : int, default np.inf
+        Maximum number of iterations for the slice sampler.
 
     """
 

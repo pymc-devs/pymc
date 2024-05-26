@@ -25,6 +25,7 @@ from pytensor.graph.basic import Node, ancestors
 from pytensor.graph.replace import clone_replace
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.utils import normalize_size_param
 
 from pymc.distributions.continuous import Normal, get_tau_sigma
 from pymc.distributions.distribution import (
@@ -39,11 +40,12 @@ from pymc.distributions.shape_utils import (
     change_dist_size,
     get_support_shape,
     get_support_shape_1d,
+    rv_size_is_none,
 )
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.abstract import _logprob
 from pymc.logprob.basic import logp
-from pymc.pytensorf import constant_fold, intX
+from pymc.pytensorf import constant_fold
 from pymc.util import check_dist_not_registered
 
 __all__ = [
@@ -60,8 +62,60 @@ __all__ = [
 class RandomWalkRV(SymbolicRandomVariable):
     """RandomWalk Variable"""
 
-    default_output = 0
     _print_name = ("RandomWalk", "\\operatorname{RandomWalk}")
+
+    @classmethod
+    def rv_op(cls, init_dist, innovation_dist, steps, size=None):
+        # We don't allow passing `rng` because we don't fully control the rng of the components!
+        steps = pt.as_tensor(steps, dtype=int, ndim=0)
+
+        dist_ndim_supp = init_dist.owner.op.ndim_supp
+        init_dist_shape = tuple(init_dist.shape)
+        init_dist_batch_shape = init_dist_shape[: len(init_dist_shape) - dist_ndim_supp]
+        innovation_dist_shape = tuple(innovation_dist.shape)
+        innovation_batch_shape = innovation_dist_shape[
+            : len(innovation_dist_shape) - dist_ndim_supp
+        ]
+        ndim_supp = dist_ndim_supp + 1
+
+        size = normalize_size_param(size)
+
+        # If not explicit, size is determined by the shapes of the input distributions
+        if rv_size_is_none(size):
+            size = pt.broadcast_shape(
+                init_dist_batch_shape, innovation_batch_shape, arrays_are_shapes=True
+            )
+
+        # Resize input distributions. We will size them to (T, B, S) in order
+        # to safely take random draws. We later swap the steps dimension so
+        # that the final distribution will follow (B, T, S)
+        # init_dist must have shape (1, B, S)
+        init_dist = change_dist_size(init_dist, (1, *size))
+        # innovation_dist must have shape (T-1, B, S)
+        innovation_dist = change_dist_size(innovation_dist, (steps, *size))
+
+        # We can only infer the logp of a dimshuffled variables, if the dimshuffle is
+        # done directly on top of a RandomVariable. Because of this we dimshuffle the
+        # distributions and only then concatenate them, instead of the other way around.
+        # shape = (B, 1, S)
+        init_dist_dimswapped = pt.moveaxis(init_dist, 0, -ndim_supp)
+        # shape = (B, T-1, S)
+        innovation_dist_dimswapped = pt.moveaxis(innovation_dist, 0, -ndim_supp)
+        # shape = (B, T, S)
+        grw = pt.concatenate([init_dist_dimswapped, innovation_dist_dimswapped], axis=-ndim_supp)
+        grw = pt.cumsum(grw, axis=-ndim_supp)
+
+        innov_supp_dims = [f"d{i}" for i in range(dist_ndim_supp)]
+        innov_supp_str = ",".join(innov_supp_dims)
+        out_supp_str = ",".join(["t", *innov_supp_dims])
+        signature = f"({innov_supp_str}),({innov_supp_str}),(s),[rng]->({out_supp_str}),[rng]"
+        return RandomWalkRV(
+            [init_dist, innovation_dist, steps],
+            # We pass steps_ through just so we can keep a reference to it, even though
+            # it's no longer needed at this point
+            [grw],
+            signature=signature,
+        )(init_dist, innovation_dist, steps)
 
 
 class RandomWalk(Distribution):
@@ -71,6 +125,7 @@ class RandomWalk(Distribution):
     """
 
     rv_type = RandomWalkRV
+    rv_op = RandomWalkRV.rv_op
 
     def __new__(cls, *args, innovation_dist, steps=None, **kwargs):
         steps = cls.get_steps(
@@ -119,7 +174,7 @@ class RandomWalk(Distribution):
         )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
-        steps = pt.as_tensor_variable(intX(steps))
+        steps = pt.as_tensor_variable(steps, dtype=int)
 
         return super().dist([init_dist, innovation_dist, steps], **kwargs)
 
@@ -149,64 +204,6 @@ class RandomWalk(Distribution):
         if support_shape is not None:
             steps = support_shape[-dist_ndim_supp - 1]
         return steps
-
-    @classmethod
-    def rv_op(cls, init_dist, innovation_dist, steps, size=None):
-        if not steps.ndim == 0 or not steps.dtype.startswith("int"):
-            raise ValueError("steps must be an integer scalar (ndim=0).")
-
-        dist_ndim_supp = init_dist.owner.op.ndim_supp
-        init_dist_shape = tuple(init_dist.shape)
-        init_dist_batch_shape = init_dist_shape[: len(init_dist_shape) - dist_ndim_supp]
-        innovation_dist_shape = tuple(innovation_dist.shape)
-        innovation_batch_shape = innovation_dist_shape[
-            : len(innovation_dist_shape) - dist_ndim_supp
-        ]
-
-        ndim_supp = dist_ndim_supp + 1
-
-        # If not explicit, size is determined by the shapes of the input distributions
-        if size is None:
-            size = pt.broadcast_shape(
-                init_dist_batch_shape, innovation_batch_shape, arrays_are_shapes=True
-            )
-
-        # Resize input distributions. We will size them to (T, B, S) in order
-        # to safely take random draws. We later swap the steps dimension so
-        # that the final distribution will follow (B, T, S)
-        # init_dist must have shape (1, B, S)
-        init_dist = change_dist_size(init_dist, (1, *size))
-        # innovation_dist must have shape (T-1, B, S)
-        innovation_dist = change_dist_size(innovation_dist, (steps, *size))
-
-        # Create SymbolicRV
-        init_dist_, innovation_dist_, steps_ = (
-            init_dist.type(),
-            innovation_dist.type(),
-            steps.type(),
-        )
-        # We can only infer the logp of a dimshuffled variables, if the dimshuffle is
-        # done directly on top of a RandomVariable. Because of this we dimshuffle the
-        # distributions and only then concatenate them, instead of the other way around.
-        # shape = (B, 1, S)
-        init_dist_dimswapped_ = pt.moveaxis(init_dist_, 0, -ndim_supp)
-        # shape = (B, T-1, S)
-        innovation_dist_dimswapped_ = pt.moveaxis(innovation_dist_, 0, -ndim_supp)
-        # shape = (B, T, S)
-        grw_ = pt.concatenate([init_dist_dimswapped_, innovation_dist_dimswapped_], axis=-ndim_supp)
-        grw_ = pt.cumsum(grw_, axis=-ndim_supp)
-
-        innov_supp_dims = [f"d{i}" for i in range(dist_ndim_supp)]
-        innov_supp_str = ",".join(innov_supp_dims)
-        out_supp_str = ",".join(["t", *innov_supp_dims])
-        signature = f"({innov_supp_str}),({innov_supp_str}),(s)->({out_supp_str})"
-        return RandomWalkRV(
-            [init_dist_, innovation_dist_, steps_],
-            # We pass steps_ through just so we can keep a reference to it, even though
-            # it's no longer needed at this point
-            [grw_],
-            signature=signature,
-        )(init_dist, innovation_dist, steps)
 
 
 @_change_dist_size.register(RandomWalkRV)
@@ -422,9 +419,7 @@ class MvStudentTRandomWalk(PredefinedRandomWalk):
 class AutoRegressiveRV(SymbolicRandomVariable):
     """A placeholder used to specify a log-likelihood for an AR sub-graph."""
 
-    signature = "(o),(),(o),(s)->(),(t)"
-    ndim_supp = 1
-    default_output = 1
+    signature = "(o),(),(o),(s),[rng]->[rng],(t)"
     ar_order: int
     constant_term: bool
     _print_name = ("AR", "\\operatorname{AR}")
@@ -434,9 +429,67 @@ class AutoRegressiveRV(SymbolicRandomVariable):
         self.constant_term = constant_term
         super().__init__(*args, **kwargs)
 
+    @classmethod
+    def rv_op(cls, rhos, sigma, init_dist, steps, ar_order, constant_term, size=None):
+        # We don't allow passing `rng` because we don't fully control the rng of the components!
+        noise_rng = pytensor.shared(np.random.default_rng())
+        size = normalize_size_param(size)
+
+        # Init dist should have shape (*size, ar_order)
+        if rv_size_is_none(size):
+            # In this case the size of the init_dist depends on the parameters shape
+            # The last dimension of rho and init_dist does not matter
+            batch_size = pt.broadcast_shape(
+                tuple(sigma.shape),
+                tuple(rhos.shape)[:-1],
+                tuple(pt.atleast_1d(init_dist).shape)[:-1],
+                arrays_are_shapes=True,
+            )
+        else:
+            batch_size = size
+
+        if init_dist.owner.op.ndim_supp == 0:
+            init_dist_size = (*batch_size, ar_order)
+        else:
+            # In this case the support dimension must cover for ar_order
+            init_dist_size = batch_size
+        init_dist = change_dist_size(init_dist, init_dist_size)
+
+        rhos_bcast_shape = init_dist.shape
+        if constant_term:
+            # In this case init shape is one unit smaller than rhos in the last dimension
+            rhos_bcast_shape = (*rhos_bcast_shape[:-1], rhos_bcast_shape[-1] + 1)
+        rhos_bcast = pt.broadcast_to(rhos, rhos_bcast_shape)
+
+        def step(*args):
+            *prev_xs, reversed_rhos, sigma, rng = args
+            if constant_term:
+                mu = reversed_rhos[-1] + pt.sum(prev_xs * reversed_rhos[:-1], axis=0)
+            else:
+                mu = pt.sum(prev_xs * reversed_rhos, axis=0)
+            next_rng, new_x = Normal.dist(mu=mu, sigma=sigma, rng=rng).owner.outputs
+            return new_x, {rng: next_rng}
+
+        # We transpose inputs as scan iterates over first dimension
+        innov, innov_updates = pytensor.scan(
+            fn=step,
+            outputs_info=[{"initial": init_dist.T, "taps": range(-ar_order, 0)}],
+            non_sequences=[rhos_bcast.T[::-1], sigma.T, noise_rng],
+            n_steps=steps,
+            strict=True,
+        )
+        (noise_next_rng,) = tuple(innov_updates.values())
+        ar = pt.concatenate([init_dist, innov.T], axis=-1)
+
+        return AutoRegressiveRV(
+            inputs=[rhos, sigma, init_dist, steps, noise_rng],
+            outputs=[noise_next_rng, ar],
+            ar_order=ar_order,
+            constant_term=constant_term,
+        )(rhos, sigma, init_dist, steps, noise_rng)
+
     def update(self, node: Node):
         """Return the update mapping for the noise RV."""
-        # Since noise is a shared variable it shows up as the last node input
         return {node.inputs[-1]: node.outputs[0]}
 
 
@@ -500,6 +553,7 @@ class AR(Distribution):
     """
 
     rv_type = AutoRegressiveRV
+    rv_op = AutoRegressiveRV.rv_op
 
     def __new__(cls, name, rho, *args, steps=None, constant=False, ar_order=None, **kwargs):
         rhos = pt.atleast_1d(pt.as_tensor_variable(rho))
@@ -545,7 +599,7 @@ class AR(Distribution):
         )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
-        steps = pt.as_tensor_variable(intX(steps), ndim=0)
+        steps = pt.as_tensor_variable(steps, dtype=int, ndim=0)
 
         if init_dist is not None:
             if not isinstance(init_dist, TensorVariable) or not isinstance(
@@ -601,71 +655,6 @@ class AR(Distribution):
                 )
 
         return ar_order
-
-    @classmethod
-    def ndim_supp(cls, *args):
-        return 1
-
-    @classmethod
-    def rv_op(cls, rhos, sigma, init_dist, steps, ar_order, constant_term, size=None):
-        # Init dist should have shape (*size, ar_order)
-        if size is not None:
-            batch_size = size
-        else:
-            # In this case the size of the init_dist depends on the parameters shape
-            # The last dimension of rho and init_dist does not matter
-            batch_size = pt.broadcast_shape(sigma, rhos[..., 0], pt.atleast_1d(init_dist)[..., 0])
-        if init_dist.owner.op.ndim_supp == 0:
-            init_dist_size = (*batch_size, ar_order)
-        else:
-            # In this case the support dimension must cover for ar_order
-            init_dist_size = batch_size
-        init_dist = change_dist_size(init_dist, init_dist_size)
-
-        # Create OpFromGraph representing random draws from AR process
-        # Variables with underscore suffix are dummy inputs into the OpFromGraph
-        init_ = init_dist.type()
-        rhos_ = rhos.type()
-        sigma_ = sigma.type()
-        steps_ = steps.type()
-
-        rhos_bcast_shape_ = init_.shape
-        if constant_term:
-            # In this case init shape is one unit smaller than rhos in the last dimension
-            rhos_bcast_shape_ = (*rhos_bcast_shape_[:-1], rhos_bcast_shape_[-1] + 1)
-        rhos_bcast_ = pt.broadcast_to(rhos_, rhos_bcast_shape_)
-
-        noise_rng = pytensor.shared(np.random.default_rng())
-
-        def step(*args):
-            *prev_xs, reversed_rhos, sigma, rng = args
-            if constant_term:
-                mu = reversed_rhos[-1] + pt.sum(prev_xs * reversed_rhos[:-1], axis=0)
-            else:
-                mu = pt.sum(prev_xs * reversed_rhos, axis=0)
-            next_rng, new_x = Normal.dist(mu=mu, sigma=sigma, rng=rng).owner.outputs
-            return new_x, {rng: next_rng}
-
-        # We transpose inputs as scan iterates over first dimension
-        innov_, innov_updates_ = pytensor.scan(
-            fn=step,
-            outputs_info=[{"initial": init_.T, "taps": range(-ar_order, 0)}],
-            non_sequences=[rhos_bcast_.T[::-1], sigma_.T, noise_rng],
-            n_steps=steps_,
-            strict=True,
-        )
-        (noise_next_rng,) = tuple(innov_updates_.values())
-        ar_ = pt.concatenate([init_, innov_.T], axis=-1)
-
-        ar_op = AutoRegressiveRV(
-            inputs=[rhos_, sigma_, init_, steps_],
-            outputs=[noise_next_rng, ar_],
-            ar_order=ar_order,
-            constant_term=constant_term,
-        )
-
-        ar = ar_op(rhos, sigma, init_dist, steps)
-        return ar
 
 
 @_change_dist_size.register(AutoRegressiveRV)
@@ -724,14 +713,60 @@ def ar_support_point(op, rv, rhos, sigma, init_dist, steps, noise_rng):
 class GARCH11RV(SymbolicRandomVariable):
     """A placeholder used to specify a GARCH11 graph."""
 
-    default_output = 1
-    signature = "(),(),(),(),(),(s)->(),(t)"
-    ndim_supp = 1
+    signature = "(),(),(),(),(),(s),[rng]->[rng],(t)"
     _print_name = ("GARCH11", "\\operatorname{GARCH11}")
+
+    @classmethod
+    def rv_op(cls, omega, alpha_1, beta_1, initial_vol, init_dist, steps, size=None):
+        # We don't allow passing `rng` because we don't fully control the rng of the components!
+        steps = pt.as_tensor(steps, ndim=0)
+        omega = pt.as_tensor(omega)
+        alpha_1 = pt.as_tensor(alpha_1)
+        beta_1 = pt.as_tensor(beta_1)
+        initial_vol = pt.as_tensor(initial_vol)
+        noise_rng = pytensor.shared(np.random.default_rng())
+        size = normalize_size_param(size)
+
+        if rv_size_is_none(size):
+            # In this case the size of the init_dist depends on the parameters shape
+            batch_size = pt.broadcast_shape(omega, alpha_1, beta_1, initial_vol)
+        else:
+            batch_size = size
+
+        init_dist = change_dist_size(init_dist, batch_size)
+
+        # Create OpFromGraph representing random draws from GARCH11 process
+
+        def step(prev_y, prev_sigma, omega, alpha_1, beta_1, rng):
+            new_sigma = pt.sqrt(
+                omega + alpha_1 * pt.square(prev_y) + beta_1 * pt.square(prev_sigma)
+            )
+            next_rng, new_y = Normal.dist(mu=0, sigma=new_sigma, rng=rng).owner.outputs
+            return (new_y, new_sigma), {rng: next_rng}
+
+        (y_t, _), innov_updates = pytensor.scan(
+            fn=step,
+            outputs_info=[
+                init_dist,
+                pt.broadcast_to(initial_vol.astype("floatX"), init_dist.shape),
+            ],
+            non_sequences=[omega, alpha_1, beta_1, noise_rng],
+            n_steps=steps,
+            strict=True,
+        )
+        (noise_next_rng,) = tuple(innov_updates.values())
+
+        garch11 = pt.concatenate([init_dist[None, ...], y_t], axis=0).dimshuffle(
+            (*range(1, y_t.ndim), 0)
+        )
+
+        return GARCH11RV(
+            inputs=[omega, alpha_1, beta_1, initial_vol, init_dist, steps, noise_rng],
+            outputs=[noise_next_rng, garch11],
+        )(omega, alpha_1, beta_1, initial_vol, init_dist, steps, noise_rng)
 
     def update(self, node: Node):
         """Return the update mapping for the noise RV."""
-        # Since noise is a shared variable it shows up as the last node input
         return {node.inputs[-1]: node.outputs[0]}
 
 
@@ -760,6 +795,7 @@ class GARCH11(Distribution):
     """
 
     rv_type = GARCH11RV
+    rv_op = GARCH11RV.rv_op
 
     def __new__(cls, *args, steps=None, **kwargs):
         steps = get_support_shape_1d(
@@ -778,65 +814,9 @@ class GARCH11(Distribution):
         )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
-        steps = pt.as_tensor_variable(intX(steps), ndim=0)
-
-        omega = pt.as_tensor_variable(omega)
-        alpha_1 = pt.as_tensor_variable(alpha_1)
-        beta_1 = pt.as_tensor_variable(beta_1)
-        initial_vol = pt.as_tensor_variable(initial_vol)
 
         init_dist = Normal.dist(0, initial_vol)
-
         return super().dist([omega, alpha_1, beta_1, initial_vol, init_dist, steps], **kwargs)
-
-    @classmethod
-    def rv_op(cls, omega, alpha_1, beta_1, initial_vol, init_dist, steps, size=None):
-        if size is not None:
-            batch_size = size
-        else:
-            # In this case the size of the init_dist depends on the parameters shape
-            batch_size = pt.broadcast_shape(omega, alpha_1, beta_1, initial_vol)
-        init_dist = change_dist_size(init_dist, batch_size)
-        # initial_vol = initial_vol * pt.ones(batch_size)
-
-        # Create OpFromGraph representing random draws from GARCH11 process
-        # Variables with underscore suffix are dummy inputs into the OpFromGraph
-        init_ = init_dist.type()
-        initial_vol_ = initial_vol.type()
-        omega_ = omega.type()
-        alpha_1_ = alpha_1.type()
-        beta_1_ = beta_1.type()
-        steps_ = steps.type()
-
-        noise_rng = pytensor.shared(np.random.default_rng())
-
-        def step(prev_y, prev_sigma, omega, alpha_1, beta_1, rng):
-            new_sigma = pt.sqrt(
-                omega + alpha_1 * pt.square(prev_y) + beta_1 * pt.square(prev_sigma)
-            )
-            next_rng, new_y = Normal.dist(mu=0, sigma=new_sigma, rng=rng).owner.outputs
-            return (new_y, new_sigma), {rng: next_rng}
-
-        (y_t, _), innov_updates_ = pytensor.scan(
-            fn=step,
-            outputs_info=[init_, initial_vol_ * pt.ones(batch_size)],
-            non_sequences=[omega_, alpha_1_, beta_1_, noise_rng],
-            n_steps=steps_,
-            strict=True,
-        )
-        (noise_next_rng,) = tuple(innov_updates_.values())
-
-        garch11_ = pt.concatenate([init_[None, ...], y_t], axis=0).dimshuffle(
-            (*range(1, y_t.ndim), 0)
-        )
-
-        garch11_op = GARCH11RV(
-            inputs=[omega_, alpha_1_, beta_1_, initial_vol_, init_, steps_],
-            outputs=[noise_next_rng, garch11_],
-        )
-
-        garch11 = garch11_op(omega, alpha_1, beta_1, initial_vol, init_dist, steps)
-        return garch11
 
 
 @_change_dist_size.register(GARCH11RV)
@@ -885,20 +865,59 @@ def garch11_support_point(op, rv, omega, alpha_1, beta_1, initial_vol, init_dist
 class EulerMaruyamaRV(SymbolicRandomVariable):
     """A placeholder used to specify a log-likelihood for a EulerMaruyama sub-graph."""
 
-    default_output = 1
     dt: float
     sde_fn: Callable
-    ndim_supp = 1
     _print_name = ("EulerMaruyama", "\\operatorname{EulerMaruyama}")
 
-    def __init__(self, *args, dt, sde_fn, **kwargs):
+    def __init__(self, *args, dt: float, sde_fn: Callable, **kwargs):
         self.dt = dt
         self.sde_fn = sde_fn
         super().__init__(*args, **kwargs)
 
+    @classmethod
+    def rv_op(cls, init_dist, steps, sde_pars, dt, sde_fn, size=None):
+        # We don't allow passing `rng` because we don't fully control the rng of the components!
+        noise_rng = pytensor.shared(np.random.default_rng())
+
+        # Init dist should have shape (*size,)
+        if size is not None:
+            batch_size = size
+        else:
+            batch_size = pt.broadcast_shape(*sde_pars, init_dist)
+        init_dist = change_dist_size(init_dist, batch_size)
+
+        # Create OpFromGraph representing random draws from SDE process
+        def step(*prev_args):
+            prev_y, *prev_sde_pars, rng = prev_args
+            f, g = sde_fn(prev_y, *prev_sde_pars)
+            mu = prev_y + dt * f
+            sigma = pt.sqrt(dt) * g
+            next_rng, next_y = Normal.dist(mu=mu, sigma=sigma, rng=rng).owner.outputs
+            return next_y, {rng: next_rng}
+
+        y_t, innov_updates = pytensor.scan(
+            fn=step,
+            outputs_info=[init_dist],
+            non_sequences=[*sde_pars, noise_rng],
+            n_steps=steps,
+            strict=True,
+        )
+        (noise_next_rng,) = tuple(innov_updates.values())
+
+        sde_out = pt.concatenate([init_dist[None, ...], y_t], axis=0).dimshuffle(
+            (*range(1, y_t.ndim), 0)
+        )
+
+        return EulerMaruyamaRV(
+            inputs=[init_dist, steps, *sde_pars, noise_rng],
+            outputs=[noise_next_rng, sde_out],
+            dt=dt,
+            sde_fn=sde_fn,
+            signature=f"(),(s),{','.join('()' for _ in sde_pars)},[rng]->[rng],(t)",
+        )(init_dist, steps, *sde_pars, noise_rng)
+
     def update(self, node: Node):
         """Return the update mapping for the noise RV."""
-        # Since noise is a shared variable it shows up as the last node input
         return {node.inputs[-1]: node.outputs[0]}
 
 
@@ -922,6 +941,7 @@ class EulerMaruyama(Distribution):
     """
 
     rv_type = EulerMaruyamaRV
+    rv_op = EulerMaruyamaRV.rv_op
 
     def __new__(cls, name, dt, sde_fn, *args, steps=None, **kwargs):
         dt = pt.as_tensor_variable(dt)
@@ -941,7 +961,7 @@ class EulerMaruyama(Distribution):
         )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
-        steps = pt.as_tensor_variable(intX(steps), ndim=0)
+        steps = pt.as_tensor_variable(steps, dtype=int, ndim=0)
 
         dt = pt.as_tensor_variable(dt)
         sde_pars = [pt.as_tensor_variable(x) for x in sde_pars]
@@ -970,55 +990,6 @@ class EulerMaruyama(Distribution):
             init_dist = Normal.dist(0, 100, shape=sde_pars[0].shape)
 
         return super().dist([init_dist, steps, sde_pars, dt, sde_fn], **kwargs)
-
-    @classmethod
-    def rv_op(cls, init_dist, steps, sde_pars, dt, sde_fn, size=None):
-        # Init dist should have shape (*size,)
-        if size is not None:
-            batch_size = size
-        else:
-            batch_size = pt.broadcast_shape(*sde_pars, init_dist)
-        init_dist = change_dist_size(init_dist, batch_size)
-
-        # Create OpFromGraph representing random draws from SDE process
-        # Variables with underscore suffix are dummy inputs into the OpFromGraph
-        init_ = init_dist.type()
-        sde_pars_ = [x.type() for x in sde_pars]
-        steps_ = steps.type()
-
-        noise_rng = pytensor.shared(np.random.default_rng())
-
-        def step(*prev_args):
-            prev_y, *prev_sde_pars, rng = prev_args
-            f, g = sde_fn(prev_y, *prev_sde_pars)
-            mu = prev_y + dt * f
-            sigma = pt.sqrt(dt) * g
-            next_rng, next_y = Normal.dist(mu=mu, sigma=sigma, rng=rng).owner.outputs
-            return next_y, {rng: next_rng}
-
-        y_t, innov_updates_ = pytensor.scan(
-            fn=step,
-            outputs_info=[init_],
-            non_sequences=[*sde_pars_, noise_rng],
-            n_steps=steps_,
-            strict=True,
-        )
-        (noise_next_rng,) = tuple(innov_updates_.values())
-
-        sde_out_ = pt.concatenate([init_[None, ...], y_t], axis=0).dimshuffle(
-            (*range(1, y_t.ndim), 0)
-        )
-
-        eulermaruyama_op = EulerMaruyamaRV(
-            inputs=[init_, steps_, *sde_pars_],
-            outputs=[noise_next_rng, sde_out_],
-            dt=dt,
-            sde_fn=sde_fn,
-            signature=f"(),(s),{','.join('()' for _ in sde_pars_)}->(),(t)",
-        )
-
-        eulermaruyama = eulermaruyama_op(init_dist, steps, *sde_pars)
-        return eulermaruyama
 
 
 @_change_dist_size.register(EulerMaruyamaRV)
