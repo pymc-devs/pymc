@@ -427,7 +427,7 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
 
 def _find_custom_methods(model):
     custom_methods = {}
-    for rv in model.free_RVs + model.observed_RVs:
+    for rv in model.basic_RVs:
         cls = rv.owner.op.__class__
         if hasattr(cls, "_random_fn"):
             custom_methods[cloudpickle.dumps(cls)] = (
