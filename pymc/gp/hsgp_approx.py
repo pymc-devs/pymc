@@ -17,6 +17,7 @@ import warnings
 
 from collections.abc import Sequence
 from types import ModuleType
+from typing import NamedTuple
 
 import numpy as np
 import pytensor.tensor as pt
@@ -31,10 +32,10 @@ TensorLike = np.ndarray | pt.TensorVariable
 
 
 def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
-    """Set the boundary using the mean-subtracted `Xs` and `c`.  `c` is usually a scalar
+    """Set the boundary using the mean-subtracted `Xs` and `c`. `c` is usually a scalar
     multiplier greater than 1.0, but it may be one value per dimension or column of `Xs`.
     """
-    S = pt.max(Xs, axis=0)
+    S = pt.max(pt.abs(Xs), axis=0)
     L = (c * S).eval()  # eval() makes sure L is not changed with out-of-sample preds
     return L
 
@@ -88,7 +89,15 @@ def calc_basis_periodic(
     return phi_cos, phi_sin
 
 
-def approx_hsgp_hyperparams(x_range: list[float], lengthscale_range: list[float], cov_func: str):
+class HSGPParams(NamedTuple):
+    m: int
+    c: float
+    S: float
+
+
+def approx_hsgp_hyperparams(
+    x_range: list[float], lengthscale_range: list[float], cov_func: str
+) -> HSGPParams:
     """Utility function that uses heuristics to recommend minimum `m` and `c` values,
     based on recommendations from Ruitort-Mayol et. al.
 
@@ -109,8 +118,8 @@ def approx_hsgp_hyperparams(x_range: list[float], lengthscale_range: list[float]
 
     Returns
     -------
-    Tuple[int, float, float]
-        A tuple containing the recommended values for `m`, `c`, and `S`.
+    HSGPParams
+        A named tuple containing the recommended values for `m`, `c`, and `S`.
         - `m` : int
             Number of basis vectors. Increasing it helps approximate smaller lengthscales, but increases computational cost.
         - `c` : float
@@ -143,10 +152,15 @@ def approx_hsgp_hyperparams(x_range: list[float], lengthscale_range: list[float]
     elif cov_func.lower() == "matern32":
         a1, a2 = 4.5, 3.42
 
+    else:
+        raise ValueError(
+            "Unsupported covariance function. Supported options are 'expquad', 'matern52', and 'matern32'."
+        )
+
     c = max(a1 * (lengthscale_range[1] / S), 1.2)
     m = int(a2 * c / (lengthscale_range[0] / S))
 
-    return m, c, S
+    return HSGPParams(m=m, c=c, S=S)
 
 
 class HSGP(Base):
@@ -314,16 +328,12 @@ class HSGP(Base):
         `pm.set_data` similarly to a linear model.  It also enables computational speed ups in
         multi-GP models, since they may share the same basis.  The return values are the Laplace
         eigenfunctions `phi`, and the square root of the power spectral density.
-
-        Correct results when using `prior_linearized` in tandem with `pm.set_data` and
-        `pm.Data` require two conditions.  First, one must specify `L` instead of `c` when
-        the GP is constructed.  If not, a RuntimeError is raised.  Second, the `Xs` needs to be  ### CHECH WITH c INSTEAD!!
-        zero-centered, so its mean must be subtracted. An example is given below.
+        An example is given below.
 
         Parameters
         ----------
         Xs: array-like
-            Function input values.  Assumes they have been mean subtracted or centered at zero.
+            Function input values.
 
         Returns
         -------
@@ -347,7 +357,7 @@ class HSGP(Base):
                 cov_func = eta**2 * pm.gp.cov.ExpQuad(1, ls=ell)
 
                 # m = [200] means 200 basis vectors for the first dimension
-                # L = [10] means the approximation is valid from Xs = [-10, 10] ### CHECH WITH c INSTEAD!!
+                # L = [10] means the approximation is valid from Xs = [-10, 10]
                 gp = pm.gp.HSGP(m=[200], L=[10], cov_func=cov_func)
 
                 X = pm.Data("X", X)
@@ -373,7 +383,7 @@ class HSGP(Base):
             # First mutate the data X,
             x_new = np.linspace(-10, 10, 100)
             with model:
-                model.set_data("X", x_new[:, None])
+                pm.set_data({"X": x_new[:, None]})
 
             # and then make predictions for the GP using posterior predictive sampling.
             with model:
@@ -383,7 +393,7 @@ class HSGP(Base):
         # the training mean will be subtracted, not the testing mean.
         if self._X_mean is None:
             self._X_mean = pt.mean(Xs, axis=0).eval()
-        Xs = Xs - self._X_mean
+        Xs = Xs - self._X_mean  # mean-center for accurate computation
 
         # Index Xs using input_dim and active_dims of covariance function
         Xs, _ = self.cov_func._slice(Xs)
