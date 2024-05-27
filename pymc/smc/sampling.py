@@ -36,7 +36,7 @@ import pymc
 
 from pymc.backends.arviz import dict_to_dataset, to_inference_data
 from pymc.backends.base import MultiTrace
-from pymc.distributions.distribution import _support_point
+from pymc.distributions.distribution import CustomDistRV, _support_point
 from pymc.logprob.abstract import _logcdf, _logprob
 from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import _cpu_count
@@ -428,8 +428,9 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
 def _find_custom_methods(model):
     custom_methods = {}
     for rv in model.basic_RVs:
-        cls = rv.owner.op.__class__
-        if hasattr(cls, "_random_fn"):
+        rv_type = rv.owner.op
+        cls = rv_type.__class__
+        if isinstance(rv_type, CustomDistRV):
             custom_methods[cloudpickle.dumps(cls)] = (
                 cloudpickle.dumps(_logprob.registry[cls]),
                 cloudpickle.dumps(_logcdf.registry[cls]),
