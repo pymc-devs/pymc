@@ -36,7 +36,7 @@ import pymc
 
 from pymc.backends.arviz import dict_to_dataset, to_inference_data
 from pymc.backends.base import MultiTrace
-from pymc.distributions.distribution import CustomDistRV, _support_point
+from pymc.distributions.distribution import CustomDistRV, CustomSymbolicDistRV, _support_point
 from pymc.logprob.abstract import _logcdf, _logprob
 from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import _cpu_count
@@ -430,7 +430,7 @@ def _find_custom_methods(model):
     for rv in model.basic_RVs:
         rv_type = rv.owner.op
         cls = rv_type.__class__
-        if isinstance(rv_type, CustomDistRV):
+        if isinstance(rv_type, CustomDistRV | CustomSymbolicDistRV):
             custom_methods[cloudpickle.dumps(cls)] = (
                 cloudpickle.dumps(_logprob.registry.get(cls, None)),
                 cloudpickle.dumps(_logcdf.registry.get(cls, None)),
