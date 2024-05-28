@@ -72,8 +72,8 @@ class Inference:
             score = returns_loss
         elif score and not returns_loss:
             warnings.warn(
-                "method `fit` got `score == True` but %s "
-                "does not return loss. Ignoring `score` argument" % self.objective.op
+                f"method `fit` got `score == True` but {self.objective.op} "
+                "does not return loss. Ignoring `score` argument"
             )
             score = False
         else:

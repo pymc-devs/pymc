@@ -1047,11 +1047,11 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initv
         tril_testval = None
 
     c = pt.sqrt(
-        ChiSquared("%s_c" % name, nu - np.arange(2, 2 + n_diag), shape=n_diag, initval=diag_testval)
+        ChiSquared(f"{name}_c", nu - np.arange(2, 2 + n_diag), shape=n_diag, initval=diag_testval)
     )
-    pm._log.info("Added new variable %s_c to model diagonal of Wishart." % name)
-    z = Normal("%s_z" % name, 0.0, 1.0, shape=n_tril, initval=tril_testval)
-    pm._log.info("Added new variable %s_z to model off-diagonals of Wishart." % name)
+    pm._log.info(f"Added new variable {name}_c to model diagonal of Wishart.")
+    z = Normal(f"{name}_z", 0.0, 1.0, shape=n_tril, initval=tril_testval)
+    pm._log.info(f"Added new variable {name}_z to model off-diagonals of Wishart.")
     # Construct A matrix
     A = pt.zeros(S.shape, dtype=np.float32)
     A = pt.set_subtensor(A[diag_idx], c)

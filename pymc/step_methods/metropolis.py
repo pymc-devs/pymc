@@ -178,7 +178,7 @@ class Metropolis(ArrayStepShared):
         elif S.ndim == 2:
             self.proposal_dist = MultivariateNormalProposal(S)
         else:
-            raise ValueError("Invalid rank for variance: %s" % S.ndim)
+            raise ValueError(f"Invalid rank for variance: {S.ndim}")
 
         self.scaling = np.atleast_1d(scaling).astype("d")
         self.tune = tune
