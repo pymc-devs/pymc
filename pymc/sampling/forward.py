@@ -419,7 +419,7 @@ def sample_prior_predictive(
 
     data = {k: np.stack(v) for k, v in zip(names, values)}
     if data is None:
-        raise AssertionError("No variables sampled: attempting to sample %s" % names)
+        raise AssertionError(f"No variables sampled: attempting to sample {names}")
 
     prior: dict[str, np.ndarray] = {}
     for var_name in vars_:
@@ -765,8 +765,7 @@ def sample_posterior_predictive(
         samples = len(_trace)
     else:
         raise TypeError(
-            "Do not know how to compute number of samples for trace argument of type %s"
-            % type(_trace)
+            f"Do not know how to compute number of samples for trace argument of type {type(_trace)}"
         )
 
     assert samples is not None
