@@ -302,7 +302,7 @@ class HSGP(Base):
             self._L = pt.as_tensor(L).eval()  # make sure L cannot be changed
         self._c = c
         self._parametrization = parametrization
-        self._X_mean = None
+        self._X_center = None
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
@@ -389,11 +389,11 @@ class HSGP(Base):
             with model:
                 ppc = pm.sample_posterior_predictive(idata, var_names=["f"])
         """
-        # Important: fix the computation of the mean. If X is mutated later,
-        # the training mean will be subtracted, not the testing mean.
-        if self._X_mean is None:
-            self._X_mean = pt.mean(Xs, axis=0).eval()
-        Xs = Xs - self._X_mean  # mean-center for accurate computation
+        # Important: fix the computation of the midpoint of X.
+        # If X is mutated later, the training midpoint will be subtracted, not the testing one.
+        if self._X_center is None:
+            self._X_center = (pt.max(Xs, axis=0) - pt.min(Xs, axis=0)).eval() / 2
+        Xs = Xs - self._X_center  # center for accurate computation
 
         # Index Xs using input_dim and active_dims of covariance function
         Xs, _ = self.cov_func._slice(Xs)
@@ -457,7 +457,7 @@ class HSGP(Base):
 
     def _build_conditional(self, Xnew):
         try:
-            beta, X_mean = self._beta, self._X_mean
+            beta, X_center = self._beta, self._X_center
 
             if self._parametrization == "noncentered":
                 sqrt_psd = self._sqrt_psd
@@ -470,7 +470,7 @@ class HSGP(Base):
         Xnew, _ = self.cov_func._slice(Xnew)
 
         eigvals = calc_eigenvalues(self.L, self._m)
-        phi = calc_eigenvectors(Xnew - X_mean, self.L, eigvals, self._m)
+        phi = calc_eigenvectors(Xnew - X_center, self.L, eigvals, self._m)
         i = int(self._drop_first is True)
 
         if self._parametrization == "noncentered":
