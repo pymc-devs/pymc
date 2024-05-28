@@ -209,7 +209,7 @@ class ContextMeta(type):
     def __call__(cls, *args, **kwargs):
         # We type hint Model here so type checkers understand that Model is a context manager.
         # This metaclass is only used for Model, so this is safe to do. See #6809 for more info.
-        instance: "Model" = cls.__new__(cls, *args, **kwargs)
+        instance: Model = cls.__new__(cls, *args, **kwargs)
         with instance:  # appends context
             instance.__init__(*args, **kwargs)
         return instance
