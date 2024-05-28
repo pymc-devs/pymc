@@ -7,7 +7,7 @@ addopts = ["--color=yes"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-exclude = ["versioneer.py"]
+extend-exclude = ["versioneer.py", "_version.py"]
 
 [tool.ruff.lint]
 select = ["D", "E", "F", "I", "UP", "W", "RUF"]
