@@ -32,10 +32,10 @@ TensorLike = np.ndarray | pt.TensorVariable
 
 
 def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
-    """Set the boundary using the mean-subtracted `Xs` and `c`. `c` is usually a scalar
+    """Set the boundary using the `Xs` centered around 0 and `c`. `c` is usually a scalar
     multiplier greater than 1.0, but it may be one value per dimension or column of `Xs`.
     """
-    S = pt.max(pt.abs(Xs), axis=0)
+    S = pt.max(pt.abs(Xs), axis=0)  # important: the Xs should be centered around 0
     L = (c * S).eval()  # eval() makes sure L is not changed with out-of-sample preds
     return L
 
@@ -96,7 +96,7 @@ class HSGPParams(NamedTuple):
 
 
 def approx_hsgp_hyperparams(
-    x_range: list[float], lengthscale_range: list[float], cov_func: str
+    x: np.ndarray, lengthscale_range: list[float], cov_func: str
 ) -> HSGPParams:
     """Utility function that uses heuristics to recommend minimum `m` and `c` values,
     based on recommendations from Ruitort-Mayol et. al.
@@ -138,10 +138,12 @@ def approx_hsgp_hyperparams(
     - Ruitort-Mayol, G., Anderson, M., Solin, A., Vehtari, A. (2022).
     Practical Hilbert Space Approximate Bayesian Gaussian Processes for Probabilistic Programming
     """
-    if (x_range[0] >= x_range[1]) or (lengthscale_range[0] >= lengthscale_range[1]):
+    if lengthscale_range[0] >= lengthscale_range[1]:
         raise ValueError("One of the boundaries out of order")
 
-    S = (x_range[1] - x_range[0]) / 2
+    X_center = (np.max(x, axis=0) - np.min(x, axis=0)) / 2
+    Xs = x - X_center
+    S = np.max(np.abs(Xs), axis=0)
 
     if cov_func.lower() == "expquad":
         a1, a2 = 3.2, 1.75
@@ -401,7 +403,7 @@ class HSGP(Base):
         # If not provided, use Xs and c to set L
         if self._L is None:
             assert isinstance(self._c, numbers.Real | np.ndarray | pt.TensorVariable)
-            self.L = pt.as_tensor(set_boundary(Xs, self._c))
+            self.L = pt.as_tensor(set_boundary(Xs, self._c))  # Xs should be 0-centered
         else:
             self.L = self._L
 
