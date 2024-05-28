@@ -143,9 +143,8 @@ def conditioned_vars(varnames):
                 value = getattr(self, name, None)
                 if value is None:
                     raise AttributeError(
-                        "'{}' not set.  Provide as argument "
-                        "to condition, or call 'prior' "
-                        "first".format(name.lstrip("_"))
+                        f"'{name.lstrip('_')}' not set.  Provide as argument "
+                        "to condition, or call 'prior' first"
                     )
                 else:
                     return value

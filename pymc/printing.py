@@ -65,12 +65,11 @@ def str_for_dist(
             else r"\\operatorname{Unknown}"
         )
         if include_params:
+            params = ",~".join([d.strip("$") for d in dist_args])
             if print_name:
-                return r"${} \sim {}({})$".format(
-                    print_name, op_name, ",~".join([d.strip("$") for d in dist_args])
-                )
+                return rf"${print_name} \sim {op_name}({params})$"
             else:
-                return r"${}({})$".format(op_name, ",~".join([d.strip("$") for d in dist_args]))
+                return rf"${op_name}({params})$"
 
         else:
             if print_name:
@@ -83,10 +82,11 @@ def str_for_dist(
             dist.owner.op._print_name[0] if hasattr(dist.owner.op, "_print_name") else "Unknown"
         )
         if include_params:
+            params = ", ".join(dist_args)
             if print_name:
-                return r"{} ~ {}({})".format(print_name, dist_name, ", ".join(dist_args))
+                return rf"{print_name} ~ {dist_name}({params})"
             else:
-                return r"{}({})".format(dist_name, ", ".join(dist_args))
+                return rf"{dist_name}({params})"
         else:
             if print_name:
                 return rf"{print_name} ~ {dist_name}"
