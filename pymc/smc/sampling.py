@@ -432,9 +432,9 @@ def _find_custom_methods(model):
         cls = rv_type.__class__
         if isinstance(rv_type, CustomDistRV):
             custom_methods[cloudpickle.dumps(cls)] = (
-                cloudpickle.dumps(_logprob.registry[cls]),
-                cloudpickle.dumps(_logcdf.registry[cls]),
-                cloudpickle.dumps(_support_point.registry[cls]),
+                cloudpickle.dumps(_logprob.registry.get(cls, None)),
+                cloudpickle.dumps(_logcdf.registry.get(cls, None)),
+                cloudpickle.dumps(_support_point.registry.get(cls, None)),
             )
 
     return custom_methods
@@ -443,6 +443,9 @@ def _find_custom_methods(model):
 def _register_custom_methods(custom_methods):
     for cls, (logprob, logcdf, support_point) in custom_methods.items():
         cls = cloudpickle.loads(cls)
-        _logprob.register(cls, cloudpickle.loads(logprob))
-        _logcdf.register(cls, cloudpickle.loads(logcdf))
-        _support_point.register(cls, cloudpickle.loads(support_point))
+        if logprob is not None:
+            _logprob.register(cls, cloudpickle.loads(logprob))
+        if logcdf is not None:
+            _logcdf.register(cls, cloudpickle.loads(logcdf))
+        if support_point is not None:
+            _support_point.register(cls, cloudpickle.loads(support_point))
