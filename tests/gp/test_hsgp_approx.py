@@ -123,7 +123,7 @@ class TestHSGP(_BaseFixtures):
 
     def test_mean_invariance(self):
         X = np.linspace(0, 10, 100)[:, None]
-        original_mean = np.mean(X, axis=0)
+        original_center = (np.max(X, axis=0) - np.min(X, axis=0)) / 2
 
         with pm.Model() as model:
             _ = pm.Data("X", X)
@@ -136,8 +136,8 @@ class TestHSGP(_BaseFixtures):
             pm.set_data({"X": x_new})
 
         assert np.allclose(
-            gp._X_mean, original_mean
-        ), "gp._X_mean should not change after updating data for out-of-sample predictions."
+            gp._X_center, original_center
+        ), "gp._X_center should not change after updating data for out-of-sample predictions."
 
     def test_parametrization(self):
         err_msg = (
