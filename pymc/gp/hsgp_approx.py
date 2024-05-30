@@ -108,9 +108,9 @@ def approx_hsgp_hyperparams(
 
     Parameters
     ----------
-    x_range : List[float]
-        The range of the input variable on which the GP is going to be evaluated.
-        Should be a list with two elements [x_min, x_max].
+    x : np.ndarray
+        The input variable on which the GP is going to be evaluated.
+        Careful: should be the X values you want to predict over, not *only* the training X.
     lengthscale_range : List[float]
         The range of the lengthscales. Should be a list with two elements [lengthscale_min, lengthscale_max].
     cov_func : str
