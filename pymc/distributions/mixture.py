@@ -798,7 +798,7 @@ class ZeroInflatedNegativeBinomial:
         )
 
 
-def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, **kwargs):
+def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, max_n_steps=None, **kwargs):
     """Helper function to create a hurdle mixtures
 
     If name is `None`, this function returns an unregistered variable
@@ -818,18 +818,15 @@ def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, **kwargs):
     nonzero_p = pt.as_tensor_variable(nonzero_p)
     weights = pt.stack([1 - nonzero_p, nonzero_p], axis=-1)
 
-    truncated_kwargs = {k: v for k, v in kwargs.items() if k in {"lower", "upper", "max_n_steps"}}
-    mixture_kwargs = {k: v for k, v in kwargs.items() if k not in truncated_kwargs}
-
     comp_dists = [
         DiracDelta.dist(zero),
-        Truncated.dist(nonzero_dist, lower=lower, **truncated_kwargs),
+        Truncated.dist(nonzero_dist, lower=lower, max_n_steps=max_n_steps),
     ]
 
     if name is not None:
-        return Mixture(name, weights, comp_dists, **mixture_kwargs)
+        return Mixture(name, weights, comp_dists, **kwargs)
     else:
-        return Mixture.dist(weights, comp_dists, **mixture_kwargs)
+        return Mixture.dist(weights, comp_dists, **kwargs)
 
 
 class HurdlePoisson:
