@@ -818,10 +818,11 @@ def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, max_n_steps=None, *
     nonzero_p = pt.as_tensor_variable(nonzero_p)
     weights = pt.stack([1 - nonzero_p, nonzero_p], axis=-1)
 
-    comp_dists = [
-        DiracDelta.dist(zero),
-        Truncated.dist(nonzero_dist, lower=lower, max_n_steps=max_n_steps),
-    ]
+    if max_n_steps:
+        truncated_dist = Truncated.dist(nonzero_dist, lower=lower, max_n_steps=max_n_steps)
+    else:
+        truncated_dist = Truncated.dist(nonzero_dist, lower=lower)
+    comp_dists = [DiracDelta.dist(zero), truncated_dist]
 
     if name is not None:
         return Mixture(name, weights, comp_dists, **kwargs)
