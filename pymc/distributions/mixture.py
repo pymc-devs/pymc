@@ -819,7 +819,7 @@ def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, **kwargs):
     weights = pt.stack([1 - nonzero_p, nonzero_p], axis=-1)
 
     truncated_kwargs = {k: v for k, v in kwargs.items() if k in {"lower", "upper", "max_n_steps"}}
-    mixture_kwargs = {key: val for key, val in kwargs.items() if key not in truncated_kwargs}
+    mixture_kwargs = {k: v for k, v in kwargs.items() if k not in truncated_kwargs}
 
     comp_dists = [
         DiracDelta.dist(zero),
