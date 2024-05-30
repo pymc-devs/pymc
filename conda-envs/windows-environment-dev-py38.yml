@@ -16,11 +16,15 @@ dependencies:
 # Extra stuff for dev, testing and docs build
 - ipython>=7.16
 - nbsphinx>=0.4
-- numpydoc>=0.9
+- numpy>=1.15,<1.22.2
+- numpydoc<1.2
 - pre-commit>=2.8.0
 - pytest-cov>=2.5
 - pytest>=3.0
 - recommonmark>=0.4
+- scipy>=1.4.1,<1.8.0
 - sphinx-autobuild>=0.7
 - sphinx>=1.5
 - watermark
+- pip:
+  - deprecat

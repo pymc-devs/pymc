@@ -8,13 +8,18 @@ dependencies:
 - libblas=*=*mkl
 - mkl-service
 - nbsphinx>=0.4
-- numpydoc>=0.9
+- numpy>=1.15,<1.22.2
+- numpydoc<1.2
+- pip
 - pre-commit>=2.8.0
 - pytest-cov>=2.5
 - pytest>=3.0
 - python-graphviz
 - python=3.8
 - recommonmark>=0.4
+- scipy>=1.4.1,<1.8.0
 - sphinx-autobuild>=0.7
 - sphinx>=1.5
 - watermark
+- pip:
+  - deprecat

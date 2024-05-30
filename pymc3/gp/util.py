@@ -36,7 +36,7 @@ def infer_shape(X, n_points=None):
 
 
 def stabilize(K):
-    """ adds small diagonal to a covariance matrix """
+    """adds small diagonal to a covariance matrix"""
     return K + 1e-6 * tt.identity_like(K)
 
 
@@ -62,7 +62,7 @@ def kmeans_inducing_points(n_inducing, X):
 
 
 def conditioned_vars(varnames):
-    """ Decorator for validating attrs that are conditioned on. """
+    """Decorator for validating attrs that are conditioned on."""
 
     def gp_wrapper(cls):
         def make_getter(name):

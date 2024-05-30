@@ -37,3 +37,26 @@ def test_build_TraceDict_point_list():
         assert len(dict) == 1
         assert len(dict["mu"]) == 1
         assert dict["mu"][0] == 0.0
+
+
+def test_fast_sample_posterior_predictive_shape_assertions():
+    """
+    This test checks the shape assertions in pm.fast_sample_posterior_predictive.
+    Originally reported - https://github.com/pymc-devs/pymc3/issues/4778
+    """
+    with pm.Model():
+        p = pm.Beta("p", 2, 2)
+        trace = pm.sample(
+            tune=30, draws=50, chains=1, return_inferencedata=True, compute_convergence_checks=False
+        )
+
+    with pm.Model() as m_forward:
+        p = pm.Beta("p", 2, 2)
+        b2 = pm.Binomial("b2", n=1, p=p)
+        b3 = pm.Binomial("b3", n=1, p=p * b2)
+
+    with m_forward:
+        trace_forward = pm.fast_sample_posterior_predictive(trace, var_names=["p", "b2", "b3"])
+
+    for free_rv in trace_forward.values():
+        assert free_rv.shape[0] == 50

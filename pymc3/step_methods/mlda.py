@@ -883,24 +883,16 @@ class MLDA(ArrayStepShared):
                 pm.set_data(
                     {
                         "mu_B": sum(
-                            [
-                                bias.get_mu()
-                                for bias in self.bias_all[
-                                    : len(self.bias_all) - self.num_levels + 2
-                                ]
-                            ]
+                            bias.get_mu()
+                            for bias in self.bias_all[: len(self.bias_all) - self.num_levels + 2]
                         )
                     }
                 )
                 pm.set_data(
                     {
                         "Sigma_B": sum(
-                            [
-                                bias.get_sigma()
-                                for bias in self.bias_all[
-                                    : len(self.bias_all) - self.num_levels + 2
-                                ]
-                            ]
+                            bias.get_sigma()
+                            for bias in self.bias_all[: len(self.bias_all) - self.num_levels + 2]
                         )
                     }
                 )
@@ -979,7 +971,7 @@ def extract_Q_estimate(trace, levels):
 
     Q_0_raw = trace.get_sampler_stats("Q_0")
     # total number of base level samples from all iterations
-    total_base_level_samples = sum([it.shape[0] for it in Q_0_raw])
+    total_base_level_samples = sum(it.shape[0] for it in Q_0_raw)
     Q_0 = np.concatenate(Q_0_raw).reshape((1, total_base_level_samples))
     ess_Q_0 = az.ess(np.array(Q_0, np.float64))
     Q_0_var = Q_0.var() / ess_Q_0
@@ -989,7 +981,7 @@ def extract_Q_estimate(trace, levels):
     for l in range(1, levels):
         Q_diff_raw = trace.get_sampler_stats(f"Q_{l}_{l-1}")
         # total number of samples from all iterations
-        total_level_samples = sum([it.shape[0] for it in Q_diff_raw])
+        total_level_samples = sum(it.shape[0] for it in Q_diff_raw)
         Q_diff = np.concatenate(Q_diff_raw).reshape((1, total_level_samples))
         ess_diff = az.ess(np.array(Q_diff, np.float64))
 

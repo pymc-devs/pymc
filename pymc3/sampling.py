@@ -23,7 +23,7 @@ import warnings
 
 from collections import defaultdict
 from copy import copy, deepcopy
-from typing import Any, Dict, Iterable, List, Optional, Set, Union, cast
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Union, cast
 
 import arviz
 import numpy as np
@@ -32,6 +32,7 @@ import theano.gradient as tg
 import xarray
 
 from arviz import InferenceData
+from deprecat.sphinx import deprecat
 from fastprogress.fastprogress import progress_bar
 
 import pymc3 as pm
@@ -232,12 +233,18 @@ def _print_step_hierarchy(s: Step, level=0) -> None:
         _log.info(">" * level + f"{s.__class__.__name__}: [{varnames}]")
 
 
+@deprecat(
+    deprecated_args={
+        "start": dict(version="3.11.5", reason="renamed to `initvals` in PyMC v4.0.0"),
+        "pickle_backend": dict(version="3.11.5", reason="removed in PyMC v4.0.0"),
+    }
+)
 def sample(
     draws=1000,
     step=None,
     init="auto",
     n_init=200000,
-    start=None,
+    initvals: Optional[Union[PointType, Sequence[Optional[PointType]]]] = None,
     trace=None,
     chain_idx=0,
     chains=None,
@@ -251,6 +258,7 @@ def sample(
     callback=None,
     jitter_max_retries=10,
     *,
+    start=None,
     return_inferencedata=None,
     idata_kwargs: dict = None,
     mp_ctx=None,
@@ -294,11 +302,10 @@ def sample(
         users.
     n_init : int
         Number of iterations of initializer. Only works for 'ADVI' init methods.
-    start : dict, or array of dict
-        Starting point in parameter space (or partial point)
-        Defaults to ``trace.point(-1))`` if there is a trace provided and model.test_point if not
-        (defaults to empty dict). Initialization methods for NUTS (see ``init`` keyword) can
-        overwrite the default.
+    initvals : optional, dict, array of dict
+        Dict or list of dicts with initial values to use instead of the defaults.
+        The keys should be names of transformed random variables.
+        Initialization methods for NUTS (see ``init`` keyword) can overwrite the default.
     trace : backend, list, or MultiTrace
         This should be a backend instance, a list of variables to track, or a MultiTrace object
         with past values. If a MultiTrace object is given, it must contain samples for the chain
@@ -339,6 +346,11 @@ def sample(
         Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform jitter
         that yields a finite probability. This applies to ``jitter+adapt_diag`` and ``jitter+adapt_full``
         init methods.
+    start : dict, or array of dict
+        Starting point in parameter space (or partial point)
+        Defaults to ``trace.point(-1))`` if there is a trace provided and model.test_point if not
+        (defaults to empty dict). Initialization methods for NUTS (see ``init`` keyword) can
+        overwrite the default.
     return_inferencedata : bool, default=False
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a `MultiTrace` (False)
         Defaults to `False`, but we'll switch to `True` in an upcoming release.
@@ -422,11 +434,15 @@ def sample(
             mean     sd  hdi_3%  hdi_97%
         p  0.609  0.047   0.528    0.699
     """
-
     _log.info("The version of PyMC you are using is very outdated.\n\nPlease upgrade to the latest "
                 "version of PyMC https://www.pymc.io/projects/docs/en/stable/installation.html\n\n"
                 "Also notice that PyMC3 has been renamed to PyMC."
                 )
+
+    # Handle deprecated/forwards-compatible kwargs
+    if initvals is not None:
+        start = initvals
+
 
     model = modelcontext(model)
     start = deepcopy(start)
@@ -1378,8 +1394,11 @@ def _choose_backend(trace, chain, **kwds) -> Backend:
         A trace object for the selected chain
     """
     if isinstance(trace, BaseTrace):
+        if len(trace) > 0:
+            warnings.warn("Trace-continuation is not supported in v4.", FutureWarning)
         return trace
     if isinstance(trace, MultiTrace):
+        warnings.warn("Starting from MultiTrace objects is not supported in v4.", FutureWarning)
         return trace._straces[chain]
     if trace is None:
         return NDArray(**kwds)

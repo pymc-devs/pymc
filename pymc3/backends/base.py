@@ -364,7 +364,7 @@ class MultiTrace:
             return self.get_values(name)
         if name in self.stat_names:
             return self.get_sampler_stats(name)
-        raise AttributeError("'{}' object has no attribute '{}'".format(type(self).__name__, name))
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def __len__(self):
         chain = self.chains[-1]

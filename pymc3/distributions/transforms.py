@@ -64,7 +64,7 @@ class Transform:
             Input tensor to be transformed.
 
         Returns
-        --------
+        -------
         tensor
             Transformed tensor.
         """
@@ -82,7 +82,7 @@ class Transform:
             Test value used to draw (fix) bounds-like transformations
 
         Returns
-        --------
+        -------
         array_like
             Transformed array.
         """

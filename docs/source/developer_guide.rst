@@ -158,7 +158,7 @@ explicit about the conversion. For example:
     with pm.Model() as model:
         z = pm.Normal('z', mu=0., sigma=5.)             # ==> pymc3.model.FreeRV, or theano.tensor with logp
         x = pm.Normal('x', mu=z, sigma=1., observed=5.) # ==> pymc3.model.ObservedRV, also has logp properties
-    x.logp({'z': 2.5})                                  # ==> -4.0439386
+    pm.logp(x, {'z': 2.5})                              # ==> -4.0439386
     model.logp({'z': 2.5})                              # ==> -6.6973152
 
 **TFP**

@@ -13,13 +13,35 @@
 #   limitations under the License.
 
 # pylint: disable=wildcard-import
-__version__ = "3.11.2"
+__version__ = "3.11.5"
 
 import logging
 import multiprocessing as mp
 import platform
+import warnings
 
+import numpy.distutils
 import semver
+
+# Workaround for Theano bug that tries to access blas_opt_info;
+#  must be done before importing theano.
+# https://github.com/pymc-devs/pymc/issues/5310
+# Copied from theano/link/c/cmodule.py: default_blas_ldflags()
+if (
+    hasattr(numpy.distutils, "__config__")
+    and numpy.distutils.__config__
+    and not hasattr(numpy.distutils.__config__, "blas_opt_info")
+):
+    import numpy.distutils.system_info  # noqa
+
+    # We need to catch warnings as in some cases NumPy print
+    # stuff that we don't want the user to see.
+    with warnings.catch_warnings(record=True):
+        numpy.distutils.system_info.system_info.verbosity = 0
+        blas_info = numpy.distutils.system_info.get_info("blas_opt")
+
+    numpy.distutils.__config__.blas_opt_info = blas_info
+
 import theano
 
 _log = logging.getLogger("pymc3")
@@ -63,11 +85,22 @@ def _check_backend_version():
 def __set_compiler_flags():
     # Workarounds for Theano compiler problems on various platforms
     current = theano.config.gcc__cxxflags
-    theano.config.gcc__cxxflags = f"{current} -Wno-c++11-narrowing"
+    augmented = f"{current} -Wno-c++11-narrowing"
+
+    # Work around compiler bug in GCC < 8.4 related to structured exception
+    # handling registers on Windows.
+    # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65782 for details.
+    # First disable C++ exception handling altogether since it's not needed
+    # for the C extensions that we generate.
+    augmented = f"{augmented} -fno-exceptions"
+    # Now disable the generation of stack unwinding tables.
+    augmented = f"{augmented} -fno-unwind-tables -fno-asynchronous-unwind-tables"
+
+    theano.config.gcc__cxxflags = augmented
 
 
 def _hotfix_theano_printing():
-    """ This is a workaround for https://github.com/pymc-devs/aesara/issues/309 """
+    """This is a workaround for https://github.com/pymc-devs/aesara/issues/309"""
     try:
         import pydot
         import theano.printing
@@ -86,6 +119,7 @@ _hotfix_theano_printing()
 from pymc3 import gp, ode, sampling
 from pymc3.backends import load_trace, save_trace
 from pymc3.backends.tracetab import *
+from pymc3.backports import logp
 from pymc3.blocking import *
 from pymc3.data import *
 from pymc3.distributions import *

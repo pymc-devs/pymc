@@ -3,3 +3,130 @@
     margin: 0.5em;
     content: ":";
 }
+
+:root {
+  --pst-color-primary: 19, 6, 84;
+  --pst-color-success: 40, 167, 69;
+  --pst-color-info: 0, 123, 255; /*23, 162, 184;*/
+  --pst-color-warning: 255, 193, 7;
+  --pst-color-danger: 220, 53, 69;
+  --pst-color-text-base: 51, 51, 51;
+
+  --pst-color-admonition-default: var(--pst-color-info);
+  --pst-color-admonition-note: var(--pst-color-info);
+  --pst-color-admonition-attention: var(--pst-color-warning);
+  --pst-color-admonition-caution: var(--pst-color-warning);
+  --pst-color-admonition-warning: var(--pst-color-warning);
+  --pst-color-admonition-danger: var(--pst-color-danger);
+  --pst-color-admonition-error: var(--pst-color-danger);
+  --pst-color-admonition-hint: var(--pst-color-success);
+  --pst-color-admonition-tip: var(--pst-color-success);
+  --pst-color-admonition-important: var(--pst-color-success);
+}
+
+.admonition,
+div.admonition {
+ margin:1.5625em auto;
+ padding:0 .6rem .8rem;
+ overflow:hidden;
+ page-break-inside:avoid;
+ border-left:.2rem solid;
+ border-left-color:rgba(var(--pst-color-admonition-default),1);
+ border-bottom-color:rgba(var(--pst-color-admonition-default),1);
+ border-right-color:rgba(var(--pst-color-admonition-default),1);
+ border-top-color:rgba(var(--pst-color-admonition-default),1);
+ border-radius:.2rem;
+ box-shadow:0 .2rem .5rem rgba(0,0,0,.05),0 0 .0625rem rgba(0,0,0,.1);
+ transition:color .25s,background-color .25s,border-color .25s
+}
+.admonition :last-child,
+div.admonition :last-child {
+ margin-bottom:0
+}
+.admonition p.admonition-title~*,
+div.admonition p.admonition-title~* {
+ padding:0 1.4rem
+}
+.admonition>ol,
+.admonition>ul,
+div.admonition>ol,
+div.admonition>ul {
+ margin-left:1em
+}
+.admonition>.admonition-title,
+div.admonition>.admonition-title {
+ position:relative;
+ margin:0 -.6rem;
+ padding:.4rem .6rem .4rem 2rem;
+ font-weight:700;
+ background-color:rgba(var(--pst-color-admonition-default),.1)
+}
+.admonition>.admonition-title+*,
+div.admonition>.admonition-title+* {
+ margin-top:.4em
+}
+.admonition.attention,
+div.admonition.attention {
+ border-color:rgba(var(--pst-color-admonition-attention),1)
+}
+.admonition.attention>.admonition-title,
+div.admonition.attention>.admonition-title {
+ background-color:rgba(var(--pst-color-admonition-attention),.1)
+}
+.admonition.caution,
+div.admonition.caution {
+ border-color:rgba(var(--pst-color-admonition-caution),1)
+}
+.admonition.caution>.admonition-title,
+div.admonition.caution>.admonition-title {
+ background-color:rgba(var(--pst-color-admonition-caution),.1)
+}
+div.admonition.warning {
+ border-color:rgba(var(--pst-color-admonition-warning),1)
+}
+.admonition.warning>.admonition-title,
+div.admonition.warning>.admonition-title {
+ background-color:rgba(var(--pst-color-admonition-warning),.1)
+}
+div.admonition.danger {
+ border-color:rgba(var(--pst-color-admonition-danger),1)
+}
+.admonition.danger>.admonition-title,
+div.admonition.danger>.admonition-title {
+ background-color:rgba(var(--pst-color-admonition-danger),.1)
+}
+div.admonition.error {
+ border-color:rgba(var(--pst-color-admonition-error),1)
+}
+.admonition.error>.admonition-title,
+div.admonition.error>.admonition-title {
+ background-color:rgba(var(--pst-color-admonition-error),.1)
+}
+div.admonition.hint {
+ border-color:rgba(var(--pst-color-admonition-hint),1)
+}
+.admonition.hint>.admonition-title,
+div.admonition.hint>.admonition-title {
+ background-color:rgba(var(--pst-color-admonition-hint),.1)
+}
+div.admonition.tip {
+ border-color:rgba(var(--pst-color-admonition-tip),1)
+}
+.admonition.tip>.admonition-title,
+div.admonition.tip>.admonition-title {
+ background-color:rgba(var(--pst-color-admonition-tip),.1)
+}
+div.admonition.important {
+ border-color:rgba(var(--pst-color-admonition-important),1)
+}
+.admonition.important>.admonition-title,
+div.admonition.important>.admonition-title {
+ background-color:rgba(var(--pst-color-admonition-important),.1)
+}
+div.admonition.note {
+ border-color:rgba(var(--pst-color-admonition-note),1)
+}
+.admonition.note>.admonition-title,
+div.admonition.note>.admonition-title {
+ background-color:rgba(var(--pst-color-admonition-note),.1)
+}

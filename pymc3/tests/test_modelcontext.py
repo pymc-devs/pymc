@@ -34,7 +34,7 @@ class TestModelContext:
         that thread A enters the context manager first, then B,
         then A attempts to declare a variable while B is still in the context manager.
         """
-        aInCtxt, bInCtxt, aDone = [threading.Event() for _ in range(3)]
+        aInCtxt, bInCtxt, aDone = (threading.Event() for _ in range(3))
         modelA = Model()
         modelB = Model()
 

@@ -161,13 +161,9 @@ class QuadPotentialDiagAdapt(QuadPotential):
         if initial_mean.ndim != 1:
             raise ValueError("Initial mean must be one-dimensional.")
         if initial_diag is not None and len(initial_diag) != n:
-            raise ValueError(
-                "Wrong shape for initial_diag: expected {} got {}".format(n, len(initial_diag))
-            )
+            raise ValueError(f"Wrong shape for initial_diag: expected {n} got {len(initial_diag)}")
         if len(initial_mean) != n:
-            raise ValueError(
-                "Wrong shape for initial_mean: expected {} got {}".format(n, len(initial_mean))
-            )
+            raise ValueError(f"Wrong shape for initial_mean: expected {n} got {len(initial_mean)}")
 
         if dtype is None:
             dtype = theano.config.floatX
@@ -520,9 +516,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         if initial_cov is not None and initial_cov.shape != (n, n):
             raise ValueError(f"Wrong shape for initial_cov: expected {n} got {initial_cov.shape}")
         if len(initial_mean) != n:
-            raise ValueError(
-                "Wrong shape for initial_mean: expected {} got {}".format(n, len(initial_mean))
-            )
+            raise ValueError(f"Wrong shape for initial_mean: expected {n} got {len(initial_mean)}")
 
         if dtype is None:
             dtype = theano.config.floatX

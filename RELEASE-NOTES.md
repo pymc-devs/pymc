@@ -1,6 +1,25 @@
 # Release Notes
 
-## PyMC3 3.11.3 (TBD)
+## PyMC 3.11.5 (14 March 2022)
+### Backports
++ The `pm.logp(rv, x)` syntax is now available and recommended to make your model code `v4`-ready. Note that this backport is just an alias and much less capable than what's available with `pymc >=4` (see [#5083](https://github.com/pymc-devs/pymc/pulls/5083)).
++ The `pm.Distribution(testval=...)` kwarg was deprecated and will be replaced by `pm.Distribution(initval=...)`in `pymc >=4` (see [#5226](https://github.com/pymc-devs/pymc/pulls/5226)).
++ The `pm.sample(start=...)` kwarg was deprecated and will be replaced by `pm.sample(initvals=...)`in `pymc >=4` (see [#5226](https://github.com/pymc-devs/pymc/pulls/5226)).
++ `pm.Lognormal` is now available as an alias for `pm.Lognormal` (see [#5389](https://github.com/pymc-devs/pymc/pull/5389)).
+
+### Bugfixes
++ The upper limit for the SciPy version is `<1.8.0` and will most probably remain for all future `3.x.x` releases. For compatibility with newer SciPy versions please update to `pymc>=4.0.0`. Also see [#5448](https://github.com/pymc-devs/pymc/pull/5448).
++ A hotfix is applied on import to remain compatible with NumPy 1.22 (see [#5316](https://github.com/pymc-devs/pymc/pull/5316)).
+
+## PyMC3 3.11.4 (20 August 2021)
+
+### New Features
++ Generalized BART, bounded distributions like Binomial and Poisson can now be used as likelihoods (see [#4675](https://github.com/pymc-devs/pymc3/pull/4675), [#4709](https://github.com/pymc-devs/pymc3/pull/4709) and
+[#4720](https://github.com/pymc-devs/pymc3/pull/4720)).
++ `plot_gp_dist` is now available at the package level: `pm.plot_gp_dist` ([see #4835](https://github.com/pymc-devs/pymc3/pull/4835)).
++ The experimental JAX sampling was removed. It will be included in the upcoming `v4` release ([see #4866](https://github.com/pymc-devs/pymc3/pull/4866)).
++ `pm.intX` no longer downcasts integers unnecessarily (see [#4569](https://github.com/pymc-devs/pymc3/pull/4569))
+
 ### Maintenance
 + A deprecation warning from the `semver` package we use for checking backend compatibility was dealt with (see [#4547](https://github.com/pymc-devs/pymc3/pull/4547)).
 + `theano.printing.pydotprint` is now hotfixed upon import (see [#4594](https://github.com/pymc-devs/pymc3/pull/4594)).
@@ -8,12 +27,16 @@
 + Fix `LKJCorr.random` method to work with `pm.sample_prior_predictive`. (see [#4780](https://github.com/pymc-devs/pymc3/pull/4780)).
 + Enable documentation generation via ReadTheDocs for upcoming v3 releases. (see [#4805](https://github.com/pymc-devs/pymc3/pull/4805)).
 + Remove `float128` dtype support (see [#4834](https://github.com/pymc-devs/pymc3/pull/4834)).
++ Use `to_tuple` function in `pm.fast_sample_posterior_predictive` to pass shape assertions (see [#4927](https://github.com/pymc-devs/pymc3/pull/4927)).
 
-### New Features
-+ Generalized BART, bounded distributions like Binomial and Poisson can now be used as likelihoods (see [#4675](https://github.com/pymc-devs/pymc3/pull/4675), [#4709](https://github.com/pymc-devs/pymc3/pull/4709) and
-[#4720](https://github.com/pymc-devs/pymc3/pull/4720)).
-+ `plot_gp_dist` is now available at the package level: `pm.plot_gp_dist` ([see #4835](https://github.com/pymc-devs/pymc3/pull/4835)).
-+ The experimental JAX sampling was removed. It will be included in the upcoming `v4` release ([see #4866](https://github.com/pymc-devs/pymc3/pull/4866)).
+**Release manager** for 3.11.4: Ravin Kumar ([@canyon289](https://github.com/canyon289))
+
+## PyMC3 3.11.3 (19 August 2021)
+
+### Maintenance
+* Broken release. Refer to 3.11.4
+
+**Release manager** for 3.11.3: Ravin Kumar ([@canyon289](https://github.com/canyon289))
 
 ## PyMC3 3.11.2 (14 March 2021)
 
@@ -34,7 +57,6 @@
 - `pm.make_shared_replacements` now retains broadcasting information which fixes issues with Metropolis samplers (see [#4492](https://github.com/pymc-devs/pymc3/pull/4492)).
 
 **Release manager** for 3.11.2: Michael Osthege ([@michaelosthege](https://github.com/michaelosthege))
-- `pm.intX` no longer downcasts integers unnecessarily (see [#4569](https://github.com/pymc-devs/pymc3/pull/4569))
 
 ## PyMC3 3.11.1 (12 February 2021)
 

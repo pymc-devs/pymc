@@ -45,6 +45,7 @@ EXCLUDE = {
     "pip",
     "python",
     "libblas",
+    "libblas=*=*mkl",
     "libpython",
     "m2w64-toolchain",
     "mkl-service",

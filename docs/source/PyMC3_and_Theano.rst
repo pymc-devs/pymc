@@ -37,6 +37,8 @@ arbitrarily chosen) function
 First, we need to define symbolic variables for our inputs (this
 is similar to eg SymPy's `Symbol`)::
 
+    import pymc as pm
+    import numpy
     import theano
     import theano.tensor as tt
     # We don't specify the dtype of our input variables, so it
@@ -75,7 +77,7 @@ We can call this function with actual arrays as many times as we want::
 
     a_val = 1.2
     x_vals = np.random.randn(10)
-    y_vals = np.random.randn(10)
+    y_vals = np.int32(np.random.randn(10))
 
     out = func(a_val, x_vals, y_vals)
 
@@ -167,8 +169,8 @@ we generate a Theano variable. And for each variable (observed or otherwise)
 we add a term to the global logp. In the background something similar to
 this is happening::
 
-    # For illustration only, those functions don't actually exist
-    # in exactly this way!
+    # For illustration only, these functions don't exactly
+    # work this way!
     model = pm.Model()
 
     mu = tt.scalar('mu')

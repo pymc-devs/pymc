@@ -266,7 +266,7 @@ class Inference:
                 )
         else:
             if n < 10:
-                logger.info("Finished [100%]: Loss = {:,.5g}".format(scores[-1]))
+                logger.info(f"Finished [100%]: Loss = {scores[-1]:,.5g}")
             else:
                 avg_loss = _infmean(scores[max(0, i - 1000) : i + 1])
                 logger.info(f"Finished [100%]: Average Loss = {avg_loss:,.5g}")
