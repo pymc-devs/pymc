@@ -5,6 +5,12 @@
 
 |Build Status| |Coverage| |NumFOCUS_badge| |Binder| |Dockerhub|
 
+.. warning::
+   This is the legacy version of PyMC3, now renamed to PyMC.
+   If you are looking for the latest version of PyMC, please visit
+   `PyMC's documentation <https://www.pymc.io/welcome.html>`__
+   
+
 PyMC3 is a Python package for Bayesian statistical modeling and Probabilistic Machine Learning
 focusing on advanced Markov chain Monte Carlo (MCMC) and variational inference (VI)
 algorithms. Its flexibility and extensibility make it applicable to a
