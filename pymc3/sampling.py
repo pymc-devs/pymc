@@ -434,9 +434,15 @@ def sample(
             mean     sd  hdi_3%  hdi_97%
         p  0.609  0.047   0.528    0.699
     """
+    _log.info("The version of PyMC you are using is very outdated.\n\nPlease upgrade to the latest "
+                "version of PyMC https://www.pymc.io/projects/docs/en/stable/installation.html\n\n"
+                "Also notice that PyMC3 has been renamed to PyMC."
+                )
+
     # Handle deprecated/forwards-compatible kwargs
     if initvals is not None:
         start = initvals
+
 
     model = modelcontext(model)
     start = deepcopy(start)

@@ -52,6 +52,10 @@ if not logging.root.handlers:
         handler = logging.StreamHandler()
         _log.addHandler(handler)
 
+_log.warning("The version of PyMC you are using is very outdated.\n\nPlease upgrade to the latest "
+             "version of PyMC https://www.pymc.io/projects/docs/en/stable/installation.html\n\n"
+             "Also notice that PyMC3 has been renamed to PyMC."
+             )
 
 def _check_backend_version():
     backend_paths = theano.__spec__.submodule_search_locations
