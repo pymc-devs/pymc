@@ -798,7 +798,7 @@ class ZeroInflatedNegativeBinomial:
         )
 
 
-def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, max_n_steps: int = 10_000, **kwargs):
+def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, max_n_steps=10_000, **kwargs):
     """Helper function to create a hurdle mixtures
 
     If name is `None`, this function returns an unregistered variable
