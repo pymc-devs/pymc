@@ -17,7 +17,6 @@ import warnings
 
 from collections.abc import Sequence
 from types import ModuleType
-from typing import NamedTuple
 
 import numpy as np
 import pytensor.tensor as pt
@@ -89,15 +88,9 @@ def calc_basis_periodic(
     return phi_cos, phi_sin
 
 
-class HSGPParams(NamedTuple):
-    m: int
-    c: float
-    S: float
-
-
 def approx_hsgp_hyperparams(
     x_range: list[float], lengthscale_range: list[float], cov_func: str
-) -> HSGPParams:
+) -> tuple[int, float]:
     """Utility function that uses heuristics to recommend minimum `m` and `c` values,
     based on recommendations from Ruitort-Mayol et. al.
 
@@ -107,10 +100,10 @@ def approx_hsgp_hyperparams(
     that 95% of the prior mass of the lengthscale is between 1 and 5, set the
     `lengthscale_range` to be [1, 5], or maybe a touch wider.
 
-    Also, be sure to pass in an `x` that is exemplary of the domain not just of your
+    Also, be sure to pass in an `x_range` that is exemplary of the domain not just of your
     training data, but also where you intend to make predictions.  For instance, if your
-    training x values are from [0, 10], and you intend to predict from [7, 15], you can
-    pass in `x_range = [0, 15]`.
+    training x values are from [0, 10], and you intend to predict from [7, 15], the narrowest
+    `x_range` you should pass in would be `x_range = [0, 15]`.
 
     NB: These recommendations are based on a one-dimensional GP.
 
@@ -126,15 +119,11 @@ def approx_hsgp_hyperparams(
 
     Returns
     -------
-    HSGPParams
-        A named tuple containing the recommended values for `m`, `c`, and `S`.
-        - `m` : int
-            Number of basis vectors. Increasing it helps approximate smaller lengthscales, but increases computational cost.
-        - `c` : float
-            Scaling factor such that L = c * S, where L is the boundary of the approximation.
-            Increasing it helps approximate larger lengthscales, but may require increasing m.
-        - `S` : float
-            The value of `S`, which is half the range, or radius, of `x`.
+    - `m` : int
+        Number of basis vectors. Increasing it helps approximate smaller lengthscales, but increases computational cost.
+    - `c` : float
+        Scaling factor such that L = c * S, where L is the boundary of the approximation.
+        Increasing it helps approximate larger lengthscales, but may require increasing m.
 
     Raises
     ------
@@ -171,7 +160,7 @@ def approx_hsgp_hyperparams(
     c = max(a1 * (lengthscale_range[1] / S), 1.2)
     m = int(a2 * c / (lengthscale_range[0] / S))
 
-    return HSGPParams(m=m, c=c, S=S)
+    return m, c
 
 
 class HSGP(Base):
