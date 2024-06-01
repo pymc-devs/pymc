@@ -31,10 +31,13 @@ TensorLike = np.ndarray | pt.TensorVariable
 
 
 def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
-    """Set the boundary using the `Xs` centered around 0 and `c`. `c` is usually a scalar
-    multiplier greater than 1.0, but it may be one value per dimension or column of `Xs`.
+    """Set the boundary using the `Xs` and `c`.  `Xs` must be centered around zero, and `c`
+    is usually a scalar multiplier greater than 1.0, but it may also be one value per dimension
+    or column of `Xs`.
     """
-    S = pt.max(pt.abs(Xs), axis=0)  # important: the Xs should be centered around 0
+    S = pt.max(
+        pt.abs(Xs), axis=0
+    )  # important: the Xs should have previously been centered around 0
     L = (c * S).eval()  # eval() makes sure L is not changed with out-of-sample preds
     return L
 
