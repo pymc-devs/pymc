@@ -129,7 +129,7 @@ class TestHSGP(_BaseFixtures):
             _ = pm.Data("X", X)
             cov_func = pm.gp.cov.ExpQuad(1, ls=3)
             gp = pm.gp.HSGP(m=[20], L=[10], cov_func=cov_func)
-            _ = gp.prior_linearized(Xs=X)
+            _ = gp.prior_linearized(X=X)
 
         x_new = np.linspace(-10, 20, 100)[:, None]
         with model:

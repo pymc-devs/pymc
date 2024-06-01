@@ -102,14 +102,14 @@ def approx_hsgp_hyperparams(
     based on recommendations from Ruitort-Mayol et. al.
 
     In practice, you need to choose `c` large enough to handle the largest lengthscales,
-    and `m` large enough to accommodate the smallest lengthscales.  Use your prior on the 
-    lengthscale as guidance for setting the prior range.  For example, if you believe 
+    and `m` large enough to accommodate the smallest lengthscales.  Use your prior on the
+    lengthscale as guidance for setting the prior range.  For example, if you believe
     that 95% of the prior mass of the lengthscale is between 1 and 5, set the
     `lengthscale_range` to be [1, 5], or maybe a touch wider.
 
-    Also, be sure to pass in an `x` that is exemplary of the domain not just of your 
+    Also, be sure to pass in an `x` that is exemplary of the domain not just of your
     training data, but also where you intend to make predictions.  For instance, if your
-    training x values are from [0, 10], and you intend to predict from [7, 15], you can 
+    training x values are from [0, 10], and you intend to predict from [7, 15], you can
     pass in `x_range = [0, 15]`.
 
     NB: These recommendations are based on a one-dimensional GP.
@@ -295,6 +295,7 @@ class HSGP(Base):
 
         if parametrization is not None:
             parametrization = parametrization.lower().replace("-", "").replace("_", "")
+
         if parametrization not in ["centered", "noncentered"]:
             raise ValueError("`parametrization` must be either 'centered' or 'noncentered'.")
 
@@ -597,6 +598,7 @@ class HSGPPeriodic(Base):
 
         self._m = m
         self.scale = scale
+        self._X_center = None
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
@@ -672,8 +674,8 @@ class HSGPPeriodic(Base):
         # Important: fix the computation of the midpoint of X.
         # If X is mutated later, the training midpoint will be subtracted, not the testing one.
         if self._X_center is None:
-            self._X_center = (pt.max(Xs, axis=0) + pt.min(Xs, axis=0)).eval() / 2
-        Xs = Xs - self._X_center  # center for accurate computation
+            self._X_center = (pt.max(X, axis=0) + pt.min(X, axis=0)).eval() / 2
+        Xs = X - self._X_center  # center for accurate computation
 
         # Index Xs using input_dim and active_dims of covariance function
         Xs, _ = self.cov_func._slice(Xs)
@@ -715,7 +717,7 @@ class HSGPPeriodic(Base):
 
     def _build_conditional(self, Xnew):
         try:
-            beta, X_mean = self._beta, self._X_mean
+            beta, X_center = self._beta, self._X_center
 
         except AttributeError:
             raise ValueError(
@@ -724,7 +726,9 @@ class HSGPPeriodic(Base):
 
         Xnew, _ = self.cov_func._slice(Xnew)
 
-        phi_cos, phi_sin = calc_basis_periodic(Xnew - X_mean, self.cov_func.period, self._m, tl=pt)
+        phi_cos, phi_sin = calc_basis_periodic(
+            Xnew - X_center, self.cov_func.period, self._m, tl=pt
+        )
         m = self._m
         J = pt.arange(0, m, 1)
         # rescale basis coefficients by the sqrt variance term
