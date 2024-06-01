@@ -330,7 +330,7 @@ class HSGP(Base):
     def L(self, value: TensorLike):
         self._L = pt.as_tensor_variable(value)
 
-    def prior_linearized(self, Xs: TensorLike):
+    def prior_linearized(self, X: TensorLike):
         """Linearized version of the HSGP.  Returns the Laplace eigenfunctions and the square root
         of the power spectral density needed to create the GP.
 
@@ -343,7 +343,7 @@ class HSGP(Base):
 
         Parameters
         ----------
-        Xs: array-like
+        X: array-like
             Function input values.
 
         Returns
@@ -371,9 +371,9 @@ class HSGP(Base):
                 # L = [10] means the approximation is valid from Xs = [-10, 10]
                 gp = pm.gp.HSGP(m=[200], L=[10], cov_func=cov_func)
 
+                # Set X as Data so it can be mutated later, and then pass it to the GP
                 X = pm.Data("X", X)
-                # Pass X to the GP
-                phi, sqrt_psd = gp.prior_linearized(Xs=X)
+                phi, sqrt_psd = gp.prior_linearized(X=X)
 
                 # Specify standard normal prior in the coefficients, the number of which
                 # is given by the number of basis vectors, saved in `n_basis_vectors`.
@@ -403,8 +403,8 @@ class HSGP(Base):
         # Important: fix the computation of the midpoint of X.
         # If X is mutated later, the training midpoint will be subtracted, not the testing one.
         if self._X_center is None:
-            self._X_center = (pt.max(Xs, axis=0) + pt.min(Xs, axis=0)).eval() / 2
-        Xs = Xs - self._X_center  # center for accurate computation
+            self._X_center = (pt.max(X, axis=0) + pt.min(X, axis=0)).eval() / 2
+        Xs = X - self._X_center  # center for accurate computation
 
         # Index Xs using input_dim and active_dims of covariance function
         Xs, _ = self.cov_func._slice(Xs)
@@ -600,7 +600,7 @@ class HSGPPeriodic(Base):
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
-    def prior_linearized(self, Xs: TensorLike):
+    def prior_linearized(self, X: TensorLike):
         """Linearized version of the approximation. Returns the cosine and sine bases and coefficients
         of the expansion needed to create the GP.
 
@@ -615,8 +615,8 @@ class HSGPPeriodic(Base):
 
         Parameters
         ----------
-        Xs: array-like
-            Function input values.  Assumes they have been mean subtracted or centered at zero.
+        X: array-like
+            Function input values.
 
         Returns
         -------
@@ -640,15 +640,9 @@ class HSGPPeriodic(Base):
                 # m=200 means 200 basis vectors
                 gp = pm.gp.HSGPPeriodic(m=200, scale=scale, cov_func=cov_func)
 
-                # Order is important.  First calculate the mean, then make X a shared variable,
-                # then subtract the mean.  When X is mutated later, the correct mean will be
-                # subtracted.
-                X_mean = np.mean(X, axis=0)
-                X = pm.MutableData("X", X)
-                Xs = X - X_mean
-
-                # Pass the zero-subtracted Xs in to the GP
-                (phi_cos, phi_sin), psd = gp.prior_linearized(Xs=Xs)
+                # Set X as Data so it can be mutated later, and then pass it to the GP
+                X = pm.Data("X", X)
+                (phi_cos, phi_sin), psd = gp.prior_linearized(X=X)
 
                 # Specify standard normal prior in the coefficients.  The number of which
                 # is twice the number of basis vectors minus one.
@@ -675,6 +669,13 @@ class HSGPPeriodic(Base):
             with model:
                 ppc = pm.sample_posterior_predictive(idata, var_names=["f"])
         """
+        # Important: fix the computation of the midpoint of X.
+        # If X is mutated later, the training midpoint will be subtracted, not the testing one.
+        if self._X_center is None:
+            self._X_center = (pt.max(Xs, axis=0) + pt.min(Xs, axis=0)).eval() / 2
+        Xs = Xs - self._X_center  # center for accurate computation
+
+        # Index Xs using input_dim and active_dims of covariance function
         Xs, _ = self.cov_func._slice(Xs)
 
         phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m, tl=pt)
@@ -697,9 +698,7 @@ class HSGPPeriodic(Base):
         dims: None
             Dimension name for the GP random variable.
         """
-        self._X_mean = pt.mean(X, axis=0)
-
-        (phi_cos, phi_sin), psd = self.prior_linearized(X - self._X_mean)
+        (phi_cos, phi_sin), psd = self.prior_linearized(X)
 
         m = self._m
         self._beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m * 2 - 1))
