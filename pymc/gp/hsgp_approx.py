@@ -96,23 +96,31 @@ class HSGPParams(NamedTuple):
 
 
 def approx_hsgp_hyperparams(
-    x: np.ndarray, lengthscale_range: list[float], cov_func: str
+    x_range: list[float], lengthscale_range: list[float], cov_func: str
 ) -> HSGPParams:
     """Utility function that uses heuristics to recommend minimum `m` and `c` values,
     based on recommendations from Ruitort-Mayol et. al.
 
     In practice, you need to choose `c` large enough to handle the largest lengthscales,
-    and `m` large enough to accommodate the smallest lengthscales.
+    and `m` large enough to accommodate the smallest lengthscales.  Use your prior on the 
+    lengthscale as guidance for setting the prior range.  For example, if you believe 
+    that 95% of the prior mass of the lengthscale is between 1 and 5, set the
+    `lengthscale_range` to be [1, 5], or maybe a touch wider.
+
+    Also, be sure to pass in an `x` that is exemplary of the domain not just of your 
+    training data, but also where you intend to make predictions.  For instance, if your
+    training x values are from [0, 10], and you intend to predict from [7, 15], you can 
+    pass in `x_range = [0, 15]`.
 
     NB: These recommendations are based on a one-dimensional GP.
 
     Parameters
     ----------
-    x : np.ndarray
-        The input variable on which the GP is going to be evaluated.
-        Careful: should be the X values you want to predict over, not *only* the training X.
+    x_range : list[float]
+        The range of the x values you intend to both train and predict over.  Should be a list with
+        two elements, [x_min, x_max].
     lengthscale_range : List[float]
-        The range of the lengthscales. Should be a list with two elements [lengthscale_min, lengthscale_max].
+        The range of the lengthscales. Should be a list with two elements, [lengthscale_min, lengthscale_max].
     cov_func : str
         The covariance function to use. Supported options are "expquad", "matern52", and "matern32".
 
@@ -126,7 +134,7 @@ def approx_hsgp_hyperparams(
             Scaling factor such that L = c * S, where L is the boundary of the approximation.
             Increasing it helps approximate larger lengthscales, but may require increasing m.
         - `S` : float
-            The value of `S`, which is half the range of `x`.
+            The value of `S`, which is half the range, or radius, of `x`.
 
     Raises
     ------
@@ -139,11 +147,12 @@ def approx_hsgp_hyperparams(
     Practical Hilbert Space Approximate Bayesian Gaussian Processes for Probabilistic Programming
     """
     if lengthscale_range[0] >= lengthscale_range[1]:
-        raise ValueError("One of the boundaries out of order")
+        raise ValueError("One of the `lengthscale_range` boundaries is out of order.")
 
-    X_center = (np.max(x, axis=0) - np.min(x, axis=0)) / 2
-    Xs = x - X_center
-    S = np.max(np.abs(Xs), axis=0)
+    if x_range[0] >= x_range[1]:
+        raise ValueError("One of the `x_range` boundaries is out of order.")
+
+    S = (x_range[1] - x_range[0]) / 2.0
 
     if cov_func.lower() == "expquad":
         a1, a2 = 3.2, 1.75
@@ -394,7 +403,7 @@ class HSGP(Base):
         # Important: fix the computation of the midpoint of X.
         # If X is mutated later, the training midpoint will be subtracted, not the testing one.
         if self._X_center is None:
-            self._X_center = (pt.max(Xs, axis=0) - pt.min(Xs, axis=0)).eval() / 2
+            self._X_center = (pt.max(Xs, axis=0) + pt.min(Xs, axis=0)).eval() / 2
         Xs = Xs - self._X_center  # center for accurate computation
 
         # Index Xs using input_dim and active_dims of covariance function
