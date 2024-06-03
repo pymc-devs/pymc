@@ -60,6 +60,7 @@ from pytensor.graph.rewriting.basic import (
     out2in,
 )
 from pytensor.graph.rewriting.db import (
+    EquilibriumDB,
     LocalGroupDB,
     RewriteDatabase,
     RewriteDatabaseQuery,
@@ -378,6 +379,14 @@ logprob_rewrites_db.register("measurable_ir_rewrites", measurable_ir_rewrites_db
 # "up" through the random/measurable variables and into their inputs.
 measurable_ir_rewrites_db.register("subtensor_lift", local_subtensor_rv_lift, "basic")
 measurable_ir_rewrites_db.register("incsubtensor_lift", incsubtensor_rv_replace, "basic")
+
+# These rewrites are used to introduce specalized operations with better logprob graphs
+specialization_ir_rewrites_db = EquilibriumDB()
+specialization_ir_rewrites_db.name = "specialization_ir_rewrites_db"
+logprob_rewrites_db.register(
+    "specialization_ir_rewrites_db", specialization_ir_rewrites_db, "basic"
+)
+
 
 logprob_rewrites_db.register("post-canonicalize", optdb.query("+canonicalize"), "basic")
 
