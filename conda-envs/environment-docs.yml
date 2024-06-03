@@ -21,7 +21,7 @@ dependencies:
 - ipython>=7.16
 - jax
 - jupyter-sphinx
-- myst-nb
+- myst-nb<=1.0.0
 - numpydoc
 - polyagamma
 - pre-commit>=2.8.0

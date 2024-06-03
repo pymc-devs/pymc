@@ -22,7 +22,7 @@ dependencies:
 - threadpoolctl>=3.1.0
 # Extra dependencies for dev, testing and docs build
 - ipython>=7.16
-- myst-nb
+- myst-nb<=1.0.0
 - numpydoc
 - pre-commit>=2.8.0
 - pytest-cov>=2.5
