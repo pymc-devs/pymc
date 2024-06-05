@@ -29,6 +29,7 @@ from pytensor.tensor import TensorVariable
 
 import pymc as pm
 
+from pymc import ImputationWarning
 from pymc.distributions.discrete import OrderedLogistic, OrderedProbit
 from pymc.logprob.basic import icdf, logcdf, logp
 from pymc.logprob.utils import ParameterValueError
@@ -877,7 +878,10 @@ class TestOrderedLogistic:
 
         # Test it works with auto-imputation
         with pm.Model() as m:
-            pm.OrderedLogistic("ol", cutpoints=np.array([-2, 0, 2]), eta=0, observed=[0, np.nan, 1])
+            with pytest.warns(ImputationWarning):
+                pm.OrderedLogistic(
+                    "ol", cutpoints=np.array([-2, 0, 2]), eta=0, observed=[0, np.nan, 1]
+                )
         assert len(m.deterministics) == 2  # One from the auto-imputation, the other from compute_p
 
 
@@ -925,7 +929,8 @@ class TestOrderedProbit:
 
         # Test it works with auto-imputation
         with pm.Model() as m:
-            pm.OrderedProbit(
-                "op", cutpoints=np.array([-2, 0, 2]), eta=0, sigma=1, observed=[0, np.nan, 1]
-            )
+            with pytest.warns(ImputationWarning):
+                pm.OrderedProbit(
+                    "op", cutpoints=np.array([-2, 0, 2]), eta=0, sigma=1, observed=[0, np.nan, 1]
+                )
         assert len(m.deterministics) == 2  # One from the auto-imputation, the other from compute_p
