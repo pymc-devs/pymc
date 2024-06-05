@@ -1197,30 +1197,9 @@ class _OrderedLogistic(Categorical):
     See docs for the OrderedLogistic wrapper class for more details on how to use it in models.
     """
 
-    rv_op = categorical
-
-    @classmethod
-    def dist(cls, eta, cutpoints, *args, **kwargs):
-        eta = pt.as_tensor_variable(eta)
-        cutpoints = pt.as_tensor_variable(cutpoints)
-
-        pa = sigmoid(cutpoints - pt.shape_padright(eta))
-        p_cum = pt.concatenate(
-            [
-                pt.zeros_like(pt.shape_padright(pa[..., 0])),
-                pa,
-                pt.ones_like(pt.shape_padright(pa[..., 0])),
-            ],
-            axis=-1,
-        )
-        p = p_cum[..., 1:] - p_cum[..., :-1]
-
-        return super().dist(p, *args, **kwargs)
-
 
 class OrderedLogistic:
-    R"""
-    Wrapper class for Ordered Logistic distributions.
+    R"""Ordered Logistic distribution.
 
     Useful for regression on ordinal data values whose values range
     from 1 to K as a function of some predictor, :math:`\eta`. The
@@ -1287,50 +1266,39 @@ class OrderedLogistic:
         plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
     """
 
-    def __new__(cls, name, *args, compute_p=True, **kwargs):
-        out_rv = _OrderedLogistic(name, *args, **kwargs)
+    def __new__(cls, name, eta, cutpoints, compute_p=True, **kwargs):
+        p = cls.compute_p(eta, cutpoints)
         if compute_p:
-            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[3], dims=kwargs.get("dims"))
+            p = pm.Deterministic(f"{name}_probs", p, dims=kwargs.get("dims"))
+        out_rv = Categorical(name, p=p, **kwargs)
         return out_rv
 
     @classmethod
-    def dist(cls, *args, **kwargs):
-        return _OrderedLogistic.dist(*args, **kwargs)
-
-
-class _OrderedProbit(Categorical):
-    r"""
-    Underlying class for ordered probit distributions.
-    See docs for the OrderedProbit wrapper class for more details on how to use it in models.
-    """
-
-    rv_op = categorical
+    def dist(cls, eta, cutpoints, **kwargs):
+        p = cls.compute_p(eta, cutpoints)
+        return Categorical.dist(p=p, **kwargs)
 
     @classmethod
-    def dist(cls, eta, cutpoints, sigma=1, *args, **kwargs):
+    def compute_p(cls, eta, cutpoints):
         eta = pt.as_tensor_variable(eta)
         cutpoints = pt.as_tensor_variable(cutpoints)
 
-        probits = pt.shape_padright(eta) - cutpoints
-        _log_p = pt.concatenate(
+        pa = sigmoid(cutpoints - pt.shape_padright(eta))
+        p_cum = pt.concatenate(
             [
-                pt.shape_padright(normal_lccdf(0, sigma, probits[..., 0])),
-                log_diff_normal_cdf(
-                    0, pt.shape_padright(sigma), probits[..., :-1], probits[..., 1:]
-                ),
-                pt.shape_padright(normal_lcdf(0, sigma, probits[..., -1])),
+                pt.zeros_like(pt.shape_padright(pa[..., 0])),
+                pa,
+                pt.ones_like(pt.shape_padright(pa[..., 0])),
             ],
             axis=-1,
         )
-        _log_p = pt.as_tensor_variable(_log_p)
-        p = pt.exp(_log_p)
-
-        return super().dist(p, *args, **kwargs)
+        p = p_cum[..., 1:] - p_cum[..., :-1]
+        return p
 
 
 class OrderedProbit:
     R"""
-    Wrapper class for Ordered Probit distributions.
+    Ordered Probit distributions.
 
     Useful for regression on ordinal data values whose values range
     from 1 to K as a function of some predictor, :math:`\eta`. The
@@ -1402,12 +1370,33 @@ class OrderedProbit:
         plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
     """
 
-    def __new__(cls, name, *args, compute_p=True, **kwargs):
-        out_rv = _OrderedProbit(name, *args, **kwargs)
+    def __new__(cls, name, eta, cutpoints, sigma=1, compute_p=True, **kwargs):
+        p = cls.compute_p(eta, cutpoints, sigma)
         if compute_p:
-            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[3], dims=kwargs.get("dims"))
+            p = pm.Deterministic(f"{name}_probs", p, dims=kwargs.get("dims"))
+        out_rv = Categorical(name, p=p, **kwargs)
         return out_rv
 
     @classmethod
-    def dist(cls, *args, **kwargs):
-        return _OrderedProbit.dist(*args, **kwargs)
+    def dist(cls, eta, cutpoints, sigma=1, **kwargs):
+        p = cls.compute_p(eta, cutpoints, sigma)
+        return Categorical.dist(p=p, **kwargs)
+
+    @classmethod
+    def compute_p(cls, eta, cutpoints, sigma):
+        eta = pt.as_tensor_variable(eta)
+        cutpoints = pt.as_tensor_variable(cutpoints)
+
+        probits = pt.shape_padright(eta) - cutpoints
+        log_p = pt.concatenate(
+            [
+                pt.shape_padright(normal_lccdf(0, sigma, probits[..., 0])),
+                log_diff_normal_cdf(
+                    0, pt.shape_padright(sigma), probits[..., :-1], probits[..., 1:]
+                ),
+                pt.shape_padright(normal_lcdf(0, sigma, probits[..., -1])),
+            ],
+            axis=-1,
+        )
+        p = pt.exp(log_p)
+        return p
