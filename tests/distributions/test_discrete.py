@@ -29,7 +29,7 @@ from pytensor.tensor import TensorVariable
 
 import pymc as pm
 
-from pymc.distributions.discrete import _OrderedLogistic, _OrderedProbit
+from pymc.distributions.discrete import OrderedLogistic, OrderedProbit
 from pymc.logprob.basic import icdf, logcdf, logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
@@ -481,26 +481,6 @@ def test_orderedlogistic_dimensions(shape):
     assert np.allclose(ologp, expected)
 
 
-def test_ordered_logistic_probs():
-    with pm.Model() as m:
-        pm.OrderedLogistic("ol_p", cutpoints=np.array([-2, 0, 2]), eta=0)
-        pm.OrderedLogistic("ol_no_p", cutpoints=np.array([-2, 0, 2]), eta=0, compute_p=False)
-    assert len(m.deterministics) == 1
-
-    x = pm.OrderedLogistic.dist(cutpoints=np.array([-2, 0, 2]), eta=0)
-    assert isinstance(x, TensorVariable)
-
-
-def test_ordered_probit_probs():
-    with pm.Model() as m:
-        pm.OrderedProbit("op_p", cutpoints=np.array([-2, 0, 2]), eta=0, sigma=1)
-        pm.OrderedProbit("op_no_p", cutpoints=np.array([-2, 0, 2]), eta=0, sigma=1, compute_p=False)
-    assert len(m.deterministics) == 1
-
-    x = pm.OrderedProbit.dist(cutpoints=np.array([-2, 0, 2]), eta=0, sigma=1)
-    assert isinstance(x, TensorVariable)
-
-
 class TestMoments:
     @pytest.mark.parametrize(
         "p, size, expected",
@@ -857,14 +837,12 @@ class TestDiscreteUniform(BaseTestDistributionRandom):
         assert x.eval().shape == (1,)
 
 
-class TestOrderedLogistic(BaseTestDistributionRandom):
-    pymc_dist = _OrderedLogistic
-    pymc_dist_params = {"eta": 0, "cutpoints": np.array([-2, 0, 2])}
-    expected_rv_op_params = {"p": np.array([0.11920292, 0.38079708, 0.38079708, 0.11920292])}
-    checks_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_rv_size",
-    ]
+class TestOrderedLogistic:
+    def test_expected_categorical(self):
+        categorical = OrderedLogistic.dist(eta=0, cutpoints=np.array([-2, 0, 2]))
+        p = categorical.owner.inputs[3].eval()
+        expected_p = np.array([0.11920292, 0.38079708, 0.38079708, 0.11920292])
+        np.testing.assert_allclose(p, expected_p)
 
     @pytest.mark.parametrize(
         "eta, cutpoints, expected",
@@ -881,22 +859,34 @@ class TestOrderedLogistic(BaseTestDistributionRandom):
         """
         This test checks when providing different shapes for `eta` parameters.
         """
-        categorical = _OrderedLogistic.dist(
+        categorical = OrderedLogistic.dist(
             eta=eta,
             cutpoints=cutpoints,
         )
+        p_shape = tuple(categorical.owner.inputs[-1].shape.eval())
+        assert p_shape == expected
+
+    def test_compute_p(self):
+        with pm.Model() as m:
+            pm.OrderedLogistic("ol_p", cutpoints=np.array([-2, 0, 2]), eta=0)
+            pm.OrderedLogistic("ol_no_p", cutpoints=np.array([-2, 0, 2]), eta=0, compute_p=False)
+        assert len(m.deterministics) == 1
+
+        x = pm.OrderedLogistic.dist(cutpoints=np.array([-2, 0, 2]), eta=0)
+        assert isinstance(x, TensorVariable)
+
+        # Test it works with auto-imputation
+        with pm.Model() as m:
+            pm.OrderedLogistic("ol", cutpoints=np.array([-2, 0, 2]), eta=0, observed=[0, np.nan, 1])
+        assert len(m.deterministics) == 2  # One from the auto-imputation, the other from compute_p
+
+
+class TestOrderedProbit:
+    def test_expected_categorical(self):
+        categorical = OrderedProbit.dist(eta=0, cutpoints=np.array([-2, 0, 2]))
         p = categorical.owner.inputs[3].eval()
-        assert p.shape == expected
-
-
-class TestOrderedProbit(BaseTestDistributionRandom):
-    pymc_dist = _OrderedProbit
-    pymc_dist_params = {"eta": 0, "cutpoints": np.array([-2, 0, 2])}
-    expected_rv_op_params = {"p": np.array([0.02275013, 0.47724987, 0.47724987, 0.02275013])}
-    checks_to_run = [
-        "check_pymc_params_match_rv_op",
-        "check_rv_size",
-    ]
+        expected_p = np.array([0.02275013, 0.47724987, 0.47724987, 0.02275013])
+        np.testing.assert_allclose(p, expected_p)
 
     @pytest.mark.parametrize(
         "eta, cutpoints, sigma, expected",
@@ -914,10 +904,28 @@ class TestOrderedProbit(BaseTestDistributionRandom):
         """
         This test checks when providing different shapes for `eta` and `sigma` parameters.
         """
-        categorical = _OrderedProbit.dist(
+        categorical = OrderedProbit.dist(
             eta=eta,
             cutpoints=cutpoints,
             sigma=sigma,
         )
-        p = categorical.owner.inputs[3].eval()
-        assert p.shape == expected
+        p_shape = tuple(categorical.owner.inputs[-1].shape.eval())
+        assert p_shape == expected
+
+    def test_compute_p(self):
+        with pm.Model() as m:
+            pm.OrderedProbit("op_p", cutpoints=np.array([-2, 0, 2]), eta=0, sigma=1)
+            pm.OrderedProbit(
+                "op_no_p", cutpoints=np.array([-2, 0, 2]), eta=0, sigma=1, compute_p=False
+            )
+        assert len(m.deterministics) == 1
+
+        x = pm.OrderedProbit.dist(cutpoints=np.array([-2, 0, 2]), eta=0, sigma=1)
+        assert isinstance(x, TensorVariable)
+
+        # Test it works with auto-imputation
+        with pm.Model() as m:
+            pm.OrderedProbit(
+                "op", cutpoints=np.array([-2, 0, 2]), eta=0, sigma=1, observed=[0, np.nan, 1]
+            )
+        assert len(m.deterministics) == 2  # One from the auto-imputation, the other from compute_p
