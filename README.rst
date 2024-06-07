@@ -3,7 +3,7 @@
     :alt: PyMC logo
     :align: center
 
-|Build Status| |Coverage| |NumFOCUS_badge| |Binder| |Dockerhub| |DOIzenodo|
+|Build Status| |Coverage| |NumFOCUS_badge| |Binder| |Dockerhub| |DOIzenodo| |OpenSSF_Scorecard|
 
 PyMC (formerly PyMC3) is a Python package for Bayesian statistical modeling
 focusing on advanced Markov chain Monte Carlo (MCMC) and variational inference (VI)
@@ -180,3 +180,5 @@ Thanks to our contributors
    :target: https://odsc.com/california/?utm_source=pymc&utm_medium=referral
 .. |contributors| image:: https://contrib.rocks/image?repo=pymc-devs/pymc
    :target: https://github.com/pymc-devs/pymc/graphs/contributors
+.. |OpenSSF_Scorecard| image:: https://api.scorecard.dev/projects/github.com/pymc-devs/pymc/badge
+   :target: https://scorecard.dev/viewer/?uri=github.com/pymc-devs/pymc
