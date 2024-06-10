@@ -31,8 +31,8 @@ TensorLike = np.ndarray | pt.TensorVariable
 
 
 def set_boundary(X: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
-    """Set the boundary using `X` and `c`.  `X` can be centered around zero but doesn't have to be, 
-    and `c` is usually a scalar multiplier greater than 1.0, but it may also be one value per 
+    """Set the boundary using `X` and `c`.  `X` can be centered around zero but doesn't have to be,
+    and `c` is usually a scalar multiplier greater than 1.0, but it may also be one value per
     dimension or column of `X`.
     """
     # compute radius. Works whether X is 0-centered or not
