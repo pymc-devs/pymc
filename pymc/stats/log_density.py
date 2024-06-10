@@ -25,6 +25,8 @@ from pymc.model import Model, modelcontext
 
 __all__ = ("compute_log_likelihood", "compute_log_prior")
 
+from pymc.model.transform.conditioning import remove_value_transforms
+
 
 def compute_log_likelihood(
     idata: InferenceData,
@@ -126,46 +128,35 @@ def compute_log_density(
     if kind not in ("likelihood", "prior"):
         raise ValueError("kind must be either 'likelihood' or 'prior'")
 
+    # We need to disable transforms, because the InferenceData only keeps the untransformed values
+    umodel = remove_value_transforms(model)
+
     if kind == "likelihood":
-        target_rvs = model.observed_RVs
+        target_rvs = list(umodel.observed_RVs)
         target_str = "observed_RVs"
     else:
-        target_rvs = model.free_RVs
+        target_rvs = list(umodel.free_RVs)
         target_str = "free_RVs"
 
     if var_names is None:
         vars = target_rvs
         var_names = tuple(rv.name for rv in vars)
     else:
-        vars = [model.named_vars[name] for name in var_names]
+        vars = [umodel.named_vars[name] for name in var_names]
         if not set(vars).issubset(target_rvs):
             raise ValueError(f"var_names must refer to {target_str} in the model. Got: {var_names}")
 
-    # We need to temporarily disable transforms, because the InferenceData only keeps the untransformed values
-    try:
-        original_rvs_to_values = model.rvs_to_values
-        original_rvs_to_transforms = model.rvs_to_transforms
+    elemwise_logdens_fn = umodel.compile_fn(
+        inputs=umodel.value_vars,
+        outs=umodel.logp(vars=vars, sum=False),
+        on_unused_input="ignore",
+    )
 
-        model.rvs_to_values = {
-            rv: rv.clone() if rv not in model.observed_RVs else value
-            for rv, value in model.rvs_to_values.items()
-        }
-        model.rvs_to_transforms = {rv: None for rv in model.basic_RVs}
-
-        elemwise_logdens_fn = model.compile_fn(
-            inputs=model.value_vars,
-            outs=model.logp(vars=vars, sum=False),
-            on_unused_input="ignore",
-        )
-    finally:
-        model.rvs_to_values = original_rvs_to_values
-        model.rvs_to_transforms = original_rvs_to_transforms
-
-    coords, dims = coords_and_dims_for_inferencedata(model)
+    coords, dims = coords_and_dims_for_inferencedata(umodel)
 
     logdens_dataset = apply_function_over_dataset(
         elemwise_logdens_fn,
-        posterior[[rv.name for rv in model.free_RVs]],
+        posterior[[rv.name for rv in umodel.free_RVs]],
         output_var_names=var_names,
         sample_dims=sample_dims,
         dims=dims,

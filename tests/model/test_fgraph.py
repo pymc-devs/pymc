@@ -267,10 +267,15 @@ def test_context_error():
     with pm.Model() as m:
         x = pm.Normal("x")
 
-        fg = fgraph_from_model(m)
+        fg, _ = fgraph_from_model(m)
 
-        with pytest.raises(RuntimeError, match="cannot be called inside a PyMC model context"):
-            model_from_fgraph(fg)
+        new_m = model_from_fgraph(fg)
+        new_x = new_m["x"]
+
+    assert new_m.parent is None
+    assert x != new_x
+    assert m.named_vars == {"x": x}
+    assert new_m.named_vars == {"x": new_x}
 
 
 def test_sub_model_error():
