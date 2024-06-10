@@ -18,7 +18,7 @@ import time
 import warnings
 
 from collections import defaultdict
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, wait
 from typing import Any
 
 import cloudpickle
@@ -404,13 +404,19 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
                     )
 
                 # monitor the progress:
-                while sum([future.done() for future in futures]) < len(futures):
+                done = []
+                remaining = futures
+                while len(remaining) > 0:
+                    finished, remaining = wait(remaining, timeout=0.1)
+                    done.extend(finished)
                     for task_id, update_data in _progress.items():
                         stage = update_data["stage"]
                         beta = update_data["beta"]
                         # update the progress bar for this task:
                         progress.update(
-                            status=f"Stage: {stage} Beta: {beta:.3f}", task_id=task_id, refresh=True
+                            status=f"Stage: {stage} Beta: {beta:.3f}",
+                            task_id=task_id,
+                            refresh=True,
                         )
 
-        return tuple(cloudpickle.loads(r.result()) for r in futures)
+        return tuple(cloudpickle.loads(r.result()) for r in done)
