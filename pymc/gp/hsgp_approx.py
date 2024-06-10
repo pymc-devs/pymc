@@ -30,14 +30,14 @@ from pymc.gp.mean import Mean, Zero
 TensorLike = np.ndarray | pt.TensorVariable
 
 
-def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
-    """Set the boundary using the `Xs` and `c`.  `Xs` must be centered around zero, and `c`
-    is usually a scalar multiplier greater than 1.0, but it may also be one value per dimension
-    or column of `Xs`.
+def set_boundary(X: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
+    """Set the boundary using `X` and `c`.  `X` can be centered around zero but doesn't have to be, 
+    and `c` is usually a scalar multiplier greater than 1.0, but it may also be one value per 
+    dimension or column of `X`.
     """
-    S = pt.max(
-        pt.abs(Xs), axis=0
-    )  # important: the Xs should have previously been centered around 0
+    # compute radius. Works whether X is 0-centered or not
+    S = (pt.max(X, axis=0) - pt.min(X, axis=0)) / 2.0
+
     L = (c * S).eval()  # eval() makes sure L is not changed with out-of-sample preds
     return L
 
