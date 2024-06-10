@@ -1077,22 +1077,6 @@ def test_compile_fn():
     np.testing.assert_allclose(result_compute, result_expect)
 
 
-def test_model_pytensor_config():
-    assert pytensor.config.mode != "JAX"
-    with pytest.warns(FutureWarning, match="pytensor_config is deprecated"):
-        m = pm.Model(pytensor_config=dict(mode="JAX"))
-    with m:
-        assert pytensor.config.mode == "JAX"
-    assert pytensor.config.mode != "JAX"
-
-
-def test_deprecated_model_property():
-    m = pm.Model()
-    with pytest.warns(FutureWarning, match="Model.model property is deprecated"):
-        m_property = m.model
-    assert m is m_property
-
-
 def test_model_parent_set_programmatically():
     with pm.Model() as model:
         x = pm.Normal("x")
