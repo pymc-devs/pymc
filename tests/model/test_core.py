@@ -130,6 +130,27 @@ class TestBaseModel:
         assert m["d"] is model["one_more::d"]
         assert m["one_more::d"] is model["one_more::d"]
 
+    def test_docstring_example(self):
+        with pm.Model(name="root") as root:
+            x = pm.Normal("x")  # Variable wil be named "root::x"
+
+            with pm.Model(name="first") as first:
+                # Variable will belong to root and first
+                y = pm.Normal("y", mu=x)  # Variable wil be named "root::first::y"
+
+            # Can pass parent model explicitly
+            with pm.Model(name="second", model=root) as second:
+                # Variable will belong to root and second
+                z = pm.Normal("z", mu=y)  # Variable wil be named "root::second::z"
+
+        assert x.name == "root::x"
+        assert y.name == "root::first::y"
+        assert z.name == "root::second::z"
+
+        assert set(root.basic_RVs) == {x, y, z}
+        assert set(first.basic_RVs) == {y}
+        assert set(second.basic_RVs) == {z}
+
 
 class TestNested:
     def test_nest_context_works(self):
@@ -1084,7 +1105,12 @@ def test_model_parent_set_programmatically():
     with pm.Model(model=model):
         y = pm.Normal("y")
 
+    with model:
+        with pm.Model(model=None):
+            z = pm.Normal("z")
+
     assert "y" in model.named_vars
+    assert "z" in model.named_vars
 
 
 class TestModelContext:
