@@ -107,18 +107,10 @@ class ContextMeta(type):
 
         def __enter__(self):
             self.__class__.context_class.get_contexts().append(self)
-            # self._pytensor_config is set in Model.__new__
-            self._config_context = None
-            if hasattr(self, "_pytensor_config"):
-                self._config_context = pytensor.config.change_flags(**self._pytensor_config)
-                self._config_context.__enter__()
             return self
 
         def __exit__(self, typ, value, traceback):
             self.__class__.context_class.get_contexts().pop()
-            # self._pytensor_config is set in Model.__new__
-            if self._config_context:
-                self._config_context.__exit__(typ, value, traceback)
 
         dct[__enter__.__name__] = __enter__
         dct[__exit__.__name__] = __exit__
@@ -485,13 +477,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             instance._parent = kwargs.get("model")
         else:
             instance._parent = cls.get_context(error_if_none=False)
-        pytensor_config = kwargs.get("pytensor_config", {})
-        if pytensor_config:
-            warnings.warn(
-                "pytensor_config is deprecated. Use pytensor.config or pytensor.config.change_flags context manager instead.",
-                FutureWarning,
-            )
-        instance._pytensor_config = pytensor_config
         return instance
 
     @staticmethod
@@ -507,10 +492,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         check_bounds=True,
         *,
         coords_mutable=None,
-        pytensor_config=None,
         model=None,
     ):
-        del pytensor_config, model  # used in __new__
+        del model  # used in __new__
         self.name = self._validate_name(name)
         self.check_bounds = check_bounds
 
@@ -559,11 +543,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self._repr_latex_ = types.MethodType(
             functools.partial(str_for_model, formatting="latex"), self
         )
-
-    @property
-    def model(self):
-        warnings.warn("Model.model property is deprecated. Just use Model.", FutureWarning)
-        return self
 
     @property
     def parent(self):
@@ -671,7 +650,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.model.compile_fn(
+        return self.compile_fn(
             self.d2logp(vars=vars, jacobian=jacobian, negate_output=negate_output),
             **compile_kwargs,
         )
