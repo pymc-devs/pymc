@@ -19,9 +19,9 @@ from typing import Any, Union
 from pytensor.graph import ancestors
 from pytensor.tensor import TensorVariable
 
-from pymc import Model
 from pymc.logprob.transforms import Transform
 from pymc.logprob.utils import rvs_in_graph
+from pymc.model.core import Model
 from pymc.model.fgraph import (
     ModelDeterministic,
     ModelFreeRV,

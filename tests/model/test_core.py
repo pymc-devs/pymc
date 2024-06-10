@@ -143,13 +143,20 @@ class TestBaseModel:
                 # Variable will belong to root and second
                 z = pm.Normal("z", mu=y)  # Variable wil be named "root::second::z"
 
+            # Set None for standalone model
+            with pm.Model(name="third", model=None) as third:
+                # Variable will belong to third only
+                w = pm.Normal("w")  # Variable wil be named "third::w"
+
         assert x.name == "root::x"
         assert y.name == "root::first::y"
         assert z.name == "root::second::z"
+        assert w.name == "third::w"
 
         assert set(root.basic_RVs) == {x, y, z}
         assert set(first.basic_RVs) == {y}
         assert set(second.basic_RVs) == {z}
+        assert set(third.basic_RVs) == {w}
 
 
 class TestNested:
@@ -1106,11 +1113,17 @@ def test_model_parent_set_programmatically():
         y = pm.Normal("y")
 
     with model:
+        # Default inherits from model
+        with pm.Model():
+            z_in = pm.Normal("z_in")
+
+        # Explict None opts out of model context
         with pm.Model(model=None):
-            z = pm.Normal("z")
+            z_out = pm.Normal("z_out")
 
     assert "y" in model.named_vars
-    assert "z" in model.named_vars
+    assert "z_in" in model.named_vars
+    assert "z_out" not in model.named_vars
 
 
 class TestModelContext:
