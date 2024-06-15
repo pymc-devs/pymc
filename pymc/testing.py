@@ -21,7 +21,6 @@ from typing import Any
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
-import pytest
 
 from numpy import random as nr
 from numpy import testing as npt
@@ -342,6 +341,8 @@ def check_logp(
     scipy_args : Dictionary with extra arguments needed to call scipy logp method
         Usually the same as extra_args
     """
+    import pytest
+
     if decimal is None:
         decimal = select_by_precision(float64=6, float32=3)
 
@@ -388,6 +389,7 @@ def check_logp(
                 point[invalid_param] = np.asarray(
                     invalid_edge, dtype=paramdomains[invalid_param].dtype
                 )
+
                 with pytest.raises(ParameterValueError):
                     pymc_logp(**point)
                     pytest.fail(f"test_params={point}")
@@ -459,6 +461,8 @@ def check_logcdf(
         returns -inf for invalid parameter values outside the supported domain edge
 
     """
+    import pytest
+
     if decimal is None:
         decimal = select_by_precision(float64=6, float32=3)
 
@@ -498,6 +502,7 @@ def check_logcdf(
 
                 point = valid_params.copy()
                 point[invalid_param] = invalid_edge
+
                 with pytest.raises(ParameterValueError):
                     pymc_logcdf(**point)
                     pytest.fail(f"test_params={point}")
@@ -563,6 +568,8 @@ def check_icdf(
         returns nan for invalid parameter values outside the supported domain edge
 
     """
+    import pytest
+
     if decimal is None:
         decimal = select_by_precision(float64=6, float32=3)
 
@@ -601,6 +608,7 @@ def check_icdf(
 
                 point = valid_params.copy()
                 point[invalid_param] = invalid_edge
+
                 with pytest.raises(ParameterValueError):
                     pymc_icdf(**point)
                     pytest.fail(f"test_params={point}")
@@ -860,6 +868,8 @@ class BaseTestDistributionRandom:
     random_state = None
 
     def test_distribution(self):
+        import pytest
+
         self.validate_tests_list()
         if self.pymc_dist == pm.Wishart:
             with pytest.warns(UserWarning, match="can currently not be used for MCMC sampling"):
