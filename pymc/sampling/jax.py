@@ -690,6 +690,7 @@ def sample_jax_nuts(
         coords=coords,
         dims=dims,
         attrs=make_attrs(attrs, library=library),
+        posterior_attrs=make_attrs(attrs, library=library),
     )
     az_trace = to_trace(posterior=mcmc_samples, **idata_kwargs)
 
