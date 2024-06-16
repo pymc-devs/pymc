@@ -669,9 +669,7 @@ def sample_jax_nuts(
     else:
         log_likelihood = None
 
-    attrs = {
-        "sampling_time": (tic2 - tic1).total_seconds(),
-    }
+    attrs = {"sampling_time": (tic2 - tic1).total_seconds(), "tuning_steps": tune}
 
     coords, dims = coords_and_dims_for_inferencedata(model)
     # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
@@ -680,6 +678,7 @@ def sample_jax_nuts(
         coords.update(idata_kwargs.pop("coords"))
     if "dims" in idata_kwargs:
         dims.update(idata_kwargs.pop("dims"))
+
     # Use 'partial' to set default arguments before passing 'idata_kwargs'
     to_trace = partial(
         az.from_dict,
