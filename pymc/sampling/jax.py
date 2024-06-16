@@ -669,7 +669,10 @@ def sample_jax_nuts(
     else:
         log_likelihood = None
 
-    attrs = {"sampling_time": (tic2 - tic1).total_seconds(), "tuning_steps": tune,}
+    attrs = {
+        "sampling_time": (tic2 - tic1).total_seconds(),
+        "tuning_steps": tune,
+    }
 
     coords, dims = coords_and_dims_for_inferencedata(model)
     # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
