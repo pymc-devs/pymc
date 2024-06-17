@@ -380,7 +380,7 @@ def sample_prior_predictive(
         warnings.warn(
             f"The samples argument has been deprecated in favor of draws. Use draws={samples} going forward.",
             DeprecationWarning,
-            stacklevel=2,
+            stacklevel=1,
         )
 
         draws = samples
