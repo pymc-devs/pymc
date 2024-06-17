@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import logging
-import sys
 import warnings
 
 import numpy as np
@@ -114,7 +113,6 @@ class TestNutsCheckTrace:
                 pm.sample(chains=1, random_seed=1)
             error.match("Initial evaluation")
 
-    @pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
     def test_bad_init_parallel(self):
         with pm.Model():
             pm.HalfNormal("a", sigma=1, initval=-1, transform=None)
