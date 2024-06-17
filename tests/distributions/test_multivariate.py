@@ -2255,9 +2255,6 @@ class TestICAR(BaseTestDistributionRandom):
     pymc_dist_params = {"W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]), "sigma": 2}
     expected_rv_op_params = {
         "W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]),
-        "node1": np.array([1, 2, 2]),
-        "node2": np.array([0, 0, 1]),
-        "N": 3,
         "sigma": 2,
         "zero_sum_strength": 0.001,
     }

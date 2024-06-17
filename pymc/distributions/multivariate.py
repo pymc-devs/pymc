@@ -2284,12 +2284,12 @@ class CAR(Continuous):
 class ICARRV(RandomVariable):
     name = "icar"
     ndim_supp = 1
-    ndims_params = [2, 1, 1, 0, 0, 0]
+    ndims_params = [2, 0, 0]
     dtype = "floatX"
     _print_name = ("ICAR", "\\operatorname{ICAR}")
 
-    def __call__(self, W, node1, node2, N, sigma, zero_sum_stdev, size=None, **kwargs):
-        return super().__call__(W, node1, node2, N, sigma, zero_sum_stdev, size=size, **kwargs)
+    def __call__(self, W, sigma, zero_sum_stdev, size=None, **kwargs):
+        return super().__call__(W, sigma, zero_sum_stdev, size=size, **kwargs)
 
     def _supp_shape_from_params(self, dist_params, param_shapes=None):
         return supp_shape_from_ref_param_shape(
@@ -2300,7 +2300,7 @@ class ICARRV(RandomVariable):
         )
 
     @classmethod
-    def rng_fn(cls, rng, size, W, node1, node2, N, sigma, zero_sum_stdev):
+    def rng_fn(cls, rng, size, W, sigma, zero_sum_stdev):
         raise NotImplementedError("Cannot sample from ICAR prior")
 
 
@@ -2408,6 +2408,18 @@ class ICAR(Continuous):
         if np.any((W != 0) & (W != 1)):
             raise ValueError("W must be composed of only 1s and 0s")
 
+        W = pt.as_tensor_variable(W, dtype=int)
+
+        sigma = pt.as_tensor_variable(sigma)
+        zero_sum_stdev = pt.as_tensor_variable(zero_sum_stdev)
+
+        return super().dist([W, sigma, zero_sum_stdev], **kwargs)
+
+    def support_point(rv, size, W, sigma, zero_sum_stdev):
+        N = pt.shape(W)[0]
+        return pt.zeros(N)
+
+    def logp(value, W, sigma, zero_sum_stdev):
         # convert adjacency matrix to edgelist representation
         # An edgelist is a pair of lists.
         # If node i and node j are connected then one list
@@ -2415,26 +2427,9 @@ class ICAR(Continuous):
         # index value.
         # We only use the lower triangle here because adjacency
         # is a undirected connection.
-
-        node1, node2 = np.where(np.tril(W) == 1)
-
-        node1 = pt.as_tensor_variable(node1, dtype=int)
-        node2 = pt.as_tensor_variable(node2, dtype=int)
-
-        W = pt.as_tensor_variable(W, dtype=int)
-
         N = pt.shape(W)[0]
-        N = pt.as_tensor_variable(N)
+        node1, node2 = pt.eq(pt.tril(W), 1).nonzero()
 
-        sigma = pt.as_tensor_variable(sigma)
-        zero_sum_stdev = pt.as_tensor_variable(zero_sum_stdev)
-
-        return super().dist([W, node1, node2, N, sigma, zero_sum_stdev], **kwargs)
-
-    def support_point(rv, size, W, node1, node2, N, sigma, zero_sum_stdev):
-        return pt.zeros(N)
-
-    def logp(value, W, node1, node2, N, sigma, zero_sum_stdev):
         pairwise_difference = (-1 / (2 * sigma**2)) * pt.sum(pt.square(value[node1] - value[node2]))
         zero_sum = (
             -0.5 * pt.pow(pt.sum(value) / (zero_sum_stdev * N), 2)
