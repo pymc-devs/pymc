@@ -900,7 +900,7 @@ class TestSetUpdateCoords:
 
     def test_set_data_indirect_resize_with_coords(self):
         with pm.Model() as pmodel:
-            pmodel.add_coord("mdim", ["A", "B"], mutable=True, length=2)
+            pmodel.add_coord("mdim", ["A", "B"], length=2)
             pm.Data("mdata", [1, 2], dims="mdim")
 
         assert pmodel.coords["mdim"] == ("A", "B")

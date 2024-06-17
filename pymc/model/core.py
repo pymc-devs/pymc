@@ -1159,9 +1159,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     raise ShapeError(
                         f"Resizing dimension '{dname}' is impossible, because "
                         "a `TensorConstant` stores its length. To be able "
-                        "to change the dimension length, pass `mutable=True` when "
-                        "registering the dimension via `model.add_coord`, "
-                        "or define it via a `pm.MutableData` variable."
+                        "to change the dimension length, create data with "
+                        "pm.Data() instead."
                     )
                 elif length_tensor.owner is not None:
                     # The dimension was created from another variable:

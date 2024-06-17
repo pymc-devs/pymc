@@ -342,8 +342,8 @@ class TestCompileForwardSampler:
         rng = np.random.default_rng(seed=42)
         data = rng.normal(loc=1, scale=0.2, size=(10, 3))
         with pm.Model() as model:
-            model.add_coord("name", ["A", "B", "C"], mutable=True)
-            model.add_coord("obs", list(range(10, 20)), mutable=True)
+            model.add_coord("name", ["A", "B", "C"])
+            model.add_coord("obs", list(range(10, 20)))
             offsets = pm.Data("offsets", rng.normal(0, 1, size=(10,)))
             a = pm.Normal("a", mu=0, sigma=1, dims=["name"])
             b = pm.Normal("b", mu=offsets, sigma=1)
@@ -873,8 +873,8 @@ class TestSamplePPC:
         rng = np.random.default_rng(seed=42)
         data = rng.normal(loc=1, scale=0.2, size=(10, 3))
         with pm.Model() as model:
-            model.add_coord("name", ["A", "B", "C"], mutable=True)
-            model.add_coord("obs", list(range(10, 20)), mutable=True)
+            model.add_coord("name", ["A", "B", "C"])
+            model.add_coord("obs", list(range(10, 20)))
             offsets = pm.Data("offsets", rng.normal(0, 1, size=(10,)))
             a = pm.Normal("a", mu=0, sigma=1, dims=["name"])
             b = pm.Normal("b", mu=offsets, sigma=1)
