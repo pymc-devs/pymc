@@ -20,6 +20,7 @@ import pytensor.tensor as pt
 
 from pytensor.graph.op import Apply, Op
 from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.utils import safe_signature
 from pytensor.tensor.variable import TensorVariable
 from scipy.spatial import cKDTree
 
@@ -39,8 +40,6 @@ class SimulatorRV(RandomVariable):
     """
 
     name = "SimulatorRV"
-    ndim_supp = None
-    ndims_params = None
     dtype = "floatX"
     _print_name = ("Simulator", "\\operatorname{Simulator}")
 
@@ -153,7 +152,8 @@ class Simulator(Distribution):
         distance="gaussian",
         sum_stat="identity",
         epsilon=1,
-        ndim_supp=0,
+        signature=None,
+        ndim_supp=None,
         ndims_params=None,
         dtype="floatX",
         class_name: str = "Simulator",
@@ -199,13 +199,19 @@ class Simulator(Distribution):
             if unnamed_params:
                 raise ValueError("Cannot pass both unnamed parameters and `params`")
 
-        # Assume scalar ndims_params
-        if ndims_params is None:
-            ndims_params = [0] * len(params)
+        if signature is None:
+            # Assume scalar ndims_params
+            temp_ndims_params = ndims_params if ndims_params is not None else [0] * len(params)
+            # Assume scalar ndim_supp
+            temp_ndim_supp = ndim_supp if ndim_supp is not None else 0
+            signature = safe_signature(
+                core_inputs_ndim=temp_ndims_params, core_outputs_ndim=[temp_ndim_supp]
+            )
 
         return super().dist(
             params,
             fn=fn,
+            signature=signature,
             ndim_supp=ndim_supp,
             ndims_params=ndims_params,
             dtype=dtype,
@@ -228,6 +234,7 @@ class Simulator(Distribution):
         sum_stat,
         epsilon,
         class_name,
+        signature,
         **kwargs,
     ):
         sim_op = type(
@@ -237,6 +244,7 @@ class Simulator(Distribution):
                 name=class_name,
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
+                signature=signature,
                 dtype=dtype,
                 inplace=False,
                 fn=fn,
@@ -250,7 +258,7 @@ class Simulator(Distribution):
 
 @_support_point.register(SimulatorRV)  # type: ignore
 def simulator_support_point(op, rv, *inputs):
-    sim_inputs = inputs[3:]
+    sim_inputs = op.dist_params(rv.owner)
     # Take the mean of 10 draws
     multiple_sim = rv.owner.op(*sim_inputs, size=pt.concatenate([[10], rv.shape]))
     return pt.mean(multiple_sim, axis=0)

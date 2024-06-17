@@ -27,6 +27,7 @@ from arviz import from_dict as az_from_dict
 from arviz.tests.helpers import check_multiple_attrs
 from pytensor import Mode, shared
 from pytensor.compile import SharedVariable
+from pytensor.graph import graph_inputs
 from scipy import stats
 
 import pymc as pm
@@ -114,8 +115,8 @@ class TestCompileForwardSampler:
     def get_function_roots(function):
         return [
             var
-            for var in pytensor.graph.basic.graph_inputs(function.maker.fgraph.outputs)
-            if var.name
+            for var in graph_inputs(function.maker.fgraph.outputs)
+            if var.name not in (None, "NoneConst")
         ]
 
     @staticmethod
@@ -212,7 +213,7 @@ class TestCompileForwardSampler:
             vars_in_trace=[mu, nested_mu, sigma],
             basic_rvs=model.basic_RVs,
             givens_dict={
-                mu: np.array(1.0)
+                mu: pytensor.shared(np.array(1.0), name="mu")
             },  # mu will be considered volatile because it's in givens
         )
         assert volatile_rvs == {nested_mu, obs}

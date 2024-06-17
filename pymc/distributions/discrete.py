@@ -392,7 +392,7 @@ class Bernoulli(Discrete):
 
 class DiscreteWeibullRV(SymbolicRandomVariable):
     name = "discrete_weibull"
-    signature = "[rng],[size],(),()->[rng],()"
+    extended_signature = "[rng],[size],(),()->[rng],()"
     _print_name = ("dWeibull", "\\operatorname{dWeibull}")
 
     @classmethod
@@ -971,8 +971,7 @@ class HyperGeometric(Discrete):
 
 class DiscreteUniformRV(ScipyRandomVariable):
     name = "discrete_uniform"
-    ndim_supp = 0
-    ndims_params = [0, 0]
+    signature = "(),()->()"
     dtype = "int64"
     _print_name = ("DiscreteUniform", "\\operatorname{DiscreteUniform}")
 

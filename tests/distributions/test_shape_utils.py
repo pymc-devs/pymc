@@ -360,7 +360,7 @@ def test_rv_size_is_none():
     assert rv_size_is_none(rv.owner.inputs[1])
 
     rv = pm.Normal.dist(0, 1, size=())
-    assert rv_size_is_none(rv.owner.inputs[1])
+    assert not rv_size_is_none(rv.owner.inputs[1])
 
     rv = pm.Normal.dist(0, 1, size=1)
     assert not rv_size_is_none(rv.owner.inputs[1])

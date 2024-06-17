@@ -426,11 +426,11 @@ class BinaryMetropolis(ArrayStep):
         if isinstance(distribution, CategoricalRV):
             # TODO: We could compute the initial value of `k`
             # if we had a model object.
-            # k_graph = var.owner.inputs[3].shape[-1]
+            # k_graph = var.owner.inputs[-1].shape[-1]
             # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
             # k = model.fn(k_graph)(initial_point)
             try:
-                k = var.owner.inputs[3].shape[-1].eval()
+                k = var.owner.inputs[-1].shape[-1].eval()
                 if k == 2:
                     return Competence.COMPATIBLE
             except MissingInputError:
@@ -533,11 +533,11 @@ class BinaryGibbsMetropolis(ArrayStep):
         if isinstance(distribution, CategoricalRV):
             # TODO: We could compute the initial value of `k`
             # if we had a model object.
-            # k_graph = var.owner.inputs[3].shape[-1]
+            # k_graph = var.owner.inputs[-1].shape[-1]
             # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
             # k = model.fn(k_graph)(initial_point)
             try:
-                k = var.owner.inputs[3].shape[-1].eval()
+                k = var.owner.inputs[-1].shape[-1].eval()
                 if k == 2:
                     return Competence.IDEAL
             except MissingInputError:
@@ -580,7 +580,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
             distr = getattr(rv_var.owner, "op", None)
 
             if isinstance(distr, CategoricalRV):
-                k_graph = rv_var.owner.inputs[3].shape[-1]
+                k_graph = rv_var.owner.inputs[-1].shape[-1]
                 (k_graph,) = model.replace_rvs_by_values((k_graph,))
                 k = model.compile_fn(k_graph, inputs=model.value_vars, on_unused_input="ignore")(
                     initial_point
@@ -696,11 +696,11 @@ class CategoricalGibbsMetropolis(ArrayStep):
         if isinstance(distribution, CategoricalRV):
             # TODO: We could compute the initial value of `k`
             # if we had a model object.
-            # k_graph = var.owner.inputs[3].shape[-1]
+            # k_graph = var.owner.inputs[-1].shape[-1]
             # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
             # k = model.fn(k_graph)(initial_point)
             try:
-                k = var.owner.inputs[3].shape[-1].eval()
+                k = var.owner.inputs[-1].shape[-1].eval()
                 if k > 2:
                     return Competence.IDEAL
             except MissingInputError:

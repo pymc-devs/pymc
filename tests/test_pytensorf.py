@@ -27,7 +27,6 @@ from pytensor.compile import UnusedInputError
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable, equal_computations
 from pytensor.tensor.random.basic import normal, uniform
-from pytensor.tensor.random.var import RandomStateSharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from pytensor.tensor.variable import TensorVariable
 
@@ -638,22 +637,13 @@ def test_reseed_rngs():
 
     bit_generators = [default_rng(sub_seed) for sub_seed in np.random.SeedSequence(seed).spawn(2)]
 
-    rngs = [
-        pytensor.shared(rng_type(default_rng()))
-        for rng_type in (np.random.Generator, np.random.RandomState)
-    ]
+    rngs = [pytensor.shared(np.random.Generator(default_rng())) for _ in range(2)]
     for rng, bit_generator in zip(rngs, bit_generators):
-        if isinstance(rng, RandomStateSharedVariable):
-            assert rng.get_value()._bit_generator.state != bit_generator.state
-        else:
-            assert rng.get_value().bit_generator.state != bit_generator.state
+        assert rng.get_value().bit_generator.state != bit_generator.state
 
     reseed_rngs(rngs, seed)
     for rng, bit_generator in zip(rngs, bit_generators):
-        if isinstance(rng, RandomStateSharedVariable):
-            assert rng.get_value()._bit_generator.state == bit_generator.state
-        else:
-            assert rng.get_value().bit_generator.state == bit_generator.state
+        assert rng.get_value().bit_generator.state == bit_generator.state
 
 
 def test_constant_fold():

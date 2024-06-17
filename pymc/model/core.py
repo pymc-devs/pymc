@@ -1853,7 +1853,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         def debug_parameters(rv):
             if isinstance(rv.owner.op, RandomVariable):
-                inputs = rv.owner.inputs[3:]
+                inputs = rv.owner.op.dist_params(rv.owner)
             else:
                 inputs = [inp for inp in rv.owner.inputs if not isinstance(inp.type, RandomType)]
             rv_inputs = pytensor.function(

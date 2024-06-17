@@ -893,7 +893,7 @@ class BaseTestDistributionRandom:
 
     def get_random_state(self, reset=False):
         if self.random_state is None or reset:
-            self.random_state = nr.RandomState(20160911)
+            self.random_state = nr.default_rng(20160911)
         return self.random_state
 
     def _instantiate_pymc_rv(self, dist_params=None):
@@ -912,16 +912,15 @@ class BaseTestDistributionRandom:
     def check_pymc_params_match_rv_op(self):
         op = self.pymc_rv.owner.op
         if isinstance(op, RandomVariable):
-            _, _, _, *pytensor_dist_inputs = self.pymc_rv.owner.inputs
+            pytensor_dist_inputs = op.dist_params(self.pymc_rv.owner)
         else:
-            inputs_signature, _ = op.signature.split("->")
-            pytensor_dist_inputs = [
-                inp
-                for inp, inp_signature in zip(
-                    self.pymc_rv.owner.inputs, inputs_signature.split(",")
-                )
-                if inp_signature not in ("[rng]", "[size]")
-            ]
+            extended_signature = op.extended_signature
+            if extended_signature is None:
+                raise NotImplementedError("Op requires extended signature to be tested")
+            [_, _, dist_params_idxs], _ = op.get_input_output_type_idxs(extended_signature)
+            dist_inputs = self.pymc_rv.owner.inputs
+            pytensor_dist_inputs = [dist_inputs[i] for i in dist_params_idxs]
+
         assert len(self.expected_rv_op_params) == len(pytensor_dist_inputs)
         for (expected_name, expected_value), actual_variable in zip(
             self.expected_rv_op_params.items(), pytensor_dist_inputs
@@ -930,6 +929,9 @@ class BaseTestDistributionRandom:
             if isinstance(expected_value, pytensor.tensor.Variable):
                 expected_value = expected_value.eval()
 
+            # RVs introduce expand_dims on the parameters, but the tests do not expect this
+            implicit_expand_dims = actual_variable.type.ndim - np.ndim(expected_value)
+            actual_variable = actual_variable.squeeze(tuple(range(implicit_expand_dims)))
             npt.assert_almost_equal(expected_value, actual_variable.eval(), decimal=self.decimal)
 
     def check_rv_size(self):
@@ -937,18 +939,15 @@ class BaseTestDistributionRandom:
         sizes_to_check = self.sizes_to_check or [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
         sizes_expected = self.sizes_expected or [(), (), (1,), (1,), (5,), (4, 5), (2, 4, 2)]
         for size, expected in zip(sizes_to_check, sizes_expected):
-            pymc_rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
-            expected_symbolic = tuple(pymc_rv.shape.eval())
-            actual = pymc_rv.eval().shape
+            rv = self.pymc_dist.dist(**self.pymc_dist_params, size=size)
+            expected_symbolic = tuple(rv.shape.eval())
+            actual = rv.eval().shape
             assert actual == expected_symbolic
             assert expected_symbolic == expected, (size, expected_symbolic, expected)
 
         # test multi-parameters sampling for univariate distributions (with univariate inputs)
-        if (
-            self.pymc_dist.rv_type.ndim_supp == 0
-            and self.pymc_dist.rv_type.ndims_params
-            and sum(self.pymc_dist.rv_type.ndims_params) == 0
-        ):
+        rv_op = rv.owner.op
+        if rv_op.ndim_supp == 0 and rv_op.ndims_params == 0:
             params = {
                 k: p * np.ones(self.repeated_params_shape) for k, p in self.pymc_dist_params.items()
             }
@@ -959,9 +958,9 @@ class BaseTestDistributionRandom:
                 (5, self.repeated_params_shape),
             ]
             for size, expected in zip(sizes_to_check, sizes_expected):
-                pymc_rv = self.pymc_dist.dist(**params, size=size)
-                expected_symbolic = tuple(pymc_rv.shape.eval())
-                actual = pymc_rv.eval().shape
+                rv = self.pymc_dist.dist(**params, size=size)
+                expected_symbolic = tuple(rv.shape.eval())
+                actual = rv.eval().shape
                 assert actual == expected_symbolic == expected
 
     def validate_tests_list(self):
@@ -975,9 +974,7 @@ def seeded_scipy_distribution_builder(dist_name: str) -> Callable:
 
 
 def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
-    return lambda self: ft.partial(
-        getattr(np.random.RandomState, dist_name), self.get_random_state()
-    )
+    return lambda self: getattr(self.get_random_state(), dist_name)
 
 
 def assert_no_rvs(vars: Sequence[Variable]) -> None:

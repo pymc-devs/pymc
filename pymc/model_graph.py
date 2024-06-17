@@ -172,8 +172,8 @@ class ModelGraph:
                 # Don't show shape-related dependencies
                 return []
             if isinstance(node.op, RandomVariable):
-                # Filter out rng, dtype and size parameters or RandomVariable nodes
-                return node.inputs[3:]
+                # Filter out rng and size parameters or RandomVariable nodes
+                return node.op.dist_params(node)
             else:
                 # Otherwise return all inputs
                 return node.inputs
