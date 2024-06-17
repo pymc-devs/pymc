@@ -336,6 +336,7 @@ def _sample_external_nuts(
         attrs = make_attrs(
             {
                 "sampling_time": t_sample,
+                "tuning_steps": tune,
             },
             library=nutpie,
         )

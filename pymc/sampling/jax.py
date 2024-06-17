@@ -671,6 +671,7 @@ def sample_jax_nuts(
 
     attrs = {
         "sampling_time": (tic2 - tic1).total_seconds(),
+        "tuning_steps": tune,
     }
 
     coords, dims = coords_and_dims_for_inferencedata(model)
@@ -680,6 +681,7 @@ def sample_jax_nuts(
         coords.update(idata_kwargs.pop("coords"))
     if "dims" in idata_kwargs:
         dims.update(idata_kwargs.pop("dims"))
+
     # Use 'partial' to set default arguments before passing 'idata_kwargs'
     to_trace = partial(
         az.from_dict,
@@ -690,6 +692,7 @@ def sample_jax_nuts(
         coords=coords,
         dims=dims,
         attrs=make_attrs(attrs, library=library),
+        posterior_attrs=make_attrs(attrs, library=library),
     )
     az_trace = to_trace(posterior=mcmc_samples, **idata_kwargs)
 

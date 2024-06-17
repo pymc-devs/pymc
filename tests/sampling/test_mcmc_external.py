@@ -44,6 +44,10 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
         idata1 = sample(**kwargs)
         idata2 = sample(**kwargs)
 
+        reference_kwargs = kwargs.copy()
+        reference_kwargs["nuts_sampler"] = "pymc"
+        idata_reference = sample(**reference_kwargs)
+
     warns = {
         (warn.category, warn.message.args[0])
         for warn in recwarn
@@ -64,7 +68,10 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
     assert "L" in idata1.observed_data
     assert idata1.posterior.chain.size == 2
     assert idata1.posterior.draw.size == 500
+    assert idata1.posterior.tuning_steps == 500
     np.testing.assert_array_equal(idata1.posterior.x, idata2.posterior.x)
+
+    assert idata_reference.posterior.attrs.keys() == idata1.posterior.attrs.keys()
 
 
 def test_step_args():
