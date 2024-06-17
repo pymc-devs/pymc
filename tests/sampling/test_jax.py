@@ -504,7 +504,7 @@ def test_sample_var_names():
 def test_convergence_warnings(caplog, nuts_sampler):
     with pm.Model() as m:
         # Model that should diverge
-        sigma = pm.Normal("sigma", initval=3, transform=None)
+        sigma = pm.Normal("sigma", initval=3, default_transform=None)
         pm.Normal("obs", mu=0, sigma=sigma, observed=[0.99, 1.0, 1.01])
 
         with caplog.at_level(logging.WARNING, logger="pymc"):

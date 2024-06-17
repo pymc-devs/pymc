@@ -1671,7 +1671,7 @@ class TestModelDebug:
     def test_invalid_value(self, capfd):
         with pm.Model() as m:
             x = pm.Normal("x", [1, -1, 1])
-            y = pm.HalfNormal("y", tau=pm.math.abs(x), initval=[-1, 1, -1], transform=None)
+            y = pm.HalfNormal("y", tau=pm.math.abs(x), initval=[-1, 1, -1], default_transform=None)
         m.debug()
 
         out, _ = capfd.readouterr()

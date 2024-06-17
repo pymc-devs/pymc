@@ -242,7 +242,7 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
         distfam(
             "value",
             **param_vars,
-            transform=None,
+            default_transform=None,
         )
     return m, param_vars
 

@@ -161,13 +161,13 @@ def mv_simple_discrete():
 
 def non_normal(n=2):
     with pm.Model() as model:
-        pm.Beta("x", 3, 3, size=n, transform=None)
+        pm.Beta("x", 3, 3, size=n, default_transform=None)
     return model.initial_point(), model, (np.tile([0.5], n), None)
 
 
 def beta_bernoulli(n=2):
     with pm.Model() as model:
-        pm.Beta("x", 3, 1, size=n, transform=None)
+        pm.Beta("x", 3, 1, size=n, default_transform=None)
         pm.Bernoulli("y", 0.5)
     return model.initial_point(), model, None
 

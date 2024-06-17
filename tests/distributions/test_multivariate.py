@@ -559,7 +559,7 @@ class TestMatchesScipy:
     @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
     def test_lkjcorr(self, x, eta, n, lp):
         with pm.Model() as model:
-            pm.LKJCorr("lkj", eta=eta, n=n, transform=None, return_matrix=False)
+            pm.LKJCorr("lkj", eta=eta, n=n, default_transform=None, return_matrix=False)
 
         point = {"lkj": x}
         decimals = select_by_precision(float64=6, float32=4)
@@ -790,7 +790,7 @@ class TestMatchesScipy:
     )
     def test_stickbreakingweights_logp(self, value, alpha, K, logp):
         with pm.Model() as model:
-            sbw = pm.StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
+            sbw = pm.StickBreakingWeights("sbw", alpha=alpha, K=K, default_transform=None)
         point = {"sbw": value}
         npt.assert_almost_equal(
             pm.logp(sbw, value).eval(),
@@ -817,7 +817,7 @@ class TestMatchesScipy:
     def test_stickbreakingweights_vectorized(self, alpha, K, stickbreakingweights_logpdf):
         value = pm.StickBreakingWeights.dist(alpha, K).eval()
         with pm.Model():
-            sbw = pm.StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
+            sbw = pm.StickBreakingWeights("sbw", alpha=alpha, K=K, default_transform=None)
         point = {"sbw": value}
         npt.assert_almost_equal(
             pm.logp(sbw, value).eval(),

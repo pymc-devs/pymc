@@ -370,7 +370,7 @@ class TestMatchesScipy:
         # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or
         # http://www.gamlss.org/.
         with pm.Model() as model:
-            pm.Wald("wald", mu=mu, lam=lam, phi=phi, alpha=alpha, transform=None)
+            pm.Wald("wald", mu=mu, lam=lam, phi=phi, alpha=alpha, default_transform=None)
         point = {"wald": value}
         decimals = select_by_precision(float64=6, float32=1)
         npt.assert_almost_equal(

@@ -249,7 +249,7 @@ def change_value_transforms(
         from pymc.model.transform.conditioning import change_value_transforms
 
         with pm.Model() as base_m:
-            p = pm.Uniform("p", 0, 1, transform=None)
+            p = pm.Uniform("p", 0, 1, default_transform=None)
             w = pm.Binomial("w", n=9, p=p, observed=6)
 
         with change_value_transforms(base_m, {"p": logodds}) as transformed_p:
