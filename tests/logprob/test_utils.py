@@ -42,6 +42,7 @@ from pytensor import function
 from pytensor import tensor as pt
 from pytensor.compile import get_default_mode
 from pytensor.graph.basic import ancestors, equal_computations
+from pytensor.tensor.random.basic import NormalRV
 from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
@@ -184,8 +185,8 @@ class TestReplaceRVsByValues:
         res_y = res.owner.inputs[1]
         # Graph should have be cloned, and therefore y and res_y should have different ids
         assert res_y is not y
-        assert res_y.owner.op == pt.random.normal
-        assert res_y.owner.inputs[3] is x_value
+        assert isinstance(res_y.owner.op, NormalRV)
+        assert res_y.owner.inputs[2] is x_value
 
     def test_no_change_inplace(self):
         # Test that calling rvs_to_value_vars in models with nested transformations

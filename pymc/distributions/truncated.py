@@ -457,7 +457,7 @@ def truncated_logcdf(op: TruncatedRV, value, *inputs, **kwargs):
 
 
 @_truncated.register(NormalRV)
-def _truncated_normal(op, lower, upper, size, rng, old_size, dtype, mu, sigma):
+def _truncated_normal(op, lower, upper, size, rng, old_size, mu, sigma):
     return TruncatedNormal.dist(
         mu=mu,
         sigma=sigma,
@@ -465,5 +465,5 @@ def _truncated_normal(op, lower, upper, size, rng, old_size, dtype, mu, sigma):
         upper=upper,
         rng=None,  # Do not reuse rng to avoid weird dependencies
         size=size,
-        dtype=dtype,
+        dtype=op.dtype,
     )

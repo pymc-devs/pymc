@@ -104,7 +104,7 @@ def naive_bcast_rv_lift(fgraph, node):
         _, lifted_rv = size_lift_res
         lifted_node = lifted_rv.owner
 
-    rng, size, dtype, *dist_params = lifted_node.inputs
+    rng, size, *dist_params = lifted_node.inputs
 
     new_dist_params = [
         pt.broadcast_to(
@@ -113,7 +113,7 @@ def naive_bcast_rv_lift(fgraph, node):
         )
         for param in dist_params
     ]
-    bcasted_node = lifted_node.op.make_node(rng, size, dtype, *new_dist_params)
+    bcasted_node = lifted_node.op.make_node(rng, size, *new_dist_params)
 
     if pytensor.config.compute_test_value != "off":
         compute_test_value(bcasted_node)

@@ -263,8 +263,7 @@ class TestSupportPoint:
     def test_support_point_not_implemented_fallback(self):
         class MyNormalRV(RandomVariable):
             name = "my_normal"
-            ndim_supp = 0
-            ndims_params = [0, 0]
+            signature = "(),()->()"
             dtype = "floatX"
 
             @classmethod

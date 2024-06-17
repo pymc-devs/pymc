@@ -48,7 +48,7 @@ from pymc.distributions.distribution import (
     create_partial_observed_rv,
     support_point,
 )
-from pymc.distributions.shape_utils import change_dist_size, to_tuple
+from pymc.distributions.shape_utils import change_dist_size, rv_size_is_none, to_tuple
 from pymc.distributions.transforms import log
 from pymc.exceptions import BlockModelAccessError
 from pymc.logprob.basic import conditional_logp, logcdf, logp
@@ -296,7 +296,7 @@ class TestCustomDist:
         [
             (None, None, 0.0),
             (None, 5, np.zeros(5)),
-            ("custom_support_point", None, 5),
+            ("custom_support_point", (), 5),
             ("custom_support_point", (2, 5), np.full((2, 5), 5)),
         ],
     )
@@ -314,7 +314,7 @@ class TestCustomDist:
             with pytest.warns(
                 FutureWarning, match="`moment` argument is deprecated. Use `support_point` instead."
             ):
-                x = CustomDist("x", moment=moment)
+                x = CustomDist("x", moment=moment, size=())
         assert_support_point_is_expected(model, 5, check_finite_logp=False)
 
     @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
@@ -459,9 +459,7 @@ class TestCustomSymbolicDist:
                 (2, np.ones(5)),
                 None,
                 np.exp(2 + np.ones(5)),
-                lambda mu, sigma, size: pt.exp(
-                    pm.Normal.dist(mu, sigma, size=size) + pt.ones(size)
-                ),
+                lambda mu, sigma, size: pt.exp(pm.Normal.dist(mu, sigma, size=size) + 1.0),
             ),
             (
                 (1, 2),
@@ -563,6 +561,8 @@ class TestCustomSymbolicDist:
     def test_random_multiple_rngs(self):
         def custom_dist(p, sigma, size):
             idx = pm.Bernoulli.dist(p=p)
+            if rv_size_is_none(size):
+                size = pt.broadcast_shape(p, sigma)
             comps = pm.Normal.dist([-sigma, sigma], 1e-1, size=(*size, 2)).T
             return comps[idx]
 
@@ -656,6 +656,9 @@ class TestCustomSymbolicDist:
 
     def test_scan(self):
         def trw(nu, sigma, steps, size):
+            if rv_size_is_none(size):
+                size = ()
+
             def step(xtm1, nu, sigma):
                 x = pm.StudentT.dist(nu=nu, mu=xtm1, sigma=sigma, shape=size)
                 return x, collect_default_updates([x])
@@ -749,25 +752,25 @@ class TestCustomSymbolicDist:
 
         out = CustomDist.dist([0.25, 0.75], dist=dist, signature="(p)->()")
         # Size and updates are added automatically to the signature
-        assert out.owner.op.signature == "[size],(p),[rng]->(),[rng]"
+        assert out.owner.op.extended_signature == "[size],(p),[rng]->(),[rng]"
         assert out.owner.op.ndim_supp == 0
         assert out.owner.op.ndims_params == [1]
 
         # When recreated internally, the whole signature may already be known
         out = CustomDist.dist([0.25, 0.75], dist=dist, signature="[size],(p),[rng]->(),[rng]")
-        assert out.owner.op.signature == "[size],(p),[rng]->(),[rng]"
+        assert out.owner.op.extended_signature == "[size],(p),[rng]->(),[rng]"
         assert out.owner.op.ndim_supp == 0
         assert out.owner.op.ndims_params == [1]
 
         # A safe signature can be inferred from ndim_supp and ndims_params
         out = CustomDist.dist([0.25, 0.75], dist=dist, ndim_supp=0, ndims_params=[1])
-        assert out.owner.op.signature == "[size],(i00),[rng]->(),[rng]"
+        assert out.owner.op.extended_signature == "[size],(i00),[rng]->(),[rng]"
         assert out.owner.op.ndim_supp == 0
         assert out.owner.op.ndims_params == [1]
 
         # Otherwise be default we assume everything is scalar, even though it's wrong in this case
         out = CustomDist.dist([0.25, 0.75], dist=dist)
-        assert out.owner.op.signature == "[size],(),[rng]->(),[rng]"
+        assert out.owner.op.extended_signature == "[size],(),[rng]->(),[rng]"
         assert out.owner.op.ndim_supp == 0
         assert out.owner.op.ndims_params == [0]
 

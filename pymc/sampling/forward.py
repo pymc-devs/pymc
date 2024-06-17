@@ -38,10 +38,7 @@ from pytensor.graph.basic import (
     walk,
 )
 from pytensor.graph.fg import FunctionGraph
-from pytensor.tensor.random.var import (
-    RandomGeneratorSharedVariable,
-    RandomStateSharedVariable,
-)
+from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.sharedvar import SharedVariable
 from rich.console import Console
 from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
@@ -107,7 +104,7 @@ def compile_forward_sampling_function(
     compiled function or after inference has been run. These variables are:
 
     - Variables in the outputs list
-    - ``SharedVariable`` instances that are not ``RandomStateSharedVariable`` or ``RandomGeneratorSharedVariable``, and whose values changed with respect to what they were at inference time
+    - ``SharedVariable`` instances that are not ``RandomGeneratorSharedVariable``, and whose values changed with respect to what they were at inference time
     - Variables that are in the `basic_rvs` list but not in the ``vars_in_trace`` list
     - Variables that are keys in the ``givens_dict``
     - Variables that have volatile inputs
@@ -207,7 +204,7 @@ def compile_forward_sampling_function(
             or node in givens_dict
             or (  # SharedVariables, except RandomState/Generators
                 isinstance(node, SharedVariable)
-                and not isinstance(node, RandomStateSharedVariable | RandomGeneratorSharedVariable)
+                and not isinstance(node, RandomGeneratorSharedVariable)
                 and not shared_value_matches(node)
             )
             or (  # Basic RVs that are not in the trace

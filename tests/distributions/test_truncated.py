@@ -125,8 +125,8 @@ def test_truncation_specialized_op(shape_info):
     # Test RNG is not reused
     assert xt.owner.inputs[0] is not rng
 
-    lower_upper = pt.stack(xt.owner.inputs[5:])
-    assert np.all(lower_upper.eval() == [5, 15])
+    lower_upper = pt.stack(xt.owner.inputs[4:])
+    assert np.all(lower_upper.eval().squeeze() == [5, 15])
 
 
 @pytest.mark.parametrize("lower, upper", [(-1, np.inf), (-1, 1.5), (-np.inf, 1.5)])

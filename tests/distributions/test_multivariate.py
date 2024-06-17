@@ -640,7 +640,7 @@ class TestMatchesScipy:
             with pm.Model() as m:
                 x = pm.Multinomial("x", n=5, p=[1, 1, 1, 1, 1])
         # test stored p-vals have been normalised
-        assert np.isclose(m.x.owner.inputs[4].sum().eval(), 1.0)
+        assert np.isclose(m.x.owner.inputs[-1].sum().eval(), 1.0)
 
     def test_multinomial_negative_p_symbolic(self):
         # Passing symbolic negative p does not raise an immediate error, but evaluating
@@ -2245,8 +2245,8 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
 
     def check_draws_match_expected(self):
         # TODO: Find better comparison:
-        rng = self.get_random_state(reset=True)
-        x = _LKJCholeskyCov.dist(n=2, eta=10_000, sd_dist=pm.DiracDelta.dist([0.5, 2.0]))
+        rng = np.random.default_rng(2248)
+        x = _LKJCholeskyCov.dist(n=2, eta=100_000, sd_dist=pm.DiracDelta.dist([0.5, 2.0]))
         assert np.all(np.abs(draw(x, random_seed=rng) - np.array([0.5, 0, 2.0])) < 0.01)
 
 
@@ -2415,56 +2415,56 @@ def test_mvnormal_blockwise_solve_opt():
 def test_mvnormal_mu_convenience():
     """Test that mu is broadcasted to the length of cov and provided a default of zero"""
     x = pm.MvNormal.dist(cov=np.eye(3))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(mu.eval(), np.zeros((3,)))
 
     x = pm.MvNormal.dist(mu=1, cov=np.eye(3))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(mu.eval(), np.ones((3,)))
 
     x = pm.MvNormal.dist(mu=np.ones((1, 1)), cov=np.eye(3))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(
         mu.eval(),
         np.ones((1, 3)),
     )
 
     x = pm.MvNormal.dist(mu=np.ones((10, 1)), cov=np.eye(3))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(
         mu.eval(),
         np.ones((10, 3)),
     )
 
     x = pm.MvNormal.dist(mu=np.ones((10, 1, 1)), cov=np.full((2, 3, 3), np.eye(3)))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(mu.eval(), np.ones((10, 2, 3)))
 
 
 def test_mvstudentt_mu_convenience():
     """Test that mu is broadcasted to the length of scale and provided a default of zero"""
     x = pm.MvStudentT.dist(nu=4, scale=np.eye(3))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(mu.eval(), np.zeros((3,)))
 
     x = pm.MvStudentT.dist(nu=4, mu=1, scale=np.eye(3))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(mu.eval(), np.ones((3,)))
 
     x = pm.MvStudentT.dist(nu=4, mu=np.ones((1, 1)), scale=np.eye(3))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(
         mu.eval(),
         np.ones((1, 3)),
     )
 
     x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), scale=np.eye(3))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(
         mu.eval(),
         np.ones((10, 3)),
     )
 
     x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1, 1)), scale=np.full((2, 3, 3), np.eye(3)))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(mu.eval(), np.ones((10, 2, 3)))

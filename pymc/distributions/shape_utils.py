@@ -28,11 +28,12 @@ import numpy as np
 
 from pytensor import config
 from pytensor import tensor as pt
-from pytensor.graph.basic import Variable
+from pytensor.graph.basic import Constant, Variable
 from pytensor.graph.op import Op, compute_test_value
 from pytensor.raise_op import Assert
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.shape import SpecifyShape
+from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.model import modelcontext
@@ -116,7 +117,7 @@ def convert_dims(dims: Dims | None) -> StrongDims | None:
 
 def convert_shape(shape: Shape) -> StrongShape | None:
     """Process a user-provided shape variable into None or a valid shape object."""
-    if shape is None:
+    if shape is None or (isinstance(shape, Variable) and isinstance(shape.type, NoneTypeT)):
         return None
     elif isinstance(shape, int) or (isinstance(shape, TensorVariable) and shape.ndim == 0):
         shape = (shape,)
@@ -134,20 +135,18 @@ def convert_shape(shape: Shape) -> StrongShape | None:
 
 def convert_size(size: Size) -> StrongSize | None:
     """Process a user-provided size variable into None or a valid size object."""
-    if size is None:
+    if size is None or (isinstance(size, Variable) and isinstance(size.type, NoneTypeT)):
         return None
     elif isinstance(size, int) or (isinstance(size, TensorVariable) and size.ndim == 0):
-        size = (size,)
+        return (size,)
     elif isinstance(size, TensorVariable) and size.ndim == 1:
-        size = tuple(size)
+        return tuple(size)
     elif isinstance(size, list | tuple):
-        size = tuple(size)
+        return tuple(size)
     else:
         raise ValueError(
             f"The `size` parameter must be a tuple, TensorVariable, int or list. Actual: {type(size)}"
         )
-
-    return size
 
 
 def shape_from_dims(dims: StrongDims, model) -> StrongShape:
@@ -210,11 +209,11 @@ def find_size(
     return None
 
 
-def rv_size_is_none(size: Variable | None) -> bool:
-    """Check whether an rv size is None (ie., pt.Constant([]))"""
+def rv_size_is_none(size: TensorVariable | Constant | None) -> bool:
+    """Check whether an rv size is None (i.e., NoneConst)"""
     if size is None:
         return True
-    return size.type.shape == (0,)  # type: ignore [attr-defined]
+    return isinstance(size.type, NoneTypeT)
 
 
 @singledispatch
@@ -269,8 +268,8 @@ def change_dist_size(
     else:
         new_size = tuple(new_size)  # type: ignore
 
-    # TODO: Get rid of unused expand argument
-    new_dist = _change_dist_size(dist.owner.op, dist, new_size=new_size, expand=expand)
+    op = dist.owner.op
+    new_dist = _change_dist_size(op, dist, new_size=new_size, expand=expand)
     _add_future_warning_tag(new_dist)
 
     new_dist.name = dist.name
@@ -287,7 +286,7 @@ def change_dist_size(
 def change_rv_size(op, rv, new_size, expand) -> TensorVariable:
     # Extract the RV node that is to be resized
     rv_node = rv.owner
-    old_rng, old_size, dtype, *dist_params = rv_node.inputs
+    old_rng, old_size, *dist_params = rv_node.inputs
 
     if expand:
         shape = tuple(rv_node.op._infer_shape(old_size, dist_params))
@@ -298,7 +297,7 @@ def change_rv_size(op, rv, new_size, expand) -> TensorVariable:
     # to not unnecessarily pick up a `Cast` in some cases (see #4652).
     new_size = pt.as_tensor(new_size, ndim=1, dtype="int64")
 
-    new_rv = rv_node.op(*dist_params, size=new_size, dtype=dtype)
+    new_rv = rv_node.op(*dist_params, size=new_size, dtype=rv.type.dtype)
 
     # Replicate "traditional" rng default_update, if that was set for old_rng
     default_update = getattr(old_rng, "default_update", None)

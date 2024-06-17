@@ -1644,7 +1644,7 @@ class TestModelDebug:
             # var dlogp is 0 or 1 without a likelihood
             assert "No problems found" in out
         else:
-            assert "The parameters evaluate to:\n0: 0.0\n1: [ 1. -1.  1.]" in out
+            assert "The parameters evaluate to:\n0: [0.]\n1: [ 1. -1.  1.]" in out
             if fn == "logp":
                 assert "This does not respect one of the following constraints: sigma > 0" in out
             else:

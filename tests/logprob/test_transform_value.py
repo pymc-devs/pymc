@@ -193,7 +193,7 @@ def test_original_values_output_dict():
             pt.random.dirichlet,
             (np.array([[0.7, 0.3], [0.9, 0.1]]),),
             lambda alpha: DirichletScipyDist(alpha),
-            (),
+            None,
         ),
         pytest.param(
             pt.random.dirichlet,

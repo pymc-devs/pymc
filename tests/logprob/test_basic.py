@@ -291,7 +291,7 @@ def test_joint_logp_incsubtensor(indices, size):
     mu = pm.floatX(np.power(10, np.arange(np.prod(size)))).reshape(size)
     data = mu[indices]
     sigma = 0.001
-    rng = np.random.RandomState(232)
+    rng = np.random.default_rng(232)
     a_val = rng.normal(mu, sigma, size=size).astype(pytensor.config.floatX)
 
     rng = pytensor.shared(rng, borrow=False)
