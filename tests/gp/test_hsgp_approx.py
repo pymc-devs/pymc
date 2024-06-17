@@ -213,7 +213,7 @@ class TestHSGP(_BaseFixtures):
             gp = pm.gp.Latent(cov_func=cov_func)
             f2 = gp.prior("f2", X=X1)
 
-            idata = pm.sample_prior_predictive(samples=1000, random_seed=rng)
+            idata = pm.sample_prior_predictive(draws=1000, random_seed=rng)
 
         samples1 = az.extract(idata.prior["f1"])["f1"].values.T
         samples2 = az.extract(idata.prior["f2"])["f2"].values.T
@@ -240,7 +240,7 @@ class TestHSGP(_BaseFixtures):
             f = hsgp.prior("f", X=X1)
             fc = hsgp.conditional("fc", Xnew=X1)
 
-            idata = pm.sample_prior_predictive(samples=1000)
+            idata = pm.sample_prior_predictive(draws=1000)
 
         samples1 = az.extract(idata.prior["f"])["f"].values.T
         samples2 = az.extract(idata.prior["fc"])["fc"].values.T
@@ -300,7 +300,7 @@ class TestHSGPPeriodic(_BaseFixtures):
             gp = pm.gp.Latent(cov_func=eta**2 * cov_func)
             f2 = gp.prior("f2", X=X1)
 
-            idata = pm.sample_prior_predictive(samples=1000, random_seed=rng)
+            idata = pm.sample_prior_predictive(draws=1000, random_seed=rng)
 
         samples1 = az.extract(idata.prior["f1"])["f1"].values.T
         samples2 = az.extract(idata.prior["f2"])["f2"].values.T
@@ -321,7 +321,7 @@ class TestHSGPPeriodic(_BaseFixtures):
             f = hsgp.prior("f", X=X1)
             fc = hsgp.conditional("fc", Xnew=X1)
 
-            idata = pm.sample_prior_predictive(samples=1000)
+            idata = pm.sample_prior_predictive(draws=1000)
 
         samples1 = az.extract(idata.prior["f"])["f"].values.T
         samples2 = az.extract(idata.prior["fc"])["fc"].values.T

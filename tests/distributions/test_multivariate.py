@@ -1448,7 +1448,7 @@ class TestMvNormalMisc:
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
             mv = pm.MvNormal("mv", mu, chol=chol, size=4)
-            prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
+            prior = pm.sample_prior_predictive(draws=10, return_inferencedata=False)
 
         assert prior["mv"].shape == (10, 4, 3)
 
@@ -1462,7 +1462,7 @@ class TestMvNormalMisc:
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
             mv = pm.MvNormal("mv", mu, cov=pm.math.dot(chol, chol.T), size=4)
-            prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
+            prior = pm.sample_prior_predictive(draws=10, return_inferencedata=False)
 
         assert prior["mv"].shape == (10, 4, 3)
 
@@ -1473,7 +1473,7 @@ class TestMvNormalMisc:
             corr = pm.LKJCorr("corr", n=3, eta=2, return_matrix=True)
             pm.Deterministic("corr_mat", corr)
             mv = pm.MvNormal("mv", 0.0, cov=corr, size=4)
-            prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
+            prior = pm.sample_prior_predictive(draws=10, return_inferencedata=False)
 
         assert prior["corr_mat"].shape == (10, 3, 3)  # square
         assert (prior["corr_mat"][:, [0, 1, 2], [0, 1, 2]] == 1.0).all()  # 1.0 on diagonal
