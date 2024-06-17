@@ -561,7 +561,7 @@ class TestMixture:
 
         n_samples = 30
         with model:
-            prior = sample_prior_predictive(samples=n_samples, return_inferencedata=False)
+            prior = sample_prior_predictive(draws=n_samples, return_inferencedata=False)
             ppc = sample_posterior_predictive(
                 n_samples * [self.get_initial_point(model)], return_inferencedata=False
             )
@@ -607,7 +607,7 @@ class TestMixture:
 
         n_samples = 20
         with model:
-            prior = sample_prior_predictive(samples=n_samples, return_inferencedata=False)
+            prior = sample_prior_predictive(draws=n_samples, return_inferencedata=False)
             ppc = sample_posterior_predictive(
                 n_samples * [self.get_initial_point(model)], return_inferencedata=False
             )
@@ -1028,7 +1028,7 @@ class TestMixtureSameFamily:
                 comp_dists=comp_dists,
                 shape=(*batch_shape, 3),
             )
-            prior = sample_prior_predictive(samples=self.n_samples, return_inferencedata=False)
+            prior = sample_prior_predictive(draws=self.n_samples, return_inferencedata=False)
 
         assert prior["mixture"].shape == (self.n_samples, *batch_shape, 3)
         assert draw(mixture, draws=self.size).shape == (self.size, *batch_shape, 3)
@@ -1060,7 +1060,7 @@ class TestMixtureSameFamily:
         with Model() as model:
             comp_dists = MvNormal.dist(mu=mu, chol=chol, shape=(self.mixture_comps, 3))
             mixture = Mixture("mixture", w=w, comp_dists=comp_dists, shape=(3,))
-            prior = sample_prior_predictive(samples=self.n_samples, return_inferencedata=False)
+            prior = sample_prior_predictive(draws=self.n_samples, return_inferencedata=False)
 
         assert prior["mixture"].shape == (self.n_samples, 3)
         assert draw(mixture, draws=self.size).shape == (self.size, 3)
@@ -1084,7 +1084,7 @@ class TestMixtureSameFamily:
             mu = Gamma("mu", 1.0, 1.0, shape=2)
             comp_dists = Poisson.dist(mu, shape=2)
             mix = Mixture("mix", w=np.ones(2) / 2, comp_dists=comp_dists, shape=(1000,))
-            prior = sample_prior_predictive(samples=self.n_samples, return_inferencedata=False)
+            prior = sample_prior_predictive(draws=self.n_samples, return_inferencedata=False)
 
         assert prior["mix"].shape == (self.n_samples, 1000)
 

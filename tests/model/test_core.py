@@ -873,7 +873,7 @@ class TestSetUpdateCoords:
             m.add_coord(name="a", values=None, length=3)
             m.add_coord(name="b", values=range(5))
             x = pm.Normal("x", dims=("a", "b"))
-            prior = pm.sample_prior_predictive(samples=2).prior
+            prior = pm.sample_prior_predictive(draws=2).prior
         assert prior["x"].shape == (1, 2, 3, 5)
         assert list(prior.coords["a"].values) == list(range(3))
         assert list(prior.coords["b"].values) == list(range(5))
