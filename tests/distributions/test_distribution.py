@@ -83,7 +83,7 @@ class TestBugfixes:
         # Test for bug in Uniform and DiscreteUniform logp when setting check_bounds = False
         # https://github.com/pymc-devs/pymc/issues/4499
         with pm.Model(check_bounds=False) as m:
-            x = pm.Uniform("x", 0, 2, size=10, transform=None)
+            x = pm.Uniform("x", 0, 2, size=10, default_transform=None)
         npt.assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), -np.log(2) * 10)
 
         with pm.Model(check_bounds=False) as m:

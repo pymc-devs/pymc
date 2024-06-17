@@ -108,14 +108,14 @@ class TestNutsCheckTrace:
 
     def test_bad_init_nonparallel(self):
         with pm.Model():
-            pm.HalfNormal("a", sigma=1, initval=-1, transform=None)
+            pm.HalfNormal("a", sigma=1, initval=-1, default_transform=None)
             with pytest.raises(SamplingError) as error:
                 pm.sample(chains=1, random_seed=1)
             error.match("Initial evaluation")
 
     def test_bad_init_parallel(self):
         with pm.Model():
-            pm.HalfNormal("a", sigma=1, initval=-1, transform=None)
+            pm.HalfNormal("a", sigma=1, initval=-1, default_transform=None)
             with pytest.raises(SamplingError) as error:
                 pm.sample(cores=2, random_seed=1)
             error.match("Initial evaluation")

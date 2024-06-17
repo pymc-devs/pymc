@@ -255,7 +255,7 @@ def test_do_self_reference():
 
 def test_change_value_transforms():
     with pm.Model() as base_m:
-        p = pm.Uniform("p", 0, 1, transform=None)
+        p = pm.Uniform("p", 0, 1, default_transform=None)
         w = pm.Binomial("w", n=9, p=p, observed=6)
         assert base_m.rvs_to_transforms[p] is None
         assert base_m.rvs_to_values[p].name == "p"

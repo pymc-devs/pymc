@@ -433,7 +433,7 @@ class TestMixture:
         cov2 = np.diag([2.5, 3.5])
         obs = np.asarray([[0.5, 0.5], mu1, mu2])
         with Model() as model:
-            w = Dirichlet("w", floatX(np.ones(2)), transform=None, shape=(2,))
+            w = Dirichlet("w", floatX(np.ones(2)), default_transform=None, shape=(2,))
             mvncomp1 = MvNormal.dist(mu=mu1, cov=cov1)
             mvncomp2 = MvNormal.dist(mu=mu2, cov=cov2)
             y = Mixture("x_obs", w, [mvncomp1, mvncomp2], observed=obs)
@@ -630,19 +630,27 @@ class TestMixture:
         with Model() as model:
             # mixtures components
             g_comp = Normal.dist(
-                mu=Exponential("mu_g", lam=1.0, shape=nbr, transform=None), sigma=1, shape=nbr
+                mu=Exponential("mu_g", lam=1.0, shape=nbr, default_transform=None),
+                sigma=1,
+                shape=nbr,
             )
             l_comp = LogNormal.dist(
-                mu=Exponential("mu_l", lam=1.0, shape=nbr, transform=None), sigma=1, shape=nbr
+                mu=Exponential("mu_l", lam=1.0, shape=nbr, default_transform=None),
+                sigma=1,
+                shape=nbr,
             )
             # weight vector for the mixtures
-            g_w = Dirichlet("g_w", a=floatX(np.ones(nbr) * 0.0000001), transform=None, shape=(nbr,))
-            l_w = Dirichlet("l_w", a=floatX(np.ones(nbr) * 0.0000001), transform=None, shape=(nbr,))
+            g_w = Dirichlet(
+                "g_w", a=floatX(np.ones(nbr) * 0.0000001), default_transform=None, shape=(nbr,)
+            )
+            l_w = Dirichlet(
+                "l_w", a=floatX(np.ones(nbr) * 0.0000001), default_transform=None, shape=(nbr,)
+            )
             # mixture components
             g_mix = Mixture.dist(w=g_w, comp_dists=g_comp)
             l_mix = Mixture.dist(w=l_w, comp_dists=l_comp)
             # mixture of mixtures
-            mix_w = Dirichlet("mix_w", a=floatX(np.ones(2)), transform=None, shape=(2,))
+            mix_w = Dirichlet("mix_w", a=floatX(np.ones(2)), default_transform=None, shape=(2,))
             mix = Mixture("mix", w=mix_w, comp_dists=[g_mix, l_mix], observed=np.exp(norm_x))
 
         test_point = model.initial_point()
@@ -1306,9 +1314,9 @@ class TestMixtureDefaultTransforms:
         with Model() as model:
             lower = Normal("lower", 0.5)
             upper = Uniform("upper", 0, 1)
-            uniform = Uniform("uniform", -pt.abs(lower), pt.abs(upper), transform=None)
+            uniform = Uniform("uniform", -pt.abs(lower), pt.abs(upper), default_transform=None)
             triangular = Triangular(
-                "triangular", -pt.abs(lower), pt.abs(upper), c=0.25, transform=None
+                "triangular", -pt.abs(lower), pt.abs(upper), c=0.25, default_transform=None
             )
             comp_dists = [
                 Uniform.dist(-pt.abs(lower), pt.abs(upper)),
@@ -1334,7 +1342,7 @@ class TestMixtureDefaultTransforms:
             halfnorm = HalfNormal("halfnorm")
             comp_dists = [HalfNormal.dist(), HalfNormal.dist()]
             mix_transf = Mixture("mix_transf", w=[0.5, 0.5], comp_dists=comp_dists)
-            mix = Mixture("mix", w=[0.5, 0.5], comp_dists=comp_dists, transform=None)
+            mix = Mixture("mix", w=[0.5, 0.5], comp_dists=comp_dists, default_transform=None)
 
         logp_fn = m.compile_logp(vars=[halfnorm, mix_transf, mix], sum=False)
         test_point = {"halfnorm_log__": 1, "mix_transf_log__": 1, "mix": np.exp(1)}

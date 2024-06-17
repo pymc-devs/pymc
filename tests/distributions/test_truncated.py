@@ -386,7 +386,7 @@ def test_truncated_default_transform():
 def test_truncated_transform_logp():
     with Model() as m:
         base_dist = rejection_normal(0, 1)
-        x = Truncated("x", base_dist, lower=0, upper=None, transform=None)
+        x = Truncated("x", base_dist, lower=0, upper=None, default_transform=None)
         y = Truncated("y", base_dist, lower=0, upper=None)
         logp_eval = m.compile_logp(sum=False)({"x": -1, "y_interval__": -1})
     assert logp_eval[0] == -np.inf
