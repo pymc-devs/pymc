@@ -794,12 +794,12 @@ class TestSamplePPC:
             z = pm.Normal("z", y, observed=0)
 
         with m:
-            pm.sample_prior_predictive(samples=1)
+            pm.sample_prior_predictive(draws=1)
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x, z]")]
         caplog.clear()
 
         with m:
-            pm.sample_prior_predictive(samples=1, var_names=["x"])
+            pm.sample_prior_predictive(draws=1, var_names=["x"])
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x]")]
         caplog.clear()
 
@@ -1028,7 +1028,7 @@ class TestSamplePPC:
             mu = x_data.sum(-1)
             pm.Normal("y", mu=mu, sigma=sigma, observed=y_data, shape=mu.shape, dims=("trial",))
 
-            prior = pm.sample_prior_predictive(samples=25).prior
+            prior = pm.sample_prior_predictive(draws=25).prior
 
         fake_idata = InferenceData(posterior=prior)
 
@@ -1052,7 +1052,7 @@ class TestSamplePPC:
             mu = (y_data.sum() * x_data).sum(-1)
             pm.Normal("y", mu=mu, sigma=sigma, observed=y_data, shape=mu.shape, dims=("trial",))
 
-            prior = pm.sample_prior_predictive(samples=25).prior
+            prior = pm.sample_prior_predictive(draws=25).prior
 
         fake_idata = InferenceData(posterior=prior)
 
@@ -1135,7 +1135,7 @@ class TestSamplePriorPredictive:
                     compute_convergence_checks=False,
                 )
         sim_priors = pm.sample_prior_predictive(
-            return_inferencedata=False, samples=20, model=dm_model
+            return_inferencedata=False, draws=20, model=dm_model
         )
         sim_ppc = pm.sample_posterior_predictive(
             burned_trace, return_inferencedata=False, model=dm_model
@@ -1227,7 +1227,7 @@ class TestSamplePriorPredictive:
             mu = pm.Beta("mu", alpha=1, beta=1)
             psi = pm.HalfNormal("psi", sigma=1)
             pm.ZeroInflatedPoisson("suppliers", psi=psi, mu=mu, size=20)
-            gen_data = pm.sample_prior_predictive(samples=5000)
+            gen_data = pm.sample_prior_predictive(draws=5000)
             assert gen_data.prior["mu"].shape == (1, 5000)
             assert gen_data.prior["psi"].shape == (1, 5000)
             assert gen_data.prior["suppliers"].shape == (1, 5000, 20)
@@ -1240,7 +1240,7 @@ class TestSamplePriorPredictive:
 
         with m:
             with pytest.warns(UserWarning, match=warning_msg):
-                pm.sample_prior_predictive(samples=5)
+                pm.sample_prior_predictive(draws=5)
 
     def test_transformed_vars_not_supported(self):
         with pm.Model() as model:
@@ -1260,7 +1260,7 @@ class TestSamplePriorPredictive:
             c = pm.Normal("c")
             d = pm.Normal("d")
             prior1 = pm.sample_prior_predictive(
-                samples=1, var_names=["a", "b", "c", "d"], random_seed=seed
+                draws=1, var_names=["a", "b", "c", "d"], random_seed=seed
             )
 
         with pm.Model() as m2:
@@ -1269,7 +1269,7 @@ class TestSamplePriorPredictive:
             c = pm.Normal("c")
             d = pm.Normal("d")
             prior2 = pm.sample_prior_predictive(
-                samples=1, var_names=["b", "a", "d", "c"], random_seed=seed
+                draws=1, var_names=["b", "a", "d", "c"], random_seed=seed
             )
 
         assert prior1.prior["a"] == prior2.prior["a"]
@@ -1284,7 +1284,7 @@ class TestSamplePriorPredictive:
             y = pm.Deterministic("y", x + sharedvar)
 
             prior = pm.sample_prior_predictive(
-                samples=5,
+                draws=5,
                 return_inferencedata=False,
                 compile_kwargs=dict(
                     mode=Mode("py"),
@@ -1308,7 +1308,7 @@ class TestSamplePosteriorPredictive:
 
         with pmodel:
             prior = pm.sample_prior_predictive(
-                samples=20,
+                draws=20,
                 return_inferencedata=False,
             )
             idat = pm.to_inference_data(trace, prior=prior)
@@ -1367,7 +1367,7 @@ def test_distinct_rvs():
         Y_rv = pm.Normal("y")
 
         pp_samples = pm.sample_prior_predictive(
-            samples=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
+            draws=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
         )
 
     assert X_rv.owner.inputs[0] != Y_rv.owner.inputs[0]
@@ -1377,7 +1377,7 @@ def test_distinct_rvs():
         Y_rv = pm.Normal("y")
 
         pp_samples_2 = pm.sample_prior_predictive(
-            samples=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
+            draws=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
         )
 
     assert np.array_equal(pp_samples["y"], pp_samples_2["y"])
@@ -1706,3 +1706,12 @@ def test_observed_dependent_deterministics():
         det_mixed = pm.Deterministic("det_mixed", free + obs)
 
     assert set(observed_dependent_deterministics(m)) == {det_obs, det_obs2, det_mixed}
+
+
+def test_sample_prior_predictive_samples_deprecated_warns() -> None:
+    with pm.Model() as m:
+        pm.Normal("a")
+
+    match = "The samples argument has been deprecated"
+    with pytest.warns(DeprecationWarning, match=match):
+        pm.sample_prior_predictive(model=m, samples=10)

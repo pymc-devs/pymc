@@ -338,19 +338,20 @@ def observed_dependent_deterministics(model: Model):
 
 
 def sample_prior_predictive(
-    samples: int = 500,
+    draws: int = 500,
     model: Model | None = None,
     var_names: Iterable[str] | None = None,
     random_seed: RandomState = None,
     return_inferencedata: bool = True,
     idata_kwargs: dict | None = None,
     compile_kwargs: dict | None = None,
+    samples: int | None = None,
 ) -> InferenceData | dict[str, np.ndarray]:
     """Generate samples from the prior predictive distribution.
 
     Parameters
     ----------
-    samples : int
+    draws : int
         Number of samples from the prior predictive to generate. Defaults to 500.
     model : Model (optional if in ``with`` context)
     var_names : Iterable[str]
@@ -366,6 +367,8 @@ def sample_prior_predictive(
         Keyword arguments for :func:`pymc.to_inference_data`
     compile_kwargs: dict, optional
         Keyword arguments for :func:`pymc.pytensorf.compile_pymc`.
+    samples : int
+        Number of samples from the prior predictive to generate. Deprecated in favor of `draws`.
 
     Returns
     -------
@@ -373,6 +376,15 @@ def sample_prior_predictive(
         An ArviZ ``InferenceData`` object containing the prior and prior predictive samples (default),
         or a dictionary with variable names as keys and samples as numpy arrays.
     """
+    if samples is not None:
+        warnings.warn(
+            f"The samples argument has been deprecated in favor of draws. Use draws={samples} going forward.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        draws = samples
+
     model = modelcontext(model)
 
     if model.potentials:
@@ -415,7 +427,7 @@ def sample_prior_predictive(
 
     # All model variables have a name, but mypy does not know this
     _log.info(f"Sampling: {list(sorted(volatile_basic_rvs, key=lambda var: var.name))}")  # type: ignore
-    values = zip(*(sampler_fn() for i in range(samples)))
+    values = zip(*(sampler_fn() for i in range(draws)))
 
     data = {k: np.stack(v) for k, v in zip(names, values)}
     if data is None:
