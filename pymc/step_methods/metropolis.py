@@ -787,8 +787,13 @@ class DEMetropolis(PopulationArrayStepShared):
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
-        else:
+        elif S.ndim == 1:
             self.proposal_dist = NormalProposal(S)
+        elif S.ndim == 2:
+            self.proposal_dist = MultivariateNormalProposal(S)
+        else:
+            raise ValueError("Invalid rank for variance: %s" % S.ndim)
+
 
         self.scaling = np.atleast_1d(scaling).astype("d")
         if lamb is None:
@@ -931,8 +936,12 @@ class DEMetropolisZ(ArrayStepShared):
 
         if proposal_dist is not None:
             self.proposal_dist = proposal_dist(S)
-        else:
+        elif S.ndim == 1:
             self.proposal_dist = NormalProposal(S)
+        elif S.ndim == 2:
+            self.proposal_dist = MultivariateNormalProposal(S)
+        else:
+            raise ValueError("Invalid rank for variance: %s" % S.ndim)
 
         self.scaling = np.atleast_1d(scaling).astype("d")
         if lamb is None:
