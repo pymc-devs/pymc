@@ -1158,23 +1158,18 @@ class Categorical(Discrete):
 
     def logp(value, p):
         k = pt.shape(p)[-1]
-        p_ = p
         value_clip = pt.clip(value, 0, k - 1)
 
-        if p.ndim > 1:
-            if p.ndim > value_clip.ndim:
-                value_clip = pt.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
-            elif p.ndim < value_clip.ndim:
-                p = pt.shape_padleft(p, value_clip.ndim - p_.ndim)
-            pattern = (p.ndim - 1, *range(p.ndim - 1))
-            a = pt.log(
-                pt.take_along_axis(
-                    p.dimshuffle(pattern),
-                    value_clip,
-                )
-            )
-        else:
-            a = pt.log(p[value_clip])
+        # In the standard case p has one more dimension than value
+        dim_diff = p.type.ndim - value.type.ndim
+        if dim_diff > 1:
+            # p brodacasts implicitly beyond value
+            value_clip = pt.shape_padleft(value_clip, dim_diff - 1)
+        elif dim_diff < 1:
+            # value broadcasts implicitly beyond p
+            p = pt.shape_padleft(p, 1 - dim_diff)
+
+        a = pt.log(pt.take_along_axis(p, value_clip[..., None], axis=-1).squeeze(-1))
 
         res = pt.switch(
             pt.or_(pt.lt(value, 0), pt.gt(value, k - 1)),
@@ -1184,8 +1179,8 @@ class Categorical(Discrete):
 
         return check_parameters(
             res,
-            0 <= p_,
-            p_ <= 1,
+            0 <= p,
+            p <= 1,
             pt.isclose(pt.sum(p, axis=-1), 1),
             msg="0 <= p <=1, sum(p) = 1",
         )
