@@ -39,7 +39,6 @@ from pymc.model import modelcontext
 from pymc.pytensorf import convert_observed_data
 
 __all__ = [
-    "broadcast_dist_samples_shape",
     "to_tuple",
     "rv_size_is_none",
     "change_dist_size",
@@ -87,86 +86,6 @@ def _check_shape_type(shape):
     except Exception:
         raise TypeError(f"Supplied value {shape} does not represent a valid shape")
     return tuple(out)
-
-
-def broadcast_dist_samples_shape(shapes, size=None):
-    """Apply shape broadcasting to shape tuples but assuming that the shapes
-    correspond to draws from random variables, with the `size` tuple possibly
-    prepended to it. The `size` prepend is ignored to consider if the supplied
-    `shapes` can broadcast or not. It is prepended to the resulting broadcasted
-    `shapes`, if any of the shape tuples had the `size` prepend.
-
-    Parameters
-    ----------
-    shapes: Iterable of tuples holding the distribution samples shapes
-    size: None, int or tuple (optional)
-        size of the sample set requested.
-
-    Returns
-    -------
-    tuple of the resulting shape
-
-    Examples
-    --------
-    .. code-block:: python
-
-        size = 100
-        shape0 = (size,)
-        shape1 = (size, 5)
-        shape2 = (size, 4, 5)
-        out = broadcast_dist_samples_shape([shape0, shape1, shape2],
-                                           size=size)
-        assert out == (size, 4, 5)
-
-    .. code-block:: python
-
-        size = 100
-        shape0 = (size,)
-        shape1 = (5,)
-        shape2 = (4, 5)
-        out = broadcast_dist_samples_shape([shape0, shape1, shape2],
-                                           size=size)
-        assert out == (size, 4, 5)
-
-    .. code-block:: python
-
-        size = 100
-        shape0 = (1,)
-        shape1 = (5,)
-        shape2 = (4, 5)
-        out = broadcast_dist_samples_shape([shape0, shape1, shape2],
-                                           size=size)
-        assert out == (4, 5)
-    """
-    if size is None:
-        broadcasted_shape = np.broadcast_shapes(*shapes)
-        if broadcasted_shape is None:
-            tmp = ", ".join([f"{s}" for s in shapes])
-            raise ValueError(f"Cannot broadcast provided shapes {tmp} given size: {size}")
-        return broadcasted_shape
-    shapes = [_check_shape_type(s) for s in shapes]
-    _size = to_tuple(size)
-    # samples shapes without the size prepend
-    sp_shapes = [s[len(_size) :] if _size == s[: min([len(_size), len(s)])] else s for s in shapes]
-    try:
-        broadcast_shape = np.broadcast_shapes(*sp_shapes)
-    except ValueError:
-        tmp = ", ".join([f"{s}" for s in shapes])
-        raise ValueError(f"Cannot broadcast provided shapes {tmp} given size: {size}")
-    broadcastable_shapes = []
-    for shape, sp_shape in zip(shapes, sp_shapes):
-        if _size == shape[: len(_size)]:
-            # If size prepends the shape, then we have to add broadcasting axis
-            # in the middle
-            p_shape = (
-                shape[: len(_size)]
-                + (1,) * (len(broadcast_shape) - len(sp_shape))
-                + shape[len(_size) :]
-            )
-        else:
-            p_shape = shape
-        broadcastable_shapes.append(p_shape)
-    return np.broadcast_shapes(*broadcastable_shapes)
 
 
 # User-provided can be lazily specified as scalars

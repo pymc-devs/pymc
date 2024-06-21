@@ -62,7 +62,6 @@ from pymc.distributions.distribution import (
 )
 from pymc.distributions.shape_utils import (
     _change_dist_size,
-    broadcast_dist_samples_shape,
     change_dist_size,
     get_support_shape,
     implicit_size_from_params,
@@ -1685,23 +1684,12 @@ class MatrixNormalRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, mu, rowchol, colchol, size=None):
-        size = to_tuple(size)
-        dist_shape = to_tuple([rowchol.shape[0], colchol.shape[0]])
+        if size is None:
+            size = np.broadcast_shapes(mu.shape[:-2], rowchol.shape[:-2], colchol.shape[:-2])
+        dist_shape = (rowchol.shape[-2], colchol.shape[-2])
         output_shape = size + dist_shape
-
-        # Broadcasting all parameters
-        shapes = [mu.shape, output_shape]
-        broadcastable_shape = broadcast_dist_samples_shape(shapes, size=size)
-        mu = np.broadcast_to(mu, shape=broadcastable_shape)
-        rowchol = np.broadcast_to(rowchol, shape=size + rowchol.shape[-2:])
-
-        colchol = np.broadcast_to(colchol, shape=size + colchol.shape[-2:])
-        colchol = np.swapaxes(colchol, -1, -2)  # Take transpose
-
         standard_normal = rng.standard_normal(output_shape)
-        samples = mu + np.matmul(rowchol, np.matmul(standard_normal, colchol))
-
-        return samples
+        return mu + np.matmul(rowchol, np.matmul(standard_normal, np.swapaxes(colchol, -1, -2)))
 
 
 matrixnormal = MatrixNormalRV()
