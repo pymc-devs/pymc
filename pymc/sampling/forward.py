@@ -795,10 +795,17 @@ def sample_posterior_predictive(
     constant_coords = set()
     for dim, coord in trace_coords.items():
         current_coord = model.coords.get(dim, None)
+        current_length = model.dim_lengths.get(dim, None)
+        if hasattr(current_length, 'eval'):
+            current_length = current_length.eval()
         if (
             current_coord is not None
             and len(coord) == len(current_coord)
             and np.all(coord == current_coord)
+        ) or (
+            # Coord was defined without values (only length)
+            current_coord is None
+            and len(coord) == current_length
         ):
             constant_coords.add(dim)
 
