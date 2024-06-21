@@ -2094,30 +2094,25 @@ class KroneckerNormal(Continuous):
 class CARRV(RandomVariable):
     name = "car"
     ndim_supp = 1
-    ndims_params = [1, 2, 0, 0]
+    ndims_params = [1, 2, 0, 0, 0]
     dtype = "floatX"
     _print_name = ("CAR", "\\operatorname{CAR}")
 
-    def make_node(self, rng, size, dtype, mu, W, alpha, tau):
+    def make_node(self, rng, size, dtype, mu, W, alpha, tau, W_is_valid):
         mu = pt.as_tensor_variable(mu)
-
         W = pytensor.sparse.as_sparse_or_tensor_variable(W)
-        if not W.ndim == 2:
-            raise ValueError("W must be a matrix (ndim=2).")
-
-        sparse = isinstance(W.type, pytensor.sparse.SparseTensorType)
-        msg = "W must be a symmetric adjacency matrix."
-        if sparse:
-            abs_diff = pytensor.sparse.basic.mul(pytensor.sparse.sign(W - W.T), W - W.T)
-            W = Assert(msg)(W, pt.isclose(pytensor.sparse.sp_sum(abs_diff), 0))
-        else:
-            W = Assert(msg)(W, pt.allclose(W, W.T))
-
         tau = pt.as_tensor_variable(tau)
-
         alpha = pt.as_tensor_variable(alpha)
+        W_is_valid = pt.as_tensor_variable(W_is_valid, dtype=bool)
 
-        return super().make_node(rng, size, dtype, mu, W, alpha, tau)
+        if W.ndim != 2:
+            raise TypeError("W must be a matrix")
+        if tau.ndim != 0:
+            raise TypeError("tau must be a scalar")
+        if alpha.ndim != 0:
+            raise TypeError("alpha must be a scalar")
+
+        return super().make_node(rng, size, dtype, mu, W, alpha, tau, W_is_valid)
 
     def _supp_shape_from_params(self, dist_params, param_shapes=None):
         return supp_shape_from_ref_param_shape(
@@ -2128,22 +2123,26 @@ class CARRV(RandomVariable):
         )
 
     @classmethod
-    def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, size):
+    def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, W_is_valid, size):
         """
         Implementation of algorithm from paper
         Havard Rue, 2001. "Fast sampling of Gaussian Markov random fields,"
         Journal of the Royal Statistical Society Series B, Royal Statistical Society,
         vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288
         """
+        if not W_is_valid.all():
+            raise ValueError("W must be a valid adjacency matrix")
+
         if np.any(alpha >= 1) or np.any(alpha <= -1):
             raise ValueError("the domain of alpha is: -1 < alpha < 1")
 
         if not scipy.sparse.issparse(W):
             W = scipy.sparse.csr_matrix(W)
-        s = np.asarray(W.sum(axis=0))[0]
-        D = scipy.sparse.diags(s)
         tau = scipy.sparse.csr_matrix(tau)
         alpha = scipy.sparse.csr_matrix(alpha)
+
+        s = np.asarray(W.sum(axis=0))[0]
+        D = scipy.sparse.diags(s)
 
         Q = tau.multiply(D - alpha.multiply(W))
 
@@ -2222,12 +2221,21 @@ class CAR(Continuous):
 
     @classmethod
     def dist(cls, mu, W, alpha, tau, *args, **kwargs):
-        return super().dist([mu, W, alpha, tau], **kwargs)
+        # This variable has an expensive validation check, that we want to constant-fold if possible
+        # So it's passed as an explicit input
+        W = pytensor.sparse.as_sparse_or_tensor_variable(W)
+        if isinstance(W.type, pytensor.sparse.SparseTensorType):
+            abs_diff = pytensor.sparse.basic.mul(pytensor.sparse.sign(W - W.T), W - W.T)
+            W_is_valid = pt.isclose(pytensor.sparse.sp_sum(abs_diff), 0)
+        else:
+            W_is_valid = pt.allclose(W, W.T)
 
-    def support_point(rv, size, mu, W, alpha, tau):
+        return super().dist([mu, W, alpha, tau, W_is_valid], **kwargs)
+
+    def support_point(rv, size, mu, W, alpha, tau, W_is_valid):
         return pt.full_like(rv, mu)
 
-    def logp(value, mu, W, alpha, tau):
+    def logp(value, mu, W, alpha, tau, W_is_valid):
         """
         Calculate log-probability of a CAR-distributed vector
         at specified value. This log probability function differs from
@@ -2277,7 +2285,8 @@ class CAR(Continuous):
             -1 < alpha,
             alpha < 1,
             tau > 0,
-            msg="-1 < alpha < 1, tau > 0",
+            W_is_valid,
+            msg="-1 < alpha < 1, tau > 0, W is a symmetric adjacency matrix.",
         )
 
 
