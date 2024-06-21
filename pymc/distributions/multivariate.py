@@ -1579,7 +1579,9 @@ class _LKJCorr(BoundedContinuous):
 
 @_default_transform.register(_LKJCorr)
 def lkjcorr_default_transform(op, rv):
-    return MultivariateIntervalTransform(-1.0, 1.0)
+    _, _, _, n, *_ = rv.owner.inputs
+    n = n.eval()
+    return transforms.CholeskyCorr(n)
 
 
 class LKJCorr:
