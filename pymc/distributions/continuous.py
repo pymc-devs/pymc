@@ -373,10 +373,6 @@ class Flat(Continuous):
 
     rv_op = flat
 
-    def __new__(cls, *args, **kwargs):
-        kwargs.setdefault("initval", "support_point")
-        return super().__new__(cls, *args, **kwargs)
-
     @classmethod
     def dist(cls, **kwargs):
         res = super().dist([], **kwargs)
@@ -413,10 +409,6 @@ class HalfFlat(PositiveContinuous):
     """Improper flat prior over the positive reals."""
 
     rv_op = halfflat
-
-    def __new__(cls, *args, **kwargs):
-        kwargs.setdefault("initval", "support_point")
-        return super().__new__(cls, *args, **kwargs)
 
     @classmethod
     def dist(cls, **kwargs):
