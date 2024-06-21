@@ -898,15 +898,15 @@ def test_car_matrix_check(sparse):
         W = pytensor.sparse.csr_from_dense(W)
 
     car_dist = pm.CAR.dist(mu, W, alpha, tau)
-    with pytest.raises(AssertionError, match="W must be a symmetric adjacency matrix"):
+    with pytest.raises(ParameterValueError, match="W is a symmetric adjacency matrix"):
         logp(car_dist, xs).eval()
 
     # W.ndim != 2
     if not sparse:
         W = np.array([0.0, 1.0, 2.0, 0.0])
         W = pytensor.tensor.as_tensor_variable(W)
-        with pytest.raises(ValueError, match="W must be a matrix"):
-            car_dist = pm.CAR.dist(mu, W, alpha, tau)
+        with pytest.raises(TypeError, match="W must be a matrix"):
+            pm.CAR.dist(mu, W, alpha, tau)
 
 
 @pytest.mark.parametrize("alpha", [1, -1])
@@ -926,7 +926,7 @@ def test_car_alpha_bounds(alpha):
     with pytest.raises(ValueError, match="the domain of alpha is: -1 < alpha < 1"):
         pm.draw(car_dist)
 
-    with pytest.raises(ValueError, match="-1 < alpha < 1, tau > 0"):
+    with pytest.raises(ParameterValueError, match="-1 < alpha < 1, tau > 0"):
         pm.logp(car_dist, values).eval()
 
 
