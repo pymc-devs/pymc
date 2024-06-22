@@ -1,3 +1,56 @@
+[build-system]
+requires = ["setuptools >= 63.0", "versioneer[toml]"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+exclude = ["benchmarks", "binder", "conda-envs", "docs", "scripts", "tests"]
+
+[project]
+dynamic = ["version"]
+name = "pymc"
+authors = [{name = "PyMC Developers", email = "pymc.devs@gmail.com"}]
+description = "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with PyTensor"
+readme = {file = "README.rst", content-type = "text/x-rst"}
+requires-python = ">= 3.10"
+dependencies = [
+  "arviz>=0.13.0",
+  "cachetools>=4.2.1",
+  "cloudpickle",
+  "numpy>=1.15.0",
+  "pandas>=0.24.0",
+  "pytensor>=2.22.1,<2.23",
+  "rich>=13.7.1",
+  "scipy>=1.4.1",
+  "threadpoolctl>=3.1.0,<4.0.0",
+  "typing-extensions>=3.7.4",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "License :: OSI Approved :: Apache Software License",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Mathematics",
+  "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://www.pymc.io/"
+Documentation = "https://www.pymc.io/projects/docs/en/stable/api.html"
+Repository = "https://github.com/pymc-devs/pymc"
+Issues = "https://github.com/pymc-devs/pymc/issues"
+Releases = "https://github.com/pymc-devs/pymc/releases"
+
+[project.optional-dependencies]
+test = [
+  "pytest",
+  "pytest-cov",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 minversion = "6.0"
