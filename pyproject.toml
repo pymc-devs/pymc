@@ -1,8 +1,19 @@
+[build-system]
+requires = ["setuptools", "versioneer[toml]==0.29"]
+build-backend = "setuptools.build_meta"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 minversion = "6.0"
 xfail_strict = true
 addopts = ["--color=yes"]
+
+[tool.versioneer]
+VCS = "git"
+style = "pep440"
+versionfile_source = "pymc/_version.py"
+versionfile_build = "pymc/_version.py"
+tag_prefix = "v"
 
 [tool.mypy]
 python_version = "3.10"
@@ -20,7 +31,7 @@ warn_unused_ignores = false
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-extend-exclude = ["versioneer.py", "_version.py"]
+extend-exclude = ["_version.py"]
 
 [tool.ruff.lint]
 select = ["D", "E", "F", "I", "UP", "W", "RUF"]
