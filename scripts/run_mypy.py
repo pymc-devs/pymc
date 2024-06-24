@@ -25,6 +25,7 @@ FAILING = """
 pymc/distributions/continuous.py
 pymc/distributions/dist_math.py
 pymc/distributions/distribution.py
+pymc/distributions/custom.py
 pymc/distributions/multivariate.py
 pymc/distributions/timeseries.py
 pymc/distributions/truncated.py
