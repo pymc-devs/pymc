@@ -22,12 +22,8 @@ from pytensor.graph import ancestors
 from pytensor.tensor.variable import TensorConstant
 from scipy.cluster.vq import kmeans
 
-# Avoid circular dependency when importing modelcontext
-from pymc.distributions.distribution import Distribution
-from pymc.model import modelcontext
+from pymc.model.core import modelcontext
 from pymc.pytensorf import compile_pymc
-
-_ = Distribution
 
 JITTER_DEFAULT = 1e-6
 
