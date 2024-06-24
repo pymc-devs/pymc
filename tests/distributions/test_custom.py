@@ -23,27 +23,34 @@ from pytensor import scan
 from pytensor import tensor as pt
 from scipy import stats as st
 
-import pymc as pm
-
-from pymc import (
-    CustomDist,
-    Deterministic,
+from pymc.distributions import (
+    Bernoulli,
+    Beta,
+    Categorical,
+    ChiSquared,
     DiracDelta,
+    Flat,
     HalfNormal,
     LogNormal,
-    Model,
+    Mixture,
+    MvNormal,
     Normal,
-    draw,
-    logcdf,
-    logp,
-    sample,
+    NormalMixture,
+    RandomWalk,
+    StudentT,
+    Truncated,
+    Uniform,
 )
-from pymc.distributions.custom import CustomDistRV, CustomSymbolicDistRV
+from pymc.distributions.custom import CustomDist, CustomDistRV, CustomSymbolicDistRV
 from pymc.distributions.distribution import support_point
 from pymc.distributions.shape_utils import change_dist_size, rv_size_is_none, to_tuple
 from pymc.distributions.transforms import log
 from pymc.exceptions import BlockModelAccessError
+from pymc.logprob import logcdf, logp
+from pymc.model import Deterministic, Model
 from pymc.pytensorf import collect_default_updates
+from pymc.sampling import draw, sample, sample_posterior_predictive
+from pymc.step_methods import Metropolis
 from pymc.testing import assert_support_point_is_expected
 
 
@@ -88,15 +95,15 @@ class TestCustomDist:
             custom_dist = CustomDist(
                 "custom_dist",
                 mu,
-                logp=lambda value, mu: logp(pm.Normal.dist(mu, 1, size=100), value),
+                logp=lambda value, mu: logp(Normal.dist(mu, 1, size=100), value),
                 observed=np.random.randn(100),
                 initval=0,
             )
             assert isinstance(custom_dist.owner.op, CustomDistRV)
-            idata = sample(tune=50, draws=100, cores=1, step=pm.Metropolis())
+            idata = sample(tune=50, draws=100, cores=1, step=Metropolis())
 
         with pytest.raises(NotImplementedError):
-            pm.sample_posterior_predictive(idata, model=model)
+            sample_posterior_predictive(idata, model=model)
 
     @pytest.mark.xfail(
         NotImplementedError,
@@ -159,7 +166,7 @@ class TestCustomDist:
         with Model() as model:
 
             def logp(value, mu):
-                return pm.MvNormal.logp(value, mu, pt.eye(mu.shape[0]))
+                return MvNormal.logp(value, mu, pt.eye(mu.shape[0]))
 
             mu = Normal("mu", size=supp_shape)
             a = CustomDist("a", mu, logp=logp, ndims_params=[1], ndim_supp=1, size=size)
@@ -184,14 +191,14 @@ class TestCustomDist:
     def test_custom_dist_default_support_point_univariate(self, support_point, size, expected):
         if support_point == "custom_support_point":
             support_point = lambda rv, size, *rv_inputs: 5 * pt.ones(size, dtype=rv.dtype)  # noqa E731
-        with pm.Model() as model:
+        with Model() as model:
             x = CustomDist("x", support_point=support_point, size=size)
         assert isinstance(x.owner.op, CustomDistRV)
         assert_support_point_is_expected(model, expected, check_finite_logp=False)
 
     def test_custom_dist_moment_future_warning(self):
         moment = lambda rv, size, *rv_inputs: 5 * pt.ones(size, dtype=rv.dtype)  # noqa E731
-        with pm.Model() as model:
+        with Model() as model:
             with pytest.warns(
                 FutureWarning, match="`moment` argument is deprecated. Use `support_point` instead."
             ):
@@ -280,24 +287,24 @@ class TestCustomDist:
         mu = 1
         x = CustomDist.dist(
             mu,
-            logp=lambda value, mu: pm.logp(pm.Normal.dist(mu), value),
+            logp=lambda value, mu: logp(Normal.dist(mu), value),
             random=lambda mu, rng=None, size=None: rng.normal(loc=mu, scale=1, size=size),
             shape=(3,),
         )
 
         x = cloudpickle.loads(cloudpickle.dumps(x))
 
-        test_value = pm.draw(x, random_seed=1)
-        assert np.all(test_value == pm.draw(x, random_seed=1))
+        test_value = draw(x, random_seed=1)
+        assert np.all(test_value == draw(x, random_seed=1))
 
-        x_logp = pm.logp(x, test_value)
+        x_logp = logp(x, test_value)
         assert np.allclose(x_logp.eval(), st.norm(1).logpdf(test_value))
 
 
 class TestCustomSymbolicDist:
     def test_basic(self):
         def custom_dist(mu, sigma, size):
-            return pt.exp(pm.Normal.dist(mu, sigma, size=size))
+            return pt.exp(Normal.dist(mu, sigma, size=size))
 
         with Model() as m:
             mu = Normal("mu")
@@ -315,7 +322,7 @@ class TestCustomSymbolicDist:
         assert isinstance(lognormal.owner.op, CustomSymbolicDistRV)
 
         # Fix mu and sigma, so that all source of randomness comes from the symbolic RV
-        draws = pm.draw(lognormal, draws=3, givens={mu: 0.0, sigma: 1.0})
+        draws = draw(lognormal, draws=3, givens={mu: 0.0, sigma: 1.0})
         assert draws.shape == (3, 10)
         assert np.unique(draws).size == 30
 
@@ -334,31 +341,31 @@ class TestCustomSymbolicDist:
                 (5, 1),
                 None,
                 np.exp(5),
-                lambda mu, sigma, size: pt.exp(pm.Normal.dist(mu, sigma, size=size)),
+                lambda mu, sigma, size: pt.exp(Normal.dist(mu, sigma, size=size)),
             ),
             (
                 (2, np.ones(5)),
                 None,
                 np.exp(2 + np.ones(5)),
-                lambda mu, sigma, size: pt.exp(pm.Normal.dist(mu, sigma, size=size) + 1.0),
+                lambda mu, sigma, size: pt.exp(Normal.dist(mu, sigma, size=size) + 1.0),
             ),
             (
                 (1, 2),
                 None,
                 np.sqrt(np.exp(1 + 0.5 * 2**2)),
-                lambda mu, sigma, size: pt.sqrt(pm.LogNormal.dist(mu, sigma, size=size)),
+                lambda mu, sigma, size: pt.sqrt(LogNormal.dist(mu, sigma, size=size)),
             ),
             (
                 (4,),
                 (3,),
                 np.log([4, 4, 4]),
-                lambda nu, size: pt.log(pm.ChiSquared.dist(nu, size=size)),
+                lambda nu, size: pt.log(ChiSquared.dist(nu, size=size)),
             ),
             (
                 (12, 1),
                 None,
                 12,
-                lambda mu1, sigma, size: pm.Normal.dist(mu1, sigma, size=size),
+                lambda mu1, sigma, size: Normal.dist(mu1, sigma, size=size),
             ),
         ],
     )
@@ -369,7 +376,7 @@ class TestCustomSymbolicDist:
 
     def test_custom_dist_default_support_point_scan(self):
         def scan_step(left, right):
-            x = pm.Uniform.dist(left, right)
+            x = Uniform.dist(left, right)
             x_update = collect_default_updates([x])
             return x, x_update
 
@@ -390,7 +397,7 @@ class TestCustomSymbolicDist:
 
     def test_custom_dist_default_support_point_scan_recurring(self):
         def scan_step(xtm1):
-            x = pm.Normal.dist(xtm1 + 1)
+            x = Normal.dist(xtm1 + 1)
             x_update = collect_default_updates([x])
             return x, x_update
 
@@ -417,7 +424,7 @@ class TestCustomSymbolicDist:
     )
     def test_custom_dist_default_support_point_nested(self, left, right, size, expected):
         def dist_fn(left, right, size):
-            return pm.Truncated.dist(pm.Normal.dist(0, 1), left, right, size=size) + 5
+            return Truncated.dist(Normal.dist(0, 1), left, right, size=size) + 5
 
         with Model() as model:
             CustomDist("x", left, right, size=size, dist=dist_fn)
@@ -425,7 +432,7 @@ class TestCustomSymbolicDist:
 
     def test_logcdf_inference(self):
         def custom_dist(mu, sigma, size):
-            return pt.exp(pm.Normal.dist(mu, sigma, size=size))
+            return pt.exp(Normal.dist(mu, sigma, size=size))
 
         mu = 1
         sigma = 1.25
@@ -435,16 +442,16 @@ class TestCustomSymbolicDist:
         ref_lognormal = LogNormal.dist(mu, sigma)
 
         np.testing.assert_allclose(
-            pm.logcdf(custom_lognormal, test_value).eval(),
-            pm.logcdf(ref_lognormal, test_value).eval(),
+            logcdf(custom_lognormal, test_value).eval(),
+            logcdf(ref_lognormal, test_value).eval(),
         )
 
     def test_random_multiple_rngs(self):
         def custom_dist(p, sigma, size):
-            idx = pm.Bernoulli.dist(p=p)
+            idx = Bernoulli.dist(p=p)
             if rv_size_is_none(size):
                 size = pt.broadcast_shape(p, sigma)
-            comps = pm.Normal.dist([-sigma, sigma], 1e-1, size=(*size, 2)).T
+            comps = Normal.dist([-sigma, sigma], 1e-1, size=(*size, 2)).T
             return comps[idx]
 
         customdist = CustomDist.dist(
@@ -461,7 +468,7 @@ class TestCustomSymbolicDist:
         assert len(node.outputs) == 3  # RV and 2 updated RNGs
         assert len(node.op.update(node)) == 2
 
-        draws = pm.draw(customdist, draws=2, random_seed=123)
+        draws = draw(customdist, draws=2, random_seed=123)
         assert np.unique(draws).size == 20
 
     def test_custom_methods(self):
@@ -494,7 +501,7 @@ class TestCustomSymbolicDist:
 
     def test_change_size(self):
         def custom_dist(mu, sigma, size):
-            return pt.exp(pm.Normal.dist(mu, sigma, size=size))
+            return pt.exp(Normal.dist(mu, sigma, size=size))
 
         lognormal = CustomDist.dist(
             0,
@@ -515,9 +522,9 @@ class TestCustomSymbolicDist:
 
     def test_error_model_access(self):
         def custom_dist(size):
-            return pm.Flat("Flat", size=size)
+            return Flat("Flat", size=size)
 
-        with pm.Model() as m:
+        with Model() as m:
             with pytest.raises(
                 BlockModelAccessError,
                 match="Model variables cannot be created in the dist function",
@@ -526,7 +533,7 @@ class TestCustomSymbolicDist:
 
     def test_api_change_error(self):
         def old_random(size):
-            return pm.Flat.dist(size=size)
+            return Flat.dist(size=size)
 
         # Old API raises
         with pytest.raises(TypeError, match="API change: function passed to `random` argument"):
@@ -541,7 +548,7 @@ class TestCustomSymbolicDist:
                 size = ()
 
             def step(xtm1, nu, sigma):
-                x = pm.StudentT.dist(nu=nu, mu=xtm1, sigma=sigma, shape=size)
+                x = StudentT.dist(nu=nu, mu=xtm1, sigma=sigma, shape=size)
                 return x, collect_default_updates([x])
 
             xs, _ = scan(
@@ -562,52 +569,50 @@ class TestCustomSymbolicDist:
         batch_size = 3
         x = CustomDist.dist(nu, sigma, steps, dist=trw, size=batch_size)
 
-        x_draw = pm.draw(x, random_seed=1)
+        x_draw = draw(x, random_seed=1)
         assert x_draw.shape == (steps, batch_size)
-        np.testing.assert_allclose(pm.draw(x, random_seed=1), x_draw)
-        assert not np.any(pm.draw(x, random_seed=2) == x_draw)
+        np.testing.assert_allclose(draw(x, random_seed=1), x_draw)
+        assert not np.any(draw(x, random_seed=2) == x_draw)
 
-        ref_dist = pm.RandomWalk.dist(
-            init_dist=pm.Flat.dist(),
-            innovation_dist=pm.StudentT.dist(nu=nu, sigma=sigma),
+        ref_dist = RandomWalk.dist(
+            init_dist=Flat.dist(),
+            innovation_dist=StudentT.dist(nu=nu, sigma=sigma),
             steps=steps,
             size=(batch_size,),
         )
         ref_val = pt.concatenate([np.zeros((1, batch_size)), x_draw]).T
 
         np.testing.assert_allclose(
-            pm.logp(x, x_draw).eval().sum(0),
-            pm.logp(ref_dist, ref_val).eval(),
+            logp(x, x_draw).eval().sum(0),
+            logp(ref_dist, ref_val).eval(),
         )
 
     def test_inferred_logp_mixture(self):
         import numpy as np
 
-        import pymc as pm
-
         def shifted_normal(mu, sigma, size):
-            return mu + pm.Normal.dist(0, sigma, shape=size)
+            return mu + Normal.dist(0, sigma, shape=size)
 
         mus = [3.5, -4.3]
         sds = [1.5, 2.3]
         w = [0.3, 0.7]
-        with pm.Model() as m:
+        with Model() as m:
             comp_dists = [
                 CustomDist.dist(mus[0], sds[0], dist=shifted_normal),
                 CustomDist.dist(mus[1], sds[1], dist=shifted_normal),
             ]
-            pm.Mixture("mix", w=w, comp_dists=comp_dists)
+            Mixture("mix", w=w, comp_dists=comp_dists)
 
         test_value = 0.1
         np.testing.assert_allclose(
             m.compile_logp()({"mix": test_value}),
-            pm.logp(pm.NormalMixture.dist(w=w, mu=mus, sigma=sds), test_value).eval(),
+            logp(NormalMixture.dist(w=w, mu=mus, sigma=sds), test_value).eval(),
         )
 
     def test_symbolic_dist(self):
         # Test we can create a SymbolicDist inside a CustomDist
         def dist(size):
-            return pm.Truncated.dist(pm.Beta.dist(1, 1, size=size), lower=0.1, upper=0.9)
+            return Truncated.dist(Beta.dist(1, 1, size=size), lower=0.1, upper=0.9)
 
         assert CustomDist.dist(dist=dist)
 
@@ -616,20 +621,20 @@ class TestCustomSymbolicDist:
 
         def dist(size=None):
             def inner_dist(size=None):
-                return pm.Normal.dist(size=size)
+                return Normal.dist(size=size)
 
             inner_dist = CustomDist.dist(dist=inner_dist, size=size)
             return pt.exp(inner_dist)
 
         rv = CustomDist.dist(dist=dist)
         np.testing.assert_allclose(
-            pm.logp(rv, 1.0).eval(),
-            pm.logp(pm.LogNormal.dist(), 1.0).eval(),
+            logp(rv, 1.0).eval(),
+            logp(LogNormal.dist(), 1.0).eval(),
         )
 
     def test_signature(self):
         def dist(p, size):
-            return -pm.Categorical.dist(p=p, size=size)
+            return -Categorical.dist(p=p, size=size)
 
         out = CustomDist.dist([0.25, 0.75], dist=dist, signature="(p)->()")
         # Size and updates are added automatically to the signature
