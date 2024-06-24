@@ -28,9 +28,9 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 
 from pymc.distributions.continuous import TruncatedNormal, bounded_cont_transform
+from pymc.distributions.custom import CustomSymbolicDistRV
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import (
-    CustomSymbolicDistRV,
     Distribution,
     SymbolicRandomVariable,
     _support_point,
