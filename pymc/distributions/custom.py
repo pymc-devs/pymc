@@ -399,7 +399,7 @@ class _CustomSymbolicDist(Distribution):
         return signature
 
 
-class FiniteLogpPointRewrite(GraphRewriter):
+class SupportPointRewrite(GraphRewriter):
     def rewrite_support_point_scan_node(self, node):
         if not isinstance(node.op, Scan):
             return
@@ -458,7 +458,7 @@ def dist_support_point(op, rv, *args):
     rv_out_idx = node.outputs.index(rv)
 
     fgraph = op.fgraph.clone()
-    replace_support_point = FiniteLogpPointRewrite()
+    replace_support_point = SupportPointRewrite()
     replace_support_point.rewrite(fgraph)
     # Replace dummy inner inputs by outer inputs
     fgraph.replace_all(tuple(zip(op.inner_inputs, args)), import_missing=True)
