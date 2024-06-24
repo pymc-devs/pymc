@@ -41,4 +41,6 @@ print(sys.executable)
 print(pm.__version__)
 print(inspect.signature(pm.sample_prior_predictive))
 print(inspect.getfile(pm))
+print("\n\n")
+print(ispect.getsource(pm))
 ```

@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+# locally installed pymc from PR 7385 should have this line
+
 
 import logging
 
