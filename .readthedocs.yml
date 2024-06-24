@@ -19,3 +19,4 @@ build:
     post_install:
       - mamba list
       - which python
+      - python -m ipykernel install --user --name pymc-docs
