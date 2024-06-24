@@ -646,25 +646,33 @@ def test_reseed_rngs():
         assert rng.get_value().bit_generator.state == bit_generator.state
 
 
-def test_constant_fold():
-    x = pt.random.normal(size=(5,))
-    y = pt.arange(x.size)
+class TestConstantFold:
+    def test_constant_fold(self):
+        x = pt.random.normal(size=(5,))
+        y = pt.arange(x.size)
 
-    res = constant_fold((y, y.shape))
-    assert np.array_equal(res[0], np.arange(5))
-    assert tuple(res[1]) == (5,)
+        res = constant_fold((y, y.shape))
+        assert np.array_equal(res[0], np.arange(5))
+        assert tuple(res[1]) == (5,)
 
+    def test_constant_fold_raises(self):
+        size = pytensor.shared(5)
+        x = pt.random.normal(size=(size,))
+        y = pt.arange(x.size)
 
-def test_constant_fold_raises():
-    size = pytensor.shared(5)
-    x = pt.random.normal(size=(size,))
-    y = pt.arange(x.size)
+        with pytest.raises(NotConstantValueError):
+            constant_fold((y, y.shape))
 
-    with pytest.raises(NotConstantValueError):
-        constant_fold((y, y.shape))
+        res = constant_fold((y, y.shape), raise_not_constant=False)
+        assert tuple(res[1].eval()) == (5,)
 
-    res = constant_fold((y, y.shape), raise_not_constant=False)
-    assert tuple(res[1].eval()) == (5,)
+    def test_inputs_preserved(self):
+        # Make sure constant_folded graph depends on original graph inputs (not copies)
+        # Regression test for #7387
+        a = pt.scalar("a", dtype="int")
+        out = pt.empty((a,))
+        (out_shape,) = constant_fold((out.shape[0],), raise_not_constant=False)
+        assert out_shape is a
 
 
 def test_replace_vars_in_graphs():
