@@ -1045,7 +1045,7 @@ def constant_fold(
         attempting constant folding, and any old non-shared inputs will not work with
         the returned outputs
     """
-    fg = FunctionGraph(outputs=xs, features=[ShapeFeature()], clone=True)
+    fg = FunctionGraph(outputs=xs, features=[ShapeFeature()], copy_inputs=False, clone=True)
 
     # By default, rewrite_graph includes canonicalize which includes constant-folding as the final rewrite
     folded_xs = rewrite_graph(fg).outputs
