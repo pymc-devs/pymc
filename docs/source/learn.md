@@ -35,7 +35,10 @@ is addressed)
 
 ```{jupyter-execute}
 import inspect
+import sys
 import pymc as pm
+print(sys.executable)
 print(pm.__version__)
 print(inspect.signature(pm.sample_prior_predictive))
+print(inspect.getfile(pm))
 ```
