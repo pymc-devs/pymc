@@ -18,6 +18,7 @@ dependencies:
 - typing-extensions>=3.7.4
 - threadpoolctl>=3.1.0
 # Extra dependencies for docs build
+- ipykernel
 - ipython>=7.16
 - jax
 - jupyter-sphinx

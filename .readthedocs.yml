@@ -15,3 +15,7 @@ build:
   os: "ubuntu-22.04"
   tools:
     python: "mambaforge-4.10"
+  jobs:
+    post_install:
+      - mamba list
+      - which python
