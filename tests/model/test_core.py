@@ -890,7 +890,17 @@ class TestSetUpdateCoords:
             rv2.name = "yumyum"
             pmodel.add_named_variable(rv2, dims=("nomnom", None))
 
-    def test_dims_type_check(self):
+    def test_add_named_variable_checks_number_of_dims(self):
+        match = "dim labels were provided"
+        with pm.Model(coords={"bad": range(6)}) as m:
+            with pytest.raises(ValueError, match=match):
+                m.add_named_variable(pt.random.normal(size=(6, 6, 6), name="a"), dims=("bad",))
+
+            # "bad" is an iterable with 3 elements, but we treat strings as a single dim, so it's still invalid
+            with pytest.raises(ValueError, match=match):
+                m.add_named_variable(pt.random.normal(size=(6, 6, 6), name="b"), dims="bad")
+
+    def test_rv_dims_type_check(self):
         with pm.Model(coords={"a": range(5)}) as m:
             with pytest.raises(TypeError, match="Dims must be string"):
                 x = pm.Normal("x", shape=(10, 5), dims=(None, "a"))
@@ -1070,7 +1080,7 @@ def test_determinsitic_with_dims():
     Test to check the passing of dims to the potential
     """
     with pm.Model(coords={"observed": range(10)}) as model:
-        x = pm.Normal("x", 0, 1)
+        x = pm.Normal("x", 0, 1, shape=(10,))
         y = pm.Deterministic("y", x**2, dims=("observed",))
     assert model.named_vars_to_dims == {"y": ("observed",)}
 
@@ -1080,7 +1090,7 @@ def test_potential_with_dims():
     Test to check the passing of dims to the potential
     """
     with pm.Model(coords={"observed": range(10)}) as model:
-        x = pm.Normal("x", 0, 1)
+        x = pm.Normal("x", 0, 1, shape=(10,))
         y = pm.Potential("y", x**2, dims=("observed",))
     assert model.named_vars_to_dims == {"y": ("observed",)}
 

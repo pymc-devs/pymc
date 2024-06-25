@@ -1185,13 +1185,6 @@ class Categorical(Discrete):
         )
 
 
-class _OrderedLogistic(Categorical):
-    r"""
-    Underlying class for ordered logistic distributions.
-    See docs for the OrderedLogistic wrapper class for more details on how to use it in models.
-    """
-
-
 class OrderedLogistic:
     R"""Ordered Logistic distribution.
 
@@ -1263,7 +1256,7 @@ class OrderedLogistic:
     def __new__(cls, name, eta, cutpoints, compute_p=True, **kwargs):
         p = cls.compute_p(eta, cutpoints)
         if compute_p:
-            p = pm.Deterministic(f"{name}_probs", p, dims=kwargs.get("dims"))
+            p = pm.Deterministic(f"{name}_probs", p)
         out_rv = Categorical(name, p=p, **kwargs)
         return out_rv
 
@@ -1367,7 +1360,7 @@ class OrderedProbit:
     def __new__(cls, name, eta, cutpoints, sigma=1, compute_p=True, **kwargs):
         p = cls.compute_p(eta, cutpoints, sigma)
         if compute_p:
-            p = pm.Deterministic(f"{name}_probs", p, dims=kwargs.get("dims"))
+            p = pm.Deterministic(f"{name}_probs", p)
         out_rv = Categorical(name, p=p, **kwargs)
         return out_rv
 

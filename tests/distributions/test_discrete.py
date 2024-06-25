@@ -897,19 +897,25 @@ class TestOrderedLogistic:
         assert p_shape == expected
 
     def test_compute_p(self):
-        with pm.Model() as m:
-            pm.OrderedLogistic("ol_p", cutpoints=np.array([-2, 0, 2]), eta=0)
-            pm.OrderedLogistic("ol_no_p", cutpoints=np.array([-2, 0, 2]), eta=0, compute_p=False)
+        with pm.Model(coords={"test_dim": [0]}) as m:
+            pm.OrderedLogistic("ol_p", cutpoints=np.array([-2, 0, 2]), eta=0, dims="test_dim")
+            pm.OrderedLogistic(
+                "ol_no_p", cutpoints=np.array([-2, 0, 2]), eta=0, compute_p=False, dims="test_dim"
+            )
         assert len(m.deterministics) == 1
 
         x = pm.OrderedLogistic.dist(cutpoints=np.array([-2, 0, 2]), eta=0)
         assert isinstance(x, TensorVariable)
 
         # Test it works with auto-imputation
-        with pm.Model() as m:
+        with pm.Model(coords={"test_dim": [0, 1, 2]}) as m:
             with pytest.warns(ImputationWarning):
                 pm.OrderedLogistic(
-                    "ol", cutpoints=np.array([-2, 0, 2]), eta=0, observed=[0, np.nan, 1]
+                    "ol",
+                    cutpoints=np.array([[-2, 0, 2]]),
+                    eta=0,
+                    observed=[0, np.nan, 1],
+                    dims=["test_dim"],
                 )
         assert len(m.deterministics) == 2  # One from the auto-imputation, the other from compute_p
 
