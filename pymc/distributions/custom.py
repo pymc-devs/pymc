@@ -27,7 +27,7 @@ from pytensor.tensor import TensorVariable, as_tensor_variable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomGeneratorType, RandomType
 from pytensor.tensor.random.utils import normalize_size_param
-from pytensor.tensor.utils import _parse_gufunc_signature, safe_signature
+from pytensor.tensor.utils import safe_signature
 
 from pymc.distributions.distribution import (
     Distribution,
@@ -108,19 +108,9 @@ class _CustomDist(Distribution):
         class_name: str = "CustomDist",
         **kwargs,
     ):
-        if ndim_supp is None or ndims_params is None:
-            if signature is None:
-                ndim_supp = 0
-                ndims_params = [0] * len(dist_params)
-            else:
-                inputs, outputs = _parse_gufunc_signature(signature)
-                ndim_supp = max(len(out) for out in outputs)
-                ndims_params = [len(inp) for inp in inputs]
-
-        if ndim_supp > 0:
-            raise NotImplementedError(
-                "CustomDist with ndim_supp > 0 and without a `dist` function are not supported."
-            )
+        if ndim_supp is None and signature is None:
+            # Assume a scalar distribution
+            signature = safe_signature([0] * len(dist_params), [0])
 
         dist_params = [as_tensor_variable(param) for param in dist_params]
 
@@ -148,6 +138,7 @@ class _CustomDist(Distribution):
             support_point=support_point,
             ndim_supp=ndim_supp,
             ndims_params=ndims_params,
+            signature=signature,
             dtype=dtype,
             class_name=class_name,
             **kwargs,
@@ -161,8 +152,9 @@ class _CustomDist(Distribution):
         logcdf: Callable | None,
         random: Callable | None,
         support_point: Callable | None,
-        ndim_supp: int,
-        ndims_params: Sequence[int],
+        signature: str | None,
+        ndim_supp: int | None,
+        ndims_params: Sequence[int] | None,
         dtype: str,
         class_name: str,
         **kwargs,
@@ -175,6 +167,7 @@ class _CustomDist(Distribution):
                 inplace=False,
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
+                signature=signature,
                 dtype=dtype,
                 _print_name=(class_name, f"\\operatorname{{{class_name}}}"),
                 # Specific to CustomDist
@@ -344,7 +337,7 @@ class _CustomSymbolicDist(Distribution):
             new_rv_op = rv_type(
                 inputs=[*dummy_params, *rngs],
                 outputs=[dummy_rv, *rngs_updates],
-                signature=signature,
+                extended_signature=extended_signature,
             )
             new_rv = new_rv_op(new_size, *dist_params, *rngs)
 
@@ -357,13 +350,13 @@ class _CustomSymbolicDist(Distribution):
 
         inputs = [*dummy_params, *rngs]
         outputs = [dummy_rv, *rngs_updates]
-        signature = cls._infer_final_signature(
+        extended_signature = cls._infer_final_signature(
             signature, n_inputs=len(inputs), n_outputs=len(outputs), n_rngs=len(rngs)
         )
         rv_op = rv_type(
             inputs=inputs,
             outputs=outputs,
-            signature=signature,
+            extended_signature=extended_signature,
         )
         return rv_op(size, *dist_params, *rngs)
 

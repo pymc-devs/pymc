@@ -53,6 +53,9 @@ from pymc.sampling import draw, sample, sample_posterior_predictive
 from pymc.step_methods import Metropolis
 from pymc.testing import assert_support_point_is_expected
 
+# Raise for any warnings in this file
+pytestmark = pytest.mark.filterwarnings("error")
+
 
 class TestCustomDist:
     @pytest.mark.parametrize("size", [(), (3,), (3, 2)], ids=str)
@@ -105,24 +108,24 @@ class TestCustomDist:
         with pytest.raises(NotImplementedError):
             sample_posterior_predictive(idata, model=model)
 
-    @pytest.mark.xfail(
-        NotImplementedError,
-        reason="Support shape of multivariate CustomDist cannot be inferred. See https://github.com/pymc-devs/pytensor/pull/388",
-    )
     @pytest.mark.parametrize("size", [(), (3,), (3, 2)], ids=str)
     def test_custom_dist_with_random_multivariate(self, size):
+        def random(mu, rng, size):
+            return rng.multivariate_normal(
+                mean=mu.ravel(),
+                cov=np.eye(mu.shape[-1]),
+                size=size,
+            )
+
         supp_shape = 5
         with Model() as model:
             mu = Normal("mu", 0, 1, size=supp_shape)
             obs = CustomDist(
                 "custom_dist",
                 mu,
-                random=lambda mu, rng=None, size=None: rng.multivariate_normal(
-                    mean=mu, cov=np.eye(len(mu)), size=size
-                ),
+                random=random,
                 observed=np.random.randn(100, *size, supp_shape),
-                ndims_params=[1],
-                ndim_supp=1,
+                signature="(n)->(n)",
             )
 
         assert isinstance(obs.owner.op, CustomDistRV)
@@ -156,20 +159,16 @@ class TestCustomDist:
             ):
                 CustomDist("a", lambda x: x)
 
-    @pytest.mark.xfail(
-        NotImplementedError,
-        reason="Support shape of multivariate CustomDist cannot be inferred. See https://github.com/pymc-devs/pytensor/pull/388",
-    )
     @pytest.mark.parametrize("size", [None, (), (2,)], ids=str)
     def test_custom_dist_multivariate_logp(self, size):
         supp_shape = 5
         with Model() as model:
 
             def logp(value, mu):
-                return MvNormal.logp(value, mu, pt.eye(mu.shape[0]))
+                return MvNormal.logp(value, mu, pt.eye(mu.shape[-1]))
 
             mu = Normal("mu", size=supp_shape)
-            a = CustomDist("a", mu, logp=logp, ndims_params=[1], ndim_supp=1, size=size)
+            a = CustomDist("a", mu, logp=logp, signature="(n)->(n)", size=size)
 
         assert isinstance(a.owner.op, CustomDistRV)
         mu_test_value = npr.normal(loc=0, scale=1, size=supp_shape).astype(pytensor.config.floatX)
@@ -219,10 +218,6 @@ class TestCustomDist:
         assert evaled_support_point.shape == to_tuple(size)
         assert np.all(evaled_support_point == mu_val)
 
-    @pytest.mark.xfail(
-        NotImplementedError,
-        reason="Support shape of multivariate CustomDist cannot be inferred. See https://github.com/pymc-devs/pytensor/pull/388",
-    )
     @pytest.mark.parametrize("size", [(), (2,), (3, 2)], ids=str)
     def test_custom_dist_custom_support_point_multivariate(self, size):
         def density_support_point(rv, size, mu):
@@ -235,8 +230,7 @@ class TestCustomDist:
                 "a",
                 mu,
                 support_point=density_support_point,
-                ndims_params=[1],
-                ndim_supp=1,
+                signature="(n)->(n)",
                 size=size,
             )
         assert isinstance(a.owner.op, CustomDistRV)
@@ -244,10 +238,6 @@ class TestCustomDist:
         assert evaled_support_point.shape == (*to_tuple(size), 5)
         assert np.all(evaled_support_point == mu_val)
 
-    @pytest.mark.xfail(
-        NotImplementedError,
-        reason="Support shape of multivariate CustomDist cannot be inferred. See https://github.com/pymc-devs/pytensor/pull/388",
-    )
     @pytest.mark.parametrize(
         "with_random, size",
         [
@@ -267,21 +257,14 @@ class TestCustomDist:
         else:
             random = None
 
-        mu_val = np.random.normal(loc=2, scale=1, size=5).astype(pytensor.config.floatX)
         with Model():
             mu = Normal("mu", size=5)
-            a = CustomDist("a", mu, random=random, ndims_params=[1], ndim_supp=1, size=size)
+            a = CustomDist("a", mu, random=random, signature="(n)->(n)", size=size)
         assert isinstance(a.owner.op, CustomDistRV)
         if with_random:
-            evaled_support_point = support_point(a).eval({mu: mu_val})
+            evaled_support_point = support_point(a).eval()
             assert evaled_support_point.shape == (*to_tuple(size), 5)
             assert np.all(evaled_support_point == 0)
-        else:
-            with pytest.raises(
-                TypeError,
-                match="Cannot safely infer the size of a multivariate random variable's support_point.",
-            ):
-                evaled_support_point = support_point(a).eval({mu: mu_val})
 
     def test_dist(self):
         mu = 1
@@ -299,6 +282,12 @@ class TestCustomDist:
 
         x_logp = logp(x, test_value)
         assert np.allclose(x_logp.eval(), st.norm(1).logpdf(test_value))
+
+    def test_multivariate_insufficient_signature(self):
+        with pytest.raises(
+            NotImplementedError, match="signature is not sufficient to infer the support shape"
+        ):
+            CustomDist.dist(signature="(n)->(m)")
 
 
 class TestCustomSymbolicDist:
