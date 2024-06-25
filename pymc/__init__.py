@@ -79,4 +79,5 @@ from pymc.util import drop_warning_stat
 from pymc.variational import *
 from pymc.vartypes import *
 
-__version__ = _version.get_versions()["version"]
+# __version__ = _version.get_versions()["version"]
+__version__ = "1.16.0.rtd0"
