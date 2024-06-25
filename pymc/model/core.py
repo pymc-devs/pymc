@@ -1532,6 +1532,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     raise ValueError(f"Dimension {dim} is not specified in `coords`.")
             if any(var.name == dim for dim in dims if dim is not None):
                 raise ValueError(f"Variable `{var.name}` has the same name as its dimension label.")
+            # This check implicitly states that only vars with .ndim attribute can have dims
+            if var.ndim != len(dims):
+                raise ValueError(
+                    f"{var} has {var.ndim} dims but {len(dims)} dim labels were provided."
+                )
             self.named_vars_to_dims[var.name] = dims
 
         self.named_vars[var.name] = var
