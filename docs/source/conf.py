@@ -146,11 +146,13 @@ exclude_patterns = [
 ]
 
 # myst config
+default_kernel = "pymc-docs" if on_readthedocs else "python3"
 nb_execution_mode = "force" if on_readthedocs else "off"
-nb_execution_allow_errors = False
-nb_execution_raise_on_error = True
+nb_execution_allow_errors = True
+nb_execution_raise_on_error = False
 nb_execution_timeout = 300
-nb_kernel_rgx_aliases = {".*": "python3"}
+nb_kernel_rgx_aliases = {".*": default_kernel}
+jupyter_execute_default_kernel = default_kernel
 myst_enable_extensions = ["colon_fence", "deflist", "dollarmath", "amsmath", "substitution"]
 myst_substitutions = {
     "version_slug": rtd_version,

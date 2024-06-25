@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+# locally installed pymc from PR 7385 should have this line
+
 
 import logging
 
@@ -77,4 +79,5 @@ from pymc.util import drop_warning_stat
 from pymc.variational import *
 from pymc.vartypes import *
 
-__version__ = _version.get_versions()["version"]
+# __version__ = _version.get_versions()["version"]
+__version__ = "1.16.0.rtd0"

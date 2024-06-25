@@ -31,3 +31,16 @@ glossary
   - {octicon}`plug;1em;sd-text-info` Experimental and cutting edge functionality: {doc}`pmx:index` library
   - {octicon}`gear;1em;sd-text-info` PyMC internals guides (To be outlined and referenced here once [pymc#5538](https://github.com/pymc-devs/pymc/issues/5538)
 is addressed)
+
+
+```{jupyter-execute}
+import inspect
+import sys
+import pymc as pm
+print(sys.executable)
+print(pm.__version__)
+print(inspect.signature(pm.sample_prior_predictive))
+print(inspect.getfile(pm))
+print("\n\n")
+print(inspect.getsource(pm))
+```
