@@ -146,7 +146,9 @@ exclude_patterns = [
 ]
 
 # myst config
-nb_execution_mode = "force" if on_readthedocs else "off"
+# Use commented code after https://github.com/pymc-devs/pymc/issues/7384 is fixed
+# nb_execution_mode = "force" if on_readthedocs else "off"
+nb_execution_mode = "off"
 nb_execution_allow_errors = False
 nb_execution_raise_on_error = True
 nb_execution_timeout = 300
