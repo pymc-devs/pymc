@@ -98,7 +98,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "PyMC"
-copyright = "2021, The PyMC Development Team"
+copyright = "2020-present, The PyMC Development Team"
 author = "PyMC contributors"
 
 # The version info for the project you're documenting, acts as replacement for
