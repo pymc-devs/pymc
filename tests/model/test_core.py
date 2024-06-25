@@ -899,12 +899,14 @@ class TestSetUpdateCoords:
         # TODO: Either allow dims without coords everywhere or nowhere
         with pm.Model() as m:
             m.add_coord(name="a", values=None, length=3)
-            m.add_coord(name="b", values=range(5))
-            x = pm.Normal("x", dims=("a", "b"))
+            m.add_coord(name="b", values=range(-5, 0))
+            m.add_coord(name="c", values=None, length=7)
+            x = pm.Normal("x", dims=("a", "b", "c"))
             prior = pm.sample_prior_predictive(draws=2).prior
-        assert prior["x"].shape == (1, 2, 3, 5)
+        assert prior["x"].shape == (1, 2, 3, 5, 7)
         assert list(prior.coords["a"].values) == list(range(3))
-        assert list(prior.coords["b"].values) == list(range(5))
+        assert list(prior.coords["b"].values) == list(range(-5, 0))
+        assert list(prior.coords["c"].values) == list(range(7))
 
     def test_set_data_indirect_resize_without_coords(self):
         with pm.Model() as pmodel:
