@@ -44,18 +44,21 @@ __all__ = (
 class PlateMeta:
     names: tuple[str]
     sizes: tuple[int]
-    dim_info: bool = True
 
     def __hash__(self) -> int:
         return hash((self.names, self.sizes))
 
 
-def create_plate_label(plate_meta: PlateMeta, include_size: bool = True) -> str:
+def create_plate_label(
+    var_name: str,
+    plate_meta: PlateMeta,
+    include_size: bool = True,
+) -> str:
     def create_label(d: int, dname: str, dlen: int):
-        if plate_meta.dim_info:
+        if dname:
             label = f"{dname}"
         else:
-            label = f"{dname}_dim{d}"
+            label = f"{var_name}_dim{d}"
 
         if include_size:
             label = f"{label} ({dlen})"
@@ -359,11 +362,9 @@ class ModelGraph:
                 )
             else:
                 # The RV has no `dims` information.
-                sizes = tuple(shape)
                 plate_meta = PlateMeta(
-                    names=tuple([var_name] * len(sizes)),
-                    sizes=sizes,
-                    dim_info=False,
+                    names=(),
+                    sizes=tuple(shape),
                 )
 
             v = self.model[var_name]
@@ -387,7 +388,7 @@ class ModelGraph:
         figsize=None,
         dpi=300,
         node_formatters: NodeTypeFormatterMapping | None = None,
-        include_size: bool = True,
+        include_shape_size: bool = True,
     ):
         """Make graphviz Digraph of PyMC model
 
@@ -411,7 +412,7 @@ class ModelGraph:
         for plate_meta, all_vars in self.get_plates(var_names).items():
             if plate_meta:
                 # must be preceded by 'cluster' to get a box around it
-                plate_label = create_plate_label(plate_meta, include_size=include_size)
+                plate_label = create_plate_label(plate_meta, include_size=include_shape_size)
                 with graph.subgraph(name="cluster" + plate_label) as sub:
                     for var in all_vars:
                         self._make_node(
@@ -453,7 +454,7 @@ class ModelGraph:
         var_names: Iterable[VarName] | None = None,
         formatting: str = "plain",
         node_formatters: NodeTypeFormatterMapping | None = None,
-        include_size: bool = True,
+        include_shape_size: bool = True,
     ):
         """Make networkx Digraph of PyMC model
 
@@ -478,7 +479,7 @@ class ModelGraph:
             if plate_meta:
                 # # must be preceded by 'cluster' to get a box around it
 
-                plate_label = create_plate_label(plate_meta, include_size=include_size)
+                plate_label = create_plate_label(plate_meta, include_size=include_shape_size)
                 subgraphnetwork = networkx.DiGraph(name="cluster" + plate_label, label=plate_label)
 
                 for var in all_vars:
@@ -523,6 +524,7 @@ def model_to_networkx(
     var_names: Iterable[VarName] | None = None,
     formatting: str = "plain",
     node_formatters: NodeTypeFormatterMapping | None = None,
+    include_shape_size: bool = True,
 ):
     """Produce a networkx Digraph from a PyMC model.
 
@@ -548,6 +550,8 @@ def model_to_networkx(
         A dictionary mapping node types to functions that return a dictionary of node attributes.
         Check out the networkx documentation for more information
         how attributes are added to nodes: https://networkx.org/documentation/stable/reference/classes/generated/networkx.Graph.add_node.html
+    include_shape_size : bool
+        Include the shape size in the plate label. Default is True.
 
     Examples
     --------
@@ -596,7 +600,10 @@ def model_to_networkx(
         )
     model = pm.modelcontext(model)
     return ModelGraph(model).make_networkx(
-        var_names=var_names, formatting=formatting, node_formatters=node_formatters
+        var_names=var_names,
+        formatting=formatting,
+        node_formatters=node_formatters,
+        include_shape_size=include_shape_size,
     )
 
 
@@ -609,6 +616,7 @@ def model_to_graphviz(
     figsize: tuple[int, int] | None = None,
     dpi: int = 300,
     node_formatters: NodeTypeFormatterMapping | None = None,
+    include_shape_size: bool = True,
 ):
     """Produce a graphviz Digraph from a PyMC model.
 
@@ -640,6 +648,8 @@ def model_to_graphviz(
         A dictionary mapping node types to functions that return a dictionary of node attributes.
         Check out graphviz documentation for more information on available
         attributes. https://graphviz.org/docs/nodes/
+    include_shape_size : bool
+        Include the shape size in the plate label. Default is True.
 
     Examples
     --------
@@ -701,4 +711,5 @@ def model_to_graphviz(
         figsize=figsize,
         dpi=dpi,
         node_formatters=node_formatters,
+        include_shape_size=include_shape_size,
     )
