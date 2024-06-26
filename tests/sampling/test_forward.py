@@ -1672,13 +1672,16 @@ class TestNestedRandom:
 
 def test_get_constant_coords():
     with pm.Model() as model:
-        model.add_coord("coord0", length=1)
+        model.add_coord("length_coord", length=1)
+        model.add_coord("value_coord", values=(3,))
 
-    trace_coords_same_len = {"coord0": np.array([0])}
-    assert "coord0" in get_constant_coords(trace_coords_same_len, model)
+    trace_coords_same = {"length_coord": np.array([0]), "value_coord": np.array([3])}
+    constant_coords_same = get_constant_coords(trace_coords_same, model)
+    assert constant_coords_same == {"length_coord", "value_coord"}
 
-    trace_coords_diff_len = {"coord0": np.array([0, 1])}
-    assert "coord0" not in get_constant_coords(trace_coords_diff_len, model)
+    trace_coords_diff = {"length_coord": np.array([0, 1]), "value_coord": np.array([4])}
+    constant_coords_diff = get_constant_coords(trace_coords_diff, model)
+    assert constant_coords_diff == set()
 
 
 def test_get_vars_in_point_list():
