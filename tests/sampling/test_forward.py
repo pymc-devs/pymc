@@ -35,6 +35,7 @@ from pymc.backends.base import MultiTrace
 from pymc.pytensorf import compile_pymc
 from pymc.sampling.forward import (
     compile_forward_sampling_function,
+    get_constant_coords,
     get_vars_in_point_list,
     observed_dependent_deterministics,
 )
@@ -1667,6 +1668,17 @@ class TestNestedRandom:
             prior_samples=prior_samples,
         )
         assert prior["target"].shape == (prior_samples, *shape)
+
+
+def test_get_constant_coords():
+    with pm.Model() as model:
+        model.add_coord("coord0", length=1)
+
+    trace_coords_same_len = {"coord0": np.array([0])}
+    assert "coord0" in get_constant_coords(trace_coords_same_len, model)
+
+    trace_coords_diff_len = {"coord0": np.array([0, 1])}
+    assert "coord0" not in get_constant_coords(trace_coords_diff_len, model)
 
 
 def test_get_vars_in_point_list():

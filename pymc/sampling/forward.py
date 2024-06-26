@@ -76,6 +76,28 @@ PointList: TypeAlias = list[PointType]
 _log = logging.getLogger(__name__)
 
 
+def get_constant_coords(trace_coords: dict[str, np.ndarray], model: Model) -> set:
+    """Get the set of coords that have remained constant between the trace and model"""
+    constant_coords = set()
+    for dim, coord in trace_coords.items():
+        current_coord = model.coords.get(dim, None)
+        current_length = model.dim_lengths.get(dim, None)
+        if hasattr(current_length, "get_value"):
+            current_length = current_length.get_value()
+        elif hasattr(current_length, "data"):
+            current_length = current_length.data
+        if (
+            current_coord is not None
+            and len(coord) == len(current_coord)
+            and np.all(coord == current_coord)
+        ) or (
+            # Coord was defined without values (only length)
+            current_coord is None and len(coord) == current_length
+        ):
+            constant_coords.add(dim)
+    return constant_coords
+
+
 def get_vars_in_point_list(trace, model):
     """Get the list of Variable instances in the model that have values stored in the trace."""
     if not isinstance(trace, MultiTrace):
@@ -792,22 +814,7 @@ def sample_posterior_predictive(
             stacklevel=2,
         )
 
-    constant_coords = set()
-    for dim, coord in trace_coords.items():
-        current_coord = model.coords.get(dim, None)
-        current_length = model.dim_lengths.get(dim, None)
-        if hasattr(current_length, 'eval'):
-            current_length = current_length.eval()
-        if (
-            current_coord is not None
-            and len(coord) == len(current_coord)
-            and np.all(coord == current_coord)
-        ) or (
-            # Coord was defined without values (only length)
-            current_coord is None
-            and len(coord) == current_length
-        ):
-            constant_coords.add(dim)
+    constant_coords = get_constant_coords(trace_coords, model)
 
     if var_names is not None:
         vars_ = [model[x] for x in var_names]
