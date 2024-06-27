@@ -17,6 +17,7 @@ from collections import defaultdict
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import Enum
+from itertools import zip_longest
 from os import path
 from typing import Any
 
@@ -45,7 +46,7 @@ class PlateMeta:
     names: tuple[str]
     sizes: tuple[int]
 
-    def __hash__(self) -> int:
+    def __hash__(self):
         return hash((self.names, self.sizes))
 
 
@@ -55,10 +56,10 @@ def create_plate_label(
     include_size: bool = True,
 ) -> str:
     def create_label(d: int, dname: str, dlen: int):
-        if dname:
-            label = f"{dname}"
-        else:
-            label = f"{var_name}_dim{d}"
+        if not dname:
+            return f"{dlen}"
+
+        label = f"{dname}"
 
         if include_size:
             label = f"{label} ({dlen})"
@@ -66,7 +67,7 @@ def create_plate_label(
         return label
 
     values = enumerate(
-        zip(plate_meta.names, plate_meta.sizes),
+        zip_longest(plate_meta.names, plate_meta.sizes, fillvalue=None),
     )
     return " x ".join(create_label(d, dname, dlen) for d, (dname, dlen) in values)
 
@@ -90,8 +91,14 @@ class NodeMeta:
     var: TensorVariable
     node_type: NodeType
 
-    def __hash__(self) -> int:
+    def __hash__(self):
         return hash(self.var.name)
+
+
+@dataclass
+class Plate:
+    meta: PlateMeta
+    variables: list[NodeMeta]
 
 
 GraphvizNodeKwargs = dict[str, Any]
@@ -325,7 +332,7 @@ class ModelGraph:
     def get_plates(
         self,
         var_names: Iterable[VarName] | None = None,
-    ) -> dict[PlateMeta, set[NodeMeta]]:
+    ) -> list[Plate]:
         """Rough but surprisingly accurate plate detection.
 
         Just groups by the shape of the underlying distribution.  Will be wrong
@@ -372,13 +379,33 @@ class ModelGraph:
             var = NodeMeta(var=v, node_type=node_type)
             plates[plate_meta].add(var)
 
-        return dict(plates)
+        return [
+            Plate(meta=plate_meta, variables=list(variables))
+            for plate_meta, variables in plates.items()
+        ]
 
-    def edges(self, var_names: Iterable[VarName] | None = None):
-        for child, parents in self.make_compute_graph(var_names=var_names).items():
-            # parents is a set of rv names that precede child rv nodes
-            for parent in parents:
-                yield child.replace(":", "&"), parent.replace(":", "&")
+    def edges(
+        self,
+        var_names: Iterable[VarName] | None = None,
+    ) -> list[tuple[VarName, VarName]]:
+        """Get edges between the variables in the model.
+
+        Parameters
+        ----------
+        var_names : iterable of str, optional
+            Subset of variables to be plotted that identify a subgraph with respect to the entire model graph
+
+        Returns
+        -------
+        list of tuple
+            List of edges between the variables in the model.
+
+        """
+        return [
+            (VarName(child.replace(":", "&")), VarName(parent.replace(":", "&")))
+            for child, parents in self.make_compute_graph(var_names=var_names).items()
+            for parent in parents
+        ]
 
     def make_graph(
         self,
@@ -409,10 +436,14 @@ class ModelGraph:
         node_formatters = update_node_formatters(node_formatters)
 
         graph = graphviz.Digraph(self.model.name)
-        for plate_meta, all_vars in self.get_plates(var_names).items():
+        for plate in self.get_plates(var_names):
+            plate_meta = plate.meta
+            all_vars = plate.variables
             if plate_meta:
                 # must be preceded by 'cluster' to get a box around it
-                plate_label = create_plate_label(plate_meta, include_size=include_shape_size)
+                plate_label = create_plate_label(
+                    all_vars[0].var.name, plate_meta, include_size=include_shape_size
+                )
                 with graph.subgraph(name="cluster" + plate_label) as sub:
                     for var in all_vars:
                         self._make_node(
@@ -475,11 +506,15 @@ class ModelGraph:
         node_formatters = update_node_formatters(node_formatters)
 
         graphnetwork = networkx.DiGraph(name=self.model.name)
-        for plate_meta, all_vars in self.get_plates(var_names).items():
+        for plate in self.get_plates(var_names):
+            plate_meta = plate.meta
+            all_vars = plate.variables
             if plate_meta:
                 # # must be preceded by 'cluster' to get a box around it
 
-                plate_label = create_plate_label(plate_meta, include_size=include_shape_size)
+                plate_label = create_plate_label(
+                    all_vars[0].var.name, plate_meta, include_size=include_shape_size
+                )
                 subgraphnetwork = networkx.DiGraph(name="cluster" + plate_label, label=plate_label)
 
                 for var in all_vars:
