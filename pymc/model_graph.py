@@ -439,7 +439,7 @@ class ModelGraph:
         for plate in self.get_plates(var_names):
             plate_meta = plate.meta
             all_vars = plate.variables
-            if plate_meta:
+            if plate_meta.names or plate_meta.sizes:
                 # must be preceded by 'cluster' to get a box around it
                 plate_label = create_plate_label(
                     all_vars[0].var.name, plate_meta, include_size=include_shape_size
@@ -509,7 +509,7 @@ class ModelGraph:
         for plate in self.get_plates(var_names):
             plate_meta = plate.meta
             all_vars = plate.variables
-            if plate_meta:
+            if plate_meta.names or plate_meta.sizes:
                 # # must be preceded by 'cluster' to get a box around it
 
                 plate_label = create_plate_label(
