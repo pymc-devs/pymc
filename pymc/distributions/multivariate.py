@@ -24,6 +24,7 @@ import pytensor
 import pytensor.tensor as pt
 import scipy
 
+from pytensor.graph import node_rewriter
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
@@ -39,7 +40,7 @@ from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.linalg import cholesky, det, eigh, solve_triangular, trace
 from pytensor.tensor.linalg import inv as matrix_inverse
-from pytensor.tensor.random.basic import dirichlet, multinomial, multivariate_normal
+from pytensor.tensor.random.basic import MvNormalRV, dirichlet, multinomial, multivariate_normal
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import (
     broadcast_params,
@@ -77,6 +78,9 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
 from pymc.logprob.abstract import _logprob
+from pymc.logprob.rewriting import (
+    specialization_ir_rewrites_db,
+)
 from pymc.math import kron_diag, kron_dot
 from pymc.pytensorf import normalize_rng_param
 from pymc.util import check_dist_not_registered
@@ -289,8 +293,70 @@ class MvNormal(Continuous):
         return check_parameters(
             norm - 0.5 * quaddist - logdet,
             ok,
-            msg="posdef",
+            msg="posdef covariance",
         )
+
+
+class PrecisionMvNormalRV(SymbolicRandomVariable):
+    r"""A specialized multivariate normal random variable defined in terms of precision.
+
+    This class is introduced during specialization logprob rewrites, and not meant to be used directly.
+    """
+
+    name = "precision_multivariate_normal"
+    extended_signature = "[rng],[size],(n),(n,n)->(n)"
+    _print_name = ("PrecisionMultivariateNormal", "\\operatorname{PrecisionMultivariateNormal}")
+
+    @classmethod
+    def rv_op(cls, mean, tau, *, rng=None, size=None):
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
+        cov = pt.linalg.inv(tau)
+        next_rng, draws = multivariate_normal(mean, cov, size=size, rng=rng).owner.outputs
+        return cls(
+            inputs=[rng, size, mean, tau],
+            outputs=[next_rng, draws],
+        )(rng, size, mean, tau)
+
+
+@_logprob.register
+def precision_mv_normal_logp(op: PrecisionMvNormalRV, value, rng, size, mean, tau, **kwargs):
+    [value] = value
+    k = value.shape[-1]
+    delta = value - mean
+    det_sign, logdet_tau = pt.nlinalg.slogdet(tau)
+    quadratic_form = delta.T @ tau @ delta
+    logp = -0.5 * (k * pt.log(2 * pt.pi) - logdet_tau + quadratic_form)
+    return check_parameters(
+        logp,
+        det_sign > 0,
+        msg="posdef precision",
+    )
+
+
+@node_rewriter(tracks=[MvNormalRV])
+def mv_normal_to_precision_mv_normal(fgraph, node):
+    """Replaces MvNormal(mu, inv(tau)) -> PrecisionMvNormal(mu, tau)
+
+    This is introduced in logprob rewrites to provide a more efficient logp for a MvNormal
+    that is defined by a precision matrix.
+
+    Note: This won't be introduced when calling `pm.logp` as that will dispatch directly
+    without triggerengi the logprob rewrites.
+    """
+
+    rng, size, mu, cov = node.inputs
+    if cov.owner and cov.owner.op == matrix_inverse:
+        tau = cov.owner.inputs[0]
+        return PrecisionMvNormalRV.rv_op(mu, tau, size=size, rng=rng).owner.outputs
+    return None
+
+
+specialization_ir_rewrites_db.register(
+    mv_normal_to_precision_mv_normal.__name__,
+    mv_normal_to_precision_mv_normal,
+    "basic",
+)
 
 
 class MvStudentTRV(RandomVariable):
