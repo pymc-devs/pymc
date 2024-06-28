@@ -42,7 +42,7 @@ __all__ = (
 
 
 @dataclass
-class PlateMeta:
+class DimInfo:
     names: tuple[str | None]
     sizes: tuple[int]
 
@@ -55,7 +55,7 @@ class PlateMeta:
 
 def create_plate_label(
     var_name: str,
-    plate_meta: PlateMeta,
+    dim_info: DimInfo,
     include_size: bool = True,
 ) -> str:
     def create_label(d: int, dname: str, dlen: int):
@@ -70,7 +70,7 @@ def create_plate_label(
         return label
 
     values = enumerate(
-        zip_longest(plate_meta.names, plate_meta.sizes, fillvalue=None),
+        zip_longest(dim_info.names, dim_info.sizes, fillvalue=None),
     )
     return " x ".join(create_label(d, dname, dlen) for d, (dname, dlen) in values)
 
@@ -90,7 +90,7 @@ class NodeType(str, Enum):
 
 
 @dataclass
-class NodeMeta:
+class NodeInfo:
     var: TensorVariable
     node_type: NodeType
 
@@ -100,8 +100,8 @@ class NodeMeta:
 
 @dataclass
 class Plate:
-    meta: PlateMeta | None
-    variables: list[NodeMeta]
+    dim_info: DimInfo | None
+    variables: list[NodeInfo]
 
 
 GraphvizNodeKwargs = dict[str, Any]
@@ -208,7 +208,7 @@ def update_node_formatters(node_formatters: NodeTypeFormatterMapping) -> NodeTyp
 
 
 def _make_node(
-    node: NodeMeta,
+    node: NodeInfo,
     *,
     node_formatters: NodeTypeFormatterMapping,
     add_node: Callable[[str, ...], None],
@@ -369,25 +369,29 @@ class ModelGraph:
                     names.append(dname)
                     sizes.append(dim_lengths.get(dname, shape[d]))
 
-                plate_meta = PlateMeta(
+                dim_info = DimInfo(
                     names=tuple(names),
                     sizes=tuple(sizes),
                 )
             else:
                 # The RV has no `dims` information.
-                plate_meta = PlateMeta(
-                    names=(),
+                dim_size = len(shape)
+                dim_info = DimInfo(
+                    names=tuple([None] * dim_size),
                     sizes=tuple(shape),
                 )
 
             v = self.model[var_name]
             node_type = get_node_type(var_name, self.model)
-            var = NodeMeta(var=v, node_type=node_type)
-            plates[plate_meta].add(var)
+            var = NodeInfo(var=v, node_type=node_type)
+            plates[dim_info].add(var)
 
         return [
-            Plate(meta=plate_meta if plate_meta else None, variables=list(variables))
-            for plate_meta, variables in plates.items()
+            Plate(
+                dim_info=dim_info if dim_info else None,
+                variables=list(variables),
+            )
+            for dim_info, variables in plates.items()
         ]
 
     def edges(
@@ -445,11 +449,11 @@ def make_graph(
 
     graph = graphviz.Digraph(name)
     for plate in plates:
-        if plate.meta:
+        if plate.dim_info:
             # must be preceded by 'cluster' to get a box around it
             plate_label = create_plate_label(
                 plate.variables[0].var.name,
-                plate.meta,
+                plate.dim_info,
                 include_size=include_dim_lengths,
             )
             with graph.subgraph(name="cluster" + plate_label) as sub:
@@ -517,12 +521,12 @@ def make_networkx(
 
     graphnetwork = networkx.DiGraph(name=name)
     for plate in plates:
-        if plate.meta:
+        if plate.dim_info:
             # # must be preceded by 'cluster' to get a box around it
 
             plate_label = create_plate_label(
                 plate.variables[0].var.name,
-                plate.meta,
+                plate.dim_info,
                 include_size=include_dim_lengths,
             )
             subgraphnetwork = networkx.DiGraph(name="cluster" + plate_label, label=plate_label)

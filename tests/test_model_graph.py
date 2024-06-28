@@ -25,11 +25,11 @@ import pymc as pm
 
 from pymc.exceptions import ImputationWarning
 from pymc.model_graph import (
+    DimInfo,
     ModelGraph,
-    NodeMeta,
+    NodeInfo,
     NodeType,
     Plate,
-    PlateMeta,
     model_to_graphviz,
     model_to_networkx,
 )
@@ -483,22 +483,38 @@ def test_custom_node_formatting_graphviz(simple_model):
     assert body == items
 
 
-def test_none_dim_in_plate_meta() -> None:
+def test_none_dim_in_plate() -> None:
     coords = {
         "obs": range(5),
     }
     with pm.Model(coords=coords) as model:
-        C = pt.as_tensor_variable(
+        data = pt.as_tensor_variable(
             np.ones((5, 3)),
-            name="C",
+            name="data",
         )
-        pm.Deterministic("C", C, dims=("obs", None))
+        pm.Deterministic("C", data, dims=("obs", None))
 
     graph = ModelGraph(model)
 
     assert graph.get_plates() == [
         Plate(
-            meta=PlateMeta(names=("obs", None), sizes=(5, 3)),
-            variables=[NodeMeta(var=model["C"], node_type=NodeType.DETERMINISTIC)],
+            dim_info=DimInfo(names=("obs", None), sizes=(5, 3)),
+            variables=[NodeInfo(var=model["C"], node_type=NodeType.DETERMINISTIC)],
         ),
     ]
+    assert graph.edges() == []
+
+
+def test_shape_without_dims() -> None:
+    with pm.Model() as model:
+        pm.Normal("mu", shape=5)
+
+    graph = ModelGraph(model)
+
+    assert graph.get_plates() == [
+        Plate(
+            dim_info=DimInfo(names=(None,), sizes=(5,)),
+            variables=[NodeInfo(var=model["mu"], node_type=NodeType.FREE_RV)],
+        ),
+    ]
+    assert graph.edges() == []
