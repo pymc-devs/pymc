@@ -489,17 +489,22 @@ def test_none_dim_in_plate() -> None:
     }
     with pm.Model(coords=coords) as model:
         data = pt.as_tensor_variable(
-            np.ones((5, 3)),
+            np.ones((5, 5)),
             name="data",
         )
         pm.Deterministic("C", data, dims=("obs", None))
+        pm.Deterministic("D", data.T, dims=(None, "obs"))
 
     graph = ModelGraph(model)
 
     assert graph.get_plates() == [
         Plate(
-            dim_info=DimInfo(names=("obs", None), sizes=(5, 3)),
+            dim_info=DimInfo(names=("obs", None), sizes=(5, 5)),
             variables=[NodeInfo(var=model["C"], node_type=NodeType.DETERMINISTIC)],
+        ),
+        Plate(
+            dim_info=DimInfo(names=(None, "obs"), sizes=(5, 5)),
+            variables=[NodeInfo(var=model["D"], node_type=NodeType.DETERMINISTIC)],
         ),
     ]
     assert graph.edges() == []
@@ -520,7 +525,7 @@ def test_shape_without_dims() -> None:
     assert graph.edges() == []
 
 
-def test_scalars_have_no_dim_info() -> None:
+def test_scalars_dim_info() -> None:
     with pm.Model() as model:
         pm.Normal("x")
 
@@ -528,7 +533,7 @@ def test_scalars_have_no_dim_info() -> None:
 
     assert graph.get_plates() == [
         Plate(
-            dim_info=None,
+            dim_info=DimInfo(names=(), sizes=()),
             variables=[NodeInfo(var=model["x"], node_type=NodeType.FREE_RV)],
         )
     ]
