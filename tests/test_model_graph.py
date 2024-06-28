@@ -102,9 +102,9 @@ def radon_model():
 
         # Anonymous SharedVariables don't show up
         floor_measure = pytensor.shared(floor_measure)
-        floor_measure_offset = pm.MutableData("floor_measure_offset", 1)
+        floor_measure_offset = pm.Data("floor_measure_offset", 1)
         y_hat = a + b * floor_measure + floor_measure_offset
-        log_radon = pm.MutableData("log_radon", np.random.normal(1, 1, size=n_homes))
+        log_radon = pm.Data("log_radon", np.random.normal(1, 1, size=n_homes))
         y_like = pm.Normal("y_like", mu=y_hat, sigma=sigma_y, observed=log_radon)
 
     compute_graph = {
@@ -163,13 +163,13 @@ def model_with_dims():
 
         population = pm.HalfNormal("population", sigma=5, dims=("city"))
 
-        time = pm.ConstantData("time", [2014, 2015, 2016], dims="year")
+        time = pm.Data("time", [2014, 2015, 2016], dims="year")
 
         n = pm.Deterministic(
             "tax revenue", economics * population[None, :] * time[:, None], dims=("year", "city")
         )
 
-        yobs = pm.MutableData("observed", np.ones((3, 4)))
+        yobs = pm.Data("observed", np.ones((3, 4)))
         L = pm.Normal("L", n, observed=yobs)
 
     compute_graph = {
@@ -218,7 +218,7 @@ def model_observation_dtype_casting():
     Model at the source of the following issue: https://github.com/pymc-devs/pymc/issues/5795
     """
     with pm.Model() as model:
-        data = pm.ConstantData("data", [0, 0, 1, 1], dtype=int)
+        data = pm.Data("data", np.array([0, 0, 1, 1], dtype=int))
         p = pm.Beta("p", 1, 1)
         bern = pm.Bernoulli("response", p, observed=data)
 
@@ -274,7 +274,7 @@ class BaseModelGraphTest:
         for child, parents_in_plot in self.compute_graph.items():
             var = self.model[child]
             parents_in_graph = self.model_graph.get_parent_names(var)
-            if isinstance(var, (SharedVariable, TensorConstant)):
+            if isinstance(var, SharedVariable | TensorConstant):
                 # observed data also doesn't have parents in the compute graph!
                 # But for the visualization we like them to become descendants of the
                 # RVs that these observations belong to.
@@ -326,7 +326,7 @@ def model_with_different_descendants():
         intermediate = pm.Deterministic("intermediate", a + b)
         pred = pm.Deterministic("pred", intermediate * 3)
 
-        obs = pm.ConstantData("obs", 1.75)
+        obs = pm.Data("obs", 1.75)
 
         L = pm.Normal("L", mu=1 + 0.5 * pred, observed=obs)
 
@@ -421,3 +421,55 @@ def test_model_graph_with_intermediate_named_variables():
         b.name = "b"
         pm.Normal("c", b, 1)
     assert dict(ModelGraph(m2).make_compute_graph()) == {"a": set(), "c": {"a"}}
+
+
+@pytest.fixture
+def simple_model() -> pm.Model:
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        b = pm.Normal("b", mu=a)
+        c = pm.Normal("c", mu=b)
+
+    return model
+
+
+def test_unknown_node_type(simple_model):
+    with pytest.raises(ValueError, match="Node formatters must be of type NodeType."):
+        model_to_graphviz(simple_model, node_formatters={"Unknown Node Type": "dummy"})
+
+
+def test_custom_node_formatting_networkx(simple_model):
+    node_formatters = {
+        "Free Random Variable": lambda var: {
+            "label": var.name,
+        },
+    }
+
+    G = model_to_networkx(simple_model, node_formatters=node_formatters)
+    assert G.__dict__["_node"] == {
+        "a": {"label": "a"},
+        "b": {"label": "b"},
+        "c": {"label": "c"},
+    }
+
+
+def test_custom_node_formatting_graphviz(simple_model):
+    node_formatters = {
+        "Free Random Variable": lambda var: {
+            "label": var.name,
+        },
+    }
+
+    G = model_to_graphviz(simple_model, node_formatters=node_formatters)
+    body = set(item.strip() for item in G.body)
+
+    items = set(
+        [
+            "a [label=a]",
+            "b [label=b]",
+            "c [label=c]",
+            "a -> b",
+            "b -> c",
+        ]
+    )
+    assert body == items

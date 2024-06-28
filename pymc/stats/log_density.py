@@ -12,27 +12,28 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from collections.abc import Sequence
-from typing import Optional, cast
+from typing import Literal
 
-from arviz import InferenceData, dict_to_dataset
-from fastprogress import progress_bar
+from arviz import InferenceData
+from xarray import Dataset
 
-import pymc
-
-from pymc.backends.arviz import _DefaultTrace, coords_and_dims_for_inferencedata
+from pymc.backends.arviz import (
+    apply_function_over_dataset,
+    coords_and_dims_for_inferencedata,
+)
 from pymc.model import Model, modelcontext
-from pymc.pytensorf import PointFunc
-from pymc.util import dataset_to_point_list
 
 __all__ = ("compute_log_likelihood", "compute_log_prior")
+
+from pymc.model.transform.conditioning import remove_value_transforms
 
 
 def compute_log_likelihood(
     idata: InferenceData,
     *,
-    var_names: Optional[Sequence[str]] = None,
+    var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
-    model: Optional[Model] = None,
+    model: Model | None = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
 ):
@@ -69,9 +70,9 @@ def compute_log_likelihood(
 
 def compute_log_prior(
     idata: InferenceData,
-    var_names: Optional[Sequence[str]] = None,
+    var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
-    model: Optional[Model] = None,
+    model: Model | None = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
 ):
@@ -109,13 +110,13 @@ def compute_log_prior(
 def compute_log_density(
     idata: InferenceData,
     *,
-    var_names: Optional[Sequence[str]] = None,
+    var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
-    model: Optional[Model] = None,
-    kind="likelihood",
+    model: Model | None = None,
+    kind: Literal["likelihood", "prior"] = "likelihood",
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
-):
+) -> InferenceData | Dataset:
     """
     Compute elemwise log_likelihood or log_prior of model given InferenceData with posterior group
     """
@@ -127,71 +128,40 @@ def compute_log_density(
     if kind not in ("likelihood", "prior"):
         raise ValueError("kind must be either 'likelihood' or 'prior'")
 
+    # We need to disable transforms, because the InferenceData only keeps the untransformed values
+    umodel = remove_value_transforms(model)
+
     if kind == "likelihood":
-        target_rvs = model.observed_RVs
+        target_rvs = list(umodel.observed_RVs)
         target_str = "observed_RVs"
     else:
-        target_rvs = model.free_RVs
+        target_rvs = list(umodel.free_RVs)
         target_str = "free_RVs"
 
     if var_names is None:
         vars = target_rvs
         var_names = tuple(rv.name for rv in vars)
     else:
-        vars = [model.named_vars[name] for name in var_names]
+        vars = [umodel.named_vars[name] for name in var_names]
         if not set(vars).issubset(target_rvs):
             raise ValueError(f"var_names must refer to {target_str} in the model. Got: {var_names}")
 
-    # We need to temporarily disable transforms, because the InferenceData only keeps the untransformed values
-    try:
-        original_rvs_to_values = model.rvs_to_values
-        original_rvs_to_transforms = model.rvs_to_transforms
+    elemwise_logdens_fn = umodel.compile_fn(
+        inputs=umodel.value_vars,
+        outs=umodel.logp(vars=vars, sum=False),
+        on_unused_input="ignore",
+    )
 
-        model.rvs_to_values = {
-            rv: rv.clone() if rv not in model.observed_RVs else value
-            for rv, value in model.rvs_to_values.items()
-        }
-        model.rvs_to_transforms = {rv: None for rv in model.basic_RVs}
+    coords, dims = coords_and_dims_for_inferencedata(umodel)
 
-        elemwise_logdens_fn = model.compile_fn(
-            inputs=model.value_vars,
-            outs=model.logp(vars=vars, sum=False),
-            on_unused_input="ignore",
-        )
-        elemwise_logdens_fn = cast(PointFunc, elemwise_logdens_fn)
-    finally:
-        model.rvs_to_values = original_rvs_to_values
-        model.rvs_to_transforms = original_rvs_to_transforms
-
-    # Ignore Deterministics
-    posterior_values = posterior[[rv.name for rv in model.free_RVs]]
-    posterior_pts, stacked_dims = dataset_to_point_list(posterior_values, sample_dims)
-
-    n_pts = len(posterior_pts)
-    logdens_dict = _DefaultTrace(n_pts)
-    indices = range(n_pts)
-    if progressbar:
-        indices = progress_bar(indices, total=n_pts, display=progressbar)
-
-    for idx in indices:
-        logdenss_pts = elemwise_logdens_fn(posterior_pts[idx])
-        for rv_name, rv_logdens in zip(var_names, logdenss_pts):
-            logdens_dict.insert(rv_name, rv_logdens, idx)
-
-    logdens_trace = logdens_dict.trace_dict
-    for key, array in logdens_trace.items():
-        logdens_trace[key] = array.reshape(
-            (*[len(coord) for coord in stacked_dims.values()], *array.shape[1:])
-        )
-
-    coords, dims = coords_and_dims_for_inferencedata(model)
-    logdens_dataset = dict_to_dataset(
-        logdens_trace,
-        library=pymc,
+    logdens_dataset = apply_function_over_dataset(
+        elemwise_logdens_fn,
+        posterior[[rv.name for rv in umodel.free_RVs]],
+        output_var_names=var_names,
+        sample_dims=sample_dims,
         dims=dims,
         coords=coords,
-        default_dims=list(sample_dims),
-        skip_event_dims=True,
+        progressbar=progressbar,
     )
 
     if extend_inferencedata:

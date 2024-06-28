@@ -37,7 +37,6 @@ import warnings
 
 from collections import deque
 from collections.abc import Sequence
-from typing import Optional
 
 import pytensor.tensor as pt
 
@@ -101,7 +100,7 @@ class MeasurableEquilibriumGraphRewriter(EquilibriumGraphRewriter):
     """
 
     def apply(self, fgraph):
-        rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+        rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
         if not rv_map_feature:
             return None
 
@@ -232,7 +231,7 @@ class PreserveRVMappings(Feature):
         self,
         old_rv: TensorVariable,
         new_value: TensorVariable,
-        new_rv: Optional[TensorVariable] = None,
+        new_rv: TensorVariable | None = None,
     ):
         """Update mappings for a random variable.
 
@@ -333,7 +332,7 @@ def incsubtensor_rv_replace(fgraph, node):
 
     This provides a means of specifying "missing data", for instance.
     """
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -366,8 +365,6 @@ logprob_rewrites_db.register(
     "local_exp_over_1_plus_exp", out2in(local_exp_over_1_plus_exp), "basic"
 )
 logprob_rewrites_db.register("pre-canonicalize", optdb.query("+canonicalize"), "basic")
-# Split max_and_argmax
-logprob_rewrites_db.register("local_max_and_argmax", out2in(local_max_and_argmax), "basic")
 
 # These rewrites convert un-measurable variables into their measurable forms,
 # but they need to be reapplied, because some of the measurable forms require
@@ -376,6 +373,12 @@ measurable_ir_rewrites_db = MeasurableEquilibriumDB()
 measurable_ir_rewrites_db.name = "measurable_ir_rewrites_db"
 
 logprob_rewrites_db.register("measurable_ir_rewrites", measurable_ir_rewrites_db, "basic")
+
+# Split max_and_argmax
+# We only register this in the measurable IR db because max does not have a grad implemented
+# And running this on any MaxAndArgmax would lead to issues: https://github.com/pymc-devs/pymc/issues/7251
+# This special registering can be removed after https://github.com/pymc-devs/pytensor/issues/334 is fixed
+measurable_ir_rewrites_db.register("local_max_and_argmax", local_max_and_argmax, "basic")
 
 # These rewrites push random/measurable variables "down", making them closer to
 # (or eventually) the graph outputs.  Often this is done by lifting other `Op`s
@@ -399,7 +402,7 @@ cleanup_ir_rewrites_db.register("remove_DiracDelta", remove_DiracDelta, "cleanup
 
 def construct_ir_fgraph(
     rv_values: dict[Variable, Variable],
-    ir_rewriter: Optional[GraphRewriter] = None,
+    ir_rewriter: GraphRewriter | None = None,
 ) -> tuple[FunctionGraph, dict[Variable, Variable], dict[Variable, Variable]]:
     r"""Construct a `FunctionGraph` in measurable IR form for the keys in `rv_values`.
 

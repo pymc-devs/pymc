@@ -11,15 +11,17 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import itertools
 import warnings
 
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Node, equal_computations
+from pytensor.graph.basic import Apply, equal_computations
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.utils import normalize_size_param
 
 from pymc.distributions import transforms
 from pymc.distributions.continuous import Gamma, LogNormal, Normal, get_tau_sigma
@@ -32,7 +34,7 @@ from pymc.distributions.distribution import (
     _support_point,
     support_point,
 )
-from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
+from pymc.distributions.shape_utils import _change_dist_size, change_dist_size, rv_size_is_none
 from pymc.distributions.transforms import _default_transform
 from pymc.distributions.truncated import Truncated
 from pymc.logprob.abstract import _logcdf, _logcdf_helper, _logprob
@@ -57,10 +59,104 @@ __all__ = [
 class MarginalMixtureRV(SymbolicRandomVariable):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
 
-    default_output = 1
     _print_name = ("MarginalMixture", "\\operatorname{MarginalMixture}")
 
-    def update(self, node: Node):
+    @classmethod
+    def rv_op(cls, weights, *components, size=None):
+        # We don't allow passing `rng` because we don't fully control the rng of the components!
+        mix_indexes_rng = pytensor.shared(np.random.default_rng())
+
+        single_component = len(components) == 1
+        ndim_supp = components[0].owner.op.ndim_supp
+
+        size = normalize_size_param(size)
+        if not rv_size_is_none(size):
+            components = cls._resize_components(size, *components)
+        elif not single_component:
+            # We might need to broadcast components when size is not specified
+            shape = tuple(pt.broadcast_shape(*components))
+            size = shape[: len(shape) - ndim_supp]
+            components = cls._resize_components(size, *components)
+
+        # Extract replication ndims from components and weights
+        ndim_batch = components[0].ndim - ndim_supp
+        if single_component:
+            # One dimension is taken by the mixture axis in the single component case
+            ndim_batch -= 1
+
+        # The weights may imply extra batch dimensions that go beyond what is already
+        # implied by the component dimensions (ndim_batch)
+        weights_ndim_batch = max(0, weights.ndim - ndim_batch - 1)
+
+        # If weights are large enough that they would broadcast the component distributions
+        # we try to resize them. This in necessary to avoid duplicated values in the
+        # random method and for equivalency with the logp method
+        if weights_ndim_batch:
+            new_size = pt.concatenate(
+                [
+                    weights.shape[:weights_ndim_batch],
+                    components[0].shape[:ndim_batch],
+                ]
+            )
+            components = cls._resize_components(new_size, *components)
+
+            # Extract support and batch ndims from components and weights
+            ndim_batch = components[0].ndim - ndim_supp
+            if single_component:
+                ndim_batch -= 1
+            weights_ndim_batch = max(0, weights.ndim - ndim_batch - 1)
+
+        assert weights_ndim_batch == 0
+
+        mix_axis = -ndim_supp - 1
+
+        # Stack components across mixture axis
+        if single_component:
+            # If single component, we consider it as being already "stacked"
+            stacked_components = components[0]
+        else:
+            stacked_components = pt.stack(components, axis=mix_axis)
+
+        # Broadcast weights to (*batched dimensions, stack dimension), ignoring support dimensions
+        weights_broadcast_shape = stacked_components.shape[: ndim_batch + 1]
+        weights_broadcasted = pt.broadcast_to(weights, weights_broadcast_shape)
+
+        # Draw mixture indexes and append (stack + ndim_supp) broadcastable dimensions to the right
+        mix_indexes_rng_next, mix_indexes = pt.random.categorical(
+            weights_broadcasted, rng=mix_indexes_rng
+        ).owner.outputs
+        mix_indexes_padded = pt.shape_padright(mix_indexes, ndim_supp + 1)
+
+        # Index components and squeeze mixture dimension
+        mix_out = pt.take_along_axis(stacked_components, mix_indexes_padded, axis=mix_axis)
+        mix_out = pt.squeeze(mix_out, axis=mix_axis)
+
+        s = ",".join(f"s{i}" for i in range(components[0].owner.op.ndim_supp))
+        if len(components) == 1:
+            comp_s = ",".join((*s, "w"))
+            extended_signature = f"[rng],(w),({comp_s})->[rng],({s})"
+        else:
+            comps_s = ",".join(f"({s})" for _ in components)
+            extended_signature = f"[rng],(w),{comps_s}->[rng],({s})"
+
+        return MarginalMixtureRV(
+            inputs=[mix_indexes_rng, weights, *components],
+            outputs=[mix_indexes_rng_next, mix_out],
+            extended_signature=extended_signature,
+        )(mix_indexes_rng, weights, *components)
+
+    @classmethod
+    def _resize_components(cls, size, *components):
+        if len(components) == 1:
+            # If we have a single component, we need to keep the length of the mixture
+            # axis intact, because that's what determines the number of mixture components
+            mix_axis = -components[0].owner.op.ndim_supp - 1
+            mix_size = components[0].shape[mix_axis]
+            size = (*size, mix_size)
+
+        return [change_dist_size(component, size) for component in components]
+
+    def update(self, node: Apply):
         # Update for the internal mix_indexes RV
         return {node.inputs[0]: node.outputs[0]}
 
@@ -175,10 +271,11 @@ class Mixture(Distribution):
     """
 
     rv_type = MarginalMixtureRV
+    rv_op = MarginalMixtureRV.rv_op
 
     @classmethod
     def dist(cls, w, comp_dists, **kwargs):
-        if not isinstance(comp_dists, (tuple, list)):
+        if not isinstance(comp_dists, tuple | list):
             # comp_dists is a single component
             comp_dists = [comp_dists]
         elif len(comp_dists) == 1:
@@ -204,7 +301,7 @@ class Mixture(Distribution):
             # TODO: Allow these to not be a RandomVariable as long as we can call `ndim_supp` on them
             #  and resize them
             if not isinstance(dist, TensorVariable) or not isinstance(
-                dist.owner.op, (RandomVariable, SymbolicRandomVariable)
+                dist.owner.op, RandomVariable | SymbolicRandomVariable
             ):
                 raise ValueError(
                     f"Component dist must be a distribution created via the `.dist()` API, got {type(dist)}"
@@ -220,115 +317,10 @@ class Mixture(Distribution):
         w = pt.as_tensor_variable(w)
         return super().dist([w, *comp_dists], **kwargs)
 
-    @classmethod
-    def rv_op(cls, weights, *components, size=None):
-        # Create new rng for the mix_indexes internal RV
-        mix_indexes_rng = pytensor.shared(np.random.default_rng())
-
-        single_component = len(components) == 1
-        ndim_supp = components[0].owner.op.ndim_supp
-
-        if size is not None:
-            components = cls._resize_components(size, *components)
-        elif not single_component:
-            # We might need to broadcast components when size is not specified
-            shape = tuple(pt.broadcast_shape(*components))
-            size = shape[: len(shape) - ndim_supp]
-            components = cls._resize_components(size, *components)
-
-        # Extract replication ndims from components and weights
-        ndim_batch = components[0].ndim - ndim_supp
-        if single_component:
-            # One dimension is taken by the mixture axis in the single component case
-            ndim_batch -= 1
-
-        # The weights may imply extra batch dimensions that go beyond what is already
-        # implied by the component dimensions (ndim_batch)
-        weights_ndim_batch = max(0, weights.ndim - ndim_batch - 1)
-
-        # If weights are large enough that they would broadcast the component distributions
-        # we try to resize them. This in necessary to avoid duplicated values in the
-        # random method and for equivalency with the logp method
-        if weights_ndim_batch:
-            new_size = pt.concatenate(
-                [
-                    weights.shape[:weights_ndim_batch],
-                    components[0].shape[:ndim_batch],
-                ]
-            )
-            components = cls._resize_components(new_size, *components)
-
-            # Extract support and batch ndims from components and weights
-            ndim_batch = components[0].ndim - ndim_supp
-            if single_component:
-                ndim_batch -= 1
-            weights_ndim_batch = max(0, weights.ndim - ndim_batch - 1)
-
-        assert weights_ndim_batch == 0
-
-        # Create a OpFromGraph that encapsulates the random generating process
-        # Create dummy input variables with the same type as the ones provided
-        weights_ = weights.type()
-        components_ = [component.type() for component in components]
-        mix_indexes_rng_ = mix_indexes_rng.type()
-
-        mix_axis = -ndim_supp - 1
-
-        # Stack components across mixture axis
-        if single_component:
-            # If single component, we consider it as being already "stacked"
-            stacked_components_ = components_[0]
-        else:
-            stacked_components_ = pt.stack(components_, axis=mix_axis)
-
-        # Broadcast weights to (*batched dimensions, stack dimension), ignoring support dimensions
-        weights_broadcast_shape_ = stacked_components_.shape[: ndim_batch + 1]
-        weights_broadcasted_ = pt.broadcast_to(weights_, weights_broadcast_shape_)
-
-        # Draw mixture indexes and append (stack + ndim_supp) broadcastable dimensions to the right
-        mix_indexes_ = pt.random.categorical(weights_broadcasted_, rng=mix_indexes_rng_)
-        mix_indexes_padded_ = pt.shape_padright(mix_indexes_, ndim_supp + 1)
-
-        # Index components and squeeze mixture dimension
-        mix_out_ = pt.take_along_axis(stacked_components_, mix_indexes_padded_, axis=mix_axis)
-        mix_out_ = pt.squeeze(mix_out_, axis=mix_axis)
-
-        # Output mix_indexes rng update so that it can be updated in place
-        mix_indexes_rng_next_ = mix_indexes_.owner.outputs[0]
-
-        s = ",".join(f"s{i}" for i in range(components[0].owner.op.ndim_supp))
-        if len(components) == 1:
-            comp_s = ",".join((*s, "w"))
-            signature = f"(),(w),({comp_s})->({s})"
-        else:
-            comps_s = ",".join(f"({s})" for _ in components)
-            signature = f"(),(w),{comps_s}->({s})"
-        mix_op = MarginalMixtureRV(
-            inputs=[mix_indexes_rng_, weights_, *components_],
-            outputs=[mix_indexes_rng_next_, mix_out_],
-            signature=signature,
-        )
-
-        # Create the actual MarginalMixture variable
-        mix_out = mix_op(mix_indexes_rng, weights, *components)
-
-        return mix_out
-
-    @classmethod
-    def _resize_components(cls, size, *components):
-        if len(components) == 1:
-            # If we have a single component, we need to keep the length of the mixture
-            # axis intact, because that's what determines the number of mixture components
-            mix_axis = -components[0].owner.op.ndim_supp - 1
-            mix_size = components[0].shape[mix_axis]
-            size = (*size, mix_size)
-
-        return [change_dist_size(component, size) for component in components]
-
 
 @_change_dist_size.register(MarginalMixtureRV)
 def change_marginal_mixture_size(op, dist, new_size, expand=False):
-    weights, *components = dist.owner.inputs[1:]
+    rng, weights, *components = dist.owner.inputs
 
     if expand:
         component = components[0]
@@ -480,7 +472,7 @@ def marginal_mixture_default_transform(op, rv):
                 transform.backward(value, *component.owner.inputs)
                 for transform, component in zip(default_transforms, components)
             ]
-            for expr1, expr2 in zip(backward_expressions[:-1], backward_expressions[1:]):
+            for expr1, expr2 in itertools.pairwise(backward_expressions):
                 if not equal_computations([expr1], [expr2]):
                     transform_warning()
                     return None
@@ -806,7 +798,7 @@ class ZeroInflatedNegativeBinomial:
         )
 
 
-def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, **kwargs):
+def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, max_n_steps=10_000, **kwargs):
     """Helper function to create a hurdle mixtures
 
     If name is `None`, this function returns an unregistered variable
@@ -827,7 +819,7 @@ def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, **kwargs):
     weights = pt.stack([1 - nonzero_p, nonzero_p], axis=-1)
     comp_dists = [
         DiracDelta.dist(zero),
-        Truncated.dist(nonzero_dist, lower=lower),
+        Truncated.dist(nonzero_dist, lower=lower, max_n_steps=max_n_steps),
     ]
 
     if name is not None:

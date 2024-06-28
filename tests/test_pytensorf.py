@@ -25,9 +25,8 @@ import scipy.sparse as sps
 from pytensor import scan, shared
 from pytensor.compile import UnusedInputError
 from pytensor.compile.builders import OpFromGraph
-from pytensor.graph.basic import Variable
+from pytensor.graph.basic import Variable, equal_computations
 from pytensor.tensor.random.basic import normal, uniform
-from pytensor.tensor.random.var import RandomStateSharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from pytensor.tensor.variable import TensorVariable
 
@@ -38,14 +37,19 @@ from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
+    GeneratorOp,
     collect_default_updates,
     compile_pymc,
     constant_fold,
-    convert_observed_data,
+    convert_data,
+    convert_generator_data,
     extract_obs_data,
+    hessian,
+    hessian_diag,
     replace_rng_nodes,
     replace_vars_in_graphs,
     reseed_rngs,
+    smarttypeX,
     walk_model,
 )
 from pymc.vartypes import int_types
@@ -152,7 +156,7 @@ def test_extract_obs_data():
     constant = pt.as_tensor(data_m.filled())
     z_at = pt.set_subtensor(constant[mask.nonzero()], missing_values)
 
-    assert isinstance(z_at.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1))
+    assert isinstance(z_at.owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1)
 
     res = extract_obs_data(z_at)
 
@@ -169,7 +173,7 @@ def test_extract_obs_data():
     constant = pt.as_tensor(data_m.filled())
     z_at = pt.set_subtensor(constant[mask.nonzero()], missing_values)
 
-    assert isinstance(z_at.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1))
+    assert isinstance(z_at.owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1)
 
     res = extract_obs_data(z_at)
 
@@ -186,9 +190,9 @@ def test_extract_obs_data():
 
 
 @pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
-def test_convert_observed_data(input_dtype):
+def test_convert_data(input_dtype):
     """
-    Ensure that convert_observed_data returns the dense array, masked array,
+    Ensure that convert_data returns the dense array, masked array,
     graph variable, TensorVariable, or sparse matrix as appropriate.
     """
     # Create the various inputs to the function
@@ -204,12 +208,8 @@ def test_convert_observed_data(input_dtype):
     missing_pandas_input = pd.DataFrame(missing_numpy_input)
     masked_array_input = ma.array(dense_input, mask=(np.mod(dense_input, 2) == 0))
 
-    # Create a generator object. Apparently the generator object needs to
-    # yield numpy arrays.
-    square_generator = (np.array([i**2], dtype=int) for i in range(100))
-
     # Alias the function to be tested
-    func = convert_observed_data
+    func = convert_data
 
     #####
     # Perform the various tests
@@ -253,21 +253,36 @@ def test_convert_observed_data(input_dtype):
     else:
         assert pytensor_output.dtype == intX
 
-    # Check function behavior with generator data
-    generator_output = func(square_generator)
 
-    # Output is wrapped with `pm.floatX`, and this unwraps
-    wrapped = generator_output.owner.inputs[0]
-    # Make sure the returned object has .set_gen and .set_default methods
-    assert hasattr(wrapped, "set_gen")
-    assert hasattr(wrapped, "set_default")
+@pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
+def test_convert_generator_data(input_dtype):
+    # Create a generator object producing NumPy arrays with the intended dtype.
+    # This is required to infer the correct dtype.
+    square_generator = (np.array([i**2], dtype=input_dtype) for i in range(100))
+
+    # Output is NOT wrapped with `pm.floatX`/`intX`,
+    # but produced from calling a special Op.
+    with pytest.warns(DeprecationWarning, match="get in touch"):
+        result = convert_generator_data(square_generator)
+    apply = result.owner
+    op = apply.op
     # Make sure the returned object is an PyTensor TensorVariable
-    assert isinstance(wrapped, TensorVariable)
+    assert isinstance(result, TensorVariable)
+    assert isinstance(op, GeneratorOp), f"It's a {type(apply)}"
+    # There are no inputs - because it generates...
+    assert apply.inputs == []
+
+    # Evaluation results should have the correct* dtype!
+    # (*intX/floatX will be enforced!)
+    evaled = result.eval()
+    expected_dtype = smarttypeX(np.array(1, dtype=input_dtype)).dtype
+    assert result.type.dtype == expected_dtype
+    assert evaled.dtype == np.dtype(expected_dtype)
 
 
 def test_pandas_to_array_pandas_index():
     data = pd.Index([1, 2, 3])
-    result = convert_observed_data(data)
+    result = convert_data(data)
     expected = np.array([1, 2, 3])
     np.testing.assert_array_equal(result, expected)
 
@@ -407,28 +422,6 @@ class TestCompilePyMC:
             assert len(fn_fgraph.apply_nodes) == max(rvs_in_graph, 1)
             # Each RV adds a shared output for its rng
             assert len(fn_fgraph.outputs) == 1 + rvs_in_graph
-
-    def test_compile_pymc_symbolic_rv_update(self):
-        """Test that SymbolicRandomVariable Op update methods are used by compile_pymc"""
-
-        class NonSymbolicRV(OpFromGraph):
-            def update(self, node):
-                return {node.inputs[0]: node.outputs[0]}
-
-        rng = pytensor.shared(np.random.default_rng())
-        dummy_rng = rng.type()
-        dummy_next_rng, dummy_x = NonSymbolicRV(
-            [dummy_rng], pt.random.normal(rng=dummy_rng).owner.outputs
-        )(rng)
-
-        # Check that there are no updates at first
-        fn = compile_pymc(inputs=[], outputs=dummy_x)
-        assert fn() == fn()
-
-        # And they are enabled once the Op is registered as a SymbolicRV
-        SymbolicRandomVariable.register(NonSymbolicRV)
-        fn = compile_pymc(inputs=[], outputs=dummy_x, random_seed=431)
-        assert fn() != fn()
 
     def test_compile_pymc_symbolic_rv_missing_update(self):
         """Test that error is raised if SymbolicRandomVariable Op does not
@@ -588,6 +581,22 @@ class TestCompilePyMC:
         fn = compile_pymc([], ys, random_seed=1)
         assert not (set(fn()) & set(fn()))
 
+    def test_op_from_graph_updates(self):
+        rng = pytensor.shared(np.random.default_rng())
+        next_rng_, x_ = pt.random.normal(size=(10,), rng=rng).owner.outputs
+
+        x = OpFromGraph([], [x_])()
+        with pytest.raises(
+            ValueError,
+            match="No update found for at least one RNG used in OpFromGraph Op",
+        ):
+            collect_default_updates([x])
+
+        next_rng, x = OpFromGraph([], [next_rng_, x_])()
+        assert collect_default_updates([x]) == {rng: next_rng}
+        fn = compile_pymc([], x, random_seed=1)
+        assert not (set(fn()) & set(fn()))
+
 
 def test_replace_rng_nodes():
     rng = pytensor.shared(np.random.default_rng())
@@ -628,43 +637,42 @@ def test_reseed_rngs():
 
     bit_generators = [default_rng(sub_seed) for sub_seed in np.random.SeedSequence(seed).spawn(2)]
 
-    rngs = [
-        pytensor.shared(rng_type(default_rng()))
-        for rng_type in (np.random.Generator, np.random.RandomState)
-    ]
+    rngs = [pytensor.shared(np.random.Generator(default_rng())) for _ in range(2)]
     for rng, bit_generator in zip(rngs, bit_generators):
-        if isinstance(rng, RandomStateSharedVariable):
-            assert rng.get_value()._bit_generator.state != bit_generator.state
-        else:
-            assert rng.get_value().bit_generator.state != bit_generator.state
+        assert rng.get_value().bit_generator.state != bit_generator.state
 
     reseed_rngs(rngs, seed)
     for rng, bit_generator in zip(rngs, bit_generators):
-        if isinstance(rng, RandomStateSharedVariable):
-            assert rng.get_value()._bit_generator.state == bit_generator.state
-        else:
-            assert rng.get_value().bit_generator.state == bit_generator.state
+        assert rng.get_value().bit_generator.state == bit_generator.state
 
 
-def test_constant_fold():
-    x = pt.random.normal(size=(5,))
-    y = pt.arange(x.size)
+class TestConstantFold:
+    def test_constant_fold(self):
+        x = pt.random.normal(size=(5,))
+        y = pt.arange(x.size)
 
-    res = constant_fold((y, y.shape))
-    assert np.array_equal(res[0], np.arange(5))
-    assert tuple(res[1]) == (5,)
+        res = constant_fold((y, y.shape))
+        assert np.array_equal(res[0], np.arange(5))
+        assert tuple(res[1]) == (5,)
 
+    def test_constant_fold_raises(self):
+        size = pytensor.shared(5)
+        x = pt.random.normal(size=(size,))
+        y = pt.arange(x.size)
 
-def test_constant_fold_raises():
-    size = pytensor.shared(5)
-    x = pt.random.normal(size=(size,))
-    y = pt.arange(x.size)
+        with pytest.raises(NotConstantValueError):
+            constant_fold((y, y.shape))
 
-    with pytest.raises(NotConstantValueError):
-        constant_fold((y, y.shape))
+        res = constant_fold((y, y.shape), raise_not_constant=False)
+        assert tuple(res[1].eval()) == (5,)
 
-    res = constant_fold((y, y.shape), raise_not_constant=False)
-    assert tuple(res[1].eval()) == (5,)
+    def test_inputs_preserved(self):
+        # Make sure constant_folded graph depends on original graph inputs (not copies)
+        # Regression test for #7387
+        a = pt.scalar("a", dtype="int")
+        out = pt.empty((a,))
+        (out_shape,) = constant_fold((out.shape[0],), raise_not_constant=False)
+        assert out_shape is a
 
 
 def test_replace_vars_in_graphs():
@@ -732,3 +740,17 @@ def test_replace_vars_in_graphs_nested_reference():
     assert np.abs(x.eval()) < 1
     # Confirm the original `y` variable is not changed in place
     assert np.abs(y.eval()) < 1
+
+
+@pytest.mark.filterwarnings("error")
+@pytest.mark.parametrize("func", (hessian, hessian_diag))
+def test_hessian_sign_change_warning(func):
+    x = pt.vector("x")
+    f = (x**2).sum()
+    with pytest.warns(
+        FutureWarning,
+        match="will stop negating the output",
+    ):
+        res_neg = func(f, vars=[x])
+    res = func(f, vars=[x], negate_output=False)
+    assert equal_computations([res_neg], [-res])

@@ -9,11 +9,10 @@ dependencies:
 - blas
 - cachetools>=4.2.1
 - cloudpickle
-- fastprogress>=0.2.0
 - h5py>=2.7
 # Jaxlib version must not be greater than jax version!
-- blackjax>=1.0.0
-- jaxlib==0.4.23
+- blackjax==1.2.0  # Blackjax>=1.2.1 is incompatible with latest available version of jaxlib in conda-forge
+- jaxlib==0.4.23  # Latest available version in conda-forge, update when new version is available
 - jax==0.4.23
 - libblas=*=*mkl
 - mkl-service
@@ -21,10 +20,14 @@ dependencies:
 - numpyro>=0.8.0
 - pandas>=0.24.0
 - pip
-- pytensor>=2.19,<2.20
+- pytensor>=2.23,<2.24
 - python-graphviz
 - networkx
-- scipy>=1.4.1
+- rich>=13.7.1
+- threadpoolctl>=3.1.0
+# JAX is only compatible with Scipy 1.13.0 from >=0.4.26, but the respective version of
+# JAXlib is still not on conda: https://github.com/conda-forge/jaxlib-feedstock/pull/243
+- scipy>=1.4.1,<1.13.0
 - typing-extensions>=3.7.4
 # Extra dependencies for testing
 - ipython>=7.16

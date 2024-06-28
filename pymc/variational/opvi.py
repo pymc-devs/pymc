@@ -122,7 +122,7 @@ def _known_scan_ignored_inputs(terms):
     return [
         n.owner.inputs[0]
         for n in pytensor.graph.ancestors(terms)
-        if n.owner is not None and isinstance(n.owner.op, (MinibatchIndexRV, SimulatorRV))
+        if n.owner is not None and isinstance(n.owner.op, MinibatchIndexRV | SimulatorRV)
     ]
 
 
@@ -163,9 +163,9 @@ def try_to_set_test_value(node_in, node_out, s):
     if s is None:
         s = 1
     s = pytensor.compile.view_op(pt.as_tensor(s))
-    if not isinstance(node_in, (list, tuple)):
+    if not isinstance(node_in, list | tuple):
         node_in = [node_in]
-    if not isinstance(node_out, (list, tuple)):
+    if not isinstance(node_out, list | tuple):
         node_out = [node_out]
     for i, o in zip(node_in, node_out):
         if hasattr(i.tag, "test_value"):
@@ -375,7 +375,7 @@ class ObjectiveFunction:
         if fn_kwargs is None:
             fn_kwargs = {}
         if score and not self.op.returns_loss:
-            raise NotImplementedError("%s does not have loss" % self.op)
+            raise NotImplementedError(f"{self.op} does not have loss")
         updates = self.updates(
             obj_n_mc=obj_n_mc,
             tf_n_mc=tf_n_mc,
@@ -416,7 +416,7 @@ class ObjectiveFunction:
         if fn_kwargs is None:
             fn_kwargs = {}
         if not self.op.returns_loss:
-            raise NotImplementedError("%s does not have loss" % self.op)
+            raise NotImplementedError(f"{self.op} does not have loss")
         if more_replacements is None:
             more_replacements = {}
         loss = self(sc_n_mc, more_replacements=more_replacements)
@@ -496,13 +496,13 @@ class Operator:
     def __call__(self, f=None):
         if self.has_test_function:
             if f is None:
-                raise ParametrizationError("Operator %s requires TestFunction" % self)
+                raise ParametrizationError(f"Operator {self} requires TestFunction")
             else:
                 if not isinstance(f, TestFunction):
                     f = TestFunction.from_function(f)
         else:
             if f is not None:
-                warnings.warn("TestFunction for %s is redundant and removed" % self, stacklevel=3)
+                warnings.warn(f"TestFunction for {self} is redundant and removed", stacklevel=3)
             else:
                 pass
             f = TestFunction()
@@ -555,7 +555,7 @@ class TestFunction:
     @classmethod
     def from_function(cls, f):
         if not callable(f):
-            raise ParametrizationError("Need callable, got %r" % f)
+            raise ParametrizationError(f"Need callable, got {f!r}")
         obj = TestFunction()
         obj.__call__ = f
         return obj
@@ -1482,10 +1482,10 @@ class Approximation(WithMemoization):
         node_in = node
         if more_replacements:
             node = graph_replace(node, more_replacements, strict=False)
-        if not isinstance(node, (list, tuple)):
+        if not isinstance(node, list | tuple):
             node = [node]
         node = self.model.replace_rvs_by_values(node)
-        if not isinstance(node_in, (list, tuple)):
+        if not isinstance(node_in, list | tuple):
             node = node[0]
         if size is None:
             node_out = self.symbolic_single_sample(node)
@@ -1512,7 +1512,7 @@ class Approximation(WithMemoization):
                 found.name = name + "_vi_random_slice"
                 break
         else:
-            raise KeyError("%r not found" % name)
+            raise KeyError(f"{name!r} not found")
         return found
 
     @node_property

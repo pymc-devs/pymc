@@ -27,6 +27,7 @@ from arviz import from_dict as az_from_dict
 from arviz.tests.helpers import check_multiple_attrs
 from pytensor import Mode, shared
 from pytensor.compile import SharedVariable
+from pytensor.graph import graph_inputs
 from scipy import stats
 
 import pymc as pm
@@ -114,8 +115,8 @@ class TestCompileForwardSampler:
     def get_function_roots(function):
         return [
             var
-            for var in pytensor.graph.basic.graph_inputs(function.maker.fgraph.outputs)
-            if var.name
+            for var in graph_inputs(function.maker.fgraph.outputs)
+            if var.name not in (None, "NoneConst")
         ]
 
     @staticmethod
@@ -124,8 +125,8 @@ class TestCompileForwardSampler:
 
     def test_linear_model(self):
         with pm.Model() as model:
-            x = pm.MutableData("x", np.linspace(0, 1, 10))
-            y = pm.MutableData("y", np.ones(10))
+            x = pm.Data("x", np.linspace(0, 1, 10))
+            y = pm.Data("y", np.ones(10))
 
             alpha = pm.Normal("alpha", 0, 0.1)
             beta = pm.Normal("beta", 0, 0.1)
@@ -142,30 +143,11 @@ class TestCompileForwardSampler:
         assert {i.name for i in self.get_function_inputs(f)} == {"alpha", "beta", "sigma"}
         assert {i.name for i in self.get_function_roots(f)} == {"x", "alpha", "beta", "sigma"}
 
-        with pm.Model() as model:
-            x = pm.ConstantData("x", np.linspace(0, 1, 10))
-            y = pm.MutableData("y", np.ones(10))
-
-            alpha = pm.Normal("alpha", 0, 0.1)
-            beta = pm.Normal("beta", 0, 0.1)
-            mu = pm.Deterministic("mu", alpha + beta * x)
-            sigma = pm.HalfNormal("sigma", 0.1)
-            obs = pm.Normal("obs", mu, sigma, observed=y, shape=x.shape)
-
-        f, volatile_rvs = compile_forward_sampling_function(
-            [obs],
-            vars_in_trace=[alpha, beta, sigma, mu],
-            basic_rvs=model.basic_RVs,
-        )
-        assert volatile_rvs == {obs}
-        assert {i.name for i in self.get_function_inputs(f)} == {"alpha", "beta", "sigma", "mu"}
-        assert {i.name for i in self.get_function_roots(f)} == {"mu", "sigma"}
-
     def test_nested_observed_model(self):
         with pm.Model() as model:
-            p = pm.ConstantData("p", np.array([0.25, 0.5, 0.25]))
-            x = pm.MutableData("x", np.zeros(10))
-            y = pm.MutableData("y", np.ones(10))
+            p = pm.Data("p", np.array([0.25, 0.5, 0.25]))
+            x = pm.Data("x", np.zeros(10))
+            y = pm.Data("y", np.ones(10))
 
             category = pm.Categorical("category", p, observed=x)
             beta = pm.Normal("beta", 0, 0.1, size=p.shape)
@@ -178,6 +160,16 @@ class TestCompileForwardSampler:
             vars_in_trace=[beta, mu, sigma],
             basic_rvs=model.basic_RVs,
         )
+        assert volatile_rvs == {category, beta, obs}
+        assert {i.name for i in self.get_function_inputs(f)} == {"sigma"}
+        assert {i.name for i in self.get_function_roots(f)} == {"x", "p", "sigma"}
+
+        f, volatile_rvs = compile_forward_sampling_function(
+            outputs=model.observed_RVs,
+            vars_in_trace=[beta, mu, sigma],
+            constant_data={"p": p.get_value()},
+            basic_rvs=model.basic_RVs,
+        )
         assert volatile_rvs == {category, obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"beta", "sigma"}
         assert {i.name for i in self.get_function_roots(f)} == {"x", "p", "beta", "sigma"}
@@ -185,6 +177,7 @@ class TestCompileForwardSampler:
         f, volatile_rvs = compile_forward_sampling_function(
             outputs=model.observed_RVs,
             vars_in_trace=[beta, mu, sigma],
+            constant_data={"p": p.get_value()},
             basic_rvs=model.basic_RVs,
             givens_dict={category: np.zeros(10, dtype=category.dtype)},
         )
@@ -200,7 +193,7 @@ class TestCompileForwardSampler:
 
     def test_volatile_parameters(self):
         with pm.Model() as model:
-            y = pm.MutableData("y", np.ones(10))
+            y = pm.Data("y", np.ones(10))
             mu = pm.Normal("mu", 0, 1)
             nested_mu = pm.Normal("nested_mu", mu, 1, size=10)
             sigma = pm.HalfNormal("sigma", 1)
@@ -220,7 +213,7 @@ class TestCompileForwardSampler:
             vars_in_trace=[mu, nested_mu, sigma],
             basic_rvs=model.basic_RVs,
             givens_dict={
-                mu: np.array(1.0)
+                mu: pytensor.shared(np.array(1.0), name="mu")
             },  # mu will be considered volatile because it's in givens
         )
         assert volatile_rvs == {nested_mu, obs}
@@ -350,15 +343,15 @@ class TestCompileForwardSampler:
         rng = np.random.default_rng(seed=42)
         data = rng.normal(loc=1, scale=0.2, size=(10, 3))
         with pm.Model() as model:
-            model.add_coord("name", ["A", "B", "C"], mutable=True)
-            model.add_coord("obs", list(range(10, 20)), mutable=True)
-            offsets = pm.MutableData("offsets", rng.normal(0, 1, size=(10,)))
+            model.add_coord("name", ["A", "B", "C"])
+            model.add_coord("obs", list(range(10, 20)))
+            offsets = pm.Data("offsets", rng.normal(0, 1, size=(10,)))
             a = pm.Normal("a", mu=0, sigma=1, dims=["name"])
             b = pm.Normal("b", mu=offsets, sigma=1)
             mu = pm.Deterministic("mu", a + b[..., None], dims=["obs", "name"])
             sigma = pm.HalfNormal("sigma", sigma=1, dims=["name"])
 
-            data = pm.MutableData(
+            data = pm.Data(
                 "y_obs",
                 data,
                 dims=["obs", "name"],
@@ -802,12 +795,12 @@ class TestSamplePPC:
             z = pm.Normal("z", y, observed=0)
 
         with m:
-            pm.sample_prior_predictive(samples=1)
+            pm.sample_prior_predictive(draws=1)
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x, z]")]
         caplog.clear()
 
         with m:
-            pm.sample_prior_predictive(samples=1, var_names=["x"])
+            pm.sample_prior_predictive(draws=1, var_names=["x"])
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x]")]
         caplog.clear()
 
@@ -881,15 +874,15 @@ class TestSamplePPC:
         rng = np.random.default_rng(seed=42)
         data = rng.normal(loc=1, scale=0.2, size=(10, 3))
         with pm.Model() as model:
-            model.add_coord("name", ["A", "B", "C"], mutable=True)
-            model.add_coord("obs", list(range(10, 20)), mutable=True)
-            offsets = pm.MutableData("offsets", rng.normal(0, 1, size=(10,)))
+            model.add_coord("name", ["A", "B", "C"])
+            model.add_coord("obs", list(range(10, 20)))
+            offsets = pm.Data("offsets", rng.normal(0, 1, size=(10,)))
             a = pm.Normal("a", mu=0, sigma=1, dims=["name"])
             b = pm.Normal("b", mu=offsets, sigma=1)
             mu = pm.Deterministic("mu", a + b[..., None], dims=["obs", "name"])
             sigma = pm.HalfNormal("sigma", sigma=1, dims=["name"])
 
-            data = pm.MutableData(
+            data = pm.Data(
                 "y_obs",
                 data,
                 dims=["obs", "name"],
@@ -938,7 +931,7 @@ class TestSamplePPC:
             pm.sample_posterior_predictive(samples)
         if kind == "MultiTrace":
             # MultiTrace will only have the actual MCMC posterior samples but no information on
-            # the MutableData and mutable coordinate values, so it will always assume they are volatile
+            # the Data and coordinate values, so it will always assume they are volatile
             # and resample their descendants
             assert caplog.record_tuples == [
                 ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
@@ -1025,6 +1018,55 @@ class TestSamplePPC:
             ]
             caplog.clear()
 
+    def test_observed_data_needed_in_pp(self):
+        # Model where y_data is not part of the generative graph.
+        # It shouldn't be needed to set a dummy value for posterior predictive sampling
+
+        with pm.Model(coords={"trial": range(5), "feature": range(3)}) as m:
+            x_data = pm.Data("x_data", np.random.normal(size=(5, 3)), dims=("trial", "feat"))
+            y_data = pm.Data("y_data", np.random.normal(size=(5,)), dims=("trial",))
+            sigma = pm.HalfNormal("sigma")
+            mu = x_data.sum(-1)
+            pm.Normal("y", mu=mu, sigma=sigma, observed=y_data, shape=mu.shape, dims=("trial",))
+
+            prior = pm.sample_prior_predictive(draws=25).prior
+
+        fake_idata = InferenceData(posterior=prior)
+
+        new_coords = {"trial": range(2), "feature": range(3)}
+        new_x_data = np.random.normal(size=(2, 3))
+        with m:
+            pm.set_data(
+                {
+                    "x_data": new_x_data,
+                },
+                coords=new_coords,
+            )
+            pp = pm.sample_posterior_predictive(fake_idata, predictions=True, progressbar=False)
+        assert pp.predictions["y"].shape == (1, 25, 2)
+
+        # In this case y_data is part of the generative graph, so we must set it to a compatible value
+        with pm.Model(coords={"trial": range(5), "feature": range(3)}) as m:
+            x_data = pm.Data("x_data", np.random.normal(size=(5, 3)), dims=("trial", "feat"))
+            y_data = pm.Data("y_data", np.random.normal(size=(5,)), dims=("trial",))
+            sigma = pm.HalfNormal("sigma")
+            mu = (y_data.sum() * x_data).sum(-1)
+            pm.Normal("y", mu=mu, sigma=sigma, observed=y_data, shape=mu.shape, dims=("trial",))
+
+            prior = pm.sample_prior_predictive(draws=25).prior
+
+        fake_idata = InferenceData(posterior=prior)
+
+        with m:
+            pm.set_data({"x_data": new_x_data}, coords=new_coords)
+            with pytest.raises(ValueError, match="conflicting sizes for dimension 'trial'"):
+                pm.sample_posterior_predictive(fake_idata, predictions=True, progressbar=False)
+
+        new_y_data = np.random.normal(size=(2,))
+        with m:
+            pm.set_data({"y_data": new_y_data})
+        assert pp.predictions["y"].shape == (1, 25, 2)
+
 
 @pytest.fixture(scope="class")
 def point_list_arg_bug_fixture() -> tuple[pm.Model, pm.backends.base.MultiTrace]:
@@ -1042,7 +1084,7 @@ class TestSamplePriorPredictive:
         observed = np.random.normal(10, 1, size=200)
         with pm.Model():
             # Use a prior that's way off to show we're ignoring the observed variables
-            observed_data = pm.MutableData("observed_data", observed)
+            observed_data = pm.Data("observed_data", observed)
             mu = pm.Normal("mu", mu=-100, sigma=1)
             positive_mu = pm.Deterministic("positive_mu", np.abs(mu))
             z = -1 - positive_mu
@@ -1094,7 +1136,7 @@ class TestSamplePriorPredictive:
                     compute_convergence_checks=False,
                 )
         sim_priors = pm.sample_prior_predictive(
-            return_inferencedata=False, samples=20, model=dm_model
+            return_inferencedata=False, draws=20, model=dm_model
         )
         sim_ppc = pm.sample_posterior_predictive(
             burned_trace, return_inferencedata=False, model=dm_model
@@ -1186,7 +1228,7 @@ class TestSamplePriorPredictive:
             mu = pm.Beta("mu", alpha=1, beta=1)
             psi = pm.HalfNormal("psi", sigma=1)
             pm.ZeroInflatedPoisson("suppliers", psi=psi, mu=mu, size=20)
-            gen_data = pm.sample_prior_predictive(samples=5000)
+            gen_data = pm.sample_prior_predictive(draws=5000)
             assert gen_data.prior["mu"].shape == (1, 5000)
             assert gen_data.prior["psi"].shape == (1, 5000)
             assert gen_data.prior["suppliers"].shape == (1, 5000, 20)
@@ -1199,7 +1241,7 @@ class TestSamplePriorPredictive:
 
         with m:
             with pytest.warns(UserWarning, match=warning_msg):
-                pm.sample_prior_predictive(samples=5)
+                pm.sample_prior_predictive(draws=5)
 
     def test_transformed_vars_not_supported(self):
         with pm.Model() as model:
@@ -1219,7 +1261,7 @@ class TestSamplePriorPredictive:
             c = pm.Normal("c")
             d = pm.Normal("d")
             prior1 = pm.sample_prior_predictive(
-                samples=1, var_names=["a", "b", "c", "d"], random_seed=seed
+                draws=1, var_names=["a", "b", "c", "d"], random_seed=seed
             )
 
         with pm.Model() as m2:
@@ -1228,7 +1270,7 @@ class TestSamplePriorPredictive:
             c = pm.Normal("c")
             d = pm.Normal("d")
             prior2 = pm.sample_prior_predictive(
-                samples=1, var_names=["b", "a", "d", "c"], random_seed=seed
+                draws=1, var_names=["b", "a", "d", "c"], random_seed=seed
             )
 
         assert prior1.prior["a"] == prior2.prior["a"]
@@ -1243,7 +1285,7 @@ class TestSamplePriorPredictive:
             y = pm.Deterministic("y", x + sharedvar)
 
             prior = pm.sample_prior_predictive(
-                samples=5,
+                draws=5,
                 return_inferencedata=False,
                 compile_kwargs=dict(
                     mode=Mode("py"),
@@ -1267,7 +1309,7 @@ class TestSamplePosteriorPredictive:
 
         with pmodel:
             prior = pm.sample_prior_predictive(
-                samples=20,
+                draws=20,
                 return_inferencedata=False,
             )
             idat = pm.to_inference_data(trace, prior=prior)
@@ -1326,7 +1368,7 @@ def test_distinct_rvs():
         Y_rv = pm.Normal("y")
 
         pp_samples = pm.sample_prior_predictive(
-            samples=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
+            draws=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
         )
 
     assert X_rv.owner.inputs[0] != Y_rv.owner.inputs[0]
@@ -1336,7 +1378,7 @@ def test_distinct_rvs():
         Y_rv = pm.Normal("y")
 
         pp_samples_2 = pm.sample_prior_predictive(
-            samples=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
+            draws=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
         )
 
     assert np.array_equal(pp_samples["y"], pp_samples_2["y"])
@@ -1636,7 +1678,7 @@ def test_get_vars_in_point_list():
     with pm.Model() as modelB:
         a = pm.Normal("a", 0, 1)
         pm.Normal("c", 0, 1)
-        pm.ConstantData("d", 0)
+        pm.Data("d", 0)
 
     point_list = [{"a": 0, "b": 0, "d": 0}]
     vars_in_trace = get_vars_in_point_list(point_list, modelB)
@@ -1665,3 +1707,12 @@ def test_observed_dependent_deterministics():
         det_mixed = pm.Deterministic("det_mixed", free + obs)
 
     assert set(observed_dependent_deterministics(m)) == {det_obs, det_obs2, det_mixed}
+
+
+def test_sample_prior_predictive_samples_deprecated_warns() -> None:
+    with pm.Model() as m:
+        pm.Normal("a")
+
+    match = "The samples argument has been deprecated"
+    with pytest.warns(DeprecationWarning, match=match):
+        pm.sample_prior_predictive(model=m, samples=10)

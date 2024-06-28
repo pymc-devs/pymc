@@ -16,6 +16,7 @@ import warnings
 import numpy as np
 import pytensor.tensor as pt
 import pytest
+import xarray
 
 from arviz import InferenceData
 from arviz.tests.helpers import check_multiple_attrs
@@ -26,6 +27,7 @@ import pymc as pm
 
 from pymc.backends.arviz import (
     InferenceDataConverter,
+    dataset_to_point_list,
     predictions_to_inference_data,
     to_inference_data,
 )
@@ -268,7 +270,7 @@ class TestDataPyMC:
             )
 
             data_dims = ("date", "city")
-            data = pm.ConstantData("data", df_data, dims=data_dims)
+            data = pm.Data("data", df_data, dims=data_dims)
             _ = pm.Normal(
                 "likelihood", mu=city_temperature, sigma=0.5, observed=data, dims=data_dims
             )
@@ -307,7 +309,7 @@ class TestDataPyMC:
         x_data = np.arange(4).reshape((2, 2))
         y = x_data + np.random.normal(size=(2, 2))
         with pm.Model(coords=coords):
-            x = pm.ConstantData("x", x_data, dims=("dim1", "dim2"))
+            x = pm.Data("x", x_data, dims=("dim1", "dim2"))
             beta = pm.Normal("beta", 0, 1, dims="dim1")
             _ = pm.Normal("obs", x * beta, 1, observed=y, dims=("dim1", "dim2"))
             trace = pm.sample(100, tune=100, return_inferencedata=False)
@@ -372,7 +374,7 @@ class TestDataPyMC:
             )
 
         # make sure that data is really missing
-        assert isinstance(y.owner.inputs[0].owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1))
+        assert isinstance(y.owner.inputs[0].owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1)
 
         test_dict = {
             "posterior": ["mu", "chol_cov"],
@@ -438,9 +440,9 @@ class TestDataPyMC:
     def test_constant_data(self, use_context):
         """Test constant_data group behaviour."""
         with pm.Model() as model:
-            x = pm.ConstantData("x", [1.0, 2.0, 3.0])
-            y = pm.MutableData("y", [1.0, 2.0, 3.0])
-            beta_sigma = pm.MutableData("beta_sigma", 1)
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            y = pm.Data("y", [1.0, 2.0, 3.0])
+            beta_sigma = pm.Data("beta_sigma", 1)
             beta = pm.Normal("beta", 0, beta_sigma)
             obs = pm.Normal("obs", x * beta, 1, observed=y)
             trace = pm.sample(100, chains=2, tune=100, return_inferencedata=False)
@@ -452,7 +454,7 @@ class TestDataPyMC:
         test_dict = {
             "posterior": ["beta"],
             "observed_data": ["obs"],
-            "constant_data": ["x", "y", "beta_sigma"],
+            "constant_data": ["x", "beta_sigma"],
         }
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
@@ -460,10 +462,34 @@ class TestDataPyMC:
         # test that scalars are dimensionless in constant_data (issue #6755)
         assert inference_data.constant_data["beta_sigma"].ndim == 0
 
+    @pytest.mark.parametrize("constant_in_generative_graph", [True, False])
+    def test_observed_data_also_constant(self, constant_in_generative_graph):
+        """Test that wen the same variable is used as constant data and observed data, it shows up in both groups."""
+        with pm.Model(coords={"trial": [0, 1, 2]}) as model:
+            x = pm.Data("x", [1.0, 2.0, 3.0], dims=["trial"])
+            sigma = pm.HalfNormal("sigma", 1)
+            mu = x - 1 if constant_in_generative_graph else 0
+            pm.Normal("y", mu, sigma, observed=x, dims=["trial"])
+
+            trace = pm.sample_prior_predictive(100, return_inferencedata=False)
+
+        inference_data = to_inference_data(prior=trace, model=model, log_likelihood=False)
+
+        test_dict = {
+            "prior": ["sigma"],
+            "observed_data": ["y"],
+        }
+        if constant_in_generative_graph:
+            test_dict["constant_data"] = ["x"]
+        else:
+            test_dict["~constant_data"] = []
+        fails = check_multiple_attrs(test_dict, inference_data)
+        assert not fails
+
     def test_predictions_constant_data(self):
         with pm.Model():
-            x = pm.ConstantData("x", [1.0, 2.0, 3.0])
-            y = pm.MutableData("y", [1.0, 2.0, 3.0])
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)
             trace = pm.sample(100, tune=100, return_inferencedata=False)
@@ -474,8 +500,8 @@ class TestDataPyMC:
         assert not fails
 
         with pm.Model():
-            x = pm.MutableData("x", [1.0, 2.0])
-            y = pm.ConstantData("y", [1.0, 2.0])
+            x = pm.Data("x", [1.0, 2.0])
+            y = pm.Data("y", [1.0, 2.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)
             predictive_trace = pm.sample_posterior_predictive(
@@ -502,8 +528,8 @@ class TestDataPyMC:
 
     def test_no_trace(self):
         with pm.Model() as model:
-            x = pm.ConstantData("x", [1.0, 2.0, 3.0])
-            y = pm.MutableData("y", [1.0, 2.0, 3.0])
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)
             idata = pm.sample(100, tune=100)
@@ -536,8 +562,8 @@ class TestDataPyMC:
     def test_priors_separation(self, use_context):
         """Test model is enough to get prior, prior predictive, constant_data and observed_data."""
         with pm.Model() as model:
-            x = pm.MutableData("x", [1.0, 2.0, 3.0])
-            y = pm.ConstantData("y", [1.0, 2.0, 3.0])
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)
             prior = pm.sample_prior_predictive(return_inferencedata=False)
@@ -546,7 +572,7 @@ class TestDataPyMC:
             "prior": ["beta", "~obs"],
             "observed_data": ["obs"],
             "prior_predictive": ["obs"],
-            "constant_data": ["x", "y"],
+            "constant_data": ["x"],
         }
         if use_context:
             with model:
@@ -776,3 +802,34 @@ class TestPyMCWarmupHandling:
             assert not fails
             assert idata.posterior.sizes["chain"] == 2
             assert idata.posterior.sizes["draw"] == 30
+
+
+class TestDatasetToPointList:
+    @pytest.mark.parametrize("input_type", ("dict", "Dataset"))
+    def test_dataset_to_point_list(self, input_type):
+        if input_type == "dict":
+            ds = {}
+        elif input_type == "Dataset":
+            ds = xarray.Dataset()
+        ds["A"] = xarray.DataArray([[1, 2, 3]] * 2, dims=("chain", "draw"))
+        pl, _ = dataset_to_point_list(ds, sample_dims=["chain", "draw"])
+        assert isinstance(pl, list)
+        assert len(pl) == 6
+        assert isinstance(pl[0], dict)
+        assert isinstance(pl[0]["A"], np.ndarray)
+
+    def test_transposed_dataset_to_point_list(self):
+        ds = xarray.Dataset()
+        ds["A"] = xarray.DataArray([[[1, 2, 3], [2, 3, 4]]] * 5, dims=("team", "draw", "chain"))
+        pl, _ = dataset_to_point_list(ds, sample_dims=["chain", "draw"])
+        assert isinstance(pl, list)
+        assert len(pl) == 6
+        assert isinstance(pl[0], dict)
+        assert isinstance(pl[0]["A"], np.ndarray)
+
+    def test_dataset_to_point_list_str_key(self):
+        # Check that non-str keys are caught
+        ds = xarray.Dataset()
+        ds[3] = xarray.DataArray([1, 2, 3])
+        with pytest.raises(ValueError, match="must be str"):
+            dataset_to_point_list(ds, sample_dims=["chain", "draw"])

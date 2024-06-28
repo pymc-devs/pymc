@@ -132,7 +132,7 @@ def test_do():
 
     # Test two substitutions
     with m_old:
-        switch = pm.MutableData("switch", 1)
+        switch = pm.Data("switch", 1)
     m_new = do(m_old, {y: 100 * switch, x: 100 * switch})
 
     assert len(m_new.free_RVs) == 1
@@ -213,8 +213,8 @@ def test_do_dims():
 @pytest.mark.parametrize("prune", (False, True))
 def test_do_prune(prune):
     with pm.Model() as m:
-        x0 = pm.ConstantData("x0", 0)
-        x1 = pm.ConstantData("x1", 0)
+        x0 = pm.Data("x0", 0)
+        x1 = pm.Data("x1", 0)
         y = pm.Normal("y")
         y_det = pm.Deterministic("y_det", y + x0)
         z = pm.Normal("z", y_det)
@@ -255,7 +255,7 @@ def test_do_self_reference():
 
 def test_change_value_transforms():
     with pm.Model() as base_m:
-        p = pm.Uniform("p", 0, 1, transform=None)
+        p = pm.Uniform("p", 0, 1, default_transform=None)
         w = pm.Binomial("w", n=9, p=p, observed=6)
         assert base_m.rvs_to_transforms[p] is None
         assert base_m.rvs_to_values[p].name == "p"
@@ -286,8 +286,8 @@ def test_change_value_transforms_error():
 
 def test_remove_value_transforms():
     with pm.Model() as base_m:
-        p = pm.Uniform("p", transform=logodds)
-        q = pm.Uniform("q", transform=logodds)
+        p = pm.Uniform("p", transform=logodds, default_transform=None)
+        q = pm.Uniform("q", transform=logodds, default_transform=None)
 
     new_m = remove_value_transforms(base_m)
     new_p = new_m["p"]

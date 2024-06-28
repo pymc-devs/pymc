@@ -163,8 +163,8 @@ class TestMinibatchRandomVariable:
         total_size = 1000
 
         with pm.Model(check_bounds=False) as m:
-            AD = pm.MutableData("AD", np.arange(total_size, dtype="float64"))
-            TD = pm.MutableData("TD", np.arange(total_size, dtype="float64"))
+            AD = pm.Data("AD", np.arange(total_size, dtype="float64"))
+            TD = pm.Data("TD", np.arange(total_size, dtype="float64"))
 
             minibatch_idx = minibatch_index(0, 10, size=(9,))
             AD_mt = AD[minibatch_idx]

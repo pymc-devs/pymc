@@ -149,9 +149,9 @@ class DifferentialEquation(Op):
         return Apply(self, inputs, (states, sens))
 
     def __call__(self, y0, theta, return_sens=False, **kwargs):
-        if isinstance(y0, (list, tuple)) and not len(y0) == self.n_states:
+        if isinstance(y0, list | tuple) and not len(y0) == self.n_states:
             raise ShapeError("Length of y0 is wrong.", actual=(len(y0),), expected=(self.n_states,))
-        if isinstance(theta, (list, tuple)) and not len(theta) == self.n_theta:
+        if isinstance(theta, list | tuple) and not len(theta) == self.n_theta:
             raise ShapeError(
                 "Length of theta is wrong.", actual=(len(theta),), expected=(self.n_theta,)
             )

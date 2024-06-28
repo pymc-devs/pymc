@@ -16,26 +16,31 @@
 import logging
 import warnings
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     Optional,
     Union,
+    cast,
 )
 
 import numpy as np
+import xarray
 
 from arviz import InferenceData, concat, rcParams
 from arviz.data.base import CoordSpec, DimSpec, dict_to_dataset, requires
-from pytensor.graph.basic import Constant
+from pytensor.graph import ancestors
 from pytensor.tensor.sharedvar import SharedVariable
+from rich.progress import Console
+from rich.theme import Theme
+from xarray import Dataset
 
 import pymc
 
 from pymc.model import Model, modelcontext
-from pymc.pytensorf import extract_obs_data
-from pymc.util import get_default_varnames
+from pymc.pytensorf import PointFunc, extract_obs_data
+from pymc.util import CustomProgress, default_progress_theme, get_default_varnames
 
 if TYPE_CHECKING:
     from pymc.backends.base import MultiTrace
@@ -67,31 +72,21 @@ def find_observations(model: "Model") -> dict[str, Var]:
 
 def find_constants(model: "Model") -> dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
+    model_vars = model.basic_RVs + model.deterministics + model.potentials
+    value_vars = set(model.rvs_to_values.values())
 
-    # The constant data vars must be either pm.Data or TensorConstant or SharedVariable
-    def is_data(name, var, model) -> bool:
-        observations = find_observations(model)
-        return (
-            var not in model.deterministics
-            and var not in model.observed_RVs
-            and var not in model.free_RVs
-            and var not in model.potentials
-            and var not in model.value_vars
-            and name not in observations
-            and isinstance(var, (Constant, SharedVariable))
-        )
-
-    # The assumption is that constants (like pm.Data) are named
-    # variables that aren't observed or free RVs, nor are they
-    # deterministics, and then we eliminate observations.
     constant_data = {}
-    for name, var in model.named_vars.items():
-        if is_data(name, var, model):
-            if hasattr(var, "get_value"):
-                var = var.get_value()
-            elif hasattr(var, "data"):
-                var = var.data
-            constant_data[name] = var
+    for var in model.data_vars:
+        if var in value_vars:
+            # An observed value variable could also be part of the generative graph
+            if var not in ancestors(model_vars):
+                continue
+
+        if isinstance(var, SharedVariable):
+            var_value = var.get_value()
+        else:
+            var_value = var.data
+        constant_data[var.name] = var_value
 
     return constant_data
 
@@ -163,10 +158,10 @@ class _DefaultTrace:
 class InferenceDataConverter:
     """Encapsulate InferenceData specific logic."""
 
-    model: Optional[Model] = None
-    posterior_predictive: Optional[Mapping[str, np.ndarray]] = None
-    predictions: Optional[Mapping[str, np.ndarray]] = None
-    prior: Optional[Mapping[str, np.ndarray]] = None
+    model: Model | None = None
+    posterior_predictive: Mapping[str, np.ndarray] | None = None
+    predictions: Mapping[str, np.ndarray] | None = None
+    prior: Mapping[str, np.ndarray] | None = None
 
     def __init__(
         self,
@@ -177,11 +172,11 @@ class InferenceDataConverter:
         log_likelihood=False,
         log_prior=False,
         predictions=None,
-        coords: Optional[CoordSpec] = None,
-        dims: Optional[DimSpec] = None,
-        sample_dims: Optional[list] = None,
+        coords: CoordSpec | None = None,
+        dims: DimSpec | None = None,
+        sample_dims: list | None = None,
         model=None,
-        save_warmup: Optional[bool] = None,
+        save_warmup: bool | None = None,
         include_transformed: bool = False,
     ):
         self.save_warmup = rcParams["data.save_warmup"] if save_warmup is None else save_warmup
@@ -466,15 +461,15 @@ class InferenceDataConverter:
 def to_inference_data(
     trace: Optional["MultiTrace"] = None,
     *,
-    prior: Optional[Mapping[str, Any]] = None,
-    posterior_predictive: Optional[Mapping[str, Any]] = None,
-    log_likelihood: Union[bool, Iterable[str]] = False,
-    log_prior: Union[bool, Iterable[str]] = False,
-    coords: Optional[CoordSpec] = None,
-    dims: Optional[DimSpec] = None,
-    sample_dims: Optional[list] = None,
+    prior: Mapping[str, Any] | None = None,
+    posterior_predictive: Mapping[str, Any] | None = None,
+    log_likelihood: bool | Iterable[str] = False,
+    log_prior: bool | Iterable[str] = False,
+    coords: CoordSpec | None = None,
+    dims: DimSpec | None = None,
+    sample_dims: list | None = None,
     model: Optional["Model"] = None,
-    save_warmup: Optional[bool] = None,
+    save_warmup: bool | None = None,
     include_transformed: bool = False,
 ) -> InferenceData:
     """Convert pymc data into an InferenceData object.
@@ -543,10 +538,10 @@ def predictions_to_inference_data(
     predictions,
     posterior_trace: Optional["MultiTrace"] = None,
     model: Optional["Model"] = None,
-    coords: Optional[CoordSpec] = None,
-    dims: Optional[DimSpec] = None,
-    sample_dims: Optional[list] = None,
-    idata_orig: Optional[InferenceData] = None,
+    coords: CoordSpec | None = None,
+    dims: DimSpec | None = None,
+    sample_dims: list | None = None,
+    idata_orig: InferenceData | None = None,
     inplace: bool = False,
 ) -> InferenceData:
     """Translate out-of-sample predictions into ``InferenceData``.
@@ -612,3 +607,75 @@ def predictions_to_inference_data(
         # data and return that.
         concat([new_idata, idata_orig], dim=None, copy=True, inplace=True)
         return new_idata
+
+
+def dataset_to_point_list(
+    ds: xarray.Dataset | dict[str, xarray.DataArray], sample_dims: Sequence[str]
+) -> tuple[list[dict[str, np.ndarray]], dict[str, Any]]:
+    # All keys of the dataset must be a str
+    var_names = cast(list[str], list(ds.keys()))
+    for vn in var_names:
+        if not isinstance(vn, str):
+            raise ValueError(f"Variable names must be str, but dataset key {vn} is a {type(vn)}.")
+    num_sample_dims = len(sample_dims)
+    stacked_dims = {dim_name: ds[var_names[0]][dim_name] for dim_name in sample_dims}
+    transposed_dict = {vn: da.transpose(*sample_dims, ...) for vn, da in ds.items()}
+    stacked_dict = {
+        vn: da.values.reshape((-1, *da.shape[num_sample_dims:]))
+        for vn, da in transposed_dict.items()
+    }
+    points = [
+        {vn: stacked_dict[vn][i, ...] for vn in var_names}
+        for i in range(np.prod([len(coords) for coords in stacked_dims.values()]))
+    ]
+    # use the list of points
+    return cast(list[dict[str, np.ndarray]], points), stacked_dims
+
+
+def apply_function_over_dataset(
+    fn: PointFunc,
+    dataset: Dataset,
+    *,
+    output_var_names: Sequence[str],
+    coords,
+    dims,
+    sample_dims: Sequence[str] = ("chain", "draw"),
+    progressbar: bool = True,
+    progressbar_theme: Theme | None = default_progress_theme,
+) -> Dataset:
+    posterior_pts, stacked_dims = dataset_to_point_list(dataset, sample_dims)
+
+    n_pts = len(posterior_pts)
+    out_dict = _DefaultTrace(n_pts)
+    indices = range(n_pts)
+
+    with CustomProgress(
+        console=Console(theme=progressbar_theme), disable=not progressbar
+    ) as progress:
+        task = progress.add_task("Computing ...", total=n_pts)
+        for idx in indices:
+            out = fn(posterior_pts[idx])
+            fn.f.trust_input = True  # If we arrive here the dtypes are valid
+            for var_name, val in zip(output_var_names, out):
+                out_dict.insert(var_name, val, idx)
+
+            progress.advance(task)
+        progress.update(task, refresh=True, completed=n_pts)
+
+    out_trace = out_dict.trace_dict
+    for key, val in out_trace.items():
+        out_trace[key] = val.reshape(
+            (
+                *[len(coord) for coord in stacked_dims.values()],
+                *val.shape[1:],
+            )
+        )
+
+    return dict_to_dataset(
+        out_trace,
+        library=pymc,
+        dims=dims,
+        coords=coords,
+        default_dims=list(sample_dims),
+        skip_event_dims=True,
+    )

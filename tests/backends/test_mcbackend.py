@@ -46,12 +46,12 @@ def simple_model():
             "condition": ["A", "B", "C"],
         }
     ) as pmodel:
-        x = pm.ConstantData("seconds", seconds, dims="time")
+        x = pm.Data("seconds", seconds, dims="time")
         a = pm.Normal("scalar")
         b = pm.Uniform("vector", dims="condition")
         pm.Deterministic("matrix", a + b[:, None] * x[None, :], dims=("condition", "time"))
         pm.Bernoulli("integer", p=0.5)
-        obs = pm.MutableData("obs", observations, dims=("condition", "time"))
+        obs = pm.Data("obs", observations, dims=("condition", "time"))
         pm.Normal("L", pmodel["matrix"], observed=obs, dims=("condition", "time"))
     return pmodel
 
@@ -65,7 +65,7 @@ def test_find_data(simple_model):
     assert isinstance(secs, mcb.DataVariable)
     assert secs.dims == ["time"]
     assert not secs.is_observed
-    np.testing.assert_array_equal(ndarray_to_numpy(secs.value), simple_model["seconds"].data)
+    np.testing.assert_array_equal(ndarray_to_numpy(secs.value), simple_model["seconds"].get_value())
 
     obs = dvardict["obs"]
     assert isinstance(obs, mcb.DataVariable)
@@ -77,7 +77,7 @@ def test_find_data(simple_model):
 def test_find_data_skips_deterministics():
     data = np.array([0, 1], dtype="float32")
     with pm.Model() as pmodel:
-        a = pm.ConstantData("a", data, dims="item")
+        a = pm.Data("a", data, dims="item")
         b = pm.Normal("b")
         pm.Deterministic("c", a + b, dims="item")
     assert "c" in pmodel.named_vars

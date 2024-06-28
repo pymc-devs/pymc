@@ -106,15 +106,38 @@ class _BaseFixtures:
 
 
 class TestHSGP(_BaseFixtures):
-    def test_set_boundaries_1d(self, X1):
+    @pytest.mark.parametrize("x_min, x_max", [(-5, 5), (-10, -1)])
+    def test_set_boundaries_1d(self, x_min, x_max):
+        X1 = np.linspace(x_min, x_max, 100)[:, None]
         X1s = X1 - np.mean(X1, axis=0)
-        L = pm.gp.hsgp_approx.set_boundary(X1s, c=2).eval()
-        assert np.all(L == 10)
+        c = 2
+        L = pm.gp.hsgp_approx.set_boundary(X1s, c=c)
+
+        expected_L = np.abs(X1.max() - X1.min()) / 2 * c
+        assert np.allclose(L, expected_L), f"Expected L to be close to {expected_L}, but got {L}"
 
     def test_set_boundaries_3d(self, X2):
         X2s = X2 - np.mean(X2, axis=0)
-        L = pm.gp.hsgp_approx.set_boundary(X2s, c=2).eval()
+        L = pm.gp.hsgp_approx.set_boundary(X2s, c=2)
         assert np.all(L == 10)
+
+    def test_mean_invariance(self):
+        X = np.linspace(0, 10, 100)[:, None]
+        original_center = (np.max(X, axis=0) - np.min(X, axis=0)) / 2
+
+        with pm.Model() as model:
+            _ = pm.Data("X", X)
+            cov_func = pm.gp.cov.ExpQuad(1, ls=3)
+            gp = pm.gp.HSGP(m=[20], L=[10], cov_func=cov_func)
+            _ = gp.prior_linearized(X=X)
+
+        x_new = np.linspace(-10, 20, 100)[:, None]
+        with model:
+            pm.set_data({"X": x_new})
+
+        assert np.allclose(
+            gp._X_center, original_center
+        ), "gp._X_center should not change after updating data for out-of-sample predictions."
 
     def test_parametrization(self):
         err_msg = (
@@ -141,10 +164,11 @@ class TestHSGP(_BaseFixtures):
             pm.gp.HSGP(m=[500], L=[12, 12], cov_func=cov_func)
 
         with pytest.raises(
-            ValueError, match="`parameterization` must be either 'centered' or 'noncentered'."
+            ValueError,
+            match="`parametrization` must be either 'centered' or 'noncentered'.",
         ):
             cov_func = pm.gp.cov.ExpQuad(2, ls=[1, 2])
-            pm.gp.HSGP(m=[50, 50], L=[12, 12], parameterization="wrong", cov_func=cov_func)
+            pm.gp.HSGP(m=[50, 50], L=[12, 12], parametrization="wrong", cov_func=cov_func)
 
         # pass without error, cov_func has 2 active dimensions, c given as scalar
         cov_func = pm.gp.cov.ExpQuad(3, ls=[1, 2], active_dims=[0, 2])
@@ -171,25 +195,25 @@ class TestHSGP(_BaseFixtures):
                 assert n_coeffs == n_basis, "one was dropped when it shouldn't have been"
 
     @pytest.mark.parametrize(
-        "cov_func,parameterization",
+        "cov_func,parametrization",
         [
             (pm.gp.cov.ExpQuad(1, ls=1), "centered"),
             (pm.gp.cov.ExpQuad(1, ls=1), "noncentered"),
         ],
     )
-    def test_prior(self, model, cov_func, X1, parameterization, rng):
+    def test_prior(self, model, cov_func, X1, parametrization, rng):
         """Compare HSGP prior to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
         prior and compare them using MMD two sample test.  Tests both centered and non-centered
-        parameterizations.
+        parametrization.
         """
         with model:
-            hsgp = pm.gp.HSGP(m=[200], c=2.0, parameterization=parameterization, cov_func=cov_func)
+            hsgp = pm.gp.HSGP(m=[200], c=2.0, parametrization=parametrization, cov_func=cov_func)
             f1 = hsgp.prior("f1", X=X1)
 
             gp = pm.gp.Latent(cov_func=cov_func)
             f2 = gp.prior("f2", X=X1)
 
-            idata = pm.sample_prior_predictive(samples=1000, random_seed=rng)
+            idata = pm.sample_prior_predictive(draws=1000, random_seed=rng)
 
         samples1 = az.extract(idata.prior["f1"])["f1"].values.T
         samples2 = az.extract(idata.prior["f2"])["f2"].values.T
@@ -200,23 +224,23 @@ class TestHSGP(_BaseFixtures):
         assert not reject, "H0 was rejected, even though HSGP and GP priors should match."
 
     @pytest.mark.parametrize(
-        "cov_func,parameterization",
+        "cov_func,parametrization",
         [
             (pm.gp.cov.ExpQuad(1, ls=1), "centered"),
             (pm.gp.cov.ExpQuad(1, ls=1), "noncentered"),
         ],
     )
-    def test_conditional(self, model, cov_func, X1, parameterization):
+    def test_conditional(self, model, cov_func, X1, parametrization):
         """Compare HSGP conditional to unapproximated GP prior, pm.gp.Latent.  Draw samples from the
         prior and compare them using MMD two sample test.  Tests both centered and non-centered
-        parameterizations.  The conditional should match the prior when no data is observed.
+        parametrization.  The conditional should match the prior when no data is observed.
         """
         with model:
-            hsgp = pm.gp.HSGP(m=[100], c=2.0, parameterization=parameterization, cov_func=cov_func)
+            hsgp = pm.gp.HSGP(m=[100], c=2.0, parametrization=parametrization, cov_func=cov_func)
             f = hsgp.prior("f", X=X1)
             fc = hsgp.conditional("fc", Xnew=X1)
 
-            idata = pm.sample_prior_predictive(samples=1000)
+            idata = pm.sample_prior_predictive(draws=1000)
 
         samples1 = az.extract(idata.prior["f"])["f"].values.T
         samples2 = az.extract(idata.prior["fc"])["fc"].values.T
@@ -276,7 +300,7 @@ class TestHSGPPeriodic(_BaseFixtures):
             gp = pm.gp.Latent(cov_func=eta**2 * cov_func)
             f2 = gp.prior("f2", X=X1)
 
-            idata = pm.sample_prior_predictive(samples=1000, random_seed=rng)
+            idata = pm.sample_prior_predictive(draws=1000, random_seed=rng)
 
         samples1 = az.extract(idata.prior["f1"])["f1"].values.T
         samples2 = az.extract(idata.prior["f2"])["f2"].values.T
@@ -297,7 +321,7 @@ class TestHSGPPeriodic(_BaseFixtures):
             f = hsgp.prior("f", X=X1)
             fc = hsgp.conditional("fc", Xnew=X1)
 
-            idata = pm.sample_prior_predictive(samples=1000)
+            idata = pm.sample_prior_predictive(draws=1000)
 
         samples1 = az.extract(idata.prior["f"])["f"].values.T
         samples2 = az.extract(idata.prior["fc"])["fc"].values.T

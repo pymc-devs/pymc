@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import numpy as np
 import numpy.random as nr
@@ -67,29 +67,29 @@ class Proposal:
 
 
 class NormalProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).normal(scale=self.s)
 
 
 class UniformProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).uniform(low=-self.s, high=self.s, size=len(self.s))
 
 
 class CauchyProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).standard_cauchy(size=np.size(self.s)) * self.s
 
 
 class LaplaceProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         size = np.size(self.s)
         r = rng or nr
         return (r.standard_exponential(size=size) - r.standard_exponential(size=size)) * self.s
 
 
 class PoissonProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).poisson(lam=self.s, size=np.size(self.s)) - self.s
 
 
@@ -101,7 +101,7 @@ class MultivariateNormalProposal(Proposal):
         self.n = n
         self.chol = scipy.linalg.cholesky(s, lower=True)
 
-    def __call__(self, num_draws=None, rng: Optional[np.random.Generator] = None):
+    def __call__(self, num_draws=None, rng: np.random.Generator | None = None):
         rng_ = rng or nr
         if num_draws is not None:
             b = rng_.normal(size=(self.n, num_draws))
@@ -178,7 +178,7 @@ class Metropolis(ArrayStepShared):
         elif S.ndim == 2:
             self.proposal_dist = MultivariateNormalProposal(S)
         else:
-            raise ValueError("Invalid rank for variance: %s" % S.ndim)
+            raise ValueError(f"Invalid rank for variance: {S.ndim}")
 
         self.scaling = np.atleast_1d(scaling).astype("d")
         self.tune = tune
@@ -426,11 +426,11 @@ class BinaryMetropolis(ArrayStep):
         if isinstance(distribution, CategoricalRV):
             # TODO: We could compute the initial value of `k`
             # if we had a model object.
-            # k_graph = var.owner.inputs[3].shape[-1]
+            # k_graph = var.owner.inputs[-1].shape[-1]
             # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
             # k = model.fn(k_graph)(initial_point)
             try:
-                k = var.owner.inputs[3].shape[-1].eval()
+                k = var.owner.inputs[-1].shape[-1].eval()
                 if k == 2:
                     return Competence.COMPATIBLE
             except MissingInputError:
@@ -533,11 +533,11 @@ class BinaryGibbsMetropolis(ArrayStep):
         if isinstance(distribution, CategoricalRV):
             # TODO: We could compute the initial value of `k`
             # if we had a model object.
-            # k_graph = var.owner.inputs[3].shape[-1]
+            # k_graph = var.owner.inputs[-1].shape[-1]
             # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
             # k = model.fn(k_graph)(initial_point)
             try:
-                k = var.owner.inputs[3].shape[-1].eval()
+                k = var.owner.inputs[-1].shape[-1].eval()
                 if k == 2:
                     return Competence.IDEAL
             except MissingInputError:
@@ -580,7 +580,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
             distr = getattr(rv_var.owner, "op", None)
 
             if isinstance(distr, CategoricalRV):
-                k_graph = rv_var.owner.inputs[3].shape[-1]
+                k_graph = rv_var.owner.inputs[-1].shape[-1]
                 (k_graph,) = model.replace_rvs_by_values((k_graph,))
                 k = model.compile_fn(k_graph, inputs=model.value_vars, on_unused_input="ignore")(
                     initial_point
@@ -696,11 +696,11 @@ class CategoricalGibbsMetropolis(ArrayStep):
         if isinstance(distribution, CategoricalRV):
             # TODO: We could compute the initial value of `k`
             # if we had a model object.
-            # k_graph = var.owner.inputs[3].shape[-1]
+            # k_graph = var.owner.inputs[-1].shape[-1]
             # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
             # k = model.fn(k_graph)(initial_point)
             try:
-                k = var.owner.inputs[3].shape[-1].eval()
+                k = var.owner.inputs[-1].shape[-1].eval()
                 if k > 2:
                     return Competence.IDEAL
             except MissingInputError:
@@ -767,7 +767,7 @@ class DEMetropolis(PopulationArrayStepShared):
         proposal_dist=None,
         lamb=None,
         scaling=0.001,
-        tune: Optional[str] = "scaling",
+        tune: str | None = "scaling",
         tune_interval=100,
         model=None,
         mode=None,
@@ -910,7 +910,7 @@ class DEMetropolisZ(ArrayStepShared):
         proposal_dist=None,
         lamb=None,
         scaling=0.001,
-        tune: Optional[str] = "scaling",
+        tune: str | None = "scaling",
         tune_interval=100,
         tune_drop_fraction: float = 0.9,
         model=None,

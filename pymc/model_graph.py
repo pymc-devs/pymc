@@ -14,19 +14,19 @@
 import warnings
 
 from collections import defaultdict
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
+from enum import Enum
 from os import path
-from typing import Optional
+from typing import Any
 
 from pytensor import function
-from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph import Apply
 from pytensor.graph.basic import ancestors, walk
 from pytensor.scalar.basic import Cast
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.shape import Shape
-from pytensor.tensor.variable import TensorConstant, TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 import pymc as pm
 
@@ -41,6 +41,119 @@ __all__ = (
 
 def fast_eval(var):
     return function([], var, mode="FAST_COMPILE")()
+
+
+class NodeType(str, Enum):
+    """Enum for the types of nodes in the graph."""
+
+    POTENTIAL = "Potential"
+    FREE_RV = "Free Random Variable"
+    OBSERVED_RV = "Observed Random Variable"
+    DETERMINISTIC = "Deterministic"
+    DATA = "Data"
+
+
+GraphvizNodeKwargs = dict[str, Any]
+NodeFormatter = Callable[[TensorVariable], GraphvizNodeKwargs]
+
+
+def default_potential(var: TensorVariable) -> GraphvizNodeKwargs:
+    """Default data for potential in the graph."""
+    return {
+        "shape": "octagon",
+        "style": "filled",
+        "label": f"{var.name}\n~\nPotential",
+    }
+
+
+def random_variable_symbol(var: TensorVariable) -> str:
+    """Get the symbol of the random variable."""
+    symbol = var.owner.op.__class__.__name__
+
+    if symbol.endswith("RV"):
+        symbol = symbol[:-2]
+
+    return symbol
+
+
+def default_free_rv(var: TensorVariable) -> GraphvizNodeKwargs:
+    """Default data for free RV in the graph."""
+    symbol = random_variable_symbol(var)
+
+    return {
+        "shape": "ellipse",
+        "style": None,
+        "label": f"{var.name}\n~\n{symbol}",
+    }
+
+
+def default_observed_rv(var: TensorVariable) -> GraphvizNodeKwargs:
+    """Default data for observed RV in the graph."""
+    symbol = random_variable_symbol(var)
+
+    return {
+        "shape": "ellipse",
+        "style": "filled",
+        "label": f"{var.name}\n~\n{symbol}",
+    }
+
+
+def default_deterministic(var: TensorVariable) -> GraphvizNodeKwargs:
+    """Default data for the deterministic in the graph."""
+    return {
+        "shape": "box",
+        "style": None,
+        "label": f"{var.name}\n~\nDeterministic",
+    }
+
+
+def default_data(var: TensorVariable) -> GraphvizNodeKwargs:
+    """Default data for the data in the graph."""
+    return {
+        "shape": "box",
+        "style": "rounded, filled",
+        "label": f"{var.name}\n~\nData",
+    }
+
+
+def get_node_type(var_name: VarName, model) -> NodeType:
+    """Return the node type of the variable in the model."""
+    v = model[var_name]
+
+    if v in model.deterministics:
+        return NodeType.DETERMINISTIC
+    elif v in model.free_RVs:
+        return NodeType.FREE_RV
+    elif v in model.observed_RVs:
+        return NodeType.OBSERVED_RV
+    elif v in model.data_vars:
+        return NodeType.DATA
+    else:
+        return NodeType.POTENTIAL
+
+
+NodeTypeFormatterMapping = dict[NodeType, NodeFormatter]
+
+DEFAULT_NODE_FORMATTERS: NodeTypeFormatterMapping = {
+    NodeType.POTENTIAL: default_potential,
+    NodeType.FREE_RV: default_free_rv,
+    NodeType.OBSERVED_RV: default_observed_rv,
+    NodeType.DETERMINISTIC: default_deterministic,
+    NodeType.DATA: default_data,
+}
+
+
+def update_node_formatters(node_formatters: NodeTypeFormatterMapping) -> NodeTypeFormatterMapping:
+    node_formatters = {**DEFAULT_NODE_FORMATTERS, **node_formatters}
+
+    unknown_keys = set(node_formatters.keys()) - set(NodeType)
+    if unknown_keys:
+        raise ValueError(
+            f"Node formatters must be of type NodeType. Found: {list(unknown_keys)}."
+            f" Please use one of {[node_type.value for node_type in NodeType]}."
+        )
+
+    return node_formatters
 
 
 class ModelGraph:
@@ -59,8 +172,8 @@ class ModelGraph:
                 # Don't show shape-related dependencies
                 return []
             if isinstance(node.op, RandomVariable):
-                # Filter out rng, dtype and size parameters or RandomVariable nodes
-                return node.inputs[3:]
+                # Filter out rng and size parameters or RandomVariable nodes
+                return node.op.dist_params(node)
             else:
                 # Otherwise return all inputs
                 return node.inputs
@@ -84,7 +197,7 @@ class ModelGraph:
 
         return parents
 
-    def vars_to_plot(self, var_names: Optional[Iterable[VarName]] = None) -> list[VarName]:
+    def vars_to_plot(self, var_names: Iterable[VarName] | None = None) -> list[VarName]:
         if var_names is None:
             return self._all_var_names
 
@@ -115,7 +228,7 @@ class ModelGraph:
         return [get_var_name(var) for var in selected_ancestors]
 
     def make_compute_graph(
-        self, var_names: Optional[Iterable[VarName]] = None
+        self, var_names: Iterable[VarName] | None = None
     ) -> dict[VarName, set[VarName]]:
         """Get map of var_name -> set(input var names) for the model"""
         input_map: dict[VarName, set[VarName]] = defaultdict(set)
@@ -150,46 +263,23 @@ class ModelGraph:
 
         return input_map
 
-    def _make_node(self, var_name, graph, *, nx=False, cluster=False, formatting: str = "plain"):
+    def _make_node(
+        self,
+        var_name,
+        graph,
+        *,
+        node_formatters: NodeTypeFormatterMapping,
+        nx=False,
+        cluster=False,
+        formatting: str = "plain",
+    ):
         """Attaches the given variable to a graphviz or networkx Digraph"""
         v = self.model[var_name]
 
-        shape = None
-        style = None
-        label = str(v)
+        node_type = get_node_type(var_name, self.model)
+        node_formatter = node_formatters[node_type]
 
-        if v in self.model.potentials:
-            shape = "octagon"
-            style = "filled"
-            label = f"{var_name}\n~\nPotential"
-        elif isinstance(v, TensorConstant):
-            shape = "box"
-            style = "rounded, filled"
-            label = f"{var_name}\n~\nConstantData"
-        elif isinstance(v, SharedVariable):
-            shape = "box"
-            style = "rounded, filled"
-            label = f"{var_name}\n~\nMutableData"
-        elif v in self.model.basic_RVs:
-            shape = "ellipse"
-            if v in self.model.observed_RVs:
-                style = "filled"
-            else:
-                style = None
-            symbol = v.owner.op.__class__.__name__
-            if symbol.endswith("RV"):
-                symbol = symbol[:-2]
-            label = f"{var_name}\n~\n{symbol}"
-        else:
-            shape = "box"
-            style = None
-            label = f"{var_name}\n~\nDeterministic"
-
-        kwargs = {
-            "shape": shape,
-            "style": style,
-            "label": label,
-        }
+        kwargs = node_formatter(v)
 
         if cluster:
             kwargs["cluster"] = cluster
@@ -199,7 +289,7 @@ class ModelGraph:
         else:
             graph.node(var_name.replace(":", "&"), **kwargs)
 
-    def get_plates(self, var_names: Optional[Iterable[VarName]] = None) -> dict[str, set[VarName]]:
+    def get_plates(self, var_names: Iterable[VarName] | None = None) -> dict[str, set[VarName]]:
         """Rough but surprisingly accurate plate detection.
 
         Just groups by the shape of the underlying distribution.  Will be wrong
@@ -241,11 +331,12 @@ class ModelGraph:
 
     def make_graph(
         self,
-        var_names: Optional[Iterable[VarName]] = None,
+        var_names: Iterable[VarName] | None = None,
         formatting: str = "plain",
         save=None,
         figsize=None,
         dpi=300,
+        node_formatters: NodeTypeFormatterMapping | None = None,
     ):
         """Make graphviz Digraph of PyMC model
 
@@ -261,18 +352,26 @@ class ModelGraph:
                 "The easiest way to install all of this is by running\n\n"
                 "\tconda install -c conda-forge python-graphviz"
             )
+
+        node_formatters = node_formatters or {}
+        node_formatters = update_node_formatters(node_formatters)
+
         graph = graphviz.Digraph(self.model.name)
         for plate_label, all_var_names in self.get_plates(var_names).items():
             if plate_label:
                 # must be preceded by 'cluster' to get a box around it
                 with graph.subgraph(name="cluster" + plate_label) as sub:
                     for var_name in all_var_names:
-                        self._make_node(var_name, sub, formatting=formatting)
+                        self._make_node(
+                            var_name, sub, formatting=formatting, node_formatters=node_formatters
+                        )
                     # plate label goes bottom right
                     sub.attr(label=plate_label, labeljust="r", labelloc="b", style="rounded")
             else:
                 for var_name in all_var_names:
-                    self._make_node(var_name, graph, formatting=formatting)
+                    self._make_node(
+                        var_name, graph, formatting=formatting, node_formatters=node_formatters
+                    )
 
         for child, parents in self.make_compute_graph(var_names=var_names).items():
             # parents is a set of rv names that precede child rv nodes
@@ -294,7 +393,10 @@ class ModelGraph:
         return graph
 
     def make_networkx(
-        self, var_names: Optional[Iterable[VarName]] = None, formatting: str = "plain"
+        self,
+        var_names: Iterable[VarName] | None = None,
+        formatting: str = "plain",
+        node_formatters: NodeTypeFormatterMapping | None = None,
     ):
         """Make networkx Digraph of PyMC model
 
@@ -310,6 +412,10 @@ class ModelGraph:
                 "The easiest way to install all of this is by running\n\n"
                 "\tconda install networkx"
             )
+
+        node_formatters = node_formatters or {}
+        node_formatters = update_node_formatters(node_formatters)
+
         graphnetwork = networkx.DiGraph(name=self.model.name)
         for plate_label, all_var_names in self.get_plates(var_names).items():
             if plate_label:
@@ -322,6 +428,7 @@ class ModelGraph:
                         var_name,
                         subgraphnetwork,
                         nx=True,
+                        node_formatters=node_formatters,
                         cluster="cluster" + plate_label,
                         formatting=formatting,
                     )
@@ -340,7 +447,13 @@ class ModelGraph:
                 graphnetwork.graph["name"] = self.model.name
             else:
                 for var_name in all_var_names:
-                    self._make_node(var_name, graphnetwork, nx=True, formatting=formatting)
+                    self._make_node(
+                        var_name,
+                        graphnetwork,
+                        nx=True,
+                        formatting=formatting,
+                        node_formatters=node_formatters,
+                    )
 
         for child, parents in self.make_compute_graph(var_names=var_names).items():
             # parents is a set of rv names that precede child rv nodes
@@ -352,8 +465,9 @@ class ModelGraph:
 def model_to_networkx(
     model=None,
     *,
-    var_names: Optional[Iterable[VarName]] = None,
+    var_names: Iterable[VarName] | None = None,
     formatting: str = "plain",
+    node_formatters: NodeTypeFormatterMapping | None = None,
 ):
     """Produce a networkx Digraph from a PyMC model.
 
@@ -375,6 +489,10 @@ def model_to_networkx(
         Subset of variables to be plotted that identify a subgraph with respect to the entire model graph
     formatting : str, optional
         one of { "plain" }
+    node_formatters : dict, optional
+        A dictionary mapping node types to functions that return a dictionary of node attributes.
+        Check out the networkx documentation for more information
+        how attributes are added to nodes: https://networkx.org/documentation/stable/reference/classes/generated/networkx.Graph.add_node.html
 
     Examples
     --------
@@ -400,6 +518,17 @@ def model_to_networkx(
             obs = Normal("obs", theta, sigma=sigma, observed=y)
 
         model_to_networkx(schools)
+
+    Add custom attributes to Free Random Variables and Observed Random Variables nodes.
+
+    .. code-block:: python
+
+        node_formatters = {
+            "Free Random Variable": lambda var: {"shape": "circle", "label": var.name},
+            "Observed Random Variable": lambda var: {"shape": "square", "label": var.name},
+        }
+        model_to_networkx(schools, node_formatters=node_formatters)
+
     """
     if "plain" not in formatting:
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
@@ -411,17 +540,20 @@ def model_to_networkx(
             stacklevel=2,
         )
     model = pm.modelcontext(model)
-    return ModelGraph(model).make_networkx(var_names=var_names, formatting=formatting)
+    return ModelGraph(model).make_networkx(
+        var_names=var_names, formatting=formatting, node_formatters=node_formatters
+    )
 
 
 def model_to_graphviz(
     model=None,
     *,
-    var_names: Optional[Iterable[VarName]] = None,
+    var_names: Iterable[VarName] | None = None,
     formatting: str = "plain",
-    save: Optional[str] = None,
-    figsize: Optional[tuple[int, int]] = None,
+    save: str | None = None,
+    figsize: tuple[int, int] | None = None,
     dpi: int = 300,
+    node_formatters: NodeTypeFormatterMapping | None = None,
 ):
     """Produce a graphviz Digraph from a PyMC model.
 
@@ -449,6 +581,10 @@ def model_to_graphviz(
         the size of the saved figure.
     dpi : int, optional
         Dots per inch. It only affects the resolution of the saved figure. The default is 300.
+    node_formatters : dict, optional
+        A dictionary mapping node types to functions that return a dictionary of node attributes.
+        Check out graphviz documentation for more information on available
+        attributes. https://graphviz.org/docs/nodes/
 
     Examples
     --------
@@ -483,6 +619,16 @@ def model_to_graphviz(
 
         # creates the file `schools.pdf`
         model_to_graphviz(schools).render("schools")
+
+    Display Free Random Variables and Observed Random Variables nodes with custom formatting.
+
+    .. code-block:: python
+
+        node_formatters = {
+            "Free Random Variable": lambda var: {"shape": "circle", "label": var.name},
+            "Observed Random Variable": lambda var: {"shape": "square", "label": var.name},
+        }
+        model_to_graphviz(schools, node_formatters=node_formatters)
     """
     if "plain" not in formatting:
         raise ValueError(f"Unsupported formatting for graph nodes: '{formatting}'. See docstring.")
@@ -499,4 +645,5 @@ def model_to_graphviz(
         save=save,
         figsize=figsize,
         dpi=dpi,
+        node_formatters=node_formatters,
     )

@@ -16,13 +16,19 @@ import pytensor.tensor as pt
 
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.utils import normalize_size_param
 
 from pymc.distributions.distribution import (
     Distribution,
     SymbolicRandomVariable,
     _support_point,
 )
-from pymc.distributions.shape_utils import _change_dist_size, change_dist_size
+from pymc.distributions.shape_utils import (
+    _change_dist_size,
+    change_dist_size,
+    implicit_size_from_params,
+    rv_size_is_none,
+)
 from pymc.util import check_dist_not_registered
 
 
@@ -30,9 +36,27 @@ class CensoredRV(SymbolicRandomVariable):
     """Censored random variable"""
 
     inline_logprob = True
-    signature = "(),(),()->()"
-    ndim_supp = 0
+    extended_signature = "(),(),()->()"
     _print_name = ("Censored", "\\operatorname{Censored}")
+
+    @classmethod
+    def rv_op(cls, dist, lower, upper, *, size=None):
+        # We don't allow passing `rng` because we don't fully control the rng of the components!
+        lower = pt.constant(-np.inf) if lower is None else pt.as_tensor(lower)
+        upper = pt.constant(np.inf) if upper is None else pt.as_tensor(upper)
+        size = normalize_size_param(size)
+
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(dist, lower, upper, ndims_params=cls.ndims_params)
+
+        # Censoring is achieved by clipping the base distribution between lower and upper
+        dist = change_dist_size(dist, size)
+        censored_rv = pt.clip(dist, lower, upper)
+
+        return CensoredRV(
+            inputs=[dist, lower, upper],
+            outputs=[censored_rv],
+        )(dist, lower, upper)
 
 
 class Censored(Distribution):
@@ -85,11 +109,12 @@ class Censored(Distribution):
     """
 
     rv_type = CensoredRV
+    rv_op = CensoredRV.rv_op
 
     @classmethod
     def dist(cls, dist, lower, upper, **kwargs):
         if not isinstance(dist, TensorVariable) or not isinstance(
-            dist.owner.op, (RandomVariable, SymbolicRandomVariable)
+            dist.owner.op, RandomVariable | SymbolicRandomVariable
         ):
             raise ValueError(
                 f"Censoring dist must be a distribution created via the `.dist()` API, got {type(dist)}"
@@ -100,24 +125,6 @@ class Censored(Distribution):
             )
         check_dist_not_registered(dist)
         return super().dist([dist, lower, upper], **kwargs)
-
-    @classmethod
-    def rv_op(cls, dist, lower=None, upper=None, size=None):
-        lower = pt.constant(-np.inf) if lower is None else pt.as_tensor_variable(lower)
-        upper = pt.constant(np.inf) if upper is None else pt.as_tensor_variable(upper)
-
-        # When size is not specified, dist may have to be broadcasted according to lower/upper
-        dist_shape = size if size is not None else pt.broadcast_shape(dist, lower, upper)
-        dist = change_dist_size(dist, dist_shape)
-
-        # Censoring is achieved by clipping the base distribution between lower and upper
-        dist_, lower_, upper_ = dist.type(), lower.type(), upper.type()
-        censored_rv_ = pt.clip(dist_, lower_, upper_)
-
-        return CensoredRV(
-            inputs=[dist_, lower_, upper_],
-            outputs=[censored_rv_],
-        )(dist, lower, upper)
 
 
 @_change_dist_size.register(CensoredRV)

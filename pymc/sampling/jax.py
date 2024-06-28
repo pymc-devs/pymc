@@ -15,10 +15,10 @@ import logging
 import os
 import re
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import datetime
 from functools import partial
-from typing import Any, Callable, Literal, Optional, Union
+from typing import Any, Literal
 
 import arviz as az
 import jax
@@ -120,8 +120,8 @@ def _replace_shared_variables(graph: list[TensorVariable]) -> list[TensorVariabl
 
 
 def get_jaxified_graph(
-    inputs: Optional[list[TensorVariable]] = None,
-    outputs: Optional[list[TensorVariable]] = None,
+    inputs: list[TensorVariable] | None = None,
+    outputs: list[TensorVariable] | None = None,
 ) -> list[TensorVariable]:
     """Compile an PyTensor graph into an optimized JAX function"""
 
@@ -161,7 +161,7 @@ def get_jaxified_logp(model: Model, negative_logp=True) -> Callable:
 def _get_log_likelihood(
     model: Model,
     samples,
-    backend: Optional[Literal["cpu", "gpu"]] = None,
+    backend: Literal["cpu", "gpu"] | None = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
 ) -> dict:
     """Compute log-likelihood for all observations"""
@@ -180,7 +180,7 @@ def _device_put(input, device: str):
 def _postprocess_samples(
     jax_fn: Callable,
     raw_mcmc_samples: list[TensorVariable],
-    postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
+    postprocessing_backend: Literal["cpu", "gpu"] | None = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
 ) -> list[TensorVariable]:
     if postprocessing_vectorize == "scan":
@@ -201,11 +201,11 @@ def _postprocess_samples(
 def _get_batched_jittered_initial_points(
     model: Model,
     chains: int,
-    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
+    initvals: StartDict | Sequence[StartDict | None] | None,
     random_seed: RandomSeed,
     jitter: bool = True,
     jitter_max_retries: int = 10,
-) -> Union[np.ndarray, list[np.ndarray]]:
+) -> np.ndarray | list[np.ndarray]:
     """Get jittered initial point in format expected by NumPyro MCMC kernel
 
     Returns
@@ -309,7 +309,7 @@ def _sample_blackjax_nuts(
     tune: int,
     draws: int,
     chains: int,
-    chain_method: Optional[str],
+    chain_method: str | None,
     progressbar: bool,
     random_seed: int,
     initial_points,
@@ -429,7 +429,7 @@ def _numpyro_stats_to_dict(posterior):
     }
     data = {}
     for stat, value in posterior.get_extra_fields(group_by_chain=True).items():
-        if isinstance(value, (dict, tuple)):
+        if isinstance(value, dict | tuple):
             continue
         name = rename_key.get(stat, stat)
         value = value.copy()
@@ -445,7 +445,7 @@ def _sample_numpyro_nuts(
     tune: int,
     draws: int,
     chains: int,
-    chain_method: Optional[str],
+    chain_method: str | None,
     progressbar: bool,
     random_seed: int,
     initial_points,
@@ -505,22 +505,89 @@ def sample_jax_nuts(
     tune: int = 1000,
     chains: int = 4,
     target_accept: float = 0.8,
-    random_seed: Optional[RandomState] = None,
-    initvals: Optional[Union[StartDict, Sequence[Optional[StartDict]]]] = None,
+    random_seed: RandomState | None = None,
+    initvals: StartDict | Sequence[StartDict | None] | None = None,
     jitter: bool = True,
-    model: Optional[Model] = None,
-    var_names: Optional[Sequence[str]] = None,
-    nuts_kwargs: Optional[dict] = None,
+    model: Model | None = None,
+    var_names: Sequence[str] | None = None,
+    nuts_kwargs: dict | None = None,
     progressbar: bool = True,
     keep_untransformed: bool = False,
     chain_method: str = "parallel",
-    postprocessing_backend: Optional[Literal["cpu", "gpu"]] = None,
+    postprocessing_backend: Literal["cpu", "gpu"] | None = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
     postprocessing_chunks=None,
-    idata_kwargs: Optional[dict] = None,
+    idata_kwargs: dict | None = None,
     compute_convergence_checks: bool = True,
     nuts_sampler: Literal["numpyro", "blackjax"],
 ) -> az.InferenceData:
+    """
+    Draw samples from the posterior using a jax NUTS method.
+
+    Parameters
+    ----------
+    draws : int, default 1000
+        The number of samples to draw. The number of tuned samples are discarded by
+        default.
+    tune : int, default 1000
+        Number of iterations to tune. Samplers adjust the step sizes, scalings or
+        similar during tuning. Tuning samples will be drawn in addition to the number
+        specified in the ``draws`` argument.  Tuned samples are discarded.
+    chains : int, default 4
+        The number of chains to sample.
+    target_accept : float in [0, 1].
+        The step size is tuned such that we approximate this acceptance rate. Higher
+        values like 0.9 or 0.95 often work better for problematic posteriors.
+    random_seed : int, RandomState or Generator, optional
+        Random seed used by the sampling steps.
+    initvals: StartDict or Sequence[Optional[StartDict]], optional
+        Initial values for random variables provided as a dictionary (or sequence of
+        dictionaries) mapping the random variable (by name or reference) to desired
+        starting values.
+    jitter: bool, default True
+        If True, add jitter to initial points.
+    model : Model, optional
+        Model to sample from. The model needs to have free random variables. When inside
+        a ``with`` model context, it defaults to that model, otherwise the model must be
+        passed explicitly.
+    var_names : sequence of str, optional
+        Names of variables for which to compute the posterior samples. Defaults to all
+        variables in the posterior.
+    nuts_kwargs : dict, optional
+        Keyword arguments for the underlying nuts sampler
+    progressbar : bool, default True
+        If True, display a progressbar while sampling
+    keep_untransformed : bool, default False
+        Include untransformed variables in the posterior samples.
+    chain_method : str, default "parallel"
+        Specify how samples should be drawn. The choices include "parallel", and
+        "vectorized".
+    postprocessing_backend : Optional[Literal["cpu", "gpu"]], default None,
+        Specify how postprocessing should be computed. gpu or cpu
+    postprocessing_vectorize : Literal["vmap", "scan"], default "scan"
+        How to vectorize the postprocessing: vmap or sequential scan
+    postprocessing_chunks : None
+        This argument is deprecated
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
+        value for the ``log_likelihood`` key to indicate that the pointwise log
+        likelihood should not be included in the returned object. Values for
+        ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
+        the ``model`` argument if not provided in ``idata_kwargs``. If ``coords`` and
+        ``dims`` are provided, they are used to update the inferred dictionaries.
+    compute_convergence_checks : bool, default True
+        If True, compute ess and rhat values and warn if they indicate potential sampling issues.
+    nuts_sampler : Literal["numpyro", "blackjax"]
+        Nuts sampler library to use - do not change - use sample_numpyro_nuts or
+        sample_blackjax_nuts as appropriate
+
+    Returns
+    -------
+    InferenceData
+        ArviZ ``InferenceData`` object that contains the posterior samples, together
+        with their respective sample stats and pointwise log likeihood values (unless
+        skipped with ``idata_kwargs``).
+    """
     if postprocessing_chunks is not None:
         import warnings
 
@@ -604,6 +671,7 @@ def sample_jax_nuts(
 
     attrs = {
         "sampling_time": (tic2 - tic1).total_seconds(),
+        "tuning_steps": tune,
     }
 
     coords, dims = coords_and_dims_for_inferencedata(model)
@@ -613,6 +681,7 @@ def sample_jax_nuts(
         coords.update(idata_kwargs.pop("coords"))
     if "dims" in idata_kwargs:
         dims.update(idata_kwargs.pop("dims"))
+
     # Use 'partial' to set default arguments before passing 'idata_kwargs'
     to_trace = partial(
         az.from_dict,
@@ -623,6 +692,7 @@ def sample_jax_nuts(
         coords=coords,
         dims=dims,
         attrs=make_attrs(attrs, library=library),
+        posterior_attrs=make_attrs(attrs, library=library),
     )
     az_trace = to_trace(posterior=mcmc_samples, **idata_kwargs)
 

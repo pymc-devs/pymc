@@ -14,14 +14,14 @@
 import warnings
 
 from collections.abc import Mapping, Sequence
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 from pytensor.graph import ancestors
 from pytensor.tensor import TensorVariable
 
-from pymc import Model
 from pymc.logprob.transforms import Transform
 from pymc.logprob.utils import rvs_in_graph
+from pymc.model.core import Model
 from pymc.model.fgraph import (
     ModelDeterministic,
     ModelFreeRV,
@@ -106,7 +106,7 @@ def observe(
         model_var = memo[var]
 
         # Just a sanity check
-        assert isinstance(model_var.owner.op, (ModelFreeRV, ModelDeterministic))
+        assert isinstance(model_var.owner.op, ModelFreeRV | ModelDeterministic)
         assert model_var in fgraph.variables
 
         var = model_var.owner.inputs[0]
@@ -117,7 +117,7 @@ def observe(
 
     toposort_replace(fgraph, tuple(replacements.items()))
 
-    return model_from_fgraph(fgraph)
+    return model_from_fgraph(fgraph, mutate_fgraph=True)
 
 
 def do(
@@ -215,7 +215,7 @@ def do(
     # Replace variables by interventions
     toposort_replace(fgraph, tuple(replacements.items()))
 
-    model = model_from_fgraph(fgraph)
+    model = model_from_fgraph(fgraph, mutate_fgraph=True)
     if prune_vars:
         return prune_vars_detached_from_observed(model)
     return model
@@ -223,7 +223,7 @@ def do(
 
 def change_value_transforms(
     model: Model,
-    vars_to_transforms: Mapping[ModelVariable, Union[Transform, None]],
+    vars_to_transforms: Mapping[ModelVariable, Transform | None],
 ) -> Model:
     """Change the value variables transforms in the model
 
@@ -249,7 +249,7 @@ def change_value_transforms(
         from pymc.model.transform.conditioning import change_value_transforms
 
         with pm.Model() as base_m:
-            p = pm.Uniform("p", 0, 1, transform=None)
+            p = pm.Uniform("p", 0, 1, default_transform=None)
             w = pm.Binomial("w", n=9, p=p, observed=6)
 
         with change_value_transforms(base_m, {"p": logodds}) as transformed_p:
@@ -302,12 +302,12 @@ def change_value_transforms(
         replacements[dummy_rv] = new_dummy_rv
 
     toposort_replace(fgraph, tuple(replacements.items()))
-    return model_from_fgraph(fgraph)
+    return model_from_fgraph(fgraph, mutate_fgraph=True)
 
 
 def remove_value_transforms(
     model: Model,
-    vars: Optional[Sequence[ModelVariable]] = None,
+    vars: Sequence[ModelVariable] | None = None,
 ) -> Model:
     """Remove the value variables transforms in the model
 

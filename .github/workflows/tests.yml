@@ -24,7 +24,7 @@ jobs:
     outputs:
       changes: ${{ steps.changes.outputs.src }}
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0
       - uses: dorny/paths-filter@v3
@@ -68,7 +68,9 @@ jobs:
 
           - |
             tests/distributions/test_censored.py
+            tests/distributions/test_custom.py
             tests/distributions/test_simulator.py
+            tests/sampling/test_deterministic.py
             tests/sampling/test_forward.py
             tests/sampling/test_population.py
             tests/stats/test_convergence.py
@@ -96,6 +98,7 @@ jobs:
             tests/model/test_fgraph.py
             tests/model/transform/test_basic.py
             tests/model/transform/test_conditioning.py
+            tests/model/transform/test_optimization.py
             tests/test_model_graph.py
             tests/ode/test_ode.py
             tests/ode/test_utils.py
@@ -129,7 +132,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
       - name: Cache conda
         uses: actions/cache@v4
         env:
@@ -168,6 +171,7 @@ jobs:
           pip install -e .
           pip install --pre -U polyagamma
           python --version
+          conda list
       - name: Run tests
         run: |
           conda activate pymc-test
@@ -187,7 +191,7 @@ jobs:
       matrix:
         os: [windows-latest]
         floatx: [float64]
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         test-subset:
           - tests/variational/test_approximations.py tests/variational/test_callbacks.py tests/variational/test_inference.py tests/variational/test_opvi.py tests/test_initial_point.py
           - tests/model/test_core.py tests/sampling/test_mcmc.py
@@ -203,7 +207,7 @@ jobs:
       run:
         shell: cmd
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
       - name: Cache conda
         uses: actions/cache@v4
         env:
@@ -242,6 +246,7 @@ jobs:
           pip install -e .
           pip install --pre -U polyagamma
           python --version
+          conda list
       - name: Run tests
         # This job uses a cmd shell, therefore the environment variable syntax is different!
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
@@ -286,7 +291,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
       - name: Cache conda
         uses: actions/cache@v4
         env:
@@ -324,6 +329,7 @@ jobs:
           conda activate pymc-test
           pip install -e .
           python --version
+          conda list
       - name: Run tests
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
@@ -354,7 +360,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
       - name: Cache conda
         uses: actions/cache@v4
         env:
@@ -392,6 +398,7 @@ jobs:
           conda activate pymc-test
           pip install -e .
           python --version
+          conda list
       - name: Run tests
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
@@ -422,7 +429,7 @@ jobs:
       run:
         shell: cmd
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
       - name: Cache conda
         uses: actions/cache@v4
         env:
@@ -461,6 +468,7 @@ jobs:
           pip install -e .
           pip install --pre -U polyagamma
           python --version
+          conda list
       - name: Run tests
         # This job uses a cmd shell, therefore the environment variable syntax is different!
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
