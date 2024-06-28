@@ -43,17 +43,17 @@ __all__ = (
 @dataclass
 class DimInfo:
     names: tuple[str | None]
-    sizes: tuple[int]
+    lengths: tuple[int]
 
     def __post_init__(self) -> None:
-        if len(self.names) != len(self.sizes):
-            raise ValueError("The number of names and sizes must be equal.")
+        if len(self.names) != len(self.lengths):
+            raise ValueError("The number of names and lengths must be equal.")
 
     def __hash__(self):
-        return hash((self.names, self.sizes))
+        return hash((self.names, self.lengths))
 
     def __bool__(self) -> bool:
-        return len(self.sizes) > 0 or len(self.names) > 0
+        return len(self.lengths) > 0 or len(self.names) > 0
 
 
 def create_plate_label(
@@ -72,7 +72,7 @@ def create_plate_label(
 
         return label
 
-    values = enumerate(zip(dim_info.names, dim_info.sizes))
+    values = enumerate(zip(dim_info.names, dim_info.lengths))
     return " x ".join(create_label(d, dname, dlen) for d, (dname, dlen) in values)
 
 
@@ -365,21 +365,21 @@ class ModelGraph:
             if var_name in self.model.named_vars_to_dims:
                 # The RV is associated with `dims` information.
                 names = []
-                sizes = []
+                lengths = []
                 for d, dname in enumerate(self.model.named_vars_to_dims[var_name]):
                     names.append(dname)
-                    sizes.append(dim_lengths.get(dname, shape[d]))
+                    lengths.append(dim_lengths.get(dname, shape[d]))
 
                 dim_info = DimInfo(
                     names=tuple(names),
-                    sizes=tuple(sizes),
+                    lengths=tuple(lengths),
                 )
             else:
                 # The RV has no `dims` information.
                 dim_size = len(shape)
                 dim_info = DimInfo(
                     names=tuple([None] * dim_size),
-                    sizes=tuple(shape),
+                    lengths=tuple(shape),
                 )
 
             v = self.model[var_name]

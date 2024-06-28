@@ -499,11 +499,11 @@ def test_none_dim_in_plate() -> None:
 
     assert graph.get_plates() == [
         Plate(
-            dim_info=DimInfo(names=("obs", None), sizes=(5, 5)),
+            dim_info=DimInfo(names=("obs", None), lengths=(5, 5)),
             variables=[NodeInfo(var=model["C"], node_type=NodeType.DETERMINISTIC)],
         ),
         Plate(
-            dim_info=DimInfo(names=(None, "obs"), sizes=(5, 5)),
+            dim_info=DimInfo(names=(None, "obs"), lengths=(5, 5)),
             variables=[NodeInfo(var=model["D"], node_type=NodeType.DETERMINISTIC)],
         ),
     ]
@@ -518,7 +518,7 @@ def test_shape_without_dims() -> None:
 
     assert graph.get_plates() == [
         Plate(
-            dim_info=DimInfo(names=(None,), sizes=(5,)),
+            dim_info=DimInfo(names=(None,), lengths=(5,)),
             variables=[NodeInfo(var=model["mu"], node_type=NodeType.FREE_RV)],
         ),
     ]
@@ -533,7 +533,7 @@ def test_scalars_dim_info() -> None:
 
     assert graph.get_plates() == [
         Plate(
-            dim_info=DimInfo(names=(), sizes=()),
+            dim_info=DimInfo(names=(), lengths=()),
             variables=[NodeInfo(var=model["x"], node_type=NodeType.FREE_RV)],
         )
     ]
