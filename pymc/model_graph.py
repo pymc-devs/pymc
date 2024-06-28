@@ -43,7 +43,7 @@ __all__ = (
 
 @dataclass
 class PlateMeta:
-    names: tuple[str]
+    names: tuple[str | None]
     sizes: tuple[int]
 
     def __hash__(self):
@@ -352,12 +352,15 @@ class ModelGraph:
         #       This should help find discrepencies, and
         #       avoids unnecessary function compiles for determining labels.
         dim_lengths: dict[str, int] = {
-            name: fast_eval(value).item() for name, value in self.model.dim_lengths.items()
+            dim_name: fast_eval(value).item() for dim_name, value in self.model.dim_lengths.items()
+        }
+        var_shapes: dict[str, tuple[int]] = {
+            var_name: tuple(fast_eval(self.model[var_name].shape))
+            for var_name in self.vars_to_plot(var_names)
         }
 
         for var_name in self.vars_to_plot(var_names):
-            v = self.model[var_name]
-            shape: tuple[int, ...] = tuple(fast_eval(v.shape))
+            shape: tuple[int] = var_shapes[var_name]
             if var_name in self.model.named_vars_to_dims:
                 # The RV is associated with `dims` information.
                 names = []
@@ -420,7 +423,7 @@ def make_graph(
     figsize=None,
     dpi=300,
     node_formatters: NodeTypeFormatterMapping | None = None,
-    include_shape_size: bool = True,
+    include_dim_lengths: bool = True,
 ):
     """Make graphviz Digraph of PyMC model
 
@@ -447,7 +450,7 @@ def make_graph(
             plate_label = create_plate_label(
                 plate.variables[0].var.name,
                 plate.meta,
-                include_size=include_shape_size,
+                include_size=include_dim_lengths,
             )
             with graph.subgraph(name="cluster" + plate_label) as sub:
                 for var in plate.variables:
@@ -492,7 +495,7 @@ def make_networkx(
     edges: list[tuple[VarName, VarName]],
     formatting: str = "plain",
     node_formatters: NodeTypeFormatterMapping | None = None,
-    include_shape_size: bool = True,
+    include_dim_lengths: bool = True,
 ):
     """Make networkx Digraph of PyMC model
 
@@ -520,7 +523,7 @@ def make_networkx(
             plate_label = create_plate_label(
                 plate.variables[0].var.name,
                 plate.meta,
-                include_size=include_shape_size,
+                include_size=include_dim_lengths,
             )
             subgraphnetwork = networkx.DiGraph(name="cluster" + plate_label, label=plate_label)
 
@@ -565,7 +568,7 @@ def model_to_networkx(
     var_names: Iterable[VarName] | None = None,
     formatting: str = "plain",
     node_formatters: NodeTypeFormatterMapping | None = None,
-    include_shape_size: bool = True,
+    include_dim_lengths: bool = True,
 ):
     """Produce a networkx Digraph from a PyMC model.
 
@@ -591,8 +594,8 @@ def model_to_networkx(
         A dictionary mapping node types to functions that return a dictionary of node attributes.
         Check out the networkx documentation for more information
         how attributes are added to nodes: https://networkx.org/documentation/stable/reference/classes/generated/networkx.Graph.add_node.html
-    include_shape_size : bool
-        Include the shape size in the plate label. Default is True.
+    include_dim_lengths : bool
+        Include the dim length in the plate label. Default is True.
 
     Examples
     --------
@@ -648,7 +651,7 @@ def model_to_networkx(
         edges=graph.edges(var_names=var_names),
         formatting=formatting,
         node_formatters=node_formatters,
-        include_shape_size=include_shape_size,
+        include_dim_lengths=include_dim_lengths,
     )
 
 
@@ -661,7 +664,7 @@ def model_to_graphviz(
     figsize: tuple[int, int] | None = None,
     dpi: int = 300,
     node_formatters: NodeTypeFormatterMapping | None = None,
-    include_shape_size: bool = True,
+    include_dim_lengths: bool = True,
 ):
     """Produce a graphviz Digraph from a PyMC model.
 
@@ -693,8 +696,8 @@ def model_to_graphviz(
         A dictionary mapping node types to functions that return a dictionary of node attributes.
         Check out graphviz documentation for more information on available
         attributes. https://graphviz.org/docs/nodes/
-    include_shape_size : bool
-        Include the shape size in the plate label. Default is True.
+    include_dim_lengths : bool
+        Include the dim lengths in the plate label. Default is True.
 
     Examples
     --------
@@ -760,5 +763,5 @@ def model_to_graphviz(
         figsize=figsize,
         dpi=dpi,
         node_formatters=node_formatters,
-        include_shape_size=include_shape_size,
+        include_dim_lengths=include_dim_lengths,
     )
