@@ -24,7 +24,15 @@ from pytensor.tensor.variable import TensorConstant
 import pymc as pm
 
 from pymc.exceptions import ImputationWarning
-from pymc.model_graph import ModelGraph, model_to_graphviz, model_to_networkx
+from pymc.model_graph import (
+    ModelGraph,
+    NodeMeta,
+    NodeType,
+    Plate,
+    PlateMeta,
+    model_to_graphviz,
+    model_to_networkx,
+)
 
 
 def school_model():
@@ -473,3 +481,24 @@ def test_custom_node_formatting_graphviz(simple_model):
         ]
     )
     assert body == items
+
+
+def test_none_dim_in_plate_meta() -> None:
+    coords = {
+        "obs": range(5),
+    }
+    with pm.Model(coords=coords) as model:
+        C = pt.as_tensor_variable(
+            np.ones((5, 3)),
+            name="C",
+        )
+        pm.Deterministic("C", C, dims=("obs", None))
+
+    graph = ModelGraph(model)
+
+    assert graph.get_plates() == [
+        Plate(
+            meta=PlateMeta(names=("obs", None), sizes=(5, 3)),
+            variables=[NodeMeta(var=model["C"], node_type=NodeType.DETERMINISTIC)],
+        ),
+    ]
