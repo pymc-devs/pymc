@@ -17,7 +17,6 @@ from collections import defaultdict
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import Enum
-from itertools import zip_longest
 from os import path
 from typing import Any
 
@@ -46,6 +45,10 @@ class DimInfo:
     names: tuple[str | None]
     sizes: tuple[int]
 
+    def __post_init__(self) -> None:
+        if len(self.names) != len(self.sizes):
+            raise ValueError("The number of names and sizes must be equal.")
+
     def __hash__(self):
         return hash((self.names, self.sizes))
 
@@ -69,9 +72,7 @@ def create_plate_label(
 
         return label
 
-    values = enumerate(
-        zip_longest(dim_info.names, dim_info.sizes, fillvalue=None),
-    )
+    values = enumerate(zip(dim_info.names, dim_info.sizes))
     return " x ".join(create_label(d, dname, dlen) for d, (dname, dlen) in values)
 
 
@@ -388,7 +389,7 @@ class ModelGraph:
 
         return [
             Plate(
-                dim_info=dim_info if dim_info else None,
+                dim_info=dim_info,
                 variables=list(variables),
             )
             for dim_info, variables in plates.items()
