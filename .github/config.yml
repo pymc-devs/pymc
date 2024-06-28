@@ -1,6 +1,6 @@
 # Comment to be posted to on first time issues
 newIssueWelcomeComment: >
-  ![Welcome Banner](https://raw.githubusercontent.com/pymc-devs/brand/main/welcome-bot/BannerWelcome.jpg)]
+  ![Welcome Banner](https://raw.githubusercontent.com/pymc-devs/brand/main/welcome-bot/BannerWelcome_910x483_resized.jpg)]
 
   :tada: Welcome to _PyMC_! :tada:
   We're really excited to have your input into the project! :sparkling_heart:
@@ -10,7 +10,7 @@ newIssueWelcomeComment: >
 
 # Comment to be posted to on PRs from first time contributors in your repository
 newPRWelcomeComment: >
-  ![Thank You Banner](https://raw.githubusercontent.com/pymc-devs/brand/main/welcome-bot/BannerThanks.jpg)]
+  ![Thank You Banner](https://raw.githubusercontent.com/pymc-devs/brand/main/welcome-bot/BannerThanks_910x483_resized.jpg)]
 
   :sparkling_heart: Thanks for opening this pull request! :sparkling_heart:
   The _PyMC_ community really appreciates your time and effort to contribute to the project.
@@ -19,7 +19,7 @@ newPRWelcomeComment: >
 
 # Comment to be posted to on pull requests merged by a first time user
 firstPRMergeComment: >
-  ![Congratulations Banner](https://raw.githubusercontent.com/pymc-devs/brand/main/welcome-bot/BannerCongratulations.jpg)]
+  ![Congratulations Banner](https://raw.githubusercontent.com/pymc-devs/brand/main/welcome-bot/BannerCongratulations_910x483_resized.jpg)]
 
   Congrats on merging your first pull request! :tada:
   We here at _PyMC_ are proud of you! :sparkling_heart:
