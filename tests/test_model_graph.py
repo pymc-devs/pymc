@@ -518,3 +518,19 @@ def test_shape_without_dims() -> None:
         ),
     ]
     assert graph.edges() == []
+
+
+def test_scalars_have_no_dim_info() -> None:
+    with pm.Model() as model:
+        pm.Normal("x")
+
+    graph = ModelGraph(model)
+
+    assert graph.get_plates() == [
+        Plate(
+            dim_info=None,
+            variables=[NodeInfo(var=model["x"], node_type=NodeType.FREE_RV)],
+        )
+    ]
+
+    assert graph.edges() == []
