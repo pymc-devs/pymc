@@ -428,6 +428,36 @@ class TestCompileForwardSampler:
             "offsets",
         }
 
+    def test_length_coords_volatile(self):
+        with pm.Model() as model:
+            model.add_coord("trial", length=3)
+            x = pm.Normal("x", dims="trial")
+            y = pm.Deterministic("y", x.mean())
+
+        # Same coord length -- `x` is not volatile
+        trace_same_len = az_from_dict(
+            posterior={"x": [[[np.pi] * 3]]},
+            coords={"trial": range(3)},
+            dims={"x": ["trial"]},
+        )
+        with model:
+            pp_same_len = pm.sample_posterior_predictive(
+                trace_same_len, var_names=["y"]
+            ).posterior_predictive
+        assert pp_same_len["y"] == np.pi
+
+        # Coord length changed -- `x` is volatile
+        trace_diff_len = az_from_dict(
+            posterior={"x": [[[np.pi] * 2]]},
+            coords={"trial": range(2)},
+            dims={"x": ["trial"]},
+        )
+        with model:
+            pp_diff_len = pm.sample_posterior_predictive(
+                trace_diff_len, var_names=["y"]
+            ).posterior_predictive
+        assert pp_diff_len["y"] != np.pi
+
 
 class TestSamplePPC:
     def test_normal_scalar(self):
