@@ -18,7 +18,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import Enum
 from os import path
-from typing import Any
+from typing import Any, Protocol, cast
 
 from pytensor import function
 from pytensor.graph import Apply
@@ -42,8 +42,8 @@ __all__ = (
 
 @dataclass
 class DimInfo:
-    names: tuple[str | None]
-    lengths: tuple[int]
+    names: tuple[str | None, ...]
+    lengths: tuple[int, ...]
 
     def __post_init__(self) -> None:
         if len(self.names) != len(self.lengths):
@@ -213,22 +213,27 @@ def update_node_formatters(node_formatters: NodeTypeFormatterMapping) -> NodeTyp
     return node_formatters
 
 
+class AddNode(Protocol):
+    def __call__(self, arg1: str, **kwargs: Any) -> None: ...
+
+
 def _make_node(
     node: NodeInfo,
     *,
     node_formatters: NodeTypeFormatterMapping,
-    add_node: Callable[[str, ...], None],
-    cluster: bool = False,
+    add_node: AddNode,
+    cluster: str | None = None,
     formatting: str = "plain",
 ):
     """Attaches the given variable to a graphviz or networkx Digraph"""
     node_formatter = node_formatters[node.node_type]
     kwargs = node_formatter(node.var)
 
-    if cluster:
+    if cluster is not None:
         kwargs["cluster"] = cluster
 
-    add_node(node.var.name.replace(":", "&"), **kwargs)
+    var_name: str = cast(str, node.var.name)
+    add_node(var_name.replace(":", "&"), **kwargs)
 
 
 class ModelGraph:
@@ -360,13 +365,13 @@ class ModelGraph:
         dim_lengths: dict[str, int] = {
             dim_name: fast_eval(value).item() for dim_name, value in self.model.dim_lengths.items()
         }
-        var_shapes: dict[str, tuple[int]] = {
+        var_shapes: dict[str, tuple[int, ...]] = {
             var_name: tuple(fast_eval(self.model[var_name].shape))
             for var_name in self.vars_to_plot(var_names)
         }
 
         for var_name in self.vars_to_plot(var_names):
-            shape: tuple[int] = var_shapes[var_name]
+            shape: tuple[int, ...] = var_shapes[var_name]
             if var_name in self.model.named_vars_to_dims:
                 # The RV is associated with `dims` information.
                 names = []
@@ -458,8 +463,9 @@ def make_graph(
         if plate.dim_info:
             # must be preceded by 'cluster' to get a box around it
             plate_label = create_plate_label(plate.dim_info)
+            plate_name = f"cluster{plate_label}"
 
-            with graph.subgraph(name="cluster" + plate_label) as sub:
+            with graph.subgraph(name=plate_name) as sub:
                 for var in plate.variables:
                     _make_node(
                         node=var,
@@ -528,13 +534,14 @@ def make_networkx(
             # # must be preceded by 'cluster' to get a box around it
 
             plate_label = create_plate_label(plate.dim_info)
-            subgraphnetwork = networkx.DiGraph(name="cluster" + plate_label, label=plate_label)
+            plate_name = f"cluster{plate_label}"
+            subgraphnetwork = networkx.DiGraph(name=plate_name, label=plate_label)
 
             for var in plate.variables:
                 _make_node(
                     node=var,
                     node_formatters=node_formatters,
-                    cluster="cluster" + plate_label,
+                    cluster=plate_name,
                     formatting=formatting,
                     add_node=subgraphnetwork.add_node,
                 )
