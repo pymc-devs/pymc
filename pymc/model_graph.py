@@ -56,24 +56,29 @@ class DimInfo:
         return len(self.lengths) > 0 or len(self.names) > 0
 
 
-def create_plate_label(
-    var_name: str,
+PlateLabelFunc = Callable[[DimInfo], str]
+
+
+def create_plate_label_without_dim_length(
     dim_info: DimInfo,
-    include_size: bool = True,
 ) -> str:
-    def create_label(d: int, dname: str, dlen: int):
-        if not dname:
-            return f"{dlen}"
+    def create_label(dname: str | None, dlen: int):
+        return f"{dname}" if dname else f"{dlen}"
 
-        label = f"{dname}"
+    return " x ".join(
+        create_label(dname, dlen) for (dname, dlen) in zip(dim_info.names, dim_info.lengths)
+    )
 
-        if include_size:
-            label = f"{label} ({dlen})"
 
-        return label
+def create_plate_label_with_dim_length(
+    dim_info: DimInfo,
+) -> str:
+    def create_label(dname: str | None, dlen: int):
+        return f"{dname} ({dlen})" if dname else f"{dlen}"
 
-    values = enumerate(zip(dim_info.names, dim_info.lengths))
-    return " x ".join(create_label(d, dname, dlen) for d, (dname, dlen) in values)
+    return " x ".join(
+        create_label(dname, dlen) for (dname, dlen) in zip(dim_info.names, dim_info.lengths)
+    )
 
 
 def fast_eval(var):
@@ -101,7 +106,7 @@ class NodeInfo:
 
 @dataclass
 class Plate:
-    dim_info: DimInfo | None
+    dim_info: DimInfo
     variables: list[NodeInfo]
 
 
@@ -428,7 +433,7 @@ def make_graph(
     figsize=None,
     dpi=300,
     node_formatters: NodeTypeFormatterMapping | None = None,
-    include_dim_lengths: bool = True,
+    create_plate_label: PlateLabelFunc = create_plate_label_with_dim_length,
 ):
     """Make graphviz Digraph of PyMC model
 
@@ -452,11 +457,8 @@ def make_graph(
     for plate in plates:
         if plate.dim_info:
             # must be preceded by 'cluster' to get a box around it
-            plate_label = create_plate_label(
-                plate.variables[0].var.name,
-                plate.dim_info,
-                include_size=include_dim_lengths,
-            )
+            plate_label = create_plate_label(plate.dim_info)
+
             with graph.subgraph(name="cluster" + plate_label) as sub:
                 for var in plate.variables:
                     _make_node(
@@ -500,7 +502,7 @@ def make_networkx(
     edges: list[tuple[VarName, VarName]],
     formatting: str = "plain",
     node_formatters: NodeTypeFormatterMapping | None = None,
-    include_dim_lengths: bool = True,
+    create_plate_label: PlateLabelFunc = create_plate_label_with_dim_length,
 ):
     """Make networkx Digraph of PyMC model
 
@@ -525,11 +527,7 @@ def make_networkx(
         if plate.dim_info:
             # # must be preceded by 'cluster' to get a box around it
 
-            plate_label = create_plate_label(
-                plate.variables[0].var.name,
-                plate.dim_info,
-                include_size=include_dim_lengths,
-            )
+            plate_label = create_plate_label(plate.dim_info)
             subgraphnetwork = networkx.DiGraph(name="cluster" + plate_label, label=plate_label)
 
             for var in plate.variables:
@@ -656,7 +654,9 @@ def model_to_networkx(
         edges=graph.edges(var_names=var_names),
         formatting=formatting,
         node_formatters=node_formatters,
-        include_dim_lengths=include_dim_lengths,
+        create_plate_label=create_plate_label_with_dim_length
+        if include_dim_lengths
+        else create_plate_label_without_dim_length,
     )
 
 
@@ -768,5 +768,7 @@ def model_to_graphviz(
         figsize=figsize,
         dpi=dpi,
         node_formatters=node_formatters,
-        include_dim_lengths=include_dim_lengths,
+        create_plate_label=create_plate_label_with_dim_length
+        if include_dim_lengths
+        else create_plate_label_without_dim_length,
     )
