@@ -42,7 +42,8 @@ from pytensor.tensor.random.var import (
     RandomGeneratorSharedVariable,
     RandomStateSharedVariable,
 )
-from pytensor.tensor.sharedvar import SharedVariable
+from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
+from pytensor.tensor.variable import TensorConstant
 from rich.console import Console
 from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
@@ -82,9 +83,9 @@ def get_constant_coords(trace_coords: dict[str, np.ndarray], model: Model) -> se
     for dim, coord in trace_coords.items():
         current_coord = model.coords.get(dim, None)
         current_length = model.dim_lengths.get(dim, None)
-        if hasattr(current_length, "get_value"):
+        if isinstance(current_length, TensorSharedVariable):
             current_length = current_length.get_value()
-        elif hasattr(current_length, "data"):
+        elif isinstance(current_length, TensorConstant):
             current_length = current_length.data
         if (
             current_coord is not None
