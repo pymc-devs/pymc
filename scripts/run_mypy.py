@@ -36,7 +36,6 @@ pymc/logprob/basic.py
 pymc/logprob/mixture.py
 pymc/logprob/rewriting.py
 pymc/logprob/scan.py
-pymc/logprob/tensor.py
 pymc/logprob/transform_value.py
 pymc/logprob/transforms.py
 pymc/logprob/utils.py

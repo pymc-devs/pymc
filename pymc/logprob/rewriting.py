@@ -36,7 +36,7 @@
 import warnings
 
 from collections import deque
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 
 import pytensor.tensor as pt
 
@@ -484,7 +484,7 @@ def cleanup_ir(vars: Sequence[Variable]) -> None:
 
 
 def assume_measured_ir_outputs(
-    inputs: Sequence[TensorVariable], outputs: Sequence[TensorVariable]
+    inputs: Collection[TensorVariable], outputs: Sequence[TensorVariable]
 ) -> Sequence[TensorVariable]:
     """Run IR rewrite assuming each output is measured.
 
