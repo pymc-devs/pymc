@@ -31,58 +31,78 @@ Using MyST allows taking advantage of all sphinx features from markdown cells in
 All markdown should be valid MyST (note that MyST is a superset of recommonmark).
 This guide does not teach nor cover MyST extensively, only gives some opinionated guidelines.
 
-* **Never** use url links to refer to other notebooks, PyMC documentation or other python
-  libraries documentations. Use [sphinx cross-references](https://docs.readthedocs.io/en/stable/guides/cross-referencing-with-sphinx.html)
-  instead.
-
-  * For instance, to link to another notebook, you could use an explicit link in the markdown text: "this model uses the \{ref}`Kronecker product <GP-Kron>`". See {ref}`this page <myst:syntax/targets>` for more details.
+* **Never** use url links to refer to other notebooks, PyMC documentation or other python libraries documentations.
+  When linking to other notebooks, always use a `ref` type cross-reference pointing to the target in the {ref}`jupyter_style_first_cell`.
 
   :::{caution}
   Using urls links breaks self referencing in versioned docs! And at the same time they are
   less robust than sphinx cross-references.
   :::
 
-  * When linking to other notebooks, always use a `ref` type cross-reference pointing
-    to the target in the {ref}`jupyter_style_first_cell`.
+  ::::{dropdown} Examples of cross-references
 
-* Here are more guidances on reference links:
+  **References to targets within the current project**
 
-#### References to targets within the current project
-That is, notebooks in pymc-examples referring to other notebooks in pymc-examples.
+  That is, notebooks in pymc-examples referring to other notebooks in pymc-examples.
 
-```
-{ref}`explicit text <anchor_id>`
-```
-For instance:
-```
-{ref}`Kronecker product <GP-Kron>`
-```
+  Pattern:
+  ```
+  {ref}`explicit text <anchor_id>`
+  ```
 
-#### References to targets of other projects
-These can be to any project defined in the [intersphinx mapping](https://github.com/pymc-devs/pymc/blob/main/docs/source/conf.py#L300-L312). For example, from pymc-examples to pymc main docs, or to arviz docs or to matplotlib docs; it doesn't matter when it comes to syntax.
+  Example source:
+  ```
+  {ref}`Kronecker product <GP-Kron>`
+  ```
 
-```
-{ref}`explicit text <key:anchor_id>`
-```
-where key is one of the keys defined in the [intersphinx mapping](https://github.com/pymc-devs/pymc/blob/main/docs/source/conf.py#L300-L312), such as `pymc`, `arviz`, `numpy`...
-For instance:
-```
-{ref}`ArviZ `plot_hdi` <arviz:plot_hdi>`
-```
+  Rendered example: {ref}`Kronecker product <GP-Kron>`
 
-#### References to python objects
+  **References to targets of other projects**
 
-```
-{type}`import.path`  # to show full import path
-{type}`~import.path`  # to show only object name
-```
-where type is func for functions, meth for methods, class for classes, prop for property, etc.
-For instance:
-```
-{class}`~pymc.gp.HSGP`
-```
+  Here "other projects" means any sphinx documentation site that was build independently
+  of the current one. Therefore, this includes linking to pymc-examples notebooks
+  from the pymc documentation or vice versa, or linking to other libraries like
+  arviz, numpy, matplotlib...
 
-Now let's continue with the MysT guidelines.
+  Pattern:
+  ```
+  {ref}`explicit text <key:anchor_id>`
+  ```
+  Example source:
+  ```
+  {ref}`how to use InferenceData <arviz:working_with_InferenceData>`
+  ```
+
+  Rendered example: {ref}`how to use InferenceData <arviz:working_with_InferenceData>`
+
+  where `key` in the pattern (`arviz` in the example) is one of the keys defined in
+  the `intersphinx_mapping` variable of `conf.py` such as `arviz`, `numpy`, `mpl`...
+  For the main pymc repo it is located in `docs/source/conf.py`, for pymc-examples it is
+  in `examples/conf.py`.
+
+  **References to python objects**
+
+  Pattern
+  ```
+  {type}`import.path`  # to show full import path
+  {type}`~import.path`  # to show only object name
+  ```
+  where type is func for functions, meth for methods, class for classes, prop for property, etc.
+
+  Example source:
+  ```
+  {class}`~pymc.gp.HSGP`
+  ```
+
+  Rendered example: {class}`~pymc.gp.HSGP`
+
+
+  :::{seealso}
+  * [ReadTheDocs page on sphinx cross-references](https://docs.readthedocs.io/en/stable/guides/cross-referencing-with-sphinx.html) instead.
+  * {ref}`MyST docs on cross-references <myst:syntax/referencing>`.
+  :::
+  ::::
+
 
 * If the output (or even code and output) of a cell is not necessary to follow the
   notebook or it is very long and can break the flow of reading, consider hiding
