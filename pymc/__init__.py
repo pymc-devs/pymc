@@ -29,14 +29,13 @@ def __set_compiler_flags():
     import pytensor
 
     current = pytensor.config.gcc__cxxflags
-    augmented = f"{current} -Wno-c++11-narrowing"
 
     # Work around compiler bug in GCC < 8.4 related to structured exception
     # handling registers on Windows.
     # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65782 for details.
     # First disable C++ exception handling altogether since it's not needed
     # for the C extensions that we generate.
-    augmented = f"{augmented} -fno-exceptions"
+    augmented = f"{current} -fno-exceptions"
     # Now disable the generation of stack unwinding tables.
     augmented = f"{augmented} -fno-unwind-tables -fno-asynchronous-unwind-tables"
 
