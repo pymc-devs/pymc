@@ -24,7 +24,15 @@ from pytensor.tensor.variable import TensorConstant
 import pymc as pm
 
 from pymc.exceptions import ImputationWarning
-from pymc.model_graph import ModelGraph, model_to_graphviz, model_to_networkx
+from pymc.model_graph import (
+    DimInfo,
+    ModelGraph,
+    NodeInfo,
+    NodeType,
+    Plate,
+    model_to_graphviz,
+    model_to_networkx,
+)
 
 
 def school_model():
@@ -473,3 +481,61 @@ def test_custom_node_formatting_graphviz(simple_model):
         ]
     )
     assert body == items
+
+
+def test_none_dim_in_plate() -> None:
+    coords = {
+        "obs": range(5),
+    }
+    with pm.Model(coords=coords) as model:
+        data = pt.as_tensor_variable(
+            np.ones((5, 5)),
+            name="data",
+        )
+        pm.Deterministic("C", data, dims=("obs", None))
+        pm.Deterministic("D", data.T, dims=(None, "obs"))
+
+    graph = ModelGraph(model)
+
+    assert graph.get_plates() == [
+        Plate(
+            dim_info=DimInfo(names=("obs", None), lengths=(5, 5)),
+            variables=[NodeInfo(var=model["C"], node_type=NodeType.DETERMINISTIC)],
+        ),
+        Plate(
+            dim_info=DimInfo(names=(None, "obs"), lengths=(5, 5)),
+            variables=[NodeInfo(var=model["D"], node_type=NodeType.DETERMINISTIC)],
+        ),
+    ]
+    assert graph.edges() == []
+
+
+def test_shape_without_dims() -> None:
+    with pm.Model() as model:
+        pm.Normal("mu", shape=5)
+
+    graph = ModelGraph(model)
+
+    assert graph.get_plates() == [
+        Plate(
+            dim_info=DimInfo(names=(None,), lengths=(5,)),
+            variables=[NodeInfo(var=model["mu"], node_type=NodeType.FREE_RV)],
+        ),
+    ]
+    assert graph.edges() == []
+
+
+def test_scalars_dim_info() -> None:
+    with pm.Model() as model:
+        pm.Normal("x")
+
+    graph = ModelGraph(model)
+
+    assert graph.get_plates() == [
+        Plate(
+            dim_info=DimInfo(names=(), lengths=()),
+            variables=[NodeInfo(var=model["x"], node_type=NodeType.FREE_RV)],
+        )
+    ]
+
+    assert graph.edges() == []
