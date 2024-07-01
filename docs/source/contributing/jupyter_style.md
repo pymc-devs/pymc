@@ -80,6 +80,8 @@ This guide does not teach nor cover MyST extensively, only gives some opinionate
   For the main pymc repo it is located in `docs/source/conf.py`, for pymc-examples it is
   in `examples/conf.py`.
 
+  To identify which `anchor_id` to use, you need to either look at the source of the document, or use [sphobjinv](https://sphobjinv.readthedocs.io/en/stable/).
+
   **References to python objects**
 
   Pattern
