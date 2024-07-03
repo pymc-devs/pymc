@@ -62,22 +62,18 @@ PlateLabelFunc = Callable[[DimInfo], str]
 def create_plate_label_without_dim_length(
     dim_info: DimInfo,
 ) -> str:
-    def create_label(dname: str | None, dlen: int):
-        return f"{dname}" if dname else f"{dlen}"
-
     return " x ".join(
-        create_label(dname, dlen) for (dname, dlen) in zip(dim_info.names, dim_info.lengths)
+        f"{dname}" if dname else f"{dlen}"
+        for (dname, dlen) in zip(dim_info.names, dim_info.lengths)
     )
 
 
 def create_plate_label_with_dim_length(
     dim_info: DimInfo,
 ) -> str:
-    def create_label(dname: str | None, dlen: int):
-        return f"{dname} ({dlen})" if dname else f"{dlen}"
-
     return " x ".join(
-        create_label(dname, dlen) for (dname, dlen) in zip(dim_info.names, dim_info.lengths)
+        f"{dname} ({dlen})" if dname else f"{dlen}"
+        for (dname, dlen) in zip(dim_info.names, dim_info.lengths)
     )
 
 
