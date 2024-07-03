@@ -18,7 +18,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import Enum
 from os import path
-from typing import Any, Protocol, cast
+from typing import Any, cast
 
 from pytensor import function
 from pytensor.graph import Apply
@@ -215,8 +215,7 @@ def update_node_formatters(node_formatters: NodeTypeFormatterMapping) -> NodeTyp
     return node_formatters
 
 
-class AddNode(Protocol):
-    def __call__(self, arg1: str, **kwargs: Any) -> None: ...
+AddNode = Callable[[str, GraphvizNodeKwargs], None]
 
 
 def _make_node(
@@ -235,7 +234,7 @@ def _make_node(
         kwargs["cluster"] = cluster
 
     var_name: str = cast(str, node.var.name)
-    add_node(var_name.replace(":", "&"), **kwargs)
+    add_node(var_name.replace(":", "&"), **kwargs)  # type: ignore
 
 
 class ModelGraph:
