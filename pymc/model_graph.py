@@ -105,6 +105,12 @@ class Plate:
     dim_info: DimInfo
     variables: list[NodeInfo]
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Plate):
+            return False
+
+        return self.dim_info == other.dim_info and set(self.variables) == set(other.variables)
+
 
 GraphvizNodeKwargs = dict[str, Any]
 NodeFormatter = Callable[[TensorVariable], GraphvizNodeKwargs]
