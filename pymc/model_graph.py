@@ -14,10 +14,11 @@
 import warnings
 
 from collections import defaultdict
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from enum import Enum
 from os import path
-from typing import Any
+from typing import Any, cast
 
 from pytensor import function
 from pytensor.graph import Apply
@@ -39,6 +40,43 @@ __all__ = (
 )
 
 
+@dataclass
+class DimInfo:
+    names: tuple[str | None, ...]
+    lengths: tuple[int, ...]
+
+    def __post_init__(self) -> None:
+        if len(self.names) != len(self.lengths):
+            raise ValueError("The number of names and lengths must be equal.")
+
+    def __hash__(self):
+        return hash((self.names, self.lengths))
+
+    def __bool__(self) -> bool:
+        return len(self.lengths) > 0 or len(self.names) > 0
+
+
+PlateLabelFunc = Callable[[DimInfo], str]
+
+
+def create_plate_label_without_dim_length(
+    dim_info: DimInfo,
+) -> str:
+    return " x ".join(
+        f"{dname}" if dname else f"{dlen}"
+        for (dname, dlen) in zip(dim_info.names, dim_info.lengths)
+    )
+
+
+def create_plate_label_with_dim_length(
+    dim_info: DimInfo,
+) -> str:
+    return " x ".join(
+        f"{dname} ({dlen})" if dname else f"{dlen}"
+        for (dname, dlen) in zip(dim_info.names, dim_info.lengths)
+    )
+
+
 def fast_eval(var):
     return function([], var, mode="FAST_COMPILE")()
 
@@ -51,6 +89,27 @@ class NodeType(str, Enum):
     OBSERVED_RV = "Observed Random Variable"
     DETERMINISTIC = "Deterministic"
     DATA = "Data"
+
+
+@dataclass
+class NodeInfo:
+    var: TensorVariable
+    node_type: NodeType
+
+    def __hash__(self):
+        return hash(self.var.name)
+
+
+@dataclass
+class Plate:
+    dim_info: DimInfo
+    variables: list[NodeInfo]
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Plate):
+            return False
+
+        return self.dim_info == other.dim_info and set(self.variables) == set(other.variables)
 
 
 GraphvizNodeKwargs = dict[str, Any]
@@ -154,6 +213,28 @@ def update_node_formatters(node_formatters: NodeTypeFormatterMapping) -> NodeTyp
         )
 
     return node_formatters
+
+
+AddNode = Callable[[str, GraphvizNodeKwargs], None]
+
+
+def _make_node(
+    node: NodeInfo,
+    *,
+    node_formatters: NodeTypeFormatterMapping,
+    add_node: AddNode,
+    cluster: str | None = None,
+    formatting: str = "plain",
+):
+    """Attaches the given variable to a graphviz or networkx Digraph"""
+    node_formatter = node_formatters[node.node_type]
+    kwargs = node_formatter(node.var)
+
+    if cluster is not None:
+        kwargs["cluster"] = cluster
+
+    var_name: str = cast(str, node.var.name)
+    add_node(var_name.replace(":", "&"), **kwargs)  # type: ignore
 
 
 class ModelGraph:
@@ -263,33 +344,10 @@ class ModelGraph:
 
         return input_map
 
-    def _make_node(
+    def get_plates(
         self,
-        var_name,
-        graph,
-        *,
-        node_formatters: NodeTypeFormatterMapping,
-        nx=False,
-        cluster=False,
-        formatting: str = "plain",
-    ):
-        """Attaches the given variable to a graphviz or networkx Digraph"""
-        v = self.model[var_name]
-
-        node_type = get_node_type(var_name, self.model)
-        node_formatter = node_formatters[node_type]
-
-        kwargs = node_formatter(v)
-
-        if cluster:
-            kwargs["cluster"] = cluster
-
-        if nx:
-            graph.add_node(var_name.replace(":", "&"), **kwargs)
-        else:
-            graph.node(var_name.replace(":", "&"), **kwargs)
-
-    def get_plates(self, var_names: Iterable[VarName] | None = None) -> dict[str, set[VarName]]:
+        var_names: Iterable[VarName] | None = None,
+    ) -> list[Plate]:
         """Rough but surprisingly accurate plate detection.
 
         Just groups by the shape of the underlying distribution.  Will be wrong
@@ -302,164 +360,217 @@ class ModelGraph:
         """
         plates = defaultdict(set)
 
-        # TODO: Evaluate all RV shapes and dim_length at once.
-        #       This should help to find discrepancies, and
-        #       avoids unnecessary function compiles for deetermining labels.
+        # TODO: Evaluate all RV shapes at once
+        #       This should help find discrepencies, and
+        #       avoids unnecessary function compiles for determining labels.
+        dim_lengths: dict[str, int] = {
+            dim_name: fast_eval(value).item() for dim_name, value in self.model.dim_lengths.items()
+        }
+        var_shapes: dict[str, tuple[int, ...]] = {
+            var_name: tuple(fast_eval(self.model[var_name].shape))
+            for var_name in self.vars_to_plot(var_names)
+        }
 
         for var_name in self.vars_to_plot(var_names):
-            v = self.model[var_name]
-            shape: Sequence[int] = fast_eval(v.shape)
-            dim_labels = []
+            shape: tuple[int, ...] = var_shapes[var_name]
             if var_name in self.model.named_vars_to_dims:
                 # The RV is associated with `dims` information.
+                names = []
+                lengths = []
                 for d, dname in enumerate(self.model.named_vars_to_dims[var_name]):
-                    if dname is None:
-                        # Unnamed dimension in a `dims` tuple!
-                        dlen = shape[d]
-                        dname = f"{var_name}_dim{d}"
-                    else:
-                        dlen = fast_eval(self.model.dim_lengths[dname])
-                    dim_labels.append(f"{dname} ({dlen})")
-                plate_label = " x ".join(dim_labels)
+                    names.append(dname)
+                    lengths.append(dim_lengths.get(dname, shape[d]))
+
+                dim_info = DimInfo(
+                    names=tuple(names),
+                    lengths=tuple(lengths),
+                )
             else:
                 # The RV has no `dims` information.
-                dim_labels = [str(x) for x in shape]
-                plate_label = " x ".join(map(str, shape))
-            plates[plate_label].add(var_name)
+                dim_size = len(shape)
+                dim_info = DimInfo(
+                    names=tuple([None] * dim_size),
+                    lengths=tuple(shape),
+                )
 
-        return dict(plates)
+            v = self.model[var_name]
+            node_type = get_node_type(var_name, self.model)
+            var = NodeInfo(var=v, node_type=node_type)
+            plates[dim_info].add(var)
 
-    def make_graph(
+        return [
+            Plate(
+                dim_info=dim_info,
+                variables=list(variables),
+            )
+            for dim_info, variables in plates.items()
+        ]
+
+    def edges(
         self,
         var_names: Iterable[VarName] | None = None,
-        formatting: str = "plain",
-        save=None,
-        figsize=None,
-        dpi=300,
-        node_formatters: NodeTypeFormatterMapping | None = None,
-    ):
-        """Make graphviz Digraph of PyMC model
+    ) -> list[tuple[VarName, VarName]]:
+        """Get edges between the variables in the model.
+
+        Parameters
+        ----------
+        var_names : iterable of str, optional
+            Subset of variables to be plotted that identify a subgraph with respect to the entire model graph
 
         Returns
         -------
-        graphviz.Digraph
+        list of tuple
+            List of edges between the variables in the model.
+
         """
-        try:
-            import graphviz
-        except ImportError:
-            raise ImportError(
-                "This function requires the python library graphviz, along with binaries. "
-                "The easiest way to install all of this is by running\n\n"
-                "\tconda install -c conda-forge python-graphviz"
-            )
+        return [
+            (VarName(child.replace(":", "&")), VarName(parent.replace(":", "&")))
+            for child, parents in self.make_compute_graph(var_names=var_names).items()
+            for parent in parents
+        ]
 
-        node_formatters = node_formatters or {}
-        node_formatters = update_node_formatters(node_formatters)
 
-        graph = graphviz.Digraph(self.model.name)
-        for plate_label, all_var_names in self.get_plates(var_names).items():
-            if plate_label:
-                # must be preceded by 'cluster' to get a box around it
-                with graph.subgraph(name="cluster" + plate_label) as sub:
-                    for var_name in all_var_names:
-                        self._make_node(
-                            var_name, sub, formatting=formatting, node_formatters=node_formatters
-                        )
-                    # plate label goes bottom right
-                    sub.attr(label=plate_label, labeljust="r", labelloc="b", style="rounded")
-            else:
-                for var_name in all_var_names:
-                    self._make_node(
-                        var_name, graph, formatting=formatting, node_formatters=node_formatters
-                    )
+def make_graph(
+    name: str,
+    plates: list[Plate],
+    edges: list[tuple[VarName, VarName]],
+    formatting: str = "plain",
+    save=None,
+    figsize=None,
+    dpi=300,
+    node_formatters: NodeTypeFormatterMapping | None = None,
+    create_plate_label: PlateLabelFunc = create_plate_label_with_dim_length,
+):
+    """Make graphviz Digraph of PyMC model
 
-        for child, parents in self.make_compute_graph(var_names=var_names).items():
-            # parents is a set of rv names that precede child rv nodes
-            for parent in parents:
-                graph.edge(parent.replace(":", "&"), child.replace(":", "&"))
+    Returns
+    -------
+    graphviz.Digraph
+    """
+    try:
+        import graphviz
+    except ImportError:
+        raise ImportError(
+            "This function requires the python library graphviz, along with binaries. "
+            "The easiest way to install all of this is by running\n\n"
+            "\tconda install -c conda-forge python-graphviz"
+        )
 
-        if save is not None:
-            width, height = (None, None) if figsize is None else figsize
-            base, ext = path.splitext(save)
-            if ext:
-                ext = ext.replace(".", "")
-            else:
-                ext = "png"
-            graph_c = graph.copy()
-            graph_c.graph_attr.update(size=f"{width},{height}!")
-            graph_c.graph_attr.update(dpi=str(dpi))
-            graph_c.render(filename=base, format=ext, cleanup=True)
+    node_formatters = node_formatters or {}
+    node_formatters = update_node_formatters(node_formatters)
 
-        return graph
+    graph = graphviz.Digraph(name)
+    for plate in plates:
+        if plate.dim_info:
+            # must be preceded by 'cluster' to get a box around it
+            plate_label = create_plate_label(plate.dim_info)
+            plate_name = f"cluster{plate_label}"
 
-    def make_networkx(
-        self,
-        var_names: Iterable[VarName] | None = None,
-        formatting: str = "plain",
-        node_formatters: NodeTypeFormatterMapping | None = None,
-    ):
-        """Make networkx Digraph of PyMC model
-
-        Returns
-        -------
-        networkx.Digraph
-        """
-        try:
-            import networkx
-        except ImportError:
-            raise ImportError(
-                "This function requires the python library networkx, along with binaries. "
-                "The easiest way to install all of this is by running\n\n"
-                "\tconda install networkx"
-            )
-
-        node_formatters = node_formatters or {}
-        node_formatters = update_node_formatters(node_formatters)
-
-        graphnetwork = networkx.DiGraph(name=self.model.name)
-        for plate_label, all_var_names in self.get_plates(var_names).items():
-            if plate_label:
-                # # must be preceded by 'cluster' to get a box around it
-
-                subgraphnetwork = networkx.DiGraph(name="cluster" + plate_label, label=plate_label)
-
-                for var_name in all_var_names:
-                    self._make_node(
-                        var_name,
-                        subgraphnetwork,
-                        nx=True,
-                        node_formatters=node_formatters,
-                        cluster="cluster" + plate_label,
-                        formatting=formatting,
-                    )
-                for sgn in subgraphnetwork.nodes:
-                    networkx.set_node_attributes(
-                        subgraphnetwork,
-                        {sgn: {"labeljust": "r", "labelloc": "b", "style": "rounded"}},
-                    )
-                node_data = {
-                    e[0]: e[1]
-                    for e in graphnetwork.nodes(data=True) & subgraphnetwork.nodes(data=True)
-                }
-
-                graphnetwork = networkx.compose(graphnetwork, subgraphnetwork)
-                networkx.set_node_attributes(graphnetwork, node_data)
-                graphnetwork.graph["name"] = self.model.name
-            else:
-                for var_name in all_var_names:
-                    self._make_node(
-                        var_name,
-                        graphnetwork,
-                        nx=True,
+            with graph.subgraph(name=plate_name) as sub:
+                for var in plate.variables:
+                    _make_node(
+                        node=var,
                         formatting=formatting,
                         node_formatters=node_formatters,
+                        add_node=sub.node,
                     )
+                # plate label goes bottom right
+                sub.attr(label=plate_label, labeljust="r", labelloc="b", style="rounded")
+        else:
+            for var in plate.variables:
+                _make_node(
+                    node=var,
+                    formatting=formatting,
+                    node_formatters=node_formatters,
+                    add_node=graph.node,
+                )
 
-        for child, parents in self.make_compute_graph(var_names=var_names).items():
-            # parents is a set of rv names that precede child rv nodes
-            for parent in parents:
-                graphnetwork.add_edge(parent.replace(":", "&"), child.replace(":", "&"))
-        return graphnetwork
+    for child, parent in edges:
+        graph.edge(parent, child)
+
+    if save is not None:
+        width, height = (None, None) if figsize is None else figsize
+        base, ext = path.splitext(save)
+        if ext:
+            ext = ext.replace(".", "")
+        else:
+            ext = "png"
+        graph_c = graph.copy()
+        graph_c.graph_attr.update(size=f"{width},{height}!")
+        graph_c.graph_attr.update(dpi=str(dpi))
+        graph_c.render(filename=base, format=ext, cleanup=True)
+
+    return graph
+
+
+def make_networkx(
+    name: str,
+    plates: list[Plate],
+    edges: list[tuple[VarName, VarName]],
+    formatting: str = "plain",
+    node_formatters: NodeTypeFormatterMapping | None = None,
+    create_plate_label: PlateLabelFunc = create_plate_label_with_dim_length,
+):
+    """Make networkx Digraph of PyMC model
+
+    Returns
+    -------
+    networkx.Digraph
+    """
+    try:
+        import networkx
+    except ImportError:
+        raise ImportError(
+            "This function requires the python library networkx, along with binaries. "
+            "The easiest way to install all of this is by running\n\n"
+            "\tconda install networkx"
+        )
+
+    node_formatters = node_formatters or {}
+    node_formatters = update_node_formatters(node_formatters)
+
+    graphnetwork = networkx.DiGraph(name=name)
+    for plate in plates:
+        if plate.dim_info:
+            # # must be preceded by 'cluster' to get a box around it
+
+            plate_label = create_plate_label(plate.dim_info)
+            plate_name = f"cluster{plate_label}"
+            subgraphnetwork = networkx.DiGraph(name=plate_name, label=plate_label)
+
+            for var in plate.variables:
+                _make_node(
+                    node=var,
+                    node_formatters=node_formatters,
+                    cluster=plate_name,
+                    formatting=formatting,
+                    add_node=subgraphnetwork.add_node,
+                )
+            for sgn in subgraphnetwork.nodes:
+                networkx.set_node_attributes(
+                    subgraphnetwork,
+                    {sgn: {"labeljust": "r", "labelloc": "b", "style": "rounded"}},
+                )
+            node_data = {
+                e[0]: e[1] for e in graphnetwork.nodes(data=True) & subgraphnetwork.nodes(data=True)
+            }
+
+            graphnetwork = networkx.compose(graphnetwork, subgraphnetwork)
+            networkx.set_node_attributes(graphnetwork, node_data)
+            graphnetwork.graph["name"] = name
+        else:
+            for var in plate.variables:
+                _make_node(
+                    node=var,
+                    formatting=formatting,
+                    node_formatters=node_formatters,
+                    add_node=graphnetwork.add_node,
+                )
+
+    for child, parents in edges:
+        graphnetwork.add_edge(parents, child)
+
+    return graphnetwork
 
 
 def model_to_networkx(
@@ -468,6 +579,7 @@ def model_to_networkx(
     var_names: Iterable[VarName] | None = None,
     formatting: str = "plain",
     node_formatters: NodeTypeFormatterMapping | None = None,
+    include_dim_lengths: bool = True,
 ):
     """Produce a networkx Digraph from a PyMC model.
 
@@ -493,6 +605,8 @@ def model_to_networkx(
         A dictionary mapping node types to functions that return a dictionary of node attributes.
         Check out the networkx documentation for more information
         how attributes are added to nodes: https://networkx.org/documentation/stable/reference/classes/generated/networkx.Graph.add_node.html
+    include_dim_lengths : bool
+        Include the dim length in the plate label. Default is True.
 
     Examples
     --------
@@ -539,9 +653,18 @@ def model_to_networkx(
             UserWarning,
             stacklevel=2,
         )
+
     model = pm.modelcontext(model)
-    return ModelGraph(model).make_networkx(
-        var_names=var_names, formatting=formatting, node_formatters=node_formatters
+    graph = ModelGraph(model)
+    return make_networkx(
+        name=model.name,
+        plates=graph.get_plates(var_names=var_names),
+        edges=graph.edges(var_names=var_names),
+        formatting=formatting,
+        node_formatters=node_formatters,
+        create_plate_label=create_plate_label_with_dim_length
+        if include_dim_lengths
+        else create_plate_label_without_dim_length,
     )
 
 
@@ -554,6 +677,7 @@ def model_to_graphviz(
     figsize: tuple[int, int] | None = None,
     dpi: int = 300,
     node_formatters: NodeTypeFormatterMapping | None = None,
+    include_dim_lengths: bool = True,
 ):
     """Produce a graphviz Digraph from a PyMC model.
 
@@ -585,6 +709,8 @@ def model_to_graphviz(
         A dictionary mapping node types to functions that return a dictionary of node attributes.
         Check out graphviz documentation for more information on available
         attributes. https://graphviz.org/docs/nodes/
+    include_dim_lengths : bool
+        Include the dim lengths in the plate label. Default is True.
 
     Examples
     --------
@@ -638,12 +764,19 @@ def model_to_graphviz(
             UserWarning,
             stacklevel=2,
         )
+
     model = pm.modelcontext(model)
-    return ModelGraph(model).make_graph(
-        var_names=var_names,
+    graph = ModelGraph(model)
+    return make_graph(
+        model.name,
+        plates=graph.get_plates(var_names=var_names),
+        edges=graph.edges(var_names=var_names),
         formatting=formatting,
         save=save,
         figsize=figsize,
         dpi=dpi,
         node_formatters=node_formatters,
+        create_plate_label=create_plate_label_with_dim_length
+        if include_dim_lengths
+        else create_plate_label_without_dim_length,
     )
