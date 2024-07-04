@@ -36,7 +36,7 @@ from pytensor.graph.basic import (
     graph_inputs,
     walk,
 )
-from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.fg import FunctionGraph, Output
 from pytensor.graph.op import Op
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
@@ -897,7 +897,7 @@ def collect_default_updates(
         [client, _] = rng_clients[0]
 
         # RNG is an output of the function, this is not a problem
-        if client == "output":
+        if isinstance(client.op, Output):
             return rng
 
         # RNG is used by another operator, which should output an update for the RNG
