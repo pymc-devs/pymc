@@ -640,7 +640,7 @@ class TestMatchesScipy:
             with pm.Model() as m:
                 x = pm.Multinomial("x", n=5, p=[1, 1, 1, 1, 1])
         # test stored p-vals have been normalised
-        assert np.isclose(m.x.owner.inputs[4].sum().eval(), 1.0)
+        assert np.isclose(m.x.owner.inputs[-1].sum().eval(), 1.0)
 
     def test_multinomial_negative_p_symbolic(self):
         # Passing symbolic negative p does not raise an immediate error, but evaluating
@@ -898,15 +898,15 @@ def test_car_matrix_check(sparse):
         W = pytensor.sparse.csr_from_dense(W)
 
     car_dist = pm.CAR.dist(mu, W, alpha, tau)
-    with pytest.raises(AssertionError, match="W must be a symmetric adjacency matrix"):
+    with pytest.raises(ParameterValueError, match="W is a symmetric adjacency matrix"):
         logp(car_dist, xs).eval()
 
     # W.ndim != 2
     if not sparse:
         W = np.array([0.0, 1.0, 2.0, 0.0])
         W = pytensor.tensor.as_tensor_variable(W)
-        with pytest.raises(ValueError, match="W must be a matrix"):
-            car_dist = pm.CAR.dist(mu, W, alpha, tau)
+        with pytest.raises(TypeError, match="W must be a matrix"):
+            pm.CAR.dist(mu, W, alpha, tau)
 
 
 @pytest.mark.parametrize("alpha", [1, -1])
@@ -926,7 +926,7 @@ def test_car_alpha_bounds(alpha):
     with pytest.raises(ValueError, match="the domain of alpha is: -1 < alpha < 1"):
         pm.draw(car_dist)
 
-    with pytest.raises(ValueError, match="-1 < alpha < 1, tau > 0"):
+    with pytest.raises(ParameterValueError, match="-1 < alpha < 1, tau > 0"):
         pm.logp(car_dist, values).eval()
 
 
@@ -2245,8 +2245,8 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
 
     def check_draws_match_expected(self):
         # TODO: Find better comparison:
-        rng = self.get_random_state(reset=True)
-        x = _LKJCholeskyCov.dist(n=2, eta=10_000, sd_dist=pm.DiracDelta.dist([0.5, 2.0]))
+        rng = np.random.default_rng(2248)
+        x = _LKJCholeskyCov.dist(n=2, eta=100_000, sd_dist=pm.DiracDelta.dist([0.5, 2.0]))
         assert np.all(np.abs(draw(x, random_seed=rng) - np.array([0.5, 0, 2.0])) < 0.01)
 
 
@@ -2255,9 +2255,6 @@ class TestICAR(BaseTestDistributionRandom):
     pymc_dist_params = {"W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]), "sigma": 2}
     expected_rv_op_params = {
         "W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]),
-        "node1": np.array([1, 2, 2]),
-        "node2": np.array([0, 0, 1]),
-        "N": 3,
         "sigma": 2,
         "zero_sum_strength": 0.001,
     }
@@ -2418,56 +2415,56 @@ def test_mvnormal_blockwise_solve_opt():
 def test_mvnormal_mu_convenience():
     """Test that mu is broadcasted to the length of cov and provided a default of zero"""
     x = pm.MvNormal.dist(cov=np.eye(3))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(mu.eval(), np.zeros((3,)))
 
     x = pm.MvNormal.dist(mu=1, cov=np.eye(3))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(mu.eval(), np.ones((3,)))
 
     x = pm.MvNormal.dist(mu=np.ones((1, 1)), cov=np.eye(3))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(
         mu.eval(),
         np.ones((1, 3)),
     )
 
     x = pm.MvNormal.dist(mu=np.ones((10, 1)), cov=np.eye(3))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(
         mu.eval(),
         np.ones((10, 3)),
     )
 
     x = pm.MvNormal.dist(mu=np.ones((10, 1, 1)), cov=np.full((2, 3, 3), np.eye(3)))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(mu.eval(), np.ones((10, 2, 3)))
 
 
 def test_mvstudentt_mu_convenience():
     """Test that mu is broadcasted to the length of scale and provided a default of zero"""
     x = pm.MvStudentT.dist(nu=4, scale=np.eye(3))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(mu.eval(), np.zeros((3,)))
 
     x = pm.MvStudentT.dist(nu=4, mu=1, scale=np.eye(3))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(mu.eval(), np.ones((3,)))
 
     x = pm.MvStudentT.dist(nu=4, mu=np.ones((1, 1)), scale=np.eye(3))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(
         mu.eval(),
         np.ones((1, 3)),
     )
 
     x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), scale=np.eye(3))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(
         mu.eval(),
         np.ones((10, 3)),
     )
 
     x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1, 1)), scale=np.full((2, 3, 3), np.eye(3)))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(mu.eval(), np.ones((10, 2, 3)))

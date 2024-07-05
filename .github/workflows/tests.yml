@@ -68,6 +68,7 @@ jobs:
 
           - |
             tests/distributions/test_censored.py
+            tests/distributions/test_custom.py
             tests/distributions/test_simulator.py
             tests/sampling/test_deterministic.py
             tests/sampling/test_forward.py

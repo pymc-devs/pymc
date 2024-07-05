@@ -43,10 +43,7 @@ from pytensor.tensor.basic import _as_tensor_variable
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
-from pytensor.tensor.random.var import (
-    RandomGeneratorSharedVariable,
-    RandomStateSharedVariable,
-)
+from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
@@ -762,12 +759,10 @@ def largest_common_dtype(tensors):
 
 def find_rng_nodes(
     variables: Iterable[Variable],
-) -> list[RandomStateSharedVariable | RandomGeneratorSharedVariable]:
-    """Return RNG variables in a graph"""
+) -> list[RandomGeneratorSharedVariable]:
+    """Return shared RNG variables in a graph"""
     return [
-        node
-        for node in graph_inputs(variables)
-        if isinstance(node, RandomStateSharedVariable | RandomGeneratorSharedVariable)
+        node for node in graph_inputs(variables) if isinstance(node, RandomGeneratorSharedVariable)
     ]
 
 
@@ -784,14 +779,7 @@ def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> list[TensorVariable]
         return outputs
 
     graph = FunctionGraph(outputs=outputs, clone=False)
-    new_rng_nodes: list[np.random.RandomState | np.random.Generator] = []
-    for rng_node in rng_nodes:
-        rng_cls: type
-        if isinstance(rng_node, pt.random.var.RandomStateSharedVariable):
-            rng_cls = np.random.RandomState
-        else:
-            rng_cls = np.random.Generator
-        new_rng_nodes.append(pytensor.shared(rng_cls(np.random.PCG64())))
+    new_rng_nodes = [pytensor.shared(np.random.Generator(np.random.PCG64())) for _ in rng_nodes]
     graph.replace_all(zip(rng_nodes, new_rng_nodes), import_missing=True)
     return cast(list[TensorVariable], graph.outputs)
 
@@ -808,12 +796,7 @@ def reseed_rngs(
         np.random.PCG64(sub_seed) for sub_seed in np.random.SeedSequence(seed).spawn(len(rngs))
     ]
     for rng, bit_generator in zip(rngs, bit_generators):
-        new_rng: np.random.RandomState | np.random.Generator
-        if isinstance(rng, pt.random.var.RandomStateSharedVariable):
-            new_rng = np.random.RandomState(bit_generator)
-        else:
-            new_rng = np.random.Generator(bit_generator)
-        rng.set_value(new_rng, borrow=True)
+        rng.set_value(np.random.Generator(bit_generator), borrow=True)
 
 
 def collect_default_updates_inner_fgraph(node: Apply) -> dict[Variable, Variable]:
@@ -1062,7 +1045,7 @@ def constant_fold(
         attempting constant folding, and any old non-shared inputs will not work with
         the returned outputs
     """
-    fg = FunctionGraph(outputs=xs, features=[ShapeFeature()], clone=True)
+    fg = FunctionGraph(outputs=xs, features=[ShapeFeature()], copy_inputs=False, clone=True)
 
     # By default, rewrite_graph includes canonicalize which includes constant-folding as the final rewrite
     folded_xs = rewrite_graph(fg).outputs

@@ -36,7 +36,7 @@
 import typing
 import warnings
 
-from collections.abc import Container, Sequence
+from collections.abc import Container, Iterable, Sequence
 
 import numpy as np
 import pytensor
@@ -173,7 +173,7 @@ def indices_from_subtensor(idx_list, indices):
 
 
 def check_potential_measurability(
-    inputs: tuple[TensorVariable], valued_rvs: Container[TensorVariable]
+    inputs: Iterable[TensorVariable], valued_rvs: Container[TensorVariable]
 ) -> bool:
     valued_rvs = set(valued_rvs)
 

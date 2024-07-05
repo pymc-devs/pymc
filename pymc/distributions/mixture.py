@@ -134,15 +134,15 @@ class MarginalMixtureRV(SymbolicRandomVariable):
         s = ",".join(f"s{i}" for i in range(components[0].owner.op.ndim_supp))
         if len(components) == 1:
             comp_s = ",".join((*s, "w"))
-            signature = f"[rng],(w),({comp_s})->[rng],({s})"
+            extended_signature = f"[rng],(w),({comp_s})->[rng],({s})"
         else:
             comps_s = ",".join(f"({s})" for _ in components)
-            signature = f"[rng],(w),{comps_s}->[rng],({s})"
+            extended_signature = f"[rng],(w),{comps_s}->[rng],({s})"
 
         return MarginalMixtureRV(
             inputs=[mix_indexes_rng, weights, *components],
             outputs=[mix_indexes_rng_next, mix_out],
-            signature=signature,
+            extended_signature=extended_signature,
         )(mix_indexes_rng, weights, *components)
 
     @classmethod

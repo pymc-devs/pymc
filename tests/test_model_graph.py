@@ -24,7 +24,19 @@ from pytensor.tensor.variable import TensorConstant
 import pymc as pm
 
 from pymc.exceptions import ImputationWarning
-from pymc.model_graph import ModelGraph, model_to_graphviz, model_to_networkx
+from pymc.model_graph import (
+    DimInfo,
+    ModelGraph,
+    NodeInfo,
+    NodeType,
+    Plate,
+    model_to_graphviz,
+    model_to_networkx,
+)
+
+
+def sort_plates(plates: list[Plate]) -> list[Plate]:
+    return sorted(plates, key=lambda x: x.dim_info.lengths)
 
 
 def school_model():
@@ -122,13 +134,36 @@ def radon_model():
         # of the model variables that the observations belong to:
         "log_radon": {"y_like"},
     }
-    plates = {
-        "": {"b", "sigma_a", "sigma_y", "floor_measure_offset"},
-        "3": {"gamma"},
-        "85": {"eps_a"},
-        "919": {"a", "mu_a", "y_like", "log_radon"},
-    }
-    return model, compute_graph, plates
+    plates = [
+        Plate(
+            dim_info=DimInfo(names=(), lengths=()),
+            variables=[
+                NodeInfo(var=model["b"], node_type=NodeType.FREE_RV),
+                NodeInfo(var=model["sigma_a"], node_type=NodeType.FREE_RV),
+                NodeInfo(var=model["sigma_y"], node_type=NodeType.FREE_RV),
+                NodeInfo(var=model["floor_measure_offset"], node_type=NodeType.DATA),
+            ],
+        ),
+        Plate(
+            dim_info=DimInfo(names=(None,), lengths=(3,)),
+            variables=[NodeInfo(var=model["gamma"], node_type=NodeType.FREE_RV)],
+        ),
+        Plate(
+            dim_info=DimInfo(names=(None,), lengths=(85,)),
+            variables=[NodeInfo(var=model["eps_a"], node_type=NodeType.FREE_RV)],
+        ),
+        Plate(
+            dim_info=DimInfo(names=(None,), lengths=(919,)),
+            variables=[
+                NodeInfo(var=model["a"], node_type=NodeType.DETERMINISTIC),
+                NodeInfo(var=model["mu_a"], node_type=NodeType.DETERMINISTIC),
+                NodeInfo(var=model["y_like"], node_type=NodeType.OBSERVED_RV),
+                NodeInfo(var=model["log_radon"], node_type=NodeType.DATA),
+            ],
+        ),
+    ]
+
+    return model, compute_graph, sort_plates(plates)
 
 
 def model_with_imputations():
@@ -148,13 +183,25 @@ def model_with_imputations():
         "L_observed": {"a"},
         "L": {"L_unobserved", "L_observed"},
     }
-    plates = {
-        "": {"a"},
-        "2": {"L_unobserved"},
-        "10": {"L_observed"},
-        "12": {"L"},
-    }
-    return model, compute_graph, plates
+    plates = [
+        Plate(
+            dim_info=DimInfo(names=(), lengths=()),
+            variables=[NodeInfo(var=model["a"], node_type=NodeType.FREE_RV)],
+        ),
+        Plate(
+            dim_info=DimInfo(names=(None,), lengths=(2,)),
+            variables=[NodeInfo(var=model["L_unobserved"], node_type=NodeType.FREE_RV)],
+        ),
+        Plate(
+            dim_info=DimInfo(names=(None,), lengths=(10,)),
+            variables=[NodeInfo(var=model["L_observed"], node_type=NodeType.OBSERVED_RV)],
+        ),
+        Plate(
+            dim_info=DimInfo(names=(None,), lengths=(12,)),
+            variables=[NodeInfo(var=model["L"], node_type=NodeType.DETERMINISTIC)],
+        ),
+    ]
+    return model, compute_graph, sort_plates(plates)
 
 
 def model_with_dims():
@@ -180,15 +227,33 @@ def model_with_dims():
         "L": {"tax revenue"},
         "observed": {"L"},
     }
-    plates = {
-        "1": {"economics"},
-        "city (4)": {"population"},
-        "year (3)": {"time"},
-        "year (3) x city (4)": {"tax revenue"},
-        "3 x 4": {"L", "observed"},
-    }
+    plates = [
+        Plate(
+            dim_info=DimInfo(names=(None,), lengths=(1,)),
+            variables=[NodeInfo(var=pmodel["economics"], node_type=NodeType.FREE_RV)],
+        ),
+        Plate(
+            dim_info=DimInfo(names=("city",), lengths=(4,)),
+            variables=[NodeInfo(var=pmodel["population"], node_type=NodeType.FREE_RV)],
+        ),
+        Plate(
+            dim_info=DimInfo(names=("year",), lengths=(3,)),
+            variables=[NodeInfo(var=pmodel["time"], node_type=NodeType.DATA)],
+        ),
+        Plate(
+            dim_info=DimInfo(names=("year", "city"), lengths=(3, 4)),
+            variables=[NodeInfo(var=pmodel["tax revenue"], node_type=NodeType.DETERMINISTIC)],
+        ),
+        Plate(
+            dim_info=DimInfo(names=(None, None), lengths=(3, 4)),
+            variables=[
+                NodeInfo(var=pmodel["L"], node_type=NodeType.OBSERVED_RV),
+                NodeInfo(var=pmodel["observed"], node_type=NodeType.DATA),
+            ],
+        ),
+    ]
 
-    return pmodel, compute_graph, plates
+    return pmodel, compute_graph, sort_plates(plates)
 
 
 def model_unnamed_observed_node():
@@ -205,12 +270,24 @@ def model_unnamed_observed_node():
         "mu": set(),
         "y": {"mu"},
     }
-    plates = {
-        "": {"mu"},
-        "4": {"y"},
-    }
+    plates = [
+        Plate(
+            dim_info=DimInfo(
+                names=(),
+                lengths=(),
+            ),
+            variables=[NodeInfo(var=model["mu"], node_type=NodeType.FREE_RV)],
+        ),
+        Plate(
+            dim_info=DimInfo(
+                names=(None,),
+                lengths=(4,),
+            ),
+            variables=[NodeInfo(var=model["y"], node_type=NodeType.OBSERVED_RV)],
+        ),
+    ]
 
-    return model, compute_graph, plates
+    return model, compute_graph, sort_plates(plates)
 
 
 def model_observation_dtype_casting():
@@ -227,9 +304,21 @@ def model_observation_dtype_casting():
         "response": {"p"},
         "data": {"response"},
     }
-    plates = {"": {"p"}, "4": {"data", "response"}}
+    plates = [
+        Plate(
+            dim_info=DimInfo(names=(), lengths=()),
+            variables=[NodeInfo(var=model["p"], node_type=NodeType.FREE_RV)],
+        ),
+        Plate(
+            dim_info=DimInfo(names=(None,), lengths=(4,)),
+            variables=[
+                NodeInfo(var=model["data"], node_type=NodeType.DATA),
+                NodeInfo(var=model["response"], node_type=NodeType.OBSERVED_RV),
+            ],
+        ),
+    ]
 
-    return model, compute_graph, plates
+    return model, compute_graph, sort_plates(plates)
 
 
 def model_non_random_variable_rvs():
@@ -254,12 +343,21 @@ def model_non_random_variable_rvs():
         "y": {"mu"},
         "z": {"y"},
     }
-    plates = {
-        "": {"mu", "y"},
-        "5": {"z"},
-    }
+    plates = [
+        Plate(
+            dim_info=DimInfo(names=(), lengths=()),
+            variables=[
+                NodeInfo(var=model["mu"], node_type=NodeType.FREE_RV),
+                NodeInfo(var=model["y"], node_type=NodeType.FREE_RV),
+            ],
+        ),
+        Plate(
+            dim_info=DimInfo(names=(None,), lengths=(5,)),
+            variables=[NodeInfo(var=model["z"], node_type=NodeType.OBSERVED_RV)],
+        ),
+    ]
 
-    return model, compute_graph, plates
+    return model, compute_graph, sort_plates(plates)
 
 
 class BaseModelGraphTest:
@@ -288,14 +386,11 @@ class BaseModelGraphTest:
         assert actual == expected
 
     def test_plates(self):
-        assert self.plates == self.model_graph.get_plates()
+        assert self.plates == sort_plates(self.model_graph.get_plates())
 
     def test_graphviz(self):
         # just make sure everything runs without error
 
-        g = self.model_graph.make_graph()
-        for key in self.compute_graph:
-            assert key in g.source
         g = model_to_graphviz(self.model)
         for key in self.compute_graph:
             assert key in g.source
@@ -346,10 +441,15 @@ class TestModelWithDims(BaseModelGraphTest):
             pm.Deterministic("n", data, dims=(None, "time"))
 
         mg = ModelGraph(pmodel)
-        plates_actual = mg.get_plates()
-        plates_expected = {
-            "n_dim0 (3) x time (5)": {"n"},
-        }
+        plates_actual = sort_plates(mg.get_plates())
+        plates_expected = sort_plates(
+            [
+                Plate(
+                    dim_info=DimInfo(names=(None, "time"), lengths=(3, 5)),
+                    variables=[NodeInfo(var=pmodel["n"], node_type=NodeType.DETERMINISTIC)],
+                ),
+            ]
+        )
         assert plates_actual == plates_expected
 
 
@@ -473,3 +573,61 @@ def test_custom_node_formatting_graphviz(simple_model):
         ]
     )
     assert body == items
+
+
+def test_none_dim_in_plate() -> None:
+    coords = {
+        "obs": range(5),
+    }
+    with pm.Model(coords=coords) as model:
+        data = pt.as_tensor_variable(
+            np.ones((5, 5)),
+            name="data",
+        )
+        pm.Deterministic("C", data, dims=("obs", None))
+        pm.Deterministic("D", data.T, dims=(None, "obs"))
+
+    graph = ModelGraph(model)
+
+    assert graph.get_plates() == [
+        Plate(
+            dim_info=DimInfo(names=("obs", None), lengths=(5, 5)),
+            variables=[NodeInfo(var=model["C"], node_type=NodeType.DETERMINISTIC)],
+        ),
+        Plate(
+            dim_info=DimInfo(names=(None, "obs"), lengths=(5, 5)),
+            variables=[NodeInfo(var=model["D"], node_type=NodeType.DETERMINISTIC)],
+        ),
+    ]
+    assert graph.edges() == []
+
+
+def test_shape_without_dims() -> None:
+    with pm.Model() as model:
+        pm.Normal("mu", shape=5)
+
+    graph = ModelGraph(model)
+
+    assert graph.get_plates() == [
+        Plate(
+            dim_info=DimInfo(names=(None,), lengths=(5,)),
+            variables=[NodeInfo(var=model["mu"], node_type=NodeType.FREE_RV)],
+        ),
+    ]
+    assert graph.edges() == []
+
+
+def test_scalars_dim_info() -> None:
+    with pm.Model() as model:
+        pm.Normal("x")
+
+    graph = ModelGraph(model)
+
+    assert graph.get_plates() == [
+        Plate(
+            dim_info=DimInfo(names=(), lengths=()),
+            variables=[NodeInfo(var=model["x"], node_type=NodeType.FREE_RV)],
+        )
+    ]
+
+    assert graph.edges() == []

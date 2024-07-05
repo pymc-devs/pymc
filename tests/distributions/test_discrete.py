@@ -374,6 +374,37 @@ class TestMatchesScipy:
             lambda value, p: categorical_logpdf(value, p),
         )
 
+    def test_categorical_logp_batch_dims(self):
+        # Core case
+        p = np.array([0.2, 0.3, 0.5])
+        value = np.array(2.0)
+        logp_expr = logp(pm.Categorical.dist(p=p, shape=value.shape), value)
+        assert logp_expr.type.ndim == 0
+        np.testing.assert_allclose(logp_expr.eval(), np.log(0.5))
+
+        # Explicit batched value broadcasts p
+        bcast_p = p[None]  # shape (1, 3)
+        batch_value = np.array([0, 1])  # shape(3,)
+        logp_expr = logp(pm.Categorical.dist(p=bcast_p, shape=batch_value.shape), batch_value)
+        assert logp_expr.type.ndim == 1
+        np.testing.assert_allclose(logp_expr.eval(), np.log([0.2, 0.3]))
+
+        # Explicit batched value and batched p
+        batch_p = np.array([p[::-1], p])
+        logp_expr = logp(pm.Categorical.dist(p=batch_p, shape=batch_value.shape), batch_value)
+        assert logp_expr.type.ndim == 1
+        np.testing.assert_allclose(logp_expr.eval(), np.log([0.5, 0.3]))
+
+        # Implicit batch value broadcasts p
+        logp_expr = logp(pm.Categorical.dist(p=p, shape=()), batch_value)
+        assert logp_expr.type.ndim == 1
+        np.testing.assert_allclose(logp_expr.eval(), np.log([0.2, 0.3]))
+
+        # Implicit batch p broadcasts value
+        logp_expr = logp(pm.Categorical.dist(p=batch_p, shape=None), value)
+        assert logp_expr.type.ndim == 1
+        np.testing.assert_allclose(logp_expr.eval(), np.log([0.2, 0.5]))
+
     @pytensor.config.change_flags(compute_test_value="raise")
     def test_categorical_bounds(self):
         with pm.Model():
@@ -407,7 +438,7 @@ class TestMatchesScipy:
         with pytest.warns(UserWarning, match="They will be automatically rescaled"):
             with pm.Model() as m:
                 x = pm.Categorical("x", p=[1, 1, 1, 1, 1])
-        assert np.isclose(m.x.owner.inputs[3].sum().eval(), 1.0)
+        assert np.isclose(m.x.owner.inputs[-1].sum().eval(), 1.0)
 
     def test_categorical_negative_p_symbolic(self):
         value = np.array([[1, 1, 1]])
@@ -476,9 +507,9 @@ def test_orderedlogistic_dimensions(shape):
     clogp = pm.logp(c, np.ones_like(obs)).sum().eval() * loge
     expected = -np.prod((size, *shape))
 
-    assert c.owner.inputs[3].ndim == (len(shape) + 1)
+    assert c.owner.inputs[-1].type.shape == (1, *shape, 10)
     assert np.allclose(clogp, expected)
-    assert ol.owner.inputs[3].ndim == (len(shape) + 1)
+    assert ol.owner.inputs[-1].type.shape == (1, *shape, 10)
     assert np.allclose(ologp, expected)
 
 
@@ -654,9 +685,7 @@ class TestDiscreteWeibull(BaseTestDistributionRandom):
         return np.ceil(np.power(np.log(1 - uniform_rng_fct(size=size)) / np.log(q), 1.0 / beta)) - 1
 
     def seeded_discrete_weibul_rng_fn(self):
-        uniform_rng_fct = ft.partial(
-            getattr(np.random.RandomState, "uniform"), self.get_random_state()
-        )
+        uniform_rng_fct = self.get_random_state().uniform
         return ft.partial(self.discrete_weibul_rng_fn, uniform_rng_fct=uniform_rng_fct)
 
     pymc_dist = pm.DiscreteWeibull
@@ -759,8 +788,8 @@ class TestLogitCategorical(BaseTestDistributionRandom):
     expected_rv_op_params = {
         "p": sp.softmax(np.array([[0.28, 0.62, 0.10], [0.28, 0.62, 0.10]]), axis=-1)
     }
-    sizes_to_check = [None, (), (2,), (4, 2), (1, 2)]
-    sizes_expected = [(2,), (2,), (2,), (4, 2), (1, 2)]
+    sizes_to_check = [None, (2,), (4, 2), (1, 2)]
+    sizes_expected = [(2,), (2,), (4, 2), (1, 2)]
 
     checks_to_run = [
         "check_pymc_params_match_rv_op",
@@ -841,7 +870,7 @@ class TestDiscreteUniform(BaseTestDistributionRandom):
 class TestOrderedLogistic:
     def test_expected_categorical(self):
         categorical = OrderedLogistic.dist(eta=0, cutpoints=np.array([-2, 0, 2]))
-        p = categorical.owner.inputs[3].eval()
+        p = categorical.owner.inputs[-1].eval()
         expected_p = np.array([0.11920292, 0.38079708, 0.38079708, 0.11920292])
         np.testing.assert_allclose(p, expected_p)
 
@@ -868,19 +897,25 @@ class TestOrderedLogistic:
         assert p_shape == expected
 
     def test_compute_p(self):
-        with pm.Model() as m:
-            pm.OrderedLogistic("ol_p", cutpoints=np.array([-2, 0, 2]), eta=0)
-            pm.OrderedLogistic("ol_no_p", cutpoints=np.array([-2, 0, 2]), eta=0, compute_p=False)
+        with pm.Model(coords={"test_dim": [0]}) as m:
+            pm.OrderedLogistic("ol_p", cutpoints=np.array([-2, 0, 2]), eta=0, dims="test_dim")
+            pm.OrderedLogistic(
+                "ol_no_p", cutpoints=np.array([-2, 0, 2]), eta=0, compute_p=False, dims="test_dim"
+            )
         assert len(m.deterministics) == 1
 
         x = pm.OrderedLogistic.dist(cutpoints=np.array([-2, 0, 2]), eta=0)
         assert isinstance(x, TensorVariable)
 
         # Test it works with auto-imputation
-        with pm.Model() as m:
+        with pm.Model(coords={"test_dim": [0, 1, 2]}) as m:
             with pytest.warns(ImputationWarning):
                 pm.OrderedLogistic(
-                    "ol", cutpoints=np.array([-2, 0, 2]), eta=0, observed=[0, np.nan, 1]
+                    "ol",
+                    cutpoints=np.array([[-2, 0, 2]]),
+                    eta=0,
+                    observed=[0, np.nan, 1],
+                    dims=["test_dim"],
                 )
         assert len(m.deterministics) == 2  # One from the auto-imputation, the other from compute_p
 
@@ -888,7 +923,7 @@ class TestOrderedLogistic:
 class TestOrderedProbit:
     def test_expected_categorical(self):
         categorical = OrderedProbit.dist(eta=0, cutpoints=np.array([-2, 0, 2]))
-        p = categorical.owner.inputs[3].eval()
+        p = categorical.owner.inputs[-1].eval()
         expected_p = np.array([0.02275013, 0.47724987, 0.47724987, 0.02275013])
         np.testing.assert_allclose(p, expected_p)
 
