@@ -458,6 +458,15 @@ class TestCompileForwardSampler:
             ).posterior_predictive
         assert pp_diff_len["y"] != np.pi
 
+        # Changing the dim length on the model itself
+        # -- `x` is volatile even though trace has same len
+        model.set_dim("trial", new_length=7)
+        with model:
+            pp_diff_len_model_set = pm.sample_posterior_predictive(
+                trace_same_len, var_names=["y"]
+            ).posterior_predictive
+        assert pp_diff_len_model_set["y"] != np.pi
+
 
 class TestSamplePPC:
     def test_normal_scalar(self):
