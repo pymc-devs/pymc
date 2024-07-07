@@ -460,7 +460,7 @@ class TestCompileForwardSampler:
         assert pp_diff_len["y"] != np.pi
 
         # Changing the dim length on the model itself
-        # -- `x` is volatile even though trace has same len
+        # -- `x` is volatile because trace has same len as original model
         model.set_dim("trial", new_length=7)
         with model:
             pp_diff_len_model_set = pm.sample_posterior_predictive(
