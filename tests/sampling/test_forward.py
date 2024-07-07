@@ -36,6 +36,7 @@ from pymc.backends.base import MultiTrace
 from pymc.pytensorf import compile_pymc
 from pymc.sampling.forward import (
     compile_forward_sampling_function,
+    get_constant_coords,
     get_vars_in_point_list,
     observed_dependent_deterministics,
 )
@@ -427,6 +428,45 @@ class TestCompileForwardSampler:
             "obs",
             "offsets",
         }
+
+    def test_length_coords_volatile(self):
+        with pm.Model() as model:
+            model.add_coord("trial", length=3)
+            x = pm.Normal("x", dims="trial")
+            y = pm.Deterministic("y", x.mean())
+
+        # Same coord length -- `x` is not volatile
+        trace_same_len = az_from_dict(
+            posterior={"x": [[[np.pi] * 3]]},
+            coords={"trial": range(3)},
+            dims={"x": ["trial"]},
+        )
+        with model:
+            pp_same_len = pm.sample_posterior_predictive(
+                trace_same_len, var_names=["y"]
+            ).posterior_predictive
+        assert pp_same_len["y"] == np.pi
+
+        # Coord length changed -- `x` is volatile
+        trace_diff_len = az_from_dict(
+            posterior={"x": [[[np.pi] * 2]]},
+            coords={"trial": range(2)},
+            dims={"x": ["trial"]},
+        )
+        with model:
+            pp_diff_len = pm.sample_posterior_predictive(
+                trace_diff_len, var_names=["y"]
+            ).posterior_predictive
+        assert pp_diff_len["y"] != np.pi
+
+        # Changing the dim length on the model itself
+        # -- `x` is volatile because trace has same len as original model
+        model.set_dim("trial", new_length=7)
+        with model:
+            pp_diff_len_model_set = pm.sample_posterior_predictive(
+                trace_same_len, var_names=["y"]
+            ).posterior_predictive
+        assert pp_diff_len_model_set["y"] != np.pi
 
 
 class TestSamplePPC:
@@ -1668,6 +1708,20 @@ class TestNestedRandom:
             prior_samples=prior_samples,
         )
         assert prior["target"].shape == (prior_samples, *shape)
+
+
+def test_get_constant_coords():
+    with pm.Model() as model:
+        model.add_coord("length_coord", length=1)
+        model.add_coord("value_coord", values=(3,))
+
+    trace_coords_same = {"length_coord": np.array([0]), "value_coord": np.array([3])}
+    constant_coords_same = get_constant_coords(trace_coords_same, model)
+    assert constant_coords_same == {"length_coord", "value_coord"}
+
+    trace_coords_diff = {"length_coord": np.array([0, 1]), "value_coord": np.array([4])}
+    constant_coords_diff = get_constant_coords(trace_coords_diff, model)
+    assert constant_coords_diff == set()
 
 
 def test_get_vars_in_point_list():
