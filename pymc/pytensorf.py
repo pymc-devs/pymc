@@ -32,6 +32,7 @@ from pytensor.graph.basic import (
     Constant,
     Variable,
     clone_get_equiv,
+    equal_computations,
     graph_inputs,
     walk,
 )
@@ -872,8 +873,23 @@ def collect_default_updates(
             return rng
 
         if len(rng_clients) > 1:
+            # Multiple clients are techincally fine if they are used in identical operations
+            # We check if the default_update of each client would be the same
+            update, *other_updates = (
+                find_default_update(
+                    # Pass version of clients that includes only one the RNG clients at a time
+                    clients | {rng: [rng_client]},
+                    rng,
+                )
+                for rng_client in rng_clients
+            )
+            if all(equal_computations([update], [other_update]) for other_update in other_updates):
+                return update
+
             warnings.warn(
-                f"RNG Variable {rng} has multiple clients. This is likely an inconsistent random graph.",
+                f"RNG Variable {rng} has multiple distinct clients {rng_clients}, "
+                f"likely due to an inconsistent random graph. "
+                f"No default update will be returned.",
                 UserWarning,
             )
             return None
