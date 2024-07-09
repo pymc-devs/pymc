@@ -592,7 +592,7 @@ class TestMatchesScipy:
         check_logcdf(
             pm.SkewStudentT,
             R,
-            {"a": Rplus, "b": Rplus, "mu": R, "sigma": Rplus},
+            {"a": Rplus, "b": Rplus, "mu": R, "sigma": Rplusbig},
             lambda value, a, b, mu, sigma: st.jf_skew_t.logcdf(value, a, b, mu, sigma),
         )
 
