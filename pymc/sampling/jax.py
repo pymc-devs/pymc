@@ -232,6 +232,7 @@ def _blackjax_inference_loop(
     seed, init_position, logprob_fn, draws, tune, target_accept, **adaptation_kwargs
 ):
     import blackjax
+    from blackjax.adaptation.base import get_filter_adapt_info_fn
 
     algorithm_name = adaptation_kwargs.pop("algorithm", "nuts")
     if algorithm_name == "nuts":
@@ -245,6 +246,7 @@ def _blackjax_inference_loop(
         algorithm=algorithm,
         logdensity_fn=logprob_fn,
         target_acceptance_rate=target_accept,
+        adaptation_info_fn=get_filter_adapt_info_fn(),
         **adaptation_kwargs,
     )
     (last_state, tuned_params), _ = adapt.run(seed, init_position, num_steps=tune)
