@@ -27,7 +27,6 @@ import numpy as np
 import pytensor.tensor as pt
 
 from arviz.data.base import make_attrs
-from blackjax.adaptation.base import get_filter_adapt_info_fn
 from jax.lax import scan
 from pytensor.compile import SharedVariable, Supervisor, mode
 from pytensor.graph.basic import graph_inputs
@@ -393,7 +392,6 @@ def _sample_blackjax_nuts(
         tune=tune,
         draws=draws,
         target_accept=target_accept,
-        adaptation_info_fn=get_filter_adapt_info_fn(),
         **nuts_kwargs,
     )
 
