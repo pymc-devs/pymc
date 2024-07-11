@@ -38,13 +38,11 @@ from pytensor.graph.basic import (
     walk,
 )
 from pytensor.graph.fg import FunctionGraph
-from pytensor.tensor.random.var import (
-    RandomGeneratorSharedVariable,
-    RandomStateSharedVariable,
-)
-from pytensor.tensor.sharedvar import SharedVariable
+from pytensor.tensor.random.var import RandomGeneratorSharedVariable
+from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
+from pytensor.tensor.variable import TensorConstant
 from rich.console import Console
-from rich.progress import Progress
+from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
 
 import pymc as pm
@@ -55,6 +53,7 @@ from pymc.blocking import PointType
 from pymc.model import Model, modelcontext
 from pymc.pytensorf import compile_pymc
 from pymc.util import (
+    CustomProgress,
     RandomState,
     _get_seeds_per_chain,
     default_progress_theme,
@@ -73,6 +72,28 @@ ArrayLike: TypeAlias = np.ndarray | list[float]
 PointList: TypeAlias = list[PointType]
 
 _log = logging.getLogger(__name__)
+
+
+def get_constant_coords(trace_coords: dict[str, np.ndarray], model: Model) -> set:
+    """Get the set of coords that have remained constant between the trace and model"""
+    constant_coords = set()
+    for dim, coord in trace_coords.items():
+        current_coord = model.coords.get(dim, None)
+        current_length = model.dim_lengths.get(dim, None)
+        if isinstance(current_length, TensorSharedVariable):
+            current_length = current_length.get_value()
+        elif isinstance(current_length, TensorConstant):
+            current_length = current_length.data
+        if (
+            current_coord is not None
+            and len(coord) == len(current_coord)
+            and np.all(coord == current_coord)
+        ) or (
+            # Coord was defined without values (only length)
+            current_coord is None and len(coord) == current_length
+        ):
+            constant_coords.add(dim)
+    return constant_coords
 
 
 def get_vars_in_point_list(trace, model):
@@ -106,7 +127,7 @@ def compile_forward_sampling_function(
     compiled function or after inference has been run. These variables are:
 
     - Variables in the outputs list
-    - ``SharedVariable`` instances that are not ``RandomStateSharedVariable`` or ``RandomGeneratorSharedVariable``, and whose values changed with respect to what they were at inference time
+    - ``SharedVariable`` instances that are not ``RandomGeneratorSharedVariable``, and whose values changed with respect to what they were at inference time
     - Variables that are in the `basic_rvs` list but not in the ``vars_in_trace`` list
     - Variables that are keys in the ``givens_dict``
     - Variables that have volatile inputs
@@ -206,7 +227,7 @@ def compile_forward_sampling_function(
             or node in givens_dict
             or (  # SharedVariables, except RandomState/Generators
                 isinstance(node, SharedVariable)
-                and not isinstance(node, RandomStateSharedVariable | RandomGeneratorSharedVariable)
+                and not isinstance(node, RandomGeneratorSharedVariable)
                 and not shared_value_matches(node)
             )
             or (  # Basic RVs that are not in the trace
@@ -337,19 +358,20 @@ def observed_dependent_deterministics(model: Model):
 
 
 def sample_prior_predictive(
-    samples: int = 500,
+    draws: int = 500,
     model: Model | None = None,
     var_names: Iterable[str] | None = None,
     random_seed: RandomState = None,
     return_inferencedata: bool = True,
     idata_kwargs: dict | None = None,
     compile_kwargs: dict | None = None,
+    samples: int | None = None,
 ) -> InferenceData | dict[str, np.ndarray]:
     """Generate samples from the prior predictive distribution.
 
     Parameters
     ----------
-    samples : int
+    draws : int
         Number of samples from the prior predictive to generate. Defaults to 500.
     model : Model (optional if in ``with`` context)
     var_names : Iterable[str]
@@ -365,6 +387,8 @@ def sample_prior_predictive(
         Keyword arguments for :func:`pymc.to_inference_data`
     compile_kwargs: dict, optional
         Keyword arguments for :func:`pymc.pytensorf.compile_pymc`.
+    samples : int
+        Number of samples from the prior predictive to generate. Deprecated in favor of `draws`.
 
     Returns
     -------
@@ -372,6 +396,15 @@ def sample_prior_predictive(
         An ArviZ ``InferenceData`` object containing the prior and prior predictive samples (default),
         or a dictionary with variable names as keys and samples as numpy arrays.
     """
+    if samples is not None:
+        warnings.warn(
+            f"The samples argument has been deprecated in favor of draws. Use draws={samples} going forward.",
+            DeprecationWarning,
+            stacklevel=1,
+        )
+
+        draws = samples
+
     model = modelcontext(model)
 
     if model.potentials:
@@ -414,11 +447,11 @@ def sample_prior_predictive(
 
     # All model variables have a name, but mypy does not know this
     _log.info(f"Sampling: {list(sorted(volatile_basic_rvs, key=lambda var: var.name))}")  # type: ignore
-    values = zip(*(sampler_fn() for i in range(samples)))
+    values = zip(*(sampler_fn() for i in range(draws)))
 
     data = {k: np.stack(v) for k, v in zip(names, values)}
     if data is None:
-        raise AssertionError("No variables sampled: attempting to sample %s" % names)
+        raise AssertionError(f"No variables sampled: attempting to sample {names}")
 
     prior: dict[str, np.ndarray] = {}
     for var_name in vars_:
@@ -764,8 +797,7 @@ def sample_posterior_predictive(
         samples = len(_trace)
     else:
         raise TypeError(
-            "Do not know how to compute number of samples for trace argument of type %s"
-            % type(_trace)
+            f"Do not know how to compute number of samples for trace argument of type {type(_trace)}"
         )
 
     assert samples is not None
@@ -780,15 +812,7 @@ def sample_posterior_predictive(
             stacklevel=2,
         )
 
-    constant_coords = set()
-    for dim, coord in trace_coords.items():
-        current_coord = model.coords.get(dim, None)
-        if (
-            current_coord is not None
-            and len(coord) == len(current_coord)
-            and np.all(coord == current_coord)
-        ):
-            constant_coords.add(dim)
+    constant_coords = get_constant_coords(trace_coords, model)
 
     if var_names is not None:
         vars_ = [model[x] for x in var_names]
@@ -828,11 +852,21 @@ def sample_posterior_predictive(
     # All model variables have a name, but mypy does not know this
     _log.info(f"Sampling: {list(sorted(volatile_basic_rvs, key=lambda var: var.name))}")  # type: ignore
     ppc_trace_t = _DefaultTrace(samples)
+
+    progress = CustomProgress(
+        "[progress.description]{task.description}",
+        BarColumn(),
+        "[progress.percentage]{task.percentage:>3.0f}%",
+        TimeRemainingColumn(),
+        TextColumn("/"),
+        TimeElapsedColumn(),
+        console=Console(theme=progressbar_theme),
+        disable=not progressbar,
+    )
+
     try:
-        with Progress(
-            console=Console(theme=progressbar_theme), disable=not progressbar
-        ) as progress:
-            task = progress.add_task("Sampling ...", total=samples, visible=progressbar)
+        with progress:
+            task = progress.add_task("Sampling ...", completed=0, total=samples)
             for idx in np.arange(samples):
                 if nchain > 1:
                     # the trace object will either be a MultiTrace (and have _straces)...
@@ -854,6 +888,7 @@ def sample_posterior_predictive(
                     ppc_trace_t.insert(k.name, v, idx)
 
                 progress.advance(task)
+            progress.update(task, refresh=True, completed=samples)
 
     except KeyboardInterrupt:
         pass

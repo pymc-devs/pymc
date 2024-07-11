@@ -34,7 +34,7 @@ def test_compute_deterministics():
         sigma = Deterministic("sigma", sigma_raw.exp())
 
     dataset = sample_prior_predictive(
-        samples=5, model=m, var_names=["mu_raw", "sigma_raw"], random_seed=22
+        draws=5, model=m, var_names=["mu_raw", "sigma_raw"], random_seed=22
     ).prior
 
     # Test default

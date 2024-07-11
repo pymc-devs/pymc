@@ -7,7 +7,6 @@ Distribution utilities
    :toctree: generated/
 
     Continuous
-    CustomDist
     Discrete
     Distribution
     SymbolicRandomVariable

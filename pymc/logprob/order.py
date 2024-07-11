@@ -35,9 +35,11 @@
 #   SOFTWARE.
 
 
+from typing import cast
+
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Node
+from pytensor.graph.basic import Apply
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor.elemwise import Elemwise
@@ -72,7 +74,7 @@ MeasurableVariable.register(MeasurableMaxDiscrete)
 
 
 @node_rewriter([Max])
-def find_measurable_max(fgraph: FunctionGraph, node: Node) -> list[TensorVariable] | None:
+def find_measurable_max(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -80,7 +82,7 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> list[TensorVariabl
     if isinstance(node.op, MeasurableMax):
         return None  # pragma: no cover
 
-    base_var = node.inputs[0]
+    base_var = cast(TensorVariable, node.inputs[0])
 
     if base_var.owner is None:
         return None
@@ -93,8 +95,8 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> list[TensorVariabl
         return None
 
     # univariate i.i.d. test which also rules out other distributions
-    for params in base_var.owner.inputs[3:]:
-        if params.type.ndim != 0:
+    for params in base_var.owner.op.dist_params(base_var.owner):
+        if not all(params.type.broadcastable):
             return None
 
     # Check whether axis covers all dimensions
@@ -104,7 +106,8 @@ def find_measurable_max(fgraph: FunctionGraph, node: Node) -> list[TensorVariabl
         return None
 
     # distinguish measurable discrete and continuous (because logprob is different)
-    if base_var.owner.op.dtype.startswith("int"):
+    measurable_max: Max
+    if base_var.type.dtype.startswith("int"):
         measurable_max = MeasurableMaxDiscrete(list(axis))
     else:
         measurable_max = MeasurableMax(list(axis))
@@ -173,7 +176,7 @@ MeasurableVariable.register(MeasurableDiscreteMaxNeg)
 
 
 @node_rewriter(tracks=[Max])
-def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> list[TensorVariable] | None:
+def find_measurable_max_neg(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
     rv_map_feature = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
@@ -182,7 +185,7 @@ def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> list[TensorVar
     if isinstance(node.op, MeasurableMaxNeg):
         return None  # pragma: no cover
 
-    base_var = node.inputs[0]
+    base_var = cast(TensorVariable, node.inputs[0])
 
     # Min is the Max of the negation of the same distribution. Hence, op must be Elemwise
     if not (base_var.owner is not None and isinstance(base_var.owner.op, Elemwise)):
@@ -199,8 +202,8 @@ def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> list[TensorVar
         return None
 
     # univariate i.i.d. test which also rules out other distributions
-    for params in base_rv.owner.inputs[3:]:
-        if params.type.ndim != 0:
+    for params in base_rv.owner.op.dist_params(base_rv.owner):
+        if not all(params.type.broadcastable):
             return None
 
     # Check whether axis is supported or not
@@ -213,7 +216,8 @@ def find_measurable_max_neg(fgraph: FunctionGraph, node: Node) -> list[TensorVar
         return None
 
     # distinguish measurable discrete and continuous (because logprob is different)
-    if base_rv.owner.op.dtype.startswith("int"):
+    measurable_min: Max
+    if base_rv.type.dtype.startswith("int"):
         measurable_min = MeasurableDiscreteMaxNeg(list(axis))
     else:
         measurable_min = MeasurableMaxNeg(list(axis))

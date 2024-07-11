@@ -36,7 +36,7 @@ from arviz import InferenceData, dict_to_dataset
 from arviz.data.base import make_attrs
 from pytensor.graph.basic import Variable
 from rich.console import Console
-from rich.progress import Progress
+from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 from typing_extensions import Protocol
@@ -65,6 +65,7 @@ from pymc.step_methods import NUTS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
+    CustomProgress,
     RandomSeed,
     RandomState,
     _get_seeds_per_chain,
@@ -336,6 +337,7 @@ def _sample_external_nuts(
         attrs = make_attrs(
             {
                 "sampling_time": t_sample,
+                "tuning_steps": tune,
             },
             library=nutpie,
         )
@@ -698,10 +700,7 @@ def sample(
         msg = "Tuning was enabled throughout the whole trace."
         _log.warning(msg)
     elif draws < 100:
-        msg = (
-            "Only %s samples per chain. Reliable r-hat and ESS diagnostics require longer chains for accurate estimate."
-            % draws
-        )
+        msg = f"Only {draws} samples per chain. Reliable r-hat and ESS diagnostics require longer chains for accurate estimate."
         _log.warning(msg)
 
     auto_nuts_init = True
@@ -1079,14 +1078,28 @@ def _sample(
     )
     _pbar_data = {"chain": chain, "divergences": 0}
     _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
-    with Progress(console=Console(theme=progressbar_theme)) as progress:
+
+    progress = CustomProgress(
+        "[progress.description]{task.description}",
+        BarColumn(),
+        "[progress.percentage]{task.percentage:>3.0f}%",
+        TimeRemainingColumn(),
+        TextColumn("/"),
+        TimeElapsedColumn(),
+        console=Console(theme=progressbar_theme),
+        disable=not progressbar,
+    )
+
+    with progress:
         try:
-            task = progress.add_task(_desc.format(**_pbar_data), total=draws, visible=progressbar)
+            task = progress.add_task(_desc.format(**_pbar_data), completed=0, total=draws)
             for it, diverging in enumerate(sampling_gen):
                 if it >= skip_first and diverging:
                     _pbar_data["divergences"] += 1
-                progress.update(task, refresh=True, advance=1)
-            progress.update(task, refresh=True, advance=1, completed=True)
+                progress.update(task, description=_desc.format(**_pbar_data), completed=it)
+            progress.update(
+                task, description=_desc.format(**_pbar_data), completed=draws, refresh=True
+            )
         except KeyboardInterrupt:
             pass
 

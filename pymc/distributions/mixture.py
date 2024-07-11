@@ -18,7 +18,7 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Node, equal_computations
+from pytensor.graph.basic import Apply, equal_computations
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import normalize_size_param
@@ -134,15 +134,15 @@ class MarginalMixtureRV(SymbolicRandomVariable):
         s = ",".join(f"s{i}" for i in range(components[0].owner.op.ndim_supp))
         if len(components) == 1:
             comp_s = ",".join((*s, "w"))
-            signature = f"[rng],(w),({comp_s})->[rng],({s})"
+            extended_signature = f"[rng],(w),({comp_s})->[rng],({s})"
         else:
             comps_s = ",".join(f"({s})" for _ in components)
-            signature = f"[rng],(w),{comps_s}->[rng],({s})"
+            extended_signature = f"[rng],(w),{comps_s}->[rng],({s})"
 
         return MarginalMixtureRV(
             inputs=[mix_indexes_rng, weights, *components],
             outputs=[mix_indexes_rng_next, mix_out],
-            signature=signature,
+            extended_signature=extended_signature,
         )(mix_indexes_rng, weights, *components)
 
     @classmethod
@@ -156,7 +156,7 @@ class MarginalMixtureRV(SymbolicRandomVariable):
 
         return [change_dist_size(component, size) for component in components]
 
-    def update(self, node: Node):
+    def update(self, node: Apply):
         # Update for the internal mix_indexes RV
         return {node.inputs[0]: node.outputs[0]}
 
@@ -798,7 +798,7 @@ class ZeroInflatedNegativeBinomial:
         )
 
 
-def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, **kwargs):
+def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, max_n_steps=10_000, **kwargs):
     """Helper function to create a hurdle mixtures
 
     If name is `None`, this function returns an unregistered variable
@@ -819,7 +819,7 @@ def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, **kwargs):
     weights = pt.stack([1 - nonzero_p, nonzero_p], axis=-1)
     comp_dists = [
         DiracDelta.dist(zero),
-        Truncated.dist(nonzero_dist, lower=lower),
+        Truncated.dist(nonzero_dist, lower=lower, max_n_steps=max_n_steps),
     ]
 
     if name is not None:

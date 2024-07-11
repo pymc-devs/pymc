@@ -45,7 +45,7 @@ from pymc.distributions.shape_utils import (
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.abstract import _logprob
 from pymc.logprob.basic import logp
-from pymc.pytensorf import constant_fold, intX
+from pymc.pytensorf import constant_fold
 from pymc.util import check_dist_not_registered
 
 __all__ = [
@@ -108,13 +108,15 @@ class RandomWalkRV(SymbolicRandomVariable):
         innov_supp_dims = [f"d{i}" for i in range(dist_ndim_supp)]
         innov_supp_str = ",".join(innov_supp_dims)
         out_supp_str = ",".join(["t", *innov_supp_dims])
-        signature = f"({innov_supp_str}),({innov_supp_str}),(s),[rng]->({out_supp_str}),[rng]"
+        extended_signature = (
+            f"({innov_supp_str}),({innov_supp_str}),(s),[rng]->({out_supp_str}),[rng]"
+        )
         return RandomWalkRV(
             [init_dist, innovation_dist, steps],
             # We pass steps_ through just so we can keep a reference to it, even though
             # it's no longer needed at this point
             [grw],
-            signature=signature,
+            extended_signature=extended_signature,
         )(init_dist, innovation_dist, steps)
 
 
@@ -174,7 +176,7 @@ class RandomWalk(Distribution):
         )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
-        steps = pt.as_tensor_variable(intX(steps))
+        steps = pt.as_tensor_variable(steps, dtype=int)
 
         return super().dist([init_dist, innovation_dist, steps], **kwargs)
 
@@ -419,7 +421,7 @@ class MvStudentTRandomWalk(PredefinedRandomWalk):
 class AutoRegressiveRV(SymbolicRandomVariable):
     """A placeholder used to specify a log-likelihood for an AR sub-graph."""
 
-    signature = "(o),(),(o),(s),[rng]->[rng],(t)"
+    extended_signature = "(o),(),(o),(s),[rng]->[rng],(t)"
     ar_order: int
     constant_term: bool
     _print_name = ("AR", "\\operatorname{AR}")
@@ -599,7 +601,7 @@ class AR(Distribution):
         )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
-        steps = pt.as_tensor_variable(intX(steps), ndim=0)
+        steps = pt.as_tensor_variable(steps, dtype=int, ndim=0)
 
         if init_dist is not None:
             if not isinstance(init_dist, TensorVariable) or not isinstance(
@@ -713,7 +715,7 @@ def ar_support_point(op, rv, rhos, sigma, init_dist, steps, noise_rng):
 class GARCH11RV(SymbolicRandomVariable):
     """A placeholder used to specify a GARCH11 graph."""
 
-    signature = "(),(),(),(),(),(s),[rng]->[rng],(t)"
+    extended_signature = "(),(),(),(),(),(s),[rng]->[rng],(t)"
     _print_name = ("GARCH11", "\\operatorname{GARCH11}")
 
     @classmethod
@@ -913,7 +915,7 @@ class EulerMaruyamaRV(SymbolicRandomVariable):
             outputs=[noise_next_rng, sde_out],
             dt=dt,
             sde_fn=sde_fn,
-            signature=f"(),(s),{','.join('()' for _ in sde_pars)},[rng]->[rng],(t)",
+            extended_signature=f"(),(s),{','.join('()' for _ in sde_pars)},[rng]->[rng],(t)",
         )(init_dist, steps, *sde_pars, noise_rng)
 
     def update(self, node: Node):
@@ -961,7 +963,7 @@ class EulerMaruyama(Distribution):
         )
         if steps is None:
             raise ValueError("Must specify steps or shape parameter")
-        steps = pt.as_tensor_variable(intX(steps), ndim=0)
+        steps = pt.as_tensor_variable(steps, dtype=int, ndim=0)
 
         dt = pt.as_tensor_variable(dt)
         sde_pars = [pt.as_tensor_variable(x) for x in sde_pars]

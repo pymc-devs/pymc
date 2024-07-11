@@ -27,6 +27,7 @@ from arviz import from_dict as az_from_dict
 from arviz.tests.helpers import check_multiple_attrs
 from pytensor import Mode, shared
 from pytensor.compile import SharedVariable
+from pytensor.graph import graph_inputs
 from scipy import stats
 
 import pymc as pm
@@ -35,6 +36,7 @@ from pymc.backends.base import MultiTrace
 from pymc.pytensorf import compile_pymc
 from pymc.sampling.forward import (
     compile_forward_sampling_function,
+    get_constant_coords,
     get_vars_in_point_list,
     observed_dependent_deterministics,
 )
@@ -114,8 +116,8 @@ class TestCompileForwardSampler:
     def get_function_roots(function):
         return [
             var
-            for var in pytensor.graph.basic.graph_inputs(function.maker.fgraph.outputs)
-            if var.name
+            for var in graph_inputs(function.maker.fgraph.outputs)
+            if var.name not in (None, "NoneConst")
         ]
 
     @staticmethod
@@ -212,7 +214,7 @@ class TestCompileForwardSampler:
             vars_in_trace=[mu, nested_mu, sigma],
             basic_rvs=model.basic_RVs,
             givens_dict={
-                mu: np.array(1.0)
+                mu: pytensor.shared(np.array(1.0), name="mu")
             },  # mu will be considered volatile because it's in givens
         )
         assert volatile_rvs == {nested_mu, obs}
@@ -342,8 +344,8 @@ class TestCompileForwardSampler:
         rng = np.random.default_rng(seed=42)
         data = rng.normal(loc=1, scale=0.2, size=(10, 3))
         with pm.Model() as model:
-            model.add_coord("name", ["A", "B", "C"], mutable=True)
-            model.add_coord("obs", list(range(10, 20)), mutable=True)
+            model.add_coord("name", ["A", "B", "C"])
+            model.add_coord("obs", list(range(10, 20)))
             offsets = pm.Data("offsets", rng.normal(0, 1, size=(10,)))
             a = pm.Normal("a", mu=0, sigma=1, dims=["name"])
             b = pm.Normal("b", mu=offsets, sigma=1)
@@ -426,6 +428,45 @@ class TestCompileForwardSampler:
             "obs",
             "offsets",
         }
+
+    def test_length_coords_volatile(self):
+        with pm.Model() as model:
+            model.add_coord("trial", length=3)
+            x = pm.Normal("x", dims="trial")
+            y = pm.Deterministic("y", x.mean())
+
+        # Same coord length -- `x` is not volatile
+        trace_same_len = az_from_dict(
+            posterior={"x": [[[np.pi] * 3]]},
+            coords={"trial": range(3)},
+            dims={"x": ["trial"]},
+        )
+        with model:
+            pp_same_len = pm.sample_posterior_predictive(
+                trace_same_len, var_names=["y"]
+            ).posterior_predictive
+        assert pp_same_len["y"] == np.pi
+
+        # Coord length changed -- `x` is volatile
+        trace_diff_len = az_from_dict(
+            posterior={"x": [[[np.pi] * 2]]},
+            coords={"trial": range(2)},
+            dims={"x": ["trial"]},
+        )
+        with model:
+            pp_diff_len = pm.sample_posterior_predictive(
+                trace_diff_len, var_names=["y"]
+            ).posterior_predictive
+        assert pp_diff_len["y"] != np.pi
+
+        # Changing the dim length on the model itself
+        # -- `x` is volatile because trace has same len as original model
+        model.set_dim("trial", new_length=7)
+        with model:
+            pp_diff_len_model_set = pm.sample_posterior_predictive(
+                trace_same_len, var_names=["y"]
+            ).posterior_predictive
+        assert pp_diff_len_model_set["y"] != np.pi
 
 
 class TestSamplePPC:
@@ -794,12 +835,12 @@ class TestSamplePPC:
             z = pm.Normal("z", y, observed=0)
 
         with m:
-            pm.sample_prior_predictive(samples=1)
+            pm.sample_prior_predictive(draws=1)
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x, z]")]
         caplog.clear()
 
         with m:
-            pm.sample_prior_predictive(samples=1, var_names=["x"])
+            pm.sample_prior_predictive(draws=1, var_names=["x"])
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x]")]
         caplog.clear()
 
@@ -873,8 +914,8 @@ class TestSamplePPC:
         rng = np.random.default_rng(seed=42)
         data = rng.normal(loc=1, scale=0.2, size=(10, 3))
         with pm.Model() as model:
-            model.add_coord("name", ["A", "B", "C"], mutable=True)
-            model.add_coord("obs", list(range(10, 20)), mutable=True)
+            model.add_coord("name", ["A", "B", "C"])
+            model.add_coord("obs", list(range(10, 20)))
             offsets = pm.Data("offsets", rng.normal(0, 1, size=(10,)))
             a = pm.Normal("a", mu=0, sigma=1, dims=["name"])
             b = pm.Normal("b", mu=offsets, sigma=1)
@@ -1028,7 +1069,7 @@ class TestSamplePPC:
             mu = x_data.sum(-1)
             pm.Normal("y", mu=mu, sigma=sigma, observed=y_data, shape=mu.shape, dims=("trial",))
 
-            prior = pm.sample_prior_predictive(samples=25).prior
+            prior = pm.sample_prior_predictive(draws=25).prior
 
         fake_idata = InferenceData(posterior=prior)
 
@@ -1052,7 +1093,7 @@ class TestSamplePPC:
             mu = (y_data.sum() * x_data).sum(-1)
             pm.Normal("y", mu=mu, sigma=sigma, observed=y_data, shape=mu.shape, dims=("trial",))
 
-            prior = pm.sample_prior_predictive(samples=25).prior
+            prior = pm.sample_prior_predictive(draws=25).prior
 
         fake_idata = InferenceData(posterior=prior)
 
@@ -1135,7 +1176,7 @@ class TestSamplePriorPredictive:
                     compute_convergence_checks=False,
                 )
         sim_priors = pm.sample_prior_predictive(
-            return_inferencedata=False, samples=20, model=dm_model
+            return_inferencedata=False, draws=20, model=dm_model
         )
         sim_ppc = pm.sample_posterior_predictive(
             burned_trace, return_inferencedata=False, model=dm_model
@@ -1227,7 +1268,7 @@ class TestSamplePriorPredictive:
             mu = pm.Beta("mu", alpha=1, beta=1)
             psi = pm.HalfNormal("psi", sigma=1)
             pm.ZeroInflatedPoisson("suppliers", psi=psi, mu=mu, size=20)
-            gen_data = pm.sample_prior_predictive(samples=5000)
+            gen_data = pm.sample_prior_predictive(draws=5000)
             assert gen_data.prior["mu"].shape == (1, 5000)
             assert gen_data.prior["psi"].shape == (1, 5000)
             assert gen_data.prior["suppliers"].shape == (1, 5000, 20)
@@ -1240,7 +1281,7 @@ class TestSamplePriorPredictive:
 
         with m:
             with pytest.warns(UserWarning, match=warning_msg):
-                pm.sample_prior_predictive(samples=5)
+                pm.sample_prior_predictive(draws=5)
 
     def test_transformed_vars_not_supported(self):
         with pm.Model() as model:
@@ -1260,7 +1301,7 @@ class TestSamplePriorPredictive:
             c = pm.Normal("c")
             d = pm.Normal("d")
             prior1 = pm.sample_prior_predictive(
-                samples=1, var_names=["a", "b", "c", "d"], random_seed=seed
+                draws=1, var_names=["a", "b", "c", "d"], random_seed=seed
             )
 
         with pm.Model() as m2:
@@ -1269,7 +1310,7 @@ class TestSamplePriorPredictive:
             c = pm.Normal("c")
             d = pm.Normal("d")
             prior2 = pm.sample_prior_predictive(
-                samples=1, var_names=["b", "a", "d", "c"], random_seed=seed
+                draws=1, var_names=["b", "a", "d", "c"], random_seed=seed
             )
 
         assert prior1.prior["a"] == prior2.prior["a"]
@@ -1284,7 +1325,7 @@ class TestSamplePriorPredictive:
             y = pm.Deterministic("y", x + sharedvar)
 
             prior = pm.sample_prior_predictive(
-                samples=5,
+                draws=5,
                 return_inferencedata=False,
                 compile_kwargs=dict(
                     mode=Mode("py"),
@@ -1308,7 +1349,7 @@ class TestSamplePosteriorPredictive:
 
         with pmodel:
             prior = pm.sample_prior_predictive(
-                samples=20,
+                draws=20,
                 return_inferencedata=False,
             )
             idat = pm.to_inference_data(trace, prior=prior)
@@ -1367,7 +1408,7 @@ def test_distinct_rvs():
         Y_rv = pm.Normal("y")
 
         pp_samples = pm.sample_prior_predictive(
-            samples=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
+            draws=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
         )
 
     assert X_rv.owner.inputs[0] != Y_rv.owner.inputs[0]
@@ -1377,7 +1418,7 @@ def test_distinct_rvs():
         Y_rv = pm.Normal("y")
 
         pp_samples_2 = pm.sample_prior_predictive(
-            samples=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
+            draws=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
         )
 
     assert np.array_equal(pp_samples["y"], pp_samples_2["y"])
@@ -1669,6 +1710,20 @@ class TestNestedRandom:
         assert prior["target"].shape == (prior_samples, *shape)
 
 
+def test_get_constant_coords():
+    with pm.Model() as model:
+        model.add_coord("length_coord", length=1)
+        model.add_coord("value_coord", values=(3,))
+
+    trace_coords_same = {"length_coord": np.array([0]), "value_coord": np.array([3])}
+    constant_coords_same = get_constant_coords(trace_coords_same, model)
+    assert constant_coords_same == {"length_coord", "value_coord"}
+
+    trace_coords_diff = {"length_coord": np.array([0, 1]), "value_coord": np.array([4])}
+    constant_coords_diff = get_constant_coords(trace_coords_diff, model)
+    assert constant_coords_diff == set()
+
+
 def test_get_vars_in_point_list():
     with pm.Model() as modelA:
         pm.Normal("a", 0, 1)
@@ -1706,3 +1761,12 @@ def test_observed_dependent_deterministics():
         det_mixed = pm.Deterministic("det_mixed", free + obs)
 
     assert set(observed_dependent_deterministics(m)) == {det_obs, det_obs2, det_mixed}
+
+
+def test_sample_prior_predictive_samples_deprecated_warns() -> None:
+    with pm.Model() as m:
+        pm.Normal("a")
+
+    match = "The samples argument has been deprecated"
+    with pytest.warns(DeprecationWarning, match=match):
+        pm.sample_prior_predictive(model=m, samples=10)

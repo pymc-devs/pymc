@@ -30,20 +30,25 @@ from pymc.gp.mean import Mean, Zero
 TensorLike = np.ndarray | pt.TensorVariable
 
 
-def set_boundary(Xs: TensorLike, c: numbers.Real | TensorLike) -> TensorLike:
-    """Set the boundary using the mean-subtracted `Xs` and `c`.  `c` is usually a scalar
-    multiplyer greater than 1.0, but it may be one value per dimension or column of `Xs`.
+def set_boundary(X: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
+    """Set the boundary using `X` and `c`.  `X` can be centered around zero but doesn't have to be,
+    and `c` is usually a scalar multiplier greater than 1.0, but it may also be one value per
+    dimension or column of `X`.
     """
-    S = pt.max(pt.abs(Xs), axis=0)
-    L = c * S
+    # compute radius. Works whether X is 0-centered or not
+    S = (pt.max(X, axis=0) - pt.min(X, axis=0)) / 2.0
+
+    L = (c * S).eval()  # eval() makes sure L is not changed with out-of-sample preds
     return L
 
 
-def calc_eigenvalues(L: TensorLike, m: Sequence[int], tl: ModuleType = np):
+def calc_eigenvalues(L: TensorLike, m: Sequence[int]):
     """Calculate eigenvalues of the Laplacian."""
+
     S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(len(m))])
     S_arr = np.vstack([s.flatten() for s in S]).T
-    return tl.square((np.pi * S_arr) / (2 * L))
+
+    return np.square((np.pi * S_arr) / (2 * L))
 
 
 def calc_eigenvectors(
@@ -51,18 +56,19 @@ def calc_eigenvectors(
     L: TensorLike,
     eigvals: TensorLike,
     m: Sequence[int],
-    tl: ModuleType = np,
 ):
     """Calculate eigenvectors of the Laplacian. These are used as basis vectors in the HSGP
     approximation.
     """
     m_star = int(np.prod(m))
-    phi = tl.ones((Xs.shape[0], m_star))
+
+    phi = pt.ones((Xs.shape[0], m_star))
     for d in range(len(m)):
-        c = 1.0 / tl.sqrt(L[d])
-        term1 = tl.sqrt(eigvals[:, d])
-        term2 = tl.tile(Xs[:, d][:, None], m_star) + L[d]
-        phi *= c * tl.sin(term1 * term2)
+        c = 1.0 / pt.sqrt(L[d])
+        term1 = pt.sqrt(eigvals[:, d])
+        term2 = pt.tile(Xs[:, d][:, None], m_star) + L[d]
+        phi *= c * pt.sin(term1 * term2)
+
     return phi
 
 
@@ -83,6 +89,81 @@ def calc_basis_periodic(
     phi_cos = tl.cos(mw0x)
     phi_sin = tl.sin(mw0x)
     return phi_cos, phi_sin
+
+
+def approx_hsgp_hyperparams(
+    x_range: list[float], lengthscale_range: list[float], cov_func: str
+) -> tuple[int, float]:
+    """Utility function that uses heuristics to recommend minimum `m` and `c` values,
+    based on recommendations from Ruitort-Mayol et. al.
+
+    In practice, you need to choose `c` large enough to handle the largest lengthscales,
+    and `m` large enough to accommodate the smallest lengthscales.  Use your prior on the
+    lengthscale as guidance for setting the prior range.  For example, if you believe
+    that 95% of the prior mass of the lengthscale is between 1 and 5, set the
+    `lengthscale_range` to be [1, 5], or maybe a touch wider.
+
+    Also, be sure to pass in an `x_range` that is exemplary of the domain not just of your
+    training data, but also where you intend to make predictions.  For instance, if your
+    training x values are from [0, 10], and you intend to predict from [7, 15], the narrowest
+    `x_range` you should pass in would be `x_range = [0, 15]`.
+
+    NB: These recommendations are based on a one-dimensional GP.
+
+    Parameters
+    ----------
+    x_range : list[float]
+        The range of the x values you intend to both train and predict over.  Should be a list with
+        two elements, [x_min, x_max].
+    lengthscale_range : List[float]
+        The range of the lengthscales. Should be a list with two elements, [lengthscale_min, lengthscale_max].
+    cov_func : str
+        The covariance function to use. Supported options are "expquad", "matern52", and "matern32".
+
+    Returns
+    -------
+    - `m` : int
+        Number of basis vectors. Increasing it helps approximate smaller lengthscales, but increases computational cost.
+    - `c` : float
+        Scaling factor such that L = c * S, where L is the boundary of the approximation.
+        Increasing it helps approximate larger lengthscales, but may require increasing m.
+
+    Raises
+    ------
+    ValueError
+        If either `x_range` or `lengthscale_range` is not in the correct order.
+
+    References
+    ----------
+    - Ruitort-Mayol, G., Anderson, M., Solin, A., Vehtari, A. (2022).
+    Practical Hilbert Space Approximate Bayesian Gaussian Processes for Probabilistic Programming
+    """
+    if lengthscale_range[0] >= lengthscale_range[1]:
+        raise ValueError("One of the `lengthscale_range` boundaries is out of order.")
+
+    if x_range[0] >= x_range[1]:
+        raise ValueError("One of the `x_range` boundaries is out of order.")
+
+    S = (x_range[1] - x_range[0]) / 2.0
+
+    if cov_func.lower() == "expquad":
+        a1, a2 = 3.2, 1.75
+
+    elif cov_func.lower() == "matern52":
+        a1, a2 = 4.1, 2.65
+
+    elif cov_func.lower() == "matern32":
+        a1, a2 = 4.5, 3.42
+
+    else:
+        raise ValueError(
+            "Unsupported covariance function. Supported options are 'expquad', 'matern52', and 'matern32'."
+        )
+
+    c = max(a1 * (lengthscale_range[1] / S), 1.2)
+    m = int(a2 * c / (lengthscale_range[0] / S))
+
+    return m, c
 
 
 class HSGP(Base):
@@ -122,8 +203,8 @@ class HSGP(Base):
         Default `False`. Sometimes the first basis vector is quite "flat" and very similar to
         the intercept term.  When there is an intercept in the model, ignoring the first basis
         vector may improve sampling. This argument will be deprecated in future versions.
-    parameterization: str
-        Whether to use the `centered` or `noncentered` parameterization when multiplying the
+    parametrization: str
+        Whether to use the `centered` or `noncentered` parametrization when multiplying the
         basis by the coefficients.
     cov_func: Covariance function, must be an instance of `Stationary` and implement a
         `power_spectral_density` method.
@@ -178,7 +259,7 @@ class HSGP(Base):
         L: Sequence[float] | None = None,
         c: numbers.Real | None = None,
         drop_first: bool = False,
-        parameterization: str | None = "noncentered",
+        parametrization: str | None = "noncentered",
         *,
         mean_func: Mean = Zero(),
         cov_func: Covariance,
@@ -204,10 +285,11 @@ class HSGP(Base):
         if L is None and c is not None and c < 1.2:
             warnings.warn("For an adequate approximation `c >= 1.2` is recommended.")
 
-        if parameterization is not None:
-            parameterization = parameterization.lower().replace("-", "").replace("_", "")
-        if parameterization not in ["centered", "noncentered"]:
-            raise ValueError("`parameterization` must be either 'centered' or 'noncentered'.")
+        if parametrization is not None:
+            parametrization = parametrization.lower().replace("-", "").replace("_", "")
+
+        if parametrization not in ["centered", "noncentered"]:
+            raise ValueError("`parametrization` must be either 'centered' or 'noncentered'.")
 
         if drop_first:
             warnings.warn(
@@ -218,12 +300,13 @@ class HSGP(Base):
 
         self._drop_first = drop_first
         self._m = m
-        self._m_star = int(np.prod(self._m))
+        self._m_star = self.n_basis_vectors = int(np.prod(self._m))
         self._L: pt.TensorVariable | None = None
         if L is not None:
-            self._L = pt.as_tensor(L)
+            self._L = pt.as_tensor(L).eval()  # make sure L cannot be changed
         self._c = c
-        self._parameterization = parameterization
+        self._parametrization = parametrization
+        self._X_center = None
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
@@ -240,7 +323,7 @@ class HSGP(Base):
     def L(self, value: TensorLike):
         self._L = pt.as_tensor_variable(value)
 
-    def prior_linearized(self, Xs: TensorLike):
+    def prior_linearized(self, X: TensorLike):
         """Linearized version of the HSGP.  Returns the Laplace eigenfunctions and the square root
         of the power spectral density needed to create the GP.
 
@@ -249,16 +332,12 @@ class HSGP(Base):
         `pm.set_data` similarly to a linear model.  It also enables computational speed ups in
         multi-GP models, since they may share the same basis.  The return values are the Laplace
         eigenfunctions `phi`, and the square root of the power spectral density.
-
-        Correct results when using `prior_linearized` in tandem with `pm.set_data` and
-        `pm.Data` require two conditions.  First, one must specify `L` instead of `c` when
-        the GP is constructed.  If not, a RuntimeError is raised.  Second, the `Xs` needs to be
-        zero-centered, so its mean must be subtracted.  An example is given below.
+        An example is given below.
 
         Parameters
         ----------
-        Xs: array-like
-            Function input values.  Assumes they have been mean subtracted or centered at zero.
+        X: array-like
+            Function input values.
 
         Returns
         -------
@@ -285,27 +364,20 @@ class HSGP(Base):
                 # L = [10] means the approximation is valid from Xs = [-10, 10]
                 gp = pm.gp.HSGP(m=[200], L=[10], cov_func=cov_func)
 
-                # Order is important.
-                # First calculate the mean, then make X a shared variable, then subtract the mean.
-                #  When X is mutated later, the correct mean will be subtracted.
-                X_mean = np.mean(X, axis=0)
+                # Set X as Data so it can be mutated later, and then pass it to the GP
                 X = pm.Data("X", X)
-                Xs = X - X_mean
+                phi, sqrt_psd = gp.prior_linearized(X=X)
 
-                # Pass the zero-subtracted Xs in to the GP
-                phi, sqrt_psd = gp.prior_linearized(Xs=Xs)
-
-                # Specify standard normal prior in the coefficients.  The number of which
-                # is given by the number of basis vectors, which is also saved in the GP object
-                # as m_star.
-                beta = pm.Normal("beta", size=gp._m_star)
+                # Specify standard normal prior in the coefficients, the number of which
+                # is given by the number of basis vectors, saved in `n_basis_vectors`.
+                beta = pm.Normal("beta", size=gp.n_basis_vectors)
 
                 # The (non-centered) GP approximation is given by:
                 f = pm.Deterministic("f", phi @ (beta * sqrt_psd))
 
                 # The centered approximation can be more efficient when
                 # the GP is stronger than the noise
-                # beta = pm.Normal("beta", sigma=sqrt_psd, size=gp._m_star)
+                # beta = pm.Normal("beta", sigma=sqrt_psd, size=gp.n_basis_vectors)
                 # f = pm.Deterministic("f", phi @ beta)
 
                 ...
@@ -315,12 +387,17 @@ class HSGP(Base):
             # First mutate the data X,
             x_new = np.linspace(-10, 10, 100)
             with model:
-                model.set_data("X", x_new[:, None])
+                pm.set_data({"X": x_new[:, None]})
 
             # and then make predictions for the GP using posterior predictive sampling.
             with model:
                 ppc = pm.sample_posterior_predictive(idata, var_names=["f"])
         """
+        # Important: fix the computation of the midpoint of X.
+        # If X is mutated later, the training midpoint will be subtracted, not the testing one.
+        if self._X_center is None:
+            self._X_center = (pt.max(X, axis=0) + pt.min(X, axis=0)).eval() / 2
+        Xs = X - self._X_center  # center for accurate computation
 
         # Index Xs using input_dim and active_dims of covariance function
         Xs, _ = self.cov_func._slice(Xs)
@@ -328,19 +405,27 @@ class HSGP(Base):
         # If not provided, use Xs and c to set L
         if self._L is None:
             assert isinstance(self._c, numbers.Real | np.ndarray | pt.TensorVariable)
-            self.L = pt.as_tensor(set_boundary(Xs, self._c))
+            self.L = pt.as_tensor(set_boundary(Xs, self._c))  # Xs should be 0-centered
         else:
             self.L = self._L
 
-        eigvals = calc_eigenvalues(self.L, self._m, tl=pt)
-        phi = calc_eigenvectors(Xs, self.L, eigvals, self._m, tl=pt)
+        eigvals = calc_eigenvalues(self.L, self._m)
+        phi = calc_eigenvectors(Xs, self.L, eigvals, self._m)
         omega = pt.sqrt(eigvals)
         psd = self.cov_func.power_spectral_density(omega)
 
         i = int(self._drop_first is True)
         return phi[:, i:], pt.sqrt(psd[i:])
 
-    def prior(self, name: str, X: TensorLike, dims: str | None = None):  # type: ignore
+    def prior(
+        self,
+        name: str,
+        X: TensorLike,
+        hsgp_coeffs_dims: str | None = None,
+        gp_dims: str | None = None,
+        *args,
+        **kwargs,
+    ):  # type: ignore
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
         For usage examples, refer to `pm.gp.Latent`.
@@ -351,31 +436,34 @@ class HSGP(Base):
             Name of the random variable
         X: array-like
             Function input values.
-        dims: None
+        hsgp_coeffs_dims: str, default None
+            Dimension name for the HSGP basis vectors.
+        gp_dims: str, default None
             Dimension name for the GP random variable.
         """
-        self._X_mean = pt.mean(X, axis=0)
+        phi, sqrt_psd = self.prior_linearized(X)
 
-        phi, sqrt_psd = self.prior_linearized(X - self._X_mean)
-        if self._parameterization == "noncentered":
+        if self._parametrization == "noncentered":
             self._beta = pm.Normal(
-                f"{name}_hsgp_coeffs_", size=self._m_star - int(self._drop_first)
+                f"{name}_hsgp_coeffs_",
+                size=self._m_star - int(self._drop_first),
+                dims=hsgp_coeffs_dims,
             )
             self._sqrt_psd = sqrt_psd
             f = self.mean_func(X) + phi @ (self._beta * self._sqrt_psd)
 
-        elif self._parameterization == "centered":
-            self._beta = pm.Normal(f"{name}_hsgp_coeffs_", sigma=sqrt_psd)
+        elif self._parametrization == "centered":
+            self._beta = pm.Normal(f"{name}_hsgp_coeffs_", sigma=sqrt_psd, dims=hsgp_coeffs_dims)
             f = self.mean_func(X) + phi @ self._beta
 
-        self.f = pm.Deterministic(name, f, dims=dims)
+        self.f = pm.Deterministic(name, f, dims=gp_dims)
         return self.f
 
     def _build_conditional(self, Xnew):
         try:
-            beta, X_mean = self._beta, self._X_mean
+            beta, X_center = self._beta, self._X_center
 
-            if self._parameterization == "noncentered":
+            if self._parametrization == "noncentered":
                 sqrt_psd = self._sqrt_psd
 
         except AttributeError:
@@ -385,14 +473,14 @@ class HSGP(Base):
 
         Xnew, _ = self.cov_func._slice(Xnew)
 
-        eigvals = calc_eigenvalues(self.L, self._m, tl=pt)
-        phi = calc_eigenvectors(Xnew - X_mean, self.L, eigvals, self._m, tl=pt)
+        eigvals = calc_eigenvalues(self.L, self._m)
+        phi = calc_eigenvectors(Xnew - X_center, self.L, eigvals, self._m)
         i = int(self._drop_first is True)
 
-        if self._parameterization == "noncentered":
+        if self._parametrization == "noncentered":
             return self.mean_func(Xnew) + phi[:, i:] @ (beta * sqrt_psd)
 
-        elif self._parameterization == "centered":
+        elif self._parametrization == "centered":
             return self.mean_func(Xnew) + phi[:, i:] @ beta
 
     def conditional(self, name: str, Xnew: TensorLike, dims: str | None = None):  # type: ignore
@@ -502,10 +590,11 @@ class HSGPPeriodic(Base):
 
         self._m = m
         self.scale = scale
+        self._X_center = None
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
-    def prior_linearized(self, Xs: TensorLike):
+    def prior_linearized(self, X: TensorLike):
         """Linearized version of the approximation. Returns the cosine and sine bases and coefficients
         of the expansion needed to create the GP.
 
@@ -520,8 +609,8 @@ class HSGPPeriodic(Base):
 
         Parameters
         ----------
-        Xs: array-like
-            Function input values.  Assumes they have been mean subtracted or centered at zero.
+        X: array-like
+            Function input values.
 
         Returns
         -------
@@ -545,15 +634,9 @@ class HSGPPeriodic(Base):
                 # m=200 means 200 basis vectors
                 gp = pm.gp.HSGPPeriodic(m=200, scale=scale, cov_func=cov_func)
 
-                # Order is important.  First calculate the mean, then make X a shared variable,
-                # then subtract the mean.  When X is mutated later, the correct mean will be
-                # subtracted.
-                X_mean = np.mean(X, axis=0)
-                X = pm.MutableData("X", X)
-                Xs = X - X_mean
-
-                # Pass the zero-subtracted Xs in to the GP
-                (phi_cos, phi_sin), psd = gp.prior_linearized(Xs=Xs)
+                # Set X as Data so it can be mutated later, and then pass it to the GP
+                X = pm.Data("X", X)
+                (phi_cos, phi_sin), psd = gp.prior_linearized(X=X)
 
                 # Specify standard normal prior in the coefficients.  The number of which
                 # is twice the number of basis vectors minus one.
@@ -580,6 +663,13 @@ class HSGPPeriodic(Base):
             with model:
                 ppc = pm.sample_posterior_predictive(idata, var_names=["f"])
         """
+        # Important: fix the computation of the midpoint of X.
+        # If X is mutated later, the training midpoint will be subtracted, not the testing one.
+        if self._X_center is None:
+            self._X_center = (pt.max(X, axis=0) + pt.min(X, axis=0)).eval() / 2
+        Xs = X - self._X_center  # center for accurate computation
+
+        # Index Xs using input_dim and active_dims of covariance function
         Xs, _ = self.cov_func._slice(Xs)
 
         phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m, tl=pt)
@@ -602,9 +692,7 @@ class HSGPPeriodic(Base):
         dims: None
             Dimension name for the GP random variable.
         """
-        self._X_mean = pt.mean(X, axis=0)
-
-        (phi_cos, phi_sin), psd = self.prior_linearized(X - self._X_mean)
+        (phi_cos, phi_sin), psd = self.prior_linearized(X)
 
         m = self._m
         self._beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m * 2 - 1))
@@ -621,7 +709,7 @@ class HSGPPeriodic(Base):
 
     def _build_conditional(self, Xnew):
         try:
-            beta, X_mean = self._beta, self._X_mean
+            beta, X_center = self._beta, self._X_center
 
         except AttributeError:
             raise ValueError(
@@ -630,7 +718,9 @@ class HSGPPeriodic(Base):
 
         Xnew, _ = self.cov_func._slice(Xnew)
 
-        phi_cos, phi_sin = calc_basis_periodic(Xnew - X_mean, self.cov_func.period, self._m, tl=pt)
+        phi_cos, phi_sin = calc_basis_periodic(
+            Xnew - X_center, self.cov_func.period, self._m, tl=pt
+        )
         m = self._m
         J = pt.arange(0, m, 1)
         # rescale basis coefficients by the sqrt variance term

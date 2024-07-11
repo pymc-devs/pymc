@@ -27,13 +27,13 @@ import cloudpickle
 import numpy as np
 
 from rich.console import Console
-from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn, TimeRemainingColumn
+from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
-from pymc.util import RandomSeed, default_progress_theme
+from pymc.util import CustomProgress, RandomSeed, default_progress_theme
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class ExceptionWithTraceback:
         tb = traceback.format_exception(type(exc), exc, tb)
         tb = "".join(tb)
         self.exc = exc
-        self.tb = '\n"""\n%s"""' % tb
+        self.tb = f'\n"""\n{tb}"""'
 
     def __reduce__(self):
         return rebuild_exc, (self.exc, self.tb)
@@ -216,7 +216,7 @@ class ProcessAdapter:
         mp_ctx,
     ):
         self.chain = chain
-        process_name = "worker_chain_%s" % chain
+        process_name = f"worker_chain_{chain}"
         self._msg_pipe, remote_conn = multiprocessing.Pipe()
 
         self._shared_point = {}
@@ -228,7 +228,7 @@ class ProcessAdapter:
                 size *= int(dim)
             size *= dtype.itemsize
             if size != ctypes.c_size_t(size).value:
-                raise ValueError("Variable %s is too large" % name)
+                raise ValueError(f"Variable {name} is too large")
 
             array = mp_ctx.RawArray("c", size)
             self._shared_point[name] = (array, shape, dtype)
@@ -388,7 +388,7 @@ class ParallelSampler:
         mp_ctx=None,
     ):
         if any(len(arg) != chains for arg in [seeds, start_points]):
-            raise ValueError("Number of seeds and start_points must be %s." % chains)
+            raise ValueError(f"Number of seeds and start_points must be {chains}.")
 
         if mp_ctx is None or isinstance(mp_ctx, str):
             # Closes issue https://github.com/pymc-devs/pymc/issues/3849
@@ -431,7 +431,7 @@ class ParallelSampler:
 
         self._in_context = False
 
-        self._progress = Progress(
+        self._progress = CustomProgress(
             "[progress.description]{task.description}",
             BarColumn(),
             "[progress.percentage]{task.percentage:>3.0f}%",
@@ -465,7 +465,6 @@ class ParallelSampler:
                 self._desc.format(self),
                 completed=self._completed_draws,
                 total=self._total_draws,
-                visible=self._show_progress,
             )
 
             while self._active:
@@ -476,7 +475,6 @@ class ParallelSampler:
                     self._divergences += 1
                 progress.update(
                     task,
-                    refresh=True,
                     completed=self._completed_draws,
                     total=self._total_draws,
                     description=self._desc.format(self),

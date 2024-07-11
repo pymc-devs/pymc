@@ -32,7 +32,7 @@ from arviz import InferenceData, concat, rcParams
 from arviz.data.base import CoordSpec, DimSpec, dict_to_dataset, requires
 from pytensor.graph import ancestors
 from pytensor.tensor.sharedvar import SharedVariable
-from rich.progress import Console, Progress
+from rich.progress import Console
 from rich.theme import Theme
 from xarray import Dataset
 
@@ -40,7 +40,7 @@ import pymc
 
 from pymc.model import Model, modelcontext
 from pymc.pytensorf import PointFunc, extract_obs_data
-from pymc.util import default_progress_theme, get_default_varnames
+from pymc.util import CustomProgress, default_progress_theme, get_default_varnames
 
 if TYPE_CHECKING:
     from pymc.backends.base import MultiTrace
@@ -649,8 +649,10 @@ def apply_function_over_dataset(
     out_dict = _DefaultTrace(n_pts)
     indices = range(n_pts)
 
-    with Progress(console=Console(theme=progressbar_theme), disable=not progressbar) as progress:
-        task = progress.add_task("Computing ...", total=n_pts, visible=progressbar)
+    with CustomProgress(
+        console=Console(theme=progressbar_theme), disable=not progressbar
+    ) as progress:
+        task = progress.add_task("Computing ...", total=n_pts)
         for idx in indices:
             out = fn(posterior_pts[idx])
             fn.f.trust_input = True  # If we arrive here the dtypes are valid
@@ -658,6 +660,7 @@ def apply_function_over_dataset(
                 out_dict.insert(var_name, val, idx)
 
             progress.advance(task)
+        progress.update(task, refresh=True, completed=n_pts)
 
     out_trace = out_dict.trace_dict
     for key, val in out_trace.items():

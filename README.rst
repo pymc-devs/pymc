@@ -3,7 +3,7 @@
     :alt: PyMC logo
     :align: center
 
-|Build Status| |Coverage| |NumFOCUS_badge| |Binder| |Dockerhub| |DOIzenodo|
+|Build Status| |Coverage| |NumFOCUS_badge| |Binder| |Dockerhub| |DOIzenodo| |Conda Downloads|
 
 PyMC (formerly PyMC3) is a Python package for Bayesian statistical modeling
 focusing on advanced Markov chain Monte Carlo (MCMC) and variational inference (VI)
@@ -32,6 +32,140 @@ Features
     *  Linear algebra operators
     *  Simple extensibility
 -  Transparent support for missing value imputation
+
+
+Linear Regression Example
+==========================
+
+
+Plant growth can be influenced by multiple factors, and understanding these relationships is crucial for optimizing agricultural practices.
+
+Imagine we conduct an experiment to predict the growth of a plant based on different environmental variables.
+
+.. code-block:: python
+
+   import pymc as pm
+
+   # Taking draws from a normal distribution
+   seed = 42
+   x_dist = pm.Normal.dist(shape=(100, 3))
+   x_data = pm.draw(x_dist, random_seed=seed)
+
+   # Independent Variables:
+   # Sunlight Hours: Number of hours the plant is exposed to sunlight daily.
+   # Water Amount: Daily water amount given to the plant (in milliliters).
+   # Soil Nitrogen Content: Percentage of nitrogen content in the soil.
+
+
+   # Dependent Variable:
+   # Plant Growth (y): Measured as the increase in plant height (in centimeters) over a certain period.
+
+
+   # Define coordinate values for all dimensions of the data
+   coords={
+    "trial": range(100),
+    "features": ["sunlight hours", "water amount", "soil nitrogen"],
+   }
+
+   # Define generative model
+   with pm.Model(coords=coords) as generative_model:
+      x = pm.Data("x", x_data, dims=["trial", "features"])
+
+      # Model parameters
+      betas = pm.Normal("betas", dims="features")
+      sigma = pm.HalfNormal("sigma")
+
+      # Linear model
+      mu = x @ betas
+
+      # Likelihood
+      # Assuming we measure deviation of each plant from baseline
+      plant_growth = pm.Normal("plant growth", mu, sigma, dims="trial")
+
+
+   # Generating data from model by fixing parameters
+   fixed_parameters = {
+    "betas": [5, 20, 2],
+    "sigma": 0.5,
+   }
+   with pm.do(generative_model, fixed_parameters) as synthetic_model:
+      idata = pm.sample_prior_predictive(random_seed=seed) # Sample from prior predictive distribution.
+      synthetic_y = idata.prior["plant growth"].sel(draw=0, chain=0)
+
+
+   # Infer parameters conditioned on observed data
+   with pm.observe(generative_model, {"plant growth": synthetic_y}) as inference_model:
+      idata = pm.sample(random_seed=seed)
+
+      summary = pm.stats.summary(idata, var_names=["betas", "sigma"])
+      print(summary)
+
+
+From the summary, we can see that the mean of the inferred parameters are very close to the fixed parameters
+
+=====================  ======  =====  ========  =========  ===========  =========  ==========  ==========  =======
+Params                  mean     sd    hdi_3%    hdi_97%    mcse_mean    mcse_sd    ess_bulk    ess_tail    r_hat
+=====================  ======  =====  ========  =========  ===========  =========  ==========  ==========  =======
+betas[sunlight hours]   4.972  0.054     4.866      5.066        0.001      0.001        3003        1257        1
+betas[water amount]    19.963  0.051    19.872     20.062        0.001      0.001        3112        1658        1
+betas[soil nitrogen]    1.994  0.055     1.899      2.107        0.001      0.001        3221        1559        1
+sigma                   0.511  0.037     0.438      0.575        0.001      0            2945        1522        1
+=====================  ======  =====  ========  =========  ===========  =========  ==========  ==========  =======
+
+.. code-block:: python
+
+   # Simulate new data conditioned on inferred parameters
+   new_x_data = pm.draw(
+      pm.Normal.dist(shape=(3, 3)),
+      random_seed=seed,
+   )
+   new_coords = coords | {"trial": [0, 1, 2]}
+
+   with inference_model:
+      pm.set_data({"x": new_x_data}, coords=new_coords)
+      pm.sample_posterior_predictive(
+         idata,
+         predictions=True,
+         extend_inferencedata=True,
+         random_seed=seed,
+      )
+
+   pm.stats.summary(idata.predictions, kind="stats")
+
+The new data conditioned on inferred parameters would look like:
+
+================ ======== ======= ======== =========
+Output            mean     sd      hdi_3%   hdi_97%
+================ ======== ======= ======== =========
+plant growth[0]   14.229   0.515   13.325   15.272
+plant growth[1]   24.418   0.511   23.428   25.326
+plant growth[2]   -6.747   0.511   -7.740   -5.797
+================ ======== ======= ======== =========
+
+.. code-block:: python
+
+   # Simulate new data, under a scenario where the first beta is zero
+   with pm.do(
+    inference_model,
+    {inference_model["betas"]: inference_model["betas"] * [0, 1, 1]},
+   ) as plant_growth_model:
+      new_predictions = pm.sample_posterior_predictive(
+         idata,
+         predictions=True,
+         random_seed=seed,
+      )
+
+   pm.stats.summary(new_predictions, kind="stats")
+
+The new data, under the above scenario would look like:
+
+================ ======== ======= ======== =========
+Output            mean     sd      hdi_3%   hdi_97%
+================ ======== ======= ======== =========
+plant growth[0]   12.149   0.515   11.193   13.135
+plant growth[1]   29.809   0.508   28.832   30.717
+plant growth[2]   -0.131   0.507   -1.121    0.791
+================ ======== ======= ======== =========
 
 Getting started
 ===============
@@ -180,3 +314,5 @@ Thanks to our contributors
    :target: https://odsc.com/california/?utm_source=pymc&utm_medium=referral
 .. |contributors| image:: https://contrib.rocks/image?repo=pymc-devs/pymc
    :target: https://github.com/pymc-devs/pymc/graphs/contributors
+.. |Conda Downloads| image:: https://anaconda.org/conda-forge/pymc/badges/downloads.svg
+   :target: https://anaconda.org/conda-forge/pymc

@@ -11,7 +11,7 @@ dependencies:
 - numpy>=1.15.0
 - pandas>=0.24.0
 - pip
-- pytensor>=2.20,<2.21
+- pytensor>=2.23,<2.24
 - python-graphviz
 - rich>=13.7.1
 - scipy>=1.4.1
@@ -21,7 +21,7 @@ dependencies:
 - ipython>=7.16
 - jax
 - jupyter-sphinx
-- myst-nb
+- myst-nb<=1.0.0
 - numpydoc
 - polyagamma
 - pre-commit>=2.8.0

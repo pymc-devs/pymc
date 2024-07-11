@@ -81,7 +81,7 @@ try:
 
     from pymc.backends.mcbackend import init_chain_adapters
 
-    TraceOrBackend = BaseTrace | Backend
+    TraceOrBackend: TypeAlias = BaseTrace | Backend
     RunType: TypeAlias = Run
     HAS_MCB = True
 except ImportError:
