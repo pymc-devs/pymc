@@ -836,11 +836,11 @@ def create_partial_observed_rv(
     if can_rewrite:
         masked_rv = rv[mask]
         fgraph = FunctionGraph(outputs=[masked_rv], clone=False, features=[ShapeFeature()])
-        [unobserved_rv] = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
+        unobserved_rv = local_subtensor_rv_lift.transform(fgraph, masked_rv.owner)[masked_rv]
 
         antimasked_rv = rv[antimask]
         fgraph = FunctionGraph(outputs=[antimasked_rv], clone=False, features=[ShapeFeature()])
-        [observed_rv] = local_subtensor_rv_lift.transform(fgraph, fgraph.outputs[0].owner)
+        observed_rv = local_subtensor_rv_lift.transform(fgraph, antimasked_rv.owner)[antimasked_rv]
 
         # Make a clone of the observedRV, with a distinct rng so that observed and
         # unobserved are never treated as equivalent (and mergeable) nodes by pytensor.

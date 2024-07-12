@@ -472,3 +472,25 @@ def test_fit_data_coords(hierarchical_model, hierarchical_model_data):
             hierarchical_model_data["group_coords"].keys()
         )
         assert data["mu"].shape == tuple()
+
+
+def test_multiple_minibatch_variables():
+    """Regression test for bug reported in
+    https://discourse.pymc.io/t/verifying-that-minibatch-is-actually-randomly-sampling/14308
+    """
+    true_weights = np.array([-5, 5] * 5)
+    feature = np.repeat(np.eye(10), 10_000, axis=0)
+    y = feature @ true_weights
+
+    with pm.Model() as model:
+        minibatch_feature, minibatch_y = pm.Minibatch(feature, y, batch_size=1)
+        weights = pm.Normal("weights", 0, 10, shape=10)
+        pm.Normal(
+            "y",
+            mu=minibatch_feature @ weights,
+            sigma=0.01,
+            observed=minibatch_y,
+            total_size=len(y),
+        )
+        mean_field = pm.fit(10_000, obj_optimizer=pm.adam(learning_rate=0.01), progressbar=False)
+    np.testing.assert_allclose(mean_field.mean.get_value(), true_weights, rtol=1e-1)

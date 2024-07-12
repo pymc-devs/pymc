@@ -35,6 +35,8 @@
 #   SOFTWARE.
 
 
+from pathlib import Path
+
 import pytensor
 
 from pytensor import tensor as pt
@@ -237,7 +239,7 @@ class MeasurableDimShuffle(DimShuffle):
 
     # Need to get the absolute path of `c_func_file`, otherwise it tries to
     # find it locally and fails when a new `Op` is initialized
-    c_func_file = DimShuffle.get_path(DimShuffle.c_func_file)
+    c_func_file = str(DimShuffle.get_path(Path(DimShuffle.c_func_file)))
 
 
 MeasurableVariable.register(MeasurableDimShuffle)

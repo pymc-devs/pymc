@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import warnings
 
 import numpy as np
 import numpy.ma as ma
@@ -486,34 +485,45 @@ class TestCompilePyMC:
         assert x3_eval == x2_eval
         assert y3_eval == y2_eval
 
+    @pytest.mark.filterwarnings("error")  # This is part of the test
     def test_multiple_updates_same_variable(self):
-        # Raise if unexpected warning is issued
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
+        rng = pytensor.shared(np.random.default_rng(), name="rng")
+        x = pt.random.normal(0, rng=rng)
+        y = pt.random.normal(1, rng=rng)
 
-            rng = pytensor.shared(np.random.default_rng(), name="rng")
-            x = pt.random.normal(rng=rng)
-            y = pt.random.normal(rng=rng)
+        # No warnings if only one variable is used
+        assert compile_pymc([], [x])
+        assert compile_pymc([], [y])
 
-            # No warnings if only one variable is used
-            assert compile_pymc([], [x])
-            assert compile_pymc([], [y])
+        user_warn_msg = "RNG Variable rng has multiple distinct clients"
+        with pytest.warns(UserWarning, match=user_warn_msg):
+            f = compile_pymc([], [x, y], random_seed=456)
+        assert f() == f()
 
-            user_warn_msg = "RNG Variable rng has multiple clients"
-            with pytest.warns(UserWarning, match=user_warn_msg):
-                f = compile_pymc([], [x, y], random_seed=456)
-            assert f() == f()
+        # The user can provide an explicit update, but we will still issue a warning
+        with pytest.warns(UserWarning, match=user_warn_msg):
+            f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
+        assert f() != f()
 
-            # The user can provide an explicit update, but we will still issue a warning
-            with pytest.warns(UserWarning, match=user_warn_msg):
-                f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
-            assert f() != f()
+        # Same with default update
+        rng.default_update = x.owner.outputs[0]
+        with pytest.warns(UserWarning, match=user_warn_msg):
+            f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
+        assert f() != f()
 
-            # Same with default update
-            rng.default_update = x.owner.outputs[0]
-            with pytest.warns(UserWarning, match=user_warn_msg):
-                f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
-            assert f() != f()
+    @pytest.mark.filterwarnings("error")  # This is part of the test
+    def test_duplicated_client_nodes(self):
+        """Test compile_pymc can handle duplicated (mergeable) RV updates."""
+        rng = pytensor.shared(np.random.default_rng(1))
+        x = pt.random.normal(rng=rng)
+        y = x.owner.clone().default_output()
+
+        fn = compile_pymc([], [x, y], random_seed=1)
+        res_x1, res_y1 = fn()
+        assert res_x1 == res_y1
+        res_x2, res_y2 = fn()
+        assert res_x2 == res_y2
+        assert res_x1 != res_x2
 
     def test_nested_updates(self):
         rng = pytensor.shared(np.random.default_rng())
