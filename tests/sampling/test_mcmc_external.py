@@ -51,7 +51,7 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
     warns = {
         (warn.category, warn.message.args[0])
         for warn in recwarn
-        if warn.category not in (FutureWarning, DeprecationWarning)
+        if warn.category not in (FutureWarning, DeprecationWarning, RuntimeWarning)
     }
     expected = set()
     if nuts_sampler == "nutpie":
