@@ -242,6 +242,7 @@ def _blackjax_inference_loop(
     seed, init_position, logprob_fn, draws, tune, target_accept, **adaptation_kwargs
 ):
     import blackjax
+
     from blackjax.adaptation.base import get_filter_adapt_info_fn
 
     algorithm_name = adaptation_kwargs.pop("algorithm", "nuts")
