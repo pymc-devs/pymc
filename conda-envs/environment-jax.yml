@@ -11,9 +11,9 @@ dependencies:
 - cloudpickle
 - h5py>=2.7
 # Jaxlib version must not be greater than jax version!
-- blackjax
-- jaxlib
-- jax
+- blackjax>=1.2.2
+- jax>=0.4.28
+- jaxlib>=0.4.28
 - libblas=*=*mkl
 - mkl-service
 - numpy>=1.15.0
@@ -25,7 +25,8 @@ dependencies:
 - networkx
 - rich>=13.7.1
 - threadpoolctl>=3.1.0
-- scipy
+# JAX is only compatible with Scipy 1.13.0 from >=0.4.26
+- scipy>=1.13.0
 - typing-extensions>=3.7.4
 # Extra dependencies for testing
 - ipython>=7.16
