@@ -387,7 +387,7 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
             _progress = manager.dict()
 
             # check if model contains CustomDistributions defined without dist argument
-            custom_methods = _find_custom_methods(params[3])
+            custom_methods = _find_custom_dist_dispatch_methods(params[3])
 
             # "manually" (de)serialize params before/after multiprocessing
             params = tuple(cloudpickle.dumps(p) for p in params)
@@ -432,7 +432,7 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
         return tuple(cloudpickle.loads(r.result()) for r in done)
 
 
-def _find_custom_methods(model):
+def _find_custom_dist_dispatch_methods(model):
     custom_methods = {}
     for rv in model.basic_RVs:
         rv_type = rv.owner.op
