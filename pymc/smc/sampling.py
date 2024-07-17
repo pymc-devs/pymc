@@ -38,7 +38,7 @@ from pymc.backends.arviz import dict_to_dataset, to_inference_data
 from pymc.backends.base import MultiTrace
 from pymc.distributions.custom import CustomDistRV, CustomSymbolicDistRV
 from pymc.distributions.distribution import _support_point
-from pymc.logprob.abstract import _logcdf, _logprob
+from pymc.logprob.abstract import _icdf, _logcdf, _logprob
 from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import _cpu_count
 from pymc.smc.kernels import IMH
@@ -441,6 +441,7 @@ def _find_custom_dist_dispatch_methods(model):
             custom_methods[cloudpickle.dumps(cls)] = (
                 cloudpickle.dumps(_logprob.registry.get(cls, None)),
                 cloudpickle.dumps(_logcdf.registry.get(cls, None)),
+                cloudpickle.dumps(_icdf.registry.get(cls, None)),
                 cloudpickle.dumps(_support_point.registry.get(cls, None)),
             )
 
@@ -448,11 +449,13 @@ def _find_custom_dist_dispatch_methods(model):
 
 
 def _register_custom_methods(custom_methods):
-    for cls, (logprob, logcdf, support_point) in custom_methods.items():
+    for cls, (logprob, logcdf, icdf, support_point) in custom_methods.items():
         cls = cloudpickle.loads(cls)
         if logprob is not None:
             _logprob.register(cls, cloudpickle.loads(logprob))
         if logcdf is not None:
             _logcdf.register(cls, cloudpickle.loads(logcdf))
+        if icdf is not None:
+            _icdf.register(cls, cloudpickle.loads(icdf))
         if support_point is not None:
             _support_point.register(cls, cloudpickle.loads(support_point))
