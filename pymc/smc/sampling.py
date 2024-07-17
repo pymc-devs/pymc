@@ -36,7 +36,8 @@ import pymc
 
 from pymc.backends.arviz import dict_to_dataset, to_inference_data
 from pymc.backends.base import MultiTrace
-from pymc.distributions.distribution import CustomDistRV, CustomSymbolicDistRV, _support_point
+from pymc.distributions.custom import CustomDistRV, CustomSymbolicDistRV
+from pymc.distributions.distribution import _support_point
 from pymc.logprob.abstract import _logcdf, _logprob
 from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import _cpu_count
