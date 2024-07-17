@@ -451,7 +451,7 @@ def test_data_naming():
 
 def test_get_data():
     data = pm.get_data("radon.csv")
-    assert type(data) == io.BytesIO
+    assert isinstance(data, io.BytesIO)
 
 
 class _DataSampler:
