@@ -436,7 +436,7 @@ def _find_custom_dist_dispatch_methods(model):
     custom_methods = {}
     for rv in model.basic_RVs:
         rv_type = rv.owner.op
-        cls = rv_type.__class__
+        cls = type(rv_type)
         if isinstance(rv_type, CustomDistRV | CustomSymbolicDistRV):
             custom_methods[cloudpickle.dumps(cls)] = (
                 cloudpickle.dumps(_logprob.registry.get(cls, None)),
