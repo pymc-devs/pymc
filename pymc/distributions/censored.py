@@ -36,7 +36,7 @@ class CensoredRV(SymbolicRandomVariable):
     """Censored random variable"""
 
     inline_logprob = True
-    signature = "(),(),()->()"
+    extended_signature = "(),(),()->()"
     _print_name = ("Censored", "\\operatorname{Censored}")
 
     @classmethod

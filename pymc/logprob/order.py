@@ -95,22 +95,24 @@ def find_measurable_max(fgraph: FunctionGraph, node: Apply) -> list[TensorVariab
         return None
 
     # univariate i.i.d. test which also rules out other distributions
-    for params in base_var.owner.inputs[3:]:
-        if params.type.ndim != 0:
+    for params in base_var.owner.op.dist_params(base_var.owner):
+        if not all(params.type.broadcastable):
             return None
 
-    # Check whether axis covers all dimensions
-    axis = set(node.op.axis)
-    base_var_dims = set(range(base_var.ndim))
-    if axis != base_var_dims:
-        return None
+    if node.op.axis is None:
+        axis = tuple(range(base_var.ndim))
+    else:
+        # Check whether axis covers all dimensions
+        axis = tuple(sorted(node.op.axis))
+        if axis != tuple(range(base_var.ndim)):
+            return None
 
     # distinguish measurable discrete and continuous (because logprob is different)
     measurable_max: Max
-    if base_var.owner.op.dtype.startswith("int"):
-        measurable_max = MeasurableMaxDiscrete(list(axis))
+    if base_var.type.dtype.startswith("int"):
+        measurable_max = MeasurableMaxDiscrete(axis)
     else:
-        measurable_max = MeasurableMax(list(axis))
+        measurable_max = MeasurableMax(axis)
 
     max_rv_node = measurable_max.make_node(base_var)
     max_rv = max_rv_node.outputs
@@ -202,25 +204,27 @@ def find_measurable_max_neg(fgraph: FunctionGraph, node: Apply) -> list[TensorVa
         return None
 
     # univariate i.i.d. test which also rules out other distributions
-    for params in base_rv.owner.inputs[3:]:
-        if params.type.ndim != 0:
+    for params in base_rv.owner.op.dist_params(base_rv.owner):
+        if not all(params.type.broadcastable):
             return None
 
-    # Check whether axis is supported or not
-    axis = set(node.op.axis)
-    base_var_dims = set(range(base_var.ndim))
-    if axis != base_var_dims:
-        return None
+    if node.op.axis is None:
+        axis = tuple(range(base_var.ndim))
+    else:
+        # Check whether axis is supported or not
+        axis = tuple(sorted(node.op.axis))
+        if axis != tuple(range(base_var.ndim)):
+            return None
 
     if not rv_map_feature.request_measurable([base_rv]):
         return None
 
     # distinguish measurable discrete and continuous (because logprob is different)
     measurable_min: Max
-    if base_rv.owner.op.dtype.startswith("int"):
-        measurable_min = MeasurableDiscreteMaxNeg(list(axis))
+    if base_rv.type.dtype.startswith("int"):
+        measurable_min = MeasurableDiscreteMaxNeg(axis)
     else:
-        measurable_min = MeasurableMaxNeg(list(axis))
+        measurable_min = MeasurableMaxNeg(axis)
 
     return measurable_min.make_node(base_rv).outputs
 

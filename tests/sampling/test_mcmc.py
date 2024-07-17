@@ -627,7 +627,7 @@ def test_exec_nuts_init(method):
 )
 def test_init_jitter(initval, jitter_max_retries, expectation):
     with pm.Model() as m:
-        pm.HalfNormal("x", transform=None, initval=initval)
+        pm.HalfNormal("x", default_transform=None, initval=initval)
 
     with expectation:
         # Starting value is negative (invalid) when np.random.rand returns 0 (jitter = -1)

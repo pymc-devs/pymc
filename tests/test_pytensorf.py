@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import warnings
 
 import numpy as np
 import numpy.ma as ma
@@ -27,7 +26,6 @@ from pytensor.compile import UnusedInputError
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable, equal_computations
 from pytensor.tensor.random.basic import normal, uniform
-from pytensor.tensor.random.var import RandomStateSharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from pytensor.tensor.variable import TensorVariable
 
@@ -38,16 +36,19 @@ from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
+    GeneratorOp,
     collect_default_updates,
     compile_pymc,
     constant_fold,
-    convert_observed_data,
+    convert_data,
+    convert_generator_data,
     extract_obs_data,
     hessian,
     hessian_diag,
     replace_rng_nodes,
     replace_vars_in_graphs,
     reseed_rngs,
+    smarttypeX,
     walk_model,
 )
 from pymc.vartypes import int_types
@@ -188,9 +189,9 @@ def test_extract_obs_data():
 
 
 @pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
-def test_convert_observed_data(input_dtype):
+def test_convert_data(input_dtype):
     """
-    Ensure that convert_observed_data returns the dense array, masked array,
+    Ensure that convert_data returns the dense array, masked array,
     graph variable, TensorVariable, or sparse matrix as appropriate.
     """
     # Create the various inputs to the function
@@ -206,12 +207,8 @@ def test_convert_observed_data(input_dtype):
     missing_pandas_input = pd.DataFrame(missing_numpy_input)
     masked_array_input = ma.array(dense_input, mask=(np.mod(dense_input, 2) == 0))
 
-    # Create a generator object. Apparently the generator object needs to
-    # yield numpy arrays.
-    square_generator = (np.array([i**2], dtype=int) for i in range(100))
-
     # Alias the function to be tested
-    func = convert_observed_data
+    func = convert_data
 
     #####
     # Perform the various tests
@@ -255,21 +252,36 @@ def test_convert_observed_data(input_dtype):
     else:
         assert pytensor_output.dtype == intX
 
-    # Check function behavior with generator data
-    generator_output = func(square_generator)
 
-    # Output is wrapped with `pm.floatX`, and this unwraps
-    wrapped = generator_output.owner.inputs[0]
-    # Make sure the returned object has .set_gen and .set_default methods
-    assert hasattr(wrapped, "set_gen")
-    assert hasattr(wrapped, "set_default")
+@pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
+def test_convert_generator_data(input_dtype):
+    # Create a generator object producing NumPy arrays with the intended dtype.
+    # This is required to infer the correct dtype.
+    square_generator = (np.array([i**2], dtype=input_dtype) for i in range(100))
+
+    # Output is NOT wrapped with `pm.floatX`/`intX`,
+    # but produced from calling a special Op.
+    with pytest.warns(DeprecationWarning, match="get in touch"):
+        result = convert_generator_data(square_generator)
+    apply = result.owner
+    op = apply.op
     # Make sure the returned object is an PyTensor TensorVariable
-    assert isinstance(wrapped, TensorVariable)
+    assert isinstance(result, TensorVariable)
+    assert isinstance(op, GeneratorOp), f"It's a {type(apply)}"
+    # There are no inputs - because it generates...
+    assert apply.inputs == []
+
+    # Evaluation results should have the correct* dtype!
+    # (*intX/floatX will be enforced!)
+    evaled = result.eval()
+    expected_dtype = smarttypeX(np.array(1, dtype=input_dtype)).dtype
+    assert result.type.dtype == expected_dtype
+    assert evaled.dtype == np.dtype(expected_dtype)
 
 
 def test_pandas_to_array_pandas_index():
     data = pd.Index([1, 2, 3])
-    result = convert_observed_data(data)
+    result = convert_data(data)
     expected = np.array([1, 2, 3])
     np.testing.assert_array_equal(result, expected)
 
@@ -473,34 +485,45 @@ class TestCompilePyMC:
         assert x3_eval == x2_eval
         assert y3_eval == y2_eval
 
+    @pytest.mark.filterwarnings("error")  # This is part of the test
     def test_multiple_updates_same_variable(self):
-        # Raise if unexpected warning is issued
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
+        rng = pytensor.shared(np.random.default_rng(), name="rng")
+        x = pt.random.normal(0, rng=rng)
+        y = pt.random.normal(1, rng=rng)
 
-            rng = pytensor.shared(np.random.default_rng(), name="rng")
-            x = pt.random.normal(rng=rng)
-            y = pt.random.normal(rng=rng)
+        # No warnings if only one variable is used
+        assert compile_pymc([], [x])
+        assert compile_pymc([], [y])
 
-            # No warnings if only one variable is used
-            assert compile_pymc([], [x])
-            assert compile_pymc([], [y])
+        user_warn_msg = "RNG Variable rng has multiple distinct clients"
+        with pytest.warns(UserWarning, match=user_warn_msg):
+            f = compile_pymc([], [x, y], random_seed=456)
+        assert f() == f()
 
-            user_warn_msg = "RNG Variable rng has multiple clients"
-            with pytest.warns(UserWarning, match=user_warn_msg):
-                f = compile_pymc([], [x, y], random_seed=456)
-            assert f() == f()
+        # The user can provide an explicit update, but we will still issue a warning
+        with pytest.warns(UserWarning, match=user_warn_msg):
+            f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
+        assert f() != f()
 
-            # The user can provide an explicit update, but we will still issue a warning
-            with pytest.warns(UserWarning, match=user_warn_msg):
-                f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
-            assert f() != f()
+        # Same with default update
+        rng.default_update = x.owner.outputs[0]
+        with pytest.warns(UserWarning, match=user_warn_msg):
+            f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
+        assert f() != f()
 
-            # Same with default update
-            rng.default_update = x.owner.outputs[0]
-            with pytest.warns(UserWarning, match=user_warn_msg):
-                f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
-            assert f() != f()
+    @pytest.mark.filterwarnings("error")  # This is part of the test
+    def test_duplicated_client_nodes(self):
+        """Test compile_pymc can handle duplicated (mergeable) RV updates."""
+        rng = pytensor.shared(np.random.default_rng(1))
+        x = pt.random.normal(rng=rng)
+        y = x.owner.clone().default_output()
+
+        fn = compile_pymc([], [x, y], random_seed=1)
+        res_x1, res_y1 = fn()
+        assert res_x1 == res_y1
+        res_x2, res_y2 = fn()
+        assert res_x2 == res_y2
+        assert res_x1 != res_x2
 
     def test_nested_updates(self):
         rng = pytensor.shared(np.random.default_rng())
@@ -624,43 +647,42 @@ def test_reseed_rngs():
 
     bit_generators = [default_rng(sub_seed) for sub_seed in np.random.SeedSequence(seed).spawn(2)]
 
-    rngs = [
-        pytensor.shared(rng_type(default_rng()))
-        for rng_type in (np.random.Generator, np.random.RandomState)
-    ]
+    rngs = [pytensor.shared(np.random.Generator(default_rng())) for _ in range(2)]
     for rng, bit_generator in zip(rngs, bit_generators):
-        if isinstance(rng, RandomStateSharedVariable):
-            assert rng.get_value()._bit_generator.state != bit_generator.state
-        else:
-            assert rng.get_value().bit_generator.state != bit_generator.state
+        assert rng.get_value().bit_generator.state != bit_generator.state
 
     reseed_rngs(rngs, seed)
     for rng, bit_generator in zip(rngs, bit_generators):
-        if isinstance(rng, RandomStateSharedVariable):
-            assert rng.get_value()._bit_generator.state == bit_generator.state
-        else:
-            assert rng.get_value().bit_generator.state == bit_generator.state
+        assert rng.get_value().bit_generator.state == bit_generator.state
 
 
-def test_constant_fold():
-    x = pt.random.normal(size=(5,))
-    y = pt.arange(x.size)
+class TestConstantFold:
+    def test_constant_fold(self):
+        x = pt.random.normal(size=(5,))
+        y = pt.arange(x.size)
 
-    res = constant_fold((y, y.shape))
-    assert np.array_equal(res[0], np.arange(5))
-    assert tuple(res[1]) == (5,)
+        res = constant_fold((y, y.shape))
+        assert np.array_equal(res[0], np.arange(5))
+        assert tuple(res[1]) == (5,)
 
+    def test_constant_fold_raises(self):
+        size = pytensor.shared(5)
+        x = pt.random.normal(size=(size,))
+        y = pt.arange(x.size)
 
-def test_constant_fold_raises():
-    size = pytensor.shared(5)
-    x = pt.random.normal(size=(size,))
-    y = pt.arange(x.size)
+        with pytest.raises(NotConstantValueError):
+            constant_fold((y, y.shape))
 
-    with pytest.raises(NotConstantValueError):
-        constant_fold((y, y.shape))
+        res = constant_fold((y, y.shape), raise_not_constant=False)
+        assert tuple(res[1].eval()) == (5,)
 
-    res = constant_fold((y, y.shape), raise_not_constant=False)
-    assert tuple(res[1].eval()) == (5,)
+    def test_inputs_preserved(self):
+        # Make sure constant_folded graph depends on original graph inputs (not copies)
+        # Regression test for #7387
+        a = pt.scalar("a", dtype="int")
+        out = pt.empty((a,))
+        (out_shape,) = constant_fold((out.shape[0],), raise_not_constant=False)
+        assert out_shape is a
 
 
 def test_replace_vars_in_graphs():

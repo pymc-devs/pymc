@@ -25,6 +25,7 @@ FAILING = """
 pymc/distributions/continuous.py
 pymc/distributions/dist_math.py
 pymc/distributions/distribution.py
+pymc/distributions/custom.py
 pymc/distributions/multivariate.py
 pymc/distributions/timeseries.py
 pymc/distributions/truncated.py
@@ -35,7 +36,6 @@ pymc/logprob/basic.py
 pymc/logprob/mixture.py
 pymc/logprob/rewriting.py
 pymc/logprob/scan.py
-pymc/logprob/tensor.py
 pymc/logprob/transform_value.py
 pymc/logprob/transforms.py
 pymc/logprob/utils.py

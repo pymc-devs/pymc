@@ -35,6 +35,7 @@ import pymc as pm
 
 from pymc import ImputationWarning
 from pymc.distributions.multivariate import DirichletMultinomial, PosDefMatrix
+from pymc.model.transform.optimization import freeze_dims_and_data
 from pymc.sampling.jax import (
     _get_batched_jittered_initial_points,
     _get_log_likelihood,
@@ -503,7 +504,7 @@ def test_sample_var_names():
 def test_convergence_warnings(caplog, nuts_sampler):
     with pm.Model() as m:
         # Model that should diverge
-        sigma = pm.Normal("sigma", initval=3, transform=None)
+        sigma = pm.Normal("sigma", initval=3, default_transform=None)
         pm.Normal("obs", mu=0, sigma=sigma, observed=[0.99, 1.0, 1.01])
 
         with caplog.at_level(logging.WARNING, logger="pymc"):
@@ -514,6 +515,24 @@ def test_convergence_warnings(caplog, nuts_sampler):
 
 
 def test_dirichlet_multinomial():
+    """Test we can draw from a DM in the JAX backend if the shape is constant."""
     dm = DirichletMultinomial.dist(n=5, a=np.eye(3) * 1e6 + 0.01)
     dm_draws = pm.draw(dm, mode="JAX")
+    np.testing.assert_equal(dm_draws, np.eye(3) * 5)
+
+
+def test_dirichlet_multinomial_dims():
+    """Test we can draw from a DM with a shape defined by dims in the JAX backend,
+    after freezing those dims.
+    """
+    with pm.Model(coords={"trial": range(3), "item": range(3)}) as m:
+        dm = DirichletMultinomial("dm", n=5, a=np.eye(3) * 1e6 + 0.01, dims=("trial", "item"))
+
+    # JAX does not allow us to JIT a function with dynamic shape
+    with pytest.raises(TypeError):
+        pm.draw(dm, mode="JAX")
+
+    # Should be fine after freezing the dims that specify the shape
+    frozen_dm = freeze_dims_and_data(m)["dm"]
+    dm_draws = pm.draw(frozen_dm, mode="JAX")
     np.testing.assert_equal(dm_draws, np.eye(3) * 5)

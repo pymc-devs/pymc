@@ -35,9 +35,12 @@
 #   SOFTWARE.
 
 
+from pathlib import Path
+
 import pytensor
 
 from pytensor import tensor as pt
+from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor import TensorVariable
@@ -60,7 +63,7 @@ from pymc.pytensorf import constant_fold
 
 
 @node_rewriter([Alloc])
-def naive_bcast_rv_lift(fgraph, node):
+def naive_bcast_rv_lift(fgraph: FunctionGraph, node):
     """Lift an ``Alloc`` through a ``RandomVariable`` ``Op``.
 
     XXX: This implementation simply broadcasts the ``RandomVariable``'s
@@ -104,7 +107,7 @@ def naive_bcast_rv_lift(fgraph, node):
         _, lifted_rv = size_lift_res
         lifted_node = lifted_rv.owner
 
-    rng, size, dtype, *dist_params = lifted_node.inputs
+    rng, size, *dist_params = lifted_node.inputs
 
     new_dist_params = [
         pt.broadcast_to(
@@ -113,7 +116,7 @@ def naive_bcast_rv_lift(fgraph, node):
         )
         for param in dist_params
     ]
-    bcasted_node = lifted_node.op.make_node(rng, size, dtype, *new_dist_params)
+    bcasted_node = lifted_node.op.make_node(rng, size, *new_dist_params)
 
     if pytensor.config.compute_test_value != "off":
         compute_test_value(bcasted_node)
@@ -226,6 +229,7 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
         measurable_stack = MeasurableJoin()(axis, *base_vars)
     else:
         measurable_stack = MeasurableMakeVector(node.op.dtype)(*base_vars)
+    assert isinstance(measurable_stack, TensorVariable)
 
     return [measurable_stack]
 
@@ -235,14 +239,14 @@ class MeasurableDimShuffle(DimShuffle):
 
     # Need to get the absolute path of `c_func_file`, otherwise it tries to
     # find it locally and fails when a new `Op` is initialized
-    c_func_file = DimShuffle.get_path(DimShuffle.c_func_file)
+    c_func_file = str(DimShuffle.get_path(Path(DimShuffle.c_func_file)))
 
 
 MeasurableVariable.register(MeasurableDimShuffle)
 
 
 @_logprob.register(MeasurableDimShuffle)
-def logprob_dimshuffle(op, values, base_var, **kwargs):
+def logprob_dimshuffle(op: MeasurableDimShuffle, values, base_var, **kwargs):
     """Compute the log-likelihood graph for a `MeasurableDimShuffle`."""
     (value,) = values
 
@@ -300,6 +304,7 @@ def find_measurable_dimshuffles(fgraph, node) -> list[TensorVariable] | None:
     measurable_dimshuffle = MeasurableDimShuffle(node.op.input_broadcastable, node.op.new_order)(
         base_var
     )
+    assert isinstance(measurable_dimshuffle, TensorVariable)
 
     return [measurable_dimshuffle]
 

@@ -660,6 +660,7 @@ def apply_function_over_dataset(
                 out_dict.insert(var_name, val, idx)
 
             progress.advance(task)
+        progress.update(task, refresh=True, completed=n_pts)
 
     out_trace = out_dict.trace_dict
     for key, val in out_trace.items():

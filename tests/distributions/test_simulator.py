@@ -21,10 +21,7 @@ import scipy.stats as st
 
 from pytensor.graph import ancestors
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.random.var import (
-    RandomGeneratorSharedVariable,
-    RandomStateSharedVariable,
-)
+from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.sort import SortOp
 
 import pymc as pm
@@ -257,7 +254,7 @@ class TestSimulator:
         shared_rng_vars = [
             node
             for node in ancestors(compiled_graph)
-            if isinstance(node, RandomStateSharedVariable | RandomGeneratorSharedVariable)
+            if isinstance(node, RandomGeneratorSharedVariable)
         ]
         assert len(shared_rng_vars) == 1
 

@@ -272,6 +272,7 @@ def _sample_external_nuts(
     var_names: Sequence[str] | None,
     progressbar: bool,
     idata_kwargs: dict | None,
+    compute_convergence_checks: bool,
     nuts_sampler_kwargs: dict | None,
     **kwargs,
 ):
@@ -336,6 +337,7 @@ def _sample_external_nuts(
         attrs = make_attrs(
             {
                 "sampling_time": t_sample,
+                "tuning_steps": tune,
             },
             library=nutpie,
         )
@@ -363,6 +365,7 @@ def _sample_external_nuts(
             progressbar=progressbar,
             nuts_sampler=sampler,
             idata_kwargs=idata_kwargs,
+            compute_convergence_checks=compute_convergence_checks,
             **nuts_sampler_kwargs,
         )
         return idata
@@ -697,10 +700,7 @@ def sample(
         msg = "Tuning was enabled throughout the whole trace."
         _log.warning(msg)
     elif draws < 100:
-        msg = (
-            "Only %s samples per chain. Reliable r-hat and ESS diagnostics require longer chains for accurate estimate."
-            % draws
-        )
+        msg = f"Only {draws} samples per chain. Reliable r-hat and ESS diagnostics require longer chains for accurate estimate."
         _log.warning(msg)
 
     auto_nuts_init = True
@@ -720,6 +720,7 @@ def sample(
             raise ValueError(
                 "Model can not be sampled with NUTS alone. Your model is probably not continuous."
             )
+
         with joined_blas_limiter():
             return _sample_external_nuts(
                 sampler=nuts_sampler,
@@ -733,6 +734,7 @@ def sample(
                 var_names=var_names,
                 progressbar=progressbar,
                 idata_kwargs=idata_kwargs,
+                compute_convergence_checks=compute_convergence_checks,
                 nuts_sampler_kwargs=nuts_sampler_kwargs,
                 **kwargs,
             )

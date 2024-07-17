@@ -385,7 +385,7 @@ class TestElementWiseLogp:
     )
     def test_uniform(self, lower, upper, size):
         def transform_params(*inputs):
-            _, _, _, lower, upper = inputs
+            _, _, lower, upper = inputs
             lower = pt.as_tensor_variable(lower) if lower is not None else None
             upper = pt.as_tensor_variable(upper) if upper is not None else None
             return lower, upper
@@ -406,7 +406,7 @@ class TestElementWiseLogp:
     )
     def test_triangular(self, lower, c, upper, size):
         def transform_params(*inputs):
-            _, _, _, lower, _, upper = inputs
+            _, _, lower, _, upper = inputs
             lower = pt.as_tensor_variable(lower) if lower is not None else None
             upper = pt.as_tensor_variable(upper) if upper is not None else None
             return lower, upper
@@ -502,7 +502,7 @@ class TestElementWiseLogp:
     )
     def test_uniform_ordered(self, lower, upper, size):
         def transform_params(*inputs):
-            _, _, _, lower, upper = inputs
+            _, _, lower, upper = inputs
             lower = pt.as_tensor_variable(lower) if lower is not None else None
             upper = pt.as_tensor_variable(upper) if upper is not None else None
             return lower, upper

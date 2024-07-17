@@ -66,7 +66,7 @@ class TestInitvalEvaluation:
     def test_make_initial_point_fns_per_chain_checks_kwargs(self):
         with pm.Model() as pmodel:
             A = pm.Uniform("A", 0, 1, initval=0.5)
-            B = pm.Uniform("B", lower=A, upper=1.5, transform=None, initval="support_point")
+            B = pm.Uniform("B", lower=A, upper=1.5, default_transform=None, initval="support_point")
         with pytest.raises(ValueError, match="Number of initval dicts"):
             make_initial_point_fns_per_chain(
                 model=pmodel,
@@ -263,8 +263,7 @@ class TestSupportPoint:
     def test_support_point_not_implemented_fallback(self):
         class MyNormalRV(RandomVariable):
             name = "my_normal"
-            ndim_supp = 0
-            ndims_params = [0, 0]
+            signature = "(),()->()"
             dtype = "floatX"
 
             @classmethod

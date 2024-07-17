@@ -186,7 +186,7 @@ class BaseTrace(IBaseTrace):
         for stats in sampler_vars:
             for key, dtype in stats.items():
                 if dtypes.setdefault(key, dtype) != dtype:
-                    raise ValueError("Sampler statistic %s appears with " "different types." % key)
+                    raise ValueError(f"Sampler statistic {key} appears with different types.")
 
         self.sampler_vars = sampler_vars
 
@@ -247,7 +247,7 @@ class BaseTrace(IBaseTrace):
 
         sampler_idxs = [i for i, s in enumerate(self.sampler_vars) if stat_name in s]
         if not sampler_idxs:
-            raise KeyError("Unknown sampler stat %s" % stat_name)
+            raise KeyError(f"Unknown sampler stat {stat_name}")
 
         vals = np.stack(
             [self._get_sampler_stats(stat_name, i, burn, thin) for i in sampler_idxs], axis=-1
@@ -388,7 +388,7 @@ class MultiTrace:
             return self.get_values(var, burn=burn, thin=thin)
         if var in self.stat_names:
             return self.get_sampler_stats(var, burn=burn, thin=thin)
-        raise KeyError("Unknown variable %s" % var)
+        raise KeyError(f"Unknown variable {var}")
 
     _attrs = {"_straces", "varnames", "chains", "stat_names", "_report"}
 
@@ -512,7 +512,7 @@ class MultiTrace:
             List or ndarray depending on parameters.
         """
         if stat_name not in self.stat_names:
-            raise KeyError("Unknown sampler statistic %s" % stat_name)
+            raise KeyError(f"Unknown sampler statistic {stat_name}")
 
         if chains is None:
             chains = self.chains

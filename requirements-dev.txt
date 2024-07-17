@@ -10,14 +10,14 @@ ipython>=7.16
 jupyter-sphinx
 mcbackend>=0.4.0
 mypy==1.5.1
-myst-nb
+myst-nb<=1.0.0
 numdifftools>=0.9.40
 numpy>=1.15.0
 numpydoc
 pandas>=0.24.0
 polyagamma
 pre-commit>=2.8.0
-pytensor>=2.20,<2.21
+pytensor>=2.25.1,<2.26
 pytest-cov>=2.5
 pytest>=3.0
 rich>=13.7.1

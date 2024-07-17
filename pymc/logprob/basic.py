@@ -294,7 +294,7 @@ def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> Te
         import pytensor.tensor as pt
 
         def normal_logcdf(value, mu, sigma):
-            return pm.logp(pm.Normal.dist(mu, sigma), value)
+            return pm.logcdf(pm.Normal.dist(mu, sigma), value)
 
         with pm.Model() as model:
             mu = pm.Normal("mu")

@@ -25,6 +25,7 @@ from typing import (
     Literal,
     Optional,
     TypeVar,
+    Union,
     cast,
     overload,
 )
@@ -47,7 +48,6 @@ from typing_extensions import Self
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, is_minibatch
-from pymc.distributions.transforms import ChainedTransform, _default_transform
 from pymc.exceptions import (
     BlockModelAccessError,
     ImputationWarning,
@@ -107,18 +107,10 @@ class ContextMeta(type):
 
         def __enter__(self):
             self.__class__.context_class.get_contexts().append(self)
-            # self._pytensor_config is set in Model.__new__
-            self._config_context = None
-            if hasattr(self, "_pytensor_config"):
-                self._config_context = pytensor.config.change_flags(**self._pytensor_config)
-                self._config_context.__enter__()
             return self
 
         def __exit__(self, typ, value, traceback):
             self.__class__.context_class.get_contexts().pop()
-            # self._pytensor_config is set in Model.__new__
-            if self._config_context:
-                self._config_context.__exit__(typ, value, traceback)
 
         dct[__enter__.__name__] = __enter__
         dct[__exit__.__name__] = __exit__
@@ -209,7 +201,7 @@ class ContextMeta(type):
     def __call__(cls, *args, **kwargs):
         # We type hint Model here so type checkers understand that Model is a context manager.
         # This metaclass is only used for Model, so this is safe to do. See #6809 for more info.
-        instance: "Model" = cls.__new__(cls, *args, **kwargs)
+        instance: Model = cls.__new__(cls, *args, **kwargs)
         with instance:  # appends context
             instance.__init__(*args, **kwargs)
         return instance
@@ -400,76 +392,108 @@ class Model(WithMemoization, metaclass=ContextMeta):
     name : str
         name that will be used as prefix for names of all random
         variables defined within model
+    coords : dict
+        Xarray-like coordinate keys and values. These coordinates can be used
+        to specify the shape of random variables and to label (but not specify)
+        the shape of Determinsitic, Potential and Data objects.
+        Other than specifying the shape of random variables, coordinates have no
+        effect on the model. They can't be used for label-based broadcasting or indexing.
+        You must use numpy-like operations for those behaviors.
     check_bounds : bool
         Ensure that input parameters to distributions are in a valid
         range. If your model is built in a way where you know your
         parameters can only take on valid values you can set this to
         False for increased speed. This should not be used if your model
         contains discrete variables.
+    model : PyMC model, optional
+        A parent model that this model belongs to. If not specified and the current model
+        is created inside another model's context, the parent model will be set to that model.
+        If `None` the model will not have a parent.
 
     Examples
     --------
-    How to define a custom model
+    Use context manager to define model and respective variables
 
     .. code-block:: python
 
-        class CustomModel(Model):
-            # 1) override init
-            def __init__(self, mean=0, sigma=1, name=''):
-                # 2) call super's init first, passing model and name
-                # to it name will be prefix for all variables here if
-                # no name specified for model there will be no prefix
-                super().__init__(name, model)
-                # now you are in the context of instance,
-                # `modelcontext` will return self you can define
-                # variables in several ways note, that all variables
-                # will get model's name prefix
+        import pymc as pm
 
-                # 3) you can create variables with the register_rv method
-                self.register_rv(Normal.dist(mu=mean, sigma=sigma), 'v1', initval=1)
-                # this will create variable named like '{name::}v1'
-                # and assign attribute 'v1' to instance created
-                # variable can be accessed with self.v1 or self['v1']
+        with pm.Model() as model:
+            x = pm.Normal("x")
 
-                # 4) this syntax will also work as we are in the
-                # context of instance itself, names are given as usual
-                Normal('v2', mu=mean, sigma=sigma)
 
-                # something more complex is allowed, too
-                half_cauchy = HalfCauchy('sigma', beta=10, initval=1.)
-                Normal('v3', mu=mean, sigma=half_cauchy)
+    Use object API to define model and respective variables
 
-                # Deterministic variables can be used in usual way
-                Deterministic('v3_sq', self.v3 ** 2)
+    .. code-block:: python
 
-                # Potentials too
-                Potential('p1', pt.constant(1))
+        import pymc as pm
 
-        # After defining a class CustomModel you can use it in several
-        # ways
+        model = pm.Model()
+        x = pm.Normal("x", model=model)
 
-        # I:
-        #   state the model within a context
-        with Model() as model:
-            CustomModel()
-            # arbitrary actions
 
-        # II:
-        #   use new class as entering point in context
-        with CustomModel() as model:
-            Normal('new_normal_var', mu=1, sigma=0)
+    Use coords for defining the shape of random variables and labeling other model variables
 
-        # III:
-        #   just get model instance with all that was defined in it
-        model = CustomModel()
+    .. code-block:: python
 
-        # IV:
-        #   use many custom models within one context
-        with Model() as model:
-            CustomModel(mean=1, name='first')
-            CustomModel(mean=2, name='second')
+        import pymc as pm
+        import numpy as np
 
-        # variables inside both scopes will be named like `first::*`, `second::*`
+        coords = {
+            "feature", ["A", "B", "C"],
+            "trial", [1, 2, 3, 4, 5],
+        }
+
+        with pm.Model(coords=coords) as model:
+            intercept = pm.Normal("intercept", shape=(3,))  # Variable will have default dim label `intercept__dim_0`
+            beta = pm.Normal("beta", dims=("feature",))  # Variable will have shape (3,) and dim label `feature`
+
+            # Dims below are only used for labeling, they have no effect on shape
+            idx = pm.Data("idx", np.array([0, 1, 1, 2, 2]))  # Variable will have default dim label `idx__dim_0`
+            x = pm.Data("x", np.random.normal(size=(5, 3)), dims=("trial", "feature"))
+            mu = pm.Deterministic("mu", intercept[idx] + beta @ x, dims="trial")  # single dim can be passed as string
+
+            # Dims controls the shape of the variable
+            # If not specified, it would be inferred from the shape of the observations
+            y = pm.Normal("y", mu=mu, observed=[-1, 0, 0, 1, 1], dims=("trial",))
+
+
+    Define nested models, and provide name for variable name prefixing
+
+    .. code-block:: python
+
+        import pymc as pm
+
+        with pm.Model(name="root") as root:
+            x = pm.Normal("x")  # Variable wil be named "root::x"
+
+            with pm.Model(name='first') as first:
+                # Variable will belong to root and first
+                y = pm.Normal("y", mu=x)  # Variable wil be named "root::first::y"
+
+            # Can pass parent model explicitly
+            with pm.Model(name='second', model=root) as second:
+                # Variable will belong to root and second
+                z = pm.Normal("z", mu=y)  # Variable wil be named "root::second::z"
+
+            # Set None for standalone model
+            with pm.Model(name="third", model=None) as third:
+                # Variable will belong to third only
+                w = pm.Normal("w")  # Variable wil be named "third::w"
+
+
+    Set `check_bounds` to False for models with only continuous variables and default transformers
+    PyMC will remove the bounds check from the model logp which can speed up sampling
+
+    .. code-block:: python
+
+        import pymc as pm
+
+        with pm.Model(check_bounds=False) as model:
+            sigma = pm.HalfNormal("sigma")
+            x = pm.Normal("x", sigma=sigma)  # No bounds check will be performed on `sigma`
+
+
     """
 
     if TYPE_CHECKING:
@@ -478,20 +502,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None: ...
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, model: Union[Literal[UNSET], None, "Model"] = UNSET, **kwargs):
         # resolves the parent instance
         instance = super().__new__(cls)
-        if kwargs.get("model") is not None:
-            instance._parent = kwargs.get("model")
-        else:
+        if model is UNSET:
             instance._parent = cls.get_context(error_if_none=False)
-        pytensor_config = kwargs.get("pytensor_config", {})
-        if pytensor_config:
-            warnings.warn(
-                "pytensor_config is deprecated. Use pytensor.config or pytensor.config.change_flags context manager instead.",
-                FutureWarning,
-            )
-        instance._pytensor_config = pytensor_config
+        else:
+            instance._parent = model
         return instance
 
     @staticmethod
@@ -507,10 +524,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         check_bounds=True,
         *,
         coords_mutable=None,
-        pytensor_config=None,
-        model=None,
+        model: Union[Literal[UNSET], None, "Model"] = UNSET,
     ):
-        del pytensor_config, model  # used in __new__
+        del model  # used in __new__ to define the parent of this model
         self.name = self._validate_name(name)
         self.check_bounds = check_bounds
 
@@ -559,11 +575,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self._repr_latex_ = types.MethodType(
             functools.partial(str_for_model, formatting="latex"), self
         )
-
-    @property
-    def model(self):
-        warnings.warn("Model.model property is deprecated. Just use Model.", FutureWarning)
-        return self
 
     @property
     def parent(self):
@@ -671,7 +682,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.model.compile_fn(
+        return self.compile_fn(
             self.d2logp(vars=vars, jacobian=jacobian, negate_output=negate_output),
             **compile_kwargs,
         )
@@ -1159,9 +1170,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     raise ShapeError(
                         f"Resizing dimension '{dname}' is impossible, because "
                         "a `TensorConstant` stores its length. To be able "
-                        "to change the dimension length, pass `mutable=True` when "
-                        "registering the dimension via `model.add_coord`, "
-                        "or define it via a `pm.MutableData` variable."
+                        "to change the dimension length, create data with "
+                        "pm.Data() instead."
                     )
                 elif length_tensor.owner is not None:
                     # The dimension was created from another variable:
@@ -1441,6 +1451,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         -------
         TensorVariable
         """
+        from pymc.distributions.transforms import ChainedTransform, _default_transform
 
         # Make the value variable a transformed value variable,
         # if there's an applicable transform
@@ -1521,6 +1532,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     raise ValueError(f"Dimension {dim} is not specified in `coords`.")
             if any(var.name == dim for dim in dims if dim is not None):
                 raise ValueError(f"Variable `{var.name}` has the same name as its dimension label.")
+            # This check implicitly states that only vars with .ndim attribute can have dims
+            if var.ndim != len(dims):
+                raise ValueError(
+                    f"{var} has {var.ndim} dims but {len(dims)} dim labels were provided."
+                )
             self.named_vars_to_dims[var.name] = dims
 
         self.named_vars[var.name] = var
@@ -1842,7 +1858,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         def debug_parameters(rv):
             if isinstance(rv.owner.op, RandomVariable):
-                inputs = rv.owner.inputs[3:]
+                inputs = rv.owner.op.dist_params(rv.owner)
             else:
                 inputs = [inp for inp in rv.owner.inputs if not isinstance(inp.type, RandomType)]
             rv_inputs = pytensor.function(

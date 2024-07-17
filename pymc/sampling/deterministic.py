@@ -83,7 +83,7 @@ def compute_deterministics(
     model = modelcontext(model)
 
     if var_names is None:
-        deterministics = model.deterministics
+        deterministics = list(model.deterministics)
         var_names = [det.name for det in deterministics]
     else:
         deterministics = [model[var_name] for var_name in var_names]

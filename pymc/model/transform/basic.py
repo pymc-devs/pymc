@@ -16,7 +16,7 @@ from collections.abc import Sequence
 from pytensor import Variable
 from pytensor.graph import ancestors
 
-from pymc import Model
+from pymc.model.core import Model
 from pymc.model.fgraph import (
     ModelObservedRV,
     ModelVar,

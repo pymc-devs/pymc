@@ -20,10 +20,8 @@ from pytensor.graph.basic import Constant, walk
 from pytensor.tensor.basic import TensorVariable, Variable
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.random.basic import RandomVariable
-from pytensor.tensor.random.var import (
-    RandomGeneratorSharedVariable,
-    RandomStateSharedVariable,
-)
+from pytensor.tensor.random.type import RandomType
+from pytensor.tensor.type_other import NoneTypeT
 
 from pymc.model import Model
 
@@ -41,16 +39,18 @@ def str_for_dist(
     LaTeX or plain, optionally with distribution parameter values included."""
 
     if include_params:
-        # first 3 args are always (rng, size, dtype), rest is relevant for distribution
-        if isinstance(dist.owner.op, RandomVariable):
+        if isinstance(dist.owner.op, RandomVariable) or getattr(
+            dist.owner.op, "extended_signature", None
+        ):
             dist_args = [
-                _str_for_input_var(x, formatting=formatting) for x in dist.owner.inputs[3:]
+                _str_for_input_var(x, formatting=formatting)
+                for x in dist.owner.op.dist_params(dist.owner)
             ]
         else:
             dist_args = [
                 _str_for_input_var(x, formatting=formatting)
                 for x in dist.owner.inputs
-                if not isinstance(x, RandomStateSharedVariable | RandomGeneratorSharedVariable)
+                if not isinstance(x.type, RandomType | NoneTypeT)
             ]
 
     print_name = dist.name
@@ -65,12 +65,11 @@ def str_for_dist(
             else r"\\operatorname{Unknown}"
         )
         if include_params:
+            params = ",~".join([d.strip("$") for d in dist_args])
             if print_name:
-                return r"${} \sim {}({})$".format(
-                    print_name, op_name, ",~".join([d.strip("$") for d in dist_args])
-                )
+                return rf"${print_name} \sim {op_name}({params})$"
             else:
-                return r"${}({})$".format(op_name, ",~".join([d.strip("$") for d in dist_args]))
+                return rf"${op_name}({params})$"
 
         else:
             if print_name:
@@ -83,10 +82,11 @@ def str_for_dist(
             dist.owner.op._print_name[0] if hasattr(dist.owner.op, "_print_name") else "Unknown"
         )
         if include_params:
+            params = ", ".join(dist_args)
             if print_name:
-                return r"{} ~ {}({})".format(print_name, dist_name, ", ".join(dist_args))
+                return rf"{print_name} ~ {dist_name}({params})"
             else:
-                return r"{}({})".format(dist_name, ", ".join(dist_args))
+                return rf"{dist_name}({params})"
         else:
             if print_name:
                 return rf"{print_name} ~ {dist_name}"

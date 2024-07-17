@@ -23,10 +23,10 @@ jobs:
 
     steps:
     - name: Checkout source
-      uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
 
     - name: Setup Docker buildx
-      uses: docker/setup-buildx-action@v3.3.0
+      uses: docker/setup-buildx-action@v3.4.0
 
     - name: Prepare metadata
       id: meta
@@ -38,7 +38,7 @@ jobs:
           type=raw,value=latest
 
     - name: Log into registry ${{ env.REGISTRY }}
-      uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20
+      uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
@@ -46,7 +46,7 @@ jobs:
 
     - name: Build and push Docker image
       id: docker_build
-      uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0
+      uses: docker/build-push-action@1a162644f9a7e87d8f4b053101d1d9a712edc18c
       with:
         context: .
         file: scripts/dev.Dockerfile

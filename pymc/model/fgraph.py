@@ -299,9 +299,7 @@ def model_from_fgraph(fgraph: FunctionGraph, mutate_fgraph: bool = False) -> Mod
         else:
             return var
 
-    model = Model()
-    if model.parent is not None:
-        raise RuntimeError("model_to_fgraph cannot be called inside a PyMC model context")
+    model = Model(model=None)  # Do not inherit from any model in the context manager
 
     _coords = getattr(fgraph, "_coords", {})
     _dim_lengths = getattr(fgraph, "_dim_lengths", {})

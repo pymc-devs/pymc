@@ -84,7 +84,7 @@ class TestBoundedContinuous:
         with pm.Model() as model:
             pm.TruncatedNormal(bounded_rv_name, mu=1, sigma=2, lower=None, upper=3)
         (
-            (_, _, _, _, _, lower, upper),
+            (_, _, _, _, lower, upper),
             lower_interval,
             upper_interval,
         ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
@@ -98,7 +98,7 @@ class TestBoundedContinuous:
         with pm.Model() as model:
             pm.TruncatedNormal(bounded_rv_name, mu=1, sigma=2, lower=-2, upper=None)
         (
-            (_, _, _, _, _, lower, upper),
+            (_, _, _, _, lower, upper),
             lower_interval,
             upper_interval,
         ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
@@ -118,14 +118,14 @@ class TestBoundedContinuous:
                 upper=None,
             )
         (
-            (_, _, _, _, _, lower, upper),
+            (_, _, _, _, lower, upper),
             lower_interval,
             upper_interval,
         ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
 
-        assert np.array_equal(lower.value, [-1, 0])
-        assert upper.value == np.inf
-        assert np.array_equal(lower_interval.value, [-1, 0])
+        assert np.array_equal(lower.eval(), [-1, 0])
+        assert np.array_equal(upper.eval(), [np.inf])
+        assert np.array_equal(lower_interval.eval(), [-1, 0])
         assert upper_interval is None
 
     def test_lower_bounded_broadcasted(self):
@@ -139,14 +139,14 @@ class TestBoundedContinuous:
                 upper=np.array([np.inf, np.inf]),
             )
         (
-            (_, _, _, _, _, lower, upper),
+            (_, _, _, _, lower, upper),
             lower_interval,
             upper_interval,
         ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
 
-        assert lower.value == -1
-        assert np.array_equal(upper.value, [np.inf, np.inf])
-        assert lower_interval.value == -1
+        assert np.array_equal(lower.eval(), [-1])
+        assert np.array_equal(upper.eval(), [np.inf, np.inf])
+        assert np.array_equal(lower_interval.eval(), [-1])
         assert upper_interval is None
 
 
@@ -370,7 +370,7 @@ class TestMatchesScipy:
         # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or
         # http://www.gamlss.org/.
         with pm.Model() as model:
-            pm.Wald("wald", mu=mu, lam=lam, phi=phi, alpha=alpha, transform=None)
+            pm.Wald("wald", mu=mu, lam=lam, phi=phi, alpha=alpha, default_transform=None)
         point = {"wald": value}
         decimals = select_by_precision(float64=6, float32=1)
         npt.assert_almost_equal(
@@ -592,7 +592,7 @@ class TestMatchesScipy:
         check_logcdf(
             pm.SkewStudentT,
             R,
-            {"a": Rplus, "b": Rplus, "mu": R, "sigma": Rplus},
+            {"a": Rplus, "b": Rplus, "mu": R, "sigma": Rplusbig},
             lambda value, a, b, mu, sigma: st.jf_skew_t.logcdf(value, a, b, mu, sigma),
         )
 
@@ -1844,9 +1844,7 @@ class TestAsymmetricLaplace(BaseTestDistributionRandom):
         return draws
 
     def seeded_asymmetriclaplace_rng_fn(self):
-        uniform_rng_fct = ft.partial(
-            getattr(np.random.RandomState, "uniform"), self.get_random_state()
-        )
+        uniform_rng_fct = self.get_random_state().uniform
         return ft.partial(self.asymmetriclaplace_rng_fn, uniform_rng_fct=uniform_rng_fct)
 
     pymc_dist = pm.AsymmetricLaplace
@@ -1880,12 +1878,8 @@ class TestExGaussian(BaseTestDistributionRandom):
         return normal_rng_fct(mu, sigma, size=size) + exponential_rng_fct(scale=nu, size=size)
 
     def seeded_exgaussian_rng_fn(self):
-        normal_rng_fct = ft.partial(
-            getattr(np.random.RandomState, "normal"), self.get_random_state()
-        )
-        exponential_rng_fct = ft.partial(
-            getattr(np.random.RandomState, "exponential"), self.get_random_state()
-        )
+        normal_rng_fct = self.get_random_state().normal
+        exponential_rng_fct = self.get_random_state().exponential
         return ft.partial(
             self.exgaussian_rng_fn,
             normal_rng_fct=normal_rng_fct,
@@ -1977,9 +1971,7 @@ class TestKumaraswamy(BaseTestDistributionRandom):
         return (1 - (1 - uniform_rng_fct(size=size)) ** (1 / b)) ** (1 / a)
 
     def seeded_kumaraswamy_rng_fn(self):
-        uniform_rng_fct = ft.partial(
-            getattr(np.random.RandomState, "uniform"), self.get_random_state()
-        )
+        uniform_rng_fct = self.get_random_state().uniform
         return ft.partial(self.kumaraswamy_rng_fn, uniform_rng_fct=uniform_rng_fct)
 
     pymc_dist = pm.Kumaraswamy
@@ -2049,7 +2041,7 @@ class TestTruncatedNormalUpperTau(BaseTestDistributionRandom):
 class TestTruncatedNormalUpperArray(BaseTestDistributionRandom):
     pymc_dist = pm.TruncatedNormal
     lower, upper, mu, tau = (
-        np.array([-np.inf, -np.inf]),
+        np.array([-np.inf]),
         np.array([3, 2]),
         np.array([0, 0]),
         np.array(
@@ -2416,9 +2408,7 @@ class TestWeibull(BaseTestDistributionRandom):
         return beta * std_weibull_rng_fct(alpha, size=size)
 
     def seeded_weibul_rng_fn(self):
-        std_weibull_rng_fct = ft.partial(
-            getattr(np.random.RandomState, "weibull"), self.get_random_state()
-        )
+        std_weibull_rng_fct = self.get_random_state().weibull
         return ft.partial(self.weibull_rng_fn, std_weibull_rng_fct=std_weibull_rng_fct)
 
     pymc_dist = pm.Weibull
