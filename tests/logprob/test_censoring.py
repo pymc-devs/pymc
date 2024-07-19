@@ -262,3 +262,159 @@ def test_rounding(rounding_op):
         logprob.eval({xr_vv: test_value}),
         expected_logp,
     )
+
+
+def test_switch_encoding_no_branch_measurable():
+    x_rv = pt.random.normal(0.5, 1, size=2)
+
+    y_rv = pt.switch(x_rv < 1, [2.0, 2.5], 3.0)
+
+    y_vv1 = y_rv.clone()
+
+    logprob1 = logp(y_rv, y_vv1)
+
+    logp_fn1 = pytensor.function([y_vv1], logprob1)
+
+    ref_scipy = st.norm(0.5, 1)
+
+    np.testing.assert_allclose(
+        logp_fn1([2.0, 1.5]),
+        np.array([ref_scipy.logcdf(1), -np.inf]),
+    )
+
+
+def test_switch_encoding_one_branch_measurable():
+    x_rv = pt.random.normal(0.5, 1, size=3)
+
+    y_rv1 = pt.switch(x_rv < 1, x_rv, 1)
+    y_rv2 = pt.switch(x_rv < 1, 1, x_rv)
+
+    y_vv1 = y_rv1.clone()
+    y_vv2 = y_rv2.clone()
+
+    logprob1 = logp(y_rv1, y_vv1)
+    logprob2 = logp(y_rv2, y_vv2)
+
+    logp_fn1 = pytensor.function([y_vv1], logprob1)
+    logp_fn2 = pytensor.function([y_vv2], logprob2)
+
+    ref_scipy = st.norm(0.5, 1)
+
+    np.testing.assert_allclose(
+        logp_fn1([1.5, 1, 0.9]),
+        np.array([-np.inf, st.norm(0.5, 1).logsf(1), st.norm(0.5, 1).logpdf(0.9)]),
+    )
+
+    np.testing.assert_allclose(
+        logp_fn2([0.9, 1, 1.5]), np.array([-np.inf, ref_scipy.logcdf(1), ref_scipy.logpdf(1.5)])
+    )
+
+
+def test_switch_encoding_two_branches():
+    x_rv = pt.random.normal(0.5, 1, size=4)
+
+    y_rv = pt.switch(x_rv < -1, -1, pt.switch(x_rv < 1, x_rv, 1))
+    clip_rv = pt.clip(x_rv, -1, 1)
+
+    y_vv = y_rv.clone()
+    clip_vv = y_vv.clone()
+
+    logp_switch = logp(y_rv, y_vv)
+    logp_clip = logp(clip_rv, clip_vv)
+
+    logp_fn_switch = pytensor.function([y_vv], logp_switch)
+    logp_fn_clip = pytensor.function([clip_vv], logp_clip)
+
+    test_values = [-1, 0, 1, 1.5]
+    np.testing.assert_allclose(logp_fn_switch(test_values), logp_fn_clip(test_values))
+
+
+def test_switch_encoding_nested_branches():
+    x_rv = pt.random.normal(0.5, 1, size=3)
+    y_rv = pt.switch(x_rv < -1, -1, pt.switch(x_rv < 2, x_rv, pt.switch(x_rv >= 2.5, 2, 1)))
+    # -inf to -1: -1
+    # -1 to 2: x
+    # 2 to 2.5: 1
+    # 2.5 to inf: 2
+    y_vv = y_rv.clone()
+
+    logp_switch = logp(y_rv, y_vv)
+    logp_fn_switch = pytensor.function([y_vv], logp_switch)
+
+    ref_scipy = st.norm(0.5, 1)
+
+    np.testing.assert_allclose(
+        logp_fn_switch([-2, -1.0, 0]), [-np.inf, ref_scipy.logcdf(-1), ref_scipy.logpdf(0)]
+    )
+    np.testing.assert_allclose(
+        logp_fn_switch([1.5, 2, 2.5]), [ref_scipy.logpdf(1.5), ref_scipy.logsf(2.5), -np.inf]
+    )
+
+
+def test_switch_encoding_broadcastability():
+    """Test that measurable branches and switch conditions are not allowed to be broadcasted"""
+    x_rv = pt.random.normal(0.5, 1, size=2)
+
+    y_rv_valid = pt.switch(x_rv < [0.3, 0.3], pt.switch(x_rv > -0.5, x_rv, [0.1, 0.2]), 1.0)
+
+    y_rv_invalid1 = pt.switch(x_rv < [[0.3, 0.3], [0.1, 0.1]], 1.0, [0.0, 0.5])
+    y_rv_invalid2 = pt.switch(x_rv < [0.3, 0.3], x_rv, [[0.0, 0.5], x_rv])
+
+    y_vv_valid = y_rv_valid.clone()
+    y_vv_invalid1 = y_rv_invalid1.clone()
+    y_vv_invalid2 = y_rv_invalid2.clone()
+
+    y_test = [0.1, 0.2]
+    ref_scipy = st.norm(0.5, 1)
+    np.testing.assert_allclose(
+        logp(y_rv_valid, y_vv_valid).eval({y_vv_valid: y_test}),
+        np.array([ref_scipy.logcdf(-0.5)] * 2),
+    )
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Logprob method not implemented",
+    ):
+        logp(y_rv_invalid1, y_vv_invalid1).eval({y_vv_invalid1: y_test})
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Logprob method not implemented",
+    ):
+        logp(y_rv_invalid2, y_vv_invalid2).eval({y_vv_invalid2: y_test})
+
+
+def test_switch_measurability_source():
+    """Test failure when more than one sources of measurability are present"""
+    x_rv1 = pt.random.normal(0.5, 1)
+    x_rv2 = pt.random.halfnormal(0.5, 1)
+
+    y_rv = pt.switch(x_rv1 > 1, x_rv2, 2)
+    y_vv = y_rv.clone()
+    y_vv.name = "cens_x"
+
+    x_vv1 = x_rv1.clone()
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Logprob method not implemented",
+    ):
+        logp(y_rv, y_vv)
+
+    with pytest.raises(RuntimeError, match="could not be derived: {cens_x}"):
+        conditional_logp({y_rv: y_vv, x_rv1: x_vv1})
+
+
+def test_switch_discrete_fail():
+    """Test failure when discrete RVs are used in the graph"""
+    x_rv = pt.random.poisson(2)
+    y_rv = pt.switch(x_rv > 3, x_rv, 1)
+
+    y_vv = x_rv.clone()
+    y_vv_test = 1
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Logprob method not implemented",
+    ):
+        logp(y_rv, y_vv).eval({y_vv: y_vv_test})
