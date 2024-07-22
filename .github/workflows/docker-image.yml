@@ -34,7 +34,7 @@ jobs:
               type=semver,pattern={{major}}.{{minor}}
 
       - name: Build and load image
-        uses: docker/build-push-action@1a162644f9a7e87d8f4b053101d1d9a712edc18c
+        uses: docker/build-push-action@1ca370b3a9802c92e886402e0dd88098a2533b12
         with:
           context: .
           file: scripts/Dockerfile
@@ -46,7 +46,7 @@ jobs:
            docker run --rm ${{ env.CONTAINER_NAME }} conda run -n pymc-dev python -c 'import pymc;print(pymc.__version__)'
 
       - name: Build and push
-        uses: docker/build-push-action@1a162644f9a7e87d8f4b053101d1d9a712edc18c
+        uses: docker/build-push-action@1ca370b3a9802c92e886402e0dd88098a2533b12
         with:
           context: .
           push: true
