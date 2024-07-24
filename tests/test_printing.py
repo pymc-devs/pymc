@@ -125,8 +125,11 @@ class TestMonolith(BaseTestStrAndLatexRepr):
             # add a potential as well
             pot = Potential("pot", mu**2)
 
+            # add a deterministic that depends on an unnamed random variable
+            pred = Deterministic("pred", Normal.dist(0, 1))
+
         self.distributions = [alpha, sigma, mu, b, Z, nb2, zip, w, nested_mix, Y_obs, pot]
-        self.deterministics_or_potentials = [mu, pot]
+        self.deterministics_or_potentials = [mu, pot, pred]
         # tuples of (formatting, include_params)
         self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
         self.expected = {
@@ -146,6 +149,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 ),
                 r"Y_obs ~ Normal(mu, sigma)",
                 r"pot ~ Potential(f(beta, alpha))",
+                r"pred ~ Deterministic(f(<normal>))",
             ],
             ("plain", False): [
                 r"alpha ~ Normal",
@@ -159,6 +163,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"nested_mix ~ MarginalMixture",
                 r"Y_obs ~ Normal",
                 r"pot ~ Potential",
+                r"pred ~ Deterministic",
             ],
             ("latex", True): [
                 r"$\text{alpha} \sim \operatorname{Normal}(0,~10)$",
@@ -176,6 +181,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 ),
                 r"$\text{Y_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$",
                 r"$\text{pot} \sim \operatorname{Potential}(f(\text{beta},~\text{alpha}))$",
+                r"$\text{pred} \sim \operatorname{Deterministic}(f(\text{<normal>}))",
             ],
             ("latex", False): [
                 r"$\text{alpha} \sim \operatorname{Normal}$",
@@ -189,6 +195,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"$\text{nested_mix} \sim \operatorname{MarginalMixture}$",
                 r"$\text{Y_obs} \sim \operatorname{Normal}$",
                 r"$\text{pot} \sim \operatorname{Potential}$",
+                r"$\text{pred} \sim \operatorname{Deterministic}",
             ],
         }
 
