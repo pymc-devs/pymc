@@ -232,6 +232,12 @@ def _str_for_expression(var: Variable, formatting: str) -> str:
         if x.owner and isinstance(x.owner.op, RandomVariable | SymbolicRandomVariable):
             parents.append(x)
             xname = x.name
+            if xname is None:
+                # If the variable is unnamed, we show the op's name as we do
+                # with constants
+                opname = x.owner.op.name
+                if opname is not None:
+                    xname = rf"<{opname}>"
             assert xname is not None
             names.append(xname)
 
