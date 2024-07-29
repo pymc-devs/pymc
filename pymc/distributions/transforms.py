@@ -53,20 +53,15 @@ __all__ = [
 
 def __getattr__(name):
     if name in ("univariate_ordered", "multivariate_ordered"):
-        warnings.warn(
-            f"{name} has been deprecated, use ordered instead.",
-            FutureWarning)
+        warnings.warn(f"{name} has been deprecated, use ordered instead.", FutureWarning)
         return ordered
 
     if name in ("univariate_sum_to_1", "multivariate_sum_to_1"):
-        warnings.warn(
-            f"{name} has been deprecated, use sum_to_1 instead.",
-            FutureWarning)
+        warnings.warn(f"{name} has been deprecated, use sum_to_1 instead.", FutureWarning)
         return sum_to_1
 
     if name == "RVTransform":
-        warnings.warn(
-            "RVTransform has been renamed to Transform", FutureWarning)
+        warnings.warn("RVTransform has been renamed to Transform", FutureWarning)
         return Transform
 
     raise AttributeError(f"module {__name__} has no attribute {name}")
@@ -101,9 +96,7 @@ class Ordered(Transform):
 
     def __init__(self, ndim_supp=None):
         if ndim_supp is not None:
-            warnings.warn(
-                "ndim_supp argument is deprecated and has no effect",
-                FutureWarning)
+            warnings.warn("ndim_supp argument is deprecated and has no effect", FutureWarning)
 
     def backward(self, value, *inputs):
         x = pt.zeros(value.shape)
@@ -133,9 +126,7 @@ class SumTo1(Transform):
 
     def __init__(self, ndim_supp=None):
         if ndim_supp is not None:
-            warnings.warn(
-                "ndim_supp argument is deprecated and has no effect",
-                FutureWarning)
+            warnings.warn("ndim_supp argument is deprecated and has no effect", FutureWarning)
 
     def backward(self, value, *inputs):
         remaining = 1 - pt.sum(value[..., :], axis=-1, keepdims=True)
