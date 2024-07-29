@@ -54,8 +54,9 @@ class SMC_KERNEL(ABC):
         initialize_population
             Choose initial population of SMC particles. Should return a dictionary
             with {var.name : numpy array of size (draws, var.size)}. Defaults
-            to sampling from the prior distribution. This method is only called
-            if `start` is not specified.
+            to sampling from the prior distribution, except for parameters which have custom
+            `initval`, in which case that value is used for all SMC particles.
+            This method is only called if `start` is not specified.
 
         _initialize_kernel : default
             Creates initial population of particles in the variable
@@ -145,7 +146,8 @@ class SMC_KERNEL(ABC):
             independent chains. Defaults to 2000.
         start : dict, or array of dict, default None
             Starting point in parameter space. It should be a list of dict with length `chains`.
-            When None (default) the starting point is sampled from the prior distribution.
+            When None (default) the starting point is sampled from the prior distribution, except
+            for parameters with a custom `initval`, in which case that value is used.
         model : Model (optional if in ``with`` context).
         random_seed : int, array_like of int, RandomState or Generator, optional
             Value used to initialize the random number generator.
