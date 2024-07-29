@@ -291,7 +291,7 @@ def test_joint_logp_incsubtensor(indices, size):
     mu = pm.floatX(np.power(10, np.arange(np.prod(size)))).reshape(size)
     data = mu[indices]
     sigma = 0.001
-    rng = np.random.RandomState(232)
+    rng = np.random.default_rng(232)
     a_val = rng.normal(mu, sigma, size=size).astype(pytensor.config.floatX)
 
     rng = pytensor.shared(rng, borrow=False)
@@ -301,7 +301,7 @@ def test_joint_logp_incsubtensor(indices, size):
 
     a_idx = pt.set_subtensor(a[indices], data)
 
-    assert isinstance(a_idx.owner.op, (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1))
+    assert isinstance(a_idx.owner.op, IncSubtensor | AdvancedIncSubtensor | AdvancedIncSubtensor1)
 
     a_idx_value_var = a_idx.type()
     a_idx_value_var.name = "a_idx_value"

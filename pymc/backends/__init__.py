@@ -60,13 +60,14 @@ Loading a saved backend
 Saved backends can be loaded using `arviz.from_netcdf`
 
 """
+
 from collections.abc import Mapping, Sequence
 from copy import copy
-from typing import Optional, Union
+from typing import Optional, TypeAlias, Union
 
 import numpy as np
 
-from typing_extensions import TypeAlias
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
 from pymc.backends.base import BaseTrace, IBaseTrace
@@ -80,7 +81,7 @@ try:
 
     from pymc.backends.mcbackend import init_chain_adapters
 
-    TraceOrBackend = Union[BaseTrace, Backend]
+    TraceOrBackend: TypeAlias = BaseTrace | Backend
     RunType: TypeAlias = Run
     HAS_MCB = True
 except ImportError:
@@ -96,13 +97,14 @@ def _init_trace(
     expected_length: int,
     chain_number: int,
     stats_dtypes: list[dict[str, type]],
-    trace: Optional[BaseTrace],
+    trace: BaseTrace | None,
     model: Model,
+    trace_vars: list[TensorVariable] | None = None,
 ) -> BaseTrace:
     """Initializes a trace backend for a chain."""
     strace: BaseTrace
     if trace is None:
-        strace = NDArray(model=model)
+        strace = NDArray(model=model, vars=trace_vars)
     elif isinstance(trace, BaseTrace):
         if len(trace) > 0:
             raise ValueError("Continuation of traces is no longer supported.")
@@ -116,13 +118,14 @@ def _init_trace(
 
 def init_traces(
     *,
-    backend: Optional[TraceOrBackend],
+    backend: TraceOrBackend | None,
     chains: int,
     expected_length: int,
-    step: Union[BlockedStep, CompoundStep],
+    step: BlockedStep | CompoundStep,
     initial_point: Mapping[str, np.ndarray],
     model: Model,
-) -> tuple[Optional[RunType], Sequence[IBaseTrace]]:
+    trace_vars: list[TensorVariable] | None = None,
+) -> tuple[RunType | None, Sequence[IBaseTrace]]:
     """Initializes a trace recorder for each chain."""
     if HAS_MCB and isinstance(backend, Backend):
         return init_chain_adapters(
@@ -141,6 +144,7 @@ def init_traces(
             chain_number=chain_number,
             trace=backend,
             model=model,
+            trace_vars=trace_vars,
         )
         for chain_number in range(chains)
     ]

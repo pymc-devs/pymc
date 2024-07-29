@@ -27,7 +27,6 @@ import pytest
 import pymc as pm
 import pymc.variational.opvi as opvi
 
-from pymc.pytensorf import intX
 from pymc.variational.inference import ADVI, ASVGD, SVGD, FullRankADVI
 from pymc.variational.opvi import NotImplementedInference
 from tests import models
@@ -172,7 +171,13 @@ def test_fit_oo(inference, fit_kwargs, simple_model_data):
         warn_ctxt = nullcontext()
 
     with warn_ctxt:
-        trace = inference.fit(**fit_kwargs).sample(10000)
+        with warnings.catch_warnings():
+            # Related to https://github.com/arviz-devs/arviz/issues/2327
+            warnings.filterwarnings(
+                "ignore", message="datetime.datetime.utcnow()", category=DeprecationWarning
+            )
+
+            trace = inference.fit(**fit_kwargs).sample(10000)
     mu_post = simple_model_data["mu_post"]
     d = simple_model_data["d"]
     np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_post, rtol=0.05)
@@ -184,10 +189,10 @@ def test_fit_start(inference_spec, simple_model):
     mu_sigma_init = 13
 
     with simple_model:
-        if type(inference_spec()) == ASVGD:
+        if type(inference_spec()) is ASVGD:
             # ASVGD doesn't support the start argument
             return
-        elif type(inference_spec()) == ADVI:
+        elif type(inference_spec()) is ADVI:
             has_start_sigma = True
         else:
             has_start_sigma = False
@@ -207,10 +212,16 @@ def test_fit_start(inference_spec, simple_model):
     expected_warning = observed_value.name.startswith("minibatch")
     with warnings.catch_warnings(record=True) as record:
         warnings.simplefilter("always")
-        try:
-            trace = inference.fit(n=0).sample(10000)
-        except NotImplementedInference as e:
-            pytest.skip(str(e))
+        with warnings.catch_warnings():
+            # Related to https://github.com/arviz-devs/arviz/issues/2327
+            warnings.filterwarnings(
+                "ignore", message="datetime.datetime.utcnow()", category=DeprecationWarning
+            )
+
+            try:
+                trace = inference.fit(n=0).sample(10000)
+            except NotImplementedInference as e:
+                pytest.skip(str(e))
 
     if expected_warning:
         assert len(record) > 0
@@ -266,7 +277,7 @@ def test_profile(inference):
 @pytest.fixture(scope="module")
 def binomial_model():
     n_samples = 100
-    xs = intX(np.random.binomial(n=1, p=0.2, size=n_samples))
+    xs = np.random.binomial(n=1, p=0.2, size=n_samples)
     with pm.Model() as model:
         p = pm.Beta("p", alpha=1, beta=1)
         pm.Binomial("xs", n=1, p=p, observed=xs)
@@ -461,3 +472,25 @@ def test_fit_data_coords(hierarchical_model, hierarchical_model_data):
             hierarchical_model_data["group_coords"].keys()
         )
         assert data["mu"].shape == tuple()
+
+
+def test_multiple_minibatch_variables():
+    """Regression test for bug reported in
+    https://discourse.pymc.io/t/verifying-that-minibatch-is-actually-randomly-sampling/14308
+    """
+    true_weights = np.array([-5, 5] * 5)
+    feature = np.repeat(np.eye(10), 10_000, axis=0)
+    y = feature @ true_weights
+
+    with pm.Model() as model:
+        minibatch_feature, minibatch_y = pm.Minibatch(feature, y, batch_size=1)
+        weights = pm.Normal("weights", 0, 10, shape=10)
+        pm.Normal(
+            "y",
+            mu=minibatch_feature @ weights,
+            sigma=0.01,
+            observed=minibatch_y,
+            total_size=len(y),
+        )
+        mean_field = pm.fit(10_000, obj_optimizer=pm.adam(learning_rate=0.01), progressbar=False)
+    np.testing.assert_allclose(mean_field.mean.get_value(), true_weights, rtol=1e-1)

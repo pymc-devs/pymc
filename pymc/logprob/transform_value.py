@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 from collections.abc import Sequence
-from typing import Optional, Union
 
 import numpy as np
 
@@ -145,7 +144,7 @@ def transformed_value_logprob(op, values, *rv_outs, use_jacobian=True, **kwargs)
 
 
 @node_rewriter(tracks=None)
-def transform_values(fgraph: FunctionGraph, node: Apply) -> Optional[list[Apply]]:
+def transform_values(fgraph: FunctionGraph, node: Apply) -> list[Apply] | None:
     """Apply transforms to value variables.
 
     It is assumed that the input value variables correspond to forward
@@ -157,8 +156,8 @@ def transform_values(fgraph: FunctionGraph, node: Apply) -> Optional[list[Apply]
     ``Y`` on the natural scale.
     """
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-    values_to_transforms: Optional[TransformValuesMapping] = getattr(
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
+    values_to_transforms: TransformValuesMapping | None = getattr(
         fgraph, "values_to_transforms", None
     )
 
@@ -213,7 +212,7 @@ def transform_values(fgraph: FunctionGraph, node: Apply) -> Optional[list[Apply]
 
 
 @node_rewriter(tracks=[Scan])
-def transform_scan_values(fgraph: FunctionGraph, node: Apply) -> Optional[list[Apply]]:
+def transform_scan_values(fgraph: FunctionGraph, node: Apply) -> list[Apply] | None:
     """Apply transforms to Scan value variables.
 
     This specialized rewrite is needed because Scan replaces the original value variables
@@ -221,8 +220,8 @@ def transform_scan_values(fgraph: FunctionGraph, node: Apply) -> Optional[list[A
     in this subgraph, leaving the rest intact
     """
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-    values_to_transforms: Optional[TransformValuesMapping] = getattr(
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
+    values_to_transforms: TransformValuesMapping | None = getattr(
         fgraph, "values_to_transforms", None
     )
 
@@ -320,7 +319,7 @@ class TransformValuesRewrite(GraphRewriter):
 
     def __init__(
         self,
-        values_to_transforms: dict[TensorVariable, Union[Transform, None]],
+        values_to_transforms: dict[TensorVariable, Transform | None],
     ):
         """
         Parameters

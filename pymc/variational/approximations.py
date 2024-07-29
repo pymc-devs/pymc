@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Optional
 
 import numpy as np
 import pytensor
@@ -333,7 +332,7 @@ def sample_approx(approx, draws=100, include_transformed=True):
 class SingleGroupApproximation(Approximation):
     """Base class for Single Group Approximation"""
 
-    _group_class: Optional[type] = None
+    _group_class: type | None = None
 
     def __init__(self, *args, **kwargs):
         groups = [self._group_class(None, *args, **kwargs)]

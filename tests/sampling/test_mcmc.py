@@ -303,7 +303,7 @@ class TestSample:
             transform = pm.distributions.transforms.Interval(
                 bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
             )
-            y = pm.Uniform("y", lower=0, upper=x, transform=transform)
+            y = pm.Uniform("y", lower=0, upper=x, transform=transform, default_transform=None)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 trace = pm.sample(tune=10, draws=50, return_inferencedata=False, random_seed=336)
@@ -507,11 +507,19 @@ def test_empty_model():
         error.match("any free variables")
 
 
-def test_partial_trace_unsupported():
+def test_blas_cores():
+    with pm.Model():
+        pm.Normal("a")
+        pm.sample(blas_cores="auto", tune=10, cores=2, draws=10)
+        pm.sample(blas_cores=None, tune=10, cores=2, draws=10)
+        pm.sample(blas_cores=2, tune=10, cores=2, draws=10)
+
+
+def test_partial_trace_with_trace_unsupported():
     with pm.Model() as model:
         a = pm.Normal("a", mu=0, sigma=1)
         b = pm.Normal("b", mu=0, sigma=1)
-        with pytest.raises(DeprecationWarning, match="removed support"):
+        with pytest.raises(ValueError, match="var_names"):
             pm.sample(trace=[a])
 
 
@@ -619,7 +627,7 @@ def test_exec_nuts_init(method):
 )
 def test_init_jitter(initval, jitter_max_retries, expectation):
     with pm.Model() as m:
-        pm.HalfNormal("x", transform=None, initval=initval)
+        pm.HalfNormal("x", default_transform=None, initval=initval)
 
     with expectation:
         # Starting value is negative (invalid) when np.random.rand returns 0 (jitter = -1)
@@ -694,6 +702,42 @@ def test_no_init_nuts_compound(caplog):
         assert "Initializing NUTS" not in caplog.text
 
 
+def test_sample_var_names():
+    # Generate data
+    seed = 1234
+    rng = np.random.default_rng(seed)
+
+    group = rng.choice(list("ABCD"), size=100)
+    x = rng.normal(size=100)
+    y = rng.normal(size=100)
+
+    group_values, group_idx = np.unique(group, return_inverse=True)
+
+    coords = {"group": group_values}
+
+    # Create model
+    with pm.Model(coords=coords) as model:
+        b_group = pm.Normal("b_group", dims="group")
+        b_x = pm.Normal("b_x")
+        mu = pm.Deterministic("mu", b_group[group_idx] + b_x * x)
+        sigma = pm.HalfNormal("sigma")
+        pm.Normal("y", mu=mu, sigma=sigma, observed=y)
+
+    # Sample with and without var_names, but always with the same seed
+    with model:
+        idata_1 = pm.sample(tune=100, draws=100, random_seed=seed)
+        idata_2 = pm.sample(
+            tune=100, draws=100, var_names=["b_group", "b_x", "sigma"], random_seed=seed
+        )
+
+    assert "mu" in idata_1.posterior
+    assert "mu" not in idata_2.posterior
+
+    assert np.all(idata_1.posterior["b_group"] == idata_2.posterior["b_group"]).item()
+    assert np.all(idata_1.posterior["b_x"] == idata_2.posterior["b_x"]).item()
+    assert np.all(idata_1.posterior["sigma"] == idata_2.posterior["sigma"]).item()
+
+
 class TestAssignStepMethods:
     def test_bernoulli(self):
         """Test bernoulli distribution is assigned binary gibbs metropolis method"""
@@ -753,12 +797,18 @@ class TestAssignStepMethods:
                 steps = assign_step_methods(model, [])
         assert isinstance(steps, Slice)
 
-    def test_modify_step_methods(self):
+    @pytest.fixture
+    def step_methods(self):
+        """Make sure we reset the STEP_METHODS after the test is done."""
+        methods_copy = pm.STEP_METHODS.copy()
+        yield pm.STEP_METHODS
+        pm.STEP_METHODS.clear()
+        for method in methods_copy:
+            pm.STEP_METHODS.append(method)
+
+    def test_modify_step_methods(self, step_methods):
         """Test step methods can be changed"""
-        # remove nuts from step_methods
-        step_methods = list(pm.STEP_METHODS)
         step_methods.remove(NUTS)
-        pm.STEP_METHODS = step_methods
 
         with pm.Model() as model:
             pm.Normal("x", 0, 1)
@@ -767,7 +817,7 @@ class TestAssignStepMethods:
         assert not isinstance(steps, NUTS)
 
         # add back nuts
-        pm.STEP_METHODS = [*step_methods, NUTS]
+        step_methods.append(NUTS)
 
         with pm.Model() as model:
             pm.Normal("x", 0, 1)

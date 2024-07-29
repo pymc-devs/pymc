@@ -16,6 +16,7 @@
 
 See the docstring for pymc.backends for more information
 """
+
 import itertools as itl
 import logging
 import warnings
@@ -24,9 +25,7 @@ from abc import ABC
 from collections.abc import Mapping, Sequence, Sized
 from typing import (
     Any,
-    Optional,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -52,7 +51,7 @@ class IBaseTrace(ABC, Sized):
     varnames: list[str]
     """Names of tracked variables."""
 
-    sampler_vars: list[dict[str, Union[type, np.dtype]]]
+    sampler_vars: list[dict[str, type | np.dtype]]
     """Sampler stats for each sampler."""
 
     def __len__(self):
@@ -74,7 +73,7 @@ class IBaseTrace(ABC, Sized):
         raise NotImplementedError()
 
     def get_sampler_stats(
-        self, stat_name: str, sampler_idx: Optional[int] = None, burn=0, thin=1
+        self, stat_name: str, sampler_idx: int | None = None, burn=0, thin=1
     ) -> np.ndarray:
         """Get sampler statistics from the trace.
 
@@ -187,7 +186,7 @@ class BaseTrace(IBaseTrace):
         for stats in sampler_vars:
             for key, dtype in stats.items():
                 if dtypes.setdefault(key, dtype) != dtype:
-                    raise ValueError("Sampler statistic %s appears with " "different types." % key)
+                    raise ValueError(f"Sampler statistic {key} appears with different types.")
 
         self.sampler_vars = sampler_vars
 
@@ -218,7 +217,7 @@ class BaseTrace(IBaseTrace):
             raise ValueError("Can only index with slice or integer")
 
     def get_sampler_stats(
-        self, stat_name: str, sampler_idx: Optional[int] = None, burn=0, thin=1
+        self, stat_name: str, sampler_idx: int | None = None, burn=0, thin=1
     ) -> np.ndarray:
         """Get sampler statistics from the trace.
 
@@ -248,7 +247,7 @@ class BaseTrace(IBaseTrace):
 
         sampler_idxs = [i for i, s in enumerate(self.sampler_vars) if stat_name in s]
         if not sampler_idxs:
-            raise KeyError("Unknown sampler stat %s" % stat_name)
+            raise KeyError(f"Unknown sampler stat {stat_name}")
 
         vals = np.stack(
             [self._get_sampler_stats(stat_name, i, burn, thin) for i in sampler_idxs], axis=-1
@@ -389,7 +388,7 @@ class MultiTrace:
             return self.get_values(var, burn=burn, thin=thin)
         if var in self.stat_names:
             return self.get_sampler_stats(var, burn=burn, thin=thin)
-        raise KeyError("Unknown variable %s" % var)
+        raise KeyError(f"Unknown variable {var}")
 
     _attrs = {"_straces", "varnames", "chains", "stat_names", "_report"}
 
@@ -442,7 +441,7 @@ class MultiTrace:
         burn: int = 0,
         thin: int = 1,
         combine: bool = True,
-        chains: Optional[Union[int, Sequence[int]]] = None,
+        chains: int | Sequence[int] | None = None,
         squeeze: bool = True,
     ) -> list[np.ndarray]:
         """Get values from traces.
@@ -481,9 +480,9 @@ class MultiTrace:
         burn: int = 0,
         thin: int = 1,
         combine: bool = True,
-        chains: Optional[Union[int, Sequence[int]]] = None,
+        chains: int | Sequence[int] | None = None,
         squeeze: bool = True,
-    ) -> Union[list[np.ndarray], np.ndarray]:
+    ) -> list[np.ndarray] | np.ndarray:
         """Get sampler statistics from the trace.
 
         Note: This implementation attempts to squeeze object arrays into a consistent dtype,
@@ -513,7 +512,7 @@ class MultiTrace:
             List or ndarray depending on parameters.
         """
         if stat_name not in self.stat_names:
-            raise KeyError("Unknown sampler statistic %s" % stat_name)
+            raise KeyError(f"Unknown sampler statistic {stat_name}")
 
         if chains is None:
             chains = self.chains
@@ -533,7 +532,7 @@ class MultiTrace:
         trace._report = self._report._slice(*idxs)
         return trace
 
-    def point(self, idx: int, chain: Optional[int] = None) -> dict[str, np.ndarray]:
+    def point(self, idx: int, chain: int | None = None) -> dict[str, np.ndarray]:
         """Return a dictionary of point values at `idx`.
 
         Parameters

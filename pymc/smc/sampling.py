@@ -13,19 +13,24 @@
 #   limitations under the License.
 
 import logging
-import multiprocessing as mp
+import multiprocessing
 import time
 import warnings
 
 from collections import defaultdict
-from itertools import repeat
-from typing import Any, Optional, Union
+from concurrent.futures import ProcessPoolExecutor, wait
+from typing import Any
 
 import cloudpickle
 import numpy as np
 
 from arviz import InferenceData
-from fastprogress.fastprogress import force_console_behavior, progress_bar
+from rich.progress import (
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 
 import pymc
 
@@ -35,7 +40,7 @@ from pymc.model import Model, modelcontext
 from pymc.sampling.parallel import _cpu_count
 from pymc.smc.kernels import IMH
 from pymc.stats.convergence import log_warnings, run_convergence_checks
-from pymc.util import RandomState, _get_seeds_per_chain
+from pymc.util import CustomProgress, RandomState, _get_seeds_per_chain
 
 
 def sample_smc(
@@ -52,7 +57,7 @@ def sample_smc(
     idata_kwargs=None,
     progressbar=True,
     **kernel_kwargs,
-) -> Union[InferenceData, MultiTrace]:
+) -> InferenceData | MultiTrace:
     r"""
     Sequential Monte Carlo based sampling.
 
@@ -209,14 +214,8 @@ def sample_smc(
 
     t1 = time.time()
 
-    if cores > 1:
-        results = run_chains_parallel(
-            chains, progressbar, _sample_smc_int, params, random_seed, kernel_kwargs, cores
-        )
-    else:
-        results = run_chains_sequential(
-            chains, progressbar, _sample_smc_int, params, random_seed, kernel_kwargs
-        )
+    results = run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores)
+
     (
         traces,
         sample_stats,
@@ -226,7 +225,7 @@ def sample_smc(
     trace = MultiTrace(traces)
 
     _t_sampling = time.time() - t1
-    sample_stats, idata = _save_sample_stats(
+    _, idata = _save_sample_stats(
         sample_settings,
         sample_stats,
         chains,
@@ -259,7 +258,7 @@ def _save_sample_stats(
     _t_sampling,
     idata_kwargs,
     model: Model,
-) -> tuple[Optional[Any], Optional[InferenceData]]:
+) -> tuple[Any | None, InferenceData | None]:
     sample_settings_dict = sample_settings[0]
     sample_settings_dict["_t_sampling"] = _t_sampling
     sample_stats_dict = sample_stats[0]
@@ -272,7 +271,7 @@ def _save_sample_stats(
                 value_list.append(chain_sample_stats[stat])
             sample_stats_dict[stat] = value_list
 
-    idata: Optional[InferenceData] = None
+    idata: InferenceData | None = None
     if not return_inferencedata:
         for stat, value in sample_stats_dict.items():
             setattr(trace.report, stat, value)
@@ -310,7 +309,8 @@ def _sample_smc_int(
     model,
     random_seed,
     chain,
-    progressbar=None,
+    progress_dict,
+    task_id,
     **kernel_kwargs,
 ):
     """Run one SMC instance."""
@@ -337,10 +337,6 @@ def _sample_smc_int(
         **kernel_kwargs,
     )
 
-    if progressbar:
-        progressbar.comment = f"{getattr(progressbar, 'base_comment', '')} Stage: 0 Beta: 0"
-        progressbar.update_bar(getattr(progressbar, "offset", 0) + 0)
-
     smc._initialize_kernel()
     smc.setup_kernel()
 
@@ -349,11 +345,7 @@ def _sample_smc_int(
     while smc.beta < 1:
         smc.update_beta_and_weights()
 
-        if progressbar:
-            progressbar.comment = (
-                f"{getattr(progressbar, 'base_comment', '')} Stage: {stage} Beta: {smc.beta:.3f}"
-            )
-            progressbar.update_bar(getattr(progressbar, "offset", 0) + int(smc.beta * 100))
+        progress_dict[task_id] = {"stage": stage, "beta": smc.beta}
 
         smc.resample()
         smc.tune()
@@ -375,47 +367,56 @@ def _sample_smc_int(
     return results
 
 
-def run_chains_parallel(chains, progressbar, to_run, params, random_seed, kernel_kwargs, cores):
-    # fastprogress HTML progress bar does not support multiprocessing
-    _, progress_bar = force_console_behavior()
-    pbar = progress_bar((), total=100, display=progressbar)
-    pbar.update(0)
-    pbars = [pbar] + [None] * (chains - 1)
+def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
+    with CustomProgress(
+        TextColumn("{task.description}"),
+        SpinnerColumn(),
+        TimeRemainingColumn(),
+        TextColumn("/"),
+        TimeElapsedColumn(),
+        TextColumn("{task.fields[status]}"),
+        disable=not progressbar,
+    ) as progress:
+        futures = []  # keep track of the jobs
+        with multiprocessing.Manager() as manager:
+            # this is the key - we share some state between our
+            # main process and our worker functions
+            _progress = manager.dict()
 
-    pool = mp.Pool(cores)
+            # "manually" (de)serialize params before/after multiprocessing
+            params = tuple(cloudpickle.dumps(p) for p in params)
+            kernel_kwargs = {key: cloudpickle.dumps(value) for key, value in kernel_kwargs.items()}
 
-    # "manually" (de)serialize params before/after multiprocessing
-    params = tuple(cloudpickle.dumps(p) for p in params)
-    kernel_kwargs = {key: cloudpickle.dumps(value) for key, value in kernel_kwargs.items()}
-    results = _starmap_with_kwargs(
-        pool,
-        to_run,
-        [(*params, random_seed[chain], chain, pbars[chain]) for chain in range(chains)],
-        repeat(kernel_kwargs),
-    )
-    results = tuple(cloudpickle.loads(r) for r in results)
-    pool.close()
-    pool.join()
-    return results
+            with ProcessPoolExecutor(max_workers=cores) as executor:
+                for c in range(chains):  # iterate over the jobs we need to run
+                    # set visible false so we don't have a lot of bars all at once:
+                    task_id = progress.add_task(f"Chain {c}", status="Stage: 0 Beta: 0")
+                    futures.append(
+                        executor.submit(
+                            _sample_smc_int,
+                            *params,
+                            random_seed[c],
+                            c,
+                            _progress,
+                            task_id,
+                            **kernel_kwargs,
+                        )
+                    )
 
+                # monitor the progress:
+                done = []
+                remaining = futures
+                while len(remaining) > 0:
+                    finished, remaining = wait(remaining, timeout=0.1)
+                    done.extend(finished)
+                    for task_id, update_data in _progress.items():
+                        stage = update_data["stage"]
+                        beta = update_data["beta"]
+                        # update the progress bar for this task:
+                        progress.update(
+                            status=f"Stage: {stage} Beta: {beta:.3f}",
+                            task_id=task_id,
+                            refresh=True,
+                        )
 
-def run_chains_sequential(chains, progressbar, to_run, params, random_seed, kernel_kwargs):
-    results = []
-    pbar = progress_bar((), total=100 * chains, display=progressbar)
-    pbar.update(0)
-    for chain in range(chains):
-        pbar.offset = 100 * chain
-        pbar.base_comment = f"Chain: {chain + 1}/{chains}"
-        results.append(to_run(*params, random_seed[chain], chain, pbar, **kernel_kwargs))
-    return results
-
-
-def _starmap_with_kwargs(pool, fn, args_iter, kwargs_iter):
-    # Helper function to allow kwargs with Pool.starmap
-    # Copied from https://stackoverflow.com/a/53173433/13311693
-    args_for_starmap = zip(repeat(fn), args_iter, kwargs_iter)
-    return pool.starmap(_apply_args_and_kwargs, args_for_starmap)
-
-
-def _apply_args_and_kwargs(fn, args, kwargs):
-    return fn(*args, **kwargs)
+        return tuple(cloudpickle.loads(r.result()) for r in done)

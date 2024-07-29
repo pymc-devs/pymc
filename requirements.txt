@@ -1,9 +1,10 @@
 arviz>=0.13.0
 cachetools>=4.2.1
 cloudpickle
-fastprogress>=0.2.0
 numpy>=1.15.0
 pandas>=0.24.0
-pytensor>=2.18.1,<2.19
+pytensor>=2.25.1,<2.26
+rich>=13.7.1
 scipy>=1.4.1
+threadpoolctl>=3.1.0,<4.0.0
 typing-extensions>=3.7.4

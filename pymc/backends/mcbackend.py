@@ -17,7 +17,7 @@ import logging
 import pickle
 
 from collections.abc import Mapping, Sequence
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 
 import hagelkorn
 import mcbackend as mcb
@@ -144,7 +144,7 @@ class ChainRecordAdapter(IBaseTrace):
         return values
 
     def get_sampler_stats(
-        self, stat_name: str, sampler_idx: Optional[int] = None, burn=0, thin=1
+        self, stat_name: str, sampler_idx: int | None = None, burn=0, thin=1
     ) -> np.ndarray:
         slc = slice(burn, None, thin)
         # When there's just one sampler, default to remove the sampler dimension
@@ -204,7 +204,7 @@ class ChainRecordAdapter(IBaseTrace):
 def make_runmeta_and_point_fn(
     *,
     initial_point: Mapping[str, np.ndarray],
-    step: Union[CompoundStep, BlockedStep],
+    step: CompoundStep | BlockedStep,
     model: Model,
 ) -> tuple[mcb.RunMeta, PointFunc]:
     variables, point_fn = get_variables_and_point_fn(model, initial_point)
@@ -254,7 +254,7 @@ def init_chain_adapters(
     backend: mcb.Backend,
     chains: int,
     initial_point: Mapping[str, np.ndarray],
-    step: Union[CompoundStep, BlockedStep],
+    step: CompoundStep | BlockedStep,
     model: Model,
 ) -> tuple[mcb.Run, list[ChainRecordAdapter]]:
     """Create an McBackend metadata description for the MCMC run.

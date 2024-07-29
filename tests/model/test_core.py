@@ -28,23 +28,29 @@ import pytensor
 import pytensor.sparse as sparse
 import pytensor.tensor as pt
 import pytest
+import scipy
 import scipy.sparse as sps
 import scipy.stats as st
 
 from pytensor.graph import graph_inputs
 from pytensor.raise_op import Assert
-from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.sharedvar import TensorSharedVariable
 from pytensor.tensor.variable import TensorConstant
 
 import pymc as pm
 
-from pymc import Deterministic, Model, Potential
+from pymc import Deterministic, Model, MvNormal, Potential
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.distributions import Normal, transforms
 from pymc.distributions.distribution import PartialObservedRV
-from pymc.distributions.transforms import log, simplex
+from pymc.distributions.transforms import (
+    ChainedTransform,
+    Interval,
+    LogTransform,
+    log,
+    ordered,
+    simplex,
+)
 from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import IntervalTransform
@@ -123,6 +129,34 @@ class TestBaseModel:
         assert m.d is model["one_more::d"]
         assert m["d"] is model["one_more::d"]
         assert m["one_more::d"] is model["one_more::d"]
+
+    def test_docstring_example(self):
+        with pm.Model(name="root") as root:
+            x = pm.Normal("x")  # Variable wil be named "root::x"
+
+            with pm.Model(name="first") as first:
+                # Variable will belong to root and first
+                y = pm.Normal("y", mu=x)  # Variable wil be named "root::first::y"
+
+            # Can pass parent model explicitly
+            with pm.Model(name="second", model=root) as second:
+                # Variable will belong to root and second
+                z = pm.Normal("z", mu=y)  # Variable wil be named "root::second::z"
+
+            # Set None for standalone model
+            with pm.Model(name="third", model=None) as third:
+                # Variable will belong to third only
+                w = pm.Normal("w")  # Variable wil be named "third::w"
+
+        assert x.name == "root::x"
+        assert y.name == "root::first::y"
+        assert z.name == "root::second::z"
+        assert w.name == "third::w"
+
+        assert set(root.basic_RVs) == {x, y, z}
+        assert set(first.basic_RVs) == {y}
+        assert set(second.basic_RVs) == {z}
+        assert set(third.basic_RVs) == {w}
 
 
 class TestNested:
@@ -529,6 +563,35 @@ def test_model_var_maps():
     assert model.rvs_to_transforms[x] is None
 
 
+class TestTransformArgs:
+    def test_transform_warning(self):
+        with pm.Model():
+            with pytest.warns(
+                UserWarning,
+                match="To disable default transform,"
+                " please use default_transform=None"
+                " instead of transform=None. Setting transform to"
+                " None will not have any effect in future.",
+            ):
+                a = pm.Normal("a", transform=None)
+
+    def test_transform_order(self):
+        with pm.Model() as model:
+            x = pm.Normal("x", transform=Interval(0, 1), default_transform=log)
+        transform = model.rvs_to_transforms[x]
+        assert isinstance(transform, ChainedTransform)
+        assert isinstance(transform.transform_list[0], LogTransform)
+        assert isinstance(transform.transform_list[1], Interval)
+
+    def test_default_transform_is_applied(self):
+        with pm.Model() as model1:
+            x1 = pm.LogNormal("x1", [0, 0], [1, 1], transform=ordered, default_transform=None)
+        with pm.Model() as model2:
+            x2 = pm.LogNormal("x2", [0, 0], [1, 1], transform=ordered)
+        assert np.isinf(model1.compile_logp()({"x1_ordered__": (-1, -1)}))
+        assert np.isfinite(model2.compile_logp()({"x2_chain__": (-1, -1)}))
+
+
 def test_make_obs_var():
     """
     Check returned values for `data` given known inputs to `as_tensor()`.
@@ -551,18 +614,18 @@ def test_make_obs_var():
 
     # The function requires data and RV dimensionality to be compatible
     with pytest.raises(ShapeError, match="Dimensionality of data and RV don't match."):
-        fake_model.make_obs_var(fake_distribution, np.ones((3, 3, 1)), None, None, None)
+        fake_model.make_obs_var(fake_distribution, np.ones((3, 3, 1)), None, None, None, None)
 
     # Check function behavior using the various inputs
     # dense, sparse: Ensure that the missing values are appropriately set to None
     # masked: a deterministic variable is returned
 
-    dense_output = fake_model.make_obs_var(fake_distribution, dense_input, None, None, None)
+    dense_output = fake_model.make_obs_var(fake_distribution, dense_input, None, None, None, None)
     assert dense_output == fake_distribution
     assert isinstance(fake_model.rvs_to_values[dense_output], TensorConstant)
     del fake_model.named_vars[fake_distribution.name]
 
-    sparse_output = fake_model.make_obs_var(fake_distribution, sparse_input, None, None, None)
+    sparse_output = fake_model.make_obs_var(fake_distribution, sparse_input, None, None, None, None)
     assert sparse_output == fake_distribution
     assert sparse.basic._is_sparse_variable(fake_model.rvs_to_values[sparse_output])
     del fake_model.named_vars[fake_distribution.name]
@@ -570,7 +633,7 @@ def test_make_obs_var():
     # Here the RandomVariable is split into observed/imputed and a Deterministic is returned
     with pytest.warns(ImputationWarning):
         masked_output = fake_model.make_obs_var(
-            fake_distribution, masked_array_input, None, None, None
+            fake_distribution, masked_array_input, None, None, None, None
         )
     assert masked_output != fake_distribution
     assert not isinstance(masked_output, RandomVariable)
@@ -583,7 +646,7 @@ def test_make_obs_var():
 
     # Test that setting total_size returns a MinibatchRandomVariable
     scaled_outputs = fake_model.make_obs_var(
-        fake_distribution, dense_input, None, None, total_size=100
+        fake_distribution, dense_input, None, None, None, total_size=100
     )
     assert scaled_outputs != fake_distribution
     assert isinstance(scaled_outputs.owner.op, MinibatchRandomVariable)
@@ -641,7 +704,7 @@ class TestShapeEvaluation:
                 "city": ["Sydney", "Las Vegas", "Düsseldorf"],
             }
         ) as pmodel:
-            pm.MutableData("budget", [1, 2, 3, 4], dims="year")
+            pm.Data("budget", [1, 2, 3, 4], dims="year")
             pm.Normal("untransformed", size=(1, 2))
             pm.Uniform("transformed", size=(7,))
             obs = pm.Uniform("observed", size=(3,), observed=[0.1, 0.2, 0.3])
@@ -746,232 +809,186 @@ def test_nested_model_coords():
     assert set(m2.named_vars_to_dims) < set(m1.named_vars_to_dims)
 
 
-def test_shapeerror_from_set_data_dimensionality():
-    with pm.Model() as pmodel:
-        pm.MutableData("m", np.ones((3,)), dims="one")
-        with pytest.raises(ValueError, match="must have 1 dimensions"):
-            pmodel.set_data("m", np.ones((3, 4)))
+class TestSetUpdateCoords:
+    def test_shapeerror_from_set_data_dimensionality(self):
+        with pm.Model() as pmodel:
+            pm.Data("m", np.ones((3,)), dims="one")
+            with pytest.raises(ValueError, match="must have 1 dimensions"):
+                pmodel.set_data("m", np.ones((3, 4)))
 
+    def test_resize_from_set_data_dim_with_coords(self):
+        with pm.Model(coords={"dim_with_coords": [1, 2]}) as pmodel:
+            pm.Data("m", [1, 2], dims=("dim_with_coords",))
+            # Does not resize dim
+            pmodel.set_data("m", [3, 4])
+            # Resizes, but also passes new coords
+            pmodel.set_data("m", [1, 2, 3], coords=dict(dim_with_coords=[1, 2, 3]))
 
-def test_shapeerror_from_resize_immutable_dim_from_RV():
-    """
-    Trying to resize an immutable dimension should raise a ShapeError.
-    Even if the variable being updated is a SharedVariable and has other
-    dimensions that are mutable.
-    """
-    with pm.Model(coords={"fixed": range(3)}) as pmodel:
-        pm.Normal("a", mu=[1, 2, 3], dims="fixed")
-        assert isinstance(pmodel.dim_lengths["fixed"], TensorVariable)
+            # Resizes, but does not pass new coords
+            with pytest.raises(ValueError, match="'m' variable already had 3"):
+                pm.set_data({"m": [1, 2, 3, 4]})
 
-        pm.MutableData("m", [[1, 2, 3]], dims=("one", "fixed"))
+    def test_resize_from_set_data_dim_without_coords(self):
+        with pm.Model() as pmodel:
+            # TODO: Either support dims without coords everywhere or don't. Why is it okay for Data but not RVs?
+            pm.Data("m", [1, 2], dims=("dim_without_coords",))
+            pmodel.set_data("m", [3, 4])
+            pmodel.set_data("m", [1, 2, 3])
 
-        # This is fine because the "fixed" dim is not resized
-        pmodel.set_data("m", [[1, 2, 3], [3, 4, 5]])
+    def test_resize_from_set_dim(self):
+        """Test the conscious re-sizing of dims created through add_coord() with coord value."""
+        with pm.Model(coords={"mdim": ["A", "B"]}) as pmodel:
+            a = pm.Normal("a", dims="mdim")
+        assert pmodel.coords["mdim"] == ("A", "B")
 
-    msg = "The 'm' variable already had 3 coord values defined for its fixed dimension"
-    with pytest.raises(ValueError, match=msg):
-        # Can't work because the "fixed" dimension is linked to a
-        # TensorVariable with constant shape.
-        # Note that the new data tries to change both dimensions
-        pmodel.set_data("m", [[1, 2], [3, 4]])
+        with pytest.raises(ValueError, match="has coord values"):
+            pmodel.set_dim("mdim", new_length=3)
 
+        with pytest.raises(ShapeError, match="does not match"):
+            pmodel.set_dim("mdim", new_length=3, coord_values=["A", "B"])
 
-def test_shapeerror_from_resize_immutable_dim_from_coords():
-    with pm.Model(coords={"immutable": [1, 2]}) as pmodel:
-        assert isinstance(pmodel.dim_lengths["immutable"], TensorConstant)
-        pm.MutableData("m", [1, 2], dims="immutable")
-        # Data can be changed
-        pmodel.set_data("m", [3, 4])
+        pmodel.set_dim("mdim", 3, ["A", "B", "C"])
+        assert pmodel.coords["mdim"] == ("A", "B", "C")
+        with pytensor.config.change_flags(cxx=""):
+            assert a.eval().shape == (3,)
 
-    with pytest.raises(ShapeError, match="`TensorConstant` stores its length"):
-        # But the length is linked to a TensorConstant
-        pmodel.set_data("m", [1, 2, 3], coords=dict(immutable=[1, 2, 3]))
+    def test_resize_from_set_data_and_set_dim(self):
+        with pm.Model(coords={"group": ["A", "B"]}) as m:
+            x = pm.Data("x", [0], dims="feature")
+            y = pm.Normal("y", x, 1, dims=("group", "feature"))
 
+        with pytensor.config.change_flags(cxx=""):
+            assert x.eval().shape == (1,)
+            assert y.eval().shape == (2, 1)
 
-def test_valueerror_from_resize_without_coords_update():
-    """
-    Resizing a mutable dimension that had coords,
-    without passing new coords raises a ValueError.
-    """
-    with pm.Model() as pmodel:
-        pmodel.add_coord("shared", [1, 2, 3], mutable=True)
-        pm.MutableData("m", [1, 2, 3], dims=("shared"))
-        with pytest.raises(ValueError, match="'m' variable already had 3"):
-            # tries to resize m but without passing coords so raise ValueError
-            pm.set_data({"m": [1, 2, 3, 4]})
+        m.set_data("x", [0, 1])
+        m.set_dim("group", new_length=3, coord_values=["A", "B", "C"])
+        with pytensor.config.change_flags(cxx=""):
+            assert x.eval().shape == (2,)
+            assert y.eval().shape == (3, 2)
 
+    def test_add_named_variable_checks_dim_name(self):
+        with pm.Model() as pmodel:
+            rv = pm.Normal.dist(mu=[1, 2])
 
-def test_coords_and_constantdata_create_immutable_dims():
-    """
-    When created from `pm.Model(coords=...)` or `pm.ConstantData`
-    a dimension should be resizable.
-    """
-    with pm.Model(coords={"group": ["A", "B"]}) as m:
-        x = pm.ConstantData("x", [0], dims="feature")
-        y = pm.Normal("y", x, 1, dims=("group", "feature"))
-    assert isinstance(m._dim_lengths["feature"], TensorConstant)
-    assert isinstance(m._dim_lengths["group"], TensorConstant)
-    assert x.eval().shape == (1,)
-    assert y.eval().shape == (2, 1)
+            # Checks that vars are named
+            with pytest.raises(ValueError, match="is unnamed"):
+                pmodel.add_named_variable(rv)
+            rv.name = "nomnom"
 
+            # Coords must be available already
+            with pytest.raises(ValueError, match="not specified in `coords`"):
+                pmodel.add_named_variable(rv, dims="nomnom")
+            pmodel.add_coord("nomnom", [1, 2])
 
-def test_add_coord_mutable_kwarg():
-    """
-    Checks resulting tensor type depending on mutable kwarg in add_coord.
-    """
-    with pm.Model() as m:
-        m.add_coord("fixed", values=[1], mutable=False)
-        m.add_coord("mutable1", values=[1, 2], mutable=True)
-        assert isinstance(m._dim_lengths["fixed"], TensorConstant)
-        assert isinstance(m._dim_lengths["mutable1"], TensorSharedVariable)
-        pm.MutableData("mdata", np.ones((1, 2, 3)), dims=("fixed", "mutable1", "mutable2"))
-        assert isinstance(m._dim_lengths["mutable2"], TensorVariable)
+            # No name collisions
+            with pytest.raises(ValueError, match="same name as"):
+                pmodel.add_named_variable(rv, dims="nomnom")
 
+            # This should work (regression test against #6335)
+            rv2 = rv[:, None]
+            rv2.name = "yumyum"
+            pmodel.add_named_variable(rv2, dims=("nomnom", None))
 
-def test_set_dim():
-    """Test the conscious re-sizing of dims created through add_coord()."""
-    with pm.Model() as pmodel:
-        pmodel.add_coord("fdim", mutable=False, length=1)
-        pmodel.add_coord("mdim", mutable=True, length=2)
-        a = pm.Normal("a", dims="mdim")
-    assert a.eval().shape == (2,)
+    def test_add_named_variable_checks_number_of_dims(self):
+        match = "dim labels were provided"
+        with pm.Model(coords={"bad": range(6)}) as m:
+            with pytest.raises(ValueError, match=match):
+                m.add_named_variable(pt.random.normal(size=(6, 6, 6), name="a"), dims=("bad",))
 
-    with pytest.raises(ValueError, match="is immutable"):
-        pmodel.set_dim("fdim", 3)
+            # "bad" is an iterable with 3 elements, but we treat strings as a single dim, so it's still invalid
+            with pytest.raises(ValueError, match=match):
+                m.add_named_variable(pt.random.normal(size=(6, 6, 6), name="b"), dims="bad")
 
-    pmodel.set_dim("mdim", 3)
-    assert a.eval().shape == (3,)
+    def test_rv_dims_type_check(self):
+        with pm.Model(coords={"a": range(5)}) as m:
+            with pytest.raises(TypeError, match="Dims must be string"):
+                x = pm.Normal("x", shape=(10, 5), dims=(None, "a"))
 
+    def test_none_coords_autonumbering(self):
+        # TODO: Either allow dims without coords everywhere or nowhere
+        with pm.Model() as m:
+            m.add_coord(name="a", values=None, length=3)
+            m.add_coord(name="b", values=range(-5, 0))
+            m.add_coord(name="c", values=None, length=7)
+            x = pm.Normal("x", dims=("a", "b", "c"))
+            prior = pm.sample_prior_predictive(draws=2).prior
+        assert prior["x"].shape == (1, 2, 3, 5, 7)
+        assert list(prior.coords["a"].values) == list(range(3))
+        assert list(prior.coords["b"].values) == list(range(-5, 0))
+        assert list(prior.coords["c"].values) == list(range(7))
 
-def test_set_dim_with_coords():
-    """Test the conscious re-sizing of dims created through add_coord() with coord value."""
-    with pm.Model() as pmodel:
-        pmodel.add_coord("mdim", mutable=True, length=2, values=["A", "B"])
-        a = pm.Normal("a", dims="mdim")
-    assert len(pmodel.coords["mdim"]) == 2
+    def test_set_data_indirect_resize_without_coords(self):
+        with pm.Model() as pmodel:
+            pmodel.add_coord("mdim", length=2)
+            pm.Data("mdata", [1, 2], dims="mdim")
 
-    with pytest.raises(ValueError, match="has coord values"):
-        pmodel.set_dim("mdim", new_length=3)
+        assert pmodel.dim_lengths["mdim"].get_value() == 2
+        assert pmodel.coords["mdim"] is None
 
-    with pytest.raises(ShapeError, match="does not match"):
-        pmodel.set_dim("mdim", new_length=3, coord_values=["A", "B"])
-
-    pmodel.set_dim("mdim", 3, ["A", "B", "C"])
-    assert a.eval().shape == (3,)
-    assert pmodel.coords["mdim"] == ("A", "B", "C")
-
-
-def test_add_named_variable_checks_dim_name():
-    with pm.Model() as pmodel:
-        rv = pm.Normal.dist(mu=[1, 2])
-
-        # Checks that vars are named
-        with pytest.raises(ValueError, match="is unnamed"):
-            pmodel.add_named_variable(rv)
-        rv.name = "nomnom"
-
-        # Coords must be available already
-        with pytest.raises(ValueError, match="not specified in `coords`"):
-            pmodel.add_named_variable(rv, dims="nomnom")
-        pmodel.add_coord("nomnom", [1, 2])
-
-        # No name collisions
-        with pytest.raises(ValueError, match="same name as"):
-            pmodel.add_named_variable(rv, dims="nomnom")
-
-        # This should work (regression test against #6335)
-        rv2 = rv[:, None]
-        rv2.name = "yumyum"
-        pmodel.add_named_variable(rv2, dims=("nomnom", None))
-
-
-def test_dims_type_check():
-    with pm.Model(coords={"a": range(5)}) as m:
-        with pytest.raises(TypeError, match="Dims must be string"):
-            x = pm.Normal("x", shape=(10, 5), dims=(None, "a"))
-
-
-def test_none_coords_autonumbering():
-    with pm.Model() as m:
-        m.add_coord(name="a", values=None, length=3)
-        m.add_coord(name="b", values=range(5))
-        x = pm.Normal("x", dims=("a", "b"))
-        prior = pm.sample_prior_predictive(samples=2).prior
-    assert prior["x"].shape == (1, 2, 3, 5)
-    assert list(prior.coords["a"].values) == list(range(3))
-    assert list(prior.coords["b"].values) == list(range(5))
-
-
-def test_set_data_indirect_resize():
-    with pm.Model() as pmodel:
-        pmodel.add_coord("mdim", mutable=True, length=2)
-        pm.MutableData("mdata", [1, 2], dims="mdim")
-
-    # First resize the dimension.
-    pmodel.dim_lengths["mdim"].set_value(3)
-    # Then change the data.
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        pmodel.set_data("mdata", [1, 2, 3])
-
-    # Now the other way around.
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        pmodel.set_data("mdata", [1, 2, 3, 4])
-
-
-def test_set_data_warns_on_resize_of_dims_defined_by_other_mutabledata():
-    with pm.Model() as pmodel:
-        pm.MutableData("m1", [1, 2], dims="mutable")
-        pm.MutableData("m2", [3, 4], dims="mutable")
-
-        # Resizing the non-defining variable first gives a warning
-        with pytest.warns(ShapeWarning, match="by another variable"):
-            pmodel.set_data("m2", [4, 5, 6])
-            pmodel.set_data("m1", [1, 2, 3])
-
-        # Resizing the definint variable first is silent
+        # First resize the dimension.
+        pmodel.dim_lengths["mdim"].set_value(3)
+        # Then change the data.
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            pmodel.set_data("m1", [1, 2])
-            pmodel.set_data("m2", [3, 4])
+            pmodel.set_data("mdata", [1, 2, 3])
 
+        # Now the other way around.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            pmodel.set_data("mdata", [1, 2, 3, 4])
 
-def test_set_data_indirect_resize_with_coords():
-    with pm.Model() as pmodel:
-        pmodel.add_coord("mdim", ["A", "B"], mutable=True, length=2)
-        pm.MutableData("mdata", [1, 2], dims="mdim")
+    def test_set_data_indirect_resize_with_coords(self):
+        with pm.Model() as pmodel:
+            pmodel.add_coord("mdim", ["A", "B"], length=2)
+            pm.Data("mdata", [1, 2], dims="mdim")
 
-    assert pmodel.coords["mdim"] == ("A", "B")
+        assert pmodel.coords["mdim"] == ("A", "B")
 
-    # First resize the dimension.
-    pmodel.set_dim("mdim", 3, ["A", "B", "C"])
-    assert pmodel.coords["mdim"] == ("A", "B", "C")
-    # Then change the data.
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        pmodel.set_data("mdata", [1, 2, 3])
+        # First resize the dimension.
+        pmodel.set_dim("mdim", 3, ["A", "B", "C"])
+        assert pmodel.coords["mdim"] == ("A", "B", "C")
+        # Then change the data.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            pmodel.set_data("mdata", [1, 2, 3])
 
-    # Now the other way around.
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        pmodel.set_data("mdata", [1, 2, 3, 4], coords=dict(mdim=["A", "B", "C", "D"]))
-    assert pmodel.coords["mdim"] == ("A", "B", "C", "D")
+        # Now the other way around.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            pmodel.set_data("mdata", [1, 2, 3, 4], coords=dict(mdim=["A", "B", "C", "D"]))
+        assert pmodel.coords["mdim"] == ("A", "B", "C", "D")
 
-    # This time with incorrectly sized coord values
-    with pytest.raises(ShapeError, match="new coordinate values"):
-        pmodel.set_data("mdata", [1, 2], coords=dict(mdim=[1, 2, 3]))
+        # This time with incorrectly sized coord values
+        with pytest.raises(ShapeError, match="new coordinate values"):
+            pmodel.set_data("mdata", [1, 2], coords=dict(mdim=[1, 2, 3]))
 
+    def test_set_data_warns_on_resize_of_dims_defined_by_other_data(self):
+        with pm.Model() as pmodel:
+            pm.Data("m1", [1, 2], dims="mutable")
+            pm.Data("m2", [3, 4], dims="mutable")
 
-def test_set_data_constant_shape_error():
-    with pm.Model() as pmodel:
-        x = pm.Normal("x", size=7)
-        pmodel.add_coord("weekday", length=x.shape[0])
-        pm.MutableData("y", np.arange(7), dims="weekday")
+            # Resizing the non-defining variable first gives a warning
+            with pytest.warns(ShapeWarning, match="by another variable"):
+                pmodel.set_data("m2", [4, 5, 6])
+                pmodel.set_data("m1", [1, 2, 3])
 
-    msg = "because the dimension was initialized from 'x'"
-    with pytest.raises(ShapeError, match=msg):
-        pmodel.set_data("y", np.arange(10))
+            # Resizing the defining variable first is silent
+            with warnings.catch_warnings():
+                warnings.simplefilter("error")
+                pmodel.set_data("m1", [1, 2])
+                pmodel.set_data("m2", [3, 4])
+
+    def test_set_data_constant_shape_error(self):
+        # TODO: Why allow such a complex scenario?
+        with pm.Model() as pmodel:
+            x = pm.Normal("x", size=7)
+            pmodel.add_coord("weekday", length=x.shape[0])
+            pm.Data("y", np.arange(7), dims="weekday")
+
+        msg = "because the dimension was initialized from 'x'"
+        with pytest.raises(ShapeError, match=msg):
+            pmodel.set_data("y", np.arange(10))
 
 
 @pytest.mark.parametrize("jacobian", [True, False])
@@ -1036,16 +1053,16 @@ def test_model_d2logp(jacobian):
     test_vals = np.array([0.0, -1.0])
     state = {"x": test_vals, "y_log__": test_vals}
 
-    expected_x_d2logp = expected_y_d2logp = np.eye(2)
+    expected_x_d2logp = expected_y_d2logp = -np.eye(2)
 
-    dlogps = m.compile_d2logp(jacobian=jacobian)(state)
+    dlogps = m.compile_d2logp(jacobian=jacobian, negate_output=False)(state)
     assert np.all(np.isclose(dlogps[:2, :2], expected_x_d2logp))
     assert np.all(np.isclose(dlogps[2:, 2:], expected_y_d2logp))
 
-    x_dlogp2 = m.compile_d2logp(vars=[x], jacobian=jacobian)(state)
+    x_dlogp2 = m.compile_d2logp(vars=[x], jacobian=jacobian, negate_output=False)(state)
     assert np.all(np.isclose(x_dlogp2, expected_x_d2logp))
 
-    y_dlogp2 = m.compile_d2logp(vars=[y], jacobian=jacobian)(state)
+    y_dlogp2 = m.compile_d2logp(vars=[y], jacobian=jacobian, negate_output=False)(state)
     assert np.all(np.isclose(y_dlogp2, expected_y_d2logp))
 
 
@@ -1063,7 +1080,7 @@ def test_determinsitic_with_dims():
     Test to check the passing of dims to the potential
     """
     with pm.Model(coords={"observed": range(10)}) as model:
-        x = pm.Normal("x", 0, 1)
+        x = pm.Normal("x", 0, 1, shape=(10,))
         y = pm.Deterministic("y", x**2, dims=("observed",))
     assert model.named_vars_to_dims == {"y": ("observed",)}
 
@@ -1073,7 +1090,7 @@ def test_potential_with_dims():
     Test to check the passing of dims to the potential
     """
     with pm.Model(coords={"observed": range(10)}) as model:
-        x = pm.Normal("x", 0, 1)
+        x = pm.Normal("x", 0, 1, shape=(10,))
         y = pm.Potential("y", x**2, dims=("observed",))
     assert model.named_vars_to_dims == {"y": ("observed",)}
 
@@ -1100,22 +1117,6 @@ def test_compile_fn():
     np.testing.assert_allclose(result_compute, result_expect)
 
 
-def test_model_pytensor_config():
-    assert pytensor.config.mode != "JAX"
-    with pytest.warns(FutureWarning, match="pytensor_config is deprecated"):
-        m = pm.Model(pytensor_config=dict(mode="JAX"))
-    with m:
-        assert pytensor.config.mode == "JAX"
-    assert pytensor.config.mode != "JAX"
-
-
-def test_deprecated_model_property():
-    m = pm.Model()
-    with pytest.warns(FutureWarning, match="Model.model property is deprecated"):
-        m_property = m.model
-    assert m is m_property
-
-
 def test_model_parent_set_programmatically():
     with pm.Model() as model:
         x = pm.Normal("x")
@@ -1123,7 +1124,18 @@ def test_model_parent_set_programmatically():
     with pm.Model(model=model):
         y = pm.Normal("y")
 
+    with model:
+        # Default inherits from model
+        with pm.Model():
+            z_in = pm.Normal("z_in")
+
+        # Explict None opts out of model context
+        with pm.Model(model=None):
+            z_out = pm.Normal("z_out")
+
     assert "y" in model.named_vars
+    assert "z_in" in model.named_vars
+    assert "z_out" not in model.named_vars
 
 
 class TestModelContext:
@@ -1528,10 +1540,38 @@ class TestImputationMissingData:
         """
         with Model() as m:
             mu = pm.TruncatedNormal("mu", mu=1, sigma=2, lower=0)
-            x = pm.TruncatedNormal(
-                "x", mu=mu, sigma=0.5, lower=0, observed=np.array([0.1, 0.2, 0.5, np.nan, np.nan])
-            )
+            with pytest.warns(ImputationWarning):
+                x = pm.TruncatedNormal(
+                    "x",
+                    mu=mu,
+                    sigma=0.5,
+                    lower=0,
+                    observed=np.array([0.1, 0.2, 0.5, np.nan, np.nan]),
+                )
         m.check_start_vals(m.initial_point())
+
+    def test_coordinates(self):
+        # Regression test for https://github.com/pymc-devs/pymc/issues/7304
+
+        coords = {"trial": range(30), "feature": range(2)}
+        observed = np.zeros((30, 2))
+        observed[0, 0] = np.nan
+
+        with Model(coords=coords) as model:
+            with pytest.warns(ImputationWarning):
+                MvNormal(
+                    "y",
+                    mu=np.zeros(2),
+                    cov=np.eye(2),
+                    observed=observed,
+                    dims=("trial", "feature"),
+                )
+
+        logp_fn = model.compile_logp()
+        np.testing.assert_allclose(
+            logp_fn({"y_unobserved": [0]}),
+            scipy.stats.multivariate_normal.logpdf([0, 0], cov=np.eye(2)) * 30,
+        )
 
 
 class TestShared:
@@ -1616,7 +1656,7 @@ class TestModelDebug:
             # var dlogp is 0 or 1 without a likelihood
             assert "No problems found" in out
         else:
-            assert "The parameters evaluate to:\n0: 0.0\n1: [ 1. -1.  1.]" in out
+            assert "The parameters evaluate to:\n0: [0.]\n1: [ 1. -1.  1.]" in out
             if fn == "logp":
                 assert "This does not respect one of the following constraints: sigma > 0" in out
             else:
@@ -1643,7 +1683,7 @@ class TestModelDebug:
     def test_invalid_value(self, capfd):
         with pm.Model() as m:
             x = pm.Normal("x", [1, -1, 1])
-            y = pm.HalfNormal("y", tau=pm.math.abs(x), initval=[-1, 1, -1], transform=None)
+            y = pm.HalfNormal("y", tau=pm.math.abs(x), initval=[-1, 1, -1], default_transform=None)
         m.debug()
 
         out, _ = capfd.readouterr()

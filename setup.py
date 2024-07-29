@@ -16,9 +16,9 @@
 from codecs import open
 from os.path import dirname, join, realpath
 
-from setuptools import find_packages, setup
-
 import versioneer
+
+from setuptools import find_packages, setup
 
 DESCRIPTION = "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with PyTensor"
 AUTHOR = "PyMC Developers"
@@ -30,9 +30,9 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: Apache Software License",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering",
@@ -70,7 +70,7 @@ if __name__ == "__main__":
         # Also see MANIFEST.in
         # package_data={'docs': ['*']},
         classifiers=classifiers,
-        python_requires=">=3.9",
+        python_requires=">=3.10",
         install_requires=install_reqs,
         tests_require=test_reqs,
     )

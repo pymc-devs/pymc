@@ -16,7 +16,7 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-from pymc import ConstantData, Model, Normal, sample
+from pymc import Data, Model, Normal, sample
 
 
 @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
@@ -26,8 +26,8 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
 
     with Model():
         x = Normal("x", 100, 5)
-        y = ConstantData("y", [1, 2, 3, 4])
-        ConstantData("z", [100, 190, 310, 405])
+        y = Data("y", [1, 2, 3, 4])
+        Data("z", [100, 190, 310, 405])
 
         Normal("L", mu=x, sigma=0.1, observed=y)
 
@@ -44,10 +44,14 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
         idata1 = sample(**kwargs)
         idata2 = sample(**kwargs)
 
+        reference_kwargs = kwargs.copy()
+        reference_kwargs["nuts_sampler"] = "pymc"
+        idata_reference = sample(**reference_kwargs)
+
     warns = {
         (warn.category, warn.message.args[0])
         for warn in recwarn
-        if warn.category is not FutureWarning
+        if warn.category not in (FutureWarning, DeprecationWarning, RuntimeWarning)
     }
     expected = set()
     if nuts_sampler == "nutpie":
@@ -64,7 +68,10 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
     assert "L" in idata1.observed_data
     assert idata1.posterior.chain.size == 2
     assert idata1.posterior.draw.size == 500
+    assert idata1.posterior.tuning_steps == 500
     np.testing.assert_array_equal(idata1.posterior.x, idata2.posterior.x)
+
+    assert idata_reference.posterior.attrs.keys() == idata1.posterior.attrs.keys()
 
 
 def test_step_args():

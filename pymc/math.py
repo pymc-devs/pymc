@@ -73,6 +73,7 @@ from pytensor.tensor import (
     ones_like,
     or_,
     prod,
+    round,
     sgn,
     sigmoid,
     sin,
@@ -178,6 +179,7 @@ __all__ = [
     "expand_packed_triangular",
     "batched_diag",
     "block_diagonal",
+    "round",
 ]
 
 
@@ -272,20 +274,6 @@ def kron_diag(*diags):
     return reduce(flat_outer, diags)
 
 
-def round(*args, **kwargs):
-    """
-    Temporary function to silence round warning in PyTensor. Please remove
-    when the warning disappears.
-    """
-    kwargs["mode"] = "half_to_even"
-    return pt.round(*args, **kwargs)
-
-
-def tround(*args, **kwargs):
-    warnings.warn("tround is deprecated. Use round instead.")
-    return round(*args, **kwargs)
-
-
 def logdiffexp(a, b):
     """log(exp(a) - exp(b))"""
     return a + pt.log1mexp(b - a)
@@ -293,6 +281,11 @@ def logdiffexp(a, b):
 
 def logdiffexp_numpy(a, b):
     """log(exp(a) - exp(b))"""
+    warnings.warn(
+        "pymc.math.logdiffexp_numpy is being deprecated.",
+        FutureWarning,
+        stacklevel=2,
+    )
     return a + log1mexp_numpy(b - a, negative_input=True)
 
 
@@ -341,6 +334,11 @@ def log1mexp_numpy(x, *, negative_input=False):
     For details, see
     https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
     """
+    warnings.warn(
+        "pymc.math.log1mexp_numpy is being deprecated.",
+        FutureWarning,
+        stacklevel=2,
+    )
     x = np.asarray(x, dtype="float")
 
     if not negative_input:

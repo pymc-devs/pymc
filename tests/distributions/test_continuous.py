@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import functools as ft
-import warnings
 
 import numpy as np
 import numpy.testing as npt
@@ -85,7 +84,7 @@ class TestBoundedContinuous:
         with pm.Model() as model:
             pm.TruncatedNormal(bounded_rv_name, mu=1, sigma=2, lower=None, upper=3)
         (
-            (_, _, _, _, _, lower, upper),
+            (_, _, _, _, lower, upper),
             lower_interval,
             upper_interval,
         ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
@@ -99,7 +98,7 @@ class TestBoundedContinuous:
         with pm.Model() as model:
             pm.TruncatedNormal(bounded_rv_name, mu=1, sigma=2, lower=-2, upper=None)
         (
-            (_, _, _, _, _, lower, upper),
+            (_, _, _, _, lower, upper),
             lower_interval,
             upper_interval,
         ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
@@ -119,14 +118,14 @@ class TestBoundedContinuous:
                 upper=None,
             )
         (
-            (_, _, _, _, _, lower, upper),
+            (_, _, _, _, lower, upper),
             lower_interval,
             upper_interval,
         ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
 
-        assert np.array_equal(lower.value, [-1, 0])
-        assert upper.value == np.inf
-        assert np.array_equal(lower_interval.value, [-1, 0])
+        assert np.array_equal(lower.eval(), [-1, 0])
+        assert np.array_equal(upper.eval(), [np.inf])
+        assert np.array_equal(lower_interval.eval(), [-1, 0])
         assert upper_interval is None
 
     def test_lower_bounded_broadcasted(self):
@@ -140,14 +139,14 @@ class TestBoundedContinuous:
                 upper=np.array([np.inf, np.inf]),
             )
         (
-            (_, _, _, _, _, lower, upper),
+            (_, _, _, _, lower, upper),
             lower_interval,
             upper_interval,
         ) = self.get_dist_params_and_interval_bounds(model, bounded_rv_name)
 
-        assert lower.value == -1
-        assert np.array_equal(upper.value, [np.inf, np.inf])
-        assert lower_interval.value == -1
+        assert np.array_equal(lower.eval(), [-1])
+        assert np.array_equal(upper.eval(), [np.inf, np.inf])
+        assert np.array_equal(lower_interval.eval(), [-1])
         assert upper_interval is None
 
 
@@ -371,7 +370,7 @@ class TestMatchesScipy:
         # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or
         # http://www.gamlss.org/.
         with pm.Model() as model:
-            pm.Wald("wald", mu=mu, lam=lam, phi=phi, alpha=alpha, transform=None)
+            pm.Wald("wald", mu=mu, lam=lam, phi=phi, alpha=alpha, default_transform=None)
         point = {"wald": value}
         decimals = select_by_precision(float64=6, float32=1)
         npt.assert_almost_equal(
@@ -412,13 +411,23 @@ class TestMatchesScipy:
             lambda value, alpha, beta: st.beta.logcdf(value, alpha, beta),
         )
 
+    def test_beta_icdf(self):
+        check_icdf(
+            pm.Beta,
+            {"alpha": Rplus, "beta": Rplus},
+            lambda q, alpha, beta: st.beta.ppf(q, alpha, beta),
+        )
+
     def test_kumaraswamy(self):
         # Scipy does not have a built-in Kumaraswamy
         def scipy_log_pdf(value, a, b):
             return np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value**a)
 
+        def log1mexp(x):
+            return np.log1p(-np.exp(x)) if x < np.log(0.5) else np.log(-np.expm1(x))
+
         def scipy_log_cdf(value, a, b):
-            return pm.math.log1mexp_numpy(b * np.log1p(-(value**a)), negative_input=True)
+            return log1mexp(b * np.log1p(-(value**a)))
 
         check_logp(
             pm.Kumaraswamy,
@@ -540,6 +549,16 @@ class TestMatchesScipy:
             lambda value, nu, mu, sigma: st.t.logpdf(value, nu, mu, sigma),
         )
 
+    def test_skewstudentt_logp(self):
+        # NOTE: Test with less extreme positive numbers
+        rplusnonzero = Domain([0, 0.01, 0.5, 2, 15, 69, np.inf])
+        check_logp(
+            pm.SkewStudentT,
+            R,
+            {"a": rplusnonzero, "b": rplusnonzero, "mu": R, "sigma": rplusnonzero},
+            lambda value, a, b, mu, sigma: st.jf_skew_t.logpdf(value, a, b, mu, sigma),
+        )
+
     @pytest.mark.skipif(
         condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
@@ -556,6 +575,32 @@ class TestMatchesScipy:
             R,
             {"nu": Rplus, "mu": R, "sigma": Rplus},
             lambda value, nu, mu, sigma: st.t.logcdf(value, nu, mu, sigma),
+        )
+
+    def test_studentt_icdf(self):
+        check_icdf(
+            pm.StudentT,
+            {"nu": Rplusbig, "mu": R, "sigma": Rplusbig},
+            lambda q, nu, mu, sigma: st.t.ppf(q, nu, mu, sigma),
+        )
+
+    @pytest.mark.skipif(
+        condition=(pytensor.config.floatX == "float32"),
+        reason="Fails on float32 due to numerical issues",
+    )
+    def test_skewstudentt_logcdf(self):
+        check_logcdf(
+            pm.SkewStudentT,
+            R,
+            {"a": Rplus, "b": Rplus, "mu": R, "sigma": Rplusbig},
+            lambda value, a, b, mu, sigma: st.jf_skew_t.logcdf(value, a, b, mu, sigma),
+        )
+
+    def test_skewstudentt_icdf(self):
+        check_icdf(
+            pm.SkewStudentT,
+            {"a": Rplusbig, "b": Rplusbig, "mu": R, "sigma": Rplusbig},
+            lambda q, a, b, mu, sigma: st.jf_skew_t.ppf(q, a, b, mu, sigma),
         )
 
     def test_cauchy(self):
@@ -622,6 +667,13 @@ class TestMatchesScipy:
             Rplus,
             {"alpha": Rplusbig, "beta": Rplusbig},
             lambda value, alpha, beta: st.gamma.logcdf(value, alpha, scale=1.0 / beta),
+        )
+
+    def test_gamma_icdf(self):
+        check_icdf(
+            pm.Gamma,
+            {"alpha": Rplusbig, "beta": Rplusbig},
+            lambda q, alpha, beta: st.gamma.ppf(q, alpha, scale=1.0 / beta),
         )
 
     def test_inverse_gamma_logp(self):
@@ -998,26 +1050,45 @@ class TestMatchesScipy:
         assert np.isinf(logp[2])
 
     def test_get_tau_sigma(self):
-        # Fail on warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
+        sigma = np.array(2)
+        tau, _ = get_tau_sigma(sigma=sigma)
+        npt.assert_almost_equal(tau.eval(), 1.0 / sigma**2)
 
-            sigma = np.array(2)
-            npt.assert_almost_equal(get_tau_sigma(sigma=sigma), [1.0 / sigma**2, sigma])
+        tau = np.array(2)
+        _, sigma = get_tau_sigma(tau=tau)
+        npt.assert_almost_equal(sigma.eval(), tau**-0.5)
 
-            tau = np.array(2)
-            npt.assert_almost_equal(get_tau_sigma(tau=tau), [tau, tau**-0.5])
+        tau, _ = get_tau_sigma(sigma=pt.constant(-2))
+        npt.assert_almost_equal(tau.eval(), -0.25)
 
-            tau, _ = get_tau_sigma(sigma=pt.constant(-2))
-            npt.assert_almost_equal(tau.eval(), -0.25)
+        _, sigma = get_tau_sigma(tau=pt.constant(-2))
+        npt.assert_almost_equal(sigma.eval(), -1.0 / np.sqrt(2.0))
 
-            _, sigma = get_tau_sigma(tau=pt.constant(-2))
-            npt.assert_almost_equal(sigma.eval(), -np.sqrt(1 / 2))
+        sigma = [1, 2]
+        tau, _ = get_tau_sigma(sigma=sigma)
+        npt.assert_almost_equal(tau.eval(), 1.0 / np.array(sigma) ** 2)
 
-            sigma = [1, 2]
-            npt.assert_almost_equal(
-                get_tau_sigma(sigma=sigma), [1.0 / np.array(sigma) ** 2, np.array(sigma)]
-            )
+        # Test null arguments
+        tau, sigma = get_tau_sigma()
+        npt.assert_almost_equal(tau.eval(), 1.0)
+        npt.assert_almost_equal(sigma.eval(), 1.0)
+
+        # Test exception upon passing both sigma and tau
+        msg = "Can't pass both tau and sigma"
+        with pytest.raises(ValueError, match=msg):
+            _, _ = get_tau_sigma(sigma=1.0, tau=1.0)
+
+        # These are regression test for #6988: Check that get_tau_sigma works
+        # for lists of tensors
+        sigma = [pt.constant(2), pt.constant(2)]
+        expect_tau = np.array([0.25, 0.25])
+        tau, _ = get_tau_sigma(sigma=sigma)
+        npt.assert_almost_equal(tau.eval(), expect_tau)
+
+        tau = [pt.constant(2), pt.constant(2)]
+        expect_sigma = np.array([2.0, 2.0]) ** -0.5
+        _, sigma = get_tau_sigma(tau=tau)
+        npt.assert_almost_equal(sigma.eval(), expect_sigma)
 
     @pytest.mark.parametrize(
         "value,mu,sigma,nu,logp",
@@ -1206,6 +1277,27 @@ class TestMoments:
     def test_studentt_support_point(self, mu, nu, sigma, size, expected):
         with pm.Model() as model:
             pm.StudentT("x", mu=mu, nu=nu, sigma=sigma, size=size)
+        assert_support_point_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "a, b, mu, sigma, size, expected",
+        [
+            (1, 1, 0, 1, None, 0),
+            (np.ones(5), np.ones(5), 0, 1, None, np.zeros(5)),
+            (10, 10, np.arange(5), np.arange(1, 6), None, np.arange(5)),
+            (
+                10,
+                10,
+                np.arange(5),
+                np.arange(1, 6),
+                (2, 5),
+                np.full((2, 5), np.arange(5)),
+            ),
+        ],
+    )
+    def test_skewstudentt_support_point(self, a, b, mu, sigma, size, expected):
+        with pm.Model() as model:
+            pm.SkewStudentT("x", a=a, b=b, mu=mu, sigma=sigma, size=size)
         assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
@@ -1752,9 +1844,7 @@ class TestAsymmetricLaplace(BaseTestDistributionRandom):
         return draws
 
     def seeded_asymmetriclaplace_rng_fn(self):
-        uniform_rng_fct = ft.partial(
-            getattr(np.random.RandomState, "uniform"), self.get_random_state()
-        )
+        uniform_rng_fct = self.get_random_state().uniform
         return ft.partial(self.asymmetriclaplace_rng_fn, uniform_rng_fct=uniform_rng_fct)
 
     pymc_dist = pm.AsymmetricLaplace
@@ -1788,12 +1878,8 @@ class TestExGaussian(BaseTestDistributionRandom):
         return normal_rng_fct(mu, sigma, size=size) + exponential_rng_fct(scale=nu, size=size)
 
     def seeded_exgaussian_rng_fn(self):
-        normal_rng_fct = ft.partial(
-            getattr(np.random.RandomState, "normal"), self.get_random_state()
-        )
-        exponential_rng_fct = ft.partial(
-            getattr(np.random.RandomState, "exponential"), self.get_random_state()
-        )
+        normal_rng_fct = self.get_random_state().normal
+        exponential_rng_fct = self.get_random_state().exponential
         return ft.partial(
             self.exgaussian_rng_fn,
             normal_rng_fct=normal_rng_fct,
@@ -1854,6 +1940,19 @@ class TestHalfStudentT(BaseTestDistributionRandom):
     ]
 
 
+class TestSkewStudentT(BaseTestDistributionRandom):
+    pymc_dist = pm.SkewStudentT
+    pymc_dist_params = {"a": 5.0, "b": 5.0, "mu": -1.0, "sigma": 2.0}
+    expected_rv_op_params = {"a": 5.0, "b": 5.0, "mu": -1.0, "sigma": 2.0}
+    reference_dist_params = {"a": 5.0, "b": 5.0, "loc": -1.0, "scale": 2.0}
+    reference_dist = seeded_scipy_distribution_builder("jf_skew_t")
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
+
 class TestMoyal(BaseTestDistributionRandom):
     pymc_dist = pm.Moyal
     pymc_dist_params = {"mu": 0.0, "sigma": 1.0}
@@ -1872,9 +1971,7 @@ class TestKumaraswamy(BaseTestDistributionRandom):
         return (1 - (1 - uniform_rng_fct(size=size)) ** (1 / b)) ** (1 / a)
 
     def seeded_kumaraswamy_rng_fn(self):
-        uniform_rng_fct = ft.partial(
-            getattr(np.random.RandomState, "uniform"), self.get_random_state()
-        )
+        uniform_rng_fct = self.get_random_state().uniform
         return ft.partial(self.kumaraswamy_rng_fn, uniform_rng_fct=uniform_rng_fct)
 
     pymc_dist = pm.Kumaraswamy
@@ -1944,7 +2041,7 @@ class TestTruncatedNormalUpperTau(BaseTestDistributionRandom):
 class TestTruncatedNormalUpperArray(BaseTestDistributionRandom):
     pymc_dist = pm.TruncatedNormal
     lower, upper, mu, tau = (
-        np.array([-np.inf, -np.inf]),
+        np.array([-np.inf]),
         np.array([3, 2]),
         np.array([0, 0]),
         np.array(
@@ -2042,7 +2139,7 @@ class TestStudentTLam(BaseTestDistributionRandom):
     lam, sigma = get_tau_sigma(tau=2.0)
     pymc_dist_params = {"nu": 5.0, "mu": -1.0, "lam": lam}
     expected_rv_op_params = {"nu": 5.0, "mu": -1.0, "lam": sigma}
-    reference_dist_params = {"df": 5.0, "loc": -1.0, "scale": sigma}
+    reference_dist_params = {"df": 5.0, "loc": -1.0, "scale": sigma.eval()}
     reference_dist = seeded_scipy_distribution_builder("t")
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
@@ -2311,9 +2408,7 @@ class TestWeibull(BaseTestDistributionRandom):
         return beta * std_weibull_rng_fct(alpha, size=size)
 
     def seeded_weibul_rng_fn(self):
-        std_weibull_rng_fct = ft.partial(
-            getattr(np.random.RandomState, "weibull"), self.get_random_state()
-        )
+        std_weibull_rng_fct = self.get_random_state().weibull
         return ft.partial(self.weibull_rng_fn, std_weibull_rng_fct=std_weibull_rng_fct)
 
     pymc_dist = pm.Weibull
@@ -2326,6 +2421,14 @@ class TestWeibull(BaseTestDistributionRandom):
         "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
+
+    def test_rng_different_shapes(self):
+        # See issue #7220
+        rng = np.random.default_rng(123)
+        alpha = np.abs(rng.normal(size=5))
+        beta = np.abs(rng.normal(size=(3, 1)))
+        draws = pm.draw(pm.Weibull.dist(alpha, beta), random_seed=rng)
+        assert len(np.unique(draws)) == draws.size
 
 
 @pytest.mark.skipif(

@@ -433,7 +433,7 @@ class TestMixture:
         cov2 = np.diag([2.5, 3.5])
         obs = np.asarray([[0.5, 0.5], mu1, mu2])
         with Model() as model:
-            w = Dirichlet("w", floatX(np.ones(2)), transform=None, shape=(2,))
+            w = Dirichlet("w", floatX(np.ones(2)), default_transform=None, shape=(2,))
             mvncomp1 = MvNormal.dist(mu=mu1, cov=cov1)
             mvncomp2 = MvNormal.dist(mu=mu2, cov=cov2)
             y = Mixture("x_obs", w, [mvncomp1, mvncomp2], observed=obs)
@@ -561,7 +561,7 @@ class TestMixture:
 
         n_samples = 30
         with model:
-            prior = sample_prior_predictive(samples=n_samples, return_inferencedata=False)
+            prior = sample_prior_predictive(draws=n_samples, return_inferencedata=False)
             ppc = sample_posterior_predictive(
                 n_samples * [self.get_initial_point(model)], return_inferencedata=False
             )
@@ -607,7 +607,7 @@ class TestMixture:
 
         n_samples = 20
         with model:
-            prior = sample_prior_predictive(samples=n_samples, return_inferencedata=False)
+            prior = sample_prior_predictive(draws=n_samples, return_inferencedata=False)
             ppc = sample_posterior_predictive(
                 n_samples * [self.get_initial_point(model)], return_inferencedata=False
             )
@@ -630,19 +630,27 @@ class TestMixture:
         with Model() as model:
             # mixtures components
             g_comp = Normal.dist(
-                mu=Exponential("mu_g", lam=1.0, shape=nbr, transform=None), sigma=1, shape=nbr
+                mu=Exponential("mu_g", lam=1.0, shape=nbr, default_transform=None),
+                sigma=1,
+                shape=nbr,
             )
             l_comp = LogNormal.dist(
-                mu=Exponential("mu_l", lam=1.0, shape=nbr, transform=None), sigma=1, shape=nbr
+                mu=Exponential("mu_l", lam=1.0, shape=nbr, default_transform=None),
+                sigma=1,
+                shape=nbr,
             )
             # weight vector for the mixtures
-            g_w = Dirichlet("g_w", a=floatX(np.ones(nbr) * 0.0000001), transform=None, shape=(nbr,))
-            l_w = Dirichlet("l_w", a=floatX(np.ones(nbr) * 0.0000001), transform=None, shape=(nbr,))
+            g_w = Dirichlet(
+                "g_w", a=floatX(np.ones(nbr) * 0.0000001), default_transform=None, shape=(nbr,)
+            )
+            l_w = Dirichlet(
+                "l_w", a=floatX(np.ones(nbr) * 0.0000001), default_transform=None, shape=(nbr,)
+            )
             # mixture components
             g_mix = Mixture.dist(w=g_w, comp_dists=g_comp)
             l_mix = Mixture.dist(w=l_w, comp_dists=l_comp)
             # mixture of mixtures
-            mix_w = Dirichlet("mix_w", a=floatX(np.ones(2)), transform=None, shape=(2,))
+            mix_w = Dirichlet("mix_w", a=floatX(np.ones(2)), default_transform=None, shape=(2,))
             mix = Mixture("mix", w=mix_w, comp_dists=[g_mix, l_mix], observed=np.exp(norm_x))
 
         test_point = model.initial_point()
@@ -820,10 +828,8 @@ class TestNormalMixture:
             mus = Normal("mus", shape=comp_shape)
             taus = Gamma("taus", alpha=1, beta=1, shape=comp_shape)
             ws = Dirichlet("ws", np.ones(ncomp), shape=(ncomp,))
-            mixture0 = NormalMixture("m", w=ws, mu=mus, tau=taus, shape=nd, comp_shape=comp_shape)
-            obs0 = NormalMixture(
-                "obs", w=ws, mu=mus, tau=taus, comp_shape=comp_shape, observed=observed
-            )
+            mixture0 = NormalMixture("m", w=ws, mu=mus, tau=taus, shape=nd)
+            obs0 = NormalMixture("obs", w=ws, mu=mus, tau=taus, observed=observed)
 
         with Model() as model1:
             mus = Normal("mus", shape=comp_shape)
@@ -867,7 +873,6 @@ class TestNormalMixture:
                 "mu": Domain([[0.05, 2.5], [-5.0, 1.0]], edges=(None, None)),
                 "sigma": Domain([[1, 1], [1.5, 2.0]], edges=(None, None)),
             },
-            extra_args={"comp_shape": 2},
             size=1000,
             ref_rand=ref_rand,
         )
@@ -878,7 +883,6 @@ class TestNormalMixture:
                 "mu": Domain([[-5.0, 1.0, 2.5]], edges=(None, None)),
                 "sigma": Domain([[1.5, 2.0, 3.0]], edges=(None, None)),
             },
-            extra_args={"comp_shape": 3},
             size=1000,
             ref_rand=ref_rand,
         )
@@ -902,7 +906,6 @@ class TestMixtureVsLatent:
                 w=np.ones(npop) / npop,
                 mu=mus,
                 sigma=1e-5,
-                comp_shape=(nd, npop),
                 shape=nd,
             )
             z = Categorical("z", p=np.ones(npop) / npop, shape=nd)
@@ -1033,7 +1036,7 @@ class TestMixtureSameFamily:
                 comp_dists=comp_dists,
                 shape=(*batch_shape, 3),
             )
-            prior = sample_prior_predictive(samples=self.n_samples, return_inferencedata=False)
+            prior = sample_prior_predictive(draws=self.n_samples, return_inferencedata=False)
 
         assert prior["mixture"].shape == (self.n_samples, *batch_shape, 3)
         assert draw(mixture, draws=self.size).shape == (self.size, *batch_shape, 3)
@@ -1065,7 +1068,7 @@ class TestMixtureSameFamily:
         with Model() as model:
             comp_dists = MvNormal.dist(mu=mu, chol=chol, shape=(self.mixture_comps, 3))
             mixture = Mixture("mixture", w=w, comp_dists=comp_dists, shape=(3,))
-            prior = sample_prior_predictive(samples=self.n_samples, return_inferencedata=False)
+            prior = sample_prior_predictive(draws=self.n_samples, return_inferencedata=False)
 
         assert prior["mixture"].shape == (self.n_samples, 3)
         assert draw(mixture, draws=self.size).shape == (self.size, 3)
@@ -1089,7 +1092,7 @@ class TestMixtureSameFamily:
             mu = Gamma("mu", 1.0, 1.0, shape=2)
             comp_dists = Poisson.dist(mu, shape=2)
             mix = Mixture("mix", w=np.ones(2) / 2, comp_dists=comp_dists, shape=(1000,))
-            prior = sample_prior_predictive(samples=self.n_samples, return_inferencedata=False)
+            prior = sample_prior_predictive(draws=self.n_samples, return_inferencedata=False)
 
         assert prior["mix"].shape == (self.n_samples, 1000)
 
@@ -1311,9 +1314,9 @@ class TestMixtureDefaultTransforms:
         with Model() as model:
             lower = Normal("lower", 0.5)
             upper = Uniform("upper", 0, 1)
-            uniform = Uniform("uniform", -pt.abs(lower), pt.abs(upper), transform=None)
+            uniform = Uniform("uniform", -pt.abs(lower), pt.abs(upper), default_transform=None)
             triangular = Triangular(
-                "triangular", -pt.abs(lower), pt.abs(upper), c=0.25, transform=None
+                "triangular", -pt.abs(lower), pt.abs(upper), c=0.25, default_transform=None
             )
             comp_dists = [
                 Uniform.dist(-pt.abs(lower), pt.abs(upper)),
@@ -1339,7 +1342,7 @@ class TestMixtureDefaultTransforms:
             halfnorm = HalfNormal("halfnorm")
             comp_dists = [HalfNormal.dist(), HalfNormal.dist()]
             mix_transf = Mixture("mix_transf", w=[0.5, 0.5], comp_dists=comp_dists)
-            mix = Mixture("mix", w=[0.5, 0.5], comp_dists=comp_dists, transform=None)
+            mix = Mixture("mix", w=[0.5, 0.5], comp_dists=comp_dists, default_transform=None)
 
         logp_fn = m.compile_logp(vars=[halfnorm, mix_transf, mix], sum=False)
         test_point = {"halfnorm_log__": 1, "mix_transf_log__": 1, "mix": np.exp(1)}
@@ -1364,17 +1367,17 @@ class TestMixtureDefaultTransforms:
 
             with warnings.catch_warnings():
                 warnings.simplefilter("error")
-                Mixture("mix4", w=[0.5, 0.5], comp_dists=comp_dists, transform=None)
+                Mixture("mix4", w=[0.5, 0.5], comp_dists=comp_dists, default_transform=None)
 
             with warnings.catch_warnings():
                 warnings.simplefilter("error")
-                Mixture("mix5", w=[0.5, 0.5], comp_dists=comp_dists, observed=1)
+                Mixture("mix6", w=[0.5, 0.5], comp_dists=comp_dists, observed=1)
 
             # Case where the appropriate default transform is None
             comp_dists = [Normal.dist(), Normal.dist()]
             with warnings.catch_warnings():
                 warnings.simplefilter("error")
-                Mixture("mix6", w=[0.5, 0.5], comp_dists=comp_dists)
+                Mixture("mix7", w=[0.5, 0.5], comp_dists=comp_dists)
 
 
 class TestZeroInflatedMixture:
@@ -1593,8 +1596,8 @@ class TestHurdleMixtures:
         _, nonzero_dist = self.check_hurdle_mixture_graph(dist)
 
         assert isinstance(nonzero_dist.owner.op.base_rv_op, NegativeBinomial)
-        assert nonzero_dist.owner.inputs[2].data == n
-        assert nonzero_dist.owner.inputs[3].data == p
+        assert nonzero_dist.owner.inputs[-4].data == n
+        assert nonzero_dist.owner.inputs[-3].data == p
 
     def test_hurdle_gamma_graph(self):
         psi, alpha, beta = 0.25, 3, 4
@@ -1604,8 +1607,8 @@ class TestHurdleMixtures:
         # Under the hood it uses the shape-scale parametrization of the Gamma distribution.
         # So the second value is the reciprocal of the rate (i.e. 1 / beta)
         assert isinstance(nonzero_dist.owner.op.base_rv_op, Gamma)
-        assert nonzero_dist.owner.inputs[2].data == alpha
-        assert nonzero_dist.owner.inputs[3].eval() == 1 / beta
+        assert nonzero_dist.owner.inputs[-4].data == alpha
+        assert nonzero_dist.owner.inputs[-3].eval() == 1 / beta
 
     def test_hurdle_lognormal_graph(self):
         psi, mu, sigma = 0.1, 2, 2.5
@@ -1613,8 +1616,8 @@ class TestHurdleMixtures:
         _, nonzero_dist = self.check_hurdle_mixture_graph(dist)
 
         assert isinstance(nonzero_dist.owner.op.base_rv_op, LogNormal)
-        assert nonzero_dist.owner.inputs[2].data == mu
-        assert nonzero_dist.owner.inputs[3].data == sigma
+        assert nonzero_dist.owner.inputs[-4].data == mu
+        assert nonzero_dist.owner.inputs[-3].data == sigma
 
     @pytest.mark.parametrize(
         "dist, psi, non_psi_args",

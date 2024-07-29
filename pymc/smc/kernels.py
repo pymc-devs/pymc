@@ -16,7 +16,7 @@ import sys
 import warnings
 
 from abc import ABC
-from typing import Union, cast
+from typing import TypeAlias, cast
 
 import numpy as np
 import pytensor.tensor as pt
@@ -24,7 +24,6 @@ import pytensor.tensor as pt
 from pytensor.graph.replace import clone_replace
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
-from typing_extensions import TypeAlias
 
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
@@ -40,8 +39,8 @@ from pymc.sampling.forward import draw
 from pymc.step_methods.metropolis import MultivariateNormalProposal
 from pymc.vartypes import discrete_types
 
-SMCStats: TypeAlias = dict[str, Union[int, float]]
-SMCSettings: TypeAlias = dict[str, Union[int, float]]
+SMCStats: TypeAlias = dict[str, int | float]
+SMCSettings: TypeAlias = dict[str, int | float]
 
 
 class SMC_KERNEL(ABC):
@@ -196,10 +195,13 @@ class SMC_KERNEL(ABC):
             )
 
             model = self.model
+
             prior_expression = make_initial_point_expression(
                 free_rvs=model.free_RVs,
                 rvs_to_transforms=model.rvs_to_transforms,
-                initval_strategies={},
+                initval_strategies={
+                    **model.rvs_to_initial_values,
+                },
                 default_strategy="prior",
                 return_transformed=True,
             )

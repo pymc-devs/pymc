@@ -36,6 +36,7 @@ Check requirements-dev.txt has been generated from conda-envs/environment-dev.ym
 This is intended to be used as a pre-commit hook, see `.pre-commit-config.yaml`.
 You can run it manually with `pre-commit run pip-from-conda --all`.
 """
+
 import argparse
 import re
 

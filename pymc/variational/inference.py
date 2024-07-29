@@ -18,10 +18,12 @@ import warnings
 
 import numpy as np
 
-from fastprogress.fastprogress import progress_bar
+from rich.console import Console
+from rich.progress import Progress, TextColumn, track
 
 import pymc as pm
 
+from pymc.util import CustomProgress, default_progress_theme
 from pymc.variational import test_functions
 from pymc.variational.approximations import Empirical, FullRank, MeanField
 from pymc.variational.operators import KL, KSD
@@ -70,8 +72,8 @@ class Inference:
             score = returns_loss
         elif score and not returns_loss:
             warnings.warn(
-                "method `fit` got `score == True` but %s "
-                "does not return loss. Ignoring `score` argument" % self.objective.op
+                f"method `fit` got `score == True` but {self.objective.op} "
+                "does not return loss. Ignoring `score` argument"
             )
             score = False
         else:
@@ -83,15 +85,22 @@ class Inference:
         fn_kwargs = kwargs.pop("fn_kwargs", dict())
         fn_kwargs["profile"] = True
         step_func = self.objective.step_function(score=score, fn_kwargs=fn_kwargs, **kwargs)
-        progress = progress_bar(range(n))
         try:
-            for _ in progress:
+            for _ in track(range(n)):
                 step_func()
         except KeyboardInterrupt:
             pass
         return step_func.profile
 
-    def fit(self, n=10000, score=None, callbacks=None, progressbar=True, **kwargs):
+    def fit(
+        self,
+        n=10000,
+        score=None,
+        callbacks=None,
+        progressbar=True,
+        progressbar_theme=default_progress_theme,
+        **kwargs,
+    ):
         """Perform Operator Variational Inference
 
         Parameters
@@ -104,6 +113,8 @@ class Inference:
             calls provided functions after each iteration step
         progressbar : bool
             whether to show progressbar or not
+        progressbar_theme : Theme
+            Custom theme for the progress bar
 
         Other Parameters
         ----------------
@@ -136,14 +147,15 @@ class Inference:
             callbacks = []
         score = self._maybe_score(score)
         step_func = self.objective.step_function(score=score, **kwargs)
-        if progressbar:
-            progress = progress_bar(range(n), display=progressbar)
-        else:
-            progress = range(n)
+
         if score:
-            state = self._iterate_with_loss(0, n, step_func, progress, callbacks)
+            state = self._iterate_with_loss(
+                0, n, step_func, progressbar, progressbar_theme, callbacks
+            )
         else:
-            state = self._iterate_without_loss(0, n, step_func, progress, callbacks)
+            state = self._iterate_without_loss(
+                0, n, step_func, progressbar, progressbar_theme, callbacks
+            )
 
         # hack to allow pm.fit() access to loss hist
         self.approx.hist = self.hist
@@ -151,43 +163,48 @@ class Inference:
 
         return self.approx
 
-    def _iterate_without_loss(self, s, _, step_func, progress, callbacks):
+    def _iterate_without_loss(self, s, n, step_func, progressbar, progressbar_theme, callbacks):
         i = 0
         try:
-            for i in progress:
-                step_func()
-                current_param = self.approx.params[0].get_value()
-                if np.isnan(current_param).any():
-                    name_slc = []
-                    tmp_hold = list(range(current_param.size))
-                    for varname, slice_info in self.approx.groups[0].ordering.items():
-                        slclen = len(tmp_hold[slice_info[1]])
-                        for j in range(slclen):
-                            name_slc.append((varname, j))
-                    index = np.where(np.isnan(current_param))[0]
-                    errmsg = ["NaN occurred in optimization. "]
-                    suggest_solution = (
-                        "Try tracking this parameter: "
-                        "http://docs.pymc.io/notebooks/variational_api_quickstart.html#Tracking-parameters"
-                    )
-                    try:
-                        for ii in index:
-                            errmsg.append(
-                                "The current approximation of RV `{}`.ravel()[{}]"
-                                " is NaN.".format(*name_slc[ii])
-                            )
-                        errmsg.append(suggest_solution)
-                    except IndexError:
-                        pass
-                    raise FloatingPointError("\n".join(errmsg))
-                for callback in callbacks:
-                    callback(self.approx, None, i + s + 1)
+            with CustomProgress(
+                console=Console(theme=progressbar_theme), disable=not progressbar
+            ) as progress:
+                task = progress.add_task("Fitting", total=n)
+                for i in range(n):
+                    step_func()
+                    progress.update(task, advance=1)
+                    current_param = self.approx.params[0].get_value()
+                    if np.isnan(current_param).any():
+                        name_slc = []
+                        tmp_hold = list(range(current_param.size))
+                        for varname, slice_info in self.approx.groups[0].ordering.items():
+                            slclen = len(tmp_hold[slice_info[1]])
+                            for j in range(slclen):
+                                name_slc.append((varname, j))
+                        index = np.where(np.isnan(current_param))[0]
+                        errmsg = ["NaN occurred in optimization. "]
+                        suggest_solution = (
+                            "Try tracking this parameter: "
+                            "http://docs.pymc.io/notebooks/variational_api_quickstart.html#Tracking-parameters"
+                        )
+                        try:
+                            for ii in index:
+                                errmsg.append(
+                                    "The current approximation of RV `{}`.ravel()[{}]"
+                                    " is NaN.".format(*name_slc[ii])
+                                )
+                            errmsg.append(suggest_solution)
+                        except IndexError:
+                            pass
+                        raise FloatingPointError("\n".join(errmsg))
+                    for callback in callbacks:
+                        callback(self.approx, None, i + s + 1)
         except (KeyboardInterrupt, StopIteration) as e:
             if isinstance(e, StopIteration):
                 logger.info(str(e))
         return State(i + s, step=step_func, callbacks=callbacks, score=False)
 
-    def _iterate_with_loss(self, s, n, step_func, progress, callbacks):
+    def _iterate_with_loss(self, s, n, step_func, progressbar, progressbar_theme, callbacks):
         def _infmean(input_array):
             """Return the mean of the finite values of the array"""
             input_array = input_array[np.isfinite(input_array)].astype("float64")
@@ -200,44 +217,50 @@ class Inference:
         scores[:] = np.nan
         i = 0
         try:
-            for i in progress:
-                e = step_func()
-                if np.isnan(e):
-                    scores = scores[:i]
-                    self.hist = np.concatenate([self.hist, scores])
-                    current_param = self.approx.params[0].get_value()
-                    name_slc = []
-                    tmp_hold = list(range(current_param.size))
-                    for varname, slice_info in self.approx.groups[0].ordering.items():
-                        slclen = len(tmp_hold[slice_info[1]])
-                        for j in range(slclen):
-                            name_slc.append((varname, j))
-                    index = np.where(np.isnan(current_param))[0]
-                    errmsg = ["NaN occurred in optimization. "]
-                    suggest_solution = (
-                        "Try tracking this parameter: "
-                        "http://docs.pymc.io/notebooks/variational_api_quickstart.html#Tracking-parameters"
-                    )
-                    try:
-                        for ii in index:
-                            errmsg.append(
-                                "The current approximation of RV `{}`.ravel()[{}]"
-                                " is NaN.".format(*name_slc[ii])
-                            )
-                        errmsg.append(suggest_solution)
-                    except IndexError:
-                        pass
-                    raise FloatingPointError("\n".join(errmsg))
-                scores[i] = e
-                if i % 10 == 0:
-                    avg_loss = _infmean(scores[max(0, i - 1000) : i + 1])
-                    if hasattr(progress, "comment"):
-                        progress.comment = f"Average Loss = {avg_loss:,.5g}"
-                    avg_loss = scores[max(0, i - 1000) : i + 1].mean()
-                    if hasattr(progress, "comment"):
-                        progress.comment = f"Average Loss = {avg_loss:,.5g}"
-                for callback in callbacks:
-                    callback(self.approx, scores[: i + 1], i + s + 1)
+            with CustomProgress(
+                *Progress.get_default_columns(),
+                TextColumn("{task.fields[loss]}"),
+                console=Console(theme=progressbar_theme),
+                disable=not progressbar,
+            ) as progress:
+                task = progress.add_task("Fitting:", total=n, loss="")
+                for i in range(n):
+                    e = step_func()
+                    progress.update(task, advance=1)
+                    if np.isnan(e):
+                        scores = scores[:i]
+                        self.hist = np.concatenate([self.hist, scores])
+                        current_param = self.approx.params[0].get_value()
+                        name_slc = []
+                        tmp_hold = list(range(current_param.size))
+                        for varname, slice_info in self.approx.groups[0].ordering.items():
+                            slclen = len(tmp_hold[slice_info[1]])
+                            for j in range(slclen):
+                                name_slc.append((varname, j))
+                        index = np.where(np.isnan(current_param))[0]
+                        errmsg = ["NaN occurred in optimization. "]
+                        suggest_solution = (
+                            "Try tracking this parameter: "
+                            "http://docs.pymc.io/notebooks/variational_api_quickstart.html#Tracking-parameters"
+                        )
+                        try:
+                            for ii in index:
+                                errmsg.append(
+                                    "The current approximation of RV `{}`.ravel()[{}]"
+                                    " is NaN.".format(*name_slc[ii])
+                                )
+                            errmsg.append(suggest_solution)
+                        except IndexError:
+                            pass
+                        raise FloatingPointError("\n".join(errmsg))
+                    scores[i] = e
+                    if i % 10 == 0:
+                        avg_loss = _infmean(scores[max(0, i - 1000) : i + 1])
+                        progress.update(task, loss=f"Average Loss = {avg_loss:,.5g}")
+                        avg_loss = scores[max(0, i - 1000) : i + 1].mean()
+                        progress.update(task, loss=f"Average Loss = {avg_loss:,.5g}")
+                    for callback in callbacks:
+                        callback(self.approx, scores[: i + 1], i + s + 1)
         except (KeyboardInterrupt, StopIteration) as e:  # pragma: no cover
             # do not print log on the same line
             scores = scores[:i]
@@ -261,19 +284,17 @@ class Inference:
         self.hist = np.concatenate([self.hist, scores])
         return State(i + s, step=step_func, callbacks=callbacks, score=True)
 
-    def refine(self, n, progressbar=True):
+    def refine(self, n, progressbar=True, progressbar_theme=default_progress_theme):
         """Refine the solution using the last compiled step function"""
         if self.state is None:
             raise TypeError("Need to call `.fit` first")
         i, step, callbacks, score = self.state
-        if progressbar:
-            progress = progress_bar(range(n), display=progressbar)
-        else:
-            progress = range(n)  # This is a guess at what progress_bar(n) does.
         if score:
-            state = self._iterate_with_loss(i, n, step, progress, callbacks)
+            state = self._iterate_with_loss(i, n, step, progressbar, progressbar_theme, callbacks)
         else:
-            state = self._iterate_without_loss(i, n, step, progress, callbacks)
+            state = self._iterate_without_loss(
+                i, n, step, progressbar, progressbar_theme, callbacks
+            )
         self.state = state
 
 
@@ -630,6 +651,7 @@ class ASVGD(ImplicitGradient):
         score=None,
         callbacks=None,
         progressbar=True,
+        progressbar_theme=default_progress_theme,
         obj_n_mc=500,
         **kwargs,
     ):
@@ -638,6 +660,7 @@ class ASVGD(ImplicitGradient):
             score=score,
             callbacks=callbacks,
             progressbar=progressbar,
+            progressbar_theme=progressbar_theme,
             obj_n_mc=obj_n_mc,
             **kwargs,
         )
@@ -688,6 +711,8 @@ def fit(
         calls provided functions after each iteration step
     progressbar: bool
         whether to show progressbar or not
+    progressbar_theme: Theme
+        Custom theme for the progress bar
     obj_n_mc: `int`
         Number of monte carlo samples used for approximation of objective gradients
     tf_n_mc: `int`

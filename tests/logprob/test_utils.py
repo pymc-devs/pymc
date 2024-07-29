@@ -42,6 +42,7 @@ from pytensor import function
 from pytensor import tensor as pt
 from pytensor.compile import get_default_mode
 from pytensor.graph.basic import ancestors, equal_computations
+from pytensor.tensor.random.basic import NormalRV
 from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
@@ -184,8 +185,8 @@ class TestReplaceRVsByValues:
         res_y = res.owner.inputs[1]
         # Graph should have be cloned, and therefore y and res_y should have different ids
         assert res_y is not y
-        assert res_y.owner.op == pt.random.normal
-        assert res_y.owner.inputs[3] is x_value
+        assert isinstance(res_y.owner.op, NormalRV)
+        assert res_y.owner.inputs[2] is x_value
 
     def test_no_change_inplace(self):
         # Test that calling rvs_to_value_vars in models with nested transformations
@@ -218,11 +219,11 @@ class TestReplaceRVsByValues:
             transform = pm.distributions.transforms.Interval(
                 bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
             )
-            x = pm.Uniform("x", lower=0, upper=1, transform=transform)
+            x = pm.Uniform("x", lower=0, upper=1, default_transform=transform)
             # Operation between the variables provides a regression test for #7054
-            y = pm.Uniform("y", lower=0, upper=pt.exp(x), transform=transform)
-            z = pm.Uniform("z", lower=0, upper=y, transform=transform)
-            w = pm.Uniform("w", lower=0, upper=pt.square(z), transform=transform)
+            y = pm.Uniform("y", lower=0, upper=pt.exp(x), default_transform=transform)
+            z = pm.Uniform("z", lower=0, upper=y, default_transform=transform)
+            w = pm.Uniform("w", lower=0, upper=pt.square(z), default_transform=transform)
 
         rvs = [x, y, z, w]
         if reversed:

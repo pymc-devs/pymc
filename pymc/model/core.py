@@ -22,13 +22,12 @@ from collections.abc import Iterable, Sequence
 from sys import modules
 from typing import (
     TYPE_CHECKING,
-    Any,
-    Callable,
     Literal,
     Optional,
     TypeVar,
     Union,
     cast,
+    overload,
 )
 
 import numpy as np
@@ -37,7 +36,7 @@ import pytensor.sparse as sparse
 import pytensor.tensor as pt
 import scipy.sparse as sps
 
-from pytensor.compile import DeepCopyOp, get_mode
+from pytensor.compile import DeepCopyOp, Function, get_mode
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Constant, Variable, graph_inputs
 from pytensor.scalar import Cast
@@ -49,7 +48,6 @@ from typing_extensions import Self
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import GenTensorVariable, is_minibatch
-from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import (
     BlockModelAccessError,
     ImputationWarning,
@@ -59,6 +57,7 @@ from pymc.exceptions import (
 )
 from pymc.initial_point import make_initial_point_fn
 from pymc.logprob.basic import transformed_conditional_logp
+from pymc.logprob.transforms import Transform
 from pymc.logprob.utils import ParameterValueError, replace_rvs_by_values
 from pymc.model_graph import model_to_graphviz
 from pymc.pytensorf import (
@@ -108,18 +107,10 @@ class ContextMeta(type):
 
         def __enter__(self):
             self.__class__.context_class.get_contexts().append(self)
-            # self._pytensor_config is set in Model.__new__
-            self._config_context = None
-            if hasattr(self, "_pytensor_config"):
-                self._config_context = pytensor.config.change_flags(**self._pytensor_config)
-                self._config_context.__enter__()
             return self
 
         def __exit__(self, typ, value, traceback):
             self.__class__.context_class.get_contexts().pop()
-            # self._pytensor_config is set in Model.__new__
-            if self._config_context:
-                self._config_context.__exit__(typ, value, traceback)
 
         dct[__enter__.__name__] = __enter__
         dct[__exit__.__name__] = __exit__
@@ -132,18 +123,18 @@ class ContextMeta(type):
 
     # FIXME: is there a more elegant way to automatically add methods to the class that
     # are instance methods instead of class methods?
-    def __init__(cls, name, bases, nmspc, context_class: Optional[type] = None, **kwargs):
+    def __init__(cls, name, bases, nmspc, context_class: type | None = None, **kwargs):
         """Add ``__enter__`` and ``__exit__`` methods to the new class automatically."""
         if context_class is not None:
             cls._context_class = context_class
         super().__init__(name, bases, nmspc)
 
-    def get_context(cls, error_if_none=True, allow_block_model_access=False) -> Optional[T]:
+    def get_context(cls, error_if_none=True, allow_block_model_access=False) -> T | None:
         """Return the most recently pushed context object of type ``cls``
         on the stack, or ``None``. If ``error_if_none`` is True (default),
         raise a ``TypeError`` instead of returning ``None``."""
         try:
-            candidate: Optional[T] = cls.get_contexts()[-1]
+            candidate: T | None = cls.get_contexts()[-1]
         except IndexError:
             # Calling code expects to get a TypeError if the entity
             # is unfound, and there's too much to fix.
@@ -184,7 +175,7 @@ class ContextMeta(type):
     # than a class.
     @property
     def context_class(cls) -> type:
-        def resolve_type(c: Union[type, str]) -> type:
+        def resolve_type(c: type | str) -> type:
             if isinstance(c, str):
                 c = getattr(modules[cls.__module__], c)
             if isinstance(c, type):
@@ -194,7 +185,7 @@ class ContextMeta(type):
         assert cls is not None
         if isinstance(cls._context_class, str):
             cls._context_class = resolve_type(cls._context_class)
-        if not isinstance(cls._context_class, (str, type)):
+        if not isinstance(cls._context_class, str | type):
             raise ValueError(
                 f"Context class for {cls.__name__}, {cls._context_class}, is not of the right type"
             )
@@ -210,7 +201,7 @@ class ContextMeta(type):
     def __call__(cls, *args, **kwargs):
         # We type hint Model here so type checkers understand that Model is a context manager.
         # This metaclass is only used for Model, so this is safe to do. See #6809 for more info.
-        instance: "Model" = cls.__new__(cls, *args, **kwargs)
+        instance: Model = cls.__new__(cls, *args, **kwargs)
         with instance:  # appends context
             instance.__init__(*args, **kwargs)
         return instance
@@ -401,100 +392,123 @@ class Model(WithMemoization, metaclass=ContextMeta):
     name : str
         name that will be used as prefix for names of all random
         variables defined within model
+    coords : dict
+        Xarray-like coordinate keys and values. These coordinates can be used
+        to specify the shape of random variables and to label (but not specify)
+        the shape of Determinsitic, Potential and Data objects.
+        Other than specifying the shape of random variables, coordinates have no
+        effect on the model. They can't be used for label-based broadcasting or indexing.
+        You must use numpy-like operations for those behaviors.
     check_bounds : bool
         Ensure that input parameters to distributions are in a valid
         range. If your model is built in a way where you know your
         parameters can only take on valid values you can set this to
         False for increased speed. This should not be used if your model
         contains discrete variables.
+    model : PyMC model, optional
+        A parent model that this model belongs to. If not specified and the current model
+        is created inside another model's context, the parent model will be set to that model.
+        If `None` the model will not have a parent.
 
     Examples
     --------
-    How to define a custom model
+    Use context manager to define model and respective variables
 
     .. code-block:: python
 
-        class CustomModel(Model):
-            # 1) override init
-            def __init__(self, mean=0, sigma=1, name=''):
-                # 2) call super's init first, passing model and name
-                # to it name will be prefix for all variables here if
-                # no name specified for model there will be no prefix
-                super().__init__(name, model)
-                # now you are in the context of instance,
-                # `modelcontext` will return self you can define
-                # variables in several ways note, that all variables
-                # will get model's name prefix
+        import pymc as pm
 
-                # 3) you can create variables with the register_rv method
-                self.register_rv(Normal.dist(mu=mean, sigma=sigma), 'v1', initval=1)
-                # this will create variable named like '{name::}v1'
-                # and assign attribute 'v1' to instance created
-                # variable can be accessed with self.v1 or self['v1']
+        with pm.Model() as model:
+            x = pm.Normal("x")
 
-                # 4) this syntax will also work as we are in the
-                # context of instance itself, names are given as usual
-                Normal('v2', mu=mean, sigma=sigma)
 
-                # something more complex is allowed, too
-                half_cauchy = HalfCauchy('sigma', beta=10, initval=1.)
-                Normal('v3', mu=mean, sigma=half_cauchy)
+    Use object API to define model and respective variables
 
-                # Deterministic variables can be used in usual way
-                Deterministic('v3_sq', self.v3 ** 2)
+    .. code-block:: python
 
-                # Potentials too
-                Potential('p1', pt.constant(1))
+        import pymc as pm
 
-        # After defining a class CustomModel you can use it in several
-        # ways
+        model = pm.Model()
+        x = pm.Normal("x", model=model)
 
-        # I:
-        #   state the model within a context
-        with Model() as model:
-            CustomModel()
-            # arbitrary actions
 
-        # II:
-        #   use new class as entering point in context
-        with CustomModel() as model:
-            Normal('new_normal_var', mu=1, sigma=0)
+    Use coords for defining the shape of random variables and labeling other model variables
 
-        # III:
-        #   just get model instance with all that was defined in it
-        model = CustomModel()
+    .. code-block:: python
 
-        # IV:
-        #   use many custom models within one context
-        with Model() as model:
-            CustomModel(mean=1, name='first')
-            CustomModel(mean=2, name='second')
+        import pymc as pm
+        import numpy as np
 
-        # variables inside both scopes will be named like `first::*`, `second::*`
+        coords = {
+            "feature", ["A", "B", "C"],
+            "trial", [1, 2, 3, 4, 5],
+        }
+
+        with pm.Model(coords=coords) as model:
+            intercept = pm.Normal("intercept", shape=(3,))  # Variable will have default dim label `intercept__dim_0`
+            beta = pm.Normal("beta", dims=("feature",))  # Variable will have shape (3,) and dim label `feature`
+
+            # Dims below are only used for labeling, they have no effect on shape
+            idx = pm.Data("idx", np.array([0, 1, 1, 2, 2]))  # Variable will have default dim label `idx__dim_0`
+            x = pm.Data("x", np.random.normal(size=(5, 3)), dims=("trial", "feature"))
+            mu = pm.Deterministic("mu", intercept[idx] + beta @ x, dims="trial")  # single dim can be passed as string
+
+            # Dims controls the shape of the variable
+            # If not specified, it would be inferred from the shape of the observations
+            y = pm.Normal("y", mu=mu, observed=[-1, 0, 0, 1, 1], dims=("trial",))
+
+
+    Define nested models, and provide name for variable name prefixing
+
+    .. code-block:: python
+
+        import pymc as pm
+
+        with pm.Model(name="root") as root:
+            x = pm.Normal("x")  # Variable wil be named "root::x"
+
+            with pm.Model(name='first') as first:
+                # Variable will belong to root and first
+                y = pm.Normal("y", mu=x)  # Variable wil be named "root::first::y"
+
+            # Can pass parent model explicitly
+            with pm.Model(name='second', model=root) as second:
+                # Variable will belong to root and second
+                z = pm.Normal("z", mu=y)  # Variable wil be named "root::second::z"
+
+            # Set None for standalone model
+            with pm.Model(name="third", model=None) as third:
+                # Variable will belong to third only
+                w = pm.Normal("w")  # Variable wil be named "third::w"
+
+
+    Set `check_bounds` to False for models with only continuous variables and default transformers
+    PyMC will remove the bounds check from the model logp which can speed up sampling
+
+    .. code-block:: python
+
+        import pymc as pm
+
+        with pm.Model(check_bounds=False) as model:
+            sigma = pm.HalfNormal("sigma")
+            x = pm.Normal("x", sigma=sigma)  # No bounds check will be performed on `sigma`
+
+
     """
 
     if TYPE_CHECKING:
 
-        def __enter__(self: Self) -> Self:
-            ...
+        def __enter__(self: Self) -> Self: ...
 
-        def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
-            ...
+        def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None: ...
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, model: Union[Literal[UNSET], None, "Model"] = UNSET, **kwargs):
         # resolves the parent instance
         instance = super().__new__(cls)
-        if kwargs.get("model") is not None:
-            instance._parent = kwargs.get("model")
-        else:
+        if model is UNSET:
             instance._parent = cls.get_context(error_if_none=False)
-        pytensor_config = kwargs.get("pytensor_config", {})
-        if pytensor_config:
-            warnings.warn(
-                "pytensor_config is deprecated. Use pytensor.config or pytensor.config.change_flags context manager instead.",
-                FutureWarning,
-            )
-        instance._pytensor_config = pytensor_config
+        else:
+            instance._parent = model
         return instance
 
     @staticmethod
@@ -510,12 +524,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
         check_bounds=True,
         *,
         coords_mutable=None,
-        pytensor_config=None,
-        model=None,
+        model: Union[Literal[UNSET], None, "Model"] = UNSET,
     ):
-        del pytensor_config, model  # used in __new__
+        del model  # used in __new__ to define the parent of this model
         self.name = self._validate_name(name)
         self.check_bounds = check_bounds
+
+        if coords_mutable is not None:
+            warnings.warn(
+                "All coords are now mutable by default. coords_mutable will be removed in a future release.",
+                FutureWarning,
+            )
 
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
@@ -528,6 +547,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.observed_RVs = treelist(parent=self.parent.observed_RVs)
             self.deterministics = treelist(parent=self.parent.deterministics)
             self.potentials = treelist(parent=self.parent.potentials)
+            self.data_vars = treelist(parent=self.parent.data_vars)
             self._coords = self.parent._coords
             self._dim_lengths = self.parent._dim_lengths
         else:
@@ -541,6 +561,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.observed_RVs = treelist()
             self.deterministics = treelist()
             self.potentials = treelist()
+            self.data_vars = treelist()
             self._coords = {}
             self._dim_lengths = {}
         self.add_coords(coords)
@@ -554,11 +575,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self._repr_latex_ = types.MethodType(
             functools.partial(str_for_model, formatting="latex"), self
         )
-
-    @property
-    def model(self):
-        warnings.warn("Model.model property is deprecated. Just use Model.", FutureWarning)
-        return self
 
     @property
     def parent(self):
@@ -611,9 +627,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def compile_logp(
         self,
-        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
         sum: bool = True,
+        **compile_kwargs,
     ) -> PointFunc:
         """Compiled log probability density function.
 
@@ -628,12 +645,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Whether to sum all logp terms or return elemwise logp for each variable.
             Defaults to True.
         """
-        return self.compile_fn(self.logp(vars=vars, jacobian=jacobian, sum=sum))
+        return self.compile_fn(self.logp(vars=vars, jacobian=jacobian, sum=sum), **compile_kwargs)
 
     def compile_dlogp(
         self,
-        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
+        **compile_kwargs,
     ) -> PointFunc:
         """Compiled log probability density gradient function.
 
@@ -645,12 +663,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.compile_fn(self.dlogp(vars=vars, jacobian=jacobian))
+        return self.compile_fn(self.dlogp(vars=vars, jacobian=jacobian), **compile_kwargs)
 
     def compile_d2logp(
         self,
-        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
+        negate_output=True,
+        **compile_kwargs,
     ) -> PointFunc:
         """Compiled log probability density hessian function.
 
@@ -662,14 +682,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.compile_fn(self.d2logp(vars=vars, jacobian=jacobian))
+        return self.compile_fn(
+            self.d2logp(vars=vars, jacobian=jacobian, negate_output=negate_output),
+            **compile_kwargs,
+        )
 
     def logp(
         self,
-        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
         sum: bool = True,
-    ) -> Union[Variable, list[Variable]]:
+    ) -> Variable | list[Variable]:
         """Elemwise log-probability of the model.
 
         Parameters
@@ -690,7 +713,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         varlist: list[TensorVariable]
         if vars is None:
             varlist = self.free_RVs + self.observed_RVs + self.potentials
-        elif not isinstance(vars, (list, tuple)):
+        elif not isinstance(vars, list | tuple):
             varlist = [vars]
         else:
             varlist = cast(list[TensorVariable], vars)
@@ -745,7 +768,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def dlogp(
         self,
-        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
     ) -> Variable:
         """Gradient of the models log-probability w.r.t. ``vars``.
@@ -765,7 +788,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if vars is None:
             value_vars = None
         else:
-            if not isinstance(vars, (list, tuple)):
+            if not isinstance(vars, list | tuple):
                 vars = [vars]
 
             value_vars = []
@@ -784,8 +807,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def d2logp(
         self,
-        vars: Optional[Union[Variable, Sequence[Variable]]] = None,
+        vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
+        negate_output=True,
     ) -> Variable:
         """Hessian of the models log-probability w.r.t. ``vars``.
 
@@ -804,7 +828,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if vars is None:
             value_vars = None
         else:
-            if not isinstance(vars, (list, tuple)):
+            if not isinstance(vars, list | tuple):
                 vars = [vars]
 
             value_vars = []
@@ -819,7 +843,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         cost = self.logp(jacobian=jacobian)
         cost = rewrite_pregrad(cost)
-        return hessian(cost, value_vars)
+        return hessian(cost, value_vars, negate_output=negate_output)
 
     @property
     def datalogp(self) -> Variable:
@@ -919,7 +943,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self.free_RVs + self.deterministics
 
     @property
-    def coords(self) -> dict[str, Union[tuple, None]]:
+    def coords(self) -> dict[str, tuple | None]:
         """Coordinate values for model dimensions."""
         return self._coords
 
@@ -949,10 +973,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def add_coord(
         self,
         name: str,
-        values: Optional[Sequence] = None,
-        mutable: bool = False,
+        values: Sequence | None = None,
+        mutable: bool | None = None,
         *,
-        length: Optional[Union[int, Variable]] = None,
+        length: int | Variable | None = None,
     ):
         """Registers a dimension coordinate with the model.
 
@@ -971,6 +995,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
             A scalar of the dimensions length.
             Defaults to ``pytensor.tensor.constant(len(values))``.
         """
+        if mutable is not None:
+            warnings.warn(
+                "Coords are now always mutable. Specifying `mutable` will raise an error in a future release",
+                FutureWarning,
+            )
+
         if name in {"draw", "chain", "__sample__"}:
             raise ValueError(
                 "Dimensions can not be named `draw`, `chain` or `__sample__`, "
@@ -987,26 +1017,23 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if name in self.coords:
             if not np.array_equal(values, self.coords[name]):
                 raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
-        if length is not None and not isinstance(length, (int, Variable)):
+        if length is not None and not isinstance(length, int | Variable):
             raise ValueError(
                 f"The `length` passed for the '{name}' coord must be an int, PyTensor Variable or None."
             )
         if length is None:
             length = len(values)
         if not isinstance(length, Variable):
-            if mutable:
-                length = pytensor.shared(length, name=name)
-            else:
-                length = pytensor.tensor.constant(length)
+            length = pytensor.shared(length, name=name)
         assert length.type.ndim == 0
         self._dim_lengths[name] = length
         self._coords[name] = values
 
     def add_coords(
         self,
-        coords: dict[str, Optional[Sequence]],
+        coords: dict[str, Sequence | None],
         *,
-        lengths: Optional[dict[str, Optional[Union[int, Variable]]]] = None,
+        lengths: dict[str, int | Variable | None] | None = None,
     ):
         """Vectorized version of ``Model.add_coord``."""
         if coords is None:
@@ -1016,7 +1043,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         for name, values in coords.items():
             self.add_coord(name, values, length=lengths.get(name, None))
 
-    def set_dim(self, name: str, new_length: int, coord_values: Optional[Sequence] = None):
+    def set_dim(self, name: str, new_length: int, coord_values: Sequence | None = None):
         """Update a mutable dimension.
 
         Parameters
@@ -1028,8 +1055,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         coord_values : array_like, optional
             Optional sequence of coordinate values.
         """
-        if not isinstance(self.dim_lengths[name], SharedVariable):
-            raise ValueError(f"The dimension '{name}' is immutable.")
         if coord_values is None and self.coords.get(name, None) is not None:
             raise ValueError(
                 f"'{name}' has coord values. Pass `set_dim(..., coord_values=...)` to update them."
@@ -1043,7 +1068,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     expected=new_length,
                 )
             self._coords[name] = tuple(coord_values)
-        self.dim_lengths[name].set_value(new_length)
+        dim_length = self.dim_lengths[name]
+        if not isinstance(dim_length, SharedVariable):
+            raise TypeError(
+                f"The dim_length of `{name}` must be a `SharedVariable` "
+                "(created through `coords` to allow updating). "
+                f"The current type is: {type(dim_length)}"
+            )
+        dim_length.set_value(new_length)
         return
 
     def initial_point(self, random_seed: SeedSequenceSeed = None) -> dict[str, np.ndarray]:
@@ -1064,7 +1096,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def set_initval(self, rv_var, initval):
         """Sets an initial value (strategy) for a random variable."""
-        if initval is not None and not isinstance(initval, (Variable, str)):
+        if initval is not None and not isinstance(initval, Variable | str):
             # Convert scalars or array-like inputs to ndarrays
             initval = rv_var.type.filter(initval)
 
@@ -1073,12 +1105,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def set_data(
         self,
         name: str,
-        values: Union[Sequence, np.ndarray],
-        coords: Optional[dict[str, Sequence]] = None,
+        values: Sequence | np.ndarray,
+        coords: dict[str, Sequence] | None = None,
     ):
         """Changes the values of a data variable in the model.
 
-        In contrast to pm.MutableData().set_value, this method can also
+        In contrast to pm.Data().set_value, this method can also
         update the corresponding coordinates.
 
         Parameters
@@ -1095,8 +1127,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         shared_object = self[name]
         if not isinstance(shared_object, SharedVariable):
             raise TypeError(
-                f"The variable `{name}` must be a `SharedVariable`"
-                " (created through `pm.MutableData()` or `pm.Data(mutable=True)`) to allow updating. "
+                f"The variable `{name}` must be a `SharedVariable` "
+                "(created through `pm.Data()` to allow updating.) "
                 f"The current type is: {type(shared_object)}"
             )
 
@@ -1121,7 +1153,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             length_changed = new_length != old_length
 
             # Reject resizing if we already know that it would create shape problems.
-            # NOTE: If there are multiple pm.MutableData containers sharing this dim, but the user only
+            # NOTE: If there are multiple pm.Data containers sharing this dim, but the user only
             #       changes the values for one of them, they will run into shape problems nonetheless.
             if length_changed:
                 if original_coords is not None:
@@ -1138,9 +1170,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     raise ShapeError(
                         f"Resizing dimension '{dname}' is impossible, because "
                         "a `TensorConstant` stores its length. To be able "
-                        "to change the dimension length, pass `mutable=True` when "
-                        "registering the dimension via `model.add_coord`, "
-                        "or define it via a `pm.MutableData` variable."
+                        "to change the dimension length, create data with "
+                        "pm.Data() instead."
                     )
                 elif length_tensor.owner is not None:
                     # The dimension was created from another variable:
@@ -1207,7 +1238,16 @@ class Model(WithMemoization, metaclass=ContextMeta):
         shared_object.set_value(values)
 
     def register_rv(
-        self, rv_var, name, observed=None, total_size=None, dims=None, transform=UNSET, initval=None
+        self,
+        rv_var,
+        name,
+        *,
+        observed=None,
+        total_size=None,
+        dims=None,
+        default_transform=UNSET,
+        transform=UNSET,
+        initval=None,
     ):
         """Register an (un)observed random variable with the model.
 
@@ -1222,8 +1262,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
             upscales logp of variable with ``coef = total_size/var.shape[0]``
         dims : tuple
             Dimension names for the variable.
+        default_transform
+            A default transform for the random variable in log-likelihood space.
         transform
-            A transform for the random variable in log-likelihood space.
+            Additional transform which may be applied after default transform.
         initval
             The initial value of the random variable.
 
@@ -1248,7 +1290,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             if total_size is not None:
                 raise ValueError("total_size can only be passed to observed RVs")
             self.free_RVs.append(rv_var)
-            self.create_value_var(rv_var, transform)
+            self.create_value_var(rv_var, transform=transform, default_transform=default_transform)
             self.add_named_variable(rv_var, dims)
             self.set_initval(rv_var, initval)
         else:
@@ -1271,7 +1313,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             # `rv_var` is potentially changed by `make_obs_var`,
             # for example into a new graph for imputation of missing data.
-            rv_var = self.make_obs_var(rv_var, observed, dims, transform, total_size)
+            rv_var = self.make_obs_var(
+                rv_var, observed, dims, default_transform, transform, total_size
+            )
 
         return rv_var
 
@@ -1280,8 +1324,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         rv_var: TensorVariable,
         data: np.ndarray,
         dims,
-        transform: Union[Any, None],
-        total_size: Union[int, None],
+        default_transform: Transform | None,
+        transform: Transform | None,
+        total_size: int | None,
     ) -> TensorVariable:
         """Create a `TensorVariable` for an observed random variable.
 
@@ -1294,8 +1339,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
             The observed data.
         dims : tuple
             Dimension names for the variable.
-        transform : int, optional
+        default_transform
             A transform for the random variable in log-likelihood space.
+        transform
+            Additional transform which may be applied after default transform.
 
         Returns
         -------
@@ -1332,12 +1379,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
             # Register ObservedRV corresponding to observed component
             observed_rv.name = f"{name}_observed"
-            self.create_value_var(observed_rv, transform=None, value_var=observed_data)
+            self.create_value_var(
+                observed_rv, transform=transform, default_transform=None, value_var=observed_data
+            )
             self.add_named_variable(observed_rv)
             self.observed_RVs.append(observed_rv)
 
             # Register FreeRV corresponding to unobserved components
-            self.register_rv(unobserved_rv, f"{name}_unobserved", transform=transform)
+            self.register_rv(
+                unobserved_rv,
+                f"{name}_unobserved",
+                transform=transform,
+                default_transform=default_transform,
+            )
 
             # Register Deterministic that combines observed and missing
             # Note: This can widely increase memory consumption during sampling for large datasets
@@ -1356,14 +1410,21 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 rv_var.name = name
 
             rv_var.tag.observations = data
-            self.create_value_var(rv_var, transform=None, value_var=data)
+            self.create_value_var(
+                rv_var, transform=transform, default_transform=None, value_var=data
+            )
             self.add_named_variable(rv_var, dims)
             self.observed_RVs.append(rv_var)
 
         return rv_var
 
     def create_value_var(
-        self, rv_var: TensorVariable, transform: Any, value_var: Optional[Variable] = None
+        self,
+        rv_var: TensorVariable,
+        *,
+        default_transform: Transform,
+        transform: Transform,
+        value_var: Variable | None = None,
     ) -> TensorVariable:
         """Create a ``TensorVariable`` that will be used as the random
         variable's "value" in log-likelihood graphs.
@@ -1378,7 +1439,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
         ----------
         rv_var : TensorVariable
 
-        transform : Any
+        default_transform: Transform
+            A transform for the random variable in log-likelihood space.
+
+        transform: Transform
+            Additional transform which may be applied after default transform.
 
         value_var : Variable, optional
 
@@ -1386,33 +1451,46 @@ class Model(WithMemoization, metaclass=ContextMeta):
         -------
         TensorVariable
         """
+        from pymc.distributions.transforms import ChainedTransform, _default_transform
 
         # Make the value variable a transformed value variable,
         # if there's an applicable transform
-        if transform is UNSET:
-            if rv_var.owner is None:
-                transform = None
-            else:
-                transform = _default_transform(rv_var.owner.op, rv_var)
+        if transform is None and default_transform is UNSET:
+            default_transform = None
+            warnings.warn(
+                "To disable default transform, please use default_transform=None"
+                " instead of transform=None. Setting transform to None will"
+                " not have any effect in future.",
+                UserWarning,
+            )
 
-        if value_var is not None:
-            if transform is not None:
-                raise ValueError("Cannot use transform when providing a pre-defined value_var")
-        elif transform is None:
-            # Create value variable with the same type as the RV
-            value_var = rv_var.type()
-            value_var.name = rv_var.name
-            if pytensor.config.compute_test_value != "off":
-                value_var.tag.test_value = rv_var.tag.test_value
-        else:
-            # Create value variable with the same type as the transformed RV
-            value_var = transform.forward(rv_var, *rv_var.owner.inputs).type()
-            value_var.name = f"{rv_var.name}_{transform.name}__"
-            value_var.tag.transform = transform
-            if pytensor.config.compute_test_value != "off":
-                value_var.tag.test_value = transform.forward(
-                    rv_var, *rv_var.owner.inputs
-                ).tag.test_value
+        if default_transform is UNSET:
+            if rv_var.owner is None:
+                default_transform = None
+            else:
+                default_transform = _default_transform(rv_var.owner.op, rv_var)
+
+        if transform is UNSET:
+            transform = default_transform
+        elif transform is not None and default_transform is not None:
+            transform = ChainedTransform([default_transform, transform])
+
+        if value_var is None:
+            if transform is None:
+                # Create value variable with the same type as the RV
+                value_var = rv_var.type()
+                value_var.name = rv_var.name
+                if pytensor.config.compute_test_value != "off":
+                    value_var.tag.test_value = rv_var.tag.test_value
+            else:
+                # Create value variable with the same type as the transformed RV
+                value_var = transform.forward(rv_var, *rv_var.owner.inputs).type()
+                value_var.name = f"{rv_var.name}_{transform.name}__"
+                value_var.tag.transform = transform
+                if pytensor.config.compute_test_value != "off":
+                    value_var.tag.test_value = transform.forward(
+                        rv_var, *rv_var.owner.inputs
+                    ).tag.test_value
 
         _add_future_warning_tag(value_var)
         rv_var.tag.value_var = value_var
@@ -1423,7 +1501,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return value_var
 
-    def add_named_variable(self, var, dims: Optional[tuple[Union[str, None], ...]] = None):
+    def register_data_var(self, data, dims=None):
+        """Register a data variable with the model."""
+        self.data_vars.append(data)
+        self.add_named_variable(data, dims=dims)
+
+    def add_named_variable(self, var, dims: tuple[str | None, ...] | None = None):
         """Add a random graph variable to the named variables of the model.
 
         This can include several types of variables such basic_RVs, Data, Deterministics,
@@ -1449,6 +1532,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     raise ValueError(f"Dimension {dim} is not specified in `coords`.")
             if any(var.name == dim for dim in dims if dim is not None):
                 raise ValueError(f"Variable `{var.name}` has the same name as its dimension label.")
+            # This check implicitly states that only vars with .ndim attribute can have dims
+            if var.ndim != len(dims):
+                raise ValueError(
+                    f"{var} has {var.ndim} dims but {len(dims)} dim labels were provided."
+                )
             self.named_vars_to_dims[var.name] = dims
 
         self.named_vars[var.name] = var
@@ -1520,15 +1608,37 @@ class Model(WithMemoization, metaclass=ContextMeta):
             rvs_to_transforms=self.rvs_to_transforms,
         )
 
+    @overload
     def compile_fn(
         self,
-        outs: Union[Variable, Sequence[Variable]],
+        outs: Variable | Sequence[Variable],
         *,
-        inputs: Optional[Sequence[Variable]] = None,
+        inputs: Sequence[Variable] | None = None,
+        mode=None,
+        point_fn: Literal[True] = True,
+        **kwargs,
+    ) -> PointFunc: ...
+
+    @overload
+    def compile_fn(
+        self,
+        outs: Variable | Sequence[Variable],
+        *,
+        inputs: Sequence[Variable] | None = None,
+        mode=None,
+        point_fn: Literal[False],
+        **kwargs,
+    ) -> Function: ...
+
+    def compile_fn(
+        self,
+        outs: Variable | Sequence[Variable],
+        *,
+        inputs: Sequence[Variable] | None = None,
         mode=None,
         point_fn: bool = True,
         **kwargs,
-    ) -> Union[PointFunc, Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]]:
+    ) -> PointFunc | Function:
         """Compiles an PyTensor function
 
         Parameters
@@ -1718,7 +1828,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def debug(
         self,
-        point: Optional[dict[str, np.ndarray]] = None,
+        point: dict[str, np.ndarray] | None = None,
         fn: Literal["logp", "dlogp", "random"] = "logp",
         verbose: bool = False,
     ):
@@ -1748,7 +1858,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         def debug_parameters(rv):
             if isinstance(rv.owner.op, RandomVariable):
-                inputs = rv.owner.inputs[3:]
+                inputs = rv.owner.op.dist_params(rv.owner)
             else:
                 inputs = [inp for inp in rv.owner.inputs if not isinstance(inp.type, RandomType)]
             rv_inputs = pytensor.function(
@@ -1865,10 +1975,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def to_graphviz(
         self,
         *,
-        var_names: Optional[Iterable[VarName]] = None,
+        var_names: Iterable[VarName] | None = None,
         formatting: str = "plain",
-        save: Optional[str] = None,
-        figsize: Optional[tuple[int, int]] = None,
+        save: str | None = None,
+        figsize: tuple[int, int] | None = None,
         dpi: int = 300,
     ):
         """Produce a graphviz Digraph from a PyMC model.
@@ -1983,8 +2093,8 @@ def set_data(new_data, model=None, *, coords=None):
         import pymc as pm
 
         with pm.Model() as model:
-            x = pm.MutableData('x', [1., 2., 3.])
-            y = pm.MutableData('y', [1., 2., 3.])
+            x = pm.Data('x', [1., 2., 3.])
+            y = pm.Data('y', [1., 2., 3.])
             beta = pm.Normal('beta', 0, 1)
             obs = pm.Normal('obs', x * beta, 1, observed=y, shape=x.shape)
             idata = pm.sample()
@@ -2013,7 +2123,7 @@ def set_data(new_data, model=None, *, coords=None):
         data = rng.normal(loc=1.0, scale=2.0, size=100)
 
         with pm.Model() as model:
-            y = pm.MutableData('y', data)
+            y = pm.Data('y', data)
             theta = pm.Normal('theta', mu=0.0, sigma=10.0)
             obs = pm.Normal('obs', theta, 2.0, observed=y, shape=y.shape)
             idata = pm.sample()
@@ -2033,14 +2143,14 @@ def set_data(new_data, model=None, *, coords=None):
 
 
 def compile_fn(
-    outs: Union[Variable, Sequence[Variable]],
+    outs: Variable | Sequence[Variable],
     *,
-    inputs: Optional[Sequence[Variable]] = None,
+    inputs: Sequence[Variable] | None = None,
     mode=None,
     point_fn: bool = True,
-    model: Optional[Model] = None,
+    model: Model | None = None,
     **kwargs,
-) -> Union[PointFunc, Callable[[Sequence[np.ndarray]], Sequence[np.ndarray]]]:
+) -> PointFunc | Function:
     """Compiles an PyTensor function
 
     Parameters

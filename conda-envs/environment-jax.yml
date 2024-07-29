@@ -9,22 +9,24 @@ dependencies:
 - blas
 - cachetools>=4.2.1
 - cloudpickle
-- fastprogress>=0.2.0
 - h5py>=2.7
 # Jaxlib version must not be greater than jax version!
-- blackjax>=1.0.0
-- jaxlib==0.4.14
-- jax==0.4.16
+- blackjax>=1.2.2
+- jax>=0.4.28
+- jaxlib>=0.4.28
 - libblas=*=*mkl
 - mkl-service
 - numpy>=1.15.0
 - numpyro>=0.8.0
 - pandas>=0.24.0
 - pip
-- pytensor>=2.18.1,<2.19
+- pytensor>=2.25.1,<2.26
 - python-graphviz
 - networkx
-- scipy>=1.4.1
+- rich>=13.7.1
+- threadpoolctl>=3.1.0
+# JAX is only compatible with Scipy 1.13.0 from >=0.4.26
+- scipy>=1.13.0
 - typing-extensions>=3.7.4
 # Extra dependencies for testing
 - ipython>=7.16

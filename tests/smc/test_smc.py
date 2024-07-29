@@ -25,6 +25,7 @@ from arviz.data.inference_data import InferenceData
 import pymc as pm
 
 from pymc.backends.base import MultiTrace
+from pymc.distributions.transforms import Ordered
 from pymc.pytensorf import floatX
 from pymc.smc.kernels import IMH, systematic_resampling
 from tests.helpers import assert_random_state_equal
@@ -268,6 +269,30 @@ class TestSMC:
                 match="save_log_pseudolikelihood has been deprecated",
             ):
                 pm.sample_smc(draws=10, chains=1, save_log_pseudolikelihood=True)
+
+    def test_ordered(self):
+        """
+        Test that initial population respects custom initval, especially when applied
+        to the Ordered transformation. Regression test for #7438.
+        """
+        with pm.Model() as m:
+            pm.Normal(
+                "a",
+                mu=0.0,
+                sigma=1.0,
+                size=(2,),
+                transform=Ordered(),
+                initval=[-1.0, 1.0],
+            )
+
+        smc = IMH(model=m)
+        out = smc.initialize_population()
+
+        # initial point should not include NaNs
+        assert not np.any(np.isnan(out["a_ordered__"]))
+
+        # initial point should match for all particles
+        assert np.all(out["a_ordered__"][0] == out["a_ordered__"])
 
 
 class TestMHKernel:

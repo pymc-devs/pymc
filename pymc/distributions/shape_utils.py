@@ -17,29 +17,29 @@
 A collection of common shape operations needed for broadcasting
 samples from probability distributions for stochastic nodes in PyMC.
 """
+
 import warnings
 
 from collections.abc import Sequence
 from functools import singledispatch
-from typing import Any, Optional, Union, cast
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 
 from pytensor import config
 from pytensor import tensor as pt
-from pytensor.graph.basic import Variable
+from pytensor.graph.basic import Constant, Variable
 from pytensor.graph.op import Op, compute_test_value
 from pytensor.raise_op import Assert
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.shape import SpecifyShape
+from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
-from typing_extensions import TypeAlias
 
 from pymc.model import modelcontext
 from pymc.pytensorf import convert_observed_data
 
 __all__ = [
-    "broadcast_dist_samples_shape",
     "to_tuple",
     "rv_size_is_none",
     "change_dist_size",
@@ -89,111 +89,25 @@ def _check_shape_type(shape):
     return tuple(out)
 
 
-def broadcast_dist_samples_shape(shapes, size=None):
-    """Apply shape broadcasting to shape tuples but assuming that the shapes
-    correspond to draws from random variables, with the `size` tuple possibly
-    prepended to it. The `size` prepend is ignored to consider if the supplied
-    `shapes` can broadcast or not. It is prepended to the resulting broadcasted
-    `shapes`, if any of the shape tuples had the `size` prepend.
-
-    Parameters
-    ----------
-    shapes: Iterable of tuples holding the distribution samples shapes
-    size: None, int or tuple (optional)
-        size of the sample set requested.
-
-    Returns
-    -------
-    tuple of the resulting shape
-
-    Examples
-    --------
-    .. code-block:: python
-
-        size = 100
-        shape0 = (size,)
-        shape1 = (size, 5)
-        shape2 = (size, 4, 5)
-        out = broadcast_dist_samples_shape([shape0, shape1, shape2],
-                                           size=size)
-        assert out == (size, 4, 5)
-
-    .. code-block:: python
-
-        size = 100
-        shape0 = (size,)
-        shape1 = (5,)
-        shape2 = (4, 5)
-        out = broadcast_dist_samples_shape([shape0, shape1, shape2],
-                                           size=size)
-        assert out == (size, 4, 5)
-
-    .. code-block:: python
-
-        size = 100
-        shape0 = (1,)
-        shape1 = (5,)
-        shape2 = (4, 5)
-        out = broadcast_dist_samples_shape([shape0, shape1, shape2],
-                                           size=size)
-        assert out == (4, 5)
-    """
-    if size is None:
-        broadcasted_shape = np.broadcast_shapes(*shapes)
-        if broadcasted_shape is None:
-            raise ValueError(
-                "Cannot broadcast provided shapes {} given size: {}".format(
-                    ", ".join([f"{s}" for s in shapes]), size
-                )
-            )
-        return broadcasted_shape
-    shapes = [_check_shape_type(s) for s in shapes]
-    _size = to_tuple(size)
-    # samples shapes without the size prepend
-    sp_shapes = [s[len(_size) :] if _size == s[: min([len(_size), len(s)])] else s for s in shapes]
-    try:
-        broadcast_shape = np.broadcast_shapes(*sp_shapes)
-    except ValueError:
-        raise ValueError(
-            "Cannot broadcast provided shapes {} given size: {}".format(
-                ", ".join([f"{s}" for s in shapes]), size
-            )
-        )
-    broadcastable_shapes = []
-    for shape, sp_shape in zip(shapes, sp_shapes):
-        if _size == shape[: len(_size)]:
-            # If size prepends the shape, then we have to add broadcasting axis
-            # in the middle
-            p_shape = (
-                shape[: len(_size)]
-                + (1,) * (len(broadcast_shape) - len(sp_shape))
-                + shape[len(_size) :]
-            )
-        else:
-            p_shape = shape
-        broadcastable_shapes.append(p_shape)
-    return np.broadcast_shapes(*broadcastable_shapes)
-
-
 # User-provided can be lazily specified as scalars
-Shape: TypeAlias = Union[int, TensorVariable, Sequence[Union[int, Variable]]]
-Dims: TypeAlias = Union[str, Sequence[Optional[str]]]
-Size: TypeAlias = Union[int, TensorVariable, Sequence[Union[int, Variable]]]
+Shape: TypeAlias = int | TensorVariable | Sequence[int | Variable]
+Dims: TypeAlias = str | Sequence[str | None]
+Size: TypeAlias = int | TensorVariable | Sequence[int | Variable]
 
 # After conversion to vectors
-StrongShape: TypeAlias = Union[TensorVariable, tuple[Union[int, Variable], ...]]
-StrongDims: TypeAlias = Sequence[Optional[str]]
-StrongSize: TypeAlias = Union[TensorVariable, tuple[Union[int, Variable], ...]]
+StrongShape: TypeAlias = TensorVariable | tuple[int | Variable, ...]
+StrongDims: TypeAlias = Sequence[str | None]
+StrongSize: TypeAlias = TensorVariable | tuple[int | Variable, ...]
 
 
-def convert_dims(dims: Optional[Dims]) -> Optional[StrongDims]:
+def convert_dims(dims: Dims | None) -> StrongDims | None:
     """Process a user-provided dims variable into None or a valid dims tuple."""
     if dims is None:
         return None
 
     if isinstance(dims, str):
         dims = (dims,)
-    elif isinstance(dims, (list, tuple)):
+    elif isinstance(dims, list | tuple):
         dims = tuple(dims)
     else:
         raise ValueError(f"The `dims` parameter must be a tuple, str or list. Actual: {type(dims)}")
@@ -201,15 +115,15 @@ def convert_dims(dims: Optional[Dims]) -> Optional[StrongDims]:
     return dims
 
 
-def convert_shape(shape: Shape) -> Optional[StrongShape]:
+def convert_shape(shape: Shape) -> StrongShape | None:
     """Process a user-provided shape variable into None or a valid shape object."""
-    if shape is None:
+    if shape is None or (isinstance(shape, Variable) and isinstance(shape.type, NoneTypeT)):
         return None
     elif isinstance(shape, int) or (isinstance(shape, TensorVariable) and shape.ndim == 0):
         shape = (shape,)
     elif isinstance(shape, TensorVariable) and shape.ndim == 1:
         shape = tuple(shape)
-    elif isinstance(shape, (list, tuple)):
+    elif isinstance(shape, list | tuple):
         shape = tuple(shape)
     else:
         raise ValueError(
@@ -219,22 +133,20 @@ def convert_shape(shape: Shape) -> Optional[StrongShape]:
     return shape
 
 
-def convert_size(size: Size) -> Optional[StrongSize]:
+def convert_size(size: Size) -> StrongSize | None:
     """Process a user-provided size variable into None or a valid size object."""
-    if size is None:
+    if size is None or (isinstance(size, Variable) and isinstance(size.type, NoneTypeT)):
         return None
     elif isinstance(size, int) or (isinstance(size, TensorVariable) and size.ndim == 0):
-        size = (size,)
+        return (size,)
     elif isinstance(size, TensorVariable) and size.ndim == 1:
-        size = tuple(size)
-    elif isinstance(size, (list, tuple)):
-        size = tuple(size)
+        return tuple(size)
+    elif isinstance(size, list | tuple):
+        return tuple(size)
     else:
         raise ValueError(
             f"The `size` parameter must be a tuple, TensorVariable, int or list. Actual: {type(size)}"
         )
-
-    return size
 
 
 def shape_from_dims(dims: StrongDims, model) -> StrongShape:
@@ -264,10 +176,10 @@ def shape_from_dims(dims: StrongDims, model) -> StrongShape:
 
 
 def find_size(
-    shape: Optional[StrongShape],
-    size: Optional[StrongSize],
+    shape: StrongShape | None,
+    size: StrongSize | None,
     ndim_supp: int,
-) -> Optional[StrongSize]:
+) -> StrongSize | None:
     """Determines the size keyword argument for creating a Distribution.
 
     Parameters
@@ -297,9 +209,11 @@ def find_size(
     return None
 
 
-def rv_size_is_none(size: Variable) -> bool:
-    """Check whether an rv size is None (ie., pt.Constant([]))"""
-    return size.type.shape == (0,)  # type: ignore [attr-defined]
+def rv_size_is_none(size: TensorVariable | Constant | None) -> bool:
+    """Check whether an rv size is None (i.e., NoneConst)"""
+    if size is None:
+        return True
+    return isinstance(size.type, NoneTypeT)
 
 
 @singledispatch
@@ -354,7 +268,8 @@ def change_dist_size(
     else:
         new_size = tuple(new_size)  # type: ignore
 
-    new_dist = _change_dist_size(dist.owner.op, dist, new_size=new_size, expand=expand)
+    op = dist.owner.op
+    new_dist = _change_dist_size(op, dist, new_size=new_size, expand=expand)
     _add_future_warning_tag(new_dist)
 
     new_dist.name = dist.name
@@ -371,7 +286,7 @@ def change_dist_size(
 def change_rv_size(op, rv, new_size, expand) -> TensorVariable:
     # Extract the RV node that is to be resized
     rv_node = rv.owner
-    old_rng, old_size, dtype, *dist_params = rv_node.inputs
+    old_rng, old_size, *dist_params = rv_node.inputs
 
     if expand:
         shape = tuple(rv_node.op._infer_shape(old_size, dist_params))
@@ -382,7 +297,7 @@ def change_rv_size(op, rv, new_size, expand) -> TensorVariable:
     # to not unnecessarily pick up a `Cast` in some cases (see #4652).
     new_size = pt.as_tensor(new_size, ndim=1, dtype="int64")
 
-    new_rv = rv_node.op(*dist_params, size=new_size, dtype=dtype)
+    new_rv = rv_node.op(*dist_params, size=new_size, dtype=rv.type.dtype)
 
     # Replicate "traditional" rng default_update, if that was set for old_rng
     default_update = getattr(old_rng, "default_update", None)
@@ -420,14 +335,14 @@ def change_specify_shape_size(op, ss, new_size, expand) -> TensorVariable:
 
 
 def get_support_shape(
-    support_shape: Optional[Sequence[Union[int, np.ndarray, TensorVariable]]],
+    support_shape: Sequence[int | np.ndarray | TensorVariable] | None,
     *,
-    shape: Optional[Shape] = None,
-    dims: Optional[Dims] = None,
-    observed: Optional[Any] = None,
-    support_shape_offset: Optional[Sequence[int]] = None,
+    shape: Shape | None = None,
+    dims: Dims | None = None,
+    observed: Any | None = None,
+    support_shape_offset: Sequence[int] | None = None,
     ndim_supp: int = 1,
-) -> Optional[TensorVariable]:
+) -> TensorVariable | None:
     """Extract the support shapes from shape / dims / observed information
 
     Parameters
@@ -460,7 +375,7 @@ def get_support_shape(
         support_shape_offset = [0] * ndim_supp
     elif isinstance(support_shape_offset, int):
         support_shape_offset = [support_shape_offset] * ndim_supp
-    inferred_support_shape: Optional[Sequence[Union[int, np.ndarray, Variable]]] = None
+    inferred_support_shape: Sequence[int | np.ndarray | Variable] | None = None
 
     if shape is not None:
         shape = to_tuple(shape)
@@ -517,13 +432,13 @@ def get_support_shape(
 
 
 def get_support_shape_1d(
-    support_shape: Optional[Union[int, np.ndarray, TensorVariable]],
+    support_shape: int | np.ndarray | TensorVariable | None,
     *,
-    shape: Optional[Shape] = None,
-    dims: Optional[Dims] = None,
-    observed: Optional[Any] = None,
+    shape: Shape | None = None,
+    dims: Dims | None = None,
+    observed: Any | None = None,
     support_shape_offset: int = 0,
-) -> Optional[TensorVariable]:
+) -> TensorVariable | None:
     """Helper function for cases when you just care about one dimension."""
     support_shape_tuple = get_support_shape(
         support_shape=(support_shape,) if support_shape is not None else None,
@@ -538,3 +453,25 @@ def get_support_shape_1d(
         return support_shape_
     else:
         return None
+
+
+def implicit_size_from_params(
+    *params: TensorVariable,
+    ndims_params: Sequence[int],
+) -> TensorVariable:
+    """Infer the size of a distribution from the batch dimenesions of its parameters."""
+    batch_shapes = []
+    for param, ndim in zip(params, ndims_params):
+        batch_shape = list(param.shape[:-ndim] if ndim > 0 else param.shape)
+        # Overwrite broadcastable dims
+        for i, broadcastable in enumerate(param.type.broadcastable):
+            if broadcastable:
+                batch_shape[i] = 1
+        batch_shapes.append(batch_shape)
+
+    return pt.as_tensor(
+        pt.broadcast_shape(
+            *batch_shapes,
+            arrays_are_shapes=True,
+        )
+    )

@@ -19,13 +19,12 @@ import warnings
 
 from collections.abc import Iterator, Sequence
 from copy import copy
-from typing import Union
+from typing import TypeAlias
 
 import cloudpickle
 import numpy as np
 
-from fastprogress.fastprogress import progress_bar
-from typing_extensions import TypeAlias
+from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 
 from pymc.backends.base import BaseTrace
 from pymc.initial_point import PointType
@@ -38,12 +37,12 @@ from pymc.step_methods.arraystep import (
     StatsType,
 )
 from pymc.step_methods.metropolis import DEMetropolis
-from pymc.util import RandomSeed
+from pymc.util import CustomProgress, RandomSeed
 
 __all__ = ()
 
 
-Step: TypeAlias = Union[BlockedStep, CompoundStep]
+Step: TypeAlias = BlockedStep | CompoundStep
 
 
 _log = logging.getLogger(__name__)
@@ -55,7 +54,7 @@ def _sample_population(
     draws: int,
     start: Sequence[PointType],
     random_seed: RandomSeed,
-    step: Union[BlockedStep, CompoundStep],
+    step: BlockedStep | CompoundStep,
     tune: int,
     model: Model,
     progressbar: bool = True,
@@ -101,17 +100,17 @@ def _sample_population(
         progressbar=progressbar,
     )
 
-    if progressbar:
-        sampling = progress_bar(sampling, total=draws, display=progressbar)
+    with CustomProgress(disable=not progressbar) as progress:
+        task = progress.add_task("[red]Sampling...", total=draws)
+        for _ in sampling:
+            progress.update(task)
 
-    for i in sampling:
-        pass
     return
 
 
 def warn_population_size(
     *,
-    step: Union[BlockedStep, CompoundStep],
+    step: BlockedStep | CompoundStep,
     initial_points: Sequence[PointType],
     model: Model,
     chains: int,
@@ -129,9 +128,7 @@ def warn_population_size(
     if has_demcmc and chains < 3:
         raise ValueError(
             "DEMetropolis requires at least 3 chains. "
-            "For this {}-dimensional model you should use ≥{} chains".format(
-                initial_point_model_size, initial_point_model_size + 1
-            )
+            f"For this {initial_point_model_size}-dimensional model you should use ≥{initial_point_model_size + 1} chains"
         )
     if has_demcmc and chains <= initial_point_model_size:
         warnings.warn(
@@ -168,6 +165,7 @@ class PopulationStepper:
         self._primary_ends = []
         self._processes = []
         self._steppers = steppers
+        self._progress = None
         if parallelize:
             try:
                 # configure a child process for each stepper
@@ -176,25 +174,35 @@ class PopulationStepper:
                 )
                 import multiprocessing
 
-                for c, stepper in (
-                    enumerate(progress_bar(steppers)) if progressbar else enumerate(steppers)
-                ):
-                    secondary_end, primary_end = multiprocessing.Pipe()
-                    stepper_dumps = cloudpickle.dumps(stepper, protocol=4)
-                    process = multiprocessing.Process(
-                        target=self.__class__._run_secondary,
-                        args=(c, stepper_dumps, secondary_end),
-                        name=f"ChainWalker{c}",
-                    )
-                    # we want the child process to exit if the parent is terminated
-                    process.daemon = True
-                    # Starting the process might fail and takes time.
-                    # By doing it in the constructor, the sampling progress bar
-                    # will not be confused by the process start.
-                    process.start()
-                    self._primary_ends.append(primary_end)
-                    self._processes.append(process)
-                self.is_parallelized = True
+                with CustomProgress(
+                    "[progress.description]{task.description}",
+                    BarColumn(),
+                    "[progress.percentage]{task.percentage:>3.0f}%",
+                    TimeRemainingColumn(),
+                    TextColumn("/"),
+                    TimeElapsedColumn(),
+                    disable=not progressbar,
+                ) as self._progress:
+                    for c, stepper in enumerate(steppers):
+                        #     enumerate(progress_bar(steppers)) if progressbar else enumerate(steppers)
+                        # ):
+                        task = self._progress.add_task(description=f"Chain {c}")
+                        secondary_end, primary_end = multiprocessing.Pipe()
+                        stepper_dumps = cloudpickle.dumps(stepper, protocol=4)
+                        process = multiprocessing.Process(
+                            target=self.__class__._run_secondary,
+                            args=(c, stepper_dumps, secondary_end, task, self._progress),
+                            name=f"ChainWalker{c}",
+                        )
+                        # we want the child process to exit if the parent is terminated
+                        process.daemon = True
+                        # Starting the process might fail and takes time.
+                        # By doing it in the constructor, the sampling progress bar
+                        # will not be confused by the process start.
+                        process.start()
+                        self._primary_ends.append(primary_end)
+                        self._processes.append(process)
+                    self.is_parallelized = True
             except Exception:
                 _log.info(
                     "Population parallelization failed. "
@@ -224,7 +232,7 @@ class PopulationStepper:
         return
 
     @staticmethod
-    def _run_secondary(c, stepper_dumps, secondary_end):
+    def _run_secondary(c, stepper_dumps, secondary_end, task, progress):
         """The method is started on a separate process to perform stepping of a chain.
 
         Parameters
@@ -235,6 +243,10 @@ class PopulationStepper:
             a step method such as CompoundStep
         secondary_end : multiprocessing.connection.PipeConnection
             This is our connection to the main process
+        task : progress.Task
+            The progress task for this chain
+        progress : progress.Progress
+            The progress bar
         """
         # re-seed each child process to make them unique
         np.random.seed(None)
@@ -261,6 +273,7 @@ class PopulationStepper:
                 for popstep in population_steppers:
                     popstep.population = population
                 update = stepper.step(population[c])
+                progress.advance(task)
                 secondary_end.send(update)
         except Exception:
             _log.exception(f"ChainWalker{c}")

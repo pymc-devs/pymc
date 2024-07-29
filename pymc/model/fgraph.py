@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from copy import copy, deepcopy
-from typing import Optional
 
 import pytensor
 
@@ -58,7 +57,7 @@ class ModelVar(Op):
 class ModelValuedVar(ModelVar):
     __props__ = ("transform",)
 
-    def __init__(self, transform: Optional[Transform] = None):
+    def __init__(self, transform: Transform | None = None):
         if transform is not None and not isinstance(transform, Transform):
             raise TypeError(f"transform must be None or RVTransform type, got {type(transform)}")
         self.transform = transform
@@ -165,16 +164,18 @@ def fgraph_from_model(
     free_rvs = model.free_RVs
     observed_rvs = model.observed_RVs
     potentials = model.potentials
-    named_vars = model.named_vars.values()
     # We copy Deterministics (Identity Op) so that they don't show in between "main" variables
     # We later remove these Identity Ops when we have a Deterministic ModelVar Op as a separator
     old_deterministics = model.deterministics
     deterministics = [det if inlined_views else det.copy(det.name) for det in old_deterministics]
     # Value variables (we also have to decide whether to inline named ones)
     old_value_vars = list(rvs_to_values.values())
-    unnamed_value_vars = [val for val in old_value_vars if val not in named_vars]
+    data_vars = model.data_vars
+    unnamed_value_vars = [val for val in old_value_vars if val not in data_vars]
     named_value_vars = [
-        val if inlined_views else val.copy(val.name) for val in old_value_vars if val in named_vars
+        val if inlined_views else val.copy(name=val.name)
+        for val in old_value_vars
+        if val in data_vars
     ]
     value_vars = old_value_vars.copy()
     if inlined_views:
@@ -182,14 +183,11 @@ def fgraph_from_model(
         for named_val in named_value_vars:
             idx = value_vars.index(named_val)
             value_vars[idx] = named_val
-    # Other variables that are in named_vars but are not any of the categories above
-    # E.g., MutableData, ConstantData, _dim_lengths
-    # We use the same trick as deterministics!
-    accounted_for = set(free_rvs + observed_rvs + potentials + old_deterministics + old_value_vars)
+    # Data vars that are not value vars
     other_named_vars = [
         var if inlined_views else var.copy(var.name)
-        for var in named_vars
-        if var not in accounted_for
+        for var in data_vars
+        if var not in old_value_vars
     ]
 
     model_vars = (
@@ -200,8 +198,8 @@ def fgraph_from_model(
 
     # Replace the following shared variables in the model:
     # 1. RNGs
-    # 2. MutableData (could increase memory usage significantly)
-    # 3. Mutable coords dim lengths
+    # 2. Data (could increase memory usage significantly)
+    # 3. Symbolic coords dim lengths
     shared_vars_to_copy = find_rng_nodes(model_vars)
     shared_vars_to_copy += [v for v in model.dim_lengths.values() if isinstance(v, SharedVariable)]
     shared_vars_to_copy += [v for v in model.named_vars.values() if isinstance(v, SharedVariable)]
@@ -262,7 +260,7 @@ def fgraph_from_model(
     inverse_memo = {v: k for k, v in memo.items()}
     for var, model_var in replacements:
         if not inlined_views and (
-            model_var.owner and isinstance(model_var.owner.op, (ModelDeterministic, ModelNamed))
+            model_var.owner and isinstance(model_var.owner.op, ModelDeterministic | ModelNamed)
         ):
             # Ignore extra identity that will be removed at the end
             var = var.owner.inputs[0]
@@ -280,12 +278,18 @@ def fgraph_from_model(
     return fgraph, memo
 
 
-def model_from_fgraph(fgraph: FunctionGraph) -> Model:
+def model_from_fgraph(fgraph: FunctionGraph, mutate_fgraph: bool = False) -> Model:
     """Convert FunctionGraph to PyMC model.
 
-    This requires nodes to be properly tagged with `ModelVar` dummy Ops.
+    Parameters
+    ----------
+    fgraph: FunctionGraph
+        fgraph representation of a PyMC model, with dummy `ModelVar` Ops.
+        See `fgraph_from_model` for more details.
 
-    See: fgraph_from_model
+    mutate_fgraph: bool, default False
+        Whether the function is allowed to modify the fgraph (and it's variables) in place.
+         This is useful if these are not needed anymore after the model is created.
     """
 
     def first_non_model_var(var):
@@ -295,14 +299,22 @@ def model_from_fgraph(fgraph: FunctionGraph) -> Model:
         else:
             return var
 
-    model = Model()
-    if model.parent is not None:
-        raise RuntimeError("model_to_fgraph cannot be called inside a PyMC model context")
-    model._coords = getattr(fgraph, "_coords", {})
-    model._dim_lengths = getattr(fgraph, "_dim_lengths", {})
+    model = Model(model=None)  # Do not inherit from any model in the context manager
+
+    _coords = getattr(fgraph, "_coords", {})
+    _dim_lengths = getattr(fgraph, "_dim_lengths", {})
+
+    if not mutate_fgraph:
+        fgraph, memo = fgraph.clone_get_equiv(check_integrity=False, attach_feature=False)
+        # Shared dim lengths are not extracted from the fgraph representation,
+        # so we need to update after we clone the fgraph
+        # TODO: Consider representing/extracting them from the fgraph!
+        _dim_lengths = {k: memo.get(v, v) for k, v in _dim_lengths.items()}
+
+    model._coords = _coords
+    model._dim_lengths = _dim_lengths
 
     # Replace dummy `ModelVar` Ops by the underlying variables,
-    fgraph = fgraph.clone()
     model_dummy_vars = [
         model_node.outputs[0]
         for model_node in fgraph.toposort()
@@ -322,14 +334,14 @@ def model_from_fgraph(fgraph: FunctionGraph) -> Model:
             var, value, *dims = model_var.owner.inputs
             transform = model_var.owner.op.transform
             model.free_RVs.append(var)
-            # PyMC does not allow setting transform when we pass a value_var. Why?
-            model.create_value_var(var, transform=None, value_var=value)
-            model.rvs_to_transforms[var] = transform
+            model.create_value_var(
+                var, transform=transform, default_transform=None, value_var=value
+            )
             model.set_initval(var, initval=None)
         elif isinstance(model_var.owner.op, ModelObservedRV):
             var, value, *dims = model_var.owner.inputs
             model.observed_RVs.append(var)
-            model.create_value_var(var, transform=None, value_var=value)
+            model.create_value_var(var, transform=None, default_transform=None, value_var=value)
         elif isinstance(model_var.owner.op, ModelPotential):
             var, *dims = model_var.owner.inputs
             model.potentials.append(var)
@@ -341,6 +353,7 @@ def model_from_fgraph(fgraph: FunctionGraph) -> Model:
             model.deterministics.append(var)
         elif isinstance(model_var.owner.op, ModelNamed):
             var, *dims = model_var.owner.inputs
+            model.data_vars.append(var)
         else:
             raise TypeError(f"Unexpected ModelVar type {type(model_var)}")
 
@@ -378,7 +391,7 @@ def clone_model(model: Model) -> Model:
             z = pm.Deterministic("z", clone_x + 1)
 
     """
-    return model_from_fgraph(fgraph_from_model(model)[0])
+    return model_from_fgraph(fgraph_from_model(model)[0], mutate_fgraph=True)
 
 
 def extract_dims(var) -> tuple:

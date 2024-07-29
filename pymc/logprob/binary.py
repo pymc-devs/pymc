@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Optional
 
 import numpy as np
 import pytensor.tensor as pt
@@ -40,10 +39,8 @@ class MeasurableComparison(MeasurableElemwise):
 
 
 @node_rewriter(tracks=[gt, lt, ge, le])
-def find_measurable_comparisons(
-    fgraph: FunctionGraph, node: Node
-) -> Optional[list[TensorVariable]]:
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+def find_measurable_comparisons(fgraph: FunctionGraph, node: Node) -> list[TensorVariable] | None:
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
 
@@ -105,9 +102,9 @@ def comparison_logprob(op, values, base_rv, operand, **kwargs):
 
     condn_exp = pt.eq(value, np.array(True))
 
-    if isinstance(op.scalar_op, (GT, GE)):
+    if isinstance(op.scalar_op, GT | GE):
         logprob = pt.switch(condn_exp, logccdf, logcdf)
-    elif isinstance(op.scalar_op, (LT, LE)):
+    elif isinstance(op.scalar_op, LT | LE):
         logprob = pt.switch(condn_exp, logcdf, logccdf)
     else:
         raise TypeError(f"Unsupported scalar_op {op.scalar_op}")
@@ -134,8 +131,8 @@ class MeasurableBitwise(MeasurableElemwise):
 
 
 @node_rewriter(tracks=[invert])
-def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> Optional[list[TensorVariable]]:
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> list[TensorVariable] | None:
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
 

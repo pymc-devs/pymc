@@ -34,9 +34,9 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from copy import copy
-from typing import Callable, Optional, cast
+from typing import cast
 
 import numpy as np
 import pytensor
@@ -365,7 +365,7 @@ def find_measurable_scans(fgraph, node):
     if not hasattr(fgraph, "shape_feature"):
         return None  # pragma: no cover
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover

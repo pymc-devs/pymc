@@ -35,7 +35,7 @@
 #   SOFTWARE.
 import abc
 
-from typing import Callable, Optional, Union
+from collections.abc import Callable
 
 import numpy as np
 import pytensor.tensor as pt
@@ -134,7 +134,7 @@ class Transform(abc.ABC):
     @abc.abstractmethod
     def backward(
         self, value: TensorVariable, *inputs: Variable
-    ) -> Union[TensorVariable, tuple[TensorVariable, ...]]:
+    ) -> TensorVariable | tuple[TensorVariable, ...]:
         """Invert the transformation. Multiple values may be returned when the
         transformation is not 1-to-1"""
 
@@ -423,14 +423,14 @@ def measurable_power_exponent_to_exp(fgraph, node):
         erfcx,
     ]
 )
-def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> Optional[list[Node]]:
+def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> list[Node] | None:
     """Find measurable transformations from Elemwise operators."""
 
     # Node was already converted
     if isinstance(node.op, MeasurableVariable):
         return None  # pragma: no cover
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is None:
         return None  # pragma: no cover
 
@@ -779,7 +779,7 @@ class PowerTransform(Transform):
     name = "power"
 
     def __init__(self, power=None):
-        if not isinstance(power, (int, float)):
+        if not isinstance(power, int | float):
             raise TypeError(f"Power must be integer or float, got {type(power)}")
         if power == 0:
             raise ValueError("Power cannot be 0")
@@ -821,7 +821,7 @@ class PowerTransform(Transform):
 class IntervalTransform(Transform):
     name = "interval"
 
-    def __init__(self, args_fn: Callable[..., tuple[Optional[Variable], Optional[Variable]]]):
+    def __init__(self, args_fn: Callable[..., tuple[Variable | None, Variable | None]]):
         """
 
         Parameters
@@ -961,7 +961,7 @@ class SimplexTransform(Transform):
         N = N.astype(value.dtype)
         sum_value = pt.sum(value, -1, keepdims=True)
         value_sum_expanded = value + sum_value
-        value_sum_expanded = pt.concatenate([value_sum_expanded, pt.zeros(sum_value.shape)], -1)
+        value_sum_expanded = pt.concatenate([value_sum_expanded, pt.zeros_like(sum_value)], -1)
         logsumexp_value_expanded = pt.logsumexp(value_sum_expanded, -1, keepdims=True)
         res = pt.log(N) + (N * sum_value) - (N * logsumexp_value_expanded)
         return pt.sum(res, -1)
@@ -977,7 +977,7 @@ class CircularTransform(Transform):
         return pt.as_tensor_variable(value)
 
     def log_jac_det(self, value, *inputs):
-        return pt.zeros(value.shape)
+        return pt.zeros_like(value)
 
 
 class ChainedTransform(Transform):

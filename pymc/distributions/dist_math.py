@@ -17,6 +17,7 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 """
+
 import warnings
 
 from collections.abc import Iterable

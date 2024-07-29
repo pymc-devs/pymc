@@ -1,4 +1,4 @@
-name: pre-commit
+name: mypy
 
 on:
   pull_request:
@@ -6,23 +6,13 @@ on:
     branches: [main]
 
 jobs:
-  pre-commit:
-    runs-on: ubuntu-latest
-    env:
-      SKIP: no-commit-to-branch
-    steps:
-    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.9"  # Run pre-commit on oldest supported Python version
-    - uses: pre-commit/action@v3.0.1
   mypy:
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
       - name: Cache conda
         uses: actions/cache@v4
         env:
@@ -52,7 +42,7 @@ jobs:
           activate-environment: pymc-test
           channel-priority: strict
           environment-file: conda-envs/environment-test.yml
-          python-version: "3.9"  # Run pre-commit on oldest supported Python version
+          python-version: "3.10"  # Run pre-commit on oldest supported Python version
           use-mamba: true
           use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
       - name: Install-pymc and mypy dependencies

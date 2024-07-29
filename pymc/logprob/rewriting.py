@@ -36,8 +36,7 @@
 import warnings
 
 from collections import deque
-from collections.abc import Sequence
-from typing import Optional
+from collections.abc import Collection, Sequence
 
 import pytensor.tensor as pt
 
@@ -73,7 +72,6 @@ from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.rewriting.basic import register_canonicalize
 from pytensor.tensor.rewriting.math import local_exp_over_1_plus_exp
 from pytensor.tensor.rewriting.shape import ShapeFeature
-from pytensor.tensor.rewriting.uncanonicalize import local_max_and_argmax
 from pytensor.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
@@ -101,7 +99,7 @@ class MeasurableEquilibriumGraphRewriter(EquilibriumGraphRewriter):
     """
 
     def apply(self, fgraph):
-        rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+        rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
         if not rv_map_feature:
             return None
 
@@ -232,7 +230,7 @@ class PreserveRVMappings(Feature):
         self,
         old_rv: TensorVariable,
         new_value: TensorVariable,
-        new_rv: Optional[TensorVariable] = None,
+        new_rv: TensorVariable | None = None,
     ):
         """Update mappings for a random variable.
 
@@ -333,7 +331,7 @@ def incsubtensor_rv_replace(fgraph, node):
 
     This provides a means of specifying "missing data", for instance.
     """
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -366,8 +364,6 @@ logprob_rewrites_db.register(
     "local_exp_over_1_plus_exp", out2in(local_exp_over_1_plus_exp), "basic"
 )
 logprob_rewrites_db.register("pre-canonicalize", optdb.query("+canonicalize"), "basic")
-# Split max_and_argmax
-logprob_rewrites_db.register("local_max_and_argmax", out2in(local_max_and_argmax), "basic")
 
 # These rewrites convert un-measurable variables into their measurable forms,
 # but they need to be reapplied, because some of the measurable forms require
@@ -399,7 +395,7 @@ cleanup_ir_rewrites_db.register("remove_DiracDelta", remove_DiracDelta, "cleanup
 
 def construct_ir_fgraph(
     rv_values: dict[Variable, Variable],
-    ir_rewriter: Optional[GraphRewriter] = None,
+    ir_rewriter: GraphRewriter | None = None,
 ) -> tuple[FunctionGraph, dict[Variable, Variable], dict[Variable, Variable]]:
     r"""Construct a `FunctionGraph` in measurable IR form for the keys in `rv_values`.
 
@@ -481,7 +477,7 @@ def cleanup_ir(vars: Sequence[Variable]) -> None:
 
 
 def assume_measured_ir_outputs(
-    inputs: Sequence[TensorVariable], outputs: Sequence[TensorVariable]
+    inputs: Collection[TensorVariable], outputs: Sequence[TensorVariable]
 ) -> Sequence[TensorVariable]:
     """Run IR rewrite assuming each output is measured.
 

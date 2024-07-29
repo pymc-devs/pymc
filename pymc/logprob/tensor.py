@@ -34,11 +34,13 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from typing import Optional, Union
+
+from pathlib import Path
 
 import pytensor
 
 from pytensor import tensor as pt
+from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor import TensorVariable
@@ -61,7 +63,7 @@ from pymc.pytensorf import constant_fold
 
 
 @node_rewriter([Alloc])
-def naive_bcast_rv_lift(fgraph, node):
+def naive_bcast_rv_lift(fgraph: FunctionGraph, node):
     """Lift an ``Alloc`` through a ``RandomVariable`` ``Op``.
 
     XXX: This implementation simply broadcasts the ``RandomVariable``'s
@@ -89,7 +91,7 @@ def naive_bcast_rv_lift(fgraph, node):
         return None  # pragma: no cover
 
     # Do not replace RV if it is associated with a value variable
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
     if rv_map_feature is not None and rv_var in rv_map_feature.rv_values:
         return None
 
@@ -105,7 +107,7 @@ def naive_bcast_rv_lift(fgraph, node):
         _, lifted_rv = size_lift_res
         lifted_node = lifted_rv.owner
 
-    rng, size, dtype, *dist_params = lifted_node.inputs
+    rng, size, *dist_params = lifted_node.inputs
 
     new_dist_params = [
         pt.broadcast_to(
@@ -114,7 +116,7 @@ def naive_bcast_rv_lift(fgraph, node):
         )
         for param in dist_params
     ]
-    bcasted_node = lifted_node.op.make_node(rng, size, dtype, *new_dist_params)
+    bcasted_node = lifted_node.op.make_node(rng, size, *new_dist_params)
 
     if pytensor.config.compute_test_value != "off":
         compute_test_value(bcasted_node)
@@ -188,20 +190,22 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
     # If the stacked variables depend on each other, we have to replace them by the respective values
     logps = replace_rvs_by_values(logps, rvs_to_values=base_rvs_to_split_values)
 
-    base_vars_ndim_supp = split_values[0].ndim - logps[0].ndim
+    # Make axis positive and adjust for multivariate logp fewer dimensions to the right
+    axis = pt.switch(axis >= 0, axis, value.ndim + axis)
+    axis = pt.minimum(axis, logps[0].ndim - 1)
     join_logprob = pt.concatenate(
         [pt.atleast_1d(logp) for logp in logps],
-        axis=axis - base_vars_ndim_supp,
+        axis=axis,
     )
 
     return join_logprob
 
 
 @node_rewriter([MakeVector, Join])
-def find_measurable_stacks(fgraph, node) -> Optional[list[TensorVariable]]:
+def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
     r"""Finds `Joins`\s and `MakeVector`\s for which a `logprob` can be computed."""
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -225,6 +229,7 @@ def find_measurable_stacks(fgraph, node) -> Optional[list[TensorVariable]]:
         measurable_stack = MeasurableJoin()(axis, *base_vars)
     else:
         measurable_stack = MeasurableMakeVector(node.op.dtype)(*base_vars)
+    assert isinstance(measurable_stack, TensorVariable)
 
     return [measurable_stack]
 
@@ -234,20 +239,20 @@ class MeasurableDimShuffle(DimShuffle):
 
     # Need to get the absolute path of `c_func_file`, otherwise it tries to
     # find it locally and fails when a new `Op` is initialized
-    c_func_file = DimShuffle.get_path(DimShuffle.c_func_file)
+    c_func_file = str(DimShuffle.get_path(Path(DimShuffle.c_func_file)))
 
 
 MeasurableVariable.register(MeasurableDimShuffle)
 
 
 @_logprob.register(MeasurableDimShuffle)
-def logprob_dimshuffle(op, values, base_var, **kwargs):
+def logprob_dimshuffle(op: MeasurableDimShuffle, values, base_var, **kwargs):
     """Compute the log-likelihood graph for a `MeasurableDimShuffle`."""
     (value,) = values
 
     # Reverse the effects of dimshuffle on the value variable
     # First, drop any augmented dimensions and reinsert any dropped dimensions
-    undo_ds: list[Union[int, str]] = [i for i, o in enumerate(op.new_order) if o != "x"]
+    undo_ds: list[int | str] = [i for i, o in enumerate(op.new_order) if o != "x"]
     dropped_dims = tuple(sorted(set(op.transposition) - set(op.shuffle)))
     for dropped_dim in dropped_dims:
         undo_ds.insert(dropped_dim, "x")
@@ -272,10 +277,10 @@ def logprob_dimshuffle(op, values, base_var, **kwargs):
 
 
 @node_rewriter([DimShuffle])
-def find_measurable_dimshuffles(fgraph, node) -> Optional[list[TensorVariable]]:
+def find_measurable_dimshuffles(fgraph, node) -> list[TensorVariable] | None:
     r"""Finds `Dimshuffle`\s for which a `logprob` can be computed."""
 
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
+    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
 
     if rv_map_feature is None:
         return None  # pragma: no cover
@@ -299,6 +304,7 @@ def find_measurable_dimshuffles(fgraph, node) -> Optional[list[TensorVariable]]:
     measurable_dimshuffle = MeasurableDimShuffle(node.op.input_broadcastable, node.op.new_order)(
         base_var
     )
+    assert isinstance(measurable_dimshuffle, TensorVariable)
 
     return [measurable_dimshuffle]
 
