@@ -193,10 +193,13 @@ class SMC_KERNEL(ABC):
             )
 
             model = self.model
+
             prior_expression = make_initial_point_expression(
                 free_rvs=model.free_RVs,
                 rvs_to_transforms=model.rvs_to_transforms,
-                initval_strategies={},
+                initval_strategies={
+                    **model.rvs_to_initial_values,
+                },
                 default_strategy="prior",
                 return_transformed=True,
             )
