@@ -505,7 +505,6 @@ def test_scan_carried_deterministic_state():
     )
 
 
-@pytest.mark.xfail(reason="Not implemented yet")
 def test_scan_multiple_output_types():
     """Test we can derive the logp for a scan that contains recurring and non-recurring measurable outputs."""
     [xs, ys, zs], _ = pytensor.scan(

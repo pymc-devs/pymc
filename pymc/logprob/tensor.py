@@ -38,6 +38,7 @@
 from pathlib import Path
 
 from pytensor import tensor as pt
+from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.basic import Join, MakeVector
@@ -47,13 +48,18 @@ from pytensor.tensor.random.rewriting import (
     local_dimshuffle_rv_lift,
 )
 
-from pymc.logprob.abstract import MeasurableOp, _logprob, _logprob_helper
+from pymc.logprob.abstract import MeasurableOp, _logprob, _logprob_helper, promised_valued_rv
 from pymc.logprob.rewriting import (
-    PreserveRVMappings,
-    assume_measured_ir_outputs,
+    assume_valued_outputs,
+    early_measurable_ir_rewrites_db,
     measurable_ir_rewrites_db,
+    remove_promised_valued_rvs,
 )
-from pymc.logprob.utils import check_potential_measurability, replace_rvs_by_values
+from pymc.logprob.utils import (
+    check_potential_measurability,
+    filter_measurable_variables,
+    replace_rvs_by_values,
+)
 from pymc.pytensorf import constant_fold
 
 
@@ -67,6 +73,8 @@ def logprob_make_vector(op, values, *base_rvs, **kwargs):
     # TODO: Sort out this circular dependency issue
 
     (value,) = values
+
+    base_rvs = remove_promised_valued_rvs(base_rvs)
 
     base_rvs_to_values = {base_rv: value[i] for i, base_rv in enumerate(base_rvs)}
     for i, (base_rv, value) in enumerate(base_rvs_to_values.items()):
@@ -89,6 +97,8 @@ class MeasurableJoin(MeasurableOp, Join):
 def logprob_join(op, values, axis, *base_rvs, **kwargs):
     """Compute the log-likelihood graph for a `Join`."""
     (value,) = values
+
+    base_rvs = remove_promised_valued_rvs(base_rvs)
 
     base_rv_shapes = [base_var.shape[axis] for base_var in base_rvs]
 
@@ -131,11 +141,10 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
 @node_rewriter([MakeVector, Join])
 def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
     r"""Finds `Joins`\s and `MakeVector`\s for which a `logprob` can be computed."""
+    from pymc.pytensorf import toposort_replace
 
-    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
+    if isinstance(node.op, MeasurableOp):
+        return None
 
     is_join = isinstance(node.op, Join)
 
@@ -144,18 +153,25 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
     else:
         base_vars = node.inputs
 
-    valued_rvs = rv_map_feature.rv_values.keys()
-    if not all(check_potential_measurability([base_var], valued_rvs) for base_var in base_vars):
+    if not all(check_potential_measurability([base_var]) for base_var in base_vars):
         return None
 
-    base_vars = assume_measured_ir_outputs(valued_rvs, base_vars)
+    base_vars = assume_valued_outputs(base_vars)
     if not all(var.owner and isinstance(var.owner.op, MeasurableOp) for var in base_vars):
         return None
 
+    # Each base var will be "valued" by the logprob method, so other rewrites shouldn't mess with it
+    # and potentially break interdependencies. For this reason, this rewrite should be applied early in
+    # the IR construction
+    replacements = [(base_var, promised_valued_rv(base_var)) for base_var in base_vars]
+    temp_fgraph = FunctionGraph(outputs=base_vars, clone=False)
+    toposort_replace(temp_fgraph, replacements)  # type: ignore
+    new_base_vars = temp_fgraph.outputs
+
     if is_join:
-        measurable_stack = MeasurableJoin()(axis, *base_vars)
+        measurable_stack = MeasurableJoin()(axis, *new_base_vars)
     else:
-        measurable_stack = MeasurableMakeVector(node.op.dtype)(*base_vars)
+        measurable_stack = MeasurableMakeVector(node.op.dtype)(*new_base_vars)
     assert isinstance(measurable_stack, TensorVariable)
 
     return [measurable_stack]
@@ -203,13 +219,12 @@ def logprob_dimshuffle(op: MeasurableDimShuffle, values, base_var, **kwargs):
 @node_rewriter([DimShuffle])
 def find_measurable_dimshuffles(fgraph, node) -> list[TensorVariable] | None:
     r"""Finds `Dimshuffle`\s for which a `logprob` can be computed."""
+    from pymc.distributions.distribution import SymbolicRandomVariable
 
-    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
+    if isinstance(node.op, MeasurableOp):
+        return None
 
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
-    if not rv_map_feature.request_measurable(node.inputs):
+    if not filter_measurable_variables(node.inputs):
         return None
 
     base_var = node.inputs[0]
@@ -222,7 +237,7 @@ def find_measurable_dimshuffles(fgraph, node) -> list[TensorVariable] | None:
     # lifted towards the base RandomVariable.
     # TODO: If we include the support axis as meta information in each
     # intermediate MeasurableVariable, we can lift this restriction.
-    if not isinstance(base_var.owner.op, RandomVariable):
+    if not isinstance(base_var.owner.op, RandomVariable | SymbolicRandomVariable):
         return None  # pragma: no cover
 
     measurable_dimshuffle = MeasurableDimShuffle(node.op.input_broadcastable, node.op.new_order)(
@@ -241,7 +256,7 @@ measurable_ir_rewrites_db.register(
     "find_measurable_dimshuffles", find_measurable_dimshuffles, "basic", "tensor"
 )
 
-measurable_ir_rewrites_db.register(
+early_measurable_ir_rewrites_db.register(
     "find_measurable_stacks",
     find_measurable_stacks,
     "basic",
