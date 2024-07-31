@@ -44,6 +44,7 @@ import scipy.stats.distributions as sp
 
 from pytensor.graph.basic import ancestors, equal_computations
 from pytensor.tensor.random.op import RandomVariable
+from scipy import stats
 
 import pymc as pm
 
@@ -412,4 +413,26 @@ def test_icdf_discrete():
     np.testing.assert_almost_equal(
         dist_icdf.eval(),
         sp.geom.ppf(value, p),
+    )
+
+
+def test_ir_rewrite_does_not_disconnect_valued_rvs():
+    """Check that we don't lose the dependency across RV values do to automatic rewrites.
+
+    See ValuedRV docstrings for more context.
+
+    Regression test for https://github.com/pymc-devs/pymc/issues/6917
+    """
+    a_base = pm.Normal.dist()
+    a = a_base * 5
+    b = pm.Normal.dist(a * 8)
+
+    a_value = a.type()
+    b_value = b.type()
+    logp_b = conditional_logp({a: a_value, b: b_value})[b_value]
+
+    assert_no_rvs(logp_b)
+    np.testing.assert_allclose(
+        logp_b.eval({a_value: np.pi, b_value: np.e}),
+        stats.norm.logpdf(np.e, np.pi * 8, 1),
     )

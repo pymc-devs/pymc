@@ -116,10 +116,11 @@ from pymc.logprob.abstract import (
     _logprob,
     _logprob_helper,
 )
-from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
+from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import (
     CheckParameterValue,
     check_potential_measurability,
+    filter_measurable_variables,
     find_negated_var,
 )
 
@@ -269,6 +270,9 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
         # We don't know if this Op is monotonically increasing/decreasing
         raise NotImplementedError
 
+    if is_discrete:
+        return logcdf
+
     # The jacobian is used to ensure a value in the supported domain was provided
     jacobian = op.transform_elemwise.log_jac_det(value, *other_inputs)
     return pt.switch(pt.isnan(jacobian), -np.inf, logcdf)
@@ -311,6 +315,9 @@ def measurable_transform_icdf(op: MeasurableTransform, value, *inputs, **kwargs)
 @node_rewriter([reciprocal])
 def measurable_reciprocal_to_power(fgraph, node):
     """Convert reciprocal of `MeasurableVariable`s to power."""
+    if not filter_measurable_variables(node.inputs):
+        return None
+
     [inp] = node.inputs
     return [pt.pow(inp, -1.0)]
 
@@ -318,6 +325,9 @@ def measurable_reciprocal_to_power(fgraph, node):
 @node_rewriter([sqr, sqrt])
 def measurable_sqrt_sqr_to_power(fgraph, node):
     """Convert square root or square of `MeasurableVariable`s to power form."""
+    if not filter_measurable_variables(node.inputs):
+        return None
+
     [inp] = node.inputs
 
     if isinstance(node.op.scalar_op, Sqr):
@@ -330,6 +340,9 @@ def measurable_sqrt_sqr_to_power(fgraph, node):
 @node_rewriter([true_div])
 def measurable_div_to_product(fgraph, node):
     """Convert divisions involving `MeasurableVariable`s to products."""
+    if not filter_measurable_variables(node.inputs):
+        return None
+
     numerator, denominator = node.inputs
 
     # Check if numerator is 1
@@ -348,13 +361,19 @@ def measurable_div_to_product(fgraph, node):
 @node_rewriter([neg])
 def measurable_neg_to_product(fgraph, node):
     """Convert negation of `MeasurableVariable`s to product with `-1`."""
+    if not filter_measurable_variables(node.inputs):
+        return None
+
     inp = node.inputs[0]
-    return [pt.mul(inp, -1.0)]
+    return [pt.mul(inp, -1)]
 
 
 @node_rewriter([sub])
 def measurable_sub_to_neg(fgraph, node):
     """Convert subtraction involving `MeasurableVariable`s to addition with neg"""
+    if not filter_measurable_variables(node.inputs):
+        return None
+
     minuend, subtrahend = node.inputs
     return [pt.add(minuend, pt.neg(subtrahend))]
 
@@ -362,6 +381,9 @@ def measurable_sub_to_neg(fgraph, node):
 @node_rewriter([log1p, softplus, log1mexp, log2, log10])
 def measurable_special_log_to_log(fgraph, node):
     """Convert log1p, log1mexp, softplus, log2, log10 of `MeasurableVariable`s to log form."""
+    if not filter_measurable_variables(node.inputs):
+        return None
+
     [inp] = node.inputs
 
     if isinstance(node.op.scalar_op, Log1p):
@@ -379,6 +401,9 @@ def measurable_special_log_to_log(fgraph, node):
 @node_rewriter([expm1, sigmoid, exp2])
 def measurable_special_exp_to_exp(fgraph, node):
     """Convert expm1, sigmoid, and exp2 of `MeasurableVariable`s to xp form."""
+    if not filter_measurable_variables(node.inputs):
+        return None
+
     [inp] = node.inputs
     if isinstance(node.op.scalar_op, Exp2):
         return [pt.exp(pt.log(2) * inp)]
@@ -391,11 +416,14 @@ def measurable_special_exp_to_exp(fgraph, node):
 @node_rewriter([pow])
 def measurable_power_exponent_to_exp(fgraph, node):
     """Convert power(base, rv) of `MeasurableVariable`s to exp(log(base) * rv) form."""
+    if not filter_measurable_variables(node.inputs):
+        return None
+
     base, inp_exponent = node.inputs
 
     # When the base is measurable we have `power(rv, exponent)`, which should be handled by `PowerTransform` and needs no further rewrite.
     # Here we change only the cases where exponent is measurable `power(base, rv)` which is not supported by the `PowerTransform`
-    if check_potential_measurability([base], fgraph.preserve_rv_mappings.rv_values.keys()):
+    if check_potential_measurability([base]):
         return None
 
     base = CheckParameterValue("base >= 0")(base, pt.all(pt.ge(base, 0.0)))
@@ -427,14 +455,10 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> list[Node] 
 
     # Node was already converted
     if isinstance(node.op, MeasurableOp):
-        return None  # pragma: no cover
-
-    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
-    if rv_map_feature is None:
-        return None  # pragma: no cover
+        return None
 
     # Check that we have a single source of measurement
-    measurable_inputs = rv_map_feature.request_measurable(node.inputs)
+    measurable_inputs = filter_measurable_variables(node.inputs)
 
     if len(measurable_inputs) != 1:
         return None
@@ -454,7 +478,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> list[Node] 
     # would be invalid
     other_inputs = tuple(inp for inp in node.inputs if inp is not measurable_input)
 
-    if check_potential_measurability(other_inputs, rv_map_feature.rv_values.keys()):
+    if check_potential_measurability(other_inputs):
         return None
 
     scalar_op = node.op.scalar_op
