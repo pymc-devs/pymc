@@ -16,7 +16,6 @@ from collections.abc import Sequence
 
 import numpy as np
 
-from pytensor.gradient import DisconnectedType
 from pytensor.graph import Apply, Op
 from pytensor.graph.features import AlreadyThere, Feature
 from pytensor.graph.fg import FunctionGraph
@@ -44,14 +43,8 @@ class TransformedValue(Op):
     def perform(self, node, inputs, outputs):
         raise NotImplementedError("These `Op`s should be removed from graphs used for computation.")
 
-    def connection_pattern(self, node):
-        return [[True], [False]]
-
     def infer_shape(self, fgraph, node, input_shapes):
         return [input_shapes[0]]
-
-    def grad(self, args, g_outs):
-        return g_outs[0], DisconnectedType()()
 
 
 transformed_value = TransformedValue()
@@ -78,9 +71,6 @@ class TransformedValueRV(Op):
         raise NotImplementedError(
             "`TransformedRV` `Op`s should be removed from graphs used for computation."
         )
-
-    def connection_pattern(self, node):
-        return [[True] for _ in node.outputs]
 
     def infer_shape(self, fgraph, node, input_shapes):
         return input_shapes
