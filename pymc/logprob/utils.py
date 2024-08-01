@@ -55,7 +55,7 @@ from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.logprob.abstract import MeasurableOp, _logprob
 from pymc.pytensorf import replace_vars_in_graphs
 from pymc.util import makeiter
 
@@ -147,7 +147,7 @@ def rvs_in_graph(vars: Variable | Sequence[Variable]) -> set[Variable]:
     return {
         node
         for node in walk(makeiter(vars), expand, False)
-        if node.owner and isinstance(node.owner.op, RandomVariable | MeasurableVariable)
+        if node.owner and isinstance(node.owner.op, RandomVariable | MeasurableOp)
     }
 
 
@@ -179,7 +179,7 @@ def check_potential_measurability(
 
     def expand_fn(var):
         # expand_fn does not go beyond valued_rvs or any MeasurableVariable
-        if var.owner and not isinstance(var.owner.op, MeasurableVariable) and var not in valued_rvs:
+        if var.owner and not isinstance(var.owner.op, MeasurableOp) and var not in valued_rvs:
             return reversed(var.owner.inputs)
         else:
             return []
@@ -189,7 +189,7 @@ def check_potential_measurability(
         for ancestor_var in walk(inputs, expand=expand_fn, bfs=False)
         if (
             ancestor_var.owner
-            and isinstance(ancestor_var.owner.op, MeasurableVariable)
+            and isinstance(ancestor_var.owner.op, MeasurableOp)
             and ancestor_var not in valued_rvs
         )
     ):
@@ -259,7 +259,7 @@ pytensor.compile.optdb["canonicalize"].register(
 )
 
 
-class DiracDelta(Op):
+class DiracDelta(MeasurableOp, Op):
     """An `Op` that represents a Dirac-delta distribution."""
 
     __props__ = ("rtol", "atol")
@@ -285,9 +285,6 @@ class DiracDelta(Op):
 
     def infer_shape(self, fgraph, node, input_shapes):
         return input_shapes
-
-
-MeasurableVariable.register(DiracDelta)
 
 
 dirac_delta = DiracDelta()

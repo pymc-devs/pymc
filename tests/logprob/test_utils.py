@@ -49,7 +49,7 @@ import pymc as pm
 
 from pymc import SymbolicRandomVariable, inputvars
 from pymc.distributions.transforms import Interval
-from pymc.logprob.abstract import MeasurableVariable
+from pymc.logprob.abstract import MeasurableOp
 from pymc.logprob.basic import logp
 from pymc.logprob.utils import (
     ParameterValueError,
@@ -151,13 +151,7 @@ class TestReplaceRVsByValues:
         res_ancestors = list(ancestors((res,)))
 
         assert (
-            len(
-                list(
-                    n
-                    for n in res_ancestors
-                    if n.owner and isinstance(n.owner.op, MeasurableVariable)
-                )
-            )
+            len(list(n for n in res_ancestors if n.owner and isinstance(n.owner.op, MeasurableOp)))
             == 1
         )
 

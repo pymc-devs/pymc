@@ -80,7 +80,7 @@ from pytensor.tensor.subtensor import (
 )
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import MeasurableVariable
+from pymc.logprob.abstract import MeasurableOp
 from pymc.logprob.utils import DiracDelta
 
 inc_subtensor_ops = (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
@@ -138,7 +138,7 @@ class MeasurableEquilibriumGraphRewriter(EquilibriumGraphRewriter):
                     continue
                 # This is where we filter only those nodes we care about:
                 # Nodes that have variables that we want to measure and are not yet measurable
-                if isinstance(node.op, MeasurableVariable):
+                if isinstance(node.op, MeasurableOp):
                     continue
                 if not any(out in rv_map_feature.needs_measuring for out in node.outputs):
                     continue
@@ -154,7 +154,7 @@ class MeasurableEquilibriumGraphRewriter(EquilibriumGraphRewriter):
                             node_rewriter, "__name__", ""
                         )
                     # If we converted to a MeasurableVariable we're done here!
-                    if node not in fgraph.apply_nodes or isinstance(node.op, MeasurableVariable):
+                    if node not in fgraph.apply_nodes or isinstance(node.op, MeasurableOp):
                         # go to next node
                         break
 
@@ -273,7 +273,7 @@ class PreserveRVMappings(Feature):
             # Input vars or valued vars can't be measured for derived expressions
             if not var.owner or var in self.rv_values:
                 continue
-            if isinstance(var.owner.op, MeasurableVariable):
+            if isinstance(var.owner.op, MeasurableOp):
                 measurable.append(var)
             else:
                 self.needs_measuring.add(var)

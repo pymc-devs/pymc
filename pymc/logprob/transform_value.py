@@ -24,7 +24,7 @@ from pytensor.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
 from pytensor.scan.op import Scan
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.logprob.abstract import MeasurableOp, _logprob
 from pymc.logprob.rewriting import PreserveRVMappings, cleanup_ir_rewrites_db
 from pymc.logprob.transforms import Transform
 
@@ -50,7 +50,7 @@ class TransformedValue(Op):
 transformed_value = TransformedValue()
 
 
-class TransformedValueRV(Op):
+class TransformedValueRV(MeasurableOp, Op):
     """A no-op that identifies RVs whose values were transformed.
 
     This is introduced by the `TransformValuesRewrite`
@@ -74,9 +74,6 @@ class TransformedValueRV(Op):
 
     def infer_shape(self, fgraph, node, input_shapes):
         return input_shapes
-
-
-MeasurableVariable.register(TransformedValueRV)
 
 
 @_logprob.register(TransformedValueRV)

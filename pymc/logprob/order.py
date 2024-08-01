@@ -48,7 +48,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
-    MeasurableVariable,
+    MeasurableOpMixin,
     _logcdf_helper,
     _logprob,
     _logprob_helper,
@@ -59,18 +59,12 @@ from pymc.math import logdiffexp
 from pymc.pytensorf import constant_fold
 
 
-class MeasurableMax(Max):
+class MeasurableMax(MeasurableOpMixin, Max):
     """A placeholder used to specify a log-likelihood for a max sub-graph."""
 
 
-MeasurableVariable.register(MeasurableMax)
-
-
-class MeasurableMaxDiscrete(Max):
+class MeasurableMaxDiscrete(MeasurableOpMixin, Max):
     """A placeholder used to specify a log-likelihood for sub-graphs of maxima of discrete variables"""
-
-
-MeasurableVariable.register(MeasurableMaxDiscrete)
 
 
 @node_rewriter([Max])
@@ -162,19 +156,13 @@ def max_logprob_discrete(op, values, base_rv, **kwargs):
     return logprob
 
 
-class MeasurableMaxNeg(Max):
+class MeasurableMaxNeg(MeasurableOpMixin, Max):
     """A placeholder used to specify a log-likelihood for a max(neg(x)) sub-graph.
     This shows up in the graph of min, which is (neg(max(neg(x)))."""
 
 
-MeasurableVariable.register(MeasurableMaxNeg)
-
-
-class MeasurableDiscreteMaxNeg(Max):
+class MeasurableDiscreteMaxNeg(MeasurableOpMixin, Max):
     """A placeholder used to specify a log-likelihood for sub-graphs of negative maxima of discrete variables"""
-
-
-MeasurableVariable.register(MeasurableDiscreteMaxNeg)
 
 
 @node_rewriter(tracks=[Max])
