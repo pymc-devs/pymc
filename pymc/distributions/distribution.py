@@ -50,7 +50,7 @@ from pymc.distributions.shape_utils import (
     rv_size_is_none,
     shape_from_dims,
 )
-from pymc.logprob.abstract import MeasurableVariable, _icdf, _logcdf, _logprob
+from pymc.logprob.abstract import MeasurableOp, _icdf, _logcdf, _logprob
 from pymc.logprob.basic import logp
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.printing import str_for_dist
@@ -228,7 +228,7 @@ class _class_or_instancemethod(classmethod):
         return descr_get(instance, type_)
 
 
-class SymbolicRandomVariable(OpFromGraph):
+class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
     """Symbolic Random Variable
 
     This is a subclasse of `OpFromGraph` which is used to encapsulate the symbolic
@@ -622,10 +622,6 @@ class Distribution(metaclass=DistributionMeta):
         rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
         _add_future_warning_tag(rv_out)
         return rv_out
-
-
-# Let PyMC know that the SymbolicRandomVariable has a logprob.
-MeasurableVariable.register(SymbolicRandomVariable)
 
 
 @node_rewriter([SymbolicRandomVariable])

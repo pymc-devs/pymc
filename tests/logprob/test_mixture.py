@@ -52,7 +52,7 @@ from pytensor.tensor.subtensor import (
     as_index_constant,
 )
 
-from pymc.logprob.abstract import MeasurableVariable
+from pymc.logprob.abstract import MeasurableOp
 from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.mixture import MeasurableSwitchMixture, expand_indices
 from pymc.logprob.rewriting import construct_ir_fgraph
@@ -993,16 +993,16 @@ def test_switch_mixture_invalid_bcast():
 
     valid_mix = pt.switch(valid_switch_cond, valid_true_branch, valid_false_branch)
     fgraph, _, _ = construct_ir_fgraph({valid_mix: valid_mix.type()})
-    assert isinstance(fgraph.outputs[0].owner.op, MeasurableVariable)
+    assert isinstance(fgraph.outputs[0].owner.op, MeasurableOp)
     assert isinstance(fgraph.outputs[0].owner.op, MeasurableSwitchMixture)
 
     invalid_mix = pt.switch(invalid_switch_cond, valid_true_branch, valid_false_branch)
     fgraph, _, _ = construct_ir_fgraph({invalid_mix: invalid_mix.type()})
-    assert not isinstance(fgraph.outputs[0].owner.op, MeasurableVariable)
+    assert not isinstance(fgraph.outputs[0].owner.op, MeasurableOp)
 
     invalid_mix = pt.switch(valid_switch_cond, valid_true_branch, invalid_false_branch)
     fgraph, _, _ = construct_ir_fgraph({invalid_mix: invalid_mix.type()})
-    assert not isinstance(fgraph.outputs[0].owner.op, MeasurableVariable)
+    assert not isinstance(fgraph.outputs[0].owner.op, MeasurableOp)
 
 
 def test_ifelse_mixture_one_component():

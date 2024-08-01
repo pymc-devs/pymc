@@ -108,7 +108,7 @@ from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,
-    MeasurableVariable,
+    MeasurableOp,
     _icdf,
     _icdf_helper,
     _logcdf,
@@ -427,7 +427,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> list[Node] 
     """Find measurable transformations from Elemwise operators."""
 
     # Node was already converted
-    if isinstance(node.op, MeasurableVariable):
+    if isinstance(node.op, MeasurableOp):
         return None  # pragma: no cover
 
     rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
