@@ -485,7 +485,7 @@ def conditional_logp(
 
     # This is the updated random-to-value-vars map with the lifted/rewritten
     # variables.  The rewrites are supposed to produce new
-    # `MeasurableVariable`s that are amenable to `_logprob`.
+    # `MeasurableOp`s whose variables are amenable to `_logprob`.
     updated_rv_values = rv_remapper.rv_values
 
     # Some rewrites also transform the original value variables. This is the
@@ -493,11 +493,11 @@ def conditional_logp(
     # we want to use as the keys in the final dictionary output
     original_values = rv_remapper.original_values
 
-    # When a `_logprob` has been produced for a `MeasurableVariable` node, all
+    # When a `_logprob` has been produced for a `MeasurableOp` node, all
     # other references to it need to be replaced with its value-variable all
     # throughout the `_logprob`-produced graphs.  The following `dict`
     # cumulatively maintains remappings for all the variables/nodes that needed
-    # to be recreated after replacing `MeasurableVariable`s with their
+    # to be recreated after replacing `MeasurableOp` variables with their
     # value-variables.  Since these replacements work in topological order, all
     # the necessary value-variable replacements should be present for each
     # node.

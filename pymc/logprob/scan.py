@@ -269,13 +269,13 @@ def convert_outer_out_to_in(
 def get_random_outer_outputs(
     scan_args: ScanArgs,
 ) -> list[tuple[int, TensorVariable, TensorVariable]]:
-    """Get the `MeasurableVariable` outputs of a `Scan` (well, its `ScanArgs`).
+    """Get the measurable outputs of a `Scan` (well, its `ScanArgs`).
 
     Returns
     -------
     A tuple of tuples containing the index of each outer-output variable, the
     outer-output variable itself, and the inner-output variable that
-    is an instance of `MeasurableVariable`.
+    is an instance of `MeasurableOp` variable.
     """
     rv_vars = []
     for n, oo_var in enumerate(
@@ -376,7 +376,7 @@ def find_measurable_scans(fgraph, node):
 
     curr_scanargs = ScanArgs.from_node(node)
 
-    # Find the un-output `MeasurableVariable`s created in the inner-graph
+    # Find the un-output `MeasurablOp` variables created in the inner-graph
     if not any(out in rv_map_feature.rv_values for out in node.outputs):
         # TODO: T
         # We need to remap user inputs that have been specified in terms of

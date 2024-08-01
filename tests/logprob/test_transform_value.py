@@ -470,7 +470,7 @@ def test_transformed_rv_and_value():
 
 @pytest.mark.filterwarnings("error")
 def test_mixture_transform():
-    """Make sure that non-`RandomVariable` `MeasurableVariable`s can be transformed.
+    """Make sure that non-`RandomVariable` `MeasurableOp` variables can be transformed.
 
     This test is specific to `MixtureRV`, which is derived from an `OpFromGraph`.
     """
