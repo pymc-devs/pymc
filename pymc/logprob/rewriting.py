@@ -152,7 +152,7 @@ class MeasurableEquilibriumGraphRewriter(EquilibriumGraphRewriter):
                         rewriter_name = getattr(node_rewriter, "name", None) or getattr(
                             node_rewriter, "__name__", ""
                         )
-                    # If we converted to a MeasurableVariable we're done here!
+                    # If we converted to a MeasurableOp we're done here!
                     if node not in fgraph.apply_nodes or isinstance(node.op, MeasurableOp):
                         # go to next node
                         break
@@ -364,11 +364,11 @@ def construct_ir_fgraph(
 
     Our measurable IR takes the form of an PyTensor graph that is more-or-less
     equivalent to a given PyTensor graph (i.e. the keys of `rv_values`) but
-    contains `Op`s that are subclasses of the `MeasurableVariable` type in
-    place of ones that do not inherit from `MeasurableVariable` in the original
+    contains `Op`s that are subclasses of the `MeasurableOp` type in
+    place of ones that do not inherit from `MeasurableOp` in the original
     graph but are nevertheless measurable.
 
-    `MeasurableVariable`\s are mapped to log-probabilities, so this IR is how
+    `MeasurableOp` variables are mapped to log-probabilities, so this IR is how
     non-trivial log-probabilities are constructed, especially when the
     "measurability" of a term depends on the measurability of its inputs
     (e.g. a mixture).
@@ -380,11 +380,6 @@ def construct_ir_fgraph(
     because--at the very least--canonicalization is always performed and the
     measurable IR includes manipulations that are not applicable to outside of
     the context of measurability/log-probabilities.
-
-    For instance, some `Op`s will be lifted through `MeasurableVariable`\s in
-    this IR, and the resulting graphs will not be computationally sound,
-    because they wouldn't produce independent samples when the original graph
-    would.  See https://github.com/aesara-devs/aeppl/pull/78.
 
     Returns
     -------

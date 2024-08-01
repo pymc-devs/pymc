@@ -132,7 +132,7 @@ def replace_rvs_by_values(
 
 
 def rvs_in_graph(vars: Variable | Sequence[Variable]) -> set[Variable]:
-    """Assert that there are no `MeasurableVariable` nodes in a graph."""
+    """Assert that there are no `MeasurableOp` nodes in a graph."""
 
     def expand(r):
         owner = r.owner
@@ -178,7 +178,7 @@ def check_potential_measurability(
     valued_rvs = set(valued_rvs)
 
     def expand_fn(var):
-        # expand_fn does not go beyond valued_rvs or any MeasurableVariable
+        # expand_fn does not go beyond valued_rvs or any MeasurableOp variables
         if var.owner and not isinstance(var.owner.op, MeasurableOp) and var not in valued_rvs:
             return reversed(var.owner.inputs)
         else:

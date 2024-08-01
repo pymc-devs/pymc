@@ -978,7 +978,7 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
 
 
 def assert_no_rvs(vars: Sequence[Variable]) -> None:
-    """Assert that there are no `MeasurableVariable` nodes in a graph."""
+    """Assert that there are no `MeasurableOp` nodes in a graph."""
 
     rvs = rvs_in_graph(vars)
     if rvs:
