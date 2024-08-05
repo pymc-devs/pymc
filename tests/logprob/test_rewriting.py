@@ -34,19 +34,13 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import numpy as np
 import pytensor.tensor as pt
-import pytest
-import scipy.stats.distributions as sp
 
 from pytensor.graph import ancestors
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.rewriting.utils import rewrite_graph
 from pytensor.tensor.elemwise import DimShuffle, Elemwise
 from pytensor.tensor.subtensor import (
-    AdvancedIncSubtensor,
-    AdvancedIncSubtensor1,
-    IncSubtensor,
     Subtensor,
 )
 
@@ -105,41 +99,3 @@ def test_local_remove_TransformedVariable():
     [p_logp] = conditional_logp({p_rv: p_vv}, extra_rewrites=tr).values()
 
     assert not any(isinstance(v.owner.op, TransformedValue) for v in ancestors([p_logp]) if v.owner)
-
-
-@pytest.mark.parametrize(
-    "indices, size",
-    [
-        (slice(0, 2), 5),
-        (np.r_[True, True, False, False, True], 5),
-        (np.r_[0, 1, 4], 5),
-        ((np.array([0, 1, 4]), np.array([0, 1, 4])), (5, 5)),
-    ],
-)
-def test_joint_logprob_incsubtensor(indices, size):
-    """Make sure we can compute a joint log-probability for ``Y[idx] = data`` where ``Y`` is univariate."""
-
-    rng = np.random.RandomState(232)
-    mu = np.power(10, np.arange(np.prod(size))).reshape(size)
-    sigma = 0.001
-    data = rng.normal(mu[indices], 1.0)
-    y_val = rng.normal(mu, sigma, size=size)
-
-    Y_base_rv = pt.random.normal(mu, sigma, size=size)
-    Y_rv = pt.set_subtensor(Y_base_rv[indices], data)
-    Y_rv.name = "Y"
-    y_value_var = Y_rv.clone()
-    y_value_var.name = "y"
-
-    assert isinstance(Y_rv.owner.op, IncSubtensor | AdvancedIncSubtensor | AdvancedIncSubtensor1)
-
-    Y_rv_logp = conditional_logp({Y_rv: y_value_var})
-    Y_rv_logp_combined = pt.add(*Y_rv_logp.values())
-
-    obs_logps = Y_rv_logp_combined.eval({y_value_var: y_val})
-
-    y_val_idx = y_val.copy()
-    y_val_idx[indices] = data
-    exp_obs_logps = sp.norm.logpdf(y_val_idx, mu, sigma)
-
-    np.testing.assert_almost_equal(obs_logps, exp_obs_logps)

@@ -54,7 +54,7 @@ from pytensor.tensor.subtensor import Subtensor, indices_from_subtensor
 from pytensor.tensor.variable import TensorVariable
 from pytensor.updates import OrderedUpdates
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.logprob.abstract import MeasurableOp, MeasurableOpMixin, _logprob
 from pymc.logprob.basic import conditional_logp
 from pymc.logprob.rewriting import (
     PreserveRVMappings,
@@ -66,14 +66,11 @@ from pymc.logprob.rewriting import (
 from pymc.logprob.utils import replace_rvs_by_values
 
 
-class MeasurableScan(Scan):
+class MeasurableScan(MeasurableOpMixin, Scan):
     """A placeholder used to specify a log-likelihood for a scan sub-graph."""
 
     def __str__(self):
         return f"Measurable({super().__str__()})"
-
-
-MeasurableVariable.register(MeasurableScan)
 
 
 def convert_outer_out_to_in(
@@ -288,7 +285,7 @@ def get_random_outer_outputs(
         io_type = oo_info.name[(oo_info.name.index("_", 6) + 1) :]
         inner_out_type = f"inner_out_{io_type}"
         io_var = getattr(scan_args, inner_out_type)[oo_info.index]
-        if io_var.owner and isinstance(io_var.owner.op, MeasurableVariable):
+        if io_var.owner and isinstance(io_var.owner.op, MeasurableOp):
             rv_vars.append((n, oo_var, io_var))
     return rv_vars
 

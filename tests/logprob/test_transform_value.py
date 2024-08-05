@@ -30,7 +30,7 @@ import pymc as pm
 
 from pymc.distributions.transforms import _default_transform, log, logodds
 from pymc.logprob import conditional_logp
-from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.logprob.abstract import MeasurableOp, _logprob
 from pymc.logprob.transform_value import TransformValuesMapping, TransformValuesRewrite
 from pymc.logprob.transforms import ExpTransform, LogOddsTransform, LogTransform
 from pymc.testing import assert_no_rvs
@@ -42,13 +42,11 @@ def multiout_measurable_op():
     # Create a dummy Op that just returns the two inputs
     mu1, mu2 = pt.scalars("mu1", "mu2")
 
-    class TestOpFromGraph(OpFromGraph):
+    class TestOpFromGraph(MeasurableOp, OpFromGraph):
         def do_constant_folding(self, fgraph, node):
             False
 
     multiout_op = TestOpFromGraph([mu1, mu2], [mu1 + 0.0, mu2 + 0.0])
-
-    MeasurableVariable.register(TestOpFromGraph)
 
     @_logprob.register(TestOpFromGraph)
     def logp_multiout(op, values, mu1, mu2):

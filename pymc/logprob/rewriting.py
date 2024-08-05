@@ -38,8 +38,6 @@ import warnings
 from collections import deque
 from collections.abc import Collection, Sequence
 
-import pytensor.tensor as pt
-
 from pytensor import config
 from pytensor.compile.mode import optdb
 from pytensor.graph.basic import (
@@ -83,8 +81,8 @@ from pytensor.tensor.subtensor import (
 )
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import MeasurableVariable
-from pymc.logprob.utils import DiracDelta, indices_from_subtensor
+from pymc.logprob.abstract import MeasurableOp
+from pymc.logprob.utils import DiracDelta
 
 inc_subtensor_ops = (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
 subtensor_ops = (AdvancedSubtensor, AdvancedSubtensor1, Subtensor)
@@ -141,7 +139,7 @@ class MeasurableEquilibriumGraphRewriter(EquilibriumGraphRewriter):
                     continue
                 # This is where we filter only those nodes we care about:
                 # Nodes that have variables that we want to measure and are not yet measurable
-                if isinstance(node.op, MeasurableVariable):
+                if isinstance(node.op, MeasurableOp):
                     continue
                 if not any(out in rv_map_feature.needs_measuring for out in node.outputs):
                     continue
@@ -157,7 +155,7 @@ class MeasurableEquilibriumGraphRewriter(EquilibriumGraphRewriter):
                             node_rewriter, "__name__", ""
                         )
                     # If we converted to a MeasurableVariable we're done here!
-                    if node not in fgraph.apply_nodes or isinstance(node.op, MeasurableVariable):
+                    if node not in fgraph.apply_nodes or isinstance(node.op, MeasurableOp):
                         # go to next node
                         break
 
@@ -276,7 +274,7 @@ class PreserveRVMappings(Feature):
             # Input vars or valued vars can't be measured for derived expressions
             if not var.owner or var in self.rv_values:
                 continue
-            if isinstance(var.owner.op, MeasurableVariable):
+            if isinstance(var.owner.op, MeasurableOp):
                 measurable.append(var)
             else:
                 self.needs_measuring.add(var)
@@ -314,50 +312,6 @@ def remove_DiracDelta(fgraph, node):
     return [dd_val]
 
 
-@node_rewriter(inc_subtensor_ops)
-def incsubtensor_rv_replace(fgraph, node):
-    r"""Replace `*IncSubtensor*` `Op`\s and their value variables for log-probability calculations.
-
-    This is used to derive the log-probability graph for ``Y[idx] = data``, where
-    ``Y`` is a `RandomVariable`, ``idx`` indices, and ``data`` some arbitrary data.
-
-    To compute the log-probability of a statement like ``Y[idx] = data``, we must
-    first realize that our objective is equivalent to computing ``logprob(Y, z)``,
-    where ``z = pt.set_subtensor(y[idx], data)`` and ``y`` is the value variable
-    for ``Y``.
-
-    In other words, the log-probability for an `*IncSubtensor*` is the log-probability
-    of the underlying `RandomVariable` evaluated at ``data`` for the indices
-    given by ``idx`` and at the value variable for ``~idx``.
-
-    This provides a means of specifying "missing data", for instance.
-    """
-    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
-    rv_var = node.outputs[0]
-    if rv_var not in rv_map_feature.rv_values:
-        return None  # pragma: no cover
-
-    base_rv_var = node.inputs[0]
-
-    if not rv_map_feature.request_measurable([base_rv_var]):
-        return None
-
-    data = node.inputs[1]
-    idx = indices_from_subtensor(getattr(node.op, "idx_list", None), node.inputs[2:])
-
-    # Create a new value variable with the indices `idx` set to `data`
-    value_var = rv_map_feature.rv_values[rv_var]
-    new_value_var = pt.set_subtensor(value_var[idx], data)
-    rv_map_feature.update_rv_maps(rv_var, new_value_var, base_rv_var)
-
-    # Return the `RandomVariable` being indexed
-    return [base_rv_var]
-
-
 logprob_rewrites_db = SequenceDB()
 logprob_rewrites_db.name = "logprob_rewrites_db"
 # Introduce sigmoid. We do it before canonicalization so that useless mul are removed next
@@ -378,7 +332,6 @@ logprob_rewrites_db.register("measurable_ir_rewrites", measurable_ir_rewrites_db
 # (or eventually) the graph outputs.  Often this is done by lifting other `Op`s
 # "up" through the random/measurable variables and into their inputs.
 measurable_ir_rewrites_db.register("subtensor_lift", local_subtensor_rv_lift, "basic")
-measurable_ir_rewrites_db.register("incsubtensor_lift", incsubtensor_rv_replace, "basic")
 
 # These rewrites are used to introduce specalized operations with better logprob graphs
 specialization_ir_rewrites_db = EquilibriumDB()
