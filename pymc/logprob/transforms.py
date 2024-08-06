@@ -232,11 +232,6 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
     """Compute the log-CDF graph for a `MeasurabeTransform`."""
     other_inputs = list(inputs)
     measurable_input = other_inputs.pop(op.measurable_input_idx)
-
-    # Do not apply rewrite to discrete variables
-    if measurable_input.type.dtype.startswith("int"):
-        raise NotImplementedError("logcdf of transformed discrete variables not implemented")
-
     backward_value = op.transform_elemwise.backward(value, *other_inputs)
 
     # Fail if transformation is not injective
@@ -244,8 +239,13 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
     if isinstance(backward_value, tuple):
         raise NotImplementedError
 
+    is_discrete = measurable_input.type.dtype.startswith("int")
+
     logcdf = _logcdf_helper(measurable_input, backward_value)
-    logccdf = pt.log1mexp(logcdf)
+    if is_discrete:
+        logccdf = pt.log1mexp(_logcdf_helper(measurable_input, backward_value - 1))
+    else:
+        logccdf = pt.log1mexp(logcdf)
 
     if isinstance(op.scalar_op, MONOTONICALLY_INCREASING_OPS):
         pass
@@ -271,7 +271,6 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
 
     # The jacobian is used to ensure a value in the supported domain was provided
     jacobian = op.transform_elemwise.log_jac_det(value, *other_inputs)
-
     return pt.switch(pt.isnan(jacobian), -np.inf, logcdf)
 
 
