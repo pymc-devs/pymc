@@ -365,14 +365,6 @@ def _sample_blackjax_nuts(
     # Adapted from numpyro
     if chain_method == "parallel":
         map_fn = jax.pmap
-        if progressbar:
-            import warnings
-
-            warnings.warn(
-                "BlackJax currently only display progress bar correctly under "
-                "`chain_method == 'vectorized'`. Setting `progressbar=False`."
-            )
-            progressbar = False
     elif chain_method == "vectorized":
         map_fn = jax.vmap
     else:
