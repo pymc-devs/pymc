@@ -280,7 +280,7 @@ def _blackjax_inference_loop(
     progress_bar = adaptation_kwargs.pop("progress_bar", False)
 
     keys = jax.random.split(seed, draws)
-    scan_fn = blackjax.progress_bar.gen_scan_fn(draws, progress_bar, label='sampling chain: ')
+    scan_fn = blackjax.progress_bar.gen_scan_fn(draws, progress_bar)
     _, (samples, stats) = scan_fn(_one_step, last_state, (jnp.arange(draws), keys))
 
     return samples, stats
