@@ -1189,11 +1189,14 @@ class OrderedLogistic:
     R"""Ordered Logistic distribution.
 
     Useful for regression on ordinal data values whose values range
-    from 1 to K as a function of some predictor, :math:`\eta`. The
+    from 0 to K-1 as a function of some predictor, :math:`\eta`. The
     cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
     mapped to which of the K observed dependent variables. The number
     of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.
+
+    Note: The observed values should use 0-based indexing (0, 1, ..., K-1),
+    consistent with Python's indexing convention.
 
     .. math::
 
@@ -1203,9 +1206,9 @@ class OrderedLogistic:
              \,, \text{if } k = 0 \\
            \text{logit}^{-1}(\eta - c_{k - 1}) -
            \text{logit}^{-1}(\eta - c_{k})
-             \,, \text{if } 0 < k < K \\
+             \,, \text{if } 0 < k < K-1 \\
            \text{logit}^{-1}(\eta - c_{K - 1})
-             \,, \text{if } k = K \\
+             \,, \text{if } k = K-1 \\
          \end{array}
        \right.
 
@@ -1233,9 +1236,9 @@ class OrderedLogistic:
         cluster3 = np.random.randn(n3_c) + 2
 
         x = np.concatenate((cluster1, cluster2, cluster3))
-        y = np.concatenate((1*np.ones(n1_c),
-                            2*np.ones(n2_c),
-                            3*np.ones(n3_c))) - 1
+        y = np.concatenate((np.zeros(n1_c),
+                            np.ones(n2_c),
+                            2*np.ones(n3_c))).astype(int)
 
         # Ordered logistic regression
         with pm.Model() as model:
@@ -1288,11 +1291,14 @@ class OrderedProbit:
     Ordered Probit distributions.
 
     Useful for regression on ordinal data values whose values range
-    from 1 to K as a function of some predictor, :math:`\eta`. The
+    from 0 to K-1 as a function of some predictor, :math:`\eta`. The
     cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
     mapped to which of the K observed dependent variables. The number
     of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.
+
+    Note: The observed values should use 0-based indexing (0, 1, ..., K-1),
+    consistent with Python's indexing convention.
 
     In order to stabilize the computation, log-likelihood is computed
     in log space using the scaled error function `erfcx`.
@@ -1305,9 +1311,9 @@ class OrderedProbit:
              \,, \text{if } k = 0 \\
            \text{normal_cdf}(0, \sigma, \eta - c_{k - 1}) -
            \text{normal_cdf}(0, \sigma, \eta - c_{k})
-             \,, \text{if } 0 < k < K \\
+             \,, \text{if } 0 < k < K-1 \\
            \text{normal_cdf}(0, \sigma, \eta - c_{K - 1})
-             \,, \text{if } k = K \\
+             \,, \text{if } k = K-1 \\
          \end{array}
        \right.
 
@@ -1337,9 +1343,10 @@ class OrderedProbit:
         cluster3 = np.random.randn(n3_c) + 2
 
         x = np.concatenate((cluster1, cluster2, cluster3))
-        y = np.concatenate((1*np.ones(n1_c),
-                            2*np.ones(n2_c),
-                            3*np.ones(n3_c))) - 1
+        # Note: y uses 0-based indexing (0, 1, 2)
+        y = np.concatenate((np.zeros(n1_c),
+                            np.ones(n2_c),
+                            2*np.ones(n3_c))).astype(int)
 
         # Ordered probit regression
         with pm.Model() as model:
