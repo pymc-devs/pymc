@@ -115,6 +115,8 @@ class NDArray(base.BaseTrace):
         if sampler_stats is not None:
             for data, vars in zip(self._stats, sampler_stats):
                 for key, val in vars.items():
+                    if isinstance(val, np.ndarray) and val.ndim > 0:
+                        val = val.item()  
                     data[key][self.draw_idx] = val
         self.draw_idx += 1
 
