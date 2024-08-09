@@ -173,7 +173,7 @@ self.logp_nojac_unscaledt = distribution.logp_nojac(data)
 
 ### Model context and Random Variable
 
-I like to think that the ``with pm.Model() ...`` is a key syntax feature and *the* signature of PyMC model language, and in general a great out-of-the-box thinking/usage of the context manager in Python (with [some critics](https://twitter.com/_szhang/status/890793373740617729), of course).
+I like to think that the ``with pm.Model() ...`` is a key syntax feature and *the* signature of PyMC model language, and in general a great out-of-the-box thinking/usage of the context manager in Python (with some critics, of course).
 
 Essentially [what a context manager does](https://www.python.org/dev/peps/pep-0343/) is:
 
