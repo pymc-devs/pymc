@@ -278,15 +278,10 @@ def _blackjax_inference_loop(
         return state, (position, stats)
 
     progress_bar = adaptation_kwargs.pop("progress_bar", False)
-    if progress_bar:
-        from blackjax.progress_bar import progress_bar_scan
-
-        one_step = jax.jit(progress_bar_scan(draws)(_one_step))
-    else:
-        one_step = jax.jit(_one_step)
 
     keys = jax.random.split(seed, draws)
-    _, (samples, stats) = jax.lax.scan(one_step, last_state, (jnp.arange(draws), keys))
+    scan_fn = blackjax.progress_bar.gen_scan_fn(draws, progress_bar)
+    _, (samples, stats) = scan_fn(_one_step, last_state, (jnp.arange(draws), keys))
 
     return samples, stats
 
@@ -365,14 +360,6 @@ def _sample_blackjax_nuts(
     # Adapted from numpyro
     if chain_method == "parallel":
         map_fn = jax.pmap
-        if progressbar:
-            import warnings
-
-            warnings.warn(
-                "BlackJax currently only display progress bar correctly under "
-                "`chain_method == 'vectorized'`. Setting `progressbar=False`."
-            )
-            progressbar = False
     elif chain_method == "vectorized":
         map_fn = jax.vmap
     else:
