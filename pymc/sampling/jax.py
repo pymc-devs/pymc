@@ -329,10 +329,8 @@ def _sample_blackjax_nuts(
 
     sample_fn = partial(_multi_step, imm=tuned_params["inverse_mass_matrix"], ss=tuned_params["step_size"])
 
-    if progressbar and num_chunks > 1:
+    if progressbar:
         print("Sampling chunk %d of %d:" % (1, num_chunks))
-    elif progressbar:
-        print("Sampling:")
     (last_state, seed), (samples, stats) = sample_fn((last_state, sample_seed))
     del sample_seed
     if num_chunks == 1:
@@ -414,10 +412,8 @@ def _sample_numpyro_nuts(
     key = jax.random.PRNGKey(random_seed)
     del random_seed
     key, _skey = jax.random.split(key)
-    if progressbar and num_chunks > 1:
+    if progressbar:
         print("Sampling chunk %d of %d:" % (1, num_chunks))
-    elif progressbar:
-        print("Sampling:")
     pmap_numpyro.run(_skey, init_params=initial_points, extra_fields=extra_fields)
     del _skey
     raw_mcmc_samples = pmap_numpyro.get_samples(group_by_chain=True)
