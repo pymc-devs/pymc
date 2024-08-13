@@ -431,18 +431,16 @@ def _sample_numpyro_nuts(
         return samples[0], stats, samples[1], numpyro
 
     def sample_chunk(state):
-        pmap_numpyro.post_warmup_state, key = state
-        key, _skey = jax.random.split(key)
-        pmap_numpyro.run(_skey, extra_fields=extra_fields)
-        del _skey
+        pmap_numpyro.post_warmup_state = state
+        pmap_numpyro.run(pmap_numpyro.post_warmup_state.rng_key, extra_fields=extra_fields)
 
         raw_mcmc_samples = pmap_numpyro.get_samples(group_by_chain=True)
         sample_stats = _numpyro_stats_to_dict(pmap_numpyro)
         mcmc_samples, likelihoods = vmap_postprocess(raw_mcmc_samples)
-        return (pmap_numpyro.last_state, key), ((mcmc_samples, likelihoods), sample_stats)
+        return pmap_numpyro.last_state, ((mcmc_samples, likelihoods), sample_stats)
 
     _, (all_samples, all_stats) = _do_chunked_sampling(
-        (pmap_numpyro.last_state, key),
+        pmap_numpyro.last_state,
         (samples, stats),
         num_chunks,
         nsteps,

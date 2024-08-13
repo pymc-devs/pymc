@@ -19,18 +19,8 @@ import pytest
 from pymc import Data, Model, Normal, sample
 
 
-@pytest.mark.parametrize(
-    "nuts_sampler,nuts_kwargs",
-    [
-        ("pymc", {}),
-        ("nutpie", {}),
-        ("blackjax", {}),
-        ("numpyro", {}),
-        ("blackjax", {"num_chunks": 10}),
-        ("numpyro", {"num_chunks": 10}),
-    ],
-)
-def test_external_nuts_sampler(recwarn, nuts_sampler, nuts_kwargs):
+@pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
+def test_external_nuts_sampler(recwarn, nuts_sampler):
     if nuts_sampler != "pymc":
         pytest.importorskip(nuts_sampler)
 
@@ -49,7 +39,6 @@ def test_external_nuts_sampler(recwarn, nuts_sampler, nuts_kwargs):
             draws=500,
             progressbar=False,
             initvals={"x": 0.0},
-            nuts_sampler_kwargs=nuts_kwargs,
         )
 
         idata1 = sample(**kwargs)
@@ -85,9 +74,9 @@ def test_external_nuts_sampler(recwarn, nuts_sampler, nuts_kwargs):
     assert idata_reference.posterior.attrs.keys() == idata1.posterior.attrs.keys()
 
 
-def test_blackjax_chunking():
+@pytest.mark.parametrize("nuts_sampler", ["blackjax", "numpyro"])
+def test_external_nuts_chunking(nuts_sampler):
     # blackjax should have same sampling whether chunked or not
-    nuts_sampler = "blackjax"
     pytest.importorskip(nuts_sampler)
 
     with Model():
