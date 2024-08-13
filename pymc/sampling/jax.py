@@ -302,9 +302,11 @@ def _sample_blackjax_nuts(
     del adapt_seed
 
     def _one_step(state, x, imm, ss):
-        _, rng_key = x
+        del x
+        state, rng_key = state
+        key, _skey = jax.random.split(rng_key)
         state, info = algorithm(logprob_fn, inverse_mass_matrix=imm, step_size=ss).step(
-            rng_key, state
+            _skey, state
         )
         position = state.position
         stats = {
@@ -315,18 +317,15 @@ def _sample_blackjax_nuts(
             "acceptance_rate": info.acceptance_rate,
             "lp": state.logdensity,
         }
-        return state, (position, stats)
+        return (state, key), (position, stats)
 
     @map_fn
     def _multi_step(state, imm, ss):
         start_state, key = state
-        key, _skey = jax.random.split(key)
-        _skeys = jax.random.split(_skey, nsteps)
-
         scan_fn = blackjax.progress_bar.gen_scan_fn(nsteps, progressbar)
 
-        last_state, (raw_samples, stats) = scan_fn(
-            partial(_one_step, imm=imm, ss=ss), start_state, (jnp.arange(nsteps), _skeys)
+        (last_state, key), (raw_samples, stats) = scan_fn(
+            partial(_one_step, imm=imm, ss=ss), (start_state, key), jnp.arange(nsteps)
         )
         samples, log_likelihoods = postprocess_fn(raw_samples)
         return (last_state, key), ((samples, log_likelihoods), stats)

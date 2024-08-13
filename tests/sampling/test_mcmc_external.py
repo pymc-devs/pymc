@@ -85,6 +85,35 @@ def test_external_nuts_sampler(recwarn, nuts_sampler, nuts_kwargs):
     assert idata_reference.posterior.attrs.keys() == idata1.posterior.attrs.keys()
 
 
+def test_blackjax_chunking():
+    # blackjax should have same sampling whether chunked or not
+    nuts_sampler = "blackjax"
+    pytest.importorskip(nuts_sampler)
+
+    with Model():
+        x = Normal("x", 100, 5)
+        y = Data("y", [1, 2, 3, 4])
+
+        Normal("L", mu=x, sigma=0.1, observed=y)
+
+        base_kwargs = dict(
+            nuts_sampler=nuts_sampler,
+            random_seed=123,
+            chains=2,
+            tune=500,
+            draws=500,
+            progressbar=False,
+            initvals={"x": 0.0},
+        )
+        chunk_kwargs = {**base_kwargs, **{"nuts_sampler_kwargs": {"num_chunks": 10}}}
+
+        idata1 = sample(**base_kwargs)
+        idata2 = sample(**chunk_kwargs)
+
+    np.testing.assert_array_equal(idata1.posterior.x, idata2.posterior.x)
+    assert idata1.posterior.attrs.keys() == idata2.posterior.attrs.keys()
+
+
 def test_step_args():
     with Model() as model:
         a = Normal("a")
