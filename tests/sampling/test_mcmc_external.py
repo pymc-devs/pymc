@@ -19,8 +19,18 @@ import pytest
 from pymc import Data, Model, Normal, sample
 
 
-@pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
-def test_external_nuts_sampler(recwarn, nuts_sampler):
+@pytest.mark.parametrize(
+    "nuts_sampler,nuts_kwargs",
+    [
+        ("pymc", {}),
+        ("nutpie", {}),
+        ("blackjax", {}),
+        ("numpyro", {}),
+        ("blackjax", {"num_chunks": 10}),
+        ("numpyro", {"num_chunks": 10}),
+    ],
+)
+def test_external_nuts_sampler(recwarn, nuts_sampler, nuts_kwargs):
     if nuts_sampler != "pymc":
         pytest.importorskip(nuts_sampler)
 
@@ -39,6 +49,7 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
             draws=500,
             progressbar=False,
             initvals={"x": 0.0},
+            nuts_sampler_kwargs=nuts_kwargs,
         )
 
         idata1 = sample(**kwargs)
