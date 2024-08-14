@@ -257,7 +257,7 @@ def _sample_blackjax_nuts(
     elif chain_method == "vectorized":
 
         def map_fn(x):
-            return jax.jit(jax.vmap(x))
+            return jax.vmap(x)  #jitting here hurts memory performance
     else:
         raise ValueError(
             "Only supporting the following methods to draw chains:" ' "parallel" or "vectorized"'
