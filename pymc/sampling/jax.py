@@ -301,13 +301,11 @@ def _sample_blackjax_nuts(
     (last_state, tuned_params), _ = run_adaptation(adapt_seed, initial_points)
     del adapt_seed
 
-    def _one_step(state, x, imm, ss):
+    def _one_step(state, x, kernel):
         del x
         state, rng_key = state
         key, _skey = jax.random.split(rng_key)
-        state, info = algorithm(logprob_fn, inverse_mass_matrix=imm, step_size=ss).step(
-            _skey, state
-        )
+        state, info = kernel(_skey, state)
         position = state.position
         stats = {
             "diverging": info.is_divergent,
@@ -324,8 +322,10 @@ def _sample_blackjax_nuts(
         start_state, key = state
         scan_fn = blackjax.progress_bar.gen_scan_fn(nsteps, progressbar)
 
+        kernel = algorithm(logprob_fn, inverse_mass_matrix=imm, step_size=ss).step
+
         (last_state, key), (raw_samples, stats) = scan_fn(
-            partial(_one_step, imm=imm, ss=ss), (start_state, key), jnp.arange(nsteps)
+            partial(_one_step, kernel=kernel), (start_state, key), jnp.arange(nsteps)
         )
         samples, log_likelihoods = postprocess_fn(raw_samples)
         return (last_state, key), ((samples, log_likelihoods), stats)
