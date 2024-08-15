@@ -312,6 +312,7 @@ def _sample_blackjax_nuts(
         return (state, key), (position, stats)
 
     @map_fn
+    @partial(jax.jit, donate_argnums=0)
     def _multi_step(state, imm, ss):
         start_state, key = state
         scan_fn = blackjax.progress_bar.gen_scan_fn(nsteps, progressbar)
@@ -327,7 +328,6 @@ def _sample_blackjax_nuts(
     sample_fn = partial(
         _multi_step, imm=tuned_params["inverse_mass_matrix"], ss=tuned_params["step_size"]
     )
-    sample_fn = jax.jit(sample_fn, donate_argnums=0)
     if progressbar:
         logger.info("Sampling chunk %d of %d:" % (1, num_chunks))
     (last_state, seed), (samples, stats) = sample_fn((last_state, sample_seed))
@@ -377,7 +377,6 @@ def _sample_numpyro_nuts(
     num_chunks: int = 1,
 ):
     import numpyro
-
     from numpyro.infer import MCMC, NUTS
 
     assert draws % num_chunks == 0
