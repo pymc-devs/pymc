@@ -214,13 +214,7 @@ def _gen_arr(inp, nchunk):
     return jnp.zeros(shape, dtype=inp.dtype, device=jax.devices("cpu")[0])
 
 
-def _do_chunked_sampling(last_state, tmpout, nchunk, nsteps, sample_fn, progressbar):
-    output = _set_tree(
-        jax.tree.map(jax.vmap(partial(_gen_arr, nchunk=nchunk)), tmpout),
-        jax.device_put(tmpout, jax.devices("cpu")[0]),
-        0,
-    )
-
+def _do_chunked_sampling(last_state, output, nchunk, nsteps, sample_fn, progressbar):
     for i in range(1, nchunk):
         if progressbar:
             logger.info("Sampling chunk %d of %d:" % (i + 1, nchunk))
@@ -230,6 +224,7 @@ def _do_chunked_sampling(last_state, tmpout, nchunk, nsteps, sample_fn, progress
             jax.device_put(tmpout, jax.devices("cpu")[0]),
             nsteps * i,
         )
+        del tmpout
     return last_state, output
 
 
@@ -257,7 +252,7 @@ def _sample_blackjax_nuts(
     elif chain_method == "vectorized":
 
         def map_fn(x):
-            return jax.vmap(x)  #jitting here hurts memory performance
+            return jax.jit(jax.vmap(x))
     else:
         raise ValueError(
             "Only supporting the following methods to draw chains:" ' "parallel" or "vectorized"'
@@ -271,7 +266,6 @@ def _sample_blackjax_nuts(
     s1, s2 = jax.random.split(jax.random.PRNGKey(random_seed))
     adapt_seed = jax.random.split(s1, chains)
     sample_seed = jax.random.split(s2, chains)
-    del s1, s2
 
     algorithm_name = nuts_kwargs.pop("algorithm", "nuts")
     if algorithm_name == "nuts":
@@ -333,16 +327,22 @@ def _sample_blackjax_nuts(
     sample_fn = partial(
         _multi_step, imm=tuned_params["inverse_mass_matrix"], ss=tuned_params["step_size"]
     )
-
+    sample_fn = jax.jit(sample_fn, donate_argnums=0)
     if progressbar:
         logger.info("Sampling chunk %d of %d:" % (1, num_chunks))
     (last_state, seed), (samples, stats) = sample_fn((last_state, sample_seed))
-    del sample_seed
     if num_chunks == 1:
         return samples[0], stats, samples[1], blackjax
 
+    output = _set_tree(
+        jax.tree.map(jax.vmap(partial(_gen_arr, nchunk=num_chunks)), (samples, stats)),
+        jax.device_put((samples, stats), jax.devices("cpu")[0]),
+        0,
+    )
+    del samples, stats
+
     last_state, (all_samples, all_stats) = _do_chunked_sampling(
-        (last_state, seed), (samples, stats), num_chunks, nsteps, sample_fn, progressbar
+        (last_state, seed), output, num_chunks, nsteps, sample_fn, progressbar
     )
     return all_samples[0], all_stats, all_samples[1], blackjax
 
@@ -439,9 +439,16 @@ def _sample_numpyro_nuts(
         mcmc_samples, likelihoods = vmap_postprocess(raw_mcmc_samples)
         return pmap_numpyro.last_state, ((mcmc_samples, likelihoods), sample_stats)
 
+    output = _set_tree(
+        jax.tree.map(jax.vmap(partial(_gen_arr, nchunk=num_chunks)), (samples, stats)),
+        jax.device_put((samples, stats), jax.devices("cpu")[0]),
+        0,
+    )
+    del samples, stats
+
     _, (all_samples, all_stats) = _do_chunked_sampling(
         pmap_numpyro.last_state,
-        (samples, stats),
+        output,
         num_chunks,
         nsteps,
         sample_chunk,
