@@ -4,38 +4,46 @@ orphan: true
 
 # PyMC Developer Guide
 
-{doc}`PyMC <index>` is a Python package for Bayesian statistical modeling built on top of {doc}`PyTensor <pytensor:index>`.
-This document aims to explain the design and implementation of probabilistic programming in PyMC, with comparisons to other PPLs like TensorFlow Probability (TFP) and Pyro.
+{doc}`PyMC <index>` is a Python package for Bayesian statistical modeling built on top of the {doc}`PyTensor <pytensor:index>` library.
+This document explains the design and implementation of probabilistic programming in PyMC, with comparisons to other probabilistic programming libraries like TensorFlow Probability (TFP) and Pyro.
 A user-facing API introduction can be found in the {ref}`API quickstart <pymc_overview>`.
-A more accessible, user facing deep introduction can be found in [Peadar Coyle's probabilistic programming primer](https://github.com/springcoil/probabilisticprogrammingprimer).
+An accessible introduction to building models with PyMC can be found in [our PyData London 2022 tutorial](https://github.com/fonnesbeck/probabilistic_python).
 
-## Distribution
+## Distributions
 
 Probability distributions in PyMC are implemented as classes that inherit from {class}`~pymc.Continuous` or {class}`~pymc.Discrete`.
-Either of these inherit {class}`~pymc.Distribution` which defines the high level API.
+Both of these inherit {class}`~pymc.Distribution` which defines the high level API.
 
-For a detailed introduction on how a new distribution should be implemented check out the {ref}`guide on implementing distributions <implementing_distribution>`.
+For a detailed introduction on how a specific statistical distribution should be implemented check out the {ref}`guide on implementing distributions <implementing_distribution>`.
 
 
 ## Reflection
 
-How tensor/value semantics for probability distributions are enabled in PyMC:
+Let's consider how the tensor/value semantics for probability distributions are enabled in PyMC.
 
-In PyMC, model variables are defined by calling probability distribution classes with parameters:
-
-```python
-z = Normal("z", 0, 5)
-```
-
-This is done inside the context of a ``pm.Model``, which intercepts some information, for example to capture known dimensions.
-The notation aligns with the typically used math notation:
+Model random variables are created by calling probability distribution classes with parameters inside of a `pm.Model` context, using a syntax analogous to statistical notation. For example, a normal distribution with a specified mean and standard deviation is written as:
 
 $$
 z \sim \text{Normal}(0, 5)
 $$
 
-A call to a {class}`~pymc.Distribution` constructor as shown above returns an PyTensor {class}`~pytensor.tensor.TensorVariable`, which is a symbolic representation of the model variable and the graph of inputs it depends on.
-Under the hood, the variables are created through the {meth}`~pymc.Distribution.dist` API, which calls the {class}`~pytensor.tensor.random.basic.RandomVariable` {class}`~pytensor.graph.op.Op` corresponding to the distribution.
+And in PyMC:
+
+```python
+with pm.Model():
+    z = pm. Normal("z", 0, 5)
+```
+
+The context manager intercepts information about the distribution relevant to the model, such as the variable dimension and any transforms, and registers it with the model.
+
+The call to a {class}`~pymc.Distribution` constructor returns an PyTensor {class}`~pytensor.tensor.TensorVariable`, which is a symbolic representation of the model variable and the graph of inputs it depends on.
+
+```python
+print(type(z))
+# ==> <class 'pytensor.tensor.variable.TensorVariable'>
+```
+
+Under the hood, the variables are created through the {meth}`~pymc.Distribution.dist` classmethod, which calls the {class}`~pytensor.tensor.random.basic.RandomVariable` {class}`~pytensor.graph.op.Op` corresponding to the distribution.
 
 At a high level of abstraction, the idea behind ``RandomVariable`` ``Op``s is to create symbolic variables (``TensorVariable``s) that can be associated with the properties of a probability distribution.
 For example, the ``RandomVariable`` ``Op`` which becomes part of the symbolic computation graph is associated with the random number generators or probability mass/density functions of the distribution.
