@@ -76,7 +76,7 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
 
 @pytest.mark.parametrize("nuts_sampler", ["blackjax", "numpyro"])
 def test_external_nuts_chunking(nuts_sampler):
-    # blackjax should have same sampling whether chunked or not
+    # chunked sampling should give exact same results as non-chunked
     pytest.importorskip(nuts_sampler)
 
     with Model():

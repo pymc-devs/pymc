@@ -158,7 +158,7 @@ def get_jaxified_logp(model: Model, negative_logp=True) -> Callable:
 
 
 def _get_log_likelihood_fn(model: Model) -> Callable:
-    """Compute log-likelihood for all observations"""
+    """Generate function to compute log-likelihood for all observations"""
     elemwise_logp = model.logp(model.observed_RVs, sum=False)
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=elemwise_logp)
 
@@ -201,6 +201,7 @@ def _get_batched_jittered_initial_points(
 
 @partial(jax.jit, donate_argnums=0)
 def _set_tree(store, input, idx):
+    """Update pytree of outputs - used for saving results of chunked sampling"""
     def update_fn(save, inp):
         starts = (save.shape[0], idx, *([0] * (len(save.shape) - 2)))
         return jax.lax.dynamic_update_slice(save, inp, starts)
@@ -210,11 +211,13 @@ def _set_tree(store, input, idx):
 
 
 def _gen_arr(inp, nchunk):
+    """Generate output array on cpu for chunked sampling"""
     shape = (inp.shape[0] * nchunk, *inp.shape[1:])
     return jnp.zeros(shape, dtype=inp.dtype, device=jax.devices("cpu")[0])
 
 
 def _do_chunked_sampling(last_state, output, nchunk, nsteps, sample_fn, progressbar):
+    """Run chunked sampling saving to output on the cpu"""
     for i in range(1, nchunk):
         if progressbar:
             logger.info("Sampling chunk %d of %d:" % (i + 1, nchunk))
@@ -293,7 +296,6 @@ def _sample_blackjax_nuts(
         return adapt.run(seed, init_position, num_steps=tune)
 
     (last_state, tuned_params), _ = run_adaptation(adapt_seed, initial_points)
-    del adapt_seed
 
     def _one_step(state, x, kernel):
         del x
@@ -377,6 +379,7 @@ def _sample_numpyro_nuts(
     num_chunks: int = 1,
 ):
     import numpyro
+
     from numpyro.infer import MCMC, NUTS
 
     assert draws % num_chunks == 0
@@ -416,12 +419,10 @@ def _sample_numpyro_nuts(
     vmap_postprocess = jax.jit(jax.vmap(postprocess_fn))
 
     key = jax.random.PRNGKey(random_seed)
-    del random_seed
     key, _skey = jax.random.split(key)
     if progressbar:
         logger.info("Sampling chunk %d of %d:" % (1, num_chunks))
     pmap_numpyro.run(_skey, init_params=initial_points, extra_fields=extra_fields)
-    del _skey
     raw_mcmc_samples = pmap_numpyro.get_samples(group_by_chain=True)
     stats = _numpyro_stats_to_dict(pmap_numpyro)
     samples = vmap_postprocess(raw_mcmc_samples)
