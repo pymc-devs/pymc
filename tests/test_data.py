@@ -404,6 +404,21 @@ class TestData:
         assert "columns" in pmodel.coords
         assert pmodel.named_vars_to_dims == {"observations": ("rows", "columns")}
 
+    def test_implicit_coords_polars_dataframe(self, seeded_test):
+        pl = pytest.importorskip("polars")
+        N_rows = 5
+        N_cols = 7
+        df_data = pl.DataFrame({f"Column {c+1}": np.random.normal(size=(N_rows,)) for c in range(N_cols)})
+        df_data = df_data.with_row_count("rows")
+
+        # infer coordinates from index and columns of the DataFrame
+        with pm.Model() as pmodel:
+            pm.Data("observations", df_data, dims=("rows", "columns"), infer_dims_and_coords=True)
+
+        assert "rows" in pmodel.coords
+        assert "columns" in pmodel.coords
+        assert pmodel.named_vars_to_dims == {"observations": ("rows", "columns")}
+
     def test_implicit_coords_xarray(self):
         xr = pytest.importorskip("xarray")
         data = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("y", "x"))

@@ -16,6 +16,7 @@ import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
 import pandas as pd
+import polars as pl
 import pytensor
 import pytensor.tensor as pt
 import pytest
@@ -64,6 +65,19 @@ from pymc.vartypes import int_types
 )
 def test_pd_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
     df = pd.DataFrame(np_array)
+    np.testing.assert_array_equal(x=pt.as_tensor_variable(x=df).eval(), y=np_array)
+
+@pytest.mark.parametrize(
+    argnames="np_array",
+    argvalues=[
+        np.array([[1.0], [2.0], [-1.0]]),
+        np.array([[1.0, 1.0, 1.0], [0.0, 0.0, 0.0]]),
+        np.ones(shape=(10, 1)),
+    ],
+)
+def test_polars_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
+    pl = pytest.importorskip("polars")
+    df = pl.DataFrame(np_array)
     np.testing.assert_array_equal(x=pt.as_tensor_variable(x=df).eval(), y=np_array)
 
 

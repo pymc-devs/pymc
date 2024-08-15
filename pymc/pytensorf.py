@@ -18,6 +18,7 @@ from typing import cast
 
 import numpy as np
 import pandas as pd
+import polars as pl
 import pytensor
 import pytensor.tensor as pt
 import scipy.sparse as sps
@@ -96,12 +97,16 @@ def convert_generator_data(data) -> TensorVariable:
 
 def convert_data(data) -> np.ndarray | Variable:
     ret: np.ndarray | Variable
-    if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
+    if hasattr(data, "to_numpy"):
         # typically, but not limited to pandas objects
         vals = data.to_numpy()
-        null_data = data.isnull()
+        if hasattr(data, "is_null"):
+            # polars DataFrame or Series
+            null_data = data.is_null()
+        else:
+            null_data = data.isnull()
         if hasattr(null_data, "to_numpy"):
-            # pandas Series
+            # pandas or polars Series
             mask = null_data.to_numpy()
         else:
             # pandas Index
@@ -144,7 +149,9 @@ def convert_data(data) -> np.ndarray | Variable:
 
 @_as_tensor_variable.register(pd.Series)
 @_as_tensor_variable.register(pd.DataFrame)
-def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVariable:
+@_as_tensor_variable.register(pl.DataFrame)
+@_as_tensor_variable.register(pl.Series)
+def dataframe_to_tensor_variable(df: pd.DataFrame | pl.DataFrame, *args, **kwargs) -> TensorVariable:
     return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
 
 

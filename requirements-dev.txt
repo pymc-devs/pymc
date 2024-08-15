@@ -15,6 +15,7 @@ numdifftools>=0.9.40
 numpy>=1.15.0
 numpydoc
 pandas>=0.24.0
+polars>=1.5.0
 polyagamma
 pre-commit>=2.8.0
 pytensor>=2.25.1,<2.26

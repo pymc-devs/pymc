@@ -22,6 +22,7 @@ from typing import cast
 
 import numpy as np
 import pandas as pd
+import polars as pl
 import pytensor
 import pytensor.tensor as pt
 import xarray as xr
@@ -204,7 +205,7 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
 
 def determine_coords(
     model,
-    value: pd.DataFrame | pd.Series | xr.DataArray,
+    value: pd.DataFrame | pd.Series | pl.DataFrame | pl.Series | xr.DataArray,
     dims: Sequence[str | None] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
 ) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None]]:
@@ -348,7 +349,7 @@ def Data(
     ----------
     name : str
         The name for this variable.
-    value : array_like or pandas.Series, pandas.Dataframe
+    value : array_like or pandas.Series, pandas.Dataframe, polars.DataFrame, polars.Series, xarray.DataArray
         A value to associate with this variable.
     dims : str or tuple of str, optional
         Dimension names of the random variables (as opposed to the shapes of these
