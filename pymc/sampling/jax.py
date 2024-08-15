@@ -202,6 +202,7 @@ def _get_batched_jittered_initial_points(
 @partial(jax.jit, donate_argnums=0)
 def _set_tree(store, input, idx):
     """Update pytree of outputs - used for saving results of chunked sampling"""
+
     def update_fn(save, inp):
         starts = (save.shape[0], idx, *([0] * (len(save.shape) - 2)))
         return jax.lax.dynamic_update_slice(save, inp, starts)
