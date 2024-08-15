@@ -539,6 +539,9 @@ def sample_jax_nuts(
     nuts_sampler : Literal["numpyro", "blackjax"]
         Nuts sampler library to use - do not change - use sample_numpyro_nuts or
         sample_blackjax_nuts as appropriate
+    num_chunks : int
+        Splits sampling into multiple chunks and collects them on the cpu.  Reduces gpu memory
+        usage when sampling.  There is no benefit when sampling on the cpu.
 
     Returns
     -------
