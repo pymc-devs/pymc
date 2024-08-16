@@ -21,8 +21,7 @@ from copy import copy
 from typing import cast
 
 import numpy as np
-import pandas as pd
-import polars as pl
+from numpy.typing import ArrayLike
 import pytensor
 import pytensor.tensor as pt
 import xarray as xr
@@ -205,7 +204,7 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
 
 def determine_coords(
     model,
-    value: pd.DataFrame | pd.Series | pl.DataFrame | pl.Series | xr.DataArray,
+    value: ArrayLike,
     dims: Sequence[str | None] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
 ) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None]]:
