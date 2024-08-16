@@ -16,7 +16,6 @@ import numpy as np
 import numpy.ma as ma
 import numpy.testing as npt
 import pandas as pd
-import polars as pl
 import pytensor
 import pytensor.tensor as pt
 import pytest
