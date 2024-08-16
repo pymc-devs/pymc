@@ -93,6 +93,7 @@ def test_external_nuts_chunking(nuts_sampler):
             draws=500,
             progressbar=False,
             initvals={"x": 0.0},
+            idata_kwargs={"log_likelihood": True},
         )
         chunk_kwargs = {**base_kwargs, **{"nuts_sampler_kwargs": {"num_chunks": 10}}}
 
@@ -100,6 +101,7 @@ def test_external_nuts_chunking(nuts_sampler):
         idata2 = sample(**chunk_kwargs)
 
     np.testing.assert_array_equal(idata1.posterior.x, idata2.posterior.x)
+    np.testing.assert_array_equal(idata1.log_likelihood.L, idata2.log_likelihood.L)
     assert idata1.posterior.attrs.keys() == idata2.posterior.attrs.keys()
 
 
