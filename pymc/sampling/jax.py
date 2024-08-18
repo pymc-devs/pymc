@@ -561,7 +561,8 @@ def sample_jax_nuts(
 
         warnings.warn(
             "postprocessing_backend={'cpu', 'gpu'} will be removed in a future release, "
-            "postprocessing is done on sampling device.",
+            "postprocessing will be done on sampling device in the future.  If device memory "
+            "consumption is an issue please use num_chunks to reduce consumption.",
             DeprecationWarning,
         )
 
@@ -617,6 +618,14 @@ def sample_jax_nuts(
     else:
         raise ValueError(f"{nuts_sampler=} not recognized")
 
+    current_backend = jax.default_backend()
+    if postprocessing_backend is not None and current_backend != postprocessing_backend:
+
+        def process_fn(x):
+            return x, None
+    else:
+        process_fn = postprocess_fn
+
     tic1 = datetime.now()
     mcmc_samples, sample_stats, log_likelihood, library = sampler_fn(
         model=model,
@@ -628,10 +637,18 @@ def sample_jax_nuts(
         progressbar=progressbar,
         random_seed=random_seed,
         initial_points=initial_points,
-        postprocess_fn=postprocess_fn,
+        postprocess_fn=process_fn,
         nuts_kwargs=nuts_kwargs,
         num_chunks=num_chunks,
     )
+
+    if postprocessing_backend is not None and current_backend != postprocessing_backend:
+        mcmc_samples = jax.device_put(mcmc_samples, jax.devices(postprocessing_backend)[0])
+        sample_stats = jax.device_put(sample_stats, jax.devices(postprocessing_backend)[0])
+        mcmc_samples, log_likelihood = jax.jit(jax.vmap(postprocess_fn), donate_argnums=0)(
+            mcmc_samples
+        )
+
     tic2 = datetime.now()
 
     attrs = {

@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import jax
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -116,3 +117,43 @@ def test_step_args():
         )
 
     npt.assert_almost_equal(idata.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
+
+
+@pytest.mark.skipif(jax.default_backend() == "cpu", reason="need default backend that is not cpu")
+@pytest.mark.parametrize("nuts_sampler", ["blackjax", "numpyro"])
+def test_postprocessing_backend(nuts_sampler):
+    pytest.importorskip(nuts_sampler)
+    default_backend = jax.default_backend()
+
+    with Model():
+        x = Normal("x", 100, 5)
+        y = Data("y", [1, 2, 3, 4])
+
+        Normal("L", mu=x, sigma=0.1, observed=y)
+
+        base_kwargs = dict(
+            nuts_sampler=nuts_sampler,
+            random_seed=123,
+            chains=4,
+            tune=200,
+            draws=200,
+            progressbar=False,
+            initvals={"x": 0.0},
+            idata_kwargs={"log_likelihood": True},
+        )
+
+        idata1 = sample(
+            **base_kwargs,
+            nuts_sampler_kwargs={
+                "postprocessing_backend": default_backend,
+                "chain_method": "vectorized",
+            },
+        )
+        idata2 = sample(
+            **base_kwargs,
+            nuts_sampler_kwargs={"postprocessing_backend": "cpu", "chain_method": "vectorized"},
+        )
+
+    np.testing.assert_array_equal(idata1.posterior.x, idata2.posterior.x)
+    np.testing.assert_array_equal(idata1.log_likelihood.L, idata2.log_likelihood.L)
+    assert idata1.posterior.attrs.keys() == idata2.posterior.attrs.keys()
