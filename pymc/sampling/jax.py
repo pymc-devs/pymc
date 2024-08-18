@@ -157,16 +157,12 @@ def get_jaxified_logp(model: Model, negative_logp=True) -> Callable:
     return logp_fn_wrap
 
 
-def _get_log_likelihood_fn(model: Model) -> Callable:
+def _get_log_likelihood(model: Model, samples) -> Callable:
     """Generate function to compute log-likelihood for all observations"""
     elemwise_logp = model.logp(model.observed_RVs, sum=False)
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=elemwise_logp)
-
-    def log_likelihood_fn(samples):
-        result = jax.vmap(jax_fn)(*samples)
-        return {v.name: r for v, r in zip(model.observed_RVs, result)}
-
-    return log_likelihood_fn
+    result = jax.vmap(jax_fn)(*samples)
+    return {v.name: r for v, r in zip(model.observed_RVs, result)}
 
 
 def _get_batched_jittered_initial_points(
@@ -420,10 +416,9 @@ def _sample_numpyro_nuts(
     vmap_postprocess = jax.jit(jax.vmap(postprocess_fn))
 
     key = jax.random.PRNGKey(random_seed)
-    key, _skey = jax.random.split(key)
     if progressbar:
         logger.info("Sampling chunk %d of %d:" % (1, num_chunks))
-    pmap_numpyro.run(_skey, init_params=initial_points, extra_fields=extra_fields)
+    pmap_numpyro.run(key, init_params=initial_points, extra_fields=extra_fields)
     raw_mcmc_samples = pmap_numpyro.get_samples(group_by_chain=True)
     stats = _numpyro_stats_to_dict(pmap_numpyro)
     samples = vmap_postprocess(raw_mcmc_samples)
@@ -594,7 +589,7 @@ def sample_jax_nuts(
         get_default_varnames(filtered_var_names, include_transformed=keep_untransformed)
     )
 
-    log_likelihood_fn = _get_log_likelihood_fn(model)
+    log_likelihood_fn = partial(_get_log_likelihood, model)
     transform_jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
 
     def postprocess_fn(samples):
