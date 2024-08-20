@@ -24,7 +24,6 @@ from typing import (
     TYPE_CHECKING,
     Literal,
     Optional,
-    TypeVar,
     Union,
     cast,
     overload,
@@ -92,9 +91,6 @@ __all__ = [
 ]
 
 
-T = TypeVar("T", bound="ContextMeta")
-
-
 class ContextMeta(type):
     """Functionality for objects that put themselves in a context manager."""
 
@@ -125,13 +121,13 @@ class ContextMeta(type):
             cls._context_class = context_class
         super().__init__(name, bases, nmspc)
 
-    def get_context(cls, error_if_none=True, allow_block_model_access=False) -> T | None:
+    def get_context(cls, error_if_none=True, allow_block_model_access=False) -> "Model | None":
         """Return the most recently pushed context object of type ``cls`` on the stack, or ``None``.
 
         If ``error_if_none`` is True (default), raise a ``TypeError`` instead of returning ``None``.
         """
         try:
-            candidate: T | None = cls.get_contexts()[-1]
+            candidate: Model | None = cls.get_contexts()[-1]
         except IndexError:
             # Calling code expects to get a TypeError if the entity
             # is unfound, and there's too much to fix.
@@ -142,7 +138,7 @@ class ContextMeta(type):
             raise BlockModelAccessError(candidate.error_msg_on_access)
         return candidate
 
-    def get_contexts(cls) -> list[T]:
+    def get_contexts(cls) -> list["Model"]:
         """Return a stack of context instances for the ``context_class`` of ``cls``."""
         # This lazily creates the context class's contexts
         # thread-local object, as needed. This seems inelegant to me,
