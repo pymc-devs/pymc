@@ -69,6 +69,7 @@ from pymc.util import (
     VarName,
     WithMemoization,
     _add_future_warning_tag,
+    _UnsetType,
     get_transformed_name,
     get_value_vars_from_user_vars,
     get_var_name,
@@ -507,7 +508,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """Exit the context manager."""
         _ = MODEL_MANAGER.active_contexts.pop()
 
-    def __new__(cls, *args, model: Literal[UNSET] | None | Model = UNSET, **kwargs):
+    def __new__(cls, *args, model: _UnsetType | None | Model = UNSET, **kwargs):
         # resolves the parent instance
         instance = super().__new__(cls)
         if model is UNSET:
@@ -529,7 +530,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         check_bounds=True,
         *,
         coords_mutable=None,
-        model: Literal[UNSET] | None | Model = UNSET,
+        model: _UnsetType | None | Model = UNSET,
     ):
         del model  # used in __new__ to define the parent of this model
         self.name = self._validate_name(name)
