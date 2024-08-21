@@ -1118,7 +1118,7 @@ class Beta(UnitContinuous):
 
        \text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1
 
-       \alpha = \mu * \nu
+       \alpha = \mu * \nu \\
        \beta = (1 - \mu) * \nu
 
     Parameters
