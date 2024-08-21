@@ -22,7 +22,6 @@ import warnings
 from collections.abc import Iterable, Sequence
 from sys import modules
 from typing import (
-    TYPE_CHECKING,
     Literal,
     cast,
     overload,
@@ -40,7 +39,6 @@ from pytensor.graph.basic import Constant, Variable, graph_inputs
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.variable import TensorConstant, TensorVariable
-from typing_extensions import Self
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import is_valid_observed
@@ -121,25 +119,6 @@ MODEL_MANAGER = ModelManager()
 
 class ContextMeta(type):
     """Functionality for objects that put themselves in a context manager."""
-
-    def __new__(cls, name, bases, dct, **kwargs):
-        """Add __enter__ and __exit__ methods to the class."""
-
-        def __enter__(self):
-            self.__class__.context_class.get_contexts().append(self)
-            return self
-
-        def __exit__(self, typ, value, traceback):
-            self.__class__.context_class.get_contexts().pop()
-
-        dct[__enter__.__name__] = __enter__
-        dct[__exit__.__name__] = __exit__
-
-        # We strip off keyword args, per the warning from
-        # StackExchange:
-        # DO NOT send "**kwargs" to "type.__new__".  It won't catch them and
-        # you'll get a "TypeError: type() takes 1 or 3 arguments" exception.
-        return super().__new__(cls, name, bases, dct)
 
     # FIXME: is there a more elegant way to automatically add methods to the class that
     # are instance methods instead of class methods?
@@ -519,13 +498,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     """
 
-    if TYPE_CHECKING:
+    def __enter__(self):
+        """Enter the context manager."""
+        MODEL_MANAGER.active_contexts.append(self)
+        return self
 
-        def __enter__(self: Self) -> Self:
-            """Enter the context manager."""
-
-        def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
-            """Exit the context manager."""
+    def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
+        """Exit the context manager."""
+        _ = MODEL_MANAGER.active_contexts.pop()
 
     def __new__(cls, *args, model: Literal[UNSET] | None | Model = UNSET, **kwargs):
         # resolves the parent instance
