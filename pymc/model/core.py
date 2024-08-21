@@ -90,6 +90,35 @@ __all__ = [
 ]
 
 
+class ModelManager(threading.local):
+    """Keeps track of currently active model contexts.
+
+    A global instance of this is created in this module on import.
+    Use that instance, `MODEL_MANAGER` to inspect current contexts.
+
+    It inherits from threading.local so is thread-safe, if models
+    can be entered/exited within individual threads.
+    """
+
+    def __init__(self):
+        self.active_contexts: list[Model] = []
+
+    @property
+    def current_context(self) -> Model | None:
+        """Return the innermost context of any current contexts."""
+        return self.active_contexts[-1] if self.active_contexts else None
+
+    @property
+    def parent_context(self) -> Model | None:
+        """Return the parent context to the active context, if any."""
+        return self.active_contexts[-2] if len(self.active_contexts) > 1 else None
+
+
+# MODEL_MANAGER is instantiated at import, and serves as a truth for
+# what any currently active model contexts are.
+MODEL_MANAGER = ModelManager()
+
+
 class ContextMeta(type):
     """Functionality for objects that put themselves in a context manager."""
 
