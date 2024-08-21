@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+from __future__ import annotations
 
 import functools
 import sys
@@ -23,8 +24,6 @@ from sys import modules
 from typing import (
     TYPE_CHECKING,
     Literal,
-    Optional,
-    Union,
     cast,
     overload,
 )
@@ -121,7 +120,7 @@ class ContextMeta(type):
             cls._context_class = context_class
         super().__init__(name, bases, nmspc)
 
-    def get_context(cls, error_if_none=True, allow_block_model_access=False) -> "Model | None":
+    def get_context(cls, error_if_none=True, allow_block_model_access=False) -> Model | None:
         """Return the most recently pushed context object of type ``cls`` on the stack, or ``None``.
 
         If ``error_if_none`` is True (default), raise a ``TypeError`` instead of returning ``None``.
@@ -138,7 +137,7 @@ class ContextMeta(type):
             raise BlockModelAccessError(candidate.error_msg_on_access)
         return candidate
 
-    def get_contexts(cls) -> list["Model"]:
+    def get_contexts(cls) -> list[Model]:
         """Return a stack of context instances for the ``context_class`` of ``cls``."""
         # This lazily creates the context class's contexts
         # thread-local object, as needed. This seems inelegant to me,
@@ -199,7 +198,7 @@ class ContextMeta(type):
         return instance
 
 
-def modelcontext(model: Optional["Model"]) -> "Model":
+def modelcontext(model: Model | None) -> Model:
     """Return the given model or, if None was supplied, try to find one in the context stack."""
     if model is None:
         model = Model.get_context(error_if_none=False)
@@ -499,7 +498,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
             """Exit the context manager."""
 
-    def __new__(cls, *args, model: Union[Literal[UNSET], None, "Model"] = UNSET, **kwargs):
+    def __new__(cls, *args, model: Literal[UNSET] | None | Model = UNSET, **kwargs):
         # resolves the parent instance
         instance = super().__new__(cls)
         if model is UNSET:
@@ -521,7 +520,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         check_bounds=True,
         *,
         coords_mutable=None,
-        model: Union[Literal[UNSET], None, "Model"] = UNSET,
+        model: Literal[UNSET] | None | Model = UNSET,
     ):
         del model  # used in __new__ to define the parent of this model
         self.name = self._validate_name(name)
