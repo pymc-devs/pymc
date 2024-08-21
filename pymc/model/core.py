@@ -508,15 +508,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """Exit the context manager."""
         _ = MODEL_MANAGER.active_contexts.pop()
 
-    def __new__(cls, *args, model: _UnsetType | None | Model = UNSET, **kwargs):
-        # resolves the parent instance
-        instance = super().__new__(cls)
-        if model is UNSET:
-            instance._parent = cls.get_context(error_if_none=False)
-        else:
-            instance._parent = model
-        return instance
-
     @staticmethod
     def _validate_name(name):
         if name.endswith(":"):
@@ -532,9 +523,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         coords_mutable=None,
         model: _UnsetType | None | Model = UNSET,
     ):
-        del model  # used in __new__ to define the parent of this model
         self.name = self._validate_name(name)
         self.check_bounds = check_bounds
+        self._parent = model if not isinstance(model, _UnsetType) else MODEL_MANAGER.parent_context
 
         if coords_mutable is not None:
             warnings.warn(
