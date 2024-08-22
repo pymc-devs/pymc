@@ -259,12 +259,8 @@ class SMC_KERNEL(ABC):
         self.tempered_posterior = np.array(floatX(population))
 
         # Initialize prior and likelihood log probabilities
-        shared = make_shared_replacements(initial_point, self.variables, self.model)
-
-        self.prior_logp_func = _logp_forw(initial_point, [self.varlogp], self.variables, shared)
-        self.likelihood_logp_func = _logp_forw(
-            initial_point, [self.datalogp], self.variables, shared
-        )
+        self.prior_logp_func = _logp_forw(initial_point, [self.varlogp], self.variables, {})
+        self.likelihood_logp_func = _logp_forw(initial_point, [self.datalogp], self.variables, {})
 
         priors = [self.prior_logp_func(sample) for sample in self.tempered_posterior]
         likelihoods = [self.likelihood_logp_func(sample) for sample in self.tempered_posterior]
