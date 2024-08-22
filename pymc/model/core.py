@@ -20,7 +20,6 @@ import types
 import warnings
 
 from collections.abc import Iterable, Sequence
-from sys import modules
 from typing import (
     Literal,
     cast,
@@ -116,55 +115,6 @@ class ModelManager(threading.local):
 # MODEL_MANAGER is instantiated at import, and serves as a truth for
 # what any currently active model contexts are.
 MODEL_MANAGER = ModelManager()
-
-
-class ContextMeta(type):
-    """Functionality for objects that put themselves in a context manager."""
-
-    # FIXME: is there a more elegant way to automatically add methods to the class that
-    # are instance methods instead of class methods?
-    def __init__(cls, name, bases, nmspc, context_class: type | None = None, **kwargs):
-        """Add ``__enter__`` and ``__exit__`` methods to the new class automatically."""
-        if context_class is not None:
-            cls._context_class = context_class
-        super().__init__(name, bases, nmspc)
-
-    # the following complex property accessor is necessary because the
-    # context_class may not have been created at the point it is
-    # specified, so the context_class may be a class *name* rather
-    # than a class.
-    @property
-    def context_class(cls) -> type:
-        def resolve_type(c: type | str) -> type:
-            if isinstance(c, str):
-                c = getattr(modules[cls.__module__], c)
-            if isinstance(c, type):
-                return c
-            raise ValueError(f"Cannot resolve context class {c}")
-
-        assert cls is not None
-        if isinstance(cls._context_class, str):
-            cls._context_class = resolve_type(cls._context_class)
-        if not isinstance(cls._context_class, str | type):
-            raise ValueError(
-                f"Context class for {cls.__name__}, {cls._context_class}, is not of the right type"
-            )
-        return cls._context_class
-
-    # Inherit context class from parent
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        cls.context_class = super().context_class
-
-    # Initialize object in its own context...
-    # Merged from InitContextMeta in the original.
-    def __call__(cls, *args, **kwargs):
-        # We type hint Model here so type checkers understand that Model is a context manager.
-        # This metaclass is only used for Model, so this is safe to do. See #6809 for more info.
-        instance: Model = cls.__new__(cls, *args, **kwargs)
-        with instance:  # appends context
-            instance.__init__(*args, **kwargs)
-        return instance
 
 
 def modelcontext(model: Model | None) -> Model:
@@ -334,6 +284,18 @@ class ValueGradFunction:
     def profile(self):
         """Profiling information of the underlying PyTensor function."""
         return self._pytensor_function.profile
+
+
+class ContextMeta(type):
+    """A metaclass in order to apply a model's context during `Model.__init__``."""
+
+    # We want the Model's context to be active during __init__. In order for this
+    # to apply to subclasses of Model as well, we need to use a metaclass.
+    def __call__(cls: type[Model], *args, **kwargs):
+        instance = cls.__new__(cls, *args, **kwargs)
+        with instance:  # applies context
+            instance.__init__(*args, **kwargs)
+        return instance
 
 
 class Model(WithMemoization, metaclass=ContextMeta):
