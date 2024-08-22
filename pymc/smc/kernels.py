@@ -168,7 +168,7 @@ class SMC_KERNEL(ABC):
             raise ValueError(f"Threshold value {threshold} must be between 0 and 1")
         self.threshold = threshold
         self.model = model
-        self.rng = np.random.default_rng(seed=random_seed)
+        self.initialize_rng(random_seed=random_seed)
 
         self.model = modelcontext(model)
         self.variables = self.model.value_vars
@@ -188,6 +188,18 @@ class SMC_KERNEL(ABC):
 
         self.varlogp = self.model.varlogp
         self.datalogp = self.model.datalogp
+
+    def initialize_rng(self, random_seed=None):
+        """
+        Initialize random number generator.
+
+        Parameters
+        ----------
+        random_seed : int, array_like of int, RandomState or Generator, optional
+            Value used to initialize the random number generator.
+        """
+
+        self.rng = np.random.default_rng(seed=random_seed)
 
     def initialize_population(self) -> dict[str, np.ndarray]:
         """Create an initial population from the prior distribution"""
