@@ -227,15 +227,22 @@ class SMC_KERNEL(ABC):
 
         return cast(dict[str, np.ndarray], dict_prior)
 
-    def _initialize_kernel(self):
-        """Create variables and logp function necessary to run SMC kernel
+    def _initialize_kernel(self, initial_point=None):
+        """
+        Create variables and logp function necessary to run SMC kernel
 
         This method should not be overwritten. If needed, use `setup_kernel`
         instead.
 
+        Parameters
+        ----------
+        initial_point : dict, optional
+            Dictionary that contains initial values for model variables.
         """
-        # Create dictionary that stores original variables shape and size
-        initial_point = self.model.initial_point(random_seed=self.rng.integers(2**30))
+
+        if initial_point is None:
+            # Create dictionary that stores original variables shape and size
+            initial_point = self.model.initial_point(random_seed=self.rng.integers(2**30))
         for v in self.variables:
             self.var_info[v.name] = (initial_point[v.name].shape, initial_point[v.name].size)
         # Create particles bijection map
