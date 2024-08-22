@@ -129,29 +129,6 @@ class ContextMeta(type):
             cls._context_class = context_class
         super().__init__(name, bases, nmspc)
 
-    def get_contexts(cls) -> list[Model]:
-        """Return a stack of context instances for the ``context_class`` of ``cls``."""
-        # This lazily creates the context class's contexts
-        # thread-local object, as needed. This seems inelegant to me,
-        # but since the context class is not guaranteed to exist when
-        # the metaclass is being instantiated, I couldn't figure out a
-        # better way. [2019/10/11:rpg]
-
-        # no race-condition here, contexts is a thread-local object
-        # be sure not to override contexts in a subclass however!
-        context_class = cls.context_class
-        assert isinstance(
-            context_class, type
-        ), f"Name of context class, {context_class} was not resolvable to a class"
-        if not hasattr(context_class, "contexts"):
-            context_class.contexts = threading.local()
-
-        contexts = context_class.contexts
-
-        if not hasattr(contexts, "stack"):
-            contexts.stack = []
-        return contexts.stack
-
     # the following complex property accessor is necessary because the
     # context_class may not have been created at the point it is
     # specified, so the context_class may be a class *name* rather
