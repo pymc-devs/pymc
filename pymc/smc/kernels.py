@@ -186,6 +186,9 @@ class SMC_KERNEL(ABC):
         self.resampling_indexes = None
         self.weights = np.ones(self.draws) / self.draws
 
+        self.varlogp = self.model.varlogp
+        self.datalogp = self.model.datalogp
+
     def initialize_population(self) -> dict[str, np.ndarray]:
         """Create an initial population from the prior distribution"""
         sys.stdout.write(" ")  # see issue #5828
@@ -239,11 +242,9 @@ class SMC_KERNEL(ABC):
         # Initialize prior and likelihood log probabilities
         shared = make_shared_replacements(initial_point, self.variables, self.model)
 
-        self.prior_logp_func = _logp_forw(
-            initial_point, [self.model.varlogp], self.variables, shared
-        )
+        self.prior_logp_func = _logp_forw(initial_point, [self.varlogp], self.variables, shared)
         self.likelihood_logp_func = _logp_forw(
-            initial_point, [self.model.datalogp], self.variables, shared
+            initial_point, [self.datalogp], self.variables, shared
         )
 
         priors = [self.prior_logp_func(sample) for sample in self.tempered_posterior]
