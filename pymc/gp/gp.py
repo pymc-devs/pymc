@@ -223,6 +223,7 @@ class Latent(Base):
         L = cholesky(stabilize(Kxx, jitter))
         A = solve_lower(L, Kxs)
         v = solve_lower(L, (f - mean_total(X)).T)
+        
         mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v).T
         Kss = self.cov_func(Xnew)
         cov = Kss - pt.dot(pt.transpose(A), A)
