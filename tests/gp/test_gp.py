@@ -17,6 +17,7 @@ from operator import add
 
 import numpy as np
 import numpy.testing as npt
+import pytensor.tensor as pt
 import pytest
 
 import pymc as pm
@@ -90,7 +91,12 @@ class TestMarginalApproxSigmaParams(TestSigmaParams):
         with self.model:
             with pytest.raises(ValueError):
                 self.gp.marginal_likelihood(
-                    "like_both", X=self.x, Xu=self.xu, y=self.y, noise=self.sigma, sigma=self.sigma
+                    "like_both",
+                    X=self.x,
+                    Xu=self.xu,
+                    y=self.y,
+                    noise=self.sigma,
+                    sigma=self.sigma,
                 )
 
             with pytest.raises(ValueError):
@@ -177,7 +183,11 @@ class TestGPAdditive:
             pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3]),
             pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3]),
         )
-        self.means = (pm.gp.mean.Constant(0.5), pm.gp.mean.Constant(0.5), pm.gp.mean.Constant(0.5))
+        self.means = (
+            pm.gp.mean.Constant(0.5),
+            pm.gp.mean.Constant(0.5),
+            pm.gp.mean.Constant(0.5),
+        )
 
     def testAdditiveMarginal(self):
         with pm.Model() as model1:
@@ -199,7 +209,9 @@ class TestGPAdditive:
 
         with model1:
             fp1 = gpsum.conditional(
-                "fp1", self.Xnew, given={"X": self.X, "y": self.y, "sigma": self.noise, "gp": gpsum}
+                "fp1",
+                self.Xnew,
+                given={"X": self.X, "y": self.y, "sigma": self.noise, "gp": gpsum},
             )
         with model2:
             fp2 = gptot.conditional("fp2", self.Xnew)
@@ -230,7 +242,9 @@ class TestGPAdditive:
 
         with pm.Model() as model2:
             gptot = pm.gp.MarginalApprox(
-                mean_func=reduce(add, self.means), cov_func=reduce(add, self.covs), approx=approx
+                mean_func=reduce(add, self.means),
+                cov_func=reduce(add, self.covs),
+                approx=approx,
             )
             fsum = gptot.marginal_likelihood("f", self.X, Xu, self.y, sigma=sigma)
             model2_logp = model2.compile_logp()({})
@@ -351,6 +365,53 @@ class TestMarginalVsLatent:
         y_rotated = np.linalg.solve(chol, self.y - 0.5)
         latent_logp = model.compile_logp()({"f_rotated_": y_rotated, "p": self.pnew})
         npt.assert_allclose(latent_logp, self.logp, atol=5)
+
+    def testLatentMultioutput(self):
+        n_outputs = 2
+        X = np.random.randn(20, 3)
+        y = np.random.randn(n_outputs, 20)
+        Xnew = np.random.randn(30, 3)
+        pnew = np.random.randn(n_outputs, 30)
+
+        with pm.Model() as latent_model:
+            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
+            mean_func = pm.gp.mean.Constant(0.5)
+            latent_gp = pm.gp.Latent(mean_func=mean_func, cov_func=cov_func)
+            latent_f = latent_gp.prior("f", X, n_outputs=n_outputs, reparameterize=True)
+            latent_p = latent_gp.conditional("p", Xnew)
+
+        with pm.Model() as marginal_model:
+            cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
+            mean_func = pm.gp.mean.Constant(0.5)
+            marginal_gp = pm.gp.Marginal(mean_func=mean_func, cov_func=cov_func)
+            marginal_f = marginal_gp.marginal_likelihood("f", X, y, sigma=0.0)
+            marginal_p = marginal_gp.conditional("p", Xnew)
+
+        assert tuple(latent_f.shape.eval()) == tuple(marginal_f.shape.eval()) == y.shape
+        assert tuple(latent_p.shape.eval()) == tuple(marginal_p.shape.eval()) == pnew.shape
+
+        chol = np.linalg.cholesky(cov_func(X).eval())
+        v = np.linalg.solve(chol, (y - 0.5).T)
+        A = np.linalg.solve(chol, cov_func(X, Xnew).eval()).T
+        mu_cond = mean_func(Xnew).eval() + (A @ v).T
+        cov_cond = cov_func(Xnew, Xnew).eval() - A @ A.T
+
+        with pm.Model() as numpy_model:
+            numpy_p = pm.MvNormal.dist(mu=pt.as_tensor(mu_cond), cov=pt.as_tensor(cov_cond))
+
+        latent_rv_logp = pm.logp(latent_p, pnew)
+        marginal_rv_logp = pm.logp(marginal_p, pnew)
+        numpy_rv_logp = pm.logp(numpy_p, pnew)
+
+        assert (
+            latent_rv_logp.shape.eval()
+            == marginal_rv_logp.shape.eval()
+            == numpy_rv_logp.shape.eval()
+        )
+
+        npt.assert_allclose(latent_rv_logp.eval(), marginal_rv_logp.eval(), atol=5)
+        npt.assert_allclose(latent_rv_logp.eval(), numpy_rv_logp.eval(), atol=5)
+        npt.assert_allclose(marginal_rv_logp.eval(), numpy_rv_logp.eval(), atol=5)
 
 
 class TestTP:
@@ -486,7 +547,11 @@ class TestMarginalKron:
         self.X = cartesian(*self.Xs)
         self.N = np.prod([len(X) for X in self.Xs])
         self.y = np.random.randn(self.N) * 0.1
-        self.Xnews = (np.random.randn(5, 1), np.random.randn(5, 1), np.random.randn(5, 1))
+        self.Xnews = (
+            np.random.randn(5, 1),
+            np.random.randn(5, 1),
+            np.random.randn(5, 1),
+        )
         self.Xnew = np.concatenate(self.Xnews, axis=1)
         self.sigma = 0.2
         self.pnew = np.random.randn(len(self.Xnew))
