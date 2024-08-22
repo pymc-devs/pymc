@@ -129,23 +129,6 @@ class ContextMeta(type):
             cls._context_class = context_class
         super().__init__(name, bases, nmspc)
 
-    def get_context(cls, error_if_none=True, allow_block_model_access=False) -> Model | None:
-        """Return the most recently pushed context object of type ``cls`` on the stack, or ``None``.
-
-        If ``error_if_none`` is True (default), raise a ``TypeError`` instead of returning ``None``.
-        """
-        try:
-            candidate: Model | None = cls.get_contexts()[-1]
-        except IndexError:
-            # Calling code expects to get a TypeError if the entity
-            # is unfound, and there's too much to fix.
-            if error_if_none:
-                raise TypeError(f"No {cls} on context stack")
-            return None
-        if isinstance(candidate, BlockModelAccess) and not allow_block_model_access:
-            raise BlockModelAccessError(candidate.error_msg_on_access)
-        return candidate
-
     def get_contexts(cls) -> list[Model]:
         """Return a stack of context instances for the ``context_class`` of ``cls``."""
         # This lazily creates the context class's contexts
@@ -572,6 +555,17 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self._repr_latex_ = types.MethodType(
             functools.partial(str_for_model, formatting="latex"), self
         )
+
+    @classmethod
+    def get_context(
+        cls, error_if_none: bool = True, allow_block_model_access: bool = False
+    ) -> Model | None:
+        model = MODEL_MANAGER.current_context
+        if isinstance(model, BlockModelAccess) and not allow_block_model_access:
+            raise BlockModelAccessError(model.error_msg_on_access)
+        if model is None and error_if_none:
+            raise TypeError("No model on context stack")
+        return model
 
     @property
     def parent(self):
