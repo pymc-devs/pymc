@@ -183,8 +183,6 @@ def quaddist_chol(value, mu, cov):
 
     # solve_triangular will raise if there are nans
     # (which happens if the cholesky fails)
-    chol_cov.dprint(print_type=True, depth=1)
-    posdef.dprint(print_type=True, depth=1)
     chol_cov = pt.switch(posdef[..., None, None], chol_cov, 1)
 
     delta = value - mu
