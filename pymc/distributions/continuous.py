@@ -2941,8 +2941,8 @@ class ExGaussian(Continuous):
     rv_op = ExGaussianRV.rv_op
 
     @classmethod
-    def dist(cls, mu=0.0, sigma=None, nu=None, *args, **kwargs):
-        return super().dist([mu, sigma, nu], *args, **kwargs)
+    def dist(cls, mu=0.0, sigma=1.0, *, nu, **kwargs):
+        return super().dist([mu, sigma, nu], **kwargs)
 
     def support_point(rv, size, mu, sigma, nu):
         mu, nu, _ = pt.broadcast_arrays(mu, nu, sigma)
