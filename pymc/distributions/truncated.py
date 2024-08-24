@@ -28,7 +28,6 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 
 from pymc.distributions.continuous import TruncatedNormal, bounded_cont_transform
-from pymc.distributions.custom import CustomSymbolicDistRV
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import (
     Distribution,
@@ -302,16 +301,23 @@ class Truncated(Distribution):
     def dist(cls, dist, lower=None, upper=None, max_n_steps: int = 10_000, **kwargs):
         if not (
             isinstance(dist, TensorVariable)
-            and isinstance(dist.owner.op, RandomVariable | CustomSymbolicDistRV)
+            and dist.owner is not None
+            and isinstance(dist.owner.op, RandomVariable | SymbolicRandomVariable)
         ):
-            if isinstance(dist.owner.op, SymbolicRandomVariable):
-                raise NotImplementedError(
-                    f"Truncation not implemented for SymbolicRandomVariable {dist.owner.op}.\n"
-                    f"You can try wrapping the distribution inside a CustomDist instead."
-                )
             raise ValueError(
                 f"Truncation dist must be a distribution created via the `.dist()` API, got {type(dist)}"
             )
+
+        if (
+            isinstance(dist.owner.op, SymbolicRandomVariable)
+            and "[size]" not in dist.owner.op.extended_signature
+        ):
+            # Truncation needs to wrap the underlying dist, but not all SymbolicRandomVariables encapsulate the whole
+            # random graph and as such we don't know where the actual inputs begin. This happens mostly for
+            # distribution factories like `Censored` and `Mixture` which would have a very complex signature if they
+            # encapsulated the random components instead of taking them as inputs like they do now.
+            # SymbolicRandomVariables that encapsulate the whole random graph can be identified for having a size parameter.
+            raise NotImplementedError(f"Truncation not implemented for {dist.owner.op}")
 
         if dist.owner.op.ndim_supp > 0:
             raise NotImplementedError("Truncation not implemented for multivariate distributions")
