@@ -21,7 +21,7 @@ from pytensor.scalar import Identity
 from pytensor.tensor.random.basic import GeometricRV, NormalRV
 from pytensor.tensor.random.type import RandomType
 
-from pymc import Model, draw, find_MAP
+from pymc import ExGaussian, Model, Normal, draw, find_MAP
 from pymc.distributions import (
     Censored,
     ChiSquared,
@@ -342,7 +342,7 @@ def test_truncation_exceptions():
     # Truncation does not work with SymbolicRV inputs
     with pytest.raises(
         NotImplementedError,
-        match="Truncation not implemented for SymbolicRandomVariable CensoredRV",
+        match="Truncation not implemented for CensoredRV",
     ):
         Truncated.dist(Censored.dist(pt.random.normal(), lower=-1, upper=1), -1, 1)
 
@@ -599,3 +599,20 @@ def test_truncated_custom_dist_indexed_argument(rv_op):
     rv_out = Truncated.dist(latent, upper=7)
 
     assert np.ptp(draw(rv_out, draws=100)) < 7
+
+
+@pytest.mark.parametrize(
+    "dist_fn",
+    [
+        lambda: ExGaussian.dist(nu=3),
+        pytest.param(
+            lambda: Censored.dist(Normal.dist(), lower=1),
+            marks=pytest.mark.xfail(raises=NotImplementedError),
+        ),
+    ],
+)
+def test_truncated_symbolic_rv(dist_fn):
+    dist = dist_fn()
+    trunc_dist = Truncated.dist(dist, lower=1, upper=3)
+    assert 1 <= draw(trunc_dist) <= 3
+    assert (logp(trunc_dist, 2.5) > logp(dist, 2.5)).eval()
