@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Invokes mypy and compare the reults with files in /pymc except tests
 and a list of files that are known to fail.
