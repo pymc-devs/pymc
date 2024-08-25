@@ -683,12 +683,12 @@ class HSGPPeriodic(Base):
         psd = self.scale * self.cov_func.power_spectral_density_approx(J)
         return (phi_cos, phi_sin), psd
 
-    def prior(
+    def prior(  # type: ignore
         self,
         name: str,
         X: TensorLike,
         dims: str | None = None,
-    ):  # type: ignore
+    ):
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
         For usage examples, refer to `pm.gp.Latent`.
