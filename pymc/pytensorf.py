@@ -672,6 +672,9 @@ class GeneratorOp(Op):
     __props__ = ("generator",)
 
     def __init__(self, gen, default=None):
+        warnings.warn(
+            "generator data is deprecated and will be removed in a future release", FutureWarning
+        )
         from pymc.data import GeneratorAdapter
 
         super().__init__()
