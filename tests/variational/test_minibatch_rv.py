@@ -13,6 +13,7 @@
 #   limitations under the License.
 import numpy as np
 import pytensor
+import pytensor.tensor as pt
 import pytest
 
 from scipy import stats as st
@@ -186,3 +187,12 @@ class TestMinibatchRandomVariable:
         with m:
             pm.set_data({"AD": rng.normal(size=1000)})
         assert logp_fn(ip) != logp_fn(ip)
+
+    def test_derived_rv(self):
+        """Test we can obtain a minibatch logp out of a derived RV."""
+        dist = pt.clip(pm.Normal.dist(0, 1, size=(1,)), -1, 1)
+        mb_dist = create_minibatch_rv(dist, total_size=(2,))
+        np.testing.assert_allclose(
+            pm.logp(mb_dist, -1).eval(),
+            pm.logp(dist, -1).eval() * 2,
+        )
