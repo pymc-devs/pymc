@@ -26,11 +26,12 @@ from pytensor.compile import UnusedInputError
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable, equal_computations
 from pytensor.tensor.random.basic import normal, uniform
-from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
+from pytensor.tensor.subtensor import AdvancedIncSubtensor
 from pytensor.tensor.variable import TensorVariable
 
 import pymc as pm
 
+from pymc.data import Minibatch, MinibatchOp
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.exceptions import NotConstantValueError
@@ -135,57 +136,68 @@ def _make_along_axis_idx(arr_shape, indices, axis):
     return tuple(fancy_index)
 
 
-def test_extract_obs_data():
-    with pytest.raises(TypeError):
-        extract_obs_data(pt.matrix())
+class TestExtractObsData:
+    def test_root_variable(self):
+        with pytest.raises(TypeError):
+            extract_obs_data(pt.matrix())
 
-    data = np.random.normal(size=(2, 3))
-    data_at = pt.as_tensor(data)
-    mask = np.random.binomial(1, 0.5, size=(2, 3)).astype(bool)
-
-    for val_at in (data_at, pytensor.shared(data)):
-        res = extract_obs_data(val_at)
+    def test_constant_variable(self):
+        data = np.random.normal(size=(2, 3))
+        data_pt = pt.as_tensor(data)
+        res = extract_obs_data(data_pt)
 
         assert isinstance(res, np.ndarray)
-        assert np.array_equal(res, data)
+        np.testing.assert_array_equal(res, data)
 
-    # AdvancedIncSubtensor check
-    data_m = np.ma.MaskedArray(data, mask)
-    missing_values = data_at.type()[mask]
-    constant = pt.as_tensor(data_m.filled())
-    z_at = pt.set_subtensor(constant[mask.nonzero()], missing_values)
+    def test_shared_variable(self):
+        data = np.random.normal(size=(2, 3))
+        data_pt = shared(data)
 
-    assert isinstance(z_at.owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1)
+        res = extract_obs_data(data_pt)
+        assert isinstance(res, np.ndarray)
+        np.testing.assert_array_equal(res, data)
 
-    res = extract_obs_data(z_at)
+    def test_masked_variable(self):
+        # Extract data from auto-imputation graph
+        data = np.random.normal(size=(2, 3))
+        data_pt = pt.as_tensor(data)
+        mask = np.random.binomial(1, 0.5, size=(2, 3)).astype(bool)
 
-    assert isinstance(res, np.ndarray)
-    assert np.ma.allequal(res, data_m)
+        # AdvancedIncSubtensor check
+        data_m = np.ma.MaskedArray(data, mask)
+        missing_values = data_pt.type()[mask]
+        constant = pt.as_tensor(data_m.filled())
+        z_at = pt.set_subtensor(constant[mask.nonzero()], missing_values)
+        assert isinstance(z_at.owner.op, AdvancedIncSubtensor)
 
-    # AdvancedIncSubtensor1 check
-    data = np.random.normal(size=(3,))
-    data_at = pt.as_tensor(data)
-    mask = np.random.binomial(1, 0.5, size=(3,)).astype(bool)
+        res = extract_obs_data(z_at)
+        assert isinstance(res, np.ndarray)
+        assert np.ma.allequal(res, data_m)
 
-    data_m = np.ma.MaskedArray(data, mask)
-    missing_values = data_at.type()[mask]
-    constant = pt.as_tensor(data_m.filled())
-    z_at = pt.set_subtensor(constant[mask.nonzero()], missing_values)
+    def test_cast_variable(self):
+        # Cast check
+        data = np.array(5)
+        data_pt = pt.cast(pt.as_tensor(5.0), np.int64)
 
-    assert isinstance(z_at.owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1)
+        res = extract_obs_data(data_pt)
+        assert isinstance(res, np.ndarray)
+        np.testing.assert_array_equal(res, data)
 
-    res = extract_obs_data(z_at)
+    def test_minibatch_variable(self):
+        x = np.arange(5)
+        y = x * 2
 
-    assert isinstance(res, np.ndarray)
-    assert np.ma.allequal(res, data_m)
+        x_mb, y_mb = Minibatch(x, y, batch_size=2)
+        assert isinstance(x_mb.owner.op, MinibatchOp)
+        assert isinstance(y_mb.owner.op, MinibatchOp)
 
-    # Cast check
-    data = np.array(5)
-    t = pt.cast(pt.as_tensor(5.0), np.int64)
-    res = extract_obs_data(t)
+        res = extract_obs_data(x_mb)
+        assert isinstance(res, np.ndarray)
+        np.testing.assert_array_equal(res, x)
 
-    assert isinstance(res, np.ndarray)
-    assert np.array_equal(res, data)
+        res = extract_obs_data(y_mb)
+        assert isinstance(res, np.ndarray)
+        np.testing.assert_array_equal(res, y)
 
 
 @pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])

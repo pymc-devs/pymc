@@ -20,7 +20,7 @@ from scipy import stats as st
 import pymc as pm
 
 from pymc import Normal, draw
-from pymc.data import minibatch_index
+from pymc.data import Minibatch
 from pymc.testing import select_by_precision
 from pymc.variational.minibatch_rv import create_minibatch_rv
 from tests.test_data import gen1, gen2
@@ -165,10 +165,7 @@ class TestMinibatchRandomVariable:
         with pm.Model(check_bounds=False) as m:
             AD = pm.Data("AD", np.arange(total_size, dtype="float64"))
             TD = pm.Data("TD", np.arange(total_size, dtype="float64"))
-
-            minibatch_idx = minibatch_index(0, 10, size=(9,))
-            AD_mt = AD[minibatch_idx]
-            TD_mt = TD[minibatch_idx]
+            AD_mt, TD_mt = Minibatch(AD, TD, batch_size=9)
 
             pm.Normal(
                 "AD_predicted",

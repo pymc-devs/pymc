@@ -116,13 +116,13 @@ class GroupError(VariationalInferenceError, TypeError):
 
 def _known_scan_ignored_inputs(terms):
     # TODO: remove when scan issue with grads is fixed
-    from pymc.data import MinibatchIndexRV
+    from pymc.data import MinibatchOp
     from pymc.distributions.simulator import SimulatorRV
 
     return [
         n.owner.inputs[0]
         for n in pytensor.graph.ancestors(terms)
-        if n.owner is not None and isinstance(n.owner.op, MinibatchIndexRV | SimulatorRV)
+        if n.owner is not None and isinstance(n.owner.op, MinibatchOp | SimulatorRV)
     ]
 
 

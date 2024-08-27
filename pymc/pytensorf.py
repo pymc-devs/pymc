@@ -156,19 +156,25 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
     TypeError
 
     """
+    # TODO: These data functions should be in data.py or model/core.py
+    from pymc.data import MinibatchOp
+
     if isinstance(x, Constant):
         return x.data
     if isinstance(x, SharedVariable):
         return x.get_value()
-    if x.owner and isinstance(x.owner.op, Elemwise) and isinstance(x.owner.op.scalar_op, Cast):
-        array_data = extract_obs_data(x.owner.inputs[0])
-        return array_data.astype(x.type.dtype)
-    if x.owner and isinstance(x.owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1):
-        array_data = extract_obs_data(x.owner.inputs[0])
-        mask_idx = tuple(extract_obs_data(i) for i in x.owner.inputs[2:])
-        mask = np.zeros_like(array_data)
-        mask[mask_idx] = 1
-        return np.ma.MaskedArray(array_data, mask)
+    if x.owner is not None:
+        if isinstance(x.owner.op, Elemwise) and isinstance(x.owner.op.scalar_op, Cast):
+            array_data = extract_obs_data(x.owner.inputs[0])
+            return array_data.astype(x.type.dtype)
+        if isinstance(x.owner.op, MinibatchOp):
+            return extract_obs_data(x.owner.inputs[x.owner.outputs.index(x)])
+        if isinstance(x.owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1):
+            array_data = extract_obs_data(x.owner.inputs[0])
+            mask_idx = tuple(extract_obs_data(i) for i in x.owner.inputs[2:])
+            mask = np.zeros_like(array_data)
+            mask[mask_idx] = 1
+            return np.ma.MaskedArray(array_data, mask)
 
     raise TypeError(f"Data cannot be extracted from {x}")
 

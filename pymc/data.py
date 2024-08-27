@@ -26,18 +26,19 @@ import pytensor
 import pytensor.tensor as pt
 import xarray as xr
 
+from pytensor.compile.builders import OpFromGraph
 from pytensor.compile.sharedvalue import SharedVariable
+from pytensor.graph.basic import Variable
 from pytensor.raise_op import Assert
 from pytensor.scalar import Cast
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.basic import IntegersRV
-from pytensor.tensor.subtensor import AdvancedSubtensor
 from pytensor.tensor.type import TensorType
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 import pymc as pm
 
-from pymc.pytensorf import convert_data, smarttypeX
+from pymc.pytensorf import GeneratorOp, convert_data, smarttypeX
 from pymc.vartypes import isgenerator
 
 __all__ = [
@@ -129,44 +130,45 @@ class GeneratorAdapter:
 class MinibatchIndexRV(IntegersRV):
     _print_name = ("minibatch_index", r"\operatorname{minibatch\_index}")
 
-    # Work-around for https://github.com/pymc-devs/pytensor/issues/97
-    def make_node(self, rng, *args, **kwargs):
-        if rng is None:
-            rng = pytensor.shared(np.random.default_rng())
-        return super().make_node(rng, *args, **kwargs)
-
 
 minibatch_index = MinibatchIndexRV()
 
 
-def is_minibatch(v: TensorVariable) -> bool:
-    return (
-        isinstance(v.owner.op, AdvancedSubtensor)
-        and isinstance(v.owner.inputs[1].owner.op, MinibatchIndexRV)
-        and valid_for_minibatch(v.owner.inputs[0])
-    )
+class MinibatchOp(OpFromGraph):
+    """Encapsulate Minibatch random draws in an opaque OFG"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs, inline=True)
+
+    def __str__(self):
+        return "Minibatch"
 
 
-def valid_for_minibatch(v: TensorVariable) -> bool:
+def is_valid_observed(v) -> bool:
+    if not isinstance(v, Variable):
+        # Non-symbolic constant
+        return True
+
+    if v.owner is None:
+        # Symbolic root variable (constant or not)
+        return True
+
     return (
-        v.owner is None
         # The only PyTensor operation we allow on observed data is type casting
         # Although we could allow for any graph that does not depend on other RVs
-        or (
+        (
             isinstance(v.owner.op, Elemwise)
-            and v.owner.inputs[0].owner is None
             and isinstance(v.owner.op.scalar_op, Cast)
+            and is_valid_observed(v.owner.inputs[0])
         )
+        # Or Minibatch
+        or (
+            isinstance(v.owner.op, MinibatchOp)
+            and all(is_valid_observed(inp) for inp in v.owner.inputs)
+        )
+        # Or Generator
+        or isinstance(v.owner.op, GeneratorOp)
     )
-
-
-def assert_all_scalars_equal(scalar, *scalars):
-    if len(scalars) == 0:
-        return scalar
-    else:
-        return Assert(
-            "All variables shape[0] in Minibatch should be equal, check your Minibatch(data1, data2, ...) code"
-        )(scalar, pt.all([pt.eq(scalar, s) for s in scalars]))
 
 
 def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: int):
@@ -188,18 +190,29 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
     if not isinstance(batch_size, int):
         raise TypeError("batch_size must be an integer")
 
-    tensor, *tensors = tuple(map(pt.as_tensor, (variable, *variables)))
-    upper = assert_all_scalars_equal(*[t.shape[0] for t in (tensor, *tensors)])
-    slc = minibatch_index(0, upper, size=batch_size)
-    for i, v in enumerate((tensor, *tensors)):
-        if not valid_for_minibatch(v):
+    tensors = tuple(map(pt.as_tensor, (variable, *variables)))
+    for i, v in enumerate(tensors):
+        if not is_valid_observed(v):
             raise ValueError(
                 f"{i}: {v} is not valid for Minibatch, only constants or constants.astype(dtype) are allowed"
             )
-    result = tuple([v[slc] for v in (tensor, *tensors)])
-    for i, r in enumerate(result):
+
+    upper = tensors[0].shape[0]
+    if len(tensors) > 1:
+        upper = Assert(
+            "All variables shape[0] in Minibatch should be equal, check your Minibatch(data1, data2, ...) code"
+        )(upper, pt.all([pt.eq(upper, other_tensor.shape[0]) for other_tensor in tensors[1:]]))
+
+    rng = pytensor.shared(np.random.default_rng())
+    rng_update, mb_indices = minibatch_index(0, upper, size=batch_size, rng=rng).owner.outputs
+    mb_tensors = [tensor[mb_indices] for tensor in tensors]
+
+    # Wrap graph in OFG so it's easily identifiable and not rewritten accidentally
+    *mb_tensors, _ = MinibatchOp([*tensors, rng], [*mb_tensors, rng_update])(*tensors, rng)
+    for i, r in enumerate(mb_tensors[:-1]):
         r.name = f"minibatch.{i}"
-    return result if tensors else result[0]
+
+    return mb_tensors if len(variables) else mb_tensors[0]
 
 
 def determine_coords(
