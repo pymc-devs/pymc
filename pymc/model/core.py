@@ -39,15 +39,13 @@ import scipy.sparse as sps
 from pytensor.compile import DeepCopyOp, Function, get_mode
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Constant, Variable, graph_inputs
-from pytensor.scalar import Cast
-from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 from typing_extensions import Self
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
-from pymc.data import GenTensorVariable, is_minibatch
+from pymc.data import is_valid_observed
 from pymc.exceptions import (
     BlockModelAccessError,
     ImputationWarning,
@@ -1294,18 +1292,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.add_named_variable(rv_var, dims)
             self.set_initval(rv_var, initval)
         else:
-            if (
-                isinstance(observed, Variable)
-                and not isinstance(observed, GenTensorVariable)
-                and observed.owner is not None
-                # The only PyTensor operation we allow on observed data is type casting
-                # Although we could allow for any graph that does not depend on other RVs
-                and not (
-                    isinstance(observed.owner.op, Elemwise)
-                    and isinstance(observed.owner.op.scalar_op, Cast)
-                )
-                and not is_minibatch(observed)
-            ):
+            if not is_valid_observed(observed):
                 raise TypeError(
                     "Variables that depend on other nodes cannot be used for observed data."
                     f"The data variable was: {observed}"
