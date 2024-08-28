@@ -1162,8 +1162,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def register_rv(
         self,
-        rv_var,
-        name,
+        rv_var: RandomVariable,
+        name: str,
         *,
         observed=None,
         total_size=None,
@@ -1171,7 +1171,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         default_transform=UNSET,
         transform=UNSET,
         initval=None,
-    ):
+    ) -> TensorVariable:
         """Register an (un)observed random variable with the model.
 
         Parameters
