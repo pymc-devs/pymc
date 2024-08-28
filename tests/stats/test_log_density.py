@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+from unittest.mock import patch
+
 import numpy as np
 import pytest
 import scipy.stats as st
@@ -174,3 +176,17 @@ class TestComputeLogLikelihood:
             res.log_prior["x"].values,
             st.norm(0, 1).logpdf(idata.posterior["x"].values),
         )
+
+    def test_compilation_kwargs(self):
+        with Model() as m:
+            x = Normal("x")
+            Deterministic("d", 2 * x)
+            Normal("y", x, observed=[0, 1, 2])
+
+            idata = InferenceData(posterior=dict_to_dataset({"x": np.arange(100).reshape(4, 25)}))
+            with patch("pymc.model.core.compile_pymc") as patched_compile_pymc:
+                compute_log_prior(idata, compile_kwargs={"mode": "JAX"})
+                compute_log_likelihood(idata, compile_kwargs={"mode": "NUMBA"})
+        assert len(patched_compile_pymc.call_args_list) == 2
+        assert patched_compile_pymc.call_args_list[0].kwargs["mode"] == "JAX"
+        assert patched_compile_pymc.call_args_list[1].kwargs["mode"] == "NUMBA"
