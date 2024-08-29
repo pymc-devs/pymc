@@ -443,17 +443,22 @@ class HSGP(Base):
         """
         phi, sqrt_psd = self.prior_linearized(X)
 
+        size = self._m_star - int(self._drop_first)
         if self._parametrization == "noncentered":
             self._beta = pm.Normal(
                 f"{name}_hsgp_coeffs_",
-                size=self._m_star - int(self._drop_first),
+                size=size,
                 dims=hsgp_coeffs_dims,
             )
             self._sqrt_psd = sqrt_psd
             f = self.mean_func(X) + phi @ (self._beta * self._sqrt_psd)
 
         elif self._parametrization == "centered":
-            self._beta = pm.Normal(f"{name}_hsgp_coeffs_", sigma=sqrt_psd, dims=hsgp_coeffs_dims)
+            self._beta = pm.Normal(
+                f"{name}_hsgp_coeffs_",
+                sigma=sqrt_psd,
+                dims=hsgp_coeffs_dims,
+            )
             f = self.mean_func(X) + phi @ self._beta
 
         self.f = pm.Deterministic(name, f, dims=gp_dims)
@@ -678,7 +683,12 @@ class HSGPPeriodic(Base):
         psd = self.scale * self.cov_func.power_spectral_density_approx(J)
         return (phi_cos, phi_sin), psd
 
-    def prior(self, name: str, X: TensorLike, dims: str | None = None):  # type: ignore
+    def prior(  # type: ignore
+        self,
+        name: str,
+        X: TensorLike,
+        dims: str | None = None,
+    ):
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
         For usage examples, refer to `pm.gp.Latent`.
@@ -695,16 +705,23 @@ class HSGPPeriodic(Base):
         (phi_cos, phi_sin), psd = self.prior_linearized(X)
 
         m = self._m
-        self._beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m * 2 - 1))
-        # The first eigenfunction for the sine component is zero
-        # and so does not contribute to the approximation.
-        f = (
-            self.mean_func(X)
-            + phi_cos @ (psd * self._beta[:m])  # type: ignore
-            + phi_sin[..., 1:] @ (psd[1:] * self._beta[m:])  # type: ignore
-        )
+        gp_dims = dims
+        size = 2 * m - 1
+        parametrization = "noncentered"
+        if parametrization == "noncentered":
+            self._beta = pm.Normal(
+                f"{name}_hsgp_coeffs_",
+                size=size,
+            )
+            # The first eigenfunction for the sine component is zero
+            # and so does not contribute to the approximation.
+            f = (
+                self.mean_func(X)
+                + phi_cos @ (self._beta[:m] * psd)  # type: ignore
+                + phi_sin[..., 1:] @ (self._beta[m:] * psd[1:])  # type: ignore
+            )
 
-        self.f = pm.Deterministic(name, f, dims=dims)
+        self.f = pm.Deterministic(name, f, dims=gp_dims)
         return self.f
 
     def _build_conditional(self, Xnew):
