@@ -152,7 +152,7 @@ class BoundedContinuous(Continuous):
     """Base class for bounded continuous distributions"""
 
     # Indices of the arguments that define the lower and upper bounds of the distribution
-    bound_args_indices: list[int] | None = None
+    bound_args_indices: tuple[int, int] | None = None
 
 
 @_default_transform.register(PositiveContinuous)
