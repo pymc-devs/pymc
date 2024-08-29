@@ -184,9 +184,15 @@ class TestComputeLogLikelihood:
             Normal("y", x, observed=[0, 1, 2])
 
             idata = InferenceData(posterior=dict_to_dataset({"x": np.arange(100).reshape(4, 25)}))
-            with patch("pymc.model.core.compile_pymc") as patched_compile_pymc:
-                compute_log_prior(idata, compile_kwargs={"mode": "JAX"})
-                compute_log_likelihood(idata, compile_kwargs={"mode": "NUMBA"})
+            with (
+                # apply_function_over_dataset fails with patched `compile_pymc`
+                patch("pymc.stats.log_density.apply_function_over_dataset"),
+                patch("pymc.model.core.compile_pymc") as patched_compile_pymc,
+            ):
+                compute_log_prior(idata, compile_kwargs={"mode": "JAX"}, extend_inferencedata=False)
+                compute_log_likelihood(
+                    idata, compile_kwargs={"mode": "NUMBA"}, extend_inferencedata=False
+                )
         assert len(patched_compile_pymc.call_args_list) == 2
         assert patched_compile_pymc.call_args_list[0].kwargs["mode"] == "JAX"
         assert patched_compile_pymc.call_args_list[1].kwargs["mode"] == "NUMBA"
