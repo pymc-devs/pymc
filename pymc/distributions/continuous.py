@@ -55,10 +55,10 @@ from pytensor.tensor.random.basic import (
 )
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import normalize_size_param
-from pytensor.tensor.variable import TensorConstant
+from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 from pymc.logprob.abstract import _logprob_helper
-from pymc.logprob.basic import icdf
+from pymc.logprob.basic import TensorLike, icdf
 from pymc.pytensorf import normalize_rng_param
 
 try:
@@ -214,7 +214,9 @@ def assert_negative_support(var, label, distname, value=-1e-6):
     return Assert(msg)(var, pt.all(pt.ge(var, 0.0)))
 
 
-def get_tau_sigma(tau=None, sigma=None):
+def get_tau_sigma(
+    tau: TensorLike | None = None, sigma: TensorLike | None = None
+) -> tuple[TensorVariable, TensorVariable]:
     r"""
     Find precision and standard deviation. The link between the two
     parameterizations is given by the inverse relationship:
@@ -241,13 +243,14 @@ def get_tau_sigma(tau=None, sigma=None):
         sigma = pt.as_tensor_variable(1.0)
         tau = pt.as_tensor_variable(1.0)
     elif tau is None:
+        assert sigma is not None  # Just for type checker
         sigma = pt.as_tensor_variable(sigma)
         # Keep tau negative, if sigma was negative, so that it will
         # fail when used
         tau = (sigma**-2.0) * pt.sign(sigma)
     else:
         tau = pt.as_tensor_variable(tau)
-        # Keep tau negative, if sigma was negative, so that it will
+        # Keep sigma negative, if tau was negative, so that it will
         # fail when used
         sigma = pt.abs(tau) ** -0.5 * pt.sign(tau)
 
