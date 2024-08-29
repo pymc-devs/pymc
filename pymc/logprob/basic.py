@@ -308,7 +308,7 @@ def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> Te
         return _logcdf_helper(rv, value, **kwargs)
     except NotImplementedError:
         # Try to rewrite rv
-        fgraph, rv_values, _ = construct_ir_fgraph({rv: value})
+        fgraph, _, _ = construct_ir_fgraph({rv: value})
         [ir_rv] = fgraph.outputs
         expr = _logcdf_helper(ir_rv, value, **kwargs)
         cleanup_ir([expr])
@@ -390,7 +390,7 @@ def icdf(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> Tens
         return _icdf_helper(rv, value, **kwargs)
     except NotImplementedError:
         # Try to rewrite rv
-        fgraph, rv_values, _ = construct_ir_fgraph({rv: value})
+        fgraph, _, _ = construct_ir_fgraph({rv: value})
         [ir_rv] = fgraph.outputs
         expr = _icdf_helper(ir_rv, value, **kwargs)
         cleanup_ir([expr])
