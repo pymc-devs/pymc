@@ -442,18 +442,23 @@ class HSGP(Base):
             Dimension name for the GP random variable.
         """
         phi, sqrt_psd = self.prior_linearized(X)
+        self._sqrt_psd = sqrt_psd
 
         if self._parametrization == "noncentered":
             self._beta = pm.Normal(
-                f"{name}_hsgp_coeffs_",
-                size=self._m_star - int(self._drop_first),
+                f"{name}_hsgp_coeffs",
+                size=self.n_basis_vectors - int(self._drop_first),
                 dims=hsgp_coeffs_dims,
             )
-            self._sqrt_psd = sqrt_psd
             f = self.mean_func(X) + phi @ (self._beta * self._sqrt_psd)
 
         elif self._parametrization == "centered":
-            self._beta = pm.Normal(f"{name}_hsgp_coeffs_", sigma=sqrt_psd, dims=hsgp_coeffs_dims)
+            self._beta = pm.Normal(
+                f"{name}_hsgp_coeffs",
+                sigma=sqrt_psd,
+                size=self.n_basis_vectors - int(self._drop_first),
+                dims=hsgp_coeffs_dims,
+            )
             f = self.mean_func(X) + phi @ self._beta
 
         self.f = pm.Deterministic(name, f, dims=gp_dims)

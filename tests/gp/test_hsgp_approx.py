@@ -186,7 +186,7 @@ class TestHSGP(_BaseFixtures):
             gp = pm.gp.HSGP(m=[n_basis], c=4.0, cov_func=cov_func, drop_first=drop_first)
             gp.prior("f1", X1)
 
-            n_coeffs = model.f1_hsgp_coeffs_.type.shape[0]
+            n_coeffs = model.f1_hsgp_coeffs.type.shape[0]
             if drop_first:
                 assert (
                     n_coeffs == n_basis - 1

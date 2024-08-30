@@ -148,18 +148,37 @@ class Latent(Base):
     def __init__(self, *, mean_func=Zero(), cov_func=Constant(0.0)):
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
-    def _build_prior(self, name, X, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs):
+    def _build_prior(
+        self, name, X, n_outputs=1, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs
+    ):
         mu = self.mean_func(X)
         cov = stabilize(self.cov_func(X), jitter)
         if reparameterize:
-            size = np.shape(X)[0]
-            v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=size, **kwargs)
-            f = pm.Deterministic(name, mu + cholesky(cov).dot(v), dims=kwargs.get("dims", None))
+            if "dims" in kwargs:
+                v = pm.Normal(
+                    name + "_rotated_",
+                    mu=0.0,
+                    sigma=1.0,
+                    **kwargs,
+                )
+
+            else:
+                size = (n_outputs, X.shape[0]) if n_outputs > 1 else X.shape[0]
+                v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=size, **kwargs)
+
+            f = pm.Deterministic(
+                name,
+                mu + cholesky(cov).dot(v.T).transpose(),
+                dims=kwargs.get("dims", None),
+            )
+
         else:
-            f = pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
+            mu_stack = pt.stack([mu] * n_outputs, axis=0) if n_outputs > 1 else mu
+            f = pm.MvNormal(name, mu=mu_stack, cov=cov, **kwargs)
+
         return f
 
-    def prior(self, name, X, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs):
+    def prior(self, name, X, n_outputs=1, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs):
         R"""
         Returns the GP prior distribution evaluated over the input
         locations `X`.
@@ -178,6 +197,12 @@ class Latent(Base):
         X : array-like
             Function input values. If one-dimensional, must be a column
             vector with shape `(n, 1)`.
+        n_outputs : int, default 1
+            Number of output GPs. If you're using `dims`, make sure their size
+            is equal to `(n_outputs, X.shape[0])`, i.e the number of output GPs
+            by the number of input points.
+            Example: `gp.prior("f", X=X, n_outputs=3, dims=("n_gps", "x_dim"))`,
+            where `len(n_gps) = 3` and `len(x_dim = X.shape[0]`.
         reparameterize : bool, default True
             Reparameterize the distribution by rotating the random
             variable by the Cholesky factor of the covariance matrix.
@@ -188,10 +213,12 @@ class Latent(Base):
             Extra keyword arguments that are passed to :class:`~pymc.MvNormal`
             distribution constructor.
         """
+        f = self._build_prior(name, X, n_outputs, reparameterize, jitter, **kwargs)
 
-        f = self._build_prior(name, X, reparameterize, jitter, **kwargs)
         self.X = X
         self.f = f
+        self.n_outputs = n_outputs
+
         return f
 
     def _get_given_vals(self, given):
@@ -212,12 +239,16 @@ class Latent(Base):
     def _build_conditional(self, Xnew, X, f, cov_total, mean_total, jitter):
         Kxx = cov_total(X)
         Kxs = self.cov_func(X, Xnew)
+
         L = cholesky(stabilize(Kxx, jitter))
         A = solve_lower(L, Kxs)
-        v = solve_lower(L, f - mean_total(X))
-        mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v)
+        v = solve_lower(L, (f - mean_total(X)).T)
+
+        mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v).T
+
         Kss = self.cov_func(Xnew)
         cov = Kss - pt.dot(pt.transpose(A), A)
+
         return mu, cov
 
     def conditional(self, name, Xnew, given=None, jitter=JITTER_DEFAULT, **kwargs):
@@ -255,7 +286,9 @@ class Latent(Base):
         """
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, *givens, jitter)
-        return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
+        f = pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
+
+        return f
 
 
 @conditioned_vars(["X", "f", "nu"])
@@ -447,7 +480,15 @@ class Marginal(Base):
         return mu, stabilize(cov, jitter)
 
     def marginal_likelihood(
-        self, name, X, y, sigma=None, noise=None, jitter=JITTER_DEFAULT, is_observed=True, **kwargs
+        self,
+        name,
+        X,
+        y,
+        sigma=None,
+        noise=None,
+        jitter=JITTER_DEFAULT,
+        is_observed=True,
+        **kwargs,
     ):
         R"""
         Returns the marginal likelihood distribution, given the input
@@ -529,21 +570,28 @@ class Marginal(Base):
         Kxs = self.cov_func(X, Xnew)
         Knx = noise_func(X)
         rxx = y - mean_total(X)
+
         L = cholesky(stabilize(Kxx, jitter) + Knx)
         A = solve_lower(L, Kxs)
-        v = solve_lower(L, rxx)
-        mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v)
+        v = solve_lower(L, rxx.T)
+        mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v).T
+
         if diag:
             Kss = self.cov_func(Xnew, diag=True)
             var = Kss - pt.sum(pt.square(A), 0)
+
             if pred_noise:
                 var += noise_func(Xnew, diag=True)
+
             return mu, var
+
         else:
             Kss = self.cov_func(Xnew)
             cov = Kss - pt.dot(pt.transpose(A), A)
+
             if pred_noise:
                 cov += noise_func(Xnew)
+
             return mu, cov if pred_noise else stabilize(cov, jitter)
 
     def conditional(
