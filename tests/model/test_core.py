@@ -756,6 +756,20 @@ class TestCheckStartVals:
         with pytest.raises(KeyError):
             model.check_start_vals(start)
 
+    @pytest.mark.parametrize("mode", [None, "JAX", "NUMBA"])
+    def test_mode(self, mode):
+        with pm.Model() as model:
+            a = pm.Uniform("a", lower=0.0, upper=1.0)
+            b = pm.Uniform("b", lower=2.0, upper=3.0)
+        start = {
+            "a_interval__": model.rvs_to_transforms[a].forward(0.3, *a.owner.inputs).eval(),
+            "b_interval__": model.rvs_to_transforms[b].forward(2.1, *b.owner.inputs).eval(),
+        }
+        with patch("pymc.model.core.compile_pymc") as patched_compile_pymc:
+            model.check_start_vals(start, mode=mode)
+        patched_compile_pymc.assert_called_once()
+        assert patched_compile_pymc.call_args.kwargs["mode"] == mode
+
 
 def test_set_initval():
     # Make sure the dependencies between variables are maintained when

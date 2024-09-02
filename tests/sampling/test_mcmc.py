@@ -846,7 +846,7 @@ class TestAssignStepMethods:
 class TestType:
     samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
 
-    @pytensor.config.change_flags({"floatX": "float64", "warn_float64": "ignore"})
+    @pytensor.config.change_flags(floatX="float64", warn_float64="ignore")
     def test_float64(self):
         with pm.Model() as model:
             x = pm.Normal("x", initval=np.array(1.0, dtype="float64"))
@@ -861,7 +861,7 @@ class TestType:
                     warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                     pm.sample(draws=10, tune=10, chains=1, step=sampler())
 
-    @pytensor.config.change_flags({"floatX": "float32", "warn_float64": "warn"})
+    @pytensor.config.change_flags(floatX="float32", warn_float64="warn")
     def test_float32(self):
         with pm.Model() as model:
             x = pm.Normal("x", initval=np.array(1.0, dtype="float32"))
