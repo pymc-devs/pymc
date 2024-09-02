@@ -33,7 +33,6 @@ from pymc.pytensorf import (
     compile_pymc,
     floatX,
     join_nonshared_inputs,
-    make_shared_replacements,
 )
 from pymc.sampling.forward import draw
 from pymc.step_methods.metropolis import MultivariateNormalProposal
