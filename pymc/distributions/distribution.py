@@ -423,8 +423,8 @@ def change_symbolic_rv_size(op: SymbolicRandomVariable, rv, new_size, expand) ->
 class Distribution(metaclass=DistributionMeta):
     """Statistical distribution"""
 
-    rv_op: Callable[..., TensorVariable] | None = None
-    rv_type: MetaType | None = None
+    rv_op: Callable[..., TensorVariable]
+    rv_type: MetaType
 
     def __new__(
         cls,
