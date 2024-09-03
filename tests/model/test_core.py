@@ -660,8 +660,8 @@ def test_initial_point():
 
     b_initval = np.array(0.3, dtype=pytensor.config.floatX)
 
-    with pytest.warns(FutureWarning), model:
-        b = pm.Uniform("b", testval=b_initval)
+    with model:
+        b = pm.Uniform("b", initval=b_initval)
 
     b_initval_trans = model.rvs_to_transforms[b].forward(b_initval, *b.owner.inputs).eval()
 

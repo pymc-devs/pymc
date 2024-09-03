@@ -13,7 +13,6 @@
 #   limitations under the License.
 import cloudpickle
 import numpy as np
-import numpy.testing as npt
 import pytensor
 import pytensor.tensor as pt
 import pytest
@@ -32,34 +31,6 @@ def transform_fwd(rv, expected_untransformed, model):
 
 def transform_back(rv, transformed, model) -> np.ndarray:
     return model.rvs_to_transforms[rv].backward(transformed, *rv.owner.inputs).eval()
-
-
-class TestInitvalAssignment:
-    def test_dist_warnings_and_errors(self):
-        with pytest.warns(FutureWarning, match="argument is deprecated and has no effect"):
-            rv = pm.Exponential.dist(lam=1, testval=0.5)
-        assert not hasattr(rv.tag, "test_value")
-
-        with pytest.raises(TypeError, match="Unexpected keyword argument `initval`."):
-            pm.Normal.dist(1, 2, initval=None)
-        pass
-
-    def test_new_warnings(self):
-        with pm.Model() as pmodel:
-            with pytest.warns(FutureWarning, match="`testval` argument is deprecated"):
-                rv = pm.Uniform("u", 0, 1, testval=0.75)
-                initial_point = pmodel.initial_point(random_seed=0)
-                npt.assert_allclose(
-                    initial_point["u_interval__"], transform_fwd(rv, 0.75, model=pmodel)
-                )
-                assert not hasattr(rv.tag, "test_value")
-        pass
-
-    def test_valid_string_strategy(self):
-        with pm.Model() as pmodel:
-            pm.Uniform("x", 0, 1, size=2, initval="unknown")
-            with pytest.raises(ValueError, match="Invalid string strategy: unknown"):
-                pmodel.initial_point(random_seed=0)
 
 
 class TestInitvalEvaluation:

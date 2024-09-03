@@ -84,31 +84,6 @@ class TestBugfixes:
         npt.assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), 0 * 10)
 
 
-@pytest.mark.parametrize(
-    "method,newcode",
-    [
-        ("logp", r"pm.logp\(rv, x\)"),
-        ("logcdf", r"pm.logcdf\(rv, x\)"),
-        ("random", r"pm.draw\(rv\)"),
-    ],
-)
-def test_logp_gives_migration_instructions(method, newcode):
-    rv = pm.Normal.dist()
-    f = getattr(rv, method)
-    with pytest.raises(AttributeError, match=rf"use `{newcode}`"):
-        f()
-
-    # A dim-induced resize of the rv created by the `.dist()` API,
-    # happening in Distribution.__new__ would make us loose the monkeypatches.
-    # So this triggers it to test if the monkeypatch still works.
-    with pm.Model(coords={"year": [2019, 2021, 2022]}):
-        rv = pm.Normal("n", dims="year")
-        f = getattr(rv, method)
-        with pytest.raises(AttributeError, match=rf"use `{newcode}`"):
-            f()
-    pass
-
-
 def test_all_distributions_have_support_points():
     import pymc.distributions as dist_module
 
