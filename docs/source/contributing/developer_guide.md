@@ -35,10 +35,10 @@ z \sim \text{Normal}(0, 5)
 $$
 
 A call to a {class}`~pymc.Distribution` constructor as shown above returns an PyTensor {class}`~pytensor.tensor.TensorVariable`, which is a symbolic representation of the model variable and the graph of inputs it depends on.
-Under the hood, the variables are created through the {meth}`~pymc.Distribution.dist` API, which calls the {class}`~pytensor.tensor.random.basic.RandomVariable` {class}`~pytensor.graph.op.Op` corresponding to the distribution.
+Under the hood, the variables are created through the {meth}`~pymc.Distribution.dist` API, which calls the {class}`~pytensor.tensor.random.basic.RandomVariable` class, which is a PyTensor {class}`~pytensor.graph.op.Op` corresponding to the specified distribution.
 
-At a high level of abstraction, the idea behind ``RandomVariable`` ``Op``s is to create symbolic variables (``TensorVariable``s) that can be associated with the properties of a probability distribution.
-For example, the ``RandomVariable`` ``Op`` which becomes part of the symbolic computation graph is associated with the random number generators or probability mass/density functions of the distribution.
+At a high level of abstraction, the idea behind the ``RandomVariable`` ``Op`` is to create a symbolic variable (``TensorVariable``) that can be associated with the properties of a probability distribution.
+For example, the ``RandomVariable`` ``Op`` that is part of the symbolic computation graph is associated with a random number generator and a probability mass/density function corresponding to the distribution.
 
 In the example above, where the ``TensorVariable`` ``z`` is created to be {math}`\text{Normal}(0, 5)` random variable, we can get a handle on the corresponding ``RandomVariable`` ``Op`` instance:
 
@@ -46,22 +46,22 @@ In the example above, where the ``TensorVariable`` ``z`` is created to be {math}
 with pm.Model():
     z = pm.Normal("z", 0, 5)
 print(type(z.owner.op))
-# ==> pytensor.tensor.random.basic.NormalRV
+# ==> <class 'pytensor.tensor.random.basic.NormalRV'>
 isinstance(z.owner.op, pytensor.tensor.random.basic.RandomVariable)
 # ==> True
 ```
 
-Now, because the ``NormalRV`` can be associated with the [probability density function](https://en.wikipedia.org/wiki/Probability_density_function) of the Normal distribution, we can now evaluate it through the special `pm.logp` function:
+Because the ``NormalRV`` can be associated with the [probability density function](https://en.wikipedia.org/wiki/Probability_density_function) of the Normal distribution, we can now evaluate it using the `pm.logp` function:
 
 ```python
 with pm.Model():
     z = pm.Normal("z", 0, 5)
 symbolic = pm.logp(z, 2.5)
 numeric = symbolic.eval()
-# array(-2.65337645)
+# array(-2.65337648)
 ```
 
-We can, of course, also work out the math by hand:
+This can be verified by hand:
 
 $$
 \begin{aligned}
@@ -71,15 +71,15 @@ ln(0.070413) &= -2.6533
 \end{aligned}
 $$
 
-In the probabilistic programming context, this enables PyMC and its backend PyTensor to create and evaluate computation graphs to compute, for example log-prior or log-likelihood values.
+In a probabilistic programming context, this enables PyMC (via PyTensor) to create and evaluate computational graphs so that we can compute, for example, log-prior or log-likelihood values.
 
 
-## PyMC in Comparison
+## PyMC Compared to Other PPLs
 
 Within the PyMC model context, random variables are essentially PyTensor tensors that can be used in all kinds of operations as if they were NumPy arrays.
-This is different compared to TFP and pyro, where one needs to be more explicit about the conversion from random variables to tensors.
+This is different compared to Tensorflow Probability (TFP) and Pyro, where one needs to be explicit about the conversion from random variables to tensors.
 
-Consider the following examples, which implement the below model.
+Consider the implementaion of the following toy model in PyMC, TFP, JAX, and Pyro.
 
 $$
     \begin{aligned}
@@ -96,10 +96,7 @@ with pm.Model() as model:
     x = pm.Normal('x', mu=z, sigma=1., observed=5.) # ==> pytensor.tensor.var.TensorVariable
 # The log-prior of z=2.5
 pm.logp(z, 2.5).eval()                              # ==> -2.65337645
-# ???????
-x.logp({'z': 2.5})                                  # ==> -4.0439386
-# ???????
-model.logp({'z': 2.5})                              # ==> -6.6973152
+model.compile_logp()({'z': 2.5})                    # ==> -6.6973150
 ```
 
 ### Tensorflow Probability
@@ -118,62 +115,73 @@ with tf.Session() as sess:
     print(sess.run(model_logp, feed_dict={z: 2.5}))  # ==> -6.6973152
 ```
 
+### JAX
+
+```python
+import jax
+import jax.numpy as jnp
+from jax import random
+import jax.scipy.stats as stats
+
+def model(z, x_obs):
+    z_prior = stats.norm.logpdf(z, loc=0., scale=5.)
+    x_likelihood = stats.norm.logpdf(x_obs, loc=z, scale=1.)
+    return z_prior + x_likelihood
+
+model(z_value=2.5, x_obs=5.0)
+```
+
+
 ### Pyro
 
 ```python
+import pyro
+import pyro.distributions as dist
+import torch
+
 z_dist = dist.Normal(loc=0., scale=5.)           # ==> <class 'pyro.distributions.torch.Normal'>
 z = pyro.sample("z", z_dist)                     # ==> <class 'torch.Tensor'>
-# reset/specify value of z
-z.data = torch.tensor(2.5)
-x = dist.Normal(loc=z, scale=1.).log_prob(5.)    # ==> <class 'torch.Tensor'>
+z.data = torch.tensor(2.5)                       # reset/specify value of z
+x = (dist.Normal(loc=z, scale=1.)
+         .log_prob(torch.tensor(5.)))            # ==> <class 'torch.Tensor'>
 model_logp = z_dist.log_prob(z) + x
 x                                                # ==> -4.0439386
 model_logp                                       # ==> -6.6973152
 ```
 
 
-## Behind the scenes of the ``logp`` function
+## A deep-dive into``logp``
 
-The ``logp`` function is straightforward - it is an PyTensor function within each distribution.
-It has the following signature:
-
-:::{warning}
-The code block is outdated.
-:::
+Notice from the above that PyMC employs a ``logp`` function to compute the log-likelihood of a distribution, rather than using a random variable's log probability method directly. The ``logp`` function creates a PyTensor graph for the log-probability of a random variable, by first converting the passed value to a PyTensor tensor and then uses a helper function to dispatch the log-probability computation to the random variable's ``logp`` method.
 
 ```python
-def logp(self, value):
-    # GET PARAMETERS
-    param1, param2, ... = self.params1, self.params2, ...
-    # EVALUATE LOG-LIKELIHOOD FUNCTION, all inputs are (or array that could be convert to) PyTensor tensor
-    total_log_prob = f(param1, param2, ..., value)
-    return total_log_prob
+def logp(rv: TensorVariable, value: TensorLike):
+    value = pt.as_tensor_variable(value, dtype=rv.dtype)
+    ...
+    return _logprob_helper(rv, value)
 ```
 
-In the ``logp`` method, parameters and values are either PyTensor tensors, or could be converted to tensors.
-It is rather convenient as the evaluation of logp is represented as a tensor (``RV.logpt``), and when we linked different ``logp`` together (e.g., summing all ``RVs.logpt`` to get the model total logp) the dependence  is taken care of by PyTensor when the graph is built and compiled.
-Again, since the compiled function depends on the nodes that already in the graph, whenever you want to generate a new function that takes new input tensors you either need to regenerate the graph with the appropriate dependencies, or replace the node by editing the existing graph.
-In PyMC we use the second approach by using ``pytensor.clone_replace()`` when it is needed.
-
-As explained above, distribution in a ``pm.Model()`` context automatically turn into a tensor with distribution property (PyMC random variable).
-To get the logp of a free\_RV is just evaluating the ``logp()`` [on itself](https://github.com/pymc-devs/pymc/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc/model.py#L1212-L1213):
+For built-in distributions, PyMC has optimized implementations of the actual log probability calculations. For example, the Normal distribution:
 
 ```python
-# self is a pytensor.tensor with a distribution attached
-self.logp_sum_unscaledt = distribution.logp_sum(self)
-self.logp_nojac_unscaledt = distribution.logp_nojac(self)
+class Normal(Continuous):
+    def logp(self, value):
+        mu = self.mu
+        tau = self.tau
+        return bound(
+            (-tau * (value - mu) ** 2 + pt.log(tau / np.pi / 2.0)) / 2.0,
+            tau > 0,
+        )
 ```
 
-Or for an observed RV. it evaluate the logp on the data:
+The logp evaluations are represented as tensors (``RV.logpt``). When we combine different ``logp`` values (for example, by summing all ``RVs.logpt`` to obtain the total logp for the model), PyTensor manages the dependencies automatically during the graph construction and compilation process.
+This dependence among nodes in the model graph means that whenever you want to generate a new function that takes new input tensors, you either need to regenerate the graph with the appropriate dependencies, or replace the node by editing the existing graph.
+The latter is facilitated by PyTensor's ``pytensor.clone_replace()`` function.
 
-```python
-self.logp_sum_unscaledt = distribution.logp_sum(data)
-self.logp_nojac_unscaledt = distribution.logp_nojac(data)
-```
 
 ### Model context and Random Variable
 
-I like to think that the ``with pm.Model() ...`` is a key syntax feature and *the* signature of PyMC model language, and in general a great out-of-the-box thinking/usage of the context manager in Python (with some critics, of course).
+A signature feature of PyMC's syntax is the ``with pm.Model() ...`` expression, which extends the functionality of the context manager in Python to make expressing Bayesian models as natural as possible.
 
 Essentially [what a context manager does](https://www.python.org/dev/peps/pep-0343/) is:
 
@@ -202,12 +210,11 @@ with EXPR as VAR:
     # DO SOME ADDITIONAL THINGS
 ```
 
-So what happened within the ``with pm.Model() as model: ...`` block, besides the initial set up ``model = pm.Model()``?
-Starting from the most elementary:
+But what are the implications of this, besides the initial set up ``model = pm.Model()``?
 
 ### Random Variable
 
-From the above session, we know that when we call e.g. ``pm.Normal('x', ...)`` within a Model context, it returns a random variable.
+Distributions defined in a ``pm.Model()`` context are automatically converted to PyMC random variables. 
 Thus, we have two equivalent ways of adding random variable to a model:
 
 ```python
