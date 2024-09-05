@@ -49,3 +49,5 @@ pythonenv*
 env/
 venv/
 .venv/
+pixi.toml
+pixi.lock
