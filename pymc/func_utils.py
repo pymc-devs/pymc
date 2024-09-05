@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 from collections.abc import Callable
 
 import numpy as np
@@ -125,6 +127,14 @@ def find_constrained_prior(
             mass_below_lower=0,
         )
     """
+    warnings.warn(
+        "find_constrained_prior is deprecated and will be removed in a future version. "
+        "Please use maxent function from PreliZ. "
+        "https://preliz.readthedocs.io/en/latest/api_reference.html#preliz.unidimensional.maxent",
+        FutureWarning,
+        stacklevel=2,
+    )
+
     assert 0.01 <= mass <= 0.99, (
         "This function optimizes the mass of the given distribution +/- "
         f"1%, so `mass` has to be between 0.01 and 0.99. You provided {mass}."

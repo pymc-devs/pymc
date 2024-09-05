@@ -56,7 +56,7 @@ from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
-    MeasurableVariable,
+    MeasurableOp,
     _icdf_helper,
     _logcdf_helper,
     _logprob,
@@ -522,7 +522,7 @@ def conditional_logp(
     while q:
         node = q.popleft()
 
-        if not isinstance(node.op, MeasurableVariable):
+        if not isinstance(node.op, MeasurableOp):
             continue
 
         q_values = [replacements[q_rv] for q_rv in node.outputs if q_rv in updated_rv_values]

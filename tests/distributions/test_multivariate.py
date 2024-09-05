@@ -26,11 +26,13 @@ import scipy.stats as st
 from pytensor import tensor as pt
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.blockwise import Blockwise
+from pytensor.tensor.nlinalg import MatrixInverse
 from pytensor.tensor.random.utils import broadcast_params
 from pytensor.tensor.slinalg import Cholesky
 
 import pymc as pm
 
+from pymc import Model
 from pymc.distributions.multivariate import (
     MultivariateIntervalTransform,
     _LKJCholeskyCov,
@@ -2468,3 +2470,30 @@ def test_mvstudentt_mu_convenience():
     x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1, 1)), scale=np.full((2, 3, 3), np.eye(3)))
     mu = x.owner.inputs[3]
     np.testing.assert_allclose(mu.eval(), np.ones((10, 2, 3)))
+
+
+def test_precision_mv_normal_optimization():
+    rng = np.random.default_rng(sum(map(ord, "be precise")))
+
+    n = 30
+    L = rng.uniform(low=0.1, high=1.0, size=(n, n))
+    Sigma_test = L @ L.T
+    mu_test = np.zeros(n)
+    Q_test = np.linalg.inv(Sigma_test)
+    y_test = rng.normal(size=n)
+
+    with Model() as m:
+        Q = pm.Flat("Q", shape=(n, n))
+        y = pm.MvNormal("y", mu=mu_test, tau=Q)
+
+    y_logp_fn = m.compile_logp(vars=[y]).f
+
+    # Check we don't have any MatrixInverses in the logp
+    assert not any(
+        node for node in y_logp_fn.maker.fgraph.apply_nodes if isinstance(node.op, MatrixInverse)
+    )
+
+    np.testing.assert_allclose(
+        y_logp_fn(y=y_test, Q=Q_test),
+        st.multivariate_normal.logpdf(y_test, mu_test, cov=Sigma_test),
+    )

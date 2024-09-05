@@ -52,7 +52,7 @@ from pytensor.tensor.random.rewriting import (
     local_rv_size_lift,
 )
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
+from pymc.logprob.abstract import MeasurableOp, MeasurableOpMixin, _logprob, _logprob_helper
 from pymc.logprob.rewriting import (
     PreserveRVMappings,
     assume_measured_ir_outputs,
@@ -124,11 +124,8 @@ def naive_bcast_rv_lift(fgraph: FunctionGraph, node):
     return [bcasted_node.outputs[1]]
 
 
-class MeasurableMakeVector(MakeVector):
+class MeasurableMakeVector(MeasurableOpMixin, MakeVector):
     """A placeholder used to specify a log-likelihood for a cumsum sub-graph."""
-
-
-MeasurableVariable.register(MeasurableMakeVector)
 
 
 @_logprob.register(MeasurableMakeVector)
@@ -151,11 +148,8 @@ def logprob_make_vector(op, values, *base_rvs, **kwargs):
     return pt.stack(logps)
 
 
-class MeasurableJoin(Join):
+class MeasurableJoin(MeasurableOpMixin, Join):
     """A placeholder used to specify a log-likelihood for a join sub-graph."""
-
-
-MeasurableVariable.register(MeasurableJoin)
 
 
 @_logprob.register(MeasurableJoin)
@@ -222,7 +216,7 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
         return None
 
     base_vars = assume_measured_ir_outputs(valued_rvs, base_vars)
-    if not all(var.owner and isinstance(var.owner.op, MeasurableVariable) for var in base_vars):
+    if not all(var.owner and isinstance(var.owner.op, MeasurableOp) for var in base_vars):
         return None
 
     if is_join:
@@ -234,15 +228,12 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
     return [measurable_stack]
 
 
-class MeasurableDimShuffle(DimShuffle):
+class MeasurableDimShuffle(MeasurableOpMixin, DimShuffle):
     """A placeholder used to specify a log-likelihood for a dimshuffle sub-graph."""
 
     # Need to get the absolute path of `c_func_file`, otherwise it tries to
     # find it locally and fails when a new `Op` is initialized
     c_func_file = str(DimShuffle.get_path(Path(DimShuffle.c_func_file)))
-
-
-MeasurableVariable.register(MeasurableDimShuffle)
 
 
 @_logprob.register(MeasurableDimShuffle)

@@ -35,6 +35,7 @@
 #   SOFTWARE.
 
 import abc
+import warnings
 
 from collections.abc import Sequence
 from functools import singledispatch
@@ -44,6 +45,17 @@ from pytensor.graph.utils import MetaType
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
+
+
+def __getattr__(name):
+    if name == "MeasurableVariable":
+        warnings.warn(
+            f"{name} has been deprecated in favor of MeasurableOp. Importing will fail in a future release.",
+            FutureWarning,
+        )
+        return MeasurableOpMixin
+
+    raise AttributeError(f"module {__name__} has no attribute {name}")
 
 
 @singledispatch
@@ -131,14 +143,21 @@ def _icdf_helper(rv, value, **kwargs):
     return rv_icdf
 
 
-class MeasurableVariable(abc.ABC):
-    """A variable that can be assigned a measure/log-probability"""
+class MeasurableOp(abc.ABC):
+    """An operation whose outputs can be assigned a measure/log-probability"""
 
 
-MeasurableVariable.register(RandomVariable)
+MeasurableOp.register(RandomVariable)
 
 
-class MeasurableElemwise(Elemwise):
+class MeasurableOpMixin(MeasurableOp):
+    """MeasurableOp Mixin with a distinctive string representation"""
+
+    def __str__(self):
+        return f"Measurable{super().__str__()}"
+
+
+class MeasurableElemwise(MeasurableOpMixin, Elemwise):
     """Base class for Measurable Elemwise variables"""
 
     valid_scalar_types: tuple[MetaType, ...] = ()
@@ -150,6 +169,3 @@ class MeasurableElemwise(Elemwise):
                 f"Acceptable types are {self.valid_scalar_types}"
             )
         super().__init__(scalar_op, *args, **kwargs)
-
-
-MeasurableVariable.register(MeasurableElemwise)

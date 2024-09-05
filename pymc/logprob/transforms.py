@@ -108,7 +108,7 @@ from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,
-    MeasurableVariable,
+    MeasurableOp,
     _icdf,
     _icdf_helper,
     _logcdf,
@@ -232,11 +232,6 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
     """Compute the log-CDF graph for a `MeasurabeTransform`."""
     other_inputs = list(inputs)
     measurable_input = other_inputs.pop(op.measurable_input_idx)
-
-    # Do not apply rewrite to discrete variables
-    if measurable_input.type.dtype.startswith("int"):
-        raise NotImplementedError("logcdf of transformed discrete variables not implemented")
-
     backward_value = op.transform_elemwise.backward(value, *other_inputs)
 
     # Fail if transformation is not injective
@@ -244,8 +239,13 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
     if isinstance(backward_value, tuple):
         raise NotImplementedError
 
+    is_discrete = measurable_input.type.dtype.startswith("int")
+
     logcdf = _logcdf_helper(measurable_input, backward_value)
-    logccdf = pt.log1mexp(logcdf)
+    if is_discrete:
+        logccdf = pt.log1mexp(_logcdf_helper(measurable_input, backward_value - 1))
+    else:
+        logccdf = pt.log1mexp(logcdf)
 
     if isinstance(op.scalar_op, MONOTONICALLY_INCREASING_OPS):
         pass
@@ -271,7 +271,6 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
 
     # The jacobian is used to ensure a value in the supported domain was provided
     jacobian = op.transform_elemwise.log_jac_det(value, *other_inputs)
-
     return pt.switch(pt.isnan(jacobian), -np.inf, logcdf)
 
 
@@ -427,7 +426,7 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> list[Node] 
     """Find measurable transformations from Elemwise operators."""
 
     # Node was already converted
-    if isinstance(node.op, MeasurableVariable):
+    if isinstance(node.op, MeasurableOp):
         return None  # pragma: no cover
 
     rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
@@ -463,21 +462,6 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> list[Node] 
     transform_inputs: tuple[TensorVariable, ...] = (measurable_input,)
     transform: Transform
 
-    transform_dict = {
-        Exp: ExpTransform(),
-        Log: LogTransform(),
-        Abs: AbsTransform(),
-        Sinh: SinhTransform(),
-        Cosh: CoshTransform(),
-        Tanh: TanhTransform(),
-        ArcSinh: ArcsinhTransform(),
-        ArcCosh: ArccoshTransform(),
-        ArcTanh: ArctanhTransform(),
-        Erf: ErfTransform(),
-        Erfc: ErfcTransform(),
-        Erfcx: ErfcxTransform(),
-    }
-    transform = transform_dict.get(type(scalar_op), None)
     if isinstance(scalar_op, Pow):
         # We only allow for the base to be measurable
         if measurable_input_idx != 0:
@@ -495,11 +479,27 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> list[Node] 
         transform = LocTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
-    elif transform is None:
+    elif isinstance(scalar_op, Mul):
         transform_inputs = (measurable_input, pt.mul(*other_inputs))
         transform = ScaleTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
+    else:
+        transform = {
+            Exp: ExpTransform,
+            Log: LogTransform,
+            Abs: AbsTransform,
+            Sinh: SinhTransform,
+            Cosh: CoshTransform,
+            Tanh: TanhTransform,
+            ArcSinh: ArcsinhTransform,
+            ArcCosh: ArccoshTransform,
+            ArcTanh: ArctanhTransform,
+            Erf: ErfTransform,
+            Erfc: ErfcTransform,
+            Erfcx: ErfcxTransform,
+        }[type(scalar_op)]()
+
     transform_op = MeasurableTransform(
         scalar_op=scalar_op,
         transform=transform,

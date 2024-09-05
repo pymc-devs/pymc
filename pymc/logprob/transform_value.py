@@ -16,7 +16,6 @@ from collections.abc import Sequence
 
 import numpy as np
 
-from pytensor.gradient import DisconnectedType
 from pytensor.graph import Apply, Op
 from pytensor.graph.features import AlreadyThere, Feature
 from pytensor.graph.fg import FunctionGraph
@@ -25,7 +24,7 @@ from pytensor.graph.rewriting.basic import GraphRewriter, in2out, node_rewriter
 from pytensor.scan.op import Scan
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.logprob.abstract import MeasurableOp, _logprob
 from pymc.logprob.rewriting import PreserveRVMappings, cleanup_ir_rewrites_db
 from pymc.logprob.transforms import Transform
 
@@ -44,20 +43,14 @@ class TransformedValue(Op):
     def perform(self, node, inputs, outputs):
         raise NotImplementedError("These `Op`s should be removed from graphs used for computation.")
 
-    def connection_pattern(self, node):
-        return [[True], [False]]
-
     def infer_shape(self, fgraph, node, input_shapes):
         return [input_shapes[0]]
-
-    def grad(self, args, g_outs):
-        return g_outs[0], DisconnectedType()()
 
 
 transformed_value = TransformedValue()
 
 
-class TransformedValueRV(Op):
+class TransformedValueRV(MeasurableOp, Op):
     """A no-op that identifies RVs whose values were transformed.
 
     This is introduced by the `TransformValuesRewrite`
@@ -79,14 +72,8 @@ class TransformedValueRV(Op):
             "`TransformedRV` `Op`s should be removed from graphs used for computation."
         )
 
-    def connection_pattern(self, node):
-        return [[True] for _ in node.outputs]
-
     def infer_shape(self, fgraph, node, input_shapes):
         return input_shapes
-
-
-MeasurableVariable.register(TransformedValueRV)
 
 
 @_logprob.register(TransformedValueRV)

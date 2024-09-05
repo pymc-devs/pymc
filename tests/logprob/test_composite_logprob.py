@@ -41,7 +41,7 @@ import pytest
 import scipy.stats as st
 
 from pymc import draw, logp
-from pymc.logprob.abstract import MeasurableVariable
+from pymc.logprob.abstract import MeasurableOp
 from pymc.logprob.basic import conditional_logp
 from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.testing import assert_no_rvs
@@ -138,7 +138,7 @@ def test_unvalued_ir_reversion(nested):
 
     # assert len(z_fgraph.preserve_rv_mappings.measurable_conversions) == 1
     assert (
-        sum(isinstance(node.op, MeasurableVariable) for node in z_fgraph.apply_nodes) == 2
+        sum(isinstance(node.op, MeasurableOp) for node in z_fgraph.apply_nodes) == 2
     )  # Just the 2 rvs
 
 

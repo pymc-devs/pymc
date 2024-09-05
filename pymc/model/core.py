@@ -1652,6 +1652,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         point_fn : bool
             Whether to wrap the compiled function in a PointFunc, which takes a Point
             dictionary with model variable names and values as input.
+        Other keyword arguments :
+            Any other keyword argument is sent to :py:func:`pymc.pytensorf.compile_pymc`.
 
         Returns
         -------
@@ -1747,7 +1749,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         )
         return {name: tuple(shape) for name, shape in zip(names, f())}
 
-    def check_start_vals(self, start):
+    def check_start_vals(self, start, **kwargs):
         r"""Check that the starting values for MCMC do not cause the relevant log probability
         to evaluate to something invalid (e.g. Inf or NaN)
 
@@ -1758,6 +1760,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Defaults to ``trace.point(-1))`` if there is a trace provided and
             ``model.initial_point`` if not (defaults to empty dict). Initialization
             methods for NUTS (see ``init`` keyword) can overwrite the default.
+        Other keyword arguments :
+            Any other keyword argument is sent to :py:meth:`~pymc.model.core.Model.point_logps`.
 
         Raises
         ------
@@ -1787,7 +1791,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     f"Valid keys are: {valid_keys}, but {extra_keys} was supplied"
                 )
 
-            initial_eval = self.point_logps(point=elem)
+            initial_eval = self.point_logps(point=elem, **kwargs)
 
             if not all(np.isfinite(v) for v in initial_eval.values()):
                 raise SamplingError(
@@ -1797,7 +1801,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     "You can call `model.debug()` for more details."
                 )
 
-    def point_logps(self, point=None, round_vals=2):
+    def point_logps(self, point=None, round_vals=2, **kwargs):
         """Computes the log probability of `point` for all random variables in the model.
 
         Parameters
@@ -1807,6 +1811,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
             is used.
         round_vals : int, default 2
             Number of decimals to round log-probabilities.
+        Other keyword arguments :
+            Any other keyword argument are sent provided to :py:meth:`~pymc.model.core.Model.compile_fn`
 
         Returns
         -------
@@ -1822,7 +1828,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             factor.name: np.round(np.asarray(factor_logp), round_vals)
             for factor, factor_logp in zip(
                 factors,
-                self.compile_fn(factor_logps_fn)(point),
+                self.compile_fn(factor_logps_fn, **kwargs)(point),
             )
         }
 

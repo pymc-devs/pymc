@@ -222,7 +222,7 @@ You can also follow us on these social media platforms for updates and other ann
 
 - `LinkedIn @pymc <https://www.linkedin.com/company/pymc/>`__
 - `YouTube @PyMCDevelopers <https://www.youtube.com/c/PyMCDevelopers>`__
-- `Twitter @pymc_devs <https://twitter.com/pymc_devs>`__
+- `X @pymc_devs <https://x.com/pymc_devs>`__
 - `Mastodon @pymc@bayes.club <https://bayes.club/@pymc>`__
 
 To report an issue with PyMC please use the `issue tracker <https://github.com/pymc-devs/pymc/issues>`__.

@@ -67,7 +67,8 @@ from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,
-    MeasurableVariable,
+    MeasurableOp,
+    MeasurableOpMixin,
     _logprob,
     _logprob_helper,
 )
@@ -217,7 +218,7 @@ def rv_pull_down(x: TensorVariable) -> TensorVariable:
     return fgraph.outputs[0]
 
 
-class MixtureRV(Op):
+class MixtureRV(MeasurableOpMixin, Op):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
 
     __props__ = ("indices_end_idx", "out_dtype", "out_broadcastable")
@@ -233,9 +234,6 @@ class MixtureRV(Op):
 
     def perform(self, node, inputs, outputs):
         raise NotImplementedError("This is a stand-in Op.")  # pragma: no cover
-
-
-MeasurableVariable.register(MixtureRV)
 
 
 def get_stack_mixture_vars(
@@ -457,11 +455,8 @@ measurable_ir_rewrites_db.register(
 )
 
 
-class MeasurableIfElse(IfElse):
+class MeasurableIfElse(MeasurableOpMixin, IfElse):
     """Measurable subclass of IfElse operator."""
-
-
-MeasurableVariable.register(MeasurableIfElse)
 
 
 @node_rewriter([IfElse])
@@ -512,7 +507,7 @@ def find_measurable_ifelse_mixture(fgraph, node):
     base_rvs = assume_measured_ir_outputs(valued_rvs, base_rvs)
     if len(base_rvs) != op.n_outs * 2:
         return None
-    if not all(var.owner and isinstance(var.owner.op, MeasurableVariable) for var in base_rvs):
+    if not all(var.owner and isinstance(var.owner.op, MeasurableOp) for var in base_rvs):
         return None
 
     return MeasurableIfElse(n_outs=op.n_outs).make_node(if_var, *base_rvs).outputs
