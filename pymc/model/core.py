@@ -1570,6 +1570,22 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def __contains__(self, key):
         return key in self.named_vars or self.name_for(key) in self.named_vars
+    
+    def __copy__(self):
+        from pymc.model.fgraph import clone_model
+        check_for_gp_vars = [k for x in ['_rotated_', '_hsgp_coeffs_'] for k in self.named_vars.keys() if x in k]
+        if len(check_for_gp_vars) > 0:
+            raise Exception("Unable to clone Gaussian Process Variables")
+    
+        return clone_model(self)
+    
+    def __deepcopy__(self, _):
+        from pymc.model.fgraph import clone_model
+        check_for_gp_vars = [k for x in ['_rotated_', '_hsgp_coeffs_'] for k in self.named_vars.keys() if x in k]
+        if len(check_for_gp_vars) > 0:
+            raise Exception("Unable to clone Gaussian Process Variables")
+        
+        return clone_model(self)
 
     def replace_rvs_by_values(
         self,
