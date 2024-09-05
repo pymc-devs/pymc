@@ -21,7 +21,7 @@ import warnings
 from abc import ABCMeta
 from collections.abc import Callable, Sequence
 from functools import singledispatch
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import numpy as np
 
@@ -122,6 +122,8 @@ class DistributionMeta(ABCMeta):
                     )
 
             class_change_dist_size = clsdict.get("change_dist_size")
+            if class_change_dist_size is not None:
+                raise ValueError("HAHAHA")
             if class_change_dist_size:
 
                 @_change_dist_size.register(rv_type)
@@ -423,8 +425,12 @@ def change_symbolic_rv_size(op: SymbolicRandomVariable, rv, new_size, expand) ->
 class Distribution(metaclass=DistributionMeta):
     """Statistical distribution"""
 
-    rv_op: Callable[..., TensorVariable]
-    rv_type: MetaType
+    # rv_op and _type are set to None via the DistributionMeta.__new__
+    # if not specified as class attributes in subclasses of Distribution.
+    # rv_op can either be a class (see the Normal class) or a method
+    # (see the Censored class), both callable to return a TensorVariable.
+    rv_op: Any = None
+    rv_type: MetaType | None = None
 
     def __new__(
         cls,
