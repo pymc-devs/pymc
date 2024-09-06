@@ -42,12 +42,12 @@ from pytensor.raise_op import CheckAndRaise
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.shape import SpecifyShape
 
-from pymc.logprob.abstract import MeasurableOp, MeasurableOpMixin, _logprob, _logprob_helper
+from pymc.logprob.abstract import MeasurableOp, _logprob, _logprob_helper
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 from pymc.logprob.utils import replace_rvs_by_values
 
 
-class MeasurableSpecifyShape(MeasurableOpMixin, SpecifyShape):
+class MeasurableSpecifyShape(MeasurableOp, SpecifyShape):
     """A placeholder used to specify a log-likelihood for a specify-shape sub-graph."""
 
 
@@ -96,7 +96,7 @@ measurable_ir_rewrites_db.register(
 )
 
 
-class MeasurableCheckAndRaise(MeasurableOpMixin, CheckAndRaise):
+class MeasurableCheckAndRaise(MeasurableOp, CheckAndRaise):
     """A placeholder used to specify a log-likelihood for an assert sub-graph."""
 
 

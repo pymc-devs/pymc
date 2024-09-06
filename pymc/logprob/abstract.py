@@ -53,7 +53,7 @@ def __getattr__(name):
             f"{name} has been deprecated in favor of MeasurableOp. Importing will fail in a future release.",
             FutureWarning,
         )
-        return MeasurableOpMixin
+        return MeasurableOp
 
     raise AttributeError(f"module {__name__} has no attribute {name}")
 
@@ -150,14 +150,7 @@ class MeasurableOp(abc.ABC):
 MeasurableOp.register(RandomVariable)
 
 
-class MeasurableOpMixin(MeasurableOp):
-    """MeasurableOp Mixin with a distinctive string representation"""
-
-    def __str__(self):
-        return f"Measurable{super().__str__()}"
-
-
-class MeasurableElemwise(MeasurableOpMixin, Elemwise):
+class MeasurableElemwise(MeasurableOp, Elemwise):
     """Base class for Measurable Elemwise variables"""
 
     valid_scalar_types: tuple[MetaType, ...] = ()
@@ -169,3 +162,6 @@ class MeasurableElemwise(MeasurableOpMixin, Elemwise):
                 f"Acceptable types are {self.valid_scalar_types}"
             )
         super().__init__(scalar_op, *args, **kwargs)
+
+    def __str__(self):
+        return f"Measurable{super().__str__()}"

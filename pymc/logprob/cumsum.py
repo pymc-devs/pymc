@@ -41,11 +41,11 @@ from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.extra_ops import CumOp
 
-from pymc.logprob.abstract import MeasurableOpMixin, _logprob, _logprob_helper
+from pymc.logprob.abstract import MeasurableOp, _logprob, _logprob_helper
 from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
 
 
-class MeasurableCumsum(MeasurableOpMixin, CumOp):
+class MeasurableCumsum(MeasurableOp, CumOp):
     """A placeholder used to specify a log-likelihood for a cumsum sub-graph."""
 
 

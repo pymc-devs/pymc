@@ -52,7 +52,7 @@ from pytensor.tensor.random.rewriting import (
     local_rv_size_lift,
 )
 
-from pymc.logprob.abstract import MeasurableOp, MeasurableOpMixin, _logprob, _logprob_helper
+from pymc.logprob.abstract import MeasurableOp, _logprob, _logprob_helper
 from pymc.logprob.rewriting import (
     PreserveRVMappings,
     assume_measured_ir_outputs,
@@ -124,7 +124,7 @@ def naive_bcast_rv_lift(fgraph: FunctionGraph, node):
     return [bcasted_node.outputs[1]]
 
 
-class MeasurableMakeVector(MeasurableOpMixin, MakeVector):
+class MeasurableMakeVector(MeasurableOp, MakeVector):
     """A placeholder used to specify a log-likelihood for a cumsum sub-graph."""
 
 
@@ -148,7 +148,7 @@ def logprob_make_vector(op, values, *base_rvs, **kwargs):
     return pt.stack(logps)
 
 
-class MeasurableJoin(MeasurableOpMixin, Join):
+class MeasurableJoin(MeasurableOp, Join):
     """A placeholder used to specify a log-likelihood for a join sub-graph."""
 
 
@@ -228,7 +228,7 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
     return [measurable_stack]
 
 
-class MeasurableDimShuffle(MeasurableOpMixin, DimShuffle):
+class MeasurableDimShuffle(MeasurableOp, DimShuffle):
     """A placeholder used to specify a log-likelihood for a dimshuffle sub-graph."""
 
     # Need to get the absolute path of `c_func_file`, otherwise it tries to
