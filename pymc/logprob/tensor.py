@@ -37,19 +37,14 @@
 
 from pathlib import Path
 
-import pytensor
-
 from pytensor import tensor as pt
-from pytensor.graph.fg import FunctionGraph
-from pytensor.graph.op import compute_test_value
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor import TensorVariable
-from pytensor.tensor.basic import Alloc, Join, MakeVector
+from pytensor.tensor.basic import Join, MakeVector
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import (
     local_dimshuffle_rv_lift,
-    local_rv_size_lift,
 )
 
 from pymc.logprob.abstract import MeasurableOp, _logprob, _logprob_helper
@@ -60,68 +55,6 @@ from pymc.logprob.rewriting import (
 )
 from pymc.logprob.utils import check_potential_measurability, replace_rvs_by_values
 from pymc.pytensorf import constant_fold
-
-
-@node_rewriter([Alloc])
-def naive_bcast_rv_lift(fgraph: FunctionGraph, node):
-    """Lift an ``Alloc`` through a ``RandomVariable`` ``Op``.
-
-    XXX: This implementation simply broadcasts the ``RandomVariable``'s
-    parameters, which won't always work (e.g. multivariate distributions).
-
-    TODO: Instead, it should use ``RandomVariable.ndim_supp``--and the like--to
-    determine which dimensions of each parameter need to be broadcasted.
-    Also, this doesn't need to remove ``size`` to perform the lifting, like it
-    currently does.
-    """
-
-    if not (
-        isinstance(node.op, Alloc)
-        and node.inputs[0].owner
-        and isinstance(node.inputs[0].owner.op, RandomVariable)
-    ):
-        return None  # pragma: no cover
-
-    bcast_shape = node.inputs[1:]
-
-    rv_var = node.inputs[0]
-    rv_node = rv_var.owner
-
-    if hasattr(fgraph, "dont_touch_vars") and rv_var in fgraph.dont_touch_vars:
-        return None  # pragma: no cover
-
-    # Do not replace RV if it is associated with a value variable
-    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
-    if rv_map_feature is not None and rv_var in rv_map_feature.rv_values:
-        return None
-
-    if not bcast_shape:
-        # The `Alloc` is broadcasting a scalar to a scalar (i.e. doing nothing)
-        assert rv_var.ndim == 0
-        return [rv_var]
-
-    size_lift_res = local_rv_size_lift.transform(fgraph, rv_node)
-    if size_lift_res is None:
-        lifted_node = rv_node
-    else:
-        _, lifted_rv = size_lift_res
-        lifted_node = lifted_rv.owner
-
-    rng, size, *dist_params = lifted_node.inputs
-
-    new_dist_params = [
-        pt.broadcast_to(
-            param,
-            pt.broadcast_shape(tuple(param.shape), tuple(bcast_shape), arrays_are_shapes=True),
-        )
-        for param in dist_params
-    ]
-    bcasted_node = lifted_node.op.make_node(rng, size, *new_dist_params)
-
-    if pytensor.config.compute_test_value != "off":
-        compute_test_value(bcasted_node)
-
-    return [bcasted_node.outputs[1]]
 
 
 class MeasurableMakeVector(MeasurableOp, MakeVector):
