@@ -896,7 +896,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def add_coord(
         self,
         name: str,
-        values: Sequence | None = None,
+        values: Sequence | np.ndarray | None = None,
         mutable: bool | None = None,
         *,
         length: int | Variable | None = None,
