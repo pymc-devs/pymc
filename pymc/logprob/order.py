@@ -46,7 +46,6 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableOp,
-    MeasurableOpMixin,
     _logcdf_helper,
     _logprob,
     _logprob_helper,
@@ -56,11 +55,11 @@ from pymc.math import logdiffexp
 from pymc.pytensorf import constant_fold
 
 
-class MeasurableMax(MeasurableOpMixin, Max):
+class MeasurableMax(MeasurableOp, Max):
     """A placeholder used to specify a log-likelihood for a max sub-graph."""
 
 
-class MeasurableMaxDiscrete(MeasurableOpMixin, Max):
+class MeasurableMaxDiscrete(MeasurableOp, Max):
     """A placeholder used to specify a log-likelihood for sub-graphs of maxima of discrete variables"""
 
 

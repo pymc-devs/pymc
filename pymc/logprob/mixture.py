@@ -68,7 +68,6 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableOp,
-    MeasurableOpMixin,
     _logprob,
     _logprob_helper,
 )
@@ -218,7 +217,7 @@ def rv_pull_down(x: TensorVariable) -> TensorVariable:
     return fgraph.outputs[0]
 
 
-class MixtureRV(MeasurableOpMixin, Op):
+class MixtureRV(MeasurableOp, Op):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
 
     __props__ = ("indices_end_idx", "out_dtype", "out_broadcastable")
@@ -455,7 +454,7 @@ measurable_ir_rewrites_db.register(
 )
 
 
-class MeasurableIfElse(MeasurableOpMixin, IfElse):
+class MeasurableIfElse(MeasurableOp, IfElse):
     """Measurable subclass of IfElse operator."""
 
 
