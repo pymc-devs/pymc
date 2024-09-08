@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 from copy import copy, deepcopy
 
 import pytensor
@@ -369,7 +371,7 @@ def clone_model(model: Model) -> Model:
 
     Recreates a PyMC model with clones of the original variables.
     Shared variables will point to the same container but be otherwise different objects.
-    Constants are not cloned.
+    Constants are not cloned and if guassian process variables are detected then a warning will be triggered.
 
 
     Examples
@@ -391,6 +393,11 @@ def clone_model(model: Model) -> Model:
             z = pm.Deterministic("z", clone_x + 1)
 
     """
+    check_for_gp_vars = [
+        k for x in ["_rotated_", "_hsgp_coeffs_"] for k in model.named_vars.keys() if x in k
+    ]
+    if len(check_for_gp_vars) > 0:
+        warnings.warn("Unable to clone Gaussian Process Variables", UserWarning)
     return model_from_fgraph(fgraph_from_model(model)[0], mutate_fgraph=True)
 
 

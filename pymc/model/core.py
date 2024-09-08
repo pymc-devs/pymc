@@ -1574,30 +1574,56 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def __copy__(self):
         """
         Clone a pymc model by overiding the python copy method using the clone_model method from fgraph.
-        if guassian process variables are detected then an exception will be raised.
+        Constants are not cloned and if guassian process variables are detected then a warning will be triggered.
+
+        Examples
+        --------
+        .. code-block:: python
+
+            import pymc as pm
+            import copy
+
+            with pm.Model() as m:
+                p = pm.Beta("p", 1, 1)
+                x = pm.Bernoulli("x", p=p, shape=(3,))
+
+            clone_m = copy.copy(m)
+
+            # Access cloned variables by name
+            clone_x = clone_m["x"]
+
+            # z will be part of clone_m but not m
+            z = pm.Deterministic("z", clone_x + 1)
         """
         from pymc.model.fgraph import clone_model
-
-        check_for_gp_vars = [
-            k for x in ["_rotated_", "_hsgp_coeffs_"] for k in self.named_vars.keys() if x in k
-        ]
-        if len(check_for_gp_vars) > 0:
-            raise Exception("Unable to clone Gaussian Process Variables")
 
         return clone_model(self)
 
     def __deepcopy__(self, _):
         """
         Clone a pymc model by overiding the python copy method using the clone_model method from fgraph.
-        if guassian process variables are detected then an exception will be raised.
+        Constants are not cloned and if guassian process variables are detected then a warning will be triggered.
+
+        Examples
+        --------
+        .. code-block:: python
+
+            import pymc as pm
+            import copy
+
+            with pm.Model() as m:
+                p = pm.Beta("p", 1, 1)
+                x = pm.Bernoulli("x", p=p, shape=(3,))
+
+            clone_m = copy.deepcopy(m)
+
+            # Access cloned variables by name
+            clone_x = clone_m["x"]
+
+            # z will be part of clone_m but not m
+            z = pm.Deterministic("z", clone_x + 1)
         """
         from pymc.model.fgraph import clone_model
-
-        check_for_gp_vars = [
-            k for x in ["_rotated_", "_hsgp_coeffs_"] for k in self.named_vars.keys() if x in k
-        ]
-        if len(check_for_gp_vars) > 0:
-            raise Exception("Unable to clone Gaussian Process Variables")
 
         return clone_model(self)
 

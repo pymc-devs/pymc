@@ -1764,7 +1764,7 @@ class TestModelGraphs:
             )
 
 
-class TestModelCopy(unittest.TestCase):
+class TestModelCopy:
     @staticmethod
     def simple_model() -> pm.Model:
         with pm.Model() as simple_model:
@@ -1772,7 +1772,7 @@ class TestModelCopy(unittest.TestCase):
             alpha = pm.Normal("alpha", 0, 1)
             pm.Normal("y", alpha, error)
         return simple_model
-    
+
     @staticmethod
     def gp_model() -> pm.Model:
         with pm.Model() as gp_model:
@@ -1782,7 +1782,7 @@ class TestModelCopy(unittest.TestCase):
             f = gp.prior("f", X=np.arange(10)[:, None])
             pm.Normal("y", f * 2)
         return gp_model
-    
+
     def test_copy_model(self) -> None:
         simple_model = self.simple_model()
         copy_simple_model = copy.copy(simple_model)
@@ -1797,17 +1797,27 @@ class TestModelCopy(unittest.TestCase):
         with deepcopy_simple_model:
             deepcopy_simple_model_prior_predictive = pm.sample_prior_predictive(random_seed=42)
 
-        simple_model_prior_predictive_mean = simple_model_prior_predictive['prior']['y'].mean(('chain', 'draw'))
-        copy_simple_model_prior_predictive_mean = copy_simple_model_prior_predictive['prior']['y'].mean(('chain', 'draw'))
-        deepcopy_simple_model_prior_predictive_mean = deepcopy_simple_model_prior_predictive['prior']['y'].mean(('chain', 'draw'))
+        simple_model_prior_predictive_mean = simple_model_prior_predictive["prior"]["y"].mean(
+            ("chain", "draw")
+        )
+        copy_simple_model_prior_predictive_mean = copy_simple_model_prior_predictive["prior"][
+            "y"
+        ].mean(("chain", "draw"))
+        deepcopy_simple_model_prior_predictive_mean = deepcopy_simple_model_prior_predictive[
+            "prior"
+        ]["y"].mean(("chain", "draw"))
 
-        assert np.isclose(simple_model_prior_predictive_mean, copy_simple_model_prior_predictive_mean)
-        assert np.isclose(simple_model_prior_predictive_mean, deepcopy_simple_model_prior_predictive_mean)
+        assert np.isclose(
+            simple_model_prior_predictive_mean, copy_simple_model_prior_predictive_mean
+        )
+        assert np.isclose(
+            simple_model_prior_predictive_mean, deepcopy_simple_model_prior_predictive_mean
+        )
 
     def test_guassian_process_copy_failure(self) -> None:
         gaussian_process_model = self.gp_model()
-        with pytest.raises(Exception) as e:
+        with pytest.warns(UserWarning):
             copy.copy(gaussian_process_model)
-        
-        with pytest.raises(Exception) as e:
+
+        with pytest.warns(UserWarning):
             copy.deepcopy(gaussian_process_model)
