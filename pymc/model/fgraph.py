@@ -160,6 +160,12 @@ def fgraph_from_model(
             "Nested sub-models cannot be converted to fgraph. Convert the parent model instead"
         )
 
+    check_for_gp_vars = [
+        k for x in ["_rotated_", "_hsgp_coeffs_"] for k in model.named_vars.keys() if x in k
+    ]
+    if len(check_for_gp_vars) > 0:
+        warnings.warn("Unable to clone Gaussian Process Variables", UserWarning)
+
     # Collect PyTensor variables
     rvs_to_values = model.rvs_to_values
     rvs = list(rvs_to_values.keys())
@@ -393,11 +399,6 @@ def clone_model(model: Model) -> Model:
             z = pm.Deterministic("z", clone_x + 1)
 
     """
-    check_for_gp_vars = [
-        k for x in ["_rotated_", "_hsgp_coeffs_"] for k in model.named_vars.keys() if x in k
-    ]
-    if len(check_for_gp_vars) > 0:
-        warnings.warn("Unable to clone Gaussian Process Variables", UserWarning)
     return model_from_fgraph(fgraph_from_model(model)[0], mutate_fgraph=True)
 
 
