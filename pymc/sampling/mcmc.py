@@ -577,8 +577,10 @@ def sample(
         method will be used, if appropriate to the model.
     var_names : list of str, optional
         Names of variables to be stored in the trace. Defaults to all free variables and deterministics.
-    nuts_sampler : str
-        Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"].
+    nuts_sampler : str, default "pymc"
+        Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"]. In addition, the compilation
+        backend for the chosen sampler can be set using square brackets, if available. For example, "nutpie[jax]" will
+        use the JAX backend for the nutpie sampler. Currently, "nutpie[jax]" and "nutpie[numba]" are allowed.
         This requires the chosen sampler to be installed.
         All samplers, except "pymc", require the full model to be continuous.
     blas_cores: int or "auto" or None, default = "auto"
