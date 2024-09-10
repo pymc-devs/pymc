@@ -17,6 +17,7 @@
 import contextlib
 import logging
 import pickle
+import re
 import sys
 import time
 import warnings
@@ -89,6 +90,13 @@ __all__ = [
 ]
 
 Step: TypeAlias = BlockedStep | CompoundStep
+
+ExternalNutsSampler = ["nutpie", "numpyro", "blackjax"]
+NutsSampler = Literal["pymc"] | ExternalNutsSampler
+
+NutpieBackend = Literal["numba", "jax"]
+NUTPIE_BACKENDS = get_args(NutpieBackend)
+NUTPIE_DEFAULT_BACKEND = cast(NutpieBackend, "numba")
 
 
 class SamplingIteratorCallback(Protocol):
@@ -291,7 +299,7 @@ def all_continuous(vars):
 
 
 def _sample_external_nuts(
-    sampler: Literal["nutpie", "numpyro", "blackjax"],
+    sampler: ExternalNutsSampler,
     draws: int,
     tune: int,
     chains: int,
@@ -309,7 +317,7 @@ def _sample_external_nuts(
     if nuts_sampler_kwargs is None:
         nuts_sampler_kwargs = {}
 
-    if sampler == "nutpie":
+    if sampler.startswith("nutpie"):
         try:
             import nutpie
         except ImportError as err:
@@ -340,6 +348,23 @@ def _sample_external_nuts(
             var_names=var_names,
             **compile_kwargs,
         )
+
+        def extract_backend(string: str) -> NutpieBackend:
+            match = re.search(r"(?<=\[)[^\]]+(?=\])", string)
+            if match is None:
+                return NUTPIE_DEFAULT_BACKEND
+            result = cast(NutpieBackend, match.group(0))
+            if result not in NUTPIE_BACKENDS:
+                last_option = f"{NUTPIE_BACKENDS[-1]}"
+                expected = (
+                    ", ".join([f'"{x}"' for x in NUTPIE_BACKENDS[:-1]]) + f' or "{last_option}"'
+                )
+                raise ValueError(f'Expected one of {expected}; found "{result}"')
+            return result
+
+        backend = extract_backend(sampler)
+        compiled_model = nutpie.compile_pymc_model(model, backend=backend)
+
         t_start = time.time()
         idata = nutpie.sample(
             compiled_model,
@@ -423,7 +448,7 @@ def sample(
     progressbar_theme: Theme | None = default_progress_theme,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: NutsSampler = "pymc",
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -455,7 +480,7 @@ def sample(
     progressbar_theme: Theme | None = default_progress_theme,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: NutsSampler = "pymc",
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -487,7 +512,7 @@ def sample(
     progressbar_theme: Theme | None = None,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: NutsSampler = "pymc",
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
