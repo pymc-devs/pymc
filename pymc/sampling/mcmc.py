@@ -91,10 +91,11 @@ __all__ = [
 
 Step: TypeAlias = BlockedStep | CompoundStep
 
-ExternalNutsSampler = ["nutpie", "numpyro", "blackjax"]
+ExternalNutsSampler = Literal["nutpie", "numpyro", "blackjax"]
 NutsSampler = Literal["pymc"] | ExternalNutsSampler
-
 NutpieBackend = Literal["numba", "jax"]
+
+
 NUTPIE_BACKENDS = get_args(NutpieBackend)
 NUTPIE_DEFAULT_BACKEND = cast(NutpieBackend, "numba")
 
@@ -412,6 +413,10 @@ def _sample_external_nuts(
 
     elif sampler in ("numpyro", "blackjax"):
         import pymc.sampling.jax as pymc_jax
+
+        from pymc.sampling.jax import JaxNutsSampler
+
+        sampler = cast(JaxNutsSampler, sampler)
 
         idata = pymc_jax.sample_jax_nuts(
             draws=draws,

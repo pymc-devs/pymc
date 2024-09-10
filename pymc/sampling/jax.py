@@ -70,6 +70,8 @@ __all__ = (
     "sample_numpyro_nuts",
 )
 
+JaxNutsSampler = Literal["numpyro", "blackjax"]
+
 
 @jax_funcify.register(Assert)
 @jax_funcify.register(CheckParameterValue)
@@ -524,7 +526,7 @@ def sample_jax_nuts(
     postprocessing_chunks=None,
     idata_kwargs: dict | None = None,
     compute_convergence_checks: bool = True,
-    nuts_sampler: Literal["numpyro", "blackjax"],
+    nuts_sampler: JaxNutsSampler,
 ) -> az.InferenceData:
     """
     Draw samples from the posterior using a jax NUTS method.
