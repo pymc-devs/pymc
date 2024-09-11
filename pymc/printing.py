@@ -114,6 +114,7 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
     if not var_reprs:
         return ""
     if "latex" in formatting:
+        var_reprs = [_format_underscore(x) for x in var_reprs]
         var_reprs = [
             var_repr.replace(r"\sim", r"&\sim &").strip("$")
             for var_repr in var_reprs
@@ -295,3 +296,19 @@ try:
 except (ModuleNotFoundError, AttributeError):
     # no ipython shell
     pass
+
+
+def _format_underscore(variable: str) -> str:
+    """
+    formats variables with underscores in its name by prefixing underscores by '\\'
+    ---
+    Params:
+        variable: The string representation of the variable in the model
+    """
+    if "_" not in variable:
+        return variable
+    inds = [i for i, ltr in enumerate(variable) if ltr == "_"]
+    for i, ind in enumerate(inds):
+        ind = ind + i
+        variable = variable[:ind] + "\\" + variable[ind:]
+    return variable

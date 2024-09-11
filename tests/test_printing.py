@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import re
+
 import numpy as np
 
 from pytensor.tensor.random import normal
@@ -316,3 +318,25 @@ def test_custom_dist_repr():
 
     str_repr = model.str_repr(include_params=False)
     assert str_repr == "\n".join(["x ~ CustomDistNormal", "y ~ CustomRandomNormal"])
+
+
+class TestLatexRepr:
+    @staticmethod
+    def simple_model() -> Model:
+        with Model() as simple_model:
+            error = HalfNormal("error", 0.5)
+            alpha = Normal("alpha", 0, 1)
+            Normal("y", alpha, error)
+        return simple_model
+
+    def test_latex_escaped_underscore(self):
+        """
+        Ensures that all underscores in model variable names are properly escaped for LaTeX representation
+        """
+        model = self.simple_model()
+        model_str = model.str_repr(formatting="latex")
+        underscores = re.finditer(r"_", model_str)
+        for match in underscores:
+            if match:
+                start = match.span(0)[0] - 1
+                assert model_str[start : start + 1] == "\\"
