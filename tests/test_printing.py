@@ -325,8 +325,8 @@ class TestLatexRepr:
     def simple_model() -> Model:
         with Model() as simple_model:
             error = HalfNormal("error", 0.5)
-            alpha = Normal("alpha", 0, 1)
-            Normal("y", alpha, error)
+            alpha_a = Normal("alpha_a", 0, 1)
+            Normal("y", alpha_a, error)
         return simple_model
 
     def test_latex_escaped_underscore(self):
