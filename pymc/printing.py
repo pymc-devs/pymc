@@ -58,6 +58,7 @@ def str_for_dist(
     if "latex" in formatting:
         if print_name is not None:
             print_name = r"\text{" + _latex_escape(print_name.strip("$")) + "}"
+            print_name = _format_underscore(print_name)
 
         op_name = (
             dist.owner.op._print_name[1]
@@ -307,8 +308,15 @@ def _format_underscore(variable: str) -> str:
     """
     if "_" not in variable:
         return variable
+
     inds = [i for i, ltr in enumerate(variable) if ltr == "_"]
-    for i, ind in enumerate(inds):
-        ind = ind + i
-        variable = variable[:ind] + "\\" + variable[ind:]
+    var_len_original = len(variable)
+    var_len = None
+    for ind in inds:
+        if var_len:
+            if var_len != var_len_original:
+                ind = ind + (var_len - var_len_original)
+        if variable[ind - 1 : ind] != "\\":
+            variable = variable[:ind] + "\\" + variable[ind:]
+            var_len = len(variable)
     return variable
