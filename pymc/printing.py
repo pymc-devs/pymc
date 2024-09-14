@@ -13,6 +13,8 @@
 #   limitations under the License.
 
 
+import re
+
 from functools import partial
 
 from pytensor.compile import SharedVariable
@@ -301,22 +303,6 @@ except (ModuleNotFoundError, AttributeError):
 
 def _format_underscore(variable: str) -> str:
     """
-    formats variables with underscores in its name by prefixing underscores by '\\'
-    ---
-    Params:
-        variable: The string representation of the variable in the model
+    Escapes all unescaped underscores in the variable name for LaTeX representation.
     """
-    if "_" not in variable:
-        return variable
-
-    inds = [i for i, ltr in enumerate(variable) if ltr == "_"]
-    var_len_original = len(variable)
-    var_len = None
-    for ind in inds:
-        if var_len:
-            if var_len != var_len_original:
-                ind = ind + (var_len - var_len_original)
-        if variable[ind - 1 : ind] != "\\":
-            variable = variable[:ind] + "\\" + variable[ind:]
-            var_len = len(variable)
-    return variable
+    return re.sub(r"(?<!\\)_", r"\\_", variable)

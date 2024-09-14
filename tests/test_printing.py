@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import re
 
 import numpy as np
 
@@ -335,8 +334,5 @@ class TestLatexRepr:
         """
         model = self.simple_model()
         model_str = model.str_repr(formatting="latex")
-        underscores = re.finditer(r"_", model_str)
-        for match in underscores:
-            if match:
-                start = match.span(0)[0] - 1
-                assert model_str[start : start + 1] == "\\"
+        assert "\\_" in model_str
+        assert "_" not in model_str.replace("\\_", "")
