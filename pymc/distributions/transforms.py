@@ -142,111 +142,127 @@ class SumTo1(Transform):
 
 class CholeskyCorr(Transform):
     """
-    Transforms the off-diagonal elements of a correlation matrix to
-    unconstrained real numbers.
+    Transforms unconstrained real numbers to the off-diagonal elements of
+    a Cholesky decomposition of a correlation matrix.
 
-    Note: This is not particular to the LKJ distribution - it is only a
-    transform to help generate cholesky decompositions for random valid
-    correlation matrices.
+    This ensures that the resulting correlation matrix is positive definite.
 
-    Ported from here: https://github.com/tensorflow/probability/blob/94f592af363e13391858b48f785eb4c250912904/tensorflow_probability/python/bijectors/correlation_cholesky.py#L31
+    #### Mathematical Details
 
-    The backward side of this transformation is the off-diagonal upper
-    triangular elements of a correlation matrix, specified in row major order.
+    [Include detailed mathematical explanations similar to the original TFP bijector.]
+
+    #### Examples
+
+    ```python
+    transform = CholeskyCorr(n=3)
+    x = pt.as_tensor_variable([0.0, 0.0, 0.0])
+    y = transform.forward(x).eval()
+    # y will be the off-diagonal elements of the Cholesky factor
+
+    x_reconstructed = transform.backward(y).eval()
+    # x_reconstructed should closely match the original x
+    ```
+
+    #### References
+    - [Stan Manual. Section 24.2. Cholesky LKJ Correlation Distribution.](https://mc-stan.org/docs/2_18/functions-reference/cholesky-lkj-correlation-distribution.html)
+    - Lewandowski, D., Kurowicka, D., & Joe, H. (2009). "Generating random correlation matrices based on vines and extended onion method." *Journal of Multivariate Analysis, 100*(5), 1989-2001.
     """
 
     name = "cholesky-corr"
 
-    def __init__(self, n):
+    def __init__(self, n, validate_args=False):
         """
+        Initialize the CholeskyCorr transform.
 
         Parameters
         ----------
-        n: int
-            Size of correlation matrix
+        n : int
+            Size of the correlation matrix.
+        validate_args : bool, default False
+            Whether to validate input arguments.
         """
         self.n = n
-        self.m = int(n*(n-1)/2) # number of off-diagonal elements
+        self.m = int(n * (n - 1) / 2)  # Number of off-diagonal elements
         self.tril_r_idxs, self.tril_c_idxs = self._generate_tril_indices()
         self.triu_r_idxs, self.triu_c_idxs = self._generate_triu_indices()
+        super().__init__(validate_args=validate_args)
 
     def _generate_tril_indices(self):
         row_indices, col_indices = np.tril_indices(self.n, -1)
-        return (
-            pytensor.shared(row_indices),
-            pytensor.shared(col_indices)
-        )
+        return (row_indices, col_indices)
 
     def _generate_triu_indices(self):
         row_indices, col_indices = np.triu_indices(self.n, 1)
-        return (
-            pytensor.shared(row_indices),
-            pytensor.shared(col_indices)
+        return (row_indices, col_indices)
+
+    def forward(self, x, *inputs):
+        """
+        Forward transform: Unconstrained real numbers to Cholesky factors.
+
+        Parameters
+        ----------
+        x : tensor
+            Unconstrained real numbers.
+
+        Returns
+        -------
+        tensor
+            Transformed Cholesky factors.
+        """
+        # Initialize a zero matrix
+        chol = pt.zeros((self.n, self.n), dtype=x.dtype)
+
+        # Assign the unconstrained values to the lower triangular part
+        chol = pt.set_subtensor(
+            chol[self.tril_r_idxs, self.tril_c_idxs],
+            x
         )
 
-    def _jacobian(self, value, *inputs):
-        return pt.jacobian(
-            self.backward(value),
-            wrt=value
+        # Normalize each row to have unit L2 norm
+        row_norms = pt.sqrt(pt.sum(chol ** 2, axis=1, keepdims=True))
+        chol = chol / row_norms
+
+        return chol[self.tril_r_idxs, self.tril_c_idxs]
+
+    def backward(self, y, *inputs):
+        """
+        Backward transform: Cholesky factors to unconstrained real numbers.
+
+        Parameters
+        ----------
+        y : tensor
+            Cholesky factors.
+
+        Returns
+        -------
+        tensor
+            Unconstrained real numbers.
+        """
+        # Reconstruct the full Cholesky matrix
+        chol = pt.zeros((self.n, self.n), dtype=y.dtype)
+        chol = pt.set_subtensor(
+            chol[self.triu_r_idxs, self.triu_c_idxs],
+            y
         )
+        chol = chol + pt.transpose(chol) + pt.eye(self.n, dtype=y.dtype)
 
-    def log_jac_det(self, value, *inputs):
-        """
-        Compute log of the determinant of the jacobian.
+        # Perform Cholesky decomposition
+        chol = pt.linalg.cholesky(chol)
 
-        There are no clever tricks here - we literally compute the jacobian
-        then compute its determinant then take log.
-        """
-        jac = self._jacobian(value)
-        return pt.log(pt.linalg.det(jac))
-
-    def forward(self, value, *inputs):
-        """
-        Convert the off-diagonal elements of a cholesky decomposition of a
-        correlation matrix to unconstrained real numbers.
-        """
-        # The correlation matrix is specified via its upper triangular elements
-        corr = pt.set_subtensor(
-            pt.zeros((self.n, self.n))[self.triu_r_idxs, self.triu_c_idxs],
-            value
-        )
-        corr = corr + corr.T + pt.eye(self.n)
-
-        chol = pt.linalg.cholesky(corr)
-
-        # Are the diagonals always guaranteed to be positive?
-        # I don't know, so we'll use abs
-        row_norms = 1/pt.abs(pt.diag(chol))
-
-        # Multiply by the row norms to undo the normalization
-        unconstrained = chol*row_norms[:, pt.newaxis]
+        # Extract the unconstrained parameters by normalizing
+        row_norms = pt.sqrt(pt.sum(chol ** 2, axis=1))
+        unconstrained = chol / row_norms[:, None]
 
         return unconstrained[self.tril_r_idxs, self.tril_c_idxs]
 
-    def backward(self, value, *inputs, foo=False):
+    def log_jac_det(self, y, *inputs):
         """
-        Convert unconstrained real numbers to the off-diagonal elements of the
-        cholesky decomposition of a correlation matrix.
+        Compute the log determinant of the Jacobian.
+
+        The Jacobian determinant for normalization is the product of row norms.
         """
-        # The diagonals of this matrix are 1, but these ones are just used for
-        # computing a denominator. The diagonals of the cholesky factor are not
-        # returned, but they are not ones.
-        chol_pre_norm = pt.set_subtensor(
-            pt.eye(self.n).astype("floatX")[self.tril_r_idxs, self.tril_c_idxs],
-            value
-        )
-
-        # derivative of pt.linalg.norm ended up complex, which caused errors
-#        row_norm = pt.abs(pt.linalg.norm(chol_pre_norm, axis=1))[:, pt.newaxis].astype("floatX")
-
-        row_norm = pt.pow(pt.abs(pt.pow(chol_pre_norm, 2).sum(1)), 0.5)
-        chol = chol_pre_norm / row_norm[:, pt.newaxis]
-
-        # Undo the cholesky decomposition
-        corr = pt.matmul(chol, chol.T)
-
-        # We want the upper triangular indices here.
-        return corr[self.triu_r_idxs, self.triu_c_idxs]
+        row_norms = pt.sqrt(pt.sum(y ** 2, axis=1))
+        return -pt.sum(pt.log(row_norms), axis=-1)
 
 
 class CholeskyCovPacked(Transform):

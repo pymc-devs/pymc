@@ -1580,8 +1580,8 @@ class _LKJCorr(BoundedContinuous):
 @_default_transform.register(_LKJCorr)
 def lkjcorr_default_transform(op, rv):
     _, _, _, n, *_ = rv.owner.inputs
-    n = n.eval()
-    return transforms.CholeskyCorr(n)
+    n = pt.get_scalar_constant_value(n)  # Safely extract scalar value without eval
+    return CholeskyCorr(n)
 
 
 class LKJCorr:

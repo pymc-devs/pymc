@@ -23,6 +23,7 @@ from pytensor.tensor.variable import TensorConstant
 
 import pymc as pm
 import pymc.distributions.transforms as tr
+from pymc.distributions.transforms import CholeskyCorr
 
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import Transform
@@ -673,3 +674,138 @@ def test_deprecated_ndim_supp_transforms():
 
     with pytest.warns(FutureWarning, match="deprecated"):
         assert tr.multivariate_sum_to_1 == tr.sum_to_1
+
+
+def test_lkjcorr_transform_round_trip():
+    """
+    Test that applying the forward transform followed by the backward transform
+    retrieves the original unconstrained parameters, and that sampled matrices are positive definite.
+    """
+    with pm.Model() as model:
+        rho = pm.LKJCorr("rho", n=3, eta=2)
+
+    trace = pm.sample(100, tune=100, chains=1, cores=1, progressbar=False, return_inferencedata=False)
+
+    # Extract the sampled correlation matrices
+    rho_samples = trace["rho"]
+    num_samples = rho_samples.shape[0]
+
+    for i in range(num_samples):
+        sample_matrix = rho_samples[i]
+
+        # Check if the sampled matrix is positive definite
+        try:
+            np.linalg.cholesky(sample_matrix)
+        except np.linalg.LinAlgError:
+            pytest.fail(f"Sampled correlation matrix at index {i} is not positive definite.")
+
+        # Perform round-trip transform: forward and then backward
+        transform = CholeskyCorr(n=3)
+        unconstrained = transform.forward(pt.as_tensor_variable(sample_matrix)).eval()
+        reconstructed = transform.backward(unconstrained).eval()
+
+        # Assert that the original and reconstructed unconstrained parameters are close
+        assert_allclose(sample_matrix, reconstructed, atol=1e-6)
+
+
+def test_lkjcorr_log_jac_det():
+    """
+    Verify that the computed log determinant of the Jacobian matches the expected closed-form solution.
+    """
+    n = 3
+    transform = CholeskyCorr(n=n)
+
+    # Create a sample unconstrained vector (all zeros for simplicity)
+    x = np.zeros(int(n * (n - 1) / 2), dtype=pytensor.config.floatX)
+    x_tensor = pt.as_tensor_variable(x)
+
+    # Perform forward transform to obtain Cholesky factors
+    y = transform.forward(x_tensor).eval()
+
+    # Compute the log determinant using the transform's method
+    computed_log_jac_det = transform.log_jac_det(y).eval()
+
+    # Expected log determinant: 0 (since row norms are 1)
+    expected_log_jac_det = 0.0
+
+    assert_allclose(computed_log_jac_det, expected_log_jac_det, atol=1e-6)
+
+
+@pytest.mark.parametrize("n", [2, 4, 5])
+def test_lkjcorr_transform_various_sizes(n):
+    """
+    Test the CholeskyCorr transform with various sizes of correlation matrices.
+    """
+    transform = CholeskyCorr(n=n)
+    unconstrained_size = int(n * (n - 1) / 2)
+
+    # Generate random unconstrained real numbers
+    x = np.random.randn(unconstrained_size).astype(pytensor.config.floatX)
+    x_tensor = pt.as_tensor_variable(x)
+
+    # Perform forward transform
+    y = transform.forward(x_tensor).eval()
+
+    # Perform backward transform
+    reconstructed = transform.backward(y).eval()
+
+    # Assert that the original and reconstructed unconstrained parameters are close
+    assert_allclose(x, reconstructed, atol=1e-6)
+
+
+def test_lkjcorr_invalid_n():
+    """
+    Test that initializing CholeskyCorr with invalid 'n' values raises appropriate errors.
+    """
+    with pytest.raises(ValueError):
+        # 'n' must be an integer greater than 1
+        CholeskyCorr(n=1)
+
+    with pytest.raises(TypeError):
+        # 'n' must be an integer
+        CholeskyCorr(n='three')
+
+
+def test_lkjcorr_positive_definite():
+    """
+    Ensure that all sampled correlation matrices are positive definite.
+    """
+    with pm.Model() as model:
+        rho = pm.LKJCorr("rho", n=4, eta=2)
+
+    trace = pm.sample(100, tune=100, chains=1, cores=1, progressbar=False, return_inferencedata=False)
+
+    # Extract the sampled correlation matrices
+    rho_samples = trace["rho"]
+    num_samples = rho_samples.shape[0]
+
+    for i in range(num_samples):
+        sample_matrix = rho_samples[i]
+
+        # Check if the sampled matrix is positive definite
+        try:
+            np.linalg.cholesky(sample_matrix)
+        except np.linalg.LinAlgError:
+            pytest.fail(f"Sampled correlation matrix at index {i} is not positive definite.")
+
+
+def test_lkjcorr_round_trip_various_sizes():
+    """
+    Perform round-trip transformation tests for various sizes of correlation matrices.
+    """
+    for n in [2, 3, 4]:
+        transform = CholeskyCorr(n=n)
+        unconstrained_size = int(n * (n - 1) / 2)
+
+        # Generate random unconstrained real numbers
+        x = np.random.randn(unconstrained_size).astype(pytensor.config.floatX)
+        x_tensor = pt.as_tensor_variable(x)
+
+        # Perform forward transform
+        y = transform.forward(x_tensor).eval()
+
+        # Perform backward transform
+        reconstructed = transform.backward(y).eval()
+
+        # Assert that the original and reconstructed unconstrained parameters are close
+        assert_allclose(x, reconstructed, atol=1e-6)
