@@ -73,7 +73,12 @@ from pymc.distributions.shape_utils import (
     rv_size_is_none,
     to_tuple,
 )
-from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
+from pymc.distributions.transforms import (
+    CholeskyCorr,
+    Interval,
+    ZeroSumTransform,
+    _default_transform,
+)
 from pymc.logprob.abstract import _logprob
 from pymc.logprob.rewriting import (
     specialization_ir_rewrites_db,
