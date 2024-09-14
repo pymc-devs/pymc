@@ -69,7 +69,12 @@ from pymc.distributions.shape_utils import (
     rv_size_is_none,
     to_tuple,
 )
-from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
+from pymc.distributions.transforms import (
+    CholeskyCorr,
+    Interval,
+    ZeroSumTransform,
+    _default_transform,
+)
 from pymc.logprob.abstract import _logprob
 from pymc.math import kron_diag, kron_dot
 from pymc.pytensorf import normalize_rng_param

@@ -17,7 +17,6 @@ from functools import singledispatch
 
 import numpy as np
 import pytensor.tensor as pt
-import pytensor
 
 
 # ignore mypy error because it somehow considers that
@@ -213,13 +212,10 @@ class CholeskyCorr(Transform):
         chol = pt.zeros((self.n, self.n), dtype=x.dtype)
 
         # Assign the unconstrained values to the lower triangular part
-        chol = pt.set_subtensor(
-            chol[self.tril_r_idxs, self.tril_c_idxs],
-            x
-        )
+        chol = pt.set_subtensor(chol[self.tril_r_idxs, self.tril_c_idxs], x)
 
         # Normalize each row to have unit L2 norm
-        row_norms = pt.sqrt(pt.sum(chol ** 2, axis=1, keepdims=True))
+        row_norms = pt.sqrt(pt.sum(chol**2, axis=1, keepdims=True))
         chol = chol / row_norms
 
         return chol[self.tril_r_idxs, self.tril_c_idxs]
@@ -240,17 +236,14 @@ class CholeskyCorr(Transform):
         """
         # Reconstruct the full Cholesky matrix
         chol = pt.zeros((self.n, self.n), dtype=y.dtype)
-        chol = pt.set_subtensor(
-            chol[self.triu_r_idxs, self.triu_c_idxs],
-            y
-        )
+        chol = pt.set_subtensor(chol[self.triu_r_idxs, self.triu_c_idxs], y)
         chol = chol + pt.transpose(chol) + pt.eye(self.n, dtype=y.dtype)
 
         # Perform Cholesky decomposition
         chol = pt.linalg.cholesky(chol)
 
         # Extract the unconstrained parameters by normalizing
-        row_norms = pt.sqrt(pt.sum(chol ** 2, axis=1))
+        row_norms = pt.sqrt(pt.sum(chol**2, axis=1))
         unconstrained = chol / row_norms[:, None]
 
         return unconstrained[self.tril_r_idxs, self.tril_c_idxs]
@@ -261,7 +254,7 @@ class CholeskyCorr(Transform):
 
         The Jacobian determinant for normalization is the product of row norms.
         """
-        row_norms = pt.sqrt(pt.sum(y ** 2, axis=1))
+        row_norms = pt.sqrt(pt.sum(y**2, axis=1))
         return -pt.sum(pt.log(row_norms), axis=-1)
 
 

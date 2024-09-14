@@ -23,8 +23,8 @@ from pytensor.tensor.variable import TensorConstant
 
 import pymc as pm
 import pymc.distributions.transforms as tr
-from pymc.distributions.transforms import CholeskyCorr
 
+from pymc.distributions.transforms import CholeskyCorr
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import Transform
 from pymc.pytensorf import floatX, jacobian
@@ -684,7 +684,9 @@ def test_lkjcorr_transform_round_trip():
     with pm.Model() as model:
         rho = pm.LKJCorr("rho", n=3, eta=2)
 
-    trace = pm.sample(100, tune=100, chains=1, cores=1, progressbar=False, return_inferencedata=False)
+    trace = pm.sample(
+        100, tune=100, chains=1, cores=1, progressbar=False, return_inferencedata=False
+    )
 
     # Extract the sampled correlation matrices
     rho_samples = trace["rho"]
@@ -763,7 +765,7 @@ def test_lkjcorr_invalid_n():
 
     with pytest.raises(TypeError):
         # 'n' must be an integer
-        CholeskyCorr(n='three')
+        CholeskyCorr(n="three")
 
 
 def test_lkjcorr_positive_definite():
@@ -773,7 +775,9 @@ def test_lkjcorr_positive_definite():
     with pm.Model() as model:
         rho = pm.LKJCorr("rho", n=4, eta=2)
 
-    trace = pm.sample(100, tune=100, chains=1, cores=1, progressbar=False, return_inferencedata=False)
+    trace = pm.sample(
+        100, tune=100, chains=1, cores=1, progressbar=False, return_inferencedata=False
+    )
 
     # Extract the sampled correlation matrices
     rho_samples = trace["rho"]
