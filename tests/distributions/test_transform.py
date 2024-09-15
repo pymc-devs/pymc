@@ -704,25 +704,38 @@ def test_lkjcorr_transform_round_trip():
 
 def test_lkjcorr_log_jac_det():
     """
-    Verify that the computed log determinant of the Jacobian matches the expected closed-form solution.
+    Verify that the computed log determinant of the Jacobian matches the expected value
+    obtained from PyTensor's automatic differentiation with a non-trivial input.
     """
     n = 3
     transform = CholeskyCorr(n=n)
 
-    # Create a sample unconstrained vector (all zeros for simplicity)
-    x = np.zeros(int(n * (n - 1) / 2), dtype=pytensor.config.floatX)
+    # Create a non-trivial sample unconstrained vector
+    x = np.random.randn(int(n * (n - 1) / 2)).astype(pytensor.config.floatX)
     x_tensor = pt.as_tensor_variable(x)
 
     # Perform forward transform to obtain Cholesky factors
-    y = transform.forward(x_tensor).eval()
+    y = transform.forward(x_tensor)
 
     # Compute the log determinant using the transform's method
     computed_log_jac_det = transform.log_jac_det(y).eval()
 
-    # Expected log determinant: 0 (since row norms are 1)
-    expected_log_jac_det = 0.0
+    # Define the backward function
+    backward = transform.backward
 
-    assert_allclose(computed_log_jac_det, expected_log_jac_det, atol=1e-6)
+    # Compute the Jacobian matrix using PyTensor's automatic differentiation
+    backward_transformed = backward(y)
+    jacobian_matrix = pt.jacobian(backward_transformed, y)
+
+    # Compile the function to compute the Jacobian matrix
+    jacobian_func = pytensor.function([], jacobian_matrix)
+    jacobian_val = jacobian_func()
+
+    # Compute the log determinant of the Jacobian matrix
+    actual_log_jac_det = np.log(np.abs(np.linalg.det(jacobian_val)))
+
+    # Compare the two
+    assert_allclose(computed_log_jac_det, actual_log_jac_det, atol=1e-6)
 
 
 @pytest.mark.parametrize("n", [2, 4, 5])
