@@ -149,7 +149,57 @@ class CholeskyCorr(Transform):
 
     #### Mathematical Details
 
-    [Include detailed mathematical explanations similar to the original TFP bijector.]
+    This bijector provides a change of variables from unconstrained reals to a
+    parameterization of the CholeskyLKJ distribution. The CholeskyLKJ distribution
+    [1] is a distribution on the set of Cholesky factors of positive definite
+    correlation matrices. The CholeskyLKJ probability density function is
+    obtained from the LKJ density on n x n matrices as follows:
+
+        1 = int p(A | eta) dA
+        = int Z(eta) * det(A) ** (eta - 1) dA
+        = int Z(eta) L_ii ** {(n - i - 1) + 2 * (eta - 1)} ^dL_ij (0 <= i < j < n)
+
+    where Z(eta) is the normalizer; the matrix L is the Cholesky factor of the
+    correlation matrix A; and ^dL_ij denotes the wedge product (or differential)
+    of the strictly lower triangular entries of L. The entries L_ij are
+    constrained such that each entry lies in [-1, 1] and the norm of each row is
+    1. The norm includes the diagonal; which is not included in the wedge product.
+    To preserve uniqueness, we further specify that the diagonal entries are
+    positive.
+
+    The image of unconstrained reals under the `CorrelationCholesky` bijector is
+    the set of correlation matrices which are positive definite. A [correlation
+    matrix](https://en.wikipedia.org/wiki/Correlation_and_dependence#Correlation_matrices)
+    can be characterized as a symmetric positive semidefinite matrix with 1s on
+    the main diagonal.
+
+    For a lower triangular matrix `L` to be a valid Cholesky-factor of a positive
+    definite correlation matrix, it is necessary and sufficient that each row of
+    `L` have unit Euclidean norm [1]. To see this, observe that if `L_i` is the
+    `i`th row of the Cholesky factor corresponding to the correlation matrix `R`,
+    then the `i`th diagonal entry of `R` satisfies:
+
+        1 = R_i,i = L_i . L_i = ||L_i||^2
+
+    where '.' is the dot product of vectors and `||...||` denotes the Euclidean
+    norm.
+
+    Furthermore, observe that `R_i,j` lies in the interval `[-1, 1]`. By the
+    Cauchy-Schwarz inequality:
+
+        |R_i,j| = |L_i . L_j| <= ||L_i|| ||L_j|| = 1
+
+    This is a consequence of the fact that `R` is symmetric positive definite with
+    1s on the main diagonal.
+
+    We choose the mapping from x in `R^{m}` to `R^{n^2}` where `m` is the
+    `(n - 1)`th triangular number; i.e. `m = 1 + 2 + ... + (n - 1)`.
+
+        L_ij = x_i,j / s_i (for i < j)
+        L_ii = 1 / s_i
+
+    where s_i = sqrt(1 + x_i,0^2 + x_i,1^2 + ... + x_(i,i-1)^2). We can check that
+    the required constraints on the image are satisfied.
 
     #### Examples
 
