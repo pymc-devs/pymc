@@ -151,7 +151,7 @@ conditioned on.
 Calling the `prior` method will create a PyMC random variable that represents
 the latent function :math:`f(x) = \mathbf{f}`::
 
-	f = gp.prior("f", X)
+    f = gp.prior("f", X)
 
 :code:`f` is a random variable that can be used within a PyMC model like any
 other type of random variable.  The first argument is the name of the random
@@ -166,7 +166,7 @@ Usually at this point, inference is performed on the model.  The
 distribution over the latent function at arbitrary :math:`x_*` input points,
 :math:`f(x_*)`.  To construct the conditional distribution we write::
 
-	f_star = gp.conditional("f_star", X_star)
+    f_star = gp.conditional("f_star", X_star)
 
 Additive GPs
 ============
