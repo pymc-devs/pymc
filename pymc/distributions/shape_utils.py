@@ -260,13 +260,13 @@ def change_dist_size(
 
     """
     # Check the dimensionality of the `new_size` kwarg
-    new_size_ndim = np.ndim(new_size)  # type: ignore
+    new_size_ndim = np.ndim(new_size)  # type: ignore[arg-type]
     if new_size_ndim > 1:
         raise ShapeError("The `new_size` must be ≤1-dimensional.", actual=new_size_ndim)
     elif new_size_ndim == 0:
-        new_size = (new_size,)  # type: ignore
+        new_size = (new_size,)  # type: ignore[assignment]
     else:
-        new_size = tuple(new_size)  # type: ignore
+        new_size = tuple(new_size)  # type: ignore[arg-type]
 
     op = dist.owner.op
     new_dist = _change_dist_size(op, dist, new_size=new_size, expand=expand)
@@ -331,7 +331,7 @@ def change_specify_shape_size(op, ss, new_size, expand) -> TensorVariable:
             new_shapes[-ndim_supp:] = shapes[-ndim_supp:]
 
     # specify_shape has a wrong signature https://github.com/aesara-devs/aesara/issues/1164
-    return pt.specify_shape(new_var, new_shapes)  # type: ignore
+    return pt.specify_shape(new_var, new_shapes)  # type: ignore[arg-type]
 
 
 def get_support_shape(
@@ -395,8 +395,7 @@ def get_support_shape(
             raise ValueError(f"Number of dims is too small for ndim_supp of {ndim_supp}")
         model = modelcontext(None)
         inferred_support_shape = [
-            model.dim_lengths[dims[i]] - support_shape_offset[i]  # type: ignore
-            for i in np.arange(-ndim_supp, 0)
+            model.dim_lengths[dims[i]] - support_shape_offset[i] for i in np.arange(-ndim_supp, 0)
         ]
 
     if inferred_support_shape is None and observed is not None:

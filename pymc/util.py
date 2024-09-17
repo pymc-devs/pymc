@@ -99,7 +99,7 @@ class treelist(list):
         if self.parent is not None:
             self.parent.extend(self)
 
-    # typechecking here works bad
+    # here typechecking works bad
     append = withparent(list.append)
     __iadd__ = withparent(list.__iadd__)
     extend = withparent(list.extend)
@@ -144,7 +144,7 @@ class treedict(dict):
         if self.parent is not None:
             self.parent.update(self)
 
-    # typechecking here works bad
+    # here typechecking works bad
     __setitem__ = withparent(dict.__setitem__)
     update = withparent(dict.update)
 
@@ -434,7 +434,7 @@ def _get_seeds_per_chain(
         return seeds
 
     try:
-        int_random_state = int(random_state)  # type: ignore
+        int_random_state = int(random_state)  # type: ignore[arg-type]
     except Exception:
         int_random_state = None
 

@@ -592,7 +592,7 @@ def transformed_conditional_logp(
     }
     if values_to_transforms:
         # There seems to be an incorrect type hint in TransformValuesRewrite
-        transform_rewrite = TransformValuesRewrite(values_to_transforms)  # type: ignore
+        transform_rewrite = TransformValuesRewrite(values_to_transforms)  # type: ignore[arg-type]
 
     kwargs.setdefault("warn_rvs", False)
     temp_logp_terms = conditional_logp(

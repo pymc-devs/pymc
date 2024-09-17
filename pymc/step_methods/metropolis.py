@@ -916,8 +916,8 @@ class DEMetropolis(PopulationArrayStepShared):
         if self.other_chains is None:  # pragma: no cover
             raise RuntimeError("Population sampler has not been linked to the other chains")
         ir1, ir2 = self.rng.choice(self.other_chains, 2, replace=False)
-        r1 = DictToArrayBijection.map(self.population[ir1])  # type: ignore
-        r2 = DictToArrayBijection.map(self.population[ir2])  # type: ignore
+        r1 = DictToArrayBijection.map(self.population[ir1])  # type: ignore[index]
+        r2 = DictToArrayBijection.map(self.population[ir2])  # type: ignore[index]
         # propose a jump
         q = floatX(q0d + self.lamb * (r1.data - r2.data) + epsilon)
 

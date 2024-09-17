@@ -85,8 +85,8 @@ try:
     RunType: TypeAlias = Run
     HAS_MCB = True
 except ImportError:
-    TraceOrBackend = BaseTrace  # type: ignore
-    RunType = type(None)  # type: ignore
+    TraceOrBackend = BaseTrace  # type: ignore[misc]
+    RunType = type(None)  # type: ignore[assignment, misc]
 
 
 __all__ = ["to_inference_data", "predictions_to_inference_data"]

@@ -234,7 +234,7 @@ def _make_node(
         kwargs["cluster"] = cluster
 
     var_name: str = cast(str, node.var.name)
-    add_node(var_name.replace(":", "&"), **kwargs)  # type: ignore
+    add_node(var_name.replace(":", "&"), **kwargs)  # type: ignore[call-arg]
 
 
 class ModelGraph:

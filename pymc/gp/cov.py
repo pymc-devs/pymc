@@ -147,7 +147,7 @@ class BaseCovariance:
 
     @staticmethod
     def _alloc(X, *shape: int) -> TensorVariable:
-        return pt.alloc(X, *shape)  # type: ignore
+        return pt.alloc(X, *shape)  # type: ignore[return-value]
 
 
 class Covariance(BaseCovariance):

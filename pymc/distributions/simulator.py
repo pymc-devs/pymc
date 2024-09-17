@@ -145,7 +145,7 @@ class Simulator(Distribution):
         return super().__new__(cls, name, *args, **kwargs)
 
     @classmethod
-    def dist(  # type: ignore
+    def dist(  # type: ignore[override]
         cls,
         fn,
         *unnamed_params,
@@ -257,7 +257,7 @@ class Simulator(Distribution):
         return sim_op(*params, **kwargs)
 
 
-@_support_point.register(SimulatorRV)  # type: ignore
+@_support_point.register(SimulatorRV)
 def simulator_support_point(op, rv, *inputs):
     sim_inputs = op.dist_params(rv.owner)
     # Take the mean of 10 draws

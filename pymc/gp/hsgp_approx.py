@@ -425,7 +425,7 @@ class HSGP(Base):
         gp_dims: str | None = None,
         *args,
         **kwargs,
-    ):  # type: ignore
+    ):
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
         For usage examples, refer to `pm.gp.Latent`.
@@ -488,7 +488,7 @@ class HSGP(Base):
         elif self._parametrization == "centered":
             return self.mean_func(Xnew) + phi[:, i:] @ beta
 
-    def conditional(self, name: str, Xnew: TensorLike, dims: str | None = None):  # type: ignore
+    def conditional(self, name: str, Xnew: TensorLike, dims: str | None = None):  # type: ignore[override]
         R"""
         Returns the (approximate) conditional distribution evaluated over new input locations
         `Xnew`.
@@ -683,7 +683,7 @@ class HSGPPeriodic(Base):
         psd = self.scale * self.cov_func.power_spectral_density_approx(J)
         return (phi_cos, phi_sin), psd
 
-    def prior(self, name: str, X: TensorLike, dims: str | None = None):  # type: ignore
+    def prior(self, name: str, X: TensorLike, dims: str | None = None):  # type: ignore[override]
         R"""
         Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
         For usage examples, refer to `pm.gp.Latent`.
@@ -705,8 +705,8 @@ class HSGPPeriodic(Base):
         # and so does not contribute to the approximation.
         f = (
             self.mean_func(X)
-            + phi_cos @ (psd * self._beta[:m])  # type: ignore
-            + phi_sin[..., 1:] @ (psd[1:] * self._beta[m:])  # type: ignore
+            + phi_cos @ (psd * self._beta[:m])  # type: ignore[index]
+            + phi_sin[..., 1:] @ (psd[1:] * self._beta[m:])  # type: ignore[index]
         )
 
         self.f = pm.Deterministic(name, f, dims=dims)
@@ -734,7 +734,7 @@ class HSGPPeriodic(Base):
         phi = phi_cos @ (psd * beta[:m]) + phi_sin[..., 1:] @ (psd[1:] * beta[m:])
         return self.mean_func(Xnew) + phi
 
-    def conditional(self, name: str, Xnew: TensorLike, dims: str | None = None):  # type: ignore
+    def conditional(self, name: str, Xnew: TensorLike, dims: str | None = None):  # type: ignore[override]
         R"""
         Returns the (approximate) conditional distribution evaluated over new input locations
         `Xnew`.
