@@ -488,10 +488,10 @@ class Normal(Continuous):
     .. code-block:: python
 
         with pm.Model():
-            x = pm.Normal('x', mu=0, sigma=10)
+            x = pm.Normal("x", mu=0, sigma=10)
 
         with pm.Model():
-            x = pm.Normal('x', mu=0, tau=1/23)
+            x = pm.Normal("x", mu=0, tau=1 / 23)
     """
 
     rv_op = normal
@@ -636,13 +636,13 @@ class TruncatedNormal(BoundedContinuous):
     .. code-block:: python
 
         with pm.Model():
-            x = pm.TruncatedNormal('x', mu=0, sigma=10, lower=0)
+            x = pm.TruncatedNormal("x", mu=0, sigma=10, lower=0)
 
         with pm.Model():
-            x = pm.TruncatedNormal('x', mu=0, sigma=10, upper=1)
+            x = pm.TruncatedNormal("x", mu=0, sigma=10, upper=1)
 
         with pm.Model():
-            x = pm.TruncatedNormal('x', mu=0, sigma=10, lower=0, upper=1)
+            x = pm.TruncatedNormal("x", mu=0, sigma=10, lower=0, upper=1)
 
     """
 
@@ -817,10 +817,10 @@ class HalfNormal(PositiveContinuous):
     .. code-block:: python
 
         with pm.Model():
-            x = pm.HalfNormal('x', sigma=10)
+            x = pm.HalfNormal("x", sigma=10)
 
         with pm.Model():
-            x = pm.HalfNormal('x', tau=1/15)
+            x = pm.HalfNormal("x", tau=1 / 15)
     """
 
     rv_op = halfnormal
@@ -1711,10 +1711,10 @@ class LogNormal(PositiveContinuous):
 
         # Example to show that we pass in only ``sigma`` or ``tau`` but not both.
         with pm.Model():
-            x = pm.LogNormal('x', mu=2, sigma=30)
+            x = pm.LogNormal("x", mu=2, sigma=30)
 
         with pm.Model():
-            x = pm.LogNormal('x', mu=2, tau=1/100)
+            x = pm.LogNormal("x", mu=2, tau=1 / 100)
     """
 
     rv_op = lognormal
@@ -1828,10 +1828,10 @@ class StudentT(Continuous):
     .. code-block:: python
 
         with pm.Model():
-            x = pm.StudentT('x', nu=15, mu=0, sigma=10)
+            x = pm.StudentT("x", nu=15, mu=0, sigma=10)
 
         with pm.Model():
-            x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
+            x = pm.StudentT("x", nu=15, mu=0, lam=1 / 23)
     """
 
     rv_op = t
@@ -2802,10 +2802,10 @@ class HalfStudentT(PositiveContinuous):
 
         # Only pass in one of lam or sigma, but not both.
         with pm.Model():
-            x = pm.HalfStudentT('x', sigma=10, nu=10)
+            x = pm.HalfStudentT("x", sigma=10, nu=10)
 
         with pm.Model():
-            x = pm.HalfStudentT('x', lam=4, nu=10)
+            x = pm.HalfStudentT("x", lam=4, nu=10)
     """
 
     rv_type = HalfStudentTRV
@@ -4104,9 +4104,9 @@ class PolyaGamma(PositiveContinuous):
 
         rng = np.random.default_rng()
         with pm.Model():
-            x = pm.PolyaGamma('x', h=1, z=5.5)
+            x = pm.PolyaGamma("x", h=1, z=5.5)
         with pm.Model():
-            x = pm.PolyaGamma('x', h=25, z=-2.3, rng=rng, size=(100, 5))
+            x = pm.PolyaGamma("x", h=25, z=-2.3, rng=rng, size=(100, 5))
 
     References
     ----------

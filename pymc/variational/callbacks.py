@@ -59,11 +59,8 @@ class CheckParametersConvergence(Callback):
     --------
     >>> with model:
     ...     approx = pm.fit(
-    ...         n=10000, callbacks=[
-    ...             CheckParametersConvergence(
-    ...                 every=50, diff='absolute',
-    ...                 tolerance=1e-4)
-    ...         ]
+    ...         n=10000,
+    ...         callbacks=[CheckParametersConvergence(every=50, diff="absolute", tolerance=1e-4)],
     ...     )
     """
 

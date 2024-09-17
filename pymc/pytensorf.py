@@ -520,20 +520,18 @@ def join_nonshared_inputs(
         y = pt.vector("y")
         # Original output
         out = x + y
-        print(out.eval({x: np.array(1), y: np.array([1, 2, 3])})) # [2, 3, 4]
+        print(out.eval({x: np.array(1), y: np.array([1, 2, 3])}))  # [2, 3, 4]
 
         # New output and inputs
         [new_out], joined_inputs = join_nonshared_inputs(
-            point={ # Only shapes matter
+            point={  # Only shapes matter
                 "x": np.zeros(()),
                 "y": np.zeros(3),
             },
             outputs=[out],
             inputs=[x, y],
         )
-        print(new_out.eval({
-            joined_inputs: np.array([1, 1, 2, 3]),
-        })) # [2, 3, 4]
+        print(new_out.eval({joined_inputs: np.array([1, 1, 2, 3])}))  # [2, 3, 4]
 
     Join the input value variables of a model logp.
 
@@ -544,15 +542,19 @@ def join_nonshared_inputs(
         with pm.Model() as model:
             mu_pop = pm.Normal("mu_pop")
             sigma_pop = pm.HalfNormal("sigma_pop")
-            mu = pm.Normal("mu", mu_pop, sigma_pop, shape=(3, ))
+            mu = pm.Normal("mu", mu_pop, sigma_pop, shape=(3,))
 
             y = pm.Normal("y", mu, 1.0, observed=[0, 1, 2])
 
-        print(model.compile_logp()({
-            "mu_pop": 0,
-            "sigma_pop_log__": 1,
-            "mu": [0, 1, 2],
-        })) # -12.691227342634292
+        print(
+            model.compile_logp()(
+                {
+                    "mu_pop": 0,
+                    "sigma_pop_log__": 1,
+                    "mu": [0, 1, 2],
+                }
+            )
+        )  # -12.691227342634292
 
         initial_point = model.initial_point()
         inputs = model.value_vars
@@ -563,9 +565,13 @@ def join_nonshared_inputs(
             inputs=inputs,
         )
 
-        print(logp.eval({
-            joined_inputs: [0, 1, 0, 1, 2],
-        })) # -12.691227342634292
+        print(
+            logp.eval(
+                {
+                    joined_inputs: [0, 1, 0, 1, 2],
+                }
+            )
+        )  # -12.691227342634292
 
     Same as above but with the `mu_pop` value variable being shared.
 
@@ -580,14 +586,16 @@ def join_nonshared_inputs(
             point=initial_point,
             outputs=[model.logp()],
             inputs=other_inputs,
-            shared_inputs={
-                mu_pop_input: shared_mu_pop_input
-            },
+            shared_inputs={mu_pop_input: shared_mu_pop_input},
         )
 
-        print(logp.eval({
-            other_joined_inputs: [1, 0, 1, 2],
-        })) # -12.691227342634292
+        print(
+            logp.eval(
+                {
+                    other_joined_inputs: [1, 0, 1, 2],
+                }
+            )
+        )  # -12.691227342634292
     """
     if not inputs:
         raise ValueError("Empty list of input variables.")

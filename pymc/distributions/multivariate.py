@@ -230,9 +230,9 @@ class MvNormal(Continuous):
     Define a multivariate normal variable for a given covariance
     matrix::
 
-        cov = np.array([[1., 0.5], [0.5, 2]])
+        cov = np.array([[1.0, 0.5], [0.5, 2]])
         mu = np.zeros(2)
-        vals = pm.MvNormal('vals', mu=mu, cov=cov, shape=(5, 2))
+        vals = pm.MvNormal("vals", mu=mu, cov=cov, shape=(5, 2))
 
     Most of the time it is preferable to specify the cholesky
     factor of the covariance instead. For example, we could
@@ -240,24 +240,26 @@ class MvNormal(Continuous):
     of `LKJCholeskyCov` for more information about this)::
 
         mu = np.zeros(3)
-        true_cov = np.array([[1.0, 0.5, 0.1],
-                             [0.5, 2.0, 0.2],
-                             [0.1, 0.2, 1.0]])
+        true_cov = np.array(
+            [
+                [1.0, 0.5, 0.1],
+                [0.5, 2.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ],
+        )
         data = np.random.multivariate_normal(mu, true_cov, 10)
 
         sd_dist = pm.Exponential.dist(1.0, shape=3)
-        chol, corr, stds = pm.LKJCholeskyCov('chol_cov', n=3, eta=2,
-            sd_dist=sd_dist, compute_corr=True)
-        vals = pm.MvNormal('vals', mu=mu, chol=chol, observed=data)
+        chol, corr, stds = pm.LKJCholeskyCov("chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True)
+        vals = pm.MvNormal("vals", mu=mu, chol=chol, observed=data)
 
     For unobserved values it can be better to use a non-centered
     parametrization::
 
         sd_dist = pm.Exponential.dist(1.0, shape=3)
-        chol, _, _ = pm.LKJCholeskyCov('chol_cov', n=3, eta=2,
-            sd_dist=sd_dist, compute_corr=True)
-        vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=(5, 3))
-        vals = pm.Deterministic('vals', pt.dot(chol, vals_raw.T).T)
+        chol, _, _ = pm.LKJCholeskyCov("chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True)
+        vals_raw = pm.Normal("vals_raw", mu=0, sigma=1, shape=(5, 3))
+        vals = pm.Deterministic("vals", pt.dot(chol, vals_raw.T).T)
     """
 
     rv_op = multivariate_normal
@@ -1806,13 +1808,12 @@ class MatrixNormal(Continuous):
     Define a matrixvariate normal variable for given row and column covariance
     matrices::
 
-        colcov = np.array([[1., 0.5], [0.5, 2]])
+        colcov = np.array([[1.0, 0.5], [0.5, 2]])
         rowcov = np.array([[1, 0, 0], [0, 4, 0], [0, 0, 16]])
         m = rowcov.shape[0]
         n = colcov.shape[0]
         mu = np.zeros((m, n))
-        vals = pm.MatrixNormal('vals', mu=mu, colcov=colcov,
-                               rowcov=rowcov)
+        vals = pm.MatrixNormal("vals", mu=mu, colcov=colcov, rowcov=rowcov)
 
     Above, the ith row in vals has a variance that is scaled by 4^i.
     Alternatively, row or column cholesky matrices could be substituted for
@@ -2418,23 +2419,25 @@ class ICAR(Continuous):
         # 4x4 adjacency matrix
         # arranged in a square lattice
 
-        W = np.array([
-            [0,1,0,1],
-            [1,0,1,0],
-            [0,1,0,1],
-            [1,0,1,0]
-        ])
+        W = np.array(
+            [
+                [0, 1, 0, 1],
+                [1, 0, 1, 0],
+                [0, 1, 0, 1],
+                [1, 0, 1, 0],
+            ],
+        )
 
         # centered parameterization
         with pm.Model():
-            sigma = pm.Exponential('sigma', 1)
-            phi = pm.ICAR('phi', W=W, sigma=sigma)
+            sigma = pm.Exponential("sigma", 1)
+            phi = pm.ICAR("phi", W=W, sigma=sigma)
             mu = phi
 
         # non-centered parameterization
         with pm.Model():
-            sigma = pm.Exponential('sigma', 1)
-            phi = pm.ICAR('phi', W=W)
+            sigma = pm.Exponential("sigma", 1)
+            phi = pm.ICAR("phi", W=W)
             mu = sigma * phi
 
     References

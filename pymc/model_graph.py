@@ -622,7 +622,6 @@ def model_to_networkx(
         sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18])
 
         with Model() as schools:
-
             eta = Normal("eta", 0, 1, shape=J)
             mu = Normal("mu", 0, sigma=1e6)
             tau = HalfCauchy("tau", 25)
@@ -726,7 +725,6 @@ def model_to_graphviz(
         sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18])
 
         with Model() as schools:
-
             eta = Normal("eta", 0, 1, shape=J)
             mu = Normal("mu", 0, sigma=1e6)
             tau = HalfCauchy("tau", 25)

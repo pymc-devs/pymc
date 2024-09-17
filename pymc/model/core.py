@@ -438,18 +438,24 @@ class Model(WithMemoization, metaclass=ContextMeta):
         import numpy as np
 
         coords = {
-            "feature", ["A", "B", "C"],
-            "trial", [1, 2, 3, 4, 5],
+            "feature",
+            ["A", "B", "C"],
+            "trial",
+            [1, 2, 3, 4, 5],
         }
 
         with pm.Model(coords=coords) as model:
-            intercept = pm.Normal("intercept", shape=(3,))  # Variable will have default dim label `intercept__dim_0`
-            beta = pm.Normal("beta", dims=("feature",))  # Variable will have shape (3,) and dim label `feature`
+            # Variable will have default dim label `intercept__dim_0`
+            intercept = pm.Normal("intercept", shape=(3,))
+            # Variable will have shape (3,) and dim label `feature`
+            beta = pm.Normal("beta", dims=("feature",))
 
             # Dims below are only used for labeling, they have no effect on shape
-            idx = pm.Data("idx", np.array([0, 1, 1, 2, 2]))  # Variable will have default dim label `idx__dim_0`
+            # Variable will have default dim label `idx__dim_0`
+            idx = pm.Data("idx", np.array([0, 1, 1, 2, 2]))
             x = pm.Data("x", np.random.normal(size=(5, 3)), dims=("trial", "feature"))
-            mu = pm.Deterministic("mu", intercept[idx] + beta @ x, dims="trial")  # single dim can be passed as string
+            # single dim can be passed as string
+            mu = pm.Deterministic("mu", intercept[idx] + beta @ x, dims="trial")
 
             # Dims controls the shape of the variable
             # If not specified, it would be inferred from the shape of the observations
@@ -465,12 +471,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         with pm.Model(name="root") as root:
             x = pm.Normal("x")  # Variable wil be named "root::x"
 
-            with pm.Model(name='first') as first:
+            with pm.Model(name="first") as first:
                 # Variable will belong to root and first
                 y = pm.Normal("y", mu=x)  # Variable wil be named "root::first::y"
 
             # Can pass parent model explicitly
-            with pm.Model(name='second', model=root) as second:
+            with pm.Model(name="second", model=root) as second:
                 # Variable will belong to root and second
                 z = pm.Normal("z", mu=y)  # Variable wil be named "root::second::z"
 
@@ -2013,7 +2019,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18])
 
             with Model() as schools:
-
                 eta = Normal("eta", 0, 1, shape=J)
                 mu = Normal("mu", 0, sigma=1e6)
                 tau = HalfCauchy("tau", 25)
@@ -2086,10 +2091,10 @@ def set_data(new_data, model=None, *, coords=None):
         import pymc as pm
 
         with pm.Model() as model:
-            x = pm.Data('x', [1., 2., 3.])
-            y = pm.Data('y', [1., 2., 3.])
-            beta = pm.Normal('beta', 0, 1)
-            obs = pm.Normal('obs', x * beta, 1, observed=y, shape=x.shape)
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            y = pm.Data("y", [1.0, 2.0, 3.0])
+            beta = pm.Normal("beta", 0, 1)
+            obs = pm.Normal("obs", x * beta, 1, observed=y, shape=x.shape)
             idata = pm.sample()
 
     Then change the value of `x` to predict on new data.
@@ -2116,9 +2121,9 @@ def set_data(new_data, model=None, *, coords=None):
         data = rng.normal(loc=1.0, scale=2.0, size=100)
 
         with pm.Model() as model:
-            y = pm.Data('y', data)
-            theta = pm.Normal('theta', mu=0.0, sigma=10.0)
-            obs = pm.Normal('obs', theta, 2.0, observed=y, shape=y.shape)
+            y = pm.Data("y", data)
+            theta = pm.Normal("theta", mu=0.0, sigma=10.0)
+            obs = pm.Normal("obs", theta, 2.0, observed=y, shape=y.shape)
             idata = pm.sample()
 
     Now update the model with a new data set.
@@ -2126,7 +2131,7 @@ def set_data(new_data, model=None, *, coords=None):
     .. code-block:: python
 
         with model:
-            pm.set_data({'y': rng.normal(loc=1.0, scale=2.0, size=200)})
+            pm.set_data({"y": rng.normal(loc=1.0, scale=2.0, size=200)})
             idata = pm.sample()
     """
     model = modelcontext(model)
