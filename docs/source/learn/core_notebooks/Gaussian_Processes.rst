@@ -123,8 +123,8 @@ variable models and also some fast approximations.  Their usage all follows a
 similar pattern:  First, a GP is instantiated with a mean function and a
 covariance function.  Then, GP objects can be added together, allowing for
 function characteristics to be carefully modeled and separated.  Finally, one
-of `prior`, `marginal_likelihood` or `conditional` methods is called on the GP
-object to actually construct the PyMC random variable that represents the
+of ``prior``, ``marginal_likelihood`` or ``conditional`` methods is called on
+the GP object to actually construct the PyMC random variable that represents the
 function prior.
 
 Using :code:`gp.Latent` for the example, the syntax to first specify the GP
@@ -145,7 +145,7 @@ conditioned on.
   or other, depending on the implementation.  See the notebooks for examples.
   The :code:`conditional` method works similarly.
 
-Calling the `prior` method will create a PyMC random variable that represents
+Calling the ``prior`` method will create a PyMC random variable that represents
 the latent function :math:`f(x) = \mathbf{f}`::
 
     f = gp.prior("f", X)
@@ -217,7 +217,7 @@ thesis <https://www.cs.toronto.edu/~duvenaud/thesis.pdf>`_.
 
 The GP objects in PyMC keeps track of these marginals automatically.  The
 following code sketch shows how to define the conditional distribution of
-:math:`f_2^*`.  We use `gp.Marginal` in the example, but the same works for
+:math:`f_2^*`.  We use ``gp.Marginal`` in the example, but the same works for
 other implementations.  The first block fits the GP prior.  We denote
 :math:`f_1 + f_2` as just :math:`f` for brevity::
 
@@ -254,7 +254,7 @@ arguments are required for conditionals of :math:`f1` and :math:`f2`, but not
 
 .. note::
   When constructing conditionals, the additional arguments :code:`X`, :code:`y`,
-  :code:`sigma` and :code:`gp` must be provided as a dict called `given`!
+  :code:`sigma` and :code:`gp` must be provided as a dict called ``given``!
 
 Since the marginal likelihoood method of :code:`gp1` or :code:`gp2` weren't called,
 their conditionals need to be provided with the required inputs.  In the same
