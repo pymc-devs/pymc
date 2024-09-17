@@ -33,6 +33,9 @@ line-length = 100
 target-version = "py310"
 extend-exclude = ["_version.py"]
 
+[tool.ruff.format]
+docstring-code-format = true
+
 [tool.ruff.lint]
 select = ["D", "E", "F", "I", "UP", "W", "RUF"]
 ignore = [

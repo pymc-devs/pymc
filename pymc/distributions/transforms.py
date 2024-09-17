@@ -219,6 +219,7 @@ class Interval(IntervalTransform):
         def get_bounds(rng, size, mu, sigma):
             return 0, None
 
+
         with pm.Model():
             interval = pm.distributions.transforms.Interval(bounds_fn=get_bounds)
             x = pm.Normal("x", transform=interval)
@@ -229,6 +230,7 @@ class Interval(IntervalTransform):
 
         def get_bounds(rng, size, mu, sigma):
             return mu - 1, None
+
 
         interval = pm.distributions.transforms.Interval(bounds_fn=get_bounds)
 

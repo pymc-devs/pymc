@@ -190,8 +190,10 @@ def logp(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> Tens
         import pymc as pm
         import pytensor.tensor as pt
 
+
         def normal_logp(value, mu, sigma):
             return pm.logp(pm.Normal.dist(mu, sigma), value)
+
 
         with pm.Model() as model:
             mu = pm.Normal("mu")
@@ -289,8 +291,10 @@ def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> Te
         import pymc as pm
         import pytensor.tensor as pt
 
+
         def normal_logcdf(value, mu, sigma):
             return pm.logcdf(pm.Normal.dist(mu, sigma), value)
+
 
         with pm.Model() as model:
             mu = pm.Normal("mu")

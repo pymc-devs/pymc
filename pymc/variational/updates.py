@@ -94,8 +94,8 @@ Examples
 >>> from lasagne.updates import sgd, apply_momentum
 >>> l_in = InputLayer((100, 20))
 >>> l1 = DenseLayer(l_in, num_units=3, nonlinearity=softmax)
->>> x = pt.matrix('x')  # shp: num_batch x num_features
->>> y = pt.ivector('y') # shp: num_batch
+>>> x = pt.matrix("x")  # shp: num_batch x num_features
+>>> y = pt.ivector("y")  # shp: num_batch
 >>> l_out = get_output(l1, x)
 >>> params = lasagne.layers.get_all_params(l1)
 >>> loss = pt.mean(pt.nnet.categorical_crossentropy(l_out, y))
@@ -212,12 +212,12 @@ def sgd(loss_or_grads=None, params=None, learning_rate=1e-3):
 
     Examples
     --------
-    >>> a = pytensor.shared(1.)
-    >>> b = a*2
-    >>> updates = sgd(b, [a], learning_rate=.01)
+    >>> a = pytensor.shared(1.0)
+    >>> b = a * 2
+    >>> updates = sgd(b, [a], learning_rate=0.01)
     >>> isinstance(updates, dict)
     True
-    >>> optimizer = sgd(learning_rate=.01)
+    >>> optimizer = sgd(learning_rate=0.01)
     >>> callable(optimizer)
     True
     >>> updates = optimizer(b, [a])
@@ -324,12 +324,12 @@ def momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
 
     Examples
     --------
-    >>> a = pytensor.shared(1.)
-    >>> b = a*2
-    >>> updates = momentum(b, [a], learning_rate=.01)
+    >>> a = pytensor.shared(1.0)
+    >>> b = a * 2
+    >>> updates = momentum(b, [a], learning_rate=0.01)
     >>> isinstance(updates, dict)
     True
-    >>> optimizer = momentum(learning_rate=.01)
+    >>> optimizer = momentum(learning_rate=0.01)
     >>> callable(optimizer)
     True
     >>> updates = optimizer(b, [a])
@@ -442,12 +442,12 @@ def nesterov_momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momen
 
     Examples
     --------
-    >>> a = pytensor.shared(1.)
-    >>> b = a*2
-    >>> updates = nesterov_momentum(b, [a], learning_rate=.01)
+    >>> a = pytensor.shared(1.0)
+    >>> b = a * 2
+    >>> updates = nesterov_momentum(b, [a], learning_rate=0.01)
     >>> isinstance(updates, dict)
     True
-    >>> optimizer = nesterov_momentum(learning_rate=.01)
+    >>> optimizer = nesterov_momentum(learning_rate=0.01)
     >>> callable(optimizer)
     True
     >>> updates = optimizer(b, [a])
@@ -510,12 +510,12 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
 
     Examples
     --------
-    >>> a = pytensor.shared(1.)
-    >>> b = a*2
-    >>> updates = adagrad(b, [a], learning_rate=.01)
+    >>> a = pytensor.shared(1.0)
+    >>> b = a * 2
+    >>> updates = adagrad(b, [a], learning_rate=0.01)
     >>> isinstance(updates, dict)
     True
-    >>> optimizer = adagrad(learning_rate=.01)
+    >>> optimizer = adagrad(learning_rate=0.01)
     >>> callable(optimizer)
     True
     >>> updates = optimizer(b, [a])
@@ -813,12 +813,12 @@ def adam(
 
     Examples
     --------
-    >>> a = pytensor.shared(1.)
-    >>> b = a*2
-    >>> updates = adam(b, [a], learning_rate=.01)
+    >>> a = pytensor.shared(1.0)
+    >>> b = a * 2
+    >>> updates = adam(b, [a], learning_rate=0.01)
     >>> isinstance(updates, dict)
     True
-    >>> optimizer = adam(learning_rate=.01)
+    >>> optimizer = adam(learning_rate=0.01)
     >>> callable(optimizer)
     True
     >>> updates = optimizer(b, [a])
@@ -897,12 +897,12 @@ def adamax(
 
     Examples
     --------
-    >>> a = pytensor.shared(1.)
-    >>> b = a*2
-    >>> updates = adamax(b, [a], learning_rate=.01)
+    >>> a = pytensor.shared(1.0)
+    >>> b = a * 2
+    >>> updates = adamax(b, [a], learning_rate=0.01)
     >>> isinstance(updates, dict)
     True
-    >>> optimizer = adamax(learning_rate=.01)
+    >>> optimizer = adamax(learning_rate=0.01)
     >>> callable(optimizer)
     True
     >>> updates = optimizer(b, [a])
@@ -975,8 +975,7 @@ def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
 
     Examples
     --------
-    >>> param = pytensor.shared(
-    ...     np.random.randn(100, 200).astype(pytensor.config.floatX))
+    >>> param = pytensor.shared(np.random.randn(100, 200).astype(pytensor.config.floatX))
     >>> update = param + 100
     >>> update = norm_constraint(update, 10)
     >>> func = pytensor.function([], [], updates=[(param, update)])

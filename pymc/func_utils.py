@@ -98,7 +98,7 @@ def find_constrained_prior(
 
         # use these parameters in a model
         with pm.Model():
-            x = pm.Gamma('x', **opt_params)
+            x = pm.Gamma("x", **opt_params)
 
         # specify fixed values before optimization
         opt_params = pm.find_constrained_prior(
@@ -121,7 +121,7 @@ def find_constrained_prior(
         opt_params = pm.find_constrained_prior(
             pm.Exponential,
             lower=0,
-            upper=3.,
+            upper=3.0,
             mass=0.9,
             init_guess={"lam": 1},
             mass_below_lower=0,

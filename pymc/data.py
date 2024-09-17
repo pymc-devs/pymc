@@ -390,16 +390,16 @@ def Data(
     >>> observed_data = [mu + np.random.randn(20) for mu in true_mu]
 
     >>> with pm.Model() as model:
-    ...     data = pm.Data('data', observed_data[0])
-    ...     mu = pm.Normal('mu', 0, 10)
-    ...     pm.Normal('y', mu=mu, sigma=1, observed=data)
+    ...     data = pm.Data("data", observed_data[0])
+    ...     mu = pm.Normal("mu", 0, 10)
+    ...     pm.Normal("y", mu=mu, sigma=1, observed=data)
 
     >>> # Generate one trace for each dataset
     >>> idatas = []
     >>> for data_vals in observed_data:
     ...     with model:
     ...         # Switch out the observed dataset
-    ...         model.set_data('data', data_vals)
+    ...         model.set_data("data", data_vals)
     ...         idatas.append(pm.sample())
     """
     if coords is None:

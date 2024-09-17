@@ -599,8 +599,10 @@ def sample(
        e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
        you could send ::
 
-        step=[pm.NUTS([freeRV1, freeRV2], target_accept=0.9),
-              pm.BinaryGibbsMetropolis([freeRV3], transit_p=.7)]
+        step = [
+            pm.NUTS([freeRV1, freeRV2], target_accept=0.9),
+            pm.BinaryGibbsMetropolis([freeRV3], transit_p=0.7),
+        ]
 
     You can find a full list of arguments in the docstring of the step methods.
 
