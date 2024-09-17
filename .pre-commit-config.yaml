@@ -16,6 +16,19 @@ repos:
     -   id: requirements-txt-fixer
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
+- repo: https://github.com/pre-commit/pygrep-hooks
+  rev: v1.10.0
+  hooks:
+    - id: python-check-blanket-noqa
+    - id: python-check-blanket-type-ignore
+    - id: python-check-mock-methods
+    # - id: python-no-eval  # gets confused with all the `.eval()`
+    - id: python-no-log-warn
+    - id: python-use-type-annotations
+    - id: rst-backticks
+    - id: rst-directive-colons
+    - id: rst-inline-touching-normal
+    - id: text-unicode-replacement-char
 - repo: https://github.com/citation-file-format/cffconvert
   rev: 054bda51dbe278b3e86f27c890e3f3ac877d616c
   hooks:
