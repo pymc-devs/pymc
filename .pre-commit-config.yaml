@@ -52,7 +52,7 @@ repos:
   rev: v0.6.5
   hooks:
     - id: ruff
-      args: ["--fix", "--output-format=full"]
+      args: [--fix, --show-fixes]
     - id: ruff-format
 - repo: https://github.com/MarcoGorelli/madforhooks
   rev: 0.4.1
