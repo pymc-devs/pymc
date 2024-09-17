@@ -961,7 +961,7 @@ class TestEulerMaruyama:
                 xs.append(xs[-1] + f * dt + np.sqrt(dt) * g * wt[i])
             return np.array(xs)
 
-        sde = lambda x, lam: (lam * x, sig2)  # noqa E731
+        sde = lambda x, lam: (lam * x, sig2)  # noqa: E731
         x = floatX(_gen_sde_path(sde, (lam,), dt, N, 5.0))
         z = x + numpy_rng.standard_normal(size=x.size) * sig2
         # build model

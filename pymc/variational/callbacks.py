@@ -27,12 +27,12 @@ class Callback:
 
 
 def relative(current: np.ndarray, prev: np.ndarray, eps=1e-6) -> np.ndarray:
-    diff = current - prev  # type: ignore
+    diff = current - prev
     return (np.abs(diff) + eps) / (np.abs(prev) + eps)
 
 
 def absolute(current: np.ndarray, prev: np.ndarray) -> np.ndarray:
-    diff = current - prev  # type: ignore
+    diff = current - prev
     return np.abs(diff)
 
 

@@ -83,10 +83,10 @@ def create_minibatch_rv(
 def get_scaling(total_size: Sequence[Variable], shape: TensorVariable) -> TensorVariable:
     """Get scaling constant for logp."""
     # mypy doesn't understand we can convert a shape TensorVariable into a tuple
-    shape = tuple(shape)  # type: ignore
+    shape = tuple(shape)  # type: ignore[assignment]
 
     # Scalar RV
-    if len(shape) == 0:  # type: ignore
+    if len(shape) == 0:  # type: ignore[arg-type]
         coef = total_size[0] if not NoneConst.equals(total_size[0]) else 1.0
     else:
         coefs = [t / shape[i] for i, t in enumerate(total_size) if not NoneConst.equals(t)]

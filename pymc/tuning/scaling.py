@@ -99,7 +99,7 @@ def adjust_precision(tau, scaling_bound=1e-8):
     return exp(bounded) ** 2
 
 
-def bound(a, l, u):  # noqa E741
+def bound(a, l, u):  # noqa: E741
     return np.maximum(np.minimum(a, u), l)
 
 

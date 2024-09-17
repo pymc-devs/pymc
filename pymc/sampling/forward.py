@@ -219,7 +219,7 @@ def compile_forward_sampling_function(
     # Walk the graph from inputs to outputs and tag the volatile variables
     nodes: list[Variable] = general_toposort(
         fg.outputs, deps=lambda x: x.owner.inputs if x.owner else []
-    )  # type: ignore
+    )  # type: ignore[call-overload]
     volatile_nodes: set[Any] = set()
     for node in nodes:
         if (
@@ -446,7 +446,7 @@ def sample_prior_predictive(
     )
 
     # All model variables have a name, but mypy does not know this
-    _log.info(f"Sampling: {sorted(volatile_basic_rvs, key=lambda var: var.name)}")  # type: ignore
+    _log.info(f"Sampling: {sorted(volatile_basic_rvs, key=lambda var: var.name)}")  # type: ignore[arg-type, return-value]
     values = zip(*(sampler_fn() for i in range(draws)))
 
     data = {k: np.stack(v) for k, v in zip(names, values)}
@@ -849,7 +849,7 @@ def sample_posterior_predictive(
     )
     sampler_fn = point_wrapper(_sampler_fn)
     # All model variables have a name, but mypy does not know this
-    _log.info(f"Sampling: {sorted(volatile_basic_rvs, key=lambda var: var.name)}")  # type: ignore
+    _log.info(f"Sampling: {sorted(volatile_basic_rvs, key=lambda var: var.name)}")  # type: ignore[arg-type, return-value]
     ppc_trace_t = _DefaultTrace(samples)
 
     progress = CustomProgress(

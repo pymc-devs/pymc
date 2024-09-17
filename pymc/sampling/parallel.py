@@ -364,8 +364,8 @@ class ProcessAdapter:
                     raise multiprocessing.TimeoutError()
                 process.join(timeout)
         except multiprocessing.TimeoutError:
-            logger.warn(
-                "Chain processes did not terminate as expected. " "Terminating forcefully..."
+            logger.warning(
+                "Chain processes did not terminate as expected. Terminating forcefully..."
             )
             for process in processes:
                 process.terminate()

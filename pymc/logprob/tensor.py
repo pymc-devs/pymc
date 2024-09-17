@@ -34,7 +34,6 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-
 from pathlib import Path
 
 from pytensor import tensor as pt
@@ -165,7 +164,7 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
     # the IR construction
     replacements = [(base_var, promised_valued_rv(base_var)) for base_var in base_vars]
     temp_fgraph = FunctionGraph(outputs=base_vars, clone=False)
-    toposort_replace(temp_fgraph, replacements)  # type: ignore
+    toposort_replace(temp_fgraph, replacements)  # type: ignore[arg-type]
     new_base_vars = temp_fgraph.outputs
 
     if is_join:
@@ -182,7 +181,7 @@ class MeasurableDimShuffle(MeasurableOp, DimShuffle):
 
     # Need to get the absolute path of `c_func_file`, otherwise it tries to
     # find it locally and fails when a new `Op` is initialized
-    c_func_file = str(DimShuffle.get_path(Path(DimShuffle.c_func_file)))
+    c_func_file = str(DimShuffle.get_path(Path(DimShuffle.c_func_file)))  # type: ignore[arg-type]
 
 
 @_logprob.register(MeasurableDimShuffle)

@@ -221,7 +221,7 @@ def assign_step_methods(
             has_gradient = getattr(var, "dtype") not in discrete_types
             if has_gradient:
                 try:
-                    tg.grad(model_logp, var)  # type: ignore
+                    tg.grad(model_logp, var)  # type: ignore[arg-type]
                 except (NotImplementedError, tg.NullTypeGradError):
                     has_gradient = False
 
@@ -229,7 +229,7 @@ def assign_step_methods(
             rv_var = model.values_to_rvs[var]
             selected = max(
                 methods_list,
-                key=lambda method, var=rv_var, has_gradient=has_gradient: method._competence(  # type: ignore
+                key=lambda method, var=rv_var, has_gradient=has_gradient: method._competence(  # type: ignore[misc]
                     var, has_gradient
                 ),
             )

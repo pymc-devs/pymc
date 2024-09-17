@@ -77,14 +77,14 @@ def freeze_dims_and_data(
         if isinstance(datum, SharedVariable)
     }
 
-    old_outs, old_coords, old_dim_lenghts = fg.outputs, fg._coords, fg._dim_lengths  # type: ignore
+    old_outs, old_coords, old_dim_lenghts = fg.outputs, fg._coords, fg._dim_lengths  # type: ignore[attr-defined]
     # Rebuild strict will force the recreation of RV nodes with updated static types
-    new_outs = clone_replace(old_outs, replace=frozen_replacements, rebuild_strict=False)  # type: ignore
+    new_outs = clone_replace(old_outs, replace=frozen_replacements, rebuild_strict=False)  # type: ignore[arg-type]
     for old_out, new_out in zip(old_outs, new_outs):
         new_out.name = old_out.name
     fg = FunctionGraph(outputs=new_outs, clone=False)
-    fg._coords = old_coords  # type: ignore
-    fg._dim_lengths = {  # type: ignore
+    fg._coords = old_coords  # type: ignore[attr-defined]
+    fg._dim_lengths = {  # type: ignore[attr-defined]
         dim: frozen_replacements.get(dim_length, dim_length)
         for dim, dim_length in old_dim_lenghts.items()
     }
@@ -99,7 +99,7 @@ def freeze_dims_and_data(
         if transform is None:
             new_value = rv.type()
         else:
-            new_value = transform.forward(rv, *rv.owner.inputs).type()  # type: ignore
+            new_value = transform.forward(rv, *rv.owner.inputs).type()  # type: ignore[arg-type]
         new_value.name = old_value.name
         replacements[old_value] = new_value
     fg.replace_all(tuple(replacements.items()), import_missing=True)

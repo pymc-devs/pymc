@@ -284,7 +284,7 @@ class TestDiracDelta:
         pymc_dist_params = {"c": 3}
         expected_rv_op_params = {"c": 3}
         reference_dist_params = {"c": 3}
-        reference_dist = lambda self: self.diracdelta_rng_fn  # noqa E731
+        reference_dist = lambda self: self.diracdelta_rng_fn  # noqa: E731
         checks_to_run = [
             "check_pymc_params_match_rv_op",
             "check_pymc_draws_match_reference",
