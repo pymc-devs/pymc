@@ -179,7 +179,7 @@ self.logp_sum_unscaledt = distribution.logp_sum(data)
 self.logp_nojac_unscaledt = distribution.logp_nojac(data)
 ```
 
-### Model context and Random Variable
+### Model Context and Random Variables
 
 I like to think that the ``with pm.Model() ...`` is a key syntax feature and *the* signature of PyMC model language, and in general a great out-of-the-box thinking/usage of the context manager in Python (with some critics, of course).
 
@@ -210,8 +210,12 @@ with EXPR as VAR:
     # DO SOME ADDITIONAL THINGS
 ```
 
+<<<<<<< Updated upstream
 So what happened within the ``with pm.Model() as model: ...`` block, besides the initial set up ``model = pm.Model()``?
 Starting from the most elementary:
+=======
+But what are the implications of this, besides the model instatiation ``model = pm.Model()``?
+>>>>>>> Stashed changes
 
 ### Random Variable
 
@@ -219,20 +223,21 @@ From the above session, we know that when we call e.g. ``pm.Normal('x', ...)`` w
 Thus, we have two equivalent ways of adding random variable to a model:
 
 ```python
-with pm.Model() as m:
+with pm.Model() as model:
     x = pm.Normal('x', mu=0., sigma=1.)
 
 print(type(x))                              # ==> <class 'pytensor.tensor.var.TensorVariable'>
-print(m.free_RVs)                           # ==> [x]
-print(logpt(x, 5.0))                        # ==> Elemwise{switch,no_inplace}.0
-print(logpt(x, 5.).eval({}))                # ==> -13.418938533204672
-print(m.logp({'x': 5.}))                    # ==> -13.418938533204672
+print(model.free_RVs)                       # ==> [x]
+print(pm.logp(x, 5.0))                      # ==> Elemwise{switch,no_inplace}.0
+print(pm.logp(x, 5.).eval({}))              # ==> -13.418938533204672
+print(model.compile_logp()({'x': 5.}))      # ==> -13.418938533204672
 ```
 
 In general, if a variable has observations (``observed`` parameter), the RV is an observed RV, otherwise if it has a ``transformed`` (``transform`` parameter) attribute, it is a transformed RV otherwise, it will be the most elementary form: a free RV.
+
 Note that this means that random variables with observations cannot be transformed.
 
-<!--
+
 Below, I will take a deeper look into transformed RV. A normal user
 might not necessarily come in contact with the concept, since a
 transformed RV and ``TransformedDistribution`` are intentionally not
@@ -313,29 +318,33 @@ transformation by nested applying multiple transforms to a Distribution
 
     z2 = Exp().apply(z)
     z2.transform is None  # ==> True
--->
+
 
 
 ### Additional things that ``pm.Model`` does
 
 In a way, ``pm.Model`` is a tape machine that records what is being added to the model, it keeps track the random variables (observed or unobserved) and potential term (additional tensor that to be added to the model logp), and also deterministic transformation (as bookkeeping):
+
 * named\_vars
 * free\_RVs
 * observed\_RVs
 * deterministics
 * potentials
 * missing\_values
+
 The model context then computes some simple model properties, builds a bijection mapping that transforms between dictionary and numpy/PyTensor ndarray, thus allowing the ``logp``/``dlogp`` functions to have two equivalent versions:
 One takes a ``dict`` as input and the other takes an ``ndarray`` as input.
 More importantly, a ``pm.Model()`` contains methods to compile PyTensor functions that take Random Variables (that are also initialised within the same model) as input, for example:
 
 ```python
+from pymc.blocking import DictToArrayBijection
+
 with pm.Model() as m:
     z = pm.Normal('z', 0., 10., shape=10)
     x = pm.Normal('x', z, 1., shape=10)
 
-print(m.initial_point)
-print(m.dict_to_array(m.initial_point))  # ==> m.bijection.map(m.initial_point)
+print(m.initial_point())
+print(DictToArrayBijection.map(m.initial_point))  # ==> m.bijection.map(m.initial_point)
 print(m.bijection.rmap(np.arange(20)))
 # {'z': array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]), 'x': array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.])}
 # [0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]
@@ -344,26 +353,19 @@ print(m.bijection.rmap(np.arange(20)))
 
 ```python
 list(filter(lambda x: "logp" in x, dir(pm.Model)))
-#['d2logp',
-# 'd2logp_nojac',
-# 'datalogpt',
-# 'dlogp',
-# 'dlogp_array',
-# 'dlogp_nojac',
-# 'fastd2logp',
-# 'fastd2logp_nojac',
-# 'fastdlogp',
-# 'fastdlogp_nojac',
-# 'fastlogp',
-# 'fastlogp_nojac',
-# 'logp',
-# 'logp_array',
-# 'logp_dlogp_function',
-# 'logp_elemwise',
-# 'logp_nojac',
-# 'logp_nojact',
-# 'logpt',
-# 'varlogpt']
+# ['compile_d2logp',
+#  'compile_dlogp',
+#  'compile_logp',
+#  'd2logp',
+#  'datalogp',
+#  'dlogp',
+#  'logp',
+#  'logp_dlogp_function',
+#  'observedlogp',
+#  'point_logps',
+#  'potentiallogp',
+#  'varlogp',
+#  'varlogp_nojac']
 ```
 
 ### Logp and dlogp
