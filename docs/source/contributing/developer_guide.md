@@ -167,21 +167,24 @@ As explained above, distribution in a ``pm.Model()`` context automatically turn 
 To get the logp of a free\_RV is just evaluating the ``logp()`` [on itself](https://github.com/pymc-devs/pymc/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc/model.py#L1212-L1213):
 
 ```python
-# self is a pytensor.tensor with a distribution attached
-self.logp_sum_unscaledt = distribution.logp_sum(self)
-self.logp_nojac_unscaledt = distribution.logp_nojac(self)
+class Normal(Continuous):
+    def logp(self, value):
+        mu = self.mu
+        tau = self.tau
+        return bound(
+            (-tau * (value - mu) ** 2 + pt.log(tau / np.pi / 2.0)) / 2.0,
+            tau > 0,
+        )
 ```
 
-Or for an observed RV. it evaluate the logp on the data:
+The logp evaluations are represented as tensors (``RV.logpt``). When we combine different ``logp`` values (for example, by summing all ``RVs.logpt`` to obtain the total logp for the model), PyTensor manages the dependencies automatically during the graph construction and compilation process.
+This dependence among nodes in the model graph means that whenever you want to generate a new function that takes new input tensors, you either need to regenerate the graph with the appropriate dependencies, or replace the node by editing the existing graph.
+The latter is facilitated by PyTensor's ``pytensor.clone_replace()`` function.
 
-```python
-self.logp_sum_unscaledt = distribution.logp_sum(data)
-self.logp_nojac_unscaledt = distribution.logp_nojac(data)
-```
 
 ### Model Context and Random Variables
 
-I like to think that the ``with pm.Model() ...`` is a key syntax feature and *the* signature of PyMC model language, and in general a great out-of-the-box thinking/usage of the context manager in Python (with some critics, of course).
+A signature feature of PyMC's syntax is the ``with pm.Model() ...`` expression, which extends the functionality of the context manager in Python to make expressing Bayesian models as natural as possible.
 
 Essentially [what a context manager does](https://www.python.org/dev/peps/pep-0343/) is:
 
@@ -210,12 +213,7 @@ with EXPR as VAR:
     # DO SOME ADDITIONAL THINGS
 ```
 
-<<<<<<< Updated upstream
-So what happened within the ``with pm.Model() as model: ...`` block, besides the initial set up ``model = pm.Model()``?
-Starting from the most elementary:
-=======
 But what are the implications of this, besides the model instatiation ``model = pm.Model()``?
->>>>>>> Stashed changes
 
 ### Random Variable
 
