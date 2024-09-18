@@ -492,6 +492,11 @@ class TestSamplePPC:
             ppc = pm.sample_posterior_predictive(trace, var_names=[], return_inferencedata=False)
             assert len(ppc) == 0
 
+            # test empty ppc with extend_inferencedata
+            assert isinstance(trace, InferenceData)
+            ppc = pm.sample_posterior_predictive(trace, var_names=[], extend_inferencedata=True)
+            assert ppc is trace
+
             # test keep_size parameter
             ppc = pm.sample_posterior_predictive(trace, return_inferencedata=False)
             assert ppc["a"].shape == (nchains, ndraws)
