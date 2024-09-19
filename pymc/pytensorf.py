@@ -18,6 +18,10 @@ from typing import cast
 
 import numpy as np
 import pandas as pd
+try:
+    import polars as pl
+except ImportError:
+    pl = None
 import pytensor
 import pytensor.tensor as pt
 import scipy.sparse as sps
@@ -111,6 +115,18 @@ def convert_data(data) -> np.ndarray | Variable:
             ret = np.ma.MaskedArray(vals, mask)
         else:
             ret = vals
+    elif hasattr(data, "to_numpy") and hasattr(data, "is_null"):
+        vals = data.to_numpy()
+        try:
+            null_data = data.is_null()
+        except AttributeError:
+            null_data = data.with_columns(pl.all().is_null())
+        mask = null_data.to_numpy()
+        if mask.any():
+            # there are missing values
+            ret = np.ma.MaskedArray(vals, mask)
+        else:
+            ret = vals
     elif isinstance(data, np.ndarray):
         if isinstance(data, np.ma.MaskedArray):
             if not data.mask.any():
@@ -141,11 +157,18 @@ def convert_data(data) -> np.ndarray | Variable:
     # Otherwise we only convert the precision.
     return smarttypeX(ret)
 
-
-@_as_tensor_variable.register(pd.Series)
-@_as_tensor_variable.register(pd.DataFrame)
-def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVariable:
-    return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
+if pl is not None:
+    @_as_tensor_variable.register(pd.Series)
+    @_as_tensor_variable.register(pd.DataFrame)
+    @_as_tensor_variable.register(pl.DataFrame)
+    @_as_tensor_variable.register(pl.Series)
+    def dataframe_to_tensor_variable(df: pd.DataFrame | pl.DataFrame, *args, **kwargs) -> TensorVariable:
+        return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
+else:
+    @_as_tensor_variable.register(pd.Series)
+    @_as_tensor_variable.register(pd.DataFrame)
+    def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVariable:
+        return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
 
 
 def extract_obs_data(x: TensorVariable) -> np.ndarray:
