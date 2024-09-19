@@ -17,6 +17,11 @@ import shutil
 import tempfile
 import warnings
 
+<<<<<<< HEAD
+=======
+from copy import deepcopy
+from dataclasses import fields
+>>>>>>> 741b38626 (Fixup state)
 from logging.handlers import BufferingHandler
 
 import numpy as np
@@ -28,6 +33,7 @@ from pytensor.gradient import verify_grad as at_verify_grad
 
 import pymc as pm
 
+from pymc.step_methods.state import equal_dataclass_values
 from pymc.testing import fast_unstable_sampling_mode
 from tests.models import mv_simple, mv_simple_coarse
 
@@ -177,3 +183,16 @@ class RVsAssignmentStepsTester:
             assert {m.rvs_to_values[c1], m.rvs_to_values[c2]} == set(
                 step([c1, c2], **step_kwargs).vars
             )
+
+
+def equal_sampling_states(this, other):
+    if this.__class__ != other.__class__:
+        return False
+    this_fields = set([f.name for f in fields(this)])
+    other_fields = set([f.name for f in fields(other)])
+    for field in this_fields:
+        this_val = getattr(this, field)
+        other_val = getattr(other, field)
+        if not equal_dataclass_values(this_val, other_val):
+            return False
+    return this_fields == other_fields
