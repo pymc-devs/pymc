@@ -31,7 +31,8 @@ from pytensor.graph.basic import Variable
 
 from pymc.blocking import PointType, StatDtype, StatsDict, StatShape, StatsType
 from pymc.model import modelcontext
-from pymc.util import get_random_generator
+from pymc.step_methods.state import DataClassState, WithSamplingState, dataclass_state
+from pymc.util import RandomGenerator, get_random_generator
 
 __all__ = ("Competence", "CompoundStep")
 
@@ -87,7 +88,12 @@ def infer_warn_stats_info(
     return stats_dtypes, sds
 
 
-class BlockedStep(ABC):
+@dataclass_state
+class StepMethodState(DataClassState):
+    rng: np.random.Generator
+
+
+class BlockedStep(ABC, WithSamplingState):
     stats_dtypes: list[dict[str, type]] = []
     """A list containing <=1 dictionary that maps stat names to dtypes.
 
@@ -195,6 +201,9 @@ class BlockedStep(ABC):
         if hasattr(self, "tune"):
             self.tune = False
 
+    def set_rng(self, rng: RandomGenerator):
+        self.rng = get_random_generator(rng, copy=False)
+
 
 def flat_statname(sampler_idx: int, sname: str) -> str:
     """Get the flat-stats name for a samplers stat."""
@@ -215,9 +224,19 @@ def get_stats_dtypes_shapes_from_steps(
     return result
 
 
-class CompoundStep:
+@dataclass_state
+class CompoundStepState(DataClassState):
+    methods: list[StepMethodState]
+
+    def __init__(self, methods: list[StepMethodState]):
+        self.methods = methods
+
+
+class CompoundStep(WithSamplingState):
     """Step method composed of a list of several other step
     methods applied in sequence."""
+
+    _state_class = CompoundStepState
 
     def __init__(self, methods):
         self.methods = list(methods)
@@ -251,8 +270,25 @@ class CompoundStep:
                 method.reset_tuning()
 
     @property
+    def sampling_state(self) -> DataClassState:
+        return CompoundStepState(methods=[method.sampling_state for method in self.methods])
+
+    @sampling_state.setter
+    def sampling_state(self, state: DataClassState):
+        assert isinstance(
+            state, self._state_class
+        ), f"Invalid sampling state class {type(state)}. Expected {self._state_class}"
+        for method, state_method in zip(self.methods, state.methods):
+            method.sampling_state = state_method
+
+    @property
     def vars(self) -> list[Variable]:
         return [var for method in self.methods for var in method.vars]
+
+    def set_rng(self, rng: RandomGenerator):
+        _rngs = get_random_generator(rng, copy=False).spawn(len(self.methods))
+        for method, _rng in zip(self.methods, _rngs):
+            method.set_rng(_rng)
 
 
 def flatten_steps(step: BlockedStep | CompoundStep) -> list[BlockedStep]:

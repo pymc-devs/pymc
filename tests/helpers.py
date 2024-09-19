@@ -17,11 +17,8 @@ import shutil
 import tempfile
 import warnings
 
-<<<<<<< HEAD
-=======
 from copy import deepcopy
 from dataclasses import fields
->>>>>>> 741b38626 (Fixup state)
 from logging.handlers import BufferingHandler
 
 import numpy as np
@@ -146,6 +143,21 @@ class StepMethodTester:
         _, model_coarse, _ = mv_simple_coarse()
         with model:
             step = step_fn(C, model_coarse)
+            orig_step = deepcopy(step)
+            orig_state = step.sampling_state
+            assert equal_sampling_states(step.sampling_state, orig_state)
+
+            ip = model.initial_point()
+            value1, _ = step.step(ip)
+            final_state = step.sampling_state
+            step.sampling_state = orig_state
+
+            value2, _ = step.step(ip)
+
+            assert equal_sampling_states(step.sampling_state, final_state)
+            assert equal_dataclass_values(value1, value2)
+
+            step.sampling_state = orig_state
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", "More chains .* than draws .*", UserWarning)
                 idata = pm.sample(
@@ -164,6 +176,14 @@ class StepMethodTester:
             assert idata.posterior.sizes["draw"] == draws
             self.check_stat(check, idata)
             self.check_stat_dtype(idata, step)
+
+            curr_state = step.sampling_state
+            assert not equal_sampling_states(orig_state, curr_state)
+
+            orig_step.sampling_state = curr_state
+
+            assert equal_sampling_states(orig_step.sampling_state, curr_state)
+            assert orig_step.sampling_state is not curr_state
 
 
 class RVsAssignmentStepsTester:
