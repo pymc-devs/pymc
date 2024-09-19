@@ -12,14 +12,33 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+
 import numpy as np
 
 from scipy import stats
 
 from pymc.stats.convergence import SamplerWarning, WarningType
+from pymc.step_methods.state import DataClassState, WithSamplingState, dataclass_state
 
 
-class DualAverageAdaptation:
+@dataclass_state
+class StepSizeState(DataClassState):
+    _log_step: np.ndarray
+    _log_bar: np.ndarray
+    _hbar: float
+    _count: int
+    _mu: np.ndarray
+    _tuned_stats: list
+    _initial_step: np.ndarray
+    _target: float
+    _k: float
+    _t0: float
+    _gamma: float
+
+
+class DualAverageAdaptation(WithSamplingState):
+    _state_class = StepSizeState
+
     def __init__(self, initial_step, target, gamma, k, t0):
         self._initial_step = initial_step
         self._target = target

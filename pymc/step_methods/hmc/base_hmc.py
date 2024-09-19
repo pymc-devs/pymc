@@ -27,14 +27,19 @@ from pymc.exceptions import SamplingError
 from pymc.model import Point, modelcontext
 from pymc.pytensorf import floatX
 from pymc.stats.convergence import SamplerWarning, WarningType
-from pymc.step_methods import step_sizes
 from pymc.step_methods.arraystep import GradientSharedStep
 from pymc.step_methods.compound import StepMethodState
 from pymc.step_methods.hmc import integration
 from pymc.step_methods.hmc.integration import IntegrationError, State
-from pymc.step_methods.hmc.quadpotential import QuadPotentialDiagAdapt, quad_potential
+from pymc.step_methods.hmc.quadpotential import (
+    PotentialState,
+    QuadPotentialDiagAdapt,
+    quad_potential,
+)
+from pymc.step_methods.state import dataclass_state
+from pymc.step_methods.step_sizes import DualAverageAdaptation, StepSizeState
 from pymc.tuning import guess_scaling
-from pymc.util import get_value_vars_from_user_vars
+from pymc.util import RandomGenerator, get_random_generator, get_value_vars_from_user_vars
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +58,26 @@ class HMCStepData(NamedTuple):
     stats: dict[str, Any]
 
 
+@dataclass_state
+class BaseHMCState(StepMethodState):
+    adapt_step_size: bool
+    Emax: float
+    iter_count: int
+    step_size: np.ndarray
+    step_adapt: StepSizeState
+    target_accept: float
+    tune: bool
+    potential: PotentialState
+    _num_divs_sample: int
+
+
 class BaseHMC(GradientSharedStep):
     """Superclass to implement Hamiltonian/hybrid monte carlo."""
 
     integrator: integration.CpuLeapfrogIntegrator
     default_blocked = True
+
+    _state_class = BaseHMCState
 
     def __init__(
         self,
@@ -134,9 +154,7 @@ class BaseHMC(GradientSharedStep):
         size = sum(v.size for v in nuts_vars)
 
         self.step_size = step_scale / (size**0.25)
-        self.step_adapt = step_sizes.DualAverageAdaptation(
-            self.step_size, target_accept, gamma, k, t0
-        )
+        self.step_adapt = DualAverageAdaptation(self.step_size, target_accept, gamma, k, t0)
         self.target_accept = target_accept
         self.tune = True
 
@@ -268,3 +286,7 @@ class BaseHMC(GradientSharedStep):
     def reset(self, start=None):
         self.tune = True
         self.potential.reset()
+
+    def set_rng(self, rng: RandomGenerator):
+        self.rng = get_random_generator(rng, copy=False)
+        self.potential.set_rng(self.rng.spawn(1)[0])
