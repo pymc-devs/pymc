@@ -13,11 +13,12 @@
 #   limitations under the License.
 import numpy as np
 import pytest
-from pymc.dispatch import dispatch_jax
+
 from pytensor import function
+
 import pymc as pm
 
-
+from pymc.dispatch import dispatch_jax  # noqa: F401
 
 jax = pytest.importorskip("jax")
 
