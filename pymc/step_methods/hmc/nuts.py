@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from collections import namedtuple
+from dataclasses import field
 
 import numpy as np
 
@@ -23,11 +24,18 @@ from pymc.pytensorf import floatX
 from pymc.stats.convergence import SamplerWarning
 from pymc.step_methods.compound import Competence
 from pymc.step_methods.hmc import integration
-from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
+from pymc.step_methods.hmc.base_hmc import BaseHMC, BaseHMCState, DivergenceInfo, HMCStepData
 from pymc.step_methods.hmc.integration import IntegrationError, State
+from pymc.step_methods.state import dataclass_state
 from pymc.vartypes import continuous_types
 
 __all__ = ["NUTS"]
+
+
+@dataclass_state
+class NUTSState(BaseHMCState):
+    max_treedepth: int = field(metadata={"frozen": True})
+    early_max_treedepth: int = field(metadata={"frozen": True})
 
 
 class NUTS(BaseHMC):

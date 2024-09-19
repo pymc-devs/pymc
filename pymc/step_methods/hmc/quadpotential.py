@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import warnings
 
-from typing import overload
+from dataclasses import field
+from typing import Any, overload
 
 import numpy as np
 import pytensor
@@ -25,6 +26,8 @@ import scipy.linalg
 from scipy.sparse import issparse
 
 from pymc.pytensorf import floatX
+from pymc.step_methods.state import DataClassState, WithSamplingState, dataclass_state
+from pymc.util import RandomGenerator, get_random_generator
 
 __all__ = [
     "quad_potential",
@@ -100,11 +103,18 @@ class PositiveDefiniteError(ValueError):
         return f"Scaling is not positive definite: {self.msg}. Check indexes {self.idx}."
 
 
-class QuadPotential:
+@dataclass_state
+class PotentialState(DataClassState):
+    rng: np.random.Generator
+
+
+class QuadPotential(WithSamplingState):
     dtype: np.dtype
 
+    _state_class = PotentialState
+
     def __init__(self, rng=None):
-        self.rng = np.random.default_rng(rng)
+        self.rng = get_random_generator(rng)
 
     @overload
     def velocity(self, x: np.ndarray, out: None) -> np.ndarray: ...
@@ -157,14 +167,41 @@ class QuadPotential:
     def stats(self):
         return {"largest_eigval": np.nan, "smallest_eigval": np.nan}
 
+    def set_rng(self, rng: RandomGenerator):
+        self.rng = get_random_generator(rng, copy=False)
+
 
 def isquadpotential(value):
     """Check whether an object might be a QuadPotential object."""
     return isinstance(value, QuadPotential)
 
 
+@dataclass_state
+class QuadPotentialDiagAdaptState(PotentialState):
+    _var: np.ndarray
+    _stds: np.ndarray
+    _inv_stds: np.ndarray
+    _foreground_var: WeightedVarianceState
+    _background_var: WeightedVarianceState
+    _n_samples: int
+    adaptation_window: int
+    _mass_trace: list[np.ndarray] | None
+
+    dtype: Any = field(metadata={"frozen": True})
+    _n: int = field(metadata={"frozen": True})
+    _discard_window: int = field(metadata={"frozen": True})
+    _early_update: int = field(metadata={"frozen": True})
+    _initial_mean: np.ndarray = field(metadata={"frozen": True})
+    _initial_diag: np.ndarray = field(metadata={"frozen": True})
+    _initial_weight: np.ndarray = field(metadata={"frozen": True})
+    adaptation_window_multiplier: float = field(metadata={"frozen": True})
+    _store_mass_matrix_trace: bool = field(metadata={"frozen": True})
+
+
 class QuadPotentialDiagAdapt(QuadPotential):
     """Adapt a diagonal mass matrix from the sample variances."""
+
+    _state_class = QuadPotentialDiagAdaptState
 
     def __init__(
         self,
@@ -346,8 +383,19 @@ class QuadPotentialDiagAdapt(QuadPotential):
             raise ValueError("\n".join(errmsg))
 
 
-class _WeightedVariance:
+@dataclass_state
+class WeightedVarianceState(DataClassState):
+    n_samples: int
+    mean: np.ndarray
+    raw_var: np.ndarray
+
+    _dtype: Any = field(metadata={"frozen": True})
+
+
+class _WeightedVariance(WithSamplingState):
     """Online algorithm for computing mean of variance."""
+
+    _state_class = WeightedVarianceState
 
     def __init__(
         self, nelem, initial_mean=None, initial_variance=None, initial_weight=0, dtype="d"
@@ -390,7 +438,16 @@ class _WeightedVariance:
         return self.mean.copy(dtype=self._dtype)
 
 
-class _ExpWeightedVariance:
+@dataclass_state
+class ExpWeightedVarianceState(DataClassState):
+    _alpha: float
+    _mean: np.ndarray
+    _var: np.ndarray
+
+
+class _ExpWeightedVariance(WithSamplingState):
+    _state_class = ExpWeightedVarianceState
+
     def __init__(self, n_vars, *, init_mean, init_var, alpha):
         self._variance = init_var
         self._mean = init_mean
@@ -415,7 +472,18 @@ class _ExpWeightedVariance:
         return out
 
 
+@dataclass_state
+class QuadPotentialDiagAdaptExpState(QuadPotentialDiagAdaptState):
+    _alpha: float
+    _stop_adaptation: float
+    _variance_estimator: ExpWeightedVarianceState
+
+    _variance_estimator_grad: ExpWeightedVarianceState | None = None
+
+
 class QuadPotentialDiagAdaptExp(QuadPotentialDiagAdapt):
+    _state_class = QuadPotentialDiagAdaptExpState
+
     def __init__(self, *args, alpha, use_grads=False, stop_adaptation=None, rng=None, **kwargs):
         """Set up a diagonal mass matrix.
 
@@ -526,7 +594,7 @@ class QuadPotentialDiag(QuadPotential):
         self.s = s
         self.inv_s = 1.0 / s
         self.v = v
-        self.rng = np.random.default_rng(rng)
+        self.rng = get_random_generator(rng)
 
     def velocity(self, x, out=None):
         """Compute the current velocity at a position in parameter space."""
@@ -572,7 +640,7 @@ class QuadPotentialFullInv(QuadPotential):
             dtype = pytensor.config.floatX
         self.dtype = dtype
         self.L = floatX(scipy.linalg.cholesky(A, lower=True))
-        self.rng = np.random.default_rng(rng)
+        self.rng = get_random_generator(rng)
 
     def velocity(self, x, out=None):
         """Compute the current velocity at a position in parameter space."""
@@ -621,7 +689,7 @@ class QuadPotentialFull(QuadPotential):
         self._cov = np.array(cov, dtype=self.dtype, copy=True)
         self._chol = scipy.linalg.cholesky(self._cov, lower=True)
         self._n = len(self._cov)
-        self.rng = np.random.default_rng(rng)
+        self.rng = get_random_generator(rng)
 
     def velocity(self, x, out=None):
         """Compute the current velocity at a position in parameter space."""
@@ -646,8 +714,30 @@ class QuadPotentialFull(QuadPotential):
     __call__ = random
 
 
+@dataclass_state
+class QuadPotentialFullAdaptState(PotentialState):
+    _previous_update: int
+    _cov: np.ndarray
+    _chol: np.ndarray
+    _chol_error: scipy.linalg.LinAlgError | ValueError | None = None
+    _foreground_cov: WeightedCovarianceState
+    _background_cov: WeightedCovarianceState
+    _n_samples: int
+    adaptation_window: int
+
+    dtype: Any = field(metadata={"frozen": True})
+    _n: int = field(metadata={"frozen": True})
+    _update_window: int = field(metadata={"frozen": True})
+    _initial_mean: np.ndarray = field(metadata={"frozen": True})
+    _initial_cov: np.ndarray = field(metadata={"frozen": True})
+    _initial_weight: np.ndarray = field(metadata={"frozen": True})
+    adaptation_window_multiplier: float = field(metadata={"frozen": True})
+
+
 class QuadPotentialFullAdapt(QuadPotentialFull):
     """Adapt a dense mass matrix using the sample covariances."""
+
+    _state_class = QuadPotentialFullAdaptState
 
     def __init__(
         self,
@@ -689,7 +779,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
         self.adaptation_window_multiplier = float(adaptation_window_multiplier)
         self._update_window = int(update_window)
 
-        self.rng = np.random.default_rng(rng)
+        self.rng = get_random_generator(rng)
 
         self.reset()
 
@@ -742,7 +832,16 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
             raise ValueError(str(self._chol_error))
 
 
-class _WeightedCovariance:
+@dataclass_state
+class WeightedCovarianceState(DataClassState):
+    n_samples: float
+    mean: np.ndarray
+    raw_cov: np.ndarray
+
+    _dtype: Any = field(metadata={"frozen": True})
+
+
+class _WeightedCovariance(WithSamplingState):
     """Online algorithm for computing mean and covariance
 
     This implements the `Welford's algorithm
@@ -751,6 +850,8 @@ class _WeightedCovariance:
     <https://github.com/stan-dev/math>`_.
 
     """
+
+    _state_class = WeightedCovarianceState
 
     def __init__(
         self,
@@ -827,7 +928,7 @@ if chol_available:
             self.size = A.shape[0]
             self.factor = factor = cholmod.cholesky(A)
             self.d_sqrt = np.sqrt(factor.D())
-            self.rng = np.random.default_rng(rng)
+            self.rng = get_random_generator(rng)
 
         def velocity(self, x):
             """Compute the current velocity at a position in parameter space."""

@@ -14,14 +14,16 @@
 
 from __future__ import annotations
 
+from dataclasses import field
 from typing import Any
 
 import numpy as np
 
 from pymc.stats.convergence import SamplerWarning
 from pymc.step_methods.compound import Competence
-from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
+from pymc.step_methods.hmc.base_hmc import BaseHMC, BaseHMCState, DivergenceInfo, HMCStepData
 from pymc.step_methods.hmc.integration import IntegrationError, State
+from pymc.step_methods.state import dataclass_state
 from pymc.vartypes import discrete_types
 
 __all__ = ["HamiltonianMC"]
@@ -29,6 +31,12 @@ __all__ = ["HamiltonianMC"]
 
 def unif(step_size, elow=0.85, ehigh=1.15, rng: np.random.Generator | None = None):
     return (rng or np.random).uniform(elow, ehigh) * step_size
+
+
+@dataclass_state
+class HamiltonianMCState(BaseHMCState):
+    path_length: float = field(metadata={"frozen": True})
+    max_steps: int = field(metadata={"frozen": True})
 
 
 class HamiltonianMC(BaseHMC):
