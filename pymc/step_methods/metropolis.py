@@ -140,22 +140,25 @@ class Metropolis(ArrayStepShared):
 
         Parameters
         ----------
-        vars: list
-            List of value variables for sampler
-        S: standard deviation or covariance matrix
-            Some measure of variance to parameterize proposal distribution
-        proposal_dist: function
+        vars : list, optional
+            List of value variables for sampler.
+        S : array_like with shape (N,) or (N, N), optional
+            Scale parameter of normal distribution.
+            If `S` is one dimensional, it is the standard deviation of a normal distribution;
+            If `S` is two dimensional, it is the covariance matrix of a multivariate normal distribution.
+        proposal_dist : callable, optional
             Function that returns zero-mean deviates when parameterized with
-            S (and n). Defaults to normal.
-        scaling: scalar or array
-            Initial scale factor for proposal. Defaults to 1.
-        tune: bool
+            `S` (and n). If `S` is one dimensional, it defaults to a normal, with `S` as its standard deviation;
+            If `S` is two dimensional, it defaults to a multivariate normal with `S` as its covariance matrix.
+        scaling : scalar or array_like, default 1.0
+            Initial scale factor for proposal. Defaults to 1.0.
+        tune : bool
             Flag for tuning. Defaults to True.
-        tune_interval: int
+        tune_interval : int
             The frequency of tuning. Defaults to 100 iterations.
-        model: PyMC Model
+        model : Model
             Optional model for sampling step. Defaults to None (taken from context).
-        mode: string or `Mode` instance.
+        mode : string or `Mode` instance.
             compilation mode passed to PyTensor functions
         """
 
@@ -443,15 +446,15 @@ class BinaryGibbsMetropolis(ArrayStep):
 
     Parameters
     ----------
-    vars: list
+    vars : list
         List of value variables for sampler
-    order: list or 'random'
+    order : list or 'random'
         List of integers indicating the Gibbs update order
         e.g., [0, 2, 1, ...]. Default is random
-    transit_p: float
+    transit_p : float
         The diagonal of the transition kernel. A value > .5 gives anticorrelated proposals,
         which resulting in more efficient antithetical sampling. Default is 0.8
-    model: PyMC Model
+    model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
 
     """
