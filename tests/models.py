@@ -186,3 +186,14 @@ def simple_normal(bounded_prior=False):
         pm.Normal("X_obs", mu=mu_i, sigma=sigma, observed=x0)
 
     return model.initial_point(), model, None
+
+
+def simple_binary():
+    p1 = 0.5
+    p2 = 0.5
+
+    with pm.Model() as model:
+        pm.Bernoulli("d1", p=p1)
+        pm.Bernoulli("d2", p=p2)
+
+    return model.initial_point(), model, (p1, p2)

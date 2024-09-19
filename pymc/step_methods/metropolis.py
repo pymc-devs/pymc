@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from collections.abc import Callable
+from dataclasses import field
+from typing import Any
 
 import numpy as np
 import numpy.random as nr
@@ -40,7 +42,8 @@ from pymc.step_methods.arraystep import (
     StatsType,
     metrop_select,
 )
-from pymc.step_methods.compound import Competence
+from pymc.step_methods.compound import Competence, StepMethodState
+from pymc.step_methods.state import dataclass_state
 
 __all__ = [
     "Metropolis",
@@ -111,17 +114,39 @@ class MultivariateNormalProposal(Proposal):
             return np.dot(self.chol, b)
 
 
+@dataclass_state
+class MetropolisState(StepMethodState):
+    scaling: np.ndarray
+    tune: bool
+    steps_until_tune: float
+    tune_interval: float
+    accepted_sum: np.ndarray
+    accept_rate_iter: np.ndarray
+    accepted_iter: np.ndarray
+    enum_dims: np.ndarray
+
+    discrete: np.ndarray = field(metadata={"frozen": True})
+    any_discrete: bool = field(metadata={"frozen": True})
+    all_discrete: bool = field(metadata={"frozen": True})
+    elemwise_update: bool = field(metadata={"frozen": True})
+    _untuned_settings: dict[str, np.ndarray | float] = field(metadata={"frozen": True})
+    mode: Any = field(metadata={"frozen": True})
+
+
 class Metropolis(ArrayStepShared):
     """Metropolis-Hastings sampling step"""
 
     name = "metropolis"
 
+    default_blocked = False
     stats_dtypes_shapes = {
         "accept": (np.float64, []),
         "accepted": (np.float64, []),
         "tune": (bool, []),
         "scaling": (np.float64, []),
     }
+
+    _state_class = MetropolisState
 
     def __init__(
         self,
@@ -346,6 +371,15 @@ def tune(scale, acc_rate):
     )
 
 
+@dataclass_state
+class BinaryMetropolisState(StepMethodState):
+    tune: bool
+    accepted: int
+    scaling: float
+    tune_interval: int
+    steps_until_tune: int
+
+
 class BinaryMetropolis(ArrayStep):
     """Metropolis-Hastings optimized for binary variables
 
@@ -375,7 +409,9 @@ class BinaryMetropolis(ArrayStep):
         "p_jump": (np.float64, []),
     }
 
-    def __init__(self, vars, scaling=1.0, tune=True, tune_interval=100, model=None):
+    _state_class = BinaryMetropolisState
+
+    def __init__(self, vars, scaling=1.0, tune=True, tune_interval=100, model=None, rng=None):
         model = pm.modelcontext(model)
 
         self.scaling = scaling
@@ -389,7 +425,7 @@ class BinaryMetropolis(ArrayStep):
         if not all([v.dtype in pm.discrete_types for v in vars]):
             raise ValueError("All variables must be Bernoulli for BinaryMetropolis")
 
-        super().__init__(vars, [model.compile_logp()])
+        super().__init__(vars, [model.compile_logp()], rng=rng)
 
     def astep(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         logp = args[0]
@@ -445,6 +481,14 @@ class BinaryMetropolis(ArrayStep):
         return Competence.INCOMPATIBLE
 
 
+@dataclass_state
+class BinaryGibbsMetropolisState(StepMethodState):
+    tune: bool
+    transit_p: int
+    shuffle_dims: bool
+    order: list
+
+
 class BinaryGibbsMetropolis(ArrayStep):
     """A Metropolis-within-Gibbs step method optimized for binary variables
 
@@ -472,7 +516,9 @@ class BinaryGibbsMetropolis(ArrayStep):
         "tune": (bool, []),
     }
 
-    def __init__(self, vars, order="random", transit_p=0.8, model=None):
+    _state_class = BinaryGibbsMetropolisState
+
+    def __init__(self, vars, order="random", transit_p=0.8, model=None, rng=None):
         model = pm.modelcontext(model)
 
         # Doesn't actually tune, but it's required to emit a sampler stat
@@ -498,7 +544,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         if not all([v.dtype in pm.discrete_types for v in vars]):
             raise ValueError("All variables must be binary for BinaryGibbsMetropolis")
 
-        super().__init__(vars, [model.compile_logp()])
+        super().__init__(vars, [model.compile_logp()], rng=rng)
 
     def reset_tuning(self):
         # There are no tuning parameters in this step method.
@@ -557,6 +603,13 @@ class BinaryGibbsMetropolis(ArrayStep):
         return Competence.INCOMPATIBLE
 
 
+@dataclass_state
+class CategoricalGibbsMetropolisState(StepMethodState):
+    shuffle_dims: bool
+    dimcats: list[tuple]
+    tune: bool
+
+
 class CategoricalGibbsMetropolis(ArrayStep):
     """A Metropolis-within-Gibbs step method optimized for categorical variables.
 
@@ -572,6 +625,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
     stats_dtypes_shapes = {
         "tune": (bool, []),
     }
+
+    _state_class = CategoricalGibbsMetropolisState
 
     def __init__(self, vars, proposal="uniform", order="random", model=None, rng=None):
         model = pm.modelcontext(model)
@@ -728,6 +783,18 @@ class CategoricalGibbsMetropolis(ArrayStep):
         return Competence.INCOMPATIBLE
 
 
+@dataclass_state
+class DEMetropolisState(StepMethodState):
+    scaling: np.ndarray
+    lamb: float
+    tune: str | None
+    tune_interval: int
+    steps_until_tune: int
+    accepted: int
+
+    mode: Any = field(metadata={"frozen": True})
+
+
 class DEMetropolis(PopulationArrayStepShared):
     """
     Differential Evolution Metropolis sampling step.
@@ -778,6 +845,8 @@ class DEMetropolis(PopulationArrayStepShared):
         "lambda": (np.float64, []),
     }
 
+    _state_class = DEMetropolisState
+
     def __init__(
         self,
         vars=None,
@@ -789,6 +858,7 @@ class DEMetropolis(PopulationArrayStepShared):
         tune_interval=100,
         model=None,
         mode=None,
+        rng=None,
         **kwargs,
     ):
         model = pm.modelcontext(model)
@@ -824,7 +894,7 @@ class DEMetropolis(PopulationArrayStepShared):
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
         self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
-        super().__init__(vars, shared)
+        super().__init__(vars, shared, rng=rng)
 
     def astep(self, q0: RaveledVars) -> tuple[RaveledVars, StatsType]:
         point_map_info = q0.point_map_info
@@ -843,9 +913,11 @@ class DEMetropolis(PopulationArrayStepShared):
 
         # differential evolution proposal
         # select two other chains
-        ir1, ir2 = np.random.choice(self.other_chains, 2, replace=False)
-        r1 = DictToArrayBijection.map(self.population[ir1])
-        r2 = DictToArrayBijection.map(self.population[ir2])
+        if self.other_chains is None:  # pragma: no cover
+            raise RuntimeError("Population sampler has not been linked to the other chains")
+        ir1, ir2 = self.rng.choice(self.other_chains, 2, replace=False)
+        r1 = DictToArrayBijection.map(self.population[ir1])  # type: ignore
+        r2 = DictToArrayBijection.map(self.population[ir2])  # type: ignore
         # propose a jump
         q = floatX(q0d + self.lamb * (r1.data - r2.data) + epsilon)
 
@@ -870,6 +942,21 @@ class DEMetropolis(PopulationArrayStepShared):
         if var.dtype in pm.discrete_types:
             return Competence.INCOMPATIBLE
         return Competence.COMPATIBLE
+
+
+@dataclass_state
+class DEMetropolisZState(StepMethodState):
+    scaling: np.ndarray
+    lamb: float
+    tune: bool
+    tune_target: str | None
+    tune_interval: int
+    steps_until_tune: int
+    accepted: int
+    _history: list
+
+    _untuned_settings: dict[str, np.ndarray | float] = field(metadata={"frozen": True})
+    mode: Any = field(metadata={"frozen": True})
 
 
 class DEMetropolisZ(ArrayStepShared):
@@ -925,6 +1012,8 @@ class DEMetropolisZ(ArrayStepShared):
         "lambda": (np.float64, []),
     }
 
+    _state_class = DEMetropolisZState
+
     def __init__(
         self,
         vars=None,
@@ -937,6 +1026,7 @@ class DEMetropolisZ(ArrayStepShared):
         tune_drop_fraction: float = 0.9,
         model=None,
         mode=None,
+        rng=None,
         **kwargs,
     ):
         model = pm.modelcontext(model)
@@ -984,7 +1074,7 @@ class DEMetropolisZ(ArrayStepShared):
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
         self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
-        super().__init__(vars, shared)
+        super().__init__(vars, shared, rng=rng)
 
     def reset_tuning(self):
         """Resets the tuned sampler parameters and history to their initial values."""
