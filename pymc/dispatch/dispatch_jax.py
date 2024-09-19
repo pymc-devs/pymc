@@ -15,14 +15,18 @@ import jax
 
 from pytensor.link.jax.dispatch import jax_funcify
 
-from pymc.distributions.continous import TruncatedNormalRV
+from pymc.distributions.continuous import TruncatedNormalRV
 
 
 @jax_funcify.register(TruncatedNormalRV)
 def jax_funcify_TruncatedNormalRV(op, **kwargs):
     def trunc_normal_fn(key, size, mu, sigma, lower, upper):
-        return None, jax.random.truncated_normal(
-            key["jax_state"], lower=lower, upper=upper, shape=size
-        )
+        rng_key = key["jax_state"]
+        rng_key, sampling_key = jax.random.split(rng_key, 2)
+        key["jax_state"] = rng_key
+
+        truncnorm = jax.nn.initializers.truncated_normal(sigma, lower=lower, upper=upper)
+
+        return key, truncnorm(key["jax_state"], size) + mu
 
     return trunc_normal_fn

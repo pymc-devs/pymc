@@ -13,12 +13,13 @@
 #   limitations under the License.
 import numpy as np
 import pytest
-
+from pymc.dispatch import dispatch_jax
 from pytensor import function
-
 import pymc as pm
 
-jax = pytest.importorskip("jax", reason="JAX is not installed")
+
+
+jax = pytest.importorskip("jax")
 
 
 def test_jax_TruncatedNormal():
