@@ -21,13 +21,25 @@ from pymc.blocking import RaveledVars, StatsType
 from pymc.model import modelcontext
 from pymc.pytensorf import compile_pymc, join_nonshared_inputs, make_shared_replacements
 from pymc.step_methods.arraystep import ArrayStepShared
-from pymc.step_methods.compound import Competence
+from pymc.step_methods.compound import Competence, StepMethodState
+from pymc.step_methods.state import dataclass_state
 from pymc.util import get_value_vars_from_user_vars
 from pymc.vartypes import continuous_types
 
 __all__ = ["Slice"]
 
 LOOP_ERR_MSG = "max slicer iters %d exceeded"
+
+
+dataclass_state
+
+
+@dataclass_state
+class SliceState(StepMethodState):
+    w: np.ndarray
+    tune: bool
+    n_tunes: float
+    iter_limit: float
 
 
 class Slice(ArrayStepShared):
@@ -60,6 +72,8 @@ class Slice(ArrayStepShared):
         "nstep_out": (int, []),
         "nstep_in": (int, []),
     }
+
+    _state_class = SliceState
 
     def __init__(
         self, vars=None, w=1.0, tune=True, model=None, iter_limit=np.inf, rng=None, **kwargs
