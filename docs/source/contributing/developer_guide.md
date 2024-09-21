@@ -217,8 +217,7 @@ But what are the implications of this, besides the model instatiation ``model = 
 
 ### Random Variable
 
-From the above session, we know that when we call e.g. ``pm.Normal('x', ...)`` within a Model context, it returns a random variable.
-Thus, we have two equivalent ways of adding random variable to a model:
+As we have seen, when we call e.g. ``pm.Normal('x', ...)`` within a Model context, it returns a random variable.
 
 ```python
 with pm.Model() as model:
@@ -256,18 +255,11 @@ usually created in order to optimise performance. But getting a
 possible (see also in
 {ref}`doc <pymc_overview##Transformed-distributions-and-changes-of-variables>`):
 
-.. code:: python
-
-
-    lognorm = Exp().apply(pm.Normal.dist(0., 1.))
-    lognorm
-
-
-.. parsed-literal::
-
-    <pymc.distributions.transforms.TransformedDistribution at 0x7f1536749b00>
-
-
+```python
+lognorm = Exp().apply(pm.Normal.dist(0., 1.))
+lognorm
+# <pymc.distributions.transforms.TransformedDistribution at 0x7f1536749b00>
+```
 
 Now, back to ``model.RV(...)`` - things returned from ``model.RV(...)``
 are PyTensor tensor variables, and it is clear from looking at
