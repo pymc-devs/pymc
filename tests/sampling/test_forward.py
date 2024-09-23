@@ -502,7 +502,7 @@ class TestSamplePPC:
             assert ppc["a"].shape == (nchains, ndraws)
 
             # test default case
-            random_state = np.random.RandomState(20160911)
+            random_state = np.random.default_rng(20160911)
             idata_ppc = pm.sample_posterior_predictive(
                 trace, var_names=["a"], random_seed=random_state
             )
@@ -628,9 +628,9 @@ class TestSamplePPC:
             assert samples["foo"].shape == (1, 40, 200)
 
     def test_model_shared_variable(self):
-        rng = np.random.RandomState(9832)
+        rng = np.random.default_rng(9832)
 
-        x = rng.randn(100)
+        x = rng.normal(size=100)
         y = x > 0
         x_shared = pytensor.shared(x)
         y_shared = pytensor.shared(y)
@@ -661,10 +661,10 @@ class TestSamplePPC:
         npt.assert_allclose(post_pred["p"], expected_p)
 
     def test_deterministic_of_observed(self):
-        rng = np.random.RandomState(8442)
+        rng = np.random.default_rng(8442)
 
-        meas_in_1 = pm.pytensorf.floatX(2 + 4 * rng.randn(10))
-        meas_in_2 = pm.pytensorf.floatX(5 + 4 * rng.randn(10))
+        meas_in_1 = pm.pytensorf.floatX(2 + 4 * rng.normal(size=10))
+        meas_in_2 = pm.pytensorf.floatX(5 + 4 * rng.normal(size=10))
         nchains = 2
         with pm.Model() as model:
             mu_in_1 = pm.Normal("mu_in_1", 0, 2)
@@ -701,10 +701,10 @@ class TestSamplePPC:
             npt.assert_allclose(ppc["in_1"] + ppc["in_2"], ppc["out"], rtol=rtol)
 
     def test_deterministic_of_observed_modified_interface(self):
-        rng = np.random.RandomState(4982)
+        rng = np.random.default_rng(4982)
 
-        meas_in_1 = pm.pytensorf.floatX(2 + 4 * rng.randn(100))
-        meas_in_2 = pm.pytensorf.floatX(5 + 4 * rng.randn(100))
+        meas_in_1 = pm.pytensorf.floatX(2 + 4 * rng.normal(size=100))
+        meas_in_2 = pm.pytensorf.floatX(5 + 4 * rng.normal(size=100))
         with pm.Model() as model:
             mu_in_1 = pm.Normal("mu_in_1", 0, 1, initval=0)
             sigma_in_1 = pm.HalfNormal("sd_in_1", 1, initval=1)
@@ -1413,7 +1413,7 @@ def test_distinct_rvs():
         Y_rv = pm.Normal("y")
 
         pp_samples = pm.sample_prior_predictive(
-            draws=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
+            draws=2, return_inferencedata=False, random_seed=npr.default_rng(2023532)
         )
 
     assert X_rv.owner.inputs[0] != Y_rv.owner.inputs[0]
@@ -1423,7 +1423,7 @@ def test_distinct_rvs():
         Y_rv = pm.Normal("y")
 
         pp_samples_2 = pm.sample_prior_predictive(
-            draws=2, return_inferencedata=False, random_seed=npr.RandomState(2023532)
+            draws=2, return_inferencedata=False, random_seed=npr.default_rng(2023532)
         )
 
     assert np.array_equal(pp_samples["y"], pp_samples_2["y"])

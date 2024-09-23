@@ -71,6 +71,7 @@ from pymc.util import (
     _get_seeds_per_chain,
     default_progress_theme,
     drop_warning_stat,
+    get_random_generator,
     get_untransformed_name,
     is_transformed_name,
 )
@@ -489,10 +490,15 @@ def sample(
     cores : int
         The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
         system, but at most 4.
-    random_seed : int, array-like of int, RandomState or Generator, optional
-        Random seed(s) used by the sampling steps. If a list, tuple or array of ints
-        is passed, each entry will be used to seed each chain. A ValueError will be
-        raised if the length does not match the number of chains.
+    random_seed : int, array-like of int, or Generator, optional
+        Random seed(s) used by the sampling steps. Each step will create its own
+        :py:class:`~numpy.random.Generator` object to make its random draws in a way that is
+        indepedent from all other steppers and all other chains. If a list, tuple or array of ints
+        is passed, each entry will be used to seed the creation of ``Generator`` objects.
+        A ``ValueError`` will be raised if the length does not match the number of chains.
+        A ``TypeError`` will be raised if a :py:class:`~numpy.random.RandomState` object is passed.
+        We no longer support ``RandomState`` objects because their seeding mechanism does not allow
+        easy spawning of new independent random streams that are needed by the step methods.
     progressbar : bool, optional default=True
         Whether or not to display a progress bar in the command line. The bar shows the percentage
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
@@ -686,7 +692,8 @@ def sample(
 
     if random_seed == -1:
         random_seed = None
-    random_seed_list = _get_seeds_per_chain(random_seed, chains)
+    rngs = get_random_generator(random_seed).spawn(chains)
+    random_seed_list = [rng.integers(2**30) for rng in rngs]
 
     if not discard_tuned_samples and not return_inferencedata:
         warnings.warn(
@@ -834,11 +841,11 @@ def sample(
     if parallel:
         # For parallel sampling we can pass the list of random seeds directly, as
         # global seeding will only be called inside each process
-        sample_args["random_seed"] = random_seed_list
+        sample_args["rngs"] = rngs
     else:
         # We pass None if the original random seed was None. The single core sampler
         # methods will only set a global seed when it is not None.
-        sample_args["random_seed"] = random_seed if random_seed is None else random_seed_list
+        sample_args["rngs"] = rngs
 
     t_start = time.time()
     if parallel:
@@ -989,7 +996,7 @@ def _sample_many(
     chains: int,
     traces: Sequence[IBaseTrace],
     start: Sequence[PointType],
-    random_seed: Sequence[RandomSeed] | None,
+    rngs: Sequence[np.random.Generator],
     step: Step,
     callback: SamplingIteratorCallback | None = None,
     **kwargs,
@@ -1004,8 +1011,8 @@ def _sample_many(
         Total number of chains to sample.
     start: list
         Starting points for each chain
-    random_seed: list of random seeds, optional
-        A list of seeds, one for each chain
+    rngs: list of random Generators
+        A list of :py:class:`~numpy.random.Generator` objects, one for each chain
     step: function
         Step function
     """
@@ -1016,7 +1023,7 @@ def _sample_many(
             start=start[i],
             step=step,
             trace=traces[i],
-            random_seed=None if random_seed is None else random_seed[i],
+            rng=rngs[i],
             callback=callback,
             **kwargs,
         )
@@ -1027,7 +1034,7 @@ def _sample(
     *,
     chain: int,
     progressbar: bool,
-    random_seed: RandomSeed,
+    rng: np.random.Generator,
     start: PointType,
     draws: int,
     step: Step,
@@ -1075,7 +1082,7 @@ def _sample(
         chain=chain,
         tune=tune,
         model=model,
-        random_seed=random_seed,
+        rng=rng,
         callback=callback,
     )
     _pbar_data = {"chain": chain, "divergences": 0}
@@ -1114,8 +1121,8 @@ def _iter_sample(
     trace: IBaseTrace,
     chain: int = 0,
     tune: int = 0,
+    rng: np.random.Generator,
     model: Model | None = None,
-    random_seed: RandomSeed = None,
     callback: SamplingIteratorCallback | None = None,
 ) -> Iterator[bool]:
     """Generator for sampling one chain. (Used in singleprocess sampling.)
@@ -1149,8 +1156,7 @@ def _iter_sample(
     if draws < 1:
         raise ValueError("Argument `draws` must be greater than 0.")
 
-    if random_seed is not None:
-        np.random.seed(random_seed)
+    step.set_rng(rng)
 
     point = start
 
@@ -1193,7 +1199,7 @@ def _mp_sample(
     step,
     chains: int,
     cores: int,
-    random_seed: Sequence[RandomSeed],
+    rngs: Sequence[np.random.Generator],
     start: Sequence[PointType],
     progressbar: bool = True,
     progressbar_theme: Theme | None = default_progress_theme,
@@ -1218,8 +1224,8 @@ def _mp_sample(
         The number of chains to sample.
     cores : int
         The number of chains to run in parallel.
-    random_seed : list of random seeds
-        Random seeds for each chain.
+    rngs: list of random Generators
+        A list of :py:class:`~numpy.random.Generator` objects, one for each chain
     start : list
         Starting points for each chain.
         Dicts must contain numeric (transformed) initial values for all (transformed) free variables.
@@ -1247,7 +1253,7 @@ def _mp_sample(
         tune=tune,
         chains=chains,
         cores=cores,
-        seeds=random_seed,
+        rngs=rngs,
         start_points=start,
         step_method=step,
         progressbar=progressbar,
@@ -1446,12 +1452,12 @@ def init_nuts(
         mean = np.mean(apoints_data, axis=0)
         var = np.ones_like(mean)
         n = len(var)
-        potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10)
+        potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10, rng=random_seed_list[0])
     elif init == "jitter+adapt_diag":
         mean = np.mean(apoints_data, axis=0)
         var = np.ones_like(mean)
         n = len(var)
-        potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10)
+        potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10, rng=random_seed_list[0])
     elif init == "jitter+adapt_diag_grad":
         mean = np.mean(apoints_data, axis=0)
         var = np.ones_like(mean)
@@ -1468,6 +1474,7 @@ def init_nuts(
             alpha=0.02,
             use_grads=True,
             stop_adaptation=stop_adaptation,
+            rng=random_seed_list[0],
         )
     elif init == "advi+adapt_diag":
         approx = pm.fit(
@@ -1488,7 +1495,9 @@ def init_nuts(
         mean = approx.mean.get_value()
         weight = 50
         n = len(cov)
-        potential = quadpotential.QuadPotentialDiagAdapt(n, mean, cov, weight)
+        potential = quadpotential.QuadPotentialDiagAdapt(
+            n, mean, cov, weight, rng=random_seed_list[0]
+        )
     elif init == "advi":
         approx = pm.fit(
             random_seed=random_seed_list[0],
@@ -1504,7 +1513,7 @@ def init_nuts(
         )
         initial_points = [approx_sample[i] for i in range(chains)]
         cov = approx.std.eval() ** 2
-        potential = quadpotential.QuadPotentialDiag(cov)
+        potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
     elif init == "advi_map":
         start = pm.find_MAP(include_transformed=True, seed=random_seed_list[0])
         approx = pm.MeanField(model=model, start=start)
@@ -1521,28 +1530,32 @@ def init_nuts(
         )
         initial_points = [approx_sample[i] for i in range(chains)]
         cov = approx.std.eval() ** 2
-        potential = quadpotential.QuadPotentialDiag(cov)
+        potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
     elif init == "map":
         start = pm.find_MAP(include_transformed=True, seed=random_seed_list[0])
         cov = -pm.find_hessian(point=start, negate_output=False)
         initial_points = [start] * chains
-        potential = quadpotential.QuadPotentialFull(cov)
+        potential = quadpotential.QuadPotentialFull(cov, rng=random_seed_list[0])
     elif init == "adapt_full":
         mean = np.mean(apoints_data * chains, axis=0)
         initial_point = initial_points[0]
         initial_point_model_size = sum(initial_point[n.name].size for n in model.value_vars)
         cov = np.eye(initial_point_model_size)
-        potential = quadpotential.QuadPotentialFullAdapt(initial_point_model_size, mean, cov, 10)
+        potential = quadpotential.QuadPotentialFullAdapt(
+            initial_point_model_size, mean, cov, 10, rng=random_seed_list[0]
+        )
     elif init == "jitter+adapt_full":
         mean = np.mean(apoints_data, axis=0)
         initial_point = initial_points[0]
         initial_point_model_size = sum(initial_point[n.name].size for n in model.value_vars)
         cov = np.eye(initial_point_model_size)
-        potential = quadpotential.QuadPotentialFullAdapt(initial_point_model_size, mean, cov, 10)
+        potential = quadpotential.QuadPotentialFullAdapt(
+            initial_point_model_size, mean, cov, 10, rng=random_seed_list[0]
+        )
     else:
         raise ValueError(f"Unknown initializer: {init}.")
 
-    step = pm.NUTS(potential=potential, model=model, **kwargs)
+    step = pm.NUTS(potential=potential, model=model, rng=random_seed_list[0], **kwargs)
 
     # Filter deterministics from initial_points
     value_var_names = [var.name for var in model.value_vars]

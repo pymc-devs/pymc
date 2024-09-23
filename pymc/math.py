@@ -292,10 +292,10 @@ def logdiffexp_numpy(a, b):
 invlogit = sigmoid
 
 
-def logbern(log_p):
+def logbern(log_p, rng=None):
     if np.isnan(log_p):
         raise FloatingPointError("log_p can't be nan.")
-    return np.log(np.random.uniform()) < log_p
+    return np.log((rng or np.random).uniform()) < log_p
 
 
 def logit(p):

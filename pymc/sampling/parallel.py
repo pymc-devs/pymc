@@ -33,7 +33,7 @@ from threadpoolctl import threadpool_limits
 
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
-from pymc.util import CustomProgress, RandomSeed, default_progress_theme
+from pymc.util import CustomProgress, default_progress_theme
 
 logger = logging.getLogger(__name__)
 
@@ -93,15 +93,18 @@ class _Process:
         shared_point,
         draws: int,
         tune: int,
-        seed,
+        rng: np.random.Generator,
+        seed_seq: np.random.SeedSequence,
         blas_cores,
     ):
+        # For some strange reason, spawn multiprocessing doesn't copy the rng
+        # seed sequence, so we have to rebuild it from scratch
+        rng = np.random.Generator(type(rng.bit_generator)(seed_seq))
         self._msg_pipe = msg_pipe
         self._step_method = step_method
         self._step_method_is_pickled = step_method_is_pickled
         self._shared_point = shared_point
-        self._seed = seed
-        self._at_seed = seed + 1
+        self._rng = rng
         self._draws = draws
         self._tune = tune
         self._blas_cores = blas_cores
@@ -159,7 +162,7 @@ class _Process:
         return self._msg_pipe.recv()
 
     def _start_loop(self):
-        np.random.seed(self._seed)
+        self._step_method.set_rng(self._rng)
 
         draw = 0
         tuning = True
@@ -210,7 +213,7 @@ class ProcessAdapter:
         step_method,
         step_method_pickled,
         chain: int,
-        seed,
+        rng: np.random.Generator,
         start: dict[str, np.ndarray],
         blas_cores,
         mp_ctx,
@@ -260,7 +263,8 @@ class ProcessAdapter:
                 self._shared_point,
                 draws,
                 tune,
-                seed,
+                rng,
+                rng.bit_generator.seed_seq,
                 blas_cores,
             ),
         )
@@ -379,7 +383,7 @@ class ParallelSampler:
         tune: int,
         chains: int,
         cores: int,
-        seeds: Sequence["RandomSeed"],
+        rngs: Sequence[np.random.Generator],
         start_points: Sequence[dict[str, np.ndarray]],
         step_method,
         progressbar: bool = True,
@@ -387,8 +391,8 @@ class ParallelSampler:
         blas_cores: int | None = None,
         mp_ctx=None,
     ):
-        if any(len(arg) != chains for arg in [seeds, start_points]):
-            raise ValueError(f"Number of seeds and start_points must be {chains}.")
+        if any(len(arg) != chains for arg in [rngs, start_points]):
+            raise ValueError(f"Number of rngs and start_points must be {chains}.")
 
         if mp_ctx is None or isinstance(mp_ctx, str):
             # Closes issue https://github.com/pymc-devs/pymc/issues/3849
@@ -416,12 +420,12 @@ class ParallelSampler:
                 step_method,
                 step_method_pickled,
                 chain,
-                seed,
+                rng,
                 start,
                 blas_cores,
                 mp_ctx,
             )
-            for chain, seed, start in zip(range(chains), seeds, start_points)
+            for chain, rng, start in zip(range(chains), rngs, start_points)
         ]
 
         self._inactive = self._samplers.copy()

@@ -37,7 +37,7 @@ from pymc.step_methods.arraystep import (
     StatsType,
 )
 from pymc.step_methods.metropolis import DEMetropolis
-from pymc.util import CustomProgress, RandomSeed
+from pymc.util import CustomProgress
 
 __all__ = ()
 
@@ -53,7 +53,7 @@ def _sample_population(
     initial_points: Sequence[PointType],
     draws: int,
     start: Sequence[PointType],
-    random_seed: RandomSeed,
+    rngs: Sequence[np.random.Generator],
     step: BlockedStep | CompoundStep,
     tune: int,
     model: Model,
@@ -70,7 +70,8 @@ def _sample_population(
         The number of samples to draw
     start : list
         Start points for each chain
-    random_seed : single random seed, optional
+    rngs: sequence of random Generators
+        A list of :py:class:`~numpy.random.Generator` objects, one for each chain
     step : function
         Step function (should be or contain a population step method)
     tune : int
@@ -96,7 +97,7 @@ def _sample_population(
         traces=traces,
         tune=tune,
         model=model,
-        random_seed=random_seed,
+        rngs=rngs,
         progressbar=progressbar,
     )
 
@@ -248,8 +249,6 @@ class PopulationStepper:
         progress : progress.Progress
             The progress bar
         """
-        # re-seed each child process to make them unique
-        np.random.seed(None)
         try:
             stepper = cloudpickle.loads(stepper_dumps)
             # the stepper is not necessarily a PopulationArraySharedStep itself,
@@ -317,8 +316,8 @@ def _prepare_iter_population(
     parallelize: bool,
     traces: Sequence[BaseTrace],
     tune: int,
+    rngs: Sequence[np.random.Generator],
     model=None,
-    random_seed: RandomSeed = None,
     progressbar=True,
 ) -> Iterator[int]:
     """Prepare a PopulationStepper and traces for population sampling.
@@ -335,8 +334,9 @@ def _prepare_iter_population(
         Setting for multiprocess parallelization
     tune : int
         Number of iterations to tune.
+    rngs: sequence of random Generators
+        A list of :py:class:`~numpy.random.Generator` objects, one for each chain
     model : Model (optional if in ``with`` context)
-    random_seed : single random seed, optional
     progressbar : bool
         ``progressbar`` argument for the ``PopulationStepper``, (defaults to True)
 
@@ -352,9 +352,6 @@ def _prepare_iter_population(
     if draws < 1:
         raise ValueError("Argument `draws` should be above 0.")
 
-    if random_seed is not None:
-        np.random.seed(random_seed)
-
     # The initialization of traces, samplers and points must happen in the right order:
     # 1. population of points is created
     # 2. steppers are initialized and linked to the points object
@@ -366,13 +363,17 @@ def _prepare_iter_population(
 
     # 2. Set up the steppers
     steppers: list[Step] = []
-    for c in range(nchains):
+    assert (
+        len(rngs) == nchains
+    ), f"There must be one random Generator per chain. Got {len(rngs)} instead of {nchains}"
+    for c, rng in enumerate(rngs):
         # need independent samplers for each chain
         # it is important to copy the actual steppers (but not the delta_logp)
         if isinstance(step, CompoundStep):
             chainstep = CompoundStep([copy(m) for m in step.methods])
         else:
             chainstep = copy(step)
+        chainstep.set_rng(rng)
         # link population samplers to the shared population state
         for sm in chainstep.methods if isinstance(step, CompoundStep) else [chainstep]:
             if isinstance(sm, PopulationArrayStepShared):

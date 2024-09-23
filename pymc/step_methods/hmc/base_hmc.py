@@ -29,6 +29,7 @@ from pymc.pytensorf import floatX
 from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods import step_sizes
 from pymc.step_methods.arraystep import GradientSharedStep
+from pymc.step_methods.compound import StepMethodState
 from pymc.step_methods.hmc import integration
 from pymc.step_methods.hmc.integration import IntegrationError, State
 from pymc.step_methods.hmc.quadpotential import QuadPotentialDiagAdapt, quad_potential
@@ -75,6 +76,7 @@ class BaseHMC(GradientSharedStep):
         t0=10,
         adapt_step_size=True,
         step_rand=None,
+        rng=None,
         **pytensor_kwargs,
     ):
         """Set up Hamiltonian samplers with common structures.
@@ -98,6 +100,14 @@ class BaseHMC(GradientSharedStep):
         potential: Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods.
+        rng: RandomGenerator
+            An object that can produce be used to produce the step method's
+            :py:class:`~numpy.random.Generator` object. Refer to
+            :py:func:`pymc.util.get_random_generator` for more information. The
+            resulting ``Generator`` object will be used stored in the step method
+            and used for accept/reject random selections. The step's ``Generator``
+            will also be used to spawn independent ``Generators`` that will be used
+            by the ``potential`` attribute.
         **pytensor_kwargs: passed to PyTensor functions
         """
         self._model = modelcontext(model)
@@ -106,7 +116,9 @@ class BaseHMC(GradientSharedStep):
             vars = self._model.continuous_value_vars
         else:
             vars = get_value_vars_from_user_vars(vars, self._model)
-        super().__init__(vars, blocked=blocked, model=self._model, dtype=dtype, **pytensor_kwargs)
+        super().__init__(
+            vars, blocked=blocked, model=self._model, dtype=dtype, rng=rng, **pytensor_kwargs
+        )
 
         self.adapt_step_size = adapt_step_size
         self.Emax = Emax
@@ -131,7 +143,7 @@ class BaseHMC(GradientSharedStep):
         if scaling is None and potential is None:
             mean = floatX(np.zeros(size))
             var = floatX(np.ones(size))
-            potential = QuadPotentialDiagAdapt(size, mean, var, 10)
+            potential = QuadPotentialDiagAdapt(size, mean, var, 10, rng=self.rng.spawn(1)[0])
 
         if isinstance(scaling, dict):
             point = Point(scaling, model=self._model)
@@ -143,7 +155,7 @@ class BaseHMC(GradientSharedStep):
         if potential is not None:
             self.potential = potential
         else:
-            self.potential = quad_potential(scaling, is_cov)
+            self.potential = quad_potential(scaling, is_cov, rng=self.rng.spawn(1)[0])
 
         self.integrator = integration.CpuLeapfrogIntegrator(self.potential, self._logp_dlogp_func)
 
@@ -193,7 +205,7 @@ class BaseHMC(GradientSharedStep):
         self.step_size = step_size
 
         if self._step_rand is not None:
-            step_size = self._step_rand(step_size)
+            step_size = self._step_rand(step_size, rng=self.rng)
 
         hmc_step = self._hamiltonian_step(start, p0.data, step_size)
 

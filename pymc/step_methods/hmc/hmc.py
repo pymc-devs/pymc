@@ -27,8 +27,8 @@ from pymc.vartypes import discrete_types
 __all__ = ["HamiltonianMC"]
 
 
-def unif(step_size, elow=0.85, ehigh=1.15):
-    return np.random.uniform(elow, ehigh) * step_size
+def unif(step_size, elow=0.85, ehigh=1.15, rng: np.random.Generator | None = None):
+    return (rng or np.random).uniform(elow, ehigh) * step_size
 
 
 class HamiltonianMC(BaseHMC):
@@ -113,6 +113,14 @@ class HamiltonianMC(BaseHMC):
             The maximum number of leapfrog steps.
         model: pymc.Model
             The model
+        rng : RandomGenerator
+            An object that can produce be used to produce the step method's
+            :py:class:`~numpy.random.Generator` object. Refer to
+            :py:func:`pymc.util.get_random_generator` for more information. The
+            resulting ``Generator`` object will be used stored in the step method
+            and used for accept/reject random selections. The step's ``Generator``
+            will also be used to spawn independent ``Generators`` that will be used
+            by the ``potential`` attribute.
         **kwargs: passed to BaseHMC
         """
         kwargs.setdefault("step_rand", unif)
@@ -151,7 +159,7 @@ class HamiltonianMC(BaseHMC):
 
         accept_stat = min(1, np.exp(-energy_change))
 
-        if div_info is not None or np.random.rand() >= accept_stat:
+        if div_info is not None or self.rng.random() >= accept_stat:
             end = start
             accepted = False
         else:
