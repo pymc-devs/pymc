@@ -16,6 +16,7 @@ import functools
 import warnings
 
 from collections.abc import Sequence
+from copy import deepcopy
 from typing import NewType, cast
 
 import arviz
@@ -399,6 +400,7 @@ def point_wrapper(core_function):
 
 RandomSeed = None | int | Sequence[int] | np.ndarray
 RandomState = RandomSeed | np.random.RandomState | np.random.Generator
+RandomGenerator = RandomSeed | np.random.Generator | np.random.BitGenerator
 
 
 def _get_seeds_per_chain(
@@ -431,10 +433,15 @@ def _get_seeds_per_chain(
             seeds = [int(seed) for seed in integers_fn(2**30, dtype=np.int64, size=chains)]
         return seeds
 
-    if random_state is None or isinstance(random_state, int):
-        if chains == 1 and isinstance(random_state, int):
-            return (random_state,)
-        return _get_unique_seeds_per_chain(np.random.default_rng(random_state).integers)
+    try:
+        int_random_state = int(random_state)  # type: ignore
+    except Exception:
+        int_random_state = None
+
+    if random_state is None or int_random_state is not None:
+        if chains == 1 and int_random_state is not None:
+            return (int_random_state,)
+        return _get_unique_seeds_per_chain(np.random.default_rng(int_random_state).integers)
     if isinstance(random_state, np.random.Generator):
         return _get_unique_seeds_per_chain(random_state.integers)
     if isinstance(random_state, np.random.RandomState):
@@ -578,3 +585,52 @@ class CustomProgress(Progress):
                 **fields,
             )
         return None
+
+
+def get_random_generator(
+    seed: RandomGenerator | np.random.RandomState = None, copy: bool = True
+) -> np.random.Generator:
+    """Build a :py:class:`~numpy.random.Generator` object from a suitable seed.
+
+    Parameters
+    ----------
+    seed : None | int | Sequence[int] | numpy.random.Generator | numpy.random.BitGenerator | numpy.random.RandomState
+        A suitable seed to use to generate the :py:class:`~numpy.random.Generator` object.
+        For more details on suitable seeds, refer to :py:func:`numpy.random.default_rng`.
+    copy : bool
+        Boolean flag that indicates whether to copy the seed object before feeding
+        it to :py:func:`numpy.random.default_rng`. If `copy` is `False`, and the seed
+        object is a ``BitGenerator`` or ``Generator`` object, the returned
+        ``Generator`` will use the ``seed`` object where possible. This means that it
+        will return the ``seed`` input object if it is a ``Generator`` or that it
+        will return a new ``Generator`` whose ``bit_generator`` attribute will be the
+        input ``seed`` object. To avoid this potential object sharing, you must set
+        ``copy`` to ``True``.
+
+    Returns
+    -------
+    rng : numpy.random.Generator
+        The result of passing the input ``seed`` (or a copy of it) through
+        :py:func:`numpy.random.default_rng`.
+
+    Raises
+    ------
+    TypeError:
+        If the supplied ``seed`` is a :py:class:`~numpy.random.RandomState` object. We
+        do not support using these legacy objects because their seeding strategy is not
+        amenable to spawning new independent random streams.
+    """
+    if isinstance(seed, np.random.RandomState):
+        raise TypeError(
+            "Cannot create a random Generator from a RandomStream object. "
+            "Please provide a random seed, BitGenerator or Generator instead."
+        )
+    if copy:
+        # If seed is a numpy.random.Generator or numpy.random.BitGenerator,
+        # numpy.random.default_rng will use the exact same object to return.
+        # In the former case, it will return seed, in the latter it will return
+        # a new Generator object that has the same BitGenerator. This would potentially
+        # make the new generator be shared across many users. To avoid this, we
+        # deepcopy by default.
+        seed = deepcopy(seed)
+    return np.random.default_rng(seed)

@@ -16,7 +16,6 @@
 
 
 import numpy as np
-import numpy.random as nr
 
 from pymc.blocking import RaveledVars, StatsType
 from pymc.model import modelcontext
@@ -47,6 +46,10 @@ class Slice(ArrayStepShared):
         Optional model for sampling step. It will be taken from the context if not provided.
     iter_limit : int, default np.inf
         Maximum number of iterations for the slice sampler.
+    rng: RandomGenerator
+        An object that can produce be used to produce the step method's
+        :py:class:`~numpy.random.Generator` object. Refer to
+        :py:func:`pymc.util.get_random_generator` for more information.
 
     """
 
@@ -58,7 +61,9 @@ class Slice(ArrayStepShared):
         "nstep_in": (int, []),
     }
 
-    def __init__(self, vars=None, w=1.0, tune=True, model=None, iter_limit=np.inf, **kwargs):
+    def __init__(
+        self, vars=None, w=1.0, tune=True, model=None, iter_limit=np.inf, rng=None, **kwargs
+    ):
         model = modelcontext(model)
         self.w = np.asarray(w).copy()
         self.tune = tune
@@ -78,7 +83,7 @@ class Slice(ArrayStepShared):
         self.logp = compile_pymc([raveled_inp], logp)
         self.logp.trust_input = True
 
-        super().__init__(vars, shared)
+        super().__init__(vars, shared, rng=rng)
 
     def astep(self, apoint: RaveledVars) -> tuple[RaveledVars, StatsType]:
         # The arguments are determined by the list passed via `super().__init__(..., fs, ...)`
@@ -96,10 +101,10 @@ class Slice(ArrayStepShared):
         logp = self.logp
         for i, wi in enumerate(self.w):
             # uniformly sample from 0 to p(q), but in log space
-            y = logp(q) - nr.standard_exponential()
+            y = logp(q) - self.rng.standard_exponential()
 
             # Create initial interval
-            ql[i] = q[i] - nr.uniform() * wi  # q[i] + r * w
+            ql[i] = q[i] - self.rng.uniform() * wi  # q[i] + r * w
             qr[i] = ql[i] + wi  # Equivalent to q[i] + (1-r) * w
 
             # Stepping out procedure
@@ -120,14 +125,14 @@ class Slice(ArrayStepShared):
             nstep_out += cnt
 
             cnt = 0
-            q[i] = nr.uniform(ql[i], qr[i])
+            q[i] = self.rng.uniform(ql[i], qr[i])
             while y > logp(q):  # Changed leq to lt, to accommodate for locally flat posteriors
                 # Sample uniformly from slice
                 if q[i] > q0_val[i]:
                     qr[i] = q[i]
                 elif q[i] < q0_val[i]:
                     ql[i] = q[i]
-                q[i] = nr.uniform(ql[i], qr[i])
+                q[i] = self.rng.uniform(ql[i], qr[i])
                 cnt += 1
                 if cnt > self.iter_limit:
                     raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)

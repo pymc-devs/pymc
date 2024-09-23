@@ -31,6 +31,7 @@ from pytensor.graph.basic import Variable
 
 from pymc.blocking import PointType, StatDtype, StatsDict, StatShape, StatsType
 from pymc.model import modelcontext
+from pymc.util import get_random_generator
 
 __all__ = ("Competence", "CompoundStep")
 
@@ -143,15 +144,18 @@ class BlockedStep(ABC):
             # In this case we create a separate sampler for each var
             # and append them to a CompoundStep
             steps = []
-            for var in vars:
+            rngs = get_random_generator(kwargs.pop("rng", None)).spawn(len(vars))
+            for var, rng in zip(vars, rngs):
                 step = super().__new__(cls)
                 step.stats_dtypes = stats_dtypes
                 step.stats_dtypes_shapes = stats_dtypes_shapes
                 # If we don't return the instance we have to manually
                 # call __init__
-                step.__init__([var], *args, **kwargs)
+                _kwargs = kwargs.copy()
+                _kwargs["rng"] = rng
+                step.__init__([var], *args, **_kwargs)
                 # Hack for creating the class correctly when unpickling.
-                step.__newargs = ([var], *args), kwargs
+                step.__newargs = ([var], *args), _kwargs
                 steps.append(step)
 
             return CompoundStep(steps)
