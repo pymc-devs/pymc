@@ -65,7 +65,7 @@ class TestPopulationSamplers:
                     cores=1,
                     draws=20,
                     tune=0,
-                    step=DEMetropolis(),
+                    step=step,
                     compute_convergence_checks=False,
                 )
                 samples = idata.posterior["x"].values[:, 5]
@@ -82,7 +82,7 @@ class TestPopulationSamplers:
                     cores=4,
                     draws=20,
                     tune=0,
-                    step=DEMetropolis(),
+                    step=step,
                     compute_convergence_checks=False,
                 )
                 samples = idata.posterior["x"].values[:, 5]
