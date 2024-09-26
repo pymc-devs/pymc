@@ -32,10 +32,11 @@ from pytensor.graph.basic import (
     Constant,
     Variable,
     clone_get_equiv,
+    equal_computations,
     graph_inputs,
     walk,
 )
-from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.fg import FunctionGraph, Output
 from pytensor.graph.op import Op
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
@@ -43,10 +44,7 @@ from pytensor.tensor.basic import _as_tensor_variable
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
-from pytensor.tensor.random.var import (
-    RandomGeneratorSharedVariable,
-    RandomStateSharedVariable,
-)
+from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
@@ -158,19 +156,25 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
     TypeError
 
     """
+    # TODO: These data functions should be in data.py or model/core.py
+    from pymc.data import MinibatchOp
+
     if isinstance(x, Constant):
         return x.data
     if isinstance(x, SharedVariable):
         return x.get_value()
-    if x.owner and isinstance(x.owner.op, Elemwise) and isinstance(x.owner.op.scalar_op, Cast):
-        array_data = extract_obs_data(x.owner.inputs[0])
-        return array_data.astype(x.type.dtype)
-    if x.owner and isinstance(x.owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1):
-        array_data = extract_obs_data(x.owner.inputs[0])
-        mask_idx = tuple(extract_obs_data(i) for i in x.owner.inputs[2:])
-        mask = np.zeros_like(array_data)
-        mask[mask_idx] = 1
-        return np.ma.MaskedArray(array_data, mask)
+    if x.owner is not None:
+        if isinstance(x.owner.op, Elemwise) and isinstance(x.owner.op.scalar_op, Cast):
+            array_data = extract_obs_data(x.owner.inputs[0])
+            return array_data.astype(x.type.dtype)
+        if isinstance(x.owner.op, MinibatchOp):
+            return extract_obs_data(x.owner.inputs[x.owner.outputs.index(x)])
+        if isinstance(x.owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1):
+            array_data = extract_obs_data(x.owner.inputs[0])
+            mask_idx = tuple(extract_obs_data(i) for i in x.owner.inputs[2:])
+            mask = np.zeros_like(array_data)
+            mask[mask_idx] = 1
+            return np.ma.MaskedArray(array_data, mask)
 
     raise TypeError(f"Data cannot be extracted from {x}")
 
@@ -516,20 +520,18 @@ def join_nonshared_inputs(
         y = pt.vector("y")
         # Original output
         out = x + y
-        print(out.eval({x: np.array(1), y: np.array([1, 2, 3])})) # [2, 3, 4]
+        print(out.eval({x: np.array(1), y: np.array([1, 2, 3])}))  # [2, 3, 4]
 
         # New output and inputs
         [new_out], joined_inputs = join_nonshared_inputs(
-            point={ # Only shapes matter
+            point={  # Only shapes matter
                 "x": np.zeros(()),
                 "y": np.zeros(3),
             },
             outputs=[out],
             inputs=[x, y],
         )
-        print(new_out.eval({
-            joined_inputs: np.array([1, 1, 2, 3]),
-        })) # [2, 3, 4]
+        print(new_out.eval({joined_inputs: np.array([1, 1, 2, 3])}))  # [2, 3, 4]
 
     Join the input value variables of a model logp.
 
@@ -540,15 +542,19 @@ def join_nonshared_inputs(
         with pm.Model() as model:
             mu_pop = pm.Normal("mu_pop")
             sigma_pop = pm.HalfNormal("sigma_pop")
-            mu = pm.Normal("mu", mu_pop, sigma_pop, shape=(3, ))
+            mu = pm.Normal("mu", mu_pop, sigma_pop, shape=(3,))
 
             y = pm.Normal("y", mu, 1.0, observed=[0, 1, 2])
 
-        print(model.compile_logp()({
-            "mu_pop": 0,
-            "sigma_pop_log__": 1,
-            "mu": [0, 1, 2],
-        })) # -12.691227342634292
+        print(
+            model.compile_logp()(
+                {
+                    "mu_pop": 0,
+                    "sigma_pop_log__": 1,
+                    "mu": [0, 1, 2],
+                }
+            )
+        )  # -12.691227342634292
 
         initial_point = model.initial_point()
         inputs = model.value_vars
@@ -559,9 +565,13 @@ def join_nonshared_inputs(
             inputs=inputs,
         )
 
-        print(logp.eval({
-            joined_inputs: [0, 1, 0, 1, 2],
-        })) # -12.691227342634292
+        print(
+            logp.eval(
+                {
+                    joined_inputs: [0, 1, 0, 1, 2],
+                }
+            )
+        )  # -12.691227342634292
 
     Same as above but with the `mu_pop` value variable being shared.
 
@@ -576,14 +586,16 @@ def join_nonshared_inputs(
             point=initial_point,
             outputs=[model.logp()],
             inputs=other_inputs,
-            shared_inputs={
-                mu_pop_input: shared_mu_pop_input
-            },
+            shared_inputs={mu_pop_input: shared_mu_pop_input},
         )
 
-        print(logp.eval({
-            other_joined_inputs: [1, 0, 1, 2],
-        })) # -12.691227342634292
+        print(
+            logp.eval(
+                {
+                    other_joined_inputs: [1, 0, 1, 2],
+                }
+            )
+        )  # -12.691227342634292
     """
     if not inputs:
         raise ValueError("Empty list of input variables.")
@@ -668,6 +680,9 @@ class GeneratorOp(Op):
     __props__ = ("generator",)
 
     def __init__(self, gen, default=None):
+        warnings.warn(
+            "generator data is deprecated and will be removed in a future release", FutureWarning
+        )
         from pymc.data import GeneratorAdapter
 
         super().__init__()
@@ -762,12 +777,10 @@ def largest_common_dtype(tensors):
 
 def find_rng_nodes(
     variables: Iterable[Variable],
-) -> list[RandomStateSharedVariable | RandomGeneratorSharedVariable]:
-    """Return RNG variables in a graph"""
+) -> list[RandomGeneratorSharedVariable]:
+    """Return shared RNG variables in a graph"""
     return [
-        node
-        for node in graph_inputs(variables)
-        if isinstance(node, RandomStateSharedVariable | RandomGeneratorSharedVariable)
+        node for node in graph_inputs(variables) if isinstance(node, RandomGeneratorSharedVariable)
     ]
 
 
@@ -784,14 +797,7 @@ def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> list[TensorVariable]
         return outputs
 
     graph = FunctionGraph(outputs=outputs, clone=False)
-    new_rng_nodes: list[np.random.RandomState | np.random.Generator] = []
-    for rng_node in rng_nodes:
-        rng_cls: type
-        if isinstance(rng_node, pt.random.var.RandomStateSharedVariable):
-            rng_cls = np.random.RandomState
-        else:
-            rng_cls = np.random.Generator
-        new_rng_nodes.append(pytensor.shared(rng_cls(np.random.PCG64())))
+    new_rng_nodes = [pytensor.shared(np.random.Generator(np.random.PCG64())) for _ in rng_nodes]
     graph.replace_all(zip(rng_nodes, new_rng_nodes), import_missing=True)
     return cast(list[TensorVariable], graph.outputs)
 
@@ -808,12 +814,7 @@ def reseed_rngs(
         np.random.PCG64(sub_seed) for sub_seed in np.random.SeedSequence(seed).spawn(len(rngs))
     ]
     for rng, bit_generator in zip(rngs, bit_generators):
-        new_rng: np.random.RandomState | np.random.Generator
-        if isinstance(rng, pt.random.var.RandomStateSharedVariable):
-            new_rng = np.random.RandomState(bit_generator)
-        else:
-            new_rng = np.random.Generator(bit_generator)
-        rng.set_value(new_rng, borrow=True)
+        rng.set_value(np.random.Generator(bit_generator), borrow=True)
 
 
 def collect_default_updates_inner_fgraph(node: Apply) -> dict[Variable, Variable]:
@@ -889,8 +890,23 @@ def collect_default_updates(
             return rng
 
         if len(rng_clients) > 1:
+            # Multiple clients are techincally fine if they are used in identical operations
+            # We check if the default_update of each client would be the same
+            update, *other_updates = (
+                find_default_update(
+                    # Pass version of clients that includes only one the RNG clients at a time
+                    clients | {rng: [rng_client]},
+                    rng,
+                )
+                for rng_client in rng_clients
+            )
+            if all(equal_computations([update], [other_update]) for other_update in other_updates):
+                return update
+
             warnings.warn(
-                f"RNG Variable {rng} has multiple clients. This is likely an inconsistent random graph.",
+                f"RNG Variable {rng} has multiple distinct clients {rng_clients}, "
+                f"likely due to an inconsistent random graph. "
+                f"No default update will be returned.",
                 UserWarning,
             )
             return None
@@ -898,7 +914,7 @@ def collect_default_updates(
         [client, _] = rng_clients[0]
 
         # RNG is an output of the function, this is not a problem
-        if client == "output":
+        if isinstance(client.op, Output):
             return rng
 
         # RNG is used by another operator, which should output an update for the RNG
@@ -1062,7 +1078,7 @@ def constant_fold(
         attempting constant folding, and any old non-shared inputs will not work with
         the returned outputs
     """
-    fg = FunctionGraph(outputs=xs, features=[ShapeFeature()], clone=True)
+    fg = FunctionGraph(outputs=xs, features=[ShapeFeature()], copy_inputs=False, clone=True)
 
     # By default, rewrite_graph includes canonicalize which includes constant-folding as the final rewrite
     folded_xs = rewrite_graph(fg).outputs

@@ -256,7 +256,7 @@ def change_value_transforms(
             mean_q = pm.find_MAP()
 
         with change_value_transforms(transformed_p, {"p": None}) as untransformed_p:
-            new_p = untransformed_p['p']
+            new_p = untransformed_p["p"]
             std_q = ((1 / pm.find_hessian(mean_q, vars=[new_p])) ** 0.5)[0]
 
         print(f"  Mean, Standard deviation\\np {mean_q['p']:.2}, {std_q[0]:.2}")

@@ -30,7 +30,8 @@ from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
 from pytensor.tensor import gamma as gammafn
-from pytensor.tensor import gammaln
+from pytensor.tensor import gammaln, get_underlying_scalar_constant_value
+from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.extra_ops import broadcast_shape
 from pytensor.tensor.math import betaincinv, gammaincinv, tanh
 from pytensor.tensor.random.basic import (
@@ -182,16 +183,20 @@ def bounded_cont_transform(op, rv, bound_args_indices=None):
             upper = args[bound_args_indices[1]]
 
         if lower is not None:
-            if isinstance(lower, TensorConstant) and np.all(lower.value == -np.inf):
-                lower = None
-            else:
-                lower = pt.as_tensor_variable(lower)
+            lower = pt.as_tensor_variable(lower)
+            try:
+                if get_underlying_scalar_constant_value(lower) == -np.inf:
+                    lower = None
+            except NotScalarConstantError:
+                pass
 
         if upper is not None:
-            if isinstance(upper, TensorConstant) and np.all(upper.value == np.inf):
-                upper = None
-            else:
-                upper = pt.as_tensor_variable(upper)
+            upper = pt.as_tensor_variable(upper)
+            try:
+                if get_underlying_scalar_constant_value(upper) == np.inf:
+                    upper = None
+            except NotScalarConstantError:
+                pass
 
         return lower, upper
 
@@ -294,7 +299,7 @@ class Uniform(BoundedContinuous):
     """
 
     rv_op = uniform
-    bound_args_indices = (3, 4)  # Lower, Upper
+    bound_args_indices = (2, 3)  # Lower, Upper
 
     @classmethod
     def dist(cls, lower=0, upper=1, **kwargs):
@@ -352,8 +357,7 @@ def uniform_default_transform(op, rv):
 
 class FlatRV(RandomVariable):
     name = "flat"
-    ndim_supp = 0
-    ndims_params = []
+    signature = "->()"
     dtype = "floatX"
     _print_name = ("Flat", "\\operatorname{Flat}")
 
@@ -373,17 +377,13 @@ class Flat(Continuous):
 
     rv_op = flat
 
-    def __new__(cls, *args, **kwargs):
-        kwargs.setdefault("initval", "support_point")
-        return super().__new__(cls, *args, **kwargs)
-
     @classmethod
     def dist(cls, **kwargs):
         res = super().dist([], **kwargs)
         return res
 
     def support_point(rv, size):
-        return pt.zeros(size)
+        return pt.zeros(() if rv_size_is_none(size) else size)
 
     def logp(value):
         return pt.zeros_like(value)
@@ -396,8 +396,7 @@ class Flat(Continuous):
 
 class HalfFlatRV(RandomVariable):
     name = "half_flat"
-    ndim_supp = 0
-    ndims_params = []
+    signature = "->()"
     dtype = "floatX"
     _print_name = ("HalfFlat", "\\operatorname{HalfFlat}")
 
@@ -414,17 +413,13 @@ class HalfFlat(PositiveContinuous):
 
     rv_op = halfflat
 
-    def __new__(cls, *args, **kwargs):
-        kwargs.setdefault("initval", "support_point")
-        return super().__new__(cls, *args, **kwargs)
-
     @classmethod
     def dist(cls, **kwargs):
         res = super().dist([], **kwargs)
         return res
 
     def support_point(rv, size):
-        return pt.ones(size)
+        return pt.ones(() if rv_size_is_none(size) else size)
 
     def logp(value):
         return pt.switch(pt.lt(value, 0), -np.inf, pt.zeros_like(value))
@@ -493,10 +488,10 @@ class Normal(Continuous):
     .. code-block:: python
 
         with pm.Model():
-            x = pm.Normal('x', mu=0, sigma=10)
+            x = pm.Normal("x", mu=0, sigma=10)
 
         with pm.Model():
-            x = pm.Normal('x', mu=0, tau=1/23)
+            x = pm.Normal("x", mu=0, tau=1 / 23)
     """
 
     rv_op = normal
@@ -545,8 +540,7 @@ class Normal(Continuous):
 
 class TruncatedNormalRV(RandomVariable):
     name = "truncated_normal"
-    ndim_supp = 0
-    ndims_params = [0, 0, 0, 0]
+    signature = "(),(),(),()->()"
     dtype = "floatX"
     _print_name = ("TruncatedNormal", "\\operatorname{TruncatedNormal}")
 
@@ -642,18 +636,18 @@ class TruncatedNormal(BoundedContinuous):
     .. code-block:: python
 
         with pm.Model():
-            x = pm.TruncatedNormal('x', mu=0, sigma=10, lower=0)
+            x = pm.TruncatedNormal("x", mu=0, sigma=10, lower=0)
 
         with pm.Model():
-            x = pm.TruncatedNormal('x', mu=0, sigma=10, upper=1)
+            x = pm.TruncatedNormal("x", mu=0, sigma=10, upper=1)
 
         with pm.Model():
-            x = pm.TruncatedNormal('x', mu=0, sigma=10, lower=0, upper=1)
+            x = pm.TruncatedNormal("x", mu=0, sigma=10, lower=0, upper=1)
 
     """
 
     rv_op = truncated_normal
-    bound_args_indices = (5, 6)  # indexes for lower and upper args
+    bound_args_indices = (4, 5)  # indexes for lower and upper args
 
     @classmethod
     def dist(
@@ -823,10 +817,10 @@ class HalfNormal(PositiveContinuous):
     .. code-block:: python
 
         with pm.Model():
-            x = pm.HalfNormal('x', sigma=10)
+            x = pm.HalfNormal("x", sigma=10)
 
         with pm.Model():
-            x = pm.HalfNormal('x', tau=1/15)
+            x = pm.HalfNormal("x", tau=1 / 15)
     """
 
     rv_op = halfnormal
@@ -880,8 +874,7 @@ class HalfNormal(PositiveContinuous):
 
 class WaldRV(RandomVariable):
     name = "wald"
-    ndim_supp = 0
-    ndims_params = [0, 0, 0]
+    signature = "(),(),()->()"
     dtype = "floatX"
     _print_name = ("Wald", "\\operatorname{Wald}")
 
@@ -1125,8 +1118,8 @@ class Beta(UnitContinuous):
 
        \text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1
 
-       \alpha = \mu * \nu
-       \beta = (1 - \mu) * \nu
+       \alpha &= \mu * \nu \\
+       \beta &= (1 - \mu) * \nu
 
     Parameters
     ----------
@@ -1237,7 +1230,7 @@ class Beta(UnitContinuous):
 
 class KumaraswamyRV(SymbolicRandomVariable):
     name = "kumaraswamy"
-    signature = "[rng],[size],(),()->[rng],()"
+    extended_signature = "[rng],[size],(),()->[rng],()"
     _print_name = ("Kumaraswamy", "\\operatorname{Kumaraswamy}")
 
     @classmethod
@@ -1540,7 +1533,7 @@ class Laplace(Continuous):
 
 class AsymmetricLaplaceRV(SymbolicRandomVariable):
     name = "asymmetriclaplace"
-    signature = "[rng],[size],(),(),()->[rng],()"
+    extended_signature = "[rng],[size],(),(),()->[rng],()"
     _print_name = ("AsymmetricLaplace", "\\operatorname{AsymmetricLaplace}")
 
     @classmethod
@@ -1718,10 +1711,10 @@ class LogNormal(PositiveContinuous):
 
         # Example to show that we pass in only ``sigma`` or ``tau`` but not both.
         with pm.Model():
-            x = pm.LogNormal('x', mu=2, sigma=30)
+            x = pm.LogNormal("x", mu=2, sigma=30)
 
         with pm.Model():
-            x = pm.LogNormal('x', mu=2, tau=1/100)
+            x = pm.LogNormal("x", mu=2, tau=1 / 100)
     """
 
     rv_op = lognormal
@@ -1835,10 +1828,10 @@ class StudentT(Continuous):
     .. code-block:: python
 
         with pm.Model():
-            x = pm.StudentT('x', nu=15, mu=0, sigma=10)
+            x = pm.StudentT("x", nu=15, mu=0, sigma=10)
 
         with pm.Model():
-            x = pm.StudentT('x', nu=15, mu=0, lam=1/23)
+            x = pm.StudentT("x", nu=15, mu=0, lam=1 / 23)
     """
 
     rv_op = t
@@ -1908,8 +1901,7 @@ class StudentT(Continuous):
 
 class SkewStudentTRV(RandomVariable):
     name = "skewstudentt"
-    ndim_supp = 0
-    ndims_params = [0, 0, 0, 0]
+    signature = "(),(),(),()->()"
     dtype = "floatX"
     _print_name = ("SkewStudentT", "\\operatorname{SkewStudentT}")
 
@@ -2086,7 +2078,7 @@ class Pareto(BoundedContinuous):
     """
 
     rv_op = pareto
-    bound_args_indices = (4, None)  # lower-bounded by `m`
+    bound_args_indices = (3, None)  # lower-bounded by `m`
 
     @classmethod
     def dist(cls, alpha, m, **kwargs):
@@ -2619,8 +2611,7 @@ class ChiSquared:
 
 class WeibullBetaRV(RandomVariable):
     name = "weibull"
-    ndim_supp = 0
-    ndims_params = [0, 0]
+    signature = "(),()->()"
     dtype = "floatX"
     _print_name = ("Weibull", "\\operatorname{Weibull}")
 
@@ -2742,7 +2733,7 @@ class Weibull(PositiveContinuous):
 
 class HalfStudentTRV(SymbolicRandomVariable):
     name = "halfstudentt"
-    signature = "[rng],[size],(),()->[rng],()"
+    extended_signature = "[rng],[size],(),()->[rng],()"
     _print_name = ("HalfStudentT", "\\operatorname{HalfStudentT}")
 
     @classmethod
@@ -2811,10 +2802,10 @@ class HalfStudentT(PositiveContinuous):
 
         # Only pass in one of lam or sigma, but not both.
         with pm.Model():
-            x = pm.HalfStudentT('x', sigma=10, nu=10)
+            x = pm.HalfStudentT("x", sigma=10, nu=10)
 
         with pm.Model():
-            x = pm.HalfStudentT('x', lam=4, nu=10)
+            x = pm.HalfStudentT("x", lam=4, nu=10)
     """
 
     rv_type = HalfStudentTRV
@@ -2856,7 +2847,7 @@ class HalfStudentT(PositiveContinuous):
 
 class ExGaussianRV(SymbolicRandomVariable):
     name = "exgaussian"
-    signature = "[rng],[size],(),(),()->[rng],()"
+    extended_signature = "[rng],[size],(),(),()->[rng],()"
     _print_name = ("ExGaussian", "\\operatorname{ExGaussian}")
 
     @classmethod
@@ -2950,8 +2941,8 @@ class ExGaussian(Continuous):
     rv_op = ExGaussianRV.rv_op
 
     @classmethod
-    def dist(cls, mu=0.0, sigma=None, nu=None, *args, **kwargs):
-        return super().dist([mu, sigma, nu], *args, **kwargs)
+    def dist(cls, mu=0.0, sigma=1.0, *, nu, **kwargs):
+        return super().dist([mu, sigma, nu], **kwargs)
 
     def support_point(rv, size, mu, sigma, nu):
         mu, nu, _ = pt.broadcast_arrays(mu, nu, sigma)
@@ -3074,8 +3065,7 @@ class VonMises(CircularContinuous):
 
 class SkewNormalRV(RandomVariable):
     name = "skewnormal"
-    ndim_supp = 0
-    ndims_params = [0, 0, 0]
+    signature = "(),(),()->()"
     dtype = "floatX"
     _print_name = ("SkewNormal", "\\operatorname{SkewNormal}")
 
@@ -3241,7 +3231,7 @@ class Triangular(BoundedContinuous):
     """
 
     rv_op = triangular
-    bound_args_indices = (3, 5)  # lower, upper
+    bound_args_indices = (2, 4)  # lower, upper
 
     @classmethod
     def dist(cls, lower=0, upper=1, c=0.5, *args, **kwargs):
@@ -3412,8 +3402,7 @@ class Gumbel(Continuous):
 
 class RiceRV(RandomVariable):
     name = "rice"
-    ndim_supp = 0
-    ndims_params = [0, 0]
+    signature = "(),()->()"
     dtype = "floatX"
     _print_name = ("Rice", "\\operatorname{Rice}")
 
@@ -3630,7 +3619,7 @@ class Logistic(Continuous):
 
 class LogitNormalRV(SymbolicRandomVariable):
     name = "logit_normal"
-    signature = "[rng],[size],(),()->[rng],()"
+    extended_signature = "[rng],[size],(),()->[rng],()"
     _print_name = ("logitNormal", "\\operatorname{logitNormal}")
 
     @classmethod
@@ -3732,6 +3721,15 @@ class LogitNormal(UnitContinuous):
 
 
 def _interpolated_argcdf(p, pdf, cdf, x):
+    if np.prod(cdf.shape[:-1]) != 1 or np.prod(pdf.shape[:-1]) != 1 or np.prod(x.shape[:-1]) != 1:
+        raise NotImplementedError(
+            "Function not implemented for batched points. "
+            "Open an issue in https://github.com/pymc-devs/pymc if you need this functionality"
+        )
+    cdf = cdf.squeeze(tuple(range(cdf.ndim - 1)))
+    pdf = pdf.squeeze(tuple(range(pdf.ndim - 1)))
+    x = x.squeeze(tuple(range(x.ndim - 1)))
+
     index = np.searchsorted(cdf, p) - 1
     slope = (pdf[index + 1] - pdf[index]) / (x[index + 1] - x[index])
 
@@ -3753,8 +3751,7 @@ def _interpolated_argcdf(p, pdf, cdf, x):
 
 class InterpolatedRV(RandomVariable):
     name = "interpolated"
-    ndim_supp = 0
-    ndims_params = [1, 1, 1]
+    signature = "(x),(x),(x)->()"
     dtype = "floatX"
     _print_name = ("Interpolated", "\\operatorname{Interpolated}")
 
@@ -3844,7 +3841,9 @@ class Interpolated(BoundedContinuous):
         Estimates the expectation integral using the trapezoid rule; cdf_points are not used.
         """
         x_fx = pt.mul(x_points, pdf_points)  # x_i * f(x_i) for all xi's in x_points
-        support_point = pt.sum(pt.mul(pt.diff(x_points), x_fx[1:] + x_fx[:-1])) / 2
+        support_point = (
+            pt.sum(pt.mul(pt.diff(x_points, axis=-1), x_fx[..., 1:] + x_fx[..., :-1])) / 2
+        )
 
         if not rv_size_is_none(size):
             support_point = pt.full(size, support_point)
@@ -3855,7 +3854,7 @@ class Interpolated(BoundedContinuous):
         # x_points and pdf_points are expected to be non-symbolic arrays wrapped
         # within a tensor.constant. We use the .data method to retrieve them
         interp = InterpolatedUnivariateSpline(x_points.data, pdf_points.data, k=1, ext="zeros")
-        Z = interp.integral(x_points.data[0], x_points.data[-1])
+        Z = interp.integral(x_points.data[..., 0], x_points.data[..., -1])
 
         # interp and Z are converted to symbolic variables here
         interp_op = SplineWrapper(interp)
@@ -3867,16 +3866,15 @@ class Interpolated(BoundedContinuous):
 @_default_transform.register(Interpolated)
 def interpolated_default_transform(op, rv):
     def transform_params(*params):
-        _, _, _, x_points, _, _ = params
-        return x_points[0], x_points[-1]
+        _, _, x_points, _, _ = params
+        return x_points[..., 0], x_points[..., -1]
 
     return transforms.Interval(bounds_fn=transform_params)
 
 
 class MoyalRV(RandomVariable):
     name = "moyal"
-    ndim_supp = 0
-    ndims_params = [0, 0]
+    signature = "(),()->()"
     dtype = "floatX"
     _print_name = ("Moyal", "\\operatorname{Moyal}")
 
@@ -3985,8 +3983,7 @@ class PolyaGammaRV(RandomVariable):
     """Polya-Gamma random variable."""
 
     name = "polyagamma"
-    ndim_supp = 0
-    ndims_params = [0, 0]
+    signature = "(),()->()"
     dtype = "floatX"
     _print_name = ("PG", "\\operatorname{PG}")
 
@@ -4000,14 +3997,7 @@ class PolyaGammaRV(RandomVariable):
 
         Parameters
         ----------
-        rng : {None, int, array_like[ints], SeedSequence, BitGenerator, Generator}
-            A seed to initialize the random number generator. If None, then fresh,
-            unpredictable entropy will be pulled from the OS. If an ``int`` or
-            ``array_like[ints]`` is passed, then it will be passed to
-            `SeedSequence` to derive the initial `BitGenerator` state. One may also
-            pass in a `SeedSequence` instance.
-            Additionally, when passed a `BitGenerator`, it will be wrapped by
-            `Generator`. If passed a `Generator`, it will be returned unaltered.
+        rng : Generator
         h : scalar or sequence
             The shape parameter of the distribution.
         z : scalar or sequence
@@ -4020,10 +4010,11 @@ class PolyaGammaRV(RandomVariable):
             to the largest integer smaller than its value (e.g (2.1, 1) -> (2, 1)).
             This parameter only applies if `h` and `z` are scalars.
         """
-        # handle the kind of rng passed to the sampler
-        bg = rng._bit_generator if isinstance(rng, np.random.RandomState) else rng
+        # random_polyagamma needs explicit size to work correctly
+        if size is None:
+            size = np.broadcast_shapes(h.shape, z.shape)
         return np.asarray(
-            random_polyagamma(h, z, size=size, random_state=bg).astype(pytensor.config.floatX)
+            random_polyagamma(h, z, size=size, random_state=rng).astype(pytensor.config.floatX)
         )
 
 
@@ -4113,9 +4104,9 @@ class PolyaGamma(PositiveContinuous):
 
         rng = np.random.default_rng()
         with pm.Model():
-            x = pm.PolyaGamma('x', h=1, z=5.5)
+            x = pm.PolyaGamma("x", h=1, z=5.5)
         with pm.Model():
-            x = pm.PolyaGamma('x', h=25, z=-2.3, rng=rng, size=(100, 5))
+            x = pm.PolyaGamma("x", h=25, z=-2.3, rng=rng, size=(100, 5))
 
     References
     ----------

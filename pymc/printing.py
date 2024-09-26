@@ -13,6 +13,8 @@
 #   limitations under the License.
 
 
+import re
+
 from functools import partial
 
 from pytensor.compile import SharedVariable
@@ -20,10 +22,8 @@ from pytensor.graph.basic import Constant, walk
 from pytensor.tensor.basic import TensorVariable, Variable
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.random.basic import RandomVariable
-from pytensor.tensor.random.var import (
-    RandomGeneratorSharedVariable,
-    RandomStateSharedVariable,
-)
+from pytensor.tensor.random.type import RandomType
+from pytensor.tensor.type_other import NoneTypeT
 
 from pymc.model import Model
 
@@ -41,16 +41,18 @@ def str_for_dist(
     LaTeX or plain, optionally with distribution parameter values included."""
 
     if include_params:
-        # first 3 args are always (rng, size, dtype), rest is relevant for distribution
-        if isinstance(dist.owner.op, RandomVariable):
+        if isinstance(dist.owner.op, RandomVariable) or getattr(
+            dist.owner.op, "extended_signature", None
+        ):
             dist_args = [
-                _str_for_input_var(x, formatting=formatting) for x in dist.owner.inputs[3:]
+                _str_for_input_var(x, formatting=formatting)
+                for x in dist.owner.op.dist_params(dist.owner)
             ]
         else:
             dist_args = [
                 _str_for_input_var(x, formatting=formatting)
                 for x in dist.owner.inputs
-                if not isinstance(x, RandomStateSharedVariable | RandomGeneratorSharedVariable)
+                if not isinstance(x.type, RandomType | NoneTypeT)
             ]
 
     print_name = dist.name
@@ -58,6 +60,7 @@ def str_for_dist(
     if "latex" in formatting:
         if print_name is not None:
             print_name = r"\text{" + _latex_escape(print_name.strip("$")) + "}"
+            print_name = _format_underscore(print_name)
 
         op_name = (
             dist.owner.op._print_name[1]
@@ -114,6 +117,7 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
     if not var_reprs:
         return ""
     if "latex" in formatting:
+        var_reprs = [_format_underscore(x) for x in var_reprs]
         var_reprs = [
             var_repr.replace(r"\sim", r"&\sim &").strip("$")
             for var_repr in var_reprs
@@ -232,6 +236,12 @@ def _str_for_expression(var: Variable, formatting: str) -> str:
         if x.owner and isinstance(x.owner.op, RandomVariable | SymbolicRandomVariable):
             parents.append(x)
             xname = x.name
+            if xname is None:
+                # If the variable is unnamed, we show the op's name as we do
+                # with constants
+                opname = x.owner.op.name
+                if opname is not None:
+                    xname = rf"<{opname}>"
             assert xname is not None
             names.append(xname)
 
@@ -289,3 +299,10 @@ try:
 except (ModuleNotFoundError, AttributeError):
     # no ipython shell
     pass
+
+
+def _format_underscore(variable: str) -> str:
+    """
+    Escapes all unescaped underscores in the variable name for LaTeX representation.
+    """
+    return re.sub(r"(?<!\\)_", r"\\_", variable)

@@ -16,9 +16,9 @@
 from codecs import open
 from os.path import dirname, join, realpath
 
-from setuptools import find_packages, setup
-
 import versioneer
+
+from setuptools import find_packages, setup
 
 DESCRIPTION = "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with PyTensor"
 AUTHOR = "PyMC Developers"

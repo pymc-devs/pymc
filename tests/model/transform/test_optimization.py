@@ -20,8 +20,10 @@ from pytensor.graph import Constant
 from pymc import Deterministic, do
 from pymc.data import Data
 from pymc.distributions import HalfNormal, Normal
+from pymc.exceptions import NotConstantValueError
 from pymc.model import Model
 from pymc.model.transform.optimization import freeze_dims_and_data
+from pymc.pytensorf import constant_fold
 
 
 def test_freeze_dims_and_data():
@@ -144,3 +146,16 @@ def test_freeze_dim_after_do_intervention():
 
     frozen_do_m = freeze_dims_and_data(do_m)
     assert frozen_do_m["x"].type.shape == (5,)
+
+
+def test_freeze_dims_and_data_partially_observed_rv():
+    # Regression test for #7387
+
+    with Model(coords={"a": [0, 1, 2]}) as model:
+        y = Normal("y", 0, observed=[0, 0, np.nan], dims="a")
+
+    with pytest.raises(NotConstantValueError):
+        constant_fold([y.shape])
+
+    frozen_y = freeze_dims_and_data(model)["y"]
+    assert constant_fold([frozen_y.shape]) == (3,)

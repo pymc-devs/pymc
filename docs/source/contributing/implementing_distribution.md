@@ -43,14 +43,9 @@ from typing import List, Tuple
 class BlahRV(RandomVariable):
     name: str = "blah"
 
-    # Provide the minimum number of (output) dimensions for this RV
-    # (e.g. `0` for a scalar, `1` for a vector, etc.)
-    ndim_supp: int = 0
-
-    # Provide the number of (input) dimensions for each parameter of the RV
-    # (e.g. if there's only one vector parameter, `[1]`; for two parameters,
-    # one a matrix and the other a scalar, `[2, 0]`; etc.)
-    ndims_params: List[int] = [0, 0]
+    # Provide a numpy-style signature for this RV, which indicates
+    # the number and core dimensionality of each input and output.
+    signature: "(),()->()"
 
     # The NumPy/PyTensor dtype for this RV (e.g. `"int32"`, `"int64"`).
     # The standard in the library is `"int64"` for discrete variables
@@ -87,8 +82,8 @@ blah = BlahRV()
 Some important things to keep in mind:
 
 1. Everything inside the `rng_fn` method is pure Python code (as are the inputs) and should __not__ make use of other `PyTensor` symbolic ops. The random method should make use of the `rng` which is a NumPy {class}`~numpy.random.RandomGenerator`, so that samples are reproducible.
-1. Non-default `RandomVariable` dimensions will end up in the `rng_fn` via the `size` kwarg. The `rng_fn` will have to take this into consideration for correct output. `size` is the specification used by NumPy and SciPy and works like PyMC `shape` for univariate distributions, but is different for multivariate distributions. For multivariate distributions the __`size` excludes the `ndim_supp` support dimensions__, whereas the __`shape` of the resulting `TensorVariable` or `ndarray` includes the support dimensions__. For more context check {ref}`The dimensionality notebook <dimensionality>`.
-1. `PyTensor` can automatically infer the output shape of univariate `RandomVariable`s (`ndim_supp=0`). For multivariate distributions (`ndim_supp>=1`), the method `_supp_shape_from_params` must be implemented in the new `RandomVariable` class. This method returns the support dimensionality of an RV given its parameters. In some cases this can be derived from the shape of one of its parameters, in which case the helper {func}`pytensor.tensor.random.utils.supp_shape_from_ref_param_shape` cand be used as is in {class}`~pymc.DirichletMultinomialRV`. In other cases the argument values (and not their shapes) may determine the support shape of the distribution, as happens in the `~pymc.distributions.multivarite._LKJCholeskyCovRV`. In simpler cases they may be constant.
+1. Non-default `RandomVariable` dimensions will end up in the `rng_fn` via the `size` kwarg. The `rng_fn` will have to take this into consideration for correct output. `size` is the specification used by NumPy and SciPy and works like PyMC `shape` for univariate distributions, but is different for multivariate distributions. For multivariate distributions the __`size` excludes the support dimensions__, whereas the __`shape` of the resulting `TensorVariable` or `ndarray` includes the support dimensions__. For more context check {ref}`The dimensionality notebook <dimensionality>`.
+1. `PyTensor` can automatically infer the output shape of univariate `RandomVariable`s. For multivariate distributions, the method `_supp_shape_from_params` must be implemented in the new `RandomVariable` class. This method returns the support dimensionality of an RV given its parameters. In some cases this can be derived from the shape of one of its parameters, in which case the helper {func}`pytensor.tensor.random.utils.supp_shape_from_ref_param_shape` cand be used as is in {class}`~pymc.DirichletMultinomialRV`. In other cases the argument values (and not their shapes) may determine the support shape of the distribution, as happens in the `~pymc.distributions.multivarite._LKJCholeskyCovRV`. In simpler cases they may be constant.
 1. It's okay to use the `rng_fn` `classmethods` of other PyTensor and PyMC `RandomVariables` inside the new `rng_fn`. For example if you are implementing a negative HalfNormal `RandomVariable`, your `rng_fn` can simply return `- halfnormal.rng_fn(rng, scale, size)`.
 
 *Note: In addition to `size`, the PyMC API also provides `shape`, `dims` and `observed` as alternatives to define a distribution dimensionality, but this is taken care of by {class}`~pymc.Distribution`, and should not require any extra changes.*

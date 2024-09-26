@@ -29,7 +29,6 @@ import pymc as pm
 
 from pymc import ShapeError
 from pymc.distributions.shape_utils import (
-    broadcast_dist_samples_shape,
     change_dist_size,
     convert_dims,
     convert_shape,
@@ -37,7 +36,6 @@ from pymc.distributions.shape_utils import (
     get_support_shape,
     get_support_shape_1d,
     rv_size_is_none,
-    to_tuple,
 )
 from pymc.model import Model
 
@@ -98,28 +96,6 @@ class TestShapesBroadcasting:
                 np.broadcast_shapes(*shapes)
         else:
             out = np.broadcast_shapes(*shapes)
-            assert out == expected_out
-
-    def test_broadcast_dist_samples_shape(self, fixture_sizes, fixture_shapes):
-        size = fixture_sizes
-        shapes = fixture_shapes
-        size_ = to_tuple(size)
-        shapes_ = [
-            s if s[: min([len(size_), len(s)])] != size_ else s[len(size_) :] for s in shapes
-        ]
-        try:
-            expected_out = np.broadcast(*(np.empty(s) for s in shapes_)).shape
-        except ValueError:
-            expected_out = None
-        if expected_out is not None and any(
-            s[: min([len(size_), len(s)])] == size_ for s in shapes
-        ):
-            expected_out = size_ + expected_out
-        if expected_out is None:
-            with pytest.raises(ValueError):
-                broadcast_dist_samples_shape(shapes, size=size)
-        else:
-            out = broadcast_dist_samples_shape(shapes, size=size)
             assert out == expected_out
 
 
@@ -384,7 +360,7 @@ def test_rv_size_is_none():
     assert rv_size_is_none(rv.owner.inputs[1])
 
     rv = pm.Normal.dist(0, 1, size=())
-    assert rv_size_is_none(rv.owner.inputs[1])
+    assert not rv_size_is_none(rv.owner.inputs[1])
 
     rv = pm.Normal.dist(0, 1, size=1)
     assert not rv_size_is_none(rv.owner.inputs[1])

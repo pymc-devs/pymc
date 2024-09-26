@@ -14,6 +14,7 @@ Distributions
    distributions/timeseries
    distributions/truncated
    distributions/censored
+   distributions/custom
    distributions/simulator
    distributions/transforms
    distributions/utilities

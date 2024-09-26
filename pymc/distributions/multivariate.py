@@ -24,19 +24,27 @@ import pytensor
 import pytensor.tensor as pt
 import scipy
 
-from pytensor.graph.basic import Apply, Constant, Variable
+from pytensor.graph import node_rewriter
+from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
-from pytensor.sparse.basic import sp_sum
-from pytensor.tensor import TensorConstant, gammaln, sigmoid
+from pytensor.sparse.basic import DenseFromSparse, sp_sum
+from pytensor.tensor import (
+    TensorConstant,
+    TensorVariable,
+    gammaln,
+    get_underlying_scalar_constant_value,
+    sigmoid,
+)
+from pytensor.tensor.elemwise import DimShuffle
+from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.linalg import cholesky, det, eigh, solve_triangular, trace
 from pytensor.tensor.linalg import inv as matrix_inverse
-from pytensor.tensor.random.basic import dirichlet, multinomial, multivariate_normal
+from pytensor.tensor.random.basic import MvNormalRV, dirichlet, multinomial, multivariate_normal
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import (
     broadcast_params,
     normalize_size_param,
-    supp_shape_from_ref_param_shape,
 )
 from pytensor.tensor.type import TensorType
 from scipy import stats
@@ -62,7 +70,6 @@ from pymc.distributions.distribution import (
 )
 from pymc.distributions.shape_utils import (
     _change_dist_size,
-    broadcast_dist_samples_shape,
     change_dist_size,
     get_support_shape,
     implicit_size_from_params,
@@ -71,6 +78,9 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
 from pymc.logprob.abstract import _logprob
+from pymc.logprob.rewriting import (
+    specialization_ir_rewrites_db,
+)
 from pymc.math import kron_diag, kron_dot
 from pymc.pytensorf import normalize_rng_param
 from pymc.util import check_dist_not_registered
@@ -96,6 +106,15 @@ __all__ = [
 
 solve_lower = partial(solve_triangular, lower=True)
 solve_upper = partial(solve_triangular, lower=False)
+
+
+def _squeeze_to_ndim(var: TensorVariable | np.ndarray, ndim: int):
+    squeeze = pt.squeeze if isinstance(var, TensorVariable) else np.squeeze
+    extra_dims = var.ndim - ndim
+    if extra_dims:
+        return squeeze(var, axis=tuple(range(extra_dims)))
+    else:
+        return var
 
 
 class SimplexContinuous(Continuous):
@@ -142,6 +161,13 @@ def quaddist_matrix(cov=None, chol=None, tau=None, lower=True, *args, **kwargs):
     return cov
 
 
+def _logdet_from_cholesky(chol: TensorVariable) -> tuple[TensorVariable, TensorVariable]:
+    diag = pt.diagonal(chol, axis1=-2, axis2=-1)
+    logdet = pt.log(diag).sum(axis=-1)
+    posdef = pt.all(diag > 0, axis=-1)
+    return logdet, posdef
+
+
 def quaddist_chol(value, mu, cov):
     """Compute (x - mu).T @ Sigma^-1 @ (x - mu) and the logdet of Sigma."""
     if value.ndim == 0:
@@ -152,23 +178,21 @@ def quaddist_chol(value, mu, cov):
     else:
         onedim = False
 
-    delta = value - mu
     chol_cov = nan_lower_cholesky(cov)
+    logdet, posdef = _logdet_from_cholesky(chol_cov)
 
-    diag = pt.diagonal(chol_cov, axis1=-2, axis2=-1)
-    # Check if the covariance matrix is positive definite.
-    ok = pt.all(diag > 0, axis=-1)
-    # If not, replace the diagonal. We return -inf later, but
-    # need to prevent solve_lower from throwing an exception.
-    chol_cov = pt.switch(ok[..., None, None], chol_cov, 1)
+    # solve_triangular will raise if there are nans
+    # (which happens if the cholesky fails)
+    chol_cov = pt.switch(posdef[..., None, None], chol_cov, 1)
+
+    delta = value - mu
     delta_trans = solve_lower(chol_cov, delta, b_ndim=1)
     quaddist = (delta_trans**2).sum(axis=-1)
-    logdet = pt.log(diag).sum(axis=-1)
 
     if onedim:
-        return quaddist[0], logdet, ok
+        return quaddist[0], logdet, posdef
     else:
-        return quaddist, logdet, ok
+        return quaddist, logdet, posdef
 
 
 class MvNormal(Continuous):
@@ -206,9 +230,9 @@ class MvNormal(Continuous):
     Define a multivariate normal variable for a given covariance
     matrix::
 
-        cov = np.array([[1., 0.5], [0.5, 2]])
+        cov = np.array([[1.0, 0.5], [0.5, 2]])
         mu = np.zeros(2)
-        vals = pm.MvNormal('vals', mu=mu, cov=cov, shape=(5, 2))
+        vals = pm.MvNormal("vals", mu=mu, cov=cov, shape=(5, 2))
 
     Most of the time it is preferable to specify the cholesky
     factor of the covariance instead. For example, we could
@@ -216,24 +240,26 @@ class MvNormal(Continuous):
     of `LKJCholeskyCov` for more information about this)::
 
         mu = np.zeros(3)
-        true_cov = np.array([[1.0, 0.5, 0.1],
-                             [0.5, 2.0, 0.2],
-                             [0.1, 0.2, 1.0]])
+        true_cov = np.array(
+            [
+                [1.0, 0.5, 0.1],
+                [0.5, 2.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ],
+        )
         data = np.random.multivariate_normal(mu, true_cov, 10)
 
         sd_dist = pm.Exponential.dist(1.0, shape=3)
-        chol, corr, stds = pm.LKJCholeskyCov('chol_cov', n=3, eta=2,
-            sd_dist=sd_dist, compute_corr=True)
-        vals = pm.MvNormal('vals', mu=mu, chol=chol, observed=data)
+        chol, corr, stds = pm.LKJCholeskyCov("chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True)
+        vals = pm.MvNormal("vals", mu=mu, chol=chol, observed=data)
 
     For unobserved values it can be better to use a non-centered
     parametrization::
 
         sd_dist = pm.Exponential.dist(1.0, shape=3)
-        chol, _, _ = pm.LKJCholeskyCov('chol_cov', n=3, eta=2,
-            sd_dist=sd_dist, compute_corr=True)
-        vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=(5, 3))
-        vals = pm.Deterministic('vals', pt.dot(chol, vals_raw.T).T)
+        chol, _, _ = pm.LKJCholeskyCov("chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True)
+        vals_raw = pm.Normal("vals_raw", mu=0, sigma=1, shape=(5, 3))
+        vals = pm.Deterministic("vals", pt.dot(chol, vals_raw.T).T)
     """
 
     rv_op = multivariate_normal
@@ -268,30 +294,85 @@ class MvNormal(Continuous):
         -------
         TensorVariable
         """
-        quaddist, logdet, ok = quaddist_chol(value, mu, cov)
+        quaddist, logdet, posdef = quaddist_chol(value, mu, cov)
         k = value.shape[-1].astype("floatX")
         norm = -0.5 * k * np.log(2 * np.pi)
         return check_parameters(
             norm - 0.5 * quaddist - logdet,
-            ok,
-            msg="posdef",
+            posdef,
+            msg="posdef covariance",
         )
+
+
+class PrecisionMvNormalRV(SymbolicRandomVariable):
+    r"""A specialized multivariate normal random variable defined in terms of precision.
+
+    This class is introduced during specialization logprob rewrites, and not meant to be used directly.
+    """
+
+    name = "precision_multivariate_normal"
+    extended_signature = "[rng],[size],(n),(n,n)->(n)"
+    _print_name = ("PrecisionMultivariateNormal", "\\operatorname{PrecisionMultivariateNormal}")
+
+    @classmethod
+    def rv_op(cls, mean, tau, *, rng=None, size=None):
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
+        cov = pt.linalg.inv(tau)
+        next_rng, draws = multivariate_normal(mean, cov, size=size, rng=rng).owner.outputs
+        return cls(
+            inputs=[rng, size, mean, tau],
+            outputs=[next_rng, draws],
+        )(rng, size, mean, tau)
+
+
+@_logprob.register
+def precision_mv_normal_logp(op: PrecisionMvNormalRV, value, rng, size, mean, tau, **kwargs):
+    [value] = value
+    k = value.shape[-1].astype("floatX")
+
+    delta = value - mean
+    quadratic_form = delta.T @ tau @ delta
+    logdet, posdef = _logdet_from_cholesky(nan_lower_cholesky(tau))
+    logp = -0.5 * (k * pt.log(2 * np.pi) + quadratic_form) + logdet
+
+    return check_parameters(
+        logp,
+        posdef,
+        msg="posdef precision",
+    )
+
+
+@node_rewriter(tracks=[MvNormalRV])
+def mv_normal_to_precision_mv_normal(fgraph, node):
+    """Replaces MvNormal(mu, inv(tau)) -> PrecisionMvNormal(mu, tau)
+
+    This is introduced in logprob rewrites to provide a more efficient logp for a MvNormal
+    that is defined by a precision matrix.
+
+    Note: This won't be introduced when calling `pm.logp` as that will dispatch directly
+    without triggering the logprob rewrites.
+    """
+
+    rng, size, mu, cov = node.inputs
+    if cov.owner and cov.owner.op == matrix_inverse:
+        tau = cov.owner.inputs[0]
+        return PrecisionMvNormalRV.rv_op(mu, tau, size=size, rng=rng).owner.outputs
+    return None
+
+
+specialization_ir_rewrites_db.register(
+    mv_normal_to_precision_mv_normal.__name__,
+    mv_normal_to_precision_mv_normal,
+    "basic",
+)
 
 
 class MvStudentTRV(RandomVariable):
     name = "multivariate_studentt"
-    ndim_supp = 1
-    ndims_params = [0, 1, 2]
+    signature = "(),(n),(n,n)->(n)"
     dtype = "floatX"
     _print_name = ("MvStudentT", "\\operatorname{MvStudentT}")
-
-    def _supp_shape_from_params(self, dist_params, param_shapes=None):
-        return supp_shape_from_ref_param_shape(
-            ndim_supp=self.ndim_supp,
-            dist_params=dist_params,
-            param_shapes=param_shapes,
-            ref_param_idx=1,
-        )
 
     @classmethod
     def rng_fn(cls, rng, nu, mu, cov, size):
@@ -596,7 +677,7 @@ class Multinomial(Discrete):
 
 class DirichletMultinomialRV(SymbolicRandomVariable):
     name = "dirichlet_multinomial"
-    signature = "[rng],[size],(),(p)->[rng],(p)"
+    extended_signature = "[rng],[size],(),(p)->[rng],(p)"
     _print_name = ("DirichletMultinomial", "\\operatorname{DirichletMultinomial}")
 
     @classmethod
@@ -802,7 +883,7 @@ class OrderedMultinomial:
     def __new__(cls, name, *args, compute_p=True, **kwargs):
         out_rv = _OrderedMultinomial(name, *args, **kwargs)
         if compute_p:
-            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[4], dims=kwargs.get("dims"))
+            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[-1], dims=kwargs.get("dims"))
         return out_rv
 
     @classmethod
@@ -861,23 +942,14 @@ matrix_pos_def = PosDefMatrix()
 
 class WishartRV(RandomVariable):
     name = "wishart"
-    ndim_supp = 2
-    ndims_params = [0, 2]
+    signature = "(),(p,p)->(p,p)"
     dtype = "floatX"
     _print_name = ("Wishart", "\\operatorname{Wishart}")
-
-    def _supp_shape_from_params(self, dist_params, param_shapes=None):
-        # The shape of second parameter `V` defines the shape of the output.
-        return supp_shape_from_ref_param_shape(
-            ndim_supp=self.ndim_supp,
-            dist_params=dist_params,
-            param_shapes=param_shapes,
-            ref_param_idx=1,
-        )
 
     @classmethod
     def rng_fn(cls, rng, nu, V, size):
         scipy_size = size if size else 1  # Default size for Scipy's wishart.rvs is 1
+        V = _squeeze_to_ndim(V, 2)
         result = stats.wishart.rvs(int(nu), V, size=scipy_size, random_state=rng)
         if size == (1,):
             return result[np.newaxis, ...]
@@ -1094,26 +1166,25 @@ def _lkj_normalizing_constant(eta, n):
 
 class _LKJCholeskyCovBaseRV(RandomVariable):
     name = "_lkjcholeskycovbase"
-    ndim_supp = 1
-    ndims_params = [0, 0, 1]
+    signature = "(),(),(d)->(n)"
     dtype = "floatX"
     _print_name = ("_lkjcholeskycovbase", "\\operatorname{_lkjcholeskycovbase}")
 
-    def make_node(self, rng, size, dtype, n, eta, D):
+    def make_node(self, rng, size, n, eta, D):
         n = pt.as_tensor_variable(n)
-        if not n.ndim == 0:
-            raise ValueError("n must be a scalar (ndim=0).")
+        if not all(n.type.broadcastable):
+            raise ValueError("n must be a scalar.")
 
         eta = pt.as_tensor_variable(eta)
-        if not eta.ndim == 0:
-            raise ValueError("eta must be a scalar (ndim=0).")
+        if not all(eta.type.broadcastable):
+            raise ValueError("eta must be a scalar.")
 
         D = pt.as_tensor_variable(D)
 
-        return super().make_node(rng, size, dtype, n, eta, D)
+        return super().make_node(rng, size, n, eta, D)
 
     def _supp_shape_from_params(self, dist_params, param_shapes):
-        n = dist_params[0]
+        n = dist_params[0].squeeze()
         return ((n * (n + 1)) // 2,)
 
     def rng_fn(self, rng, n, eta, D, size):
@@ -1121,6 +1192,9 @@ class _LKJCholeskyCovBaseRV(RandomVariable):
         if size is None:
             size = D.shape[:-1]
         flat_size = np.prod(size).astype(int)
+
+        n = n.squeeze()
+        eta = eta.squeeze()
 
         C = LKJCorrRV._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
         D = D.reshape(flat_size, n)
@@ -1144,7 +1218,7 @@ _ljk_cholesky_cov_base = _LKJCholeskyCovBaseRV()
 # _LKJCholeskyCovBaseRV requires a properly shaped `D`, which means the variable can't
 # be safely resized. Because of this, we add the thin SymbolicRandomVariable wrapper
 class _LKJCholeskyCovRV(SymbolicRandomVariable):
-    signature = "[rng],(),(),(n)->[rng],(n)"
+    extended_signature = "[rng],(),(),(n)->[rng],(n)"
     _print_name = ("_lkjcholeskycov", "\\operatorname{_lkjcholeskycov}")
 
     @classmethod
@@ -1256,13 +1330,15 @@ def _LKJCholeksyCovRV_logp(op, values, rng, n, eta, sd_dist, **kwargs):
     det_invjac = det_invjac.sum()
 
     # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
-    if not isinstance(n, Constant):
+    try:
+        n = int(get_underlying_scalar_constant_value(n))
+    except NotScalarConstantError:
         raise NotImplementedError("logp only implemented for constant `n`")
-    n = int(n.data)
 
-    if not isinstance(eta, Constant):
+    try:
+        eta = float(get_underlying_scalar_constant_value(eta))
+    except NotScalarConstantError:
         raise NotImplementedError("logp only implemented for constant `eta`")
-    eta = float(eta.data)
 
     norm = _lkj_normalizing_constant(eta, n)
 
@@ -1445,24 +1521,23 @@ class LKJCholeskyCov:
 
 class LKJCorrRV(RandomVariable):
     name = "lkjcorr"
-    ndim_supp = 1
-    ndims_params = [0, 0]
+    signature = "(),()->(n)"
     dtype = "floatX"
     _print_name = ("LKJCorrRV", "\\operatorname{LKJCorrRV}")
 
-    def make_node(self, rng, size, dtype, n, eta):
+    def make_node(self, rng, size, n, eta):
         n = pt.as_tensor_variable(n)
-        if not n.ndim == 0:
-            raise ValueError("n must be a scalar (ndim=0).")
+        if not all(n.type.broadcastable):
+            raise ValueError("n must be a scalar.")
 
         eta = pt.as_tensor_variable(eta)
-        if not eta.ndim == 0:
-            raise ValueError("eta must be a scalar (ndim=0).")
+        if not all(eta.type.broadcastable):
+            raise ValueError("eta must be a scalar.")
 
-        return super().make_node(rng, size, dtype, n, eta)
+        return super().make_node(rng, size, n, eta)
 
     def _supp_shape_from_params(self, dist_params, **kwargs):
-        n = dist_params[0]
+        n = dist_params[0].squeeze()
         dist_shape = ((n * (n - 1)) // 2,)
         return dist_shape
 
@@ -1472,8 +1547,10 @@ class LKJCorrRV(RandomVariable):
         if size is None:
             flat_size = 1
         else:
-            flat_size = np.prod(size)
+            flat_size = np.prod(size).astype(int)
 
+        n = n.squeeze()
+        eta = eta.squeeze()
         C = cls._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
 
         triu_idx = np.triu_indices(n, k=1)
@@ -1550,10 +1627,11 @@ class _LKJCorr(BoundedContinuous):
 
         # TODO: PyTensor does not have a `triu_indices`, so we can only work with constant
         #  n (or else find a different expression)
-        if not isinstance(n, Constant):
+        try:
+            n = int(get_underlying_scalar_constant_value(n))
+        except NotScalarConstantError:
             raise NotImplementedError("logp only implemented for constant `n`")
 
-        n = int(n.data)
         shape = n * (n - 1) // 2
         tri_index = np.zeros((n, n), dtype="int32")
         tri_index[np.triu_indices(n, k=1)] = np.arange(shape)
@@ -1563,9 +1641,10 @@ class _LKJCorr(BoundedContinuous):
         value = pt.fill_diagonal(value, 1)
 
         # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
-        if not isinstance(eta, Constant):
+        try:
+            eta = float(get_underlying_scalar_constant_value(eta))
+        except NotScalarConstantError:
             raise NotImplementedError("logp only implemented for constant `eta`")
-        eta = float(eta.data)
         result = _lkj_normalizing_constant(eta, n)
         result += (eta - 1.0) * pt.log(det(value))
         return check_parameters(
@@ -1670,38 +1749,18 @@ class LKJCorr:
 
 class MatrixNormalRV(RandomVariable):
     name = "matrixnormal"
-    ndim_supp = 2
-    ndims_params = [2, 2, 2]
+    signature = "(m,n),(m,m),(n,n)->(m,n)"
     dtype = "floatX"
     _print_name = ("MatrixNormal", "\\operatorname{MatrixNormal}")
 
-    def _supp_shape_from_params(self, dist_params, param_shapes=None):
-        return supp_shape_from_ref_param_shape(
-            ndim_supp=self.ndim_supp,
-            dist_params=dist_params,
-            param_shapes=param_shapes,
-            ref_param_idx=0,
-        )
-
     @classmethod
     def rng_fn(cls, rng, mu, rowchol, colchol, size=None):
-        size = to_tuple(size)
-        dist_shape = to_tuple([rowchol.shape[0], colchol.shape[0]])
+        if size is None:
+            size = np.broadcast_shapes(mu.shape[:-2], rowchol.shape[:-2], colchol.shape[:-2])
+        dist_shape = (rowchol.shape[-2], colchol.shape[-2])
         output_shape = size + dist_shape
-
-        # Broadcasting all parameters
-        shapes = [mu.shape, output_shape]
-        broadcastable_shape = broadcast_dist_samples_shape(shapes, size=size)
-        mu = np.broadcast_to(mu, shape=broadcastable_shape)
-        rowchol = np.broadcast_to(rowchol, shape=size + rowchol.shape[-2:])
-
-        colchol = np.broadcast_to(colchol, shape=size + colchol.shape[-2:])
-        colchol = np.swapaxes(colchol, -1, -2)  # Take transpose
-
         standard_normal = rng.standard_normal(output_shape)
-        samples = mu + np.matmul(rowchol, np.matmul(standard_normal, colchol))
-
-        return samples
+        return mu + np.matmul(rowchol, np.matmul(standard_normal, np.swapaxes(colchol, -1, -2)))
 
 
 matrixnormal = MatrixNormalRV()
@@ -1749,13 +1808,12 @@ class MatrixNormal(Continuous):
     Define a matrixvariate normal variable for given row and column covariance
     matrices::
 
-        colcov = np.array([[1., 0.5], [0.5, 2]])
+        colcov = np.array([[1.0, 0.5], [0.5, 2]])
         rowcov = np.array([[1, 0, 0], [0, 4, 0], [0, 0, 16]])
         m = rowcov.shape[0]
         n = colcov.shape[0]
         mu = np.zeros((m, n))
-        vals = pm.MatrixNormal('vals', mu=mu, colcov=colcov,
-                               rowcov=rowcov)
+        vals = pm.MatrixNormal("vals", mu=mu, colcov=colcov, rowcov=rowcov)
 
     Above, the ith row in vals has a variance that is scaled by 4^i.
     Alternatively, row or column cholesky matrices could be substituted for
@@ -1892,35 +1950,30 @@ class MatrixNormal(Continuous):
         return norm - 0.5 * trquaddist - m * half_collogdet - n * half_rowlogdet
 
 
-class KroneckerNormalRV(RandomVariable):
-    name = "kroneckernormal"
+class KroneckerNormalRV(SymbolicRandomVariable):
     ndim_supp = 1
-    ndims_params = [1, 0, 2]
-    dtype = "floatX"
     _print_name = ("KroneckerNormal", "\\operatorname{KroneckerNormal}")
 
-    def _supp_shape_from_params(self, dist_params, param_shapes=None):
-        return supp_shape_from_ref_param_shape(
-            ndim_supp=self.ndim_supp,
-            dist_params=dist_params,
-            param_shapes=param_shapes,
-            ref_param_idx=0,
-        )
+    @classmethod
+    def rv_op(cls, mu, sigma, *covs, size=None, rng=None):
+        mu = pt.as_tensor(mu)
+        sigma = pt.as_tensor(sigma)
+        covs = [pt.as_tensor(cov) for cov in covs]
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
 
-    def rng_fn(self, rng, mu, sigma, *covs, size=None):
-        size = size if size else covs[-1]
-        covs = covs[:-1] if covs[-1] == size else covs
+        cov = reduce(pt.linalg.kron, covs)
+        cov = cov + sigma**2 * pt.eye(cov.shape[-2])
+        next_rng, draws = multivariate_normal(mean=mu, cov=cov, size=size, rng=rng).owner.outputs
 
-        cov = reduce(scipy.linalg.kron, covs)
+        covs_sig = ",".join(f"(a{i},b{i})" for i in range(len(covs)))
+        extended_signature = f"[rng],[size],(m),(),{covs_sig}->[rng],(m)"
 
-        if sigma:
-            cov = cov + sigma**2 * np.eye(cov.shape[0])
-
-        x = multivariate_normal.rng_fn(rng=rng, mean=mu, cov=cov, size=size)
-        return x
-
-
-kroneckernormal = KroneckerNormalRV()
+        return KroneckerNormalRV(
+            inputs=[rng, size, mu, sigma, *covs],
+            outputs=[next_rng, draws],
+            extended_signature=extended_signature,
+        )(rng, size, mu, sigma, *covs)
 
 
 class KroneckerNormal(Continuous):
@@ -2011,7 +2064,8 @@ class KroneckerNormal(Continuous):
     .. [1] Saatchi, Y. (2011). "Scalable inference for structured Gaussian process models"
     """
 
-    rv_op = kroneckernormal
+    rv_type = KroneckerNormalRV
+    rv_op = KroneckerNormalRV.rv_op
 
     @classmethod
     def dist(cls, mu, covs=None, chols=None, evds=None, sigma=None, *args, **kwargs):
@@ -2036,14 +2090,10 @@ class KroneckerNormal(Continuous):
 
         return super().dist([mu, sigma, *covs], **kwargs)
 
-    def support_point(rv, size, mu, covs, chols, evds):
-        mean = mu
-        if not rv_size_is_none(size):
-            support_point_size = pt.concatenate([size, mu.shape])
-            mean = pt.full(support_point_size, mu)
-        return mean
+    def support_point(rv, rng, size, mu, sigma, *covs):
+        return pt.full_like(rv, mu)
 
-    def logp(value, mu, sigma, *covs):
+    def logp(value, rng, size, mu, sigma, *covs):
         """
         Calculate log-probability of Multivariate Normal distribution
         with Kronecker-structured covariance at specified value.
@@ -2093,57 +2143,51 @@ class KroneckerNormal(Continuous):
 
 class CARRV(RandomVariable):
     name = "car"
-    ndim_supp = 1
-    ndims_params = [1, 2, 0, 0]
+    signature = "(m),(m,m),(),(),()->(m)"
     dtype = "floatX"
     _print_name = ("CAR", "\\operatorname{CAR}")
 
-    def make_node(self, rng, size, dtype, mu, W, alpha, tau):
+    def make_node(self, rng, size, mu, W, alpha, tau, W_is_valid):
         mu = pt.as_tensor_variable(mu)
-
         W = pytensor.sparse.as_sparse_or_tensor_variable(W)
-        if not W.ndim == 2:
-            raise ValueError("W must be a matrix (ndim=2).")
-
-        sparse = isinstance(W.type, pytensor.sparse.SparseTensorType)
-        msg = "W must be a symmetric adjacency matrix."
-        if sparse:
-            abs_diff = pytensor.sparse.basic.mul(pytensor.sparse.sign(W - W.T), W - W.T)
-            W = Assert(msg)(W, pt.isclose(pytensor.sparse.sp_sum(abs_diff), 0))
-        else:
-            W = Assert(msg)(W, pt.allclose(W, W.T))
-
         tau = pt.as_tensor_variable(tau)
-
         alpha = pt.as_tensor_variable(alpha)
+        W_is_valid = pt.as_tensor_variable(W_is_valid, dtype=bool)
 
-        return super().make_node(rng, size, dtype, mu, W, alpha, tau)
+        if not (W.ndim >= 2 and all(W.type.broadcastable[:-2])):
+            raise TypeError("W must be a matrix")
+        if not all(tau.type.broadcastable):
+            raise TypeError("tau must be a scalar")
+        if not all(alpha.type.broadcastable):
+            raise TypeError("alpha must be a scalar")
 
-    def _supp_shape_from_params(self, dist_params, param_shapes=None):
-        return supp_shape_from_ref_param_shape(
-            ndim_supp=self.ndim_supp,
-            dist_params=dist_params,
-            param_shapes=param_shapes,
-            ref_param_idx=0,
-        )
+        return super().make_node(rng, size, mu, W, alpha, tau, W_is_valid)
 
     @classmethod
-    def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, size):
+    def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, W_is_valid, size):
         """
         Implementation of algorithm from paper
         Havard Rue, 2001. "Fast sampling of Gaussian Markov random fields,"
         Journal of the Royal Statistical Society Series B, Royal Statistical Society,
         vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288
         """
+        if not W_is_valid.all():
+            raise ValueError("W must be a valid adjacency matrix")
+
         if np.any(alpha >= 1) or np.any(alpha <= -1):
             raise ValueError("the domain of alpha is: -1 < alpha < 1")
 
+        # TODO: If there are batch dims, even if W was already sparse,
+        #  we will have some expensive dense_from_sparse and sparse_from_dense
+        #  operations that we should avoid. See https://github.com/pymc-devs/pytensor/issues/839
+        W = _squeeze_to_ndim(W, 2)
         if not scipy.sparse.issparse(W):
             W = scipy.sparse.csr_matrix(W)
+        tau = scipy.sparse.csr_matrix(_squeeze_to_ndim(tau, 0))
+        alpha = scipy.sparse.csr_matrix(_squeeze_to_ndim(alpha, 0))
+
         s = np.asarray(W.sum(axis=0))[0]
         D = scipy.sparse.diags(s)
-        tau = scipy.sparse.csr_matrix(tau)
-        alpha = scipy.sparse.csr_matrix(alpha)
 
         Q = tau.multiply(D - alpha.multiply(W))
 
@@ -2222,12 +2266,21 @@ class CAR(Continuous):
 
     @classmethod
     def dist(cls, mu, W, alpha, tau, *args, **kwargs):
-        return super().dist([mu, W, alpha, tau], **kwargs)
+        # This variable has an expensive validation check, that we want to constant-fold if possible
+        # So it's passed as an explicit input
+        W = pytensor.sparse.as_sparse_or_tensor_variable(W)
+        if isinstance(W.type, pytensor.sparse.SparseTensorType):
+            abs_diff = pytensor.sparse.basic.mul(pytensor.sparse.sign(W - W.T), W - W.T)
+            W_is_valid = pt.isclose(pytensor.sparse.sp_sum(abs_diff), 0)
+        else:
+            W_is_valid = pt.allclose(W, W.T)
 
-    def support_point(rv, size, mu, W, alpha, tau):
+        return super().dist([mu, W, alpha, tau, W_is_valid], **kwargs)
+
+    def support_point(rv, size, mu, W, alpha, tau, W_is_valid):
         return pt.full_like(rv, mu)
 
-    def logp(value, mu, W, alpha, tau):
+    def logp(value, mu, W, alpha, tau, W_is_valid):
         """
         Calculate log-probability of a CAR-distributed vector
         at specified value. This log probability function differs from
@@ -2244,8 +2297,22 @@ class CAR(Continuous):
         TensorVariable
         """
 
-        sparse = isinstance(W, pytensor.sparse.SparseConstant | pytensor.sparse.SparseVariable)
+        # If expand_dims were added to (a potentially sparse) W, retrieve the non-expanded W
+        extra_dims = W.type.ndim - 2
+        if extra_dims:
+            if (
+                W.owner
+                and isinstance(W.owner.op, DimShuffle)
+                and W.owner.op.new_order == (*("x",) * extra_dims, 0, 1)
+            ):
+                W = W.owner.inputs[0]
+            else:
+                W = pt.squeeze(W, axis=tuple(range(extra_dims)))
 
+        if W.owner and isinstance(W.owner.op, DenseFromSparse):
+            W = W.owner.inputs[0]
+
+        sparse = isinstance(W, pytensor.sparse.SparseVariable)
         if sparse:
             D = sp_sum(W, axis=0)
             Dinv_sqrt = pt.diag(1 / pt.sqrt(D))
@@ -2261,7 +2328,7 @@ class CAR(Continuous):
         if value.ndim == 1:
             value = value[None, :]
 
-        logtau = d * pt.log(tau).sum()
+        logtau = d * pt.log(tau).sum(axis=-1)
         logdet = pt.log(1 - alpha.T * lam[:, None]).sum()
         delta = value - mu
 
@@ -2277,30 +2344,22 @@ class CAR(Continuous):
             -1 < alpha,
             alpha < 1,
             tau > 0,
-            msg="-1 < alpha < 1, tau > 0",
+            W_is_valid,
+            msg="-1 < alpha < 1, tau > 0, W is a symmetric adjacency matrix.",
         )
 
 
 class ICARRV(RandomVariable):
     name = "icar"
-    ndim_supp = 1
-    ndims_params = [2, 1, 1, 0, 0, 0]
+    signature = "(m,m),(),()->(m)"
     dtype = "floatX"
     _print_name = ("ICAR", "\\operatorname{ICAR}")
 
-    def __call__(self, W, node1, node2, N, sigma, zero_sum_stdev, size=None, **kwargs):
-        return super().__call__(W, node1, node2, N, sigma, zero_sum_stdev, size=size, **kwargs)
-
-    def _supp_shape_from_params(self, dist_params, param_shapes=None):
-        return supp_shape_from_ref_param_shape(
-            ndim_supp=self.ndim_supp,
-            dist_params=dist_params,
-            param_shapes=param_shapes,
-            ref_param_idx=0,
-        )
+    def __call__(self, W, sigma, zero_sum_stdev, size=None, **kwargs):
+        return super().__call__(W, sigma, zero_sum_stdev, size=size, **kwargs)
 
     @classmethod
-    def rng_fn(cls, rng, size, W, node1, node2, N, sigma, zero_sum_stdev):
+    def rng_fn(cls, rng, size, W, sigma, zero_sum_stdev):
         raise NotImplementedError("Cannot sample from ICAR prior")
 
 
@@ -2360,23 +2419,25 @@ class ICAR(Continuous):
         # 4x4 adjacency matrix
         # arranged in a square lattice
 
-        W = np.array([
-            [0,1,0,1],
-            [1,0,1,0],
-            [0,1,0,1],
-            [1,0,1,0]
-        ])
+        W = np.array(
+            [
+                [0, 1, 0, 1],
+                [1, 0, 1, 0],
+                [0, 1, 0, 1],
+                [1, 0, 1, 0],
+            ],
+        )
 
         # centered parameterization
         with pm.Model():
-            sigma = pm.Exponential('sigma', 1)
-            phi = pm.ICAR('phi', W=W, sigma=sigma)
+            sigma = pm.Exponential("sigma", 1)
+            phi = pm.ICAR("phi", W=W, sigma=sigma)
             mu = phi
 
         # non-centered parameterization
         with pm.Model():
-            sigma = pm.Exponential('sigma', 1)
-            phi = pm.ICAR('phi', W=W)
+            sigma = pm.Exponential("sigma", 1)
+            phi = pm.ICAR("phi", W=W)
             mu = sigma * phi
 
     References
@@ -2396,6 +2457,7 @@ class ICAR(Continuous):
 
     @classmethod
     def dist(cls, W, sigma=1, zero_sum_stdev=0.001, **kwargs):
+        # Note: These checks are forcing W to be non-symbolic
         if not W.ndim == 2:
             raise ValueError("W must be matrix with ndim=2")
 
@@ -2408,6 +2470,16 @@ class ICAR(Continuous):
         if np.any((W != 0) & (W != 1)):
             raise ValueError("W must be composed of only 1s and 0s")
 
+        W = pt.as_tensor_variable(W, dtype=int)
+        sigma = pt.as_tensor_variable(sigma)
+        zero_sum_stdev = pt.as_tensor_variable(zero_sum_stdev)
+        return super().dist([W, sigma, zero_sum_stdev], **kwargs)
+
+    def support_point(rv, size, W, sigma, zero_sum_stdev):
+        N = pt.shape(W)[-2]
+        return pt.zeros(N)
+
+    def logp(value, W, sigma, zero_sum_stdev):
         # convert adjacency matrix to edgelist representation
         # An edgelist is a pair of lists.
         # If node i and node j are connected then one list
@@ -2415,26 +2487,9 @@ class ICAR(Continuous):
         # index value.
         # We only use the lower triangle here because adjacency
         # is a undirected connection.
+        N = pt.shape(W)[-2]
+        node1, node2 = pt.eq(pt.tril(W), 1).nonzero()
 
-        node1, node2 = np.where(np.tril(W) == 1)
-
-        node1 = pt.as_tensor_variable(node1, dtype=int)
-        node2 = pt.as_tensor_variable(node2, dtype=int)
-
-        W = pt.as_tensor_variable(W, dtype=int)
-
-        N = pt.shape(W)[0]
-        N = pt.as_tensor_variable(N)
-
-        sigma = pt.as_tensor_variable(sigma)
-        zero_sum_stdev = pt.as_tensor_variable(zero_sum_stdev)
-
-        return super().dist([W, node1, node2, N, sigma, zero_sum_stdev], **kwargs)
-
-    def support_point(rv, size, W, node1, node2, N, sigma, zero_sum_stdev):
-        return pt.zeros(N)
-
-    def logp(value, W, node1, node2, N, sigma, zero_sum_stdev):
         pairwise_difference = (-1 / (2 * sigma**2)) * pt.sum(pt.square(value[node1] - value[node2]))
         zero_sum = (
             -0.5 * pt.pow(pt.sum(value) / (zero_sum_stdev * N), 2)
@@ -2447,26 +2502,26 @@ class ICAR(Continuous):
 
 class StickBreakingWeightsRV(RandomVariable):
     name = "stick_breaking_weights"
-    ndim_supp = 1
-    ndims_params = [0, 0]
+    signature = "(),()->(k)"
     dtype = "floatX"
     _print_name = ("StickBreakingWeights", "\\operatorname{StickBreakingWeights}")
 
-    def make_node(self, rng, size, dtype, alpha, K):
+    def make_node(self, rng, size, alpha, K):
         alpha = pt.as_tensor_variable(alpha)
         K = pt.as_tensor_variable(K, dtype=int)
 
-        if K.ndim > 0:
+        if not all(K.type.broadcastable):
             raise ValueError("K must be a scalar.")
 
-        return super().make_node(rng, size, dtype, alpha, K)
+        return super().make_node(rng, size, alpha, K)
 
     def _supp_shape_from_params(self, dist_params, param_shapes):
         K = dist_params[1]
-        return (K + 1,)
+        return (K.squeeze() + 1,)
 
     @classmethod
     def rng_fn(cls, rng, alpha, K, size):
+        K = K.squeeze()
         if K < 0:
             raise ValueError("K needs to be positive.")
 
@@ -2542,6 +2597,7 @@ class StickBreakingWeights(SimplexContinuous):
         return super().dist([alpha, K], **kwargs)
 
     def support_point(rv, size, alpha, K):
+        K = K.squeeze()
         alpha = alpha[..., np.newaxis]
         support_point = (alpha / (1 + alpha)) ** pt.arange(K)
         support_point *= 1 / (1 + alpha)
@@ -2634,11 +2690,11 @@ class ZeroSumNormalRV(SymbolicRandomVariable):
             zerosum_rv -= zerosum_rv.mean(axis=-axis - 1, keepdims=True)
 
         support_str = ",".join([f"d{i}" for i in range(n_zerosum_axes)])
-        signature = f"[rng],(),(s),[size]->[rng],({support_str})"
+        extended_signature = f"[rng],(),(s),[size]->[rng],({support_str})"
         return ZeroSumNormalRV(
             inputs=[rng, sigma, support_shape, size],
             outputs=[next_rng, zerosum_rv],
-            signature=signature,
+            extended_signature=extended_signature,
         )(rng, sigma, support_shape, size)
 
 

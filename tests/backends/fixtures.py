@@ -180,7 +180,7 @@ class ModelBackendSampledTestCase:
                 cls.expected_stats[0].append(stats)
                 cls.expected_stats[1].append(stats)
                 for key, dtype in vars.items():
-                    if dtype == bool:
+                    if dtype is bool:
                         stats[key] = np.zeros(cls.draws, dtype=dtype)
                     else:
                         stats[key] = np.arange(cls.draws, dtype=dtype)

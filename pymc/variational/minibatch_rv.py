@@ -20,10 +20,11 @@ from pytensor import Variable, config
 from pytensor.graph import Apply, Op
 from pytensor.tensor import NoneConst, TensorVariable, as_tensor_variable
 
-from pymc.logprob.abstract import MeasurableVariable, _logprob, _logprob_helper
+from pymc.logprob.abstract import MeasurableOp, _logprob
+from pymc.logprob.basic import logp
 
 
-class MinibatchRandomVariable(Op):
+class MinibatchRandomVariable(MeasurableOp, Op):
     """RV whose logprob should be rescaled to match total_size"""
 
     __props__ = ()
@@ -95,11 +96,8 @@ def get_scaling(total_size: Sequence[Variable], shape: TensorVariable) -> Tensor
     return pt.cast(coef, dtype=config.floatX)
 
 
-MeasurableVariable.register(MinibatchRandomVariable)
-
-
 @_logprob.register(MinibatchRandomVariable)
 def minibatch_rv_logprob(op, values, *inputs, **kwargs):
     [value] = values
     rv, *total_size = inputs
-    return _logprob_helper(rv, value, **kwargs) * get_scaling(total_size, value.shape)
+    return logp(rv, value, **kwargs) * get_scaling(total_size, value.shape)

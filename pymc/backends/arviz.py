@@ -656,7 +656,7 @@ def apply_function_over_dataset(
         for idx in indices:
             out = fn(posterior_pts[idx])
             fn.f.trust_input = True  # If we arrive here the dtypes are valid
-            for var_name, val in zip(output_var_names, out):
+            for var_name, val in zip(output_var_names, out, strict=True):
                 out_dict.insert(var_name, val, idx)
 
             progress.advance(task)

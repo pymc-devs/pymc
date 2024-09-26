@@ -3,7 +3,7 @@
     :alt: PyMC logo
     :align: center
 
-|Build Status| |Coverage| |NumFOCUS_badge| |Binder| |Dockerhub| |DOIzenodo|
+|Build Status| |Coverage| |NumFOCUS_badge| |Binder| |Dockerhub| |DOIzenodo| |Conda Downloads|
 
 PyMC (formerly PyMC3) is a Python package for Bayesian statistical modeling
 focusing on advanced Markov chain Monte Carlo (MCMC) and variational inference (VI)
@@ -222,7 +222,7 @@ You can also follow us on these social media platforms for updates and other ann
 
 - `LinkedIn @pymc <https://www.linkedin.com/company/pymc/>`__
 - `YouTube @PyMCDevelopers <https://www.youtube.com/c/PyMCDevelopers>`__
-- `Twitter @pymc_devs <https://twitter.com/pymc_devs>`__
+- `X @pymc_devs <https://x.com/pymc_devs>`__
 - `Mastodon @pymc@bayes.club <https://bayes.club/@pymc>`__
 
 To report an issue with PyMC please use the `issue tracker <https://github.com/pymc-devs/pymc/issues>`__.
@@ -314,3 +314,5 @@ Thanks to our contributors
    :target: https://odsc.com/california/?utm_source=pymc&utm_medium=referral
 .. |contributors| image:: https://contrib.rocks/image?repo=pymc-devs/pymc
    :target: https://github.com/pymc-devs/pymc/graphs/contributors
+.. |Conda Downloads| image:: https://anaconda.org/conda-forge/pymc/badges/downloads.svg
+   :target: https://anaconda.org/conda-forge/pymc

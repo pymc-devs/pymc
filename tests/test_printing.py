@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+
 import numpy as np
 
 from pytensor.tensor.random import normal
@@ -125,8 +126,11 @@ class TestMonolith(BaseTestStrAndLatexRepr):
             # add a potential as well
             pot = Potential("pot", mu**2)
 
+            # add a deterministic that depends on an unnamed random variable
+            pred = Deterministic("pred", Normal.dist(0, 1))
+
         self.distributions = [alpha, sigma, mu, b, Z, nb2, zip, w, nested_mix, Y_obs, pot]
-        self.deterministics_or_potentials = [mu, pot]
+        self.deterministics_or_potentials = [mu, pot, pred]
         # tuples of (formatting, include_params)
         self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
         self.expected = {
@@ -146,6 +150,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 ),
                 r"Y_obs ~ Normal(mu, sigma)",
                 r"pot ~ Potential(f(beta, alpha))",
+                r"pred ~ Deterministic(f(<normal>))",
             ],
             ("plain", False): [
                 r"alpha ~ Normal",
@@ -159,6 +164,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"nested_mix ~ MarginalMixture",
                 r"Y_obs ~ Normal",
                 r"pot ~ Potential",
+                r"pred ~ Deterministic",
             ],
             ("latex", True): [
                 r"$\text{alpha} \sim \operatorname{Normal}(0,~10)$",
@@ -166,16 +172,17 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"$\text{mu} \sim \operatorname{Deterministic}(f(\text{beta},~\text{alpha}))$",
                 r"$\text{beta} \sim \operatorname{Normal}(0,~10)$",
                 r"$\text{Z} \sim \operatorname{MultivariateNormal}(f(),~f())$",
-                r"$\text{nb_with_p_n} \sim \operatorname{NegativeBinomial}(10,~\text{nbp})$",
+                r"$\text{nb\_with\_p\_n} \sim \operatorname{NegativeBinomial}(10,~\text{nbp})$",
                 r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5))$",
                 r"$\text{w} \sim \operatorname{Dirichlet}(\text{<constant>})$",
                 (
-                    r"$\text{nested_mix} \sim \operatorname{MarginalMixture}(\text{w},"
+                    r"$\text{nested\_mix} \sim \operatorname{MarginalMixture}(\text{w},"
                     r"~\operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5)),"
                     r"~\operatorname{Censored}(\operatorname{Bernoulli}(0.5),~-1,~1))$"
                 ),
-                r"$\text{Y_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$",
+                r"$\text{Y\_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$",
                 r"$\text{pot} \sim \operatorname{Potential}(f(\text{beta},~\text{alpha}))$",
+                r"$\text{pred} \sim \operatorname{Deterministic}(f(\text{<normal>}))",
             ],
             ("latex", False): [
                 r"$\text{alpha} \sim \operatorname{Normal}$",
@@ -183,12 +190,13 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"$\text{mu} \sim \operatorname{Deterministic}$",
                 r"$\text{beta} \sim \operatorname{Normal}$",
                 r"$\text{Z} \sim \operatorname{MultivariateNormal}$",
-                r"$\text{nb_with_p_n} \sim \operatorname{NegativeBinomial}$",
+                r"$\text{nb\_with\_p\_n} \sim \operatorname{NegativeBinomial}$",
                 r"$\text{zip} \sim \operatorname{MarginalMixture}$",
                 r"$\text{w} \sim \operatorname{Dirichlet}$",
-                r"$\text{nested_mix} \sim \operatorname{MarginalMixture}$",
-                r"$\text{Y_obs} \sim \operatorname{Normal}$",
+                r"$\text{nested\_mix} \sim \operatorname{MarginalMixture}$",
+                r"$\text{Y\_obs} \sim \operatorname{Normal}$",
                 r"$\text{pot} \sim \operatorname{Potential}$",
+                r"$\text{pred} \sim \operatorname{Deterministic}",
             ],
         }
 
@@ -249,7 +257,7 @@ def test_model_latex_repr_three_levels_model():
         "$$",
         "\\begin{array}{rcl}",
         "\\text{mu} &\\sim & \\operatorname{Normal}(0,~5)\\\\\\text{sigma} &\\sim & "
-        "\\operatorname{HalfCauchy}(0,~2.5)\\\\\\text{censored_normal} &\\sim & "
+        "\\operatorname{HalfCauchy}(0,~2.5)\\\\\\text{censored\\_normal} &\\sim & "
         "\\operatorname{Censored}(\\operatorname{Normal}(\\text{mu},~\\text{sigma}),~-2,~2)",
         "\\end{array}",
         "$$",
@@ -309,3 +317,22 @@ def test_custom_dist_repr():
 
     str_repr = model.str_repr(include_params=False)
     assert str_repr == "\n".join(["x ~ CustomDistNormal", "y ~ CustomRandomNormal"])
+
+
+class TestLatexRepr:
+    @staticmethod
+    def simple_model() -> Model:
+        with Model() as simple_model:
+            error = HalfNormal("error", 0.5)
+            alpha_a = Normal("alpha_a", 0, 1)
+            Normal("y", alpha_a, error)
+        return simple_model
+
+    def test_latex_escaped_underscore(self):
+        """
+        Ensures that all underscores in model variable names are properly escaped for LaTeX representation
+        """
+        model = self.simple_model()
+        model_str = model.str_repr(formatting="latex")
+        assert "\\_" in model_str
+        assert "_" not in model_str.replace("\\_", "")

@@ -116,13 +116,13 @@ class GroupError(VariationalInferenceError, TypeError):
 
 def _known_scan_ignored_inputs(terms):
     # TODO: remove when scan issue with grads is fixed
-    from pymc.data import MinibatchIndexRV
+    from pymc.data import MinibatchOp
     from pymc.distributions.simulator import SimulatorRV
 
     return [
         n.owner.inputs[0]
         for n in pytensor.graph.ancestors(terms)
-        if n.owner is not None and isinstance(n.owner.op, MinibatchIndexRV | SimulatorRV)
+        if n.owner is not None and isinstance(n.owner.op, MinibatchOp | SimulatorRV)
     ]
 
 
@@ -604,7 +604,7 @@ class Group(WithMemoization):
 
     .. code:: python
 
-        >>> group = Group([latent1, latent2], vfam='mean_field')
+        >>> group = Group([latent1, latent2], vfam="mean_field")
 
     The other way to select approximation is to provide `params` dictionary that has some
     predefined well shaped parameters. Keys of the dict serve as an identifier for variational family and help
@@ -639,8 +639,8 @@ class Group(WithMemoization):
 
     .. code:: python
 
-        >>> group_1 = Group([latent1], vfam='fr')  # latent1 has full rank approximation
-        >>> group_other = Group(None, vfam='mf')  # other variables have mean field Q
+        >>> group_1 = Group([latent1], vfam="fr")  # latent1 has full rank approximation
+        >>> group_other = Group(None, vfam="mf")  # other variables have mean field Q
         >>> approx = Approximation([group_1, group_other])
 
     **Summing Up**

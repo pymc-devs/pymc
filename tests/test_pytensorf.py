@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import warnings
 
 import numpy as np
 import numpy.ma as ma
@@ -27,12 +26,12 @@ from pytensor.compile import UnusedInputError
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable, equal_computations
 from pytensor.tensor.random.basic import normal, uniform
-from pytensor.tensor.random.var import RandomStateSharedVariable
-from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
+from pytensor.tensor.subtensor import AdvancedIncSubtensor
 from pytensor.tensor.variable import TensorVariable
 
 import pymc as pm
 
+from pymc.data import Minibatch, MinibatchOp
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.exceptions import NotConstantValueError
@@ -137,57 +136,68 @@ def _make_along_axis_idx(arr_shape, indices, axis):
     return tuple(fancy_index)
 
 
-def test_extract_obs_data():
-    with pytest.raises(TypeError):
-        extract_obs_data(pt.matrix())
+class TestExtractObsData:
+    def test_root_variable(self):
+        with pytest.raises(TypeError):
+            extract_obs_data(pt.matrix())
 
-    data = np.random.normal(size=(2, 3))
-    data_at = pt.as_tensor(data)
-    mask = np.random.binomial(1, 0.5, size=(2, 3)).astype(bool)
-
-    for val_at in (data_at, pytensor.shared(data)):
-        res = extract_obs_data(val_at)
+    def test_constant_variable(self):
+        data = np.random.normal(size=(2, 3))
+        data_pt = pt.as_tensor(data)
+        res = extract_obs_data(data_pt)
 
         assert isinstance(res, np.ndarray)
-        assert np.array_equal(res, data)
+        np.testing.assert_array_equal(res, data)
 
-    # AdvancedIncSubtensor check
-    data_m = np.ma.MaskedArray(data, mask)
-    missing_values = data_at.type()[mask]
-    constant = pt.as_tensor(data_m.filled())
-    z_at = pt.set_subtensor(constant[mask.nonzero()], missing_values)
+    def test_shared_variable(self):
+        data = np.random.normal(size=(2, 3))
+        data_pt = shared(data)
 
-    assert isinstance(z_at.owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1)
+        res = extract_obs_data(data_pt)
+        assert isinstance(res, np.ndarray)
+        np.testing.assert_array_equal(res, data)
 
-    res = extract_obs_data(z_at)
+    def test_masked_variable(self):
+        # Extract data from auto-imputation graph
+        data = np.random.normal(size=(2, 3))
+        data_pt = pt.as_tensor(data)
+        mask = np.random.binomial(1, 0.5, size=(2, 3)).astype(bool)
 
-    assert isinstance(res, np.ndarray)
-    assert np.ma.allequal(res, data_m)
+        # AdvancedIncSubtensor check
+        data_m = np.ma.MaskedArray(data, mask)
+        missing_values = data_pt.type()[mask]
+        constant = pt.as_tensor(data_m.filled())
+        z_at = pt.set_subtensor(constant[mask.nonzero()], missing_values)
+        assert isinstance(z_at.owner.op, AdvancedIncSubtensor)
 
-    # AdvancedIncSubtensor1 check
-    data = np.random.normal(size=(3,))
-    data_at = pt.as_tensor(data)
-    mask = np.random.binomial(1, 0.5, size=(3,)).astype(bool)
+        res = extract_obs_data(z_at)
+        assert isinstance(res, np.ndarray)
+        assert np.ma.allequal(res, data_m)
 
-    data_m = np.ma.MaskedArray(data, mask)
-    missing_values = data_at.type()[mask]
-    constant = pt.as_tensor(data_m.filled())
-    z_at = pt.set_subtensor(constant[mask.nonzero()], missing_values)
+    def test_cast_variable(self):
+        # Cast check
+        data = np.array(5)
+        data_pt = pt.cast(pt.as_tensor(5.0), np.int64)
 
-    assert isinstance(z_at.owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1)
+        res = extract_obs_data(data_pt)
+        assert isinstance(res, np.ndarray)
+        np.testing.assert_array_equal(res, data)
 
-    res = extract_obs_data(z_at)
+    def test_minibatch_variable(self):
+        x = np.arange(5)
+        y = x * 2
 
-    assert isinstance(res, np.ndarray)
-    assert np.ma.allequal(res, data_m)
+        x_mb, y_mb = Minibatch(x, y, batch_size=2)
+        assert isinstance(x_mb.owner.op, MinibatchOp)
+        assert isinstance(y_mb.owner.op, MinibatchOp)
 
-    # Cast check
-    data = np.array(5)
-    t = pt.cast(pt.as_tensor(5.0), np.int64)
-    res = extract_obs_data(t)
+        res = extract_obs_data(x_mb)
+        assert isinstance(res, np.ndarray)
+        np.testing.assert_array_equal(res, x)
 
-    assert isinstance(res, np.ndarray)
-    assert np.array_equal(res, data)
+        res = extract_obs_data(y_mb)
+        assert isinstance(res, np.ndarray)
+        np.testing.assert_array_equal(res, y)
 
 
 @pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
@@ -487,34 +497,45 @@ class TestCompilePyMC:
         assert x3_eval == x2_eval
         assert y3_eval == y2_eval
 
+    @pytest.mark.filterwarnings("error")  # This is part of the test
     def test_multiple_updates_same_variable(self):
-        # Raise if unexpected warning is issued
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
+        rng = pytensor.shared(np.random.default_rng(), name="rng")
+        x = pt.random.normal(0, rng=rng)
+        y = pt.random.normal(1, rng=rng)
 
-            rng = pytensor.shared(np.random.default_rng(), name="rng")
-            x = pt.random.normal(rng=rng)
-            y = pt.random.normal(rng=rng)
+        # No warnings if only one variable is used
+        assert compile_pymc([], [x])
+        assert compile_pymc([], [y])
 
-            # No warnings if only one variable is used
-            assert compile_pymc([], [x])
-            assert compile_pymc([], [y])
+        user_warn_msg = "RNG Variable rng has multiple distinct clients"
+        with pytest.warns(UserWarning, match=user_warn_msg):
+            f = compile_pymc([], [x, y], random_seed=456)
+        assert f() == f()
 
-            user_warn_msg = "RNG Variable rng has multiple clients"
-            with pytest.warns(UserWarning, match=user_warn_msg):
-                f = compile_pymc([], [x, y], random_seed=456)
-            assert f() == f()
+        # The user can provide an explicit update, but we will still issue a warning
+        with pytest.warns(UserWarning, match=user_warn_msg):
+            f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
+        assert f() != f()
 
-            # The user can provide an explicit update, but we will still issue a warning
-            with pytest.warns(UserWarning, match=user_warn_msg):
-                f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
-            assert f() != f()
+        # Same with default update
+        rng.default_update = x.owner.outputs[0]
+        with pytest.warns(UserWarning, match=user_warn_msg):
+            f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
+        assert f() != f()
 
-            # Same with default update
-            rng.default_update = x.owner.outputs[0]
-            with pytest.warns(UserWarning, match=user_warn_msg):
-                f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
-            assert f() != f()
+    @pytest.mark.filterwarnings("error")  # This is part of the test
+    def test_duplicated_client_nodes(self):
+        """Test compile_pymc can handle duplicated (mergeable) RV updates."""
+        rng = pytensor.shared(np.random.default_rng(1))
+        x = pt.random.normal(rng=rng)
+        y = x.owner.clone().default_output()
+
+        fn = compile_pymc([], [x, y], random_seed=1)
+        res_x1, res_y1 = fn()
+        assert res_x1 == res_y1
+        res_x2, res_y2 = fn()
+        assert res_x2 == res_y2
+        assert res_x1 != res_x2
 
     def test_nested_updates(self):
         rng = pytensor.shared(np.random.default_rng())
@@ -638,43 +659,42 @@ def test_reseed_rngs():
 
     bit_generators = [default_rng(sub_seed) for sub_seed in np.random.SeedSequence(seed).spawn(2)]
 
-    rngs = [
-        pytensor.shared(rng_type(default_rng()))
-        for rng_type in (np.random.Generator, np.random.RandomState)
-    ]
+    rngs = [pytensor.shared(np.random.Generator(default_rng())) for _ in range(2)]
     for rng, bit_generator in zip(rngs, bit_generators):
-        if isinstance(rng, RandomStateSharedVariable):
-            assert rng.get_value()._bit_generator.state != bit_generator.state
-        else:
-            assert rng.get_value().bit_generator.state != bit_generator.state
+        assert rng.get_value().bit_generator.state != bit_generator.state
 
     reseed_rngs(rngs, seed)
     for rng, bit_generator in zip(rngs, bit_generators):
-        if isinstance(rng, RandomStateSharedVariable):
-            assert rng.get_value()._bit_generator.state == bit_generator.state
-        else:
-            assert rng.get_value().bit_generator.state == bit_generator.state
+        assert rng.get_value().bit_generator.state == bit_generator.state
 
 
-def test_constant_fold():
-    x = pt.random.normal(size=(5,))
-    y = pt.arange(x.size)
+class TestConstantFold:
+    def test_constant_fold(self):
+        x = pt.random.normal(size=(5,))
+        y = pt.arange(x.size)
 
-    res = constant_fold((y, y.shape))
-    assert np.array_equal(res[0], np.arange(5))
-    assert tuple(res[1]) == (5,)
+        res = constant_fold((y, y.shape))
+        assert np.array_equal(res[0], np.arange(5))
+        assert tuple(res[1]) == (5,)
 
+    def test_constant_fold_raises(self):
+        size = pytensor.shared(5)
+        x = pt.random.normal(size=(size,))
+        y = pt.arange(x.size)
 
-def test_constant_fold_raises():
-    size = pytensor.shared(5)
-    x = pt.random.normal(size=(size,))
-    y = pt.arange(x.size)
+        with pytest.raises(NotConstantValueError):
+            constant_fold((y, y.shape))
 
-    with pytest.raises(NotConstantValueError):
-        constant_fold((y, y.shape))
+        res = constant_fold((y, y.shape), raise_not_constant=False)
+        assert tuple(res[1].eval()) == (5,)
 
-    res = constant_fold((y, y.shape), raise_not_constant=False)
-    assert tuple(res[1].eval()) == (5,)
+    def test_inputs_preserved(self):
+        # Make sure constant_folded graph depends on original graph inputs (not copies)
+        # Regression test for #7387
+        a = pt.scalar("a", dtype="int")
+        out = pt.empty((a,))
+        (out_shape,) = constant_fold((out.shape[0],), raise_not_constant=False)
+        assert out_shape is a
 
 
 def test_replace_vars_in_graphs():

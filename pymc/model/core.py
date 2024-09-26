@@ -39,16 +39,13 @@ import scipy.sparse as sps
 from pytensor.compile import DeepCopyOp, Function, get_mode
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Constant, Variable, graph_inputs
-from pytensor.scalar import Cast
-from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 from typing_extensions import Self
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
-from pymc.data import GenTensorVariable, is_minibatch
-from pymc.distributions.transforms import ChainedTransform, _default_transform
+from pymc.data import is_valid_observed
 from pymc.exceptions import (
     BlockModelAccessError,
     ImputationWarning,
@@ -441,18 +438,24 @@ class Model(WithMemoization, metaclass=ContextMeta):
         import numpy as np
 
         coords = {
-            "feature", ["A", "B", "C"],
-            "trial", [1, 2, 3, 4, 5],
+            "feature",
+            ["A", "B", "C"],
+            "trial",
+            [1, 2, 3, 4, 5],
         }
 
         with pm.Model(coords=coords) as model:
-            intercept = pm.Normal("intercept", shape=(3,))  # Variable will have default dim label `intercept__dim_0`
-            beta = pm.Normal("beta", dims=("feature",))  # Variable will have shape (3,) and dim label `feature`
+            # Variable will have default dim label `intercept__dim_0`
+            intercept = pm.Normal("intercept", shape=(3,))
+            # Variable will have shape (3,) and dim label `feature`
+            beta = pm.Normal("beta", dims=("feature",))
 
             # Dims below are only used for labeling, they have no effect on shape
-            idx = pm.Data("idx", np.array([0, 1, 1, 2, 2]))  # Variable will have default dim label `idx__dim_0`
+            # Variable will have default dim label `idx__dim_0`
+            idx = pm.Data("idx", np.array([0, 1, 1, 2, 2]))
             x = pm.Data("x", np.random.normal(size=(5, 3)), dims=("trial", "feature"))
-            mu = pm.Deterministic("mu", intercept[idx] + beta @ x, dims="trial")  # single dim can be passed as string
+            # single dim can be passed as string
+            mu = pm.Deterministic("mu", intercept[idx] + beta @ x, dims="trial")
 
             # Dims controls the shape of the variable
             # If not specified, it would be inferred from the shape of the observations
@@ -468,12 +471,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         with pm.Model(name="root") as root:
             x = pm.Normal("x")  # Variable wil be named "root::x"
 
-            with pm.Model(name='first') as first:
+            with pm.Model(name="first") as first:
                 # Variable will belong to root and first
                 y = pm.Normal("y", mu=x)  # Variable wil be named "root::first::y"
 
             # Can pass parent model explicitly
-            with pm.Model(name='second', model=root) as second:
+            with pm.Model(name="second", model=root) as second:
                 # Variable will belong to root and second
                 z = pm.Normal("z", mu=y)  # Variable wil be named "root::second::z"
 
@@ -1295,18 +1298,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.add_named_variable(rv_var, dims)
             self.set_initval(rv_var, initval)
         else:
-            if (
-                isinstance(observed, Variable)
-                and not isinstance(observed, GenTensorVariable)
-                and observed.owner is not None
-                # The only PyTensor operation we allow on observed data is type casting
-                # Although we could allow for any graph that does not depend on other RVs
-                and not (
-                    isinstance(observed.owner.op, Elemwise)
-                    and isinstance(observed.owner.op.scalar_op, Cast)
-                )
-                and not is_minibatch(observed)
-            ):
+            if not is_valid_observed(observed):
                 raise TypeError(
                     "Variables that depend on other nodes cannot be used for observed data."
                     f"The data variable was: {observed}"
@@ -1452,6 +1444,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         -------
         TensorVariable
         """
+        from pymc.distributions.transforms import ChainedTransform, _default_transform
 
         # Make the value variable a transformed value variable,
         # if there's an applicable transform
@@ -1532,6 +1525,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     raise ValueError(f"Dimension {dim} is not specified in `coords`.")
             if any(var.name == dim for dim in dims if dim is not None):
                 raise ValueError(f"Variable `{var.name}` has the same name as its dimension label.")
+            # This check implicitly states that only vars with .ndim attribute can have dims
+            if var.ndim != len(dims):
+                raise ValueError(
+                    f"{var} has {var.ndim} dims but {len(dims)} dim labels were provided."
+                )
             self.named_vars_to_dims[var.name] = dims
 
         self.named_vars[var.name] = var
@@ -1647,6 +1645,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         point_fn : bool
             Whether to wrap the compiled function in a PointFunc, which takes a Point
             dictionary with model variable names and values as input.
+        Other keyword arguments :
+            Any other keyword argument is sent to :py:func:`pymc.pytensorf.compile_pymc`.
 
         Returns
         -------
@@ -1742,7 +1742,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         )
         return {name: tuple(shape) for name, shape in zip(names, f())}
 
-    def check_start_vals(self, start):
+    def check_start_vals(self, start, **kwargs):
         r"""Check that the starting values for MCMC do not cause the relevant log probability
         to evaluate to something invalid (e.g. Inf or NaN)
 
@@ -1753,6 +1753,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Defaults to ``trace.point(-1))`` if there is a trace provided and
             ``model.initial_point`` if not (defaults to empty dict). Initialization
             methods for NUTS (see ``init`` keyword) can overwrite the default.
+        Other keyword arguments :
+            Any other keyword argument is sent to :py:meth:`~pymc.model.core.Model.point_logps`.
 
         Raises
         ------
@@ -1782,7 +1784,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     f"Valid keys are: {valid_keys}, but {extra_keys} was supplied"
                 )
 
-            initial_eval = self.point_logps(point=elem)
+            initial_eval = self.point_logps(point=elem, **kwargs)
 
             if not all(np.isfinite(v) for v in initial_eval.values()):
                 raise SamplingError(
@@ -1792,7 +1794,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     "You can call `model.debug()` for more details."
                 )
 
-    def point_logps(self, point=None, round_vals=2):
+    def point_logps(self, point=None, round_vals=2, **kwargs):
         """Computes the log probability of `point` for all random variables in the model.
 
         Parameters
@@ -1802,6 +1804,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
             is used.
         round_vals : int, default 2
             Number of decimals to round log-probabilities.
+        Other keyword arguments :
+            Any other keyword argument are sent provided to :py:meth:`~pymc.model.core.Model.compile_fn`
 
         Returns
         -------
@@ -1817,7 +1821,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             factor.name: np.round(np.asarray(factor_logp), round_vals)
             for factor, factor_logp in zip(
                 factors,
-                self.compile_fn(factor_logps_fn)(point),
+                self.compile_fn(factor_logps_fn, **kwargs)(point),
             )
         }
 
@@ -1853,7 +1857,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         def debug_parameters(rv):
             if isinstance(rv.owner.op, RandomVariable):
-                inputs = rv.owner.inputs[3:]
+                inputs = rv.owner.op.dist_params(rv.owner)
             else:
                 inputs = [inp for inp in rv.owner.inputs if not isinstance(inp.type, RandomType)]
             rv_inputs = pytensor.function(
@@ -2015,7 +2019,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18])
 
             with Model() as schools:
-
                 eta = Normal("eta", 0, 1, shape=J)
                 mu = Normal("mu", 0, sigma=1e6)
                 tau = HalfCauchy("tau", 25)
@@ -2088,10 +2091,10 @@ def set_data(new_data, model=None, *, coords=None):
         import pymc as pm
 
         with pm.Model() as model:
-            x = pm.Data('x', [1., 2., 3.])
-            y = pm.Data('y', [1., 2., 3.])
-            beta = pm.Normal('beta', 0, 1)
-            obs = pm.Normal('obs', x * beta, 1, observed=y, shape=x.shape)
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            y = pm.Data("y", [1.0, 2.0, 3.0])
+            beta = pm.Normal("beta", 0, 1)
+            obs = pm.Normal("obs", x * beta, 1, observed=y, shape=x.shape)
             idata = pm.sample()
 
     Then change the value of `x` to predict on new data.
@@ -2118,9 +2121,9 @@ def set_data(new_data, model=None, *, coords=None):
         data = rng.normal(loc=1.0, scale=2.0, size=100)
 
         with pm.Model() as model:
-            y = pm.Data('y', data)
-            theta = pm.Normal('theta', mu=0.0, sigma=10.0)
-            obs = pm.Normal('obs', theta, 2.0, observed=y, shape=y.shape)
+            y = pm.Data("y", data)
+            theta = pm.Normal("theta", mu=0.0, sigma=10.0)
+            obs = pm.Normal("obs", theta, 2.0, observed=y, shape=y.shape)
             idata = pm.sample()
 
     Now update the model with a new data set.
@@ -2128,7 +2131,7 @@ def set_data(new_data, model=None, *, coords=None):
     .. code-block:: python
 
         with model:
-            pm.set_data({'y': rng.normal(loc=1.0, scale=2.0, size=200)})
+            pm.set_data({"y": rng.normal(loc=1.0, scale=2.0, size=200)})
             idata = pm.sample()
     """
     model = modelcontext(model)
