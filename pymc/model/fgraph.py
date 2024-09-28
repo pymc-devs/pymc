@@ -160,11 +160,13 @@ def fgraph_from_model(
             "Nested sub-models cannot be converted to fgraph. Convert the parent model instead"
         )
 
-    check_for_gp_vars = [
-        k for x in ["_rotated_", "_hsgp_coeffs_"] for k in model.named_vars.keys() if x in k
-    ]
-    if len(check_for_gp_vars) > 0:
-        warnings.warn("Unable to clone Gaussian Process Variables", UserWarning)
+    if any(
+        ("_rotated_" in var_name or "_hsgp_coeffs_" in var_name) for var_name in model.named_vars
+    ):
+        warnings.warn(
+            "Detected variables likely created by GP objects. Further use of these old GP objects should be avoided as it may reintroduce variables from the old model. See issue: https://github.com/pymc-devs/pymc/issues/6883",
+            UserWarning,
+        )
 
     # Collect PyTensor variables
     rvs_to_values = model.rvs_to_values
@@ -377,7 +379,7 @@ def clone_model(model: Model) -> Model:
 
     Recreates a PyMC model with clones of the original variables.
     Shared variables will point to the same container but be otherwise different objects.
-    Constants are not cloned and if guassian process variables are detected then a warning will be triggered.
+    Constants are not cloned.
 
 
     Examples
