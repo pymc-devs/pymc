@@ -1773,29 +1773,18 @@ class TestModelCopy:
             pm.Normal("y", alpha, error)
         return simple_model
 
-    @staticmethod
-    def gp_model() -> pm.Model:
-        with pm.Model() as gp_model:
-            ell = pm.Gamma("ell", alpha=2, beta=1)
-            cov = 2 * pm.gp.cov.ExpQuad(1, ell)
-            gp = pm.gp.Latent(cov_func=cov)
-            f = gp.prior("f", X=np.arange(10)[:, None])
-            pm.Normal("y", f * 2)
-        return gp_model
-
-    def test_copy_model(self) -> None:
+    @pytest.mark.parametrize("copy_method", (copy.copy, copy.deepcopy))
+    def test_copy_model(self, copy_method) -> None:
         simple_model = self.simple_model()
-        copy_simple_model = copy.copy(simple_model)
-        deepcopy_simple_model = copy.deepcopy(simple_model)
+        copy_simple_model = copy_method(simple_model)
 
         with simple_model:
-            simple_model_prior_predictive = pm.sample_prior_predictive(random_seed=42)
+            simple_model_prior_predictive = pm.sample_prior_predictive(samples=1, random_seed=42)
 
         with copy_simple_model:
-            copy_simple_model_prior_predictive = pm.sample_prior_predictive(random_seed=42)
-
-        with deepcopy_simple_model:
-            deepcopy_simple_model_prior_predictive = pm.sample_prior_predictive(random_seed=42)
+            copy_simple_model_prior_predictive = pm.sample_prior_predictive(
+                samples=1, random_seed=42
+            )
 
         simple_model_prior_predictive_mean = simple_model_prior_predictive["prior"]["y"].mean(
             ("chain", "draw")
@@ -1803,21 +1792,33 @@ class TestModelCopy:
         copy_simple_model_prior_predictive_mean = copy_simple_model_prior_predictive["prior"][
             "y"
         ].mean(("chain", "draw"))
-        deepcopy_simple_model_prior_predictive_mean = deepcopy_simple_model_prior_predictive[
-            "prior"
-        ]["y"].mean(("chain", "draw"))
 
         assert np.isclose(
             simple_model_prior_predictive_mean, copy_simple_model_prior_predictive_mean
         )
-        assert np.isclose(
-            simple_model_prior_predictive_mean, deepcopy_simple_model_prior_predictive_mean
-        )
 
-    def test_guassian_process_copy_failure(self) -> None:
-        gaussian_process_model = self.gp_model()
-        with pytest.warns(UserWarning):
-            copy.copy(gaussian_process_model)
+    @pytest.mark.parametrize("copy_method", (copy.copy, copy.deepcopy))
+    def test_guassian_process_copy_failure(self, copy_method) -> None:
+        with pm.Model() as gaussian_process_model:
+            ell = pm.Gamma("ell", alpha=2, beta=1)
+            cov = 2 * pm.gp.cov.ExpQuad(1, ell)
+            gp = pm.gp.Latent(cov_func=cov)
+            f = gp.prior("f", X=np.arange(10)[:, None])
+            pm.Normal("y", f * 2)
 
-        with pytest.warns(UserWarning):
-            copy.deepcopy(gaussian_process_model)
+        with pytest.warns(
+            UserWarning,
+            match="Detected variables likely created by GP objects. Further use of these old GP objects should be avoided as it may reintroduce variables from the old model. See issue: https://github.com/pymc-devs/pymc/issues/6883",
+        ):
+            copy_method(gaussian_process_model)
+
+    @pytest.mark.parametrize("copy_method", (copy.copy, copy.deepcopy))
+    def test_adding_deterministics_to_clone(self, copy_method) -> None:
+        simple_model = self.simple_model()
+        clone_model = copy_method(simple_model)
+
+        with clone_model:
+            z = pm.Deterministic("z", clone_model["alpha"] + 1)
+
+        assert "z" in clone_model.named_vars
+        assert "z" not in simple_model.named_vars

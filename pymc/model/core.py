@@ -1572,6 +1572,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return key in self.named_vars or self.name_for(key) in self.named_vars
 
     def __copy__(self):
+        return self.copy()
+
+    def __deepcopy__(self, _):
+        return self.copy()
+
+    def copy(self):
         """
         Clone a pymc model by overiding the python copy method using the clone_model method from fgraph.
         Constants are not cloned and if guassian process variables are detected then a warning will be triggered.
@@ -1588,34 +1594,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 x = pm.Bernoulli("x", p=p, shape=(3,))
 
             clone_m = copy.copy(m)
-
-            # Access cloned variables by name
-            clone_x = clone_m["x"]
-
-            # z will be part of clone_m but not m
-            z = pm.Deterministic("z", clone_x + 1)
-        """
-        from pymc.model.fgraph import clone_model
-
-        return clone_model(self)
-
-    def __deepcopy__(self, _):
-        """
-        Clone a pymc model by overiding the python copy method using the clone_model method from fgraph.
-        Constants are not cloned and if guassian process variables are detected then a warning will be triggered.
-
-        Examples
-        --------
-        .. code-block:: python
-
-            import pymc as pm
-            import copy
-
-            with pm.Model() as m:
-                p = pm.Beta("p", 1, 1)
-                x = pm.Bernoulli("x", p=p, shape=(3,))
-
-            clone_m = copy.deepcopy(m)
 
             # Access cloned variables by name
             clone_x = clone_m["x"]
