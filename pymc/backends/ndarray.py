@@ -116,8 +116,8 @@ class NDArray(base.BaseTrace):
             for data, vars in zip(self._stats, sampler_stats):
                 compressed_vars = {}
                 for k, v in vars.items():
-                    if isinstance(v, np.ndarray) and v.shape[0] == 1:
-                        compressed_vars[k] = v.item()
+                    if isinstance(v, np.ndarray) and v.shape[0] == 1 and len(v.shape) == 1:
+                        compressed_vars[k] = v.reshape(1, 1)
                     else:
                         compressed_vars[k] = v
                 for key, val in compressed_vars.items():
