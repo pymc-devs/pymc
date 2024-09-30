@@ -1782,12 +1782,10 @@ class TestModelCopy:
                 samples=1, random_seed=42
             )
 
-        simple_model_prior_predictive_val = simple_model_prior_predictive["prior"]["y"].values
-        copy_simple_model_prior_predictive_val = copy_simple_model_prior_predictive["prior"][
-            "y"
-        ].values
-
-        assert simple_model_prior_predictive_val == copy_simple_model_prior_predictive_val
+        assert (
+            simple_model_prior_predictive["prior"]["y"].values
+            == copy_simple_model_prior_predictive["prior"]["y"].values
+        )
 
         with copy_simple_model:
             z = pm.Deterministic("z", copy_simple_model["alpha"] + 1)
