@@ -1765,17 +1765,13 @@ class TestModelGraphs:
 
 
 class TestModelCopy:
-    @staticmethod
-    def simple_model() -> pm.Model:
+    @pytest.mark.parametrize("copy_method", (copy.copy, copy.deepcopy))
+    def test_copy_model(self, copy_method) -> None:
         with pm.Model() as simple_model:
             error = pm.HalfNormal("error", 0.5)
             alpha = pm.Normal("alpha", 0, 1)
             pm.Normal("y", alpha, error)
-        return simple_model
 
-    @pytest.mark.parametrize("copy_method", (copy.copy, copy.deepcopy))
-    def test_copy_model(self, copy_method) -> None:
-        simple_model = self.simple_model()
         copy_simple_model = copy_method(simple_model)
 
         with simple_model:
@@ -1786,15 +1782,24 @@ class TestModelCopy:
                 samples=1, random_seed=42
             )
 
-        simple_model_prior_predictive_mean = simple_model_prior_predictive["prior"]["y"].mean(
-            ("chain", "draw")
-        )
-        copy_simple_model_prior_predictive_mean = copy_simple_model_prior_predictive["prior"][
+        simple_model_prior_predictive_val = simple_model_prior_predictive["prior"]["y"].values
+        copy_simple_model_prior_predictive_val = copy_simple_model_prior_predictive["prior"][
             "y"
-        ].mean(("chain", "draw"))
+        ].values
 
-        assert np.isclose(
-            simple_model_prior_predictive_mean, copy_simple_model_prior_predictive_mean
+        assert simple_model_prior_predictive_val == copy_simple_model_prior_predictive_val
+
+        with copy_simple_model:
+            z = pm.Deterministic("z", copy_simple_model["alpha"] + 1)
+            copy_simple_model_prior_predictive = pm.sample_prior_predictive(
+                samples=1, random_seed=42
+            )
+
+        assert "z" in copy_simple_model.named_vars
+        assert "z" not in simple_model.named_vars
+        assert (
+            copy_simple_model_prior_predictive["prior"]["z"].values
+            == 1 + copy_simple_model_prior_predictive["prior"]["alpha"].values
         )
 
     @pytest.mark.parametrize("copy_method", (copy.copy, copy.deepcopy))
@@ -1811,14 +1816,3 @@ class TestModelCopy:
             match="Detected variables likely created by GP objects. Further use of these old GP objects should be avoided as it may reintroduce variables from the old model. See issue: https://github.com/pymc-devs/pymc/issues/6883",
         ):
             copy_method(gaussian_process_model)
-
-    @pytest.mark.parametrize("copy_method", (copy.copy, copy.deepcopy))
-    def test_adding_deterministics_to_clone(self, copy_method) -> None:
-        simple_model = self.simple_model()
-        clone_model = copy_method(simple_model)
-
-        with clone_model:
-            z = pm.Deterministic("z", clone_model["alpha"] + 1)
-
-        assert "z" in clone_model.named_vars
-        assert "z" not in simple_model.named_vars

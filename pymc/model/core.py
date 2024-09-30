@@ -1579,8 +1579,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def copy(self):
         """
-        Clone a pymc model by overiding the python copy method using the clone_model method from fgraph.
-        Constants are not cloned and if guassian process variables are detected then a warning will be triggered.
+        Clone the model
+
+        To access variables in the cloned model use `cloned_model["var_name"]`.
 
         Examples
         --------
