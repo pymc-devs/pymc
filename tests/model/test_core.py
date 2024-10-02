@@ -1768,9 +1768,7 @@ class TestModelCopy:
     @pytest.mark.parametrize("copy_method", (copy.copy, copy.deepcopy))
     def test_copy_model(self, copy_method) -> None:
         with pm.Model() as simple_model:
-            error = pm.HalfNormal("error", 0.5)
-            alpha = pm.Normal("alpha", 0, 1)
-            pm.Normal("y", alpha, error)
+            pm.Normal("y")
 
         copy_simple_model = copy_method(simple_model)
 
@@ -1778,6 +1776,7 @@ class TestModelCopy:
             simple_model_prior_predictive = pm.sample_prior_predictive(samples=1, random_seed=42)
 
         with copy_simple_model:
+            z = pm.Deterministic("z", copy_simple_model["y"] + 1)
             copy_simple_model_prior_predictive = pm.sample_prior_predictive(
                 samples=1, random_seed=42
             )
@@ -1787,17 +1786,11 @@ class TestModelCopy:
             == copy_simple_model_prior_predictive["prior"]["y"].values
         )
 
-        with copy_simple_model:
-            z = pm.Deterministic("z", copy_simple_model["alpha"] + 1)
-            copy_simple_model_prior_predictive = pm.sample_prior_predictive(
-                samples=1, random_seed=42
-            )
-
         assert "z" in copy_simple_model.named_vars
         assert "z" not in simple_model.named_vars
         assert (
             copy_simple_model_prior_predictive["prior"]["z"].values
-            == 1 + copy_simple_model_prior_predictive["prior"]["alpha"].values
+            == 1 + simple_model_prior_predictive["prior"]["y"].values
         )
 
     @pytest.mark.parametrize("copy_method", (copy.copy, copy.deepcopy))
