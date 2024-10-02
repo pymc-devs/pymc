@@ -26,10 +26,10 @@ jobs:
     #    pytest --cov=./pymc --cov-report term-missing pymc/
     - name: Install release tooling
       run: |
-        pip install twine wheel
+        pip install build twine
     - name: Build package
       run: |
-        python setup.py sdist bdist_wheel
+        python -m build
     - name: Check version number match
       run: |
         echo "GITHUB_REF: ${GITHUB_REF}"
