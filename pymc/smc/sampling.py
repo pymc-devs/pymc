@@ -197,6 +197,16 @@ def sample_smc(
     random_seed = _get_seeds_per_chain(random_state=random_seed, chains=chains)
 
     model = modelcontext(model)
+    smc = kernel(
+        draws=draws,
+        start=start,
+        model=model,
+        **kernel_kwargs,
+    )
+    initial_points = [
+        model.initial_point(random_seed=np.random.default_rng(seed=seed).integers(2**30))
+        for seed in random_seed
+    ]
 
     _log = logging.getLogger(__name__)
     _log.info("Initializing SMC sampler...")
@@ -205,16 +215,9 @@ def sample_smc(
         f"in {cores} job{'s' if cores > 1 else ''}"
     )
 
-    params = (
-        draws,
-        kernel,
-        start,
-        model,
-    )
-
     t1 = time.time()
 
-    results = run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores)
+    results = run_chains(chains, progressbar, smc, random_seed, initial_points, cores)
 
     (
         traces,
@@ -303,41 +306,21 @@ def _save_sample_stats(
 
 
 def _sample_smc_int(
-    draws,
-    kernel,
-    start,
-    model,
+    smc,
     random_seed,
+    initial_point,
     chain,
     progress_dict,
     task_id,
-    **kernel_kwargs,
 ):
     """Run one SMC instance."""
-    in_out_pickled = isinstance(model, bytes)
+    in_out_pickled = isinstance(smc, bytes)
     if in_out_pickled:
         # function was called in multiprocessing context, deserialize first
-        (draws, kernel, start, model) = map(
-            cloudpickle.loads,
-            (
-                draws,
-                kernel,
-                start,
-                model,
-            ),
-        )
+        smc = cloudpickle.loads(smc)
 
-        kernel_kwargs = {key: cloudpickle.loads(value) for key, value in kernel_kwargs.items()}
-
-    smc = kernel(
-        draws=draws,
-        start=start,
-        model=model,
-        random_seed=random_seed,
-        **kernel_kwargs,
-    )
-
-    smc._initialize_kernel()
+    smc.initialize_rng(random_seed)
+    smc._initialize_kernel(initial_point)
     smc.setup_kernel()
 
     stage = 0
@@ -367,7 +350,7 @@ def _sample_smc_int(
     return results
 
 
-def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
+def run_chains(chains, progressbar, smc, random_seed, initial_points, cores):
     with CustomProgress(
         TextColumn("{task.description}"),
         SpinnerColumn(),
@@ -383,9 +366,8 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
             # main process and our worker functions
             _progress = manager.dict()
 
-            # "manually" (de)serialize params before/after multiprocessing
-            params = tuple(cloudpickle.dumps(p) for p in params)
-            kernel_kwargs = {key: cloudpickle.dumps(value) for key, value in kernel_kwargs.items()}
+            # "manually" (de)serialize kernel before/after multiprocessing
+            smc = cloudpickle.dumps(smc)
 
             with ProcessPoolExecutor(max_workers=cores) as executor:
                 for c in range(chains):  # iterate over the jobs we need to run
@@ -394,12 +376,12 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
                     futures.append(
                         executor.submit(
                             _sample_smc_int,
-                            *params,
+                            smc,
                             random_seed[c],
+                            initial_points[c],
                             c,
                             _progress,
                             task_id,
-                            **kernel_kwargs,
                         )
                     )
 

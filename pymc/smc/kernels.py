@@ -33,7 +33,6 @@ from pymc.pytensorf import (
     compile_pymc,
     floatX,
     join_nonshared_inputs,
-    make_shared_replacements,
 )
 from pymc.sampling.forward import draw
 from pymc.step_methods.metropolis import MultivariateNormalProposal
@@ -168,7 +167,7 @@ class SMC_KERNEL(ABC):
             raise ValueError(f"Threshold value {threshold} must be between 0 and 1")
         self.threshold = threshold
         self.model = model
-        self.rng = np.random.default_rng(seed=random_seed)
+        self.initialize_rng(random_seed=random_seed)
 
         self.model = modelcontext(model)
         self.variables = self.model.value_vars
@@ -185,6 +184,21 @@ class SMC_KERNEL(ABC):
         self.iteration = 0
         self.resampling_indexes = None
         self.weights = np.ones(self.draws) / self.draws
+
+        self.varlogp = self.model.varlogp
+        self.datalogp = self.model.datalogp
+
+    def initialize_rng(self, random_seed=None):
+        """
+        Initialize random number generator.
+
+        Parameters
+        ----------
+        random_seed : int, array_like of int, RandomState or Generator, optional
+            Value used to initialize the random number generator.
+        """
+
+        self.rng = np.random.default_rng(seed=random_seed)
 
     def initialize_population(self) -> dict[str, np.ndarray]:
         """Create an initial population from the prior distribution"""
@@ -212,15 +226,22 @@ class SMC_KERNEL(ABC):
 
         return cast(dict[str, np.ndarray], dict_prior)
 
-    def _initialize_kernel(self):
-        """Create variables and logp function necessary to run SMC kernel
+    def _initialize_kernel(self, initial_point=None):
+        """
+        Create variables and logp function necessary to run SMC kernel
 
         This method should not be overwritten. If needed, use `setup_kernel`
         instead.
 
+        Parameters
+        ----------
+        initial_point : dict, optional
+            Dictionary that contains initial values for model variables.
         """
-        # Create dictionary that stores original variables shape and size
-        initial_point = self.model.initial_point(random_seed=self.rng.integers(2**30))
+
+        if initial_point is None:
+            # Create dictionary that stores original variables shape and size
+            initial_point = self.model.initial_point(random_seed=self.rng.integers(2**30))
         for v in self.variables:
             self.var_info[v.name] = (initial_point[v.name].shape, initial_point[v.name].size)
         # Create particles bijection map
@@ -237,14 +258,8 @@ class SMC_KERNEL(ABC):
         self.tempered_posterior = np.array(floatX(population))
 
         # Initialize prior and likelihood log probabilities
-        shared = make_shared_replacements(initial_point, self.variables, self.model)
-
-        self.prior_logp_func = _logp_forw(
-            initial_point, [self.model.varlogp], self.variables, shared
-        )
-        self.likelihood_logp_func = _logp_forw(
-            initial_point, [self.model.datalogp], self.variables, shared
-        )
+        self.prior_logp_func = _logp_forw(initial_point, [self.varlogp], self.variables, {})
+        self.likelihood_logp_func = _logp_forw(initial_point, [self.datalogp], self.variables, {})
 
         priors = [self.prior_logp_func(sample) for sample in self.tempered_posterior]
         likelihoods = [self.likelihood_logp_func(sample) for sample in self.tempered_posterior]
