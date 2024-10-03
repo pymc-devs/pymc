@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 from copy import copy, deepcopy
 
 import pytensor
@@ -156,6 +158,14 @@ def fgraph_from_model(
     if model.parent is not None:
         raise ValueError(
             "Nested sub-models cannot be converted to fgraph. Convert the parent model instead"
+        )
+
+    if any(
+        ("_rotated_" in var_name or "_hsgp_coeffs_" in var_name) for var_name in model.named_vars
+    ):
+        warnings.warn(
+            "Detected variables likely created by GP objects. Further use of these old GP objects should be avoided as it may reintroduce variables from the old model. See issue: https://github.com/pymc-devs/pymc/issues/6883",
+            UserWarning,
         )
 
     # Collect PyTensor variables

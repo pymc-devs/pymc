@@ -1577,6 +1577,41 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def __contains__(self, key):
         return key in self.named_vars or self.name_for(key) in self.named_vars
 
+    def __copy__(self):
+        return self.copy()
+
+    def __deepcopy__(self, _):
+        return self.copy()
+
+    def copy(self):
+        """
+        Clone the model
+
+        To access variables in the cloned model use `cloned_model["var_name"]`.
+
+        Examples
+        --------
+        .. code-block:: python
+
+            import pymc as pm
+            import copy
+
+            with pm.Model() as m:
+                p = pm.Beta("p", 1, 1)
+                x = pm.Bernoulli("x", p=p, shape=(3,))
+
+            clone_m = copy.copy(m)
+
+            # Access cloned variables by name
+            clone_x = clone_m["x"]
+
+            # z will be part of clone_m but not m
+            z = pm.Deterministic("z", clone_x + 1)
+        """
+        from pymc.model.fgraph import clone_model
+
+        return clone_model(self)
+
     def replace_rvs_by_values(
         self,
         graphs: Sequence[TensorVariable],
