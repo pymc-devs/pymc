@@ -462,7 +462,7 @@ def Data(
         xshape = x.shape
         # Register new dimension lengths
         for d, dname in enumerate(new_dims):
-            if dname not in model.dim_lengths:
+            if dname not in model.dim_lengths and dname is not None:
                 model.add_coord(
                     name=dname,
                     # Note: Coordinate values can't be taken from
