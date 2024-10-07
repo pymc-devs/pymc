@@ -178,14 +178,16 @@ def log_diff_normal_cdf(mu, sigma, x, y):
 def sigma2rho(sigma):
     """
     `sigma -> rho` PyTensor converter
-    :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
+    :math:`mu + sigma*e = mu + log(1+exp(rho))*e`
+    """
     return pt.log(pt.exp(pt.abs(sigma)) - 1.0)
 
 
 def rho2sigma(rho):
     """
     `rho -> sigma` PyTensor converter
-    :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
+    :math:`mu + sigma*e = mu + log(1+exp(rho))*e`
+    """
     return pt.softplus(rho)
 
 

@@ -44,7 +44,6 @@ def set_boundary(X: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
 
 def calc_eigenvalues(L: TensorLike, m: Sequence[int]):
     """Calculate eigenvalues of the Laplacian."""
-
     S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(len(m))])
     S_arr = np.vstack([s.flatten() for s in S]).T
 

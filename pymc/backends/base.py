@@ -562,7 +562,8 @@ class MultiTrace:
 
 def _squeeze_cat(results, combine: bool, squeeze: bool):
     """Squeeze and concatenate the results depending on values of
-    `combine` and `squeeze`."""
+    `combine` and `squeeze`.
+    """
     if combine:
         results = np.concatenate(results)
         if not squeeze:

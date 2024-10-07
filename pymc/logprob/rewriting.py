@@ -106,7 +106,6 @@ def remove_promised_valued_rvs(outputs):
 @node_rewriter((Elemwise, Alloc, DimShuffle, *subtensor_ops))
 def local_lift_DiracDelta(fgraph, node):
     r"""Lift basic `Op`\s through `DiracDelta`\s."""
-
     if len(node.outputs) > 1:
         return
 
@@ -223,7 +222,6 @@ def construct_ir_fgraph(
     -------
     A `FunctionGraph` of the measurable IR.
     """
-
     # We add `ShapeFeature` because it will get rid of references to the old
     # `RandomVariable`s that have been lifted; otherwise, it will be difficult
     # to give good warnings when an unaccounted for `RandomVariable` is encountered

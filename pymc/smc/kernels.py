@@ -161,7 +161,6 @@ class SMC_KERNEL(ABC):
             Dictionary that contains information about model variables shape and size.
 
         """
-
         self.draws = draws
         self.start = start
         if threshold < 0 or threshold > 1:
@@ -614,7 +613,6 @@ def _logp_forw(point, out_vars, in_vars, shared):
     shared : list
         Containing TensorVariable for depended shared data
     """
-
     # Replace integer inputs with rounded float inputs
     if any(var.dtype in discrete_types for var in in_vars):
         replace_int_input = {}

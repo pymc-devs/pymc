@@ -130,7 +130,8 @@ class ContextMeta(type):
     def get_context(cls, error_if_none=True, allow_block_model_access=False) -> T | None:
         """Return the most recently pushed context object of type ``cls``
         on the stack, or ``None``. If ``error_if_none`` is True (default),
-        raise a ``TypeError`` instead of returning ``None``."""
+        raise a ``TypeError`` instead of returning ``None``.
+        """
         try:
             candidate: T | None = cls.get_contexts()[-1]
         except IndexError:
@@ -145,7 +146,8 @@ class ContextMeta(type):
 
     def get_contexts(cls) -> list[T]:
         """Return a stack of context instances for the ``context_class``
-        of ``cls``."""
+        of ``cls``.
+        """
         # This lazily creates the context class's contexts
         # thread-local object, as needed. This seems inelegant to me,
         # but since the context class is not guaranteed to exist when
@@ -852,19 +854,22 @@ class Model(WithMemoization, metaclass=ContextMeta):
     @property
     def datalogp(self) -> Variable:
         """PyTensor scalar of log-probability of the observed variables and
-        potential terms"""
+        potential terms
+        """
         return self.observedlogp + self.potentiallogp
 
     @property
     def varlogp(self) -> Variable:
         """PyTensor scalar of log-probability of the unobserved random variables
-        (excluding deterministic)."""
+        (excluding deterministic).
+        """
         return self.logp(vars=self.free_RVs)
 
     @property
     def varlogp_nojac(self) -> Variable:
         """PyTensor scalar of log-probability of the unobserved random variables
-        (excluding deterministic) without jacobian term."""
+        (excluding deterministic) without jacobian term.
+        """
         return self.logp(vars=self.free_RVs, jacobian=False)
 
     @property
@@ -2204,7 +2209,6 @@ def compile_fn(
     -------
     Compiled PyTensor function
     """
-
     model = modelcontext(model)
     return model.compile_fn(
         outs,

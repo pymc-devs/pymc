@@ -205,7 +205,6 @@ class Covariance(BaseCovariance):
 class Combination(Covariance):
     def __init__(self, factor_list: Sequence):
         """Use constituent factors to get input_dim and active_dims for the Combination covariance."""
-
         # Check if all input_dim are the same in factor_list
         input_dims = {factor.input_dim for factor in factor_list if isinstance(factor, Covariance)}
 

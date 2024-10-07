@@ -80,7 +80,6 @@ def replace_rvs_by_values(
     rvs_to_transforms, optional
         Mapping between the original graph RVs and respective value transforms
     """
-
     if rvs_to_transforms:
         # Conditional transforms like Interval can reference variables in the original RV graph
         # To avoid mutating the original graphs in place, we have to clone them
@@ -302,7 +301,6 @@ def diracdelta_logprob(op, values, *inputs, **kwargs):
 
 def find_negated_var(var):
     """Return a variable that is being multiplied by -1 or None otherwise."""
-
     if not (
         var.owner and isinstance(var.owner.op, Elemwise) and isinstance(var.owner.op.scalar_op, Mul)
     ):

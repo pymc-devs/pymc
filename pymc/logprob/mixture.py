@@ -244,7 +244,6 @@ def get_stack_mixture_vars(
     node: Apply,
 ) -> tuple[list[TensorVariable] | None, int | None]:
     r"""Extract the mixture terms from a `*Subtensor*` applied to stacked `MeasurableVariable`\s."""
-
     assert isinstance(node.op, subtensor_ops)
 
     joined_rvs = node.inputs[0]

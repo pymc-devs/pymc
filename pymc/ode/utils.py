@@ -44,7 +44,6 @@ def make_sens_ic(n_states, n_theta, floatX):
     dydp : array
         1D-array of shape (n_states * (n_states + n_theta),), representing the initial condition of the sensitivities
     """
-
     # Initialize the sensitivity matrix to be 0 everywhere
     sens_matrix = np.zeros((n_states, n_states + n_theta), dtype=floatX)
 
@@ -81,7 +80,6 @@ def augment_system(ode_func, n_states, n_theta):
     system: function
         Augemted system of differential equations.
     """
-
     # Present state of the system
     t_y = pt.vector("y", dtype="float64")
     t_y.tag.test_value = np.ones((n_states,), dtype="float64")

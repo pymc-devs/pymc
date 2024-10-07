@@ -151,7 +151,6 @@ def fgraph_from_model(
     memo: Dict
         A dictionary mapping original model variables to the equivalent nodes in the fgraph.
     """
-
     if any(v is not None for v in model.rvs_to_initial_values.values()):
         raise NotImplementedError("Cannot convert models with non-default initial_values")
 

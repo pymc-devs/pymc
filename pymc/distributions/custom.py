@@ -363,7 +363,6 @@ class _CustomSymbolicDist(Distribution):
     @staticmethod
     def _infer_final_signature(signature: str, n_inputs, n_outputs, n_rngs) -> str:
         """Add size and updates to user provided gufunc signature if they are missing."""
-
         # Regex to split across outer commas
         # Copied from https://stackoverflow.com/a/26634150
         outer_commas = re.compile(r",\s*(?![^()]*\))")

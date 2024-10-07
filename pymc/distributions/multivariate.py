@@ -353,7 +353,6 @@ def mv_normal_to_precision_mv_normal(fgraph, node):
     Note: This won't be introduced when calling `pm.logp` as that will dispatch directly
     without triggering the logprob rewrites.
     """
-
     rng, size, mu, cov = node.inputs
     if cov.owner and cov.owner.op == matrix_inverse:
         tau = cov.owner.inputs[0]
@@ -658,7 +657,6 @@ class Multinomial(Discrete):
         -------
         TensorVariable
         """
-
         res = factln(n) + pt.sum(-factln(value) + logpow(p, value), axis=-1)
         res = pt.switch(
             pt.or_(pt.any(pt.lt(value, 0), axis=-1), pt.neq(pt.sum(value, axis=-1), n)),
@@ -1033,7 +1031,6 @@ class Wishart(Continuous):
         -------
         TensorVariable
         """
-
         p = V.shape[0]
 
         IVI = det(V)
@@ -1101,7 +1098,6 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initv
     This distribution is usually a bad idea to use as a prior for multivariate
     normal. You should instead use LKJCholeskyCov or LKJCorr.
     """
-
     L = S if is_cholesky else scipy.linalg.cholesky(S)
     diag_idx = np.diag_indices_from(S)
     tril_idx = np.tril_indices_from(S, k=-1)
@@ -1621,7 +1617,6 @@ class _LKJCorr(BoundedContinuous):
         -------
         TensorVariable
         """
-
         if value.ndim > 1:
             raise NotImplementedError("LKJCorr logp is only implemented for vector values (ndim=1)")
 
@@ -1923,7 +1918,6 @@ class MatrixNormal(Continuous):
         -------
         TensorVariable
         """
-
         if value.ndim != 2:
             raise ValueError("Value must be two dimensional.")
 
@@ -2296,7 +2290,6 @@ class CAR(Continuous):
         -------
         TensorVariable
         """
-
         # If expand_dims were added to (a potentially sparse) W, retrieve the non-expanded W
         extra_dims = W.type.ndim - 2
         if extra_dims:

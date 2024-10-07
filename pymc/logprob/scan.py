@@ -100,7 +100,6 @@ def convert_outer_out_to_in(
     A `ScanArgs` object for a `Scan` in which `outer_out_vars` has been converted to an
     outer-graph input.
     """
-
     output_scan_args = copy(input_scan_args)
     inner_outs_to_new_inner_ins = {}
 
@@ -396,7 +395,6 @@ def logprob_scan(op, values, *inputs, name=None, **kwargs):
 @node_rewriter([Scan, Subtensor])
 def find_measurable_scans(fgraph, node):
     r"""Find `Scan`\s for which a `logprob` can be computed."""
-
     if isinstance(node.op, Subtensor):
         node = node.inputs[0].owner
         if not (node and isinstance(node.op, Scan)):

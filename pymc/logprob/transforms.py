@@ -137,7 +137,8 @@ class Transform(abc.ABC):
         self, value: TensorVariable, *inputs: Variable
     ) -> TensorVariable | tuple[TensorVariable, ...]:
         """Invert the transformation. Multiple values may be returned when the
-        transformation is not 1-to-1"""
+        transformation is not 1-to-1
+        """
 
     def log_jac_det(self, value: TensorVariable, *inputs) -> TensorVariable:
         """Construct the log of the absolute value of the Jacobian determinant."""
@@ -452,7 +453,6 @@ def measurable_power_exponent_to_exp(fgraph, node):
 )
 def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> list[Node] | None:
     """Find measurable transformations from Elemwise operators."""
-
     # Node was already converted
     if isinstance(node.op, MeasurableOp):
         return None

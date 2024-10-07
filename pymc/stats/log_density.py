@@ -154,7 +154,6 @@ def compute_log_density(
         InferenceData with the ``log_likelihood`` group when ``kind == "likelihood"``
         or the ``log_prior`` group when ``kind == "prior"``.
     """
-
     posterior = idata["posterior"]
 
     model = modelcontext(model)

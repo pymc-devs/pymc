@@ -99,7 +99,6 @@ def _replace_shared_variables(graph: list[TensorVariable]) -> list[TensorVariabl
     ValueError
         If any shared variable contains default_updates
     """
-
     shared_variables = [var for var in graph_inputs(graph) if isinstance(var, SharedVariable)]
 
     if any(isinstance(var.type, RandomType) for var in shared_variables):
@@ -124,7 +123,6 @@ def get_jaxified_graph(
     outputs: list[TensorVariable] | None = None,
 ) -> list[TensorVariable]:
     """Compile an PyTensor graph into an optimized JAX function"""
-
     graph = _replace_shared_variables(outputs) if outputs is not None else None
 
     fgraph = FunctionGraph(inputs=inputs, outputs=graph, clone=True)
@@ -224,7 +222,6 @@ def _get_batched_jittered_initial_points(
         list with one item per variable and number of chains as batch dimension.
         Each item has shape `(chains, *var.shape)`
     """
-
     initial_points = _init_jitter(
         model,
         initvals,
@@ -354,7 +351,6 @@ def _sample_blackjax_nuts(
         with their respective sample stats and pointwise log likeihood values (unless
         skipped with ``idata_kwargs``).
     """
-
     import blackjax
 
     # Adapted from numpyro
