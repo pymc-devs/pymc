@@ -12,5 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""Tuning phase."""
+
 from pymc.tuning.scaling import find_hessian, guess_scaling, trace_cov
 from pymc.tuning.starting import find_MAP

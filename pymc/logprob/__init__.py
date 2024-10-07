@@ -34,6 +34,8 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
+"""Conversion of PyMC graphs into logp graphs."""
+
 from pymc.logprob.basic import (
     conditional_logp,
     icdf,
