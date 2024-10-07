@@ -229,7 +229,7 @@ def test_get_log_likelihood():
     b_true = trace.log_likelihood.b.values
     a = np.array(trace.posterior.a)
     sigma_log_ = np.log(np.array(trace.posterior.sigma))
-    b_jax = _get_log_likelihood(model, [a, sigma_log_])["b"]
+    b_jax = jax.vmap(_get_log_likelihood, in_axes=(None, 0))(model, [a, sigma_log_])["b"]
 
     assert np.allclose(b_jax.reshape(-1), b_true.reshape(-1))
 

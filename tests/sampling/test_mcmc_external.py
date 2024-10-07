@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import numpy as np
-import numpy.testing as npt
 import pytest
 
 from pymc import Data, Model, Normal, sample
@@ -74,14 +73,32 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
     assert idata_reference.posterior.attrs.keys() == idata1.posterior.attrs.keys()
 
 
-def test_step_args():
-    with Model() as model:
-        a = Normal("a")
-        idata = sample(
-            nuts_sampler="numpyro",
-            target_accept=0.5,
-            nuts={"max_treedepth": 10},
-            random_seed=1410,
-        )
+def test_numpyro_external_nuts_chunking():
+    # chunked sampling should give exact same results as non-chunked
+    nuts_sampler = "numpyro"
+    pytest.importorskip(nuts_sampler)
 
-    npt.assert_almost_equal(idata.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
+    with Model():
+        x = Normal("x", 100, 5)
+        y = Data("y", [1, 2, 3, 4])
+
+        Normal("L", mu=x, sigma=0.1, observed=y)
+
+        base_kwargs = dict(
+            nuts_sampler=nuts_sampler,
+            random_seed=123,
+            chains=2,
+            tune=500,
+            draws=500,
+            progressbar=False,
+            initvals={"x": 0.0},
+            idata_kwargs={"log_likelihood": True},
+        )
+        chunk_kwargs = {**base_kwargs, **{"nuts_sampler_kwargs": {"num_chunks": 10}}}
+
+        idata1 = sample(**base_kwargs)
+        idata2 = sample(**chunk_kwargs)
+
+    np.testing.assert_array_equal(idata1.posterior.x, idata2.posterior.x)
+    np.testing.assert_array_equal(idata1.log_likelihood.L, idata2.log_likelihood.L)
+    assert idata1.posterior.attrs.keys() == idata2.posterior.attrs.keys()
