@@ -239,6 +239,7 @@ class TruncationCheck(CheckAndRaise):
         super().__init__(TruncationError, msg)
 
     def __str__(self):
+        """Return a string representation of the object."""
         return f"TruncationCheck{{{self.msg}}}"
 
 

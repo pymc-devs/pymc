@@ -113,6 +113,7 @@ class treelist(list):
             return list.__contains__(self, item)
 
     def __setitem__(self, key, value):
+        """Set value at index `key` with value `value`."""
         raise NotImplementedError(
             "Method is removed as we are not able to determine appropriate logic for it"
         )
@@ -121,9 +122,11 @@ class treelist(list):
     # This is my best guess about what this should do.  I might be happier
     # to kill both of these if they are not used.
     def __mul__(self, other) -> "treelist":
+        """Multiplication."""
         return cast("treelist", super().__mul__(other))
 
     def __imul__(self, other) -> "treelist":
+        """Inplace multiplication."""
         t0 = len(self)
         super().__imul__(other)
         if self.parent is not None:
@@ -334,25 +337,31 @@ class HashableWrapper:
         self.obj = obj
 
     def __hash__(self):
+        """Return a hash of the object."""
         return hashable(self.obj)
 
     def __eq__(self, other):
+        """Compare this object with `other`."""
         return self.obj == other
 
     def __repr__(self):
+        """Return a string representation of the object."""
         return f"{type(self).__name__}({self.obj})"
 
 
 class WithMemoization:
     def __hash__(self):
+        """Return a hash of the object."""
         return hash(id(self))
 
     def __getstate__(self):
+        """Return an object to pickle."""
         state = self.__dict__.copy()
         state.pop("_cache", None)
         return state
 
     def __setstate__(self, state):
+        """Set the object from a pickled object."""
         self.__dict__.update(state)
 
 
@@ -543,11 +552,13 @@ class CustomProgress(Progress):
             super().__init__(*args, **kwargs)
 
     def __enter__(self):
+        """Enter the context manager."""
         if self.is_enabled:
             self.start()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit the context manager."""
         if self.is_enabled:
             super().__exit__(exc_type, exc_val, exc_tb)
 

@@ -504,9 +504,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     if TYPE_CHECKING:
 
-        def __enter__(self: Self) -> Self: ...
+        def __enter__(self: Self) -> Self:
+            """Enter the context manager."""
 
-        def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None: ...
+        def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
+            """Exit the context manager."""
 
     def __new__(cls, *args, model: Union[Literal[UNSET], None, "Model"] = UNSET, **kwargs):
         # resolves the parent instance
@@ -1571,6 +1573,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             return name
 
     def __getitem__(self, key):
+        """Get the variable named `key`."""
         try:
             return self.named_vars[key]
         except KeyError as e:
@@ -1580,12 +1583,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 raise e
 
     def __contains__(self, key):
+        """Check if the model contains a variable named `key`."""
         return key in self.named_vars or self.name_for(key) in self.named_vars
 
     def __copy__(self):
+        """Clone the model."""
         return self.copy()
 
     def __deepcopy__(self, _):
+        """Clone the model."""
         return self.copy()
 
     def copy(self):

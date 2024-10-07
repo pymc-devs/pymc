@@ -124,6 +124,7 @@ class ChainRecordAdapter(IBaseTrace):
         return self._chain.append(value_dict, stats_dict)
 
     def __len__(self):
+        """Length of the chain."""
         return len(self._chain)
 
     def get_values(self, varname: str, burn=0, thin=1) -> np.ndarray:

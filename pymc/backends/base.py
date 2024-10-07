@@ -55,6 +55,7 @@ class IBaseTrace(ABC, Sized):
     """Sampler stats for each sampler."""
 
     def __len__(self):
+        """Length of the chain."""
         raise NotImplementedError()
 
     def get_values(self, varname: str, burn=0, thin=1) -> np.ndarray:
@@ -208,6 +209,7 @@ class BaseTrace(IBaseTrace):
     # Selection methods
 
     def __getitem__(self, idx):
+        """Get the sample at index `idx`."""
         if isinstance(idx, slice):
             return self._slice(idx)
 
@@ -339,6 +341,7 @@ class MultiTrace:
         self._report = SamplerReport()
 
     def __repr__(self):
+        """Return a string representation of MultiTrace."""
         template = "<{}: {} chains, {} iterations, {} variables>"
         return template.format(self.__class__.__name__, self.nchains, len(self), len(self.varnames))
 
@@ -355,9 +358,11 @@ class MultiTrace:
         return self._report
 
     def __iter__(self):
+        """Return an iterator of the MultiTrace."""
         raise NotImplementedError
 
     def __getitem__(self, idx):
+        """Get the sample at index `idx`."""
         if isinstance(idx, slice):
             return self._slice(idx)
 
@@ -393,6 +398,7 @@ class MultiTrace:
     _attrs = {"_straces", "varnames", "chains", "stat_names", "_report"}
 
     def __getattr__(self, name):
+        """Get the value of the attribute of name `name`."""
         # Avoid infinite recursion when called before __init__
         # variables are set up (e.g., when pickling).
         if name in self._attrs:
@@ -412,6 +418,7 @@ class MultiTrace:
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def __len__(self):
+        """Length of the chains."""
         chain = self.chains[-1]
         return len(self._straces[chain])
 

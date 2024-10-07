@@ -164,6 +164,7 @@ class MeasurableElemwise(MeasurableOp, Elemwise):
         super().__init__(scalar_op, *args, **kwargs)
 
     def __str__(self):
+        """Return a string representation of the object."""
         return f"Measurable{super().__str__()}"
 
 

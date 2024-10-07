@@ -138,6 +138,7 @@ class NDArray(base.BaseTrace):
     # Selection methods
 
     def __len__(self):
+        """Length of the chain."""
         if not self.samples:  # `setup` has not been called.
             return 0
         return self.draw_idx

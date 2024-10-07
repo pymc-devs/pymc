@@ -334,6 +334,7 @@ class TP(Latent):
         super().__init__(mean_func=mean_func, cov_func=scale_func)
 
     def __add__(self, other):
+        """Add two Student's T processes."""
         raise TypeError("Student's T processes aren't additive")
 
     def _build_prior(self, name, X, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs):
@@ -773,6 +774,7 @@ class MarginalApprox(Marginal):
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def __add__(self, other):
+        """Add two Gaussian processes."""
         new_gp = super().__add__(other)
         if not self.approx == other.approx:
             raise TypeError("Cannot add GPs with different approximations")
@@ -1004,6 +1006,7 @@ class LatentKron(Base):
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def __add__(self, other):
+        """Add two Gaussian processes."""
         raise TypeError("Additive, Kronecker-structured processes not implemented")
 
     def _build_prior(self, name, Xs, jitter, **kwargs):
@@ -1165,6 +1168,7 @@ class MarginalKron(Base):
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def __add__(self, other):
+        """Add two Gaussian processes."""
         raise TypeError("Additive, Kronecker-structured processes not implemented")
 
     def _build_marginal_likelihood(self, Xs):

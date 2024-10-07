@@ -68,6 +68,7 @@ class MeasurableScan(MeasurableOp, Scan):
     """A placeholder used to specify a log-likelihood for a scan sub-graph."""
 
     def __str__(self):
+        """Return a string representation of the object."""
         return f"Measurable{super().__str__()}"
 
 

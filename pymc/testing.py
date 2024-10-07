@@ -114,6 +114,7 @@ class Domain:
         self.dtype = dtype
 
     def __add__(self, other):
+        """Add two domains."""
         return Domain(
             [v + other for v in self.vals],
             self.dtype,
@@ -122,6 +123,7 @@ class Domain:
         )
 
     def __mul__(self, other):
+        """Multiply two domains."""
         try:
             return Domain(
                 [v * other for v in self.vals],
@@ -138,6 +140,7 @@ class Domain:
             )
 
     def __neg__(self):
+        """Negate one domain."""
         return Domain([-v for v in self.vals], self.dtype, (-self.lower, -self.upper), self.shape)
 
 

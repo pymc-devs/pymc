@@ -509,6 +509,7 @@ class Operator:
         return self.objective_class(self, f)
 
     def __str__(self):  # pragma: no cover
+        """Return a string representation of the object."""
         return f"{self.__class__.__name__}[{self.approx.__class__.__name__}]"
 
 
@@ -836,6 +837,7 @@ class Group(WithMemoization):
 
     @pytensor.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
+        """Initialize the group."""
         if not group:
             raise GroupError("Got empty group")
         if self.group is None:
@@ -1119,6 +1121,7 @@ class Group(WithMemoization):
         return self.logq / self.symbolic_normalizing_constant
 
     def __str__(self):
+        """Return a string representation for the object."""
         if self.group is None:
             shp = "undefined"
         else:
@@ -1591,6 +1594,7 @@ class Approximation(WithMemoization):
         return pt.concatenate(self.collect("symbolic_random"), axis=-1)
 
     def __str__(self):
+        """Return a string representation of the object."""
         if len(self.groups) < 5:
             return "Approximation{" + " & ".join(map(str, self.groups)) + "}"
         else:
