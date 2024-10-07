@@ -226,7 +226,7 @@ def _make_node(
     cluster: str | None = None,
     formatting: str = "plain",
 ):
-    """Attaches the given variable to a graphviz or networkx Digraph"""
+    """Attaches the given variable to a graphviz or networkx Digraph."""
     node_formatter = node_formatters[node.node_type]
     kwargs = node_formatter(node.var)
 
@@ -311,7 +311,7 @@ class ModelGraph:
     def make_compute_graph(
         self, var_names: Iterable[VarName] | None = None
     ) -> dict[VarName, set[VarName]]:
-        """Get map of var_name -> set(input var names) for the model"""
+        """Get map of var_name -> set(input var names) for the model."""
         input_map: dict[VarName, set[VarName]] = defaultdict(set)
 
         for var_name in self.vars_to_plot(var_names):
@@ -441,7 +441,7 @@ def make_graph(
     node_formatters: NodeTypeFormatterMapping | None = None,
     create_plate_label: PlateLabelFunc = create_plate_label_with_dim_length,
 ):
-    """Make graphviz Digraph of PyMC model
+    """Make graphviz Digraph of PyMC model.
 
     Returns
     -------
@@ -511,7 +511,7 @@ def make_networkx(
     node_formatters: NodeTypeFormatterMapping | None = None,
     create_plate_label: PlateLabelFunc = create_plate_label_with_dim_length,
 ):
-    """Make networkx Digraph of PyMC model
+    """Make networkx Digraph of PyMC model.
 
     Returns
     -------

@@ -32,7 +32,7 @@ floatX = pytensor.config.floatX
 
 class DifferentialEquation(Op):
     r"""
-    Specify an ordinary differential equation
+    Specify an ordinary differential equation.
 
     Due to the nature of the model (as well as included solvers), the process of ODE solution may perform slowly.  A faster alternative library based on PyMC--sunode--has implemented Adams' method and BDF (backward differentation formula).  More information about sunode is available at: https://github.com/aseyboldt/sunode.
 

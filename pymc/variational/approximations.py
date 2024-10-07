@@ -43,7 +43,7 @@ class MeanFieldGroup(Group):
     R"""Mean Field approximation to the posterior where spherical Gaussian family
     is fitted to minimize KL divergence from True posterior. It is assumed
     that latent space variables are uncorrelated that is the main drawback
-    of the method
+    of the method.
     """
 
     __param_spec__ = {"mu": ("d",), "rho": ("d",)}
@@ -189,7 +189,7 @@ class FullRankGroup(Group):
 @Group.register
 class EmpiricalGroup(Group):
     """Builds Approximation instance from a given trace,
-    it has the same interface as variational approximation
+    it has the same interface as variational approximation.
     """
 
     has_logq = False
@@ -330,7 +330,7 @@ def sample_approx(approx, draws=100, include_transformed=True):
 
 # single group shortcuts exported to user
 class SingleGroupApproximation(Approximation):
-    """Base class for Single Group Approximation"""
+    """Base class for Single Group Approximation."""
 
     _group_class: type | None = None
 

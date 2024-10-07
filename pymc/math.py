@@ -185,7 +185,7 @@ __all__ = [
 
 def kronecker(*Ks):
     r"""Return the Kronecker product of arguments:
-          :math:`K_1 \otimes K_2 \otimes ... \otimes K_D`
+          :math:`K_1 \otimes K_2 \otimes ... \otimes K_D`.
 
     Parameters
     ----------
@@ -219,7 +219,7 @@ def cartesian(*arrays):
 
 
 def kron_matrix_op(krons, m, op):
-    r"""Apply op to krons and m in a way that reproduces ``op(kronecker(*krons), m)``
+    r"""Apply op to krons and m in a way that reproduces ``op(kronecker(*krons), m)``.
 
     Parameters
     ----------
@@ -275,12 +275,12 @@ def kron_diag(*diags):
 
 
 def logdiffexp(a, b):
-    """log(exp(a) - exp(b))"""
+    """Return log(exp(a) - exp(b))."""
     return a + pt.log1mexp(b - a)
 
 
 def logdiffexp_numpy(a, b):
-    """log(exp(a) - exp(b))"""
+    """Return log(exp(a) - exp(b))."""
     warnings.warn(
         "pymc.math.logdiffexp_numpy is being deprecated.",
         FutureWarning,
@@ -331,6 +331,7 @@ def log1mexp(x, *, negative_input=False):
 def log1mexp_numpy(x, *, negative_input=False):
     """Return log(1 - exp(x)).
     This function is numerically more stable than the naive approach.
+
     For details, see
     https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
     """
@@ -460,9 +461,7 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
 
 
 class BatchedDiag(Op):
-    """
-    Fast BatchedDiag allocation
-    """
+    """Fast BatchedDiag allocation."""
 
     __props__ = ()
 
@@ -510,7 +509,7 @@ def batched_diag(C):
 
 def block_diagonal(matrices, sparse=False, format="csr"):
     r"""See pt.slinalg.block_diag or
-    pytensor.sparse.basic.block_diag for reference
+    pytensor.sparse.basic.block_diag for reference.
 
     Parameters
     ----------

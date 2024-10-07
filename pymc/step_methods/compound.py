@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 """
-Created on Mar 7, 2011
+Created on Mar 7, 2011.
 
 @author: johnsalvatier
 """
@@ -40,6 +40,7 @@ __all__ = ("Competence", "CompoundStep")
 @unique
 class Competence(IntEnum):
     """Enum for characterizing competence classes of step methods.
+
     Values include:
     0: INCOMPATIBLE
     1: COMPATIBLE

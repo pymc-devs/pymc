@@ -34,7 +34,7 @@ _log = logging.getLogger(__name__)
 
 class SimulatorRV(RandomVariable):
     """
-    Base class for SimulatorRVs
+    Base class for SimulatorRVs.
 
     This should be subclassed when defining custom Simulator objects.
     """

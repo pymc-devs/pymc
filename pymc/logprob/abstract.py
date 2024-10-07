@@ -144,14 +144,14 @@ def _icdf_helper(rv, value, **kwargs):
 
 
 class MeasurableOp(abc.ABC):
-    """An operation whose outputs can be assigned a measure/log-probability"""
+    """An operation whose outputs can be assigned a measure/log-probability."""
 
 
 MeasurableOp.register(RandomVariable)
 
 
 class MeasurableElemwise(MeasurableOp, Elemwise):
-    """Base class for Measurable Elemwise variables"""
+    """Base class for Measurable Elemwise variables."""
 
     valid_scalar_types: tuple[MetaType, ...] = ()
 

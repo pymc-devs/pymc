@@ -89,7 +89,7 @@ class GenTensorVariable(TensorVariable):
 class GeneratorAdapter:
     """
     Helper class that helps to infer data type of generator with looking
-    at the first item, preserving the order of the resulting generator
+    at the first item, preserving the order of the resulting generator.
     """
 
     def make_variable(self, gop, name=None):
@@ -135,7 +135,7 @@ minibatch_index = MinibatchIndexRV()
 
 
 class MinibatchOp(OpFromGraph):
-    """Encapsulate Minibatch random draws in an opaque OFG"""
+    """Encapsulate Minibatch random draws in an opaque OFG."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs, inline=True)

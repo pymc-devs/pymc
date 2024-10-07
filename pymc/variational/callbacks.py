@@ -43,7 +43,7 @@ _diff: dict[str, Callable[[np.ndarray, np.ndarray], np.ndarray]] = {
 
 
 class CheckParametersConvergence(Callback):
-    """Convergence stopping check
+    """Convergence stopping check.
 
     Parameters
     ----------
@@ -93,7 +93,7 @@ class CheckParametersConvergence(Callback):
 
 class Tracker(Callback):
     """
-    Helper class to record arbitrary stats during VI
+    Helper class to record arbitrary stats during VI.
 
     It is possible to pass a function that takes no arguments
     If call fails then (approx, hist, i) are passed

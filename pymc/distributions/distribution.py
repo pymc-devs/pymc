@@ -86,7 +86,7 @@ class _Unpickling:
 
 class DistributionMeta(ABCMeta):
     """
-    DistributionMeta class
+    DistributionMeta class.
 
     Notes
     -----
@@ -208,7 +208,7 @@ class _class_or_instancemethod(classmethod):
 
 
 class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
-    """Symbolic Random Variable
+    """Symbolic Random Variable.
 
     This is a subclasse of `OpFromGraph` which is used to encapsulate the symbolic
     random graph of complex distributions which are built on top of pure
@@ -269,7 +269,7 @@ class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
     @_class_or_instancemethod
     @property
     def ndim_supp(cls_or_self) -> int | None:
-        """Number of support dimensions of the RandomVariable
+        """Number of support dimensions of the RandomVariable.
 
         (0 for scalar, 1 for vector, ...)
         """
@@ -308,7 +308,7 @@ class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
     def get_input_output_type_idxs(
         extended_signature: str | None,
     ) -> tuple[tuple[tuple[int], int | None, tuple[int]], tuple[tuple[int], tuple[int]]]:
-        """Parse extended_signature and return indexes for *[rng], [size] and parameters as well as outputs"""
+        """Parse extended_signature and return indexes for *[rng], [size] and parameters as well as outputs."""
         if extended_signature is None:
             raise ValueError("extended_signature must be provided")
 
@@ -340,17 +340,17 @@ class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
         )
 
     def rng_params(self, node) -> tuple[Variable, ...]:
-        """Extract the rng parameters from the node's inputs"""
+        """Extract the rng parameters from the node's inputs."""
         [rng_args_idxs, _, _], _ = self.get_input_output_type_idxs(self.extended_signature)
         return tuple(node.inputs[i] for i in rng_args_idxs)
 
     def size_param(self, node) -> Variable | None:
-        """Extract the size parameter from the node's inputs"""
+        """Extract the size parameter from the node's inputs."""
         [_, size_arg_idx, _], _ = self.get_input_output_type_idxs(self.extended_signature)
         return node.inputs[size_arg_idx] if size_arg_idx is not None else None
 
     def dist_params(self, node) -> tuple[Variable, ...]:
-        """Extract distribution parameters from the node's inputs"""
+        """Extract distribution parameters from the node's inputs."""
         [_, _, param_args_idxs], _ = self.get_input_output_type_idxs(self.extended_signature)
         return tuple(node.inputs[i] for i in param_args_idxs)
 
@@ -383,7 +383,7 @@ class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
         super().__init__(*args, **kwargs)
 
     def update(self, node: Apply) -> dict[Variable, Variable]:
-        """Symbolic update expression for input random state variables
+        """Symbolic update expression for input random state variables.
 
         Returns a dictionary with the symbolic expressions required for correct updating
         of random state input variables repeated function evaluations. This is used by
@@ -420,7 +420,7 @@ def change_symbolic_rv_size(op: SymbolicRandomVariable, rv, new_size, expand) ->
 
 
 class Distribution(metaclass=DistributionMeta):
-    """Statistical distribution"""
+    """Statistical distribution."""
 
     rv_op: [RandomVariable, SymbolicRandomVariable] = None
     rv_type: MetaType = None
@@ -630,7 +630,7 @@ def moment(rv: TensorVariable) -> TensorVariable:
 
 
 class Discrete(Distribution):
-    """Base class for discrete distributions"""
+    """Base class for discrete distributions."""
 
     def __new__(cls, name, *args, **kwargs):
         if kwargs.get("transform", None):
@@ -640,7 +640,7 @@ class Discrete(Distribution):
 
 
 class Continuous(Distribution):
-    """Base class for continuous distributions"""
+    """Base class for continuous distributions."""
 
 
 class DiracDeltaRV(SymbolicRandomVariable):

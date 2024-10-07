@@ -33,7 +33,7 @@ from pymc.util import check_dist_not_registered
 
 
 class CensoredRV(SymbolicRandomVariable):
-    """Censored random variable"""
+    """Censored random variable."""
 
     inline_logprob = True
     extended_signature = "(),(),()->()"
@@ -61,7 +61,7 @@ class CensoredRV(SymbolicRandomVariable):
 
 class Censored(Distribution):
     r"""
-    Censored distribution
+    Censored distribution.
 
     The pdf of a censored distribution is
 

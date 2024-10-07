@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""NumPy array trace backend
+"""NumPy array trace backend.
 
 Store sampling values in memory as a NumPy array.
 """
@@ -27,7 +27,7 @@ from pymc.model import Model, modelcontext
 
 
 class NDArray(base.BaseTrace):
-    """NDArray trace object
+    """NDArray trace object.
 
     Parameters
     ----------
@@ -212,7 +212,7 @@ def _slice_as_ndarray(strace, idx):
 def point_list_to_multitrace(
     point_list: list[dict[str, np.ndarray]], model: Model | None = None
 ) -> MultiTrace:
-    """Transform point list into MultiTrace"""
+    """Transform point list into MultiTrace."""
     _model = modelcontext(model)
     varnames = list(point_list[0].keys())
     with _model:

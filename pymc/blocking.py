@@ -12,11 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""
-pymc.blocking
-
-Classes for working with subsets of parameters.
-"""
+"""Classes for working with subsets of parameters."""
 
 from __future__ import annotations
 
@@ -51,9 +47,7 @@ class RaveledVars(NamedTuple):
 
 
 class Compose(Generic[T]):
-    """
-    Compose two functions in a pickleable way
-    """
+    """Compose two functions in a pickleable way."""
 
     def __init__(self, fa: Callable[[PointType], T], fb: Callable[[RaveledVars], PointType]):
         self.fa = fa

@@ -31,7 +31,7 @@ class IncorrectArgumentsError(ValueError):
 
 
 class TraceDirectoryError(ValueError):
-    """Error from trying to load a trace from an incorrectly-structured directory,"""
+    """Error from trying to load a trace from an incorrectly-structured directory."""
 
     pass
 
@@ -77,7 +77,7 @@ class DtypeError(TypeError):
 
 
 class TruncationError(RuntimeError):
-    """Exception for errors generated from truncated graphs"""
+    """Exception for errors generated from truncated graphs."""
 
 
 class NotConstantValueError(ValueError):

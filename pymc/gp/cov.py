@@ -56,9 +56,7 @@ IntSequence = np.ndarray | Sequence[int]
 
 
 class BaseCovariance:
-    """
-    Base class for kernels/covariance functions.
-    """
+    """Base class for kernels/covariance functions."""
 
     def __call__(
         self,
@@ -116,9 +114,7 @@ class BaseCovariance:
         return Exponentiated(self, other)
 
     def __array_wrap__(self, result):
-        """
-        Required to allow radd/rmul by numpy arrays.
-        """
+        """Required to allow radd/rmul by numpy arrays."""
         result = np.squeeze(result)
         if len(result.shape) <= 1:
             result = result.reshape(1, 1)
@@ -579,7 +575,7 @@ class ExpQuad(Stationary):
 
     def power_spectral_density(self, omega: TensorLike) -> TensorVariable:
         r"""
-        The power spectral density for the ExpQuad kernel is:
+        Power spectral density for the ExpQuad kernel.
 
         .. math::
 
@@ -638,7 +634,7 @@ class Matern52(Stationary):
 
     def power_spectral_density(self, omega: TensorLike) -> TensorVariable:
         r"""
-        The power spectral density for the Matern52 kernel is:
+        Power spectral density for the Matern52 kernel.
 
         .. math::
 
@@ -677,7 +673,7 @@ class Matern32(Stationary):
 
     def power_spectral_density(self, omega: TensorLike) -> TensorVariable:
         r"""
-        The power spectral density for the Matern32 kernel is:
+        Power spectral density for the Matern32 kernel.
 
         .. math::
 
@@ -702,7 +698,7 @@ class Matern32(Stationary):
 
 class Matern12(Stationary):
     r"""
-    The Matern kernel with nu = 1/2
+    The Matern kernel with nu = 1/2.
 
     .. math::
 
@@ -788,7 +784,7 @@ class Periodic(Stationary):
         return pt.exp(-0.5 * r2)
 
     def power_spectral_density_approx(self, J: TensorLike) -> TensorVariable:
-        """
+        r"""
         Technically, this is not a spectral density but these are the first `m` coefficients of
         the low rank approximation for the periodic kernel, which are used in the same way.
         `J` is a vector of `np.arange(m)`.

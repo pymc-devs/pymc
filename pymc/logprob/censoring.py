@@ -90,7 +90,7 @@ measurable_ir_rewrites_db.register(
 
 @_logprob.register(MeasurableClip)
 def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
-    r"""Logprob of a clipped censored distribution
+    r"""Logprob of a clipped censored distribution.
 
     The probability is given by
     .. math::
@@ -174,7 +174,7 @@ measurable_ir_rewrites_db.register(
 
 @_logprob.register(MeasurableRound)
 def round_logprob(op, values, base_rv, **kwargs):
-    r"""Logprob of a rounded censored distribution
+    r"""Logprob of a rounded censored distribution.
 
     The probability of a distribution rounded to the nearest integer is given by
     .. math::

@@ -311,7 +311,7 @@ def check_logp(
     skip_paramdomain_outside_edge_test: bool = False,
 ) -> None:
     """
-    Generic test for PyMC logp methods
+    Generic test for PyMC logp methods.
 
     Test PyMC logp and equivalent scipy logpmf/logpdf methods give similar
     results for valid values and parameters inside the supported edges.
@@ -421,7 +421,7 @@ def check_logcdf(
     skip_paramdomain_outside_edge_test: bool = False,
 ) -> None:
     """
-    Generic test for PyMC logcdf methods
+    Generic test for PyMC logcdf methods.
 
     The following tests are performed by default:
         1. Test PyMC logcdf and equivalent scipy logcdf methods give similar
@@ -536,7 +536,7 @@ def check_icdf(
     n_samples: int = 100,
 ) -> None:
     """
-    Generic test for PyMC icdf methods
+    Generic test for PyMC icdf methods.
 
     The following tests are performed by default:
         1. Test PyMC icdf and equivalent scipy icdf (ppf) methods give similar
@@ -633,9 +633,7 @@ def check_selfconsistency_discrete_logcdf(
     decimal: int | None = None,
     n_samples: int = 100,
 ) -> None:
-    """
-    Check that logcdf of discrete distributions matches sum of logps up to value.
-    """
+    """Check that logcdf of discrete distributions matches sum of logps up to value."""
     if decimal is None:
         decimal = select_by_precision(float64=6, float32=3)
 

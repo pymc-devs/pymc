@@ -37,7 +37,7 @@ def convert_str_to_rv_dict(
 ) -> dict[TensorVariable, np.ndarray | Variable | str | None]:
     """Helper function for converting a user-provided start dict with str keys of (transformed) variable names
     to a dict mapping the RV tensors to untransformed initvals.
-    TODO: Deprecate this functionality and only accept TensorVariables as keys
+    TODO: Deprecate this functionality and only accept TensorVariables as keys.
     """
     initvals = {}
     for key, initval in start.items():
@@ -59,7 +59,7 @@ def make_initial_point_fns_per_chain(
     jitter_rvs: set[TensorVariable] | None = None,
     chains: int,
 ) -> list[Callable]:
-    """Create an initial point function for each chain, as defined by initvals
+    """Create an initial point function for each chain, as defined by initvals.
 
     If a single initval dictionary is passed, the function is replicated for each
     chain, otherwise a unique function is compiled for each entry in the dictionary.

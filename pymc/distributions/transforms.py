@@ -69,7 +69,7 @@ def __getattr__(name):
 
 @singledispatch
 def _default_transform(op: Op, rv: TensorVariable):
-    """Return default transform for a given Distribution `Op`"""
+    """Return default transform for a given Distribution `Op`."""
     return None
 
 
@@ -141,7 +141,7 @@ class SumTo1(Transform):
 class CholeskyCovPacked(Transform):
     """
     Transforms the diagonal elements of the LKJCholeskyCov distribution to be on the
-    log scale
+    log scale.
     """
 
     name = "cholesky-cov-packed"

@@ -303,7 +303,5 @@ except (ModuleNotFoundError, AttributeError):
 
 
 def _format_underscore(variable: str) -> str:
-    """
-    Escapes all unescaped underscores in the variable name for LaTeX representation.
-    """
+    """Escapes all unescaped underscores in the variable name for LaTeX representation."""
     return re.sub(r"(?<!\\)_", r"\\_", variable)

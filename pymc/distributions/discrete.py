@@ -293,7 +293,7 @@ class BetaBinomial(Discrete):
 
 
 class Bernoulli(Discrete):
-    R"""Bernoulli log-likelihood
+    R"""Bernoulli log-likelihood.
 
     The Bernoulli distribution describes the probability of successes
     (x=1) and failures (x=0).

@@ -244,7 +244,7 @@ def replace_vars_in_graphs(
 
 def inputvars(a):
     """
-    Get the inputs into PyTensor variables
+    Get the inputs into PyTensor variables.
 
     Parameters
     ----------
@@ -263,7 +263,7 @@ def inputvars(a):
 
 def cont_inputs(a):
     """
-    Get the continuous inputs into PyTensor variables
+    Get the continuous inputs into PyTensor variables.
 
     Parameters
     ----------
@@ -277,9 +277,7 @@ def cont_inputs(a):
 
 
 def floatX(X):
-    """
-    Convert an PyTensor tensor or numpy array to pytensor.config.floatX type.
-    """
+    """Convert an PyTensor tensor or numpy array to pytensor.config.floatX type."""
     try:
         return X.astype(pytensor.config.floatX)
     except AttributeError:
@@ -291,9 +289,7 @@ _conversion_map = {"float64": "int32", "float32": "int16", "float16": "int8", "f
 
 
 def intX(X):
-    """
-    Convert a pytensor tensor or numpy array to pytensor.tensor.int32 type.
-    """
+    """Convert a pytensor tensor or numpy array to pytensor.tensor.int32 type."""
     intX = _conversion_map[pytensor.config.floatX]
     try:
         return X.astype(intX)
@@ -303,9 +299,7 @@ def intX(X):
 
 
 def smartfloatX(x):
-    """
-    Converts numpy float values to floatX and leaves values of other types unchanged.
-    """
+    """Converts numpy float values to floatX and leaves values of other types unchanged."""
     if str(x.dtype).startswith("float"):
         x = floatX(x)
     return x
@@ -325,7 +319,7 @@ PyTensor derivative functions
 
 
 def gradient1(f, v):
-    """Flat gradient of f wrt v"""
+    """Flat gradient of f wrt v."""
     return pt.flatten(grad(f, v, disconnected_inputs="warn"))
 
 
@@ -343,7 +337,7 @@ def gradient(f, vars=None):
 
 
 def jacobian1(f, v):
-    """Jacobian of f wrt v"""
+    """Jacobian of f wrt v."""
     f = pt.flatten(f)
     idx = pt.arange(f.shape[0], dtype="int32")
 
@@ -751,7 +745,7 @@ def generator(gen, default=None):
 
 def ix_(*args):
     """
-    PyTensor np.ix_ analog
+    PyTensor np.ix_ analog.
 
     See numpy.lib.index_tricks.ix_ for reference
     """
@@ -778,14 +772,14 @@ def largest_common_dtype(tensors):
 def find_rng_nodes(
     variables: Iterable[Variable],
 ) -> list[RandomGeneratorSharedVariable]:
-    """Return shared RNG variables in a graph"""
+    """Return shared RNG variables in a graph."""
     return [
         node for node in graph_inputs(variables) if isinstance(node, RandomGeneratorSharedVariable)
     ]
 
 
 def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> list[TensorVariable]:
-    """Replace any RNG nodes upstream of outputs by new RNGs of the same type
+    """Replace any RNG nodes upstream of outputs by new RNGs of the same type.
 
     This can be used when combining a pre-existing graph with a cloned one, to ensure
     RNGs are unique across the two graphs.
@@ -809,7 +803,7 @@ def reseed_rngs(
     rngs: Sequence[SharedVariable],
     seed: SeedSequenceSeed,
 ) -> None:
-    """Create a new set of RandomState/Generator for each rng based on a seed"""
+    """Create a new set of RandomState/Generator for each rng based on a seed."""
     bit_generators = [
         np.random.PCG64(sub_seed) for sub_seed in np.random.SeedSequence(seed).spawn(len(rngs))
     ]
@@ -1142,7 +1136,7 @@ def toposort_replace(
 
 
 def normalize_rng_param(rng: None | Variable) -> Variable:
-    """Validate rng is a valid type or create a new one if None"""
+    """Validate rng is a valid type or create a new one if None."""
     if rng is None:
         rng = pytensor.shared(np.random.default_rng())
     elif not isinstance(rng.type, RandomType):

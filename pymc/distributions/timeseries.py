@@ -60,7 +60,7 @@ __all__ = [
 
 
 class RandomWalkRV(SymbolicRandomVariable):
-    """RandomWalk Variable"""
+    """RandomWalk Variable."""
 
     _print_name = ("RandomWalk", "\\operatorname{RandomWalk}")
 
@@ -121,7 +121,7 @@ class RandomWalkRV(SymbolicRandomVariable):
 
 
 class RandomWalk(Distribution):
-    r"""RandomWalk Distribution
+    r"""RandomWalk Distribution.
 
     TODO: Expand docstrings
     """
@@ -247,7 +247,7 @@ def random_walk_logp(op, values, *inputs, **kwargs):
 
 
 class PredefinedRandomWalk(ABCMeta):
-    """Base class for predefined RandomWalk distributions"""
+    """Base class for predefined RandomWalk distributions."""
 
     def __new__(cls, name, *args, **kwargs):
         init_dist, innovation_dist, kwargs = cls.get_dists(*args, **kwargs)
@@ -309,7 +309,7 @@ class GaussianRandomWalk(PredefinedRandomWalk):
 
 
 class MvGaussianRandomWalk(PredefinedRandomWalk):
-    r"""Random Walk with Multivariate Normal innovations
+    r"""Random Walk with Multivariate Normal innovations.
 
     Parameters
     ----------
@@ -361,7 +361,7 @@ class MvGaussianRandomWalk(PredefinedRandomWalk):
 
 
 class MvStudentTRandomWalk(PredefinedRandomWalk):
-    r"""Multivariate Random Walk with StudentT innovations
+    r"""Multivariate Random Walk with StudentT innovations.
 
     Parameters
     ----------
@@ -630,7 +630,7 @@ class AR(Distribution):
 
     @classmethod
     def _get_ar_order(cls, rhos: TensorVariable, ar_order: int | None, constant: bool) -> int:
-        """Compute ar_order given inputs
+        """Compute ar_order given inputs.
 
         If ar_order is not specified we do constant folding on the shape of rhos
         to retrieve it. For example, this will detect that
@@ -774,7 +774,7 @@ class GARCH11RV(SymbolicRandomVariable):
 
 class GARCH11(Distribution):
     r"""
-    GARCH(1,1) with Normal innovations. The model is specified by
+    GARCH(1,1) with Normal innovations. The model is specified by.
 
     .. math::
         y_t \sim N(0, \sigma_t^2)

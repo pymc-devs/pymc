@@ -45,7 +45,7 @@ State = collections.namedtuple("State", "i,step,callbacks,score")
 
 
 class Inference:
-    r"""**Base class for Variational Inference**
+    r"""**Base class for Variational Inference**.
 
     Communicates Operator, Approximation and Test Function to build Objective Function
 
@@ -101,7 +101,7 @@ class Inference:
         progressbar_theme=default_progress_theme,
         **kwargs,
     ):
-        """Perform Operator Variational Inference
+        """Perform Operator Variational Inference.
 
         Parameters
         ----------
@@ -206,7 +206,7 @@ class Inference:
 
     def _iterate_with_loss(self, s, n, step_func, progressbar, progressbar_theme, callbacks):
         def _infmean(input_array):
-            """Return the mean of the finite values of the array"""
+            """Return the mean of the finite values of the array."""
             input_array = input_array[np.isfinite(input_array)].astype("float64")
             if len(input_array) == 0:
                 return np.nan
@@ -285,7 +285,7 @@ class Inference:
         return State(i + s, step=step_func, callbacks=callbacks, score=True)
 
     def refine(self, n, progressbar=True, progressbar_theme=default_progress_theme):
-        """Refine the solution using the last compiled step function"""
+        """Refine the solution using the last compiled step function."""
         if self.state is None:
             raise TypeError("Need to call `.fit` first")
         i, step, callbacks, score = self.state
@@ -299,7 +299,7 @@ class Inference:
 
 
 class KLqp(Inference):
-    r"""**Kullback Leibler Divergence Inference**
+    r"""**Kullback Leibler Divergence Inference**.
 
     General approach to fit Approximations that define :math:`logq`
     by maximizing ELBO (Evidence Lower Bound). In some cases
@@ -328,7 +328,7 @@ class KLqp(Inference):
 
 
 class ADVI(KLqp):
-    r"""**Automatic Differentiation Variational Inference (ADVI)**
+    r"""**Automatic Differentiation Variational Inference (ADVI)**.
 
     This class implements the meanfield ADVI, where the variational
     posterior distribution is assumed to be spherical Gaussian without
@@ -472,7 +472,7 @@ class ADVI(KLqp):
 
 
 class FullRankADVI(KLqp):
-    r"""**Full Rank Automatic Differentiation Variational Inference (ADVI)**
+    r"""**Full Rank Automatic Differentiation Variational Inference (ADVI)**.
 
     Parameters
     ----------
@@ -501,7 +501,7 @@ class FullRankADVI(KLqp):
 
 
 class ImplicitGradient(Inference):
-    """**Implicit Gradient for Variational Inference**
+    """**Implicit Gradient for Variational Inference**.
 
     **not suggested to use**
 
@@ -517,7 +517,7 @@ class ImplicitGradient(Inference):
 
 
 class SVGD(ImplicitGradient):
-    r"""**Stein Variational Gradient Descent**
+    r"""**Stein Variational Gradient Descent**.
 
     This inference is based on Kernelized Stein Discrepancy
     it's main idea is to move initial noisy particles so that
@@ -585,7 +585,7 @@ class SVGD(ImplicitGradient):
 
 
 class ASVGD(ImplicitGradient):
-    r"""**Amortized Stein Variational Gradient Descent**
+    r"""**Amortized Stein Variational Gradient Descent**.
 
     **not suggested to use**
 
@@ -679,7 +679,7 @@ def fit(
     inf_kwargs=None,
     **kwargs,
 ):
-    r"""Handy shortcut for using inference methods in functional way
+    r"""Handy shortcut for using inference methods in functional way.
 
     Parameters
     ----------

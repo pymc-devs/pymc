@@ -109,7 +109,7 @@ def eig_recompose(val, vec):
 
 def trace_cov(trace, vars=None, model=None):
     """
-    Calculate the flattened covariance matrix using a sample trace
+    Calculate the flattened covariance matrix using a sample trace.
 
     Useful if you want to base your covariance matrix for further sampling on some initial samples.
 
