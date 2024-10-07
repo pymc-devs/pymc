@@ -37,7 +37,7 @@ extend-exclude = ["_version.py"]
 docstring-code-format = true
 
 [tool.ruff.lint]
-select = ["C4", "D", "E", "F", "I", "UP", "W", "RUF"]
+select = ["C4", "D", "E", "F", "I", "UP", "W", "RUF", "T20"]
 ignore = [
   "E501",
   "F841", # Local variable name is assigned to but never used
@@ -72,6 +72,12 @@ lines-between-types = 1
   "I001", # Import block is un-sorted or un-formatted
 ]
 "tests/*" = ["D"]
+"scripts/run_mypy.py" = [
+  "T201", # No print statements
+]
+"*.ipynb" = [
+  "T201", # No print statements
+]
 
 [tool.coverage.report]
 exclude_lines = [

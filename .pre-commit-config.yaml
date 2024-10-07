@@ -54,12 +54,6 @@ repos:
     - id: ruff
       args: [--fix, --show-fixes]
     - id: ruff-format
-- repo: https://github.com/MarcoGorelli/madforhooks
-  rev: 0.4.1
-  hooks:
-    - id: no-print-statements
-      files: ^pymc/
-      exclude: (?x)(pymc/_version.py)
 - repo: local
   hooks:
     - id: check-no-tests-are-ignored

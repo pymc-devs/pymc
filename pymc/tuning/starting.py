@@ -18,7 +18,6 @@ Created on Mar 12, 2011.
 @author: johnsalvatier
 """
 
-import sys
 import warnings
 
 from collections.abc import Sequence
@@ -184,7 +183,6 @@ def find_MAP(
                 pm._log.info(e)
         finally:
             cost_func.progress.update(cost_func.task, completed=cost_func.n_eval, refresh=True)
-            print(file=sys.stdout)
 
     mx0 = RaveledVars(mx0, x0.point_map_info)
     unobserved_vars = get_default_varnames(model.unobserved_value_vars, include_transformed)

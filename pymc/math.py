@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import sys
 import warnings
 
 from functools import partial, reduce
@@ -389,8 +388,7 @@ class LogDet(Op):
             log_det = np.sum(np.log(np.abs(s)))
             z[0] = np.asarray(log_det, dtype=x.dtype)
         except Exception:
-            print(f"Failed to compute logdet of {x}.", file=sys.stdout)
-            raise
+            raise ValueError(f"Failed to compute logdet of {x}.")
 
     def grad(self, inputs, g_outputs):
         [gz] = g_outputs

@@ -483,7 +483,6 @@ class TestExpQuad:
                 [1, 0, 1],
             ]
         )
-        print(result, expected)
         npt.assert_allclose(result, expected, atol=1e-5)
 
 
