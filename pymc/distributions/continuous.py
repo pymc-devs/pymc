@@ -14,7 +14,6 @@
 
 # Contains code from AePPL, Copyright (c) 2021-2022, Aesara Developers.
 
-# coding: utf-8
 """
 A collection of common probability distributions for stochastic
 nodes in PyMC.
