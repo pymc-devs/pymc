@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""Probability distributions."""
+
 from pymc.distributions.censored import Censored
 from pymc.distributions.continuous import (
     AsymmetricLaplace,

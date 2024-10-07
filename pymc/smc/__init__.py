@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""Sequential Monte Carlo samplers."""
+
 from pymc.smc.kernels import IMH, MH
 from pymc.smc.sampling import sample_smc
 

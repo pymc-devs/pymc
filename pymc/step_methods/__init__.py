@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""Step methods."""
+
 from pymc.step_methods.compound import BlockedStep, CompoundStep
 from pymc.step_methods.hmc import NUTS, HamiltonianMC
 from pymc.step_methods.metropolis import (
