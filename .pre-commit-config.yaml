@@ -12,7 +12,6 @@ repos:
     -   id: debug-statements
     -   id: end-of-file-fixer
     -   id: no-commit-to-branch
-        args: [--branch, main]
     -   id: requirements-txt-fixer
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
@@ -69,12 +68,6 @@ repos:
       files: ^conda-envs/environment-dev.yml$
       language: python
       name: Generate pip dependency from conda
-    - id: no-relative-imports
-      name: No relative imports
-      entry: from \.[\.\w]* import
-      types: [python]
-      language: pygrep
-      exclude: (?x)(pymc/_version.py|versioneer.py)
     - id: no-internal-links
       name: Check no links that should be cross-references are in the docs
       description: >-
