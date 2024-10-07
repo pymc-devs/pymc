@@ -325,7 +325,7 @@ PyTensor derivative functions
 
 
 def gradient1(f, v):
-    """flat gradient of f wrt v"""
+    """Flat gradient of f wrt v"""
     return pt.flatten(grad(f, v, disconnected_inputs="warn"))
 
 
@@ -343,7 +343,7 @@ def gradient(f, vars=None):
 
 
 def jacobian1(f, v):
-    """jacobian of f wrt v"""
+    """Jacobian of f wrt v"""
     f = pt.flatten(f)
     idx = pt.arange(f.shape[0], dtype="int32")
 

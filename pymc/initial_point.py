@@ -130,7 +130,6 @@ def make_initial_point_fn(
     return_transformed : bool
         If `True` the returned variables will correspond to transformed initial values.
     """
-
     sdict_overrides = convert_str_to_rv_dict(model, overrides or {})
     initval_strats = {
         **model.rvs_to_initial_values,

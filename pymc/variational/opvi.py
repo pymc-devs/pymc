@@ -143,7 +143,6 @@ def append_name(name):
 
 def node_property(f):
     """A shortcut for wrapping method to accessible tensor"""
-
     if isinstance(f, str):
 
         def wrapper(fn):
@@ -1011,7 +1010,6 @@ class Group(WithMemoization):
         -------
         :class:`Variable` or list with applied replacements, ready to use
         """
-
         flat2rand = self.make_size_and_deterministic_replacements(s, d, more_replacements)
         node_out = graph_replace(node, flat2rand, strict=False)
         assert not (
@@ -1327,19 +1325,22 @@ class Approximation(WithMemoization):
     @node_property
     def single_symbolic_varlogp(self):
         """*Dev* - for single MC sample estimate of :math:`E_{q}(prior term)` `pytensor.scan`
-        is not needed and code can be optimized"""
+        is not needed and code can be optimized
+        """
         return self._single_symbolic_varlogp_and_datalogp[0]
 
     @node_property
     def single_symbolic_datalogp(self):
         """*Dev* - for single MC sample estimate of :math:`E_{q}(data term)` `pytensor.scan`
-        is not needed and code can be optimized"""
+        is not needed and code can be optimized
+        """
         return self._single_symbolic_varlogp_and_datalogp[1]
 
     @node_property
     def single_symbolic_logp(self):
         """*Dev* - for single MC sample estimate of :math:`E_{q}(logP)` `pytensor.scan`
-        is not needed and code can be optimized"""
+        is not needed and code can be optimized
+        """
         return self.single_symbolic_datalogp + self.single_symbolic_varlogp
 
     @node_property

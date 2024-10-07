@@ -187,7 +187,6 @@ class Metropolis(ArrayStepShared):
             :py:class:`~numpy.random.Generator` object. Refer to
             :py:func:`pymc.util.get_random_generator` for more information.
         """
-
         model = pm.modelcontext(model)
         initial_values = model.initial_point()
 

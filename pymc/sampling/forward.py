@@ -754,7 +754,6 @@ def sample_posterior_predictive(
 
 
     """
-
     _trace: MultiTrace | PointList
     nchain: int
     if idata_kwargs is None:

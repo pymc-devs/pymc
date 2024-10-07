@@ -225,7 +225,6 @@ class NUTS(BaseHMC):
     @staticmethod
     def competence(var, has_grad):
         """Check how appropriate this class is for sampling a random variable."""
-
         if var.dtype in continuous_types and has_grad:
             return Competence.PREFERRED
         return Competence.INCOMPATIBLE

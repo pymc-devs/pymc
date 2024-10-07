@@ -909,7 +909,8 @@ def _sample_return(
     model: Model,
 ) -> InferenceData | MultiTrace:
     """Final step of `pm.sampler` that picks/slices chains,
-    runs diagnostics and converts to the desired return type."""
+    runs diagnostics and converts to the desired return type.
+    """
     # Pick and slice chains to keep the maximum number of samples
     if discard_tuned_samples:
         traces, length = _choose_chains(traces, tune)
@@ -1312,7 +1313,6 @@ def _init_jitter(
     start : ``pymc.model.Point``
         Starting point for sampler
     """
-
     ipfns = make_initial_point_fns_per_chain(
         model=model,
         overrides=initvals,

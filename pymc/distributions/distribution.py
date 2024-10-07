@@ -88,7 +88,6 @@ class DistributionMeta(ABCMeta):
     """
     DistributionMeta class
 
-
     Notes
     -----
     DistributionMeta currently performs many functions, and will likely be refactored soon.
@@ -477,7 +476,6 @@ class Distribution(metaclass=DistributionMeta):
         rv : TensorVariable
             The created random variable tensor, registered in the Model.
         """
-
         try:
             from pymc.model import Model
 

@@ -48,7 +48,6 @@ _noise_deprecation_warning = (
 
 def _handle_sigma_noise_parameters(sigma, noise):
     """Helper function for transition of 'noise' parameter to be named 'sigma'."""
-
     if (sigma is None and noise is None) or (sigma is not None and noise is not None):
         raise ValueError("'sigma' argument must be specified.")
 
@@ -375,7 +374,6 @@ class TP(Latent):
             Extra keyword arguments that are passed to :class:`~pymc.MvStudentT`
             distribution constructor.
         """
-
         f = self._build_prior(name, X, reparameterize, jitter, **kwargs)
         self.X = X
         self.f = f
@@ -418,7 +416,6 @@ class TP(Latent):
             Extra keyword arguments that are passed to :class:`~pymc.MvStudentT` distribution
             constructor.
         """
-
         X = self.X
         f = self.f
         nu2, mu, cov = self._build_conditional(Xnew, X, f, jitter)
@@ -630,7 +627,6 @@ class Marginal(Base):
             Extra keyword arguments that are passed to :class:`~pymc.MvNormal` distribution
             constructor.
         """
-
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens, jitter)
         return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
@@ -845,7 +841,6 @@ class MarginalApprox(Marginal):
             Extra keyword arguments that are passed to :class:`~pymc.MvNormal` distribution
             constructor.
         """
-
         self.X = X
         self.Xu = Xu
         self.y = y
@@ -934,7 +929,6 @@ class MarginalApprox(Marginal):
             Extra keyword arguments that are passed to :class:`~pymc.MvNormal` distribution
             constructor.
         """
-
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, False, *givens, jitter)
         return pm.MvNormal(name, mu=mu, cov=cov, **kwargs)

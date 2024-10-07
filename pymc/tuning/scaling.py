@@ -35,7 +35,6 @@ def fixed_hessian(point, model=None):
     vars: list
         Variables for which Hessian is to be calculated.
     """
-
     model = modelcontext(model)
     point = Point(point, model=model)
 

@@ -68,7 +68,7 @@ def product(domains, n_samples=-1):
                  must be "domain-like", as in, have a `.vals` property
         n_samples: int, maximum samples to return.  -1 to return whole product
 
-    Returns:
+    Returns
     -------
         list of the cartesian product of the domains
     """
@@ -979,7 +979,6 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
 
 def assert_no_rvs(vars: Sequence[Variable]) -> None:
     """Assert that there are no `MeasurableOp` nodes in a graph."""
-
     rvs = rvs_in_graph(vars)
     if rvs:
         raise AssertionError(f"RV found in graph: {rvs}")

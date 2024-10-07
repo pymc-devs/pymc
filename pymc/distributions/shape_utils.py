@@ -164,7 +164,6 @@ def shape_from_dims(dims: StrongDims, model) -> StrongShape:
     dims : tuple of (str or None)
         Names or None for all RV dimensions.
     """
-
     # Dims must be known already
     unknowndim_dims = set(dims) - set(model.dim_lengths)
     if unknowndim_dims:
@@ -197,7 +196,6 @@ def find_size(
     size : tuble of int or TensorVariable, optional
         The size argument for creating the Distribution
     """
-
     if size is not None:
         return size
 

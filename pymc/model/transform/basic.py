@@ -29,7 +29,6 @@ ModelVariable = Variable | str
 
 def prune_vars_detached_from_observed(model: Model) -> Model:
     """Prune model variables that are not related to any observed variable in the Model."""
-
     # Potentials are ambiguous as whether they correspond to likelihood or prior terms,
     # We simply raise for now
     if model.potentials:

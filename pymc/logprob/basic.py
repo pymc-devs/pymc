@@ -87,7 +87,6 @@ def _warn_rvs_in_inferred_graph(graph: TensorVariable | Sequence[TensorVariable]
     This makes it impossible (or difficult) to replace it by the respective values afterward,
     so we instruct users to do it beforehand.
     """
-
     rvs_in_graph = _find_unallowed_rvs_in_graph(graph)
     if rvs_in_graph:
         warnings.warn(
@@ -583,7 +582,6 @@ def transformed_conditional_logp(
     This helper will only return the subset of logprob terms corresponding to `rvs`.
     All rvs_to_values and rvs_to_transforms mappings are required.
     """
-
     transform_rewrite = None
     values_to_transforms = {
         rvs_to_values[rv]: transform

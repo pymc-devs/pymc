@@ -186,7 +186,6 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
     >>> data2 = np.random.randn(100, 20)
     >>> mdata1, mdata2 = Minibatch(data1, data2, batch_size=10)
     """
-
     if not isinstance(batch_size, int):
         raise TypeError("batch_size must be an integer")
 
