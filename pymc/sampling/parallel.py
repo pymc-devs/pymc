@@ -50,6 +50,7 @@ class RemoteTraceback(Exception):
         self.tb = tb
 
     def __str__(self):
+        """Return a string representation of the object."""
         return self.tb
 
 
@@ -61,6 +62,7 @@ class ExceptionWithTraceback:
         self.tb = f'\n"""\n{tb}"""'
 
     def __reduce__(self):
+        """Return a tuple to pickle."""
         return rebuild_exc, (self.exc, self.tb)
 
 
@@ -460,6 +462,7 @@ class ParallelSampler:
             self._active.append(proc)
 
     def __iter__(self):
+        """Return an iterator over draws."""
         if not self._in_context:
             raise ValueError("Use ParallelSampler as context manager.")
         self._make_active()
@@ -504,10 +507,12 @@ class ParallelSampler:
                 yield Draw(proc.chain, is_last, draw, tuning, stats, point)
 
     def __enter__(self):
+        """Enter the context manager."""
         self._in_context = True
         return self
 
     def __exit__(self, *args):
+        """Exit the context manager."""
         ProcessAdapter.terminate_all(self._samplers)
 
 

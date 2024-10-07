@@ -310,6 +310,7 @@ class HSGP(Base):
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def __add__(self, other):
+        """Add two HSGPs."""
         raise NotImplementedError("Additive HSGPs aren't supported.")
 
     @property

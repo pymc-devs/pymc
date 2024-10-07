@@ -149,6 +149,7 @@ class Tracker(Callback):
         self.hist = collections.defaultdict(list)
 
     def __getitem__(self, item):
+        """Get the element at index `item`."""
         return self.hist[item]
 
     __call__ = record

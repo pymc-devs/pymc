@@ -154,6 +154,7 @@ class Transform(abc.ABC):
             return pt.log(pt.abs(pt.nlinalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
 
     def __str__(self):
+        """Return a string representation of the object."""
         return f"{self.__class__.__name__}"
 
 

@@ -215,6 +215,7 @@ class CheckParameterValue(CheckAndRaise):
         self.can_be_replaced_by_ninf = can_be_replaced_by_ninf
 
     def __str__(self):
+        """Return a string representation of the object."""
         return f"Check{{{self.msg}}}"
 
 

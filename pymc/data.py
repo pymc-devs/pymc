@@ -108,6 +108,7 @@ class GeneratorAdapter:
 
     # python3 generator
     def __next__(self):
+        """Next value in the generator."""
         if not self._yielded_test_value:
             self._yielded_test_value = True
             return self.test_value
@@ -118,12 +119,15 @@ class GeneratorAdapter:
     next = __next__
 
     def __iter__(self):
+        """Return an iterator."""
         return self
 
     def __eq__(self, other):
+        """Return true if both objects are actually the same."""
         return id(self) == id(other)
 
     def __hash__(self):
+        """Return a hash of the object."""
         return hash(id(self))
 
 
