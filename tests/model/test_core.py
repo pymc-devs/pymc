@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import copy
 import pickle
 import threading
 import traceback
@@ -660,8 +661,8 @@ def test_initial_point():
 
     b_initval = np.array(0.3, dtype=pytensor.config.floatX)
 
-    with pytest.warns(FutureWarning), model:
-        b = pm.Uniform("b", testval=b_initval)
+    with model:
+        b = pm.Uniform("b", initval=b_initval)
 
     b_initval_trans = model.rvs_to_transforms[b].forward(b_initval, *b.owner.inputs).eval()
 
@@ -755,6 +756,20 @@ class TestCheckStartVals:
         }
         with pytest.raises(KeyError):
             model.check_start_vals(start)
+
+    @pytest.mark.parametrize("mode", [None, "JAX", "NUMBA"])
+    def test_mode(self, mode):
+        with pm.Model() as model:
+            a = pm.Uniform("a", lower=0.0, upper=1.0)
+            b = pm.Uniform("b", lower=2.0, upper=3.0)
+        start = {
+            "a_interval__": model.rvs_to_transforms[a].forward(0.3, *a.owner.inputs).eval(),
+            "b_interval__": model.rvs_to_transforms[b].forward(2.1, *b.owner.inputs).eval(),
+        }
+        with patch("pymc.model.core.compile_pymc") as patched_compile_pymc:
+            model.check_start_vals(start, mode=mode)
+        patched_compile_pymc.assert_called_once()
+        assert patched_compile_pymc.call_args.kwargs["mode"] == mode
 
 
 def test_set_initval():
@@ -1747,3 +1762,48 @@ class TestModelGraphs:
                 figsize=None,
                 dpi=300,
             )
+
+
+class TestModelCopy:
+    @pytest.mark.parametrize("copy_method", (copy.copy, copy.deepcopy))
+    def test_copy_model(self, copy_method) -> None:
+        with pm.Model() as simple_model:
+            pm.Normal("y")
+
+        copy_simple_model = copy_method(simple_model)
+
+        with simple_model:
+            simple_model_prior_predictive = pm.sample_prior_predictive(samples=1, random_seed=42)
+
+        with copy_simple_model:
+            z = pm.Deterministic("z", copy_simple_model["y"] + 1)
+            copy_simple_model_prior_predictive = pm.sample_prior_predictive(
+                samples=1, random_seed=42
+            )
+
+        assert (
+            simple_model_prior_predictive["prior"]["y"].values
+            == copy_simple_model_prior_predictive["prior"]["y"].values
+        )
+
+        assert "z" in copy_simple_model.named_vars
+        assert "z" not in simple_model.named_vars
+        assert (
+            copy_simple_model_prior_predictive["prior"]["z"].values
+            == 1 + simple_model_prior_predictive["prior"]["y"].values
+        )
+
+    @pytest.mark.parametrize("copy_method", (copy.copy, copy.deepcopy))
+    def test_guassian_process_copy_failure(self, copy_method) -> None:
+        with pm.Model() as gaussian_process_model:
+            ell = pm.Gamma("ell", alpha=2, beta=1)
+            cov = 2 * pm.gp.cov.ExpQuad(1, ell)
+            gp = pm.gp.Latent(cov_func=cov)
+            f = gp.prior("f", X=np.arange(10)[:, None])
+            pm.Normal("y", f * 2)
+
+        with pytest.warns(
+            UserWarning,
+            match="Detected variables likely created by GP objects. Further use of these old GP objects should be avoided as it may reintroduce variables from the old model. See issue: https://github.com/pymc-devs/pymc/issues/6883",
+        ):
+            copy_method(gaussian_process_model)

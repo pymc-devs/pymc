@@ -33,6 +33,7 @@
 #   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
+import itertools
 
 import numpy as np
 import pytensor
@@ -388,58 +389,6 @@ def test_scan_joint_logprob(require_inner_rewrites):
     assert np.allclose(y_logp_val, y_logp_ref_val)
 
 
-@pytest.mark.xfail(reason="see #148")
-@pytensor.config.change_flags(compute_test_value="raise")
-@pytest.mark.xfail(reason="see #148")
-def test_initial_values():
-    srng = pt.random.RandomStream(seed=2320)
-
-    p_S_0 = np.array([0.9, 0.1])
-    S_0_rv = srng.categorical(p_S_0, name="S_0")
-    S_0_rv.tag.test_value = 0
-
-    Gamma_at = pt.matrix("Gamma")
-    Gamma_at.tag.test_value = np.array([[0, 1], [1, 0]])
-
-    s_0_vv = S_0_rv.clone()
-    s_0_vv.name = "s_0"
-
-    def step_fn(S_tm1, Gamma):
-        S_t = srng.categorical(Gamma[S_tm1], name="S_t")
-        return S_t
-
-    S_1T_rv, _ = pytensor.scan(
-        fn=step_fn,
-        outputs_info=[{"initial": S_0_rv, "taps": [-1]}],
-        non_sequences=[Gamma_at],
-        strict=True,
-        n_steps=10,
-        name="S_0T",
-    )
-
-    S_1T_rv.name = "S_1T"
-    s_1T_vv = S_1T_rv.clone()
-    s_1T_vv.name = "s_1T"
-
-    logp_parts = conditional_logp({S_1T_rv: s_1T_vv, S_0_rv: s_0_vv})
-
-    s_0_val = 0
-    s_1T_val = np.array([1, 0, 1, 0, 1, 1, 0, 1, 0, 1])
-    Gamma_val = np.array([[0.1, 0.9], [0.9, 0.1]])
-
-    exp_res = np.log(p_S_0[s_0_val])
-    s_prev = s_0_val
-    for s in s_1T_val:
-        exp_res += np.log(Gamma_val[s_prev, s])
-        s_prev = s
-
-    S_0T_logp = sum(v.sum() for v in logp_parts.values())
-    S_0T_logp_fn = pytensor.function([s_0_vv, s_1T_vv, Gamma_at], S_0T_logp)
-    res = S_0T_logp_fn(s_0_val, s_1T_val, Gamma_val)
-
-    assert res == pytest.approx(exp_res)
-
-
 @pytest.mark.parametrize("remove_asserts", (True, False))
 def test_mode_is_kept(remove_asserts):
     mode = Mode().including("local_remove_all_assert") if remove_asserts else None
@@ -553,4 +502,51 @@ def test_scan_carried_deterministic_state():
     np.testing.assert_array_almost_equal(
         logp_expr.eval({ma2_vv: ma2_test, rho: rho_test, sigma: sigma_test}),
         ref_logp(ma2_test, rho_test, sigma_test),
+    )
+
+
+def test_scan_multiple_output_types():
+    """Test we can derive the logp for a scan that contains recurring and non-recurring measurable outputs."""
+    [xs, ys, zs], _ = pytensor.scan(
+        fn=lambda x_mu, y_tm1, z_tm2, z_tm1: (
+            pt.random.normal(x_mu),
+            pt.random.normal(y_tm1),
+            pt.random.normal(z_tm1) + z_tm2,
+        ),
+        sequences=[pt.arange(10)],
+        outputs_info=[
+            None,
+            pt.zeros(()),
+            dict(initial=pt.ones(2), taps=[-2, -1]),
+        ],
+    )
+
+    xs.name = "xs"
+    xs_value = xs.clone()
+    ys.name = "ys"
+    ys_value = ys.clone()
+    zs.name = "zs"
+    zs_value = zs.clone()
+
+    logp_dict = conditional_logp({xs: xs_value, ys: ys_value, zs: zs_value})
+    xs_logp = logp_dict[xs_value]
+    ys_logp = logp_dict[ys_value]
+    zs_logp = logp_dict[zs_value]
+
+    assert_no_rvs([xs_logp, ys_logp, zs_logp])
+    fn = pytensor.function(
+        [xs_value, ys_value, zs_value],
+        [xs_logp, ys_logp, zs_logp],
+    )
+
+    rng = np.random.default_rng(577)
+    test_value = rng.uniform(size=(10,))
+    (xs_logp_eval, ys_logp_eval, zs_logp_eval) = fn(test_value, test_value, test_value)
+    np.testing.assert_allclose(xs_logp_eval, stats.norm.logpdf(test_value, np.arange(10)))
+    np.testing.assert_allclose(ys_logp_eval, stats.norm.logpdf(test_value, [0, *test_value[:-1]]))
+    np.testing.assert_allclose(
+        zs_logp_eval,
+        stats.norm.logpdf(
+            test_value, [a + b for a, b in itertools.pairwise([1, 1, *test_value[:-1]])]
+        ),
     )

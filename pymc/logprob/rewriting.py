@@ -33,26 +33,18 @@
 #   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
-import warnings
 
-from collections import deque
-from collections.abc import Collection, Sequence
+from collections.abc import Sequence
 
-from pytensor import config
 from pytensor.compile.mode import optdb
 from pytensor.graph.basic import (
-    Constant,
     Variable,
     ancestors,
-    io_toposort,
     truncated_graph_inputs,
 )
-from pytensor.graph.features import Feature
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import (
-    ChangeTracker,
-    EquilibriumGraphRewriter,
     GraphRewriter,
     node_rewriter,
     out2in,
@@ -60,7 +52,6 @@ from pytensor.graph.rewriting.basic import (
 from pytensor.graph.rewriting.db import (
     EquilibriumDB,
     LocalGroupDB,
-    RewriteDatabase,
     RewriteDatabaseQuery,
     SequenceDB,
     TopoDB,
@@ -81,204 +72,34 @@ from pytensor.tensor.subtensor import (
 )
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import MeasurableOp
+from pymc.logprob.abstract import PromisedValuedRV, ValuedRV, valued_rv
 from pymc.logprob.utils import DiracDelta
+from pymc.pytensorf import toposort_replace
 
 inc_subtensor_ops = (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
 subtensor_ops = (AdvancedSubtensor, AdvancedSubtensor1, Subtensor)
 
 
-class MeasurableEquilibriumGraphRewriter(EquilibriumGraphRewriter):
-    """EquilibriumGraphRewriter focused on IR measurable rewrites.
-
-    This is a stripped down version of the EquilibriumGraphRewriter,
-    which specifically targets nodes in `PreserveRVMAppings.needs_measuring`
-    that are not yet measurable.
-
-    """
-
-    def apply(self, fgraph):
-        rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
-        if not rv_map_feature:
-            return None
-
-        change_tracker = ChangeTracker()
-        fgraph.attach_feature(change_tracker)
-
-        changed = True
-        max_use_abort = False
-        rewriter_name = None
-        global_process_count = {}
-
-        for rewriter in self.global_rewriters + list(self.get_node_rewriters()):
-            global_process_count.setdefault(rewriter, 0)
-
-        while changed and not max_use_abort:
-            changed = False
-            max_nb_nodes = len(fgraph.apply_nodes)
-            max_use = max_nb_nodes * self.max_use_ratio
-
-            # Apply global rewriters
-            for grewrite in self.global_rewriters:
-                change_tracker.reset()
-                grewrite.apply(fgraph)
-                if change_tracker.changed:
-                    global_process_count[grewrite] += 1
-                    changed = True
-                    if global_process_count[grewrite] > max_use:
-                        max_use_abort = True
-                        rewriter_name = getattr(grewrite, "name", None) or getattr(
-                            grewrite, "__name__", ""
-                        )
-
-            # Apply local node rewriters
-            q = deque(io_toposort(fgraph.inputs, fgraph.outputs))
-            while q:
-                node = q.pop()
-                if node not in fgraph.apply_nodes:
-                    continue
-                # This is where we filter only those nodes we care about:
-                # Nodes that have variables that we want to measure and are not yet measurable
-                if isinstance(node.op, MeasurableOp):
-                    continue
-                if not any(out in rv_map_feature.needs_measuring for out in node.outputs):
-                    continue
-                for node_rewriter in self.node_tracker.get_trackers(node.op):  # noqa F402
-                    node_rewriter_change = self.process_node(fgraph, node, node_rewriter)
-                    if not node_rewriter_change:
-                        continue
-                    global_process_count[node_rewriter] += 1
-                    changed = True
-                    if global_process_count[node_rewriter] > max_use:
-                        max_use_abort = True
-                        rewriter_name = getattr(node_rewriter, "name", None) or getattr(
-                            node_rewriter, "__name__", ""
-                        )
-                    # If we converted to a MeasurableVariable we're done here!
-                    if node not in fgraph.apply_nodes or isinstance(node.op, MeasurableOp):
-                        # go to next node
-                        break
-
-        if max_use_abort:
-            msg = (
-                f"{type(self).__name__} max'ed out by {rewriter_name}."
-                "You can safely raise the current threshold of "
-                f"{config.optdb__max_use_ratio} with the option `optdb__max_use_ratio`."
-            )
-            if config.on_opt_error == "raise":
-                raise AssertionError(msg)
-            else:
-                warnings.warn(msg)
-        fgraph.remove_feature(change_tracker)
+@node_rewriter([ValuedRV])
+def local_remove_valued_rv(fgraph, node):
+    rv = node.inputs[0]
+    return [rv]
 
 
-class MeasurableEquilibriumDB(RewriteDatabase):
-    """A database of rewrites that should be applied until equilibrium is reached.
-
-    This will return a MeasurableEquilibriumGraphRewriter when queried.
-
-    """
-
-    def query(self, *tags, **kwtags):
-        rewriters = super().query(*tags, **kwtags)
-        return MeasurableEquilibriumGraphRewriter(
-            rewriters,
-            max_use_ratio=config.optdb__max_use_ratio,
-        )
+remove_valued_rvs = out2in(local_remove_valued_rv)
 
 
-class PreserveRVMappings(Feature):
-    r"""Keeps track of random variables and their respective value variables during
-    graph rewrites in `rv_values`
+@node_rewriter([PromisedValuedRV])
+def local_remove_promised_value_rv(fgraph, node):
+    rv = node.inputs[0]
+    return [rv]
 
-    When a random variable is replaced in a rewrite, this `Feature` automatically
-    updates the `rv_values` mapping, so that the new variable is linked to the
-    original value variable.
 
-    In addition this `Feature` provides functionality to manually update a random
-    and/or value variable. A mapping from the transformed value variables to the
-    the original value variables is kept in `original_values`.
-
-    Likewise, a `measurable_conversions` map is maintained, which holds
-    information about un-valued and un-measurable variables that were replaced
-    with measurable variables.  This information can be used to revert these
-    rewrites.
-
-    """
-
-    def __init__(self, rv_values: dict[TensorVariable, TensorVariable]):
-        """
-        Parameters
-        ----------
-        rv_values
-            Mappings between random variables and their value variables.
-            The keys of this map are what this `Feature` keeps updated.
-            The ``dict`` is updated in-place.
-        """
-        self.rv_values = rv_values
-        self.original_values = {v: v for v in rv_values.values()}
-        self.needs_measuring = set(rv_values.keys())
-
-    def on_attach(self, fgraph):
-        if hasattr(fgraph, "preserve_rv_mappings"):
-            raise ValueError(f"{fgraph} already has the `PreserveRVMappings` feature attached.")
-
-        fgraph.preserve_rv_mappings = self
-
-    def update_rv_maps(
-        self,
-        old_rv: TensorVariable,
-        new_value: TensorVariable,
-        new_rv: TensorVariable | None = None,
-    ):
-        """Update mappings for a random variable.
-
-        It also creates/updates a map from new value variables to their
-        original value variables.
-
-        Parameters
-        ----------
-        old_rv
-            The random variable whose mappings will be updated.
-        new_value
-            The new value variable that will replace the current one assigned
-            to `old_rv`.
-        new_rv
-            When non-``None``, `old_rv` will also be replaced with `new_rv` in
-            the mappings, as well.
-        """
-        old_value = self.rv_values.pop(old_rv)
-        original_value = self.original_values.pop(old_value)
-
-        if new_rv is None:
-            new_rv = old_rv
-
-        self.rv_values[new_rv] = new_value
-        self.original_values[new_value] = original_value
-
-    def on_change_input(self, fgraph, node, i, r, new_r, reason=None):
-        """
-        Whenever a node is replaced during rewrite, we check if it had a value
-        variable associated with it and map it to the new node.
-        """
-        r_value_var = self.rv_values.pop(r, None)
-        if r_value_var is not None:
-            self.rv_values[new_r] = r_value_var
-            self.needs_measuring.add(new_r)
-            if new_r.name is None:
-                new_r.name = r.name
-
-    def request_measurable(self, vars: Sequence[Variable]) -> list[Variable]:
-        measurable = []
-        for var in vars:
-            # Input vars or valued vars can't be measured for derived expressions
-            if not var.owner or var in self.rv_values:
-                continue
-            if isinstance(var.owner.op, MeasurableOp):
-                measurable.append(var)
-            else:
-                self.needs_measuring.add(var)
-        return measurable
+def remove_promised_valued_rvs(outputs):
+    fgraph = FunctionGraph(outputs=outputs, clone=False)
+    rewrite = out2in(local_remove_promised_value_rv)
+    rewrite.apply(fgraph)
+    return fgraph.outputs
 
 
 @register_canonicalize
@@ -314,6 +135,20 @@ def remove_DiracDelta(fgraph, node):
 
 logprob_rewrites_db = SequenceDB()
 logprob_rewrites_db.name = "logprob_rewrites_db"
+
+early_measurable_ir_rewrites_db = LocalGroupDB()
+early_measurable_ir_rewrites_db.name = "early_measurable_rewrites_db"
+logprob_rewrites_db.register(
+    "early_ir_rewrites",
+    TopoDB(
+        early_measurable_ir_rewrites_db,
+        order="in_to_out",
+        ignore_newtrees=False,
+        failure_callback=None,
+    ),
+    "basic",
+)
+
 # Introduce sigmoid. We do it before canonicalization so that useless mul are removed next
 logprob_rewrites_db.register(
     "local_exp_over_1_plus_exp", out2in(local_exp_over_1_plus_exp), "basic"
@@ -323,7 +158,7 @@ logprob_rewrites_db.register("pre-canonicalize", optdb.query("+canonicalize"), "
 # These rewrites convert un-measurable variables into their measurable forms,
 # but they need to be reapplied, because some of the measurable forms require
 # their inputs to be measurable.
-measurable_ir_rewrites_db = MeasurableEquilibriumDB()
+measurable_ir_rewrites_db = EquilibriumDB()
 measurable_ir_rewrites_db.name = "measurable_ir_rewrites_db"
 
 logprob_rewrites_db.register("measurable_ir_rewrites", measurable_ir_rewrites_db, "basic")
@@ -353,12 +188,13 @@ logprob_rewrites_db.register(
 )
 
 cleanup_ir_rewrites_db.register("remove_DiracDelta", remove_DiracDelta, "cleanup")
+cleanup_ir_rewrites_db.register("local_remove_valued_rv", local_remove_valued_rv, "cleanup")
 
 
 def construct_ir_fgraph(
     rv_values: dict[Variable, Variable],
     ir_rewriter: GraphRewriter | None = None,
-) -> tuple[FunctionGraph, dict[Variable, Variable], dict[Variable, Variable]]:
+) -> FunctionGraph:
     r"""Construct a `FunctionGraph` in measurable IR form for the keys in `rv_values`.
 
     A custom IR rewriter can be specified. By default,
@@ -366,11 +202,11 @@ def construct_ir_fgraph(
 
     Our measurable IR takes the form of an PyTensor graph that is more-or-less
     equivalent to a given PyTensor graph (i.e. the keys of `rv_values`) but
-    contains `Op`s that are subclasses of the `MeasurableVariable` type in
-    place of ones that do not inherit from `MeasurableVariable` in the original
+    contains `Op`s that are subclasses of the `MeasurableOp` type in
+    place of ones that do not inherit from `MeasurableOp` in the original
     graph but are nevertheless measurable.
 
-    `MeasurableVariable`\s are mapped to log-probabilities, so this IR is how
+    `MeasurableOp` variables are mapped to log-probabilities, so this IR is how
     non-trivial log-probabilities are constructed, especially when the
     "measurability" of a term depends on the measurability of its inputs
     (e.g. a mixture).
@@ -383,53 +219,39 @@ def construct_ir_fgraph(
     measurable IR includes manipulations that are not applicable to outside of
     the context of measurability/log-probabilities.
 
-    For instance, some `Op`s will be lifted through `MeasurableVariable`\s in
-    this IR, and the resulting graphs will not be computationally sound,
-    because they wouldn't produce independent samples when the original graph
-    would.  See https://github.com/aesara-devs/aeppl/pull/78.
-
     Returns
     -------
-    A `FunctionGraph` of the measurable IR, a copy of `rv_values` containing
-    the new, cloned versions of the original variables in `rv_values`, and
-    a ``dict`` mapping all the original variables to their cloned values in
-    `FunctionGraph`.
+    A `FunctionGraph` of the measurable IR.
     """
-
-    # Since we're going to clone the entire graph, we need to keep a map from
-    # the old nodes to the new ones; otherwise, we won't be able to use
-    # `rv_values`.
-    # We start the `dict` with mappings from the value variables to themselves,
-    # to prevent them from being cloned. This also includes ancestors
-    memo = {v: v for v in ancestors(rv_values.values()) if not isinstance(v, Constant)}
 
     # We add `ShapeFeature` because it will get rid of references to the old
     # `RandomVariable`s that have been lifted; otherwise, it will be difficult
-    # to give good warnings when an unaccounted for `RandomVariable` is
-    # encountered
+    # to give good warnings when an unaccounted for `RandomVariable` is encountered
     fgraph = FunctionGraph(
         outputs=list(rv_values.keys()),
         clone=True,
-        memo=memo,
         copy_orphans=False,
         copy_inputs=False,
         features=[ShapeFeature()],
     )
 
-    # Update `rv_values` so that it uses the new cloned variables
-    rv_values = {memo[k]: v for k, v in rv_values.items()}
+    # Replace valued RVs by ValuedVar Ops so that rewrites are aware of conditioning points
+    # We use clones of the value variables so that they are not affected by rewrites
+    cloned_values = tuple(v.clone() for v in rv_values.values())
+    ir_rv_values = {rv: value for rv, value in zip(fgraph.outputs, cloned_values)}
 
-    # This `Feature` preserves the relationships between the original
-    # random variables (i.e. keys in `rv_values`) and the new ones
-    # produced when `Op`s are lifted through them.
-    rv_remapper = PreserveRVMappings(rv_values)
-    fgraph.attach_feature(rv_remapper)
+    replacements = tuple((rv, valued_rv(rv, value)) for rv, value in ir_rv_values.items())
+    toposort_replace(fgraph, replacements, reverse=True)
 
     if ir_rewriter is None:
         ir_rewriter = logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"]))
     ir_rewriter.rewrite(fgraph)
 
-    return fgraph, rv_values, memo
+    # Reintroduce original value variables
+    replacements = tuple((cloned_v, v) for v, cloned_v in zip(rv_values.values(), cloned_values))
+    toposort_replace(fgraph, replacements=replacements, reverse=True)
+
+    return fgraph
 
 
 def cleanup_ir(vars: Sequence[Variable]) -> None:
@@ -438,9 +260,7 @@ def cleanup_ir(vars: Sequence[Variable]) -> None:
     ir_rewriter.rewrite(fgraph)
 
 
-def assume_measured_ir_outputs(
-    inputs: Collection[TensorVariable], outputs: Sequence[TensorVariable]
-) -> Sequence[TensorVariable]:
+def assume_valued_outputs(outputs: Sequence[TensorVariable]) -> Sequence[TensorVariable]:
     """Run IR rewrite assuming each output is measured.
 
     IR variables could depend on each other in a way that looks unmeasurable without a value variable assigned to each.
@@ -449,7 +269,12 @@ def assume_measured_ir_outputs(
     This helper runs an inner ir rewrite after giving each output a dummy value variable.
     We replace inputs by dummies and then undo it so that any dependency on outer variables is preserved.
     """
-    # Replace inputs by dummy variables
+    # Replace inputs by dummy variables (so they are not affected)
+    inputs = [
+        valued_var
+        for valued_var in ancestors(outputs)
+        if (valued_var.owner and isinstance(valued_var.owner.op, ValuedRV))
+    ]
     replaced_inputs = {
         var: var.type()
         for var in truncated_graph_inputs(outputs, ancestors_to_include=inputs)
@@ -458,9 +283,10 @@ def assume_measured_ir_outputs(
     cloned_outputs = clone_replace(outputs, replace=replaced_inputs)
 
     dummy_rv_values = {base_var: base_var.type() for base_var in cloned_outputs}
-    fgraph, *_ = construct_ir_fgraph(dummy_rv_values)
+    fgraph = construct_ir_fgraph(dummy_rv_values)
+    remove_valued_rvs.apply(fgraph)
 
-    # Replace dummy variables by inputs
+    # Replace dummy variables by original inputs
     fgraph.replace_all(
         tuple((repl, orig) for orig, repl in replaced_inputs.items()),
         import_missing=True,

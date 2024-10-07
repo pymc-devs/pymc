@@ -1,0 +1,52 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it using the metadata from this file.
+title: PyMC
+authors:
+  - name: PyMC-Devs
+repository-code: "https://github.com/pymc-devs/pymc"
+url: "https://www.pymc.io"
+abstract: Bayesian Modeling and Probabilistic Programming in Python
+license: Apache-2.0
+
+preferred-citation:
+  type: article
+  title: "PyMC: a modern, and comprehensive probabilistic programming framework in Python"
+  journal: PeerJ Comput. Sci.
+  database: peerj.com
+  issn: 2376-5992
+  languages:
+    - en
+  pages: e1516
+  volume: 9
+  url: "https://peerj.com/articles/cs-1516"
+  date-published: 2023-09-01
+  doi: 10.7717/peerj-cs.1516
+  authors:
+    - family-names: Abril-Pla
+      given-names: Oriol
+    - family-names: Andreani
+      given-names: Virgile
+    - family-names: Carroll
+      given-names: Colin
+    - family-names: Dong
+      given-names: Larry
+    - family-names: Fonnesbeck
+      given-names: Christopher J.
+    - family-names: Kochurov
+      given-names: Maxim
+    - family-names: Kumar
+      given-names: Ravin
+    - family-names: Lao
+      given-names: Junpeng
+    - family-names: Luhmann
+      given-names: Christian C.
+    - family-names: Martin
+      given-names: Osvaldo A.
+    - family-names: Osthege
+      given-names: Michael
+    - family-names: Vieira
+      given-names: Ricardo
+    - family-names: Wiecki
+      given-names: Thomas
+    - family-names: Zinkov
+      given-names: Robert

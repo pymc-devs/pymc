@@ -36,15 +36,15 @@
 import typing
 import warnings
 
-from collections.abc import Container, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 
 import numpy as np
 import pytensor
 
-from pytensor import Variable
 from pytensor import tensor as pt
 from pytensor.graph import Apply, Op, node_rewriter
-from pytensor.graph.basic import Constant, clone_get_equiv, graph_inputs, walk
+from pytensor.graph.basic import Constant, Variable, clone_get_equiv, graph_inputs, walk
+from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import HasInnerGraph
 from pytensor.link.c.type import CType
 from pytensor.raise_op import CheckAndRaise
@@ -55,7 +55,7 @@ from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import MeasurableOp, _logprob
+from pymc.logprob.abstract import MeasurableOp, ValuedRV, _logprob
 from pymc.pytensorf import replace_vars_in_graphs
 from pymc.util import makeiter
 
@@ -132,7 +132,7 @@ def replace_rvs_by_values(
 
 
 def rvs_in_graph(vars: Variable | Sequence[Variable]) -> set[Variable]:
-    """Assert that there are no `MeasurableVariable` nodes in a graph."""
+    """Assert that there are no `MeasurableOp` nodes in a graph."""
 
     def expand(r):
         owner = r.owner
@@ -172,15 +172,17 @@ def indices_from_subtensor(idx_list, indices):
     )
 
 
-def check_potential_measurability(
-    inputs: Iterable[TensorVariable], valued_rvs: Container[TensorVariable]
-) -> bool:
-    valued_rvs = set(valued_rvs)
+def filter_measurable_variables(inputs):
+    return [
+        inp for inp in inputs if (inp.owner is not None and isinstance(inp.owner.op, MeasurableOp))
+    ]
 
+
+def check_potential_measurability(inputs: Iterable[TensorVariable]) -> bool:
     def expand_fn(var):
-        # expand_fn does not go beyond valued_rvs or any MeasurableVariable
-        if var.owner and not isinstance(var.owner.op, MeasurableOp) and var not in valued_rvs:
-            return reversed(var.owner.inputs)
+        # expand_fn does not go beyond valued_rvs or any MeasurableOp variables
+        if var.owner and not isinstance(var.owner.op, MeasurableOp | ValuedRV):
+            return var.owner.inputs
         else:
             return []
 
@@ -190,7 +192,7 @@ def check_potential_measurability(
         if (
             ancestor_var.owner
             and isinstance(ancestor_var.owner.op, MeasurableOp)
-            and ancestor_var not in valued_rvs
+            and not isinstance(ancestor_var.owner.op, ValuedRV)
         )
     ):
         return True
@@ -301,10 +303,8 @@ def diracdelta_logprob(op, values, *inputs, **kwargs):
 def find_negated_var(var):
     """Return a variable that is being multiplied by -1 or None otherwise."""
 
-    if (
-        not (var.owner)
-        and isinstance(var.owner.op, Elemwise)
-        and isinstance(var.owner.op.scalar_op, Mul)
+    if not (
+        var.owner and isinstance(var.owner.op, Elemwise) and isinstance(var.owner.op.scalar_op, Mul)
     ):
         return None
     if len(var.owner.inputs) != 2:
@@ -319,3 +319,20 @@ def find_negated_var(var):
             continue
 
     return None
+
+
+def get_related_valued_nodes(node: Apply, fgraph: FunctionGraph) -> list[Apply]:
+    """Get all ValuedVars related to the same RV node.
+
+    Returns
+    -------
+        rv_node
+        valued_nodes
+    """
+    clients = fgraph.clients
+    return [
+        client
+        for out in node.outputs
+        for client, _ in clients[out]
+        if isinstance(client.op, ValuedRV)
+    ]

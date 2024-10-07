@@ -41,11 +41,12 @@ from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.extra_ops import CumOp
 
-from pymc.logprob.abstract import MeasurableOpMixin, _logprob, _logprob_helper
-from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
+from pymc.logprob.abstract import MeasurableOp, _logprob, _logprob_helper
+from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.utils import filter_measurable_variables
 
 
-class MeasurableCumsum(MeasurableOpMixin, CumOp):
+class MeasurableCumsum(MeasurableOp, CumOp):
     """A placeholder used to specify a log-likelihood for a cumsum sub-graph."""
 
 
@@ -78,15 +79,10 @@ def find_measurable_cumsums(fgraph, node) -> list[TensorVariable] | None:
     r"""Finds `Cumsums`\s for which a `logprob` can be computed."""
 
     if not (isinstance(node.op, CumOp) and node.op.mode == "add"):
-        return None  # pragma: no cover
+        return None
 
     if isinstance(node.op, MeasurableCumsum):
-        return None  # pragma: no cover
-
-    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
+        return None
 
     base_rv = node.inputs[0]
 
@@ -94,7 +90,7 @@ def find_measurable_cumsums(fgraph, node) -> list[TensorVariable] | None:
     if base_rv.ndim > 1 and node.op.axis is None:
         return None
 
-    if not rv_map_feature.request_measurable(node.inputs):
+    if not filter_measurable_variables(node.inputs):
         return None
 
     new_op = MeasurableCumsum(axis=node.op.axis or 0, mode="add")

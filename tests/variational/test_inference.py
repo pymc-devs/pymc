@@ -14,9 +14,6 @@
 
 import io
 import operator
-import warnings
-
-from contextlib import nullcontext
 
 import cloudpickle
 import numpy as np
@@ -162,22 +159,7 @@ def fit_kwargs(inference, use_minibatch):
 
 
 def test_fit_oo(inference, fit_kwargs, simple_model_data):
-    # Minibatch data can't be extracted into the `observed_data` group in the final InferenceData
-    if getattr(simple_model_data["data"], "name", "").startswith("minibatch"):
-        warn_ctxt = pytest.warns(
-            UserWarning, match="Could not extract data from symbolic observation"
-        )
-    else:
-        warn_ctxt = nullcontext()
-
-    with warn_ctxt:
-        with warnings.catch_warnings():
-            # Related to https://github.com/arviz-devs/arviz/issues/2327
-            warnings.filterwarnings(
-                "ignore", message="datetime.datetime.utcnow()", category=DeprecationWarning
-            )
-
-            trace = inference.fit(**fit_kwargs).sample(10000)
+    trace = inference.fit(**fit_kwargs).sample(10000)
     mu_post = simple_model_data["mu_post"]
     d = simple_model_data["d"]
     np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_post, rtol=0.05)
@@ -203,33 +185,10 @@ def test_fit_start(inference_spec, simple_model):
     with simple_model:
         inference = inference_spec(**kw)
 
-    # Minibatch data can't be extracted into the `observed_data` group in the final InferenceData
-    [observed_value] = [simple_model.rvs_to_values[obs] for obs in simple_model.observed_RVs]
-
-    # We can`t use pytest.warns here because after version 8.0 it`s still check for warning when
-    # exception raised and test failed instead being skipped
-    warning_raised = False
-    expected_warning = observed_value.name.startswith("minibatch")
-    with warnings.catch_warnings(record=True) as record:
-        warnings.simplefilter("always")
-        with warnings.catch_warnings():
-            # Related to https://github.com/arviz-devs/arviz/issues/2327
-            warnings.filterwarnings(
-                "ignore", message="datetime.datetime.utcnow()", category=DeprecationWarning
-            )
-
-            try:
-                trace = inference.fit(n=0).sample(10000)
-            except NotImplementedInference as e:
-                pytest.skip(str(e))
-
-    if expected_warning:
-        assert len(record) > 0
-        for item in record:
-            assert issubclass(item.category, UserWarning)
-            assert "Could not extract data from symbolic observation" in str(item.message)
-    if not expected_warning:
-        assert not record
+    try:
+        trace = inference.fit(n=0).sample(10000)
+    except NotImplementedInference as e:
+        pytest.skip(str(e))
 
     np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_init, rtol=0.05)
     if has_start_sigma:

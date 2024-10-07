@@ -122,6 +122,7 @@ class Simulator(Distribution):
         def simulator_fn(rng, loc, scale, size):
             return rng.normal(loc, scale, size=size)
 
+
         with pm.Model() as m:
             loc = pm.Normal("loc", 0, 1)
             scale = pm.HalfNormal("scale", 1)

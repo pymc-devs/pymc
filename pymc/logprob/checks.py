@@ -33,7 +33,7 @@
 #   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
-
+from typing import cast
 
 import pytensor.tensor as pt
 
@@ -42,12 +42,12 @@ from pytensor.raise_op import CheckAndRaise
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.shape import SpecifyShape
 
-from pymc.logprob.abstract import MeasurableOp, MeasurableOpMixin, _logprob, _logprob_helper
-from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
-from pymc.logprob.utils import replace_rvs_by_values
+from pymc.logprob.abstract import MeasurableOp, _logprob, _logprob_helper
+from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.utils import filter_measurable_variables, replace_rvs_by_values
 
 
-class MeasurableSpecifyShape(MeasurableOpMixin, SpecifyShape):
+class MeasurableSpecifyShape(MeasurableOp, SpecifyShape):
     """A placeholder used to specify a log-likelihood for a specify-shape sub-graph."""
 
 
@@ -66,24 +66,12 @@ def find_measurable_specify_shapes(fgraph, node) -> list[TensorVariable] | None:
     if isinstance(node.op, MeasurableSpecifyShape):
         return None  # pragma: no cover
 
-    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
-    rv = node.outputs[0]
-
     base_rv, *shape = node.inputs
 
-    if not (
-        base_rv.owner
-        and isinstance(base_rv.owner.op, MeasurableOp)
-        and base_rv not in rv_map_feature.rv_values
-    ):
-        return None  # pragma: no cover
+    if not filter_measurable_variables([base_rv]):
+        return None
 
-    new_op = MeasurableSpecifyShape()
-    new_rv = new_op.make_node(base_rv, *shape).default_output()
+    new_rv = cast(TensorVariable, MeasurableSpecifyShape()(base_rv, *shape))
 
     return [new_rv]
 
@@ -96,7 +84,7 @@ measurable_ir_rewrites_db.register(
 )
 
 
-class MeasurableCheckAndRaise(MeasurableOpMixin, CheckAndRaise):
+class MeasurableCheckAndRaise(MeasurableOp, CheckAndRaise):
     """A placeholder used to specify a log-likelihood for an assert sub-graph."""
 
 
@@ -116,13 +104,9 @@ def find_measurable_check_and_raise(fgraph, node) -> list[TensorVariable] | None
     if isinstance(node.op, MeasurableCheckAndRaise):
         return None  # pragma: no cover
 
-    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
     base_rv, *conds = node.inputs
-    if not rv_map_feature.request_measurable([base_rv]):
+
+    if not filter_measurable_variables([base_rv]):
         return None
 
     op = node.op

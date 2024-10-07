@@ -112,7 +112,7 @@ class Censored(Distribution):
     rv_op = CensoredRV.rv_op
 
     @classmethod
-    def dist(cls, dist, lower, upper, **kwargs):
+    def dist(cls, dist, lower=-np.inf, upper=np.inf, **kwargs):
         if not isinstance(dist, TensorVariable) or not isinstance(
             dist.owner.op, RandomVariable | SymbolicRandomVariable
         ):

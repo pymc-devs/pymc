@@ -39,7 +39,7 @@ from typing import cast
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Apply, Constant, Variable
+from pytensor.graph.basic import Apply, Constant, Variable, ancestors
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op, compute_test_value
 from pytensor.graph.rewriting.basic import EquilibriumGraphRewriter, node_rewriter
@@ -68,18 +68,22 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableOp,
-    MeasurableOpMixin,
+    PromisedValuedRV,
     _logprob,
     _logprob_helper,
+    valued_rv,
 )
 from pymc.logprob.rewriting import (
-    PreserveRVMappings,
-    assume_measured_ir_outputs,
+    early_measurable_ir_rewrites_db,
     local_lift_DiracDelta,
     measurable_ir_rewrites_db,
     subtensor_ops,
 )
-from pymc.logprob.utils import check_potential_measurability, replace_rvs_by_values
+from pymc.logprob.utils import (
+    check_potential_measurability,
+    filter_measurable_variables,
+    get_related_valued_nodes,
+)
 from pymc.pytensorf import constant_fold
 
 
@@ -218,7 +222,7 @@ def rv_pull_down(x: TensorVariable) -> TensorVariable:
     return fgraph.outputs[0]
 
 
-class MixtureRV(MeasurableOpMixin, Op):
+class MixtureRV(MeasurableOp, Op):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
 
     __props__ = ("indices_end_idx", "out_dtype", "out_broadcastable")
@@ -261,6 +265,11 @@ def get_stack_mixture_vars(
 
         mixture_rvs = joined_rvs.owner.inputs[1:]
 
+    # Join and MakeVector can introduce PromisedValuedRV to prevent losing interdependencies
+    mixture_rvs = [
+        rv.owner.inputs[0] if rv.owner and isinstance(rv.owner.op, PromisedValuedRV) else rv
+        for rv in mixture_rvs
+    ]
     return mixture_rvs, join_axis
 
 
@@ -274,11 +283,6 @@ def find_measurable_index_mixture(fgraph, node):
     From these terms, new terms ``Z_rv[i] = mixture_comps[i][i == I_rv]`` are
     created for each ``i`` in ``enumerate(mixture_comps)``.
     """
-    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
     mixing_indices = node.inputs[1:]
 
     # TODO: Add check / test case for Advanced Boolean indexing
@@ -299,7 +303,7 @@ def find_measurable_index_mixture(fgraph, node):
     if mixture_rvs is None or not isinstance(join_axis, NoneTypeT | Constant):
         return None
 
-    if rv_map_feature.request_measurable(mixture_rvs) != mixture_rvs:
+    if set(filter_measurable_variables(mixture_rvs)) != set(mixture_rvs):
         return None
 
     # Replace this sub-graph with a `MixtureRV`
@@ -404,10 +408,8 @@ measurable_switch_mixture = MeasurableSwitchMixture(scalar_switch)
 
 @node_rewriter([switch])
 def find_measurable_switch_mixture(fgraph, node):
-    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
+    if isinstance(node.op, MeasurableOp):
+        return None
 
     switch_cond, *components = node.inputs
 
@@ -418,12 +420,11 @@ def find_measurable_switch_mixture(fgraph, node):
     if any(comp.type.broadcastable != out_bcast for comp in components):
         return None
 
-    # Check that `switch_cond` is not potentially measurable
-    valued_rvs = rv_map_feature.rv_values.keys()
-    if check_potential_measurability([switch_cond], valued_rvs):
+    if set(filter_measurable_variables(components)) != set(components):
         return None
 
-    if rv_map_feature.request_measurable(components) != components:
+    # Check that `switch_cond` is not potentially measurable
+    if check_potential_measurability([switch_cond]):
         return None
 
     return [measurable_switch_mixture(switch_cond, *components)]
@@ -455,71 +456,110 @@ measurable_ir_rewrites_db.register(
 )
 
 
-class MeasurableIfElse(MeasurableOpMixin, IfElse):
+class MeasurableIfElse(MeasurableOp, IfElse):
     """Measurable subclass of IfElse operator."""
 
 
 @node_rewriter([IfElse])
-def useless_ifelse_outputs(fgraph, node):
-    """Remove outputs that are shared across the IfElse branches."""
-    # TODO: This should be a PyTensor canonicalization
+def split_valued_ifelse(fgraph, node):
+    """Split valued variables in multi-output ifelse into their own ifelse."""
     op = node.op
-    if_var, *inputs = node.inputs
-    shared_inputs = set(inputs[op.n_outs :]).intersection(inputs[: op.n_outs])
-    if not shared_inputs:
+
+    if op.n_outs == 1:
+        # Single outputs IfElse
         return None
 
-    replacements = {}
-    for shared_inp in shared_inputs:
-        idx = inputs.index(shared_inp)
-        replacements[node.outputs[idx]] = shared_inp
+    valued_output_nodes = get_related_valued_nodes(node, fgraph)
+    if not valued_output_nodes:
+        return None
 
-    # IfElse isn't needed at all
-    if len(shared_inputs) == op.n_outs:
-        return replacements
+    cond, *all_outputs = node.inputs
+    then_outputs = all_outputs[: op.n_outs]
+    else_outputs = all_outputs[op.n_outs :]
 
-    # Create subset IfElse with remaining nodes
-    remaining_inputs = [inp for inp in inputs if inp not in shared_inputs]
-    new_outs = (
-        IfElse(n_outs=len(remaining_inputs) // 2).make_node(if_var, *remaining_inputs).outputs
+    # Split first topological valued output
+    then_else_valued_outputs = []
+    for valued_output_node in valued_output_nodes:
+        rv, value = valued_output_node.inputs
+        [valued_out] = valued_output_node.outputs
+        rv_idx = node.outputs.index(rv)
+        then_else_valued_outputs.append(
+            (
+                then_outputs[rv_idx],
+                else_outputs[rv_idx],
+                value,
+                valued_out,
+            )
+        )
+
+    toposort = fgraph.toposort()
+    then_else_valued_outputs = sorted(
+        then_else_valued_outputs,
+        key=lambda x: max(toposort.index(x[0].owner), toposort.index(x[1].owner)),
     )
-    for inp, new_out in zip(remaining_inputs, new_outs):
-        idx = inputs.index(inp)
-        replacements[node.outputs[idx]] = new_out
+
+    (first_then, first_else, first_value_var, first_valued_out), *remaining_vars = (
+        then_else_valued_outputs
+    )
+    first_ifelse = ifelse(cond, first_then, first_else)
+    first_valued_ifelse = valued_rv(first_ifelse, first_value_var)
+    replacements = {first_valued_out: first_valued_ifelse}
+
+    if remaining_vars:
+        first_ifelse_ancestors = set(a for a in ancestors((first_then, first_else)) if a.owner)
+        remaining_thens = [then_out for (then_out, _, _, _) in remaining_vars]
+        remaininng_elses = [else_out for (_, else_out, _, _) in remaining_vars]
+        if set(remaining_thens + remaininng_elses) & first_ifelse_ancestors:
+            # IfElse graph cannot be split, because some remaining variables are inputs to first ifelse
+            return None
+
+        remaining_ifelses = ifelse(cond, remaining_thens, remaininng_elses)
+        # Replace potential dependencies on first_then, first_else in remaining ifelse by first_valued_ifelse
+        dummy_first_valued_ifelse = first_valued_ifelse.type()
+        temp_fgraph = FunctionGraph(
+            outputs=[*remaining_ifelses, dummy_first_valued_ifelse], clone=False
+        )
+        temp_fgraph.replace(first_then, dummy_first_valued_ifelse)
+        temp_fgraph.replace(first_else, dummy_first_valued_ifelse)
+        temp_fgraph.replace(dummy_first_valued_ifelse, first_valued_ifelse, import_missing=True)
+        for remaining_ifelse, (_, _, remaining_value_var, remaining_valued_out) in zip(
+            remaining_ifelses, remaining_vars
+        ):
+            remaining_valued_ifelse = valued_rv(remaining_ifelse, remaining_value_var)
+            replacements[remaining_valued_out] = remaining_valued_ifelse
 
     return replacements
 
 
 @node_rewriter([IfElse])
 def find_measurable_ifelse_mixture(fgraph, node):
-    rv_map_feature: PreserveRVMappings | None = getattr(fgraph, "preserve_rv_mappings", None)
-
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
+    """Find `IfElse` nodes that can be replaced by `MeasurableIfElse`."""
     op = node.op
-    if_var, *base_rvs = node.inputs
 
-    valued_rvs = rv_map_feature.rv_values.keys()
-    if not all(check_potential_measurability([base_var], valued_rvs) for base_var in base_rvs):
+    if isinstance(op, MeasurableOp):
         return None
 
-    base_rvs = assume_measured_ir_outputs(valued_rvs, base_rvs)
-    if len(base_rvs) != op.n_outs * 2:
-        return None
-    if not all(var.owner and isinstance(var.owner.op, MeasurableOp) for var in base_rvs):
+    if op.n_outs > 1:
+        # The rewrite split_measurable_ifelse should take care of this
         return None
 
-    return MeasurableIfElse(n_outs=op.n_outs).make_node(if_var, *base_rvs).outputs
+    if_var, then_rv, else_rv = node.inputs
+
+    if check_potential_measurability([if_var]):
+        return None
+
+    if len(filter_measurable_variables([then_rv, else_rv])) != 2:
+        return None
+
+    return MeasurableIfElse(n_outs=op.n_outs)(if_var, then_rv, else_rv, return_list=True)
 
 
-measurable_ir_rewrites_db.register(
-    "useless_ifelse_outputs",
-    useless_ifelse_outputs,
+early_measurable_ir_rewrites_db.register(
+    "split_valued_ifelse",
+    split_valued_ifelse,
     "basic",
     "mixture",
 )
-
 
 measurable_ir_rewrites_db.register(
     "find_measurable_ifelse_mixture",
@@ -530,27 +570,9 @@ measurable_ir_rewrites_db.register(
 
 
 @_logprob.register(MeasurableIfElse)
-def logprob_ifelse(op, values, if_var, *base_rvs, **kwargs):
+def logprob_ifelse(op, values, if_var, rv_then, rv_else, **kwargs):
     """Compute the log-likelihood graph for an `IfElse`."""
-
-    assert len(values) * 2 == len(base_rvs)
-
-    rvs_to_values_then = {then_rv: value for then_rv, value in zip(base_rvs[: len(values)], values)}
-    rvs_to_values_else = {else_rv: value for else_rv, value in zip(base_rvs[len(values) :], values)}
-
-    logps_then = [
-        _logprob_helper(rv_then, value, **kwargs) for rv_then, value in rvs_to_values_then.items()
-    ]
-    logps_else = [
-        _logprob_helper(rv_else, value, **kwargs) for rv_else, value in rvs_to_values_else.items()
-    ]
-
-    # If the multiple variables depend on each other, we have to replace them
-    # by the respective values
-    logps_then = replace_rvs_by_values(logps_then, rvs_to_values=rvs_to_values_then)
-    logps_else = replace_rvs_by_values(logps_else, rvs_to_values=rvs_to_values_else)
-
-    logps = ifelse(if_var, logps_then, logps_else)
-    if len(logps) == 1:
-        return logps[0]
-    return logps
+    [value] = values
+    logps_then = _logprob_helper(rv_then, value, **kwargs)
+    logps_else = _logprob_helper(rv_else, value, **kwargs)
+    return ifelse(if_var, logps_then, logps_else)

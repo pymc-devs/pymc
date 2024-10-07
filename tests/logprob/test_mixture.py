@@ -108,40 +108,6 @@ def test_mixture_basics():
         conditional_logp({M_rv: m_vv, I_rv: i_vv})
 
 
-@pytensor.config.change_flags(compute_test_value="warn")
-@pytest.mark.parametrize(
-    "op_constructor",
-    [
-        lambda _I, _X, _Y: pt.stack([_X, _Y])[_I],
-        lambda _I, _X, _Y: pt.switch(_I, _X, _Y),
-    ],
-)
-def test_compute_test_value(op_constructor):
-    X_rv = pt.random.normal(0, 1, name="X")
-    Y_rv = pt.random.gamma(0.5, scale=2.0, name="Y")
-
-    p_at = pt.scalar("p")
-    p_at.tag.test_value = 0.3
-
-    I_rv = pt.random.bernoulli(p_at, name="I")
-
-    i_vv = I_rv.clone()
-    i_vv.name = "i"
-
-    M_rv = op_constructor(I_rv, X_rv, Y_rv)
-    M_rv.name = "M"
-
-    m_vv = M_rv.clone()
-    m_vv.name = "m"
-
-    del M_rv.tag.test_value
-
-    M_logp = conditional_logp({M_rv: m_vv, I_rv: i_vv})
-    M_logp_combined = pt.add(*M_logp.values())
-
-    assert isinstance(M_logp_combined.tag.test_value, np.ndarray)
-
-
 @pytest.mark.parametrize(
     "p_val, size, supported",
     [
@@ -920,8 +886,8 @@ def test_scalar_switch_mixture():
     z_vv = Z1_rv.clone()
     z_vv.name = "z1"
 
-    fgraph, _, _ = construct_ir_fgraph({Z1_rv: z_vv, I_rv: i_vv})
-    assert isinstance(fgraph.outputs[0].owner.op, MeasurableSwitchMixture)
+    fgraph = construct_ir_fgraph({Z1_rv: z_vv, I_rv: i_vv})
+    assert isinstance(fgraph.outputs[0].owner.inputs[0].owner.op, MeasurableSwitchMixture)
 
     # building the identical graph but with a stack to check that mixture logps are identical
     Z2_rv = pt.stack((Y_rv, X_rv))[I_rv]
@@ -992,17 +958,17 @@ def test_switch_mixture_invalid_bcast():
     invalid_false_branch = pt.abs(pt.random.normal(size=()))
 
     valid_mix = pt.switch(valid_switch_cond, valid_true_branch, valid_false_branch)
-    fgraph, _, _ = construct_ir_fgraph({valid_mix: valid_mix.type()})
-    assert isinstance(fgraph.outputs[0].owner.op, MeasurableOp)
-    assert isinstance(fgraph.outputs[0].owner.op, MeasurableSwitchMixture)
+    fgraph = construct_ir_fgraph({valid_mix: valid_mix.type()})
+    assert isinstance(fgraph.outputs[0].owner.inputs[0].owner.op, MeasurableOp)
+    assert isinstance(fgraph.outputs[0].owner.inputs[0].owner.op, MeasurableSwitchMixture)
 
     invalid_mix = pt.switch(invalid_switch_cond, valid_true_branch, valid_false_branch)
-    fgraph, _, _ = construct_ir_fgraph({invalid_mix: invalid_mix.type()})
-    assert not isinstance(fgraph.outputs[0].owner.op, MeasurableOp)
+    fgraph = construct_ir_fgraph({invalid_mix: invalid_mix.type()})
+    assert not isinstance(fgraph.outputs[0].owner.inputs[0].owner.op, MeasurableOp)
 
     invalid_mix = pt.switch(valid_switch_cond, valid_true_branch, invalid_false_branch)
-    fgraph, _, _ = construct_ir_fgraph({invalid_mix: invalid_mix.type()})
-    assert not isinstance(fgraph.outputs[0].owner.op, MeasurableOp)
+    fgraph = construct_ir_fgraph({invalid_mix: invalid_mix.type()})
+    assert not isinstance(fgraph.outputs[0].owner.inputs[0].owner.op, MeasurableOp)
 
 
 def test_ifelse_mixture_one_component():
@@ -1036,7 +1002,8 @@ def test_ifelse_mixture_multiple_components():
 
     if_var = pt.scalar("if_var", dtype="bool")
     comp_then1 = pt.random.normal(size=(2,), name="comp_true1")
-    comp_then2 = comp_then1 + pt.random.normal(size=(2, 2), name="comp_then2")
+    comp_then2 = comp_then1 + pt.random.normal(size=(2, 2))
+    comp_then2.name = "comp_then2"
     comp_else1 = pt.random.halfnormal(size=(4,), name="comp_else1")
     comp_else2 = pt.random.halfnormal(size=(4, 4), name="comp_else2")
 

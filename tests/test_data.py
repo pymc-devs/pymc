@@ -14,7 +14,6 @@
 
 import io
 import itertools as it
-import re
 
 from os import path
 
@@ -29,7 +28,7 @@ from pytensor.tensor.variable import TensorVariable
 
 import pymc as pm
 
-from pymc.data import is_minibatch
+from pymc.data import MinibatchOp
 from pymc.pytensorf import GeneratorOp, floatX
 
 
@@ -593,44 +592,34 @@ class TestMinibatch:
 
     def test_1d(self):
         mb = pm.Minibatch(self.data, batch_size=20)
-        assert is_minibatch(mb)
-        assert mb.eval().shape == (20, 10)
+        assert isinstance(mb.owner.op, MinibatchOp)
+        draw1, draw2 = pm.draw(mb, draws=2)
+        assert draw1.shape == (20, 10)
+        assert draw2.shape == (20, 10)
+        assert not np.all(draw1 == draw2)
 
     def test_allowed(self):
         mb = pm.Minibatch(pt.as_tensor(self.data).astype(int), batch_size=20)
-        assert is_minibatch(mb)
+        assert isinstance(mb.owner.op, MinibatchOp)
 
-    def test_not_allowed(self):
         with pytest.raises(ValueError, match="not valid for Minibatch"):
-            mb = pm.Minibatch(pt.as_tensor(self.data) * 2, batch_size=20)
+            pm.Minibatch(pt.as_tensor(self.data) * 2, batch_size=20)
 
-    def test_not_allowed2(self):
         with pytest.raises(ValueError, match="not valid for Minibatch"):
-            mb = pm.Minibatch(self.data, pt.as_tensor(self.data) * 2, batch_size=20)
+            pm.Minibatch(self.data, pt.as_tensor(self.data) * 2, batch_size=20)
 
     def test_assert(self):
+        d1, d2 = pm.Minibatch(self.data, self.data[::2], batch_size=20)
         with pytest.raises(
             AssertionError, match=r"All variables shape\[0\] in Minibatch should be equal"
         ):
-            d1, d2 = pm.Minibatch(self.data, self.data[::2], batch_size=20)
             d1.eval()
 
     def test_multiple_vars(self):
         A = np.arange(1000)
-        B = np.arange(1000)
+        B = -np.arange(1000)
         mA, mB = pm.Minibatch(A, B, batch_size=10)
 
         [draw_mA, draw_mB] = pm.draw([mA, mB])
         assert draw_mA.shape == (10,)
-        np.testing.assert_allclose(draw_mA, draw_mB)
-
-        # Check invalid dims
-        A = np.arange(1000)
-        C = np.arange(999)
-        mA, mC = pm.Minibatch(A, C, batch_size=10)
-
-        with pytest.raises(
-            AssertionError,
-            match=re.escape("All variables shape[0] in Minibatch should be equal"),
-        ):
-            pm.draw([mA, mC])
+        np.testing.assert_allclose(draw_mA, -draw_mB)

@@ -825,7 +825,7 @@ def sample_posterior_predictive(
         if return_inferencedata and not extend_inferencedata:
             return InferenceData()
         elif return_inferencedata and extend_inferencedata:
-            return trace
+            return trace if idata is None else idata
         return {}
 
     vars_in_trace = get_vars_in_point_list(_trace, model)

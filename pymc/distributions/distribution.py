@@ -97,19 +97,6 @@ class DistributionMeta(ABCMeta):
     """
 
     def __new__(cls, name, bases, clsdict):
-        # Forcefully deprecate old v3 `Distribution`s
-        if "random" in clsdict:
-
-            def _random(*args, **kwargs):
-                warnings.warn(
-                    "The old `Distribution.random` interface is deprecated.",
-                    FutureWarning,
-                    stacklevel=2,
-                )
-                return clsdict["random"](*args, **kwargs)
-
-            clsdict["random"] = _random
-
         rv_op = clsdict.setdefault("rv_op", None)
         rv_type = clsdict.setdefault("rv_type", None)
 
@@ -204,13 +191,6 @@ class DistributionMeta(ABCMeta):
             new_cls.register(rv_type)
 
         return new_cls
-
-
-def _make_nice_attr_error(oldcode: str, newcode: str):
-    def fn(*args, **kwargs):
-        raise AttributeError(f"The `{oldcode}` method was removed. Instead use `{newcode}`.`")
-
-    return fn
 
 
 class _class_or_instancemethod(classmethod):
@@ -510,14 +490,6 @@ class Distribution(metaclass=DistributionMeta):
                 "for a standalone distribution."
             )
 
-        if "testval" in kwargs:
-            initval = kwargs.pop("testval")
-            warnings.warn(
-                "The `testval` argument is deprecated; use `initval`.",
-                FutureWarning,
-                stacklevel=2,
-            )
-
         if not isinstance(name, string_types):
             raise TypeError(f"Name needs to be a string but got: {name}")
 
@@ -551,10 +523,6 @@ class Distribution(metaclass=DistributionMeta):
         rv_out._repr_latex_ = types.MethodType(
             functools.partial(str_for_dist, formatting="latex"), rv_out
         )
-
-        rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
-        rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
-        rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
         return rv_out
 
     @classmethod
@@ -582,15 +550,6 @@ class Distribution(metaclass=DistributionMeta):
         rv : TensorVariable
             The created random variable tensor.
         """
-        if "testval" in kwargs:
-            kwargs.pop("testval")
-            warnings.warn(
-                "The `.dist(testval=...)` argument is deprecated and has no effect. "
-                "Initial values for sampling/optimization can be specified with `initval` in a modelcontext. "
-                "For using PyTensor's test value features, you must assign the `.tag.test_value` yourself.",
-                FutureWarning,
-                stacklevel=2,
-            )
         if "initval" in kwargs:
             raise TypeError(
                 "Unexpected keyword argument `initval`. "
@@ -617,9 +576,6 @@ class Distribution(metaclass=DistributionMeta):
         create_size = find_size(shape=shape, size=size, ndim_supp=ndim_supp)
         rv_out = cls.rv_op(*dist_params, size=create_size, **kwargs)
 
-        rv_out.logp = _make_nice_attr_error("rv.logp(x)", "pm.logp(rv, x)")
-        rv_out.logcdf = _make_nice_attr_error("rv.logcdf(x)", "pm.logcdf(rv, x)")
-        rv_out.random = _make_nice_attr_error("rv.random()", "pm.draw(rv)")
         _add_future_warning_tag(rv_out)
         return rv_out
 

@@ -59,8 +59,9 @@ class DifferentialEquation(Op):
     .. code-block:: python
 
         def odefunc(y, t, p):
-            #Logistic differential equation
+            # Logistic differential equation
             return p[0] * y[0] * (1 - y[0])
+
 
         times = np.arange(0.5, 5, 0.5)
 
