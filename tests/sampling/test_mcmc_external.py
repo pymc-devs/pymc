@@ -12,9 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import jax
 import numpy as np
-import numpy.testing as npt
 import pytest
 
 from pymc import Data, Model, Normal, sample
