@@ -38,7 +38,7 @@ def compute_log_likelihood(
     progressbar=True,
     compile_kwargs: dict[str, Any] | None = None,
 ):
-    """Compute elemwise log_likelihood of model given InferenceData with posterior group
+    """Compute elemwise log_likelihood of model given InferenceData with posterior group.
 
     Parameters
     ----------
@@ -81,7 +81,7 @@ def compute_log_prior(
     progressbar=True,
     compile_kwargs=None,
 ):
-    """Compute elemwise log_prior of model given InferenceData with posterior group
+    """Compute elemwise log_prior of model given InferenceData with posterior group.
 
     Parameters
     ----------
@@ -127,7 +127,7 @@ def compute_log_density(
     compile_kwargs=None,
 ) -> InferenceData | Dataset:
     """
-    Compute elemwise log_likelihood or log_prior of model given InferenceData with posterior group
+    Compute elemwise log_likelihood or log_prior of model given InferenceData with posterior group.
 
     Parameters
     ----------

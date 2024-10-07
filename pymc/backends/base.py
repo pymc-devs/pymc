@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Base backend for traces
+"""Base backend for traces.
 
 See the docstring for pymc.backends for more information
 """
@@ -127,7 +127,7 @@ class IBaseTrace(ABC, Sized):
 
 
 class BaseTrace(IBaseTrace):
-    """Base trace object
+    """Base trace object.
 
     Parameters
     ----------
@@ -546,7 +546,7 @@ class MultiTrace:
         return self._straces[chain].point(idx)
 
     def points(self, chains=None):
-        """Return an iterator over all or some of the sample points
+        """Return an iterator over all or some of the sample points.
 
         Parameters
         ----------

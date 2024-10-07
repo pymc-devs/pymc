@@ -21,8 +21,8 @@ __all__ = ["rbf"]
 
 
 class Kernel(TestFunction):
-    """
-    Dummy base class for kernel SVGD in case we implement more
+    r"""
+    Dummy base class for kernel SVGD in case we implement more.
 
     .. math::
 

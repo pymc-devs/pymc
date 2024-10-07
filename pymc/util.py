@@ -71,7 +71,7 @@ UNSET = _UnsetType()
 
 
 def withparent(meth):
-    """Helper wrapper that passes calls to parent's instance"""
+    """Helper wrapper that passes calls to parent's instance."""
 
     def wrapped(self, *args, **kwargs):
         res = meth(self, *args, **kwargs)
@@ -89,7 +89,7 @@ def withparent(meth):
 class treelist(list):
     """A list that passes mutable extending operations used in Model
     to parent list instance.
-    Extending treelist you will also extend its parent
+    Extending treelist you will also extend its parent.
     """
 
     def __init__(self, iterable=(), parent=None):
@@ -134,7 +134,7 @@ class treelist(list):
 class treedict(dict):
     """A dict that passes mutable extending operations used in Model
     to parent dict instance.
-    Extending treedict you will also extend its parent
+    Extending treedict you will also extend its parent.
     """
 
     def __init__(self, iterable=(), parent=None, **kwargs):
@@ -160,7 +160,7 @@ class treedict(dict):
 
 def get_transformed_name(name, transform):
     r"""
-    Consistent way of transforming names
+    Consistent way of transforming names.
 
     Parameters
     ----------
@@ -179,7 +179,7 @@ def get_transformed_name(name, transform):
 
 def is_transformed_name(name):
     r"""
-    Quickly check if a name was transformed with `get_transformed_name`
+    Quickly check if a name was transformed with `get_transformed_name`.
 
     Parameters
     ----------
@@ -196,7 +196,7 @@ def is_transformed_name(name):
 
 def get_untransformed_name(name):
     r"""
-    Undo transformation in `get_transformed_name`. Throws ValueError if name wasn't transformed
+    Undo transformation in `get_transformed_name`. Throws ValueError if name wasn't transformed.
 
     Parameters
     ----------
@@ -369,7 +369,7 @@ def locally_cachedmethod(f):
 
 
 def check_dist_not_registered(dist, model=None):
-    """Check that a dist is not registered in the model already"""
+    """Check that a dist is not registered in the model already."""
     from pymc.model import modelcontext
 
     try:
@@ -531,7 +531,7 @@ def makeiter(a):
 
 
 class CustomProgress(Progress):
-    """A child of Progress that allows to disable progress bars and its container
+    """A child of Progress that allows to disable progress bars and its container.
 
     The implementation simply checks an `is_enabled` flag and generates the progress bar only if
     it's `True`.

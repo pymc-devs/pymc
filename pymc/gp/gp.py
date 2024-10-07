@@ -59,9 +59,7 @@ def _handle_sigma_noise_parameters(sigma, noise):
 
 
 class Base:
-    R"""
-    Base class.
-    """
+    """Base class."""
 
     def __init__(self, *, mean_func=Zero(), cov_func=Constant(0.0)):
         self.mean_func = mean_func

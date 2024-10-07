@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Storage backends for traces
+"""Storage backends for traces.
 
 The NDArray (pymc.backends.NDArray) backend holds the entire trace in memory.
 

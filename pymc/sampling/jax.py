@@ -92,7 +92,7 @@ def jax_funcify_PosDefMatrix(op, **kwargs):
 
 
 def _replace_shared_variables(graph: list[TensorVariable]) -> list[TensorVariable]:
-    """Replace shared variables in graph by their constant values
+    """Replace shared variables in graph by their constant values.
 
     Raises
     ------
@@ -122,7 +122,7 @@ def get_jaxified_graph(
     inputs: list[TensorVariable] | None = None,
     outputs: list[TensorVariable] | None = None,
 ) -> list[TensorVariable]:
-    """Compile an PyTensor graph into an optimized JAX function"""
+    """Compile an PyTensor graph into an optimized JAX function."""
     graph = _replace_shared_variables(outputs) if outputs is not None else None
 
     fgraph = FunctionGraph(inputs=inputs, outputs=graph, clone=True)
@@ -162,7 +162,7 @@ def _get_log_likelihood(
     backend: Literal["cpu", "gpu"] | None = None,
     postprocessing_vectorize: Literal["vmap", "scan"] = "scan",
 ) -> dict:
-    """Compute log-likelihood for all observations"""
+    """Compute log-likelihood for all observations."""
     elemwise_logp = model.logp(model.observed_RVs, sum=False)
     jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=elemwise_logp)
     result = _postprocess_samples(
@@ -214,7 +214,7 @@ def _get_batched_jittered_initial_points(
     jitter: bool = True,
     jitter_max_retries: int = 10,
 ) -> np.ndarray | list[np.ndarray]:
-    """Get jittered initial point in format expected by NumPyro MCMC kernel
+    """Get jittered initial point in format expected by NumPyro MCMC kernel.
 
     Returns
     -------

@@ -854,7 +854,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
     @property
     def datalogp(self) -> Variable:
         """PyTensor scalar of log-probability of the observed variables and
-        potential terms
+        potential terms.
         """
         return self.observedlogp + self.potentiallogp
 
@@ -874,12 +874,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     @property
     def observedlogp(self) -> Variable:
-        """PyTensor scalar of log-probability of the observed variables"""
+        """PyTensor scalar of log-probability of the observed variables."""
         return self.logp(vars=self.observed_RVs)
 
     @property
     def potentiallogp(self) -> Variable:
-        """PyTensor scalar of log-probability of the Potential terms"""
+        """PyTensor scalar of log-probability of the Potential terms."""
         # Convert random variables in Potential expression into their log-likelihood
         # inputs and apply their transforms, if any
         potentials = self.replace_rvs_by_values(self.potentials)
@@ -899,7 +899,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def unobserved_value_vars(self):
         """List of all random variables (including untransformed projections),
         as well as deterministics used as inputs and outputs of the model's
-        log-likelihood graph
+        log-likelihood graph.
         """
         vars = []
         transformed_rvs = []
@@ -920,12 +920,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     @property
     def discrete_value_vars(self):
-        """All the discrete value variables in the model"""
+        """All the discrete value variables in the model."""
         return list(typefilter(self.value_vars, discrete_types))
 
     @property
     def continuous_value_vars(self):
-        """All the continuous value variables in the model"""
+        """All the continuous value variables in the model."""
         return list(typefilter(self.value_vars, continuous_types))
 
     @property
@@ -1550,7 +1550,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return name
 
     def name_for(self, name):
-        """Checks if name has prefix and adds if needed"""
+        """Checks if name has prefix and adds if needed."""
         name = self._validate_name(name)
         if self.prefix:
             if not name.startswith(self.prefix + "::"):
@@ -1561,7 +1561,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             return name
 
     def name_of(self, name):
-        """Checks if name has prefix and deletes if needed"""
+        """Checks if name has prefix and deletes if needed."""
         name = self._validate_name(name)
         if not self.prefix or not name:
             return name
@@ -1590,7 +1590,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def copy(self):
         """
-        Clone the model
+        Clone the model.
 
         To access variables in the cloned model use `cloned_model["var_name"]`.
 
@@ -1672,7 +1672,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         point_fn: bool = True,
         **kwargs,
     ) -> PointFunc | Function:
-        """Compiles an PyTensor function
+        """Compiles an PyTensor function.
 
         Parameters
         ----------
@@ -1784,7 +1784,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
     def check_start_vals(self, start, **kwargs):
         r"""Check that the starting values for MCMC do not cause the relevant log probability
-        to evaluate to something invalid (e.g. Inf or NaN)
+        to evaluate to something invalid (e.g. Inf or NaN).
 
         Parameters
         ----------
@@ -2094,7 +2094,7 @@ Model._context_class = Model
 
 
 class BlockModelAccess(Model):
-    """Can be used to prevent user access to Model contexts"""
+    """Can be used to prevent user access to Model contexts."""
 
     def __init__(self, *args, error_msg_on_access="Model access is blocked", **kwargs):
         self.error_msg_on_access = error_msg_on_access
@@ -2189,7 +2189,7 @@ def compile_fn(
     model: Model | None = None,
     **kwargs,
 ) -> PointFunc | Function:
-    """Compiles an PyTensor function
+    """Compiles an PyTensor function.
 
     Parameters
     ----------

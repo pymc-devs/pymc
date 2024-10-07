@@ -225,7 +225,7 @@ def change_value_transforms(
     model: Model,
     vars_to_transforms: Mapping[ModelVariable, Transform | None],
 ) -> Model:
-    """Change the value variables transforms in the model
+    r"""Change the value variables transforms in the model.
 
     Parameters
     ----------
@@ -309,7 +309,7 @@ def remove_value_transforms(
     model: Model,
     vars: Sequence[ModelVariable] | None = None,
 ) -> Model:
-    """Remove the value variables transforms in the model
+    r"""Remove the value variables transforms in the model.
 
     Parameters
     ----------

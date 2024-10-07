@@ -174,7 +174,7 @@ def plot_gp_dist(
     fill_kwargs=None,
     samples_kwargs=None,
 ):
-    """A helper function for plotting 1D GP posteriors from trace
+    """A helper function for plotting 1D GP posteriors from trace.
 
     Parameters
     ----------

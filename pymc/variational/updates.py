@@ -136,7 +136,7 @@ __all__ = [
 
 
 def get_or_compute_grads(loss_or_grads, params):
-    """Helper function returning a list of gradients
+    """Helper function returning a list of gradients.
 
     Parameters
     ----------
@@ -185,7 +185,7 @@ def _get_call_kwargs(_locals_):
 
 
 def sgd(loss_or_grads=None, params=None, learning_rate=1e-3):
-    """Stochastic Gradient Descent (SGD) updates
+    """Stochastic Gradient Descent (SGD) updates.
 
     Generates update expressions of the form:
 
@@ -238,7 +238,7 @@ def sgd(loss_or_grads=None, params=None, learning_rate=1e-3):
 
 
 def apply_momentum(updates, params=None, momentum=0.9):
-    """Returns a modified update dictionary including momentum
+    """Returns a modified update dictionary including momentum.
 
     Generates update expressions of the form:
 
@@ -285,7 +285,7 @@ def apply_momentum(updates, params=None, momentum=0.9):
 
 
 def momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
-    """Stochastic Gradient Descent (SGD) updates with momentum
+    """Stochastic Gradient Descent (SGD) updates with momentum.
 
     Generates update expressions of the form:
 
@@ -345,7 +345,7 @@ def momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
 
 
 def apply_nesterov_momentum(updates, params=None, momentum=0.9):
-    """Returns a modified update dictionary including Nesterov momentum
+    """Returns a modified update dictionary including Nesterov momentum.
 
     Generates update expressions of the form:
 
@@ -398,7 +398,7 @@ def apply_nesterov_momentum(updates, params=None, momentum=0.9):
 
 
 def nesterov_momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
-    """Stochastic Gradient Descent (SGD) updates with Nesterov momentum
+    """Stochastic Gradient Descent (SGD) updates with Nesterov momentum.
 
     Generates update expressions of the form:
 
@@ -463,7 +463,7 @@ def nesterov_momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momen
 
 
 def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
-    """Adagrad updates
+    r"""Adagrad updates.
 
     Scale learning rates by dividing with the square root of accumulated
     squared gradients. See [1]_ for further description.
@@ -541,7 +541,7 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
 
 def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon=0.1, n_win=10):
     """Returns a function that returns parameter updates.
-    Instead of accumulated estimate, uses running window
+    Instead of accumulated estimate, uses running window.
 
     Parameters
     ----------
@@ -585,7 +585,7 @@ def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon
 
 
 def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon=1e-6):
-    """RMSProp updates
+    r"""RMSProp updates.
 
     Scale learning rates by dividing with the moving average of the root mean
     squared (RMS) gradients. See [1]_ for further description.
@@ -666,7 +666,7 @@ def rmsprop(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.9, epsilon
 
 
 def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsilon=1e-6):
-    r"""Adadelta updates
+    r"""Adadelta updates.
 
     Scale learning rates by the ratio of accumulated gradients to accumulated
     updates, see [1]_ and notes for further description.
@@ -772,7 +772,7 @@ def adadelta(loss_or_grads=None, params=None, learning_rate=1.0, rho=0.95, epsil
 def adam(
     loss_or_grads=None, params=None, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
 ):
-    """Adam updates
+    """Adam updates.
 
     Adam updates implemented as in [1]_.
 
@@ -859,7 +859,7 @@ def adam(
 def adamax(
     loss_or_grads=None, params=None, learning_rate=0.002, beta1=0.9, beta2=0.999, epsilon=1e-8
 ):
-    """Adamax updates
+    """Adamax updates.
 
     Adamax updates implemented as in [1]_. This is a variant of the Adam
     algorithm based on the infinity norm.
@@ -941,7 +941,7 @@ def adamax(
 
 
 def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
-    """Max weight norm constraints and gradient clipping
+    """Max weight norm constraints and gradient clipping.
 
     This takes a TensorVariable and rescales it so that incoming weight
     norms are below a specified constraint value. Vectors violating the
@@ -1016,7 +1016,7 @@ def norm_constraint(tensor_var, max_norm, norm_axes=None, epsilon=1e-7):
 
 
 def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7, return_norm=False):
-    """Rescales a list of tensors based on their combined norm
+    """Rescales a list of tensors based on their combined norm.
 
     If the combined norm of the input tensors exceeds the threshold then all
     tensors are rescaled such that the combined norm is equal to the threshold.

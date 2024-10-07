@@ -199,7 +199,7 @@ def check_potential_measurability(inputs: Iterable[TensorVariable]) -> bool:
 
 
 class ParameterValueError(ValueError):
-    """Exception for invalid parameters values in logprob graphs"""
+    """Exception for invalid parameters values in logprob graphs."""
 
 
 class CheckParameterValue(CheckAndRaise):
@@ -220,7 +220,7 @@ class CheckParameterValue(CheckAndRaise):
 
 @node_rewriter(tracks=[CheckParameterValue])
 def local_remove_check_parameter(fgraph, node):
-    """Rewrite that removes CheckParameterValue
+    """Rewrite that removes CheckParameterValue.
 
     This is used when compile_rv_inplace
     """

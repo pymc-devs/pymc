@@ -61,7 +61,7 @@ class MeasurableMax(MeasurableOp, Max):
 
 
 class MeasurableMaxDiscrete(MeasurableOp, Max):
-    """A placeholder used to specify a log-likelihood for sub-graphs of maxima of discrete variables"""
+    """A placeholder used to specify a log-likelihood for sub-graphs of maxima of discrete variables."""
 
 
 @node_rewriter([Max])

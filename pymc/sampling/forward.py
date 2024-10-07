@@ -75,7 +75,7 @@ _log = logging.getLogger(__name__)
 
 
 def get_constant_coords(trace_coords: dict[str, np.ndarray], model: Model) -> set:
-    """Get the set of coords that have remained constant between the trace and model"""
+    """Get the set of coords that have remained constant between the trace and model."""
     constant_coords = set()
     for dim, coord in trace_coords.items():
         current_coord = model.coords.get(dim, None)
@@ -284,7 +284,7 @@ def draw(
     random_seed: RandomState = None,
     **kwargs,
 ) -> np.ndarray | list[np.ndarray]:
-    """Draw samples for one variable or a list of variables
+    """Draw samples for one variable or a list of variables.
 
     Parameters
     ----------
@@ -346,7 +346,7 @@ def draw(
 
 
 def observed_dependent_deterministics(model: Model):
-    """Find deterministics that depend directly on observed variables"""
+    """Find deterministics that depend directly on observed variables."""
     deterministics = model.deterministics
     observed_rvs = set(model.observed_RVs)
     blockers = model.basic_RVs

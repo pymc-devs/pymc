@@ -25,7 +25,7 @@ from pymc.logprob.basic import logp
 
 
 class MinibatchRandomVariable(MeasurableOp, Op):
-    """RV whose logprob should be rescaled to match total_size"""
+    """RV whose logprob should be rescaled to match total_size."""
 
     __props__ = ()
     view_map = {0: [0]}

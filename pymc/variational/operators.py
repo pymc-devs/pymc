@@ -32,7 +32,7 @@ __all__ = ["KL", "KSD"]
 
 
 class KL(Operator):
-    R"""**Operator based on Kullback Leibler Divergence**
+    R"""**Operator based on Kullback Leibler Divergence**.
 
     This operator constructs Evidence Lower Bound (ELBO) objective
 
@@ -67,7 +67,7 @@ class KL(Operator):
 
 
 class KSDObjective(ObjectiveFunction):
-    R"""Helper class for construction loss and updates for variational inference
+    R"""Helper class for construction loss and updates for variational inference.
 
     Parameters
     ----------
@@ -104,7 +104,7 @@ class KSDObjective(ObjectiveFunction):
 
 
 class KSD(Operator):
-    R"""**Operator based on Kernelized Stein Discrepancy**
+    R"""**Operator based on Kernelized Stein Discrepancy**.
 
     Input: A target distribution with density function :math:`p(x)`
         and a set of initial particles :math:`\{x^0_i\}^n_{i=1}`

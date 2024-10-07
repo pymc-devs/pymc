@@ -137,7 +137,7 @@ class Transform(abc.ABC):
         self, value: TensorVariable, *inputs: Variable
     ) -> TensorVariable | tuple[TensorVariable, ...]:
         """Invert the transformation. Multiple values may be returned when the
-        transformation is not 1-to-1
+        transformation is not 1-to-1.
         """
 
     def log_jac_det(self, value: TensorVariable, *inputs) -> TensorVariable:
@@ -158,7 +158,7 @@ class Transform(abc.ABC):
 
 
 class MeasurableTransform(MeasurableElemwise):
-    """A placeholder used to specify a log-likelihood for a transformed measurable variable"""
+    """A placeholder used to specify a log-likelihood for a transformed measurable variable."""
 
     valid_scalar_types = (
         Exp,
@@ -371,7 +371,7 @@ def measurable_neg_to_product(fgraph, node):
 
 @node_rewriter([sub])
 def measurable_sub_to_neg(fgraph, node):
-    """Convert subtraction involving `MeasurableVariable`s to addition with neg"""
+    """Convert subtraction involving `MeasurableVariable`s to addition with neg."""
     if not filter_measurable_variables(node.inputs):
         return None
 

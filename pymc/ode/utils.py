@@ -19,7 +19,7 @@ import pytensor.tensor as pt
 
 def make_sens_ic(n_states, n_theta, floatX):
     r"""
-    The sensitivity matrix will always have consistent form. (n_states, n_states + n_theta)
+    The sensitivity matrix will always have consistent form. (n_states, n_states + n_theta).
 
     If the first n_states entries of the parameters vector in the simulate call
     correspond to initial conditions of the system,

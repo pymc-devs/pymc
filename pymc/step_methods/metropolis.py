@@ -134,7 +134,7 @@ class MetropolisState(StepMethodState):
 
 
 class Metropolis(ArrayStepShared):
-    """Metropolis-Hastings sampling step"""
+    """Metropolis-Hastings sampling step."""
 
     name = "metropolis"
 
@@ -161,7 +161,7 @@ class Metropolis(ArrayStepShared):
         rng=None,
         **kwargs,
     ):
-        """Create an instance of a Metropolis stepper
+        """Create an instance of a Metropolis stepper.
 
         Parameters
         ----------
@@ -324,7 +324,7 @@ class Metropolis(ArrayStepShared):
 def tune(scale, acc_rate):
     """
     Tunes the scaling parameter for the proposal distribution
-    according to the acceptance rate over the last tune_interval:
+    according to the acceptance rate over the last tune_interval.
 
     Rate    Variance adaptation
     ----    -------------------
@@ -380,7 +380,7 @@ class BinaryMetropolisState(StepMethodState):
 
 
 class BinaryMetropolis(ArrayStep):
-    """Metropolis-Hastings optimized for binary variables
+    """Metropolis-Hastings optimized for binary variables.
 
     Parameters
     ----------
@@ -489,7 +489,7 @@ class BinaryGibbsMetropolisState(StepMethodState):
 
 
 class BinaryGibbsMetropolis(ArrayStep):
-    """A Metropolis-within-Gibbs step method optimized for binary variables
+    """A Metropolis-within-Gibbs step method optimized for binary variables.
 
     Parameters
     ----------

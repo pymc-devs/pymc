@@ -118,7 +118,7 @@ def _squeeze_to_ndim(var: TensorVariable | np.ndarray, ndim: int):
 
 
 class SimplexContinuous(Continuous):
-    """Base class for simplex continuous distributions"""
+    """Base class for simplex continuous distributions."""
 
 
 @_default_transform.register(SimplexContinuous)
@@ -345,7 +345,7 @@ def precision_mv_normal_logp(op: PrecisionMvNormalRV, value, rng, size, mean, ta
 
 @node_rewriter(tracks=[MvNormalRV])
 def mv_normal_to_precision_mv_normal(fgraph, node):
-    """Replaces MvNormal(mu, inv(tau)) -> PrecisionMvNormal(mu, tau)
+    """Replaces MvNormal(mu, inv(tau)) -> PrecisionMvNormal(mu, tau).
 
     This is introduced in logprob rewrites to provide a more efficient logp for a MvNormal
     that is defined by a precision matrix.
@@ -898,10 +898,7 @@ def posdef(AA):
 
 
 class PosDefMatrix(Op):
-    """
-    Check if input is positive definite. Input should be a square matrix.
-
-    """
+    """Check if input is positive definite. Input should be a square matrix."""
 
     # Properties attribute
     __props__ = ()
@@ -2163,7 +2160,7 @@ class CARRV(RandomVariable):
         Implementation of algorithm from paper
         Havard Rue, 2001. "Fast sampling of Gaussian Markov random fields,"
         Journal of the Royal Statistical Society Series B, Royal Statistical Society,
-        vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288
+        vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288.
         """
         if not W_is_valid.all():
             raise ValueError("W must be a valid adjacency matrix")
@@ -2658,7 +2655,7 @@ class StickBreakingWeights(SimplexContinuous):
 
 
 class ZeroSumNormalRV(SymbolicRandomVariable):
-    """ZeroSumNormal random variable"""
+    """ZeroSumNormal random variable."""
 
     _print_name = ("ZeroSumNormal", "\\operatorname{ZeroSumNormal}")
 

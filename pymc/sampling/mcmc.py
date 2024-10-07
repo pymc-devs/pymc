@@ -254,7 +254,7 @@ def _print_step_hierarchy(s: Step, level: int = 0) -> None:
 
 
 def all_continuous(vars):
-    """Check that vars not include discrete variables"""
+    """Check that vars not include discrete variables."""
     if any((var.dtype in discrete_types) for var in vars):
         return False
     else:
@@ -1126,7 +1126,7 @@ def _iter_sample(
     model: Model | None = None,
     callback: SamplingIteratorCallback | None = None,
 ) -> Iterator[bool]:
-    """Generator for sampling one chain. (Used in singleprocess sampling.)
+    """Generator for sampling one chain. (Used in singleprocess sampling.).
 
     Parameters
     ----------

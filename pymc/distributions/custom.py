@@ -73,7 +73,7 @@ def default_support_point(rv, size, *rv_inputs, rv_name=None, has_fallback=False
 
 class CustomDistRV(RandomVariable):
     """
-    Base class for CustomDistRV
+    Base class for CustomDistRV.
 
     This should be subclassed when defining CustomDist objects.
     """
@@ -89,7 +89,7 @@ class CustomDistRV(RandomVariable):
 
 
 class _CustomDist(Distribution):
-    """A distribution that returns a subclass of CustomDistRV"""
+    """A distribution that returns a subclass of CustomDistRV."""
 
     rv_type = CustomDistRV
 
@@ -194,7 +194,7 @@ class _CustomDist(Distribution):
 
 class CustomSymbolicDistRV(SymbolicRandomVariable):
     """
-    Base class for CustomSymbolicDist
+    Base class for CustomSymbolicDist.
 
     This should be subclassed when defining custom CustomDist objects that have
     symbolic random methods.
@@ -459,7 +459,7 @@ def dist_support_point(op, rv, *args):
 
 
 class CustomDist:
-    """A helper class to create custom distributions
+    """A helper class to create custom distributions.
 
     This class can be used to wrap black-box random and logp methods for use in
     forward and mcmc sampling.

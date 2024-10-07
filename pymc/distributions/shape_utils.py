@@ -51,7 +51,7 @@ from pymc.util import _add_future_warning_tag
 
 
 def to_tuple(shape):
-    """Convert ints, arrays, and Nones to tuples
+    """Convert ints, arrays, and Nones to tuples.
 
     Parameters
     ----------
@@ -208,7 +208,7 @@ def find_size(
 
 
 def rv_size_is_none(size: TensorVariable | Constant | None) -> bool:
-    """Check whether an rv size is None (i.e., NoneConst)"""
+    """Check whether an rv size is None (i.e., NoneConst)."""
     if size is None:
         return True
     return isinstance(size.type, NoneTypeT)
@@ -341,7 +341,7 @@ def get_support_shape(
     support_shape_offset: Sequence[int] | None = None,
     ndim_supp: int = 1,
 ) -> TensorVariable | None:
-    """Extract the support shapes from shape / dims / observed information
+    """Extract the support shapes from shape / dims / observed information.
 
     Parameters
     ----------

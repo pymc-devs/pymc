@@ -244,7 +244,7 @@ class TruncationCheck(CheckAndRaise):
 
 class Truncated(Distribution):
     r"""
-    Truncated distribution
+    Truncated distribution.
 
     The pdf of a Truncated distribution is
 
