@@ -65,10 +65,10 @@ def to_tuple(shape):
         returned. If it is array-like, tuple(shape) is returned.
     """
     if shape is None:
-        return tuple()
+        return ()
     temp = np.atleast_1d(shape)
     if temp.size == 0:
-        return tuple()
+        return ()
     else:
         return tuple(temp)
 

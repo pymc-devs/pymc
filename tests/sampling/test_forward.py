@@ -1332,10 +1332,10 @@ class TestSamplePriorPredictive:
             prior = pm.sample_prior_predictive(
                 draws=5,
                 return_inferencedata=False,
-                compile_kwargs=dict(
-                    mode=Mode("py"),
-                    updates={sharedvar: sharedvar + 1},
-                ),
+                compile_kwargs={
+                    "mode": Mode("py"),
+                    "updates": {sharedvar: sharedvar + 1},
+                },
             )
 
         assert np.all(prior["y"] == np.arange(5))
@@ -1380,10 +1380,10 @@ class TestSamplePosteriorPredictive:
                 trace=az_from_dict({"x": np.arange(5)}),
                 var_names=["y"],
                 return_inferencedata=False,
-                compile_kwargs=dict(
-                    mode=Mode("py"),
-                    updates={sharedvar: sharedvar + 1},
-                ),
+                compile_kwargs={
+                    "mode": Mode("py"),
+                    "updates": {sharedvar: sharedvar + 1},
+                },
             )
 
         assert np.all(pp["y"] == np.arange(5) * 2)
@@ -1467,8 +1467,8 @@ class TestNestedRandom:
     @pytest.mark.parametrize(
         ["prior_samples", "shape", "mu", "alpha"],
         [
-            [10, (3,), (None, tuple()), (None, (3,))],
-            [10, (3,), (None, (3,)), (None, tuple())],
+            [10, (3,), (None, ()), (None, (3,))],
+            [10, (3,), (None, (3,)), (None, ())],
             [
                 10,
                 (
@@ -1500,7 +1500,7 @@ class TestNestedRandom:
         prior = self.sample_prior(
             distribution=pm.NegativeBinomial,
             shape=shape,
-            nested_rvs_info=dict(mu=mu, alpha=alpha),
+            nested_rvs_info={"mu": mu, "alpha": alpha},
             prior_samples=prior_samples,
         )
         assert prior["target"].shape == (prior_samples, *shape)
@@ -1508,10 +1508,10 @@ class TestNestedRandom:
     @pytest.mark.parametrize(
         ["prior_samples", "shape", "psi", "mu", "alpha"],
         [
-            [10, (3,), (0.5, tuple()), (None, tuple()), (None, (3,))],
-            [10, (3,), (0.5, (3,)), (None, tuple()), (None, (3,))],
-            [10, (3,), (0.5, tuple()), (None, (3,)), (None, tuple())],
-            [10, (3,), (0.5, (3,)), (None, (3,)), (None, tuple())],
+            [10, (3,), (0.5, ()), (None, ()), (None, (3,))],
+            [10, (3,), (0.5, (3,)), (None, ()), (None, (3,))],
+            [10, (3,), (0.5, ()), (None, (3,)), (None, ())],
+            [10, (3,), (0.5, (3,)), (None, (3,)), (None, ())],
             [
                 10,
                 (
@@ -1546,7 +1546,7 @@ class TestNestedRandom:
         prior = self.sample_prior(
             distribution=pm.ZeroInflatedNegativeBinomial,
             shape=shape,
-            nested_rvs_info=dict(psi=psi, mu=mu, alpha=alpha),
+            nested_rvs_info={"psi": psi, "mu": mu, "alpha": alpha},
             prior_samples=prior_samples,
         )
         assert prior["target"].shape == (prior_samples, *shape)
@@ -1554,10 +1554,10 @@ class TestNestedRandom:
     @pytest.mark.parametrize(
         ["prior_samples", "shape", "nu", "sigma"],
         [
-            [10, (3,), (None, tuple()), (None, (3,))],
-            [10, (3,), (None, tuple()), (None, (3,))],
-            [10, (3,), (None, (3,)), (None, tuple())],
-            [10, (3,), (None, (3,)), (None, tuple())],
+            [10, (3,), (None, ()), (None, (3,))],
+            [10, (3,), (None, ()), (None, (3,))],
+            [10, (3,), (None, (3,)), (None, ())],
+            [10, (3,), (None, (3,)), (None, ())],
             [
                 10,
                 (
@@ -1589,7 +1589,7 @@ class TestNestedRandom:
         prior = self.sample_prior(
             distribution=pm.Rice,
             shape=shape,
-            nested_rvs_info=dict(nu=nu, sigma=sigma),
+            nested_rvs_info={"nu": nu, "sigma": sigma},
             prior_samples=prior_samples,
         )
         assert prior["target"].shape == (prior_samples, *shape)
@@ -1597,10 +1597,10 @@ class TestNestedRandom:
     @pytest.mark.parametrize(
         ["prior_samples", "shape", "mu", "sigma", "lower", "upper"],
         [
-            [10, (3,), (None, tuple()), (1.0, tuple()), (None, tuple(), -1), (None, (3,))],
-            [10, (3,), (None, tuple()), (1.0, tuple()), (None, tuple(), -1), (None, (3,))],
-            [10, (3,), (None, tuple()), (1.0, tuple()), (None, (3,), -1), (None, tuple())],
-            [10, (3,), (None, tuple()), (1.0, tuple()), (None, (3,), -1), (None, tuple())],
+            [10, (3,), (None, ()), (1.0, ()), (None, (), -1), (None, (3,))],
+            [10, (3,), (None, ()), (1.0, ()), (None, (), -1), (None, (3,))],
+            [10, (3,), (None, ()), (1.0, ()), (None, (3,), -1), (None, ())],
+            [10, (3,), (None, ()), (1.0, ()), (None, (3,), -1), (None, ())],
             [
                 10,
                 (
@@ -1608,7 +1608,7 @@ class TestNestedRandom:
                     3,
                 ),
                 (None, (3,)),
-                (1.0, tuple()),
+                (1.0, ()),
                 (None, (3,), -1),
                 (None, (3,)),
             ],
@@ -1619,21 +1619,21 @@ class TestNestedRandom:
                     3,
                 ),
                 (None, (3,)),
-                (1.0, tuple()),
+                (1.0, ()),
                 (None, (3,), -1),
                 (None, (4, 3)),
             ],
-            [10, (3,), (0.0, tuple()), (None, tuple()), (None, tuple(), -1), (None, (3,))],
-            [10, (3,), (0.0, tuple()), (None, tuple()), (None, tuple(), -1), (None, (3,))],
-            [10, (3,), (0.0, tuple()), (None, tuple()), (None, (3,), -1), (None, tuple())],
-            [10, (3,), (0.0, tuple()), (None, tuple()), (None, (3,), -1), (None, tuple())],
+            [10, (3,), (0.0, ()), (None, ()), (None, (), -1), (None, (3,))],
+            [10, (3,), (0.0, ()), (None, ()), (None, (), -1), (None, (3,))],
+            [10, (3,), (0.0, ()), (None, ()), (None, (3,), -1), (None, ())],
+            [10, (3,), (0.0, ()), (None, ()), (None, (3,), -1), (None, ())],
             [
                 10,
                 (
                     4,
                     3,
                 ),
-                (0.0, tuple()),
+                (0.0, ()),
                 (None, (3,)),
                 (None, (3,), -1),
                 (None, (3,)),
@@ -1644,7 +1644,7 @@ class TestNestedRandom:
                     4,
                     3,
                 ),
-                (0.0, tuple()),
+                (0.0, ()),
                 (None, (3,)),
                 (None, (3,), -1),
                 (None, (4, 3)),
@@ -1664,7 +1664,7 @@ class TestNestedRandom:
         prior = self.sample_prior(
             distribution=pm.TruncatedNormal,
             shape=shape,
-            nested_rvs_info=dict(mu=mu, sigma=sigma, lower=lower, upper=upper),
+            nested_rvs_info={"mu": mu, "sigma": sigma, "lower": lower, "upper": upper},
             prior_samples=prior_samples,
         )
         assert prior["target"].shape == (prior_samples, *shape)
@@ -1672,9 +1672,9 @@ class TestNestedRandom:
     @pytest.mark.parametrize(
         ["prior_samples", "shape", "c", "lower", "upper"],
         [
-            [10, (3,), (None, tuple()), (-1.0, (3,)), (2, tuple())],
-            [10, (3,), (None, tuple()), (-1.0, tuple()), (None, tuple(), 1)],
-            [10, (3,), (None, (3,)), (-1.0, tuple()), (None, tuple(), 1)],
+            [10, (3,), (None, ()), (-1.0, (3,)), (2, ())],
+            [10, (3,), (None, ()), (-1.0, ()), (None, (), 1)],
+            [10, (3,), (None, (3,)), (-1.0, ()), (None, (), 1)],
             [
                 10,
                 (
@@ -1682,7 +1682,7 @@ class TestNestedRandom:
                     3,
                 ),
                 (None, (3,)),
-                (-1.0, tuple()),
+                (-1.0, ()),
                 (None, (3,), 1),
             ],
             [
@@ -1692,7 +1692,7 @@ class TestNestedRandom:
                     3,
                 ),
                 (None, (3,)),
-                (None, tuple(), -1),
+                (None, (), -1),
                 (None, (3,), 1),
             ],
         ],
@@ -1709,7 +1709,7 @@ class TestNestedRandom:
         prior = self.sample_prior(
             distribution=pm.Triangular,
             shape=shape,
-            nested_rvs_info=dict(c=c, lower=lower, upper=upper),
+            nested_rvs_info={"c": c, "lower": lower, "upper": upper},
             prior_samples=prior_samples,
         )
         assert prior["target"].shape == (prior_samples, *shape)

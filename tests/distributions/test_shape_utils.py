@@ -40,21 +40,21 @@ from pymc.distributions.shape_utils import (
 from pymc.model import Model
 
 test_shapes = [
-    (tuple(), (1,), (4,), (5, 4)),
-    (tuple(), (1,), (7,), (5, 4)),
-    (tuple(), (1,), (1, 4), (5, 4)),
-    (tuple(), (1,), (5, 1), (5, 4)),
-    (tuple(), (1,), (3, 4), (5, 4)),
-    (tuple(), (1,), (5, 3), (5, 4)),
-    (tuple(), (1,), (10, 4), (5, 4)),
-    (tuple(), (1,), (10,), (5, 4)),
-    (tuple(), (1,), (1, 1, 4), (5, 4)),
-    (tuple(), (1,), (10, 1, 4), (5, 4)),
-    (tuple(), (1,), (10, 5, 4), (5, 4)),
+    ((), (1,), (4,), (5, 4)),
+    ((), (1,), (7,), (5, 4)),
+    ((), (1,), (1, 4), (5, 4)),
+    ((), (1,), (5, 1), (5, 4)),
+    ((), (1,), (3, 4), (5, 4)),
+    ((), (1,), (5, 3), (5, 4)),
+    ((), (1,), (10, 4), (5, 4)),
+    ((), (1,), (10,), (5, 4)),
+    ((), (1,), (1, 1, 4), (5, 4)),
+    ((), (1,), (10, 1, 4), (5, 4)),
+    ((), (1,), (10, 5, 4), (5, 4)),
 ]
 test_sizes = [
     None,
-    tuple(),
+    (),
     1,
     (1,),
     10,
@@ -66,7 +66,7 @@ test_sizes = [
     (5, 4),
     (1, 1, 1, 1),
 ]
-test_to_shapes = [None, tuple(), (10, 5, 4), (10, 1, 1, 5, 1)]
+test_to_shapes = [None, (), (10, 5, 4), (10, 1, 1, 5, 1)]
 
 
 @pytest.fixture(params=test_sizes, ids=str)
@@ -180,7 +180,7 @@ class TestSizeShapeDimsObserved:
             assert "ddata" in pmodel.dim_lengths
 
             # Size does not include support dims, so this test must use a dist with support dims.
-            kwargs = dict(name="y", size=(2, 3), mu=pt.ones((3, 4)), cov=pt.eye(4))
+            kwargs = {"name": "y", "size": (2, 3), "mu": pt.ones((3, 4)), "cov": pt.eye(4)}
             y = pm.MvNormal(**kwargs, dims=("dsize", "ddata", "dsupport"))
             assert pmodel.named_vars_to_dims["y"] == ("dsize", "ddata", "dsupport")
 
@@ -309,7 +309,7 @@ class TestSizeShapeDimsObserved:
     def test_lazy_flavors(self):
         assert pm.Uniform.dist(2, [4, 5], size=[3, 2]).eval().shape == (3, 2)
         assert pm.Uniform.dist(2, [4, 5], shape=[3, 2]).eval().shape == (3, 2)
-        with pm.Model(coords=dict(town=["Greifswald", "Madrid"])):
+        with pm.Model(coords={"town": ["Greifswald", "Madrid"]}):
             assert pm.Normal("n1", mu=[1, 2], dims="town").eval().shape == (2,)
             assert pm.Normal("n2", mu=[1, 2], dims=["town"]).eval().shape == (2,)
 
@@ -321,7 +321,7 @@ class TestSizeShapeDimsObserved:
         """Test that when setting size from dims we update the rng properly
         See https://github.com/pymc-devs/pymc/issues/5653
         """
-        with pm.Model(coords=dict(x_dim=range(2))):
+        with pm.Model(coords={"x_dim": range(2)}):
             x = pm.Normal("x", dims=("x_dim",))
 
         fn = pm.pytensorf.compile_pymc([], x)

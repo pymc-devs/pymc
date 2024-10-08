@@ -179,8 +179,8 @@ class TestStatsBijection:
         assert bij.n_samplers == 2
         w = Warning("hmm")
         stats_l = [
-            dict(a=1.5, b=3),
-            dict(a=2.5, c=w),
+            {"a": 1.5, "b": 3},
+            {"a": 2.5, "c": w},
         ]
         stats_d = bij.map(stats_l)
         assert isinstance(stats_d, dict)

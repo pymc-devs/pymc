@@ -59,8 +59,8 @@ def test_warn_treedepth_multiple_samplers():
 
 
 def test_log_warning_stats(caplog):
-    s1 = dict(warning="Temperature too low!")
-    s2 = dict(warning="Temperature too high!")
+    s1 = {"warning": "Temperature too low!"}
+    s2 = {"warning": "Temperature too high!"}
     stats = [s1, s2]
 
     with caplog.at_level(logging.WARNING):
@@ -78,7 +78,7 @@ def test_log_warning_stats_knows_SamplerWarning(caplog):
         "Not that interesting",
         "debug",
     )
-    stats = [dict(warning=warn)]
+    stats = [{"warning": warn}]
 
     with caplog.at_level(logging.DEBUG, logger="pymc"):
         convergence.log_warning_stats(stats)

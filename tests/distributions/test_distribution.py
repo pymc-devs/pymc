@@ -55,7 +55,7 @@ from pymc.util import _FutureWarningValidatingScratchpad
 
 
 class TestBugfixes:
-    @pytest.mark.parametrize("dist_cls,kwargs", [(MvNormal, dict()), (MvStudentT, dict(nu=2))])
+    @pytest.mark.parametrize("dist_cls,kwargs", [(MvNormal, {}), (MvStudentT, {"nu": 2})])
     @pytest.mark.parametrize("dims", [1, 2, 4])
     def test_issue_3051(self, dims, dist_cls, kwargs):
         mu = np.repeat(0, dims)

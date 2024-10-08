@@ -483,7 +483,7 @@ class TestMatchesScipy:
 
 
 # TODO: Is this test working as expected / still relevant?
-@pytest.mark.parametrize("shape", [tuple(), (1,), (3, 1), (3, 2)], ids=str)
+@pytest.mark.parametrize("shape", [(), (1,), (3, 1), (3, 2)], ids=str)
 def test_orderedlogistic_dimensions(shape):
     # Test for issue #3535
     loge = np.log10(np.exp(1))

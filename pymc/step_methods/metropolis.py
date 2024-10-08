@@ -245,7 +245,7 @@ class Metropolis(ArrayStepShared):
         self.accepted_sum = np.zeros(dims, dtype=int)
 
         # remember initial settings before tuning so they can be reset
-        self._untuned_settings = dict(scaling=self.scaling, steps_until_tune=tune_interval)
+        self._untuned_settings = {"scaling": self.scaling, "steps_until_tune": tune_interval}
 
         # TODO: This is not being used when compiling the logp function!
         self.mode = mode
@@ -1063,12 +1063,12 @@ class DEMetropolisZ(ArrayStepShared):
         # cache local history for the Z-proposals
         self._history: list[np.ndarray] = []
         # remember initial settings before tuning so they can be reset
-        self._untuned_settings = dict(
-            scaling=self.scaling,
-            lamb=self.lamb,
-            steps_until_tune=tune_interval,
-            accepted=self.accepted,
-        )
+        self._untuned_settings = {
+            "scaling": self.scaling,
+            "lamb": self.lamb,
+            "steps_until_tune": tune_interval,
+            "accepted": self.accepted,
+        }
 
         self.mode = mode
 

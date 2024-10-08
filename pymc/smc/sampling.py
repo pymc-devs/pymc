@@ -293,7 +293,7 @@ def _save_sample_stats(
             library=pymc,
         )
 
-        ikwargs: dict[str, Any] = dict(model=model)
+        ikwargs: dict[str, Any] = {"model": model}
         if idata_kwargs is not None:
             ikwargs.update(idata_kwargs)
         idata = to_inference_data(trace, **ikwargs)

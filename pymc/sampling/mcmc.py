@@ -947,7 +947,7 @@ def _sample_return(
 
     idata = None
     if compute_convergence_checks or return_inferencedata:
-        ikwargs: dict[str, Any] = dict(model=model, save_warmup=not discard_tuned_samples)
+        ikwargs: dict[str, Any] = {"model": model, "save_warmup": not discard_tuned_samples}
         ikwargs.update(idata_kwargs)
         idata = pm.to_inference_data(mtrace, **ikwargs)
 

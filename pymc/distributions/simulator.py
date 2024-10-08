@@ -241,18 +241,18 @@ class Simulator(Distribution):
         sim_op = type(
             class_name,
             (SimulatorRV,),
-            dict(
-                name=class_name,
-                ndim_supp=ndim_supp,
-                ndims_params=ndims_params,
-                signature=signature,
-                dtype=dtype,
-                inplace=False,
-                fn=fn,
-                _distance=distance,
-                _sum_stat=sum_stat,
-                epsilon=epsilon,
-            ),
+            {
+                "name": class_name,
+                "ndim_supp": ndim_supp,
+                "ndims_params": ndims_params,
+                "signature": signature,
+                "dtype": dtype,
+                "inplace": False,
+                "fn": fn,
+                "_distance": distance,
+                "_sum_stat": sum_stat,
+                "epsilon": epsilon,
+            },
         )()
         return sim_op(*params, **kwargs)
 

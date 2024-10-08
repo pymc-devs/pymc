@@ -162,17 +162,17 @@ class _CustomDist(Distribution):
         rv_type = type(
             class_name,
             (CustomDistRV,),
-            dict(
-                name=class_name,
-                inplace=False,
-                ndim_supp=ndim_supp,
-                ndims_params=ndims_params,
-                signature=signature,
-                dtype=dtype,
-                _print_name=(class_name, f"\\operatorname{{{class_name}}}"),
+            {
+                "name": class_name,
+                "inplace": False,
+                "ndim_supp": ndim_supp,
+                "ndims_params": ndims_params,
+                "signature": signature,
+                "dtype": dtype,
+                "_print_name": (class_name, f"\\operatorname{{{class_name}}}"),
                 # Specific to CustomDist
-                _random_fn=random,
-            ),
+                "_random_fn": random,
+            },
         )
 
         # Dispatch custom methods
@@ -278,10 +278,10 @@ class _CustomSymbolicDist(Distribution):
             class_name,
             (CustomSymbolicDistRV,),
             # If logp is not provided, we try to infer it from the dist graph
-            dict(
-                inline_logprob=logp is None,
-                _print_name=(class_name, f"\\operatorname{{{class_name}}}"),
-            ),
+            {
+                "inline_logprob": logp is None,
+                "_print_name": (class_name, f"\\operatorname{{{class_name}}}"),
+            },
         )
 
         # Dispatch custom methods

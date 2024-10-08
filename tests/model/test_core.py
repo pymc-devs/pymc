@@ -321,7 +321,7 @@ class TestValueGradFunction(unittest.TestCase):
     def setUp(self):
         extra1 = pt.iscalar("extra1")
         extra1_ = np.array(0, dtype=extra1.dtype)
-        extra1.dshape = tuple()
+        extra1.dshape = ()
         extra1.dsize = 1
 
         val1 = pt.vector("val1")
@@ -811,9 +811,9 @@ def test_datalogp_multiple_shapes():
 
 
 def test_nested_model_coords():
-    with pm.Model(name="m1", coords=dict(dim1=range(2))) as m1:
+    with pm.Model(name="m1", coords={"dim1": range(2)}) as m1:
         a = pm.Normal("a", dims="dim1")
-        with pm.Model(name="m2", coords=dict(dim2=range(4))) as m2:
+        with pm.Model(name="m2", coords={"dim2": range(4)}) as m2:
             b = pm.Normal("b", dims="dim1")
             m1.add_coord("dim3", range(4))
             c = pm.HalfNormal("c", dims="dim3")
@@ -837,7 +837,7 @@ class TestSetUpdateCoords:
             # Does not resize dim
             pmodel.set_data("m", [3, 4])
             # Resizes, but also passes new coords
-            pmodel.set_data("m", [1, 2, 3], coords=dict(dim_with_coords=[1, 2, 3]))
+            pmodel.set_data("m", [1, 2, 3], coords={"dim_with_coords": [1, 2, 3]})
 
             # Resizes, but does not pass new coords
             with pytest.raises(ValueError, match="'m' variable already had 3"):
@@ -971,12 +971,12 @@ class TestSetUpdateCoords:
         # Now the other way around.
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            pmodel.set_data("mdata", [1, 2, 3, 4], coords=dict(mdim=["A", "B", "C", "D"]))
+            pmodel.set_data("mdata", [1, 2, 3, 4], coords={"mdim": ["A", "B", "C", "D"]})
         assert pmodel.coords["mdim"] == ("A", "B", "C", "D")
 
         # This time with incorrectly sized coord values
         with pytest.raises(ShapeError, match="new coordinate values"):
-            pmodel.set_data("mdata", [1, 2], coords=dict(mdim=[1, 2, 3]))
+            pmodel.set_data("mdata", [1, 2], coords={"mdim": [1, 2, 3]})
 
     def test_set_data_warns_on_resize_of_dims_defined_by_other_data(self):
         with pm.Model() as pmodel:

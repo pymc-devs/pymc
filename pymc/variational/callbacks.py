@@ -36,9 +36,10 @@ def absolute(current: np.ndarray, prev: np.ndarray) -> np.ndarray:
     return np.abs(diff)
 
 
-_diff: dict[str, Callable[[np.ndarray, np.ndarray], np.ndarray]] = dict(
-    relative=relative, absolute=absolute
-)
+_diff: dict[str, Callable[[np.ndarray, np.ndarray], np.ndarray]] = {
+    "relative": relative,
+    "absolute": absolute,
+}
 
 
 class CheckParametersConvergence(Callback):
