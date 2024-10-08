@@ -555,9 +555,9 @@ class NormalMixture:
 
 
 def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):
-    """Helper function to create a zero-inflated mixture.
+    """Create a zero-inflated mixture (helper function).
 
-    If name is `None`, this function returns an unregistered variable
+    If name is `None`, this function returns an unregistered variable.
     """
     nonzero_p = pt.as_tensor_variable(nonzero_p)
     weights = pt.stack([1 - nonzero_p, nonzero_p], axis=-1)
@@ -799,7 +799,7 @@ class ZeroInflatedNegativeBinomial:
 
 
 def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, max_n_steps=10_000, **kwargs):
-    """Helper function to create a hurdle mixtures.
+    """Create a hurdle mixtures (helper function).
 
     If name is `None`, this function returns an unregistered variable
 

@@ -149,7 +149,7 @@ def convert_size(size: Size) -> StrongSize | None:
 
 
 def shape_from_dims(dims: StrongDims, model) -> StrongShape:
-    """Determines shape from a `dims` tuple.
+    """Determine shape from a `dims` tuple.
 
     Parameters
     ----------
@@ -178,7 +178,7 @@ def find_size(
     size: StrongSize | None,
     ndim_supp: int,
 ) -> StrongSize | None:
-    """Determines the size keyword argument for creating a Distribution.
+    """Determine the size keyword argument for creating a Distribution.
 
     Parameters
     ----------
@@ -436,7 +436,11 @@ def get_support_shape_1d(
     observed: Any | None = None,
     support_shape_offset: int = 0,
 ) -> TensorVariable | None:
-    """Helper function for cases when you just care about one dimension."""
+    """
+    Extract the support shapes from shape / dims / observed information.
+
+    Helper function for cases when you just care about one dimension.
+    """
     support_shape_tuple = get_support_shape(
         support_shape=(support_shape,) if support_shape is not None else None,
         shape=shape,

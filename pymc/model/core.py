@@ -989,7 +989,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         *,
         length: int | Variable | None = None,
     ):
-        """Registers a dimension coordinate with the model.
+        """Register a dimension coordinate with the model.
 
         Parameters
         ----------
@@ -1090,7 +1090,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return
 
     def initial_point(self, random_seed: SeedSequenceSeed = None) -> dict[str, np.ndarray]:
-        """Computes the initial point of the model.
+        """Compute the initial point of the model.
 
         Parameters
         ----------
@@ -1106,7 +1106,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return Point(fn(random_seed), model=self)
 
     def set_initval(self, rv_var, initval):
-        """Sets an initial value (strategy) for a random variable."""
+        """Set an initial value (strategy) for a random variable."""
         if initval is not None and not isinstance(initval, Variable | str):
             # Convert scalars or array-like inputs to ndarrays
             initval = rv_var.type.filter(initval)
@@ -1119,7 +1119,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         values: Sequence | np.ndarray,
         coords: dict[str, Sequence] | None = None,
     ):
-        """Changes the values of a data variable in the model.
+        """Change the values of a data variable in the model.
 
         In contrast to pm.Data().set_value, this method can also
         update the corresponding coordinates.
@@ -1552,7 +1552,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return name
 
     def name_for(self, name):
-        """Checks if name has prefix and adds if needed."""
+        """Check if name has prefix and adds if needed."""
         name = self._validate_name(name)
         if self.prefix:
             if not name.startswith(self.prefix + "::"):
@@ -1563,7 +1563,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             return name
 
     def name_of(self, name):
-        """Checks if name has prefix and deletes if needed."""
+        """Check if name has prefix and deletes if needed."""
         name = self._validate_name(name)
         if not self.prefix or not name:
             return name
@@ -1763,7 +1763,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         )
 
     def eval_rv_shapes(self) -> dict[str, tuple[int, ...]]:
-        """Evaluates shapes of untransformed AND transformed free variables.
+        """Evaluate shapes of untransformed AND transformed free variables.
 
         Returns
         -------
@@ -1841,7 +1841,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 )
 
     def point_logps(self, point=None, round_vals=2, **kwargs):
-        """Computes the log probability of `point` for all random variables in the model.
+        """Compute the log probability of `point` for all random variables in the model.
 
         Parameters
         ----------
@@ -2115,7 +2115,7 @@ def new_or_existing_block_model_access(*args, **kwargs):
 
 
 def set_data(new_data, model=None, *, coords=None):
-    """Sets the value of one or more data container variables.  Note that the shape is also
+    """Set the value of one or more data container variables.  Note that the shape is also
     dynamic, it is updated when the value is changed.  See the examples below for two common
     use-cases that take advantage of this behavior.
 

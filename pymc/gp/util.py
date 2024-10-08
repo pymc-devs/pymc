@@ -76,7 +76,7 @@ def replace_with_values(vars_needed, replacements=None, model=None):
 
 def stabilize(K, jitter=JITTER_DEFAULT):
     R"""
-    Adds small diagonal to a covariance matrix.
+    Add small diagonal to a covariance matrix.
 
     Often the matrices calculated from covariance functions, `K = cov_func(X)`
     do not appear numerically to be positive semi-definite.  Adding a small
@@ -131,7 +131,7 @@ def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
 
 
 def conditioned_vars(varnames):
-    """Decorator for validating attrs that are conditioned on."""
+    """Validate attrs that are conditioned on."""
 
     def gp_wrapper(cls):
         def make_getter(name):
@@ -174,7 +174,7 @@ def plot_gp_dist(
     fill_kwargs=None,
     samples_kwargs=None,
 ):
-    """A helper function for plotting 1D GP posteriors from trace.
+    """Plot 1D GP posteriors from trace.
 
     Parameters
     ----------

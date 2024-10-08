@@ -71,7 +71,7 @@ UNSET = _UnsetType()
 
 
 def withparent(meth):
-    """Helper wrapper that passes calls to parent's instance."""
+    """Pass calls to parent's instance."""
 
     def wrapped(self, *args, **kwargs):
         res = meth(self, *args, **kwargs)
@@ -217,7 +217,7 @@ def get_untransformed_name(name):
 
 
 def get_default_varnames(var_iterator, include_transformed):
-    r"""Helper to extract default varnames from a trace.
+    r"""Extract default varnames from a trace.
 
     Parameters
     ----------
@@ -267,7 +267,7 @@ def biwrap(wrapper):
 
 
 def drop_warning_stat(idata: arviz.InferenceData) -> arviz.InferenceData:
-    """Returns a new ``InferenceData`` object with the "warning" stat removed from sample stats groups.
+    """Return a new ``InferenceData`` object with the "warning" stat removed from sample stats groups.
 
     This function should be applied to an ``InferenceData`` object obtained with
     ``pm.sample(keep_warning_stat=True)`` before trying to ``.to_netcdf()`` or ``.to_zarr()`` it.
@@ -468,7 +468,7 @@ def _get_seeds_per_chain(
 
 
 def get_value_vars_from_user_vars(vars: Variable | Sequence[Variable], model) -> list[Variable]:
-    """Converts user "vars" input into value variables.
+    """Convert user "vars" input into value variables.
 
     More often than not, users will pass random variables, and we will extract the
     respective value variables, but we also allow for the input to already be value

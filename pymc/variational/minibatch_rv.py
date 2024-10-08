@@ -81,7 +81,7 @@ def create_minibatch_rv(
 
 
 def get_scaling(total_size: Sequence[Variable], shape: TensorVariable) -> TensorVariable:
-    """Gets scaling constant for logp."""
+    """Get scaling constant for logp."""
     # mypy doesn't understand we can convert a shape TensorVariable into a tuple
     shape = tuple(shape)  # type: ignore
 

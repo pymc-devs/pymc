@@ -114,7 +114,7 @@ class BaseCovariance:
         return Exponentiated(self, other)
 
     def __array_wrap__(self, result):
-        """Required to allow radd/rmul by numpy arrays."""
+        """Allow radd/rmul by numpy arrays."""
         result = np.squeeze(result)
         if len(result.shape) <= 1:
             result = result.reshape(1, 1)
@@ -234,7 +234,7 @@ class Combination(Covariance):
                 self._factor_list.append(factor)
 
     def _merge_factors_cov(self, X, Xs=None, diag=False):
-        """Called to evaluate either all the sums or all the
+        """Evaluate either all the sums or all the
         products of kernels that are possible to evaluate.
         """
         factor_list = []
@@ -264,12 +264,12 @@ class Combination(Covariance):
         return factor_list
 
     def _merge_factors_psd(self, omega):
-        """Called to evaluatate spectral densities of combination kernels when possible.
+        """Evaluate spectral densities of combination kernels when possible.
 
-        Implements
-        a more restricted set of rules than `_merge_factors_cov` -- just additivity of stationary
-        covariances with defined power spectral densities and multiplication by scalars.  Also, the
-        active_dims for all covariances in the sum must be the same.
+        Implements a more restricted set of rules than `_merge_factors_cov` --
+        just additivity of stationary covariances with defined power spectral
+        densities and multiplication by scalars.  Also, the active_dims for all
+        covariances in the sum must be the same.
         """
         factor_list = []
         for factor in self._factor_list:

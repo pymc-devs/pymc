@@ -254,7 +254,7 @@ class Metropolis(ArrayStepShared):
         super().__init__(vars, shared, rng=rng)
 
     def reset_tuning(self):
-        """Resets the tuned sampler parameters to their initial values."""
+        """Reset the tuned sampler parameters to their initial values."""
         for attr, initial_value in self._untuned_settings.items():
             setattr(self, attr, initial_value)
         self.accepted_sum[:] = 0
@@ -1076,7 +1076,7 @@ class DEMetropolisZ(ArrayStepShared):
         super().__init__(vars, shared, rng=rng)
 
     def reset_tuning(self):
-        """Resets the tuned sampler parameters and history to their initial values."""
+        """Reset the tuned sampler parameters and history to their initial values."""
         # history can't be reset via the _untuned_settings dict because it's a list
         self._history = []
         for attr, initial_value in self._untuned_settings.items():

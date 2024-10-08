@@ -62,7 +62,7 @@ def find_MAP(
     seed: int | None = None,
     **kwargs,
 ):
-    """Finds the local maximum a posteriori point given a model.
+    """Find the local maximum a posteriori point given a model.
 
     `find_MAP` should not be used to initialize the NUTS sampler. Simply call
     ``pymc.sample()`` and it will automatically initialize NUTS in a better

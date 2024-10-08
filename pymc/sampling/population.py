@@ -62,7 +62,7 @@ def _sample_population(
     traces: Sequence[BaseTrace],
     **kwargs,
 ):
-    """Performs sampling of a population of chains using the ``PopulationStepper``.
+    """Perform sampling of a population of chains using the ``PopulationStepper``.
 
     Parameters
     ----------
@@ -234,7 +234,7 @@ class PopulationStepper:
 
     @staticmethod
     def _run_secondary(c, stepper_dumps, secondary_end, task, progress):
-        """The method is started on a separate process to perform stepping of a chain.
+        """Perform stepping of a chain from a separate process.
 
         Parameters
         ----------

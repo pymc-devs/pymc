@@ -392,7 +392,7 @@ class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
         return collect_default_updates_inner_fgraph(node)
 
     def batch_ndim(self, node: Apply) -> int:
-        """Number of dimensions of the distribution's batch shape."""
+        """Return the number of dimensions of the distribution's batch shape."""
         out_ndim = max(getattr(out.type, "ndim", 0) for out in node.outputs)
         return out_ndim - self.ndim_supp
 
@@ -438,7 +438,7 @@ class Distribution(metaclass=DistributionMeta):
         default_transform=UNSET,
         **kwargs,
     ) -> TensorVariable:
-        """Adds a tensor variable corresponding to a PyMC distribution to the current model.
+        """Add a tensor variable corresponding to a PyMC distribution to the current model.
 
         Note that all remaining kwargs must be compatible with ``.dist()``
 
@@ -531,7 +531,7 @@ class Distribution(metaclass=DistributionMeta):
         shape: Shape | None = None,
         **kwargs,
     ) -> TensorVariable:
-        """Creates a tensor variable corresponding to the `cls` distribution.
+        """Create a tensor variable corresponding to the `cls` distribution.
 
         Parameters
         ----------
@@ -604,8 +604,7 @@ def _support_point(op, rv, *rv_inputs) -> TensorVariable:
 
 
 def support_point(rv: TensorVariable) -> TensorVariable:
-    """Method for choosing a representative point/value
-    that can be used to start optimization or MCMC sampling.
+    """Choose a representative point/value that can be used to start optimization or MCMC sampling.
 
     The only parameter to this function is the RandomVariable
     for which the value is to be derived.

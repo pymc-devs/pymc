@@ -76,7 +76,7 @@ def _logprob(
 
 
 def _logprob_helper(rv, *values, **kwargs):
-    """Helper that calls `_logprob` dispatcher."""
+    """Help call `_logprob` dispatcher."""
     logprob = _logprob(rv.owner.op, values, *rv.owner.inputs, **kwargs)
 
     name = rv.name
@@ -109,7 +109,7 @@ def _logcdf(
 
 
 def _logcdf_helper(rv, value, **kwargs):
-    """Helper that calls `_logcdf` dispatcher."""
+    """Help call `_logcdf` dispatcher."""
     logcdf = _logcdf(rv.owner.op, value, *rv.owner.inputs, name=rv.name, **kwargs)
 
     if rv.name:
@@ -134,7 +134,7 @@ def _icdf(
 
 
 def _icdf_helper(rv, value, **kwargs):
-    """Helper that calls `_icdf` dispatcher."""
+    """Help call `_icdf` dispatcher."""
     rv_icdf = _icdf(rv.owner.op, value, *rv.owner.inputs, **kwargs)
 
     if rv.name:

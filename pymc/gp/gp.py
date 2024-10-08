@@ -47,7 +47,7 @@ _noise_deprecation_warning = (
 
 
 def _handle_sigma_noise_parameters(sigma, noise):
-    """Helper function for transition of 'noise' parameter to be named 'sigma'."""
+    """Help transition of 'noise' parameter to be named 'sigma'."""
     if (sigma is None and noise is None) or (sigma is not None and noise is not None):
         raise ValueError("'sigma' argument must be specified.")
 
@@ -177,7 +177,7 @@ class Latent(Base):
 
     def prior(self, name, X, n_outputs=1, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs):
         R"""
-        Returns the GP prior distribution evaluated over the input
+        Return the GP prior distribution evaluated over the input
         locations `X`.
 
         This is the prior probability over the space
@@ -250,7 +250,7 @@ class Latent(Base):
 
     def conditional(self, name, Xnew, given=None, jitter=JITTER_DEFAULT, **kwargs):
         R"""
-        Returns the conditional distribution evaluated over new input
+        Return the conditional distribution evaluated over new input
         locations `Xnew`.
 
         Given a set of function values `f` that
@@ -350,7 +350,7 @@ class TP(Latent):
 
     def prior(self, name, X, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs):
         R"""
-        Returns the TP prior distribution evaluated over the input
+        Return the TP prior distribution evaluated over the input
         locations `X`.
 
         This is the prior probability over the space
@@ -394,7 +394,7 @@ class TP(Latent):
 
     def conditional(self, name, Xnew, jitter=JITTER_DEFAULT, **kwargs):
         R"""
-        Returns the conditional distribution evaluated over new input
+        Return the conditional distribution evaluated over new input
         locations `Xnew`.
 
         Given a set of function values `f` that
@@ -487,7 +487,7 @@ class Marginal(Base):
         **kwargs,
     ):
         R"""
-        Returns the marginal likelihood distribution, given the input
+        Return the marginal likelihood distribution, given the input
         locations `X` and the data `y`.
 
         This is the integral over the product of the GP prior and a normal likelihood.
@@ -594,7 +594,7 @@ class Marginal(Base):
         self, name, Xnew, pred_noise=False, given=None, jitter=JITTER_DEFAULT, **kwargs
     ):
         R"""
-        Returns the conditional distribution evaluated over new input
+        Return the conditional distribution evaluated over new input
         locations `Xnew`.
 
         Given a set of function values `f` that the GP prior was over, the
@@ -814,7 +814,7 @@ class MarginalApprox(Marginal):
         self, name, X, Xu, y, sigma=None, noise=None, jitter=JITTER_DEFAULT, **kwargs
     ):
         R"""
-        Returns the approximate marginal likelihood distribution, given the input
+        Return the approximate marginal likelihood distribution, given the input
         locations `X`, inducing point locations `Xu`, data `y`, and white noise
         standard deviations `sigma`.
 
@@ -906,7 +906,7 @@ class MarginalApprox(Marginal):
         self, name, Xnew, pred_noise=False, given=None, jitter=JITTER_DEFAULT, **kwargs
     ):
         R"""
-        Returns the approximate conditional distribution of the GP evaluated over
+        Return the approximate conditional distribution of the GP evaluated over
         new input locations `Xnew`.
 
         Parameters
@@ -1019,7 +1019,7 @@ class LatentKron(Base):
 
     def prior(self, name, Xs, jitter=JITTER_DEFAULT, **kwargs):
         """
-        Returns the prior distribution evaluated over the input
+        Return the prior distribution evaluated over the input
         locations `Xs`.
 
         Parameters
@@ -1065,7 +1065,7 @@ class LatentKron(Base):
 
     def conditional(self, name, Xnew, jitter=JITTER_DEFAULT, **kwargs):
         """
-        Returns the conditional distribution evaluated over new input
+        Return the conditional distribution evaluated over new input
         locations `Xnew`.
 
         `Xnew` will be split by columns and fed to the relevant
@@ -1188,7 +1188,7 @@ class MarginalKron(Base):
 
     def marginal_likelihood(self, name, Xs, y, sigma, is_observed=True, **kwargs):
         """
-        Returns the marginal likelihood distribution, given the input
+        Return the marginal likelihood distribution, given the input
         locations `cartesian(*Xs)` and the data `y`.
 
         Parameters
@@ -1267,7 +1267,7 @@ class MarginalKron(Base):
 
     def conditional(self, name, Xnew, pred_noise=False, diag=False, **kwargs):
         """
-        Returns the conditional distribution evaluated over new input
+        Return the conditional distribution evaluated over new input
         locations `Xnew`, just as in `Marginal`.
 
         `Xnew` will be split by columns and fed to the relevant

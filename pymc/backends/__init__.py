@@ -101,7 +101,7 @@ def _init_trace(
     model: Model,
     trace_vars: list[TensorVariable] | None = None,
 ) -> BaseTrace:
-    """Initializes a trace backend for a chain."""
+    """Initialize a trace backend for a chain."""
     strace: BaseTrace
     if trace is None:
         strace = NDArray(model=model, vars=trace_vars)
@@ -126,7 +126,7 @@ def init_traces(
     model: Model,
     trace_vars: list[TensorVariable] | None = None,
 ) -> tuple[RunType | None, Sequence[IBaseTrace]]:
-    """Initializes a trace recorder for each chain."""
+    """Initialize a trace recorder for each chain."""
     if HAS_MCB and isinstance(backend, Backend):
         return init_chain_adapters(
             backend=backend,

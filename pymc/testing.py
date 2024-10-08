@@ -226,7 +226,7 @@ Bool = Domain([0, 0, 1, 1], "int64")
 
 
 def select_by_precision(float64, float32):
-    """Helper function to choose reasonable decimal cutoffs for different floatX modes."""
+    """Choose reasonable decimal cutoffs for different floatX modes."""
     decimal = float64 if pytensor.config.floatX == "float64" else float32
     return decimal
 
@@ -314,10 +314,9 @@ def check_logp(
     skip_paramdomain_outside_edge_test: bool = False,
 ) -> None:
     """
-    Generic test for PyMC logp methods.
-
     Test PyMC logp and equivalent scipy logpmf/logpdf methods give similar
     results for valid values and parameters inside the supported edges.
+
     Edges are excluded by default, but can be artificially included by
     creating a domain with repeated values (e.g., `Domain([0, 0, .5, 1, 1]`)
 
@@ -424,7 +423,8 @@ def check_logcdf(
     skip_paramdomain_outside_edge_test: bool = False,
 ) -> None:
     """
-    Generic test for PyMC logcdf methods.
+    Test PyMC logcdf and equivalent scipy logcdf methods give similar
+    results for valid values and parameters inside the supported edges.
 
     The following tests are performed by default:
         1. Test PyMC logcdf and equivalent scipy logcdf methods give similar
@@ -539,7 +539,8 @@ def check_icdf(
     n_samples: int = 100,
 ) -> None:
     """
-    Generic test for PyMC icdf methods.
+    Test PyMC icdf and equivalent scipy icdf methods give similar
+    results for valid values and parameters inside the supported edges.
 
     The following tests are performed by default:
         1. Test PyMC icdf and equivalent scipy icdf (ppf) methods give similar

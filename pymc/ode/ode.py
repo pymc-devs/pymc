@@ -108,7 +108,9 @@ class DifferentialEquation(Op):
         self._output_sensitivities = {}
 
     def _system(self, Y, t, p):
-        r"""The function that will be passed to odeint. Solves both ODE and sensitivities.
+        r"""Solve both ODE and sensitivities.
+
+        This function will be passed to odeint.
 
         Parameters
         ----------

@@ -26,7 +26,7 @@ __all__ = ["find_hessian", "trace_cov", "guess_scaling"]
 
 def fixed_hessian(point, model=None):
     """
-    Returns a fixed Hessian for any chain location.
+    Return a fixed Hessian for any chain location.
 
     Parameters
     ----------
@@ -44,7 +44,7 @@ def fixed_hessian(point, model=None):
 
 def find_hessian(point, vars=None, model=None, negate_output=True):
     """
-    Returns Hessian of logp at the point passed.
+    Return Hessian of logp at the point passed.
 
     Parameters
     ----------
@@ -60,7 +60,7 @@ def find_hessian(point, vars=None, model=None, negate_output=True):
 
 def find_hessian_diag(point, vars=None, model=None, negate_output=True):
     """
-    Returns Hessian of logp at the point passed.
+    Return Hessian of logp at the point passed.
 
     Parameters
     ----------

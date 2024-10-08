@@ -142,7 +142,7 @@ def append_name(name):
 
 
 def node_property(f):
-    """A shortcut for wrapping method to accessible tensor."""
+    """Wrap method to accessible tensor."""
     if isinstance(f, str):
 
         def wrapper(fn):
@@ -514,8 +514,7 @@ class Operator:
 
 
 def collect_shared_to_list(params):
-    """Helper function for getting a list from
-    usable representation of parameters.
+    """Get a list from a usable representation of parameters.
 
     Parameters
     ----------
@@ -1130,21 +1129,21 @@ class Group(WithMemoization):
 
     @node_property
     def std(self) -> pt.TensorVariable:
-        """Standard deviation of the latent variables as an unstructured 1-dimensional tensor variable."""
+        """Return the standard deviation of the latent variables as an unstructured 1-dimensional tensor variable."""
         raise NotImplementedError()
 
     @node_property
     def cov(self) -> pt.TensorVariable:
-        """Covariance between the latent variables as an unstructured 2-dimensional tensor variable."""
+        """Return the covariance between the latent variables as an unstructured 2-dimensional tensor variable."""
         raise NotImplementedError()
 
     @node_property
     def mean(self) -> pt.TensorVariable:
-        """Mean of the latent variables as an unstructured 1-dimensional tensor variable."""
+        """Return the mean of the latent variables as an unstructured 1-dimensional tensor variable."""
         raise NotImplementedError()
 
     def var_to_data(self, shared: pt.TensorVariable) -> xarray.Dataset:
-        """Takes a flat 1-dimensional tensor variable and maps it to an xarray data set based on the information in
+        """Take a flat 1-dimensional tensor variable and maps it to an xarray data set based on the information in
         `self.ordering`.
         """
         # This is somewhat similar to `DictToArrayBijection.rmap`, which doesn't work here since we don't have
@@ -1466,7 +1465,7 @@ class Approximation(WithMemoization):
 
     @pytensor.config.change_flags(compute_test_value="off")
     def sample_node(self, node, size=None, deterministic=False, more_replacements=None):
-        """Samples given node or nodes over shared posterior.
+        """Sample given node or nodes over shared posterior.
 
         Parameters
         ----------

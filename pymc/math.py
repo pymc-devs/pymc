@@ -201,7 +201,7 @@ def kronecker(*Ks):
 
 
 def cartesian(*arrays):
-    """Makes the Cartesian product of arrays.
+    """Make the Cartesian product of arrays.
 
     Parameters
     ----------
@@ -264,7 +264,7 @@ def flat_outer(a, b):
 
 
 def kron_diag(*diags):
-    """Returns diagonal of a kronecker product.
+    """Return diagonal of a kronecker product.
 
     Parameters
     ----------

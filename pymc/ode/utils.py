@@ -19,6 +19,8 @@ import pytensor.tensor as pt
 
 def make_sens_ic(n_states, n_theta, floatX):
     r"""
+    Make initial condition for the sensitivity matrix.
+
     The sensitivity matrix will always have consistent form. (n_states, n_states + n_theta).
 
     If the first n_states entries of the parameters vector in the simulate call
@@ -58,7 +60,7 @@ def make_sens_ic(n_states, n_theta, floatX):
 
 def augment_system(ode_func, n_states, n_theta):
     """
-    Function to create augmented system.
+    Create augmented system.
 
     Take a function which specifies a set of differential equations and return
     a compiled function which allows for computation of gradients of the

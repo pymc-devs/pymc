@@ -252,7 +252,7 @@ class SMC_KERNEL(ABC):
         self.likelihood_logp = np.array(likelihoods).squeeze()
 
     def setup_kernel(self):
-        """Setup logic performed once before sampling starts."""
+        """Perform setup logic once before sampling starts."""
         pass
 
     def update_beta_and_weights(self):

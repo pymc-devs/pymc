@@ -93,8 +93,7 @@ def calc_basis_periodic(
 def approx_hsgp_hyperparams(
     x_range: list[float], lengthscale_range: list[float], cov_func: str
 ) -> tuple[int, float]:
-    """Utility function that uses heuristics to recommend minimum `m` and `c` values,
-    based on recommendations from Ruitort-Mayol et. al.
+    """Use heuristics to recommend minimum `m` and `c` values, based on recommendations from Ruitort-Mayol et. al.
 
     In practice, you need to choose `c` large enough to handle the largest lengthscales,
     and `m` large enough to accommodate the smallest lengthscales.  Use your prior on the
@@ -427,7 +426,7 @@ class HSGP(Base):
         **kwargs,
     ):  # type: ignore
         R"""
-        Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
+        Return the (approximate) GP prior distribution evaluated over the input locations `X`.
         For usage examples, refer to `pm.gp.Latent`.
 
         Parameters
@@ -490,7 +489,7 @@ class HSGP(Base):
 
     def conditional(self, name: str, Xnew: TensorLike, dims: str | None = None):  # type: ignore
         R"""
-        Returns the (approximate) conditional distribution evaluated over new input locations
+        Return the (approximate) conditional distribution evaluated over new input locations
         `Xnew`.
 
         Parameters
@@ -685,7 +684,7 @@ class HSGPPeriodic(Base):
 
     def prior(self, name: str, X: TensorLike, dims: str | None = None):  # type: ignore
         R"""
-        Returns the (approximate) GP prior distribution evaluated over the input locations `X`.
+        Return the (approximate) GP prior distribution evaluated over the input locations `X`.
         For usage examples, refer to `pm.gp.Latent`.
 
         Parameters
@@ -736,7 +735,7 @@ class HSGPPeriodic(Base):
 
     def conditional(self, name: str, Xnew: TensorLike, dims: str | None = None):  # type: ignore
         R"""
-        Returns the (approximate) conditional distribution evaluated over new input locations
+        Return the (approximate) conditional distribution evaluated over new input locations
         `Xnew`.
 
         Parameters
