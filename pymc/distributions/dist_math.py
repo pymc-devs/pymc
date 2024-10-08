@@ -172,16 +172,16 @@ def log_diff_normal_cdf(mu, sigma, x, y):
 
 
 def sigma2rho(sigma):
-    """
-    `sigma -> rho` PyTensor converter
+    """Convert `sigma` into `rho` with PyTensor.
+
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`.
     """
     return pt.log(pt.exp(pt.abs(sigma)) - 1.0)
 
 
 def rho2sigma(rho):
-    """
-    `rho -> sigma` PyTensor converter
+    """Convert `rho` to `sigma` with PyTensor.
+
     :math:`mu + sigma*e = mu + log(1+exp(rho))*e`.
     """
     return pt.softplus(rho)
@@ -193,8 +193,7 @@ sd2rho = sigma2rho
 
 def log_normal(x, mean, **kwargs):
     """
-    Calculate logarithm of normal distribution at point `x`
-    with given `mean` and `std`.
+    Calculate logarithm of normal distribution at point `x` with given `mean` and `std`.
 
     Parameters
     ----------

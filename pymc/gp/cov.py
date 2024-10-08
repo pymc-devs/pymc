@@ -148,8 +148,9 @@ class BaseCovariance:
 
 class Covariance(BaseCovariance):
     """
-    Base class for kernels/covariance functions with input_dim and active_dims, which excludes
-    kernels like `Constant` and `WhiteNoise`.
+    Base class for kernels/covariance functions with input_dim and active_dims.
+
+    This excludes kernels like `Constant` and `WhiteNoise`.
 
     Parameters
     ----------
@@ -173,9 +174,7 @@ class Covariance(BaseCovariance):
 
     @property
     def n_dims(self) -> int:
-        """The dimensionality of the input, as taken from the
-        `active_dims`.
-        """
+        """The dimensionality of the input, as taken from the `active_dims`."""
         # Evaluate lazily in case this changes.
         return len(self.active_dims)
 
@@ -234,9 +233,7 @@ class Combination(Covariance):
                 self._factor_list.append(factor)
 
     def _merge_factors_cov(self, X, Xs=None, diag=False):
-        """Evaluate either all the sums or all the
-        products of kernels that are possible to evaluate.
-        """
+        """Evaluate either all the sums or all the products of kernels that are possible to evaluate."""
         factor_list = []
         for factor in self._factor_list:
             # make sure diag=True is handled properly
@@ -560,8 +557,9 @@ class Stationary(Covariance):
 
 class ExpQuad(Stationary):
     r"""
-    The Exponentiated Quadratic kernel.  Also referred to as the Squared
-    Exponential, or Radial Basis Function kernel.
+    The Exponentiated Quadratic kernel.
+
+    Also referred to as the Squared Exponential, or Radial Basis Function kernel.
 
     .. math::
 
@@ -784,7 +782,8 @@ class Periodic(Stationary):
         return pt.exp(-0.5 * r2)
 
     def power_spectral_density_approx(self, J: TensorLike) -> TensorVariable:
-        r"""
+        r"""Power spectral density approximation.
+
         Technically, this is not a spectral density but these are the first `m` coefficients of
         the low rank approximation for the periodic kernel, which are used in the same way.
         `J` is a vector of `np.arange(m)`.
@@ -860,8 +859,7 @@ class Polynomial(Linear):
 
 class WarpedInput(Covariance):
     r"""
-    Warp the inputs of any kernel using an arbitrary function
-    defined using PyTensor.
+    Warp the inputs of any kernel using an arbitrary function defined using PyTensor.
 
     .. math::
        k(x, x') = k(w(x), w(x'))
@@ -972,8 +970,10 @@ class WrappedPeriodic(Covariance):
 
 class Gibbs(Covariance):
     r"""
-    The Gibbs kernel.  Use an arbitrary lengthscale function defined
-    using PyTensor.  Only tested in one dimension.
+    The Gibbs kernel.
+
+    Use an arbitrary lengthscale function defined using PyTensor.
+    Only tested in one dimension.
 
     .. math::
        k(x, x') = \sqrt{\frac{2\ell(x)\ell(x')}{\ell^2(x) + \ell^2(x')}}
@@ -1039,9 +1039,9 @@ class Gibbs(Covariance):
 
 class ScaledCov(Covariance):
     r"""
-    Construct a kernel by multiplying a base kernel with a scaling
-    function defined using PyTensor.  The scaling function is
-    non-negative, and can be parameterized.
+    Construct a kernel by multiplying a base kernel with a scaling function defined using PyTensor.
+
+    The scaling function is non-negative, and can be parameterized.
 
     .. math::
        k(x, x') = \phi(x) k_{\text{base}}(x, x') \phi(x')
@@ -1091,6 +1091,7 @@ class ScaledCov(Covariance):
 
 class Coregion(Covariance):
     r"""Covariance function for intrinsic/linear coregionalization models.
+
     Adapted from GPy http://gpy.readthedocs.io/en/deploy/GPy.kern.src.html#GPy.kern.src.coregionalize.Coregionalize.
 
     This covariance has the form:

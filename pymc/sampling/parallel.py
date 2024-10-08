@@ -82,6 +82,7 @@ def rebuild_exc(exc, tb):
 
 class _Process:
     """Separate process for each chain.
+
     We communicate with the main process using a pipe,
     and send finished samples using shared memory.
     """
@@ -277,9 +278,7 @@ class ProcessAdapter:
 
     @property
     def shared_point_view(self):
-        """May only be written to or read between a `recv_draw`
-        call from the process and a `write_next` or `abort` call.
-        """
+        """May only be written to or read between a `recv_draw` call from the process and a `write_next` or `abort` call."""
         if not self._readable:
             raise RuntimeError()
         return self._point

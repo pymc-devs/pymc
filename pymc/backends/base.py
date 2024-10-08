@@ -102,8 +102,12 @@ class IBaseTrace(ABC, Sized):
         raise NotImplementedError()
 
     def point(self, idx: int) -> dict[str, np.ndarray]:
-        """Return dictionary of point values at `idx` for current chain
-        with variables names as keys.
+        """Return point values at `idx` for current chain.
+
+        Returns
+        -------
+        values : dict[str, np.ndarray]
+            Dictionary of values with variable names as keys.
         """
         raise NotImplementedError()
 
@@ -568,9 +572,7 @@ class MultiTrace:
 
 
 def _squeeze_cat(results, combine: bool, squeeze: bool):
-    """Squeeze and concatenate the results depending on values of
-    `combine` and `squeeze`.
-    """
+    """Squeeze and/or concatenate the results."""
     if combine:
         results = np.concatenate(results)
         if not squeeze:

@@ -30,9 +30,7 @@ from pymc.pytensorf import StringType, find_rng_nodes, toposort_replace
 
 
 class ModelVar(Op):
-    """A dummy Op that describes the purpose of a Model variable and contains
-    meta-information as additional inputs (value and dims).
-    """
+    """A dummy Op that describes the purpose of a Model variable and contains meta-information as additional inputs (value and dims)."""
 
     def make_node(self, rv, *dims):
         assert isinstance(rv, Variable)

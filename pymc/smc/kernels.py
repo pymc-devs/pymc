@@ -364,6 +364,8 @@ class IMH(SMC_KERNEL):
 
     def __init__(self, *args, correlation_threshold=0.01, **kwargs):
         """
+        Create the Independent Metropolis-Hastings SMC kernel object.
+
         Parameters
         ----------
         correlation_threshold : float, default 0.01
@@ -470,6 +472,8 @@ class MH(SMC_KERNEL):
 
     def __init__(self, *args, correlation_threshold=0.01, **kwargs):
         """
+        Create a Metropolis-Hastings SMC kernel.
+
         Parameters
         ----------
         correlation_threshold : float, default 0.01
@@ -489,6 +493,7 @@ class MH(SMC_KERNEL):
 
     def setup_kernel(self):
         """Proposal dist is just a Multivariate Normal with unit identity covariance.
+
         Dimension specific scaling is provided by `self.proposal_scales` and set in `self.tune()`.
         """
         ndim = self.tempered_posterior.shape[1]

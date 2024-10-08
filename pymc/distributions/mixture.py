@@ -702,6 +702,7 @@ class ZeroInflatedBinomial:
 class ZeroInflatedNegativeBinomial:
     R"""
     Zero-Inflated Negative binomial log-likelihood.
+
     The Zero-inflated version of the Negative Binomial (NB).
     The NB distribution describes a Poisson random variable
     whose rate parameter is gamma distributed.

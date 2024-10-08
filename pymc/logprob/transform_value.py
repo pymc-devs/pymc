@@ -209,7 +209,8 @@ class TransformValuesRewrite(GraphRewriter):
         self,
         values_to_transforms: dict[TensorVariable, Transform | None],
     ):
-        """
+        """Create the rewriter.
+
         Parameters
         ----------
         values_to_transforms

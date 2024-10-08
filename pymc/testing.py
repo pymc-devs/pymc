@@ -314,8 +314,7 @@ def check_logp(
     skip_paramdomain_outside_edge_test: bool = False,
 ) -> None:
     """
-    Test PyMC logp and equivalent scipy logpmf/logpdf methods give similar
-    results for valid values and parameters inside the supported edges.
+    Test PyMC logp and equivalent scipy logpmf/logpdf methods give similar results for valid values and parameters inside the supported edges.
 
     Edges are excluded by default, but can be artificially included by
     creating a domain with repeated values (e.g., `Domain([0, 0, .5, 1, 1]`)
@@ -423,8 +422,7 @@ def check_logcdf(
     skip_paramdomain_outside_edge_test: bool = False,
 ) -> None:
     """
-    Test PyMC logcdf and equivalent scipy logcdf methods give similar
-    results for valid values and parameters inside the supported edges.
+    Test PyMC logcdf and equivalent scipy logcdf methods give similar results for valid values and parameters inside the supported edges.
 
     The following tests are performed by default:
         1. Test PyMC logcdf and equivalent scipy logcdf methods give similar
@@ -539,8 +537,7 @@ def check_icdf(
     n_samples: int = 100,
 ) -> None:
     """
-    Test PyMC icdf and equivalent scipy icdf methods give similar
-    results for valid values and parameters inside the supported edges.
+    Test PyMC icdf and equivalent scipy icdf methods give similar results for valid values and parameters inside the supported edges.
 
     The following tests are performed by default:
         1. Test PyMC icdf and equivalent scipy icdf (ppf) methods give similar
@@ -798,8 +795,9 @@ def discrete_random_tester(
 
 class BaseTestDistributionRandom:
     """
-    Base class for tests that new RandomVariables are correctly
-    implemented, and that the mapping of parameters between the PyMC
+    Base class for tests that new RandomVariables are correctly implemented.
+
+    Also checks that the mapping of parameters between the PyMC
     Distribution and the respective RandomVariable is correct.
 
     Three default tests are provided which check:

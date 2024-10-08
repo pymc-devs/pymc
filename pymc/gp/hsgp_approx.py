@@ -31,8 +31,10 @@ TensorLike = np.ndarray | pt.TensorVariable
 
 
 def set_boundary(X: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
-    """Set the boundary using `X` and `c`.  `X` can be centered around zero but doesn't have to be,
-    and `c` is usually a scalar multiplier greater than 1.0, but it may also be one value per
+    """Set the boundary using `X` and `c`.
+
+    `X` can be centered around zero but doesn't have to be, and `c` is usually
+    a scalar multiplier greater than 1.0, but it may also be one value per
     dimension or column of `X`.
     """
     # compute radius. Works whether X is 0-centered or not
@@ -56,8 +58,9 @@ def calc_eigenvectors(
     eigvals: TensorLike,
     m: Sequence[int],
 ):
-    """Calculate eigenvectors of the Laplacian. These are used as basis vectors in the HSGP
-    approximation.
+    """Calculate eigenvectors of the Laplacian.
+
+    These are used as basis vectors in the HSGP approximation.
     """
     m_star = int(np.prod(m))
 
@@ -79,6 +82,7 @@ def calc_basis_periodic(
 ):
     """
     Calculate basis vectors for the cosine series expansion of the periodic covariance function.
+
     These are derived from the Taylor series representation of the covariance.
     """
     w0 = (2 * np.pi) / period  # angular frequency defining the periodicity
@@ -323,14 +327,18 @@ class HSGP(Base):
         self._L = pt.as_tensor_variable(value)
 
     def prior_linearized(self, X: TensorLike):
-        """Linearized version of the HSGP.  Returns the Laplace eigenfunctions and the square root
+        """Linearized version of the HSGP.
+
+        Returns the Laplace eigenfunctions and the square root
         of the power spectral density needed to create the GP.
 
-        This function allows the user to bypass the GP interface and work with the basis
-        and coefficients directly.  This format allows the user to create predictions using
-        `pm.set_data` similarly to a linear model.  It also enables computational speed ups in
-        multi-GP models, since they may share the same basis.  The return values are the Laplace
-        eigenfunctions `phi`, and the square root of the power spectral density.
+        This function allows the user to bypass the GP interface and work with
+        the basis and coefficients directly.  This format allows the user to
+        create predictions using `pm.set_data` similarly to a linear model.  It
+        also enables computational speed ups in multi-GP models, since they may
+        share the same basis.  The return values are the Laplace eigenfunctions
+        `phi`, and the square root of the power spectral density.
+
         An example is given below.
 
         Parameters
@@ -427,6 +435,7 @@ class HSGP(Base):
     ):  # type: ignore
         R"""
         Return the (approximate) GP prior distribution evaluated over the input locations `X`.
+
         For usage examples, refer to `pm.gp.Latent`.
 
         Parameters
@@ -489,8 +498,7 @@ class HSGP(Base):
 
     def conditional(self, name: str, Xnew: TensorLike, dims: str | None = None):  # type: ignore
         R"""
-        Return the (approximate) conditional distribution evaluated over new input locations
-        `Xnew`.
+        Return the (approximate) conditional distribution evaluated over new input locations `Xnew`.
 
         Parameters
         ----------
@@ -599,16 +607,21 @@ class HSGPPeriodic(Base):
         super().__init__(mean_func=mean_func, cov_func=cov_func)
 
     def prior_linearized(self, X: TensorLike):
-        """Linearized version of the approximation. Returns the cosine and sine bases and coefficients
+        """Linearized version of the approximation.
+
+        Returns the cosine and sine bases and coefficients
         of the expansion needed to create the GP.
 
-        This function allows the user to bypass the GP interface and work directly with the basis
-        and coefficients directly.  This format allows the user to create predictions using
-        `pm.set_data` similarly to a linear model.  It also enables computational speed ups in
-        multi-GP models since they may share the same basis.
+        This function allows the user to bypass the GP interface and work
+        directly with the basis and coefficients directly.  This format allows
+        the user to create predictions using `pm.set_data` similarly to a linear
+        model.  It also enables computational speed ups in multi-GP models since
+        they may share the same basis.
 
-        Correct results when using `prior_linearized` in tandem with `pm.set_data` and
-        `pm.MutableData` require that the `Xs` are zero-centered, so it's mean must be subtracted.
+        Correct results when using `prior_linearized` in tandem with
+        `pm.set_data` and `pm.MutableData` require that the `Xs` are
+        zero-centered, so its mean must be subtracted.
+
         An example is given below.
 
         Parameters
@@ -685,6 +698,7 @@ class HSGPPeriodic(Base):
     def prior(self, name: str, X: TensorLike, dims: str | None = None):  # type: ignore
         R"""
         Return the (approximate) GP prior distribution evaluated over the input locations `X`.
+
         For usage examples, refer to `pm.gp.Latent`.
 
         Parameters
@@ -735,8 +749,7 @@ class HSGPPeriodic(Base):
 
     def conditional(self, name: str, Xnew: TensorLike, dims: str | None = None):  # type: ignore
         R"""
-        Return the (approximate) conditional distribution evaluated over new input locations
-        `Xnew`.
+        Return the (approximate) conditional distribution evaluated over new input locations `Xnew`.
 
         Parameters
         ----------

@@ -12,10 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""
-A collection of common shape operations needed for broadcasting
-samples from probability distributions for stochastic nodes in PyMC.
-"""
+"""Common shape operations to broadcast samples from probability distributions for stochastic nodes in PyMC."""
 
 import warnings
 

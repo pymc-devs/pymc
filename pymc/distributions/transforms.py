@@ -116,8 +116,9 @@ class Ordered(Transform):
 
 class SumTo1(Transform):
     """
-    Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to a K - 1 vector of values in [0,1]
-    This Transformation operates on the last dimension of the input tensor.
+    Transforms K - 1 dimensional simplex space (K values in [0, 1] that sum to 1) to a K - 1 vector of values in [0, 1].
+
+    This transformation operates on the last dimension of the input tensor.
     """
 
     name = "sumto1"
@@ -139,15 +140,12 @@ class SumTo1(Transform):
 
 
 class CholeskyCovPacked(Transform):
-    """
-    Transforms the diagonal elements of the LKJCholeskyCov distribution to be on the
-    log scale.
-    """
+    """Transforms the diagonal elements of the LKJCholeskyCov distribution to be on the log scale."""
 
     name = "cholesky-cov-packed"
 
     def __init__(self, n):
-        """
+        """Create a CholeskyCovPack object.
 
         Parameters
         ----------
@@ -180,8 +178,7 @@ for use in the ``transform`` argument of a random variable."""
 
 
 class Interval(IntervalTransform):
-    """Wrapper around  :class:`pymc.logprob.transforms.IntervalTransform` for use in the
-    ``transform`` argument of a random variable.
+    """Wrapper around  :class:`pymc.logprob.transforms.IntervalTransform` for use in the ``transform`` argument of a random variable.
 
     Parameters
     ----------

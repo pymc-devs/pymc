@@ -12,7 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-R"""
+R"""Operational Variational Inference.
+
 Variational inference is a great approach for doing really complex,
 often intractable Bayesian inference in approximate form. Common methods
 (e.g. ADVI) lack from complexity so that approximate posterior does not
@@ -219,8 +220,7 @@ class ObjectiveFunction:
         more_replacements=None,
         total_grad_norm_constraint=None,
     ):
-        """Calculate gradients for objective function, test function and then
-        constructs updates for optimization step.
+        """Construct updates for optimization step after calculating gradients.
 
         Parameters
         ----------
@@ -776,7 +776,8 @@ class Group(WithMemoization):
         return res
 
     def _check_user_params(self, **kwargs):
-        R"""*Dev* - checks user params, allocates them if they are correct, returns True.
+        R"""*Dev* - check user params, if correct allocate them and return True.
+
         If they are not present, returns False.
 
         Parameters
@@ -967,8 +968,7 @@ class Group(WithMemoization):
 
     @node_property
     def symbolic_random(self):
-        """*Dev* - abstract node that takes `self.symbolic_initial` and creates
-        approximate posterior that is parametrized with `self.params_dict`.
+        """*Dev* - abstract node that takes `self.symbolic_initial` and creates approximate posterior that is parametrized with `self.params_dict`.
 
         Implementation should take in account `self.batched`. If `self.batched` is `True`, then
         `self.symbolic_initial` is 3d tensor, else 2d
@@ -993,8 +993,7 @@ class Group(WithMemoization):
     def set_size_and_deterministic(
         self, node: Variable | list[Variable], s, d: bool, more_replacements: dict | None = None
     ) -> Variable | list[Variable]:
-        """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
-        :func:`symbolic_single_sample` new random generator can be allocated and applied to node.
+        """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or :func:`symbolic_single_sample` new random generator can be allocated and applied to node.
 
         Parameters
         ----------
@@ -1025,7 +1024,8 @@ class Group(WithMemoization):
         return graph_replace(node, self.replacements, strict=False)
 
     def symbolic_sample_over_posterior(self, node):
-        """*Dev* - performs sampling of node applying independent samples from posterior each time.
+        """*Dev* - perform sampling of node applying independent samples from posterior each time.
+
         Note that it is done symbolically and this node needs :func:`set_size_and_deterministic` call.
         """
         node = self.to_flat_input(node)
@@ -1042,7 +1042,8 @@ class Group(WithMemoization):
         return nodes
 
     def symbolic_single_sample(self, node):
-        """*Dev* - performs sampling of node applying single sample from posterior.
+        """*Dev* - perform sampling of node applying single sample from posterior.
+
         Note that it is done symbolically and this node needs
         :func:`set_size_and_deterministic` call with `size=1`.
         """
@@ -1051,8 +1052,7 @@ class Group(WithMemoization):
         return graph_replace(node, {self.input: random[0]}, strict=False)
 
     def make_size_and_deterministic_replacements(self, s, d, more_replacements=None):
-        """*Dev* - creates correct replacements for initial depending on
-        sample size and deterministic flag.
+        """*Dev* - create correct replacements for initial depending on sample size and deterministic flag.
 
         Parameters
         ----------
@@ -1098,10 +1098,7 @@ class Group(WithMemoization):
 
     @node_property
     def symbolic_logq_not_scaled(self):
-        """*Dev* - symbolically computed logq for `self.symbolic_random`
-        computations can be more efficient since all is known beforehand including
-        `self.symbolic_random`.
-        """
+        """*Dev* - symbolically computed logq for `self.symbolic_random` computations can be more efficient since all is known beforehand including `self.symbolic_random`."""
         raise NotImplementedError  # shape (s,)
 
     @node_property
@@ -1143,9 +1140,7 @@ class Group(WithMemoization):
         raise NotImplementedError()
 
     def var_to_data(self, shared: pt.TensorVariable) -> xarray.Dataset:
-        """Take a flat 1-dimensional tensor variable and maps it to an xarray data set based on the information in
-        `self.ordering`.
-        """
+        """Take a flat 1-dimensional tensor variable and maps it to an xarray data set based on the information in `self.ordering`."""
         # This is somewhat similar to `DictToArrayBijection.rmap`, which doesn't work here since we don't have
         # `RaveledVars` and need to take the information from `self.ordering` instead
         shared_nda = shared.eval()
@@ -1252,6 +1247,7 @@ class Approximation(WithMemoization):
     @node_property
     def symbolic_normalizing_constant(self):
         """*Dev* - normalizing constant for `self.logq`, scales it to `minibatch_size` instead of `total_size`.
+
         Here the effect is controlled by `self.scale_cost_to_minibatch`.
         """
         t = pt.max(
@@ -1326,23 +1322,17 @@ class Approximation(WithMemoization):
 
     @node_property
     def single_symbolic_varlogp(self):
-        """*Dev* - for single MC sample estimate of :math:`E_{q}(prior term)` `pytensor.scan`
-        is not needed and code can be optimized.
-        """
+        """*Dev* - for single MC sample estimate of :math:`E_{q}(prior term)` `pytensor.scan` is not needed and code can be optimized."""
         return self._single_symbolic_varlogp_and_datalogp[0]
 
     @node_property
     def single_symbolic_datalogp(self):
-        """*Dev* - for single MC sample estimate of :math:`E_{q}(data term)` `pytensor.scan`
-        is not needed and code can be optimized.
-        """
+        """*Dev* - for single MC sample estimate of :math:`E_{q}(data term)` `pytensor.scan` is not needed and code can be optimized."""
         return self._single_symbolic_varlogp_and_datalogp[1]
 
     @node_property
     def single_symbolic_logp(self):
-        """*Dev* - for single MC sample estimate of :math:`E_{q}(logP)` `pytensor.scan`
-        is not needed and code can be optimized.
-        """
+        """*Dev* - for single MC sample estimate of :math:`E_{q}(logP)` `pytensor.scan` is not needed and code can be optimized."""
         return self.single_symbolic_datalogp + self.single_symbolic_varlogp
 
     @node_property
@@ -1368,8 +1358,7 @@ class Approximation(WithMemoization):
         )
 
     def make_size_and_deterministic_replacements(self, s, d, more_replacements=None):
-        """*Dev* - creates correct replacements for initial depending on
-        sample size and deterministic flag.
+        """*Dev* - create correct replacements for initial depending on sample size and deterministic flag.
 
         Parameters
         ----------
@@ -1394,8 +1383,7 @@ class Approximation(WithMemoization):
 
     @pytensor.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(self, node, s, d, more_replacements=None):
-        """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or
-        :func:`symbolic_single_sample` new random generator can be allocated and applied to node.
+        """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or :func:`symbolic_single_sample` new random generator can be allocated and applied to node.
 
         Parameters
         ----------
@@ -1428,7 +1416,8 @@ class Approximation(WithMemoization):
         return graph_replace(node, self.replacements, strict=False)
 
     def symbolic_sample_over_posterior(self, node, more_replacements=None):
-        """*Dev* - performs sampling of node applying independent samples from posterior each time.
+        """*Dev* - perform sampling of node applying independent samples from posterior each time.
+
         Note that it is done symbolically and this node needs :func:`set_size_and_deterministic` call.
         """
         node = self.to_flat_input(node)
@@ -1443,7 +1432,8 @@ class Approximation(WithMemoization):
         return nodes
 
     def symbolic_single_sample(self, node, more_replacements=None):
-        """*Dev* - performs sampling of node applying single sample from posterior.
+        """*Dev* - perform sampling of node applying single sample from posterior.
+
         Note that it is done symbolically and this node needs
         :func:`set_size_and_deterministic` call with `size=1`.
         """
@@ -1453,8 +1443,10 @@ class Approximation(WithMemoization):
         return graph_replace(node, dict(zip(inp, post)), strict=False)
 
     def get_optimization_replacements(self, s, d):
-        """*Dev* - optimizations for logP. If sample size is static and equal to 1:
-        then `pytensor.scan` MC estimate is replaced with single sample without call to `pytensor.scan`.
+        """*Dev* - optimizations for logP.
+
+        If sample size is static and equal to 1, then `pytensor.scan` MC
+        estimate is replaced with single sample without call to `pytensor.scan`.
         """
         repl = collections.OrderedDict()
         # avoid scan if size is constant and equal to one
@@ -1500,6 +1492,7 @@ class Approximation(WithMemoization):
 
     def rslice(self, name):
         """*Dev* - vectorized sampling for named random variable without call to `pytensor.scan`.
+
         This node still needs :func:`set_size_and_deterministic` to be evaluated.
         """
 

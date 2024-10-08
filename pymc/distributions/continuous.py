@@ -14,10 +14,7 @@
 
 # Contains code from AePPL, Copyright (c) 2021-2022, Aesara Developers.
 
-"""
-A collection of common probability distributions for stochastic
-nodes in PyMC.
-"""
+"""A collection of common probability distributions for stochastic nodes in PyMC."""
 
 import warnings
 
@@ -371,10 +368,7 @@ flat = FlatRV()
 
 
 class Flat(Continuous):
-    """
-    Uninformative log-likelihood that returns 0 regardless of
-    the passed value.
-    """
+    """Uninformative log-likelihood that returns 0 regardless of the passed value."""
 
     rv_op = flat
 
@@ -3767,8 +3761,7 @@ interpolated = InterpolatedRV()
 
 class Interpolated(BoundedContinuous):
     r"""
-    Univariate probability distribution defined as a linear interpolation
-    of probability density function evaluated on some lattice of points.
+    Univariate linear interpolation of pdf evaluated on some lattice of points.
 
     The lattice can be uneven, so the steps between different points can have
     different size and it is possible to vary the precision between regions

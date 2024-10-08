@@ -87,9 +87,9 @@ class GenTensorVariable(TensorVariable):
 
 
 class GeneratorAdapter:
-    """
-    Helper class that helps to infer data type of generator with looking
-    at the first item, preserving the order of the resulting generator.
+    """Class that helps infer data type of generator.
+
+    It looks at the first item, preserving the order of the resulting generator.
     """
 
     def make_variable(self, gop, name=None):
