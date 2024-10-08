@@ -221,7 +221,7 @@ def log_normal(x, mean, **kwargs):
     rho = kwargs.get("rho")
     tau = kwargs.get("tau")
     eps = kwargs.get("eps", 0.0)
-    check = sum(map(lambda a: a is not None, [sigma, w, rho, tau]))
+    check = sum(a is not None for a in [sigma, w, rho, tau])
     if check > 1:
         raise ValueError("more than one required kwarg is passed")
     if check == 0:
