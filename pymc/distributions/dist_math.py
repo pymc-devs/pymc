@@ -236,7 +236,7 @@ def log_normal(x, mean, **kwargs):
 
 
 class SplineWrapper(Op):
-    """Creates an PyTensor operation from scipy.interpolate.UnivariateSpline."""
+    """Creates a PyTensor operation from scipy.interpolate.UnivariateSpline."""
 
     __props__ = ("spline",)
 

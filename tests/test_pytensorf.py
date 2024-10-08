@@ -277,7 +277,7 @@ def test_convert_generator_data(input_dtype):
         result = convert_generator_data(square_generator)
     apply = result.owner
     op = apply.op
-    # Make sure the returned object is an PyTensor TensorVariable
+    # Make sure the returned object is a PyTensor TensorVariable
     assert isinstance(result, TensorVariable)
     assert isinstance(op, GeneratorOp), f"It's a {type(apply)}"
     # There are no inputs - because it generates...

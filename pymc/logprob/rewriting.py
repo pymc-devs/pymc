@@ -199,7 +199,7 @@ def construct_ir_fgraph(
     A custom IR rewriter can be specified. By default,
     `logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"]))` is used.
 
-    Our measurable IR takes the form of an PyTensor graph that is more-or-less
+    Our measurable IR takes the form of a PyTensor graph that is more-or-less
     equivalent to a given PyTensor graph (i.e. the keys of `rv_values`) but
     contains `Op`s that are subclasses of the `MeasurableOp` type in
     place of ones that do not inherit from `MeasurableOp` in the original

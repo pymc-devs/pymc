@@ -216,7 +216,7 @@ def modelcontext(model: Optional["Model"]) -> "Model":
 
 
 class ValueGradFunction:
-    """Create an PyTensor function that computes a value and its gradient.
+    """Create a PyTensor function that computes a value and its gradient.
 
     Parameters
     ----------
@@ -593,7 +593,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self.parent is None
 
     def logp_dlogp_function(self, grad_vars=None, tempered=False, **kwargs):
-        """Compile an PyTensor function that computes logp and gradient.
+        """Compile a PyTensor function that computes logp and gradient.
 
         Parameters
         ----------
@@ -1660,7 +1660,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         point_fn: bool = True,
         **kwargs,
     ) -> PointFunc | Function:
-        """Compiles an PyTensor function.
+        """Compiles a PyTensor function.
 
         Parameters
         ----------
@@ -2177,7 +2177,7 @@ def compile_fn(
     model: Model | None = None,
     **kwargs,
 ) -> PointFunc | Function:
-    """Compiles an PyTensor function.
+    """Compiles a PyTensor function.
 
     Parameters
     ----------
