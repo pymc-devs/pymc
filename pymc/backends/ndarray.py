@@ -184,8 +184,12 @@ class NDArray(base.BaseTrace):
         return sliced
 
     def point(self, idx) -> dict[str, Any]:
-        """Return dictionary of point values at `idx` for current chain
-        with variable names as keys.
+        """Return point values at `idx` for current chain.
+
+        Returns
+        -------
+        values : dict[str, Any]
+            Dictionary of values with variable names as keys.
         """
         idx = int(idx)
         return {varname: values[idx] for varname, values in self.samples.items()}

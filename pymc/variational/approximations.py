@@ -40,10 +40,12 @@ __all__ = ["MeanField", "FullRank", "Empirical", "sample_approx"]
 
 @Group.register
 class MeanFieldGroup(Group):
-    R"""Mean Field approximation to the posterior where spherical Gaussian family
-    is fitted to minimize KL divergence from True posterior. It is assumed
-    that latent space variables are uncorrelated that is the main drawback
-    of the method.
+    """Mean Field approximation to the posterior.
+
+    Spherical Gaussian family is fitted to minimize KL divergence from posterior.
+
+    It is assumed that latent space variables are uncorrelated that is the main
+    drawback of the method.
     """
 
     __param_spec__ = {"mu": ("d",), "rho": ("d",)}
@@ -116,10 +118,12 @@ class MeanFieldGroup(Group):
 
 @Group.register
 class FullRankGroup(Group):
-    """Full Rank approximation to the posterior where Multivariate Gaussian family
-    is fitted to minimize KL divergence from True posterior. In contrast to
-    MeanField approach correlations between variables are taken in account. The
-    main drawback of the method is computational cost.
+    """Full Rank approximation to the posterior.
+
+    Multivariate Gaussian family is fitted to minimize KL divergence from posterior.
+
+    In contrast to MeanField approach, correlations between variables are taken
+    into account. The main drawback of the method is its computational cost.
     """
 
     __param_spec__ = {"mu": ("d",), "L_tril": ("int(d * (d + 1) / 2)",)}
@@ -188,8 +192,9 @@ class FullRankGroup(Group):
 
 @Group.register
 class EmpiricalGroup(Group):
-    """Builds Approximation instance from a given trace,
-    it has the same interface as variational approximation.
+    """Builds Approximation instance from a given trace.
+
+    It has the same interface as variational approximation.
     """
 
     has_logq = False

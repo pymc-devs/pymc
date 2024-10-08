@@ -279,8 +279,7 @@ class MvNormal(Continuous):
 
     def logp(value, mu, cov):
         """
-        Calculate log-probability of Multivariate Normal distribution
-        at specified value.
+        Calculate logp of Multivariate Normal distribution at specified value.
 
         Parameters
         ----------
@@ -469,8 +468,7 @@ class MvStudentT(Continuous):
 
     def logp(value, nu, mu, scale):
         """
-        Calculate log-probability of Multivariate Student's T distribution
-        at specified value.
+        Calculate logp of Multivariate Student's T distribution at specified value.
 
         Parameters
         ----------
@@ -535,8 +533,7 @@ class Dirichlet(SimplexContinuous):
 
     def logp(value, a):
         """
-        Calculate log-probability of Dirichlet distribution
-        at specified value.
+        Calculate logp of Dirichlet distribution at specified value.
 
         Parameters
         ----------
@@ -642,8 +639,7 @@ class Multinomial(Discrete):
 
     def logp(value, n, p):
         """
-        Calculate log-probability of Multinomial distribution
-        at specified value.
+        Calculate logp of Multinomial distribution at specified value.
 
         Parameters
         ----------
@@ -736,8 +732,7 @@ class DirichletMultinomial(Discrete):
 
     def logp(value, n, a):
         """
-        Calculate log-probability of DirichletMultinomial distribution
-        at specified value.
+        Calculate logp of DirichletMultinomial distribution at specified value.
 
         Parameters
         ----------
@@ -773,6 +768,7 @@ class DirichletMultinomial(Discrete):
 class _OrderedMultinomial(Multinomial):
     r"""
     Underlying class for ordered multinomial distributions.
+
     See docs for the OrderedMultinomial wrapper class for more details on how to use it in models.
     """
 
@@ -1013,8 +1009,7 @@ class Wishart(Continuous):
 
     def logp(X, nu, V):
         """
-        Calculate log-probability of Wishart distribution
-        at specified value.
+        Calculate logp of Wishart distribution at specified value.
 
         Parameters
         ----------
@@ -1047,9 +1042,10 @@ class Wishart(Continuous):
 
 def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initval=None):
     r"""
-    Bartlett decomposition of the Wishart distribution. As the Wishart
-    distribution requires the matrix to be symmetric positive semi-definite
-    it is impossible for MCMC to ever propose acceptable matrices.
+    Bartlett decomposition of the Wishart distribution.
+
+    As the Wishart distribution requires the matrix to be symmetric positive
+    semi-definite, it is impossible for MCMC to ever propose acceptable matrices.
 
     Instead, we can use the Barlett decomposition which samples a lower
     diagonal matrix. Specifically:
@@ -1248,6 +1244,7 @@ class _LKJCholeskyCovRV(SymbolicRandomVariable):
 
 class _LKJCholeskyCov(Distribution):
     r"""Underlying class for covariance matrix with LKJ distributed correlations.
+
     See docs for LKJCholeskyCov function for more details on how to use it in models.
     """
 
@@ -1599,8 +1596,7 @@ class _LKJCorr(BoundedContinuous):
 
     def logp(value, n, eta):
         """
-        Calculate log-probability of LKJ distribution at specified
-        value.
+        Calculate logp of LKJ distribution at specified value.
 
         Parameters
         ----------
@@ -1900,8 +1896,7 @@ class MatrixNormal(Continuous):
 
     def logp(value, mu, rowchol, colchol):
         """
-        Calculate log-probability of Matrix-valued Normal distribution
-        at specified value.
+        Calculate logp of Matrix-valued Normal distribution at specified value.
 
         Parameters
         ----------
@@ -2083,8 +2078,7 @@ class KroneckerNormal(Continuous):
 
     def logp(value, rng, size, mu, sigma, *covs):
         """
-        Calculate log-probability of Multivariate Normal distribution
-        with Kronecker-structured covariance at specified value.
+        Calculate logp of Multivariate Normal distribution with Kronecker-structured covariance at specified value.
 
         Parameters
         ----------
@@ -2209,8 +2203,10 @@ car = CARRV()
 
 class CAR(Continuous):
     r"""
-    Likelihood for a conditional autoregression. This is a special case of the
-    multivariate normal with an adjacency-structured covariance matrix.
+    Likelihood for a conditional autoregression.
+
+    This is a special case of the multivariate normal with an
+    adjacency-structured covariance matrix.
 
     .. math::
 
@@ -2271,8 +2267,9 @@ class CAR(Continuous):
 
     def logp(value, mu, W, alpha, tau, W_is_valid):
         """
-        Calculate log-probability of a CAR-distributed vector
-        at specified value. This log probability function differs from
+        Calculate logp of a CAR-distributed vector at specified value.
+
+        This log probability function differs from
         the true CAR log density (AKA a multivariate normal with CAR-structured
         covariance matrix) by an additive constant.
 
@@ -2356,9 +2353,10 @@ icar = ICARRV()
 
 class ICAR(Continuous):
     r"""
-    The intrinsic conditional autoregressive prior. It is primarily used to model
-    covariance between neighboring areas. It is a special case
-    of the :class:`~pymc.CAR` distribution where alpha is set to 1.
+    The intrinsic conditional autoregressive prior.
+
+    It is primarily used to model covariance between neighboring areas. It is a
+    special case of the :class:`~pymc.CAR` distribution where alpha is set to 1.
 
     The log probability density function is
 
@@ -2541,7 +2539,9 @@ stickbreakingweights = StickBreakingWeightsRV()
 
 class StickBreakingWeights(SimplexContinuous):
     r"""
-    Likelihood of truncated stick-breaking weights. The weights are generated from a
+    Likelihood of truncated stick-breaking weights.
+
+    The weights are generated from a
     stick-breaking proceduce where :math:`x_k = v_k \prod_{\ell < k} (1 - v_\ell)` for
     :math:`k \in \{1, \ldots, K\}` and :math:`x_K = \prod_{\ell = 1}^{K} (1 - v_\ell) = 1 - \sum_{\ell=1}^K x_\ell`
     with :math:`v_k \stackrel{\text{i.i.d.}}{\sim} \text{Beta}(1, \alpha)`.
@@ -2605,8 +2605,7 @@ class StickBreakingWeights(SimplexContinuous):
 
     def logp(value, alpha, K):
         """
-        Calculate log-probability of the distribution induced from the stick-breaking process
-        at specified value.
+        Calculate logp of the distribution induced from the stick-breaking process at specified value.
 
         Parameters
         ----------
@@ -2688,8 +2687,8 @@ class ZeroSumNormalRV(SymbolicRandomVariable):
 
 class ZeroSumNormal(Distribution):
     r"""
-    ZeroSumNormal distribution, i.e Normal distribution where one or
-    several axes are constrained to sum to zero.
+    Normal distribution where one or several axes are constrained to sum to zero.
+
     By default, the last axis is constrained to sum to zero.
     See `n_zerosum_axes` kwarg for more details.
 

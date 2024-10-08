@@ -31,6 +31,7 @@ JITTER_DEFAULT = 1e-6
 def replace_with_values(vars_needed, replacements=None, model=None):
     R"""
     Replace random variable nodes in the graph with values given by the replacements dict.
+
     Uses untransformed versions of the inputs, performs some basic input validation.
 
     Parameters
@@ -94,8 +95,7 @@ def stabilize(K, jitter=JITTER_DEFAULT):
 
 def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
     R"""
-    Use the K-means algorithm to initialize the locations `X` for the inducing
-    points `fu`.
+    Use the K-means algorithm to initialize the locations `X` for the inducing points `fu`.
 
     Parameters
     ----------

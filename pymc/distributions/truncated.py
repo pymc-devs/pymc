@@ -51,10 +51,7 @@ from pymc.util import check_dist_not_registered
 
 
 class TruncatedRV(SymbolicRandomVariable):
-    """
-    An `Op` constructed from an PyTensor graph
-    that represents a truncated univariate random variable.
-    """
+    """An `Op` constructed from an PyTensor graph that represents a truncated univariate random variable."""
 
     default_output: int = 0
     base_rv_op: Op
@@ -232,6 +229,7 @@ def _truncated(op: Op, lower, upper, size, *params):
 
 class TruncationCheck(CheckAndRaise):
     """Implements a check in truncated graphs.
+
     Raises `TruncationError` if the check is not True.
     """
 

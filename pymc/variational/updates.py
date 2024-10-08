@@ -541,6 +541,7 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
 
 def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon=0.1, n_win=10):
     """Return a function that returns parameter updates.
+
     Instead of accumulated estimate, uses running window.
 
     Parameters

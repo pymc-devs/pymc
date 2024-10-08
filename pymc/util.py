@@ -87,8 +87,8 @@ def withparent(meth):
 
 
 class treelist(list):
-    """A list that passes mutable extending operations used in Model
-    to parent list instance.
+    """A list that passes mutable extending operations used in Model to parent list instance.
+
     Extending treelist you will also extend its parent.
     """
 
@@ -135,8 +135,8 @@ class treelist(list):
 
 
 class treedict(dict):
-    """A dict that passes mutable extending operations used in Model
-    to parent dict instance.
+    """A dict that passes mutable extending operations used in Model to parent dict instance.
+
     Extending treedict you will also extend its parent.
     """
 
@@ -301,7 +301,8 @@ def chains_and_samples(data: xarray.Dataset | arviz.InferenceData) -> tuple[int,
 
 def hashable(a=None) -> int:
     """
-    Hashes many kinds of objects, including some that are unhashable through the builtin `hash` function.
+    Hash many kinds of objects, including some that are unhashable through the builtin `hash` function.
+
     Lists and tuples are hashed based on their elements.
     """
     if isinstance(a, dict):
@@ -395,8 +396,10 @@ def check_dist_not_registered(dist, model=None):
 
 
 def point_wrapper(core_function):
-    """Wrap an pytensor compiled function to be able to ingest point dictionaries whilst
-    ignoring the keys that are not valid inputs to the core function.
+    """
+    Wrap a pytensor compiled function to ingest point dictionaries.
+
+    It ignores the keys that are not valid inputs to the core function.
     """
     ins = [i.name for i in core_function.maker.fgraph.inputs if not isinstance(i, SharedVariable)]
 

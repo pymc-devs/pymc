@@ -234,9 +234,7 @@ class CompoundStepState(DataClassState):
 
 
 class CompoundStep(WithSamplingState):
-    """Step method composed of a list of several other step
-    methods applied in sequence.
-    """
+    """Step method composed of a list of several other step methods applied in sequence."""
 
     _state_class = CompoundStepState
 

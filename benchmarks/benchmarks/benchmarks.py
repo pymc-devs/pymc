@@ -77,10 +77,7 @@ def mixture_model(random_seed=1234):
 
 
 class OverheadSuite:
-    """
-    Just tests how long sampling from a normal distribution takes for various
-    samplers.
-    """
+    """Test how long sampling from a normal distribution takes for various samplers."""
 
     params = [pm.NUTS, pm.HamiltonianMC, pm.Metropolis, pm.Slice]
     timer = timeit.default_timer

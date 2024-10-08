@@ -63,8 +63,7 @@ class SimulatorRV(RandomVariable):
 
 class Simulator(Distribution):
     r"""
-    Simulator distribution, used for Approximate Bayesian Inference (ABC)
-    with Sequential Monte Carlo (SMC) sampling via :func:`~pymc.sample_smc`.
+    Used for Approximate Bayesian Inference with SMC sampling via :func:`~pymc.sample_smc`.
 
     Simulator distributions have a stochastic pseudo-loglikelihood defined by
     a distance metric between the observed and simulated data, and tweaked

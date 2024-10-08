@@ -323,8 +323,9 @@ class Metropolis(ArrayStepShared):
 
 def tune(scale, acc_rate):
     """
-    Tunes the scaling parameter for the proposal distribution
-    according to the acceptance rate over the last tune_interval.
+    Tune the scaling parameter for the proposal distribution.
+
+    Uses the acceptance rate over the last tune_interval.
 
     Rate    Variance adaptation
     ----    -------------------
@@ -456,10 +457,7 @@ class BinaryMetropolis(ArrayStep):
 
     @staticmethod
     def competence(var):
-        """
-        BinaryMetropolis is only suitable for binary (bool)
-        and Categorical variables with k=1.
-        """
+        """BinaryMetropolis is only suitable for binary (bool) and Categorical variables with k=1."""
         distribution = getattr(var.owner, "op", None)
 
         if isinstance(distribution, BernoulliRV):
@@ -578,10 +576,7 @@ class BinaryGibbsMetropolis(ArrayStep):
 
     @staticmethod
     def competence(var):
-        """
-        BinaryMetropolis is only suitable for Bernoulli
-        and Categorical variables with k=2.
-        """
+        """BinaryMetropolis is only suitable for Bernoulli and Categorical variables with k=2."""
         distribution = getattr(var.owner, "op", None)
 
         if isinstance(distribution, BernoulliRV):
@@ -755,10 +750,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
     @staticmethod
     def competence(var):
-        """
-        CategoricalGibbsMetropolis is only suitable for Bernoulli and
-        Categorical variables.
-        """
+        """CategoricalGibbsMetropolis is only suitable for Bernoulli and Categorical variables."""
         distribution = getattr(var.owner, "op", None)
 
         if isinstance(distribution, CategoricalRV):
@@ -1135,8 +1127,9 @@ class DEMetropolisZ(ArrayStepShared):
         return RaveledVars(q_new, point_map_info), [stats]
 
     def stop_tuning(self):
-        """At the end of the tuning phase, this method removes the first x% of the history
-        so future proposals are not informed by unconverged tuning iterations.
+        """Remove the first x% of the history at the end of the tuning phase.
+
+        This is so future proposals are not informed by unconverged tuning iterations.
         """
         it = len(self._history)
         n_drop = int(self.tune_drop_fraction * it)

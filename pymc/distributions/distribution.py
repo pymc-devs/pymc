@@ -193,8 +193,9 @@ class DistributionMeta(ABCMeta):
 
 
 class _class_or_instancemethod(classmethod):
-    """Allow a method to be called both as a classmethod and an instancemethod,
-    giving priority to the instancemethod.
+    """Allow a method to be called both as a classmethod and an instancemethod.
+
+    Priority is given to the instancemethod.
 
     This is used to allow extracting information from the signature of a SymbolicRandomVariable
     which may be provided either as a class attribute or as an instance attribute.
@@ -580,10 +581,7 @@ class Distribution(metaclass=DistributionMeta):
 
 @node_rewriter([SymbolicRandomVariable])
 def inline_symbolic_random_variable(fgraph, node):
-    """
-    Optimization that expands the internal graph of a SymbolicRV when obtaining the logp
-    graph, if the flag `inline_logprob` is True.
-    """
+    """Expand a SymbolicRV when obtaining the logp graph if `inline_logprob` is True."""
     op = node.op
     if op.inline_logprob:
         return clone_replace(op.inner_outputs, dict(zip(op.inner_inputs, node.inputs)))

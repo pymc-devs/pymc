@@ -136,8 +136,9 @@ class Transform(abc.ABC):
     def backward(
         self, value: TensorVariable, *inputs: Variable
     ) -> TensorVariable | tuple[TensorVariable, ...]:
-        """Invert the transformation. Multiple values may be returned when the
-        transformation is not 1-to-1.
+        """Invert the transformation.
+
+        Multiple values may be returned when the transformation is not 1-to-1.
         """
 
     def log_jac_det(self, value: TensorVariable, *inputs) -> TensorVariable:
@@ -847,7 +848,7 @@ class IntervalTransform(Transform):
     name = "interval"
 
     def __init__(self, args_fn: Callable[..., tuple[Variable | None, Variable | None]]):
-        """
+        """Create the IntervalTransform object.
 
         Parameters
         ----------

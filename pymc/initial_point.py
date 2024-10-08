@@ -35,7 +35,9 @@ PointType = dict[str, np.ndarray]
 def convert_str_to_rv_dict(
     model, start: StartDict
 ) -> dict[TensorVariable, np.ndarray | Variable | str | None]:
-    """Convert a user-provided start dict with str keys of (transformed) variable names
+    """Convert a user-provided start dict to an untransformed RV start dict.
+
+    Converts a dict of str keys of (transformed) variable names
     to a dict mapping the RV tensors to untransformed initvals.
 
     TODO: Deprecate this functionality and only accept TensorVariables as keys.

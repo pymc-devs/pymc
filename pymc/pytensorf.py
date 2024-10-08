@@ -470,8 +470,7 @@ def join_nonshared_inputs(
     make_inputs_shared: bool = False,
 ) -> tuple[list[TensorVariable], TensorVariable]:
     """
-    Create new outputs and input TensorVariables where the non-shared inputs are joined
-    in a single raveled vector input.
+    Create new outputs and input TensorVariables where the non-shared inputs are joined in a single raveled vector input.
 
     Parameters
     ----------
@@ -634,9 +633,7 @@ class PointFunc:
 
 
 class CallableTensor:
-    """Turns a symbolic variable with one input into a function that returns symbolic arguments
-    with the one variable replaced with the input.
-    """
+    """Turns a symbolic variable with one input into a function that returns symbolic arguments with the one variable replaced with the input."""
 
     def __init__(self, tensor):
         self.tensor = tensor
@@ -1087,9 +1084,7 @@ def constant_fold(
 
 
 def rewrite_pregrad(graph):
-    """Apply simplifying or stabilizing rewrites to graph that are safe to use
-    pre-grad.
-    """
+    """Apply simplifying or stabilizing rewrites to graph that are safe to use pre-grad."""
     return rewrite_graph(graph, include=("canonicalize", "stabilize"))
 
 

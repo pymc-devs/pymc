@@ -95,8 +95,7 @@ def conda_package_to_pip(package):
 
 def main(conda_fname, pip_fname):
     """
-    Generate the pip dependencies file from the conda file, or compare that
-    they are synchronized (``compare=True``).
+    Generate the pip dependencies file from the conda file.
 
     Parameters
     ----------
@@ -104,10 +103,6 @@ def main(conda_fname, pip_fname):
         Path to the conda file with dependencies (e.g. `environment.yml`).
     pip_fname : str
         Path to the pip file with dependencies (e.g. `requirements-dev.txt`).
-    compare : bool, default False
-        Whether to generate the pip file (``False``) or to compare if the
-        pip file has been generated with this script and the last version
-        of the conda file (``True``).
 
     Returns
     -------

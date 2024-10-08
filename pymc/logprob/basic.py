@@ -414,8 +414,7 @@ def conditional_logp(
     extra_rewrites: GraphRewriter | NodeRewriter | None = None,
     **kwargs,
 ) -> dict[TensorVariable, TensorVariable]:
-    r"""Create a map between variables and conditional log-probabilities
-    such that the sum is their joint log-probability.
+    r"""Create a map between variables and conditional logps such that the sum is their joint logp.
 
     The `rv_values` dictionary specifies a joint probability graph defined by
     pairs of random variables and respective measure-space input parameters

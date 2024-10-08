@@ -75,8 +75,10 @@ class ArrayStep(BlockedStep):
 
 
 class ArrayStepShared(BlockedStep):
-    """Faster version of ArrayStep that requires the substep method that does not wrap
-       the functions the step method uses.
+    """Faster version of ArrayStep.
+
+    It requires the substep method that does not wrap the functions the step
+    method uses.
 
     Works by setting shared variables before using the step. This eliminates the mapping
     and unmapping overhead as well as moving fewer variables around.
@@ -84,6 +86,8 @@ class ArrayStepShared(BlockedStep):
 
     def __init__(self, vars, shared, blocked=True, rng: RandomGenerator = None):
         """
+        Create the ArrayStepShared object.
+
         Parameters
         ----------
         vars: list of sampling value variables
@@ -122,14 +126,15 @@ class ArrayStepShared(BlockedStep):
 
 
 class PopulationArrayStepShared(ArrayStepShared):
-    """Version of ArrayStepShared that allows samplers to access the states
-    of other chains in the population.
+    """Version of ArrayStepShared that allows samplers to access the states of other chains in the population.
 
     Works by linking a list of Points that is updated as the chains are iterated.
     """
 
     def __init__(self, vars, shared, blocked=True, rng: RandomGenerator = None):
         """
+        Create the PopulationArrayStepShared object.
+
         Parameters
         ----------
         vars: list of sampling value variables

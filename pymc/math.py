@@ -184,8 +184,9 @@ __all__ = [
 
 
 def kronecker(*Ks):
-    r"""Return the Kronecker product of arguments:
-          :math:`K_1 \otimes K_2 \otimes ... \otimes K_D`.
+    r"""Return the Kronecker product of arguments.
+
+    math:`K_1 \otimes K_2 \otimes ... \otimes K_D`
 
     Parameters
     ----------
@@ -330,6 +331,7 @@ def log1mexp(x, *, negative_input=False):
 
 def log1mexp_numpy(x, *, negative_input=False):
     """Return log(1 - exp(x)).
+
     This function is numerically more stable than the naive approach.
 
     For details, see
@@ -364,9 +366,9 @@ def flatten_list(tensors):
 
 
 class LogDet(Op):
-    r"""Compute the logarithm of the absolute determinant of a square
-    matrix M, log(abs(det(M))) on the CPU. Avoids det(M) overflow/
-    underflow.
+    r"""Compute the logarithm of the absolute determinant of a square matrix M, log(abs(det(M))) on the CPU.
+
+    Avoids det(M) overflow/underflow.
 
     Notes
     -----
@@ -508,8 +510,7 @@ def batched_diag(C):
 
 
 def block_diagonal(matrices, sparse=False, format="csr"):
-    r"""See pt.slinalg.block_diag or
-    pytensor.sparse.basic.block_diag for reference.
+    r"""See pt.slinalg.block_diag or pytensor.sparse.basic.block_diag for reference.
 
     Parameters
     ----------
