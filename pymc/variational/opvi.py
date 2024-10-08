@@ -526,11 +526,11 @@ def collect_shared_to_list(params):
     List
     """
     if isinstance(params, dict):
-        return list(
+        return [
             t[1]
             for t in sorted(params.items(), key=lambda t: t[0])
             if isinstance(t[1], pytensor.compile.SharedVariable)
-        )
+        ]
     elif params is None:
         return []
     else:

@@ -151,8 +151,7 @@ class TestReplaceRVsByValues:
         res_ancestors = list(ancestors((res,)))
 
         assert (
-            len(list(n for n in res_ancestors if n.owner and isinstance(n.owner.op, MeasurableOp)))
-            == 1
+            len([n for n in res_ancestors if n.owner and isinstance(n.owner.op, MeasurableOp)]) == 1
         )
 
         assert c_value_var in res_ancestors
