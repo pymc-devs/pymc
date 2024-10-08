@@ -546,11 +546,11 @@ class TestCompilePyMC:
         collect_default_updates(inputs=[], outputs=[x, y, z]) == {rng: next_rng3}
 
         fn = compile_pymc([], [x, y, z], random_seed=514)
-        assert not set(list(np.array(fn()))) & set(list(np.array(fn())))
+        assert not set(np.array(fn())) & set(np.array(fn()))
 
         # A local myopic rule (as PyMC used before, would not work properly)
         fn = pytensor.function([], [x, y, z], updates={rng: next_rng1})
-        assert set(list(np.array(fn()))) & set(list(np.array(fn())))
+        assert set(np.array(fn())) & set(np.array(fn()))
 
     def test_collect_default_updates_must_be_shared(self):
         shared_rng = pytensor.shared(np.random.default_rng())
