@@ -199,9 +199,7 @@ def find_constrained_prior(
         )
 
     # save optimal parameters
-    opt_params = {
-        param_name: param_value for param_name, param_value in zip(init_guess.keys(), opt.x)
-    }
+    opt_params = dict(zip(init_guess.keys(), opt.x))
     if fixed_params is not None:
         opt_params.update(fixed_params)
     return opt_params

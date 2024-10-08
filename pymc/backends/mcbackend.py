@@ -114,7 +114,7 @@ class ChainRecordAdapter(IBaseTrace):
 
     def record(self, draw: Mapping[str, np.ndarray], stats: Sequence[Mapping[str, Any]]):
         values = self._point_fn(draw)
-        value_dict = {n: v for n, v in zip(self.varnames, values)}
+        value_dict = dict(zip(self.varnames, values))
         stats_dict = self._statsbj.map(stats)
         # Apply pickling to objects stats
         for fname in self._statsbj.object_stats.keys():

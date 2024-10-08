@@ -356,7 +356,7 @@ class SMC_KERNEL(ABC):
                     var_samples = np.round(var_samples).astype(var.dtype)
                 value.append(var_samples.reshape(shape))
                 size += new_size
-            strace.record(point={k: v for k, v in zip(varnames, value)})
+            strace.record(point=dict(zip(varnames, value)))
         return strace
 
 

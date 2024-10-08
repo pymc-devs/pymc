@@ -1529,7 +1529,7 @@ class Approximation(WithMemoization):
                 reseed_rngs(rng_nodes, random_seed)
             _samples = sample_fn(draws)
 
-            return {v_: s_ for v_, s_ in zip(names, _samples)}
+            return dict(zip(names, _samples))
 
         return inner
 

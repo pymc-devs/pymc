@@ -112,7 +112,7 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
         axis=axis,
     )
 
-    base_rvs_to_split_values = {base_rv: value for base_rv, value in zip(base_rvs, split_values)}
+    base_rvs_to_split_values = dict(zip(base_rvs, split_values))
     logps = [
         _logprob_helper(base_var, split_value)
         for base_var, split_value in base_rvs_to_split_values.items()

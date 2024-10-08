@@ -238,7 +238,7 @@ def construct_ir_fgraph(
     # Replace valued RVs by ValuedVar Ops so that rewrites are aware of conditioning points
     # We use clones of the value variables so that they are not affected by rewrites
     cloned_values = tuple(v.clone() for v in rv_values.values())
-    ir_rv_values = {rv: value for rv, value in zip(fgraph.outputs, cloned_values)}
+    ir_rv_values = dict(zip(fgraph.outputs, cloned_values))
 
     replacements = tuple((rv, valued_rv(rv, value)) for rv, value in ir_rv_values.items())
     toposort_replace(fgraph, replacements, reverse=True)
