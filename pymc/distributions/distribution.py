@@ -122,8 +122,6 @@ class DistributionMeta(ABCMeta):
                     )
 
             class_change_dist_size = clsdict.get("change_dist_size")
-            if class_change_dist_size is not None:
-                raise ValueError("HAHAHA")
             if class_change_dist_size:
 
                 @_change_dist_size.register(rv_type)
