@@ -510,9 +510,9 @@ class CustomDist:
         A callable that calculates the log probability of some given ``value``
         conditioned on certain distribution parameter values. It must have the
         following signature: ``logp(value, *dist_params)``, where ``value`` is
-        an PyTensor tensor that represents the distribution value, and ``dist_params``
+        a PyTensor tensor that represents the distribution value, and ``dist_params``
         are the tensors that hold the values of the distribution parameters.
-        This function must return an PyTensor tensor.
+        This function must return a PyTensor tensor.
 
         When the `dist` function is specified, PyMC will try to automatically
         infer the `logp` when this is not provided.
@@ -523,9 +523,9 @@ class CustomDist:
         A callable that calculates the log cumulative log probability of some given
         ``value`` conditioned on certain distribution parameter values. It must have the
         following signature: ``logcdf(value, *dist_params)``, where ``value`` is
-        an PyTensor tensor that represents the distribution value, and ``dist_params``
+        a PyTensor tensor that represents the distribution value, and ``dist_params``
         are the tensors that hold the values of the distribution parameters.
-        This function must return an PyTensor tensor. If ``None``, a ``NotImplementedError``
+        This function must return a PyTensor tensor. If ``None``, a ``NotImplementedError``
         will be raised when trying to compute the distribution's logcdf.
     support_point : Optional[Callable]
         A callable that can be used to compute the finete logp point of the distribution.
@@ -550,7 +550,7 @@ class CustomDist:
         When specified, `ndim_supp` and `ndims_params` are not needed. See examples below.
     dtype : str
         The dtype of the distribution. All draws and observations passed into the
-        distribution will be cast onto this dtype. This is not needed if an PyTensor
+        distribution will be cast onto this dtype. This is not needed if a PyTensor
         dist function is provided, which should already return the right dtype!
     class_name : str
         Name for the class which will wrap the CustomDist methods. When not specified,

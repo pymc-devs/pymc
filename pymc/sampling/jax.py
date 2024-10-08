@@ -122,7 +122,7 @@ def get_jaxified_graph(
     inputs: list[TensorVariable] | None = None,
     outputs: list[TensorVariable] | None = None,
 ) -> list[TensorVariable]:
-    """Compile an PyTensor graph into an optimized JAX function."""
+    """Compile a PyTensor graph into an optimized JAX function."""
     graph = _replace_shared_variables(outputs) if outputs is not None else None
 
     fgraph = FunctionGraph(inputs=inputs, outputs=graph, clone=True)

@@ -34,7 +34,7 @@ $$
 z \sim \text{Normal}(0, 5)
 $$
 
-A call to a {class}`~pymc.Distribution` constructor as shown above returns an PyTensor {class}`~pytensor.tensor.TensorVariable`, which is a symbolic representation of the model variable and the graph of inputs it depends on.
+A call to a {class}`~pymc.Distribution` constructor as shown above returns a PyTensor {class}`~pytensor.tensor.TensorVariable`, which is a symbolic representation of the model variable and the graph of inputs it depends on.
 Under the hood, the variables are created through the {meth}`~pymc.Distribution.dist` API, which calls the {class}`~pytensor.tensor.random.basic.RandomVariable` {class}`~pytensor.graph.op.Op` corresponding to the distribution.
 
 At a high level of abstraction, the idea behind ``RandomVariable`` ``Op``s is to create symbolic variables (``TensorVariable``s) that can be associated with the properties of a probability distribution.
@@ -134,7 +134,7 @@ model_logp                                       # ==> -6.6973152
 
 ## Behind the scenes of the ``logp`` function
 
-The ``logp`` function is straightforward - it is an PyTensor function within each distribution.
+The ``logp`` function is straightforward - it is a PyTensor function within each distribution.
 It has the following signature:
 
 :::{warning}
@@ -277,7 +277,7 @@ as for ``FreeRV`` and ``ObservedRV``, they are ``TensorVariable``\s with
 
 ``Factor`` basically `enable and assign the
 logp <https://github.com/pymc-devs/pymc/blob/6d07591962a6c135640a3c31903eba66b34e71d8/pymc/model.py#L195-L276>`__
-(represented as a tensor also) property to an PyTensor tensor (thus
+(represented as a tensor also) property to a PyTensor tensor (thus
 making it a random variable). For a ``TransformedRV``, it transforms the
 distribution into a ``TransformedDistribution``, and then ``model.Var`` is
 called again to added the RV associated with the
@@ -373,7 +373,7 @@ def logpt(self):
         return logp
 ```
 
-which returns an PyTensor tensor that its value depends on the free parameters in the model (i.e., its parent nodes from the PyTensor graph).
+which returns a PyTensor tensor that its value depends on the free parameters in the model (i.e., its parent nodes from the PyTensor graph).
 You can evaluate or compile into a python callable (that you can pass numpy as input args).
 Note that the logp tensor depends on its input in the PyTensor graph, thus you cannot pass new tensor to generate a logp function.
 For similar reason, in PyMC we do graph copying a lot using pytensor.clone_replace to replace the inputs to a tensor.
@@ -561,7 +561,7 @@ Moreover, transition kernels in TFP do not flatten the tensors, see eg docstring
 We love NUTS, or to be more precise Dynamic HMC with complex stopping rules.
 This part is actually all done outside of PyTensor, for NUTS, it includes:
 The leapfrog, dual averaging, tuning of mass matrix and step size, the tree building, sampler related statistics like divergence and energy checking.
-We actually have an PyTensor version of HMC, but it has never been used, and has been removed from the main repository.
+We actually have a PyTensor version of HMC, but it has never been used, and has been removed from the main repository.
 It can still be found in the [git history](https://github.com/pymc-devs/pymc/pull/3734/commits/0fdae8207fd14f66635f3673ef267b2b8817aa68), though.
 
 #### Variational Inference (VI)

@@ -277,7 +277,7 @@ def cont_inputs(a):
 
 
 def floatX(X):
-    """Convert an PyTensor tensor or numpy array to pytensor.config.floatX type."""
+    """Convert a PyTensor tensor or numpy array to pytensor.config.floatX type."""
     try:
         return X.astype(pytensor.config.floatX)
     except AttributeError:
