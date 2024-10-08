@@ -506,7 +506,7 @@ def split_valued_ifelse(fgraph, node):
     replacements = {first_valued_out: first_valued_ifelse}
 
     if remaining_vars:
-        first_ifelse_ancestors = set(a for a in ancestors((first_then, first_else)) if a.owner)
+        first_ifelse_ancestors = {a for a in ancestors((first_then, first_else)) if a.owner}
         remaining_thens = [then_out for (then_out, _, _, _) in remaining_vars]
         remaininng_elses = [else_out for (_, else_out, _, _) in remaining_vars]
         if set(remaining_thens + remaininng_elses) & first_ifelse_ancestors:

@@ -561,17 +561,15 @@ def test_custom_node_formatting_graphviz(simple_model):
     }
 
     G = model_to_graphviz(simple_model, node_formatters=node_formatters)
-    body = set(item.strip() for item in G.body)
+    body = {item.strip() for item in G.body}
 
-    items = set(
-        [
-            "a [label=a]",
-            "b [label=b]",
-            "c [label=c]",
-            "a -> b",
-            "b -> c",
-        ]
-    )
+    items = {
+        "a [label=a]",
+        "b [label=b]",
+        "c [label=c]",
+        "a -> b",
+        "b -> c",
+    }
     assert body == items
 
 

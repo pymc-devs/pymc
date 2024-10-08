@@ -208,8 +208,8 @@ class RVsAssignmentStepsTester:
 def equal_sampling_states(this, other):
     if this.__class__ != other.__class__:
         return False
-    this_fields = set([f.name for f in fields(this)])
-    other_fields = set([f.name for f in fields(other)])
+    this_fields = {f.name for f in fields(this)}
+    other_fields = {f.name for f in fields(other)}
     for field in this_fields:
         this_val = getattr(this, field)
         other_val = getattr(other, field)
