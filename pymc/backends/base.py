@@ -348,7 +348,7 @@ class MultiTrace:
 
     @property
     def chains(self) -> list[int]:
-        return list(sorted(self._straces.keys()))
+        return sorted(self._straces.keys())
 
     @property
     def report(self) -> SamplerReport:

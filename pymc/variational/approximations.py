@@ -344,7 +344,7 @@ class SingleGroupApproximation(Approximation):
     def __dir__(self):
         d = set(super().__dir__())
         d.update(self.groups[0].__dir__())
-        return list(sorted(d))
+        return sorted(d)
 
 
 class MeanField(SingleGroupApproximation):
