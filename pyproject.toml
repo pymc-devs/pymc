@@ -37,7 +37,7 @@ extend-exclude = ["_version.py"]
 docstring-code-format = true
 
 [tool.ruff.lint]
-select = ["D", "E", "F", "I", "UP", "W", "RUF"]
+select = ["C4", "D", "E", "F", "I", "UP", "W", "RUF"]
 ignore = [
   "E501",
   "F841", # Local variable name is assigned to but never used
