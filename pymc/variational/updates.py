@@ -136,7 +136,7 @@ __all__ = [
 
 
 def get_or_compute_grads(loss_or_grads, params):
-    """Helper function returning a list of gradients.
+    """Return a list of gradients.
 
     Parameters
     ----------
@@ -238,9 +238,9 @@ def sgd(loss_or_grads=None, params=None, learning_rate=1e-3):
 
 
 def apply_momentum(updates, params=None, momentum=0.9):
-    """Returns a modified update dictionary including momentum.
+    """Return a modified update dictionary including momentum.
 
-    Generates update expressions of the form:
+    Generate update expressions of the form:
 
     * ``velocity := momentum * velocity + updates[param] - param``
     * ``param := param + velocity``
@@ -345,9 +345,9 @@ def momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
 
 
 def apply_nesterov_momentum(updates, params=None, momentum=0.9):
-    """Returns a modified update dictionary including Nesterov momentum.
+    """Return a modified update dictionary including Nesterov momentum.
 
-    Generates update expressions of the form:
+    Generate update expressions of the form:
 
     * ``velocity := momentum * velocity + updates[param] - param``
     * ``param := param + momentum * velocity + updates[param] - param``
@@ -540,7 +540,7 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
 
 
 def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon=0.1, n_win=10):
-    """Returns a function that returns parameter updates.
+    """Return a function that returns parameter updates.
     Instead of accumulated estimate, uses running window.
 
     Parameters

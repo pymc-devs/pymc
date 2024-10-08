@@ -90,7 +90,7 @@ def check_icdf_value(expr: Variable, value: Variable) -> Variable:
 
 
 def logpow(x, m):
-    """Calculates log(x**m) since m*log(x) will fail when m, x = 0."""
+    """Calculate log(x**m) since m*log(x) will fail when m, x = 0."""
     # return m * log(x)
     return pt.switch(pt.eq(x, 0), pt.switch(pt.eq(m, 0), 0.0, -np.inf), m * pt.log(x))
 
@@ -108,7 +108,7 @@ def betaln(x, y):
 
 
 def std_cdf(x):
-    """Calculates the standard normal cumulative distribution function."""
+    """Calculate the standard normal cumulative distribution function."""
     return 0.5 + 0.5 * pt.erf(x / pt.sqrt(2.0))
 
 
@@ -400,7 +400,7 @@ def multigammaln(a, p):
 
 
 def log_i0(x):
-    """Calculates the logarithm of the 0 order modified Bessel function of the first kind."""
+    """Calculate the logarithm of the 0 order modified Bessel function of the first kind."""
     return pt.switch(
         pt.lt(x, 5),
         pt.log1p(

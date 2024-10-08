@@ -117,7 +117,7 @@ NodeFormatter = Callable[[TensorVariable], GraphvizNodeKwargs]
 
 
 def default_potential(var: TensorVariable) -> GraphvizNodeKwargs:
-    """Default data for potential in the graph."""
+    """Return default data for potential in the graph."""
     return {
         "shape": "octagon",
         "style": "filled",
@@ -136,7 +136,7 @@ def random_variable_symbol(var: TensorVariable) -> str:
 
 
 def default_free_rv(var: TensorVariable) -> GraphvizNodeKwargs:
-    """Default data for free RV in the graph."""
+    """Return default data for free RV in the graph."""
     symbol = random_variable_symbol(var)
 
     return {
@@ -147,7 +147,7 @@ def default_free_rv(var: TensorVariable) -> GraphvizNodeKwargs:
 
 
 def default_observed_rv(var: TensorVariable) -> GraphvizNodeKwargs:
-    """Default data for observed RV in the graph."""
+    """Return default data for observed RV in the graph."""
     symbol = random_variable_symbol(var)
 
     return {
@@ -158,7 +158,7 @@ def default_observed_rv(var: TensorVariable) -> GraphvizNodeKwargs:
 
 
 def default_deterministic(var: TensorVariable) -> GraphvizNodeKwargs:
-    """Default data for the deterministic in the graph."""
+    """Return default data for the deterministic in the graph."""
     return {
         "shape": "box",
         "style": None,
@@ -167,7 +167,7 @@ def default_deterministic(var: TensorVariable) -> GraphvizNodeKwargs:
 
 
 def default_data(var: TensorVariable) -> GraphvizNodeKwargs:
-    """Default data for the data in the graph."""
+    """Return default data for the data in the graph."""
     return {
         "shape": "box",
         "style": "rounded, filled",

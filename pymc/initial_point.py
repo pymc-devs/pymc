@@ -35,8 +35,9 @@ PointType = dict[str, np.ndarray]
 def convert_str_to_rv_dict(
     model, start: StartDict
 ) -> dict[TensorVariable, np.ndarray | Variable | str | None]:
-    """Helper function for converting a user-provided start dict with str keys of (transformed) variable names
+    """Convert a user-provided start dict with str keys of (transformed) variable names
     to a dict mapping the RV tensors to untransformed initvals.
+
     TODO: Deprecate this functionality and only accept TensorVariables as keys.
     """
     initvals = {}
@@ -182,7 +183,7 @@ def make_initial_point_expression(
     default_strategy: str = "support_point",
     return_transformed: bool = False,
 ) -> list[TensorVariable]:
-    """Creates the tensor variables that need to be evaluated to obtain an initial point.
+    """Create the tensor variables that need to be evaluated to obtain an initial point.
 
     Parameters
     ----------

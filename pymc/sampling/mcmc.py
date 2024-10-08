@@ -908,8 +908,9 @@ def _sample_return(
     idata_kwargs: dict[str, Any],
     model: Model,
 ) -> InferenceData | MultiTrace:
-    """Final step of `pm.sampler` that picks/slices chains,
-    runs diagnostics and converts to the desired return type.
+    """Pick/slice chains, run diagnostics and convert to the desired return type.
+
+    Final step of `pm.sampler`.
     """
     # Pick and slice chains to keep the maximum number of samples
     if discard_tuned_samples:
@@ -967,7 +968,7 @@ def _sample_return(
 
 
 def _check_start_shape(model, start: PointType):
-    """Checks that the prior evaluations and initial points have identical shapes.
+    """Check that the prior evaluations and initial points have identical shapes.
 
     Parameters
     ----------
@@ -1002,7 +1003,7 @@ def _sample_many(
     callback: SamplingIteratorCallback | None = None,
     **kwargs,
 ):
-    """Samples all chains sequentially.
+    """Sample all chains sequentially.
 
     Parameters
     ----------
@@ -1046,7 +1047,7 @@ def _sample(
     callback=None,
     **kwargs,
 ) -> None:
-    """Main iteration for singleprocess sampling.
+    """Sample one chain (singleprocess).
 
     Multiple step methods are supported via compound step methods.
 
@@ -1126,7 +1127,7 @@ def _iter_sample(
     model: Model | None = None,
     callback: SamplingIteratorCallback | None = None,
 ) -> Iterator[bool]:
-    """Generator for sampling one chain. (Used in singleprocess sampling.).
+    """Sample one chain with a generator (singleprocess).
 
     Parameters
     ----------
@@ -1211,7 +1212,7 @@ def _mp_sample(
     mp_ctx=None,
     **kwargs,
 ) -> None:
-    """Main iteration for multiprocess sampling.
+    """Sample all chains (multiprocess).
 
     Parameters
     ----------

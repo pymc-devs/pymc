@@ -372,7 +372,7 @@ class Empirical(SingleGroupApproximation):
 
     def evaluate_over_trace(self, node):
         R"""
-        Allows to statically evaluate any symbolic expression over the trace.
+        Allow to statically evaluate any symbolic expression over the trace.
 
         Parameters
         ----------

@@ -299,7 +299,7 @@ def intX(X):
 
 
 def smartfloatX(x):
-    """Converts numpy float values to floatX and leaves values of other types unchanged."""
+    """Convert numpy float values to floatX and leaves values of other types unchanged."""
     if str(x.dtype).startswith("float"):
         x = floatX(x)
     return x
@@ -440,7 +440,7 @@ identity = Elemwise(scalar_identity, name="identity")
 
 def make_shared_replacements(point, vars, model):
     """
-    Makes shared replacements for all *other* variables than the ones passed.
+    Make shared replacements for all *other* variables than the ones passed.
 
     This way functions can be called many times without setting unchanging variables. Allows us
     to use func.trust_input by removing the need for DictToArrayBijection and kwargs.
@@ -642,7 +642,7 @@ class CallableTensor:
         self.tensor = tensor
 
     def __call__(self, input):
-        """Replaces the single input of symbolic variable to be the passed argument.
+        """Replace the single input of symbolic variable to be the passed argument.
 
         Parameters
         ----------
@@ -723,7 +723,8 @@ class GeneratorOp(Op):
 
 def generator(gen, default=None):
     """
-    Generator variable with possibility to set default value and new generator.
+    Create a generator variable with possibility to set default value and new generator.
+
     If generator is exhausted variable will produce default value if it is not None,
     else raises `StopIteration` exception that can be caught on runtime.
 

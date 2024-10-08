@@ -61,7 +61,7 @@ def logprob_specify_shape(op, values, inner_rv, *shapes, **kwargs):
 
 @node_rewriter([SpecifyShape])
 def find_measurable_specify_shapes(fgraph, node) -> list[TensorVariable] | None:
-    r"""Finds `SpecifyShapeOp`\s for which a `logprob` can be computed."""
+    r"""Find `SpecifyShapeOp`\s for which a `logprob` can be computed."""
     if isinstance(node.op, MeasurableSpecifyShape):
         return None  # pragma: no cover
 
@@ -98,7 +98,7 @@ def logprob_check_and_raise(op, values, inner_rv, *assertions, **kwargs):
 
 @node_rewriter([CheckAndRaise])
 def find_measurable_check_and_raise(fgraph, node) -> list[TensorVariable] | None:
-    r"""Finds `AssertOp`\s for which a `logprob` can be computed."""
+    r"""Find `AssertOp`\s for which a `logprob` can be computed."""
     if isinstance(node.op, MeasurableCheckAndRaise):
         return None  # pragma: no cover
 

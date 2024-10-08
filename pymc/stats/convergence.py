@@ -131,7 +131,7 @@ def run_convergence_checks(idata: arviz.InferenceData, model) -> list[SamplerWar
 
 
 def warn_divergences(idata: arviz.InferenceData) -> list[SamplerWarning]:
-    """Checks sampler stats and creates a list of warnings about divergences."""
+    """Check sampler stats and creates a list of warnings about divergences."""
     sampler_stats = idata.get("sample_stats", None)
     if sampler_stats is None:
         return []
@@ -153,7 +153,7 @@ def warn_divergences(idata: arviz.InferenceData) -> list[SamplerWarning]:
 
 
 def warn_treedepth(idata: arviz.InferenceData) -> list[SamplerWarning]:
-    """Checks sampler stats and creates a list of warnings about tree depth."""
+    """Check sampler stats and creates a list of warnings about tree depth."""
     sampler_stats = idata.get("sample_stats", None)
     if sampler_stats is None:
         return []
@@ -187,7 +187,7 @@ def log_warnings(warnings: Sequence[SamplerWarning]):
 
 
 def log_warning_stats(stats: Sequence[dict[str, Any]]):
-    """Logs 'warning' stats if present."""
+    """Log 'warning' stats if present."""
     if stats is None:
         return
 

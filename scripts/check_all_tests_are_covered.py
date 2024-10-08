@@ -31,7 +31,7 @@ def find_testfiles():
 
 
 def from_yaml():
-    """Determines how often each test file is run per platform and floatX setting.
+    """Determine how often each test file is run per platform and floatX setting.
 
     An exception is raised if tests run multiple times with the same configuration.
     """

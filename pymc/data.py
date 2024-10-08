@@ -53,7 +53,7 @@ BASE_URL = "https://raw.githubusercontent.com/pymc-devs/pymc-examples/main/examp
 
 
 def get_data(filename):
-    """Returns a BytesIO object for a package data file.
+    """Return a BytesIO object for a package data file.
 
     Parameters
     ----------
@@ -224,7 +224,7 @@ def determine_coords(
     dims: Sequence[str | None] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
 ) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None]]:
-    """Determines coordinate values from data or the model (via ``dims``)."""
+    """Determine coordinate values from data or the model (via ``dims``)."""
     if coords is None:
         coords = {}
 
@@ -343,7 +343,7 @@ def Data(
     mutable: bool | None = None,
     **kwargs,
 ) -> SharedVariable | TensorConstant:
-    """Data container that registers a data variable with the model.
+    """Create a data container that registers a data variable with the model.
 
     Depending on the ``mutable`` setting (default: True), the variable
     is registered as a :class:`~pytensor.compile.sharedvalue.SharedVariable`,

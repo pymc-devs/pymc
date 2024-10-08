@@ -76,7 +76,7 @@ def logprob_cumsum(op, values, base_rv, **kwargs):
 
 @node_rewriter([CumOp])
 def find_measurable_cumsums(fgraph, node) -> list[TensorVariable] | None:
-    r"""Finds `Cumsums`\s for which a `logprob` can be computed."""
+    r"""Find `Cumsums`\s for which a `logprob` can be computed."""
     if not (isinstance(node.op, CumOp) and node.op.mode == "add"):
         return None
 

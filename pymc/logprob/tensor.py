@@ -140,7 +140,7 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
 
 @node_rewriter([MakeVector, Join])
 def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
-    r"""Finds `Joins`\s and `MakeVector`\s for which a `logprob` can be computed."""
+    r"""Find `Joins`\s and `MakeVector`\s for which a `logprob` can be computed."""
     from pymc.pytensorf import toposort_replace
 
     if isinstance(node.op, MeasurableOp):
@@ -218,7 +218,7 @@ def logprob_dimshuffle(op: MeasurableDimShuffle, values, base_var, **kwargs):
 
 @node_rewriter([DimShuffle])
 def find_measurable_dimshuffles(fgraph, node) -> list[TensorVariable] | None:
-    r"""Finds `Dimshuffle`\s for which a `logprob` can be computed."""
+    r"""Find `Dimshuffle`\s for which a `logprob` can be computed."""
     from pymc.distributions.distribution import SymbolicRandomVariable
 
     if isinstance(node.op, MeasurableOp):

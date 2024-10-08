@@ -43,7 +43,7 @@ _log = logging.getLogger(__name__)
 
 
 def find_data(pmodel: Model) -> list[mcb.DataVariable]:
-    """Extracts data variables from a model."""
+    """Extract data variables from a model."""
     observed_rvs = {pmodel.rvs_to_values[rv] for rv in pmodel.observed_RVs}
     dvars = []
     # All data containers are named vars!
@@ -131,7 +131,7 @@ class ChainRecordAdapter(IBaseTrace):
         return self._chain.get_draws(varname, slice(burn, None, thin))
 
     def _get_stats(self, fname: str, slc: slice) -> np.ndarray:
-        """Wraps `self._chain.get_stats` but unpickles automatically."""
+        """Wrap `self._chain.get_stats` but unpickle automatically."""
         values = self._chain.get_stats(fname, slc)
         # Unpickle object stats
         if fname in self._statsbj.object_stats:

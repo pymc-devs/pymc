@@ -342,7 +342,7 @@ def precision_mv_normal_logp(op: PrecisionMvNormalRV, value, rng, size, mean, ta
 
 @node_rewriter(tracks=[MvNormalRV])
 def mv_normal_to_precision_mv_normal(fgraph, node):
-    """Replaces MvNormal(mu, inv(tau)) -> PrecisionMvNormal(mu, tau).
+    """Replace MvNormal(mu, inv(tau)) -> PrecisionMvNormal(mu, tau).
 
     This is introduced in logprob rewrites to provide a more efficient logp for a MvNormal
     that is defined by a precision matrix.
@@ -2153,7 +2153,8 @@ class CARRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, W_is_valid, size):
-        """
+        """Sample a numeric random variate.
+
         Implementation of algorithm from paper
         Havard Rue, 2001. "Fast sampling of Gaussian Markov random fields,"
         Journal of the Royal Statistical Society Series B, Royal Statistical Society,
