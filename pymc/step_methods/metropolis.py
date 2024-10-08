@@ -422,7 +422,7 @@ class BinaryMetropolis(ArrayStep):
 
         vars = get_value_vars_from_user_vars(vars, model)
 
-        if not all([v.dtype in pm.discrete_types for v in vars]):
+        if not all(v.dtype in pm.discrete_types for v in vars):
             raise ValueError("All variables must be Bernoulli for BinaryMetropolis")
 
         super().__init__(vars, [model.compile_logp()], rng=rng)
@@ -541,7 +541,7 @@ class BinaryGibbsMetropolis(ArrayStep):
             self.shuffle_dims = False
             self.order = order
 
-        if not all([v.dtype in pm.discrete_types for v in vars]):
+        if not all(v.dtype in pm.discrete_types for v in vars):
             raise ValueError("All variables must be binary for BinaryGibbsMetropolis")
 
         super().__init__(vars, [model.compile_logp()], rng=rng)

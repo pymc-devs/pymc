@@ -236,7 +236,7 @@ class EmpiricalGroup(Group):
                 " Please help us to refactor: https://github.com/pymc-devs/pymc/issues/5884"
             )
         elif trace is not None and not all(
-            [self.model.rvs_to_values[var].name in trace.varnames for var in self.group]
+            self.model.rvs_to_values[var].name in trace.varnames for var in self.group
         ):
             raise ValueError("trace has not all free RVs in the group")
 
