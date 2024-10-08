@@ -82,7 +82,7 @@ class Inference:
 
     def run_profiling(self, n=1000, score=None, **kwargs):
         score = self._maybe_score(score)
-        fn_kwargs = kwargs.pop("fn_kwargs", dict())
+        fn_kwargs = kwargs.pop("fn_kwargs", {})
         fn_kwargs["profile"] = True
         step_func = self.objective.step_function(score=score, fn_kwargs=fn_kwargs, **kwargs)
         try:
@@ -739,7 +739,7 @@ def fit(
     :class:`Approximation`
     """
     if inf_kwargs is None:
-        inf_kwargs = dict()
+        inf_kwargs = {}
     else:
         inf_kwargs = inf_kwargs.copy()
     if random_seed is not None:
@@ -752,7 +752,7 @@ def fit(
         inf_kwargs["start_sigma"] = start_sigma
     if model is None:
         model = pm.modelcontext(model)
-    _select = dict(advi=ADVI, fullrank_advi=FullRankADVI, svgd=SVGD, asvgd=ASVGD)
+    _select = {"advi": ADVI, "fullrank_advi": FullRankADVI, "svgd": SVGD, "asvgd": ASVGD}
     if isinstance(method, str):
         method = method.lower()
         if method in _select:

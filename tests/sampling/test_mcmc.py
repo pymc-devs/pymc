@@ -110,7 +110,7 @@ class TestSample:
         # Test that when random_seed is None, `np.random.seed` is not called in the main
         # process. Ideally it would never be called, but PyMC step samplers still rely
         # on global seeding for reproducible behavior.
-        kwargs = dict(tune=2, draws=2, random_seed=None)
+        kwargs = {"tune": 2, "draws": 2, "random_seed": None}
         with self.model:
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
@@ -121,12 +121,12 @@ class TestSample:
 
     def test_sample_does_not_rely_on_external_global_seeding(self):
         # Tests that sampling does not depend on exertenal global seeding
-        kwargs = dict(
-            tune=2,
-            draws=20,
-            random_seed=None,
-            return_inferencedata=False,
-        )
+        kwargs = {
+            "tune": 2,
+            "draws": 20,
+            "random_seed": None,
+            "return_inferencedata": False,
+        }
         with self.model:
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
@@ -438,14 +438,14 @@ class TestSampleReturn:
         to keep the ``SamplerWarning`` objects from the ``sample_stats.warning`` group.
         This breaks ``idata.to_netcdf()`` which is why it defaults to ``False``.
         """
-        sample_kwargs = dict(
-            tune=2,
-            draws=3,
-            chains=1,
-            compute_convergence_checks=False,
-            discard_tuned_samples=False,
-            keep_warning_stat=keep_warning_stat,
-        )
+        sample_kwargs = {
+            "tune": 2,
+            "draws": 3,
+            "chains": 1,
+            "compute_convergence_checks": False,
+            "discard_tuned_samples": False,
+            "keep_warning_stat": keep_warning_stat,
+        }
         if keep_warning_stat:
             sample_kwargs["keep_warning_stat"] = True
         with pm.Model():

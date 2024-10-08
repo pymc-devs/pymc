@@ -165,7 +165,7 @@ def test_drop_warning_stat():
             "a": np.ones((2, 5, 4)),
             "warning": np.ones((2, 5, 3), dtype=object),
         },
-        attrs=dict(version="0.1.2"),
+        attrs={"version": "0.1.2"},
         coords={
             "adim": [0, 1, None, 3],
             "warning_dim_0": list("ABC"),

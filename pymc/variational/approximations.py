@@ -46,7 +46,7 @@ class MeanFieldGroup(Group):
     of the method
     """
 
-    __param_spec__ = dict(mu=("d",), rho=("d",))
+    __param_spec__ = {"mu": ("d",), "rho": ("d",)}
     short_name = "mean_field"
     alias_names = frozenset(["mf"])
 
@@ -122,7 +122,7 @@ class FullRankGroup(Group):
     main drawback of the method is computational cost.
     """
 
-    __param_spec__ = dict(mu=("d",), L_tril=("int(d * (d + 1) / 2)",))
+    __param_spec__ = {"mu": ("d",), "L_tril": ("int(d * (d + 1) / 2)",)}
     short_name = "full_rank"
     alias_names = frozenset(["fr"])
 
@@ -193,14 +193,14 @@ class EmpiricalGroup(Group):
     """
 
     has_logq = False
-    __param_spec__ = dict(histogram=("s", "d"))
+    __param_spec__ = {"histogram": ("s", "d")}
     short_name = "empirical"
 
     @pytensor.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         self._check_trace()
-        if not self._check_user_params(spec_kw=dict(s=-1)):
+        if not self._check_user_params(spec_kw={"s": -1}):
             self.shared_params = self.create_shared_params(
                 trace=self._kwargs.get("trace", None),
                 size=self._kwargs.get("size", None),
@@ -225,7 +225,7 @@ class EmpiricalGroup(Group):
                 for j in range(len(trace)):
                     histogram[i] = DictToArrayBijection.map(trace.point(j, t)).data
                     i += 1
-        return dict(histogram=pytensor.shared(pm.floatX(histogram), "histogram"))
+        return {"histogram": pytensor.shared(pm.floatX(histogram), "histogram")}
 
     def _check_trace(self):
         trace = self._kwargs.get("trace", None)

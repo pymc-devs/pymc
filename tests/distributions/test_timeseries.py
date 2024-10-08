@@ -234,7 +234,7 @@ class TestRandomWalk:
     )
     @pytest.mark.parametrize("steps_source", ("shape", "dims", "observed"))
     def test_infer_steps(self, init_dist, innovation_dist, shape, steps, steps_source):
-        shape_source_kwargs = dict(shape=None, dims=None, observed=None)
+        shape_source_kwargs = {"shape": None, "dims": None, "observed": None}
         if steps_source == "shape":
             shape_source_kwargs["shape"] = shape
         elif steps_source == "dims":
@@ -464,12 +464,16 @@ class TestPredefinedRandomWalk:
     @pytest.mark.parametrize(
         "distribution, init_dist, build_kwargs",
         [
-            (GaussianRandomWalk, Normal.dist(), dict()),
-            (MvGaussianRandomWalk, Dirichlet.dist(np.ones(3)), dict(mu=np.zeros(3), tau=np.eye(3))),
+            (GaussianRandomWalk, Normal.dist(), {}),
+            (
+                MvGaussianRandomWalk,
+                Dirichlet.dist(np.ones(3)),
+                {"mu": np.zeros(3), "tau": np.eye(3)},
+            ),
             (
                 MvStudentTRandomWalk,
                 Dirichlet.dist(np.ones(3)),
-                dict(nu=4, mu=np.zeros(3), tau=np.eye(3)),
+                {"nu": 4, "mu": np.zeros(3), "tau": np.eye(3)},
             ),
         ],
     )
@@ -782,12 +786,12 @@ class TestGARCH11:
     def test_batched_size(self, explicit_shape, batched_param):
         steps, batch_size = 100, 5
         param_val = np.square(np.random.randn(batch_size))
-        init_kwargs = dict(
-            omega=1.25,
-            alpha_1=0.5,
-            beta_1=0.45,
-            initial_vol=2.5,
-        )
+        init_kwargs = {
+            "omega": 1.25,
+            "alpha_1": 0.5,
+            "beta_1": 0.45,
+            "initial_vol": 2.5,
+        }
         kwargs0 = init_kwargs.copy()
         kwargs0[batched_param] = init_kwargs[batched_param] * param_val
         if explicit_shape:

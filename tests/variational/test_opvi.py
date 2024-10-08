@@ -83,19 +83,19 @@ def test_group_api_vfam(three_var_model, raises, vfam, type_, kw):
     [
         (
             not_raises(),
-            dict(mu=np.ones((10, 2), "float32"), rho=np.ones((10, 2), "float32")),
+            {"mu": np.ones((10, 2), "float32"), "rho": np.ones((10, 2), "float32")},
             MeanFieldGroup,
             {},
             None,
         ),
         (
             not_raises(),
-            dict(
-                mu=np.ones((10, 2), "float32"),
-                L_tril=np.ones(
+            {
+                "mu": np.ones((10, 2), "float32"),
+                "L_tril": np.ones(
                     FullRankGroup.get_param_spec_for(d=np.prod((10, 2)))["L_tril"], "float32"
                 ),
-            ),
+            },
             FullRankGroup,
             {},
             None,

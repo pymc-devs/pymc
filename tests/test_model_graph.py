@@ -436,7 +436,7 @@ class TestModelWithDims(BaseModelGraphTest):
     model_func = model_with_dims
 
     def test_issue_6335_dims_containing_none(self):
-        with pm.Model(coords=dict(time=np.arange(5))) as pmodel:
+        with pm.Model(coords={"time": np.arange(5)}) as pmodel:
             data = pt.as_tensor(np.ones((3, 5)))
             pm.Deterministic("n", data, dims=(None, "time"))
 

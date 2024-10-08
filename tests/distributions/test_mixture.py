@@ -812,7 +812,7 @@ class TestNormalMixture:
         assert_allclose(np.sort(trace["mu"].mean(axis=0)), np.sort(norm_mu), rtol=0.1, atol=0.1)
 
     @pytest.mark.parametrize(
-        "nd, ncomp", [(tuple(), 5), (1, 5), (3, 5), ((3, 3), 5), (3, 3), ((3, 3), 3)], ids=str
+        "nd, ncomp", [((), 5), (1, 5), (3, 5), ((3, 3), 5), (3, 3), ((3, 3), 3)], ids=str
     )
     def test_normal_mixture_nd(self, seeded_test, nd, ncomp):
         nd = to_tuple(nd)

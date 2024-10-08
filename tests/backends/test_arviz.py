@@ -337,7 +337,7 @@ class TestDataPyMC:
             with pytest.warns(ImputationWarning):
                 y = pm.Normal("y", x, 1, observed=data)
             inference_data = pm.sample(
-                100, chains=2, return_inferencedata=True, idata_kwargs=dict(log_likelihood=True)
+                100, chains=2, return_inferencedata=True, idata_kwargs={"log_likelihood": True}
             )
 
         # make sure that data is really missing
@@ -370,7 +370,7 @@ class TestDataPyMC:
                 draws=10,
                 chains=2,
                 step=pm.Metropolis(),
-                idata_kwargs=dict(log_likelihood=True),
+                idata_kwargs={"log_likelihood": True},
             )
 
         # make sure that data is really missing
@@ -422,7 +422,7 @@ class TestDataPyMC:
             p = pm.Uniform("p", 0, 1)
             pm.Binomial("w", p=p, n=2, observed=[1])
             inference_data = pm.sample(
-                500, chains=2, return_inferencedata=True, idata_kwargs=dict(log_likelihood=True)
+                500, chains=2, return_inferencedata=True, idata_kwargs={"log_likelihood": True}
             )
 
         assert inference_data
@@ -607,7 +607,7 @@ class TestDataPyMC:
                     chains=2,
                     tune=100,
                     return_inferencedata=True,
-                    idata_kwargs=dict(log_likelihood=True),
+                    idata_kwargs={"log_likelihood": True},
                 )
         test_dict = {
             "posterior": ["p"],
@@ -688,9 +688,13 @@ class TestDataPyMC:
             pm.Uniform("p", 0, 1)
 
             # First check that the default is to exclude the transformed variables
-            sample_kwargs = dict(
-                tune=5, draws=7, chains=2, cores=1, compute_convergence_checks=False
-            )
+            sample_kwargs = {
+                "tune": 5,
+                "draws": 7,
+                "chains": 2,
+                "cores": 1,
+                "compute_convergence_checks": False,
+            }
             inference_data = pm.sample(**sample_kwargs, step=pm.Metropolis())
             assert "p_interval__" not in inference_data.posterior
 

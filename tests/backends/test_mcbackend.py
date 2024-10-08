@@ -200,7 +200,7 @@ class TestChainRecordAdapter:
         rng = np.random.RandomState(2023)
         for i in range(N):
             draw = {"a": rng.normal(), "b_interval__": rng.normal()}
-            stats = [dict(tune=(i <= 5), s1=i, accepted=bool(rng.randint(0, 2)))]
+            stats = [{"tune": (i <= 5), "s1": i, "accepted": bool(rng.randint(0, 2))}]
             cra.record(draw, stats)
 
         # Check final state of the chain
@@ -251,8 +251,8 @@ class TestChainRecordAdapter:
             tune = i <= 5
             draw = {"a": rng.normal(), "b_interval__": rng.normal()}
             stats = [
-                dict(tune=tune, s1=i, accepted=bool(rng.randint(0, 2))),
-                dict(tune=tune, s2=i, accepted=bool(rng.randint(0, 2))),
+                {"tune": tune, "s1": i, "accepted": bool(rng.randint(0, 2))},
+                {"tune": tune, "s2": i, "accepted": bool(rng.randint(0, 2))},
             ]
             cra.record(draw, stats)
 

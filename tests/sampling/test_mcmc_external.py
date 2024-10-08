@@ -31,15 +31,15 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
 
         Normal("L", mu=x, sigma=0.1, observed=y)
 
-        kwargs = dict(
-            nuts_sampler=nuts_sampler,
-            random_seed=123,
-            chains=2,
-            tune=500,
-            draws=500,
-            progressbar=False,
-            initvals={"x": 0.0},
-        )
+        kwargs = {
+            "nuts_sampler": nuts_sampler,
+            "random_seed": 123,
+            "chains": 2,
+            "tune": 500,
+            "draws": 500,
+            "progressbar": False,
+            "initvals": {"x": 0.0},
+        }
 
         idata1 = sample(**kwargs)
         idata2 = sample(**kwargs)

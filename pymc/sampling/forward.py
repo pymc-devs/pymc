@@ -460,7 +460,7 @@ def sample_prior_predictive(
 
     if not return_inferencedata:
         return prior
-    ikwargs: dict[str, Any] = dict(model=model)
+    ikwargs: dict[str, Any] = {"model": model}
     if idata_kwargs:
         ikwargs.update(idata_kwargs)
     return pm.to_inference_data(prior=prior, **ikwargs)

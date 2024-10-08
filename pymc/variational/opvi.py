@@ -249,7 +249,7 @@ class ObjectiveFunction:
         :class:`ObjectiveUpdates`
         """
         if more_updates is None:
-            more_updates = dict()
+            more_updates = {}
         resulting_updates = ObjectiveUpdates()
         if self.test_params:
             self.add_test_updates(
@@ -288,7 +288,7 @@ class ObjectiveFunction:
         if more_tf_params is None:
             more_tf_params = []
         if more_replacements is None:
-            more_replacements = dict()
+            more_replacements = {}
         tf_target = self(
             tf_n_mc, more_tf_params=more_tf_params, more_replacements=more_replacements
         )
@@ -309,7 +309,7 @@ class ObjectiveFunction:
         if more_obj_params is None:
             more_obj_params = []
         if more_replacements is None:
-            more_replacements = dict()
+            more_replacements = {}
         obj_target = self(
             obj_n_mc, more_obj_params=more_obj_params, more_replacements=more_replacements
         )
@@ -676,11 +676,11 @@ class Group(WithMemoization):
     initial_dist_map = 0.0
 
     # for handy access using class methods
-    __param_spec__: dict = dict()
+    __param_spec__: dict = {}
     short_name = ""
     alias_names: frozenset[str] = frozenset()
-    __param_registry: dict[frozenset, Any] = dict()
-    __name_registry: dict[str, Any] = dict()
+    __param_registry: dict[frozenset, Any] = {}
+    __name_registry: dict[str, Any] = {}
 
     @classmethod
     def register(cls, sbcls):
@@ -739,7 +739,7 @@ class Group(WithMemoization):
         if isinstance(vfam, str):
             vfam = vfam.lower()
         if options is None:
-            options = dict()
+            options = {}
         self.options = options
         self._vfam = vfam
         self.rng = np.random.RandomState(random_seed)
@@ -771,7 +771,7 @@ class Group(WithMemoization):
 
     @classmethod
     def get_param_spec_for(cls, **kwargs):
-        res = dict()
+        res = {}
         for name, fshape in cls.__param_spec__.items():
             res[name] = tuple(eval(s, kwargs) for s in fshape)
         return res
@@ -800,7 +800,7 @@ class Group(WithMemoization):
                 "Passed parameters do not have a needed set of keys, "
                 f"they should be equal, got {givens}, needed {needed}"
             )
-        self._user_params = dict()
+        self._user_params = {}
         spec = self.get_param_spec_for(d=self.ddim, **kwargs.pop("spec_kw", {}))
         for name, param in self.user_params.items():
             shape = spec[name]
@@ -1149,7 +1149,7 @@ class Group(WithMemoization):
         # This is somewhat similar to `DictToArrayBijection.rmap`, which doesn't work here since we don't have
         # `RaveledVars` and need to take the information from `self.ordering` instead
         shared_nda = shared.eval()
-        result = dict()
+        result = {}
         for name, s, shape, dtype in self.ordering.values():
             dims = self.model.named_vars_to_dims.get(name, None)
             if dims is not None:
@@ -1206,7 +1206,7 @@ class Approximation(WithMemoization):
         model = modelcontext(model)
         if not model.free_RVs:
             raise TypeError("Model does not have an free RVs")
-        self.groups = list()
+        self.groups = []
         seen = set()
         rest = None
         for g in groups:

@@ -62,15 +62,15 @@ def simple_model_data(use_minibatch):
     mu_post = (n * np.mean(data) / sigma**2 + mu0 / sigma0**2) / d
     if use_minibatch:
         data = pm.Minibatch(data, batch_size=128)
-    return dict(
-        n=n,
-        data=data,
-        mu_post=mu_post,
-        d=d,
-        mu0=mu0,
-        sigma0=sigma0,
-        sigma=sigma,
-    )
+    return {
+        "n": n,
+        "data": data,
+        "mu_post": mu_post,
+        "d": d,
+        "mu0": mu0,
+        "sigma0": sigma0,
+        "sigma": sigma,
+    }
 
 
 @pytest.fixture
@@ -95,10 +95,10 @@ def simple_model(simple_model_data):
 @pytest.fixture(
     scope="module",
     params=[
-        dict(cls=ADVI, init=dict()),
-        dict(cls=FullRankADVI, init=dict()),
-        dict(cls=SVGD, init=dict(n_particles=500, jitter=1)),
-        dict(cls=ASVGD, init=dict(temperature=1.0)),
+        {"cls": ADVI, "init": {}},
+        {"cls": FullRankADVI, "init": {}},
+        {"cls": SVGD, "init": {"n_particles": 500, "jitter": 1}},
+        {"cls": ASVGD, "init": {"temperature": 1.0}},
     ],
     ids=["ADVI", "FullRankADVI", "SVGD", "ASVGD"],
 )
@@ -128,24 +128,40 @@ def inference(inference_spec, simple_model):
 @pytest.fixture(scope="function")
 def fit_kwargs(inference, use_minibatch):
     _select = {
-        (ADVI, "full"): dict(obj_optimizer=pm.adagrad_window(learning_rate=0.02, n_win=50), n=5000),
-        (ADVI, "mini"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=12000
-        ),
-        (FullRankADVI, "full"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.015, n_win=50), n=6000
-        ),
-        (FullRankADVI, "mini"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.007, n_win=50), n=12000
-        ),
-        (SVGD, "full"): dict(obj_optimizer=pm.adagrad_window(learning_rate=0.075, n_win=7), n=300),
-        (SVGD, "mini"): dict(obj_optimizer=pm.adagrad_window(learning_rate=0.075, n_win=7), n=300),
-        (ASVGD, "full"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=10), n=500, obj_n_mc=300
-        ),
-        (ASVGD, "mini"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=10), n=500, obj_n_mc=300
-        ),
+        (ADVI, "full"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.02, n_win=50),
+            "n": 5000,
+        },
+        (ADVI, "mini"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.01, n_win=50),
+            "n": 12000,
+        },
+        (FullRankADVI, "full"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.015, n_win=50),
+            "n": 6000,
+        },
+        (FullRankADVI, "mini"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.007, n_win=50),
+            "n": 12000,
+        },
+        (SVGD, "full"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.075, n_win=7),
+            "n": 300,
+        },
+        (SVGD, "mini"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.075, n_win=7),
+            "n": 300,
+        },
+        (ASVGD, "full"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.07, n_win=10),
+            "n": 500,
+            "obj_n_mc": 300,
+        },
+        (ASVGD, "mini"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.07, n_win=10),
+            "n": 500,
+            "obj_n_mc": 300,
+        },
     }
     if use_minibatch:
         key = "mini"
@@ -198,16 +214,16 @@ def test_fit_start(inference_spec, simple_model):
 @pytest.mark.parametrize(
     ["method", "kwargs", "error"],
     [
-        ("undefined", dict(), KeyError),
-        (1, dict(), TypeError),
-        ("advi", dict(total_grad_norm_constraint=10), None),
-        ("fullrank_advi", dict(), None),
-        ("svgd", dict(total_grad_norm_constraint=10), None),
-        ("svgd", dict(start={}), None),
+        ("undefined", {}, KeyError),
+        (1, {}, TypeError),
+        ("advi", {"total_grad_norm_constraint": 10}, None),
+        ("fullrank_advi", {}, None),
+        ("svgd", {"total_grad_norm_constraint": 10}, None),
+        ("svgd", {"start": {}}, None),
         # start argument is not allowed for ASVGD
-        ("asvgd", dict(start={}, total_grad_norm_constraint=10), TypeError),
-        ("asvgd", dict(total_grad_norm_constraint=10), None),
-        ("nfvi=bad-formula", dict(start={}), KeyError),
+        ("asvgd", {"start": {}, "total_grad_norm_constraint": 10}, TypeError),
+        ("asvgd", {"total_grad_norm_constraint": 10}, None),
+        ("nfvi=bad-formula", {"start": {}}, KeyError),
     ],
 )
 def test_fit_fn_text(method, kwargs, error):
@@ -383,17 +399,17 @@ def hierarchical_model_data():
 
     data = sigma * np.random.randn(*data_shape) + group_mu + mu
 
-    return dict(
-        group_coords=group_coords,
-        group_shape=group_shape,
-        data_coords=data_coords,
-        data_shape=data_shape,
-        mu=mu,
-        sigma_group_mu=sigma_group_mu,
-        sigma=sigma,
-        group_mu=group_mu,
-        data=data,
-    )
+    return {
+        "group_coords": group_coords,
+        "group_shape": group_shape,
+        "data_coords": data_coords,
+        "data_shape": data_shape,
+        "mu": mu,
+        "sigma_group_mu": sigma_group_mu,
+        "sigma": sigma,
+        "group_mu": group_mu,
+        "data": data,
+    }
 
 
 @pytest.fixture
@@ -430,7 +446,7 @@ def test_fit_data_coords(hierarchical_model, hierarchical_model_data):
         assert list(data["group_mu"].coords.keys()) == list(
             hierarchical_model_data["group_coords"].keys()
         )
-        assert data["mu"].shape == tuple()
+        assert data["mu"].shape == ()
 
 
 def test_multiple_minibatch_variables():

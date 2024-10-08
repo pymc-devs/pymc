@@ -223,7 +223,7 @@ def test_get_log_likelihood():
                 draws=10,
                 chains=2,
                 random_seed=1322,
-                idata_kwargs=dict(log_likelihood=True),
+                idata_kwargs={"log_likelihood": True},
             )
 
     b_true = trace.log_likelihood.b.values
@@ -284,14 +284,14 @@ def model_test_idata_kwargs() -> pm.Model:
 @pytest.mark.parametrize(
     "idata_kwargs",
     [
-        dict(),
-        dict(log_likelihood=True),
+        {},
+        {"log_likelihood": True},
         # Overwrite models coords
-        dict(coords={"x_coord": ["x1", "x2"]}),
+        {"coords": {"x_coord": ["x1", "x2"]}},
         # Overwrite dims from dist specification in model
-        dict(dims={"x": ["x_coord2"]}),
+        {"dims": {"x": ["x_coord2"]}},
         # Overwrite both coords and dims
-        dict(coords={"x_coord3": ["A", "B"]}, dims={"x": ["x_coord3"]}),
+        {"coords": {"x_coord3": ["A", "B"]}, "dims": {"x": ["x_coord3"]}},
     ],
 )
 @pytest.mark.parametrize("postprocessing_backend", [None, "cpu"])
@@ -377,12 +377,12 @@ def test_get_batched_jittered_initial_points():
     ],
 )
 def test_seeding(chains, random_seed, sampler):
-    sample_kwargs = dict(
-        tune=100,
-        draws=5,
-        chains=chains,
-        random_seed=random_seed,
-    )
+    sample_kwargs = {
+        "tune": 100,
+        "draws": 5,
+        "chains": chains,
+        "random_seed": random_seed,
+    }
 
     with pm.Model() as m:
         pm.Normal("x", mu=0, sigma=1)

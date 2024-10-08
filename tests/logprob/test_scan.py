@@ -517,7 +517,7 @@ def test_scan_multiple_output_types():
         outputs_info=[
             None,
             pt.zeros(()),
-            dict(initial=pt.ones(2), taps=[-2, -1]),
+            {"initial": pt.ones(2), "taps": [-2, -1]},
         ],
     )
 
