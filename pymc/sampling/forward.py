@@ -446,7 +446,7 @@ def sample_prior_predictive(
     )
 
     # All model variables have a name, but mypy does not know this
-    _log.info(f"Sampling: {list(sorted(volatile_basic_rvs, key=lambda var: var.name))}")  # type: ignore
+    _log.info(f"Sampling: {sorted(volatile_basic_rvs, key=lambda var: var.name)}")  # type: ignore
     values = zip(*(sampler_fn() for i in range(draws)))
 
     data = {k: np.stack(v) for k, v in zip(names, values)}
@@ -850,7 +850,7 @@ def sample_posterior_predictive(
     )
     sampler_fn = point_wrapper(_sampler_fn)
     # All model variables have a name, but mypy does not know this
-    _log.info(f"Sampling: {list(sorted(volatile_basic_rvs, key=lambda var: var.name))}")  # type: ignore
+    _log.info(f"Sampling: {sorted(volatile_basic_rvs, key=lambda var: var.name)}")  # type: ignore
     ppc_trace_t = _DefaultTrace(samples)
 
     progress = CustomProgress(

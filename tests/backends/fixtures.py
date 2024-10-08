@@ -459,8 +459,8 @@ class DumpLoadTestCase(ModelBackendSampledTestCase):
         assert self.mtrace.nchains == self.dumped.nchains
 
     def test_varnames(self):
-        trace_names = list(sorted(self.mtrace.varnames))
-        dumped_names = list(sorted(self.dumped.varnames))
+        trace_names = sorted(self.mtrace.varnames)
+        dumped_names = sorted(self.dumped.varnames)
         assert trace_names == dumped_names
 
     def test_values(self):
