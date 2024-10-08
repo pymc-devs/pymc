@@ -239,9 +239,9 @@ def random_walk_logp(op, values, *inputs, **kwargs):
     (value,) = values
     # Recreate RV and obtain inner graph
     rv_node = op.make_node(*inputs)
-    rv = clone_replace(
-        op.inner_outputs, replace={u: v for u, v in zip(op.inner_inputs, rv_node.inputs)}
-    )[op.default_output]
+    rv = clone_replace(op.inner_outputs, replace=dict(zip(op.inner_inputs, rv_node.inputs)))[
+        op.default_output
+    ]
     # Obtain logp of the inner graph and collapse steps dimension
     return logp(rv, value).sum(axis=-1)
 

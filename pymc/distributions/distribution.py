@@ -588,7 +588,7 @@ def inline_symbolic_random_variable(fgraph, node):
     """
     op = node.op
     if op.inline_logprob:
-        return clone_replace(op.inner_outputs, {u: v for u, v in zip(op.inner_inputs, node.inputs)})
+        return clone_replace(op.inner_outputs, dict(zip(op.inner_inputs, node.inputs)))
 
 
 # Registered before pre-canonicalization which happens at position=-10

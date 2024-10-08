@@ -206,7 +206,7 @@ class NUTSInitSuite:
             _, step = pm.init_nuts(
                 init=init, chains=self.chains, progressbar=False, random_seed=np.arange(self.chains)
             )
-            start = [{k: v for k, v in start.items()} for _ in range(self.chains)]
+            start = [dict(start) for _ in range(self.chains)]
             t0 = time.time()
             idata = pm.sample(
                 draws=self.draws,
