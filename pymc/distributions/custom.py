@@ -481,10 +481,10 @@ class CustomDist:
     Parameters
     ----------
     name : str
-    dist_params : Tuple
+    dist_params : tuple
         A sequence of the distribution's parameter. These will be converted into
         Pytensor tensor variables internally.
-    dist: Optional[Callable]
+    dist: Callable | None
         A callable that returns a PyTensor graph built from simpler PyMC distributions
         which represents the distribution. This can be used by PyMC to take random draws
         as well as to infer the logp of the distribution in some cases. In that case
@@ -494,7 +494,7 @@ class CustomDist:
         The symbolic tensor distribution parameters are passed as positional arguments in
         the same order as they are supplied when the ``CustomDist`` is constructed.
 
-    random : Optional[Callable]
+    random : Callable | None
         A callable that can be used to generate random draws from the distribution
 
         It must have the following signature: ``random(*dist_params, rng=None, size=None)``.
@@ -506,7 +506,7 @@ class CustomDist:
         error will be raised when trying to draw random samples from the distribution's
         prior or posterior predictive.
 
-    logp : Optional[Callable]
+    logp : Callable | None
         A callable that calculates the log probability of some given ``value``
         conditioned on certain distribution parameter values. It must have the
         following signature: ``logp(value, *dist_params)``, where ``value`` is
@@ -519,7 +519,7 @@ class CustomDist:
 
         Otherwise, a ``NotImplementedError`` will be raised when trying to compute the
         distribution's logp.
-    logcdf : Optional[Callable]
+    logcdf : Callable | None
         A callable that calculates the log cumulative log probability of some given
         ``value`` conditioned on certain distribution parameter values. It must have the
         following signature: ``logcdf(value, *dist_params)``, where ``value`` is
@@ -527,7 +527,7 @@ class CustomDist:
         are the tensors that hold the values of the distribution parameters.
         This function must return a PyTensor tensor. If ``None``, a ``NotImplementedError``
         will be raised when trying to compute the distribution's logcdf.
-    support_point : Optional[Callable]
+    support_point : Callable | None
         A callable that can be used to compute the finete logp point of the distribution.
         It must have the following signature: ``support_point(rv, size, *rv_inputs)``.
         The distribution's variable is passed as the first argument ``rv``. ``size``
@@ -536,15 +536,15 @@ class CustomDist:
         distribution parameters, in the same order as they were supplied when the
         CustomDist was created. If ``None``, a default  ``support_point`` function will be
         assigned that will always return 0, or an array of zeros.
-    ndim_supp : Optional[int]
+    ndim_supp : int | None
         The number of dimensions in the support of the distribution.
         Inferred from signature, if provided. Defaults to assuming
         a scalar distribution, i.e. ``ndim_supp = 0``
-    ndims_params : Optional[Sequence[int]]
+    ndims_params : Sequence[int] | None
         The list of number of dimensions in the support of each of the distribution's
         parameters. Inferred from signature, if provided. Defaults to assuming
         all parameters are scalars, i.e. ``ndims_params=[0, ...]``.
-    signature : Optional[str]
+    signature : str | None
         A numpy vectorize-like signature that indicates the number and core dimensionality
         of the input parameters and sample outputs of the CustomDist.
         When specified, `ndim_supp` and `ndims_params` are not needed. See examples below.
@@ -591,8 +591,6 @@ class CustomDist:
 
     .. code-block:: python
 
-        from typing import Optional, Tuple
-
         import numpy as np
         import pymc as pm
         from pytensor.tensor import TensorVariable
@@ -604,8 +602,8 @@ class CustomDist:
 
         def random(
             mu: np.ndarray | float,
-            rng: Optional[np.random.Generator] = None,
-            size: Optional[Tuple[int]] = None,
+            rng: np.random.Generator | None = None,
+            size: tuple[int, ...] | None = None,
         ) -> np.ndarray | float:
             return rng.normal(loc=mu, scale=1, size=size)
 

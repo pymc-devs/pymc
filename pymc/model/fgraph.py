@@ -146,7 +146,7 @@ def fgraph_from_model(
         FunctionGraph that includes a copy of model variables, wrapped in dummy `ModelVar` Ops.
         It should be possible to reconstruct a valid PyMC model using `model_from_fgraph`.
 
-    memo: Dict
+    memo: dict
         A dictionary mapping original model variables to the equivalent nodes in the fgraph.
     """
     if any(v is not None for v in model.rvs_to_initial_values.values()):

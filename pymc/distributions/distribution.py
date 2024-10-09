@@ -734,9 +734,9 @@ def create_partial_observed_rv(
 
     Returns
     -------
-    observed_rv and mask : Tuple of TensorVariable
+    observed_rv and mask : tuple of TensorVariable
         The observed component of the RV and respective indexing mask
-    unobserved_rv and mask : Tuple of TensorVariable
+    unobserved_rv and mask : tuple of TensorVariable
         The unobserved component of the RV and respective indexing mask
     joined_rv : TensorVariable
         The symbolic join of the observed and unobserved components.
