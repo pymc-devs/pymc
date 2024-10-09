@@ -86,3 +86,7 @@ class NotConstantValueError(ValueError):
 
 class BlockModelAccessError(RuntimeError):
     pass
+
+
+class UndefinedMomentException(Exception):
+    pass

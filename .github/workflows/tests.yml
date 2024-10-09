@@ -65,6 +65,7 @@ jobs:
           - |
             tests/distributions/test_continuous.py
             tests/distributions/test_multivariate.py
+            tests/distributions/moments/test_means.py
 
           - |
             tests/distributions/test_censored.py
