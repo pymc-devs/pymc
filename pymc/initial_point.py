@@ -15,6 +15,7 @@ import functools
 import warnings
 
 from collections.abc import Callable, Sequence
+from typing import Literal
 
 import numpy as np
 import pytensor
@@ -30,6 +31,8 @@ from pymc.util import get_transformed_name, get_untransformed_name, is_transform
 
 StartDict = dict[Variable | str, np.ndarray | Variable | str]
 PointType = dict[str, np.ndarray]
+SeedSequenceSeed = None | int | Sequence[int] | np.ndarray | np.random.SeedSequence
+SeededInitialPointFn = Callable[[SeedSequenceSeed], dict[str, np.ndarray]]
 
 
 def convert_str_to_rv_dict(
@@ -61,7 +64,7 @@ def make_initial_point_fns_per_chain(
     overrides: StartDict | Sequence[StartDict | None] | None,
     jitter_rvs: set[TensorVariable] | None = None,
     chains: int,
-) -> list[Callable]:
+) -> list[SeededInitialPointFn]:
     """Create an initial point function for each chain, as defined by initvals.
 
     If a single initval dictionary is passed, the function is replicated for each
@@ -76,12 +79,23 @@ def make_initial_point_fns_per_chain(
         Random variable tensors for which U(-1, 1) jitter shall be applied.
         (To the transformed space if applicable.)
 
+    Returns
+    -------
+    initial_point_fns : list[SeededInitialPointFn]
+        A list, one element per chain. Each element is a function that takes
+        a seed and returns a dictionary of variable names to initial points
+        (numpy arrays).
+
     Raises
     ------
     ValueError
         If the number of entries in initvals is different than the number of chains
 
     """
+    if isinstance(overrides, Sequence) and len(overrides) != chains:
+        msg = f"Number of initval dicts ({len(overrides)}) must match the number of chains ({chains})."
+        raise ValueError(msg)
+
     if isinstance(overrides, dict) or overrides is None:
         # One strategy for all chains
         # Only one function compilation is needed.
@@ -93,21 +107,18 @@ def make_initial_point_fns_per_chain(
                 return_transformed=True,
             )
         ] * chains
-    elif len(overrides) == chains:
-        ipfns = [
-            make_initial_point_fn(
-                model=model,
-                jitter_rvs=jitter_rvs,
-                overrides=chain_overrides,
-                return_transformed=True,
-            )
-            for chain_overrides in overrides
-        ]
-    else:
-        raise ValueError(
-            f"Number of initval dicts ({len(overrides)}) does not match the number of chains ({chains})."
-        )
+        return ipfns
 
+    assert isinstance(overrides, Sequence) and len(overrides) == chains
+    ipfns = [
+        make_initial_point_fn(
+            model=model,
+            jitter_rvs=jitter_rvs,
+            overrides=chain_overrides,
+            return_transformed=True,
+        )
+        for chain_overrides in overrides
+    ]
     return ipfns
 
 
@@ -116,22 +127,27 @@ def make_initial_point_fn(
     model,
     overrides: StartDict | None = None,
     jitter_rvs: set[TensorVariable] | None = None,
-    default_strategy: str = "support_point",
+    default_strategy: Literal["support_point", "prior"] = "support_point",
     return_transformed: bool = True,
-) -> Callable:
+) -> SeededInitialPointFn:
     """Create seeded function that computes initial values for all free model variables.
 
     Parameters
     ----------
-    jitter_rvs : set
+    overrides : StartDict or None (default: None)
+        Initial value (strategies) to use instead of what's specified in `Model.initial_values`.
+    jitter_rvs : set or None (default: None)
         The set (or list or tuple) of random variables for which a U(-1, +1) jitter should be
         added to the initial value. Only available for variables that have a transform or real-valued support.
-    default_strategy : str
+    default_strategy : either "support_point" or "prior" (default: "support_point")
         Which of { "support_point", "prior" } to prefer if the initval setting for an RV is None.
-    overrides : dict
-        Initial value (strategies) to use instead of what's specified in `Model.initial_values`.
-    return_transformed : bool
+    return_transformed : bool (default: True)
         If `True` the returned variables will correspond to transformed initial values.
+
+    Returns
+    -------
+    initial_point_fn : SeededInitialPointFn
+        A function that takes a seed and returns a dictionary of variable names to initial points (numpy arrays).
     """
     sdict_overrides = convert_str_to_rv_dict(model, overrides or {})
     initval_strats = {
@@ -162,11 +178,13 @@ def make_initial_point_fn(
             name = var.name
         varnames.append(name)
 
-    def make_seeded_function(func):
+    def make_seeded_function(
+        func: pytensor.compile.Function,
+    ) -> SeededInitialPointFn:
         rngs = find_rng_nodes(func.maker.fgraph.outputs)
 
         @functools.wraps(func)
-        def inner(seed, *args, **kwargs):
+        def inner(seed: SeedSequenceSeed, *args, **kwargs) -> dict[str, np.ndarray]:
             reseed_rngs(rngs, seed)
             values = func(*args, **kwargs)
             return dict(zip(varnames, values))
@@ -182,26 +200,26 @@ def make_initial_point_expression(
     rvs_to_transforms: dict[TensorVariable, Transform],
     initval_strategies: dict[TensorVariable, np.ndarray | Variable | str | None],
     jitter_rvs: set[TensorVariable] | None = None,
-    default_strategy: str = "support_point",
+    default_strategy: Literal["support_point", "prior"] = "support_point",
     return_transformed: bool = False,
 ) -> list[TensorVariable]:
     """Create the tensor variables that need to be evaluated to obtain an initial point.
 
     Parameters
     ----------
-    free_rvs : list
+    free_rvs : list of `TensorVariable`s
         Tensors of free random variables in the model.
-    rvs_to_values : dict
+    rvs_to_transforms : dict[TensorVariable, Transform]
         Mapping of free random variable tensors to value variable tensors.
-    initval_strategies : dict
+    initval_strategies : dict[TensorVariable, np.ndarray | Variable | str | None]
         Mapping of free random variable tensors to initial value strategies.
         For example the `Model.initial_values` dictionary.
-    jitter_rvs : set
+    jitter_rvs : set[TensorVariable] | None (default: None)
         The set (or list or tuple) of random variables for which a U(-1, +1) jitter should be
         added to the initial value. Only available for variables that have a transform or real-valued support.
-    default_strategy : str
+    default_strategy : either "support_point" or "prior" (default: "support_point")
         Which of { "support_point", "prior" } to prefer if the initval strategy setting for an RV is None.
-    return_transformed : bool
+    return_transformed : bool (default: False)
         Switches between returning the tensors for untransformed or transformed initial points.
 
     Returns

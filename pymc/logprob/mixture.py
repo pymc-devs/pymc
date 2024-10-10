@@ -92,8 +92,8 @@ def is_newaxis(x):
 
 
 def expand_indices(
-    indices: tuple[Variable | slice | None, ...], shape: tuple[TensorVariable]
-) -> tuple[TensorVariable]:
+    indices: tuple[Variable | slice | None, ...], shape: tuple[TensorVariable, ...]
+) -> tuple[TensorVariable, ...]:
     """Convert basic and/or advanced indices into a single, broadcasted advanced indexing operation.
 
     Parameters
@@ -206,7 +206,7 @@ def expand_indices(
 
         adv_indices.append(expanded_idx)
 
-    return cast(tuple[TensorVariable], tuple(pt.broadcast_arrays(*adv_indices)))
+    return tuple(pt.broadcast_arrays(*adv_indices))
 
 
 def rv_pull_down(x: TensorVariable) -> TensorVariable:

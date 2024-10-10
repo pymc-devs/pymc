@@ -37,7 +37,6 @@ The following snippet illustrates how to create a new `RandomVariable`:
 
 from pytensor.tensor.var import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
-from typing import List, Tuple
 
 # Create your own `RandomVariable`...
 class BlahRV(RandomVariable):
@@ -53,7 +52,7 @@ class BlahRV(RandomVariable):
     dtype: str = "floatX"
 
     # A pretty text and LaTeX representation for the RV
-    _print_name: Tuple[str, str] = ("blah", "\\operatorname{blah}")
+    _print_name: tuple[str, str] = ("blah", "\\operatorname{blah}")
 
     # If you want to add a custom signature and default values for the
     # parameters, do it like this. Otherwise this can be left out.
@@ -70,7 +69,7 @@ class BlahRV(RandomVariable):
         rng: np.random.RandomState,
         loc: np.ndarray,
         scale: np.ndarray,
-        size: Tuple[int, ...],
+        size: tuple[int, ...],
     ) -> np.ndarray:
         return scipy.stats.blah.rvs(loc, scale, random_state=rng, size=size)
 
