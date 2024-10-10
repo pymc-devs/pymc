@@ -199,17 +199,6 @@ def bounded_cont_transform(op, rv, bound_args_indices=None):
     return transforms.Interval(bounds_fn=transform_params)
 
 
-def assert_negative_support(var, label, distname, value=-1e-6):
-    warnings.warn(
-        "The assert_negative_support function will be deprecated in future versions!"
-        " See https://github.com/pymc-devs/pymc/issues/5162",
-        DeprecationWarning,
-    )
-    msg = f"The variable specified for {label} has negative support for {distname}, "
-    msg += "likely making it unsuitable for this parameter."
-    return Assert(msg)(var, pt.all(pt.ge(var, 0.0)))
-
-
 def get_tau_sigma(
     tau: TensorLike | None = None, sigma: TensorLike | None = None
 ) -> tuple[TensorVariable, TensorVariable]:
