@@ -47,13 +47,6 @@ from pymc.sampling.jax import (
 )
 
 
-def test_old_import_route():
-    import pymc.sampling.jax as new_sj
-    import pymc.sampling_jax as old_sj
-
-    assert set(new_sj.__all__) <= set(dir(old_sj))
-
-
 def test_jax_PosDefMatrix():
     x = pt.tensor(name="x", shape=(2, 2), dtype="float32")
     matrix_pos_def = PosDefMatrix()
