@@ -236,40 +236,6 @@ class TestSMC:
                 pm.sample_smc(draws=99, progressbar=not _IS_WINDOWS)
         assert "The number of samples is too small" in caplog.text
 
-    def test_deprecated_parallel_arg(self):
-        with self.fast_model:
-            with pytest.warns(
-                FutureWarning,
-                match="The argument parallel is deprecated",
-            ):
-                pm.sample_smc(draws=10, chains=1, parallel=False)
-
-    def test_deprecated_abc_args(self):
-        with self.fast_model:
-            with pytest.warns(
-                FutureWarning,
-                match='The kernel string argument "ABC" in sample_smc has been deprecated',
-            ):
-                pm.sample_smc(draws=10, chains=1, kernel="ABC")
-
-            with pytest.warns(
-                FutureWarning,
-                match='The kernel string argument "Metropolis" in sample_smc has been deprecated',
-            ):
-                pm.sample_smc(draws=10, chains=1, kernel="Metropolis")
-
-            with pytest.warns(
-                FutureWarning,
-                match="save_sim_data has been deprecated",
-            ):
-                pm.sample_smc(draws=10, chains=1, save_sim_data=True)
-
-            with pytest.warns(
-                FutureWarning,
-                match="save_log_pseudolikelihood has been deprecated",
-            ):
-                pm.sample_smc(draws=10, chains=1, save_log_pseudolikelihood=True)
-
     def test_ordered(self):
         """
         Test that initial population respects custom initval, especially when applied

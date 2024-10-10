@@ -15,7 +15,6 @@
 import logging
 import multiprocessing
 import time
-import warnings
 
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, wait
@@ -150,41 +149,6 @@ def sample_smc(
         `link <http://ascelibrary.org/doi/abs/10.1061/%28ASCE%290733-9399
         %282007%29133:7%28816%29>`__
     """
-    if isinstance(kernel, str) and kernel.lower() in ("abc", "metropolis"):
-        warnings.warn(
-            f'The kernel string argument "{kernel}" in sample_smc has been deprecated. '
-            f"It is no longer needed to distinguish between `abc` and `metropolis`",
-            FutureWarning,
-            stacklevel=2,
-        )
-        kernel = IMH
-
-    if kernel_kwargs.pop("save_sim_data", None) is not None:
-        warnings.warn(
-            "save_sim_data has been deprecated. Use pm.sample_posterior_predictive "
-            "to obtain the same type of samples.",
-            FutureWarning,
-            stacklevel=2,
-        )
-
-    if kernel_kwargs.pop("save_log_pseudolikelihood", None) is not None:
-        warnings.warn(
-            "save_log_pseudolikelihood has been deprecated. This information is "
-            "now saved as log_likelihood in models with Simulator distributions.",
-            FutureWarning,
-            stacklevel=2,
-        )
-
-    parallel = kernel_kwargs.pop("parallel", None)
-    if parallel is not None:
-        warnings.warn(
-            "The argument parallel is deprecated, use the argument cores instead.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        if parallel is False:
-            cores = 1
-
     if cores is None:
         cores = _cpu_count()
 
