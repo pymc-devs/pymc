@@ -112,7 +112,7 @@ class DistributionMeta(ABCMeta):
             # Create dispatch functions
 
             size_idx: int | None = None
-            params_idxs: tuple[int] | None = None
+            params_idxs: tuple[int, ...] | None = None
             if issubclass(rv_type, SymbolicRandomVariable):
                 extended_signature = getattr(rv_type, "extended_signature", None)
                 if extended_signature is not None:
@@ -308,7 +308,9 @@ class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
     @staticmethod
     def get_input_output_type_idxs(
         extended_signature: str | None,
-    ) -> tuple[tuple[tuple[int], int | None, tuple[int]], tuple[tuple[int], tuple[int]]]:
+    ) -> tuple[
+        tuple[tuple[int, ...], int | None, tuple[int, ...]], tuple[tuple[int, ...], tuple[int, ...]]
+    ]:
         """Parse extended_signature and return indexes for *[rng], [size] and parameters as well as outputs."""
         if extended_signature is None:
             raise ValueError("extended_signature must be provided")
