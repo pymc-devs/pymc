@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import functools
 import warnings
 
 from collections.abc import Sequence
@@ -246,24 +245,6 @@ def get_transformed(z):
     if hasattr(z, "transformed"):
         z = z.transformed
     return z
-
-
-def biwrap(wrapper):
-    @functools.wraps(wrapper)
-    def enhanced(*args, **kwargs):
-        is_bound_method = hasattr(args[0], wrapper.__name__) if args else False
-        if is_bound_method:
-            count = 1
-        else:
-            count = 0
-        if len(args) > count:
-            newfn = wrapper(*args, **kwargs)
-            return newfn
-        else:
-            newwrapper = functools.partial(wrapper, *args, **kwargs)
-            return newwrapper
-
-    return enhanced
 
 
 def drop_warning_stat(idata: arviz.InferenceData) -> arviz.InferenceData:
