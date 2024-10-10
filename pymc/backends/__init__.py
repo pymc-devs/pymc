@@ -85,7 +85,7 @@ try:
     RunType: TypeAlias = Run
     HAS_MCB = True
 except ImportError:
-    TraceOrBackend = BaseTrace  # type: ignore[misc]
+    TraceOrBackend = BaseTrace  # type: ignore[assignment, misc]
     RunType = type(None)  # type: ignore[assignment, misc]
 
 
