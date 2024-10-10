@@ -2709,7 +2709,6 @@ class ZeroSumNormal(Distribution):
     n_zerosum_axes: int, defaults to 1
         Number of axes along which the zero-sum constraint is enforced, starting from the rightmost position.
         Defaults to 1, i.e the rightmost axis.
-    zerosum_axes: int, deprecated please use n_zerosum_axes as its successor
     dims: sequence of strings, optional
         Dimension names of the distribution. Works the same as for other PyMC distributions.
         Necessary if ``shape`` is not passed.
@@ -2749,15 +2748,7 @@ class ZeroSumNormal(Distribution):
     rv_type = ZeroSumNormalRV
     rv_op = ZeroSumNormalRV.rv_op
 
-    def __new__(
-        cls, *args, zerosum_axes=None, n_zerosum_axes=None, support_shape=None, dims=None, **kwargs
-    ):
-        if zerosum_axes is not None:
-            n_zerosum_axes = zerosum_axes
-            warnings.warn(
-                "The 'zerosum_axes' parameter is deprecated. Use 'n_zerosum_axes' instead.",
-                DeprecationWarning,
-            )
+    def __new__(cls, *args, n_zerosum_axes=None, support_shape=None, dims=None, **kwargs):
         if dims is not None or kwargs.get("observed") is not None:
             n_zerosum_axes = cls.check_zerosum_axes(n_zerosum_axes)
 
