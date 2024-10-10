@@ -2003,11 +2003,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         )
 
 
-# this is really disgusting, but it breaks a self-loop: I can't pass Model
-# itself as context class init arg.
-Model._context_class = Model
-
-
 class BlockModelAccess(Model):
     """Can be used to prevent user access to Model contexts."""
 
