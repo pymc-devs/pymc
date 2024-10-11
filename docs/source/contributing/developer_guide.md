@@ -9,6 +9,30 @@ This document explains the design and implementation of probabilistic programmin
 A user-facing API introduction can be found in the {ref}`API quickstart <pymc_overview>`.
 An accessible introduction to building models with PyMC can be found in [our PyData London 2022 tutorial](https://github.com/fonnesbeck/probabilistic_python).
 
+## Table of Contents
+- [Distributions](#distributions)
+- [Reflection](#reflection)
+- [PyMC in Comparison](#pymc-in-comparison)
+  - [PyMC](#pymc)
+  - [Tensorflow Probability](#tensorflow-probability)
+  - [Pyro](#pyro)
+- [Behind the scenes of the logp function](#behind-the-scenes-of-the-logp-function)
+- [Model Context and Random Variables](#model-context-and-random-variables)
+- [Additional things that pm.Model does](#additional-things-that-pmmodel-does)
+- [Logp and dlogp](#logp-and-dlogp)
+- [Inference](#inference)
+  - [MCMC](#mcmc)
+    - [Transition kernel](#transition-kernel)
+    - [Dynamic HMC](#dynamic-hmc)
+    - [Variational Inference (VI)](#variational-inference-vi)
+      - [Some challenges and insights from implementing VI](#some-challenges-and-insights-from-implementing-vi)
+  - [Forward sampling](#forward-sampling)
+  - [Extending PyMC](#extending-pymc)
+  - [What we got wrong](#what-we-got-wrong)
+    - [Shape](#shape)
+    - [Random methods in numpy](#random-methods-in-numpy)
+    - [Samplers are in Python](#samplers-are-in-python)
+
 ## Distributions
 
 Probability distributions in PyMC are implemented as classes that inherit from {class}`~pymc.Continuous` or {class}`~pymc.Discrete`.
@@ -65,7 +89,7 @@ Now, because the ``NormalRV`` can be associated with the [probability density fu
 with pm.Model():
     z = pm.Normal("z", 0, 5)
 symbolic = pm.logp(z, 2.5)
-numeric = symbolic.eval()
+symbolic.eval()
 # array(-2.65337645)
 ```
 
@@ -100,14 +124,17 @@ $$
 
 ```python
 with pm.Model() as model:
-    z = pm.Normal('z', mu=0., sigma=5.)             # ==> pytensor.tensor.var.TensorVariable
-    x = pm.Normal('x', mu=z, sigma=1., observed=5.) # ==> pytensor.tensor.var.TensorVariable
+    z = pm.Normal('z', mu=0., sigma=5.)
+    # ==> pytensor.tensor.var.TensorVariable
+    x = pm.Normal('x', mu=z, sigma=1., observed=5.)
+    # ==> pytensor.tensor.var.TensorVariable
 # The log-prior of z=2.5
-pm.logp(z, 2.5).eval()                              # ==> -2.65337645
-# ???????
-x.logp({'z': 2.5})                                  # ==> -4.0439386
-# ???????
-model.logp({'z': 2.5})                              # ==> -6.6973152
+pm.logp(z, 2.5).eval()
+# ==> -2.65337645
+x.logp({'z': 2.5})
+# ==> -4.0439386
+model.logp({'z': 2.5})
+# ==> -6.6973152
 ```
 
 ### Tensorflow Probability
@@ -118,25 +145,35 @@ import tensorflow.compat.v1 as tf
 from tensorflow_probability import distributions as tfd
 
 with tf.Session() as sess:
-    z_dist = tfd.Normal(loc=0., scale=5.)            # ==> <class 'tfp.python.distributions.normal.Normal'>
-    z = z_dist.sample()                              # ==> <class 'tensorflow.python.framework.ops.Tensor'>
-    x = tfd.Normal(loc=z, scale=1.).log_prob(5.)     # ==> <class 'tensorflow.python.framework.ops.Tensor'>
+    z_dist = tfd.Normal(loc=0., scale=5.)
+    # ==> <class 'tfp.python.distributions.normal.Normal'>
+    z = z_dist.sample()
+    # ==> <class 'tensorflow.python.framework.ops.Tensor'>
+    x = tfd.Normal(loc=z, scale=1.).log_prob(5.)
+    # ==> <class 'tensorflow.python.framework.ops.Tensor'>
     model_logp = z_dist.log_prob(z) + x
-    print(sess.run(x, feed_dict={z: 2.5}))           # ==> -4.0439386
-    print(sess.run(model_logp, feed_dict={z: 2.5}))  # ==> -6.6973152
+    print(sess.run(x, feed_dict={z: 2.5}))
+    # ==> -4.0439386
+    print(sess.run(model_logp, feed_dict={z: 2.5}))
+    # ==> -6.6973152
 ```
 
 ### Pyro
 
 ```python
-z_dist = dist.Normal(loc=0., scale=5.)           # ==> <class 'pyro.distributions.torch.Normal'>
-z = pyro.sample("z", z_dist)                     # ==> <class 'torch.Tensor'>
+z_dist = dist.Normal(loc=0., scale=5.)
+# ==> <class 'pyro.distributions.torch.Normal'>
+z = pyro.sample("z", z_dist)
+# ==> <class 'torch.Tensor'>
 # reset/specify value of z
 z.data = torch.tensor(2.5)
-x = dist.Normal(loc=z, scale=1.).log_prob(5.)    # ==> <class 'torch.Tensor'>
+x = dist.Normal(loc=z, scale=1.).log_prob(5.)
+# ==> <class 'torch.Tensor'>
 model_logp = z_dist.log_prob(z) + x
-x                                                # ==> -4.0439386
-model_logp                                       # ==> -6.6973152
+x
+# ==> -4.0439386
+model_logp
+# ==> -6.6973152
 ```
 
 
@@ -204,30 +241,26 @@ finally:
     VAR.__exit__()
 ```
 
-or conceptually:
-
-```python
-with EXPR as VAR:
-    # DO SOMETHING
-    USERCODE
-    # DO SOME ADDITIONAL THINGS
-```
-
 But what are the implications of this, besides the model instatiation ``model = pm.Model()``?
 
 ### Random Variable
 
-As we have seen, when we call e.g. ``pm.Normal('x', ...)`` within a Model context, it returns a random variable.
+As we have seen already, when we call e.g. ``pm.Normal('x', ...)`` within a Model context, it returns a random variable.
 
 ```python
 with pm.Model() as model:
     x = pm.Normal('x', mu=0., sigma=1.)
 
-print(type(x))                              # ==> <class 'pytensor.tensor.var.TensorVariable'>
-print(model.free_RVs)                       # ==> [x]
-print(pm.logp(x, 5.0))                      # ==> Elemwise{switch,no_inplace}.0
-print(pm.logp(x, 5.).eval({}))              # ==> -13.418938533204672
-print(model.compile_logp()({'x': 5.}))      # ==> -13.418938533204672
+print(type(x))
+# ==> <class 'pytensor.tensor.var.TensorVariable'>
+print(model.free_RVs)
+# ==> [x]
+print(pm.logp(x, 5.0))
+# ==> Elemwise{switch,no_inplace}.0
+print(pm.logp(x, 5.).eval({}))
+# ==> -13.418938533204672
+print(model.compile_logp()({'x': 5.}))
+# ==> -13.418938533204672
 ```
 
 In general, if a variable has observations (``observed`` parameter), the RV is an observed RV, otherwise if it has a ``transformed`` (``transform`` parameter) attribute, it is a transformed RV otherwise, it will be the most elementary form: a free RV.
