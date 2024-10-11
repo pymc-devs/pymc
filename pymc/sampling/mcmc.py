@@ -305,7 +305,11 @@ def _sample_external_nuts(
                 "`var_names` are currently ignored by the nutpie sampler",
                 UserWarning,
             )
-        compiled_model = nutpie.compile_pymc_model(model)
+        compiled_model = nutpie.compile_pymc_model(
+            model,
+            backend=nuts_sampler_kwargs.pop("backend", None),
+            gradient_backend=nuts_sampler_kwargs.pop("gradient_backend", None),
+        )
         t_start = time.time()
         idata = nutpie.sample(
             compiled_model,
