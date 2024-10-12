@@ -23,16 +23,34 @@ from pymc.dispatch import dispatch_jax  # noqa: F401
 jax = pytest.importorskip("jax")
 
 
-def test_jax_TruncatedNormal():
+@pytest.mark.parametrize("sigma", [0.02, 5])
+def test_jax_TruncatedNormal(sigma):
     with pm.Model() as m:
-        f_jax = function(
-            [],
-            [pm.TruncatedNormal("a", 0, 1, lower=-1, upper=2, rng=np.random.default_rng(seed=123))],
-            mode="JAX",
-        )
-        f_py = function(
-            [],
-            [pm.TruncatedNormal("b", 0, 1, lower=-1, upper=2, rng=np.random.default_rng(seed=123))],
+        lower = 5
+        upper = 8
+        mu = 6
+
+        a = pm.TruncatedNormal(
+            "a", mu, sigma, lower=lower, upper=upper, rng=np.random.default_rng(seed=123)
         )
 
-    assert jax.numpy.array_equal(a1=f_py(), a2=f_jax())
+        f_jax = function(
+            [],
+            [
+                pm.TruncatedNormal(
+                    "b",
+                    mu,
+                    sigma,
+                    lower=lower,
+                    upper=upper,
+                    rng=np.random.default_rng(seed=123),
+                )
+            ],
+            mode="JAX",
+        )
+        res = f_jax()
+
+        draws = pm.draw(a, draws=100, mode="JAX")
+
+    assert jax.numpy.all((draws >= lower) & (draws <= upper))
+    assert jax.numpy.all((res[0] >= lower) & (res[0] <= upper))

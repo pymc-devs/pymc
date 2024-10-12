@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import jax
+import jax.numpy as jnp
 
 from pytensor.link.jax.dispatch import jax_funcify
 
@@ -25,8 +26,19 @@ def jax_funcify_TruncatedNormalRV(op, **kwargs):
         rng_key, sampling_key = jax.random.split(rng_key, 2)
         key["jax_state"] = rng_key
 
-        truncnorm = jax.nn.initializers.truncated_normal(sigma, lower=lower, upper=upper)
+        if lower is None:
+            lower = -jnp.inf
+        if upper is None:
+            upper = jnp.inf
+        else:
+            new_lower, new_upper = (lower - mu) / sigma, (upper - mu) / sigma
 
-        return key, truncnorm(key["jax_state"], size) + mu
+        if size is None:
+            size = jnp.broadcast_arrays(jnp.array(mu), jnp.array(sigma))[0].shape
+
+        res = jax.random.truncated_normal(key["jax_state"], new_lower, new_upper, shape=size)
+        res = res * sigma + mu
+
+        return key, res
 
     return trunc_normal_fn
