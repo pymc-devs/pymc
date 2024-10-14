@@ -314,7 +314,7 @@ def _sample_blackjax_nuts(
         values like 0.9 or 0.95 often work better for problematic posteriors.
     random_seed : int, RandomState or Generator, optional
         Random seed used by the sampling steps.
-    initvals: StartDict or Sequence[Optional[StartDict]], optional
+    initvals: StartDict or Sequence[StartDict | None], optional
         Initial values for random variables provided as a dictionary (or sequence of
         dictionaries) mapping the random variable (by name or reference) to desired
         starting values.
@@ -332,7 +332,7 @@ def _sample_blackjax_nuts(
     chain_method : str, default "parallel"
         Specify how samples should be drawn. The choices include "parallel", and
         "vectorized".
-    postprocessing_backend: Optional[Literal["cpu", "gpu"]], default None,
+    postprocessing_backend: Literal["cpu", "gpu"] | None, default None,
         Specify how postprocessing should be computed. gpu or cpu
     postprocessing_vectorize: Literal["vmap", "scan"], default "scan"
         How to vectorize the postprocessing: vmap or sequential scan
@@ -507,7 +507,7 @@ def sample_jax_nuts(
         values like 0.9 or 0.95 often work better for problematic posteriors.
     random_seed : int, RandomState or Generator, optional
         Random seed used by the sampling steps.
-    initvals: StartDict or Sequence[Optional[StartDict]], optional
+    initvals: StartDict or Sequence[StartDict | None], optional
         Initial values for random variables provided as a dictionary (or sequence of
         dictionaries) mapping the random variable (by name or reference) to desired
         starting values.
@@ -529,7 +529,7 @@ def sample_jax_nuts(
     chain_method : str, default "parallel"
         Specify how samples should be drawn. The choices include "parallel", and
         "vectorized".
-    postprocessing_backend : Optional[Literal["cpu", "gpu"]], default None,
+    postprocessing_backend : Literal["cpu", "gpu"] | None, default None,
         Specify how postprocessing should be computed. gpu or cpu
     postprocessing_vectorize : Literal["vmap", "scan"], default "scan"
         How to vectorize the postprocessing: vmap or sequential scan

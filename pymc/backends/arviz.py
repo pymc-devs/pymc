@@ -118,7 +118,7 @@ class _DefaultTrace:
 
     Attributes
     ----------
-    trace_dict : Dict[str, np.ndarray]
+    trace_dict : dict[str, np.ndarray]
         A dictionary constituting a trace.  Should be extracted
         after a procedure has filled the `_DefaultTrace` using the
         `insert()` method
@@ -548,7 +548,7 @@ def predictions_to_inference_data(
 
     Parameters
     ----------
-    predictions: Dict[str, np.ndarray]
+    predictions: dict[str, np.ndarray]
         The predictions are the return value of :func:`~pymc.sample_posterior_predictive`,
         a dictionary of strings (variable names) to numpy ndarrays (draws).
         Requires the arrays to follow the convention ``chain, draw, *shape``.
@@ -559,9 +559,9 @@ def predictions_to_inference_data(
         variables must be *removed* from this trace.
     model: Model
         The pymc model. It can be omitted if within a model context.
-    coords: Dict[str, array-like[Any]]
+    coords: dict[str, array-like[Any]]
         Coordinates for the variables.  Map from coordinate names to coordinate values.
-    dims: Dict[str, array-like[str]]
+    dims: dict[str, array-like[str]]
         Map from variable name to ordered set of coordinate names.
     idata_orig: InferenceData, optional
         If supplied, then modify this inference data in place, adding ``predictions`` and
