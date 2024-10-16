@@ -20,3 +20,5 @@ Internal structures
    NDArray
    base.BaseTrace
    base.MultiTrace
+   zarr.ZarrTrace
+   zarr.ZarrChain
