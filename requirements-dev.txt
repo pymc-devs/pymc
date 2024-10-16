@@ -32,3 +32,4 @@ threadpoolctl>=3.1.0
 types-cachetools
 typing-extensions>=3.7.4
 watermark
+zarr>=2.5.0,<3
