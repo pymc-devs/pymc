@@ -309,10 +309,7 @@ def test_join_mixed_ndim_supp():
         (1, 2, 0),  # Swap
         (0, 1, 2, "x"),  # Expand
         ("x", 0, 1, 2),  # Expand
-        (
-            0,
-            2,
-        ),  # Drop
+        (0, 2),  # Drop
         (2, 0),  # Swap and drop
         (2, 1, "x", 0),  # Swap and expand
         ("x", 0, 2),  # Expand and drop
@@ -338,7 +335,7 @@ def test_measurable_dimshuffle(ds_order, multivariate):
 
     ref_logp = logp(base_rv, base_vv).dimshuffle(logp_ds_order)
 
-    # Disable local_dimshuffle_rv_lift to test fallback Aeppl rewrite
+    # Disable local_dimshuffle_rv_lift to test fallback logprob rewrite
     ir_rewriter = logprob_rewrites_db.query(
         RewriteDatabaseQuery(include=["basic"]).excluding("dimshuffle_lift")
     )
