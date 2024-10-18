@@ -503,7 +503,7 @@ def conditional_logp(
         if not isinstance(node.op, MeasurableOp):
             continue
 
-        valued_nodes = get_related_valued_nodes(node, fgraph)
+        valued_nodes = get_related_valued_nodes(fgraph, node)
 
         if not valued_nodes:
             continue

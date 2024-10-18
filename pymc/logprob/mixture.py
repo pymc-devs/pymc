@@ -468,7 +468,7 @@ def split_valued_ifelse(fgraph, node):
         # Single outputs IfElse
         return None
 
-    valued_output_nodes = get_related_valued_nodes(node, fgraph)
+    valued_output_nodes = get_related_valued_nodes(fgraph, node)
     if not valued_output_nodes:
         return None
 
