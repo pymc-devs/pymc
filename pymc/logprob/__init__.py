@@ -49,6 +49,7 @@ import pymc.logprob.binary
 import pymc.logprob.censoring
 import pymc.logprob.cumsum
 import pymc.logprob.checks
+import pymc.logprob.linalg
 import pymc.logprob.mixture
 import pymc.logprob.order
 import pymc.logprob.scan

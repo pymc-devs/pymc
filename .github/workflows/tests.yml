@@ -116,6 +116,7 @@ jobs:
             tests/logprob/test_censoring.py
             tests/logprob/test_composite_logprob.py
             tests/logprob/test_cumsum.py
+            tests/logprob/test_linalg.py
             tests/logprob/test_mixture.py
             tests/logprob/test_order.py
             tests/logprob/test_rewriting.py
