@@ -421,7 +421,7 @@ def find_measurable_scans(fgraph, node):
     # Find outputs of scan that are directly valued.
     # These must be mapping outputs, such as `outputs_info = [None]` (i.e, no recurrence nit_sot outputs)
     direct_valued_outputs = [
-        valued_node.inputs[0] for valued_node in get_related_valued_nodes(node, fgraph)
+        valued_node.inputs[0] for valued_node in get_related_valued_nodes(fgraph, node)
     ]
     if not all(valued_out in scan_args.outer_out_nit_sot for valued_out in direct_valued_outputs):
         return None
@@ -434,7 +434,7 @@ def find_measurable_scans(fgraph, node):
         client.outputs[0]
         for out in node.outputs
         for client, _ in fgraph.clients[out]
-        if (isinstance(client.op, Subtensor) and get_related_valued_nodes(client, fgraph))
+        if (isinstance(client.op, Subtensor) and get_related_valued_nodes(fgraph, client))
     ]
     indirect_valued_outputs = [out.owner.inputs[0] for out in sliced_valued_outputs]
     if not all(

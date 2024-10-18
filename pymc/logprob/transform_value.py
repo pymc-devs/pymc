@@ -147,7 +147,7 @@ def transform_values(fgraph: FunctionGraph, node: Apply) -> list[Apply] | None:
         return None
 
     rv_node = node.inputs[0].owner
-    valued_nodes = get_related_valued_nodes(rv_node, fgraph)
+    valued_nodes = get_related_valued_nodes(fgraph, rv_node)
     rvs = [valued_var.inputs[0] for valued_var in valued_nodes]
     values = [valued_var.inputs[1] for valued_var in valued_nodes]
     transforms = [values_to_transforms.get(value, None) for value in values]
