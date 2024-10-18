@@ -43,6 +43,7 @@ from functools import singledispatch
 from pytensor.graph import Apply, Op, Variable
 from pytensor.graph.utils import MetaType
 from pytensor.tensor import TensorVariable
+from pytensor.tensor.blockwise import Blockwise
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 
@@ -166,6 +167,10 @@ class MeasurableElemwise(MeasurableOp, Elemwise):
     def __str__(self):
         """Return a string representation of the object."""
         return f"Measurable{super().__str__()}"
+
+
+class MeasurableBlockwise(MeasurableOp, Blockwise):
+    """Base class for Measurable Blockwise variables."""
 
 
 class ValuedRV(Op):
