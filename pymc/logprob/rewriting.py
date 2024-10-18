@@ -152,7 +152,11 @@ logprob_rewrites_db.register(
 logprob_rewrites_db.register(
     "local_exp_over_1_plus_exp", out2in(local_exp_over_1_plus_exp), "basic"
 )
-logprob_rewrites_db.register("pre-canonicalize", optdb.query("+canonicalize"), "basic")
+logprob_rewrites_db.register(
+    "pre-canonicalize",
+    optdb.query("+canonicalize", "-local_eager_useless_unbatched_blockwise"),
+    "basic",
+)
 
 # These rewrites convert un-measurable variables into their measurable forms,
 # but they need to be reapplied, because some of the measurable forms require
@@ -175,7 +179,11 @@ logprob_rewrites_db.register(
 )
 
 
-logprob_rewrites_db.register("post-canonicalize", optdb.query("+canonicalize"), "basic")
+logprob_rewrites_db.register(
+    "post-canonicalize",
+    optdb.query("+canonicalize", "-local_eager_useless_unbatched_blockwise"),
+    "basic",
+)
 
 # Rewrites that remove IR Ops
 cleanup_ir_rewrites_db = LocalGroupDB()
