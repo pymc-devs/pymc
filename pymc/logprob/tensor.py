@@ -41,13 +41,19 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.basic import Join, MakeVector
-from pytensor.tensor.elemwise import DimShuffle
+from pytensor.tensor.elemwise import DimShuffle, Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import (
     local_dimshuffle_rv_lift,
 )
 
-from pymc.logprob.abstract import MeasurableOp, _logprob, _logprob_helper, promised_valued_rv
+from pymc.logprob.abstract import (
+    MeasurableOp,
+    ValuedRV,
+    _logprob,
+    _logprob_helper,
+    promised_valued_rv,
+)
 from pymc.logprob.rewriting import (
     assume_valued_outputs,
     early_measurable_ir_rewrites_db,
@@ -57,6 +63,7 @@ from pymc.logprob.rewriting import (
 from pymc.logprob.utils import (
     check_potential_measurability,
     filter_measurable_variables,
+    get_related_valued_nodes,
     replace_rvs_by_values,
 )
 from pymc.pytensorf import constant_fold
@@ -183,6 +190,9 @@ class MeasurableDimShuffle(MeasurableOp, DimShuffle):
     # find it locally and fails when a new `Op` is initialized
     c_func_file = str(DimShuffle.get_path(Path(DimShuffle.c_func_file)))  # type: ignore[arg-type]
 
+    def __str__(self):
+        return f"Measurable{super().__str__()}"
+
 
 @_logprob.register(MeasurableDimShuffle)
 def logprob_dimshuffle(op: MeasurableDimShuffle, values, base_var, **kwargs):
@@ -215,29 +225,66 @@ def logprob_dimshuffle(op: MeasurableDimShuffle, values, base_var, **kwargs):
     return raw_logp.dimshuffle(redo_ds)
 
 
+def _elemwise_univariate_chain(fgraph, node) -> bool:
+    # Check whether only Elemwise operations connect a base univariate RV to the valued node through var.
+    from pymc.distributions.distribution import SymbolicRandomVariable
+    from pymc.logprob.transforms import MeasurableTransform
+
+    [inp] = node.inputs
+    [out] = node.outputs
+
+    def elemwise_root(var: TensorVariable) -> TensorVariable | None:
+        if isinstance(var.owner.op, RandomVariable | SymbolicRandomVariable):
+            return var
+        elif isinstance(var.owner.op, MeasurableTransform):
+            return elemwise_root(var.owner.inputs[var.owner.op.measurable_input_idx])
+        else:
+            return None
+
+    # Check that the root is a univariate distribution linked by only elemwise operations
+    root = elemwise_root(inp)
+    if root is None:
+        return False
+    elif root.owner.op.ndim_supp != 0:
+        # This is still fine if the variable is directly valued
+        return any(get_related_valued_nodes(fgraph, node))
+
+    def elemwise_leaf(var: TensorVariable, clients=fgraph.clients) -> bool:
+        var_clients = clients[var]
+        if len(var_clients) != 1:
+            return False
+        [(client, _)] = var_clients
+        if isinstance(client.op, ValuedRV):
+            return True
+        elif isinstance(client.op, Elemwise) and len(client.outputs) == 1:
+            return elemwise_leaf(client.outputs[0])
+        else:
+            return False
+
+    # Check that the path to the valued node consists only of elemwise operations
+    return elemwise_leaf(out)
+
+
 @node_rewriter([DimShuffle])
 def find_measurable_dimshuffles(fgraph, node) -> list[TensorVariable] | None:
     r"""Find `Dimshuffle`\s for which a `logprob` can be computed."""
-    from pymc.distributions.distribution import SymbolicRandomVariable
-
     if isinstance(node.op, MeasurableOp):
         return None
 
     if not filter_measurable_variables(node.inputs):
         return None
 
-    base_var = node.inputs[0]
+    # In cases where DimShuffle transposes dimensions, we only apply this rewrite when only Elemwise
+    # operations separate it from the valued node. Further transformations likely need to know where
+    # the support axes are for a correct implementation (and thus assume they are the rightmost axes).
+    # TODO: When we include the support axis as meta information in each  intermediate MeasurableVariable,
+    #  we can lift this restriction (see https://github.com/pymc-devs/pymc/issues/6360)
+    if tuple(node.op.shuffle) != tuple(sorted(node.op.shuffle)) and not _elemwise_univariate_chain(
+        fgraph, node
+    ):
+        return None
 
-    # We can only apply this rewrite directly to `RandomVariable`s, as those are
-    # the only `Op`s for which we always know the support axis. Other measurable
-    # variables can have arbitrary support axes (e.g., if they contain separate
-    # `MeasurableDimShuffle`s). Most measurable variables with `DimShuffle`s
-    # should still be supported as long as the `DimShuffle`s can be merged/
-    # lifted towards the base RandomVariable.
-    # TODO: If we include the support axis as meta information in each
-    # intermediate MeasurableVariable, we can lift this restriction.
-    if not isinstance(base_var.owner.op, RandomVariable | SymbolicRandomVariable):
-        return None  # pragma: no cover
+    base_var = node.inputs[0]
 
     measurable_dimshuffle = MeasurableDimShuffle(node.op.input_broadcastable, node.op.new_order)(
         base_var

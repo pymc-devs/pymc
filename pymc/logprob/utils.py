@@ -320,7 +320,7 @@ def find_negated_var(var):
     return None
 
 
-def get_related_valued_nodes(node: Apply, fgraph: FunctionGraph) -> list[Apply]:
+def get_related_valued_nodes(fgraph: FunctionGraph, node: Apply) -> list[Apply]:
     """Get all ValuedVars related to the same RV node.
 
     Returns
