@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import functools
+import re
 import warnings
 
 from collections import namedtuple
@@ -276,7 +277,12 @@ def drop_warning_stat(idata: arviz.InferenceData) -> arviz.InferenceData:
     nidata = arviz.InferenceData(attrs=idata.attrs)
     for gname, group in idata.items():
         if "sample_stat" in gname:
-            group = group.drop_vars(names=["warning", "warning_dim_0"], errors="ignore")
+            warning_vars = [
+                name
+                for name in group.data_vars
+                if name == "warning" or re.match(r"sampler_\d+__warning", str(name))
+            ]
+            group = group.drop_vars(names=[*warning_vars, "warning_dim_0"], errors="ignore")
         nidata.add_groups({gname: group}, coords=group.coords, dims=group.dims)
     return nidata
 
