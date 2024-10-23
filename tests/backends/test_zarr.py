@@ -19,6 +19,8 @@ import numpy as np
 import pytest
 import zarr
 
+from arviz import InferenceData
+
 import pymc as pm
 
 from pymc.backends.zarr import ZarrTrace
@@ -357,3 +359,112 @@ def test_split_warmup(tune, model, model_step, include_transformed):
             if len(dims) >= 2 and dims[1] == "draw":
                 assert sample_stats_array.shape[1] == draws
                 assert trace.root["warmup_sample_stats"][var_name].shape[1] == tune
+
+
+@pytest.fixture(scope="function", params=[True, False])
+def discard_tuned_samples(request):
+    return request.param
+
+
+@pytest.fixture(scope="function", params=[True, False])
+def return_inferencedata(request):
+    return request.param
+
+
+@pytest.fixture(scope="function", params=[True, False])
+def keep_warning_stat(request):
+    return request.param
+
+
+@pytest.fixture(scope="function", params=[True, False])
+def parallel(request):
+    return request.param
+
+
+@pytest.fixture(scope="function", params=[True, False])
+def log_likelihood(request):
+    return request.param
+
+
+def test_sample(
+    model,
+    model_step,
+    include_transformed,
+    discard_tuned_samples,
+    return_inferencedata,
+    keep_warning_stat,
+    parallel,
+    log_likelihood,
+    draws_per_chunk,
+):
+    if not return_inferencedata and not log_likelihood:
+        pytest.skip(
+            reason="log_likelihood is only computed if an inference data object is returned"
+        )
+    store = zarr.MemoryStore()
+    trace = ZarrTrace(
+        store=store, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
+    )
+    tune = 2
+    draws = 3
+    if parallel:
+        chains = 2
+        cores = 2
+    else:
+        chains = 1
+        cores = 1
+    with model:
+        out_trace = pm.sample(
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            cores=cores,
+            trace=trace,
+            step=model_step,
+            discard_tuned_samples=discard_tuned_samples,
+            return_inferencedata=return_inferencedata,
+            keep_warning_stat=keep_warning_stat,
+            idata_kwargs={"log_likelihood": log_likelihood},
+        )
+
+    if not return_inferencedata:
+        assert isinstance(out_trace, ZarrTrace)
+        assert out_trace.root.store is trace.root.store
+    else:
+        assert isinstance(out_trace, InferenceData)
+
+    expected_groups = {"posterior", "constant_data", "observed_data", "sample_stats"}
+    if include_transformed:
+        expected_groups |= {"unconstrained_posterior"}
+    if not return_inferencedata or not discard_tuned_samples:
+        expected_groups |= {"warmup_posterior", "warmup_sample_stats"}
+        if include_transformed:
+            expected_groups |= {"warmup_unconstrained_posterior"}
+    if not return_inferencedata:
+        expected_groups |= {"_sampling_state"}
+    elif log_likelihood:
+        expected_groups |= {"log_likelihood"}
+    assert set(out_trace.groups()) == expected_groups
+
+    if return_inferencedata:
+        warning_stat = (
+            "sampler_1__warning" if isinstance(model_step, CompoundStep) else "sampler_0__warning"
+        )
+        if keep_warning_stat:
+            assert warning_stat in out_trace.sample_stats
+        else:
+            assert warning_stat not in out_trace.sample_stats
+
+    # Assert that all variables have non empty samples (not NaNs)
+    if return_inferencedata:
+        assert all(
+            (not np.any(np.isnan(v))) and v.shape[:2] == (chains, draws)
+            for v in out_trace.posterior.data_vars.values()
+        )
+    else:
+        dimensions = {*model.coords, "a_dim_0", "a_dim_1", "chain", "draw"}
+        assert all(
+            (not np.any(np.isnan(v[:]))) and v.shape[:2] == (chains, draws)
+            for name, v in out_trace.posterior.arrays()
+            if name not in dimensions
+        )
