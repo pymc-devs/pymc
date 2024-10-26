@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import sys
 import warnings
 
 from functools import partial, reduce
@@ -73,6 +72,7 @@ from pytensor.tensor import (
     ones_like,
     or_,
     prod,
+    round,
     sgn,
     sigmoid,
     sin,
@@ -178,12 +178,14 @@ __all__ = [
     "expand_packed_triangular",
     "batched_diag",
     "block_diagonal",
+    "round",
 ]
 
 
 def kronecker(*Ks):
-    r"""Return the Kronecker product of arguments:
-          :math:`K_1 \otimes K_2 \otimes ... \otimes K_D`
+    r"""Return the Kronecker product of arguments.
+
+    math:`K_1 \otimes K_2 \otimes ... \otimes K_D`
 
     Parameters
     ----------
@@ -199,7 +201,7 @@ def kronecker(*Ks):
 
 
 def cartesian(*arrays):
-    """Makes the Cartesian product of arrays.
+    """Make the Cartesian product of arrays.
 
     Parameters
     ----------
@@ -217,7 +219,7 @@ def cartesian(*arrays):
 
 
 def kron_matrix_op(krons, m, op):
-    r"""Apply op to krons and m in a way that reproduces ``op(kronecker(*krons), m)``
+    r"""Apply op to krons and m in a way that reproduces ``op(kronecker(*krons), m)``.
 
     Parameters
     ----------
@@ -262,7 +264,7 @@ def flat_outer(a, b):
 
 
 def kron_diag(*diags):
-    """Returns diagonal of a kronecker product.
+    """Return diagonal of a kronecker product.
 
     Parameters
     ----------
@@ -272,37 +274,28 @@ def kron_diag(*diags):
     return reduce(flat_outer, diags)
 
 
-def round(*args, **kwargs):
-    """
-    Temporary function to silence round warning in PyTensor. Please remove
-    when the warning disappears.
-    """
-    kwargs["mode"] = "half_to_even"
-    return pt.round(*args, **kwargs)
-
-
-def tround(*args, **kwargs):
-    warnings.warn("tround is deprecated. Use round instead.")
-    return round(*args, **kwargs)
-
-
 def logdiffexp(a, b):
-    """log(exp(a) - exp(b))"""
+    """Return log(exp(a) - exp(b))."""
     return a + pt.log1mexp(b - a)
 
 
 def logdiffexp_numpy(a, b):
-    """log(exp(a) - exp(b))"""
+    """Return log(exp(a) - exp(b))."""
+    warnings.warn(
+        "pymc.math.logdiffexp_numpy is being deprecated.",
+        FutureWarning,
+        stacklevel=2,
+    )
     return a + log1mexp_numpy(b - a, negative_input=True)
 
 
 invlogit = sigmoid
 
 
-def logbern(log_p):
+def logbern(log_p, rng=None):
     if np.isnan(log_p):
         raise FloatingPointError("log_p can't be nan.")
-    return np.log(np.random.uniform()) < log_p
+    return np.log((rng or np.random).uniform()) < log_p
 
 
 def logit(p):
@@ -337,10 +330,17 @@ def log1mexp(x, *, negative_input=False):
 
 def log1mexp_numpy(x, *, negative_input=False):
     """Return log(1 - exp(x)).
+
     This function is numerically more stable than the naive approach.
+
     For details, see
     https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
     """
+    warnings.warn(
+        "pymc.math.log1mexp_numpy is being deprecated.",
+        FutureWarning,
+        stacklevel=2,
+    )
     x = np.asarray(x, dtype="float")
 
     if not negative_input:
@@ -365,9 +365,9 @@ def flatten_list(tensors):
 
 
 class LogDet(Op):
-    r"""Compute the logarithm of the absolute determinant of a square
-    matrix M, log(abs(det(M))) on the CPU. Avoids det(M) overflow/
-    underflow.
+    r"""Compute the logarithm of the absolute determinant of a square matrix M, log(abs(det(M))) on the CPU.
+
+    Avoids det(M) overflow/underflow.
 
     Notes
     -----
@@ -388,8 +388,7 @@ class LogDet(Op):
             log_det = np.sum(np.log(np.abs(s)))
             z[0] = np.asarray(log_det, dtype=x.dtype)
         except Exception:
-            print(f"Failed to compute logdet of {x}.", file=sys.stdout)
-            raise
+            raise ValueError(f"Failed to compute logdet of {x}.")
 
     def grad(self, inputs, g_outputs):
         [gz] = g_outputs
@@ -462,9 +461,7 @@ def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):
 
 
 class BatchedDiag(Op):
-    """
-    Fast BatchedDiag allocation
-    """
+    """Fast BatchedDiag allocation."""
 
     __props__ = ()
 
@@ -511,8 +508,7 @@ def batched_diag(C):
 
 
 def block_diagonal(matrices, sparse=False, format="csr"):
-    r"""See pt.slinalg.block_diag or
-    pytensor.sparse.basic.block_diag for reference
+    r"""See pt.slinalg.block_diag or pytensor.sparse.basic.block_diag for reference.
 
     Parameters
     ----------

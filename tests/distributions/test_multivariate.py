@@ -26,11 +26,13 @@ import scipy.stats as st
 from pytensor import tensor as pt
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.blockwise import Blockwise
+from pytensor.tensor.nlinalg import MatrixInverse
 from pytensor.tensor.random.utils import broadcast_params
 from pytensor.tensor.slinalg import Cholesky
 
 import pymc as pm
 
+from pymc import Model
 from pymc.distributions.multivariate import (
     MultivariateIntervalTransform,
     _LKJCholeskyCov,
@@ -43,7 +45,7 @@ from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.logprob.basic import logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.math import kronecker
-from pymc.pytensorf import compile_pymc, floatX, intX
+from pymc.pytensorf import compile_pymc, floatX
 from pymc.sampling.forward import draw
 from pymc.testing import (
     BaseTestDistributionRandom,
@@ -559,7 +561,7 @@ class TestMatchesScipy:
     @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
     def test_lkjcorr(self, x, eta, n, lp):
         with pm.Model() as model:
-            pm.LKJCorr("lkj", eta=eta, n=n, transform=None, return_matrix=False)
+            pm.LKJCorr("lkj", eta=eta, n=n, default_transform=None, return_matrix=False)
 
         point = {"lkj": x}
         decimals = select_by_precision(float64=6, float32=4)
@@ -640,7 +642,7 @@ class TestMatchesScipy:
             with pm.Model() as m:
                 x = pm.Multinomial("x", n=5, p=[1, 1, 1, 1, 1])
         # test stored p-vals have been normalised
-        assert np.isclose(m.x.owner.inputs[4].sum().eval(), 1.0)
+        assert np.isclose(m.x.owner.inputs[-1].sum().eval(), 1.0)
 
     def test_multinomial_negative_p_symbolic(self):
         # Passing symbolic negative p does not raise an immediate error, but evaluating
@@ -674,8 +676,8 @@ class TestMatchesScipy:
     )
     @pytest.mark.parametrize("extra_size", [(1,), (2,), (2, 3)])
     def test_multinomial_vectorized(self, n, p, extra_size):
-        n = intX(np.array(n))
-        p = floatX(np.array(p))
+        n = np.array(n)
+        p = np.array(p)
         p /= p.sum(axis=-1, keepdims=True)
 
         _, bcast_p = broadcast_params([n, p], ndims_params=[0, 1])
@@ -757,8 +759,8 @@ class TestMatchesScipy:
     )
     @pytest.mark.parametrize("extra_size", [(1,), (2,), (2, 3)])
     def test_dirichlet_multinomial_vectorized(self, n, a, extra_size):
-        n = intX(np.array(n))
-        a = floatX(np.array(a))
+        n = np.array(n)
+        a = np.array(a)
 
         _, bcast_a = broadcast_params([n, a], ndims_params=[0, 1])
         size = extra_size + bcast_a.shape[:-1]
@@ -790,7 +792,7 @@ class TestMatchesScipy:
     )
     def test_stickbreakingweights_logp(self, value, alpha, K, logp):
         with pm.Model() as model:
-            sbw = pm.StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
+            sbw = pm.StickBreakingWeights("sbw", alpha=alpha, K=K, default_transform=None)
         point = {"sbw": value}
         npt.assert_almost_equal(
             pm.logp(sbw, value).eval(),
@@ -817,7 +819,7 @@ class TestMatchesScipy:
     def test_stickbreakingweights_vectorized(self, alpha, K, stickbreakingweights_logpdf):
         value = pm.StickBreakingWeights.dist(alpha, K).eval()
         with pm.Model():
-            sbw = pm.StickBreakingWeights("sbw", alpha=alpha, K=K, transform=None)
+            sbw = pm.StickBreakingWeights("sbw", alpha=alpha, K=K, default_transform=None)
         point = {"sbw": value}
         npt.assert_almost_equal(
             pm.logp(sbw, value).eval(),
@@ -898,15 +900,15 @@ def test_car_matrix_check(sparse):
         W = pytensor.sparse.csr_from_dense(W)
 
     car_dist = pm.CAR.dist(mu, W, alpha, tau)
-    with pytest.raises(AssertionError, match="W must be a symmetric adjacency matrix"):
+    with pytest.raises(ParameterValueError, match="W is a symmetric adjacency matrix"):
         logp(car_dist, xs).eval()
 
     # W.ndim != 2
     if not sparse:
         W = np.array([0.0, 1.0, 2.0, 0.0])
         W = pytensor.tensor.as_tensor_variable(W)
-        with pytest.raises(ValueError, match="W must be a matrix"):
-            car_dist = pm.CAR.dist(mu, W, alpha, tau)
+        with pytest.raises(TypeError, match="W must be a matrix"):
+            pm.CAR.dist(mu, W, alpha, tau)
 
 
 @pytest.mark.parametrize("alpha", [1, -1])
@@ -926,7 +928,7 @@ def test_car_alpha_bounds(alpha):
     with pytest.raises(ValueError, match="the domain of alpha is: -1 < alpha < 1"):
         pm.draw(car_dist)
 
-    with pytest.raises(ValueError, match="-1 < alpha < 1, tau > 0"):
+    with pytest.raises(ParameterValueError, match="-1 < alpha < 1, tau > 0"):
         pm.logp(car_dist, values).eval()
 
 
@@ -1448,7 +1450,7 @@ class TestMvNormalMisc:
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
             mv = pm.MvNormal("mv", mu, chol=chol, size=4)
-            prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
+            prior = pm.sample_prior_predictive(draws=10, return_inferencedata=False)
 
         assert prior["mv"].shape == (10, 4, 3)
 
@@ -1462,7 +1464,7 @@ class TestMvNormalMisc:
                 "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
             )
             mv = pm.MvNormal("mv", mu, cov=pm.math.dot(chol, chol.T), size=4)
-            prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
+            prior = pm.sample_prior_predictive(draws=10, return_inferencedata=False)
 
         assert prior["mv"].shape == (10, 4, 3)
 
@@ -1473,7 +1475,7 @@ class TestMvNormalMisc:
             corr = pm.LKJCorr("corr", n=3, eta=2, return_matrix=True)
             pm.Deterministic("corr_mat", corr)
             mv = pm.MvNormal("mv", 0.0, cov=corr, size=4)
-            prior = pm.sample_prior_predictive(samples=10, return_inferencedata=False)
+            prior = pm.sample_prior_predictive(draws=10, return_inferencedata=False)
 
         assert prior["corr_mat"].shape == (10, 3, 3)  # square
         assert (prior["corr_mat"][:, [0, 1, 2], [0, 1, 2]] == 1.0).all()  # 1.0 on diagonal
@@ -1795,7 +1797,7 @@ class TestMvStudentTCov(BaseTestDistributionRandom):
         "mu": np.array([1.0, 2.0]),
         "scale": np.array([[2.0, 0.0], [0.0, 3.5]]),
     }
-    reference_dist = lambda self: ft.partial(self.mvstudentt_rng_fn, rng=self.get_random_state())  # noqa E731
+    reference_dist = lambda self: ft.partial(self.mvstudentt_rng_fn, rng=self.get_random_state())  # noqa: E731
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -1998,7 +2000,7 @@ class TestWishart(BaseTestDistributionRandom):
         (1, 3, 3),
         (4, 5, 3, 3),
     ]
-    reference_dist = lambda self: ft.partial(self.wishart_rng_fn, rng=self.get_random_state())  # noqa E731
+    reference_dist = lambda self: ft.partial(self.wishart_rng_fn, rng=self.get_random_state())  # noqa: E731
     checks_to_run = [
         "check_rv_size",
         "check_pymc_params_match_rv_op",
@@ -2127,7 +2129,7 @@ class TestKroneckerNormal(BaseTestDistributionRandom):
     sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
     sizes_expected = [(N,), (N,), (1, N), (1, N), (5, N), (4, 5, N), (2, 4, 2, N)]
 
-    reference_dist = lambda self: ft.partial(self.kronecker_rng_fn, rng=self.get_random_state())  # noqa E731
+    reference_dist = lambda self: ft.partial(self.kronecker_rng_fn, rng=self.get_random_state())  # noqa: E731
     checks_to_run = [
         "check_pymc_draws_match_reference",
         "check_rv_size",
@@ -2245,8 +2247,8 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
 
     def check_draws_match_expected(self):
         # TODO: Find better comparison:
-        rng = self.get_random_state(reset=True)
-        x = _LKJCholeskyCov.dist(n=2, eta=10_000, sd_dist=pm.DiracDelta.dist([0.5, 2.0]))
+        rng = np.random.default_rng(2248)
+        x = _LKJCholeskyCov.dist(n=2, eta=100_000, sd_dist=pm.DiracDelta.dist([0.5, 2.0]))
         assert np.all(np.abs(draw(x, random_seed=rng) - np.array([0.5, 0, 2.0])) < 0.01)
 
 
@@ -2255,9 +2257,6 @@ class TestICAR(BaseTestDistributionRandom):
     pymc_dist_params = {"W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]), "sigma": 2}
     expected_rv_op_params = {
         "W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]),
-        "node1": np.array([1, 2, 2]),
-        "node2": np.array([0, 0, 1]),
-        "N": 3,
         "sigma": 2,
         "zero_sum_strength": 0.001,
     }
@@ -2383,7 +2382,7 @@ def test_mvnormal_no_cholesky_in_model_logp():
         data = np.ones((batch_size, n))
         pm.MvNormal("y", mu=mu, chol=pt.broadcast_to(chol, (batch_size, n, n)), observed=data)
 
-    contains_cholesky_op = lambda fgraph: any(  # noqa E731
+    contains_cholesky_op = lambda fgraph: any(  # noqa: E731
         isinstance(node.op, Cholesky) for node in fgraph.apply_nodes
     )
 
@@ -2418,56 +2417,83 @@ def test_mvnormal_blockwise_solve_opt():
 def test_mvnormal_mu_convenience():
     """Test that mu is broadcasted to the length of cov and provided a default of zero"""
     x = pm.MvNormal.dist(cov=np.eye(3))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(mu.eval(), np.zeros((3,)))
 
     x = pm.MvNormal.dist(mu=1, cov=np.eye(3))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(mu.eval(), np.ones((3,)))
 
     x = pm.MvNormal.dist(mu=np.ones((1, 1)), cov=np.eye(3))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(
         mu.eval(),
         np.ones((1, 3)),
     )
 
     x = pm.MvNormal.dist(mu=np.ones((10, 1)), cov=np.eye(3))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(
         mu.eval(),
         np.ones((10, 3)),
     )
 
     x = pm.MvNormal.dist(mu=np.ones((10, 1, 1)), cov=np.full((2, 3, 3), np.eye(3)))
-    mu = x.owner.inputs[3]
+    mu = x.owner.inputs[2]
     np.testing.assert_allclose(mu.eval(), np.ones((10, 2, 3)))
 
 
 def test_mvstudentt_mu_convenience():
     """Test that mu is broadcasted to the length of scale and provided a default of zero"""
     x = pm.MvStudentT.dist(nu=4, scale=np.eye(3))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(mu.eval(), np.zeros((3,)))
 
     x = pm.MvStudentT.dist(nu=4, mu=1, scale=np.eye(3))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(mu.eval(), np.ones((3,)))
 
     x = pm.MvStudentT.dist(nu=4, mu=np.ones((1, 1)), scale=np.eye(3))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(
         mu.eval(),
         np.ones((1, 3)),
     )
 
     x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1)), scale=np.eye(3))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(
         mu.eval(),
         np.ones((10, 3)),
     )
 
     x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1, 1)), scale=np.full((2, 3, 3), np.eye(3)))
-    mu = x.owner.inputs[4]
+    mu = x.owner.inputs[3]
     np.testing.assert_allclose(mu.eval(), np.ones((10, 2, 3)))
+
+
+def test_precision_mv_normal_optimization():
+    rng = np.random.default_rng(sum(map(ord, "be precise")))
+
+    n = 30
+    L = rng.uniform(low=0.1, high=1.0, size=(n, n))
+    Sigma_test = L @ L.T
+    mu_test = np.zeros(n)
+    Q_test = np.linalg.inv(Sigma_test)
+    y_test = rng.normal(size=n)
+
+    with Model() as m:
+        Q = pm.Flat("Q", shape=(n, n))
+        y = pm.MvNormal("y", mu=mu_test, tau=Q)
+
+    y_logp_fn = m.compile_logp(vars=[y]).f
+
+    # Check we don't have any MatrixInverses in the logp
+    assert not any(
+        node for node in y_logp_fn.maker.fgraph.apply_nodes if isinstance(node.op, MatrixInverse)
+    )
+
+    np.testing.assert_allclose(
+        y_logp_fn(y=y_test, Q=Q_test),
+        st.multivariate_normal.logpdf(y_test, mu_test, cov=Sigma_test),
+    )

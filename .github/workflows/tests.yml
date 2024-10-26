@@ -24,7 +24,7 @@ jobs:
     outputs:
       changes: ${{ steps.changes.outputs.src }}
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938
         with:
           fetch-depth: 0
       - uses: dorny/paths-filter@v3
@@ -48,7 +48,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04]
         floatx: [float64]
-        python-version: ["3.11"]
+        python-version: ["3.12"]
         test-subset:
           - |
             tests/test_util.py
@@ -65,10 +65,13 @@ jobs:
           - |
             tests/distributions/test_continuous.py
             tests/distributions/test_multivariate.py
+            tests/distributions/moments/test_means.py
 
           - |
             tests/distributions/test_censored.py
+            tests/distributions/test_custom.py
             tests/distributions/test_simulator.py
+            tests/sampling/test_deterministic.py
             tests/sampling/test_forward.py
             tests/sampling/test_population.py
             tests/stats/test_convergence.py
@@ -96,10 +99,12 @@ jobs:
             tests/model/test_fgraph.py
             tests/model/transform/test_basic.py
             tests/model/transform/test_conditioning.py
+            tests/model/transform/test_optimization.py
             tests/test_model_graph.py
             tests/ode/test_ode.py
             tests/ode/test_utils.py
             tests/step_methods/hmc/test_quadpotential.py
+            tests/step_methods/test_state.py
 
           - |
             tests/backends/test_mcbackend.py
@@ -111,6 +116,7 @@ jobs:
             tests/logprob/test_censoring.py
             tests/logprob/test_composite_logprob.py
             tests/logprob/test_cumsum.py
+            tests/logprob/test_linalg.py
             tests/logprob/test_mixture.py
             tests/logprob/test_order.py
             tests/logprob/test_rewriting.py
@@ -129,7 +135,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938
       - name: Cache conda
         uses: actions/cache@v4
         env:
@@ -166,14 +172,16 @@ jobs:
         run: |
           conda activate pymc-test
           pip install -e .
-          pip install --pre -U polyagamma
+          # TODO: https://github.com/pymc-devs/pymc/issues/7417
+          pip install --pre -U 'polyagamma<1.3.7'
           python --version
+          conda list
       - name: Run tests
         run: |
           conda activate pymc-test
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
@@ -187,12 +195,12 @@ jobs:
       matrix:
         os: [windows-latest]
         floatx: [float64]
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         test-subset:
           - tests/variational/test_approximations.py tests/variational/test_callbacks.py tests/variational/test_inference.py tests/variational/test_opvi.py tests/test_initial_point.py
           - tests/model/test_core.py tests/sampling/test_mcmc.py
           - tests/gp/test_cov.py tests/gp/test_gp.py tests/gp/test_mean.py tests/gp/test_util.py tests/ode/test_ode.py tests/ode/test_utils.py tests/smc/test_smc.py tests/sampling/test_parallel.py
-          - tests/step_methods/test_metropolis.py tests/step_methods/test_slicer.py tests/step_methods/hmc/test_nuts.py tests/step_methods/test_compound.py tests/step_methods/hmc/test_hmc.py
+          - tests/step_methods/test_metropolis.py tests/step_methods/test_slicer.py tests/step_methods/hmc/test_nuts.py tests/step_methods/test_compound.py tests/step_methods/hmc/test_hmc.py tests/step_methods/test_state.py
 
       fail-fast: false
     runs-on: ${{ matrix.os }}
@@ -203,7 +211,7 @@ jobs:
       run:
         shell: cmd
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938
       - name: Cache conda
         uses: actions/cache@v4
         env:
@@ -240,8 +248,9 @@ jobs:
         run: |
           conda activate pymc-test
           pip install -e .
-          pip install --pre -U polyagamma
+          pip install --pre -U 'polyagamma<1.3.7'
           python --version
+          conda list
       - name: Run tests
         # This job uses a cmd shell, therefore the environment variable syntax is different!
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
@@ -249,7 +258,7 @@ jobs:
           conda activate pymc-test &&
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
@@ -263,7 +272,7 @@ jobs:
       matrix:
         os: [macos-latest]
         floatx: [float64]
-        python-version: ["3.10"]
+        python-version: ["3.12"]
         test-subset:
           - |
             tests/sampling/test_parallel.py
@@ -286,7 +295,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938
       - name: Cache conda
         uses: actions/cache@v4
         env:
@@ -324,11 +333,12 @@ jobs:
           conda activate pymc-test
           pip install -e .
           python --version
+          conda list
       - name: Run tests
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
@@ -342,7 +352,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04]
         floatx: [float64]
-        python-version: ["3.11"]
+        python-version: ["3.12"]
         test-subset:
           - tests/sampling/test_jax.py tests/sampling/test_mcmc_external.py
       fail-fast: false
@@ -354,7 +364,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938
       - name: Cache conda
         uses: actions/cache@v4
         env:
@@ -392,11 +402,12 @@ jobs:
           conda activate pymc-test
           pip install -e .
           python --version
+          conda list
       - name: Run tests
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
@@ -410,7 +421,7 @@ jobs:
       matrix:
         os: [windows-latest]
         floatx: [float32]
-        python-version: ["3.11"]
+        python-version: ["3.12"]
         test-subset:
         - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py tests/distributions/test_transform.py
       fail-fast: false
@@ -422,7 +433,7 @@ jobs:
       run:
         shell: cmd
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938
       - name: Cache conda
         uses: actions/cache@v4
         env:
@@ -459,8 +470,9 @@ jobs:
         run: |
           conda activate pymc-test
           pip install -e .
-          pip install --pre -U polyagamma
+          pip install --pre -U 'polyagamma<1.3.7'
           python --version
+          conda list
       - name: Run tests
         # This job uses a cmd shell, therefore the environment variable syntax is different!
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
@@ -468,7 +480,7 @@ jobs:
           conda activate pymc-test &&
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET

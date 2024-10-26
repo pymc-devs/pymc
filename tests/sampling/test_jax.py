@@ -15,7 +15,8 @@ import logging
 import re
 import warnings
 
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 from unittest import mock
 
 import arviz as az
@@ -33,7 +34,8 @@ from pytensor.graph import graph_inputs
 import pymc as pm
 
 from pymc import ImputationWarning
-from pymc.distributions.multivariate import PosDefMatrix
+from pymc.distributions.multivariate import DirichletMultinomial, PosDefMatrix
+from pymc.model.transform.optimization import freeze_dims_and_data
 from pymc.sampling.jax import (
     _get_batched_jittered_initial_points,
     _get_log_likelihood,
@@ -43,13 +45,6 @@ from pymc.sampling.jax import (
     sample_blackjax_nuts,
     sample_numpyro_nuts,
 )
-
-
-def test_old_import_route():
-    import pymc.sampling.jax as new_sj
-    import pymc.sampling_jax as old_sj
-
-    assert set(new_sj.__all__) <= set(dir(old_sj))
 
 
 def test_jax_PosDefMatrix():
@@ -221,7 +216,7 @@ def test_get_log_likelihood():
                 draws=10,
                 chains=2,
                 random_seed=1322,
-                idata_kwargs=dict(log_likelihood=True),
+                idata_kwargs={"log_likelihood": True},
             )
 
     b_true = trace.log_likelihood.b.values
@@ -268,8 +263,7 @@ def model_test_idata_kwargs() -> pm.Model:
         x = pm.Normal("x", shape=(2,), dims=["x_coord"])
         _ = pm.Normal("y", x, observed=[0, 0])
         _ = pm.Normal("z", 0, 1, dims="z_coord")
-        pm.ConstantData("constantdata", [1, 2, 3])
-        pm.MutableData("mutabledata", 2)
+        pm.Data("data", [1, 2, 3])
     return m
 
 
@@ -283,14 +277,14 @@ def model_test_idata_kwargs() -> pm.Model:
 @pytest.mark.parametrize(
     "idata_kwargs",
     [
-        dict(),
-        dict(log_likelihood=True),
+        {},
+        {"log_likelihood": True},
         # Overwrite models coords
-        dict(coords={"x_coord": ["x1", "x2"]}),
+        {"coords": {"x_coord": ["x1", "x2"]}},
         # Overwrite dims from dist specification in model
-        dict(dims={"x": ["x_coord2"]}),
+        {"dims": {"x": ["x_coord2"]}},
         # Overwrite both coords and dims
-        dict(coords={"x_coord3": ["A", "B"]}, dims={"x": ["x_coord3"]}),
+        {"coords": {"x_coord3": ["A", "B"]}, "dims": {"x": ["x_coord3"]}},
     ],
 )
 @pytest.mark.parametrize("postprocessing_backend", [None, "cpu"])
@@ -298,9 +292,9 @@ def test_idata_kwargs(
     model_test_idata_kwargs: pm.Model,
     sampler: Callable[..., az.InferenceData],
     idata_kwargs: dict[str, Any],
-    postprocessing_backend: Optional[str],
+    postprocessing_backend: str | None,
 ):
-    idata: Optional[az.InferenceData] = None
+    idata: az.InferenceData | None = None
     with model_test_idata_kwargs:
         idata = sampler(
             tune=50,
@@ -312,8 +306,7 @@ def test_idata_kwargs(
     assert idata is not None
     const_data = idata.get("constant_data")
     assert const_data is not None
-    assert "constantdata" in const_data
-    assert "mutabledata" in const_data
+    assert "data" in const_data
 
     if idata_kwargs.get("log_likelihood", False):
         assert "log_likelihood" in idata
@@ -377,12 +370,12 @@ def test_get_batched_jittered_initial_points():
     ],
 )
 def test_seeding(chains, random_seed, sampler):
-    sample_kwargs = dict(
-        tune=100,
-        draws=5,
-        chains=chains,
-        random_seed=random_seed,
-    )
+    sample_kwargs = {
+        "tune": 100,
+        "draws": 5,
+        "chains": chains,
+        "random_seed": random_seed,
+    }
 
     with pm.Model() as m:
         pm.Normal("x", mu=0, sigma=1)
@@ -491,11 +484,20 @@ def test_sample_partially_observed():
     assert idata.posterior["x"].shape == (1, 10, 3)
 
 
+def test_sample_var_names():
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        b = pm.Deterministic("b", a**2)
+        idata = pm.sample(10, tune=10, nuts_sampler="numpyro", var_names=["a"])
+        assert "a" in idata.posterior
+        assert "b" not in idata.posterior
+
+
 @pytest.mark.parametrize("nuts_sampler", ("numpyro", "blackjax"))
 def test_convergence_warnings(caplog, nuts_sampler):
     with pm.Model() as m:
         # Model that should diverge
-        sigma = pm.Normal("sigma", initval=3, transform=None)
+        sigma = pm.Normal("sigma", initval=3, default_transform=None)
         pm.Normal("obs", mu=0, sigma=sigma, observed=[0.99, 1.0, 1.01])
 
         with caplog.at_level(logging.WARNING, logger="pymc"):
@@ -503,3 +505,27 @@ def test_convergence_warnings(caplog, nuts_sampler):
 
     [record] = caplog.records
     assert re.match(r"There were \d+ divergences after tuning", record.message)
+
+
+def test_dirichlet_multinomial():
+    """Test we can draw from a DM in the JAX backend if the shape is constant."""
+    dm = DirichletMultinomial.dist(n=5, a=np.eye(3) * 1e6 + 0.01)
+    dm_draws = pm.draw(dm, mode="JAX")
+    np.testing.assert_equal(dm_draws, np.eye(3) * 5)
+
+
+def test_dirichlet_multinomial_dims():
+    """Test we can draw from a DM with a shape defined by dims in the JAX backend,
+    after freezing those dims.
+    """
+    with pm.Model(coords={"trial": range(3), "item": range(3)}) as m:
+        dm = DirichletMultinomial("dm", n=5, a=np.eye(3) * 1e6 + 0.01, dims=("trial", "item"))
+
+    # JAX does not allow us to JIT a function with dynamic shape
+    with pytest.raises(TypeError):
+        pm.draw(dm, mode="JAX")
+
+    # Should be fine after freezing the dims that specify the shape
+    frozen_dm = freeze_dims_and_data(m)["dm"]
+    dm_draws = pm.draw(frozen_dm, mode="JAX")
+    np.testing.assert_equal(dm_draws, np.eye(3) * 5)

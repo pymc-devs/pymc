@@ -14,9 +14,6 @@
 
 import io
 import operator
-import warnings
-
-from contextlib import nullcontext
 
 import cloudpickle
 import numpy as np
@@ -27,7 +24,6 @@ import pytest
 import pymc as pm
 import pymc.variational.opvi as opvi
 
-from pymc.pytensorf import intX
 from pymc.variational.inference import ADVI, ASVGD, SVGD, FullRankADVI
 from pymc.variational.opvi import NotImplementedInference
 from tests import models
@@ -66,15 +62,15 @@ def simple_model_data(use_minibatch):
     mu_post = (n * np.mean(data) / sigma**2 + mu0 / sigma0**2) / d
     if use_minibatch:
         data = pm.Minibatch(data, batch_size=128)
-    return dict(
-        n=n,
-        data=data,
-        mu_post=mu_post,
-        d=d,
-        mu0=mu0,
-        sigma0=sigma0,
-        sigma=sigma,
-    )
+    return {
+        "n": n,
+        "data": data,
+        "mu_post": mu_post,
+        "d": d,
+        "mu0": mu0,
+        "sigma0": sigma0,
+        "sigma": sigma,
+    }
 
 
 @pytest.fixture
@@ -99,10 +95,10 @@ def simple_model(simple_model_data):
 @pytest.fixture(
     scope="module",
     params=[
-        dict(cls=ADVI, init=dict()),
-        dict(cls=FullRankADVI, init=dict()),
-        dict(cls=SVGD, init=dict(n_particles=500, jitter=1)),
-        dict(cls=ASVGD, init=dict(temperature=1.0)),
+        {"cls": ADVI, "init": {}},
+        {"cls": FullRankADVI, "init": {}},
+        {"cls": SVGD, "init": {"n_particles": 500, "jitter": 1}},
+        {"cls": ASVGD, "init": {"temperature": 1.0}},
     ],
     ids=["ADVI", "FullRankADVI", "SVGD", "ASVGD"],
 )
@@ -132,24 +128,40 @@ def inference(inference_spec, simple_model):
 @pytest.fixture(scope="function")
 def fit_kwargs(inference, use_minibatch):
     _select = {
-        (ADVI, "full"): dict(obj_optimizer=pm.adagrad_window(learning_rate=0.02, n_win=50), n=5000),
-        (ADVI, "mini"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.01, n_win=50), n=12000
-        ),
-        (FullRankADVI, "full"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.015, n_win=50), n=6000
-        ),
-        (FullRankADVI, "mini"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.007, n_win=50), n=12000
-        ),
-        (SVGD, "full"): dict(obj_optimizer=pm.adagrad_window(learning_rate=0.075, n_win=7), n=300),
-        (SVGD, "mini"): dict(obj_optimizer=pm.adagrad_window(learning_rate=0.075, n_win=7), n=300),
-        (ASVGD, "full"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=10), n=500, obj_n_mc=300
-        ),
-        (ASVGD, "mini"): dict(
-            obj_optimizer=pm.adagrad_window(learning_rate=0.07, n_win=10), n=500, obj_n_mc=300
-        ),
+        (ADVI, "full"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.02, n_win=50),
+            "n": 5000,
+        },
+        (ADVI, "mini"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.01, n_win=50),
+            "n": 12000,
+        },
+        (FullRankADVI, "full"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.015, n_win=50),
+            "n": 6000,
+        },
+        (FullRankADVI, "mini"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.007, n_win=50),
+            "n": 12000,
+        },
+        (SVGD, "full"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.075, n_win=7),
+            "n": 300,
+        },
+        (SVGD, "mini"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.075, n_win=7),
+            "n": 300,
+        },
+        (ASVGD, "full"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.07, n_win=10),
+            "n": 500,
+            "obj_n_mc": 300,
+        },
+        (ASVGD, "mini"): {
+            "obj_optimizer": pm.adagrad_window(learning_rate=0.07, n_win=10),
+            "n": 500,
+            "obj_n_mc": 300,
+        },
     }
     if use_minibatch:
         key = "mini"
@@ -163,16 +175,7 @@ def fit_kwargs(inference, use_minibatch):
 
 
 def test_fit_oo(inference, fit_kwargs, simple_model_data):
-    # Minibatch data can't be extracted into the `observed_data` group in the final InferenceData
-    if getattr(simple_model_data["data"], "name", "").startswith("minibatch"):
-        warn_ctxt = pytest.warns(
-            UserWarning, match="Could not extract data from symbolic observation"
-        )
-    else:
-        warn_ctxt = nullcontext()
-
-    with warn_ctxt:
-        trace = inference.fit(**fit_kwargs).sample(10000)
+    trace = inference.fit(**fit_kwargs).sample(10000)
     mu_post = simple_model_data["mu_post"]
     d = simple_model_data["d"]
     np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_post, rtol=0.05)
@@ -184,10 +187,10 @@ def test_fit_start(inference_spec, simple_model):
     mu_sigma_init = 13
 
     with simple_model:
-        if type(inference_spec()) == ASVGD:
+        if type(inference_spec()) is ASVGD:
             # ASVGD doesn't support the start argument
             return
-        elif type(inference_spec()) == ADVI:
+        elif type(inference_spec()) is ADVI:
             has_start_sigma = True
         else:
             has_start_sigma = False
@@ -198,27 +201,10 @@ def test_fit_start(inference_spec, simple_model):
     with simple_model:
         inference = inference_spec(**kw)
 
-    # Minibatch data can't be extracted into the `observed_data` group in the final InferenceData
-    [observed_value] = [simple_model.rvs_to_values[obs] for obs in simple_model.observed_RVs]
-
-    # We can`t use pytest.warns here because after version 8.0 it`s still check for warning when
-    # exception raised and test failed instead being skipped
-    warning_raised = False
-    expected_warning = observed_value.name.startswith("minibatch")
-    with warnings.catch_warnings(record=True) as record:
-        warnings.simplefilter("always")
-        try:
-            trace = inference.fit(n=0).sample(10000)
-        except NotImplementedInference as e:
-            pytest.skip(str(e))
-
-    if expected_warning:
-        assert len(record) > 0
-        for item in record:
-            assert issubclass(item.category, UserWarning)
-            assert "Could not extract data from symbolic observation" in str(item.message)
-    if not expected_warning:
-        assert not record
+    try:
+        trace = inference.fit(n=0).sample(10000)
+    except NotImplementedInference as e:
+        pytest.skip(str(e))
 
     np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_init, rtol=0.05)
     if has_start_sigma:
@@ -228,16 +214,16 @@ def test_fit_start(inference_spec, simple_model):
 @pytest.mark.parametrize(
     ["method", "kwargs", "error"],
     [
-        ("undefined", dict(), KeyError),
-        (1, dict(), TypeError),
-        ("advi", dict(total_grad_norm_constraint=10), None),
-        ("fullrank_advi", dict(), None),
-        ("svgd", dict(total_grad_norm_constraint=10), None),
-        ("svgd", dict(start={}), None),
+        ("undefined", {}, KeyError),
+        (1, {}, TypeError),
+        ("advi", {"total_grad_norm_constraint": 10}, None),
+        ("fullrank_advi", {}, None),
+        ("svgd", {"total_grad_norm_constraint": 10}, None),
+        ("svgd", {"start": {}}, None),
         # start argument is not allowed for ASVGD
-        ("asvgd", dict(start={}, total_grad_norm_constraint=10), TypeError),
-        ("asvgd", dict(total_grad_norm_constraint=10), None),
-        ("nfvi=bad-formula", dict(start={}), KeyError),
+        ("asvgd", {"start": {}, "total_grad_norm_constraint": 10}, TypeError),
+        ("asvgd", {"total_grad_norm_constraint": 10}, None),
+        ("nfvi=bad-formula", {"start": {}}, KeyError),
     ],
 )
 def test_fit_fn_text(method, kwargs, error):
@@ -266,7 +252,7 @@ def test_profile(inference):
 @pytest.fixture(scope="module")
 def binomial_model():
     n_samples = 100
-    xs = intX(np.random.binomial(n=1, p=0.2, size=n_samples))
+    xs = np.random.binomial(n=1, p=0.2, size=n_samples)
     with pm.Model() as model:
         p = pm.Beta("p", alpha=1, beta=1)
         pm.Binomial("xs", n=1, p=p, observed=xs)
@@ -413,17 +399,17 @@ def hierarchical_model_data():
 
     data = sigma * np.random.randn(*data_shape) + group_mu + mu
 
-    return dict(
-        group_coords=group_coords,
-        group_shape=group_shape,
-        data_coords=data_coords,
-        data_shape=data_shape,
-        mu=mu,
-        sigma_group_mu=sigma_group_mu,
-        sigma=sigma,
-        group_mu=group_mu,
-        data=data,
-    )
+    return {
+        "group_coords": group_coords,
+        "group_shape": group_shape,
+        "data_coords": data_coords,
+        "data_shape": data_shape,
+        "mu": mu,
+        "sigma_group_mu": sigma_group_mu,
+        "sigma": sigma,
+        "group_mu": group_mu,
+        "data": data,
+    }
 
 
 @pytest.fixture
@@ -460,4 +446,26 @@ def test_fit_data_coords(hierarchical_model, hierarchical_model_data):
         assert list(data["group_mu"].coords.keys()) == list(
             hierarchical_model_data["group_coords"].keys()
         )
-        assert data["mu"].shape == tuple()
+        assert data["mu"].shape == ()
+
+
+def test_multiple_minibatch_variables():
+    """Regression test for bug reported in
+    https://discourse.pymc.io/t/verifying-that-minibatch-is-actually-randomly-sampling/14308
+    """
+    true_weights = np.array([-5, 5] * 5)
+    feature = np.repeat(np.eye(10), 10_000, axis=0)
+    y = feature @ true_weights
+
+    with pm.Model() as model:
+        minibatch_feature, minibatch_y = pm.Minibatch(feature, y, batch_size=1)
+        weights = pm.Normal("weights", 0, 10, shape=10)
+        pm.Normal(
+            "y",
+            mu=minibatch_feature @ weights,
+            sigma=0.01,
+            observed=minibatch_y,
+            total_size=len(y),
+        )
+        mean_field = pm.fit(10_000, obj_optimizer=pm.adam(learning_rate=0.01), progressbar=False)
+    np.testing.assert_allclose(mean_field.mean.get_value(), true_weights, rtol=1e-1)

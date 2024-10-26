@@ -14,8 +14,7 @@
 import functools
 import warnings
 
-from collections.abc import Sequence
-from typing import Callable, Optional, Union
+from collections.abc import Callable, Sequence
 
 import numpy as np
 import pytensor
@@ -29,16 +28,19 @@ from pymc.logprob.transforms import Transform
 from pymc.pytensorf import compile_pymc, find_rng_nodes, replace_rng_nodes, reseed_rngs
 from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
 
-StartDict = dict[Union[Variable, str], Union[np.ndarray, Variable, str]]
+StartDict = dict[Variable | str, np.ndarray | Variable | str]
 PointType = dict[str, np.ndarray]
 
 
 def convert_str_to_rv_dict(
     model, start: StartDict
-) -> dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]]:
-    """Helper function for converting a user-provided start dict with str keys of (transformed) variable names
+) -> dict[TensorVariable, np.ndarray | Variable | str | None]:
+    """Convert a user-provided start dict to an untransformed RV start dict.
+
+    Converts a dict of str keys of (transformed) variable names
     to a dict mapping the RV tensors to untransformed initvals.
-    TODO: Deprecate this functionality and only accept TensorVariables as keys
+
+    TODO: Deprecate this functionality and only accept TensorVariables as keys.
     """
     initvals = {}
     for key, initval in start.items():
@@ -56,11 +58,11 @@ def convert_str_to_rv_dict(
 def make_initial_point_fns_per_chain(
     *,
     model,
-    overrides: Optional[Union[StartDict, Sequence[Optional[StartDict]]]],
-    jitter_rvs: Optional[set[TensorVariable]] = None,
+    overrides: StartDict | Sequence[StartDict | None] | None,
+    jitter_rvs: set[TensorVariable] | None = None,
     chains: int,
 ) -> list[Callable]:
-    """Create an initial point function for each chain, as defined by initvals
+    """Create an initial point function for each chain, as defined by initvals.
 
     If a single initval dictionary is passed, the function is replicated for each
     chain, otherwise a unique function is compiled for each entry in the dictionary.
@@ -112,8 +114,8 @@ def make_initial_point_fns_per_chain(
 def make_initial_point_fn(
     *,
     model,
-    overrides: Optional[StartDict] = None,
-    jitter_rvs: Optional[set[TensorVariable]] = None,
+    overrides: StartDict | None = None,
+    jitter_rvs: set[TensorVariable] | None = None,
     default_strategy: str = "support_point",
     return_transformed: bool = True,
 ) -> Callable:
@@ -131,7 +133,6 @@ def make_initial_point_fn(
     return_transformed : bool
         If `True` the returned variables will correspond to transformed initial values.
     """
-
     sdict_overrides = convert_str_to_rv_dict(model, overrides or {})
     initval_strats = {
         **model.rvs_to_initial_values,
@@ -179,12 +180,12 @@ def make_initial_point_expression(
     *,
     free_rvs: Sequence[TensorVariable],
     rvs_to_transforms: dict[TensorVariable, Transform],
-    initval_strategies: dict[TensorVariable, Optional[Union[np.ndarray, Variable, str]]],
-    jitter_rvs: Optional[set[TensorVariable]] = None,
+    initval_strategies: dict[TensorVariable, np.ndarray | Variable | str | None],
+    jitter_rvs: set[TensorVariable] | None = None,
     default_strategy: str = "support_point",
     return_transformed: bool = False,
 ) -> list[TensorVariable]:
-    """Creates the tensor variables that need to be evaluated to obtain an initial point.
+    """Create the tensor variables that need to be evaluated to obtain an initial point.
 
     Parameters
     ----------

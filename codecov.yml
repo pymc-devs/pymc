@@ -1,5 +1,7 @@
 codecov:
   require_ci_to_pass: yes
+  notify:
+    after_n_builds: 15  # This should be updated if number of test jobs changes
 
 coverage:
   precision: 2

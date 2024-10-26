@@ -1,46 +1,58 @@
+[build-system]
+requires = ["setuptools", "versioneer[toml]==0.29"]
+build-backend = "setuptools.build_meta"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 minversion = "6.0"
 xfail_strict = true
 addopts = ["--color=yes"]
 
+[tool.versioneer]
+VCS = "git"
+style = "pep440"
+versionfile_source = "pymc/_version.py"
+versionfile_build = "pymc/_version.py"
+tag_prefix = "v"
+
+[tool.mypy]
+python_version = "3.10"
+no_implicit_optional = false
+strict_optional = true
+warn_redundant_casts = false
+check_untyped_defs = false
+disallow_untyped_calls = false
+disallow_incomplete_defs = false
+disallow_untyped_defs = false
+disallow_untyped_decorators = false
+ignore_missing_imports = true
+warn_unused_ignores = false
+
 [tool.ruff]
 line-length = 100
-target-version = "py39"
-exclude = ["versioneer.py"]
+target-version = "py310"
+extend-exclude = ["_version.py"]
+
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.ruff.lint]
-select = ["D", "E", "F", "I", "UP", "W", "RUF"]
-ignore-init-module-imports = true
+select = ["C4", "D", "E", "F", "I", "UP", "W", "RUF", "T20", "TID"]
 ignore = [
   "E501",
   "F841", # Local variable name is assigned to but never used
   "RUF001", # String contains ambiguous character (such as Greek letters)
   "RUF002", # Docstring contains ambiguous character (such as Greek letters)
   "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
-  "D100",
-  "D101",
-  "D102",
-  "D103",
-  "D104",
-  "D105",
-  "D107",
-  "D200",
-  "D202",
-  "D203",
-  "D204",
-  "D205",
-  "D209",
-  "D212",
-  "D213",
-  "D301",
-  "D400",
-  "D401",
-  "D403",
-  "D413",
-  "D415",
-  "D417",
+  "D100",  # Missing docstring in public module
+  "D101",  # Missing docstring in public class
+  "D102",  # Missing docstring in public method
+  "D103",  # Missing docstring in public function
+  "D105",  # Missing docstring in magic method
 ]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 
 [tool.ruff.lint.isort]
 lines-between-types = 1
@@ -61,6 +73,12 @@ lines-between-types = 1
   "I001", # Import block is un-sorted or un-formatted
 ]
 "tests/*" = ["D"]
+"scripts/run_mypy.py" = [
+  "T201", # No print statements
+]
+"*.ipynb" = [
+  "T201", # No print statements
+]
 
 [tool.coverage.report]
 exclude_lines = [

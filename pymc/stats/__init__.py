@@ -18,6 +18,7 @@ Diagnostics and auxiliary statistical functions are delegated to the ArviZ libra
 purpose library for "exploratory analysis of Bayesian models."
 See https://arviz-devs.github.io/arviz/ for details.
 """
+
 import sys
 
 import arviz as az

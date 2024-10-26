@@ -32,7 +32,7 @@ floatX = pytensor.config.floatX
 
 class DifferentialEquation(Op):
     r"""
-    Specify an ordinary differential equation
+    Specify an ordinary differential equation.
 
     Due to the nature of the model (as well as included solvers), the process of ODE solution may perform slowly.  A faster alternative library based on PyMC--sunode--has implemented Adams' method and BDF (backward differentation formula).  More information about sunode is available at: https://github.com/aseyboldt/sunode.
 
@@ -59,8 +59,9 @@ class DifferentialEquation(Op):
     .. code-block:: python
 
         def odefunc(y, t, p):
-            #Logistic differential equation
+            # Logistic differential equation
             return p[0] * y[0] * (1 - y[0])
+
 
         times = np.arange(0.5, 5, 0.5)
 
@@ -107,7 +108,9 @@ class DifferentialEquation(Op):
         self._output_sensitivities = {}
 
     def _system(self, Y, t, p):
-        r"""The function that will be passed to odeint. Solves both ODE and sensitivities.
+        r"""Solve both ODE and sensitivities.
+
+        This function will be passed to odeint.
 
         Parameters
         ----------
@@ -149,9 +152,9 @@ class DifferentialEquation(Op):
         return Apply(self, inputs, (states, sens))
 
     def __call__(self, y0, theta, return_sens=False, **kwargs):
-        if isinstance(y0, (list, tuple)) and not len(y0) == self.n_states:
+        if isinstance(y0, list | tuple) and not len(y0) == self.n_states:
             raise ShapeError("Length of y0 is wrong.", actual=(len(y0),), expected=(self.n_states,))
-        if isinstance(theta, (list, tuple)) and not len(theta) == self.n_theta:
+        if isinstance(theta, list | tuple) and not len(theta) == self.n_theta:
             raise ShapeError(
                 "Length of theta is wrong.", actual=(len(theta),), expected=(self.n_theta,)
             )

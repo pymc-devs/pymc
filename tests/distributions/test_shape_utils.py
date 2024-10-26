@@ -29,7 +29,6 @@ import pymc as pm
 
 from pymc import ShapeError
 from pymc.distributions.shape_utils import (
-    broadcast_dist_samples_shape,
     change_dist_size,
     convert_dims,
     convert_shape,
@@ -37,26 +36,25 @@ from pymc.distributions.shape_utils import (
     get_support_shape,
     get_support_shape_1d,
     rv_size_is_none,
-    to_tuple,
 )
 from pymc.model import Model
 
 test_shapes = [
-    (tuple(), (1,), (4,), (5, 4)),
-    (tuple(), (1,), (7,), (5, 4)),
-    (tuple(), (1,), (1, 4), (5, 4)),
-    (tuple(), (1,), (5, 1), (5, 4)),
-    (tuple(), (1,), (3, 4), (5, 4)),
-    (tuple(), (1,), (5, 3), (5, 4)),
-    (tuple(), (1,), (10, 4), (5, 4)),
-    (tuple(), (1,), (10,), (5, 4)),
-    (tuple(), (1,), (1, 1, 4), (5, 4)),
-    (tuple(), (1,), (10, 1, 4), (5, 4)),
-    (tuple(), (1,), (10, 5, 4), (5, 4)),
+    ((), (1,), (4,), (5, 4)),
+    ((), (1,), (7,), (5, 4)),
+    ((), (1,), (1, 4), (5, 4)),
+    ((), (1,), (5, 1), (5, 4)),
+    ((), (1,), (3, 4), (5, 4)),
+    ((), (1,), (5, 3), (5, 4)),
+    ((), (1,), (10, 4), (5, 4)),
+    ((), (1,), (10,), (5, 4)),
+    ((), (1,), (1, 1, 4), (5, 4)),
+    ((), (1,), (10, 1, 4), (5, 4)),
+    ((), (1,), (10, 5, 4), (5, 4)),
 ]
 test_sizes = [
     None,
-    tuple(),
+    (),
     1,
     (1,),
     10,
@@ -68,7 +66,7 @@ test_sizes = [
     (5, 4),
     (1, 1, 1, 1),
 ]
-test_to_shapes = [None, tuple(), (10, 5, 4), (10, 1, 1, 5, 1)]
+test_to_shapes = [None, (), (10, 5, 4), (10, 1, 1, 5, 1)]
 
 
 @pytest.fixture(params=test_sizes, ids=str)
@@ -98,28 +96,6 @@ class TestShapesBroadcasting:
                 np.broadcast_shapes(*shapes)
         else:
             out = np.broadcast_shapes(*shapes)
-            assert out == expected_out
-
-    def test_broadcast_dist_samples_shape(self, fixture_sizes, fixture_shapes):
-        size = fixture_sizes
-        shapes = fixture_shapes
-        size_ = to_tuple(size)
-        shapes_ = [
-            s if s[: min([len(size_), len(s)])] != size_ else s[len(size_) :] for s in shapes
-        ]
-        try:
-            expected_out = np.broadcast(*(np.empty(s) for s in shapes_)).shape
-        except ValueError:
-            expected_out = None
-        if expected_out is not None and any(
-            s[: min([len(size_), len(s)])] == size_ for s in shapes
-        ):
-            expected_out = size_ + expected_out
-        if expected_out is None:
-            with pytest.raises(ValueError):
-                broadcast_dist_samples_shape(shapes, size=size)
-        else:
-            out = broadcast_dist_samples_shape(shapes, size=size)
             assert out == expected_out
 
 
@@ -188,7 +164,7 @@ class TestSizeShapeDimsObserved:
 
     def test_simultaneous_shape_and_dims(self):
         with pm.Model() as pmodel:
-            x = pm.ConstantData("x", [1, 2, 3], dims="ddata")
+            x = pm.Data("x", [1, 2, 3], dims="ddata")
 
             # The shape and dims tuples correspond to each other.
             # Note: No checks are performed that implied shape (x), shape and dims actually match.
@@ -200,11 +176,11 @@ class TestSizeShapeDimsObserved:
 
     def test_simultaneous_size_and_dims(self):
         with pm.Model() as pmodel:
-            x = pm.ConstantData("x", [1, 2, 3], dims="ddata")
+            x = pm.Data("x", [1, 2, 3], dims="ddata")
             assert "ddata" in pmodel.dim_lengths
 
             # Size does not include support dims, so this test must use a dist with support dims.
-            kwargs = dict(name="y", size=(2, 3), mu=pt.ones((3, 4)), cov=pt.eye(4))
+            kwargs = {"name": "y", "size": (2, 3), "mu": pt.ones((3, 4)), "cov": pt.eye(4)}
             y = pm.MvNormal(**kwargs, dims=("dsize", "ddata", "dsupport"))
             assert pmodel.named_vars_to_dims["y"] == ("dsize", "ddata", "dsupport")
 
@@ -213,7 +189,7 @@ class TestSizeShapeDimsObserved:
 
     def test_simultaneous_dims_and_observed(self):
         with pm.Model() as pmodel:
-            x = pm.ConstantData("x", [1, 2, 3], dims="ddata")
+            x = pm.Data("x", [1, 2, 3], dims="ddata")
             assert "ddata" in pmodel.dim_lengths
 
             # Note: No checks are performed that observed and dims actually match.
@@ -234,7 +210,7 @@ class TestSizeShapeDimsObserved:
 
     def test_can_resize_data_defined_size(self):
         with pm.Model() as pmodel:
-            x = pm.MutableData("x", [[1, 2, 3, 4]], dims=("first", "second"))
+            x = pm.Data("x", [[1, 2, 3, 4]], dims=("first", "second"))
             y = pm.Normal("y", mu=0, dims=("first", "second"))
             z = pm.Normal("z", mu=y, observed=np.ones((1, 4)), size=y.shape)
             assert x.eval().shape == (1, 4)
@@ -333,7 +309,7 @@ class TestSizeShapeDimsObserved:
     def test_lazy_flavors(self):
         assert pm.Uniform.dist(2, [4, 5], size=[3, 2]).eval().shape == (3, 2)
         assert pm.Uniform.dist(2, [4, 5], shape=[3, 2]).eval().shape == (3, 2)
-        with pm.Model(coords=dict(town=["Greifswald", "Madrid"])):
+        with pm.Model(coords={"town": ["Greifswald", "Madrid"]}):
             assert pm.Normal("n1", mu=[1, 2], dims="town").eval().shape == (2,)
             assert pm.Normal("n2", mu=[1, 2], dims=["town"]).eval().shape == (2,)
 
@@ -345,7 +321,7 @@ class TestSizeShapeDimsObserved:
         """Test that when setting size from dims we update the rng properly
         See https://github.com/pymc-devs/pymc/issues/5653
         """
-        with pm.Model(coords=dict(x_dim=range(2))):
+        with pm.Model(coords={"x_dim": range(2)}):
             x = pm.Normal("x", dims=("x_dim",))
 
         fn = pm.pytensorf.compile_pymc([], x)
@@ -384,7 +360,7 @@ def test_rv_size_is_none():
     assert rv_size_is_none(rv.owner.inputs[1])
 
     rv = pm.Normal.dist(0, 1, size=())
-    assert rv_size_is_none(rv.owner.inputs[1])
+    assert not rv_size_is_none(rv.owner.inputs[1])
 
     rv = pm.Normal.dist(0, 1, size=1)
     assert not rv_size_is_none(rv.owner.inputs[1])

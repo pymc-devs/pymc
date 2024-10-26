@@ -16,7 +16,8 @@ import functools
 import warnings
 
 from collections.abc import Sequence
-from typing import Any, NewType, Optional, Union, cast
+from copy import deepcopy
+from typing import NewType, cast
 
 import arviz
 import cloudpickle
@@ -27,10 +28,33 @@ from cachetools import LRUCache, cachedmethod
 from pytensor import Variable
 from pytensor.compile import SharedVariable
 from pytensor.graph.utils import ValidatingScratchpad
+from rich.progress import Progress
+from rich.theme import Theme
 
 from pymc.exceptions import BlockModelAccessError
 
+
+def __getattr__(name):
+    if name == "dataset_to_point_list":
+        warnings.warn(
+            f"{name} has been moved to backends.arviz. Importing from util will fail in a future release.",
+            FutureWarning,
+        )
+        from pymc.backends.arviz import dataset_to_point_list
+
+        return dataset_to_point_list
+
+    raise AttributeError(f"module {__name__} has no attribute {name}")
+
+
 VarName = NewType("VarName", str)
+
+default_progress_theme = Theme(
+    {
+        "bar.complete": "#1764f4",
+        "bar.finished": "green",
+    }
+)
 
 
 class _UnsetType:
@@ -47,7 +71,7 @@ UNSET = _UnsetType()
 
 
 def withparent(meth):
-    """Helper wrapper that passes calls to parent's instance"""
+    """Pass calls to parent's instance."""
 
     def wrapped(self, *args, **kwargs):
         res = meth(self, *args, **kwargs)
@@ -63,9 +87,9 @@ def withparent(meth):
 
 
 class treelist(list):
-    """A list that passes mutable extending operations used in Model
-    to parent list instance.
-    Extending treelist you will also extend its parent
+    """A list that passes mutable extending operations used in Model to parent list instance.
+
+    Extending treelist you will also extend its parent.
     """
 
     def __init__(self, iterable=(), parent=None):
@@ -75,7 +99,7 @@ class treelist(list):
         if self.parent is not None:
             self.parent.extend(self)
 
-    # typechecking here works bad
+    # here typechecking works bad
     append = withparent(list.append)
     __iadd__ = withparent(list.__iadd__)
     extend = withparent(list.extend)
@@ -89,6 +113,7 @@ class treelist(list):
             return list.__contains__(self, item)
 
     def __setitem__(self, key, value):
+        """Set value at index `key` with value `value`."""
         raise NotImplementedError(
             "Method is removed as we are not able to determine appropriate logic for it"
         )
@@ -97,9 +122,11 @@ class treelist(list):
     # This is my best guess about what this should do.  I might be happier
     # to kill both of these if they are not used.
     def __mul__(self, other) -> "treelist":
+        """Multiplication."""
         return cast("treelist", super().__mul__(other))
 
     def __imul__(self, other) -> "treelist":
+        """Inplace multiplication."""
         t0 = len(self)
         super().__imul__(other)
         if self.parent is not None:
@@ -108,9 +135,9 @@ class treelist(list):
 
 
 class treedict(dict):
-    """A dict that passes mutable extending operations used in Model
-    to parent dict instance.
-    Extending treedict you will also extend its parent
+    """A dict that passes mutable extending operations used in Model to parent dict instance.
+
+    Extending treedict you will also extend its parent.
     """
 
     def __init__(self, iterable=(), parent=None, **kwargs):
@@ -120,7 +147,7 @@ class treedict(dict):
         if self.parent is not None:
             self.parent.update(self)
 
-    # typechecking here works bad
+    # here typechecking works bad
     __setitem__ = withparent(dict.__setitem__)
     update = withparent(dict.update)
 
@@ -136,7 +163,7 @@ class treedict(dict):
 
 def get_transformed_name(name, transform):
     r"""
-    Consistent way of transforming names
+    Consistent way of transforming names.
 
     Parameters
     ----------
@@ -155,7 +182,7 @@ def get_transformed_name(name, transform):
 
 def is_transformed_name(name):
     r"""
-    Quickly check if a name was transformed with `get_transformed_name`
+    Quickly check if a name was transformed with `get_transformed_name`.
 
     Parameters
     ----------
@@ -172,7 +199,7 @@ def is_transformed_name(name):
 
 def get_untransformed_name(name):
     r"""
-    Undo transformation in `get_transformed_name`. Throws ValueError if name wasn't transformed
+    Undo transformation in `get_transformed_name`. Throws ValueError if name wasn't transformed.
 
     Parameters
     ----------
@@ -190,7 +217,7 @@ def get_untransformed_name(name):
 
 
 def get_default_varnames(var_iterator, include_transformed):
-    r"""Helper to extract default varnames from a trace.
+    r"""Extract default varnames from a trace.
 
     Parameters
     ----------
@@ -239,31 +266,8 @@ def biwrap(wrapper):
     return enhanced
 
 
-def dataset_to_point_list(
-    ds: Union[xarray.Dataset, dict[str, xarray.DataArray]], sample_dims: Sequence[str]
-) -> tuple[list[dict[str, np.ndarray]], dict[str, Any]]:
-    # All keys of the dataset must be a str
-    var_names = cast(list[str], list(ds.keys()))
-    for vn in var_names:
-        if not isinstance(vn, str):
-            raise ValueError(f"Variable names must be str, but dataset key {vn} is a {type(vn)}.")
-    num_sample_dims = len(sample_dims)
-    stacked_dims = {dim_name: ds[var_names[0]][dim_name] for dim_name in sample_dims}
-    transposed_dict = {vn: da.transpose(*sample_dims, ...) for vn, da in ds.items()}
-    stacked_dict = {
-        vn: da.values.reshape((-1, *da.shape[num_sample_dims:]))
-        for vn, da in transposed_dict.items()
-    }
-    points = [
-        {vn: stacked_dict[vn][i, ...] for vn in var_names}
-        for i in range(np.prod([len(coords) for coords in stacked_dims.values()]))
-    ]
-    # use the list of points
-    return cast(list[dict[str, np.ndarray]], points), stacked_dims
-
-
 def drop_warning_stat(idata: arviz.InferenceData) -> arviz.InferenceData:
-    """Returns a new ``InferenceData`` object with the "warning" stat removed from sample stats groups.
+    """Return a new ``InferenceData`` object with the "warning" stat removed from sample stats groups.
 
     This function should be applied to an ``InferenceData`` object obtained with
     ``pm.sample(keep_warning_stat=True)`` before trying to ``.to_netcdf()`` or ``.to_zarr()`` it.
@@ -276,7 +280,7 @@ def drop_warning_stat(idata: arviz.InferenceData) -> arviz.InferenceData:
     return nidata
 
 
-def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> tuple[int, int]:
+def chains_and_samples(data: xarray.Dataset | arviz.InferenceData) -> tuple[int, int]:
     """Extract and return number of chains and samples in xarray or arviz traces."""
     dataset: xarray.Dataset
     if isinstance(data, xarray.Dataset):
@@ -297,14 +301,15 @@ def chains_and_samples(data: Union[xarray.Dataset, arviz.InferenceData]) -> tupl
 
 def hashable(a=None) -> int:
     """
-    Hashes many kinds of objects, including some that are unhashable through the builtin `hash` function.
+    Hash many kinds of objects, including some that are unhashable through the builtin `hash` function.
+
     Lists and tuples are hashed based on their elements.
     """
     if isinstance(a, dict):
         # first hash the keys and values with hashable
         # then hash the tuple of int-tuples with the builtin
         return hash(tuple((hashable(k), hashable(v)) for k, v in a.items()))
-    if isinstance(a, (tuple, list)):
+    if isinstance(a, tuple | list):
         # lists are mutable and not hashable by default
         # for memoization, we need the hash to depend on the items
         return hash(tuple(hashable(i) for i in a))
@@ -333,25 +338,31 @@ class HashableWrapper:
         self.obj = obj
 
     def __hash__(self):
+        """Return a hash of the object."""
         return hashable(self.obj)
 
     def __eq__(self, other):
+        """Compare this object with `other`."""
         return self.obj == other
 
     def __repr__(self):
+        """Return a string representation of the object."""
         return f"{type(self).__name__}({self.obj})"
 
 
 class WithMemoization:
     def __hash__(self):
+        """Return a hash of the object."""
         return hash(id(self))
 
     def __getstate__(self):
+        """Return an object to pickle."""
         state = self.__dict__.copy()
         state.pop("_cache", None)
         return state
 
     def __setstate__(self, state):
+        """Set the object from a pickled object."""
         self.__dict__.update(state)
 
 
@@ -368,7 +379,7 @@ def locally_cachedmethod(f):
 
 
 def check_dist_not_registered(dist, model=None):
-    """Check that a dist is not registered in the model already"""
+    """Check that a dist is not registered in the model already."""
     from pymc.model import modelcontext
 
     try:
@@ -385,8 +396,10 @@ def check_dist_not_registered(dist, model=None):
 
 
 def point_wrapper(core_function):
-    """Wrap an pytensor compiled function to be able to ingest point dictionaries whilst
-    ignoring the keys that are not valid inputs to the core function.
+    """
+    Wrap a pytensor compiled function to ingest point dictionaries.
+
+    It ignores the keys that are not valid inputs to the core function.
     """
     ins = [i.name for i in core_function.maker.fgraph.inputs if not isinstance(i, SharedVariable)]
 
@@ -397,14 +410,15 @@ def point_wrapper(core_function):
     return wrapped
 
 
-RandomSeed = Optional[Union[int, Sequence[int], np.ndarray]]
-RandomState = Union[RandomSeed, np.random.RandomState, np.random.Generator]
+RandomSeed = None | int | Sequence[int] | np.ndarray
+RandomState = RandomSeed | np.random.RandomState | np.random.Generator
+RandomGenerator = RandomSeed | np.random.Generator | np.random.BitGenerator
 
 
 def _get_seeds_per_chain(
     random_state: RandomState,
     chains: int,
-) -> Union[Sequence[int], np.ndarray]:
+) -> Sequence[int] | np.ndarray:
     """Obtain or validate specified integer seeds per chain.
 
     This function process different possible sources of seeding and returns one integer
@@ -431,16 +445,21 @@ def _get_seeds_per_chain(
             seeds = [int(seed) for seed in integers_fn(2**30, dtype=np.int64, size=chains)]
         return seeds
 
-    if random_state is None or isinstance(random_state, int):
-        if chains == 1 and isinstance(random_state, int):
-            return (random_state,)
-        return _get_unique_seeds_per_chain(np.random.default_rng(random_state).integers)
+    try:
+        int_random_state = int(random_state)  # type: ignore[arg-type]
+    except Exception:
+        int_random_state = None
+
+    if random_state is None or int_random_state is not None:
+        if chains == 1 and int_random_state is not None:
+            return (int_random_state,)
+        return _get_unique_seeds_per_chain(np.random.default_rng(int_random_state).integers)
     if isinstance(random_state, np.random.Generator):
         return _get_unique_seeds_per_chain(random_state.integers)
     if isinstance(random_state, np.random.RandomState):
         return _get_unique_seeds_per_chain(random_state.randint)
 
-    if not isinstance(random_state, (list, tuple, np.ndarray)):
+    if not isinstance(random_state, list | tuple | np.ndarray):
         raise ValueError(f"The `seeds` must be array-like. Got {type(random_state)} instead.")
 
     if len(random_state) != chains:
@@ -451,10 +470,8 @@ def _get_seeds_per_chain(
     return random_state
 
 
-def get_value_vars_from_user_vars(
-    vars: Union[Variable, Sequence[Variable]], model
-) -> list[Variable]:
-    """Converts user "vars" input into value variables.
+def get_value_vars_from_user_vars(vars: Variable | Sequence[Variable], model) -> list[Variable]:
+    """Convert user "vars" input into value variables.
 
     More often than not, users will pass random variables, and we will extract the
     respective value variables, but we also allow for the input to already be value
@@ -519,7 +536,115 @@ def _add_future_warning_tag(var) -> None:
 
 
 def makeiter(a):
-    if isinstance(a, (tuple, list)):
+    if isinstance(a, tuple | list):
         return a
     else:
         return [a]
+
+
+class CustomProgress(Progress):
+    """A child of Progress that allows to disable progress bars and its container.
+
+    The implementation simply checks an `is_enabled` flag and generates the progress bar only if
+    it's `True`.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.is_enabled = kwargs.get("disable", None) is not True
+        if self.is_enabled:
+            super().__init__(*args, **kwargs)
+
+    def __enter__(self):
+        """Enter the context manager."""
+        if self.is_enabled:
+            self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit the context manager."""
+        if self.is_enabled:
+            super().__exit__(exc_type, exc_val, exc_tb)
+
+    def add_task(self, *args, **kwargs):
+        if self.is_enabled:
+            return super().add_task(*args, **kwargs)
+        return None
+
+    def advance(self, task_id, advance=1) -> None:
+        if self.is_enabled:
+            super().advance(task_id, advance)
+        return None
+
+    def update(
+        self,
+        task_id,
+        *,
+        total=None,
+        completed=None,
+        advance=None,
+        description=None,
+        visible=None,
+        refresh=False,
+        **fields,
+    ):
+        if self.is_enabled:
+            super().update(
+                task_id,
+                total=total,
+                completed=completed,
+                advance=advance,
+                description=description,
+                visible=visible,
+                refresh=refresh,
+                **fields,
+            )
+        return None
+
+
+def get_random_generator(
+    seed: RandomGenerator | np.random.RandomState = None, copy: bool = True
+) -> np.random.Generator:
+    """Build a :py:class:`~numpy.random.Generator` object from a suitable seed.
+
+    Parameters
+    ----------
+    seed : None | int | Sequence[int] | numpy.random.Generator | numpy.random.BitGenerator | numpy.random.RandomState
+        A suitable seed to use to generate the :py:class:`~numpy.random.Generator` object.
+        For more details on suitable seeds, refer to :py:func:`numpy.random.default_rng`.
+    copy : bool
+        Boolean flag that indicates whether to copy the seed object before feeding
+        it to :py:func:`numpy.random.default_rng`. If `copy` is `False`, and the seed
+        object is a ``BitGenerator`` or ``Generator`` object, the returned
+        ``Generator`` will use the ``seed`` object where possible. This means that it
+        will return the ``seed`` input object if it is a ``Generator`` or that it
+        will return a new ``Generator`` whose ``bit_generator`` attribute will be the
+        input ``seed`` object. To avoid this potential object sharing, you must set
+        ``copy`` to ``True``.
+
+    Returns
+    -------
+    rng : numpy.random.Generator
+        The result of passing the input ``seed`` (or a copy of it) through
+        :py:func:`numpy.random.default_rng`.
+
+    Raises
+    ------
+    TypeError:
+        If the supplied ``seed`` is a :py:class:`~numpy.random.RandomState` object. We
+        do not support using these legacy objects because their seeding strategy is not
+        amenable to spawning new independent random streams.
+    """
+    if isinstance(seed, np.random.RandomState):
+        raise TypeError(
+            "Cannot create a random Generator from a RandomStream object. "
+            "Please provide a random seed, BitGenerator or Generator instead."
+        )
+    if copy:
+        # If seed is a numpy.random.Generator or numpy.random.BitGenerator,
+        # numpy.random.default_rng will use the exact same object to return.
+        # In the former case, it will return seed, in the latter it will return
+        # a new Generator object that has the same BitGenerator. This would potentially
+        # make the new generator be shared across many users. To avoid this, we
+        # deepcopy by default.
+        seed = deepcopy(seed)
+    return np.random.default_rng(seed)

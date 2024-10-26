@@ -18,7 +18,7 @@ import warnings
 
 from collections.abc import Sequence
 from copy import copy
-from typing import Optional, Union, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -26,18 +26,20 @@ import pytensor
 import pytensor.tensor as pt
 import xarray as xr
 
+from pytensor.compile.builders import OpFromGraph
 from pytensor.compile.sharedvalue import SharedVariable
+from pytensor.graph.basic import Variable
 from pytensor.raise_op import Assert
 from pytensor.scalar import Cast
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.basic import IntegersRV
-from pytensor.tensor.subtensor import AdvancedSubtensor
 from pytensor.tensor.type import TensorType
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 import pymc as pm
 
-from pymc.pytensorf import convert_observed_data
+from pymc.pytensorf import GeneratorOp, convert_data, smarttypeX
+from pymc.vartypes import isgenerator
 
 __all__ = [
     "get_data",
@@ -51,7 +53,7 @@ BASE_URL = "https://raw.githubusercontent.com/pymc-devs/pymc-examples/main/examp
 
 
 def get_data(filename):
-    """Returns a BytesIO object for a package data file.
+    """Return a BytesIO object for a package data file.
 
     Parameters
     ----------
@@ -85,9 +87,9 @@ class GenTensorVariable(TensorVariable):
 
 
 class GeneratorAdapter:
-    """
-    Helper class that helps to infer data type of generator with looking
-    at the first item, preserving the order of the resulting generator
+    """Class that helps infer data type of generator.
+
+    It looks at the first item, preserving the order of the resulting generator.
     """
 
     def make_variable(self, gop, name=None):
@@ -98,7 +100,7 @@ class GeneratorAdapter:
     def __init__(self, generator):
         if not pm.vartypes.isgenerator(generator):
             raise TypeError("Object should be generator like")
-        self.test_value = pm.smartfloatX(copy(next(generator)))
+        self.test_value = smarttypeX(copy(next(generator)))
         # make pickling potentially possible
         self._yielded_test_value = False
         self.gen = generator
@@ -106,66 +108,71 @@ class GeneratorAdapter:
 
     # python3 generator
     def __next__(self):
+        """Next value in the generator."""
         if not self._yielded_test_value:
             self._yielded_test_value = True
             return self.test_value
         else:
-            return pm.smartfloatX(copy(next(self.gen)))
+            return smarttypeX(copy(next(self.gen)))
 
     # python2 generator
     next = __next__
 
     def __iter__(self):
+        """Return an iterator."""
         return self
 
     def __eq__(self, other):
+        """Return true if both objects are actually the same."""
         return id(self) == id(other)
 
     def __hash__(self):
+        """Return a hash of the object."""
         return hash(id(self))
 
 
 class MinibatchIndexRV(IntegersRV):
     _print_name = ("minibatch_index", r"\operatorname{minibatch\_index}")
 
-    # Work-around for https://github.com/pymc-devs/pytensor/issues/97
-    def make_node(self, rng, *args, **kwargs):
-        if rng is None:
-            rng = pytensor.shared(np.random.default_rng())
-        return super().make_node(rng, *args, **kwargs)
-
 
 minibatch_index = MinibatchIndexRV()
 
 
-def is_minibatch(v: TensorVariable) -> bool:
-    return (
-        isinstance(v.owner.op, AdvancedSubtensor)
-        and isinstance(v.owner.inputs[1].owner.op, MinibatchIndexRV)
-        and valid_for_minibatch(v.owner.inputs[0])
-    )
+class MinibatchOp(OpFromGraph):
+    """Encapsulate Minibatch random draws in an opaque OFG."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs, inline=True)
+
+    def __str__(self):
+        return "Minibatch"
 
 
-def valid_for_minibatch(v: TensorVariable) -> bool:
+def is_valid_observed(v) -> bool:
+    if not isinstance(v, Variable):
+        # Non-symbolic constant
+        return True
+
+    if v.owner is None:
+        # Symbolic root variable (constant or not)
+        return True
+
     return (
-        v.owner is None
         # The only PyTensor operation we allow on observed data is type casting
         # Although we could allow for any graph that does not depend on other RVs
-        or (
+        (
             isinstance(v.owner.op, Elemwise)
-            and v.owner.inputs[0].owner is None
             and isinstance(v.owner.op.scalar_op, Cast)
+            and is_valid_observed(v.owner.inputs[0])
         )
+        # Or Minibatch
+        or (
+            isinstance(v.owner.op, MinibatchOp)
+            and all(is_valid_observed(inp) for inp in v.owner.inputs)
+        )
+        # Or Generator
+        or isinstance(v.owner.op, GeneratorOp)
     )
-
-
-def assert_all_scalars_equal(scalar, *scalars):
-    if len(scalars) == 0:
-        return scalar
-    else:
-        return Assert(
-            "All variables shape[0] in Minibatch should be equal, check your Minibatch(data1, data2, ...) code"
-        )(scalar, pt.all([pt.eq(scalar, s) for s in scalars]))
 
 
 def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: int):
@@ -183,31 +190,41 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
     >>> data2 = np.random.randn(100, 20)
     >>> mdata1, mdata2 = Minibatch(data1, data2, batch_size=10)
     """
-
     if not isinstance(batch_size, int):
         raise TypeError("batch_size must be an integer")
 
-    tensor, *tensors = tuple(map(pt.as_tensor, (variable, *variables)))
-    upper = assert_all_scalars_equal(*[t.shape[0] for t in (tensor, *tensors)])
-    slc = minibatch_index(0, upper, size=batch_size)
-    for i, v in enumerate((tensor, *tensors)):
-        if not valid_for_minibatch(v):
+    tensors = tuple(map(pt.as_tensor, (variable, *variables)))
+    for i, v in enumerate(tensors):
+        if not is_valid_observed(v):
             raise ValueError(
                 f"{i}: {v} is not valid for Minibatch, only constants or constants.astype(dtype) are allowed"
             )
-    result = tuple([v[slc] for v in (tensor, *tensors)])
-    for i, r in enumerate(result):
+
+    upper = tensors[0].shape[0]
+    if len(tensors) > 1:
+        upper = Assert(
+            "All variables shape[0] in Minibatch should be equal, check your Minibatch(data1, data2, ...) code"
+        )(upper, pt.all([pt.eq(upper, other_tensor.shape[0]) for other_tensor in tensors[1:]]))
+
+    rng = pytensor.shared(np.random.default_rng())
+    rng_update, mb_indices = minibatch_index(0, upper, size=batch_size, rng=rng).owner.outputs
+    mb_tensors = [tensor[mb_indices] for tensor in tensors]
+
+    # Wrap graph in OFG so it's easily identifiable and not rewritten accidentally
+    *mb_tensors, _ = MinibatchOp([*tensors, rng], [*mb_tensors, rng_update])(*tensors, rng)
+    for i, r in enumerate(mb_tensors[:-1]):
         r.name = f"minibatch.{i}"
-    return result if tensors else result[0]
+
+    return mb_tensors if len(variables) else mb_tensors[0]
 
 
 def determine_coords(
     model,
-    value: Union[pd.DataFrame, pd.Series, xr.DataArray],
-    dims: Optional[Sequence[Optional[str]]] = None,
-    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
-) -> tuple[dict[str, Union[Sequence, np.ndarray]], Sequence[Optional[str]]]:
-    """Determines coordinate values from data or the model (via ``dims``)."""
+    value: pd.DataFrame | pd.Series | xr.DataArray,
+    dims: Sequence[str] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str] | Sequence[None]]:
+    """Determine coordinate values from data or the model (via ``dims``)."""
     if coords is None:
         coords = {}
 
@@ -251,32 +268,30 @@ def determine_coords(
 
     if dims is None:
         # TODO: Also determine dim names from the index
-        dims = [None] * np.ndim(value)
-
-    return coords, dims
+        new_dims: Sequence[str] | Sequence[None] = [None] * np.ndim(value)
+    else:
+        new_dims = dims
+    return coords, new_dims
 
 
 def ConstantData(
     name: str,
     value,
     *,
-    dims: Optional[Sequence[str]] = None,
-    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
-    export_index_as_coords=False,
+    dims: Sequence[str] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
     infer_dims_and_coords=False,
     **kwargs,
 ) -> TensorConstant:
-    """Alias for ``pm.Data(..., mutable=False)``.
+    """Alias for ``pm.Data``.
 
     Registers the ``value`` as a :class:`~pytensor.tensor.TensorConstant` with the model.
     For more information, please reference :class:`pymc.Data`.
     """
-    if export_index_as_coords:
-        infer_dims_and_coords = export_index_as_coords
-        warnings.warn(
-            "Deprecation warning: 'export_index_as_coords; is deprecated and will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
-            DeprecationWarning,
-        )
+    warnings.warn(
+        "ConstantData is deprecated. All Data variables are now mutable. Use Data instead.",
+        FutureWarning,
+    )
 
     var = Data(
         name,
@@ -284,7 +299,6 @@ def ConstantData(
         dims=dims,
         coords=coords,
         infer_dims_and_coords=infer_dims_and_coords,
-        mutable=False,
         **kwargs,
     )
     return cast(TensorConstant, var)
@@ -294,23 +308,20 @@ def MutableData(
     name: str,
     value,
     *,
-    dims: Optional[Sequence[str]] = None,
-    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
-    export_index_as_coords=False,
+    dims: Sequence[str] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
     infer_dims_and_coords=False,
     **kwargs,
 ) -> SharedVariable:
-    """Alias for ``pm.Data(..., mutable=True)``.
+    """Alias for ``pm.Data``.
 
     Registers the ``value`` as a :class:`~pytensor.compile.sharedvalue.SharedVariable`
     with the model. For more information, please reference :class:`pymc.Data`.
     """
-    if export_index_as_coords:
-        infer_dims_and_coords = export_index_as_coords
-        warnings.warn(
-            "Deprecation warning: 'export_index_as_coords; is deprecated and will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
-            DeprecationWarning,
-        )
+    warnings.warn(
+        "MutableData is deprecated. All Data variables are now mutable. Use Data instead.",
+        FutureWarning,
+    )
 
     var = Data(
         name,
@@ -318,7 +329,6 @@ def MutableData(
         dims=dims,
         coords=coords,
         infer_dims_and_coords=infer_dims_and_coords,
-        mutable=True,
         **kwargs,
     )
     return cast(SharedVariable, var)
@@ -328,14 +338,13 @@ def Data(
     name: str,
     value,
     *,
-    dims: Optional[Sequence[str]] = None,
-    coords: Optional[dict[str, Union[Sequence, np.ndarray]]] = None,
-    export_index_as_coords=False,
+    dims: Sequence[str] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
     infer_dims_and_coords=False,
-    mutable: Optional[bool] = None,
+    mutable: bool | None = None,
     **kwargs,
-) -> Union[SharedVariable, TensorConstant]:
-    """Data container that registers a data variable with the model.
+) -> SharedVariable | TensorConstant:
+    """Create a data container that registers a data variable with the model.
 
     Depending on the ``mutable`` setting (default: True), the variable
     is registered as a :class:`~pytensor.compile.sharedvalue.SharedVariable`,
@@ -358,7 +367,7 @@ def Data(
         The name for this variable.
     value : array_like or pandas.Series, pandas.Dataframe
         A value to associate with this variable.
-    dims : str or tuple of str, optional
+    dims : str, tuple of str or tuple of None, optional
         Dimension names of the random variables (as opposed to the shapes of these
         random variables). Use this when ``value`` is a pandas Series or DataFrame. The
         ``dims`` will then be the name of the Series / DataFrame's columns. See ArviZ
@@ -373,15 +382,6 @@ def Data(
     infer_dims_and_coords : bool, default=False
         If True, the ``Data`` container will try to infer what the coordinates
         and dimension names should be if there is an index in ``value``.
-    mutable : bool, optional
-        Switches between creating a :class:`~pytensor.compile.sharedvalue.SharedVariable`
-        (``mutable=True``) vs. creating a :class:`~pytensor.tensor.TensorConstant`
-        (``mutable=False``).
-        Consider using :class:`pymc.ConstantData` or :class:`pymc.MutableData` as less
-        verbose alternatives to ``pm.Data(..., mutable=...)``.
-        If this parameter is not specified, the value it takes will depend on the
-        version of the package. Since ``v4.1.0`` the default value is
-        ``mutable=False``, with previous versions having ``mutable=True``.
     **kwargs : dict, optional
         Extra arguments passed to :func:`pytensor.shared`.
 
@@ -394,16 +394,16 @@ def Data(
     >>> observed_data = [mu + np.random.randn(20) for mu in true_mu]
 
     >>> with pm.Model() as model:
-    ...     data = pm.MutableData('data', observed_data[0])
-    ...     mu = pm.Normal('mu', 0, 10)
-    ...     pm.Normal('y', mu=mu, sigma=1, observed=data)
+    ...     data = pm.Data("data", observed_data[0])
+    ...     mu = pm.Normal("mu", 0, 10)
+    ...     pm.Normal("y", mu=mu, sigma=1, observed=data)
 
     >>> # Generate one trace for each dataset
     >>> idatas = []
     >>> for data_vals in observed_data:
     ...     with model:
     ...         # Switch out the observed dataset
-    ...         model.set_data('data', data_vals)
+    ...         model.set_data("data", data_vals)
     ...         idatas.append(pm.sample())
     """
     if coords is None:
@@ -421,28 +421,27 @@ def Data(
         )
     name = model.name_for(name)
 
-    # `convert_observed_data` takes care of parameter `value` and
-    # transforms it to something digestible for PyTensor.
-    arr = convert_observed_data(value)
+    # Transform `value` it to something digestible for PyTensor.
+    if isgenerator(value):
+        raise NotImplementedError(
+            "Generator type data is no longer supported with pm.Data.",
+            # It messes up InferenceData and can't be the input to a SharedVariable.
+        )
+    else:
+        arr = convert_data(value)
+
     if isinstance(arr, np.ma.MaskedArray):
         raise NotImplementedError(
             "Masked arrays or arrays with `nan` entries are not supported. "
             "Pass them directly to `observed` if you want to trigger auto-imputation"
         )
 
-    if mutable is None:
+    if mutable is not None:
         warnings.warn(
-            "The `mutable` kwarg was not specified. Before v4.1.0 it defaulted to `pm.Data(mutable=True)`,"
-            " which is equivalent to using `pm.MutableData()`."
-            " In v4.1.0 the default changed to `pm.Data(mutable=False)`, equivalent to `pm.ConstantData`."
-            " Use `pm.ConstantData`/`pm.MutableData` or pass `pm.Data(..., mutable=False/True)` to avoid this warning.",
-            UserWarning,
+            "Data is now always mutable. Specifying the `mutable` kwarg will raise an error in a future release",
+            FutureWarning,
         )
-        mutable = False
-    if mutable:
-        x = pytensor.shared(arr, name, **kwargs)
-    else:
-        x = pt.as_tensor_variable(arr, name, **kwargs)
+    x = pytensor.shared(arr, name, **kwargs)
 
     if isinstance(dims, str):
         dims = (dims,)
@@ -453,36 +452,25 @@ def Data(
             expected=x.ndim,
         )
 
-    # Optionally infer coords and dims from the input value.
-    if export_index_as_coords:
-        infer_dims_and_coords = export_index_as_coords
-        warnings.warn(
-            "Deprecation warning: 'export_index_as_coords; is deprecated and will be removed in future versions. Please use 'infer_dims_and_coords' instead.",
-            DeprecationWarning,
-        )
-
+    new_dims: Sequence[str] | Sequence[None] | None
     if infer_dims_and_coords:
-        coords, dims = determine_coords(model, value, dims)
+        coords, new_dims = determine_coords(model, value, dims)
+    else:
+        new_dims = dims
 
-    if dims:
-        if not mutable:
-            # Use the dimension lengths from the before it was tensorified.
-            # These can still be tensors, but in many cases they are numeric.
-            xshape = np.shape(arr)
-        else:
-            xshape = x.shape
+    if new_dims:
+        xshape = x.shape
         # Register new dimension lengths
-        for d, dname in enumerate(dims):
-            if dname not in model.dim_lengths:
+        for d, dname in enumerate(new_dims):
+            if dname not in model.dim_lengths and dname is not None:
                 model.add_coord(
                     name=dname,
                     # Note: Coordinate values can't be taken from
                     # the value, because it could be N-dimensional.
                     values=coords.get(dname, None),
-                    mutable=mutable,
                     length=xshape[d],
                 )
 
-    model.add_named_variable(x, dims=dims)
+    model.register_data_var(x, dims=new_dims)
 
     return x

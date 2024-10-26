@@ -6,6 +6,7 @@ run by the other jobs.
 This is intended to be used as a pre-commit hook, see `.pre-commit-config.yaml`.
 You can run it manually with `pre-commit run check-no-tests-are-ignored --all`.
 """
+
 import itertools
 import logging
 import os
@@ -30,7 +31,7 @@ def find_testfiles():
 
 
 def from_yaml():
-    """Determines how often each test file is run per platform and floatX setting.
+    """Determine how often each test file is run per platform and floatX setting.
 
     An exception is raised if tests run multiple times with the same configuration.
     """

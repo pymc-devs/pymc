@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""Probability distributions."""
+
 from pymc.distributions.censored import Censored
 from pymc.distributions.continuous import (
     AsymmetricLaplace,
@@ -41,6 +43,7 @@ from pymc.distributions.continuous import (
     PolyaGamma,
     Rice,
     SkewNormal,
+    SkewStudentT,
     StudentT,
     Triangular,
     TruncatedNormal,
@@ -49,6 +52,7 @@ from pymc.distributions.continuous import (
     Wald,
     Weibull,
 )
+from pymc.distributions.custom import CustomDist, DensityDist
 from pymc.distributions.discrete import (
     Bernoulli,
     BetaBinomial,
@@ -65,8 +69,6 @@ from pymc.distributions.discrete import (
 )
 from pymc.distributions.distribution import (
     Continuous,
-    CustomDist,
-    DensityDist,
     DiracDelta,
     Discrete,
     Distribution,
@@ -202,4 +204,5 @@ __all__ = [
     "HurdleLogNormal",
     "HurdleNegativeBinomial",
     "HurdlePoisson",
+    "SkewStudentT",
 ]

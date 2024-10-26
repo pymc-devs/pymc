@@ -4,7 +4,7 @@ ci:
 exclude: ^(docs/logos|pymc/tests/data)/
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.5.0
+  rev: v5.0.0
   hooks:
     -   id: check-merge-conflict
     -   id: check-toml
@@ -12,10 +12,31 @@ repos:
     -   id: debug-statements
     -   id: end-of-file-fixer
     -   id: no-commit-to-branch
-        args: [--branch, main]
     -   id: requirements-txt-fixer
         exclude: ^requirements-dev\.txt$
     -   id: trailing-whitespace
+- repo: https://github.com/pre-commit/pygrep-hooks
+  rev: v1.10.0
+  hooks:
+    - id: python-check-blanket-noqa
+    - id: python-check-blanket-type-ignore
+    - id: python-check-mock-methods
+    # - id: python-no-eval  # gets confused with all the `.eval()`
+    - id: python-no-log-warn
+    - id: python-use-type-annotations
+    - id: rst-backticks
+    - id: rst-directive-colons
+    - id: rst-inline-touching-normal
+    - id: text-unicode-replacement-char
+- repo: https://github.com/citation-file-format/cffconvert
+  rev: 054bda51dbe278b3e86f27c890e3f3ac877d616c
+  hooks:
+    - id: validate-cff
+- repo: https://github.com/sphinx-contrib/sphinx-lint
+  rev: v1.0.0
+  hooks:
+    - id: sphinx-lint
+      args: ["."]
 - repo: https://github.com/lucianopaz/head_of_apache
   rev: "0.0.3"
   hooks:
@@ -27,17 +48,11 @@ repos:
         - --exclude=binder/
         - --exclude=versioneer.py
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.2.2
+  rev: v0.7.0
   hooks:
     - id: ruff
-      args: ["--fix", "--output-format=full"]
+      args: [--fix, --show-fixes]
     - id: ruff-format
-- repo: https://github.com/MarcoGorelli/madforhooks
-  rev: 0.4.1
-  hooks:
-    - id: no-print-statements
-      files: ^pymc/
-      exclude: (?x)(pymc/_version.py)
 - repo: local
   hooks:
     - id: check-no-tests-are-ignored
@@ -53,12 +68,6 @@ repos:
       files: ^conda-envs/environment-dev.yml$
       language: python
       name: Generate pip dependency from conda
-    - id: no-relative-imports
-      name: No relative imports
-      entry: from \.[\.\w]* import
-      types: [python]
-      language: pygrep
-      exclude: (?x)(pymc/_version.py|versioneer.py)
     - id: no-internal-links
       name: Check no links that should be cross-references are in the docs
       description: >-

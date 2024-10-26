@@ -31,17 +31,80 @@ Using MyST allows taking advantage of all sphinx features from markdown cells in
 All markdown should be valid MyST (note that MyST is a superset of recommonmark).
 This guide does not teach nor cover MyST extensively, only gives some opinionated guidelines.
 
-* **Never** use url links to refer to other notebooks, PyMC documentation or other python
-  libraries documentations. Use [sphinx cross-references](https://docs.readthedocs.io/en/stable/guides/cross-referencing-with-sphinx.html)
-  instead.
+* **Never** use url links to refer to other notebooks, PyMC documentation or other python libraries documentations.
+  When linking to other notebooks, always use a `ref` type cross-reference pointing to the target in the {ref}`jupyter_style_first_cell`.
 
   :::{caution}
   Using urls links breaks self referencing in versioned docs! And at the same time they are
   less robust than sphinx cross-references.
   :::
 
-  * When linking to other notebooks, always use a `ref` type cross-reference pointing
-    to the target in the {ref}`jupyter_style_first_cell`.
+  ::::{dropdown} Examples of cross-references
+
+  **References to targets within the current project**
+
+  That is, notebooks in pymc-examples referring to other notebooks in pymc-examples.
+
+  Pattern:
+  ```
+  {ref}`explicit text <anchor_id>`
+  ```
+
+  Example source:
+  ```
+  {ref}`Kronecker product <GP-Kron>`
+  ```
+
+  Rendered example: {ref}`Kronecker product <GP-Kron>`
+
+  **References to targets of other projects**
+
+  Here "other projects" means any sphinx documentation site that was build independently
+  of the current one. Therefore, this includes linking to pymc-examples notebooks
+  from the pymc documentation or vice versa, or linking to other libraries like
+  arviz, numpy, matplotlib...
+
+  Pattern:
+  ```
+  {ref}`explicit text <key:anchor_id>`
+  ```
+  Example source:
+  ```
+  {ref}`how to use InferenceData <arviz:working_with_InferenceData>`
+  ```
+
+  Rendered example: {ref}`how to use InferenceData <arviz:working_with_InferenceData>`
+
+  where `key` in the pattern (`arviz` in the example) is one of the keys defined in
+  the `intersphinx_mapping` variable of `conf.py` such as `arviz`, `numpy`, `mpl`...
+  For the main pymc repo it is located in `docs/source/conf.py`, for pymc-examples it is
+  in `examples/conf.py`.
+
+  To identify which `anchor_id` to use, you need to either look at the source of the document, or use [sphobjinv](https://sphobjinv.readthedocs.io/en/stable/).
+
+  **References to python objects**
+
+  Pattern
+  ```
+  {type}`import.path`  # to show full import path
+  {type}`~import.path`  # to show only object name
+  ```
+  where type is func for functions, meth for methods, class for classes, prop for property, etc.
+
+  Example source:
+  ```
+  {class}`~pymc.gp.HSGP`
+  ```
+
+  Rendered example: {class}`~pymc.gp.HSGP`
+
+
+  :::{seealso}
+  * [ReadTheDocs page on sphinx cross-references](https://docs.readthedocs.io/en/stable/guides/cross-referencing-with-sphinx.html) instead.
+  * {ref}`MyST docs on cross-references <myst:syntax/referencing>`.
+  :::
+  ::::
+
 
 * If the output (or even code and output) of a cell is not necessary to follow the
   notebook or it is very long and can break the flow of reading, consider hiding

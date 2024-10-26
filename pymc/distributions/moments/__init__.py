@@ -11,10 +11,9 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-# This file exists only for backward-compatibility with imports like
-# `import pymc.sampling_jax` or `from pymc import sampling_jax`.
 
-import warnings
+"""Moments dispatchers for pymc random variables."""
 
-warnings.warn("This module is deprecated, use pymc.sampling.jax", DeprecationWarning)
-from pymc.sampling.jax import *  # noqa: E402, F403
+from pymc.distributions.moments.means import mean
+
+__all__ = ["mean"]

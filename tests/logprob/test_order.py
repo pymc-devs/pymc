@@ -45,6 +45,7 @@ import scipy.stats as sp
 import pymc as pm
 
 from pymc import logp
+from pymc.logprob import conditional_logp
 from pymc.testing import assert_no_rvs
 
 
@@ -52,11 +53,11 @@ def test_argmax():
     """Test whether the logprob for ```pt.argmax``` is correctly rejected"""
     x = pt.random.normal(0, 1, size=(3,))
     x.name = "x"
-    x_max = pt.argmax(x, axis=-1)
-    x_max_value = pt.vector("x_max_value")
+    x_argmax = pt.argmax(x, axis=-1)
+    x_max_value = pt.scalar("x_max_value", dtype=x_argmax.type.dtype)
 
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented for Argmax")):
-        x_max_logprob = logp(x_max, x_max_value)
+        logp(x_argmax, x_max_value)
 
 
 @pytest.mark.parametrize(
@@ -71,26 +72,9 @@ def test_non_iid_fails(pt_op):
     x = pm.Normal.dist([0, 1, 2, 3, 4], 1, shape=(5,))
     x.name = "x"
     x_m = pt_op(x, axis=-1)
-    x_m_value = pt.vector("x_value")
+    x_m_value = pt.scalar("x_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
-        x_max_logprob = logp(x_m, x_m_value)
-
-
-@pytest.mark.parametrize(
-    "pt_op",
-    [
-        pt.max,
-        pt.min,
-    ],
-)
-def test_non_rv_fails(pt_op):
-    """Test whether the logprob for ```pt.max``` for non-RVs is correctly rejected"""
-    x = pt.exp(pt.random.beta(0, 1, size=(3,)))
-    x.name = "x"
-    x_m = pt_op(x, axis=-1)
-    x_m_value = pt.vector("x_value")
-    with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
-        x_max_logprob = logp(x_m, x_m_value)
+        logp(x_m, x_m_value)
 
 
 @pytest.mark.parametrize(
@@ -106,9 +90,9 @@ def test_multivariate_rv_fails(pt_op):
     x = pm.StickBreakingWeights.dist(_alpha, _k)
     x.name = "x"
     x_m = pt_op(x, axis=-1)
-    x_m_value = pt.vector("x_value")
+    x_m_value = pt.scalar("x_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
-        x_max_logprob = logp(x_m, x_m_value)
+        logp(x_m, x_m_value)
 
 
 @pytest.mark.parametrize(
@@ -123,9 +107,9 @@ def test_categorical(pt_op):
     x = pm.Categorical.dist([1, 1, 1, 1], shape=(5,))
     x.name = "x"
     x_m = pt_op(x, axis=-1)
-    x_m_value = pt.vector("x_value")
+    x_m_value = pt.scalar("x_value", dtype=x.type.dtype)
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
-        x_max_logprob = logp(x_m, x_m_value)
+        logp(x_m, x_m_value)
 
 
 @pytest.mark.parametrize(
@@ -229,9 +213,9 @@ def test_min_non_mul_elemwise_fails():
     x = pt.log(pt.random.beta(0, 1, size=(3,)))
     x.name = "x"
     x_min = pt.min(x, axis=-1)
-    x_min_value = pt.vector("x_min_value")
+    x_min_value = pt.scalar("x_min_value")
     with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
-        x_min_logprob = logp(x_min, x_min_value)
+        logp(x_min, x_min_value)
 
 
 @pytest.mark.parametrize(
@@ -239,9 +223,9 @@ def test_min_non_mul_elemwise_fails():
     [(2, 3, 1, -1), (2, 3, 1, 0), (1, 2, 2, None), (0, 4, 0, 0)],
 )
 def test_max_discrete(mu, size, value, axis):
-    x = pm.Poisson.dist(name="x", mu=mu, size=(size))
+    x = pm.Poisson.dist(name="x", mu=mu, size=size)
     x_max = pt.max(x, axis=axis)
-    x_max_value = pt.scalar("x_max_value")
+    x_max_value = pt.scalar("x_max_value", dtype=x.type.dtype)
     x_max_logprob = logp(x_max, x_max_value)
 
     test_value = value
@@ -264,7 +248,7 @@ def test_max_discrete(mu, size, value, axis):
 def test_min_discrete(mu, n, test_value, axis):
     x = pm.Poisson.dist(name="x", mu=mu, size=(n,))
     x_min = pt.min(x, axis=axis)
-    x_min_value = pt.scalar("x_min_value")
+    x_min_value = pt.scalar("x_min_value", dtype=x.type.dtype)
     x_min_logprob = logp(x_min, x_min_value)
 
     sf_before = 1 - sp.poisson(mu).cdf(test_value - 1)
@@ -293,3 +277,18 @@ def test_min_max_bernoulli():
     min_logp_fn = pytensor.function([value], pm.logp(pt.min(x), value))
     np.testing.assert_allclose(min_logp_fn(1), np.log(p**n))
     np.testing.assert_allclose(min_logp_fn(0), np.log(1 - p**n))
+
+
+def test_non_measurable_max_grad():
+    # Regression test for https://github.com/pymc-devs/pytensor/issues/711
+    x = pt.random.normal(0, 1, size=(3,))
+    max_x = x.max()
+    y = pt.random.normal(max_x, 1)
+
+    x_vv = x.type()
+    y_vv = y.type()
+    logp_terms = conditional_logp({x: x_vv, y: y_vv}).values()
+    joint_logp = pt.sum([term.sum() for term in logp_terms])
+
+    # Test that calling gradient does not raise a NotImplementedError
+    assert pt.grad(joint_logp, x_vv)

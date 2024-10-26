@@ -13,10 +13,11 @@
 #   limitations under the License.
 
 """
-Created on Mar 7, 2011
+Created on Mar 7, 2011.
 
 @author: johnsalvatier
 """
+
 import warnings
 
 from collections.abc import Iterable
@@ -89,9 +90,7 @@ def check_icdf_value(expr: Variable, value: Variable) -> Variable:
 
 
 def logpow(x, m):
-    """
-    Calculates log(x**m) since m*log(x) will fail when m, x = 0.
-    """
+    """Calculate log(x**m) since m*log(x) will fail when m, x = 0."""
     # return m * log(x)
     return pt.switch(pt.eq(x, 0), pt.switch(pt.eq(m, 0), 0.0, -np.inf), m * pt.log(x))
 
@@ -109,9 +108,7 @@ def betaln(x, y):
 
 
 def std_cdf(x):
-    """
-    Calculates the standard normal cumulative distribution function.
-    """
+    """Calculate the standard normal cumulative distribution function."""
     return 0.5 + 0.5 * pt.erf(x / pt.sqrt(2.0))
 
 
@@ -135,7 +132,7 @@ def normal_lccdf(mu, sigma, x):
 
 
 def log_diff_normal_cdf(mu, sigma, x, y):
-    """
+    r"""
     Compute :math:`\\log(\\Phi(\frac{x - \\mu}{\\sigma}) - \\Phi(\frac{y - \\mu}{\\sigma}))` safely in log space.
 
     Parameters
@@ -175,16 +172,18 @@ def log_diff_normal_cdf(mu, sigma, x, y):
 
 
 def sigma2rho(sigma):
+    """Convert `sigma` into `rho` with PyTensor.
+
+    :math:`mu + sigma*e = mu + log(1+exp(rho))*e`.
     """
-    `sigma -> rho` PyTensor converter
-    :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
     return pt.log(pt.exp(pt.abs(sigma)) - 1.0)
 
 
 def rho2sigma(rho):
+    """Convert `rho` to `sigma` with PyTensor.
+
+    :math:`mu + sigma*e = mu + log(1+exp(rho))*e`.
     """
-    `rho -> sigma` PyTensor converter
-    :math:`mu + sigma*e = mu + log(1+exp(rho))*e`"""
     return pt.softplus(rho)
 
 
@@ -194,8 +193,7 @@ sd2rho = sigma2rho
 
 def log_normal(x, mean, **kwargs):
     """
-    Calculate logarithm of normal distribution at point `x`
-    with given `mean` and `std`
+    Calculate logarithm of normal distribution at point `x` with given `mean` and `std`.
 
     Parameters
     ----------
@@ -220,7 +218,7 @@ def log_normal(x, mean, **kwargs):
     rho = kwargs.get("rho")
     tau = kwargs.get("tau")
     eps = kwargs.get("eps", 0.0)
-    check = sum(map(lambda a: a is not None, [sigma, w, rho, tau]))
+    check = sum(a is not None for a in [sigma, w, rho, tau])
     if check > 1:
         raise ValueError("more than one required kwarg is passed")
     if check == 0:
@@ -238,9 +236,7 @@ def log_normal(x, mean, **kwargs):
 
 
 class SplineWrapper(Op):
-    """
-    Creates an PyTensor operation from scipy.interpolate.UnivariateSpline
-    """
+    """Creates a PyTensor operation from scipy.interpolate.UnivariateSpline."""
 
     __props__ = ("spline",)
 
@@ -275,9 +271,7 @@ class SplineWrapper(Op):
 
 
 class I1e(UnaryScalarOp):
-    """
-    Modified Bessel function of the first kind of order 1, exponentially scaled.
-    """
+    """Modified Bessel function of the first kind of order 1, exponentially scaled."""
 
     nfunc_spec = ("scipy.special.i1e", 1, 1)
 
@@ -290,9 +284,7 @@ i1e = Elemwise(i1e_scalar, name="Elemwise{i1e,no_inplace}")
 
 
 class I0e(UnaryScalarOp):
-    """
-    Modified Bessel function of the first kind of order 0, exponentially scaled.
-    """
+    """Modified Bessel function of the first kind of order 0, exponentially scaled."""
 
     nfunc_spec = ("scipy.special.i0e", 1, 1)
 
@@ -310,7 +302,7 @@ i0e = Elemwise(i0e_scalar, name="Elemwise{i0e,no_inplace}")
 
 
 def random_choice(p, size):
-    """Return draws from categorical probability functions
+    """Return draws from categorical probability functions.
 
     Parameters
     ----------
@@ -349,9 +341,7 @@ def random_choice(p, size):
 
 
 def zvalue(value, sigma, mu):
-    """
-    Calculate the z-value for a normal distribution.
-    """
+    """Calculate the z-value for a normal distribution."""
     return (value - mu) / sigma
 
 
@@ -396,7 +386,7 @@ def clipped_beta_rvs(a, b, size=None, random_state=None, dtype="float64"):
 
 
 def multigammaln(a, p):
-    """Multivariate Log Gamma
+    """Multivariate Log Gamma.
 
     Parameters
     ----------
@@ -409,9 +399,7 @@ def multigammaln(a, p):
 
 
 def log_i0(x):
-    """
-    Calculates the logarithm of the 0 order modified Bessel function of the first kind""
-    """
+    """Calculate the logarithm of the 0 order modified Bessel function of the first kind."""
     return pt.switch(
         pt.lt(x, 5),
         pt.log1p(

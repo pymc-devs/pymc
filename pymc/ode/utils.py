@@ -19,7 +19,9 @@ import pytensor.tensor as pt
 
 def make_sens_ic(n_states, n_theta, floatX):
     r"""
-    The sensitivity matrix will always have consistent form. (n_states, n_states + n_theta)
+    Make initial condition for the sensitivity matrix.
+
+    The sensitivity matrix will always have consistent form. (n_states, n_states + n_theta).
 
     If the first n_states entries of the parameters vector in the simulate call
     correspond to initial conditions of the system,
@@ -44,7 +46,6 @@ def make_sens_ic(n_states, n_theta, floatX):
     dydp : array
         1D-array of shape (n_states * (n_states + n_theta),), representing the initial condition of the sensitivities
     """
-
     # Initialize the sensitivity matrix to be 0 everywhere
     sens_matrix = np.zeros((n_states, n_states + n_theta), dtype=floatX)
 
@@ -59,7 +60,7 @@ def make_sens_ic(n_states, n_theta, floatX):
 
 def augment_system(ode_func, n_states, n_theta):
     """
-    Function to create augmented system.
+    Create augmented system.
 
     Take a function which specifies a set of differential equations and return
     a compiled function which allows for computation of gradients of the
@@ -81,7 +82,6 @@ def augment_system(ode_func, n_states, n_theta):
     system: function
         Augemted system of differential equations.
     """
-
     # Present state of the system
     t_y = pt.vector("y", dtype="float64")
     t_y.tag.test_value = np.ones((n_states,), dtype="float64")
@@ -107,7 +107,7 @@ def augment_system(ode_func, n_states, n_theta):
         t_yhat = pt.atleast_1d(yhat)
     else:
         # Stack the results of the ode_func into a single tensor variable
-        if not isinstance(yhat, (list, tuple)):
+        if not isinstance(yhat, list | tuple):
             raise TypeError(
                 f"Unexpected type, {type(yhat)}, returned by ode_func. TensorVariable, list or tuple is expected."
             )

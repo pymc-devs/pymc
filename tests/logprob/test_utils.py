@@ -42,13 +42,14 @@ from pytensor import function
 from pytensor import tensor as pt
 from pytensor.compile import get_default_mode
 from pytensor.graph.basic import ancestors, equal_computations
+from pytensor.tensor.random.basic import NormalRV
 from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
 
 from pymc import SymbolicRandomVariable, inputvars
 from pymc.distributions.transforms import Interval
-from pymc.logprob.abstract import MeasurableVariable
+from pymc.logprob.abstract import MeasurableOp, valued_rv
 from pymc.logprob.basic import logp
 from pymc.logprob.utils import (
     ParameterValueError,
@@ -150,14 +151,7 @@ class TestReplaceRVsByValues:
         res_ancestors = list(ancestors((res,)))
 
         assert (
-            len(
-                list(
-                    n
-                    for n in res_ancestors
-                    if n.owner and isinstance(n.owner.op, MeasurableVariable)
-                )
-            )
-            == 1
+            len([n for n in res_ancestors if n.owner and isinstance(n.owner.op, MeasurableOp)]) == 1
         )
 
         assert c_value_var in res_ancestors
@@ -184,8 +178,8 @@ class TestReplaceRVsByValues:
         res_y = res.owner.inputs[1]
         # Graph should have be cloned, and therefore y and res_y should have different ids
         assert res_y is not y
-        assert res_y.owner.op == pt.random.normal
-        assert res_y.owner.inputs[3] is x_value
+        assert isinstance(res_y.owner.op, NormalRV)
+        assert res_y.owner.inputs[2] is x_value
 
     def test_no_change_inplace(self):
         # Test that calling rvs_to_value_vars in models with nested transformations
@@ -218,11 +212,11 @@ class TestReplaceRVsByValues:
             transform = pm.distributions.transforms.Interval(
                 bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
             )
-            x = pm.Uniform("x", lower=0, upper=1, transform=transform)
+            x = pm.Uniform("x", lower=0, upper=1, default_transform=transform)
             # Operation between the variables provides a regression test for #7054
-            y = pm.Uniform("y", lower=0, upper=pt.exp(x), transform=transform)
-            z = pm.Uniform("z", lower=0, upper=y, transform=transform)
-            w = pm.Uniform("w", lower=0, upper=pt.square(z), transform=transform)
+            y = pm.Uniform("y", lower=0, upper=pt.exp(x), default_transform=transform)
+            z = pm.Uniform("z", lower=0, upper=y, default_transform=transform)
+            w = pm.Uniform("w", lower=0, upper=pt.square(z), default_transform=transform)
 
         rvs = [x, y, z, w]
         if reversed:
@@ -312,13 +306,23 @@ def test_dirac_delta_logprob(dist_params, obs):
 
 def test_check_potential_measurability():
     x1 = pt.random.normal()
+    x1_valued = valued_rv(x1, x1.type())
+
     x2 = pt.random.normal()
+    x2_valued = valued_rv(x2, x2.type())
+
     x3 = pt.scalar("x3")
-    y = pt.exp(x1 + x2 + x3)
 
     # In the first three cases, y is potentially measurable, because it has at least on unvalued RV input
-    assert check_potential_measurability([y], {})
-    assert check_potential_measurability([y], {x1})
-    assert check_potential_measurability([y], {x2})
+    y = pt.exp(x1 + x2 + x3)
+    assert check_potential_measurability([y])
+
+    y = pt.exp(x1_valued + x2 + x3)
+    assert check_potential_measurability([y])
+
+    y = pt.exp(x1 + x2_valued + x3)
+    assert check_potential_measurability([y])
+
     # y is not potentially measurable because both RV inputs are valued
-    assert not check_potential_measurability([y], {x1, x2})
+    y = pt.exp(x1_valued + x2_valued + x3)
+    assert not check_potential_measurability([y])

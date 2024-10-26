@@ -17,6 +17,8 @@ import shutil
 import tempfile
 import warnings
 
+from copy import deepcopy
+from dataclasses import fields
 from logging.handlers import BufferingHandler
 
 import numpy as np
@@ -28,6 +30,7 @@ from pytensor.gradient import verify_grad as at_verify_grad
 
 import pymc as pm
 
+from pymc.step_methods.state import equal_dataclass_values
 from pymc.testing import fast_unstable_sampling_mode
 from tests.models import mv_simple, mv_simple_coarse
 
@@ -140,6 +143,21 @@ class StepMethodTester:
         _, model_coarse, _ = mv_simple_coarse()
         with model:
             step = step_fn(C, model_coarse)
+            orig_step = deepcopy(step)
+            orig_state = step.sampling_state
+            assert equal_sampling_states(step.sampling_state, orig_state)
+
+            ip = model.initial_point()
+            value1, _ = step.step(ip)
+            final_state = step.sampling_state
+            step.sampling_state = orig_state
+
+            value2, _ = step.step(ip)
+
+            assert equal_sampling_states(step.sampling_state, final_state)
+            assert equal_dataclass_values(value1, value2)
+
+            step.sampling_state = orig_state
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", "More chains .* than draws .*", UserWarning)
                 idata = pm.sample(
@@ -159,6 +177,14 @@ class StepMethodTester:
             self.check_stat(check, idata)
             self.check_stat_dtype(idata, step)
 
+            curr_state = step.sampling_state
+            assert not equal_sampling_states(orig_state, curr_state)
+
+            orig_step.sampling_state = curr_state
+
+            assert equal_sampling_states(orig_step.sampling_state, curr_state)
+            assert orig_step.sampling_state is not curr_state
+
 
 class RVsAssignmentStepsTester:
     """
@@ -177,3 +203,16 @@ class RVsAssignmentStepsTester:
             assert {m.rvs_to_values[c1], m.rvs_to_values[c2]} == set(
                 step([c1, c2], **step_kwargs).vars
             )
+
+
+def equal_sampling_states(this, other):
+    if this.__class__ != other.__class__:
+        return False
+    this_fields = {f.name for f in fields(this)}
+    other_fields = {f.name for f in fields(other)}
+    for field in this_fields:
+        this_val = getattr(this, field)
+        other_val = getattr(other, field)
+        if not equal_dataclass_values(this_val, other_val):
+            return False
+    return this_fields == other_fields

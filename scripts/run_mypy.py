@@ -1,6 +1,8 @@
+#!/usr/bin/env python
 """
-Invokes mypy and compare the reults with files in /pymc except tests
-and a list of files that are known to fail.
+Invoke mypy and compare the reults with files in /pymc.
+
+Excludes tests and a list of files that are known to fail.
 
 Exit code 0 indicates that there are no unexpected results.
 
@@ -8,6 +10,7 @@ Usage
 -----
 python scripts/run_mypy.py [--verbose]
 """
+
 import argparse
 import importlib
 import os
@@ -24,7 +27,7 @@ FAILING = """
 pymc/distributions/continuous.py
 pymc/distributions/dist_math.py
 pymc/distributions/distribution.py
-pymc/distributions/mixture.py
+pymc/distributions/custom.py
 pymc/distributions/multivariate.py
 pymc/distributions/timeseries.py
 pymc/distributions/truncated.py
@@ -33,17 +36,14 @@ pymc/logprob/binary.py
 pymc/logprob/censoring.py
 pymc/logprob/basic.py
 pymc/logprob/mixture.py
-pymc/logprob/order.py
 pymc/logprob/rewriting.py
 pymc/logprob/scan.py
-pymc/logprob/tensor.py
 pymc/logprob/transform_value.py
 pymc/logprob/transforms.py
 pymc/logprob/utils.py
 pymc/model/core.py
 pymc/model/fgraph.py
 pymc/model/transform/conditioning.py
-pymc/printing.py
 pymc/pytensorf.py
 pymc/sampling/jax.py
 """
@@ -98,7 +98,7 @@ def mypy_to_pandas(input_lines: Iterator[str]) -> pandas.DataFrame:
 
 
 def check_no_unexpected_results(mypy_lines: Iterator[str]):
-    """Compares mypy results with list of known FAILING files.
+    """Compare mypy results with list of known FAILING files.
 
     Exits the process with non-zero exit code upon unexpected results.
     """

@@ -21,7 +21,7 @@ import pytensor.tensor as pt
 
 # ignore mypy error because it somehow considers that
 # "numpy.core.numeric has no attribute normalize_axis_tuple"
-from numpy.core.numeric import normalize_axis_tuple  # type: ignore
+from numpy.core.numeric import normalize_axis_tuple  # type: ignore[attr-defined]
 from pytensor.graph import Op
 from pytensor.tensor import TensorVariable
 
@@ -69,7 +69,7 @@ def __getattr__(name):
 
 @singledispatch
 def _default_transform(op: Op, rv: TensorVariable):
-    """Return default transform for a given Distribution `Op`"""
+    """Return default transform for a given Distribution `Op`."""
     return None
 
 
@@ -116,8 +116,9 @@ class Ordered(Transform):
 
 class SumTo1(Transform):
     """
-    Transforms K - 1 dimensional simplex space (k values in [0,1] and that sum to 1) to a K - 1 vector of values in [0,1]
-    This Transformation operates on the last dimension of the input tensor.
+    Transforms K - 1 dimensional simplex space (K values in [0, 1] that sum to 1) to a K - 1 vector of values in [0, 1].
+
+    This transformation operates on the last dimension of the input tensor.
     """
 
     name = "sumto1"
@@ -139,15 +140,12 @@ class SumTo1(Transform):
 
 
 class CholeskyCovPacked(Transform):
-    """
-    Transforms the diagonal elements of the LKJCholeskyCov distribution to be on the
-    log scale
-    """
+    """Transforms the diagonal elements of the LKJCholeskyCov distribution to be on the log scale."""
 
     name = "cholesky-cov-packed"
 
     def __init__(self, n):
-        """
+        """Create a CholeskyCovPack object.
 
         Parameters
         ----------
@@ -180,8 +178,7 @@ for use in the ``transform`` argument of a random variable."""
 
 
 class Interval(IntervalTransform):
-    """Wrapper around  :class:`pymc.logprob.transforms.IntervalTransform` for use in the
-    ``transform`` argument of a random variable.
+    """Wrapper around  :class:`pymc.logprob.transforms.IntervalTransform` for use in the ``transform`` argument of a random variable.
 
     Parameters
     ----------
@@ -216,8 +213,9 @@ class Interval(IntervalTransform):
 
     .. code-block:: python
 
-        def get_bounds(rng, size, dtype, mu, sigma):
+        def get_bounds(rng, size, mu, sigma):
             return 0, None
+
 
         with pm.Model():
             interval = pm.distributions.transforms.Interval(bounds_fn=get_bounds)
@@ -227,8 +225,9 @@ class Interval(IntervalTransform):
 
     .. code-block:: python
 
-        def get_bounds(rng, size, dtype, mu, sigma):
+        def get_bounds(rng, size, mu, sigma):
             return mu - 1, None
+
 
         interval = pm.distributions.transforms.Interval(bounds_fn=get_bounds)
 
@@ -322,7 +321,6 @@ log_exp_m1.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.LogExpM1`
 for use in the ``transform`` argument of a random variable."""
 
-# Deprecated
 ordered = Ordered()
 ordered.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.Ordered`

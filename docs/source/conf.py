@@ -1,6 +1,4 @@
-""" Sphinx configuration file.
-
-"""
+"""Sphinx configuration file."""
 #!/usr/bin/env python3
 #
 # pymc documentation build configuration file, created by
@@ -100,7 +98,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "PyMC"
-copyright = "2021, The PyMC Development Team"
+copyright = "2020-present, The PyMC Development Team"
 author = "PyMC contributors"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -148,7 +146,9 @@ exclude_patterns = [
 ]
 
 # myst config
-nb_execution_mode = "force" if on_readthedocs else "off"
+# Use commented code after https://github.com/pymc-devs/pymc/issues/7384 is fixed
+# nb_execution_mode = "force" if on_readthedocs else "off"
+nb_execution_mode = "off"
 nb_execution_allow_errors = False
 nb_execution_raise_on_error = True
 nb_execution_timeout = 300

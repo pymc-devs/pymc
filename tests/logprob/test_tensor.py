@@ -40,45 +40,11 @@ import pytest
 
 from pytensor import tensor as pt
 from pytensor.graph import RewriteDatabaseQuery
-from pytensor.graph.rewriting.basic import in2out
-from pytensor.graph.rewriting.utils import rewrite_graph
-from pytensor.tensor.basic import Alloc
 from scipy import stats as st
 
 from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.rewriting import logprob_rewrites_db
-from pymc.logprob.tensor import naive_bcast_rv_lift
 from pymc.testing import assert_no_rvs
-
-
-def test_naive_bcast_rv_lift():
-    r"""Make sure `naive_bcast_rv_lift` can handle useless scalar `Alloc`\s."""
-    X_rv = pt.random.normal()
-    Z_at = Alloc()(X_rv, *())
-
-    # Make sure we're testing what we intend to test
-    assert isinstance(Z_at.owner.op, Alloc)
-
-    res = rewrite_graph(Z_at, custom_rewrite=in2out(naive_bcast_rv_lift), clone=False)
-    assert res is X_rv
-
-
-def test_naive_bcast_rv_lift_valued_var():
-    r"""Check that `naive_bcast_rv_lift` won't touch valued variables"""
-
-    x_rv = pt.random.normal(name="x")
-    broadcasted_x_rv = pt.broadcast_to(x_rv, (2,))
-
-    y_rv = pt.random.normal(broadcasted_x_rv, name="y")
-
-    x_vv = x_rv.clone()
-    y_vv = y_rv.clone()
-    logp_map = conditional_logp({x_rv: x_vv, y_rv: y_vv})
-    assert x_vv in logp_map
-    assert y_vv in logp_map
-    assert len(logp_map) == 2
-    assert np.allclose(logp_map[x_vv].eval({x_vv: 0}), st.norm(0).logpdf(0))
-    assert np.allclose(logp_map[y_vv].eval({x_vv: 0, y_vv: [0, 0]}), st.norm(0).logpdf([0, 0]))
 
 
 @pytest.mark.xfail(RuntimeError, reason="logprob for broadcasted RVs not implemented")
@@ -269,34 +235,23 @@ def test_measurable_join_univariate(size1, size2, axis, concatenate):
 
 
 @pytest.mark.parametrize(
-    "size1, supp_size1, size2, supp_size2, axis, concatenate",
+    "size1, supp_size1, size2, supp_size2, axis, concatenate, logp_axis",
     [
-        (None, 2, None, 2, 0, True),
-        (None, 2, None, 2, -1, True),
-        ((5,), 2, (3,), 2, 0, True),
-        ((5,), 2, (3,), 2, -2, True),
-        ((2,), 5, (2,), 3, 1, True),
-        pytest.param(
-            (2,),
-            5,
-            (2,),
-            5,
-            0,
-            False,
-            marks=pytest.mark.xfail(reason="cannot measure dimshuffled multivariate RVs"),
-        ),
-        pytest.param(
-            (2,),
-            5,
-            (2,),
-            5,
-            1,
-            False,
-            marks=pytest.mark.xfail(reason="cannot measure dimshuffled multivariate RVs"),
-        ),
+        (None, 2, None, 2, 0, True, 0),
+        (None, 2, None, 2, -1, True, 0),
+        ((5,), 2, (3,), 2, 0, True, 0),
+        ((5,), 2, (3,), 2, -2, True, 0),
+        ((2,), 5, (2,), 3, 1, True, 0),
+        ((5, 6), 10, (5, 1), 10, 1, True, 1),
+        ((5, 6), 10, (5, 1), 10, -2, True, 1),
+        ((2,), 5, (2,), 5, 0, False, 0),
+        ((2,), 5, (2,), 5, 1, False, 1),
+        ((5, 6), 10, (5, 6), 10, 2, False, 2),
     ],
 )
-def test_measurable_join_multivariate(size1, supp_size1, size2, supp_size2, axis, concatenate):
+def test_measurable_join_multivariate(
+    size1, supp_size1, size2, supp_size2, axis, concatenate, logp_axis
+):
     base1_rv = pt.random.multivariate_normal(
         np.zeros(supp_size1), np.eye(supp_size1), size=size1, name="base1"
     )
@@ -310,19 +265,18 @@ def test_measurable_join_multivariate(size1, supp_size1, size2, supp_size2, axis
     base1_vv = base1_rv.clone()
     base2_vv = base2_rv.clone()
     y_vv = y_rv.clone()
+
+    y_logp = logp(y_rv, y_vv)
+    assert_no_rvs(y_logp)
+
     base_logps = [
         pt.atleast_1d(logp)
         for logp in conditional_logp({base1_rv: base1_vv, base2_rv: base2_vv}).values()
     ]
-
     if concatenate:
-        axis_norm = np.core.numeric.normalize_axis_index(axis, base1_rv.ndim)
-        base_logps = pt.concatenate(base_logps, axis=axis_norm - 1)
+        expected_logp = pt.concatenate(base_logps, axis=logp_axis)
     else:
-        axis_norm = np.core.numeric.normalize_axis_index(axis, base1_rv.ndim + 1)
-        base_logps = pt.stack(base_logps, axis=axis_norm - 1)
-    y_logp = y_logp = logp(y_rv, y_vv)
-    assert_no_rvs(y_logp)
+        expected_logp = pt.stack(base_logps, axis=logp_axis)
 
     base1_testval = base1_rv.eval()
     base2_testval = base2_rv.eval()
@@ -331,7 +285,7 @@ def test_measurable_join_multivariate(size1, supp_size1, size2, supp_size2, axis
     else:
         y_testval = np.stack((base1_testval, base2_testval), axis=axis)
     np.testing.assert_allclose(
-        base_logps.eval({base1_vv: base1_testval, base2_vv: base2_testval}),
+        expected_logp.eval({base1_vv: base1_testval, base2_vv: base2_testval}),
         y_logp.eval({y_vv: y_testval}),
     )
 
@@ -355,10 +309,7 @@ def test_join_mixed_ndim_supp():
         (1, 2, 0),  # Swap
         (0, 1, 2, "x"),  # Expand
         ("x", 0, 1, 2),  # Expand
-        (
-            0,
-            2,
-        ),  # Drop
+        (0, 2),  # Drop
         (2, 0),  # Swap and drop
         (2, 1, "x", 0),  # Swap and expand
         ("x", 0, 2),  # Expand and drop
@@ -384,7 +335,7 @@ def test_measurable_dimshuffle(ds_order, multivariate):
 
     ref_logp = logp(base_rv, base_vv).dimshuffle(logp_ds_order)
 
-    # Disable local_dimshuffle_rv_lift to test fallback Aeppl rewrite
+    # Disable local_dimshuffle_rv_lift to test fallback logprob rewrite
     ir_rewriter = logprob_rewrites_db.query(
         RewriteDatabaseQuery(include=["basic"]).excluding("dimshuffle_lift")
     )

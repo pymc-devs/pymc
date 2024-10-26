@@ -83,19 +83,19 @@ def test_group_api_vfam(three_var_model, raises, vfam, type_, kw):
     [
         (
             not_raises(),
-            dict(mu=np.ones((10, 2), "float32"), rho=np.ones((10, 2), "float32")),
+            {"mu": np.ones((10, 2), "float32"), "rho": np.ones((10, 2), "float32")},
             MeanFieldGroup,
             {},
             None,
         ),
         (
             not_raises(),
-            dict(
-                mu=np.ones((10, 2), "float32"),
-                L_tril=np.ones(
+            {
+                "mu": np.ones((10, 2), "float32"),
+                "L_tril": np.ones(
                     FullRankGroup.get_param_spec_for(d=np.prod((10, 2)))["L_tril"], "float32"
                 ),
-            ),
+            },
             FullRankGroup,
             {},
             None,
@@ -261,7 +261,7 @@ def test_logq_mini_2_sample_2_var(parametric_grouped_approxes, three_var_model):
 
 def test_logq_globals(three_var_approx):
     if not three_var_approx.has_logq:
-        pytest.skip("%s does not implement logq" % three_var_approx)
+        pytest.skip(f"{three_var_approx} does not implement logq")
     approx = three_var_approx
     logq, symbolic_logq = approx.set_size_and_deterministic(
         [approx.logq, approx.symbolic_logq], 1, 0

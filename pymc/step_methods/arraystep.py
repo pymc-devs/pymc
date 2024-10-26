@@ -13,16 +13,15 @@
 #   limitations under the License.
 
 from abc import abstractmethod
-from typing import Callable, Union, cast
+from collections.abc import Callable
+from typing import cast
 
 import numpy as np
-
-from numpy.random import uniform
 
 from pymc.blocking import DictToArrayBijection, PointType, RaveledVars, StatsType
 from pymc.model import modelcontext
 from pymc.step_methods.compound import BlockedStep
-from pymc.util import get_var_name
+from pymc.util import RandomGenerator, get_random_generator, get_var_name
 
 __all__ = ["ArrayStep", "ArrayStepShared", "metrop_select"]
 
@@ -38,16 +37,21 @@ class ArrayStep(BlockedStep):
     fs: list of logp PyTensor functions
     allvars: Boolean (default False)
     blocked: Boolean (default True)
+    rng: RandomGenerator
+        An object that can produce be used to produce the step method's
+        :py:class:`~numpy.random.Generator` object. Refer to
+        :py:func:`pymc.util.get_random_generator` for more information.
     """
 
-    def __init__(self, vars, fs, allvars=False, blocked=True):
+    def __init__(self, vars, fs, allvars=False, blocked=True, rng: RandomGenerator = None):
         self.vars = vars
         self.fs = fs
         self.allvars = allvars
         self.blocked = blocked
+        self.rng = get_random_generator(rng)
 
     def step(self, point: PointType) -> tuple[PointType, StatsType]:
-        partial_funcs_and_point: list[Union[Callable, PointType]] = [
+        partial_funcs_and_point: list[Callable | PointType] = [
             DictToArrayBijection.mapf(x, start_point=point) for x in self.fs
         ]
         if self.allvars:
@@ -71,24 +75,33 @@ class ArrayStep(BlockedStep):
 
 
 class ArrayStepShared(BlockedStep):
-    """Faster version of ArrayStep that requires the substep method that does not wrap
-       the functions the step method uses.
+    """Faster version of ArrayStep.
+
+    It requires the substep method that does not wrap the functions the step
+    method uses.
 
     Works by setting shared variables before using the step. This eliminates the mapping
     and unmapping overhead as well as moving fewer variables around.
     """
 
-    def __init__(self, vars, shared, blocked=True):
+    def __init__(self, vars, shared, blocked=True, rng: RandomGenerator = None):
         """
+        Create the ArrayStepShared object.
+
         Parameters
         ----------
         vars: list of sampling value variables
         shared: dict of PyTensor variable -> shared variable
         blocked: Boolean (default True)
+        rng: RandomGenerator
+            An object that can produce be used to produce the step method's
+            :py:class:`~numpy.random.Generator` object. Refer to
+            :py:func:`pymc.util.get_random_generator` for more information.
         """
         self.vars = vars
         self.shared = {get_var_name(var): shared for var, shared in shared.items()}
         self.blocked = blocked
+        self.rng = get_random_generator(rng)
 
     def step(self, point: PointType) -> tuple[PointType, StatsType]:
         for name, shared_var in self.shared.items():
@@ -113,24 +126,29 @@ class ArrayStepShared(BlockedStep):
 
 
 class PopulationArrayStepShared(ArrayStepShared):
-    """Version of ArrayStepShared that allows samplers to access the states
-    of other chains in the population.
+    """Version of ArrayStepShared that allows samplers to access the states of other chains in the population.
 
     Works by linking a list of Points that is updated as the chains are iterated.
     """
 
-    def __init__(self, vars, shared, blocked=True):
+    def __init__(self, vars, shared, blocked=True, rng: RandomGenerator = None):
         """
+        Create the PopulationArrayStepShared object.
+
         Parameters
         ----------
         vars: list of sampling value variables
         shared: dict of PyTensor variable -> shared variable
         blocked: Boolean (default True)
+        rng: RandomGenerator
+            An object that can produce be used to produce the step method's
+            :py:class:`~numpy.random.Generator` object. Refer to
+            :py:func:`pymc.util.get_random_generator` for more information.
         """
         self.population = None
         self.this_chain = None
-        self.other_chains = None
-        return super().__init__(vars, shared, blocked)
+        self.other_chains: list[int] | None = None
+        return super().__init__(vars, shared, blocked, rng=rng)
 
     def link_population(self, population, chain_index):
         """Links the sampler to the population.
@@ -154,7 +172,14 @@ class PopulationArrayStepShared(ArrayStepShared):
 
 class GradientSharedStep(ArrayStepShared):
     def __init__(
-        self, vars, model=None, blocked=True, dtype=None, logp_dlogp_func=None, **pytensor_kwargs
+        self,
+        vars,
+        model=None,
+        blocked=True,
+        dtype=None,
+        logp_dlogp_func=None,
+        rng: RandomGenerator = None,
+        **pytensor_kwargs,
     ):
         model = modelcontext(model)
 
@@ -165,14 +190,16 @@ class GradientSharedStep(ArrayStepShared):
 
         self._logp_dlogp_func = func
 
-        super().__init__(vars, func._extra_vars_shared, blocked)
+        super().__init__(vars, func._extra_vars_shared, blocked, rng=rng)
 
     def step(self, point) -> tuple[PointType, StatsType]:
         self._logp_dlogp_func._extra_are_set = True
         return super().step(point)
 
 
-def metrop_select(mr: np.ndarray, q: np.ndarray, q0: np.ndarray) -> tuple[np.ndarray, bool]:
+def metrop_select(
+    mr: np.ndarray, q: np.ndarray, q0: np.ndarray, rng: np.random.Generator
+) -> tuple[np.ndarray, bool]:
     """Perform rejection/acceptance step for Metropolis class samplers.
 
     Returns the new sample q if a uniform random number is less than the
@@ -184,6 +211,8 @@ def metrop_select(mr: np.ndarray, q: np.ndarray, q0: np.ndarray) -> tuple[np.nda
     mr: float, Metropolis acceptance rate
     q: proposed sample
     q0: current sample
+    rng: numpy.random.Generator
+        A random number generator object
 
     Returns
     -------
@@ -192,7 +221,7 @@ def metrop_select(mr: np.ndarray, q: np.ndarray, q0: np.ndarray) -> tuple[np.nda
     # Compare acceptance ratio to uniform random number
     # TODO XXX: This `uniform` is not given a model-specific RNG state, which
     # means that sampler runs that use it will not be reproducible.
-    if np.isfinite(mr) and np.log(uniform()) < mr:
+    if np.isfinite(mr) and np.log(rng.uniform()) < mr:
         return q, True
     else:
         return q0, False

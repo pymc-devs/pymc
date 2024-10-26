@@ -13,6 +13,8 @@
 #   limitations under the License.
 
 
+"""PyMC: Bayesian Modeling and Probabilistic Programming in Python."""
+
 import logging
 
 _log = logging.getLogger(__name__)

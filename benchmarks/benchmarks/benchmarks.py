@@ -24,7 +24,7 @@ import pymc as pm
 
 
 def glm_hierarchical_model(random_seed=123):
-    """Sample glm hierarchical model to use in benchmarks"""
+    """Sample glm hierarchical model to use in benchmarks."""
     np.random.seed(random_seed)
     data = pd.read_csv(pm.get_data("radon.csv"))
     data["log_radon"] = data["log_radon"].astype(pytensor.config.floatX)
@@ -47,7 +47,7 @@ def glm_hierarchical_model(random_seed=123):
 
 
 def mixture_model(random_seed=1234):
-    """Sample mixture model to use in benchmarks"""
+    """Sample mixture model to use in benchmarks."""
     np.random.seed(1234)
     size = 1000
     w_true = np.array([0.35, 0.4, 0.25])
@@ -77,10 +77,7 @@ def mixture_model(random_seed=1234):
 
 
 class OverheadSuite:
-    """
-    Just tests how long sampling from a normal distribution takes for various
-    samplers
-    """
+    """Test how long sampling from a normal distribution takes for various samplers."""
 
     params = [pm.NUTS, pm.HamiltonianMC, pm.Metropolis, pm.Slice]
     timer = timeit.default_timer
@@ -161,7 +158,7 @@ class ExampleSuite:
 
 
 class NUTSInitSuite:
-    """Tests initializations for NUTS sampler on models"""
+    """Tests initializations for NUTS sampler on models."""
 
     timeout = 360.0
     params = ("adapt_diag", "jitter+adapt_diag", "jitter+adapt_full", "adapt_full")
@@ -206,7 +203,7 @@ class NUTSInitSuite:
             _, step = pm.init_nuts(
                 init=init, chains=self.chains, progressbar=False, random_seed=np.arange(self.chains)
             )
-            start = [{k: v for k, v in start.items()} for _ in range(self.chains)]
+            start = [dict(start) for _ in range(self.chains)]
             t0 = time.time()
             idata = pm.sample(
                 draws=self.draws,

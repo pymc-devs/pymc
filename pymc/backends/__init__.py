@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Storage backends for traces
+"""Storage backends for traces.
 
 The NDArray (pymc.backends.NDArray) backend holds the entire trace in memory.
 
@@ -23,7 +23,7 @@ After a backend is finished sampling, it returns a MultiTrace object.
 Values can be accessed in a few ways. The easiest way is to index the
 backend object with a variable or variable name.
 
-    >>> trace['x']  # or trace.x or trace[x]
+    >>> trace["x"]  # or trace.x or trace[x]
 
 The call will return the sampling values of `x`, with the values for
 all chains concatenated. (For a single call to `sample`, the number of
@@ -32,18 +32,18 @@ chains will correspond to the `cores` argument.)
 To discard the first N values of each chain, slicing syntax can be
 used.
 
-    >>> trace['x', 1000:]
+    >>> trace["x", 1000:]
 
 The `get_values` method offers more control over which values are
 returned. The call below will discard the first 1000 iterations
 from each chain and keep the values for each chain as separate arrays.
 
-    >>> trace.get_values('x', burn=1000, combine=False)
+    >>> trace.get_values("x", burn=1000, combine=False)
 
 The `chains` parameter of `get_values` can be used to limit the chains
 that are retrieved.
 
-    >>> trace.get_values('x', burn=1000, chains=[0, 2])
+    >>> trace.get_values("x", burn=1000, chains=[0, 2])
 
 MultiTrace objects also support slicing. For example, the following
 call would return a new trace object without the first 1000 sampling
@@ -60,13 +60,14 @@ Loading a saved backend
 Saved backends can be loaded using `arviz.from_netcdf`
 
 """
+
 from collections.abc import Mapping, Sequence
 from copy import copy
-from typing import Optional, Union
+from typing import Optional, TypeAlias, Union
 
 import numpy as np
 
-from typing_extensions import TypeAlias
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
 from pymc.backends.base import BaseTrace, IBaseTrace
@@ -80,12 +81,12 @@ try:
 
     from pymc.backends.mcbackend import init_chain_adapters
 
-    TraceOrBackend = Union[BaseTrace, Backend]
+    TraceOrBackend: TypeAlias = BaseTrace | Backend
     RunType: TypeAlias = Run
     HAS_MCB = True
 except ImportError:
-    TraceOrBackend = BaseTrace  # type: ignore
-    RunType = type(None)  # type: ignore
+    TraceOrBackend = BaseTrace  # type: ignore[misc]
+    RunType = type(None)  # type: ignore[assignment, misc]
 
 
 __all__ = ["to_inference_data", "predictions_to_inference_data"]
@@ -96,13 +97,14 @@ def _init_trace(
     expected_length: int,
     chain_number: int,
     stats_dtypes: list[dict[str, type]],
-    trace: Optional[BaseTrace],
+    trace: BaseTrace | None,
     model: Model,
+    trace_vars: list[TensorVariable] | None = None,
 ) -> BaseTrace:
-    """Initializes a trace backend for a chain."""
+    """Initialize a trace backend for a chain."""
     strace: BaseTrace
     if trace is None:
-        strace = NDArray(model=model)
+        strace = NDArray(model=model, vars=trace_vars)
     elif isinstance(trace, BaseTrace):
         if len(trace) > 0:
             raise ValueError("Continuation of traces is no longer supported.")
@@ -116,14 +118,15 @@ def _init_trace(
 
 def init_traces(
     *,
-    backend: Optional[TraceOrBackend],
+    backend: TraceOrBackend | None,
     chains: int,
     expected_length: int,
-    step: Union[BlockedStep, CompoundStep],
+    step: BlockedStep | CompoundStep,
     initial_point: Mapping[str, np.ndarray],
     model: Model,
-) -> tuple[Optional[RunType], Sequence[IBaseTrace]]:
-    """Initializes a trace recorder for each chain."""
+    trace_vars: list[TensorVariable] | None = None,
+) -> tuple[RunType | None, Sequence[IBaseTrace]]:
+    """Initialize a trace recorder for each chain."""
     if HAS_MCB and isinstance(backend, Backend):
         return init_chain_adapters(
             backend=backend,
@@ -141,6 +144,7 @@ def init_traces(
             chain_number=chain_number,
             trace=backend,
             model=model,
+            trace_vars=trace_vars,
         )
         for chain_number in range(chains)
     ]

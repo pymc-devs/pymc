@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Optional
 
 import numpy as np
 import pytensor.tensor as pt
@@ -29,8 +28,8 @@ from pymc.logprob.abstract import (
     _logprob,
     _logprob_helper,
 )
-from pymc.logprob.rewriting import PreserveRVMappings, measurable_ir_rewrites_db
-from pymc.logprob.utils import check_potential_measurability
+from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.utils import check_potential_measurability, filter_measurable_variables
 
 
 class MeasurableComparison(MeasurableElemwise):
@@ -40,14 +39,8 @@ class MeasurableComparison(MeasurableElemwise):
 
 
 @node_rewriter(tracks=[gt, lt, ge, le])
-def find_measurable_comparisons(
-    fgraph: FunctionGraph, node: Node
-) -> Optional[list[TensorVariable]]:
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
-    measurable_inputs = rv_map_feature.request_measurable(node.inputs)
+def find_measurable_comparisons(fgraph: FunctionGraph, node: Node) -> list[TensorVariable] | None:
+    measurable_inputs = filter_measurable_variables(node.inputs)
 
     if len(measurable_inputs) != 1:
         return None
@@ -65,7 +58,7 @@ def find_measurable_comparisons(
     const = node.inputs[(measurable_var_idx + 1) % 2]
 
     # check for potential measurability of const
-    if check_potential_measurability([const], rv_map_feature.rv_values.keys()):
+    if check_potential_measurability([const]):
         return None
 
     node_scalar_op = node.op.scalar_op
@@ -105,9 +98,9 @@ def comparison_logprob(op, values, base_rv, operand, **kwargs):
 
     condn_exp = pt.eq(value, np.array(True))
 
-    if isinstance(op.scalar_op, (GT, GE)):
+    if isinstance(op.scalar_op, GT | GE):
         logprob = pt.switch(condn_exp, logccdf, logcdf)
-    elif isinstance(op.scalar_op, (LT, LE)):
+    elif isinstance(op.scalar_op, LT | LE):
         logprob = pt.switch(condn_exp, logcdf, logccdf)
     else:
         raise TypeError(f"Unsupported scalar_op {op.scalar_op}")
@@ -134,17 +127,13 @@ class MeasurableBitwise(MeasurableElemwise):
 
 
 @node_rewriter(tracks=[invert])
-def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> Optional[list[TensorVariable]]:
-    rv_map_feature: Optional[PreserveRVMappings] = getattr(fgraph, "preserve_rv_mappings", None)
-    if rv_map_feature is None:
-        return None  # pragma: no cover
-
+def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> list[TensorVariable] | None:
     base_var = node.inputs[0]
 
     if not base_var.dtype.startswith("bool"):
         raise None
 
-    if not rv_map_feature.request_measurable([base_var]):
+    if not filter_measurable_variables([base_var]):
         return None
 
     node_scalar_op = node.op.scalar_op

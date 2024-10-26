@@ -45,7 +45,7 @@ from pytensor.scalar import Exp, exp
 
 import pymc as pm
 
-from pymc.logprob.abstract import MeasurableElemwise, MeasurableVariable, _logcdf_helper
+from pymc.logprob.abstract import MeasurableElemwise, MeasurableOp, _logcdf_helper
 from pymc.logprob.basic import logcdf
 
 
@@ -66,7 +66,7 @@ def test_measurable_elemwise():
 
     measurable_exp_op = TestMeasurableElemwise(scalar_op=exp)
     measurable_exp = measurable_exp_op(0.0)
-    assert isinstance(measurable_exp.owner.op, MeasurableVariable)
+    assert isinstance(measurable_exp.owner.op, MeasurableOp)
 
 
 def test_logcdf_helper():

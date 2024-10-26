@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import logging
-import sys
 import warnings
 
 import numpy as np
@@ -37,14 +36,15 @@ class TestNUTSUniform(sf.NutsFixture, sf.UniformFixture):
     min_n_eff = 9000
     rtol = 0.1
     atol = 0.05
+    step_args = {"random_seed": 202010}
 
 
 class TestNUTSUniform2(TestNUTSUniform):
-    step_args = {"target_accept": 0.95}
+    step_args = {"target_accept": 0.95, "random_seed": 202010}
 
 
 class TestNUTSUniform3(TestNUTSUniform):
-    step_args = {"target_accept": 0.80}
+    step_args = {"target_accept": 0.80, "random_seed": 202010}
 
 
 class TestNUTSNormal(sf.NutsFixture, sf.NormalFixture):
@@ -55,6 +55,7 @@ class TestNUTSNormal(sf.NutsFixture, sf.NormalFixture):
     min_n_eff = 10000
     rtol = 0.1
     atol = 0.05
+    step_args = {"random_seed": 123456}
 
 
 class TestNUTSBetaBinomial(sf.NutsFixture, sf.BetaBinomialFixture):
@@ -64,6 +65,7 @@ class TestNUTSBetaBinomial(sf.NutsFixture, sf.BetaBinomialFixture):
     burn = 0
     chains = 2
     min_n_eff = 400
+    step_args = {"random_seed": 202010}
 
 
 class TestNUTSStudentT(sf.NutsFixture, sf.StudentTFixture):
@@ -74,6 +76,7 @@ class TestNUTSStudentT(sf.NutsFixture, sf.StudentTFixture):
     min_n_eff = 1000
     rtol = 0.1
     atol = 0.05
+    step_args = {"random_seed": 202010}
 
 
 @pytest.mark.skip("Takes too long to run")
@@ -93,6 +96,7 @@ class TestNUTSLKJCholeskyCov(sf.NutsFixture, sf.LKJCholeskyCovFixture):
     burn = 0
     chains = 2
     min_n_eff = 200
+    step_args = {"random_seed": 202010}
 
 
 class TestNutsCheckTrace:
@@ -109,15 +113,14 @@ class TestNutsCheckTrace:
 
     def test_bad_init_nonparallel(self):
         with pm.Model():
-            pm.HalfNormal("a", sigma=1, initval=-1, transform=None)
+            pm.HalfNormal("a", sigma=1, initval=-1, default_transform=None)
             with pytest.raises(SamplingError) as error:
                 pm.sample(chains=1, random_seed=1)
             error.match("Initial evaluation")
 
-    @pytest.mark.skipif(sys.version_info < (3, 6), reason="requires python3.6 or higher")
     def test_bad_init_parallel(self):
         with pm.Model():
-            pm.HalfNormal("a", sigma=1, initval=-1, transform=None)
+            pm.HalfNormal("a", sigma=1, initval=-1, default_transform=None)
             with pytest.raises(SamplingError) as error:
                 pm.sample(cores=2, random_seed=1)
             error.match("Initial evaluation")

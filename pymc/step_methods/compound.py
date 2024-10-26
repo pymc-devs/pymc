@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 """
-Created on Mar 7, 2011
+Created on Mar 7, 2011.
 
 @author: johnsalvatier
 """
@@ -23,7 +23,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping, Sequence
 from enum import IntEnum, unique
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 
@@ -31,6 +31,8 @@ from pytensor.graph.basic import Variable
 
 from pymc.blocking import PointType, StatDtype, StatsDict, StatShape, StatsType
 from pymc.model import modelcontext
+from pymc.step_methods.state import DataClassState, WithSamplingState, dataclass_state
+from pymc.util import RandomGenerator, get_random_generator
 
 __all__ = ("Competence", "CompoundStep")
 
@@ -38,6 +40,7 @@ __all__ = ("Competence", "CompoundStep")
 @unique
 class Competence(IntEnum):
     """Enum for characterizing competence classes of step methods.
+
     Values include:
     0: INCOMPATIBLE
     1: COMPATIBLE
@@ -56,7 +59,7 @@ def infer_warn_stats_info(
     sds: dict[str, tuple[StatDtype, StatShape]],
     stepname: str,
 ) -> tuple[list[dict[str, StatDtype]], dict[str, tuple[StatDtype, StatShape]]]:
-    """Helper function to get `stats_dtypes` and `stats_dtypes_shapes` from either of them."""
+    """Get `stats_dtypes` and `stats_dtypes_shapes` from either of them."""
     # Avoid side-effects on the original lists/dicts
     stats_dtypes = [d.copy() for d in stats_dtypes]
     sds = sds.copy()
@@ -86,7 +89,12 @@ def infer_warn_stats_info(
     return stats_dtypes, sds
 
 
-class BlockedStep(ABC):
+@dataclass_state
+class StepMethodState(DataClassState):
+    rng: np.random.Generator
+
+
+class BlockedStep(ABC, WithSamplingState):
     stats_dtypes: list[dict[str, type]] = []
     """A list containing <=1 dictionary that maps stat names to dtypes.
 
@@ -126,7 +134,7 @@ class BlockedStep(ABC):
         else:  # Assume all model variables
             vars = model.value_vars
 
-        if not isinstance(vars, (tuple, list)):
+        if not isinstance(vars, tuple | list):
             vars = [vars]
 
         if len(vars) == 0:
@@ -143,15 +151,18 @@ class BlockedStep(ABC):
             # In this case we create a separate sampler for each var
             # and append them to a CompoundStep
             steps = []
-            for var in vars:
+            rngs = get_random_generator(kwargs.pop("rng", None)).spawn(len(vars))
+            for var, rng in zip(vars, rngs):
                 step = super().__new__(cls)
                 step.stats_dtypes = stats_dtypes
                 step.stats_dtypes_shapes = stats_dtypes_shapes
                 # If we don't return the instance we have to manually
                 # call __init__
-                step.__init__([var], *args, **kwargs)
+                _kwargs = kwargs.copy()
+                _kwargs["rng"] = rng
+                step.__init__([var], *args, **_kwargs)
                 # Hack for creating the class correctly when unpickling.
-                step.__newargs = ([var], *args), kwargs
+                step.__newargs = ([var], *args), _kwargs
                 steps.append(step)
 
             return CompoundStep(steps)
@@ -191,6 +202,9 @@ class BlockedStep(ABC):
         if hasattr(self, "tune"):
             self.tune = False
 
+    def set_rng(self, rng: RandomGenerator):
+        self.rng = get_random_generator(rng, copy=False)
+
 
 def flat_statname(sampler_idx: int, sname: str) -> str:
     """Get the flat-stats name for a samplers stat."""
@@ -200,7 +214,7 @@ def flat_statname(sampler_idx: int, sname: str) -> str:
 def get_stats_dtypes_shapes_from_steps(
     steps: Iterable[BlockedStep],
 ) -> dict[str, tuple[StatDtype, StatShape]]:
-    """Combines stats dtype shape dictionaries from multiple step methods.
+    """Combine stats dtype shape dictionaries from multiple step methods.
 
     In the resulting stats dict, each sampler stat is prefixed by `sampler_#__`.
     """
@@ -211,9 +225,18 @@ def get_stats_dtypes_shapes_from_steps(
     return result
 
 
-class CompoundStep:
-    """Step method composed of a list of several other step
-    methods applied in sequence."""
+@dataclass_state
+class CompoundStepState(DataClassState):
+    methods: list[StepMethodState]
+
+    def __init__(self, methods: list[StepMethodState]):
+        self.methods = methods
+
+
+class CompoundStep(WithSamplingState):
+    """Step method composed of a list of several other step methods applied in sequence."""
+
+    _state_class = CompoundStepState
 
     def __init__(self, methods):
         self.methods = list(methods)
@@ -247,11 +270,28 @@ class CompoundStep:
                 method.reset_tuning()
 
     @property
+    def sampling_state(self) -> DataClassState:
+        return CompoundStepState(methods=[method.sampling_state for method in self.methods])
+
+    @sampling_state.setter
+    def sampling_state(self, state: DataClassState):
+        assert isinstance(
+            state, self._state_class
+        ), f"Invalid sampling state class {type(state)}. Expected {self._state_class}"
+        for method, state_method in zip(self.methods, state.methods):
+            method.sampling_state = state_method
+
+    @property
     def vars(self) -> list[Variable]:
         return [var for method in self.methods for var in method.vars]
 
+    def set_rng(self, rng: RandomGenerator):
+        _rngs = get_random_generator(rng, copy=False).spawn(len(self.methods))
+        for method, _rng in zip(self.methods, _rngs):
+            method.set_rng(_rng)
 
-def flatten_steps(step: Union[BlockedStep, CompoundStep]) -> list[BlockedStep]:
+
+def flatten_steps(step: BlockedStep | CompoundStep) -> list[BlockedStep]:
     """Flatten a hierarchy of step methods to a list."""
     if isinstance(step, BlockedStep):
         return [step]
@@ -263,7 +303,7 @@ def flatten_steps(step: Union[BlockedStep, CompoundStep]) -> list[BlockedStep]:
     return steps
 
 
-def check_step_emits_tune(step: Union[CompoundStep, BlockedStep]):
+def check_step_emits_tune(step: CompoundStep | BlockedStep):
     if isinstance(step, BlockedStep) and "tune" not in step.stats_dtypes_shapes:
         raise TypeError(f"{type(step)} does not emit the required 'tune' stat.")
     elif isinstance(step, CompoundStep):

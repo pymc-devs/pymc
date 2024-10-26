@@ -12,5 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""Hamiltonian Monte Carlo."""
+
 from pymc.step_methods.hmc.hmc import HamiltonianMC
 from pymc.step_methods.hmc.nuts import NUTS

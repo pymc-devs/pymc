@@ -25,6 +25,7 @@ from arviz.data.inference_data import InferenceData
 import pymc as pm
 
 from pymc.backends.base import MultiTrace
+from pymc.distributions.transforms import Ordered
 from pymc.pytensorf import floatX
 from pymc.smc.kernels import IMH, systematic_resampling
 from tests.helpers import assert_random_state_equal
@@ -235,39 +236,29 @@ class TestSMC:
                 pm.sample_smc(draws=99, progressbar=not _IS_WINDOWS)
         assert "The number of samples is too small" in caplog.text
 
-    def test_deprecated_parallel_arg(self):
-        with self.fast_model:
-            with pytest.warns(
-                FutureWarning,
-                match="The argument parallel is deprecated",
-            ):
-                pm.sample_smc(draws=10, chains=1, parallel=False)
+    def test_ordered(self):
+        """
+        Test that initial population respects custom initval, especially when applied
+        to the Ordered transformation. Regression test for #7438.
+        """
+        with pm.Model() as m:
+            pm.Normal(
+                "a",
+                mu=0.0,
+                sigma=1.0,
+                size=(2,),
+                transform=Ordered(),
+                initval=[-1.0, 1.0],
+            )
 
-    def test_deprecated_abc_args(self):
-        with self.fast_model:
-            with pytest.warns(
-                FutureWarning,
-                match='The kernel string argument "ABC" in sample_smc has been deprecated',
-            ):
-                pm.sample_smc(draws=10, chains=1, kernel="ABC")
+        smc = IMH(model=m)
+        out = smc.initialize_population()
 
-            with pytest.warns(
-                FutureWarning,
-                match='The kernel string argument "Metropolis" in sample_smc has been deprecated',
-            ):
-                pm.sample_smc(draws=10, chains=1, kernel="Metropolis")
+        # initial point should not include NaNs
+        assert not np.any(np.isnan(out["a_ordered__"]))
 
-            with pytest.warns(
-                FutureWarning,
-                match="save_sim_data has been deprecated",
-            ):
-                pm.sample_smc(draws=10, chains=1, save_sim_data=True)
-
-            with pytest.warns(
-                FutureWarning,
-                match="save_log_pseudolikelihood has been deprecated",
-            ):
-                pm.sample_smc(draws=10, chains=1, save_log_pseudolikelihood=True)
+        # initial point should match for all particles
+        assert np.all(out["a_ordered__"][0] == out["a_ordered__"])
 
 
 class TestMHKernel:

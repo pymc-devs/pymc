@@ -16,7 +16,7 @@ Hands on approach with PyMC and ArviZ focusing on the practice of applied statis
 :::
 
 :::{grid-item-card} Bayesian Methods for Hackers
-:img-top: https://camo.githubusercontent.com/4a0aca82ca82efab71747d00db30f3a68de98e82/687474703a2f2f692e696d6775722e636f6d2f36444b596250622e706e673f31
+:img-top: https://www.pearson.com/hipassets/assets/hip/images/bigcovers/0133902838.jpg
 By Cameron Davidson-Pilon
 
 The "hacker" in the title  means learn-as-you-code. This hands-on introduction teaches intuitive definitions of the Bayesian approach to statistics, worklflow and decision-making by applying them using PyMC.
@@ -28,7 +28,7 @@ The "hacker" in the title  means learn-as-you-code. This hands-on introduction t
 :::
 
 :::{grid-item-card} Bayesian Analysis with Python
-:img-top: https://aloctavodia.github.io/img/BAP.jpg
+:img-top: https://aloctavodia.github.io/img/BAP.png
 
 By Osvaldo Martin
 
@@ -55,7 +55,7 @@ Principled introduction to Bayesian data analysis, with practical exercises. The
 :::
 
 :::{grid-item-card} Statistical Rethinking
-:img-top: http://xcelab.net/rm/wp-content/uploads/2012/01/9781482253443-191x300.jpg
+:img-top: https://xcelab.net/rm/sr2edcover-1-187x300.png
 
 By Richard McElreath
 

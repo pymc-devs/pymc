@@ -17,7 +17,7 @@ import logging
 import pickle
 
 from collections.abc import Mapping, Sequence
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 
 import hagelkorn
 import mcbackend as mcb
@@ -43,7 +43,7 @@ _log = logging.getLogger(__name__)
 
 
 def find_data(pmodel: Model) -> list[mcb.DataVariable]:
-    """Extracts data variables from a model."""
+    """Extract data variables from a model."""
     observed_rvs = {pmodel.rvs_to_values[rv] for rv in pmodel.observed_RVs}
     dvars = []
     # All data containers are named vars!
@@ -114,7 +114,7 @@ class ChainRecordAdapter(IBaseTrace):
 
     def record(self, draw: Mapping[str, np.ndarray], stats: Sequence[Mapping[str, Any]]):
         values = self._point_fn(draw)
-        value_dict = {n: v for n, v in zip(self.varnames, values)}
+        value_dict = dict(zip(self.varnames, values))
         stats_dict = self._statsbj.map(stats)
         # Apply pickling to objects stats
         for fname in self._statsbj.object_stats.keys():
@@ -124,13 +124,14 @@ class ChainRecordAdapter(IBaseTrace):
         return self._chain.append(value_dict, stats_dict)
 
     def __len__(self):
+        """Length of the chain."""
         return len(self._chain)
 
     def get_values(self, varname: str, burn=0, thin=1) -> np.ndarray:
         return self._chain.get_draws(varname, slice(burn, None, thin))
 
     def _get_stats(self, fname: str, slc: slice) -> np.ndarray:
-        """Wraps `self._chain.get_stats` but unpickles automatically."""
+        """Wrap `self._chain.get_stats` but unpickle automatically."""
         values = self._chain.get_stats(fname, slc)
         # Unpickle object stats
         if fname in self._statsbj.object_stats:
@@ -144,7 +145,7 @@ class ChainRecordAdapter(IBaseTrace):
         return values
 
     def get_sampler_stats(
-        self, stat_name: str, sampler_idx: Optional[int] = None, burn=0, thin=1
+        self, stat_name: str, sampler_idx: int | None = None, burn=0, thin=1
     ) -> np.ndarray:
         slc = slice(burn, None, thin)
         # When there's just one sampler, default to remove the sampler dimension
@@ -204,7 +205,7 @@ class ChainRecordAdapter(IBaseTrace):
 def make_runmeta_and_point_fn(
     *,
     initial_point: Mapping[str, np.ndarray],
-    step: Union[CompoundStep, BlockedStep],
+    step: CompoundStep | BlockedStep,
     model: Model,
 ) -> tuple[mcb.RunMeta, PointFunc]:
     variables, point_fn = get_variables_and_point_fn(model, initial_point)
@@ -254,7 +255,7 @@ def init_chain_adapters(
     backend: mcb.Backend,
     chains: int,
     initial_point: Mapping[str, np.ndarray],
-    step: Union[CompoundStep, BlockedStep],
+    step: CompoundStep | BlockedStep,
     model: Model,
 ) -> tuple[mcb.Run, list[ChainRecordAdapter]]:
     """Create an McBackend metadata description for the MCMC run.

@@ -12,17 +12,18 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from typing import Union
+
+import re
+
+from functools import partial
 
 from pytensor.compile import SharedVariable
 from pytensor.graph.basic import Constant, walk
 from pytensor.tensor.basic import TensorVariable, Variable
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.random.basic import RandomVariable
-from pytensor.tensor.random.var import (
-    RandomGeneratorSharedVariable,
-    RandomStateSharedVariable,
-)
+from pytensor.tensor.random.type import RandomType
+from pytensor.tensor.type_other import NoneTypeT
 
 from pymc.model import Model
 
@@ -36,27 +37,32 @@ __all__ = [
 def str_for_dist(
     dist: TensorVariable, formatting: str = "plain", include_params: bool = True
 ) -> str:
-    """Make a human-readable string representation of a Distribution in a model, either
-    LaTeX or plain, optionally with distribution parameter values included."""
+    """Make a human-readable string representation of a Distribution in a model.
 
+    This can be either LaTeX or plain, optionally with distribution parameter
+    values included.
+    """
     if include_params:
-        # first 3 args are always (rng, size, dtype), rest is relevant for distribution
-        if isinstance(dist.owner.op, RandomVariable):
+        if isinstance(dist.owner.op, RandomVariable) or getattr(
+            dist.owner.op, "extended_signature", None
+        ):
             dist_args = [
-                _str_for_input_var(x, formatting=formatting) for x in dist.owner.inputs[3:]
+                _str_for_input_var(x, formatting=formatting)
+                for x in dist.owner.op.dist_params(dist.owner)
             ]
         else:
             dist_args = [
                 _str_for_input_var(x, formatting=formatting)
                 for x in dist.owner.inputs
-                if not isinstance(x, (RandomStateSharedVariable, RandomGeneratorSharedVariable))
+                if not isinstance(x.type, RandomType | NoneTypeT)
             ]
 
     print_name = dist.name
 
     if "latex" in formatting:
         if print_name is not None:
-            print_name = r"\text{" + _latex_escape(dist.name.strip("$")) + "}"
+            print_name = r"\text{" + _latex_escape(print_name.strip("$")) + "}"
+            print_name = _format_underscore(print_name)
 
         op_name = (
             dist.owner.op._print_name[1]
@@ -64,12 +70,11 @@ def str_for_dist(
             else r"\\operatorname{Unknown}"
         )
         if include_params:
+            params = ",~".join([d.strip("$") for d in dist_args])
             if print_name:
-                return r"${} \sim {}({})$".format(
-                    print_name, op_name, ",~".join([d.strip("$") for d in dist_args])
-                )
+                return rf"${print_name} \sim {op_name}({params})$"
             else:
-                return r"${}({})$".format(op_name, ",~".join([d.strip("$") for d in dist_args]))
+                return rf"${op_name}({params})$"
 
         else:
             if print_name:
@@ -82,10 +87,11 @@ def str_for_dist(
             dist.owner.op._print_name[0] if hasattr(dist.owner.op, "_print_name") else "Unknown"
         )
         if include_params:
+            params = ", ".join(dist_args)
             if print_name:
-                return r"{} ~ {}({})".format(print_name, dist_name, ", ".join(dist_args))
+                return rf"{print_name} ~ {dist_name}({params})"
             else:
-                return r"{}({})".format(dist_name, ", ".join(dist_args))
+                return rf"{dist_name}({params})"
         else:
             if print_name:
                 return rf"{print_name} ~ {dist_name}"
@@ -94,26 +100,28 @@ def str_for_dist(
 
 
 def str_for_model(model: Model, formatting: str = "plain", include_params: bool = True) -> str:
-    """Make a human-readable string representation of Model, listing all random variables
-    and their distributions, optionally including parameter values."""
+    """Make a human-readable string representation of Model.
 
-    kwargs = dict(formatting=formatting, include_params=include_params)
-    free_rv_reprs = [str_for_dist(dist, **kwargs) for dist in model.free_RVs]
-    observed_rv_reprs = [str_for_dist(rv, **kwargs) for rv in model.observed_RVs]
-    det_reprs = [
-        str_for_potential_or_deterministic(dist, **kwargs, dist_name="Deterministic")
-        for dist in model.deterministics
-    ]
-    potential_reprs = [
-        str_for_potential_or_deterministic(pot, **kwargs, dist_name="Potential")
-        for pot in model.potentials
-    ]
+    This lists all random variables and their distributions, optionally
+    including parameter values.
+    """
+    # Wrap functions to avoid confusing typecheckers
+    sfd = partial(str_for_dist, formatting=formatting, include_params=include_params)
+    sfp = partial(
+        str_for_potential_or_deterministic, formatting=formatting, include_params=include_params
+    )
+
+    free_rv_reprs = [sfd(dist) for dist in model.free_RVs]
+    observed_rv_reprs = [sfd(rv) for rv in model.observed_RVs]
+    det_reprs = [sfp(dist, dist_name="Deterministic") for dist in model.deterministics]
+    potential_reprs = [sfp(pot, dist_name="Potential") for pot in model.potentials]
 
     var_reprs = free_rv_reprs + det_reprs + observed_rv_reprs + potential_reprs
 
     if not var_reprs:
         return ""
     if "latex" in formatting:
+        var_reprs = [_format_underscore(x) for x in var_reprs]
         var_reprs = [
             var_repr.replace(r"\sim", r"&\sim &").strip("$")
             for var_repr in var_reprs
@@ -142,8 +150,11 @@ def str_for_potential_or_deterministic(
     include_params: bool = True,
     dist_name: str = "Deterministic",
 ) -> str:
-    """Make a human-readable string representation of a Deterministic or Potential in a model, either
-    LaTeX or plain, optionally with distribution parameter values included."""
+    """Make a human-readable string representation of a Deterministic or Potential in a model.
+
+    This can be either LaTeX or plain, optionally with distribution parameter
+    values included.
+    """
     print_name = var.name if var.name is not None else "<unnamed>"
     if "latex" in formatting:
         print_name = r"\text{" + _latex_escape(print_name.strip("$")) + "}"
@@ -163,19 +174,22 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
     from pymc.distributions.distribution import SymbolicRandomVariable
 
     def _is_potential_or_deterministic(var: Variable) -> bool:
+        if not hasattr(var, "str_repr"):
+            return False
         try:
             return var.str_repr.__func__.func is str_for_potential_or_deterministic
         except AttributeError:
             # in case other code overrides str_repr, fallback
             return False
 
-    if isinstance(var, (Constant, SharedVariable)):
+    if isinstance(var, Constant | SharedVariable):
         return _str_for_constant(var, formatting)
     elif isinstance(
-        var.owner.op, (RandomVariable, SymbolicRandomVariable)
+        var.owner.op, RandomVariable | SymbolicRandomVariable
     ) or _is_potential_or_deterministic(var):
         # show the names for RandomVariables, Deterministics, and Potentials, rather
         # than the full expression
+        assert isinstance(var, TensorVariable)
         return _str_for_input_rv(var, formatting)
     elif isinstance(var.owner.op, DimShuffle):
         return _str_for_input_var(var.owner.inputs[0], formatting)
@@ -183,7 +197,7 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
         return _str_for_expression(var, formatting)
 
 
-def _str_for_input_rv(var: Variable, formatting: str) -> str:
+def _str_for_input_rv(var: TensorVariable, formatting: str) -> str:
     _str = (
         var.name
         if var.name is not None
@@ -195,7 +209,7 @@ def _str_for_input_rv(var: Variable, formatting: str) -> str:
         return _str
 
 
-def _str_for_constant(var: Union[Constant, SharedVariable], formatting: str) -> str:
+def _str_for_constant(var: Constant | SharedVariable, formatting: str) -> str:
     if isinstance(var, Constant):
         var_data = var.data
         var_type = "constant"
@@ -219,15 +233,24 @@ def _str_for_expression(var: Variable, formatting: str) -> str:
 
     # construct a string like f(a1, ..., aN) listing all random variables a as arguments
     def _expand(x):
-        if x.owner and (not isinstance(x.owner.op, (RandomVariable, SymbolicRandomVariable))):
+        if x.owner and (not isinstance(x.owner.op, RandomVariable | SymbolicRandomVariable)):
             return reversed(x.owner.inputs)
 
-    parents = [
-        x
-        for x in walk(nodes=var.owner.inputs, expand=_expand)
-        if x.owner and isinstance(x.owner.op, (RandomVariable, SymbolicRandomVariable))
-    ]
-    names = [x.name for x in parents]
+    parents = []
+    names = []
+    for x in walk(nodes=var.owner.inputs, expand=_expand):
+        assert isinstance(x, Variable)
+        if x.owner and isinstance(x.owner.op, RandomVariable | SymbolicRandomVariable):
+            parents.append(x)
+            xname = x.name
+            if xname is None:
+                # If the variable is unnamed, we show the op's name as we do
+                # with constants
+                opname = x.owner.op.name
+                if opname is not None:
+                    xname = rf"<{opname}>"
+            assert xname is not None
+            names.append(xname)
 
     if "latex" in formatting:
         return (
@@ -254,10 +277,12 @@ def _latex_escape(text: str) -> str:
     return text.replace("$", r"\$")
 
 
-def _default_repr_pretty(obj: Union[TensorVariable, Model], p, cycle):
+def _default_repr_pretty(obj: TensorVariable | Model, p, cycle):
     """Handy plug-in method to instruct IPython-like REPLs to use our str_repr above."""
     # we know that our str_repr does not recurse, so we can ignore cycle
     try:
+        if not hasattr(obj, "str_repr"):
+            raise AttributeError
         output = obj.str_repr()
         # Find newlines and replace them with p.break_()
         # (see IPython.lib.pretty._repr_pprint)
@@ -281,3 +306,8 @@ try:
 except (ModuleNotFoundError, AttributeError):
     # no ipython shell
     pass
+
+
+def _format_underscore(variable: str) -> str:
+    """Escapes all unescaped underscores in the variable name for LaTeX representation."""
+    return re.sub(r"(?<!\\)_", r"\\_", variable)

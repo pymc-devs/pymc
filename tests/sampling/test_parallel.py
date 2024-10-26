@@ -157,10 +157,11 @@ def test_explicit_sample(mp_start_method):
         10,
         step,
         chain=3,
-        seed=1,
+        rng=np.random.default_rng(1),
         mp_ctx=ctx,
         start={"a": floatX(np.array([1.0])), "b_log__": floatX(np.array(2.0))},
         step_method_pickled=step_method_pickled,
+        blas_cores=None,
     )
     proc.start()
     while True:
@@ -189,10 +190,11 @@ def test_iterator():
         tune=10,
         chains=3,
         cores=2,
-        seeds=[2, 3, 4],
+        rngs=np.random.default_rng(1).spawn(3),
         start_points=[start] * 3,
         step_method=step,
         progressbar=False,
+        blas_cores=None,
     )
     with sampler:
         for draw in sampler:

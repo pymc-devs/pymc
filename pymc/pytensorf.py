@@ -13,12 +13,8 @@
 #   limitations under the License.
 import warnings
 
-from collections.abc import Generator, Iterable, Sequence
-from typing import (
-    Callable,
-    Optional,
-    Union,
-)
+from collections.abc import Callable, Generator, Iterable, Sequence
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -28,6 +24,7 @@ import scipy.sparse as sps
 
 from pytensor import scalar
 from pytensor.compile import Function, Mode, get_mode
+from pytensor.compile.builders import OpFromGraph
 from pytensor.gradient import grad
 from pytensor.graph import Type, rewrite_graph
 from pytensor.graph.basic import (
@@ -35,10 +32,11 @@ from pytensor.graph.basic import (
     Constant,
     Variable,
     clone_get_equiv,
+    equal_computations,
     graph_inputs,
     walk,
 )
-from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.fg import FunctionGraph, Output
 from pytensor.graph.op import Op
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
@@ -46,20 +44,17 @@ from pytensor.tensor.basic import _as_tensor_variable
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
-from pytensor.tensor.random.var import (
-    RandomGeneratorSharedVariable,
-    RandomStateSharedVariable,
-)
+from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
-from pytensor.tensor.variable import TensorConstant, TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.exceptions import NotConstantValueError
 from pymc.util import makeiter
 from pymc.vartypes import continuous_types, isgenerator, typefilter
 
-PotentialShapeType = Union[int, np.ndarray, Sequence[Union[int, Variable]], TensorVariable]
+PotentialShapeType = int | np.ndarray | Sequence[int | Variable] | TensorVariable
 
 
 __all__ = [
@@ -70,20 +65,37 @@ __all__ = [
     "cont_inputs",
     "floatX",
     "intX",
-    "smartfloatX",
     "jacobian",
     "CallableTensor",
     "join_nonshared_inputs",
     "make_shared_replacements",
     "generator",
+    "convert_data",
+    "convert_generator_data",
     "convert_observed_data",
     "compile_pymc",
 ]
 
 
-def convert_observed_data(data):
+def convert_observed_data(data) -> np.ndarray | Variable:
     """Convert user provided dataset to accepted formats."""
+    if isgenerator(data):
+        return convert_generator_data(data)
+    return convert_data(data)
 
+
+def convert_generator_data(data) -> TensorVariable:
+    warnings.warn(
+        "Generator data is deprecated and we intend to remove it."
+        " If you disagree and need this, please get in touch via https://github.com/pymc-devs/pymc/issues.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return generator(data)
+
+
+def convert_data(data) -> np.ndarray | Variable:
+    ret: np.ndarray | Variable
     if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
         # typically, but not limited to pandas objects
         vals = data.to_numpy()
@@ -119,21 +131,15 @@ def convert_observed_data(data):
         ret = data
     elif sps.issparse(data):
         ret = data
-    elif isgenerator(data):
-        ret = generator(data)
     else:
         ret = np.asarray(data)
 
-    # type handling to enable index variables when data is int:
-    if hasattr(data, "dtype"):
-        if "int" in str(data.dtype):
-            return intX(ret)
-        # otherwise, assume float:
-        else:
-            return floatX(ret)
-    # needed for uses of this function other than with pm.Data:
-    else:
+    # Data without dtype info is converted to float arrays by default.
+    # This is the most common case for simple examples.
+    if not hasattr(data, "dtype"):
         return floatX(ret)
+    # Otherwise we only convert the precision.
+    return smarttypeX(ret)
 
 
 @_as_tensor_variable.register(pd.Series)
@@ -150,26 +156,32 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
     TypeError
 
     """
+    # TODO: These data functions should be in data.py or model/core.py
+    from pymc.data import MinibatchOp
+
     if isinstance(x, Constant):
         return x.data
     if isinstance(x, SharedVariable):
         return x.get_value()
-    if x.owner and isinstance(x.owner.op, Elemwise) and isinstance(x.owner.op.scalar_op, Cast):
-        array_data = extract_obs_data(x.owner.inputs[0])
-        return array_data.astype(x.type.dtype)
-    if x.owner and isinstance(x.owner.op, (AdvancedIncSubtensor, AdvancedIncSubtensor1)):
-        array_data = extract_obs_data(x.owner.inputs[0])
-        mask_idx = tuple(extract_obs_data(i) for i in x.owner.inputs[2:])
-        mask = np.zeros_like(array_data)
-        mask[mask_idx] = 1
-        return np.ma.MaskedArray(array_data, mask)
+    if x.owner is not None:
+        if isinstance(x.owner.op, Elemwise) and isinstance(x.owner.op.scalar_op, Cast):
+            array_data = extract_obs_data(x.owner.inputs[0])
+            return array_data.astype(x.type.dtype)
+        if isinstance(x.owner.op, MinibatchOp):
+            return extract_obs_data(x.owner.inputs[x.owner.outputs.index(x)])
+        if isinstance(x.owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1):
+            array_data = extract_obs_data(x.owner.inputs[0])
+            mask_idx = tuple(extract_obs_data(i) for i in x.owner.inputs[2:])
+            mask = np.zeros_like(array_data)
+            mask[mask_idx] = 1
+            return np.ma.MaskedArray(array_data, mask)
 
     raise TypeError(f"Data cannot be extracted from {x}")
 
 
 def walk_model(
     graphs: Iterable[TensorVariable],
-    stop_at_vars: Optional[set[TensorVariable]] = None,
+    stop_at_vars: set[TensorVariable] | None = None,
     expand_fn: Callable[[TensorVariable], Iterable[TensorVariable]] = lambda var: [],
 ) -> Generator[TensorVariable, None, None]:
     """Walk model graphs and yield their nodes.
@@ -210,8 +222,8 @@ def replace_vars_in_graphs(
     """
     # Clone graphs and get equivalences
     inputs = [i for i in graph_inputs(graphs) if not isinstance(i, Constant)]
-    equiv = {k: k for k in replacements.keys()}
-    equiv = clone_get_equiv(inputs, graphs, False, False, equiv)
+    memo = {k: k for k in replacements.keys()}
+    equiv = clone_get_equiv(inputs, graphs, False, False, memo)
 
     fg = FunctionGraph(
         [equiv[i] for i in inputs],
@@ -232,7 +244,7 @@ def replace_vars_in_graphs(
 
 def inputvars(a):
     """
-    Get the inputs into PyTensor variables
+    Get the inputs into PyTensor variables.
 
     Parameters
     ----------
@@ -245,13 +257,13 @@ def inputvars(a):
     return [
         v
         for v in graph_inputs(makeiter(a))
-        if isinstance(v, TensorVariable) and not isinstance(v, TensorConstant)
+        if isinstance(v, Variable) and not isinstance(v, Constant | SharedVariable)
     ]
 
 
 def cont_inputs(a):
     """
-    Get the continuous inputs into PyTensor variables
+    Get the continuous inputs into PyTensor variables.
 
     Parameters
     ----------
@@ -265,9 +277,7 @@ def cont_inputs(a):
 
 
 def floatX(X):
-    """
-    Convert an PyTensor tensor or numpy array to pytensor.config.floatX type.
-    """
+    """Convert a PyTensor tensor or numpy array to pytensor.config.floatX type."""
     try:
         return X.astype(pytensor.config.floatX)
     except AttributeError:
@@ -279,9 +289,7 @@ _conversion_map = {"float64": "int32", "float32": "int16", "float16": "int8", "f
 
 
 def intX(X):
-    """
-    Convert a pytensor tensor or numpy array to pytensor.tensor.int32 type.
-    """
+    """Convert a pytensor tensor or numpy array to pytensor.tensor.int32 type."""
     intX = _conversion_map[pytensor.config.floatX]
     try:
         return X.astype(intX)
@@ -291,11 +299,17 @@ def intX(X):
 
 
 def smartfloatX(x):
-    """
-    Converts numpy float values to floatX and leaves values of other types unchanged.
-    """
+    """Convert numpy float values to floatX and leaves values of other types unchanged."""
     if str(x.dtype).startswith("float"):
         x = floatX(x)
+    return x
+
+
+def smarttypeX(x):
+    if str(x.dtype).startswith("float"):
+        x = floatX(x)
+    elif str(x.dtype).startswith("int"):
+        x = intX(x)
     return x
 
 
@@ -305,7 +319,7 @@ PyTensor derivative functions
 
 
 def gradient1(f, v):
-    """flat gradient of f wrt v"""
+    """Flat gradient of f wrt v."""
     return pt.flatten(grad(f, v, disconnected_inputs="warn"))
 
 
@@ -323,7 +337,7 @@ def gradient(f, vars=None):
 
 
 def jacobian1(f, v):
-    """jacobian of f wrt v"""
+    """Jacobian of f wrt v."""
     f = pt.flatten(f)
     idx = pt.arange(f.shape[0], dtype="int32")
 
@@ -355,8 +369,17 @@ def jacobian_diag(f, x):
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")
-def hessian(f, vars=None):
-    return -jacobian(gradient(f, vars), vars)
+def hessian(f, vars=None, negate_output=True):
+    res = jacobian(gradient(f, vars), vars)
+    if negate_output:
+        warnings.warn(
+            "hessian will stop negating the output in a future version of PyMC.\n"
+            "To suppress this warning set `negate_output=False`",
+            FutureWarning,
+            stacklevel=2,
+        )
+        res = -res
+    return res
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")
@@ -371,12 +394,21 @@ def hessian_diag1(f, v):
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")
-def hessian_diag(f, vars=None):
+def hessian_diag(f, vars=None, negate_output=True):
     if vars is None:
         vars = cont_inputs(f)
 
     if vars:
-        return -pt.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
+        res = pt.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
+        if negate_output:
+            warnings.warn(
+                "hessian_diag will stop negating the output in a future version of PyMC.\n"
+                "To suppress this warning set `negate_output=False`",
+                FutureWarning,
+                stacklevel=2,
+            )
+            res = -res
+        return res
     else:
         return empty_gradient
 
@@ -408,7 +440,7 @@ identity = Elemwise(scalar_identity, name="identity")
 
 def make_shared_replacements(point, vars, model):
     """
-    Makes shared replacements for all *other* variables than the ones passed.
+    Make shared replacements for all *other* variables than the ones passed.
 
     This way functions can be called many times without setting unchanging variables. Allows us
     to use func.trust_input by removing the need for DictToArrayBijection and kwargs.
@@ -434,12 +466,11 @@ def join_nonshared_inputs(
     point: dict[str, np.ndarray],
     outputs: list[TensorVariable],
     inputs: list[TensorVariable],
-    shared_inputs: Optional[dict[TensorVariable, TensorSharedVariable]] = None,
+    shared_inputs: dict[TensorVariable, TensorSharedVariable] | None = None,
     make_inputs_shared: bool = False,
 ) -> tuple[list[TensorVariable], TensorVariable]:
     """
-    Create new outputs and input TensorVariables where the non-shared inputs are joined
-    in a single raveled vector input.
+    Create new outputs and input TensorVariables where the non-shared inputs are joined in a single raveled vector input.
 
     Parameters
     ----------
@@ -482,20 +513,18 @@ def join_nonshared_inputs(
         y = pt.vector("y")
         # Original output
         out = x + y
-        print(out.eval({x: np.array(1), y: np.array([1, 2, 3])})) # [2, 3, 4]
+        print(out.eval({x: np.array(1), y: np.array([1, 2, 3])}))  # [2, 3, 4]
 
         # New output and inputs
         [new_out], joined_inputs = join_nonshared_inputs(
-            point={ # Only shapes matter
+            point={  # Only shapes matter
                 "x": np.zeros(()),
                 "y": np.zeros(3),
             },
             outputs=[out],
             inputs=[x, y],
         )
-        print(new_out.eval({
-            joined_inputs: np.array([1, 1, 2, 3]),
-        })) # [2, 3, 4]
+        print(new_out.eval({joined_inputs: np.array([1, 1, 2, 3])}))  # [2, 3, 4]
 
     Join the input value variables of a model logp.
 
@@ -506,15 +535,19 @@ def join_nonshared_inputs(
         with pm.Model() as model:
             mu_pop = pm.Normal("mu_pop")
             sigma_pop = pm.HalfNormal("sigma_pop")
-            mu = pm.Normal("mu", mu_pop, sigma_pop, shape=(3, ))
+            mu = pm.Normal("mu", mu_pop, sigma_pop, shape=(3,))
 
             y = pm.Normal("y", mu, 1.0, observed=[0, 1, 2])
 
-        print(model.compile_logp()({
-            "mu_pop": 0,
-            "sigma_pop_log__": 1,
-            "mu": [0, 1, 2],
-        })) # -12.691227342634292
+        print(
+            model.compile_logp()(
+                {
+                    "mu_pop": 0,
+                    "sigma_pop_log__": 1,
+                    "mu": [0, 1, 2],
+                }
+            )
+        )  # -12.691227342634292
 
         initial_point = model.initial_point()
         inputs = model.value_vars
@@ -525,9 +558,13 @@ def join_nonshared_inputs(
             inputs=inputs,
         )
 
-        print(logp.eval({
-            joined_inputs: [0, 1, 0, 1, 2],
-        })) # -12.691227342634292
+        print(
+            logp.eval(
+                {
+                    joined_inputs: [0, 1, 0, 1, 2],
+                }
+            )
+        )  # -12.691227342634292
 
     Same as above but with the `mu_pop` value variable being shared.
 
@@ -542,14 +579,16 @@ def join_nonshared_inputs(
             point=initial_point,
             outputs=[model.logp()],
             inputs=other_inputs,
-            shared_inputs={
-                mu_pop_input: shared_mu_pop_input
-            },
+            shared_inputs={mu_pop_input: shared_mu_pop_input},
         )
 
-        print(logp.eval({
-            other_joined_inputs: [1, 0, 1, 2],
-        })) # -12.691227342634292
+        print(
+            logp.eval(
+                {
+                    other_joined_inputs: [1, 0, 1, 2],
+                }
+            )
+        )  # -12.691227342634292
     """
     if not inputs:
         raise ValueError("Empty list of input variables.")
@@ -594,15 +633,13 @@ class PointFunc:
 
 
 class CallableTensor:
-    """Turns a symbolic variable with one input into a function that returns symbolic arguments
-    with the one variable replaced with the input.
-    """
+    """Turns a symbolic variable with one input into a function that returns symbolic arguments with the one variable replaced with the input."""
 
     def __init__(self, tensor):
         self.tensor = tensor
 
     def __call__(self, input):
-        """Replaces the single input of symbolic variable to be the passed argument.
+        """Replace the single input of symbolic variable to be the passed argument.
 
         Parameters
         ----------
@@ -634,6 +671,9 @@ class GeneratorOp(Op):
     __props__ = ("generator",)
 
     def __init__(self, gen, default=None):
+        warnings.warn(
+            "generator data is deprecated and will be removed in a future release", FutureWarning
+        )
         from pymc.data import GeneratorAdapter
 
         super().__init__()
@@ -680,7 +720,8 @@ class GeneratorOp(Op):
 
 def generator(gen, default=None):
     """
-    Generator variable with possibility to set default value and new generator.
+    Create a generator variable with possibility to set default value and new generator.
+
     If generator is exhausted variable will produce default value if it is not None,
     else raises `StopIteration` exception that can be caught on runtime.
 
@@ -700,13 +741,9 @@ def generator(gen, default=None):
     return GeneratorOp(gen, default)()
 
 
-def floatX_array(x):
-    return floatX(np.array(x))
-
-
 def ix_(*args):
     """
-    PyTensor np.ix_ analog
+    PyTensor np.ix_ analog.
 
     See numpy.lib.index_tricks.ix_ for reference
     """
@@ -732,17 +769,15 @@ def largest_common_dtype(tensors):
 
 def find_rng_nodes(
     variables: Iterable[Variable],
-) -> list[Union[RandomStateSharedVariable, RandomGeneratorSharedVariable]]:
-    """Return RNG variables in a graph"""
+) -> list[RandomGeneratorSharedVariable]:
+    """Return shared RNG variables in a graph."""
     return [
-        node
-        for node in graph_inputs(variables)
-        if isinstance(node, (RandomStateSharedVariable, RandomGeneratorSharedVariable))
+        node for node in graph_inputs(variables) if isinstance(node, RandomGeneratorSharedVariable)
     ]
 
 
-def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVariable]:
-    """Replace any RNG nodes upstream of outputs by new RNGs of the same type
+def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> list[TensorVariable]:
+    """Replace any RNG nodes upstream of outputs by new RNGs of the same type.
 
     This can be used when combining a pre-existing graph with a cloned one, to ensure
     RNGs are unique across the two graphs.
@@ -754,42 +789,47 @@ def replace_rng_nodes(outputs: Sequence[TensorVariable]) -> Sequence[TensorVaria
         return outputs
 
     graph = FunctionGraph(outputs=outputs, clone=False)
-    new_rng_nodes: list[Union[np.random.RandomState, np.random.Generator]] = []
-    for rng_node in rng_nodes:
-        rng_cls: type
-        if isinstance(rng_node, pt.random.var.RandomStateSharedVariable):
-            rng_cls = np.random.RandomState
-        else:
-            rng_cls = np.random.Generator
-        new_rng_nodes.append(pytensor.shared(rng_cls(np.random.PCG64())))
+    new_rng_nodes = [pytensor.shared(np.random.Generator(np.random.PCG64())) for _ in rng_nodes]
     graph.replace_all(zip(rng_nodes, new_rng_nodes), import_missing=True)
-    return graph.outputs
+    return cast(list[TensorVariable], graph.outputs)
 
 
-SeedSequenceSeed = Optional[Union[int, Sequence[int], np.ndarray, np.random.SeedSequence]]
+SeedSequenceSeed = None | int | Sequence[int] | np.ndarray | np.random.SeedSequence
 
 
 def reseed_rngs(
     rngs: Sequence[SharedVariable],
     seed: SeedSequenceSeed,
 ) -> None:
-    """Create a new set of RandomState/Generator for each rng based on a seed"""
+    """Create a new set of RandomState/Generator for each rng based on a seed."""
     bit_generators = [
         np.random.PCG64(sub_seed) for sub_seed in np.random.SeedSequence(seed).spawn(len(rngs))
     ]
     for rng, bit_generator in zip(rngs, bit_generators):
-        new_rng: Union[np.random.RandomState, np.random.Generator]
-        if isinstance(rng, pt.random.var.RandomStateSharedVariable):
-            new_rng = np.random.RandomState(bit_generator)
-        else:
-            new_rng = np.random.Generator(bit_generator)
-        rng.set_value(new_rng, borrow=True)
+        rng.set_value(np.random.Generator(bit_generator), borrow=True)
+
+
+def collect_default_updates_inner_fgraph(node: Apply) -> dict[Variable, Variable]:
+    """Collect default updates from node with inner fgraph."""
+    op = node.op
+    inner_updates = collect_default_updates(
+        inputs=op.inner_inputs, outputs=op.inner_outputs, must_be_shared=False
+    )
+
+    # Map inner updates to outer inputs/outputs
+    updates = {}
+    for rng, update in inner_updates.items():
+        inp_idx = op.inner_inputs.index(rng)
+        out_idx = op.inner_outputs.index(update)
+        updates[node.inputs[inp_idx]] = node.outputs[out_idx]
+
+    return updates
 
 
 def collect_default_updates(
-    outputs: Sequence[Variable],
+    outputs: Variable | Sequence[Variable],
     *,
-    inputs: Optional[Sequence[Variable]] = None,
+    inputs: Sequence[Variable] | None = None,
     must_be_shared: bool = True,
 ) -> dict[Variable, Variable]:
     """Collect default update expression for shared-variable RNGs used by RVs between inputs and outputs.
@@ -808,6 +848,7 @@ def collect_default_updates(
     Examples
     --------
     .. code:: python
+
         import pymc as pm
         from pytensor.scan import scan
         from pymc.pytensorf import collect_default_updates
@@ -833,7 +874,7 @@ def collect_default_updates(
     # Avoid circular import
     from pymc.distributions.distribution import SymbolicRandomVariable
 
-    def find_default_update(clients, rng: Variable) -> Union[None, Variable]:
+    def find_default_update(clients, rng: Variable) -> None | Variable:
         rng_clients = clients.get(rng, None)
 
         # Root case, RNG is not used elsewhere
@@ -841,8 +882,23 @@ def collect_default_updates(
             return rng
 
         if len(rng_clients) > 1:
+            # Multiple clients are techincally fine if they are used in identical operations
+            # We check if the default_update of each client would be the same
+            update, *other_updates = (
+                find_default_update(
+                    # Pass version of clients that includes only one the RNG clients at a time
+                    clients | {rng: [rng_client]},
+                    rng,
+                )
+                for rng_client in rng_clients
+            )
+            if all(equal_computations([update], [other_update]) for other_update in other_updates):
+                return update
+
             warnings.warn(
-                f"RNG Variable {rng} has multiple clients. This is likely an inconsistent random graph.",
+                f"RNG Variable {rng} has multiple distinct clients {rng_clients}, "
+                f"likely due to an inconsistent random graph. "
+                f"No default update will be returned.",
                 UserWarning,
             )
             return None
@@ -850,7 +906,7 @@ def collect_default_updates(
         [client, _] = rng_clients[0]
 
         # RNG is an output of the function, this is not a problem
-        if client == "output":
+        if isinstance(client.op, Output):
             return rng
 
         # RNG is used by another operator, which should output an update for the RNG
@@ -878,9 +934,16 @@ def collect_default_updates(
                     f"No update found for at least one RNG used in Scan Op {client.op}.\n"
                     "You can use `pytensorf.collect_default_updates` inside the Scan function to return updates automatically."
                 )
+        elif isinstance(client.op, OpFromGraph):
+            try:
+                next_rng = collect_default_updates_inner_fgraph(client)[rng]
+            except (ValueError, KeyError):
+                raise ValueError(
+                    f"No update found for at least one RNG used in OpFromGraph Op {client.op}.\n"
+                    "You can use `pytensorf.collect_default_updates` and include those updates as outputs."
+                )
         else:
-            # We don't know how this RNG should be updated (e.g., OpFromGraph).
-            # The user should provide an update manually
+            # We don't know how this RNG should be updated. The user should provide an update manually
             return None
 
         # Recurse until we find final update for RNG
@@ -889,15 +952,15 @@ def collect_default_updates(
     if inputs is None:
         inputs = []
 
-    outputs = makeiter(outputs)
-    fg = FunctionGraph(outputs=outputs, clone=False)
+    outs = makeiter(outputs)
+    fg = FunctionGraph(outputs=outs, clone=False)
     clients = fg.clients
 
     rng_updates = {}
     # Iterate over input RNGs. Only consider shared RNGs if `must_be_shared==True`
     for input_rng in (
         inp
-        for inp in graph_inputs(outputs, blockers=inputs)
+        for inp in graph_inputs(outs, blockers=inputs)
         if (
             (not must_be_shared or isinstance(inp, SharedVariable))
             and isinstance(inp.type, RandomType)
@@ -908,7 +971,7 @@ def collect_default_updates(
         default_update = find_default_update(clients, input_rng)
 
         # Respect default update if provided
-        if getattr(input_rng, "default_update", None):
+        if hasattr(input_rng, "default_update") and input_rng.default_update is not None:
             rng_updates[input_rng] = input_rng.default_update
         else:
             if default_update is not None:
@@ -964,7 +1027,8 @@ def compile_pymc(
 
     # We always reseed random variables as this provides RNGs with no chances of collision
     if rng_updates:
-        reseed_rngs(rng_updates.keys(), random_seed)
+        rngs = cast(list[SharedVariable], list(rng_updates))
+        reseed_rngs(rngs, random_seed)
 
     # If called inside a model context, see if check_bounds flag is set to False
     try:
@@ -1006,7 +1070,7 @@ def constant_fold(
         attempting constant folding, and any old non-shared inputs will not work with
         the returned outputs
     """
-    fg = FunctionGraph(outputs=xs, features=[ShapeFeature()], clone=True)
+    fg = FunctionGraph(outputs=xs, features=[ShapeFeature()], copy_inputs=False, clone=True)
 
     # By default, rewrite_graph includes canonicalize which includes constant-folding as the final rewrite
     folded_xs = rewrite_graph(fg).outputs
@@ -1020,9 +1084,7 @@ def constant_fold(
 
 
 def rewrite_pregrad(graph):
-    """Apply simplifying or stabilizing rewrites to graph that are safe to use
-    pre-grad.
-    """
+    """Apply simplifying or stabilizing rewrites to graph that are safe to use pre-grad."""
     return rewrite_graph(graph, include=("canonicalize", "stabilize"))
 
 
@@ -1067,3 +1129,14 @@ def toposort_replace(
         reverse=reverse,
     )
     fgraph.replace_all(sorted_replacements, import_missing=True)
+
+
+def normalize_rng_param(rng: None | Variable) -> Variable:
+    """Validate rng is a valid type or create a new one if None."""
+    if rng is None:
+        rng = pytensor.shared(np.random.default_rng())
+    elif not isinstance(rng.type, RandomType):
+        raise TypeError(
+            "The type of rng should be an instance of either RandomGeneratorType or RandomStateType"
+        )
+    return rng

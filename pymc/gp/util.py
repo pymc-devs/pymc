@@ -22,12 +22,8 @@ from pytensor.graph import ancestors
 from pytensor.tensor.variable import TensorConstant
 from scipy.cluster.vq import kmeans
 
-# Avoid circular dependency when importing modelcontext
-from pymc.distributions.distribution import Distribution
-from pymc.model import modelcontext
+from pymc.model.core import modelcontext
 from pymc.pytensorf import compile_pymc
-
-_ = Distribution
 
 JITTER_DEFAULT = 1e-6
 
@@ -35,6 +31,7 @@ JITTER_DEFAULT = 1e-6
 def replace_with_values(vars_needed, replacements=None, model=None):
     R"""
     Replace random variable nodes in the graph with values given by the replacements dict.
+
     Uses untransformed versions of the inputs, performs some basic input validation.
 
     Parameters
@@ -80,7 +77,7 @@ def replace_with_values(vars_needed, replacements=None, model=None):
 
 def stabilize(K, jitter=JITTER_DEFAULT):
     R"""
-    Adds small diagonal to a covariance matrix.
+    Add small diagonal to a covariance matrix.
 
     Often the matrices calculated from covariance functions, `K = cov_func(X)`
     do not appear numerically to be positive semi-definite.  Adding a small
@@ -98,8 +95,7 @@ def stabilize(K, jitter=JITTER_DEFAULT):
 
 def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
     R"""
-    Use the K-means algorithm to initialize the locations `X` for the inducing
-    points `fu`.
+    Use the K-means algorithm to initialize the locations `X` for the inducing points `fu`.
 
     Parameters
     ----------
@@ -113,7 +109,7 @@ def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
     # first whiten X
     if isinstance(X, TensorConstant):
         X = X.value
-    elif isinstance(X, (np.ndarray, tuple, list)):
+    elif isinstance(X, np.ndarray | tuple | list):
         X = np.asarray(X)
     else:
         raise TypeError(
@@ -135,7 +131,7 @@ def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
 
 
 def conditioned_vars(varnames):
-    """Decorator for validating attrs that are conditioned on."""
+    """Validate attrs that are conditioned on."""
 
     def gp_wrapper(cls):
         def make_getter(name):
@@ -143,9 +139,8 @@ def conditioned_vars(varnames):
                 value = getattr(self, name, None)
                 if value is None:
                     raise AttributeError(
-                        "'{}' not set.  Provide as argument "
-                        "to condition, or call 'prior' "
-                        "first".format(name.lstrip("_"))
+                        f"'{name.lstrip('_')}' not set.  Provide as argument "
+                        "to condition, or call 'prior' first"
                     )
                 else:
                     return value
@@ -179,7 +174,7 @@ def plot_gp_dist(
     fill_kwargs=None,
     samples_kwargs=None,
 ):
-    """A helper function for plotting 1D GP posteriors from trace
+    """Plot 1D GP posteriors from trace.
 
     Parameters
     ----------

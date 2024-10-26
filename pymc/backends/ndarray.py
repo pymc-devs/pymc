@@ -12,13 +12,12 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""NumPy array trace backend
+"""NumPy array trace backend.
 
 Store sampling values in memory as a NumPy array.
 """
 
-
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
@@ -28,7 +27,7 @@ from pymc.model import Model, modelcontext
 
 
 class NDArray(base.BaseTrace):
-    """NDArray trace object
+    """NDArray trace object.
 
     Parameters
     ----------
@@ -85,7 +84,7 @@ class NDArray(base.BaseTrace):
         if self._stats is None:
             self._stats = []
             for sampler in sampler_vars:
-                data: dict[str, np.ndarray] = dict()
+                data: dict[str, np.ndarray] = {}
                 self._stats.append(data)
                 for varname, dtype in sampler.items():
                     data[varname] = np.zeros(draws, dtype=dtype)
@@ -139,6 +138,7 @@ class NDArray(base.BaseTrace):
     # Selection methods
 
     def __len__(self):
+        """Length of the chain."""
         if not self.samples:  # `setup` has not been called.
             return 0
         return self.draw_idx
@@ -184,8 +184,12 @@ class NDArray(base.BaseTrace):
         return sliced
 
     def point(self, idx) -> dict[str, Any]:
-        """Return dictionary of point values at `idx` for current chain
-        with variable names as keys.
+        """Return point values at `idx` for current chain.
+
+        Returns
+        -------
+        values : dict[str, Any]
+            Dictionary of values with variable names as keys.
         """
         idx = int(idx)
         return {varname: values[idx] for varname, values in self.samples.items()}
@@ -211,9 +215,9 @@ def _slice_as_ndarray(strace, idx):
 
 
 def point_list_to_multitrace(
-    point_list: list[dict[str, np.ndarray]], model: Optional[Model] = None
+    point_list: list[dict[str, np.ndarray]], model: Model | None = None
 ) -> MultiTrace:
-    """transform point list into MultiTrace"""
+    """Transform point list into MultiTrace."""
     _model = modelcontext(model)
     varnames = list(point_list[0].keys())
     with _model:

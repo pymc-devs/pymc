@@ -30,7 +30,7 @@ import pymc as pm
 
 from pymc.distributions.transforms import _default_transform, log, logodds
 from pymc.logprob import conditional_logp
-from pymc.logprob.abstract import MeasurableVariable, _logprob
+from pymc.logprob.abstract import MeasurableOp, _logprob
 from pymc.logprob.transform_value import TransformValuesMapping, TransformValuesRewrite
 from pymc.logprob.transforms import ExpTransform, LogOddsTransform, LogTransform
 from pymc.testing import assert_no_rvs
@@ -42,13 +42,11 @@ def multiout_measurable_op():
     # Create a dummy Op that just returns the two inputs
     mu1, mu2 = pt.scalars("mu1", "mu2")
 
-    class TestOpFromGraph(OpFromGraph):
+    class TestOpFromGraph(MeasurableOp, OpFromGraph):
         def do_constant_folding(self, fgraph, node):
             False
 
     multiout_op = TestOpFromGraph([mu1, mu2], [mu1 + 0.0, mu2 + 0.0])
-
-    MeasurableVariable.register(TestOpFromGraph)
 
     @_logprob.register(TestOpFromGraph)
     def logp_multiout(op, values, mu1, mu2):
@@ -193,7 +191,7 @@ def test_original_values_output_dict():
             pt.random.dirichlet,
             (np.array([[0.7, 0.3], [0.9, 0.1]]),),
             lambda alpha: DirichletScipyDist(alpha),
-            (),
+            None,
         ),
         pytest.param(
             pt.random.dirichlet,
@@ -472,7 +470,7 @@ def test_transformed_rv_and_value():
 
 @pytest.mark.filterwarnings("error")
 def test_mixture_transform():
-    """Make sure that non-`RandomVariable` `MeasurableVariable`s can be transformed.
+    """Make sure that non-`RandomVariable` `MeasurableOp` variables can be transformed.
 
     This test is specific to `MixtureRV`, which is derived from an `OpFromGraph`.
     """

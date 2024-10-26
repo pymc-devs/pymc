@@ -11,7 +11,9 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Callable, Optional, Union
+import warnings
+
+from collections.abc import Callable
 
 import numpy as np
 import pytensor.tensor as pt
@@ -30,13 +32,12 @@ def find_constrained_prior(
     upper: float,
     init_guess: dict[str, float],
     mass: float = 0.95,
-    fixed_params: Optional[dict[str, float]] = None,
-    mass_below_lower: Optional[float] = None,
+    fixed_params: dict[str, float] | None = None,
+    mass_below_lower: float | None = None,
     **kwargs,
 ) -> dict[str, float]:
     """
-    Find optimal parameters to get `mass` % of probability
-    of a :ref:`distribution <api_distributions>` between `lower` and `upper`.
+    Find optimal parameters to get `mass` % of probability of a distribution between `lower` and `upper`.
 
     Note: only works for one- and two-parameter distributions, as there
     are exactly two constraints. Fix some combination of parameters
@@ -96,7 +97,7 @@ def find_constrained_prior(
 
         # use these parameters in a model
         with pm.Model():
-            x = pm.Gamma('x', **opt_params)
+            x = pm.Gamma("x", **opt_params)
 
         # specify fixed values before optimization
         opt_params = pm.find_constrained_prior(
@@ -119,12 +120,20 @@ def find_constrained_prior(
         opt_params = pm.find_constrained_prior(
             pm.Exponential,
             lower=0,
-            upper=3.,
+            upper=3.0,
             mass=0.9,
             init_guess={"lam": 1},
             mass_below_lower=0,
         )
     """
+    warnings.warn(
+        "find_constrained_prior is deprecated and will be removed in a future version. "
+        "Please use maxent function from PreliZ. "
+        "https://preliz.readthedocs.io/en/latest/api_reference.html#preliz.unidimensional.maxent",
+        FutureWarning,
+        stacklevel=2,
+    )
+
     assert 0.01 <= mass <= 0.99, (
         "This function optimizes the mass of the given distribution +/- "
         f"1%, so `mass` has to be between 0.01 and 0.99. You provided {mass}."
@@ -165,8 +174,8 @@ def find_constrained_prior(
     constraint = pt.exp(logcdf_upper) - pt.exp(logcdf_lower)
     constraint_fn = pm.pytensorf.compile_pymc([dist_params], constraint, allow_input_downcast=True)
 
-    jac: Union[str, Callable]
-    constraint_jac: Union[str, Callable]
+    jac: str | Callable
+    constraint_jac: str | Callable
     try:
         pytensor_jac = pm.gradient(target, [dist_params])
         jac = pm.pytensorf.compile_pymc([dist_params], pytensor_jac, allow_input_downcast=True)
@@ -189,9 +198,7 @@ def find_constrained_prior(
         )
 
     # save optimal parameters
-    opt_params = {
-        param_name: param_value for param_name, param_value in zip(init_guess.keys(), opt.x)
-    }
+    opt_params = dict(zip(init_guess.keys(), opt.x))
     if fixed_params is not None:
         opt_params.update(fixed_params)
     return opt_params

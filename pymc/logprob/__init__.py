@@ -34,6 +34,8 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
+"""Conversion of PyMC graphs into logp graphs."""
+
 from pymc.logprob.basic import (
     conditional_logp,
     icdf,
@@ -47,6 +49,7 @@ import pymc.logprob.binary
 import pymc.logprob.censoring
 import pymc.logprob.cumsum
 import pymc.logprob.checks
+import pymc.logprob.linalg
 import pymc.logprob.mixture
 import pymc.logprob.order
 import pymc.logprob.scan

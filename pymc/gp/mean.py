@@ -18,9 +18,7 @@ __all__ = ["Zero", "Constant", "Linear"]
 
 
 class Mean:
-    R"""
-    Base class for mean functions
-    """
+    """Base class for mean functions."""
 
     def __call__(self, X):
         R"""
@@ -40,17 +38,14 @@ class Mean:
 
 
 class Zero(Mean):
-    R"""
-    Zero mean function for Gaussian process.
-
-    """
+    """Zero mean function for Gaussian process."""
 
     def __call__(self, X):
         return pt.alloc(0.0, X.shape[0])
 
 
 class Constant(Mean):
-    R"""
+    """
     Constant mean function for Gaussian process.
 
     Parameters
@@ -68,7 +63,7 @@ class Constant(Mean):
 
 
 class Linear(Mean):
-    R"""
+    """
     Linear mean function for Gaussian process.
 
     Parameters

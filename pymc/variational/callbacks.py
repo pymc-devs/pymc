@@ -14,7 +14,7 @@
 
 import collections
 
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 
@@ -27,22 +27,23 @@ class Callback:
 
 
 def relative(current: np.ndarray, prev: np.ndarray, eps=1e-6) -> np.ndarray:
-    diff = current - prev  # type: ignore
+    diff = current - prev
     return (np.abs(diff) + eps) / (np.abs(prev) + eps)
 
 
 def absolute(current: np.ndarray, prev: np.ndarray) -> np.ndarray:
-    diff = current - prev  # type: ignore
+    diff = current - prev
     return np.abs(diff)
 
 
-_diff: dict[str, Callable[[np.ndarray, np.ndarray], np.ndarray]] = dict(
-    relative=relative, absolute=absolute
-)
+_diff: dict[str, Callable[[np.ndarray, np.ndarray], np.ndarray]] = {
+    "relative": relative,
+    "absolute": absolute,
+}
 
 
 class CheckParametersConvergence(Callback):
-    """Convergence stopping check
+    """Convergence stopping check.
 
     Parameters
     ----------
@@ -59,11 +60,8 @@ class CheckParametersConvergence(Callback):
     --------
     >>> with model:
     ...     approx = pm.fit(
-    ...         n=10000, callbacks=[
-    ...             CheckParametersConvergence(
-    ...                 every=50, diff='absolute',
-    ...                 tolerance=1e-4)
-    ...         ]
+    ...         n=10000,
+    ...         callbacks=[CheckParametersConvergence(every=50, diff="absolute", tolerance=1e-4)],
     ...     )
     """
 
@@ -95,7 +93,7 @@ class CheckParametersConvergence(Callback):
 
 class Tracker(Callback):
     """
-    Helper class to record arbitrary stats during VI
+    Helper class to record arbitrary stats during VI.
 
     It is possible to pass a function that takes no arguments
     If call fails then (approx, hist, i) are passed
@@ -151,6 +149,7 @@ class Tracker(Callback):
         self.hist = collections.defaultdict(list)
 
     def __getitem__(self, item):
+        """Get the element at index `item`."""
         return self.hist[item]
 
     __call__ = record

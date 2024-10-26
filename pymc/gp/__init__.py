@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+"""Gaussian Processes."""
+
 from pymc.gp import cov, mean, util
 from pymc.gp.gp import (
     TP,

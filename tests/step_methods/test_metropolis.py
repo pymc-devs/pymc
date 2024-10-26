@@ -14,6 +14,8 @@
 
 import warnings
 
+from copy import deepcopy
+
 import arviz as az
 import numpy as np
 import numpy.testing as npt
@@ -24,6 +26,7 @@ import pymc as pm
 
 from pymc.step_methods.metropolis import (
     BinaryGibbsMetropolis,
+    BinaryMetropolis,
     CategoricalGibbsMetropolis,
     DEMetropolis,
     DEMetropolisZ,
@@ -31,10 +34,19 @@ from pymc.step_methods.metropolis import (
     MultivariateNormalProposal,
     NormalProposal,
 )
+from pymc.step_methods.state import equal_dataclass_values
 from pymc.testing import fast_unstable_sampling_mode
 from tests import sampler_fixtures as sf
-from tests.helpers import RVsAssignmentStepsTester, StepMethodTester
-from tests.models import mv_simple, mv_simple_discrete, simple_categorical
+from tests.helpers import RVsAssignmentStepsTester, StepMethodTester, equal_sampling_states
+from tests.models import (
+    mv_simple,
+    mv_simple_discrete,
+    simple_binary,
+    simple_categorical,
+    simple_model,
+)
+
+SEED = sum(ord(c) for c in "test_metropolis")
 
 
 class TestMetropolisUniform(sf.MetropolisFixture, sf.UniformFixture):
@@ -45,6 +57,8 @@ class TestMetropolisUniform(sf.MetropolisFixture, sf.UniformFixture):
     min_n_eff = 10000
     rtol = 0.1
     atol = 0.05
+    ks_thin = 10
+    step_args = {"rng": np.random.default_rng(SEED)}
 
 
 class TestMetropolis:
@@ -81,7 +95,7 @@ class TestMetropolis:
             idata = pm.sample(
                 tune=600,
                 draws=500,
-                step=Metropolis(tune=True, scaling=0.1),
+                step=Metropolis(tune=True, scaling=0.1, rng=SEED),
                 cores=1,
                 chains=3,
                 discard_tuned_samples=False,
@@ -113,7 +127,7 @@ class TestMetropolis:
     def test_elemwise_update(self, batched_dist):
         with pm.Model() as m:
             m.register_rv(batched_dist, name="batched_dist")
-            step = pm.Metropolis([batched_dist])
+            step = pm.Metropolis([batched_dist], rng=SEED)
             assert step.elemwise_update == (batched_dist.ndim > 0)
             trace = pm.sample(draws=1000, chains=2, step=step, random_seed=428)
 
@@ -124,7 +138,7 @@ class TestMetropolis:
         mu = [1, 2, 3, 4, 5, 100, 1_000, 10_000]
         with pm.Model() as m:
             x = pm.Poisson("x", mu=mu)
-            step = pm.Metropolis([x])
+            step = pm.Metropolis([x], rng=SEED)
             trace = pm.sample(draws=1000, chains=2, step=step, random_seed=128).posterior
 
         np.testing.assert_allclose(trace["x"].mean(("draw", "chain")), mu, rtol=0.1)
@@ -134,7 +148,7 @@ class TestMetropolis:
         with pm.Model() as m:
             batched_dist = pm.Multinomial("batched_dist", n=5, p=np.ones(4) / 4, shape=(10, 4))
             with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
-                step = pm.Metropolis([batched_dist])
+                step = pm.Metropolis([batched_dist], rng=SEED)
                 assert not step.elemwise_update
 
 
@@ -167,7 +181,7 @@ class TestDEMetropolisZ:
             idata = pm.sample(
                 tune=1000,
                 draws=500,
-                step=DEMetropolisZ(tune="lambda", lamb=0.92),
+                step=DEMetropolisZ(tune="lambda", lamb=0.92, rng=SEED),
                 cores=1,
                 chains=3,
                 discard_tuned_samples=False,
@@ -185,7 +199,7 @@ class TestDEMetropolisZ:
             idata = pm.sample(
                 tune=1000,
                 draws=500,
-                step=DEMetropolisZ(tune="scaling", scaling=0.002),
+                step=DEMetropolisZ(tune="scaling", scaling=0.002, rng=SEED),
                 cores=2,
                 chains=2,
                 discard_tuned_samples=False,
@@ -203,7 +217,7 @@ class TestDEMetropolisZ:
             idata = pm.sample(
                 tune=1000,
                 draws=500,
-                step=DEMetropolisZ(tune=None),
+                step=DEMetropolisZ(tune=None, rng=SEED),
                 cores=1,
                 chains=2,
                 discard_tuned_samples=False,
@@ -221,7 +235,7 @@ class TestDEMetropolisZ:
             idata = pm.sample(
                 tune=1000,
                 draws=500,
-                step=DEMetropolisZ(tune="scaling", scaling=0.002),
+                step=DEMetropolisZ(tune="scaling", scaling=0.002, rng=SEED),
                 cores=1,
                 chains=3,
                 discard_tuned_samples=False,
@@ -245,7 +259,7 @@ class TestDEMetropolisZ:
         draws = 200
         with pm.Model() as pmodel:
             pm.Normal("n", 0, 2, size=(3,))
-            step = DEMetropolisZ(tune_drop_fraction=tune_drop_fraction)
+            step = DEMetropolisZ(tune_drop_fraction=tune_drop_fraction, rng=SEED)
             idata = pm.sample(
                 tune=tune, draws=draws, step=step, cores=1, chains=1, discard_tuned_samples=False
             )
@@ -292,7 +306,7 @@ class TestStepMetropolis(StepMethodTester):
         unc = np.diag(C) ** 0.5
         check = (("x", np.mean, mu, unc / 10.0), ("x", np.std, unc, unc / 10.0))
         with model:
-            step = Metropolis(S=C, proposal_dist=MultivariateNormalProposal)
+            step = Metropolis(S=C, proposal_dist=MultivariateNormalProposal, rng=123456)
             idata = pm.sample(
                 tune=1000,
                 draws=2000,
@@ -311,7 +325,7 @@ class TestStepMetropolis(StepMethodTester):
         unc = C**0.5
         check = (("x", np.mean, mu, unc / 10.0), ("x", np.std, unc, unc / 10.0))
         with model:
-            step = CategoricalGibbsMetropolis([model.x], proposal=proposal)
+            step = CategoricalGibbsMetropolis([model.x], proposal=proposal, rng=SEED)
             idata = pm.sample(
                 tune=1000,
                 draws=2000,
@@ -329,7 +343,7 @@ class TestStepMetropolis(StepMethodTester):
         [
             (
                 lambda C, _: Metropolis(
-                    S=C, proposal_dist=MultivariateNormalProposal, blocked=True
+                    S=C, proposal_dist=MultivariateNormalProposal, blocked=True, rng=SEED
                 ),
                 4000,
             ),
@@ -364,3 +378,45 @@ class TestRVsAssignmentMetropolis(RVsAssignmentStepsTester):
     )
     def test_continuous_steps(self, step, step_kwargs):
         self.continuous_steps(step, step_kwargs)
+
+
+@pytest.mark.parametrize(
+    ["step_method", "model_fn"],
+    [
+        [Metropolis, simple_model],
+        [BinaryMetropolis, simple_binary],
+        [BinaryGibbsMetropolis, simple_binary],
+        [CategoricalGibbsMetropolis, simple_categorical],
+        [DEMetropolis, simple_model],
+        [DEMetropolisZ, simple_model],
+    ],
+)
+def test_sampling_state(step_method, model_fn):
+    with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
+        initial_point, model, _ = model_fn()
+        with model:
+            sampler = step_method(model.value_vars)
+            if hasattr(sampler, "link_population"):
+                sampler.link_population([initial_point] * 100, 0)
+            sampler_orig = deepcopy(sampler)
+            state_orig = sampler_orig.sampling_state
+
+            sample1, stat1 = sampler.step(initial_point)
+            sampler.tune = False
+
+            final_state1 = sampler.sampling_state
+
+            assert not equal_sampling_states(final_state1, state_orig)
+
+            sampler.sampling_state = state_orig
+
+            assert equal_sampling_states(sampler.sampling_state, state_orig)
+
+            sample2, stat2 = sampler.step(initial_point)
+            sampler.tune = False
+
+            final_state2 = sampler.sampling_state
+
+            assert equal_sampling_states(final_state1, final_state2)
+            assert equal_dataclass_values(sample1, sample2)
+            assert equal_dataclass_values(stat1, stat2)

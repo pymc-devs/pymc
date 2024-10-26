@@ -12,28 +12,21 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""
-pymc.blocking
+"""Classes for working with subsets of parameters."""
 
-Classes for working with subsets of parameters.
-"""
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from functools import partial
 from typing import (
     Any,
-    Callable,
     Generic,
     NamedTuple,
-    Optional,
+    TypeAlias,
     TypeVar,
-    Union,
 )
 
 import numpy as np
-
-from typing_extensions import TypeAlias
 
 __all__ = ["DictToArrayBijection"]
 
@@ -42,8 +35,8 @@ T = TypeVar("T")
 PointType: TypeAlias = dict[str, np.ndarray]
 StatsDict: TypeAlias = dict[str, Any]
 StatsType: TypeAlias = list[StatsDict]
-StatDtype: TypeAlias = Union[type, np.dtype]
-StatShape: TypeAlias = Optional[Sequence[Optional[int]]]
+StatDtype: TypeAlias = type | np.dtype
+StatShape: TypeAlias = Sequence[int | None] | None
 
 
 # `point_map_info` is a tuple of tuples containing `(name, shape, dtype)` for
@@ -54,9 +47,7 @@ class RaveledVars(NamedTuple):
 
 
 class Compose(Generic[T]):
-    """
-    Compose two functions in a pickleable way
-    """
+    """Compose two functions in a pickleable way."""
 
     def __init__(self, fa: Callable[[PointType], T], fb: Callable[[RaveledVars], PointType]):
         self.fa = fa

@@ -13,7 +13,7 @@
 #   limitations under the License.
 import warnings
 
-from typing import Optional, Union
+from typing import TypeAlias
 
 import numpy as np
 import numpy.typing as npt
@@ -21,7 +21,6 @@ import pytensor.tensor as pt
 
 from pytensor.tensor import TensorConstant
 from pytensor.tensor.random.basic import (
-    RandomVariable,
     ScipyRandomVariable,
     bernoulli,
     betabinom,
@@ -31,10 +30,11 @@ from pytensor.tensor.random.basic import (
     hypergeometric,
     nbinom,
     poisson,
+    uniform,
 )
+from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.variable import TensorVariable
 from scipy import stats
-from typing_extensions import TypeAlias
 
 import pymc as pm
 
@@ -50,10 +50,11 @@ from pymc.distributions.dist_math import (
     normal_lccdf,
     normal_lcdf,
 )
-from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Discrete
-from pymc.distributions.shape_utils import rv_size_is_none
+from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Discrete, SymbolicRandomVariable
+from pymc.distributions.shape_utils import implicit_size_from_params, rv_size_is_none
 from pymc.logprob.basic import logcdf, logp
 from pymc.math import sigmoid
+from pymc.pytensorf import normalize_rng_param
 
 __all__ = [
     "Binomial",
@@ -70,7 +71,7 @@ __all__ = [
     "OrderedProbit",
 ]
 
-DISCRETE_DIST_PARAMETER_TYPES: TypeAlias = Union[npt.NDArray[np.int_], int, TensorVariable]
+DISCRETE_DIST_PARAMETER_TYPES: TypeAlias = npt.NDArray[np.int_] | int | TensorVariable
 
 
 class Binomial(Discrete):
@@ -125,8 +126,8 @@ class Binomial(Discrete):
     def dist(
         cls,
         n: DISCRETE_DIST_PARAMETER_TYPES,
-        p: Optional[DIST_PARAMETER_TYPES] = None,
-        logit_p: Optional[DIST_PARAMETER_TYPES] = None,
+        p: DIST_PARAMETER_TYPES | None = None,
+        logit_p: DIST_PARAMETER_TYPES | None = None,
         *args,
         **kwargs,
     ):
@@ -311,7 +312,7 @@ class BetaBinomial(Discrete):
 
 
 class Bernoulli(Discrete):
-    R"""Bernoulli log-likelihood
+    R"""Bernoulli log-likelihood.
 
     The Bernoulli distribution describes the probability of successes
     (x=1) and failures (x=0).
@@ -361,8 +362,8 @@ class Bernoulli(Discrete):
     @classmethod
     def dist(
         cls,
-        p: Optional[DIST_PARAMETER_TYPES] = None,
-        logit_p: Optional[DIST_PARAMETER_TYPES] = None,
+        p: DIST_PARAMETER_TYPES | None = None,
+        logit_p: DIST_PARAMETER_TYPES | None = None,
         *args,
         **kwargs,
     ):
@@ -414,20 +415,26 @@ class Bernoulli(Discrete):
         )
 
 
-class DiscreteWeibullRV(RandomVariable):
+class DiscreteWeibullRV(SymbolicRandomVariable):
     name = "discrete_weibull"
-    ndim_supp = 0
-    ndims_params = [0, 0]
-    dtype = "int64"
+    extended_signature = "[rng],[size],(),()->[rng],()"
     _print_name = ("dWeibull", "\\operatorname{dWeibull}")
 
     @classmethod
-    def rng_fn(cls, rng, q, beta, size):
-        p = rng.uniform(size=size)
-        return np.ceil(np.power(np.log(1 - p) / np.log(q), 1.0 / beta)) - 1
+    def rv_op(cls, q, beta, *, size=None, rng=None):
+        q = pt.as_tensor(q)
+        beta = pt.as_tensor(beta)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
 
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(q, beta, ndims_params=cls.ndims_params)
 
-discrete_weibull = DiscreteWeibullRV()
+        next_rng, p = uniform(size=size, rng=rng).owner.outputs
+        draws = pt.ceil(pt.power(pt.log(1 - p) / pt.log(q), 1.0 / beta)) - 1
+        draws = draws.astype("int64")
+
+        return cls(inputs=[rng, size, q, beta], outputs=[next_rng, draws])(rng, size, q, beta)
 
 
 class DiscreteWeibull(Discrete):
@@ -479,7 +486,8 @@ class DiscreteWeibull(Discrete):
 
     """
 
-    rv_op = discrete_weibull
+    rv_type = DiscreteWeibullRV
+    rv_op = DiscreteWeibullRV.rv_op
 
     @classmethod
     def dist(cls, q: DIST_PARAMETER_TYPES, beta: DIST_PARAMETER_TYPES, *args, **kwargs):
@@ -698,10 +706,10 @@ class NegativeBinomial(Discrete):
     @classmethod
     def dist(
         cls,
-        mu: Optional[DIST_PARAMETER_TYPES] = None,
-        alpha: Optional[DIST_PARAMETER_TYPES] = None,
-        p: Optional[DIST_PARAMETER_TYPES] = None,
-        n: Optional[DIST_PARAMETER_TYPES] = None,
+        mu: DIST_PARAMETER_TYPES | None = None,
+        alpha: DIST_PARAMETER_TYPES | None = None,
+        p: DIST_PARAMETER_TYPES | None = None,
+        n: DIST_PARAMETER_TYPES | None = None,
         *args,
         **kwargs,
     ):
@@ -1005,8 +1013,7 @@ class HyperGeometric(Discrete):
 
 class DiscreteUniformRV(ScipyRandomVariable):
     name = "discrete_uniform"
-    ndim_supp = 0
-    ndims_params = [0, 0]
+    signature = "(),()->()"
     dtype = "int64"
     _print_name = ("DiscreteUniform", "\\operatorname{DiscreteUniform}")
 
@@ -1166,8 +1173,8 @@ class Categorical(Discrete):
     @classmethod
     def dist(
         cls,
-        p: Optional[np.ndarray] = None,
-        logit_p: Optional[float] = None,
+        p: np.ndarray | None = None,
+        logit_p: float | None = None,
         **kwargs,
     ):
         if p is not None and logit_p is not None:
@@ -1203,23 +1210,18 @@ class Categorical(Discrete):
 
     def logp(value, p):
         k = pt.shape(p)[-1]
-        p_ = p
         value_clip = pt.clip(value, 0, k - 1)
 
-        if p.ndim > 1:
-            if p.ndim > value_clip.ndim:
-                value_clip = pt.shape_padleft(value_clip, p_.ndim - value_clip.ndim)
-            elif p.ndim < value_clip.ndim:
-                p = pt.shape_padleft(p, value_clip.ndim - p_.ndim)
-            pattern = (p.ndim - 1, *range(p.ndim - 1))
-            a = pt.log(
-                pt.take_along_axis(
-                    p.dimshuffle(pattern),
-                    value_clip,
-                )
-            )
-        else:
-            a = pt.log(p[value_clip])
+        # In the standard case p has one more dimension than value
+        dim_diff = p.type.ndim - value.type.ndim
+        if dim_diff > 1:
+            # p brodacasts implicitly beyond value
+            value_clip = pt.shape_padleft(value_clip, dim_diff - 1)
+        elif dim_diff < 1:
+            # value broadcasts implicitly beyond p
+            p = pt.shape_padleft(p, 1 - dim_diff)
+
+        a = pt.log(pt.take_along_axis(p, value_clip[..., None], axis=-1).squeeze(-1))
 
         res = pt.switch(
             pt.or_(pt.lt(value, 0), pt.gt(value, k - 1)),
@@ -1229,43 +1231,15 @@ class Categorical(Discrete):
 
         return check_parameters(
             res,
-            0 <= p_,
-            p_ <= 1,
+            0 <= p,
+            p <= 1,
             pt.isclose(pt.sum(p, axis=-1), 1),
             msg="0 <= p <=1, sum(p) = 1",
         )
 
 
-class _OrderedLogistic(Categorical):
-    r"""
-    Underlying class for ordered logistic distributions.
-    See docs for the OrderedLogistic wrapper class for more details on how to use it in models.
-    """
-
-    rv_op = categorical
-
-    @classmethod
-    def dist(cls, eta: DIST_PARAMETER_TYPES, cutpoints: DIST_PARAMETER_TYPES, *args, **kwargs):
-        eta = pt.as_tensor_variable(eta)
-        cutpoints = pt.as_tensor_variable(cutpoints)
-
-        pa = sigmoid(cutpoints - pt.shape_padright(eta))
-        p_cum = pt.concatenate(
-            [
-                pt.zeros_like(pt.shape_padright(pa[..., 0])),
-                pa,
-                pt.ones_like(pt.shape_padright(pa[..., 0])),
-            ],
-            axis=-1,
-        )
-        p = p_cum[..., 1:] - p_cum[..., :-1]
-
-        return super().dist(p, *args, **kwargs)
-
-
 class OrderedLogistic:
-    R"""
-    Wrapper class for Ordered Logistic distributions.
+    R"""Ordered Logistic distribution.
 
     Useful for regression on ordinal data values whose values range
     from 1 to K as a function of some predictor, :math:`\eta`. The
@@ -1332,57 +1306,39 @@ class OrderedLogistic:
         plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
     """
 
-    def __new__(cls, name, *args, compute_p=True, **kwargs):
-        out_rv = _OrderedLogistic(name, *args, **kwargs)
+    def __new__(cls, name, eta, cutpoints, compute_p=True, **kwargs):
+        p = cls.compute_p(eta, cutpoints)
         if compute_p:
-            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[3], dims=kwargs.get("dims"))
+            p = pm.Deterministic(f"{name}_probs", p)
+        out_rv = Categorical(name, p=p, **kwargs)
         return out_rv
 
     @classmethod
-    def dist(cls, *args, **kwargs):
-        return _OrderedLogistic.dist(*args, **kwargs)
-
-
-class _OrderedProbit(Categorical):
-    r"""
-    Underlying class for ordered probit distributions.
-    See docs for the OrderedProbit wrapper class for more details on how to use it in models.
-    """
-
-    rv_op = categorical
+    def dist(cls, eta: DIST_PARAMETER_TYPES, cutpoints: DIST_PARAMETER_TYPES, **kwargs):
+        p = cls.compute_p(eta, cutpoints)
+        return Categorical.dist(p=p, **kwargs)
 
     @classmethod
-    def dist(
-        cls,
-        eta: DIST_PARAMETER_TYPES,
-        cutpoints: DIST_PARAMETER_TYPES,
-        sigma: DIST_PARAMETER_TYPES = 1.0,
-        *args,
-        **kwargs,
-    ):
+    def compute_p(cls, eta, cutpoints):
         eta = pt.as_tensor_variable(eta)
         cutpoints = pt.as_tensor_variable(cutpoints)
 
-        probits = pt.shape_padright(eta) - cutpoints
-        _log_p = pt.concatenate(
+        pa = sigmoid(cutpoints - pt.shape_padright(eta))
+        p_cum = pt.concatenate(
             [
-                pt.shape_padright(normal_lccdf(0, sigma, probits[..., 0])),
-                log_diff_normal_cdf(
-                    0, pt.shape_padright(sigma), probits[..., :-1], probits[..., 1:]
-                ),
-                pt.shape_padright(normal_lcdf(0, sigma, probits[..., -1])),
+                pt.zeros_like(pt.shape_padright(pa[..., 0])),
+                pa,
+                pt.ones_like(pt.shape_padright(pa[..., 0])),
             ],
             axis=-1,
         )
-        _log_p = pt.as_tensor_variable(_log_p)
-        p = pt.exp(_log_p)
-
-        return super().dist(p, *args, **kwargs)
+        p = p_cum[..., 1:] - p_cum[..., :-1]
+        return p
 
 
 class OrderedProbit:
     R"""
-    Wrapper class for Ordered Probit distributions.
+    Ordered Probit distributions.
 
     Useful for regression on ordinal data values whose values range
     from 1 to K as a function of some predictor, :math:`\eta`. The
@@ -1454,12 +1410,33 @@ class OrderedProbit:
         plt.hist(posterior["cutpoints"][1], 80, alpha=0.2, color='k');
     """
 
-    def __new__(cls, name, *args, compute_p=True, **kwargs):
-        out_rv = _OrderedProbit(name, *args, **kwargs)
+    def __new__(cls, name, eta, cutpoints, sigma=1, compute_p=True, **kwargs):
+        p = cls.compute_p(eta, cutpoints, sigma)
         if compute_p:
-            pm.Deterministic(f"{name}_probs", out_rv.owner.inputs[3], dims=kwargs.get("dims"))
+            p = pm.Deterministic(f"{name}_probs", p)
+        out_rv = Categorical(name, p=p, **kwargs)
         return out_rv
 
     @classmethod
-    def dist(cls, *args, **kwargs):
-        return _OrderedProbit.dist(*args, **kwargs)
+    def dist(cls, eta, cutpoints, sigma=1, **kwargs):
+        p = cls.compute_p(eta, cutpoints, sigma)
+        return Categorical.dist(p=p, **kwargs)
+
+    @classmethod
+    def compute_p(cls, eta, cutpoints, sigma):
+        eta = pt.as_tensor_variable(eta)
+        cutpoints = pt.as_tensor_variable(cutpoints)
+
+        probits = pt.shape_padright(eta) - cutpoints
+        log_p = pt.concatenate(
+            [
+                pt.shape_padright(normal_lccdf(0, sigma, probits[..., 0])),
+                log_diff_normal_cdf(
+                    0, pt.shape_padright(sigma), probits[..., :-1], probits[..., 1:]
+                ),
+                pt.shape_padright(normal_lcdf(0, sigma, probits[..., -1])),
+            ],
+            axis=-1,
+        )
+        p = pt.exp(log_p)
+        return p

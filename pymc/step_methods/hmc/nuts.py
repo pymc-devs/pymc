@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from collections import namedtuple
+from dataclasses import field
 
 import numpy as np
 
@@ -23,11 +24,18 @@ from pymc.pytensorf import floatX
 from pymc.stats.convergence import SamplerWarning
 from pymc.step_methods.compound import Competence
 from pymc.step_methods.hmc import integration
-from pymc.step_methods.hmc.base_hmc import BaseHMC, DivergenceInfo, HMCStepData
+from pymc.step_methods.hmc.base_hmc import BaseHMC, BaseHMCState, DivergenceInfo, HMCStepData
 from pymc.step_methods.hmc.integration import IntegrationError, State
+from pymc.step_methods.state import dataclass_state
 from pymc.vartypes import continuous_types
 
 __all__ = ["NUTS"]
+
+
+@dataclass_state
+class NUTSState(BaseHMCState):
+    max_treedepth: int = field(metadata={"frozen": True})
+    early_max_treedepth: int = field(metadata={"frozen": True})
 
 
 class NUTS(BaseHMC):
@@ -169,6 +177,14 @@ class NUTS(BaseHMC):
             of the scaling matrix.
         model: pymc.Model
             The model
+        rng : RandomGenerator
+            An object that can produce be used to produce the step method's
+            :py:class:`~numpy.random.Generator` object. Refer to
+            :py:func:`pymc.util.get_random_generator` for more information. The
+            resulting ``Generator`` object will be used stored in the step method
+            and used for accept/reject random selections. The step's ``Generator``
+            will also be used to spawn independent ``Generators`` that will be used
+            by the ``potential`` attribute.
         kwargs: passed to BaseHMC
 
         Notes
@@ -189,11 +205,11 @@ class NUTS(BaseHMC):
         else:
             max_treedepth = self.max_treedepth
 
-        tree = _Tree(len(p0), self.integrator, start, step_size, self.Emax)
+        tree = _Tree(len(p0), self.integrator, start, step_size, self.Emax, rng=self.rng)
 
         reached_max_treedepth = False
         for _ in range(max_treedepth):
-            direction = logbern(np.log(0.5)) * 2 - 1
+            direction = logbern(np.log(0.5), rng=self.rng) * 2 - 1
             divergence_info, turning = tree.extend(direction)
 
             if divergence_info or turning:
@@ -209,7 +225,6 @@ class NUTS(BaseHMC):
     @staticmethod
     def competence(var, has_grad):
         """Check how appropriate this class is for sampling a random variable."""
-
         if var.dtype in continuous_types and has_grad:
             return Competence.PREFERRED
         return Competence.INCOMPATIBLE
@@ -233,6 +248,7 @@ class _Tree:
         start: State,
         step_size: float,
         Emax: float,
+        rng: np.random.Generator,
     ):
         """Binary tree from the NUTS algorithm.
 
@@ -254,6 +270,7 @@ class _Tree:
         self.step_size = step_size
         self.Emax = Emax
         self.start_energy = start.energy
+        self.rng = rng
 
         self.left = self.right = start
         self.proposal = Proposal(start.q.data, start.q_grad, start.energy, start.model_logp, 0)
@@ -302,7 +319,7 @@ class _Tree:
             return diverging, turning
 
         size1, size2 = self.log_size, tree.log_size
-        if logbern(size2 - size1):
+        if logbern(size2 - size1, rng=self.rng):
             self.proposal = tree.proposal
 
         self.log_size = np.logaddexp(self.log_size, tree.log_size)
@@ -390,7 +407,7 @@ class _Tree:
                 turning = turning | turning1 | turning2
 
             log_size = np.logaddexp(tree1.log_size, tree2.log_size)
-            if logbern(tree2.log_size - log_size):
+            if logbern(tree2.log_size - log_size, rng=self.rng):
                 proposal = tree2.proposal
             else:
                 proposal = tree1.proposal

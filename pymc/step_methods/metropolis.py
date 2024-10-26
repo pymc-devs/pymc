@@ -11,7 +11,9 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from typing import Callable, Optional
+from collections.abc import Callable
+from dataclasses import field
+from typing import Any
 
 import numpy as np
 import numpy.random as nr
@@ -40,7 +42,8 @@ from pymc.step_methods.arraystep import (
     StatsType,
     metrop_select,
 )
-from pymc.step_methods.compound import Competence
+from pymc.step_methods.compound import Competence, StepMethodState
+from pymc.step_methods.state import dataclass_state
 
 __all__ = [
     "Metropolis",
@@ -67,29 +70,29 @@ class Proposal:
 
 
 class NormalProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).normal(scale=self.s)
 
 
 class UniformProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).uniform(low=-self.s, high=self.s, size=len(self.s))
 
 
 class CauchyProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).standard_cauchy(size=np.size(self.s)) * self.s
 
 
 class LaplaceProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         size = np.size(self.s)
         r = rng or nr
         return (r.standard_exponential(size=size) - r.standard_exponential(size=size)) * self.s
 
 
 class PoissonProposal(Proposal):
-    def __call__(self, rng: Optional[np.random.Generator] = None):
+    def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).poisson(lam=self.s, size=np.size(self.s)) - self.s
 
 
@@ -101,7 +104,7 @@ class MultivariateNormalProposal(Proposal):
         self.n = n
         self.chol = scipy.linalg.cholesky(s, lower=True)
 
-    def __call__(self, num_draws=None, rng: Optional[np.random.Generator] = None):
+    def __call__(self, num_draws=None, rng: np.random.Generator | None = None):
         rng_ = rng or nr
         if num_draws is not None:
             b = rng_.normal(size=(self.n, num_draws))
@@ -111,8 +114,27 @@ class MultivariateNormalProposal(Proposal):
             return np.dot(self.chol, b)
 
 
+@dataclass_state
+class MetropolisState(StepMethodState):
+    scaling: np.ndarray
+    tune: bool
+    steps_until_tune: float
+    tune_interval: float
+    accepted_sum: np.ndarray
+    accept_rate_iter: np.ndarray
+    accepted_iter: np.ndarray
+    enum_dims: np.ndarray
+
+    discrete: np.ndarray = field(metadata={"frozen": True})
+    any_discrete: bool = field(metadata={"frozen": True})
+    all_discrete: bool = field(metadata={"frozen": True})
+    elemwise_update: bool = field(metadata={"frozen": True})
+    _untuned_settings: dict[str, np.ndarray | float] = field(metadata={"frozen": True})
+    mode: Any = field(metadata={"frozen": True})
+
+
 class Metropolis(ArrayStepShared):
-    """Metropolis-Hastings sampling step"""
+    """Metropolis-Hastings sampling step."""
 
     name = "metropolis"
 
@@ -124,6 +146,8 @@ class Metropolis(ArrayStepShared):
         "scaling": (np.float64, []),
     }
 
+    _state_class = MetropolisState
+
     def __init__(
         self,
         vars=None,
@@ -134,9 +158,10 @@ class Metropolis(ArrayStepShared):
         tune_interval=100,
         model=None,
         mode=None,
+        rng=None,
         **kwargs,
     ):
-        """Create an instance of a Metropolis stepper
+        """Create an instance of a Metropolis stepper.
 
         Parameters
         ----------
@@ -157,8 +182,11 @@ class Metropolis(ArrayStepShared):
             Optional model for sampling step. Defaults to None (taken from context).
         mode: string or `Mode` instance.
             compilation mode passed to PyTensor functions
+        rng: RandomGenerator
+            An object that can produce be used to produce the step method's
+            :py:class:`~numpy.random.Generator` object. Refer to
+            :py:func:`pymc.util.get_random_generator` for more information.
         """
-
         model = pm.modelcontext(model)
         initial_values = model.initial_point()
 
@@ -178,7 +206,7 @@ class Metropolis(ArrayStepShared):
         elif S.ndim == 2:
             self.proposal_dist = MultivariateNormalProposal(S)
         else:
-            raise ValueError("Invalid rank for variance: %s" % S.ndim)
+            raise ValueError(f"Invalid rank for variance: {S.ndim}")
 
         self.scaling = np.atleast_1d(scaling).astype("d")
         self.tune = tune
@@ -216,17 +244,17 @@ class Metropolis(ArrayStepShared):
         self.accepted_sum = np.zeros(dims, dtype=int)
 
         # remember initial settings before tuning so they can be reset
-        self._untuned_settings = dict(scaling=self.scaling, steps_until_tune=tune_interval)
+        self._untuned_settings = {"scaling": self.scaling, "steps_until_tune": tune_interval}
 
         # TODO: This is not being used when compiling the logp function!
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
         self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
-        super().__init__(vars, shared)
+        super().__init__(vars, shared, rng=rng)
 
     def reset_tuning(self):
-        """Resets the tuned sampler parameters to their initial values."""
+        """Reset the tuned sampler parameters to their initial values."""
         for attr, initial_value in self._untuned_settings.items():
             setattr(self, attr, initial_value)
         self.accepted_sum[:] = 0
@@ -243,7 +271,7 @@ class Metropolis(ArrayStepShared):
             self.steps_until_tune = self.tune_interval
             self.accepted_sum[:] = 0
 
-        delta = self.proposal_dist() * self.scaling
+        delta = self.proposal_dist(rng=self.rng) * self.scaling
 
         if self.any_discrete:
             if self.all_discrete:
@@ -260,11 +288,11 @@ class Metropolis(ArrayStepShared):
             q0d = q0d.copy()
             q_temp = q0d.copy()
             # Shuffle order of updates (probably we don't need to do this in every step)
-            np.random.shuffle(self.enum_dims)
+            self.rng.shuffle(self.enum_dims)
             for i in self.enum_dims:
                 q_temp[i] = q[i]
                 accept_rate_i = self.delta_logp(q_temp, q0d)
-                q_temp_, accepted_i = metrop_select(accept_rate_i, q_temp, q0d)
+                q_temp_, accepted_i = metrop_select(accept_rate_i, q_temp, q0d, rng=self.rng)
                 q_temp[i] = q0d[i] = q_temp_[i]
                 self.accept_rate_iter[i] = accept_rate_i
                 self.accepted_iter[i] = accepted_i
@@ -272,7 +300,7 @@ class Metropolis(ArrayStepShared):
             q = q_temp
         else:
             accept_rate = self.delta_logp(q, q0d)
-            q, accepted = metrop_select(accept_rate, q, q0d)
+            q, accepted = metrop_select(accept_rate, q, q0d, rng=self.rng)
             self.accept_rate_iter = accept_rate
             self.accepted_iter = accepted
             self.accepted_sum += accepted
@@ -295,8 +323,9 @@ class Metropolis(ArrayStepShared):
 
 def tune(scale, acc_rate):
     """
-    Tunes the scaling parameter for the proposal distribution
-    according to the acceptance rate over the last tune_interval:
+    Tune the scaling parameter for the proposal distribution.
+
+    Uses the acceptance rate over the last tune_interval.
 
     Rate    Variance adaptation
     ----    -------------------
@@ -342,8 +371,17 @@ def tune(scale, acc_rate):
     )
 
 
+@dataclass_state
+class BinaryMetropolisState(StepMethodState):
+    tune: bool
+    accepted: int
+    scaling: float
+    tune_interval: int
+    steps_until_tune: int
+
+
 class BinaryMetropolis(ArrayStep):
-    """Metropolis-Hastings optimized for binary variables
+    """Metropolis-Hastings optimized for binary variables.
 
     Parameters
     ----------
@@ -357,7 +395,10 @@ class BinaryMetropolis(ArrayStep):
         The frequency of tuning. Defaults to 100 iterations.
     model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
-
+    rng: RandomGenerator
+        An object that can produce be used to produce the step method's
+        :py:class:`~numpy.random.Generator` object. Refer to
+        :py:func:`pymc.util.get_random_generator` for more information.
     """
 
     name = "binary_metropolis"
@@ -368,7 +409,9 @@ class BinaryMetropolis(ArrayStep):
         "p_jump": (np.float64, []),
     }
 
-    def __init__(self, vars, scaling=1.0, tune=True, tune_interval=100, model=None):
+    _state_class = BinaryMetropolisState
+
+    def __init__(self, vars, scaling=1.0, tune=True, tune_interval=100, model=None, rng=None):
         model = pm.modelcontext(model)
 
         self.scaling = scaling
@@ -379,10 +422,10 @@ class BinaryMetropolis(ArrayStep):
 
         vars = get_value_vars_from_user_vars(vars, model)
 
-        if not all([v.dtype in pm.discrete_types for v in vars]):
+        if not all(v.dtype in pm.discrete_types for v in vars):
             raise ValueError("All variables must be Bernoulli for BinaryMetropolis")
 
-        super().__init__(vars, [model.compile_logp()])
+        super().__init__(vars, [model.compile_logp()], rng=rng)
 
     def astep(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         logp = args[0]
@@ -393,7 +436,7 @@ class BinaryMetropolis(ArrayStep):
         # Convert adaptive_scale_factor to a jump probability
         p_jump = 1.0 - 0.5**self.scaling
 
-        rand_array = nr.random(q0.shape)
+        rand_array = self.rng.random(q0.shape)
         q = np.copy(q0)
         # Locations where switches occur, according to p_jump
         switch_locs = rand_array < p_jump
@@ -401,7 +444,7 @@ class BinaryMetropolis(ArrayStep):
         logp_q = logp(RaveledVars(q, point_map_info))
 
         accept = logp_q - logp_q0
-        q_new, accepted = metrop_select(accept, q, q0)
+        q_new, accepted = metrop_select(accept, q, q0, rng=self.rng)
         self.accepted += accepted
 
         stats = {
@@ -414,10 +457,7 @@ class BinaryMetropolis(ArrayStep):
 
     @staticmethod
     def competence(var):
-        """
-        BinaryMetropolis is only suitable for binary (bool)
-        and Categorical variables with k=1.
-        """
+        """BinaryMetropolis is only suitable for binary (bool) and Categorical variables with k=1."""
         distribution = getattr(var.owner, "op", None)
 
         if isinstance(distribution, BernoulliRV):
@@ -426,11 +466,11 @@ class BinaryMetropolis(ArrayStep):
         if isinstance(distribution, CategoricalRV):
             # TODO: We could compute the initial value of `k`
             # if we had a model object.
-            # k_graph = var.owner.inputs[3].shape[-1]
+            # k_graph = var.owner.inputs[-1].shape[-1]
             # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
             # k = model.fn(k_graph)(initial_point)
             try:
-                k = var.owner.inputs[3].shape[-1].eval()
+                k = var.owner.inputs[-1].shape[-1].eval()
                 if k == 2:
                     return Competence.COMPATIBLE
             except MissingInputError:
@@ -438,8 +478,16 @@ class BinaryMetropolis(ArrayStep):
         return Competence.INCOMPATIBLE
 
 
+@dataclass_state
+class BinaryGibbsMetropolisState(StepMethodState):
+    tune: bool
+    transit_p: int
+    shuffle_dims: bool
+    order: list
+
+
 class BinaryGibbsMetropolis(ArrayStep):
-    """A Metropolis-within-Gibbs step method optimized for binary variables
+    """A Metropolis-within-Gibbs step method optimized for binary variables.
 
     Parameters
     ----------
@@ -453,7 +501,10 @@ class BinaryGibbsMetropolis(ArrayStep):
         which resulting in more efficient antithetical sampling. Default is 0.8
     model: PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
-
+    rng: RandomGenerator
+        An object that can produce be used to produce the step method's
+        :py:class:`~numpy.random.Generator` object. Refer to
+        :py:func:`pymc.util.get_random_generator` for more information.
     """
 
     name = "binary_gibbs_metropolis"
@@ -462,7 +513,9 @@ class BinaryGibbsMetropolis(ArrayStep):
         "tune": (bool, []),
     }
 
-    def __init__(self, vars, order="random", transit_p=0.8, model=None):
+    _state_class = BinaryGibbsMetropolisState
+
+    def __init__(self, vars, order="random", transit_p=0.8, model=None, rng=None):
         model = pm.modelcontext(model)
 
         # Doesn't actually tune, but it's required to emit a sampler stat
@@ -485,10 +538,10 @@ class BinaryGibbsMetropolis(ArrayStep):
             self.shuffle_dims = False
             self.order = order
 
-        if not all([v.dtype in pm.discrete_types for v in vars]):
+        if not all(v.dtype in pm.discrete_types for v in vars):
             raise ValueError("All variables must be binary for BinaryGibbsMetropolis")
 
-        super().__init__(vars, [model.compile_logp()])
+        super().__init__(vars, [model.compile_logp()], rng=rng)
 
     def reset_tuning(self):
         # There are no tuning parameters in this step method.
@@ -498,7 +551,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         logp: Callable[[RaveledVars], np.ndarray] = args[0]
         order = self.order
         if self.shuffle_dims:
-            nr.shuffle(order)
+            self.rng.shuffle(order)
 
         q = RaveledVars(np.copy(apoint.data), apoint.point_map_info)
 
@@ -507,10 +560,12 @@ class BinaryGibbsMetropolis(ArrayStep):
         for idx in order:
             # No need to do metropolis update if the same value is proposed,
             # as you will get the same value regardless of accepted or reject
-            if nr.rand() < self.transit_p:
+            if self.rng.random() < self.transit_p:
                 curr_val, q.data[idx] = q.data[idx], True - q.data[idx]
                 logp_prop = logp(q)
-                q.data[idx], accepted = metrop_select(logp_prop - logp_curr, q.data[idx], curr_val)
+                q.data[idx], accepted = metrop_select(
+                    logp_prop - logp_curr, q.data[idx], curr_val, rng=self.rng
+                )
                 if accepted:
                     logp_curr = logp_prop
 
@@ -521,10 +576,7 @@ class BinaryGibbsMetropolis(ArrayStep):
 
     @staticmethod
     def competence(var):
-        """
-        BinaryMetropolis is only suitable for Bernoulli
-        and Categorical variables with k=2.
-        """
+        """BinaryMetropolis is only suitable for Bernoulli and Categorical variables with k=2."""
         distribution = getattr(var.owner, "op", None)
 
         if isinstance(distribution, BernoulliRV):
@@ -533,16 +585,23 @@ class BinaryGibbsMetropolis(ArrayStep):
         if isinstance(distribution, CategoricalRV):
             # TODO: We could compute the initial value of `k`
             # if we had a model object.
-            # k_graph = var.owner.inputs[3].shape[-1]
+            # k_graph = var.owner.inputs[-1].shape[-1]
             # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
             # k = model.fn(k_graph)(initial_point)
             try:
-                k = var.owner.inputs[3].shape[-1].eval()
+                k = var.owner.inputs[-1].shape[-1].eval()
                 if k == 2:
                     return Competence.IDEAL
             except MissingInputError:
                 pass
         return Competence.INCOMPATIBLE
+
+
+@dataclass_state
+class CategoricalGibbsMetropolisState(StepMethodState):
+    shuffle_dims: bool
+    dimcats: list[tuple]
+    tune: bool
 
 
 class CategoricalGibbsMetropolis(ArrayStep):
@@ -561,7 +620,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
         "tune": (bool, []),
     }
 
-    def __init__(self, vars, proposal="uniform", order="random", model=None):
+    _state_class = CategoricalGibbsMetropolisState
+
+    def __init__(self, vars, proposal="uniform", order="random", model=None, rng=None):
         model = pm.modelcontext(model)
 
         vars = get_value_vars_from_user_vars(vars, model)
@@ -580,7 +641,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
             distr = getattr(rv_var.owner, "op", None)
 
             if isinstance(distr, CategoricalRV):
-                k_graph = rv_var.owner.inputs[3].shape[-1]
+                k_graph = rv_var.owner.inputs[-1].shape[-1]
                 (k_graph,) = model.replace_rvs_by_values((k_graph,))
                 k = model.compile_fn(k_graph, inputs=model.value_vars, on_unused_input="ignore")(
                     initial_point
@@ -615,7 +676,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
         # that indicates whether a draw was done in a tuning phase.
         self.tune = True
 
-        super().__init__(vars, [model.compile_logp()])
+        super().__init__(vars, [model.compile_logp()], rng=rng)
 
     def reset_tuning(self):
         # There are no tuning parameters in this step method.
@@ -628,15 +689,17 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         dimcats = self.dimcats
         if self.shuffle_dims:
-            nr.shuffle(dimcats)
+            self.rng.shuffle(dimcats)
 
         q = RaveledVars(np.copy(q0), point_map_info)
         logp_curr = logp(q)
 
         for dim, k in dimcats:
-            curr_val, q.data[dim] = q.data[dim], sample_except(k, q.data[dim])
+            curr_val, q.data[dim] = q.data[dim], sample_except(k, q.data[dim], rng=self.rng)
             logp_prop = logp(q)
-            q.data[dim], accepted = metrop_select(logp_prop - logp_curr, q.data[dim], curr_val)
+            q.data[dim], accepted = metrop_select(
+                logp_prop - logp_curr, q.data[dim], curr_val, rng=self.rng
+            )
             if accepted:
                 logp_curr = logp_prop
 
@@ -652,7 +715,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         dimcats = self.dimcats
         if self.shuffle_dims:
-            nr.shuffle(dimcats)
+            self.rng.shuffle(dimcats)
 
         q = RaveledVars(np.copy(q0), point_map_info)
         logp_curr = logp(q)
@@ -677,9 +740,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
         probs = scipy.special.softmax(log_probs, axis=0)
         prob_curr, probs[given_cat] = probs[given_cat], 0.0
         probs /= 1.0 - prob_curr
-        proposed_cat = nr.choice(candidates, p=probs)
+        proposed_cat = self.rng.choice(candidates, p=probs)
         accept_ratio = (1.0 - prob_curr) / (1.0 - probs[proposed_cat])
-        if not np.isfinite(accept_ratio) or nr.uniform() >= accept_ratio:
+        if not np.isfinite(accept_ratio) or self.rng.uniform() >= accept_ratio:
             q.data[dim] = given_cat
             return logp_curr
         q.data[dim] = proposed_cat
@@ -687,20 +750,17 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
     @staticmethod
     def competence(var):
-        """
-        CategoricalGibbsMetropolis is only suitable for Bernoulli and
-        Categorical variables.
-        """
+        """CategoricalGibbsMetropolis is only suitable for Bernoulli and Categorical variables."""
         distribution = getattr(var.owner, "op", None)
 
         if isinstance(distribution, CategoricalRV):
             # TODO: We could compute the initial value of `k`
             # if we had a model object.
-            # k_graph = var.owner.inputs[3].shape[-1]
+            # k_graph = var.owner.inputs[-1].shape[-1]
             # (k_graph,), _ = rvs_to_value_vars((k_graph,), apply_transforms=True)
             # k = model.fn(k_graph)(initial_point)
             try:
-                k = var.owner.inputs[3].shape[-1].eval()
+                k = var.owner.inputs[-1].shape[-1].eval()
                 if k > 2:
                     return Competence.IDEAL
             except MissingInputError:
@@ -712,6 +772,18 @@ class CategoricalGibbsMetropolis(ArrayStep):
             return Competence.COMPATIBLE
 
         return Competence.INCOMPATIBLE
+
+
+@dataclass_state
+class DEMetropolisState(StepMethodState):
+    scaling: np.ndarray
+    lamb: float
+    tune: str | None
+    tune_interval: int
+    steps_until_tune: int
+    accepted: int
+
+    mode: Any = field(metadata={"frozen": True})
 
 
 class DEMetropolis(PopulationArrayStepShared):
@@ -739,6 +811,10 @@ class DEMetropolis(PopulationArrayStepShared):
         Optional model for sampling step. Defaults to None (taken from context).
     mode:  string or `Mode` instance.
         compilation mode passed to PyTensor functions
+    rng: RandomGenerator
+        An object that can produce be used to produce the step method's
+        :py:class:`~numpy.random.Generator` object. Refer to
+        :py:func:`pymc.util.get_random_generator` for more information.
 
     References
     ----------
@@ -760,6 +836,8 @@ class DEMetropolis(PopulationArrayStepShared):
         "lambda": (np.float64, []),
     }
 
+    _state_class = DEMetropolisState
+
     def __init__(
         self,
         vars=None,
@@ -767,10 +845,11 @@ class DEMetropolis(PopulationArrayStepShared):
         proposal_dist=None,
         lamb=None,
         scaling=0.001,
-        tune: Optional[str] = "scaling",
+        tune: str | None = "scaling",
         tune_interval=100,
         model=None,
         mode=None,
+        rng=None,
         **kwargs,
     ):
         model = pm.modelcontext(model)
@@ -806,7 +885,7 @@ class DEMetropolis(PopulationArrayStepShared):
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
         self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
-        super().__init__(vars, shared)
+        super().__init__(vars, shared, rng=rng)
 
     def astep(self, q0: RaveledVars) -> tuple[RaveledVars, StatsType]:
         point_map_info = q0.point_map_info
@@ -821,18 +900,20 @@ class DEMetropolis(PopulationArrayStepShared):
             self.steps_until_tune = self.tune_interval
             self.accepted = 0
 
-        epsilon = self.proposal_dist() * self.scaling
+        epsilon = self.proposal_dist(rng=self.rng) * self.scaling
 
         # differential evolution proposal
         # select two other chains
-        ir1, ir2 = np.random.choice(self.other_chains, 2, replace=False)
-        r1 = DictToArrayBijection.map(self.population[ir1])
-        r2 = DictToArrayBijection.map(self.population[ir2])
+        if self.other_chains is None:  # pragma: no cover
+            raise RuntimeError("Population sampler has not been linked to the other chains")
+        ir1, ir2 = self.rng.choice(self.other_chains, 2, replace=False)
+        r1 = DictToArrayBijection.map(self.population[ir1])  # type: ignore[index]
+        r2 = DictToArrayBijection.map(self.population[ir2])  # type: ignore[index]
         # propose a jump
         q = floatX(q0d + self.lamb * (r1.data - r2.data) + epsilon)
 
         accept = self.delta_logp(q, q0d)
-        q_new, accepted = metrop_select(accept, q, q0d)
+        q_new, accepted = metrop_select(accept, q, q0d, rng=self.rng)
         self.accepted += accepted
 
         self.steps_until_tune -= 1
@@ -852,6 +933,21 @@ class DEMetropolis(PopulationArrayStepShared):
         if var.dtype in pm.discrete_types:
             return Competence.INCOMPATIBLE
         return Competence.COMPATIBLE
+
+
+@dataclass_state
+class DEMetropolisZState(StepMethodState):
+    scaling: np.ndarray
+    lamb: float
+    tune: bool
+    tune_target: str | None
+    tune_interval: int
+    steps_until_tune: int
+    accepted: int
+    _history: list
+
+    _untuned_settings: dict[str, np.ndarray | float] = field(metadata={"frozen": True})
+    mode: Any = field(metadata={"frozen": True})
 
 
 class DEMetropolisZ(ArrayStepShared):
@@ -883,6 +979,10 @@ class DEMetropolisZ(ArrayStepShared):
         Optional model for sampling step. Defaults to None (taken from context).
     mode:  string or `Mode` instance.
         compilation mode passed to PyTensor functions
+    rng: RandomGenerator
+        An object that can produce be used to produce the step method's
+        :py:class:`~numpy.random.Generator` object. Refer to
+        :py:func:`pymc.util.get_random_generator` for more information.
 
     References
     ----------
@@ -903,6 +1003,8 @@ class DEMetropolisZ(ArrayStepShared):
         "lambda": (np.float64, []),
     }
 
+    _state_class = DEMetropolisZState
+
     def __init__(
         self,
         vars=None,
@@ -910,11 +1012,12 @@ class DEMetropolisZ(ArrayStepShared):
         proposal_dist=None,
         lamb=None,
         scaling=0.001,
-        tune: Optional[str] = "scaling",
+        tune: str | None = "scaling",
         tune_interval=100,
         tune_drop_fraction: float = 0.9,
         model=None,
         mode=None,
+        rng=None,
         **kwargs,
     ):
         model = pm.modelcontext(model)
@@ -951,21 +1054,21 @@ class DEMetropolisZ(ArrayStepShared):
         # cache local history for the Z-proposals
         self._history: list[np.ndarray] = []
         # remember initial settings before tuning so they can be reset
-        self._untuned_settings = dict(
-            scaling=self.scaling,
-            lamb=self.lamb,
-            steps_until_tune=tune_interval,
-            accepted=self.accepted,
-        )
+        self._untuned_settings = {
+            "scaling": self.scaling,
+            "lamb": self.lamb,
+            "steps_until_tune": tune_interval,
+            "accepted": self.accepted,
+        }
 
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
         self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
-        super().__init__(vars, shared)
+        super().__init__(vars, shared, rng=rng)
 
     def reset_tuning(self):
-        """Resets the tuned sampler parameters and history to their initial values."""
+        """Reset the tuned sampler parameters and history to their initial values."""
         # history can't be reset via the _untuned_settings dict because it's a list
         self._history = []
         for attr, initial_value in self._untuned_settings.items():
@@ -986,17 +1089,17 @@ class DEMetropolisZ(ArrayStepShared):
             self.steps_until_tune = self.tune_interval
             self.accepted = 0
 
-        epsilon = self.proposal_dist() * self.scaling
+        epsilon = self.proposal_dist(rng=self.rng) * self.scaling
 
         it = len(self._history)
         # use the DE-MCMC-Z proposal scheme as soon as the history has 2 entries
         if it > 1:
             # differential evolution proposal
             # select two other chains
-            iz1 = np.random.randint(it)
-            iz2 = np.random.randint(it)
+            iz1 = self.rng.integers(it)
+            iz2 = self.rng.integers(it)
             while iz2 == iz1:
-                iz2 = np.random.randint(it)
+                iz2 = self.rng.integers(it)
 
             z1 = self._history[iz1]
             z2 = self._history[iz2]
@@ -1007,7 +1110,7 @@ class DEMetropolisZ(ArrayStepShared):
             q = floatX(q0d + epsilon)
 
         accept = self.delta_logp(q, q0d)
-        q_new, accepted = metrop_select(accept, q, q0d)
+        q_new, accepted = metrop_select(accept, q, q0d, rng=self.rng)
         self.accepted += accepted
         self._history.append(q_new)
 
@@ -1024,8 +1127,9 @@ class DEMetropolisZ(ArrayStepShared):
         return RaveledVars(q_new, point_map_info), [stats]
 
     def stop_tuning(self):
-        """At the end of the tuning phase, this method removes the first x% of the history
-        so future proposals are not informed by unconverged tuning iterations.
+        """Remove the first x% of the history at the end of the tuning phase.
+
+        This is so future proposals are not informed by unconverged tuning iterations.
         """
         it = len(self._history)
         n_drop = int(self.tune_drop_fraction * it)
@@ -1039,8 +1143,8 @@ class DEMetropolisZ(ArrayStepShared):
         return Competence.COMPATIBLE
 
 
-def sample_except(limit, excluded):
-    candidate = nr.choice(limit - 1)
+def sample_except(limit, excluded, rng: np.random.Generator):
+    candidate = rng.choice(limit - 1)
     if candidate >= excluded:
         candidate += 1
     return candidate

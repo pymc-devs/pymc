@@ -26,11 +26,14 @@ from collections.abc import Sequence
 import cloudpickle
 import numpy as np
 
-from fastprogress.fastprogress import progress_bar
+from rich.console import Console
+from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
+from rich.theme import Theme
+from threadpoolctl import threadpool_limits
 
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
-from pymc.util import RandomSeed
+from pymc.util import CustomProgress, default_progress_theme
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +50,7 @@ class RemoteTraceback(Exception):
         self.tb = tb
 
     def __str__(self):
+        """Return a string representation of the object."""
         return self.tb
 
 
@@ -55,9 +59,10 @@ class ExceptionWithTraceback:
         tb = traceback.format_exception(type(exc), exc, tb)
         tb = "".join(tb)
         self.exc = exc
-        self.tb = '\n"""\n%s"""' % tb
+        self.tb = f'\n"""\n{tb}"""'
 
     def __reduce__(self):
+        """Return a tuple to pickle."""
         return rebuild_exc, (self.exc, self.tb)
 
 
@@ -77,6 +82,7 @@ def rebuild_exc(exc, tb):
 
 class _Process:
     """Separate process for each chain.
+
     We communicate with the main process using a pipe,
     and send finished samples using shared memory.
     """
@@ -90,16 +96,21 @@ class _Process:
         shared_point,
         draws: int,
         tune: int,
-        seed,
+        rng: np.random.Generator,
+        seed_seq: np.random.SeedSequence,
+        blas_cores,
     ):
+        # For some strange reason, spawn multiprocessing doesn't copy the rng
+        # seed sequence, so we have to rebuild it from scratch
+        rng = np.random.Generator(type(rng.bit_generator)(seed_seq))
         self._msg_pipe = msg_pipe
         self._step_method = step_method
         self._step_method_is_pickled = step_method_is_pickled
         self._shared_point = shared_point
-        self._seed = seed
-        self._at_seed = seed + 1
+        self._rng = rng
         self._draws = draws
         self._tune = tune
+        self._blas_cores = blas_cores
 
     def _unpickle_step_method(self):
         unpickle_error = (
@@ -114,22 +125,23 @@ class _Process:
                 raise ValueError(unpickle_error)
 
     def run(self):
-        try:
-            # We do not create this in __init__, as pickling this
-            # would destroy the shared memory.
-            self._unpickle_step_method()
-            self._point = self._make_numpy_refs()
-            self._start_loop()
-        except KeyboardInterrupt:
-            pass
-        except BaseException as e:
-            e = ExceptionWithTraceback(e, e.__traceback__)
-            # Send is not blocking so we have to force a wait for the abort
-            # message
-            self._msg_pipe.send(("error", e))
-            self._wait_for_abortion()
-        finally:
-            self._msg_pipe.close()
+        with threadpool_limits(limits=self._blas_cores):
+            try:
+                # We do not create this in __init__, as pickling this
+                # would destroy the shared memory.
+                self._unpickle_step_method()
+                self._point = self._make_numpy_refs()
+                self._start_loop()
+            except KeyboardInterrupt:
+                pass
+            except BaseException as e:
+                e = ExceptionWithTraceback(e, e.__traceback__)
+                # Send is not blocking so we have to force a wait for the abort
+                # message
+                self._msg_pipe.send(("error", e))
+                self._wait_for_abortion()
+            finally:
+                self._msg_pipe.close()
 
     def _wait_for_abortion(self):
         while True:
@@ -153,7 +165,7 @@ class _Process:
         return self._msg_pipe.recv()
 
     def _start_loop(self):
-        np.random.seed(self._seed)
+        self._step_method.set_rng(self._rng)
 
         draw = 0
         tuning = True
@@ -204,12 +216,13 @@ class ProcessAdapter:
         step_method,
         step_method_pickled,
         chain: int,
-        seed,
+        rng: np.random.Generator,
         start: dict[str, np.ndarray],
+        blas_cores,
         mp_ctx,
     ):
         self.chain = chain
-        process_name = "worker_chain_%s" % chain
+        process_name = f"worker_chain_{chain}"
         self._msg_pipe, remote_conn = multiprocessing.Pipe()
 
         self._shared_point = {}
@@ -221,7 +234,7 @@ class ProcessAdapter:
                 size *= int(dim)
             size *= dtype.itemsize
             if size != ctypes.c_size_t(size).value:
-                raise ValueError("Variable %s is too large" % name)
+                raise ValueError(f"Variable {name} is too large")
 
             array = mp_ctx.RawArray("c", size)
             self._shared_point[name] = (array, shape, dtype)
@@ -253,7 +266,9 @@ class ProcessAdapter:
                 self._shared_point,
                 draws,
                 tune,
-                seed,
+                rng,
+                rng.bit_generator.seed_seq,
+                blas_cores,
             ),
         )
         self._process.start()
@@ -263,9 +278,7 @@ class ProcessAdapter:
 
     @property
     def shared_point_view(self):
-        """May only be written to or read between a `recv_draw`
-        call from the process and a `write_next` or `abort` call.
-        """
+        """May only be written to or read between a `recv_draw` call from the process and a `write_next` or `abort` call."""
         if not self._readable:
             raise RuntimeError()
         return self._point
@@ -351,8 +364,8 @@ class ProcessAdapter:
                     raise multiprocessing.TimeoutError()
                 process.join(timeout)
         except multiprocessing.TimeoutError:
-            logger.warn(
-                "Chain processes did not terminate as expected. " "Terminating forcefully..."
+            logger.warning(
+                "Chain processes did not terminate as expected. Terminating forcefully..."
             )
             for process in processes:
                 process.terminate()
@@ -371,14 +384,16 @@ class ParallelSampler:
         tune: int,
         chains: int,
         cores: int,
-        seeds: Sequence["RandomSeed"],
+        rngs: Sequence[np.random.Generator],
         start_points: Sequence[dict[str, np.ndarray]],
         step_method,
         progressbar: bool = True,
+        progressbar_theme: Theme | None = default_progress_theme,
+        blas_cores: int | None = None,
         mp_ctx=None,
     ):
-        if any(len(arg) != chains for arg in [seeds, start_points]):
-            raise ValueError("Number of seeds and start_points must be %s." % chains)
+        if any(len(arg) != chains for arg in [rngs, start_points]):
+            raise ValueError(f"Number of rngs and start_points must be {chains}.")
 
         if mp_ctx is None or isinstance(mp_ctx, str):
             # Closes issue https://github.com/pymc-devs/pymc/issues/3849
@@ -406,11 +421,12 @@ class ParallelSampler:
                 step_method,
                 step_method_pickled,
                 chain,
-                seed,
+                rng,
                 start,
+                blas_cores,
                 mp_ctx,
             )
-            for chain, seed, start in zip(range(chains), seeds, start_points)
+            for chain, rng, start in zip(range(chains), rngs, start_points)
         ]
 
         self._inactive = self._samplers.copy()
@@ -420,14 +436,22 @@ class ParallelSampler:
 
         self._in_context = False
 
-        self._progress = None
+        self._progress = CustomProgress(
+            "[progress.description]{task.description}",
+            BarColumn(),
+            "[progress.percentage]{task.percentage:>3.0f}%",
+            TimeRemainingColumn(),
+            TextColumn("/"),
+            TimeElapsedColumn(),
+            console=Console(theme=progressbar_theme),
+            disable=not progressbar,
+        )
+        self._show_progress = progressbar
         self._divergences = 0
-        self._total_draws = 0
+        self._completed_draws = 0
+        self._total_draws = chains * (draws + tune)
         self._desc = "Sampling {0._chains:d} chains, {0._divergences:,d} divergences"
         self._chains = chains
-        if progressbar:
-            self._progress = progress_bar(range(chains * (draws + tune)), display=progressbar)
-            self._progress.comment = self._desc.format(self)
 
     def _make_active(self):
         while self._inactive and len(self._active) < self._max_active:
@@ -437,47 +461,57 @@ class ParallelSampler:
             self._active.append(proc)
 
     def __iter__(self):
+        """Return an iterator over draws."""
         if not self._in_context:
             raise ValueError("Use ParallelSampler as context manager.")
         self._make_active()
 
-        if self._active and self._progress:
-            self._progress.update(self._total_draws)
+        with self._progress as progress:
+            task = progress.add_task(
+                self._desc.format(self),
+                completed=self._completed_draws,
+                total=self._total_draws,
+            )
 
-        while self._active:
-            draw = ProcessAdapter.recv_draw(self._active)
-            proc, is_last, draw, tuning, stats = draw
-            self._total_draws += 1
-            if not tuning and stats and stats[0].get("diverging"):
-                self._divergences += 1
-                if self._progress:
-                    self._progress.comment = self._desc.format(self)
-            if self._progress:
-                self._progress.update(self._total_draws)
+            while self._active:
+                draw = ProcessAdapter.recv_draw(self._active)
+                proc, is_last, draw, tuning, stats = draw
+                self._completed_draws += 1
+                if not tuning and stats and stats[0].get("diverging"):
+                    self._divergences += 1
+                progress.update(
+                    task,
+                    completed=self._completed_draws,
+                    total=self._total_draws,
+                    description=self._desc.format(self),
+                )
 
-            if is_last:
-                proc.join()
-                self._active.remove(proc)
-                self._finished.append(proc)
-                self._make_active()
+                if is_last:
+                    proc.join()
+                    self._active.remove(proc)
+                    self._finished.append(proc)
+                    self._make_active()
+                    progress.update(task, description=self._desc.format(self), refresh=True)
 
-            # We could also yield proc.shared_point_view directly,
-            # and only call proc.write_next() after the yield returns.
-            # This seems to be faster overally though, as the worker
-            # loses less time waiting.
-            point = {name: val.copy() for name, val in proc.shared_point_view.items()}
+                # We could also yield proc.shared_point_view directly,
+                # and only call proc.write_next() after the yield returns.
+                # This seems to be faster overally though, as the worker
+                # loses less time waiting.
+                point = {name: val.copy() for name, val in proc.shared_point_view.items()}
 
-            # Already called for new proc in _make_active
-            if not is_last:
-                proc.write_next()
+                # Already called for new proc in _make_active
+                if not is_last:
+                    proc.write_next()
 
-            yield Draw(proc.chain, is_last, draw, tuning, stats, point)
+                yield Draw(proc.chain, is_last, draw, tuning, stats, point)
 
     def __enter__(self):
+        """Enter the context manager."""
         self._in_context = True
         return self
 
     def __exit__(self, *args):
+        """Exit the context manager."""
         ProcessAdapter.terminate_all(self._samplers)
 
 
