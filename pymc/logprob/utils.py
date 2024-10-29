@@ -46,7 +46,6 @@ from pytensor.graph import Apply, Op, node_rewriter
 from pytensor.graph.basic import Constant, Variable, clone_get_equiv, graph_inputs, walk
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import HasInnerGraph
-from pytensor.link.c.type import CType
 from pytensor.raise_op import CheckAndRaise
 from pytensor.scalar.basic import Mul
 from pytensor.tensor.basic import get_underlying_scalar_constant_value
@@ -148,27 +147,6 @@ def rvs_in_graph(vars: Variable | Sequence[Variable]) -> set[Variable]:
         for node in walk(makeiter(vars), expand, False)
         if node.owner and isinstance(node.owner.op, RandomVariable | MeasurableOp)
     }
-
-
-def convert_indices(indices, entry):
-    if indices and isinstance(entry, CType):
-        rval = indices.pop(0)
-        return rval
-    elif isinstance(entry, slice):
-        return slice(
-            convert_indices(indices, entry.start),
-            convert_indices(indices, entry.stop),
-            convert_indices(indices, entry.step),
-        )
-    else:
-        return entry
-
-
-def indices_from_subtensor(idx_list, indices):
-    """Compute a useable index tuple from the inputs of a ``*Subtensor**`` ``Op``."""
-    return tuple(
-        tuple(convert_indices(list(indices), idx) for idx in idx_list) if idx_list else indices
-    )
 
 
 def filter_measurable_variables(inputs):
