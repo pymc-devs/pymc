@@ -7,6 +7,13 @@ on:
       - main
 
 
+
+# Cancel running workflows for updated PRs
+# https://turso.tech/blog/simple-trick-to-save-environment-and-money-when-using-github-actions
+concurrency:
+  group: ${{ github.workflow}}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 # Tests are split into multiple jobs to accelerate the CI.
 # Different jobs should be organized to take approximately the same
 # time to complete (and not be prohibitely slow).
