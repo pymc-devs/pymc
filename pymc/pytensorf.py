@@ -45,6 +45,7 @@ from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.random.var import RandomGeneratorSharedVariable
+from pytensor.tensor.rewriting.basic import topo_unconditional_constant_folding
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
@@ -1057,7 +1058,7 @@ def compile_pymc(
 
 def constant_fold(
     xs: Sequence[TensorVariable], raise_not_constant: bool = True
-) -> tuple[np.ndarray, ...]:
+) -> tuple[np.ndarray | Variable, ...]:
     """Use constant folding to get constant values of a graph.
 
     Parameters
@@ -1072,8 +1073,12 @@ def constant_fold(
     """
     fg = FunctionGraph(outputs=xs, features=[ShapeFeature()], copy_inputs=False, clone=True)
 
-    # By default, rewrite_graph includes canonicalize which includes constant-folding as the final rewrite
-    folded_xs = rewrite_graph(fg).outputs
+    # The default rewrite_graph includes a constand_folding that is not always applied.
+    # We use an unconditional constant_folding as the last pass to ensure a thorough constant folding.
+    rewrite_graph(fg)
+    topo_unconditional_constant_folding.apply(fg)
+
+    folded_xs = fg.outputs
 
     if raise_not_constant and not all(isinstance(folded_x, Constant) for folded_x in folded_xs):
         raise NotConstantValueError

@@ -696,6 +696,11 @@ class TestConstantFold:
         (out_shape,) = constant_fold((out.shape[0],), raise_not_constant=False)
         assert out_shape is a
 
+    def test_constant_fold_alloc(self):
+        # By default, Alloc outputs cannot be constant folded
+        x = pt.alloc(pt.arange(5), 2, 5)
+        np.testing.assert_allclose(constant_fold([x])[0], np.broadcast_to(np.arange(5), (2, 5)))
+
 
 def test_replace_vars_in_graphs():
     inp = shared(0.0, name="inp")
