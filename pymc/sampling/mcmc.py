@@ -26,6 +26,7 @@ from typing import (
     Any,
     Literal,
     TypeAlias,
+    cast,
     overload,
 )
 
@@ -40,6 +41,7 @@ from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainin
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 from typing_extensions import Protocol
+from zarr.storage import MemoryStore
 
 import pymc as pm
 
@@ -50,7 +52,7 @@ from pymc.backends.arviz import (
     find_observations,
 )
 from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
-from pymc.backends.zarr import ZarrTrace
+from pymc.backends.zarr import ZarrChain, ZarrTrace
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
@@ -1275,6 +1277,8 @@ def _iter_sample(
     step.set_rng(rng)
 
     point = start
+    if isinstance(trace, ZarrChain):
+        trace.link_stepper(step)
 
     try:
         step.tune = bool(tune)
@@ -1297,12 +1301,18 @@ def _iter_sample(
 
             yield diverging
     except KeyboardInterrupt:
+        if isinstance(trace, ZarrChain):
+            trace.record_sampling_state(step=step)
         trace.close()
         raise
     except BaseException:
+        if isinstance(trace, ZarrChain):
+            trace.record_sampling_state(step=step)
         trace.close()
         raise
     else:
+        if isinstance(trace, ZarrChain):
+            trace.record_sampling_state(step=step)
         trace.close()
 
 
@@ -1361,6 +1371,19 @@ def _mp_sample(
 
     # We did draws += tune in pm.sample
     draws -= tune
+    zarr_chains: list[ZarrChain] | None = None
+    zarr_recording = False
+    if all(isinstance(trace, ZarrChain) for trace in traces):
+        if isinstance(cast(ZarrChain, traces[0])._posterior.store, MemoryStore):
+            warnings.warn(
+                "Parallel sampling with MemoryStore zarr store wont write the processes "
+                "step method sampling state. If you wish to be able to access the step "
+                "method sampling state, please use a different storage backend, e.g. "
+                "DirectoryStore or ZipStore"
+            )
+        else:
+            zarr_chains = cast(list[ZarrChain], traces)
+            zarr_recording = True
 
     sampler = ps.ParallelSampler(
         draws=draws,
@@ -1374,13 +1397,16 @@ def _mp_sample(
         progressbar_theme=progressbar_theme,
         blas_cores=blas_cores,
         mp_ctx=mp_ctx,
+        zarr_chains=zarr_chains,
     )
     try:
         try:
             with sampler:
                 for draw in sampler:
                     strace = traces[draw.chain]
-                    strace.record(draw.point, draw.stats)
+                    if not zarr_recording:
+                        # Zarr recording happens in each process
+                        strace.record(draw.point, draw.stats)
                     log_warning_stats(draw.stats)
 
                     if callback is not None:
