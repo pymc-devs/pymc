@@ -428,8 +428,8 @@ class HSGP(Base):
         self,
         name: str,
         X: TensorLike,
+        dims: str | None = None,
         hsgp_coeffs_dims: str | None = None,
-        gp_dims: str | None = None,
         *args,
         **kwargs,
     ):
@@ -444,10 +444,11 @@ class HSGP(Base):
             Name of the random variable
         X: array-like
             Function input values.
+        dims: str, default None
+            Dimension name for the GP random variable.
         hsgp_coeffs_dims: str, default None
             Dimension name for the HSGP basis vectors.
-        gp_dims: str, default None
-            Dimension name for the GP random variable.
+
         """
         phi, sqrt_psd = self.prior_linearized(X)
         self._sqrt_psd = sqrt_psd
@@ -469,7 +470,7 @@ class HSGP(Base):
             )
             f = self.mean_func(X) + phi @ self._beta
 
-        self.f = pm.Deterministic(name, f, dims=gp_dims)
+        self.f = pm.Deterministic(name, f, dims=dims)
         return self.f
 
     def _build_conditional(self, Xnew):
@@ -695,7 +696,9 @@ class HSGPPeriodic(Base):
         psd = self.scale * self.cov_func.power_spectral_density_approx(J)
         return (phi_cos, phi_sin), psd
 
-    def prior(self, name: str, X: TensorLike, dims: str | None = None):  # type: ignore[override]
+    def prior(  # type: ignore[override]
+        self, name: str, X: TensorLike, dims: str | None = None, hsgp_coeffs_dims: str | None = None
+    ):
         R"""
         Return the (approximate) GP prior distribution evaluated over the input locations `X`.
 
@@ -709,11 +712,13 @@ class HSGPPeriodic(Base):
             Function input values.
         dims: None
             Dimension name for the GP random variable.
+        hsgp_coeffs_dims: str | None = None
+            Dimension name for the HSGPPeriodic basis vectors.
         """
         (phi_cos, phi_sin), psd = self.prior_linearized(X)
 
         m = self._m
-        self._beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m * 2 - 1))
+        self._beta = pm.Normal(f"{name}_hsgp_coeffs_", size=(m * 2 - 1), dims=hsgp_coeffs_dims)
         # The first eigenfunction for the sine component is zero
         # and so does not contribute to the approximation.
         f = (
