@@ -22,6 +22,7 @@ import traceback
 
 from collections import namedtuple
 from collections.abc import Sequence
+from typing import cast
 
 import cloudpickle
 import numpy as np
@@ -31,6 +32,7 @@ from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainin
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 
+from pymc.backends.zarr import ZarrChain
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.util import (
@@ -104,6 +106,9 @@ class _Process:
         tune: int,
         rng_state: RandomGeneratorState,
         blas_cores,
+        chain: int,
+        zarr_chains: list[ZarrChain] | bytes | None = None,
+        zarr_chains_is_pickled: bool = False,
     ):
         # For some strange reason, spawn multiprocessing doesn't copy the rng
         # seed sequence, so we have to rebuild it from scratch
@@ -111,6 +116,15 @@ class _Process:
         self._msg_pipe = msg_pipe
         self._step_method = step_method
         self._step_method_is_pickled = step_method_is_pickled
+        self.chain = chain
+        self._zarr_recording = False
+        self._zarr_chain: ZarrChain | None = None
+        if zarr_chains_is_pickled:
+            self._zarr_chain = cloudpickle.loads(zarr_chains)[self.chain]
+        elif zarr_chains is not None:
+            self._zarr_chain = cast(list[ZarrChain], zarr_chains)[self.chain]
+        self._zarr_recording = self._zarr_chain is not None
+
         self._shared_point = shared_point
         self._rng = rng
         self._draws = draws
@@ -135,6 +149,7 @@ class _Process:
                 # We do not create this in __init__, as pickling this
                 # would destroy the shared memory.
                 self._unpickle_step_method()
+                self._link_step_to_zarrchain()
                 self._point = self._make_numpy_refs()
                 self._start_loop()
             except KeyboardInterrupt:
@@ -147,6 +162,10 @@ class _Process:
                 self._wait_for_abortion()
             finally:
                 self._msg_pipe.close()
+
+    def _link_step_to_zarrchain(self):
+        if self._zarr_recording:
+            self._zarr_chain.link_stepper(self._step_method)
 
     def _wait_for_abortion(self):
         while True:
@@ -170,6 +189,7 @@ class _Process:
         return self._msg_pipe.recv()
 
     def _start_loop(self):
+        zarr_recording = self._zarr_recording
         self._step_method.set_rng(self._rng)
 
         draw = 0
@@ -199,6 +219,8 @@ class _Process:
             if msg[0] == "abort":
                 raise KeyboardInterrupt()
             elif msg[0] == "write_next":
+                if zarr_recording:
+                    self._zarr_chain.record(point, stats)
                 self._write_point(point)
                 is_last = draw + 1 == self._draws + self._tune
                 self._msg_pipe.send(("writing_done", is_last, draw, tuning, stats))
@@ -225,6 +247,8 @@ class ProcessAdapter:
         start: dict[str, np.ndarray],
         blas_cores,
         mp_ctx,
+        zarr_chains: list[ZarrChain] | None = None,
+        zarr_chains_pickled: bytes | None = None,
     ):
         self.chain = chain
         process_name = f"worker_chain_{chain}"
@@ -246,6 +270,16 @@ class ProcessAdapter:
 
         self._readable = True
         self._num_samples = 0
+
+        zarr_chains_send: list[ZarrChain] | bytes | None = None
+        if zarr_chains_pickled is not None:
+            zarr_chains_send = zarr_chains_pickled
+        elif zarr_chains is not None:
+            if mp_ctx.get_start_method() == "spawn":
+                raise ValueError(
+                    "please provide a pre-pickled zarr_chains when multiprocessing start method is 'spawn'"
+                )
+            zarr_chains_send = zarr_chains
 
         if step_method_pickled is not None:
             step_method_send = step_method_pickled
@@ -270,6 +304,9 @@ class ProcessAdapter:
                 tune,
                 get_state_from_generator(rng),
                 blas_cores,
+                self.chain,
+                zarr_chains_send,
+                zarr_chains_pickled is not None,
             ),
         )
         self._process.start()
@@ -392,6 +429,7 @@ class ParallelSampler:
         progressbar_theme: Theme | None = default_progress_theme,
         blas_cores: int | None = None,
         mp_ctx=None,
+        zarr_chains: list[ZarrChain] | None = None,
     ):
         if any(len(arg) != chains for arg in [rngs, start_points]):
             raise ValueError(f"Number of rngs and start_points must be {chains}.")
@@ -412,8 +450,15 @@ class ParallelSampler:
             mp_ctx = multiprocessing.get_context(mp_ctx)
 
         step_method_pickled = None
+        zarr_chains_pickled = None
+        self.zarr_recording = False
+        if zarr_chains is not None:
+            assert all(isinstance(zarr_chain, ZarrChain) for zarr_chain in zarr_chains)
+            self.zarr_recording = True
         if mp_ctx.get_start_method() != "fork":
             step_method_pickled = cloudpickle.dumps(step_method, protocol=-1)
+            if zarr_chains is not None:
+                zarr_chains_pickled = cloudpickle.dumps(zarr_chains, protocol=-1)
 
         self._samplers = [
             ProcessAdapter(
@@ -426,6 +471,8 @@ class ParallelSampler:
                 start,
                 blas_cores,
                 mp_ctx,
+                zarr_chains=zarr_chains,
+                zarr_chains_pickled=zarr_chains_pickled,
             )
             for chain, rng, start in zip(range(chains), rngs, start_points)
         ]
