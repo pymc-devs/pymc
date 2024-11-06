@@ -17,6 +17,7 @@ from dataclasses import asdict
 
 import numpy as np
 import pytest
+import xarray as xr
 import zarr
 
 from arviz import InferenceData
@@ -62,9 +63,9 @@ def model():
     return model
 
 
-@pytest.fixture(params=[True, False])
+@pytest.fixture(params=["include_transformed", "discard_transformed"])
 def include_transformed(request):
-    return request.param
+    return request.param == "include_transformed"
 
 
 @pytest.fixture(params=["frequent_writes", "sparse_writes"])
@@ -94,7 +95,7 @@ def model_step(request, model):
 
 
 def test_record(model, model_step, include_transformed, draws_per_chunk):
-    store = zarr.MemoryStore()
+    store = zarr.TempStore()
     trace = ZarrTrace(
         store=store, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
     )
@@ -361,27 +362,31 @@ def test_split_warmup(tune, model, model_step, include_transformed):
                 assert trace.root["warmup_sample_stats"][var_name].shape[1] == tune
 
 
-@pytest.fixture(scope="function", params=[True, False])
+@pytest.fixture(scope="function", params=["discard_tuning", "keep_tuning"])
 def discard_tuned_samples(request):
-    return request.param
+    return request.param == "discard_tuning"
 
 
-@pytest.fixture(scope="function", params=[True, False])
+@pytest.fixture(scope="function", params=["return_idata", "return_zarr"])
 def return_inferencedata(request):
-    return request.param
+    return request.param == "return_idata"
 
 
-@pytest.fixture(scope="function", params=[True, False])
+@pytest.fixture(
+    scope="function", params=[True, False], ids=["keep_warning_stat", "discard_warning_stat"]
+)
 def keep_warning_stat(request):
     return request.param
 
 
-@pytest.fixture(scope="function", params=[True, False])
+@pytest.fixture(
+    scope="function", params=[True, False], ids=["parallel_sampling", "sequential_sampling"]
+)
 def parallel(request):
     return request.param
 
 
-@pytest.fixture(scope="function", params=[True, False])
+@pytest.fixture(scope="function", params=[True, False], ids=["compute_loglike", "no_loglike"])
 def log_likelihood(request):
     return request.param
 
@@ -401,7 +406,7 @@ def test_sample(
         pytest.skip(
             reason="log_likelihood is only computed if an inference data object is returned"
         )
-    store = zarr.MemoryStore()
+    store = zarr.TempStore()
     trace = ZarrTrace(
         store=store, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
     )
@@ -468,3 +473,66 @@ def test_sample(
             for name, v in out_trace.posterior.arrays()
             if name not in dimensions
         )
+
+    # Assert that the trace has valid sampling state stored for each chain
+    for step_method_state in trace._sampling_state.sampling_state[:]:
+        # We have no access to the actual step method that was using by each chain in pymc.sample
+        # The best way to see if the step method state is valid is by trying to set
+        # the model_step sampling state to the one stored in the trace.
+        model_step.sampling_state = step_method_state
+
+
+def test_sampling_consistency(
+    model,
+    model_step,
+    draws_per_chunk,
+):
+    # Test that pm.sample will generate the same posterior and sampling state
+    # regardless of whether sampling was done in parallel or not.
+    store1 = zarr.TempStore()
+    parallel_trace = ZarrTrace(
+        store=store1, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
+    )
+    store2 = zarr.TempStore()
+    sequential_trace = ZarrTrace(
+        store=store2, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
+    )
+    tune = 2
+    draws = 3
+    chains = 2
+    random_seed = 12345
+    initial_step_state = model_step.sampling_state
+    with model:
+        parallel_idata = pm.sample(
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            cores=chains,
+            trace=parallel_trace,
+            step=model_step,
+            discard_tuned_samples=True,
+            return_inferencedata=True,
+            keep_warning_stat=False,
+            idata_kwargs={"log_likelihood": False},
+            random_seed=random_seed,
+        )
+        model_step.sampling_state = initial_step_state
+        sequential_idata = pm.sample(
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            cores=1,
+            trace=sequential_trace,
+            step=model_step,
+            discard_tuned_samples=True,
+            return_inferencedata=True,
+            keep_warning_stat=False,
+            idata_kwargs={"log_likelihood": False},
+            random_seed=random_seed,
+        )
+    for chain in range(chains):
+        assert equal_sampling_states(
+            parallel_trace._sampling_state.sampling_state[chain],
+            sequential_trace._sampling_state.sampling_state[chain],
+        )
+    xr.testing.assert_equal(parallel_idata.posterior, sequential_idata.posterior)
