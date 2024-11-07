@@ -1025,7 +1025,9 @@ def _sample_many(
     step: function
         Step function
     """
+    initial_step_state = step.sampling_state
     for i in range(chains):
+        step.sampling_state = initial_step_state
         _sample(
             draws=draws,
             chain=i,
