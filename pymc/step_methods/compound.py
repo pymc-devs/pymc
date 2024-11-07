@@ -22,6 +22,7 @@ import warnings
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import field
 from enum import IntEnum, unique
 from typing import Any
 
@@ -96,6 +97,7 @@ def infer_warn_stats_info(
 
 @dataclass_state
 class StepMethodState(DataClassState):
+    var_names: list[str] = field(metadata={"tensor_name": True, "frozen": True})
     rng: RandomGeneratorState
 
 
