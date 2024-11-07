@@ -1626,7 +1626,7 @@ class AsymmetricLaplace(Continuous):
     def logp(value, b, kappa, mu):
         value = value - mu
         res = pt.log(b / (kappa + (kappa**-1))) + (
-            -value * b * pt.sgn(value) * (kappa ** pt.sgn(value))
+            -value * b * pt.sign(value) * (kappa ** pt.sign(value))
         )
 
         return check_parameters(
