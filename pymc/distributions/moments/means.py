@@ -50,7 +50,7 @@ from pytensor.tensor.random.basic import (
     UniformRV,
     VonMisesRV,
 )
-from pytensor.tensor.var import TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.distributions.continuous import (
     AsymmetricLaplaceRV,
