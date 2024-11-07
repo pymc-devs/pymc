@@ -481,7 +481,7 @@ class _ExpWeightedVariance(WithSamplingState):
 class QuadPotentialDiagAdaptExpState(QuadPotentialDiagAdaptState):
     _alpha: float
     _stop_adaptation: float
-    _variance_estimator: ExpWeightedVarianceState
+    _variance_estimator: ExpWeightedVarianceState | None = None
 
     _variance_estimator_grad: ExpWeightedVarianceState | None = None
 

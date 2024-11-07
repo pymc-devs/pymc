@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from copy import deepcopy
-from dataclasses import Field, dataclass, fields
+from dataclasses import MISSING, Field, dataclass, fields
 from typing import Any, ClassVar
 
 import numpy as np
@@ -67,7 +67,11 @@ class WithSamplingState:
         state_class = self._state_class
         kwargs = {}
         for field in fields(state_class):
-            val = getattr(self, field.name)
+            val = getattr(self, field.name, field.default)
+            if val is MISSING:
+                raise AttributeError(
+                    f"{type(self).__name__!r} object has no attribute {field.name!r}"
+                )
             _val: Any
             if isinstance(val, WithSamplingState):
                 _val = val.sampling_state
