@@ -461,7 +461,7 @@ def implicit_size_from_params(
     for param, ndim in zip(params, ndims_params):
         batch_shape = list(param.shape[:-ndim] if ndim > 0 else param.shape)
         # Overwrite broadcastable dims
-        for i, broadcastable in enumerate(param.type.broadcastable):
+        for i, broadcastable in enumerate(param.type.broadcastable[: len(batch_shape)]):
             if broadcastable:
                 batch_shape[i] = 1
         batch_shapes.append(batch_shape)
