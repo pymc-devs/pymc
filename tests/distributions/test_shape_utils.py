@@ -35,9 +35,11 @@ from pymc.distributions.shape_utils import (
     convert_size,
     get_support_shape,
     get_support_shape_1d,
+    implicit_size_from_params,
     rv_size_is_none,
 )
 from pymc.model import Model
+from pymc.pytensorf import constant_fold
 
 test_shapes = [
     ((), (1,), (4,), (5, 4)),
@@ -630,3 +632,10 @@ def test_get_support_shape(
             assert (f() == expected_support_shape).all()
             with pytest.raises(AssertionError, match="support_shape does not match"):
                 inferred_support_shape.eval()
+
+
+def test_implicit_size_from_params():
+    x = pt.tensor(shape=(5, 1))
+    y = pt.tensor(shape=(3, 3))
+    res = implicit_size_from_params(x, y, ndims_params=[1, 2])
+    assert constant_fold([res]) == (5,)
