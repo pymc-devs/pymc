@@ -14,8 +14,6 @@
 
 import warnings
 
-from copy import deepcopy
-
 import arviz as az
 import numpy as np
 import numpy.testing as npt
@@ -406,8 +404,7 @@ def test_sampling_state(step_method, model_fn):
             sampler = step_method(model.value_vars)
             if hasattr(sampler, "link_population"):
                 sampler.link_population([initial_point] * 100, 0)
-            sampler_orig = deepcopy(sampler)
-            state_orig = sampler_orig.sampling_state
+            state_orig = sampler.sampling_state
 
             sample1, stat1 = sampler.step(initial_point)
             sampler.tune = False

@@ -17,6 +17,8 @@ from typing import Any, ClassVar
 
 import numpy as np
 
+from pymc.util import RandomGeneratorState, get_state_from_generator, random_generator_from_state
+
 dataclass_state = dataclass(kw_only=True)
 
 
@@ -66,8 +68,11 @@ class WithSamplingState:
         kwargs = {}
         for field in fields(state_class):
             val = getattr(self, field.name)
+            _val: Any
             if isinstance(val, WithSamplingState):
                 _val = val.sampling_state
+            elif isinstance(val, np.random.Generator):
+                _val = get_state_from_generator(val)
             else:
                 _val = val
             kwargs[field.name] = deepcopy(_val)
@@ -81,6 +86,8 @@ class WithSamplingState:
         ), f"Encountered invalid state class '{state.__class__}'. State must be '{state_class}'"
         for field in fields(state_class):
             state_val = deepcopy(getattr(state, field.name))
+            if isinstance(state_val, RandomGeneratorState):
+                state_val = random_generator_from_state(state_val)
             self_val = getattr(self, field.name)
             is_frozen = field.metadata.get("frozen", False)
             if is_frozen:
