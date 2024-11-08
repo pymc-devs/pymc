@@ -31,7 +31,12 @@ from pytensor.graph.basic import Variable
 
 from pymc.blocking import PointType, StatDtype, StatsDict, StatShape, StatsType
 from pymc.model import modelcontext
-from pymc.step_methods.state import DataClassState, WithSamplingState, dataclass_state
+from pymc.step_methods.state import (
+    DataClassState,
+    RandomGeneratorState,
+    WithSamplingState,
+    dataclass_state,
+)
 from pymc.util import RandomGenerator, get_random_generator
 
 __all__ = ("Competence", "CompoundStep")
@@ -91,7 +96,7 @@ def infer_warn_stats_info(
 
 @dataclass_state
 class StepMethodState(DataClassState):
-    rng: np.random.Generator
+    rng: RandomGeneratorState
 
 
 class BlockedStep(ABC, WithSamplingState):
