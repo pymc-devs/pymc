@@ -1127,10 +1127,40 @@ def toposort_replace(
     fgraph: FunctionGraph, replacements: Sequence[tuple[Variable, Variable]], reverse: bool = False
 ) -> None:
     """Replace multiple variables in place in topological order."""
-    toposort = fgraph.toposort()
+    fgraph_toposort = {node: i for i, node in enumerate(fgraph.toposort())}
+    _inner_fgraph_toposorts = {}  # Cache inner toposorts
+
+    def _nested_toposort_index(var, fgraph_toposort) -> tuple[int]:
+        """Compute position of variable in fgraph toposort.
+
+        When a variable is an OpFromGraph output, extend output with the toposort index of the inner graph(s).
+
+        This allows ordering variables that come from the same OpFromGraph.
+        """
+        if not var.owner:
+            return (-1,)
+
+        index = fgraph_toposort[var.owner]
+
+        # Recurse into OpFromGraphs
+        # TODO: Could also recurse into Scans
+        if isinstance(var.owner.op, OpFromGraph):
+            inner_fgraph = var.owner.op.fgraph
+
+            if inner_fgraph not in _inner_fgraph_toposorts:
+                _inner_fgraph_toposorts[inner_fgraph] = {
+                    node: i for i, node in enumerate(inner_fgraph.toposort())
+                }
+
+            inner_fgraph_toposort = _inner_fgraph_toposorts[inner_fgraph]
+            inner_var = inner_fgraph.outputs[var.owner.outputs.index(var)]
+            return (index, *_nested_toposort_index(inner_var, inner_fgraph_toposort))
+        else:
+            return (index,)
+
     sorted_replacements = sorted(
         replacements,
-        key=lambda pair: toposort.index(pair[0].owner) if pair[0].owner else -1,
+        key=lambda pair: _nested_toposort_index(pair[0], fgraph_toposort),
         reverse=reverse,
     )
     fgraph.replace_all(sorted_replacements, import_missing=True)

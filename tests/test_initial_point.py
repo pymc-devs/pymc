@@ -17,11 +17,12 @@ import pytensor
 import pytensor.tensor as pt
 import pytest
 
+from pytensor.compile.builders import OpFromGraph
 from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
 
-from pymc.distributions.distribution import support_point
+from pymc.distributions.distribution import _support_point, support_point
 from pymc.initial_point import make_initial_point_fn, make_initial_point_fns_per_chain
 
 
@@ -191,6 +192,40 @@ class TestInitvalEvaluation:
         assert iv["A"] == 1
         assert np.isclose(iv["B_log__"], 0)
         assert iv["C_log__"] == 0
+
+    @pytest.mark.parametrize("reverse_rvs", [False, True])
+    def test_dependent_initval_from_OFG(self, reverse_rvs):
+        class MyTestOp(OpFromGraph):
+            pass
+
+        @_support_point.register(MyTestOp)
+        def my_test_op_support_point(op, out):
+            out1, out2 = out.owner.outputs
+            if out is out1:
+                return out1
+            else:
+                return out1 * 4
+
+        out1 = pt.zeros(())
+        out2 = out1 * 2
+        rv_op = MyTestOp([], [out1, out2])
+
+        with pm.Model() as model:
+            A, B = rv_op()
+            if reverse_rvs:
+                model.register_rv(B, "B")
+                model.register_rv(A, "A")
+            else:
+                model.register_rv(A, "A")
+                model.register_rv(B, "B")
+
+        assert model.initial_point() == {"A": 0, "B": 0}
+
+        model.set_initval(A, 1)
+        assert model.initial_point() == {"A": 1, "B": 4}
+
+        model.set_initval(B, 3)
+        assert model.initial_point() == {"A": 1, "B": 3}
 
 
 class TestSupportPoint:
