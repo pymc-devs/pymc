@@ -286,9 +286,9 @@ def find_measurable_dimshuffles(fgraph, node) -> list[TensorVariable] | None:
 
     base_var = node.inputs[0]
 
-    measurable_dimshuffle = MeasurableDimShuffle(node.op.input_broadcastable, node.op.new_order)(
-        base_var
-    )
+    measurable_dimshuffle = MeasurableDimShuffle(
+        input_ndim=node.op.input_ndim, new_order=node.op.new_order
+    )(base_var)
     assert isinstance(measurable_dimshuffle, TensorVariable)
 
     return [measurable_dimshuffle]
