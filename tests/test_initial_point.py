@@ -47,12 +47,17 @@ class TestInitvalEvaluation:
             )
         pass
 
-    def test_dependent_initvals(self):
+    @pytest.mark.parametrize("reverse_rvs", [False, True])
+    def test_dependent_initvals(self, reverse_rvs):
         with pm.Model() as pmodel:
             L = pm.Uniform("L", 0, 1, initval=0.5)
             U = pm.Uniform("U", lower=9, upper=10, initval=9.5)
             B1 = pm.Uniform("B1", lower=L, upper=U, initval=5)
             B2 = pm.Uniform("B2", lower=L, upper=U, initval=(L + U) / 2)
+
+            if reverse_rvs:
+                pmodel.free_RVs = pmodel.free_RVs[::-1]
+
             ip = pmodel.initial_point(random_seed=0)
             assert ip["L_interval__"] == 0
             assert ip["U_interval__"] == 0

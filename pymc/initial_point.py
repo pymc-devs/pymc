@@ -25,7 +25,13 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.transforms import Transform
-from pymc.pytensorf import compile_pymc, find_rng_nodes, replace_rng_nodes, reseed_rngs
+from pymc.pytensorf import (
+    compile_pymc,
+    find_rng_nodes,
+    replace_rng_nodes,
+    reseed_rngs,
+    toposort_replace,
+)
 from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
 
 StartDict = dict[Variable | str, np.ndarray | Variable | str]
@@ -288,8 +294,7 @@ def make_initial_point_expression(
     # order, so that later nodes do not reintroduce expressions with earlier
     # rvs that would need to once again be replaced by their initial_points
     graph = FunctionGraph(outputs=free_rvs_clone, clone=False)
-    replacements = reversed(list(zip(free_rvs_clone, initial_values_clone)))
-    graph.replace_all(replacements, import_missing=True)
+    toposort_replace(graph, tuple(zip(free_rvs_clone, initial_values_clone)), reverse=True)
 
     if not return_transformed:
         return graph.outputs
