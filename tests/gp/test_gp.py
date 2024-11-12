@@ -409,9 +409,9 @@ class TestMarginalVsLatent:
             == numpy_rv_logp.shape.eval()
         )
 
-        npt.assert_allclose(latent_rv_logp.eval(), marginal_rv_logp.eval(), atol=5)
-        npt.assert_allclose(latent_rv_logp.eval(), numpy_rv_logp.eval(), atol=5)
-        npt.assert_allclose(marginal_rv_logp.eval(), numpy_rv_logp.eval(), atol=5)
+        npt.assert_allclose(latent_rv_logp.eval({"f": y}), marginal_rv_logp.eval(), rtol=1e-4)
+        npt.assert_allclose(latent_rv_logp.eval({"f": y}), numpy_rv_logp.eval(), rtol=1e-4)
+        npt.assert_allclose(marginal_rv_logp.eval(), numpy_rv_logp.eval(), rtol=1e-4)
 
 
 class TestTP:
