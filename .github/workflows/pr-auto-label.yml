@@ -14,6 +14,6 @@ jobs:
     - name: Sync labels with closing issues
       uses: wd60622/closing-labels@v0.0.3
       with:
-        exclude: "help wanted,needs info"
+        exclude: "help wanted,needs info,beginner friendly"
       env:
         GH_TOKEN: ${{ github.token }}
