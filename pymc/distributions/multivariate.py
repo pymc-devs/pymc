@@ -194,7 +194,7 @@ def quaddist_chol(value, mu, cov):
 
 class MvNormal(Continuous):
     r"""
-    Multivariate normal log-likelihood.
+    Multivariate normal distribution.
 
     .. math::
 
