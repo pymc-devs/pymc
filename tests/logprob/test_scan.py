@@ -550,3 +550,25 @@ def test_scan_multiple_output_types():
             test_value, [a + b for a, b in itertools.pairwise([1, 1, *test_value[:-1]])]
         ),
     )
+
+
+def test_generative_graph_unchanged():
+    # Regression test where creating the IR would overwrite the original Scan inner fgraph
+
+    def step(eps_tm1):
+        x = pt.random.normal(0, eps_tm1)
+        eps_t = x - 0
+        return (x, eps_t), {x.owner.inputs[0]: x.owner.outputs[0]}
+
+    [xs, _], update = pytensor.scan(step, outputs_info=[None, pt.ones(())], n_steps=5)
+
+    before = xs.dprint(file="str")
+
+    xs_value = np.ones(5)
+    expected_logp = stats.norm.logpdf(xs_value, 0, 1)
+    for i in range(2):
+        xs_logp = logp(xs, xs_value)
+        np.testing.assert_allclose(xs_logp.eval(), expected_logp)
+
+    after = xs.dprint(file="str")
+    assert before == after
