@@ -632,7 +632,7 @@ class HSGPPeriodic(Base):
 
         Returns
         -------
-        (phi_cos, phi_sin): Tuple[array-like]
+        (phi_cos, phi_sin): tuple[array-like, ...]
             List of either Numpy or PyTensor 2D array of the cosine and sine fixed basis vectors.
             There are n rows, one per row of `Xs` and `m` columns, one for each basis vector.
         psd: array-like

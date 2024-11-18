@@ -37,7 +37,7 @@ dependencies:
 - watermark
 - polyagamma
 - sphinx-remove-toctrees
-- mypy=1.5.1
+- mypy=1.11.2
 - types-cachetools
 - pip:
   - git+https://github.com/pymc-devs/pymc-sphinx-theme
