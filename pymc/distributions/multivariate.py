@@ -73,7 +73,12 @@ from pymc.distributions.shape_utils import (
     rv_size_is_none,
     to_tuple,
 )
-from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
+from pymc.distributions.transforms import (
+    CholeskyCorr,
+    Interval,
+    ZeroSumTransform,
+    _default_transform,
+)
 from pymc.logprob.abstract import _logprob
 from pymc.logprob.rewriting import (
     specialization_ir_rewrites_db,
@@ -1643,7 +1648,9 @@ class _LKJCorr(BoundedContinuous):
 
 @_default_transform.register(_LKJCorr)
 def lkjcorr_default_transform(op, rv):
-    return MultivariateIntervalTransform(-1.0, 1.0)
+    _, _, _, n, *_ = rv.owner.inputs
+    n = pt.get_scalar_constant_value(n)  # Safely extract scalar value without eval
+    return CholeskyCorr(n)
 
 
 class LKJCorr:
