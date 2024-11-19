@@ -22,6 +22,8 @@ import numpy.testing as npt
 import pytensor
 import pytest
 
+from pytensor.compile.mode import Mode
+
 import pymc as pm
 
 from pymc.step_methods.metropolis import (
@@ -368,18 +370,16 @@ class TestRVsAssignmentMetropolis(RVsAssignmentStepsTester):
             d1 = pm.Bernoulli("d1", p=0.5)
             d2 = pm.Bernoulli("d2", p=0.5)
 
-            # Test it can take initial_point as a kwarg
+            # Test it can take initial_point, and compile_kwargs as a kwarg
             step_kwargs = {
                 "initial_point": {
                     "d1": np.array(0, dtype="int64"),
                     "d2": np.array(1, dtype="int64"),
                 },
+                "compile_kwargs": {"mode": Mode(linker="py", optimizer=None)},
             }
-            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
-                assert [m.rvs_to_values[d1]] == step([d1]).vars
-                assert {m.rvs_to_values[d1], m.rvs_to_values[d2]} == set(
-                    step([d1, d2]).vars
-                )
+            assert [m.rvs_to_values[d1]] == step([d1]).vars
+            assert {m.rvs_to_values[d1], m.rvs_to_values[d2]} == set(step([d1, d2]).vars)
 
     @pytest.mark.parametrize(
         "step, step_kwargs", [(Metropolis, {}), (DEMetropolis, {}), (DEMetropolisZ, {})]

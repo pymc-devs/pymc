@@ -104,6 +104,7 @@ def instantiate_steppers(
     *,
     step_kwargs: dict[str, dict] | None = None,
     initial_point: PointType | None = None,
+    compile_kwargs: dict | None = None,
 ) -> Step | list[Step]:
     """Instantiate steppers assigned to the model variables.
 
@@ -146,6 +147,7 @@ def instantiate_steppers(
                     vars=vars,
                     model=model,
                     initial_point=initial_point,
+                    compile_kwargs=compile_kwargs,
                     **kwargs,
                 )
                 steps.append(step)
@@ -434,6 +436,7 @@ def sample(
     callback=None,
     mp_ctx=None,
     blas_cores: int | None | Literal["auto"] = "auto",
+    compile_kwargs: dict | None = None,
     **kwargs,
 ) -> InferenceData: ...
 
@@ -466,6 +469,7 @@ def sample(
     mp_ctx=None,
     model: Model | None = None,
     blas_cores: int | None | Literal["auto"] = "auto",
+    compile_kwargs: dict | None = None,
     **kwargs,
 ) -> MultiTrace: ...
 
@@ -497,6 +501,7 @@ def sample(
     mp_ctx=None,
     blas_cores: int | None | Literal["auto"] = "auto",
     model: Model | None = None,
+    compile_kwargs: dict | None = None,
     **kwargs,
 ) -> InferenceData | MultiTrace:
     r"""Draw samples from the posterior using the given step methods.
@@ -598,6 +603,9 @@ def sample(
         See multiprocessing documentation for details.
     model : Model (optional if in ``with`` context)
         Model to sample from. The model needs to have free random variables.
+    compile_kwargs: dict, optional
+        Dictionary with keyword argument to pass to the functions compiled by the step methods.
+
 
     Returns
     -------
@@ -795,6 +803,7 @@ def sample(
                 jitter_max_retries=jitter_max_retries,
                 tune=tune,
                 initvals=initvals,
+                compile_kwargs=compile_kwargs,
                 **kwargs,
             )
     else:
@@ -814,6 +823,7 @@ def sample(
             selected_steps=selected_steps,
             step_kwargs=kwargs,
             initial_point=initial_points[0],
+            compile_kwargs=compile_kwargs,
         )
         if isinstance(step, list):
             step = CompoundStep(step)
@@ -1390,6 +1400,7 @@ def init_nuts(
     jitter_max_retries: int = 10,
     tune: int | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
+    compile_kwargs: dict | None = None,
     **kwargs,
 ) -> tuple[Sequence[PointType], NUTS]:
     """Set up the mass matrix initialization for NUTS.
@@ -1466,6 +1477,9 @@ def init_nuts(
     if init == "auto":
         init = "jitter+adapt_diag"
 
+    if compile_kwargs is None:
+        compile_kwargs = {}
+
     random_seed_list = _get_seeds_per_chain(random_seed, chains)
 
     _log.info(f"Initializing NUTS using {init}...")
@@ -1477,7 +1491,7 @@ def init_nuts(
             pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="relative"),
         ]
 
-    logp_dlogp_func = model.logp_dlogp_function(ravel_inputs=True)
+    logp_dlogp_func = model.logp_dlogp_function(ravel_inputs=True, **compile_kwargs)
     logp_dlogp_func.trust_input = True
     initial_points = _init_jitter(
         model,

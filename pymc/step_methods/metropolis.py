@@ -162,6 +162,7 @@ class Metropolis(ArrayStepShared):
         mode=None,
         rng=None,
         initial_point: PointType | None = None,
+        compile_kwargs: dict | None = None,
         blocked: bool = False,
     ):
         """Create an instance of a Metropolis stepper.
@@ -254,7 +255,7 @@ class Metropolis(ArrayStepShared):
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_point, vars, model)
-        self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared)
+        self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared, compile_kwargs)
         super().__init__(vars, shared, blocked=blocked, rng=rng)
 
     def reset_tuning(self):
@@ -432,6 +433,7 @@ class BinaryMetropolis(ArrayStep):
         model=None,
         rng=None,
         initial_point: PointType | None = None,
+        compile_kwargs: dict | None = None,
         blocked: bool = True,
     ):
         model = pm.modelcontext(model)
@@ -447,7 +449,9 @@ class BinaryMetropolis(ArrayStep):
         if not all(v.dtype in pm.discrete_types for v in vars):
             raise ValueError("All variables must be Bernoulli for BinaryMetropolis")
 
-        super().__init__(vars, [model.compile_logp()], blocked=blocked, rng=rng)
+        if compile_kwargs is None:
+            compile_kwargs = {}
+        super().__init__(vars, [model.compile_logp(**compile_kwargs)], blocked=blocked, rng=rng)
 
     def astep(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         logp = args[0]
@@ -554,6 +558,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         model=None,
         rng=None,
         initial_point: PointType | None = None,
+        compile_kwargs: dict | None = None,
         blocked: bool = True,
     ):
         model = pm.modelcontext(model)
@@ -582,7 +587,10 @@ class BinaryGibbsMetropolis(ArrayStep):
         if not all(v.dtype in pm.discrete_types for v in vars):
             raise ValueError("All variables must be binary for BinaryGibbsMetropolis")
 
-        super().__init__(vars, [model.compile_logp()], blocked=blocked, rng=rng)
+        if compile_kwargs is None:
+            compile_kwargs = {}
+
+        super().__init__(vars, [model.compile_logp(**compile_kwargs)], blocked=blocked, rng=rng)
 
     def reset_tuning(self):
         # There are no tuning parameters in this step method.
@@ -672,6 +680,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
         model=None,
         rng: RandomGenerator = None,
         initial_point: PointType | None = None,
+        compile_kwargs: dict | None = None,
         blocked: bool = True,
     ):
         model = pm.modelcontext(model)
@@ -728,7 +737,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
         # that indicates whether a draw was done in a tuning phase.
         self.tune = True
 
-        super().__init__(vars, [model.compile_logp()], blocked=blocked, rng=rng)
+        if compile_kwargs is None:
+            compile_kwargs = {}
+        super().__init__(vars, [model.compile_logp(**compile_kwargs)], blocked=blocked, rng=rng)
 
     def reset_tuning(self):
         # There are no tuning parameters in this step method.
@@ -904,6 +915,7 @@ class DEMetropolis(PopulationArrayStepShared):
         mode=None,
         rng=None,
         initial_point: PointType | None = None,
+        compile_kwargs: dict | None = None,
         blocked: bool = True,
     ):
         model = pm.modelcontext(model)
@@ -939,7 +951,7 @@ class DEMetropolis(PopulationArrayStepShared):
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_point, vars, model)
-        self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared)
+        self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared, compile_kwargs)
         super().__init__(vars, shared, blocked=blocked, rng=rng)
 
     def astep(self, q0: RaveledVars) -> tuple[RaveledVars, StatsType]:
@@ -1073,6 +1085,7 @@ class DEMetropolisZ(ArrayStepShared):
         tune_drop_fraction: float = 0.9,
         model=None,
         initial_point: PointType | None = None,
+        compile_kwargs: dict | None = None,
         mode=None,
         rng=None,
         blocked: bool = True,
@@ -1122,7 +1135,7 @@ class DEMetropolisZ(ArrayStepShared):
         self.mode = mode
 
         shared = pm.make_shared_replacements(initial_point, vars, model)
-        self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared)
+        self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared, compile_kwargs)
         super().__init__(vars, shared, blocked=blocked, rng=rng)
 
     def reset_tuning(self):
@@ -1213,6 +1226,7 @@ def delta_logp(
     logp: pt.TensorVariable,
     vars: list[pt.TensorVariable],
     shared: dict[pt.TensorVariable, pt.sharedvar.TensorSharedVariable],
+    compile_kwargs: dict | None,
 ) -> pytensor.compile.Function:
     [logp0], inarray0 = join_nonshared_inputs(
         point=point, outputs=[logp], inputs=vars, shared_inputs=shared
@@ -1225,6 +1239,8 @@ def delta_logp(
     # Replace any potential duplicated RNG nodes
     (logp1,) = replace_rng_nodes((logp1,))
 
-    f = compile_pymc([inarray1, inarray0], logp1 - logp0)
+    if compile_kwargs is None:
+        compile_kwargs = {}
+    f = compile_pymc([inarray1, inarray0], logp1 - logp0, **compile_kwargs)
     f.trust_input = True
     return f
