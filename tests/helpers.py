@@ -26,6 +26,7 @@ import numpy.random as nr
 import pytensor
 
 from numpy.testing import assert_array_less
+from pytensor.compile.mode import Mode
 from pytensor.gradient import verify_grad as at_verify_grad
 
 import pymc as pm
@@ -198,10 +199,11 @@ class RVsAssignmentStepsTester:
             c1 = pm.HalfNormal("c1")
             c2 = pm.HalfNormal("c2")
 
-            # Test methods can handle initial_point
+            # Test methods can handle initial_point and compile_kwargs
             step_kwargs.setdefault(
                 "initial_point", {"c1_log__": np.array(0.5), "c2_log__": np.array(0.9)}
             )
+            step_kwargs.setdefault("compile_kwargs", {"mode": Mode(linker="py", optimizer=None)})
             with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
                 assert [m.rvs_to_values[c1]] == step([c1], **step_kwargs).vars
                 assert {m.rvs_to_values[c1], m.rvs_to_values[c2]} == set(
