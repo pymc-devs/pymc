@@ -86,6 +86,7 @@ class Slice(ArrayStepShared):
         iter_limit=np.inf,
         rng=None,
         initial_point: PointType | None = None,
+        compile_kwargs: dict | None = None,
         blocked: bool = False,  # Could be true since tuning is independent across dims?
     ):
         model = modelcontext(model)
@@ -106,7 +107,9 @@ class Slice(ArrayStepShared):
         [logp], raveled_inp = join_nonshared_inputs(
             point=initial_point, outputs=[model.logp()], inputs=vars, shared_inputs=shared
         )
-        self.logp = compile_pymc([raveled_inp], logp)
+        if compile_kwargs is None:
+            compile_kwargs = {}
+        self.logp = compile_pymc([raveled_inp], logp, **compile_kwargs)
         self.logp.trust_input = True
 
         super().__init__(vars, shared, blocked=blocked, rng=rng)
