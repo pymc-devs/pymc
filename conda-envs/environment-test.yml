@@ -11,8 +11,6 @@ dependencies:
 - cloudpickle
 - h5py>=2.7
 - jax
-- libblas=*=*mkl
-- mkl-service
 - numpy>=1.15.0
 - pandas>=0.24.0
 - pip
