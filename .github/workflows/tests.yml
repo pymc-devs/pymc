@@ -164,7 +164,7 @@ jobs:
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
@@ -216,7 +216,7 @@ jobs:
         run: >-
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
@@ -274,7 +274,7 @@ jobs:
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
@@ -320,7 +320,7 @@ jobs:
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
@@ -368,7 +368,7 @@ jobs:
         run: >-
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
