@@ -140,52 +140,26 @@ jobs:
       PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -leo pipefail {0}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Cache conda
-        uses: actions/cache@v4
-        env:
-          # Increase this value to reset cache if environment-test.yml has not changed
-          CACHE_NUMBER: 0
+      - uses: mamba-org/setup-micromamba@v2
         with:
-          path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/environment-test.yml') }}
-      - name: Cache multiple paths
-        uses: actions/cache@v4
-        env:
-          # Increase this value to reset cache if requirements.txt has not changed
-          CACHE_NUMBER: 0
-        with:
-          path: |
-            ~/.cache/pip
-            $RUNNER_TOOL_CACHE/Python/*
-            ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('requirements.txt') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          mamba-version: "*"
-          activate-environment: pymc-test
-          channel-priority: strict
           environment-file: conda-envs/environment-test.yml
-          python-version: ${{matrix.python-version}}
-          use-mamba: true
-          use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
+          create-args: >-
+            python=${{matrix.python-version}}
+          environment-name: pymc-test
+          init-shell: bash
+          cache-environment: true
       - name: Install-pymc
         run: |
-          conda activate pymc-test
           pip install -e .
           # TODO: https://github.com/pymc-devs/pymc/issues/7417
           pip install --pre -U 'polyagamma<1.3.7'
           python --version
-          conda list
+          micromamba list
       - name: Run tests
         run: |
-          conda activate pymc-test
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -216,53 +190,27 @@ jobs:
       PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=core2'
     defaults:
       run:
-        shell: cmd
+        shell: cmd /C call {0}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Cache conda
-        uses: actions/cache@v4
-        env:
-          # Increase this value to reset cache if conda-envs/windows-environment-test.yml has not changed
-          CACHE_NUMBER: 0
+      - uses: mamba-org/setup-micromamba@v2
         with:
-          path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/windows-environment-test.yml') }}
-      - name: Cache multiple paths
-        uses: actions/cache@v4
-        env:
-          # Increase this value to reset cache if requirements.txt has not changed
-          CACHE_NUMBER: 0
-        with:
-          path: |
-            ~/.cache/pip
-            $RUNNER_TOOL_CACHE/Python/*
-            ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('requirements.txt') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          mamba-version: "*"
-          activate-environment: pymc-test
-          channel-priority: strict
           environment-file: conda-envs/windows-environment-test.yml
-          python-version: ${{matrix.python-version}}
-          use-mamba: true
-          use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
+          create-args: >-
+            python=${{matrix.python-version}}
+          environment-name: pymc-test
+          init-shell: cmd.exe
+          cache-environment: true
       - name: Install-pymc
         run: |
-          conda activate pymc-test
           pip install -e .
           pip install --pre -U 'polyagamma<1.3.7'
           python --version
-          conda list
+          micromamba list
       - name: Run tests
         # This job uses a cmd shell, therefore the environment variable syntax is different!
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
         run: >-
-          conda activate pymc-test &&
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -300,47 +248,22 @@ jobs:
       PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -leo pipefail {0}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Cache conda
-        uses: actions/cache@v4
-        env:
-          # Increase this value to reset cache if environment-test.yml has not changed
-          CACHE_NUMBER: 0
+      - uses: mamba-org/setup-micromamba@v2
         with:
-          path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/environment-test.yml') }}
-      - name: Cache multiple paths
-        uses: actions/cache@v4
-        env:
-          # Increase this value to reset cache if requirements.txt has not changed
-          CACHE_NUMBER: 0
-        with:
-          path: |
-            ~/.cache/pip
-            $RUNNER_TOOL_CACHE/Python/*
-            ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('requirements.txt') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          mamba-version: "*"
-          activate-environment: pymc-test
-          channel-priority: strict
           environment-file: conda-envs/environment-test.yml
-          python-version: ${{matrix.python-version}}
-          use-mamba: true
-          use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
+          create-args: >-
+            python=${{matrix.python-version}}
+          environment-name: pymc-test
+          init-shell: bash
+          cache-environment: true
       - name: Install pymc
         run: |
-          conda activate pymc-test
           pip install -e .
           python --version
-          conda list
+          micromamba list
       - name: Run tests
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
@@ -369,47 +292,22 @@ jobs:
       PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -leo pipefail {0}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Cache conda
-        uses: actions/cache@v4
-        env:
-          # Increase this value to reset cache if environment-jax.yml has not changed
-          CACHE_NUMBER: 0
+      - uses: mamba-org/setup-micromamba@v2
         with:
-          path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/environment-jax.yml') }}
-      - name: Cache multiple paths
-        uses: actions/cache@v4
-        env:
-          # Increase this value to reset cache if requirements.txt has not changed
-          CACHE_NUMBER: 0
-        with:
-          path: |
-            ~/.cache/pip
-            $RUNNER_TOOL_CACHE/Python/*
-            ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('requirements.txt') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          mamba-version: "*"
-          activate-environment: pymc-test
-          channel-priority: strict
           environment-file: conda-envs/environment-jax.yml
-          python-version: ${{matrix.python-version}}
-          use-mamba: true
-          use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
+          create-args: >-
+            python=${{matrix.python-version}}
+          environment-name: pymc-test
+          init-shell: bash
+          cache-environment: true
       - name: Install pymc
         run: |
-          conda activate pymc-test
           pip install -e .
           python --version
-          conda list
+          micromamba list
       - name: Run tests
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
@@ -438,53 +336,27 @@ jobs:
       PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=core2'
     defaults:
       run:
-        shell: cmd
+        shell: cmd /C call {0}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Cache conda
-        uses: actions/cache@v4
-        env:
-          # Increase this value to reset cache if conda-envs/windows-environment-test.yml has not changed
-          CACHE_NUMBER: 0
+      - uses: mamba-org/setup-micromamba@v2
         with:
-          path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-py${{matrix.python-version}}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('conda-envs/windows-environment-test.yml') }}
-      - name: Cache multiple paths
-        uses: actions/cache@v4
-        env:
-          # Increase this value to reset cache if requirements.txt has not changed
-          CACHE_NUMBER: 0
-        with:
-          path: |
-            ~/.cache/pip
-            $RUNNER_TOOL_CACHE/Python/*
-            ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-build-${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('requirements.txt') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          mamba-version: "*"
-          activate-environment: pymc-test
-          channel-priority: strict
           environment-file: conda-envs/windows-environment-test.yml
-          python-version: ${{matrix.python-version}}
-          use-mamba: true
-          use-only-tar-bz2: false # IMPORTANT: This may break caching of conda packages! See https://github.com/conda-incubator/setup-miniconda/issues/267
+          create-args: >-
+            python=${{matrix.python-version}}
+          environment-name: pymc-test
+          init-shell: cmd.exe
+          cache-environment: true
       - name: Install-pymc
         run: |
-          conda activate pymc-test
           pip install -e .
           pip install --pre -U 'polyagamma<1.3.7'
           python --version
-          conda list
+          micromamba list
       - name: Run tests
         # This job uses a cmd shell, therefore the environment variable syntax is different!
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
         run: >-
-          conda activate pymc-test &&
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
