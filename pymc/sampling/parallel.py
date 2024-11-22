@@ -228,15 +228,12 @@ class ProcessAdapter:
         self._shared_point = {}
         self._point = {}
 
-        for name, shape, dtype in DictToArrayBijection.map(start).point_map_info:
-            size = 1
-            for dim in shape:
-                size *= int(dim)
-            size *= dtype.itemsize
-            if size != ctypes.c_size_t(size).value:
+        for name, shape, size, dtype in DictToArrayBijection.map(start).point_map_info:
+            byte_size = size * dtype.itemsize
+            if byte_size != ctypes.c_size_t(byte_size).value:
                 raise ValueError(f"Variable {name} is too large")
 
-            array = mp_ctx.RawArray("c", size)
+            array = mp_ctx.RawArray("c", byte_size)
             self._shared_point[name] = (array, shape, dtype)
             array_np = np.frombuffer(array, dtype).reshape(shape)
             array_np[...] = start[name]
