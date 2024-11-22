@@ -61,6 +61,7 @@ from pymc.pytensorf import (
     gradient,
     hessian,
     inputvars,
+    join_nonshared_inputs,
     rewrite_pregrad,
 )
 from pymc.util import (
@@ -172,6 +173,9 @@ class ValueGradFunction:
         dtype=None,
         casting="no",
         compute_grads=True,
+        model=None,
+        initial_point=None,
+        ravel_inputs: bool | None = None,
         **kwargs,
     ):
         if extra_vars_and_values is None:
@@ -219,9 +223,7 @@ class ValueGradFunction:
         givens = []
         self._extra_vars_shared = {}
         for var, value in extra_vars_and_values.items():
-            shared = pytensor.shared(
-                value, var.name + "_shared__", shape=[1 if s == 1 else None for s in value.shape]
-            )
+            shared = pytensor.shared(value, var.name + "_shared__", shape=value.shape)
             self._extra_vars_shared[var.name] = shared
             givens.append((var, shared))
 
@@ -231,13 +233,28 @@ class ValueGradFunction:
             grads = pytensor.grad(cost, grad_vars, disconnected_inputs="ignore")
             for grad_wrt, var in zip(grads, grad_vars):
                 grad_wrt.name = f"{var.name}_grad"
-            outputs = [cost, *grads]
+            grads = pt.join(0, *[pt.atleast_1d(grad.ravel()) for grad in grads])
+            outputs = [cost, grads]
         else:
             outputs = [cost]
 
-        inputs = grad_vars
+        if ravel_inputs:
+            if initial_point is None:
+                initial_point = modelcontext(model).initial_point()
+            outputs, raveled_grad_vars = join_nonshared_inputs(
+                point=initial_point, inputs=grad_vars, outputs=outputs, make_inputs_shared=False
+            )
+            inputs = [raveled_grad_vars]
+        else:
+            if ravel_inputs is None:
+                warnings.warn(
+                    "ValueGradFunction will become a function of raveled inputs.\n"
+                    "Specify `ravel_inputs` to suppress this warning. Note that setting `ravel_inputs=False` will be forbidden in a future release."
+                )
+            inputs = grad_vars
 
         self._pytensor_function = compile_pymc(inputs, outputs, givens=givens, **kwargs)
+        self._raveled_inputs = ravel_inputs
 
     def set_weights(self, values):
         if values.shape != (self._n_costs - 1,):
@@ -247,7 +264,7 @@ class ValueGradFunction:
     def set_extra_values(self, extra_vars):
         self._extra_are_set = True
         for var in self._extra_vars:
-            self._extra_vars_shared[var.name].set_value(extra_vars[var.name])
+            self._extra_vars_shared[var.name].set_value(extra_vars[var.name], borrow=True)
 
     def get_extra_values(self):
         if not self._extra_are_set:
@@ -255,30 +272,21 @@ class ValueGradFunction:
 
         return {var.name: self._extra_vars_shared[var.name].get_value() for var in self._extra_vars}
 
-    def __call__(self, grad_vars, grad_out=None, extra_vars=None):
+    def __call__(self, grad_vars, *, extra_vars=None):
         if extra_vars is not None:
             self.set_extra_values(extra_vars)
-
-        if not self._extra_are_set:
+        elif not self._extra_are_set:
             raise ValueError("Extra values are not set.")
 
         if isinstance(grad_vars, RaveledVars):
-            grad_vars = list(DictToArrayBijection.rmap(grad_vars).values())
-
-        cost, *grads = self._pytensor_function(*grad_vars)
-
-        if grads:
-            grads_raveled = DictToArrayBijection.map(
-                {v.name: gv for v, gv in zip(self._grad_vars, grads)}
-            )
-
-            if grad_out is None:
-                return cost, grads_raveled.data
+            if self._raveled_inputs:
+                grad_vars = (grad_vars.data,)
             else:
-                np.copyto(grad_out, grads_raveled.data)
-                return cost
-        else:
-            return cost
+                grad_vars = DictToArrayBijection.rmap(grad_vars).values()
+        elif self._raveled_inputs and not isinstance(grad_vars, Sequence):
+            grad_vars = (grad_vars,)
+
+        return self._pytensor_function(*grad_vars)
 
     @property
     def profile(self):
@@ -521,7 +529,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def isroot(self):
         return self.parent is None
 
-    def logp_dlogp_function(self, grad_vars=None, tempered=False, **kwargs):
+    def logp_dlogp_function(
+        self,
+        grad_vars=None,
+        tempered=False,
+        initial_point=None,
+        ravel_inputs: bool | None = None,
+        **kwargs,
+    ):
         """Compile a PyTensor function that computes logp and gradient.
 
         Parameters
@@ -547,13 +562,22 @@ class Model(WithMemoization, metaclass=ContextMeta):
             costs = [self.logp()]
 
         input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
-        ip = self.initial_point(0)
+        if initial_point is None:
+            initial_point = self.initial_point(0)
         extra_vars_and_values = {
-            var: ip[var.name]
+            var: initial_point[var.name]
             for var in self.value_vars
             if var in input_vars and var not in grad_vars
         }
-        return ValueGradFunction(costs, grad_vars, extra_vars_and_values, **kwargs)
+        return ValueGradFunction(
+            costs,
+            grad_vars,
+            extra_vars_and_values,
+            model=self,
+            initial_point=initial_point,
+            ravel_inputs=ravel_inputs,
+            **kwargs,
+        )
 
     def compile_logp(
         self,

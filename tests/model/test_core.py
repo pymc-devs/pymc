@@ -15,7 +15,6 @@ import copy
 import pickle
 import threading
 import traceback
-import unittest
 import warnings
 
 from unittest.mock import patch
@@ -302,23 +301,26 @@ def test_empty_observed():
         assert not hasattr(a.tag, "observations")
 
 
-class TestValueGradFunction(unittest.TestCase):
+class TestValueGradFunction:
     def test_no_extra(self):
         a = pt.vector("a")
-        a.tag.test_value = np.zeros(3, dtype=a.dtype)
-        f_grad = ValueGradFunction([a.sum()], [a], {}, mode="FAST_COMPILE")
+        a_ = np.zeros(3, dtype=a.dtype)
+        f_grad = ValueGradFunction(
+            [a.sum()], [a], {}, ravel_inputs=True, initial_point={"a": a_}, mode="FAST_COMPILE"
+        )
         assert f_grad._extra_vars == []
 
     def test_invalid_type(self):
         a = pt.ivector("a")
-        a.tag.test_value = np.zeros(3, dtype=a.dtype)
+        a_ = np.zeros(3, dtype=a.dtype)
         a.dshape = (3,)
         a.dsize = 3
-        with pytest.raises(TypeError) as err:
-            ValueGradFunction([a.sum()], [a], {}, mode="FAST_COMPILE")
-        err.match("Invalid dtype")
+        with pytest.raises(TypeError, match="Invalid dtype"):
+            ValueGradFunction(
+                [a.sum()], [a], {}, ravel_inputs=True, initial_point={"a": a_}, mode="FAST_COMPILE"
+            )
 
-    def setUp(self):
+    def setup_method(self, test_method):
         extra1 = pt.iscalar("extra1")
         extra1_ = np.array(0, dtype=extra1.dtype)
         extra1.dshape = ()
@@ -340,41 +342,68 @@ class TestValueGradFunction(unittest.TestCase):
 
         self.cost = extra1 * val1.sum() + val2.sum()
 
-        self.f_grad = ValueGradFunction(
-            [self.cost], [val1, val2], {extra1: extra1_}, mode="FAST_COMPILE"
-        )
+        self.initial_point = {
+            "extra1": extra1_,
+            "val1": val1_,
+            "val2": val2_,
+        }
 
-    def test_extra_not_set(self):
+        with pytest.warns(
+            UserWarning, match="ValueGradFunction will become a function of raveled inputs"
+        ):
+            self.f_grad = ValueGradFunction(
+                [self.cost],
+                [val1, val2],
+                {extra1: extra1_},
+                mode="FAST_COMPILE",
+            )
+
+        self.f_grad_raveled_inputs = ValueGradFunction(
+            [self.cost],
+            [val1, val2],
+            {extra1: extra1_},
+            initial_point=self.initial_point,
+            mode="FAST_COMPILE",
+            ravel_inputs=True,
+        )
+        self.f_grad_raveled_inputs.trust_input = True
+
+    @pytest.mark.parametrize("raveled_fn", (False, True))
+    def test_extra_not_set(self, raveled_fn):
+        f_grad = self.f_grad_raveled_inputs if raveled_fn else self.f_grad
         with pytest.raises(ValueError) as err:
-            self.f_grad.get_extra_values()
+            f_grad.get_extra_values()
         err.match("Extra values are not set")
 
         with pytest.raises(ValueError) as err:
             size = self.val1_.size + self.val2_.size
-            self.f_grad(np.zeros(size, dtype=self.f_grad.dtype))
+            f_grad(np.zeros(size, dtype=self.f_grad.dtype))
         err.match("Extra values are not set")
 
-    def test_grad(self):
-        self.f_grad.set_extra_values({"extra1": 5})
+    @pytest.mark.parametrize("raveled_fn", (False, True))
+    def test_grad(self, raveled_fn):
+        f_grad = self.f_grad_raveled_inputs if raveled_fn else self.f_grad
+        f_grad.set_extra_values({"extra1": 5})
+
         size = self.val1_.size + self.val2_.size
         array = RaveledVars(
             np.ones(size, dtype=self.f_grad.dtype),
             (
-                ("val1", self.val1_.shape, self.val1_.dtype),
-                ("val2", self.val2_.shape, self.val2_.dtype),
+                ("val1", self.val1_.shape, self.val1_.size, self.val1_.dtype),
+                ("val2", self.val2_.shape, self.val2_.size, self.val2_.dtype),
             ),
         )
-        val, grad = self.f_grad(array)
+
+        val, grad = f_grad(array)
         assert val == 21
         npt.assert_allclose(grad, [5, 5, 5, 1, 1, 1, 1, 1, 1])
 
-    @pytest.mark.xfail(reason="Test not refactored for v4")
     def test_edge_case(self):
         # Edge case discovered in #2948
         ndim = 3
         with pm.Model() as m:
             pm.LogNormal(
-                "sigma", mu=np.zeros(ndim), tau=np.ones(ndim), shape=ndim
+                "sigma", mu=np.zeros(ndim), tau=np.ones(ndim), initval=np.ones(ndim), shape=ndim
             )  # variance for the correlation matrix
             pm.HalfCauchy("nu", beta=10)
             step = pm.NUTS()
@@ -382,7 +411,7 @@ class TestValueGradFunction(unittest.TestCase):
         func = step._logp_dlogp_func
         initial_point = m.initial_point()
         func.set_extra_values(initial_point)
-        q = func.dict_to_array(initial_point)
+        q = DictToArrayBijection.map(initial_point)
         logp, dlogp = func(q)
         assert logp.size == 1
         assert dlogp.size == 4
@@ -398,7 +427,7 @@ class TestValueGradFunction(unittest.TestCase):
             with pytest.warns(ImputationWarning):
                 x2 = pm.Bernoulli("x2", x1, observed=X)
 
-        gf = m.logp_dlogp_function()
+        gf = m.logp_dlogp_function(ravel_inputs=True)
         gf._extra_are_set = True
 
         assert m["x2_unobserved"].type == gf._extra_vars_shared["x2_unobserved"].type
@@ -414,6 +443,8 @@ class TestValueGradFunction(unittest.TestCase):
         # Assert that all the elements of res are equal
         assert res[1:] == res[:-1]
 
+
+class TestPytensorRelatedLogpBugs:
     def test_pytensor_switch_broadcast_edge_cases_1(self):
         # Tests against two subtle issues related to a previous bug in Theano
         # where `tt.switch` would not always broadcast tensors with single
@@ -460,25 +491,28 @@ def test_multiple_observed_rv():
     assert model["x"] not in model.value_vars
 
 
-def test_tempered_logp_dlogp():
+@pytest.mark.parametrize("ravel_inputs", (False, True))
+def test_tempered_logp_dlogp(ravel_inputs):
     with pm.Model() as model:
         pm.Normal("x")
         pm.Normal("y", observed=1)
         pm.Potential("z", pt.constant(-1.0, dtype=pytensor.config.floatX))
 
-    func = model.logp_dlogp_function()
+    func = model.logp_dlogp_function(ravel_inputs=ravel_inputs)
     func.set_extra_values({})
 
-    func_temp = model.logp_dlogp_function(tempered=True)
+    func_temp = model.logp_dlogp_function(tempered=True, ravel_inputs=ravel_inputs)
     func_temp.set_extra_values({})
 
-    func_nograd = model.logp_dlogp_function(compute_grads=False)
+    func_nograd = model.logp_dlogp_function(compute_grads=False, ravel_inputs=ravel_inputs)
     func_nograd.set_extra_values({})
 
-    func_temp_nograd = model.logp_dlogp_function(tempered=True, compute_grads=False)
+    func_temp_nograd = model.logp_dlogp_function(
+        tempered=True, compute_grads=False, ravel_inputs=ravel_inputs
+    )
     func_temp_nograd.set_extra_values({})
 
-    x = np.ones(1, dtype=func.dtype)
+    x = np.ones((1,), dtype=func.dtype)
     npt.assert_allclose(func(x)[0], func_temp(x)[0])
     npt.assert_allclose(func(x)[1], func_temp(x)[1])
 

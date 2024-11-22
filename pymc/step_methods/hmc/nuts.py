@@ -279,7 +279,7 @@ class _Tree:
         self.log_accept_sum = -np.inf
         self.mean_tree_accept = 0.0
         self.n_proposals = 0
-        self.p_sum = start.p.data.copy()
+        self.p_sum = start.p.copy()
         self.max_energy_change = 0.0
 
     def extend(self, direction):
@@ -330,9 +330,9 @@ class _Tree:
             left, right = self.left, self.right
             p_sum = self.p_sum
             turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
-            p_sum1 = leftmost_p_sum + rightmost_begin.p.data
+            p_sum1 = leftmost_p_sum + rightmost_begin.p
             turning1 = (p_sum1.dot(leftmost_begin.v) <= 0) or (p_sum1.dot(rightmost_begin.v) <= 0)
-            p_sum2 = leftmost_end.p.data + rightmost_p_sum
+            p_sum2 = leftmost_end.p + rightmost_p_sum
             turning2 = (p_sum2.dot(leftmost_end.v) <= 0) or (p_sum2.dot(rightmost_end.v) <= 0)
             turning = turning | turning1 | turning2
 
@@ -372,7 +372,7 @@ class _Tree:
                     right.model_logp,
                     right.index_in_trajectory,
                 )
-                tree = Subtree(right, right, right.p.data, proposal, log_size)
+                tree = Subtree(right, right, right.p, proposal, log_size)
                 return tree, None, False
             else:
                 error_msg = f"Energy change in leapfrog step is too large: {energy_change}."
@@ -400,9 +400,9 @@ class _Tree:
             turning = (p_sum.dot(left.v) <= 0) or (p_sum.dot(right.v) <= 0)
             # Additional U turn check only when depth > 1 to avoid redundant work.
             if depth - 1 > 0:
-                p_sum1 = tree1.p_sum + tree2.left.p.data
+                p_sum1 = tree1.p_sum + tree2.left.p
                 turning1 = (p_sum1.dot(tree1.left.v) <= 0) or (p_sum1.dot(tree2.left.v) <= 0)
-                p_sum2 = tree1.right.p.data + tree2.p_sum
+                p_sum2 = tree1.right.p + tree2.p_sum
                 turning2 = (p_sum2.dot(tree1.right.v) <= 0) or (p_sum2.dot(tree2.right.v) <= 0)
                 turning = turning | turning1 | turning2
 

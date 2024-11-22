@@ -204,3 +204,24 @@ class TestRVsAssignmentNUTS(RVsAssignmentStepsTester):
     @pytest.mark.parametrize("step, step_kwargs", [(NUTS, {})])
     def test_continuous_steps(self, step, step_kwargs):
         self.continuous_steps(step, step_kwargs)
+
+
+def test_nuts_step_legacy_value_grad_function():
+    # This test can be removed once ravel_inputs=False is deprecated
+    with pm.Model() as m:
+        x = pm.Normal("x", shape=(2,))
+        y = pm.Normal("y", x, shape=(3, 2))
+
+    legacy_value_grad_fn = m.logp_dlogp_function(ravel_inputs=False, mode="FAST_COMPILE")
+    legacy_value_grad_fn.set_extra_values({})
+    nuts = NUTS(model=m, logp_dlogp_func=legacy_value_grad_fn)
+
+    # Confirm it is a function of multiple variables
+    logp, dlogp = nuts._logp_dlogp_func([np.zeros((2,)), np.zeros((3, 2))])
+    np.testing.assert_allclose(dlogp, np.zeros(8))
+
+    # Confirm we can perform a NUTS step
+    ip = m.initial_point()
+    new_ip, _ = nuts.step(ip)
+    assert np.all(new_ip["x"] != ip["x"])
+    assert np.all(new_ip["y"] != ip["y"])
