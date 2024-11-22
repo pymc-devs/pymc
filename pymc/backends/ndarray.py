@@ -76,7 +76,7 @@ class NDArray(base.BaseTrace):
         else:  # Otherwise, make array of zeros for each variable.
             self.draws = draws
             for varname, shape in self.var_shapes.items():
-                self.samples[varname] = np.zeros((draws, *shape), dtype=self.var_dtypes[varname])
+                self.samples[varname] = np.empty((draws, *shape), dtype=self.var_dtypes[varname])
 
         if sampler_vars is None:
             return
@@ -105,7 +105,7 @@ class NDArray(base.BaseTrace):
         point: dict
             Values mapped to variable names
         """
-        for varname, value in zip(self.varnames, self.fn(point)):
+        for varname, value in zip(self.varnames, self.fn(*point.values())):
             self.samples[varname][self.draw_idx] = value
 
         if self._stats is not None and sampler_stats is None:
