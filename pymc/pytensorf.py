@@ -1024,7 +1024,12 @@ def compile_pymc(
     """
     # Create an update mapping of RandomVariable's RNG so that it is automatically
     # updated after every function call
-    rng_updates = collect_default_updates(inputs=inputs, outputs=outputs)
+    rng_updates = collect_default_updates(
+        inputs=[inp.variable if isinstance(inp, pytensor.In) else inp for inp in inputs],
+        outputs=[
+            out.variable if isinstance(out, pytensor.Out) else out for out in makeiter(outputs)
+        ],
+    )
 
     # We always reseed random variables as this provides RNGs with no chances of collision
     if rng_updates:

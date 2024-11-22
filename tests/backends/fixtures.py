@@ -238,7 +238,10 @@ class SamplingTestCase(ModelBackendSetupTestCase):
     """
 
     def record_point(self, val):
-        point = {varname: np.tile(val, value.shape) for varname, value in self.test_point.items()}
+        point = {
+            varname: np.tile(val, value.shape).astype(value.dtype)
+            for varname, value in self.test_point.items()
+        }
         if self.sampler_vars is not None:
             stats = [{key: dtype(val) for key, dtype in vars.items()} for vars in self.sampler_vars]
             self.strace.record(point=point, sampler_stats=stats)
