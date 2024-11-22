@@ -48,7 +48,7 @@ from pymc.exceptions import (
     ShapeError,
     ShapeWarning,
 )
-from pymc.initial_point import make_initial_point_fn
+from pymc.initial_point import PointType, make_initial_point_fn
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import Transform
 from pymc.logprob.utils import ParameterValueError, replace_rvs_by_values
@@ -174,7 +174,7 @@ class ValueGradFunction:
         casting="no",
         compute_grads=True,
         model=None,
-        initial_point=None,
+        initial_point: PointType | None = None,
         ravel_inputs: bool | None = None,
         **kwargs,
     ):
@@ -533,7 +533,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         grad_vars=None,
         tempered=False,
-        initial_point=None,
+        initial_point: PointType | None = None,
         ravel_inputs: bool | None = None,
         **kwargs,
     ):

@@ -72,6 +72,7 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
 from pymc.backends.base import BaseTrace, IBaseTrace
 from pymc.backends.ndarray import NDArray
+from pymc.blocking import PointType
 from pymc.model import Model
 from pymc.step_methods.compound import BlockedStep, CompoundStep
 
@@ -100,11 +101,12 @@ def _init_trace(
     trace: BaseTrace | None,
     model: Model,
     trace_vars: list[TensorVariable] | None = None,
+    initial_point: PointType | None = None,
 ) -> BaseTrace:
     """Initialize a trace backend for a chain."""
     strace: BaseTrace
     if trace is None:
-        strace = NDArray(model=model, vars=trace_vars)
+        strace = NDArray(model=model, vars=trace_vars, test_point=initial_point)
     elif isinstance(trace, BaseTrace):
         if len(trace) > 0:
             raise ValueError("Continuation of traces is no longer supported.")
@@ -122,7 +124,7 @@ def init_traces(
     chains: int,
     expected_length: int,
     step: BlockedStep | CompoundStep,
-    initial_point: Mapping[str, np.ndarray],
+    initial_point: PointType,
     model: Model,
     trace_vars: list[TensorVariable] | None = None,
 ) -> tuple[RunType | None, Sequence[IBaseTrace]]:
@@ -145,6 +147,7 @@ def init_traces(
             trace=backend,
             model=model,
             trace_vars=trace_vars,
+            initial_point=initial_point,
         )
         for chain_number in range(chains)
     ]

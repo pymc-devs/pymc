@@ -181,6 +181,7 @@ class GradientSharedStep(ArrayStepShared):
         dtype=None,
         logp_dlogp_func=None,
         rng: RandomGenerator = None,
+        initial_point: PointType | None = None,
         **pytensor_kwargs,
     ):
         model = modelcontext(model)
@@ -190,6 +191,7 @@ class GradientSharedStep(ArrayStepShared):
                 vars,
                 dtype=dtype,
                 ravel_inputs=True,
+                initial_point=initial_point,
                 **pytensor_kwargs,
             )
             logp_dlogp_func.trust_input = True
