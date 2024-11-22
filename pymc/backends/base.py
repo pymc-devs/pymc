@@ -147,32 +147,45 @@ class BaseTrace(IBaseTrace):
         use different test point that might be with changed variables shapes
     """
 
-    def __init__(self, name, model=None, vars=None, test_point=None):
-        self.name = name
-
+    def __init__(
+        self,
+        name=None,
+        model=None,
+        vars=None,
+        test_point=None,
+        *,
+        fn=None,
+        var_shapes=None,
+        var_dtypes=None,
+    ):
         model = modelcontext(model)
-        self.model = model
+
         if vars is None:
             vars = model.unobserved_value_vars
 
         unnamed_vars = {var for var in vars if var.name is None}
         if unnamed_vars:
             raise Exception(f"Can't trace unnamed variables: {unnamed_vars}")
-        self.vars = vars
-        self.varnames = [var.name for var in vars]
-        self.fn = model.compile_fn(vars, inputs=model.value_vars, on_unused_input="ignore")
+
+        if fn is None:
+            fn = model.compile_fn(vars, inputs=model.value_vars, on_unused_input="ignore")
 
         # Get variable shapes. Most backends will need this
         # information.
-        if test_point is None:
-            test_point = model.initial_point()
-        else:
-            test_point_ = model.initial_point().copy()
-            test_point_.update(test_point)
-            test_point = test_point_
-        var_values = list(zip(self.varnames, self.fn(test_point)))
-        self.var_shapes = {var: value.shape for var, value in var_values}
-        self.var_dtypes = {var: value.dtype for var, value in var_values}
+        if var_shapes is None or var_dtypes is None:
+            if test_point is None:
+                test_point = model.initial_point()
+            var_values = tuple(zip(vars, fn(**test_point)))
+            var_shapes = {var.name: value.shape for var, value in var_values}
+            var_dtypes = {var.name: value.dtype for var, value in var_values}
+
+        self.name = name
+        self.model = model
+        self.fn = fn
+        self.vars = vars
+        self.varnames = [var.name for var in vars]
+        self.var_shapes = var_shapes
+        self.var_dtypes = var_dtypes
         self.chain = None
         self._is_base_setup = False
         self.sampler_vars = None
