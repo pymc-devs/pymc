@@ -40,8 +40,8 @@ class NDArray(base.BaseTrace):
         `model.unobserved_RVs` is used.
     """
 
-    def __init__(self, name=None, model=None, vars=None, test_point=None):
-        super().__init__(name, model, vars, test_point)
+    def __init__(self, name=None, model=None, vars=None, test_point=None, **kwargs):
+        super().__init__(name, model, vars, test_point, **kwargs)
         self.draw_idx = 0
         self.draws = None
         self.samples = {}
@@ -166,7 +166,13 @@ class NDArray(base.BaseTrace):
         # Only the first `draw_idx` value are valid because of preallocation
         idx = slice(*idx.indices(len(self)))
 
-        sliced = NDArray(model=self.model, vars=self.vars)
+        sliced = type(self)(
+            model=self.model,
+            vars=self.vars,
+            fn=self.fn,
+            var_shapes=self.var_shapes,
+            var_dtypes=self.var_dtypes,
+        )
         sliced.chain = self.chain
         sliced.samples = {varname: values[idx] for varname, values in self.samples.items()}
         sliced.sampler_vars = self.sampler_vars
