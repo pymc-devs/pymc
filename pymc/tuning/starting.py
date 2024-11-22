@@ -143,7 +143,7 @@ def find_MAP(
     compiled_logp_func = DictToArrayBijection.mapf(model.compile_logp(jacobian=False), start)
     logp_func = lambda x: compiled_logp_func(RaveledVars(x, x0.point_map_info))  # noqa: E731
 
-    rvs = [model.values_to_rvs[vars_dict[name]] for name, _, _ in x0.point_map_info]
+    rvs = [model.values_to_rvs[vars_dict[name]] for name, _, _, _ in x0.point_map_info]
     try:
         # This might be needed for calls to `dlogp_func`
         # start_map_info = tuple((v.name, v.shape, v.dtype) for v in vars)

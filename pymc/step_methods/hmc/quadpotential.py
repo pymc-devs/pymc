@@ -363,11 +363,11 @@ class QuadPotentialDiagAdapt(QuadPotential):
         if np.any(self._stds == 0):
             errmsg = ["Mass matrix contains zeros on the diagonal. "]
             last_idx = 0
-            for name, shape, dtype in map_info:
-                arr_len = np.prod(shape, dtype=int)
-                index = np.where(self._stds[last_idx : last_idx + arr_len] == 0)[0]
+            for name, shape, size, dtype in map_info:
+                end = last_idx + size
+                index = np.where(self._stds[last_idx:end] == 0)[0]
                 errmsg.append(f"The derivative of RV `{name}`.ravel()[{index}] is zero.")
-                last_idx += arr_len
+                last_idx += end
 
             raise ValueError("\n".join(errmsg))
 
@@ -375,11 +375,11 @@ class QuadPotentialDiagAdapt(QuadPotential):
             errmsg = ["Mass matrix contains non-finite values on the diagonal. "]
 
             last_idx = 0
-            for name, shape, dtype in map_info:
-                arr_len = np.prod(shape, dtype=int)
-                index = np.where(~np.isfinite(self._stds[last_idx : last_idx + arr_len]))[0]
+            for name, shape, size, dtype in map_info:
+                end = last_idx + size
+                index = np.where(~np.isfinite(self._stds[last_idx:end]))[0]
                 errmsg.append(f"The derivative of RV `{name}`.ravel()[{index}] is non-finite.")
-                last_idx += arr_len
+                last_idx = end
             raise ValueError("\n".join(errmsg))
 
 
