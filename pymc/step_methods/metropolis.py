@@ -28,6 +28,7 @@ from pytensor.tensor.random.basic import BernoulliRV, CategoricalRV
 import pymc as pm
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
+from pymc.initial_point import PointType
 from pymc.pytensorf import (
     CallableTensor,
     compile_pymc,
@@ -160,6 +161,7 @@ class Metropolis(ArrayStepShared):
         model=None,
         mode=None,
         rng=None,
+        initial_point: PointType | None = None,
         blocked: bool = False,
     ):
         """Create an instance of a Metropolis stepper.
@@ -189,14 +191,15 @@ class Metropolis(ArrayStepShared):
             :py:func:`pymc.util.get_random_generator` for more information.
         """
         model = pm.modelcontext(model)
-        initial_values = model.initial_point()
+        if initial_point is None:
+            initial_point = model.initial_point()
 
         if vars is None:
             vars = model.value_vars
         else:
             vars = get_value_vars_from_user_vars(vars, model)
 
-        initial_values_shape = [initial_values[v.name].shape for v in vars]
+        initial_values_shape = [initial_point[v.name].shape for v in vars]
         if S is None:
             S = np.ones(int(sum(np.prod(ivs) for ivs in initial_values_shape)))
 
@@ -216,7 +219,7 @@ class Metropolis(ArrayStepShared):
 
         # Determine type of variables
         self.discrete = np.concatenate(
-            [[v.dtype in pm.discrete_types] * (initial_values[v.name].size or 1) for v in vars]
+            [[v.dtype in pm.discrete_types] * (initial_point[v.name].size or 1) for v in vars]
         )
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
@@ -250,8 +253,8 @@ class Metropolis(ArrayStepShared):
         # TODO: This is not being used when compiling the logp function!
         self.mode = mode
 
-        shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
+        shared = pm.make_shared_replacements(initial_point, vars, model)
+        self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared)
         super().__init__(vars, shared, blocked=blocked, rng=rng)
 
     def reset_tuning(self):
@@ -428,6 +431,7 @@ class BinaryMetropolis(ArrayStep):
         tune_interval=100,
         model=None,
         rng=None,
+        initial_point: PointType | None = None,
         blocked: bool = True,
     ):
         model = pm.modelcontext(model)
@@ -549,6 +553,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         transit_p=0.8,
         model=None,
         rng=None,
+        initial_point: PointType | None = None,
         blocked: bool = True,
     ):
         model = pm.modelcontext(model)
@@ -561,7 +566,8 @@ class BinaryGibbsMetropolis(ArrayStep):
 
         vars = get_value_vars_from_user_vars(vars, model)
 
-        initial_point = model.initial_point()
+        if initial_point is None:
+            initial_point = model.initial_point()
         self.dim = sum(initial_point[v.name].size for v in vars)
 
         if order == "random":
@@ -665,13 +671,15 @@ class CategoricalGibbsMetropolis(ArrayStep):
         order="random",
         model=None,
         rng: RandomGenerator = None,
+        initial_point: PointType | None = None,
         blocked: bool = True,
     ):
         model = pm.modelcontext(model)
 
         vars = get_value_vars_from_user_vars(vars, model)
 
-        initial_point = model.initial_point()
+        if initial_point is None:
+            initial_point = model.initial_point()
 
         dimcats: list[tuple[int, int]] = []
         # The above variable is a list of pairs (aggregate dimension, number
@@ -895,11 +903,13 @@ class DEMetropolis(PopulationArrayStepShared):
         model=None,
         mode=None,
         rng=None,
+        initial_point: PointType | None = None,
         blocked: bool = True,
     ):
         model = pm.modelcontext(model)
-        initial_values = model.initial_point()
-        initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
+        if initial_point is None:
+            initial_point = model.initial_point()
+        initial_values_size = sum(initial_point[n.name].size for n in model.value_vars)
 
         if vars is None:
             vars = model.continuous_value_vars
@@ -928,8 +938,8 @@ class DEMetropolis(PopulationArrayStepShared):
 
         self.mode = mode
 
-        shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
+        shared = pm.make_shared_replacements(initial_point, vars, model)
+        self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared)
         super().__init__(vars, shared, blocked=blocked, rng=rng)
 
     def astep(self, q0: RaveledVars) -> tuple[RaveledVars, StatsType]:
@@ -1062,13 +1072,15 @@ class DEMetropolisZ(ArrayStepShared):
         tune_interval=100,
         tune_drop_fraction: float = 0.9,
         model=None,
+        initial_point: PointType | None = None,
         mode=None,
         rng=None,
         blocked: bool = True,
     ):
         model = pm.modelcontext(model)
-        initial_values = model.initial_point()
-        initial_values_size = sum(initial_values[n.name].size for n in model.value_vars)
+        if initial_point is None:
+            initial_point = model.initial_point()
+        initial_values_size = sum(initial_point[n.name].size for n in model.value_vars)
 
         if vars is None:
             vars = model.continuous_value_vars
@@ -1109,8 +1121,8 @@ class DEMetropolisZ(ArrayStepShared):
 
         self.mode = mode
 
-        shared = pm.make_shared_replacements(initial_values, vars, model)
-        self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
+        shared = pm.make_shared_replacements(initial_point, vars, model)
+        self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared)
         super().__init__(vars, shared, blocked=blocked, rng=rng)
 
     def reset_tuning(self):
