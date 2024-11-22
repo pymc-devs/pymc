@@ -2395,7 +2395,7 @@ def test_mvnormal_no_cholesky_in_model_logp():
     d2logp = m.compile_d2logp()
     assert not contains_cholesky_op(d2logp.f.maker.fgraph)
 
-    logp_dlogp = m.logp_dlogp_function()
+    logp_dlogp = m.logp_dlogp_function(ravel_inputs=True)
     assert not contains_cholesky_op(logp_dlogp._pytensor_function.maker.fgraph)
 
 

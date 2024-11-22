@@ -194,8 +194,6 @@ class BaseHMC(GradientSharedStep):
         process_start = time.process_time()
 
         p0 = self.potential.random()
-        p0 = RaveledVars(p0, q0.point_map_info)
-
         start = self.integrator.compute_state(q0, p0)
 
         warning: SamplerWarning | None = None
@@ -226,13 +224,13 @@ class BaseHMC(GradientSharedStep):
         if self._step_rand is not None:
             step_size = self._step_rand(step_size, rng=self.rng)
 
-        hmc_step = self._hamiltonian_step(start, p0.data, step_size)
+        hmc_step = self._hamiltonian_step(start, p0, step_size)
 
         perf_end = time.perf_counter()
         process_end = time.process_time()
 
         self.step_adapt.update(hmc_step.accept_stat, adapt_step)
-        self.potential.update(hmc_step.end.q, hmc_step.end.q_grad, self.tune)
+        self.potential.update(hmc_step.end.q.data, hmc_step.end.q_grad, self.tune)
         if hmc_step.divergence_info:
             info = hmc_step.divergence_info
             point = None

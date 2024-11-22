@@ -1441,6 +1441,8 @@ def init_nuts(
         pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="relative"),
     ]
 
+    logp_dlogp_func = model.logp_dlogp_function(ravel_inputs=True)
+    logp_dlogp_func.trust_input = True
     initial_points = _init_jitter(
         model,
         initvals,

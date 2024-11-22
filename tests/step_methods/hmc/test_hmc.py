@@ -59,10 +59,9 @@ def test_leapfrog_reversible():
 
     step = HMC(vars=model.value_vars, model=model, scaling=scaling)
 
-    step.integrator._logp_dlogp_func.set_extra_values({})
     astart = DictToArrayBijection.map(start)
     p = RaveledVars(floatX(step.potential.random()), astart.point_map_info)
-    q = RaveledVars(floatX(np.random.randn(size)), astart.point_map_info)
+    q = floatX(np.random.randn(size))
     start = step.integrator.compute_state(p, q)
     for epsilon in [0.01, 0.1]:
         for n_steps in [1, 2, 3, 4, 20]:
