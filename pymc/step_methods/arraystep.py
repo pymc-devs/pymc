@@ -185,17 +185,17 @@ class GradientSharedStep(ArrayStepShared):
         model = modelcontext(model)
 
         if logp_dlogp_func is None:
-            func = model.logp_dlogp_function(vars, dtype=dtype, **pytensor_kwargs)
-        else:
-            func = logp_dlogp_func
+            logp_dlogp_func = model.logp_dlogp_function(
+                vars,
+                dtype=dtype,
+                ravel_inputs=True,
+                **pytensor_kwargs,
+            )
+            logp_dlogp_func.trust_input = True
 
-        self._logp_dlogp_func = func
+        self._logp_dlogp_func = logp_dlogp_func
 
-        super().__init__(vars, func._extra_vars_shared, blocked, rng=rng)
-
-    def step(self, point) -> tuple[PointType, StatsType]:
-        self._logp_dlogp_func._extra_are_set = True
-        return super().step(point)
+        super().__init__(vars, logp_dlogp_func._extra_vars_shared, blocked, rng=rng)
 
 
 def metrop_select(
