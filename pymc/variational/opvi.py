@@ -1554,7 +1554,10 @@ class Approximation(WithMemoization):
         if random_seed is not None:
             (random_seed,) = _get_seeds_per_chain(random_seed, 1)
         samples: dict = self.sample_dict_fn(draws, random_seed=random_seed)
-        points = ({name: records[i] for name, records in samples.items()} for i in range(draws))
+        points = (
+            {name: np.asarray(records[i]) for name, records in samples.items()}
+            for i in range(draws)
+        )
 
         trace = NDArray(
             model=self.model,
