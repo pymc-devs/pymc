@@ -99,26 +99,27 @@ class ArrayStepShared(BlockedStep):
             :py:func:`pymc.util.get_random_generator` for more information.
         """
         self.vars = vars
+        self.var_names = tuple(cast(str, var.name) for var in vars)
         self.shared = {get_var_name(var): shared for var, shared in shared.items()}
         self.blocked = blocked
         self.rng = get_random_generator(rng)
 
     def step(self, point: PointType) -> tuple[PointType, StatsType]:
-        for name, shared_var in self.shared.items():
-            shared_var.set_value(point[name])
+        full_point = None
+        if self.shared:
+            for name, shared_var in self.shared.items():
+                shared_var.set_value(point[name], borrow=True)
+            full_point = point
+            point = {name: point[name] for name in self.var_names}
 
-        var_dict = {cast(str, v.name): point[cast(str, v.name)] for v in self.vars}
-        q = DictToArrayBijection.map(var_dict)
-
+        q = DictToArrayBijection.map(point)
         apoint, stats = self.astep(q)
 
         if not isinstance(apoint, RaveledVars):
             # We assume that the mapping has stayed the same
             apoint = RaveledVars(apoint, q.point_map_info)
 
-        new_point = DictToArrayBijection.rmap(apoint, start_point=point)
-
-        return new_point, stats
+        return DictToArrayBijection.rmap(apoint, start_point=full_point), stats
 
     @abstractmethod
     def astep(self, q0: RaveledVars) -> tuple[RaveledVars, StatsType]:
