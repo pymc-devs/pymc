@@ -742,39 +742,35 @@ class TestAssignStepMethods:
     def test_bernoulli(self):
         """Test bernoulli distribution is assigned binary gibbs metropolis method"""
         with pm.Model() as model:
-            pm.Bernoulli("x", 0.5)
-            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
-                steps = assign_step_methods(model, [])
-        assert isinstance(steps, BinaryGibbsMetropolis)
+            x = pm.Bernoulli("x", 0.5)
+        _, selected_steps = assign_step_methods(model, [])
+        assert selected_steps == {BinaryGibbsMetropolis: [model.rvs_to_values[x]]}
 
     def test_normal(self):
         """Test normal distribution is assigned NUTS method"""
         with pm.Model() as model:
-            pm.Normal("x", 0, 1)
-            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
-                steps = assign_step_methods(model, [])
-        assert isinstance(steps, NUTS)
+            x = pm.Normal("x", 0, 1)
+        _, selected_steps = assign_step_methods(model, [])
+        assert selected_steps == {NUTS: [model.rvs_to_values[x]]}
 
     def test_categorical(self):
         """Test categorical distribution is assigned categorical gibbs metropolis method"""
         with pm.Model() as model:
-            pm.Categorical("x", np.array([0.25, 0.75]))
-            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
-                steps = assign_step_methods(model, [])
-        assert isinstance(steps, BinaryGibbsMetropolis)
+            x = pm.Categorical("x", np.array([0.25, 0.75]))
+        _, selected_steps = assign_step_methods(model, [])
+        assert selected_steps == {BinaryGibbsMetropolis: [model.rvs_to_values[x]]}
+
         with pm.Model() as model:
-            pm.Categorical("y", np.array([0.25, 0.70, 0.05]))
-            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
-                steps = assign_step_methods(model, [])
-        assert isinstance(steps, CategoricalGibbsMetropolis)
+            y = pm.Categorical("y", np.array([0.25, 0.70, 0.05]))
+        _, selected_steps = assign_step_methods(model, [])
+        assert selected_steps == {CategoricalGibbsMetropolis: [model.rvs_to_values[y]]}
 
     def test_binomial(self):
         """Test binomial distribution is assigned metropolis method."""
         with pm.Model() as model:
-            pm.Binomial("x", 10, 0.5)
-            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
-                steps = assign_step_methods(model, [])
-        assert isinstance(steps, Metropolis)
+            x = pm.Binomial("x", 10, 0.5)
+        _, selected_steps = assign_step_methods(model, [])
+        assert selected_steps == {Metropolis: [model.rvs_to_values[x]]}
 
     def test_normal_nograd_op(self):
         """Test normal distribution without an implemented gradient is assigned slice method"""
@@ -791,11 +787,12 @@ class TestAssignStepMethods:
                 return x
 
             data = np.random.normal(size=(100,))
-            pm.Normal("y", mu=kill_grad(x), sigma=1, observed=data.astype(pytensor.config.floatX))
+            y = pm.Normal(
+                "y", mu=kill_grad(x), sigma=1, observed=data.astype(pytensor.config.floatX)
+            )
 
-            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
-                steps = assign_step_methods(model, [])
-        assert isinstance(steps, Slice)
+        _, selected_steps = assign_step_methods(model, [])
+        assert selected_steps == {Slice: [model.rvs_to_values[x]]}
 
     @pytest.fixture
     def step_methods(self):
@@ -812,18 +809,18 @@ class TestAssignStepMethods:
 
         with pm.Model() as model:
             pm.Normal("x", 0, 1)
-            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
-                steps = assign_step_methods(model, [])
-        assert not isinstance(steps, NUTS)
+
+        _, selected_steps = assign_step_methods(model, [])
+        assert NUTS not in selected_steps
 
         # add back nuts
         step_methods.append(NUTS)
 
         with pm.Model() as model:
             pm.Normal("x", 0, 1)
-            with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
-                steps = assign_step_methods(model, [])
-        assert isinstance(steps, NUTS)
+
+        _, selected_steps = assign_step_methods(model, [])
+        assert NUTS in selected_steps
 
     def test_step_vars_in_model(self):
         """Test if error is raised if step variable is not found in model.value_vars"""

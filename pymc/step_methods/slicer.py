@@ -18,6 +18,7 @@
 import numpy as np
 
 from pymc.blocking import RaveledVars, StatsType
+from pymc.initial_point import PointType
 from pymc.model import modelcontext
 from pymc.pytensorf import compile_pymc, join_nonshared_inputs, make_shared_replacements
 from pymc.step_methods.arraystep import ArrayStepShared
@@ -84,6 +85,7 @@ class Slice(ArrayStepShared):
         model=None,
         iter_limit=np.inf,
         rng=None,
+        initial_point: PointType | None = None,
         blocked: bool = False,  # Could be true since tuning is independent across dims?
     ):
         model = modelcontext(model)
@@ -97,10 +99,12 @@ class Slice(ArrayStepShared):
         else:
             vars = get_value_vars_from_user_vars(vars, model)
 
-        point = model.initial_point()
-        shared = make_shared_replacements(point, vars, model)
+        if initial_point is None:
+            initial_point = model.initial_point()
+
+        shared = make_shared_replacements(initial_point, vars, model)
         [logp], raveled_inp = join_nonshared_inputs(
-            point=point, outputs=[model.logp()], inputs=vars, shared_inputs=shared
+            point=initial_point, outputs=[model.logp()], inputs=vars, shared_inputs=shared
         )
         self.logp = compile_pymc([raveled_inp], logp)
         self.logp.trust_input = True
