@@ -105,17 +105,18 @@ class NDArray(base.BaseTrace):
         point: dict
             Values mapped to variable names
         """
+        samples = self.samples
+        draw_idx = self.draw_idx
         for varname, value in zip(self.varnames, self.fn(*point.values())):
-            self.samples[varname][self.draw_idx] = value
+            samples[varname][draw_idx] = value
 
-        if self._stats is not None and sampler_stats is None:
-            raise ValueError("Expected sampler_stats")
-        if self._stats is None and sampler_stats is not None:
-            raise ValueError("Unknown sampler_stats")
         if sampler_stats is not None:
             for data, vars in zip(self._stats, sampler_stats):
                 for key, val in vars.items():
-                    data[key][self.draw_idx] = val
+                    data[key][draw_idx] = val
+        elif self._stats is not None:
+            raise ValueError("Expected sampler_stats")
+
         self.draw_idx += 1
 
     def _get_sampler_stats(
