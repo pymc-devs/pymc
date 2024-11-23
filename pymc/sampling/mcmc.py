@@ -1277,14 +1277,11 @@ def _mp_sample(
                     strace = traces[draw.chain]
                     strace.record(draw.point, draw.stats)
                     log_warning_stats(draw.stats)
-                    if draw.is_last:
-                        strace.close()
 
                     if callback is not None:
                         callback(trace=strace, draw=draw)
 
         except ps.ParallelSamplingError as error:
-            strace = traces[error._chain]
             for strace in traces:
                 strace.close()
             raise
