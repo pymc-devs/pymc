@@ -38,7 +38,7 @@
 import numpy as np
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Node
+from pytensor.graph.basic import Apply
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scalar.basic import Ceil, Clip, Floor, RoundHalfToEven
@@ -62,7 +62,7 @@ measurable_clip = MeasurableClip(scalar_clip)
 
 
 @node_rewriter(tracks=[clip])
-def find_measurable_clips(fgraph: FunctionGraph, node: Node) -> list[TensorVariable] | None:
+def find_measurable_clips(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
     # TODO: Canonicalize x[x>ub] = ub -> clip(x, x, ub)
 
     if not filter_measurable_variables(node.inputs):
@@ -153,7 +153,7 @@ class MeasurableRound(MeasurableElemwise):
 
 
 @node_rewriter(tracks=[ceil, floor, round_half_to_even])
-def find_measurable_roundings(fgraph: FunctionGraph, node: Node) -> list[TensorVariable] | None:
+def find_measurable_roundings(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
     if not filter_measurable_variables(node.inputs):
         return None
 

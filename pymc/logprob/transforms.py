@@ -42,7 +42,7 @@ import pytensor.tensor as pt
 
 from pytensor import scan
 from pytensor.gradient import jacobian
-from pytensor.graph.basic import Node, Variable
+from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scalar import (
@@ -453,7 +453,7 @@ def measurable_power_exponent_to_exp(fgraph, node):
         erfcx,
     ]
 )
-def find_measurable_transforms(fgraph: FunctionGraph, node: Node) -> list[Node] | None:
+def find_measurable_transforms(fgraph: FunctionGraph, node: Apply) -> list[Variable] | None:
     """Find measurable transformations from Elemwise operators."""
     # Node was already converted
     if isinstance(node.op, MeasurableOp):
