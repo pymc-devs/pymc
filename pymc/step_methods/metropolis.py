@@ -383,6 +383,13 @@ class BinaryMetropolisState(StepMethodState):
 class BinaryMetropolis(ArrayStep):
     """Metropolis-Hastings optimized for binary variables.
 
+    Unlike BinaryGibbsMetropolis, this step sampler proposes an update for all variable dimensions at once.
+
+    This will perform a single logp evaluation per step, at the expense of a lower acceptance rate when
+    the posteriors of the binary variables are highly correlated.
+
+    The BinaryGibbsMetropolis (not this one) is the default step sampler for binary variables
+
     Parameters
     ----------
     vars: list
@@ -488,6 +495,14 @@ class BinaryGibbsMetropolisState(StepMethodState):
 
 class BinaryGibbsMetropolis(ArrayStep):
     """A Metropolis-within-Gibbs step method optimized for binary variables.
+
+    Unlike BinaryMetropolis, this step sampler proposes a variable dimension update at a time.
+
+    This will increase acceptance rate when the posteriors of the binary variables are highly correlated,
+    at the expense of doing more logp evaluations per step.
+
+    This is the default step sampler for binary variables.
+
 
     Parameters
     ----------
