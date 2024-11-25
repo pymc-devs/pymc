@@ -151,6 +151,7 @@ class Metropolis(ArrayStepShared):
     def __init__(
         self,
         vars=None,
+        *,
         S=None,
         proposal_dist=None,
         scaling=1.0,
@@ -159,7 +160,7 @@ class Metropolis(ArrayStepShared):
         model=None,
         mode=None,
         rng=None,
-        **kwargs,
+        blocked: bool = False,
     ):
         """Create an instance of a Metropolis stepper.
 
@@ -251,7 +252,7 @@ class Metropolis(ArrayStepShared):
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
         self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
-        super().__init__(vars, shared, rng=rng)
+        super().__init__(vars, shared, blocked=blocked, rng=rng)
 
     def reset_tuning(self):
         """Reset the tuned sampler parameters to their initial values."""
@@ -418,7 +419,17 @@ class BinaryMetropolis(ArrayStep):
 
     _state_class = BinaryMetropolisState
 
-    def __init__(self, vars, scaling=1.0, tune=True, tune_interval=100, model=None, rng=None):
+    def __init__(
+        self,
+        vars,
+        *,
+        scaling=1.0,
+        tune=True,
+        tune_interval=100,
+        model=None,
+        rng=None,
+        blocked: bool = True,
+    ):
         model = pm.modelcontext(model)
 
         self.scaling = scaling
@@ -432,7 +443,7 @@ class BinaryMetropolis(ArrayStep):
         if not all(v.dtype in pm.discrete_types for v in vars):
             raise ValueError("All variables must be Bernoulli for BinaryMetropolis")
 
-        super().__init__(vars, [model.compile_logp()], rng=rng)
+        super().__init__(vars, [model.compile_logp()], blocked=blocked, rng=rng)
 
     def astep(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         logp = args[0]
@@ -530,7 +541,16 @@ class BinaryGibbsMetropolis(ArrayStep):
 
     _state_class = BinaryGibbsMetropolisState
 
-    def __init__(self, vars, order="random", transit_p=0.8, model=None, rng=None):
+    def __init__(
+        self,
+        vars,
+        *,
+        order="random",
+        transit_p=0.8,
+        model=None,
+        rng=None,
+        blocked: bool = True,
+    ):
         model = pm.modelcontext(model)
 
         # Doesn't actually tune, but it's required to emit a sampler stat
@@ -556,7 +576,7 @@ class BinaryGibbsMetropolis(ArrayStep):
         if not all(v.dtype in pm.discrete_types for v in vars):
             raise ValueError("All variables must be binary for BinaryGibbsMetropolis")
 
-        super().__init__(vars, [model.compile_logp()], rng=rng)
+        super().__init__(vars, [model.compile_logp()], blocked=blocked, rng=rng)
 
     def reset_tuning(self):
         # There are no tuning parameters in this step method.
@@ -638,7 +658,14 @@ class CategoricalGibbsMetropolis(ArrayStep):
     _state_class = CategoricalGibbsMetropolisState
 
     def __init__(
-        self, vars, proposal="uniform", order="random", model=None, rng: RandomGenerator = None
+        self,
+        vars,
+        *,
+        proposal="uniform",
+        order="random",
+        model=None,
+        rng: RandomGenerator = None,
+        blocked: bool = True,
     ):
         model = pm.modelcontext(model)
 
@@ -693,7 +720,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
         # that indicates whether a draw was done in a tuning phase.
         self.tune = True
 
-        super().__init__(vars, [model.compile_logp()], rng=rng)
+        super().__init__(vars, [model.compile_logp()], blocked=blocked, rng=rng)
 
     def reset_tuning(self):
         # There are no tuning parameters in this step method.
@@ -858,6 +885,7 @@ class DEMetropolis(PopulationArrayStepShared):
     def __init__(
         self,
         vars=None,
+        *,
         S=None,
         proposal_dist=None,
         lamb=None,
@@ -867,7 +895,7 @@ class DEMetropolis(PopulationArrayStepShared):
         model=None,
         mode=None,
         rng=None,
-        **kwargs,
+        blocked: bool = True,
     ):
         model = pm.modelcontext(model)
         initial_values = model.initial_point()
@@ -902,7 +930,7 @@ class DEMetropolis(PopulationArrayStepShared):
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
         self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
-        super().__init__(vars, shared, rng=rng)
+        super().__init__(vars, shared, blocked=blocked, rng=rng)
 
     def astep(self, q0: RaveledVars) -> tuple[RaveledVars, StatsType]:
         point_map_info = q0.point_map_info
@@ -1025,6 +1053,7 @@ class DEMetropolisZ(ArrayStepShared):
     def __init__(
         self,
         vars=None,
+        *,
         S=None,
         proposal_dist=None,
         lamb=None,
@@ -1035,7 +1064,7 @@ class DEMetropolisZ(ArrayStepShared):
         model=None,
         mode=None,
         rng=None,
-        **kwargs,
+        blocked: bool = True,
     ):
         model = pm.modelcontext(model)
         initial_values = model.initial_point()
@@ -1082,7 +1111,7 @@ class DEMetropolisZ(ArrayStepShared):
 
         shared = pm.make_shared_replacements(initial_values, vars, model)
         self.delta_logp = delta_logp(initial_values, model.logp(), vars, shared)
-        super().__init__(vars, shared, rng=rng)
+        super().__init__(vars, shared, blocked=blocked, rng=rng)
 
     def reset_tuning(self):
         """Reset the tuned sampler parameters and history to their initial values."""

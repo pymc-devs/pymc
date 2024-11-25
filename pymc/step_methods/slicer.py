@@ -76,7 +76,15 @@ class Slice(ArrayStepShared):
     _state_class = SliceState
 
     def __init__(
-        self, vars=None, w=1.0, tune=True, model=None, iter_limit=np.inf, rng=None, **kwargs
+        self,
+        vars=None,
+        *,
+        w=1.0,
+        tune=True,
+        model=None,
+        iter_limit=np.inf,
+        rng=None,
+        blocked: bool = False,  # Could be true since tuning is independent across dims?
     ):
         model = modelcontext(model)
         self.w = np.asarray(w).copy()
@@ -97,7 +105,7 @@ class Slice(ArrayStepShared):
         self.logp = compile_pymc([raveled_inp], logp)
         self.logp.trust_input = True
 
-        super().__init__(vars, shared, rng=rng)
+        super().__init__(vars, shared, blocked=blocked, rng=rng)
 
     def astep(self, apoint: RaveledVars) -> tuple[RaveledVars, StatsType]:
         # The arguments are determined by the list passed via `super().__init__(..., fs, ...)`
