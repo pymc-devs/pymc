@@ -131,7 +131,7 @@ def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> list[TensorVar
     base_var = node.inputs[0]
 
     if not base_var.dtype.startswith("bool"):
-        raise None
+        return None
 
     if not filter_measurable_variables([base_var]):
         return None
