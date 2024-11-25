@@ -49,13 +49,13 @@ from pymc.pytensorf import constant_fold
 from pymc.util import check_dist_not_registered
 
 __all__ = [
-    "RandomWalk",
-    "GaussianRandomWalk",
-    "MvGaussianRandomWalk",
-    "MvStudentTRandomWalk",
     "AR",
     "GARCH11",
     "EulerMaruyama",
+    "GaussianRandomWalk",
+    "MvGaussianRandomWalk",
+    "MvStudentTRandomWalk",
+    "RandomWalk",
 ]
 
 

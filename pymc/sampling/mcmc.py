@@ -80,8 +80,8 @@ from pymc.vartypes import discrete_types
 sys.setrecursionlimit(10000)
 
 __all__ = [
-    "sample",
     "init_nuts",
+    "sample",
 ]
 
 Step: TypeAlias = BlockedStep | CompoundStep

@@ -413,7 +413,7 @@ def extract_dims(var) -> tuple:
 
 
 __all__ = (
+    "clone_model",
     "fgraph_from_model",
     "model_from_fgraph",
-    "clone_model",
 )

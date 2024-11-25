@@ -119,18 +119,18 @@ import pytensor.tensor as pt
 import pymc as pm
 
 __all__ = [
-    "sgd",
-    "apply_momentum",
-    "momentum",
-    "apply_nesterov_momentum",
-    "nesterov_momentum",
+    "adadelta",
     "adagrad",
     "adagrad_window",
-    "rmsprop",
-    "adadelta",
     "adam",
     "adamax",
+    "apply_momentum",
+    "apply_nesterov_momentum",
+    "momentum",
+    "nesterov_momentum",
     "norm_constraint",
+    "rmsprop",
+    "sgd",
     "total_norm_constraint",
 ]
 

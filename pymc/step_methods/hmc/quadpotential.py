@@ -30,13 +30,13 @@ from pymc.step_methods.state import DataClassState, WithSamplingState, dataclass
 from pymc.util import RandomGenerator, get_random_generator
 
 __all__ = [
-    "quad_potential",
     "QuadPotentialDiag",
-    "QuadPotentialFull",
-    "QuadPotentialFullInv",
     "QuadPotentialDiagAdapt",
+    "QuadPotentialFull",
     "QuadPotentialFullAdapt",
+    "QuadPotentialFullInv",
     "isquadpotential",
+    "quad_potential",
 ]
 
 

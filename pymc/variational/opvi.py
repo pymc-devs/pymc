@@ -88,7 +88,7 @@ from pymc.variational.minibatch_rv import MinibatchRandomVariable, get_scaling
 from pymc.variational.updates import adagrad_window
 from pymc.vartypes import discrete_types
 
-__all__ = ["ObjectiveFunction", "Operator", "TestFunction", "Group", "Approximation"]
+__all__ = ["Approximation", "Group", "ObjectiveFunction", "Operator", "TestFunction"]
 
 
 class VariationalInferenceError(Exception):
@@ -1450,7 +1450,7 @@ class Approximation(WithMemoization):
         """
         repl = collections.OrderedDict()
         # avoid scan if size is constant and equal to one
-        if isinstance(s, int) and (s == 1) or s is None:
+        if (isinstance(s, int) and (s == 1)) or s is None:
             repl[self.varlogp] = self.single_symbolic_varlogp
             repl[self.datalogp] = self.single_symbolic_datalogp
         return repl

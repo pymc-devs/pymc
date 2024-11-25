@@ -36,7 +36,7 @@ from pymc.math import cartesian, kron_diag, kron_dot, kron_solve_lower, kron_sol
 solve_lower = partial(solve_triangular, lower=True)
 solve_upper = partial(solve_triangular, lower=False)
 
-__all__ = ["Latent", "Marginal", "TP", "MarginalApprox", "LatentKron", "MarginalKron"]
+__all__ = ["TP", "Latent", "LatentKron", "Marginal", "MarginalApprox", "MarginalKron"]
 
 
 _noise_deprecation_warning = (

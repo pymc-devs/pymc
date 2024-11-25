@@ -52,18 +52,18 @@ from pymc.logprob.basic import logcdf, logp
 from pymc.math import sigmoid
 
 __all__ = [
-    "Binomial",
-    "BetaBinomial",
     "Bernoulli",
-    "DiscreteWeibull",
-    "Poisson",
-    "NegativeBinomial",
+    "BetaBinomial",
+    "Binomial",
+    "Categorical",
     "DiscreteUniform",
+    "DiscreteWeibull",
     "Geometric",
     "HyperGeometric",
-    "Categorical",
+    "NegativeBinomial",
     "OrderedLogistic",
     "OrderedProbit",
+    "Poisson",
 ]
 
 from pymc.pytensorf import normalize_rng_param

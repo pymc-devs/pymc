@@ -14,7 +14,7 @@
 
 import pytensor.tensor as pt
 
-__all__ = ["Zero", "Constant", "Linear"]
+__all__ = ["Constant", "Linear", "Zero"]
 
 
 class Mean:

@@ -58,7 +58,7 @@ import pymc.logprob.transforms
 
 
 __all__ = (
-    "logp",
-    "logcdf",
     "icdf",
+    "logcdf",
+    "logp",
 )
