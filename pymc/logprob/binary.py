@@ -11,11 +11,12 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+from typing import cast
 
 import numpy as np
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Node
+from pytensor.graph.basic import Apply
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scalar.basic import GE, GT, LE, LT, Invert
@@ -39,7 +40,7 @@ class MeasurableComparison(MeasurableElemwise):
 
 
 @node_rewriter(tracks=[gt, lt, ge, le])
-def find_measurable_comparisons(fgraph: FunctionGraph, node: Node) -> list[TensorVariable] | None:
+def find_measurable_comparisons(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
     measurable_inputs = filter_measurable_variables(node.inputs)
 
     if len(measurable_inputs) != 1:
@@ -55,7 +56,7 @@ def find_measurable_comparisons(fgraph: FunctionGraph, node: Node) -> list[Tenso
 
     # Check that the other input is not potentially measurable, in which case this rewrite
     # would be invalid
-    const = node.inputs[(measurable_var_idx + 1) % 2]
+    const = cast(TensorVariable, node.inputs[(measurable_var_idx + 1) % 2])
 
     # check for potential measurability of const
     if check_potential_measurability([const]):
@@ -127,8 +128,8 @@ class MeasurableBitwise(MeasurableElemwise):
 
 
 @node_rewriter(tracks=[invert])
-def find_measurable_bitwise(fgraph: FunctionGraph, node: Node) -> list[TensorVariable] | None:
-    base_var = node.inputs[0]
+def find_measurable_bitwise(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
+    base_var = cast(TensorVariable, node.inputs[0])
 
     if not base_var.dtype.startswith("bool"):
         return None

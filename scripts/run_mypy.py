@@ -32,8 +32,6 @@ pymc/distributions/multivariate.py
 pymc/distributions/timeseries.py
 pymc/distributions/truncated.py
 pymc/initial_point.py
-pymc/logprob/binary.py
-pymc/logprob/censoring.py
 pymc/logprob/basic.py
 pymc/logprob/mixture.py
 pymc/logprob/rewriting.py

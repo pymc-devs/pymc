@@ -19,7 +19,7 @@ import pytensor.tensor as pt
 
 from pytensor import config, graph_replace, scan
 from pytensor.graph import Op
-from pytensor.graph.basic import Node
+from pytensor.graph.basic import Apply
 from pytensor.raise_op import CheckAndRaise
 from pytensor.scan import until
 from pytensor.tensor import TensorConstant, TensorVariable
@@ -211,7 +211,7 @@ class TruncatedRV(SymbolicRandomVariable):
         upper_logcdf = graph_replace(lower_logcdf, {lower_value: upper_value})
         return lower_logcdf, upper_logcdf
 
-    def update(self, node: Node):
+    def update(self, node: Apply):
         """Return the update mapping for the internal RNGs.
 
         TruncatedRVs are created in a way that the rng updates follow the same order as the input RNGs.
