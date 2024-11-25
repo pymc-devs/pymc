@@ -174,8 +174,9 @@ class GradientSharedStep(ArrayStepShared):
     def __init__(
         self,
         vars,
+        *,
         model=None,
-        blocked=True,
+        blocked: bool = True,
         dtype=None,
         logp_dlogp_func=None,
         rng: RandomGenerator = None,

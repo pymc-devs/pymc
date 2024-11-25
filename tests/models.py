@@ -78,7 +78,7 @@ def simple_arbitrary_det():
 
 def simple_init():
     start, model, moments = simple_model()
-    step = Metropolis(model.value_vars, np.diag([1.0]), model=model)
+    step = Metropolis(model.value_vars, S=np.diag([1.0]), model=model)
     return model, start, step, moments
 
 

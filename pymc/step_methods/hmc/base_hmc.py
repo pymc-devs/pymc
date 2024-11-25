@@ -82,11 +82,12 @@ class BaseHMC(GradientSharedStep):
     def __init__(
         self,
         vars=None,
+        *,
         scaling=None,
         step_scale=0.25,
         is_cov=False,
         model=None,
-        blocked=True,
+        blocked: bool = True,
         potential=None,
         dtype=None,
         Emax=1000,
