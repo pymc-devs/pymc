@@ -59,7 +59,7 @@ __all__ = [
     "MultivariateNormalProposal",
 ]
 
-from pymc.util import get_value_vars_from_user_vars
+from pymc.util import RandomGenerator, get_value_vars_from_user_vars
 
 # Available proposal distributions for Metropolis
 
@@ -302,7 +302,7 @@ class Metropolis(ArrayStepShared):
             accept_rate = self.delta_logp(q, q0d)
             q, accepted = metrop_select(accept_rate, q, q0d, rng=self.rng)
             self.accept_rate_iter = accept_rate
-            self.accepted_iter = accepted
+            self.accepted_iter[0] = accepted
             self.accepted_sum += accepted
 
         self.steps_until_tune -= 1
@@ -622,14 +622,16 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
     _state_class = CategoricalGibbsMetropolisState
 
-    def __init__(self, vars, proposal="uniform", order="random", model=None, rng=None):
+    def __init__(
+        self, vars, proposal="uniform", order="random", model=None, rng: RandomGenerator = None
+    ):
         model = pm.modelcontext(model)
 
         vars = get_value_vars_from_user_vars(vars, model)
 
         initial_point = model.initial_point()
 
-        dimcats = []
+        dimcats: list[tuple[int, int]] = []
         # The above variable is a list of pairs (aggregate dimension, number
         # of categories). For example, if vars = [x, y] with x being a 2-D
         # variable with M categories and y being a 3-D variable with N
@@ -665,10 +667,10 @@ class CategoricalGibbsMetropolis(ArrayStep):
             self.dimcats = [dimcats[j] for j in order]
 
         if proposal == "uniform":
-            self.astep = self.astep_unif
+            self.astep = self.astep_unif  # type: ignore[assignment]
         elif proposal == "proportional":
             # Use the optimized "Metropolized Gibbs Sampler" described in Liu96.
-            self.astep = self.astep_prop
+            self.astep = self.astep_prop  # type: ignore[assignment]
         else:
             raise ValueError("Argument 'proposal' should either be 'uniform' or 'proportional'")
 
