@@ -21,7 +21,7 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Node, ancestors
+from pytensor.graph.basic import Apply, ancestors
 from pytensor.graph.replace import clone_replace
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
@@ -490,7 +490,7 @@ class AutoRegressiveRV(SymbolicRandomVariable):
             constant_term=constant_term,
         )(rhos, sigma, init_dist, steps, noise_rng)
 
-    def update(self, node: Node):
+    def update(self, node: Apply):
         """Return the update mapping for the noise RV."""
         return {node.inputs[-1]: node.outputs[0]}
 
@@ -767,7 +767,7 @@ class GARCH11RV(SymbolicRandomVariable):
             outputs=[noise_next_rng, garch11],
         )(omega, alpha_1, beta_1, initial_vol, init_dist, steps, noise_rng)
 
-    def update(self, node: Node):
+    def update(self, node: Apply):
         """Return the update mapping for the noise RV."""
         return {node.inputs[-1]: node.outputs[0]}
 
@@ -918,7 +918,7 @@ class EulerMaruyamaRV(SymbolicRandomVariable):
             extended_signature=f"(),(s),{','.join('()' for _ in sde_pars)},[rng]->[rng],(t)",
         )(init_dist, steps, *sde_pars, noise_rng)
 
-    def update(self, node: Node):
+    def update(self, node: Apply):
         """Return the update mapping for the noise RV."""
         return {node.inputs[-1]: node.outputs[0]}
 
