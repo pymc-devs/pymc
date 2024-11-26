@@ -84,9 +84,9 @@ class Censored(Distribution):
 
         .. warning:: dist will be cloned, rendering it independent of the one passed as input.
 
-    lower : float or None
+    lower : float, int, array-like or None
         Lower (left) censoring point. If `None` the distribution will not be left censored
-    upper : float or None
+    upper : float, int, array-like or None
         Upper (right) censoring point. If `None`, the distribution will not be right censored.
 
     Warnings
