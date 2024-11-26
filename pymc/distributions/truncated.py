@@ -291,8 +291,8 @@ class Truncated(Distribution):
         with pm.Model():
             normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
             truncated_normal = pm.Truncated("truncated_normal", normal_dist, lower=-1, upper=1)
-    
-    Partial truncatin of normal distributions achieved by passing +/-inf truncation points. 
+
+    Partial truncatin of normal distributions achieved by passing +/-inf truncation points.
     Examples of 4 truncation conditions: untruncated (-inf, inf), upper truncated (-inf, 1),
     lower truncated (-1, inf), and both truncated (-1, 1)
     .. code-block:: python

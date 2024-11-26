@@ -107,8 +107,8 @@ class Censored(Distribution):
         with pm.Model():
             normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
             censored_normal = pm.Censored("censored_normal", normal_dist, lower=-1, upper=1)
-    
-    Partial censoring of normal distributions achienved by passing +/-inf censor points. 
+
+    Partial censoring of normal distributions achienved by passing +/-inf censor points.
     Examples of 4 censor conditions: uncensored (-inf, inf), upper censored (-inf, 1),
     lower censored (-1, inf), and both censored (-1, 1)
     .. code-block:: python
