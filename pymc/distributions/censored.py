@@ -106,6 +106,9 @@ class Censored(Distribution):
         with pm.Model():
             normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
             censored_normal = pm.Censored("censored_normal", normal_dist, lower=-1, upper=1)
+        with pm.Model():
+            normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
+            partially_censored_normal = pm.Censored("partially_censored_normal", normal_dist, lower=-1, upper=np.inf)
     """
 
     rv_type = CensoredRV
