@@ -285,14 +285,20 @@ class Truncated(Distribution):
 
     Examples
     --------
+    Truncation with upper & lower points set to +/-1
     .. code-block:: python
 
         with pm.Model():
             normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
             truncated_normal = pm.Truncated("truncated_normal", normal_dist, lower=-1, upper=1)
+    
+    Partial truncatin of normal distributions achieved by passing +/-inf truncation points. 
+    Examples of 4 truncation conditions: untruncated (-inf, inf), upper truncated (-inf, 1),
+    lower truncated (-1, inf), and both truncated (-1, 1)
+    .. code-block:: python
         with pm.Model():
             normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
-            partially_truncated_normal = pm.Truncated("partially_truncated_normal", normal_dist, lower=-np.inf, upper=1)
+            partially_truncated_normal = pm.Truncated("partially_truncated_normal", normal_dist, lower=[-np.inf, -np.inf, -1, -1], upper=[np.inf, 1, np.inf, 1], shape=(4,))
     """
 
     rv_type = TruncatedRV
