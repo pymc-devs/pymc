@@ -290,6 +290,9 @@ class Truncated(Distribution):
         with pm.Model():
             normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
             truncated_normal = pm.Truncated("truncated_normal", normal_dist, lower=-1, upper=1)
+        with pm.Model():
+            normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
+            partially_truncated_normal = pm.Truncated("partially_truncated_normal", normal_dist, lower=-np.inf, upper=1)
     """
 
     rv_type = TruncatedRV
