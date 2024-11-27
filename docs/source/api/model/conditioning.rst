@@ -9,12 +9,3 @@ Model Conditioning
    observe
    change_value_transforms
    remove_value_transforms
-
-
-Model Optimization
-------------------
-.. currentmodule:: pymc.model.transform.optimization
-.. autosummary::
-   :toctree: generated/
-
-   freeze_dims_and_data
