@@ -394,7 +394,7 @@ mv_studentt = MvStudentTRV()
 
 class MvStudentT(Continuous):
     r"""
-    Multivariate Student-T log-likelihood.
+    Multivariate Student-T distribution.
 
     .. math::
         f(\mathbf{x}| \nu,\mu,\Sigma) =
@@ -491,7 +491,7 @@ class MvStudentT(Continuous):
 
 class Dirichlet(SimplexContinuous):
     r"""
-    Dirichlet log-likelihood.
+    Dirichlet distribution.
 
     .. math::
 
@@ -563,7 +563,7 @@ class Dirichlet(SimplexContinuous):
 
 class Multinomial(Discrete):
     r"""
-    Multinomial log-likelihood.
+    Multinomial distribution.
 
     Generalizes binomial distribution, but instead of each trial resulting
     in "success" or "failure", each one results in exactly one of some
@@ -691,7 +691,7 @@ class DirichletMultinomialRV(SymbolicRandomVariable):
 
 
 class DirichletMultinomial(Discrete):
-    r"""Dirichlet Multinomial log-likelihood.
+    r"""Dirichlet Multinomial distribution.
 
     Dirichlet mixture of Multinomials distribution, with a marginalized PMF.
 
@@ -950,7 +950,7 @@ wishart = WishartRV()
 
 class Wishart(Continuous):
     r"""
-    Wishart log-likelihood.
+    Wishart distribution.
 
     The Wishart distribution is the probability distribution of the
     maximum-likelihood estimator (MLE) of the precision matrix of a
@@ -1648,7 +1648,7 @@ def lkjcorr_default_transform(op, rv):
 
 class LKJCorr:
     r"""
-    The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
+    The LKJ (Lewandowski, Kurowicka and Joe) distribution.
 
     The LKJ distribution is a prior distribution for correlation matrices.
     If eta = 1 this corresponds to the uniform distribution over correlation
@@ -1753,7 +1753,7 @@ matrixnormal = MatrixNormalRV()
 
 class MatrixNormal(Continuous):
     r"""
-    Matrix-valued normal log-likelihood.
+    Matrix-valued normal distribution.
 
     .. math::
        f(x \mid \mu, U, V) =
@@ -1961,7 +1961,7 @@ class KroneckerNormalRV(SymbolicRandomVariable):
 
 class KroneckerNormal(Continuous):
     r"""
-    Multivariate normal log-likelihood with Kronecker-structured covariance.
+    Multivariate normal distribution with Kronecker-structured covariance.
 
     .. math::
 
