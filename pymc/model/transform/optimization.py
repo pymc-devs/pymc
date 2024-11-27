@@ -57,6 +57,28 @@ def freeze_dims_and_data(
     -------
     Model
         A new model with the specified dimensions and data frozen.
+
+
+    Examples
+    --------
+    .. code-block:: python
+
+        import pymc as pm
+        import pytensor.tensor as pt
+
+        from pymc.model.transform.optimization import freeze_dims_and_data
+
+        with pm.Model() as m:
+            x = pm.Data("x", [0, 1, 2] * 1000)
+            y = pm.Normal("y", mu=pt.unique(x).mean())
+
+        # pt.unique(x).mean() has to be computed in every logp function evaluation
+        print("Logp eval time (1000x): ", m.profile(m.logp()).fct_call_time)
+
+        # pt.uniqe(x).mean() is cached in the logp function
+        frozen_m = freeze_dims_and_data(m)
+        print("Logp eval time (1000x): ", frozen_m.profile(frozen_m.logp()).fct_call_time)
+
     """
     fg, memo = fgraph_from_model(model)
 
