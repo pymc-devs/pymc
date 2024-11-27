@@ -246,7 +246,7 @@ def get_tau_sigma(
 
 class Uniform(BoundedContinuous):
     r"""
-    Continuous uniform log-likelihood.
+    Continuous uniform distribution.
 
     The pdf of this distribution is
 
@@ -360,7 +360,7 @@ flat = FlatRV()
 
 
 class Flat(Continuous):
-    """Uninformative log-likelihood that returns 0 regardless of the passed value."""
+    """Uninformative distribution that returns 0 regardless of the passed value."""
 
     rv_op = flat
 
@@ -417,7 +417,7 @@ class HalfFlat(PositiveContinuous):
 
 class Normal(Continuous):
     r"""
-    Univariate normal log-likelihood.
+    Univariate normal distribution.
 
     The pdf of this distribution is
 
@@ -558,7 +558,7 @@ truncated_normal = TruncatedNormalRV()
 
 class TruncatedNormal(BoundedContinuous):
     r"""
-    Univariate truncated normal log-likelihood.
+    Univariate truncated normal distribution.
 
     The pdf of this distribution is
 
@@ -745,7 +745,7 @@ def truncated_normal_default_transform(op, rv):
 
 class HalfNormal(PositiveContinuous):
     r"""
-    Half-normal log-likelihood.
+    Half-normal distribution.
 
     The pdf of this distribution is
 
@@ -875,7 +875,7 @@ wald = WaldRV()
 
 class Wald(PositiveContinuous):
     r"""
-    Wald log-likelihood.
+    Wald distribution.
 
     The pdf of this distribution is
 
@@ -1055,7 +1055,7 @@ beta = BetaClippedRV()
 
 class Beta(UnitContinuous):
     r"""
-    Beta log-likelihood.
+    Beta distribution.
 
     The pdf of this distribution is
 
@@ -1241,7 +1241,7 @@ class KumaraswamyRV(SymbolicRandomVariable):
 
 class Kumaraswamy(UnitContinuous):
     r"""
-    Kumaraswamy log-likelihood.
+    Kumaraswamy distribution.
 
     The pdf of this distribution is
 
@@ -1331,7 +1331,7 @@ class Kumaraswamy(UnitContinuous):
 
 class Exponential(PositiveContinuous):
     r"""
-    Exponential log-likelihood.
+    Exponential distribution.
 
     The pdf of this distribution is
 
@@ -1426,7 +1426,7 @@ class Exponential(PositiveContinuous):
 
 class Laplace(Continuous):
     r"""
-    Laplace log-likelihood.
+    Laplace distribution.
 
     The pdf of this distribution is
 
@@ -1548,7 +1548,7 @@ class AsymmetricLaplaceRV(SymbolicRandomVariable):
 
 class AsymmetricLaplace(Continuous):
     r"""
-    Asymmetric-Laplace log-likelihood.
+    Asymmetric-Laplace distribution.
 
     The pdf of this distribution is
 
@@ -1639,7 +1639,7 @@ class AsymmetricLaplace(Continuous):
 
 class LogNormal(PositiveContinuous):
     r"""
-    Log-normal log-likelihood.
+    Log-normal distribution.
 
     Distribution of any random variable whose logarithm is normally
     distributed. A variable might be modeled as log-normal if it can
@@ -1758,7 +1758,7 @@ Lognormal = LogNormal
 
 class StudentT(Continuous):
     r"""
-    Student's T log-likelihood.
+    Student's T distribution.
 
     Describes a normal variable whose precision is gamma distributed.
     If only nu parameter is passed, this specifies a standard (central)
@@ -1904,7 +1904,7 @@ skewstudentt = SkewStudentTRV()
 
 class SkewStudentT(Continuous):
     r"""
-    Skewed Student's T distribution log-likelihood.
+    Skewed Student's T distribution distribution.
 
     This follows Jones and Faddy (2003)
 
@@ -2019,7 +2019,7 @@ class SkewStudentT(Continuous):
 
 class Pareto(BoundedContinuous):
     r"""
-    Pareto log-likelihood.
+    Pareto distribution.
 
     Often used to characterize wealth distribution, or other examples of the
     80/20 rule.
@@ -2128,7 +2128,7 @@ def pareto_default_transform(op, rv):
 
 class Cauchy(Continuous):
     r"""
-    Cauchy log-likelihood.
+    Cauchy distribution.
 
     Also known as the Lorentz or the Breit-Wigner distribution.
 
@@ -2216,7 +2216,7 @@ class Cauchy(Continuous):
 
 class HalfCauchy(PositiveContinuous):
     r"""
-    Half-Cauchy log-likelihood.
+    Half-Cauchy distribution.
 
     The pdf of this distribution is
 
@@ -2300,7 +2300,7 @@ class HalfCauchy(PositiveContinuous):
 
 class Gamma(PositiveContinuous):
     r"""
-    Gamma log-likelihood.
+    Gamma distribution.
 
     Represents the sum of alpha exponentially distributed random variables,
     each of which has rate beta.
@@ -2429,7 +2429,7 @@ class Gamma(PositiveContinuous):
 
 class InverseGamma(PositiveContinuous):
     r"""
-    Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
+    Inverse gamma distribution, the reciprocal of the gamma distribution.
 
     The pdf of this distribution is
 
@@ -2545,7 +2545,7 @@ class InverseGamma(PositiveContinuous):
 
 class ChiSquared:
     r"""
-    :math:`\chi^2` log-likelihood.
+    :math:`\chi^2` distribution.
 
     This is the distribution from the sum of the squares of :math:`\nu` independent standard normal random variables or a special
     case of the gamma distribution with :math:`\alpha = \nu/2` and :math:`\beta = 1/2`.
@@ -2617,7 +2617,7 @@ weibull_beta = WeibullBetaRV()
 
 class Weibull(PositiveContinuous):
     r"""
-    Weibull log-likelihood.
+    Weibull distribution.
 
     The pdf of this distribution is
 
@@ -2738,7 +2738,7 @@ class HalfStudentTRV(SymbolicRandomVariable):
 
 class HalfStudentT(PositiveContinuous):
     r"""
-    Half Student's T log-likelihood.
+    Half Student's T distribution.
 
     The pdf of this distribution is
 
@@ -2859,7 +2859,7 @@ class ExGaussianRV(SymbolicRandomVariable):
 
 class ExGaussian(Continuous):
     r"""
-    Exponentially modified Gaussian log-likelihood.
+    Exponentially modified Gaussian distribution.
 
     Results from the convolution of a normal distribution with an exponential
     distribution.
@@ -2982,7 +2982,7 @@ class ExGaussian(Continuous):
 
 class VonMises(CircularContinuous):
     r"""
-    Univariate VonMises log-likelihood.
+    Univariate VonMises distribution.
 
     The pdf of this distribution is
 
@@ -3068,7 +3068,7 @@ skewnormal = SkewNormalRV()
 
 class SkewNormal(Continuous):
     r"""
-    Univariate skew-normal log-likelihood.
+    Univariate skew-normal distribution.
 
     The pdf of this distribution is
 
@@ -3163,7 +3163,7 @@ class SkewNormal(Continuous):
 
 class Triangular(BoundedContinuous):
     r"""
-    Continuous Triangular log-likelihood.
+    Continuous Triangular distribution.
 
     The pdf of this distribution is
 
@@ -3292,7 +3292,7 @@ def triangular_default_transform(op, rv):
 
 class Gumbel(Continuous):
     r"""
-    Univariate right-skewed Gumbel log-likelihood.
+    Univariate right-skewed Gumbel distribution.
 
     This distribution is typically used for modeling maximum (or extreme) values.
     Those looking to find the extreme minimum provided by the left-skewed Gumbel should
@@ -3519,7 +3519,7 @@ class Rice(PositiveContinuous):
 
 class Logistic(Continuous):
     r"""
-    Logistic log-likelihood.
+    Logistic distribution.
 
     The pdf of this distribution is
 
@@ -3627,7 +3627,7 @@ class LogitNormalRV(SymbolicRandomVariable):
 
 class LogitNormal(UnitContinuous):
     r"""
-    Logit-Normal log-likelihood.
+    Logit-Normal distribution.
 
     The pdf of this distribution is
 
@@ -3872,7 +3872,7 @@ moyal = MoyalRV()
 
 class Moyal(Continuous):
     r"""
-    Moyal log-likelihood.
+    Moyal distribution.
 
     The pdf of this distribution is
 
