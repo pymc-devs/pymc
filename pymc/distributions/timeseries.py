@@ -419,7 +419,7 @@ class MvStudentTRandomWalk(PredefinedRandomWalk):
 
 
 class AutoRegressiveRV(SymbolicRandomVariable):
-    """A placeholder used to specify a log-likelihood for an AR sub-graph."""
+    """A placeholder used to specify a distribution for an AR sub-graph."""
 
     extended_signature = "(o),(),(o),(s),[rng]->[rng],(t)"
     ar_order: int
@@ -865,7 +865,7 @@ def garch11_support_point(op, rv, omega, alpha_1, beta_1, initial_vol, init_dist
 
 
 class EulerMaruyamaRV(SymbolicRandomVariable):
-    """A placeholder used to specify a log-likelihood for a EulerMaruyama sub-graph."""
+    """A placeholder used to specify a distribution for a EulerMaruyama sub-graph."""
 
     dt: float
     sde_fn: Callable
