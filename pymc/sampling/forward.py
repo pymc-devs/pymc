@@ -64,8 +64,8 @@ from pymc.util import (
 __all__ = (
     "compile_forward_sampling_function",
     "draw",
-    "sample_prior_predictive",
     "sample_posterior_predictive",
+    "sample_prior_predictive",
 )
 
 ArrayLike: TypeAlias = np.ndarray | list[float]

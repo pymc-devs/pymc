@@ -532,7 +532,7 @@ class TestPickling:
                 cloudpickle.loads(s)
             except Exception:
                 raise AssertionError(
-                    "Exception while trying roundtrip with pickle protocol %d:\n" % proto
+                    f"Exception while trying roundtrip with pickle protocol {proto}:\n"
                     + "".join(traceback.format_exc())
                 )
 
