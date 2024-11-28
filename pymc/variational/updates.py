@@ -119,18 +119,18 @@ import pytensor.tensor as pt
 import pymc as pm
 
 __all__ = [
-    "sgd",
-    "apply_momentum",
-    "momentum",
-    "apply_nesterov_momentum",
-    "nesterov_momentum",
+    "adadelta",
     "adagrad",
     "adagrad_window",
-    "rmsprop",
-    "adadelta",
     "adam",
     "adamax",
+    "apply_momentum",
+    "apply_nesterov_momentum",
+    "momentum",
+    "nesterov_momentum",
     "norm_constraint",
+    "rmsprop",
+    "sgd",
     "total_norm_constraint",
 ]
 
@@ -170,7 +170,7 @@ def get_or_compute_grads(loss_or_grads, params):
     if isinstance(loss_or_grads, list):
         if not len(loss_or_grads) == len(params):
             raise ValueError(
-                "Got %d gradient expressions for %d parameters" % (len(loss_or_grads), len(params))
+                f"Got {len(loss_or_grads)} gradient expressions for {len(params)} parameters"
             )
         return loss_or_grads
     else:

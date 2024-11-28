@@ -36,18 +36,18 @@ from pymc.logprob.transforms import (
 )
 
 __all__ = [
-    "Transform",
-    "simplex",
-    "logodds",
-    "Interval",
-    "log_exp_m1",
-    "ordered",
-    "log",
-    "sum_to_1",
-    "circular",
-    "CholeskyCovPacked",
     "Chain",
+    "CholeskyCovPacked",
+    "Interval",
+    "Transform",
     "ZeroSumTransform",
+    "circular",
+    "log",
+    "log_exp_m1",
+    "logodds",
+    "ordered",
+    "simplex",
+    "sum_to_1",
 ]
 
 

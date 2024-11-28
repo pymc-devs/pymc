@@ -83,22 +83,22 @@ from pymc.pytensorf import normalize_rng_param
 from pymc.util import check_dist_not_registered
 
 __all__ = [
-    "MvNormal",
-    "ZeroSumNormal",
-    "MvStudentT",
-    "Dirichlet",
-    "Multinomial",
-    "DirichletMultinomial",
-    "OrderedMultinomial",
-    "Wishart",
-    "WishartBartlett",
-    "LKJCorr",
-    "LKJCholeskyCov",
-    "MatrixNormal",
-    "KroneckerNormal",
     "CAR",
     "ICAR",
+    "Dirichlet",
+    "DirichletMultinomial",
+    "KroneckerNormal",
+    "LKJCholeskyCov",
+    "LKJCorr",
+    "MatrixNormal",
+    "Multinomial",
+    "MvNormal",
+    "MvStudentT",
+    "OrderedMultinomial",
     "StickBreakingWeights",
+    "Wishart",
+    "WishartBartlett",
+    "ZeroSumNormal",
 ]
 
 solve_lower = partial(solve_triangular, lower=True)

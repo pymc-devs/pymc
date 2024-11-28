@@ -35,7 +35,7 @@ from pymc.variational.opvi import (
     node_property,
 )
 
-__all__ = ["MeanField", "FullRank", "Empirical", "sample_approx"]
+__all__ = ["Empirical", "FullRank", "MeanField", "sample_approx"]
 
 
 @Group.register

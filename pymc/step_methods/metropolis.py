@@ -46,17 +46,17 @@ from pymc.step_methods.compound import Competence, StepMethodState
 from pymc.step_methods.state import dataclass_state
 
 __all__ = [
-    "Metropolis",
+    "BinaryGibbsMetropolis",
+    "BinaryMetropolis",
+    "CategoricalGibbsMetropolis",
+    "CauchyProposal",
     "DEMetropolis",
     "DEMetropolisZ",
-    "BinaryMetropolis",
-    "BinaryGibbsMetropolis",
-    "CategoricalGibbsMetropolis",
-    "NormalProposal",
-    "CauchyProposal",
     "LaplaceProposal",
-    "PoissonProposal",
+    "Metropolis",
     "MultivariateNormalProposal",
+    "NormalProposal",
+    "PoissonProposal",
 ]
 
 from pymc.util import RandomGenerator, get_value_vars_from_user_vars

@@ -78,13 +78,13 @@ from pymc.util import (
 from pymc.vartypes import continuous_types, discrete_types, typefilter
 
 __all__ = [
-    "Model",
-    "modelcontext",
     "Deterministic",
-    "Potential",
-    "set_data",
+    "Model",
     "Point",
+    "Potential",
     "compile_fn",
+    "modelcontext",
+    "set_data",
 ]
 
 

@@ -13,12 +13,12 @@
 #   limitations under the License.
 
 __all__ = [
-    "SamplingError",
-    "IncorrectArgumentsError",
-    "TraceDirectoryError",
     "ImputationWarning",
-    "ShapeWarning",
+    "IncorrectArgumentsError",
+    "SamplingError",
     "ShapeError",
+    "ShapeWarning",
+    "TraceDirectoryError",
 ]
 
 

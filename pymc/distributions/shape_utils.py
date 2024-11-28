@@ -36,9 +36,9 @@ from pymc.model import modelcontext
 from pymc.pytensorf import convert_observed_data
 
 __all__ = [
-    "to_tuple",
-    "rv_size_is_none",
     "change_dist_size",
+    "rv_size_is_none",
+    "to_tuple",
 ]
 
 from pymc.exceptions import ShapeError
