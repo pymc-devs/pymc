@@ -32,11 +32,11 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "ADVI",
-    "FullRankADVI",
-    "SVGD",
     "ASVGD",
-    "Inference",
+    "SVGD",
+    "FullRankADVI",
     "ImplicitGradient",
+    "Inference",
     "KLqp",
     "fit",
 ]

@@ -64,10 +64,10 @@ from pymc.util import UNSET, _add_future_warning_tag
 from pymc.vartypes import continuous_types, string_types
 
 __all__ = [
-    "DiracDelta",
-    "Distribution",
     "Continuous",
+    "DiracDelta",
     "Discrete",
+    "Distribution",
     "SymbolicRandomVariable",
 ]
 

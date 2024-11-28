@@ -89,7 +89,7 @@ except ImportError:
     RunType = type(None)  # type: ignore[assignment, misc]
 
 
-__all__ = ["to_inference_data", "predictions_to_inference_data"]
+__all__ = ["predictions_to_inference_data", "to_inference_data"]
 
 
 def _init_trace(

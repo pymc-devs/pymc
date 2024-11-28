@@ -14,13 +14,13 @@
 
 __all__ = [
     "bool_types",
-    "int_types",
-    "float_types",
     "complex_types",
     "continuous_types",
     "discrete_types",
-    "typefilter",
+    "float_types",
+    "int_types",
     "isgenerator",
+    "typefilter",
 ]
 
 bool_types = {"int8"}

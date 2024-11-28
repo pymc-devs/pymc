@@ -42,12 +42,12 @@ from pymc.pytensorf import GeneratorOp, convert_data, smarttypeX
 from pymc.vartypes import isgenerator
 
 __all__ = [
-    "get_data",
+    "ConstantData",
+    "Data",
     "GeneratorAdapter",
     "Minibatch",
-    "Data",
-    "ConstantData",
     "MutableData",
+    "get_data",
 ]
 BASE_URL = "https://raw.githubusercontent.com/pymc-devs/pymc-examples/main/examples/data/{filename}"
 

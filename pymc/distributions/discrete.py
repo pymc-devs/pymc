@@ -57,18 +57,18 @@ from pymc.math import sigmoid
 from pymc.pytensorf import normalize_rng_param
 
 __all__ = [
-    "Binomial",
-    "BetaBinomial",
     "Bernoulli",
-    "DiscreteWeibull",
-    "Poisson",
-    "NegativeBinomial",
+    "BetaBinomial",
+    "Binomial",
+    "Categorical",
     "DiscreteUniform",
+    "DiscreteWeibull",
     "Geometric",
     "HyperGeometric",
-    "Categorical",
+    "NegativeBinomial",
     "OrderedLogistic",
     "OrderedProbit",
+    "Poisson",
 ]
 
 DISCRETE_DIST_PARAMETER_TYPES: TypeAlias = npt.NDArray[np.int_] | int | TensorVariable
