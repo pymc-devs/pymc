@@ -16,9 +16,12 @@ import numpy as np
 import pytest
 
 from pytensor import config
+from pytensor.compile import SharedVariable
+from pytensor.graph import Constant
 
 import pymc as pm
 
+from pymc import sample_posterior_predictive, set_data
 from pymc.distributions.transforms import logodds
 from pymc.model.transform.conditioning import (
     change_value_transforms,
@@ -251,6 +254,46 @@ def test_do_self_reference():
     do_x = new_m["do_x"]
     draw_x, draw_do_x = pm.draw([x, do_x], draws=5)
     np.testing.assert_allclose(draw_x + 100, draw_do_x)
+
+
+def test_do_make_intervenstions_shared():
+    with pm.Model(coords={"obs": [1]}) as m:
+        x = pm.Normal("x", dims="obs")
+        y = pm.Normal("y", dims="obs")
+
+    constant_m = do(m, {x: [0.5]}, make_interventions_shared=False)
+    constant_x = constant_m["x"]
+    assert isinstance(constant_x, Constant)
+    np.testing.assert_array_equal(constant_x.data, [0.5])
+
+    shared_m = do(m, {x: [0.5]}, make_interventions_shared=True)
+    shared_x = shared_m["x"]
+    assert isinstance(shared_x, SharedVariable)
+    np.testing.assert_array_equal(shared_x.get_value(borrow=True), [0.5])
+
+    with shared_m:
+        set_data({"x": [0.6, 0.9]}, coords={"obs": [2, 3]})
+        pp_y = pm.sample_prior_predictive(draws=3).prior["y"]
+    assert pp_y.sizes == {"chain": 1, "draw": 3, "obs": 2}
+    assert pp_y.shape == (1, 3, 2)
+
+
+@pytest.mark.parametrize(
+    "make_interventions_shared",
+    [True, pytest.param(False, marks=pytest.mark.xfail(reason="#6876"))],
+)
+def test_do_sample_posterior_predictive(make_interventions_shared):
+    # Regression test for https://github.com/pymc-devs/pymc/issues/6977
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        b = pm.Deterministic("b", a * 2)
+        c = pm.Normal("c", b / 2)
+
+    idata = az.from_dict({"a": [[1.0]], "b": [[2.0]], "c": [[1.0]]})
+
+    with do(model, {a: 1000}, make_interventions_shared=make_interventions_shared):
+        pp = sample_posterior_predictive(idata, var_names=["c"], predictions=True).predictions
+    assert (pp["c"] > 500).all()
 
 
 def test_change_value_transforms():
