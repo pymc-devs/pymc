@@ -1827,8 +1827,7 @@ class MatrixNormal(Continuous):
         with pm.Model() as model:
             # Setup right cholesky matrix
             sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
-            colchol_packed = pm.LKJCholeskyCov('colcholpacked', n=3, eta=2,compute_corr=False,
-                                            sd_dist=sd_dist)
+            colchol_packed, _, _ = pm.LKJCholeskyCov('colcholpacked', n=3, eta=2, sd_dist=sd_dist)
             colchol = pm.expand_packed_triangular(3, colchol_packed)
 
             # Setup left covariance matrix
