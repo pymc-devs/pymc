@@ -1239,8 +1239,7 @@ class OrderedLogistic:
 
         # Ordered logistic regression
         with pm.Model() as model:
-            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
-                                  transform=pm.distributions.transforms.ordered)
+            cutpoints = pm.Ordered("cutpoints", dist=pm.Normal.dist(mu=0, sigma=10), shape=2)
             y_ = pm.OrderedLogistic("y", cutpoints=cutpoints, eta=x, observed=y)
             idata = pm.sample()
 
@@ -1343,8 +1342,7 @@ class OrderedProbit:
 
         # Ordered probit regression
         with pm.Model() as model:
-            cutpoints = pm.Normal("cutpoints", mu=[-1,1], sigma=10, shape=2,
-                                  transform=pm.distributions.transforms.ordered)
+            cutpoints = pm.Ordered("cutpoints", dist=pm.Normal.dist(mu=0, sigma=10), shape=2)
             y_ = pm.OrderedProbit("y", cutpoints=cutpoints, eta=x, observed=y)
             idata = pm.sample()
 
