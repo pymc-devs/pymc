@@ -1373,13 +1373,12 @@ class Exponential(PositiveContinuous):
     rv_op = exponential
 
     @classmethod
-    def dist(cls, lam=None, scale=None, *args, **kwargs):
-        if lam is not None and scale is not None:
+    def dist(cls, lam=None, *, scale=None, **kwargs):
+        if lam is None and scale is None:
+            scale = 1.0
+        elif lam is not None and scale is not None:
             raise ValueError("Incompatible parametrization. Can't specify both lam and scale.")
-        elif lam is None and scale is None:
-            raise ValueError("Incompatible parametrization. Must specify either lam or scale.")
-
-        if scale is None:
+        elif lam is not None:
             scale = pt.reciprocal(lam)
 
         scale = pt.as_tensor_variable(scale)
