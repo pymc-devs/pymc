@@ -187,12 +187,12 @@ class TestComputeLogLikelihood:
             with (
                 # apply_function_over_dataset fails with patched `compile_pymc`
                 patch("pymc.stats.log_density.apply_function_over_dataset"),
-                patch("pymc.model.core.compile_pymc") as patched_compile_pymc,
+                patch("pymc.model.core.compile") as patched_compile,
             ):
                 compute_log_prior(idata, compile_kwargs={"mode": "JAX"}, extend_inferencedata=False)
                 compute_log_likelihood(
                     idata, compile_kwargs={"mode": "NUMBA"}, extend_inferencedata=False
                 )
-        assert len(patched_compile_pymc.call_args_list) == 2
-        assert patched_compile_pymc.call_args_list[0].kwargs["mode"] == "JAX"
-        assert patched_compile_pymc.call_args_list[1].kwargs["mode"] == "NUMBA"
+        assert len(patched_compile.call_args_list) == 2
+        assert patched_compile.call_args_list[0].kwargs["mode"] == "JAX"
+        assert patched_compile.call_args_list[1].kwargs["mode"] == "NUMBA"

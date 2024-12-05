@@ -56,7 +56,7 @@ from pymc.model_graph import model_to_graphviz
 from pymc.pytensorf import (
     PointFunc,
     SeedSequenceSeed,
-    compile_pymc,
+    compile,
     convert_observed_data,
     gradient,
     hessian,
@@ -253,7 +253,7 @@ class ValueGradFunction:
                 )
             inputs = grad_vars
 
-        self._pytensor_function = compile_pymc(inputs, outputs, givens=givens, **kwargs)
+        self._pytensor_function = compile(inputs, outputs, givens=givens, **kwargs)
         self._raveled_inputs = ravel_inputs
 
     def set_weights(self, values):
@@ -1637,7 +1637,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             inputs = inputvars(outs)
 
         with self:
-            fn = compile_pymc(
+            fn = compile(
                 inputs,
                 outs,
                 allow_input_downcast=True,

@@ -26,7 +26,7 @@ from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.transforms import Transform
 from pymc.pytensorf import (
-    compile_pymc,
+    compile,
     find_rng_nodes,
     replace_rng_nodes,
     reseed_rngs,
@@ -157,7 +157,7 @@ def make_initial_point_fn(
     # Replace original rng shared variables so that we don't mess with them
     # when calling the final seeded function
     initial_values = replace_rng_nodes(initial_values)
-    func = compile_pymc(inputs=[], outputs=initial_values, mode=pytensor.compile.mode.FAST_COMPILE)
+    func = compile(inputs=[], outputs=initial_values, mode=pytensor.compile.mode.FAST_COMPILE)
 
     varnames = []
     for var in model.free_RVs:

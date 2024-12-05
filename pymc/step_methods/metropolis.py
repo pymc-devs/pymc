@@ -31,7 +31,7 @@ from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.initial_point import PointType
 from pymc.pytensorf import (
     CallableTensor,
-    compile_pymc,
+    compile,
     floatX,
     join_nonshared_inputs,
     replace_rng_nodes,
@@ -1241,6 +1241,6 @@ def delta_logp(
 
     if compile_kwargs is None:
         compile_kwargs = {}
-    f = compile_pymc([inarray1, inarray0], logp1 - logp0, **compile_kwargs)
+    f = compile([inarray1, inarray0], logp1 - logp0, **compile_kwargs)
     f.trust_input = True
     return f

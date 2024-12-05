@@ -23,7 +23,7 @@ from pytensor.tensor.variable import TensorConstant
 from scipy.cluster.vq import kmeans
 
 from pymc.model.core import modelcontext
-from pymc.pytensorf import compile_pymc
+from pymc.pytensorf import compile
 
 JITTER_DEFAULT = 1e-6
 
@@ -55,7 +55,7 @@ def replace_with_values(vars_needed, replacements=None, model=None):
     if len(inputs) == 0:
         return tuple(v.eval() for v in vars_needed)
 
-    fn = compile_pymc(
+    fn = compile(
         inputs,
         vars_needed,
         allow_input_downcast=True,
