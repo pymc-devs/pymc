@@ -287,7 +287,7 @@ class TestCustomDist:
         with pytest.raises(
             NotImplementedError, match="signature is not sufficient to infer the support shape"
         ):
-            CustomDist.dist(signature="(n)->(m)")
+            CustomDist.dist([0], signature="(n)->(m)")
 
 
 class TestCustomSymbolicDist:
