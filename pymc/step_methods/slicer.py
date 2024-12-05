@@ -20,7 +20,7 @@ import numpy as np
 from pymc.blocking import RaveledVars, StatsType
 from pymc.initial_point import PointType
 from pymc.model import modelcontext
-from pymc.pytensorf import compile_pymc, join_nonshared_inputs, make_shared_replacements
+from pymc.pytensorf import compile, join_nonshared_inputs, make_shared_replacements
 from pymc.step_methods.arraystep import ArrayStepShared
 from pymc.step_methods.compound import Competence, StepMethodState
 from pymc.step_methods.state import dataclass_state
@@ -109,7 +109,7 @@ class Slice(ArrayStepShared):
         )
         if compile_kwargs is None:
             compile_kwargs = {}
-        self.logp = compile_pymc([raveled_inp], logp, **compile_kwargs)
+        self.logp = compile([raveled_inp], logp, **compile_kwargs)
         self.logp.trust_input = True
 
         super().__init__(vars, shared, blocked=blocked, rng=rng)

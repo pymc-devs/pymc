@@ -72,7 +72,7 @@ from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
 from pymc.pytensorf import (
     SeedSequenceSeed,
-    compile_pymc,
+    compile,
     find_rng_nodes,
     identity,
     reseed_rngs,
@@ -388,9 +388,9 @@ class ObjectiveFunction:
         )
         seed = self.approx.rng.randint(2**30, dtype=np.int64)
         if score:
-            step_fn = compile_pymc([], updates.loss, updates=updates, random_seed=seed, **fn_kwargs)
+            step_fn = compile([], updates.loss, updates=updates, random_seed=seed, **fn_kwargs)
         else:
-            step_fn = compile_pymc([], [], updates=updates, random_seed=seed, **fn_kwargs)
+            step_fn = compile([], [], updates=updates, random_seed=seed, **fn_kwargs)
         return step_fn
 
     @pytensor.config.change_flags(compute_test_value="off")
@@ -420,7 +420,7 @@ class ObjectiveFunction:
             more_replacements = {}
         loss = self(sc_n_mc, more_replacements=more_replacements)
         seed = self.approx.rng.randint(2**30, dtype=np.int64)
-        return compile_pymc([], loss, random_seed=seed, **fn_kwargs)
+        return compile([], loss, random_seed=seed, **fn_kwargs)
 
     @pytensor.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
@@ -1517,7 +1517,7 @@ class Approximation(WithMemoization):
         names = [self.model.rvs_to_values[v].name for v in self.model.free_RVs]
         sampled = [self.rslice(name) for name in names]
         sampled = self.set_size_and_deterministic(sampled, s, 0)
-        sample_fn = compile_pymc([s], sampled)
+        sample_fn = compile([s], sampled)
         rng_nodes = find_rng_nodes(sampled)
 
         def inner(draws=100, *, random_seed: SeedSequenceSeed = None):
