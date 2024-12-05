@@ -242,24 +242,24 @@ Subtree = namedtuple(
 
 class _Tree:
     __slots__ = (
-        "ndim",
-        "integrator",
-        "start",
-        "step_size",
         "Emax",
-        "start_energy",
-        "rng",
-        "left",
-        "right",
-        "proposal",
         "depth",
-        "log_size",
+        "floatX",
+        "integrator",
+        "left",
         "log_accept_sum",
+        "log_size",
+        "max_energy_change",
         "mean_tree_accept",
         "n_proposals",
+        "ndim",
         "p_sum",
-        "max_energy_change",
-        "floatX",
+        "proposal",
+        "right",
+        "rng",
+        "start",
+        "start_energy",
+        "step_size",
     )
 
     def __init__(
