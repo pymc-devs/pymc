@@ -16,7 +16,7 @@ dependencies:
 - jaxlib>=0.4.28
 - libblas=*=*mkl
 - mkl-service
-- numpy>=1.15.0
+- numpy>=1.25.0
 - numpyro>=0.8.0
 - pandas>=0.24.0
 - pip

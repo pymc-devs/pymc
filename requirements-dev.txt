@@ -12,7 +12,7 @@ mcbackend>=0.4.0
 mypy==1.5.1
 myst-nb<=1.0.0
 numdifftools>=0.9.40
-numpy>=1.15.0
+numpy>=1.25.0
 numpydoc
 pandas>=0.24.0
 polyagamma

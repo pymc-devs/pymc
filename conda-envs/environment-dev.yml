@@ -10,7 +10,7 @@ dependencies:
 - cachetools>=4.2.1
 - cloudpickle
 - h5py>=2.7
-- numpy>=1.15.0
+- numpy>=1.25.0
 - pandas>=0.24.0
 - pip
 - pytensor>=2.26.2,<2.27
