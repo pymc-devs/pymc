@@ -60,6 +60,7 @@ PotentialShapeType = int | np.ndarray | Sequence[int | Variable] | TensorVariabl
 
 __all__ = [
     "CallableTensor",
+    "compile",
     "compile_pymc",
     "cont_inputs",
     "convert_data",
@@ -981,7 +982,7 @@ def collect_default_updates(
     return rng_updates
 
 
-def compile_pymc(
+def compile(
     inputs,
     outputs,
     random_seed: SeedSequenceSeed = None,
@@ -990,7 +991,7 @@ def compile_pymc(
 ) -> Function:
     """Use ``pytensor.function`` with specialized pymc rewrites always enabled.
 
-    This function also ensures shared RandomState/Generator used by RandomVariables
+    This function also ensures shared Generator used by RandomVariables
     in the graph are updated across calls, to ensure independent draws.
 
     Parameters
@@ -1059,6 +1060,14 @@ def compile_pymc(
         **kwargs,
     )
     return pytensor_function
+
+
+def compile_pymc(*args, **kwargs):
+    warnings.warn(
+        "compile_pymc was renamed to compile. Old name will be removed in a future release of PyMC",
+        FutureWarning,
+    )
+    return compile(*args, **kwargs)
 
 
 def constant_fold(

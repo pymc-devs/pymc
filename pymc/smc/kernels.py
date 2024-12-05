@@ -30,7 +30,7 @@ from pymc.blocking import DictToArrayBijection
 from pymc.initial_point import make_initial_point_expression
 from pymc.model import Point, modelcontext
 from pymc.pytensorf import (
-    compile_pymc,
+    compile,
     floatX,
     join_nonshared_inputs,
     make_shared_replacements,
@@ -636,6 +636,6 @@ def _logp_forw(point, out_vars, in_vars, shared):
     out_list, inarray0 = join_nonshared_inputs(
         point=point, outputs=out_vars, inputs=in_vars, shared_inputs=shared
     )
-    f = compile_pymc([inarray0], out_list[0])
+    f = compile([inarray0], out_list[0])
     f.trust_input = True
     return f
