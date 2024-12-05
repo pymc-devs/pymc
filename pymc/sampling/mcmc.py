@@ -727,6 +727,10 @@ def sample(
         )
 
     if random_seed == -1:
+        warnings.warn(
+            "Setting random_seed = -1 is deprecated. Pass `None` to not specify a seed.",
+            FutureWarning,
+        )
         random_seed = None
     elif isinstance(random_seed, tuple | list):
         warnings.warn(
