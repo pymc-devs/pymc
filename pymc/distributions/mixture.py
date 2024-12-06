@@ -57,7 +57,7 @@ __all__ = [
 
 
 class MarginalMixtureRV(SymbolicRandomVariable):
-    """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
+    """A placeholder used to specify a distribution for a mixture sub-graph."""
 
     _print_name = ("MarginalMixture", "\\operatorname{MarginalMixture}")
 
@@ -163,7 +163,7 @@ class MarginalMixtureRV(SymbolicRandomVariable):
 
 class Mixture(Distribution):
     R"""
-    Mixture log-likelihood.
+    Mixture distribution.
 
     Often used to model subpopulation heterogeneity
 
@@ -493,7 +493,7 @@ def marginal_mixture_default_transform(op, rv):
 
 class NormalMixture:
     R"""
-    Normal mixture log-likelihood.
+    Normal mixture distribution.
 
     .. math::
 
@@ -573,7 +573,7 @@ def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):
 
 class ZeroInflatedPoisson:
     R"""
-    Zero-inflated Poisson log-likelihood.
+    Zero-inflated Poisson distribution.
 
     Often used to model the number of events occurring in a fixed period
     of time when the times at which events occur are independent.
@@ -637,7 +637,7 @@ class ZeroInflatedPoisson:
 
 class ZeroInflatedBinomial:
     R"""
-    Zero-inflated Binomial log-likelihood.
+    Zero-inflated Binomial distribution.
 
     The pmf of this distribution is
 
@@ -701,7 +701,7 @@ class ZeroInflatedBinomial:
 
 class ZeroInflatedNegativeBinomial:
     R"""
-    Zero-Inflated Negative binomial log-likelihood.
+    Zero-Inflated Negative binomial distribution.
 
     The Zero-inflated version of the Negative Binomial (NB).
     The NB distribution describes a Poisson random variable
@@ -831,7 +831,7 @@ def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, max_n_steps=10_000,
 
 class HurdlePoisson:
     R"""
-    Hurdle Poisson log-likelihood.
+    Hurdle Poisson distribution.
 
     The Poisson distribution is often used to model the number of events occurring
     in a fixed period of time or space when the times or locations
@@ -877,7 +877,7 @@ class HurdlePoisson:
 
 class HurdleNegativeBinomial:
     R"""
-    Hurdle Negative Binomial log-likelihood.
+    Hurdle Negative Binomial distribution.
 
     The negative binomial distribution describes a Poisson random variable
     whose rate parameter is gamma distributed.
@@ -935,7 +935,7 @@ class HurdleNegativeBinomial:
 
 class HurdleGamma:
     R"""
-    Hurdle Gamma log-likelihood.
+    Hurdle Gamma distribution.
 
     .. math::
 
@@ -987,7 +987,7 @@ class HurdleGamma:
 
 class HurdleLogNormal:
     R"""
-    Hurdle LogNormal log-likelihood.
+    Hurdle LogNormal distribution.
 
     .. math::
 
