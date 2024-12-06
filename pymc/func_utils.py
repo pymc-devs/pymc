@@ -169,18 +169,18 @@ def find_constrained_prior(
         )
 
     target = (pt.exp(logcdf_lower) - mass_below_lower) ** 2
-    target_fn = pm.pytensorf.compile_pymc([dist_params], target, allow_input_downcast=True)
+    target_fn = pm.pytensorf.compile([dist_params], target, allow_input_downcast=True)
 
     constraint = pt.exp(logcdf_upper) - pt.exp(logcdf_lower)
-    constraint_fn = pm.pytensorf.compile_pymc([dist_params], constraint, allow_input_downcast=True)
+    constraint_fn = pm.pytensorf.compile([dist_params], constraint, allow_input_downcast=True)
 
     jac: str | Callable
     constraint_jac: str | Callable
     try:
         pytensor_jac = pm.gradient(target, [dist_params])
-        jac = pm.pytensorf.compile_pymc([dist_params], pytensor_jac, allow_input_downcast=True)
+        jac = pm.pytensorf.compile([dist_params], pytensor_jac, allow_input_downcast=True)
         pytensor_constraint_jac = pm.gradient(constraint, [dist_params])
-        constraint_jac = pm.pytensorf.compile_pymc(
+        constraint_jac = pm.pytensorf.compile(
             [dist_params], pytensor_constraint_jac, allow_input_downcast=True
         )
     # when PyMC cannot compute the gradient

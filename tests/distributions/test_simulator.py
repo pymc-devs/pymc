@@ -28,7 +28,7 @@ import pymc as pm
 
 from pymc import floatX
 from pymc.initial_point import make_initial_point_fn
-from pymc.pytensorf import compile_pymc
+from pymc.pytensorf import compile
 from pymc.smc.kernels import IMH
 
 
@@ -357,12 +357,12 @@ class TestSimulator:
         x = cloudpickle.loads(cloudpickle.dumps(x))
 
         x_logp = pm.logp(x, [0, 1, 2])
-        x_logp_fn = compile_pymc([], x_logp, random_seed=1)
+        x_logp_fn = compile([], x_logp, random_seed=1)
         res1, res2 = x_logp_fn(), x_logp_fn()
         assert res1.shape == (3,)
         assert np.all(res1 != res2)
 
-        x_logp_fn = compile_pymc([], x_logp, random_seed=1)
+        x_logp_fn = compile([], x_logp, random_seed=1)
         res3, res4 = x_logp_fn(), x_logp_fn()
         assert np.all(res1 == res3)
         assert np.all(res2 == res4)

@@ -39,7 +39,7 @@ from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
     GeneratorOp,
     collect_default_updates,
-    compile_pymc,
+    compile,
     constant_fold,
     convert_data,
     convert_generator_data,
@@ -348,23 +348,23 @@ class TestCompilePyMC:
 
         m.check_bounds = False
         with m:
-            assert np.all(compile_pymc([], bound)() == 1)
+            assert np.all(compile([], bound)() == 1)
 
         m.check_bounds = True
         with m:
-            assert np.all(compile_pymc([], bound)() == -np.inf)
+            assert np.all(compile([], bound)() == -np.inf)
 
     def test_check_parameters_can_be_replaced_by_ninf(self):
         expr = pt.vector("expr", shape=(3,))
         cond = pt.ge(expr, 0)
 
         final_expr = check_parameters(expr, cond, can_be_replaced_by_ninf=True)
-        fn = compile_pymc([expr], final_expr)
+        fn = compile([expr], final_expr)
         np.testing.assert_array_equal(fn(expr=[1, 2, 3]), [1, 2, 3])
         np.testing.assert_array_equal(fn(expr=[-1, 2, 3]), [-np.inf, -np.inf, -np.inf])
 
         final_expr = check_parameters(expr, cond, msg="test", can_be_replaced_by_ninf=False)
-        fn = compile_pymc([expr], final_expr)
+        fn = compile([expr], final_expr)
         np.testing.assert_array_equal(fn(expr=[1, 2, 3]), [1, 2, 3])
         with pytest.raises(ParameterValueError, match="test"):
             fn([-1, 2, 3])
@@ -373,7 +373,7 @@ class TestCompilePyMC:
         rng = pytensor.shared(np.random.default_rng(0))
         x = pm.Normal.dist(rng=rng)
         assert x.owner.inputs[0] is rng
-        f = compile_pymc([], x)
+        f = compile([], x)
         assert not np.isclose(f(), f())
 
         # Check that update was not done inplace
@@ -383,7 +383,7 @@ class TestCompilePyMC:
 
     def test_compile_pymc_with_updates(self):
         x = pytensor.shared(0)
-        f = compile_pymc([], x, updates={x: x + 1})
+        f = compile([], x, updates={x: x + 1})
         assert f() == 0
         assert f() == 1
 
@@ -392,21 +392,21 @@ class TestCompilePyMC:
         x = pm.Normal.dist(rng=rng)
 
         # By default, compile_pymc should update the rng of x
-        f = compile_pymc([], x)
+        f = compile([], x)
         assert f() != f()
 
         # An explicit update should override the default_update, like pytensor.function does
         # For testing purposes, we use an update that leaves the rng unchanged
-        f = compile_pymc([], x, updates={rng: rng})
+        f = compile([], x, updates={rng: rng})
         assert f() == f()
 
         # If we specify a custom default_update directly it should use that instead.
         rng.default_update = rng
-        f = compile_pymc([], x)
+        f = compile([], x)
         assert f() == f()
 
         # And again, it should be overridden by an explicit update
-        f = compile_pymc([], x, updates={rng: x.owner.outputs[0]})
+        f = compile([], x, updates={rng: x.owner.outputs[0]})
         assert f() != f()
 
     def test_compile_pymc_updates_inputs(self):
@@ -425,7 +425,7 @@ class TestCompilePyMC:
             ([x, y], 1),
             ([x, y, z], 0),
         ):
-            fn = compile_pymc(inputs, z, on_unused_input="ignore")
+            fn = compile(inputs, z, on_unused_input="ignore")
             fn_fgraph = fn.maker.fgraph
             # Each RV adds a shared input for its rng
             assert len(fn_fgraph.inputs) == len(inputs) + rvs_in_graph
@@ -452,7 +452,7 @@ class TestCompilePyMC:
             [dummy_rng1],
             pt.random.normal(rng=dummy_rng1).owner.outputs,
         )(rng1)
-        fn = compile_pymc(inputs=[], outputs=dummy_x1, random_seed=433)
+        fn = compile(inputs=[], outputs=dummy_x1, random_seed=433)
         assert fn() != fn()
 
         # Now there's a problem as there is no update rule for rng2
@@ -468,7 +468,7 @@ class TestCompilePyMC:
         with pytest.raises(
             ValueError, match="No update found for at least one RNG used in SymbolicRandomVariable"
         ):
-            compile_pymc(inputs=[], outputs=[dummy_x1, dummy_x2])
+            compile(inputs=[], outputs=[dummy_x1, dummy_x2])
 
     def test_random_seed(self):
         seedx = pytensor.shared(np.random.default_rng(1))
@@ -482,17 +482,17 @@ class TestCompilePyMC:
         assert x0_eval == y0_eval
 
         # The variables will be reseeded with new seeds by default
-        f1 = compile_pymc([], [x, y])
+        f1 = compile([], [x, y])
         x1_eval, y1_eval = f1()
         assert x1_eval != y1_eval
 
         # Check that seeding works
-        f2 = compile_pymc([], [x, y], random_seed=1)
+        f2 = compile([], [x, y], random_seed=1)
         x2_eval, y2_eval = f2()
         assert x2_eval != x1_eval
         assert y2_eval != y1_eval
 
-        f3 = compile_pymc([], [x, y], random_seed=1)
+        f3 = compile([], [x, y], random_seed=1)
         x3_eval, y3_eval = f3()
         assert x3_eval == x2_eval
         assert y3_eval == y2_eval
@@ -504,23 +504,23 @@ class TestCompilePyMC:
         y = pt.random.normal(1, rng=rng)
 
         # No warnings if only one variable is used
-        assert compile_pymc([], [x])
-        assert compile_pymc([], [y])
+        assert compile([], [x])
+        assert compile([], [y])
 
         user_warn_msg = "RNG Variable rng has multiple distinct clients"
         with pytest.warns(UserWarning, match=user_warn_msg):
-            f = compile_pymc([], [x, y], random_seed=456)
+            f = compile([], [x, y], random_seed=456)
         assert f() == f()
 
         # The user can provide an explicit update, but we will still issue a warning
         with pytest.warns(UserWarning, match=user_warn_msg):
-            f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
+            f = compile([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
         assert f() != f()
 
         # Same with default update
         rng.default_update = x.owner.outputs[0]
         with pytest.warns(UserWarning, match=user_warn_msg):
-            f = compile_pymc([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
+            f = compile([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
         assert f() != f()
 
     @pytest.mark.filterwarnings("error")  # This is part of the test
@@ -530,7 +530,7 @@ class TestCompilePyMC:
         x = pt.random.normal(rng=rng)
         y = x.owner.clone().default_output()
 
-        fn = compile_pymc([], [x, y], random_seed=1)
+        fn = compile([], [x, y], random_seed=1)
         res_x1, res_y1 = fn()
         assert res_x1 == res_y1
         res_x2, res_y2 = fn()
@@ -545,7 +545,7 @@ class TestCompilePyMC:
 
         collect_default_updates(inputs=[], outputs=[x, y, z]) == {rng: next_rng3}
 
-        fn = compile_pymc([], [x, y, z], random_seed=514)
+        fn = compile([], [x, y, z], random_seed=514)
         assert not set(np.array(fn())) & set(np.array(fn()))
 
         # A local myopic rule (as PyMC used before, would not work properly)
@@ -600,7 +600,7 @@ class TestCompilePyMC:
 
         assert collect_default_updates([ys]) == {rng: next(iter(next_rng.values()))}
 
-        fn = compile_pymc([], ys, random_seed=1)
+        fn = compile([], ys, random_seed=1)
         assert not (set(fn()) & set(fn()))
 
     def test_op_from_graph_updates(self):
@@ -616,7 +616,7 @@ class TestCompilePyMC:
 
         next_rng, x = OpFromGraph([], [next_rng_, x_])()
         assert collect_default_updates([x]) == {rng: next_rng}
-        fn = compile_pymc([], x, random_seed=1)
+        fn = compile([], x, random_seed=1)
         assert not (set(fn()) & set(fn()))
 
 

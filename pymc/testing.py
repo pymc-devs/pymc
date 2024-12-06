@@ -43,7 +43,7 @@ from pymc.logprob.utils import (
     local_check_parameter_to_ninf_switch,
     rvs_in_graph,
 )
-from pymc.pytensorf import compile_pymc, floatX, inputvars
+from pymc.pytensorf import compile, floatX, inputvars
 
 # This mode can be used for tests where model compilations takes the bulk of the runtime
 # AND where we don't care about posterior numerical or sampling stability (e.g., when
@@ -645,7 +645,7 @@ def check_selfconsistency_discrete_logcdf(
     dist_logp_fn = pytensor.function(list(inputvars(dist_logp)), dist_logp)
 
     dist_logcdf = logcdf(dist, value)
-    dist_logcdf_fn = compile_pymc(list(inputvars(dist_logcdf)), dist_logcdf)
+    dist_logcdf_fn = compile(list(inputvars(dist_logcdf)), dist_logcdf)
 
     domains = paramdomains.copy()
     domains["value"] = domain
@@ -721,7 +721,7 @@ def continuous_random_tester(
 
     model, param_vars = build_model(dist, valuedomain, paramdomains, extra_args)
     model_dist = change_dist_size(model.named_vars["value"], size, expand=True)
-    pymc_rand = compile_pymc([], model_dist)
+    pymc_rand = compile([], model_dist)
 
     domains = paramdomains.copy()
     for point in product(domains, n_samples=100):
@@ -760,7 +760,7 @@ def discrete_random_tester(
 
     model, param_vars = build_model(dist, valuedomain, paramdomains)
     model_dist = change_dist_size(model.named_vars["value"], size, expand=True)
-    pymc_rand = compile_pymc([], model_dist)
+    pymc_rand = compile([], model_dist)
 
     domains = paramdomains.copy()
     for point in product(domains, n_samples=100):

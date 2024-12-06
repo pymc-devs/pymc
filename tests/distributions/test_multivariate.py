@@ -45,7 +45,7 @@ from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.logprob.basic import logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.math import kronecker
-from pymc.pytensorf import compile_pymc, floatX
+from pymc.pytensorf import compile, floatX
 from pymc.sampling.forward import draw
 from pymc.testing import (
     BaseTestDistributionRandom,
@@ -168,7 +168,7 @@ def stickbreakingweights_logpdf():
     _alpha = pt.scalar()
     _k = pt.iscalar()
     _logp = logp(pm.StickBreakingWeights.dist(_alpha, _k), _value)
-    core_fn = compile_pymc([_value, _alpha, _k], _logp)
+    core_fn = compile([_value, _alpha, _k], _logp)
 
     return np.vectorize(core_fn, signature="(n),(),()->()")
 

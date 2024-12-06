@@ -33,7 +33,7 @@ from scipy import stats
 import pymc as pm
 
 from pymc.backends.base import MultiTrace
-from pymc.pytensorf import compile_pymc
+from pymc.pytensorf import compile
 from pymc.sampling.forward import (
     compile_forward_sampling_function,
     get_constant_coords,
@@ -1195,7 +1195,7 @@ class TestSamplePriorPredictive:
             a = pm.Uniform("a", lower=0, upper=1, size=10)
             b = pm.Binomial("b", n=1, p=a, size=10)
 
-        b_sampler = compile_pymc([], b, mode="FAST_RUN", random_seed=232093)
+        b_sampler = compile([], b, mode="FAST_RUN", random_seed=232093)
         avg = np.stack([b_sampler() for i in range(10000)]).mean(0)
         npt.assert_array_almost_equal(avg, 0.5 * np.ones((10,)), decimal=2)
 

@@ -51,7 +51,7 @@ from pymc.backends.arviz import _DefaultTrace, dataset_to_point_list
 from pymc.backends.base import MultiTrace
 from pymc.blocking import PointType
 from pymc.model import Model, modelcontext
-from pymc.pytensorf import compile_pymc
+from pymc.pytensorf import compile
 from pymc.util import (
     CustomProgress,
     RandomState,
@@ -273,7 +273,7 @@ def compile_forward_sampling_function(
     ]
 
     return (
-        compile_pymc(inputs, fg.outputs, givens=givens, on_unused_input="ignore", **kwargs),
+        compile(inputs, fg.outputs, givens=givens, on_unused_input="ignore", **kwargs),
         set(basic_rvs) & (volatile_nodes - set(givens_dict)),  # Basic RVs that will be resampled
     )
 
@@ -329,7 +329,7 @@ def draw(
     if random_seed is not None:
         (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
-    draw_fn = compile_pymc(inputs=[], outputs=vars, random_seed=random_seed, **kwargs)
+    draw_fn = compile(inputs=[], outputs=vars, random_seed=random_seed, **kwargs)
 
     if draws == 1:
         return draw_fn()

@@ -43,7 +43,7 @@ from pymc.distributions.distribution import (
 )
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.logprob.basic import conditional_logp, logp
-from pymc.pytensorf import compile_pymc
+from pymc.pytensorf import compile
 from pymc.testing import (
     BaseTestDistributionRandom,
     I,
@@ -169,7 +169,7 @@ class TestSymbolicRandomVariable:
             outputs=[dummy_next_rng, dummy_x],
             ndim_supp=0,
         )(rng)
-        fn = compile_pymc(inputs=[], outputs=x, random_seed=431)
+        fn = compile(inputs=[], outputs=x, random_seed=431)
         assert fn() != fn()
 
         # Check that custom updates are respected, by using one that's broken
@@ -182,7 +182,7 @@ class TestSymbolicRandomVariable:
             ValueError,
             match="No update found for at least one RNG used in SymbolicRandomVariable Op SymbolicRVCustomUpdates",
         ):
-            compile_pymc(inputs=[], outputs=x, random_seed=431)
+            compile(inputs=[], outputs=x, random_seed=431)
 
     def test_recreate_with_different_rng_inputs(self):
         """Test that we can recreate a SymbolicRandomVariable with new RNG inputs.

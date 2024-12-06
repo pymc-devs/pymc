@@ -800,10 +800,10 @@ class TestCheckStartVals:
             "a_interval__": model.rvs_to_transforms[a].forward(0.3, *a.owner.inputs).eval(),
             "b_interval__": model.rvs_to_transforms[b].forward(2.1, *b.owner.inputs).eval(),
         }
-        with patch("pymc.model.core.compile_pymc") as patched_compile_pymc:
+        with patch("pymc.model.core.compile") as patched_compile:
             model.check_start_vals(start, mode=mode)
-        patched_compile_pymc.assert_called_once()
-        assert patched_compile_pymc.call_args.kwargs["mode"] == mode
+        patched_compile.assert_called_once()
+        assert patched_compile.call_args.kwargs["mode"] == mode
 
 
 def test_set_initval():

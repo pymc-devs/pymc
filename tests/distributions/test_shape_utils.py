@@ -326,7 +326,7 @@ class TestSizeShapeDimsObserved:
         with pm.Model(coords={"x_dim": range(2)}):
             x = pm.Normal("x", dims=("x_dim",))
 
-        fn = pm.pytensorf.compile_pymc([], x)
+        fn = pm.pytensorf.compile([], x)
         # Check that both function outputs (rng and draws) come from the same Apply node
         assert fn.maker.fgraph.outputs[0].owner is fn.maker.fgraph.outputs[1].owner
 
@@ -341,7 +341,7 @@ class TestSizeShapeDimsObserved:
         with pm.Model():
             x = pm.Normal("x", observed=[0, 1])
 
-        fn = pm.pytensorf.compile_pymc([], x)
+        fn = pm.pytensorf.compile([], x)
         # Check that both function outputs (rng and draws) come from the same Apply node
         assert fn.maker.fgraph.outputs[0].owner is fn.maker.fgraph.outputs[1].owner
 
