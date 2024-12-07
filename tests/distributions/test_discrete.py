@@ -53,6 +53,7 @@ from pymc.testing import (
     check_icdf,
     check_logcdf,
     check_logp,
+    check_selfconsistency_discrete_icdf,
     check_selfconsistency_discrete_logcdf,
     seeded_numpy_distribution_builder,
     seeded_scipy_distribution_builder,
@@ -121,6 +122,11 @@ class TestMatchesScipy:
             lambda q, lower, upper: st.randint.ppf(q=q, low=lower, high=upper + 1),
             skip_paramdomain_outside_edge_test=True,
         )
+        check_selfconsistency_discrete_icdf(
+            pm.DiscreteUniform,
+            Rdunif,
+            {"lower": -Rplusdunif, "upper": Rplusdunif},
+        )
         # Custom logp / logcdf check for invalid parameters
         invalid_dist = pm.DiscreteUniform.dist(lower=1, upper=0)
         with pytensor.config.change_flags(mode=Mode("py")):
@@ -153,6 +159,11 @@ class TestMatchesScipy:
             pm.Geometric,
             {"p": Unit},
             st.geom.ppf,
+        )
+        check_selfconsistency_discrete_icdf(
+            pm.Geometric,
+            Nat,
+            {"p": Unit},
         )
 
     def test_hypergeometric(self):
