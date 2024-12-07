@@ -1811,31 +1811,29 @@ class MatrixNormal(Continuous):
 
     .. code:: python
 
-        # Setup data
-        true_colcov = np.array([[1.0, 0.5, 0.1],
-                                [0.5, 1.0, 0.2],
-                                [0.1, 0.2, 1.0]])
-        m = 3
-        n = true_colcov.shape[0]
-        true_scale = 3
-        true_rowcov = np.diag([true_scale**(2*i) for i in range(m)])
-        mu = np.zeros((m, n))
-        true_kron = np.kron(true_rowcov, true_colcov)
-        data = np.random.multivariate_normal(mu.flatten(), true_kron)
-        data = data.reshape(m, n)
+            # Setup data
+            true_colcov = np.array([[1.0, 0.5, 0.1],
+                                    [0.5, 1.0, 0.2],
+                                    [0.1, 0.2, 1.0]])
+            m = 3
+            n = true_colcov.shape[0]
+            true_scale = 3
+            true_rowcov = np.diag([true_scale**(2*i) for i in range(m)])
+            mu = np.zeros((m, n))
+            true_kron = np.kron(true_rowcov, true_colcov)
+            data = np.random.multivariate_normal(mu.flatten(), true_kron)
+            data = data.reshape(m, n)
 
-        with pm.Model() as model:
-            # Setup right cholesky matrix
-            sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
-            colchol_packed, _, _ = pm.LKJCholeskyCov('colcholpacked', n=3, eta=2, sd_dist=sd_dist)
-            colchol = pm.expand_packed_triangular(3, colchol_packed)
+            with pm.Model() as model:
+                # Setup right cholesky matrix
+                sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
+                colchol,_,_ = pm.LKJCholeskyCov('colchol', n=3, eta=2,sd_dist=sd_dist)
+                # Setup left covariance matrix
+                scale = pm.LogNormal('scale', mu=np.log(true_scale), sigma=0.5)
+                rowcov = pt.diag([scale**(2*i) for i in range(m)])
 
-            # Setup left covariance matrix
-            scale = pm.LogNormal('scale', mu=np.log(true_scale), sigma=0.5)
-            rowcov = pt.diag([scale**(2*i) for i in range(m)])
-
-            vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,
-                                observed=data)
+                vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,
+                                    observed=data)
     """
 
     rv_op = matrixnormal
