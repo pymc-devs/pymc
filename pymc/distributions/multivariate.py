@@ -1791,14 +1791,21 @@ class MatrixNormal(Continuous):
     Examples
     --------
     Define a matrixvariate normal variable for given row and column covariance
-    matrices::
+    matrices.
 
-        colcov = np.array([[1.0, 0.5], [0.5, 2]])
-        rowcov = np.array([[1, 0, 0], [0, 4, 0], [0, 0, 16]])
-        m = rowcov.shape[0]
-        n = colcov.shape[0]
-        mu = np.zeros((m, n))
-        vals = pm.MatrixNormal("vals", mu=mu, colcov=colcov, rowcov=rowcov)
+    .. code:: python
+
+        import pymc as pm
+        import numpy as np
+        import pytensor.tensor as pt
+
+        with pm.Model() as model:
+            colcov = np.array([[1.0, 0.5], [0.5, 2]])
+            rowcov = np.array([[1, 0, 0], [0, 4, 0], [0, 0, 16]])
+            m = rowcov.shape[0]
+            n = colcov.shape[0]
+            mu = np.zeros((m, n))
+            vals = pm.MatrixNormal("vals", mu=mu, colcov=colcov, rowcov=rowcov)
 
     Above, the ith row in vals has a variance that is scaled by 4^i.
     Alternatively, row or column cholesky matrices could be substituted for
@@ -1827,16 +1834,13 @@ class MatrixNormal(Continuous):
         with pm.Model() as model:
             # Setup right cholesky matrix
             sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
-            colchol_packed = pm.LKJCholeskyCov('colcholpacked', n=3, eta=2,
-                                               sd_dist=sd_dist)
-            colchol = pm.expand_packed_triangular(3, colchol_packed)
-
+            colchol,_,_ = pm.LKJCholeskyCov('colchol', n=3, eta=2,sd_dist=sd_dist)
             # Setup left covariance matrix
             scale = pm.LogNormal('scale', mu=np.log(true_scale), sigma=0.5)
             rowcov = pt.diag([scale**(2*i) for i in range(m)])
 
             vals = pm.MatrixNormal('vals', mu=mu, colchol=colchol, rowcov=rowcov,
-                                   observed=data)
+                                observed=data)
     """
 
     rv_op = matrixnormal
