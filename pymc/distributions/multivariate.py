@@ -1791,14 +1791,21 @@ class MatrixNormal(Continuous):
     Examples
     --------
     Define a matrixvariate normal variable for given row and column covariance
-    matrices::
-    with pm.Model() as model:
-        colcov = np.array([[1.0, 0.5], [0.5, 2]])
-        rowcov = np.array([[1, 0, 0], [0, 4, 0], [0, 0, 16]])
-        m = rowcov.shape[0]
-        n = colcov.shape[0]
-        mu = np.zeros((m, n))
-        vals = pm.MatrixNormal("vals", mu=mu, colcov=colcov, rowcov=rowcov)
+    matrices.
+
+    .. code:: python
+
+        import pymc as pm
+        import numpy as np
+        import pytensor.tensor as pt
+
+        with pm.Model() as model:
+            colcov = np.array([[1.0, 0.5], [0.5, 2]])
+            rowcov = np.array([[1, 0, 0], [0, 4, 0], [0, 0, 16]])
+            m = rowcov.shape[0]
+            n = colcov.shape[0]
+            mu = np.zeros((m, n))
+            vals = pm.MatrixNormal("vals", mu=mu, colcov=colcov, rowcov=rowcov)
 
     Above, the ith row in vals has a variance that is scaled by 4^i.
     Alternatively, row or column cholesky matrices could be substituted for
