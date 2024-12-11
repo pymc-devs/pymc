@@ -337,22 +337,18 @@ def test_get_batched_jittered_initial_points():
 
     # No jitter
     ips = _get_batched_jittered_initial_points(
-        model=model, chains=1, random_seed=1, initvals=None, jitter=False, logp_fn=logp_fn
+        model=model, chains=1, random_seed=1, initvals=None, jitter=False
     )
     assert np.all(ips[0] == 0)
 
     # Single chain
-    ips = _get_batched_jittered_initial_points(
-        model=model, chains=1, random_seed=1, initvals=None, logp_fn=logp_fn
-    )
+    ips = _get_batched_jittered_initial_points(model=model, chains=1, random_seed=1, initvals=None)
 
     assert ips[0].shape == (2, 3)
     assert np.all(ips[0] != 0)
 
     # Multiple chains
-    ips = _get_batched_jittered_initial_points(
-        model=model, chains=2, random_seed=1, initvals=None, logp_fn=logp_fn
-    )
+    ips = _get_batched_jittered_initial_points(model=model, chains=2, random_seed=1, initvals=None)
 
     assert ips[0].shape == (2, 2, 3)
     assert np.all(ips[0][0] != ips[0][1])
