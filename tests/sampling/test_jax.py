@@ -333,8 +333,6 @@ def test_get_batched_jittered_initial_points():
     with pm.Model() as model:
         x = pm.MvNormal("x", mu=np.zeros(3), cov=np.eye(3), shape=(2, 3), initval=np.zeros((2, 3)))
 
-    logp_fn = get_jaxified_logp(model)
-
     # No jitter
     ips = _get_batched_jittered_initial_points(
         model=model, chains=1, random_seed=1, initvals=None, jitter=False
