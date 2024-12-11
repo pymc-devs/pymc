@@ -213,7 +213,7 @@ def _get_batched_jittered_initial_points(
     chains: int,
     initvals: StartDict | Sequence[StartDict | None] | None,
     random_seed: RandomSeed,
-    logp_fn: Callable[[Sequence[np.ndarray]], np.ndarray],
+    logp_fn: Callable[[Sequence[np.ndarray]], np.ndarray] | None = None,
     jitter: bool = True,
     jitter_max_retries: int = 10,
 ) -> np.ndarray | list[np.ndarray]:
@@ -230,14 +230,18 @@ def _get_batched_jittered_initial_points(
         list with one item per variable and number of chains as batch dimension.
         Each item has shape `(chains, *var.shape)`
     """
+    if logp_fn is None:
+        eval_logp_initial_point = None
 
-    def eval_logp_initial_point(point: dict[str, np.ndarray]) -> np.ndarray:
-        """Wrap logp_fn to conform to _init_jitter logic.
+    else:
 
-        Wraps jaxified logp function to accept a dict of
-        {model_variable: np.array} key:value pairs.
-        """
-        return logp_fn(point.values())
+        def eval_logp_initial_point(point: dict[str, np.ndarray]) -> np.ndarray:
+            """Wrap logp_fn to conform to _init_jitter logic.
+
+            Wraps jaxified logp function to accept a dict of
+            {model_variable: np.array} key:value pairs.
+            """
+            return logp_fn(point.values())
 
     initial_points = _init_jitter(
         model,
