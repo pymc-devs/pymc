@@ -377,7 +377,7 @@ def _sample_blackjax_nuts(
             Datastructure containing raw mcmc samples
         sample_stats : dict[str, Any]
             Dictionary containing sample stats
-        Module("blackjax")
+        blackjax : ModuleType["blackjax"]
     """
     import blackjax
 
@@ -488,7 +488,7 @@ def _sample_numpyro_nuts(
             Datastructure containing raw mcmc samples
         sample_stats : dict[str, Any]
             Dictionary containing sample stats
-        Module("numpyro")
+        numpyro : ModuleType["numpyro"]
     """
     import numpyro
 
