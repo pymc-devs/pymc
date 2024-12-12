@@ -17,17 +17,13 @@
 import contextlib
 import logging
 import pickle
+import re
 import sys
 import time
 import warnings
 
 from collections.abc import Callable, Iterator, Mapping, Sequence
-from typing import (
-    Any,
-    Literal,
-    TypeAlias,
-    overload,
-)
+from typing import Any, Literal, TypeAlias, cast, get_args, overload
 
 import numpy as np
 import pytensor.gradient as tg
@@ -85,6 +81,14 @@ __all__ = [
 ]
 
 Step: TypeAlias = BlockedStep | CompoundStep
+
+ExternalNutsSampler = Literal["nutpie", "numpyro", "blackjax"]
+NutsSampler = Literal["pymc"] | ExternalNutsSampler
+NutpieBackend = Literal["numba", "jax"]
+
+
+NUTPIE_BACKENDS = get_args(NutpieBackend)
+NUTPIE_DEFAULT_BACKEND = cast(NutpieBackend, "numba")
 
 
 class SamplingIteratorCallback(Protocol):
@@ -287,7 +291,7 @@ def all_continuous(vars):
 
 
 def _sample_external_nuts(
-    sampler: Literal["nutpie", "numpyro", "blackjax"],
+    sampler: ExternalNutsSampler,
     draws: int,
     tune: int,
     chains: int,
@@ -305,7 +309,7 @@ def _sample_external_nuts(
     if nuts_sampler_kwargs is None:
         nuts_sampler_kwargs = {}
 
-    if sampler == "nutpie":
+    if sampler.startswith("nutpie"):
         try:
             import nutpie
         except ImportError as err:
@@ -338,6 +342,23 @@ def _sample_external_nuts(
             model,
             **compile_kwargs,
         )
+
+        def extract_backend(string: str) -> NutpieBackend:
+            match = re.search(r"(?<=\[)[^\]]+(?=\])", string)
+            if match is None:
+                return NUTPIE_DEFAULT_BACKEND
+            result = cast(NutpieBackend, match.group(0))
+            if result not in NUTPIE_BACKENDS:
+                last_option = f"{NUTPIE_BACKENDS[-1]}"
+                expected = (
+                    ", ".join([f'"{x}"' for x in NUTPIE_BACKENDS[:-1]]) + f' or "{last_option}"'
+                )
+                raise ValueError(f'Expected one of {expected}; found "{result}"')
+            return result
+
+        backend = extract_backend(sampler)
+        compiled_model = nutpie.compile_pymc_model(model, backend=backend)
+
         t_start = time.time()
         idata = nutpie.sample(
             compiled_model,
@@ -386,6 +407,10 @@ def _sample_external_nuts(
     elif sampler in ("numpyro", "blackjax"):
         import pymc.sampling.jax as pymc_jax
 
+        from pymc.sampling.jax import JaxNutsSampler
+
+        sampler = cast(JaxNutsSampler, sampler)
+
         idata = pymc_jax.sample_jax_nuts(
             draws=draws,
             tune=tune,
@@ -421,7 +446,7 @@ def sample(
     progressbar_theme: Theme | None = default_progress_theme,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: NutsSampler = "pymc",
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -453,7 +478,7 @@ def sample(
     progressbar_theme: Theme | None = default_progress_theme,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: NutsSampler = "pymc",
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -485,7 +510,7 @@ def sample(
     progressbar_theme: Theme | None = default_progress_theme,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: NutsSampler = "pymc",
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -543,8 +568,10 @@ def sample(
         method will be used, if appropriate to the model.
     var_names : list of str, optional
         Names of variables to be stored in the trace. Defaults to all free variables and deterministics.
-    nuts_sampler : str
-        Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"].
+    nuts_sampler : str, default "pymc"
+        Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"]. In addition, the compilation
+        backend for the chosen sampler can be set using square brackets, if available. For example, "nutpie[jax]" will
+        use the JAX backend for the nutpie sampler. Currently, "nutpie[jax]" and "nutpie[numba]" are allowed.
         This requires the chosen sampler to be installed.
         All samplers, except "pymc", require the full model to be continuous.
     blas_cores: int or "auto" or None, default = "auto"
