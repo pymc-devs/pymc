@@ -1353,8 +1353,8 @@ def _init_jitter(
         Whether to apply jitter or not.
     jitter_max_retries : int
         Maximum number of repeated attempts at initializing values (per chain).
-    logp_fn: Callable[[dict[str, np.ndarray]], np.ndarray] | None
-        Jaxified logp function that takes the output of the initial point functions as input.
+    logp_fn: Callable[[dict[str, np.ndarray]], np.ndarray | jax.Array] | None
+        logp function that takes the output of initial point functions as input.
         If None, will use the results of model.compile_logp().
 
     Returns

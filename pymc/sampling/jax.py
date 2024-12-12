@@ -28,6 +28,7 @@ import pytensor.tensor as pt
 
 from arviz.data.base import make_attrs
 from jax.lax import scan
+from numpy.typing import ArrayLike
 from pytensor.compile import SharedVariable, Supervisor, mode
 from pytensor.graph.basic import graph_inputs
 from pytensor.graph.fg import FunctionGraph
@@ -121,7 +122,7 @@ def _replace_shared_variables(graph: list[TensorVariable]) -> list[TensorVariabl
 def get_jaxified_graph(
     inputs: list[TensorVariable] | None = None,
     outputs: list[TensorVariable] | None = None,
-) -> list[TensorVariable]:
+) -> Callable[[list[TensorVariable]], list[TensorVariable]]:
     """Compile a PyTensor graph into an optimized JAX function."""
     graph = _replace_shared_variables(outputs) if outputs is not None else None
 
@@ -144,15 +145,13 @@ def get_jaxified_graph(
     return jax_funcify(fgraph)
 
 
-def get_jaxified_logp(
-    model: Model, negative_logp=True
-) -> Callable[[Sequence[np.ndarray]], np.ndarray]:
+def get_jaxified_logp(model: Model, negative_logp: bool = True) -> Callable[[ArrayLike], jax.Array]:
     model_logp = model.logp()
     if not negative_logp:
         model_logp = -model_logp
     logp_fn = get_jaxified_graph(inputs=model.value_vars, outputs=[model_logp])
 
-    def logp_fn_wrap(x: Sequence[np.ndarray]) -> np.ndarray:
+    def logp_fn_wrap(x: ArrayLike) -> jax.Array:
         return logp_fn(*x)[0]
 
     return logp_fn_wrap
@@ -213,7 +212,7 @@ def _get_batched_jittered_initial_points(
     chains: int,
     initvals: StartDict | Sequence[StartDict | None] | None,
     random_seed: RandomSeed,
-    logp_fn: Callable[[Sequence[np.ndarray]], np.ndarray] | None = None,
+    logp_fn: Callable[[ArrayLike], jax.Array] | None = None,
     jitter: bool = True,
     jitter_max_retries: int = 10,
 ) -> np.ndarray | list[np.ndarray]:
@@ -235,7 +234,7 @@ def _get_batched_jittered_initial_points(
 
     else:
 
-        def eval_logp_initial_point(point: dict[str, np.ndarray]) -> np.ndarray:
+        def eval_logp_initial_point(point: dict[str, np.ndarray]) -> jax.Array:
             """Wrap logp_fn to conform to _init_jitter logic.
 
             Wraps jaxified logp function to accept a dict of
