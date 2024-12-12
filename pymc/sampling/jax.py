@@ -18,7 +18,8 @@ import re
 from collections.abc import Callable, Sequence
 from datetime import datetime
 from functools import partial
-from typing import Any, Literal
+from types import ModuleType
+from typing import TYPE_CHECKING, Any, Literal
 
 import arviz as az
 import jax
@@ -68,6 +69,9 @@ __all__ = (
     "sample_blackjax_nuts",
     "sample_numpyro_nuts",
 )
+
+if TYPE_CHECKING:
+    from numpyro.infer import MCMC
 
 
 @jax_funcify.register(Assert)
@@ -310,50 +314,48 @@ def _sample_blackjax_nuts(
     tune: int,
     draws: int,
     chains: int,
-    chain_method: str | None,
+    chain_method: Literal["parallel", "vectorized"],
     progressbar: bool,
     random_seed: int,
     initial_points: np.ndarray | list[np.ndarray],
     nuts_kwargs,
-    logp_fn: Callable[[Sequence[np.ndarray]], np.ndarray] | None = None,
-) -> az.InferenceData:
+    logp_fn: Callable[[ArrayLike], jax.Array] | None = None,
+) -> tuple[Any, dict[str, Any], ModuleType]:
     """
     Draw samples from the posterior using the NUTS method from the ``blackjax`` library.
 
     Parameters
     ----------
-    draws : int, default 1000
-        The number of samples to draw. The number of tuned samples are discarded by
-        default.
-    tune : int, default 1000
-        Number of iterations to tune. Samplers adjust the step sizes, scalings or
-        similar during tuning. Tuning samples will be drawn in addition to the number
-        specified in the ``draws`` argument.
-    chains : int, default 4
-        The number of chains to sample.
-    target_accept : float in [0, 1].
-        The step size is tuned such that we approximate this acceptance rate. Higher
-        values like 0.9 or 0.95 often work better for problematic posteriors.
-    random_seed : int, RandomState or Generator, optional
-        Random seed used by the sampling steps.
-    initvals: StartDict or Sequence[Optional[StartDict]], optional
-        Initial values for random variables provided as a dictionary (or sequence of
-        dictionaries) mapping the random variable (by name or reference) to desired
-        starting values.
-    jitter: bool, default True
-        If True, add jitter to initial points.
     model : Model, optional
         Model to sample from. The model needs to have free random variables. When inside
         a ``with`` model context, it defaults to that model, otherwise the model must be
         passed explicitly.
+    target_accept : float in [0, 1].
+        The step size is tuned such that we approximate this acceptance rate. Higher
+        values like 0.9 or 0.95 often work better for problematic posteriors.
+    tune : int, default 1000
+        Number of iterations to tune. Samplers adjust the step sizes, scalings or
+        similar during tuning. Tuning samples will be drawn in addition to the number
+        specified in the ``draws`` argument.
+    draws : int, default 1000
+        The number of samples to draw. The number of tuned samples are discarded by
+        default.
+    chains : int, default 4
+        The number of chains to sample.
+    chain_method : str, default "parallel"
+        Specify how samples should be drawn. The choices include "parallel", and
+        "vectorized".
+    progressbar : bool
+        Whether to show progressbar or not during sampling.
+    random_seed : int, RandomState or Generator, optional
+        Random seed used by the sampling steps.
+    initial_points : np.ndarray | list[np.ndarray]
+        Initial point(s) for sampler to begin sampling from.
     var_names : sequence of str, optional
         Names of variables for which to compute the posterior samples. Defaults to all
         variables in the posterior.
     keep_untransformed : bool, default False
         Include untransformed variables in the posterior samples. Defaults to False.
-    chain_method : str, default "parallel"
-        Specify how samples should be drawn. The choices include "parallel", and
-        "vectorized".
     postprocessing_backend: Optional[Literal["cpu", "gpu"]], default None,
         Specify how postprocessing should be computed. gpu or cpu
     postprocessing_vectorize: Literal["vmap", "scan"], default "scan"
@@ -365,13 +367,17 @@ def _sample_blackjax_nuts(
         ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
         the ``model`` argument if not provided in ``idata_kwargs``. If ``coords`` and
         ``dims`` are provided, they are used to update the inferred dictionaries.
+    logp_fn : Callable[[ArrayLike], jax.Array] | None:
+        jaxified logp function. If not passed in it will compute it here.
 
     Returns
     -------
-    InferenceData
-        ArviZ ``InferenceData`` object that contains the posterior samples, together
-        with their respective sample stats and pointwise log likeihood values (unless
-        skipped with ``idata_kwargs``).
+    Tuple containing:
+        raw_mcmc_samples
+            Datastructure containing raw mcmc samples
+        sample_stats : dict[str, Any]
+            Dictionary containing sample stats
+        Module("blackjax")
     """
     import blackjax
 
@@ -409,7 +415,7 @@ def _sample_blackjax_nuts(
 
 
 # Adopted from arviz numpyro extractor
-def _numpyro_stats_to_dict(posterior):
+def _numpyro_stats_to_dict(posterior: MCMC) -> dict[str, Any]:
     """Extract sample_stats from NumPyro posterior."""
     rename_key = {
         "potential_energy": "lp",
@@ -440,8 +446,50 @@ def _sample_numpyro_nuts(
     random_seed: int,
     initial_points: np.ndarray | list[np.ndarray],
     nuts_kwargs: dict[str, Any],
-    logp_fn: Callable | None = None,
-):
+    logp_fn: Callable[[ArrayLike], jax.Array] | None = None,
+) -> tuple[Any, dict[str, Any], ModuleType]:
+    """
+    Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
+
+    Parameters
+    ----------
+    model : Model, optional
+        Model to sample from. The model needs to have free random variables. When inside
+        a ``with`` model context, it defaults to that model, otherwise the model must be
+        passed explicitly.
+    target_accept : float in [0, 1].
+        The step size is tuned such that we approximate this acceptance rate. Higher
+        values like 0.9 or 0.95 often work better for problematic posteriors.
+    tune : int, default 1000
+        Number of iterations to tune. Samplers adjust the step sizes, scalings or
+        similar during tuning. Tuning samples will be drawn in addition to the number
+        specified in the ``draws`` argument.
+    draws : int, default 1000
+        The number of samples to draw. The number of tuned samples are discarded by
+        default.
+    chains : int, default 4
+        The number of chains to sample.
+    chain_method : str, default "parallel"
+        Specify how samples should be drawn. The choices include "parallel", and
+        "vectorized".
+    progressbar : bool
+        Whether to show progressbar or not during sampling.
+    random_seed : int, RandomState or Generator, optional
+        Random seed used by the sampling steps.
+    initial_points : np.ndarray | list[np.ndarray]
+        Initial point(s) for sampler to begin sampling from.
+    logp_fn : Callable[[ArrayLike], jax.Array] | None:
+        jaxified logp function. If not passed in it will compute it here.
+
+    Returns
+    -------
+    Tuple containing:
+        raw_mcmc_samples
+            Datastructure containing raw mcmc samples
+        sample_stats : dict[str, Any]
+            Dictionary containing sample stats
+        Module("numpyro")
+    """
     import numpyro
 
     from numpyro.infer import MCMC, NUTS
@@ -505,7 +553,7 @@ def sample_jax_nuts(
     nuts_kwargs: dict | None = None,
     progressbar: bool = True,
     keep_untransformed: bool = False,
-    chain_method: str = "parallel",
+    chain_method: Literal["parallel", "vectorized"] = "parallel",
     postprocessing_backend: Literal["cpu", "gpu"] | None = None,
     postprocessing_vectorize: Literal["vmap", "scan"] | None = None,
     postprocessing_chunks=None,
@@ -551,7 +599,7 @@ def sample_jax_nuts(
         If True, display a progressbar while sampling
     keep_untransformed : bool, default False
         Include untransformed variables in the posterior samples.
-    chain_method : str, default "parallel"
+    chain_method : Literal["parallel", "vectorized"], default "parallel"
         Specify how samples should be drawn. The choices include "parallel", and
         "vectorized".
     postprocessing_backend : Optional[Literal["cpu", "gpu"]], default None,
