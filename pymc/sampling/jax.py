@@ -19,7 +19,7 @@ from collections.abc import Callable, Sequence
 from datetime import datetime
 from functools import partial
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 import arviz as az
 import jax
@@ -69,9 +69,6 @@ __all__ = (
     "sample_blackjax_nuts",
     "sample_numpyro_nuts",
 )
-
-if TYPE_CHECKING:
-    from numpyro.infer import MCMC
 
 
 @jax_funcify.register(Assert)
@@ -415,7 +412,7 @@ def _sample_blackjax_nuts(
 
 
 # Adopted from arviz numpyro extractor
-def _numpyro_stats_to_dict(posterior: MCMC) -> dict[str, Any]:
+def _numpyro_stats_to_dict(posterior) -> dict[str, Any]:
     """Extract sample_stats from NumPyro posterior."""
     rename_key = {
         "potential_energy": "lp",
