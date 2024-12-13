@@ -528,24 +528,30 @@ def join_nonshared_inputs(
         raise ValueError("Empty list of input variables.")
 
     raveled_inputs = pt.concatenate([var.ravel() for var in inputs])
+    input_sizes = [point[var_name].size for var_name in point]
+    size = sum(input_sizes)
 
     if not make_inputs_shared:
-        tensor_type = raveled_inputs.type
-        joined_inputs = tensor_type("joined_inputs")
+        joined_inputs = pt.tensor("joined_inputs", shape=(size,), dtype=raveled_inputs.dtype)
     else:
         joined_values = np.concatenate([point[var.name].ravel() for var in inputs])
-        joined_inputs = pytensor.shared(joined_values, "joined_inputs")
+        joined_inputs = pytensor.shared(joined_values, "joined_inputs", shape=(size,))
 
     if pytensor.config.compute_test_value != "off":
         joined_inputs.tag.test_value = raveled_inputs.tag.test_value
 
     replace: dict[TensorVariable, TensorVariable] = {}
-    last_idx = 0
-    for var in inputs:
+    if len(inputs) == 1:
+        split_vars = [joined_inputs]
+    else:
+        split_vars = pt.split(joined_inputs, input_sizes, len(inputs))
+
+    for var, flat_var in zip(inputs, split_vars, strict=True):
         shape = point[var.name].shape
-        arr_len = np.prod(shape, dtype=int)
-        replace[var] = joined_inputs[last_idx : last_idx + arr_len].reshape(shape).astype(var.dtype)
-        last_idx += arr_len
+        joined_inputs.name == f"{var.name}__flat"
+        reshaped_var = joined_inputs.reshape(shape)
+        reshaped_var.name == var.name
+        replace[var] = reshaped_var
 
     if shared_inputs is not None:
         replace.update(shared_inputs)
