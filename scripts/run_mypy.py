@@ -18,7 +18,7 @@ import pathlib
 import subprocess
 import sys
 
-from collections.abc import Iterator
+from collections.abc import Iterable
 
 import pandas
 
@@ -58,13 +58,13 @@ def enforce_pep561(module_name):
     return
 
 
-def mypy_to_pandas(input_lines: Iterator[str]) -> pandas.DataFrame:
+def mypy_to_pandas(input_lines: Iterable[str]) -> pandas.DataFrame:
     """Reformats mypy output with error codes to a DataFrame.
 
     Adapted from: https://gist.github.com/michaelosthege/24d0703e5f37850c9e5679f69598930a
     """
-    current_section = None
-    data = {
+    current_section = ""
+    data: dict[str, list[str]] = {
         "file": [],
         "line": [],
         "type": [],
@@ -95,7 +95,7 @@ def mypy_to_pandas(input_lines: Iterator[str]) -> pandas.DataFrame:
     return pandas.DataFrame(data=data).set_index(["file", "line"])
 
 
-def check_no_unexpected_results(mypy_lines: Iterator[str]):
+def check_no_unexpected_results(mypy_lines: Iterable[str]):
     """Compare mypy results with list of known FAILING files.
 
     Exits the process with non-zero exit code upon unexpected results.

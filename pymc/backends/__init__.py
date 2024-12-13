@@ -63,7 +63,7 @@ Saved backends can be loaded using `arviz.from_netcdf`
 
 from collections.abc import Mapping, Sequence
 from copy import copy
-from typing import Optional, TypeAlias, Union
+from typing import TypeAlias
 
 import numpy as np
 
@@ -86,7 +86,7 @@ try:
     RunType: TypeAlias = Run
     HAS_MCB = True
 except ImportError:
-    TraceOrBackend = BaseTrace  # type: ignore[misc]
+    TraceOrBackend = BaseTrace  # type: ignore[assignment, misc]
     RunType = type(None)  # type: ignore[assignment, misc]
 
 

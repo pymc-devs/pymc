@@ -350,11 +350,11 @@ class MultiTrace:
     ----------
     nchains: int
         Number of chains in the `MultiTrace`.
-    chains: `List[int]`
+    chains: list[int]
         List of chain indices
     report: str
         Report on the sampling process.
-    varnames: `List[str]`
+    varnames: list[str]
         List of variable names in the trace(s)
     """
 

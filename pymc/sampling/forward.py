@@ -151,21 +151,21 @@ def compile_forward_sampling_function(
 
     Parameters
     ----------
-    outputs : List[pytensor.graph.basic.Variable]
+    outputs : list[pytensor.graph.basic.Variable]
         The list of variables that will be returned by the compiled function
-    vars_in_trace : List[pytensor.graph.basic.Variable]
+    vars_in_trace : list[pytensor.graph.basic.Variable]
         The list of variables that are assumed to have values stored in the trace
-    basic_rvs : Optional[List[pytensor.graph.basic.Variable]]
+    basic_rvs : list[pytensor.graph.basic.Variable] | None
         A list of random variables that are defined in the model. This list (which could be the
         output of ``model.basic_RVs``) should have a reference to the variables that should
         be considered as random variable instances. This includes variables that have
         a ``RandomVariable`` owner op, but also unpure random variables like Mixtures, or
         Censored distributions.
-    givens_dict : Optional[Dict[pytensor.graph.basic.Variable, Any]]
+    givens_dict : dict[pytensor.graph.basic.Variable, Any] | None
         A dictionary that maps tensor variables to the values that should be used to replace them
         in the compiled function. The types of the key and value should match or an error will be
         raised during compilation.
-    constant_data : Optional[Dict[str, numpy.ndarray]]
+    constant_data : dict[str, numpy.ndarray] | None
         A dictionary that maps the names of ``Data`` instances to their
         corresponding values at inference time. If a model was created with ``Data``, these
         are stored as ``SharedVariable`` with the name of the data variable and a value equal to
@@ -176,7 +176,7 @@ def compile_forward_sampling_function(
         the ``SharedVariable`` is assumed to not be volatile. If a ``SharedVariable`` is not found
         in either ``constant_data`` or ``constant_coords``, then it is assumed to be volatile.
         Setting ``constant_data`` to ``None`` is equivalent to passing an empty dictionary.
-    constant_coords : Optional[Set[str]]
+    constant_coords : Set[str] | None
         A set with the names of the mutable coordinates that have not changed their shape after
         inference. If a model was created with mutable coordinates, these are stored as
         ``SharedVariable`` with the name of the coordinate and a value equal to the length of said
@@ -392,7 +392,7 @@ def sample_prior_predictive(
 
     Returns
     -------
-    arviz.InferenceData or Dict
+    arviz.InferenceData or dict
         An ArviZ ``InferenceData`` object containing the prior and prior predictive samples (default),
         or a dictionary with variable names as keys and samples as numpy arrays.
     """
@@ -530,7 +530,7 @@ def sample_posterior_predictive(
 
     Returns
     -------
-    arviz.InferenceData or Dict
+    arviz.InferenceData or dict
         An ArviZ ``InferenceData`` object containing the posterior predictive samples (default), or
         a dictionary with variable names as keys, and samples as numpy arrays.
 

@@ -271,7 +271,7 @@ def _print_step_hierarchy(s: Step, level: int = 0) -> None:
     else:
         varnames = ", ".join(
             [
-                get_untransformed_name(v.name) if is_transformed_name(v.name) else v.name
+                get_untransformed_name(v.name) if is_transformed_name(v.name) else v.name  # type: ignore[arg-type, misc]
                 for v in s.vars
             ]
         )
