@@ -29,7 +29,7 @@ from pytensor.tensor import gamma as gammafn
 from pytensor.tensor import gammaln, get_underlying_scalar_constant_value
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.extra_ops import broadcast_shape
-from pytensor.tensor.math import betaincinv, gammaincinv, tanh
+from pytensor.tensor.math import betaincinv, gammaincinv, gammainccinv, tanh
 from pytensor.tensor.random.basic import (
     BetaRV,
     _gamma,
@@ -2535,6 +2535,16 @@ class InverseGamma(PositiveContinuous):
         )
 
         return check_parameters(
+            res,
+            alpha > 0,
+            beta > 0,
+            msg="alpha > 0, beta > 0",
+        )
+
+    def icdf(value, alpha, beta):
+        res = beta / gammainccinv(alpha, value)
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
             res,
             alpha > 0,
             beta > 0,
