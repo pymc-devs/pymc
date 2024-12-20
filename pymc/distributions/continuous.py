@@ -29,7 +29,7 @@ from pytensor.tensor import gamma as gammafn
 from pytensor.tensor import gammaln, get_underlying_scalar_constant_value
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.extra_ops import broadcast_shape
-from pytensor.tensor.math import betaincinv, gammaincinv, gammainccinv, tanh
+from pytensor.tensor.math import betaincinv, gammainccinv, gammaincinv, tanh
 from pytensor.tensor.random.basic import (
     BetaRV,
     _gamma,
