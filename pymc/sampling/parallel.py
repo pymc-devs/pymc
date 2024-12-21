@@ -110,8 +110,10 @@ class _Process:
         zarr_chains: list[ZarrChain] | bytes | None = None,
         zarr_chains_is_pickled: bool = False,
     ):
-        # For some strange reason, spawn multiprocessing doesn't copy the rng
-        # seed sequence, so we have to rebuild it from scratch
+        # Because of https://github.com/numpy/numpy/issues/27727, we can't send
+        # the rng instance to the child process because pickling (copying) looses
+        # the seed sequence state information. For this reason, we send a
+        # RandomGeneratorState instead.
         rng = random_generator_from_state(rng_state)
         self._msg_pipe = msg_pipe
         self._step_method = step_method
