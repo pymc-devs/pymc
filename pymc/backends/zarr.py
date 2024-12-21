@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from collections.abc import Mapping, MutableMapping, Sequence
+from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from typing import Any
 
 import arviz as az
@@ -91,10 +91,11 @@ class ZarrChain(BaseTrace):
         vars: Sequence[TensorVariable] | None = None,
         test_point: dict[str, np.ndarray] | None = None,
         draws_per_chunk: int = 1,
+        fn: Callable | None = None,
     ):
         if not _zarr_available:
             raise RuntimeError("You must install zarr to be able to create ZarrChain instances")
-        super().__init__(name="zarr", model=model, vars=vars, test_point=test_point)
+        super().__init__(name="zarr", model=model, vars=vars, test_point=test_point, fn=fn)
         self._step_method: BlockedStep | CompoundStep | None = None
         self.unconstrained_variables = {
             var.name for var in self.vars if is_transformed_name(var.name)
@@ -168,7 +169,7 @@ class ZarrChain(BaseTrace):
         :meth:`~ZarrChain.flush`
         """
         unconstrained_variables = self.unconstrained_variables
-        for var_name, var_value in zip(self.varnames, self.fn(draw)):
+        for var_name, var_value in zip(self.varnames, self.fn(**draw)):
             if var_name in unconstrained_variables:
                 self.buffer(group="unconstrained_posterior", var_name=var_name, value=var_value)
             else:
@@ -452,13 +453,18 @@ class ZarrTrace:
         )
         self.vars = [var for var in vars if var.name in self.varnames]
 
-        self.fn = model.compile_fn(self.vars, inputs=model.value_vars, on_unused_input="ignore")
+        self.fn = model.compile_fn(
+            self.vars,
+            inputs=model.value_vars,
+            on_unused_input="ignore",
+            point_fn=False,
+        )
 
         # Get variable shapes. Most backends will need this
         # information.
         if test_point is None:
             test_point = model.initial_point()
-        var_values = list(zip(self.varnames, self.fn(test_point)))
+        var_values = list(zip(self.varnames, self.fn(**test_point)))
         self.var_dtype_shapes = {
             var: (value.dtype, value.shape)
             for var, value in var_values
@@ -528,6 +534,7 @@ class ZarrTrace:
                 test_point=test_point,
                 stats_bijection=StatsBijection(step.stats_dtypes),
                 draws_per_chunk=self.draws_per_chunk,
+                fn=self.fn,
             )
             for _ in range(chains)
         ]
