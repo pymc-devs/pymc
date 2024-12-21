@@ -228,3 +228,12 @@ def test_spawn_densitydist_bound_method():
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
             pm.sample(draws=10, tune=10, step=pm.Metropolis(), cores=2, mp_ctx="spawn")
+
+
+def test_sampling_with_random_generator_matches():
+    with pm.Model() as m:
+        x = pm.Normal("x")
+
+        post1 = pm.sample(tune=10, draws=10, random_seed=np.random.default_rng(42)).posterior
+        post2 = pm.sample(tune=10, draws=10, random_seed=np.random.default_rng(42)).posterior
+    assert post1.equals(post2), (post1["x"].mean().item(), post2["x"].mean().item())

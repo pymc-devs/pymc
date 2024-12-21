@@ -22,6 +22,7 @@ import warnings
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import field
 from enum import IntEnum, unique
 from typing import Any
 
@@ -31,7 +32,12 @@ from pytensor.graph.basic import Variable
 
 from pymc.blocking import PointType, StatDtype, StatsDict, StatShape, StatsType
 from pymc.model import modelcontext
-from pymc.step_methods.state import DataClassState, WithSamplingState, dataclass_state
+from pymc.step_methods.state import (
+    DataClassState,
+    RandomGeneratorState,
+    WithSamplingState,
+    dataclass_state,
+)
 from pymc.util import RandomGenerator, get_random_generator
 
 __all__ = ("Competence", "CompoundStep")
@@ -91,7 +97,8 @@ def infer_warn_stats_info(
 
 @dataclass_state
 class StepMethodState(DataClassState):
-    rng: np.random.Generator
+    var_names: list[str] = field(metadata={"tensor_name": True, "frozen": True})
+    rng: RandomGeneratorState
 
 
 class BlockedStep(ABC, WithSamplingState):
