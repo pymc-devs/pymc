@@ -1,15 +1,15 @@
 name: Read the Docs Pull Request Preview
 on:
-  pull_request_target:
+  # See <https://github.com/readthedocs/actions/issues/45>
+  pull_request_target:  # zizmor: ignore[dangerous-triggers]
     types:
       - opened
-
-permissions:
-  pull-requests: write
 
 jobs:
   documentation-links:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
       - uses: readthedocs/actions/preview@v1
         with:
