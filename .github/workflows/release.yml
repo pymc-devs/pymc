@@ -1,57 +1,42 @@
 name: release-pipeline
 
 on:
+  push:
+    branches:
+      - main
   release:
     types:
-      - created
+      - published
 
 jobs:
-  release-job:
+  build-package:
     runs-on: ubuntu-latest
-    env:
-      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN_PYMC }}
+    permissions:
+      # write attestations and id-token are necessary for attest-build-provenance-github
+      attestations: write
+      id-token: write
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      with:
-        persist-credentials: false
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: 3.7
-    # TODO: ideally, this pipeline should run parallelized tests in upstream jobs..
-    #- name: Install test tooling
-    #  run: |
-    #    pip install pytest pytest-cov nose nose-parameterized
-    #    pip install -r requirements.txt
-    #- name: Run tests
-    #  run: |
-    #    pytest --cov=./pymc --cov-report term-missing pymc/
-    - name: Install release tooling
-      run: |
-        pip install build twine
-    - name: Build package
-      run: |
-        python -m build
-    - name: Check version number match
-      run: |
-        echo "GITHUB_REF: ${GITHUB_REF}"
-        # The GITHUB_REF should be something like "refs/tags/v1.2.3"
-        # Make sure the package version is the same as the tag
-        grep -Rq "^Version: ${GITHUB_REF:11}$" pymc.egg-info/PKG-INFO
-    - name: Publish to PyPI
-      run: |
-        twine check dist/*
-        twine upload --repository pypi --username __token__ --password ${PYPI_TOKEN} dist/*
-  test-install-job:
-    needs: release-job
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: hynek/build-and-inspect-python-package@14c7e53f5d033cfa99f7af916fa59a6f7f356394  # v2.11.0
+        with:
+          attest-build-provenance-github: true
+
+  publish-package:
+    if: github.repository_owner == 'pymc-devs' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: release
+    needs: build-package
     runs-on: ubuntu-latest
+    permissions:
+      # write id-token is necessary for trusted publishing (OIDC)
+      id-token: write
     steps:
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: 3.7
-    - name: Give PyPI a chance to update the index
-      run: sleep 240
-    - name: Install from PyPI
-      run: |
-        pip install pymc==${GITHUB_REF:11}
+      - name: Download Distribution Artifacts
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
+        with:
+          name: Packages
+          path: dist
+      - name: Publish Package to PyPI
+        uses: pypa/gh-action-pypi-publish@67339c736fd9354cd4f8cb0b744f2b82a74b5c70  # v1.12.3
