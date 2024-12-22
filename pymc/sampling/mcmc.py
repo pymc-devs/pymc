@@ -1300,12 +1300,7 @@ def _iter_sample(
                 )
 
             yield diverging
-    except KeyboardInterrupt:
-        if isinstance(trace, ZarrChain):
-            trace.record_sampling_state(step=step)
-        trace.close()
-        raise
-    except BaseException:
+    except (KeyboardInterrupt, BaseException):
         if isinstance(trace, ZarrChain):
             trace.record_sampling_state(step=step)
         trace.close()
