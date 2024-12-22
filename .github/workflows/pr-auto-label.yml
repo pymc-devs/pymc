@@ -1,6 +1,7 @@
 name: "Pull Request Labeler"
 on:
-- pull_request_target
+# The labeler doesn't execute any contributed code, so it should be fairly safe.
+- pull_request_target  # zizmor: ignore[dangerous-triggers]
 
 jobs:
   sync:
