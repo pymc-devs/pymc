@@ -12,6 +12,8 @@ jobs:
       PYPI_TOKEN: ${{ secrets.PYPI_TOKEN_PYMC }}
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        persist-credentials: false
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
