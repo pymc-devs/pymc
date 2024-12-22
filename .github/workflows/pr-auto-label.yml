@@ -11,6 +11,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
+      with:
+        persist-credentials: false
     - name: Sync labels with closing issues
       uses: wd60622/closing-labels@v0.0.3
       with:
