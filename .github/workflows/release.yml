@@ -22,10 +22,14 @@ jobs:
           persist-credentials: false
       - uses: hynek/build-and-inspect-python-package@14c7e53f5d033cfa99f7af916fa59a6f7f356394  # v2.11.0
         with:
+          # Prove that the packages were built in the context of this workflow.
           attest-build-provenance-github: true
 
   publish-package:
+    # Don't publish from forks
     if: github.repository_owner == 'pymc-devs' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Use the `release` GitHub environment to protect the Trusted Publishing (OIDC)
+    # workflow by requiring signoff from a maintainer.
     environment: release
     needs: build-package
     runs-on: ubuntu-latest
@@ -36,7 +40,10 @@ jobs:
       - name: Download Distribution Artifacts
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
         with:
+          # The build-and-inspect-python-package action invokes upload-artifact.
+          # These are the correct arguments from that action.
           name: Packages
           path: dist
       - name: Publish Package to PyPI
         uses: pypa/gh-action-pypi-publish@67339c736fd9354cd4f8cb0b744f2b82a74b5c70  # v1.12.3
+        # Implicitly attests that the packages were uploaded in the context of this workflow.
