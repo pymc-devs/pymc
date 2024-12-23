@@ -27,7 +27,7 @@ jobs:
 
   publish-package:
     # Don't publish from forks
-    if: github.repository_owner == 'pymc-devs' && github.event.action == 'published'
+    if: github.repository_owner == 'pymc-devs' && github.event_name == 'release' && github.event.action == 'published'
     # Use the `release` GitHub environment to protect the Trusted Publishing (OIDC)
     # workflow by requiring signoff from a maintainer.
     environment: release
