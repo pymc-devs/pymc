@@ -205,11 +205,10 @@ In particular, the Council may:
 
 The current Steering Council membership comprises:
 
-- Chris Fonnesbeck (dev, docs)
-- Junpeng Lao (dev, community)
-- Oriol Abril-Pla (docs, community)
-- Ravin Kumar (dev, community, docs)
-- Thomas Wiecki (dev, community - PyMC Labs)
+- Ricardo Vieira (dev, community - PyMC Labs)
+- Colin Carroll (dev)
+- Osvaldo Martin (dev, docs)
+- Jesse Grabowski (community, dev - PyMC Labs)
 
 Note that as explained in the [community architecture section](#community-and-team-architecture)
 and as indicated again in the description of the Steering Council above,
@@ -483,9 +482,9 @@ The log of past election processes is kept on [Discourse](https://discourse.pymc
   the membership constraints were not met,
   candidates are ranked by interpreting yes=+1, abstain=0 and no=-1.
   * If too many candidates were confirmed,
-    the {max_range} number of candidates with higher rank are elected.
+    the max number of candidates (7) with higher rank are elected.
   * If not enough candidates were chosen,
-    the {min_range} number of candidates with higher rank are elected.
+    the min number of candidates (4) with higher rank are elected.
   * If membership constraints were not met, candidates are selected
     progressively by rank if they meet the membership requirements.
     If for example out of 7 candidates for the NumFOCUS subcommittee
