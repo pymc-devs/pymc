@@ -76,6 +76,7 @@ from pymc.backends.zarr import ZarrTrace
 from pymc.blocking import PointType
 from pymc.model import Model
 from pymc.step_methods.compound import BlockedStep, CompoundStep
+from pymc.util import get_random_generator
 
 HAS_MCB = False
 try:
@@ -103,11 +104,13 @@ def _init_trace(
     model: Model,
     trace_vars: list[TensorVariable] | None = None,
     initial_point: PointType | None = None,
+    rng: np.random.Generator | None = None,
 ) -> BaseTrace:
     """Initialize a trace backend for a chain."""
+    rng_ = get_random_generator(rng)
     strace: BaseTrace
     if trace is None:
-        strace = NDArray(model=model, vars=trace_vars, test_point=initial_point)
+        strace = NDArray(model=model, vars=trace_vars, test_point=initial_point, rng=rng_)
     elif isinstance(trace, BaseTrace):
         if len(trace) > 0:
             raise ValueError("Continuation of traces is no longer supported.")
@@ -129,6 +132,7 @@ def init_traces(
     model: Model,
     trace_vars: list[TensorVariable] | None = None,
     tune: int = 0,
+    rng: np.random.Generator | None = None,
 ) -> tuple[RunType | None, Sequence[IBaseTrace]]:
     """Initialize a trace recorder for each chain."""
     if isinstance(backend, ZarrTrace):
@@ -140,6 +144,7 @@ def init_traces(
             model=model,
             vars=trace_vars,
             test_point=initial_point,
+            rng=rng,
         )
         return None, backend.straces
     if HAS_MCB and isinstance(backend, Backend):
@@ -149,6 +154,7 @@ def init_traces(
             initial_point=initial_point,
             step=step,
             model=model,
+            rng=rng,
         )
 
     assert backend is None or isinstance(backend, BaseTrace)
@@ -161,7 +167,8 @@ def init_traces(
             model=model,
             trace_vars=trace_vars,
             initial_point=initial_point,
+            rng=rng_,
         )
-        for chain_number in range(chains)
+        for chain_number, rng_ in enumerate(get_random_generator(rng).spawn(chains))
     ]
     return None, traces

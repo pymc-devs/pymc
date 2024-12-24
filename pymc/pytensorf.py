@@ -14,7 +14,7 @@
 import warnings
 
 from collections.abc import Callable, Generator, Iterable, Sequence
-from typing import cast
+from typing import cast, overload
 
 import numpy as np
 import pandas as pd
@@ -22,6 +22,7 @@ import pytensor
 import pytensor.tensor as pt
 import scipy.sparse as sps
 
+from pytensor import shared
 from pytensor.compile import Function, Mode, get_mode
 from pytensor.compile.builders import OpFromGraph
 from pytensor.gradient import grad
@@ -42,7 +43,7 @@ from pytensor.scan.op import Scan
 from pytensor.tensor.basic import _as_tensor_variable
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.random.type import RandomType
+from pytensor.tensor.random.type import RandomGeneratorType, RandomType
 from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.rewriting.basic import topo_unconditional_constant_folding
 from pytensor.tensor.rewriting.shape import ShapeFeature
@@ -51,7 +52,7 @@ from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.exceptions import NotConstantValueError
-from pymc.util import makeiter
+from pymc.util import RandomGeneratorState, makeiter, random_generator_from_state
 from pymc.vartypes import continuous_types, isgenerator, typefilter
 
 PotentialShapeType = int | np.ndarray | Sequence[int | Variable] | TensorVariable
@@ -1163,3 +1164,55 @@ def normalize_rng_param(rng: None | Variable) -> Variable:
             "The type of rng should be an instance of either RandomGeneratorType or RandomStateType"
         )
     return rng
+
+
+@overload
+def copy_function_with_new_rngs(
+    fn: PointFunc, rng: np.random.Generator | RandomGeneratorState
+) -> PointFunc: ...
+
+
+@overload
+def copy_function_with_new_rngs(
+    fn: Function, rng: np.random.Generator | RandomGeneratorState
+) -> Function: ...
+
+
+def copy_function_with_new_rngs(
+    fn: Function, rng: np.random.Generator | RandomGeneratorState
+) -> Function:
+    """Copy a compiled pytensor function and replace the random Generators with spawns.
+
+    Parameters
+    ----------
+    fn : pytensor.compile.function.types.Function | pymc.util.PointFunc
+        The compiled function
+    rng : numpy.random.Generator | RandomGeneratorState
+        The random generator or its state
+
+    Returns
+    -------
+    fn_out : pytensor.compile.function.types.Function | pymc.pytensorf.PointFunc
+        A copy of the input function with the shared random generator states set to
+        spawns of the supplied ``rng``. If the function has no shared random generators
+        in it, the input ``fn`` is returned without any changes.
+        If ``fn`` is a :clas:`~pymc.pytensorf.PointFunc` instance, and the inner
+        pytensor function has random variables, then the inner pytensor function is
+        copied, setting new random generators, and a new ``PointFunc`` instance is
+        returned.
+    """
+    # Copy the function and replace any shared RNGs
+    # This is needed so that it can work correctly with multiple traces
+    # This will be costly if set_rng is called too often!
+    rng_gen = rng if isinstance(rng, np.random.Generator) else random_generator_from_state(rng)
+    fn_ = fn.f if isinstance(fn, PointFunc) else fn
+    shared_rngs = [var for var in fn_.get_shared() if isinstance(var.type, RandomGeneratorType)]
+    n_shared_rngs = len(shared_rngs)
+    swap = {
+        old_shared_rng: shared(rng, borrow=True)
+        for old_shared_rng, rng in zip(shared_rngs, rng_gen.spawn(n_shared_rngs), strict=True)
+    }
+    if isinstance(fn, PointFunc):
+        return PointFunc(fn.f.copy(swap=swap)) if n_shared_rngs > 0 else fn
+    else:
+        return fn.copy(swap=swap) if n_shared_rngs > 0 else fn

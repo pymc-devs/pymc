@@ -34,7 +34,7 @@ import pytensor
 
 from pymc.backends.report import SamplerReport
 from pymc.model import modelcontext
-from pymc.pytensorf import compile
+from pymc.pytensorf import compile, copy_function_with_new_rngs
 from pymc.util import get_var_name
 
 logger = logging.getLogger(__name__)
@@ -159,6 +159,7 @@ class BaseTrace(IBaseTrace):
         fn=None,
         var_shapes=None,
         var_dtypes=None,
+        rng=None,
     ):
         model = modelcontext(model)
 
@@ -177,6 +178,8 @@ class BaseTrace(IBaseTrace):
                 on_unused_input="ignore",
             )
             fn.trust_input = True
+        if rng is not None:
+            fn = copy_function_with_new_rngs(fn=fn, rng=rng)
 
         # Get variable shapes. Most backends will need this
         # information.

@@ -866,6 +866,7 @@ def sample(
         initial_point=initial_points[0],
         model=model,
         tune=tune,
+        rng=rngs[0].spawn(1)[0],
     )
 
     sample_args = {
