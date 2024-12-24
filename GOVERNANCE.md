@@ -161,46 +161,7 @@ nomination at the earliest. The nomination process is explained below
 in more detail in a section of its own.
 
 ### Current Core Contributors
-Contributors who are also part of a dedicated team or are institutional
-contributors will have so indicated after their name.
-
-Dedicated teams only cover a small part of the work needed to
-get the project going, tasks like fundraising, outreach or marketing
-for example don't (yet) have a dedicated team.
-Contributors don't need to be part of any dedicated team.
-
-* Adrian Seyboldt (dev - PyMC Labs)
-* Alex Andorra (dev - PyMC Labs)
-* Austin Rochford
-* Ben Mares
-* Benjamin Vincent (docs - PyMC Labs)
-* Bill Engels (dev)
-* Chris Fonnesbeck (dev, docs)
-* Christian Luhmann (community)
-* Colin Carroll (dev)
-* Eelke Spaak (dev)
-* Eric Ma (dev - PyMC Labs)
-* Fernando Irarrazaval (community)
-* George Ho (dev)
-* Junpeng Lao (dev, community)
-* Larry Dong (dev)
-* Luciano Paz (dev - PyMC Labs)
-* Martina Cantaro (docs)
-* Maxim Kochurov (dev - PyMC Labs)
-* Meenal Jhajharia (docs, community)
-* Michael Osthege (dev)
-* Oriol Abril-Pla (docs, community)
-* Osvaldo Martin (dev, docs)
-* Purna Chandra Mansingh (community)
-* Ravin Kumar (dev, community, docs)
-* Reshama Shaikh (community - PyMC Labs)
-* Ricardo Vieira (dev, community)
-* Robert P. Goldman (dev)
-* Rob Zinkov (dev, community)
-* Sandra Meneses (community)
-* Sayam Kumar (dev, docs)
-* Thomas Wiecki (dev, community - PyMC Labs)
-* Virgile Andreani  (dev)
+The list of current core contributors is available at https://github.com/orgs/pymc-devs/teams/core-contributors
 
 ## Steering Council
 
@@ -326,38 +287,6 @@ disagrees with the delegate's decision and no resolution is possible within the
 subcommittee. This is a different situation from a BDFL delegate for a specific
 decision, or a recusal situation, in which the BDFL gives up their authority
 to someone else in full.
-
-### NumFOCUS Subcommittee
-
-The Council will maintain one narrowly focused subcommittee to manage its
-interactions with NumFOCUS.
-
-- The NumFOCUS Subcommittee is comprised of 5 persons who manage project
-  funding that comes through NumFOCUS. It is expected that these funds will
-  be spent in a manner that is consistent with the non-profit mission of
-  NumFOCUS and the direction of the Project as determined by the full
-  Council.
-- This Subcommittee shall NOT make decisions about the direction, scope,
-  technical or financial direction of the Project.
-
-#### NumFOCUS subcommittee membership
-This Subcommittee will have 5 members. With at least
-2 members being on the Steering Council. No more
-than 2 Subcommitee Members can report to one person or company through
-employment or contracting work (including the reportee, i.e.
-the reportee + 1 is the max).
-This avoids effective majorities resting on one person.
-
-Any Core Contributor is eligible for the NumFOCUS subcommittee.
-
-#### Current NumFOCUS Subcommitee
-The current NumFOCUS Subcommittee consists of:
-
-- Peadar Coyle
-- Chris Fonnesbeck
-- John Salvatier
-- Jon Sedar
-- Thomas Wiecki
 
 ## BDFL
 
@@ -677,12 +606,18 @@ Role:
   [Community Team](https://discourse.pymc.io/g/Community_Team) group.
 
 #### Accounts and services ownership and administration
-The PyMC Project also has accounts and hosts services on several platforms
-such as GitHub, Discourse, Twitter, ReadTheDocs, and Medium.
+The PyMC Project also has accounts and hosts services on several platforms.
+Some examples of such platforms include (but are not limited to)
+GitHub, Discourse, PyPI, Discord, Twitter, ReadTheDocs, or Medium.
+Any service under the PyMC project should follow these rules,
+even if not explicitly listed above as an example.
 
 If possible, all Council Members and relevant Core Contributors should have
-administrative rights on those platforms.
-If this is not possible, administrative rights should be distributed among
+administrative rights on those platforms. [SPEC 6](https://scientific-python.org/specs/spec-0006/)
+from the scientific python project has some recommendations on shared
+infrastructure and credentials.
+
+If none of the above were possible, administrative rights should be distributed among
 Council Members and relevant Core Contributors and establish a rotation
 of the administrative rights every 1-2 years.
 
