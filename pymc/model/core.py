@@ -1611,6 +1611,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         inputs: Sequence[Variable] | None = None,
         mode=None,
         point_fn: bool = True,
+        borrow_vars: bool = False,
         **kwargs,
     ) -> PointFunc | Function:
         """Compiles a PyTensor function.
@@ -1636,6 +1637,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if inputs is None:
             inputs = inputvars(outs)
 
+        if borrow_vars:
+            inputs = [pytensor.In(v, borrow=True) for v in inputs]
+            outs = [pytensor.Out(v, borrow=True) for v in outs]
+
         with self:
             fn = compile(
                 inputs,
@@ -1645,6 +1650,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 mode=mode,
                 **kwargs,
             )
+        if borrow_vars:
+            fn.trust_input = True
 
         if point_fn:
             return PointFunc(fn)

@@ -26,7 +26,12 @@ import scipy.linalg
 from scipy.sparse import issparse
 
 from pymc.pytensorf import floatX
-from pymc.step_methods.state import DataClassState, WithSamplingState, dataclass_state
+from pymc.step_methods.state import (
+    DataClassState,
+    RandomGeneratorState,
+    WithSamplingState,
+    dataclass_state,
+)
 from pymc.util import RandomGenerator, get_random_generator
 
 __all__ = [
@@ -105,7 +110,7 @@ class PositiveDefiniteError(ValueError):
 
 @dataclass_state
 class PotentialState(DataClassState):
-    rng: np.random.Generator
+    rng: RandomGeneratorState
 
 
 class QuadPotential(WithSamplingState):
@@ -476,7 +481,7 @@ class _ExpWeightedVariance(WithSamplingState):
 class QuadPotentialDiagAdaptExpState(QuadPotentialDiagAdaptState):
     _alpha: float
     _stop_adaptation: float
-    _variance_estimator: ExpWeightedVarianceState
+    _variance_estimator: ExpWeightedVarianceState | None = None
 
     _variance_estimator_grad: ExpWeightedVarianceState | None = None
 
