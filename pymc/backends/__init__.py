@@ -72,6 +72,7 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
 from pymc.backends.base import BaseTrace, IBaseTrace
 from pymc.backends.ndarray import NDArray
+from pymc.backends.zarr import ZarrTrace
 from pymc.blocking import PointType
 from pymc.model import Model
 from pymc.step_methods.compound import BlockedStep, CompoundStep
@@ -120,15 +121,27 @@ def _init_trace(
 
 def init_traces(
     *,
-    backend: TraceOrBackend | None,
+    backend: TraceOrBackend | ZarrTrace | None,
     chains: int,
     expected_length: int,
     step: BlockedStep | CompoundStep,
     initial_point: PointType,
     model: Model,
     trace_vars: list[TensorVariable] | None = None,
+    tune: int = 0,
 ) -> tuple[RunType | None, Sequence[IBaseTrace]]:
     """Initialize a trace recorder for each chain."""
+    if isinstance(backend, ZarrTrace):
+        backend.init_trace(
+            chains=chains,
+            draws=expected_length - tune,
+            tune=tune,
+            step=step,
+            model=model,
+            vars=trace_vars,
+            test_point=initial_point,
+        )
+        return None, backend.straces
     if HAS_MCB and isinstance(backend, Backend):
         return init_chain_adapters(
             backend=backend,

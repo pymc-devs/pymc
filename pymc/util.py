@@ -13,8 +13,10 @@
 #   limitations under the License.
 
 import functools
+import re
 import warnings
 
+from collections import namedtuple
 from collections.abc import Sequence
 from copy import deepcopy
 from typing import NewType, cast
@@ -275,7 +277,12 @@ def drop_warning_stat(idata: arviz.InferenceData) -> arviz.InferenceData:
     nidata = arviz.InferenceData(attrs=idata.attrs)
     for gname, group in idata.items():
         if "sample_stat" in gname:
-            group = group.drop_vars(names=["warning", "warning_dim_0"], errors="ignore")
+            warning_vars = [
+                name
+                for name in group.data_vars
+                if name == "warning" or re.match(r"sampler_\d+__warning", str(name))
+            ]
+            group = group.drop_vars(names=[*warning_vars, "warning_dim_0"], errors="ignore")
         nidata.add_groups({gname: group}, coords=group.coords, dims=group.dims)
     return nidata
 
@@ -601,6 +608,31 @@ class CustomProgress(Progress):
         return None
 
 
+RandomGeneratorState = namedtuple("RandomGeneratorState", ["bit_generator_state", "seed_seq_state"])
+
+
+def get_state_from_generator(
+    rng: np.random.Generator | np.random.BitGenerator,
+) -> RandomGeneratorState:
+    assert isinstance(rng, (np.random.Generator | np.random.BitGenerator))
+    bit_gen: np.random.BitGenerator = (
+        rng.bit_generator if isinstance(rng, np.random.Generator) else rng
+    )
+
+    return RandomGeneratorState(
+        bit_generator_state=bit_gen.state,
+        seed_seq_state=bit_gen.seed_seq.state,  # type: ignore[attr-defined]
+    )
+
+
+def random_generator_from_state(state: RandomGeneratorState) -> np.random.Generator:
+    seed_seq = np.random.SeedSequence(**state.seed_seq_state)
+    bit_generator_class = getattr(np.random, state.bit_generator_state["bit_generator"])
+    bit_generator = bit_generator_class(seed_seq)
+    bit_generator.state = state.bit_generator_state
+    return np.random.Generator(bit_generator)
+
+
 def get_random_generator(
     seed: RandomGenerator | np.random.RandomState = None, copy: bool = True
 ) -> np.random.Generator:
@@ -645,6 +677,10 @@ def get_random_generator(
         # In the former case, it will return seed, in the latter it will return
         # a new Generator object that has the same BitGenerator. This would potentially
         # make the new generator be shared across many users. To avoid this, we
-        # deepcopy by default.
+        # copy by default.
+        # Also, because of https://github.com/numpy/numpy/issues/27727, we can't use
+        # deepcopy. We must rebuild a Generator without losing the SeedSequence information
+        if isinstance(seed, np.random.Generator | np.random.BitGenerator):
+            return random_generator_from_state(get_state_from_generator(seed))
         seed = deepcopy(seed)
     return np.random.default_rng(seed)
