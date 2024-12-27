@@ -53,6 +53,7 @@ import pymc.logprob.linalg
 import pymc.logprob.mixture
 import pymc.logprob.order
 import pymc.logprob.scan
+import pymc.logprob.set_subtensor
 import pymc.logprob.tensor
 import pymc.logprob.transforms
 
