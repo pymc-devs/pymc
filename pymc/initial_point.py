@@ -26,6 +26,7 @@ from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.transforms import Transform
 from pymc.pytensorf import (
+    SeedSequenceSeed,
     compile,
     find_rng_nodes,
     replace_rng_nodes,
@@ -67,7 +68,7 @@ def make_initial_point_fns_per_chain(
     overrides: StartDict | Sequence[StartDict | None] | None,
     jitter_rvs: set[TensorVariable] | None = None,
     chains: int,
-) -> list[Callable]:
+) -> list[Callable[[SeedSequenceSeed], PointType]]:
     """Create an initial point function for each chain, as defined by initvals.
 
     If a single initval dictionary is passed, the function is replicated for each
@@ -81,6 +82,11 @@ def make_initial_point_fns_per_chain(
     jitter_rvs : set, optional
         Random variable tensors for which U(-1, 1) jitter shall be applied.
         (To the transformed space if applicable.)
+
+    Returns
+    -------
+    ipfns : list[Callable[[SeedSequenceSeed], dict[str, np.ndarray]]]
+        list of functions that return initial points for each chain.
 
     Raises
     ------
@@ -124,7 +130,7 @@ def make_initial_point_fn(
     jitter_rvs: set[TensorVariable] | None = None,
     default_strategy: str = "support_point",
     return_transformed: bool = True,
-) -> Callable:
+) -> Callable[[SeedSequenceSeed], PointType]:
     """Create seeded function that computes initial values for all free model variables.
 
     Parameters
@@ -138,6 +144,10 @@ def make_initial_point_fn(
         Initial value (strategies) to use instead of what's specified in `Model.initial_values`.
     return_transformed : bool
         If `True` the returned variables will correspond to transformed initial values.
+
+    Returns
+    -------
+    initial_point_fn : Callable[[SeedSequenceSeed], dict[str, np.ndarray]]
     """
     sdict_overrides = convert_str_to_rv_dict(model, overrides or {})
     initval_strats = {
