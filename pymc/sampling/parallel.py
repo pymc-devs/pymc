@@ -565,7 +565,7 @@ class ParallelSampler:
                     self._divergences_by_chain[proc.chain] += 1
 
                 if self._show_progress:
-                    elapsed = progress._tasks[proc.chain].elapsed
+                    elapsed = max(progress._tasks[proc.chain].elapsed, 1e-4)
                     speed = self._completed_draws_by_chain[proc.chain] / elapsed
 
                     if speed > 1:
