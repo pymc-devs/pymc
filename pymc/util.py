@@ -17,7 +17,7 @@ import re
 import warnings
 
 from collections import namedtuple
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from copy import deepcopy
 from typing import NewType, cast
 
@@ -30,7 +30,10 @@ from cachetools import LRUCache, cachedmethod
 from pytensor import Variable
 from pytensor.compile import SharedVariable
 from pytensor.graph.utils import ValidatingScratchpad
-from rich.progress import Progress
+from rich.box import SIMPLE_HEAD
+from rich.progress import BarColumn, Progress, Task
+from rich.style import Style
+from rich.table import Column, Table
 from rich.theme import Theme
 
 from pymc.exceptions import BlockModelAccessError
@@ -556,8 +559,10 @@ class CustomProgress(Progress):
     it's `True`.
     """
 
-    def __init__(self, *args, **kwargs):
-        self.is_enabled = kwargs.get("disable", None) is not True
+    def __init__(self, *args, disable=False, include_headers=False, **kwargs):
+        self.is_enabled = not disable
+        self.include_headers = include_headers
+
         if self.is_enabled:
             super().__init__(*args, **kwargs)
 
@@ -606,6 +611,88 @@ class CustomProgress(Progress):
                 **fields,
             )
         return None
+
+    def make_tasks_table(self, tasks: Iterable[Task]) -> Table:
+        """Get a table to render the Progress display.
+
+        Unlike the parent method, this one returns a full table (not a grid), allowing for column headings.
+
+        Parameters
+        ----------
+        tasks: Iterable[Task]
+            An iterable of Task instances, one per row of the table.
+
+        Returns
+        -------
+        table: Table
+            A table instance.
+        """
+
+        def call_column(column, task):
+            if hasattr(column, "callbacks"):
+                column.callbacks(task)
+
+            return column(task)
+
+        table_columns = (
+            (
+                Column(no_wrap=True)
+                if isinstance(_column, str)
+                else _column.get_table_column().copy()
+            )
+            for _column in self.columns
+        )
+        if self.include_headers:
+            table = Table(
+                *table_columns,
+                padding=(0, 1),
+                expand=self.expand,
+                show_header=True,
+                show_edge=True,
+                box=SIMPLE_HEAD,
+            )
+        else:
+            table = Table.grid(*table_columns, padding=(0, 1), expand=self.expand)
+
+        for task in tasks:
+            if task.visible:
+                table.add_row(
+                    *(
+                        (
+                            column.format(task=task)
+                            if isinstance(column, str)
+                            else call_column(column, task)
+                        )
+                        for column in self.columns
+                    )
+                )
+
+        return table
+
+
+class DivergenceBarColumn(BarColumn):
+    def __init__(self, *args, diverging_color="red", diverging_finished_color="purple", **kwargs):
+        from matplotlib.colors import to_rgb
+
+        self.diverging_color = diverging_color
+        self.diverging_rgb = [int(x * 255) for x in to_rgb(self.diverging_color)]
+
+        self.diverging_finished_color = diverging_finished_color
+        self.diverging_finished_rgb = [int(x * 255) for x in to_rgb(self.diverging_finished_color)]
+
+        super().__init__(*args, **kwargs)
+
+        self.non_diverging_style = self.complete_style
+        self.non_diverging_finished_style = self.finished_style
+
+    def callbacks(self, task: "Task"):
+        divergences = task.fields.get("divergences", 0)
+        if divergences > 0:
+            self.complete_style = Style.parse("rgb({},{},{})".format(*self.diverging_rgb))
+            self.finished_style = Style.parse("rgb({},{},{})".format(*self.diverging_finished_rgb))
+        else:
+            self.complete_style = self.non_diverging_style
+            self.finished_style = self.non_diverging_finished_style
 
 
 RandomGeneratorState = namedtuple("RandomGeneratorState", ["bit_generator_state", "seed_seq_state"])
