@@ -148,32 +148,35 @@ class TestSample:
         assert np.all(idata12["x"] != idata22["x"])
         assert np.all(idata13["x"] != idata23["x"])
 
-    def test_sample_init(self):
+    @pytest.mark.parametrize(
+        "init",
+        (
+            "advi",
+            "advi_map",
+            "map",
+            "adapt_diag",
+            "jitter+adapt_diag",
+            "jitter+adapt_diag_grad",
+            "adapt_full",
+            "jitter+adapt_full",
+        ),
+    )
+    def test_sample_init(self, init):
         with self.model:
-            for init in (
-                "advi",
-                "advi_map",
-                "map",
-                "adapt_diag",
-                "jitter+adapt_diag",
-                "jitter+adapt_diag_grad",
-                "adapt_full",
-                "jitter+adapt_full",
-            ):
-                kwargs = {
-                    "init": init,
-                    "tune": 120,
-                    "n_init": 1000,
-                    "draws": 50,
-                    "random_seed": 20160911,
-                }
-                with warnings.catch_warnings(record=True) as rec:
-                    warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                    if init.endswith("adapt_full"):
-                        with pytest.warns(UserWarning, match="experimental feature"):
-                            pm.sample(**kwargs)
-                    else:
-                        pm.sample(**kwargs)
+            kwargs = {
+                "init": init,
+                "tune": 120,
+                "n_init": 1000,
+                "draws": 50,
+                "random_seed": 20160911,
+            }
+            with warnings.catch_warnings(record=True) as rec:
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                if init.endswith("adapt_full"):
+                    with pytest.warns(UserWarning, match="experimental feature"):
+                        pm.sample(**kwargs, cores=1)
+                else:
+                    pm.sample(**kwargs, cores=1)
 
     def test_sample_args(self):
         with self.model:
