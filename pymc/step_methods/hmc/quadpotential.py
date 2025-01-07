@@ -481,9 +481,8 @@ class _ExpWeightedVariance(WithSamplingState):
 class QuadPotentialDiagAdaptExpState(QuadPotentialDiagAdaptState):
     _alpha: float
     _stop_adaptation: float
-    _variance_estimator: ExpWeightedVarianceState
-
-    _variance_estimator_grad: ExpWeightedVarianceState | None = None
+    _variance_estimator: ExpWeightedVarianceState | None
+    _variance_estimator_grad: ExpWeightedVarianceState | None
 
 
 class QuadPotentialDiagAdaptExp(QuadPotentialDiagAdapt):
@@ -529,6 +528,8 @@ class QuadPotentialDiagAdaptExp(QuadPotentialDiagAdapt):
         if stop_adaptation is None:
             stop_adaptation = np.inf
         self._stop_adaptation = stop_adaptation
+        self._variance_estimator = None
+        self._variance_estimator_grad = None
 
     def update(self, sample, grad, tune):
         if tune and self._n_samples < self._stop_adaptation:
