@@ -19,7 +19,7 @@ import pytensor
 import pytest
 import scipy as sp
 
-from numdifftools import Jacobian
+from numdifftools import Derivative, Jacobian
 from pytensor import scan
 from pytensor import tensor as pt
 from pytensor.compile.builders import OpFromGraph
@@ -279,7 +279,7 @@ def test_default_value_transform_logprob(pt_dist, dist_params, sp_dist, size):
 
             exp_log_jac_val = jacobian_estimate(a_trans_value)
         else:
-            jacobian_val = np.atleast_2d(sp.misc.derivative(a_backward_fn, a_trans_value, dx=1e-6))
+            jacobian_val = np.atleast_2d(Derivative(a_backward_fn, step=1e-6)(a_trans_value))
             exp_log_jac_val = np.linalg.slogdet(jacobian_val)[-1]
 
         log_jac_val = log_jac_fn(a_trans_value)
