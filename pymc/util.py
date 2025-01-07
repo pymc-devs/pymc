@@ -671,14 +671,11 @@ class CustomProgress(Progress):
 
 
 class DivergenceBarColumn(BarColumn):
-    def __init__(self, *args, diverging_color="red", diverging_finished_color="purple", **kwargs):
+    def __init__(self, *args, diverging_color="red", **kwargs):
         from matplotlib.colors import to_rgb
 
         self.diverging_color = diverging_color
         self.diverging_rgb = [int(x * 255) for x in to_rgb(self.diverging_color)]
-
-        self.diverging_finished_color = diverging_finished_color
-        self.diverging_finished_rgb = [int(x * 255) for x in to_rgb(self.diverging_finished_color)]
 
         super().__init__(*args, **kwargs)
 
@@ -689,7 +686,7 @@ class DivergenceBarColumn(BarColumn):
         divergences = task.fields.get("divergences", 0)
         if divergences > 0:
             self.complete_style = Style.parse("rgb({},{},{})".format(*self.diverging_rgb))
-            self.finished_style = Style.parse("rgb({},{},{})".format(*self.diverging_finished_rgb))
+            self.finished_style = Style.parse("rgb({},{},{})".format(*self.diverging_rgb))
         else:
             self.complete_style = self.non_diverging_style
             self.finished_style = self.non_diverging_finished_style

@@ -493,7 +493,6 @@ class ParallelSampler:
             DivergenceBarColumn(
                 table_column=Column("Progress", ratio=2),
                 diverging_color="tab:red",
-                diverging_finished_color="tab:purple",
                 complete_style=Style.parse("rgb(31,119,180)"),  # tab:blue
                 finished_style=Style.parse("rgb(44,160,44)"),  # tab:green
             ),
