@@ -32,13 +32,12 @@ from threadpoolctl import threadpool_limits
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.util import (
+    RandomGeneratorState,
     compute_draw_speed,
     create_progress_bar,
     default_progress_theme,
-    RandomGeneratorState,
     get_state_from_generator,
     random_generator_from_state,
-
 )
 
 logger = logging.getLogger(__name__)
