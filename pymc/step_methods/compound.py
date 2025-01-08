@@ -318,7 +318,7 @@ class CompoundStep(WithSamplingState):
 
         return columns, stats
 
-    def _make_update_stat_function(self):
+    def _make_update_stats_function(self):
         update_fns = [method._make_update_stats_function() for method in self.methods]
 
         def update_stats(stats, step_stats, chain_idx):

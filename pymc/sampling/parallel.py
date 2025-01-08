@@ -496,7 +496,7 @@ class ParallelSampler:
         )
 
         self.progress_stats = progress_stats
-        self.update_stats = step_method._make_update_stat_function()
+        self.update_stats = step_method._make_update_stats_function()
 
         self._show_progress = progressbar
         self._divergences = 0
