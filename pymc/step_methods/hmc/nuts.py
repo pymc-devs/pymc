@@ -248,7 +248,7 @@ class NUTS(BaseHMC):
         return columns, stats
 
     @staticmethod
-    def _make_update_stat_function():
+    def _make_update_stats_function():
         def update_stats(stats, step_stats, chain_idx):
             if isinstance(step_stats, list):
                 step_stats = step_stats[0]
