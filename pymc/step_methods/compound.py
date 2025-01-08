@@ -181,6 +181,20 @@ class BlockedStep(ABC, WithSamplingState):
             step.__newargs = (vars, *args), kwargs
             return step
 
+    @staticmethod
+    def _progressbar_config(n_chains=1):
+        columns = []
+        stats = {}
+
+        return columns, stats
+
+    @staticmethod
+    def _make_update_stats_function():
+        def update_stats(stats, step_stats, chain_idx):
+            return stats
+
+        return update_stats
+
     # Hack for creating the class correctly when unpickling.
     def __getnewargs_ex__(self):
         return self.__newargs
