@@ -27,10 +27,6 @@ from typing import cast
 import cloudpickle
 import numpy as np
 
-from rich.console import Console
-from rich.progress import TextColumn
-from rich.style import Style
-from rich.table import Column
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 
@@ -38,12 +34,13 @@ from pymc.backends.zarr import ZarrChain
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.util import (
-    CustomProgress,
-    DivergenceBarColumn,
-    RandomGeneratorState,
+    compute_draw_speed,
+    create_progress_bar,
     default_progress_theme,
+    RandomGeneratorState,
     get_state_from_generator,
     random_generator_from_state,
+
 )
 
 logger = logging.getLogger(__name__)
@@ -489,33 +486,21 @@ class ParallelSampler:
 
         self._in_context = False
 
-        self._progress = CustomProgress(
-            DivergenceBarColumn(
-                table_column=Column("Progress", ratio=2),
-                diverging_color="tab:red",
-                complete_style=Style.parse("rgb(31,119,180)"),  # tab:blue
-                finished_style=Style.parse("rgb(44,160,44)"),  # tab:green
-            ),
-            TextColumn("{task.fields[draws]:,d}", table_column=Column("Draws", ratio=1)),
-            TextColumn(
-                "{task.fields[divergences]:,d}", table_column=Column("Divergences", ratio=1)
-            ),
-            TextColumn("{task.fields[step_size]:0.2f}", table_column=Column("Step size", ratio=1)),
-            TextColumn("{task.fields[tree_depth]:,d}", table_column=Column("Tree depth", ratio=1)),
-            TextColumn(
-                "{task.fields[sampling_speed]:0.2f} {task.fields[speed_unit]}",
-                table_column=Column("Sampling Speed", ratio=1),
-            ),
-            console=Console(theme=progressbar_theme),
-            disable=not progressbar,
-            include_headers=True,
+        progress_columns, progress_stats = step_method._progressbar_config(chains)
+
+        self._progress = create_progress_bar(
+            progress_columns,
+            progress_stats,
+            progressbar=progressbar,
+            progressbar_theme=progressbar_theme,
         )
+
+        self.progress_stats = progress_stats
+        self.update_stats = step_method._make_update_stat_function()
 
         self._show_progress = progressbar
         self._divergences = 0
-        self._divergences_by_chain = [0] * chains
         self._completed_draws = 0
-        self._completed_draws_by_chain = [0] * chains
         self._total_draws = draws + tune
         self._desc = "Sampling chain"
         self._chains = chains
@@ -537,15 +522,13 @@ class ParallelSampler:
             tasks = [
                 progress.add_task(
                     self._desc.format(self),
-                    completed=self._completed_draws,
+                    completed=0,
+                    draws=0,
                     total=self._total_draws,
                     chain_idx=chain_idx,
-                    draws=0,
-                    divergences=0,
-                    step_size=0.0,
-                    tree_depth=0,
                     sampling_speed=0,
                     speed_unit="draws/s",
+                    **{stat: value[chain_idx] for stat, value in self.progress_stats.items()},
                 )
                 for chain_idx in range(self._chains)
             ]
@@ -553,40 +536,26 @@ class ParallelSampler:
             while self._active:
                 draw = ProcessAdapter.recv_draw(self._active)
                 proc, is_last, draw, tuning, stats = draw
-                speed = 0
-                unit = "draws/s"
 
                 self._completed_draws += 1
-                self._completed_draws_by_chain[proc.chain] += 1
+
+                speed, unit = compute_draw_speed(progress._tasks[proc.chain].elapsed, draw)
 
                 if not tuning and stats and stats[0].get("diverging"):
                     self._divergences += 1
-                    self._divergences_by_chain[proc.chain] += 1
 
-                if self._show_progress:
-                    elapsed = max(progress._tasks[proc.chain].elapsed, 1e-4)
-                    speed = self._completed_draws_by_chain[proc.chain] / elapsed
-
-                    if speed > 1:
-                        unit = "draws/s"
-                    else:
-                        unit = "s/draws"
-                        speed = 1 / speed
+                self.progress_stats = self.update_stats(self.progress_stats, stats, proc.chain)
 
                 progress.update(
                     tasks[proc.chain],
-                    completed=self._completed_draws_by_chain[proc.chain],
+                    completed=draw,
                     draws=draw,
-                    divergences=self._divergences_by_chain[proc.chain],
-                    step_size=stats[0].get("step_size", 0),
-                    tree_depth=stats[0].get("tree_size", 0),
                     sampling_speed=speed,
                     speed_unit=unit,
+                    **{stat: value[proc.chain] for stat, value in self.progress_stats.items()},
                 )
 
                 if is_last:
-                    self._completed_draws_by_chain[proc.chain] += 1
-
                     proc.join()
                     self._active.remove(proc)
                     self._finished.append(proc)
@@ -594,9 +563,7 @@ class ParallelSampler:
                     progress.update(
                         tasks[proc.chain],
                         draws=draw + 1,
-                        divergences=self._divergences_by_chain[proc.chain],
-                        step_size=stats[0].get("step_size", 0),
-                        tree_depth=stats[0].get("tree_size", 0),
+                        **{stat: value[proc.chain] for stat, value in self.progress_stats.items()},
                         refresh=True,
                     )
 

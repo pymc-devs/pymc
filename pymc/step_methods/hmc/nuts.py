@@ -20,6 +20,8 @@ from dataclasses import field
 import numpy as np
 
 from pytensor import config
+from rich.progress import TextColumn
+from rich.table import Column
 
 from pymc.stats.convergence import SamplerWarning
 from pymc.step_methods.compound import Competence
@@ -228,6 +230,35 @@ class NUTS(BaseHMC):
         if var.dtype in continuous_types and has_grad:
             return Competence.PREFERRED
         return Competence.INCOMPATIBLE
+
+    @staticmethod
+    def _progressbar_config(n_chains=1):
+        columns = [
+            TextColumn("{task.fields[divergences]}", table_column=Column("Divergences", ratio=1)),
+            TextColumn("{task.fields[step_size]:0.2f}", table_column=Column("Step size", ratio=1)),
+            TextColumn("{task.fields[tree_size]}", table_column=Column("Grad evals", ratio=1)),
+        ]
+
+        stats = {
+            "divergences": [0] * n_chains,
+            "step_size": [0] * n_chains,
+            "tree_size": [0] * n_chains,
+        }
+
+        return columns, stats
+
+    @staticmethod
+    def _make_update_stat_function():
+        def update_stats(stats, step_stats, chain_idx):
+            if isinstance(step_stats, list):
+                step_stats = step_stats[0]
+
+            stats["divergences"][chain_idx] += step_stats["diverging"]
+            stats["step_size"][chain_idx] = step_stats["step_size"]
+            stats["tree_size"][chain_idx] = step_stats["tree_size"]
+            return stats
+
+        return update_stats
 
 
 # A proposal for the next position

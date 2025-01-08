@@ -297,6 +297,38 @@ class CompoundStep(WithSamplingState):
         for method, _rng in zip(self.methods, _rngs):
             method.set_rng(_rng)
 
+    def _progressbar_config(self, n_chains=1):
+        from functools import reduce
+
+        column_lists, stat_dict_list = zip(
+            *[method._progressbar_config(n_chains) for method in self.methods]
+        )
+        flat_list = reduce(lambda left_list, right_list: left_list + right_list, column_lists)
+
+        columns = []
+        headers = []
+
+        for col in flat_list:
+            name = col.get_table_column().header
+            if name not in headers:
+                headers.append(name)
+                columns.append(col)
+
+        stats = reduce(lambda left_dict, right_dict: left_dict | right_dict, stat_dict_list)
+
+        return columns, stats
+
+    def _make_update_stat_function(self):
+        update_fns = [method._make_update_stats_function() for method in self.methods]
+
+        def update_stats(stats, step_stats, chain_idx):
+            for step_stat, update_fn in zip(step_stats, update_fns):
+                stats = update_fn(stats, step_stat, chain_idx)
+
+            return stats
+
+        return update_stats
+
 
 def flatten_steps(step: BlockedStep | CompoundStep) -> list[BlockedStep]:
     """Flatten a hierarchy of step methods to a list."""

@@ -31,7 +31,8 @@ from pytensor import Variable
 from pytensor.compile import SharedVariable
 from pytensor.graph.utils import ValidatingScratchpad
 from rich.box import SIMPLE_HEAD
-from rich.progress import BarColumn, Progress, Task
+from rich.console import Console
+from rich.progress import BarColumn, Progress, Task, TextColumn
 from rich.style import Style
 from rich.table import Column, Table
 from rich.theme import Theme
@@ -684,12 +685,48 @@ class DivergenceBarColumn(BarColumn):
 
     def callbacks(self, task: "Task"):
         divergences = task.fields.get("divergences", 0)
-        if divergences > 0:
+        if isinstance(divergences, float | int) and divergences > 0:
             self.complete_style = Style.parse("rgb({},{},{})".format(*self.diverging_rgb))
             self.finished_style = Style.parse("rgb({},{},{})".format(*self.diverging_rgb))
         else:
             self.complete_style = self.non_diverging_style
             self.finished_style = self.non_diverging_finished_style
+
+
+def create_progress_bar(step_columns, init_stat_dict, progressbar, progressbar_theme):
+    columns = [TextColumn("{task.fields[draws]}", table_column=Column("Draws", ratio=1))]
+    columns += step_columns
+    columns += [
+        TextColumn(
+            "{task.fields[sampling_speed]:0.2f} {task.fields[speed_unit]}",
+            table_column=Column("Sampling Speed", ratio=1),
+        )
+    ]
+
+    return CustomProgress(
+        DivergenceBarColumn(
+            table_column=Column("Progress", ratio=2),
+            diverging_color="tab:red",
+            complete_style=Style.parse("rgb(31,119,180)"),  # tab:blue
+            finished_style=Style.parse("rgb(44,160,44)"),  # tab:green
+        ),
+        *columns,
+        console=Console(theme=progressbar_theme),
+        disable=not progressbar,
+        include_headers=True,
+    )
+
+
+def compute_draw_speed(elapsed, draws):
+    speed = draws / max(elapsed, 1e-6)
+
+    if speed > 1 or speed == 0:
+        unit = "draws/s"
+    else:
+        unit = "s/draws"
+        speed = 1 / speed
+
+    return speed, unit
 
 
 RandomGeneratorState = namedtuple("RandomGeneratorState", ["bit_generator_state", "seed_seq_state"])
