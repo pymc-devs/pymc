@@ -22,7 +22,6 @@ import pytensor
 import pytensor.tensor as pt
 import scipy.sparse as sps
 
-from pytensor import scalar
 from pytensor.compile import Function, Mode, get_mode
 from pytensor.compile.builders import OpFromGraph
 from pytensor.gradient import grad
@@ -413,31 +412,6 @@ def hessian_diag(f, vars=None, negate_output=True):
         return res
     else:
         return empty_gradient
-
-
-class IdentityOp(scalar.UnaryScalarOp):
-    @staticmethod
-    def st_impl(x):
-        return x
-
-    def impl(self, x):
-        return x
-
-    def grad(self, inp, grads):
-        return grads
-
-    def c_code(self, node, name, inp, out, sub):
-        return f"{out[0]} = {inp[0]};"
-
-    def __eq__(self, other):
-        return isinstance(self, type(other))
-
-    def __hash__(self):
-        return hash(type(self))
-
-
-scalar_identity = IdentityOp(scalar.upgrade_to_float, name="scalar_identity")
-identity = Elemwise(scalar_identity, name="identity")
 
 
 def make_shared_replacements(point, vars, model):

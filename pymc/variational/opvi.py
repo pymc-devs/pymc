@@ -61,6 +61,8 @@ import xarray
 
 from pytensor.graph.basic import Variable
 from pytensor.graph.replace import graph_replace
+from pytensor.scalar.basic import identity as scalar_identity
+from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.shape import unbroadcast
 
 import pymc as pm
@@ -74,7 +76,6 @@ from pymc.pytensorf import (
     SeedSequenceSeed,
     compile,
     find_rng_nodes,
-    identity,
     reseed_rngs,
 )
 from pymc.util import (
@@ -469,7 +470,7 @@ class Operator:
     require_logq = True
     objective_class = ObjectiveFunction
     supports_aevb = property(lambda self: not self.approx.any_histograms)
-    T = identity
+    T = Elemwise(scalar_identity)
 
     def __init__(self, approx):
         self.approx = approx
