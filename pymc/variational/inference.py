@@ -84,7 +84,7 @@ class Inference:
         score = self._maybe_score(score)
         if "fn_kwargs" in kwargs:
             warnings.warn(
-                DeprecationWarning, "fn_kwargs is deprecated, please use compile_kwargs instead"
+                "fn_kwargs is deprecated, please use compile_kwargs instead", DeprecationWarning
             )
             compile_kwargs = kwargs.pop("fn_kwargs")
         else:

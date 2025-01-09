@@ -379,7 +379,11 @@ class ObjectiveFunction:
         `pytensor.function`
         """
         if fn_kwargs is not None:
-            warnings.warn("`fn_kwargs` is deprecated and will be removed in future versions")
+            warnings.warn(
+                "`fn_kwargs` is deprecated and will be removed in future versions. Use "
+                "`compile_kwargs` instead.",
+                DeprecationWarning,
+            )
             compile_kwargs = fn_kwargs
 
         if compile_kwargs is None:
@@ -428,7 +432,11 @@ class ObjectiveFunction:
         pytensor.function
         """
         if fn_kwargs is not None:
-            warnings.warn("`fn_kwargs` is deprecated and will be removed in future versions")
+            warnings.warn(
+                "`fn_kwargs` is deprecated and will be removed in future versions. Use "
+                "`compile_kwargs` instead",
+                DeprecationWarning,
+            )
             compile_kwargs = fn_kwargs
 
         if compile_kwargs is None:
