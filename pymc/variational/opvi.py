@@ -333,6 +333,7 @@ class ObjectiveFunction:
         total_grad_norm_constraint=None,
         score=False,
         compile_kwargs=None,
+        fn_kwargs=None,
     ):
         R"""Step function that should be called on each optimization step.
 
@@ -364,6 +365,11 @@ class ObjectiveFunction:
             calculate loss on each step? Defaults to False for speed
         compile_kwargs: `dict`
             Add kwargs to pytensor.function (e.g. `{'profile': True}`)
+        fn_kwargs: dict
+            arbitrary kwargs passed to `pytensor.function`
+
+            .. warning:: `fn_kwargs` is deprecated and will be removed in future versions
+
         more_replacements: `dict`
             Apply custom replacements before calculating gradients
 
@@ -371,6 +377,10 @@ class ObjectiveFunction:
         -------
         `pytensor.function`
         """
+        if fn_kwargs is not None:
+            warnings.warn("`fn_kwargs` is deprecated and will be removed in future versions")
+            compile_kwargs = fn_kwargs
+
         if compile_kwargs is None:
             compile_kwargs = {}
         if score and not self.op.returns_loss:
@@ -395,7 +405,7 @@ class ObjectiveFunction:
 
     @pytensor.config.change_flags(compute_test_value="off")
     def score_function(
-        self, sc_n_mc=None, more_replacements=None, compile_kwargs=None
+        self, sc_n_mc=None, more_replacements=None, compile_kwargs=None, fn_kwargs=None
     ):  # pragma: no cover
         R"""Compile scoring function that operates which takes no inputs and returns Loss.
 
@@ -407,11 +417,19 @@ class ObjectiveFunction:
             Apply custom replacements before compiling a function
         compile_kwargs: `dict`
             arbitrary kwargs passed to `pytensor.function`
+        fn_kwargs: `dict`
+            arbitrary kwargs passed to `pytensor.function`
+
+            .. warning:: `fn_kwargs` is deprecated and will be removed in future versions
 
         Returns
         -------
         pytensor.function
         """
+        if fn_kwargs is not None:
+            warnings.warn("`fn_kwargs` is deprecated and will be removed in future versions")
+            compile_kwargs = fn_kwargs
+
         if compile_kwargs is None:
             compile_kwargs = {}
         if not self.op.returns_loss:

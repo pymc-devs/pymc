@@ -82,7 +82,14 @@ class Inference:
 
     def run_profiling(self, n=1000, score=None, **kwargs):
         score = self._maybe_score(score)
-        compile_kwargs = kwargs.pop("compile_kwargs", {})
+        if "fn_kwargs" in kwargs:
+            warnings.warn(
+                DeprecationWarning, "fn_kwargs is deprecated, please use compile_kwargs instead"
+            )
+            compile_kwargs = kwargs.pop("fn_kwargs")
+        else:
+            compile_kwargs = kwargs.pop("compile_kwargs", {})
+
         compile_kwargs["profile"] = True
         step_func = self.objective.step_function(
             score=score, compile_kwargs=compile_kwargs, **kwargs
