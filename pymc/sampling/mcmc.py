@@ -1553,6 +1553,7 @@ def init_nuts(
             callbacks=cb,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
+            compile_kwargs=compile_kwargs,
         )
         approx_sample = approx.sample(
             draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
@@ -1566,6 +1567,7 @@ def init_nuts(
         potential = quadpotential.QuadPotentialDiagAdapt(
             n, mean, cov, weight, rng=random_seed_list[0]
         )
+
     elif init == "advi":
         approx = pm.fit(
             random_seed=random_seed_list[0],
@@ -1575,6 +1577,7 @@ def init_nuts(
             callbacks=cb,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
+            compile_kwargs=compile_kwargs,
         )
         approx_sample = approx.sample(
             draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
@@ -1592,6 +1595,7 @@ def init_nuts(
             callbacks=cb,
             progressbar=progressbar,
             obj_optimizer=pm.adagrad_window,
+            compile_kwargs=compile_kwargs,
         )
         approx_sample = approx.sample(
             draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
