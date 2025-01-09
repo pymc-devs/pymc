@@ -2311,6 +2311,8 @@ class Gamma(PositiveContinuous):
        f(x \mid \alpha, \beta) =
            \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}
 
+    Here, the gamma distribution is parameterized by shape (alpha) and rate (beta).
+
     .. plot::
         :context: close-figs
 
