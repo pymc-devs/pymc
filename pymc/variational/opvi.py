@@ -61,6 +61,8 @@ import xarray
 
 from pytensor.graph.basic import Variable
 from pytensor.graph.replace import graph_replace
+from pytensor.scalar.basic import identity as scalar_identity
+from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.shape import unbroadcast
 
 import pymc as pm
@@ -74,7 +76,6 @@ from pymc.pytensorf import (
     SeedSequenceSeed,
     compile,
     find_rng_nodes,
-    identity,
     reseed_rngs,
 )
 from pymc.util import (
@@ -332,6 +333,7 @@ class ObjectiveFunction:
         more_replacements=None,
         total_grad_norm_constraint=None,
         score=False,
+        compile_kwargs=None,
         fn_kwargs=None,
     ):
         R"""Step function that should be called on each optimization step.
@@ -362,8 +364,13 @@ class ObjectiveFunction:
             Bounds gradient norm, prevents exploding gradient problem
         score: `bool`
             calculate loss on each step? Defaults to False for speed
-        fn_kwargs: `dict`
+        compile_kwargs: `dict`
             Add kwargs to pytensor.function (e.g. `{'profile': True}`)
+        fn_kwargs: dict
+            arbitrary kwargs passed to `pytensor.function`
+
+            .. warning:: `fn_kwargs` is deprecated and will be removed in future versions
+
         more_replacements: `dict`
             Apply custom replacements before calculating gradients
 
@@ -371,8 +378,16 @@ class ObjectiveFunction:
         -------
         `pytensor.function`
         """
-        if fn_kwargs is None:
-            fn_kwargs = {}
+        if fn_kwargs is not None:
+            warnings.warn(
+                "`fn_kwargs` is deprecated and will be removed in future versions. Use "
+                "`compile_kwargs` instead.",
+                DeprecationWarning,
+            )
+            compile_kwargs = fn_kwargs
+
+        if compile_kwargs is None:
+            compile_kwargs = {}
         if score and not self.op.returns_loss:
             raise NotImplementedError(f"{self.op} does not have loss")
         updates = self.updates(
@@ -388,14 +403,14 @@ class ObjectiveFunction:
         )
         seed = self.approx.rng.randint(2**30, dtype=np.int64)
         if score:
-            step_fn = compile([], updates.loss, updates=updates, random_seed=seed, **fn_kwargs)
+            step_fn = compile([], updates.loss, updates=updates, random_seed=seed, **compile_kwargs)
         else:
-            step_fn = compile([], [], updates=updates, random_seed=seed, **fn_kwargs)
+            step_fn = compile([], [], updates=updates, random_seed=seed, **compile_kwargs)
         return step_fn
 
     @pytensor.config.change_flags(compute_test_value="off")
     def score_function(
-        self, sc_n_mc=None, more_replacements=None, fn_kwargs=None
+        self, sc_n_mc=None, more_replacements=None, compile_kwargs=None, fn_kwargs=None
     ):  # pragma: no cover
         R"""Compile scoring function that operates which takes no inputs and returns Loss.
 
@@ -405,22 +420,34 @@ class ObjectiveFunction:
             number of scoring MC samples
         more_replacements:
             Apply custom replacements before compiling a function
+        compile_kwargs: `dict`
+            arbitrary kwargs passed to `pytensor.function`
         fn_kwargs: `dict`
             arbitrary kwargs passed to `pytensor.function`
+
+            .. warning:: `fn_kwargs` is deprecated and will be removed in future versions
 
         Returns
         -------
         pytensor.function
         """
-        if fn_kwargs is None:
-            fn_kwargs = {}
+        if fn_kwargs is not None:
+            warnings.warn(
+                "`fn_kwargs` is deprecated and will be removed in future versions. Use "
+                "`compile_kwargs` instead",
+                DeprecationWarning,
+            )
+            compile_kwargs = fn_kwargs
+
+        if compile_kwargs is None:
+            compile_kwargs = {}
         if not self.op.returns_loss:
             raise NotImplementedError(f"{self.op} does not have loss")
         if more_replacements is None:
             more_replacements = {}
         loss = self(sc_n_mc, more_replacements=more_replacements)
         seed = self.approx.rng.randint(2**30, dtype=np.int64)
-        return compile([], loss, random_seed=seed, **fn_kwargs)
+        return compile([], loss, random_seed=seed, **compile_kwargs)
 
     @pytensor.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
@@ -451,7 +478,7 @@ class Operator:
     require_logq = True
     objective_class = ObjectiveFunction
     supports_aevb = property(lambda self: not self.approx.any_histograms)
-    T = identity
+    T = Elemwise(scalar_identity)
 
     def __init__(self, approx):
         self.approx = approx
