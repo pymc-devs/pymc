@@ -253,7 +253,9 @@ class NUTS(BaseHMC):
             if isinstance(step_stats, list):
                 step_stats = step_stats[0]
 
-            stats["divergences"][chain_idx] += step_stats["diverging"]
+            if not step_stats["tune"]:
+                stats["divergences"][chain_idx] += step_stats["diverging"]
+
             stats["step_size"][chain_idx] = step_stats["step_size"]
             stats["tree_size"][chain_idx] = step_stats["tree_size"]
             return stats
