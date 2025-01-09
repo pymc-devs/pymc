@@ -82,9 +82,11 @@ class Inference:
 
     def run_profiling(self, n=1000, score=None, **kwargs):
         score = self._maybe_score(score)
-        fn_kwargs = kwargs.pop("fn_kwargs", {})
-        fn_kwargs["profile"] = True
-        step_func = self.objective.step_function(score=score, fn_kwargs=fn_kwargs, **kwargs)
+        compile_kwargs = kwargs.pop("compile_kwargs", {})
+        compile_kwargs["profile"] = True
+        step_func = self.objective.step_function(
+            score=score, compile_kwargs=compile_kwargs, **kwargs
+        )
         try:
             for _ in track(range(n)):
                 step_func()
@@ -134,7 +136,7 @@ class Inference:
             Add custom updates to resulting updates
         total_grad_norm_constraint: `float`
             Bounds gradient norm, prevents exploding gradient problem
-        fn_kwargs: `dict`
+        compile_kwargs: `dict`
             Add kwargs to pytensor.function (e.g. `{'profile': True}`)
         more_replacements: `dict`
             Apply custom replacements before calculating gradients
@@ -729,7 +731,7 @@ def fit(
         Add custom updates to resulting updates
     total_grad_norm_constraint: `float`
         Bounds gradient norm, prevents exploding gradient problem
-    fn_kwargs: `dict`
+    compile_kwargs: `dict`
         Add kwargs to pytensor.function (e.g. `{'profile': True}`)
     more_replacements: `dict`
         Apply custom replacements before calculating gradients
