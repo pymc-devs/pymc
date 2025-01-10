@@ -523,7 +523,7 @@ class ParallelSampler:
                     self._desc.format(self),
                     completed=0,
                     draws=0,
-                    total=self._total_draws,
+                    total=self._total_draws - 1,
                     chain_idx=chain_idx,
                     sampling_speed=0,
                     speed_unit="draws/s",

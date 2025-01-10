@@ -32,7 +32,14 @@ from pytensor.compile import SharedVariable
 from pytensor.graph.utils import ValidatingScratchpad
 from rich.box import SIMPLE_HEAD
 from rich.console import Console
-from rich.progress import BarColumn, Progress, Task, TextColumn
+from rich.progress import (
+    BarColumn,
+    Progress,
+    Task,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 from rich.style import Style
 from rich.table import Column, Table
 from rich.theme import Theme
@@ -59,6 +66,8 @@ default_progress_theme = Theme(
     {
         "bar.complete": "#1764f4",
         "bar.finished": "green",
+        "progress.remaining": "none",
+        "progress.elapsed": "none",
     }
 )
 
@@ -700,7 +709,9 @@ def create_progress_bar(step_columns, init_stat_dict, progressbar, progressbar_t
         TextColumn(
             "{task.fields[sampling_speed]:0.2f} {task.fields[speed_unit]}",
             table_column=Column("Sampling Speed", ratio=1),
-        )
+        ),
+        TimeElapsedColumn(table_column=Column("Elapsed", ratio=1)),
+        TimeRemainingColumn(table_column=Column("Remaining", ratio=1)),
     ]
 
     return CustomProgress(
