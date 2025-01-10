@@ -38,6 +38,7 @@ from pytensor.graph.basic import (
 )
 from pytensor.graph.fg import FunctionGraph, Output
 from pytensor.graph.op import Op
+from pytensor.link.jax.linker import JAXLinker
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
 from pytensor.tensor.basic import _as_tensor_variable
@@ -1208,6 +1209,15 @@ def copy_function_with_new_rngs(
     fn_ = fn.f if isinstance(fn, PointFunc) else fn
     shared_rngs = [var for var in fn_.get_shared() if isinstance(var.type, RandomGeneratorType)]
     n_shared_rngs = len(shared_rngs)
+    if n_shared_rngs > 0 and isinstance(fn_.maker.linker, JAXLinker):
+        # Reseeding RVs in JAX backend requires a different logic, becuase the SharedVariables
+        # used internally are not the ones that `function.get_shared()` returns.
+        warnings.warn(
+            "At the moment, it is not possible to set the random generator's key for "
+            "JAX linked functions. This means that the draws yielded by the random "
+            "variables that are requested by 'Deterministic' will not be reproducible."
+        )
+        return fn
     swap = {
         old_shared_rng: shared(rng, borrow=True)
         for old_shared_rng, rng in zip(shared_rngs, rng_gen.spawn(n_shared_rngs), strict=True)

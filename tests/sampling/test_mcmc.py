@@ -929,12 +929,29 @@ def trace_backend(request):
         return trace
 
 
-def test_random_deterministics(trace_backend):
+@pytest.fixture(scope="function", params=["FAST_COMPILE", "NUMBA", "JAX"])
+def pytensor_mode(request):
+    return request.param
+
+
+def test_random_deterministics(trace_backend, pytensor_mode):
     with pm.Model() as m:
         x = pm.Bernoulli("x", p=0.5) * 0  # Force it to be zero
         pm.Deterministic("y", x + pm.Normal.dist())
 
-        idata1 = pm.sample(tune=0, draws=1, random_seed=1, trace=trace_backend)
-        idata2 = pm.sample(tune=0, draws=1, random_seed=1, trace=trace_backend)
-
-    assert idata1.posterior.equals(idata2.posterior)
+        if pytensor_mode == "JAX":
+            expected_warning = (
+                "At the moment, it is not possible to set the random generator's key for "
+                "JAX linked functions. This means that the draws yielded by the random "
+                "variables that are requested by 'Deterministic' will not be reproducible."
+            )
+            with pytest.warns(UserWarning, match=expected_warning):
+                with pytensor.config.change_flags(mode=pytensor_mode):
+                    idata1 = pm.sample(tune=0, draws=1, random_seed=1, trace=trace_backend)
+                    idata2 = pm.sample(tune=0, draws=1, random_seed=1, trace=trace_backend)
+            assert not idata1.posterior.equals(idata2.posterior)
+        else:
+            with pytensor.config.change_flags(mode=pytensor_mode):
+                idata1 = pm.sample(tune=0, draws=1, random_seed=1, trace=trace_backend)
+                idata2 = pm.sample(tune=0, draws=1, random_seed=1, trace=trace_backend)
+            assert idata1.posterior.equals(idata2.posterior)
