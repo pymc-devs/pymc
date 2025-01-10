@@ -29,7 +29,7 @@ from pytensor.graph.basic import Constant
 
 from pymc.backends.base import IBaseTrace
 from pymc.model import Model
-from pymc.pytensorf import PointFunc
+from pymc.pytensorf import PointFunc, copy_function_with_new_rngs
 from pymc.step_methods.compound import (
     BlockedStep,
     CompoundStep,
@@ -38,6 +38,7 @@ from pymc.step_methods.compound import (
     flat_statname,
     flatten_steps,
 )
+from pymc.util import get_random_generator
 
 _log = logging.getLogger(__name__)
 
@@ -96,7 +97,11 @@ class ChainRecordAdapter(IBaseTrace):
     """Wraps an McBackend ``Chain`` as an ``IBaseTrace``."""
 
     def __init__(
-        self, chain: mcb.Chain, point_fn: PointFunc, stats_bijection: StatsBijection
+        self,
+        chain: mcb.Chain,
+        point_fn: PointFunc,
+        stats_bijection: StatsBijection,
+        rng: np.random.Generator | None = None,
     ) -> None:
         # Assign attributes required by IBaseTrace
         self.chain = chain.cmeta.chain_number
@@ -107,8 +112,11 @@ class ChainRecordAdapter(IBaseTrace):
             for sstats in stats_bijection._stat_groups
         ]
 
+        self._rng = rng
         self._chain = chain
         self._point_fn = point_fn
+        if rng is not None:
+            self._point_fn = copy_function_with_new_rngs(self._point_fn, rng)
         self._statsbj = stats_bijection
         super().__init__()
 
@@ -257,6 +265,7 @@ def init_chain_adapters(
     initial_point: Mapping[str, np.ndarray],
     step: CompoundStep | BlockedStep,
     model: Model,
+    rng: np.random.Generator | None,
 ) -> tuple[mcb.Run, list[ChainRecordAdapter]]:
     """Create an McBackend metadata description for the MCMC run.
 
@@ -286,7 +295,8 @@ def init_chain_adapters(
             chain=run.init_chain(chain_number=chain_number),
             point_fn=point_fn,
             stats_bijection=statsbj,
+            rng=rng_,
         )
-        for chain_number in range(chains)
+        for chain_number, rng_ in enumerate(get_random_generator(rng).spawn(chains))
     ]
     return run, adapters

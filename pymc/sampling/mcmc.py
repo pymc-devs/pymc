@@ -26,6 +26,7 @@ from typing import (
     Any,
     Literal,
     TypeAlias,
+    cast,
     overload,
 )
 
@@ -40,6 +41,7 @@ from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainin
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 from typing_extensions import Protocol
+from zarr.storage import MemoryStore
 
 import pymc as pm
 
@@ -50,6 +52,7 @@ from pymc.backends.arviz import (
     find_observations,
 )
 from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
+from pymc.backends.zarr import ZarrChain, ZarrTrace
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
@@ -503,7 +506,7 @@ def sample(
     model: Model | None = None,
     compile_kwargs: dict | None = None,
     **kwargs,
-) -> InferenceData | MultiTrace:
+) -> InferenceData | MultiTrace | ZarrTrace:
     r"""Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -570,7 +573,13 @@ def sample(
         Number of iterations of initializer. Only works for 'ADVI' init methods.
     trace : backend, optional
         A backend instance or None.
-        If None, the NDArray backend is used.
+        If ``None``, a ``MultiTrace`` object with underlying ``NDArray`` trace objects
+        is used. If ``trace`` is a :class:`~pymc.backends.zarr.ZarrTrace` instance,
+        the drawn samples will be written onto the desired storage while sampling is
+        on-going. This means sampling runs that, for whatever reason, die in the middle
+        of their execution will write the partial results onto the storage. If the
+        storage persist on disk, these results should be available even after a server
+        crash. See :class:`~pymc.backends.zarr.ZarrTrace` for more information.
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval.
     compute_convergence_checks : bool, default=True
@@ -607,8 +616,12 @@ def sample(
 
     Returns
     -------
-    trace : pymc.backends.base.MultiTrace or arviz.InferenceData
-        A ``MultiTrace`` or ArviZ ``InferenceData`` object that contains the samples.
+    trace : pymc.backends.base.MultiTrace | pymc.backends.zarr.ZarrTrace | arviz.InferenceData
+        A ``MultiTrace``, :class:`~arviz.InferenceData` or
+        :class:`~pymc.backends.zarr.ZarrTrace` object that contains the samples. A
+        ``ZarrTrace`` is only returned if the supplied ``trace`` argument is a
+        ``ZarrTrace`` instance. Refer to :class:`~pymc.backends.zarr.ZarrTrace` for
+        the benefits this backend provides.
 
     Notes
     -----
@@ -741,7 +754,7 @@ def sample(
     rngs = get_random_generator(random_seed).spawn(chains)
     random_seed_list = [rng.integers(2**30) for rng in rngs]
 
-    if not discard_tuned_samples and not return_inferencedata:
+    if not discard_tuned_samples and not return_inferencedata and not isinstance(trace, ZarrTrace):
         warnings.warn(
             "Tuning samples will be included in the returned `MultiTrace` object, which can lead to"
             " complications in your downstream analysis. Please consider to switch to `InferenceData`:\n"
@@ -852,6 +865,8 @@ def sample(
         trace_vars=trace_vars,
         initial_point=initial_points[0],
         model=model,
+        tune=tune,
+        rng=rngs[0].spawn(1)[0],
     )
 
     sample_args = {
@@ -934,7 +949,7 @@ def sample(
     # into a function to make it easier to test and refactor.
     return _sample_return(
         run=run,
-        traces=traces,
+        traces=trace if isinstance(trace, ZarrTrace) else traces,
         tune=tune,
         t_sampling=t_sampling,
         discard_tuned_samples=discard_tuned_samples,
@@ -949,7 +964,7 @@ def sample(
 def _sample_return(
     *,
     run: RunType | None,
-    traces: Sequence[IBaseTrace],
+    traces: Sequence[IBaseTrace] | ZarrTrace,
     tune: int,
     t_sampling: float,
     discard_tuned_samples: bool,
@@ -958,18 +973,69 @@ def _sample_return(
     keep_warning_stat: bool,
     idata_kwargs: dict[str, Any],
     model: Model,
-) -> InferenceData | MultiTrace:
+) -> InferenceData | MultiTrace | ZarrTrace:
     """Pick/slice chains, run diagnostics and convert to the desired return type.
 
     Final step of `pm.sampler`.
     """
+    if isinstance(traces, ZarrTrace):
+        # Split warmup from posterior samples
+        traces.split_warmup_groups()
+
+        # Set sampling time
+        traces.sampling_time = t_sampling
+
+        # Compute number of actual draws per chain
+        total_draws_per_chain = traces._sampling_state.draw_idx[:]
+        n_chains = len(traces.straces)
+        desired_tune = traces.tuning_steps
+        desired_draw = len(traces.posterior.draw)
+        tuning_steps_per_chain = np.clip(total_draws_per_chain, 0, desired_tune)
+        draws_per_chain = total_draws_per_chain - tuning_steps_per_chain
+
+        total_n_tune = tuning_steps_per_chain.sum()
+        total_draws = draws_per_chain.sum()
+
+        _log.info(
+            f'Sampling {n_chains} chain{"s" if n_chains > 1 else ""} for {desired_tune:_d} desired tune and {desired_draw:_d} desired draw iterations '
+            f"(Actually sampled {total_n_tune:_d} tune and {total_draws:_d} draws total) "
+            f"took {t_sampling:.0f} seconds."
+        )
+
+        if compute_convergence_checks or return_inferencedata:
+            idata = traces.to_inferencedata(save_warmup=not discard_tuned_samples)
+            log_likelihood = idata_kwargs.pop("log_likelihood", False)
+            if log_likelihood:
+                from pymc.stats.log_density import compute_log_likelihood
+
+                idata = compute_log_likelihood(
+                    idata,
+                    var_names=None if log_likelihood is True else log_likelihood,
+                    extend_inferencedata=True,
+                    model=model,
+                    sample_dims=["chain", "draw"],
+                    progressbar=False,
+                )
+            if compute_convergence_checks:
+                warns = run_convergence_checks(idata, model)
+                for warn in warns:
+                    traces._sampling_state.global_warnings.append(np.array([warn]))
+                log_warnings(warns)
+
+            if return_inferencedata:
+                # By default we drop the "warning" stat which contains `SamplerWarning`
+                # objects that can not be stored with `.to_netcdf()`.
+                if not keep_warning_stat:
+                    return drop_warning_stat(idata)
+                return idata
+        return traces
+
     # Pick and slice chains to keep the maximum number of samples
     if discard_tuned_samples:
         traces, length = _choose_chains(traces, tune)
     else:
         traces, length = _choose_chains(traces, 0)
     mtrace = MultiTrace(traces)[:length]
-
     # count the number of tune/draw iterations that happened
     # ideally via the "tune" statistic, but not all samplers record it!
     if "tune" in mtrace.stat_names:
@@ -1212,6 +1278,8 @@ def _iter_sample(
     step.set_rng(rng)
 
     point = start
+    if isinstance(trace, ZarrChain):
+        trace.link_stepper(step)
 
     try:
         step.tune = bool(tune)
@@ -1233,13 +1301,14 @@ def _iter_sample(
                 )
 
             yield diverging
-    except KeyboardInterrupt:
-        trace.close()
-        raise
-    except BaseException:
+    except (KeyboardInterrupt, BaseException):
+        if isinstance(trace, ZarrChain):
+            trace.record_sampling_state(step=step)
         trace.close()
         raise
     else:
+        if isinstance(trace, ZarrChain):
+            trace.record_sampling_state(step=step)
         trace.close()
 
 
@@ -1298,6 +1367,19 @@ def _mp_sample(
 
     # We did draws += tune in pm.sample
     draws -= tune
+    zarr_chains: list[ZarrChain] | None = None
+    zarr_recording = False
+    if all(isinstance(trace, ZarrChain) for trace in traces):
+        if isinstance(cast(ZarrChain, traces[0])._posterior.store, MemoryStore):
+            warnings.warn(
+                "Parallel sampling with MemoryStore zarr store wont write the processes "
+                "step method sampling state. If you wish to be able to access the step "
+                "method sampling state, please use a different storage backend, e.g. "
+                "DirectoryStore or ZipStore"
+            )
+        else:
+            zarr_chains = cast(list[ZarrChain], traces)
+            zarr_recording = True
 
     sampler = ps.ParallelSampler(
         draws=draws,
@@ -1311,13 +1393,16 @@ def _mp_sample(
         progressbar_theme=progressbar_theme,
         blas_cores=blas_cores,
         mp_ctx=mp_ctx,
+        zarr_chains=zarr_chains,
     )
     try:
         try:
             with sampler:
                 for draw in sampler:
                     strace = traces[draw.chain]
-                    strace.record(draw.point, draw.stats)
+                    if not zarr_recording:
+                        # Zarr recording happens in each process
+                        strace.record(draw.point, draw.stats)
                     log_warning_stats(draw.stats)
 
                     if callback is not None:

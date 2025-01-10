@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from copy import deepcopy
-from dataclasses import Field, dataclass, fields
+from dataclasses import MISSING, Field, dataclass, fields
 from typing import Any, ClassVar
 
 import numpy as np
@@ -67,7 +67,16 @@ class WithSamplingState:
         state_class = self._state_class
         kwargs = {}
         for field in fields(state_class):
-            val = getattr(self, field.name)
+            is_tensor_name = field.metadata.get("tensor_name", False)
+            val: Any
+            if is_tensor_name:
+                val = [var.name for var in getattr(self, "vars")]
+            else:
+                val = getattr(self, field.name, field.default)
+            if val is MISSING:
+                raise AttributeError(
+                    f"{type(self).__name__!r} object has no attribute {field.name!r}"
+                )
             _val: Any
             if isinstance(val, WithSamplingState):
                 _val = val.sampling_state
@@ -85,11 +94,17 @@ class WithSamplingState:
             state, state_class
         ), f"Encountered invalid state class '{state.__class__}'. State must be '{state_class}'"
         for field in fields(state_class):
+            is_tensor_name = field.metadata.get("tensor_name", False)
             state_val = deepcopy(getattr(state, field.name))
             if isinstance(state_val, RandomGeneratorState):
                 state_val = random_generator_from_state(state_val)
-            self_val = getattr(self, field.name)
             is_frozen = field.metadata.get("frozen", False)
+            self_val: Any
+            if is_tensor_name:
+                self_val = [var.name for var in getattr(self, "vars")]
+                assert is_frozen
+            else:
+                self_val = getattr(self, field.name, field.default)
             if is_frozen:
                 if not equal_dataclass_values(state_val, self_val):
                     raise ValueError(

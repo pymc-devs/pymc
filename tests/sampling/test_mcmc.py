@@ -909,3 +909,49 @@ class TestShared:
         np.testing.assert_allclose(
             x_pred, pp_trace1.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
         )
+
+
+@pytest.fixture(scope="function", params=[None, "mcbackend", "zarr"])
+def trace_backend(request):
+    if request.param is None:
+        return None
+    elif request.param == "mcbackend":
+        try:
+            import mcbackend as mcb
+        except ImportError:
+            pytest.skip("Requires McBackend to be installed.")
+        return mcb.NumPyBackend()
+    elif request.param == "zarr":
+        try:
+            trace = pm.backends.zarr.ZarrTrace()
+        except RuntimeError:
+            pytest.skip("Requires zarr to be installed")
+        return trace
+
+
+@pytest.fixture(scope="function", params=["FAST_COMPILE", "NUMBA", "JAX"])
+def pytensor_mode(request):
+    return request.param
+
+
+def test_random_deterministics(trace_backend, pytensor_mode):
+    with pm.Model() as m:
+        x = pm.Bernoulli("x", p=0.5) * 0  # Force it to be zero
+        pm.Deterministic("y", x + pm.Normal.dist())
+
+        if pytensor_mode == "JAX":
+            expected_warning = (
+                "At the moment, it is not possible to set the random generator's key for "
+                "JAX linked functions. This means that the draws yielded by the random "
+                "variables that are requested by 'Deterministic' will not be reproducible."
+            )
+            with pytest.warns(UserWarning, match=expected_warning):
+                with pytensor.config.change_flags(mode=pytensor_mode):
+                    idata1 = pm.sample(tune=0, draws=1, random_seed=1, trace=trace_backend)
+                    idata2 = pm.sample(tune=0, draws=1, random_seed=1, trace=trace_backend)
+            assert not idata1.posterior.equals(idata2.posterior)
+        else:
+            with pytensor.config.change_flags(mode=pytensor_mode):
+                idata1 = pm.sample(tune=0, draws=1, random_seed=1, trace=trace_backend)
+                idata2 = pm.sample(tune=0, draws=1, random_seed=1, trace=trace_backend)
+            assert idata1.posterior.equals(idata2.posterior)
