@@ -767,6 +767,7 @@ def sample_posterior_predictive(
     if "coords" not in idata_kwargs:
         idata_kwargs["coords"] = {}
     idata: InferenceData | None = None
+    observed_data = None
     stacked_dims = None
     if isinstance(trace, InferenceData):
         _constant_data = getattr(trace, "constant_data", None)
@@ -774,6 +775,7 @@ def sample_posterior_predictive(
             trace_coords.update({str(k): v.data for k, v in _constant_data.coords.items()})
             constant_data.update({str(k): v.data for k, v in _constant_data.items()})
         idata = trace
+        observed_data = trace["observed_data"]
         trace = trace["posterior"]
     if isinstance(trace, xarray.Dataset):
         trace_coords.update({str(k): v.data for k, v in trace.coords.items()})
@@ -817,6 +819,8 @@ def sample_posterior_predictive(
         vars_ = [model[x] for x in var_names]
     else:
         vars_ = model.observed_RVs + observed_dependent_deterministics(model)
+        if observed_data is not None:
+            vars_ += [model[x] for x in observed_data if x in model]
 
     vars_to_sample = list(get_default_varnames(vars_, include_transformed=False))
 

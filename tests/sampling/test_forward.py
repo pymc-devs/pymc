@@ -481,6 +481,16 @@ class TestSamplePPC:
                 chains=nchains,
             )
 
+        # test that trace is used in ppc
+        with pm.Model() as model_ppc:
+            mu = pm.Normal("mu", 0.0, 1.0)
+            a = pm.Normal("a", mu=mu, sigma=1)
+
+        ppc = pm.sample_posterior_predictive(
+            trace=trace, model=model_ppc, return_inferencedata=False
+        )
+        assert "a" in ppc
+
         with model:
             # test list input
             ppc0 = pm.sample_posterior_predictive(
