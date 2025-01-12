@@ -775,7 +775,7 @@ def sample_posterior_predictive(
             trace_coords.update({str(k): v.data for k, v in _constant_data.coords.items()})
             constant_data.update({str(k): v.data for k, v in _constant_data.items()})
         idata = trace
-        observed_data = trace["observed_data"]
+        observed_data = trace.get("observed_data", None)
         trace = trace["posterior"]
     if isinstance(trace, xarray.Dataset):
         trace_coords.update({str(k): v.data for k, v in trace.coords.items()})
