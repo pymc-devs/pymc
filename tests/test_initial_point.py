@@ -152,6 +152,34 @@ class TestInitvalEvaluation:
         assert fn(0) == fn(0)
         assert fn(0) != fn(1)
 
+    def test_jitter_scale(self):
+        with pm.Model() as pmodel:
+            A = pm.HalfFlat("A", initval="support_point")
+
+        jitter_scale_tests = np.array([1.0, 2.0, 5.0])
+        fns = []
+        for jitter_scale in jitter_scale_tests:
+            fns.append(
+                make_initial_point_fn(
+                    model=pmodel,
+                    jitter_rvs=set(pmodel.free_RVs),
+                    jitter_scale=jitter_scale,
+                    return_transformed=True,
+                )
+            )
+
+        n_draws = 1000
+        jitter_samples = np.empty((n_draws, len(fns)))
+        for j, fn in enumerate(fns):
+            # start and end to ensure random samples, otherwise jitter_samples across different jitter_scale will be an exact scale of each other
+            start = j * n_draws
+            end = start + n_draws
+            jitter_samples[:, j] = np.asarray([fn(i)["A_log__"] for i in range(start, end)])
+
+        init_standardised = np.mean((jitter_samples / jitter_scale_tests), axis=0)
+
+        assert np.all((-0.05 < init_standardised) & (init_standardised < 0.05))
+
     def test_respects_overrides(self):
         with pm.Model() as pmodel:
             A = pm.Flat("A", initval="support_point")

@@ -66,6 +66,7 @@ def make_initial_point_fns_per_chain(
     model,
     overrides: StartDict | Sequence[StartDict | None] | None,
     jitter_rvs: set[TensorVariable] | None = None,
+    jitter_scale: float = 1.0,
     chains: int,
 ) -> list[Callable]:
     """Create an initial point function for each chain, as defined by initvals.
@@ -96,6 +97,7 @@ def make_initial_point_fns_per_chain(
                 model=model,
                 overrides=overrides,
                 jitter_rvs=jitter_rvs,
+                jitter_scale=jitter_scale,
                 return_transformed=True,
             )
         ] * chains
@@ -104,6 +106,7 @@ def make_initial_point_fns_per_chain(
             make_initial_point_fn(
                 model=model,
                 jitter_rvs=jitter_rvs,
+                jitter_scale=jitter_scale,
                 overrides=chain_overrides,
                 return_transformed=True,
             )
@@ -122,6 +125,7 @@ def make_initial_point_fn(
     model,
     overrides: StartDict | None = None,
     jitter_rvs: set[TensorVariable] | None = None,
+    jitter_scale: float = 1.0,
     default_strategy: str = "support_point",
     return_transformed: bool = True,
 ) -> Callable:
@@ -150,6 +154,7 @@ def make_initial_point_fn(
         rvs_to_transforms=model.rvs_to_transforms,
         initval_strategies=initval_strats,
         jitter_rvs=jitter_rvs,
+        jitter_scale=jitter_scale,
         default_strategy=default_strategy,
         return_transformed=return_transformed,
     )
@@ -188,6 +193,7 @@ def make_initial_point_expression(
     rvs_to_transforms: dict[TensorVariable, Transform],
     initval_strategies: dict[TensorVariable, np.ndarray | Variable | str | None],
     jitter_rvs: set[TensorVariable] | None = None,
+    jitter_scale: float = 1.0,
     default_strategy: str = "support_point",
     return_transformed: bool = False,
 ) -> list[TensorVariable]:
@@ -265,7 +271,7 @@ def make_initial_point_expression(
             value = transform.forward(value, *variable.owner.inputs)
 
         if variable in jitter_rvs:
-            jitter = pt.random.uniform(-1, 1, size=value.shape)
+            jitter = pt.random.uniform(-jitter_scale, jitter_scale, size=value.shape)
             jitter.name = f"{variable.name}_jitter"
             value = value + jitter
 
