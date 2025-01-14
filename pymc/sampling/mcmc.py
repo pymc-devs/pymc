@@ -41,7 +41,6 @@ from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainin
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 from typing_extensions import Protocol
-from zarr.storage import MemoryStore
 
 import pymc as pm
 
@@ -79,6 +78,11 @@ from pymc.util import (
     is_transformed_name,
 )
 from pymc.vartypes import discrete_types
+
+try:
+    from zarr.storage import MemoryStore
+except ImportError:
+    MemoryStore = type("MemoryStore", (), {})
 
 sys.setrecursionlimit(10000)
 
