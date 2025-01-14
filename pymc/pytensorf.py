@@ -1128,7 +1128,7 @@ def toposort_replace(
         if not var.owner:
             return (-1,)
 
-        index = fgraph_toposort[var.owner]
+        index = fgraph_toposort.get(var.owner, -1)
 
         # Recurse into OpFromGraphs
         # TODO: Could also recurse into Scans
