@@ -1438,6 +1438,8 @@ def _init_jitter(
     ----------
     jitter: bool
         Whether to apply jitter or not.
+    jitter_scale : float, optional
+        The scale of the jitter in set(model.free_RVs). Defaults to 1.0.
     jitter_max_retries : int
         Maximum number of repeated attempts at initializing values (per chain).
 
