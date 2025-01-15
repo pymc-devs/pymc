@@ -37,16 +37,17 @@ repos:
   hooks:
     - id: sphinx-lint
       args: ["."]
-#- repo: https://github.com/lucianopaz/head_of_apache
-#  rev: "0.0.3"
-#  hooks:
-#    - id: head_of_apache
-#      args:
-#        - --author=The PyMC Developers
-#        - --exclude=docs/
-#        - --exclude=scripts/
-#        - --exclude=binder/
-#        - --exclude=versioneer.py
+- repo: https://github.com/lucianopaz/head_of_apache
+  rev: "0.1.0"
+  hooks:
+    - id: head_of_apache
+      args:
+        - --author=The PyMC Developers
+        - --exclude=docs/
+        - --exclude=scripts/
+        - --exclude=binder/
+        - --exclude=versioneer.py
+        - --last-year-present
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.8.4
   hooks:
