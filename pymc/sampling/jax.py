@@ -359,7 +359,7 @@ def _sample_blackjax_nuts(
         map_fn = jax.vmap
     else:
         raise ValueError(
-            'Only supporting the following methods to draw chains: "parallel" or "vectorized"'
+            "Only supporting the following methods to draw chains: 'parallel' or 'vectorized'"
         )
 
     if chains == 1:
