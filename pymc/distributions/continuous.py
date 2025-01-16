@@ -992,8 +992,7 @@ class Wald(PositiveContinuous):
                     return mu, lam, lam / mu
 
         raise ValueError(
-            "Wald distribution must specify either mu only, "
-            "mu and lam, mu and phi, or lam and phi."
+            "Wald distribution must specify either mu only, mu and lam, mu and phi, or lam and phi."
         )
 
     def logp(value, mu, lam, alpha):
@@ -1603,8 +1602,7 @@ class AsymmetricLaplace(Continuous):
     def get_kappa(cls, kappa=None, q=None):
         if kappa is not None and q is not None:
             raise ValueError(
-                "Incompatible parameterization. Either use "
-                "kappa or q to specify the distribution."
+                "Incompatible parameterization. Either use kappa or q to specify the distribution."
             )
         elif q is not None:
             if isinstance(q, Variable):
@@ -3483,7 +3481,7 @@ class Rice(PositiveContinuous):
         elif nu is not None and b is None:
             b = nu / sigma
             return nu, b, sigma
-        raise ValueError("Rice distribution must specify either nu" " or b.")
+        raise ValueError("Rice distribution must specify either nu or b.")
 
     def support_point(rv, size, nu, sigma):
         nu_sigma_ratio = -(nu**2) / (2 * sigma**2)

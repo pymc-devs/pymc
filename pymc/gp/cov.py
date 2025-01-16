@@ -328,8 +328,7 @@ class Prod(Combination):
         check = Counter([isinstance(factor, Covariance) for factor in self._factor_list])
         if check.get(True, 0) >= 2:
             raise NotImplementedError(
-                "The power spectral density of products of covariance "
-                "functions is not implemented."
+                "The power spectral density of products of covariance functions is not implemented."
             )
         return reduce(mul, self._merge_factors_psd(omega))
 

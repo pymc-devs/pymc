@@ -108,8 +108,7 @@ def _replace_shared_variables(graph: list[TensorVariable]) -> list[TensorVariabl
 
     if any(var.default_update is not None for var in shared_variables):
         raise ValueError(
-            "Graph contains shared variables with default_update which cannot "
-            "be safely replaced."
+            "Graph contains shared variables with default_update which cannot be safely replaced."
         )
 
     replacements = {var: pt.constant(var.get_value(borrow=True)) for var in shared_variables}
@@ -360,7 +359,7 @@ def _sample_blackjax_nuts(
         map_fn = jax.vmap
     else:
         raise ValueError(
-            "Only supporting the following methods to draw chains:" ' "parallel" or "vectorized"'
+            'Only supporting the following methods to draw chains: "parallel" or "vectorized"'
         )
 
     if chains == 1:

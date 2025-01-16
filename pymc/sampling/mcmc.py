@@ -1000,7 +1000,7 @@ def _sample_return(
         total_draws = draws_per_chain.sum()
 
         _log.info(
-            f'Sampling {n_chains} chain{"s" if n_chains > 1 else ""} for {desired_tune:_d} desired tune and {desired_draw:_d} desired draw iterations '
+            f"Sampling {n_chains} chain{'s' if n_chains > 1 else ''} for {desired_tune:_d} desired tune and {desired_draw:_d} desired draw iterations "
             f"(Actually sampled {total_n_tune:_d} tune and {total_draws:_d} draws total) "
             f"took {t_sampling:.0f} seconds."
         )
@@ -1062,8 +1062,8 @@ def _sample_return(
 
     n_chains = len(mtrace.chains)
     _log.info(
-        f'Sampling {n_chains} chain{"s" if n_chains > 1 else ""} for {n_tune:_d} tune and {n_draws:_d} draw iterations '
-        f"({n_tune*n_chains:_d} + {n_draws*n_chains:_d} draws total) "
+        f"Sampling {n_chains} chain{'s' if n_chains > 1 else ''} for {n_tune:_d} tune and {n_draws:_d} draw iterations "
+        f"({n_tune * n_chains:_d} + {n_draws * n_chains:_d} draws total) "
         f"took {t_sampling:.0f} seconds."
     )
 

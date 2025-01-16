@@ -211,8 +211,7 @@ def plot_gp_dist(
         samples_kwargs = {}
     if np.any(np.isnan(samples)):
         warnings.warn(
-            "There are `nan` entries in the [samples] arguments. "
-            "The plot will not contain a band!",
+            "There are `nan` entries in the [samples] arguments. The plot will not contain a band!",
             UserWarning,
         )
 

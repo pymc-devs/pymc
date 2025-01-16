@@ -247,7 +247,9 @@ class MvNormal(Continuous):
         data = np.random.multivariate_normal(mu, true_cov, 10)
 
         sd_dist = pm.Exponential.dist(1.0, shape=3)
-        chol, corr, stds = pm.LKJCholeskyCov("chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True)
+        chol, corr, stds = pm.LKJCholeskyCov(
+            "chol_cov", n=3, eta=2, sd_dist=sd_dist, compute_corr=True
+        )
         vals = pm.MvNormal("vals", mu=mu, chol=chol, observed=data)
 
     For unobserved values it can be better to use a non-centered
@@ -2793,9 +2795,9 @@ class ZeroSumNormal(Distribution):
 
         support_shape = pt.as_tensor(support_shape, dtype="int64", ndim=1)
 
-        assert n_zerosum_axes == pt.get_vector_length(
-            support_shape
-        ), "support_shape has to be as long as n_zerosum_axes"
+        assert n_zerosum_axes == pt.get_vector_length(support_shape), (
+            "support_shape has to be as long as n_zerosum_axes"
+        )
 
         return super().dist([sigma, support_shape], **kwargs)
 

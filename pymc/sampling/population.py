@@ -386,9 +386,9 @@ def _prepare_iter_population(
 
     # 2. Set up the steppers
     steppers: list[Step] = []
-    assert (
-        len(rngs) == nchains
-    ), f"There must be one random Generator per chain. Got {len(rngs)} instead of {nchains}"
+    assert len(rngs) == nchains, (
+        f"There must be one random Generator per chain. Got {len(rngs)} instead of {nchains}"
+    )
     for c, rng in enumerate(rngs):
         # need independent samplers for each chain
         # it is important to copy the actual steppers (but not the delta_logp)

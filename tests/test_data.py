@@ -318,8 +318,8 @@ class TestData:
         N_cols = 7
         data = np.random.uniform(size=(N_rows, N_cols))
         coords = {
-            "rows": [f"R{r+1}" for r in range(N_rows)],
-            "columns": [f"C{c+1}" for c in range(N_cols)],
+            "rows": [f"R{r + 1}" for r in range(N_rows)],
+            "columns": [f"C{c + 1}" for c in range(N_cols)],
         }
         # pass coordinates explicitly, use numpy array in Data container
         with pm.Model(coords=coords) as pmodel:
@@ -391,7 +391,7 @@ class TestData:
         N_cols = 7
         df_data = pd.DataFrame()
         for c in range(N_cols):
-            df_data[f"Column {c+1}"] = np.random.normal(size=(N_rows,))
+            df_data[f"Column {c + 1}"] = np.random.normal(size=(N_rows,))
         df_data.index.name = "rows"
         df_data.columns.name = "columns"
 
