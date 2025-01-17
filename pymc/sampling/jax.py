@@ -315,58 +315,38 @@ def _sample_blackjax_nuts(
     progressbar: bool,
     random_seed: int,
     initial_points: np.ndarray | list[np.ndarray],
-    nuts_kwargs,
+    nuts_kwargs: dict[str, Any],
     logp_fn: Callable[[ArrayLike], jax.Array] | None = None,
 ) -> tuple[Any, dict[str, Any], ModuleType]:
     """
     Draw samples from the posterior using the NUTS method from the ``blackjax`` library.
 
-    Note the default parameter values listed below are provided by the calling function `sample_jax_nuts`.
-
     Parameters
     ----------
-    model : Model, optional
-        Model to sample from. The model needs to have free random variables. When inside
-        a ``with`` model context, it defaults to that model, otherwise the model must be
-        passed explicitly.
+    model : Model
+        Model to sample from. The model needs to have free random variables.
     target_accept : float in [0, 1].
         The step size is tuned such that we approximate this acceptance rate. Higher
         values like 0.9 or 0.95 often work better for problematic posteriors.
-    tune : int, default 1000
+    tune : int
         Number of iterations to tune. Samplers adjust the step sizes, scalings or
         similar during tuning. Tuning samples will be drawn in addition to the number
         specified in the ``draws`` argument.
-    draws : int, default 1000
-        The number of samples to draw. The number of tuned samples are discarded by
-        default.
-    chains : int, default 4
+    draws : int
+        The number of samples to draw. The number of tuned samples are discarded by default.
+    chains : int
         The number of chains to sample.
-    chain_method : str, default "parallel"
-        Specify how samples should be drawn. The choices include "parallel", and
-        "vectorized".
+    chain_method : "parallel" or "vectorized"
+        Specify how samples should be drawn.
     progressbar : bool
         Whether to show progressbar or not during sampling.
-    random_seed : int, RandomState or Generator, optional
+    random_seed : int, RandomState or Generator
         Random seed used by the sampling steps.
-    initial_points : np.ndarray | list[np.ndarray]
+    initial_points : np.ndarray or list[np.ndarray]
         Initial point(s) for sampler to begin sampling from.
-    var_names : sequence of str, optional
-        Names of variables for which to compute the posterior samples. Defaults to all
-        variables in the posterior.
-    keep_untransformed : bool, default False
-        Include untransformed variables in the posterior samples. Defaults to False.
-    postprocessing_backend: Optional[Literal["cpu", "gpu"]], default None,
-        Specify how postprocessing should be computed. gpu or cpu
-    postprocessing_vectorize: Literal["vmap", "scan"], default "scan"
-        How to vectorize the postprocessing: vmap or sequential scan
-    idata_kwargs : dict, optional
-        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
-        value for the ``log_likelihood`` key to indicate that the pointwise log
-        likelihood should not be included in the returned object. Values for
-        ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
-        the ``model`` argument if not provided in ``idata_kwargs``. If ``coords`` and
-        ``dims`` are provided, they are used to update the inferred dictionaries.
-    logp_fn : Callable[[ArrayLike], jax.Array] | None:
+    nuts_kwargs : dict
+        Keyword arguments for the blackjax nuts sampler
+    logp_fn : Callable[[ArrayLike], jax.Array], optional, default None
         jaxified logp function. If not passed in it will be created anew.
 
     Returns
@@ -439,7 +419,7 @@ def _sample_numpyro_nuts(
     tune: int,
     draws: int,
     chains: int,
-    chain_method: str | None,
+    chain_method: Literal["parallel", "vectorized"],
     progressbar: bool,
     random_seed: int,
     initial_points: np.ndarray | list[np.ndarray],
@@ -449,36 +429,32 @@ def _sample_numpyro_nuts(
     """
     Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
 
-    Note the default parameter values listed below are provided by the calling function `sample_jax_nuts`.
-
     Parameters
     ----------
-    model : Model, optional
-        Model to sample from. The model needs to have free random variables. When inside
-        a ``with`` model context, it defaults to that model, otherwise the model must be
-        passed explicitly.
+    model : Model
+        Model to sample from. The model needs to have free random variables.
     target_accept : float in [0, 1].
         The step size is tuned such that we approximate this acceptance rate. Higher
         values like 0.9 or 0.95 often work better for problematic posteriors.
-    tune : int, default 1000
+    tune : int
         Number of iterations to tune. Samplers adjust the step sizes, scalings or
         similar during tuning. Tuning samples will be drawn in addition to the number
         specified in the ``draws`` argument.
-    draws : int, default 1000
-        The number of samples to draw. The number of tuned samples are discarded by
-        default.
-    chains : int, default 4
+    draws : int
+        The number of samples to draw. The number of tuned samples are discarded by default.
+    chains : int
         The number of chains to sample.
-    chain_method : str, default "parallel"
-        Specify how samples should be drawn. The choices include "parallel", and
-        "vectorized".
+    chain_method : "parallel" or "vectorized"
+        Specify how samples should be drawn.
     progressbar : bool
         Whether to show progressbar or not during sampling.
-    random_seed : int, RandomState or Generator, optional
+    random_seed : int, RandomState or Generator
         Random seed used by the sampling steps.
-    initial_points : np.ndarray | list[np.ndarray]
+    initial_points : np.ndarray or list[np.ndarray]
         Initial point(s) for sampler to begin sampling from.
-    logp_fn : Callable[[ArrayLike], jax.Array] | None:
+    nuts_kwargs : dict
+        Keyword arguments for the underlying numpyro nuts sampler
+    logp_fn : Callable[[ArrayLike], jax.Array], optional, default None
         jaxified logp function. If not passed in it will be created anew.
 
     Returns
