@@ -135,9 +135,9 @@ class TestHSGP(_BaseFixtures):
         with model:
             pm.set_data({"X": x_new})
 
-        assert np.allclose(
-            gp._X_center, original_center
-        ), "gp._X_center should not change after updating data for out-of-sample predictions."
+        assert np.allclose(gp._X_center, original_center), (
+            "gp._X_center should not change after updating data for out-of-sample predictions."
+        )
 
     def test_parametrization(self):
         err_msg = (
@@ -188,9 +188,9 @@ class TestHSGP(_BaseFixtures):
 
             n_coeffs = model.f1_hsgp_coeffs.type.shape[0]
             if drop_first:
-                assert (
-                    n_coeffs == n_basis - 1
-                ), f"one basis vector should have been dropped, {n_coeffs}"
+                assert n_coeffs == n_basis - 1, (
+                    f"one basis vector should have been dropped, {n_coeffs}"
+                )
             else:
                 assert n_coeffs == n_basis, "one was dropped when it shouldn't have been"
 

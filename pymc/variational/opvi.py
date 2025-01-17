@@ -710,9 +710,9 @@ class Group(WithMemoization):
 
     @classmethod
     def register(cls, sbcls):
-        assert (
-            frozenset(sbcls.__param_spec__) not in cls.__param_registry
-        ), "Duplicate __param_spec__"
+        assert frozenset(sbcls.__param_spec__) not in cls.__param_registry, (
+            "Duplicate __param_spec__"
+        )
         cls.__param_registry[frozenset(sbcls.__param_spec__)] = sbcls
         assert sbcls.short_name not in cls.__name_registry, "Duplicate short_name"
         cls.__name_registry[sbcls.short_name] = sbcls
@@ -1234,7 +1234,7 @@ class Approximation(WithMemoization):
         for g in groups:
             if g.group is None:
                 if rest is not None:
-                    raise GroupError("More than one group is specified for " "the rest variables")
+                    raise GroupError("More than one group is specified for the rest variables")
                 else:
                     rest = g
             else:

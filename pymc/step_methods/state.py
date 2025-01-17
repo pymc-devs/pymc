@@ -90,9 +90,9 @@ class WithSamplingState:
     @sampling_state.setter
     def sampling_state(self, state: DataClassState):
         state_class = self._state_class
-        assert isinstance(
-            state, state_class
-        ), f"Encountered invalid state class '{state.__class__}'. State must be '{state_class}'"
+        assert isinstance(state, state_class), (
+            f"Encountered invalid state class '{state.__class__}'. State must be '{state_class}'"
+        )
         for field in fields(state_class):
             is_tensor_name = field.metadata.get("tensor_name", False)
             state_val = deepcopy(getattr(state, field.name))
