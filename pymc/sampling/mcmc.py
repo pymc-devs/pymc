@@ -1373,7 +1373,7 @@ def _init_jitter(
         return [ipfn(seed) for ipfn, seed in zip(ipfns, seeds)]
 
     if logp_fn is None:
-        model_logp_fn = model.compile_logp()
+        model_logp_fn: Callable[[PointType], np.ndarray] = model.compile_logp()
     else:
         model_logp_fn = logp_fn
 

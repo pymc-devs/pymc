@@ -226,7 +226,7 @@ def _get_batched_jittered_initial_points(
 
     Returns
     -------
-    out: list[np.ndarray]
+    out: list of ndarrays
         list with one item per variable and number of chains as batch dimension.
         Each item has shape `(chains, *var.shape)`
     """
@@ -321,6 +321,8 @@ def _sample_blackjax_nuts(
     """
     Draw samples from the posterior using the NUTS method from the ``blackjax`` library.
 
+    Note the default parameter values listed below are provided by the calling function `sample_jax_nuts`.
+
     Parameters
     ----------
     model : Model, optional
@@ -365,11 +367,10 @@ def _sample_blackjax_nuts(
         the ``model`` argument if not provided in ``idata_kwargs``. If ``coords`` and
         ``dims`` are provided, they are used to update the inferred dictionaries.
     logp_fn : Callable[[ArrayLike], jax.Array] | None:
-        jaxified logp function. If not passed in it will compute it here.
+        jaxified logp function. If not passed in it will be created anew.
 
     Returns
     -------
-    Tuple containing:
         raw_mcmc_samples
             Datastructure containing raw mcmc samples
         sample_stats : dict[str, Any]
@@ -448,6 +449,8 @@ def _sample_numpyro_nuts(
     """
     Draw samples from the posterior using the NUTS method from the ``numpyro`` library.
 
+    Note the default parameter values listed below are provided by the calling function `sample_jax_nuts`.
+
     Parameters
     ----------
     model : Model, optional
@@ -476,11 +479,10 @@ def _sample_numpyro_nuts(
     initial_points : np.ndarray | list[np.ndarray]
         Initial point(s) for sampler to begin sampling from.
     logp_fn : Callable[[ArrayLike], jax.Array] | None:
-        jaxified logp function. If not passed in it will compute it here.
+        jaxified logp function. If not passed in it will be created anew.
 
     Returns
     -------
-    Tuple containing:
         raw_mcmc_samples
             Datastructure containing raw mcmc samples
         sample_stats : dict[str, Any]

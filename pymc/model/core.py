@@ -19,7 +19,7 @@ import threading
 import types
 import warnings
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 from typing import (
     Literal,
     cast,
@@ -585,7 +585,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian: bool = True,
         sum: bool = True,
         **compile_kwargs,
-    ) -> Callable[[PointType], np.ndarray]:
+    ) -> PointFunc:
         """Compiled log probability density function.
 
         Parameters
