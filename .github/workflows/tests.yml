@@ -34,6 +34,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: dorny/paths-filter@v3
         id: changes
         with:
@@ -144,6 +145,8 @@ jobs:
         shell: bash -leo pipefail {0}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
       - uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: conda-envs/environment-test.yml
@@ -194,6 +197,8 @@ jobs:
         shell: cmd /C call {0}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
       - uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: conda-envs/windows-environment-test.yml
@@ -253,6 +258,8 @@ jobs:
         shell: bash -leo pipefail {0}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
       - uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: conda-envs/environment-test.yml
@@ -297,6 +304,8 @@ jobs:
         shell: bash -leo pipefail {0}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
       - uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: conda-envs/environment-jax.yml
@@ -341,6 +350,8 @@ jobs:
         shell: cmd /C call {0}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
       - uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: conda-envs/windows-environment-test.yml
