@@ -1,4 +1,4 @@
-#   Copyright 2024 The PyMC Developers
+#   Copyright 2025 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -27,8 +27,6 @@ from typing import cast
 import cloudpickle
 import numpy as np
 
-from rich.console import Console
-from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 
@@ -36,8 +34,9 @@ from pymc.backends.zarr import ZarrChain
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.util import (
-    CustomProgress,
     RandomGeneratorState,
+    compute_draw_speed,
+    create_progress_bar,
     default_progress_theme,
     get_state_from_generator,
     random_generator_from_state,
@@ -486,21 +485,23 @@ class ParallelSampler:
 
         self._in_context = False
 
-        self._progress = CustomProgress(
-            "[progress.description]{task.description}",
-            BarColumn(),
-            "[progress.percentage]{task.percentage:>3.0f}%",
-            TimeRemainingColumn(),
-            TextColumn("/"),
-            TimeElapsedColumn(),
-            console=Console(theme=progressbar_theme),
-            disable=not progressbar,
+        progress_columns, progress_stats = step_method._progressbar_config(chains)
+
+        self._progress = create_progress_bar(
+            progress_columns,
+            progress_stats,
+            progressbar=progressbar,
+            progressbar_theme=progressbar_theme,
         )
+
+        self.progress_stats = progress_stats
+        self.update_stats = step_method._make_update_stats_function()
+
         self._show_progress = progressbar
         self._divergences = 0
         self._completed_draws = 0
-        self._total_draws = chains * (draws + tune)
-        self._desc = "Sampling {0._chains:d} chains, {0._divergences:,d} divergences"
+        self._total_draws = draws + tune
+        self._desc = "Sampling chain"
         self._chains = chains
 
     def _make_active(self):
@@ -517,23 +518,40 @@ class ParallelSampler:
         self._make_active()
 
         with self._progress as progress:
-            task = progress.add_task(
-                self._desc.format(self),
-                completed=self._completed_draws,
-                total=self._total_draws,
-            )
+            tasks = [
+                progress.add_task(
+                    self._desc.format(self),
+                    completed=0,
+                    draws=0,
+                    total=self._total_draws - 1,
+                    chain_idx=chain_idx,
+                    sampling_speed=0,
+                    speed_unit="draws/s",
+                    **{stat: value[chain_idx] for stat, value in self.progress_stats.items()},
+                )
+                for chain_idx in range(self._chains)
+            ]
 
             while self._active:
                 draw = ProcessAdapter.recv_draw(self._active)
                 proc, is_last, draw, tuning, stats = draw
+
                 self._completed_draws += 1
+
+                speed, unit = compute_draw_speed(progress._tasks[proc.chain].elapsed, draw)
+
                 if not tuning and stats and stats[0].get("diverging"):
                     self._divergences += 1
+
+                self.progress_stats = self.update_stats(self.progress_stats, stats, proc.chain)
+
                 progress.update(
-                    task,
-                    completed=self._completed_draws,
-                    total=self._total_draws,
-                    description=self._desc.format(self),
+                    tasks[proc.chain],
+                    completed=draw,
+                    draws=draw,
+                    sampling_speed=speed,
+                    speed_unit=unit,
+                    **{stat: value[proc.chain] for stat, value in self.progress_stats.items()},
                 )
 
                 if is_last:
@@ -541,7 +559,12 @@ class ParallelSampler:
                     self._active.remove(proc)
                     self._finished.append(proc)
                     self._make_active()
-                    progress.update(task, description=self._desc.format(self), refresh=True)
+                    progress.update(
+                        tasks[proc.chain],
+                        draws=draw + 1,
+                        **{stat: value[proc.chain] for stat, value in self.progress_stats.items()},
+                        refresh=True,
+                    )
 
                 # We could also yield proc.shared_point_view directly,
                 # and only call proc.write_next() after the yield returns.
