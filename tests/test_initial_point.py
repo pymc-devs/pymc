@@ -169,7 +169,8 @@ class TestInitvalEvaluation:
             return_transformed=True,
         )
 
-        assert fn_large(0)["A_log__"] > fn_default(0)["A_log__"]
+        assert fn_large(0)["A_log__"] > 10
+        assert fn_default(0)["A_log__"] < 1
 
     def test_respects_overrides(self):
         with pm.Model() as pmodel:
