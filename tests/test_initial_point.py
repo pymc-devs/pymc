@@ -152,6 +152,26 @@ class TestInitvalEvaluation:
         assert fn(0) == fn(0)
         assert fn(0) != fn(1)
 
+    def test_jitter_scale(self):
+        with pm.Model() as pmodel:
+            A = pm.HalfFlat("A", initval="support_point")
+
+        fn_default = make_initial_point_fn(
+            model=pmodel,
+            jitter_rvs=set(pmodel.free_RVs),
+            return_transformed=True,
+        )
+
+        fn_large = make_initial_point_fn(
+            model=pmodel,
+            jitter_rvs=set(pmodel.free_RVs),
+            jitter_scale=1000.0,
+            return_transformed=True,
+        )
+
+        assert fn_large(0)["A_log__"] > 10
+        assert fn_default(0)["A_log__"] < 1
+
     def test_respects_overrides(self):
         with pm.Model() as pmodel:
             A = pm.Flat("A", initval="support_point")
