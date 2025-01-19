@@ -345,10 +345,13 @@ def draw(
     return [np.stack(v) for v in drawn_values]
 
 
-def observed_dependent_deterministics(model: Model):
+def observed_dependent_deterministics(model: Model, extra_observeds=None):
     """Find deterministics that depend directly on observed variables."""
+    if extra_observeds is None:
+        extra_observeds = []
+
     deterministics = model.deterministics
-    observed_rvs = set(model.observed_RVs)
+    observed_rvs = set(model.observed_RVs + extra_observeds)
     blockers = model.basic_RVs
     return [
         deterministic
@@ -821,6 +824,7 @@ def sample_posterior_predictive(
         vars_ = model.observed_RVs + observed_dependent_deterministics(model)
         if observed_data is not None:
             vars_ += [model[x] for x in observed_data if x in model and x not in vars_]
+            vars_ += observed_dependent_deterministics(model, vars_)
 
     vars_to_sample = list(get_default_varnames(vars_, include_transformed=False))
 

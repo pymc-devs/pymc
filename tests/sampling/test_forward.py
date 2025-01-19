@@ -561,7 +561,6 @@ class TestSamplePPC:
         )
         assert list(ppc.keys()) == ["a"]
 
-    @pytest.mark.xfail(reason="Auto-imputation of variables not supported in this setting")
     def test_external_trace_det(self):
         nchains = 2
         ndraws = 500
@@ -578,12 +577,12 @@ class TestSamplePPC:
         with pm.Model() as model_ppc:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1)
-            b = pm.Deterministic("b", a + 1)
+            c = pm.Deterministic("c", a + 1)
 
         ppc = pm.sample_posterior_predictive(
             trace=trace, model=model_ppc, return_inferencedata=False
         )
-        assert list(ppc.keys()) == ["a", "b"]
+        assert list(ppc.keys()) == ["a", "c"]
 
     def test_normal_vector(self):
         with pm.Model() as model:
