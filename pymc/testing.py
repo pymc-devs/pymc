@@ -964,9 +964,9 @@ class BaseTestDistributionRandom:
                 assert actual == expected_symbolic == expected
 
     def validate_tests_list(self):
-        assert len(self.checks_to_run) == len(
-            set(self.checks_to_run)
-        ), "There are duplicates in the list of checks_to_run"
+        assert len(self.checks_to_run) == len(set(self.checks_to_run)), (
+            "There are duplicates in the list of checks_to_run"
+        )
 
 
 def seeded_scipy_distribution_builder(dist_name: str) -> Callable:

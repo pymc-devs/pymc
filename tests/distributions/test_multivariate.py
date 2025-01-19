@@ -1531,14 +1531,14 @@ class TestZeroSumNormal:
     def assert_zerosum_axes(self, random_samples, axes_to_check, check_zerosum_axes=True):
         if check_zerosum_axes:
             for ax in axes_to_check:
-                assert np.isclose(
-                    random_samples.mean(axis=ax), 0
-                ).all(), f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
+                assert np.isclose(random_samples.mean(axis=ax), 0).all(), (
+                    f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
+                )
         else:
             for ax in axes_to_check:
-                assert not np.isclose(
-                    random_samples.mean(axis=ax), 0
-                ).all(), f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
+                assert not np.isclose(random_samples.mean(axis=ax), 0).all(), (
+                    f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
+                )
 
     @pytest.mark.parametrize(
         "dims, n_zerosum_axes",

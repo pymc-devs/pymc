@@ -257,7 +257,7 @@ def determine_coords(
     if isinstance(value, np.ndarray) and dims is not None:
         if len(dims) != value.ndim:
             raise pm.exceptions.ShapeError(
-                "Invalid data shape. The rank of the dataset must match the " "length of `dims`.",
+                "Invalid data shape. The rank of the dataset must match the length of `dims`.",
                 actual=value.shape,
                 expected=value.ndim,
             )

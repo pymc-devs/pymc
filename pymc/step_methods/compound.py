@@ -282,9 +282,9 @@ class CompoundStep(WithSamplingState):
 
     @sampling_state.setter
     def sampling_state(self, state: DataClassState):
-        assert isinstance(
-            state, self._state_class
-        ), f"Invalid sampling state class {type(state)}. Expected {self._state_class}"
+        assert isinstance(state, self._state_class), (
+            f"Invalid sampling state class {type(state)}. Expected {self._state_class}"
+        )
         for method, state_method in zip(self.methods, state.methods):
             method.sampling_state = state_method
 
