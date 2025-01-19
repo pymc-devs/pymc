@@ -820,7 +820,7 @@ def sample_posterior_predictive(
     else:
         vars_ = model.observed_RVs + observed_dependent_deterministics(model)
         if observed_data is not None:
-            vars_ += [model[x] for x in observed_data if x in model]
+            vars_ += [model[x] for x in observed_data if x in model and x not in vars_]
 
     vars_to_sample = list(get_default_varnames(vars_, include_transformed=False))
 
