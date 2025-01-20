@@ -309,7 +309,6 @@ def _sample_external_nuts(
     nuts_sampler_kwargs: dict | None,
     **kwargs,
 ):
-    nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
     if nuts_sampler_kwargs is None:
         nuts_sampler_kwargs = {}
 
@@ -339,6 +338,7 @@ def _sample_external_nuts(
                 UserWarning,
             )
         compile_kwargs = {}
+        nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
         for kwarg in ("backend", "gradient_backend"):
             if kwarg in nuts_sampler_kwargs:
                 compile_kwargs[kwarg] = nuts_sampler_kwargs.pop(kwarg)
@@ -687,7 +687,6 @@ def sample(
             mean     sd  hdi_3%  hdi_97%
         p  0.609  0.047   0.528    0.699
     """
-    nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
     if "start" in kwargs:
         if initvals is not None:
             raise ValueError("Passing both `start` and `initvals` is not supported.")
