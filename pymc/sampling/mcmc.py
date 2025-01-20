@@ -309,11 +309,9 @@ def _sample_external_nuts(
     nuts_sampler_kwargs: dict | None,
     **kwargs,
 ):
-    import copy
-
-    nuts_sampler_kwargs_copy = copy.deepcopy(nuts_sampler_kwargs)
-    if nuts_sampler_kwargs_copy is None:
-        nuts_sampler_kwargs_copy = {}
+    nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
+    if nuts_sampler_kwargs is None:
+        nuts_sampler_kwargs = {}
 
     if sampler == "nutpie":
         try:
@@ -342,8 +340,8 @@ def _sample_external_nuts(
             )
         compile_kwargs = {}
         for kwarg in ("backend", "gradient_backend"):
-            if kwarg in nuts_sampler_kwargs_copy:
-                compile_kwargs[kwarg] = nuts_sampler_kwargs_copy.pop(kwarg)
+            if kwarg in nuts_sampler_kwargs:
+                compile_kwargs[kwarg] = nuts_sampler_kwargs.pop(kwarg)
         compiled_model = nutpie.compile_pymc_model(
             model,
             **compile_kwargs,
@@ -357,7 +355,7 @@ def _sample_external_nuts(
             target_accept=target_accept,
             seed=_get_seeds_per_chain(random_seed, 1)[0],
             progress_bar=progressbar,
-            **nuts_sampler_kwargs_copy,
+            **nuts_sampler_kwargs,
         )
         t_sample = time.time() - t_start
         # Temporary work-around. Revert once https://github.com/pymc-devs/nutpie/issues/74 is fixed
@@ -409,7 +407,7 @@ def _sample_external_nuts(
             nuts_sampler=sampler,
             idata_kwargs=idata_kwargs,
             compute_convergence_checks=compute_convergence_checks,
-            **nuts_sampler_kwargs_copy,
+            **nuts_sampler_kwargs,
         )
         return idata
 
@@ -689,9 +687,7 @@ def sample(
             mean     sd  hdi_3%  hdi_97%
         p  0.609  0.047   0.528    0.699
     """
-    import copy
-
-    nuts_sampler_kwargs_copy = copy.deepcopy(nuts_sampler_kwargs)
+    nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
     if "start" in kwargs:
         if initvals is not None:
             raise ValueError("Passing both `start` and `initvals` is not supported.")
@@ -701,8 +697,8 @@ def sample(
             stacklevel=2,
         )
         initvals = kwargs.pop("start")
-    if nuts_sampler_kwargs_copy is None:
-        nuts_sampler_kwargs_copy = {}
+    if nuts_sampler_kwargs is None:
+        nuts_sampler_kwargs = {}
     if "target_accept" in kwargs:
         if "nuts" in kwargs and "target_accept" in kwargs["nuts"]:
             raise ValueError(
@@ -814,7 +810,7 @@ def sample(
                 progressbar=progressbar,
                 idata_kwargs=idata_kwargs,
                 compute_convergence_checks=compute_convergence_checks,
-                nuts_sampler_kwargs=nuts_sampler_kwargs_copy,
+                nuts_sampler_kwargs=nuts_sampler_kwargs,
                 **kwargs,
             )
 
