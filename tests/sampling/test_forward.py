@@ -540,38 +540,12 @@ class TestSamplePPC:
             ppc = pm.sample_posterior_predictive(idata, return_inferencedata=False)
             assert ppc["a"].shape == (nchains, ndraws)
 
-    def test_external_trace(self):
-        nchains = 2
-        ndraws = 500
-        with pm.Model() as model:
-            mu = pm.Normal("mu", 0.0, 1.0)
-            a = pm.Normal("a", mu=mu, sigma=1, observed=0.0)
-            trace = pm.sample(
-                draws=ndraws,
-                chains=nchains,
-            )
-
-        # test that trace is used in ppc
-        with pm.Model() as model_ppc:
-            mu = pm.Normal("mu", 0.0, 1.0)
-            a = pm.Normal("a", mu=mu, sigma=1)
-
-        ppc = pm.sample_posterior_predictive(
-            trace=trace, model=model_ppc, return_inferencedata=False
-        )
-        assert list(ppc.keys()) == ["a"]
-
     def test_external_trace_det(self):
-        nchains = 2
-        ndraws = 500
         with pm.Model() as model:
             mu = pm.Normal("mu", 0.0, 1.0)
             a = pm.Normal("a", mu=mu, sigma=1, observed=0.0)
             b = pm.Deterministic("b", a + 1)
-            trace = pm.sample(
-                draws=ndraws,
-                chains=nchains,
-            )
+            trace = pm.sample(tune=50, draws=50, chains=1, compute_convergence_checks=False)
 
         # test that trace is used in ppc
         with pm.Model() as model_ppc:

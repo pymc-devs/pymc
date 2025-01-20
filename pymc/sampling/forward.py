@@ -821,10 +821,12 @@ def sample_posterior_predictive(
     if var_names is not None:
         vars_ = [model[x] for x in var_names]
     else:
-        vars_ = model.observed_RVs + observed_dependent_deterministics(model)
+        observed_vars = model.observed_RVs
         if observed_data is not None:
-            vars_ += [model[x] for x in observed_data if x in model and x not in vars_]
-            vars_ += observed_dependent_deterministics(model, vars_)
+            observed_vars += [
+                model[x] for x in observed_data if x in model and x not in observed_vars
+            ]
+        vars_ = observed_vars + observed_dependent_deterministics(model, observed_vars)
 
     vars_to_sample = list(get_default_varnames(vars_, include_transformed=False))
 
