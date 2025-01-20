@@ -1,4 +1,4 @@
-#   Copyright 2024 The PyMC Developers
+#   Copyright 2024 - present The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -539,6 +539,24 @@ class TestSamplePPC:
 
             ppc = pm.sample_posterior_predictive(idata, return_inferencedata=False)
             assert ppc["a"].shape == (nchains, ndraws)
+
+    def test_external_trace_det(self):
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0.0, 1.0)
+            a = pm.Normal("a", mu=mu, sigma=1, observed=0.0)
+            b = pm.Deterministic("b", a + 1)
+            trace = pm.sample(tune=50, draws=50, chains=1, compute_convergence_checks=False)
+
+        # test that trace is used in ppc
+        with pm.Model() as model_ppc:
+            mu = pm.Normal("mu", 0.0, 1.0)
+            a = pm.Normal("a", mu=mu, sigma=1)
+            c = pm.Deterministic("c", a + 1)
+
+        ppc = pm.sample_posterior_predictive(
+            trace=trace, model=model_ppc, return_inferencedata=False
+        )
+        assert list(ppc.keys()) == ["a", "c"]
 
     def test_normal_vector(self):
         with pm.Model() as model:

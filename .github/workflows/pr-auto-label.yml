@@ -1,16 +1,14 @@
 name: "Pull Request Labeler"
 on:
-- pull_request_target
+# The labeler doesn't execute any contributed code, so it should be fairly safe.
+- pull_request_target  # zizmor: ignore[dangerous-triggers]
 
 jobs:
   sync:
     permissions:
-      contents: read
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
     - name: Sync labels with closing issues
       uses: wd60622/closing-labels@v0.0.3
       with:
