@@ -345,10 +345,13 @@ def draw(
     return [np.stack(v) for v in drawn_values]
 
 
-def observed_dependent_deterministics(model: Model):
+def observed_dependent_deterministics(model: Model, extra_observeds=None):
     """Find deterministics that depend directly on observed variables."""
+    if extra_observeds is None:
+        extra_observeds = []
+
     deterministics = model.deterministics
-    observed_rvs = set(model.observed_RVs)
+    observed_rvs = set(model.observed_RVs + extra_observeds)
     blockers = model.basic_RVs
     return [
         deterministic
@@ -767,6 +770,7 @@ def sample_posterior_predictive(
     if "coords" not in idata_kwargs:
         idata_kwargs["coords"] = {}
     idata: InferenceData | None = None
+    observed_data = None
     stacked_dims = None
     if isinstance(trace, InferenceData):
         _constant_data = getattr(trace, "constant_data", None)
@@ -774,6 +778,7 @@ def sample_posterior_predictive(
             trace_coords.update({str(k): v.data for k, v in _constant_data.coords.items()})
             constant_data.update({str(k): v.data for k, v in _constant_data.items()})
         idata = trace
+        observed_data = trace.get("observed_data", None)
         trace = trace["posterior"]
     if isinstance(trace, xarray.Dataset):
         trace_coords.update({str(k): v.data for k, v in trace.coords.items()})
@@ -816,7 +821,12 @@ def sample_posterior_predictive(
     if var_names is not None:
         vars_ = [model[x] for x in var_names]
     else:
-        vars_ = model.observed_RVs + observed_dependent_deterministics(model)
+        observed_vars = model.observed_RVs
+        if observed_data is not None:
+            observed_vars += [
+                model[x] for x in observed_data if x in model and x not in observed_vars
+            ]
+        vars_ = observed_vars + observed_dependent_deterministics(model, observed_vars)
 
     vars_to_sample = list(get_default_varnames(vars_, include_transformed=False))
 
