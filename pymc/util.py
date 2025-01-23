@@ -709,6 +709,8 @@ class ProgressManager:
         show_progress = True
 
         match progressbar:
+            case True:
+                show_progress = True
             case False:
                 show_progress = False
             case "combined":
