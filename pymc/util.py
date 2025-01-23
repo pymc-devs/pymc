@@ -709,30 +709,32 @@ class ProgressManager:
         show_progress = True
 
         match progressbar:
-            case True:
-                show_progress = True
             case False:
                 show_progress = False
             case "combined":
                 self.combined_progress = True
             case "chain":
                 self.combined_progress = False
-            case "combined+full":
+            case "simple":
+                self.full_stats = False
+            case "full":
+                self.full_stats = True
+            case "combined+full" | "full+combined":
                 self.combined_progress = True
                 self.full_stats = True
-            case "combined+simple":
+            case "combined+simple" | "simple+combined":
                 self.combined_progress = True
                 self.full_stats = False
-            case "chain+full":
+            case "chain+full" | "full+chain":
                 self.combined_progress = False
                 self.full_stats = True
-            case "chain+simple":
+            case "chain+simple" | "simple+chain":
                 self.combined_progress = False
                 self.full_stats = False
             case _:
                 raise ValueError(
                     "Invalid value for `progressbar`. Valid values are True (default), False (no progress bar), "
-                    "or one of 'combined', 'chain', 'combined+full', 'combined+simple', 'chain+full', 'chain+simple'."
+                    "one of 'combined', 'chain', 'simple', 'full', or a '+' delimited pair of two of these values."
                 )
 
         progress_columns, progress_stats = step_method._progressbar_config(chains)
