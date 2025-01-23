@@ -34,9 +34,8 @@ from pymc.backends.zarr import ZarrChain
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.util import (
+    ProgressManager,
     RandomGeneratorState,
-    compute_draw_speed,
-    create_progress_bar,
     default_progress_theme,
     get_state_from_generator,
     random_generator_from_state,
@@ -484,25 +483,14 @@ class ParallelSampler:
         self._max_active = cores
 
         self._in_context = False
-
-        progress_columns, progress_stats = step_method._progressbar_config(chains)
-
-        self._progress = create_progress_bar(
-            progress_columns,
-            progress_stats,
+        self._progress = ProgressManager(
+            step_method=step_method,
+            chains=chains,
+            draws=draws,
+            tune=tune,
             progressbar=progressbar,
             progressbar_theme=progressbar_theme,
         )
-
-        self.progress_stats = progress_stats
-        self.update_stats = step_method._make_update_stats_function()
-
-        self._show_progress = progressbar
-        self._divergences = 0
-        self._completed_draws = 0
-        self._total_draws = draws + tune
-        self._desc = "Sampling chain"
-        self._chains = chains
 
     def _make_active(self):
         while self._inactive and len(self._active) < self._max_active:
@@ -517,41 +505,13 @@ class ParallelSampler:
             raise ValueError("Use ParallelSampler as context manager.")
         self._make_active()
 
-        with self._progress as progress:
-            tasks = [
-                progress.add_task(
-                    self._desc.format(self),
-                    completed=0,
-                    draws=0,
-                    total=self._total_draws - 1,
-                    chain_idx=chain_idx,
-                    sampling_speed=0,
-                    speed_unit="draws/s",
-                    **{stat: value[chain_idx] for stat, value in self.progress_stats.items()},
-                )
-                for chain_idx in range(self._chains)
-            ]
-
+        with self._progress:
             while self._active:
                 draw = ProcessAdapter.recv_draw(self._active)
                 proc, is_last, draw, tuning, stats = draw
 
-                self._completed_draws += 1
-
-                speed, unit = compute_draw_speed(progress._tasks[proc.chain].elapsed, draw)
-
-                if not tuning and stats and stats[0].get("diverging"):
-                    self._divergences += 1
-
-                self.progress_stats = self.update_stats(self.progress_stats, stats, proc.chain)
-
-                progress.update(
-                    tasks[proc.chain],
-                    completed=draw,
-                    draws=draw,
-                    sampling_speed=speed,
-                    speed_unit=unit,
-                    **{stat: value[proc.chain] for stat, value in self.progress_stats.items()},
+                self._progress.update(
+                    chain_idx=proc.chain, is_last=is_last, draw=draw, tuning=tuning, stats=stats
                 )
 
                 if is_last:
@@ -559,12 +519,6 @@ class ParallelSampler:
                     self._active.remove(proc)
                     self._finished.append(proc)
                     self._make_active()
-                    progress.update(
-                        tasks[proc.chain],
-                        draws=draw + 1,
-                        **{stat: value[proc.chain] for stat, value in self.progress_stats.items()},
-                        refresh=True,
-                    )
 
                 # We could also yield proc.shared_point_view directly,
                 # and only call proc.write_next() after the yield returns.

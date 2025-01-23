@@ -702,30 +702,164 @@ class DivergenceBarColumn(BarColumn):
             self.finished_style = self.non_diverging_finished_style
 
 
-def create_progress_bar(step_columns, init_stat_dict, progressbar, progressbar_theme):
-    columns = [TextColumn("{task.fields[draws]}", table_column=Column("Draws", ratio=1))]
-    columns += step_columns
-    columns += [
-        TextColumn(
-            "{task.fields[sampling_speed]:0.2f} {task.fields[speed_unit]}",
-            table_column=Column("Sampling Speed", ratio=1),
-        ),
-        TimeElapsedColumn(table_column=Column("Elapsed", ratio=1)),
-        TimeRemainingColumn(table_column=Column("Remaining", ratio=1)),
-    ]
+class ProgressManager:
+    def __init__(self, step_method, chains, draws, tune, progressbar, progressbar_theme):
+        mode = "chain"
+        stats = "full"
 
-    return CustomProgress(
-        DivergenceBarColumn(
-            table_column=Column("Progress", ratio=2),
-            diverging_color="tab:red",
-            complete_style=Style.parse("rgb(31,119,180)"),  # tab:blue
-            finished_style=Style.parse("rgb(31,119,180)"),  # tab:blue
-        ),
-        *columns,
-        console=Console(theme=progressbar_theme),
-        disable=not progressbar,
-        include_headers=True,
-    )
+        if isinstance(progressbar, bool):
+            show_progress = progressbar
+        else:
+            show_progress = True
+
+            if "+" in progressbar:
+                mode, stats = progressbar.split("+")
+            else:
+                mode = progressbar
+                stats = "full"
+
+        if mode not in ["chain", "combined"]:
+            raise ValueError('Invalid mode. Valid values are "chain" and "combined"')
+        if stats not in ["full", "simple"]:
+            raise ValueError('Invalid stats. Valid values are "full" and "simple"')
+
+        progress_columns, progress_stats = step_method._progressbar_config(chains)
+        self.combined_progress = mode == "combined"
+        self.full_stats = stats == "full"
+
+        self._progress = self.create_progress_bar(
+            progress_columns,
+            progressbar=progressbar,
+            progressbar_theme=progressbar_theme,
+        )
+
+        self.progress_stats = progress_stats
+        self.update_stats = step_method._make_update_stats_function()
+
+        self._show_progress = show_progress
+        self.divergences = 0
+        self.completed_draws = 0
+        self.total_draws = draws + tune
+        self.desc = "Sampling chain"
+        self.chains = chains
+
+        self._tasks: list[Task] | None = None
+
+    def __enter__(self):
+        self._initialize_tasks()
+
+        return self._progress.__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self._progress.__exit__(exc_type, exc_val, exc_tb)
+
+    def _initialize_tasks(self):
+        if self.combined_progress:
+            self.tasks = [
+                self._progress.add_task(
+                    self.desc.format(self),
+                    completed=0,
+                    draws=0,
+                    total=self.total_draws * self.chains - 1,
+                    chain_idx=0,
+                    sampling_speed=0,
+                    speed_unit="draws/s",
+                    **{stat: value[0] for stat, value in self.progress_stats.items()},
+                )
+            ]
+
+        else:
+            self.tasks = [
+                self._progress.add_task(
+                    self.desc.format(self),
+                    completed=0,
+                    draws=0,
+                    total=self.total_draws - 1,
+                    chain_idx=chain_idx,
+                    sampling_speed=0,
+                    speed_unit="draws/s",
+                    **{stat: value[chain_idx] for stat, value in self.progress_stats.items()},
+                )
+                for chain_idx in range(self.chains)
+            ]
+
+    def compute_draw_speed(self, chain_idx, draws):
+        elapsed = self._progress.tasks[chain_idx].elapsed
+        speed = draws / max(elapsed, 1e-6)
+
+        if speed > 1 or speed == 0:
+            unit = "draws/s"
+        else:
+            unit = "s/draws"
+            speed = 1 / speed
+
+        return speed, unit
+
+    def update(self, chain_idx, is_last, draw, tuning, stats):
+        if not self._show_progress:
+            return
+
+        self.completed_draws += 1
+        if self.combined_progress:
+            draw = self.completed_draws
+            chain_idx = 0
+
+        speed, unit = self.compute_draw_speed(chain_idx, draw)
+
+        if not tuning and stats and stats[0].get("diverging"):
+            self.divergences += 1
+
+        self.progress_stats = self.update_stats(self.progress_stats, stats, chain_idx)
+        more_updates = (
+            {stat: value[chain_idx] for stat, value in self.progress_stats.items()}
+            if self.full_stats
+            else {}
+        )
+
+        self._progress.update(
+            self.tasks[chain_idx],
+            completed=draw,
+            draws=draw,
+            sampling_speed=speed,
+            speed_unit=unit,
+            **more_updates,
+        )
+
+        if is_last:
+            self._progress.update(
+                self.tasks[chain_idx],
+                draws=draw + 1 if not self.combined_progress else draw - 1,
+                **more_updates,
+                refresh=True,
+            )
+
+    def create_progress_bar(self, step_columns, progressbar, progressbar_theme):
+        columns = [TextColumn("{task.fields[draws]}", table_column=Column("Draws", ratio=1))]
+
+        if self.full_stats:
+            columns += step_columns
+
+        columns += [
+            TextColumn(
+                "{task.fields[sampling_speed]:0.2f} {task.fields[speed_unit]}",
+                table_column=Column("Sampling Speed", ratio=1),
+            ),
+            TimeElapsedColumn(table_column=Column("Elapsed", ratio=1)),
+            TimeRemainingColumn(table_column=Column("Remaining", ratio=1)),
+        ]
+
+        return CustomProgress(
+            DivergenceBarColumn(
+                table_column=Column("Progress", ratio=2),
+                diverging_color="tab:red",
+                complete_style=Style.parse("rgb(31,119,180)"),  # tab:blue
+                finished_style=Style.parse("rgb(31,119,180)"),  # tab:blue
+            ),
+            *columns,
+            console=Console(theme=progressbar_theme),
+            disable=not progressbar,
+            include_headers=True,
+        )
 
 
 def compute_draw_speed(elapsed, draws):
