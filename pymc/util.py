@@ -719,7 +719,7 @@ def create_progress_bar(step_columns, init_stat_dict, progressbar, progressbar_t
             table_column=Column("Progress", ratio=2),
             diverging_color="tab:red",
             complete_style=Style.parse("rgb(31,119,180)"),  # tab:blue
-            finished_style=Style.parse("rgb(44,160,44)"),  # tab:green
+            finished_style=Style.parse("rgb(31,119,180)"),  # tab:blue
         ),
         *columns,
         console=Console(theme=progressbar_theme),
