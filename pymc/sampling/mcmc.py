@@ -1296,13 +1296,13 @@ def _iter_sample(
                 )
 
             yield stats
-            
+
     except (KeyboardInterrupt, BaseException):
         if isinstance(trace, ZarrChain):
             trace.record_sampling_state(step=step)
         trace.close()
         raise
-    
+
     else:
         if isinstance(trace, ZarrChain):
             trace.record_sampling_state(step=step)
