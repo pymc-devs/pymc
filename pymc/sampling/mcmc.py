@@ -276,7 +276,7 @@ def _print_step_hierarchy(s: Step, level: int = 0) -> None:
     else:
         varnames = ", ".join(
             [
-                get_untransformed_name(v.name) if is_transformed_name(v.name) else v.name
+                get_untransformed_name(v.name) if is_transformed_name(v.name) else v.name  # type: ignore[misc]
                 for v in s.vars
             ]
         )
@@ -1238,7 +1238,7 @@ def _iter_sample(
     rng: np.random.Generator,
     model: Model | None = None,
     callback: SamplingIteratorCallback | None = None,
-) -> Iterator[bool]:
+) -> Iterator[list[dict[str, Any]]]:
     """Sample one chain with a generator (singleprocess).
 
     Parameters
@@ -1261,8 +1261,8 @@ def _iter_sample(
 
     Yields
     ------
-    diverging : bool
-        Indicates if the draw is divergent. Only available with some samplers.
+    stats : list of dict
+        Dictionary of statistics returned by step sampler
     """
     draws = int(draws)
 

@@ -755,7 +755,7 @@ class ProgressManager:
         self.desc = "Sampling chain"
         self.chains = chains
 
-        self._tasks: list[Task] | None = None
+        self._tasks: list[Task] | None = None  # type: ignore[annotation-unchecked]
 
     def __enter__(self):
         self._initialize_tasks()
