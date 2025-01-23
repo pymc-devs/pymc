@@ -1293,22 +1293,25 @@ def _iter_sample(
                 step.iter_count = 0
             if i == tune:
                 step.stop_tuning()
+
             point, stats = step.step(point)
             trace.record(point, stats)
             log_warning_stats(stats)
-            diverging = i > tune and len(stats) > 0 and (stats[0].get("diverging") is True)
+
             if callback is not None:
                 callback(
                     trace=trace,
                     draw=Draw(chain, i == draws, i, i < tune, stats, point),
                 )
 
-            yield diverging
+            yield stats
+            
     except (KeyboardInterrupt, BaseException):
         if isinstance(trace, ZarrChain):
             trace.record_sampling_state(step=step)
         trace.close()
         raise
+    
     else:
         if isinstance(trace, ZarrChain):
             trace.record_sampling_state(step=step)
