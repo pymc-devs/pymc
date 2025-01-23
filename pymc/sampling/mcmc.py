@@ -1428,7 +1428,7 @@ def _init_jitter(
     seeds: Sequence[int] | np.ndarray,
     jitter: bool,
     jitter_max_retries: int,
-    logp_dlogp_func=None,
+    logp_fn: Callable[[PointType], np.ndarray] | None = None,
 ) -> list[PointType]:
     """Apply a uniform jitter in [-1, 1] to the test value as starting point in each chain.
 
@@ -1443,11 +1443,14 @@ def _init_jitter(
         Whether to apply jitter or not.
     jitter_max_retries : int
         Maximum number of repeated attempts at initializing values (per chain).
+    logp_fn: Callable[[dict[str, np.ndarray]], np.ndarray | jax.Array] | None
+        logp function that takes the output of initial point functions as input.
+        If None, will use the results of model.compile_logp().
 
     Returns
     -------
-    start : ``pymc.model.Point``
-        Starting point for sampler
+    initial_points : list[dict[str, np.ndarray]]
+        List of starting points for the sampler
     """
     ipfns = make_initial_point_fns_per_chain(
         model=model,
@@ -1459,14 +1462,10 @@ def _init_jitter(
     if not jitter:
         return [ipfn(seed) for ipfn, seed in zip(ipfns, seeds)]
 
-    model_logp_fn: Callable
-    if logp_dlogp_func is None:
-        model_logp_fn = model.compile_logp()
+    if logp_fn is None:
+        model_logp_fn: Callable[[PointType], np.ndarray] = model.compile_logp()
     else:
-
-        def model_logp_fn(ip):
-            q, _ = DictToArrayBijection.map(ip)
-            return logp_dlogp_func([q], extra_vars={})[0]
+        model_logp_fn = logp_fn
 
     initial_points = []
     for ipfn, seed in zip(ipfns, seeds):
@@ -1591,13 +1590,18 @@ def init_nuts(
 
     logp_dlogp_func = model.logp_dlogp_function(ravel_inputs=True, **compile_kwargs)
     logp_dlogp_func.trust_input = True
+
+    def model_logp_fn(ip: PointType) -> np.ndarray:
+        q, _ = DictToArrayBijection.map(ip)
+        return logp_dlogp_func([q], extra_vars={})[0]
+
     initial_points = _init_jitter(
         model,
         initvals,
         seeds=random_seed_list,
         jitter="jitter" in init,
         jitter_max_retries=jitter_max_retries,
-        logp_dlogp_func=logp_dlogp_func,
+        logp_fn=model_logp_fn,
     )
 
     apoints = [DictToArrayBijection.map(point) for point in initial_points]
