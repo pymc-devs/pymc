@@ -33,6 +33,7 @@ from pytensor.raise_op import Assert
 from pytensor.scalar import Cast
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.basic import IntegersRV
+from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.type import TensorType
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 
@@ -148,6 +149,19 @@ class MinibatchOp(OpFromGraph):
         return "Minibatch"
 
 
+def first_inputs(r):
+    if not r.owner:
+        return
+
+    first_input = r.owner.inputs[0]
+    yield first_input
+    yield from first_inputs(first_input)
+
+
+def has_random_ancestor(r):
+    return any(isinstance(i, RandomGeneratorSharedVariable) for i in first_inputs(r))
+
+
 def is_valid_observed(v) -> bool:
     if not isinstance(v, Variable):
         # Non-symbolic constant
@@ -165,6 +179,7 @@ def is_valid_observed(v) -> bool:
             and isinstance(v.owner.op.scalar_op, Cast)
             and is_valid_observed(v.owner.inputs[0])
         )
+        or not has_random_ancestor(v)
         # Or Minibatch
         or (
             isinstance(v.owner.op, MinibatchOp)
