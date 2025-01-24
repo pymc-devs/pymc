@@ -623,3 +623,14 @@ class TestMinibatch:
         [draw_mA, draw_mB] = pm.draw([mA, mB])
         assert draw_mA.shape == (10,)
         np.testing.assert_allclose(draw_mA, -draw_mB)
+
+
+def test_scaling_data_works_in_likelihood() -> None:
+    data = np.array([10, 11, 12, 13, 14, 15])
+
+    with pm.Model() as model:
+        target = pm.Data("target", data)
+        scale = 12
+        scaled_target = target / scale
+        mu = pm.Normal("mu", mu=0, sigma=1)
+        pm.Normal("x", mu=mu, sigma=1, observed=scaled_target)
