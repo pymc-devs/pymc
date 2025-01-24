@@ -153,7 +153,12 @@ def first_inputs(r):
     if not r.owner:
         return
 
-    first_input = r.owner.inputs[0]
+    inputs = r.owner.inputs
+
+    if not inputs:
+        return
+
+    first_input = inputs[0]
     yield first_input
     yield from first_inputs(first_input)
 
