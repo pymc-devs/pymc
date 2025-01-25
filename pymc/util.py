@@ -842,7 +842,7 @@ class ProgressManager:
         if is_last:
             self._progress.update(
                 self.tasks[chain_idx],
-                draws=draw + 1 if not self.combined_progress else draw - 1,
+                draws=draw + 1 if not self.combined_progress else draw,
                 **more_updates,
                 refresh=True,
             )
