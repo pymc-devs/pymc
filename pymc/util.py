@@ -727,7 +727,7 @@ class ProgressManager:
 
     def __init__(
         self,
-        step_method: "BlockedStep" | "CompoundStep",
+        step_method: "BlockedStep | CompoundStep",
         chains: int,
         draws: int,
         tune: int,
@@ -745,7 +745,7 @@ class ProgressManager:
 
         Parameters
         ----------
-        step_method: BlockedStep
+        step_method: BlockedStep or CompoundStep
             The step method being used to sample
         chains: int
             Number of chains being sampled
