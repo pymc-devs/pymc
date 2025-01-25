@@ -302,7 +302,7 @@ def _sample_external_nuts(
     initvals: StartDict | Sequence[StartDict | None] | None,
     model: Model,
     var_names: Sequence[str] | None,
-    progressbar: bool,
+    progressbar: bool | ProgressType,
     idata_kwargs: dict | None,
     compute_convergence_checks: bool,
     nuts_sampler_kwargs: dict | None,
@@ -401,7 +401,7 @@ def _sample_external_nuts(
             initvals=initvals,
             model=model,
             var_names=var_names,
-            progressbar=progressbar,
+            progressbar=True if progressbar else False,
             nuts_sampler=sampler,
             idata_kwargs=idata_kwargs,
             compute_convergence_checks=compute_convergence_checks,
@@ -488,7 +488,7 @@ def sample(
     cores: int | None = None,
     random_seed: RandomState = None,
     progressbar: bool | ProgressType = True,
-    progressbar_theme: Theme | None = default_progress_theme,
+    progressbar_theme: Theme | None = None,
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
@@ -831,7 +831,9 @@ def sample(
                 n_init=n_init,
                 model=model,
                 random_seed=random_seed_list,
-                progressbar=progressbar,
+                progressbar=True
+                if progressbar
+                else False,  # ADVI doesn't use the ProgressManager; pass a bool only
                 jitter_max_retries=jitter_max_retries,
                 tune=tune,
                 initvals=initvals,

@@ -47,7 +47,7 @@ from rich.theme import Theme
 from pymc.exceptions import BlockModelAccessError
 
 if TYPE_CHECKING:
-    from pymc import BlockedStep
+    from pymc.step_methods.compound import BlockedStep, CompoundStep
 
 
 ProgressType = Literal[
@@ -727,12 +727,12 @@ class ProgressManager:
 
     def __init__(
         self,
-        step_method: BlockedStep,
+        step_method: "BlockedStep" | "CompoundStep",
         chains: int,
         draws: int,
         tune: int,
         progressbar: bool | ProgressType = True,
-        progressbar_theme: Theme = default_progress_theme,
+        progressbar_theme: Theme | None = None,
     ):
         """
         Manage progress bars displayed during sampling.
@@ -770,6 +770,9 @@ class ProgressManager:
         progressbar_theme: Theme, optional
             The theme to use for the progress bar. Defaults to the default theme.
         """
+        if progressbar_theme is None:
+            progressbar_theme = default_progress_theme
+
         self.combined_progress = False
         self.full_stats = True
         show_progress = True
