@@ -66,6 +66,7 @@ from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
     ProgressManager,
+    ProgressType,
     RandomSeed,
     RandomState,
     _get_seeds_per_chain,
@@ -486,7 +487,7 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool = True,
+    progressbar: bool | ProgressType = True,
     progressbar_theme: Theme | None = default_progress_theme,
     step=None,
     var_names: Sequence[str] | None = None,
@@ -537,11 +538,19 @@ def sample(
         A ``TypeError`` will be raised if a legacy :py:class:`~numpy.random.RandomState` object is passed.
         We no longer support ``RandomState`` objects because their seeding mechanism does not allow
         easy spawning of new independent random streams that are needed by the step methods.
-    progressbar : bool, optional default=True
-        Whether or not to display a progress bar in the command line. The bar shows the percentage
-        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
-        time until completion ("expected time of arrival"; ETA).
-        Only applicable to the pymc nuts sampler.
+    progressbar: bool or ProgressType, optional
+            How and whether to display the progress bar. If False, no progress bar is displayed. Otherwise, you can ask
+            for either:
+            - "combined": A single progress bar that displays the progress of all chains combined.
+            - "chain": A separate progress bar for each chain.
+
+            You can also combine the above options with:
+            - "simple": A simple progress bar that displays only timing information alongside the progress bar.
+            - "full": A progress bar that displays all available statistics.
+
+            These can be combined with a "+" delimiter, for example: "combined+full" or "chain+simple".
+
+            If True, the default is "chain+full".
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically. By default the NUTS step

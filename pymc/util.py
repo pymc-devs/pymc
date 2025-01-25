@@ -19,7 +19,7 @@ import warnings
 from collections import namedtuple
 from collections.abc import Iterable, Sequence
 from copy import deepcopy
-from typing import NewType, cast
+from typing import TYPE_CHECKING, Literal, NewType, cast
 
 import arviz
 import cloudpickle
@@ -45,6 +45,23 @@ from rich.table import Column, Table
 from rich.theme import Theme
 
 from pymc.exceptions import BlockModelAccessError
+
+if TYPE_CHECKING:
+    from pymc import BlockedStep
+
+
+ProgressType = Literal[
+    "chain",
+    "combined",
+    "simple",
+    "full",
+    "combined+full",
+    "full+combined",
+    "combined+simple",
+    "simple+combined",
+    "chain+full",
+    "full+chain",
+]
 
 
 def __getattr__(name):
@@ -639,6 +656,7 @@ class CustomProgress(Progress):
         """
 
         def call_column(column, task):
+            # Subclass rich.BarColumn and add a callback method to dynamically update the display
             if hasattr(column, "callbacks"):
                 column.callbacks(task)
 
@@ -681,6 +699,8 @@ class CustomProgress(Progress):
 
 
 class DivergenceBarColumn(BarColumn):
+    """Rich colorbar that changes color when a chain has detected a divergence."""
+
     def __init__(self, *args, diverging_color="red", **kwargs):
         from matplotlib.colors import to_rgb
 
@@ -703,7 +723,53 @@ class DivergenceBarColumn(BarColumn):
 
 
 class ProgressManager:
-    def __init__(self, step_method, chains, draws, tune, progressbar, progressbar_theme):
+    """Manage progress bars displayed during sampling."""
+
+    def __init__(
+        self,
+        step_method: BlockedStep,
+        chains: int,
+        draws: int,
+        tune: int,
+        progressbar: bool | ProgressType = True,
+        progressbar_theme: Theme = default_progress_theme,
+    ):
+        """
+        Manage progress bars displayed during sampling.
+
+        When sampling, Step classes are responsible for computing and exposing statistics that can be reported on
+        progress bars. Each Step implements two class methods: :meth:`pymc.step_methods.BlockedStep._progressbar_config`
+        and :meth:`pymc.step_methods.BlockedStep._make_update_stats_function`. `_progressbar_config` reports which
+        columns should be displayed on the progress bar, and `_make_update_stats_function` computes the statistics
+        that will be displayed on the progress bar.
+
+        Parameters
+        ----------
+        step_method: BlockedStep
+            The step method being used to sample
+        chains: int
+            Number of chains being sampled
+        draws: int
+            Number of draws per chain
+        tune: int
+            Number of tuning steps per chain
+        progressbar: bool or ProgressType, optional
+            How and whether to display the progress bar. If False, no progress bar is displayed. Otherwise, you can ask
+            for either:
+            - "combined": A single progress bar that displays the progress of all chains combined.
+            - "chain": A separate progress bar for each chain.
+
+            You can also combine the above options with:
+            - "simple": A simple progress bar that displays only timing information alongside the progress bar.
+            - "full": A progress bar that displays all available statistics.
+
+            These can be combined with a "+" delimiter, for example: "combined+full" or "chain+simple".
+
+            If True, the default is "chain+full".
+
+        progressbar_theme: Theme, optional
+            The theme to use for the progress bar. Defaults to the default theme.
+        """
         self.combined_progress = False
         self.full_stats = True
         show_progress = True
