@@ -619,6 +619,20 @@ class TestCompilePyMC:
         fn = compile([], x, random_seed=1)
         assert not (set(fn()) & set(fn()))
 
+    def test_unused_ofg_rng(self):
+        rng = pytensor.shared(np.random.default_rng())
+        next_rng, x = pt.random.normal(rng=rng).owner.outputs
+        ofg1 = OpFromGraph([rng], [next_rng, x])
+        ofg2 = OpFromGraph([rng, x], [x + 1])
+
+        next_rng, x = ofg1(rng)
+        y = ofg2(rng, x)
+
+        # In all these cases the update should be the same
+        assert collect_default_updates([x]) == {rng: next_rng}
+        assert collect_default_updates([y]) == {rng: next_rng}
+        assert collect_default_updates([x, y]) == {rng: next_rng}
+
 
 def test_replace_rng_nodes():
     rng = pytensor.shared(np.random.default_rng())
