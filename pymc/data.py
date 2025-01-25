@@ -30,15 +30,13 @@ from pytensor.compile.builders import OpFromGraph
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Variable
 from pytensor.raise_op import Assert
-from pytensor.scalar import Cast
-from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.basic import IntegersRV
-from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.type import TensorType
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 import pymc as pm
 
+from pymc.logprob.utils import rvs_in_graph
 from pymc.pytensorf import GeneratorOp, convert_data, smarttypeX
 from pymc.vartypes import isgenerator
 
@@ -149,22 +147,8 @@ class MinibatchOp(OpFromGraph):
         return "Minibatch"
 
 
-def first_inputs(r):
-    if not r.owner:
-        return
-
-    inputs = r.owner.inputs
-
-    if not inputs:
-        return
-
-    first_input = inputs[0]
-    yield first_input
-    yield from first_inputs(first_input)
-
-
 def has_random_ancestor(r):
-    return any(isinstance(i, RandomGeneratorSharedVariable) for i in first_inputs(r))
+    return rvs_in_graph(r) != set()
 
 
 def is_valid_observed(v) -> bool:
@@ -177,14 +161,7 @@ def is_valid_observed(v) -> bool:
         return True
 
     return (
-        # The only PyTensor operation we allow on observed data is type casting
-        # Although we could allow for any graph that does not depend on other RVs
-        (
-            isinstance(v.owner.op, Elemwise)
-            and isinstance(v.owner.op.scalar_op, Cast)
-            and is_valid_observed(v.owner.inputs[0])
-        )
-        or not has_random_ancestor(v)
+        not has_random_ancestor(v)
         # Or Minibatch
         or (
             isinstance(v.owner.op, MinibatchOp)
