@@ -51,16 +51,12 @@ if TYPE_CHECKING:
 
 
 ProgressType = Literal[
-    "chain",
     "combined",
-    "simple",
-    "full",
-    "combined+full",
-    "full+combined",
-    "combined+simple",
-    "simple+combined",
-    "chain+full",
-    "full+chain",
+    "split",
+    "combined+stats",
+    "stats+combined",
+    "split+stats",
+    "stats+split",
 ]
 
 
@@ -755,17 +751,16 @@ class ProgressManager:
             Number of tuning steps per chain
         progressbar: bool or ProgressType, optional
             How and whether to display the progress bar. If False, no progress bar is displayed. Otherwise, you can ask
-            for either:
-            - "combined": A single progress bar that displays the progress of all chains combined.
-            - "chain": A separate progress bar for each chain.
+            for one of the following:
+            - "combined": A single progress bar that displays the total progress across all chains. Only timing
+                information is shown.
+            - "split": A separate progress bar for each chain. Only timing information is shown.
+            - "combined+stats" or "stats+combined": A single progress bar displaying the total progress across all
+                chains. Aggregate sample statistics are also displayed.
+            - "split+stats" or "stats+split": A separate progress bar for each chain. Sample statistics for each chain
+                are also displayed.
 
-            You can also combine the above options with:
-            - "simple": A simple progress bar that displays only timing information alongside the progress bar.
-            - "full": A progress bar that displays all available statistics.
-
-            These can be combined with a "+" delimiter, for example: "combined+full" or "chain+simple".
-
-            If True, the default is "chain+full".
+            If True, the default is "split+stats" is used.
 
         progressbar_theme: Theme, optional
             The theme to use for the progress bar. Defaults to the default theme.
@@ -784,28 +779,20 @@ class ProgressManager:
                 show_progress = False
             case "combined":
                 self.combined_progress = True
-            case "chain":
-                self.combined_progress = False
-            case "simple":
                 self.full_stats = False
-            case "full":
+            case "split":
+                self.combined_progress = False
+                self.full_stats = False
+            case "combined+stats" | "stats+combined":
                 self.full_stats = True
-            case "combined+full" | "full+combined":
                 self.combined_progress = True
+            case "split+stats" | "stats+split":
                 self.full_stats = True
-            case "combined+simple" | "simple+combined":
-                self.combined_progress = True
-                self.full_stats = False
-            case "chain+full" | "full+chain":
                 self.combined_progress = False
-                self.full_stats = True
-            case "chain+simple" | "simple+chain":
-                self.combined_progress = False
-                self.full_stats = False
             case _:
                 raise ValueError(
                     "Invalid value for `progressbar`. Valid values are True (default), False (no progress bar), "
-                    "one of 'combined', 'chain', 'simple', 'full', or a '+' delimited pair of two of these values."
+                    "one of 'combined', 'split', 'split+stats', or 'combined+stats."
                 )
 
         progress_columns, progress_stats = step_method._progressbar_config(chains)

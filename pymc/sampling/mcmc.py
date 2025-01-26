@@ -302,7 +302,7 @@ def _sample_external_nuts(
     initvals: StartDict | Sequence[StartDict | None] | None,
     model: Model,
     var_names: Sequence[str] | None,
-    progressbar: bool | ProgressType,
+    progressbar: bool,
     idata_kwargs: dict | None,
     compute_convergence_checks: bool,
     nuts_sampler_kwargs: dict | None,
@@ -401,7 +401,7 @@ def _sample_external_nuts(
             initvals=initvals,
             model=model,
             var_names=var_names,
-            progressbar=True if progressbar else False,
+            progressbar=progressbar,
             nuts_sampler=sampler,
             idata_kwargs=idata_kwargs,
             compute_convergence_checks=compute_convergence_checks,
@@ -423,7 +423,7 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool = True,
+    progressbar: bool | ProgressType = True,
     progressbar_theme: Theme | None = default_progress_theme,
     step=None,
     var_names: Sequence[str] | None = None,
@@ -455,7 +455,7 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool = True,
+    progressbar: bool | ProgressType = True,
     progressbar_theme: Theme | None = default_progress_theme,
     step=None,
     var_names: Sequence[str] | None = None,
@@ -540,17 +540,16 @@ def sample(
         easy spawning of new independent random streams that are needed by the step methods.
     progressbar: bool or ProgressType, optional
             How and whether to display the progress bar. If False, no progress bar is displayed. Otherwise, you can ask
-            for either:
-            - "combined": A single progress bar that displays the progress of all chains combined.
-            - "chain": A separate progress bar for each chain.
+            for one of the following:
+            - "combined": A single progress bar that displays the total progress across all chains. Only timing
+                information is shown.
+            - "split": A separate progress bar for each chain. Only timing information is shown.
+            - "combined+stats" or "stats+combined": A single progress bar displaying the total progress across all
+                chains. Aggregate sample statistics are also displayed.
+            - "split+stats" or "stats+split": A separate progress bar for each chain. Sample statistics for each chain
+                are also displayed.
 
-            You can also combine the above options with:
-            - "simple": A simple progress bar that displays only timing information alongside the progress bar.
-            - "full": A progress bar that displays all available statistics.
-
-            These can be combined with a "+" delimiter, for example: "combined+full" or "chain+simple".
-
-            If True, the default is "chain+full".
+            If True, the default is "split+stats" is used.
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically. By default the NUTS step
@@ -716,6 +715,10 @@ def sample(
     if isinstance(trace, list):
         raise ValueError("Please use `var_names` keyword argument for partial traces.")
 
+    # progressbar might be a string, which is used by the ProgressManager in the pymc samplers. External samplers and
+    # ADVI initialization expect just a bool.
+    progress_bool = True if progressbar else False
+
     model = modelcontext(model)
     if not model.free_RVs:
         raise SamplingError(
@@ -812,7 +815,7 @@ def sample(
                 initvals=initvals,
                 model=model,
                 var_names=var_names,
-                progressbar=progressbar,
+                progressbar=progress_bool,
                 idata_kwargs=idata_kwargs,
                 compute_convergence_checks=compute_convergence_checks,
                 nuts_sampler_kwargs=nuts_sampler_kwargs,
@@ -831,9 +834,7 @@ def sample(
                 n_init=n_init,
                 model=model,
                 random_seed=random_seed_list,
-                progressbar=True
-                if progressbar
-                else False,  # ADVI doesn't use the ProgressManager; pass a bool only
+                progressbar=progress_bool,
                 jitter_max_retries=jitter_max_retries,
                 tune=tune,
                 initvals=initvals,
