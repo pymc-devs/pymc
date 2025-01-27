@@ -768,27 +768,31 @@ class ProgressBarManager:
         if progressbar_theme is None:
             progressbar_theme = default_progress_theme
 
-        self.combined_progress = False
-        self.full_stats = True
-        show_progress = True
-
         match progressbar:
             case True:
+                self.combined_progress = False
+                self.full_stats = True
                 show_progress = True
             case False:
+                self.combined_progress = False
+                self.full_stats = True
                 show_progress = False
             case "combined":
                 self.combined_progress = True
                 self.full_stats = False
+                show_progress = True
             case "split":
                 self.combined_progress = False
                 self.full_stats = False
+                show_progress = True
             case "combined+stats" | "stats+combined":
-                self.full_stats = True
                 self.combined_progress = True
-            case "split+stats" | "stats+split":
                 self.full_stats = True
+                show_progress = True
+            case "split+stats" | "stats+split":
                 self.combined_progress = False
+                self.full_stats = True
+                show_progress = True
             case _:
                 raise ValueError(
                     "Invalid value for `progressbar`. Valid values are True (default), False (no progress bar), "
