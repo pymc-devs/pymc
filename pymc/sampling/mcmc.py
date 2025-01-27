@@ -65,8 +65,8 @@ from pymc.step_methods import NUTS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
-    ProgressManager,
-    ProgressType,
+    ProgressBarManager,
+    ProgressBarType,
     RandomSeed,
     RandomState,
     _get_seeds_per_chain,
@@ -423,7 +423,7 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool | ProgressType = True,
+    progressbar: bool | ProgressBarType = True,
     progressbar_theme: Theme | None = default_progress_theme,
     step=None,
     var_names: Sequence[str] | None = None,
@@ -455,7 +455,7 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool | ProgressType = True,
+    progressbar: bool | ProgressBarType = True,
     progressbar_theme: Theme | None = default_progress_theme,
     step=None,
     var_names: Sequence[str] | None = None,
@@ -487,7 +487,7 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool | ProgressType = True,
+    progressbar: bool | ProgressBarType = True,
     progressbar_theme: Theme | None = None,
     step=None,
     var_names: Sequence[str] | None = None,
@@ -717,7 +717,7 @@ def sample(
 
     # progressbar might be a string, which is used by the ProgressManager in the pymc samplers. External samplers and
     # ADVI initialization expect just a bool.
-    progress_bool = True if progressbar else False
+    progress_bool = bool(progressbar)
 
     model = modelcontext(model)
     if not model.free_RVs:
@@ -1148,7 +1148,7 @@ def _sample_many(
         Step function
     """
     initial_step_state = step.sampling_state
-    progress_manager = ProgressManager(
+    progress_manager = ProgressBarManager(
         step_method=step,
         chains=chains,
         draws=draws - kwargs.get("tune", 0),
@@ -1185,7 +1185,7 @@ def _sample(
     tune: int,
     model: Model | None = None,
     callback=None,
-    progress_manager: ProgressManager,
+    progress_manager: ProgressBarManager,
     **kwargs,
 ) -> None:
     """Sample one chain (singleprocess).
@@ -1210,7 +1210,7 @@ def _sample(
         Number of iterations to tune.
     model : Model, optional
         PyMC model. If None, the model is taken from the current context.
-    progress_manager: ProgressManager
+    progress_manager: ProgressBarManager
         Helper class used to handle progress bar styling and updates
     """
     sampling_gen = _iter_sample(

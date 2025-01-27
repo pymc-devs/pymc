@@ -34,7 +34,7 @@ from pymc.backends.zarr import ZarrChain
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.util import (
-    ProgressManager,
+    ProgressBarManager,
     RandomGeneratorState,
     default_progress_theme,
     get_state_from_generator,
@@ -483,7 +483,7 @@ class ParallelSampler:
         self._max_active = cores
 
         self._in_context = False
-        self._progress = ProgressManager(
+        self._progress = ProgressBarManager(
             step_method=step_method,
             chains=chains,
             draws=draws,

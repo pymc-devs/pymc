@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     from pymc.step_methods.compound import BlockedStep, CompoundStep
 
 
-ProgressType = Literal[
+ProgressBarType = Literal[
     "combined",
     "split",
     "combined+stats",
@@ -718,7 +718,7 @@ class DivergenceBarColumn(BarColumn):
             self.finished_style = self.non_diverging_finished_style
 
 
-class ProgressManager:
+class ProgressBarManager:
     """Manage progress bars displayed during sampling."""
 
     def __init__(
@@ -727,7 +727,7 @@ class ProgressManager:
         chains: int,
         draws: int,
         tune: int,
-        progressbar: bool | ProgressType = True,
+        progressbar: bool | ProgressBarType = True,
         progressbar_theme: Theme | None = None,
     ):
         """
