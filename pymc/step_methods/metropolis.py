@@ -24,6 +24,8 @@ import scipy.special
 from pytensor import tensor as pt
 from pytensor.graph.fg import MissingInputError
 from pytensor.tensor.random.basic import BernoulliRV, CategoricalRV
+from rich.progress import TextColumn
+from rich.table import Column
 
 import pymc as pm
 
@@ -324,6 +326,38 @@ class Metropolis(ArrayStepShared):
     @staticmethod
     def competence(var, has_grad):
         return Competence.COMPATIBLE
+
+    @staticmethod
+    def _progressbar_config(n_chains=1):
+        columns = [
+            TextColumn("{task.fields[tune]}", table_column=Column("Tuning", ratio=1)),
+            TextColumn("{task.fields[scaling]:0.2f}", table_column=Column("Scaling", ratio=1)),
+            TextColumn(
+                "{task.fields[accept_rate]:0.2f}", table_column=Column("Accept Rate", ratio=1)
+            ),
+        ]
+
+        stats = {
+            "tune": [True] * n_chains,
+            "scaling": [0] * n_chains,
+            "accept_rate": [0.0] * n_chains,
+        }
+
+        return columns, stats
+
+    @staticmethod
+    def _make_update_stats_function():
+        def update_stats(stats, step_stats, chain_idx):
+            if isinstance(step_stats, list):
+                step_stats = step_stats[0]
+
+            stats["tune"][chain_idx] = step_stats["tune"]
+            stats["accept_rate"][chain_idx] = step_stats["accept"]
+            stats["scaling"][chain_idx] = step_stats["scaling"]
+
+            return stats
+
+        return update_stats
 
 
 def tune(scale, acc_rate):
