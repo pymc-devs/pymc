@@ -367,43 +367,58 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_categorical(self, n):
+        domain = Domain(range(n), dtype="int64", edges=(0, n))
+        paramdomains = {"p": Simplex(n)}
+
         check_logp(
             pm.Categorical,
-            Domain(range(n), dtype="int64", edges=(0, n)),
-            {"p": Simplex(n)},
+            domain,
+            paramdomains,
             lambda value, p: categorical_logpdf(value, p),
         )
 
-    def test_categorical_logp_batch_dims(self):
+        check_selfconsistency_discrete_logcdf(
+            pm.Categorical,
+            domain,
+            paramdomains,
+        )
+
+    @pytest.mark.parametrize("method", (logp, logcdf), ids=lambda x: x.__name__)
+    def test_categorical_logp_batch_dims(self, method):
         # Core case
         p = np.array([0.2, 0.3, 0.5])
         value = np.array(2.0)
-        logp_expr = logp(pm.Categorical.dist(p=p, shape=value.shape), value)
-        assert logp_expr.type.ndim == 0
-        np.testing.assert_allclose(logp_expr.eval(), np.log(0.5))
+        expr = method(pm.Categorical.dist(p=p, shape=value.shape), value)
+        assert expr.type.ndim == 0
+        expected_p = 0.5 if method is logp else 1.0
+        np.testing.assert_allclose(expr.exp().eval(), expected_p)
 
         # Explicit batched value broadcasts p
         bcast_p = p[None]  # shape (1, 3)
         batch_value = np.array([0, 1])  # shape(3,)
-        logp_expr = logp(pm.Categorical.dist(p=bcast_p, shape=batch_value.shape), batch_value)
-        assert logp_expr.type.ndim == 1
-        np.testing.assert_allclose(logp_expr.eval(), np.log([0.2, 0.3]))
+        expr = method(pm.Categorical.dist(p=bcast_p, shape=batch_value.shape), batch_value)
+        assert expr.type.ndim == 1
+        expected_p = [0.2, 0.3] if method is logp else [0.2, 0.5]
+        np.testing.assert_allclose(expr.exp().eval(), expected_p)
+
+        # Implicit batch value broadcasts p
+        expr = method(pm.Categorical.dist(p=p, shape=()), batch_value)
+        assert expr.type.ndim == 1
+        expected_p = [0.2, 0.3] if method is logp else [0.2, 0.5]
+        np.testing.assert_allclose(expr.exp().eval(), expected_p)
 
         # Explicit batched value and batched p
         batch_p = np.array([p[::-1], p])
-        logp_expr = logp(pm.Categorical.dist(p=batch_p, shape=batch_value.shape), batch_value)
-        assert logp_expr.type.ndim == 1
-        np.testing.assert_allclose(logp_expr.eval(), np.log([0.5, 0.3]))
-
-        # Implicit batch value broadcasts p
-        logp_expr = logp(pm.Categorical.dist(p=p, shape=()), batch_value)
-        assert logp_expr.type.ndim == 1
-        np.testing.assert_allclose(logp_expr.eval(), np.log([0.2, 0.3]))
+        expr = method(pm.Categorical.dist(p=batch_p, shape=batch_value.shape), batch_value)
+        assert expr.type.ndim == 1
+        expected_p = [0.5, 0.3] if method is logp else [0.5, 0.5]
+        np.testing.assert_allclose(expr.exp().eval(), expected_p)
 
         # Implicit batch p broadcasts value
-        logp_expr = logp(pm.Categorical.dist(p=batch_p, shape=None), value)
-        assert logp_expr.type.ndim == 1
-        np.testing.assert_allclose(logp_expr.eval(), np.log([0.2, 0.5]))
+        expr = method(pm.Categorical.dist(p=batch_p, shape=None), value)
+        assert expr.type.ndim == 1
+        expected_p = [0.2, 0.5] if method is logp else [1.0, 1.0]
+        np.testing.assert_allclose(expr.exp().eval(), expected_p)
 
     @pytensor.config.change_flags(compute_test_value="raise")
     def test_categorical_bounds(self):
