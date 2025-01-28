@@ -199,6 +199,14 @@ class TestExtractObsData:
         assert isinstance(res, np.ndarray)
         np.testing.assert_array_equal(res, y)
 
+    def test_pytensor_operations(self):
+        x = np.array([1, 2, 3])
+        target = 1 + 3 * pt.as_tensor_variable(x)
+
+        res = extract_obs_data(target)
+        assert isinstance(res, np.ndarray)
+        np.testing.assert_array_equal(res, np.array([4, 7, 10]))
+
 
 @pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
 def test_convert_data(input_dtype):
