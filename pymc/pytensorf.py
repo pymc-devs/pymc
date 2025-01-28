@@ -180,7 +180,8 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
     from pymc.data import has_random_ancestor
 
     if not has_random_ancestor(x):
-        return x.eval()
+        cheap_eval_mode = Mode(linker="py", optimizer=None)
+        return x.eval(mode=cheap_eval_mode)
 
     raise TypeError(f"Data cannot be extracted from {x}")
 
