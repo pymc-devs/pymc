@@ -602,11 +602,11 @@ class TestMinibatch:
         mb = pm.Minibatch(pt.as_tensor(self.data).astype(int), batch_size=20)
         assert isinstance(mb.owner.op, MinibatchOp)
 
-        with pytest.raises(ValueError, match="not valid for Minibatch"):
-            pm.Minibatch(pt.as_tensor(self.data) * 2, batch_size=20)
+        mb = pm.Minibatch(pt.as_tensor(self.data) * 2, batch_size=20)
+        assert isinstance(mb.owner.op, MinibatchOp)
 
-        with pytest.raises(ValueError, match="not valid for Minibatch"):
-            pm.Minibatch(self.data, pt.as_tensor(self.data) * 2, batch_size=20)
+        for mb in pm.Minibatch(self.data, pt.as_tensor(self.data) * 2, batch_size=20):
+            assert isinstance(mb.owner.op, MinibatchOp)
 
     def test_assert(self):
         d1, d2 = pm.Minibatch(self.data, self.data[::2], batch_size=20)
