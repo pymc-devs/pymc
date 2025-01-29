@@ -147,10 +147,6 @@ class MinibatchOp(OpFromGraph):
         return "Minibatch"
 
 
-def has_random_ancestor(r):
-    return rvs_in_graph(r) != set()
-
-
 def is_valid_observed(v) -> bool:
     if not isinstance(v, Variable):
         # Non-symbolic constant
@@ -161,7 +157,7 @@ def is_valid_observed(v) -> bool:
         return True
 
     return (
-        not has_random_ancestor(v)
+        not rvs_in_graph(v)
         # Or Minibatch
         or (
             isinstance(v.owner.op, MinibatchOp)

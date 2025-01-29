@@ -628,7 +628,7 @@ class TestMinibatch:
 def test_scaling_data_works_in_likelihood() -> None:
     data = np.array([10, 11, 12, 13, 14, 15])
 
-    with pm.Model() as model:
+    with pm.Model():
         target = pm.Data("target", data)
         scale = 12
         scaled_target = target / scale
