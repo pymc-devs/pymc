@@ -375,7 +375,7 @@ class TestData:
         pd = pytest.importorskip("pandas")
         ser_sales = pd.Series(
             data=np.random.randint(low=0, high=30, size=22),
-            index=pd.date_range(start="2020-05-01", periods=22, freq="24H", name="date"),
+            index=pd.date_range(start="2020-05-01", periods=22, freq="24h", name="date"),
             name="sales",
         )
         with pm.Model() as pmodel:
