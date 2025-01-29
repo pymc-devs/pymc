@@ -207,6 +207,13 @@ class TestExtractObsData:
         assert isinstance(res, np.ndarray)
         np.testing.assert_array_equal(res, np.array([4, 7, 10]))
 
+    def test_pytensor_operations_raises(self):
+        x = pt.scalar("x")
+        target = 1 + 3 * x
+
+        with pytest.raises(TypeError, match="Data cannot be extracted from"):
+            extract_obs_data(target)
+
 
 @pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
 def test_convert_data(input_dtype):

@@ -179,7 +179,7 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
 
     from pymc.logprob.utils import rvs_in_graph
 
-    if not rvs_in_graph(x):
+    if not inputvars(x) and not rvs_in_graph(x):
         cheap_eval_mode = Mode(linker="py", optimizer=None)
         return x.eval(mode=cheap_eval_mode)
 
