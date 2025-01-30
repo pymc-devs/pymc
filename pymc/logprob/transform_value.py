@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
 
 from collections.abc import Sequence
 
@@ -40,7 +41,8 @@ class TransformedValue(Op):
         return Apply(self, [tran_value, value], [tran_value.type()])
 
     def perform(self, node, inputs, outputs):
-        raise NotImplementedError("These `Op`s should be removed from graphs used for computation.")
+        warnings.warn("TransformedValue should not be present in the final graph!")
+        outputs[0][0] = inputs[0]
 
     def infer_shape(self, fgraph, node, input_shapes):
         return [input_shapes[0]]
