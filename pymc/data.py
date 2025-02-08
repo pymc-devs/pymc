@@ -190,7 +190,7 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
     for i, v in enumerate(tensors):
         if not is_valid_observed(v):
             raise ValueError(
-                f"{i}: {v} is not valid for Minibatch, only constants or constants.astype(dtype) are allowed"
+                f"{i}: {v} is not valid for Minibatch, only non-random variables are allowed"
             )
 
     upper = tensors[0].shape[0]
