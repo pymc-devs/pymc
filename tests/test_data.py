@@ -493,20 +493,6 @@ def integers_ndim(ndim):
         i += 1
 
 
-def gen1():
-    i = 0
-    while True:
-        yield np.ones((10, 100)) * i
-        i += 1
-
-
-def gen2():
-    i = 0
-    while True:
-        yield np.ones((20, 100)) * i
-        i += 1
-
-
 @pytest.mark.usefixtures("strict_float32")
 class TestMinibatch:
     data = np.random.rand(30, 10)
