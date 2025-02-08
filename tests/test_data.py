@@ -608,6 +608,12 @@ class TestMinibatch:
         for mb in pm.Minibatch(self.data, pt.as_tensor(self.data) * 2, batch_size=20):
             assert isinstance(mb.owner.op, MinibatchOp)
 
+    def test_not_allowed(self):
+        data = pt.random.normal(loc=self.data, scale=1)
+
+        with pytest.raises(ValueError):
+            pm.Minibatch(data, batch_size=20)
+
     def test_assert(self):
         d1, d2 = pm.Minibatch(self.data, self.data[::2], batch_size=20)
         with pytest.raises(
