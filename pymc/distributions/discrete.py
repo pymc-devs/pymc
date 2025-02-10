@@ -71,7 +71,7 @@ from pymc.pytensorf import normalize_rng_param
 
 class Binomial(Discrete):
     R"""
-    Binomial log-likelihood.
+    Binomial distribution.
 
     The discrete probability distribution of the number of successes
     in a sequence of n independent yes/no experiments, each of which
@@ -176,7 +176,7 @@ class Binomial(Discrete):
 
 class BetaBinomial(Discrete):
     R"""
-    Beta-binomial log-likelihood.
+    Beta-binomial distribution.
 
     Equivalent to binomial random variable with success probability
     drawn from a beta distribution.
@@ -293,7 +293,7 @@ class BetaBinomial(Discrete):
 
 
 class Bernoulli(Discrete):
-    R"""Bernoulli log-likelihood.
+    R"""Bernoulli distribution.
 
     The Bernoulli distribution describes the probability of successes
     (x=1) and failures (x=0).
@@ -413,7 +413,7 @@ class DiscreteWeibullRV(SymbolicRandomVariable):
 
 
 class DiscreteWeibull(Discrete):
-    R"""Discrete Weibull log-likelihood.
+    R"""Discrete Weibull distribution.
 
     The discrete Weibull distribution is a flexible model of count data that
     can handle both over- and under-dispersion.
@@ -506,7 +506,7 @@ class DiscreteWeibull(Discrete):
 
 class Poisson(Discrete):
     R"""
-    Poisson log-likelihood.
+    Poisson distribution.
 
     Often used to model the number of events occurring in a fixed period
     of time when the times at which events occur are independent.
@@ -602,7 +602,7 @@ class Poisson(Discrete):
 
 class NegativeBinomial(Discrete):
     R"""
-    Negative binomial log-likelihood.
+    Negative binomial distribution.
 
     The negative binomial distribution describes a Poisson random variable
     whose rate parameter is gamma distributed.
@@ -750,7 +750,7 @@ class NegativeBinomial(Discrete):
 
 class Geometric(Discrete):
     R"""
-    Geometric log-likelihood.
+    Geometric distribution.
 
     The probability that the first success in a sequence of Bernoulli
     trials occurs on the x'th trial.
@@ -1084,7 +1084,7 @@ class DiscreteUniform(Discrete):
 
 class Categorical(Discrete):
     R"""
-    Categorical log-likelihood.
+    Categorical distribution.
 
     The most general discrete distribution. The pmf of this distribution is
 
