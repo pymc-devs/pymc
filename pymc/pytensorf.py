@@ -36,7 +36,6 @@ from pytensor.graph.basic import (
     walk,
 )
 from pytensor.graph.fg import FunctionGraph, Output
-from pytensor.graph.op import Op
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
 from pytensor.tensor.basic import _as_tensor_variable
@@ -63,10 +62,8 @@ __all__ = [
     "compile_pymc",
     "cont_inputs",
     "convert_data",
-    "convert_generator_data",
     "convert_observed_data",
     "floatX",
-    "generator",
     "gradient",
     "hessian",
     "hessian_diag",
@@ -81,18 +78,8 @@ __all__ = [
 def convert_observed_data(data) -> np.ndarray | Variable:
     """Convert user provided dataset to accepted formats."""
     if isgenerator(data):
-        return convert_generator_data(data)
+        raise TypeError("Data passed to `observed` cannot be a generator.")
     return convert_data(data)
-
-
-def convert_generator_data(data) -> TensorVariable:
-    warnings.warn(
-        "Generator data is deprecated and we intend to remove it."
-        " If you disagree and need this, please get in touch via https://github.com/pymc-devs/pymc/issues.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return generator(data)
 
 
 def convert_data(data) -> np.ndarray | Variable:
@@ -623,98 +610,6 @@ class CallableTensor:
         """
         (oldinput,) = inputvars(self.tensor)
         return pytensor.clone_replace(self.tensor, {oldinput: input}, rebuild_strict=False)
-
-
-class GeneratorOp(Op):
-    """
-    Generator Op is designed for storing python generators inside pytensor graph.
-
-    __call__ creates TensorVariable
-        It has 2 new methods
-        - var.set_gen(gen): sets new generator
-        - var.set_default(value): sets new default value (None erases default value)
-
-    If generator is exhausted, variable will produce default value if it is not None,
-    else raises `StopIteration` exception that can be caught on runtime.
-
-    Parameters
-    ----------
-    gen: generator that implements __next__ (py3) or next (py2) method
-        and yields np.arrays with same types
-    default: np.array with the same type as generator produces
-    """
-
-    __props__ = ("generator",)
-
-    def __init__(self, gen, default=None):
-        warnings.warn(
-            "generator data is deprecated and will be removed in a future release", FutureWarning
-        )
-        from pymc.data import GeneratorAdapter
-
-        super().__init__()
-        if not isinstance(gen, GeneratorAdapter):
-            gen = GeneratorAdapter(gen)
-        self.generator = gen
-        self.set_default(default)
-
-    def make_node(self, *inputs):
-        gen_var = self.generator.make_variable(self)
-        return Apply(self, [], [gen_var])
-
-    def perform(self, node, inputs, output_storage, params=None):
-        if self.default is not None:
-            output_storage[0][0] = next(self.generator, self.default)
-        else:
-            output_storage[0][0] = next(self.generator)
-
-    def do_constant_folding(self, fgraph, node):
-        return False
-
-    __call__ = pytensor.config.change_flags(compute_test_value="off")(Op.__call__)
-
-    def set_gen(self, gen):
-        from pymc.data import GeneratorAdapter
-
-        if not isinstance(gen, GeneratorAdapter):
-            gen = GeneratorAdapter(gen)
-        if not gen.tensortype == self.generator.tensortype:
-            raise ValueError("New generator should yield the same type")
-        self.generator = gen
-
-    def set_default(self, value):
-        if value is None:
-            self.default = None
-        else:
-            value = np.asarray(value, self.generator.tensortype.dtype)
-            t1 = (False,) * value.ndim
-            t2 = self.generator.tensortype.broadcastable
-            if not t1 == t2:
-                raise ValueError("Default value should have the same type as generator")
-            self.default = value
-
-
-def generator(gen, default=None):
-    """
-    Create a generator variable with possibility to set default value and new generator.
-
-    If generator is exhausted variable will produce default value if it is not None,
-    else raises `StopIteration` exception that can be caught on runtime.
-
-    Parameters
-    ----------
-    gen: generator that implements __next__ (py3) or next (py2) method
-        and yields np.arrays with same types
-    default: np.array with the same type as generator produces
-
-    Returns
-    -------
-    TensorVariable
-        It has 2 new methods
-        - var.set_gen(gen): sets new generator
-        - var.set_default(value): sets new default value (None erases default value)
-    """
-    return GeneratorOp(gen, default)()
 
 
 def ix_(*args):

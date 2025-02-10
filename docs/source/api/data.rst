@@ -10,5 +10,4 @@ Data
    MutableData
    get_data
    Data
-   GeneratorAdapter
    Minibatch

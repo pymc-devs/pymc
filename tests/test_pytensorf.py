@@ -27,7 +27,6 @@ from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable, equal_computations
 from pytensor.tensor.random.basic import normal, uniform
 from pytensor.tensor.subtensor import AdvancedIncSubtensor
-from pytensor.tensor.variable import TensorVariable
 
 import pymc as pm
 
@@ -37,19 +36,16 @@ from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
-    GeneratorOp,
     collect_default_updates,
     compile,
     constant_fold,
     convert_data,
-    convert_generator_data,
     extract_obs_data,
     hessian,
     hessian_diag,
     replace_rng_nodes,
     replace_vars_in_graphs,
     reseed_rngs,
-    smarttypeX,
     walk_model,
 )
 from pymc.vartypes import int_types
@@ -263,32 +259,6 @@ def test_convert_data(input_dtype):
         assert pytensor_output.dtype == pytensor.config.floatX
     else:
         assert pytensor_output.dtype == intX
-
-
-@pytest.mark.parametrize("input_dtype", ["int32", "int64", "float32", "float64"])
-def test_convert_generator_data(input_dtype):
-    # Create a generator object producing NumPy arrays with the intended dtype.
-    # This is required to infer the correct dtype.
-    square_generator = (np.array([i**2], dtype=input_dtype) for i in range(100))
-
-    # Output is NOT wrapped with `pm.floatX`/`intX`,
-    # but produced from calling a special Op.
-    with pytest.warns(DeprecationWarning, match="get in touch"):
-        result = convert_generator_data(square_generator)
-    apply = result.owner
-    op = apply.op
-    # Make sure the returned object is a PyTensor TensorVariable
-    assert isinstance(result, TensorVariable)
-    assert isinstance(op, GeneratorOp), f"It's a {type(apply)}"
-    # There are no inputs - because it generates...
-    assert apply.inputs == []
-
-    # Evaluation results should have the correct* dtype!
-    # (*intX/floatX will be enforced!)
-    evaled = result.eval()
-    expected_dtype = smarttypeX(np.array(1, dtype=input_dtype)).dtype
-    assert result.type.dtype == expected_dtype
-    assert evaled.dtype == np.dtype(expected_dtype)
 
 
 def test_pandas_to_array_pandas_index():
