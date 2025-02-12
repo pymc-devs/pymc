@@ -547,3 +547,10 @@ def test_scaling_data_works_in_likelihood() -> None:
         scaled_target = target / scale
         mu = pm.Normal("mu", mu=0, sigma=1)
         pm.Normal("x", mu=mu, sigma=1, observed=scaled_target)
+
+        idata = pm.sample(10, chains=1, tune=100)
+
+    np.testing.assert_allclose(
+        idata.observed_data["x"].values,
+        data / scale,
+    )
