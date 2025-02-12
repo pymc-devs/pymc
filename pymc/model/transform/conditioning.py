@@ -25,6 +25,7 @@ from pymc.model.core import Model
 from pymc.model.fgraph import (
     ModelDeterministic,
     ModelFreeRV,
+    ModelValuedVar,
     extract_dims,
     fgraph_from_model,
     model_deterministic,
@@ -74,7 +75,9 @@ def observe(
 
         m_new = pm.observe(m, {y: 0.5})
 
-    Deterministic variables can also be observed.
+    Deterministic variables can also be observed. If the variable has already
+    been observed, its old value is replaced with the one provided.
+
     This relies on PyMC ability to infer the logp of the underlying expression
 
     .. code-block:: python
@@ -95,9 +98,9 @@ def observe(
         for var, obs in vars_to_observations.items()
     }
 
-    valid_model_vars = set(model.free_RVs + model.deterministics)
+    valid_model_vars = set(model.basic_RVs + model.deterministics)
     if any(var not in valid_model_vars for var in vars_to_observations):
-        raise ValueError("At least one var is not a free variable or deterministic in the model")
+        raise ValueError("At least one var is not a random variable or deterministic in the model")
 
     fgraph, memo = fgraph_from_model(model)
 
@@ -106,7 +109,7 @@ def observe(
         model_var = memo[var]
 
         # Just a sanity check
-        assert isinstance(model_var.owner.op, ModelFreeRV | ModelDeterministic)
+        assert isinstance(model_var.owner.op, ModelValuedVar | ModelDeterministic)
         assert model_var in fgraph.variables
 
         var = model_var.owner.inputs[0]

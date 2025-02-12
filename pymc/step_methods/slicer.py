@@ -17,6 +17,9 @@
 
 import numpy as np
 
+from rich.progress import TextColumn
+from rich.table import Column
+
 from pymc.blocking import RaveledVars, StatsType
 from pymc.initial_point import PointType
 from pymc.model import modelcontext
@@ -195,3 +198,29 @@ class Slice(ArrayStepShared):
                 return Competence.PREFERRED
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
+
+    @staticmethod
+    def _progressbar_config(n_chains=1):
+        columns = [
+            TextColumn("{task.fields[tune]}", table_column=Column("Tuning", ratio=1)),
+            TextColumn("{task.fields[nstep_out]}", table_column=Column("Steps out", ratio=1)),
+            TextColumn("{task.fields[nstep_in]}", table_column=Column("Steps in", ratio=1)),
+        ]
+
+        stats = {"tune": [True] * n_chains, "nstep_out": [0] * n_chains, "nstep_in": [0] * n_chains}
+
+        return columns, stats
+
+    @staticmethod
+    def _make_update_stats_function():
+        def update_stats(stats, step_stats, chain_idx):
+            if isinstance(step_stats, list):
+                step_stats = step_stats[0]
+
+            stats["tune"][chain_idx] = step_stats["tune"]
+            stats["nstep_out"][chain_idx] = step_stats["nstep_out"]
+            stats["nstep_in"][chain_idx] = step_stats["nstep_in"]
+
+            return stats
+
+        return update_stats
