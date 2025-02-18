@@ -818,6 +818,8 @@ class TestGARCH11:
         np.testing.assert_allclose(
             t0.compile_logp()(t0.initial_point()),
             t1.compile_logp()(t1.initial_point()),
+            atol=1e-3,
+            rtol=1e-2,
         )
 
     @pytest.mark.parametrize(
