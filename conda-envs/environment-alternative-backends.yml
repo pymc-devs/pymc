@@ -11,6 +11,7 @@ dependencies:
 - cloudpickle
 - h5py>=2.7
 - zarr>=2.5.0,<3
+- nutpie >= 0.13.4
 # Jaxlib version must not be greater than jax version!
 - blackjax>=1.2.2
 - jax>=0.4.28
