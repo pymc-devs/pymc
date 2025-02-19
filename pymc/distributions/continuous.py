@@ -2595,23 +2595,27 @@ class ChiSquared:
         return Gamma.dist(alpha=nu / 2, beta=1 / 2, **kwargs)
 
 
-class WeibullBetaRV(RandomVariable):
+class WeibullBetaRV(SymbolicRandomVariable):
     name = "weibull"
-    signature = "(),()->()"
-    dtype = "floatX"
+    extended_signature = "[rng],[size],(),()->[rng],()"
     _print_name = ("Weibull", "\\operatorname{Weibull}")
 
-    def __call__(self, alpha, beta, size=None, **kwargs):
-        return super().__call__(alpha, beta, size=size, **kwargs)
-
     @classmethod
-    def rng_fn(cls, rng, alpha, beta, size) -> np.ndarray:
-        if size is None:
-            size = np.broadcast_shapes(alpha.shape, beta.shape)
-        return np.asarray(beta * rng.weibull(alpha, size=size))
+    def rv_op(cls, alpha, beta, *, rng=None, size=None) -> np.ndarray:
+        alpha = pt.as_tensor(alpha)
+        beta = pt.as_tensor(beta)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
 
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(alpha, beta, ndims_params=cls.ndims_params)
 
-weibull_beta = WeibullBetaRV()
+        next_rng, raw_weibull = pt.random.weibull(alpha, size=size, rng=rng).owner.outputs
+        draws = beta * raw_weibull
+        return cls(
+            inputs=[rng, size, alpha, beta],
+            outputs=[next_rng, draws],
+        )(rng, size, alpha, beta)
 
 
 class Weibull(PositiveContinuous):
@@ -2660,7 +2664,8 @@ class Weibull(PositiveContinuous):
         Scale parameter (beta > 0).
     """
 
-    rv_op = weibull_beta
+    rv_type = WeibullBetaRV
+    rv_op = WeibullBetaRV.rv_op
 
     @classmethod
     def dist(cls, alpha, beta, *args, **kwargs):

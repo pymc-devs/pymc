@@ -281,16 +281,20 @@ jobs:
           name: ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
 
-  external_samplers:
+  alternative_backends:
     needs: changes
     if: ${{ needs.changes.outputs.changes == 'true' }}
     strategy:
       matrix:
         os: [ubuntu-20.04]
         floatx: [float64]
-        python-version: ["3.13"]
+        python-version: ["3.12"]
         test-subset:
-          - tests/sampling/test_jax.py tests/sampling/test_mcmc_external.py
+          - |
+            tests/distributions/test_random_alternative_backends.py
+            tests/sampling/test_jax.py
+            tests/sampling/test_mcmc_external.py
+
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
@@ -305,7 +309,7 @@ jobs:
           persist-credentials: false
       - uses: mamba-org/setup-micromamba@v2
         with:
-          environment-file: conda-envs/environment-jax.yml
+          environment-file: conda-envs/environment-alternative-backends.yml
           create-args: >-
             python=${{matrix.python-version}}
           environment-name: pymc-test
@@ -324,7 +328,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
-          name: JAX tests - ${{ matrix.os }} ${{ matrix.floatx }}
+          name: Alternative backend tests - ${{ matrix.os }} ${{ matrix.floatx }}
           fail_ci_if_error: false
 
   float32:
@@ -378,13 +382,13 @@ jobs:
   all_tests:
     if: ${{ always() }}
     runs-on: ubuntu-latest
-    needs: [ changes, ubuntu, windows, macos, external_samplers, float32 ]
+    needs: [ changes, ubuntu, windows, macos, alternative_backends, float32 ]
     steps:
       - name: Check build matrix status
         if: ${{ needs.changes.outputs.changes == 'true' &&
                 ( needs.ubuntu.result != 'success' ||
                   needs.windows.result != 'success' ||
                   needs.macos.result != 'success' ||
-                  needs.external_samplers.result != 'success' ||
+                  needs.alternative_backends.result != 'success' ||
                   needs.float32.result != 'success' ) }}
         run: exit 1
