@@ -1310,32 +1310,15 @@ class TestMoments:
         [
             (3, 1, None, np.zeros(3)),
             (5, 1, None, np.zeros(10)),
-            pytest.param(
-                3,
-                1,
-                1,
-                np.zeros((1, 3)),
-                marks=pytest.mark.xfail(
-                    raises=NotImplementedError,
-                    reason="LKJCorr logp is only implemented for vector values (ndim=1)",
-                ),
-            ),
-            pytest.param(
-                5,
-                1,
-                (2, 3),
-                np.zeros((2, 3, 10)),
-                marks=pytest.mark.xfail(
-                    raises=NotImplementedError,
-                    reason="LKJCorr logp is only implemented for vector values (ndim=1)",
-                ),
-            ),
+            pytest.param(3, 1, 1, np.zeros((1, 3))),
+            pytest.param(5, 1, (2, 3), np.zeros((2, 3, 10))),
         ],
     )
     def test_lkjcorr_support_point(self, n, eta, size, expected):
         with pm.Model() as model:
             pm.LKJCorr("x", n=n, eta=eta, size=size, return_matrix=False)
-        assert_support_point_is_expected(model, expected)
+        # LKJCorr logp is only implemented for vector values (size=None)
+        assert_support_point_is_expected(model, expected, check_finite_logp=size is None)
 
     @pytest.mark.parametrize(
         "n, eta, size, expected",
@@ -2190,15 +2173,18 @@ class TestLKJCorr(BaseTestDistributionRandom):
             beta = eta - 1 + n / 2
             return (st.beta.rvs(size=(size, shape), a=beta, b=beta) - 0.5) * 2
 
-        continuous_random_tester(
-            _LKJCorr,
-            {
-                "n": Domain([2, 10, 50], edges=(None, None)),
-                "eta": Domain([1.0, 10.0, 100.0], edges=(None, None)),
-            },
-            ref_rand=ref_rand,
-            size=1000,
-        )
+        # If passed as a domain, continuous_random_tester would make `n` a shared variable
+        # But this RV needs it to be constant in order to define the inner graph
+        for n in (2, 10, 50):
+            continuous_random_tester(
+                _LKJCorr,
+                {
+                    "eta": Domain([1.0, 10.0, 100.0], edges=(None, None)),
+                },
+                extra_args={"n": n},
+                ref_rand=ft.partial(ref_rand, n=n),
+                size=1000,
+            )
 
 
 @pytest.mark.parametrize(
