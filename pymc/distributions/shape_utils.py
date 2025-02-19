@@ -468,5 +468,6 @@ def implicit_size_from_params(
         pt.broadcast_shape(
             *batch_shapes,
             arrays_are_shapes=True,
-        )
+        ),
+        dtype="int64",  # In case it's empty, as_tensor will default to floatX
     )
