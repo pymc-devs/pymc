@@ -1150,13 +1150,25 @@ def _sample_many(
 
     with progress_manager:
         for i in range(chains):
+            trace = traces[i]
+            progress_manager.set_initial_state(
+                *trace.completed_draws_and_divergences(chain_specific=True)
+            )
+            progress_manager._progress.update(
+                progress_manager.tasks[i],
+                draws=progress_manager.completed_draws
+                if progress_manager.combined_progress
+                else progress_manager.draws,
+                divergences=progress_manager.divergences,
+                refresh=True,
+            )
             step.sampling_state = initial_step_state
             _sample(
                 draws=draws,
                 chain=i,
                 start=start[i],
                 step=step,
-                trace=traces[i],
+                trace=trace,
                 rng=rngs[i],
                 callback=callback,
                 progress_manager=progress_manager,

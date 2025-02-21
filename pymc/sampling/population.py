@@ -27,7 +27,6 @@ import numpy as np
 from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 
 from pymc.backends.base import BaseTrace
-from pymc.backends.zarr import ZarrChain
 from pymc.initial_point import PointType
 from pymc.model import Model, modelcontext
 from pymc.progress_bar import CustomProgress
@@ -110,6 +109,10 @@ def _sample_population(
 
     with CustomProgress(disable=not progressbar) as progress:
         task = progress.add_task("[red]Sampling...", total=draws)
+        for trace in traces:
+            progress.update(
+                task, completed=trace.completed_draws_and_divergences(chain_specific=True)[0]
+            )
         for _ in sampling:
             progress.update(task)
 
@@ -197,6 +200,7 @@ class PopulationStepper:
                         #     enumerate(progress_bar(steppers)) if progressbar else enumerate(steppers)
                         # ):
                         task = self._progress.add_task(description=f"Chain {c}")
+                        self._progress.update(task, completed=first_draw_idx)
                         secondary_end, primary_end = multiprocessing.Pipe()
                         stepper_dumps = cloudpickle.dumps(stepper, protocol=4)
                         process = multiprocessing.Process(
