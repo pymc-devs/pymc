@@ -509,6 +509,10 @@ class ParallelSampler:
             progressbar=progressbar,
             progressbar_theme=progressbar_theme,
         )
+        if self.zarr_recording:
+            self._progress.set_initial_state(
+                *cast(ZarrChain, zarr_chains)[0].completed_draws_and_divergences()
+            )
 
     def _make_active(self):
         while self._inactive and len(self._active) < self._max_active:

@@ -110,6 +110,9 @@ def _sample_population(
 
     with CustomProgress(disable=not progressbar) as progress:
         task = progress.add_task("[red]Sampling...", total=draws)
+        if isinstance(traces[0], ZarrChain):
+            completed_draws, _ = traces[0].completed_draws_and_divergences()
+            progress.update(task, completed=completed_draws)
         for _ in sampling:
             progress.update(task)
 
@@ -197,6 +200,7 @@ class PopulationStepper:
                         #     enumerate(progress_bar(steppers)) if progressbar else enumerate(steppers)
                         # ):
                         task = self._progress.add_task(description=f"Chain {c}")
+                        self._progress.update(task, completed=first_draw_idx)
                         secondary_end, primary_end = multiprocessing.Pipe()
                         stepper_dumps = cloudpickle.dumps(stepper, protocol=4)
                         process = multiprocessing.Process(
