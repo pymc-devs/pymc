@@ -218,7 +218,7 @@ class ZarrChain(BaseTrace):
             self.buffer(group="sample_stats", var_name=var_name, value=var_value)
         self._buffered_draws += 1
         if self._buffered_draws == self.draws_until_flush:
-            self.flush()
+            self.flush(draw)
             return True
         return None
 
@@ -248,7 +248,7 @@ class ZarrChain(BaseTrace):
             self.chain, np.array([sampling_state], dtype="object")
         )
 
-    def flush(self):
+    def flush(self, mcmc_point: Mapping[str, np.ndarray] | None = None):
         """Write the data stored in the internal buffer to the desired zarr store.
 
         After writing the draws and stats returned by each step of the step method,
@@ -269,6 +269,8 @@ class ZarrChain(BaseTrace):
         self.record_sampling_state()
         self.clear_buffers()
         self.update_draws_until_flush()
+        if mcmc_point is not None:
+            self.set_mcmc_point(mcmc_point)
 
     def update_draws_until_flush(self):
         self.in_warmup = self.draw_idx < self.tune
@@ -280,6 +282,52 @@ class ZarrChain(BaseTrace):
                 else self.draws + self.tune - self.draw_idx,
             ]
         )
+
+    def completed_draws_and_divergences(self, chain_specific: bool = False) -> tuple[int, int]:
+        """Get number of completed draws and divergences in the traces.
+
+        This is a helper function to start the ProgressBarManager when resuming sampling
+        from an existing trace.
+
+        Parameters
+        ----------
+        chain_specific : bool
+            If ``True``, only the completed draws and divergences on the current chain
+            are returned. If ``False``, the draws and divergences across all chains are
+            returned
+
+        Returns
+        -------
+        draws : int
+            Number of draws in the current chain or across all chains.
+        divergences : int
+            Number of divergences in the current chain or across all chains.
+        """
+        # No need to iterate over ZarrChain instances because the zarr group is
+        # shared between them
+        if chain_specific:
+            idx = self.chain
+        else:
+            idx = slice(None)
+        diverging_stat_sums = [
+            np.sum(array[idx])
+            for stat_name, array in self._sample_stats.arrays()
+            if "diverging" in stat_name
+        ]
+        return int(np.sum(self._sampling_state.draw_idx[idx])), int(sum(diverging_stat_sums))
+
+    def set_mcmc_point(self, mcmc_point: Mapping[str, np.ndarray]):
+        for var_name, value in mcmc_point.items():
+            self._sampling_state.mcmc_point[var_name].set_basic_selection(
+                self.chain,
+                value,
+            )
+
+    def get_mcmc_point(self) -> dict[str, np.ndarray]:
+        return {
+            str(var_name): np.asarray(array[self.chain])
+            for var_name, array in self._sampling_state.mcmc_point.arrays()
+        }
 
 
 FILL_VALUE_TYPE = float | int | bool | str | np.datetime64 | np.timedelta64 | None
@@ -636,6 +684,7 @@ class ZarrTrace:
             tune=tune,
             draws=draws,
             chains=chains,
+            mcmc_point=test_point,
         )
         self.link_model_and_step(
             chains=chains,
@@ -726,7 +775,7 @@ class ZarrTrace:
         self._sampling_state.sampling_time.set_basic_selection((), float(value))
 
     def init_sampling_state_group(
-        self, tune: int, draws: int, chains: int
+        self, tune: int, draws: int, chains: int, mcmc_point: dict[str, np.ndarray]
     ):
         state = self.root.create_group(name="_sampling_state", overwrite=True)
         sampling_state = state.empty(
@@ -795,6 +844,19 @@ class ZarrTrace:
             object_codec=numcodecs.Pickle(),
             shape=(0,),
         )
+
+        zarr_mcmc_point = state.create_group("mcmc_point", overwrite=True)
+        for var_name, test_value in mcmc_point.items():
+            fill_value, dtype, object_codec = get_initial_fill_value_and_codec(test_value.dtype)
+            zarr_mcmc_point.full(
+                name=var_name,
+                dtype=dtype,
+                fill_value=fill_value,
+                object_codec=object_codec,
+                shape=(chains, *test_value.shape),
+                chunks=(1, *test_value.shape),
+                compressor=self.compressor,
+            )
 
     def init_group_with_empty(
         self,

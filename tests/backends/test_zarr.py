@@ -294,6 +294,9 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
         trace._sampling_state.sampling_state[0],
         model_step.sampling_state,
     )
+    assert set(last_point) == set(trace._sampling_state.mcmc_point.array_keys())
+    for var_name, value in trace._sampling_state.mcmc_point.arrays():
+        np.testing.assert_array_equal(last_point[var_name][None, ...], value)
 
     # Assert to inference data returns the expected groups
     idata = trace.to_inferencedata(save_warmup=True)
