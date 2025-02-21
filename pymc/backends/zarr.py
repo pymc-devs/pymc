@@ -35,7 +35,9 @@ from pymc.model.core import Model, modelcontext
 from pymc.step_methods.compound import (
     BlockedStep,
     CompoundStep,
+    CompoundStepState,
     StatsBijection,
+    StepMethodState,
     get_stats_dtypes_shapes_from_steps,
 )
 from pymc.util import UNSET, _UnsetType, get_default_varnames, is_transformed_name
@@ -212,7 +214,7 @@ class ZarrChain(BaseTrace):
             self.store_sampling_state(step.sampling_state)
         self._sampling_state.draw_idx.set_coordinate_selection(self.chain, self.draw_idx)
 
-    def store_sampling_state(self, sampling_state):
+    def store_sampling_state(self, sampling_state: StepMethodState | CompoundStepState):
         self._sampling_state.sampling_state.set_coordinate_selection(
             self.chain, np.array([sampling_state], dtype="object")
         )
