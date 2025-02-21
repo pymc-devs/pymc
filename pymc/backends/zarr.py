@@ -950,86 +950,103 @@ class ZarrTrace:
                 array.attrs.update({"_ARRAY_DIMENSIONS": [dim]})
         return group
 
-    def split_warmup(self, group_name: str, error_if_already_split: bool = True):
-        """Split the arrays of a group into the warmup and regular groups.
+    def resize(
+        self,
+        tune: int | None = None,
+        draws: int | None = None,
+    ) -> "ZarrTrace":
+        if not self.is_root_populated:
+            raise RuntimeError(
+                "The ZarrTrace has not been initialized yet. You must call resize on "
+                "an instance that has already been initialized."
+            )
+        old_tuning = self.tuning_steps
+        old_draws = self.draws
+        desired_tune = tune or old_tuning
+        desired_draws = draws or old_draws
+        draws_in_chains = self._sampling_state.draw_idx[:]
 
-        This function takes the first ``self.tuning_steps`` draws of supplied
-        ``group_name`` and moves them into a new zarr group called
-        ``f"warmup_{group_name}"``.
+        # For us to be able to resize, a few conditions must be met:
+        # 1. If we want to change the number of tuning steps, the draws_in_chains must
+        #    not be bigger than the old tune, and it must not be bigger than the desired
+        #    tune. If the first condition weren't true, the sampler would have already
+        #    stopped tuning, and it would be wrong to relabel some samples to belong to
+        #    the tuning phase. If the second condition weren't true, the sampler would
+        #    have continued tuning instead after the desired number of tuning steps had
+        #    been taken.
+        # 2. If we want to change the number of posterior draws, the draws_in_chains
+        #    minus the old number of tuning steps must be less or equal to the desired
+        #    number of draws. If this condition is not met, the sampler will have taken
+        #    extra steps and we wont have stored the sampling state information at the
+        #    end of the desired number of draws.
+        change_tune = False
+        change_draws = False
+        if old_tuning != desired_tune:
+            # Attempting to change the number of tuning steps
+            if any(draws_in_chains > old_tuning):
+                raise ValueError(
+                    "Cannot change the number of tuning steps in the trace. "
+                    "Some chains have finished their tuning phase and have "
+                    "already performed steps in the posterior sampling regime."
+                )
+            elif any(draws_in_chains >= desired_tune):
+                raise ValueError(
+                    "Cannot change the number of tuning steps in the trace. "
+                    "Some chains have already taken more steps than the desired number "
+                    "of tuning steps. Please increase the desired number of tuning "
+                    f"steps to at least {max(draws_in_chains)}."
+                )
+            change_tune = True
+        if old_draws != desired_draws:
+            # Attempting to change the number of draws
+            if any((draws_in_chains - old_tuning) > desired_draws):
+                raise ValueError(
+                    "Cannot change the number of draws in the trace. "
+                    "Some chains have already taken more steps than the desired number "
+                    "of draws. Please increase the desired number of draws "
+                    f"to at least {max(draws_in_chains) - old_tuning}."
+                )
+            change_draws = True
+        if change_tune:
+            self._resize_tuning_steps(desired_tune)
+        if change_draws:
+            self._resize_draws(desired_draws)
+        return self
 
-        Parameters
-        ----------
-        group_name : str
-            The name of the group that should be split.
-        error_if_already_split : bool
-            If ``True`` and if the ``f"warmup_{group_name}"`` group already exists in
-            the root hierarchy, a ``ValueError`` is raised. If this flag is ``False``
-            but the warmup group already exists, the contents of that group are
-            overwritten.
-        """
-        if error_if_already_split and f"{WARMUP_TAG}{group_name}" in {
-            group_name for group_name, _ in self.root.groups()
-        }:
-            raise RuntimeError(f"Warmup data for {group_name} has already been split")
-        posterior_group = self.root[group_name]
-        tune = self.tuning_steps
-        warmup_group = self.root.create_group(f"{WARMUP_TAG}{group_name}", overwrite=True)
-        if tune == 0:
-            try:
-                self.root.pop(f"{WARMUP_TAG}{group_name}")
-            except KeyError:
-                pass
-            return
-        for name, array in posterior_group.arrays():
-            array_attrs = array.attrs.asdict()
-            if name == "draw":
-                warmup_array = warmup_group.array(
-                    name="draw",
-                    data=np.arange(tune),
-                    dtype="int",
-                    compressor=self.compressor,
-                )
-                posterior_array = posterior_group.array(
-                    name=name,
-                    data=np.arange(len(array) - tune),
-                    dtype="int",
-                    overwrite=True,
-                    compressor=self.compressor,
-                )
-                posterior_array.attrs.update(array_attrs)
-            else:
-                dims = array.attrs["_ARRAY_DIMENSIONS"]
-                warmup_idx: slice | tuple[slice, slice]
-                if len(dims) >= 2 and dims[:2] == ["chain", "draw"]:
-                    must_overwrite_posterior = True
-                    warmup_idx = (slice(None), slice(None, tune, None))
-                    posterior_idx = (slice(None), slice(tune, None, None))
-                else:
-                    must_overwrite_posterior = False
-                    warmup_idx = slice(None)
-                fill_value, dtype, object_codec = get_initial_fill_value_and_codec(array.dtype)
-                warmup_array = warmup_group.array(
-                    name=name,
-                    data=array[warmup_idx],
-                    chunks=array.chunks,
-                    dtype=dtype,
-                    fill_value=fill_value,
-                    object_codec=object_codec,
-                    compressor=self.compressor,
-                )
-                if must_overwrite_posterior:
-                    posterior_array = posterior_group.array(
-                        name=name,
-                        data=array[posterior_idx],
-                        chunks=array.chunks,
-                        dtype=dtype,
-                        fill_value=fill_value,
-                        object_codec=object_codec,
-                        overwrite=True,
-                        compressor=self.compressor,
-                    )
-                    posterior_array.attrs.update(array_attrs)
-            warmup_array.attrs.update(array_attrs)
+    def _resize_tuning_steps(self, desired_tune: int):
+        groups = ["warmup_posterior", "warmup_sample_stats"]
+        if "warmup_unconstrained_posterior" in dict(self.root.groups()):
+            groups.append("warmup_unconstrained_posterior")
+        for group in groups:
+            self._resize_arrays_in_group(group=group, axis=1, new_size=desired_tune)
+            zarr_draw = getattr(self.root, group).draw
+            zarr_draw.resize(desired_tune)
+            zarr_draw.set_basic_selection(
+                slice(None), np.arange(desired_tune, dtype=zarr_draw.dtype)
+            )
+        self._sampling_state.tuning_steps.set_basic_selection((), desired_tune)
+
+    def _resize_draws(self, desired_draws: int):
+        groups = ["posterior", "sample_stats"]
+        if "unconstrained_posterior" in dict(self.root.groups()):
+            groups.append("unconstrained_posterior")
+        for group in groups:
+            self._resize_arrays_in_group(group=group, axis=1, new_size=desired_draws)
+            zarr_draw = getattr(self.root, group).draw
+            zarr_draw.resize(desired_draws)
+            zarr_draw.set_basic_selection(
+                slice(None), np.arange(desired_draws, dtype=zarr_draw.dtype)
+            )
+        self._sampling_state.draws.set_basic_selection((), desired_draws)
+
+    def _resize_arrays_in_group(self, group: str, axis: int, new_size: int):
+        zarr_group: Group = getattr(self.root, group)
+        for _, array in zarr_group.arrays():
+            dims = array.attrs.get("_ARRAY_DIMENSIONS", [])
+            if len(dims) >= 2 and dims[1] == "draw":
+                new_shape = list(array.shape)
+                new_shape[axis] = new_size
+                array.resize(new_shape)
 
     def to_inferencedata(self, save_warmup: bool = False) -> az.InferenceData:
         """Convert ``ZarrTrace`` to :class:`~.arviz.InferenceData`.
