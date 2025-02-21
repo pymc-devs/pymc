@@ -13,7 +13,7 @@
 #   limitations under the License.
 from copy import deepcopy
 from dataclasses import MISSING, Field, dataclass, fields
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Generic, TypeVar
 
 import numpy as np
 
@@ -51,7 +51,10 @@ def equal_dataclass_values(v1, v2):
         return v1 == v2
 
 
-class WithSamplingState:
+SamplingStateType = TypeVar("SamplingStateType", bound=DataClassState)
+
+
+class WithSamplingState(Generic[SamplingStateType]):
     """Mixin class that adds the ``sampling_state`` property to an object.
 
     The object's type must define the ``_state_class`` as a valid
@@ -60,10 +63,10 @@ class WithSamplingState:
     the state represented as objects of the ``_state_class`` type.
     """
 
-    _state_class: type[DataClassState] = DataClassState
+    _state_class: type[SamplingStateType]
 
     @property
-    def sampling_state(self) -> DataClassState:
+    def sampling_state(self) -> SamplingStateType:
         state_class = self._state_class
         kwargs = {}
         for field in fields(state_class):
