@@ -11,8 +11,11 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import itertools
+import re
+
 from collections.abc import Callable, Mapping, MutableMapping, Sequence
-from typing import Any
+from typing import Any, cast
 
 import arviz as az
 import numpy as np
@@ -63,6 +66,9 @@ except ImportError:
     _zarr_available = False
 
 
+class TraceAlreadyInitialized(RuntimeError): ...
+
+
 class ZarrChain(BaseTrace):
     """Interface object to interact with a single chain in a :class:`~.ZarrTrace`.
 
@@ -103,30 +109,44 @@ class ZarrChain(BaseTrace):
         test_point: dict[str, np.ndarray] | None = None,
         draws_per_chunk: int = 1,
         fn: Callable | None = None,
+        include_transformed: bool = True,
     ):
         if not _zarr_available:
             raise RuntimeError("You must install zarr to be able to create ZarrChain instances")
         super().__init__(name="zarr", model=model, vars=vars, test_point=test_point, fn=fn)
+        self.include_transformed = include_transformed
         self._step_method: BlockedStep | CompoundStep | None = None
         self.unconstrained_variables = {
             var.name for var in self.vars if is_transformed_name(var.name)
-        }
+        } | {inp.name for inp in self.fn.maker.inputs if is_transformed_name(inp.name)}
         self.draw_idx = 0
         self._buffers: dict[str, dict[str, list]] = {
             "posterior": {},
             "sample_stats": {},
+            "warmup_posterior": {},
+            "warmup_sample_stats": {},
         }
         self._buffered_draws = 0
         self.draws_per_chunk = int(draws_per_chunk)
         assert self.draws_per_chunk > 0
+        self._warmup_posterior = zarr.open_group(
+            store, synchronizer=synchronizer, path="warmup_posterior", mode="a"
+        )
         self._posterior = zarr.open_group(
             store, synchronizer=synchronizer, path="posterior", mode="a"
         )
-        if self.unconstrained_variables:
+        if self.unconstrained_variables and include_transformed:
+            self._warmup_unconstrained_posterior = zarr.open_group(
+                store, synchronizer=synchronizer, path="warmup_unconstrained_posterior", mode="a"
+            )
             self._unconstrained_posterior = zarr.open_group(
                 store, synchronizer=synchronizer, path="unconstrained_posterior", mode="a"
             )
             self._buffers["unconstrained_posterior"] = {}
+            self._buffers["warmup_unconstrained_posterior"] = {}
+        self._warmup_sample_stats = zarr.open_group(
+            store, synchronizer=synchronizer, path="warmup_sample_stats", mode="a"
+        )
         self._sample_stats = zarr.open_group(
             store, synchronizer=synchronizer, path="sample_stats", mode="a"
         )
@@ -143,10 +163,12 @@ class ZarrChain(BaseTrace):
         """
         self._step_method = step_method
 
-    def setup(self, draws: int, chain: int, sampler_vars: Sequence[dict] | None):  # type: ignore[override]
+    def setup(self, draws: int, chain: int, sampler_vars: Sequence[dict] | None, tune: int = 0):  # type: ignore[override]
         self.chain = chain
-        self.total_draws = draws
-        self.draws_until_flush = min([self.draws_per_chunk, draws - self.draw_idx])
+        self.draws = draws
+        self.tune = tune
+        self.draw_idx = self._sampling_state.draw_idx[chain] or 0
+        self.update_draws_until_flush()
         self.clear_buffers()
 
     def clear_buffers(self):
@@ -155,7 +177,8 @@ class ZarrChain(BaseTrace):
         self._buffered_draws = 0
 
     def buffer(self, group, var_name, value):
-        buffer = self._buffers[group]
+        group_name = f"warmup_{group}" if self.in_warmup else group
+        buffer = self._buffers[group_name]
         if var_name not in buffer:
             buffer[var_name] = []
         buffer[var_name].append(value)
@@ -180,9 +203,15 @@ class ZarrChain(BaseTrace):
         :meth:`~ZarrChain.flush`
         """
         unconstrained_variables = self.unconstrained_variables
+        include_transformed = self.include_transformed
         for var_name, var_value in zip(self.varnames, self.fn(**draw)):
             if var_name in unconstrained_variables:
-                self.buffer(group="unconstrained_posterior", var_name=var_name, value=var_value)
+                if include_transformed:
+                    self.buffer(
+                        group="unconstrained_posterior",
+                        var_name=var_name,
+                        value=var_value,
+                    )
             else:
                 self.buffer(group="posterior", var_name=var_name, value=var_value)
         for var_name, var_value in self.stats_bijection.map(stats).items():
@@ -227,7 +256,8 @@ class ZarrChain(BaseTrace):
         the number of steps until the next flush is determined.
         """
         chain = self.chain
-        draw_slice = slice(self.draw_idx, self.draw_idx + self.draws_until_flush)
+        offset = 0 if self.in_warmup else self.tune
+        draw_slice = slice(self.draw_idx - offset, self.draw_idx + self.draws_until_flush - offset)
         for group_name, buffer in self._buffers.items():
             group = getattr(self, f"_{group_name}")
             for var_name, var_value in buffer.items():
@@ -238,7 +268,18 @@ class ZarrChain(BaseTrace):
         self.draw_idx += self.draws_until_flush
         self.record_sampling_state()
         self.clear_buffers()
-        self.draws_until_flush = min([self.draws_per_chunk, self.total_draws - self.draw_idx])
+        self.update_draws_until_flush()
+
+    def update_draws_until_flush(self):
+        self.in_warmup = self.draw_idx < self.tune
+        self.draws_until_flush = min(
+            [
+                self.draws_per_chunk,
+                self.tune - self.draw_idx
+                if self.in_warmup
+                else self.draws + self.tune - self.draw_idx,
+            ]
+        )
 
 
 FILL_VALUE_TYPE = float | int | bool | str | np.datetime64 | np.timedelta64 | None
@@ -288,10 +329,9 @@ class ZarrTrace:
     | |--> _sampling_state
 
     The root group is created when the ``ZarrTrace`` object is initialized. The rest of
-    the groups are created once :meth:`~ZarrChain.init_trace` is called with a few exceptions:
-    unconstrained_posterior is only created if ``include_transformed = True``, and the
-    groups prefixed with ``warmup_`` are created only after calling
-    :meth:`~ZarrTrace.split_warmup_groups`.
+    the groups are created once :meth:`~ZarrChain.init_trace` is called with the exception
+    that the unconstrained_posterior and warmup_unconstrained_posterior groups are
+    only created if ``include_transformed = True``.
 
     Since ``ZarrTrace`` objects are intended to be as close to
     :class:`arviz.InferenceData` objects as possible, the groups store the dimension
@@ -371,7 +411,25 @@ class ZarrTrace:
 
         self.include_transformed = include_transformed
 
-        self._is_base_setup = False
+    @property
+    def is_root_populated(self) -> bool:
+        groups = set(self.root.group_keys())
+        out = groups >= {
+            "posterior",
+            "sample_stats",
+            "warmup_posterior",
+            "warmup_sample_stats",
+            "_sampling_state",
+        }
+        if self.include_transformed and any(
+            is_transformed_name(name) for name in getattr(self, "varnames", [])
+        ):
+            out &= groups >= {"unconstrained_posterior", "warmup_unconstrained_posterior"}
+        return out
+
+    @property
+    def _is_base_setup(self) -> bool:
+        return self.is_root_populated and getattr(self, "straces", 0) > 0
 
     def groups(self) -> list[str]:
         return [str(group_name) for group_name, _ in self.root.groups()]
@@ -381,12 +439,24 @@ class ZarrTrace:
         return self.root.posterior
 
     @property
+    def warmup_posterior(self) -> Group:
+        return self.root.warmup_posterior
+
+    @property
     def unconstrained_posterior(self) -> Group:
         return self.root.unconstrained_posterior
 
     @property
+    def warmup_unconstrained_posterior(self) -> Group:
+        return self.root.warmup_unconstrained_posterior
+
+    @property
     def sample_stats(self) -> Group:
         return self.root.sample_stats
+
+    @property
+    def warmup_sample_stats(self) -> Group:
+        return self.root.warmup_sample_stats
 
     @property
     def constant_data(self) -> Group:
@@ -399,6 +469,22 @@ class ZarrTrace:
     @property
     def _sampling_state(self) -> Group:
         return self.root._sampling_state
+
+    def parse_varnames(
+        self,
+        model: Model | None = None,
+        vars: Sequence[TensorVariable] | None = None,
+    ) -> tuple[list[TensorVariable], list[str]]:
+        if vars is None:
+            vars = modelcontext(model).unobserved_value_vars
+
+        unnamed_vars = {var for var in vars if var.name is None}
+        assert not unnamed_vars, f"Can't trace unnamed variables: {unnamed_vars}"
+        var_names = get_default_varnames(
+            [var.name for var in vars], include_transformed=self.include_transformed
+        )
+        vars = [var for var in vars if var.name in var_names]
+        return vars, var_names
 
     def init_trace(
         self,
@@ -413,16 +499,17 @@ class ZarrTrace:
         """Initialize the trace groups and arrays.
 
         This function creates and fills with default values the groups below the
-        ``ZarrTrace.root`` group. It creates the ``constant_data``, ``observed_data``,
+        ``ZarrTrace.root`` group. It creates the ``constant_data`` (only if the model
+        has ``Data`` containers), ``observed_data`` (only if the model has observed),
         ``posterior``, ``unconstrained_posterior`` (if ``include_transformed = True``),
         ``sample_stats``, and ``_sampling_state`` zarr groups, and all of the relevant
         arrays that must be stored there.
 
         Every array in the posterior and sample stats groups will have the
-        (chains, tune + draws) batch dimensions to the left of the core dimensions of
+        (chains, draws) batch dimensions to the left of the core dimensions of
         the model's random variable or the step method's stat shape. The warmup (tuning
-        draws) and the posterior samples are split at a later stage, once
-        :meth:`~ZarrTrace.split_warmup_groups` is called.
+        draws) posterior and sample stats will have (chains, tune) batch dimensions
+        instead.
 
         After the creation if the zarr hierarchies, it initializes the list of
         :class:`~pymc.backends.zarr.Zarrchain` instances (one for each chain) under the
@@ -449,23 +536,14 @@ class ZarrTrace:
             from :class:`~.BaseTrace`, which uses it to determine the shape and dtype
             of `vars`.
         """
-        if self._is_base_setup:
-            raise RuntimeError("The ZarrTrace has already been initialized")  # pragma: no cover
+        if self.is_root_populated:
+            raise TraceAlreadyInitialized("The ZarrTrace has already been initialized")
         model = modelcontext(model)
-        self.model = model
         self.coords, self.vars_to_dims = coords_and_dims_for_inferencedata(model)
-        if vars is None:
-            vars = model.unobserved_value_vars
+        vars, varnames = self.parse_varnames(model, vars)
 
-        unnamed_vars = {var for var in vars if var.name is None}
-        assert not unnamed_vars, f"Can't trace unnamed variables: {unnamed_vars}"
-        self.varnames = get_default_varnames(
-            [var.name for var in vars], include_transformed=self.include_transformed
-        )
-        self.vars = [var for var in vars if var.name in self.varnames]
-
-        self.fn = model.compile_fn(
-            self.vars,
+        fn = model.compile_fn(
+            vars,
             inputs=model.value_vars,
             on_unused_input="ignore",
             point_fn=False,
@@ -475,7 +553,7 @@ class ZarrTrace:
         # information.
         if test_point is None:
             test_point = model.initial_point()
-        var_values = list(zip(self.varnames, self.fn(**test_point)))
+        var_values = list(zip(varnames, fn(**test_point)))
         self.var_dtype_shapes = {
             var: (value.dtype, value.shape)
             for var, value in var_values
@@ -496,34 +574,48 @@ class ZarrTrace:
 
         self.create_group(
             name="constant_data",
-            data_dict=find_constants(self.model),
+            data_dict=find_constants(model),
         )
 
         self.create_group(
             name="observed_data",
-            data_dict=find_observations(self.model),
+            data_dict=find_observations(model),
         )
 
-        # Create the posterior that includes warmup draws
+        # Create the posterior and warmup posterior groups
         self.init_group_with_empty(
             group=self.root.create_group(name="posterior", overwrite=True),
             var_dtype_and_shape=self.var_dtype_shapes,
             chains=chains,
-            draws=tune + draws,
+            draws=draws,
+            extra_var_attrs=extra_var_attrs,
+        )
+        self.init_group_with_empty(
+            group=self.root.create_group(name="warmup_posterior", overwrite=True),
+            var_dtype_and_shape=self.var_dtype_shapes,
+            chains=chains,
+            draws=tune,
             extra_var_attrs=extra_var_attrs,
         )
 
-        # Create the unconstrained posterior group that includes warmup draws
+        # Create the unconstrained posterior and warmup groups
         if self.include_transformed and self.unc_var_dtype_shapes:
             self.init_group_with_empty(
                 group=self.root.create_group(name="unconstrained_posterior", overwrite=True),
                 var_dtype_and_shape=self.unc_var_dtype_shapes,
                 chains=chains,
-                draws=tune + draws,
+                draws=draws,
+                extra_var_attrs=extra_unc_var_attrs,
+            )
+            self.init_group_with_empty(
+                group=self.root.create_group(name="warmup_unconstrained_posterior", overwrite=True),
+                var_dtype_and_shape=self.unc_var_dtype_shapes,
+                chains=chains,
+                draws=tune,
                 extra_var_attrs=extra_unc_var_attrs,
             )
 
-        # Create the sample stats that include warmup draws
+        # Create the sample stats and warmup groups
         stats_dtypes_shapes = get_stats_dtypes_shapes_from_steps(
             [step] if isinstance(step, BlockedStep) else step.methods
         )
@@ -531,11 +623,60 @@ class ZarrTrace:
             group=self.root.create_group(name="sample_stats", overwrite=True),
             var_dtype_and_shape=stats_dtypes_shapes,
             chains=chains,
-            draws=tune + draws,
+            draws=draws,
+        )
+        self.init_group_with_empty(
+            group=self.root.create_group(name="warmup_sample_stats", overwrite=True),
+            var_dtype_and_shape=stats_dtypes_shapes,
+            chains=chains,
+            draws=tune,
         )
 
-        self.init_sampling_state_group(tune=tune, chains=chains)
+        self.init_sampling_state_group(
+            tune=tune,
+            draws=draws,
+            chains=chains,
+        )
+        self.link_model_and_step(
+            chains=chains,
+            draws=draws,
+            tune=tune,
+            step=step,
+            model=model,
+            vars=vars,
+            var_names=varnames,
+            test_point=test_point,
+            fn=fn,
+        )
 
+    def link_model_and_step(
+        self,
+        chains: int,
+        draws: int,
+        tune: int,
+        step: BlockedStep | CompoundStep,
+        vars: Sequence[TensorVariable],
+        var_names: Sequence[str],
+        model: Model | None = None,
+        test_point: dict[str, np.ndarray] | None = None,
+        fn: Callable | None = None,
+    ):
+        model = modelcontext(model)
+        self.model = model
+        self.varnames = var_names
+        self.vars = vars
+        if fn is None:
+            self.fn = cast(
+                Callable,
+                model.compile_fn(
+                    self.vars,
+                    inputs=model.value_vars,
+                    on_unused_input="ignore",
+                    point_fn=False,
+                ),
+            )
+        else:
+            self.fn = fn
         self.straces = [
             ZarrChain(
                 store=self.root.store,
@@ -546,31 +687,12 @@ class ZarrTrace:
                 stats_bijection=StatsBijection(step.stats_dtypes),
                 draws_per_chunk=self.draws_per_chunk,
                 fn=self.fn,
+                include_transformed=self.include_transformed,
             )
             for _ in range(chains)
         ]
         for chain, strace in enumerate(self.straces):
-            strace.setup(draws=tune + draws, chain=chain, sampler_vars=None)
-
-    def split_warmup_groups(self):
-        """Split the warmup and standard groups.
-
-        This method takes the entries in the arrays in the posterior, sample_stats
-        and unconstrained_posterior that happened in the tuning phase and moves them
-        into the warmup_ groups. If the ``warmup_posterior`` group already exists, then
-        nothing is done.
-
-        See Also
-        --------
-        :meth:`~ZarrTrace.split_warmup`
-        """
-        if "warmup_posterior" not in self.groups():
-            self.split_warmup("posterior", error_if_already_split=False)
-            self.split_warmup("sample_stats", error_if_already_split=False)
-            try:
-                self.split_warmup("unconstrained_posterior", error_if_already_split=False)
-            except KeyError:
-                pass
+            strace.setup(draws=draws, tune=tune, chain=chain, sampler_vars=None)
 
     @property
     def tuning_steps(self):
@@ -579,6 +701,15 @@ class ZarrTrace:
         except AttributeError:  # pragma: no cover
             raise ValueError(
                 "ZarrTrace has not been initialized and there is no tuning step information available"
+            )
+
+    @property
+    def draws(self):
+        try:
+            return int(self._sampling_state.draws.get_basic_selection())
+        except AttributeError:  # pragma: no cover
+            raise ValueError(
+                "ZarrTrace has not been initialized and there is no draw information available"
             )
 
     @property
@@ -594,7 +725,9 @@ class ZarrTrace:
     def sampling_time(self, value):
         self._sampling_state.sampling_time.set_basic_selection((), float(value))
 
-    def init_sampling_state_group(self, tune: int, chains: int):
+    def init_sampling_state_group(
+        self, tune: int, draws: int, chains: int
+    ):
         state = self.root.create_group(name="_sampling_state", overwrite=True)
         sampling_state = state.empty(
             name="sampling_state",
@@ -620,6 +753,14 @@ class ZarrTrace:
         state.array(
             name="tuning_steps",
             data=tune,
+            overwrite=True,
+            dtype="int",
+            fill_value=0,
+            compressor=self.compressor,
+        )
+        state.array(
+            name="draws",
+            data=draws,
             overwrite=True,
             dtype="int",
             fill_value=0,
@@ -682,10 +823,15 @@ class ZarrTrace:
                     group_coords[dim] = self.coords[dim]
             except KeyError:
                 dims = []
+                if len(shape) > 0:
+                    self.vars_to_dims[name] = []
                 for i, shape_i in enumerate(shape):
                     dim = f"{name}_dim_{i}"
+                    coord = np.arange(shape_i, dtype="int")
                     dims.append(dim)
-                    group_coords[dim] = np.arange(shape_i, dtype="int")
+                    self.vars_to_dims[name].append(dim)
+                    group_coords[dim] = coord
+                    self.coords[dim] = coord
             dims = ("chain", "draw", *dims)
             attrs = extra_var_attrs[name] if extra_var_attrs is not None else {}
             attrs.update({"_ARRAY_DIMENSIONS": dims})
@@ -721,10 +867,15 @@ class ZarrTrace:
                         group_coords[dim] = self.coords[dim]
                 except KeyError:
                     dims = []
+                    if var_value.ndim > 0:
+                        self.vars_to_dims[var_name] = []
                     for i in range(var_value.ndim):
                         dim = f"{var_name}_dim_{i}"
+                        coord = np.arange(var_value.shape[i], dtype="int")
                         dims.append(dim)
-                        group_coords[dim] = np.arange(var_value.shape[i], dtype="int")
+                        self.vars_to_dims[var_name].append(dim)
+                        group_coords[dim] = coord
+                        self.coords[dim] = coord
                 array.attrs.update({"_ARRAY_DIMENSIONS": dims})
             for dim, coord in group_coords.items():
                 array = group.array(
@@ -839,7 +990,6 @@ class ZarrTrace:
         than the calling ``ZarrTrace``, so future changes to the ``ZarrTrace`` won't be
         automatically reflected in the returned ``InferenceData`` object.
         """
-        self.split_warmup_groups()
         # Xarray complains if we try to open a zarr hierarchy that doesn't have consolidated metadata
         consolidated_root = zarr.consolidate_metadata(self.root.store)
         # The ConsolidatedMetadataStore looks like an empty store from xarray's point of view
