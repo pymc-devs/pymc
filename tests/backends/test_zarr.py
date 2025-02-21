@@ -27,6 +27,7 @@ import pymc as pm
 from pymc.backends.zarr import ZarrTrace
 from pymc.stats.convergence import SamplerWarning
 from pymc.step_methods import NUTS, CompoundStep, Metropolis
+from pymc.step_methods.hmc import quadpotential
 from pymc.step_methods.state import equal_dataclass_values
 from tests.helpers import equal_sampling_states
 
@@ -656,3 +657,222 @@ def test_from_store(populated_trace):
                 loaded_array = loaded_group[name]
                 assert dict(array.attrs) == dict(loaded_array.attrs)
                 np.testing.assert_array_equal(np.asarray(array), np.asarray(loaded_array))
+
+
+def test_resume_sampling(
+    model,
+    model_step,
+    include_transformed,
+    parallel,
+    draws_per_chunk,
+):
+    tune = 2
+    draws = 3
+    if parallel:
+        chains = 2
+        cores = 2
+    else:
+        chains = 1
+        cores = 1
+    store1 = zarr.TempStore()
+    store2 = zarr.TempStore()
+    trace1 = ZarrTrace(
+        store=store1, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
+    )
+    trace2 = ZarrTrace(
+        store=store2, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
+    )
+    tune = 2
+    draws = 3
+    if parallel:
+        chains = 2
+        cores = 2
+    else:
+        chains = 1
+        cores = 1
+    initial_step_state = model_step.sampling_state
+    with model:
+        idata_full = pm.sample(
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            cores=cores,
+            trace=trace1,
+            step=model_step,
+            discard_tuned_samples=False,
+            return_inferencedata=True,
+            keep_warning_stat=False,
+            idata_kwargs={"log_likelihood": True},
+            random_seed=42,
+        )
+    model_step.sampling_state = initial_step_state
+    with model:
+        pm.sample(
+            draws=0,
+            tune=tune - 1,
+            chains=chains,
+            cores=cores,
+            trace=trace2,
+            step=model_step,
+            discard_tuned_samples=False,
+            return_inferencedata=False,
+            keep_warning_stat=False,
+            idata_kwargs={"log_likelihood": True},
+            random_seed=42,
+        )
+        pm.sample(
+            draws=draws - 1,
+            tune=tune,
+            chains=chains,
+            cores=1,
+            trace=trace2,
+            step=model_step,
+            discard_tuned_samples=False,
+            return_inferencedata=False,
+            keep_warning_stat=False,
+            idata_kwargs={"log_likelihood": True},
+        )
+        idata_with_pauses = pm.sample(
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            cores=cores,
+            trace=trace2,
+            step=model_step,
+            discard_tuned_samples=False,
+            return_inferencedata=True,
+            keep_warning_stat=False,
+            idata_kwargs={"log_likelihood": True},
+        )
+    for group in idata_full.groups():
+        if "sample_stats" in group:
+            comparable_stats = [
+                stat_name
+                for stat_name in idata_full[group].data_vars
+                if not any(
+                    incomparable in stat_name
+                    for incomparable in [
+                        "process_time_diff",
+                        "perf_counter_diff",
+                        "perf_counter_start",
+                    ]
+                )
+            ]
+            for comparable_stat in comparable_stats:
+                xr.testing.assert_equal(
+                    idata_full[group][comparable_stat],
+                    idata_with_pauses[group][comparable_stat],
+                )
+        else:
+            xr.testing.assert_equal(idata_full[group], idata_with_pauses[group])
+
+
+incompatibility_modes = [
+    "wrong_coordinates",
+    "changed_coordinates",
+    "changed_data",
+    "changed_observations",
+    "untracked_vars",
+    "different_step_stats",
+    "different_step_state",
+]
+
+
+def basic_model(coords, observed_value, include_free_var=True, include_data=True, mix_dims=False):
+    with pm.Model(coords=coords) as base_model:
+        trans_var = pm.HalfNormal("trans_var", dims="free_dims" if mix_dims else "trans_dims")
+        if include_free_var:
+            free_var = pm.Normal("free_var", dims="free_dims")
+            det_var = pm.Deterministic("det_var", free_var.sum() + trans_var.sum())
+        else:
+            det_var = pm.Deterministic("det_var", trans_var.sum())
+        if include_data:
+            data_var = pm.Data(
+                "data_var", np.ones(len(coords.get("data_dims", [1]))), dims="data_dims"
+            )
+            obs_var = pm.Normal("obs_var", data_var.sum() + det_var, observed=observed_value)
+        else:
+            obs_var = pm.Normal("obs_var", det_var, observed=observed_value)
+    return base_model
+
+
+@pytest.fixture(scope="module", params=incompatibility_modes)
+def incompatible_model(request):
+    mode = request.param
+    base_coords = {
+        "trans_dims": range(3),
+        "free_dims": ["A", "B"],
+        "data_dims": range(5),
+    }
+    base_observed = np.arange(4)
+    base_model = basic_model(
+        coords=base_coords, include_free_var=True, include_data=True, observed_value=base_observed
+    )
+    with base_model:
+        base_step = NUTS()
+        store = zarr.TempStore()
+        trace = ZarrTrace(store=store, include_transformed=True)
+        trace = pm.sample(
+            tune=4,
+            draws=4,
+            chains=1,
+            step=base_step,
+            random_seed=42,
+            trace=trace,
+            return_inferencedata=False,
+            discard_tuned_samples=False,
+        )
+    test_step = base_step
+    if mode == "wrong_coordinates":
+        wrong_model = basic_model(coords=base_coords, observed_value=base_observed, mix_dims=True)
+        error_message = (
+            "Some model variables have different dimensions than those stored in the trace."
+        )
+    elif mode == "changed_coordinates":
+        wrong_coords = base_coords.copy()
+        wrong_coords["trans_dims"] = range(10)
+        wrong_model = basic_model(coords=wrong_coords, observed_value=base_observed)
+        error_message = "Model coordinates don't match the coordinates stored in the trace"
+    elif mode == "changed_data":
+        wrong_model = basic_model(coords=base_coords, observed_value=base_observed)
+        with wrong_model:
+            pm.set_data({"data_var": np.zeros_like(wrong_model["data_var"].get_value())})
+        error_message = "The model constant data does not match with the stored constant data"
+    elif mode == "changed_observations":
+        wrong_model = basic_model(coords=base_coords, observed_value=base_observed + 44)
+        error_message = "The model observed data does not match with the stored observed data"
+    elif mode == "untracked_vars":
+        wrong_model = basic_model(
+            coords=base_coords, include_free_var=False, observed_value=base_observed
+        )
+        error_message = (
+            "The model deterministics and random variables given the sampled var_names "
+            "do not match with the stored deterministics variables in the trace."
+        )
+    elif mode == "different_step_stats":
+        wrong_model = base_model
+        with wrong_model:
+            test_step = Metropolis()
+        error_message = "The step method sample stats do not match the ones stored in the trace."
+    elif mode == "different_step_state":
+        wrong_model = base_model
+        with wrong_model:
+            potential = quadpotential.QuadPotentialFullAdapt(
+                base_step.potential._n,
+                base_step.potential._initial_mean,
+            )
+            test_step = NUTS(potential=potential)
+        error_message = (
+            "The state method sampling state class is incompatible with what's stored in the trace."
+        )
+    else:
+        raise NotImplementedError()
+    return trace, wrong_model, error_message, test_step
+
+
+def test_model_and_step_are_compatible(incompatible_model):
+    trace, model, expected_error, step = incompatible_model
+    with pytest.raises(AssertionError, match=expected_error):
+        trace.assert_model_and_step_are_compatible(
+            step=step, model=model, vars=model.unobserved_value_vars
+        )
