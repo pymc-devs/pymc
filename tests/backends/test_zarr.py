@@ -94,6 +94,40 @@ def model_step(request, model):
     return step
 
 
+@pytest.fixture(scope="function", params=["mid_tuning", "finished_tuning"])
+def populated_trace(model, request):
+    tune = 5
+    draws = 5
+    chains = 1
+    if request.param == "mid_tuning":
+        total_steps = 2
+    else:
+        total_steps = 7
+    trace = ZarrTrace(
+        draws_per_chunk=1,
+        include_transformed=True,
+    )
+    with model:
+        rng = np.random.default_rng(42)
+        stepper = NUTS(rng=rng)
+    trace.init_trace(
+        chains=chains,
+        draws=draws,
+        tune=tune,
+        step=stepper,
+        model=model,
+    )
+    point = model.initial_point()
+    for draw in range(total_steps):
+        tuning = draw < tune
+        if not tuning:
+            stepper.stop_tuning()
+        point, stats = stepper.step(point)
+        trace.straces[0].record(point, stats)
+    trace.straces[0].record_sampling_state(stepper)
+    return trace, total_steps, tune, draws
+
+
 def test_record(model, model_step, include_transformed, draws_per_chunk):
     store = zarr.TempStore()
     trace = ZarrTrace(
@@ -347,7 +381,67 @@ def test_split_warmup(tune, model, model_step, include_transformed):
         if len(dims) >= 2 and dims[1] == "draw":
             assert sample_stats_array.shape[1] == draws
             assert trace.root["warmup_sample_stats"][var_name].shape[1] == tune
+
+
+@pytest.mark.parametrize(
+    "desired_tune_and_draws",
+    [
+        [None, 1],
+        [3, None],
+        [10, None],
+        [None, 10],
+    ],
+)
+def test_resize(populated_trace, desired_tune_and_draws):
+    desired_tune, desired_draws = desired_tune_and_draws
+    trace, total_steps, tune, draws = populated_trace
+    expect_to_fail = False
+    failure_message = ""
+    if desired_tune is not None:
+        if total_steps > tune:
+            expect_to_fail = True
+            failure_message = (
+                "Cannot change the number of tuning steps in the trace. "
+                "Some chains have finished their tuning phase and have "
+                "already performed steps in the posterior sampling regime."
+            )
+        elif total_steps > desired_tune:
+            expect_to_fail = True
+            failure_message = (
+                "Cannot change the number of tuning steps in the trace. "
+                "Some chains have already taken more steps than the desired number "
+                "of tuning steps. Please increase the desired number of tuning "
+                f"steps to at least {total_steps}."
+            )
+    if desired_draws is not None and total_steps > (desired_draws + tune):
+        expect_to_fail = True
+        failure_message = (
+            "Cannot change the number of draws in the trace. "
+            "Some chains have already taken more steps than the desired number "
+            "of draws. Please increase the desired number of draws "
+            f"to at least {total_steps - tune}."
+        )
+    if expect_to_fail:
+        with pytest.raises(ValueError, match=failure_message):
+            trace.resize(tune=desired_tune, draws=desired_draws)
     else:
+        trace.resize(tune=desired_tune, draws=desired_draws)
+        result_tune = desired_tune or tune
+        result_draws = desired_draws or draws
+        assert trace.tuning_steps == result_tune
+        assert trace.draws == result_draws
+        posterior_groups = ["posterior", "sample_stats", "unconstrained_posterior"]
+        warmup_groups = [f"warmup_{name}" for name in posterior_groups]
+        for group_set, expected_size in zip(
+            [posterior_groups, warmup_groups], [result_draws, result_tune]
+        ):
+            for group in group_set:
+                zarr_group = getattr(trace, group)
+                for name, values in zarr_group.arrays():
+                    if values.ndim > 1:  # Quick and dirty hack to filter out coordinate arrays
+                        assert values.shape[1] == expected_size
+                    elif name == "draw":
+                        assert values.shape[0] == expected_size
 
 
 @pytest.fixture(scope="function", params=["discard_tuning", "keep_tuning"])
