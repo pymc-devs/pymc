@@ -1092,3 +1092,74 @@ class ZarrTrace:
             data.attrs = make_attrs(attrs=attrs, library=pymc)
             groups[name] = data.load() if az.rcParams["data.load"] == "eager" else data
         return az.InferenceData(**groups)
+
+    @classmethod
+    def from_store(
+        cls: type["ZarrTrace"],
+        store: BaseStore | MutableMapping,
+        synchronizer: Synchronizer | None = None,
+    ) -> "ZarrTrace":
+        if not _zarr_available:
+            raise RuntimeError("You must install zarr to be able to create ZarrTrace instances")
+        self: ZarrTrace = object.__new__(cls)
+        self.root = zarr.group(
+            store=store,
+            overwrite=False,
+            synchronizer=synchronizer,
+        )
+        self.synchronizer = synchronizer
+        self.compressor = default_compressor
+
+        groups = set(self.root.group_keys())
+        assert groups >= {
+            "posterior",
+            "sample_stats",
+            "warmup_posterior",
+            "warmup_sample_stats",
+            "constant_data",
+            "observed_data",
+            "_sampling_state",
+        }
+
+        if "posterior" in groups:
+            for _, array in self.posterior.arrays():
+                dims = array.attrs.get("_ARRAY_DIMENSIONS", [])
+                if len(dims) >= 2 and dims[1] == "draw":
+                    draws_per_chunk = int(array.chunks[1])
+                    break
+            else:
+                draws_per_chunk = 1
+
+        self.draws_per_chunk = int(draws_per_chunk)
+        assert self.draws_per_chunk >= 1
+
+        self.include_transformed = "unconstrained_posterior" in groups
+        arrays = itertools.chain(
+            self.posterior.arrays(),
+            self.constant_data.arrays(),
+            self.observed_data.arrays(),
+        )
+        if self.include_transformed:
+            arrays = itertools.chain(arrays, self.unconstrained_posterior.arrays())
+        varnames = []
+        coords = {}
+        vars_to_dims = {}
+        for name, array in arrays:
+            dims = array.attrs["_ARRAY_DIMENSIONS"]
+            if dims[:2] == ["chain", "draw"]:
+                # Random Variable
+                vars_to_dims[name] = dims[2:]
+                varnames.append(name)
+            elif len(dims) == 1 and name == dims[0]:
+                # Coordinate
+                # We store all model coordinates, which means we have to exclude chain
+                # and draw
+                if name not in ["chain", "draw"]:
+                    coords[name] = np.asarray(array)
+            else:
+                # Constant data or observation
+                vars_to_dims[name] = dims
+        self.varnames = varnames
+        self.coords = coords
+        self.vars_to_dims = vars_to_dims
+        return self

@@ -618,3 +618,41 @@ def test_sampling_consistency(
             sequential_trace._sampling_state.sampling_state[chain],
         )
     xr.testing.assert_equal(parallel_idata.posterior, sequential_idata.posterior)
+
+
+def test_from_store(populated_trace):
+    trace, total_steps, tune, draws = populated_trace
+    loaded_trace = ZarrTrace.from_store(
+        trace.root.store,
+    )
+    assert loaded_trace.is_root_populated and not loaded_trace._is_base_setup
+    assert trace.draws_per_chunk == loaded_trace.draws_per_chunk
+    assert trace.include_transformed == loaded_trace.include_transformed
+    assert set(trace.varnames) == set(loaded_trace.varnames)
+    assert set(trace.coords) == set(loaded_trace.coords) and (
+        all(
+            np.array_equal(np.asarray(coord), np.asarray(loaded_trace.coords[dim]))
+            for dim, coord in trace.coords.items()
+        )
+    )
+    assert trace.vars_to_dims == loaded_trace.vars_to_dims
+
+    assert not hasattr(loaded_trace, "straces")
+    assert set(trace.root.group_keys()) == set(loaded_trace.root.group_keys())
+    for group_name, group in trace.root.groups():
+        loaded_group = loaded_trace.root[group_name]
+        if group_name == "_sampling_state":
+            assert all(
+                equal_sampling_states(this, other) if this is not None else this is other
+                for this, other in zip(group.sampling_state[:], loaded_group.sampling_state[:])
+            )
+            np.testing.assert_array_equal(group.draw_idx, loaded_group.draw_idx)
+            assert trace.tuning_steps == loaded_trace.tuning_steps
+            assert trace.draws == loaded_trace.draws
+            assert trace.sampling_time == loaded_trace.sampling_time
+        else:
+            assert set(group.array_keys()) == set(loaded_group.array_keys())
+            for name, array in group.arrays():
+                loaded_array = loaded_group[name]
+                assert dict(array.attrs) == dict(loaded_array.attrs)
+                np.testing.assert_array_equal(np.asarray(array), np.asarray(loaded_array))
