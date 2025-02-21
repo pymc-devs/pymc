@@ -297,6 +297,7 @@ class ZarrChain(BaseTrace):
         """
         # No need to iterate over ZarrChain instances because the zarr group is
         # shared between them
+        idx: int | slice
         if chain_specific:
             idx = self.chain
         else:
