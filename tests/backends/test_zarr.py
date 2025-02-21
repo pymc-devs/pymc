@@ -108,11 +108,14 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
         "_sampling_state",
         "sample_stats",
         "posterior",
+        "warmup_sample_stats",
+        "warmup_posterior",
         "constant_data",
         "observed_data",
     }
     if include_transformed:
         expected_groups.add("unconstrained_posterior")
+        expected_groups.add("warmup_unconstrained_posterior")
     assert {group_name for group_name, _ in trace.root.groups()} == expected_groups
 
     # Record samples from the ZarrChain
@@ -121,6 +124,7 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
     manually_collected_draws = []
     manually_collected_stats = []
     point = model.initial_point()
+    divergences = 0
     for draw in range(tune + draws):
         tuning = draw < tune
         if not tuning:
@@ -133,27 +137,16 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
             manually_collected_draws.append(point)
             manually_collected_stats.append(stats)
         trace.straces[0].record(point, stats)
+        for step_stats in stats:
+            divergences += sum(
+                int(step_stats[key] and not step_stats["tune"])
+                for key in step_stats
+                if "diverging" in key
+            )
+    assert trace.straces[0].completed_draws_and_divergences() == (draw + 1, divergences)
+    last_point = point
     trace.straces[0].record_sampling_state(model_step)
     assert {group_name for group_name, _ in trace.root.groups()} == expected_groups
-
-    # Assert split warmup
-    trace.split_warmup("posterior")
-    trace.split_warmup("sample_stats")
-    expected_groups = {
-        "_sampling_state",
-        "sample_stats",
-        "posterior",
-        "warmup_sample_stats",
-        "warmup_posterior",
-        "constant_data",
-        "observed_data",
-    }
-    if include_transformed:
-        trace.split_warmup("unconstrained_posterior")
-        expected_groups.add("unconstrained_posterior")
-        expected_groups.add("warmup_unconstrained_posterior")
-    assert {group_name for group_name, _ in trace.root.groups()} == expected_groups
-    # trace.consolidate()
 
     # Assert observed data is correct
     assert set(dict(trace.observed_data.arrays())) == {"obs", "dim_time", "dim_str"}
@@ -236,7 +229,7 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
         stat = stats_bijection.map(stat)
         for var, value in draw.items():
             if var in trace.posterior.arrays():
-                assert np.array_equal(trace.posterior[var][0, draw_idx], value)
+                np.testing.assert_array_equal(trace.posterior[var][0, draw_idx], value)
         for var, value in stat.items():
             sample_stats = trace.root["sample_stats"]
             stat_val = sample_stats[var][0, draw_idx]
@@ -260,7 +253,7 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
             else:
                 posterior = trace.root["warmup_posterior"]
             if var in posterior.arrays():
-                assert np.array_equal(posterior[var][0, draw_idx], value)
+                np.testing.assert_array_equal(posterior[var][0, draw_idx], value)
         for var, value in stat.items():
             sample_stats = trace.root["warmup_sample_stats"]
             stat_val = sample_stats[var][0, draw_idx]
@@ -284,7 +277,7 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
             else:
                 posterior = trace.root["posterior"]
             if var in posterior.arrays():
-                assert np.array_equal(posterior[var][0, draw_idx], value)
+                np.testing.assert_array_equal(posterior[var][0, draw_idx], value)
         for var, value in stat.items():
             sample_stats = trace.root["sample_stats"]
             stat_val = sample_stats[var][0, draw_idx]
@@ -336,30 +329,22 @@ def test_split_warmup(tune, model, model_step, include_transformed):
     draws = 10 - tune
     trace.init_trace(chains=1, draws=draws, tune=tune, model=model, step=model_step)
 
-    trace.split_warmup("posterior")
-    trace.split_warmup("sample_stats")
     assert len(trace.root.posterior.draw) == draws
     assert len(trace.root.sample_stats.draw) == draws
-    if tune == 0:
-        with pytest.raises(KeyError):
-            trace.root["warmup_posterior"]
+    assert len(trace.root["warmup_posterior"].draw) == tune
+    assert len(trace.root["warmup_sample_stats"].draw) == tune
+
+    for var_name, posterior_array in trace.posterior.arrays():
+        dims = posterior_array.attrs["_ARRAY_DIMENSIONS"]
+        if len(dims) >= 2 and dims[1] == "draw":
+            assert posterior_array.shape[1] == draws
+            assert trace.root["warmup_posterior"][var_name].shape[1] == tune
+    for var_name, sample_stats_array in trace.sample_stats.arrays():
+        dims = sample_stats_array.attrs["_ARRAY_DIMENSIONS"]
+        if len(dims) >= 2 and dims[1] == "draw":
+            assert sample_stats_array.shape[1] == draws
+            assert trace.root["warmup_sample_stats"][var_name].shape[1] == tune
     else:
-        assert len(trace.root["warmup_posterior"].draw) == tune
-        assert len(trace.root["warmup_sample_stats"].draw) == tune
-
-        with pytest.raises(RuntimeError):
-            trace.split_warmup("posterior")
-
-        for var_name, posterior_array in trace.posterior.arrays():
-            dims = posterior_array.attrs["_ARRAY_DIMENSIONS"]
-            if len(dims) >= 2 and dims[1] == "draw":
-                assert posterior_array.shape[1] == draws
-                assert trace.root["warmup_posterior"][var_name].shape[1] == tune
-        for var_name, sample_stats_array in trace.sample_stats.arrays():
-            dims = sample_stats_array.attrs["_ARRAY_DIMENSIONS"]
-            if len(dims) >= 2 and dims[1] == "draw":
-                assert sample_stats_array.shape[1] == draws
-                assert trace.root["warmup_sample_stats"][var_name].shape[1] == tune
 
 
 @pytest.fixture(scope="function", params=["discard_tuning", "keep_tuning"])
