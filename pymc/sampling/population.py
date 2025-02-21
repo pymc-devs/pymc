@@ -19,7 +19,7 @@ import warnings
 
 from collections.abc import Iterator, Sequence
 from copy import copy
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import cloudpickle
 import numpy as np
@@ -38,7 +38,7 @@ from pymc.step_methods.arraystep import (
     PopulationArrayStepShared,
     StatsType,
 )
-from pymc.step_methods.compound import StepMethodState
+from pymc.step_methods.compound import CompoundStepState, StepMethodState
 from pymc.step_methods.metropolis import DEMetropolis
 
 __all__ = ()
@@ -54,7 +54,7 @@ def _sample_population(
     *,
     initial_points: Sequence[PointType],
     draws: int,
-    start: Sequence[PointType],
+    start: list[PointType],
     rngs: Sequence[np.random.Generator],
     step: BlockedStep | CompoundStep,
     tune: int,
@@ -151,7 +151,9 @@ def warn_population_size(
 class PopulationStepper:
     """Wraps population of step methods to step them in parallel with single or multiprocessing."""
 
-    def __init__(self, steppers, parallelize: bool, progressbar: bool = True):
+    def __init__(
+        self, steppers, parallelize: bool, progressbar: bool = True, first_draw_idx: int = 0
+    ):
         """Use multiprocessing to parallelize chains.
 
         Falls back to sequential evaluation if multiprocessing fails.
@@ -330,7 +332,7 @@ def _prepare_iter_population(
     *,
     draws: int,
     step,
-    start: Sequence[PointType],
+    start: list[PointType],
     parallelize: bool,
     traces: Sequence[BaseTrace],
     tune: int,
@@ -376,9 +378,28 @@ def _prepare_iter_population(
         raise ValueError("Argument `draws` should be above 0.")
 
     # The initialization of traces, samplers and points must happen in the right order:
+    # 0. previous sampling state is loaded if possible
     # 1. population of points is created
     # 2. steppers are initialized and linked to the points object
     # 3. a PopulationStepper is configured for parallelized stepping
+
+    # 0. load sampling state and start point from traces if possible
+    first_draw_idx = 0
+    can_resume_sampling = False
+    stored_draw_idxs: list[int] = []
+    stored_sampling_states: list[StepMethodState | CompoundStepState | None] = []
+    for trace in traces:
+        draw_idx, sampling_state = trace.get_stored_draw_and_state()
+        stored_draw_idxs.append(draw_idx)
+        stored_sampling_states.append(sampling_state)
+    can_resume_sampling = all(
+        draw_idx > 0 and draw_idx == stored_draw_idxs[0] for draw_idx in stored_draw_idxs
+    ) and all(sampling_state is not None for sampling_state in stored_sampling_states)
+    for chain, trace in enumerate(traces):
+        if can_resume_sampling:
+            start[chain] = trace.get_mcmc_point()
+        else:
+            trace.set_mcmc_point(start[chain])
 
     # 1. create a population (points) that tracks each chain
     # it is updated as the chains are advanced
@@ -401,15 +422,25 @@ def _prepare_iter_population(
         for sm in chainstep.methods if isinstance(step, CompoundStep) else [chainstep]:
             if isinstance(sm, PopulationArrayStepShared):
                 sm.link_population(population, c)
+        if can_resume_sampling:
+            chainstep.sampling_state = cast(Sequence[CompoundStepState], stored_sampling_states)[c]
         steppers.append(chainstep)
 
     # 3. configure the PopulationStepper (expensive call)
-    popstep = PopulationStepper(steppers, parallelize, progressbar=progressbar)
+    popstep = PopulationStepper(
+        steppers, parallelize, progressbar=progressbar, first_draw_idx=first_draw_idx
+    )
 
     # Because the preparations above are expensive, the actual iterator is
     # in another method. This way the progbar will not be disturbed.
     return _iter_population(
-        draws=draws, tune=tune, popstep=popstep, steppers=steppers, traces=traces, points=population
+        draws=draws,
+        tune=tune,
+        popstep=popstep,
+        steppers=steppers,
+        traces=traces,
+        points=population,
+        first_draw_idx=first_draw_idx,
     )
 
 
@@ -421,6 +452,7 @@ def _iter_population(
     steppers,
     traces: Sequence[BaseTrace],
     points,
+    first_draw_idx=0,
 ) -> Iterator[int]:
     """Iterate a ``PopulationStepper``.
 
@@ -450,7 +482,7 @@ def _iter_population(
     try:
         with popstep:
             # iterate draws of all chains
-            for i in range(draws):
+            for i in range(first_draw_idx, draws):
                 # this call steps all chains and returns a list of (point, stats)
                 # the `popstep` may interact with subprocesses internally
                 updates = popstep.step(i == tune, points)
@@ -460,7 +492,7 @@ def _iter_population(
                     points[c], stats = updates[c]
                     flushed = strace.record(points[c], stats)
                     log_warning_stats(stats)
-                    if flushed and isinstance(strace, ZarrChain):
+                    if flushed:
                         sampling_state = popstep.request_sampling_state(c)
                         strace.store_sampling_state(sampling_state)
                 # yield the state of all chains in parallel

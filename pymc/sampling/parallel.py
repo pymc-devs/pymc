@@ -30,6 +30,7 @@ import numpy as np
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 
+from pymc.backends.base import IBaseTrace
 from pymc.backends.zarr import ZarrChain
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
@@ -104,8 +105,9 @@ class _Process:
         rng_state: RandomGeneratorState,
         blas_cores,
         chain: int,
-        zarr_chains: list[ZarrChain] | bytes | None = None,
-        zarr_chains_is_pickled: bool = False,
+        traces: list[IBaseTrace] | bytes | None = None,
+        traces_is_pickled: bool = False,
+        zarr_recording: bool = False,
     ):
         # Because of https://github.com/numpy/numpy/issues/27727, we can't send
         # the rng instance to the child process because pickling (copying) looses
@@ -116,13 +118,12 @@ class _Process:
         self._step_method = step_method
         self._step_method_is_pickled = step_method_is_pickled
         self.chain = chain
-        self._zarr_recording = False
-        self._zarr_chain: ZarrChain | None = None
-        if zarr_chains_is_pickled:
-            self._zarr_chain = cloudpickle.loads(zarr_chains)[self.chain]
-        elif zarr_chains is not None:
-            self._zarr_chain = cast(list[ZarrChain], zarr_chains)[self.chain]
-        self._zarr_recording = self._zarr_chain is not None
+        self._zarr_recording = zarr_recording
+        self._trace: IBaseTrace | None = None
+        if traces_is_pickled:
+            self._trace = cloudpickle.loads(traces)[self.chain]
+        elif traces is not None:
+            self._trace = cast(list[IBaseTrace], traces)[self.chain]
 
         self._shared_point = shared_point
         self._rng = rng
@@ -164,7 +165,7 @@ class _Process:
 
     def _link_step_to_zarrchain(self):
         if self._zarr_recording:
-            self._zarr_chain.link_stepper(self._step_method)
+            self._trace.link_stepper(self._step_method)
 
     def _wait_for_abortion(self):
         while True:
@@ -193,6 +194,24 @@ class _Process:
 
         draw = 0
         tuning = True
+        if self._zarr_recording:
+            trace = self._trace
+            stored_draw_idx = trace._sampling_state.draw_idx[self.chain]
+            stored_sampling_state = trace._sampling_state.sampling_state[self.chain]
+            if stored_draw_idx > 0:
+                if stored_sampling_state is not None:
+                    self._step_method.sampling_state = stored_sampling_state
+                else:
+                    raise RuntimeError(
+                        "Cannot use the supplied ZarrTrace to restart sampling because "
+                        "it has no sampling_state information stored. You will have to "
+                        "resample from scratch."
+                    )
+                draw = stored_draw_idx
+                self._write_point(trace.get_mcmc_point())
+            else:
+                # Store starting point in trace's mcmc_point
+                trace.set_mcmc_point(self._point)
 
         msg = self._recv_msg()
         if msg[0] == "abort":
@@ -219,7 +238,7 @@ class _Process:
                 raise KeyboardInterrupt()
             elif msg[0] == "write_next":
                 if zarr_recording:
-                    self._zarr_chain.record(point, stats)
+                    self._trace.record(point, stats)
                 self._write_point(point)
                 is_last = draw + 1 == self._draws + self._tune
                 self._msg_pipe.send(("writing_done", is_last, draw, tuning, stats))
@@ -246,8 +265,9 @@ class ProcessAdapter:
         start: dict[str, np.ndarray],
         blas_cores,
         mp_ctx,
-        zarr_chains: list[ZarrChain] | None = None,
-        zarr_chains_pickled: bytes | None = None,
+        traces: Sequence[IBaseTrace] | None = None,
+        traces_pickled: bytes | None = None,
+        zarr_recording: bool = False,
     ):
         self.chain = chain
         process_name = f"worker_chain_{chain}"
@@ -270,15 +290,15 @@ class ProcessAdapter:
         self._readable = True
         self._num_samples = 0
 
-        zarr_chains_send: list[ZarrChain] | bytes | None = None
-        if zarr_chains_pickled is not None:
-            zarr_chains_send = zarr_chains_pickled
-        elif zarr_chains is not None:
+        traces_send: Sequence[IBaseTrace] | bytes | None = None
+        if traces_pickled is not None:
+            traces_send = traces_pickled
+        elif traces is not None:
             if mp_ctx.get_start_method() == "spawn":
                 raise ValueError(
-                    "please provide a pre-pickled zarr_chains when multiprocessing start method is 'spawn'"
+                    "please provide a pre-pickled traces when multiprocessing start method is 'spawn'"
                 )
-            zarr_chains_send = zarr_chains
+            traces_send = traces
 
         if step_method_pickled is not None:
             step_method_send = step_method_pickled
@@ -304,8 +324,9 @@ class ProcessAdapter:
                 get_state_from_generator(rng),
                 blas_cores,
                 self.chain,
-                zarr_chains_send,
-                zarr_chains_pickled is not None,
+                traces_send,
+                traces_pickled is not None,
+                zarr_recording,
             ),
         )
         self._process.start()
@@ -428,7 +449,7 @@ class ParallelSampler:
         progressbar_theme: Theme | None = default_progress_theme,
         blas_cores: int | None = None,
         mp_ctx=None,
-        zarr_chains: list[ZarrChain] | None = None,
+        traces: Sequence[IBaseTrace] | None = None,
     ):
         if any(len(arg) != chains for arg in [rngs, start_points]):
             raise ValueError(f"Number of rngs and start_points must be {chains}.")
@@ -449,15 +470,14 @@ class ParallelSampler:
             mp_ctx = multiprocessing.get_context(mp_ctx)
 
         step_method_pickled = None
-        zarr_chains_pickled = None
-        self.zarr_recording = False
-        if zarr_chains is not None:
-            assert all(isinstance(zarr_chain, ZarrChain) for zarr_chain in zarr_chains)
-            self.zarr_recording = True
+        traces_pickled = None
+        self.zarr_recording = traces is not None and all(
+            isinstance(trace, ZarrChain) for trace in traces
+        )
         if mp_ctx.get_start_method() != "fork":
             step_method_pickled = cloudpickle.dumps(step_method, protocol=-1)
-            if zarr_chains is not None:
-                zarr_chains_pickled = cloudpickle.dumps(zarr_chains, protocol=-1)
+            if traces is not None:
+                traces_pickled = cloudpickle.dumps(traces, protocol=-1)
 
         self._samplers = [
             ProcessAdapter(
@@ -470,8 +490,9 @@ class ParallelSampler:
                 start,
                 blas_cores,
                 mp_ctx,
-                zarr_chains=zarr_chains,
-                zarr_chains_pickled=zarr_chains_pickled,
+                traces=traces,
+                traces_pickled=traces_pickled,
+                zarr_recording=self.zarr_recording,
             )
             for chain, rng, start in zip(range(chains), rngs, start_points)
         ]

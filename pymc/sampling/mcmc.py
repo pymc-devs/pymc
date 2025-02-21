@@ -760,7 +760,7 @@ def sample(
             UserWarning,
         )
     rngs = get_random_generator(random_seed).spawn(chains)
-    random_seed_list = [rng.integers(2**30) for rng in rngs]
+    random_seed_list: list[int] = [int(rng.integers(2**30)) for rng in rngs]
 
     if not discard_tuned_samples and not return_inferencedata and not isinstance(trace, ZarrTrace):
         warnings.warn(
@@ -986,11 +986,8 @@ def _sample_return(
     Final step of `pm.sampler`.
     """
     if isinstance(traces, ZarrTrace):
-        # Split warmup from posterior samples
-        traces.split_warmup_groups()
-
         # Set sampling time
-        traces.sampling_time = t_sampling
+        traces.sampling_time = traces.sampling_time + t_sampling
 
         # Compute number of actual draws per chain
         total_draws_per_chain = traces._sampling_state.draw_idx[:]
@@ -1219,7 +1216,7 @@ def _sample(
         callback=callback,
     )
     try:
-        for it, stats in enumerate(sampling_gen):
+        for it, stats in sampling_gen:
             progress_manager.update(
                 chain_idx=chain, is_last=False, draw=it, stats=stats, tuning=it > tune
             )
@@ -1244,7 +1241,7 @@ def _iter_sample(
     rng: np.random.Generator,
     model: Model | None = None,
     callback: SamplingIteratorCallback | None = None,
-) -> Iterator[list[dict[str, Any]]]:
+) -> Iterator[tuple[int, list[dict[str, Any]]]]:
     """Sample one chain with a generator (singleprocess).
 
     Parameters
@@ -1278,14 +1275,29 @@ def _iter_sample(
     step.set_rng(rng)
 
     point = start
-    if isinstance(trace, ZarrChain):
-        trace.link_stepper(step)
+    initial_draw_idx = 0
+    step.tune = bool(tune)
+    if hasattr(step, "reset_tuning"):
+        step.reset_tuning()
+    trace.link_stepper(step)
+    stored_draw_idx, stored_sampling_state = trace.get_stored_draw_and_state()
+    if stored_draw_idx > 0:
+        if stored_sampling_state is not None:
+            step.sampling_state = stored_sampling_state
+        else:
+            raise RuntimeError(
+                "Cannot use the supplied ZarrTrace to restart sampling because "
+                "it has no sampling_state information stored. You will have to "
+                "resample from scratch."
+            )
+        initial_draw_idx = stored_draw_idx
+        point = trace.get_mcmc_point()
+    else:
+        # Store initial point in trace
+        trace.set_mcmc_point(point)
 
     try:
-        step.tune = bool(tune)
-        if hasattr(step, "reset_tuning"):
-            step.reset_tuning()
-        for i in range(draws):
+        for i in range(initial_draw_idx, draws):
             if i == 0 and hasattr(step, "iter_count"):
                 step.iter_count = 0
             if i == tune:
@@ -1301,17 +1313,15 @@ def _iter_sample(
                     draw=Draw(chain, i == draws, i, i < tune, stats, point),
                 )
 
-            yield stats
+            yield i, stats
 
     except (KeyboardInterrupt, BaseException):
-        if isinstance(trace, ZarrChain):
-            trace.record_sampling_state(step=step)
+        trace.record_sampling_state(step=step)
         trace.close()
         raise
 
     else:
-        if isinstance(trace, ZarrChain):
-            trace.record_sampling_state(step=step)
+        trace.record_sampling_state(step=step)
         trace.close()
 
 
@@ -1370,7 +1380,6 @@ def _mp_sample(
 
     # We did draws += tune in pm.sample
     draws -= tune
-    zarr_chains: list[ZarrChain] | None = None
     zarr_recording = False
     if all(isinstance(trace, ZarrChain) for trace in traces):
         if isinstance(cast(ZarrChain, traces[0])._posterior.store, MemoryStore):
@@ -1381,7 +1390,6 @@ def _mp_sample(
                 "DirectoryStore or ZipStore"
             )
         else:
-            zarr_chains = cast(list[ZarrChain], traces)
             zarr_recording = True
 
     sampler = ps.ParallelSampler(
@@ -1396,7 +1404,9 @@ def _mp_sample(
         progressbar_theme=progressbar_theme,
         blas_cores=blas_cores,
         mp_ctx=mp_ctx,
-        zarr_chains=zarr_chains,
+        # We only need to pass the traces when zarr_recording is happening because
+        # it's the only backend that can resume sampling
+        traces=traces if zarr_recording else None,
     )
     try:
         try:
