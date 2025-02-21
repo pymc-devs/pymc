@@ -11,11 +11,15 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import importlib
+
 from copy import deepcopy
 from dataclasses import MISSING, Field, dataclass, fields
-from typing import Any, ClassVar, Generic, TypeVar
+from numbers import Number
+from typing import Any, ClassVar, ForwardRef, Generic, TypeVar
 
 import numpy as np
+import typeguard
 
 from pymc.util import RandomGeneratorState, get_state_from_generator, random_generator_from_state
 
@@ -26,9 +30,78 @@ dataclass_state = dataclass(kw_only=True)
 class DataClassState:
     __dataclass_fields__: ClassVar[dict[str, Field[Any]]] = {}
 
+    def is_compatible(self, other: Any) -> bool:
+        return compatible_dataclass_values(self, other)
+
+
+def resolve_typehint(hint: Any, anchor: object = None) -> Any:
+    if isinstance(hint, str | ForwardRef):
+        if anchor is None:
+            globalns = globals()
+        else:
+            module = importlib.import_module(anchor.__module__)
+            globalns = vars(module)
+        recursive_guard: frozenset[str] = frozenset()
+        hint = (
+            eval(hint, globalns)
+            if isinstance(hint, str)
+            else hint._evaluate(globalns, None, recursive_guard=recursive_guard)
+        )
+    return hint
+
+
+def compatible_dataclass_values(v1: Any, v2: Any, typehint: Any = None) -> bool:
+    if typehint is not None:
+        # Some dataclass fields support multiple different types of values
+        # e.g. SomeClass | None union types. If v1 is a `SomeClass` object
+        # and v2 is `None`, just checking the values would determine that
+        # they are incompatible with each other. We need to check that
+        # they are compatible with the typehint signature instead.
+        # If they are compatible with the type hint, then we say that the
+        # values are compatible.
+        # If the values aren't compatible with the type hint (this could
+        # happen because python isn't strongly typed!), then we resort to
+        # comparing the values directly.
+        try:
+            assert typehint is not Any
+            typeguard.check_type(v1, typehint)
+            typeguard.check_type(v2, typehint)
+            return True
+        except Exception:
+            pass
+    if v1.__class__ != v2.__class__ and not (isinstance(v1, Number) and isinstance(v2, Number)):
+        # Numbers might have different classes (e.g. float("32") and np.float64(32))
+        # but numbers are compatible with each other
+        return False
+    if isinstance(v1, tuple):
+        return len(v1) == len(v2) or all(
+            compatible_dataclass_values(v1i, v2i) for v1i, v2i in zip(v1, v2, strict=True)
+        )
+    elif isinstance(v1, dict):
+        return set(v1) == set(v2) or all(compatible_dataclass_values(v1[k], v2[k]) for k in v1)
+    elif isinstance(v1, np.ndarray):
+        return v1.dtype == v2.dtype
+    elif isinstance(v1, np.random.Generator):
+        return True
+    elif isinstance(v1, DataClassState):
+        if set(fields(v1)) != set(fields(v2)):
+            return False
+        for field in fields(v1):
+            val1 = getattr(v1, field.name)
+            val2 = getattr(v2, field.name)
+            if not (isinstance(val1, DataClassState) and isinstance(val2, DataClassState)):
+                typehint = resolve_typehint(field.type, anchor=v1)
+            else:
+                typehint = None
+            if not compatible_dataclass_values(val1, val2, typehint):
+                return False
+    return True
+
 
 def equal_dataclass_values(v1, v2):
-    if v1.__class__ != v2.__class__:
+    if v1.__class__ != v2.__class__ and not (isinstance(v1, Number) and isinstance(v2, Number)):
+        # Numbers might have different classes (e.g. float("32") and np.float64(32))
+        # but numbers are equal based on their value and not their type
         return False
     if isinstance(v1, (list, tuple)):  # noqa: UP038
         return len(v1) == len(v2) and all(
@@ -95,6 +168,9 @@ class WithSamplingState(Generic[SamplingStateType]):
         state_class = self._state_class
         assert isinstance(state, state_class), (
             f"Encountered invalid state class '{state.__class__}'. State must be '{state_class}'"
+        )
+        assert self.sampling_state.is_compatible(state), (
+            "The supplied state is incompatible with the current sampling state."
         )
         for field in fields(state_class):
             is_tensor_name = field.metadata.get("tensor_name", False)

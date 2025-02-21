@@ -198,7 +198,7 @@ class QuadPotentialDiagAdaptState(PotentialState):
     _early_update: int = field(metadata={"frozen": True})
     _initial_mean: np.ndarray
     _initial_diag: np.ndarray
-    _initial_weight: np.ndarray
+    _initial_weight: np.ndarray | float
     adaptation_window_multiplier: float = field(metadata={"frozen": True})
     _store_mass_matrix_trace: bool = field(metadata={"frozen": True})
 
@@ -390,7 +390,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
 
 @dataclass_state
 class WeightedVarianceState(DataClassState):
-    n_samples: int
+    n_samples: int | float
     mean: np.ndarray
     raw_var: np.ndarray
 
@@ -447,7 +447,7 @@ class _WeightedVariance(WithSamplingState):
 class ExpWeightedVarianceState(DataClassState):
     _alpha: float
     _mean: np.ndarray
-    _var: np.ndarray
+    _variance: np.ndarray
 
 
 class _ExpWeightedVariance(WithSamplingState):

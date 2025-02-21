@@ -17,6 +17,7 @@ import numpy as np
 import pytest
 
 from pymc.step_methods.state import DataClassState, WithSamplingState, dataclass_state
+from pymc.util import RandomGeneratorState
 from tests.helpers import equal_sampling_states
 
 
@@ -88,7 +89,7 @@ class B(WithSamplingState):
 
 @dataclass_state
 class RngState(DataClassState):
-    rng: np.random.Generator
+    rng: RandomGeneratorState
 
 
 class Step(WithSamplingState):
@@ -101,7 +102,7 @@ class Step(WithSamplingState):
 def test_sampling_state():
     b1 = B()
     b2 = B(mutable_field=2.0)
-    b3 = B(c=1, extra_info1=np.array([10, 20]))
+    b3 = B(extra_info1=np.array([10, 20]))
     b4 = B(a=2, b=3.0, c="d")
     b5 = B(c=1)
     b6 = B(f={"a": 1, "b": "c", "d": None})
@@ -129,6 +130,11 @@ def test_sampling_state():
 
     with pytest.raises(AssertionError, match="Encountered invalid state class"):
         b1.sampling_state = b1_state.state1
+
+    with pytest.raises(
+        AssertionError, match="The supplied state is incompatible with the current sampling state."
+    ):
+        b1.sampling_state = b5.sampling_state
 
     b1.sampling_state = b4_state
     assert equal_sampling_states(b1.sampling_state, b4_state)
