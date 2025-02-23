@@ -27,6 +27,7 @@ from pytensor import tensor as pt
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.blockwise import Blockwise
 from pytensor.tensor.nlinalg import MatrixInverse
+from pytensor.tensor.random.basic import multivariate_normal
 from pytensor.tensor.random.utils import broadcast_params
 from pytensor.tensor.slinalg import Cholesky
 
@@ -1392,6 +1393,11 @@ class TestMoments:
 
 
 class TestMvNormalCov(BaseTestDistributionRandom):
+    def mvnormal_rng_fn(self, size, mean, cov, rng):
+        if isinstance(size, int):
+            size = (size,)
+        return multivariate_normal.rng_fn(rng, mean, cov, size=size)
+
     pymc_dist = pm.MvNormal
     pymc_dist_params = {
         "mu": np.array([1.0, 2.0]),
@@ -1407,7 +1413,8 @@ class TestMvNormalCov(BaseTestDistributionRandom):
         "mean": np.array([1.0, 2.0]),
         "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
     }
-    reference_dist = seeded_numpy_distribution_builder("multivariate_normal")
+    reference_dist = lambda self: ft.partial(self.mvnormal_rng_fn, rng=self.get_random_state())  # noqa: E731
+
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -1531,12 +1538,12 @@ class TestZeroSumNormal:
     def assert_zerosum_axes(self, random_samples, axes_to_check, check_zerosum_axes=True):
         if check_zerosum_axes:
             for ax in axes_to_check:
-                assert np.isclose(random_samples.mean(axis=ax), 0).all(), (
+                assert np.allclose(random_samples.mean(axis=ax), 0), (
                     f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
                 )
         else:
             for ax in axes_to_check:
-                assert not np.isclose(random_samples.mean(axis=ax), 0).all(), (
+                assert not np.allclose(random_samples.mean(axis=ax), 0), (
                     f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
                 )
 
@@ -1775,7 +1782,9 @@ class TestZeroSumNormal:
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
     def mvstudentt_rng_fn(self, size, nu, mu, scale, rng):
-        mv_samples = rng.multivariate_normal(np.zeros_like(mu), scale, size=size)
+        if isinstance(size, int):
+            size = (size,)
+        mv_samples = multivariate_normal.rng_fn(rng, np.zeros_like(mu), scale, size=size)
         chi2_samples = rng.chisquare(nu, size=size)
         return (mv_samples / np.sqrt(chi2_samples[:, None] / nu)) + mu
 
@@ -2111,9 +2120,11 @@ class TestMatrixNormal(BaseTestDistributionRandom):
 
 class TestKroneckerNormal(BaseTestDistributionRandom):
     def kronecker_rng_fn(self, size, mu, covs=None, sigma=None, rng=None):
-        cov = pm.math.kronecker(covs[0], covs[1]).eval()
+        if isinstance(size, int):
+            size = (size,)
+        cov = np.kron(covs[0], covs[1])
         cov += sigma**2 * np.identity(cov.shape[0])
-        return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size, random_state=rng)
+        return multivariate_normal.rng_fn(rng, mean=mu, cov=cov, size=size)
 
     pymc_dist = pm.KroneckerNormal
 
