@@ -1564,8 +1564,8 @@ class TestZeroSumNormal:
         )
 
         ndim_supp = v.owner.op.ndim_supp
-        n_zerosum_axes = np.arange(-ndim_supp, 0)
-        nonzero_axes = np.arange(v.ndim - ndim_supp)
+        n_zerosum_axes = tuple(range(-ndim_supp, 0))
+        nonzero_axes = tuple(range(v.ndim - ndim_supp))
         for samples in [
             s.posterior.v,
             random_samples,
@@ -1595,8 +1595,8 @@ class TestZeroSumNormal:
         )
 
         ndim_supp = v.owner.op.ndim_supp
-        n_zerosum_axes = np.arange(-ndim_supp, 0)
-        nonzero_axes = np.arange(v.ndim - ndim_supp)
+        n_zerosum_axes = tuple(range(-ndim_supp, 0))
+        nonzero_axes = tuple(range(v.ndim - ndim_supp))
         for samples in [
             s.posterior.v,
             random_samples,
