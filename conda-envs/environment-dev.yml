@@ -26,6 +26,7 @@ dependencies:
 - myst-nb<=1.0.0
 - numpydoc
 - pre-commit>=2.8.0
+- polyagamma
 - pytest-cov>=2.5
 - pytest>=3.0
 - rich>=13.7.1
@@ -35,7 +36,6 @@ dependencies:
 - sphinx>=1.5
 - sphinxext-rediraffe
 - watermark
-- polyagamma
 - sphinx-remove-toctrees
 - mypy=1.5.1
 - types-cachetools

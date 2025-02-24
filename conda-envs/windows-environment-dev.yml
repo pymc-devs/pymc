@@ -24,6 +24,7 @@ dependencies:
 - ipython>=7.16
 - myst-nb<=1.0.0
 - numpydoc
+- polyagamma
 - pre-commit>=2.8.0
 - pytest-cov>=2.5
 - pytest>=3.0

@@ -158,8 +158,6 @@ jobs:
       - name: Install-pymc
         run: |
           pip install -e .
-          # TODO: https://github.com/pymc-devs/pymc/issues/7417
-          pip install --pre -U 'polyagamma<1.3.7'
           python --version
           micromamba list
       - name: Run tests
@@ -210,7 +208,6 @@ jobs:
       - name: Install-pymc
         run: |
           pip install -e .
-          pip install --pre -U 'polyagamma<1.3.7'
           python --version
           micromamba list
       - name: Run tests
@@ -363,7 +360,6 @@ jobs:
       - name: Install-pymc
         run: |
           pip install -e .
-          pip install --pre -U 'polyagamma<1.3.7'
           python --version
           micromamba list
       - name: Run tests
