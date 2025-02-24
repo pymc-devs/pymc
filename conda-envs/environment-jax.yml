@@ -9,7 +9,6 @@ dependencies:
 - blas
 - cachetools>=4.2.1
 - cloudpickle
-- h5py>=2.7
 - zarr>=2.5.0,<3
 # Jaxlib version must not be greater than jax version!
 - blackjax>=1.2.2

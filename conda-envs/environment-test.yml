@@ -9,7 +9,6 @@ dependencies:
 - blas
 - cachetools>=4.2.1
 - cloudpickle
-- h5py>=2.7
 - jax
 - numpy>=1.25.0
 - pandas>=0.24.0
