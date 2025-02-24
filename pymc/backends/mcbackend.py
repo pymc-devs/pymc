@@ -181,7 +181,7 @@ class ChainRecordAdapter(IBaseTrace):
     def _slice(self, idx: slice) -> "IBaseTrace":
         # Get the integer indices
         start, stop, step = idx.indices(len(self))
-        indices = np.arange(start, stop, step)
+        indices = tuple(range(start, stop, step))
 
         # Create a NumPyChain for the sliced data
         nchain = mcb.backends.numpy.NumPyChain(
