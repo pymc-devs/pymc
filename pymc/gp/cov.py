@@ -170,7 +170,7 @@ class Covariance(BaseCovariance):
         else:
             self.active_dims = np.asarray(active_dims, int)
 
-        if max(self.active_dims) > self.input_dim:
+        if self.active_dims.max() > self.input_dim:
             raise ValueError("Values in `active_dims` can't be larger than `input_dim`.")
 
     @property
