@@ -2440,7 +2440,9 @@ class TestWeibull(BaseTestDistributionRandom):
 )
 class TestPolyaGamma(BaseTestDistributionRandom):
     def polyagamma_rng_fn(self, size, h, z, rng):
-        return random_polyagamma(h, z, size=size, random_state=rng._bit_generator)
+        # Polyagamma returns different values if inputs have explicit broadcasted dims
+        # Which PyTensor RVs always do when size is not None.
+        return random_polyagamma(np.atleast_1d(h), np.atleast_1d(z), size=size, random_state=rng)
 
     pymc_dist = pm.PolyaGamma
     pymc_dist_params = {"h": 1.0, "z": 0.0}
