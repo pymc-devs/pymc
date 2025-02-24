@@ -164,6 +164,7 @@ class Covariance(BaseCovariance):
 
     def __init__(self, input_dim: int, active_dims: IntSequence | None = None):
         self.input_dim = input_dim
+        self.active_dims: np.ndarray[Any, np.dtype[np.int_]]
         if active_dims is None:
             self.active_dims = np.arange(input_dim)
         else:

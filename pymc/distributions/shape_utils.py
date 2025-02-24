@@ -369,7 +369,7 @@ def get_support_shape(
         support_shape_offset = [0] * ndim_supp
     elif isinstance(support_shape_offset, int):
         support_shape_offset = [support_shape_offset] * ndim_supp
-    inferred_support_shape: Sequence[int | np.ndarray | Variable] | None = None
+    inferred_support_shape: Sequence[int | np.ndarray | TensorVariable] | None = None
 
     if shape is not None:
         shape = to_tuple(shape)
@@ -411,7 +411,7 @@ def get_support_shape(
         # There were two sources of support_shape, make sure they are consistent
         inferred_support_shape = [
             cast(
-                Variable,
+                TensorVariable,
                 Assert(msg="support_shape does not match respective shape dimension")(
                     inferred, pt.eq(inferred, explicit)
                 ),
