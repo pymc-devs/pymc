@@ -186,13 +186,12 @@ def check_potential_measurability(inputs: Iterable[TensorVariable]) -> bool:
             return []
 
     if any(
-        ancestor_var
-        for ancestor_var in walk(inputs, expand=expand_fn, bfs=False)
-        if (
+        (
             ancestor_var.owner
             and isinstance(ancestor_var.owner.op, MeasurableOp)
             and not isinstance(ancestor_var.owner.op, ValuedRV)
         )
+        for ancestor_var in walk(inputs, expand=expand_fn, bfs=False)
     ):
         return True
     return False

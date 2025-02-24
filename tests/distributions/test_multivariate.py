@@ -421,7 +421,7 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3])
     @pytest.mark.parametrize("m", [3])
-    @pytest.mark.parametrize("sigma", [None, 1])
+    @pytest.mark.parametrize("sigma", [0, 1])
     def test_kroneckernormal(self, n, m, sigma):
         np.random.seed(5)
         N = n * m
