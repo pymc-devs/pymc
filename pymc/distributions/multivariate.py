@@ -2057,13 +2057,11 @@ class KroneckerNormal(Continuous):
     rv_op = KroneckerNormalRV.rv_op
 
     @classmethod
-    def dist(cls, mu, covs=None, chols=None, evds=None, sigma=None, *args, **kwargs):
+    def dist(cls, mu, covs=None, chols=None, evds=None, sigma=0.0, *args, **kwargs):
         if len([i for i in [covs, chols, evds] if i is not None]) != 1:
             raise ValueError(
                 "Incompatible parameterization. Specify exactly one of covs, chols, or evds."
             )
-
-        sigma = sigma if sigma else 0
 
         if chols is not None:
             covs = [chol.dot(chol.T) for chol in chols]
@@ -2076,6 +2074,7 @@ class KroneckerNormal(Continuous):
                 covs.append(cov_i)
 
         mu = pt.as_tensor_variable(mu)
+        sigma = pt.as_tensor_variable(sigma)
 
         return super().dist([mu, sigma, *covs], **kwargs)
 
