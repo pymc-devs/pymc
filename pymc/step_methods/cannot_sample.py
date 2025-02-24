@@ -15,9 +15,7 @@ from pymc.step_methods.arraystep import ArrayStep
 
 
 class CannotSampleRV(ArrayStep):
-    """
-    A step method that raises an error when sampling a latent Multinomial variable.
-    """
+    """A step method that raises an error when sampling a latent Multinomial variable."""
 
     name = "cannot_sample_rv"
 
