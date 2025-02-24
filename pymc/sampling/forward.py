@@ -876,7 +876,7 @@ def sample_posterior_predictive(
     try:
         with progress:
             task = progress.add_task("Sampling ...", completed=0, total=samples)
-            for idx in np.arange(samples):
+            for idx in range(samples):
                 if nchain > 1:
                     # the trace object will either be a MultiTrace (and have _straces)...
                     if hasattr(_trace, "_straces"):

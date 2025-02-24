@@ -378,9 +378,7 @@ def get_support_shape(
             raise ValueError(
                 f"Number of shape dimensions is too small for ndim_supp of {ndim_supp}"
             )
-        inferred_support_shape = [
-            shape[i] - support_shape_offset[i] for i in np.arange(-ndim_supp, 0)
-        ]
+        inferred_support_shape = [shape[i] - support_shape_offset[i] for i in range(-ndim_supp, 0)]
 
     if inferred_support_shape is None and dims is not None:
         dims = convert_dims(dims)
@@ -389,7 +387,7 @@ def get_support_shape(
             raise ValueError(f"Number of dims is too small for ndim_supp of {ndim_supp}")
         model = modelcontext(None)
         inferred_support_shape = [
-            model.dim_lengths[dims[i]] - support_shape_offset[i] for i in np.arange(-ndim_supp, 0)
+            model.dim_lengths[dims[i]] - support_shape_offset[i] for i in range(-ndim_supp, 0)
         ]
 
     if inferred_support_shape is None and observed is not None:
@@ -399,7 +397,7 @@ def get_support_shape(
                 f"Number of observed dimensions is too small for ndim_supp of {ndim_supp}"
             )
         inferred_support_shape = [
-            observed.shape[i] - support_shape_offset[i] for i in np.arange(-ndim_supp, 0)
+            observed.shape[i] - support_shape_offset[i] for i in range(-ndim_supp, 0)
         ]
 
     if inferred_support_shape is None:
