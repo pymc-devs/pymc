@@ -82,7 +82,14 @@ class TestBugfixes:
         with pm.Model(check_bounds=False) as m:
             x = pm.DiracDelta("x", 1, size=10)
         npt.assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), 0 * 10)
-
+    def test_issue_7548(self):
+        #Test for bug in Multinomial, it should raise when trying to sample a Multinomial variable
+        with pm.Model() as model:
+            p = [0.3, 0.4, 0.3]
+            n = 10
+            x = pm.Multinomial("x", n=n, p=p)
+            with pytest.raises(ValueError, match="Latent Multinomial variables are not supported"):
+                pm.sample(draws=100, chains=1)
 
 def test_all_distributions_have_support_points():
     import pymc.distributions as dist_module
