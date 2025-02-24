@@ -619,12 +619,6 @@ class Multinomial(Discrete):
         return super().dist([n, p], *args, **kwargs)
 
     def support_point(rv, size, n, p):
-        observed = getattr(rv.tag, "observed", None)
-        if observed is None:
-            raise ValueError(
-                "Latent Multinomial variables are not supported for sampling. "
-                "Use a Categorical variable instead."
-            )
         n = pt.shape_padright(n)
         mean = n * p
         mode = pt.round(mean)
