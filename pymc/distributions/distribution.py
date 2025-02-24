@@ -27,7 +27,7 @@ import numpy as np
 
 from pytensor import tensor as pt
 from pytensor.compile.builders import OpFromGraph
-from pytensor.graph import FunctionGraph, clone_replace, node_rewriter
+from pytensor.graph import FunctionGraph, graph_replace, node_rewriter
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.utils import MetaType
@@ -588,7 +588,9 @@ def inline_symbolic_random_variable(fgraph, node):
     """Expand a SymbolicRV when obtaining the logp graph if `inline_logprob` is True."""
     op = node.op
     if op.inline_logprob:
-        return clone_replace(op.inner_outputs, dict(zip(op.inner_inputs, node.inputs)))
+        return graph_replace(
+            op.inner_outputs, dict(zip(op.inner_inputs, node.inputs)), strict=False
+        )
 
 
 # Registered before pre-canonicalization which happens at position=-10
