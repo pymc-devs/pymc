@@ -895,7 +895,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self._coords
 
     @property
-    def dim_lengths(self) -> dict[str, Variable]:
+    def dim_lengths(self) -> dict[str, TensorVariable]:
         """The symbolic lengths of dimensions in the model.
 
         The values are typically instances of ``TensorVariable`` or ``ScalarSharedVariable``.
