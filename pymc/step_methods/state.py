@@ -13,7 +13,8 @@
 #   limitations under the License.
 from copy import deepcopy
 from dataclasses import MISSING, Field, dataclass, fields
-from typing import Any, ClassVar
+from numbers import Number
+from typing import Any, ClassVar, Generic, TypeVar
 
 import numpy as np
 
@@ -26,9 +27,37 @@ dataclass_state = dataclass(kw_only=True)
 class DataClassState:
     __dataclass_fields__: ClassVar[dict[str, Field[Any]]] = {}
 
+    def is_compatible(self, other: Any) -> bool:
+        return compatible_dataclass_values(self, other)
+
+
+def compatible_dataclass_values(v1: Any, v2: Any) -> bool:
+    if v1.__class__ != v2.__class__ and not (isinstance(v1, Number) and isinstance(v2, Number)):
+        # Numbers might have different classes (e.g. float("32") and np.float64(32))
+        # but numbers are compatible with each other
+        return False
+    if isinstance(v1, tuple):
+        return len(v1) == len(v2) or all(
+            compatible_dataclass_values(v1i, v2i) for v1i, v2i in zip(v1, v2, strict=True)
+        )
+    elif isinstance(v1, dict):
+        return set(v1) == set(v2) or all(compatible_dataclass_values(v1[k], v2[k]) for k in v1)
+    elif isinstance(v1, np.ndarray):
+        return v1.dtype == v2.dtype
+    elif isinstance(v1, np.random.Generator):
+        return True
+    elif isinstance(v1, DataClassState):
+        return set(fields(v1)) == set(fields(v2)) and all(
+            compatible_dataclass_values(getattr(v1, f1.name), getattr(v2, f2.name))
+            for f1, f2 in zip(fields(v1), fields(v2), strict=True)
+        )
+    return True
+
 
 def equal_dataclass_values(v1, v2):
-    if v1.__class__ != v2.__class__:
+    if v1.__class__ != v2.__class__ and not (isinstance(v1, Number) and isinstance(v2, Number)):
+        # Numbers might have different classes (e.g. float("32") and np.float64(32))
+        # but numbers are equal based on their value and not their type
         return False
     if isinstance(v1, (list, tuple)):  # noqa: UP038
         return len(v1) == len(v2) and all(
@@ -51,7 +80,10 @@ def equal_dataclass_values(v1, v2):
         return v1 == v2
 
 
-class WithSamplingState:
+SamplingStateType = TypeVar("SamplingStateType", bound=DataClassState)
+
+
+class WithSamplingState(Generic[SamplingStateType]):
     """Mixin class that adds the ``sampling_state`` property to an object.
 
     The object's type must define the ``_state_class`` as a valid
@@ -60,10 +92,10 @@ class WithSamplingState:
     the state represented as objects of the ``_state_class`` type.
     """
 
-    _state_class: type[DataClassState] = DataClassState
+    _state_class: type[SamplingStateType]
 
     @property
-    def sampling_state(self) -> DataClassState:
+    def sampling_state(self) -> SamplingStateType:
         state_class = self._state_class
         kwargs = {}
         for field in fields(state_class):
@@ -92,6 +124,9 @@ class WithSamplingState:
         state_class = self._state_class
         assert isinstance(state, state_class), (
             f"Encountered invalid state class '{state.__class__}'. State must be '{state_class}'"
+        )
+        assert self.sampling_state.is_compatible(state), (
+            "The supplied state is incompatible with the current sampling state."
         )
         for field in fields(state_class):
             is_tensor_name = field.metadata.get("tensor_name", False)
