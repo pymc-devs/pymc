@@ -382,7 +382,7 @@ def test_warn_random_found_probability_inference(func, scipy_func, test_value):
         with pytest.warns(
             UserWarning, match="RandomVariables {input} were found in the derived graph"
         ):
-            assert func(rv, 0.0)
+            func(rv, 0.0)
 
         res = func(rv, 0.0, warn_rvs=False)
         # This is the problem we are warning about, as now we can no longer identify the original rv in the graph

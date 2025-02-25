@@ -604,7 +604,7 @@ class TestCustomSymbolicDist:
         def dist(size):
             return Truncated.dist(Beta.dist(1, 1, size=size), lower=0.1, upper=0.9)
 
-        assert CustomDist.dist(dist=dist)
+        CustomDist.dist(dist=dist)
 
     def test_nested_custom_dist(self):
         """Test we can create CustomDist that creates another CustomDist"""

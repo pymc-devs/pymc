@@ -291,4 +291,4 @@ def test_non_measurable_max_grad():
     joint_logp = pt.sum([term.sum() for term in logp_terms])
 
     # Test that calling gradient does not raise a NotImplementedError
-    assert pt.grad(joint_logp, x_vv)
+    pt.grad(joint_logp, x_vv)

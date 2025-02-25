@@ -470,7 +470,9 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Apply) -> list[Varia
 
     # Do not apply rewrite to discrete variables except for their addition and negation
     if measurable_input.type.dtype.startswith("int"):
-        if not (find_negated_var(measurable_output) or isinstance(node.op.scalar_op, Add)):
+        if not (
+            find_negated_var(measurable_output) is not None or isinstance(node.op.scalar_op, Add)
+        ):
             return None
         # Do not allow rewrite if output is cast to a float, because we don't have meta-info on the type of the MeasurableVariable
         if not measurable_output.type.dtype.startswith("int"):
