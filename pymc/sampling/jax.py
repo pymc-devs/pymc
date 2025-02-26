@@ -240,7 +240,10 @@ def _get_batched_jittered_initial_points(
             Wraps jaxified logp function to accept a dict of
             {model_variable: np.array} key:value pairs.
             """
-            return logp_fn(point.values())
+            # Because logp_fn is not jitted, we need to convert inputs to jax arrays,
+            # or some methods that are only available for jax arrays will fail
+            # such as x.at[indices].set(y)
+            return logp_fn([jax.numpy.asarray(v) for v in point.values()])
 
     initial_points = _init_jitter(
         model,
