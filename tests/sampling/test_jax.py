@@ -352,6 +352,27 @@ def test_get_batched_jittered_initial_points():
     assert np.all(ips[0][0] != ips[0][1])
 
 
+def test_get_batched_jittered_initial_points_set_subtensor():
+    """Regression bug for issue described in
+    https://discourse.pymc.io/t/attributeerror-numpy-ndarray-object-has-no-attribute-at-when-sampling-lkj-cholesky-covariance-priors-for-multivariate-normal-models-example-with-numpyro-or-blackjax/16598/3
+
+    Which was caused by passing numpy arrays to a non-jitted logp function
+    """
+    with pm.Model() as model:
+        # Set operation will use `x.at[1].set(100)` which is only available in JAX
+        x = pm.Normal("x", mu=[-100, -100])
+        mu_y = x[1].set(100)
+        y = pm.Normal("y", mu=mu_y)
+
+    logp_fn = get_jaxified_logp(model)
+    [x_ips, y_ips] = _get_batched_jittered_initial_points(
+        model, chains=3, initvals=None, logp_fn=logp_fn, jitter=True, random_seed=0
+    )
+    assert np.all(x_ips < -10)
+    assert np.all(y_ips[..., 0] < -10)
+    assert np.all(y_ips[..., 1] > 10)
+
+
 @pytest.mark.parametrize(
     "sampler",
     [
