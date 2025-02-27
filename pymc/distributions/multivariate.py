@@ -302,7 +302,19 @@ class MvNormal(Continuous):
         )
 
 
-class PrecisionMvNormalRV(SymbolicRandomVariable):
+class SymbolicMVNormalUsedInternally(SymbolicRandomVariable):
+    """Helper subclass that handles the forwarding / caching of method to `MvNormal` used internally."""
+
+    def __init__(self, *args, method: str, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.method = method
+
+    def rebuild_rv(self, *args, **kwargs):
+        # rv_op is a classmethod, so it doesn't have access to the instance method
+        return self.rv_op(*args, method=self.method, **kwargs)
+
+
+class PrecisionMvNormalRV(SymbolicMVNormalUsedInternally):
     r"""A specialized multivariate normal random variable defined in terms of precision.
 
     This class is introduced during specialization logprob rewrites, and not meant to be used directly.
@@ -313,14 +325,17 @@ class PrecisionMvNormalRV(SymbolicRandomVariable):
     _print_name = ("PrecisionMultivariateNormal", "\\operatorname{PrecisionMultivariateNormal}")
 
     @classmethod
-    def rv_op(cls, mean, tau, *, rng=None, size=None):
+    def rv_op(cls, mean, tau, *, method: str = "cholesky", rng=None, size=None):
         rng = normalize_rng_param(rng)
         size = normalize_size_param(size)
         cov = pt.linalg.inv(tau)
-        next_rng, draws = multivariate_normal(mean, cov, size=size, rng=rng).owner.outputs
+        next_rng, draws = multivariate_normal(
+            mean, cov, size=size, rng=rng, method=method
+        ).owner.outputs
         return cls(
             inputs=[rng, size, mean, tau],
             outputs=[next_rng, draws],
+            method=method,
         )(rng, size, mean, tau)
 
 
@@ -354,7 +369,9 @@ def mv_normal_to_precision_mv_normal(fgraph, node):
     rng, size, mu, cov = node.inputs
     if cov.owner and cov.owner.op == matrix_inverse:
         tau = cov.owner.inputs[0]
-        return PrecisionMvNormalRV.rv_op(mu, tau, size=size, rng=rng).owner.outputs
+        return PrecisionMvNormalRV.rv_op(
+            mu, tau, size=size, rng=rng, method=node.op.method
+        ).owner.outputs
     return None
 
 
@@ -365,7 +382,7 @@ specialization_ir_rewrites_db.register(
 )
 
 
-class MvStudentTRV(SymbolicRandomVariable):
+class MvStudentTRV(SymbolicMVNormalUsedInternally):
     r"""A specialized multivariate normal random variable defined in terms of precision.
 
     This class is introduced during specialization logprob rewrites, and not meant to be used directly.
@@ -376,7 +393,7 @@ class MvStudentTRV(SymbolicRandomVariable):
     _print_name = ("MvStudentT", "\\operatorname{MvStudentT}")
 
     @classmethod
-    def rv_op(cls, nu, mean, scale, *, rng=None, size=None):
+    def rv_op(cls, nu, mean, scale, *, method: str = "cholesky", rng=None, size=None):
         nu = pt.as_tensor(nu)
         mean = pt.as_tensor(mean)
         scale = pt.as_tensor(scale)
@@ -387,7 +404,7 @@ class MvStudentTRV(SymbolicRandomVariable):
             size = implicit_size_from_params(nu, mean, scale, ndims_params=cls.ndims_params)
 
         next_rng, mv_draws = multivariate_normal(
-            mean.zeros_like(), scale, size=size, rng=rng
+            mean.zeros_like(), scale, size=size, rng=rng, method=method
         ).owner.outputs
         next_rng, chi2_draws = chisquare(nu, size=size, rng=next_rng).owner.outputs
         draws = mean + (mv_draws / pt.sqrt(chi2_draws / nu)[..., None])
@@ -395,6 +412,7 @@ class MvStudentTRV(SymbolicRandomVariable):
         return cls(
             inputs=[rng, size, nu, mean, scale],
             outputs=[next_rng, draws],
+            method=method,
         )(rng, size, nu, mean, scale)
 
 
@@ -1923,12 +1941,12 @@ class MatrixNormal(Continuous):
         return norm - 0.5 * trquaddist - m * half_collogdet - n * half_rowlogdet
 
 
-class KroneckerNormalRV(SymbolicRandomVariable):
+class KroneckerNormalRV(SymbolicMVNormalUsedInternally):
     ndim_supp = 1
     _print_name = ("KroneckerNormal", "\\operatorname{KroneckerNormal}")
 
     @classmethod
-    def rv_op(cls, mu, sigma, *covs, size=None, rng=None):
+    def rv_op(cls, mu, sigma, *covs, method: str = "cholesky", size=None, rng=None):
         mu = pt.as_tensor(mu)
         sigma = pt.as_tensor(sigma)
         covs = [pt.as_tensor(cov) for cov in covs]
@@ -1937,7 +1955,9 @@ class KroneckerNormalRV(SymbolicRandomVariable):
 
         cov = reduce(pt.linalg.kron, covs)
         cov = cov + sigma**2 * pt.eye(cov.shape[-2])
-        next_rng, draws = multivariate_normal(mean=mu, cov=cov, size=size, rng=rng).owner.outputs
+        next_rng, draws = multivariate_normal(
+            mean=mu, cov=cov, size=size, rng=rng, method=method
+        ).owner.outputs
 
         covs_sig = ",".join(f"(a{i},b{i})" for i in range(len(covs)))
         extended_signature = f"[rng],[size],(m),(),{covs_sig}->[rng],(m)"
@@ -1946,6 +1966,7 @@ class KroneckerNormalRV(SymbolicRandomVariable):
             inputs=[rng, size, mu, sigma, *covs],
             outputs=[next_rng, draws],
             extended_signature=extended_signature,
+            method=method,
         )(rng, size, mu, sigma, *covs)
 
 
