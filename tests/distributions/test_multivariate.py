@@ -2469,6 +2469,26 @@ def test_mvstudentt_mu_convenience():
     np.testing.assert_allclose(mu.eval(), np.ones((10, 2, 3)))
 
 
+def test_mvstudentt_method():
+    def all_svd_method(fgraph):
+        found_one = False
+        for node in fgraph.toposort():
+            if isinstance(node.op, pm.MvNormal):
+                found_one = True
+                if not node.op.method == "svd":
+                    return False
+        return found_one  # We want to fail if there were no MvNormal nodes
+
+    x = pm.MvStudentT.dist(nu=4, scale=np.eye(3), method="svd")
+    assert x.type.shape == (3,)
+    assert all_svd_method(x.owner.op.fgraph)
+
+    # Changing the size should preserve the method
+    resized_x = change_dist_size(x, (2,))
+    assert resized_x.type.shape == (2, 3)
+    assert all_svd_method(resized_x.owner.op.fgraph)
+
+
 def test_precision_mv_normal_optimization():
     rng = np.random.default_rng(sum(map(ord, "be precise")))
 
