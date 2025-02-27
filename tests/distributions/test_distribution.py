@@ -23,7 +23,8 @@ import pytest
 import scipy.stats as st
 
 from pytensor import shared
-from pytensor.tensor import TensorVariable
+from pytensor.tensor import NoneConst, TensorVariable
+from pytensor.tensor.random.utils import normalize_size_param
 
 import pymc as pm
 
@@ -43,7 +44,7 @@ from pymc.distributions.distribution import (
 )
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.logprob.basic import conditional_logp, logp
-from pymc.pytensorf import compile
+from pymc.pytensorf import compile, normalize_rng_param
 from pymc.testing import (
     BaseTestDistributionRandom,
     I,
@@ -209,6 +210,27 @@ class TestSymbolicRandomVariable:
         # This would fail with the default OpFromGraph.__call__()
         new_next_rng, new_x = x.owner.op(*inputs)
         assert op.update(new_x.owner) == {new_rng: new_next_rng}
+
+    def test_change_dist_size_none(self):
+        class TestRV(SymbolicRandomVariable):
+            extended_signature = "[rng],[size]->[rng],(n)"
+
+            @classmethod
+            def rv_op(cls, size=None, rng=None):
+                rng = normalize_rng_param(rng)
+                size = normalize_size_param(size)
+                next_rng, draws = Normal.dist(size=size, rng=rng).owner.outputs
+                return cls(inputs=[rng, size], outputs=[next_rng, draws])(rng, size)
+
+        size = NoneConst
+        rv = TestRV.rv_op(size=size)
+        assert rv.type.shape == ()
+
+        resized_rv = change_dist_size(rv, new_size=5)
+        assert resized_rv.type.shape == (5,)
+
+        resized_rv = change_dist_size(rv, new_size=5, expand=True)
+        assert resized_rv.type.shape == (5,)
 
 
 def test_tag_future_warning_dist():

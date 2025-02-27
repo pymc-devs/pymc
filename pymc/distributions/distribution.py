@@ -400,7 +400,7 @@ def change_symbolic_rv_size(op: SymbolicRandomVariable, rv, new_size, expand) ->
 
     params = op.dist_params(rv.owner)
 
-    if expand:
+    if expand and not rv_size_is_none(size):
         new_size = tuple(new_size) + tuple(size)
 
     return op.rv_op(*params, size=new_size)
