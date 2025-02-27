@@ -30,13 +30,12 @@ from pytensor.compile.builders import OpFromGraph
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Variable
 from pytensor.raise_op import Assert
-from pytensor.scalar import Cast
-from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.basic import IntegersRV
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 import pymc as pm
 
+from pymc.logprob.utils import rvs_in_graph
 from pymc.pytensorf import convert_data
 from pymc.vartypes import isgenerator
 
@@ -111,13 +110,7 @@ def is_valid_observed(v) -> bool:
         return True
 
     return (
-        # The only PyTensor operation we allow on observed data is type casting
-        # Although we could allow for any graph that does not depend on other RVs
-        (
-            isinstance(v.owner.op, Elemwise)
-            and isinstance(v.owner.op.scalar_op, Cast)
-            and is_valid_observed(v.owner.inputs[0])
-        )
+        not rvs_in_graph(v)
         # Or Minibatch
         or (
             isinstance(v.owner.op, MinibatchOp)
@@ -148,7 +141,7 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
     for i, v in enumerate(tensors):
         if not is_valid_observed(v):
             raise ValueError(
-                f"{i}: {v} is not valid for Minibatch, only constants or constants.astype(dtype) are allowed"
+                f"{i}: {v} is not valid for Minibatch, only non-random variables are allowed"
             )
 
     upper = tensors[0].shape[0]
