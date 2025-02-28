@@ -207,7 +207,8 @@ class CholeskyCorr(Transform):
     def forward(self, value, *inputs):
         # TODO: This is a placeholder
         n = self.n
-        return pt.as_tensor_variable(np.random.normal(size=(n,)))
+        size = n * (n - 1) // 2
+        return pt.as_tensor_variable(np.random.normal(size=size))
 
     def log_jac_det(self, value, *inputs):
         _, log_det = self._compute_L_and_logdet(value, *inputs)
