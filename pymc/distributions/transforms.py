@@ -164,6 +164,56 @@ class CholeskyCovPacked(Transform):
         return pt.sum(value[..., self.diag_idxs], axis=-1)
 
 
+class CholeskyCorr(Transform):
+    """Get a Cholesky Corr from a packed vector."""
+
+    name = "cholesky-corr-packed"
+
+    def __init__(self, n):
+        """Create a CholeskyCorrPack object.
+
+        Parameters
+        ----------
+        n: int
+            Number of diagonal entries in the LKJCholeskyCov distribution
+        """
+        self.n = n
+
+    def _compute_L_and_logdet(self, value, *inputs):
+        n = self.n
+        counter = 0
+        L = pt.eye(n)
+        log_det = 0
+
+        for i in range(1, n):
+            y_star = value[counter : counter + i]
+            dsy = y_star.dot(y_star)
+            alpha_r = 1 / (dsy + 1)
+            gamma = pt.sqrt(dsy + 2) * alpha_r
+
+            x = pt.join(0, gamma * y_star, pt.atleast_1d(alpha_r))
+            L = L[i, : i + 1].set(x)
+            log_det += pt.log(2) + 0.5 * (i - 2) * pt.log(dsy + 2) - i * pt.log(1 + dsy)
+
+            counter += i
+
+        # Return whole matrix? Or just lower triangle?
+        return L, log_det
+
+    def backward(self, value, *inputs):
+        L, _ = self._compute_L_and_logdet(value, *inputs)
+        return L
+
+    def forward(self, value, *inputs):
+        # TODO: This is a placeholder
+        n = self.n
+        return pt.as_tensor_variable(np.random.normal(size=(n,)))
+
+    def log_jac_det(self, value, *inputs):
+        _, log_det = self._compute_L_and_logdet(value, *inputs)
+        return log_det
+
+
 Chain = ChainedTransform
 
 simplex = SimplexTransform()

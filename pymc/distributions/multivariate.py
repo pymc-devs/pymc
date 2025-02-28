@@ -1510,7 +1510,7 @@ class LKJCholeskyCov:
 
 class LKJCorrRV(RandomVariable):
     name = "lkjcorr"
-    signature = "(),()->(n)"
+    signature = "(),()->(n,n)"
     dtype = "floatX"
     _print_name = ("LKJCorrRV", "\\operatorname{LKJCorrRV}")
 
@@ -1527,8 +1527,8 @@ class LKJCorrRV(RandomVariable):
 
     def _supp_shape_from_params(self, dist_params, **kwargs):
         n = dist_params[0].squeeze()
-        dist_shape = ((n * (n - 1)) // 2,)
-        return dist_shape
+        # dist_shape = ((n * (n - 1)) // 2,)
+        return (n, n)
 
     @classmethod
     def rng_fn(cls, rng, n, eta, size):
@@ -1609,23 +1609,26 @@ class _LKJCorr(BoundedContinuous):
         -------
         TensorVariable
         """
-        if value.ndim > 1:
-            raise NotImplementedError("LKJCorr logp is only implemented for vector values (ndim=1)")
-
-        # TODO: PyTensor does not have a `triu_indices`, so we can only work with constant
-        #  n (or else find a different expression)
+        # if value.ndim > 1:
+        #     raise NotImplementedError("LKJCorr logp is only implemented for vector values (ndim=1)")
+        #
         try:
             n = int(get_underlying_scalar_constant_value(n))
         except NotScalarConstantError:
             raise NotImplementedError("logp only implemented for constant `n`")
 
-        shape = n * (n - 1) // 2
-        tri_index = np.zeros((n, n), dtype="int32")
-        tri_index[np.triu_indices(n, k=1)] = np.arange(shape)
-        tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
+        # shape = n * (n - 1) // 2
+        # tri_index = np.zeros((n, n), dtype="int32")
+        # tri_index[np.triu_indices(n, k=1)] = np.arange(shape)
+        # tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
 
-        value = pt.take(value, tri_index)
-        value = pt.fill_diagonal(value, 1)
+        # value = pt.take(value, tri_index)
+        # value = pt.fill_diagonal(value, 1)
+
+        # print(n, type(n))
+        # print(value.type.shape)
+        # value = value @ value.T
+        # print(value.type.shape)
 
         # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
         try:
