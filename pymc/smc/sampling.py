@@ -58,6 +58,7 @@ def sample_smc(
     return_inferencedata=True,
     idata_kwargs=None,
     progressbar=True,
+    compile_kwargs: dict | None = None,
     **kernel_kwargs,
 ) -> InferenceData | MultiTrace:
     r"""
@@ -95,6 +96,9 @@ def sample_smc(
         Keyword arguments for :func:`pymc.to_inference_data`.
     progressbar : bool, optional, default True
         Whether or not to display a progress bar in the command line.
+    compile_kwargs: dict, optional
+        Keyword arguments to pass to pytensor.function
+
     **kernel_kwargs : dict, optional
         Keyword arguments passed to the SMC_kernel. The default IMH kernel takes the following keywords:
 
@@ -102,10 +106,11 @@ def sample_smc(
           Determines the change of beta from stage to stage, i.e. indirectly the number of stages,
           the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
           It should be between 0 and 1.
-            correlation_threshold : float, default 0.01
-                The lower the value the higher the number of MCMC steps computed automatically.
-                Defaults to 0.01. It should be between 0 and 1.
-        Keyword arguments for other kernels should be checked in the respective docstrings.
+        correlation_threshold : float, default 0.01
+            The lower the value the higher the number of MCMC steps computed automatically.
+            Defaults to 0.01. It should be between 0 and 1.
+
+        Additional keyword arguments for other kernels should be checked in the respective docstrings.
 
     Notes
     -----
@@ -159,6 +164,11 @@ def sample_smc(
         chains = max(2, cores)
     else:
         cores = min(chains, cores)
+
+    if compile_kwargs is None:
+        compile_kwargs = {}
+
+    kernel_kwargs["compile_kwargs"] = compile_kwargs
 
     random_seed = _get_seeds_per_chain(random_state=random_seed, chains=chains)
 
