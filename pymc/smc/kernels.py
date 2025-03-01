@@ -175,8 +175,8 @@ class SMC_KERNEL(ABC):
         self.model = modelcontext(model)
         self.variables = self.model.value_vars
 
-        self.var_info = {}
-        self.tempered_posterior = None
+        self.var_info: dict[str, tuple] = {}
+        self.tempered_posterior: np.ndarray
         self.prior_logp = None
         self.likelihood_logp = None
         self.tempered_posterior_logp = None
