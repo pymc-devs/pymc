@@ -134,6 +134,7 @@ class SMC_KERNEL(ABC):
         model=None,
         random_seed=None,
         threshold=0.5,
+        compile_kwargs: dict | None = None,
     ):
         """
         Initialize the SMC_kernel class.
@@ -154,6 +155,8 @@ class SMC_KERNEL(ABC):
             Determines the change of beta from stage to stage, i.e.indirectly the number of stages,
             the higher the value of `threshold` the higher the number of stages. Defaults to 0.5.
             It should be between 0 and 1.
+        compile_kwargs: dict, optional
+            Keyword arguments passed to pytensor.function
 
         Attributes
         ----------
@@ -172,8 +175,8 @@ class SMC_KERNEL(ABC):
         self.model = modelcontext(model)
         self.variables = self.model.value_vars
 
-        self.var_info = {}
-        self.tempered_posterior = None
+        self.var_info: dict[str, tuple] = {}
+        self.tempered_posterior: np.ndarray
         self.prior_logp = None
         self.likelihood_logp = None
         self.tempered_posterior_logp = None
@@ -184,6 +187,7 @@ class SMC_KERNEL(ABC):
         self.iteration = 0
         self.resampling_indexes = None
         self.weights = np.ones(self.draws) / self.draws
+        self.compile_kwargs = compile_kwargs if compile_kwargs is not None else {}
 
     def initialize_population(self) -> dict[str, np.ndarray]:
         """Create an initial population from the prior distribution."""
@@ -239,10 +243,10 @@ class SMC_KERNEL(ABC):
         shared = make_shared_replacements(initial_point, self.variables, self.model)
 
         self.prior_logp_func = _logp_forw(
-            initial_point, [self.model.varlogp], self.variables, shared
+            initial_point, [self.model.varlogp], self.variables, shared, self.compile_kwargs
         )
         self.likelihood_logp_func = _logp_forw(
-            initial_point, [self.model.datalogp], self.variables, shared
+            initial_point, [self.model.datalogp], self.variables, shared, self.compile_kwargs
         )
 
         priors = [self.prior_logp_func(sample) for sample in self.tempered_posterior]
@@ -606,7 +610,7 @@ def systematic_resampling(weights, rng):
     return new_indices
 
 
-def _logp_forw(point, out_vars, in_vars, shared):
+def _logp_forw(point, out_vars, in_vars, shared, compile_kwargs=None):
     """Compile PyTensor function of the model and the input and output variables.
 
     Parameters
@@ -617,7 +621,12 @@ def _logp_forw(point, out_vars, in_vars, shared):
         Containing Distribution for the input variables
     shared : list
         Containing TensorVariable for depended shared data
+    compile_kwargs: dict, optional
+        Additional keyword arguments passed to pytensor.function
     """
+    if compile_kwargs is None:
+        compile_kwargs = {}
+
     # Replace integer inputs with rounded float inputs
     if any(var.dtype in discrete_types for var in in_vars):
         replace_int_input = {}
@@ -636,6 +645,6 @@ def _logp_forw(point, out_vars, in_vars, shared):
     out_list, inarray0 = join_nonshared_inputs(
         point=point, outputs=out_vars, inputs=in_vars, shared_inputs=shared
     )
-    f = compile([inarray0], out_list[0])
+    f = compile([inarray0], out_list[0], **compile_kwargs)
     f.trust_input = True
     return f
