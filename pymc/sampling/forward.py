@@ -473,7 +473,9 @@ def sample_prior_predictive(
     )
 
     # All model variables have a name, but mypy does not know this
-    _log.info(f"Sampling: {sorted(vars_to_sample, key=lambda var: var.name)}")  # type: ignore[arg-type, return-value]
+    _log.info(
+        f"Sampling: {sorted(volatile_basic_rvs.intersection(vars_to_sample), key=lambda var: var.name)}"  # type: ignore[arg-type, return-value]
+    )
     values = zip(*(sampler_fn() for i in range(draws)))
 
     data = {k: np.stack(v) for k, v in zip(names, values)}
