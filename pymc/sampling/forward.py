@@ -20,6 +20,7 @@ import warnings
 from collections.abc import Callable, Iterable, Sequence
 from typing import (
     Any,
+    Literal,
     TypeAlias,
     cast,
     overload,
@@ -367,7 +368,7 @@ def sample_prior_predictive(
     model: Model | None = None,
     var_names: Iterable[str] | None = None,
     random_seed: RandomState = None,
-    return_inferencedata: bool = True,
+    return_inferencedata: Literal[True] = True,
     idata_kwargs: dict | None = None,
     compile_kwargs: dict | None = None,
     samples: int | None = None,
@@ -378,7 +379,7 @@ def sample_prior_predictive(
     model: Model | None = None,
     var_names: Iterable[str] | None = None,
     random_seed: RandomState = None,
-    return_inferencedata: bool = False,
+    return_inferencedata: Literal[False] = False,
     idata_kwargs: dict | None = None,
     compile_kwargs: dict | None = None,
     samples: int | None = None,
