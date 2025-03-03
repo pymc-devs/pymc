@@ -20,8 +20,10 @@ import warnings
 from collections.abc import Callable, Iterable, Sequence
 from typing import (
     Any,
+    Literal,
     TypeAlias,
     cast,
+    overload,
 )
 
 import numpy as np
@@ -360,6 +362,28 @@ def observed_dependent_deterministics(model: Model, extra_observeds=None):
     ]
 
 
+@overload
+def sample_prior_predictive(
+    draws: int = 500,
+    model: Model | None = None,
+    var_names: Iterable[str] | None = None,
+    random_seed: RandomState = None,
+    return_inferencedata: Literal[True] = True,
+    idata_kwargs: dict | None = None,
+    compile_kwargs: dict | None = None,
+    samples: int | None = None,
+) -> InferenceData: ...
+@overload
+def sample_prior_predictive(
+    draws: int = 500,
+    model: Model | None = None,
+    var_names: Iterable[str] | None = None,
+    random_seed: RandomState = None,
+    return_inferencedata: Literal[False] = False,
+    idata_kwargs: dict | None = None,
+    compile_kwargs: dict | None = None,
+    samples: int | None = None,
+) -> dict[str, np.ndarray]: ...
 def sample_prior_predictive(
     draws: int = 500,
     model: Model | None = None,
