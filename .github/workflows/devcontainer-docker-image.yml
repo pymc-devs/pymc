@@ -32,7 +32,7 @@ jobs:
 
     - name: Prepare metadata
       id: meta
-      uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81
+      uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
