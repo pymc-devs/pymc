@@ -785,7 +785,9 @@ class TestGARCH11:
     @pytest.mark.parametrize("explicit_shape", (True, False))
     def test_batched_size(self, explicit_shape, batched_param):
         steps, batch_size = 100, 5
-        param_val = np.square(np.random.randn(batch_size))
+        random_seed = 800
+        rng = np.random.default_rng(random_seed)
+        param_val = np.square(rng.random(batch_size))
         init_kwargs = {
             "omega": 1.25,
             "alpha_1": 0.5,
@@ -801,7 +803,7 @@ class TestGARCH11:
         with Model() as t0:
             y = GARCH11("y", **kwargs0)
 
-        y_eval = draw(y, draws=2, random_seed=800)
+        y_eval = draw(y, draws=2, random_seed=random_seed)
         assert y_eval[0].shape == (batch_size, steps)
         assert not np.any(np.isclose(y_eval[0], y_eval[1]))
 
