@@ -862,9 +862,16 @@ class TestSamplePPC:
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x, z]")]
         caplog.clear()
 
+        # RV only
         with m:
             pm.sample_prior_predictive(draws=1, var_names=["x"])
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x]")]
+        caplog.clear()
+
+        # observed only
+        with m:
+            pm.sample_prior_predictive(draws=1, var_names=["z"])
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [z]")]
         caplog.clear()
 
     def test_logging_sampled_basic_rvs_posterior(self, caplog):
