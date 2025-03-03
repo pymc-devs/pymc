@@ -803,7 +803,7 @@ class TestGARCH11:
         with Model() as t0:
             y = GARCH11("y", **kwargs0)
 
-        y_eval = draw(y, draws=2, random_seed=random_seed)
+        y_eval = draw(y, draws=2, random_seed=rng)
         assert y_eval[0].shape == (batch_size, steps)
         assert not np.any(np.isclose(y_eval[0], y_eval[1]))
 
