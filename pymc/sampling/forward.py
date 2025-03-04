@@ -493,6 +493,36 @@ def sample_prior_predictive(
     return pm.to_inference_data(prior=prior, **ikwargs)
 
 
+@overload
+def sample_posterior_predictive(
+    trace,
+    model: Model | None = None,
+    var_names: list[str] | None = None,
+    sample_dims: list[str] | None = None,
+    random_seed: RandomState = None,
+    progressbar: bool = True,
+    progressbar_theme: Theme | None = default_progress_theme,
+    return_inferencedata: Literal[True] = True,
+    extend_inferencedata: bool = False,
+    predictions: bool = False,
+    idata_kwargs: dict | None = None,
+    compile_kwargs: dict | None = None,
+) -> InferenceData: ...
+@overload
+def sample_posterior_predictive(
+    trace,
+    model: Model | None = None,
+    var_names: list[str] | None = None,
+    sample_dims: list[str] | None = None,
+    random_seed: RandomState = None,
+    progressbar: bool = True,
+    progressbar_theme: Theme | None = default_progress_theme,
+    return_inferencedata: Literal[False] = False,
+    extend_inferencedata: bool = False,
+    predictions: bool = False,
+    idata_kwargs: dict | None = None,
+    compile_kwargs: dict | None = None,
+) -> dict[str, np.ndarray]: ...
 def sample_posterior_predictive(
     trace,
     model: Model | None = None,
