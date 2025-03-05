@@ -30,15 +30,17 @@ from pymc.distributions import (
 )
 from pymc.math import dot
 from pymc.model import Deterministic, Model, Potential
+from pymc.printing import str_for_dist, str_for_model
 from pymc.pytensorf import floatX
 
 
 class BaseTestStrAndLatexRepr:
     def test__repr_latex_(self):
-        for distribution, tex in zip(self.distributions, self.expected[("latex", True)]):
-            assert distribution._repr_latex_() == tex
+        for model_variable, tex in zip(self.distributions, self.expected[("latex", True)]):
+            if model_variable in self.model.basic_RVs:
+                assert str_for_dist(model_variable, formatting="latex", model=self.model) == tex
 
-        model_tex = self.model._repr_latex_()
+        model_tex = str_for_model(self.model, formatting="latex")
 
         # make sure each variable is in the model
         for tex in self.expected[("latex", True)]:
@@ -47,10 +49,11 @@ class BaseTestStrAndLatexRepr:
 
     def test_str_repr(self):
         for str_format in self.formats:
-            for dist, text in zip(self.distributions, self.expected[str_format]):
-                assert dist.str_repr(*str_format) == text
+            for model_variable, text in zip(self.distributions, self.expected[str_format]):
+                if model_variable in self.model.basic_RVs:
+                    assert str_for_dist(model_variable, *str_format, model=self.model) == text
 
-            model_text = self.model.str_repr(*str_format)
+            model_text = str_for_model(self.model, *str_format)
             for text in self.expected[str_format]:
                 if str_format[0] == "latex":
                     for segment in text.strip("$").split(r"\sim"):
@@ -252,7 +255,7 @@ def test_model_latex_repr_three_levels_model():
             "censored_normal", normal_dist, lower=-2.0, upper=2.0, observed=[1, 0, 0.5]
         )
 
-    latex_repr = censored_model.str_repr(formatting="latex")
+    latex_repr = str_for_model(censored_model, formatting="latex")
     expected = [
         "$$",
         "\\begin{array}{rcl}",
@@ -270,7 +273,7 @@ def test_model_latex_repr_mixture_model():
         w = Dirichlet("w", [1, 1])
         mix = Mixture("mix", w=w, comp_dists=[Normal.dist(0.0, 5.0), StudentT.dist(7.0)])
 
-    latex_repr = mix_model.str_repr(formatting="latex")
+    latex_repr = str_for_model(mix_model, formatting="latex")
     expected = [
         "$$",
         "\\begin{array}{rcl}",
@@ -291,7 +294,7 @@ def test_model_repr_variables_without_monkey_patched_repr():
     model = Model()
     model.register_rv(x, "x")
 
-    str_repr = model.str_repr()
+    str_repr = str_for_model(model)
     assert str_repr == "x ~ Normal(0, 1)"
 
 
@@ -299,7 +302,7 @@ def test_truncated_repr():
     with Model() as model:
         x = Truncated("x", Gamma.dist(1, 1), lower=0, upper=20)
 
-    str_repr = model.str_repr(include_params=False)
+    str_repr = str_for_model(model, include_params=False)
     assert str_repr == "x ~ TruncatedGamma"
 
 
@@ -315,7 +318,7 @@ def test_custom_dist_repr():
         x = CustomDist("x", 0, dist=dist, class_name="CustomDistNormal")
         x = CustomDist("y", 0, random=random, class_name="CustomRandomNormal")
 
-    str_repr = model.str_repr(include_params=False)
+    str_repr = str_for_model(model, include_params=False)
     assert str_repr == "\n".join(["x ~ CustomDistNormal", "y ~ CustomRandomNormal"])
 
 
@@ -333,6 +336,6 @@ class TestLatexRepr:
         Ensures that all underscores in model variable names are properly escaped for LaTeX representation
         """
         model = self.simple_model()
-        model_str = model.str_repr(formatting="latex")
+        model_str = str_for_model(model, formatting="latex")
         assert "\\_" in model_str
         assert "_" not in model_str.replace("\\_", "")

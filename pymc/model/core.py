@@ -16,7 +16,6 @@ from __future__ import annotations
 import functools
 import sys
 import threading
-import types
 import warnings
 
 from collections.abc import Iterable, Sequence
@@ -490,13 +489,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self._coords = {}
             self._dim_lengths = {}
         self.add_coords(coords)
-
-        from pymc.printing import str_for_model
-
-        self.str_repr = types.MethodType(str_for_model, self)
-        self._repr_latex_ = types.MethodType(
-            functools.partial(str_for_model, formatting="latex"), self
-        )
 
     @classmethod
     def get_context(
@@ -2014,6 +2006,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
             dpi=dpi,
         )
 
+    def _repr_pretty_(self, p, cycle):
+        from pymc.printing import str_for_model
+
+        output = str_for_model(self)
+        # Find newlines and replace them with p.break_()
+        # (see IPython.lib.pretty._repr_pprint)
+        lines = output.splitlines()
+        with p.group():
+            for idx, output_line in enumerate(lines):
+                if idx:
+                    p.break_()
+                p.text(output_line)
+
 
 class BlockModelAccess(Model):
     """Can be used to prevent user access to Model contexts."""
@@ -2240,19 +2245,6 @@ def Deterministic(name, var, model=None, dims=None):
     var = var.copy(model.name_for(name))
     model.deterministics.append(var)
     model.add_named_variable(var, dims)
-
-    from pymc.printing import str_for_potential_or_deterministic
-
-    var.str_repr = types.MethodType(
-        functools.partial(str_for_potential_or_deterministic, dist_name="Deterministic"), var
-    )
-    var._repr_latex_ = types.MethodType(
-        functools.partial(
-            str_for_potential_or_deterministic, dist_name="Deterministic", formatting="latex"
-        ),
-        var,
-    )
-
     return var
 
 
@@ -2364,17 +2356,5 @@ def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariabl
     var.name = model.name_for(name)
     model.potentials.append(var)
     model.add_named_variable(var, dims)
-
-    from pymc.printing import str_for_potential_or_deterministic
-
-    var.str_repr = types.MethodType(
-        functools.partial(str_for_potential_or_deterministic, dist_name="Potential"), var
-    )
-    var._repr_latex_ = types.MethodType(
-        functools.partial(
-            str_for_potential_or_deterministic, dist_name="Potential", formatting="latex"
-        ),
-        var,
-    )
 
     return var
