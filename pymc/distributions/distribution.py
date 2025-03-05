@@ -383,6 +383,14 @@ class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
         out_ndim = max(getattr(out.type, "ndim", 0) for out in node.outputs)
         return out_ndim - self.ndim_supp
 
+    def rebuild_rv(self, *args, **kwargs):
+        """Rebuild the RandomVariable with new inputs."""
+        if not hasattr(self, "rv_op"):
+            raise NotImplementedError(
+                f"SymbolicRandomVariable {self} without `rv_op` method cannot be rebuilt automatically."
+            )
+        return self.rv_op(*args, **kwargs)
+
 
 @_change_dist_size.register(SymbolicRandomVariable)
 def change_symbolic_rv_size(op: SymbolicRandomVariable, rv, new_size, expand) -> TensorVariable:
@@ -400,10 +408,10 @@ def change_symbolic_rv_size(op: SymbolicRandomVariable, rv, new_size, expand) ->
 
     params = op.dist_params(rv.owner)
 
-    if expand:
+    if expand and not rv_size_is_none(size):
         new_size = tuple(new_size) + tuple(size)
 
-    return op.rv_op(*params, size=new_size)
+    return op.rebuild_rv(*params, size=new_size)
 
 
 class Distribution(metaclass=DistributionMeta):
