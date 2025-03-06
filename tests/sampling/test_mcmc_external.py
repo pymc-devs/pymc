@@ -81,7 +81,8 @@ def test_step_args():
             nuts_sampler="numpyro",
             target_accept=0.5,
             nuts={"max_treedepth": 10},
-            random_seed=1410,
+            random_seed=1411,
+            progressbar=False,
         )
 
     npt.assert_almost_equal(idata.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
