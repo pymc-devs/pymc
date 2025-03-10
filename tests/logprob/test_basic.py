@@ -436,3 +436,26 @@ def test_ir_rewrite_does_not_disconnect_valued_rvs():
         logp_b.eval({a_value: np.pi, b_value: np.e}),
         stats.norm.logpdf(np.e, np.pi * 8, 1),
     )
+
+
+def test_ir_ops_can_be_evaluated_with_warning():
+    _eval_values = [None, None]
+
+    def my_logp(value, lam):
+        nonlocal _eval_values
+        _eval_values[0] = value.eval()
+        _eval_values[1] = lam.eval({"lam_log__": -1.5})
+        return value * lam
+
+    with pm.Model() as m:
+        lam = pm.Exponential("lam")
+        pm.CustomDist("y", lam, logp=my_logp, observed=[0, 1, 2])
+
+    with pytest.warns(
+        UserWarning, match="TransformedValue should not be present in the final graph"
+    ):
+        with pytest.warns(UserWarning, match="ValuedVar should not be present in the final graph"):
+            m.logp()
+
+    assert _eval_values[0].sum() == 3
+    assert _eval_values[1] == np.exp(-1.5)
