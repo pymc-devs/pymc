@@ -45,5 +45,5 @@ jobs:
           name: Packages
           path: dist
       - name: Publish Package to PyPI
-        uses: pypa/gh-action-pypi-publish@67339c736fd9354cd4f8cb0b744f2b82a74b5c70  # v1.12.3
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc  # v1.12.4
         # Implicitly attests that the packages were uploaded in the context of this workflow.
