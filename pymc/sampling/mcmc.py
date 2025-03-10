@@ -292,6 +292,105 @@ def all_continuous(vars):
         return True
 
 
+def _sample_mclmc(
+    sampler: Literal["blackjax"],
+    draws: int,
+    tune: int,
+    chains: int,
+    target_accept: float,
+    random_seed: RandomState | None,
+    initvals: StartDict | Sequence[StartDict | None] | None,
+    model: Model,
+    var_names: Sequence[str] | None,
+    progressbar: bool,
+    idata_kwargs: dict | None,
+    compute_convergence_checks: bool,
+    mclmc_sampler_kwargs: dict | None,
+    adjusted: bool = False,
+    **kwargs,
+):
+    """
+    Sample using the MCLMC sampler from BlackJax.
+
+    Parameters
+    ----------
+    sampler : {"blackjax"}
+        Name of the external sampler to use.
+    draws : int
+        Number of samples to draw.
+    tune : int
+        Number of tuning steps.
+    chains : int
+        Number of chains to run in parallel.
+    target_accept : float
+        Target acceptance rate.
+    random_seed : RandomState, optional
+        Random seed.
+    initvals : dict or list of dict, optional
+        Initial values for variables.
+    model : Model
+        PyMC model.
+    var_names : list of str, optional
+        List of variable names to sample.
+    progressbar : bool
+        Whether to display a progress bar.
+    idata_kwargs : dict, optional
+        Keyword arguments for InferenceData conversion.
+    compute_convergence_checks : bool
+        Whether to compute convergence checks.
+    mclmc_sampler_kwargs : dict, optional
+        Keyword arguments for the MCLMC sampler.
+    adjusted : bool, default=False
+        Whether to use the adjusted MCLMC algorithm.
+
+    Returns
+    -------
+    InferenceData
+        ArviZ InferenceData object with sampling results.
+    """
+    if mclmc_sampler_kwargs is None:
+        mclmc_sampler_kwargs = {}
+
+    if sampler == "blackjax":
+        import pymc.sampling.jax as pymc_jax
+
+        if adjusted:
+            idata = pymc_jax.sample_blackjax_adjusted_mclmc(
+                draws=draws,
+                tune=tune,
+                chains=chains,
+                target_accept=target_accept,
+                random_seed=random_seed,
+                initvals=initvals,
+                model=model,
+                var_names=var_names,
+                progressbar=progressbar,
+                idata_kwargs=idata_kwargs,
+                compute_convergence_checks=compute_convergence_checks,
+                **mclmc_sampler_kwargs,
+            )
+        else:
+            idata = pymc_jax.sample_blackjax_mclmc(
+                draws=draws,
+                tune=tune,
+                chains=chains,
+                target_accept=target_accept,
+                random_seed=random_seed,
+                initvals=initvals,
+                model=model,
+                var_names=var_names,
+                progressbar=progressbar,
+                idata_kwargs=idata_kwargs,
+                compute_convergence_checks=compute_convergence_checks,
+                **mclmc_sampler_kwargs,
+            )
+        return idata
+    else:
+        raise ValueError(
+            f"Sampler {sampler} not found. Currently only 'blackjax' is supported for MCLMC."
+        )
+
+
 def _sample_external_nuts(
     sampler: Literal["nutpie", "numpyro", "blackjax"],
     draws: int,
@@ -429,6 +528,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    mclmc_sampler: Literal["blackjax"] | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -440,6 +540,7 @@ def sample(
     return_inferencedata: Literal[True] = True,
     idata_kwargs: dict[str, Any] | None = None,
     nuts_sampler_kwargs: dict[str, Any] | None = None,
+    mclmc_sampler_kwargs: dict[str, Any] | None = None,
     callback=None,
     mp_ctx=None,
     blas_cores: int | None | Literal["auto"] = "auto",
@@ -461,6 +562,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    mclmc_sampler: Literal["blackjax"] | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -472,6 +574,7 @@ def sample(
     return_inferencedata: Literal[False],
     idata_kwargs: dict[str, Any] | None = None,
     nuts_sampler_kwargs: dict[str, Any] | None = None,
+    mclmc_sampler_kwargs: dict[str, Any] | None = None,
     callback=None,
     mp_ctx=None,
     model: Model | None = None,
@@ -493,6 +596,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    mclmc_sampler: Literal["blackjax"] | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -504,6 +608,7 @@ def sample(
     return_inferencedata: bool = True,
     idata_kwargs: dict[str, Any] | None = None,
     nuts_sampler_kwargs: dict[str, Any] | None = None,
+    mclmc_sampler_kwargs: dict[str, Any] | None = None,
     callback=None,
     mp_ctx=None,
     blas_cores: int | None | Literal["auto"] = "auto",
@@ -820,6 +925,33 @@ def sample(
                 idata_kwargs=idata_kwargs,
                 compute_convergence_checks=compute_convergence_checks,
                 nuts_sampler_kwargs=nuts_sampler_kwargs,
+                **kwargs,
+            )
+
+    if mclmc_sampler is not None:
+        if not exclusive_nuts:
+            raise ValueError(
+                "Model can not be sampled with MCLMC alone. It either has discrete variables or a non-differentiable log-probability."
+            )
+
+        adjusted = mclmc_sampler_kwargs.pop("adjusted", False) if mclmc_sampler_kwargs else False
+
+        with joined_blas_limiter():
+            return _sample_mclmc(
+                sampler=mclmc_sampler,
+                draws=draws,
+                tune=tune,
+                chains=chains,
+                target_accept=kwargs.pop("nuts", {}).get("target_accept", 0.9),
+                random_seed=random_seed,
+                initvals=initvals,
+                model=model,
+                var_names=var_names,
+                progressbar=progress_bool,
+                idata_kwargs=idata_kwargs,
+                compute_convergence_checks=compute_convergence_checks,
+                mclmc_sampler_kwargs=mclmc_sampler_kwargs,
+                adjusted=adjusted,
                 **kwargs,
             )
 

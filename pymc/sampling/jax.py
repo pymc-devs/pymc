@@ -66,6 +66,8 @@ os.environ["XLA_FLAGS"] = " ".join([f"--xla_force_host_platform_device_count={10
 __all__ = (
     "get_jaxified_graph",
     "get_jaxified_logp",
+    "sample_blackjax_adjusted_mclmc",
+    "sample_blackjax_mclmc",
     "sample_blackjax_nuts",
     "sample_numpyro_nuts",
 )
@@ -259,8 +261,14 @@ def _blackjax_inference_loop(
         algorithm = blackjax.nuts
     elif algorithm_name == "hmc":
         algorithm = blackjax.hmc
+    elif algorithm_name == "mclmc":
+        algorithm = blackjax.mclmc
+    elif algorithm_name == "adjusted_mclmc":
+        algorithm = blackjax.adjusted_mclmc_dynamic
     else:
-        raise ValueError("Only supporting 'nuts' or 'hmc' as algorithm to draw samples.")
+        raise ValueError(
+            "Only supporting 'nuts', 'hmc', 'mclmc', or 'adjusted_mclmc' as algorithm to draw samples."
+        )
 
     adapt = blackjax.window_adaptation(
         algorithm=algorithm,
@@ -726,3 +734,44 @@ def sample_jax_nuts(
 
 sample_numpyro_nuts = partial(sample_jax_nuts, nuts_sampler="numpyro")
 sample_blackjax_nuts = partial(sample_jax_nuts, nuts_sampler="blackjax")
+
+
+# Custom partial functions for the MCLMC samplers
+def sample_blackjax_mclmc(*args, **kwargs):
+    """
+    Draw samples from the posterior using the MCLMC (Microcanonical Langevin Monte Carlo) method.
+
+    From the ``blackjax`` library.
+
+    Parameters are the same as for sample_jax_nuts.
+
+    MCLMC is based on https://arxiv.org/abs/2212.08549. It numerically integrates a specialized SDE
+    to produce samples from the target distribution.
+
+    This implementation uses the unadjusted MCLMC algorithm, which may have some asymptotic bias
+    but is typically faster than adjusted MCLMC or NUTS for many high-dimensional problems.
+    """
+    kwargs.setdefault("nuts_sampler_kwargs", {}).setdefault("algorithm", "mclmc")
+    # MCLMC has different default target_accept
+    if "target_accept" not in kwargs:
+        kwargs["target_accept"] = 0.9
+    return sample_jax_nuts(*args, nuts_sampler="blackjax", **kwargs)
+
+
+def sample_blackjax_adjusted_mclmc(*args, **kwargs):
+    """
+    Draw samples from the posterior using the adjusted MCLMC (Microcanonical Langevin Monte Carlo) method.
+
+    From the ``blackjax`` library.
+
+    Parameters are the same as for sample_jax_nuts.
+
+    Adjusted MCLMC adds a Metropolis-Hastings correction step to the unadjusted MCLMC algorithm,
+    ensuring asymptotic unbiasedness at the cost of some computational efficiency.
+    It is recommended when exact asymptotic convergence to the posterior is required.
+    """
+    kwargs.setdefault("nuts_sampler_kwargs", {}).setdefault("algorithm", "adjusted_mclmc")
+    # Adjusted MCLMC also has different default target_accept
+    if "target_accept" not in kwargs:
+        kwargs["target_accept"] = 0.9
+    return sample_jax_nuts(*args, nuts_sampler="blackjax", **kwargs)

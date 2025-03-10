@@ -86,3 +86,34 @@ def test_step_args():
         )
 
     npt.assert_almost_equal(idata.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
+
+
+def test_mclmc_sampling():
+    """Test that blackjax MCLMC sampling works."""
+    pytest.importorskip("blackjax")
+    with Model():
+        a = Normal("a", 0, 1)
+        trace = sample(
+            draws=50,
+            tune=50,
+            random_seed=345,
+            mclmc_sampler="blackjax",
+            progressbar=False,
+        )
+    assert "a" in trace.posterior.data_vars
+
+
+def test_adjusted_mclmc_sampling():
+    """Test that blackjax adjusted MCLMC sampling works."""
+    pytest.importorskip("blackjax")
+    with Model():
+        a = Normal("a", 0, 1)
+        trace = sample(
+            draws=50,
+            tune=50,
+            random_seed=345,
+            mclmc_sampler="blackjax",
+            mclmc_sampler_kwargs={"adjusted": True},
+            progressbar=False,
+        )
+    assert "a" in trace.posterior.data_vars
