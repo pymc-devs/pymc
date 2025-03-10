@@ -159,16 +159,16 @@ class TestDEMetropolis:
             pm.Normal("n", mu=0, sigma=1, size=(2, 3))
 
             step = DEMetropolis()
-            assert step.tune == "scaling"
+            assert step.tune_target == "scaling"
 
             step = DEMetropolis(tune=None)
-            assert step.tune is None
+            assert step.tune_target is None
 
             step = DEMetropolis(tune="scaling")
-            assert step.tune == "scaling"
+            assert step.tune_target == "scaling"
 
             step = DEMetropolis(tune="lambda")
-            assert step.tune == "lambda"
+            assert step.tune_target == "lambda"
 
             with pytest.raises(ValueError):
                 DEMetropolis(tune="foo")
