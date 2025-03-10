@@ -20,7 +20,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: hynek/build-and-inspect-python-package@14c7e53f5d033cfa99f7af916fa59a6f7f356394  # v2.11.0
+      - uses: hynek/build-and-inspect-python-package@b5076c307dc91924a82ad150cdd1533b444d3310  # v2.12.0
         with:
           # Prove that the packages were built in the context of this workflow.
           attest-build-provenance-github: true
