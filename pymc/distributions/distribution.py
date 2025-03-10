@@ -664,7 +664,7 @@ class DiracDeltaRV(SymbolicRandomVariable):
 
 class DiracDelta(Discrete):
     r"""
-    DiracDelta log-likelihood.
+    DiracDelta distribution.
 
     Parameters
     ----------
