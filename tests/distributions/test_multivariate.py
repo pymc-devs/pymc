@@ -27,6 +27,7 @@ from pytensor import tensor as pt
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.blockwise import Blockwise
 from pytensor.tensor.nlinalg import MatrixInverse
+from pytensor.tensor.random.basic import multivariate_normal
 from pytensor.tensor.random.utils import broadcast_params
 from pytensor.tensor.slinalg import Cholesky
 
@@ -421,7 +422,7 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3])
     @pytest.mark.parametrize("m", [3])
-    @pytest.mark.parametrize("sigma", [None, 1])
+    @pytest.mark.parametrize("sigma", [0, 1])
     def test_kroneckernormal(self, n, m, sigma):
         np.random.seed(5)
         N = n * m
@@ -1309,32 +1310,15 @@ class TestMoments:
         [
             (3, 1, None, np.zeros(3)),
             (5, 1, None, np.zeros(10)),
-            pytest.param(
-                3,
-                1,
-                1,
-                np.zeros((1, 3)),
-                marks=pytest.mark.xfail(
-                    raises=NotImplementedError,
-                    reason="LKJCorr logp is only implemented for vector values (ndim=1)",
-                ),
-            ),
-            pytest.param(
-                5,
-                1,
-                (2, 3),
-                np.zeros((2, 3, 10)),
-                marks=pytest.mark.xfail(
-                    raises=NotImplementedError,
-                    reason="LKJCorr logp is only implemented for vector values (ndim=1)",
-                ),
-            ),
+            pytest.param(3, 1, 1, np.zeros((1, 3))),
+            pytest.param(5, 1, (2, 3), np.zeros((2, 3, 10))),
         ],
     )
     def test_lkjcorr_support_point(self, n, eta, size, expected):
         with pm.Model() as model:
             pm.LKJCorr("x", n=n, eta=eta, size=size, return_matrix=False)
-        assert_support_point_is_expected(model, expected)
+        # LKJCorr logp is only implemented for vector values (size=None)
+        assert_support_point_is_expected(model, expected, check_finite_logp=size is None)
 
     @pytest.mark.parametrize(
         "n, eta, size, expected",
@@ -1392,6 +1376,11 @@ class TestMoments:
 
 
 class TestMvNormalCov(BaseTestDistributionRandom):
+    def mvnormal_rng_fn(self, size, mean, cov, rng):
+        if isinstance(size, int):
+            size = (size,)
+        return multivariate_normal.rng_fn(rng, mean, cov, size=size)
+
     pymc_dist = pm.MvNormal
     pymc_dist_params = {
         "mu": np.array([1.0, 2.0]),
@@ -1407,7 +1396,8 @@ class TestMvNormalCov(BaseTestDistributionRandom):
         "mean": np.array([1.0, 2.0]),
         "cov": np.array([[2.0, 0.0], [0.0, 3.5]]),
     }
-    reference_dist = seeded_numpy_distribution_builder("multivariate_normal")
+    reference_dist = lambda self: ft.partial(self.mvnormal_rng_fn, rng=self.get_random_state())  # noqa: E731
+
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -1531,12 +1521,12 @@ class TestZeroSumNormal:
     def assert_zerosum_axes(self, random_samples, axes_to_check, check_zerosum_axes=True):
         if check_zerosum_axes:
             for ax in axes_to_check:
-                assert np.isclose(random_samples.mean(axis=ax), 0).all(), (
+                assert np.allclose(random_samples.mean(axis=ax), 0), (
                     f"{ax} is a zerosum_axis but is not summing to 0 across all samples."
                 )
         else:
             for ax in axes_to_check:
-                assert not np.isclose(random_samples.mean(axis=ax), 0).all(), (
+                assert not np.allclose(random_samples.mean(axis=ax), 0), (
                     f"{ax} is not a zerosum_axis, but is nonetheless summing to 0 across all samples."
                 )
 
@@ -1564,8 +1554,8 @@ class TestZeroSumNormal:
         )
 
         ndim_supp = v.owner.op.ndim_supp
-        n_zerosum_axes = np.arange(-ndim_supp, 0)
-        nonzero_axes = np.arange(v.ndim - ndim_supp)
+        n_zerosum_axes = tuple(range(-ndim_supp, 0))
+        nonzero_axes = tuple(range(v.ndim - ndim_supp))
         for samples in [
             s.posterior.v,
             random_samples,
@@ -1595,8 +1585,8 @@ class TestZeroSumNormal:
         )
 
         ndim_supp = v.owner.op.ndim_supp
-        n_zerosum_axes = np.arange(-ndim_supp, 0)
-        nonzero_axes = np.arange(v.ndim - ndim_supp)
+        n_zerosum_axes = tuple(range(-ndim_supp, 0))
+        nonzero_axes = tuple(range(v.ndim - ndim_supp))
         for samples in [
             s.posterior.v,
             random_samples,
@@ -1775,7 +1765,9 @@ class TestZeroSumNormal:
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
     def mvstudentt_rng_fn(self, size, nu, mu, scale, rng):
-        mv_samples = rng.multivariate_normal(np.zeros_like(mu), scale, size=size)
+        if isinstance(size, int):
+            size = (size,)
+        mv_samples = multivariate_normal.rng_fn(rng, np.zeros_like(mu), scale, size=size)
         chi2_samples = rng.chisquare(nu, size=size)
         return (mv_samples / np.sqrt(chi2_samples[:, None] / nu)) + mu
 
@@ -2111,9 +2103,11 @@ class TestMatrixNormal(BaseTestDistributionRandom):
 
 class TestKroneckerNormal(BaseTestDistributionRandom):
     def kronecker_rng_fn(self, size, mu, covs=None, sigma=None, rng=None):
-        cov = pm.math.kronecker(covs[0], covs[1]).eval()
+        if isinstance(size, int):
+            size = (size,)
+        cov = np.kron(covs[0], covs[1])
         cov += sigma**2 * np.identity(cov.shape[0])
-        return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size, random_state=rng)
+        return multivariate_normal.rng_fn(rng, mean=mu, cov=cov, size=size)
 
     pymc_dist = pm.KroneckerNormal
 
@@ -2179,15 +2173,18 @@ class TestLKJCorr(BaseTestDistributionRandom):
             beta = eta - 1 + n / 2
             return (st.beta.rvs(size=(size, shape), a=beta, b=beta) - 0.5) * 2
 
-        continuous_random_tester(
-            _LKJCorr,
-            {
-                "n": Domain([2, 10, 50], edges=(None, None)),
-                "eta": Domain([1.0, 10.0, 100.0], edges=(None, None)),
-            },
-            ref_rand=ref_rand,
-            size=1000,
-        )
+        # If passed as a domain, continuous_random_tester would make `n` a shared variable
+        # But this RV needs it to be constant in order to define the inner graph
+        for n in (2, 10, 50):
+            continuous_random_tester(
+                _LKJCorr,
+                {
+                    "eta": Domain([1.0, 10.0, 100.0], edges=(None, None)),
+                },
+                extra_args={"n": n},
+                ref_rand=ft.partial(ref_rand, n=n),
+                size=1000,
+            )
 
 
 @pytest.mark.parametrize(
@@ -2470,6 +2467,26 @@ def test_mvstudentt_mu_convenience():
     x = pm.MvStudentT.dist(nu=4, mu=np.ones((10, 1, 1)), scale=np.full((2, 3, 3), np.eye(3)))
     mu = x.owner.inputs[3]
     np.testing.assert_allclose(mu.eval(), np.ones((10, 2, 3)))
+
+
+def test_mvstudentt_method():
+    def all_svd_method(fgraph):
+        found_one = False
+        for node in fgraph.toposort():
+            if isinstance(node.op, pm.MvNormal):
+                found_one = True
+                if not node.op.method == "svd":
+                    return False
+        return found_one  # We want to fail if there were no MvNormal nodes
+
+    x = pm.MvStudentT.dist(nu=4, scale=np.eye(3), method="svd")
+    assert x.type.shape == (3,)
+    assert all_svd_method(x.owner.op.fgraph)
+
+    # Changing the size should preserve the method
+    resized_x = change_dist_size(x, (2,))
+    assert resized_x.type.shape == (2, 3)
+    assert all_svd_method(resized_x.owner.op.fgraph)
 
 
 def test_precision_mv_normal_optimization():

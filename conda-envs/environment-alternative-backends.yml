@@ -9,8 +9,9 @@ dependencies:
 - blas
 - cachetools>=4.2.1
 - cloudpickle
-- h5py>=2.7
 - zarr>=2.5.0,<3
+- numba
+- nutpie >= 0.13.4
 # Jaxlib version must not be greater than jax version!
 - blackjax>=1.2.2
 - jax>=0.4.28
@@ -21,7 +22,7 @@ dependencies:
 - numpyro>=0.8.0
 - pandas>=0.24.0
 - pip
-- pytensor>=2.26.2,<2.28
+- pytensor>=2.28.3,<2.29
 - python-graphviz
 - networkx
 - rich>=13.7.1
@@ -34,7 +35,7 @@ dependencies:
 - pre-commit>=2.8.0
 - pytest-cov>=2.5
 - pytest>=3.0
-- mypy=1.5.1
+- mypy=1.15.0
 - types-cachetools
 - pip:
   - numdifftools>=0.9.40

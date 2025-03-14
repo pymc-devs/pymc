@@ -26,7 +26,6 @@ jobs:
       - name: Install-pymc and mypy dependencies
         run: |
           pip install -e .
-          pip install --pre -U polyagamma
           python --version
       - name: Run mypy
         run: |

@@ -20,8 +20,10 @@ import warnings
 from collections.abc import Callable, Iterable, Sequence
 from typing import (
     Any,
+    Literal,
     TypeAlias,
     cast,
+    overload,
 )
 
 import numpy as np
@@ -360,6 +362,28 @@ def observed_dependent_deterministics(model: Model, extra_observeds=None):
     ]
 
 
+@overload
+def sample_prior_predictive(
+    draws: int = 500,
+    model: Model | None = None,
+    var_names: Iterable[str] | None = None,
+    random_seed: RandomState = None,
+    return_inferencedata: Literal[True] = True,
+    idata_kwargs: dict | None = None,
+    compile_kwargs: dict | None = None,
+    samples: int | None = None,
+) -> InferenceData: ...
+@overload
+def sample_prior_predictive(
+    draws: int = 500,
+    model: Model | None = None,
+    var_names: Iterable[str] | None = None,
+    random_seed: RandomState = None,
+    return_inferencedata: Literal[False] = False,
+    idata_kwargs: dict | None = None,
+    compile_kwargs: dict | None = None,
+    samples: int | None = None,
+) -> dict[str, np.ndarray]: ...
 def sample_prior_predictive(
     draws: int = 500,
     model: Model | None = None,
@@ -469,6 +493,36 @@ def sample_prior_predictive(
     return pm.to_inference_data(prior=prior, **ikwargs)
 
 
+@overload
+def sample_posterior_predictive(
+    trace,
+    model: Model | None = None,
+    var_names: list[str] | None = None,
+    sample_dims: list[str] | None = None,
+    random_seed: RandomState = None,
+    progressbar: bool = True,
+    progressbar_theme: Theme | None = default_progress_theme,
+    return_inferencedata: Literal[True] = True,
+    extend_inferencedata: bool = False,
+    predictions: bool = False,
+    idata_kwargs: dict | None = None,
+    compile_kwargs: dict | None = None,
+) -> InferenceData: ...
+@overload
+def sample_posterior_predictive(
+    trace,
+    model: Model | None = None,
+    var_names: list[str] | None = None,
+    sample_dims: list[str] | None = None,
+    random_seed: RandomState = None,
+    progressbar: bool = True,
+    progressbar_theme: Theme | None = default_progress_theme,
+    return_inferencedata: Literal[False] = False,
+    extend_inferencedata: bool = False,
+    predictions: bool = False,
+    idata_kwargs: dict | None = None,
+    compile_kwargs: dict | None = None,
+) -> dict[str, np.ndarray]: ...
 def sample_posterior_predictive(
     trace,
     model: Model | None = None,
@@ -876,7 +930,7 @@ def sample_posterior_predictive(
     try:
         with progress:
             task = progress.add_task("Sampling ...", completed=0, total=samples)
-            for idx in np.arange(samples):
+            for idx in range(samples):
                 if nchain > 1:
                     # the trace object will either be a MultiTrace (and have _straces)...
                     if hasattr(_trace, "_straces"):

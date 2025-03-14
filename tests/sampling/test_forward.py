@@ -857,14 +857,22 @@ class TestSamplePPC:
             y = pm.Deterministic("y", x + 1)
             z = pm.Normal("z", y, observed=0)
 
+        # all volatile RVs in model
         with m:
             pm.sample_prior_predictive(draws=1)
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x, z]")]
         caplog.clear()
 
+        # `x` has no dependencies so will be sampled by itself
         with m:
             pm.sample_prior_predictive(draws=1, var_names=["x"])
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x]")]
+        caplog.clear()
+
+        # `z` depends on `x`
+        with m:
+            pm.sample_prior_predictive(draws=1, var_names=["z"])
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x, z]")]
         caplog.clear()
 
     def test_logging_sampled_basic_rvs_posterior(self, caplog):

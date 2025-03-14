@@ -509,11 +509,17 @@ class TestMinibatch:
         mb = pm.Minibatch(pt.as_tensor(self.data).astype(int), batch_size=20)
         assert isinstance(mb.owner.op, MinibatchOp)
 
-        with pytest.raises(ValueError, match="not valid for Minibatch"):
-            pm.Minibatch(pt.as_tensor(self.data) * 2, batch_size=20)
+        mb = pm.Minibatch(pt.as_tensor(self.data) * 2, batch_size=20)
+        assert isinstance(mb.owner.op, MinibatchOp)
 
-        with pytest.raises(ValueError, match="not valid for Minibatch"):
-            pm.Minibatch(self.data, pt.as_tensor(self.data) * 2, batch_size=20)
+        for mb in pm.Minibatch(self.data, pt.as_tensor(self.data) * 2, batch_size=20):
+            assert isinstance(mb.owner.op, MinibatchOp)
+
+    def test_not_allowed(self):
+        data = pt.random.normal(loc=self.data, scale=1)
+
+        with pytest.raises(ValueError):
+            pm.Minibatch(data, batch_size=20)
 
     def test_assert(self):
         d1, d2 = pm.Minibatch(self.data, self.data[::2], batch_size=20)
@@ -530,3 +536,21 @@ class TestMinibatch:
         [draw_mA, draw_mB] = pm.draw([mA, mB])
         assert draw_mA.shape == (10,)
         np.testing.assert_allclose(draw_mA, -draw_mB)
+
+
+def test_scaling_data_works_in_likelihood() -> None:
+    data = np.array([10, 11, 12, 13, 14, 15])
+
+    with pm.Model():
+        target = pm.Data("target", data)
+        scale = 12
+        scaled_target = target / scale
+        mu = pm.Normal("mu", mu=0, sigma=1)
+        pm.Normal("x", mu=mu, sigma=1, observed=scaled_target)
+
+        idata = pm.sample(10, chains=1, tune=100)
+
+    np.testing.assert_allclose(
+        idata.observed_data["x"].values,
+        data / scale,
+    )

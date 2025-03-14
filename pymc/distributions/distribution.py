@@ -27,7 +27,7 @@ import numpy as np
 
 from pytensor import tensor as pt
 from pytensor.compile.builders import OpFromGraph
-from pytensor.graph import FunctionGraph, clone_replace, node_rewriter
+from pytensor.graph import FunctionGraph, graph_replace, node_rewriter
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.utils import MetaType
@@ -192,20 +192,19 @@ class DistributionMeta(ABCMeta):
         return new_cls
 
 
-class _class_or_instancemethod(classmethod):
-    """Allow a method to be called both as a classmethod and an instancemethod.
+class _class_or_instance_property(property):
+    """Allow a property to be accessed from a class or an instance.
 
-    Priority is given to the instancemethod.
+    Priority is given to the instance.
 
     This is used to allow extracting information from the signature of a SymbolicRandomVariable
-    which may be provided either as a class attribute or as an instance attribute.
+    which may be available early as a class attribute or only later as an instance attribute.
 
-    Adapted from https://stackoverflow.com/a/28238047
+    Adapted from https://stackoverflow.com/a/13624858
     """
 
-    def __get__(self, instance, type_):
-        descr_get = super().__get__ if instance is None else self.__func__.__get__
-        return descr_get(instance, type_)
+    def __get__(self, owner_self, owner_cls):
+        return self.fget(owner_self if owner_self is not None else owner_cls)
 
 
 class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
@@ -241,8 +240,7 @@ class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
     _print_name: tuple[str, str] = ("Unknown", "\\operatorname{Unknown}")
     """Tuple of (name, latex name) used for for pretty-printing variables of this type"""
 
-    @_class_or_instancemethod
-    @property
+    @_class_or_instance_property
     def signature(cls_or_self) -> None | str:
         # Convert "expanded" signature into "vanilla" signature that has no rng and size tokens
         extended_signature = cls_or_self.extended_signature
@@ -257,40 +255,28 @@ class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
 
         return signature
 
-    @_class_or_instancemethod
-    @property
+    @_class_or_instance_property
     def ndims_params(cls_or_self) -> Sequence[int] | None:
-        """Number of core dimensions of the distribution's parameters."""
+        """Return number of core dimensions of the distribution's parameters."""
         signature = cls_or_self.signature
         if signature is None:
             return None
         inputs_signature, _ = _parse_gufunc_signature(signature)
         return [len(sig) for sig in inputs_signature]
 
-    @_class_or_instancemethod
-    @property
+    @_class_or_instance_property
     def ndim_supp(cls_or_self) -> int | None:
-        """Number of support dimensions of the RandomVariable.
+        """Return number of support dimensions of the RandomVariable.
 
         (0 for scalar, 1 for vector, ...)
         """
         signature = cls_or_self.signature
         if signature is None:
-            return None
+            return getattr(cls_or_self, "_ndim_supp", None)
         _, outputs_params_signature = _parse_gufunc_signature(signature)
         return max(len(out_sig) for out_sig in outputs_params_signature)
 
-    @_class_or_instancemethod
-    def _parse_extended_signature(cls_or_self) -> tuple[tuple[str, ...], tuple[str, ...]] | None:
-        extended_signature = cls_or_self.extended_signature
-        if extended_signature is None:
-            return None
-
-        fake_signature = extended_signature.replace("[rng]", "(rng)").replace("[size]", "(size)")
-        return _parse_gufunc_signature(fake_signature)
-
-    @_class_or_instancemethod
-    @property
+    @_class_or_instance_property
     def default_output(cls_or_self) -> int | None:
         extended_signature = cls_or_self.extended_signature
         if extended_signature is None:
@@ -374,7 +360,7 @@ class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
         if "ndim_supp" in kwargs:
             # For backwards compatibility we allow passing ndim_supp without signature
             # This is the only variable that PyMC absolutely needs to work with SymbolicRandomVariables
-            self.ndim_supp = kwargs.pop("ndim_supp")
+            self._ndim_supp = kwargs.pop("ndim_supp")
 
         if self.ndim_supp is None:
             raise ValueError("ndim_supp or signature must be provided")
@@ -397,6 +383,14 @@ class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
         out_ndim = max(getattr(out.type, "ndim", 0) for out in node.outputs)
         return out_ndim - self.ndim_supp
 
+    def rebuild_rv(self, *args, **kwargs):
+        """Rebuild the RandomVariable with new inputs."""
+        if not hasattr(self, "rv_op"):
+            raise NotImplementedError(
+                f"SymbolicRandomVariable {self} without `rv_op` method cannot be rebuilt automatically."
+            )
+        return self.rv_op(*args, **kwargs)
+
 
 @_change_dist_size.register(SymbolicRandomVariable)
 def change_symbolic_rv_size(op: SymbolicRandomVariable, rv, new_size, expand) -> TensorVariable:
@@ -414,10 +408,10 @@ def change_symbolic_rv_size(op: SymbolicRandomVariable, rv, new_size, expand) ->
 
     params = op.dist_params(rv.owner)
 
-    if expand:
+    if expand and not rv_size_is_none(size):
         new_size = tuple(new_size) + tuple(size)
 
-    return op.rv_op(*params, size=new_size)
+    return op.rebuild_rv(*params, size=new_size)
 
 
 class Distribution(metaclass=DistributionMeta):
@@ -588,7 +582,9 @@ def inline_symbolic_random_variable(fgraph, node):
     """Expand a SymbolicRV when obtaining the logp graph if `inline_logprob` is True."""
     op = node.op
     if op.inline_logprob:
-        return clone_replace(op.inner_outputs, dict(zip(op.inner_inputs, node.inputs)))
+        return graph_replace(
+            op.inner_outputs, dict(zip(op.inner_inputs, node.inputs)), strict=False
+        )
 
 
 # Registered before pre-canonicalization which happens at position=-10
@@ -668,7 +664,7 @@ class DiracDeltaRV(SymbolicRandomVariable):
 
 class DiracDelta(Discrete):
     r"""
-    DiracDelta log-likelihood.
+    DiracDelta distribution.
 
     Parameters
     ----------
