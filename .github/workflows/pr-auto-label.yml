@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Sync labels with closing issues
-      uses: wd60622/closing-labels@v0.0.3
+      uses: wd60622/closing-labels@v0.0.4
       with:
         exclude: "help wanted,needs info,beginner friendly"
       env:
