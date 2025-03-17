@@ -606,7 +606,7 @@ def test_weakref_leak():
         return [(name, stats[name], delta) for name, delta in deltas]
 
     rvs_to_values = {pt.random.beta(1, 1, name=f"p_{i}"): pt.scalar(f"p_{i}") for i in range(30)}
-    tr = TransformValuesRewrite({v: logodds for v in rvs_to_values.values()})
+    tr = TransformValuesRewrite(dict.fromkeys(rvs_to_values.values(), logodds))
 
     for i in range(20):
         conditional_logp(rvs_to_values, extra_rewrites=tr)
