@@ -2354,8 +2354,59 @@ class ICARRV(RandomVariable):
         return super().__call__(W, sigma, zero_sum_stdev, size=size, **kwargs)
 
     @classmethod
-    def rng_fn(cls, rng, size, W, sigma, zero_sum_stdev):
-        raise NotImplementedError("Cannot sample from ICAR prior")
+    def rng_fn(cls, rng, W, sigma, zero_sum_stdev, size=None):
+            """Sample from the ICAR distribution.
+            
+            The ICAR distribution is a special case of the CAR distribution with alpha=1.
+            It generates spatial random effects where neighboring areas tend to have 
+            similar values. The precision matrix is the graph Laplacian of W.
+            
+            Parameters
+            ----------
+            rng : numpy.random.Generator
+                Random number generator
+            W : ndarray
+                Symmetric adjacency matrix
+            sigma : float
+                Standard deviation parameter
+            zero_sum_stdev : float
+                Controls how strongly to enforce the zero-sum constraint
+            size : tuple, optional
+                Size of the samples to generate
+            
+            Returns
+            -------
+            ndarray
+                Samples from the ICAR distribution
+            """
+            W = np.asarray(W)
+            N = W.shape[0]
+            
+            # Construct the precision matrix (graph Laplacian)
+            D = np.diag(W.sum(axis=1))
+            Q = D - W
+            
+            # Add regularization for the zero eigenvalue based on zero_sum_stdev
+            zero_sum_precision = 1.0 / (zero_sum_stdev * N)**2
+            Q_reg = Q + zero_sum_precision * np.ones((N, N)) / N
+            
+            # Use eigendecomposition to handle the degenerate covariance
+            eigvals, eigvecs = np.linalg.eigh(Q_reg)
+            
+            # Construct the covariance matrix
+            cov = eigvecs @ np.diag(1.0 / eigvals) @ eigvecs.T
+            
+            # Scale by sigma^2
+            cov = sigma**2 * cov
+            
+            # Generate samples
+            mean = np.zeros(N)
+            
+            # Handle different size specifications
+            if size is None:
+                return rng.multivariate_normal(mean, cov)
+            else:
+                return rng.multivariate_normal(mean, cov, size=size)
 
 
 icar = ICARRV()
