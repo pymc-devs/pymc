@@ -993,11 +993,8 @@ def _sample_return(
     Final step of `pm.sampler`.
     """
     if isinstance(traces, ZarrTrace):
-        # Split warmup from posterior samples
-        traces.split_warmup_groups()
-
         # Set sampling time
-        traces.sampling_time = t_sampling
+        traces.sampling_time = traces.sampling_time + t_sampling
 
         # Compute number of actual draws per chain
         total_draws_per_chain = traces._sampling_state.draw_idx[:]
@@ -1160,13 +1157,24 @@ def _sample_many(
 
     with progress_manager:
         for i in range(chains):
+            trace = traces[i]
+            if isinstance(trace, ZarrChain):
+                progress_manager.set_initial_state(*trace.completed_draws_and_divergences())
+                progress_manager._progress.update(
+                    progress_manager.tasks[i],
+                    draws=progress_manager.completed_draws
+                    if progress_manager.combined_progress
+                    else progress_manager.draws,
+                    divergences=progress_manager.divergences,
+                    refresh=True,
+                )
             step.sampling_state = initial_step_state
             _sample(
                 draws=draws,
                 chain=i,
                 start=start[i],
                 step=step,
-                trace=traces[i],
+                trace=trace,
                 rng=rngs[i],
                 callback=callback,
                 progress_manager=progress_manager,
@@ -1226,7 +1234,7 @@ def _sample(
         callback=callback,
     )
     try:
-        for it, stats in enumerate(sampling_gen):
+        for it, stats in sampling_gen:
             progress_manager.update(
                 chain_idx=chain, is_last=False, draw=it, stats=stats, tuning=it > tune
             )
@@ -1251,7 +1259,7 @@ def _iter_sample(
     rng: np.random.Generator,
     model: Model | None = None,
     callback: SamplingIteratorCallback | None = None,
-) -> Iterator[list[dict[str, Any]]]:
+) -> Iterator[tuple[int, list[dict[str, Any]]]]:
     """Sample one chain with a generator (singleprocess).
 
     Parameters
@@ -1285,14 +1293,33 @@ def _iter_sample(
     step.set_rng(rng)
 
     point = start
+    initial_draw_idx = 0
+    step.tune = bool(tune)
+    if hasattr(step, "reset_tuning"):
+        step.reset_tuning()
     if isinstance(trace, ZarrChain):
         trace.link_stepper(step)
+        stored_draw_idx = trace._sampling_state.draw_idx[chain]
+        stored_sampling_state = trace._sampling_state.sampling_state[chain]
+        if stored_draw_idx > 0:
+            if stored_sampling_state is not None:
+                step.sampling_state = stored_sampling_state
+            else:
+                raise RuntimeError(
+                    "Cannot use the supplied ZarrTrace to restart sampling because "
+                    "it has no sampling_state information stored. You will have to "
+                    "resample from scratch."
+                )
+            initial_draw_idx = stored_draw_idx
+            point = trace.get_mcmc_point()
+        else:
+            # Store initial point in trace
+            trace.set_mcmc_point(point)
 
     try:
-        step.tune = bool(tune)
-        if hasattr(step, "reset_tuning"):
-            step.reset_tuning()
-        for i in range(draws):
+        for i in range(initial_draw_idx, draws):
+            diverging = False
+
             if i == 0 and hasattr(step, "iter_count"):
                 step.iter_count = 0
             if i == tune:
@@ -1308,7 +1335,7 @@ def _iter_sample(
                     draw=Draw(chain, i == draws, i, i < tune, stats, point),
                 )
 
-            yield stats
+            yield i, stats
 
     except (KeyboardInterrupt, BaseException):
         if isinstance(trace, ZarrChain):
