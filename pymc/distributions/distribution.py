@@ -23,7 +23,7 @@ from collections.abc import Callable, Sequence
 from functools import singledispatch
 from typing import Any, TypeAlias
 
-import numpy as np
+import numpy as np # type: ignore
 
 from pytensor import tensor as pt
 from pytensor.compile.builders import OpFromGraph
