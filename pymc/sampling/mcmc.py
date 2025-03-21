@@ -51,6 +51,7 @@ from pymc.backends.arviz import (
 from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
 from pymc.backends.zarr import ZarrChain, ZarrTrace
 from pymc.blocking import DictToArrayBijection
+from pymc.distributions.multivariate import Multinomial
 from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
 from pymc.model import Model, modelcontext
@@ -63,6 +64,7 @@ from pymc.stats.convergence import (
 )
 from pymc.step_methods import NUTS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
+from pymc.step_methods.cannot_sample import CannotSampleRV
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
     ProgressBarManager,
@@ -143,6 +145,13 @@ def instantiate_steppers(
     if selected_steps:
         if initial_point is None:
             initial_point = model.initial_point()
+
+        for rv in model.free_RVs:
+            if isinstance(rv.owner.op, Multinomial) and getattr(rv.tag, "observed", None) is None:
+                for step_class in list(selected_steps.keys()):
+                    if rv in selected_steps[step_class]:
+                        selected_steps[step_class].remove(rv)
+                selected_steps.setdefault(CannotSampleRV, []).append(rv)
 
         for step_class, vars in selected_steps.items():
             if vars:
