@@ -1189,7 +1189,7 @@ class OrderedLogistic:
     R"""Ordered Logistic distribution.
 
     Useful for regression on ordinal data values whose values range
-    from 1 to K as a function of some predictor, :math:`\eta`. The
+    from 0 to K-1 as a function of some predictor, :math:`\eta`
     cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
     mapped to which of the K observed dependent variables. The number
     of cutpoints is K - 1. It is recommended that the cutpoints are
