@@ -883,7 +883,10 @@ class ProgressBarManager:
         if not tuning and stats and stats[0].get("diverging"):
             self.divergences += 1
 
-        self.progress_stats = self.update_stats(self.progress_stats, stats, chain_idx)
+        step_meta = [entry["step_meta"] for entry in stats]
+        step_id_to_stats = {meta["step_id"]: entry for meta, entry in zip(step_meta, stats)}
+
+        self.progress_stats = self.update_stats(self.progress_stats, step_id_to_stats, chain_idx)
         more_updates = (
             {stat: value[chain_idx] for stat, value in self.progress_stats.items()}
             if self.full_stats
