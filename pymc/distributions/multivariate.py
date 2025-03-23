@@ -2158,7 +2158,7 @@ class CARRV(RandomVariable):
     @classmethod
     def rng_fn(cls, rng, mu, W, alpha, tau, W_is_valid, size=None):
         """Sample from the CAR distribution.
-        
+
         Parameters
         ----------
         rng : numpy.random.Generator
@@ -2175,7 +2175,7 @@ class CARRV(RandomVariable):
             Flag indicating whether W is a valid adjacency matrix
         size : tuple, optional
             Size of the samples to generate
-        
+
         Returns
         -------
         ndarray
@@ -2186,26 +2186,21 @@ class CARRV(RandomVariable):
 
         if np.any(alpha >= 1) or np.any(alpha <= -1):
             raise ValueError("the domain of alpha is: -1 < alpha < 1")
-            
+
         W = np.asarray(W)
         N = W.shape[0]
-        
+
         # Construct the precision matrix
         D = np.diag(W.sum(axis=1))
         Q = tau * (D - alpha * W)
-        
+
         # Convert precision to covariance matrix
         cov = np.linalg.inv(Q)
-        
+
         # Generate samples using multivariate_normal with covariance matrix
         mean = np.zeros(N) if mu is None else np.asarray(mu)
-        
-        return stats.multivariate_normal.rvs(
-            mean=mean, 
-            cov=cov,
-            size=size, 
-            random_state=rng
-        )
+
+        return stats.multivariate_normal.rvs(mean=mean, cov=cov, size=size, random_state=rng)
 
 
 car = CARRV()
@@ -2342,8 +2337,6 @@ class CAR(Continuous):
             W_is_valid,
             msg="-1 < alpha < 1, tau > 0, W is a symmetric adjacency matrix.",
         )
-    
-
 
 
 class ICARRV(RandomVariable):
@@ -2358,7 +2351,7 @@ class ICARRV(RandomVariable):
     @classmethod
     def rng_fn(cls, rng, W, sigma, zero_sum_stdev, size=None):
         """Sample from the ICAR distribution.
-        
+
         Parameters
         ----------
         rng : numpy.random.Generator
@@ -2371,7 +2364,7 @@ class ICARRV(RandomVariable):
             Controls how strongly to enforce the zero-sum constraint
         size : tuple, optional
             Size of the samples to generate
-        
+
         Returns
         -------
         ndarray
@@ -2379,26 +2372,23 @@ class ICARRV(RandomVariable):
         """
         W = np.asarray(W)
         N = W.shape[0]
-        
+
         # Construct the precision matrix (graph Laplacian)
         D = np.diag(W.sum(axis=1))
         Q = D - W
-        
+
         # Add regularization for the zero eigenvalue based on zero_sum_stdev
-        zero_sum_precision = 1.0 / (zero_sum_stdev * N)**2
+        zero_sum_precision = 1.0 / (zero_sum_stdev * N) ** 2
         Q_reg = Q + zero_sum_precision * np.ones((N, N)) / N
-        
+
         # Convert precision to covariance matrix
         cov = np.linalg.inv(Q_reg)
-        
+
         # Generate samples using multivariate_normal with covariance matrix
         mean = np.zeros(N)
-        
+
         return sigma * stats.multivariate_normal.rvs(
-            mean=mean, 
-            cov=cov,
-            size=size, 
-            random_state=rng
+            mean=mean, cov=cov, size=size, random_state=rng
         )
 
 
