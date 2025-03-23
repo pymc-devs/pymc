@@ -18,6 +18,7 @@ import logging
 import time
 
 from abc import abstractmethod
+from collections.abc import Iterator
 from typing import Any, NamedTuple
 
 import numpy as np
@@ -99,6 +100,7 @@ class BaseHMC(GradientSharedStep):
         step_rand=None,
         rng=None,
         initial_point: PointType | None = None,
+        step_id_generator: Iterator[int] | None = None,
         **pytensor_kwargs,
     ):
         """Set up Hamiltonian samplers with common structures.
@@ -133,6 +135,7 @@ class BaseHMC(GradientSharedStep):
         **pytensor_kwargs: passed to PyTensor functions
         """
         self._model = modelcontext(model)
+        self._step_id = next(step_id_generator) if step_id_generator else None
 
         if vars is None:
             vars = self._model.continuous_value_vars
