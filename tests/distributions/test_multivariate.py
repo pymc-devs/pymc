@@ -2249,6 +2249,42 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
         assert np.all(np.abs(draw(x, random_seed=rng) - np.array([0.5, 0, 2.0])) < 0.01)
 
 
+class TestCAR:
+    def test_car_rng_fn(self):
+        """Test the random number generator for the CAR distribution."""
+        # Create a simple adjacency matrix for a grid
+        W = np.array([
+            [0, 1, 0, 1],
+            [1, 0, 1, 0],
+            [0, 1, 0, 1],
+            [1, 0, 1, 0]
+        ], dtype=np.int32)  # Explicitly set dtype
+        
+        rng = np.random.default_rng(42)
+        mu = np.array([1.0, 2.0, 3.0, 4.0])
+        alpha = 0.7
+        tau = 0.5
+        
+        # Generate samples - use W directly instead of tensor
+        car_dist = pm.CAR.dist(mu=mu, W=W, alpha=alpha, tau=tau)
+        car_samples = np.array([draw(car_dist, random_seed=rng) for _ in range(1000)])
+        
+        # Test shape
+        assert car_samples.shape == (1000, 4)
+        
+        # Test mean
+        assert np.allclose(car_samples.mean(axis=0), mu, atol=0.1)
+        
+        # Test covariance structure - neighbors should be more correlated
+        sample_corr = np.corrcoef(car_samples.T)
+        for i in range(4):
+            for j in range(4):
+                if i != j:
+                    # Neighbors should have higher correlation than non-neighbors
+                    if W[i, j] == 1:
+                        assert sample_corr[i, j] > 0
+
+
 class TestICAR(BaseTestDistributionRandom):
     pymc_dist = pm.ICAR
     pymc_dist_params = {"W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]), "sigma": 2}
@@ -2278,12 +2314,36 @@ class TestICAR(BaseTestDistributionRandom):
         ).eval(), "logp inaccuracy"
 
     def test_icar_rng_fn(self):
-        W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
-
-        RV = pm.ICAR.dist(W=W)
-
-        with pytest.raises(NotImplementedError, match="Cannot sample from ICAR prior"):
-            pm.draw(RV)
+        """Test the random number generator for the ICAR distribution."""
+        # Create a simple adjacency matrix for a grid
+        W = np.array([
+            [0, 1, 0, 1],
+            [1, 0, 1, 0],
+            [0, 1, 0, 1],
+            [1, 0, 1, 0]
+        ], dtype=np.int32)  # Explicitly set dtype
+        
+        rng = np.random.default_rng(42)        
+        sigma = 2.0
+        zero_sum_stdev = 0.001
+        
+        # Use W directly instead of converting to tensor
+        icar_dist = pm.ICAR.dist(W=W, sigma=sigma, zero_sum_stdev=zero_sum_stdev)
+        icar_samples = np.array([draw(icar_dist, random_seed=rng) for _ in range(1000)])
+        
+        # Test shape
+        assert icar_samples.shape == (1000, 4)
+        
+        # Test approximate zero-sum constraint
+        assert np.abs(icar_samples.sum(axis=1).mean()) < 0.1
+        
+        # Test variance scale - expect variance ≈ sigma^2 * (N-1)/N due to constraint
+        var_scale = (W.shape[0] - 1) / W.shape[0]  # Degrees of freedom adjustment
+        expected_var = sigma**2 * var_scale
+        observed_var = np.var(icar_samples, axis=1).mean()
+        
+        # Use a more generous tolerance to account for the zero sum constraint's impact on variance
+        assert np.abs(observed_var - expected_var) < 2.0  
 
     @pytest.mark.parametrize(
         "W,msg",

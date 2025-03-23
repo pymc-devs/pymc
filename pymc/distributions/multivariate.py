@@ -2156,56 +2156,56 @@ class CARRV(RandomVariable):
         return super().make_node(rng, size, mu, W, alpha, tau, W_is_valid)
 
     @classmethod
-    def rng_fn(cls, rng: np.random.RandomState, mu, W, alpha, tau, W_is_valid, size):
-        """Sample a numeric random variate.
-
-        Implementation of algorithm from paper
-        Havard Rue, 2001. "Fast sampling of Gaussian Markov random fields,"
-        Journal of the Royal Statistical Society Series B, Royal Statistical Society,
-        vol. 63(2), pages 325-338. DOI: 10.1111/1467-9868.00288.
+    def rng_fn(cls, rng, mu, W, alpha, tau, W_is_valid, size=None):
+        """Sample from the CAR distribution.
+        
+        Parameters
+        ----------
+        rng : numpy.random.Generator
+            Random number generator
+        mu : ndarray
+            Mean vector
+        W : ndarray
+            Symmetric adjacency matrix
+        alpha : float
+            Autoregression parameter (-1 < alpha < 1)
+        tau : float
+            Precision parameter (tau > 0)
+        W_is_valid : bool
+            Flag indicating whether W is a valid adjacency matrix
+        size : tuple, optional
+            Size of the samples to generate
+        
+        Returns
+        -------
+        ndarray
+            Samples from the CAR distribution
         """
-        if not W_is_valid.all():
-            raise ValueError("W must be a valid adjacency matrix")
+        if not W_is_valid:
+            raise ValueError("W must be a symmetric adjacency matrix")
 
         if np.any(alpha >= 1) or np.any(alpha <= -1):
             raise ValueError("the domain of alpha is: -1 < alpha < 1")
-
-        # TODO: If there are batch dims, even if W was already sparse,
-        #  we will have some expensive dense_from_sparse and sparse_from_dense
-        #  operations that we should avoid. See https://github.com/pymc-devs/pytensor/issues/839
-        W = _squeeze_to_ndim(W, 2)
-        if not scipy.sparse.issparse(W):
-            W = scipy.sparse.csr_matrix(W)
-        tau = scipy.sparse.csr_matrix(_squeeze_to_ndim(tau, 0))
-        alpha = scipy.sparse.csr_matrix(_squeeze_to_ndim(alpha, 0))
-
-        s = np.asarray(W.sum(axis=0))[0]
-        D = scipy.sparse.diags(s)
-
-        Q = tau.multiply(D - alpha.multiply(W))
-
-        perm_array = scipy.sparse.csgraph.reverse_cuthill_mckee(Q, symmetric_mode=True)
-        inv_perm = np.argsort(perm_array)
-
-        Q = Q[perm_array, :][:, perm_array]
-
-        Qb = Q.diagonal()
-        u = 1
-        while np.count_nonzero(Q.diagonal(u)) > 0:
-            Qb = np.vstack((np.pad(Q.diagonal(u), (u, 0), constant_values=(0, 0)), Qb))
-            u += 1
-
-        L = scipy.linalg.cholesky_banded(Qb, lower=False)
-
-        size = tuple(size or ())
-        if size:
-            mu = np.broadcast_to(mu, (*size, mu.shape[-1]))
-        z = rng.normal(size=mu.shape)
-        samples = np.empty(z.shape)
-        for idx in np.ndindex(mu.shape[:-1]):
-            samples[idx] = scipy.linalg.cho_solve_banded((L, False), z[idx]) + mu[idx][perm_array]
-        samples = samples[..., inv_perm]
-        return samples
+            
+        W = np.asarray(W)
+        N = W.shape[0]
+        
+        # Construct the precision matrix
+        D = np.diag(W.sum(axis=1))
+        Q = tau * (D - alpha * W)
+        
+        # Convert precision to covariance matrix
+        cov = np.linalg.inv(Q)
+        
+        # Generate samples using multivariate_normal with covariance matrix
+        mean = np.zeros(N) if mu is None else np.asarray(mu)
+        
+        return stats.multivariate_normal.rvs(
+            mean=mean, 
+            cov=cov,
+            size=size, 
+            random_state=rng
+        )
 
 
 car = CARRV()
@@ -2342,6 +2342,8 @@ class CAR(Continuous):
             W_is_valid,
             msg="-1 < alpha < 1, tau > 0, W is a symmetric adjacency matrix.",
         )
+    
+
 
 
 class ICARRV(RandomVariable):
@@ -2355,58 +2357,49 @@ class ICARRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, W, sigma, zero_sum_stdev, size=None):
-            """Sample from the ICAR distribution.
-            
-            The ICAR distribution is a special case of the CAR distribution with alpha=1.
-            It generates spatial random effects where neighboring areas tend to have 
-            similar values. The precision matrix is the graph Laplacian of W.
-            
-            Parameters
-            ----------
-            rng : numpy.random.Generator
-                Random number generator
-            W : ndarray
-                Symmetric adjacency matrix
-            sigma : float
-                Standard deviation parameter
-            zero_sum_stdev : float
-                Controls how strongly to enforce the zero-sum constraint
-            size : tuple, optional
-                Size of the samples to generate
-            
-            Returns
-            -------
-            ndarray
-                Samples from the ICAR distribution
-            """
-            W = np.asarray(W)
-            N = W.shape[0]
-            
-            # Construct the precision matrix (graph Laplacian)
-            D = np.diag(W.sum(axis=1))
-            Q = D - W
-            
-            # Add regularization for the zero eigenvalue based on zero_sum_stdev
-            zero_sum_precision = 1.0 / (zero_sum_stdev * N)**2
-            Q_reg = Q + zero_sum_precision * np.ones((N, N)) / N
-            
-            # Use eigendecomposition to handle the degenerate covariance
-            eigvals, eigvecs = np.linalg.eigh(Q_reg)
-            
-            # Construct the covariance matrix
-            cov = eigvecs @ np.diag(1.0 / eigvals) @ eigvecs.T
-            
-            # Scale by sigma^2
-            cov = sigma**2 * cov
-            
-            # Generate samples
-            mean = np.zeros(N)
-            
-            # Handle different size specifications
-            if size is None:
-                return rng.multivariate_normal(mean, cov)
-            else:
-                return rng.multivariate_normal(mean, cov, size=size)
+        """Sample from the ICAR distribution.
+        
+        Parameters
+        ----------
+        rng : numpy.random.Generator
+            Random number generator
+        W : ndarray
+            Symmetric adjacency matrix
+        sigma : float
+            Standard deviation parameter
+        zero_sum_stdev : float
+            Controls how strongly to enforce the zero-sum constraint
+        size : tuple, optional
+            Size of the samples to generate
+        
+        Returns
+        -------
+        ndarray
+            Samples from the ICAR distribution
+        """
+        W = np.asarray(W)
+        N = W.shape[0]
+        
+        # Construct the precision matrix (graph Laplacian)
+        D = np.diag(W.sum(axis=1))
+        Q = D - W
+        
+        # Add regularization for the zero eigenvalue based on zero_sum_stdev
+        zero_sum_precision = 1.0 / (zero_sum_stdev * N)**2
+        Q_reg = Q + zero_sum_precision * np.ones((N, N)) / N
+        
+        # Convert precision to covariance matrix
+        cov = np.linalg.inv(Q_reg)
+        
+        # Generate samples using multivariate_normal with covariance matrix
+        mean = np.zeros(N)
+        
+        return sigma * stats.multivariate_normal.rvs(
+            mean=mean, 
+            cov=cov,
+            size=size, 
+            random_state=rng
+        )
 
 
 icar = ICARRV()
