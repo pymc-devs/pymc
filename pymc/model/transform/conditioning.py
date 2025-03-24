@@ -359,7 +359,7 @@ def remove_value_transforms(
     """
     if vars is None:
         vars = model.free_RVs
-    return change_value_transforms(model, {var: None for var in vars})
+    return change_value_transforms(model, dict.fromkeys(vars))
 
 
 __all__ = (

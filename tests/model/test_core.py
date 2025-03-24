@@ -181,7 +181,7 @@ class TestNested:
         assert "v2" in usage1.named_vars
         assert "v3" in usage1.named_vars
         assert "v3_sq" in usage1.named_vars
-        assert len(usage1.potentials), 1
+        assert len(usage1.potentials), "1"
 
     def test_docstring_example2(self):
         with pm.Model() as model:
@@ -190,7 +190,7 @@ class TestNested:
         assert "prefix::v2" in model.named_vars
         assert "prefix::v3" in model.named_vars
         assert "prefix::v3_sq" in model.named_vars
-        assert len(model.potentials), 1
+        assert len(model.potentials), "1"
 
     def test_duplicates_detection(self):
         with pm.Model():
