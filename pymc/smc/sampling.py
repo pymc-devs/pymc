@@ -13,7 +13,6 @@
 #   limitations under the License.
 
 import logging
-import multiprocessing
 import time
 
 from collections import defaultdict
@@ -354,6 +353,7 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
         disable=not progressbar,
     ) as progress:
         futures = []  # keep track of the jobs
+        import multiprocessing
         with multiprocessing.Manager() as manager:
             # this is the key - we share some state between our
             # main process and our worker functions
