@@ -162,6 +162,7 @@ def transform_values(fgraph: FunctionGraph, node: Apply) -> list[Apply] | None:
     # This means that we need to replace all instance of the old value variable
     # with "inversely/un-" transformed versions of itself.
     replacements = {}
+    new_surprising_vars = set()
     for valued_node, transformed_rv, transform in zip(
         valued_nodes, transformed_rv_node.outputs, transforms
     ):
@@ -172,6 +173,9 @@ def transform_values(fgraph: FunctionGraph, node: Apply) -> list[Apply] | None:
             transformed_val = value
 
         else:
+            if hasattr(transform, "_trafo_params"):
+                new_surprising_vars.update(transform._trafo_params)
+
             transformed_val = transformed_value(
                 transform.backward(value, *rv.owner.inputs),
                 value,
@@ -183,6 +187,10 @@ def transform_values(fgraph: FunctionGraph, node: Apply) -> list[Apply] | None:
                 transformed_val.name = f"{value_name}_{transform.name}"
 
         replacements[val_rv] = valued_rv(transformed_rv, transformed_val)
+
+    for new_surprising_var in new_surprising_vars:
+        # print("Importing hyper parameter: ", new_surprising_var)
+        fgraph.import_var(new_surprising_var, import_missing=True)
 
     return replacements
 
