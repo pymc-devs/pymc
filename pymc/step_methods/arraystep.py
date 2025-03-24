@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 from abc import abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import cast
 
 import numpy as np
@@ -43,14 +43,25 @@ class ArrayStep(BlockedStep):
         :py:func:`pymc.util.get_random_generator` for more information.
     """
 
-    def __init__(self, vars, fs, allvars=False, blocked=True, rng: RandomGenerator = None):
+    def __init__(
+        self,
+        vars,
+        fs,
+        allvars=False,
+        blocked=True,
+        rng: RandomGenerator = None,
+        step_id_generator: Iterator[int] | None = None,
+    ):
         self.vars = vars
         self.fs = fs
         self.allvars = allvars
         self.blocked = blocked
         self.rng = get_random_generator(rng)
+        self._step_id = next(step_id_generator) if step_id_generator else None
 
-    def step(self, point: PointType) -> tuple[PointType, StatsType]:
+    def step(
+        self, point: PointType, step_parent_id: int | None = None
+    ) -> tuple[PointType, StatsType]:
         partial_funcs_and_point: list[Callable | PointType] = [
             DictToArrayBijection.mapf(x, start_point=point) for x in self.fs
         ]
@@ -60,6 +71,9 @@ class ArrayStep(BlockedStep):
         var_dict = {cast(str, v.name): point[cast(str, v.name)] for v in self.vars}
         apoint = DictToArrayBijection.map(var_dict)
         apoint_new, stats = self.astep(apoint, *partial_funcs_and_point)
+
+        for sts in stats:
+            sts["step_meta"] = {"step_id": self._step_id, "step_parent_id": step_parent_id}
 
         if not isinstance(apoint_new, RaveledVars):
             # We assume that the mapping has stayed the same
@@ -84,7 +98,14 @@ class ArrayStepShared(BlockedStep):
     and unmapping overhead as well as moving fewer variables around.
     """
 
-    def __init__(self, vars, shared, blocked=True, rng: RandomGenerator = None):
+    def __init__(
+        self,
+        vars,
+        shared,
+        blocked=True,
+        rng: RandomGenerator = None,
+        step_id_generator: Iterator[int] | None = None,
+    ):
         """
         Create the ArrayStepShared object.
 
@@ -103,8 +124,11 @@ class ArrayStepShared(BlockedStep):
         self.shared = {get_var_name(var): shared for var, shared in shared.items()}
         self.blocked = blocked
         self.rng = get_random_generator(rng)
+        self._step_id = next(step_id_generator) if step_id_generator else None
 
-    def step(self, point: PointType) -> tuple[PointType, StatsType]:
+    def step(
+        self, point: PointType, step_parent_id: int | None = None
+    ) -> tuple[PointType, StatsType]:
         full_point = None
         if self.shared:
             for name, shared_var in self.shared.items():
@@ -114,6 +138,9 @@ class ArrayStepShared(BlockedStep):
 
         q = DictToArrayBijection.map(point)
         apoint, stats = self.astep(q)
+
+        for sts in stats:
+            sts["step_meta"] = {"step_id": self._step_id, "step_parent_id": step_parent_id}
 
         if not isinstance(apoint, RaveledVars):
             # We assume that the mapping has stayed the same
