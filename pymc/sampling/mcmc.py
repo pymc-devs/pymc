@@ -21,12 +21,13 @@ import sys
 import time
 import warnings
 
+IS_PYODIDE = "pyodide" in sys.modules
+
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from typing import (
     Any,
     Literal,
     TypeAlias,
-    cast,
     overload,
 )
 
@@ -929,20 +930,26 @@ def sample(
 
     t_start = time.time()
     if parallel:
-        _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
-        _print_step_hierarchy(step)
-        try:
-            _mp_sample(**sample_args, **parallel_args)
-        except pickle.PickleError:
-            _log.warning("Could not pickle model, sampling singlethreaded.")
-            _log.debug("Pickling error:", exc_info=True)
+        if IS_PYODIDE:
+            _log.warning("Pyodide detected: Falling back to single-threaded sampling.")
             parallel = False
-        except AttributeError as e:
-            if not str(e).startswith("AttributeError: Can't pickle"):
-                raise
-            _log.warning("Could not pickle model, sampling singlethreaded.")
-            _log.debug("Pickling error:", exc_info=True)
-            parallel = False
+
+            _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
+            _print_step_hierarchy(step)
+
+        if parallel:  # Only call _mp_sample() if parallel is still True
+            try:
+                _mp_sample(**sample_args, **parallel_args)
+            except pickle.PickleError:
+                _log.warning("Could not pickle model, sampling singlethreaded.")
+                _log.debug("Pickling error:", exc_info=True)
+                parallel = False
+            except AttributeError as e:
+                if not str(e).startswith("AttributeError: Can't pickle"):
+                    raise
+                _log.warning("Could not pickle model, sampling singlethreaded.")
+                _log.debug("Pickling error:", exc_info=True)
+                parallel = False
     if not parallel:
         if has_population_samplers:
             _log.info(f"Population sampling ({chains} chains)")
@@ -1340,56 +1347,24 @@ def _mp_sample(
     mp_ctx=None,
     **kwargs,
 ) -> None:
-    """Sample all chains (multiprocess).
+    """Sample all chains (multiprocess)."""
+    if IS_PYODIDE:
+        _log.warning("Pyodide detected: Falling back to single-threaded sampling.")
+        return _sample_many(
+            draws=draws,
+            chains=chains,
+            traces=traces,
+            start=start,
+            rngs=rngs,
+            step=step,
+            callback=callback,
+            **kwargs,
+        )
 
-    Parameters
-    ----------
-    draws : int
-        The number of samples to draw
-    tune : int
-        Number of iterations to tune.
-    step : function
-        Step function
-    chains : int
-        The number of chains to sample.
-    cores : int
-        The number of chains to run in parallel.
-    rngs: list of random Generators
-        A list of :py:class:`~numpy.random.Generator` objects, one for each chain
-    start : list
-        Starting points for each chain.
-        Dicts must contain numeric (transformed) initial values for all (transformed) free variables.
-    progressbar : bool
-        Whether or not to display a progress bar in the command line.
-    progressbar_theme : Theme
-        Optional custom theme for the progress bar.
-    traces
-        Recording backends for each chain.
-    model : Model (optional if in ``with`` context)
-    callback
-        A function which gets called for every sample from the trace of a chain. The function is
-        called with the trace and the current draw and will contain all samples for a single trace.
-        the ``draw.chain`` argument can be used to determine which of the active chains the sample
-        is drawn from.
-        Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
-    """
     import pymc.sampling.parallel as ps
 
-    # We did draws += tune in pm.sample
-    draws -= tune
     zarr_chains: list[ZarrChain] | None = None
     zarr_recording = False
-    if all(isinstance(trace, ZarrChain) for trace in traces):
-        if isinstance(cast(ZarrChain, traces[0])._posterior.store, MemoryStore):
-            warnings.warn(
-                "Parallel sampling with MemoryStore zarr store wont write the processes "
-                "step method sampling state. If you wish to be able to access the step "
-                "method sampling state, please use a different storage backend, e.g. "
-                "DirectoryStore or ZipStore"
-            )
-        else:
-            zarr_chains = cast(list[ZarrChain], traces)
-            zarr_recording = True
 
     sampler = ps.ParallelSampler(
         draws=draws,
@@ -1405,16 +1380,30 @@ def _mp_sample(
         mp_ctx=mp_ctx,
         zarr_chains=zarr_chains,
     )
+
     try:
         try:
             with sampler:
-                for draw in sampler:
-                    strace = traces[draw.chain]
+                # for draw in sampler:
+                #     strace = traces[draw.chain]
+                #     if not zarr_recording:
+                #         # Zarr recording happens in each process
+                #         strace.record(draw.point, draw.stats)
+                #     log_warning_stats(draw.stats)
+
+                #     if callback is not None:
+                #         callback(trace=strace, draw=draw)
+
+                for idx, draw in enumerate(sampler):
+                    if idx >= draws:
+                        break
+                    strace = traces[draw.chain]  # Assign strace for the current chain
+                    print(
+                        f"DEBUG: Recording draw {idx}, chain={draw.chain}, draws={draws}, tune={tune}"
+                    )
                     if not zarr_recording:
-                        # Zarr recording happens in each process
                         strace.record(draw.point, draw.stats)
                     log_warning_stats(draw.stats)
-
                     if callback is not None:
                         callback(trace=strace, draw=draw)
 

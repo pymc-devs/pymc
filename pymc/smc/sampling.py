@@ -354,6 +354,7 @@ def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
     ) as progress:
         futures = []  # keep track of the jobs
         import multiprocessing
+
         with multiprocessing.Manager() as manager:
             # this is the key - we share some state between our
             # main process and our worker functions
