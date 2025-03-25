@@ -320,5 +320,5 @@ class TestMcBackendSampling:
         print(" Actual posterior draws:", idata.posterior.sizes["draw"])
 
         assert idata.warmup_posterior.sizes["draw"] == 5
-        assert idata.posterior.sizes["draw"] in {7, 12}
+        assert idata.posterior.sizes["draw"] == 7
         pass
