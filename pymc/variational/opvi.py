@@ -63,7 +63,6 @@ from pytensor.graph.basic import Variable
 from pytensor.graph.replace import graph_replace
 from pytensor.scalar.basic import identity as scalar_identity
 from pytensor.tensor.elemwise import Elemwise
-from pytensor.tensor.shape import unbroadcast
 
 import pymc as pm
 
@@ -1096,13 +1095,6 @@ class Group(WithMemoization):
         """
         initial = self._new_initial(s, d, more_replacements)
         initial = pt.specify_shape(initial, self.symbolic_initial.type.shape)
-        # The static shape of initial may be more precise than self.symbolic_initial,
-        # and reveal previously unknown broadcastable dimensions. We have to mask those again.
-        if initial.type.broadcastable != self.symbolic_initial.type.broadcastable:
-            unbroadcast_axes = (
-                i for i, b in enumerate(self.symbolic_initial.type.broadcastable) if not b
-            )
-            initial = unbroadcast(initial, *unbroadcast_axes)
         if more_replacements:
             initial = graph_replace(initial, more_replacements, strict=False)
         return {self.symbolic_initial: initial}
