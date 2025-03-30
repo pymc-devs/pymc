@@ -463,10 +463,7 @@ def make_graph(
     node_formatters = node_formatters or {}
     node_formatters = update_node_formatters(node_formatters)
 
-    graph = graphviz.Digraph(name)
-    if graph_attrs is not None:
-        graph.attr(**graph_attrs)
-
+    graph = graphviz.Digraph(name, graph_attr=graph_attrs)
     for plate in plates:
         if plate.dim_info:
             # must be preceded by 'cluster' to get a box around it
