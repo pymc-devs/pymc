@@ -40,7 +40,7 @@ from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
-from pymc.data import is_valid_observed, MinibatchOp
+from pymc.data import MinibatchOp, is_valid_observed
 from pymc.exceptions import (
     BlockModelAccessError,
     ImputationWarning,
