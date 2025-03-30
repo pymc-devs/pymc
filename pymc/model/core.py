@@ -40,7 +40,7 @@ from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
-from pymc.data import is_valid_observed
+from pymc.data import is_valid_observed, MinibatchOp
 from pymc.exceptions import (
     BlockModelAccessError,
     ImputationWarning,
@@ -1241,6 +1241,14 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.add_named_variable(rv_var, dims)
             self.set_initval(rv_var, initval)
         else:
+            if (
+                isinstance(observed, TensorVariable)
+                and isinstance(observed.owner.op, MinibatchOp)
+                and total_size is None
+            ):
+                warnings.warn(
+                    "total_size not provided for observed variable that uses pm.Minibatch"
+                )
             if not is_valid_observed(observed):
                 raise TypeError(
                     "Variables that depend on other nodes cannot be used for observed data."
