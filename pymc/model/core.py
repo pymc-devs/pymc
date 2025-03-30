@@ -1243,6 +1243,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         else:
             if (
                 isinstance(observed, TensorVariable)
+                and observed.owner is not None
                 and isinstance(observed.owner.op, MinibatchOp)
                 and total_size is None
             ):
