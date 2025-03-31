@@ -564,15 +564,16 @@ class Model(WithMemoization, metaclass=ContextMeta):
             for var in self.value_vars
             if var in input_vars and var not in grad_vars
         }
-        return ValueGradFunction(
-            costs,
-            grad_vars,
-            extra_vars_and_values,
-            model=self,
-            initial_point=initial_point,
-            ravel_inputs=ravel_inputs,
-            **kwargs,
-        )
+        with self:
+            return ValueGradFunction(
+                costs,
+                grad_vars,
+                extra_vars_and_values,
+                model=self,
+                initial_point=initial_point,
+                ravel_inputs=ravel_inputs,
+                **kwargs,
+            )
 
     def compile_logp(
         self,
