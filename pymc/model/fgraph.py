@@ -223,6 +223,7 @@ def fgraph_from_model(
         copy_inputs=True,
     )
     # Copy model meta-info to fgraph
+    fgraph.check_bounds = model.check_bounds
     fgraph._coords = model._coords.copy()
     fgraph._dim_lengths = {k: memo.get(v, v) for k, v in model._dim_lengths.items()}
 
@@ -318,6 +319,7 @@ def model_from_fgraph(fgraph: FunctionGraph, mutate_fgraph: bool = False) -> Mod
         # TODO: Consider representing/extracting them from the fgraph!
         _dim_lengths = {k: memo.get(v, v) for k, v in _dim_lengths.items()}
 
+    model.check_bounds = getattr(fgraph, "check_bounds", False)
     model._coords = _coords
     model._dim_lengths = _dim_lengths
 
