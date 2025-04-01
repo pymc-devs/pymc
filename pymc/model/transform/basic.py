@@ -63,7 +63,7 @@ def parse_vars(model: Model, vars: ModelVariable | Sequence[ModelVariable]) -> l
 
 
 def remove_minibatched_nodes(model: Model):
-    """Remove all uses of pm.Minibatch in the Model"""
+    """Remove all uses of pm.Minibatch in the Model."""
 
     @node_rewriter([MinibatchOp])
     def local_remove_minibatch(fgraph, node):

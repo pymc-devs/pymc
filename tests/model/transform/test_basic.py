@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import numpy as np
+
 import pymc as pm
 
 from pymc.model.transform.basic import prune_vars_detached_from_observed, remove_minibatched_nodes
