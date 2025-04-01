@@ -1248,7 +1248,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 and total_size is None
             ):
                 warnings.warn(
-                    "total_size not provided for observed variable that uses pm.Minibatch"
+                    f"total_size not provided for observed variable `{name}` that uses pm.Minibatch"
                 )
             if not is_valid_observed(observed):
                 raise TypeError(
