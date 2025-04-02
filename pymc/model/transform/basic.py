@@ -14,8 +14,10 @@
 from collections.abc import Sequence
 
 from pytensor import Variable
-from pytensor.graph import ancestors
+from pytensor.graph import ancestors, node_rewriter
+from pytensor.graph.rewriting.basic import out2in
 
+from pymc.data import MinibatchOp
 from pymc.model.core import Model
 from pymc.model.fgraph import (
     ModelObservedRV,
@@ -58,3 +60,16 @@ def parse_vars(model: Model, vars: ModelVariable | Sequence[ModelVariable]) -> l
     else:
         vars_seq = (vars,)
     return [model[var] if isinstance(var, str) else var for var in vars_seq]
+
+
+def remove_minibatched_nodes(model: Model):
+    """Remove all uses of pm.Minibatch in the Model."""
+
+    @node_rewriter([MinibatchOp])
+    def local_remove_minibatch(fgraph, node):
+        return node.inputs
+
+    remove_minibatch = out2in(local_remove_minibatch)
+    fgraph, _ = fgraph_from_model(model)
+    remove_minibatch.apply(fgraph)
+    return model_from_fgraph(fgraph, mutate_fgraph=True)
