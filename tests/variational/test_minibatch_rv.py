@@ -112,6 +112,13 @@ class TestMinibatchRandomVariable:
         assert mx is not x
         np.testing.assert_array_equal(draw(mx, random_seed=1), draw(x, random_seed=1))
 
+    def test_warning_on_missing_total_size(self):
+        total_size = 1000
+        with pytest.warns(match="total_size not provided"):
+            with pm.Model() as m:
+                MB = pm.Minibatch(np.arange(total_size, dtype="float64"), batch_size=100)
+                pm.Normal("n", observed=MB)
+
     @pytest.mark.filterwarnings("error")
     def test_minibatch_parameter_and_value(self):
         rng = np.random.default_rng(161)

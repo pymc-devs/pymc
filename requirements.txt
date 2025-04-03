@@ -2,3 +2,11 @@ arviz==0.15.1
 numba==0.61.0
 numpyro   REM Optional, latest version
 scipy==1.10.1
+cachetools>=4.2.1
+cloudpickle
+numpy>=1.25.0
+pandas>=0.24.0
+pytensor>=2.30.2,<2.31
+rich>=13.7.1
+threadpoolctl>=3.1.0,<4.0.0
+typing-extensions>=3.7.4
