@@ -1241,7 +1241,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.add_named_variable(rv_var, dims)
             self.set_initval(rv_var, initval)
         else:
-            if total_size is None and isinstance(node, TensorVariable):
+            if total_size is None and isinstance(observed, TensorVariable):
                 for node in ancestors([observed]):
                     if node.owner is not None and isinstance(node.owner.op, MinibatchOp):
                         warnings.warn(
