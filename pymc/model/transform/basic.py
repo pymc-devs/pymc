@@ -72,13 +72,13 @@ def remove_minibatched_nodes(model: Model) -> Model:
             for inp, out in zip(var.inputs, var.outputs):
                 replacements[out] = inp
 
-    old_outs, old_coords, old_dim_lengths = fgraph.outputs, fgraph._coords, fgraph._dim_lengths
+    old_outs, old_coords, old_dim_lengths = fgraph.outputs, fgraph._coords, fgraph._dim_lengths  # type: ignore[attr-defined]
     # Using `rebuild_strict=False` means all coords, names, and dim information is lost
     # So we need to restore it from the old fgraph
-    new_outs = clone_replace(old_outs, replacements, rebuild_strict=False)
+    new_outs = clone_replace(old_outs, replacements, rebuild_strict=False)  # type: ignore[arg-type]
     for old_out, new_out in zip(old_outs, new_outs):
         new_out.name = old_out.name
     fgraph = FunctionGraph(outputs=new_outs, clone=False)
-    fgraph._coords = old_coords
-    fgraph._dim_lengths = old_dim_lengths
+    fgraph._coords = old_coords  # type: ignore[attr-defined]
+    fgraph._dim_lengths = old_dim_lengths  # type: ignore[attr-defined]
     return model_from_fgraph(fgraph, mutate_fgraph=True)
