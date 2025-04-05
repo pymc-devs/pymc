@@ -62,14 +62,24 @@ def parse_vars(model: Model, vars: ModelVariable | Sequence[ModelVariable]) -> l
     return [model[var] if isinstance(var, str) else var for var in vars_seq]
 
 
-def remove_minibatched_nodes(model: Model):
+def remove_minibatched_nodes(model: pm.Model) -> pm.Model:
     """Remove all uses of pm.Minibatch in the Model."""
-
-    @node_rewriter([MinibatchOp])
-    def local_remove_minibatch(fgraph, node):
-        return node.inputs
-
-    remove_minibatch = out2in(local_remove_minibatch)
     fgraph, _ = fgraph_from_model(model)
-    remove_minibatch.apply(fgraph)
+
+    replacements = {}
+    for var in fgraph.apply_nodes:
+        if isinstance(var.op, MinibatchOp):
+            for inp, out in zip(var.inputs, var.outputs):
+                replacements[out] = inp
+
+    old_outs, old_coords, old_dim_lengths = fgraph.outputs, fgraph._coords, fgraph._dim_lengths
+    # Using `rebuild_strict=False` means all coords, names, and dim information is lost
+    # So we need to restore it from the old fgraph
+    new_outs = pytensor.clone_replace(old_outs, replacements, rebuild_strict=False)
+    for old_out, new_out in zip(old_outs, new_outs):
+        new_out.name = old_out.name
+    fgraph = pytensor.graph.fg.FunctionGraph(outputs=new_outs, clone=False)
+    fgraph._coords = old_coords
+    fgraph._dim_lengths = old_dim_lengths
     return model_from_fgraph(fgraph, mutate_fgraph=True)
+
