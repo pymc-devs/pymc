@@ -11,9 +11,11 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import numpy as np
+
 import pymc as pm
 
-from pymc.model.transform.basic import prune_vars_detached_from_observed
+from pymc.model.transform.basic import prune_vars_detached_from_observed, remove_minibatched_nodes
 
 
 def test_prune_vars_detached_from_observed():
@@ -30,3 +32,17 @@ def test_prune_vars_detached_from_observed():
     assert set(m.named_vars.keys()) == {"obs_data", "a0", "a1", "a2", "obs", "d0", "d1"}
     pruned_m = prune_vars_detached_from_observed(m)
     assert set(pruned_m.named_vars.keys()) == {"obs_data", "a0", "a1", "a2", "obs"}
+
+
+def test_remove_minibatches():
+    data_size = 100
+    data = np.zeros((data_size,))
+    batch_size = 10
+    with pm.Model() as m1:
+        mb = pm.Minibatch(data, batch_size=batch_size)
+        x = pm.Normal("x")
+        y = pm.Normal("y", x, observed=mb, total_size=100)
+
+    m2 = remove_minibatched_nodes(m1)
+    assert m1.y.shape[0].eval() == batch_size
+    assert m2.y.shape[0].eval() == data_size
