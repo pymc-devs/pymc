@@ -42,6 +42,7 @@ class CpuLeapfrogIntegrator:
         self._potential = potential
         # Sidestep logp_dlogp_function.__call__
         pytensor_function = logp_dlogp_func._pytensor_function
+        pytensor_function.vm.allow_gc = False
         # Create some wrappers for backwards compatibility during transition
         # When raveled_inputs=False is forbidden, func = pytensor_function
         if logp_dlogp_func._raveled_inputs:
