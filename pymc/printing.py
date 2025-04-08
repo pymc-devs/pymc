@@ -35,7 +35,10 @@ __all__ = [
 
 
 def str_for_dist(
-    dist: TensorVariable, formatting: str = "plain", include_params: bool = True
+    dist: TensorVariable,
+    formatting: str = "plain",
+    include_params: bool = True,
+    model: Model | None = None,
 ) -> str:
     """Make a human-readable string representation of a Distribution in a model.
 
@@ -47,12 +50,12 @@ def str_for_dist(
             dist.owner.op, "extended_signature", None
         ):
             dist_args = [
-                _str_for_input_var(x, formatting=formatting)
+                _str_for_input_var(x, formatting=formatting, model=model)
                 for x in dist.owner.op.dist_params(dist.owner)
             ]
         else:
             dist_args = [
-                _str_for_input_var(x, formatting=formatting)
+                _str_for_input_var(x, formatting=formatting, model=model)
                 for x in dist.owner.inputs
                 if not isinstance(x.type, RandomType | NoneTypeT)
             ]
@@ -106,7 +109,7 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
     including parameter values.
     """
     # Wrap functions to avoid confusing typecheckers
-    sfd = partial(str_for_dist, formatting=formatting, include_params=include_params)
+    sfd = partial(str_for_dist, formatting=formatting, include_params=include_params, model=model)
     sfp = partial(
         str_for_potential_or_deterministic, formatting=formatting, include_params=include_params
     )
@@ -169,18 +172,14 @@ def str_for_potential_or_deterministic(
             return rf"{print_name} ~ {dist_name}"
 
 
-def _str_for_input_var(var: Variable, formatting: str) -> str:
+def _str_for_input_var(var: Variable, formatting: str, model: Model | None = None) -> str:
     # Avoid circular import
     from pymc.distributions.distribution import SymbolicRandomVariable
 
     def _is_potential_or_deterministic(var: Variable) -> bool:
-        if not hasattr(var, "str_repr"):
+        if model is None:
             return False
-        try:
-            return var.str_repr.__func__.func is str_for_potential_or_deterministic
-        except AttributeError:
-            # in case other code overrides str_repr, fallback
-            return False
+        return var in model.deterministics or var in model.potentials
 
     if isinstance(var, Constant | SharedVariable):
         return _str_for_constant(var, formatting)
@@ -190,18 +189,18 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
         # show the names for RandomVariables, Deterministics, and Potentials, rather
         # than the full expression
         assert isinstance(var, TensorVariable)
-        return _str_for_input_rv(var, formatting)
+        return _str_for_input_rv(var, formatting, model=model)
     elif isinstance(var.owner.op, DimShuffle):
-        return _str_for_input_var(var.owner.inputs[0], formatting)
+        return _str_for_input_var(var.owner.inputs[0], formatting, model=model)
     else:
         return _str_for_expression(var, formatting)
 
 
-def _str_for_input_rv(var: TensorVariable, formatting: str) -> str:
+def _str_for_input_rv(var: TensorVariable, formatting: str, model: Model | None = None) -> str:
     _str = (
         var.name
         if var.name is not None
-        else str_for_dist(var, formatting=formatting, include_params=True)
+        else str_for_dist(var, formatting=formatting, include_params=True, model=model)
     )
     if "latex" in formatting:
         return _latex_text_format(_latex_escape(_str.strip("$")))
@@ -275,37 +274,6 @@ def _latex_escape(text: str) -> str:
     # MathJax is a subset of LaTeX proper, which expects only $ to be escaped. If we were
     # to also escape e.g. _ (replace with \_), then "\_" will show up in the output, etc.
     return text.replace("$", r"\$")
-
-
-def _default_repr_pretty(obj: TensorVariable | Model, p, cycle):
-    """Handy plug-in method to instruct IPython-like REPLs to use our str_repr above."""
-    # we know that our str_repr does not recurse, so we can ignore cycle
-    try:
-        if not hasattr(obj, "str_repr"):
-            raise AttributeError
-        output = obj.str_repr()
-        # Find newlines and replace them with p.break_()
-        # (see IPython.lib.pretty._repr_pprint)
-        lines = output.splitlines()
-        with p.group():
-            for idx, output_line in enumerate(lines):
-                if idx:
-                    p.break_()
-                p.text(output_line)
-    except AttributeError:
-        # the default fallback option (no str_repr method)
-        IPython.lib.pretty._repr_pprint(obj, p, cycle)
-
-
-try:
-    # register our custom pretty printer in ipython shells
-    import IPython
-
-    IPython.lib.pretty.for_type(TensorVariable, _default_repr_pretty)
-    IPython.lib.pretty.for_type(Model, _default_repr_pretty)
-except (ModuleNotFoundError, AttributeError):
-    # no ipython shell
-    pass
 
 
 def _format_underscore(variable: str) -> str:
