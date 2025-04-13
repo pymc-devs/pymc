@@ -281,6 +281,7 @@ class Latent(Base):
         """
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, *givens, jitter)
+        kwargs.setdefault("method", "svd")
         f = pm.MvNormal(name, mu=mu, cov=cov, **kwargs)
 
         return f
