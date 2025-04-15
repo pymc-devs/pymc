@@ -196,9 +196,9 @@ class QuadPotentialDiagAdaptState(PotentialState):
     _n: int = field(metadata={"frozen": True})
     _discard_window: int = field(metadata={"frozen": True})
     _early_update: int = field(metadata={"frozen": True})
-    _initial_mean: np.ndarray = field(metadata={"frozen": True})
-    _initial_diag: np.ndarray = field(metadata={"frozen": True})
-    _initial_weight: np.ndarray = field(metadata={"frozen": True})
+    _initial_mean: np.ndarray
+    _initial_diag: np.ndarray
+    _initial_weight: np.ndarray
     adaptation_window_multiplier: float = field(metadata={"frozen": True})
     _store_mass_matrix_trace: bool = field(metadata={"frozen": True})
 
@@ -734,9 +734,9 @@ class QuadPotentialFullAdaptState(PotentialState):
     dtype: Any = field(metadata={"frozen": True})
     _n: int = field(metadata={"frozen": True})
     _update_window: int = field(metadata={"frozen": True})
-    _initial_mean: np.ndarray = field(metadata={"frozen": True})
-    _initial_cov: np.ndarray = field(metadata={"frozen": True})
-    _initial_weight: np.ndarray = field(metadata={"frozen": True})
+    _initial_mean: np.ndarray
+    _initial_cov: np.ndarray
+    _initial_weight: np.ndarray
     adaptation_window_multiplier: float = field(metadata={"frozen": True})
 
 
