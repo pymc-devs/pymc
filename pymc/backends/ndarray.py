@@ -113,6 +113,10 @@ class NDArray(base.BaseTrace):
         if sampler_stats is not None:
             for data, vars in zip(self._stats, sampler_stats):
                 for key, val in vars.items():
+                    # step_meta is a key used by the progress bars to track which draw came from which step instance. It
+                    # should never be stored as a sampler statistic.
+                    if key == "step_meta":
+                        continue
                     data[key][draw_idx] = val
         elif self._stats is not None:
             raise ValueError("Expected sampler_stats")
