@@ -38,11 +38,14 @@ def test_remove_minibatches():
     data_size = 100
     data = np.zeros((data_size,))
     batch_size = 10
-    with pm.Model() as m1:
+    with pm.Model(coords={"d": range(5)}) as m1:
         mb = pm.Minibatch(data, batch_size=batch_size)
+        mu = pm.Normal("mu", dims="d")
         x = pm.Normal("x")
         y = pm.Normal("y", x, observed=mb, total_size=100)
 
     m2 = remove_minibatched_nodes(m1)
     assert m1.y.shape[0].eval() == batch_size
     assert m2.y.shape[0].eval() == data_size
+    assert m1.coords == m2.coords
+    assert m1.dim_lengths["d"].eval() == m2.dim_lengths["d"].eval()
