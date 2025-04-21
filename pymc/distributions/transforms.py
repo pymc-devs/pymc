@@ -89,26 +89,48 @@ class LogExpM1(Transform):
 
 
 class Ordered(Transform):
+    """
+    Transforms a vector of values into a vector of ordered values.
+
+    Parameters
+    ----------
+    positive: If True, all values are positive. This has better geometry than just chaining with a log transform.
+    ascending: If True, the values are in ascending order (default). If False, the values are in descending order.
+    """
+
     name = "ordered"
 
-    def __init__(self, ndim_supp=None):
+    def __init__(self, ndim_supp=None, positive=False, ascending=True):
         if ndim_supp is not None:
             warnings.warn("ndim_supp argument is deprecated and has no effect", FutureWarning)
+        self.positive = positive
+        self.ascending = ascending
 
     def backward(self, value, *inputs):
-        x = pt.zeros(value.shape)
-        x = pt.set_subtensor(x[..., 0], value[..., 0])
-        x = pt.set_subtensor(x[..., 1:], pt.exp(value[..., 1:]))
-        return pt.cumsum(x, axis=-1)
+        if self.positive:  # Transform both initial value and deltas to be positive
+            x = pt.exp(value)
+        else:  # Transform only deltas to be positive
+            x = pt.empty(value.shape)
+            x = pt.set_subtensor(x[..., 0], value[..., 0])
+            x = pt.set_subtensor(x[..., 1:], pt.exp(value[..., 1:]))
+        x = pt.cumsum(x, axis=-1)  # Add deltas cumulatively to initial value
+        if not self.ascending:
+            x = x[..., ::-1]
+        return x
 
     def forward(self, value, *inputs):
-        y = pt.zeros(value.shape)
-        y = pt.set_subtensor(y[..., 0], value[..., 0])
+        if not self.ascending:
+            value = value[..., ::-1]
+        y = pt.empty(value.shape)
+        y = pt.set_subtensor(y[..., 0], pt.log(value[..., 0]) if self.positive else value[..., 0])
         y = pt.set_subtensor(y[..., 1:], pt.log(value[..., 1:] - value[..., :-1]))
         return y
 
     def log_jac_det(self, value, *inputs):
-        return pt.sum(value[..., 1:], axis=-1)
+        if self.positive:
+            return pt.sum(value, axis=-1)
+        else:
+            return pt.sum(value[..., 1:], axis=-1)
 
 
 class SumTo1(Transform):
