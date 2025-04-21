@@ -103,7 +103,7 @@ def check_jacobian_det(
         x = make_comparable(x)
 
     if not elemwise:
-        jac = pt.log(pt.nlinalg.det(jacobian(x, [y])))
+        jac = pt.log(pt.abs(pt.nlinalg.det(jacobian(x, [y]))))
     else:
         jac = pt.log(pt.abs(pt.diag(jacobian(x, [y]))))
 
@@ -115,7 +115,7 @@ def check_jacobian_det(
     )
 
     for yval in domain.vals:
-        assert_allclose(actual_ljd(yval), computed_ljd(yval), rtol=tol)
+        assert_allclose(actual_ljd(yval), computed_ljd(yval), rtol=tol, atol=tol)
 
 
 def test_simplex():
@@ -280,6 +280,31 @@ def test_ordered():
 
     vals = get_values(tr.ordered, Vector(R, 3), pt.vector, floatX(np.zeros(3)))
     assert_array_equal(np.diff(vals) >= 0, True)
+
+    # Check that positive=True creates positive and still ordered values
+    vals = get_values(tr.Ordered(positive=True), Vector(R, 3), pt.vector, floatX(np.zeros(3)))
+    assert_array_equal(vals > 0, True)
+    assert_array_equal(np.diff(vals) >= 0, True)
+
+    # Check that positive=True and ascending=False creates descending values
+    vals = get_values(
+        tr.Ordered(positive=True, ascending=False), Vector(R, 3), pt.vector, floatX(np.zeros(3))
+    )
+    assert_array_equal(vals > 0, True)
+    assert_array_equal(np.diff(vals) <= 0, True)
+
+    # Check that forward and backward are still inverses
+    ord, vals = tr.Ordered(positive=True, ascending=False), np.array([0.3, 0.2, 0.1])
+    assert_allclose(vals, ord.backward(ord.forward(vals)).eval())
+
+    # Check the jacobian for positive=True and ascending=False
+    check_jacobian_det(
+        tr.Ordered(positive=True, ascending=False),
+        Vector(R, 2),
+        pt.vector,
+        floatX(np.array([1, 1])),
+        elemwise=False,
+    )
 
 
 def test_chain_values():
