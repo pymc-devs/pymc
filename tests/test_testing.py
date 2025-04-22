@@ -15,7 +15,8 @@ from contextlib import ExitStack as does_not_raise
 
 import pytest
 
-from pymc.testing import Domain
+from pymc.testing import Domain, mock_sample
+from tests.models import simple_normal
 
 
 @pytest.mark.parametrize(
@@ -32,3 +33,15 @@ from pymc.testing import Domain
 def test_domain(values, edges, expectation):
     with expectation:
         Domain(values, edges=edges)
+
+
+def test_mock_sample() -> None:
+    _, model, _ = simple_normal(bounded_prior=True)
+
+    idata = mock_sample(model=model)
+
+    assert "posterior" in idata
+    assert "observed_data" in idata
+    assert "prior" not in idata
+    assert "posterior_predictive" not in idata
+    assert "sample_stats" not in idata
