@@ -18,12 +18,11 @@ import warnings
 from collections.abc import Callable, Sequence
 from typing import Any
 
-from arviz import InferenceData
-from xarray import DataArray
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
+from arviz import InferenceData
 from numpy import random as nr
 from numpy import testing as npt
 from pytensor.compile.mode import Mode
@@ -33,6 +32,7 @@ from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from scipy import special as sp
 from scipy import stats as st
+from xarray import DataArray
 
 import pymc as pm
 
@@ -1028,7 +1028,7 @@ def mock_sample(*args, **kwargs):
         coords={"chain": np.arange(n_chains)},
     )
     idata.add_groups(
-        posterior=(idata.prior.mean("chain") * expanded_chains).transpose("chain", "draw", ...)
+        posterior=(idata.prior.mean("chain") * expanded_chains).transpose("chain", "draw", ...),
     )
     del idata.prior
     if "prior_predictive" in idata:
