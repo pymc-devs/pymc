@@ -35,13 +35,24 @@ def test_domain(values, edges, expectation):
         Domain(values, edges=edges)
 
 
-def test_mock_sample() -> None:
+@pytest.mark.parametrize(
+    "args, kwargs, expected_draws",
+    [
+        pytest.param((), {}, 10, id="default"),
+        pytest.param((100,), {}, 100, id="positional-draws"),
+        pytest.param((), {"draws": 100}, 100, id="keyword-draws"),
+    ],
+)
+def test_mock_sample(args, kwargs, expected_draws) -> None:
     _, model, _ = simple_normal(bounded_prior=True)
 
-    idata = mock_sample(model=model)
+    with model:
+        idata = mock_sample(*args, **kwargs)
 
     assert "posterior" in idata
     assert "observed_data" in idata
     assert "prior" not in idata
     assert "posterior_predictive" not in idata
     assert "sample_stats" not in idata
+
+    assert idata.posterior.sizes == {"chain": 1, "draw": expected_draws}

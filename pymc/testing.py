@@ -986,7 +986,7 @@ def assert_no_rvs(vars: Sequence[Variable]) -> None:
         raise AssertionError(f"RV found in graph: {rvs}")
 
 
-def mock_sample(*args, **kwargs):
+def mock_sample(draws: int = 10, **kwargs):
     """Mock the pm.sample function by returning prior predictive samples as posterior.
 
     Useful for testing models that use pm.sample without running MCMC sampling.
@@ -1015,7 +1015,7 @@ def mock_sample(*args, **kwargs):
     """
     random_seed = kwargs.get("random_seed", None)
     model = kwargs.get("model", None)
-    draws = kwargs.get("draws", 10)
+    draws = kwargs.get("draws", draws)
     n_chains = kwargs.get("chains", 1)
     idata: InferenceData = pm.sample_prior_predictive(
         model=model,
