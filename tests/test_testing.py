@@ -15,7 +15,9 @@ from contextlib import ExitStack as does_not_raise
 
 import pytest
 
-from pymc.testing import Domain, mock_sample
+import pymc as pm
+
+from pymc.testing import Domain, mock_sample, mock_sample_setup_and_breakdown
 from tests.models import simple_normal
 
 
@@ -56,3 +58,16 @@ def test_mock_sample(args, kwargs, expected_draws) -> None:
     assert "sample_stats" not in idata
 
     assert idata.posterior.sizes == {"chain": 1, "draw": expected_draws}
+
+
+mock_pymc_sample = pytest.fixture(scope="function")(mock_sample_setup_and_breakdown)
+
+
+def test_fixture(mock_pymc_sample) -> None:
+    # This has Flat distribution
+    _, model, _ = simple_normal(bounded_prior=False)
+
+    with model:
+        idata = pm.sample()
+
+    assert idata.posterior.sizes == {"chain": 1, "draw": 10}

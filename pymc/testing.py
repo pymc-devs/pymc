@@ -1034,3 +1034,54 @@ def mock_sample(draws: int = 10, **kwargs):
     if "prior_predictive" in idata:
         del idata["prior_predictive"]
     return idata
+
+
+def mock_sample_setup_and_breakdown():
+    """Set up and tear down mocking of PyMC sampling functions for testing.
+
+    This function is designed to be used with pytest fixtures to temporarily replace
+    PyMC's sampling functionality with faster alternatives for testing purposes.
+
+    Effects during the fixture's active period:
+    * Replaces pm.sample with mock_sample, which uses prior predictive sampling
+      instead of MCMC
+    * Replaces pm.Flat with pm.Normal to avoid issues with unbounded priors
+    * Replaces pm.HalfFlat with pm.HalfNormal to avoid issues with semi-bounded priors
+    * Automatically restores all original functions after the test completes
+
+    Examples
+    --------
+    .. code-block:: python
+
+        import pytest
+        import pymc as pm
+        from pymc.testing import mock_sample_setup_and_breakdown
+
+        # Register as a pytest fixture
+        mock_pymc_sample = pytest.fixture(scope="function")(mock_sample_setup_and_breakdown)
+
+
+        # Use in a test function
+        def test_model_inference(mock_pymc_sample):
+            with pm.Model() as model:
+                x = pm.Normal("x", 0, 1)
+                # This will use mock_sample instead of actual MCMC
+                idata = pm.sample()
+                # Test with the inference data...
+
+    """
+    import pymc as pm
+
+    original_flat = pm.Flat
+    original_half_flat = pm.HalfFlat
+    original_sample = pm.sample
+
+    pm.sample = mock_sample
+    pm.Flat = pm.Normal
+    pm.HalfFlat = pm.HalfNormal
+
+    yield
+
+    pm.sample = original_sample
+    pm.Flat = original_flat
+    pm.HalfFlat = original_half_flat
