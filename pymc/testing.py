@@ -1028,9 +1028,9 @@ def mock_sample(draws: int = 10, **kwargs):
         coords={"chain": np.arange(n_chains)},
     )
     idata.add_groups(
-        posterior=(idata.prior.mean("chain") * expanded_chains).transpose("chain", "draw", ...),
+        posterior=(idata["prior"].mean("chain") * expanded_chains).transpose("chain", "draw", ...),
     )
-    del idata.prior
+    del idata["prior"]
     if "prior_predictive" in idata:
-        del idata.prior_predictive
+        del idata["prior_predictive"]
     return idata
