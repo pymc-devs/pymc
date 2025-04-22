@@ -17,7 +17,7 @@ import pytest
 
 import pymc as pm
 
-from pymc.testing import Domain, mock_sample, mock_sample_setup_and_breakdown
+from pymc.testing import Domain, mock_sample, mock_sample_setup_and_teardown
 from tests.models import simple_normal
 
 
@@ -60,7 +60,7 @@ def test_mock_sample(args, kwargs, expected_draws) -> None:
     assert idata.posterior.sizes == {"chain": 1, "draw": expected_draws}
 
 
-mock_pymc_sample = pytest.fixture(scope="function")(mock_sample_setup_and_breakdown)
+mock_pymc_sample = pytest.fixture(scope="function")(mock_sample_setup_and_teardown)
 
 
 def test_fixture(mock_pymc_sample) -> None:

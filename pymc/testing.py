@@ -1036,7 +1036,7 @@ def mock_sample(draws: int = 10, **kwargs):
     return idata
 
 
-def mock_sample_setup_and_breakdown():
+def mock_sample_setup_and_teardown():
     """Set up and tear down mocking of PyMC sampling functions for testing.
 
     This function is designed to be used with pytest fixtures to temporarily replace
@@ -1055,10 +1055,10 @@ def mock_sample_setup_and_breakdown():
 
         import pytest
         import pymc as pm
-        from pymc.testing import mock_sample_setup_and_breakdown
+        from pymc.testing import mock_sample_setup_and_teardown
 
         # Register as a pytest fixture
-        mock_pymc_sample = pytest.fixture(scope="function")(mock_sample_setup_and_breakdown)
+        mock_pymc_sample = pytest.fixture(scope="function")(mock_sample_setup_and_teardown)
 
 
         # Use in a test function
