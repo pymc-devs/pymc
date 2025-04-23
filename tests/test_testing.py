@@ -63,11 +63,19 @@ def test_mock_sample(args, kwargs, expected_draws) -> None:
 mock_pymc_sample = pytest.fixture(scope="function")(mock_sample_setup_and_teardown)
 
 
-def test_fixture(mock_pymc_sample) -> None:
-    # This has Flat distribution
-    _, model, _ = simple_normal(bounded_prior=False)
+@pytest.fixture(scope="function")
+def dummy_model() -> pm.Model:
+    with pm.Model() as model:
+        pm.Flat("flat")
+        pm.HalfFlat("half_flat")
 
-    with model:
+    return model
+
+
+def test_fixture(mock_pymc_sample, dummy_model) -> None:
+    with dummy_model:
         idata = pm.sample()
 
-    assert idata.posterior.sizes == {"chain": 1, "draw": 10}
+    posterior = idata.posterior
+    assert posterior.sizes == {"chain": 1, "draw": 10}
+    assert (posterior["half_flat"] >= 0).all()
