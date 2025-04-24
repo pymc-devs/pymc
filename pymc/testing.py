@@ -994,6 +994,10 @@ def mock_sample(draws: int = 10, **kwargs):
     --------
     Using mock_sample with pytest
 
+    .. note::
+
+        Use :func:`pymc.testing.mock_sample_setup_and_teardown` directly for pytest fixtures.
+
     .. code-block:: python
 
         import pytest
@@ -1043,6 +1047,7 @@ def mock_sample_setup_and_teardown():
     PyMC's sampling functionality with faster alternatives for testing purposes.
 
     Effects during the fixture's active period:
+
     * Replaces pm.sample with mock_sample, which uses prior predictive sampling
       instead of MCMC
     * Replaces pm.Flat with pm.Normal to avoid issues with unbounded priors
@@ -1051,8 +1056,11 @@ def mock_sample_setup_and_teardown():
 
     Examples
     --------
+    Use with `pytest` to mock actual PyMC sampling in test suite.
+
     .. code-block:: python
 
+        # tests/conftest.py
         import pytest
         import pymc as pm
         from pymc.testing import mock_sample_setup_and_teardown
@@ -1061,6 +1069,7 @@ def mock_sample_setup_and_teardown():
         mock_pymc_sample = pytest.fixture(scope="function")(mock_sample_setup_and_teardown)
 
 
+        # tests/test_model.py
         # Use in a test function
         def test_model_inference(mock_pymc_sample):
             with pm.Model() as model:
