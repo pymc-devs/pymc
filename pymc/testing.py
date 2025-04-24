@@ -32,7 +32,6 @@ from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from scipy import special as sp
 from scipy import stats as st
-from xarray import DataArray
 
 import pymc as pm
 
@@ -1023,12 +1022,13 @@ def mock_sample(draws: int = 10, **kwargs):
         draws=draws,
     )
 
-    expanded_chains = DataArray(
-        np.ones(n_chains),
-        coords={"chain": np.arange(n_chains)},
-    )
     idata.add_groups(
-        posterior=(idata["prior"].mean("chain") * expanded_chains).transpose("chain", "draw", ...),
+        posterior=(
+            idata["prior"]
+            .isel(chain=0)
+            .expand_dims({"chain": range(n_chains)})
+            .transpose("chain", "draw", ...)
+        )
     )
     del idata["prior"]
     if "prior_predictive" in idata:

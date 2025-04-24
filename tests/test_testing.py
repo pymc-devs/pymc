@@ -38,14 +38,16 @@ def test_domain(values, edges, expectation):
 
 
 @pytest.mark.parametrize(
-    "args, kwargs, expected_draws",
+    "args, kwargs, expected_size",
     [
-        pytest.param((), {}, 10, id="default"),
-        pytest.param((100,), {}, 100, id="positional-draws"),
-        pytest.param((), {"draws": 100}, 100, id="keyword-draws"),
+        pytest.param((), {}, (1, 10), id="default"),
+        pytest.param((100,), {}, (1, 100), id="positional-draws"),
+        pytest.param((), {"draws": 100}, (1, 100), id="keyword-draws"),
+        pytest.param((100,), {"chains": 6}, (6, 100), id="chains"),
     ],
 )
-def test_mock_sample(args, kwargs, expected_draws) -> None:
+def test_mock_sample(args, kwargs, expected_size) -> None:
+    expected_chains, expected_draws = expected_size
     _, model, _ = simple_normal(bounded_prior=True)
 
     with model:
@@ -57,7 +59,7 @@ def test_mock_sample(args, kwargs, expected_draws) -> None:
     assert "posterior_predictive" not in idata
     assert "sample_stats" not in idata
 
-    assert idata.posterior.sizes == {"chain": 1, "draw": expected_draws}
+    assert idata.posterior.sizes == {"chain": expected_chains, "draw": expected_draws}
 
 
 mock_pymc_sample = pytest.fixture(scope="function")(mock_sample_setup_and_teardown)
