@@ -22,6 +22,7 @@ API
    api/shape_utils
    api/backends
    api/misc
+   api/testing
 
 ------------------
 Dimensionality
