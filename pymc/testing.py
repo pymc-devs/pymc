@@ -1048,11 +1048,12 @@ def mock_sample_setup_and_teardown():
 
     Effects during the fixture's active period:
 
-    * Replaces pm.sample with mock_sample, which uses prior predictive sampling
-      instead of MCMC
-    * Replaces pm.Flat with pm.Normal to avoid issues with unbounded priors
-    * Replaces pm.HalfFlat with pm.HalfNormal to avoid issues with semi-bounded priors
-    * Automatically restores all original functions after the test completes
+    * Replaces :func:`pymc.sample` with :func:`pymc.testing.mock_sample`, which uses
+      prior predictive sampling instead of MCMC
+    * Replaces distributions:
+        * :class:`pymc.Flat` with :class:`pymc.Normal`
+        * :class:`pymc.HalfFlat` with :class:`pymc.HalfNormal`
+    * Automatically restores all original functions and distributions after the test completes
 
     Examples
     --------
