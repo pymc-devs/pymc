@@ -986,7 +986,7 @@ def assert_no_rvs(vars: Sequence[Variable]) -> None:
 
 
 def mock_sample(draws: int = 10, **kwargs):
-    """Mock the pm.sample function by returning prior predictive samples as posterior.
+    """Mock :func:`pymc.sample` with :func:`pymc.sample_prior_predictive`.
 
     Useful for testing models that use pm.sample without running MCMC sampling.
 
