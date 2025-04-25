@@ -9,3 +9,4 @@ Gaussian Processes
    gp/implementations
    gp/mean
    gp/cov
+   gp/util
