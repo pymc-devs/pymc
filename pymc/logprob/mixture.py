@@ -289,7 +289,14 @@ def find_measurable_index_mixture(fgraph, node):
         # We don't support (non-scalar) integer array indexing as it can pick repeated values,
         # but the Mixture logprob assumes all mixture values are independent
         if any(
-            indices.dtype.startswith("int") and sum(1 - b for b in indices.type.broadcastable) > 0
+            (
+                isinstance(indices, (type(NoneConst), type(None)))
+                or
+                (
+                    indices.dtype.startswith("int") and 
+                    sum(1 - b for b in indices.type.broadcastable) > 0
+                )
+            )
             for indices in mixing_indices
             if not isinstance(indices, SliceConstant)
         ):
