@@ -290,7 +290,7 @@ def find_measurable_index_mixture(fgraph, node):
         # but the Mixture logprob assumes all mixture values are independent
         if any(
             (
-                isinstance(indices, (type(NoneConst), type(None)))
+                isinstance(indices, (type(NoneConst) | type(None)))
                 or
                 (
                     indices.dtype.startswith("int") and 
