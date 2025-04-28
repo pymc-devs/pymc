@@ -62,7 +62,7 @@ from pytensor.tensor.subtensor import (
     is_basic_idx,
 )
 from pytensor.tensor.type import TensorType
-from pytensor.tensor.type_other import NoneConst, NoneTypeT, SliceConstant, SliceType
+from pytensor.tensor.type_other import NoneConst, NoneTypeT, SliceType
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
@@ -290,14 +290,11 @@ def find_measurable_index_mixture(fgraph, node):
         # but the Mixture logprob assumes all mixture values are independent
         if any(
             (
-                isinstance(indices, (type(NoneConst) | type(None)))
-                or (
-                    indices.dtype.startswith("int")
-                    and sum(1 - b for b in indices.type.broadcastable) > 0
-                )
+                isinstance(indices, TensorVariable)
+                and indices.dtype.startswith("int")
+                and any(not b for b in indices.type.broadcastable)
             )
             for indices in mixing_indices
-            if not isinstance(indices, SliceConstant)
         ):
             return None
 
