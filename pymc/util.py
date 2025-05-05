@@ -763,9 +763,8 @@ class ProgressBarManager:
             progressbar=progressbar,
             progressbar_theme=progressbar_theme,
         )
-
         self.progress_stats = progress_stats
-        self.update_stats = step_method._make_update_stats_function()
+        self.update_stats_functions = step_method._make_update_stats_functions()
 
         self._show_progress = show_progress
         self.divergences = 0
@@ -829,12 +828,31 @@ class ProgressBarManager:
         if not tuning and stats and stats[0].get("diverging"):
             self.divergences += 1
 
-        self.progress_stats = self.update_stats(self.progress_stats, stats, chain_idx)
-        more_updates = (
-            {stat: value[chain_idx] for stat, value in self.progress_stats.items()}
-            if self.full_stats
-            else {}
-        )
+        if self.full_stats:
+            # TODO: Index by chain already?
+            chain_progress_stats = [
+                update_states_fn(step_stats)
+                for update_states_fn, step_stats in zip(
+                    self.update_stats_functions, stats, strict=True
+                )
+            ]
+            all_step_stats = {}
+            for step_stats in chain_progress_stats:
+                for key, val in step_stats.items():
+                    if key in all_step_stats:
+                        # TODO: Figure out how to integrate duplicate / non-scalar keys, ignoring them for now
+                        continue
+                    else:
+                        all_step_stats[key] = val
+
+        else:
+            all_step_stats = {}
+
+        # more_updates = (
+        #     {stat: value[chain_idx] for stat, value in progress_stats.items()}
+        #     if self.full_stats
+        #     else {}
+        # )
 
         self._progress.update(
             self.tasks[chain_idx],
@@ -842,14 +860,14 @@ class ProgressBarManager:
             draws=draw,
             sampling_speed=speed,
             speed_unit=unit,
-            **more_updates,
+            **all_step_stats,
         )
 
         if is_last:
             self._progress.update(
                 self.tasks[chain_idx],
                 draws=draw + 1 if not self.combined_progress else draw,
-                **more_updates,
+                **all_step_stats,
                 refresh=True,
             )
 

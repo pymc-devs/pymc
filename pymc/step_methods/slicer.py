@@ -212,15 +212,8 @@ class Slice(ArrayStepShared):
         return columns, stats
 
     @staticmethod
-    def _make_update_stats_function():
-        def update_stats(stats, step_stats, chain_idx):
-            if isinstance(step_stats, list):
-                step_stats = step_stats[0]
+    def _make_update_stats_functions():
+        def update_stats(step_stats):
+            return {key: step_stats[key] for key in {"tune", "nstep_out", "nstep_in"}}
 
-            stats["tune"][chain_idx] = step_stats["tune"]
-            stats["nstep_out"][chain_idx] = step_stats["nstep_out"]
-            stats["nstep_in"][chain_idx] = step_stats["nstep_in"]
-
-            return stats
-
-        return update_stats
+        return (update_stats,)

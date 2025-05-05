@@ -250,3 +250,35 @@ def test_get_value_vars_from_user_vars():
         get_value_vars_from_user_vars([x2], model1)
     with pytest.raises(ValueError, match=rf"{prefix} \['det2'\]"):
         get_value_vars_from_user_vars([det2], model2)
+
+
+def test_progressbar_nested_compound():
+    # Regression test for https://github.com/pymc-devs/pymc/issues/7721
+
+    with pm.Model():
+        a = pm.Poisson("a", mu=10)
+        b = pm.Binomial("b", n=a, p=0.8)
+        c = pm.Poisson("c", mu=11)
+        d = pm.Dirichlet("d", a=[c, b])
+
+        step = pm.CompoundStep(
+            [
+                pm.CompoundStep([pm.Metropolis(a), pm.Metropolis(b), pm.Metropolis(c)]),
+                pm.NUTS([d]),
+            ]
+        )
+
+        kwargs = {
+            "draws": 10,
+            "tune": 10,
+            "chains": 2,
+            "compute_convergence_checks": False,
+            "step": step,
+        }
+
+        # We don't parametrize to avoid recompiling the model functions
+        for cores in (1, 2):
+            pm.sample(**kwargs, cores=cores, progressbar=True)  # default is split+stats
+            pm.sample(**kwargs, cores=cores, progressbar="combined")
+            pm.sample(**kwargs, cores=cores, progressbar="split")
+            pm.sample(**kwargs, cores=cores, progressbar=False)

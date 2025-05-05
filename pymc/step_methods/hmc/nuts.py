@@ -248,19 +248,11 @@ class NUTS(BaseHMC):
         return columns, stats
 
     @staticmethod
-    def _make_update_stats_function():
-        def update_stats(stats, step_stats, chain_idx):
-            if isinstance(step_stats, list):
-                step_stats = step_stats[0]
+    def _make_update_stats_functions():
+        def update_stats(stats):
+            return {key: stats[key] for key in ("diverging", "step_size", "tree_size")}
 
-            if not step_stats["tune"]:
-                stats["divergences"][chain_idx] += step_stats["diverging"]
-
-            stats["step_size"][chain_idx] = step_stats["step_size"]
-            stats["tree_size"][chain_idx] = step_stats["tree_size"]
-            return stats
-
-        return update_stats
+        return (update_stats,)
 
 
 # A proposal for the next position
