@@ -22,9 +22,7 @@ import pymc as pm
 
 from pymc import Normal, draw
 from pymc.data import Minibatch
-from pymc.testing import select_by_precision
 from pymc.variational.minibatch_rv import create_minibatch_rv
-from tests.test_data import gen1, gen2
 
 
 class TestMinibatchRandomVariable:
@@ -41,50 +39,6 @@ class TestMinibatchRandomVariable:
             pm.Normal("n", observed=[[1]], total_size=2)
             p2 = pytensor.function([], model2.logp())
         assert p1() * 2 == p2()
-
-    def test_density_scaling_with_generator(self):
-        # We have different size generators
-
-        def true_dens():
-            g = gen1()
-            for i, point in enumerate(g):
-                yield st.norm.logpdf(point).sum() * 10
-
-        t = true_dens()
-        # We have same size models
-        with pm.Model() as model1:
-            pm.Normal("n", observed=gen1(), total_size=100)
-            p1 = pytensor.function([], model1.logp())
-
-        with pm.Model() as model2:
-            gen_var = pm.generator(gen2())
-            pm.Normal("n", observed=gen_var, total_size=100)
-            p2 = pytensor.function([], model2.logp())
-
-        for i in range(10):
-            _1, _2, _t = p1(), p2(), next(t)
-            decimals = select_by_precision(float64=7, float32=1)
-            np.testing.assert_almost_equal(_1, _t, decimal=decimals)  # Value O(-50,000)
-            np.testing.assert_almost_equal(_1, _2)
-        # Done
-
-    def test_gradient_with_scaling(self):
-        with pm.Model() as model1:
-            genvar = pm.generator(gen1())
-            m = pm.Normal("m")
-            pm.Normal("n", observed=genvar, total_size=1000)
-            grad1 = model1.compile_fn(model1.dlogp(vars=m), point_fn=False)
-        with pm.Model() as model2:
-            m = pm.Normal("m")
-            shavar = pytensor.shared(np.ones((1000, 100)))
-            pm.Normal("n", observed=shavar)
-            grad2 = model2.compile_fn(model2.dlogp(vars=m), point_fn=False)
-
-        for i in range(10):
-            shavar.set_value(np.ones((100, 100)) * i)
-            g1 = grad1(1)
-            g2 = grad2(1)
-            np.testing.assert_almost_equal(g1, g2)
 
     def test_multidim_scaling(self):
         with pm.Model() as model0:
@@ -157,6 +111,13 @@ class TestMinibatchRandomVariable:
         mx = create_minibatch_rv(x, total_size=(10,))
         assert mx is not x
         np.testing.assert_array_equal(draw(mx, random_seed=1), draw(x, random_seed=1))
+
+    def test_warning_on_missing_total_size(self):
+        total_size = 1000
+        with pytest.warns(match="total_size not provided"):
+            with pm.Model() as m:
+                MB = pm.Minibatch(np.arange(total_size, dtype="float64"), batch_size=100)
+                pm.Normal("n", observed=MB)
 
     @pytest.mark.filterwarnings("error")
     def test_minibatch_parameter_and_value(self):

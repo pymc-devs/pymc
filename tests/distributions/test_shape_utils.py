@@ -427,6 +427,17 @@ def test_change_rv_size():
     assert tuple(rv_newer.shape.eval()) == (2,)
 
 
+def test_change_rv_size_expand_none_size():
+    x = pt.random.normal()
+    size = x.owner.op.size_param(x.owner)
+    assert rv_size_is_none(size)
+    new_x = change_dist_size(x, new_size=(2,), expand=True)
+    new_size = new_x.owner.op.size_param(new_x.owner)
+    assert not rv_size_is_none(new_size)
+    assert new_size.data == [2]
+    assert new_x.type.shape == (2,)
+
+
 def test_change_rv_size_default_update():
     rng = pytensor.shared(np.random.default_rng(0))
     x = normal(rng=rng)

@@ -34,13 +34,13 @@ import scipy.sparse as sps
 
 from pytensor.compile import DeepCopyOp, Function, get_mode
 from pytensor.compile.sharedvalue import SharedVariable
-from pytensor.graph.basic import Constant, Variable, graph_inputs
+from pytensor.graph.basic import Constant, Variable, ancestors, graph_inputs
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
-from pymc.data import is_valid_observed
+from pymc.data import MinibatchOp, is_valid_observed
 from pymc.exceptions import (
     BlockModelAccessError,
     ImputationWarning,
@@ -895,7 +895,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self._coords
 
     @property
-    def dim_lengths(self) -> dict[str, Variable]:
+    def dim_lengths(self) -> dict[str, TensorVariable]:
         """The symbolic lengths of dimensions in the model.
 
         The values are typically instances of ``TensorVariable`` or ``ScalarSharedVariable``.
@@ -1241,6 +1241,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.add_named_variable(rv_var, dims)
             self.set_initval(rv_var, initval)
         else:
+            if total_size is None and isinstance(observed, TensorVariable):
+                for node in ancestors([observed]):
+                    if node.owner is not None and isinstance(node.owner.op, MinibatchOp):
+                        warnings.warn(
+                            f"total_size not provided for observed variable `{name}` that uses pm.Minibatch"
+                        )
+                        break
             if not is_valid_observed(observed):
                 raise TypeError(
                     "Variables that depend on other nodes cannot be used for observed data."

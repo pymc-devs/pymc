@@ -296,8 +296,8 @@ Thanks to our contributors
 
 .. |Binder| image:: https://mybinder.org/badge_logo.svg
    :target: https://mybinder.org/v2/gh/pymc-devs/pymc/main?filepath=%2Fdocs%2Fsource%2Fnotebooks
-.. |Build Status| image:: https://github.com/pymc-devs/pymc/workflows/pytest/badge.svg
-   :target: https://github.com/pymc-devs/pymc/actions
+.. |Build Status| image:: https://github.com/pymc-devs/pymc/workflows/tests/badge.svg
+   :target: https://github.com/pymc-devs/pymc/actions?query=workflow%3Atests+branch%3Amain
 .. |Coverage| image:: https://codecov.io/gh/pymc-devs/pymc/branch/main/graph/badge.svg
    :target: https://codecov.io/gh/pymc-devs/pymc
 .. |Dockerhub| image:: https://img.shields.io/docker/automated/pymc/pymc.svg

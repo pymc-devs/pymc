@@ -36,8 +36,6 @@ import pytensor.gradient as tg
 from arviz import InferenceData, dict_to_dataset
 from arviz.data.base import make_attrs
 from pytensor.graph.basic import Variable
-from rich.console import Console
-from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 from typing_extensions import Protocol
@@ -67,7 +65,8 @@ from pymc.step_methods import NUTS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
-    CustomProgress,
+    ProgressBarManager,
+    ProgressBarType,
     RandomSeed,
     RandomState,
     _get_seeds_per_chain,
@@ -278,7 +277,7 @@ def _print_step_hierarchy(s: Step, level: int = 0) -> None:
     else:
         varnames = ", ".join(
             [
-                get_untransformed_name(v.name) if is_transformed_name(v.name) else v.name
+                get_untransformed_name(v.name) if is_transformed_name(v.name) else v.name  # type: ignore[misc]
                 for v in s.vars
             ]
         )
@@ -338,6 +337,7 @@ def _sample_external_nuts(
                 UserWarning,
             )
         compile_kwargs = {}
+        nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
         for kwarg in ("backend", "gradient_backend"):
             if kwarg in nuts_sampler_kwargs:
                 compile_kwargs[kwarg] = nuts_sampler_kwargs.pop(kwarg)
@@ -424,7 +424,7 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool = True,
+    progressbar: bool | ProgressBarType = True,
     progressbar_theme: Theme | None = default_progress_theme,
     step=None,
     var_names: Sequence[str] | None = None,
@@ -456,7 +456,7 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool = True,
+    progressbar: bool | ProgressBarType = True,
     progressbar_theme: Theme | None = default_progress_theme,
     step=None,
     var_names: Sequence[str] | None = None,
@@ -488,8 +488,8 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool = True,
-    progressbar_theme: Theme | None = default_progress_theme,
+    progressbar: bool | ProgressBarType = True,
+    progressbar_theme: Theme | None = None,
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
@@ -539,11 +539,18 @@ def sample(
         A ``TypeError`` will be raised if a legacy :py:class:`~numpy.random.RandomState` object is passed.
         We no longer support ``RandomState`` objects because their seeding mechanism does not allow
         easy spawning of new independent random streams that are needed by the step methods.
-    progressbar : bool, optional default=True
-        Whether or not to display a progress bar in the command line. The bar shows the percentage
-        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
-        time until completion ("expected time of arrival"; ETA).
-        Only applicable to the pymc nuts sampler.
+    progressbar: bool or ProgressType, optional
+            How and whether to display the progress bar. If False, no progress bar is displayed. Otherwise, you can ask
+            for one of the following:
+            - "combined": A single progress bar that displays the total progress across all chains. Only timing
+                information is shown.
+            - "split": A separate progress bar for each chain. Only timing information is shown.
+            - "combined+stats" or "stats+combined": A single progress bar displaying the total progress across all
+                chains. Aggregate sample statistics are also displayed.
+            - "split+stats" or "stats+split": A separate progress bar for each chain. Sample statistics for each chain
+                are also displayed.
+
+            If True, the default is "split+stats" is used.
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically. By default the NUTS step
@@ -709,6 +716,10 @@ def sample(
     if isinstance(trace, list):
         raise ValueError("Please use `var_names` keyword argument for partial traces.")
 
+    # progressbar might be a string, which is used by the ProgressManager in the pymc samplers. External samplers and
+    # ADVI initialization expect just a bool.
+    progress_bool = bool(progressbar)
+
     model = modelcontext(model)
     if not model.free_RVs:
         raise SamplingError(
@@ -805,7 +816,7 @@ def sample(
                 initvals=initvals,
                 model=model,
                 var_names=var_names,
-                progressbar=progressbar,
+                progressbar=progress_bool,
                 idata_kwargs=idata_kwargs,
                 compute_convergence_checks=compute_convergence_checks,
                 nuts_sampler_kwargs=nuts_sampler_kwargs,
@@ -824,7 +835,7 @@ def sample(
                 n_init=n_init,
                 model=model,
                 random_seed=random_seed_list,
-                progressbar=progressbar,
+                progressbar=progress_bool,
                 jitter_max_retries=jitter_max_retries,
                 tune=tune,
                 initvals=initvals,
@@ -1138,25 +1149,35 @@ def _sample_many(
         Step function
     """
     initial_step_state = step.sampling_state
-    for i in range(chains):
-        step.sampling_state = initial_step_state
-        _sample(
-            draws=draws,
-            chain=i,
-            start=start[i],
-            step=step,
-            trace=traces[i],
-            rng=rngs[i],
-            callback=callback,
-            **kwargs,
-        )
+    progress_manager = ProgressBarManager(
+        step_method=step,
+        chains=chains,
+        draws=draws - kwargs.get("tune", 0),
+        tune=kwargs.get("tune", 0),
+        progressbar=kwargs.get("progressbar", True),
+        progressbar_theme=kwargs.get("progressbar_theme", default_progress_theme),
+    )
+
+    with progress_manager:
+        for i in range(chains):
+            step.sampling_state = initial_step_state
+            _sample(
+                draws=draws,
+                chain=i,
+                start=start[i],
+                step=step,
+                trace=traces[i],
+                rng=rngs[i],
+                callback=callback,
+                progress_manager=progress_manager,
+                **kwargs,
+            )
     return
 
 
 def _sample(
     *,
     chain: int,
-    progressbar: bool,
     rng: np.random.Generator,
     start: PointType,
     draws: int,
@@ -1164,8 +1185,8 @@ def _sample(
     trace: IBaseTrace,
     tune: int,
     model: Model | None = None,
-    progressbar_theme: Theme | None = default_progress_theme,
     callback=None,
+    progress_manager: ProgressBarManager,
     **kwargs,
 ) -> None:
     """Sample one chain (singleprocess).
@@ -1176,27 +1197,23 @@ def _sample(
     ----------
     chain : int
         Number of the chain that the samples will belong to.
-    progressbar : bool
-        Whether or not to display a progress bar in the command line. The bar shows the percentage
-        of completion, the sampling speed in samples per second (SPS), and the estimated remaining
-        time until completion ("expected time of arrival"; ETA).
-    random_seed : single random seed
+    random_seed : Generator
+        Single random seed
     start : dict
         Starting point in parameter space (or partial point)
     draws : int
         The number of samples to draw
-    step : function
-        Step function
+    step : Step
+        Step class instance used to generate samples.
     trace
         A chain backend to record draws and stats.
     tune : int
         Number of iterations to tune.
-    model : Model (optional if in ``with`` context)
-    progressbar_theme : Theme
-        Optional custom theme for the progress bar.
+    model : Model, optional
+        PyMC model. If None, the model is taken from the current context.
+    progress_manager: ProgressBarManager
+        Helper class used to handle progress bar styling and updates
     """
-    skip_first = kwargs.get("skip_first", 0)
-
     sampling_gen = _iter_sample(
         draws=draws,
         step=step,
@@ -1208,32 +1225,19 @@ def _sample(
         rng=rng,
         callback=callback,
     )
-    _pbar_data = {"chain": chain, "divergences": 0}
-    _desc = "Sampling chain {chain:d}, {divergences:,d} divergences"
-
-    progress = CustomProgress(
-        "[progress.description]{task.description}",
-        BarColumn(),
-        "[progress.percentage]{task.percentage:>3.0f}%",
-        TimeRemainingColumn(),
-        TextColumn("/"),
-        TimeElapsedColumn(),
-        console=Console(theme=progressbar_theme),
-        disable=not progressbar,
-    )
-
-    with progress:
-        try:
-            task = progress.add_task(_desc.format(**_pbar_data), completed=0, total=draws)
-            for it, diverging in enumerate(sampling_gen):
-                if it >= skip_first and diverging:
-                    _pbar_data["divergences"] += 1
-                progress.update(task, description=_desc.format(**_pbar_data), completed=it)
-            progress.update(
-                task, description=_desc.format(**_pbar_data), completed=draws, refresh=True
+    try:
+        for it, stats in enumerate(sampling_gen):
+            progress_manager.update(
+                chain_idx=chain, is_last=False, draw=it, stats=stats, tuning=it > tune
             )
-        except KeyboardInterrupt:
-            pass
+
+        if not progress_manager.combined_progress or chain == progress_manager.chains - 1:
+            progress_manager.update(
+                chain_idx=chain, is_last=True, draw=it, stats=stats, tuning=False
+            )
+
+    except KeyboardInterrupt:
+        pass
 
 
 def _iter_sample(
@@ -1247,7 +1251,7 @@ def _iter_sample(
     rng: np.random.Generator,
     model: Model | None = None,
     callback: SamplingIteratorCallback | None = None,
-) -> Iterator[bool]:
+) -> Iterator[list[dict[str, Any]]]:
     """Sample one chain with a generator (singleprocess).
 
     Parameters
@@ -1270,8 +1274,8 @@ def _iter_sample(
 
     Yields
     ------
-    diverging : bool
-        Indicates if the draw is divergent. Only available with some samplers.
+    stats : list of dict
+        Dictionary of statistics returned by step sampler
     """
     draws = int(draws)
 
@@ -1293,22 +1297,25 @@ def _iter_sample(
                 step.iter_count = 0
             if i == tune:
                 step.stop_tuning()
+
             point, stats = step.step(point)
             trace.record(point, stats)
             log_warning_stats(stats)
-            diverging = i > tune and len(stats) > 0 and (stats[0].get("diverging") is True)
+
             if callback is not None:
                 callback(
                     trace=trace,
                     draw=Draw(chain, i == draws, i, i < tune, stats, point),
                 )
 
-            yield diverging
+            yield stats
+
     except (KeyboardInterrupt, BaseException):
         if isinstance(trace, ZarrChain):
             trace.record_sampling_state(step=step)
         trace.close()
         raise
+
     else:
         if isinstance(trace, ZarrChain):
             trace.record_sampling_state(step=step)
@@ -1428,7 +1435,7 @@ def _init_jitter(
     seeds: Sequence[int] | np.ndarray,
     jitter: bool,
     jitter_max_retries: int,
-    logp_dlogp_func=None,
+    logp_fn: Callable[[PointType], np.ndarray] | None = None,
 ) -> list[PointType]:
     """Apply a uniform jitter in [-1, 1] to the test value as starting point in each chain.
 
@@ -1443,11 +1450,14 @@ def _init_jitter(
         Whether to apply jitter or not.
     jitter_max_retries : int
         Maximum number of repeated attempts at initializing values (per chain).
+    logp_fn: Callable[[dict[str, np.ndarray]], np.ndarray | jax.Array] | None
+        logp function that takes the output of initial point functions as input.
+        If None, will use the results of model.compile_logp().
 
     Returns
     -------
-    start : ``pymc.model.Point``
-        Starting point for sampler
+    initial_points : list[dict[str, np.ndarray]]
+        List of starting points for the sampler
     """
     ipfns = make_initial_point_fns_per_chain(
         model=model,
@@ -1459,14 +1469,10 @@ def _init_jitter(
     if not jitter:
         return [ipfn(seed) for ipfn, seed in zip(ipfns, seeds)]
 
-    model_logp_fn: Callable
-    if logp_dlogp_func is None:
-        model_logp_fn = model.compile_logp()
+    if logp_fn is None:
+        model_logp_fn: Callable[[PointType], np.ndarray] = model.compile_logp()
     else:
-
-        def model_logp_fn(ip):
-            q, _ = DictToArrayBijection.map(ip)
-            return logp_dlogp_func([q], extra_vars={})[0]
+        model_logp_fn = logp_fn
 
     initial_points = []
     for ipfn, seed in zip(ipfns, seeds):
@@ -1591,13 +1597,18 @@ def init_nuts(
 
     logp_dlogp_func = model.logp_dlogp_function(ravel_inputs=True, **compile_kwargs)
     logp_dlogp_func.trust_input = True
+
+    def model_logp_fn(ip: PointType) -> np.ndarray:
+        q, _ = DictToArrayBijection.map(ip)
+        return logp_dlogp_func([q], extra_vars={})[0]
+
     initial_points = _init_jitter(
         model,
         initvals,
         seeds=random_seed_list,
         jitter="jitter" in init,
         jitter_max_retries=jitter_max_retries,
-        logp_dlogp_func=logp_dlogp_func,
+        logp_fn=model_logp_fn,
     )
 
     apoints = [DictToArrayBijection.map(point) for point in initial_points]

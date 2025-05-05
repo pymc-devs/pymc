@@ -369,7 +369,7 @@ def get_support_shape(
         support_shape_offset = [0] * ndim_supp
     elif isinstance(support_shape_offset, int):
         support_shape_offset = [support_shape_offset] * ndim_supp
-    inferred_support_shape: Sequence[int | np.ndarray | Variable] | None = None
+    inferred_support_shape: Sequence[int | np.ndarray | TensorVariable] | None = None
 
     if shape is not None:
         shape = to_tuple(shape)
@@ -378,9 +378,7 @@ def get_support_shape(
             raise ValueError(
                 f"Number of shape dimensions is too small for ndim_supp of {ndim_supp}"
             )
-        inferred_support_shape = [
-            shape[i] - support_shape_offset[i] for i in np.arange(-ndim_supp, 0)
-        ]
+        inferred_support_shape = [shape[i] - support_shape_offset[i] for i in range(-ndim_supp, 0)]
 
     if inferred_support_shape is None and dims is not None:
         dims = convert_dims(dims)
@@ -389,7 +387,7 @@ def get_support_shape(
             raise ValueError(f"Number of dims is too small for ndim_supp of {ndim_supp}")
         model = modelcontext(None)
         inferred_support_shape = [
-            model.dim_lengths[dims[i]] - support_shape_offset[i] for i in np.arange(-ndim_supp, 0)
+            model.dim_lengths[dims[i]] - support_shape_offset[i] for i in range(-ndim_supp, 0)
         ]
 
     if inferred_support_shape is None and observed is not None:
@@ -399,7 +397,7 @@ def get_support_shape(
                 f"Number of observed dimensions is too small for ndim_supp of {ndim_supp}"
             )
         inferred_support_shape = [
-            observed.shape[i] - support_shape_offset[i] for i in np.arange(-ndim_supp, 0)
+            observed.shape[i] - support_shape_offset[i] for i in range(-ndim_supp, 0)
         ]
 
     if inferred_support_shape is None:
@@ -413,7 +411,7 @@ def get_support_shape(
         # There were two sources of support_shape, make sure they are consistent
         inferred_support_shape = [
             cast(
-                Variable,
+                TensorVariable,
                 Assert(msg="support_shape does not match respective shape dimension")(
                     inferred, pt.eq(inferred, explicit)
                 ),
@@ -470,5 +468,6 @@ def implicit_size_from_params(
         pt.broadcast_shape(
             *batch_shapes,
             arrays_are_shapes=True,
-        )
+        ),
+        dtype="int64",  # In case it's empty, as_tensor will default to floatX
     )

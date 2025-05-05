@@ -30,21 +30,18 @@ from pytensor.compile.builders import OpFromGraph
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Variable
 from pytensor.raise_op import Assert
-from pytensor.scalar import Cast
-from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.basic import IntegersRV
-from pytensor.tensor.type import TensorType
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 import pymc as pm
 
-from pymc.pytensorf import GeneratorOp, convert_data, smarttypeX
+from pymc.logprob.utils import rvs_in_graph
+from pymc.pytensorf import convert_data
 from pymc.vartypes import isgenerator
 
 __all__ = [
     "ConstantData",
     "Data",
-    "GeneratorAdapter",
     "Minibatch",
     "MutableData",
     "get_data",
@@ -86,51 +83,6 @@ class GenTensorVariable(TensorVariable):
         return cp
 
 
-class GeneratorAdapter:
-    """Class that helps infer data type of generator.
-
-    It looks at the first item, preserving the order of the resulting generator.
-    """
-
-    def make_variable(self, gop, name=None):
-        var = GenTensorVariable(gop, self.tensortype, name)
-        var.tag.test_value = self.test_value
-        return var
-
-    def __init__(self, generator):
-        if not pm.vartypes.isgenerator(generator):
-            raise TypeError("Object should be generator like")
-        self.test_value = smarttypeX(copy(next(generator)))
-        # make pickling potentially possible
-        self._yielded_test_value = False
-        self.gen = generator
-        self.tensortype = TensorType(self.test_value.dtype, ((False,) * self.test_value.ndim))
-
-    # python3 generator
-    def __next__(self):
-        """Next value in the generator."""
-        if not self._yielded_test_value:
-            self._yielded_test_value = True
-            return self.test_value
-        else:
-            return smarttypeX(copy(next(self.gen)))
-
-    # python2 generator
-    next = __next__
-
-    def __iter__(self):
-        """Return an iterator."""
-        return self
-
-    def __eq__(self, other):
-        """Return true if both objects are actually the same."""
-        return id(self) == id(other)
-
-    def __hash__(self):
-        """Return a hash of the object."""
-        return hash(id(self))
-
-
 class MinibatchIndexRV(IntegersRV):
     _print_name = ("minibatch_index", r"\operatorname{minibatch\_index}")
 
@@ -158,20 +110,12 @@ def is_valid_observed(v) -> bool:
         return True
 
     return (
-        # The only PyTensor operation we allow on observed data is type casting
-        # Although we could allow for any graph that does not depend on other RVs
-        (
-            isinstance(v.owner.op, Elemwise)
-            and isinstance(v.owner.op.scalar_op, Cast)
-            and is_valid_observed(v.owner.inputs[0])
-        )
+        not rvs_in_graph(v)
         # Or Minibatch
         or (
             isinstance(v.owner.op, MinibatchOp)
             and all(is_valid_observed(inp) for inp in v.owner.inputs)
         )
-        # Or Generator
-        or isinstance(v.owner.op, GeneratorOp)
     )
 
 
@@ -197,7 +141,7 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
     for i, v in enumerate(tensors):
         if not is_valid_observed(v):
             raise ValueError(
-                f"{i}: {v} is not valid for Minibatch, only constants or constants.astype(dtype) are allowed"
+                f"{i}: {v} is not valid for Minibatch, only non-random variables are allowed"
             )
 
     upper = tensors[0].shape[0]

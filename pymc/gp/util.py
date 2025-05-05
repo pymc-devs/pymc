@@ -178,30 +178,30 @@ def plot_gp_dist(
 
     Parameters
     ----------
-    ax: axes
+    ax : axes
         Matplotlib axes.
-    samples: numpy.ndarray
+    samples : numpy.ndarray
         Array of S posterior predictive sample from a GP.
         Expected shape: (S, X)
-    x: numpy.ndarray
+    x : numpy.ndarray
         Grid of X values corresponding to the samples.
         Expected shape: (X,) or (X, 1), or (1, X)
-    plot_samples: bool
+    plot_samples : bool
         Plot the GP samples along with posterior (defaults True).
-    palette: str
+    palette : str
         Palette for coloring output (defaults to "Reds").
-    fill_alpha: float
+    fill_alpha : float
         Alpha value for the posterior interval fill (defaults to 0.8).
-    samples_alpha: float
+    samples_alpha : float
         Alpha value for the sample lines (defaults to 0.1).
-    fill_kwargs: dict
+    fill_kwargs : dict
         Additional arguments for posterior interval fill (fill_between).
-    samples_kwargs: dict
+    samples_kwargs : dict
         Additional keyword arguments for samples plot.
 
     Returns
     -------
-    ax: Matplotlib axes
+    ax : Matplotlib axes
     """
     import matplotlib.pyplot as plt
 

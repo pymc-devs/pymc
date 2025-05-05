@@ -37,10 +37,10 @@ from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.linalg import cholesky, det, eigh, solve_triangular, trace
 from pytensor.tensor.linalg import inv as matrix_inverse
+from pytensor.tensor.random import chisquare
 from pytensor.tensor.random.basic import MvNormalRV, dirichlet, multinomial, multivariate_normal
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import (
-    broadcast_params,
     normalize_size_param,
 )
 from pytensor.tensor.type import TensorType
@@ -194,7 +194,7 @@ def quaddist_chol(value, mu, cov):
 
 class MvNormal(Continuous):
     r"""
-    Multivariate normal log-likelihood.
+    Multivariate normal distribution.
 
     .. math::
 
@@ -302,7 +302,19 @@ class MvNormal(Continuous):
         )
 
 
-class PrecisionMvNormalRV(SymbolicRandomVariable):
+class SymbolicMVNormalUsedInternally(SymbolicRandomVariable):
+    """Helper subclass that handles the forwarding / caching of method to `MvNormal` used internally."""
+
+    def __init__(self, *args, method: str, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.method = method
+
+    def rebuild_rv(self, *args, **kwargs):
+        # rv_op is a classmethod, so it doesn't have access to the instance method
+        return self.rv_op(*args, method=self.method, **kwargs)
+
+
+class PrecisionMvNormalRV(SymbolicMVNormalUsedInternally):
     r"""A specialized multivariate normal random variable defined in terms of precision.
 
     This class is introduced during specialization logprob rewrites, and not meant to be used directly.
@@ -313,14 +325,17 @@ class PrecisionMvNormalRV(SymbolicRandomVariable):
     _print_name = ("PrecisionMultivariateNormal", "\\operatorname{PrecisionMultivariateNormal}")
 
     @classmethod
-    def rv_op(cls, mean, tau, *, rng=None, size=None):
+    def rv_op(cls, mean, tau, *, method: str = "cholesky", rng=None, size=None):
         rng = normalize_rng_param(rng)
         size = normalize_size_param(size)
         cov = pt.linalg.inv(tau)
-        next_rng, draws = multivariate_normal(mean, cov, size=size, rng=rng).owner.outputs
+        next_rng, draws = multivariate_normal(
+            mean, cov, size=size, rng=rng, method=method
+        ).owner.outputs
         return cls(
             inputs=[rng, size, mean, tau],
             outputs=[next_rng, draws],
+            method=method,
         )(rng, size, mean, tau)
 
 
@@ -354,7 +369,9 @@ def mv_normal_to_precision_mv_normal(fgraph, node):
     rng, size, mu, cov = node.inputs
     if cov.owner and cov.owner.op == matrix_inverse:
         tau = cov.owner.inputs[0]
-        return PrecisionMvNormalRV.rv_op(mu, tau, size=size, rng=rng).owner.outputs
+        return PrecisionMvNormalRV.rv_op(
+            mu, tau, size=size, rng=rng, method=node.op.method
+        ).owner.outputs
     return None
 
 
@@ -365,38 +382,43 @@ specialization_ir_rewrites_db.register(
 )
 
 
-class MvStudentTRV(RandomVariable):
+class MvStudentTRV(SymbolicMVNormalUsedInternally):
+    r"""A specialized multivariate normal random variable defined in terms of precision.
+
+    This class is introduced during specialization logprob rewrites, and not meant to be used directly.
+    """
+
     name = "multivariate_studentt"
-    signature = "(),(n),(n,n)->(n)"
-    dtype = "floatX"
+    extended_signature = "[rng],[size],(),(n),(n,n)->[rng],(n)"
     _print_name = ("MvStudentT", "\\operatorname{MvStudentT}")
 
     @classmethod
-    def rng_fn(cls, rng, nu, mu, cov, size):
-        if size is None:
-            # When size is implicit, we need to broadcast parameters correctly,
-            # so that the MvNormal draws and the chisquare draws have the same number of batch dimensions.
-            # nu broadcasts mu and cov
-            if np.ndim(nu) > max(mu.ndim - 1, cov.ndim - 2):
-                _, mu, cov = broadcast_params((nu, mu, cov), ndims_params=cls.ndims_params)
-            # nu is broadcasted by either mu or cov
-            elif np.ndim(nu) < max(mu.ndim - 1, cov.ndim - 2):
-                nu, _, _ = broadcast_params((nu, mu, cov), ndims_params=cls.ndims_params)
+    def rv_op(cls, nu, mean, scale, *, method: str = "cholesky", rng=None, size=None):
+        nu = pt.as_tensor(nu)
+        mean = pt.as_tensor(mean)
+        scale = pt.as_tensor(scale)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
 
-        mv_samples = multivariate_normal.rng_fn(rng=rng, mean=np.zeros_like(mu), cov=cov, size=size)
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(nu, mean, scale, ndims_params=cls.ndims_params)
 
-        # Take chi2 draws and add an axis of length 1 to the right for correct broadcasting below
-        chi2_samples = np.sqrt(rng.chisquare(nu, size=size) / nu)[..., None]
+        next_rng, mv_draws = multivariate_normal(
+            mean.zeros_like(), scale, size=size, rng=rng, method=method
+        ).owner.outputs
+        next_rng, chi2_draws = chisquare(nu, size=size, rng=next_rng).owner.outputs
+        draws = mean + (mv_draws / pt.sqrt(chi2_draws / nu)[..., None])
 
-        return (mv_samples / chi2_samples) + mu
-
-
-mv_studentt = MvStudentTRV()
+        return cls(
+            inputs=[rng, size, nu, mean, scale],
+            outputs=[next_rng, draws],
+            method=method,
+        )(rng, size, nu, mean, scale)
 
 
 class MvStudentT(Continuous):
     r"""
-    Multivariate Student-T log-likelihood.
+    Multivariate Student-T distribution.
 
     .. math::
         f(\mathbf{x}| \nu,\mu,\Sigma) =
@@ -435,7 +457,8 @@ class MvStudentT(Continuous):
         Whether the cholesky fatcor is given as a lower triangular matrix.
     """
 
-    rv_op = mv_studentt
+    rv_type = MvStudentTRV
+    rv_op = MvStudentTRV.rv_op
 
     @classmethod
     def dist(cls, nu, *, Sigma=None, mu=0, scale=None, tau=None, chol=None, lower=True, **kwargs):
@@ -493,7 +516,7 @@ class MvStudentT(Continuous):
 
 class Dirichlet(SimplexContinuous):
     r"""
-    Dirichlet log-likelihood.
+    Dirichlet distribution.
 
     .. math::
 
@@ -565,7 +588,7 @@ class Dirichlet(SimplexContinuous):
 
 class Multinomial(Discrete):
     r"""
-    Multinomial log-likelihood.
+    Multinomial distribution.
 
     Generalizes binomial distribution, but instead of each trial resulting
     in "success" or "failure", each one results in exactly one of some
@@ -693,7 +716,7 @@ class DirichletMultinomialRV(SymbolicRandomVariable):
 
 
 class DirichletMultinomial(Discrete):
-    r"""Dirichlet Multinomial log-likelihood.
+    r"""Dirichlet Multinomial distribution.
 
     Dirichlet mixture of Multinomials distribution, with a marginalized PMF.
 
@@ -952,7 +975,7 @@ wishart = WishartRV()
 
 class Wishart(Continuous):
     r"""
-    Wishart log-likelihood.
+    Wishart distribution.
 
     The Wishart distribution is the probability distribution of the
     maximum-likelihood estimator (MLE) of the precision matrix of a
@@ -1152,57 +1175,6 @@ def _lkj_normalizing_constant(eta, n):
     return result
 
 
-class _LKJCholeskyCovBaseRV(RandomVariable):
-    name = "_lkjcholeskycovbase"
-    signature = "(),(),(d)->(n)"
-    dtype = "floatX"
-    _print_name = ("_lkjcholeskycovbase", "\\operatorname{_lkjcholeskycovbase}")
-
-    def make_node(self, rng, size, n, eta, D):
-        n = pt.as_tensor_variable(n)
-        if not all(n.type.broadcastable):
-            raise ValueError("n must be a scalar.")
-
-        eta = pt.as_tensor_variable(eta)
-        if not all(eta.type.broadcastable):
-            raise ValueError("eta must be a scalar.")
-
-        D = pt.as_tensor_variable(D)
-
-        return super().make_node(rng, size, n, eta, D)
-
-    def _supp_shape_from_params(self, dist_params, param_shapes):
-        n = dist_params[0].squeeze()
-        return ((n * (n + 1)) // 2,)
-
-    def rng_fn(self, rng, n, eta, D, size):
-        # We flatten the size to make operations easier, and then rebuild it
-        if size is None:
-            size = D.shape[:-1]
-        flat_size = np.prod(size).astype(int)
-
-        n = n.squeeze()
-        eta = eta.squeeze()
-
-        C = LKJCorrRV._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
-        D = D.reshape(flat_size, n)
-        C *= D[..., :, np.newaxis] * D[..., np.newaxis, :]
-
-        tril_idx = np.tril_indices(n, k=0)
-        samples = np.linalg.cholesky(C)[..., tril_idx[0], tril_idx[1]]
-
-        if size is None:
-            samples = samples[0]
-        else:
-            dist_shape = (n * (n + 1)) // 2
-            samples = np.reshape(samples, (*size, dist_shape))
-
-        return samples
-
-
-_ljk_cholesky_cov_base = _LKJCholeskyCovBaseRV()
-
-
 # _LKJCholeskyCovBaseRV requires a properly shaped `D`, which means the variable can't
 # be safely resized. Because of this, we add the thin SymbolicRandomVariable wrapper
 class _LKJCholeskyCovRV(SymbolicRandomVariable):
@@ -1223,21 +1195,40 @@ class _LKJCholeskyCovRV(SymbolicRandomVariable):
         # for each diagonal element.
         # Since `eta` and `n` are forced to be scalars we don't need to worry about
         # implied batched dimensions from those for the time being.
-        if rv_size_is_none(size):
-            size = sd_dist.shape[:-1]
 
-        shape = (*size, n)
+        if rv_size_is_none(size):
+            sd_dist_size = sd_dist.shape[:-1]
+        else:
+            sd_dist_size = size
+
         if sd_dist.owner.op.ndim_supp == 0:
-            sd_dist = change_dist_size(sd_dist, shape)
+            sd_dist = change_dist_size(sd_dist, (*sd_dist_size, n))
         else:
             # The support shape must be `n` but we have no way of controlling it
-            sd_dist = change_dist_size(sd_dist, shape[:-1])
+            sd_dist = change_dist_size(sd_dist, sd_dist_size)
 
-        next_rng, lkjcov = _ljk_cholesky_cov_base(n, eta, sd_dist, rng=rng).owner.outputs
+        D = sd_dist.type(name="D")  # Make sd_dist opaque to OpFromGraph
+        size = D.shape[:-1]
+
+        # We flatten the size to make operations easier, and then rebuild it
+        flat_size = pt.prod(size, dtype="int64")
+
+        next_rng, C = LKJCorrRV._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
+        D_matrix = D.reshape((flat_size, n))
+        C *= D_matrix[..., :, None] * D_matrix[..., None, :]
+
+        tril_idx = pt.tril_indices(n, k=0)
+        samples = pt.linalg.cholesky(C)[..., tril_idx[0], tril_idx[1]]
+
+        if rv_size_is_none(size):
+            samples = samples[0]
+        else:
+            dist_shape = (n * (n + 1)) // 2
+            samples = pt.reshape(samples, (*size, dist_shape))
 
         return _LKJCholeskyCovRV(
-            inputs=[rng, n, eta, sd_dist],
-            outputs=[next_rng, lkjcov],
+            inputs=[rng, n, eta, D],
+            outputs=[next_rng, samples],
         )(rng, n, eta, sd_dist)
 
     def update(self, node):
@@ -1508,10 +1499,9 @@ class LKJCholeskyCov:
         return chol, corr, stds
 
 
-class LKJCorrRV(RandomVariable):
+class LKJCorrRV(SymbolicRandomVariable):
     name = "lkjcorr"
-    signature = "(),()->(n)"
-    dtype = "floatX"
+    extended_signature = "[rng],[size],(),()->[rng],(n)"
     _print_name = ("LKJCorrRV", "\\operatorname{LKJCorrRV}")
 
     def make_node(self, rng, size, n, eta):
@@ -1525,55 +1515,66 @@ class LKJCorrRV(RandomVariable):
 
         return super().make_node(rng, size, n, eta)
 
-    def _supp_shape_from_params(self, dist_params, **kwargs):
-        n = dist_params[0].squeeze()
-        dist_shape = ((n * (n - 1)) // 2,)
-        return dist_shape
-
     @classmethod
-    def rng_fn(cls, rng, n, eta, size):
+    def rv_op(cls, n: int, eta, *, rng=None, size=None):
         # We flatten the size to make operations easier, and then rebuild it
-        if size is None:
+        n = pt.as_tensor(n, ndim=0, dtype=int)
+        eta = pt.as_tensor(eta, ndim=0)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
+
+        if rv_size_is_none(size):
             flat_size = 1
         else:
-            flat_size = np.prod(size).astype(int)
+            flat_size = pt.prod(size, dtype="int64")
 
-        n = n.squeeze()
-        eta = eta.squeeze()
-        C = cls._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
+        next_rng, C = cls._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
 
-        triu_idx = np.triu_indices(n, k=1)
+        triu_idx = pt.triu_indices(n, k=1)
         samples = C[..., triu_idx[0], triu_idx[1]]
 
-        if size is None:
+        if rv_size_is_none(size):
             samples = samples[0]
         else:
             dist_shape = (n * (n - 1)) // 2
-            samples = np.reshape(samples, (*size, dist_shape))
+            samples = pt.reshape(samples, (*size, dist_shape))
+
+        return cls(
+            inputs=[rng, size, n, eta],
+            outputs=[next_rng, samples],
+        )(rng, size, n, eta)
+
         return samples
 
     @classmethod
-    def _random_corr_matrix(cls, rng, n, eta, flat_size):
+    def _random_corr_matrix(
+        cls, rng: Variable, n: int, eta: TensorVariable, flat_size: TensorVariable
+    ) -> tuple[Variable, TensorVariable]:
         # original implementation in R see:
         # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
 
         beta = eta - 1.0 + n / 2.0
-        r12 = 2.0 * stats.beta.rvs(a=beta, b=beta, size=flat_size, random_state=rng) - 1.0
-        P = np.full((flat_size, n, n), np.eye(n))
-        P[..., 0, 1] = r12
-        P[..., 1, 1] = np.sqrt(1.0 - r12**2)
+        next_rng, beta_rvs = pt.random.beta(
+            alpha=beta, beta=beta, size=flat_size, rng=rng
+        ).owner.outputs
+        r12 = 2.0 * beta_rvs - 1.0
+        P = pt.full((flat_size, n, n), pt.eye(n))
+        P = P[..., 0, 1].set(r12)
+        P = P[..., 1, 1].set(pt.sqrt(1.0 - r12**2))
+        n = get_underlying_scalar_constant_value(n)
         for mp1 in range(2, n):
             beta -= 0.5
-            y = stats.beta.rvs(a=mp1 / 2.0, b=beta, size=flat_size, random_state=rng)
-            z = stats.norm.rvs(loc=0, scale=1, size=(flat_size, mp1), random_state=rng)
-            z = z / np.sqrt(np.einsum("ij,ij->i", z, z))[..., np.newaxis]
-            P[..., 0:mp1, mp1] = np.sqrt(y[..., np.newaxis]) * z
-            P[..., mp1, mp1] = np.sqrt(1.0 - y)
-        C = np.einsum("...ji,...jk->...ik", P, P)
-        return C
-
-
-lkjcorr = LKJCorrRV()
+            next_rng, y = pt.random.beta(
+                alpha=mp1 / 2.0, beta=beta, size=flat_size, rng=next_rng
+            ).owner.outputs
+            next_rng, z = pt.random.normal(
+                loc=0, scale=1, size=(flat_size, mp1), rng=next_rng
+            ).owner.outputs
+            z = z / pt.sqrt(pt.einsum("ij,ij->i", z, z.copy()))[..., np.newaxis]
+            P = P[..., 0:mp1, mp1].set(pt.sqrt(y[..., np.newaxis]) * z)
+            P = P[..., mp1, mp1].set(pt.sqrt(1.0 - y))
+        C = pt.einsum("...ji,...jk->...ik", P, P.copy())
+        return next_rng, C
 
 
 class MultivariateIntervalTransform(Interval):
@@ -1585,7 +1586,8 @@ class MultivariateIntervalTransform(Interval):
 
 # Returns list of upper triangular values
 class _LKJCorr(BoundedContinuous):
-    rv_op = lkjcorr
+    rv_type = LKJCorrRV
+    rv_op = LKJCorrRV.rv_op
 
     @classmethod
     def dist(cls, n, eta, **kwargs):
@@ -1650,7 +1652,7 @@ def lkjcorr_default_transform(op, rv):
 
 class LKJCorr:
     r"""
-    The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
+    The LKJ (Lewandowski, Kurowicka and Joe) distribution.
 
     The LKJ distribution is a prior distribution for correlation matrices.
     If eta = 1 this corresponds to the uniform distribution over correlation
@@ -1755,7 +1757,7 @@ matrixnormal = MatrixNormalRV()
 
 class MatrixNormal(Continuous):
     r"""
-    Matrix-valued normal log-likelihood.
+    Matrix-valued normal distribution.
 
     .. math::
        f(x \mid \mu, U, V) =
@@ -1939,12 +1941,12 @@ class MatrixNormal(Continuous):
         return norm - 0.5 * trquaddist - m * half_collogdet - n * half_rowlogdet
 
 
-class KroneckerNormalRV(SymbolicRandomVariable):
+class KroneckerNormalRV(SymbolicMVNormalUsedInternally):
     ndim_supp = 1
     _print_name = ("KroneckerNormal", "\\operatorname{KroneckerNormal}")
 
     @classmethod
-    def rv_op(cls, mu, sigma, *covs, size=None, rng=None):
+    def rv_op(cls, mu, sigma, *covs, method: str = "cholesky", size=None, rng=None):
         mu = pt.as_tensor(mu)
         sigma = pt.as_tensor(sigma)
         covs = [pt.as_tensor(cov) for cov in covs]
@@ -1953,7 +1955,9 @@ class KroneckerNormalRV(SymbolicRandomVariable):
 
         cov = reduce(pt.linalg.kron, covs)
         cov = cov + sigma**2 * pt.eye(cov.shape[-2])
-        next_rng, draws = multivariate_normal(mean=mu, cov=cov, size=size, rng=rng).owner.outputs
+        next_rng, draws = multivariate_normal(
+            mean=mu, cov=cov, size=size, rng=rng, method=method
+        ).owner.outputs
 
         covs_sig = ",".join(f"(a{i},b{i})" for i in range(len(covs)))
         extended_signature = f"[rng],[size],(m),(),{covs_sig}->[rng],(m)"
@@ -1962,12 +1966,13 @@ class KroneckerNormalRV(SymbolicRandomVariable):
             inputs=[rng, size, mu, sigma, *covs],
             outputs=[next_rng, draws],
             extended_signature=extended_signature,
+            method=method,
         )(rng, size, mu, sigma, *covs)
 
 
 class KroneckerNormal(Continuous):
     r"""
-    Multivariate normal log-likelihood with Kronecker-structured covariance.
+    Multivariate normal distribution with Kronecker-structured covariance.
 
     .. math::
 
@@ -2057,13 +2062,11 @@ class KroneckerNormal(Continuous):
     rv_op = KroneckerNormalRV.rv_op
 
     @classmethod
-    def dist(cls, mu, covs=None, chols=None, evds=None, sigma=None, *args, **kwargs):
+    def dist(cls, mu, covs=None, chols=None, evds=None, sigma=0.0, *args, **kwargs):
         if len([i for i in [covs, chols, evds] if i is not None]) != 1:
             raise ValueError(
                 "Incompatible parameterization. Specify exactly one of covs, chols, or evds."
             )
-
-        sigma = sigma if sigma else 0
 
         if chols is not None:
             covs = [chol.dot(chol.T) for chol in chols]
@@ -2076,6 +2079,7 @@ class KroneckerNormal(Continuous):
                 covs.append(cov_i)
 
         mu = pt.as_tensor_variable(mu)
+        sigma = pt.as_tensor_variable(sigma)
 
         return super().dist([mu, sigma, *covs], **kwargs)
 

@@ -16,7 +16,9 @@ import warnings
 from collections.abc import Mapping, Sequence
 from typing import Any, Union
 
-from pytensor.graph import ancestors
+import pytensor
+
+from pytensor.graph import Constant, ancestors
 from pytensor.tensor import TensorVariable
 
 from pymc.logprob.transforms import Transform
@@ -25,6 +27,7 @@ from pymc.model.core import Model
 from pymc.model.fgraph import (
     ModelDeterministic,
     ModelFreeRV,
+    ModelValuedVar,
     extract_dims,
     fgraph_from_model,
     model_deterministic,
@@ -74,7 +77,9 @@ def observe(
 
         m_new = pm.observe(m, {y: 0.5})
 
-    Deterministic variables can also be observed.
+    Deterministic variables can also be observed. If the variable has already
+    been observed, its old value is replaced with the one provided.
+
     This relies on PyMC ability to infer the logp of the underlying expression
 
     .. code-block:: python
@@ -95,9 +100,9 @@ def observe(
         for var, obs in vars_to_observations.items()
     }
 
-    valid_model_vars = set(model.free_RVs + model.deterministics)
+    valid_model_vars = set(model.basic_RVs + model.deterministics)
     if any(var not in valid_model_vars for var in vars_to_observations):
-        raise ValueError("At least one var is not a free variable or deterministic in the model")
+        raise ValueError("At least one var is not a random variable or deterministic in the model")
 
     fgraph, memo = fgraph_from_model(model)
 
@@ -106,7 +111,7 @@ def observe(
         model_var = memo[var]
 
         # Just a sanity check
-        assert isinstance(model_var.owner.op, ModelFreeRV | ModelDeterministic)
+        assert isinstance(model_var.owner.op, ModelValuedVar | ModelDeterministic)
         assert model_var in fgraph.variables
 
         var = model_var.owner.inputs[0]
@@ -123,7 +128,9 @@ def observe(
 def do(
     model: Model,
     vars_to_interventions: Mapping[Union["str", TensorVariable], Any],
-    prune_vars=False,
+    *,
+    make_interventions_shared: bool = True,
+    prune_vars: bool = False,
 ) -> Model:
     """Replace model variables by intervention variables.
 
@@ -137,6 +144,8 @@ def do(
         Dictionary that maps model variables (or names) to intervention expressions.
         Intervention expressions must have a shape and data type that is compatible
         with the original model variable.
+    make_interventions_shared: bool, defaults to True,
+        Whether to make constant interventions shared variables.
     prune_vars: bool, defaults to False
         Whether to prune model variables that are not connected to any observed variables,
         after the interventions.
@@ -167,11 +176,14 @@ def do(
 
     """
     do_mapping = {}
-    for var, obs in vars_to_interventions.items():
+    for var, intervention in vars_to_interventions.items():
         if isinstance(var, str):
             var = model[var]
         try:
-            do_mapping[var] = var.type.filter_variable(obs)
+            intervention = var.type.filter_variable(intervention)
+            if make_interventions_shared and isinstance(intervention, Constant):
+                intervention = pytensor.shared(intervention.data, name=var.name)
+            do_mapping[var] = intervention
         except TypeError as err:
             raise TypeError(
                 "Incompatible replacement type. Make sure the shape and datatype of the interventions match the original variables"
@@ -347,7 +359,7 @@ def remove_value_transforms(
     """
     if vars is None:
         vars = model.free_RVs
-    return change_value_transforms(model, {var: None for var in vars})
+    return change_value_transforms(model, dict.fromkeys(vars))
 
 
 __all__ = (

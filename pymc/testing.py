@@ -22,6 +22,7 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
+from arviz import InferenceData
 from numpy import random as nr
 from numpy import testing as npt
 from pytensor.compile.mode import Mode
@@ -982,3 +983,115 @@ def assert_no_rvs(vars: Sequence[Variable]) -> None:
     rvs = rvs_in_graph(vars)
     if rvs:
         raise AssertionError(f"RV found in graph: {rvs}")
+
+
+def mock_sample(draws: int = 10, **kwargs):
+    """Mock :func:`pymc.sample` with :func:`pymc.sample_prior_predictive`.
+
+    Useful for testing models that use pm.sample without running MCMC sampling.
+
+    Examples
+    --------
+    Using mock_sample with pytest
+
+    .. note::
+
+        Use :func:`pymc.testing.mock_sample_setup_and_teardown` directly for pytest fixtures.
+
+    .. code-block:: python
+
+        import pytest
+
+        import pymc as pm
+        from pymc.testing import mock_sample
+
+
+        @pytest.fixture(scope="module")
+        def mock_pymc_sample():
+            original_sample = pm.sample
+            pm.sample = mock_sample
+
+            yield
+
+            pm.sample = original_sample
+
+    """
+    random_seed = kwargs.get("random_seed", None)
+    model = kwargs.get("model", None)
+    draws = kwargs.get("draws", draws)
+    n_chains = kwargs.get("chains", 1)
+    idata: InferenceData = pm.sample_prior_predictive(
+        model=model,
+        random_seed=random_seed,
+        draws=draws,
+    )
+
+    idata.add_groups(
+        posterior=(
+            idata["prior"]
+            .isel(chain=0)
+            .expand_dims({"chain": range(n_chains)})
+            .transpose("chain", "draw", ...)
+        )
+    )
+    del idata["prior"]
+    if "prior_predictive" in idata:
+        del idata["prior_predictive"]
+    return idata
+
+
+def mock_sample_setup_and_teardown():
+    """Set up and tear down mocking of PyMC sampling functions for testing.
+
+    This function is designed to be used with pytest fixtures to temporarily replace
+    PyMC's sampling functionality with faster alternatives for testing purposes.
+
+    Effects during the fixture's active period:
+
+    * Replaces :func:`pymc.sample` with :func:`pymc.testing.mock_sample`, which uses
+      prior predictive sampling instead of MCMC
+    * Replaces distributions:
+        * :class:`pymc.Flat` with :class:`pymc.Normal`
+        * :class:`pymc.HalfFlat` with :class:`pymc.HalfNormal`
+    * Automatically restores all original functions and distributions after the test completes
+
+    Examples
+    --------
+    Use with `pytest` to mock actual PyMC sampling in test suite.
+
+    .. code-block:: python
+
+        # tests/conftest.py
+        import pytest
+        import pymc as pm
+        from pymc.testing import mock_sample_setup_and_teardown
+
+        # Register as a pytest fixture
+        mock_pymc_sample = pytest.fixture(scope="function")(mock_sample_setup_and_teardown)
+
+
+        # tests/test_model.py
+        # Use in a test function
+        def test_model_inference(mock_pymc_sample):
+            with pm.Model() as model:
+                x = pm.Normal("x", 0, 1)
+                # This will use mock_sample instead of actual MCMC
+                idata = pm.sample()
+                # Test with the inference data...
+
+    """
+    import pymc as pm
+
+    original_flat = pm.Flat
+    original_half_flat = pm.HalfFlat
+    original_sample = pm.sample
+
+    pm.sample = mock_sample
+    pm.Flat = pm.Normal
+    pm.HalfFlat = pm.HalfNormal
+
+    yield
+
+    pm.sample = original_sample
+    pm.Flat = original_flat
+    pm.HalfFlat = original_half_flat

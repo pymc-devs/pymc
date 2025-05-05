@@ -27,8 +27,6 @@ from typing import cast
 import cloudpickle
 import numpy as np
 
-from rich.console import Console
-from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 
@@ -36,7 +34,7 @@ from pymc.backends.zarr import ZarrChain
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.util import (
-    CustomProgress,
+    ProgressBarManager,
     RandomGeneratorState,
     default_progress_theme,
     get_state_from_generator,
@@ -485,23 +483,14 @@ class ParallelSampler:
         self._max_active = cores
 
         self._in_context = False
-
-        self._progress = CustomProgress(
-            "[progress.description]{task.description}",
-            BarColumn(),
-            "[progress.percentage]{task.percentage:>3.0f}%",
-            TimeRemainingColumn(),
-            TextColumn("/"),
-            TimeElapsedColumn(),
-            console=Console(theme=progressbar_theme),
-            disable=not progressbar,
+        self._progress = ProgressBarManager(
+            step_method=step_method,
+            chains=chains,
+            draws=draws,
+            tune=tune,
+            progressbar=progressbar,
+            progressbar_theme=progressbar_theme,
         )
-        self._show_progress = progressbar
-        self._divergences = 0
-        self._completed_draws = 0
-        self._total_draws = chains * (draws + tune)
-        self._desc = "Sampling {0._chains:d} chains, {0._divergences:,d} divergences"
-        self._chains = chains
 
     def _make_active(self):
         while self._inactive and len(self._active) < self._max_active:
@@ -516,24 +505,13 @@ class ParallelSampler:
             raise ValueError("Use ParallelSampler as context manager.")
         self._make_active()
 
-        with self._progress as progress:
-            task = progress.add_task(
-                self._desc.format(self),
-                completed=self._completed_draws,
-                total=self._total_draws,
-            )
-
+        with self._progress:
             while self._active:
                 draw = ProcessAdapter.recv_draw(self._active)
                 proc, is_last, draw, tuning, stats = draw
-                self._completed_draws += 1
-                if not tuning and stats and stats[0].get("diverging"):
-                    self._divergences += 1
-                progress.update(
-                    task,
-                    completed=self._completed_draws,
-                    total=self._total_draws,
-                    description=self._desc.format(self),
+
+                self._progress.update(
+                    chain_idx=proc.chain, is_last=is_last, draw=draw, tuning=tuning, stats=stats
                 )
 
                 if is_last:
@@ -541,7 +519,6 @@ class ParallelSampler:
                     self._active.remove(proc)
                     self._finished.append(proc)
                     self._make_active()
-                    progress.update(task, description=self._desc.format(self), refresh=True)
 
                 # We could also yield proc.shared_point_view directly,
                 # and only call proc.write_next() after the yield returns.

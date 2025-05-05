@@ -9,11 +9,10 @@ dependencies:
 - blas
 - cachetools>=4.2.1
 - cloudpickle
-- h5py>=2.7
 - numpy>=1.25.0
 - pandas>=0.24.0
 - pip
-- pytensor>=2.26.2,<2.27
+- pytensor>=2.30.2,<2.31
 - python-graphviz
 - networkx
 - scipy>=1.4.1
@@ -27,6 +26,7 @@ dependencies:
 - myst-nb<=1.0.0
 - numpydoc
 - pre-commit>=2.8.0
+- polyagamma
 - pytest-cov>=2.5
 - pytest>=3.0
 - rich>=13.7.1
@@ -36,9 +36,8 @@ dependencies:
 - sphinx>=1.5
 - sphinxext-rediraffe
 - watermark
-- polyagamma
 - sphinx-remove-toctrees
-- mypy=1.5.1
+- mypy=1.15.0
 - types-cachetools
 - pip:
   - git+https://github.com/pymc-devs/pymc-sphinx-theme
