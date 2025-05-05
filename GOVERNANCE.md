@@ -607,7 +607,7 @@ Role:
 #### Accounts and services ownership and administration
 The PyMC Project also has accounts and hosts services on several platforms.
 Some examples of such platforms include (but are not limited to)
-GitHub, Discourse, PyPI, Discord, ReadTheDocs, or Medium.
+GitHub, Discourse, PyPI, Discord, X, ReadTheDocs, or Medium.
 Any service under the PyMC project should follow these rules,
 even if not explicitly listed above as an example.
 
