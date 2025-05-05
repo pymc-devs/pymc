@@ -17,6 +17,7 @@ import pytest
 
 import pymc as pm
 
+from pymc import logp
 from pymc.distributions.shape_utils import change_dist_size
 
 
@@ -110,3 +111,18 @@ class TestCensored:
             pm.Normal.dist(size=(3, 4, 2)), lower=np.zeros((2,)), upper=np.zeros((4, 2))
         )
         assert tuple(x.owner.inputs[0].shape.eval()) == (3, 4, 2)
+
+    def test_censored_categorical(self):
+        cat = pm.Categorical.dist([0.1, 0.2, 0.2, 0.3, 0.2], shape=(5,))
+
+        np.testing.assert_allclose(
+            logp(cat, [-1, 0, 1, 2, 3, 4, 5]).exp().eval(),
+            [0, 0.1, 0.2, 0.2, 0.3, 0.2, 0],
+        )
+
+        censored_cat = pm.Censored.dist(cat, lower=1, upper=3, shape=(5,))
+
+        np.testing.assert_allclose(
+            logp(censored_cat, [-1, 0, 1, 2, 3, 4, 5]).exp().eval(),
+            [0, 0, 0.3, 0.2, 0.5, 0, 0],
+        )
