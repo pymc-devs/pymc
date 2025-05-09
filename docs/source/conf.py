@@ -351,6 +351,14 @@ html_theme_options = {
     "logo": {
         "link": "https://www.pymc.io",
     },
+    "search_bar_text": "Search within PyMC library docs...",
+    "icon_links": [
+        {
+            "url": "https://github.com/pymc-devs/pymc",
+            "icon": "fa-brands fa-github",
+            "name": "GitHub",
+        },
+    ],
 }
 html_context = {
     "github_user": "pymc-devs",
