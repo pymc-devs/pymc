@@ -863,7 +863,7 @@ def incompatible_model(request):
             )
             test_step = NUTS(potential=potential)
         error_message = (
-            "The state method sampling state class is incompatible with what's stored in the trace."
+            "The step method sampling state class is incompatible with what's stored in the trace."
         )
     else:
         raise NotImplementedError()
