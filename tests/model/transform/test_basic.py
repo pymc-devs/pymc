@@ -15,7 +15,11 @@ import numpy as np
 
 import pymc as pm
 
-from pymc.model.transform.basic import prune_vars_detached_from_observed, remove_minibatched_nodes
+from pymc.model.transform.basic import (
+    model_to_minibatch,
+    prune_vars_detached_from_observed,
+    remove_minibatched_nodes,
+)
 
 
 def test_prune_vars_detached_from_observed():
@@ -32,6 +36,28 @@ def test_prune_vars_detached_from_observed():
     assert set(m.named_vars.keys()) == {"obs_data", "a0", "a1", "a2", "obs", "d0", "d1"}
     pruned_m = prune_vars_detached_from_observed(m)
     assert set(pruned_m.named_vars.keys()) == {"obs_data", "a0", "a1", "a2", "obs"}
+
+
+def test_model_to_minibatch():
+    data_size = 100
+    n_features = 4
+
+    obs_data = np.zeros((data_size,))
+    X_data = np.random.normal(size=(data_size, n_features))
+
+    with pm.Model(coords={"feature": range(n_features), "data_dim": range(data_size)}) as m1:
+        obs_data = pm.Data("obs_data", obs_data, dims=["data_dim"])
+        X_data = pm.Data("X_data", X_data, dims=["data_dim", "feature"])
+        beta = pm.Normal("beta", dims="feature")
+
+        mu = X_data @ beta
+
+        y = pm.Normal("y", mu=mu, sigma=1, observed=obs_data, dims="data_dim")
+
+    m2 = model_to_minibatch(m1, batch_size=10)
+    m2["y"].dprint()
+
+    assert 0
 
 
 def test_remove_minibatches():
