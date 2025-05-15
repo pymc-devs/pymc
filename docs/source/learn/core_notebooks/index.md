@@ -11,6 +11,7 @@ posterior_predictive
 dimensionality
 pymc_pytensor
 Gaussian_Processes
+rosetta_stone_pymc_stan
 :::
 
 :::{note}
