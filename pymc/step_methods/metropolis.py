@@ -314,10 +314,13 @@ class Metropolis(ArrayStepShared):
 
         self.steps_until_tune -= 1
 
+        self.accept_rate_iter = np.atleast_1d(self.accept_rate_iter)
+        log_N = np.log(self.accept_rate_iter.shape[0])
+
         stats = {
             "tune": self.tune,
             "scaling": np.mean(self.scaling),
-            "accept": np.mean(np.exp(self.accept_rate_iter)),
+            "accept": np.exp(scipy.special.logsumexp(self.accept_rate_iter) - log_N),
             "accepted": np.mean(self.accepted_iter),
         }
 
