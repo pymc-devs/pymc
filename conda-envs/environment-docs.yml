@@ -26,7 +26,7 @@ dependencies:
 - numpydoc
 - polyagamma
 - pre-commit>=2.8.0
-- pymc-sphinx-theme==0.14
+- pymc-sphinx-theme>=0.16
 - sphinx-copybutton
 - sphinx-design
 - sphinx-notfound-page

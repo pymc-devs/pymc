@@ -15,3 +15,16 @@ build:
   os: "ubuntu-22.04"
   tools:
     python: "mambaforge-4.10"
+
+search:
+  ranking:
+    _sources/*: -10
+    _modules/*: -5
+    genindex.html: -9
+    '*__init__.html': -3
+    '*dist.html': -3
+
+  ignore:
+    - 404.html
+    - search.html
+    - index.html
