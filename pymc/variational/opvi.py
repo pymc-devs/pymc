@@ -74,6 +74,7 @@ from pymc.model import modelcontext
 from pymc.pytensorf import (
     SeedSequenceSeed,
     compile,
+    constant_fold,
     find_rng_nodes,
     reseed_rngs,
 )
@@ -1105,7 +1106,10 @@ class Group(WithMemoization):
         t = self.to_flat_input(
             pt.max(
                 [
-                    get_scaling(v.owner.inputs[1:], v.shape)
+                    get_scaling(
+                        v.owner.inputs[1:],
+                        constant_fold([v.owner.inputs[0].shape], raise_not_constant=False),
+                    )
                     for v in self.group
                     if isinstance(v.owner.op, MinibatchRandomVariable)
                 ]
@@ -1272,7 +1276,10 @@ class Approximation(WithMemoization):
         t = pt.max(
             self.collect("symbolic_normalizing_constant")
             + [
-                get_scaling(obs.owner.inputs[1:], obs.shape)
+                get_scaling(
+                    obs.owner.inputs[1:],
+                    constant_fold([obs.owner.inputs[0].shape], raise_not_constant=False),
+                )
                 for obs in self.model.observed_RVs
                 if isinstance(obs.owner.op, MinibatchRandomVariable)
             ]

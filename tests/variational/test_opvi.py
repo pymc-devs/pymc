@@ -20,6 +20,7 @@ import pytest
 
 import pymc as pm
 
+from pymc.testing import assert_no_rvs
 from pymc.variational import opvi
 from pymc.variational.approximations import (
     Empirical,
@@ -278,3 +279,18 @@ def test_logq_globals(three_var_approx):
     es = symbolic_logq.eval()
     assert e.shape == ()
     assert es.shape == (2,)
+
+
+def test_symbolic_normalizing_constant_no_rvs():
+    # Test that RVs aren't included in the graph of symbolic_normalizing_constant
+    rng = np.random.default_rng()
+
+    with pm.Model() as m:
+        obs = pm.Data("obs", rng.normal(size=(1000,)))
+        obs_batch = pm.Minibatch(obs, batch_size=128)
+        x = pm.Normal("x")  # Need at least one Free_RV in the graph
+        y_hat = pm.Flat("y_hat", observed=obs_batch, total_size=1000)
+
+        step = pm.ADVI()
+
+    assert_no_rvs(step.approx.symbolic_normalizing_constant)

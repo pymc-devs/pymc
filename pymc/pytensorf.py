@@ -979,7 +979,7 @@ def constant_fold(
     """
     fg = FunctionGraph(outputs=xs, features=[ShapeFeature()], copy_inputs=False, clone=True)
 
-    # The default rewrite_graph includes a constand_folding that is not always applied.
+    # The default rewrite_graph includes a constant_folding that is not always applied.
     # We use an unconditional constant_folding as the last pass to ensure a thorough constant folding.
     rewrite_graph(fg)
     topo_unconditional_constant_folding.apply(fg)
