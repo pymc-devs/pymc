@@ -526,7 +526,6 @@ def test_partial_trace_with_trace_unsupported():
             pm.sample(trace=[a])
 
 
-@pytest.mark.xfail(condition=(pytensor.config.floatX == "float32"), reason="Fails on float32")
 class TestNamedSampling:
     def test_shared_named(self):
         G_var = shared(value=np.atleast_2d(1.0), shape=(1, None), name="G")
@@ -537,7 +536,6 @@ class TestNamedSampling:
                 mu=np.atleast_2d(0),
                 tau=np.atleast_2d(1e20),
                 size=(1, 1),
-                initval=np.atleast_2d(0),
             )
             theta = pm.Normal(
                 "theta", mu=pt.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
@@ -553,7 +551,6 @@ class TestNamedSampling:
                 mu=np.atleast_2d(0),
                 tau=np.atleast_2d(1e20),
                 size=(1, 1),
-                initval=np.atleast_2d(0),
             )
             theta = pm.Normal(
                 "theta", mu=pt.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
@@ -569,7 +566,6 @@ class TestNamedSampling:
                 mu=np.atleast_2d(0),
                 tau=np.atleast_2d(1e20),
                 size=(1, 1),
-                initval=np.atleast_2d(0),
             )
             theta = pm.Normal(
                 "theta", mu=pt.dot(G_var, theta0), tau=np.atleast_2d(1e20), size=(1, 1)
