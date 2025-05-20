@@ -1023,4 +1023,5 @@ def get_random_generator(
         if isinstance(seed, np.random.Generator | np.random.BitGenerator):
             return random_generator_from_state(get_state_from_generator(seed))
         seed = deepcopy(seed)
-    return np.random.default_rng(seed)
+    # FIXME: No idea what seed type hint would make mypy happy
+    return np.random.default_rng(seed)  # type: ignore[incompatible-type]
