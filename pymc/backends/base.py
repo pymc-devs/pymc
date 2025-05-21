@@ -35,6 +35,7 @@ import pytensor
 from pymc.backends.report import SamplerReport
 from pymc.model import modelcontext
 from pymc.pytensorf import compile
+from pymc.step_methods.compound import BlockedStep, CompoundStep, CompoundStepState, StepMethodState
 from pymc.util import get_var_name
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,8 @@ class IBaseTrace(ABC, Sized):
 
     sampler_vars: list[dict[str, type | np.dtype]]
     """Sampler stats for each sampler."""
+
+    _step_method: BlockedStep | CompoundStep | None
 
     def __len__(self):
         """Length of the chain."""
@@ -130,6 +133,69 @@ class IBaseTrace(ABC, Sized):
 
         This is called after sampling has finished.
         """
+        pass
+
+    def completed_draws_and_divergences(self, chain_specific: bool = True) -> tuple[int, int]:
+        """Get number of completed draws and divergences in the trace.
+
+        This is a helper function to start the ProgressBarManager when resuming sampling
+        from an existing trace.
+
+        Parameters
+        ----------
+        chain_specific : bool
+            If ``True``, only the completed draws and divergences on the current chain
+            are returned. If ``False``, the draws and divergences across all chains are
+            returned. WARNING: many BaseTrace backends are not aware of the information
+            stored in other chains and will raise a ``ValueError`` if passed ``False``.
+
+        Returns
+        -------
+        draws : int
+            Number of draws in the current chain or across all chains.
+        divergences : int
+            Number of divergences in the current chain or across all chains.
+        """
+        raise NotImplementedError()
+
+    def link_stepper(self, step_method: BlockedStep | CompoundStep):
+        """Provide a reference to the step method used during sampling.
+
+        This reference can be used to facilite writing the stepper's sampling state
+        each time the samples are flushed into the storage.
+        """
+        self._step_method = step_method
+
+    def store_sampling_state(self, sampling_state: StepMethodState | CompoundStepState):
+        self._sampling_state = sampling_state
+
+    def record_sampling_state(self, step: BlockedStep | CompoundStep | None = None):
+        """Record the sampling state information to the store's ``_sampling_state`` group.
+
+        The sampling state includes the number of draws taken so far (``draw_idx``) and
+        the step method's ``sampling_state``.
+
+        Parameters
+        ----------
+        step : BlockedStep | CompoundStep | None
+            The step method from which to take the ``sampling_state``. If ``None``,
+            the ``step`` is taken to be the step method that was linked to the
+            trace when calling :meth:`~IBaseTrace.link_stepper`. If this method was never
+            called, no step method ``sampling_state`` information is stored in the
+            chain.
+        """
+        if step is None:
+            step = self._step_method
+        if step is not None:
+            self.store_sampling_state(step.sampling_state)
+
+    def get_stored_draw_and_state(self) -> tuple[int, StepMethodState | CompoundStepState | None]:
+        return 0, None
+
+    def get_mcmc_point(self) -> dict[str, np.ndarray]:
+        raise NotImplementedError()
+
+    def set_mcmc_point(self, mcmc_point: Mapping[str, np.ndarray]):
         pass
 
 
