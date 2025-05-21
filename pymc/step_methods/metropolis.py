@@ -308,7 +308,7 @@ class Metropolis(ArrayStepShared):
         else:
             accept_rate = self.delta_logp(q, q0d)
             q, accepted = metrop_select(accept_rate, q, q0d, rng=self.rng)
-            self.accept_rate_iter[:] = accept_rate
+            self.accept_rate_iter[0] = accept_rate
             self.accepted_iter[0] = accepted
             self.accepted_sum += accepted
 
