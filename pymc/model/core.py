@@ -948,6 +948,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 FutureWarning,
             )
 
+        if name in self.named_vars:
+            raise ValueError(
+                f"Name '{name}' already exists as a variable name in the model. Please choose a different name for the coordinate."
+            )
+
         if name in {"draw", "chain", "__sample__"}:
             raise ValueError(
                 "Dimensions can not be named `draw`, `chain` or `__sample__`, "
@@ -1463,6 +1468,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         if var.name is None:
             raise ValueError("Variable is unnamed.")
+        if var.name in self.coords:
+            raise ValueError(
+                f"Name '{var.name}' already exists as a coordinate name in the model. Please choose a different name for the variable."
+            )
         if self.named_vars.tree_contains(var.name):
             raise ValueError(f"Variable name {var.name} already exists.")
 
