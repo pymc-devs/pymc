@@ -841,7 +841,7 @@ def sample(
                 initvals=initvals,
                 compile_kwargs=compile_kwargs,
                 **kwargs,
-            )
+            )  # type: ignore[incompatible-type]
     else:
         # Get initial points
         ipfns = make_initial_point_fns_per_chain(
@@ -850,7 +850,7 @@ def sample(
             jitter_rvs=set(),
             chains=chains,
         )
-        initial_points = [ipfn(seed) for ipfn, seed in zip(ipfns, random_seed_list)]
+        initial_points = [ipfn(seed) for ipfn, seed in zip(ipfns, random_seed_list)]  # type: ignore[incompatible-type]
 
         # Instantiate automatically selected steps
         step = instantiate_steppers(
