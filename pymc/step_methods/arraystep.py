@@ -32,13 +32,16 @@ class ArrayStep(BlockedStep):
 
     Parameters
     ----------
-    vars: list
+    vars : list
         List of value variables for sampler.
-    fs: list of logp PyTensor functions
-    allvars: Boolean (default False)
-    blocked: Boolean (default True)
-    rng: RandomGenerator
-        An object that can produce be used to produce the step method's
+    fs : list
+        Logp PyTensor functions.
+    allvars : bool, default False
+        Whether to pass all model variables to the logp functions.
+    blocked : bool, default True
+        Whether variables are updated jointly or separately.
+    rng : RandomGenerator
+        An object that can be used to produce the step method's
         :py:class:`~numpy.random.Generator` object. Refer to
         :py:func:`pymc.util.get_random_generator` for more information.
     """
@@ -90,11 +93,14 @@ class ArrayStepShared(BlockedStep):
 
         Parameters
         ----------
-        vars: list of sampling value variables
-        shared: dict of PyTensor variable -> shared variable
-        blocked: Boolean (default True)
-        rng: RandomGenerator
-            An object that can produce be used to produce the step method's
+        vars : list
+            Sampling value variables.
+        shared : dict
+            PyTensor variable -> shared variable.
+        blocked : bool, default True
+            Whether variables are updated jointly or separately.
+        rng : RandomGenerator
+            An object that can be used to produce the step method's
             :py:class:`~numpy.random.Generator` object. Refer to
             :py:func:`pymc.util.get_random_generator` for more information.
         """
@@ -138,11 +144,14 @@ class PopulationArrayStepShared(ArrayStepShared):
 
         Parameters
         ----------
-        vars: list of sampling value variables
-        shared: dict of PyTensor variable -> shared variable
-        blocked: Boolean (default True)
-        rng: RandomGenerator
-            An object that can produce be used to produce the step method's
+        vars : list
+            Sampling value variables.
+        shared : dict
+            PyTensor variable -> shared variable.
+        blocked : bool, default True
+            Whether variables are updated jointly or separately.
+        rng : RandomGenerator
+            An object that can be used to produce the step method's
             :py:class:`~numpy.random.Generator` object. Refer to
             :py:func:`pymc.util.get_random_generator` for more information.
         """
@@ -156,9 +165,11 @@ class PopulationArrayStepShared(ArrayStepShared):
 
         Parameters
         ----------
-        population: list of Points. (The elements of this list must be
-            replaced with current chain states in every iteration.)
-        chain_index: int of the index of this sampler in the population
+        population : list of Points
+            The elements of this list must be replaced with current chain
+            states in every iteration.
+        chain_index : int
+            The index of this sampler in the population.
         """
         self.population = population
         self.this_chain = chain_index
@@ -216,15 +227,21 @@ def metrop_select(
 
     Parameters
     ----------
-    mr: float, Metropolis acceptance rate
-    q: proposed sample
-    q0: current sample
-    rng: numpy.random.Generator
-        A random number generator object
+    mr : float
+        Metropolis acceptance rate.
+    q : np.ndarray
+        Proposed sample.
+    q0 : np.ndarray
+        Current sample.
+    rng : numpy.random.Generator
+        A random number generator object.
 
     Returns
     -------
-    q or q0
+    np.ndarray
+        The accepted sample (`q` or `q0`).
+    bool
+        Whether the proposed `q` was accepted.
     """
     # Compare acceptance ratio to uniform random number
     # TODO XXX: This `uniform` is not given a model-specific RNG state, which
