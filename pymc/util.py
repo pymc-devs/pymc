@@ -857,18 +857,6 @@ class ProgressBarManager:
                 for chain_idx in range(self.chains)
             ]
 
-    def compute_draw_speed(self, chain_idx, draws):
-        elapsed = self._progress.tasks[chain_idx].elapsed
-        speed = draws / max(elapsed, 1e-6)
-
-        if speed > 1 or speed == 0:
-            unit = "draws/s"
-        else:
-            unit = "s/draws"
-            speed = 1 / speed
-
-        return speed, unit
-
     def update(self, chain_idx, is_last, draw, tuning, stats):
         if not self._show_progress:
             return
@@ -878,7 +866,8 @@ class ProgressBarManager:
             draw = self.completed_draws
             chain_idx = 0
 
-        speed, unit = self.compute_draw_speed(chain_idx, draw)
+        elapsed = self._progress.tasks[chain_idx].elapsed
+        speed, unit = compute_draw_speed(elapsed, draw)
 
         if not tuning and stats and stats[0].get("diverging"):
             self.divergences += 1
