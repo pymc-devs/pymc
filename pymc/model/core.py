@@ -950,7 +950,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         if name in self.named_vars:
             raise ValueError(
-                f"Name '{name}' already exists as a variable name in the model. Please choose a different name for the coordinate."
+                f"Name '{name}' already exists as a variable name in the model. Please choose a different name for the dimension."
             )
 
         if name in {"draw", "chain", "__sample__"}:
