@@ -17,7 +17,6 @@
 import contextlib
 import logging
 import pickle
-import platform
 import sys
 import time
 import warnings
@@ -78,12 +77,6 @@ from pymc.util import (
     is_transformed_name,
 )
 from pymc.vartypes import discrete_types
-
-if platform.system() == "linux":
-    # Threads are not fork-safe on Linux, so we need to use spawn
-    import multiprocessing
-
-    multiprocessing.set_start_method("spawn", force=True)
 
 try:
     from zarr.storage import MemoryStore
