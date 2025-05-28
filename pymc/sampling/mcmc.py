@@ -80,6 +80,7 @@ from pymc.util import (
 from pymc.vartypes import discrete_types
 
 if platform.system() == "linux":
+    # Threads are not fork-safe on Linux, so we need to use spawn
     import multiprocessing
 
     multiprocessing.set_start_method("spawn", force=True)
