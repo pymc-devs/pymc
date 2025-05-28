@@ -448,7 +448,7 @@ class ParallelSampler:
                     else:
                         mp_ctx = "forkserver"
                 elif platform.system() == "Linux":
-                    # Threads are not fork-safe on Linux when using libraries like OpenBLAS
+                    # Threads are not fork-safe on Linux
                     mp_ctx = "spawn"
                     logger.debug(
                         "mp_ctx is set to 'spawn' for Linux to ensure thread safety. "
