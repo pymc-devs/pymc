@@ -56,10 +56,8 @@ __all__ = [
 ]
 
 
-class MarginalMixtureRV(SymbolicRandomVariable):
-    """A placeholder used to specify a distribution for a mixture sub-graph."""
-
-    _print_name = ("MarginalMixture", "\\operatorname{MarginalMixture}")
+class _BaseMixtureRV(SymbolicRandomVariable):
+    """Base class SymbolicRandomVariable for Mixture and Hurdle RVs."""
 
     @classmethod
     def rv_op(cls, weights, *components, size=None):
@@ -139,7 +137,7 @@ class MarginalMixtureRV(SymbolicRandomVariable):
             comps_s = ",".join(f"({s})" for _ in components)
             extended_signature = f"[rng],(w),{comps_s}->[rng],({s})"
 
-        return MarginalMixtureRV(
+        return cls(
             inputs=[mix_indexes_rng, weights, *components],
             outputs=[mix_indexes_rng_next, mix_out],
             extended_signature=extended_signature,
@@ -161,7 +159,202 @@ class MarginalMixtureRV(SymbolicRandomVariable):
         return {node.inputs[0]: node.outputs[0]}
 
 
-class Mixture(Distribution):
+class _BaseMixtureDistribution(Distribution):
+    """Base class distribution for Mixture and Hurdle distributions."""
+
+    @classmethod
+    def dist(cls, w, comp_dists, **kwargs):
+        if not isinstance(comp_dists, tuple | list):
+            # comp_dists is a single component
+            comp_dists = [comp_dists]
+        elif len(comp_dists) == 1:
+            warnings.warn(
+                "Single component will be treated as a mixture across the last size dimension.\n"
+                "To disable this warning do not wrap the single component inside a list or tuple",
+                UserWarning,
+            )
+
+        if len(comp_dists) > 1:
+            if not (
+                all(comp_dist.dtype in continuous_types for comp_dist in comp_dists)
+                or all(comp_dist.dtype in discrete_types for comp_dist in comp_dists)
+            ):
+                raise ValueError(
+                    "All distributions in comp_dists must be either discrete or continuous.\n"
+                    "See the following issue for more information: https://github.com/pymc-devs/pymc/issues/4511."
+                )
+
+        # Check that components are not associated with a registered variable in the model
+        components_ndim_supp = set()
+        for dist in comp_dists:
+            if not isinstance(dist, TensorVariable) or not isinstance(
+                dist.owner.op, RandomVariable | SymbolicRandomVariable
+            ):
+                raise ValueError(
+                    f"Component dist must be a distribution created via the `.dist()` API, got {type(dist)}"
+                )
+            check_dist_not_registered(dist)
+            components_ndim_supp.add(dist.owner.op.ndim_supp)
+
+        if len(components_ndim_supp) > 1:
+            raise ValueError(
+                f"Mixture components must all have the same support dimensionality, got {components_ndim_supp}"
+            )
+
+        w = pt.as_tensor_variable(w)
+        return super().dist([w, *comp_dists], **kwargs)
+
+
+@_change_dist_size.register(_BaseMixtureRV)
+def change_mixture_size(op, dist, new_size, expand=False):
+    rng, weights, *components = dist.owner.inputs
+
+    if expand:
+        component = components[0]
+        # Old size is equal to `shape[:-ndim_supp]`, with care needed for `ndim_supp == 0`
+        size_dims = component.ndim - component.owner.op.ndim_supp
+        if len(components) == 1:
+            # If we have a single component, new size should ignore the mixture axis
+            # dimension, as that is not touched by `_resize_components`
+            size_dims -= 1
+        old_size = components[0].shape[:size_dims]
+        new_size = tuple(new_size) + tuple(old_size)
+
+    return op.rv_op(weights, *components, size=new_size)
+
+
+@_support_point.register(_BaseMixtureRV)
+def mixture_support_point(op, rv, rng, weights, *components):
+    ndim_supp = components[0].owner.op.ndim_supp
+    weights = pt.shape_padright(weights, ndim_supp)
+    mix_axis = -ndim_supp - 1
+
+    if len(components) == 1:
+        support_point_components = support_point(components[0])
+
+    else:
+        support_point_components = pt.stack(
+            [support_point(component) for component in components],
+            axis=mix_axis,
+        )
+
+    mix_support_point = pt.sum(weights * support_point_components, axis=mix_axis)
+    if components[0].dtype in discrete_types:
+        mix_support_point = pt.round(mix_support_point)
+    return mix_support_point
+
+
+@_logcdf.register(_BaseMixtureRV)
+def mixture_logcdf(op, value, rng, weights, *components, **kwargs):
+    # single component
+    if len(components) == 1:
+        # Need to broadcast value across mixture axis
+        mix_axis = -components[0].owner.op.ndim_supp - 1
+        components_logcdf = _logcdf_helper(components[0], pt.expand_dims(value, mix_axis))
+    else:
+        components_logcdf = pt.stack(
+            [_logcdf_helper(component, value) for component in components],
+            axis=-1,
+        )
+
+    mix_logcdf = pt.logsumexp(pt.log(weights) + components_logcdf, axis=-1)
+
+    mix_logcdf = check_parameters(
+        mix_logcdf,
+        0 <= weights,
+        weights <= 1,
+        pt.isclose(pt.sum(weights, axis=-1), 1),
+        msg="0 <= weights <= 1, sum(weights) == 1",
+    )
+
+    return mix_logcdf
+
+
+# List of transforms that can be used by Mixture, either because they do not require
+# special handling or because we have custom logic to enable them. If new default
+# transforms are implemented, this list and function should be updated
+allowed_default_mixture_transforms = (
+    transforms.CholeskyCovPacked,
+    transforms.CircularTransform,
+    transforms.IntervalTransform,
+    transforms.LogTransform,
+    transforms.LogExpM1,
+    transforms.LogOddsTransform,
+    transforms.Ordered,
+    transforms.SimplexTransform,
+    transforms.SumTo1,
+)
+
+
+class MixtureTransformWarning(UserWarning):
+    pass
+
+
+@_default_transform.register(_BaseMixtureRV)
+def mixture_default_transform(op, rv):
+    def transform_warning():
+        warnings.warn(
+            f"No safe default transform found for Mixture distribution {rv}. This can "
+            "happen when components have different supports or default transforms.\n"
+            "If appropriate, you can specify a custom transform for more efficient sampling.",
+            MixtureTransformWarning,
+            stacklevel=2,
+        )
+
+    rng, weights, *components = rv.owner.inputs
+
+    default_transforms = [
+        _default_transform(component.owner.op, component) for component in components
+    ]
+
+    # If there are more than one type of default transforms, we do not apply any
+    if len({type(transform) for transform in default_transforms}) != 1:
+        transform_warning()
+        return None
+
+    default_transform = default_transforms[0]
+
+    if default_transform is None:
+        return None
+
+    if not isinstance(default_transform, allowed_default_mixture_transforms):
+        transform_warning()
+        return None
+
+    if isinstance(default_transform, IntervalTransform):
+        # If there are more than one component, we need to check the IntervalTransform
+        # of the components are actually equivalent (e.g., we don't have an
+        # Interval(0, 1), and an Interval(0, 2)).
+        if len(default_transforms) > 1:
+            value = rv.type()
+            backward_expressions = [
+                transform.backward(value, *component.owner.inputs)
+                for transform, component in zip(default_transforms, components)
+            ]
+            for expr1, expr2 in itertools.pairwise(backward_expressions):
+                if not equal_computations([expr1], [expr2]):
+                    transform_warning()
+                    return None
+
+        # We need to create a new IntervalTransform that expects the Mixture inputs
+        args_fn = default_transform.args_fn
+
+        def mixture_args_fn(rng, weights, *components):
+            # We checked that the interval transforms of each component are equivalent,
+            # so we can just pass the inputs of the first component
+            return args_fn(*components[0].owner.inputs)
+
+        return IntervalTransform(args_fn=mixture_args_fn)
+
+    else:
+        return default_transform
+
+
+class MixtureRV(_BaseMixtureRV):
+    _print_name = ("Mixture", "\\operatorname{Mixture}")
+
+
+class Mixture(_BaseMixtureDistribution):
     R"""
     Mixture distribution.
 
@@ -270,74 +463,12 @@ class Mixture(Distribution):
             like = pm.Mixture("like", w=w, comp_dists=components, observed=data)
     """
 
-    rv_type = MarginalMixtureRV
-    rv_op = MarginalMixtureRV.rv_op
-
-    @classmethod
-    def dist(cls, w, comp_dists, **kwargs):
-        if not isinstance(comp_dists, tuple | list):
-            # comp_dists is a single component
-            comp_dists = [comp_dists]
-        elif len(comp_dists) == 1:
-            warnings.warn(
-                "Single component will be treated as a mixture across the last size dimension.\n"
-                "To disable this warning do not wrap the single component inside a list or tuple",
-                UserWarning,
-            )
-
-        if len(comp_dists) > 1:
-            if not (
-                all(comp_dist.dtype in continuous_types for comp_dist in comp_dists)
-                or all(comp_dist.dtype in discrete_types for comp_dist in comp_dists)
-            ):
-                raise ValueError(
-                    "All distributions in comp_dists must be either discrete or continuous.\n"
-                    "See the following issue for more information: https://github.com/pymc-devs/pymc/issues/4511."
-                )
-
-        # Check that components are not associated with a registered variable in the model
-        components_ndim_supp = set()
-        for dist in comp_dists:
-            # TODO: Allow these to not be a RandomVariable as long as we can call `ndim_supp` on them
-            #  and resize them
-            if not isinstance(dist, TensorVariable) or not isinstance(
-                dist.owner.op, RandomVariable | SymbolicRandomVariable
-            ):
-                raise ValueError(
-                    f"Component dist must be a distribution created via the `.dist()` API, got {type(dist)}"
-                )
-            check_dist_not_registered(dist)
-            components_ndim_supp.add(dist.owner.op.ndim_supp)
-
-        if len(components_ndim_supp) > 1:
-            raise ValueError(
-                f"Mixture components must all have the same support dimensionality, got {components_ndim_supp}"
-            )
-
-        w = pt.as_tensor_variable(w)
-        return super().dist([w, *comp_dists], **kwargs)
+    rv_type = MixtureRV
+    rv_op = MixtureRV.rv_op
 
 
-@_change_dist_size.register(MarginalMixtureRV)
-def change_marginal_mixture_size(op, dist, new_size, expand=False):
-    rng, weights, *components = dist.owner.inputs
-
-    if expand:
-        component = components[0]
-        # Old size is equal to `shape[:-ndim_supp]`, with care needed for `ndim_supp == 0`
-        size_dims = component.ndim - component.owner.op.ndim_supp
-        if len(components) == 1:
-            # If we have a single component, new size should ignore the mixture axis
-            # dimension, as that is not touched by `_resize_components`
-            size_dims -= 1
-        old_size = components[0].shape[:size_dims]
-        new_size = tuple(new_size) + tuple(old_size)
-
-    return Mixture.rv_op(weights, *components, size=new_size)
-
-
-@_logprob.register(MarginalMixtureRV)
-def marginal_mixture_logprob(op, values, rng, weights, *components, **kwargs):
+@_logprob.register(MixtureRV)
+def mixture_logprob(op, values, rng, weights, *components, **kwargs):
     (value,) = values
 
     # single component
@@ -362,133 +493,6 @@ def marginal_mixture_logprob(op, values, rng, weights, *components, **kwargs):
     )
 
     return mix_logp
-
-
-@_logcdf.register(MarginalMixtureRV)
-def marginal_mixture_logcdf(op, value, rng, weights, *components, **kwargs):
-    # single component
-    if len(components) == 1:
-        # Need to broadcast value across mixture axis
-        mix_axis = -components[0].owner.op.ndim_supp - 1
-        components_logcdf = _logcdf_helper(components[0], pt.expand_dims(value, mix_axis))
-    else:
-        components_logcdf = pt.stack(
-            [_logcdf_helper(component, value) for component in components],
-            axis=-1,
-        )
-
-    mix_logcdf = pt.logsumexp(pt.log(weights) + components_logcdf, axis=-1)
-
-    mix_logcdf = check_parameters(
-        mix_logcdf,
-        0 <= weights,
-        weights <= 1,
-        pt.isclose(pt.sum(weights, axis=-1), 1),
-        msg="0 <= weights <= 1, sum(weights) == 1",
-    )
-
-    return mix_logcdf
-
-
-@_support_point.register(MarginalMixtureRV)
-def marginal_mixture_support_point(op, rv, rng, weights, *components):
-    ndim_supp = components[0].owner.op.ndim_supp
-    weights = pt.shape_padright(weights, ndim_supp)
-    mix_axis = -ndim_supp - 1
-
-    if len(components) == 1:
-        support_point_components = support_point(components[0])
-
-    else:
-        support_point_components = pt.stack(
-            [support_point(component) for component in components],
-            axis=mix_axis,
-        )
-
-    mix_support_point = pt.sum(weights * support_point_components, axis=mix_axis)
-    if components[0].dtype in discrete_types:
-        mix_support_point = pt.round(mix_support_point)
-    return mix_support_point
-
-
-# List of transforms that can be used by Mixture, either because they do not require
-# special handling or because we have custom logic to enable them. If new default
-# transforms are implemented, this list and function should be updated
-allowed_default_mixture_transforms = (
-    transforms.CholeskyCovPacked,
-    transforms.CircularTransform,
-    transforms.IntervalTransform,
-    transforms.LogTransform,
-    transforms.LogExpM1,
-    transforms.LogOddsTransform,
-    transforms.Ordered,
-    transforms.SimplexTransform,
-    transforms.SumTo1,
-)
-
-
-class MixtureTransformWarning(UserWarning):
-    pass
-
-
-@_default_transform.register(MarginalMixtureRV)
-def marginal_mixture_default_transform(op, rv):
-    def transform_warning():
-        warnings.warn(
-            f"No safe default transform found for Mixture distribution {rv}. This can "
-            "happen when components have different supports or default transforms.\n"
-            "If appropriate, you can specify a custom transform for more efficient sampling.",
-            MixtureTransformWarning,
-            stacklevel=2,
-        )
-
-    rng, weights, *components = rv.owner.inputs
-
-    default_transforms = [
-        _default_transform(component.owner.op, component) for component in components
-    ]
-
-    # If there are more than one type of default transforms, we do not apply any
-    if len({type(transform) for transform in default_transforms}) != 1:
-        transform_warning()
-        return None
-
-    default_transform = default_transforms[0]
-
-    if default_transform is None:
-        return None
-
-    if not isinstance(default_transform, allowed_default_mixture_transforms):
-        transform_warning()
-        return None
-
-    if isinstance(default_transform, IntervalTransform):
-        # If there are more than one component, we need to check the IntervalTransform
-        # of the components are actually equivalent (e.g., we don't have an
-        # Interval(0, 1), and an Interval(0, 2)).
-        if len(default_transforms) > 1:
-            value = rv.type()
-            backward_expressions = [
-                transform.backward(value, *component.owner.inputs)
-                for transform, component in zip(default_transforms, components)
-            ]
-            for expr1, expr2 in itertools.pairwise(backward_expressions):
-                if not equal_computations([expr1], [expr2]):
-                    transform_warning()
-                    return None
-
-        # We need to create a new IntervalTransform that expects the Mixture inputs
-        args_fn = default_transform.args_fn
-
-        def mixture_args_fn(rng, weights, *components):
-            # We checked that the interval transforms of each component are equivalent,
-            # so we can just pass the inputs of the first component
-            return args_fn(*components[0].owner.inputs)
-
-        return IntervalTransform(args_fn=mixture_args_fn)
-
-    else:
-        return default_transform
 
 
 class NormalMixture:
@@ -799,34 +803,65 @@ class ZeroInflatedNegativeBinomial:
         )
 
 
-def _hurdle_mixture(*, name, nonzero_p, nonzero_dist, dtype, max_n_steps=10_000, **kwargs):
-    """Create a hurdle mixtures (helper function).
+class _HurdleRV(_BaseMixtureRV):
+    _print_name = ("Hurdle", "\\operatorname{Hurdle}")
 
-    If name is `None`, this function returns an unregistered variable
 
-    In hurdle models, the zeros come from a completely different process than the rest of the data.
-    In other words, the zeros are not inflated, they come from a different process.
-    """
-    if dtype == "float":
-        zero = 0.0
-        lower = np.finfo(pytensor.config.floatX).eps
-    elif dtype == "int":
-        zero = 0
-        lower = 1
-    else:
-        raise ValueError("dtype must be 'float' or 'int'")
+class _Hurdle(_BaseMixtureDistribution):
+    rv_type = _HurdleRV
+    rv_op = _HurdleRV.rv_op
 
-    nonzero_p = pt.as_tensor_variable(nonzero_p)
-    weights = pt.stack([1 - nonzero_p, nonzero_p], axis=-1)
-    comp_dists = [
-        DiracDelta.dist(zero),
-        Truncated.dist(nonzero_dist, lower=lower, max_n_steps=max_n_steps),
-    ]
+    @classmethod
+    def _create(cls, *, name, nonzero_p, nonzero_dist, max_n_steps=10_000, **kwargs):
+        """Create a hurdle mixture (helper function).
 
-    if name is not None:
-        return Mixture(name, weights, comp_dists, **kwargs)
-    else:
-        return Mixture.dist(weights, comp_dists, **kwargs)
+        If name is `None`, this function returns an unregistered variable
+
+        In hurdle models, the zeros come from a completely different process than the rest of the data.
+        In other words, the zeros are not inflated, they come from a different process.
+
+        Note: this is invalid for discrete nonzero distributions with mass below 0, as we simply truncate[lower=1].
+        """
+        dtype = nonzero_dist.dtype
+
+        if dtype.startswith("int"):
+            # Need to truncate the distribution to exclude zero.
+            # Continuous distributions have "zero" mass at zero (and anywhere else), so can be used as is.
+            nonzero_dist = Truncated.dist(nonzero_dist, lower=1, max_n_steps=max_n_steps)
+        elif not dtype.startswith("float"):
+            raise ValueError(f"nonzero_dist dtype must be 'float' or 'int', got {dtype}")
+
+        nonzero_p = pt.as_tensor_variable(nonzero_p)
+        weights = pt.stack([1 - nonzero_p, nonzero_p], axis=-1)
+        comp_dists = [
+            DiracDelta.dist(np.asarray(0, dtype=dtype)),
+            nonzero_dist,
+        ]
+
+        if name is not None:
+            return cls(name, weights, comp_dists, **kwargs)
+        else:
+            return cls.dist(weights, comp_dists, **kwargs)
+
+
+@_logprob.register(_HurdleRV)
+def marginal_hurdle_logprob(op, values, rng, weights, zero_dist, dist, **kwargs):
+    (value,) = values
+
+    psi = weights[..., 1]
+
+    hurdle_logp = pt.where(
+        pt.eq(value, 0),
+        pt.log(1 - psi),
+        pt.log(psi) + logp(dist, value),
+    )
+
+    return check_parameters(
+        hurdle_logp,
+        0 <= psi,
+        psi <= 1,
+        msg="0 <= psi <= 1",
+    )
 
 
 class HurdlePoisson:
@@ -864,14 +899,20 @@ class HurdlePoisson:
     """
 
     def __new__(cls, name, psi, mu, **kwargs):
-        return _hurdle_mixture(
-            name=name, nonzero_p=psi, nonzero_dist=Poisson.dist(mu=mu), dtype="int", **kwargs
+        return _Hurdle._create(
+            name=name,
+            nonzero_p=psi,
+            nonzero_dist=Poisson.dist(mu=mu),
+            **kwargs,
         )
 
     @classmethod
     def dist(cls, psi, mu, **kwargs):
-        return _hurdle_mixture(
-            name=None, nonzero_p=psi, nonzero_dist=Poisson.dist(mu=mu), dtype="int", **kwargs
+        return _Hurdle._create(
+            name=None,
+            nonzero_p=psi,
+            nonzero_dist=Poisson.dist(mu=mu),
+            **kwargs,
         )
 
 
@@ -914,21 +955,19 @@ class HurdleNegativeBinomial:
     """
 
     def __new__(cls, name, psi, mu=None, alpha=None, p=None, n=None, **kwargs):
-        return _hurdle_mixture(
+        return _Hurdle._create(
             name=name,
             nonzero_p=psi,
             nonzero_dist=NegativeBinomial.dist(mu=mu, alpha=alpha, p=p, n=n),
-            dtype="int",
             **kwargs,
         )
 
     @classmethod
     def dist(cls, psi, mu=None, alpha=None, p=None, n=None, **kwargs):
-        return _hurdle_mixture(
+        return _Hurdle._create(
             name=None,
             nonzero_p=psi,
             nonzero_dist=NegativeBinomial.dist(mu=mu, alpha=alpha, p=p, n=n),
-            dtype="int",
             **kwargs,
         )
 
@@ -963,24 +1002,28 @@ class HurdleGamma:
         Alternative shape parameter (mu > 0).
     sigma : tensor_like of float, optional
         Alternative scale parameter (sigma > 0).
+
+    .. warning::
+        HurdleGamma distributions cannot be sampled correctly with MCMC methods,
+        as this would require a specialized step sampler. They are intended to be used as
+        observed variables, and/or sampled exclusively with forward methods like
+        `sample_prior_predictive` and `sample_posterior_predictive`.
     """
 
     def __new__(cls, name, psi, alpha=None, beta=None, mu=None, sigma=None, **kwargs):
-        return _hurdle_mixture(
+        return _Hurdle._create(
             name=name,
             nonzero_p=psi,
             nonzero_dist=Gamma.dist(alpha=alpha, beta=beta, mu=mu, sigma=sigma),
-            dtype="float",
             **kwargs,
         )
 
     @classmethod
     def dist(cls, psi, alpha=None, beta=None, mu=None, sigma=None, **kwargs):
-        return _hurdle_mixture(
+        return _Hurdle._create(
             name=None,
             nonzero_p=psi,
             nonzero_dist=Gamma.dist(alpha=alpha, beta=beta, mu=mu, sigma=sigma),
-            dtype="float",
             **kwargs,
         )
 
@@ -1015,23 +1058,27 @@ class HurdleLogNormal:
     tau : tensor_like of float, optional
         Scale parameter (tau > 0). (only required if sigma is not specified).
         Defaults to 1.
+
+    .. warning::
+        HurdleLogNormal distributions cannot be sampled correctly with MCMC methods,
+        as this would require a specialized step sampler. They are intended to be used as
+        observed variables, and/or sampled exclusively with forward methods like
+        `sample_prior_predictive` and `sample_posterior_predictive`.
     """
 
     def __new__(cls, name, psi, mu=0, sigma=None, tau=None, **kwargs):
-        return _hurdle_mixture(
+        return _Hurdle._create(
             name=name,
             nonzero_p=psi,
             nonzero_dist=LogNormal.dist(mu=mu, sigma=sigma, tau=tau),
-            dtype="float",
             **kwargs,
         )
 
     @classmethod
     def dist(cls, psi, mu=0, sigma=None, tau=None, **kwargs):
-        return _hurdle_mixture(
+        return _Hurdle._create(
             name=None,
             nonzero_p=psi,
             nonzero_dist=LogNormal.dist(mu=mu, sigma=sigma, tau=tau),
-            dtype="float",
             **kwargs,
         )

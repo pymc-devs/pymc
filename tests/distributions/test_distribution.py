@@ -92,8 +92,14 @@ def test_all_distributions_have_support_points():
 
     dists = (getattr(dist_module, dist) for dist in dist_module.__all__)
     dists = (dist for dist in dists if isinstance(dist, DistributionMeta))
+    generic_func = _support_point.dispatch(object)
     missing_support_points = {
-        dist for dist in dists if getattr(dist, "rv_type", None) not in _support_point.registry
+        dist
+        for dist in dists
+        if (
+            getattr(dist, "rv_type", None) is not None
+            and _support_point.dispatch(dist.rv_type) is generic_func
+        )
     }
 
     # Ignore super classes
