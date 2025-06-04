@@ -49,13 +49,12 @@ from pymc.distributions import (
     Poisson,
     StickBreakingWeights,
     Triangular,
-    Truncated,
     Uniform,
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
 )
-from pymc.distributions.mixture import MixtureTransformWarning
+from pymc.distributions.mixture import MixtureTransformWarning, _Hurdle
 from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.logprob.basic import logp
@@ -1563,26 +1562,24 @@ class TestZeroInflatedMixture:
         assert x.eval().shape == (3,)
 
 
-class TestHurdleMixtures:
+class TestHurdleDistributions:
     @staticmethod
-    def check_hurdle_mixture_graph(dist):
+    def check_hurdle_graph(dist):
         # Assert it's a mixture
-        assert isinstance(dist.owner.op, Mixture)
+        assert isinstance(dist.owner.op, _Hurdle)
 
         # Extract the distribution for zeroes and nonzeroes
         zero_dist, nonzero_dist = dist.owner.inputs[-2:]
 
         # Assert ops are of the right type
         assert isinstance(zero_dist.owner.op, DiracDelta)
-        assert isinstance(nonzero_dist.owner.op, Truncated)
-
         return zero_dist, nonzero_dist
 
     def test_hurdle_poisson_graph(self):
         # There's nothing special in these values
         psi, mu = 0.3, 4
         dist = HurdlePoisson.dist(psi=psi, mu=mu)
-        _, nonzero_dist = self.check_hurdle_mixture_graph(dist)
+        _, nonzero_dist = self.check_hurdle_graph(dist)
 
         # Assert the truncated distribution is of the right type
         assert isinstance(nonzero_dist.owner.op.base_rv_op, Poisson)
@@ -1593,7 +1590,7 @@ class TestHurdleMixtures:
     def test_hurdle_negativebinomial_graph(self):
         psi, p, n = 0.2, 0.6, 10
         dist = HurdleNegativeBinomial.dist(psi=psi, p=p, n=n)
-        _, nonzero_dist = self.check_hurdle_mixture_graph(dist)
+        _, nonzero_dist = self.check_hurdle_graph(dist)
 
         assert isinstance(nonzero_dist.owner.op.base_rv_op, NegativeBinomial)
         assert nonzero_dist.owner.inputs[-4].data == n
@@ -1602,22 +1599,24 @@ class TestHurdleMixtures:
     def test_hurdle_gamma_graph(self):
         psi, alpha, beta = 0.25, 3, 4
         dist = HurdleGamma.dist(psi=psi, alpha=alpha, beta=beta)
-        _, nonzero_dist = self.check_hurdle_mixture_graph(dist)
+        _, nonzero_dist = self.check_hurdle_graph(dist)
 
         # Under the hood it uses the shape-scale parametrization of the Gamma distribution.
         # So the second value is the reciprocal of the rate (i.e. 1 / beta)
-        assert isinstance(nonzero_dist.owner.op.base_rv_op, Gamma)
-        assert nonzero_dist.owner.inputs[-4].data == alpha
-        assert nonzero_dist.owner.inputs[-3].eval() == 1 / beta
+        assert isinstance(nonzero_dist.owner.op, Gamma)
+        alpha_param, reciprocal_beta_param = nonzero_dist.owner.op.dist_params(nonzero_dist.owner)
+        assert alpha_param.data == alpha
+        assert reciprocal_beta_param.eval() == 1 / beta
 
     def test_hurdle_lognormal_graph(self):
         psi, mu, sigma = 0.1, 2, 2.5
         dist = HurdleLogNormal.dist(psi=psi, mu=mu, sigma=sigma)
-        _, nonzero_dist = self.check_hurdle_mixture_graph(dist)
+        _, nonzero_dist = self.check_hurdle_graph(dist)
 
-        assert isinstance(nonzero_dist.owner.op.base_rv_op, LogNormal)
-        assert nonzero_dist.owner.inputs[-4].data == mu
-        assert nonzero_dist.owner.inputs[-3].data == sigma
+        assert isinstance(nonzero_dist.owner.op, LogNormal)
+        mu_param, sigma_param = nonzero_dist.owner.op.dist_params(nonzero_dist.owner)
+        assert mu_param.data == mu
+        assert sigma_param.data == sigma
 
     @pytest.mark.parametrize(
         "dist, psi, non_psi_args",
@@ -1699,11 +1698,7 @@ class TestHurdleMixtures:
             if value == 0:
                 return np.log(1 - psi)
             else:
-                return (
-                    np.log(psi)
-                    + st.gamma.logpdf(value, alpha, scale=1.0 / beta)
-                    - np.log(1 - st.gamma.cdf(np.finfo(float).eps, alpha, scale=1.0 / beta))
-                )
+                return np.log(psi) + st.gamma.logpdf(value, alpha, scale=1.0 / beta)
 
         check_logp(HurdleGamma, Rplus, {"psi": Unit, "alpha": Rplusbig, "beta": Rplusbig}, logp_fn)
 
@@ -1712,10 +1707,6 @@ class TestHurdleMixtures:
             if value == 0:
                 return np.log(1 - psi)
             else:
-                return (
-                    np.log(psi)
-                    + st.lognorm.logpdf(value, sigma, 0, np.exp(mu))
-                    - np.log(1 - st.lognorm.cdf(np.finfo(float).eps, sigma, 0, np.exp(mu)))
-                )
+                return np.log(psi) + st.lognorm.logpdf(value, sigma, 0, np.exp(mu))
 
         check_logp(HurdleLogNormal, Rplus, {"psi": Unit, "mu": R, "sigma": Rplusbig}, logp_fn)
