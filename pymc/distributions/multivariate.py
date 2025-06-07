@@ -347,7 +347,7 @@ def precision_mv_normal_logp(op: PrecisionMvNormalRV, value, rng, size, mean, ta
     delta = value - mean
     quadratic_form = delta.T @ tau @ delta
     logdet, posdef = _logdet_from_cholesky(nan_lower_cholesky(tau))
-    logp = -0.5 * (k * pt.log(2 * np.pi) + quadratic_form) + logdet
+    logp = -0.5 * (k * pt.log(2 * np.pi) + quadratic_form + logdet)
 
     return check_parameters(
         logp,
