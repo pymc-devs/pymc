@@ -30,7 +30,6 @@ from rich.table import Column
 import pymc as pm
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
-from pymc.initial_point import PointType
 from pymc.pytensorf import (
     CallableTensor,
     compile,
@@ -163,7 +162,6 @@ class Metropolis(ArrayStepShared):
         model=None,
         mode=None,
         rng=None,
-        initial_point: PointType | None = None,
         compile_kwargs: dict | None = None,
         blocked: bool = False,
     ):
@@ -194,8 +192,7 @@ class Metropolis(ArrayStepShared):
             :py:func:`pymc.util.get_random_generator` for more information.
         """
         model = pm.modelcontext(model)
-        if initial_point is None:
-            initial_point = model.initial_point()
+        initial_point = model.initial_point()
 
         if vars is None:
             vars = model.value_vars
@@ -466,7 +463,6 @@ class BinaryMetropolis(ArrayStep):
         tune_interval=100,
         model=None,
         rng=None,
-        initial_point: PointType | None = None,
         compile_kwargs: dict | None = None,
         blocked: bool = True,
     ):
@@ -591,7 +587,6 @@ class BinaryGibbsMetropolis(ArrayStep):
         transit_p=0.8,
         model=None,
         rng=None,
-        initial_point: PointType | None = None,
         compile_kwargs: dict | None = None,
         blocked: bool = True,
     ):
@@ -605,8 +600,7 @@ class BinaryGibbsMetropolis(ArrayStep):
 
         vars = get_value_vars_from_user_vars(vars, model)
 
-        if initial_point is None:
-            initial_point = model.initial_point()
+        initial_point = model.initial_point()
         self.dim = sum(initial_point[v.name].size for v in vars)
 
         if order == "random":
@@ -713,7 +707,6 @@ class CategoricalGibbsMetropolis(ArrayStep):
         order="random",
         model=None,
         rng: RandomGenerator = None,
-        initial_point: PointType | None = None,
         compile_kwargs: dict | None = None,
         blocked: bool = True,
     ):
@@ -721,8 +714,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         vars = get_value_vars_from_user_vars(vars, model)
 
-        if initial_point is None:
-            initial_point = model.initial_point()
+        initial_point = model.initial_point()
 
         dimcats: list[tuple[int, int]] = []
         # The above variable is a list of pairs (aggregate dimension, number
@@ -948,13 +940,11 @@ class DEMetropolis(PopulationArrayStepShared):
         model=None,
         mode=None,
         rng=None,
-        initial_point: PointType | None = None,
         compile_kwargs: dict | None = None,
         blocked: bool = True,
     ):
         model = pm.modelcontext(model)
-        if initial_point is None:
-            initial_point = model.initial_point()
+        initial_point = model.initial_point()
         initial_values_size = sum(initial_point[n.name].size for n in model.value_vars)
 
         if vars is None:
@@ -1118,15 +1108,13 @@ class DEMetropolisZ(ArrayStepShared):
         tune_interval=100,
         tune_drop_fraction: float = 0.9,
         model=None,
-        initial_point: PointType | None = None,
         compile_kwargs: dict | None = None,
         mode=None,
         rng=None,
         blocked: bool = True,
     ):
         model = pm.modelcontext(model)
-        if initial_point is None:
-            initial_point = model.initial_point()
+        initial_point = model.initial_point()
         initial_values_size = sum(initial_point[n.name].size for n in model.value_vars)
 
         if vars is None:

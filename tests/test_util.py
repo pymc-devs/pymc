@@ -30,7 +30,7 @@ from pymc.util import (
     get_value_vars_from_user_vars,
     hash_key,
     hashable,
-    locally_cachedmethod,
+    memoize,
 )
 
 
@@ -138,7 +138,7 @@ def test_hash_key():
     assert some_func(b1) != some_func(b2)
 
     class TestClass:
-        @locally_cachedmethod
+        @memoize
         def some_method(self, x):
             return x
 

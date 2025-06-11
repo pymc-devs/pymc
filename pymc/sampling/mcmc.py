@@ -109,7 +109,6 @@ def instantiate_steppers(
     selected_steps: Mapping[type[BlockedStep], list[Any]],
     *,
     step_kwargs: dict[str, dict] | None = None,
-    initial_point: PointType | None = None,
     compile_kwargs: dict | None = None,
 ) -> Step | list[Step]:
     """Instantiate steppers assigned to the model variables.
@@ -141,9 +140,6 @@ def instantiate_steppers(
 
     used_keys = set()
     if selected_steps:
-        if initial_point is None:
-            initial_point = model.initial_point()
-
         for step_class, vars in selected_steps.items():
             if vars:
                 name = getattr(step_class, "name")
@@ -152,7 +148,6 @@ def instantiate_steppers(
                 step = step_class(
                     vars=vars,
                     model=model,
-                    initial_point=initial_point,
                     compile_kwargs=compile_kwargs,
                     **kwargs,
                 )
@@ -769,20 +764,8 @@ def sample(
     rngs = get_random_generator(random_seed).spawn(chains)
     random_seed_list = [rng.integers(2**30) for rng in rngs]
 
-    if not discard_tuned_samples and not return_inferencedata and not isinstance(trace, ZarrTrace):
-        warnings.warn(
-            "Tuning samples will be included in the returned `MultiTrace` object, which can lead to"
-            " complications in your downstream analysis. Please consider to switch to `InferenceData`:\n"
-            "`pm.sample(..., return_inferencedata=True)`",
-            UserWarning,
-            stacklevel=2,
-        )
-
     # small trace warning
-    if draws == 0:
-        msg = "Tuning was enabled throughout the whole trace."
-        _log.warning(msg)
-    elif draws < 100:
+    if 0 < draws < 100:
         msg = f"Only {draws} samples per chain. Reliable r-hat and ESS diagnostics require longer chains for accurate estimate."
         _log.warning(msg)
 
@@ -858,7 +841,6 @@ def sample(
             steps=provided_steps,
             selected_steps=selected_steps,
             step_kwargs=kwargs,
-            initial_point=initial_points[0],
             compile_kwargs=compile_kwargs,
         )
         if isinstance(step, list):
@@ -1095,31 +1077,6 @@ def _sample_return(
                 return drop_warning_stat(idata)
             return idata
     return mtrace
-
-
-def _check_start_shape(model, start: PointType):
-    """Check that the prior evaluations and initial points have identical shapes.
-
-    Parameters
-    ----------
-    model : pm.Model
-        The current model on context.
-    start : dict
-        The complete dictionary mapping (transformed) variable names to numeric initial values.
-    """
-    e = ""
-    try:
-        actual_shapes = model.eval_rv_shapes()
-    except NotImplementedError as ex:
-        warnings.warn(f"Unable to validate shapes: {ex.args[0]}", UserWarning)
-        return
-    for name, sval in start.items():
-        ashape = actual_shapes.get(name)
-        sshape = np.shape(sval)
-        if ashape != tuple(sshape):
-            e += f"\nExpected shape {ashape} for var '{name}', got: {sshape}"
-    if e != "":
-        raise ValueError(f"Bad shape in start point:{e}")
 
 
 def _sample_many(
@@ -1595,12 +1552,13 @@ def init_nuts(
             pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="relative"),
         ]
 
-    logp_dlogp_func = model.logp_dlogp_function(ravel_inputs=True, **compile_kwargs)
-    logp_dlogp_func.trust_input = True
+    logp_dlogp_func = model.logp_dlogp_function(
+        ravel_inputs=True, trust_input=True, **compile_kwargs
+    )
 
     def model_logp_fn(ip: PointType) -> np.ndarray:
         q, _ = DictToArrayBijection.map(ip)
-        return logp_dlogp_func([q], extra_vars={})[0]
+        return logp_dlogp_func(q)[0]
 
     initial_points = _init_jitter(
         model,
@@ -1726,14 +1684,7 @@ def init_nuts(
     else:
         raise ValueError(f"Unknown initializer: {init}.")
 
-    step = pm.NUTS(
-        potential=potential,
-        model=model,
-        rng=random_seed_list[0],
-        initial_point=initial_points[0],
-        logp_dlogp_func=logp_dlogp_func,
-        **kwargs,
-    )
+    step = pm.NUTS(potential=potential, model=model, rng=random_seed_list[0], **kwargs)
 
     # Filter deterministics from initial_points
     value_var_names = [var.name for var in model.value_vars]

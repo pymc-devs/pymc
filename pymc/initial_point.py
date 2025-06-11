@@ -28,9 +28,8 @@ from pymc.logprob.transforms import Transform
 from pymc.pytensorf import (
     SeedSequenceSeed,
     compile,
-    find_rng_nodes,
     replace_rng_nodes,
-    reseed_rngs,
+    seed_compiled_function,
     toposort_replace,
 )
 from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
@@ -167,7 +166,12 @@ def make_initial_point_fn(
     # Replace original rng shared variables so that we don't mess with them
     # when calling the final seeded function
     initial_values = replace_rng_nodes(initial_values)
-    func = compile(inputs=[], outputs=initial_values, mode=pytensor.compile.mode.FAST_COMPILE)
+    func = compile(
+        inputs=[],
+        outputs=initial_values,
+        mode=pytensor.compile.mode.FAST_COMPILE,
+        random_seed=False,
+    )
 
     varnames = []
     for var in model.free_RVs:
@@ -179,11 +183,9 @@ def make_initial_point_fn(
         varnames.append(name)
 
     def make_seeded_function(func):
-        rngs = find_rng_nodes(func.maker.fgraph.outputs)
-
         @functools.wraps(func)
         def inner(seed, *args, **kwargs):
-            reseed_rngs(rngs, seed)
+            seed_compiled_function(func, seed)
             values = func(*args, **kwargs)
             return dict(zip(varnames, values))
 

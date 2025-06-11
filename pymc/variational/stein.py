@@ -17,7 +17,7 @@ import pytensor.tensor as pt
 from pytensor.graph.replace import graph_replace
 
 from pymc.pytensorf import floatX
-from pymc.util import WithMemoization, locally_cachedmethod
+from pymc.util import WithMemoization, memoize
 from pymc.variational.opvi import node_property
 from pymc.variational.test_functions import rbf
 
@@ -93,6 +93,6 @@ class Stein(WithMemoization):
             )
         return sized_symbolic_logp / self.approx.symbolic_normalizing_constant
 
-    @locally_cachedmethod
+    @memoize
     def _kernel(self):
         return self._kernel_f(self.input_joint_matrix)

@@ -399,7 +399,7 @@ class WithMemoization:
         self.__dict__.update(state)
 
 
-def locally_cachedmethod(f):
+def memoize(f):
     from collections import defaultdict
 
     def self_cache_fn(f_name):
@@ -409,6 +409,16 @@ def locally_cachedmethod(f):
         return cf
 
     return cachedmethod(self_cache_fn(f.__name__), key=hash_key)(f)
+
+
+def invalidates_memoize(f):
+    @functools.wraps(f)
+    def wrapper_fn(self, *args, **kwargs):
+        if cache := getattr(self, "_cache", None):
+            cache.clear()
+        return f(self, *args, **kwargs)
+
+    return wrapper_fn
 
 
 def check_dist_not_registered(dist, model=None):
