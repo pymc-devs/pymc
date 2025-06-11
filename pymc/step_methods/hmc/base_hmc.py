@@ -22,7 +22,7 @@ from typing import Any, NamedTuple
 
 import numpy as np
 
-from pymc.blocking import DictToArrayBijection, PointType, RaveledVars, StatsType
+from pymc.blocking import DictToArrayBijection, RaveledVars, StatsType
 from pymc.exceptions import SamplingError
 from pymc.model import Point, modelcontext
 from pymc.pytensorf import floatX
@@ -98,7 +98,6 @@ class BaseHMC(GradientSharedStep):
         adapt_step_size=True,
         step_rand=None,
         rng=None,
-        initial_point: PointType | None = None,
         **pytensor_kwargs,
     ):
         """Set up Hamiltonian samplers with common structures.
@@ -144,7 +143,6 @@ class BaseHMC(GradientSharedStep):
             model=self._model,
             dtype=dtype,
             rng=rng,
-            initial_point=initial_point,
             **pytensor_kwargs,
         )
 
@@ -152,9 +150,7 @@ class BaseHMC(GradientSharedStep):
         self.Emax = Emax
         self.iter_count = 0
 
-        if initial_point is None:
-            initial_point = self._model.initial_point()
-
+        initial_point = self._model.initial_point()
         nuts_vars = [initial_point[v.name] for v in vars]
         size = sum(v.size for v in nuts_vars)
 

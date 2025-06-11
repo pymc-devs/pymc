@@ -36,6 +36,7 @@ from pytensor.graph.basic import (
     walk,
 )
 from pytensor.graph.fg import FunctionGraph, Output
+from pytensor.link.jax import JAXLinker
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
 from pytensor.tensor.basic import _as_tensor_variable
@@ -50,7 +51,7 @@ from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.exceptions import NotConstantValueError
-from pymc.util import makeiter
+from pymc.util import _get_seeds_per_chain, makeiter
 from pymc.vartypes import continuous_types, isgenerator, typefilter
 
 PotentialShapeType = int | np.ndarray | Sequence[int | Variable] | TensorVariable
@@ -59,7 +60,6 @@ PotentialShapeType = int | np.ndarray | Sequence[int | Variable] | TensorVariabl
 __all__ = [
     "CallableTensor",
     "compile",
-    "compile_pymc",
     "cont_inputs",
     "convert_data",
     "convert_observed_data",
@@ -424,10 +424,11 @@ def make_shared_replacements(point, vars, model):
     -------
     Dict of variable -> new shared variable
     """
-    othervars = set(model.value_vars) - set(vars)
+    vars_set = set(vars)
     return {
         var: pytensor.shared(point[var.name], var.name + "_shared", shape=var.type.shape)
-        for var in othervars
+        for var in model.value_vars
+        if var not in vars_set
     }
 
 
@@ -686,6 +687,27 @@ def reseed_rngs(
         rng.set_value(np.random.Generator(bit_generator), borrow=True)
 
 
+def seed_compiled_function(function, seed: SeedSequenceSeed):
+    rng_variables = [
+        inp
+        for inp in function.maker.fgraph.inputs
+        if isinstance(inp.type, RandomGeneratorSharedVariable)
+    ]
+    if rng_variables:
+        if isinstance(function.maker.linker, JAXLinker):
+            import jax
+
+            (int_seed,) = _get_seeds_per_chain(seed, 1)
+            rng_values = jax.random.split(jax.random.key(int_seed), len(rng_variables))
+        else:
+            rng_values = [
+                np.random.Generator(np.random.PCG64(sub_seed))
+                for sub_seed in np.random.SeedSequence(seed).spawn(len(rng_variables))
+            ]
+        for rng_variable, rng_value in zip(rng_variables, rng_values):
+            rng_variable.set_value(rng_value, borrow=True)
+
+
 def collect_default_updates_inner_fgraph(node: Apply) -> dict[Variable, Variable]:
     """Collect default updates from node with inner fgraph."""
     op = node.op
@@ -877,7 +899,7 @@ def collect_default_updates(
 def compile(
     inputs,
     outputs,
-    random_seed: SeedSequenceSeed = None,
+    random_seed: SeedSequenceSeed | bool = None,
     mode=None,
     **kwargs,
 ) -> Function:
@@ -926,8 +948,9 @@ def compile(
 
     # We always reseed random variables as this provides RNGs with no chances of collision
     if rng_updates:
-        rngs = cast(list[SharedVariable], list(rng_updates))
-        reseed_rngs(rngs, random_seed)
+        if random_seed is not False:
+            rngs = cast(list[SharedVariable], list(rng_updates))
+            reseed_rngs(rngs, random_seed)
 
     # If called inside a model context, see if check_bounds flag is set to False
     try:
@@ -952,14 +975,6 @@ def compile(
         **kwargs,
     )
     return pytensor_function
-
-
-def compile_pymc(*args, **kwargs):
-    warnings.warn(
-        "compile_pymc was renamed to compile. Old name will be removed in a future release of PyMC",
-        FutureWarning,
-    )
-    return compile(*args, **kwargs)
 
 
 def constant_fold(

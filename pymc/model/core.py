@@ -23,7 +23,6 @@ from collections.abc import Iterable, Sequence
 from typing import (
     Literal,
     cast,
-    overload,
 )
 
 import numpy as np
@@ -58,11 +57,10 @@ from pymc.pytensorf import (
     SeedSequenceSeed,
     compile,
     convert_observed_data,
-    gradient,
-    hessian,
     inputvars,
     join_nonshared_inputs,
     rewrite_pregrad,
+    seed_compiled_function,
 )
 from pymc.util import (
     UNSET,
@@ -73,6 +71,8 @@ from pymc.util import (
     get_transformed_name,
     get_value_vars_from_user_vars,
     get_var_name,
+    invalidates_memoize,
+    memoize,
     treedict,
     treelist,
 )
@@ -455,7 +455,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
     ):
         self.name = self._validate_name(name)
         self.check_bounds = check_bounds
-        self._parent = model if not isinstance(model, _UnsetType) else MODEL_MANAGER.parent_context
+        self.parent = model if not isinstance(model, _UnsetType) else MODEL_MANAGER.parent_context
+        self.isroot = self.parent is not None
 
         if coords_mutable is not None:
             warnings.warn(
@@ -515,20 +516,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return model
 
     @property
-    def parent(self):
-        return self._parent
-
-    @property
     def root(self):
         model = self
         while not model.isroot:
             model = model.parent
         return model
 
-    @property
-    def isroot(self):
-        return self.parent is None
-
+    @memoize
     def logp_dlogp_function(
         self,
         grad_vars=None,
@@ -574,7 +568,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             grad_vars,
             extra_vars_and_values,
             model=self,
-            initial_point=initial_point,
             ravel_inputs=ravel_inputs,
             **kwargs,
         )
@@ -641,6 +634,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             **compile_kwargs,
         )
 
+    @memoize
     def logp(
         self,
         vars: Variable | Sequence[Variable] | None = None,
@@ -720,18 +714,21 @@ class Model(WithMemoization, metaclass=ContextMeta):
         logp_scalar.name = logp_scalar_name
         return logp_scalar
 
+    @memoize
     def dlogp(
         self,
         vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
-    ) -> Variable:
+        ravel_outputs: bool = True,
+        return_logp: bool = False,
+    ) -> list[Variable] | Variable | tuple[Variable, list[Variable] | Variable]:
         """Gradient of the models log-probability w.r.t. ``vars``.
 
         Parameters
         ----------
-        vars : list of random variables or potential terms, optional
-            Compute the gradient with respect to those variables. If None, use all
-            free and observed random variables, as well as potential terms in model.
+        vars : list of random variables, optional
+            Compute the gradient with respect to those variables.
+            If None, consider all continuous free variables.
         jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
 
@@ -740,7 +737,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         dlogp graph
         """
         if vars is None:
-            value_vars = None
+            value_vars = self.continuous_value_vars
         else:
             if not isinstance(vars, list | tuple):
                 vars = [vars]
@@ -757,21 +754,27 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         cost = self.logp(jacobian=jacobian)
         cost = rewrite_pregrad(cost)
-        return gradient(cost, value_vars)
+        gradient = pt.grad(cost, value_vars)
+        if ravel_outputs:
+            gradient = pt.concatenate([g.reshape(-1) for g in gradient], axis=0)
+        if return_logp:
+            return cost, gradient
+        return gradient
 
+    @memoize
     def d2logp(
         self,
         vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
-        negate_output=True,
+        negate_output: bool | None = None,
     ) -> Variable:
-        """Hessian of the models log-probability w.r.t. ``vars``.
+        """Hessian of the models log-probability w.r.t. the flattened vector of ``vars``.
 
         Parameters
         ----------
-        vars : list of random variables or potential terms, optional
-            Compute the gradient with respect to those variables. If None, use all
-            free and observed random variables, as well as potential terms in model.
+        vars : list of random variables, optional
+            Compute the hessian with respect to those variables.
+            If None, consider all continuous free variables.
         jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
 
@@ -780,7 +783,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         d²logp graph
         """
         if vars is None:
-            value_vars = None
+            value_vars = self.continuous_value_vars
         else:
             if not isinstance(vars, list | tuple):
                 vars = [vars]
@@ -795,9 +798,26 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         f"Requested variable {var} not found among the model variables"
                     )
 
-        cost = self.logp(jacobian=jacobian)
-        cost = rewrite_pregrad(cost)
-        return hessian(cost, value_vars, negate_output=negate_output)
+        grad = self.dlogp(
+            vars=[self.values_to_rvs[value] for value in value_vars],
+            jacobian=jacobian,
+            ravel_outputs=True,
+        )
+        hess = jacobian(grad, value_vars, vectorize=True)
+        if negate_output is not None:
+            if negate_output:
+                warnings.warn(
+                    "negate_output is deprecated and will fail in a future release. To comply with the API change, set it to None and negate the result manually",
+                    FutureWarning,
+                )
+                hess = -hess
+            else:
+                warnings.warn(
+                    "negate_output is deprecated and will fail in a future release. To comply with the API change, set it to None. The result is not negated by default.",
+                    FutureWarning,
+                )
+
+        return hess
 
     @property
     def datalogp(self) -> Variable:
@@ -812,6 +832,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
     @property
     def varlogp_nojac(self) -> Variable:
         """PyTensor scalar of log-probability of the unobserved random variables (excluding deterministic) without jacobian term."""
+        warnings.warn(
+            "varlogp_nojac is deprecated, use `model.logp(vars=self.free_RVs, jacobian=False)`"
+        )
         return self.logp(vars=self.free_RVs, jacobian=False)
 
     @property
@@ -824,11 +847,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """PyTensor scalar of log-probability of the Potential terms."""
         # Convert random variables in Potential expression into their log-likelihood
         # inputs and apply their transforms, if any
-        potentials = self.replace_rvs_by_values(self.potentials)
-        if potentials:
-            return pt.sum([pt.sum(factor) for factor in potentials])
-        else:
-            return pt.constant(0.0)
+        return self.logp(vars=self.potentials)
 
     @property
     def value_vars(self):
@@ -903,6 +922,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self._dim_lengths
 
     def shape_from_dims(self, dims):
+        warnings.warn(
+            "model.shape_from_dims is deprecated and will be removed in a future release",
+            FutureWarning,
+        )
         shape = []
         if len(set(dims)) != len(dims):
             raise ValueError("Can not contain the same dimension name twice.")
@@ -921,7 +944,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self,
         name: str,
         values: Sequence | np.ndarray | None = None,
-        mutable: bool | None = None,
         *,
         length: int | Variable | None = None,
     ):
@@ -935,19 +957,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         values : optional, array_like
             Coordinate values or ``None`` (for auto-numbering).
             If ``None`` is passed, a ``length`` must be specified.
-        mutable : bool
-            Whether the created dimension should be resizable.
-            Default is False.
         length : optional, scalar
             A scalar of the dimensions length.
             Defaults to ``pytensor.tensor.constant(len(values))``.
         """
-        if mutable is not None:
-            warnings.warn(
-                "Coords are now always mutable. Specifying `mutable` will raise an error in a future release",
-                FutureWarning,
-            )
-
         if name in {"draw", "chain", "__sample__"}:
             raise ValueError(
                 "Dimensions can not be named `draw`, `chain` or `__sample__`, "
@@ -1026,6 +1039,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         dim_length.set_value(new_length)
         return
 
+    @memoize
+    def _make_initial_point(self):
+        return make_initial_point_fn(model=self, return_transformed=True)
+
     def initial_point(self, random_seed: SeedSequenceSeed = None) -> dict[str, np.ndarray]:
         """Compute the initial point of the model.
 
@@ -1039,9 +1056,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         ip : dict of {str : array_like}
             Maps names of transformed variables to numeric initial values in the transformed space.
         """
-        fn = make_initial_point_fn(model=self, return_transformed=True)
+        fn = self._make_initial_point()
         return Point(fn(random_seed), model=self)
 
+    @invalidates_memoize
     def set_initval(self, rv_var, initval):
         """Set an initial value (strategy) for a random variable."""
         if initval is not None and not isinstance(initval, Variable | str):
@@ -1185,6 +1203,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         shared_object.set_value(values)
 
+    @invalidates_memoize
     def register_rv(
         self,
         rv_var: RandomVariable,
@@ -1263,6 +1282,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return rv_var
 
+    @invalidates_memoize
     def make_obs_var(
         self,
         rv_var: TensorVariable,
@@ -1362,6 +1382,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return rv_var
 
+    @invalidates_memoize
     def create_value_var(
         self,
         rv_var: TensorVariable,
@@ -1444,11 +1465,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return value_var
 
+    @invalidates_memoize
     def register_data_var(self, data, dims=None):
         """Register a data variable with the model."""
         self.data_vars.append(data)
         self.add_named_variable(data, dims=dims)
 
+    @invalidates_memoize
     def add_named_variable(self, var, dims: tuple[str | None, ...] | None = None):
         """Add a random graph variable to the named variables of the model.
 
@@ -1566,6 +1589,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return clone_model(self)
 
+    @memoize
     def replace_rvs_by_values(
         self,
         graphs: Sequence[TensorVariable],
@@ -1590,27 +1614,39 @@ class Model(WithMemoization, metaclass=ContextMeta):
             rvs_to_transforms=self.rvs_to_transforms,
         )
 
-    @overload
-    def compile_fn(
+    @memoize
+    def _compile_fn(
         self,
         outs: Variable | Sequence[Variable],
         *,
         inputs: Sequence[Variable] | None = None,
         mode=None,
-        point_fn: Literal[True] = True,
+        borrow_inputs=False,
+        borrow_outputs=False,
         **kwargs,
-    ) -> PointFunc: ...
+    ) -> PointFunc | Function:
+        if inputs is None:
+            inputs = inputvars(outs)
 
-    @overload
-    def compile_fn(
-        self,
-        outs: Variable | Sequence[Variable],
-        *,
-        inputs: Sequence[Variable] | None = None,
-        mode=None,
-        point_fn: Literal[False],
-        **kwargs,
-    ) -> Function: ...
+        if borrow_inputs:
+            inputs = [pytensor.In(inp, borrow=True) for inp in inputs]
+
+        if borrow_outputs:
+            if isinstance(outs, list | tuple):
+                outs = [pytensor.Out(o, borrow=True) for o in outs]
+            else:
+                outs = pytensor.Out(outs, borrow=True)
+
+        with self:
+            return compile(
+                inputs,
+                outs,
+                allow_input_downcast=True,
+                accept_inplace=True,
+                mode=mode,
+                random_seed=False,
+                **kwargs,
+            )
 
     def compile_fn(
         self,
@@ -1619,6 +1655,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         inputs: Sequence[Variable] | None = None,
         mode=None,
         point_fn: bool = True,
+        borrow_inputs: bool = False,
+        borrow_outputs: bool = False,
         **kwargs,
     ) -> PointFunc | Function:
         """Compiles a PyTensor function.
@@ -1641,21 +1679,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
         -------
         Compiled PyTensor function
         """
-        if inputs is None:
-            inputs = inputvars(outs)
-
-        with self:
-            fn = compile(
-                inputs,
-                outs,
-                allow_input_downcast=True,
-                accept_inplace=True,
-                mode=mode,
-                **kwargs,
-            )
-
+        random_seed = kwargs.pop("random_seed", None)
+        fn = self._compile_fn(
+            outs,
+            inputs=inputs,
+            mode=mode,
+            point_fn=point_fn,
+            borrow_inputs=borrow_inputs,
+            borrow_outputs=borrow_outputs,
+            **kwargs,
+        )
+        seed_compiled_function(fn, random_seed)
         if point_fn:
-            return PointFunc(fn)
+            fn = PointFunc(fn)
         return fn
 
     def profile(
@@ -1695,28 +1731,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         )
         if point is None:
             point = self.initial_point()
+        point_values = point.values()
 
         for _ in range(n):
-            f(**point)
+            f(*point_values)
 
         return f.profile
-
-    def update_start_vals(self, a: dict[str, np.ndarray], b: dict[str, np.ndarray]):
-        r"""Update point `a` with `b`, without overwriting existing keys.
-
-        Values specified for transformed variables in `a` will be recomputed
-        conditional on the values of `b` and stored in `b`.
-
-        Parameters
-        ----------
-        a : dict
-
-        b : dict
-        """
-        raise FutureWarning(
-            "The `Model.update_start_vals` method was removed."
-            " To change initial values you may set the items of `Model.initial_values` directly."
-        )
 
     def eval_rv_shapes(self) -> dict[str, tuple[int, ...]]:
         """Evaluate shapes of untransformed AND transformed free variables.
@@ -1795,7 +1815,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     "You can call `model.debug()` for more details."
                 )
 
-    def point_logps(self, point=None, round_vals=2, **kwargs):
+    def point_logps(self, point=None, round_vals=2):
         """Compute the log probability of `point` for all random variables in the model.
 
         Parameters
@@ -1817,12 +1837,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
             point = self.initial_point()
 
         factors = self.basic_RVs + self.potentials
-        factor_logps_fn = [pt.sum(factor) for factor in self.logp(factors, sum=False)]
+        factor_logps_fn = self.compile_logp(factors, sum=False)
         return {
-            factor.name: np.round(np.asarray(factor_logp), round_vals)
+            factor.name: np.round(np.asarray(factor_logp.sum()), round_vals)
             for factor, factor_logp in zip(
                 factors,
-                self.compile_fn(factor_logps_fn, **kwargs)(point),
+                factor_logps_fn(point),
             )
         }
 
@@ -2048,6 +2068,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
             dpi=dpi,
         )
 
+    @invalidates_memoize
+    def clear_cache(self):
+        pass
+
 
 class BlockModelAccess(Model):
     """Can be used to prevent user access to Model contexts."""
@@ -2167,6 +2191,10 @@ def compile_fn(
     -------
     Compiled PyTensor function
     """
+    warnings.warn(
+        "compile_fn is deprecated. Use `model.compile_fn` or `pytensorf.compile` instead.",
+        FutureWarning,
+    )
     model = modelcontext(model)
     return model.compile_fn(
         outs,
