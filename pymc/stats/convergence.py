@@ -144,9 +144,15 @@ def warn_divergences(idata: arviz.InferenceData) -> list[SamplerWarning]:
     n_div = int(diverging.sum())
     if n_div == 0:
         return []
+
+    if n_div == 1:
+        verb, word = "was", "divergence"
+    else:
+        verb, word = "were", "divergences"
+
     warning = SamplerWarning(
         WarningType.DIVERGENCES,
-        f"There were {n_div} divergences after tuning. Increase `target_accept` or reparameterize.",
+        f"There {verb} {n_div} {word} after tuning. Increase `target_accept` or reparameterize.",
         "error",
     )
     return [warning]

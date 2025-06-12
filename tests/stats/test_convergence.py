@@ -16,19 +16,27 @@ import logging
 
 import arviz
 import numpy as np
+import pytest
 
 from pymc.stats import convergence
 
 
-def test_warn_divergences():
+@pytest.mark.parametrize(
+    "diverging, expected_phrase",
+    [
+        pytest.param([1, 0, 1, 0], "were 2 divergences after tuning", id="plural"),
+        pytest.param([1, 0, 0, 0], "was 1 divergence after tuning", id="singular"),
+    ],
+)
+def test_warn_divergences(diverging, expected_phrase):
     idata = arviz.from_dict(
         sample_stats={
-            "diverging": np.array([[1, 0, 1, 0], [0, 0, 0, 0]]).astype(bool),
+            "diverging": np.array([diverging, [0, 0, 0, 0]]).astype(bool),
         }
     )
     warns = convergence.warn_divergences(idata)
     assert len(warns) == 1
-    assert "2 divergences after tuning" in warns[0].message
+    assert expected_phrase in warns[0].message
 
 
 def test_warn_treedepth():
