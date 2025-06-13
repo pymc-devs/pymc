@@ -82,8 +82,8 @@ from pymc.util import (
     RandomState,
     WithMemoization,
     _get_seeds_per_chain,
-    locally_cachedmethod,
     makeiter,
+    memoize,
 )
 from pymc.variational.minibatch_rv import MinibatchRandomVariable, get_scaling
 from pymc.variational.updates import adagrad_window
@@ -150,12 +150,12 @@ def node_property(f):
         def wrapper(fn):
             ff = append_name(f)(fn)
             f_ = pytensor.config.change_flags(compute_test_value="off")(ff)
-            return property(locally_cachedmethod(f_))
+            return property(memoize(f_))
 
         return wrapper
     else:
         f_ = pytensor.config.change_flags(compute_test_value="off")(f)
-        return property(locally_cachedmethod(f_))
+        return property(memoize(f_))
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")

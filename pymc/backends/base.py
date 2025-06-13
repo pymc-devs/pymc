@@ -30,11 +30,9 @@ from typing import (
 )
 
 import numpy as np
-import pytensor
 
 from pymc.backends.report import SamplerReport
 from pymc.model import modelcontext
-from pymc.pytensorf import compile
 from pymc.util import get_var_name
 
 logger = logging.getLogger(__name__)
@@ -171,10 +169,14 @@ class BaseTrace(IBaseTrace):
 
         if fn is None:
             # borrow=True avoids deepcopy when inputs=output which is the case for untransformed value variables
-            fn = compile(
-                inputs=[pytensor.In(v, borrow=True) for v in model.value_vars],
-                outputs=[pytensor.Out(v, borrow=True) for v in vars],
+            fn = model.compile_fn(
+                inputs=model.value_vars,
+                outputs=vars,
                 on_unused_input="ignore",
+                random_seed=False,
+                borrow_inputs=True,
+                borrow_outputs=True,
+                wrap_point_fn=False,
             )
             fn.trust_input = True
 
