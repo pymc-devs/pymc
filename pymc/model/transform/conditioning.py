@@ -139,14 +139,14 @@ def do(
 
     Parameters
     ----------
-    model: PyMC Model
-    vars_to_interventions: Dict of variable or name to TensorLike
+    model : PyMC Model
+    vars_to_interventions : Dict of variable or name to TensorLike
         Dictionary that maps model variables (or names) to intervention expressions.
         Intervention expressions must have a shape and data type that is compatible
         with the original model variable.
-    make_interventions_shared: bool, defaults to True,
+    make_interventions_shared : bool, defaults to True,
         Whether to make constant interventions shared variables.
-    prune_vars: bool, defaults to False
+    prune_vars : bool, defaults to False
         Whether to prune model variables that are not connected to any observed variables,
         after the interventions.
 
