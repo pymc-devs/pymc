@@ -15,6 +15,7 @@
 """Functions for MCMC sampling."""
 
 import contextlib
+import itertools
 import logging
 import pickle
 import sys
@@ -111,6 +112,7 @@ def instantiate_steppers(
     step_kwargs: dict[str, dict] | None = None,
     initial_point: PointType | None = None,
     compile_kwargs: dict | None = None,
+    step_id_generator: Iterator[int] | None = None,
 ) -> Step | list[Step]:
     """Instantiate steppers assigned to the model variables.
 
@@ -139,6 +141,9 @@ def instantiate_steppers(
     if step_kwargs is None:
         step_kwargs = {}
 
+    if step_id_generator is None:
+        step_id_generator = itertools.count()
+
     used_keys = set()
     if selected_steps:
         if initial_point is None:
@@ -154,6 +159,7 @@ def instantiate_steppers(
                     model=model,
                     initial_point=initial_point,
                     compile_kwargs=compile_kwargs,
+                    step_id_generator=step_id_generator,
                     **kwargs,
                 )
                 steps.append(step)
@@ -853,6 +859,8 @@ def sample(
         initial_points = [ipfn(seed) for ipfn, seed in zip(ipfns, random_seed_list)]
 
         # Instantiate automatically selected steps
+        # Use a counter to generate a unique id for each stepper used in the model.
+        step_id_generator = itertools.count()
         step = instantiate_steppers(
             model,
             steps=provided_steps,
@@ -860,9 +868,10 @@ def sample(
             step_kwargs=kwargs,
             initial_point=initial_points[0],
             compile_kwargs=compile_kwargs,
+            step_id_generator=step_id_generator,
         )
         if isinstance(step, list):
-            step = CompoundStep(step)
+            step = CompoundStep(step, step_id_generator=step_id_generator)
 
     if var_names is not None:
         trace_vars = [v for v in model.unobserved_RVs if v.name in var_names]
