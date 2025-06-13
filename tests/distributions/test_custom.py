@@ -148,7 +148,9 @@ class TestCustomDist:
             assert isinstance(y_dist.owner.op, CustomDistRV)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                sample(draws=5, tune=1, mp_ctx="spawn")
+                # sample(draws=10, tune=1, mp_ctx="spawn")
+                # sample(draws=5, tune=1, discard_tuned_samples=True, mp_ctx="spawn")
+                sample(draws=6, tune=1, discard_tuned_samples=True, mp_ctx="spawn")  # Was draws=5
 
         cloudpickle.loads(cloudpickle.dumps(y))
         cloudpickle.loads(cloudpickle.dumps(y_dist))
