@@ -70,7 +70,7 @@ from pymc.distributions.continuous import (
 )
 from pymc.distributions.discrete import DiscreteUniformRV
 from pymc.distributions.distribution import DiracDeltaRV
-from pymc.distributions.mixture import MarginalMixtureRV
+from pymc.distributions.mixture import MixtureRV
 from pymc.distributions.multivariate import (
     CARRV,
     DirichletMultinomialRV,
@@ -300,7 +300,7 @@ def lognormal_mean(op, rv, rng, size, mu, sigma):
     return maybe_resize(pt.exp(mu + 0.5 * sigma**2), size)
 
 
-@_mean.register(MarginalMixtureRV)
+@_mean.register(MixtureRV)
 def marginal_mixture_mean(op, rv, rng, weights, *components):
     ndim_supp = components[0].owner.op.ndim_supp
     weights = pt.shape_padright(weights, ndim_supp)

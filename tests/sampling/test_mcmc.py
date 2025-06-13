@@ -212,22 +212,6 @@ class TestSample:
             assert step.potential._n_samples == tune
             assert step.step_adapt._count == tune + 1
 
-    @pytest.mark.parametrize(
-        "start, error",
-        [
-            ({"x": 1}, ValueError),
-            ({"x": [1, 2, 3]}, ValueError),
-            ({"x": np.array([[1, 1], [1, 1]])}, ValueError),
-        ],
-    )
-    def test_sample_start_bad_shape(self, start, error):
-        with pytest.raises(error):
-            pm.sampling.mcmc._check_start_shape(self.model, start)
-
-    @pytest.mark.parametrize("start", [{"x": np.array([1, 1])}, {"x": [10, 10]}, {"x": [-10, -10]}])
-    def test_sample_start_good_shape(self, start):
-        pm.sampling.mcmc._check_start_shape(self.model, start)
-
     def test_sample_callback(self):
         callback = mock.Mock()
         test_cores = [1, 2]
