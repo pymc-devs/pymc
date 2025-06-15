@@ -179,26 +179,22 @@ class GradientSharedStep(ArrayStepShared):
         model=None,
         blocked: bool = True,
         dtype=None,
-        logp_dlogp_func=None,
         rng: RandomGenerator = None,
-        initial_point: PointType | None = None,
         compile_kwargs: dict | None = None,
         **pytensor_kwargs,
     ):
         model = modelcontext(model)
 
-        if logp_dlogp_func is None:
-            if compile_kwargs is None:
-                compile_kwargs = {}
-            logp_dlogp_func = model.logp_dlogp_function(
-                vars,
-                dtype=dtype,
-                ravel_inputs=True,
-                initial_point=initial_point,
-                **compile_kwargs,
-                **pytensor_kwargs,
-            )
-            logp_dlogp_func.trust_input = True
+        if compile_kwargs is None:
+            compile_kwargs = {}
+        logp_dlogp_func = model.logp_dlogp_function(
+            vars,
+            dtype=dtype,
+            ravel_inputs=True,
+            trust_input=True,
+            **compile_kwargs,
+            **pytensor_kwargs,
+        )
 
         self._logp_dlogp_func = logp_dlogp_func
 
