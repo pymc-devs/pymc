@@ -100,6 +100,16 @@ class TestBaseModel:
                 assert len(submodel.value_vars) == 2
             assert len(model.value_vars) == 3
 
+    def test_name_conflict_variable_and_coord(self):
+        with pm.Model(coords={"test_name": [1, 2, 3]}) as model1:
+            with pytest.raises(ValueError, match="already exists as a coordinate name"):
+                pm.Data("test_name", [4, 5, 6])
+
+        with pm.Model() as model2:
+            pm.Data("another_name", [7, 8, 9])
+            with pytest.raises(ValueError, match="already exists as a variable name"):
+                model2.add_coord("another_name", [10, 11, 12])
+
     def test_context_passes_vars_to_parent_model(self):
         with pm.Model() as model:
             assert pm.model.modelcontext(None) == model
