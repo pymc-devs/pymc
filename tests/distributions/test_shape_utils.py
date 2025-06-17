@@ -31,6 +31,7 @@ from pymc import ShapeError
 from pymc.distributions.shape_utils import (
     change_dist_size,
     convert_dims,
+    convert_dims_with_ellipsis,
     convert_shape,
     convert_size,
     get_support_shape,
@@ -297,6 +298,14 @@ class TestSizeShapeDimsObserved:
         assert convert_dims(dims="town") == ("town",)
         with pytest.raises(ValueError, match="must be a tuple, str or list"):
             convert_dims(3)
+        with pytest.raises(ValueError, match="must be a tuple, str or list"):
+            convert_dims(...)
+
+    def test_convert_dims_with_ellipsis(self):
+        assert convert_dims_with_ellipsis(dims="town") == ("town",)
+        assert convert_dims_with_ellipsis(...) == (...,)
+        with pytest.raises(ValueError, match="must be a tuple, list, str or Ellipsis"):
+            convert_dims_with_ellipsis(3)
 
     def test_convert_shape(self):
         assert convert_shape(5) == (5,)

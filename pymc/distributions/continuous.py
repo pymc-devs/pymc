@@ -2370,11 +2370,8 @@ class Gamma(PositiveContinuous):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sigma is not None):
-            if isinstance(sigma, Variable):
-                sigma = check_parameters(sigma, sigma > 0, msg="sigma > 0")
-            else:
-                assert np.all(np.asarray(sigma) > 0)
-            alpha = mu**2 / sigma**2
+            # Use sign of sigma to not let negative sigma fly by
+            alpha = (mu**2 / sigma**2) * pt.sign(sigma)
             beta = mu / sigma**2
         else:
             raise ValueError(
@@ -2496,13 +2493,10 @@ class InverseGamma(PositiveContinuous):
             if beta is not None:
                 pass
             else:
-                beta = 1
+                beta = 1.0
         elif (mu is not None) and (sigma is not None):
-            if isinstance(sigma, Variable):
-                sigma = check_parameters(sigma, sigma > 0, msg="sigma > 0")
-            else:
-                assert np.all(np.asarray(sigma) > 0)
-            alpha = (2 * sigma**2 + mu**2) / sigma**2
+            # Use sign of sigma to not let negative sigma fly by
+            alpha = ((2 * sigma**2 + mu**2) / sigma**2) * pt.sign(sigma)
             beta = mu * (mu**2 + sigma**2) / sigma**2
         else:
             raise ValueError(

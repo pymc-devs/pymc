@@ -186,7 +186,7 @@ class TestSymbolicRandomVariable:
         )(rng)
         with pytest.raises(
             ValueError,
-            match="No update found for at least one RNG used in SymbolicRandomVariable Op SymbolicRVCustomUpdates",
+            match="No update found for at least one RNG used in SymbolicRVCustomUpdates",
         ):
             compile(inputs=[], outputs=x, random_seed=431)
 
