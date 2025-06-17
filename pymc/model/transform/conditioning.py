@@ -22,7 +22,6 @@ from pytensor.graph import Constant, ancestors
 from pytensor.tensor import TensorVariable
 
 from pymc.logprob.transforms import Transform
-from pymc.logprob.utils import rvs_in_graph
 from pymc.model.core import Model
 from pymc.model.fgraph import (
     ModelDeterministic,
@@ -41,7 +40,7 @@ from pymc.model.transform.basic import (
     parse_vars,
     prune_vars_detached_from_observed,
 )
-from pymc.pytensorf import replace_vars_in_graphs, toposort_replace
+from pymc.pytensorf import replace_vars_in_graphs, rvs_in_graph, toposort_replace
 from pymc.util import get_transformed_name, get_untransformed_name
 
 

@@ -32,7 +32,7 @@ from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.utils import MetaType
 from pytensor.tensor.basic import as_tensor_variable
-from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.op import RandomVariable, RNGConsumerOp
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.rewriting.shape import ShapeFeature
@@ -207,7 +207,7 @@ class _class_or_instance_property(property):
         return self.fget(owner_self if owner_self is not None else owner_cls)
 
 
-class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
+class SymbolicRandomVariable(MeasurableOp, RNGConsumerOp, OpFromGraph):
     """Symbolic Random Variable.
 
     This is a subclasse of `OpFromGraph` which is used to encapsulate the symbolic

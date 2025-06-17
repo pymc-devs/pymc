@@ -20,8 +20,9 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Variable
+from pytensor.graph.basic import Constant, Variable
 from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.rewriting.db import RewriteDatabaseQuery, SequenceDB
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.transforms import Transform
@@ -37,6 +38,8 @@ from pymc.util import get_transformed_name, get_untransformed_name, is_transform
 
 StartDict = dict[Variable | str, np.ndarray | Variable | str]
 PointType = dict[str, np.ndarray]
+initial_point_rewrites_db = SequenceDB()
+initial_point_basic_query = RewriteDatabaseQuery(include=["basic"])
 
 
 def convert_str_to_rv_dict(
@@ -230,11 +233,20 @@ def make_initial_point_expression(
     if jitter_rvs is None:
         jitter_rvs = set()
 
+    # Clone free_rvs so we don't modify the original graph
+    initial_point_fgraph = FunctionGraph(outputs=free_rvs, clone=True)
+
+    # Apply any rewrites necessary to compute the initial points.
+    initial_point_rewriter = initial_point_rewrites_db.query(initial_point_basic_query)
+    if initial_point_rewriter:
+        initial_point_rewriter.rewrite(initial_point_fgraph)
+
+    free_rvs_clone = initial_point_fgraph.outputs
+
     initial_values = []
     initial_values_transformed = []
-
-    for variable in free_rvs:
-        strategy = initval_strategies.get(variable, None)
+    for old_variable, variable in zip(free_rvs, free_rvs_clone):
+        strategy = initval_strategies.get(old_variable)
 
         if strategy is None:
             strategy = default_strategy
@@ -261,9 +273,13 @@ def make_initial_point_expression(
                     f'Invalid string strategy: {strategy}. It must be one of ["support_point", "prior"]'
                 )
         else:
-            value = pt.as_tensor(strategy, dtype=variable.dtype).astype(variable.dtype)
+            if isinstance(strategy, Variable) and not isinstance(strategy, Constant):
+                raise ValueError(
+                    f"Initial value must be constants variables. {strategy} comes from an apply node {strategy.node}"
+                )
+            value = pt.as_tensor(strategy, variable.dtype).astype(variable.dtype)
 
-        transform = rvs_to_transforms.get(variable, None)
+        transform = rvs_to_transforms.get(old_variable, None)
 
         if transform is not None:
             value = transform.forward(value, *variable.owner.inputs)
@@ -281,28 +297,16 @@ def make_initial_point_expression(
 
         initial_values.append(value)
 
-    all_outputs: list[TensorVariable] = []
-    all_outputs.extend(free_rvs)
-    all_outputs.extend(initial_values)
-    all_outputs.extend(initial_values_transformed)
-
-    copy_graph = FunctionGraph(outputs=all_outputs, clone=True)
-
-    n_variables = len(free_rvs)
-    free_rvs_clone = copy_graph.outputs[:n_variables]
-    initial_values_clone = copy_graph.outputs[n_variables:-n_variables]
-    initial_values_transformed_clone = copy_graph.outputs[-n_variables:]
-
     # We now replace all rvs by the respective initial_point expressions
     # in the constrained (untransformed) space. We do this in reverse topological
     # order, so that later nodes do not reintroduce expressions with earlier
     # rvs that would need to once again be replaced by their initial_points
-    graph = FunctionGraph(outputs=free_rvs_clone, clone=False)
-    toposort_replace(graph, tuple(zip(free_rvs_clone, initial_values_clone)), reverse=True)
+    toposort_replace(initial_point_fgraph, tuple(zip(free_rvs_clone, initial_values)), reverse=True)
 
     if not return_transformed:
-        return graph.outputs
+        return initial_point_fgraph.outputs
+
     # Because the unconstrained (transformed) expressions are a subgraph of the
     # constrained initial point they were also automatically updated inplace
     # when calling graph.replace_all above, so we don't need to do anything else
-    return initial_values_transformed_clone
+    return initial_values_transformed
