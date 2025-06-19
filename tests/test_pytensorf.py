@@ -36,6 +36,7 @@ from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
+    PointFunc,
     collect_default_updates,
     compile,
     constant_fold,
@@ -780,3 +781,17 @@ def test_hessian_sign_change_warning(func):
         res_neg = func(f, vars=[x])
     res = func(f, vars=[x], negate_output=False)
     assert equal_computations([res_neg], [-res])
+
+
+def test_point_func():
+    x, y = pt.vectors("x", "y")
+    outs = x * 2 + y**2
+    f = compile([x, y], outs)
+
+    point_f = PointFunc(f)
+    np.testing.assert_allclose(point_f({"y": [3], "x": [2]}), [4 + 9])
+
+    # Check we can access other methods of the wrapped pytensor function
+    dprint_res = point_f.dprint(file="str")
+    expected_dprint_res = point_f.f.dprint(file="str")
+    assert dprint_res == expected_dprint_res
