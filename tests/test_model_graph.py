@@ -13,6 +13,8 @@
 #   limitations under the License.
 import warnings
 
+from textwrap import dedent
+
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
@@ -31,6 +33,7 @@ from pymc.model_graph import (
     NodeType,
     Plate,
     model_to_graphviz,
+    model_to_mermaid,
     model_to_networkx,
 )
 
@@ -629,3 +632,23 @@ def test_scalars_dim_info() -> None:
     ]
 
     assert graph.edges() == []
+
+
+def test_model_to_mermaid(simple_model):
+    expected_mermaid_string = dedent("""
+    graph TD
+    %% Nodes:
+    a([a ~ Normal])
+    a@{ shape: rounded }
+    b([b ~ Normal])
+    b@{ shape: rounded }
+    c([c ~ Normal])
+    c@{ shape: rounded }
+
+    %% Edges:
+    a --> b
+    b --> c
+
+    %% Plates:
+    """)
+    assert model_to_mermaid(simple_model) == expected_mermaid_string.strip()
