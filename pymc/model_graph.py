@@ -908,7 +908,7 @@ def model_to_mermaid(model=None, *, var_names=None, include_dim_lengths: bool = 
     graph = ModelGraph(model)
     plates = sorted(graph.get_plates(var_names=var_names), key=lambda plate: hash(plate.dim_info))
     edges = sorted(graph.edges(var_names=var_names))
-    nodes = sorted(graph.nodes(plates=plates), key=lambda node: node.var.name)
+    nodes = sorted(graph.nodes(plates=plates), key=lambda node: cast(str, node.var.name))
 
     return "\n".join(
         [
