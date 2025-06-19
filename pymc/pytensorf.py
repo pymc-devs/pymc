@@ -565,6 +565,12 @@ class PointFunc:
     def __call__(self, state):
         return self.f(**state)
 
+    def __getattr__(self, item):
+        """Allow access to the original function attributes."""
+        if item == "f":
+            return self.f
+        return getattr(self.f, item)
+
 
 class CallableTensor:
     """Turns a symbolic variable with one input into a function that returns symbolic arguments with the one variable replaced with the input."""
