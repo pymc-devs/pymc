@@ -108,7 +108,7 @@ def test_data(inline_views):
     with pm.Model(coords={"test_dim": range(3)}) as m_old:
         x = pm.Data("x", [0.0, 1.0, 2.0], dims=("test_dim",))
         y = pm.Data("y", [10.0, 11.0, 12.0], dims=("test_dim",))
-        sigma = pm.MutableData("sigma", [1.0], shape=(1,))
+        sigma = pm.Data("sigma", [1.0], shape=(1,))
         b0 = pm.Data("b0", np.zeros((1,)), shape=((1,)))
         b1 = pm.Normal("b1", 1.0, sigma=1e-8)
         mu = pm.Deterministic("mu", b0 + b1 * x, dims=("test_dim",))

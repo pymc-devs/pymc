@@ -14,7 +14,6 @@
 
 import io
 import urllib.request
-import warnings
 
 from collections.abc import Sequence
 from copy import copy
@@ -40,10 +39,8 @@ from pymc.pytensorf import convert_data
 from pymc.vartypes import isgenerator
 
 __all__ = [
-    "ConstantData",
     "Data",
     "Minibatch",
-    "MutableData",
     "get_data",
 ]
 BASE_URL = "https://raw.githubusercontent.com/pymc-devs/pymc-examples/main/examples/data/{filename}"
@@ -218,66 +215,6 @@ def determine_coords(
     return coords, new_dims
 
 
-def ConstantData(
-    name: str,
-    value,
-    *,
-    dims: Sequence[str] | None = None,
-    coords: dict[str, Sequence | np.ndarray] | None = None,
-    infer_dims_and_coords=False,
-    **kwargs,
-) -> TensorConstant:
-    """Alias for ``pm.Data``.
-
-    Registers the ``value`` as a :class:`~pytensor.tensor.TensorConstant` with the model.
-    For more information, please reference :class:`pymc.Data`.
-    """
-    warnings.warn(
-        "ConstantData is deprecated. All Data variables are now mutable. Use Data instead.",
-        FutureWarning,
-    )
-
-    var = Data(
-        name,
-        value,
-        dims=dims,
-        coords=coords,
-        infer_dims_and_coords=infer_dims_and_coords,
-        **kwargs,
-    )
-    return cast(TensorConstant, var)
-
-
-def MutableData(
-    name: str,
-    value,
-    *,
-    dims: Sequence[str] | None = None,
-    coords: dict[str, Sequence | np.ndarray] | None = None,
-    infer_dims_and_coords=False,
-    **kwargs,
-) -> SharedVariable:
-    """Alias for ``pm.Data``.
-
-    Registers the ``value`` as a :class:`~pytensor.compile.sharedvalue.SharedVariable`
-    with the model. For more information, please reference :class:`pymc.Data`.
-    """
-    warnings.warn(
-        "MutableData is deprecated. All Data variables are now mutable. Use Data instead.",
-        FutureWarning,
-    )
-
-    var = Data(
-        name,
-        value,
-        dims=dims,
-        coords=coords,
-        infer_dims_and_coords=infer_dims_and_coords,
-        **kwargs,
-    )
-    return cast(SharedVariable, var)
-
-
 def Data(
     name: str,
     value,
@@ -285,7 +222,6 @@ def Data(
     dims: Sequence[str] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
     infer_dims_and_coords=False,
-    mutable: bool | None = None,
     **kwargs,
 ) -> SharedVariable | TensorConstant:
     """Create a data container that registers a data variable with the model.
@@ -380,11 +316,6 @@ def Data(
             "Pass them directly to `observed` if you want to trigger auto-imputation"
         )
 
-    if mutable is not None:
-        warnings.warn(
-            "Data is now always mutable. Specifying the `mutable` kwarg will raise an error in a future release",
-            FutureWarning,
-        )
     x = pytensor.shared(arr, name, **kwargs)
 
     if isinstance(dims, str):

@@ -13,7 +13,6 @@
 #   limitations under the License.
 import functools
 import re
-import warnings
 
 from collections.abc import Callable, Sequence
 
@@ -715,13 +714,6 @@ class CustomDist:
             )
         dist_params = cls.parse_dist_params(dist_params)
         cls.check_valid_dist_random(dist, random, dist_params)
-        moment = kwargs.pop("moment", None)
-        if moment is not None:
-            warnings.warn(
-                "`moment` argument is deprecated. Use `support_point` instead.",
-                FutureWarning,
-            )
-            support_point = moment
         if dist is not None:
             kwargs.setdefault("class_name", f"CustomDist_{name}")
             return _CustomSymbolicDist(

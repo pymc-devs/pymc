@@ -43,7 +43,6 @@ __all__ = [
 
 from pymc.exceptions import ShapeError
 from pymc.pytensorf import PotentialShapeType
-from pymc.util import _add_future_warning_tag
 
 
 def to_tuple(shape):
@@ -264,7 +263,6 @@ def change_dist_size(
 
     op = dist.owner.op
     new_dist = _change_dist_size(op, dist, new_size=new_size, expand=expand)
-    _add_future_warning_tag(new_dist)
 
     new_dist.name = dist.name
     for k, v in dist.tag.__dict__.items():

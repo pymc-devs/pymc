@@ -60,7 +60,7 @@ from pymc.pytensorf import (
     convert_observed_data,
     floatX,
 )
-from pymc.util import UNSET, _add_future_warning_tag
+from pymc.util import UNSET
 from pymc.vartypes import continuous_types, string_types
 
 __all__ = [
@@ -571,10 +571,7 @@ class Distribution(metaclass=DistributionMeta):
             ndim_supp = cls.rv_op(*dist_params, **kwargs).owner.op.ndim_supp
 
         create_size = find_size(shape=shape, size=size, ndim_supp=ndim_supp)
-        rv_out = cls.rv_op(*dist_params, size=create_size, **kwargs)
-
-        _add_future_warning_tag(rv_out)
-        return rv_out
+        return cls.rv_op(*dist_params, size=create_size, **kwargs)
 
 
 @node_rewriter([SymbolicRandomVariable])

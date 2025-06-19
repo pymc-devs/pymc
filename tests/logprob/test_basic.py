@@ -201,7 +201,7 @@ def test_persist_inputs():
     assert y_vv_2 in ancestors([logp_2_combined])
 
 
-def test_warn_random_found_factorized_joint_logprob():
+def test_warn_rvs_conditional_logp():
     x_rv = pt.random.normal(name="x")
     y_rv = pt.random.normal(x_rv, 1, name="y")
 
@@ -369,7 +369,7 @@ def test_probability_inference_fails(func, func_name):
         (icdf, "ppf", 0.7),
     ],
 )
-def test_warn_random_found_probability_inference(func, scipy_func, test_value):
+def test_warn_rvs_probability_derivation(func, scipy_func, test_value):
     # Fail if unexpected warning is issued
     with warnings.catch_warnings():
         warnings.simplefilter("error")

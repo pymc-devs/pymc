@@ -286,13 +286,6 @@ class GaussianRandomWalk(PredefinedRandomWalk):
 
     @classmethod
     def get_dists(cls, mu=0.0, sigma=1.0, *, init_dist=None, **kwargs):
-        if "init" in kwargs:
-            warnings.warn(
-                "init parameter is now called init_dist. Using init will raise an error in a future release.",
-                FutureWarning,
-            )
-            init_dist = kwargs.pop("init")
-
         if init_dist is None:
             warnings.warn(
                 "Initial distribution not specified, defaulting to `Normal.dist(0, 100)`."
@@ -340,14 +333,6 @@ class MvGaussianRandomWalk(PredefinedRandomWalk):
 
     @classmethod
     def get_dists(cls, mu, *, cov=None, tau=None, chol=None, lower=True, init_dist=None, **kwargs):
-        if "init" in kwargs:
-            warnings.warn(
-                "init parameter is now called init_dist. Using init will raise an error "
-                "in a future release.",
-                FutureWarning,
-            )
-            init_dist = kwargs.pop("init")
-
         if init_dist is None:
             warnings.warn(
                 "Initial distribution not specified, defaulting to `MvNormal.dist(0, I*100)`."
@@ -396,14 +381,6 @@ class MvStudentTRandomWalk(PredefinedRandomWalk):
     def get_dists(
         cls, *, nu, mu, scale=None, tau=None, chol=None, lower=True, init_dist=None, **kwargs
     ):
-        if "init" in kwargs:
-            warnings.warn(
-                "init parameter is now called init_dist. Using init will raise an error "
-                "in a future release.",
-                FutureWarning,
-            )
-            init_dist = kwargs.pop("init")
-
         if init_dist is None:
             warnings.warn(
                 "Initial distribution not specified, defaulting to `MvNormal.dist(0, I*100)`."
@@ -587,13 +564,6 @@ class AR(Distribution):
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         sigma = pt.as_tensor_variable(sigma)
         rhos = pt.atleast_1d(pt.as_tensor_variable(rho))
-
-        if "init" in kwargs:
-            warnings.warn(
-                "init parameter is now called init_dist. Using init will raise an error in a future release.",
-                FutureWarning,
-            )
-            init_dist = kwargs.pop("init")
 
         ar_order = cls._get_ar_order(rhos=rhos, constant=constant, ar_order=ar_order)
         steps = get_support_shape_1d(

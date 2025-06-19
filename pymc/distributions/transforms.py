@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import warnings
 
 from functools import singledispatch
 
@@ -46,22 +45,6 @@ __all__ = [
     "simplex",
     "sum_to_1",
 ]
-
-
-def __getattr__(name):
-    if name in ("univariate_ordered", "multivariate_ordered"):
-        warnings.warn(f"{name} has been deprecated, use ordered instead.", FutureWarning)
-        return ordered
-
-    if name in ("univariate_sum_to_1", "multivariate_sum_to_1"):
-        warnings.warn(f"{name} has been deprecated, use sum_to_1 instead.", FutureWarning)
-        return sum_to_1
-
-    if name == "RVTransform":
-        warnings.warn("RVTransform has been renamed to Transform", FutureWarning)
-        return Transform
-
-    raise AttributeError(f"module {__name__} has no attribute {name}")
 
 
 @singledispatch
@@ -100,9 +83,7 @@ class Ordered(Transform):
 
     name = "ordered"
 
-    def __init__(self, ndim_supp=None, positive=False, ascending=True):
-        if ndim_supp is not None:
-            warnings.warn("ndim_supp argument is deprecated and has no effect", FutureWarning)
+    def __init__(self, positive=False, ascending=True):
         self.positive = positive
         self.ascending = ascending
 
@@ -141,10 +122,6 @@ class SumTo1(Transform):
     """
 
     name = "sumto1"
-
-    def __init__(self, ndim_supp=None):
-        if ndim_supp is not None:
-            warnings.warn("ndim_supp argument is deprecated and has no effect", FutureWarning)
 
     def backward(self, value, *inputs):
         remaining = 1 - pt.sum(value[..., :], axis=-1, keepdims=True)

@@ -35,7 +35,6 @@
 #   SOFTWARE.
 
 import abc
-import warnings
 
 from collections.abc import Sequence
 from functools import singledispatch
@@ -46,17 +45,6 @@ from pytensor.tensor import TensorVariable
 from pytensor.tensor.blockwise import Blockwise
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
-
-
-def __getattr__(name):
-    if name == "MeasurableVariable":
-        warnings.warn(
-            f"{name} has been deprecated in favor of MeasurableOp. Importing will fail in a future release.",
-            FutureWarning,
-        )
-        return MeasurableOp
-
-    raise AttributeError(f"module {__name__} has no attribute {name}")
 
 
 @singledispatch

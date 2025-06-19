@@ -14,7 +14,6 @@
 
 import functools
 import re
-import warnings
 
 from collections import namedtuple
 from collections.abc import Iterable, Sequence
@@ -29,7 +28,6 @@ import xarray
 from cachetools import LRUCache, cachedmethod
 from pytensor import Variable
 from pytensor.compile import SharedVariable
-from pytensor.graph.utils import ValidatingScratchpad
 from rich.box import SIMPLE_HEAD
 from rich.console import Console
 from rich.progress import (
@@ -58,19 +56,6 @@ ProgressBarType = Literal[
     "split+stats",
     "stats+split",
 ]
-
-
-def __getattr__(name):
-    if name == "dataset_to_point_list":
-        warnings.warn(
-            f"{name} has been moved to backends.arviz. Importing from util will fail in a future release.",
-            FutureWarning,
-        )
-        from pymc.backends.arviz import dataset_to_point_list
-
-        return dataset_to_point_list
-
-    raise AttributeError(f"module {__name__} has no attribute {name}")
 
 
 VarName = NewType("VarName", str)
@@ -538,34 +523,6 @@ def get_value_vars_from_user_vars(vars: Variable | Sequence[Variable], model) ->
         )
 
     return value_vars
-
-
-class _FutureWarningValidatingScratchpad(ValidatingScratchpad):
-    def __getattribute__(self, name):
-        for deprecated_names, alternative in (
-            (("value_var", "observations"), "model.rvs_to_values[rv]"),
-            (("transform",), "model.rvs_to_transforms[rv]"),
-        ):
-            if name in deprecated_names:
-                try:
-                    super().__getattribute__(name)
-                except AttributeError:
-                    pass
-                else:
-                    warnings.warn(
-                        f"The tag attribute {name} is deprecated. Use {alternative} instead",
-                        FutureWarning,
-                    )
-        return super().__getattribute__(name)
-
-
-def _add_future_warning_tag(var) -> None:
-    old_tag = var.tag
-    if not isinstance(old_tag, _FutureWarningValidatingScratchpad):
-        new_tag = _FutureWarningValidatingScratchpad("test_value", var.type.filter)
-        for k, v in old_tag.__dict__.items():
-            new_tag.__dict__.setdefault(k, v)
-        var.tag = new_tag
 
 
 def makeiter(a):
