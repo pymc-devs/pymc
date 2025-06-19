@@ -559,6 +559,8 @@ def join_nonshared_inputs(
 class PointFunc:
     """Wraps so a function so it takes a dict of arguments instead of arguments."""
 
+    __slots__ = ("f",)
+
     def __init__(self, f):
         self.f = f
 
@@ -567,8 +569,7 @@ class PointFunc:
 
     def __getattr__(self, item):
         """Allow access to the original function attributes."""
-        if item == "f":
-            return self.f
+        # This is only reached if `__getattribute__` fails.
         return getattr(self.f, item)
 
 
