@@ -13,7 +13,7 @@
 #   limitations under the License.
 import warnings
 
-from collections.abc import Callable, Generator, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 from typing import cast
 
 import numpy as np
@@ -33,7 +33,6 @@ from pytensor.graph.basic import (
     clone_get_equiv,
     equal_computations,
     graph_inputs,
-    walk,
 )
 from pytensor.graph.fg import FunctionGraph, Output
 from pytensor.scalar.basic import Cast
@@ -55,11 +54,9 @@ from pymc.vartypes import continuous_types, isgenerator, typefilter
 
 PotentialShapeType = int | np.ndarray | Sequence[int | Variable] | TensorVariable
 
-
 __all__ = [
     "CallableTensor",
     "compile",
-    "compile_pymc",
     "cont_inputs",
     "convert_data",
     "convert_observed_data",
@@ -171,38 +168,6 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
         return x.eval(mode=cheap_eval_mode)
 
     raise TypeError(f"Data cannot be extracted from {x}")
-
-
-def walk_model(
-    graphs: Iterable[TensorVariable],
-    stop_at_vars: set[TensorVariable] | None = None,
-    expand_fn: Callable[[TensorVariable], Iterable[TensorVariable]] = lambda var: [],
-) -> Generator[TensorVariable, None, None]:
-    """Walk model graphs and yield their nodes.
-
-    Parameters
-    ----------
-    graphs
-        The graphs to walk.
-    stop_at_vars
-        A list of variables at which the walk will terminate.
-    expand_fn
-        A function that returns the next variable(s) to be traversed.
-    """
-    warnings.warn("walk_model will be removed in a future relase of PyMC", FutureWarning)
-
-    if stop_at_vars is None:
-        stop_at_vars = set()
-
-    def expand(var):
-        new_vars = expand_fn(var)
-
-        if var.owner and var not in stop_at_vars:
-            new_vars.extend(reversed(var.owner.inputs))
-
-        return new_vars
-
-    yield from walk(graphs, expand, bfs=False)
 
 
 def replace_vars_in_graphs(
@@ -952,14 +917,6 @@ def compile(
         **kwargs,
     )
     return pytensor_function
-
-
-def compile_pymc(*args, **kwargs):
-    warnings.warn(
-        "compile_pymc was renamed to compile. Old name will be removed in a future release of PyMC",
-        FutureWarning,
-    )
-    return compile(*args, **kwargs)
 
 
 def constant_fold(

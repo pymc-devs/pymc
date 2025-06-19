@@ -18,8 +18,6 @@ Created on Mar 7, 2011.
 @author: johnsalvatier
 """
 
-import warnings
-
 from collections.abc import Iterable
 from functools import partial
 
@@ -419,12 +417,3 @@ def log_i0(x):
             + 11025.0 / (98304.0 * x**4.0)
         ),
     )
-
-
-def incomplete_beta(a, b, value):
-    warnings.warn(
-        "incomplete_beta has been deprecated. Use pytensor.tensor.betainc instead.",
-        FutureWarning,
-        stacklevel=2,
-    )
-    return pt.betainc(a, b, value)

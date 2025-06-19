@@ -294,15 +294,6 @@ class TestSupportPoint:
 
         assert np.isclose(res["x"], np.pi)
 
-    def test_future_warning_moment(self):
-        with pm.Model() as m:
-            pm.Normal("x", initval="moment")
-            with pytest.warns(
-                FutureWarning,
-                match="The 'moment' strategy is deprecated. Use 'support_point' instead.",
-            ):
-                ip = m.initial_point(random_seed=42)
-
 
 def test_pickling_issue_5090():
     with pm.Model() as model:

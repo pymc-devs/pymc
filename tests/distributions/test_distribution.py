@@ -52,7 +52,6 @@ from pymc.testing import (
     check_logcdf,
     check_logp,
 )
-from pymc.util import _FutureWarningValidatingScratchpad
 
 
 class TestBugfixes:
@@ -237,43 +236,6 @@ class TestSymbolicRandomVariable:
 
         resized_rv = change_dist_size(rv, new_size=5, expand=True)
         assert resized_rv.type.shape == (5,)
-
-
-def test_tag_future_warning_dist():
-    # Test no unexpected warnings
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-
-        x = pm.Normal.dist()
-        assert isinstance(x.tag, _FutureWarningValidatingScratchpad)
-
-        x.tag.banana = "banana"
-        assert x.tag.banana == "banana"
-
-        # Check we didn't break test_value filtering
-        x.tag.test_value = np.array(1)
-        assert x.tag.test_value == 1
-        with pytest.raises(TypeError, match="Wrong number of dimensions"):
-            x.tag.test_value = np.array([1, 1])
-        assert x.tag.test_value == 1
-
-        # No warning if deprecated attribute is not present
-        with pytest.raises(AttributeError):
-            x.tag.value_var
-
-        # Warning if present
-        x.tag.value_var = "1"
-        with pytest.warns(FutureWarning, match="Use model.rvs_to_values"):
-            value_var = x.tag.value_var
-        assert value_var == "1"
-
-        # Check that PyMC method that copies tag contents does not erase special tag
-        new_x = change_dist_size(x, new_size=5)
-        assert new_x.tag is not x.tag
-        assert isinstance(new_x.tag, _FutureWarningValidatingScratchpad)
-        with pytest.warns(FutureWarning, match="Use model.rvs_to_values"):
-            value_var = new_x.tag.value_var
-        assert value_var == "1"
 
 
 def test_distribution_op_registered():

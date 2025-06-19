@@ -25,7 +25,6 @@ from pytensor import scan, shared
 from pytensor.compile import UnusedInputError
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable, equal_computations
-from pytensor.tensor.random.basic import normal, uniform
 from pytensor.tensor.subtensor import AdvancedIncSubtensor
 
 import pymc as pm
@@ -46,7 +45,6 @@ from pymc.pytensorf import (
     replace_rng_nodes,
     replace_vars_in_graphs,
     reseed_rngs,
-    walk_model,
 )
 from pymc.vartypes import int_types
 
@@ -283,42 +281,7 @@ def test_pandas_to_array_pandas_index():
     np.testing.assert_array_equal(result, expected)
 
 
-def test_walk_model():
-    a = pt.vector("a")
-    b = uniform(0.0, a, name="b")
-    c = pt.log(b)
-    c.name = "c"
-    d = pt.vector("d")
-    e = normal(c, d, name="e")
-
-    test_graph = pt.exp(e + 1)
-
-    with pytest.warns(FutureWarning):
-        res = list(walk_model((test_graph,)))
-    assert a in res
-    assert b in res
-    assert c in res
-    assert d in res
-    assert e in res
-
-    with pytest.warns(FutureWarning):
-        res = list(walk_model((test_graph,), stop_at_vars={c}))
-    assert a not in res
-    assert b not in res
-    assert c in res
-    assert d in res
-    assert e in res
-
-    with pytest.warns(FutureWarning):
-        res = list(walk_model((test_graph,), stop_at_vars={b}))
-    assert a not in res
-    assert b in res
-    assert c in res
-    assert d in res
-    assert e in res
-
-
-class TestCompilePyMC:
+class TestCompile:
     def test_check_bounds_flag(self):
         """Test that CheckParameterValue Ops are replaced or removed when using compile_pymc"""
         logp = pt.ones(3)

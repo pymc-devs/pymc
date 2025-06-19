@@ -30,7 +30,6 @@ from pymc.distributions.dist_math import (
     clipped_beta_rvs,
     factln,
     i0e,
-    incomplete_beta,
     multigammaln,
 )
 from pymc.logprob.utils import ParameterValueError
@@ -176,9 +175,3 @@ def test_multigamma():
         for x in xvals:
             if np.all(x > 0.5 * (p - 1)):
                 check_vals(multigammaln_, ref_multigammaln, x, p)
-
-
-def test_incomplete_beta_deprecation():
-    with pytest.warns(FutureWarning, match="incomplete_beta has been deprecated"):
-        res = incomplete_beta(3, 5, 0.5).eval()
-    assert np.isclose(res, pt.betainc(3, 5, 0.5).eval())

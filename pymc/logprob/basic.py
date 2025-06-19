@@ -98,23 +98,7 @@ def _warn_rvs_in_inferred_graph(graph: TensorVariable | Sequence[TensorVariable]
         )
 
 
-def _deprecate_warn_missing_rvs(warn_rvs, kwargs):
-    if "warn_missing_rvs" in kwargs:
-        warnings.warn(
-            "Argument `warn_missing_rvs` was renamed to `warn_rvs` and will be removed in a future release",
-            FutureWarning,
-        )
-        if warn_rvs is None:
-            warn_rvs = kwargs.pop("warn_missing_rvs")
-        else:
-            raise ValueError("Can't set both warn_rvs and warn_missing_rvs")
-    else:
-        if warn_rvs is None:
-            warn_rvs = True
-    return warn_rvs, kwargs
-
-
-def logp(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> TensorVariable:
+def logp(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> TensorVariable:
     """Create a graph for the log-probability of a random variable.
 
     Parameters
@@ -200,8 +184,6 @@ def logp(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> Tens
             pm.CustomDist("x", mu, sigma, logp=normal_logp)
 
     """
-    warn_rvs, kwargs = _deprecate_warn_missing_rvs(warn_rvs, kwargs)
-
     value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
         return _logprob_helper(rv, value, **kwargs)
@@ -216,7 +198,7 @@ def logp(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> Tens
         return expr
 
 
-def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> TensorVariable:
+def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> TensorVariable:
     """Create a graph for the log-CDF of a random variable.
 
     Parameters
@@ -301,7 +283,6 @@ def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> Te
             pm.CustomDist("x", mu, sigma, logcdf=normal_logcdf)
 
     """
-    warn_rvs, kwargs = _deprecate_warn_missing_rvs(warn_rvs, kwargs)
     value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
         return _logcdf_helper(rv, value, **kwargs)
@@ -317,7 +298,7 @@ def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> Te
         return expr
 
 
-def icdf(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> TensorVariable:
+def icdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> TensorVariable:
     """Create a graph for the inverse CDF of a random variable.
 
     Parameters
@@ -384,7 +365,6 @@ def icdf(rv: TensorVariable, value: TensorLike, warn_rvs=None, **kwargs) -> Tens
         print(exp_rv_icdf_fn(value=0.9, mu=0.0))  # 3.60222448
 
     """
-    warn_rvs, kwargs = _deprecate_warn_missing_rvs(warn_rvs, kwargs)
     value = pt.as_tensor_variable(value, dtype="floatX")
     try:
         return _icdf_helper(rv, value, **kwargs)
@@ -409,7 +389,7 @@ RVS_IN_JOINT_LOGP_GRAPH_MSG = (
 
 def conditional_logp(
     rv_values: dict[TensorVariable, TensorVariable],
-    warn_rvs=None,
+    warn_rvs=True,
     ir_rewriter: GraphRewriter | None = None,
     extra_rewrites: GraphRewriter | NodeRewriter | None = None,
     **kwargs,
@@ -474,8 +454,6 @@ def conditional_logp(
         from the respective `RandomVariable`.
 
     """
-    warn_rvs, kwargs = _deprecate_warn_missing_rvs(warn_rvs, kwargs)
-
     fgraph = construct_ir_fgraph(rv_values, ir_rewriter=ir_rewriter)
 
     if extra_rewrites is not None:
@@ -614,21 +592,3 @@ def transformed_conditional_logp(
         raise ValueError(RVS_IN_JOINT_LOGP_GRAPH_MSG % rvs_in_logp_expressions)
 
     return logp_terms_list
-
-
-def factorized_joint_logprob(*args, **kwargs):
-    warnings.warn(
-        "`factorized_joint_logprob` was renamed to `conditional_logp`. "
-        "The function will be removed in a future release",
-        FutureWarning,
-    )
-    return conditional_logp(*args, **kwargs)
-
-
-def joint_logp(*args, **kwargs):
-    warnings.warn(
-        "`joint_logp` was renamed to `transformed_conditional_logp`. "
-        "The function will be removed in a future release",
-        FutureWarning,
-    )
-    return transformed_conditional_logp(*args, **kwargs)
