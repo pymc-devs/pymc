@@ -66,7 +66,7 @@ from pymc.math import (
 )
 from pymc.model.core import *
 from pymc.model.transform.conditioning import do, observe
-from pymc.model_graph import model_to_graphviz, model_to_networkx
+from pymc.model_graph import model_to_graphviz, model_to_mermaid, model_to_networkx
 from pymc.plots import *
 from pymc.printing import *
 from pymc.pytensorf import *
