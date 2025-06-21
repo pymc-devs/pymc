@@ -73,7 +73,7 @@ def test_simple_model():
     np.testing.assert_allclose(draw, draw_same)
     assert not np.allclose(draw, draw_diff)
 
-    observed_values = DataArray(np.ones((3, 5)), dims=("a", "b")).transpose()
+    observed_values = DataArray(np.ones((3, 5)), dims=("a", "b"))
     with observe(xmodel, {"y": observed_values}):
         pm.sample_prior_predictive()
         idata = pm.sample(
