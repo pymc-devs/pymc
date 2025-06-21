@@ -35,6 +35,8 @@ import scipy.sparse as sps
 from pytensor.compile import DeepCopyOp, Function, ProfileStats, get_mode
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Constant, Variable, ancestors, graph_inputs
+from pytensor.tensor import as_tensor
+from pytensor.tensor.math import variadic_add
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.variable import TensorConstant, TensorVariable
@@ -232,7 +234,9 @@ class ValueGradFunction:
             grads = pytensor.grad(cost, grad_vars, disconnected_inputs="ignore")
             for grad_wrt, var in zip(grads, grad_vars):
                 grad_wrt.name = f"{var.name}_grad"
-            grads = pt.join(0, *[pt.atleast_1d(grad.ravel()) for grad in grads])
+            grads = pt.join(
+                0, *[as_tensor(grad, allow_xtensor_conversion=True).ravel() for grad in grads]
+            )
             outputs = [cost, grads]
         else:
             outputs = [cost]
@@ -702,7 +706,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if not sum:
             return logp_factors
 
-        logp_scalar = pt.sum([pt.sum(factor) for factor in logp_factors])
+        logp_scalar = variadic_add(
+            *(as_tensor(factor, allow_xtensor_conversion=True).sum() for factor in logp_factors)
+        )
         logp_scalar_name = "__logp" if jacobian else "__logp_nojac"
         if self.name:
             logp_scalar_name = f"{logp_scalar_name}_{self.name}"
@@ -1322,7 +1328,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         else:
             if sps.issparse(data):
                 data = sparse.basic.as_sparse(data, name=name)
-            else:
+            elif not isinstance(data, Variable):
                 data = pt.as_tensor_variable(data, name=name)
 
             if total_size:

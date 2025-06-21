@@ -197,7 +197,7 @@ def logp(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Tens
         [ir_valued_var] = fgraph.outputs
         [ir_rv, ir_value] = ir_valued_var.owner.inputs
         expr = _logprob_helper(ir_rv, ir_value, **kwargs)
-        cleanup_ir([expr])
+        [expr] = cleanup_ir([expr])
         if warn_rvs:
             _warn_rvs_in_inferred_graph(expr)
         return expr
@@ -297,7 +297,7 @@ def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Te
         [ir_valued_rv] = fgraph.outputs
         [ir_rv, ir_value] = ir_valued_rv.owner.inputs
         expr = _logcdf_helper(ir_rv, ir_value, **kwargs)
-        cleanup_ir([expr])
+        [expr] = cleanup_ir([expr])
         if warn_rvs:
             _warn_rvs_in_inferred_graph(expr)
         return expr
@@ -379,7 +379,7 @@ def icdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Tens
         [ir_valued_rv] = fgraph.outputs
         [ir_rv, ir_value] = ir_valued_rv.owner.inputs
         expr = _icdf_helper(ir_rv, ir_value, **kwargs)
-        cleanup_ir([expr])
+        [expr] = cleanup_ir([expr])
         if warn_rvs:
             _warn_rvs_in_inferred_graph(expr)
         return expr
@@ -540,15 +540,15 @@ def conditional_logp(
             f"The logprob terms of the following value variables could not be derived: {missing_value_terms}"
         )
 
-    logprobs = list(values_to_logprobs.values())
-    cleanup_ir(logprobs)
+    values, logprobs = zip(*values_to_logprobs.items())
+    logprobs = cleanup_ir(logprobs)
 
     if warn_rvs:
         rvs_in_logp_expressions = _find_unallowed_rvs_in_graph(logprobs)
         if rvs_in_logp_expressions:
             warnings.warn(RVS_IN_JOINT_LOGP_GRAPH_MSG % rvs_in_logp_expressions, UserWarning)
 
-    return values_to_logprobs
+    return dict(zip(values, logprobs))
 
 
 def transformed_conditional_logp(

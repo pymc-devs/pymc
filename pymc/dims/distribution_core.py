@@ -14,15 +14,20 @@
 from collections.abc import Callable, Sequence
 from itertools import chain
 
+from pytensor.graph import node_rewriter
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.xtensor import as_xtensor
+from pytensor.xtensor.basic import XTensorFromTensor, xtensor_from_tensor
 from pytensor.xtensor.type import XTensorVariable
 
 from pymc import modelcontext
 from pymc.dims.model import with_dims
-from pymc.distributions import transforms
+from pymc.dims.transforms import log_odds_transform, log_transform
 from pymc.distributions.distribution import _support_point, support_point
 from pymc.distributions.shape_utils import DimsWithEllipsis, convert_dims
+from pymc.logprob.abstract import MeasurableOp, _logprob
+from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.utils import filter_measurable_variables
 from pymc.util import UNSET
 
 
@@ -32,6 +37,38 @@ def dimshuffle_support_point(ds_op, _, rv):
     # DimDistribution can register a transposed version of a variable.
 
     return ds_op(support_point(rv))
+
+
+@_support_point.register(XTensorFromTensor)
+def xtensor_from_tensor_support_point(xtensor_op, _, rv):
+    # We remove the xtensor_from_tensor operation, so initial_point doesn't have to do a further lowering
+    return xtensor_op(support_point(rv))
+
+
+class MeasurableXTensorFromTensor(MeasurableOp, XTensorFromTensor):
+    pass
+
+
+@node_rewriter([XTensorFromTensor])
+def find_measurable_xtensor_from_tensor(fgraph, node) -> list[XTensorVariable] | None:
+    if isinstance(node.op, MeasurableXTensorFromTensor):
+        return None
+
+    if not filter_measurable_variables(node.inputs):
+        return None
+
+    return [MeasurableXTensorFromTensor(dims=node.op.dims)(*node.inputs)]
+
+
+@_logprob.register(MeasurableXTensorFromTensor)
+def measurable_xtensor_from_tensor(op, values, rv, **kwargs):
+    rv_logp = _logprob(rv.owner.op, tuple(v.values for v in values), *rv.owner.inputs, **kwargs)
+    return xtensor_from_tensor(rv_logp, dims=op.dims)
+
+
+measurable_ir_rewrites_db.register(
+    "measurable_xtensor_from_tensor", find_measurable_xtensor_from_tensor, "basic", "xtensor"
+)
 
 
 class DimDistribution:
@@ -117,10 +154,10 @@ class DimDistribution:
         else:
             # Align observed dims with those of the RV
             # TODO: If this fails give a more informative error message
-            observed = observed.transpose(*rv_dims).values
+            observed = observed.transpose(*rv_dims)
 
         rv = model.register_rv(
-            rv.values,
+            rv,
             name=name,
             observed=observed,
             total_size=total_size,
@@ -177,10 +214,10 @@ class MultivariateDimDistribution(DimDistribution):
 class PositiveDimDistribution(DimDistribution):
     """Base class for positive continuous distributions."""
 
-    default_transform = transforms.log
+    default_transform = log_transform
 
 
 class UnitDimDistribution(DimDistribution):
     """Base class for unit-valued distributions."""
 
-    default_transform = transforms.logodds
+    default_transform = log_odds_transform

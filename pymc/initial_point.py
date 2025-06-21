@@ -20,7 +20,8 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Constant, Variable
+from pytensor.compile.ops import TypeCastingOp
+from pytensor.graph.basic import Apply, Constant, Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.db import RewriteDatabaseQuery, SequenceDB
 from pytensor.tensor.variable import TensorVariable
@@ -195,6 +196,14 @@ def make_initial_point_fn(
     return make_seeded_function(func)
 
 
+class InitialPoint(TypeCastingOp):
+    def make_node(self, var):
+        return Apply(self, [var], [var.type()])
+
+
+initial_point_op = InitialPoint()
+
+
 def make_initial_point_expression(
     *,
     free_rvs: Sequence[TensorVariable],
@@ -235,6 +244,9 @@ def make_initial_point_expression(
 
     # Clone free_rvs so we don't modify the original graph
     initial_point_fgraph = FunctionGraph(outputs=free_rvs, clone=True)
+    # Wrap each rv in an initial_point Operation to avoid losing dependency between the RVs
+    replacements = tuple((rv, initial_point_op(rv)) for rv in initial_point_fgraph.outputs)
+    toposort_replace(initial_point_fgraph, replacements, reverse=True)
 
     # Apply any rewrites necessary to compute the initial points.
     initial_point_rewriter = initial_point_rewrites_db.query(initial_point_basic_query)
@@ -254,10 +266,10 @@ def make_initial_point_expression(
         if isinstance(strategy, str):
             if strategy == "support_point":
                 try:
-                    value = support_point(variable)
+                    value = support_point(variable.owner.inputs[0])
                 except NotImplementedError:
                     warnings.warn(
-                        f"Moment not defined for variable {variable} of type "
+                        f"support_point not defined for variable {variable} of type "
                         f"{variable.owner.op.__class__.__name__}, defaulting to "
                         f"a draw from the prior. This can lead to difficulties "
                         f"during tuning. You can manually define an initval or "
