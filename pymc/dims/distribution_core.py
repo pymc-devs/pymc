@@ -14,19 +14,23 @@
 from collections.abc import Callable, Sequence
 from itertools import chain
 
+import numpy as np
+
 from pytensor.graph import node_rewriter
 from pytensor.tensor.elemwise import DimShuffle
+from pytensor.tensor.random.op import RandomVariable
 from pytensor.xtensor import as_xtensor
 from pytensor.xtensor.basic import XTensorFromTensor, xtensor_from_tensor
 from pytensor.xtensor.type import XTensorVariable
 
-from pymc import modelcontext
+from pymc import SymbolicRandomVariable, modelcontext
 from pymc.dims.model import with_dims
-from pymc.dims.transforms import log_odds_transform, log_transform
+from pymc.dims.transforms import DimTransform, log_odds_transform, log_transform
 from pymc.distributions.distribution import _support_point, support_point
 from pymc.distributions.shape_utils import DimsWithEllipsis, convert_dims
 from pymc.logprob.abstract import MeasurableOp, _logprob
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.tensor import MeasurableDimShuffle
 from pymc.logprob.utils import filter_measurable_variables
 from pymc.util import UNSET
 
@@ -46,7 +50,11 @@ def xtensor_from_tensor_support_point(xtensor_op, _, rv):
 
 
 class MeasurableXTensorFromTensor(MeasurableOp, XTensorFromTensor):
-    pass
+    __props__ = ("dims", "core_dims")
+
+    def __init__(self, dims, core_dims):
+        super().__init__(dims=dims)
+        self.core_dims = tuple(core_dims) if core_dims is not None else None
 
 
 @node_rewriter([XTensorFromTensor])
@@ -54,16 +62,55 @@ def find_measurable_xtensor_from_tensor(fgraph, node) -> list[XTensorVariable] |
     if isinstance(node.op, MeasurableXTensorFromTensor):
         return None
 
-    if not filter_measurable_variables(node.inputs):
-        return None
+    xs = filter_measurable_variables(node.inputs)
 
-    return [MeasurableXTensorFromTensor(dims=node.op.dims)(*node.inputs)]
+    if not xs:
+        # Check if we have a transposition instead
+        # The rewrite that introduces measurable tranpsoses refuses to apply to multivariate RVs
+        # So we have a chance of inferring the core dims!
+        [ds] = node.inputs
+        ds_node = ds.owner
+        if not (
+            ds_node is not None
+            and isinstance(ds_node.op, DimShuffle)
+            and ds_node.op.is_transpose
+            and filter_measurable_variables(ds_node.inputs)
+        ):
+            return None
+        [x] = ds_node.inputs
+        if not (
+            x.owner is not None and isinstance(x.owner.op, RandomVariable | SymbolicRandomVariable)
+        ):
+            return None
+
+        measurable_x = MeasurableDimShuffle(**ds_node.op._props_dict())(x)
+
+        ndim_supp = x.owner.op.ndim_supp
+        if ndim_supp:
+            inverse_transpose = np.argsort(ds_node.op.shuffle)
+            dims = node.op.dims
+            dims_before_transpose = [dims[i] for i in inverse_transpose]
+            core_dims = dims_before_transpose[-ndim_supp:]
+        else:
+            core_dims = ()
+
+        return [MeasurableXTensorFromTensor(dims=node.op.dims, core_dims=core_dims)(measurable_x)]
+    else:
+        # If this happens we know there's no measurable transpose in between and we can
+        # safely infer the core_dims positionally when the inner logp is returned
+        return [MeasurableXTensorFromTensor(dims=node.op.dims, core_dims=None)(*node.inputs)]
 
 
 @_logprob.register(MeasurableXTensorFromTensor)
 def measurable_xtensor_from_tensor(op, values, rv, **kwargs):
     rv_logp = _logprob(rv.owner.op, tuple(v.values for v in values), *rv.owner.inputs, **kwargs)
-    return xtensor_from_tensor(rv_logp, dims=op.dims)
+    if op.core_dims is None:
+        # The core_dims of the inner rv are on the right
+        dims = op.dims[: rv_logp.ndim]
+    else:
+        # We inferred where the core_dims are!
+        dims = [d for d in op.dims if d not in op.core_dims]
+    return xtensor_from_tensor(rv_logp, dims=dims)
 
 
 measurable_ir_rewrites_db.register(
@@ -75,7 +122,7 @@ class DimDistribution:
     """Base class for PyMC distribution that wrap pytensor.xtensor.random operations, and follow xarray-like semantics."""
 
     xrv_op: Callable
-    default_transform: Callable | None = None
+    default_transform: DimTransform | None = None
 
     @staticmethod
     def _as_xtensor(x):
@@ -156,6 +203,18 @@ class DimDistribution:
             # TODO: If this fails give a more informative error message
             observed = observed.transpose(*rv_dims)
 
+        # Check user didn't pass regular transforms
+        if transform not in (UNSET, None):
+            if not isinstance(transform, DimTransform):
+                raise TypeError(
+                    f"Transform must be a DimTransform, form pymc.dims.transforms, but got {type(transform)}."
+                )
+        if default_transform not in (UNSET, None):
+            if not isinstance(default_transform, DimTransform):
+                raise TypeError(
+                    f"default_transform must be a DimTransform, from pymc.dims.transforms, but got {type(default_transform)}."
+                )
+
         rv = model.register_rv(
             rv,
             name=name,
@@ -188,13 +247,16 @@ class DimDistribution:
         if dims_dict is None:
             extra_dims = None
         else:
-            parameter_implied_dims = set(
-                chain.from_iterable(param.type.dims for param in dist_params)
-            )
+            # Exclude dims that are implied by the parameters or core_dims
+            implied_dims = set(chain.from_iterable(param.type.dims for param in dist_params))
+            if core_dims is not None:
+                if isinstance(core_dims, str):
+                    implied_dims.add(core_dims)
+                else:
+                    implied_dims.update(core_dims)
+
             extra_dims = {
-                dim: length
-                for dim, length in dims_dict.items()
-                if dim not in parameter_implied_dims
+                dim: length for dim, length in dims_dict.items() if dim not in implied_dims
             }
         return cls.xrv_op(*dist_params, extra_dims=extra_dims, core_dims=core_dims, **kwargs)
 
