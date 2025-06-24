@@ -19,7 +19,7 @@ from pytensor.xtensor import as_xtensor
 import pymc.distributions as regular_distributions
 
 from pymc import Model
-from pymc.dims import Categorical, MvNormal
+from pymc.dims import Categorical, MvNormal, ZeroSumNormal
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
 
 
@@ -60,3 +60,21 @@ def test_mvnormal():
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_zerosumnormal():
+    coords = {"a": range(3), "b": range(2)}
+    with Model(coords=coords) as model:
+        ZeroSumNormal("x", core_dims=("b",), dims=("a", "b"))
+        ZeroSumNormal("y", sigma=3, core_dims=("b",), dims=("a", "b"))
+        ZeroSumNormal("z", core_dims=("a", "b"), dims=("a", "b"))
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.ZeroSumNormal("x", dims=("a", "b"))
+        regular_distributions.ZeroSumNormal("y", sigma=3, n_zerosum_axes=1, dims=("a", "b"))
+        regular_distributions.ZeroSumNormal("z", n_zerosum_axes=2, dims=("a", "b"))
+
+    assert_equivalent_random_graph(model, reference_model)
+    # Logp is correct, but we have join(..., -1) and join(..., 1), that don't get canonicalized to the same
+    # Should work once https://github.com/pymc-devs/pytensor/issues/1505 is fixed
+    # assert_equivalent_logp_graph(model, reference_model)
