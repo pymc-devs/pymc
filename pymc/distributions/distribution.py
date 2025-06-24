@@ -367,6 +367,7 @@ class SymbolicRandomVariable(MeasurableOp, RNGConsumerOp, OpFromGraph):
 
         kwargs.setdefault("inline", True)
         kwargs.setdefault("strict", True)
+        kwargs.setdefault("on_unused_input", "ignore")
         super().__init__(*args, **kwargs)
 
     def update(self, node: Apply) -> dict[Variable, Variable]:
