@@ -14,9 +14,14 @@
 import pytensor.xtensor as ptx
 import pytensor.xtensor.random as ptxr
 
+from pytensor.tensor import as_tensor
+from pytensor.xtensor import as_xtensor
 from pytensor.xtensor import random as pxr
 
 from pymc.dims.distributions.core import VectorDimDistribution
+from pymc.dims.distributions.transforms import ZeroSumTransform
+from pymc.distributions.multivariate import ZeroSumNormalRV
+from pymc.util import UNSET
 
 
 class Categorical(VectorDimDistribution):
@@ -114,3 +119,80 @@ class MvNormal(VectorDimDistribution):
             cov = chol.dot(chol.rename({d0: safe_name}), dim=d1).rename({safe_name: d1})
 
         return super().dist([mu, cov], core_dims=core_dims, **kwargs)
+
+
+class ZeroSumNormal(VectorDimDistribution):
+    """Zero-sum multivariate normal distribution.
+
+    Parameters
+    ----------
+    sigma : xtensor_like, optional
+        The standard deviation of the underlying unconstrained normal distribution.
+        Defaults to 1.0. It cannot have core dimensions.
+    core_dims : Sequence of str, optional
+        The axes along which the zero-sum constraint is applied.
+    **kwargs
+        Additional keyword arguments used to define the distribution.
+
+    Returns
+    -------
+    XTensorVariable
+        An xtensor variable representing the zero-sum multivariate normal distribution.
+    """
+
+    @classmethod
+    def __new__(
+        cls, *args, core_dims=None, dims=None, default_transform=UNSET, observed=None, **kwargs
+    ):
+        if core_dims is not None:
+            if isinstance(core_dims, str):
+                core_dims = (core_dims,)
+
+            # Create default_transform
+            if observed is None and default_transform is UNSET:
+                default_transform = ZeroSumTransform(dims=core_dims)
+
+        # If the user didn't specify dims, take it from core_dims
+        # We need them to be forwarded to dist in the `dim_lenghts` argument
+        if dims is None and core_dims is not None:
+            dims = (..., *core_dims)
+
+        return super().__new__(
+            *args,
+            core_dims=core_dims,
+            dims=dims,
+            default_transform=default_transform,
+            observed=observed,
+            **kwargs,
+        )
+
+    @classmethod
+    def dist(cls, sigma=1.0, *, core_dims=None, dim_lengths, **kwargs):
+        if isinstance(core_dims, str):
+            core_dims = (core_dims,)
+        if core_dims is None or len(core_dims) == 0:
+            raise ValueError("ZeroSumNormal requires atleast 1 core_dims")
+
+        support_dims = as_xtensor(
+            as_tensor([dim_lengths[core_dim] for core_dim in core_dims]), dims=("_",)
+        )
+        sigma = cls._as_xtensor(sigma)
+
+        return super().dist(
+            [sigma, support_dims], core_dims=core_dims, dim_lengths=dim_lengths, **kwargs
+        )
+
+    @classmethod
+    def xrv_op(self, sigma, support_dims, core_dims, extra_dims=None, rng=None):
+        sigma = as_xtensor(sigma)
+        support_dims = as_xtensor(support_dims, dims=("_",))
+        support_shape = support_dims.values
+        core_rv = ZeroSumNormalRV.rv_op(sigma=sigma.values, support_shape=support_shape).owner.op
+        xop = pxr.as_xrv(
+            core_rv,
+            core_inps_dims_map=[(), (0,)],
+            core_out_dims_map=tuple(range(1, len(core_dims) + 1)),
+        )
+        # Dummy "_" core dim to absorb the support_shape vector
+        # If ZeroSumNormal expected a scalar per support dim, this wouldn't be needed
+        return xop(sigma, support_dims, core_dims=("_", *core_dims), extra_dims=extra_dims, rng=rng)
