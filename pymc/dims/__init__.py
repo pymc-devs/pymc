@@ -68,4 +68,4 @@ del __init__
 
 from pymc.dims import math
 from pymc.dims.distributions import *
-from pymc.dims.model import Data, with_dims
+from pymc.dims.model import Data, Deterministic, Potential

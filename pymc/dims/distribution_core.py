@@ -24,7 +24,6 @@ from pytensor.xtensor.basic import XTensorFromTensor, xtensor_from_tensor
 from pytensor.xtensor.type import XTensorVariable
 
 from pymc import SymbolicRandomVariable, modelcontext
-from pymc.dims.model import with_dims
 from pymc.dims.transforms import DimTransform, log_odds_transform, log_transform
 from pymc.distributions.distribution import _support_point, support_point
 from pymc.distributions.shape_utils import DimsWithEllipsis, convert_dims
@@ -129,14 +128,11 @@ class DimDistribution:
         try:
             return as_xtensor(x)
         except TypeError:
-            try:
-                return with_dims(x)
-            except ValueError:
-                raise ValueError(
-                    f"Variable {x} must have dims associated with it.\n"
-                    "To avoid subtle bugs, PyMC does not make any assumptions about the dims of the parameters.\n"
-                    "Convert parameters to an xarray.DataArray, pymc.dims.Data or pytensor.xtensor.as_xtensor with explicit dims."
-                )
+            raise ValueError(
+                f"Variable {x} must have dims associated with it.\n"
+                "To avoid subtle bugs, PyMC does not make any assumptions about the dims of the parameters.\n"
+                "Convert parameters to an xarray.DataArray, pymc.dims.Data or pytensor.xtensor.as_xtensor with explicit dims."
+            )
 
     def __new__(
         cls,

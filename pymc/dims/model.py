@@ -15,7 +15,6 @@ from collections.abc import Callable
 
 from pytensor.tensor import TensorVariable
 from pytensor.xtensor import as_xtensor
-from pytensor.xtensor.basic import TensorFromXTensor
 from pytensor.xtensor.type import XTensorVariable
 
 from pymc.data import Data as RegularData
@@ -23,29 +22,6 @@ from pymc.distributions.shape_utils import DimsWithEllipsis, convert_dims
 from pymc.model.core import Deterministic as RegularDeterministic
 from pymc.model.core import Model, modelcontext
 from pymc.model.core import Potential as RegularPotential
-
-
-def with_dims(x: TensorVariable | XTensorVariable, model: Model | None = None) -> XTensorVariable:
-    """Recover the dims of a variable that was registered in the Model."""
-    if isinstance(x, XTensorVariable):
-        return x
-
-    if (x.owner is not None) and isinstance(x.owner.op, TensorFromXTensor):
-        dims = x.owner.inputs[0].type.dims
-        return as_xtensor(x, dims=dims, name=x.name)
-
-    # Try accessing the model context to get dims
-    try:
-        model = modelcontext(model)
-        if (
-            model.named_vars.get(x.name, None) is x
-            and (dims := model.named_vars_to_dims.get(x.name, None)) is not None
-        ):
-            return as_xtensor(x, dims=dims, name=x.name)
-    except TypeError:
-        pass
-
-    raise ValueError(f"variable {x} doesn't have dims associated with it")
 
 
 def Data(
