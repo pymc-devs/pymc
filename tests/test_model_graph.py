@@ -536,6 +536,14 @@ def simple_model() -> pm.Model:
     return model
 
 
+@pytest.fixture(scope="module")
+def variable_with_space():
+    with pm.Model() as model:
+        pm.Normal("plant growth")
+
+    return model
+
+
 def test_unknown_node_type(simple_model):
     with pytest.raises(ValueError, match="Node formatters must be of type NodeType."):
         model_to_graphviz(simple_model, node_formatters={"Unknown Node Type": "dummy"})
@@ -652,3 +660,17 @@ def test_model_to_mermaid(simple_model):
     %% Plates:
     """)
     assert model_to_mermaid(simple_model) == expected_mermaid_string.strip()
+
+
+def test_model_to_mermaid_with_variable_with_space(variable_with_space):
+    expected_mermaid_string = dedent("""
+    graph TD
+    %% Nodes:
+    plant_growth([plant growth ~ Normal])
+    plant_growth@{ shape: rounded }
+
+    %% Edges:
+
+    %% Plates:
+    """)
+    assert model_to_mermaid(variable_with_space) == expected_mermaid_string.strip()
