@@ -257,13 +257,13 @@ class DimDistribution:
         return cls.xrv_op(*dist_params, extra_dims=extra_dims, core_dims=core_dims, **kwargs)
 
 
-class MultivariateDimDistribution(DimDistribution):
+class VectorDimDistribution(DimDistribution):
     @classmethod
     def dist(self, *args, core_dims: str | Sequence[str] | None = None, **kwargs):
         # Add a helpful error message if core_dims is not provided
         if core_dims is None:
             raise ValueError(
-                f"{self.__name__} requires core_dims to be specified, as it is a multivariate distribution."
+                f"{self.__name__} requires core_dims to be specified, as it involves non-scalar inputs or outputs."
                 "Check the documentation of the distribution for details."
             )
         return super().dist(*args, core_dims=core_dims, **kwargs)

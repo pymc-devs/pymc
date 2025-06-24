@@ -55,8 +55,6 @@ def _register_and_return_xtensor_variable(
             value = value.transpose(*dims)
         # Regardless of whether dims are provided, we now have them
         dims = value.type.dims
-        # Register the equivalent TensorVariable with the model so it doesn't see XTensorVariables directly.
-        value = value.values
 
     value = registration_func(name, value, dims=dims, model=model)
 

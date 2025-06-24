@@ -12,167 +12,36 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import pytensor.xtensor as ptx
-import pytensor.xtensor.random as pxr
+import pytensor.xtensor.random as ptxr
 
 from pytensor.tensor import as_tensor
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.xtensor import as_xtensor
+from pytensor.xtensor import random as pxr
 
-from pymc.dims.distribution_core import (
-    DimDistribution,
-    MultivariateDimDistribution,
-    PositiveDimDistribution,
-    UnitDimDistribution,
-)
+from pymc.dims.distributions.core import VectorDimDistribution
 from pymc.dims.transforms import ZeroSumTransform
-from pymc.distributions.continuous import Beta as RegularBeta
-from pymc.distributions.continuous import Gamma as RegularGamma
-from pymc.distributions.continuous import HalfStudentTRV, flat, halfflat
-from pymc.distributions.continuous import InverseGamma as RegularInverseGamma
 from pymc.distributions.multivariate import ZeroSumNormalRV
 from pymc.util import UNSET
 
 
-def _get_sigma_from_either_sigma_or_tau(*, sigma, tau):
-    if sigma is not None and tau is not None:
-        raise ValueError("Can't pass both tau and sigma")
-
-    if sigma is None and tau is None:
-        return 1.0
-
-    if sigma is not None:
-        return sigma
-
-    return ptx.math.reciprocal(ptx.math.square(sigma))
-
-
-class Flat(DimDistribution):
-    xrv_op = pxr._as_xrv(flat)
+# FIXME: Find a better name for this class, which is based on needed core_dims for inputs/outputs
+class Categorical(VectorDimDistribution):
+    xrv_op = ptxr.categorical
 
     @classmethod
-    def dist(cls, **kwargs):
-        return super().dist([], **kwargs)
+    def dist(cls, p=None, *, logit_p=None, core_dims=None, **kwargs):
+        if p is not None and logit_p is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both p and logit_p.")
+        elif p is None and logit_p is None:
+            raise ValueError("Incompatible parametrization. Must specify either p or logit_p.")
+
+        if logit_p is not None:
+            p = ptx.math.softmax(logit_p, dims=core_dims)
+        return super().dist([p], core_dims=core_dims, **kwargs)
 
 
-class HalfFlat(PositiveDimDistribution):
-    xrv_op = pxr._as_xrv(halfflat, [], ())
-
-    @classmethod
-    def dist(cls, **kwargs):
-        return super().dist([], **kwargs)
-
-
-class Normal(DimDistribution):
-    xrv_op = pxr.normal
-
-    @classmethod
-    def dist(cls, mu=0, sigma=None, *, tau=None, **kwargs):
-        sigma = _get_sigma_from_either_sigma_or_tau(sigma=sigma, tau=tau)
-        return super().dist([mu, sigma], **kwargs)
-
-
-class HalfNormal(PositiveDimDistribution):
-    xrv_op = pxr.halfnormal
-
-    @classmethod
-    def dist(cls, sigma=None, *, tau=None, **kwargs):
-        sigma = _get_sigma_from_either_sigma_or_tau(sigma=sigma, tau=tau)
-        return super().dist([0.0, sigma], **kwargs)
-
-
-class LogNormal(PositiveDimDistribution):
-    xrv_op = pxr.lognormal
-
-    @classmethod
-    def dist(cls, mu=0, sigma=None, *, tau=None, **kwargs):
-        sigma = _get_sigma_from_either_sigma_or_tau(sigma=sigma, tau=tau)
-        return super().dist([mu, sigma], **kwargs)
-
-
-class StudentT(DimDistribution):
-    xrv_op = pxr.t
-
-    @classmethod
-    def dist(cls, nu, mu=0, sigma=None, *, lam=None, **kwargs):
-        sigma = _get_sigma_from_either_sigma_or_tau(sigma=sigma, tau=lam)
-        return super().dist([nu, mu, sigma], **kwargs)
-
-
-class HalfStudentT(PositiveDimDistribution):
-    xrv_op = pxr._as_xrv(HalfStudentTRV.rv_op, [(), ()], ())
-
-    @classmethod
-    def dist(cls, nu, sigma=None, *, lam=None, **kwargs):
-        sigma = _get_sigma_from_either_sigma_or_tau(sigma=sigma, tau=lam)
-        return super().dist([nu, sigma], **kwargs)
-
-
-class Cauchy(DimDistribution):
-    xrv_op = pxr.cauchy
-
-    @classmethod
-    def dist(cls, alpha, beta, **kwargs):
-        return super().dist([alpha, beta], **kwargs)
-
-
-class HalfCauchy(PositiveDimDistribution):
-    xrv_op = pxr.halfcauchy
-
-    @classmethod
-    def dist(cls, beta, **kwargs):
-        return super().dist([0.0, beta], **kwargs)
-
-
-class Beta(UnitDimDistribution):
-    xrv_op = pxr.beta
-
-    @classmethod
-    def dist(cls, alpha=None, beta=None, *, mu=None, sigma=None, nu=None, **kwargs):
-        alpha, beta = RegularBeta.get_alpha_beta(alpha=alpha, beta=beta, mu=mu, sigma=sigma, nu=nu)
-        return super().dist([alpha, beta], **kwargs)
-
-
-class Laplace(DimDistribution):
-    xrv_op = pxr.laplace
-
-    @classmethod
-    def dist(cls, mu=0, b=1, **kwargs):
-        return super().dist([mu, b], **kwargs)
-
-
-class Exponential(PositiveDimDistribution):
-    xrv_op = pxr.exponential
-
-    @classmethod
-    def dist(cls, lam=None, *, scale=None, **kwargs):
-        if lam is None and scale is None:
-            scale = 1.0
-        elif lam is not None and scale is not None:
-            raise ValueError("Cannot pass both 'lam' and 'scale'. Use one of them.")
-        elif lam is not None:
-            scale = 1 / lam
-        return super().dist([scale], **kwargs)
-
-
-class Gamma(PositiveDimDistribution):
-    xrv_op = pxr.gamma
-
-    @classmethod
-    def dist(cls, alpha=None, beta=None, *, mu=None, sigma=None, **kwargs):
-        alpha, beta = RegularGamma.get_alpha_beta(alpha=alpha, beta=beta, mu=None, sigma=None)
-        return super().dist([alpha, 1 / beta], **kwargs)
-
-
-class InverseGamma(PositiveDimDistribution):
-    xrv_op = pxr.invgamma
-
-    @classmethod
-    def dist(cls, alpha=None, beta=None, *, mu=None, sigma=None, **kwargs):
-        alpha, beta = RegularInverseGamma.get_alpha_beta(alpha=alpha, beta=beta, mu=mu, sigma=sigma)
-        return super().dist([alpha, beta], **kwargs)
-
-
-class MvNormal(MultivariateDimDistribution):
+class MvNormal(VectorDimDistribution):
     """Multivariate Normal distribution.
 
     Parameters
@@ -238,7 +107,7 @@ class DimZeroSumNormalRV(ZeroSumNormalRV):
         return super().make_node(rng, size, sigma, support_shape)
 
 
-class ZeroSumNormal(MultivariateDimDistribution):
+class ZeroSumNormal(VectorDimDistribution):
     @classmethod
     def __new__(
         cls, *args, core_dims=None, dims=None, default_transform=UNSET, observed=None, **kwargs
