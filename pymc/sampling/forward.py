@@ -30,9 +30,7 @@ import numpy as np
 import xarray
 
 from arviz import InferenceData
-from pytensor import tensor as pt
 from pytensor.graph.basic import (
-    Apply,
     Constant,
     Variable,
     ancestors,
@@ -60,7 +58,6 @@ from pymc.util import (
     _get_seeds_per_chain,
     default_progress_theme,
     get_default_varnames,
-    point_wrapper,
 )
 
 __all__ = (
@@ -113,9 +110,9 @@ def compile_forward_sampling_function(
     outputs: list[Variable],
     vars_in_trace: list[Variable],
     basic_rvs: list[Variable] | None = None,
-    givens_dict: dict[Variable, Any] | None = None,
     constant_data: dict[str, np.ndarray] | None = None,
     constant_coords: set[str] | None = None,
+    model=None,
     **kwargs,
 ) -> tuple[Callable[..., np.ndarray | list[np.ndarray]], set[Variable]]:
     """Compile a function to draw samples, conditioned on the values of some variables.
@@ -131,7 +128,6 @@ def compile_forward_sampling_function(
     - Variables in the outputs list
     - ``SharedVariable`` instances that are not ``RandomGeneratorSharedVariable``, and whose values changed with respect to what they were at inference time
     - Variables that are in the `basic_rvs` list but not in the ``vars_in_trace`` list
-    - Variables that are keys in the ``givens_dict``
     - Variables that have volatile inputs
 
     Concretely, this function can be used to compile a function to sample from the
@@ -141,15 +137,6 @@ def compile_forward_sampling_function(
     function. This means that if they have values stored in the posterior, these values will be
     ignored and new values will be computed (in the case of deterministics and potentials) or
     sampled (in the case of random variables).
-
-    This function also enables a way to impute values for any variable in the computational
-    graph that produces the desired outputs: the ``givens_dict``. This dictionary can be used
-    to set the ``givens`` argument of the pytensor function compilation. This will essentially
-    replace a node in the computational graph with any other expression that has the same
-    type as the desired node. Passing variables in the givens_dict is considered an intervention
-    that might lead to different variable values from those that could have been seen during
-    inference, as such, **any variable that is passed in the ``givens_dict`` will be considered
-    volatile**.
 
     Parameters
     ----------
@@ -163,10 +150,6 @@ def compile_forward_sampling_function(
         be considered as random variable instances. This includes variables that have
         a ``RandomVariable`` owner op, but also unpure random variables like Mixtures, or
         Censored distributions.
-    givens_dict : Optional[Dict[pytensor.graph.basic.Variable, Any]]
-        A dictionary that maps tensor variables to the values that should be used to replace them
-        in the compiled function. The types of the key and value should match or an error will be
-        raised during compilation.
     constant_data : Optional[Dict[str, numpy.ndarray]]
         A dictionary that maps the names of ``Data`` instances to their
         corresponding values at inference time. If a model was created with ``Data``, these
@@ -195,9 +178,6 @@ def compile_forward_sampling_function(
         Set of all basic_rvs that were considered volatile and will be resampled when
         the function is evaluated
     """
-    if givens_dict is None:
-        givens_dict = {}
-
     if basic_rvs is None:
         basic_rvs = []
 
@@ -226,7 +206,6 @@ def compile_forward_sampling_function(
     for node in nodes:
         if (
             node in fg.outputs
-            or node in givens_dict
             or (  # SharedVariables, except RandomState/Generators
                 isinstance(node, SharedVariable)
                 and not isinstance(node, RandomGeneratorSharedVariable)
@@ -263,20 +242,15 @@ def compile_forward_sampling_function(
     # the entire graph
     list(walk(fg.outputs, expand))
 
-    # Populate the givens list
-    givens = [
-        (
-            node,
-            value
-            if isinstance(value, Variable | Apply)
-            else pt.constant(value, dtype=getattr(node, "dtype", None), name=node.name),
-        )
-        for node, value in givens_dict.items()
-    ]
+    if model is None:
+        fn = compile(inputs, fg.outputs, on_unused_input="ignore", **kwargs)
+    else:
+        # Go through model to cache function
+        fn = model.compile_fn(fg.outputs, inputs=inputs, on_unused_input="ignore", **kwargs)
 
     return (
-        compile(inputs, fg.outputs, givens=givens, on_unused_input="ignore", **kwargs),
-        set(basic_rvs) & (volatile_nodes - set(givens_dict)),  # Basic RVs that will be resampled
+        fn,
+        set(basic_rvs) & volatile_nodes,  # Basic RVs that will be resampled
     )
 
 
@@ -467,8 +441,6 @@ def sample_prior_predictive(
         vars_to_sample,
         vars_in_trace=[],
         basic_rvs=model.basic_RVs,
-        givens_dict=None,
-        random_seed=random_seed,
         **compile_kwargs,
     )
 
@@ -901,17 +873,16 @@ def sample_posterior_predictive(
     compile_kwargs.setdefault("allow_input_downcast", True)
     compile_kwargs.setdefault("accept_inplace", True)
 
-    _sampler_fn, volatile_basic_rvs = compile_forward_sampling_function(
+    sampler_fn, volatile_basic_rvs = compile_forward_sampling_function(
         outputs=vars_to_sample,
         vars_in_trace=vars_in_trace,
         basic_rvs=model.basic_RVs,
-        givens_dict=None,
-        random_seed=random_seed,
         constant_data=constant_data,
         constant_coords=constant_coords,
         **compile_kwargs,
+        random_seed=random_seed,
+        on_unused_input="ignore",
     )
-    sampler_fn = point_wrapper(_sampler_fn)
     # All model variables have a name, but mypy does not know this
     _log.info(f"Sampling: {sorted(volatile_basic_rvs, key=lambda var: var.name)}")  # type: ignore[arg-type, return-value]
     ppc_trace_t = _DefaultTrace(samples)

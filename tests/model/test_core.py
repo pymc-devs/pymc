@@ -1805,3 +1805,21 @@ class TestModelCopy:
             match="Detected variables likely created by GP objects. Further use of these old GP objects should be avoided as it may reintroduce variables from the old model. See issue: https://github.com/pymc-devs/pymc/issues/6883",
         ):
             copy_method(gaussian_process_model)
+
+
+@pytest.mark.parametrize()
+def test_memoization():
+    with pm.Model() as m:
+        x = pm.Normal("x")
+        y = pm.Normal("y")
+
+    res1 = m.logp()
+    res2 = m.logp()
+    res3 = m.logp(sum=False)
+
+    res4 = m.logp()
+    assert res1 is res2
+    assert res1 is not res3
+    assert res1 is res4
+
+    m.invalidate_cache()
