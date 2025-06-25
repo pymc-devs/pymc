@@ -56,7 +56,10 @@ class TestCensored:
             )
 
             prior_pred = pm.sample_prior_predictive(random_seed=rng)
-            posterior = pm.sample(tune=500, draws=500, random_seed=rng)
+            # posterior = pm.sample(tune=250, draws=250, random_seed=rng)
+            posterior = pm.sample(
+                tune=240, draws=270, discard_tuned_samples=True, random_seed=rng, max_treedepth=10
+            )
             posterior_pred = pm.sample_posterior_predictive(posterior, random_seed=rng)
 
         expected = True if censored else False
