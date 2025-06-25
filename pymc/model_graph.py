@@ -802,7 +802,7 @@ def _create_mermaid_node_name(name: str) -> str:
 def _build_mermaid_node(node: NodeInfo) -> list[str]:
     var = node.var
     node_type = node.node_type
-    name = var.name
+    name = cast(str, var.name)
     node_name = _create_mermaid_node_name(name)
     if node_type == NodeType.DATA:
         return [
