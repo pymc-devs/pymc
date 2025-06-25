@@ -652,3 +652,20 @@ def test_model_to_mermaid(simple_model):
     %% Plates:
     """)
     assert model_to_mermaid(simple_model) == expected_mermaid_string.strip()
+
+
+def test_model_to_mermaid_with_variable_with_space():
+    with pm.Model() as variable_with_space:
+        pm.Normal("plant growth")
+
+    expected_mermaid_string = dedent("""
+    graph TD
+    %% Nodes:
+    plant_growth([plant growth ~ Normal])
+    plant_growth@{ shape: rounded }
+
+    %% Edges:
+
+    %% Plates:
+    """)
+    assert model_to_mermaid(variable_with_space) == expected_mermaid_string.strip()
