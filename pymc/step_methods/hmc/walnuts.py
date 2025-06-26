@@ -188,7 +188,7 @@ class WalnutsTree:
 class WALNUTS(BaseHMC):
     """Within-orbit Adaptive Step-length No-U-Turn Sampler.
 
-    WALNUTS extends NUTS by adapting the integration step size within
+    WALNUTS (Bou-Rabee et al., 2025) extends NUTS by adapting the integration step size within
     each trajectory. This can improve numerical stability in models
     with varying curvature.
 
@@ -204,6 +204,13 @@ class WALNUTS(BaseHMC):
         Maximum depth during tuning phase.
     **kwargs
         Additional arguments passed to BaseHMC.
+
+    References
+    ----------
+    .. [1] Bou-Rabee, N., Carpenter, B., Kleppe, T. S., & Liu, S. (2025).
+       The Within-Orbit Adaptive Leapfrog No-U-Turn Sampler.
+       arXiv preprint arXiv:2506.18746.
+       https://arxiv.org/abs/2506.18746v1
     """
 
     name = "walnuts"
