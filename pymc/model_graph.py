@@ -77,8 +77,11 @@ def create_plate_label_with_dim_length(
     )
 
 
+from pymc.pytensorf import _cheap_eval_mode
+
+
 def fast_eval(var):
-    return function([], var, mode="FAST_COMPILE")()
+    return function([], var, mode=_cheap_eval_mode)()
 
 
 class NodeType(str, Enum):

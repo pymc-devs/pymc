@@ -43,21 +43,18 @@ import pytensor
 
 from pytensor import tensor as pt
 from pytensor.graph import Apply, Op, node_rewriter
-from pytensor.graph.basic import Constant, Variable, clone_get_equiv, graph_inputs, walk
+from pytensor.graph.basic import Constant, clone_get_equiv, graph_inputs, walk
 from pytensor.graph.fg import FunctionGraph
-from pytensor.graph.op import HasInnerGraph
 from pytensor.link.c.type import CType
 from pytensor.raise_op import CheckAndRaise
 from pytensor.scalar.basic import Mul
 from pytensor.tensor.basic import get_underlying_scalar_constant_value
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.exceptions import NotScalarConstantError
-from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import MeasurableOp, ValuedRV, _logprob
 from pymc.pytensorf import replace_vars_in_graphs
-from pymc.util import makeiter
 
 if typing.TYPE_CHECKING:
     from pymc.logprob.transforms import Transform
@@ -128,26 +125,6 @@ def replace_rvs_by_values(
         pass
 
     return replace_vars_in_graphs(graphs, replacements)
-
-
-def rvs_in_graph(vars: Variable | Sequence[Variable]) -> set[Variable]:
-    """Assert that there are no `MeasurableOp` nodes in a graph."""
-
-    def expand(r):
-        owner = r.owner
-        if owner:
-            inputs = list(reversed(owner.inputs))
-
-            if isinstance(owner.op, HasInnerGraph):
-                inputs += owner.op.inner_outputs
-
-            return inputs
-
-    return {
-        node
-        for node in walk(makeiter(vars), expand, False)
-        if node.owner and isinstance(node.owner.op, RandomVariable | MeasurableOp)
-    }
 
 
 def convert_indices(indices, entry):
@@ -334,3 +311,16 @@ def get_related_valued_nodes(fgraph: FunctionGraph, node: Apply) -> list[Apply]:
         for client, _ in clients[out]
         if isinstance(client.op, ValuedRV)
     ]
+
+
+def __getattr__(name):
+    if name == "rvs_in_graphs":
+        warnings.warn(
+            f"{name} has been moved to `pymc.pytensorf`. Importing from `pymc.logprob.utils` will fail in a future release.",
+            FutureWarning,
+        )
+        from pymc.pytensorf import rvs_in_graph
+
+        return rvs_in_graph()
+
+    raise AttributeError(f"module {__name__} has no attribute {name}")
