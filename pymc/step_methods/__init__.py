@@ -15,7 +15,7 @@
 """Step methods."""
 
 from pymc.step_methods.compound import BlockedStep, CompoundStep
-from pymc.step_methods.hmc import NUTS, HamiltonianMC
+from pymc.step_methods.hmc import NUTS, WALNUTS, HamiltonianMC
 from pymc.step_methods.metropolis import (
     BinaryGibbsMetropolis,
     BinaryMetropolis,
@@ -35,6 +35,7 @@ from pymc.step_methods.slicer import Slice
 # Other step methods can be added by appending to this list
 STEP_METHODS: list[type[BlockedStep]] = [
     NUTS,
+    WALNUTS,
     HamiltonianMC,
     Metropolis,
     BinaryMetropolis,

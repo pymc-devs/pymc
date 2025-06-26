@@ -16,3 +16,4 @@
 
 from pymc.step_methods.hmc.hmc import HamiltonianMC
 from pymc.step_methods.hmc.nuts import NUTS
+from pymc.step_methods.hmc.walnuts import WALNUTS
