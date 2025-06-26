@@ -1781,7 +1781,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             point = self.initial_point()
 
         factors = self.basic_RVs + self.potentials
-        factor_logps_fn = [pt.sum(factor) for factor in self.logp(factors, sum=False)]
+        factor_logps_fn = [factor.sum() for factor in self.logp(factors, sum=False)]
         return {
             factor.name: np.round(np.asarray(factor_logp), round_vals)
             for factor, factor_logp in zip(

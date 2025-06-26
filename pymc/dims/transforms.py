@@ -68,10 +68,13 @@ class ZeroSumTransform(DimTransform):
         fill_val = norm - sum_vals / pt.sqrt(n)
 
         out = ptx.concat([array, fill_val], dim=dim)
+        import pytensor
+        with pytensor.config.change_flags(optimizer_verbose=True):
+            print(out.eval(mode="minimum_compile").shape)
         return out - norm
 
     @staticmethod
-    def reduct_dim(array, dim):
+    def reduce_dim(array, dim):
         n = array.sizes[dim].astype("floatX")
         last = array.isel({dim: -1})
 
@@ -81,7 +84,7 @@ class ZeroSumTransform(DimTransform):
 
     def forward(self, value, *rv_inputs):
         for dim in self.dims:
-            value = self.reduct_dim(value, dim=dim)
+            value = self.reduce_dim(value, dim=dim)
         return value
 
     def backward(self, value, *rv_inputs):
@@ -92,4 +95,4 @@ class ZeroSumTransform(DimTransform):
     def log_jac_det(self, value, *rv_inputs):
         # Use following once broadcast_like is implemented
         # as_xtensor(0).broadcast_like(value, exclude=self.dims)`
-        return (value * 0).sum(self.dims)
+        return value.sum(self.dims) * 0

@@ -60,7 +60,9 @@ def test_zerosumnormal():
         np.testing.assert_allclose(ip_value, ref_ip_value)
 
     logp_fn = model.compile_logp()
-    ref_logp_fn = ref_model.compile_logp()
     logp_fn(ip)
+    ref_logp_fn = ref_model.compile_logp()
     # np.testing.assert_allclose(logp_fn(ip), ref_logp_fn(ref_ip))
     # Test a new
+
+test_zerosumnormal()
