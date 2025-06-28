@@ -1750,7 +1750,7 @@ class TestModelGraphs:
     )
     def test_graphviz_call_function(self, var_names, filenames) -> None:
         model = self.school_model(J=8)
-        with patch("pymc.model.core.model_to_graphviz") as mock_model_to_graphviz:
+        with patch("pymc.model_graph.model_to_graphviz") as mock_model_to_graphviz:
             model.to_graphviz(var_names=var_names, save=filenames)
             mock_model_to_graphviz.assert_called_once_with(
                 model=model,
