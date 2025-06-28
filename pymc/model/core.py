@@ -52,7 +52,6 @@ from pymc.initial_point import PointType, make_initial_point_fn
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import Transform
 from pymc.logprob.utils import ParameterValueError, replace_rvs_by_values
-from pymc.model_graph import model_to_graphviz
 from pymc.pytensorf import (
     PointFunc,
     SeedSequenceSeed,
@@ -436,6 +435,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
         """Exit the context manager."""
         _ = MODEL_MANAGER.active_contexts.pop()
+
+    def _display_(self):
+        import marimo as mo
+
+        from pymc.model_graph import model_to_mermaid
+
+        return mo.mermaid(model_to_mermaid(self))
 
     @staticmethod
     def _validate_name(name):
@@ -1997,6 +2003,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
             # creates the file `schools.pdf`
             schools.to_graphviz().render("schools")
         """
+        from pymc.model_graph import model_to_graphviz
+
         return model_to_graphviz(
             model=self,
             var_names=var_names,
