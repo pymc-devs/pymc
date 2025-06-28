@@ -29,8 +29,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.shape import Shape
 from pytensor.tensor.variable import TensorVariable
 
-import pymc as pm
-
+from pymc.model.core import modelcontext
 from pymc.util import VarName, get_default_varnames, get_var_name
 
 __all__ = (
@@ -662,7 +661,7 @@ def model_to_networkx(
             stacklevel=2,
         )
 
-    model = pm.modelcontext(model)
+    model = modelcontext(model)
     graph = ModelGraph(model)
     return make_networkx(
         name=model.name,
@@ -777,7 +776,7 @@ def model_to_graphviz(
             stacklevel=2,
         )
 
-    model = pm.modelcontext(model)
+    model = modelcontext(model)
     graph = ModelGraph(model)
     return make_graph(
         model.name,
@@ -910,7 +909,7 @@ def model_to_mermaid(model=None, *, var_names=None, include_dim_lengths: bool = 
 
 
     """
-    model = pm.modelcontext(model)
+    model = modelcontext(model)
     graph = ModelGraph(model)
     plates = sorted(graph.get_plates(var_names=var_names), key=lambda plate: hash(plate.dim_info))
     edges = sorted(graph.edges(var_names=var_names))
