@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import re
 import warnings
 
 import numpy as np
@@ -837,3 +838,23 @@ class TestDatasetToPointList:
         ds[3] = xarray.DataArray([1, 2, 3])
         with pytest.raises(ValueError, match="must be str"):
             dataset_to_point_list(ds, sample_dims=["chain", "draw"])
+
+
+def test_incompatible_coordinate_lengths():
+    with pm.Model(coords={"a": [0, 1, 2]}) as m:
+        x = pm.Normal("x", dims="a")
+        y = pm.Deterministic("b", x[1:], dims=("a",))
+
+        with pytest.warns(
+            UserWarning,
+            match=re.escape(
+                "Incompatible coordinate length of 3 for dimension 'a' of variable 'b'"
+            ),
+        ):
+            pm.sample_prior_predictive(draws=1)
+
+        pm.backends.arviz.RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = True
+        with pytest.raises(ValueError):
+            pm.sample_prior_predictive(draws=1)
+
+        pm.backends.arviz.RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = False
