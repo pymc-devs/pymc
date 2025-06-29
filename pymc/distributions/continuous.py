@@ -487,11 +487,7 @@ class Normal(Continuous):
     def dist(cls, mu=0, sigma=None, tau=None, **kwargs):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         sigma = pt.as_tensor_variable(sigma)
-
-        # tau = pt.as_tensor_variable(tau)
-        # mean = median = mode = mu = pt.as_tensor_variable(floatX(mu))
-        # variance = 1.0 / self.tau
-
+        mu = pt.as_tensor_variable(mu)
         return super().dist([mu, sigma], **kwargs)
 
     def support_point(rv, size, mu, sigma):
