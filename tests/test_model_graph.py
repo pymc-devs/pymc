@@ -470,7 +470,7 @@ class TestVariableSelection:
         [
             (["c"], ["a", "b", "c"], {"c": {"a", "b"}, "a": set(), "b": set()}),
             (
-                ["L"],
+                ["L", "obs"],
                 ["pred", "obs", "L", "intermediate", "a", "b"],
                 {
                     "pred": {"intermediate"},
