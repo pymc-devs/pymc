@@ -372,6 +372,8 @@ class SymbolicRandomVariable(MeasurableOp, RNGConsumerOp, OpFromGraph):
         kwargs.setdefault("strict", True)
         # Many RVS have a size argument, even when this is `None` and is therefore unused
         kwargs.setdefault("on_unused_input", "ignore")
+        if hasattr(self, "name"):
+            kwargs.setdefault("name", self.name)
         super().__init__(*args, **kwargs)
 
     def make_node(self, *inputs):
