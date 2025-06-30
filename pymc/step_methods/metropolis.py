@@ -13,7 +13,7 @@
 #   limitations under the License.
 from collections.abc import Callable
 from dataclasses import field
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import numpy.random as nr
@@ -22,6 +22,7 @@ import scipy.linalg
 import scipy.special
 
 from pytensor import tensor as pt
+from pytensor.graph.basic import Variable
 from pytensor.graph.fg import MissingInputError
 from pytensor.tensor.random.basic import BernoulliRV, CategoricalRV
 from rich.progress import TextColumn
@@ -1253,7 +1254,10 @@ def delta_logp(
     compile_kwargs: dict | None,
 ) -> pytensor.compile.Function:
     [logp0], inarray0 = join_nonshared_inputs(
-        point=point, outputs=[logp], inputs=vars, shared_inputs=shared
+        point=point,
+        outputs=[logp],
+        inputs=vars,
+        shared_inputs=cast(dict[Variable, Variable], shared),
     )
 
     tensor_type = inarray0.type
