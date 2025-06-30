@@ -46,7 +46,7 @@ from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.rewriting.basic import topo_unconditional_constant_folding
 from pytensor.tensor.rewriting.shape import ShapeFeature
-from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
+from pytensor.tensor.sharedvar import SharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from pytensor.tensor.variable import TensorVariable
 
@@ -300,7 +300,9 @@ PyTensor derivative functions
 
 def gradient1(f, v):
     """Flat gradient of f wrt v."""
-    return pt.flatten(grad(f, v, disconnected_inputs="warn"))
+    return pt.as_tensor(
+        grad(f, v, disconnected_inputs="warn"), allow_xtensor_conversion=True
+    ).ravel()
 
 
 empty_gradient = pt.zeros(0, dtype="float32")
@@ -419,11 +421,11 @@ def make_shared_replacements(point, vars, model):
 
 def join_nonshared_inputs(
     point: dict[str, np.ndarray],
-    outputs: list[TensorVariable],
-    inputs: list[TensorVariable],
-    shared_inputs: dict[TensorVariable, TensorSharedVariable] | None = None,
+    outputs: Sequence[Variable],
+    inputs: Sequence[Variable],
+    shared_inputs: dict[Variable, Variable] | None = None,
     make_inputs_shared: bool = False,
-) -> tuple[list[TensorVariable], TensorVariable]:
+) -> tuple[Sequence[Variable], TensorVariable]:
     """
     Create new outputs and input TensorVariables where the non-shared inputs are joined in a single raveled vector input.
 
@@ -548,7 +550,9 @@ def join_nonshared_inputs(
     if not inputs:
         raise ValueError("Empty list of input variables.")
 
-    raveled_inputs = pt.concatenate([var.ravel() for var in inputs])
+    raveled_inputs = pt.concatenate(
+        [pt.as_tensor(var, allow_xtensor_conversion=True).ravel() for var in inputs]
+    )
 
     if not make_inputs_shared:
         tensor_type = raveled_inputs.type
@@ -560,12 +564,15 @@ def join_nonshared_inputs(
     if pytensor.config.compute_test_value != "off":
         joined_inputs.tag.test_value = raveled_inputs.tag.test_value
 
-    replace: dict[TensorVariable, TensorVariable] = {}
+    replace: dict[Variable, Variable] = {}
     last_idx = 0
     for var in inputs:
         shape = point[var.name].shape
         arr_len = np.prod(shape, dtype=int)
-        replace[var] = joined_inputs[last_idx : last_idx + arr_len].reshape(shape).astype(var.dtype)
+        replacement_var = (
+            joined_inputs[last_idx : last_idx + arr_len].reshape(shape).astype(var.dtype)
+        )
+        replace[var] = var.type.filter_variable(replacement_var)
         last_idx += arr_len
 
     if shared_inputs is not None:
@@ -1010,43 +1017,16 @@ def as_symbolic_string(x, **kwargs):
 
 
 def toposort_replace(
-    fgraph: FunctionGraph, replacements: Sequence[tuple[Variable, Variable]], reverse: bool = False
+    fgraph: FunctionGraph,
+    replacements: Sequence[tuple[Variable, Variable]],
+    reverse: bool = False,
 ) -> None:
     """Replace multiple variables in place in topological order."""
     fgraph_toposort = {node: i for i, node in enumerate(fgraph.toposort())}
-    _inner_fgraph_toposorts = {}  # Cache inner toposorts
-
-    def _nested_toposort_index(var, fgraph_toposort) -> tuple[int]:
-        """Compute position of variable in fgraph toposort.
-
-        When a variable is an OpFromGraph output, extend output with the toposort index of the inner graph(s).
-
-        This allows ordering variables that come from the same OpFromGraph.
-        """
-        if not var.owner:
-            return (-1,)
-
-        index = fgraph_toposort[var.owner]
-
-        # Recurse into OpFromGraphs
-        # TODO: Could also recurse into Scans
-        if isinstance(var.owner.op, OpFromGraph):
-            inner_fgraph = var.owner.op.fgraph
-
-            if inner_fgraph not in _inner_fgraph_toposorts:
-                _inner_fgraph_toposorts[inner_fgraph] = {
-                    node: i for i, node in enumerate(inner_fgraph.toposort())
-                }
-
-            inner_fgraph_toposort = _inner_fgraph_toposorts[inner_fgraph]
-            inner_var = inner_fgraph.outputs[var.owner.outputs.index(var)]
-            return (index, *_nested_toposort_index(inner_var, inner_fgraph_toposort))
-        else:
-            return (index,)
-
+    fgraph_toposort[None] = -1  # Variables without owner are not in the toposort
     sorted_replacements = sorted(
         replacements,
-        key=lambda pair: _nested_toposort_index(pair[0], fgraph_toposort),
+        key=lambda pair: fgraph_toposort[pair[0].owner],
         reverse=reverse,
     )
     fgraph.replace_all(sorted_replacements, import_missing=True)

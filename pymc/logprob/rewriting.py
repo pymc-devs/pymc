@@ -133,6 +133,8 @@ def remove_DiracDelta(fgraph, node):
 
 
 logprob_rewrites_basic_query = RewriteDatabaseQuery(include=["basic"])
+logprob_rewrites_cleanup_query = RewriteDatabaseQuery(include=["cleanup"])
+
 logprob_rewrites_db = SequenceDB()
 logprob_rewrites_db.name = "logprob_rewrites_db"
 
@@ -276,10 +278,11 @@ def construct_ir_fgraph(
     return fgraph
 
 
-def cleanup_ir(vars: Sequence[Variable]) -> None:
+def cleanup_ir(vars: Sequence[Variable]) -> Sequence[Variable]:
     fgraph = FunctionGraph(outputs=vars, clone=False)
-    ir_rewriter = logprob_rewrites_db.query(RewriteDatabaseQuery(include=["cleanup"]))
+    ir_rewriter = logprob_rewrites_db.query(logprob_rewrites_cleanup_query)
     ir_rewriter.rewrite(fgraph)
+    return fgraph.outputs
 
 
 def assume_valued_outputs(outputs: Sequence[TensorVariable]) -> Sequence[TensorVariable]:

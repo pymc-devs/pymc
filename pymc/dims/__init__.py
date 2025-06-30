@@ -39,6 +39,9 @@ def __init__():
     logprob_rewrites_db.register(
         "pre_lower_xtensor", optdb.query("+lower_xtensor"), "basic", position=0.1
     )
+    logprob_rewrites_db.register(
+        "post_lower_xtensor", optdb.query("+lower_xtensor"), "cleanup", position=5.1
+    )
     initial_point_rewrites_db.register(
         "lower_xtensor", optdb.query("+lower_xtensor"), "basic", position=0.1
     )
