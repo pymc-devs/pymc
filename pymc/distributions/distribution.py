@@ -370,7 +370,28 @@ class SymbolicRandomVariable(MeasurableOp, RNGConsumerOp, OpFromGraph):
 
         kwargs.setdefault("inline", True)
         kwargs.setdefault("strict", True)
+        # Many RVS have a size argument, even when this is `None` and is therefore unused
+        kwargs.setdefault("on_unused_input", "ignore")
+        if hasattr(self, "name"):
+            kwargs.setdefault("name", self.name)
         super().__init__(*args, **kwargs)
+
+    def make_node(self, *inputs):
+        # If we try to build the RV with a different size type (vector -> None or None -> vector)
+        # We need to rebuild the Op with new size type in the inner graph
+        if self.extended_signature is not None:
+            (rng_arg_idxs, size_arg_idx, param_idxs), _ = self.get_input_output_type_idxs(
+                self.extended_signature
+            )
+            if size_arg_idx is not None and len(rng_arg_idxs) == 1:
+                new_size_type = normalize_size_param(inputs[size_arg_idx]).type
+                if not self.input_types[size_arg_idx].in_same_class(new_size_type):
+                    params = [inputs[idx] for idx in param_idxs]
+                    size = inputs[size_arg_idx]
+                    rng = inputs[rng_arg_idxs[0]]
+                    return self.rebuild_rv(*params, size=size, rng=rng).owner
+
+        return super().make_node(*inputs)
 
     def update(self, node: Apply) -> dict[Variable, Variable]:
         """Symbolic update expression for input random state variables.

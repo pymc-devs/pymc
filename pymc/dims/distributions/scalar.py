@@ -14,6 +14,8 @@
 import pytensor.xtensor as ptx
 import pytensor.xtensor.random as pxr
 
+from pytensor.xtensor import as_xtensor
+
 from pymc.dims.distributions.core import (
     DimDistribution,
     PositiveDimDistribution,
@@ -21,7 +23,7 @@ from pymc.dims.distributions.core import (
 )
 from pymc.distributions.continuous import Beta as RegularBeta
 from pymc.distributions.continuous import Gamma as RegularGamma
-from pymc.distributions.continuous import flat, halfflat
+from pymc.distributions.continuous import HalfStudentTRV, flat, halfflat
 
 
 def _get_sigma_from_either_sigma_or_tau(*, sigma, tau):
@@ -87,6 +89,21 @@ class StudentT(DimDistribution):
     def dist(cls, nu, mu=0, sigma=None, *, lam=None, **kwargs):
         sigma = _get_sigma_from_either_sigma_or_tau(sigma=sigma, tau=lam)
         return super().dist([nu, mu, sigma], **kwargs)
+
+
+class HalfStudentT(PositiveDimDistribution):
+    @classmethod
+    def dist(cls, nu, sigma=None, *, lam=None, **kwargs):
+        sigma = _get_sigma_from_either_sigma_or_tau(sigma=sigma, tau=lam)
+        return super().dist([nu, sigma], **kwargs)
+
+    @classmethod
+    def xrv_op(self, nu, sigma, core_dims=None, extra_dims=None, rng=None):
+        nu = as_xtensor(nu)
+        sigma = as_xtensor(sigma)
+        core_rv = HalfStudentTRV.rv_op(nu=nu.values, sigma=sigma.values).owner.op
+        xop = pxr.as_xrv(core_rv)
+        return xop(nu, sigma, core_dims=core_dims, extra_dims=extra_dims, rng=rng)
 
 
 class Cauchy(DimDistribution):
