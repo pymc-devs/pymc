@@ -36,9 +36,15 @@ def __init__():
 
     # Make PyMC aware of xtensor functionality
     MeasurableOp.register(XRV)
-    lower_xtensor_query = optdb.query("+lower_xtensor")
-    logprob_rewrites_db.register("lower_xtensor", lower_xtensor_query, "basic", position=0.1)
-    initial_point_rewrites_db.register("lower_xtensor", lower_xtensor_query, "basic", position=0.1)
+    logprob_rewrites_db.register(
+        "pre_lower_xtensor", optdb.query("+lower_xtensor"), "basic", position=0.1
+    )
+    logprob_rewrites_db.register(
+        "post_lower_xtensor", optdb.query("+lower_xtensor"), "cleanup", position=5.1
+    )
+    initial_point_rewrites_db.register(
+        "lower_xtensor", optdb.query("+lower_xtensor"), "basic", position=0.1
+    )
 
     # TODO: Better model of probability of bugs
     day_of_conception = datetime.date(2025, 6, 17)
@@ -64,4 +70,4 @@ from pytensor.xtensor import as_xtensor, concat
 
 from pymc.dims import math
 from pymc.dims.distributions import *
-from pymc.dims.model import Data, Deterministic, Potential, with_dims
+from pymc.dims.model import Data, Deterministic, Potential

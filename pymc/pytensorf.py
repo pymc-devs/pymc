@@ -46,7 +46,7 @@ from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.rewriting.basic import topo_unconditional_constant_folding
 from pytensor.tensor.rewriting.shape import ShapeFeature
-from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
+from pytensor.tensor.sharedvar import SharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from pytensor.tensor.variable import TensorVariable
 
@@ -300,7 +300,9 @@ PyTensor derivative functions
 
 def gradient1(f, v):
     """Flat gradient of f wrt v."""
-    return pt.flatten(grad(f, v, disconnected_inputs="warn"))
+    return pt.as_tensor(
+        grad(f, v, disconnected_inputs="warn"), allow_xtensor_conversion=True
+    ).ravel()
 
 
 empty_gradient = pt.zeros(0, dtype="float32")
@@ -419,11 +421,11 @@ def make_shared_replacements(point, vars, model):
 
 def join_nonshared_inputs(
     point: dict[str, np.ndarray],
-    outputs: list[TensorVariable],
-    inputs: list[TensorVariable],
-    shared_inputs: dict[TensorVariable, TensorSharedVariable] | None = None,
+    outputs: Sequence[Variable],
+    inputs: Sequence[Variable],
+    shared_inputs: dict[Variable, Variable] | None = None,
     make_inputs_shared: bool = False,
-) -> tuple[list[TensorVariable], TensorVariable]:
+) -> tuple[Sequence[Variable], TensorVariable]:
     """
     Create new outputs and input TensorVariables where the non-shared inputs are joined in a single raveled vector input.
 
@@ -548,7 +550,9 @@ def join_nonshared_inputs(
     if not inputs:
         raise ValueError("Empty list of input variables.")
 
-    raveled_inputs = pt.concatenate([var.ravel() for var in inputs])
+    raveled_inputs = pt.concatenate(
+        [pt.as_tensor(var, allow_xtensor_conversion=True).ravel() for var in inputs]
+    )
 
     if not make_inputs_shared:
         tensor_type = raveled_inputs.type
@@ -560,12 +564,15 @@ def join_nonshared_inputs(
     if pytensor.config.compute_test_value != "off":
         joined_inputs.tag.test_value = raveled_inputs.tag.test_value
 
-    replace: dict[TensorVariable, TensorVariable] = {}
+    replace: dict[Variable, Variable] = {}
     last_idx = 0
     for var in inputs:
         shape = point[var.name].shape
         arr_len = np.prod(shape, dtype=int)
-        replace[var] = joined_inputs[last_idx : last_idx + arr_len].reshape(shape).astype(var.dtype)
+        replacement_var = (
+            joined_inputs[last_idx : last_idx + arr_len].reshape(shape).astype(var.dtype)
+        )
+        replace[var] = var.type.filter_variable(replacement_var)
         last_idx += arr_len
 
     if shared_inputs is not None:

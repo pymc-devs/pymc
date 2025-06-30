@@ -20,7 +20,8 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Variable, ancestors
+from pytensor.compile.ops import TypeCastingOp
+from pytensor.graph.basic import Apply, Variable, ancestors
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.db import RewriteDatabaseQuery, SequenceDB
 from pytensor.tensor.variable import TensorVariable
@@ -195,6 +196,14 @@ def make_initial_point_fn(
     return make_seeded_function(func)
 
 
+class InitialPoint(TypeCastingOp):
+    def make_node(self, var):
+        return Apply(self, [var], [var.type()])
+
+
+initial_point_op = InitialPoint()
+
+
 def make_initial_point_expression(
     *,
     free_rvs: Sequence[TensorVariable],
@@ -235,6 +244,9 @@ def make_initial_point_expression(
 
     # Clone free_rvs so we don't modify the original graph
     initial_point_fgraph = FunctionGraph(outputs=free_rvs, clone=True)
+    # Wrap each rv in an initial_point Operation to avoid losing dependency between the RVs
+    replacements = tuple((rv, initial_point_op(rv)) for rv in initial_point_fgraph.outputs)
+    toposort_replace(initial_point_fgraph, replacements, reverse=True)
 
     # Apply any rewrites necessary to compute the initial points.
     initial_point_rewriter = initial_point_rewrites_db.query(initial_point_basic_query)
@@ -245,7 +257,9 @@ def make_initial_point_expression(
 
     initial_values = []
     initial_values_transformed = []
-    for original_variable, variable in zip(free_rvs, free_rvs_clone):
+    for original_variable, ip_variable in zip(free_rvs, free_rvs_clone):
+        # Extract the variable from the initial_point operation
+        [variable] = ip_variable.owner.inputs
         strategy = initval_strategies.get(original_variable)
 
         if strategy is None:
@@ -286,7 +300,10 @@ def make_initial_point_expression(
 
         if original_variable in jitter_rvs:
             jitter = pt.random.uniform(-1, 1, size=value.shape)
+            # Hack to allow xtensor value to be added to tensor jitter
+            jitter = value.type.filter_variable(jitter)
             jitter.name = f"{variable.name}_jitter"
+            # Hack to allow xtensor value to be added to tensor jitter
             value = value + jitter
 
         value = value.astype(variable.dtype)
