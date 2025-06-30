@@ -22,6 +22,7 @@ from pymc.dims import (
     HalfCauchy,
     HalfFlat,
     HalfNormal,
+    HalfStudentT,
     InverseGamma,
     Laplace,
     LogNormal,
@@ -114,6 +115,22 @@ def test_studentt():
         regular_distributions.StudentT("x", nu=1, dims="a")
         regular_distributions.StudentT("y", nu=1, mu=2, sigma=3, dims="a")
         regular_distributions.StudentT("z", nu=1, mu=-2, lam=3, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_halfstudentt():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        HalfStudentT("x", nu=1, dims="a")
+        HalfStudentT("y", nu=1, sigma=3, dims="a")
+        HalfStudentT("z", nu=1, lam=3, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.HalfStudentT("x", nu=1, dims="a")
+        regular_distributions.HalfStudentT("y", nu=1, sigma=3, dims="a")
+        regular_distributions.HalfStudentT("z", nu=1, lam=3, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
