@@ -15,7 +15,6 @@ from collections.abc import Callable
 
 from pytensor.tensor import TensorVariable
 from pytensor.xtensor import as_xtensor
-from pytensor.xtensor.basic import TensorFromXTensor
 from pytensor.xtensor.type import XTensorVariable
 
 from pymc.data import Data as RegularData
@@ -30,29 +29,6 @@ from pymc.model.core import Model, modelcontext
 from pymc.model.core import Potential as RegularPotential
 
 
-def with_dims(x: TensorVariable | XTensorVariable, model: Model | None = None) -> XTensorVariable:
-    """Recover the dims of a variable that was registered in the Model."""
-    if isinstance(x, XTensorVariable):
-        return x
-
-    if (x.owner is not None) and isinstance(x.owner.op, TensorFromXTensor):
-        dims = x.owner.inputs[0].type.dims
-        return as_xtensor(x, dims=dims, name=x.name)
-
-    # Try accessing the model context to get dims
-    try:
-        model = modelcontext(model)
-        if (
-            model.named_vars.get(x.name, None) is x
-            and (dims := model.named_vars_to_dims.get(x.name, None)) is not None
-        ):
-            return as_xtensor(x, dims=dims, name=x.name)
-    except TypeError:
-        pass
-
-    raise ValueError(f"variable {x} doesn't have dims associated with it")
-
-
 def Data(
     name: str, value, dims: Dims = None, model: Model | None = None, **kwargs
 ) -> XTensorVariable:
@@ -60,8 +36,6 @@ def Data(
 
     Dimensions are required if the input is not a scalar.
     These are always forwarded to the model object.
-
-    The respective TensorVariable is registered in the model
     """
     model = modelcontext(model)
     dims = convert_dims(dims)  # type: ignore[assignment]
@@ -90,12 +64,9 @@ def _register_and_return_xtensor_variable(
             value = value.transpose(*dims)
         # Regardless of whether dims are provided, we now have them
         dims = value.type.dims
-        # Register the equivalent TensorVariable with the model so it doesn't see XTensorVariables directly.
-        value = value.values  # type: ignore[union-attr]
-
-    value = registration_func(name, value, dims=dims, model=model)
-
-    return as_xtensor(value, dims=dims, name=name)  # type: ignore[arg-type]
+    else:
+        value = as_xtensor(value, dims=dims, name=name)  # type: ignore[arg-type]
+    return registration_func(name, value, dims=dims, model=model)
 
 
 def Deterministic(
@@ -107,8 +78,6 @@ def Deterministic(
     If the input is not an XTensorVariable, it is converted to one using `as_xtensor`. Dims are required if the input is not a scalar.
 
     The dimensions of the resulting XTensorVariable are always forwarded to the model object.
-
-    The respective TensorVariable is registered in the model
     """
     return _register_and_return_xtensor_variable(name, value, dims, model, RegularDeterministic)
 
@@ -122,7 +91,5 @@ def Potential(
     If the input is not an XTensorVariable, it is converted to one using `as_xtensor`. Dims are required if the input is not a scalar.
 
     The dimensions of the resulting XTensorVariable are always forwarded to the model object.
-
-    The respective TensorVariable is registered in the model.
     """
     return _register_and_return_xtensor_variable(name, value, dims, model, RegularPotential)
