@@ -249,7 +249,7 @@ class TestLocScaleRVTransform:
     @pytest.mark.parametrize(
         "rv_size, loc_type, addition",
         [
-            (None, pt.scalar, True),
+            ((), pt.scalar, True),
             (2, pt.vector, False),
             ((2, 1), pt.col, True),
         ],
