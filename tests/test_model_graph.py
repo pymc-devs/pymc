@@ -541,6 +541,16 @@ def test_model_graph_with_intermediate_named_variables():
     assert ModelGraph(m3).make_compute_graph() == {"C": set(), "D": set(), "E": {"C"}}
 
 
+def test_model_graph_complex_observed_dependency():
+    with pm.Model() as model:
+        x = pm.Data("x", [0])
+        y = pm.Data("y", [0])
+        observed = pt.exp(x) + pt.log(y)
+        pm.Normal("obs", mu=0, observed=observed)
+
+    assert ModelGraph(model).make_compute_graph() == {"obs": set(), "x": {"obs"}, "y": {"obs"}}
+
+
 @pytest.fixture
 def simple_model() -> pm.Model:
     with pm.Model() as model:
