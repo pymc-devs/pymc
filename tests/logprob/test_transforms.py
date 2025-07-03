@@ -288,7 +288,7 @@ class TestLocScaleRVTransform:
     @pytest.mark.parametrize(
         "rv_size, scale_type, product",
         [
-            (None, pt.scalar, True),
+            ((), pt.scalar, True),
             (1, pt.TensorType("floatX", (True,)), True),
             ((2, 3), pt.matrix, False),
         ],
