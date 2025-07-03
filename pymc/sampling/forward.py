@@ -28,9 +28,11 @@ from typing import (
 
 import numpy as np
 import xarray
+import xarray as xr
 
 from arviz import InferenceData
 from pytensor import tensor as pt
+from pytensor.graph import vectorize_graph
 from pytensor.graph.basic import (
     Apply,
     Constant,
@@ -42,7 +44,7 @@ from pytensor.graph.basic import (
 from pytensor.graph.fg import FunctionGraph
 from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
-from pytensor.tensor.variable import TensorConstant
+from pytensor.tensor.variable import TensorConstant, TensorVariable
 from rich.console import Console
 from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
@@ -52,6 +54,8 @@ import pymc as pm
 from pymc.backends.arviz import _DefaultTrace, dataset_to_point_list
 from pymc.backends.base import MultiTrace
 from pymc.blocking import PointType
+from pymc.distributions.shape_utils import change_dist_size
+from pymc.logprob.utils import rvs_in_graph
 from pymc.model import Model, modelcontext
 from pymc.pytensorf import compile
 from pymc.util import (
@@ -68,6 +72,7 @@ __all__ = (
     "draw",
     "sample_posterior_predictive",
     "sample_prior_predictive",
+    "vectorize_over_posterior",
 )
 
 ArrayLike: TypeAlias = np.ndarray | list[float]
@@ -984,3 +989,99 @@ def sample_posterior_predictive(
         idata.extend(idata_pp)
         return idata
     return idata_pp
+
+
+def vectorize_over_posterior(
+    outputs: list[Variable],
+    posterior: xr.Dataset,
+    input_rvs: list[Variable],
+    allow_rvs_in_graph: bool = True,
+    sample_dims: tuple[str, ...] = ("chain", "draw"),
+) -> list[Variable]:
+    """Vectorize outputs over posterior samples of subset of input rvs.
+
+    This function creates a new graph for the supplied outputs, where the required
+    subset of input rvs are replaced by their posterior samples (chain and draw
+    dimensions are flattened). The other input tensors are kept as is.
+
+    Parameters
+    ----------
+    outputs : list[Variable]
+        The list of variables to vectorize over the posterior samples.
+    posterior : xr.Dataset
+        The posterior samples to use as replacements for the `input_rvs`.
+    input_rvs : list[Variable]
+        The list of random variables to replace with their posterior samples.
+    allow_rvs_in_graph : bool
+        Whether to allow random variables to be present in the graph. If False,
+        an error will be raised if any random variables are found in the graph. If
+        True, the remaining random variables will be resized to match the number of
+        draws from the posterior.
+    sample_dims : tuple[str, ...]
+        The dimensions of the posterior samples to use for vectorizing the `input_rvs`.
+
+
+    Returns
+    -------
+    vectorized_outputs : list[Variable]
+        The vectorized variables
+
+    Raises
+    ------
+    RuntimeError
+        If random variables are found in the graph and `allow_rvs_in_graph` is False
+    """
+    # Identify which free RVs are needed to compute `outputs`
+    needed_rvs: list[TensorVariable] = [
+        cast(TensorVariable, rv)
+        for rv in ancestors(outputs, blockers=input_rvs)
+        if rv in set(input_rvs)
+    ]
+
+    # Replace needed_rvs with actual posterior samples
+    batch_shape = tuple([len(posterior.coords[dim]) for dim in sample_dims])
+    replace_dict: dict[Variable, Variable] = {}
+    for rv in needed_rvs:
+        posterior_samples = posterior[rv.name].data
+
+        replace_dict[rv] = pt.constant(posterior_samples.astype(rv.dtype), name=rv.name)
+
+    # Replace the rvs that remain in the graph with resized versions
+    all_rvs = rvs_in_graph(outputs)
+
+    # Once we give values for the needed_rvs (setting them to their posterior samples),
+    # we need to identify the rvs that only depend on these conditioned values, and
+    # don't depend on any other rvs or output nodes.
+    # These variables need to be resized because they won't be resized implicitly by
+    # the replacement of the needed_rvs or other random variables in the graph when we
+    # later call vectorize_graph.
+    independent_rvs: list[TensorVariable] = []
+    for rv in [
+        rv
+        for rv in general_toposort(  # type: ignore[call-overload]
+            all_rvs, lambda x: x.owner.inputs if x.owner is not None else None
+        )
+        if rv in all_rvs
+    ]:
+        rv_ancestors = ancestors([rv], blockers=[*needed_rvs, *independent_rvs, *outputs])
+        if (
+            rv not in needed_rvs
+            and not ({*outputs, *independent_rvs} & set(rv_ancestors))
+            and {var for var in rv_ancestors if var in all_rvs} <= {rv, *needed_rvs}
+        ):
+            independent_rvs.append(rv)
+    for rv in independent_rvs:
+        replace_dict[rv] = change_dist_size(rv, new_size=batch_shape, expand=True)
+
+    # Vectorize across samples
+    vectorized_outputs = list(vectorize_graph(outputs, replace=replace_dict))
+    for vectorized_output, output in zip(vectorized_outputs, outputs):
+        vectorized_output.name = output.name
+
+    if not allow_rvs_in_graph:
+        remaining_rvs = rvs_in_graph(vectorized_outputs)
+        if remaining_rvs:
+            raise RuntimeError(
+                f"The following random variables found in the extracted graph: {remaining_rvs}"
+            )
+    return vectorized_outputs
