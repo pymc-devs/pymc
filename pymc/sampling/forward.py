@@ -67,6 +67,7 @@ __all__ = (
     "compile_forward_sampling_function",
     "draw",
     "sample_posterior_predictive",
+    "sample_prior",
     "sample_prior_predictive",
 )
 
@@ -984,3 +985,91 @@ def sample_posterior_predictive(
         idata.extend(idata_pp)
         return idata
     return idata_pp
+
+
+def sample_prior(
+    draws: int = 500,
+    model: Model | None = None,
+    var_names: Iterable[str] | None = None,
+    random_seed: RandomState = None,
+    return_inferencedata: bool = True,
+    idata_kwargs: dict | None = None,
+    compile_kwargs: dict | None = None,
+) -> InferenceData | dict[str, np.ndarray]:
+    """Generate samples from the prior distribution.
+
+    This function samples only from the prior (unobserved random variables)
+    and deterministics that do not depend on observed variables.
+
+    This is different from `sample_prior_predictive` which samples from both
+    prior and prior predictive distributions.
+
+    Parameters
+    ----------
+    draws : int
+        Number of samples from the prior to generate. Defaults to 500.
+    model : Model (optional if in ``with`` context)
+    var_names : Iterable[str]
+        A list of names of variables for which to compute the prior samples.
+    random_seed : int, RandomState or Generator, optional
+        Seed for the random number generator.
+    return_inferencedata : bool
+        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
+        Defaults to True.
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`pymc.to_inference_data`
+    compile_kwargs: dict, optional
+        Keyword arguments for :func:`pymc.pytensorf.compile_pymc`.
+
+    Returns
+    -------
+    arviz.InferenceData or Dict
+        An ArviZ ``InferenceData`` object containing the prior samples (default),
+        or a dictionary with variable names as keys and samples as numpy arrays.
+
+    Examples
+    --------
+    Basic usage:
+
+    .. code:: python
+
+        import pymc as pm
+
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0, 1)
+            sigma = pm.HalfNormal("sigma", 1)
+            y = pm.Normal("y", mu, sigma, observed=[1, 2, 3])
+
+            # Sample only from the prior (mu and sigma)
+            prior_samples = pm.sample_prior(draws=1000)
+
+    Specify specific variables:
+
+    .. code:: python
+
+        with model:
+            # Sample only mu from the prior
+            mu_samples = pm.sample_prior(draws=1000, var_names=["mu"])
+    """
+    model = modelcontext(model)
+
+    if var_names is None:
+        # Default to unobserved random variables
+        var_names = (var.name for var in model.unobserved_RVs)
+
+        # Filter out deterministics that depend on observed variables
+        dependent_dets = observed_dependent_deterministics(model)
+        var_names = (var_name for var_name in var_names if model[var_name] not in dependent_dets)
+
+    # Use sample_prior_predictive with filtered var_names
+    result = sample_prior_predictive(
+        draws=draws,
+        model=model,
+        var_names=var_names,
+        random_seed=random_seed,
+        return_inferencedata=return_inferencedata,
+        idata_kwargs=idata_kwargs,
+        compile_kwargs=compile_kwargs,
+    )
+
+    return result
