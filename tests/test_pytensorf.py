@@ -60,7 +60,7 @@ from pymc.vartypes import int_types
 )
 def test_pd_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
     df = pd.DataFrame(np_array)
-    np.testing.assert_array_equal(x=pt.as_tensor_variable(x=df).eval(), y=np_array)
+    np.testing.assert_array_equal(pt.as_tensor_variable(df).eval(), np_array)
 
 
 @pytest.mark.parametrize(
@@ -69,7 +69,7 @@ def test_pd_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
 )
 def test_pd_series_as_tensor_variable(np_array: np.ndarray) -> None:
     df = pd.Series(np_array)
-    np.testing.assert_array_equal(x=pt.as_tensor_variable(x=df).eval(), y=np_array)
+    np.testing.assert_array_equal(pt.as_tensor_variable(df).eval(), np_array)
 
 
 def test_pd_as_tensor_variable_multiindex() -> None:
@@ -80,7 +80,7 @@ def test_pd_as_tensor_variable_multiindex() -> None:
     df = pd.DataFrame({"A": [12.0, 80.0, 30.0, 20.0], "B": [120.0, 700.0, 30.0, 20.0]}, index=index)
     np_array = np.array([[12.0, 80.0, 30.0, 20.0], [120.0, 700.0, 30.0, 20.0]]).T
     assert isinstance(df.index, pd.MultiIndex)
-    np.testing.assert_array_equal(x=pt.as_tensor_variable(x=df).eval(), y=np_array)
+    np.testing.assert_array_equal(pt.as_tensor_variable(df).eval(), np_array)
 
 
 class TestBroadcasting:
