@@ -21,11 +21,9 @@ from os import path
 from typing import Any, cast
 
 from pytensor import function
-from pytensor.graph import Apply
 from pytensor.graph.basic import ancestors, walk
 from pytensor.scalar.basic import Cast
 from pytensor.tensor.elemwise import Elemwise
-from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.shape import Shape
 from pytensor.tensor.variable import TensorVariable
 
@@ -240,42 +238,32 @@ class ModelGraph:
     def __init__(self, model):
         self.model = model
         self._all_var_names = get_default_varnames(self.model.named_vars, include_transformed=False)
+        self._all_vars = {model[var_name] for var_name in self._all_var_names}
         self.var_list = self.model.named_vars.values()
 
     def get_parent_names(self, var: TensorVariable) -> set[VarName]:
-        if var.owner is None or var.owner.inputs is None:
+        if var.owner is None:
             return set()
 
-        def _filter_non_parameter_inputs(var):
-            node = var.owner
-            if isinstance(node.op, Shape):
-                # Don't show shape-related dependencies
-                return []
-            if isinstance(node.op, RandomVariable):
-                # Filter out rng and size parameters or RandomVariable nodes
-                return node.op.dist_params(node)
-            else:
-                # Otherwise return all inputs
-                return node.inputs
-
-        blockers = set(self.model.named_vars)
+        named_vars = self._all_vars
 
         def _expand(x):
-            nonlocal blockers
-            if x.name in blockers:
+            if x in named_vars:
+                # Don't go beyond named_vars
                 return [x]
-            if isinstance(x.owner, Apply):
-                return reversed(_filter_non_parameter_inputs(x))
-            return []
+            if x.owner is None:
+                return []
+            if isinstance(x.owner.op, Shape):
+                # Don't propagate shape-related dependencies
+                return []
+            # Continue walking the graph through the inputs
+            return x.owner.inputs
 
-        parents = set()
-        for x in walk(nodes=_filter_non_parameter_inputs(var), expand=_expand):
-            # Only consider nodes that are in the named model variables.
-            vname = getattr(x, "name", None)
-            if isinstance(vname, str) and vname in self._all_var_names:
-                parents.add(VarName(vname))
-
-        return parents
+        return {
+            cast(VarName, ancestor.name)  # type: ignore[union-attr]
+            for ancestor in walk(nodes=var.owner.inputs, expand=_expand)
+            if ancestor in named_vars
+        }
 
     def vars_to_plot(self, var_names: Iterable[VarName] | None = None) -> list[VarName]:
         if var_names is None:

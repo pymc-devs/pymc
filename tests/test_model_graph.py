@@ -516,14 +516,29 @@ def test_model_graph_with_intermediate_named_variables():
     with pm.Model() as m1:
         a = pm.Normal("a", 0, 1, shape=3)
         pm.Normal("b", a.mean(axis=-1), 1)
-    assert dict(ModelGraph(m1).make_compute_graph()) == {"a": set(), "b": {"a"}}
+    assert ModelGraph(m1).make_compute_graph() == {"a": set(), "b": {"a"}}
 
     with pm.Model() as m2:
         a = pm.Normal("a", 0, 1)
         b = a + 1
         b.name = "b"
         pm.Normal("c", b, 1)
-    assert dict(ModelGraph(m2).make_compute_graph()) == {"a": set(), "c": {"a"}}
+    assert ModelGraph(m2).make_compute_graph() == {"a": set(), "c": {"a"}}
+
+    # Regression test for https://github.com/pymc-devs/pymc/issues/7397
+    with pm.Model() as m3:
+        data = pt.as_tensor_variable(
+            np.ones((5, 3)),
+            name="C",
+        )
+        # C has the same name as `data` variable
+        # This used to be wrongly picked up as a dependency
+        C = pm.Deterministic("C", data)
+        # D depends on a variable called `C` but this is not really one in the model
+        D = pm.Deterministic("D", data)
+        # This actually depends on the model variable `C`
+        E = pm.Deterministic("E", C)
+    assert ModelGraph(m3).make_compute_graph() == {"C": set(), "D": set(), "E": {"C"}}
 
 
 @pytest.fixture
