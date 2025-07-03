@@ -20,8 +20,9 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
+from pytensor import graph_replace
 from pytensor.compile.ops import TypeCastingOp
-from pytensor.graph.basic import Apply, Variable, ancestors
+from pytensor.graph.basic import Apply, Variable, ancestors, walk
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.db import RewriteDatabaseQuery, SequenceDB
 from pytensor.tensor.variable import TensorVariable
@@ -201,6 +202,17 @@ class InitialPoint(TypeCastingOp):
         return Apply(self, [var], [var.type()])
 
 
+def non_support_point_ancestors(value):
+    def expand(r: Variable):
+        node = r.owner
+        if node is not None and not isinstance(node.op, InitialPoint):
+            # Stop graph traversal at InitialPoint ops
+            return node.inputs
+        return None
+
+    yield from walk([value], expand, bfs=False)
+
+
 initial_point_op = InitialPoint()
 
 
@@ -253,13 +265,13 @@ def make_initial_point_expression(
     if initial_point_rewriter:
         initial_point_rewriter.rewrite(initial_point_fgraph)
 
-    free_rvs_clone = initial_point_fgraph.outputs
+    ip_variables = initial_point_fgraph.outputs.copy()
+    free_rvs_clone = [ip.owner.inputs[0] for ip in ip_variables]
+    n_rvs = len(free_rvs_clone)
 
     initial_values = []
     initial_values_transformed = []
-    for original_variable, ip_variable in zip(free_rvs, free_rvs_clone):
-        # Extract the variable from the initial_point operation
-        [variable] = ip_variable.owner.inputs
+    for original_variable, variable in zip(free_rvs, free_rvs_clone):
         strategy = initval_strategies.get(original_variable)
 
         if strategy is None:
@@ -269,6 +281,20 @@ def make_initial_point_expression(
             if strategy == "support_point":
                 try:
                     value = support_point(variable)
+
+                    # If a support point expression depends on other free_RVs that are not
+                    # wrapped in InitialPoint, we need to replace them with their wrapped versions
+                    # This can only happen for multi-output distributions, where the initial point
+                    # of some outputs depends on the initial point of other outputs from the same node.
+                    other_free_rvs = set(free_rvs_clone) - {variable}
+                    support_point_replacements = {
+                        ancestor: ip_variables[free_rvs_clone.index(ancestor)]
+                        for ancestor in non_support_point_ancestors(value)
+                        if ancestor in other_free_rvs
+                    }
+                    if support_point_replacements:
+                        value = graph_replace(value, support_point_replacements)
+
                 except NotImplementedError:
                     warnings.warn(
                         f"Support point not defined for variable {variable} of type "
@@ -314,14 +340,19 @@ def make_initial_point_expression(
 
         initial_values.append(value)
 
+    for initial_value in initial_values:
+        # Adding the initial value to the fgraph outputs seems to help
+        # with interdependenncies. WHY????
+        initial_point_fgraph.add_output(initial_value, import_missing=True)
+
     # We now replace all rvs by the respective initial_point expressions
     # in the constrained (untransformed) space. We do this in reverse topological
     # order, so that later nodes do not reintroduce expressions with earlier
     # rvs that would need to once again be replaced by their initial_points
-    toposort_replace(initial_point_fgraph, tuple(zip(free_rvs_clone, initial_values)), reverse=True)
+    toposort_replace(initial_point_fgraph, tuple(zip(ip_variables, initial_values)), reverse=True)
 
     if not return_transformed:
-        return initial_point_fgraph.outputs
+        return initial_point_fgraph.outputs[:n_rvs]
 
     # Because the unconstrained (transformed) expressions are a subgraph of the
     # constrained initial point they were also automatically updated inplace
