@@ -146,7 +146,7 @@ class ZeroSumNormal(VectorDimDistribution):
         support_dims = as_xtensor(support_dims, dims=("_",))
         support_shape = support_dims.values
         core_rv = ZeroSumNormalRV.rv_op(sigma=sigma.values, support_shape=support_shape).owner.op
-        xop = pxr.as_xrv(
+        xop = pxr._as_xrv(
             core_rv,
             core_inps_dims_map=[(), (0,)],
             core_out_dims_map=tuple(range(1, len(core_dims) + 1)),

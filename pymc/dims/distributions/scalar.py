@@ -40,7 +40,7 @@ def _get_sigma_from_either_sigma_or_tau(*, sigma, tau):
 
 
 class Flat(DimDistribution):
-    xrv_op = pxr.as_xrv(flat)
+    xrv_op = pxr._as_xrv(flat)
 
     @classmethod
     def dist(cls, **kwargs):
@@ -48,7 +48,7 @@ class Flat(DimDistribution):
 
 
 class HalfFlat(PositiveDimDistribution):
-    xrv_op = pxr.as_xrv(halfflat, [], ())
+    xrv_op = pxr._as_xrv(halfflat, [], ())
 
     @classmethod
     def dist(cls, **kwargs):
@@ -102,7 +102,7 @@ class HalfStudentT(PositiveDimDistribution):
         nu = as_xtensor(nu)
         sigma = as_xtensor(sigma)
         core_rv = HalfStudentTRV.rv_op(nu=nu.values, sigma=sigma.values).owner.op
-        xop = pxr.as_xrv(core_rv)
+        xop = pxr._as_xrv(core_rv)
         return xop(nu, sigma, core_dims=core_dims, extra_dims=extra_dims, rng=rng)
 
 
