@@ -21,16 +21,11 @@ from os import path
 from typing import Any, cast
 
 from pytensor import function
-from pytensor.graph import Apply
 from pytensor.graph.basic import ancestors, walk
-from pytensor.scalar.basic import Cast
-from pytensor.tensor.elemwise import Elemwise
-from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.shape import Shape
 from pytensor.tensor.variable import TensorVariable
 
-import pymc as pm
-
+from pymc.model.core import modelcontext
 from pymc.util import VarName, get_default_varnames, get_var_name
 
 __all__ = (
@@ -241,42 +236,32 @@ class ModelGraph:
     def __init__(self, model):
         self.model = model
         self._all_var_names = get_default_varnames(self.model.named_vars, include_transformed=False)
+        self._all_vars = {model[var_name] for var_name in self._all_var_names}
         self.var_list = self.model.named_vars.values()
 
     def get_parent_names(self, var: TensorVariable) -> set[VarName]:
-        if var.owner is None or var.owner.inputs is None:
+        if var.owner is None:
             return set()
 
-        def _filter_non_parameter_inputs(var):
-            node = var.owner
-            if isinstance(node.op, Shape):
-                # Don't show shape-related dependencies
-                return []
-            if isinstance(node.op, RandomVariable):
-                # Filter out rng and size parameters or RandomVariable nodes
-                return node.op.dist_params(node)
-            else:
-                # Otherwise return all inputs
-                return node.inputs
-
-        blockers = set(self.model.named_vars)
+        named_vars = self._all_vars
 
         def _expand(x):
-            nonlocal blockers
-            if x.name in blockers:
+            if x in named_vars:
+                # Don't go beyond named_vars
                 return [x]
-            if isinstance(x.owner, Apply):
-                return reversed(_filter_non_parameter_inputs(x))
-            return []
+            if x.owner is None:
+                return []
+            if isinstance(x.owner.op, Shape):
+                # Don't propagate shape-related dependencies
+                return []
+            # Continue walking the graph through the inputs
+            return x.owner.inputs
 
-        parents = set()
-        for x in walk(nodes=_filter_non_parameter_inputs(var), expand=_expand):
-            # Only consider nodes that are in the named model variables.
-            vname = getattr(x, "name", None)
-            if isinstance(vname, str) and vname in self._all_var_names:
-                parents.add(VarName(vname))
-
-        return parents
+        return {
+            cast(VarName, ancestor.name)  # type: ignore[union-attr]
+            for ancestor in walk(nodes=var.owner.inputs, expand=_expand)
+            if ancestor in named_vars
+        }
 
     def vars_to_plot(self, var_names: Iterable[VarName] | None = None) -> list[VarName]:
         if var_names is None:
@@ -312,35 +297,28 @@ class ModelGraph:
         self, var_names: Iterable[VarName] | None = None
     ) -> dict[VarName, set[VarName]]:
         """Get map of var_name -> set(input var names) for the model."""
+        model = self.model
+        named_vars = self._all_vars
         input_map: dict[VarName, set[VarName]] = defaultdict(set)
 
-        for var_name in self.vars_to_plot(var_names):
-            var = self.model[var_name]
-            parent_name = self.get_parent_names(var)
-            input_map[var_name] = input_map[var_name].union(parent_name)
+        var_names_to_plot = self.vars_to_plot(var_names)
+        for var_name in var_names_to_plot:
+            parent_names = self.get_parent_names(model[var_name])
+            input_map[var_name].update(parent_names)
 
-            if var in self.model.observed_RVs:
-                obs_node = self.model.rvs_to_values[var]
-
-                # loop created so that the elif block can go through this again
-                # and remove any intermediate ops, notably dtype casting, to observations
-                while True:
-                    obs_name = obs_node.name
-                    if obs_name and obs_name != var_name:
-                        input_map[var_name] = input_map[var_name].difference({obs_name})
-                        input_map[obs_name] = input_map[obs_name].union({var_name})
-                        break
-                    elif (
-                        # for cases where observations are cast to a certain dtype
-                        # see issue 5795: https://github.com/pymc-devs/pymc/issues/5795
-                        obs_node.owner
-                        and isinstance(obs_node.owner.op, Elemwise)
-                        and isinstance(obs_node.owner.op.scalar_op, Cast)
-                    ):
-                        # we can retrieve the observation node by going up the graph
-                        obs_node = obs_node.owner.inputs[0]
-                    else:
-                        break
+        for var_name in var_names_to_plot:
+            if (var := model[var_name]) in model.observed_RVs:
+                # Make observed `Data` variables flow from the observed RV, and not the other way around
+                # (In the generative graph they usually inform shape of the observed RV)
+                # We have to iterate over the ancestors of the observed values because there can be
+                # deterministic operations in between the `Data` variable and the observed value.
+                obs_var = model.rvs_to_values[var]
+                for ancestor in ancestors([obs_var]):
+                    if ancestor not in named_vars:
+                        continue
+                    obs_name = cast(VarName, ancestor.name)
+                    input_map[var_name].discard(obs_name)
+                    input_map[obs_name].add(var_name)
 
         return input_map
 
@@ -361,7 +339,7 @@ class ModelGraph:
         plates = defaultdict(set)
 
         # TODO: Evaluate all RV shapes at once
-        #       This should help find discrepencies, and
+        #       This should help find discrepancies, and
         #       avoids unnecessary function compiles for determining labels.
         dim_lengths: dict[str, int] = {
             dim_name: fast_eval(value).item() for dim_name, value in self.model.dim_lengths.items()
@@ -662,7 +640,7 @@ def model_to_networkx(
             stacklevel=2,
         )
 
-    model = pm.modelcontext(model)
+    model = modelcontext(model)
     graph = ModelGraph(model)
     return make_networkx(
         name=model.name,
@@ -777,7 +755,7 @@ def model_to_graphviz(
             stacklevel=2,
         )
 
-    model = pm.modelcontext(model)
+    model = modelcontext(model)
     graph = ModelGraph(model)
     return make_graph(
         model.name,
@@ -910,7 +888,7 @@ def model_to_mermaid(model=None, *, var_names=None, include_dim_lengths: bool = 
 
 
     """
-    model = pm.modelcontext(model)
+    model = modelcontext(model)
     graph = ModelGraph(model)
     plates = sorted(graph.get_plates(var_names=var_names), key=lambda plate: hash(plate.dim_info))
     edges = sorted(graph.edges(var_names=var_names))
