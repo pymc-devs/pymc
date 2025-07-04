@@ -33,18 +33,20 @@ from pytensor.graph.basic import (
     clone_get_equiv,
     equal_computations,
     graph_inputs,
+    walk,
 )
 from pytensor.graph.fg import FunctionGraph, Output
+from pytensor.graph.op import HasInnerGraph
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
 from pytensor.tensor.basic import _as_tensor_variable
 from pytensor.tensor.elemwise import Elemwise
-from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.op import RandomVariable, RNGConsumerOp
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.rewriting.basic import topo_unconditional_constant_folding
 from pytensor.tensor.rewriting.shape import ShapeFeature
-from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
+from pytensor.tensor.sharedvar import SharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from pytensor.tensor.variable import TensorVariable
 
@@ -133,6 +135,9 @@ def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVar
     return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
 
 
+_cheap_eval_mode = Mode(linker="py", optimizer="minimum_compile")
+
+
 def extract_obs_data(x: TensorVariable) -> np.ndarray:
     """Extract data from observed symbolic variables.
 
@@ -161,13 +166,29 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
             mask[mask_idx] = 1
             return np.ma.MaskedArray(array_data, mask)
 
-    from pymc.logprob.utils import rvs_in_graph
-
     if not inputvars(x) and not rvs_in_graph(x):
-        cheap_eval_mode = Mode(linker="py", optimizer=None)
-        return x.eval(mode=cheap_eval_mode)
+        return x.eval(mode=_cheap_eval_mode)
 
     raise TypeError(f"Data cannot be extracted from {x}")
+
+
+def expand_inner_graph(r):
+    if (node := r.owner) is not None:
+        inputs = list(reversed(node.inputs))
+
+        if isinstance(node.op, HasInnerGraph):
+            inputs += node.op.inner_outputs
+
+        return inputs
+
+
+def rvs_in_graph(vars: Variable | Sequence[Variable], rv_ops=None) -> set[Variable]:
+    """Assert that there are no random nodes in a graph."""
+    return {
+        var
+        for var in walk(makeiter(vars), expand_inner_graph, False)
+        if (var.owner and isinstance(var.owner.op, RNGConsumerOp))
+    }
 
 
 def replace_vars_in_graphs(
@@ -279,7 +300,9 @@ PyTensor derivative functions
 
 def gradient1(f, v):
     """Flat gradient of f wrt v."""
-    return pt.flatten(grad(f, v, disconnected_inputs="warn"))
+    return pt.as_tensor(
+        grad(f, v, disconnected_inputs="warn"), allow_xtensor_conversion=True
+    ).ravel()
 
 
 empty_gradient = pt.zeros(0, dtype="float32")
@@ -398,11 +421,11 @@ def make_shared_replacements(point, vars, model):
 
 def join_nonshared_inputs(
     point: dict[str, np.ndarray],
-    outputs: list[TensorVariable],
-    inputs: list[TensorVariable],
-    shared_inputs: dict[TensorVariable, TensorSharedVariable] | None = None,
+    outputs: Sequence[Variable],
+    inputs: Sequence[Variable],
+    shared_inputs: dict[Variable, Variable] | None = None,
     make_inputs_shared: bool = False,
-) -> tuple[list[TensorVariable], TensorVariable]:
+) -> tuple[Sequence[Variable], TensorVariable]:
     """
     Create new outputs and input TensorVariables where the non-shared inputs are joined in a single raveled vector input.
 
@@ -527,7 +550,9 @@ def join_nonshared_inputs(
     if not inputs:
         raise ValueError("Empty list of input variables.")
 
-    raveled_inputs = pt.concatenate([var.ravel() for var in inputs])
+    raveled_inputs = pt.concatenate(
+        [pt.as_tensor(var, allow_xtensor_conversion=True).ravel() for var in inputs]
+    )
 
     if not make_inputs_shared:
         tensor_type = raveled_inputs.type
@@ -539,12 +564,15 @@ def join_nonshared_inputs(
     if pytensor.config.compute_test_value != "off":
         joined_inputs.tag.test_value = raveled_inputs.tag.test_value
 
-    replace: dict[TensorVariable, TensorVariable] = {}
+    replace: dict[Variable, Variable] = {}
     last_idx = 0
     for var in inputs:
         shape = point[var.name].shape
         arr_len = np.prod(shape, dtype=int)
-        replace[var] = joined_inputs[last_idx : last_idx + arr_len].reshape(shape).astype(var.dtype)
+        replacement_var = (
+            joined_inputs[last_idx : last_idx + arr_len].reshape(shape).astype(var.dtype)
+        )
+        replace[var] = var.type.filter_variable(replacement_var)
         last_idx += arr_len
 
     if shared_inputs is not None:
@@ -720,8 +748,6 @@ def collect_default_updates(
         xs_draws = pm.draw(xs, draws=10)
 
     """
-    # Avoid circular import
-    from pymc.distributions.distribution import SymbolicRandomVariable
 
     def find_default_update(clients, rng: Variable) -> None | Variable:
         rng_clients = clients.get(rng, None)
@@ -764,48 +790,47 @@ def collect_default_updates(
         [client, _] = rng_clients[0]
 
         # RNG is an output of the function, this is not a problem
-        if isinstance(client.op, Output):
-            return None
+        client_op = client.op
 
-        # RNG is used by another operator, which should output an update for the RNG
-        if isinstance(client.op, RandomVariable):
-            # RandomVariable first output is always the update of the input RNG
-            next_rng = client.outputs[0]
-
-        elif isinstance(client.op, SymbolicRandomVariable):
-            # SymbolicRandomVariable have an explicit method that returns an
-            # update mapping for their RNG(s)
-            next_rng = client.op.update(client).get(rng)
-            if next_rng is None:
-                raise ValueError(
-                    f"No update found for at least one RNG used in SymbolicRandomVariable Op {client.op}"
-                )
-        elif isinstance(client.op, Scan):
-            # Check if any shared output corresponds to the RNG
-            rng_idx = client.inputs.index(rng)
-            io_map = client.op.get_oinp_iinp_iout_oout_mappings()["outer_out_from_outer_inp"]
-            out_idx = io_map.get(rng_idx, -1)
-            if out_idx != -1:
-                next_rng = client.outputs[out_idx]
-            else:  # No break
-                raise ValueError(
-                    f"No update found for at least one RNG used in Scan Op {client.op}.\n"
-                    "You can use `pytensorf.collect_default_updates` inside the Scan function to return updates automatically."
-                )
-        elif isinstance(client.op, OpFromGraph):
-            try:
-                next_rng = collect_default_updates_inner_fgraph(client).get(rng)
+        match client_op:
+            case Output():
+                return None
+            # Otherwise, RNG is used by another operator, which should output an update for the RNG
+            case RandomVariable():
+                # RandomVariable first output is always the update of the input RNG
+                next_rng = client.outputs[0]
+            case RNGConsumerOp():
+                # RNGConsumerOp have an explicit method that returns an update mapping for their RNG(s)
+                # RandomVariable is a subclass of RNGConsumerOp, but we specialize above for speedup
+                next_rng = client_op.update(client).get(rng)
                 if next_rng is None:
-                    # OFG either does not make use of this RNG or inconsistent use that will have emitted a warning
-                    return None
-            except ValueError as exc:
-                raise ValueError(
-                    f"No update found for at least one RNG used in OpFromGraph Op {client.op}.\n"
-                    "You can use `pytensorf.collect_default_updates` and include those updates as outputs."
-                ) from exc
-        else:
-            # We don't know how this RNG should be updated. The user should provide an update manually
-            return None
+                    raise ValueError(f"No update found for at least one RNG used in {client_op}")
+            case Scan():
+                # Check if any shared output corresponds to the RNG
+                rng_idx = client.inputs.index(rng)
+                io_map = client_op.get_oinp_iinp_iout_oout_mappings()["outer_out_from_outer_inp"]
+                out_idx = io_map.get(rng_idx, -1)
+                if out_idx != -1:
+                    next_rng = client.outputs[out_idx]
+                else:  # No break
+                    raise ValueError(
+                        f"No update found for at least one RNG used in Scan Op {client_op}.\n"
+                        "You can use `pytensorf.collect_default_updates` inside the Scan function to return updates automatically."
+                    )
+            case OpFromGraph():
+                try:
+                    next_rng = collect_default_updates_inner_fgraph(client).get(rng)
+                    if next_rng is None:
+                        # OFG either does not make use of this RNG or inconsistent use that will have emitted a warning
+                        return None
+                except ValueError as exc:
+                    raise ValueError(
+                        f"No update found for at least one RNG used in OpFromGraph Op {client_op}.\n"
+                        "You can use `pytensorf.collect_default_updates` and include those updates as outputs."
+                    ) from exc
+            case _:
+                # We don't know how this RNG should be updated. The user should provide an update manually
+                return None
 
         # Recurse until we find final update for RNG
         nested_next_rng = find_default_update(clients, next_rng)
