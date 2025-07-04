@@ -397,3 +397,13 @@ def test_multivariate_transform():
     new_ip = new_m.initial_point()
     np.testing.assert_allclose(ip["x_simplex__"], new_ip["x_simplex__"])
     np.testing.assert_allclose(ip["y_cholesky-cov-packed__"], new_ip["y_cholesky-cov-packed__"])
+
+
+def test_check_bounds_preserved():
+    with pm.Model(check_bounds=True) as m:
+        x = pm.HalfNormal("x")
+
+    assert clone_model(m).check_bounds
+
+    m.check_bounds = False
+    assert not clone_model(m).check_bounds
