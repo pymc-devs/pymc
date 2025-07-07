@@ -93,7 +93,6 @@ def test_step_args():
 def test_sample_var_names(nuts_sampler):
     seed = 1234
     kwargs = {
-        "nuts_sampler": nuts_sampler,
         "chains": 1,
         "tune": 100,
         "draws": 100,
@@ -125,9 +124,9 @@ def test_sample_var_names(nuts_sampler):
 
     with model:
         # Sample with and without var_names, but always with the same seed
-        idata_1 = sample(**kwargs)
+        idata_1 = sample(nuts_sampler=nuts_sampler, **kwargs)
         # Remove the last free RV from the sampling
-        idata_2 = sample(var_names=free_RVs[:-1], **kwargs)
+        idata_2 = sample(nuts_sampler=nuts_sampler, var_names=free_RVs[:-1], **kwargs)
 
     assert "mu" in idata_1.posterior
     assert "mu" not in idata_2.posterior
