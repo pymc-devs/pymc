@@ -90,13 +90,16 @@ def test_step_args():
 
 @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
 def test_sample_var_names(nuts_sampler):
+    seed = 1234
     kwargs = {
         "nuts_sampler": nuts_sampler,
         "chains": 1,
+        "tune": 100,
+        "draws": 100,
+        "random_seed": seed,
     }
 
     # Generate data
-    seed = 1234
     rng = np.random.default_rng(seed)
 
     group = rng.choice(list("ABCD"), size=100)
@@ -117,10 +120,8 @@ def test_sample_var_names(nuts_sampler):
 
     # Sample with and without var_names, but always with the same seed
     with model:
-        idata_1 = sample(tune=100, draws=100, random_seed=seed, **kwargs)
-        idata_2 = sample(
-            tune=100, draws=100, var_names=["b_group", "b_x", "sigma"], random_seed=seed, **kwargs
-        )
+        idata_1 = sample(**kwargs)
+        idata_2 = sample(var_names=["b_group", "b_x", "sigma"], **kwargs)
 
     assert "mu" in idata_1.posterior
     assert "mu" not in idata_2.posterior
