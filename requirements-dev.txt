@@ -4,7 +4,7 @@
 arviz>=0.13.0
 cachetools>=4.2.1
 cloudpickle
-git+https://github.com/pymc-devs/pymc-sphinx-theme
+pymc-sphinx-theme>=0.16.0
 ipython>=7.16
 jupyter-sphinx
 mcbackend>=0.4.0

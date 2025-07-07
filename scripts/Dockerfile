@@ -5,9 +5,6 @@ LABEL description="Environment for PyMC version 4"
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
-USER root
-RUN apt-get update && apt-get install -y git
-
 # Switch to jovyan to avoid container runs as root
 USER $NB_UID
 
