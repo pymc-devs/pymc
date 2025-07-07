@@ -15,6 +15,7 @@
 import numpy as np
 import numpy.testing as npt
 import pytest
+import xarray as xr
 
 from pymc import Data, Deterministic, HalfNormal, Model, Normal, sample
 
@@ -128,6 +129,6 @@ def test_sample_var_names(nuts_sampler):
     assert "mu" in idata_1.posterior
     assert "mu" not in idata_2.posterior
 
-    assert np.all(idata_1.posterior["b_group"] == idata_2.posterior["b_group"]).item()
-    assert np.all(idata_1.posterior["b_x"] == idata_2.posterior["b_x"]).item()
-    assert np.all(idata_1.posterior["sigma"] == idata_2.posterior["sigma"]).item()
+    xr.testing.assert_allclose(idata_1.posterior["b_group"], idata_2.posterior["b_group"])
+    xr.testing.assert_allclose(idata_1.posterior["b_x"], idata_2.posterior["b_x"])
+    xr.testing.assert_allclose(idata_1.posterior["sigma"], idata_2.posterior["sigma"])
