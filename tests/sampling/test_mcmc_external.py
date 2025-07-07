@@ -97,6 +97,8 @@ def test_sample_var_names(nuts_sampler):
         "tune": 100,
         "draws": 100,
         "random_seed": seed,
+        "progressbar": False,
+        "compute_convergence_checks": False,
     }
 
     # Generate data
