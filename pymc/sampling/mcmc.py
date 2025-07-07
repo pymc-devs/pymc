@@ -31,7 +31,6 @@ from typing import (
 )
 
 import numpy as np
-import pytensor
 import pytensor.gradient as tg
 
 from arviz import InferenceData, dict_to_dataset
@@ -78,8 +77,6 @@ from pymc.util import (
     is_transformed_name,
 )
 from pymc.vartypes import discrete_types
-
-pytensor.config.cxx = "/usr/bin/clang++"
 
 try:
     from zarr.storage import MemoryStore
