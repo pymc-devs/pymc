@@ -31,6 +31,7 @@ from typing import (
 )
 
 import numpy as np
+import pytensor
 import pytensor.gradient as tg
 
 from arviz import InferenceData, dict_to_dataset
@@ -78,8 +79,7 @@ from pymc.util import (
 )
 from pymc.vartypes import discrete_types
 
-import pytensor
-pytensor.config.cxx = '/usr/bin/clang++'
+pytensor.config.cxx = "/usr/bin/clang++"
 
 try:
     from zarr.storage import MemoryStore
@@ -334,7 +334,7 @@ def _sample_external_nuts(
                 "`idata_kwargs` are currently ignored by the nutpie sampler",
                 UserWarning,
             )
-        
+
         compile_kwargs = {}
         nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
         for kwarg in ("backend", "gradient_backend"):

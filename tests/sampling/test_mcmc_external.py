@@ -87,6 +87,7 @@ def test_step_args():
 
     npt.assert_almost_equal(idata.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
 
+
 @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
 def test_sample_var_names(nuts_sampler):
     kwargs = {
