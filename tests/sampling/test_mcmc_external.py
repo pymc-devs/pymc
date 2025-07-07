@@ -16,7 +16,7 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-import pymc as pm
+from pymc import Data, Deterministic, HalfNormal, Model, Normal, sample
 
 
 @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
@@ -24,12 +24,12 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
     if nuts_sampler != "pymc":
         pytest.importorskip(nuts_sampler)
 
-    with pm.Model():
-        x = pm.Normal("x", 100, 5)
-        y = pm.Data("y", [1, 2, 3, 4])
-        pm.Data("z", [100, 190, 310, 405])
+    with Model():
+        x = Normal("x", 100, 5)
+        y = Data("y", [1, 2, 3, 4])
+        Data("z", [100, 190, 310, 405])
 
-        pm.Normal("L", mu=x, sigma=0.1, observed=y)
+        Normal("L", mu=x, sigma=0.1, observed=y)
 
         kwargs = {
             "nuts_sampler": nuts_sampler,
@@ -41,12 +41,12 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
             "initvals": {"x": 0.0},
         }
 
-        idata1 = pm.sample(**kwargs)
-        idata2 = pm.sample(**kwargs)
+        idata1 = sample(**kwargs)
+        idata2 = sample(**kwargs)
 
         reference_kwargs = kwargs.copy()
         reference_kwargs["nuts_sampler"] = "pymc"
-        idata_reference = pm.sample(**reference_kwargs)
+        idata_reference = sample(**reference_kwargs)
 
     warns = {
         (warn.category, warn.message.args[0])
@@ -75,9 +75,9 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
 
 
 def test_step_args():
-    with pm.Model() as model:
-        a = pm.Normal("a")
-        idata = pm.sample(
+    with Model() as model:
+        a = Normal("a")
+        idata = sample(
             nuts_sampler="numpyro",
             target_accept=0.5,
             nuts={"max_treedepth": 10},
@@ -108,17 +108,17 @@ def test_sample_var_names(nuts_sampler):
     coords = {"group": group_values}
 
     # Create model
-    with pm.Model(coords=coords) as model:
-        b_group = pm.Normal("b_group", dims="group")
-        b_x = pm.Normal("b_x")
-        mu = pm.Deterministic("mu", b_group[group_idx] + b_x * x)
-        sigma = pm.HalfNormal("sigma")
-        pm.Normal("y", mu=mu, sigma=sigma, observed=y)
+    with Model(coords=coords) as model:
+        b_group = Normal("b_group", dims="group")
+        b_x = Normal("b_x")
+        mu = Deterministic("mu", b_group[group_idx] + b_x * x)
+        sigma = HalfNormal("sigma")
+        Normal("y", mu=mu, sigma=sigma, observed=y)
 
     # Sample with and without var_names, but always with the same seed
     with model:
-        idata_1 = pm.sample(tune=100, draws=100, random_seed=seed, **kwargs)
-        idata_2 = pm.sample(
+        idata_1 = sample(tune=100, draws=100, random_seed=seed, **kwargs)
+        idata_2 = sample(
             tune=100, draws=100, var_names=["b_group", "b_x", "sigma"], random_seed=seed, **kwargs
         )
 
