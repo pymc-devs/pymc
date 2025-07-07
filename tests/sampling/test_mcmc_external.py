@@ -121,14 +121,19 @@ def test_sample_var_names(nuts_sampler):
         sigma = HalfNormal("sigma")
         Normal("y", mu=mu, sigma=sigma, observed=y)
 
-    # Sample with and without var_names, but always with the same seed
+    free_RVs = [var.name for var in model.free_RVs]
+
     with model:
+        # Sample with and without var_names, but always with the same seed
         idata_1 = sample(**kwargs)
-        idata_2 = sample(var_names=["b_group", "b_x", "sigma"], **kwargs)
+        # Remove the last free RV from the sampling
+        idata_2 = sample(var_names=free_RVs[:-1], **kwargs)
 
     assert "mu" in idata_1.posterior
     assert "mu" not in idata_2.posterior
 
-    xr.testing.assert_allclose(idata_1.posterior["b_group"], idata_2.posterior["b_group"])
-    xr.testing.assert_allclose(idata_1.posterior["b_x"], idata_2.posterior["b_x"])
-    xr.testing.assert_allclose(idata_1.posterior["sigma"], idata_2.posterior["sigma"])
+    for var in free_RVs[:-1]:
+        assert var in idata_1.posterior
+        assert var in idata_2.posterior
+
+        xr.testing.assert_allclose(idata_1.posterior[var], idata_2.posterior[var])
