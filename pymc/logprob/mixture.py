@@ -292,6 +292,7 @@ def find_measurable_index_mixture(fgraph, node):
             indices.dtype.startswith("int") and sum(1 - b for b in indices.type.broadcastable) > 0
             for indices in mixing_indices
             if not isinstance(indices, SliceConstant)
+            if not isinstance(indices, type(NoneConst))
         ):
             return None
 
