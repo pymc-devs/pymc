@@ -331,11 +331,7 @@ def _sample_external_nuts(
                 "`idata_kwargs` are currently ignored by the nutpie sampler",
                 UserWarning,
             )
-        if var_names is not None:
-            warnings.warn(
-                "`var_names` are currently ignored by the nutpie sampler",
-                UserWarning,
-            )
+
         compile_kwargs = {}
         nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
         for kwarg in ("backend", "gradient_backend"):
@@ -343,6 +339,7 @@ def _sample_external_nuts(
                 compile_kwargs[kwarg] = nuts_sampler_kwargs.pop(kwarg)
         compiled_model = nutpie.compile_pymc_model(
             model,
+            var_names=var_names,
             **compile_kwargs,
         )
         t_start = time.time()
