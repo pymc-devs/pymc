@@ -131,8 +131,8 @@ def test_sample_var_names(nuts_sampler):
     assert "mu" in idata_1.posterior
     assert "mu" not in idata_2.posterior
 
-    assert free_RVs[-1].name in idata1.posterior
-    assert free_RVs[-1].name not in idata2.posterior
+    assert free_RVs[-1].name in idata_1.posterior
+    assert free_RVs[-1].name not in idata_2.posterior
 
     for var in free_RVs[:-1]:
         assert var in idata_1.posterior
