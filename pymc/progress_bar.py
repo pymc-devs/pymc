@@ -153,13 +153,13 @@ class CustomProgress(Progress):
         return table
 
 
-class DivergenceBarColumn(BarColumn):
-    """Rich colorbar that changes color when a chain has detected a divergence."""
+class RecolorOnFailureBarColumn(BarColumn):
+    """Rich colorbar that changes color when a chain has detected a failure."""
 
-    def __init__(self, *args, diverging_color="red", **kwargs):
+    def __init__(self, *args, failing_color="red", **kwargs):
         from matplotlib.colors import to_rgb
 
-        self.failing_color = diverging_color
+        self.failing_color = failing_color
         self.failing_rgb = [int(x * 255) for x in to_rgb(self.failing_color)]
 
         super().__init__(*args, **kwargs)
@@ -269,7 +269,6 @@ class ProgressBarManager:
         self.update_stats_functions = step_method._make_progressbar_update_functions()
 
         self._show_progress = show_progress
-        self.divergences = 0
         self.completed_draws = 0
         self.total_draws = draws + tune
         self.desc = "Sampling chain"
@@ -341,17 +340,13 @@ class ProgressBarManager:
         elapsed = self._progress.tasks[chain_idx].elapsed
         speed, unit = self.compute_draw_speed(elapsed, draw)
 
-        if not tuning and stats and stats[0].get("diverging"):
-            self.divergences += 1
-
         if self.full_stats:
             failing = False
             all_step_stats = {}
 
-            # TODO: Index by chain already?
             chain_progress_stats = [
-                update_states_fn(step_stats)
-                for update_states_fn, step_stats in zip(
+                update_stats_fn(step_stats)
+                for update_stats_fn, step_stats in zip(
                     self.update_stats_functions, stats, strict=True
                 )
             ]
@@ -405,9 +400,9 @@ class ProgressBarManager:
         ]
 
         return CustomProgress(
-            DivergenceBarColumn(
+            RecolorOnFailureBarColumn(
                 table_column=Column("Progress", ratio=2),
-                diverging_color="tab:red",
+                failure_color="tab:red",
                 complete_style=Style.parse("rgb(31,119,180)"),  # tab:blue
                 finished_style=Style.parse("rgb(31,119,180)"),  # tab:blue
             ),
