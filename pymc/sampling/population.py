@@ -30,6 +30,7 @@ from pymc.backends.base import BaseTrace
 from pymc.backends.zarr import ZarrChain
 from pymc.initial_point import PointType
 from pymc.model import Model, modelcontext
+from pymc.progress_bar import CustomProgress
 from pymc.stats.convergence import log_warning_stats
 from pymc.step_methods import CompoundStep
 from pymc.step_methods.arraystep import (
@@ -39,7 +40,6 @@ from pymc.step_methods.arraystep import (
 )
 from pymc.step_methods.compound import StepMethodState
 from pymc.step_methods.metropolis import DEMetropolis
-from pymc.util import CustomProgress
 
 __all__ = ()
 

@@ -189,11 +189,11 @@ class BlockedStep(ABC, WithSamplingState):
         return columns, stats
 
     @staticmethod
-    def _make_update_stats_function():
-        def update_stats(stats, step_stats, chain_idx):
-            return stats
+    def _make_progressbar_update_functions():
+        def update_stats(step_stats):
+            return step_stats
 
-        return update_stats
+        return (update_stats,)
 
     # Hack for creating the class correctly when unpickling.
     def __getnewargs_ex__(self):
@@ -332,16 +332,11 @@ class CompoundStep(WithSamplingState):
 
         return columns, stats
 
-    def _make_update_stats_function(self):
-        update_fns = [method._make_update_stats_function() for method in self.methods]
-
-        def update_stats(stats, step_stats, chain_idx):
-            for step_stat, update_fn in zip(step_stats, update_fns):
-                stats = update_fn(stats, step_stat, chain_idx)
-
-            return stats
-
-        return update_stats
+    def _make_progressbar_update_functions(self):
+        update_functions = []
+        for method in self.methods:
+            update_functions.extend(method._make_progressbar_update_functions())
+        return update_functions
 
 
 def flatten_steps(step: BlockedStep | CompoundStep) -> list[BlockedStep]:

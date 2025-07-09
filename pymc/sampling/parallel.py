@@ -33,8 +33,8 @@ from threadpoolctl import threadpool_limits
 from pymc.backends.zarr import ZarrChain
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
+from pymc.progress_bar import ProgressBarManager
 from pymc.util import (
-    ProgressBarManager,
     RandomGeneratorState,
     default_progress_theme,
     get_state_from_generator,
