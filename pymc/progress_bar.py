@@ -402,7 +402,7 @@ class ProgressBarManager:
         return CustomProgress(
             RecolorOnFailureBarColumn(
                 table_column=Column("Progress", ratio=2),
-                failure_color="tab:red",
+                failing_color="tab:red",
                 complete_style=Style.parse("rgb(31,119,180)"),  # tab:blue
                 finished_style=Style.parse("rgb(31,119,180)"),  # tab:blue
             ),
