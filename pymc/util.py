@@ -657,22 +657,22 @@ class DivergenceBarColumn(BarColumn):
     def __init__(self, *args, diverging_color="red", **kwargs):
         from matplotlib.colors import to_rgb
 
-        self.diverging_color = diverging_color
-        self.diverging_rgb = [int(x * 255) for x in to_rgb(self.diverging_color)]
+        self.failing_color = diverging_color
+        self.failing_rgb = [int(x * 255) for x in to_rgb(self.failing_color)]
 
         super().__init__(*args, **kwargs)
 
-        self.non_diverging_style = self.complete_style
-        self.non_diverging_finished_style = self.finished_style
+        self.default_complete_style = self.complete_style
+        self.default_finished_style = self.finished_style
 
     def callbacks(self, task: "Task"):
-        divergences = task.fields.get("divergences", 0)
-        if isinstance(divergences, float | int) and divergences > 0:
-            self.complete_style = Style.parse("rgb({},{},{})".format(*self.diverging_rgb))
-            self.finished_style = Style.parse("rgb({},{},{})".format(*self.diverging_rgb))
+        if task.fields["failing"]:
+            self.complete_style = Style.parse("rgb({},{},{})".format(*self.failing_rgb))
+            self.finished_style = Style.parse("rgb({},{},{})".format(*self.failing_rgb))
         else:
-            self.complete_style = self.non_diverging_style
-            self.finished_style = self.non_diverging_finished_style
+            # Recovered from failing yay
+            self.complete_style = self.default_complete_style
+            self.finished_style = self.default_finished_style
 
 
 class ProgressBarManager:
@@ -794,6 +794,7 @@ class ProgressBarManager:
                     chain_idx=0,
                     sampling_speed=0,
                     speed_unit="draws/s",
+                    failing=False,
                     **{stat: value[0] for stat, value in self.progress_stats.items()},
                 )
             ]
@@ -808,6 +809,7 @@ class ProgressBarManager:
                     chain_idx=chain_idx,
                     sampling_speed=0,
                     speed_unit="draws/s",
+                    failing=False,
                     **{stat: value[chain_idx] for stat, value in self.progress_stats.items()},
                 )
                 for chain_idx in range(self.chains)
@@ -829,6 +831,9 @@ class ProgressBarManager:
             self.divergences += 1
 
         if self.full_stats:
+            failing = False
+            all_step_stats = {}
+
             # TODO: Index by chain already?
             chain_progress_stats = [
                 update_states_fn(step_stats)
@@ -836,9 +841,12 @@ class ProgressBarManager:
                     self.update_stats_functions, stats, strict=True
                 )
             ]
-            all_step_stats = {}
             for step_stats in chain_progress_stats:
                 for key, val in step_stats.items():
+                    if key == "failing":
+                        failing |= val
+                        continue
+
                     if key in all_step_stats:
                         continue
                         count = (
@@ -849,6 +857,7 @@ class ProgressBarManager:
                         all_step_stats[key] = val
 
         else:
+            failing = False
             all_step_stats = {}
 
         # more_updates = (
@@ -863,6 +872,7 @@ class ProgressBarManager:
             draws=draw,
             sampling_speed=speed,
             speed_unit=unit,
+            failing=failing,
             **all_step_stats,
         )
 

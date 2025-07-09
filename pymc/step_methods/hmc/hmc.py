@@ -55,6 +55,7 @@ class HamiltonianMC(BaseHMC):
         "accept": (np.float64, []),
         "diverging": (bool, []),
         "energy_error": (np.float64, []),
+        "divergences": (np.int64, []),
         "energy": (np.float64, []),
         "path_length": (np.float64, []),
         "accepted": (bool, []),

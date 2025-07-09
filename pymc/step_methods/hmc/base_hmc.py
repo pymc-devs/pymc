@@ -184,6 +184,7 @@ class BaseHMC(GradientSharedStep):
 
         self._step_rand = step_rand
         self._num_divs_sample = 0
+        self.divergences = 0
 
     @abstractmethod
     def _hamiltonian_step(self, start, p0, step_size) -> HMCStepData:
@@ -266,11 +267,15 @@ class BaseHMC(GradientSharedStep):
                 divergence_info=info_store,
             )
 
+        diverging = bool(hmc_step.divergence_info)
+        if not self.tune:
+            self.divergences += diverging
         self.iter_count += 1
 
         stats: dict[str, Any] = {
             "tune": self.tune,
-            "diverging": bool(hmc_step.divergence_info),
+            "diverging": diverging,
+            "divergences": self.divergences,
             "perf_counter_diff": perf_end - perf_start,
             "process_time_diff": process_end - process_start,
             "perf_counter_start": perf_start,
@@ -288,6 +293,8 @@ class BaseHMC(GradientSharedStep):
         self.reset(start=None)
 
     def reset(self, start=None):
+        self.iter_count = 0
+        self.divergences = 0
         self.tune = True
         self.potential.reset()
 
