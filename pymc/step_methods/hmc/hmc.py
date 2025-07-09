@@ -19,6 +19,9 @@ from typing import Any
 
 import numpy as np
 
+from rich.progress import TextColumn
+from rich.table import Column
+
 from pymc.stats.convergence import SamplerWarning
 from pymc.step_methods.compound import Competence
 from pymc.step_methods.hmc.base_hmc import BaseHMC, BaseHMCState, DivergenceInfo, HMCStepData
@@ -55,6 +58,7 @@ class HamiltonianMC(BaseHMC):
         "accept": (np.float64, []),
         "diverging": (bool, []),
         "energy_error": (np.float64, []),
+        "divergences": (np.int64, []),
         "energy": (np.float64, []),
         "path_length": (np.float64, []),
         "accepted": (bool, []),
@@ -202,3 +206,32 @@ class HamiltonianMC(BaseHMC):
         if var.dtype in discrete_types or not has_grad:
             return Competence.INCOMPATIBLE
         return Competence.COMPATIBLE
+
+    @staticmethod
+    def _progressbar_config(n_chains=1):
+        columns = [
+            TextColumn("{task.fields[divergences]}", table_column=Column("Divergences", ratio=1)),
+            TextColumn("{task.fields[n_steps]}", table_column=Column("Grad evals", ratio=1)),
+        ]
+
+        stats = {
+            "divergences": [0] * n_chains,
+            "n_steps": [0] * n_chains,
+        }
+
+        return columns, stats
+
+    @staticmethod
+    def _make_progressbar_update_functions():
+        def update_stats(stats):
+            return {
+                key: stats[key]
+                for key in (
+                    "divergences",
+                    "n_steps",
+                )
+            } | {
+                "failing": stats["divergences"] > 0,
+            }
+
+        return (update_stats,)

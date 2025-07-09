@@ -115,6 +115,7 @@ class NUTS(BaseHMC):
         "step_size_bar": (np.float64, []),
         "tree_size": (np.float64, []),
         "diverging": (bool, []),
+        "divergences": (int, []),
         "energy_error": (np.float64, []),
         "energy": (np.float64, []),
         "max_energy_error": (np.float64, []),
@@ -250,7 +251,9 @@ class NUTS(BaseHMC):
     @staticmethod
     def _make_progressbar_update_functions():
         def update_stats(stats):
-            return {key: stats[key] for key in ("diverging", "step_size", "tree_size")}
+            return {key: stats[key] for key in ("divergences", "step_size", "tree_size")} | {
+                "failing": stats["divergences"] > 0,
+            }
 
         return (update_stats,)
 
