@@ -212,7 +212,7 @@ class Slice(ArrayStepShared):
         return columns, stats
 
     @staticmethod
-    def _make_update_stats_functions():
+    def _make_progressbar_update_functions():
         def update_stats(step_stats):
             return {key: step_stats[key] for key in {"tune", "nstep_out", "nstep_in"}}
 

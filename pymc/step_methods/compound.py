@@ -189,7 +189,7 @@ class BlockedStep(ABC, WithSamplingState):
         return columns, stats
 
     @staticmethod
-    def _make_update_stats_functions():
+    def _make_progressbar_update_functions():
         def update_stats(step_stats):
             return step_stats
 
@@ -332,10 +332,10 @@ class CompoundStep(WithSamplingState):
 
         return columns, stats
 
-    def _make_update_stats_functions(self):
+    def _make_progressbar_update_functions(self):
         update_functions = []
         for method in self.methods:
-            update_functions.extend(method._make_update_stats_functions())
+            update_functions.extend(method._make_progressbar_update_functions())
         return update_functions
 
 

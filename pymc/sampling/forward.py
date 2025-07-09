@@ -57,9 +57,9 @@ from pymc.blocking import PointType
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.logprob.utils import rvs_in_graph
 from pymc.model import Model, modelcontext
+from pymc.progress_bar import CustomProgress
 from pymc.pytensorf import compile
 from pymc.util import (
-    CustomProgress,
     RandomState,
     _get_seeds_per_chain,
     default_progress_theme,
