@@ -848,11 +848,8 @@ class ProgressBarManager:
                         continue
 
                     if key in all_step_stats:
+                        # TODO: Figure out how to integrate duplicate / non-scalar keys, ignoring them for now
                         continue
-                        count = (
-                            sum(step_key.startswith(f"{key}_") for step_key in all_step_stats) + 1
-                        )
-                        all_step_stats[f"{key}_{count}"] = val
                     else:
                         all_step_stats[key] = val
 
