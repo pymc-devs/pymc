@@ -48,7 +48,9 @@ ignore = [
   "D101",  # Missing docstring in public class
   "D102",  # Missing docstring in public method
   "D103",  # Missing docstring in public function
+  "D104",  # Missing docstring in public package
   "D105",  # Missing docstring in magic method
+  "D401",  # Ignore Umbridge level of control
 ]
 
 [tool.ruff.lint.pydocstyle]
@@ -65,6 +67,13 @@ lines-between-types = 1
 "docs/source/*" = ["D"]
 "pymc/__init__.py" = [
   "E402", # Module level import not at top of file
+]
+"pymc/dims/__init__.py" = [
+  "E402", # Module level import not at top of file
+]
+"pymc/dims/math.py" = [
+  "F401", # Module imported but unused
+  "F403", # 'from module import *' used; unable to detect undefined names
 ]
 "pymc/stats/__init__.py" = [
   "E402", # Module level import not at top of file

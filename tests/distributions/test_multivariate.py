@@ -1617,9 +1617,10 @@ class TestZeroSumNormal:
     def test_zsn_fail_axis(self, error, match, shape, support_shape, n_zerosum_axes):
         with pytest.raises(error, match=match):
             with pm.Model() as m:
-                _ = pm.ZeroSumNormal(
+                v = pm.ZeroSumNormal(
                     "v", shape=shape, support_shape=support_shape, n_zerosum_axes=n_zerosum_axes
                 )
+                v.eval()
 
     @pytest.mark.parametrize(
         "shape, support_shape",
