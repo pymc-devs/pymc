@@ -46,6 +46,7 @@ from pytensor.graph.basic import (
     Constant,
     Variable,
     ancestors,
+    walk,
 )
 from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
 from pytensor.tensor.variable import TensorVariable
@@ -60,8 +61,8 @@ from pymc.logprob.abstract import (
 from pymc.logprob.rewriting import cleanup_ir, construct_ir_fgraph
 from pymc.logprob.transform_value import TransformValuesRewrite
 from pymc.logprob.transforms import Transform
-from pymc.logprob.utils import get_related_valued_nodes, rvs_in_graph
-from pymc.pytensorf import replace_vars_in_graphs
+from pymc.logprob.utils import get_related_valued_nodes
+from pymc.pytensorf import expand_inner_graph, replace_vars_in_graphs
 
 TensorLike: TypeAlias = Variable | float | np.ndarray
 
@@ -71,9 +72,13 @@ def _find_unallowed_rvs_in_graph(graph):
     from pymc.distributions.simulator import SimulatorRV
 
     return {
-        rv
-        for rv in rvs_in_graph(graph)
-        if not isinstance(rv.owner.op, SimulatorRV | MinibatchIndexRV)
+        var
+        for var in walk(graph, expand_inner_graph, False)
+        if (
+            var.owner
+            and isinstance(var.owner.op, MeasurableOp)
+            and not isinstance(var.owner.op, SimulatorRV | MinibatchIndexRV)
+        )
     }
 
 

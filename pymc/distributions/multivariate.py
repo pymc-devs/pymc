@@ -149,11 +149,11 @@ def quaddist_matrix(cov=None, chol=None, tau=None, lower=True, *args, **kwargs):
             raise ValueError("chol must be at least two dimensional.")
 
         if not lower:
-            chol = pt.swapaxes(chol, -1, -2)
+            chol = chol.mT
 
         # tag as lower triangular to enable pytensor rewrites of chol(l.l') -> l
         chol.tag.lower_triangular = True
-        cov = pt.matmul(chol, pt.swapaxes(chol, -1, -2))
+        cov = chol @ chol.mT
 
     return cov
 
