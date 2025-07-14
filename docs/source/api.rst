@@ -23,6 +23,7 @@ API
    api/backends
    api/misc
    api/testing
+   api/dims
 
 ------------------
 Dimensionality
