@@ -18,6 +18,7 @@ import warnings
 
 from collections.abc import Sequence
 from functools import singledispatch
+from types import EllipsisType
 from typing import Any, TypeAlias, cast
 
 import numpy as np
@@ -87,11 +88,13 @@ def _check_shape_type(shape):
 # User-provided can be lazily specified as scalars
 Shape: TypeAlias = int | TensorVariable | Sequence[int | Variable]
 Dims: TypeAlias = str | Sequence[str | None]
+DimsWithEllipsis: TypeAlias = str | EllipsisType | Sequence[str | None | EllipsisType]
 Size: TypeAlias = int | TensorVariable | Sequence[int | Variable]
 
 # After conversion to vectors
 StrongShape: TypeAlias = TensorVariable | tuple[int | Variable, ...]
-StrongDims: TypeAlias = Sequence[str | None]
+StrongDims: TypeAlias = Sequence[str]
+StrongDimsWithEllipsis: TypeAlias = Sequence[str | EllipsisType]
 StrongSize: TypeAlias = TensorVariable | tuple[int | Variable, ...]
 
 
@@ -107,7 +110,24 @@ def convert_dims(dims: Dims | None) -> StrongDims | None:
     else:
         raise ValueError(f"The `dims` parameter must be a tuple, str or list. Actual: {type(dims)}")
 
-    return dims
+    return dims  # type: ignore[return-value]
+
+
+def convert_dims_with_ellipsis(dims: DimsWithEllipsis | None) -> StrongDimsWithEllipsis | None:
+    """Process a user-provided dims variable into None or a valid dims tuple with ellipsis."""
+    if dims is None:
+        return None
+
+    if isinstance(dims, str | EllipsisType):
+        dims = (dims,)
+    elif isinstance(dims, list | tuple):
+        dims = tuple(dims)
+    else:
+        raise ValueError(
+            f"The `dims` parameter must be a tuple, list, str or Ellipsis. Actual: {type(dims)}"
+        )
+
+    return dims  # type: ignore[return-value]
 
 
 def convert_shape(shape: Shape) -> StrongShape | None:

@@ -415,7 +415,7 @@ class TestCompile:
             ],
         )(rng1, rng2)
         with pytest.raises(
-            ValueError, match="No update found for at least one RNG used in SymbolicRandomVariable"
+            ValueError, match="No update found for at least one RNG used in SymbolicRV"
         ):
             compile(inputs=[], outputs=[dummy_x1, dummy_x2])
 

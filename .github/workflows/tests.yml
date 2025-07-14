@@ -136,6 +136,12 @@ jobs:
             tests/logprob/test_transforms.py
             tests/logprob/test_utils.py
 
+          - |
+            tests/dims/distributions/test_core.py
+            tests/dims/distributions/test_scalar.py
+            tests/dims/distributions/test_vector.py
+            tests/dims/test_model.py
+
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
