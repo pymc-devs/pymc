@@ -55,9 +55,8 @@ from pymc.backends.arviz import _DefaultTrace, dataset_to_point_list
 from pymc.backends.base import MultiTrace
 from pymc.blocking import PointType
 from pymc.distributions.shape_utils import change_dist_size
-from pymc.logprob.utils import rvs_in_graph
 from pymc.model import Model, modelcontext
-from pymc.pytensorf import compile
+from pymc.pytensorf import compile, rvs_in_graph
 from pymc.util import (
     CustomProgress,
     RandomState,

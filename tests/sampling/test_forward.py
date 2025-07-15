@@ -35,9 +35,8 @@ from scipy import stats
 import pymc as pm
 
 from pymc.backends.base import MultiTrace
-from pymc.logprob.utils import rvs_in_graph
 from pymc.model.transform.optimization import freeze_dims_and_data
-from pymc.pytensorf import compile
+from pymc.pytensorf import compile, rvs_in_graph
 from pymc.sampling.forward import (
     compile_forward_sampling_function,
     get_constant_coords,

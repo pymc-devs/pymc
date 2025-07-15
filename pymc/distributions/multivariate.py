@@ -149,11 +149,11 @@ def quaddist_matrix(cov=None, chol=None, tau=None, lower=True, *args, **kwargs):
             raise ValueError("chol must be at least two dimensional.")
 
         if not lower:
-            chol = pt.swapaxes(chol, -1, -2)
+            chol = chol.mT
 
         # tag as lower triangular to enable pytensor rewrites of chol(l.l') -> l
         chol.tag.lower_triangular = True
-        cov = pt.matmul(chol, pt.swapaxes(chol, -1, -2))
+        cov = chol @ chol.mT
 
     return cov
 
@@ -2664,6 +2664,7 @@ class StickBreakingWeights(SimplexContinuous):
 class ZeroSumNormalRV(SymbolicRandomVariable):
     """ZeroSumNormal random variable."""
 
+    name = "ZeroSumNormal"
     _print_name = ("ZeroSumNormal", "\\operatorname{ZeroSumNormal}")
 
     @classmethod
@@ -2687,12 +2688,12 @@ class ZeroSumNormalRV(SymbolicRandomVariable):
             zerosum_rv -= zerosum_rv.mean(axis=-axis - 1, keepdims=True)
 
         support_str = ",".join([f"d{i}" for i in range(n_zerosum_axes)])
-        extended_signature = f"[rng],(),(s),[size]->[rng],({support_str})"
-        return ZeroSumNormalRV(
-            inputs=[rng, sigma, support_shape, size],
+        extended_signature = f"[rng],[size],(),(s)->[rng],({support_str})"
+        return cls(
+            inputs=[rng, size, sigma, support_shape],
             outputs=[next_rng, zerosum_rv],
             extended_signature=extended_signature,
-        )(rng, sigma, support_shape, size)
+        )(rng, size, sigma, support_shape)
 
 
 class ZeroSumNormal(Distribution):
@@ -2828,7 +2829,7 @@ def zerosum_default_transform(op, rv):
 
 
 @_logprob.register(ZeroSumNormalRV)
-def zerosumnormal_logp(op, values, rng, sigma, support_shape, size, **kwargs):
+def zerosumnormal_logp(op, values, rng, size, sigma, support_shape, **kwargs):
     (value,) = values
     shape = value.shape
     n_zerosum_axes = op.ndim_supp

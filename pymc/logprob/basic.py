@@ -46,6 +46,7 @@ from pytensor.graph.basic import (
     Constant,
     Variable,
     ancestors,
+    walk,
 )
 from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
 from pytensor.tensor.variable import TensorVariable
@@ -60,8 +61,8 @@ from pymc.logprob.abstract import (
 from pymc.logprob.rewriting import cleanup_ir, construct_ir_fgraph
 from pymc.logprob.transform_value import TransformValuesRewrite
 from pymc.logprob.transforms import Transform
-from pymc.logprob.utils import get_related_valued_nodes, rvs_in_graph
-from pymc.pytensorf import replace_vars_in_graphs
+from pymc.logprob.utils import get_related_valued_nodes
+from pymc.pytensorf import expand_inner_graph, replace_vars_in_graphs
 
 TensorLike: TypeAlias = Variable | float | np.ndarray
 
@@ -71,9 +72,13 @@ def _find_unallowed_rvs_in_graph(graph):
     from pymc.distributions.simulator import SimulatorRV
 
     return {
-        rv
-        for rv in rvs_in_graph(graph)
-        if not isinstance(rv.owner.op, SimulatorRV | MinibatchIndexRV)
+        var
+        for var in walk(graph, expand_inner_graph, False)
+        if (
+            var.owner
+            and isinstance(var.owner.op, MeasurableOp)
+            and not isinstance(var.owner.op, SimulatorRV | MinibatchIndexRV)
+        )
     }
 
 
@@ -192,9 +197,9 @@ def logp(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Tens
         [ir_valued_var] = fgraph.outputs
         [ir_rv, ir_value] = ir_valued_var.owner.inputs
         expr = _logprob_helper(ir_rv, ir_value, **kwargs)
-        cleanup_ir([expr])
+        [expr] = cleanup_ir([expr])
         if warn_rvs:
-            _warn_rvs_in_inferred_graph(expr)
+            _warn_rvs_in_inferred_graph([expr])
         return expr
 
 
@@ -292,9 +297,9 @@ def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Te
         [ir_valued_rv] = fgraph.outputs
         [ir_rv, ir_value] = ir_valued_rv.owner.inputs
         expr = _logcdf_helper(ir_rv, ir_value, **kwargs)
-        cleanup_ir([expr])
+        [expr] = cleanup_ir([expr])
         if warn_rvs:
-            _warn_rvs_in_inferred_graph(expr)
+            _warn_rvs_in_inferred_graph([expr])
         return expr
 
 
@@ -374,9 +379,9 @@ def icdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Tens
         [ir_valued_rv] = fgraph.outputs
         [ir_rv, ir_value] = ir_valued_rv.owner.inputs
         expr = _icdf_helper(ir_rv, ir_value, **kwargs)
-        cleanup_ir([expr])
+        [expr] = cleanup_ir([expr])
         if warn_rvs:
-            _warn_rvs_in_inferred_graph(expr)
+            _warn_rvs_in_inferred_graph([expr])
         return expr
 
 
@@ -528,8 +533,8 @@ def conditional_logp(
             f"The logprob terms of the following value variables could not be derived: {missing_value_terms}"
         )
 
-    logprobs = list(values_to_logprobs.values())
-    cleanup_ir(logprobs)
+    values, logprobs = zip(*values_to_logprobs.items())
+    logprobs = cleanup_ir(logprobs)
 
     if warn_rvs:
         rvs_in_logp_expressions = _find_unallowed_rvs_in_graph(logprobs)
@@ -540,7 +545,7 @@ def conditional_logp(
                 UserWarning,
             )
 
-    return values_to_logprobs
+    return dict(zip(values, logprobs))
 
 
 def transformed_conditional_logp(

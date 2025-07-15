@@ -132,6 +132,9 @@ def remove_DiracDelta(fgraph, node):
     return [dd_val]
 
 
+logprob_rewrites_basic_query = RewriteDatabaseQuery(include=["basic"])
+logprob_rewrites_cleanup_query = RewriteDatabaseQuery(include=["cleanup"])
+
 logprob_rewrites_db = SequenceDB()
 logprob_rewrites_db.name = "logprob_rewrites_db"
 
@@ -146,16 +149,21 @@ logprob_rewrites_db.register(
         failure_callback=None,
     ),
     "basic",
+    position=0,
 )
 
 # Introduce sigmoid. We do it before canonicalization so that useless mul are removed next
 logprob_rewrites_db.register(
-    "local_exp_over_1_plus_exp", out2in(local_exp_over_1_plus_exp), "basic"
+    "local_exp_over_1_plus_exp",
+    out2in(local_exp_over_1_plus_exp),
+    "basic",
+    position=0.9,
 )
 logprob_rewrites_db.register(
     "pre-canonicalize",
     optdb.query("+canonicalize", "-local_eager_useless_unbatched_blockwise"),
     "basic",
+    position=1,
 )
 
 # These rewrites convert un-measurable variables into their measurable forms,
@@ -164,18 +172,26 @@ logprob_rewrites_db.register(
 measurable_ir_rewrites_db = EquilibriumDB()
 measurable_ir_rewrites_db.name = "measurable_ir_rewrites_db"
 
-logprob_rewrites_db.register("measurable_ir_rewrites", measurable_ir_rewrites_db, "basic")
+logprob_rewrites_db.register(
+    "measurable_ir_rewrites",
+    measurable_ir_rewrites_db,
+    "basic",
+    position=2,
+)
 
 # These rewrites push random/measurable variables "down", making them closer to
 # (or eventually) the graph outputs.  Often this is done by lifting other `Op`s
 # "up" through the random/measurable variables and into their inputs.
 measurable_ir_rewrites_db.register("subtensor_lift", local_subtensor_rv_lift, "basic")
 
-# These rewrites are used to introduce specalized operations with better logprob graphs
+# These rewrites are used to introduce specialized operations with better logprob graphs
 specialization_ir_rewrites_db = EquilibriumDB()
 specialization_ir_rewrites_db.name = "specialization_ir_rewrites_db"
 logprob_rewrites_db.register(
-    "specialization_ir_rewrites_db", specialization_ir_rewrites_db, "basic"
+    "specialization_ir_rewrites_db",
+    specialization_ir_rewrites_db,
+    "basic",
+    position=3,
 )
 
 
@@ -183,6 +199,7 @@ logprob_rewrites_db.register(
     "post-canonicalize",
     optdb.query("+canonicalize", "-local_eager_useless_unbatched_blockwise"),
     "basic",
+    position=4,
 )
 
 # Rewrites that remove IR Ops
@@ -192,6 +209,7 @@ logprob_rewrites_db.register(
     "cleanup_ir_rewrites",
     TopoDB(cleanup_ir_rewrites_db, order="out_to_in", ignore_newtrees=True, failure_callback=None),
     "cleanup",
+    position=5,
 )
 
 cleanup_ir_rewrites_db.register("remove_DiracDelta", remove_DiracDelta, "cleanup")
@@ -250,7 +268,7 @@ def construct_ir_fgraph(
     toposort_replace(fgraph, replacements, reverse=True)
 
     if ir_rewriter is None:
-        ir_rewriter = logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"]))
+        ir_rewriter = logprob_rewrites_db.query(logprob_rewrites_basic_query)
     ir_rewriter.rewrite(fgraph)
 
     # Reintroduce original value variables
@@ -260,10 +278,11 @@ def construct_ir_fgraph(
     return fgraph
 
 
-def cleanup_ir(vars: Sequence[Variable]) -> None:
+def cleanup_ir(vars: Sequence[Variable]) -> Sequence[Variable]:
     fgraph = FunctionGraph(outputs=vars, clone=False)
-    ir_rewriter = logprob_rewrites_db.query(RewriteDatabaseQuery(include=["cleanup"]))
+    ir_rewriter = logprob_rewrites_db.query(logprob_rewrites_cleanup_query)
     ir_rewriter.rewrite(fgraph)
+    return fgraph.outputs
 
 
 def assume_valued_outputs(outputs: Sequence[TensorVariable]) -> Sequence[TensorVariable]:
