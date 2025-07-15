@@ -39,10 +39,11 @@ from pymc.distributions.custom import CustomDistRV, CustomSymbolicDistRV
 from pymc.distributions.distribution import _support_point
 from pymc.logprob.abstract import _icdf, _logcdf, _logprob
 from pymc.model import Model, modelcontext
+from pymc.progress_bar import CustomProgress
 from pymc.sampling.parallel import _cpu_count
 from pymc.smc.kernels import IMH
 from pymc.stats.convergence import log_warnings, run_convergence_checks
-from pymc.util import CustomProgress, RandomState, _get_seeds_per_chain
+from pymc.util import RandomState, _get_seeds_per_chain
 
 
 def sample_smc(
