@@ -67,12 +67,12 @@ def make_initial_point_fns_per_chain(
     model,
     overrides: StartDict | Sequence[StartDict | None] | None,
     jitter_rvs: set[TensorVariable] | None = None,
+    jitter_scale: float = 1.0,
     chains: int,
 ) -> list[Callable[[SeedSequenceSeed], PointType]]:
     """Create an initial point function for each chain, as defined by initvals.
 
-    If a single initval dictionary is passed, the function is replicated for each
-    chain, otherwise a unique function is compiled for each entry in the dictionary.
+    If a single initval dictionary is passed, the function is replicated for each chain, otherwise a unique function is compiled for each entry in the dictionary.
 
     Parameters
     ----------
@@ -82,6 +82,8 @@ def make_initial_point_fns_per_chain(
     jitter_rvs : set, optional
         Random variable tensors for which U(-1, 1) jitter shall be applied.
         (To the transformed space if applicable.)
+    jitter_scale : float, optional
+        The scale of the jitter in the jitter_rvs set. Defaults to 1.0.
 
     Returns
     -------
@@ -102,6 +104,7 @@ def make_initial_point_fns_per_chain(
                 model=model,
                 overrides=overrides,
                 jitter_rvs=jitter_rvs,
+                jitter_scale=jitter_scale,
                 return_transformed=True,
             )
         ] * chains
@@ -110,6 +113,7 @@ def make_initial_point_fns_per_chain(
             make_initial_point_fn(
                 model=model,
                 jitter_rvs=jitter_rvs,
+                jitter_scale=jitter_scale,
                 overrides=chain_overrides,
                 return_transformed=True,
             )
@@ -128,6 +132,7 @@ def make_initial_point_fn(
     model,
     overrides: StartDict | None = None,
     jitter_rvs: set[TensorVariable] | None = None,
+    jitter_scale: float = 1.0,
     default_strategy: str = "support_point",
     return_transformed: bool = True,
 ) -> Callable[[SeedSequenceSeed], PointType]:
@@ -136,8 +141,9 @@ def make_initial_point_fn(
     Parameters
     ----------
     jitter_rvs : set
-        The set (or list or tuple) of random variables for which a U(-1, +1) jitter should be
-        added to the initial value. Only available for variables that have a transform or real-valued support.
+        The set (or list or tuple) of random variables for which a U(-1, +1) jitter should be added to the initial value. Only available for variables that have a transform or real-valued support.
+    jitter_scale : float, optional
+        The scale of the jitter in the jitter_rvs set. Defaults to 1.0.
     default_strategy : str
         Which of { "support_point", "prior" } to prefer if the initval setting for an RV is None.
     overrides : dict
@@ -160,6 +166,7 @@ def make_initial_point_fn(
         rvs_to_transforms=model.rvs_to_transforms,
         initval_strategies=initval_strats,
         jitter_rvs=jitter_rvs,
+        jitter_scale=jitter_scale,
         default_strategy=default_strategy,
         return_transformed=return_transformed,
     )
@@ -198,6 +205,7 @@ def make_initial_point_expression(
     rvs_to_transforms: dict[TensorVariable, Transform],
     initval_strategies: dict[TensorVariable, np.ndarray | Variable | str | None],
     jitter_rvs: set[TensorVariable] | None = None,
+    jitter_scale: float = 1.0,
     default_strategy: str = "support_point",
     return_transformed: bool = False,
 ) -> list[TensorVariable]:
@@ -213,8 +221,10 @@ def make_initial_point_expression(
         Mapping of free random variable tensors to initial value strategies.
         For example the `Model.initial_values` dictionary.
     jitter_rvs : set
-        The set (or list or tuple) of random variables for which a U(-1, +1) jitter should be
+        The set (or list or tuple) of random variables for which a U(-1, 1) jitter should be
         added to the initial value. Only available for variables that have a transform or real-valued support.
+    jitter_scale : float, optional
+        The scale of the jitter in the jitter_rvs set. Defaults to 1.0.
     default_strategy : str
         Which of { "support_point", "prior" } to prefer if the initval strategy setting for an RV is None.
     return_transformed : bool
@@ -269,7 +279,7 @@ def make_initial_point_expression(
             value = transform.forward(value, *variable.owner.inputs)
 
         if variable in jitter_rvs:
-            jitter = pt.random.uniform(-1, 1, size=value.shape)
+            jitter = pt.random.uniform(-jitter_scale, jitter_scale, size=value.shape)
             jitter.name = f"{variable.name}_jitter"
             value = value + jitter
 

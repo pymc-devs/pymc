@@ -1429,10 +1429,11 @@ def _init_jitter(
     initvals: StartDict | Sequence[StartDict | None] | None,
     seeds: Sequence[int] | np.ndarray,
     jitter: bool,
+    jitter_scale: float,
     jitter_max_retries: int,
     logp_fn: Callable[[PointType], np.ndarray] | None = None,
 ) -> list[PointType]:
-    """Apply a uniform jitter in [-1, 1] to the test value as starting point in each chain.
+    """Apply a uniform jitter in [-jitter_scale, jitter_scale] to the test value as starting point in each chain.
 
     ``model.check_start_vals`` is used to test whether the jittered starting
     values produce a finite log probability. Invalid values are resampled
@@ -1443,6 +1444,8 @@ def _init_jitter(
     ----------
     jitter: bool
         Whether to apply jitter or not.
+    jitter_scale : float, optional
+        The scale of the jitter in set(model.free_RVs). Defaults to 1.0.
     jitter_max_retries : int
         Maximum number of repeated attempts at initializing values (per chain).
     logp_fn: Callable[[dict[str, np.ndarray]], np.ndarray | jax.Array] | None
@@ -1458,6 +1461,7 @@ def _init_jitter(
         model=model,
         overrides=initvals,
         jitter_rvs=set(model.free_RVs) if jitter else set(),
+        jitter_scale=jitter_scale if jitter else 1.0,
         chains=len(seeds),
     )
 
