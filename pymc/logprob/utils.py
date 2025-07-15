@@ -46,10 +46,9 @@ from pytensor.graph import Apply, Op, node_rewriter
 from pytensor.graph.basic import Constant, Variable, clone_get_equiv, graph_inputs, walk
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import HasInnerGraph
-from pytensor.link.c.type import CType
 from pytensor.raise_op import CheckAndRaise
 from pytensor.scalar.basic import Mul
-from pytensor.tensor.basic import get_underlying_scalar_constant_value
+from pytensor.tensor.basic import AllocEmpty, get_underlying_scalar_constant_value
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.random.op import RandomVariable
@@ -150,27 +149,6 @@ def rvs_in_graph(vars: Variable | Sequence[Variable]) -> set[Variable]:
     }
 
 
-def convert_indices(indices, entry):
-    if indices and isinstance(entry, CType):
-        rval = indices.pop(0)
-        return rval
-    elif isinstance(entry, slice):
-        return slice(
-            convert_indices(indices, entry.start),
-            convert_indices(indices, entry.stop),
-            convert_indices(indices, entry.step),
-        )
-    else:
-        return entry
-
-
-def indices_from_subtensor(idx_list, indices):
-    """Compute a useable index tuple from the inputs of a ``*Subtensor**`` ``Op``."""
-    return tuple(
-        tuple(convert_indices(list(indices), idx) for idx in idx_list) if idx_list else indices
-    )
-
-
 def filter_measurable_variables(inputs):
     return [
         inp for inp in inputs if (inp.owner is not None and isinstance(inp.owner.op, MeasurableOp))
@@ -265,7 +243,7 @@ class DiracDelta(MeasurableOp, Op):
 
     __props__ = ("rtol", "atol")
 
-    def __init__(self, rtol=1e-5, atol=1e-8):
+    def __init__(self, rtol, atol):
         self.rtol = rtol
         self.atol = atol
 
@@ -288,15 +266,25 @@ class DiracDelta(MeasurableOp, Op):
         return input_shapes
 
 
-dirac_delta = DiracDelta()
+def dirac_delta(x, rtol=1e-5, atol=1e-8):
+    return DiracDelta(rtol, atol)(x)
 
 
 @_logprob.register(DiracDelta)
-def diracdelta_logprob(op, values, *inputs, **kwargs):
-    (values,) = values
-    (const_value,) = inputs
-    values, const_value = pt.broadcast_arrays(values, const_value)
-    return pt.switch(pt.isclose(values, const_value, rtol=op.rtol, atol=op.atol), 0.0, -np.inf)
+def diracdelta_logprob(op, values, const_value, **kwargs):
+    [value] = values
+
+    if const_value.owner and isinstance(const_value.owner.op, AllocEmpty):
+        # Any value is considered valid for an AllocEmpty array
+        return pt.zeros_like(value)
+
+    if op.rtol == 0 and op.atol == 0:
+        # Strict equality, cheaper logp
+        match = pt.eq(value, const_value)
+    else:
+        # Loose equality, more expensive logp
+        match = pt.isclose(value, const_value, rtol=op.rtol, atol=op.atol)
+    return pt.switch(match, np.array(0, dtype=value.dtype), -np.inf)
 
 
 def find_negated_var(var):

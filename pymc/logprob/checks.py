@@ -92,7 +92,7 @@ def logprob_check_and_raise(op, values, inner_rv, *assertions, **kwargs):
     (value,) = values
     # transfer assertion from rv to value
     assertions = replace_rvs_by_values(assertions, rvs_to_values={inner_rv: value})
-    value = op(value, *assertions)
+    value = CheckAndRaise(**op._props_dict())(value, *assertions)
     return _logprob_helper(inner_rv, value)
 
 
