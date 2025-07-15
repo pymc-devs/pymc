@@ -346,7 +346,7 @@ class Metropolis(ArrayStepShared):
         return columns, stats
 
     @staticmethod
-    def _make_update_stats_functions():
+    def _make_progressbar_update_functions():
         def update_stats(step_stats):
             return {
                 "accept_rate" if key == "accept" else key: step_stats[key]

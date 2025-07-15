@@ -248,7 +248,7 @@ class NUTS(BaseHMC):
         return columns, stats
 
     @staticmethod
-    def _make_update_stats_functions():
+    def _make_progressbar_update_functions():
         def update_stats(stats):
             return {key: stats[key] for key in ("diverging", "step_size", "tree_size")}
 

@@ -209,8 +209,8 @@ class ProgressBarManager:
 
         When sampling, Step classes are responsible for computing and exposing statistics that can be reported on
         progress bars. Each Step implements two class methods: :meth:`pymc.step_methods.BlockedStep._progressbar_config`
-        and :meth:`pymc.step_methods.BlockedStep._make_update_stats_function`. `_progressbar_config` reports which
-        columns should be displayed on the progress bar, and `_make_update_stats_function` computes the statistics
+        and :meth:`pymc.step_methods.BlockedStep._make_progressbar_update_functions`. `_progressbar_config` reports which
+        columns should be displayed on the progress bar, and `_make_progressbar_update_functions` computes the statistics
         that will be displayed on the progress bar.
 
         Parameters
@@ -281,7 +281,7 @@ class ProgressBarManager:
             progressbar_theme=progressbar_theme,
         )
         self.progress_stats = progress_stats
-        self.update_stats_functions = step_method._make_update_stats_functions()
+        self.update_stats_functions = step_method._make_progressbar_update_functions()
 
         self._show_progress = show_progress
         self.divergences = 0
