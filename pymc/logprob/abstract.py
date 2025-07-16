@@ -35,6 +35,7 @@
 #   SOFTWARE.
 
 import abc
+import warnings
 
 from collections.abc import Sequence
 from functools import singledispatch

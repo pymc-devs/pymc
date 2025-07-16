@@ -148,6 +148,7 @@ class TestNutsCheckTrace:
         expected_stat_names = {
             "depth",
             "diverging",
+            "divergences",
             "energy",
             "energy_error",
             "model_logp",

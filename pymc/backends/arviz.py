@@ -39,8 +39,9 @@ from xarray import Dataset
 import pymc
 
 from pymc.model import Model, modelcontext
+from pymc.progress_bar import CustomProgress, default_progress_theme
 from pymc.pytensorf import PointFunc, extract_obs_data
-from pymc.util import CustomProgress, default_progress_theme, get_default_varnames
+from pymc.util import get_default_varnames
 
 if TYPE_CHECKING:
     from pymc.backends.base import MultiTrace

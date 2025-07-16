@@ -346,18 +346,14 @@ class Metropolis(ArrayStepShared):
         return columns, stats
 
     @staticmethod
-    def _make_update_stats_function():
-        def update_stats(stats, step_stats, chain_idx):
-            if isinstance(step_stats, list):
-                step_stats = step_stats[0]
+    def _make_progressbar_update_functions():
+        def update_stats(step_stats):
+            return {
+                "accept_rate" if key == "accept" else key: step_stats[key]
+                for key in ("tune", "accept", "scaling")
+            }
 
-            stats["tune"][chain_idx] = step_stats["tune"]
-            stats["accept_rate"][chain_idx] = step_stats["accept"]
-            stats["scaling"][chain_idx] = step_stats["scaling"]
-
-            return stats
-
-        return update_stats
+        return (update_stats,)
 
 
 def tune(scale, acc_rate):
@@ -684,7 +680,6 @@ class BinaryGibbsMetropolis(ArrayStep):
 class CategoricalGibbsMetropolisState(StepMethodState):
     shuffle_dims: bool
     dimcats: list[tuple]
-    tune: bool
 
 
 class CategoricalGibbsMetropolis(ArrayStep):
@@ -767,10 +762,6 @@ class CategoricalGibbsMetropolis(ArrayStep):
         else:
             raise ValueError("Argument 'proposal' should either be 'uniform' or 'proportional'")
 
-        # Doesn't actually tune, but it's required to emit a sampler stat
-        # that indicates whether a draw was done in a tuning phase.
-        self.tune = True
-
         if compile_kwargs is None:
             compile_kwargs = {}
         super().__init__(vars, [model.compile_logp(**compile_kwargs)], blocked=blocked, rng=rng)
@@ -800,10 +791,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
             if accepted:
                 logp_curr = logp_prop
 
-        stats = {
-            "tune": self.tune,
-        }
-        return q, [stats]
+        # This step doesn't have any tunable parameters
+        return q, [{"tune": False}]
 
     def astep_prop(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         logp = args[0]
@@ -820,7 +809,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
         for dim, k in dimcats:
             logp_curr = self.metropolis_proportional(q, logp, logp_curr, dim, k)
 
-        return q, []
+        # This step doesn't have any tunable parameters
+        return q, [{"tune": False}]
 
     def astep(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         raise NotImplementedError()
