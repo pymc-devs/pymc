@@ -65,7 +65,6 @@ from pymc.pytensorf import (
 )
 from pymc.util import (
     UNSET,
-    VarName,
     WithMemoization,
     _UnsetType,
     get_transformed_name,

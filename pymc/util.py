@@ -31,7 +31,6 @@ from pytensor.compile import SharedVariable
 
 from pymc.exceptions import BlockModelAccessError
 
-VarName = NewType("VarName", str)
 
 
 class _UnsetType:

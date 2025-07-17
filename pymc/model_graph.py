@@ -26,7 +26,7 @@ from pytensor.tensor.shape import Shape
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.model.core import modelcontext
-from pymc.util import VarName, get_default_varnames, get_var_name
+from pymc.util import get_default_varnames, get_var_name
 
 __all__ = (
     "ModelGraph",
