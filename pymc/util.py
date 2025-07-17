@@ -215,7 +215,7 @@ def get_default_varnames(var_iterator, include_transformed):
 
 def get_var_name(var) -> str:
     """Get an appropriate, plain variable name for a variable."""
-    return str(getattr(var, "name", var))
+    return str(var.name if var.name is not None else var)
 
 
 def get_transformed(z):
