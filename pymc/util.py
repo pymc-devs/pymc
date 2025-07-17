@@ -18,7 +18,7 @@ import re
 from collections import namedtuple
 from collections.abc import Sequence
 from copy import deepcopy
-from typing import NewType, cast
+from typing import cast
 
 import arviz
 import cloudpickle
@@ -30,8 +30,6 @@ from pytensor import Variable
 from pytensor.compile import SharedVariable
 
 from pymc.exceptions import BlockModelAccessError
-
-VarName = NewType("VarName", str)
 
 
 class _UnsetType:
@@ -214,9 +212,9 @@ def get_default_varnames(var_iterator, include_transformed):
         return [var for var in var_iterator if not is_transformed_name(get_var_name(var))]
 
 
-def get_var_name(var) -> VarName:
+def get_var_name(var) -> str:
     """Get an appropriate, plain variable name for a variable."""
-    return VarName(str(getattr(var, "name", var)))
+    return var if isinstance(var, str) else str(var.name)
 
 
 def get_transformed(z):
