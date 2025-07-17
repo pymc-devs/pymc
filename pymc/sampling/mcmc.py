@@ -760,7 +760,7 @@ def sample(
             UserWarning,
         )
     rngs = get_random_generator(random_seed).spawn(chains)
-    random_seed_list = [rng.integers(2**30) for rng in rngs]
+    random_seed_list = np.fromiter((rng.integers(2**30) for rng in rngs), dtype=np.int64)
 
     if not discard_tuned_samples and not return_inferencedata and not isinstance(trace, ZarrTrace):
         warnings.warn(
