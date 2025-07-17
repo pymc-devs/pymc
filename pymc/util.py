@@ -18,7 +18,7 @@ import re
 from collections import namedtuple
 from collections.abc import Sequence
 from copy import deepcopy
-from typing import NewType, cast
+from typing import cast
 
 import arviz
 import cloudpickle
@@ -30,7 +30,6 @@ from pytensor import Variable
 from pytensor.compile import SharedVariable
 
 from pymc.exceptions import BlockModelAccessError
-
 
 
 class _UnsetType:
