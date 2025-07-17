@@ -1,0 +1,29 @@
+---
+name: Slow Tests Issue Body
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'
+
+permissions:
+  issues: write
+
+jobs:
+  update-comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install ZSH
+        run: sudo apt-get update && sudo apt-get install -y zsh
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Slow tests
+        working-directory: scripts/slowest_tests
+        shell: zsh {0}
+        run: source update-slowest-times-issue.sh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
