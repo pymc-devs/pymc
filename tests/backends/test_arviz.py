@@ -837,3 +837,14 @@ class TestDatasetToPointList:
         ds[3] = xarray.DataArray([1, 2, 3])
         with pytest.raises(ValueError, match="must be str"):
             dataset_to_point_list(ds, sample_dims=["chain", "draw"])
+
+    def test_zero_size(self):
+        ds = xarray.Dataset()
+        ds["x"] = xarray.DataArray(
+            np.zeros((4, 10, 0, 5)), dims=("chain", "draw", "dim_0", "dim_5")
+        )
+        pl, _ = dataset_to_point_list(ds, sample_dims=("chain", "draw"))
+        assert len(pl) == 40
+        assert tuple(pl[0]) == ("x",)
+        assert pl[0]["x"].shape == (0, 5)
+        assert pl[0]["x"].dtype == np.float64
