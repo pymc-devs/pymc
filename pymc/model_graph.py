@@ -334,7 +334,7 @@ class ModelGraph:
         Returns
         -------
         dict
-            Maps plate labels to the set of ``VarName``s inside the plate.
+            Maps plate labels to the set of strings inside the plate.
         """
         plates = defaultdict(set)
 
