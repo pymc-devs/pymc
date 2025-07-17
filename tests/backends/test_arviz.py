@@ -301,32 +301,120 @@ class TestDataPyMC:
         np.testing.assert_array_equal(idata.observed_data.coords["date"], coords["date"])
         np.testing.assert_array_equal(idata.observed_data.coords["city"], coords["city"])
 
-    def test_overwrite_model_coords_dims(self):
-        """Check coords and dims from model object can be partially overwritten."""
-        dim1 = ["a", "b"]
-        new_dim1 = ["c", "d"]
-        coords = {"dim1": dim1, "dim2": ["c1", "c2"]}
-        x_data = np.arange(4).reshape((2, 2))
-        y = x_data + np.random.normal(size=(2, 2))
-        with pm.Model(coords=coords):
-            x = pm.Data("x", x_data, dims=("dim1", "dim2"))
-            beta = pm.Normal("beta", 0, 1, dims="dim1")
-            _ = pm.Normal("obs", x * beta, 1, observed=y, dims=("dim1", "dim2"))
-            trace = pm.sample(100, tune=100, return_inferencedata=False)
-            idata1 = to_inference_data(trace)
-            idata2 = to_inference_data(trace, coords={"dim1": new_dim1}, dims={"beta": ["dim2"]})
 
-        test_dict = {"posterior": ["beta"], "observed_data": ["obs"], "constant_data": ["x"]}
-        fails1 = check_multiple_attrs(test_dict, idata1)
-        assert not fails1
-        fails2 = check_multiple_attrs(test_dict, idata2)
-        assert not fails2
-        assert "dim1" in list(idata1.posterior.beta.dims)
-        assert "dim2" in list(idata2.posterior.beta.dims)
-        assert np.all(idata1.constant_data.x.dim1.values == np.array(dim1))
-        assert np.all(idata1.constant_data.x.dim2.values == np.array(["c1", "c2"]))
-        assert np.all(idata2.constant_data.x.dim1.values == np.array(new_dim1))
-        assert np.all(idata2.constant_data.x.dim2.values == np.array(["c1", "c2"]))
+from arviz import to_inference_data
+
+
+def test_overwrite_model_coords_dims(self):
+    """Test overwriting model coords and dims."""
+
+    # ✅ Define model and sample posterior
+    with pm.Model() as model:
+        mu = pm.Normal("mu", 0, 1)
+        sigma = pm.HalfNormal("sigma", 1)
+        obs = pm.Normal("obs", mu=mu, sigma=sigma, observed=[1.2, 2.3, 3.1])
+
+        idata = pm.sample(500, return_inferencedata=True)
+
+    # ✅ Debugging prints
+    print("📌 Shape of idata.posterior:", idata.posterior.sizes)
+    print("📌 Shape of idata.observed_data:", idata.observed_data.sizes)
+
+    # ✅ Use `idata` directly instead of `create_test_inference_data()`
+    inference_data = idata
+
+    # ✅ Ensure shapes match expectations
+    expected_chains = inference_data.posterior.sizes["chain"]
+    expected_draws = inference_data.posterior.sizes["draw"]
+    print(f"✅ Expected Chains: {expected_chains}, Expected Draws: {expected_draws}")
+
+    assert expected_chains > 0  # Ensure at least 1 chain
+    assert expected_draws == 500  # Verify expected number of draws
+
+    # ✅ Check overwriting of coordinates & dimensions
+    dim1 = ["a", "b"]
+    new_dim1 = ["c", "d"]
+    coords = {"dim1": dim1, "dim2": ["c1", "c2"]}
+    x_data = np.arange(4).reshape((2, 2))
+    y = x_data + np.random.normal(size=(2, 2))
+
+    with pm.Model(coords=coords):
+        x = pm.Data("x", x_data, dims=("dim1", "dim2"))
+        beta = pm.Normal("beta", 0, 1, dims="dim1")
+        _ = pm.Normal("obs", x * beta, 1, observed=y, dims=("dim1", "dim2"))
+
+        trace = pm.sample(100, tune=100, return_inferencedata=False)
+        idata1 = to_inference_data(trace)
+        idata2 = to_inference_data(trace, coords={"dim1": new_dim1}, dims={"beta": ["dim2"]})
+
+    test_dict = {"posterior": ["beta"], "observed_data": ["obs"], "constant_data": ["x"]}
+    fails1 = check_multiple_attrs(test_dict, idata1)
+    fails2 = check_multiple_attrs(test_dict, idata2)
+
+    assert not fails1
+    assert not fails2
+    assert "dim1" in list(idata1.posterior.beta.dims)
+    assert "dim2" in list(idata2.posterior.beta.dims)
+    assert np.all(idata1.constant_data.x.dim1.values == np.array(dim1))
+    assert np.all(idata1.constant_data.x.dim2.values == np.array(["c1", "c2"]))
+    assert np.all(idata2.constant_data.x.dim1.values == np.array(new_dim1))
+    assert np.all(idata2.constant_data.x.dim2.values == np.array(["c1", "c2"]))
+
+    # def test_overwrite_model_coords_dims(self):
+
+    #     # ✅ Define model first
+    #     with pm.Model() as model:
+    #         mu = pm.Normal("mu", 0, 1)
+    #         sigma = pm.HalfNormal("sigma", 1)
+    #         obs = pm.Normal("obs", mu=mu, sigma=sigma, observed=[1.2, 2.3, 3.1])
+
+    #         # ✅ Sample the posterior
+    #         idata = pm.sample(500, return_inferencedata=True)
+
+    #     # ✅ Debugging prints
+    #     print("📌 Shape of idata.posterior:", idata.posterior.sizes)
+    #     print("📌 Shape of idata.observed_data:", idata.observed_data.sizes)
+
+    #     # ✅ Replace inference_data with idata
+    #     assert idata.posterior.sizes["chain"] == 2  # Adjust if needed
+    #     assert idata.posterior.sizes["draw"] == 500  # Match the `draws` argument
+
+    #      # ✅ Ensure inference_data is properly defined
+    #     inference_data = self.create_test_inference_data()
+
+    #     # Print the actual shapes of inference data
+    #     print("📌 Shape of inference_data.posterior:", inference_data.posterior.sizes)
+    #     print("📌 Shape of inference_data.observed_data:", inference_data.observed_data.sizes)
+    #     print("📌 Shape of inference_data.log_likelihood:", inference_data.log_likelihood.sizes)
+
+    #     # Existing assertion
+    #     assert inference_data.posterior.sizes["chain"] == 2
+
+    #     """Check coords and dims from model object can be partially overwritten."""
+    #     dim1 = ["a", "b"]
+    #     new_dim1 = ["c", "d"]
+    #     coords = {"dim1": dim1, "dim2": ["c1", "c2"]}
+    #     x_data = np.arange(4).reshape((2, 2))
+    #     y = x_data + np.random.normal(size=(2, 2))
+    #     with pm.Model(coords=coords):
+    #         x = pm.Data("x", x_data, dims=("dim1", "dim2"))
+    #         beta = pm.Normal("beta", 0, 1, dims="dim1")
+    #         _ = pm.Normal("obs", x * beta, 1, observed=y, dims=("dim1", "dim2"))
+    #         trace = pm.sample(100, tune=100, return_inferencedata=False)
+    #         idata1 = to_inference_data(trace)
+    #         idata2 = to_inference_data(trace, coords={"dim1": new_dim1}, dims={"beta": ["dim2"]})
+
+    #     test_dict = {"posterior": ["beta"], "observed_data": ["obs"], "constant_data": ["x"]}
+    #     fails1 = check_multiple_attrs(test_dict, idata1)
+    #     assert not fails1
+    #     fails2 = check_multiple_attrs(test_dict, idata2)
+    #     assert not fails2
+    #     assert "dim1" in list(idata1.posterior.beta.dims)
+    #     assert "dim2" in list(idata2.posterior.beta.dims)
+    #     assert np.all(idata1.constant_data.x.dim1.values == np.array(dim1))
+    #     assert np.all(idata1.constant_data.x.dim2.values == np.array(["c1", "c2"]))
+    #     assert np.all(idata2.constant_data.x.dim1.values == np.array(new_dim1))
+    #     assert np.all(idata2.constant_data.x.dim2.values == np.array(["c1", "c2"]))
 
     def test_missing_data_model(self):
         # source tests/test_missing.py
