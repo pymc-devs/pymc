@@ -617,13 +617,27 @@ class RatQuad(Stationary):
 
 class Matern52(Stationary):
     r"""
-    The Matern kernel with nu = 5/2.
+    The Matérn kernel with :math:`\nu = \frac{5}{2}`.
 
     .. math::
 
        k(x, x') = \left(1 + \frac{\sqrt{5(x - x')^2}}{\ell} +
                    \frac{5(x-x')^2}{3\ell^2}\right)
                    \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]
+    
+    Read more `here <https://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function>`_.
+    
+    Parameters
+    ----------
+    input_dim : int
+        The number of input dimensions
+    ls : scalar or array, optional
+        Lengthscale parameter :math:`\ell`; if `input_dim` > 1, a list or array of scalars.
+        If `input_dim` == 1, a scalar.
+    ls_inv : scalar or array, optional
+        Inverse lengthscale :math:`1 / \ell`. One of `ls` or `ls_inv` must be provided.
+    active_dims : list of int, optional
+        The dimension(s) the covariance function operates on.
     """
 
     def full_from_distance(self, dist: TensorLike, squared: bool = False) -> TensorVariable:
@@ -657,12 +671,26 @@ class Matern52(Stationary):
 
 class Matern32(Stationary):
     r"""
-    The Matern kernel with nu = 3/2.
+    The Matérn kernel with :math:`\nu = \frac{3}{2}`.
 
     .. math::
 
        k(x, x') = \left(1 + \frac{\sqrt{3(x - x')^2}}{\ell}\right)
                   \mathrm{exp}\left[ - \frac{\sqrt{3(x - x')^2}}{\ell} \right]
+
+    Read more `here <https://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function>`_.
+    
+    Parameters
+    ----------
+    input_dim : int
+        The number of input dimensions
+    ls : scalar or array, optional
+        Lengthscale parameter :math:`\ell`; if `input_dim` > 1, a list or array of scalars.
+        If `input_dim` == 1, a scalar.
+    ls_inv : scalar or array, optional
+        Inverse lengthscale :math:`1 / \ell`. One of `ls` or `ls_inv` must be provided.
+    active_dims : list of int, optional
+        The dimension(s) the covariance function operates on.
     """
 
     def full_from_distance(self, dist: TensorLike, squared: bool = False) -> TensorVariable:
