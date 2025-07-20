@@ -567,10 +567,8 @@ class PointFunc:
     def __call__(self, state):
         return self.f(**state)
 
-    def __getattr__(self, item):
-        """Allow access to the original function attributes."""
-        # This is only reached if `__getattribute__` fails.
-        return getattr(self.f, item)
+    def dprint(self, **kwrags):
+        return self.f.dprint(**kwrags)
 
 
 class CallableTensor:
