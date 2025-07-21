@@ -624,9 +624,9 @@ class Matern52(Stationary):
        k(x, x') = \left(1 + \frac{\sqrt{5(x - x')^2}}{\ell} +
                    \frac{5(x-x')^2}{3\ell^2}\right)
                    \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]
-    
+
     Read more `here <https://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function>`_.
-    
+
     Parameters
     ----------
     input_dim : int
@@ -679,7 +679,7 @@ class Matern32(Stationary):
                   \mathrm{exp}\left[ - \frac{\sqrt{3(x - x')^2}}{\ell} \right]
 
     Read more `here <https://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function>`_.
-    
+
     Parameters
     ----------
     input_dim : int
