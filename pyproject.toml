@@ -85,6 +85,9 @@ lines-between-types = 1
 "scripts/run_mypy.py" = [
   "T201", # No print statements
 ]
+"scripts/publish_release_notes_to_discourse.py" = [
+  "T201", # No print statements
+]
 "*.ipynb" = [
   "T201", # No print statements
 ]
