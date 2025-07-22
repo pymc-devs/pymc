@@ -64,7 +64,7 @@ def format_release_content(config: dict[str, str]) -> tuple[str, str]:
 
 - **Version:** `{config["RELEASE_TAG"]}`
 - **Repository:** [{config["REPO_NAME"]}](https://github.com/{config["REPO_NAME"]})
-- **Release Page:** [View on GitHub]({config["RELEASE_URL"]})
+- **Release Page:** {config["RELEASE_URL"]}
 - Note: It may take some time for the release to appear on PyPI and conda-forge.
 
 ## 📋 Release Notes
@@ -105,7 +105,7 @@ def publish_release_to_discourse(config: dict[str, str]) -> bool:
     url = f"{config['DISCOURSE_URL']}/posts.json"
 
     try:
-        response = requests.post(url, headers=headers, data=topic_data)
+        response = requests.post(url, headers=headers, json=topic_data)
         response.raise_for_status()
 
         data = response.json()
