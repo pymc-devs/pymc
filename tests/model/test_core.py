@@ -443,6 +443,15 @@ class TestValueGradFunction:
         # Assert that all the elements of res are equal
         assert res[1:] == res[:-1]
 
+    def test_check_bounds_out_of_model_context(self):
+        with pm.Model(check_bounds=False) as m:
+            x = pm.Normal("x")
+            y = pm.Normal("y", sigma=x)
+        fn = m.logp_dlogp_function(ravel_inputs=True)
+        fn.set_extra_values({})
+        # When there are no bounds check logp turns into `nan`
+        assert np.isnan(fn(np.array([-1.0, -1.0]))[0])
+
 
 class TestPytensorRelatedLogpBugs:
     def test_pytensor_switch_broadcast_edge_cases_1(self):
