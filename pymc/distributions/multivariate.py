@@ -2376,12 +2376,12 @@ class ICAR(Continuous):
           \frac{1}{2}*\frac{\sum_{i}{\phi_{i}}}{0.001N}^{2} - \ln{\sqrt{2\pi}} -
           \ln{0.001N}
 
-    The first term represents the spatial covariance component. Each $\phi_{i}$ is penalized
-    based on the square distance from each of its neighbors. The notation $i\\sim j$
-    indicates a sum over all the neighbors of $\phi_{i}$. The last three terms are the
+    The first term represents the spatial covariance component. Each :math:`\phi_{i}` is penalized
+    based on the square distance from each of its neighbors. The notation :math:`i \sim j`
+    indicates a sum over all the neighbors of :math:`\phi_{i}`. The last three terms are the
     Normal log density function where the mean is zero and the standard deviation is
-    N * 0.001 (where N is the length of the vector $\phi$). This component imposes
-    a zero-sum constraint by finding the sum of the vector $\phi$ and penalizing based
+    N * 0.001 (where N is the length of the vector :math:`\phi`). This component imposes
+    a zero-sum constraint by finding the sum of the vector :math:`\phi` and penalizing based
     on its distance from zero.
 
     Parameters
