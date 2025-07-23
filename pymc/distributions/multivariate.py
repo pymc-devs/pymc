@@ -1656,7 +1656,7 @@ class LKJCorr:
 
     The LKJ distribution is a prior distribution for correlation matrices.
     If eta = 1 this corresponds to the uniform distribution over correlation
-    matrices. For eta -> oo the LKJ prior approaches the identity matrix.
+    matrices. For eta :math:`\to \infty` the LKJ prior approaches the identity matrix.
 
     ========  ==============================================
     Support   Upper triangular matrix with values in [-1, 1]
