@@ -54,6 +54,7 @@ from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
 from pymc.model import Model, modelcontext
+from pymc.progress_bar import ProgressBarManager, ProgressBarType, default_progress_theme
 from pymc.sampling.parallel import Draw, _cpu_count
 from pymc.sampling.population import _sample_population
 from pymc.stats.convergence import (
@@ -65,12 +66,9 @@ from pymc.step_methods import NUTS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
-    ProgressBarManager,
-    ProgressBarType,
     RandomSeed,
     RandomState,
     _get_seeds_per_chain,
-    default_progress_theme,
     drop_warning_stat,
     get_random_generator,
     get_untransformed_name,

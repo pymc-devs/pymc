@@ -23,7 +23,7 @@ from rich.progress import Progress, TextColumn, track
 
 import pymc as pm
 
-from pymc.util import CustomProgress, default_progress_theme
+from pymc.progress_bar import CustomProgress, default_progress_theme
 from pymc.variational import test_functions
 from pymc.variational.approximations import Empirical, FullRank, MeanField
 from pymc.variational.operators import KL, KSD

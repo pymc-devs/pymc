@@ -693,7 +693,8 @@ class TestMatchesScipy:
     )
     def test_inverse_gamma_alt_params(self):
         def test_fun(value, mu, sigma):
-            alpha, beta = pm.InverseGamma._get_alpha_beta(None, None, mu, sigma)
+            alpha = (2 * sigma**2 + mu**2) / sigma**2
+            beta = mu * (mu**2 + sigma**2) / sigma**2
             return st.invgamma.logpdf(value, alpha, scale=beta)
 
         check_logp(

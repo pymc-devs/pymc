@@ -1155,29 +1155,58 @@ class Categorical(Discrete):
             mode = pt.full(size, mode)
         return mode
 
-    def logp(value, p):
-        k = pt.shape(p)[-1]
-        value_clip = pt.clip(value, 0, k - 1)
+    @staticmethod
+    def _safe_index_value_p(value, p):
+        # Find the probabily of the given value by indexing in p,
+        # after handling broadcasting and invalid values.
 
         # In the standard case p has one more dimension than value
         dim_diff = p.type.ndim - value.type.ndim
         if dim_diff > 1:
             # p brodacasts implicitly beyond value
-            value_clip = pt.shape_padleft(value_clip, dim_diff - 1)
+            value = pt.shape_padleft(value, dim_diff - 1)
         elif dim_diff < 1:
             # value broadcasts implicitly beyond p
             p = pt.shape_padleft(p, 1 - dim_diff)
 
-        a = pt.log(pt.take_along_axis(p, value_clip[..., None], axis=-1).squeeze(-1))
+        k = pt.shape(p)[-1]
+        value_clip = pt.clip(value, 0, k - 1).astype(int)
+        return value, pt.log(pt.take_along_axis(p, value_clip[..., None], axis=-1).squeeze(-1))
 
-        res = pt.switch(
+    def logp(value, p):
+        k = pt.shape(p)[-1]
+        value, safe_value_p = Categorical._safe_index_value_p(value, p)
+
+        value_p = pt.switch(
             pt.or_(pt.lt(value, 0), pt.gt(value, k - 1)),
             -np.inf,
-            a,
+            safe_value_p,
         )
 
         return check_parameters(
-            res,
+            value_p,
+            0 <= p,
+            p <= 1,
+            pt.isclose(pt.sum(p, axis=-1), 1),
+            msg="0 <= p <=1, sum(p) = 1",
+        )
+
+    def logcdf(value, p):
+        k = pt.shape(p)[-1]
+        value, safe_value_p = Categorical._safe_index_value_p(value, p.cumsum(-1))
+
+        value_p = pt.switch(
+            pt.lt(value, 0),
+            -np.inf,
+            pt.switch(
+                pt.gt(value, k - 1),
+                0,
+                safe_value_p,
+            ),
+        )
+
+        return check_parameters(
+            value_p,
             0 <= p,
             p <= 1,
             pt.isclose(pt.sum(p, axis=-1), 1),

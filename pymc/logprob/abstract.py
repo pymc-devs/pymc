@@ -35,6 +35,7 @@
 #   SOFTWARE.
 
 import abc
+import warnings
 
 from collections.abc import Sequence
 from functools import singledispatch
@@ -224,13 +225,16 @@ class ValuedRV(Op):
     and breaking the dependency of `b` on `a`. The new nodes isolate the graphs between conditioning points.
     """
 
+    view_map = {0: [0]}
+
     def make_node(self, rv, value):
         assert isinstance(rv, Variable)
         assert isinstance(value, Variable)
         return Apply(self, [rv, value], [rv.type(name=rv.name)])
 
     def perform(self, node, inputs, out):
-        raise NotImplementedError("ValuedVar should not be present in the final graph!")
+        warnings.warn("ValuedVar should not be present in the final graph!")
+        out[0][0] = inputs[0]
 
     def infer_shape(self, fgraph, node, input_shapes):
         return [input_shapes[0]]

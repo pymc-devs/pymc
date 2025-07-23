@@ -36,9 +36,8 @@ import pymc as pm
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.initial_point import make_initial_point_fn
 from pymc.model import modelcontext
+from pymc.progress_bar import CustomProgress, default_progress_theme
 from pymc.util import (
-    CustomProgress,
-    default_progress_theme,
     get_default_varnames,
     get_value_vars_from_user_vars,
 )

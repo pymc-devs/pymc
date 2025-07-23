@@ -21,11 +21,11 @@ from os import path
 from typing import Any, cast
 
 from pytensor import function
-from pytensor.graph.basic import ancestors, walk
+from pytensor.graph.basic import Variable, ancestors, walk
 from pytensor.tensor.shape import Shape
-from pytensor.tensor.variable import TensorVariable
 
 from pymc.model.core import modelcontext
+from pymc.pytensorf import _cheap_eval_mode
 from pymc.util import VarName, get_default_varnames, get_var_name
 
 __all__ = (
@@ -73,7 +73,7 @@ def create_plate_label_with_dim_length(
 
 
 def fast_eval(var):
-    return function([], var, mode="FAST_COMPILE")()
+    return function([], var, mode=_cheap_eval_mode)()
 
 
 class NodeType(str, Enum):
@@ -88,7 +88,7 @@ class NodeType(str, Enum):
 
 @dataclass
 class NodeInfo:
-    var: TensorVariable
+    var: Variable
     node_type: NodeType
 
     def __hash__(self):
@@ -108,10 +108,10 @@ class Plate:
 
 
 GraphvizNodeKwargs = dict[str, Any]
-NodeFormatter = Callable[[TensorVariable], GraphvizNodeKwargs]
+NodeFormatter = Callable[[Variable], GraphvizNodeKwargs]
 
 
-def default_potential(var: TensorVariable) -> GraphvizNodeKwargs:
+def default_potential(var: Variable) -> GraphvizNodeKwargs:
     """Return default data for potential in the graph."""
     return {
         "shape": "octagon",
@@ -120,17 +120,19 @@ def default_potential(var: TensorVariable) -> GraphvizNodeKwargs:
     }
 
 
-def random_variable_symbol(var: TensorVariable) -> str:
+def random_variable_symbol(var: Variable) -> str:
     """Get the symbol of the random variable."""
-    symbol = var.owner.op.__class__.__name__
+    op = var.owner.op
 
-    if symbol.endswith("RV"):
-        symbol = symbol[:-2]
+    if name := getattr(op, "name", None):
+        symbol = name[0].upper() + name[1:]
+    else:
+        symbol = op.__class__.__name__.removesuffix("RV")
 
     return symbol
 
 
-def default_free_rv(var: TensorVariable) -> GraphvizNodeKwargs:
+def default_free_rv(var: Variable) -> GraphvizNodeKwargs:
     """Return default data for free RV in the graph."""
     symbol = random_variable_symbol(var)
 
@@ -141,7 +143,7 @@ def default_free_rv(var: TensorVariable) -> GraphvizNodeKwargs:
     }
 
 
-def default_observed_rv(var: TensorVariable) -> GraphvizNodeKwargs:
+def default_observed_rv(var: Variable) -> GraphvizNodeKwargs:
     """Return default data for observed RV in the graph."""
     symbol = random_variable_symbol(var)
 
@@ -152,7 +154,7 @@ def default_observed_rv(var: TensorVariable) -> GraphvizNodeKwargs:
     }
 
 
-def default_deterministic(var: TensorVariable) -> GraphvizNodeKwargs:
+def default_deterministic(var: Variable) -> GraphvizNodeKwargs:
     """Return default data for the deterministic in the graph."""
     return {
         "shape": "box",
@@ -161,7 +163,7 @@ def default_deterministic(var: TensorVariable) -> GraphvizNodeKwargs:
     }
 
 
-def default_data(var: TensorVariable) -> GraphvizNodeKwargs:
+def default_data(var: Variable) -> GraphvizNodeKwargs:
     """Return default data for the data in the graph."""
     return {
         "shape": "box",
@@ -239,7 +241,7 @@ class ModelGraph:
         self._all_vars = {model[var_name] for var_name in self._all_var_names}
         self.var_list = self.model.named_vars.values()
 
-    def get_parent_names(self, var: TensorVariable) -> set[VarName]:
+    def get_parent_names(self, var: Variable) -> set[VarName]:
         if var.owner is None:
             return set()
 
@@ -345,7 +347,7 @@ class ModelGraph:
             dim_name: fast_eval(value).item() for dim_name, value in self.model.dim_lengths.items()
         }
         var_shapes: dict[str, tuple[int, ...]] = {
-            var_name: tuple(fast_eval(self.model[var_name].shape))
+            var_name: tuple(map(int, fast_eval(self.model[var_name].shape)))
             for var_name in self.vars_to_plot(var_names)
         }
 

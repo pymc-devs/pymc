@@ -20,8 +20,11 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Variable
+from pytensor import graph_replace
+from pytensor.compile.ops import TypeCastingOp
+from pytensor.graph.basic import Apply, Variable, ancestors, walk
 from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.rewriting.db import RewriteDatabaseQuery, SequenceDB
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.transforms import Transform
@@ -37,6 +40,8 @@ from pymc.util import get_transformed_name, get_untransformed_name, is_transform
 
 StartDict = dict[Variable | str, np.ndarray | Variable | str]
 PointType = dict[str, np.ndarray]
+initial_point_rewrites_db = SequenceDB()
+initial_point_basic_query = RewriteDatabaseQuery(include=["basic"])
 
 
 def convert_str_to_rv_dict(
@@ -192,6 +197,25 @@ def make_initial_point_fn(
     return make_seeded_function(func)
 
 
+class InitialPoint(TypeCastingOp):
+    def make_node(self, var):
+        return Apply(self, [var], [var.type()])
+
+
+def non_support_point_ancestors(value):
+    def expand(r: Variable):
+        node = r.owner
+        if node is not None and not isinstance(node.op, InitialPoint):
+            # Stop graph traversal at InitialPoint ops
+            return node.inputs
+        return None
+
+    yield from walk([value], expand, bfs=False)
+
+
+initial_point_op = InitialPoint()
+
+
 def make_initial_point_expression(
     *,
     free_rvs: Sequence[TensorVariable],
@@ -230,11 +254,25 @@ def make_initial_point_expression(
     if jitter_rvs is None:
         jitter_rvs = set()
 
+    # Clone free_rvs so we don't modify the original graph
+    initial_point_fgraph = FunctionGraph(outputs=free_rvs, clone=True)
+    # Wrap each rv in an initial_point Operation to avoid losing dependency between the RVs
+    replacements = tuple((rv, initial_point_op(rv)) for rv in initial_point_fgraph.outputs)
+    toposort_replace(initial_point_fgraph, replacements, reverse=True)
+
+    # Apply any rewrites necessary to compute the initial points.
+    initial_point_rewriter = initial_point_rewrites_db.query(initial_point_basic_query)
+    if initial_point_rewriter:
+        initial_point_rewriter.rewrite(initial_point_fgraph)
+
+    ip_variables = initial_point_fgraph.outputs.copy()
+    free_rvs_clone = [ip.owner.inputs[0] for ip in ip_variables]
+    n_rvs = len(free_rvs_clone)
+
     initial_values = []
     initial_values_transformed = []
-
-    for variable in free_rvs:
-        strategy = initval_strategies.get(variable, None)
+    for original_variable, variable in zip(free_rvs, free_rvs_clone):
+        strategy = initval_strategies.get(original_variable)
 
         if strategy is None:
             strategy = default_strategy
@@ -243,9 +281,23 @@ def make_initial_point_expression(
             if strategy == "support_point":
                 try:
                     value = support_point(variable)
+
+                    # If a support point expression depends on other free_RVs that are not
+                    # wrapped in InitialPoint, we need to replace them with their wrapped versions
+                    # This can only happen for multi-output distributions, where the initial point
+                    # of some outputs depends on the initial point of other outputs from the same node.
+                    other_free_rvs = set(free_rvs_clone) - {variable}
+                    support_point_replacements = {
+                        ancestor: ip_variables[free_rvs_clone.index(ancestor)]
+                        for ancestor in non_support_point_ancestors(value)
+                        if ancestor in other_free_rvs
+                    }
+                    if support_point_replacements:
+                        value = graph_replace(value, support_point_replacements)
+
                 except NotImplementedError:
                     warnings.warn(
-                        f"Moment not defined for variable {variable} of type "
+                        f"Support point not defined for variable {variable} of type "
                         f"{variable.owner.op.__class__.__name__}, defaulting to "
                         f"a draw from the prior. This can lead to difficulties "
                         f"during tuning. You can manually define an initval or "
@@ -261,16 +313,23 @@ def make_initial_point_expression(
                     f'Invalid string strategy: {strategy}. It must be one of ["support_point", "prior"]'
                 )
         else:
-            value = pt.as_tensor(strategy, dtype=variable.dtype).astype(variable.dtype)
+            if isinstance(strategy, Variable) and (set(free_rvs) & set(ancestors([strategy]))):
+                raise ValueError(
+                    f"Initial value of {original_variable} depends on other random variables. This is not supported anymore."
+                )
+            value = pt.as_tensor(strategy, variable.dtype).astype(variable.dtype)
 
-        transform = rvs_to_transforms.get(variable, None)
+        transform = rvs_to_transforms.get(original_variable, None)
 
         if transform is not None:
             value = transform.forward(value, *variable.owner.inputs)
 
-        if variable in jitter_rvs:
+        if original_variable in jitter_rvs:
             jitter = pt.random.uniform(-1, 1, size=value.shape)
+            # Hack to allow xtensor value to be added to tensor jitter
+            jitter = value.type.filter_variable(jitter)
             jitter.name = f"{variable.name}_jitter"
+            # Hack to allow xtensor value to be added to tensor jitter
             value = value + jitter
 
         value = value.astype(variable.dtype)
@@ -281,28 +340,23 @@ def make_initial_point_expression(
 
         initial_values.append(value)
 
-    all_outputs: list[TensorVariable] = []
-    all_outputs.extend(free_rvs)
-    all_outputs.extend(initial_values)
-    all_outputs.extend(initial_values_transformed)
-
-    copy_graph = FunctionGraph(outputs=all_outputs, clone=True)
-
-    n_variables = len(free_rvs)
-    free_rvs_clone = copy_graph.outputs[:n_variables]
-    initial_values_clone = copy_graph.outputs[n_variables:-n_variables]
-    initial_values_transformed_clone = copy_graph.outputs[-n_variables:]
+    for initial_value in initial_values:
+        # FIXME: This is a hack so that interdependent replacements that can't
+        # be sorted topologically from the initial point graph come out correctly.
+        # This happens for multi-output nodes where the replacements depend on each other.
+        # From the original graph perspective, their ordering is equivalent.
+        initial_point_fgraph.add_output(initial_value, import_missing=True)
 
     # We now replace all rvs by the respective initial_point expressions
     # in the constrained (untransformed) space. We do this in reverse topological
     # order, so that later nodes do not reintroduce expressions with earlier
     # rvs that would need to once again be replaced by their initial_points
-    graph = FunctionGraph(outputs=free_rvs_clone, clone=False)
-    toposort_replace(graph, tuple(zip(free_rvs_clone, initial_values_clone)), reverse=True)
+    toposort_replace(initial_point_fgraph, tuple(zip(ip_variables, initial_values)), reverse=True)
 
     if not return_transformed:
-        return graph.outputs
+        return initial_point_fgraph.outputs[:n_rvs]
+
     # Because the unconstrained (transformed) expressions are a subgraph of the
     # constrained initial point they were also automatically updated inplace
     # when calling graph.replace_all above, so we don't need to do anything else
-    return initial_values_transformed_clone
+    return initial_values_transformed
