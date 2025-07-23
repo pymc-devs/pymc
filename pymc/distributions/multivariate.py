@@ -2373,15 +2373,15 @@ class ICAR(Continuous):
     .. math::
         f(\phi| W,\sigma) =
           -\frac{1}{2\sigma^{2}} \sum_{i\sim j} (\phi_{i} - \phi_{j})^2 -
-          \frac{1}{2}*\frac{\sum_{i}{\phi_{i}}}{0.001N}^{2} - \ln{\sqrt{2\\pi}} -
+          \frac{1}{2}*\frac{\sum_{i}{\phi_{i}}}{0.001N}^{2} - \ln{\sqrt{2\pi}} -
           \ln{0.001N}
 
-    The first term represents the spatial covariance component. Each $\\phi_{i}$ is penalized
+    The first term represents the spatial covariance component. Each $\phi_{i}$ is penalized
     based on the square distance from each of its neighbors. The notation $i\\sim j$
-    indicates a sum over all the neighbors of $\\phi_{i}$. The last three terms are the
+    indicates a sum over all the neighbors of $\phi_{i}$. The last three terms are the
     Normal log density function where the mean is zero and the standard deviation is
-    $N * 0.001$ (where N is the length of the vector $\\phi$). This component imposes
-    a zero-sum constraint by finding the sum of the vector $\\phi$ and penalizing based
+    N * 0.001 (where N is the length of the vector $\phi$). This component imposes
+    a zero-sum constraint by finding the sum of the vector $\phi$ and penalizing based
     on its distance from zero.
 
     Parameters
