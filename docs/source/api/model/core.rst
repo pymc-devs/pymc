@@ -31,3 +31,4 @@ Graph visualization
 
    model_to_networkx
    model_to_graphviz
+   model_to_mermaid
