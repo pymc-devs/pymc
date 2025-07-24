@@ -236,7 +236,7 @@ class NUTS(BaseHMC):
     def _progressbar_config(n_chains=1):
         columns = [
             TextColumn("{task.fields[divergences]}", table_column=Column("Divergences", ratio=1)),
-            TextColumn("{task.fields[step_size]:0.2f}", table_column=Column("Step size", ratio=1)),
+            TextColumn("{task.fields[step_size]:0.3f}", table_column=Column("Step size", ratio=1)),
             TextColumn("{task.fields[tree_size]}", table_column=Column("Grad evals", ratio=1)),
         ]
 
