@@ -6,6 +6,7 @@ on:
 
 jobs:
   publish-to-discourse:
+    environment: discourse
     runs-on: ubuntu-latest
 
     steps:
