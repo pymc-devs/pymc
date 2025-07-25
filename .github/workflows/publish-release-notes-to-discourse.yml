@@ -28,7 +28,7 @@ jobs:
           DISCOURSE_API_KEY: ${{ secrets.DISCOURSE_API_KEY }}
           DISCOURSE_USERNAME: "pymc-bot"
           DISCOURSE_URL: "https://discourse.pymc.io"
-          DISCOURSE_CATEGORY: "Development"
+          DISCOURSE_CATEGORY: "News"
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           RELEASE_BODY: ${{ github.event.release.body }}
           RELEASE_URL: ${{ github.event.release.html_url }}
