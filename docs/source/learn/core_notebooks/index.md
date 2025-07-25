@@ -5,11 +5,12 @@
 :maxdepth: 1
 
 pymc_overview
-GLM_linear
 model_comparison
 posterior_predictive
 dimensionality
 pymc_pytensor
+dims_module
+GLM_linear
 Gaussian_Processes
 :::
 

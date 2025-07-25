@@ -1,0 +1,36 @@
+name: Publish Release Notes to Discourse
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish-to-discourse:
+    environment: discourse
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Publish release to Discourse
+        env:
+          DISCOURSE_API_KEY: ${{ secrets.DISCOURSE_API_KEY }}
+          DISCOURSE_USERNAME: "pymc-bot"
+          DISCOURSE_URL: "https://discourse.pymc.io"
+          DISCOURSE_CATEGORY: "Development"
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+          REPO_NAME: ${{ github.repository }}
+        run: python ./scripts/publish_release_notes_to_discourse.py

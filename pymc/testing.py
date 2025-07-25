@@ -24,11 +24,13 @@ import pytensor.tensor as pt
 from arviz import InferenceData
 from numpy import random as nr
 from numpy import testing as npt
+from pytensor.compile import SharedVariable
 from pytensor.compile.mode import Mode
-from pytensor.graph.basic import Variable
+from pytensor.graph.basic import Constant, Variable, equal_computations, graph_inputs
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.type import RandomType
 from scipy import special as sp
 from scipy import stats as st
 
@@ -41,9 +43,8 @@ from pymc.logprob.basic import icdf, logcdf, logp, transformed_conditional_logp
 from pymc.logprob.utils import (
     ParameterValueError,
     local_check_parameter_to_ninf_switch,
-    rvs_in_graph,
 )
-from pymc.pytensorf import compile, floatX, inputvars
+from pymc.pytensorf import compile, floatX, inputvars, rvs_in_graph
 
 # This mode can be used for tests where model compilations takes the bulk of the runtime
 # AND where we don't care about posterior numerical or sampling stability (e.g., when
@@ -971,8 +972,7 @@ def seeded_numpy_distribution_builder(dist_name: str) -> Callable:
 
 def assert_no_rvs(vars: Sequence[Variable]) -> None:
     """Assert that there are no `MeasurableOp` nodes in a graph."""
-    rvs = rvs_in_graph(vars)
-    if rvs:
+    if rvs := rvs_in_graph(vars):
         raise AssertionError(f"RV found in graph: {rvs}")
 
 
@@ -1086,3 +1086,28 @@ def mock_sample_setup_and_teardown():
     pm.sample = original_sample
     pm.Flat = original_flat
     pm.HalfFlat = original_half_flat
+
+
+def equal_computations_up_to_root(
+    xs: Sequence[Variable], ys: Sequence[Variable], ignore_rng_values=True
+) -> bool:
+    # Check if graphs are equivalent even if root variables have distinct identities
+
+    x_graph_inputs = [var for var in graph_inputs(xs) if not isinstance(var, Constant)]
+    y_graph_inputs = [var for var in graph_inputs(ys) if not isinstance(var, Constant)]
+    if len(x_graph_inputs) != len(y_graph_inputs):
+        return False
+    for x, y in zip(x_graph_inputs, y_graph_inputs):
+        if x.type != y.type:
+            return False
+        if x.name != y.name:
+            return False
+        if isinstance(x, SharedVariable):
+            if not isinstance(y, SharedVariable):
+                return False
+            if isinstance(x.type, RandomType) and ignore_rng_values:
+                continue
+            if not x.type.values_eq(x.get_value(), y.get_value()):
+                return False
+
+    return equal_computations(xs, ys, in_xs=x_graph_inputs, in_ys=y_graph_inputs)  # type: ignore[arg-type]
