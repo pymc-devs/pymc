@@ -59,7 +59,7 @@ def test_check_parameters(conditions, succeeds):
     if succeeds:
         assert ret.eval()
     else:
-        with pytest.raises(ParameterValueError, match="^parameter check msg$"):
+        with pytest.raises(ParameterValueError, match="^parameter check msg*"):
             ret.eval()
 
 

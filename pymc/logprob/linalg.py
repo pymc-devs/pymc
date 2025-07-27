@@ -14,7 +14,7 @@
 import pytensor.tensor as pt
 
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.tensor.math import _matrix_matrix_matmul
+from pytensor.tensor.math import _matmul
 
 from pymc.logprob.abstract import MeasurableBlockwise, MeasurableOp, _logprob, _logprob_helper
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
@@ -55,7 +55,7 @@ def logprob_measurable_matmul(op, values, l, r):  # noqa: E741
     return x_logp - log_abs_jac_det
 
 
-@node_rewriter(tracks=[_matrix_matrix_matmul])
+@node_rewriter(tracks=[_matmul])
 def find_measurable_matmul(fgraph, node):
     """Find measurable matrix-matrix multiplication operations."""
     if isinstance(node.op, MeasurableOp):

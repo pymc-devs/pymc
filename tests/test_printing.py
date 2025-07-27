@@ -137,7 +137,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
             ("plain", True): [
                 r"alpha ~ Normal(0, 10)",
                 r"sigma ~ HalfNormal(0, 1)",
-                r"mu ~ Deterministic(f(beta, alpha))",
+                r"mu ~ Deterministic(f(alpha, beta))",
                 r"beta ~ Normal(0, 10)",
                 r"Z ~ MultivariateNormal(f(), f())",
                 r"nb_with_p_n ~ NegativeBinomial(10, nbp)",
@@ -149,7 +149,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                     r"Censored(Bernoulli(0.5), -1, 1))"
                 ),
                 r"Y_obs ~ Normal(mu, sigma)",
-                r"pot ~ Potential(f(beta, alpha))",
+                r"pot ~ Potential(f(alpha, beta))",
                 r"pred ~ Deterministic(f(<normal>))",
             ],
             ("plain", False): [
@@ -169,7 +169,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
             ("latex", True): [
                 r"$\text{alpha} \sim \operatorname{Normal}(0,~10)$",
                 r"$\text{sigma} \sim \operatorname{HalfNormal}(0,~1)$",
-                r"$\text{mu} \sim \operatorname{Deterministic}(f(\text{beta},~\text{alpha}))$",
+                r"$\text{mu} \sim \operatorname{Deterministic}(f(\text{alpha},~\text{beta}))$",
                 r"$\text{beta} \sim \operatorname{Normal}(0,~10)$",
                 r"$\text{Z} \sim \operatorname{MultivariateNormal}(f(),~f())$",
                 r"$\text{nb\_with\_p\_n} \sim \operatorname{NegativeBinomial}(10,~\text{nbp})$",
@@ -181,7 +181,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                     r"~\operatorname{Censored}(\operatorname{Bernoulli}(0.5),~-1,~1))$"
                 ),
                 r"$\text{Y\_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$",
-                r"$\text{pot} \sim \operatorname{Potential}(f(\text{beta},~\text{alpha}))$",
+                r"$\text{pot} \sim \operatorname{Potential}(f(\text{alpha},~\text{beta}))$",
                 r"$\text{pred} \sim \operatorname{Deterministic}(f(\text{<normal>}))",
             ],
             ("latex", False): [
