@@ -1091,7 +1091,7 @@ class DEMetropolisZ(ArrayStepShared):
         "accept": (np.float64, []),
         "accepted": (bool, []),
         "tune": (bool, []),
-        "scaling": (np.float64, [None]),
+        "scaling": (np.float64, []),
         "lambda": (np.float64, []),
     }
 
