@@ -1156,3 +1156,31 @@ def test_nested_ifelse():
     np.testing.assert_almost_equal(mix_logp_fn(0, test_value), sp.norm.logpdf(test_value, -5, 1))
     np.testing.assert_almost_equal(mix_logp_fn(1, test_value), sp.norm.logpdf(test_value, 0, 1))
     np.testing.assert_almost_equal(mix_logp_fn(2, test_value), sp.norm.logpdf(test_value, 5, 1))
+
+
+def test_advanced_subtensor_none_and_integer():
+    """
+    Test for correct error handling when the logp graph is over-specified.
+
+    Providing values for both a random variable ('a') and its deterministic
+    child ('b') creates a logical conflict. The system should detect this
+    and raise a controlled RuntimeError.
+
+    This test fails if the rewriter instead crashes with the old internal
+    AttributeError bug, which would indicate a regression. Please see: #7762
+    """
+    a = pt.random.normal(0, 1, size=(10,), name="a")
+    inds = np.array([0, 1, 2, 3], dtype="int32")
+    b = a[None, inds]
+
+    b_val = b.type()
+    b_val.name = "b_val"
+    a_val = a.type()
+    a_val.name = "a_val"
+
+    with pytest.raises(RuntimeError) as e:
+        conditional_logp({b: b_val, a: a_val})
+
+    # Assert that the error message does NOT contain "AttributeError",
+    # which would indicate the presence of the original bug.
+    assert "AttributeError" not in str(e.value)
