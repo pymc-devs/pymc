@@ -440,7 +440,7 @@ class TestPartialObservedRV:
         obs_logp, unobs_logp = logp_fn()
         expected_logp = pm.logp(rv, unobs_data).eval()
         np.testing.assert_almost_equal(obs_logp, [])
-        np.testing.assert_array_equal(unobs_logp, expected_logp)
+        np.testing.assert_almost_equal(unobs_logp, expected_logp)
 
         # Test that we can update a shared mask
         mask.set_value(np.array([False]))

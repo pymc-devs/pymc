@@ -615,10 +615,10 @@ def test_measurable_power_exponent_with_constant_base():
 
     np.testing.assert_allclose(x_logp_fn_pow(0.1), x_logp_fn_exp2(0.1))
 
+    x_rv_neg = pt.pow(-2, pt.random.normal())
+    x_vv_neg = x_rv_neg.clone()
     with pytest.raises(ParameterValueError, match="base >= 0"):
-        x_rv_neg = pt.pow(-2, pt.random.normal())
-        x_vv_neg = x_rv_neg.clone()
-        logp(x_rv_neg, x_vv_neg)
+        logp(x_rv_neg, x_vv_neg).eval({x_vv_neg: 1.5})
 
 
 def test_measurable_power_exponent_with_variable_base():
