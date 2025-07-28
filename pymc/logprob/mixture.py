@@ -291,7 +291,7 @@ def find_measurable_index_mixture(fgraph, node):
         if any(
             hasattr(indices, "dtype")
             and indices.dtype.startswith("int")
-            and sum(1 - b for b in indices.type.broadcastable) > 0
+            and not all(indices.type.broadcastable)
             for indices in mixing_indices
         ):
             return None
