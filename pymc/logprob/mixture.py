@@ -289,7 +289,7 @@ def find_measurable_index_mixture(fgraph, node):
         # We don't support (non-scalar) integer array indexing as it can pick repeated values,
         # but the Mixture logprob assumes all mixture values are independent
         if any(
-            hasattr(indices, "dtype")
+            isinstance(indices, TensorVariable)
             and indices.dtype.startswith("int")
             and not all(indices.type.broadcastable)
             for indices in mixing_indices
