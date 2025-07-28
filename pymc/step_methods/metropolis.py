@@ -1214,7 +1214,7 @@ class DEMetropolisZ(ArrayStepShared):
 
         stats = {
             "tune": self.tune,
-            "scaling": self.scaling,
+            "scaling": np.mean(self.scaling),
             "lambda": self.lamb,
             "accept": np.exp(accept),
             "accepted": accepted,
