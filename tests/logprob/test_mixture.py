@@ -1178,5 +1178,8 @@ def test_advanced_subtensor_none_and_integer():
     a_val = a.type()
     a_val.name = "a_val"
 
-    with pytest.raises(RuntimeError, match="logprob terms of the following value variables could not be derived: {b_val}"):
+    with pytest.raises(
+        RuntimeError,
+        match="logprob terms of the following value variables could not be derived: {b_val}",
+    ):
         conditional_logp({b: b_val, a: a_val})
