@@ -71,6 +71,7 @@ from pymc.plots import *
 from pymc.printing import *
 from pymc.pytensorf import *
 from pymc.sampling import *
+from pymc.sampling import external
 from pymc.smc import *
 from pymc.stats import *
 from pymc.step_methods import *

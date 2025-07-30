@@ -332,6 +332,7 @@ class ApocalypticMetropolis(pm.Metropolis):
         return draw, stats
 
 
+@pytest.mark.filterwarnings("error")
 class TestSampleReturn:
     """Tests related to kwargs that parametrize how `pm.sample` results are returned."""
 
@@ -340,18 +341,17 @@ class TestSampleReturn:
             pm.Normal("n")
 
             # Get a MultiTrace with warmup
-            with pytest.warns(UserWarning, match="will be included"):
-                mtrace = pm.sample(
-                    draws=100,
-                    tune=50,
-                    cores=1,
-                    chains=3,
-                    step=pm.Metropolis(),
-                    return_inferencedata=False,
-                    discard_tuned_samples=False,
-                )
-                assert isinstance(mtrace, pm.backends.base.MultiTrace)
-                assert len(mtrace) == 150
+            mtrace = pm.sample(
+                draws=100,
+                tune=50,
+                cores=1,
+                chains=3,
+                step=pm.Metropolis(),
+                return_inferencedata=False,
+                discard_tuned_samples=False,
+            )
+            assert isinstance(mtrace, pm.backends.base.MultiTrace)
+            assert len(mtrace) == 150
 
         # Now instead of running more MCMCs, we'll test the other return
         # options using the basetraces inside the MultiTrace.
@@ -516,14 +516,6 @@ def test_blas_cores():
         pm.sample(blas_cores="auto", tune=10, cores=2, draws=10)
         pm.sample(blas_cores=None, tune=10, cores=2, draws=10)
         pm.sample(blas_cores=2, tune=10, cores=2, draws=10)
-
-
-def test_partial_trace_with_trace_unsupported():
-    with pm.Model() as model:
-        a = pm.Normal("a", mu=0, sigma=1)
-        b = pm.Normal("b", mu=0, sigma=1)
-        with pytest.raises(ValueError, match="var_names"):
-            pm.sample(trace=[a])
 
 
 class TestNamedSampling:

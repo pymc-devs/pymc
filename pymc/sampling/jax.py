@@ -35,7 +35,6 @@ from pytensor.graph.basic import graph_inputs
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.replace import clone_replace
 from pytensor.link.jax.dispatch import jax_funcify
-from pytensor.raise_op import Assert
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.type import RandomType
 
@@ -47,7 +46,6 @@ from pymc.backends.arviz import (
 )
 from pymc.distributions.multivariate import PosDefMatrix
 from pymc.initial_point import StartDict
-from pymc.logprob.utils import CheckParameterValue
 from pymc.sampling.mcmc import _init_jitter
 from pymc.stats.convergence import log_warnings, run_convergence_checks
 from pymc.util import (
@@ -69,19 +67,6 @@ __all__ = (
     "sample_blackjax_nuts",
     "sample_numpyro_nuts",
 )
-
-
-@jax_funcify.register(Assert)
-@jax_funcify.register(CheckParameterValue)
-def jax_funcify_Assert(op, **kwargs):
-    # Jax does not allow assert whose values aren't known during JIT compilation
-    # within it's JIT-ed code. Hence we need to make a simple pass through
-    # version of the Assert Op.
-    # https://github.com/google/jax/issues/2273#issuecomment-589098722
-    def assert_fn(value, *inps):
-        return value
-
-    return assert_fn
 
 
 @jax_funcify.register(PosDefMatrix)
@@ -520,8 +505,6 @@ def sample_jax_nuts(
     keep_untransformed: bool = False,
     chain_method: Literal["parallel", "vectorized"] = "parallel",
     postprocessing_backend: Literal["cpu", "gpu"] | None = None,
-    postprocessing_vectorize: Literal["vmap", "scan"] | None = None,
-    postprocessing_chunks=None,
     idata_kwargs: dict | None = None,
     compute_convergence_checks: bool = True,
     nuts_sampler: Literal["numpyro", "blackjax"],
@@ -593,25 +576,6 @@ def sample_jax_nuts(
         with their respective sample stats and pointwise log likeihood values (unless
         skipped with ``idata_kwargs``).
     """
-    if postprocessing_chunks is not None:
-        import warnings
-
-        warnings.warn(
-            "postprocessing_chunks is deprecated due to being unstable, "
-            "using postprocessing_vectorize='scan' instead",
-            DeprecationWarning,
-        )
-
-    if postprocessing_vectorize is not None:
-        import warnings
-
-        warnings.warn(
-            'postprocessing_vectorize={"scan", "vmap"} will be removed in a future release.',
-            FutureWarning,
-        )
-    else:
-        postprocessing_vectorize = "vmap"
-
     model = modelcontext(model)
 
     if var_names is not None:
@@ -674,7 +638,6 @@ def sample_jax_nuts(
             model,
             raw_mcmc_samples,
             backend=postprocessing_backend,
-            postprocessing_vectorize=postprocessing_vectorize,
         )
     else:
         log_likelihood = None
@@ -684,7 +647,6 @@ def sample_jax_nuts(
         jax_fn,
         raw_mcmc_samples,
         postprocessing_backend=postprocessing_backend,
-        postprocessing_vectorize=postprocessing_vectorize,
         donate_samples=True,
     )
     del raw_mcmc_samples
@@ -704,8 +666,8 @@ def sample_jax_nuts(
         dims.update(idata_kwargs.pop("dims"))
 
     # Use 'partial' to set default arguments before passing 'idata_kwargs'
-    to_trace = partial(
-        az.from_dict,
+    idata = az.from_dict(
+        posterior=mcmc_samples,
         log_likelihood=log_likelihood,
         observed_data=find_observations(model),
         constant_data=find_constants(model),
@@ -714,14 +676,13 @@ def sample_jax_nuts(
         dims=dims,
         attrs=make_attrs(attrs, library=library),
         posterior_attrs=make_attrs(attrs, library=library),
+        **idata_kwargs,
     )
-    az_trace = to_trace(posterior=mcmc_samples, **idata_kwargs)
 
     if compute_convergence_checks:
-        warns = run_convergence_checks(az_trace, model)
-        log_warnings(warns)
+        log_warnings(run_convergence_checks(idata, model))
 
-    return az_trace
+    return idata
 
 
 sample_numpyro_nuts = partial(sample_jax_nuts, nuts_sampler="numpyro")
