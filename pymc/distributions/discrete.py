@@ -1357,7 +1357,7 @@ class OrderedProbit:
 
     Examples
     --------
-    .. code:: python
+    .. code-block:: python
 
         # Generate data for a simple 1 dimensional example problem
         n1_c = 300; n2_c = 300; n3_c = 300

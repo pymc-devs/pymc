@@ -669,7 +669,7 @@ def sample(
 
     Examples
     --------
-    .. code:: ipython
+    .. code-block:: ipython
 
         In [1]: import pymc as pm
            ...: n = 100

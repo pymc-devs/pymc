@@ -215,7 +215,7 @@ class HSGP(Base):
 
     Examples
     --------
-    .. code:: python
+    .. code-block:: python
 
         # A three dimensional column vector of inputs.
         X = np.random.rand(100, 3)
@@ -357,7 +357,7 @@ class HSGP(Base):
 
         Examples
         --------
-        .. code:: python
+        .. code-block:: python
 
             # A one dimensional column vector of inputs.
             X = np.linspace(0, 10, 100)[:, None]
@@ -544,7 +544,7 @@ class HSGPPeriodic(Base):
 
     Examples
     --------
-    .. code:: python
+    .. code-block:: python
 
         # A three dimensional column vector of inputs.
         X = np.random.rand(100, 3)
@@ -640,7 +640,7 @@ class HSGPPeriodic(Base):
 
         Examples
         --------
-        .. code:: python
+        .. code-block:: python
 
             # A one dimensional column vector of inputs.
             X = np.linspace(0, 10, 100)[:, None]
@@ -665,8 +665,7 @@ class HSGPPeriodic(Base):
 
                 # The (non-centered) GP approximation is given by
                 f = pm.Deterministic(
-                    "f",
-                    phi_cos @ (psd * beta[:m]) + phi_sin[..., 1:] @ (psd[1:] * beta[m:])
+                    "f", phi_cos @ (psd * beta[:m]) + phi_sin[..., 1:] @ (psd[1:] * beta[m:])
                 )
                 ...
 
