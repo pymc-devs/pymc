@@ -208,7 +208,7 @@ class ProgressBar(Protocol):
     def tasks(self) -> list[ProgressTask]:
         """Get the tasks in the progress bar."""
 
-    def add_task(self, *args, **kwargs):
+    def add_task(self, *args, **kwargs) -> ProgressTask | None:
         """Add a task to the progress bar."""
 
     def update(self, task_id, **kwargs):
