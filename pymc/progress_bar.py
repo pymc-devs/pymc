@@ -192,9 +192,20 @@ class RecolorOnFailureBarColumn(BarColumn):
             self.finished_style = self.default_finished_style
 
 
+class ProgressTask(Protocol):
+    """A protocol for a task in a progress bar.
+
+    This protocol defines the expected interface for tasks that can be added to a progress bar.
+    """
+
+    @property
+    def elapsed(self):
+        """Get the elapsed time for this task."""
+
+
 class ProgressBar(Protocol):
     @property
-    def tasks(self):
+    def tasks(self) -> list[ProgressTask]:
         """Get the tasks in the progress bar."""
 
     def add_task(self, *args, **kwargs):
@@ -271,8 +282,8 @@ class MarimoProgressTask:
 
 class MarimoProgressBar:
     def __init__(self) -> None:
-        self.tasks = []
-        self.divergences = {}
+        self.tasks: list[ProgressTask] = []
+        self.divergences: dict[int, int] = {}
 
     def __enter__(self):
         """Enter the context manager."""
@@ -329,7 +340,6 @@ class ProgressBarManager:
         tune: int,
         progressbar: bool | ProgressBarType = True,
         progressbar_theme: Theme | None = None,
-        progress: ProgressBar | None = None,
     ):
         """
         Manage progress bars displayed during sampling.
@@ -406,7 +416,7 @@ class ProgressBarManager:
             self.combined_progress = False
             self._progress = MarimoProgressBar()
         else:
-            self._progress = progress or create_rich_progress_bar(
+            self._progress = create_rich_progress_bar(
                 self.full_stats,
                 progress_columns,
                 progressbar=progressbar,
