@@ -131,17 +131,19 @@ class TestCensored:
         norm = pm.Normal.dist(0, 1)
         eval_points = np.array([-np.inf, -2, -1, 0, 1, 2, np.inf])
 
+        match_str = "divide by zero encountered in log|invalid value encountered in subtract"
+
         # No censoring
         censored_norm = pm.Censored.dist(norm, lower=None, upper=None)
-        with pytest.warns(RuntimeWarning, match="divide by zero encountered in log"):
+        with pytest.warns(RuntimeWarning, match=match_str):
             censored_eval = logcdf(censored_norm, eval_points).eval()
-        with pytest.warns(RuntimeWarning, match="divide by zero encountered in log"):
+        with pytest.warns(RuntimeWarning, match=match_str):
             norm_eval = logcdf(norm, eval_points).eval()
         np.testing.assert_allclose(censored_eval, norm_eval)
 
         # Left censoring
         censored_norm = pm.Censored.dist(norm, lower=-1, upper=None)
-        with pytest.warns(RuntimeWarning, match="divide by zero encountered in log"):
+        with pytest.warns(RuntimeWarning, match=match_str):
             censored_eval = logcdf(censored_norm, eval_points).eval()
         np.testing.assert_allclose(
             censored_eval,
@@ -151,7 +153,7 @@ class TestCensored:
 
         # Right censoring
         censored_norm = pm.Censored.dist(norm, lower=None, upper=1)
-        with pytest.warns(RuntimeWarning, match="divide by zero encountered in log"):
+        with pytest.warns(RuntimeWarning, match=match_str):
             censored_eval = logcdf(censored_norm, eval_points).eval()
         np.testing.assert_allclose(
             censored_eval,
@@ -161,7 +163,7 @@ class TestCensored:
 
         # Interval censoring
         censored_norm = pm.Censored.dist(norm, lower=-1, upper=1)
-        with pytest.warns(RuntimeWarning, match="divide by zero encountered in log"):
+        with pytest.warns(RuntimeWarning, match=match_str):
             censored_eval = logcdf(censored_norm, eval_points).eval()
         np.testing.assert_allclose(
             censored_eval,
