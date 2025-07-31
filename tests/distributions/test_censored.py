@@ -17,7 +17,7 @@ import pytest
 
 import pymc as pm
 
-from pymc import logp
+from pymc import logcdf, logp
 from pymc.distributions.shape_utils import change_dist_size
 
 
@@ -125,4 +125,78 @@ class TestCensored:
         np.testing.assert_allclose(
             logp(censored_cat, [-1, 0, 1, 2, 3, 4, 5]).exp().eval(),
             [0, 0, 0.3, 0.2, 0.5, 0, 0],
+        )
+
+    def test_censored_logcdf_continuous(self):
+        norm = pm.Normal.dist(0, 1)
+        eval_points = np.array([-np.inf, -2, -1, 0, 1, 2, np.inf])
+
+        # No censoring
+        censored_norm = pm.Censored.dist(norm, lower=None, upper=None)
+        with pytest.warns(RuntimeWarning, match="divide by zero encountered in log"):
+            censored_eval = logcdf(censored_norm, eval_points).eval()
+        with pytest.warns(RuntimeWarning, match="divide by zero encountered in log"):
+            norm_eval = logcdf(norm, eval_points).eval()
+        np.testing.assert_allclose(censored_eval, norm_eval)
+
+        # Left censoring
+        censored_norm = pm.Censored.dist(norm, lower=-1, upper=None)
+        with pytest.warns(RuntimeWarning, match="divide by zero encountered in log"):
+            censored_eval = logcdf(censored_norm, eval_points).eval()
+        np.testing.assert_allclose(
+            censored_eval,
+            np.array([-np.inf, -np.inf, -1.84102167, -0.69314718, -0.17275377, -0.02301291, 0.0]),
+            rtol=1e-6,
+        )
+
+        # Right censoring
+        censored_norm = pm.Censored.dist(norm, lower=None, upper=1)
+        with pytest.warns(RuntimeWarning, match="divide by zero encountered in log"):
+            censored_eval = logcdf(censored_norm, eval_points).eval()
+        np.testing.assert_allclose(
+            censored_eval,
+            np.array([-np.inf, -3.78318435, -1.84102167, -0.69314718, 0, 0, 0.0]),
+            rtol=1e-6,
+        )
+
+        # Interval censoring
+        censored_norm = pm.Censored.dist(norm, lower=-1, upper=1)
+        with pytest.warns(RuntimeWarning, match="divide by zero encountered in log"):
+            censored_eval = logcdf(censored_norm, eval_points).eval()
+        np.testing.assert_allclose(
+            censored_eval,
+            np.array([-np.inf, -np.inf, -1.84102167, -0.69314718, 0, 0, 0.0]),
+            rtol=1e-6,
+        )
+
+    def test_censored_logcdf_discrete(self):
+        cat = pm.Categorical.dist([0.1, 0.2, 0.2, 0.3, 0.2])
+        eval_points = np.array([-1, 0, 1, 2, 3, 4, 5])
+
+        # No censoring
+        censored_cat = pm.Censored.dist(cat, lower=None, upper=None)
+        np.testing.assert_allclose(
+            logcdf(censored_cat, eval_points).eval(),
+            logcdf(cat, eval_points).eval(),
+        )
+
+        # Left censoring
+        censored_cat = pm.Censored.dist(cat, lower=1, upper=None)
+        np.testing.assert_allclose(
+            logcdf(censored_cat, eval_points).eval(),
+            np.array([-np.inf, -np.inf, -1.2039728, -0.69314718, -0.22314355, 0, 0]),
+        )
+
+        # Right censoring
+        censored_cat = pm.Censored.dist(cat, lower=None, upper=3)
+        np.testing.assert_allclose(
+            logcdf(censored_cat, eval_points).eval(),
+            np.array([-np.inf, -2.30258509, -1.2039728, -0.69314718, 0, 0, 0]),
+        )
+
+        # Interval censoring
+        censored_cat = pm.Censored.dist(cat, lower=1, upper=3)
+        np.testing.assert_allclose(
+            logcdf(censored_cat, eval_points).eval(),
+            np.array([-np.inf, -np.inf, -1.2039728, -0.69314718, 0, 0, 0]),
         )

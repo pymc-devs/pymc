@@ -17,7 +17,9 @@ import pytensor.tensor as pt
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import normalize_size_param
+from pytensor.tensor.variable import TensorConstant
 
+from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import (
     Distribution,
     SymbolicRandomVariable,
@@ -29,6 +31,7 @@ from pymc.distributions.shape_utils import (
     implicit_size_from_params,
     rv_size_is_none,
 )
+from pymc.logprob.abstract import _logcdf
 from pymc.util import check_dist_not_registered
 
 
@@ -156,3 +159,30 @@ def support_point_censored(op, rv, dist, lower, upper):
     )
     support_point = pt.full_like(dist, support_point)
     return support_point
+
+
+@_logcdf.register(CensoredRV)
+def censored_logcdf(op, value, *inputs, **kwargs):
+    base_rv, lower, upper = inputs
+
+    base_rv_op = base_rv.owner.op
+    base_rv_inputs = base_rv.owner.inputs
+    logcdf_val = _logcdf(base_rv_op, value, *base_rv_inputs, **kwargs)
+
+    is_lower_bounded = not (isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value)))
+    is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
+
+    if is_lower_bounded:
+        logcdf_val = pt.switch(pt.lt(value, lower), -np.inf, logcdf_val)
+
+    if is_upper_bounded:
+        logcdf_val = pt.switch(pt.ge(value, upper), 0.0, logcdf_val)
+
+    if is_lower_bounded and is_upper_bounded:
+        logcdf_val = check_parameters(
+            logcdf_val,
+            pt.le(lower, upper),
+            msg="lower_bound <= upper_bound",
+        )
+
+    return logcdf_val
