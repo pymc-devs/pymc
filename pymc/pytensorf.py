@@ -58,6 +58,7 @@ PotentialShapeType = int | np.ndarray | Sequence[int | Variable] | TensorVariabl
 
 __all__ = [
     "CallableTensor",
+    "clone_while_sharing_some_variables",
     "compile",
     "cont_inputs",
     "convert_data",
@@ -1041,3 +1042,42 @@ def normalize_rng_param(rng: None | Variable) -> Variable:
             "The type of rng should be an instance of either RandomGeneratorType or RandomStateType"
         )
     return rng
+
+
+def clone_while_sharing_some_variables(
+    outputs: list[Variable],
+    kept_variables: Sequence[Variable] = (),
+    replace: dict[Variable, Variable] | None = None,
+) -> list[Variable]:
+    """Clone graphs, applying replacements while preserving some original variables.
+
+    Parameters
+    ----------
+    outputs : list[Variable]
+        The list of variables to clone.
+    kept_variables : Sequence[Variable]
+        The set of variables to preserve in the cloned graph.
+    replace : dict[Variable, Variable]
+        A dictionary of variables to replace in the cloned graph.
+        The keys are the variables to replace, and the values are the new variables
+        to use in their place.
+
+    Returns
+    -------
+    list[Variable]
+        The cloned graphs with the replacements applied.
+    """
+    replace_dict = replace or {}
+
+    memo = {rv: rv for rv in kept_variables}
+    clone_map = clone_get_equiv(
+        [],
+        outputs,
+        memo=memo,
+    )
+
+    replace_keys = [clone_map.get(key, key) for key in replace_dict]
+    replace_values = replace_vars_in_graphs(list(replace_dict.values()), clone_map)
+    fg = FunctionGraph(None, [clone_map[o] for o in outputs], clone=False)
+    fg.replace_all(list(zip(replace_keys, replace_values)), import_missing=True)
+    return fg.outputs

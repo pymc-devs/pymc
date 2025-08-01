@@ -41,6 +41,7 @@ from pymc.sampling.forward import (
     compile_forward_sampling_function,
     get_constant_coords,
     get_vars_in_point_list,
+    loop_over_posterior,
     observed_dependent_deterministics,
     vectorize_over_posterior,
 )
@@ -1949,6 +1950,118 @@ def test_vectorize_over_posterior_matches_sample():
             allow_rvs_in_graph=True,
         )
         [vect_obs, vect_det] = compile(inputs=[], outputs=vectorized, random_seed=1234)()
+        assert pp.posterior_predictive["obs"].shape == vect_obs.shape
+        assert pp.posterior_predictive["det"].shape == vect_det.shape
+        np.testing.assert_allclose(vect_obs + 1, vect_det)
+        np.testing.assert_allclose(
+            pp.posterior_predictive["obs"].mean(dim=("chain", "draw")),
+            vect_obs.mean(axis=(0, 1)),
+            atol=0.6 / np.sqrt(10000),
+        )
+        assert np.all(np.abs(vect_obs - x_posterior[..., None]) < 1)
+
+
+def test_loop_over_posterior(
+    variable_to_vectorize,
+    input_rv_names,
+    allow_rvs_in_graph,
+    model_to_vectorize,
+):
+    model, idata = model_to_vectorize
+
+    if not allow_rvs_in_graph and (len(input_rv_names) == 0 or "z" in variable_to_vectorize):
+        with pytest.raises(
+            RuntimeError,
+            match="The following random variables found in the extracted graph",
+        ):
+            loop_over_posterior(
+                outputs=[model[name] for name in variable_to_vectorize],
+                posterior=idata.posterior,
+                input_rvs=[model[name] for name in input_rv_names],
+                input_tensors=[model["d"]],
+                allow_rvs_in_graph=allow_rvs_in_graph,
+            )
+    else:
+        vectorized, _ = loop_over_posterior(
+            outputs=[model[name] for name in variable_to_vectorize],
+            posterior=idata.posterior,
+            input_rvs=[model[name] for name in input_rv_names],
+            input_tensors=[model["d"]],
+            allow_rvs_in_graph=allow_rvs_in_graph,
+        )
+        assert all(
+            vectorized_var is not model[name]
+            for vectorized_var, name in zip(vectorized, variable_to_vectorize)
+        )
+        assert all(vectorized_var.type.shape == (1, 100, 3) for vectorized_var in vectorized)
+        assert all(
+            variable_depends_on(
+                vectorized_var.owner.inputs[0].owner.op.inner_outputs[0], model["d"]
+            )
+            for vectorized_var in vectorized
+        )
+        inner_graph_outputs = [
+            vectorized_var.owner.inputs[0].owner.op.inner_outputs[i]
+            for i, vectorized_var in enumerate(vectorized)
+        ]
+        if len(vectorized) == 2:
+            assert variable_depends_on(
+                inner_graph_outputs[variable_to_vectorize.index("z_downstream")],
+                inner_graph_outputs[variable_to_vectorize.index("z")],
+            )
+        if len(input_rv_names) > 0:
+            for input_rv_name in input_rv_names:
+                if input_rv_name == "x_parent":
+                    assert len(get_var_by_name(inner_graph_outputs, input_rv_name)) == 0
+                else:
+                    [vectorized_rv] = get_var_by_name(vectorized, input_rv_name)
+                    rv_posterior = idata.posterior[input_rv_name].data
+                    assert isinstance(vectorized_rv, TensorConstant)
+                    np.testing.assert_equal(
+                        np.reshape(vectorized_rv.value, rv_posterior.shape),
+                        rv_posterior,
+                        strict=True,
+                    )
+        else:
+            original_rvs = rvs_in_graph([model[name] for name in variable_to_vectorize])
+            expected_rv_shapes = {rv.type.shape for rv in original_rvs}
+            rvs = rvs_in_graph(inner_graph_outputs)
+            assert {rv.type.shape for rv in rvs} == expected_rv_shapes
+
+
+def test_loop_over_posterior_matches_sample():
+    rng = np.random.default_rng(1234)
+    with pm.Model() as model:
+        x = pm.Normal("x")
+        sigma = 0.1
+        obs = pm.Normal("obs", x, sigma, observed=rng.normal(size=10))
+        det = pm.Deterministic("det", obs + 1)
+
+    chains = 2
+    draws = 100
+    x_posterior = np.broadcast_to(100 * np.arange(chains)[..., None], (chains, draws))
+    with model:
+        posterior = xr.Dataset(
+            {
+                "x": xr.DataArray(
+                    x_posterior,
+                    dims=("chain", "draw"),
+                    coords={"chain": np.arange(chains), "draw": np.arange(draws)},
+                )
+            }
+        )
+    idata = InferenceData(posterior=posterior)
+    with model:
+        pp = pm.sample_posterior_predictive(idata, var_names=["obs", "det"], random_seed=1234)
+        vectorized, updates = loop_over_posterior(
+            outputs=[obs, det],
+            posterior=posterior,
+            input_rvs=[x],
+            allow_rvs_in_graph=True,
+        )
+        [vect_obs, vect_det] = compile(
+            inputs=[], outputs=vectorized, random_seed=1234, updates=updates
+        )()
         assert pp.posterior_predictive["obs"].shape == vect_obs.shape
         assert pp.posterior_predictive["det"].shape == vect_det.shape
         np.testing.assert_allclose(vect_obs + 1, vect_det)
