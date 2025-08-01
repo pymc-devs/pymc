@@ -14,10 +14,11 @@
 
 import numpy as np
 import pytest
+import scipy as sp
 
 import pymc as pm
 
-from pymc import logp
+from pymc import logcdf, logp
 from pymc.distributions.shape_utils import change_dist_size
 
 
@@ -125,4 +126,94 @@ class TestCensored:
         np.testing.assert_allclose(
             logp(censored_cat, [-1, 0, 1, 2, 3, 4, 5]).exp().eval(),
             [0, 0, 0.3, 0.2, 0.5, 0, 0],
+        )
+
+    def test_censored_logcdf_continuous(self):
+        norm = pm.Normal.dist(0, 1)
+        eval_points = np.array([-np.inf, -2, -1, 0, 1, 2, np.inf])
+        expected_logcdf_uncensored = sp.stats.norm.logcdf(eval_points)
+
+        match_str = "divide by zero encountered in log|invalid value encountered in subtract"
+
+        # No censoring
+        censored_norm = pm.Censored.dist(norm, lower=None, upper=None)
+        with pytest.warns(RuntimeWarning, match=match_str):
+            censored_eval = logcdf(censored_norm, eval_points).eval()
+        np.testing.assert_allclose(censored_eval, expected_logcdf_uncensored)
+
+        # Left censoring
+        censored_norm = pm.Censored.dist(norm, lower=-1, upper=None)
+        expected_left = np.where(eval_points < -1, -np.inf, expected_logcdf_uncensored)
+        with pytest.warns(RuntimeWarning, match=match_str):
+            censored_eval = logcdf(censored_norm, eval_points).eval()
+        np.testing.assert_allclose(
+            censored_eval,
+            expected_left,
+            rtol=1e-6,
+        )
+
+        # Right censoring
+        censored_norm = pm.Censored.dist(norm, lower=None, upper=1)
+        expected_right = np.where(eval_points >= 1, 0.0, expected_logcdf_uncensored)
+        with pytest.warns(RuntimeWarning, match=match_str):
+            censored_eval = logcdf(censored_norm, eval_points).eval()
+        np.testing.assert_allclose(
+            censored_eval,
+            expected_right,
+            rtol=1e-6,
+        )
+
+        # Interval censoring
+        censored_norm = pm.Censored.dist(norm, lower=-1, upper=1)
+        expected_interval = np.where(eval_points < -1, -np.inf, expected_logcdf_uncensored)
+        expected_interval = np.where(eval_points >= 1, 0.0, expected_interval)
+        with pytest.warns(RuntimeWarning, match=match_str):
+            censored_eval = logcdf(censored_norm, eval_points).eval()
+        np.testing.assert_allclose(
+            censored_eval,
+            expected_interval,
+            rtol=1e-6,
+        )
+
+    def test_censored_logcdf_discrete(self):
+        probs = [0.1, 0.2, 0.2, 0.3, 0.2]
+        cat = pm.Categorical.dist(probs)
+        eval_points = np.array([-1, 0, 1, 2, 3, 4, 5])
+
+        cdf = np.cumsum(probs)
+        log_cdf_base = np.log(cdf)
+        expected_logcdf_uncensored = np.full_like(eval_points, -np.inf, dtype=float)
+        expected_logcdf_uncensored[1:6] = log_cdf_base
+        expected_logcdf_uncensored[6] = 0.0
+
+        # No censoring
+        censored_cat = pm.Censored.dist(cat, lower=None, upper=None)
+        np.testing.assert_allclose(
+            logcdf(censored_cat, eval_points).eval(),
+            expected_logcdf_uncensored,
+        )
+
+        # Left censoring
+        censored_cat = pm.Censored.dist(cat, lower=1, upper=None)
+        expected_left = np.where(eval_points < 1, -np.inf, expected_logcdf_uncensored)
+        np.testing.assert_allclose(
+            logcdf(censored_cat, eval_points).eval(),
+            expected_left,
+        )
+
+        # Right censoring
+        censored_cat = pm.Censored.dist(cat, lower=None, upper=3)
+        expected_right = np.where(eval_points >= 3, 0.0, expected_logcdf_uncensored)
+        np.testing.assert_allclose(
+            logcdf(censored_cat, eval_points).eval(),
+            expected_right,
+        )
+
+        # Interval censoring
+        censored_cat = pm.Censored.dist(cat, lower=1, upper=3)
+        expected_interval = np.where(eval_points < 1, -np.inf, expected_logcdf_uncensored)
+        expected_interval = np.where(eval_points >= 3, 0.0, expected_interval)
+        np.testing.assert_allclose(
+            logcdf(censored_cat, eval_points).eval(),
+            expected_interval,
         )
