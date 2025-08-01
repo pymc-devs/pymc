@@ -628,7 +628,7 @@ class Group(WithMemoization):
     Passing the correct `vfam` (Variational FAMily) argument you'll tell what
     parametrization is desired for the group. This helps not to overload code with lots of classes.
 
-    .. code:: python
+    .. code-block:: python
 
         >>> group = Group([latent1, latent2], vfam="mean_field")
 
@@ -639,7 +639,7 @@ class Group(WithMemoization):
     passing both `vfam` and `params` is prohibited. Partial parametrization is prohibited by design to
     avoid corner cases and possible problems.
 
-    .. code:: python
+    .. code-block:: python
 
         >>> group = Group([latent3], params=dict(mu=my_mu, rho=my_rho))
 
@@ -663,7 +663,7 @@ class Group(WithMemoization):
     correctly initialized. For those groups which have group equal to `None` it will collect all
     the rest variables not covered by other groups and perform delayed init.
 
-    .. code:: python
+    .. code-block:: python
 
         >>> group_1 = Group([latent1], vfam="fr")  # latent1 has full rank approximation
         >>> group_other = Group(None, vfam="mf")  # other variables have mean field Q
@@ -674,7 +674,7 @@ class Group(WithMemoization):
     When you have created all the groups they need to pass all the groups to :class:`Approximation`.
     It does not accept any other parameter rather than `groups`
 
-    .. code:: python
+    .. code-block:: python
 
         >>> approx = Approximation(my_groups)
 

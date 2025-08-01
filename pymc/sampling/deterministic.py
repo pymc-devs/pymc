@@ -61,7 +61,7 @@ def compute_deterministics(
 
     Examples
     --------
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
 

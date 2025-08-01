@@ -245,7 +245,7 @@ usually created in order to optimise performance. But getting a
 possible (see also in
 {ref}`doc <pymc_overview##Transformed-distributions-and-changes-of-variables>`):
 
-.. code:: python
+.. code-block:: python
 
 
     lognorm = Exp().apply(pm.Normal.dist(0., 1.))
@@ -262,7 +262,7 @@ Now, back to ``model.RV(...)`` - things returned from ``model.RV(...)``
 are PyTensor tensor variables, and it is clear from looking at
 ``TransformedRV``:
 
-.. code:: python
+.. code-block:: python
 
     class TransformedRV(TensorVariable):
         ...
@@ -270,7 +270,7 @@ are PyTensor tensor variables, and it is clear from looking at
 as for ``FreeRV`` and ``ObservedRV``, they are ``TensorVariable``\s with
 ``Factor`` as mixin:
 
-.. code:: python
+.. code-block:: python
 
     class FreeRV(Factor, TensorVariable):
         ...
@@ -283,7 +283,7 @@ distribution into a ``TransformedDistribution``, and then ``model.Var`` is
 called again to added the RV associated with the
 ``TransformedDistribution`` as a ``FreeRV``:
 
-.. code:: python
+.. code-block:: python
 
         ...
         self.transformed = model.Var(
@@ -295,13 +295,13 @@ only add one ``FreeRV``. In another word, you *cannot* do chain
 transformation by nested applying multiple transforms to a Distribution
 (however, you can use ``Chain`` transformation.
 
-.. code:: python
+.. code-block:: python
 
     z = pm.LogNormal.dist(mu=0., sigma=1., transform=tr.Log)
     z.transform           # ==> pymc.distributions.transforms.Log
 
 
-.. code:: python
+.. code-block:: python
 
     z2 = Exp().apply(z)
     z2.transform is None  # ==> True

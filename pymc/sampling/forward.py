@@ -603,7 +603,7 @@ def sample_posterior_predictive(
     The most common use of `sample_posterior_predictive` is to perform posterior predictive checks (in-sample predictions)
     and new model predictions (out-of-sample predictions).
 
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
 
@@ -632,7 +632,7 @@ def sample_posterior_predictive(
     For the last example we could have created a new predictions model. Note that we have to specify
     `var_names` explicitly, because the newly defined `y` was not given any observations:
 
-    .. code:: python
+    .. code-block:: python
 
         with pm.Model(coords_mutable={"trial": [3, 4]}) as predictions_model:
             x = pm.MutableData("x", [-2, 2], dims=["trial"])
@@ -640,14 +640,16 @@ def sample_posterior_predictive(
             noise = pm.HalfNormal("noise")
             y = pm.Normal("y", mu=x * beta, sigma=noise, dims=["trial"])
 
-            predictions = pm.sample_posterior_predictive(idata, var_names=["y"], predictions=True).predictions
+            predictions = pm.sample_posterior_predictive(
+                idata, var_names=["y"], predictions=True
+            ).predictions
 
 
     The new model may even have a different structure and unobserved variables that don't exist in the trace.
     These variables will also be forward sampled. In the following example we added a new ``extra_noise``
     variable between the inferred posterior ``noise`` and the new StudentT observational distribution  ``y``:
 
-    .. code:: python
+    .. code-block:: python
 
         with pm.Model(coords_mutable={"trial": [3, 4]}) as distinct_predictions_model:
             x = pm.MutableData("x", [-2, 2], dims=["trial"])
@@ -656,7 +658,9 @@ def sample_posterior_predictive(
             extra_noise = pm.HalfNormal("extra_noise", sigma=noise)
             y = pm.StudentT("y", nu=4, mu=x * beta, sigma=extra_noise, dims=["trial"])
 
-            predictions = pm.sample_posterior_predictive(idata, var_names=["y"], predictions=True).predictions
+            predictions = pm.sample_posterior_predictive(
+                idata, var_names=["y"], predictions=True
+            ).predictions
 
 
     For more about out-of-model predictions, see this `blog post <https://www.pymc-labs.com/blog-posts/out-of-model-predictions-with-pymc/>`_.
@@ -682,7 +686,7 @@ def sample_posterior_predictive(
 
     The following code block explores how the behavior changes with different `var_names`:
 
-    .. code:: python
+    .. code-block:: python
 
         from logging import getLogger
         import pymc as pm
@@ -705,7 +709,7 @@ def sample_posterior_predictive(
     Default behavior. Generate samples of ``obs``, conditioned on the posterior samples of ``z`` found in the trace.
     These are often referred to as posterior predictive samples in the literature:
 
-    .. code:: python
+    .. code-block:: python
 
         with model:
             pm.sample_posterior_predictive(idata, var_names=["obs"], **kwargs)
@@ -782,7 +786,7 @@ def sample_posterior_predictive(
 
     You can manipulate the InferenceData to control the number of samples
 
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
 
@@ -792,7 +796,7 @@ def sample_posterior_predictive(
 
     Generate 1 posterior predictive sample for every 5 posterior samples.
 
-    .. code:: python
+    .. code-block:: python
 
         thinned_idata = idata.sel(draw=slice(None, None, 5))
         with model:
@@ -801,7 +805,7 @@ def sample_posterior_predictive(
 
     Generate 5 posterior predictive samples for every posterior sample.
 
-    .. code:: python
+    .. code-block:: python
 
         expanded_idata = idata.copy()
         expanded_idata.posterior = idata.posterior.expand_dims(pred_id=5)

@@ -956,7 +956,7 @@ class WrappedPeriodic(Covariance):
     In order to construct a kernel equivalent to the `Periodic` kernel you
     can do the following (though using `Periodic` will likely be a bit faster):
 
-    .. code:: python
+    .. code-block:: python
 
         exp_quad = pm.gp.cov.ExpQuad(1, ls=0.5)
         cov = pm.gp.cov.WrappedPeriodic(exp_quad, period=5)

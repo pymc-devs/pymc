@@ -722,16 +722,18 @@ def collect_default_updates(
 
     Examples
     --------
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
         from pytensor.scan import scan
         from pymc.pytensorf import collect_default_updates
 
+
         def scan_step(xtm1):
             x = xtm1 + pm.Normal.dist()
             x_update = collect_default_updates([x])
             return x, x_update
+
 
         x0 = pm.Normal.dist()
 
