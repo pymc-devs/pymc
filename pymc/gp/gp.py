@@ -458,8 +458,7 @@ class Marginal(Base):
         name,
         X,
         y,
-        sigma=None,
-        noise=None,
+        sigma,
         jitter=JITTER_DEFAULT,
         is_observed=True,
         **kwargs,
@@ -777,7 +776,7 @@ class MarginalApprox(Marginal):
         quadratic = 0.5 * (pt.dot(r, r_l) - pt.dot(c, c))
         return -1.0 * (constant + logdet + quadratic + trace)
 
-    def marginal_likelihood(self, name, X, Xu, y, sigma=None, jitter=JITTER_DEFAULT, **kwargs):
+    def marginal_likelihood(self, name, X, Xu, y, sigma, jitter=JITTER_DEFAULT, **kwargs):
         R"""
         Return the approximate marginal likelihood distribution.
 
