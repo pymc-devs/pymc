@@ -1820,7 +1820,13 @@ class MatrixNormal(Continuous):
     .. code-block:: python
 
         # Setup data
-        true_colcov = np.array([[1.0, 0.5, 0.1], [0.5, 1.0, 0.2], [0.1, 0.2, 1.0],])
+        true_colcov = np.array(
+            [
+                [1.0, 0.5, 0.1],
+                [0.5, 1.0, 0.2],
+                [0.1, 0.2, 1.0],
+            ]
+        )
         m = 3
         n = true_colcov.shape[0]
         true_scale = 3
