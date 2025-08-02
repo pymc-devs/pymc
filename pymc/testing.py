@@ -20,10 +20,12 @@ from typing import Any
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
+import xarray as xr
 
 from arviz import InferenceData
 from numpy import random as nr
 from numpy import testing as npt
+from numpy.typing import NDArray
 from pytensor.compile import SharedVariable
 from pytensor.compile.mode import Mode
 from pytensor.graph.basic import Constant, Variable, equal_computations, graph_inputs
@@ -976,7 +978,14 @@ def assert_no_rvs(vars: Sequence[Variable]) -> None:
         raise AssertionError(f"RV found in graph: {rvs}")
 
 
-def mock_sample(draws: int = 10, **kwargs):
+SampleStatsCreator = Callable[[tuple[str, ...]], NDArray]
+
+
+def mock_sample(
+    draws: int = 10,
+    sample_stats: dict[str, SampleStatsCreator] | None = None,
+    **kwargs,
+) -> InferenceData:
     """Mock :func:`pymc.sample` with :func:`pymc.sample_prior_predictive`.
 
     Useful for testing models that use pm.sample without running MCMC sampling.
@@ -1006,6 +1015,36 @@ def mock_sample(draws: int = 10, **kwargs):
 
             pm.sample = original_sample
 
+    By default, the sample_stats group is not created. Pass a dictionary of functions
+    that create sample statistics, where the keys are the names of the statistics
+    and the values are functions that take a size tuple and return an array of that size.
+
+    .. code-block:: python
+
+        from functools import partial
+
+        import numpy as np
+        import numpy.typing as npt
+
+        from pymc.testing import mock_sample
+
+
+        def mock_diverging(size: tuple[str, ...]) -> npt.NDArray:
+            return np.zeros(size)
+
+
+        def mock_tree_depth(size: tuple[str, ...]) -> npt.NDArray:
+            return np.random.choice(range(2, 10), size=size)
+
+
+        mock_sample_with_stats = partial(
+            mock_sample,
+            sample_stats={
+                "diverging": mock_diverging,
+                "tree_depth": mock_tree_depth,
+            },
+        )
+
     """
     random_seed = kwargs.get("random_seed", None)
     model = kwargs.get("model", None)
@@ -1028,6 +1067,16 @@ def mock_sample(draws: int = 10, **kwargs):
     del idata["prior"]
     if "prior_predictive" in idata:
         del idata["prior_predictive"]
+
+    if sample_stats is not None:
+        sizes = idata["posterior"].sizes
+        size = (sizes["chain"], sizes["draw"])
+        sample_stats_ds = xr.Dataset(
+            {name: (("chain", "draw"), creator(size)) for name, creator in sample_stats.items()},
+            coords=idata["posterior"].coords,
+        )
+        idata.add_groups(sample_stats=sample_stats_ds)
+
     return idata
 
 
