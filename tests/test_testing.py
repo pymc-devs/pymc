@@ -13,6 +13,7 @@
 #   limitations under the License.
 from contextlib import ExitStack as does_not_raise
 
+import numpy as np
 import pytest
 
 import pymc as pm
@@ -38,28 +39,47 @@ def test_domain(values, edges, expectation):
 
 
 @pytest.mark.parametrize(
-    "args, kwargs, expected_size",
+    "args, kwargs, expected_size, sample_stats",
     [
-        pytest.param((), {}, (1, 10), id="default"),
-        pytest.param((100,), {}, (1, 100), id="positional-draws"),
-        pytest.param((), {"draws": 100}, (1, 100), id="keyword-draws"),
-        pytest.param((100,), {"chains": 6}, (6, 100), id="chains"),
+        pytest.param((), {}, (1, 10), None, id="default"),
+        pytest.param((100,), {}, (1, 100), None, id="positional-draws"),
+        pytest.param((), {"draws": 100}, (1, 100), None, id="keyword-draws"),
+        pytest.param((100,), {"chains": 6}, (6, 100), None, id="chains"),
+        pytest.param(
+            (100,),
+            {"chains": 6},
+            (6, 100),
+            {
+                "diverging": np.zeros,
+                "tree_depth": lambda size: np.random.choice(range(2, 10), size=size),
+            },
+            id="with_sample_stats",
+        ),
     ],
 )
-def test_mock_sample(args, kwargs, expected_size) -> None:
+def test_mock_sample(args, kwargs, expected_size, sample_stats) -> None:
     expected_chains, expected_draws = expected_size
     _, model, _ = simple_normal(bounded_prior=True)
 
     with model:
-        idata = mock_sample(*args, **kwargs)
+        idata = mock_sample(*args, **kwargs, sample_stats=sample_stats)
 
     assert "posterior" in idata
     assert "observed_data" in idata
     assert "prior" not in idata
     assert "posterior_predictive" not in idata
-    assert "sample_stats" not in idata
 
-    assert idata.posterior.sizes == {"chain": expected_chains, "draw": expected_draws}
+    expected_sizes = {"chain": expected_chains, "draw": expected_draws}
+
+    if sample_stats:
+        sample_stats_ds = idata["sample_stats"]
+        for name in sample_stats.keys():
+            assert sample_stats_ds[name].sizes == expected_sizes
+
+    else:
+        assert "sample_stats" not in idata
+
+    assert idata.posterior.sizes == expected_sizes
 
 
 mock_pymc_sample = pytest.fixture(scope="function")(mock_sample_setup_and_teardown)
