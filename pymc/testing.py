@@ -1029,11 +1029,11 @@ def mock_sample(
         from pymc.testing import mock_sample
 
 
-        def mock_diverging(size: tuple[str, ...]) -> npt.NDArray:
+        def mock_diverging(size: tuple[int, int]) -> npt.NDArray:
             return np.zeros(size)
 
 
-        def mock_tree_depth(size: tuple[str, ...]) -> npt.NDArray:
+        def mock_tree_depth(size: tuple[int, int]) -> npt.NDArray:
             return np.random.choice(range(2, 10), size=size)
 
 
