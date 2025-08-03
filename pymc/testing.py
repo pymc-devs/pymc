@@ -978,7 +978,7 @@ def assert_no_rvs(vars: Sequence[Variable]) -> None:
         raise AssertionError(f"RV found in graph: {rvs}")
 
 
-SampleStatsCreator = Callable[[tuple[str, ...]], NDArray]
+SampleStatsCreator = Callable[[tuple[int, int]], NDArray]
 
 
 def mock_sample(
