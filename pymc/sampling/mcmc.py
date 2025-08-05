@@ -1155,7 +1155,9 @@ def _sample_many(
                 *trace.completed_draws_and_divergences(chain_specific=True)
             )
             progress_manager._progress.update(
-                progress_manager.tasks[i],
+                progress_manager.tasks[0]
+                if progress_manager.combined_progress
+                else progress_manager.tasks[i],
                 draws=progress_manager.completed_draws
                 if progress_manager.combined_progress
                 else progress_manager.draws,

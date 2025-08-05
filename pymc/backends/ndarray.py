@@ -232,8 +232,8 @@ class NDArray(base.BaseTrace):
         for sampler_stats in self._stats:
             for key, data in sampler_stats.items():
                 if "divergence" in key:
-                    divergent_draws += np.asarray(data)
-        divergences = sum(divergent_draws > 0)
+                    divergent_draws += np.asarray(data[: len(self)])
+        divergences = int(sum(divergent_draws > 0, start=0))
         return len(self), divergences
 
 

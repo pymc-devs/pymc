@@ -69,6 +69,7 @@ class BaseHMCState(StepMethodState):
     tune: bool
     potential: PotentialState
     _num_divs_sample: int
+    divergences: int
 
 
 class BaseHMC(GradientSharedStep):
