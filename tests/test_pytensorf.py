@@ -25,7 +25,6 @@ from pytensor import scan, shared
 from pytensor.compile import UnusedInputError
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable, equal_computations
-from pytensor.tensor.random.basic import normal, uniform
 from pytensor.tensor.subtensor import AdvancedIncSubtensor
 
 import pymc as pm
@@ -36,6 +35,7 @@ from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.exceptions import NotConstantValueError
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
+    PointFunc,
     collect_default_updates,
     compile,
     constant_fold,
@@ -46,7 +46,6 @@ from pymc.pytensorf import (
     replace_rng_nodes,
     replace_vars_in_graphs,
     reseed_rngs,
-    walk_model,
 )
 from pymc.vartypes import int_types
 
@@ -61,7 +60,7 @@ from pymc.vartypes import int_types
 )
 def test_pd_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
     df = pd.DataFrame(np_array)
-    np.testing.assert_array_equal(x=pt.as_tensor_variable(x=df).eval(), y=np_array)
+    np.testing.assert_array_equal(pt.as_tensor_variable(df).eval(), np_array)
 
 
 @pytest.mark.parametrize(
@@ -70,7 +69,7 @@ def test_pd_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
 )
 def test_pd_series_as_tensor_variable(np_array: np.ndarray) -> None:
     df = pd.Series(np_array)
-    np.testing.assert_array_equal(x=pt.as_tensor_variable(x=df).eval(), y=np_array)
+    np.testing.assert_array_equal(pt.as_tensor_variable(df).eval(), np_array)
 
 
 def test_pd_as_tensor_variable_multiindex() -> None:
@@ -81,7 +80,7 @@ def test_pd_as_tensor_variable_multiindex() -> None:
     df = pd.DataFrame({"A": [12.0, 80.0, 30.0, 20.0], "B": [120.0, 700.0, 30.0, 20.0]}, index=index)
     np_array = np.array([[12.0, 80.0, 30.0, 20.0], [120.0, 700.0, 30.0, 20.0]]).T
     assert isinstance(df.index, pd.MultiIndex)
-    np.testing.assert_array_equal(x=pt.as_tensor_variable(x=df).eval(), y=np_array)
+    np.testing.assert_array_equal(pt.as_tensor_variable(df).eval(), np_array)
 
 
 class TestBroadcasting:
@@ -283,42 +282,7 @@ def test_pandas_to_array_pandas_index():
     np.testing.assert_array_equal(result, expected)
 
 
-def test_walk_model():
-    a = pt.vector("a")
-    b = uniform(0.0, a, name="b")
-    c = pt.log(b)
-    c.name = "c"
-    d = pt.vector("d")
-    e = normal(c, d, name="e")
-
-    test_graph = pt.exp(e + 1)
-
-    with pytest.warns(FutureWarning):
-        res = list(walk_model((test_graph,)))
-    assert a in res
-    assert b in res
-    assert c in res
-    assert d in res
-    assert e in res
-
-    with pytest.warns(FutureWarning):
-        res = list(walk_model((test_graph,), stop_at_vars={c}))
-    assert a not in res
-    assert b not in res
-    assert c in res
-    assert d in res
-    assert e in res
-
-    with pytest.warns(FutureWarning):
-        res = list(walk_model((test_graph,), stop_at_vars={b}))
-    assert a not in res
-    assert b in res
-    assert c in res
-    assert d in res
-    assert e in res
-
-
-class TestCompilePyMC:
+class TestCompile:
     def test_check_bounds_flag(self):
         """Test that CheckParameterValue Ops are replaced or removed when using compile_pymc"""
         logp = pt.ones(3)
@@ -451,7 +415,7 @@ class TestCompilePyMC:
             ],
         )(rng1, rng2)
         with pytest.raises(
-            ValueError, match="No update found for at least one RNG used in SymbolicRandomVariable"
+            ValueError, match="No update found for at least one RNG used in SymbolicRV"
         ):
             compile(inputs=[], outputs=[dummy_x1, dummy_x2])
 
@@ -780,3 +744,44 @@ def test_hessian_sign_change_warning(func):
         res_neg = func(f, vars=[x])
     res = func(f, vars=[x], negate_output=False)
     assert equal_computations([res_neg], [-res])
+
+
+def test_point_func(capsys):
+    x, y = pt.vectors("x", "y")
+    outs = x * 2 + y**2
+    f = compile([x, y], outs)
+
+    point_f = PointFunc(f)
+    np.testing.assert_allclose(point_f({"y": [3], "x": [2]}), [4 + 9])
+
+    # Check we can access other methods of the wrapped pytensor function
+    dprint_res = point_f.dprint(file="str")
+    expected_dprint_res = point_f.f.dprint(file="str")
+    assert dprint_res == expected_dprint_res
+
+    point_f.dprint(print_shape=True)
+    captured = capsys.readouterr()
+
+    # The shape=(?,) arises because the inputs are dvector. This checks that the dprint works, and the print_shape
+    # kwargs was correctly forwarded
+    assert "shape=(?,)" in captured.out
+
+
+def test_pickle_point_func():
+    """
+    Regression test for https://github.com/pymc-devs/pymc/issues/7857
+    """
+    import cloudpickle
+
+    x, y = pt.vectors("x", "y")
+    outs = x * 2 + y**2
+    f = compile([x, y], outs)
+
+    point_f = PointFunc(f)
+    point_f_pickled = cloudpickle.dumps(point_f)
+    point_f_unpickled = cloudpickle.loads(point_f_pickled)
+
+    # Check that the function survived the round-trip
+    np.testing.assert_allclose(
+        point_f_unpickled({"y": [3], "x": [2]}), point_f({"y": [3], "x": [2]})
+    )

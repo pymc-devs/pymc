@@ -54,6 +54,7 @@ from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
 from pymc.model import Model, modelcontext
+from pymc.progress_bar import ProgressBarManager, ProgressBarType, default_progress_theme
 from pymc.sampling.parallel import Draw, _cpu_count
 from pymc.sampling.population import _sample_population
 from pymc.stats.convergence import (
@@ -65,12 +66,9 @@ from pymc.step_methods import NUTS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
-    ProgressBarManager,
-    ProgressBarType,
     RandomSeed,
     RandomState,
     _get_seeds_per_chain,
-    default_progress_theme,
     drop_warning_stat,
     get_random_generator,
     get_untransformed_name,
@@ -331,11 +329,7 @@ def _sample_external_nuts(
                 "`idata_kwargs` are currently ignored by the nutpie sampler",
                 UserWarning,
             )
-        if var_names is not None:
-            warnings.warn(
-                "`var_names` are currently ignored by the nutpie sampler",
-                UserWarning,
-            )
+
         compile_kwargs = {}
         nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
         for kwarg in ("backend", "gradient_backend"):
@@ -343,6 +337,7 @@ def _sample_external_nuts(
                 compile_kwargs[kwarg] = nuts_sampler_kwargs.pop(kwarg)
         compiled_model = nutpie.compile_pymc_model(
             model,
+            var_names=var_names,
             **compile_kwargs,
         )
         t_start = time.time()
@@ -755,11 +750,9 @@ def sample(
         )
 
     if random_seed == -1:
-        warnings.warn(
-            "Setting random_seed = -1 is deprecated. Pass `None` to not specify a seed.",
-            FutureWarning,
+        raise ValueError(
+            "Setting random_seed = -1 is not allowed. Pass `None` to not specify a seed."
         )
-        random_seed = None
     elif isinstance(random_seed, tuple | list):
         warnings.warn(
             "A list or tuple of random_seed no longer specifies the specific random_seed of each chain. "

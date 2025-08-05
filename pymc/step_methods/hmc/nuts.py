@@ -115,6 +115,7 @@ class NUTS(BaseHMC):
         "step_size_bar": (np.float64, []),
         "tree_size": (np.float64, []),
         "diverging": (bool, []),
+        "divergences": (int, []),
         "energy_error": (np.float64, []),
         "energy": (np.float64, []),
         "max_energy_error": (np.float64, []),
@@ -235,7 +236,7 @@ class NUTS(BaseHMC):
     def _progressbar_config(n_chains=1):
         columns = [
             TextColumn("{task.fields[divergences]}", table_column=Column("Divergences", ratio=1)),
-            TextColumn("{task.fields[step_size]:0.2f}", table_column=Column("Step size", ratio=1)),
+            TextColumn("{task.fields[step_size]:0.3f}", table_column=Column("Step size", ratio=1)),
             TextColumn("{task.fields[tree_size]}", table_column=Column("Grad evals", ratio=1)),
         ]
 
@@ -248,19 +249,13 @@ class NUTS(BaseHMC):
         return columns, stats
 
     @staticmethod
-    def _make_update_stats_function():
-        def update_stats(stats, step_stats, chain_idx):
-            if isinstance(step_stats, list):
-                step_stats = step_stats[0]
+    def _make_progressbar_update_functions():
+        def update_stats(stats):
+            return {key: stats[key] for key in ("divergences", "step_size", "tree_size")} | {
+                "failing": stats["divergences"] > 0,
+            }
 
-            if not step_stats["tune"]:
-                stats["divergences"][chain_idx] += step_stats["diverging"]
-
-            stats["step_size"][chain_idx] = step_stats["step_size"]
-            stats["tree_size"][chain_idx] = step_stats["tree_size"]
-            return stats
-
-        return update_stats
+        return (update_stats,)
 
 
 # A proposal for the next position

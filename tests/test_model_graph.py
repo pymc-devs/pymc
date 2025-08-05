@@ -13,6 +13,8 @@
 #   limitations under the License.
 import warnings
 
+from textwrap import dedent
+
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
@@ -31,6 +33,7 @@ from pymc.model_graph import (
     NodeType,
     Plate,
     model_to_graphviz,
+    model_to_mermaid,
     model_to_networkx,
 )
 
@@ -513,14 +516,39 @@ def test_model_graph_with_intermediate_named_variables():
     with pm.Model() as m1:
         a = pm.Normal("a", 0, 1, shape=3)
         pm.Normal("b", a.mean(axis=-1), 1)
-    assert dict(ModelGraph(m1).make_compute_graph()) == {"a": set(), "b": {"a"}}
+    assert ModelGraph(m1).make_compute_graph() == {"a": set(), "b": {"a"}}
 
     with pm.Model() as m2:
         a = pm.Normal("a", 0, 1)
         b = a + 1
         b.name = "b"
         pm.Normal("c", b, 1)
-    assert dict(ModelGraph(m2).make_compute_graph()) == {"a": set(), "c": {"a"}}
+    assert ModelGraph(m2).make_compute_graph() == {"a": set(), "c": {"a"}}
+
+    # Regression test for https://github.com/pymc-devs/pymc/issues/7397
+    with pm.Model() as m3:
+        data = pt.as_tensor_variable(
+            np.ones((5, 3)),
+            name="C",
+        )
+        # C has the same name as `data` variable
+        # This used to be wrongly picked up as a dependency
+        C = pm.Deterministic("C", data)
+        # D depends on a variable called `C` but this is not really one in the model
+        D = pm.Deterministic("D", data)
+        # This actually depends on the model variable `C`
+        E = pm.Deterministic("E", C)
+    assert ModelGraph(m3).make_compute_graph() == {"C": set(), "D": set(), "E": {"C"}}
+
+
+def test_model_graph_complex_observed_dependency():
+    with pm.Model() as model:
+        x = pm.Data("x", [0])
+        y = pm.Data("y", [0])
+        observed = pt.exp(x) + pt.log(y)
+        pm.Normal("obs", mu=0, observed=observed)
+
+    assert ModelGraph(model).make_compute_graph() == {"obs": set(), "x": {"obs"}, "y": {"obs"}}
 
 
 @pytest.fixture
@@ -629,3 +657,40 @@ def test_scalars_dim_info() -> None:
     ]
 
     assert graph.edges() == []
+
+
+def test_model_to_mermaid(simple_model):
+    expected_mermaid_string = dedent("""
+    graph TD
+    %% Nodes:
+    a([a ~ Normal])
+    a@{ shape: rounded }
+    b([b ~ Normal])
+    b@{ shape: rounded }
+    c([c ~ Normal])
+    c@{ shape: rounded }
+
+    %% Edges:
+    a --> b
+    b --> c
+
+    %% Plates:
+    """)
+    assert model_to_mermaid(simple_model) == expected_mermaid_string.strip()
+
+
+def test_model_to_mermaid_with_variable_with_space():
+    with pm.Model() as variable_with_space:
+        pm.Normal("plant growth")
+
+    expected_mermaid_string = dedent("""
+    graph TD
+    %% Nodes:
+    plant_growth([plant growth ~ Normal])
+    plant_growth@{ shape: rounded }
+
+    %% Edges:
+
+    %% Plates:
+    """)
+    assert model_to_mermaid(variable_with_space) == expected_mermaid_string.strip()

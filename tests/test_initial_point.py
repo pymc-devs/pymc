@@ -54,7 +54,7 @@ class TestInitvalEvaluation:
             L = pm.Uniform("L", 0, 1, initval=0.5)
             U = pm.Uniform("U", lower=9, upper=10, initval=9.5)
             B1 = pm.Uniform("B1", lower=L, upper=U, initval=5)
-            B2 = pm.Uniform("B2", lower=L, upper=U, initval=(L + U) / 2)
+            B2 = pm.Uniform("B2", lower=L, upper=U, initval=(0.5 + 9.5) / 2)
 
             if reverse_rvs:
                 pmodel.free_RVs = pmodel.free_RVs[::-1]
@@ -69,7 +69,16 @@ class TestInitvalEvaluation:
             pmodel.rvs_to_initial_values[U] = 9.9
             ip = pmodel.initial_point(random_seed=0)
             assert ip["B1_interval__"] < 0
-            assert ip["B2_interval__"] == 0
+            assert ip["B2_interval__"] < 0
+
+    def test_symbolic_initval_not_supported(self):
+        with pm.Model() as pmodel:
+            L = pm.Uniform("L", 0, 1, initval=0.5)
+            U = pm.Uniform("U", lower=L, upper=1.5, initval=L * 2)
+            with pytest.raises(
+                ValueError, match="Initial value of U depends on other random variables"
+            ):
+                pmodel.initial_point(random_seed=0)
         pass
 
     def test_nested_initvals(self):
@@ -288,20 +297,11 @@ class TestSupportPoint:
             x = MyNormalDistribution("x", 0, 1, initval="support_point")
 
         with pytest.warns(
-            UserWarning, match="Moment not defined for variable x of type MyNormalRV"
+            UserWarning, match="Support point not defined for variable x of type MyNormalRV"
         ):
             res = m.initial_point()
 
         assert np.isclose(res["x"], np.pi)
-
-    def test_future_warning_moment(self):
-        with pm.Model() as m:
-            pm.Normal("x", initval="moment")
-            with pytest.warns(
-                FutureWarning,
-                match="The 'moment' strategy is deprecated. Use 'support_point' instead.",
-            ):
-                ip = m.initial_point(random_seed=42)
 
 
 def test_pickling_issue_5090():

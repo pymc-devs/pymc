@@ -21,16 +21,11 @@ from os import path
 from typing import Any, cast
 
 from pytensor import function
-from pytensor.graph import Apply
-from pytensor.graph.basic import ancestors, walk
-from pytensor.scalar.basic import Cast
-from pytensor.tensor.elemwise import Elemwise
-from pytensor.tensor.random.op import RandomVariable
+from pytensor.graph.basic import Variable, ancestors, walk
 from pytensor.tensor.shape import Shape
-from pytensor.tensor.variable import TensorVariable
 
-import pymc as pm
-
+from pymc.model.core import modelcontext
+from pymc.pytensorf import _cheap_eval_mode
 from pymc.util import VarName, get_default_varnames, get_var_name
 
 __all__ = (
@@ -78,7 +73,7 @@ def create_plate_label_with_dim_length(
 
 
 def fast_eval(var):
-    return function([], var, mode="FAST_COMPILE")()
+    return function([], var, mode=_cheap_eval_mode)()
 
 
 class NodeType(str, Enum):
@@ -93,7 +88,7 @@ class NodeType(str, Enum):
 
 @dataclass
 class NodeInfo:
-    var: TensorVariable
+    var: Variable
     node_type: NodeType
 
     def __hash__(self):
@@ -113,10 +108,10 @@ class Plate:
 
 
 GraphvizNodeKwargs = dict[str, Any]
-NodeFormatter = Callable[[TensorVariable], GraphvizNodeKwargs]
+NodeFormatter = Callable[[Variable], GraphvizNodeKwargs]
 
 
-def default_potential(var: TensorVariable) -> GraphvizNodeKwargs:
+def default_potential(var: Variable) -> GraphvizNodeKwargs:
     """Return default data for potential in the graph."""
     return {
         "shape": "octagon",
@@ -125,17 +120,19 @@ def default_potential(var: TensorVariable) -> GraphvizNodeKwargs:
     }
 
 
-def random_variable_symbol(var: TensorVariable) -> str:
+def random_variable_symbol(var: Variable) -> str:
     """Get the symbol of the random variable."""
-    symbol = var.owner.op.__class__.__name__
+    op = var.owner.op
 
-    if symbol.endswith("RV"):
-        symbol = symbol[:-2]
+    if name := getattr(op, "name", None):
+        symbol = name[0].upper() + name[1:]
+    else:
+        symbol = op.__class__.__name__.removesuffix("RV")
 
     return symbol
 
 
-def default_free_rv(var: TensorVariable) -> GraphvizNodeKwargs:
+def default_free_rv(var: Variable) -> GraphvizNodeKwargs:
     """Return default data for free RV in the graph."""
     symbol = random_variable_symbol(var)
 
@@ -146,7 +143,7 @@ def default_free_rv(var: TensorVariable) -> GraphvizNodeKwargs:
     }
 
 
-def default_observed_rv(var: TensorVariable) -> GraphvizNodeKwargs:
+def default_observed_rv(var: Variable) -> GraphvizNodeKwargs:
     """Return default data for observed RV in the graph."""
     symbol = random_variable_symbol(var)
 
@@ -157,7 +154,7 @@ def default_observed_rv(var: TensorVariable) -> GraphvizNodeKwargs:
     }
 
 
-def default_deterministic(var: TensorVariable) -> GraphvizNodeKwargs:
+def default_deterministic(var: Variable) -> GraphvizNodeKwargs:
     """Return default data for the deterministic in the graph."""
     return {
         "shape": "box",
@@ -166,7 +163,7 @@ def default_deterministic(var: TensorVariable) -> GraphvizNodeKwargs:
     }
 
 
-def default_data(var: TensorVariable) -> GraphvizNodeKwargs:
+def default_data(var: Variable) -> GraphvizNodeKwargs:
     """Return default data for the data in the graph."""
     return {
         "shape": "box",
@@ -241,42 +238,32 @@ class ModelGraph:
     def __init__(self, model):
         self.model = model
         self._all_var_names = get_default_varnames(self.model.named_vars, include_transformed=False)
+        self._all_vars = {model[var_name] for var_name in self._all_var_names}
         self.var_list = self.model.named_vars.values()
 
-    def get_parent_names(self, var: TensorVariable) -> set[VarName]:
-        if var.owner is None or var.owner.inputs is None:
+    def get_parent_names(self, var: Variable) -> set[VarName]:
+        if var.owner is None:
             return set()
 
-        def _filter_non_parameter_inputs(var):
-            node = var.owner
-            if isinstance(node.op, Shape):
-                # Don't show shape-related dependencies
-                return []
-            if isinstance(node.op, RandomVariable):
-                # Filter out rng and size parameters or RandomVariable nodes
-                return node.op.dist_params(node)
-            else:
-                # Otherwise return all inputs
-                return node.inputs
-
-        blockers = set(self.model.named_vars)
+        named_vars = self._all_vars
 
         def _expand(x):
-            nonlocal blockers
-            if x.name in blockers:
+            if x in named_vars:
+                # Don't go beyond named_vars
                 return [x]
-            if isinstance(x.owner, Apply):
-                return reversed(_filter_non_parameter_inputs(x))
-            return []
+            if x.owner is None:
+                return []
+            if isinstance(x.owner.op, Shape):
+                # Don't propagate shape-related dependencies
+                return []
+            # Continue walking the graph through the inputs
+            return x.owner.inputs
 
-        parents = set()
-        for x in walk(nodes=_filter_non_parameter_inputs(var), expand=_expand):
-            # Only consider nodes that are in the named model variables.
-            vname = getattr(x, "name", None)
-            if isinstance(vname, str) and vname in self._all_var_names:
-                parents.add(VarName(vname))
-
-        return parents
+        return {
+            cast(VarName, ancestor.name)  # type: ignore[union-attr]
+            for ancestor in walk(nodes=var.owner.inputs, expand=_expand)
+            if ancestor in named_vars
+        }
 
     def vars_to_plot(self, var_names: Iterable[VarName] | None = None) -> list[VarName]:
         if var_names is None:
@@ -312,35 +299,28 @@ class ModelGraph:
         self, var_names: Iterable[VarName] | None = None
     ) -> dict[VarName, set[VarName]]:
         """Get map of var_name -> set(input var names) for the model."""
+        model = self.model
+        named_vars = self._all_vars
         input_map: dict[VarName, set[VarName]] = defaultdict(set)
 
-        for var_name in self.vars_to_plot(var_names):
-            var = self.model[var_name]
-            parent_name = self.get_parent_names(var)
-            input_map[var_name] = input_map[var_name].union(parent_name)
+        var_names_to_plot = self.vars_to_plot(var_names)
+        for var_name in var_names_to_plot:
+            parent_names = self.get_parent_names(model[var_name])
+            input_map[var_name].update(parent_names)
 
-            if var in self.model.observed_RVs:
-                obs_node = self.model.rvs_to_values[var]
-
-                # loop created so that the elif block can go through this again
-                # and remove any intermediate ops, notably dtype casting, to observations
-                while True:
-                    obs_name = obs_node.name
-                    if obs_name and obs_name != var_name:
-                        input_map[var_name] = input_map[var_name].difference({obs_name})
-                        input_map[obs_name] = input_map[obs_name].union({var_name})
-                        break
-                    elif (
-                        # for cases where observations are cast to a certain dtype
-                        # see issue 5795: https://github.com/pymc-devs/pymc/issues/5795
-                        obs_node.owner
-                        and isinstance(obs_node.owner.op, Elemwise)
-                        and isinstance(obs_node.owner.op.scalar_op, Cast)
-                    ):
-                        # we can retrieve the observation node by going up the graph
-                        obs_node = obs_node.owner.inputs[0]
-                    else:
-                        break
+        for var_name in var_names_to_plot:
+            if (var := model[var_name]) in model.observed_RVs:
+                # Make observed `Data` variables flow from the observed RV, and not the other way around
+                # (In the generative graph they usually inform shape of the observed RV)
+                # We have to iterate over the ancestors of the observed values because there can be
+                # deterministic operations in between the `Data` variable and the observed value.
+                obs_var = model.rvs_to_values[var]
+                for ancestor in ancestors([obs_var]):
+                    if ancestor not in named_vars:
+                        continue
+                    obs_name = cast(VarName, ancestor.name)
+                    input_map[var_name].discard(obs_name)
+                    input_map[obs_name].add(var_name)
 
         return input_map
 
@@ -361,13 +341,13 @@ class ModelGraph:
         plates = defaultdict(set)
 
         # TODO: Evaluate all RV shapes at once
-        #       This should help find discrepencies, and
+        #       This should help find discrepancies, and
         #       avoids unnecessary function compiles for determining labels.
         dim_lengths: dict[str, int] = {
             dim_name: fast_eval(value).item() for dim_name, value in self.model.dim_lengths.items()
         }
         var_shapes: dict[str, tuple[int, ...]] = {
-            var_name: tuple(fast_eval(self.model[var_name].shape))
+            var_name: tuple(map(int, fast_eval(self.model[var_name].shape)))
             for var_name in self.vars_to_plot(var_names)
         }
 
@@ -428,6 +408,14 @@ class ModelGraph:
             for child, parents in self.make_compute_graph(var_names=var_names).items()
             for parent in parents
         ]
+
+    def nodes(self, plates: list[Plate] | None = None) -> list[NodeInfo]:
+        """Get all nodes in the model graph."""
+        plates = plates or self.get_plates()
+        nodes = []
+        for plate in plates:
+            nodes.extend(plate.variables)
+        return nodes
 
 
 def make_graph(
@@ -654,7 +642,7 @@ def model_to_networkx(
             stacklevel=2,
         )
 
-    model = pm.modelcontext(model)
+    model = modelcontext(model)
     graph = ModelGraph(model)
     return make_networkx(
         name=model.name,
@@ -769,7 +757,7 @@ def model_to_graphviz(
             stacklevel=2,
         )
 
-    model = pm.modelcontext(model)
+    model = modelcontext(model)
     graph = ModelGraph(model)
     return make_graph(
         model.name,
@@ -784,4 +772,138 @@ def model_to_graphviz(
         create_plate_label=create_plate_label_with_dim_length
         if include_dim_lengths
         else create_plate_label_without_dim_length,
+    )
+
+
+def _create_mermaid_node_name(name: str) -> str:
+    return name.replace(":", "_").replace(" ", "_")
+
+
+def _build_mermaid_node(node: NodeInfo) -> list[str]:
+    var = node.var
+    node_type = node.node_type
+    name = cast(str, var.name)
+    node_name = _create_mermaid_node_name(name)
+    if node_type == NodeType.DATA:
+        return [
+            f"{node_name}[{var.name} ~ Data]",
+            f"{node_name}@{{ shape: db }}",
+        ]
+    elif node_type == NodeType.OBSERVED_RV:
+        return [
+            f"{node_name}([{name} ~ {random_variable_symbol(var)}])",
+            f"{node_name}@{{ shape: rounded }}",
+            f"style {node_name} fill:#757575",
+        ]
+
+    elif node_type == NodeType.FREE_RV:
+        return [
+            f"{node_name}([{name} ~ {random_variable_symbol(var)}])",
+            f"{node_name}@{{ shape: rounded }}",
+        ]
+    elif node_type == NodeType.DETERMINISTIC:
+        return [
+            f"{node_name}([{name} ~ Deterministic])",
+            f"{node_name}@{{ shape: rect }}",
+        ]
+    elif node_type == NodeType.POTENTIAL:
+        return [
+            f"{node_name}([{name} ~ Potential])",
+            f"{node_name}@{{ shape: diam }}",
+            f"style {node_name} fill:#f0f0f0",
+        ]
+
+    return []
+
+
+def _build_mermaid_nodes(nodes) -> list[str]:
+    node_lines = []
+    for node in nodes:
+        node_lines.extend(_build_mermaid_node(node))
+
+    return node_lines
+
+
+def _build_mermaid_edges(edges) -> list[str]:
+    """Return a list of Mermaid edge definitions."""
+    edge_lines = []
+    for child, parent in edges:
+        child_id = _create_mermaid_node_name(child)
+        parent_id = _create_mermaid_node_name(parent)
+        edge_lines.append(f"{parent_id} --> {child_id}")
+    return edge_lines
+
+
+def _build_mermaid_plates(plates, include_dim_lengths) -> list[str]:
+    plate_lines = []
+    for plate in plates:
+        if not plate.dim_info:
+            continue
+
+        plate_label_func = (
+            create_plate_label_with_dim_length
+            if include_dim_lengths
+            else create_plate_label_without_dim_length
+        )
+        plate_label = plate_label_func(plate.dim_info)
+        plate_name = f'subgraph "{plate_label}"'
+        plate_lines.append(plate_name)
+        for var in plate.variables:
+            plate_lines.append(f"    {var.var.name}")
+        plate_lines.append("end")
+
+    return plate_lines
+
+
+def model_to_mermaid(model=None, *, var_names=None, include_dim_lengths: bool = True) -> str:
+    """Produce a Mermaid diagram string from a PyMC model.
+
+    Parameters
+    ----------
+    model : pm.Model
+        The model to plot. Not required when called from inside a modelcontext.
+    var_names : iterable of variable names, optional
+        Subset of variables to be plotted that identify a subgraph with respect to the entire model graph
+    include_dim_lengths : bool
+        Include the dim lengths in the plate label. Default is True.
+
+    Returns
+    -------
+    str
+        Mermaid diagram string representing the model graph.
+
+    Examples
+    --------
+    Visualize a simple PyMC model
+
+    .. code-block:: python
+
+        import pymc as pm
+
+        with pm.Model() as model:
+            mu = pm.Normal("mu", mu=0, sigma=1)
+            sigma = pm.HalfNormal("sigma", sigma=1)
+
+            pm.Normal("obs", mu=mu, sigma=sigma, observed=[1, 2, 3])
+
+        print(pm.model_to_mermaid(model))
+
+
+    """
+    model = modelcontext(model)
+    graph = ModelGraph(model)
+    plates = sorted(graph.get_plates(var_names=var_names), key=lambda plate: hash(plate.dim_info))
+    edges = sorted(graph.edges(var_names=var_names))
+    nodes = sorted(graph.nodes(plates=plates), key=lambda node: cast(str, node.var.name))
+
+    return "\n".join(
+        [
+            "graph TD",
+            "%% Nodes:",
+            *_build_mermaid_nodes(nodes),
+            "\n%% Edges:",
+            *_build_mermaid_edges(edges),
+            "\n%% Plates:",
+            *_build_mermaid_plates(plates, include_dim_lengths=include_dim_lengths),
+        ]
     )

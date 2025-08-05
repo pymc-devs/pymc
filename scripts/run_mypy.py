@@ -168,7 +168,7 @@ if __name__ == "__main__":
         for section, sdf in df.reset_index().groupby(args.groupby):
             print(f"\n\n[{section}]")
             for row in sdf.itertuples():
-                print(f"{row.file}:{row.line}: {row.type}: {row.message}")
+                print(f"{row.file}:{row.line}: {row.type} [{row.errorcode}]: {row.message}")
         print()
     else:
         print(

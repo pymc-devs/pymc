@@ -48,17 +48,6 @@ from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 
 
-def __getattr__(name):
-    if name == "MeasurableVariable":
-        warnings.warn(
-            f"{name} has been deprecated in favor of MeasurableOp. Importing will fail in a future release.",
-            FutureWarning,
-        )
-        return MeasurableOp
-
-    raise AttributeError(f"module {__name__} has no attribute {name}")
-
-
 @singledispatch
 def _logprob(
     op: Op,
@@ -236,13 +225,16 @@ class ValuedRV(Op):
     and breaking the dependency of `b` on `a`. The new nodes isolate the graphs between conditioning points.
     """
 
+    view_map = {0: [0]}
+
     def make_node(self, rv, value):
         assert isinstance(rv, Variable)
         assert isinstance(value, Variable)
         return Apply(self, [rv, value], [rv.type(name=rv.name)])
 
     def perform(self, node, inputs, out):
-        raise NotImplementedError("ValuedVar should not be present in the final graph!")
+        warnings.warn("ValuedVar should not be present in the final graph!")
+        out[0][0] = inputs[0]
 
     def infer_shape(self, fgraph, node, input_shapes):
         return [input_shapes[0]]

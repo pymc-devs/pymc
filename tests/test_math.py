@@ -15,7 +15,6 @@
 import warnings
 
 import numpy as np
-import numpy.testing as npt
 import pytensor
 import pytensor.tensor as pt
 import pytest
@@ -29,10 +28,8 @@ from pymc.math import (
     kron_solve_lower,
     kronecker,
     log1mexp,
-    log1mexp_numpy,
     logdet,
     logdiffexp,
-    logdiffexp_numpy,
     probit,
 )
 from pymc.pytensorf import floatX
@@ -126,70 +123,22 @@ def test_probit():
     np.testing.assert_allclose(invprobit(probit(p)).eval(), p, atol=1e-5)
 
 
-def test_log1mexp():
-    vals = np.array([-1, 0, 1e-20, 1e-4, 10, 100, 1e20])
-    vals_ = vals.copy()
-    # import mpmath
-    # mpmath.mp.dps = 1000
-    # [float(mpmath.log(1 - mpmath.exp(-x))) for x in vals]
-    expected = np.array(
-        [
-            np.nan,
-            -np.inf,
-            -46.051701859880914,
-            -9.210390371559516,
-            -4.540096037048921e-05,
-            -3.720075976020836e-44,
-            0.0,
-        ]
-    )
-    actual = pt.log1mexp(-vals).eval()
-    npt.assert_allclose(actual, expected)
-
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
-        warnings.filterwarnings("ignore", "invalid value encountered in log", RuntimeWarning)
-        with pytest.warns(FutureWarning, match="deprecated"):
-            actual_ = log1mexp_numpy(-vals, negative_input=True)
-    npt.assert_allclose(actual_, expected)
-    # Check that input was not changed in place
-    npt.assert_allclose(vals, vals_)
-
-
-@pytest.mark.filterwarnings("error")
-def test_log1mexp_numpy_no_warning():
-    """Assert RuntimeWarning is not raised for very small numbers"""
-    with pytest.warns(FutureWarning, match="deprecated"):
-        log1mexp_numpy(-1e-25, negative_input=True)
-
-
-def test_log1mexp_numpy_integer_input():
-    with pytest.warns(FutureWarning, match="deprecated"):
-        assert np.isclose(log1mexp_numpy(-2, negative_input=True), pt.log1mexp(-2).eval())
-
-
 @pytest.mark.filterwarnings("error")
 def test_log1mexp_deprecation_warnings():
-    with pytest.warns(FutureWarning, match="deprecated"):
-        with pytest.warns(
-            FutureWarning,
-            match="pymc.math.log1mexp_numpy will expect a negative input",
-        ):
-            res_pos = log1mexp_numpy(2)
+    with pytest.raises(
+        ValueError,
+        match="log1mexp with negative_input=False is no longer supported",
+    ):
+        log1mexp(2, negative_input=False).eval()
 
-        res_neg = log1mexp_numpy(-2, negative_input=True)
+    with pytest.warns(FutureWarning):
+        res_1 = log1mexp(-2, negative_input=True).eval()
 
-        with pytest.warns(
-            FutureWarning,
-            match="pymc.math.log1mexp will expect a negative input",
-        ):
-            res_pos_at = log1mexp(2).eval()
+    res_2 = log1mexp(-2).eval()
+    res_ref = pt.log1mexp(-2).eval()
 
-        res_neg_at = log1mexp(-2, negative_input=True).eval()
-
-    assert np.isclose(res_pos, res_neg)
-    assert np.isclose(res_pos_at, res_neg)
-    assert np.isclose(res_neg_at, res_neg)
+    assert np.isclose(res_ref, res_1)
+    assert np.isclose(res_ref, res_2)
 
 
 def test_logdiffexp():
@@ -197,8 +146,6 @@ def test_logdiffexp():
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
         b = np.log([0, 1, 2, 3])
-    with pytest.warns(FutureWarning, match="deprecated"):
-        assert np.allclose(logdiffexp_numpy(a, b), 0)
     assert np.allclose(logdiffexp(a, b).eval(), 0)
 
 

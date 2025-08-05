@@ -151,18 +151,8 @@ def test_sum_to_1():
     check_vector_transform(tr.sum_to_1, Simplex(2))
     check_vector_transform(tr.sum_to_1, Simplex(4))
 
-    with pytest.warns(FutureWarning, match="ndim_supp argument is deprecated"):
-        tr.SumTo1(2)
-
     check_jacobian_det(
         tr.sum_to_1,
-        Vector(Unit, 2),
-        pt.vector,
-        floatX(np.array([0, 0])),
-        lambda x: x[:-1],
-    )
-    check_jacobian_det(
-        tr.multivariate_sum_to_1,
         Vector(Unit, 2),
         pt.vector,
         floatX(np.array([0, 0])),
@@ -270,9 +260,6 @@ def test_circular():
 
 def test_ordered():
     check_vector_transform(tr.ordered, SortedVector(6))
-
-    with pytest.warns(FutureWarning, match="ndim_supp argument is deprecated"):
-        tr.Ordered(1)
 
     check_jacobian_det(
         tr.ordered, Vector(R, 2), pt.vector, floatX(np.array([0, 0])), elemwise=False
@@ -678,23 +665,3 @@ def test_invalid_jacobian_broadcast_raises():
             match="are not allowed to broadcast together. There is a bug in the implementation of either one",
         ):
             m.logp(jacobian=jacobian_val)
-
-
-def test_deprecated_ndim_supp_transforms():
-    with pytest.warns(FutureWarning, match="deprecated"):
-        tr.Ordered(ndim_supp=1)
-
-    with pytest.warns(FutureWarning, match="deprecated"):
-        assert tr.univariate_ordered == tr.ordered
-
-    with pytest.warns(FutureWarning, match="deprecated"):
-        assert tr.multivariate_ordered == tr.ordered
-
-    with pytest.warns(FutureWarning, match="deprecated"):
-        tr.SumTo1(ndim_supp=1)
-
-    with pytest.warns(FutureWarning, match="deprecated"):
-        assert tr.univariate_sum_to_1 == tr.sum_to_1
-
-    with pytest.warns(FutureWarning, match="deprecated"):
-        assert tr.multivariate_sum_to_1 == tr.sum_to_1

@@ -33,6 +33,7 @@ from pytensor.tensor import (
     arcsinh,
     arctan,
     arctanh,
+    as_tensor,
     broadcast_to,
     ceil,
     clip,
@@ -42,6 +43,7 @@ from pytensor.tensor import (
     cosh,
     cumprod,
     cumsum,
+    diff,
     dot,
     eq,
     erf,
@@ -103,6 +105,7 @@ __all__ = [
     "arcsinh",
     "arctan",
     "arctanh",
+    "as_tensor",
     "batched_diag",
     "block_diagonal",
     "broadcast_to",
@@ -115,6 +118,7 @@ __all__ = [
     "cosh",
     "cumprod",
     "cumsum",
+    "diff",
     "dot",
     "eq",
     "erf",
@@ -180,6 +184,8 @@ __all__ = [
     "zeros",
     "zeros_like",
 ]
+
+from pymc.util import UNSET
 
 
 def kronecker(*Ks):
@@ -279,16 +285,6 @@ def logdiffexp(a, b):
     return a + pt.log1mexp(b - a)
 
 
-def logdiffexp_numpy(a, b):
-    """Return log(exp(a) - exp(b))."""
-    warnings.warn(
-        "pymc.math.logdiffexp_numpy is being deprecated.",
-        FutureWarning,
-        stacklevel=2,
-    )
-    return a + log1mexp_numpy(b - a, negative_input=True)
-
-
 invlogit = sigmoid
 
 
@@ -302,7 +298,7 @@ def logit(p):
     return pt.log(p / (floatX(1) - p))
 
 
-def log1mexp(x, *, negative_input=False):
+def log1mexp(x, *, negative_input=UNSET):
     r"""Return log(1 - exp(-x)).
 
     This function is numerically more stable than the naive approach.
@@ -316,48 +312,18 @@ def log1mexp(x, *, negative_input=False):
        "Accurately computing `\log(1-\exp(- \mid a \mid))` Assessed by the Rmpfr package"
 
     """
-    if not negative_input:
-        warnings.warn(
-            "pymc.math.log1mexp will expect a negative input in a future "
-            "version of PyMC.\n To suppress this warning set `negative_input=True`",
-            FutureWarning,
-            stacklevel=2,
-        )
-        x = -x
+    if negative_input is not UNSET:
+        if not negative_input:
+            raise ValueError(
+                "log1mexp with negative_input=False is no longer supported. Negate the input yourself before calling the function."
+            )
+        else:
+            warnings.warn(
+                "log1mexp with negative_input=True is now the default behavior. Specifying will fail in a future release of PyMC. Simply omit it",
+                FutureWarning,
+            )
 
     return pt.log1mexp(x)
-
-
-def log1mexp_numpy(x, *, negative_input=False):
-    """Return log(1 - exp(x)).
-
-    This function is numerically more stable than the naive approach.
-
-    For details, see
-    https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
-    """
-    warnings.warn(
-        "pymc.math.log1mexp_numpy is being deprecated.",
-        FutureWarning,
-        stacklevel=2,
-    )
-    x = np.asarray(x, dtype="float")
-
-    if not negative_input:
-        warnings.warn(
-            "pymc.math.log1mexp_numpy will expect a negative input in a future "
-            "version of PyMC.\n To suppress this warning set `negative_input=True`",
-            FutureWarning,
-            stacklevel=2,
-        )
-        x = -x
-
-    out = np.empty_like(x)
-    mask = x < -0.6931471805599453  # log(1/2)
-    out[mask] = np.log1p(-np.exp(x[mask]))
-    mask = ~mask
-    out[mask] = np.log(-np.expm1(x[mask]))
-    return out
 
 
 def flatten_list(tensors):

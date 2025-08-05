@@ -83,7 +83,7 @@ def augment_system(ode_func, n_states, n_theta):
         Augemted system of differential equations.
     """
     # Present state of the system
-    t_y = pt.vector("y", dtype="float64")
+    t_y = pt.vector("y", dtype="float64", shape=(n_states,))
     t_y.tag.test_value = np.ones((n_states,), dtype="float64")
     # Parameter(s).  Should be vector to allow for generaliztion to multiparameter
     # systems of ODEs.  Is m dimensional because it includes all initial conditions as well as ode parameters

@@ -56,7 +56,6 @@ from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
-from pymc.util import _FutureWarningValidatingScratchpad
 from pymc.variational.minibatch_rv import MinibatchRandomVariable
 from tests.models import simple_model
 
@@ -1648,55 +1647,6 @@ class TestShared:
             )
 
 
-def test_tag_future_warning_model():
-    # Test no unexpected warnings
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-
-        model = pm.Model()
-
-        x = pt.random.normal()
-        x.tag.something_else = "5"
-        x.tag.test_value = 0
-        assert not isinstance(x.tag, _FutureWarningValidatingScratchpad)
-
-        # Test that model changes the tag type, but copies existing contents
-        x = model.register_rv(x, name="x", transform=log)
-        assert isinstance(x.tag, _FutureWarningValidatingScratchpad)
-        assert x.tag.something_else == "5"
-        assert x.tag.test_value == 0
-
-        # Test expected warnings
-        with pytest.warns(FutureWarning, match="model.rvs_to_values"):
-            x_value = x.tag.value_var
-
-        assert isinstance(x_value.tag, _FutureWarningValidatingScratchpad)
-        with pytest.warns(FutureWarning, match="model.rvs_to_transforms"):
-            transform = x_value.tag.transform
-        assert transform is log
-
-        with pytest.raises(AttributeError):
-            x.tag.observations
-
-        # Cloning a node will keep the same tag type and contents
-        y = x.owner.clone().default_output()
-        assert y is not x
-        assert y.tag is not x.tag
-        assert isinstance(y.tag, _FutureWarningValidatingScratchpad)
-        y = model.register_rv(y, name="y", observed=5)
-        assert isinstance(y.tag, _FutureWarningValidatingScratchpad)
-
-        # Test expected warnings
-        with pytest.warns(FutureWarning, match="model.rvs_to_values"):
-            y_value = y.tag.value_var
-        with pytest.warns(FutureWarning, match="model.rvs_to_values"):
-            y_obs = y.tag.observations
-        assert y_value is y_obs
-        assert y_value.eval() == 5
-
-        assert isinstance(y_value.tag, _FutureWarningValidatingScratchpad)
-
-
 class TestModelDebug:
     @pytest.mark.parametrize("fn", ("logp", "dlogp", "random"))
     def test_no_problems(self, fn, capfd):
@@ -1800,7 +1750,7 @@ class TestModelGraphs:
     )
     def test_graphviz_call_function(self, var_names, filenames) -> None:
         model = self.school_model(J=8)
-        with patch("pymc.model.core.model_to_graphviz") as mock_model_to_graphviz:
+        with patch("pymc.model_graph.model_to_graphviz") as mock_model_to_graphviz:
             model.to_graphviz(var_names=var_names, save=filenames)
             mock_model_to_graphviz.assert_called_once_with(
                 model=model,

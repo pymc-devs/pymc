@@ -487,11 +487,7 @@ class Normal(Continuous):
     def dist(cls, mu=0, sigma=None, tau=None, **kwargs):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
         sigma = pt.as_tensor_variable(sigma)
-
-        # tau = pt.as_tensor_variable(tau)
-        # mean = median = mode = mu = pt.as_tensor_variable(floatX(mu))
-        # variance = 1.0 / self.tau
-
+        mu = pt.as_tensor_variable(mu)
         return super().dist([mu, sigma], **kwargs)
 
     def support_point(rv, size, mu, sigma):
@@ -1622,7 +1618,7 @@ class AsymmetricLaplace(Continuous):
 
     def logp(value, b, kappa, mu):
         value = value - mu
-        res = pt.log(b / (kappa + (kappa**-1))) + (
+        res = pt.log(b / (kappa + pt.reciprocal(kappa))) + (
             -value * b * pt.sign(value) * (kappa ** pt.sign(value))
         )
 
@@ -2374,11 +2370,8 @@ class Gamma(PositiveContinuous):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sigma is not None):
-            if isinstance(sigma, Variable):
-                sigma = check_parameters(sigma, sigma > 0, msg="sigma > 0")
-            else:
-                assert np.all(np.asarray(sigma) > 0)
-            alpha = mu**2 / sigma**2
+            # Use sign of sigma to not let negative sigma fly by
+            alpha = (mu**2 / sigma**2) * pt.sign(sigma)
             beta = mu / sigma**2
         else:
             raise ValueError(
@@ -2500,13 +2493,10 @@ class InverseGamma(PositiveContinuous):
             if beta is not None:
                 pass
             else:
-                beta = 1
+                beta = 1.0
         elif (mu is not None) and (sigma is not None):
-            if isinstance(sigma, Variable):
-                sigma = check_parameters(sigma, sigma > 0, msg="sigma > 0")
-            else:
-                assert np.all(np.asarray(sigma) > 0)
-            alpha = (2 * sigma**2 + mu**2) / sigma**2
+            # Use sign of sigma to not let negative sigma fly by
+            alpha = ((2 * sigma**2 + mu**2) / sigma**2) * pt.sign(sigma)
             beta = mu * (mu**2 + sigma**2) / sigma**2
         else:
             raise ValueError(

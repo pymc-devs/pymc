@@ -29,6 +29,7 @@ from pymc.model.transform.conditioning import (
     observe,
     remove_value_transforms,
 )
+from pymc.model.transform.optimization import freeze_dims_and_data
 from pymc.variational.minibatch_rv import create_minibatch_rv
 
 
@@ -176,10 +177,13 @@ def test_do_posterior_predictive():
 def test_do_constant(mutable):
     rng = np.random.default_rng(seed=122)
     with pm.Model() as m:
-        x = pm.Data("x", 0, mutable=mutable)
+        x = pm.Data("x", 0)
         y = pm.Normal("y", x, 1e-3)
 
-    do_m = do(m, {x: 105})
+    if not mutable:
+        m = freeze_dims_and_data(m, data=["x"])
+
+    do_m = do(m, {m["x"]: 105})
     assert pm.draw(do_m["y"], random_seed=rng) > 100
 
 

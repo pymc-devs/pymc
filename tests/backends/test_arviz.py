@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import re
 import warnings
 
 import numpy as np
@@ -837,3 +838,38 @@ class TestDatasetToPointList:
         ds[3] = xarray.DataArray([1, 2, 3])
         with pytest.raises(ValueError, match="must be str"):
             dataset_to_point_list(ds, sample_dims=["chain", "draw"])
+
+    def test_zero_size(self):
+        ds = xarray.Dataset()
+        ds["x"] = xarray.DataArray(
+            np.zeros((4, 10, 0, 5)), dims=("chain", "draw", "dim_0", "dim_5")
+        )
+        pl, _ = dataset_to_point_list(ds, sample_dims=("chain", "draw"))
+        assert len(pl) == 40
+        assert tuple(pl[0]) == ("x",)
+        assert pl[0]["x"].shape == (0, 5)
+        assert pl[0]["x"].dtype == np.float64
+
+
+def test_incompatible_coordinate_lengths():
+    with pm.Model(coords={"a": [-1, -2, -3]}) as m:
+        x = pm.Normal("x", dims="a")
+        y = pm.Deterministic("y", x[1:], dims=("a",))
+
+        with pytest.warns(
+            UserWarning,
+            match=re.escape(
+                "Incompatible coordinate length of 3 for dimension 'a' of variable 'y'"
+            ),
+        ):
+            prior = pm.sample_prior_predictive(draws=1).prior.squeeze(("chain", "draw"))
+        assert prior.x.dims == prior.y.dims == ("a",)
+        assert prior.x.shape == prior.y.shape == (3,)
+        assert np.isnan(prior.y.values[-1])
+        assert list(prior.coords["a"]) == [0, 1, 2]
+
+        pm.backends.arviz.RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = True
+        with pytest.raises(ValueError):
+            pm.sample_prior_predictive(draws=1)
+
+        pm.backends.arviz.RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = False

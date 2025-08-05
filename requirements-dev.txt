@@ -4,7 +4,6 @@
 arviz>=0.13.0
 cachetools>=4.2.1
 cloudpickle
-git+https://github.com/pymc-devs/pymc-sphinx-theme
 ipython>=7.16
 jupyter-sphinx
 mcbackend>=0.4.0
@@ -16,7 +15,8 @@ numpydoc
 pandas>=0.24.0
 polyagamma
 pre-commit>=2.8.0
-pytensor>=2.31.2,<2.32
+pymc-sphinx-theme>=0.16.0
+pytensor>=2.32.0,<2.33
 pytest-cov>=2.5
 pytest>=3.0
 rich>=13.7.1

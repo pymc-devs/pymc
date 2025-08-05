@@ -137,19 +137,19 @@ class TestMonolith(BaseTestStrAndLatexRepr):
             ("plain", True): [
                 r"alpha ~ Normal(0, 10)",
                 r"sigma ~ HalfNormal(0, 1)",
-                r"mu ~ Deterministic(f(beta, alpha))",
+                r"mu ~ Deterministic(f(alpha, beta))",
                 r"beta ~ Normal(0, 10)",
                 r"Z ~ MultivariateNormal(f(), f())",
                 r"nb_with_p_n ~ NegativeBinomial(10, nbp)",
-                r"zip ~ MarginalMixture(f(), DiracDelta(0), Poisson(5))",
+                r"zip ~ Mixture(f(), DiracDelta(0), Poisson(5))",
                 r"w ~ Dirichlet(<constant>)",
                 (
-                    r"nested_mix ~ MarginalMixture(w, "
-                    r"MarginalMixture(f(), DiracDelta(0), Poisson(5)), "
+                    r"nested_mix ~ Mixture(w, "
+                    r"Mixture(f(), DiracDelta(0), Poisson(5)), "
                     r"Censored(Bernoulli(0.5), -1, 1))"
                 ),
                 r"Y_obs ~ Normal(mu, sigma)",
-                r"pot ~ Potential(f(beta, alpha))",
+                r"pot ~ Potential(f(alpha, beta))",
                 r"pred ~ Deterministic(f(<normal>))",
             ],
             ("plain", False): [
@@ -159,9 +159,9 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"beta ~ Normal",
                 r"Z ~ MultivariateNormal",
                 r"nb_with_p_n ~ NegativeBinomial",
-                r"zip ~ MarginalMixture",
+                r"zip ~ Mixture",
                 r"w ~ Dirichlet",
-                r"nested_mix ~ MarginalMixture",
+                r"nested_mix ~ Mixture",
                 r"Y_obs ~ Normal",
                 r"pot ~ Potential",
                 r"pred ~ Deterministic",
@@ -169,19 +169,19 @@ class TestMonolith(BaseTestStrAndLatexRepr):
             ("latex", True): [
                 r"$\text{alpha} \sim \operatorname{Normal}(0,~10)$",
                 r"$\text{sigma} \sim \operatorname{HalfNormal}(0,~1)$",
-                r"$\text{mu} \sim \operatorname{Deterministic}(f(\text{beta},~\text{alpha}))$",
+                r"$\text{mu} \sim \operatorname{Deterministic}(f(\text{alpha},~\text{beta}))$",
                 r"$\text{beta} \sim \operatorname{Normal}(0,~10)$",
                 r"$\text{Z} \sim \operatorname{MultivariateNormal}(f(),~f())$",
                 r"$\text{nb\_with\_p\_n} \sim \operatorname{NegativeBinomial}(10,~\text{nbp})$",
-                r"$\text{zip} \sim \operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5))$",
+                r"$\text{zip} \sim \operatorname{Mixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5))$",
                 r"$\text{w} \sim \operatorname{Dirichlet}(\text{<constant>})$",
                 (
-                    r"$\text{nested\_mix} \sim \operatorname{MarginalMixture}(\text{w},"
-                    r"~\operatorname{MarginalMixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5)),"
+                    r"$\text{nested\_mix} \sim \operatorname{Mixture}(\text{w},"
+                    r"~\operatorname{Mixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5)),"
                     r"~\operatorname{Censored}(\operatorname{Bernoulli}(0.5),~-1,~1))$"
                 ),
                 r"$\text{Y\_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$",
-                r"$\text{pot} \sim \operatorname{Potential}(f(\text{beta},~\text{alpha}))$",
+                r"$\text{pot} \sim \operatorname{Potential}(f(\text{alpha},~\text{beta}))$",
                 r"$\text{pred} \sim \operatorname{Deterministic}(f(\text{<normal>}))",
             ],
             ("latex", False): [
@@ -191,9 +191,9 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"$\text{beta} \sim \operatorname{Normal}$",
                 r"$\text{Z} \sim \operatorname{MultivariateNormal}$",
                 r"$\text{nb\_with\_p\_n} \sim \operatorname{NegativeBinomial}$",
-                r"$\text{zip} \sim \operatorname{MarginalMixture}$",
+                r"$\text{zip} \sim \operatorname{Mixture}$",
                 r"$\text{w} \sim \operatorname{Dirichlet}$",
-                r"$\text{nested\_mix} \sim \operatorname{MarginalMixture}$",
+                r"$\text{nested\_mix} \sim \operatorname{Mixture}$",
                 r"$\text{Y\_obs} \sim \operatorname{Normal}$",
                 r"$\text{pot} \sim \operatorname{Potential}$",
                 r"$\text{pred} \sim \operatorname{Deterministic}",
@@ -276,7 +276,7 @@ def test_model_latex_repr_mixture_model():
         "\\begin{array}{rcl}",
         "\\text{w} &\\sim & "
         "\\operatorname{Dirichlet}(\\text{<constant>})\\\\\\text{mix} &\\sim & "
-        "\\operatorname{MarginalMixture}(\\text{w},~\\operatorname{Normal}(0,~5),~\\operatorname{StudentT}(7,~0,~1))",
+        "\\operatorname{Mixture}(\\text{w},~\\operatorname{Normal}(0,~5),~\\operatorname{StudentT}(7,~0,~1))",
         "\\end{array}",
         "$$",
     ]

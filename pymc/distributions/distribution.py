@@ -32,7 +32,7 @@ from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.utils import MetaType
 from pytensor.tensor.basic import as_tensor_variable
-from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.op import RandomVariable, RNGConsumerOp
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.rewriting.shape import ShapeFeature
@@ -60,7 +60,7 @@ from pymc.pytensorf import (
     convert_observed_data,
     floatX,
 )
-from pymc.util import UNSET, _add_future_warning_tag
+from pymc.util import UNSET
 from pymc.vartypes import continuous_types, string_types
 
 __all__ = [
@@ -207,7 +207,7 @@ class _class_or_instance_property(property):
         return self.fget(owner_self if owner_self is not None else owner_cls)
 
 
-class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
+class SymbolicRandomVariable(MeasurableOp, RNGConsumerOp, OpFromGraph):
     """Symbolic Random Variable.
 
     This is a subclasse of `OpFromGraph` which is used to encapsulate the symbolic
@@ -294,7 +294,10 @@ class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
     @staticmethod
     def get_input_output_type_idxs(
         extended_signature: str | None,
-    ) -> tuple[tuple[tuple[int], int | None, tuple[int]], tuple[tuple[int], tuple[int]]]:
+    ) -> tuple[
+        tuple[tuple[int, ...], int | None, tuple[int, ...]],
+        tuple[tuple[int, ...], tuple[int, ...]],
+    ]:
         """Parse extended_signature and return indexes for *[rng], [size] and parameters as well as outputs."""
         if extended_signature is None:
             raise ValueError("extended_signature must be provided")
@@ -367,7 +370,28 @@ class SymbolicRandomVariable(MeasurableOp, OpFromGraph):
 
         kwargs.setdefault("inline", True)
         kwargs.setdefault("strict", True)
+        # Many RVS have a size argument, even when this is `None` and is therefore unused
+        kwargs.setdefault("on_unused_input", "ignore")
+        if hasattr(self, "name"):
+            kwargs.setdefault("name", self.name)
         super().__init__(*args, **kwargs)
+
+    def make_node(self, *inputs):
+        # If we try to build the RV with a different size type (vector -> None or None -> vector)
+        # We need to rebuild the Op with new size type in the inner graph
+        if self.extended_signature is not None:
+            (rng_arg_idxs, size_arg_idx, param_idxs), _ = self.get_input_output_type_idxs(
+                self.extended_signature
+            )
+            if size_arg_idx is not None and len(rng_arg_idxs) == 1:
+                new_size_type = normalize_size_param(inputs[size_arg_idx]).type
+                if not self.input_types[size_arg_idx].in_same_class(new_size_type):
+                    params = [inputs[idx] for idx in param_idxs]
+                    size = inputs[size_arg_idx]
+                    rng = inputs[rng_arg_idxs[0]]
+                    return self.rebuild_rv(*params, size=size, rng=rng).owner
+
+        return super().make_node(*inputs)
 
     def update(self, node: Apply) -> dict[Variable, Variable]:
         """Symbolic update expression for input random state variables.
@@ -571,10 +595,7 @@ class Distribution(metaclass=DistributionMeta):
             ndim_supp = cls.rv_op(*dist_params, **kwargs).owner.op.ndim_supp
 
         create_size = find_size(shape=shape, size=size, ndim_supp=ndim_supp)
-        rv_out = cls.rv_op(*dist_params, size=create_size, **kwargs)
-
-        _add_future_warning_tag(rv_out)
-        return rv_out
+        return cls.rv_op(*dist_params, size=create_size, **kwargs)
 
 
 @node_rewriter([SymbolicRandomVariable])

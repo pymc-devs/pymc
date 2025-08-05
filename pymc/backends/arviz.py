@@ -39,8 +39,9 @@ from xarray import Dataset
 import pymc
 
 from pymc.model import Model, modelcontext
+from pymc.progress_bar import CustomProgress, default_progress_theme
 from pymc.pytensorf import PointFunc, extract_obs_data
-from pymc.util import CustomProgress, default_progress_theme, get_default_varnames
+from pymc.util import get_default_varnames
 
 if TYPE_CHECKING:
     from pymc.backends.base import MultiTrace
@@ -49,8 +50,39 @@ ___all__ = [""]
 
 _log = logging.getLogger(__name__)
 
+
+RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = False
+
+
 # random variable object ...
 Var = Any
+
+
+def dict_to_dataset_drop_incompatible_coords(vars_dict, *args, dims, coords, **kwargs):
+    safe_coords = coords
+
+    if not RAISE_ON_INCOMPATIBLE_COORD_LENGTHS:
+        coords_lengths = {k: len(v) for k, v in coords.items()}
+        for var_name, var in vars_dict.items():
+            # Iterate in reversed because of chain/draw batch dimensions
+            for dim, dim_length in zip(reversed(dims.get(var_name, ())), reversed(var.shape)):
+                coord_length = coords_lengths.get(dim, None)
+                if (coord_length is not None) and (coord_length != dim_length):
+                    warnings.warn(
+                        f"Incompatible coordinate length of {coord_length} for dimension '{dim}' of variable '{var_name}'.\n"
+                        "This usually happens when a sliced or concatenated variable is wrapped as a `pymc.dims.Deterministic`."
+                        "The originate coordinates for this dim will not be included in the returned dataset for any of the variables. "
+                        "Instead they will default to `np.arange(var_length)` and the shorter variables will be right-padded with nan.\n"
+                        "To make this warning into an error set `pymc.backends.arviz.RAISE_ON_INCOMPATIBLE_COORD_LENGTHS` to `True`",
+                        UserWarning,
+                    )
+                    if safe_coords is coords:
+                        safe_coords = coords.copy()
+                    safe_coords.pop(dim)
+                    coords_lengths.pop(dim)
+
+    # FIXME: Would be better to drop coordinates altogether, but arviz defaults to `np.arange(var_length)`
+    return dict_to_dataset(vars_dict, *args, dims=dims, coords=safe_coords, **kwargs)
 
 
 def find_observations(model: "Model") -> dict[str, Var]:
@@ -365,7 +397,7 @@ class InferenceDataConverter:
             priors_dict[group] = (
                 None
                 if var_names is None
-                else dict_to_dataset(
+                else dict_to_dataset_drop_incompatible_coords(
                     {k: np.expand_dims(self.prior[k], 0) for k in var_names},
                     library=pymc,
                     coords=self.coords,
@@ -617,11 +649,13 @@ def dataset_to_point_list(
     for vn in var_names:
         if not isinstance(vn, str):
             raise ValueError(f"Variable names must be str, but dataset key {vn} is a {type(vn)}.")
+
     num_sample_dims = len(sample_dims)
     stacked_dims = {dim_name: ds[var_names[0]][dim_name] for dim_name in sample_dims}
     transposed_dict = {vn: da.transpose(*sample_dims, ...) for vn, da in ds.items()}
+    stacked_size = np.prod(transposed_dict[var_names[0]].shape[:num_sample_dims], dtype=int)
     stacked_dict = {
-        vn: da.values.reshape((-1, *da.shape[num_sample_dims:]))
+        vn: da.values.reshape((stacked_size, *da.shape[num_sample_dims:]))
         for vn, da in transposed_dict.items()
     }
     points = [

@@ -39,25 +39,6 @@ solve_upper = partial(solve_triangular, lower=False)
 __all__ = ["TP", "Latent", "LatentKron", "Marginal", "MarginalApprox", "MarginalKron"]
 
 
-_noise_deprecation_warning = (
-    "The 'noise' parameter has been been changed to 'sigma' "
-    "in order to standardize the GP API and will be "
-    "deprecated in future releases."
-)
-
-
-def _handle_sigma_noise_parameters(sigma, noise):
-    """Help transition of 'noise' parameter to be named 'sigma'."""
-    if (sigma is None and noise is None) or (sigma is not None and noise is not None):
-        raise ValueError("'sigma' argument must be specified.")
-
-    if sigma is None:
-        warnings.warn(_noise_deprecation_warning, FutureWarning)
-        return noise
-
-    return sigma
-
-
 class Base:
     """Base class."""
 
@@ -477,8 +458,7 @@ class Marginal(Base):
         name,
         X,
         y,
-        sigma=None,
-        noise=None,
+        sigma,
         jitter=JITTER_DEFAULT,
         is_observed=True,
         **kwargs,
@@ -505,8 +485,6 @@ class Marginal(Base):
         sigma : float, Variable, or Covariance, default ~pymc.gp.cov.WhiteNoise
             Standard deviation of the Gaussian noise.  Can also be a Covariance for
             non-white noise.
-        noise : float, Variable, or Covariance, optional
-            Deprecated. Previous parameterization of `sigma`.
         jitter : float, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
@@ -516,8 +494,6 @@ class Marginal(Base):
             Extra keyword arguments that are passed to :class:`~pymc.MvNormal` distribution
             constructor.
         """
-        sigma = _handle_sigma_noise_parameters(sigma=sigma, noise=noise)
-
         noise_func = sigma if isinstance(sigma, BaseCovariance) else pm.gp.cov.WhiteNoise(sigma)
         mu, cov = self._build_marginal_likelihood(X=X, noise_func=noise_func, jitter=jitter)
         self.X = X
@@ -543,10 +519,6 @@ class Marginal(Base):
         else:
             cov_total = self.cov_func
             mean_total = self.mean_func
-
-        if "noise" in given:
-            warnings.warn(_noise_deprecation_warning, FutureWarning)
-            given["sigma"] = given["noise"]
 
         if all(val in given for val in ["X", "y", "sigma"]):
             X, y, sigma = given["X"], given["y"], given["sigma"]
@@ -804,9 +776,7 @@ class MarginalApprox(Marginal):
         quadratic = 0.5 * (pt.dot(r, r_l) - pt.dot(c, c))
         return -1.0 * (constant + logdet + quadratic + trace)
 
-    def marginal_likelihood(
-        self, name, X, Xu, y, sigma=None, noise=None, jitter=JITTER_DEFAULT, **kwargs
-    ):
+    def marginal_likelihood(self, name, X, Xu, y, sigma, jitter=JITTER_DEFAULT, **kwargs):
         R"""
         Return the approximate marginal likelihood distribution.
 
@@ -827,8 +797,6 @@ class MarginalApprox(Marginal):
             noise.  Must have shape `(n, )`.
         sigma : float, Variable
             Standard deviation of the Gaussian noise.
-        noise : float, Variable, optional
-            Previous parameterization of `sigma`.
         jitter : float, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
@@ -840,7 +808,7 @@ class MarginalApprox(Marginal):
         self.Xu = Xu
         self.y = y
 
-        self.sigma = _handle_sigma_noise_parameters(sigma=sigma, noise=noise)
+        self.sigma = sigma
 
         approx_loglik = self._build_marginal_likelihood_loglik(
             y=self.y, X=self.X, Xu=self.Xu, sigma=self.sigma, jitter=jitter

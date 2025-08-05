@@ -412,7 +412,9 @@ class TestDiffEqModel:
                     warnings.filterwarnings(
                         "ignore", "invalid value encountered in log", RuntimeWarning
                     )
-                    idata = pm.sample(50, tune=0, chains=1)
+                    idata = pm.sample(
+                        50, tune=0, chains=1, progressbar=False, compute_convergence_checks=False
+                    )
 
         assert idata.posterior["R"].shape == (1, 50)
         assert idata.posterior["sigma"].shape == (1, 50, 2)

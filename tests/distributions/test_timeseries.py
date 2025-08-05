@@ -461,26 +461,6 @@ class TestPredefinedRandomWalk:
         assert isinstance(init_dist.owner.op, Dirichlet)
         assert isinstance(innovation_dist.owner.op, MvStudentT)
 
-    @pytest.mark.parametrize(
-        "distribution, init_dist, build_kwargs",
-        [
-            (GaussianRandomWalk, Normal.dist(), {}),
-            (
-                MvGaussianRandomWalk,
-                Dirichlet.dist(np.ones(3)),
-                {"mu": np.zeros(3), "tau": np.eye(3)},
-            ),
-            (
-                MvStudentTRandomWalk,
-                Dirichlet.dist(np.ones(3)),
-                {"nu": 4, "mu": np.zeros(3), "tau": np.eye(3)},
-            ),
-        ],
-    )
-    def test_init_deprecated_arg(self, distribution, init_dist, build_kwargs):
-        with pytest.warns(FutureWarning, match="init parameter is now called init_dist"):
-            distribution.dist(init=init_dist, steps=10, **build_kwargs)
-
 
 class TestAR:
     def test_order1_logp(self):
@@ -712,10 +692,6 @@ class TestAR:
             init_dist = DiracDelta.dist([[1.0, 2.0], [3.0, 4.0]])
             AR("x", rho=[0, 0], init_dist=init_dist, steps=5, size=size)
         assert_support_point_is_expected(model, expected, check_finite_logp=False)
-
-    def test_init_deprecated_arg(self):
-        with pytest.warns(FutureWarning, match="init parameter is now called init_dist"):
-            AR.dist(rho=[1, 2, 3], init=Normal.dist(), shape=(10,))
 
     def test_change_dist_size(self):
         base_dist = AR.dist(rho=[0.5, 0.5], init_dist=pm.Normal.dist(size=(2,)), shape=(3, 10))

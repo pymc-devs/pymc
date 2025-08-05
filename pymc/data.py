@@ -13,12 +13,12 @@
 #   limitations under the License.
 
 import io
+import typing
 import urllib.request
-import warnings
 
 from collections.abc import Sequence
 from copy import copy
-from typing import cast
+from typing import Union, cast
 
 import numpy as np
 import pandas as pd
@@ -33,17 +33,16 @@ from pytensor.raise_op import Assert
 from pytensor.tensor.random.basic import IntegersRV
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 
-import pymc as pm
-
-from pymc.logprob.utils import rvs_in_graph
-from pymc.pytensorf import convert_data
+from pymc.exceptions import ShapeError
+from pymc.pytensorf import convert_data, rvs_in_graph
 from pymc.vartypes import isgenerator
 
+if typing.TYPE_CHECKING:
+    from pymc.model.core import Model
+
 __all__ = [
-    "ConstantData",
     "Data",
     "Minibatch",
-    "MutableData",
     "get_data",
 ]
 BASE_URL = "https://raw.githubusercontent.com/pymc-devs/pymc-examples/main/examples/data/{filename}"
@@ -200,7 +199,7 @@ def determine_coords(
 
     if isinstance(value, np.ndarray) and dims is not None:
         if len(dims) != value.ndim:
-            raise pm.exceptions.ShapeError(
+            raise ShapeError(
                 "Invalid data shape. The rank of the dataset must match the length of `dims`.",
                 actual=value.shape,
                 expected=value.ndim,
@@ -218,66 +217,6 @@ def determine_coords(
     return coords, new_dims
 
 
-def ConstantData(
-    name: str,
-    value,
-    *,
-    dims: Sequence[str] | None = None,
-    coords: dict[str, Sequence | np.ndarray] | None = None,
-    infer_dims_and_coords=False,
-    **kwargs,
-) -> TensorConstant:
-    """Alias for ``pm.Data``.
-
-    Registers the ``value`` as a :class:`~pytensor.tensor.TensorConstant` with the model.
-    For more information, please reference :class:`pymc.Data`.
-    """
-    warnings.warn(
-        "ConstantData is deprecated. All Data variables are now mutable. Use Data instead.",
-        FutureWarning,
-    )
-
-    var = Data(
-        name,
-        value,
-        dims=dims,
-        coords=coords,
-        infer_dims_and_coords=infer_dims_and_coords,
-        **kwargs,
-    )
-    return cast(TensorConstant, var)
-
-
-def MutableData(
-    name: str,
-    value,
-    *,
-    dims: Sequence[str] | None = None,
-    coords: dict[str, Sequence | np.ndarray] | None = None,
-    infer_dims_and_coords=False,
-    **kwargs,
-) -> SharedVariable:
-    """Alias for ``pm.Data``.
-
-    Registers the ``value`` as a :class:`~pytensor.compile.sharedvalue.SharedVariable`
-    with the model. For more information, please reference :class:`pymc.Data`.
-    """
-    warnings.warn(
-        "MutableData is deprecated. All Data variables are now mutable. Use Data instead.",
-        FutureWarning,
-    )
-
-    var = Data(
-        name,
-        value,
-        dims=dims,
-        coords=coords,
-        infer_dims_and_coords=infer_dims_and_coords,
-        **kwargs,
-    )
-    return cast(SharedVariable, var)
-
-
 def Data(
     name: str,
     value,
@@ -285,7 +224,7 @@ def Data(
     dims: Sequence[str] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
     infer_dims_and_coords=False,
-    mutable: bool | None = None,
+    model: Union["Model", None] = None,
     **kwargs,
 ) -> SharedVariable | TensorConstant:
     """Create a data container that registers a data variable with the model.
@@ -350,6 +289,8 @@ def Data(
     ...         model.set_data("data", data_vals)
     ...         idatas.append(pm.sample())
     """
+    from pymc.model.core import modelcontext
+
     if coords is None:
         coords = {}
 
@@ -357,8 +298,9 @@ def Data(
         value = np.array(value)
 
     # Add data container to the named variables of the model.
-    model = pm.Model.get_context(error_if_none=False)
-    if model is None:
+    try:
+        model = modelcontext(model)
+    except TypeError:
         raise TypeError(
             "No model on context stack, which is needed to instantiate a data container. "
             "Add variable inside a 'with model:' block."
@@ -380,17 +322,12 @@ def Data(
             "Pass them directly to `observed` if you want to trigger auto-imputation"
         )
 
-    if mutable is not None:
-        warnings.warn(
-            "Data is now always mutable. Specifying the `mutable` kwarg will raise an error in a future release",
-            FutureWarning,
-        )
     x = pytensor.shared(arr, name, **kwargs)
 
     if isinstance(dims, str):
         dims = (dims,)
     if not (dims is None or len(dims) == x.ndim):
-        raise pm.exceptions.ShapeError(
+        raise ShapeError(
             "Length of `dims` must match the dimensions of the dataset.",
             actual=len(dims),
             expected=x.ndim,
