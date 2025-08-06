@@ -1059,14 +1059,11 @@ def vectorize_over_posterior(
         for rv in general_toposort(  # type: ignore[call-overload]
             all_rvs, lambda x: x.owner.inputs if x.owner is not None else None
         )
-        if rv in all_rvs
+        if rv in all_rvs and rv not in needed_rvs
     ]:
-        rv_ancestors = ancestors([rv], blockers=[*needed_rvs, *independent_rvs, *outputs])
-        if (
-            rv not in needed_rvs
-            and not ({*outputs, *independent_rvs} & set(rv_ancestors))
-            and {var for var in rv_ancestors if var in all_rvs} <= {rv, *needed_rvs}
-        ):
+        blockers = [*needed_rvs, *independent_rvs, *outputs]
+        rv_ancestors = ancestors([rv], blockers=blockers)
+        if not (set(blockers) & set(rv_ancestors)):
             independent_rvs.append(rv)
     for rv in independent_rvs:
         replace_dict[rv] = change_dist_size(rv, new_size=batch_shape, expand=True)
