@@ -338,6 +338,7 @@ class PrecisionMvNormalRV(SymbolicMVNormalUsedInternally):
             method=method,
         )(rng, size, mean, tau)
 
+
 def _precision_mv_normal_logp(value, mean, tau):
     k = value.shape[-1].astype("floatX")
 
@@ -347,6 +348,7 @@ def _precision_mv_normal_logp(value, mean, tau):
     logp = -0.5 * (k * pt.log(2 * np.pi) + quadratic_form) + logdet
 
     return logp, posdef
+
 
 @_logprob.register
 def precision_mv_normal_logp(op: PrecisionMvNormalRV, value, rng, size, mean, tau, **kwargs):
