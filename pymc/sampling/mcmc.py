@@ -292,11 +292,11 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
+    step=None,
+    external_sampler: ExternalSampler | None = None,
     progressbar: bool | ProgressBarType = True,
     progressbar_theme: Theme | None = default_progress_theme,
-    step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -324,11 +324,11 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
+    step=None,
+    external_sampler: ExternalSampler | None = None,
     progressbar: bool | ProgressBarType = True,
     progressbar_theme: Theme | None = default_progress_theme,
-    step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -356,11 +356,11 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
+    step=None,
+    external_sampler: ExternalSampler | None = None,
     progressbar: bool | ProgressBarType = True,
     progressbar_theme: Theme | None = None,
-    step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: None | Literal["pymc", "nutpie", "numpyro", "blackjax"] = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -407,6 +407,12 @@ def sample(
         A ``TypeError`` will be raised if a legacy :py:class:`~numpy.random.RandomState` object is passed.
         We no longer support ``RandomState`` objects because their seeding mechanism does not allow
         easy spawning of new independent random streams that are needed by the step methods.
+    step : function or iterable of functions, optional
+        A step function or collection of functions. If there are variables without step methods,
+        step methods for those variables will be assigned automatically. By default the NUTS step
+        method will be used, if appropriate to the model. Not compatible with external_sampler
+    external_sampler: ExternalSampler, optional
+        An external sampler to sample the whole model. Not compatible with step.
     progressbar: bool or ProgressType, optional
             How and whether to display the progress bar. If False, no progress bar is displayed. Otherwise, you can ask
             for one of the following:
@@ -419,16 +425,8 @@ def sample(
                 are also displayed.
 
             If True, the default is "split+stats" is used.
-    step : function or iterable of functions
-        A step function or collection of functions. If there are variables without step methods,
-        step methods for those variables will be assigned automatically. By default the NUTS step
-        method will be used, if appropriate to the model.
     var_names : list of str, optional
         Names of variables to be stored in the trace. Defaults to all free variables and deterministics.
-    nuts_sampler : str
-        Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"].
-        This requires the chosen sampler to be installed.
-        All samplers, except "pymc", require the full model to be continuous.
     blas_cores: int or "auto" or None, default = "auto"
         The total number of threads blas and openmp functions should use during sampling.
         Setting it to "auto" will ensure that the total number of active blas threads is the
@@ -608,35 +606,40 @@ def sample(
     rngs = get_random_generator(random_seed).spawn(chains)
     random_seed_list = [rng.integers(2**30) for rng in rngs]
 
-    if step is None and nuts_sampler not in (None, "pymc"):
-        # Temporarily instantiate external samplers for user, for backwards-compat
-        warnings.warn(
-            f"Setting `pm.sample(nuts_sampler='{nuts_sampler}, nuts_sampler_kwargs=...)'` is deprecated.\n"
-            f"Use `pm.sample(step=pm.external.{nuts_sampler.capitalize()}(**nuts_sampler_kwargs))` instead",
-            FutureWarning,
-        )
-        from pymc.sampling import external
+    if "nuts_sampler" in kwargs:
+        # Transition backwards-compatibility
+        nuts_sampler = kwargs.pop("nuts_sampler")
+        if nuts_sampler != "pymc":
+            warnings.warn(
+                f"Setting `pm.sample(nuts_sampler='{nuts_sampler}, nuts_sampler_kwargs=...)'` is deprecated.\n"
+                f"Use `pm.sample(external_sampler=pm.external.{nuts_sampler.capitalize()}(**nuts_sampler_kwargs))` instead",
+                FutureWarning,
+            )
+            from pymc.sampling import external
 
-        step = getattr(external, nuts_sampler.capitalize())(
-            model=model,
-            **(nuts_sampler_kwargs or {}),
-        )
-        nuts_sampler_kwargs = None
+            external_sampler = getattr(external, nuts_sampler.capitalize())(
+                model=model,
+                **(nuts_sampler_kwargs or {}),
+                **(kwargs.pop("nuts") or {}),
+            )
+            nuts_sampler_kwargs = None
 
-    if isinstance(step, list | tuple) and len(step) == 1:
-        [step] = step
+    if external_sampler is not None:
+        if step is not None:
+            raise ValueError("`step` and `external_sampler` cannot be used together")
 
-    if isinstance(step, ExternalSampler):
-        if step.model is not model:
-            raise ValueError("External step model does not match model detected by sample")
+        if external_sampler.model is not model:
+            raise ValueError(
+                "External sampler model does not match model detected by sample function"
+            )
         if nuts_sampler_kwargs:
             raise ValueError(
                 f"{nuts_sampler_kwargs=} should be passed when constructing external sampler"
             )
         if "nuts" in kwargs:
-            kwargs.update(kwargs["nuts"].pop())
+            kwargs.update(kwargs.pop("nuts"))
         with joined_blas_limiter():
-            return step.sample(
+            return external_sampler.sample(
                 tune=tune,
                 draws=draws,
                 chains=chains,

@@ -665,7 +665,6 @@ def sample_jax_nuts(
     if "dims" in idata_kwargs:
         dims.update(idata_kwargs.pop("dims"))
 
-    # Use 'partial' to set default arguments before passing 'idata_kwargs'
     idata = az.from_dict(
         posterior=mcmc_samples,
         log_likelihood=log_likelihood,

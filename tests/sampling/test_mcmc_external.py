@@ -59,8 +59,7 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
         expected.add(
             (
                 UserWarning,
-                "`initvals` are currently not passed to nutpie sampler. "
-                "Use `init_mean` kwarg following nutpie specification instead.",
+                "initvals are currently ignored by the nutpie sampler.",
             )
         )
     assert warns == expected

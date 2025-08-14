@@ -12,37 +12,40 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
+from typing import Any
+
+from pytensor.scalar import discrete_dtypes
 
 from pymc.model.core import modelcontext
-from pymc.util import get_value_vars_from_user_vars
+from pymc.util import RandomSeed
 
 
 class ExternalSampler(ABC):
-    def __init__(self, vars=None, model=None):
+    def __init__(self, model=None):
         model = modelcontext(model)
-        if vars is None:
-            vars = model.free_RVs
-        else:
-            vars = get_value_vars_from_user_vars(vars, model=model)
-            if set(vars) != set(model.free_RVs):
-                raise ValueError(
-                    "External samplers must sample all the model free_RVs, not just a subset"
-                )
-        self.vars = vars
         self.model = model
 
     @abstractmethod
     def sample(
         self,
-        tune,
-        draws,
-        chains,
-        initvals,
-        random_seed,
-        progressbar,
-        var_names,
-        idata_kwargs,
-        compute_convergence_checks,
+        *,
+        tune: int,
+        draws: int,
+        chains: int,
+        initvals: dict[str, Any] | Sequence[dict[str, Any]],
+        random_seed: RandomSeed,
+        progressbar: bool,
+        var_names: Sequence[str] | None = None,
+        idata_kwargs: dict[str, Any] | None = None,
+        compute_convergence_checks: bool,
         **kwargs,
     ):
         pass
+
+
+class NUTSExternalSampler(ExternalSampler):
+    def __init__(self, model=None):
+        super().__init__(model)
+        if any(var.dtype in discrete_dtypes for var in model.free_RVs):
+            raise ValueError("External NUTS samplers can only sample continuous variables")

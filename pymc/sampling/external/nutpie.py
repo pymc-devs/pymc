@@ -14,31 +14,28 @@
 import warnings
 
 from arviz import InferenceData, dict_to_dataset
-from pytensor.scalar import discrete_dtypes
 
 from pymc.backends.arviz import coords_and_dims_for_inferencedata, find_constants, find_observations
-from pymc.sampling.external.base import ExternalSampler
+from pymc.sampling.external.base import NUTSExternalSampler
 from pymc.stats.convergence import log_warnings, run_convergence_checks
 from pymc.util import _get_seeds_per_chain
 
 
-class Nutpie(ExternalSampler):
+class Nutpie(NUTSExternalSampler):
     def __init__(
         self,
-        vars=None,
         model=None,
         backend="numba",
         gradient_backend="pytensor",
         compile_kwargs=None,
         sample_kwargs=None,
     ):
-        super().__init__(vars, model)
-        if any(var.dtype in discrete_dtypes for var in self.vars):
-            raise ValueError("Nutpie can only sample continuous variables")
+        super().__init__(model)
         self.backend = backend
         self.gradient_backend = gradient_backend
         self.compile_kwargs = compile_kwargs or {}
         self.sample_kwargs = sample_kwargs or {}
+        self.compiled_model = None
 
     def sample(
         self,

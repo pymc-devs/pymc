@@ -16,16 +16,15 @@ from typing import Literal
 
 from arviz import InferenceData
 
-from pymc.sampling.external.base import ExternalSampler
+from pymc.sampling.external.base import NUTSExternalSampler
 from pymc.util import RandomState
 
 
-class JAXSampler(ExternalSampler):
-    nuts_sampler = None  # Should be defined by subclass
+class JAXNUTSSampler(NUTSExternalSampler):
+    nuts_sampler: Literal["numpyro", "blackjax"]
 
     def __init__(
         self,
-        vars=None,
         model=None,
         postprocessing_backend: Literal["cpu", "gpu"] | None = None,
         chain_method: Literal["parallel", "vectorized"] = "parallel",
@@ -33,7 +32,7 @@ class JAXSampler(ExternalSampler):
         keep_untransformed: bool = False,
         nuts_kwargs: dict | None = None,
     ):
-        super().__init__(vars, model)
+        super().__init__(model)
         self.postprocessing_backend = postprocessing_backend
         self.chain_method = chain_method
         self.jitter = jitter
@@ -53,7 +52,6 @@ class JAXSampler(ExternalSampler):
         idata_kwargs: dict | None = None,
         compute_convergence_checks: bool = True,
         target_accept: float = 0.8,
-        nuts_sampler,
         **kwargs,
     ) -> InferenceData:
         from pymc.sampling.jax import sample_jax_nuts
@@ -80,9 +78,9 @@ class JAXSampler(ExternalSampler):
         )
 
 
-class Numpyro(JAXSampler):
+class Numpyro(JAXNUTSSampler):
     nuts_sampler = "numpyro"
 
 
-class Blackjax(JAXSampler):
+class Blackjax(JAXNUTSSampler):
     nuts_sampler = "blackjax"
