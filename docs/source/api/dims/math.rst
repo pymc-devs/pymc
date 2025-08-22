@@ -28,17 +28,17 @@ Example
 
     import numpy as np
     import pymc as pm
-    
+
     coords = {"time": np.arange(10), "feature": ["a", "b", "c"]}
     with pm.Model(coords=coords):
         x = pm.Normal("x", mu=0, sigma=1, dims=("time", "feature"))
-        
+
         # Method-based selection and operations
-        x_subset = x.isel(time=slice(0, 5))  # First 5 timesteps
-        x_mean = x_subset.mean(dim="feature")  # Average across features
-        
+        x_subset = x.isel(time=slice(0, 5))
+        x_mean = x_subset.mean(dim="feature")
+
         # Dot product using method syntax
         y = pm.Normal("y", mu=0, sigma=1, dims="feature")
-        dot_result = x.dot(y, dim="feature")  # Shape: (time,)
+        dot_result = x.dot(y, dim="feature")
 
 For a complete list of available methods, see the :class:`~pytensor.xtensor.type.XTensorVariable` API documentation.
