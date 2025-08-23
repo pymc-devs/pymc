@@ -63,12 +63,13 @@ class BaseHMCState(StepMethodState):
     adapt_step_size: bool
     Emax: float
     iter_count: int
-    step_size: np.ndarray
+    step_size: np.ndarray | float
     step_adapt: StepSizeState
     target_accept: float
     tune: bool
     potential: PotentialState
     _num_divs_sample: int
+    divergences: int
 
 
 class BaseHMC(GradientSharedStep):
