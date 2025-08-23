@@ -98,7 +98,7 @@ class Latent(Base):
 
     Examples
     --------
-    .. code:: python
+    .. code-block:: python
 
         # A one dimensional column vector of inputs.
         X = np.linspace(0, 1, 10)[:, None]
@@ -420,7 +420,7 @@ class Marginal(Base):
 
     Examples
     --------
-    .. code:: python
+    .. code-block:: python
 
         # A one dimensional column vector of inputs.
         X = np.linspace(0, 1, 10)[:, None]
@@ -691,7 +691,7 @@ class MarginalApprox(Marginal):
 
     Examples
     --------
-    .. code:: python
+    .. code-block:: python
 
         # A one dimensional column vector of inputs.
         X = np.linspace(0, 1, 10)[:, None]
@@ -931,7 +931,7 @@ class LatentKron(Base):
 
     Examples
     --------
-    .. code:: python
+    .. code-block:: python
 
         # One dimensional column vectors of inputs
         X1 = np.linspace(0, 1, 10)[:, None]
@@ -1034,7 +1034,7 @@ class LatentKron(Base):
         1, and 4, respectively, then `Xnew` must have 7 columns and a
         covariance between the prediction points
 
-        .. code:: python
+        .. code-block:: python
 
             cov_func(Xnew) = cov_func1(Xnew[:, :2]) * cov_func1(Xnew[:, 2:3]) * cov_func1(Xnew[:, 3:])
 
@@ -1086,13 +1086,13 @@ class MarginalKron(Base):
 
     Examples
     --------
-    .. code:: python
+    .. code-block:: python
 
         # One dimensional column vectors of inputs
         X1 = np.linspace(0, 1, 10)[:, None]
         X2 = np.linspace(0, 2, 5)[:, None]
         Xs = [X1, X2]
-        y = np.random.randn(len(X1)*len(X2))  # toy data
+        y = np.random.randn(len(X1) * len(X2))  # toy data
         with pm.Model() as model:
             # Specify the covariance functions for each Xi
             cov_func1 = pm.gp.cov.ExpQuad(1, ls=0.1)  # Must accept X1 without error
@@ -1234,7 +1234,7 @@ class MarginalKron(Base):
         1, and 4, respectively, then `Xnew` must have 7 columns and a
         covariance between the prediction points
 
-        .. code:: python
+        .. code-block:: python
 
             cov_func(Xnew) = cov_func1(Xnew[:, :2]) * cov_func1(Xnew[:, 2:3]) * cov_func1(Xnew[:, 3:])
 

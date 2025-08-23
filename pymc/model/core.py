@@ -2204,7 +2204,7 @@ def Deterministic(name, var, model=None, dims=None):
     Indeed, PyMC allows for arbitrary combinations of random variables, for
     example in the case of a logistic regression
 
-    .. code:: python
+    .. code-block:: python
 
         with pm.Model():
             alpha = pm.Normal("alpha", 0, 1)
@@ -2218,7 +2218,7 @@ def Deterministic(name, var, model=None, dims=None):
     ``p`` is important and one would like to track its value in the sampling
     trace, then one can use a deterministic node:
 
-    .. code:: python
+    .. code-block:: python
 
         with pm.Model():
             alpha = pm.Normal("alpha", 0, 1)
@@ -2294,7 +2294,7 @@ def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariabl
     The statement ``pm.math.log(pm.math.switch(constraint, 0, 1))`` adds either 0 or -inf to the model logp,
     depending on whether the constraint is met. During sampling, any proposals where ``x`` is negative will be rejected.
 
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
 
@@ -2308,7 +2308,7 @@ def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariabl
     Instead, with a soft constraint like ``pm.math.log(pm.math.switch(constraint, 1, 0.5))``,
     the sampler will be less likely, but not forbidden, from accepting negative values for `x`.
 
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
 
@@ -2316,33 +2316,35 @@ def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariabl
             x = pm.Normal("x", mu=0, sigma=1)
 
             constraint = x >= 0
-            potential = pm.Potential("x_constraint", pm.math.log(pm.math.switch(constraint, 1.0, 0.5)))
+            potential = pm.Potential(
+                "x_constraint", pm.math.log(pm.math.switch(constraint, 1.0, 0.5))
+            )
 
     A Potential term can depend on multiple variables.
     In the following example, the ``soft_sum_constraint`` potential encourages ``x`` and ``y`` to have a small sum.
     The more the sum deviates from zero, the more negative the penalty value of ``(-((x + y)**2))``.
 
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
 
         with pm.Model() as model:
             x = pm.Normal("x", mu=0, sigma=10)
             y = pm.Normal("y", mu=0, sigma=10)
-            soft_sum_constraint = pm.Potential("soft_sum_constraint", -((x + y)**2))
+            soft_sum_constraint = pm.Potential("soft_sum_constraint", -((x + y) ** 2))
 
     A Potential can be used to define a specific prior term.
     The following example imposes a power law prior on `max_items`, under the form ``log(1/max_items)``,
     which penalizes very large values of `max_items`.
 
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
 
         with pm.Model() as model:
             # p(max_items) = 1 / max_items
             max_items = pm.Uniform("max_items", lower=1, upper=100)
-            pm.Potential("power_prior", pm.math.log(1/max_items))
+            pm.Potential("power_prior", pm.math.log(1 / max_items))
 
             n_items = pm.Uniform("n_items", lower=1, upper=max_items, observed=60)
 
@@ -2350,12 +2352,14 @@ def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariabl
     In the following example, a normal likelihood term is added to fixed data.
     The same result would be obtained by using an observed `Normal` variable.
 
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
 
+
         def normal_logp(value, mu, sigma):
             return -0.5 * ((value - mu) / sigma) ** 2 - pm.math.log(sigma)
+
 
         with pm.Model() as model:
             mu = pm.Normal("x")
