@@ -24,7 +24,7 @@ import scipy.sparse as sps
 from pytensor import scan, shared
 from pytensor.compile import UnusedInputError
 from pytensor.compile.builders import OpFromGraph
-from pytensor.graph.basic import Variable, equal_computations
+from pytensor.graph.basic import Variable, ancestors, equal_computations, get_var_by_name
 from pytensor.tensor.subtensor import AdvancedIncSubtensor
 
 import pymc as pm
@@ -36,6 +36,7 @@ from pymc.exceptions import NotConstantValueError
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import (
     PointFunc,
+    clone_while_sharing_some_variables,
     collect_default_updates,
     compile,
     constant_fold,
@@ -785,3 +786,24 @@ def test_pickle_point_func():
     np.testing.assert_allclose(
         point_f_unpickled({"y": [3], "x": [2]}), point_f({"y": [3], "x": [2]})
     )
+
+
+def test_clone_while_sharing_some_variables():
+    with pm.Model() as model:
+        x = pm.Normal("x")
+        d = pm.Data("d", np.array([1, 2, 3]))
+        obs = pm.Data("obs", np.ones_like(d.get_value()))
+        y = pm.Deterministic("y", x * d)
+        z = pm.Gamma("z", mu=pt.exp(y), sigma=pt.exp(y) * 0.1, observed=obs)
+
+    kept_variables = [*model.free_RVs, *model.data_vars]
+    d_replace = pt.zeros_like(d.get_value())
+    d_replace.name = "d"
+    z_clone = clone_while_sharing_some_variables([z], kept_variables, {d: d_replace})[0]
+    assert z_clone is not z
+    cloned_ancestors = list(ancestors([z_clone]))
+    for kept_var in [x, obs]:
+        assert kept_var in cloned_ancestors
+    for different_var in [d, y]:
+        assert different_var not in cloned_ancestors
+    assert np.all(get_var_by_name([z_clone], "d")[0].eval() == 0)

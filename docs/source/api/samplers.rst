@@ -15,6 +15,7 @@ This submodule contains functions for MCMC and forward sampling.
    draw
    compute_deterministics
    vectorize_over_posterior
+   loop_over_posterior
    init_nuts
    sampling.jax.sample_blackjax_nuts
    sampling.jax.sample_numpyro_nuts
