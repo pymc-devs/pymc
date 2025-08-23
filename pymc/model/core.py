@@ -67,7 +67,6 @@ from pymc.pytensorf import (
 )
 from pymc.util import (
     UNSET,
-    VarName,
     WithMemoization,
     _UnsetType,
     get_transformed_name,
@@ -1945,7 +1944,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def to_graphviz(
         self,
         *,
-        var_names: Iterable[VarName] | None = None,
+        var_names: Iterable[str] | None = None,
         formatting: str = "plain",
         save: str | None = None,
         figsize: tuple[int, int] | None = None,
@@ -2149,7 +2148,7 @@ def compile_fn(
     )
 
 
-def Point(*args, filter_model_vars=False, **kwargs) -> dict[VarName, np.ndarray]:
+def Point(*args, filter_model_vars=False, **kwargs) -> dict[str, np.ndarray]:
     """Build a point.
 
     Uses same args as dict() does.
