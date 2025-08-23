@@ -108,6 +108,8 @@ class NDArray(base.BaseTrace):
         samples = self.samples
         draw_idx = self.draw_idx
         for varname, value in zip(self.varnames, self.fn(*point.values())):
+            print(f"DEBUG: draw_idx={draw_idx}, max_index={samples[varname].shape[0]}")
+            print(f"DEBUG: samples shape = {samples[varname].shape}")
             samples[varname][draw_idx] = value
 
         if sampler_stats is not None:
