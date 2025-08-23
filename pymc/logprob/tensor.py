@@ -33,20 +33,23 @@
 #   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
+import typing
 
 from pathlib import Path
 
 from pytensor import tensor as pt
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.npy_2_compat import normalize_axis_index
 from pytensor.tensor import TensorVariable
-from pytensor.tensor.basic import Join, MakeVector
+from pytensor.tensor.basic import Join, MakeVector, Split
 from pytensor.tensor.elemwise import DimShuffle, Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import (
     local_dimshuffle_rv_lift,
 )
 
+from pymc.exceptions import NotConstantValueError
 from pymc.logprob.abstract import (
     MeasurableOp,
     ValuedRV,
@@ -70,7 +73,7 @@ from pymc.pytensorf import constant_fold
 
 
 class MeasurableMakeVector(MeasurableOp, MakeVector):
-    """A placeholder used to specify a log-likelihood for a cumsum sub-graph."""
+    """A placeholder used to specify a log-likelihood for a make_vector sub-graph."""
 
 
 @_logprob.register(MeasurableMakeVector)
@@ -181,6 +184,64 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
     assert isinstance(measurable_stack, TensorVariable)
 
     return [measurable_stack]
+
+
+class MeasurableSplit(MeasurableOp, Split):
+    """A placeholder used to specify a log-likelihood for a split sub-graph."""
+
+
+@node_rewriter([Split])
+def find_measurable_splits(fgraph, node) -> list[TensorVariable] | None:
+    if isinstance(node.op, MeasurableOp):
+        return None
+
+    x, axis, splits = node.inputs
+    if not filter_measurable_variables([x]):
+        return None
+
+    return MeasurableSplit(node.op.len_splits).make_node(x, axis, splits).outputs
+
+
+@_logprob.register(MeasurableSplit)
+def logprob_split(op: MeasurableSplit, values, x, axis, splits, **kwargs):
+    """Compute the log-likelihood graph for a `MeasurableSplit`."""
+    if len(values) != op.len_splits:
+        # TODO: Don't rewrite the split in the first place if not all parts are linked to value variables
+        # This also allows handling some cases where not all splits are used
+        raise ValueError("Split logp requires the number of values to match the number of splits")
+
+    # Reverse the effects of split on the value variable
+    join_value = pt.join(axis, *values)
+
+    join_logp = _logprob_helper(x, join_value)
+
+    reduced_dims = join_value.ndim - join_logp.ndim
+
+    if reduced_dims:
+        # This happens for multivariate distributions
+        try:
+            [constant_axis] = constant_fold([axis])
+        except NotConstantValueError:
+            raise NotImplementedError("Cannot split multivariate logp with non-constant axis")
+
+        constant_axis = normalize_axis_index(constant_axis, join_value.ndim)  # type: ignore[arg-type, assignment]
+        if constant_axis >= join_logp.ndim:
+            # If the axis is over a dimension that was reduced in the logp (multivariate logp),
+            # We cannot split it into distinct entries. The mapping between values-densities breaks.
+            # We return the weighted logp by the split sizes. This is a good solution as any?
+            split_weights = splits / pt.sum(splits)
+            return [join_logp * split_weights[i] for i in range(typing.cast(int, op.len_splits))]
+        else:
+            # Otherwise we can split the logp as the split were over batched dimensions
+            # We just need to be sure to use the positive axis index
+            axis = constant_axis
+
+    return pt.split(
+        join_logp,
+        splits_size=splits,
+        n_splits=op.len_splits,
+        axis=axis,
+    )
 
 
 class MeasurableDimShuffle(MeasurableOp, DimShuffle):
@@ -305,6 +366,13 @@ measurable_ir_rewrites_db.register(
 early_measurable_ir_rewrites_db.register(
     "find_measurable_stacks",
     find_measurable_stacks,
+    "basic",
+    "tensor",
+)
+
+measurable_ir_rewrites_db.register(
+    "find_measurable_splits",
+    find_measurable_splits,
     "basic",
     "tensor",
 )
