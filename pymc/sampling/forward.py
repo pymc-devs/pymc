@@ -607,8 +607,8 @@ def sample_posterior_predictive(
 
         import pymc as pm
 
-        with pm.Model(coords_mutable={"trial": [0, 1, 2]}) as model:
-            x = pm.MutableData("x", [-1, 0, 1], dims=["trial"])
+        with pm.Model(coords={"trial": [0, 1, 2]}) as model:
+            x = pm.Data("x", [-1, 0, 1], dims=["trial"])
             beta = pm.Normal("beta")
             noise = pm.HalfNormal("noise")
             y = pm.Normal("y", mu=x * beta, sigma=noise, observed=[-2, 0, 3], dims=["trial"])
@@ -634,8 +634,8 @@ def sample_posterior_predictive(
 
     .. code-block:: python
 
-        with pm.Model(coords_mutable={"trial": [3, 4]}) as predictions_model:
-            x = pm.MutableData("x", [-2, 2], dims=["trial"])
+        with pm.Model(coords={"trial": [3, 4]}) as predictions_model:
+            x = pm.Data("x", [-2, 2], dims=["trial"])
             beta = pm.Normal("beta")
             noise = pm.HalfNormal("noise")
             y = pm.Normal("y", mu=x * beta, sigma=noise, dims=["trial"])
@@ -651,8 +651,8 @@ def sample_posterior_predictive(
 
     .. code-block:: python
 
-        with pm.Model(coords_mutable={"trial": [3, 4]}) as distinct_predictions_model:
-            x = pm.MutableData("x", [-2, 2], dims=["trial"])
+        with pm.Model(coords={"trial": [3, 4]}) as distinct_predictions_model:
+            x = pm.Data("x", [-2, 2], dims=["trial"])
             beta = pm.Normal("beta")
             noise = pm.HalfNormal("noise")
             extra_noise = pm.HalfNormal("extra_noise", sigma=noise)
