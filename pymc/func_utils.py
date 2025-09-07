@@ -14,16 +14,6 @@
 
 import warnings
 
-from sys import modules
-
-try:
-    from preliz.unidimensional import maxent
-except ImportError as e:
-    raise ImportError(
-        "The `find_constrained_prior` function requires the `preliz` package. "
-        "You can install it via `pip install preliz` or `conda install -c conda-forge preliz`."
-    ) from e
-
 import pymc as pm
 
 __all__ = ["find_constrained_prior"]
@@ -112,6 +102,15 @@ def find_constrained_prior(
             mass=0.9,
         )
     """
+    try:
+        from preliz import distributions
+        from preliz.unidimensional import maxent
+    except ImportError as e:
+        raise ImportError(
+            "The `find_constrained_prior` function requires the `preliz` package. "
+            "You can install it via `pip install preliz` or `conda install -c conda-forge preliz`."
+        ) from e
+
     if fixed_params is None:
         fixed_params = {}
 
@@ -139,7 +138,7 @@ def find_constrained_prior(
             stacklevel=2,
         )
 
-    dist = getattr(modules["preliz.distributions"], distribution.__name__)
+    dist = getattr(distributions, distribution.__name__)
 
     return maxent(
         dist(**fixed_params), lower=lower, upper=upper, mass=mass, fixed_stat=fixed_stat, plot=False
