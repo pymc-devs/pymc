@@ -33,7 +33,7 @@ from rich.progress import (
 
 import pymc
 
-from pymc.backends.arviz import dict_to_dataset, to_inference_data
+from pymc.backends.arviz import dict_to_dataset_drop_incompatible_coords, to_inference_data
 from pymc.backends.base import MultiTrace
 from pymc.distributions.custom import CustomDistRV, CustomSymbolicDistRV
 from pymc.distributions.distribution import _support_point
@@ -264,7 +264,7 @@ def _save_sample_stats(
             else:
                 sample_stats_dict[stat] = np.array(value)
 
-        sample_stats = dict_to_dataset(
+        sample_stats = dict_to_dataset_drop_incompatible_coords(
             sample_stats_dict,
             attrs=sample_settings_dict,
             library=pymc,
