@@ -851,7 +851,16 @@ class TestDatasetToPointList:
         assert pl[0]["x"].dtype == np.float64
 
 
-def test_incompatible_coordinate_lengths():
+@pytest.mark.parametrize(
+    "sampling_method",
+    (
+        lambda: pm.sample_prior_predictive(draws=1).prior,
+        lambda: pm.sample(
+            chains=1, draws=1, tune=0, compute_convergence_checks=False, progressbar=False
+        ).posterior,
+    ),
+)
+def test_incompatible_coordinate_lengths(sampling_method):
     with pm.Model(coords={"a": [-1, -2, -3]}) as m:
         x = pm.Normal("x", dims="a")
         y = pm.Deterministic("y", x[1:], dims=("a",))
@@ -862,7 +871,7 @@ def test_incompatible_coordinate_lengths():
                 "Incompatible coordinate length of 3 for dimension 'a' of variable 'y'"
             ),
         ):
-            prior = pm.sample_prior_predictive(draws=1).prior.squeeze(("chain", "draw"))
+            prior = sampling_method().squeeze(("chain", "draw"))
         assert prior.x.dims == prior.y.dims == ("a",)
         assert prior.x.shape == prior.y.shape == (3,)
         assert np.isnan(prior.y.values[-1])
@@ -870,6 +879,6 @@ def test_incompatible_coordinate_lengths():
 
         pm.backends.arviz.RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = True
         with pytest.raises(ValueError):
-            pm.sample_prior_predictive(draws=1)
+            sampling_method()
 
         pm.backends.arviz.RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = False

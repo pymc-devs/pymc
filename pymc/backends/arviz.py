@@ -61,7 +61,7 @@ Var = Any
 def dict_to_dataset_drop_incompatible_coords(vars_dict, *args, dims, coords, **kwargs):
     safe_coords = coords
 
-    if not RAISE_ON_INCOMPATIBLE_COORD_LENGTHS:
+    if dims and not RAISE_ON_INCOMPATIBLE_COORD_LENGTHS:
         coords_lengths = {k: len(v) for k, v in coords.items()}
         for var_name, var in vars_dict.items():
             # Iterate in reversed because of chain/draw batch dimensions
@@ -70,9 +70,8 @@ def dict_to_dataset_drop_incompatible_coords(vars_dict, *args, dims, coords, **k
                 if (coord_length is not None) and (coord_length != dim_length):
                     warnings.warn(
                         f"Incompatible coordinate length of {coord_length} for dimension '{dim}' of variable '{var_name}'.\n"
-                        "This usually happens when a sliced or concatenated variable is wrapped as a `pymc.dims.Deterministic`."
-                        "The originate coordinates for this dim will not be included in the returned dataset for any of the variables. "
-                        "Instead they will default to `np.arange(var_length)` and the shorter variables will be right-padded with nan.\n"
+                        "The original coordinates for this dim will not be included in the returned dataset for any of the variables. "
+                        "Instead they will default to `np.arange`, possibly right-padded with nan.\n"
                         "To make this warning into an error set `pymc.backends.arviz.RAISE_ON_INCOMPATIBLE_COORD_LENGTHS` to `True`",
                         UserWarning,
                     )
@@ -303,14 +302,14 @@ class InferenceDataConverter:
                     self.posterior_trace.get_values(var_name, combine=False, squeeze=False)
                 )
         return (
-            dict_to_dataset(
+            dict_to_dataset_drop_incompatible_coords(
                 data,
                 library=pymc,
                 coords=self.coords,
                 dims=self.dims,
                 attrs=self.attrs,
             ),
-            dict_to_dataset(
+            dict_to_dataset_drop_incompatible_coords(
                 data_warmup,
                 library=pymc,
                 coords=self.coords,
@@ -345,14 +344,14 @@ class InferenceDataConverter:
                 )
 
         return (
-            dict_to_dataset(
+            dict_to_dataset_drop_incompatible_coords(
                 data,
                 library=pymc,
                 dims=None,
                 coords=self.coords,
                 attrs=self.attrs,
             ),
-            dict_to_dataset(
+            dict_to_dataset_drop_incompatible_coords(
                 data_warmup,
                 library=pymc,
                 dims=None,
@@ -366,7 +365,7 @@ class InferenceDataConverter:
         """Convert posterior_predictive samples to xarray."""
         data = self.posterior_predictive
         dims = {var_name: self.sample_dims + self.dims.get(var_name, []) for var_name in data}
-        return dict_to_dataset(
+        return dict_to_dataset_drop_incompatible_coords(
             data, library=pymc, coords=self.coords, dims=dims, default_dims=self.sample_dims
         )
 
@@ -375,7 +374,7 @@ class InferenceDataConverter:
         """Convert predictions (out of sample predictions) to xarray."""
         data = self.predictions
         dims = {var_name: self.sample_dims + self.dims.get(var_name, []) for var_name in data}
-        return dict_to_dataset(
+        return dict_to_dataset_drop_incompatible_coords(
             data, library=pymc, coords=self.coords, dims=dims, default_dims=self.sample_dims
         )
 
@@ -412,7 +411,7 @@ class InferenceDataConverter:
         """Convert observed data to xarray."""
         if self.predictions:
             return None
-        return dict_to_dataset(
+        return dict_to_dataset_drop_incompatible_coords(
             self.observations,
             library=pymc,
             coords=self.coords,
@@ -427,7 +426,7 @@ class InferenceDataConverter:
         if not constant_data:
             return None
 
-        xarray_dataset = dict_to_dataset(
+        xarray_dataset = dict_to_dataset_drop_incompatible_coords(
             constant_data,
             library=pymc,
             coords=self.coords,
@@ -705,7 +704,7 @@ def apply_function_over_dataset(
             )
         )
 
-    return dict_to_dataset(
+    return dict_to_dataset_drop_incompatible_coords(
         out_trace,
         library=pymc,
         dims=dims,
