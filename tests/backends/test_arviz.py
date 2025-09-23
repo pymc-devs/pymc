@@ -213,15 +213,16 @@ class TestDataPyMC:
 
     def test_posterior_predictive_keep_size(self, data, chains, draws, eight_schools_params):
         with data.model:
-            posterior_predictive = pm.sample_posterior_predictive(
-                data.obj, return_inferencedata=False
-            )
-            inference_data = to_inference_data(
-                trace=data.obj,
-                posterior_predictive=posterior_predictive,
-                coords={"school": np.arange(eight_schools_params["J"])},
-                dims={"theta": ["school"], "eta": ["school"]},
-            )
+            with pytest.warns(UserWarning, match="Incompatible coordinate length"):
+                posterior_predictive = pm.sample_posterior_predictive(
+                    data.obj, return_inferencedata=False
+                )
+                inference_data = to_inference_data(
+                    trace=data.obj,
+                    posterior_predictive=posterior_predictive,
+                    coords={"school": np.arange(eight_schools_params["J"])},
+                    dims={"theta": ["school"], "eta": ["school"]},
+                )
 
         shape = inference_data.posterior_predictive.obs.shape
         assert np.all(
@@ -236,7 +237,8 @@ class TestDataPyMC:
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 idata = pm.sample(tune=5, draws=draws, chains=2, return_inferencedata=True)
             thinned_idata = idata.sel(draw=slice(None, None, thin_by))
-            idata.extend(pm.sample_posterior_predictive(thinned_idata))
+            with pytest.warns(UserWarning, match="Incompatible coordinate length"):
+                idata.extend(pm.sample_posterior_predictive(thinned_idata))
         test_dict = {
             "posterior": ["mu", "tau", "eta", "theta"],
             "sample_stats": ["diverging", "lp", "~log_likelihood"],
