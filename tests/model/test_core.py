@@ -33,7 +33,7 @@ import scipy.sparse as sps
 import scipy.stats as st
 
 from pytensor.graph import graph_inputs
-from pytensor.graph.basic import get_var_by_name
+from pytensor.graph.traversal import get_var_by_name
 from pytensor.raise_op import Assert
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorConstant

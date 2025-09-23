@@ -34,7 +34,8 @@ import scipy.sparse as sps
 
 from pytensor.compile import DeepCopyOp, Function, ProfileStats, get_mode
 from pytensor.compile.sharedvalue import SharedVariable
-from pytensor.graph.basic import Constant, Variable, ancestors, graph_inputs
+from pytensor.graph.basic import Constant, Variable
+from pytensor.graph.traversal import ancestors, graph_inputs
 from pytensor.tensor import as_tensor
 from pytensor.tensor.math import variadic_add
 from pytensor.tensor.random.op import RandomVariable

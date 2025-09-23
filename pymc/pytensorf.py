@@ -32,11 +32,10 @@ from pytensor.graph.basic import (
     Variable,
     clone_get_equiv,
     equal_computations,
-    graph_inputs,
-    walk,
 )
 from pytensor.graph.fg import FunctionGraph, Output
 from pytensor.graph.op import HasInnerGraph
+from pytensor.graph.traversal import graph_inputs, walk
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
 from pytensor.tensor.basic import _as_tensor_variable

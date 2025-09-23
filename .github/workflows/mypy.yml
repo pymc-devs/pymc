@@ -19,7 +19,7 @@ jobs:
         with:
           environment-file: conda-envs/environment-test.yml
           create-args: >-
-            python=3.10
+            python=3.11
           environment-name: pymc-test
           init-shell: bash
           cache-environment: true

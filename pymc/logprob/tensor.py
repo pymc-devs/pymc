@@ -37,10 +37,10 @@ import typing
 
 from pathlib import Path
 
+from numpy.lib.array_utils import normalize_axis_index
 from pytensor import tensor as pt
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.npy_2_compat import normalize_axis_index
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.basic import Join, MakeVector, Split
 from pytensor.tensor.elemwise import DimShuffle, Elemwise

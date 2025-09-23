@@ -37,11 +37,7 @@
 from collections.abc import Sequence
 
 from pytensor.compile.mode import optdb
-from pytensor.graph.basic import (
-    Variable,
-    ancestors,
-    truncated_graph_inputs,
-)
+from pytensor.graph.basic import Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import (
@@ -56,6 +52,7 @@ from pytensor.graph.rewriting.db import (
     SequenceDB,
     TopoDB,
 )
+from pytensor.graph.traversal import ancestors, truncated_graph_inputs
 from pytensor.tensor.basic import Alloc
 from pytensor.tensor.elemwise import DimShuffle, Elemwise
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
