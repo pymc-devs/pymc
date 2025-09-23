@@ -1011,10 +1011,12 @@ def mock_sample(draws: int = 10, **kwargs):
     model = kwargs.get("model", None)
     draws = kwargs.get("draws", draws)
     n_chains = kwargs.get("chains", 1)
+    var_names = kwargs.get("var_names", None)
     idata: InferenceData = pm.sample_prior_predictive(
         model=model,
         random_seed=random_seed,
         draws=draws,
+        var_names=var_names,
     )
 
     idata.add_groups(
