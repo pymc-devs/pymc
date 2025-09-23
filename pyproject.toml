@@ -16,7 +16,7 @@ versionfile_build = "pymc/_version.py"
 tag_prefix = "v"
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 no_implicit_optional = false
 strict_optional = true
 warn_redundant_casts = false
@@ -30,7 +30,7 @@ warn_unused_ignores = false
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py311"
 extend-exclude = ["_version.py"]
 
 [tool.ruff.format]

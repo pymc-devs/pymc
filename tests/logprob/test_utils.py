@@ -41,7 +41,8 @@ import pytest
 from pytensor import function
 from pytensor import tensor as pt
 from pytensor.compile import get_default_mode
-from pytensor.graph.basic import ancestors, equal_computations
+from pytensor.graph.basic import equal_computations
+from pytensor.graph.traversal import ancestors
 from pytensor.tensor.random.basic import NormalRV
 from pytensor.tensor.random.op import RandomVariable
 

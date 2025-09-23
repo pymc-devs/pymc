@@ -21,7 +21,8 @@ from os import path
 from typing import Any, cast
 
 from pytensor import function
-from pytensor.graph.basic import Variable, ancestors, walk
+from pytensor.graph.basic import Variable
+from pytensor.graph.traversal import ancestors, walk
 from pytensor.tensor.shape import Shape
 
 from pymc.model.core import modelcontext

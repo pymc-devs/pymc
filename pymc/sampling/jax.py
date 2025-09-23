@@ -31,9 +31,9 @@ from arviz.data.base import make_attrs
 from jax.lax import scan
 from numpy.typing import ArrayLike
 from pytensor.compile import SharedVariable, mode
-from pytensor.graph.basic import graph_inputs
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.replace import clone_replace
+from pytensor.graph.traversal import graph_inputs
 from pytensor.link.jax.dispatch import jax_funcify
 from pytensor.raise_op import Assert
 from pytensor.tensor import TensorVariable

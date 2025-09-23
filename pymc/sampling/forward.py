@@ -37,11 +37,9 @@ from pytensor.graph.basic import (
     Apply,
     Constant,
     Variable,
-    ancestors,
-    general_toposort,
-    walk,
 )
 from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.traversal import ancestors, general_toposort, walk
 from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
 from pytensor.tensor.variable import TensorConstant, TensorVariable
