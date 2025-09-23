@@ -58,10 +58,10 @@ RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = False
 Var = Any
 
 
-def dict_to_dataset_drop_incompatible_coords(vars_dict, *args, dims, coords, **kwargs):
+def dict_to_dataset_drop_incompatible_coords(vars_dict, *args, dims=None, coords=None, **kwargs):
     safe_coords = coords
 
-    if dims and not RAISE_ON_INCOMPATIBLE_COORD_LENGTHS:
+    if dims and coords is not None and not RAISE_ON_INCOMPATIBLE_COORD_LENGTHS:
         coords_lengths = {k: len(v) for k, v in coords.items()}
         for var_name, var in vars_dict.items():
             # Iterate in reversed because of chain/draw batch dimensions

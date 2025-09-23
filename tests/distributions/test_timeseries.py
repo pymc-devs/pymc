@@ -951,7 +951,8 @@ class TestEulerMaruyama:
         with model:
             trace = sample(chains=1, random_seed=numpy_rng)
 
-        ppc = sample_posterior_predictive(trace, model=model, random_seed=numpy_rng)
+        with pytest.warns(UserWarning):
+            ppc = sample_posterior_predictive(trace, model=model, random_seed=numpy_rng)
 
         p95 = [2.5, 97.5]
         lo, hi = np.percentile(trace.posterior["lamh"], p95, axis=[0, 1])
