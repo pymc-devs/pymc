@@ -705,6 +705,13 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=4, float32=3),
         )
 
+    def test_inverse_gamma_icdf(self):
+        check_icdf(
+            pm.InverseGamma,
+            {"alpha": Rplusbig, "beta": Rplusbig},
+            lambda q, alpha, beta: st.invgamma.ppf(q, alpha, scale=beta),
+        )
+
     def test_pareto(self):
         check_logp(
             pm.Pareto,
