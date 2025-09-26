@@ -12,6 +12,7 @@ myst-nb<=1.0.0
 numdifftools>=0.9.40
 numpy>=1.25.0
 numpydoc
+numpyro
 pandas>=0.24.0
 polyagamma
 pre-commit>=2.8.0
