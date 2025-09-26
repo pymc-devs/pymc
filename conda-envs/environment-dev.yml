@@ -25,6 +25,7 @@ dependencies:
 - jupyter-sphinx
 - myst-nb<=1.0.0
 - numpydoc
+- numpyro
 - pre-commit>=2.8.0
 - polyagamma
 - pytest-cov>=2.5
