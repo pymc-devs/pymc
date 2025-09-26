@@ -3707,6 +3707,7 @@ class LogitNormal(UnitContinuous):
         res = check_icdf_value(res, value)
         return check_icdf_parameters(res, sigma > 0, msg="sigma > 0")
 
+
 def _interpolated_argcdf(p, pdf, cdf, x):
     if np.prod(cdf.shape[:-1]) != 1 or np.prod(pdf.shape[:-1]) != 1 or np.prod(x.shape[:-1]) != 1:
         raise NotImplementedError(
