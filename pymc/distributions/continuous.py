@@ -2530,9 +2530,9 @@ class InverseGamma(PositiveContinuous):
             beta > 0,
             msg="alpha > 0, beta > 0",
         )
-    
+
     def icdf(value, alpha, beta):
-        res = 1 / Gamma.icdf(value=1-value, alpha=alpha, scale=1 / beta)
+        res = 1 / Gamma.icdf(value=1 - value, alpha=alpha, scale=1 / beta)
         res = check_icdf_value(res, value)
         return check_icdf_parameters(
             res,
