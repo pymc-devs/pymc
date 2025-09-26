@@ -3700,6 +3700,12 @@ class LogitNormal(UnitContinuous):
             msg="tau > 0",
         )
 
+    def icdf(value, mu, sigma):
+        # F^{-1}_{LogitNormal}(q) = sigmoid( mu + sigma * Phi^{-1}(q) )
+        # where Phi^{-1} is the Normal icdf
+        res = invlogit(icdf(Normal.dist(mu, sigma), value))
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(res, sigma > 0, msg="sigma > 0")
 
 def _interpolated_argcdf(p, pdf, cdf, x):
     if np.prod(cdf.shape[:-1]) != 1 or np.prod(pdf.shape[:-1]) != 1 or np.prod(x.shape[:-1]) != 1:
