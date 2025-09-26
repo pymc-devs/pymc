@@ -59,7 +59,6 @@ from pymc.distributions.continuous import (
     HalfFlatRV,
     HalfStudentTRV,
     KumaraswamyRV,
-    LogitNormalRV,
     MoyalRV,
     PolyaGammaRV,
     RiceRV,
@@ -288,11 +287,6 @@ def lkj_corr_mean(op, rv, rng, size, *args):
 @_mean.register(LogisticRV)
 def logistic_mean(op, rv, rng, size, mu, s):
     return maybe_resize(pt.broadcast_arrays(mu, s)[0], size)
-
-
-@_mean.register(LogitNormalRV)
-def logitnormal_mean(op, rv, rng, size, mu, sigma):
-    raise UndefinedMomentException("The mean of the LogitNormal distribution is undefined")
 
 
 @_mean.register(LogNormalRV)
