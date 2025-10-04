@@ -60,7 +60,7 @@ def test_dirichlet():
         reference_model.compile_logp()(reference_model.initial_point()),
     )
 
-    
+
 def test_mvnormal():
     coords = {"a": range(3), "b": range(2)}
     mu = pt.as_tensor([1, 2])

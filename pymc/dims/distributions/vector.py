@@ -117,7 +117,7 @@ class Dirichlet(VectorDimDistribution):
     def dist(cls, a, *, core_dims=None, **kwargs):
         return super().dist([a], core_dims=core_dims, **kwargs)
 
-    
+
 class MvNormal(VectorDimDistribution):
     """Multivariate Normal distribution.
 

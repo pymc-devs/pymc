@@ -59,7 +59,7 @@ class SimplexTransform(DimTransform):
 
     def __init__(self, dim: str):
         self.core_dim = dim
-    
+
     def forward(self, value, *inputs):
         log_value = ptx.math.log(value)
         N = value.sizes[self.core_dim].astype(value.dtype)
