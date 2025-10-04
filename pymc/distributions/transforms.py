@@ -33,10 +33,15 @@ from pymc.logprob.transforms import (
 
 __all__ = [
     "Chain",
+    "Chain",
+    "CholeskyCorr",
+    "CholeskyCovPacked",
     "CholeskyCovPacked",
     "Interval",
     "Transform",
     "ZeroSumTransform",
+    "ZeroSumTransform",
+    "circular",
     "circular",
     "log",
     "log_exp_m1",
@@ -44,11 +49,6 @@ __all__ = [
     "ordered",
     "simplex",
     "sum_to_1",
-    "circular",
-    "CholeskyCorr",
-    "CholeskyCovPacked",
-    "Chain",
-    "ZeroSumTransform",
 ]
 
 
@@ -142,85 +142,48 @@ class SumTo1(Transform):
 
 class CholeskyCorr(Transform):
     """
-    Transforms unconstrained real numbers to the off-diagonal elements of
-    a Cholesky decomposition of a correlation matrix.
+    Map an unconstrained real vector the Cholesky factor of a correlation matrix.
 
-    This ensures that the resulting correlation matrix is positive definite.
+    For detailed description of the transform, [1]_ and [2]_.
 
-    #### Mathematical Details
+    This is typically used with :class:`~pymc.distributions.LKJCholeskyCov` to place priors on correlation structures.
+    For a related transform that additionally rescales diagonal elements (working on covariance factors), see
+    :class:`~pymc.distributions.transforms.CholeskyCovPacked`.
 
-    This bijector provides a change of variables from unconstrained reals to a
-    parameterization of the CholeskyLKJ distribution. The CholeskyLKJ distribution
-    [1] is a distribution on the set of Cholesky factors of positive definite
-    correlation matrices. The CholeskyLKJ probability density function is
-    obtained from the LKJ density on n x n matrices as follows:
+    Adapted from the implementation in TensorFlow Probability [3]_:
+    https://github.com/tensorflow/probability/blob/94f592af363e13391858b48f785eb4c250912904/tensorflow_probability/python/bijectors/correlation_cholesky.py#L31
 
-        1 = int p(A | eta) dA
-        = int Z(eta) * det(A) ** (eta - 1) dA
-        = int Z(eta) L_ii ** {(n - i - 1) + 2 * (eta - 1)} ^dL_ij (0 <= i < j < n)
+    Examples
+    --------
 
-    where Z(eta) is the normalizer; the matrix L is the Cholesky factor of the
-    correlation matrix A; and ^dL_ij denotes the wedge product (or differential)
-    of the strictly lower triangular entries of L. The entries L_ij are
-    constrained such that each entry lies in [-1, 1] and the norm of each row is
-    1. The norm includes the diagonal; which is not included in the wedge product.
-    To preserve uniqueness, we further specify that the diagonal entries are
-    positive.
+    .. code-block:: python
 
-    The image of unconstrained reals under the `CorrelationCholesky` bijector is
-    the set of correlation matrices which are positive definite. A [correlation
-    matrix](https://en.wikipedia.org/wiki/Correlation_and_dependence#Correlation_matrices)
-    can be characterized as a symmetric positive semidefinite matrix with 1s on
-    the main diagonal.
+        import numpy as np
+        import pytensor.tensor as pt
+        from pymc.distributions.transforms import CholeskyCorr
 
-    For a lower triangular matrix `L` to be a valid Cholesky-factor of a positive
-    definite correlation matrix, it is necessary and sufficient that each row of
-    `L` have unit Euclidean norm [1]. To see this, observe that if `L_i` is the
-    `i`th row of the Cholesky factor corresponding to the correlation matrix `R`,
-    then the `i`th diagonal entry of `R` satisfies:
+        unconstrained_vector = pt.as_tensor(np.array([2.0, 2.0, 1.0]))
+        n = unconstrained_vector.shape[0]
+        tr = CholeskyCorr(n)
+        constrained_matrix = tr.forward(unconstrained_vector)
+        y.eval()
+        array(
+            [[1.0, 0.0, 0.0], [0.70710678, 0.70710678, 0.0], [0.66666667, 0.66666667, 0.33333333]]
+        )
 
-        1 = R_i,i = L_i . L_i = ||L_i||^2
-
-    where '.' is the dot product of vectors and `||...||` denotes the Euclidean
-    norm.
-
-    Furthermore, observe that `R_i,j` lies in the interval `[-1, 1]`. By the
-    Cauchy-Schwarz inequality:
-
-        |R_i,j| = |L_i . L_j| <= ||L_i|| ||L_j|| = 1
-
-    This is a consequence of the fact that `R` is symmetric positive definite with
-    1s on the main diagonal.
-
-    We choose the mapping from x in `R^{m}` to `R^{n^2}` where `m` is the
-    `(n - 1)`th triangular number; i.e. `m = 1 + 2 + ... + (n - 1)`.
-
-        L_ij = x_i,j / s_i (for i < j)
-        L_ii = 1 / s_i
-
-    where s_i = sqrt(1 + x_i,0^2 + x_i,1^2 + ... + x_(i,i-1)^2). We can check that
-    the required constraints on the image are satisfied.
-
-    #### Examples
-
-    ```python
-    transform = CholeskyCorr(n=3)
-    x = pt.as_tensor_variable([0.0, 0.0, 0.0])
-    y = transform.forward(x).eval()
-    # y will be the off-diagonal elements of the Cholesky factor
-
-    x_reconstructed = transform.backward(y).eval()
-    # x_reconstructed should closely match the original x
-    ```
-
-    #### References
-    - [Stan Manual. Section 24.2. Cholesky LKJ Correlation Distribution.](https://mc-stan.org/docs/2_18/functions-reference/cholesky-lkj-correlation-distribution.html)
-    - Lewandowski, D., Kurowicka, D., & Joe, H. (2009). "Generating random correlation matrices based on vines and extended onion method." *Journal of Multivariate Analysis, 100*(5), 1989-2001.
+    References
+    ----------
+    .. [1] Lewandowski, D., Kurowicka, D., & Joe, H. (2009).
+       Generating random correlation matrices based on vines and extended onion method.
+       Journal of Multivariate Analysis, 100(9), 1989–2001.
+    .. [2] Stan Development Team. Stan Functions Reference. Section on LKJ / Cholesky correlation.
+    .. [3] TensorFlow Probability. Correlation Cholesky bijector implementation.
+       https://github.com/tensorflow/probability/
     """
 
     name = "cholesky-corr"
 
-    def __init__(self, n, validate_args=False):
+    def __init__(self, n, upper: bool = False):
         """
         Initialize the CholeskyCorr transform.
 
@@ -228,85 +191,237 @@ class CholeskyCorr(Transform):
         ----------
         n : int
             Size of the correlation matrix.
-        validate_args : bool, default False
-            Whether to validate input arguments.
+        upper: bool, default False
+            If True, transform to an upper triangular matrix. If False, transform to a lower triangular matrix.
         """
         self.n = n
-        self.m = int(n * (n - 1) / 2)  # Number of off-diagonal elements
-        self.tril_r_idxs, self.tril_c_idxs = self._generate_tril_indices()
-        self.triu_r_idxs, self.triu_c_idxs = self._generate_triu_indices()
-        super().__init__(validate_args=validate_args)
+        self.m = (n * (n + 1)) // 2  # Number of triangular elements
+        self.upper = upper
 
-    def _generate_tril_indices(self):
-        row_indices, col_indices = np.tril_indices(self.n, -1)
-        return (row_indices, col_indices)
+        super().__init__()
 
-    def _generate_triu_indices(self):
-        row_indices, col_indices = np.triu_indices(self.n, 1)
-        return (row_indices, col_indices)
-
-    def forward(self, x, *inputs):
+    def _fill_triangular_spiral(
+        self, x_raveled: TensorLike, unit_diag: bool = True
+    ) -> TensorVariable:
         """
-        Forward transform: Unconstrained real numbers to Cholesky factors.
+        Create a triangular matrix from a vector by filling it in a spiral order.
+
+        This code is adapted from the `fill_triangular` function in TensorFlow Probability:
+        https://github.com/tensorflow/probability/blob/a26f4cbe5ce1549767e13798d9bf5032dac4257b/tensorflow_probability/python/math/linalg.py#L925
 
         Parameters
         ----------
-        x : tensor
-            Unconstrained real numbers.
+        x_raveled: TensorLike
+            The input vector to be reshaped into a triangular matrix.
+        unit_diag: bool, default False
+            If True, the diagonal elements are assumed to be 1 and are not filled from the input vector. The input
+            vector is expected to have length m = n * (n - 1) / 2 in this case, containing only the off-diagonal
+            elements.
 
         Returns
         -------
-        tensor
-            Transformed Cholesky factors.
+        triangular_matrix: TensorVariable
+            The resulting triangular matrix.
+
+        Notes
+        -----
+        By "spiral order", it is meant that the matrix is filled by jumping between the top and bottom rows, flipping
+        the fill order from left-to-right to right-to-left on each jump. For example, to fill a 4x4 matrix with
+        `order=True`, the matrix is filled in the following order:
+
+        - Row 0, left to right
+        - Row 3, right to left
+        - Row 1, left to right
+        - Row 2, right to left
+
+        When `upper` if False, everything is reversed:
+
+        - Row 3, right to left
+        - Row 0, left to right
+        - Row 2, right to left
+        - Row 1, left to right
+
+        After filling, entries not part of the triangular matrix are set to zero.
+
+        Examples
+        --------
+
+        .. code-block:: python
+
+            import numpy as np
+            from pymc.distributions.transforms import CholeskyCorr
+
+            tr = CholeskyCorr(n=4)
+            x_unconstrained = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+            tr._fill_triangular_spiral(x_unconstrained, upper=False).eval()
+
+            # Out:
+            # array([[ 5,  0,  0,  0],
+            #        [ 9, 10,  0,  0],
+            #        [ 8,  7,  6,  0],
+            #        [ 4,  3,  2,  1]])
         """
-        # Initialize a zero matrix
-        chol = pt.zeros((self.n, self.n), dtype=x.dtype)
+        x_raveled = pt.as_tensor(x_raveled)
+        *batch_shape, _ = x_raveled.shape
+        n, m = self.n, self.m
+        upper = self.upper
 
-        # Assign the unconstrained values to the lower triangular part
-        chol = pt.set_subtensor(chol[self.tril_r_idxs, self.tril_c_idxs], x)
+        if unit_diag:
+            m -= n
+            n -= 1
 
-        # Normalize each row to have unit L2 norm
-        row_norms = pt.sqrt(pt.sum(chol**2, axis=1, keepdims=True))
-        chol = chol / row_norms
+        tail = x_raveled[..., n:]
 
-        return chol[self.tril_r_idxs, self.tril_c_idxs]
+        if upper:
+            xc = pt.concatenate([x_raveled, pt.flip(tail, -1)])
+        else:
+            xc = pt.concatenate([tail, pt.flip(x_raveled, -1)])
 
-    def backward(self, y, *inputs):
+        y = pt.reshape(xc, (*batch_shape, n, n))
+        return pt.triu(y) if upper else pt.tril(y)
+
+    def _inverse_fill_triangular_spiral(
+        self, x: TensorLike, unit_diag: bool = True
+    ) -> TensorVariable:
         """
-        Backward transform: Cholesky factors to unconstrained real numbers.
+        Inverse operation of `_fill_triangular_spiral`.
+
+        Extracts the elements of a triangular matrix in spiral order and returns them as a vector. For details about
+        what is meant by "spiral order", see the docstring of `_fill_triangular_spiral`.
 
         Parameters
         ----------
-        y : tensor
-            Cholesky factors.
+        x: TensorVariable
+            The input triangular matrix.
+        unit_diag: bool
+            If True, the diagonal elements are assumed to be 1 and are not included in the output vector.
 
         Returns
         -------
-        tensor
+        x_raveled: TensorVariable
+            The resulting vector containing the elements of the triangular matrix in spiral order.
+        """
+        x = pt.as_tensor(x)
+        *batch_shape, _, _ = x.shape
+        n, m = self.n, self.m
+
+        if unit_diag:
+            m -= n
+            n -= 1
+
+        upper = self.upper
+
+        if upper:
+            initial_elements = x[..., 0, :]
+            triangular_portion = x[..., 1:, :]
+        else:
+            initial_elements = pt.flip(x[..., -1, :], axis=-1)
+            triangular_portion = x[..., :-1, :]
+
+        rotated_triangular_portion = pt.flip(triangular_portion, axis=(-1, -2))
+        consolidated_matrix = triangular_portion + rotated_triangular_portion
+        end_sequence = pt.reshape(
+            consolidated_matrix,
+            (*batch_shape, pt.cast(n * (n - 1), "int64")),
+        )
+        y = pt.concatenate([initial_elements, end_sequence[..., : m - n]], axis=-1)
+
+        return y
+
+    def forward(self, chol_corr_matrix: TensorLike, *inputs):
+        """
+        Transform the Cholesky factor of a correlation matrix into a real-valued vector.
+
+        Parameters
+        ----------
+        chol_corr_matrix : TensorVariable
+            Cholesky factor of a correlation matrix R = L @ L.T of shape (n,n).
+        inputs:
+            Additional input values. Not used; included for signature compatibility with other transformations.
+
+        Returns
+        -------
+        unconstrained_vector: TensorVariable
+            Real-valued vector of length m = n * (n - 1) / 2.
+        """
+        chol_corr_matrix = pt.as_tensor(chol_corr_matrix)
+        n = self.n
+
+        # Extract the reciprocal of the row norms from the diagonal.
+        diag = pt.diagonal(chol_corr_matrix, axis1=-2, axis2=-1)[..., None]
+
+        # Set the diagonal to 0s.
+        diag_idx = pt.arange(n)
+        chol_corr_matrix = chol_corr_matrix[..., diag_idx, diag_idx].set(0)
+
+        # Multiply with the norm (or divide by its reciprocal) to recover the
+        # unconstrained reals in the (strictly) lower triangular part.
+        unconstrained_matrix = chol_corr_matrix / diag
+
+        # Remove the first row and last column before inverting the fill_triangular_spiral
+        # transformation.
+        return self._inverse_fill_triangular_spiral(
+            unconstrained_matrix[..., 1:, :-1], unit_diag=True
+        )
+
+    def backward(self, unconstrained_vector: TensorLike, *inputs):
+        """
+        Transform a real-valued vector of length m = n * (n - 1) / 2 into the Cholesky factor of a correlation matrix.
+
+        Parameters
+        ----------
+        unconstrained_vector : TensorLike
+            Real-valued vector of length m = n * (n - 1) / 2.
+        inputs:
+            Additional input values. Not used; included for signature compatibility with other transformations.
+
+        Returns
+        -------
+        unconstrained_vector: TensorVariable
             Unconstrained real numbers.
         """
-        # Reconstruct the full Cholesky matrix
-        chol = pt.zeros((self.n, self.n), dtype=y.dtype)
-        chol = pt.set_subtensor(chol[self.triu_r_idxs, self.triu_c_idxs], y)
-        chol = chol + pt.transpose(chol) + pt.eye(self.n, dtype=y.dtype)
+        unconstrained_vector = pt.as_tensor(unconstrained_vector)
+        chol_corr_matrix = self._fill_triangular_spiral(unconstrained_vector, unit_diag=True)
 
-        # Perform Cholesky decomposition
-        chol = pt.linalg.cholesky(chol)
+        # Pad zeros on the top row and right column.
+        ndim = chol_corr_matrix.ndim
+        paddings = [*([(0, 0)] * (ndim - 2)), [1, 0], [0, 1]]
+        chol_corr_matrix = pt.pad(chol_corr_matrix, paddings)
 
-        # Extract the unconstrained parameters by normalizing
-        row_norms = pt.sqrt(pt.sum(chol**2, axis=1))
-        unconstrained = chol / row_norms[:, None]
+        diag_idx = pt.arange(self.n)
+        chol_corr_matrix = chol_corr_matrix[..., diag_idx, diag_idx].set(1)
 
-        return unconstrained[self.tril_r_idxs, self.tril_c_idxs]
+        # Normalize each row to have Euclidean (L2) norm 1.
+        chol_corr_matrix /= pt.linalg.norm(chol_corr_matrix, axis=-1, ord=2)[..., None]
 
-    def log_jac_det(self, y, *inputs):
+        return chol_corr_matrix
+
+    def log_jac_det(self, unconstrained_vector: TensorLike, *inputs) -> TensorVariable:
         """
         Compute the log determinant of the Jacobian.
 
-        The Jacobian determinant for normalization is the product of row norms.
+        Parameters
+        ----------
+        unconstrained_vector : TensorLike
+            Real-valued vector of length m = n * (n - 1) / 2.
+        inputs:
+            Additional input values. Not used; included for signature compatibility with other transformations.
+
+        Returns
+        -------
+        log_jac_det: TensorVariable
+            Log determinant of the Jacobian of the transformation.
         """
-        row_norms = pt.sqrt(pt.sum(y**2, axis=1))
-        return -pt.sum(pt.log(row_norms), axis=-1)
+        chol_corr_matrix = self.backward(unconstrained_vector, *inputs)
+        n = self.n
+        input_dtype = unconstrained_vector.dtype
+
+        # TODO: tfp has a negative sign here; verify if it is needed
+        return pt.sum(
+            pt.arange(2, 2 + n, dtype=input_dtype)
+            * pt.log(pt.diagonal(chol_corr_matrix, axis1=-2, axis2=-1)),
+            axis=-1,
+        )
 
 
 class CholeskyCovPacked(Transform):

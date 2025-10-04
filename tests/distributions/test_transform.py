@@ -24,7 +24,6 @@ from pytensor.tensor.variable import TensorConstant
 import pymc as pm
 import pymc.distributions.transforms as tr
 
-from pymc.distributions.transforms import CholeskyCorr
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import Transform
 from pymc.pytensorf import floatX, jacobian
@@ -668,153 +667,88 @@ def test_invalid_jacobian_broadcast_raises():
             m.logp(jacobian=jacobian_val)
 
 
-def test_lkjcorr_transform_round_trip():
-    """
-    Test that applying the forward transform followed by the backward transform
-    retrieves the original unconstrained parameters, and that sampled matrices are positive definite.
-    """
-    with pm.Model() as model:
-        rho = pm.LKJCorr("rho", n=3, eta=2)
+class TestLJKCholeskyCorr:
+    def _get_test_values(self):
+        x_unconstrained = np.array([2.0, 2.0, 1.0])
+        x_constrained = np.array(
+            [[1.0, 0.0, 0.0], [0.70710678, 0.70710678, 0.0], [0.66666667, 0.66666667, 0.33333333]]
+        )
+        return x_unconstrained, x_constrained
 
-    trace = pm.sample(
-        100, tune=100, chains=1, cores=1, progressbar=False, return_inferencedata=False
-    )
+    @pytest.mark.parametrize("upper", [True, False], ids=["upper", "lower"])
+    def test_fill_triangular_spiral(self, upper):
+        x_unconstrained = np.array([1, 2, 3, 4, 5, 6])
 
-    # Extract the sampled correlation matrices
-    rho_samples = trace["rho"]
-    num_samples = rho_samples.shape[0]
+        if upper:
+            x_constrained = np.array(
+                [
+                    [1, 2, 3],
+                    [0, 5, 6],
+                    [0, 0, 4],
+                ]
+            )
+        else:
+            x_constrained = np.array(
+                [
+                    [4, 0, 0],
+                    [6, 5, 0],
+                    [3, 2, 1],
+                ]
+            )
 
-    for i in range(num_samples):
-        sample_matrix = rho_samples[i]
+        transform = tr.CholeskyCorr(n=3, upper=upper)
 
-        # Check if the sampled matrix is positive definite
-        try:
-            np.linalg.cholesky(sample_matrix)
-        except np.linalg.LinAlgError:
-            pytest.fail(f"Sampled correlation matrix at index {i} is not positive definite.")
+        np.testing.assert_allclose(
+            transform._fill_triangular_spiral(x_unconstrained, unit_diag=False).eval(),
+            x_constrained,
+        )
 
-        # Perform round-trip transform: forward and then backward
-        transform = CholeskyCorr(n=3)
-        unconstrained = transform.forward(pt.as_tensor_variable(sample_matrix)).eval()
-        reconstructed = transform.backward(unconstrained).eval()
+        np.testing.assert_allclose(
+            transform._inverse_fill_triangular_spiral(x_constrained, unit_diag=False).eval(),
+            x_unconstrained,
+        )
 
-        # Assert that the original and reconstructed unconstrained parameters are close
-        assert_allclose(sample_matrix, reconstructed, atol=1e-6)
+    def test_forward(self):
+        transform = tr.CholeskyCorr(n=3, upper=False)
+        x_unconstrained, x_constrained = self._get_test_values()
 
+        np.testing.assert_allclose(
+            transform.forward(x_constrained).eval(),
+            x_unconstrained,
+            atol=1e-6,
+        )
 
-def test_lkjcorr_log_jac_det():
-    """
-    Verify that the computed log determinant of the Jacobian matches the expected value
-    obtained from PyTensor's automatic differentiation with a non-trivial input.
-    """
-    n = 3
-    transform = CholeskyCorr(n=n)
+    def test_backward(self):
+        transform = tr.CholeskyCorr(n=3, upper=False)
+        x_unconstrained, x_constrained = self._get_test_values()
 
-    # Create a non-trivial sample unconstrained vector
-    x = np.random.randn(int(n * (n - 1) / 2)).astype(pytensor.config.floatX)
-    x_tensor = pt.as_tensor_variable(x)
+        np.testing.assert_allclose(
+            transform.backward(x_unconstrained).eval(),
+            x_constrained,
+            atol=1e-6,
+        )
 
-    # Perform forward transform to obtain Cholesky factors
-    y = transform.forward(x_tensor)
+    def test_transform_round_trip(self):
+        transform = tr.CholeskyCorr(n=3, upper=False)
+        x_unconstrained, x_constrained = self._get_test_values()
 
-    # Compute the log determinant using the transform's method
-    computed_log_jac_det = transform.log_jac_det(y).eval()
+        constrained_reconstructed = transform.backward(transform.forward(x_constrained)).eval()
+        unconstrained_reconstructed = transform.forward(transform.backward(x_unconstrained)).eval()
 
-    # Define the backward function
-    backward = transform.backward
+        np.testing.assert_allclose(x_unconstrained, unconstrained_reconstructed, atol=1e-6)
+        np.testing.assert_allclose(x_constrained, constrained_reconstructed, atol=1e-6)
 
-    # Compute the Jacobian matrix using PyTensor's automatic differentiation
-    backward_transformed = backward(y)
-    jacobian_matrix = pt.jacobian(backward_transformed, y)
+    def test_log_jac_det(self):
+        transform = tr.CholeskyCorr(n=3, upper=False)
+        x_unconstrained, x_constrained = self._get_test_values()
 
-    # Compile the function to compute the Jacobian matrix
-    jacobian_func = pytensor.function([], jacobian_matrix)
-    jacobian_val = jacobian_func()
+        computed_log_jac_det = transform.log_jac_det(x_unconstrained).eval()
 
-    # Compute the log determinant of the Jacobian matrix
-    actual_log_jac_det = np.log(np.abs(np.linalg.det(jacobian_val)))
+        x = pt.tensor("x", shape=(3,))
+        lower_tri_vec = transform.backward(x)[pt.tril_indices(x.shape[0], k=-1)].ravel()
+        jac = pt.jacobian(lower_tri_vec, x, vectorize=True)
+        _, autodiff_log_jac_det = pt.linalg.slogdet(jac)
 
-    # Compare the two
-    assert_allclose(computed_log_jac_det, actual_log_jac_det, atol=1e-6)
-
-
-@pytest.mark.parametrize("n", [2, 4, 5])
-def test_lkjcorr_transform_various_sizes(n):
-    """
-    Test the CholeskyCorr transform with various sizes of correlation matrices.
-    """
-    transform = CholeskyCorr(n=n)
-    unconstrained_size = int(n * (n - 1) / 2)
-
-    # Generate random unconstrained real numbers
-    x = np.random.randn(unconstrained_size).astype(pytensor.config.floatX)
-    x_tensor = pt.as_tensor_variable(x)
-
-    # Perform forward transform
-    y = transform.forward(x_tensor).eval()
-
-    # Perform backward transform
-    reconstructed = transform.backward(y).eval()
-
-    # Assert that the original and reconstructed unconstrained parameters are close
-    assert_allclose(x, reconstructed, atol=1e-6)
-
-
-def test_lkjcorr_invalid_n():
-    """
-    Test that initializing CholeskyCorr with invalid 'n' values raises appropriate errors.
-    """
-    with pytest.raises(ValueError):
-        # 'n' must be an integer greater than 1
-        CholeskyCorr(n=1)
-
-    with pytest.raises(TypeError):
-        # 'n' must be an integer
-        CholeskyCorr(n="three")
-
-
-def test_lkjcorr_positive_definite():
-    """
-    Ensure that all sampled correlation matrices are positive definite.
-    """
-    with pm.Model() as model:
-        rho = pm.LKJCorr("rho", n=4, eta=2)
-
-    trace = pm.sample(
-        100, tune=100, chains=1, cores=1, progressbar=False, return_inferencedata=False
-    )
-
-    # Extract the sampled correlation matrices
-    rho_samples = trace["rho"]
-    num_samples = rho_samples.shape[0]
-
-    for i in range(num_samples):
-        sample_matrix = rho_samples[i]
-
-        # Check if the sampled matrix is positive definite
-        try:
-            np.linalg.cholesky(sample_matrix)
-        except np.linalg.LinAlgError:
-            pytest.fail(f"Sampled correlation matrix at index {i} is not positive definite.")
-
-
-def test_lkjcorr_round_trip_various_sizes():
-    """
-    Perform round-trip transformation tests for various sizes of correlation matrices.
-    """
-    for n in [2, 3, 4]:
-        transform = CholeskyCorr(n=n)
-        unconstrained_size = int(n * (n - 1) / 2)
-
-        # Generate random unconstrained real numbers
-        x = np.random.randn(unconstrained_size).astype(pytensor.config.floatX)
-        x_tensor = pt.as_tensor_variable(x)
-
-        # Perform forward transform
-        y = transform.forward(x_tensor).eval()
-
-        # Perform backward transform
-        reconstructed = transform.backward(y).eval()
-
-        # Assert that the original and reconstructed unconstrained parameters are close
-        assert_allclose(x, reconstructed, atol=1e-6)
+        np.testing.assert_allclose(
+            autodiff_log_jac_det.eval({x: x_unconstrained}), computed_log_jac_det, atol=1e-6
+        )
