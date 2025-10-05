@@ -33,6 +33,7 @@ from pytensor.tensor import (
     get_underlying_scalar_constant_value,
     sigmoid,
 )
+from pytensor.tensor.blockwise import Blockwise
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.linalg import cholesky, det, eigh, solve_triangular, trace
@@ -923,10 +924,8 @@ def posdef(AA):
 class PosDefMatrix(Op):
     """Check if input is positive definite. Input should be a square matrix."""
 
-    # Properties attribute
     __props__ = ()
-
-    # Compulsory if itypes and otypes are not defined
+    gufunc_signature = "(m,m)->()"
 
     def make_node(self, x):
         x = pt.as_tensor_variable(x)
@@ -934,7 +933,6 @@ class PosDefMatrix(Op):
         o = TensorType(dtype="bool", shape=[])()
         return Apply(self, [x], [o])
 
-    # Python implementation:
     def perform(self, node, inputs, outputs):
         (x,) = inputs
         (z,) = outputs
@@ -955,7 +953,7 @@ class PosDefMatrix(Op):
         return "MatrixIsPositiveDefinite"
 
 
-matrix_pos_def = PosDefMatrix()
+matrix_pos_def = Blockwise(PosDefMatrix())
 
 
 class WishartRV(RandomVariable):
