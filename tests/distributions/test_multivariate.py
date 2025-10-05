@@ -1312,17 +1312,17 @@ class TestMoments:
     @pytest.mark.parametrize(
         "n, eta, size, expected",
         [
-            (3, 1, None, np.zeros(3)),
-            (5, 1, None, np.zeros(10)),
-            pytest.param(3, 1, 1, np.zeros((1, 3))),
-            pytest.param(5, 1, (2, 3), np.zeros((2, 3, 10))),
+            (3, 1, None, np.eye(3)),
+            (5, 1, None, np.eye(5)),
+            (3, 1, (1,), np.broadcast_to(np.eye(3), (1, 3, 3))),
+            (5, 1, (2, 3), np.broadcast_to(np.eye(5), (2, 3, 5, 5))),
         ],
+        ids=["n=3", "n=5", "batch_1", "batch_2"],
     )
     def test_lkjcorr_support_point(self, n, eta, size, expected):
         with pm.Model() as model:
-            pm.LKJCorr("x", n=n, eta=eta, size=size, return_matrix=False)
-        # LKJCorr logp is only implemented for vector values (size=None)
-        assert_support_point_is_expected(model, expected, check_finite_logp=size is None)
+            pm.LKJCorr("x", n=n, eta=eta, size=size)
+        assert_support_point_is_expected(model, expected, check_finite_logp=True)
 
     @pytest.mark.parametrize(
         "n, eta, size, expected",
@@ -1466,13 +1466,12 @@ class TestMvNormalMisc:
         self,
     ):
         with pm.Model() as model:
-            corr = pm.LKJCorr("corr", n=3, eta=2, return_matrix=True)
-            pm.Deterministic("corr_mat", corr)
-            mv = pm.MvNormal("mv", 0.0, cov=corr, size=4)
+            corr_mat = pm.LKJCorr("corr_mat", n=3, eta=2)
+            mv = pm.MvNormal("mv", 0.0, cov=corr_mat, size=4)
             prior = pm.sample_prior_predictive(draws=10, return_inferencedata=False)
 
         assert prior["corr_mat"].shape == (10, 3, 3)  # square
-        assert (prior["corr_mat"][:, [0, 1, 2], [0, 1, 2]] == 1.0).all()  # 1.0 on diagonal
+        assert np.allclose(prior["corr_mat"][:, [0, 1, 2], [0, 1, 2]], 1.0)  # 1.0 on diagonal
         assert (prior["corr_mat"] == prior["corr_mat"].transpose(0, 2, 1)).all()  # symmetric
         assert (
             prior["corr_mat"].max() <= 1.0 and prior["corr_mat"].min() >= -1.0

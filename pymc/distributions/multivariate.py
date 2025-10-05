@@ -34,7 +34,6 @@ from pytensor.tensor import (
     sigmoid,
 )
 from pytensor.tensor.blockwise import Blockwise
-from pytensor.tensor.einsum import _delta
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.linalg import cholesky, det, eigh, solve_triangular, trace
@@ -1213,12 +1212,8 @@ class _LKJCholeskyCovRV(SymbolicRandomVariable):
         D = sd_dist.type(name="D")  # Make sd_dist opaque to OpFromGraph
         size = D.shape[:-1]
 
-        # We flatten the size to make operations easier, and then rebuild it
-        flat_size = pt.prod(size, dtype="int64")
-
-        next_rng, C = LKJCorrRV._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
-        D_matrix = D.reshape((flat_size, n))
-        C *= D_matrix[..., :, None] * D_matrix[..., None, :]
+        next_rng, C = LKJCorrRV._random_corr_matrix(rng=rng, n=n, eta=eta, size=size)
+        C *= D[..., :, None] * D[..., None, :]
 
         tril_idx = pt.tril_indices(n, k=0)
         samples = pt.linalg.cholesky(C)[..., tril_idx[0], tril_idx[1]]
@@ -1520,53 +1515,52 @@ class LKJCorrRV(SymbolicRandomVariable):
 
     @classmethod
     def rv_op(cls, n: int, eta, *, rng=None, size=None):
-        # We flatten the size to make operations easier, and then rebuild it
+        # HACK: normalize_size_param doesn't handle size=() properly
+        if not size:
+            size = None
+
         n = pt.as_tensor(n, ndim=0, dtype=int)
         eta = pt.as_tensor(eta, ndim=0)
         rng = normalize_rng_param(rng)
         size = normalize_size_param(size)
 
-        if rv_size_is_none(size):
-            flat_size = 1
-        else:
-            flat_size = pt.prod(size, dtype="int64")
+        next_rng, C = cls._random_corr_matrix(rng=rng, n=n, eta=eta, size=size)
 
-        next_rng, C = cls._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
-        C = C[0] if rv_size_is_none(size) else C.reshape((*size, n, n))
-
-        return cls(
-            inputs=[rng, size, n, eta],
-            outputs=[next_rng, C],
-        )(rng, size, n, eta)
+        return cls(inputs=[rng, size, n, eta], outputs=[next_rng, C])(rng, size, n, eta)
 
     @classmethod
     def _random_corr_matrix(
-        cls, rng: Variable, n: int, eta: TensorVariable, flat_size: TensorVariable
+        cls, rng: Variable, n: int, eta: TensorVariable, size: TensorVariable
     ) -> tuple[Variable, TensorVariable]:
         # original implementation in R see:
         # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
+        size = () if rv_size_is_none(size) else size
 
         beta = eta - 1.0 + n / 2.0
-        next_rng, beta_rvs = pt.random.beta(
-            alpha=beta, beta=beta, size=flat_size, rng=rng
-        ).owner.outputs
+        next_rng, beta_rvs = pt.random.beta(alpha=beta, beta=beta, size=size, rng=rng).owner.outputs
         r12 = 2.0 * beta_rvs - 1.0
-        P = pt.full((flat_size, n, n), pt.eye(n))
+
+        P = pt.full((*size, n, n), pt.eye(n))
         P = P[..., 0, 1].set(r12)
         P = P[..., 1, 1].set(pt.sqrt(1.0 - r12**2))
         n = get_underlying_scalar_constant_value(n)
 
         for mp1 in range(2, n):
             beta -= 0.5
+
             next_rng, y = pt.random.beta(
-                alpha=mp1 / 2.0, beta=beta, size=flat_size, rng=next_rng
+                alpha=mp1 / 2.0, beta=beta, size=size, rng=next_rng
             ).owner.outputs
+
             next_rng, z = pt.random.normal(
-                loc=0, scale=1, size=(flat_size, mp1), rng=next_rng
+                loc=0, scale=1, size=(*size, mp1), rng=next_rng
             ).owner.outputs
-            z = z / pt.sqrt(pt.einsum("ij,ij->i", z, z.copy()))[..., np.newaxis]
+
+            ein_sig_z = "i, i->" if z.ndim == 1 else "...ij, ...ij->...i"
+            z = z / pt.sqrt(pt.einsum(ein_sig_z, z, z.copy()))[..., np.newaxis]
             P = P[..., 0:mp1, mp1].set(pt.sqrt(y[..., np.newaxis]) * z)
             P = P[..., mp1, mp1].set(pt.sqrt(1.0 - y))
+
         C = pt.einsum("...ji,...jk->...ik", P, P.copy())
 
         return next_rng, C
@@ -1584,10 +1578,7 @@ class _LKJCorr(BoundedContinuous):
 
     @staticmethod
     def support_point(rv: TensorVariable, *args):
-        ndim = rv.ndim
-
-        # Batched identity matrix
-        return _delta(rv.shape, (ndim - 2, ndim - 1)).astype(int)
+        return pt.broadcast_to(pt.eye(rv.shape[-1]), rv.shape)
 
     @staticmethod
     def logp(value: TensorVariable, n, eta):
