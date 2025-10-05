@@ -74,7 +74,7 @@ from pymc.distributions.shape_utils import (
     to_tuple,
 )
 from pymc.distributions.transforms import (
-    CholeskyCorr,
+    CholeskyCorrTransform,
     Interval,
     ZeroSumTransform,
     _default_transform,
@@ -1652,9 +1652,9 @@ class _LKJCorr(BoundedContinuous):
 
 @_default_transform.register(_LKJCorr)
 def lkjcorr_default_transform(op, rv):
-    _, _, _, n, *_ = rv.owner.inputs
+    rng, shape, n, eta, *_ = rv.owner.inputs = rv.owner.inputs
     n = pt.get_scalar_constant_value(n)  # Safely extract scalar value without eval
-    return CholeskyCorr(n)
+    return CholeskyCorrTransform(n=n, upper=False)
 
 
 class LKJCorr:

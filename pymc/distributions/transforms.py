@@ -34,7 +34,7 @@ from pymc.logprob.transforms import (
 __all__ = [
     "Chain",
     "Chain",
-    "CholeskyCorr",
+    "CholeskyCorrTransform",
     "CholeskyCovPacked",
     "CholeskyCovPacked",
     "Interval",
@@ -140,7 +140,7 @@ class SumTo1(Transform):
         return pt.sum(y, axis=-1)
 
 
-class CholeskyCorr(Transform):
+class CholeskyCorrTransform(Transform):
     """
     Map an unconstrained real vector the Cholesky factor of a correlation matrix.
 
@@ -181,7 +181,7 @@ class CholeskyCorr(Transform):
        https://github.com/tensorflow/probability/
     """
 
-    name = "cholesky-corr"
+    name = "cholesky_corr"
 
     def __init__(self, n, upper: bool = False):
         """
@@ -267,15 +267,14 @@ class CholeskyCorr(Transform):
         upper = self.upper
 
         if unit_diag:
-            m -= n
-            n -= 1
+            n = n - 1
 
         tail = x_raveled[..., n:]
 
         if upper:
-            xc = pt.concatenate([x_raveled, pt.flip(tail, -1)])
+            xc = pt.concatenate([x_raveled, pt.flip(tail, -1)], axis=-1)
         else:
-            xc = pt.concatenate([tail, pt.flip(x_raveled, -1)])
+            xc = pt.concatenate([tail, pt.flip(x_raveled, -1)], axis=-1)
 
         y = pt.reshape(xc, (*batch_shape, n, n))
         return pt.triu(y) if upper else pt.tril(y)
@@ -306,8 +305,8 @@ class CholeskyCorr(Transform):
         n, m = self.n, self.m
 
         if unit_diag:
-            m -= n
-            n -= 1
+            m = m - n
+            n = n - 1
 
         upper = self.upper
 
