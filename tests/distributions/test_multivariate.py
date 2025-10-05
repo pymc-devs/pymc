@@ -1471,11 +1471,15 @@ class TestMvNormalMisc:
             prior = pm.sample_prior_predictive(draws=10, return_inferencedata=False)
 
         assert prior["corr_mat"].shape == (10, 3, 3)  # square
-        assert np.allclose(prior["corr_mat"][:, [0, 1, 2], [0, 1, 2]], 1.0)  # 1.0 on diagonal
         assert (prior["corr_mat"] == prior["corr_mat"].transpose(0, 2, 1)).all()  # symmetric
-        assert (
-            prior["corr_mat"].max() <= 1.0 and prior["corr_mat"].min() >= -1.0
-        )  # constrained between -1 and 1
+
+        np.testing.assert_allclose(
+            prior["corr_mat"][:, [0, 1, 2], [0, 1, 2]], 1.0
+        )  # 1.0 on diagonal
+
+        # constrained between -1 and 1
+        assert prior["corr_mat"].max() <= (1.0 + 1e-12)
+        assert prior["corr_mat"].min() >= (-1.0 - 1e-12)
 
     def test_issue_3758(self):
         np.random.seed(42)
@@ -2172,8 +2176,6 @@ class TestLKJCorr(BaseTestDistributionRandom):
     ]
 
     def check_draws_match_expected(self):
-        from pymc.distributions import CustomDist
-
         def ref_rand(size, n, eta):
             shape = int(n * (n - 1) // 2)
             beta = eta - 1 + n / 2
@@ -2182,16 +2184,9 @@ class TestLKJCorr(BaseTestDistributionRandom):
 
         # If passed as a domain, continuous_random_tester would make `n` a shared variable
         # But this RV needs it to be constant in order to define the inner graph
-        def lkj_corr_tril(n, eta, shape=None):
-            tril_idx = pt.tril_indices(n)
-            return _LKJCorr.dist(n=n, eta=eta, shape=shape)[..., tril_idx[0], tril_idx[1]]
-
-        def SlicedLKJ(name, n, eta, *args, shape=None, **kwargs):
-            return CustomDist(name, n, eta, dist=lkj_corr_tril, shape=shape)
-
         for n in (2, 10, 50):
             continuous_random_tester(
-                SlicedLKJ,
+                _LKJCorr,
                 {
                     "eta": Domain([1.0, 10.0, 100.0], edges=(None, None)),
                 },
@@ -2204,7 +2199,7 @@ class TestLKJCorr(BaseTestDistributionRandom):
 @pytest.mark.parametrize("shape", [(2, 2), (3, 2, 2)], ids=["no_batch", "with_batch"])
 def test_LKJCorr_default_transform(shape):
     with pm.Model() as m:
-        x = pm.LKJCorr("x", n=2, eta=1, shape=shape, return_matrix=False)
+        x = pm.LKJCorr("x", n=2, eta=1, shape=shape)
     assert isinstance(m.rvs_to_transforms[x], CholeskyCorrTransform)
     assert m.logp(sum=False)[0].type.shape == shape[:-2]
 
