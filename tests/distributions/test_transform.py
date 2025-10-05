@@ -667,7 +667,7 @@ def test_invalid_jacobian_broadcast_raises():
             m.logp(jacobian=jacobian_val)
 
 
-class TestLJKCholeskyCorr:
+class TestLJKCholeskyCorrTransform:
     def _get_test_values(self):
         x_unconstrained = np.array([2.0, 2.0, 1.0])
         x_constrained = np.array(
@@ -696,7 +696,7 @@ class TestLJKCholeskyCorr:
                 ]
             )
 
-        transform = tr.CholeskyCorr(n=3, upper=upper)
+        transform = tr.CholeskyCorrTransform(n=3, upper=upper)
 
         np.testing.assert_allclose(
             transform._fill_triangular_spiral(x_unconstrained, unit_diag=False).eval(),
@@ -709,7 +709,7 @@ class TestLJKCholeskyCorr:
         )
 
     def test_forward(self):
-        transform = tr.CholeskyCorr(n=3, upper=False)
+        transform = tr.CholeskyCorrTransform(n=3, upper=False)
         x_unconstrained, x_constrained = self._get_test_values()
 
         np.testing.assert_allclose(
@@ -719,7 +719,7 @@ class TestLJKCholeskyCorr:
         )
 
     def test_backward(self):
-        transform = tr.CholeskyCorr(n=3, upper=False)
+        transform = tr.CholeskyCorrTransform(n=3, upper=False)
         x_unconstrained, x_constrained = self._get_test_values()
 
         np.testing.assert_allclose(
@@ -729,7 +729,7 @@ class TestLJKCholeskyCorr:
         )
 
     def test_transform_round_trip(self):
-        transform = tr.CholeskyCorr(n=3, upper=False)
+        transform = tr.CholeskyCorrTransform(n=3, upper=False)
         x_unconstrained, x_constrained = self._get_test_values()
 
         constrained_reconstructed = transform.backward(transform.forward(x_constrained)).eval()
@@ -739,7 +739,7 @@ class TestLJKCholeskyCorr:
         np.testing.assert_allclose(x_constrained, constrained_reconstructed, atol=1e-6)
 
     def test_log_jac_det(self):
-        transform = tr.CholeskyCorr(n=3, upper=False)
+        transform = tr.CholeskyCorrTransform(n=3, upper=False)
         x_unconstrained, x_constrained = self._get_test_values()
 
         computed_log_jac_det = transform.log_jac_det(x_unconstrained).eval()
