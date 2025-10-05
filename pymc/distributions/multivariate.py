@@ -34,6 +34,7 @@ from pytensor.tensor import (
     sigmoid,
 )
 from pytensor.tensor.blockwise import Blockwise
+from pytensor.tensor.einsum import _delta
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.linalg import cholesky, det, eigh, solve_triangular, trace
@@ -76,7 +77,6 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.distributions.transforms import (
     CholeskyCorrTransform,
-    Interval,
     ZeroSumTransform,
     _default_transform,
 )
@@ -1157,12 +1157,12 @@ def _lkj_normalizing_constant(eta, n):
     if not isinstance(n, int):
         raise NotImplementedError("n must be an integer")
     if eta == 1:
-        result = gammaln(2.0 * pt.arange(1, int((n - 1) / 2) + 1)).sum()
+        result = gammaln(2.0 * pt.arange(1, ((n - 1) / 2) + 1)).sum()
         if n % 2 == 1:
             result += (
                 0.25 * (n**2 - 1) * pt.log(np.pi)
                 - 0.25 * (n - 1) ** 2 * pt.log(2.0)
-                - (n - 1) * gammaln(int((n + 1) / 2))
+                - (n - 1) * gammaln((n + 1) / 2)
             )
         else:
             result += (
@@ -1504,7 +1504,7 @@ class LKJCholeskyCov:
 
 class LKJCorrRV(SymbolicRandomVariable):
     name = "lkjcorr"
-    extended_signature = "[rng],[size],(),()->[rng],(n)"
+    extended_signature = "[rng],[size],(),()->[rng],(n,n)"
     _print_name = ("LKJCorrRV", "\\operatorname{LKJCorrRV}")
 
     def make_node(self, rng, size, n, eta):
@@ -1532,22 +1532,12 @@ class LKJCorrRV(SymbolicRandomVariable):
             flat_size = pt.prod(size, dtype="int64")
 
         next_rng, C = cls._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
-
-        triu_idx = pt.triu_indices(n, k=1)
-        samples = C[..., triu_idx[0], triu_idx[1]]
-
-        if rv_size_is_none(size):
-            samples = samples[0]
-        else:
-            dist_shape = (n * (n - 1)) // 2
-            samples = pt.reshape(samples, (*size, dist_shape))
+        C = C[0] if rv_size_is_none(size) else C.reshape((*size, n, n))
 
         return cls(
             inputs=[rng, size, n, eta],
-            outputs=[next_rng, samples],
+            outputs=[next_rng, C],
         )(rng, size, n, eta)
-
-        return samples
 
     @classmethod
     def _random_corr_matrix(
@@ -1565,6 +1555,7 @@ class LKJCorrRV(SymbolicRandomVariable):
         P = P[..., 0, 1].set(r12)
         P = P[..., 1, 1].set(pt.sqrt(1.0 - r12**2))
         n = get_underlying_scalar_constant_value(n)
+
         for mp1 in range(2, n):
             beta -= 0.5
             next_rng, y = pt.random.beta(
@@ -1577,17 +1568,10 @@ class LKJCorrRV(SymbolicRandomVariable):
             P = P[..., 0:mp1, mp1].set(pt.sqrt(y[..., np.newaxis]) * z)
             P = P[..., mp1, mp1].set(pt.sqrt(1.0 - y))
         C = pt.einsum("...ji,...jk->...ik", P, P.copy())
+
         return next_rng, C
 
 
-class MultivariateIntervalTransform(Interval):
-    name = "interval"
-
-    def log_jac_det(self, *args):
-        return super().log_jac_det(*args).sum(-1)
-
-
-# Returns list of upper triangular values
 class _LKJCorr(BoundedContinuous):
     rv_type = LKJCorrRV
     rv_op = LKJCorrRV.rv_op
@@ -1598,10 +1582,15 @@ class _LKJCorr(BoundedContinuous):
         eta = pt.as_tensor_variable(eta)
         return super().dist([n, eta], **kwargs)
 
-    def support_point(rv, *args):
-        return pt.zeros_like(rv)
+    @staticmethod
+    def support_point(rv: TensorVariable, *args):
+        ndim = rv.ndim
 
-    def logp(value, n, eta):
+        # Batched identity matrix
+        return _delta(rv.shape, (ndim - 2, ndim - 1)).astype(int)
+
+    @staticmethod
+    def logp(value: TensorVariable, n, eta):
         """
         Calculate logp of LKJ distribution at specified value.
 
@@ -1614,31 +1603,20 @@ class _LKJCorr(BoundedContinuous):
         -------
         TensorVariable
         """
-        if value.ndim > 1:
-            raise NotImplementedError("LKJCorr logp is only implemented for vector values (ndim=1)")
-
-        # TODO: PyTensor does not have a `triu_indices`, so we can only work with constant
-        #  n (or else find a different expression)
+        # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
         try:
             n = int(get_underlying_scalar_constant_value(n))
         except NotScalarConstantError:
             raise NotImplementedError("logp only implemented for constant `n`")
 
-        shape = n * (n - 1) // 2
-        tri_index = np.zeros((n, n), dtype="int32")
-        tri_index[np.triu_indices(n, k=1)] = np.arange(shape)
-        tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
-
-        value = pt.take(value, tri_index)
-        value = pt.fill_diagonal(value, 1)
-
-        # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
         try:
             eta = float(get_underlying_scalar_constant_value(eta))
         except NotScalarConstantError:
             raise NotImplementedError("logp only implemented for constant `eta`")
+
         result = _lkj_normalizing_constant(eta, n)
         result += (eta - 1.0) * pt.log(det(value))
+
         return check_parameters(
             result,
             value >= -1,
@@ -1675,10 +1653,6 @@ class LKJCorr:
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
         larger values put more weight on matrices with few correlations.
-    return_matrix : bool, default=False
-        If True, returns the full correlation matrix.
-        False only returns the values of the upper triangular matrix excluding
-        diagonal in a single vector of length n(n-1)/2 for memory efficiency
 
     Notes
     -----
@@ -1693,7 +1667,7 @@ class LKJCorr:
             # Define the vector of fixed standard deviations
             sds = 3 * np.ones(10)
 
-            corr = pm.LKJCorr("corr", eta=4, n=10, return_matrix=True)
+            corr = pm.LKJCorr("corr", eta=4, n=10)
 
             # Define a new MvNormal with the given correlation matrix
             vals = sds * pm.MvNormal("vals", mu=np.zeros(10), cov=corr, shape=10)
@@ -1702,10 +1676,6 @@ class LKJCorr:
             vals_raw = pm.Normal("vals_raw", shape=10)
             chol = pt.linalg.cholesky(corr)
             vals = sds * pt.dot(chol, vals_raw)
-
-            # The matrix is internally still sampled as a upper triangular vector
-            # If you want access to it in matrix form in the trace, add
-            pm.Deterministic("corr_mat", corr)
 
 
     References
@@ -1716,26 +1686,28 @@ class LKJCorr:
         100(9), pp.1989-2001.
     """
 
-    def __new__(cls, name, n, eta, *, return_matrix=False, **kwargs):
-        c_vec = _LKJCorr(name, eta=eta, n=n, **kwargs)
-        if not return_matrix:
-            return c_vec
-        else:
-            return cls.vec_to_corr_mat(c_vec, n)
+    def __new__(cls, name, n, eta, **kwargs):
+        return_matrix = kwargs.pop("return_matrix", None)
+        if return_matrix is not None:
+            warnings.warn(
+                "The `return_matrix` argument is deprecated and has no effect. "
+                "LKJCorr always returns the correlation matrix.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return _LKJCorr(name, eta=eta, n=n, **kwargs)
 
     @classmethod
-    def dist(cls, n, eta, *, return_matrix=False, **kwargs):
-        c_vec = _LKJCorr.dist(eta=eta, n=n, **kwargs)
-        if not return_matrix:
-            return c_vec
-        else:
-            return cls.vec_to_corr_mat(c_vec, n)
-
-    @classmethod
-    def vec_to_corr_mat(cls, vec, n):
-        tri = pt.zeros(pt.concatenate([vec.shape[:-1], (n, n)]))
-        tri = pt.subtensor.set_subtensor(tri[(..., *np.triu_indices(n, 1))], vec)
-        return tri + pt.moveaxis(tri, -2, -1) + pt.diag(pt.ones(n))
+    def dist(cls, n, eta, **kwargs):
+        return_matrix = kwargs.pop("return_matrix", None)
+        if return_matrix is not None:
+            warnings.warn(
+                "The `return_matrix` argument is deprecated and has no effect. "
+                "LKJCorr always returns the correlation matrix.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return _LKJCorr.dist(eta=eta, n=n, **kwargs)
 
 
 class MatrixNormalRV(RandomVariable):

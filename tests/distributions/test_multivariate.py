@@ -35,7 +35,6 @@ import pymc as pm
 
 from pymc import Model
 from pymc.distributions.multivariate import (
-    MultivariateIntervalTransform,
     _LKJCholeskyCov,
     _LKJCorr,
     _OrderedMultinomial,
@@ -43,6 +42,7 @@ from pymc.distributions.multivariate import (
     quaddist_matrix,
 )
 from pymc.distributions.shape_utils import change_dist_size, to_tuple
+from pymc.distributions.transforms import CholeskyCorrTransform
 from pymc.logprob.basic import logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.math import kronecker
@@ -559,10 +559,14 @@ class TestMatchesScipy:
                 lambda value, nu, V: st.wishart.logpdf(value, int(nu), V),
             )
 
-    @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
-    def test_lkjcorr(self, x, eta, n, lp):
+    @pytest.mark.parametrize("x_tri,eta,n,lp", LKJ_CASES)
+    def test_lkjcorr(self, x_tri, eta, n, lp):
         with pm.Model() as model:
-            pm.LKJCorr("lkj", eta=eta, n=n, default_transform=None, return_matrix=False)
+            pm.LKJCorr("lkj", eta=eta, n=n, transform=None)
+
+        x = np.eye(n)
+        x[np.tril_indices(n, -1)] = x_tri
+        x[np.triu_indices(n, 1)] = x_tri
 
         point = {"lkj": x}
         decimals = select_by_precision(float64=6, float32=4)
@@ -2153,13 +2157,13 @@ class TestLKJCorr(BaseTestDistributionRandom):
 
     sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
     sizes_expected = [
-        (3,),
-        (3,),
-        (1, 3),
-        (1, 3),
-        (5, 3),
-        (4, 5, 3),
-        (2, 4, 2, 3),
+        (3, 3),
+        (3, 3),
+        (1, 3, 3),
+        (1, 3, 3),
+        (5, 3, 3),
+        (4, 5, 3, 3),
+        (2, 4, 2, 3, 3),
     ]
 
     checks_to_run = [
@@ -2169,16 +2173,26 @@ class TestLKJCorr(BaseTestDistributionRandom):
     ]
 
     def check_draws_match_expected(self):
+        from pymc.distributions import CustomDist
+
         def ref_rand(size, n, eta):
             shape = int(n * (n - 1) // 2)
             beta = eta - 1 + n / 2
-            return (st.beta.rvs(size=(size, shape), a=beta, b=beta) - 0.5) * 2
+            tril_values = (st.beta.rvs(size=(size, shape), a=beta, b=beta) - 0.5) * 2
+            return tril_values
 
         # If passed as a domain, continuous_random_tester would make `n` a shared variable
         # But this RV needs it to be constant in order to define the inner graph
+        def lkj_corr_tril(n, eta, shape=None):
+            tril_idx = pt.tril_indices(n)
+            return _LKJCorr.dist(n=n, eta=eta, shape=shape)[..., tril_idx[0], tril_idx[1]]
+
+        def SlicedLKJ(name, n, eta, *args, shape=None, **kwargs):
+            return CustomDist(name, n, eta, dist=lkj_corr_tril, shape=shape)
+
         for n in (2, 10, 50):
             continuous_random_tester(
-                _LKJCorr,
+                SlicedLKJ,
                 {
                     "eta": Domain([1.0, 10.0, 100.0], edges=(None, None)),
                 },
@@ -2188,24 +2202,12 @@ class TestLKJCorr(BaseTestDistributionRandom):
             )
 
 
-@pytest.mark.parametrize(
-    argnames="shape",
-    argvalues=[
-        (2,),
-        pytest.param(
-            (3, 2),
-            marks=pytest.mark.xfail(
-                raises=NotImplementedError,
-                reason="LKJCorr logp is only implemented for vector values (ndim=1)",
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("shape", [(2, 2), (3, 2, 2)], ids=["no_batch", "with_batch"])
 def test_LKJCorr_default_transform(shape):
     with pm.Model() as m:
         x = pm.LKJCorr("x", n=2, eta=1, shape=shape, return_matrix=False)
-    assert isinstance(m.rvs_to_transforms[x], MultivariateIntervalTransform)
-    assert m.logp(sum=False)[0].type.shape == shape[:-1]
+    assert isinstance(m.rvs_to_transforms[x], CholeskyCorrTransform)
+    assert m.logp(sum=False)[0].type.shape == shape[:-2]
 
 
 class TestLKJCholeskyCov(BaseTestDistributionRandom):
