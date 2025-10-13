@@ -412,10 +412,11 @@ def make_shared_replacements(point, vars, model):
     -------
     Dict of variable -> new shared variable
     """
-    othervars = set(model.value_vars) - set(vars)
+    vars_set = set(vars)
     return {
         var: pytensor.shared(point[var.name], var.name + "_shared", shape=var.type.shape)
-        for var in othervars
+        for var in model.value_vars
+        if var not in vars_set
     }
 
 
