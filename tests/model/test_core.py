@@ -1066,19 +1066,18 @@ def test_model_logp(jacobian):
     if not jacobian:
         expected_y_logp -= np.array([0.0, 1.0])
 
-    x_logp, y_logp = m.compile_logp(sum=False, jacobian=jacobian)(
-        {"x": test_vals, "y_log__": test_vals}
-    )
+    test_val_dict = {"x": test_vals, "y_log__": test_vals}
+    x_logp, y_logp = m.compile_logp(sum=False, jacobian=jacobian)(test_val_dict)
     assert np.all(np.isclose(x_logp, expected_x_logp))
     assert np.all(np.isclose(y_logp, expected_y_logp))
 
-    x_logp2 = m.compile_logp(vars=[x], sum=False, jacobian=jacobian)({"x": test_vals})
+    x_logp2 = m.compile_logp(vars=[x], sum=False, jacobian=jacobian)(test_val_dict)
     assert np.all(np.isclose(x_logp2, expected_x_logp))
 
-    y_logp2 = m.compile_logp(vars=[y], sum=False, jacobian=jacobian)({"y_log__": test_vals})
+    y_logp2 = m.compile_logp(vars=[y], sum=False, jacobian=jacobian)(test_val_dict)
     assert np.all(np.isclose(y_logp2, expected_y_logp))
 
-    logp_sum = m.compile_logp(sum=True, jacobian=jacobian)({"x": test_vals, "y_log__": test_vals})
+    logp_sum = m.compile_logp(sum=True, jacobian=jacobian)(test_val_dict)
     assert np.isclose(logp_sum, expected_x_logp.sum() + expected_y_logp.sum())
 
 

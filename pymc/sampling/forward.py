@@ -1053,7 +1053,7 @@ def vectorize_over_posterior(
     # These variables need to be resized because they won't be resized implicitly by
     # the replacement of the needed_rvs or other random variables in the graph when we
     # later call vectorize_graph.
-    independent_rvs: list[TensorVariable] = []
+    independent_rvs: list[Variable] = []
     for rv in [
         rv
         for rv in general_toposort(  # type: ignore[call-overload]
