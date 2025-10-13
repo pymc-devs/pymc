@@ -19,7 +19,7 @@ import pytensor.tensor as pt
 
 from numpy.lib.array_utils import normalize_axis_tuple
 from pytensor.graph import Op
-from pytensor.tensor import TensorVariable
+from pytensor.tensor import TensorLike, TensorVariable
 
 from pymc.logprob.transforms import (
     ChainedTransform,

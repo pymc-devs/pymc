@@ -1180,7 +1180,7 @@ def _lkj_normalizing_constant(eta, n):
 # _LKJCholeskyCovBaseRV requires a properly shaped `D`, which means the variable can't
 # be safely resized. Because of this, we add the thin SymbolicRandomVariable wrapper
 class _LKJCholeskyCovRV(SymbolicRandomVariable):
-    extended_signature = "[rng],(),(),(n)->[rng],(n)"
+    extended_signature = "[rng],[rng],(),(),(n)->[rng],[rng],(n)"
     _print_name = ("_lkjcholeskycov", "\\operatorname{_lkjcholeskycov}")
 
     @classmethod
@@ -1188,7 +1188,11 @@ class _LKJCholeskyCovRV(SymbolicRandomVariable):
         # We don't allow passing `rng` because we don't fully control the rng of the components!
         n = pt.as_tensor(n, dtype="int64", ndim=0)
         eta = pt.as_tensor_variable(eta, ndim=0)
-        rng = pytensor.shared(np.random.default_rng())
+
+        # LKJCorr requries 2 random number generators
+        outer_rng = pytensor.shared(np.random.default_rng())
+        scan_rng = pytensor.shared(np.random.default_rng())
+
         size = normalize_size_param(size)
 
         # We resize the sd_dist automatically so that it has (size x n) independent
@@ -1212,8 +1216,11 @@ class _LKJCholeskyCovRV(SymbolicRandomVariable):
         D = sd_dist.type(name="D")  # Make sd_dist opaque to OpFromGraph
         size = D.shape[:-1]
 
-        next_rng, C = LKJCorrRV._random_corr_matrix(rng=rng, n=n, eta=eta, size=size)
-        C *= D[..., :, None] * D[..., None, :]
+        next_outer_rng, next_scan_rng, C = LKJCorrRV._random_corr_matrix(
+            outer_rng=outer_rng, scan_rng=scan_rng, n=n, eta=eta, size=size
+        )
+        vec_diag = pt.vectorize(pt.diag, signature="(n)->(n,n)")
+        C = vec_diag(D) @ C @ vec_diag(D)
 
         tril_idx = pt.tril_indices(n, k=0)
         samples = pt.linalg.cholesky(C)[..., tril_idx[0], tril_idx[1]]
@@ -1225,12 +1232,12 @@ class _LKJCholeskyCovRV(SymbolicRandomVariable):
             samples = pt.reshape(samples, (*size, dist_shape))
 
         return _LKJCholeskyCovRV(
-            inputs=[rng, n, eta, D],
-            outputs=[next_rng, samples],
-        )(rng, n, eta, sd_dist)
+            inputs=[outer_rng, scan_rng, n, eta, D],
+            outputs=[next_outer_rng, next_scan_rng, samples],
+        )(outer_rng, scan_rng, n, eta, sd_dist)
 
     def update(self, node):
-        return {node.inputs[0]: node.outputs[0]}
+        return {node.inputs[0]: node.outputs[0], node.inputs[1]: node.outputs[1]}
 
 
 class _LKJCholeskyCov(Distribution):
@@ -1258,7 +1265,7 @@ class _LKJCholeskyCov(Distribution):
 
 @_change_dist_size.register(_LKJCholeskyCovRV)
 def change_LKJCholeksyCovRV_size(op, dist, new_size, expand=False):
-    n, eta, sd_dist = dist.owner.inputs[1:]
+    n, eta, sd_dist = dist.owner.inputs[2:]
 
     if expand:
         old_size = sd_dist.shape[:-1]
@@ -1268,7 +1275,7 @@ def change_LKJCholeksyCovRV_size(op, dist, new_size, expand=False):
 
 
 @_support_point.register(_LKJCholeskyCovRV)
-def _LKJCholeksyCovRV_support_point(op, rv, rng, n, eta, sd_dist):
+def _LKJCholeksyCovRV_support_point(op, rv, outer_rng, scan_rng, n, eta, sd_dist):
     diag_idxs = (pt.cumsum(pt.arange(1, n + 1)) - 1).astype("int32")
     support_point = pt.zeros_like(rv)
     support_point = pt.set_subtensor(support_point[..., diag_idxs], 1)
@@ -1277,12 +1284,12 @@ def _LKJCholeksyCovRV_support_point(op, rv, rng, n, eta, sd_dist):
 
 @_default_transform.register(_LKJCholeskyCovRV)
 def _LKJCholeksyCovRV_default_transform(op, rv):
-    _, n, _, _ = rv.owner.inputs
+    _, _, n, _, _ = rv.owner.inputs
     return transforms.CholeskyCovPacked(n)
 
 
 @_logprob.register(_LKJCholeskyCovRV)
-def _LKJCholeksyCovRV_logp(op, values, rng, n, eta, sd_dist, **kwargs):
+def _LKJCholeksyCovRV_logp(op, values, outer_rng, scan_rng, n, eta, sd_dist, **kwargs):
     (value,) = values
 
     if value.ndim > 1:
@@ -1499,10 +1506,10 @@ class LKJCholeskyCov:
 
 class LKJCorrRV(SymbolicRandomVariable):
     name = "lkjcorr"
-    extended_signature = "[rng],[size],(),()->[rng],(n,n)"
+    extended_signature = "[rng],[rng],[size],(),()->[rng],[rng],(n,n)"
     _print_name = ("LKJCorrRV", "\\operatorname{LKJCorrRV}")
 
-    def make_node(self, rng, size, n, eta):
+    def make_node(self, outer_rng, scan_rng, size, n, eta):
         n = pt.as_tensor_variable(n)
         if not all(n.type.broadcastable):
             raise ValueError("n must be a scalar.")
@@ -1511,59 +1518,81 @@ class LKJCorrRV(SymbolicRandomVariable):
         if not all(eta.type.broadcastable):
             raise ValueError("eta must be a scalar.")
 
-        return super().make_node(rng, size, n, eta)
+        return super().make_node(outer_rng, scan_rng, size, n, eta)
 
     @classmethod
-    def rv_op(cls, n: int, eta, *, rng=None, size=None):
-        # HACK: normalize_size_param doesn't handle size=() properly
-        if not size:
-            size = None
-
+    def rv_op(cls, n: int, eta, *, outer_rng=None, scan_rng=None, size=None):
         n = pt.as_tensor(n, ndim=0, dtype=int)
         eta = pt.as_tensor(eta, ndim=0)
-        rng = normalize_rng_param(rng)
+        outer_rng = normalize_rng_param(outer_rng)
+        scan_rng = normalize_rng_param(scan_rng)
         size = normalize_size_param(size)
 
-        next_rng, C = cls._random_corr_matrix(rng=rng, n=n, eta=eta, size=size)
+        outer_rng_out, scan_rng_out, C = cls._random_corr_matrix(
+            outer_rng=outer_rng, scan_rng=scan_rng, n=n, eta=eta, size=size
+        )
 
-        return cls(inputs=[rng, size, n, eta], outputs=[next_rng, C])(rng, size, n, eta)
+        return cls(
+            inputs=[outer_rng, scan_rng, size, n, eta], outputs=[outer_rng_out, scan_rng_out, C]
+        )(outer_rng, scan_rng, size, n, eta)
 
     @classmethod
     def _random_corr_matrix(
-        cls, rng: Variable, n: int, eta: TensorVariable, size: TensorVariable
+        cls,
+        outer_rng: Variable,
+        scan_rng: Variable,
+        n: int,
+        eta: TensorVariable,
+        size: TensorVariable,
     ) -> tuple[Variable, TensorVariable]:
-        # original implementation in R see:
-        # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
-        size = () if rv_size_is_none(size) else size
+        size_is_none = rv_size_is_none(size)
+        size = () if size_is_none else size
 
-        beta = eta - 1.0 + n / 2.0
-        next_rng, beta_rvs = pt.random.beta(alpha=beta, beta=beta, size=size, rng=rng).owner.outputs
-        r12 = 2.0 * beta_rvs - 1.0
+        beta0 = eta - 1.0 + n / 2.0
 
-        P = pt.full((*size, n, n), pt.eye(n))
-        P = P[..., 0, 1].set(r12)
-        P = P[..., 1, 1].set(pt.sqrt(1.0 - r12**2))
-        n = get_underlying_scalar_constant_value(n)
+        outer_rng_out, y0 = pt.random.beta(
+            alpha=beta0, beta=beta0, size=size, rng=outer_rng
+        ).owner.outputs
 
-        for mp1 in range(2, n):
-            beta -= 0.5
+        r12 = 2.0 * y0 - 1.0
 
-            next_rng, y = pt.random.beta(
-                alpha=mp1 / 2.0, beta=beta, size=size, rng=next_rng
+        P0 = pt.full((*size, n, n), pt.eye(n))
+        P0 = P0[..., 0, 1].set(r12)
+        P0 = P0[..., 1, 1].set(pt.sqrt(1.0 - r12**2))
+
+        def step(mp1, beta, P, prev_rng):
+            beta_next = beta - 0.5
+
+            middle_rng, y = pt.random.beta(
+                alpha=mp1 / 2.0, beta=beta, size=size, rng=prev_rng
             ).owner.outputs
 
             next_rng, z = pt.random.normal(
-                loc=0, scale=1, size=(*size, mp1), rng=next_rng
+                loc=0, scale=1, size=(*size, mp1), rng=middle_rng
             ).owner.outputs
 
             ein_sig_z = "i, i->" if z.ndim == 1 else "...ij, ...ij->...i"
-            z = z / pt.sqrt(pt.einsum(ein_sig_z, z, z.copy()))[..., np.newaxis]
-            P = P[..., 0:mp1, mp1].set(pt.sqrt(y[..., np.newaxis]) * z)
+
+            z = z / pt.sqrt(pt.einsum(ein_sig_z, z, z.copy()))[..., None]
+            P = P[..., 0:mp1, mp1].set(pt.sqrt(y[..., None]) * z)
             P = P[..., mp1, mp1].set(pt.sqrt(1.0 - y))
 
-        C = pt.einsum("...ji,...jk->...ik", P, P.copy())
+            return (beta_next, P), {prev_rng: next_rng}
 
-        return next_rng, C
+        (_, P_seq), updates = pytensor.scan(
+            fn=step,
+            outputs_info=[beta0, P0],
+            sequences=[pt.arange(2, n)],
+            non_sequences=[scan_rng],
+            strict=True,
+        )
+
+        P = pytensor.ifelse(n < 3, P0, P_seq[-1])
+
+        C = pt.einsum("...ji,...jk->...ik", P, P.copy())
+        (scan_rng_out,) = tuple(updates.values())
+
+        return outer_rng_out, scan_rng_out, C
 
 
 class _LKJCorr(BoundedContinuous):
@@ -1574,6 +1603,14 @@ class _LKJCorr(BoundedContinuous):
     def dist(cls, n, eta, **kwargs):
         n = pt.as_tensor_variable(n).astype(int)
         eta = pt.as_tensor_variable(eta)
+        rng = kwargs.pop("rng", None)
+
+        if isinstance(rng, Variable):
+            rng = rng.get_value()
+
+        kwargs["scan_rng"] = pytensor.shared(np.random.default_rng(rng))
+        kwargs["outer_rng"] = pytensor.shared(np.random.default_rng(rng))
+
         return super().dist([n, eta], **kwargs)
 
     @staticmethod
@@ -1619,7 +1656,7 @@ class _LKJCorr(BoundedContinuous):
 
 @_default_transform.register(_LKJCorr)
 def lkjcorr_default_transform(op, rv):
-    rng, shape, n, eta, *_ = rv.owner.inputs = rv.owner.inputs
+    rng, scan_rng, shape, n, eta, *_ = rv.owner.inputs
     n = pt.get_scalar_constant_value(n)  # Safely extract scalar value without eval
     return CholeskyCorrTransform(n=n, upper=False)
 

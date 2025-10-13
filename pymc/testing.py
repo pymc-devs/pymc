@@ -735,7 +735,13 @@ def continuous_random_tester(
         while p <= alpha and f > 0:
             s0 = pymc_rand()
             s1 = floatX(ref_rand(size=size, **point))
-            _, p = st.ks_2samp(np.atleast_1d(s0).flatten(), np.atleast_1d(s1).flatten())
+
+            # If a distribution has non-stochastic elements in the output (e.g. LKJCorr putting 1's on the diagonal),
+            # it will mess up the KS test. So we filter those out here.
+            stacked_samples = np.c_[np.atleast_1d(s0).flatten(), np.atleast_1d(s1).flatten()]
+            samples = stacked_samples[~np.isclose(stacked_samples[..., 0], stacked_samples[..., 1])]
+
+            _, p = st.ks_2samp(*samples.T)
             f -= 1
         assert p > alpha, str(point)
 
