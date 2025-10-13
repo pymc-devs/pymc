@@ -469,8 +469,9 @@ class TestAR:
         with Model() as t:
             y = AR("y", phi, sigma=1, init_dist=Flat.dist(), shape=len(data))
             z = Normal("z", mu=phi * data[:-1], sigma=1, shape=len(data) - 1)
-        ar_like = t.compile_logp(y)({"y": data})
-        reg_like = t.compile_logp(z)({"z": data[1:]})
+        test_dict = {"y": data, "z": data[1:]}
+        ar_like = t.compile_logp(y)(test_dict)
+        reg_like = t.compile_logp(z)(test_dict)
         np.testing.assert_allclose(ar_like, reg_like)
 
         with Model() as t_constant:
@@ -483,8 +484,8 @@ class TestAR:
                 constant=True,
             )
             z = Normal("z", mu=0.3 + phi * data[:-1], sigma=1, shape=len(data) - 1)
-        ar_like = t_constant.compile_logp(y)({"y": data})
-        reg_like = t_constant.compile_logp(z)({"z": data[1:]})
+        ar_like = t_constant.compile_logp(y)(test_dict)
+        reg_like = t_constant.compile_logp(z)(test_dict)
         np.testing.assert_allclose(ar_like, reg_like)
 
     def test_order2_logp(self):
@@ -495,8 +496,9 @@ class TestAR:
             z = Normal(
                 "z", mu=phi[0] * data[1:-1] + phi[1] * data[:-2], sigma=1, shape=len(data) - 2
             )
-        ar_like = t.compile_logp(y)({"y": data})
-        reg_like = t.compile_logp(z)({"z": data[2:]})
+        test_dict = {"y": data, "z": data[2:]}
+        ar_like = t.compile_logp(y)(test_dict)
+        reg_like = t.compile_logp(z)(test_dict)
         np.testing.assert_allclose(ar_like, reg_like)
 
     @pytest.mark.parametrize("constant", (False, True))
@@ -749,8 +751,9 @@ class TestGARCH11:
                 shape=data.shape,
             )
             z = Normal("z", mu=0, sigma=vol, shape=data.shape)
-        garch_like = t.compile_logp(y)({"y": data})
-        reg_like = t.compile_logp(z)({"z": data})
+        test_dict = {"y": data, "z": data}
+        garch_like = t.compile_logp(y)(test_dict)
+        reg_like = t.compile_logp(z)(test_dict)
         decimal = select_by_precision(float64=7, float32=4)
         np.testing.assert_allclose(garch_like, reg_like, 10 ** (-decimal))
 
