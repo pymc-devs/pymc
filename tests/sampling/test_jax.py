@@ -27,7 +27,6 @@ import pytensor
 import pytensor.tensor as pt
 import pytest
 
-from numpyro.infer import MCMC
 from pytensor.compile import SharedVariable
 from pytensor.graph import graph_inputs
 
@@ -44,6 +43,8 @@ from pymc.sampling.jax import (
     sample_blackjax_nuts,
     sample_numpyro_nuts,
 )
+
+MCMC = pytest.importorskip("numpyro.infer.MCMC")
 
 
 def test_jax_PosDefMatrix():
