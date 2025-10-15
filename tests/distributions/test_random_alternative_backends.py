@@ -33,7 +33,7 @@ def mode(request):
 def test_dirichlet_multinomial(mode):
     """Test we can draw from a DM in the JAX backend if the shape is constant."""
     dm = DirichletMultinomial.dist(n=5, a=np.eye(3) * 1e6 + 0.01)
-    dm_draws = pm.draw(dm, mode=mode)
+    dm_draws = pm.draw(dm, mode=mode, random_seed=36)
     np.testing.assert_equal(dm_draws, np.eye(3) * 5)
 
 
