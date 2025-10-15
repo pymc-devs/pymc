@@ -230,17 +230,17 @@ def rv_size_is_none(size: TensorVariable | Constant | None) -> bool:
 
 
 @singledispatch
-def _change_dist_size(op: Op, dist: TensorVariable, new_size, expand):
+def _change_dist_size(op: Op, dist: Variable, new_size, expand):
     raise NotImplementedError(
         f"Variable {dist} of type {op} has no _change_dist_size implementation."
     )
 
 
 def change_dist_size(
-    dist: TensorVariable,
+    dist: Variable,
     new_size: PotentialShapeType,
     expand: bool = False,
-) -> TensorVariable:
+) -> Variable:
     """Change or expand the size of a Distribution.
 
     Parameters
