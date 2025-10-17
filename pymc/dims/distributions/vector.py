@@ -19,7 +19,7 @@ from pytensor.xtensor import as_xtensor
 from pytensor.xtensor import random as pxr
 
 from pymc.dims.distributions.core import VectorDimDistribution
-from pymc.dims.distributions.transforms import ZeroSumTransform
+from pymc.dims.distributions.transforms import SimplexTransform, ZeroSumTransform
 from pymc.distributions.multivariate import ZeroSumNormalRV
 from pymc.util import UNSET
 
@@ -61,6 +61,61 @@ class Categorical(VectorDimDistribution):
         if logit_p is not None:
             p = ptx.math.softmax(logit_p, dim=core_dims)
         return super().dist([p], core_dims=core_dims, **kwargs)
+
+
+class Dirichlet(VectorDimDistribution):
+    """Dirichlet distribution.
+
+    Parameters
+    ----------
+    a : xtensor_like, optional
+        Probabilities of each category. Must sum to 1 along the core dimension.
+    core_dims : str
+        The core dimension of the distribution, which represents the categories.
+        The dimension must be present in `p` or `logit_p`.
+    **kwargs
+        Other keyword arguments used to define the distribution.
+
+    Returns
+    -------
+    XTensorVariable
+        An xtensor variable representing the categorical distribution.
+        The output does not contain the core dimension, as it is absorbed into the distribution.
+
+
+    """
+
+    xrv_op = ptxr.dirichlet
+
+    @classmethod
+    def __new__(
+        cls, *args, core_dims=None, dims=None, default_transform=UNSET, observed=None, **kwargs
+    ):
+        if core_dims is not None:
+            if isinstance(core_dims, tuple | list):
+                [core_dims] = core_dims
+
+            # Create default_transform
+            if observed is None and default_transform is UNSET:
+                default_transform = SimplexTransform(dim=core_dims)
+
+        # If the user didn't specify dims, take it from core_dims
+        # We need them to be forwarded to dist in the `dim_lenghts` argument
+        # if dims is None and core_dims is not None:
+        #    dims = (..., *core_dims)
+
+        return super().__new__(
+            *args,
+            core_dims=core_dims,
+            dims=dims,
+            default_transform=default_transform,
+            observed=observed,
+            **kwargs,
+        )
+
+    @classmethod
+    def dist(cls, a, *, core_dims=None, **kwargs):
+        return super().dist([a], core_dims=core_dims, **kwargs)
 
 
 class MvNormal(VectorDimDistribution):

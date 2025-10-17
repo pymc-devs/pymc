@@ -54,6 +54,34 @@ class LogOddsTransform(DimTransform):
 log_odds_transform = LogOddsTransform()
 
 
+class SimplexTransform(DimTransform):
+    name = "simplex"
+
+    def __init__(self, dim: str):
+        self.core_dim = dim
+
+    def forward(self, value, *inputs):
+        log_value = ptx.math.log(value)
+        N = value.sizes[self.core_dim].astype(value.dtype)
+        shift = log_value.sum(self.core_dim) / N
+        return log_value.isel({self.core_dim: slice(None, -1)}) - shift
+
+    def backward(self, value, *inputs):
+        value = ptx.concat([value, -value.sum(self.core_dim)], dim=self.core_dim)
+        exp_value_max = ptx.math.exp(value - value.max(self.core_dim))
+        return exp_value_max / exp_value_max.sum(self.core_dim)
+
+    def log_jac_det(self, value, *inputs):
+        N = value.sizes[self.core_dim] + 1
+        N = N.astype(value.dtype)
+        sum_value = value.sum(self.core_dim)
+        value_sum_expanded = value + sum_value
+        value_sum_expanded = ptx.concat([value_sum_expanded, 0], dim=self.core_dim)
+        logsumexp_value_expanded = ptx.math.logsumexp(value_sum_expanded, dim=self.core_dim)
+        res = ptx.math.log(N) + (N * sum_value) - (N * logsumexp_value_expanded)
+        return res
+
+
 class ZeroSumTransform(DimTransform):
     name = "zerosum"
 
