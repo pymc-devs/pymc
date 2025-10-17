@@ -70,7 +70,7 @@ if __name__ == "__main__":
         # Also see MANIFEST.in
         # package_data={'docs': ['*']},
         classifiers=classifiers,
-        python_requires=">=3.10",
+        python_requires=">=3.11",
         install_requires=install_reqs,
         tests_require=test_reqs,
     )
