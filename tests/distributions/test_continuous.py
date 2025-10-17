@@ -575,6 +575,13 @@ class TestMatchesScipy:
             lambda q, nu, mu, sigma: st.t.ppf(q, nu, mu, sigma),
         )
 
+    def test_halfstudentt_icdf(self):
+        check_icdf(
+            pm.HalfStudentT,
+            {"nu": Rplusbig, "sigma": Rplusbig},
+            lambda q, nu, sigma: st.t.ppf(0.5 * (q + 1.0), nu, 0.0, sigma),
+        )
+
     @pytest.mark.skipif(
         condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
