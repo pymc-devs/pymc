@@ -72,18 +72,22 @@ class TestFormatReleaseContent:
         assert "[#7871](https://github.com/pymc-devs/pymc/pull/7871)" in content
 
         # Check that the raw PR link format is not present
-        assert "https://github.com/pymc-devs/pymc/pull/7910" in content  # it's still in the formatted link
+        assert (
+            "https://github.com/pymc-devs/pymc/pull/7910" in content
+        )  # it's still in the formatted link
         # But NOT as a standalone link (which would appear without the [#xxx](...) wrapper)
         # We can verify this by checking the pattern doesn't match the raw format
         # Find raw PR links (not inside markdown link syntax)
         raw_pr_links = re.findall(
-            r'(?<!\()\bhttps://github\.com/pymc-devs/pymc/pull/\d+(?!\))',
-            content
+            r"(?<!\()\bhttps://github\.com/pymc-devs/pymc/pull/\d+(?!\))", content
         )
         assert len(raw_pr_links) == 0, f"Found raw PR links: {raw_pr_links}"
 
         # Check that other links remain unchanged (e.g., the Full Changelog link)
-        assert "**Full Changelog**: https://github.com/pymc-devs/pymc/compare/v5.25.1...v5.26.0" in content
+        assert (
+            "**Full Changelog**: https://github.com/pymc-devs/pymc/compare/v5.25.1...v5.26.0"
+            in content
+        )
 
     def test_non_pymc_links_unchanged(self):
         """Test that PR links from other repositories are not affected."""
@@ -125,3 +129,27 @@ class TestFormatReleaseContent:
         assert "**Repository:** [pymc-devs/pymc](https://github.com/pymc-devs/pymc)" in content
         assert "**Release Page:** https://github.com/pymc-devs/pymc/releases/tag/v1.2.3" in content
         assert "[#999](https://github.com/pymc-devs/pymc/pull/999)" in content
+
+    def test_already_formatted_links_not_double_formatted(self):
+        """Test that already-formatted PR links are not double-formatted."""
+        release_body = """Some changes:
+* Already formatted: [#123](https://github.com/pymc-devs/pymc/pull/123)
+* Raw link: https://github.com/pymc-devs/pymc/pull/456
+"""
+
+        config = {
+            "RELEASE_TAG": "v1.0.0",
+            "REPO_NAME": "pymc-devs/pymc",
+            "RELEASE_BODY": release_body,
+            "RELEASE_URL": "https://github.com/pymc-devs/pymc/releases/tag/v1.0.0",
+        }
+
+        title, content = format_release_content(config)
+
+        # Already formatted link should remain unchanged
+        assert "[#123](https://github.com/pymc-devs/pymc/pull/123)" in content
+        # Should NOT be double-formatted
+        assert "[#123]([#123](https://github.com/pymc-devs/pymc/pull/123))" not in content
+
+        # Raw link should be formatted
+        assert "[#456](https://github.com/pymc-devs/pymc/pull/456)" in content
