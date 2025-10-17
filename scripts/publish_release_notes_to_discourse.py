@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import re
 
 import requests
 
@@ -58,6 +59,15 @@ def find_category_id(config: dict[str, str]) -> int:
 def format_release_content(config: dict[str, str]) -> tuple[str, str]:
     title = f"🚀 Release {config['RELEASE_TAG']}"
     repo_name = config["REPO_NAME"].split("/")[1]
+    
+    # Format PR links in the release body
+    # Replace https://github.com/pymc-devs/pymc/pull/123 with [#123](https://github.com/pymc-devs/pymc/pull/123)
+    release_body = re.sub(
+        r'https://github\.com/pymc-devs/pymc/pull/(\d+)',
+        r'[#\1](\g<0>)',
+        config["RELEASE_BODY"]
+    )
+    
     content = f"""A new release of **{repo_name}** is now available!
 
 ## 📦 Release Information
@@ -69,7 +79,7 @@ def format_release_content(config: dict[str, str]) -> tuple[str, str]:
 
 ## 📋 Release Notes
 
-{config["RELEASE_BODY"]}
+{release_body}
 
 ---
 
