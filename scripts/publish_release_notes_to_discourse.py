@@ -62,8 +62,9 @@ def format_release_content(config: dict[str, str]) -> tuple[str, str]:
     
     # Format PR links in the release body
     # Replace https://github.com/pymc-devs/pymc/pull/123 with [#123](https://github.com/pymc-devs/pymc/pull/123)
+    # Use negative lookbehind to avoid formatting already-formatted links
     release_body = re.sub(
-        r'https://github\.com/pymc-devs/pymc/pull/(\d+)',
+        r'(?<!\()\bhttps://github\.com/pymc-devs/pymc/pull/(\d+)\b',
         r'[#\1](\g<0>)',
         config["RELEASE_BODY"]
     )

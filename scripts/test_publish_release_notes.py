@@ -125,3 +125,27 @@ class TestFormatReleaseContent:
         assert "**Repository:** [pymc-devs/pymc](https://github.com/pymc-devs/pymc)" in content
         assert "**Release Page:** https://github.com/pymc-devs/pymc/releases/tag/v1.2.3" in content
         assert "[#999](https://github.com/pymc-devs/pymc/pull/999)" in content
+
+    def test_already_formatted_links_not_double_formatted(self):
+        """Test that already-formatted PR links are not double-formatted."""
+        release_body = """Some changes:
+* Already formatted: [#123](https://github.com/pymc-devs/pymc/pull/123)
+* Raw link: https://github.com/pymc-devs/pymc/pull/456
+"""
+
+        config = {
+            "RELEASE_TAG": "v1.0.0",
+            "REPO_NAME": "pymc-devs/pymc",
+            "RELEASE_BODY": release_body,
+            "RELEASE_URL": "https://github.com/pymc-devs/pymc/releases/tag/v1.0.0",
+        }
+
+        title, content = format_release_content(config)
+
+        # Already formatted link should remain unchanged
+        assert "[#123](https://github.com/pymc-devs/pymc/pull/123)" in content
+        # Should NOT be double-formatted
+        assert "[#123]([#123](https://github.com/pymc-devs/pymc/pull/123))" not in content
+        
+        # Raw link should be formatted
+        assert "[#456](https://github.com/pymc-devs/pymc/pull/456)" in content
