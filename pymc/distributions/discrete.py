@@ -1191,6 +1191,33 @@ class Categorical(Discrete):
             msg="0 <= p <=1, sum(p) = 1",
         )
 
+    def icdf(value, p):
+        eps = 1e-12
+        q = value
+        q_safe = pt.clip(q, 0.0, 1.0 - eps)
+        cdf = pt.cumsum(p, axis=-1)
+
+        cdf_batch_ndim = cdf.ndim - 1
+        q_ndim = q_safe.ndim
+        if q_ndim < cdf_batch_ndim:
+            q_safe = pt.shape_padleft(q_safe, cdf_batch_ndim - q_ndim)
+        elif q_ndim > cdf_batch_ndim:
+            extra = q_ndim - cdf_batch_ndim
+            axes = list(range(cdf.ndim - 1)) + ["x"] * extra + [cdf.ndim - 1]
+            cdf = cdf.dimshuffle(axes)
+
+        mask = pt.shape_padright(q_safe, 1) <= cdf
+        idx = pt.argmax(mask, axis=-1).astype("int64")
+
+        idx = check_icdf_value(idx, q)
+        return check_icdf_parameters(
+            idx,
+            0 <= p,
+            p <= 1,
+            pt.isclose(pt.sum(p, axis=-1), 1),
+            msg="0 <= p <=1, sum(p) = 1",
+        )
+
     def logcdf(value, p):
         k = pt.shape(p)[-1]
         value, safe_value_p = Categorical._safe_index_value_p(value, p.cumsum(-1))
