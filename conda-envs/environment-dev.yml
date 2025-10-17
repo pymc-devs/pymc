@@ -20,11 +20,13 @@ dependencies:
 - threadpoolctl>=3.1.0
 - zarr>=2.5.0,<3
 # Extra dependencies for dev, testing and docs build
+- blackjax
 - ipython>=7.16
 - jax
 - jupyter-sphinx
 - myst-nb<=1.0.0
 - numpydoc
+- numpyro
 - pre-commit>=2.8.0
 - polyagamma
 - pytest-cov>=2.5
