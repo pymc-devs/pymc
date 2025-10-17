@@ -83,8 +83,7 @@ def test_jax_PosDefMatrix():
         ),
     ],
 )
-@pytest.mark.parametrize("postprocessing_vectorize", ["scan", "vmap"])
-def test_transform_samples(sampler, postprocessing_backend, chains, postprocessing_vectorize):
+def test_transform_samples(sampler, postprocessing_backend, chains):
     pytensor.config.on_opt_error = "raise"
     np.random.seed(13244)
 
@@ -100,7 +99,6 @@ def test_transform_samples(sampler, postprocessing_backend, chains, postprocessi
             random_seed=1322,
             keep_untransformed=True,
             postprocessing_backend=postprocessing_backend,
-            postprocessing_vectorize=postprocessing_vectorize,
         )
 
     log_vals = trace.posterior["sigma_log__"].values
