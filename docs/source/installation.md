@@ -1,7 +1,7 @@
 (installation)=
 # Installation
 
-We recommend using [Anaconda](https://www.anaconda.com/) (or [Miniforge](https://github.com/conda-forge/miniforge)) to install Python on your local machine, which allows for packages to be installed using its `conda` utility.
+PyMC requires Python 3.11 or greater. We recommend using [Anaconda](https://www.anaconda.com/) (or [Miniforge](https://github.com/conda-forge/miniforge)) to install Python on your local machine, which allows for packages to be installed using its `conda` utility.
 
 Once you have installed one of the above, PyMC can be installed into a new conda environment as follows:
 
