@@ -648,7 +648,7 @@ As in the batch random generation, we want to generate (n\_sample, ) + RV.shape 
 In some cases, where we broadcast RV1 and RV2 to create a RV3 that has one more batch shape, we get error (even worse, wrong answer with silent error).
 
 The good news is, we are fixing these errors with the amazing works from [lucianopaz](https://github.com/lucianopaz) and others.
-The challenge and some summary of the solution could be found in Luciano's [blog post](https://lucianopaz.github.io/2019/08/19/pymc3-shape-handling/)
+The challenge and some summary of the solution could be found in Luciano's [blog post](https://lucianopaz.github.io/2019/08/19/pymc-shape-handling/)
 
 ```python
 with pm.Model() as m:
@@ -667,7 +667,7 @@ There are also other error related random sample generation (e.g., [Mixture is c
 ### Extending PyMC
 -  Custom Inference method
     -  [Inferencing Linear Mixed Model with EM.ipynb](https://github.com/junpenglao/Planet_Sakaar_Data_Science/blob/main/Ports/Inferencing%20Linear%20Mixed%20Model%20with%20EM.ipynb)
-    -  [Laplace approximation in  pymc.ipynb](https://github.com/junpenglao/Planet_Sakaar_Data_Science/blob/main/Ports/Laplace%20approximation%20in%20pymc3.ipynb)
+    -  [Laplace approximation in  pymc.ipynb](https://github.com/junpenglao/Planet_Sakaar_Data_Science/blob/main/Ports/Laplace%20approximation%20in%20pymc.ipynb)
 -  Connecting it to other library within a model
     -  Using "black box" likelihood function by creating a custom PyTensor Op.
     -  Using emcee
