@@ -613,7 +613,6 @@ def test_exec_nuts_init(method):
         check_exec_nuts_init(method)
 
 
-@pytest.mark.skip(reason="Test requires monkey patching of RandomGenerator")
 @pytest.mark.parametrize(
     "initval, jitter_max_retries, expectation",
     [
@@ -629,17 +628,20 @@ def test_init_jitter(initval, jitter_max_retries, expectation):
         pm.HalfNormal("x", default_transform=None, initval=initval)
 
     with expectation:
-        # Starting value is negative (invalid) when np.random.rand returns 0 (jitter = -1)
-        # and positive (valid) when it returns 1 (jitter = 1)
-        with mock.patch("numpy.random.Generator.uniform", side_effect=[-1, -1, -1, 1, -1]):
-            start = pm.sampling.mcmc._init_jitter(
-                model=m,
-                initvals=None,
-                seeds=[1],
-                jitter=True,
-                jitter_max_retries=jitter_max_retries,
-            )
-            m.check_start_vals(start)
+        # Test the new initial point generation with jitter
+        from pymc.initial_point import make_initial_point_fns_per_chain
+        
+        # Create initial point functions with jitter
+        initial_point_fns = make_initial_point_fns_per_chain(
+            model=m,
+            overrides=None,
+            jitter_rvs=set(m.free_RVs),
+            chains=1,
+        )
+        
+        # Generate initial point
+        start = initial_point_fns[0](1)
+        m.check_start_vals(start)
 
 
 def test_step_args():

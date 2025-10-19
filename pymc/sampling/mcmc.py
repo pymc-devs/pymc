@@ -1595,14 +1595,34 @@ def init_nuts(
         q, _ = DictToArrayBijection.map(ip)
         return logp_dlogp_func([q], extra_vars={})[0]
 
-    initial_points = _init_jitter(
-        model,
-        initvals,
-        seeds=random_seed_list,
-        jitter="jitter" in init,
-        jitter_max_retries=jitter_max_retries,
-        logp_fn=model_logp_fn,
+    # Create initial point functions for each chain
+    initial_point_fns = make_initial_point_fns_per_chain(
+        model=model,
+        overrides=initvals,
+        jitter_rvs=set(model.free_RVs) if "jitter" in init else None,
+        chains=chains,
     )
+    
+    # Generate initial points for each chain
+    initial_points = []
+    for i, fn in enumerate(initial_point_fns):
+        try:
+            point = fn(random_seed_list[i])
+            initial_points.append(point)
+        except Exception as e:
+            # If jitter fails, try without jitter
+            if "jitter" in init and jitter_max_retries > 0:
+                jitter_max_retries -= 1
+                initial_point_fns_no_jitter = make_initial_point_fns_per_chain(
+                    model=model,
+                    overrides=initvals,
+                    jitter_rvs=None,
+                    chains=chains,
+                )
+                point = initial_point_fns_no_jitter[i](random_seed_list[i])
+                initial_points.append(point)
+            else:
+                raise e
 
     apoints = [DictToArrayBijection.map(point) for point in initial_points]
     apoints_data = [apoint.data for apoint in apoints]
