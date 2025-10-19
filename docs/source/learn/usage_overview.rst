@@ -1,10 +1,8 @@
-TODO: incorporate the useful bits of this page into the learning section
-
 **************
 Usage Overview
 **************
 
-For a detailed overview of building models in PyMC, please read the appropriate sections in the rest of the documentation. For a flavor of what PyMC models look like, here is a quick example.
+This page provides a quick introduction to PyMC's model building syntax and workflow. For a detailed overview of building models in PyMC, please read the appropriate sections in the rest of the documentation. For a flavor of what PyMC models look like, here is a quick example.
 
 First, let's import PyMC and :doc:`ArviZ <arviz:index>` (which handles plotting and diagnostics):
 
@@ -14,7 +12,7 @@ First, let's import PyMC and :doc:`ArviZ <arviz:index>` (which handles plotting 
     import numpy as np
     import pymc as pm
 
-Models are defined using a context manager (``with`` statement). The model is specified declaratively inside the context manager, instantiating model variables and transforming them as necessary. Here is an example of a model for a bioassay experiment:
+Models are defined using a context manager (``with`` statement). The model is specified declaratively inside the context manager, instantiating model variables and transforming them as necessary. Here is an example of a model for a bioassay experiment that demonstrates PyMC's intuitive syntax:
 
 ::
 
