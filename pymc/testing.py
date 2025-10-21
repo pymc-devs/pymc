@@ -1024,16 +1024,16 @@ def mock_sample(
         from functools import partial
 
         import numpy as np
-        import numpy.typing as npt
+        from numpy.typing import NDArray
 
         from pymc.testing import mock_sample
 
 
-        def mock_diverging(size: tuple[int, int]) -> npt.NDArray:
+        def mock_diverging(size: tuple[int, int]) -> NDArray:
             return np.zeros(size)
 
 
-        def mock_tree_depth(size: tuple[int, int]) -> npt.NDArray:
+        def mock_tree_depth(size: tuple[int, int]) -> NDArray:
             return np.random.choice(range(2, 10), size=size)
 
 
