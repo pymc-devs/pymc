@@ -42,7 +42,8 @@ import pytensor.tensor as pt
 import pytest
 import scipy.stats.distributions as sp
 
-from pytensor.graph.basic import ancestors, equal_computations
+from pytensor.graph.basic import equal_computations
+from pytensor.graph.traversal import ancestors
 from pytensor.tensor.random.op import RandomVariable
 from scipy import stats
 
@@ -89,7 +90,7 @@ def test_factorized_joint_logprob_basic():
         [ll_Y],
         rvs_to_values={sigma: sigma_value_var},
     )
-    total_ll_exp = logp(sigma, sigma_value_var) + ll_Y
+    total_ll_exp = ll_Y + logp(sigma, sigma_value_var)
 
     assert equal_computations([total_ll_combined], [total_ll_exp])
 

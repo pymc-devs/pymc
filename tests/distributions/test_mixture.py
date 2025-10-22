@@ -924,7 +924,9 @@ class TestMixtureVsLatent:
 
         # Check that logp is the same whether elements of the last axis are mixed or not
         logp_fn = model.compile_logp(vars=[m])
-        assert np.isclose(logp_fn({"m": [0, 0, 0]}), logp_fn({"m": [0, 1, 2]}))
+        ip = model.initial_point()
+
+        assert np.isclose(logp_fn(ip | {"m": [0, 0, 0]}), logp_fn(ip | {"m": [0, 1, 2]}))
         self.logp_matches(m, latent_m, z, npop, model=model)
 
     def test_vector_components(self):
@@ -945,8 +947,8 @@ class TestMixtureVsLatent:
             latent_m = Normal("latent_m", mu=mus[..., z], sigma=1e-5, shape=nd)
 
         size = 100
-        m_val = draw(m, draws=size, random_seed=998)
-        latent_m_val = draw(latent_m, draws=size, random_seed=998 * 2)
+        m_val = draw(m, draws=size, random_seed=997)
+        latent_m_val = draw(latent_m, draws=size, random_seed=997 * 2)
         assert m_val.shape == latent_m_val.shape
         # Test that each element in axis = -1 comes from the same mixture
         # component
@@ -959,7 +961,12 @@ class TestMixtureVsLatent:
 
         # Check that mixing of values in the last axis leads to smaller logp
         logp_fn = model.compile_logp(vars=[m])
-        assert logp_fn({"m": [0, 0, 0]}) > logp_fn({"m": [0, 1, 0]}) > logp_fn({"m": [0, 1, 2]})
+        ip = model.initial_point()
+        assert (
+            logp_fn(ip | {"m": [0, 0, 0]})
+            > logp_fn(ip | {"m": [0, 1, 0]})
+            > logp_fn(ip | {"m": [0, 1, 2]})
+        )
         self.logp_matches(m, latent_m, z, npop, model=model)
 
     def samples_from_same_distribution(self, *args):

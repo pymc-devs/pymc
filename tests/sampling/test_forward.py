@@ -28,7 +28,7 @@ from arviz.tests.helpers import check_multiple_attrs
 from pytensor import Mode, shared
 from pytensor.compile import SharedVariable
 from pytensor.graph import graph_inputs
-from pytensor.graph.basic import get_var_by_name, variable_depends_on
+from pytensor.graph.traversal import get_var_by_name, variable_depends_on
 from pytensor.tensor.variable import TensorConstant
 from scipy import stats
 

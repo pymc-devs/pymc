@@ -21,8 +21,9 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Apply, ancestors
+from pytensor.graph.basic import Apply
 from pytensor.graph.replace import clone_replace
+from pytensor.graph.traversal import ancestors
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import normalize_size_param

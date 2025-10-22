@@ -41,13 +41,14 @@ import pytest
 from pytensor import function
 from pytensor import tensor as pt
 from pytensor.compile import get_default_mode
-from pytensor.graph.basic import ancestors, equal_computations
+from pytensor.graph.basic import equal_computations
+from pytensor.graph.traversal import ancestors, explicit_graph_inputs
 from pytensor.tensor.random.basic import NormalRV
 from pytensor.tensor.random.op import RandomVariable
 
 import pymc as pm
 
-from pymc import SymbolicRandomVariable, inputvars
+from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.distributions.transforms import Interval
 from pymc.logprob.abstract import MeasurableOp, valued_rv
 from pymc.logprob.basic import logp
@@ -204,7 +205,7 @@ class TestReplaceRVsByValues:
         after = pytensor.clone_replace(m.free_RVs)
         assert equal_computations(before, after)
 
-    @pytest.mark.parametrize("reversed", (False,))
+    @pytest.mark.parametrize("reversed", (False, True))
     def test_interdependent_transformed_rvs(self, reversed):
         # Test that nested transformed variables, whose transformed values depend on other
         # RVs are properly replaced
@@ -230,11 +231,11 @@ class TestReplaceRVsByValues:
 
         assert_no_rvs(transform_values)
         # Test that we haven't introduced value variables in the random graph (issue #7054)
-        assert not inputvars(rvs)
+        assert not any(list(explicit_graph_inputs(rvs)))
 
         if reversed:
             transform_values = transform_values[::-1]
-        transform_values_fn = m.compile_fn(transform_values, point_fn=False)
+        transform_values_fn = m.compile_fn(transform_values)
 
         x_interval_test_value = np.random.rand()
         y_interval_test_value = np.random.rand()
@@ -255,10 +256,12 @@ class TestReplaceRVsByValues:
 
         np.testing.assert_allclose(
             transform_values_fn(
-                x_interval__=x_interval_test_value,
-                y_interval__=y_interval_test_value,
-                z_interval__=z_interval_test_value,
-                w_interval__=w_interval_test_value,
+                {
+                    "x_interval__": x_interval_test_value,
+                    "y_interval__": y_interval_test_value,
+                    "z_interval__": z_interval_test_value,
+                    "w_interval__": w_interval_test_value,
+                }
             ),
             [expected_x, expected_y, expected_z, expected_w],
         )

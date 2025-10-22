@@ -43,8 +43,9 @@ import pytensor
 
 from pytensor import tensor as pt
 from pytensor.graph import Apply, Op, node_rewriter
-from pytensor.graph.basic import Constant, clone_get_equiv, graph_inputs, walk
+from pytensor.graph.basic import Constant, clone_get_equiv
 from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.traversal import graph_inputs, walk
 from pytensor.link.c.type import CType
 from pytensor.raise_op import CheckAndRaise
 from pytensor.scalar.basic import Mul

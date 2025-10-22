@@ -34,7 +34,8 @@ import scipy.sparse as sps
 
 from pytensor.compile import DeepCopyOp, Function, ProfileStats, get_mode
 from pytensor.compile.sharedvalue import SharedVariable
-from pytensor.graph.basic import Constant, Variable, ancestors, graph_inputs
+from pytensor.graph.basic import Constant, Variable
+from pytensor.graph.traversal import ancestors, explicit_graph_inputs, graph_inputs
 from pytensor.tensor import as_tensor
 from pytensor.tensor.math import variadic_add
 from pytensor.tensor.random.op import RandomVariable
@@ -61,7 +62,6 @@ from pymc.pytensorf import (
     convert_observed_data,
     gradient,
     hessian,
-    inputvars,
     join_nonshared_inputs,
     rewrite_pregrad,
 )
@@ -587,6 +587,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
     ) -> PointFunc:
         """Compiled log probability density function.
 
+        The function expects as input a dictionary with the same structure as self.initial_point()
+
         Parameters
         ----------
         vars : list of random variables or potential terms, optional
@@ -598,7 +600,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Whether to sum all logp terms or return elemwise logp for each variable.
             Defaults to True.
         """
-        return self.compile_fn(self.logp(vars=vars, jacobian=jacobian, sum=sum), **compile_kwargs)
+        compile_kwargs.setdefault("on_unused_input", "ignore")
+        return self.compile_fn(
+            inputs=self.value_vars,
+            outs=self.logp(vars=vars, jacobian=jacobian, sum=sum),
+            **compile_kwargs,
+        )
 
     def compile_dlogp(
         self,
@@ -608,6 +615,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
     ) -> PointFunc:
         """Compiled log probability density gradient function.
 
+        The function expects as input a dictionary with the same structure as self.initial_point()
+
+
         Parameters
         ----------
         vars : list of random variables or potential terms, optional
@@ -616,7 +626,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.compile_fn(self.dlogp(vars=vars, jacobian=jacobian), **compile_kwargs)
+        compile_kwargs.setdefault("on_unused_input", "ignore")
+        return self.compile_fn(
+            inputs=self.value_vars,
+            outs=self.dlogp(vars=vars, jacobian=jacobian),
+            **compile_kwargs,
+        )
 
     def compile_d2logp(
         self,
@@ -627,6 +642,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
     ) -> PointFunc:
         """Compiled log probability density hessian function.
 
+        The function expects as input a dictionary with the same structure as self.initial_point()
+
         Parameters
         ----------
         vars : list of random variables or potential terms, optional
@@ -635,8 +652,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
+        compile_kwargs.setdefault("on_unused_input", "ignore")
         return self.compile_fn(
-            self.d2logp(vars=vars, jacobian=jacobian, negate_output=negate_output),
+            inputs=self.value_vars,
+            outs=self.d2logp(vars=vars, jacobian=jacobian, negate_output=negate_output),
             **compile_kwargs,
         )
 
@@ -741,7 +760,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         dlogp graph
         """
         if vars is None:
-            value_vars = None
+            value_vars = self.continuous_value_vars
         else:
             if not isinstance(vars, list | tuple):
                 vars = [vars]
@@ -781,7 +800,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         d²logp graph
         """
         if vars is None:
-            value_vars = None
+            value_vars = self.continuous_value_vars
         else:
             if not isinstance(vars, list | tuple):
                 vars = [vars]
@@ -1615,7 +1634,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         outs : Variable or sequence of Variables
             PyTensor variable or iterable of PyTensor variables.
         inputs : sequence of Variables, optional
-            PyTensor input variables, defaults to pytensorf.inputvars(outs).
+            PyTensor input variables, Required if there is more than one input.
         mode
             PyTensor compilation mode, default=None.
         point_fn : bool
@@ -1629,7 +1648,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
         Compiled PyTensor function
         """
         if inputs is None:
-            inputs = inputvars(outs)
+            inputs = list(explicit_graph_inputs(outs))
+            if (not point_fn) and len(inputs) > 1:
+                raise ValueError(
+                    "compile_fn requires inputs to be specified when there is more than one input and point_fn is disabled."
+                )
 
         with self:
             fn = compile(
@@ -1792,7 +1815,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             factor.name: np.round(np.asarray(factor_logp), round_vals)
             for factor, factor_logp in zip(
                 factors,
-                self.compile_fn(factor_logps_fn, **kwargs)(point),
+                self.compile_fn(inputs=self.value_vars, outs=factor_logps_fn, **kwargs)(point),
             )
         }
 
@@ -2125,8 +2148,8 @@ def compile_fn(
     ----------
     outs
         PyTensor variable or iterable of PyTensor variables.
-    inputs
-        PyTensor input variables, defaults to pytensorf.inputvars(outs).
+    inputs, optional
+        PyTensor input variables. Required if there is more than one input.
     mode
         PyTensor compilation mode, default=None.
     point_fn : bool

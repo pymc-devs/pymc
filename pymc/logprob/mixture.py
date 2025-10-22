@@ -39,10 +39,11 @@ from typing import cast
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Apply, Constant, Variable, ancestors
+from pytensor.graph.basic import Apply, Constant, Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op, compute_test_value
 from pytensor.graph.rewriting.basic import EquilibriumGraphRewriter, node_rewriter
+from pytensor.graph.traversal import ancestors
 from pytensor.ifelse import IfElse, ifelse
 from pytensor.scalar import Switch
 from pytensor.scalar import switch as scalar_switch

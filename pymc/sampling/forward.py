@@ -37,14 +37,12 @@ from pytensor.graph.basic import (
     Apply,
     Constant,
     Variable,
-    ancestors,
-    general_toposort,
-    walk,
 )
 from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.traversal import ancestors, general_toposort, walk
 from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
-from pytensor.tensor.variable import TensorConstant, TensorVariable
+from pytensor.tensor.variable import TensorConstant
 from rich.console import Console
 from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
@@ -1034,10 +1032,8 @@ def vectorize_over_posterior(
         If random variables are found in the graph and `allow_rvs_in_graph` is False
     """
     # Identify which free RVs are needed to compute `outputs`
-    needed_rvs: list[TensorVariable] = [
-        cast(TensorVariable, rv)
-        for rv in ancestors(outputs, blockers=input_rvs)
-        if rv in set(input_rvs)
+    needed_rvs: list[Variable] = [
+        rv for rv in ancestors(outputs, blockers=input_rvs) if rv in set(input_rvs)
     ]
 
     # Replace needed_rvs with actual posterior samples
@@ -1046,7 +1042,7 @@ def vectorize_over_posterior(
     for rv in needed_rvs:
         posterior_samples = posterior[rv.name].data
 
-        replace_dict[rv] = pt.constant(posterior_samples.astype(rv.dtype), name=rv.name)
+        replace_dict[rv] = pt.constant(posterior_samples.astype(rv.dtype), name=rv.name)  # type: ignore[attr-defined]
 
     # Replace the rvs that remain in the graph with resized versions
     all_rvs = rvs_in_graph(outputs)
@@ -1057,7 +1053,7 @@ def vectorize_over_posterior(
     # These variables need to be resized because they won't be resized implicitly by
     # the replacement of the needed_rvs or other random variables in the graph when we
     # later call vectorize_graph.
-    independent_rvs: list[TensorVariable] = []
+    independent_rvs: list[Variable] = []
     for rv in [
         rv
         for rv in general_toposort(  # type: ignore[call-overload]
