@@ -137,15 +137,13 @@ class TestCensored:
 
         # No censoring
         censored_norm = pm.Censored.dist(norm, lower=None, upper=None)
-        with pytest.warns(RuntimeWarning, match=match_str):
-            censored_eval = logcdf(censored_norm, eval_points).eval()
+        censored_eval = logcdf(censored_norm, eval_points).eval()
         np.testing.assert_allclose(censored_eval, expected_logcdf_uncensored)
 
         # Left censoring
         censored_norm = pm.Censored.dist(norm, lower=-1, upper=None)
         expected_left = np.where(eval_points < -1, -np.inf, expected_logcdf_uncensored)
-        with pytest.warns(RuntimeWarning, match=match_str):
-            censored_eval = logcdf(censored_norm, eval_points).eval()
+        censored_eval = logcdf(censored_norm, eval_points).eval()
         np.testing.assert_allclose(
             censored_eval,
             expected_left,
@@ -155,8 +153,7 @@ class TestCensored:
         # Right censoring
         censored_norm = pm.Censored.dist(norm, lower=None, upper=1)
         expected_right = np.where(eval_points >= 1, 0.0, expected_logcdf_uncensored)
-        with pytest.warns(RuntimeWarning, match=match_str):
-            censored_eval = logcdf(censored_norm, eval_points).eval()
+        censored_eval = logcdf(censored_norm, eval_points).eval()
         np.testing.assert_allclose(
             censored_eval,
             expected_right,
@@ -167,8 +164,7 @@ class TestCensored:
         censored_norm = pm.Censored.dist(norm, lower=-1, upper=1)
         expected_interval = np.where(eval_points < -1, -np.inf, expected_logcdf_uncensored)
         expected_interval = np.where(eval_points >= 1, 0.0, expected_interval)
-        with pytest.warns(RuntimeWarning, match=match_str):
-            censored_eval = logcdf(censored_norm, eval_points).eval()
+        censored_eval = logcdf(censored_norm, eval_points).eval()
         np.testing.assert_allclose(
             censored_eval,
             expected_interval,
