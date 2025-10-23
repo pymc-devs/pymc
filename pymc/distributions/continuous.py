@@ -2532,22 +2532,7 @@ class InverseGamma(PositiveContinuous):
         )
 
 
-class ChiSquaredRV(RandomVariable):
-    name = "chi_squared"
-    signature = "()->()"
-    dtype = "floatX"
-    _print_name = ("ChiSquared", "\\operatorname{ChiSquared}")
-
-    @classmethod
-    def rng_fn(cls, rng, nu, size=None):
-        alpha = np.asarray(nu) / 2.0
-        return np.asarray(Gamma.rv_op.rng_fn(rng, alpha, 2.0, size=size))
-
-
-chi_squared = ChiSquaredRV()
-
-
-class ChiSquared(PositiveContinuous):
+class ChiSquared:
     r"""
     :math:`\chi^2` distribution.
 
@@ -2592,27 +2577,20 @@ class ChiSquared(PositiveContinuous):
         Degrees of freedom (nu > 0).
     """
 
-    rv_op = chi_squared
+    name = "chi_squared"
+    extended_signature = "[rng],[size],(),()->[rng],()"
+    _print_name = ("ChiSquared", "\\operatorname{ChiSquared}")
+
+    def __new__(cls, name, nu, **kwargs):
+        obj = Gamma(name, alpha=nu / 2, beta=1 / 2, **kwargs)
+        obj.owner.op._print_name = cls._print_name
+        return obj
 
     @classmethod
-    def dist(cls, nu, *args, **kwargs):
-        nu = pt.as_tensor_variable(nu)
-        return super().dist([nu], *args, **kwargs)
-
-    def support_point(rv, size, nu):
-        mean = nu
-        if not rv_size_is_none(size):
-            mean = pt.full(size, mean)
-        return mean
-
-    def logp(value, nu):
-        return Gamma.logp(value, alpha=nu / 2, scale=2)
-
-    def logcdf(value, nu):
-        return Gamma.logcdf(value, alpha=nu / 2, scale=2)
-
-    def icdf(value, nu):
-        return Gamma.icdf(value, alpha=nu / 2, scale=2)
+    def dist(cls, nu, **kwargs):
+        obj = Gamma.dist(alpha=nu / 2, beta=1 / 2, **kwargs)
+        obj.owner.op._print_name = cls._print_name
+        return obj
 
 
 class WeibullBetaRV(SymbolicRandomVariable):
