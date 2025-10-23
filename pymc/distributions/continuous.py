@@ -2577,20 +2577,12 @@ class ChiSquared:
         Degrees of freedom (nu > 0).
     """
 
-    name = "chi_squared"
-    extended_signature = "[rng],[size],(),()->[rng],()"
-    _print_name = ("ChiSquared", "\\operatorname{ChiSquared}")
-
     def __new__(cls, name, nu, **kwargs):
-        obj = Gamma(name, alpha=nu / 2, beta=1 / 2, **kwargs)
-        obj.owner.op._print_name = cls._print_name
-        return obj
+        return Gamma(name, alpha=nu / 2, beta=1 / 2, **kwargs)
 
     @classmethod
     def dist(cls, nu, **kwargs):
-        obj = Gamma.dist(alpha=nu / 2, beta=1 / 2, **kwargs)
-        obj.owner.op._print_name = cls._print_name
-        return obj
+        return Gamma.dist(alpha=nu / 2, beta=1 / 2, **kwargs)
 
 
 class WeibullBetaRV(SymbolicRandomVariable):
