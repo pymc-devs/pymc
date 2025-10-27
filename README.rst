@@ -203,6 +203,21 @@ Citing PyMC
 Please choose from the following:
 
 - |DOIpaper| *PyMC: A Modern and Comprehensive Probabilistic Programming Framework in Python*, Abril-Pla O, Andreani V, Carroll C, Dong L, Fonnesbeck CJ, Kochurov M, Kumar R, Lao J, Luhmann CC, Martin OA, Osthege M, Vieira R, Wiecki T, Zinkov R. (2023)
+
+  - BibTex version
+
+    .. code:: bibtex
+
+       @article{pymc2023,
+         title = {{PyMC}: A Modern and Comprehensive Probabilistic Programming Framework in {P}ython},
+         author = {Oriol Abril-Pla and Virgile Andreani and Colin Carroll and Larry Dong and Christopher J. Fonnesbeck and Maxim Kochurov and Ravin Kumar and Junpeng Lao and Christian C. Luhmann and Osvaldo A. Martin and Michael Osthege and Ricardo Vieira and Thomas Wiecki and Robert Zinkov },
+         journal = {{PeerJ} Computer Science},
+         volume = {9},
+         number = {e1516},
+         doi = {10.7717/peerj-cs.1516},
+         year = {2023}
+       }
+
 - |DOIzenodo| A DOI for all versions.
 - DOIs for specific versions are shown on Zenodo and under `Releases <https://github.com/pymc-devs/pymc/releases>`_
 
