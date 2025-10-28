@@ -284,7 +284,9 @@ class ProgressBarManager:
         self.update_stats_functions = step_method._make_progressbar_update_functions()
 
         self._show_progress = show_progress
+        self.draws = 0
         self.completed_draws = 0
+        self.divergences = 0
         self.total_draws = draws + tune
         self.desc = "Sampling chain"
         self.chains = chains
@@ -299,13 +301,18 @@ class ProgressBarManager:
     def __exit__(self, exc_type, exc_val, exc_tb):
         return self._progress.__exit__(exc_type, exc_val, exc_tb)
 
+    def set_initial_state(self, draws: int = 0, divergences: int = 0):
+        self.draws = draws
+        self.completed_draws += draws
+        self.divergences += divergences
+
     def _initialize_tasks(self):
         if self.combined_progress:
             self.tasks = [
                 self._progress.add_task(
                     self.desc.format(self),
-                    completed=0,
-                    draws=0,
+                    completed=self.completed_draws,
+                    draws=self.completed_draws,
                     total=self.total_draws * self.chains - 1,
                     chain_idx=0,
                     sampling_speed=0,
@@ -319,14 +326,17 @@ class ProgressBarManager:
             self.tasks = [
                 self._progress.add_task(
                     self.desc.format(self),
-                    completed=0,
-                    draws=0,
+                    completed=self.completed_draws,
+                    draws=self.draws,
                     total=self.total_draws - 1,
                     chain_idx=chain_idx,
                     sampling_speed=0,
                     speed_unit="draws/s",
                     failing=False,
-                    **{stat: value[chain_idx] for stat, value in self.progress_stats.items()},
+                    **{
+                        stat: value[0] if stat != "diverging" else self.divergences
+                        for stat, value in self.progress_stats.items()
+                    },
                 )
                 for chain_idx in range(self.chains)
             ]
