@@ -27,7 +27,7 @@ from pytensor.tensor.shape import Shape
 
 from pymc.model.core import modelcontext
 from pymc.pytensorf import _cheap_eval_mode
-from pymc.util import VarName, get_default_varnames, get_var_name
+from pymc.util import get_default_varnames, get_var_name
 
 __all__ = (
     "ModelGraph",
@@ -173,7 +173,7 @@ def default_data(var: Variable) -> GraphvizNodeKwargs:
     }
 
 
-def get_node_type(var_name: VarName, model) -> NodeType:
+def get_node_type(var_name: str, model) -> NodeType:
     """Return the node type of the variable in the model."""
     v = model[var_name]
 
@@ -242,7 +242,7 @@ class ModelGraph:
         self._all_vars = {model[var_name] for var_name in self._all_var_names}
         self.var_list = self.model.named_vars.values()
 
-    def get_parent_names(self, var: Variable) -> set[VarName]:
+    def get_parent_names(self, var: Variable) -> set[str]:
         if var.owner is None:
             return set()
 
@@ -261,12 +261,12 @@ class ModelGraph:
             return x.owner.inputs
 
         return {
-            cast(VarName, ancestor.name)  # type: ignore[union-attr]
+            cast(str, ancestor.name)  # type: ignore[union-attr]
             for ancestor in walk(nodes=var.owner.inputs, expand=_expand)
             if ancestor in named_vars
         }
 
-    def vars_to_plot(self, var_names: Iterable[VarName] | None = None) -> list[VarName]:
+    def vars_to_plot(self, var_names: Iterable[str] | None = None) -> list[str]:
         if var_names is None:
             return self._all_var_names
 
@@ -297,12 +297,12 @@ class ModelGraph:
         return [get_var_name(var) for var in selected_ancestors]
 
     def make_compute_graph(
-        self, var_names: Iterable[VarName] | None = None
-    ) -> dict[VarName, set[VarName]]:
+        self, var_names: Iterable[str] | None = None
+    ) -> dict[str, set[str]]:
         """Get map of var_name -> set(input var names) for the model."""
         model = self.model
         named_vars = self._all_vars
-        input_map: dict[VarName, set[VarName]] = defaultdict(set)
+        input_map: dict[str, set[str]] = defaultdict(set)
 
         var_names_to_plot = self.vars_to_plot(var_names)
         for var_name in var_names_to_plot:
@@ -319,7 +319,7 @@ class ModelGraph:
                 for ancestor in ancestors([obs_var]):
                     if ancestor not in named_vars:
                         continue
-                    obs_name = cast(VarName, ancestor.name)
+                    obs_name = cast(str, ancestor.name)
                     input_map[var_name].discard(obs_name)
                     input_map[obs_name].add(var_name)
 
@@ -327,7 +327,7 @@ class ModelGraph:
 
     def get_plates(
         self,
-        var_names: Iterable[VarName] | None = None,
+        var_names: Iterable[str] | None = None,
     ) -> list[Plate]:
         """Rough but surprisingly accurate plate detection.
 
@@ -337,7 +337,7 @@ class ModelGraph:
         Returns
         -------
         dict
-            Maps plate labels to the set of ``VarName``s inside the plate.
+            Maps plate labels to the set of ``str``s inside the plate.
         """
         plates = defaultdict(set)
 
@@ -389,8 +389,8 @@ class ModelGraph:
 
     def edges(
         self,
-        var_names: Iterable[VarName] | None = None,
-    ) -> list[tuple[VarName, VarName]]:
+        var_names: Iterable[str] | None = None,
+    ) -> list[tuple[str, str]]:
         """Get edges between the variables in the model.
 
         Parameters
@@ -405,7 +405,7 @@ class ModelGraph:
 
         """
         return [
-            (VarName(child.replace(":", "&")), VarName(parent.replace(":", "&")))
+            (str(child.replace(":", "&")), str(parent.replace(":", "&")))
             for child, parents in self.make_compute_graph(var_names=var_names).items()
             for parent in parents
         ]
@@ -422,7 +422,7 @@ class ModelGraph:
 def make_graph(
     name: str,
     plates: list[Plate],
-    edges: list[tuple[VarName, VarName]],
+    edges: list[tuple[str, str]],
     formatting: str = "plain",
     save=None,
     figsize=None,
@@ -496,7 +496,7 @@ def make_graph(
 def make_networkx(
     name: str,
     plates: list[Plate],
-    edges: list[tuple[VarName, VarName]],
+    edges: list[tuple[str, str]],
     formatting: str = "plain",
     node_formatters: NodeTypeFormatterMapping | None = None,
     create_plate_label: PlateLabelFunc = create_plate_label_with_dim_length,
@@ -566,7 +566,7 @@ def make_networkx(
 def model_to_networkx(
     model=None,
     *,
-    var_names: Iterable[VarName] | None = None,
+    var_names: Iterable[str] | None = None,
     formatting: str = "plain",
     node_formatters: NodeTypeFormatterMapping | None = None,
     include_dim_lengths: bool = True,
@@ -660,7 +660,7 @@ def model_to_networkx(
 def model_to_graphviz(
     model=None,
     *,
-    var_names: Iterable[VarName] | None = None,
+    var_names: Iterable[str] | None = None,
     formatting: str = "plain",
     save: str | None = None,
     figsize: tuple[int, int] | None = None,
