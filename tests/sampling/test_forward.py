@@ -1022,7 +1022,7 @@ class TestSamplePPC:
             caplog.clear()
         elif kind == "Dataset":
             # Dataset has all MCMC posterior samples and the values of the coordinates. This
-            # enables it to see that the coordinates have not changed, but the MutableData is
+            # enables it to see that the coordinates have not changed, but the Data is
             # assumed volatile by default
             assert caplog.record_tuples == [
                 ("pymc.sampling.forward", logging.INFO, "Sampling: [b, y]")
@@ -1031,7 +1031,7 @@ class TestSamplePPC:
 
         original_offsets = model["offsets"].get_value()
         with model:
-            # Changing the MutableData values. This will only be picked up by InferenceData
+            # Changing the Data values. This will only be picked up by InferenceData
             pm.set_data({"offsets": original_offsets + 1})
             pm.sample_posterior_predictive(samples)
         if kind == "MultiTrace":
@@ -1072,7 +1072,7 @@ class TestSamplePPC:
             caplog.clear()
 
         with model:
-            # Changing the mutable coordinate values, but not shape, and also changing MutableData.
+            # Changing the mutable coordinate values, but not shape, and also changing Data.
             # This will trigger resampling of all variables
             model.set_dim("name", new_length=3, coord_values=["A", "B", "D"])
             pm.set_data({"offsets": original_offsets + 1, "y_obs": np.zeros((10, 3))})
