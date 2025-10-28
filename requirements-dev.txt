@@ -2,6 +2,7 @@
 # See that file for comments about the need/usage of each dependency.
 
 arviz>=0.13.0
+blackjax
 cachetools>=4.2.1
 cloudpickle
 ipython>=7.16
@@ -12,6 +13,7 @@ myst-nb<=1.0.0
 numdifftools>=0.9.40
 numpy>=1.25.0
 numpydoc
+numpyro
 pandas>=0.24.0
 polyagamma
 pre-commit>=2.8.0
