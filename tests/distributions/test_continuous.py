@@ -872,6 +872,12 @@ class TestMatchesScipy:
             ),
             decimal=select_by_precision(float64=6, float32=1),
         )
+        check_icdf(
+            pm.LogitNormal,
+            {"mu": R, "sigma": Rplus},
+            lambda q, mu, sigma: sp.expit(mu + sigma * st.norm.ppf(q)),
+            decimal=select_by_precision(float64=12, float32=5),
+        )
 
     @pytest.mark.skipif(
         condition=(pytensor.config.floatX == "float32"),
