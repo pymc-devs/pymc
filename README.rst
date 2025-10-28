@@ -282,13 +282,24 @@ You can get professional consulting support from `PyMC Labs <https://www.pymc-la
 Sponsors
 ========
 
-|NumFOCUS|
+.. list-table::
+   :widths: 33 33 33
+   :align: center
 
-|PyMCLabs|
+   * - |NumFOCUS|
+     - |PyMCLabs|
+     - |OWR|
 
-|Mistplay|
+Past Sponsors
+=============
 
-|ODSC|
+.. list-table::
+   :widths: 33 33 33
+   :align: center
+
+   * - |Mistplay|
+     - |ODSC|
+     - |AdiaLab|
 
 Thanks to our contributors
 ==========================
@@ -308,11 +319,15 @@ Thanks to our contributors
 .. |NumFOCUS| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/sponsor_numfocus.png?raw=true
    :target: http://www.numfocus.org/
 .. |PyMCLabs| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/sponsor_pymc_labs.png?raw=true
-   :target: https://pymc-labs.io
+   :target: https://pymc-labs.com
+.. |OWR| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/owr/sponsor_owr.png?raw=true
+   :target: https://www.openwoundresearch.com
 .. |Mistplay| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/sponsor_mistplay.png?raw=true
    :target: https://www.mistplay.com/
 .. |ODSC| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/odsc/sponsor_odsc.png?raw=true
    :target: https://odsc.com/california/?utm_source=pymc&utm_medium=referral
+.. |AdiaLab| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/adia-lab/sponsor_adia_lab.png?raw=true
+   :target: https://www.adialab.ae/
 .. |contributors| image:: https://contrib.rocks/image?repo=pymc-devs/pymc
    :target: https://github.com/pymc-devs/pymc/graphs/contributors
 .. |Conda Downloads| image:: https://anaconda.org/conda-forge/pymc/badges/downloads.svg
