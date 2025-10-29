@@ -70,7 +70,7 @@ from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
 from pymc.initial_point import make_initial_point_fn
-from pymc.model import modelcontext
+from pymc.model import Model, modelcontext
 from pymc.pytensorf import (
     SeedSequenceSeed,
     compile,
@@ -1246,11 +1246,20 @@ class Approximation(WithMemoization):
             else:
                 rest.__init_group__(unseen_free_RVs)
                 self.groups.append(rest)
-        self.model = model
+        self._model = model
 
     @property
     def has_logq(self):
         return all(self.collect("has_logq"))
+
+    @property
+    def model(self):
+        warnings.warn(
+            "`model` field is deprecated and will be removed in future versions. Use "
+            "a model context instead.",
+            DeprecationWarning,
+        )
+        return self._model
 
     def collect(self, item):
         return [getattr(g, item) for g in self.groups]
@@ -1538,9 +1547,12 @@ class Approximation(WithMemoization):
         return found
 
     @node_property
-    def sample_dict_fn(self):
+    def sample_dict_fn(self, model=None):
         s = pt.iscalar()
-        names = [self.model.rvs_to_values[v].name for v in self.model.free_RVs]
+
+        model = modelcontext(model)
+
+        names = [model.rvs_to_values[v].name for v in model.free_RVs]
         sampled = [self.rslice(name) for name in names]
         sampled = self.set_size_and_deterministic(sampled, s, 0)
         sample_fn = compile([s], sampled)
@@ -1556,7 +1568,13 @@ class Approximation(WithMemoization):
         return inner
 
     def sample(
-        self, draws=500, *, random_seed: RandomState = None, return_inferencedata=True, **kwargs
+        self,
+        draws=500,
+        *,
+        model: Model | None = None,
+        random_seed: RandomState = None,
+        return_inferencedata=True,
+        **kwargs,
     ):
         """Draw samples from variational posterior.
 
@@ -1564,6 +1582,8 @@ class Approximation(WithMemoization):
         ----------
         draws : int
             Number of random samples.
+        model : Model (optional if in ``with`` context
+            Model to be used to generate samples.
         random_seed : int, RandomState or Generator, optional
             Seed for the random number generator.
         return_inferencedata : bool
@@ -1577,16 +1597,18 @@ class Approximation(WithMemoization):
         # TODO: add tests for include_transformed case
         kwargs["log_likelihood"] = False
 
+        model = modelcontext(model)
+
         if random_seed is not None:
             (random_seed,) = _get_seeds_per_chain(random_seed, 1)
-        samples: dict = self.sample_dict_fn(draws, random_seed=random_seed)
+        samples: dict = self.sample_dict_fn(draws, model=model, random_seed=random_seed)
         points = (
             {name: np.asarray(records[i]) for name, records in samples.items()}
             for i in range(draws)
         )
 
         trace = NDArray(
-            model=self.model,
+            model=model,
             test_point={name: records[0] for name, records in samples.items()},
         )
         try:
@@ -1600,7 +1622,7 @@ class Approximation(WithMemoization):
         if not return_inferencedata:
             return multi_trace
         else:
-            return pm.to_inference_data(multi_trace, model=self.model, **kwargs)
+            return pm.to_inference_data(multi_trace, model=model, **kwargs)
 
     @property
     def ndim(self):
