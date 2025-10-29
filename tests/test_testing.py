@@ -101,3 +101,18 @@ def test_fixture(mock_pymc_sample, dummy_model) -> None:
     posterior = idata.posterior
     assert posterior.sizes == {"chain": 1, "draw": 10}
     assert (posterior["half_flat"] >= 0).all()
+
+
+def test_mock_pymc_sample_var_names(mock_pymc_sample):
+    with pm.Model() as model:
+        pm.Flat("flat")
+        pm.HalfFlat("half_flat")
+        pm.Flat("other_flat")
+
+    with model:
+        idata = pm.sample(var_names=["flat", "half_flat"])
+    assert set(idata.posterior.data_vars) == {"flat", "half_flat"}
+
+    with model:
+        idata = pm.sample()
+    assert set(idata.posterior.data_vars) == {"flat", "half_flat", "other_flat"}

@@ -76,6 +76,8 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
 
 
 def test_step_args():
+    pytest.importorskip("numpyro")
+
     with Model() as model:
         a = Normal("a")
         idata = sample(
@@ -91,6 +93,9 @@ def test_step_args():
 
 @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
 def test_sample_var_names(nuts_sampler):
+    if nuts_sampler != "pymc":
+        pytest.importorskip(nuts_sampler)
+
     seed = 1234
     kwargs = {
         "chains": 1,

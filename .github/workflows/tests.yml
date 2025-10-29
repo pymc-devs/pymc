@@ -31,11 +31,11 @@ jobs:
     outputs:
       changes: ${{ steps.changes.outputs.src }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         id: changes
         with:
           filters: |
@@ -146,15 +146,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }}
     defaults:
       run:
         shell: bash -leo pipefail {0}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
-      - uses: mamba-org/setup-micromamba@v2
+      - uses: mamba-org/setup-micromamba@add3a49764cedee8ee24e82dfde87f5bc2914462 # v2.0.7
         with:
           environment-file: conda-envs/environment-test.yml
           create-args: >-
@@ -171,7 +171,7 @@ jobs:
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
@@ -185,7 +185,7 @@ jobs:
       matrix:
         os: [windows-latest]
         floatx: [float64]
-        python-version: ["3.10"]
+        python-version: ["3.11"]
         test-subset:
           - tests/variational/test_approximations.py tests/variational/test_callbacks.py tests/variational/test_inference.py tests/variational/test_opvi.py tests/test_initial_point.py
           - tests/model/test_core.py tests/sampling/test_mcmc.py
@@ -196,15 +196,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=core2'
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }}
     defaults:
       run:
         shell: cmd /C call {0}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
-      - uses: mamba-org/setup-micromamba@v2
+      - uses: mamba-org/setup-micromamba@add3a49764cedee8ee24e82dfde87f5bc2914462 # v2.0.7
         with:
           environment-file: conda-envs/windows-environment-test.yml
           create-args: >-
@@ -223,7 +223,7 @@ jobs:
         run: >-
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
@@ -256,15 +256,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }}
     defaults:
       run:
         shell: bash -leo pipefail {0}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
-      - uses: mamba-org/setup-micromamba@v2
+      - uses: mamba-org/setup-micromamba@add3a49764cedee8ee24e82dfde87f5bc2914462 # v2.0.7
         with:
           environment-file: conda-envs/environment-test.yml
           create-args: >-
@@ -281,7 +281,7 @@ jobs:
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
@@ -306,15 +306,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=native'
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }}
     defaults:
       run:
         shell: bash -leo pipefail {0}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
-      - uses: mamba-org/setup-micromamba@v2
+      - uses: mamba-org/setup-micromamba@add3a49764cedee8ee24e82dfde87f5bc2914462 # v2.0.7
         with:
           environment-file: conda-envs/environment-alternative-backends.yml
           create-args: >-
@@ -331,7 +331,7 @@ jobs:
         run: |
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
@@ -352,15 +352,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }},gcc__cxxflags='-march=core2'
+      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }}
     defaults:
       run:
         shell: cmd /C call {0}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
-      - uses: mamba-org/setup-micromamba@v2
+      - uses: mamba-org/setup-micromamba@add3a49764cedee8ee24e82dfde87f5bc2914462 # v2.0.7
         with:
           environment-file: conda-envs/windows-environment-test.yml
           create-args: >-
@@ -379,7 +379,7 @@ jobs:
         run: >-
           python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET

@@ -393,7 +393,7 @@ class Bernoulli(Discrete):
 class DiscreteWeibullRV(SymbolicRandomVariable):
     name = "discrete_weibull"
     extended_signature = "[rng],[size],(),()->[rng],()"
-    _print_name = ("dWeibull", "\\operatorname{dWeibull}")
+    _print_name = ("DiscreteWeibull", "\\operatorname{DiscreteWeibull}")
 
     @classmethod
     def rv_op(cls, q, beta, *, size=None, rng=None):
@@ -1357,7 +1357,7 @@ class OrderedProbit:
 
     Examples
     --------
-    .. code:: python
+    .. code-block:: python
 
         # Generate data for a simple 1 dimensional example problem
         n1_c = 300; n2_c = 300; n3_c = 300

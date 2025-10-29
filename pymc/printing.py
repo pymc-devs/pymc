@@ -18,7 +18,8 @@ import re
 from functools import partial
 
 from pytensor.compile import SharedVariable
-from pytensor.graph.basic import Constant, walk
+from pytensor.graph.basic import Constant
+from pytensor.graph.traversal import walk
 from pytensor.tensor.basic import TensorVariable, Variable
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.random.basic import RandomVariable

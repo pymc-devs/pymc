@@ -32,11 +32,10 @@ from pytensor.graph.basic import (
     Variable,
     clone_get_equiv,
     equal_computations,
-    graph_inputs,
-    walk,
 )
 from pytensor.graph.fg import FunctionGraph, Output
 from pytensor.graph.op import HasInnerGraph
+from pytensor.graph.traversal import explicit_graph_inputs, graph_inputs, walk
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
 from pytensor.tensor.basic import _as_tensor_variable
@@ -166,7 +165,7 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
             mask[mask_idx] = 1
             return np.ma.MaskedArray(array_data, mask)
 
-    if not inputvars(x) and not rvs_in_graph(x):
+    if not len(list(explicit_graph_inputs(x))) and not rvs_in_graph(x):
         return x.eval(mode=_cheap_eval_mode)
 
     raise TypeError(f"Data cannot be extracted from {x}")
@@ -245,15 +244,17 @@ def cont_inputs(a):
     """
     Get the continuous inputs into PyTensor variables.
 
+    NOTE: No particular order is guaranteed across PyTensor versions
+
     Parameters
     ----------
         a: PyTensor variable
 
     Returns
     -------
-        r: list of tensor variables that are continuous inputs
+        r: list of tensor variables that are continuous inputs.
     """
-    return typefilter(inputvars(a), continuous_types)
+    return typefilter(explicit_graph_inputs(a), continuous_types)
 
 
 def floatX(X):
@@ -311,6 +312,10 @@ empty_gradient = pt.zeros(0, dtype="float32")
 def gradient(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)
+        if len(vars) > 1:
+            raise ValueError(
+                "gradient requires vars to be specified when there is more than one input."
+            )
 
     if vars:
         return pt.concatenate([gradient1(f, v) for v in vars], axis=0)
@@ -332,6 +337,10 @@ def jacobian1(f, v):
 def jacobian(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)
+        if len(vars) > 1:
+            raise ValueError(
+                "jacobian requires vars to be specified when there is more than one input."
+            )
 
     if vars:
         return pt.concatenate([jacobian1(f, v) for v in vars], axis=1)
@@ -379,6 +388,10 @@ def hessian_diag1(f, v):
 def hessian_diag(f, vars=None, negate_output=True):
     if vars is None:
         vars = cont_inputs(f)
+        if len(vars) > 1:
+            raise ValueError(
+                "hessian_diag requires vars to be specified when there is more than one input."
+            )
 
     if vars:
         res = pt.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
@@ -412,10 +425,11 @@ def make_shared_replacements(point, vars, model):
     -------
     Dict of variable -> new shared variable
     """
-    othervars = set(model.value_vars) - set(vars)
+    vars_set = set(vars)
     return {
         var: pytensor.shared(point[var.name], var.name + "_shared", shape=var.type.shape)
-        for var in othervars
+        for var in model.value_vars
+        if var not in vars_set
     }
 
 
@@ -612,7 +626,7 @@ class CallableTensor:
         ----------
         input: TensorVariable
         """
-        (oldinput,) = inputvars(self.tensor)
+        (oldinput,) = explicit_graph_inputs(self.tensor)
         return pytensor.clone_replace(self.tensor, {oldinput: input}, rebuild_strict=False)
 
 
@@ -722,16 +736,18 @@ def collect_default_updates(
 
     Examples
     --------
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
         from pytensor.scan import scan
         from pymc.pytensorf import collect_default_updates
 
+
         def scan_step(xtm1):
             x = xtm1 + pm.Normal.dist()
             x_update = collect_default_updates([x])
             return x, x_update
+
 
         x0 = pm.Normal.dist()
 

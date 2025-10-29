@@ -17,8 +17,8 @@ from functools import singledispatch
 import numpy as np
 import pytensor.tensor as pt
 
+from numpy.lib.array_utils import normalize_axis_tuple
 from pytensor.graph import Op
-from pytensor.npy_2_compat import normalize_axis_tuple
 from pytensor.tensor import TensorVariable
 
 from pymc.logprob.transforms import (

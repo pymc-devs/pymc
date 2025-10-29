@@ -45,10 +45,9 @@ import pytensor.tensor as pt
 from pytensor.graph.basic import (
     Constant,
     Variable,
-    ancestors,
-    walk,
 )
 from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
+from pytensor.graph.traversal import ancestors, walk
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
@@ -533,8 +532,8 @@ def conditional_logp(
             f"The logprob terms of the following value variables could not be derived: {missing_value_terms}"
         )
 
-    values, logprobs = zip(*values_to_logprobs.items())
-    logprobs = cleanup_ir(logprobs)
+    # Ensure same order as input
+    logprobs = cleanup_ir(tuple(values_to_logprobs[v] for v in original_values))
 
     if warn_rvs:
         rvs_in_logp_expressions = _find_unallowed_rvs_in_graph(logprobs)
@@ -545,7 +544,7 @@ def conditional_logp(
                 UserWarning,
             )
 
-    return dict(zip(values, logprobs))
+    return dict(zip(original_values, logprobs))
 
 
 def transformed_conditional_logp(

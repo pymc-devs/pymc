@@ -28,8 +28,9 @@ from numpy import testing as npt
 from numpy.typing import NDArray
 from pytensor.compile import SharedVariable
 from pytensor.compile.mode import Mode
-from pytensor.graph.basic import Constant, Variable, equal_computations, graph_inputs
+from pytensor.graph.basic import Constant, Variable, equal_computations
 from pytensor.graph.rewriting.basic import in2out
+from pytensor.graph.traversal import graph_inputs
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
@@ -1050,10 +1051,12 @@ def mock_sample(
     model = kwargs.get("model", None)
     draws = kwargs.get("draws", draws)
     n_chains = kwargs.get("chains", 1)
+    var_names = kwargs.get("var_names", None)
     idata: InferenceData = pm.sample_prior_predictive(
         model=model,
         random_seed=random_seed,
         draws=draws,
+        var_names=var_names,
     )
 
     idata.add_groups(

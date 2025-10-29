@@ -34,7 +34,8 @@ import scipy.sparse as sps
 
 from pytensor.compile import DeepCopyOp, Function, ProfileStats, get_mode
 from pytensor.compile.sharedvalue import SharedVariable
-from pytensor.graph.basic import Constant, Variable, ancestors, graph_inputs
+from pytensor.graph.basic import Constant, Variable
+from pytensor.graph.traversal import ancestors, explicit_graph_inputs, graph_inputs
 from pytensor.tensor import as_tensor
 from pytensor.tensor.math import variadic_add
 from pytensor.tensor.random.op import RandomVariable
@@ -61,7 +62,6 @@ from pymc.pytensorf import (
     convert_observed_data,
     gradient,
     hessian,
-    inputvars,
     join_nonshared_inputs,
     rewrite_pregrad,
 )
@@ -587,6 +587,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
     ) -> PointFunc:
         """Compiled log probability density function.
 
+        The function expects as input a dictionary with the same structure as self.initial_point()
+
         Parameters
         ----------
         vars : list of random variables or potential terms, optional
@@ -598,7 +600,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Whether to sum all logp terms or return elemwise logp for each variable.
             Defaults to True.
         """
-        return self.compile_fn(self.logp(vars=vars, jacobian=jacobian, sum=sum), **compile_kwargs)
+        compile_kwargs.setdefault("on_unused_input", "ignore")
+        return self.compile_fn(
+            inputs=self.value_vars,
+            outs=self.logp(vars=vars, jacobian=jacobian, sum=sum),
+            **compile_kwargs,
+        )
 
     def compile_dlogp(
         self,
@@ -608,6 +615,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
     ) -> PointFunc:
         """Compiled log probability density gradient function.
 
+        The function expects as input a dictionary with the same structure as self.initial_point()
+
+
         Parameters
         ----------
         vars : list of random variables or potential terms, optional
@@ -616,7 +626,12 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
-        return self.compile_fn(self.dlogp(vars=vars, jacobian=jacobian), **compile_kwargs)
+        compile_kwargs.setdefault("on_unused_input", "ignore")
+        return self.compile_fn(
+            inputs=self.value_vars,
+            outs=self.dlogp(vars=vars, jacobian=jacobian),
+            **compile_kwargs,
+        )
 
     def compile_d2logp(
         self,
@@ -627,6 +642,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
     ) -> PointFunc:
         """Compiled log probability density hessian function.
 
+        The function expects as input a dictionary with the same structure as self.initial_point()
+
         Parameters
         ----------
         vars : list of random variables or potential terms, optional
@@ -635,8 +652,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian : bool
             Whether to include jacobian terms in logprob graph. Defaults to True.
         """
+        compile_kwargs.setdefault("on_unused_input", "ignore")
         return self.compile_fn(
-            self.d2logp(vars=vars, jacobian=jacobian, negate_output=negate_output),
+            inputs=self.value_vars,
+            outs=self.d2logp(vars=vars, jacobian=jacobian, negate_output=negate_output),
             **compile_kwargs,
         )
 
@@ -741,7 +760,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         dlogp graph
         """
         if vars is None:
-            value_vars = None
+            value_vars = self.continuous_value_vars
         else:
             if not isinstance(vars, list | tuple):
                 vars = [vars]
@@ -781,7 +800,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         d²logp graph
         """
         if vars is None:
-            value_vars = None
+            value_vars = self.continuous_value_vars
         else:
             if not isinstance(vars, list | tuple):
                 vars = [vars]
@@ -1615,7 +1634,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         outs : Variable or sequence of Variables
             PyTensor variable or iterable of PyTensor variables.
         inputs : sequence of Variables, optional
-            PyTensor input variables, defaults to pytensorf.inputvars(outs).
+            PyTensor input variables, Required if there is more than one input.
         mode
             PyTensor compilation mode, default=None.
         point_fn : bool
@@ -1629,7 +1648,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
         Compiled PyTensor function
         """
         if inputs is None:
-            inputs = inputvars(outs)
+            inputs = list(explicit_graph_inputs(outs))
+            if (not point_fn) and len(inputs) > 1:
+                raise ValueError(
+                    "compile_fn requires inputs to be specified when there is more than one input and point_fn is disabled."
+                )
 
         with self:
             fn = compile(
@@ -1792,7 +1815,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             factor.name: np.round(np.asarray(factor_logp), round_vals)
             for factor, factor_logp in zip(
                 factors,
-                self.compile_fn(factor_logps_fn, **kwargs)(point),
+                self.compile_fn(inputs=self.value_vars, outs=factor_logps_fn, **kwargs)(point),
             )
         }
 
@@ -2125,8 +2148,8 @@ def compile_fn(
     ----------
     outs
         PyTensor variable or iterable of PyTensor variables.
-    inputs
-        PyTensor input variables, defaults to pytensorf.inputvars(outs).
+    inputs, optional
+        PyTensor input variables. Required if there is more than one input.
     mode
         PyTensor compilation mode, default=None.
     point_fn : bool
@@ -2204,7 +2227,7 @@ def Deterministic(name, var, model=None, dims=None):
     Indeed, PyMC allows for arbitrary combinations of random variables, for
     example in the case of a logistic regression
 
-    .. code:: python
+    .. code-block:: python
 
         with pm.Model():
             alpha = pm.Normal("alpha", 0, 1)
@@ -2218,7 +2241,7 @@ def Deterministic(name, var, model=None, dims=None):
     ``p`` is important and one would like to track its value in the sampling
     trace, then one can use a deterministic node:
 
-    .. code:: python
+    .. code-block:: python
 
         with pm.Model():
             alpha = pm.Normal("alpha", 0, 1)
@@ -2294,7 +2317,7 @@ def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariabl
     The statement ``pm.math.log(pm.math.switch(constraint, 0, 1))`` adds either 0 or -inf to the model logp,
     depending on whether the constraint is met. During sampling, any proposals where ``x`` is negative will be rejected.
 
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
 
@@ -2308,7 +2331,7 @@ def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariabl
     Instead, with a soft constraint like ``pm.math.log(pm.math.switch(constraint, 1, 0.5))``,
     the sampler will be less likely, but not forbidden, from accepting negative values for `x`.
 
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
 
@@ -2316,33 +2339,35 @@ def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariabl
             x = pm.Normal("x", mu=0, sigma=1)
 
             constraint = x >= 0
-            potential = pm.Potential("x_constraint", pm.math.log(pm.math.switch(constraint, 1.0, 0.5)))
+            potential = pm.Potential(
+                "x_constraint", pm.math.log(pm.math.switch(constraint, 1.0, 0.5))
+            )
 
     A Potential term can depend on multiple variables.
     In the following example, the ``soft_sum_constraint`` potential encourages ``x`` and ``y`` to have a small sum.
     The more the sum deviates from zero, the more negative the penalty value of ``(-((x + y)**2))``.
 
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
 
         with pm.Model() as model:
             x = pm.Normal("x", mu=0, sigma=10)
             y = pm.Normal("y", mu=0, sigma=10)
-            soft_sum_constraint = pm.Potential("soft_sum_constraint", -((x + y)**2))
+            soft_sum_constraint = pm.Potential("soft_sum_constraint", -((x + y) ** 2))
 
     A Potential can be used to define a specific prior term.
     The following example imposes a power law prior on `max_items`, under the form ``log(1/max_items)``,
     which penalizes very large values of `max_items`.
 
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
 
         with pm.Model() as model:
             # p(max_items) = 1 / max_items
             max_items = pm.Uniform("max_items", lower=1, upper=100)
-            pm.Potential("power_prior", pm.math.log(1/max_items))
+            pm.Potential("power_prior", pm.math.log(1 / max_items))
 
             n_items = pm.Uniform("n_items", lower=1, upper=max_items, observed=60)
 
@@ -2350,12 +2375,14 @@ def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariabl
     In the following example, a normal likelihood term is added to fixed data.
     The same result would be obtained by using an observed `Normal` variable.
 
-    .. code:: python
+    .. code-block:: python
 
         import pymc as pm
 
+
         def normal_logp(value, mu, sigma):
             return -0.5 * ((value - mu) / sigma) ** 2 - pm.math.log(sigma)
+
 
         with pm.Model() as model:
             mu = pm.Normal("x")
