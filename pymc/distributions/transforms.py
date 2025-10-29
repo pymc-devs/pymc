@@ -317,7 +317,7 @@ class CholeskyCorrTransform(Transform):
             initial_elements = pt.flip(x[..., -1, :], axis=-1)
             triangular_portion = x[..., :-1, :]
 
-        rotated_triangular_portion = pt.flip(triangular_portion, axis=(-1, -2))
+        rotated_triangular_portion = pt.flip(triangular_portion, axis=(-1, -2))  # type: ignore[arg-type]
         consolidated_matrix = triangular_portion + rotated_triangular_portion
         end_sequence = pt.reshape(
             consolidated_matrix,
