@@ -1586,7 +1586,7 @@ class LKJCorrRV(SymbolicRandomVariable):
             strict=True,
         )
 
-        P = pytensor.ifelse(n < 3, P0, P_seq[-1])
+        P = pt.concatenate([P0[None], P_seq], axis=0)[-1]
 
         C = pt.einsum("...ji,...jk->...ik", P, P.copy())
         (scan_rng_out,) = tuple(updates.values())
