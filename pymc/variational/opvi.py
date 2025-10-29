@@ -1491,12 +1491,14 @@ class Approximation(WithMemoization):
         return repl
 
     @pytensor.config.change_flags(compute_test_value="off")
-    def sample_node(self, node, size=None, deterministic=False, more_replacements=None):
+    def sample_node(self, node, model=None, size=None, deterministic=False, more_replacements=None):
         """Sample given node or nodes over shared posterior.
 
         Parameters
         ----------
         node: PyTensor Variables (or PyTensor expressions)
+        model : Model (optional if in ``with`` context
+            Model to be used to generate samples.
         size: None or scalar
             number of samples
         more_replacements: `dict`
@@ -1510,11 +1512,14 @@ class Approximation(WithMemoization):
         sampled node(s) with replacements
         """
         node_in = node
+
+        model = modelcontext(model)
+
         if more_replacements:
             node = graph_replace(node, more_replacements, strict=False)
         if not isinstance(node, list | tuple):
             node = [node]
-        node = self.model.replace_rvs_by_values(node)
+        node = model.replace_rvs_by_values(node)
         if not isinstance(node_in, list | tuple):
             node = node[0]
         if size is None:
@@ -1525,14 +1530,14 @@ class Approximation(WithMemoization):
         try_to_set_test_value(node_in, node_out, size)
         return node_out
 
-    def rslice(self, name):
+    def rslice(self, name, model):
         """*Dev* - vectorized sampling for named random variable without call to `pytensor.scan`.
 
         This node still needs :func:`set_size_and_deterministic` to be evaluated.
         """
 
         def vars_names(vs):
-            return {self.model.rvs_to_values[v].name for v in vs}
+            return {model.rvs_to_values[v].name for v in vs}
 
         for vars_, random, ordering in zip(
             self.collect("group"), self.symbolic_randoms, self.collect("ordering")
@@ -1553,7 +1558,7 @@ class Approximation(WithMemoization):
         model = modelcontext(model)
 
         names = [model.rvs_to_values[v].name for v in model.free_RVs]
-        sampled = [self.rslice(name) for name in names]
+        sampled = [self.rslice(name, model) for name in names]
         sampled = self.set_size_and_deterministic(sampled, s, 0)
         sample_fn = compile([s], sampled)
         rng_nodes = find_rng_nodes(sampled)
