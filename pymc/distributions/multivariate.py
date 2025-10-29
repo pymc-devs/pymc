@@ -1150,31 +1150,30 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initv
 
 
 def _lkj_normalizing_constant(eta, n):
-    # TODO: This is mixing python branching with the potentially symbolic n and eta variables
-    if not isinstance(eta, int | float):
-        raise NotImplementedError("eta must be an int or float")
-    if not isinstance(n, int):
-        raise NotImplementedError("n must be an integer")
-    if eta == 1:
-        result = gammaln(2.0 * pt.arange(1, ((n - 1) / 2) + 1)).sum()
-        if n % 2 == 1:
-            result += (
+    result_1 = gammaln(2.0 * pt.arange(1, ((n - 1) / 2) + 1)).sum()
+    result_2 = -(n - 1) * gammaln(eta + 0.5 * (n - 1))
+    k = pt.arange(1, n)
+
+    return pt.switch(
+        pt.eq(eta, 1.0),
+        pt.switch(
+            pt.eq(n % 2, 1.0),
+            result_1
+            + (
                 0.25 * (n**2 - 1) * pt.log(np.pi)
                 - 0.25 * (n - 1) ** 2 * pt.log(2.0)
                 - (n - 1) * gammaln((n + 1) / 2)
-            )
-        else:
-            result += (
+            ),
+            result_1
+            + (
                 0.25 * n * (n - 2) * pt.log(np.pi)
                 + 0.25 * (3 * n**2 - 4 * n) * pt.log(2.0)
                 + n * gammaln(n / 2)
                 - (n - 1) * gammaln(n)
-            )
-    else:
-        result = -(n - 1) * gammaln(eta + 0.5 * (n - 1))
-        k = pt.arange(1, n)
-        result += (0.5 * k * pt.log(np.pi) + gammaln(eta + 0.5 * (n - 1 - k))).sum()
-    return result
+            ),
+        ),
+        result_2 + (0.5 * k * pt.log(np.pi) + gammaln(eta + 0.5 * (n - 1 - k))).sum(),
+    )
 
 
 # _LKJCholeskyCovBaseRV requires a properly shaped `D`, which means the variable can't
@@ -1603,13 +1602,17 @@ class _LKJCorr(BoundedContinuous):
     def dist(cls, n, eta, **kwargs):
         n = pt.as_tensor_variable(n).astype(int)
         eta = pt.as_tensor_variable(eta)
+
+        # In general, RVs are expected to take an "rng" argument. We allow it here to prevent API break, but
+        # ignore it. This can be changed in the future if we relax the requirement that rng be a shared variable
+        # in a scan.
         rng = kwargs.pop("rng", None)
-
-        if isinstance(rng, Variable):
-            rng = rng.get_value()
-
-        kwargs["scan_rng"] = pytensor.shared(np.random.default_rng(rng))
-        kwargs["outer_rng"] = pytensor.shared(np.random.default_rng(rng))
+        if rng is not None:
+            warnings.warn(
+                "You passed a random generator to LKJCorr via the `rng` keyword argument, but it is not "
+                "used. To seed LKJCorr, pass two random generators via the `outer_rng` and `scan_rng` "
+                "keyword arguments.",
+            )
 
         return super().dist([n, eta], **kwargs)
 
@@ -1631,16 +1634,11 @@ class _LKJCorr(BoundedContinuous):
         -------
         TensorVariable
         """
-        # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
+        # n has to be a constant, otherwise the shape of the RV would not be fixed between draws.
         try:
             n = int(get_underlying_scalar_constant_value(n))
         except NotScalarConstantError:
             raise NotImplementedError("logp only implemented for constant `n`")
-
-        try:
-            eta = float(get_underlying_scalar_constant_value(eta))
-        except NotScalarConstantError:
-            raise NotImplementedError("logp only implemented for constant `eta`")
 
         result = _lkj_normalizing_constant(eta, n)
         result += (eta - 1.0) * pt.log(det(value))
