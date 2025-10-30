@@ -285,7 +285,7 @@ Contributors
 
 The `GitHub contributor page <https://github.com/pymc-devs/pymc/graphs/contributors>`__ shows the people who have added content to this repo
 which includes a large portion of contributors to the PyMC project but not all of them. Other
-contributors have added content to other repos of the `pymc-devs` GitHub organization or have contributed
+contributors have added content to other repos of the ``pymc-devs`` GitHub organization or have contributed
 through other project spaces outside of GitHub like `our Discourse forum <https://discourse.pymc.io/>`__.
 
 If you are interested in contributing yourself, read our `Code of Conduct <https://github.com/pymc-devs/pymc/blob/main/CODE_OF_CONDUCT.md>`__
