@@ -1382,10 +1382,6 @@ def _rebuild_group_mappings(group, model):
 class TraceSpec:
     sample_vars: list
     test_point: collections.OrderedDict
-    computed_var_names: list[str]
-    input_vars: list
-    compute_fn: Any
-    value_var_names: list[str]
 
 
 class Approximation(WithMemoization):
@@ -1545,7 +1541,7 @@ class Approximation(WithMemoization):
 
     def _compute_missing_trace_values(self, model, samples, missing_vars):
         if not missing_vars:
-            return {}, [], [], None
+            return {}
         input_vars = model.value_vars
         base_point = model.initial_point()
         point = {
@@ -1565,7 +1561,7 @@ class Approximation(WithMemoization):
         if not isinstance(raw_values, list | tuple):
             raw_values = [raw_values]
         values = {var.name: np.asarray(value) for var, value in zip(missing_vars, raw_values)}
-        return values, [var.name for var in missing_vars], list(input_vars), compute_fn
+        return values
 
     def _build_trace_spec(self, model, samples):
         sample_names = sorted(samples.keys())
@@ -1586,42 +1582,14 @@ class Approximation(WithMemoization):
                 continue
             missing_vars.append(var)
 
-        values, computed_var_names, input_vars, compute_fn = self._compute_missing_trace_values(
-            model, samples, missing_vars
-        )
+        values = self._compute_missing_trace_values(model, samples, missing_vars)
         for name, value in values.items():
             test_point[name] = value
 
         return TraceSpec(
             sample_vars=sample_vars,
             test_point=test_point,
-            computed_var_names=computed_var_names,
-            input_vars=input_vars,
-            compute_fn=compute_fn,
-            value_var_names=[var.name for var in model.value_vars],
         )
-
-    def _augment_samples_with_computed(self, model, samples, spec, draws):
-        if not spec.computed_var_names:
-            return
-
-        computed = {name: [] for name in spec.computed_var_names}
-        input_names = [var.name for var in spec.input_vars]
-        for i in range(draws):
-            inputs = {}
-            for name in input_names:
-                if name in samples:
-                    inputs[name] = samples[name][i]
-                else:
-                    inputs[name] = spec.test_point[name]
-            outputs = spec.compute_fn(inputs)
-            if not isinstance(outputs, list | tuple):
-                outputs = [outputs]
-            for name, value in zip(spec.computed_var_names, outputs):
-                computed[name].append(np.asarray(value))
-
-        for name, values in computed.items():
-            samples[name] = np.stack(values)
 
     inputs = property(lambda self: self.collect("input"))
     symbolic_randoms = property(lambda self: self.collect("symbolic_random"))
@@ -1958,13 +1926,11 @@ class Approximation(WithMemoization):
             (random_seed,) = _get_seeds_per_chain(random_seed, 1)
         samples: dict = self.sample_dict_fn(draws, model=model, random_seed=random_seed)
         spec = self._build_trace_spec(model, samples)
-        self._augment_samples_with_computed(model, samples, spec, draws)
-        if spec.computed_var_names:
-            spec = self._build_trace_spec(model, samples)
 
         from collections import OrderedDict
 
         default_point = model.initial_point()
+        value_var_names = [var.name for var in model.value_vars]
         points = (
             OrderedDict(
                 (
@@ -1973,7 +1939,7 @@ class Approximation(WithMemoization):
                     if name in samples and len(samples[name]) > i
                     else np.asarray(spec.test_point.get(name, default_point[name])),
                 )
-                for name in spec.value_var_names
+                for name in value_var_names
             )
             for i in range(draws)
         )
