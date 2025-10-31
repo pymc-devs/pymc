@@ -2124,8 +2124,8 @@ class KroneckerNormal(Continuous):
         sqrt_quad = sqrt_quad / pt.sqrt(eigs[:, None])
         logdet = pt.sum(pt.log(eigs))
 
-        # Square each sample
-        quad = pt.batched_dot(sqrt_quad.T, sqrt_quad.T)
+        # Square each sample - compute squared norm for each sample
+        quad = pt.sum(sqrt_quad.T ** 2, axis=-1)
         if onedim:
             quad = quad[0]
 
