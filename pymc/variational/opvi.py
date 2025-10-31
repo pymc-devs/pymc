@@ -52,6 +52,7 @@ import collections
 import itertools
 import warnings
 
+from dataclasses import dataclass
 from typing import Any, overload
 
 import numpy as np
@@ -1377,6 +1378,16 @@ def _rebuild_group_mappings(group, model):
     group.ordering = ordering
 
 
+@dataclass
+class TraceSpec:
+    sample_vars: list
+    test_point: collections.OrderedDict
+    computed_var_names: list[str]
+    input_vars: list
+    compute_fn: Any
+    value_var_names: list[str]
+
+
 class Approximation(WithMemoization):
     """**Wrapper for grouped approximations**.
 
@@ -1466,6 +1477,151 @@ class Approximation(WithMemoization):
     def collect(self, item):
         self._ensure_groups_ready()
         return [getattr(g, item) for g in self.groups]
+
+    def _variational_orderings(self, model):
+        orderings = collections.OrderedDict()
+        for g in self.groups:
+            mapped = _refresh_group_for_model(g, model)
+            if mapped:
+                orderings.update(g.ordering)
+        return orderings
+
+    def _draw_variational_samples(self, model, names, draws, size_sym, random_seed):
+        if not names:
+            return {}
+        tensors = [self.rslice(name, model) for name in names]
+        tensors = self.set_size_and_deterministic(tensors, size_sym, 0)
+        sample_fn = compile([size_sym], tensors)
+        rng_nodes = find_rng_nodes(tensors)
+        if random_seed is not None:
+            reseed_rngs(rng_nodes, random_seed)
+        outputs = sample_fn(draws)
+        if not isinstance(outputs, list | tuple):
+            outputs = [outputs]
+        return dict(zip(names, outputs))
+
+    def _draw_forward_samples(self, model, approx_samples, approx_names, draws, random_seed):
+        from pymc.sampling.forward import compile_forward_sampling_function
+
+        model_names = {model.rvs_to_values[v].name: v for v in model.free_RVs}
+        forward_names = sorted(name for name in model_names if name not in approx_names)
+        if not forward_names:
+            return {}
+
+        forward_vars = [model_names[name] for name in forward_names]
+        approx_vars = [model_names[name] for name in approx_names if name in model_names]
+        sampler_fn, _ = compile_forward_sampling_function(
+            outputs=forward_vars,
+            vars_in_trace=approx_vars,
+            basic_rvs=model.basic_RVs,
+            givens_dict=None,
+            random_seed=random_seed,
+        )
+        approx_value_vars = [model.rvs_to_values[var] for var in approx_vars]
+        stacked = {name: [] for name in forward_names}
+        for i in range(draws):
+            inputs = {
+                value_var.name: approx_samples[value_var.name][i] for value_var in approx_value_vars
+            }
+            raw = sampler_fn(**inputs)
+            if not isinstance(raw, list | tuple):
+                raw = [raw]
+            for name, value in zip(forward_names, raw):
+                stacked[name].append(value)
+        return {name: np.stack(values) for name, values in stacked.items()}
+
+    def _collect_sample_vars(self, model, sample_names):
+        lookup = {}
+        for var in model.unobserved_value_vars:
+            lookup.setdefault(var.name, var)
+        for name, var in model.named_vars.items():
+            lookup.setdefault(name, var)
+        sample_vars = [lookup[name] for name in sample_names if name in lookup]
+        seen = {var.name for var in sample_vars}
+        for var in model.unobserved_value_vars:
+            if var.name not in seen:
+                sample_vars.append(var)
+        return sample_vars, lookup
+
+    def _compute_missing_trace_values(self, model, samples, missing_vars):
+        if not missing_vars:
+            return {}, [], [], None
+        input_vars = model.value_vars
+        base_point = model.initial_point()
+        point = {
+            var.name: np.asarray(samples[var.name][0])
+            if var.name in samples
+            else base_point[var.name]
+            for var in input_vars
+            if var.name in samples or var.name in base_point
+        }
+        compute_fn = model.compile_fn(
+            missing_vars,
+            inputs=input_vars,
+            on_unused_input="ignore",
+            point_fn=True,
+        )
+        raw_values = compute_fn(point)
+        if not isinstance(raw_values, list | tuple):
+            raw_values = [raw_values]
+        values = {var.name: np.asarray(value) for var, value in zip(missing_vars, raw_values)}
+        return values, [var.name for var in missing_vars], list(input_vars), compute_fn
+
+    def _build_trace_spec(self, model, samples):
+        sample_names = sorted(samples.keys())
+        sample_vars, _ = self._collect_sample_vars(model, sample_names)
+        initial_point = model.initial_point()
+        test_point = collections.OrderedDict()
+        missing_vars = []
+
+        for var in sample_vars:
+            trace_name = var.name
+            if trace_name in samples:
+                first_sample = np.asarray(samples[trace_name][0])
+                test_point[trace_name] = first_sample
+                continue
+            if trace_name in initial_point:
+                value = np.asarray(initial_point[trace_name])
+                test_point[trace_name] = value
+                continue
+            missing_vars.append(var)
+
+        values, computed_var_names, input_vars, compute_fn = self._compute_missing_trace_values(
+            model, samples, missing_vars
+        )
+        for name, value in values.items():
+            test_point[name] = value
+
+        return TraceSpec(
+            sample_vars=sample_vars,
+            test_point=test_point,
+            computed_var_names=computed_var_names,
+            input_vars=input_vars,
+            compute_fn=compute_fn,
+            value_var_names=[var.name for var in model.value_vars],
+        )
+
+    def _augment_samples_with_computed(self, model, samples, spec, draws):
+        if not spec.computed_var_names:
+            return
+
+        computed = {name: [] for name in spec.computed_var_names}
+        input_names = [var.name for var in spec.input_vars]
+        for i in range(draws):
+            inputs = {}
+            for name in input_names:
+                if name in samples:
+                    inputs[name] = samples[name][i]
+                else:
+                    inputs[name] = spec.test_point[name]
+            outputs = spec.compute_fn(inputs)
+            if not isinstance(outputs, list | tuple):
+                outputs = [outputs]
+            for name, value in zip(spec.computed_var_names, outputs):
+                computed[name].append(np.asarray(value))
+
+        for name, values in computed.items():
+            samples[name] = np.stack(values)
 
     inputs = property(lambda self: self.collect("input"))
     symbolic_randoms = property(lambda self: self.collect("symbolic_random"))
@@ -1754,80 +1910,16 @@ class Approximation(WithMemoization):
         s = pt.iscalar()
 
         def inner(draws=100, *, model=None, random_seed: SeedSequenceSeed = None):
-            from pymc.sampling.forward import compile_forward_sampling_function
-
             model = modelcontext(model)
-
-            # Get all variable names that exist in the approximation
-            approx_names = set()
-            for ordering in self.collect("ordering"):
-                approx_names.update(ordering.keys())
-
-            # Get all variable names from the model
-            model_names = {model.rvs_to_values[v].name: v for v in model.free_RVs}
-
-            # Separate variables into those in approximation and those not
-            approx_var_names = sorted(approx_names & set(model_names.keys()))
-            forward_var_names = sorted(set(model_names.keys()) - approx_names)
-
-            # Sample variables from approximation
-            all_samples = {}
-            if approx_var_names:
-                sampled = [self.rslice(name, model) for name in approx_var_names]
-                sampled = self.set_size_and_deterministic(sampled, s, 0)
-                sample_fn = compile([s], sampled)
-                rng_nodes = find_rng_nodes(sampled)
-
-                if random_seed is not None:
-                    reseed_rngs(rng_nodes, random_seed)
-                _samples = sample_fn(draws)
-                all_samples.update(dict(zip(approx_var_names, _samples)))
-
-            # Forward sample variables not in approximation, conditioned on approximation variables
-            if forward_var_names:
-                forward_vars = [model_names[name] for name in forward_var_names]
-                approx_vars = [model_names[name] for name in approx_var_names]
-
-                # Compile forward sampling function
-                # Variables in vars_in_trace become inputs to the function
-                # so we can pass the sampled approximation values as inputs
-                sampler_fn, _ = compile_forward_sampling_function(
-                    outputs=forward_vars,
-                    vars_in_trace=approx_vars,
-                    basic_rvs=model.basic_RVs,
-                    givens_dict=None,
-                    random_seed=random_seed,
-                )
-
-                # Get the value variables that will be inputs
-                approx_value_vars = [model.rvs_to_values[var] for var in approx_vars]
-
-                # Forward sample for each draw, conditioned on approximation samples
-                forward_samples_list = []
-                for i in range(draws):
-                    # Create inputs dict with sampled approximation values for this draw
-                    # Use variable names as keys since the compiled function expects string keywords
-                    inputs_dict = {}
-                    for var, value_var in zip(approx_vars, approx_value_vars):
-                        sampled_value = all_samples[value_var.name][i]
-                        inputs_dict[value_var.name] = sampled_value
-
-                    # Forward sample with these fixed values
-                    forward_samples = sampler_fn(**inputs_dict)
-                    if isinstance(forward_samples, list):
-                        forward_samples_list.append(forward_samples)
-                    else:
-                        forward_samples_list.append([forward_samples])
-
-                # Stack results
-                if forward_samples_list:
-                    if isinstance(forward_samples_list[0], list):
-                        for j, name in enumerate(forward_var_names):
-                            all_samples[name] = np.stack([draw[j] for draw in forward_samples_list])
-                    else:
-                        all_samples[forward_var_names[0]] = np.stack(forward_samples_list)
-
-            return all_samples
+            orderings = self._variational_orderings(model)
+            approx_var_names = sorted(orderings.keys())
+            approx_samples = self._draw_variational_samples(
+                model, approx_var_names, draws, s, random_seed
+            )
+            forward_samples = self._draw_forward_samples(
+                model, approx_samples, approx_var_names, draws, random_seed
+            )
+            return {**approx_samples, **forward_samples}
 
         return inner
 
@@ -1858,7 +1950,6 @@ class Approximation(WithMemoization):
         trace: :class:`pymc.backends.base.MultiTrace`
             Samples drawn from variational posterior.
         """
-        # TODO: add tests for include_transformed case
         kwargs["log_likelihood"] = False
 
         model = modelcontext(model)
@@ -1866,273 +1957,29 @@ class Approximation(WithMemoization):
         if random_seed is not None:
             (random_seed,) = _get_seeds_per_chain(random_seed, 1)
         samples: dict = self.sample_dict_fn(draws, model=model, random_seed=random_seed)
+        spec = self._build_trace_spec(model, samples)
+        self._augment_samples_with_computed(model, samples, spec, draws)
+        if spec.computed_var_names:
+            spec = self._build_trace_spec(model, samples)
 
-        # Get the variables that correspond to our samples
-        # We need to find all variables in the model that match our sample names
-        # This includes both transformed (e.g., 'one_log__') and untransformed (e.g., 'one') variables
-        sample_names = sorted(samples.keys())  # Use sorted order for consistency
-
-        # Build lookup from unobserved_value_vars first (prioritize these)
-        # This includes both transformed and untransformed variables
-        var_name_to_var = {}
-        for var in model.unobserved_value_vars:
-            if var.name not in var_name_to_var:
-                var_name_to_var[var.name] = var
-
-        # Also include named_vars (for variables like 'one' that might not be in unobserved_value_vars)
-        for name, var in model.named_vars.items():
-            if name not in var_name_to_var:
-                var_name_to_var[name] = var
-
-        # Collect variables in the order matching sample_names, plus untransformed versions
-        # Use model.unobserved_value_vars as source of truth - it includes both transformed
-        # and untransformed variables
-        sample_vars = []
-        sample_var_names = set()  # Track which var names we've added
-
-        # First, add variables that are in samples (in sample_names order)
-        for name in sample_names:
-            if name in var_name_to_var:
-                var = var_name_to_var[name]
-                sample_vars.append(var)
-                sample_var_names.add(var.name)
-
-        # Then, add any variables from model.unobserved_value_vars that aren't already included
-        # This ensures we include both transformed (e.g., 'one_log__') and untransformed (e.g., 'one')
-        for var in model.unobserved_value_vars:
-            if var.name not in sample_var_names:
-                sample_vars.append(var)
-                sample_var_names.add(var.name)
-
-        # Create points as OrderedDict to preserve order matching sample_names
-        # This ensures fn(*point.values()) gets values in the correct order
         from collections import OrderedDict
 
+        default_point = model.initial_point()
         points = (
-            OrderedDict((name, np.asarray(samples[name][i])) for name in sample_names)
+            OrderedDict(
+                (
+                    name,
+                    np.asarray(samples[name][i])
+                    if name in samples and len(samples[name]) > i
+                    else np.asarray(spec.test_point.get(name, default_point[name])),
+                )
+                for name in spec.value_var_names
+            )
             for i in range(draws)
         )
 
-        # Create test_point and var_shapes using the actual sample shapes to ensure trace setup matches
-        # Key var_shapes by trace variable names (var.name from sample_vars), not sample_names
-        test_point = OrderedDict()
-        var_shapes = {}
-        var_dtypes = {}
-        trace_varnames = [var.name for var in sample_vars]
-
-        # Create mapping from trace variable names to sample names
-        # This handles cases where sample_names might differ from trace variable names
-        trace_to_sample = {}
-        sample_to_trace = {}  # Reverse mapping
-        for i, var in enumerate(sample_vars):
-            trace_name = var.name
-            # Try to find matching sample by name first
-            if trace_name in sample_names and trace_name in samples:
-                sample_name = trace_name
-            elif i < len(sample_names):
-                # Fall back to index alignment
-                sample_name = sample_names[i]
-            else:
-                continue
-            trace_to_sample[trace_name] = sample_name
-            sample_to_trace[sample_name] = trace_name
-
-        # Build test_point, var_shapes, and var_dtypes using actual sample shapes
-        # Use trace variable names as keys (what trace expects)
-        # CRITICAL: var_shapes must use trace variable names (var.name) as keys
-        # and shapes must match the actual samples, not model variable shapes
-        # For untransformed variables not in samples, we'll compute them from transformed ones
-        initial_point = model.initial_point()  # Get once to compute untransformed vars
-
-        for var in sample_vars:
-            trace_name = var.name
-            if trace_name in trace_to_sample:
-                # Variable is in samples, use the sample value
-                sample_name = trace_to_sample[trace_name]
-                if sample_name in samples:
-                    first_sample = np.asarray(samples[sample_name][0])
-                    test_point[trace_name] = first_sample
-                    var_shapes[trace_name] = first_sample.shape
-                    var_dtypes[trace_name] = first_sample.dtype
-                else:
-                    # Shouldn't happen, but use initial_point as fallback
-                    if trace_name in initial_point:
-                        test_point[trace_name] = initial_point[trace_name]
-                        var_shapes[trace_name] = initial_point[trace_name].shape
-                        var_dtypes[trace_name] = initial_point[trace_name].dtype
-            elif trace_name in samples:
-                # Direct match in samples (shouldn't happen if trace_to_sample is correct)
-                first_sample = np.asarray(samples[trace_name][0])
-                test_point[trace_name] = first_sample
-                var_shapes[trace_name] = first_sample.shape
-                var_dtypes[trace_name] = first_sample.dtype
-            else:
-                # Variable not in samples - it's an untransformed variable we need to compute
-                # Use model.initial_point to get the shape (it includes both transformed and untransformed)
-                if trace_name in initial_point:
-                    test_point[trace_name] = initial_point[trace_name]
-                    var_shapes[trace_name] = initial_point[trace_name].shape
-                    var_dtypes[trace_name] = initial_point[trace_name].dtype
-                else:
-                    # Variable not in initial_point either - compute shape from model
-                    # We need to compute this variable from transformed variables
-                    # Use a test computation to get the shape
-                    try:
-                        # Try to compute the variable using model.compile_fn to get its shape
-                        # Build test point with transformed variables from samples
-                        test_point_dict = {}
-                        for v in model.value_vars:
-                            if v.name in samples:
-                                test_point_dict[v.name] = samples[v.name][0]
-
-                        test_compute_fn = model.compile_fn(
-                            [var], inputs=model.value_vars, on_unused_input="ignore", point_fn=True
-                        )
-                        # Get shape from the computed value
-                        test_result = test_compute_fn(test_point_dict)
-                        if isinstance(test_result, list | tuple):
-                            test_value = test_result[0] if len(test_result) > 0 else None
-                        else:
-                            test_value = test_result
-
-                        if test_value is not None:
-                            test_point[trace_name] = test_value
-                            var_shapes[trace_name] = test_value.shape
-                            var_dtypes[trace_name] = test_value.dtype
-                        else:
-                            raise ValueError(f"Could not compute shape for {trace_name}")
-                    except Exception as e:
-                        # If computation fails, try to get shape from initial_point computation
-                        # Compute initial_point again with all variables
-                        try:
-                            full_initial_point = model.initial_point()
-                            if trace_name in full_initial_point:
-                                test_point[trace_name] = full_initial_point[trace_name]
-                                var_shapes[trace_name] = full_initial_point[trace_name].shape
-                                var_dtypes[trace_name] = full_initial_point[trace_name].dtype
-                            else:
-                                # Last resort: skip if we truly can't determine shape
-                                # But this shouldn't happen for variables in model.unobserved_value_vars
-                                raise ValueError(
-                                    f"Could not determine shape for {trace_name}. "
-                                    f"Variable should be in model.unobserved_value_vars. "
-                                    f"Initial point keys: {list(full_initial_point.keys())}"
-                                ) from e
-                        except Exception as e2:
-                            raise ValueError(
-                                f"Could not determine shape for {trace_name}. "
-                                f"Variable is in sample_vars but not in samples or initial_point."
-                            ) from e2
-
-        # Create a custom fn that returns values in the order matching trace.varnames
-        # trace.record calls fn(*point.values()), so we need to return values in trace.varnames order
-        # point.values() is in sample_names order, but trace.varnames is trace_varnames
-        # We need to reorder values from sample_names order to trace_varnames order
-        # For untransformed variables not in samples, we need to compute them from transformed ones
-        vars_to_compute = [
-            var
-            for var in sample_vars
-            if var.name not in samples and var.name not in trace_to_sample
-        ]
-
-        if vars_to_compute:
-            # We have untransformed variables to compute - need a proper fn that transforms them
-            # Use model's compile_fn to compute untransformed variables from transformed ones
-            computed_var_names = [var.name for var in vars_to_compute]
-            # Get the transformed variables that are inputs (value_vars)
-            input_vars = model.value_vars
-            # Compile a function to compute untransformed variables
-            # Use point_fn=True to get a PointFunc that accepts a dict
-            compute_fn = model.compile_fn(
-                vars_to_compute,
-                inputs=input_vars,
-                on_unused_input="ignore",
-                point_fn=True,
-            )
-        else:
-            compute_fn = None
-            computed_var_names = []
-            input_vars = []
-
-        def identity_fn(*args):
-            """Return values reordered to match trace.varnames."""
-            # args comes from point.values() in sample_names order
-            # Build mapping from sample_names to values
-            value_dict = dict(zip(sample_names, args))
-
-            # Build input dict for compute_fn if needed
-            if compute_fn is not None:
-                # Map sample names to value_vars for compute_fn
-                # compute_fn expects a dict (point_fn=True)
-                compute_input_dict = {}
-                for var in input_vars:
-                    if var.name in value_dict:
-                        compute_input_dict[var.name] = value_dict[var.name]
-
-                # Call with dict (PointFunc expects a dict)
-                # PointFunc returns a list/tuple of values in the order of outputs
-                computed_values = compute_fn(compute_input_dict)
-                if isinstance(computed_values, list | tuple):
-                    # computed_values is in the order of vars_to_compute
-                    if len(computed_values) != len(computed_var_names):
-                        raise ValueError(
-                            f"Mismatch: compute_fn returned {len(computed_values)} values, "
-                            f"expected {len(computed_var_names)}. "
-                            f"computed_var_names: {computed_var_names}"
-                        )
-                    computed_dict = dict(zip(computed_var_names, computed_values))
-                else:
-                    # Single output case
-                    if len(computed_var_names) != 1:
-                        raise ValueError(
-                            f"compute_fn returned single value but expected {len(computed_var_names)} values. "
-                            f"computed_var_names: {computed_var_names}"
-                        )
-                    computed_dict = {computed_var_names[0]: computed_values}
-                value_dict.update(computed_dict)
-
-            # Return values in trace_varnames order, mapping trace names to sample names
-            # CRITICAL: We must return exactly len(trace_varnames) values, one for each variable
-            result = []
-            for trace_name in trace_varnames:
-                if trace_name in trace_to_sample:
-                    # Variable is mapped to a sample name
-                    sample_name = trace_to_sample[trace_name]
-                    if sample_name in value_dict:
-                        result.append(value_dict[sample_name])
-                    else:
-                        # Sample name not in value_dict - shouldn't happen
-                        raise ValueError(
-                            f"Sample name '{sample_name}' for trace variable '{trace_name}' not found in value_dict. "
-                            f"Available keys: {list(value_dict.keys())}"
-                        )
-                elif trace_name in value_dict:
-                    # Direct match (e.g., computed untransformed variable)
-                    result.append(value_dict[trace_name])
-                else:
-                    # Variable not in value_dict - missing value!
-                    raise ValueError(
-                        f"Trace variable '{trace_name}' not found in value_dict. "
-                        f"Available keys: {list(value_dict.keys())}, "
-                        f"trace_varnames: {trace_varnames}, "
-                        f"vars_to_compute: {computed_var_names if compute_fn is not None else []}"
-                    )
-
-            # Ensure we return exactly len(trace_varnames) values
-            if len(result) != len(trace_varnames):
-                raise ValueError(
-                    f"Mismatch in result length: got {len(result)}, expected {len(trace_varnames)}. "
-                    f"trace_varnames: {trace_varnames}, result length: {len(result)}"
-                )
-            return tuple(result)
-
         trace = NDArray(
             model=model,
-            vars=sample_vars,
-            test_point=test_point,
-            fn=identity_fn,
-            var_shapes=var_shapes,
-            var_dtypes=var_dtypes,
         )
         try:
             trace.setup(draws=draws, chain=0)
