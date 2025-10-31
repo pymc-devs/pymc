@@ -1289,7 +1289,7 @@ class Approximation(WithMemoization):
                     obs.owner.inputs[1:],
                     constant_fold([obs.owner.inputs[0].shape], raise_not_constant=False),
                 )
-                for obs in self.model.observed_RVs
+                for obs in self._model.observed_RVs
                 if isinstance(obs.owner.op, MinibatchRandomVariable)
             ]
         )
@@ -1315,7 +1315,7 @@ class Approximation(WithMemoization):
     def _sized_symbolic_varlogp_and_datalogp(self):
         """*Dev* - computes sampled prior term from model via `pytensor.scan`."""
         varlogp_s, datalogp_s = self.symbolic_sample_over_posterior(
-            [self.model.varlogp, self.model.datalogp]
+            [self._model.varlogp, self._model.datalogp]
         )
         return varlogp_s, datalogp_s  # both shape (s,)
 
@@ -1352,7 +1352,7 @@ class Approximation(WithMemoization):
     @node_property
     def _single_symbolic_varlogp_and_datalogp(self):
         """*Dev* - computes sampled prior term from model via `pytensor.scan`."""
-        varlogp, datalogp = self.symbolic_single_sample([self.model.varlogp, self.model.datalogp])
+        varlogp, datalogp = self.symbolic_single_sample([self._model.varlogp, self._model.datalogp])
         return varlogp, datalogp
 
     @node_property
@@ -1491,14 +1491,12 @@ class Approximation(WithMemoization):
         return repl
 
     @pytensor.config.change_flags(compute_test_value="off")
-    def sample_node(self, node, model=None, size=None, deterministic=False, more_replacements=None):
+    def sample_node(self, node, size=None, deterministic=False, more_replacements=None):
         """Sample given node or nodes over shared posterior.
 
         Parameters
         ----------
         node: PyTensor Variables (or PyTensor expressions)
-        model : Model (optional if in ``with`` context
-            Model to be used to generate samples.
         size: None or scalar
             number of samples
         more_replacements: `dict`
@@ -1513,7 +1511,7 @@ class Approximation(WithMemoization):
         """
         node_in = node
 
-        model = modelcontext(model)
+        model = self._model
 
         if more_replacements:
             node = graph_replace(node, more_replacements, strict=False)
@@ -1552,18 +1550,18 @@ class Approximation(WithMemoization):
         return found
 
     @node_property
-    def sample_dict_fn(self, model=None):
+    def sample_dict_fn(self):
         s = pt.iscalar()
 
-        model = modelcontext(model)
+        def inner(draws=100, *, model=None, random_seed: SeedSequenceSeed = None):
+            model = modelcontext(model)
 
-        names = [model.rvs_to_values[v].name for v in model.free_RVs]
-        sampled = [self.rslice(name, model) for name in names]
-        sampled = self.set_size_and_deterministic(sampled, s, 0)
-        sample_fn = compile([s], sampled)
-        rng_nodes = find_rng_nodes(sampled)
+            names = [model.rvs_to_values[v].name for v in model.free_RVs]
+            sampled = [self.rslice(name, model) for name in names]
+            sampled = self.set_size_and_deterministic(sampled, s, 0)
+            sample_fn = compile([s], sampled)
+            rng_nodes = find_rng_nodes(sampled)
 
-        def inner(draws=100, *, random_seed: SeedSequenceSeed = None):
             if random_seed is not None:
                 reseed_rngs(rng_nodes, random_seed)
             _samples = sample_fn(draws)

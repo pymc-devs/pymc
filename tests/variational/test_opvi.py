@@ -213,7 +213,7 @@ def test_pickle_approx(three_var_approx):
 
     dump = cloudpickle.dumps(three_var_approx)
     new = cloudpickle.loads(dump)
-    assert new.sample(1)
+    assert new.sample(1, model=new._model)
 
 
 def test_pickle_single_group(three_var_approx_single_group_mf):
@@ -221,11 +221,11 @@ def test_pickle_single_group(three_var_approx_single_group_mf):
 
     dump = cloudpickle.dumps(three_var_approx_single_group_mf)
     new = cloudpickle.loads(dump)
-    assert new.sample(1)
+    assert new.sample(1, model=new._model)
 
 
 def test_sample_simple(three_var_approx):
-    trace = three_var_approx.sample(100, return_inferencedata=False)
+    trace = three_var_approx.sample(100, model=three_var_approx._model, return_inferencedata=False)
     assert set(trace.varnames) == {"one", "one_log__", "three", "two"}
     assert len(trace) == 100
     assert trace[0]["one"].shape == (10, 2)

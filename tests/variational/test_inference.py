@@ -41,7 +41,7 @@ def test_fit_with_nans(score):
         mean = inp * coef
         pm.Normal("y", mean, 0.1, observed=y)
         with pytest.raises(FloatingPointError) as e:
-            advi = pm.fit(100, score=score, obj_optimizer=pm.adam(learning_rate=float("nan")))
+            pm.fit(100, score=score, obj_optimizer=pm.adam(learning_rate=float("nan")))
 
 
 @pytest.fixture(scope="module", params=[True, False], ids=["mini", "full"])
@@ -174,8 +174,8 @@ def fit_kwargs(inference, use_minibatch):
     return _select[(type(inference), key)]
 
 
-def test_fit_oo(inference, fit_kwargs, simple_model_data):
-    trace = inference.fit(**fit_kwargs).sample(10000)
+def test_fit_oo(simple_model, inference, fit_kwargs, simple_model_data):
+    trace = inference.fit(**fit_kwargs).sample(10000, model=simple_model)
     mu_post = simple_model_data["mu_post"]
     d = simple_model_data["d"]
     np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_post, rtol=0.05)
@@ -202,7 +202,8 @@ def test_fit_start(inference_spec, simple_model):
         inference = inference_spec(**kw)
 
     try:
-        trace = inference.fit(n=0).sample(10000)
+        with simple_model:
+            trace = inference.fit(n=0).sample(10000)
     except NotImplementedInference as e:
         pytest.skip(str(e))
 
@@ -269,7 +270,7 @@ def binomial_model_inference(binomial_model, inference_spec):
 def test_replacements(binomial_model_inference):
     d = pytensor.shared(1)
     approx = binomial_model_inference.approx
-    p = approx.model.p
+    p = approx._model.p
     p_t = p**3
     p_s = approx.sample_node(p_t)
     assert not any(
@@ -309,7 +310,7 @@ def test_sample_replacements(binomial_model_inference):
     i = pt.iscalar()
     i.tag.test_value = 1
     approx = binomial_model_inference.approx
-    p = approx.model.p
+    p = approx._model.p
     p_t = p**3
     p_s = approx.sample_node(p_t, size=100)
     if pytensor.config.compute_test_value != "off":
