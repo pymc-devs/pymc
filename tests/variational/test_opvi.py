@@ -270,9 +270,9 @@ def test_logq_mini_2_sample_2_var(parametric_grouped_approxes, three_var_model):
 
 
 def test_logq_globals(three_var_approx, three_var_model):
-    if not three_var_approx.has_logq:
-        pytest.skip(f"{three_var_approx} does not implement logq")
     with three_var_model:
+        if not three_var_approx.has_logq:
+            pytest.skip(f"{three_var_approx} does not implement logq")
         approx = three_var_approx
         logq, symbolic_logq = approx.set_size_and_deterministic(
             [approx.logq, approx.symbolic_logq], 1, 0

@@ -1428,26 +1428,27 @@ class Approximation(WithMemoization):
         self.groups = []
         seen = set()
         rest = None
-        for g in groups:
-            if g.group is None:
-                if rest is not None:
-                    raise GroupError("More than one group is specified for the rest variables")
+        with model:
+            for g in groups:
+                if g.group is None:
+                    if rest is not None:
+                        raise GroupError("More than one group is specified for the rest variables")
+                    else:
+                        rest = g
                 else:
-                    rest = g
-            else:
-                final_group = _refresh_group_for_model(g, model)
-                if set(final_group) & seen:
-                    raise GroupError("Found duplicates in groups")
-                seen.update(final_group)
-                self.groups.append(g)
-        # List iteration to preserve order for reproducibility between runs
-        unseen_free_RVs = [var for var in model.free_RVs if var not in seen]
-        if unseen_free_RVs:
-            if rest is None:
-                raise GroupError("No approximation is specified for the rest variables")
-            else:
-                _refresh_group_for_model(rest, model, unseen_free_RVs)
-                self.groups.append(rest)
+                    final_group = _refresh_group_for_model(g, model)
+                    if set(final_group) & seen:
+                        raise GroupError("Found duplicates in groups")
+                    seen.update(final_group)
+                    self.groups.append(g)
+            # List iteration to preserve order for reproducibility between runs
+            unseen_free_RVs = [var for var in model.free_RVs if var not in seen]
+            if unseen_free_RVs:
+                if rest is None:
+                    raise GroupError("No approximation is specified for the rest variables")
+                else:
+                    rest.__init_group__(unseen_free_RVs)
+                    self.groups.append(rest)
 
     @property
     def has_logq(self):
@@ -1467,11 +1468,13 @@ class Approximation(WithMemoization):
             model = modelcontext(model)
         except TypeError:
             return
-        for g in self.groups:
-            _refresh_group_for_model(g, model)
+        with model:
+            for g in self.groups:
+                _refresh_group_for_model(g, model)
 
     def collect(self, item):
-        self._ensure_groups_ready()
+        model = modelcontext(None)
+        self._ensure_groups_ready(model=model)
         return [getattr(g, item) for g in self.groups]
 
     def _variational_orderings(self, model):
@@ -1483,48 +1486,51 @@ class Approximation(WithMemoization):
         return orderings
 
     def _draw_variational_samples(self, model, names, draws, size_sym, random_seed):
-        if not names:
-            return {}
-        tensors = [self.rslice(name, model) for name in names]
-        tensors = self.set_size_and_deterministic(tensors, size_sym, 0)
-        sample_fn = compile([size_sym], tensors)
-        rng_nodes = find_rng_nodes(tensors)
-        if random_seed is not None:
-            reseed_rngs(rng_nodes, random_seed)
-        outputs = sample_fn(draws)
-        if not isinstance(outputs, list | tuple):
-            outputs = [outputs]
-        return dict(zip(names, outputs))
+        with model:
+            if not names:
+                return {}
+            tensors = [self.rslice(name, model) for name in names]
+            tensors = self.set_size_and_deterministic(tensors, size_sym, 0)
+            sample_fn = compile([size_sym], tensors)
+            rng_nodes = find_rng_nodes(tensors)
+            if random_seed is not None:
+                reseed_rngs(rng_nodes, random_seed)
+            outputs = sample_fn(draws)
+            if not isinstance(outputs, list | tuple):
+                outputs = [outputs]
+            return dict(zip(names, outputs))
 
     def _draw_forward_samples(self, model, approx_samples, approx_names, draws, random_seed):
         from pymc.sampling.forward import compile_forward_sampling_function
 
-        model_names = {model.rvs_to_values[v].name: v for v in model.free_RVs}
-        forward_names = sorted(name for name in model_names if name not in approx_names)
-        if not forward_names:
-            return {}
+        with model:
+            model_names = {model.rvs_to_values[v].name: v for v in model.free_RVs}
+            forward_names = sorted(name for name in model_names if name not in approx_names)
+            if not forward_names:
+                return {}
 
-        forward_vars = [model_names[name] for name in forward_names]
-        approx_vars = [model_names[name] for name in approx_names if name in model_names]
-        sampler_fn, _ = compile_forward_sampling_function(
-            outputs=forward_vars,
-            vars_in_trace=approx_vars,
-            basic_rvs=model.basic_RVs,
-            givens_dict=None,
-            random_seed=random_seed,
-        )
-        approx_value_vars = [model.rvs_to_values[var] for var in approx_vars]
-        stacked = {name: [] for name in forward_names}
-        for i in range(draws):
-            inputs = {
-                value_var.name: approx_samples[value_var.name][i] for value_var in approx_value_vars
-            }
-            raw = sampler_fn(**inputs)
-            if not isinstance(raw, list | tuple):
-                raw = [raw]
-            for name, value in zip(forward_names, raw):
-                stacked[name].append(value)
-        return {name: np.stack(values) for name, values in stacked.items()}
+            forward_vars = [model_names[name] for name in forward_names]
+            approx_vars = [model_names[name] for name in approx_names if name in model_names]
+            sampler_fn, _ = compile_forward_sampling_function(
+                outputs=forward_vars,
+                vars_in_trace=approx_vars,
+                basic_rvs=model.basic_RVs,
+                givens_dict=None,
+                random_seed=random_seed,
+            )
+            approx_value_vars = [model.rvs_to_values[var] for var in approx_vars]
+            stacked = {name: [] for name in forward_names}
+            for i in range(draws):
+                inputs = {
+                    value_var.name: approx_samples[value_var.name][i]
+                    for value_var in approx_value_vars
+                }
+                raw = sampler_fn(**inputs)
+                if not isinstance(raw, list | tuple):
+                    raw = [raw]
+                for name, value in zip(forward_names, raw):
+                    stacked[name].append(value)
+            return {name: np.stack(values) for name, values in stacked.items()}
 
     def _collect_sample_vars(self, model, sample_names):
         lookup = {}
@@ -1540,28 +1546,29 @@ class Approximation(WithMemoization):
         return sample_vars, lookup
 
     def _compute_missing_trace_values(self, model, samples, missing_vars):
-        if not missing_vars:
-            return {}
-        input_vars = model.value_vars
-        base_point = model.initial_point()
-        point = {
-            var.name: np.asarray(samples[var.name][0])
-            if var.name in samples
-            else base_point[var.name]
-            for var in input_vars
-            if var.name in samples or var.name in base_point
-        }
-        compute_fn = model.compile_fn(
-            missing_vars,
-            inputs=input_vars,
-            on_unused_input="ignore",
-            point_fn=True,
-        )
-        raw_values = compute_fn(point)
-        if not isinstance(raw_values, list | tuple):
-            raw_values = [raw_values]
-        values = {var.name: np.asarray(value) for var, value in zip(missing_vars, raw_values)}
-        return values
+        with model:
+            if not missing_vars:
+                return {}
+            input_vars = model.value_vars
+            base_point = model.initial_point()
+            point = {
+                var.name: np.asarray(samples[var.name][0])
+                if var.name in samples
+                else base_point[var.name]
+                for var in input_vars
+                if var.name in samples or var.name in base_point
+            }
+            compute_fn = model.compile_fn(
+                missing_vars,
+                inputs=input_vars,
+                on_unused_input="ignore",
+                point_fn=True,
+            )
+            raw_values = compute_fn(point)
+            if not isinstance(raw_values, list | tuple):
+                raw_values = [raw_values]
+            values = {var.name: np.asarray(value) for var, value in zip(missing_vars, raw_values)}
+            return values
 
     def _build_trace_spec(self, model, samples):
         sample_names = sorted(samples.keys())
@@ -1819,7 +1826,7 @@ class Approximation(WithMemoization):
         return repl
 
     @pytensor.config.change_flags(compute_test_value="off")
-    def sample_node(self, node, size=None, deterministic=False, more_replacements=None):
+    def sample_node(self, node, size=None, deterministic=False, more_replacements=None, model=None):
         """Sample given node or nodes over shared posterior.
 
         Parameters
@@ -1839,22 +1846,22 @@ class Approximation(WithMemoization):
         """
         node_in = node
 
-        model = modelcontext(None)
-
-        if more_replacements:
-            node = graph_replace(node, more_replacements, strict=False)
-        if not isinstance(node, list | tuple):
-            node = [node]
-        node = model.replace_rvs_by_values(node)
-        if not isinstance(node_in, list | tuple):
-            node = node[0]
-        if size is None:
-            node_out = self.symbolic_single_sample(node)
-        else:
-            node_out = self.symbolic_sample_over_posterior(node)
-        node_out = self.set_size_and_deterministic(node_out, size, deterministic)
-        try_to_set_test_value(node_in, node_out, size)
-        return node_out
+        model = modelcontext(model)
+        with model:
+            if more_replacements:
+                node = graph_replace(node, more_replacements, strict=False)
+            if not isinstance(node, list | tuple):
+                node = [node]
+            node = model.replace_rvs_by_values(node)
+            if not isinstance(node_in, list | tuple):
+                node = node[0]
+            if size is None:
+                node_out = self.symbolic_single_sample(node)
+            else:
+                node_out = self.symbolic_sample_over_posterior(node)
+            node_out = self.set_size_and_deterministic(node_out, size, deterministic)
+            try_to_set_test_value(node_in, node_out, size)
+            return node_out
 
     def rslice(self, name, model=None):
         """*Dev* - vectorized sampling for named random variable without call to `pytensor.scan`.
@@ -1863,14 +1870,15 @@ class Approximation(WithMemoization):
         """
         model = modelcontext(model)
 
-        for random, ordering in zip(self.symbolic_randoms, self.collect("ordering")):
-            if name in ordering:
-                _name, slc, shape, dtype = ordering[name]
-                found = random[..., slc].reshape((random.shape[0], *shape)).astype(dtype)
-                found.name = name + "_vi_random_slice"
-                break
-        else:
-            raise KeyError(f"{name!r} not found")
+        with model:
+            for random, ordering in zip(self.symbolic_randoms, self.collect("ordering")):
+                if name in ordering:
+                    _name, slc, shape, dtype = ordering[name]
+                    found = random[..., slc].reshape((random.shape[0], *shape)).astype(dtype)
+                    found.name = name + "_vi_random_slice"
+                    break
+            else:
+                raise KeyError(f"{name!r} not found")
         return found
 
     @node_property
@@ -1879,15 +1887,16 @@ class Approximation(WithMemoization):
 
         def inner(draws=100, *, model=None, random_seed: SeedSequenceSeed = None):
             model = modelcontext(model)
-            orderings = self._variational_orderings(model)
-            approx_var_names = sorted(orderings.keys())
-            approx_samples = self._draw_variational_samples(
-                model, approx_var_names, draws, s, random_seed
-            )
-            forward_samples = self._draw_forward_samples(
-                model, approx_samples, approx_var_names, draws, random_seed
-            )
-            return {**approx_samples, **forward_samples}
+            with model:
+                orderings = self._variational_orderings(model)
+                approx_var_names = sorted(orderings.keys())
+                approx_samples = self._draw_variational_samples(
+                    model, approx_var_names, draws, s, random_seed
+                )
+                forward_samples = self._draw_forward_samples(
+                    model, approx_samples, approx_var_names, draws, random_seed
+                )
+                return {**approx_samples, **forward_samples}
 
         return inner
 
@@ -1922,37 +1931,38 @@ class Approximation(WithMemoization):
 
         model = modelcontext(model)
 
-        if random_seed is not None:
-            (random_seed,) = _get_seeds_per_chain(random_seed, 1)
-        samples: dict = self.sample_dict_fn(draws, model=model, random_seed=random_seed)
-        spec = self._build_trace_spec(model, samples)
+        with model:
+            if random_seed is not None:
+                (random_seed,) = _get_seeds_per_chain(random_seed, 1)
+            samples: dict = self.sample_dict_fn(draws, model=model, random_seed=random_seed)
+            spec = self._build_trace_spec(model, samples)
 
-        from collections import OrderedDict
+            from collections import OrderedDict
 
-        default_point = model.initial_point()
-        value_var_names = [var.name for var in model.value_vars]
-        points = (
-            OrderedDict(
-                (
-                    name,
-                    np.asarray(samples[name][i])
-                    if name in samples and len(samples[name]) > i
-                    else np.asarray(spec.test_point.get(name, default_point[name])),
+            default_point = model.initial_point()
+            value_var_names = [var.name for var in model.value_vars]
+            points = (
+                OrderedDict(
+                    (
+                        name,
+                        np.asarray(samples[name][i])
+                        if name in samples and len(samples[name]) > i
+                        else np.asarray(spec.test_point.get(name, default_point[name])),
+                    )
+                    for name in value_var_names
                 )
-                for name in value_var_names
+                for i in range(draws)
             )
-            for i in range(draws)
-        )
 
-        trace = NDArray(
-            model=model,
-        )
-        try:
-            trace.setup(draws=draws, chain=0)
-            for point in points:
-                trace.record(point)
-        finally:
-            trace.close()
+            trace = NDArray(
+                model=model,
+            )
+            try:
+                trace.setup(draws=draws, chain=0)
+                for point in points:
+                    trace.record(point)
+            finally:
+                trace.close()
 
         multi_trace = MultiTrace([trace])
         if not return_inferencedata:
