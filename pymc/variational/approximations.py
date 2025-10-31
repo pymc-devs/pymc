@@ -85,6 +85,13 @@ class MeanFieldGroup(Group):
         # by `self.ordering`. In the cases I looked into these turn out to be the same, but there may be edge cases or
         # future code changes that break this assumption.
         start = self._prepare_start(start)
+        # Ensure start is a 1D array and matches ddim
+        start = np.asarray(start).flatten()
+        if start.size != self.ddim:
+            raise ValueError(
+                f"Start array size mismatch: got {start.size}, expected {self.ddim}. "
+                f"Start shape: {start.shape if hasattr(start, 'shape') else 'unknown'}"
+            )
         rho1 = np.zeros((self.ddim,))
 
         if start_sigma is not None:
@@ -139,6 +146,13 @@ class FullRankGroup(Group):
 
     def create_shared_params(self, start=None):
         start = self._prepare_start(start)
+        # Ensure start is a 1D array and matches ddim
+        start = np.asarray(start).flatten()
+        if start.size != self.ddim:
+            raise ValueError(
+                f"Start array size mismatch: got {start.size}, expected {self.ddim}. "
+                f"Start shape: {start.shape if hasattr(start, 'shape') else 'unknown'}"
+            )
         n = self.ddim
         L_tril = np.eye(n)[np.tril_indices(n)].astype(pytensor.config.floatX)
         return {"mu": pytensor.shared(start, "mu"), "L_tril": pytensor.shared(L_tril, "L_tril")}
@@ -233,6 +247,8 @@ class EmpiricalGroup(Group):
         return {"histogram": pytensor.shared(pm.floatX(histogram), "histogram")}
 
     def _check_trace(self):
+        from pymc.model import modelcontext
+
         trace = self._kwargs.get("trace", None)
         if isinstance(trace, InferenceData):
             raise NotImplementedError(
@@ -240,10 +256,10 @@ class EmpiricalGroup(Group):
                 " Pass `pm.sample(return_inferencedata=False)` to get a `MultiTrace` to use with `Empirical`."
                 " Please help us to refactor: https://github.com/pymc-devs/pymc/issues/5884"
             )
-        elif trace is not None and not all(
-            self.model.rvs_to_values[var].name in trace.varnames for var in self.group
-        ):
-            raise ValueError("trace has not all free RVs in the group")
+        elif trace is not None:
+            model = modelcontext(None)
+            if not all(model.rvs_to_values[var].name in trace.varnames for var in self.group):
+                raise ValueError("trace has not all free RVs in the group")
 
     def randidx(self, size=None):
         if size is None:

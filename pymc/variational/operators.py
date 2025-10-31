@@ -19,6 +19,7 @@ from pytensor.graph.basic import Variable
 
 import pymc as pm
 
+from pymc.model import modelcontext
 from pymc.variational import opvi
 from pymc.variational.opvi import (
     NotImplementedInference,
@@ -142,7 +143,8 @@ class KSD(Operator):
 
     def apply(self, f):
         # f: kernel function for KSD f(histogram) -> (k(x,.), \nabla_x k(x,.))
-        if _known_scan_ignored_inputs([self.approx._model.logp()]):
+        model = modelcontext(None)
+        if _known_scan_ignored_inputs([model.logp()]):
             raise NotImplementedInference(
                 "SVGD does not currently support Minibatch or Simulator RV"
             )

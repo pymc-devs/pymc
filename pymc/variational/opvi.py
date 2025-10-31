@@ -82,7 +82,6 @@ from pymc.util import (
     RandomState,
     WithMemoization,
     _get_seeds_per_chain,
-    locally_cachedmethod,
     makeiter,
 )
 from pymc.variational.minibatch_rv import MinibatchRandomVariable, get_scaling
@@ -145,17 +144,43 @@ def append_name(name):
 
 def node_property(f):
     """Wrap method to accessible tensor."""
+    from collections import defaultdict
+
+    from cachetools import LRUCache, cachedmethod
+
+    def self_cache_fn(f_name):
+        def cf(self):
+            return self.__dict__.setdefault("_cache", defaultdict(lambda: LRUCache(128)))[f_name]
+
+        return cf
+
+    def cache_key_with_model(*args, **kwargs):
+        """Cache key that includes the current model context."""
+        from pymc.util import hash_key
+
+        try:
+            model = modelcontext(None)
+            # Include the model in the cache key to avoid using cached values
+            # from a different model context
+            return (
+                *tuple(hash_key(*args, **kwargs)),
+                id(model),
+            )
+        except TypeError:
+            # If no model context, just use regular hash_key
+            return tuple(hash_key(*args, **kwargs))
+
     if isinstance(f, str):
 
         def wrapper(fn):
             ff = append_name(f)(fn)
             f_ = pytensor.config.change_flags(compute_test_value="off")(ff)
-            return property(locally_cachedmethod(f_))
+            return property(cachedmethod(self_cache_fn(f_.__name__), key=cache_key_with_model)(f_))
 
         return wrapper
     else:
         f_ = pytensor.config.change_flags(compute_test_value="off")(f)
-        return property(locally_cachedmethod(f_))
+        return property(cachedmethod(self_cache_fn(f_.__name__), key=cache_key_with_model)(f_))
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")
@@ -497,7 +522,7 @@ class Operator:
     varlogp_norm = property(lambda self: self.approx.varlogp_norm)
     datalogp_norm = property(lambda self: self.approx.datalogp_norm)
     logq_norm = property(lambda self: self.approx.logq_norm)
-    model = property(lambda self: self.approx.model)
+    model = property(lambda self: modelcontext(None))
 
     def apply(self, f):  # pragma: no cover
         R"""Operator itself.
@@ -770,7 +795,6 @@ class Group(WithMemoization):
         self._vfam = vfam
         self.rng = np.random.RandomState(random_seed)
         model = modelcontext(model)
-        self.model = model
         self.group = group
         self.user_params = params
         self._user_params = None
@@ -783,17 +807,42 @@ class Group(WithMemoization):
             self.__init_group__(self.group)
 
     def _prepare_start(self, start=None):
+        model = modelcontext(None)
+        # If start is already an array, we need to ensure it's flattened and matches ddim
+        if isinstance(start, np.ndarray):
+            start_flat = start.flatten()
+            if start_flat.size != self.ddim:
+                raise ValueError(
+                    f"Mismatch in start array size: got {start_flat.size}, expected {self.ddim}. "
+                    f"Start array shape: {start.shape}, flattened size: {start_flat.size}"
+                )
+            return start_flat
+        # Otherwise, get initial point from model and filter by group variables
         ipfn = make_initial_point_fn(
-            model=self.model,
+            model=model,
             overrides=start,
             jitter_rvs={},
             return_transformed=True,
         )
         start = ipfn(self.rng.randint(2**30, dtype=np.int64))
-        group_vars = {self.model.rvs_to_values[v].name for v in self.group}
+        group_vars = {model.rvs_to_values[v].name for v in self.group}
         start = {k: v for k, v in start.items() if k in group_vars}
-        start = DictToArrayBijection.map(start).data
-        return start
+        if not start:
+            raise ValueError(
+                f"No matching variables found in initial point for group variables: {group_vars}. "
+                f"Initial point keys: {list(ipfn(self.rng.randint(2**30, dtype=np.int64)).keys())}"
+            )
+        start_raveled = DictToArrayBijection.map(start)
+        # Ensure we have a 1D array that matches self.ddim
+        start_data = start_raveled.data
+        expected_size = self.ddim
+        if start_data.size != expected_size:
+            raise ValueError(
+                f"Mismatch in start array size: got {start_data.size}, expected {expected_size}. "
+                f"Group variables: {group_vars}, Start dict keys: {list(start.keys())}, "
+                f"This might indicate an issue with the model context or group initialization."
+            )
+        return start_data
 
     @classmethod
     def get_param_spec_for(cls, **kwargs):
@@ -867,9 +916,38 @@ class Group(WithMemoization):
         """Initialize the group."""
         if not group:
             raise GroupError("Got empty group")
+        model = modelcontext(None)
+
+        # If self.group is already set (from unpickling), we might need to rebuild it
+        # to map old variables to new ones in the current model context
+        if self.group is not None:
+            # Check if any variables in self.group don't belong to the current model
+            # If so, rebuild the group by matching variable names
+            needs_rebuild = False
+            for var in self.group:
+                # Check if variable is in the current model's free_RVs
+                if var not in model.free_RVs:
+                    needs_rebuild = True
+                    break
+
+            if needs_rebuild:
+                # Rebuild group by matching variable names
+                var_name_map = {var.name: var for var in model.free_RVs}
+                new_group = []
+                for old_var in self.group:
+                    if old_var.name in var_name_map:
+                        new_group.append(var_name_map[old_var.name])
+                    else:
+                        raise ValueError(
+                            f"Variable '{old_var.name}' from unpickled group not found in current model. "
+                            f"Available variables: {list(var_name_map.keys())}"
+                        )
+                self.group = new_group
+
         if self.group is None:
             # delayed init
             self.group = group
+
         self.symbolic_initial = self._initial_type(
             self.__class__.__name__ + "_symbolic_initial_tensor"
         )
@@ -878,15 +956,18 @@ class Group(WithMemoization):
         # so I have to to it by myself
 
         # 1) we need initial point (transformed space)
-        model_initial_point = self.model.initial_point(0)
+        model_initial_point = model.initial_point(0)
         # 2) we'll work with a single group, a subset of the model
         # here we need to create a mapping to replace value_vars with slices from the approximation
+        # Clear old replacements/ordering before rebuilding
+        self.replacements = collections.OrderedDict()
+        self.ordering = collections.OrderedDict()
         start_idx = 0
         for var in self.group:
             if var.type.numpy_dtype.name in discrete_types:
                 raise ParametrizationError(f"Discrete variables are not supported by VI: {var}")
             # 3) This is the way to infer shape and dtype of the variable
-            value_var = self.model.rvs_to_values[var]
+            value_var = model.rvs_to_values[var]
             test_var = model_initial_point[value_var.name]
             shape = test_var.shape
             size = test_var.size
@@ -902,9 +983,31 @@ class Group(WithMemoization):
             )
             start_idx += size
 
+    def __setstate__(self, state):
+        """Restore state after unpickling and clear cache."""
+        super().__setstate__(state)
+        # Clear cached state after unpickling since cached values may reference
+        # variables from a different model context
+        self._clear_cached_state()
+        # Recreate _kwargs if it was deleted by _finalize_init, needed for rebuild
+        if not hasattr(self, "_kwargs"):
+            self._kwargs = {}
+
     def _finalize_init(self):
         """*Dev* - clean up after init."""
         del self._kwargs
+
+    def _clear_cached_state(self, *, reset_shared=False):
+        """Reset cached structures that depend on the current model context."""
+        if hasattr(self, "_cache"):
+            del self._cache
+        self.replacements = collections.OrderedDict()
+        self.ordering = collections.OrderedDict()
+        for attr in ("symbolic_initial", "input"):
+            if attr in self.__dict__:
+                delattr(self, attr)
+        if reset_shared:
+            self.shared_params = None
 
     @property
     def params_dict(self):
@@ -912,6 +1015,8 @@ class Group(WithMemoization):
         if self._user_params is not None:
             return self._user_params
         else:
+            if self.shared_params is None and self.group is not None:
+                _refresh_group_for_model(self, modelcontext(None))
             return self.shared_params
 
     @property
@@ -1166,12 +1271,13 @@ class Group(WithMemoization):
         """Take a flat 1-dimensional tensor variable and maps it to an xarray data set based on the information in `self.ordering`."""
         # This is somewhat similar to `DictToArrayBijection.rmap`, which doesn't work here since we don't have
         # `RaveledVars` and need to take the information from `self.ordering` instead
+        model = modelcontext(None)
         shared_nda = shared.eval()
         result = {}
         for name, s, shape, dtype in self.ordering.values():
-            dims = self.model.named_vars_to_dims.get(name, None)
+            dims = model.named_vars_to_dims.get(name, None)
             if dims is not None:
-                coords = {d: np.array(self.model.coords[d]) for d in dims}
+                coords = {d: np.array(model.coords[d]) for d in dims}
             else:
                 coords = None
             values = shared_nda[s].reshape(shape).astype(dtype)
@@ -1191,6 +1297,84 @@ class Group(WithMemoization):
 
 group_for_params = Group.group_for_params
 group_for_short_name = Group.group_for_short_name
+
+
+def _map_group_vars_to_model(group_vars, model):
+    if not group_vars:
+        return []
+    var_name_map = {var.name: var for var in model.free_RVs}
+    mapped = []
+    for var in group_vars:
+        if var in model.free_RVs:
+            mapped.append(var)
+        else:
+            mapped_var = var_name_map.get(var.name)
+            if mapped_var is not None:
+                mapped.append(mapped_var)
+    return mapped
+
+
+def _refresh_group_for_model(group, model, group_vars=None):
+    if group_vars is None:
+        group_vars = group.group or []
+    mapped_group = _map_group_vars_to_model(group_vars, model)
+    if mapped_group:
+        group_vars = mapped_group
+    if not group_vars:
+        group.group = group_vars
+        return group.group
+    if group.shared_params is None:
+        if not hasattr(group, "_kwargs"):
+            group._kwargs = {}
+        original_user_params = group.user_params
+        group._clear_cached_state(reset_shared=True)
+        group.user_params = None
+        group._user_params = None
+        group.group = None
+        group.__init_group__(list(group_vars))
+        if original_user_params is not None:
+            group.user_params = original_user_params
+    else:
+        group.group = list(group_vars)
+    if "symbolic_initial" not in group.__dict__:
+        group.symbolic_initial = group._initial_type(
+            group.__class__.__name__ + "_symbolic_initial_tensor"
+        )
+    if "input" not in group.__dict__:
+        group.input = group._input_type(group.__class__.__name__ + "_symbolic_input")
+    _rebuild_group_mappings(group, model)
+    return group.group
+
+
+def _rebuild_group_mappings(group, model):
+    if not group.group:
+        group.replacements = collections.OrderedDict()
+        group.ordering = collections.OrderedDict()
+        return
+    model_initial_point = model.initial_point(0)
+    replacements = collections.OrderedDict()
+    ordering = collections.OrderedDict()
+    start_idx = 0
+    for var in group.group:
+        if var.type.numpy_dtype.name in discrete_types:
+            raise ParametrizationError(f"Discrete variables are not supported by VI: {var}")
+        value_var = model.rvs_to_values[var]
+        test_var = model_initial_point[value_var.name]
+        shape = test_var.shape
+        size = test_var.size
+        dtype = test_var.dtype
+        vr = group.input[..., start_idx : start_idx + size].reshape(shape).astype(dtype)
+        vr.name = value_var.name + "_vi_replacement"
+        replacements[value_var] = vr
+        ordering[value_var.name] = (
+            value_var.name,
+            slice(start_idx, start_idx + size),
+            shape,
+            dtype,
+        )
+        start_idx += size
+    group.replacements = replacements
+    group.ordering = ordering
 
 
 class Approximation(WithMemoization):
@@ -1219,6 +1403,16 @@ class Approximation(WithMemoization):
     :class:`Group`
     """
 
+    def __setstate__(self, state):
+        """Restore state after unpickling and clear cache."""
+        super().__setstate__(state)
+        # Clear cache after unpickling since cached values may reference
+        # variables from a different model context
+        # _cache is removed during pickling by WithMemoization.__getstate__,
+        # so it shouldn't exist after unpickling, but ensure it's deleted if it does
+        if hasattr(self, "_cache"):
+            del self._cache
+
     def __init__(self, groups, model=None):
         self._scale_cost_to_minibatch = pytensor.shared(np.int8(1))
         model = modelcontext(model)
@@ -1234,9 +1428,10 @@ class Approximation(WithMemoization):
                 else:
                     rest = g
             else:
-                if set(g.group) & seen:
+                final_group = _refresh_group_for_model(g, model)
+                if set(final_group) & seen:
                     raise GroupError("Found duplicates in groups")
-                seen.update(g.group)
+                seen.update(final_group)
                 self.groups.append(g)
         # List iteration to preserve order for reproducibility between runs
         unseen_free_RVs = [var for var in model.free_RVs if var not in seen]
@@ -1244,9 +1439,8 @@ class Approximation(WithMemoization):
             if rest is None:
                 raise GroupError("No approximation is specified for the rest variables")
             else:
-                rest.__init_group__(unseen_free_RVs)
+                _refresh_group_for_model(rest, model, unseen_free_RVs)
                 self.groups.append(rest)
-        self._model = model
 
     @property
     def has_logq(self):
@@ -1259,9 +1453,18 @@ class Approximation(WithMemoization):
             "a model context instead.",
             DeprecationWarning,
         )
-        return self._model
+        return modelcontext(None)
+
+    def _ensure_groups_ready(self, model=None):
+        try:
+            model = modelcontext(model)
+        except TypeError:
+            return
+        for g in self.groups:
+            _refresh_group_for_model(g, model)
 
     def collect(self, item):
+        self._ensure_groups_ready()
         return [getattr(g, item) for g in self.groups]
 
     inputs = property(lambda self: self.collect("input"))
@@ -1282,6 +1485,7 @@ class Approximation(WithMemoization):
 
         Here the effect is controlled by `self.scale_cost_to_minibatch`.
         """
+        model = modelcontext(None)
         t = pt.max(
             self.collect("symbolic_normalizing_constant")
             + [
@@ -1289,7 +1493,7 @@ class Approximation(WithMemoization):
                     obs.owner.inputs[1:],
                     constant_fold([obs.owner.inputs[0].shape], raise_not_constant=False),
                 )
-                for obs in self._model.observed_RVs
+                for obs in model.observed_RVs
                 if isinstance(obs.owner.op, MinibatchRandomVariable)
             ]
         )
@@ -1314,9 +1518,8 @@ class Approximation(WithMemoization):
     @node_property
     def _sized_symbolic_varlogp_and_datalogp(self):
         """*Dev* - computes sampled prior term from model via `pytensor.scan`."""
-        varlogp_s, datalogp_s = self.symbolic_sample_over_posterior(
-            [self._model.varlogp, self._model.datalogp]
-        )
+        model = modelcontext(None)
+        varlogp_s, datalogp_s = self.symbolic_sample_over_posterior([model.varlogp, model.datalogp])
         return varlogp_s, datalogp_s  # both shape (s,)
 
     @node_property
@@ -1352,7 +1555,8 @@ class Approximation(WithMemoization):
     @node_property
     def _single_symbolic_varlogp_and_datalogp(self):
         """*Dev* - computes sampled prior term from model via `pytensor.scan`."""
-        varlogp, datalogp = self.symbolic_single_sample([self._model.varlogp, self._model.datalogp])
+        model = modelcontext(None)
+        varlogp, datalogp = self.symbolic_single_sample([model.varlogp, model.datalogp])
         return varlogp, datalogp
 
     @node_property
@@ -1511,7 +1715,7 @@ class Approximation(WithMemoization):
         """
         node_in = node
 
-        model = self._model
+        model = modelcontext(None)
 
         if more_replacements:
             node = graph_replace(node, more_replacements, strict=False)
@@ -1528,20 +1732,16 @@ class Approximation(WithMemoization):
         try_to_set_test_value(node_in, node_out, size)
         return node_out
 
-    def rslice(self, name, model):
+    def rslice(self, name, model=None):
         """*Dev* - vectorized sampling for named random variable without call to `pytensor.scan`.
 
         This node still needs :func:`set_size_and_deterministic` to be evaluated.
         """
+        model = modelcontext(model)
 
-        def vars_names(vs):
-            return {model.rvs_to_values[v].name for v in vs}
-
-        for vars_, random, ordering in zip(
-            self.collect("group"), self.symbolic_randoms, self.collect("ordering")
-        ):
-            if name in vars_names(vars_):
-                name_, slc, shape, dtype = ordering[name]
+        for random, ordering in zip(self.symbolic_randoms, self.collect("ordering")):
+            if name in ordering:
+                _name, slc, shape, dtype = ordering[name]
                 found = random[..., slc].reshape((random.shape[0], *shape)).astype(dtype)
                 found.name = name + "_vi_random_slice"
                 break
@@ -1554,19 +1754,80 @@ class Approximation(WithMemoization):
         s = pt.iscalar()
 
         def inner(draws=100, *, model=None, random_seed: SeedSequenceSeed = None):
+            from pymc.sampling.forward import compile_forward_sampling_function
+
             model = modelcontext(model)
 
-            names = [model.rvs_to_values[v].name for v in model.free_RVs]
-            sampled = [self.rslice(name, model) for name in names]
-            sampled = self.set_size_and_deterministic(sampled, s, 0)
-            sample_fn = compile([s], sampled)
-            rng_nodes = find_rng_nodes(sampled)
+            # Get all variable names that exist in the approximation
+            approx_names = set()
+            for ordering in self.collect("ordering"):
+                approx_names.update(ordering.keys())
 
-            if random_seed is not None:
-                reseed_rngs(rng_nodes, random_seed)
-            _samples = sample_fn(draws)
+            # Get all variable names from the model
+            model_names = {model.rvs_to_values[v].name: v for v in model.free_RVs}
 
-            return dict(zip(names, _samples))
+            # Separate variables into those in approximation and those not
+            approx_var_names = sorted(approx_names & set(model_names.keys()))
+            forward_var_names = sorted(set(model_names.keys()) - approx_names)
+
+            # Sample variables from approximation
+            all_samples = {}
+            if approx_var_names:
+                sampled = [self.rslice(name, model) for name in approx_var_names]
+                sampled = self.set_size_and_deterministic(sampled, s, 0)
+                sample_fn = compile([s], sampled)
+                rng_nodes = find_rng_nodes(sampled)
+
+                if random_seed is not None:
+                    reseed_rngs(rng_nodes, random_seed)
+                _samples = sample_fn(draws)
+                all_samples.update(dict(zip(approx_var_names, _samples)))
+
+            # Forward sample variables not in approximation, conditioned on approximation variables
+            if forward_var_names:
+                forward_vars = [model_names[name] for name in forward_var_names]
+                approx_vars = [model_names[name] for name in approx_var_names]
+
+                # Compile forward sampling function
+                # Variables in vars_in_trace become inputs to the function
+                # so we can pass the sampled approximation values as inputs
+                sampler_fn, _ = compile_forward_sampling_function(
+                    outputs=forward_vars,
+                    vars_in_trace=approx_vars,
+                    basic_rvs=model.basic_RVs,
+                    givens_dict=None,
+                    random_seed=random_seed,
+                )
+
+                # Get the value variables that will be inputs
+                approx_value_vars = [model.rvs_to_values[var] for var in approx_vars]
+
+                # Forward sample for each draw, conditioned on approximation samples
+                forward_samples_list = []
+                for i in range(draws):
+                    # Create inputs dict with sampled approximation values for this draw
+                    # Use variable names as keys since the compiled function expects string keywords
+                    inputs_dict = {}
+                    for var, value_var in zip(approx_vars, approx_value_vars):
+                        sampled_value = all_samples[value_var.name][i]
+                        inputs_dict[value_var.name] = sampled_value
+
+                    # Forward sample with these fixed values
+                    forward_samples = sampler_fn(**inputs_dict)
+                    if isinstance(forward_samples, list):
+                        forward_samples_list.append(forward_samples)
+                    else:
+                        forward_samples_list.append([forward_samples])
+
+                # Stack results
+                if forward_samples_list:
+                    if isinstance(forward_samples_list[0], list):
+                        for j, name in enumerate(forward_var_names):
+                            all_samples[name] = np.stack([draw[j] for draw in forward_samples_list])
+                    else:
+                        all_samples[forward_var_names[0]] = np.stack(forward_samples_list)
+
+            return all_samples
 
         return inner
 
@@ -1605,14 +1866,273 @@ class Approximation(WithMemoization):
         if random_seed is not None:
             (random_seed,) = _get_seeds_per_chain(random_seed, 1)
         samples: dict = self.sample_dict_fn(draws, model=model, random_seed=random_seed)
+
+        # Get the variables that correspond to our samples
+        # We need to find all variables in the model that match our sample names
+        # This includes both transformed (e.g., 'one_log__') and untransformed (e.g., 'one') variables
+        sample_names = sorted(samples.keys())  # Use sorted order for consistency
+
+        # Build lookup from unobserved_value_vars first (prioritize these)
+        # This includes both transformed and untransformed variables
+        var_name_to_var = {}
+        for var in model.unobserved_value_vars:
+            if var.name not in var_name_to_var:
+                var_name_to_var[var.name] = var
+
+        # Also include named_vars (for variables like 'one' that might not be in unobserved_value_vars)
+        for name, var in model.named_vars.items():
+            if name not in var_name_to_var:
+                var_name_to_var[name] = var
+
+        # Collect variables in the order matching sample_names, plus untransformed versions
+        # Use model.unobserved_value_vars as source of truth - it includes both transformed
+        # and untransformed variables
+        sample_vars = []
+        sample_var_names = set()  # Track which var names we've added
+
+        # First, add variables that are in samples (in sample_names order)
+        for name in sample_names:
+            if name in var_name_to_var:
+                var = var_name_to_var[name]
+                sample_vars.append(var)
+                sample_var_names.add(var.name)
+
+        # Then, add any variables from model.unobserved_value_vars that aren't already included
+        # This ensures we include both transformed (e.g., 'one_log__') and untransformed (e.g., 'one')
+        for var in model.unobserved_value_vars:
+            if var.name not in sample_var_names:
+                sample_vars.append(var)
+                sample_var_names.add(var.name)
+
+        # Create points as OrderedDict to preserve order matching sample_names
+        # This ensures fn(*point.values()) gets values in the correct order
+        from collections import OrderedDict
+
         points = (
-            {name: np.asarray(records[i]) for name, records in samples.items()}
+            OrderedDict((name, np.asarray(samples[name][i])) for name in sample_names)
             for i in range(draws)
         )
 
+        # Create test_point and var_shapes using the actual sample shapes to ensure trace setup matches
+        # Key var_shapes by trace variable names (var.name from sample_vars), not sample_names
+        test_point = OrderedDict()
+        var_shapes = {}
+        var_dtypes = {}
+        trace_varnames = [var.name for var in sample_vars]
+
+        # Create mapping from trace variable names to sample names
+        # This handles cases where sample_names might differ from trace variable names
+        trace_to_sample = {}
+        sample_to_trace = {}  # Reverse mapping
+        for i, var in enumerate(sample_vars):
+            trace_name = var.name
+            # Try to find matching sample by name first
+            if trace_name in sample_names and trace_name in samples:
+                sample_name = trace_name
+            elif i < len(sample_names):
+                # Fall back to index alignment
+                sample_name = sample_names[i]
+            else:
+                continue
+            trace_to_sample[trace_name] = sample_name
+            sample_to_trace[sample_name] = trace_name
+
+        # Build test_point, var_shapes, and var_dtypes using actual sample shapes
+        # Use trace variable names as keys (what trace expects)
+        # CRITICAL: var_shapes must use trace variable names (var.name) as keys
+        # and shapes must match the actual samples, not model variable shapes
+        # For untransformed variables not in samples, we'll compute them from transformed ones
+        initial_point = model.initial_point()  # Get once to compute untransformed vars
+
+        for var in sample_vars:
+            trace_name = var.name
+            if trace_name in trace_to_sample:
+                # Variable is in samples, use the sample value
+                sample_name = trace_to_sample[trace_name]
+                if sample_name in samples:
+                    first_sample = np.asarray(samples[sample_name][0])
+                    test_point[trace_name] = first_sample
+                    var_shapes[trace_name] = first_sample.shape
+                    var_dtypes[trace_name] = first_sample.dtype
+                else:
+                    # Shouldn't happen, but use initial_point as fallback
+                    if trace_name in initial_point:
+                        test_point[trace_name] = initial_point[trace_name]
+                        var_shapes[trace_name] = initial_point[trace_name].shape
+                        var_dtypes[trace_name] = initial_point[trace_name].dtype
+            elif trace_name in samples:
+                # Direct match in samples (shouldn't happen if trace_to_sample is correct)
+                first_sample = np.asarray(samples[trace_name][0])
+                test_point[trace_name] = first_sample
+                var_shapes[trace_name] = first_sample.shape
+                var_dtypes[trace_name] = first_sample.dtype
+            else:
+                # Variable not in samples - it's an untransformed variable we need to compute
+                # Use model.initial_point to get the shape (it includes both transformed and untransformed)
+                if trace_name in initial_point:
+                    test_point[trace_name] = initial_point[trace_name]
+                    var_shapes[trace_name] = initial_point[trace_name].shape
+                    var_dtypes[trace_name] = initial_point[trace_name].dtype
+                else:
+                    # Variable not in initial_point either - compute shape from model
+                    # We need to compute this variable from transformed variables
+                    # Use a test computation to get the shape
+                    try:
+                        # Try to compute the variable using model.compile_fn to get its shape
+                        # Build test point with transformed variables from samples
+                        test_point_dict = {}
+                        for v in model.value_vars:
+                            if v.name in samples:
+                                test_point_dict[v.name] = samples[v.name][0]
+
+                        test_compute_fn = model.compile_fn(
+                            [var], inputs=model.value_vars, on_unused_input="ignore", point_fn=True
+                        )
+                        # Get shape from the computed value
+                        test_result = test_compute_fn(test_point_dict)
+                        if isinstance(test_result, list | tuple):
+                            test_value = test_result[0] if len(test_result) > 0 else None
+                        else:
+                            test_value = test_result
+
+                        if test_value is not None:
+                            test_point[trace_name] = test_value
+                            var_shapes[trace_name] = test_value.shape
+                            var_dtypes[trace_name] = test_value.dtype
+                        else:
+                            raise ValueError(f"Could not compute shape for {trace_name}")
+                    except Exception as e:
+                        # If computation fails, try to get shape from initial_point computation
+                        # Compute initial_point again with all variables
+                        try:
+                            full_initial_point = model.initial_point()
+                            if trace_name in full_initial_point:
+                                test_point[trace_name] = full_initial_point[trace_name]
+                                var_shapes[trace_name] = full_initial_point[trace_name].shape
+                                var_dtypes[trace_name] = full_initial_point[trace_name].dtype
+                            else:
+                                # Last resort: skip if we truly can't determine shape
+                                # But this shouldn't happen for variables in model.unobserved_value_vars
+                                raise ValueError(
+                                    f"Could not determine shape for {trace_name}. "
+                                    f"Variable should be in model.unobserved_value_vars. "
+                                    f"Initial point keys: {list(full_initial_point.keys())}"
+                                ) from e
+                        except Exception as e2:
+                            raise ValueError(
+                                f"Could not determine shape for {trace_name}. "
+                                f"Variable is in sample_vars but not in samples or initial_point."
+                            ) from e2
+
+        # Create a custom fn that returns values in the order matching trace.varnames
+        # trace.record calls fn(*point.values()), so we need to return values in trace.varnames order
+        # point.values() is in sample_names order, but trace.varnames is trace_varnames
+        # We need to reorder values from sample_names order to trace_varnames order
+        # For untransformed variables not in samples, we need to compute them from transformed ones
+        vars_to_compute = [
+            var
+            for var in sample_vars
+            if var.name not in samples and var.name not in trace_to_sample
+        ]
+
+        if vars_to_compute:
+            # We have untransformed variables to compute - need a proper fn that transforms them
+            # Use model's compile_fn to compute untransformed variables from transformed ones
+            computed_var_names = [var.name for var in vars_to_compute]
+            # Get the transformed variables that are inputs (value_vars)
+            input_vars = model.value_vars
+            # Compile a function to compute untransformed variables
+            # Use point_fn=True to get a PointFunc that accepts a dict
+            compute_fn = model.compile_fn(
+                vars_to_compute,
+                inputs=input_vars,
+                on_unused_input="ignore",
+                point_fn=True,
+            )
+        else:
+            compute_fn = None
+            computed_var_names = []
+            input_vars = []
+
+        def identity_fn(*args):
+            """Return values reordered to match trace.varnames."""
+            # args comes from point.values() in sample_names order
+            # Build mapping from sample_names to values
+            value_dict = dict(zip(sample_names, args))
+
+            # Build input dict for compute_fn if needed
+            if compute_fn is not None:
+                # Map sample names to value_vars for compute_fn
+                # compute_fn expects a dict (point_fn=True)
+                compute_input_dict = {}
+                for var in input_vars:
+                    if var.name in value_dict:
+                        compute_input_dict[var.name] = value_dict[var.name]
+
+                # Call with dict (PointFunc expects a dict)
+                # PointFunc returns a list/tuple of values in the order of outputs
+                computed_values = compute_fn(compute_input_dict)
+                if isinstance(computed_values, list | tuple):
+                    # computed_values is in the order of vars_to_compute
+                    if len(computed_values) != len(computed_var_names):
+                        raise ValueError(
+                            f"Mismatch: compute_fn returned {len(computed_values)} values, "
+                            f"expected {len(computed_var_names)}. "
+                            f"computed_var_names: {computed_var_names}"
+                        )
+                    computed_dict = dict(zip(computed_var_names, computed_values))
+                else:
+                    # Single output case
+                    if len(computed_var_names) != 1:
+                        raise ValueError(
+                            f"compute_fn returned single value but expected {len(computed_var_names)} values. "
+                            f"computed_var_names: {computed_var_names}"
+                        )
+                    computed_dict = {computed_var_names[0]: computed_values}
+                value_dict.update(computed_dict)
+
+            # Return values in trace_varnames order, mapping trace names to sample names
+            # CRITICAL: We must return exactly len(trace_varnames) values, one for each variable
+            result = []
+            for trace_name in trace_varnames:
+                if trace_name in trace_to_sample:
+                    # Variable is mapped to a sample name
+                    sample_name = trace_to_sample[trace_name]
+                    if sample_name in value_dict:
+                        result.append(value_dict[sample_name])
+                    else:
+                        # Sample name not in value_dict - shouldn't happen
+                        raise ValueError(
+                            f"Sample name '{sample_name}' for trace variable '{trace_name}' not found in value_dict. "
+                            f"Available keys: {list(value_dict.keys())}"
+                        )
+                elif trace_name in value_dict:
+                    # Direct match (e.g., computed untransformed variable)
+                    result.append(value_dict[trace_name])
+                else:
+                    # Variable not in value_dict - missing value!
+                    raise ValueError(
+                        f"Trace variable '{trace_name}' not found in value_dict. "
+                        f"Available keys: {list(value_dict.keys())}, "
+                        f"trace_varnames: {trace_varnames}, "
+                        f"vars_to_compute: {computed_var_names if compute_fn is not None else []}"
+                    )
+
+            # Ensure we return exactly len(trace_varnames) values
+            if len(result) != len(trace_varnames):
+                raise ValueError(
+                    f"Mismatch in result length: got {len(result)}, expected {len(trace_varnames)}. "
+                    f"trace_varnames: {trace_varnames}, result length: {len(result)}"
+                )
+            return tuple(result)
+
         trace = NDArray(
             model=model,
-            test_point={name: records[0] for name, records in samples.items()},
+            vars=sample_vars,
+            test_point=test_point,
+            fn=identity_fn,
+            var_shapes=var_shapes,
+            var_dtypes=var_dtypes,
         )
         try:
             trace.setup(draws=draws, chain=0)
