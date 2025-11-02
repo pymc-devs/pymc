@@ -874,35 +874,8 @@ class Group:
             raise GroupError("Got empty group")
         model = modelcontext(None)
 
-        # If self.group is already set (from unpickling), we might need to rebuild it
-        # to map old variables to new ones in the current model context
-        if self.group is not None:
-            # Check if any variables in self.group don't belong to the current model
-            # If so, rebuild the group by matching variable names
-            needs_rebuild = False
-            for var in self.group:
-                # Check if variable is in the current model's free_RVs
-                if var not in model.free_RVs:
-                    needs_rebuild = True
-                    break
-
-            if needs_rebuild:
-                # Rebuild group by matching variable names
-                var_name_map = {var.name: var for var in model.free_RVs}
-                new_group = []
-                for old_var in self.group:
-                    if old_var.name in var_name_map:
-                        new_group.append(var_name_map[old_var.name])
-                    else:
-                        raise ValueError(
-                            f"Variable '{old_var.name}' from unpickled group not found in current model. "
-                            f"Available variables: {list(var_name_map.keys())}"
-                        )
-                self.group = new_group
-
         if self.group is None:
-            # delayed init
-            self.group = group
+            self.group = list(group)
 
         self.symbolic_initial = self._initial_type(
             self.__class__.__name__ + "_symbolic_initial_tensor"
