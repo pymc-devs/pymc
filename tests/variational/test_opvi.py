@@ -313,3 +313,27 @@ def test_symbolic_normalizing_constant_no_rvs():
 
     # Access the property again to test it doesn't require model context after first access
     assert_no_rvs(symbolic_normalizing)
+
+
+def test_sample_additional_vars(three_var_approx, three_var_model):
+    with pm.Model() as extended_model:
+        one = pm.HalfNormal("one", size=(10, 2))
+        two = pm.Normal("two", size=(10,))
+        three = pm.Normal("three", size=(10, 1, 2))
+        four = pm.Normal("four", mu=two, sigma=1, size=(10,))
+        five = pm.Deterministic("five", four.sum())
+        pm.Normal("six", mu=five, sigma=1)
+
+    with extended_model:
+        idata = three_var_approx.sample(20)
+
+    posterior = idata.posterior
+
+    varnames = set(posterior.data_vars)
+    assert {"one", "two", "three"}.issubset(varnames)
+    assert {"four", "five", "six"}.issubset(varnames)
+    assert posterior.sizes["draw"] == 20
+    assert posterior.sizes["chain"] == 1
+    assert posterior["four"].shape == (1, 20, 10)
+    assert posterior["five"].shape == (1, 20)
+    assert posterior["six"].shape == (1, 20)

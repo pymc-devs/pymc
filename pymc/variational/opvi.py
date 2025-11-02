@@ -80,7 +80,7 @@ from pymc.pytensorf import (
     find_rng_nodes,
     reseed_rngs,
 )
-from pymc.util import RandomState, _get_seeds_per_chain, makeiter
+from pymc.util import RandomState, _get_seeds_per_chain, makeiter, point_wrapper
 from pymc.variational.minibatch_rv import MinibatchRandomVariable, get_scaling
 from pymc.variational.updates import adagrad_window
 from pymc.vartypes import discrete_types
@@ -1321,13 +1321,13 @@ class Approximation:
                 random_seed=random_seed,
             )
             approx_value_vars = [model.rvs_to_values[var] for var in approx_vars]
+            input_values = {var.name: approx_samples[var.name] for var in approx_value_vars}
+            wrapped_sampler = point_wrapper(sampler_fn)
+
             stacked = {name: [] for name in forward_names}
             for i in range(draws):
-                inputs = {
-                    value_var.name: approx_samples[value_var.name][i]
-                    for value_var in approx_value_vars
-                }
-                raw = sampler_fn(**inputs)
+                inputs = {name: values[i] for name, values in input_values.items()}
+                raw = wrapped_sampler(**inputs)
                 if not isinstance(raw, list | tuple):
                     raw = [raw]
                 for name, value in zip(forward_names, raw):
