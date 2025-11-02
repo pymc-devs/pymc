@@ -358,23 +358,19 @@ def test_var_replacement():
         assert advi.sample_node(mean, more_replacements={inp: x_new}).eval().shape == (11,)
 
 
-def test_clear_cache():
+@pytest.mark.parametrize(
+    "inference_cls",
+    [ADVI, FullRankADVI],
+)
+def test_advi_pickle(inference_cls):
     with pm.Model() as model:
         pm.Normal("n", 0, 1)
-        inference = ADVI()
+        inference = inference_cls()
         inference.fit(n=10)
-        assert any(len(c) != 0 for c in inference.approx._cache.values())
-        inference.approx._cache.clear()
-        # should not be cleared at this call
-        assert all(len(c) == 0 for c in inference.approx._cache.values())
-        new_a = cloudpickle.loads(cloudpickle.dumps(inference.approx))
-        assert not hasattr(new_a, "_cache")
-        with model:
-            inference_new = pm.KLqp(new_a)
-            inference_new.fit(n=10)
-            assert any(len(c) != 0 for c in inference_new.approx._cache.values())
-            inference_new.approx._cache.clear()
-            assert all(len(c) == 0 for c in inference_new.approx._cache.values())
+        serialized = cloudpickle.dumps(inference.approx)
+        new_approx = cloudpickle.loads(serialized)
+        inference_new = pm.KLqp(new_approx)
+        inference_new.fit(n=10)
 
 
 def test_fit_data(inference, fit_kwargs, simple_model_data, simple_model):

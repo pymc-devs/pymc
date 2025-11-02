@@ -53,6 +53,7 @@ import itertools
 import warnings
 
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Any, overload
 
 import numpy as np
@@ -79,12 +80,7 @@ from pymc.pytensorf import (
     find_rng_nodes,
     reseed_rngs,
 )
-from pymc.util import (
-    RandomState,
-    WithMemoization,
-    _get_seeds_per_chain,
-    makeiter,
-)
+from pymc.util import RandomState, _get_seeds_per_chain, makeiter
 from pymc.variational.minibatch_rv import MinibatchRandomVariable, get_scaling
 from pymc.variational.updates import adagrad_window
 from pymc.vartypes import discrete_types
@@ -141,47 +137,6 @@ def append_name(name):
         return inner
 
     return wrap
-
-
-def node_property(f):
-    """Wrap method to accessible tensor."""
-    from collections import defaultdict
-
-    from cachetools import LRUCache, cachedmethod
-
-    def self_cache_fn(f_name):
-        def cf(self):
-            return self.__dict__.setdefault("_cache", defaultdict(lambda: LRUCache(128)))[f_name]
-
-        return cf
-
-    def cache_key_with_model(*args, **kwargs):
-        """Cache key that includes the current model context."""
-        from pymc.util import hash_key
-
-        try:
-            model = modelcontext(None)
-            # Include the model in the cache key to avoid using cached values
-            # from a different model context
-            return (
-                *tuple(hash_key(*args, **kwargs)),
-                id(model),
-            )
-        except TypeError:
-            # If no model context, just use regular hash_key
-            return tuple(hash_key(*args, **kwargs))
-
-    if isinstance(f, str):
-
-        def wrapper(fn):
-            ff = append_name(f)(fn)
-            f_ = pytensor.config.change_flags(compute_test_value="off")(ff)
-            return property(cachedmethod(self_cache_fn(f_.__name__), key=cache_key_with_model)(f_))
-
-        return wrapper
-    else:
-        f_ = pytensor.config.change_flags(compute_test_value="off")(f)
-        return property(cachedmethod(self_cache_fn(f_.__name__), key=cache_key_with_model)(f_))
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")
@@ -613,7 +568,7 @@ class TestFunction:
         return obj
 
 
-class Group(WithMemoization):
+class Group:
     R"""**Base class for grouping variables in VI**.
 
     Grouped Approximation is used for modelling mutual dependencies
@@ -984,31 +939,9 @@ class Group(WithMemoization):
             )
             start_idx += size
 
-    def __setstate__(self, state):
-        """Restore state after unpickling and clear cache."""
-        super().__setstate__(state)
-        # Clear cached state after unpickling since cached values may reference
-        # variables from a different model context
-        self._clear_cached_state()
-        # Recreate _kwargs if it was deleted by _finalize_init, needed for rebuild
-        if not hasattr(self, "_kwargs"):
-            self._kwargs = {}
-
     def _finalize_init(self):
         """*Dev* - clean up after init."""
         del self._kwargs
-
-    def _clear_cached_state(self, *, reset_shared=False):
-        """Reset cached structures that depend on the current model context."""
-        if hasattr(self, "_cache"):
-            del self._cache
-        self.replacements = collections.OrderedDict()
-        self.ordering = collections.OrderedDict()
-        for attr in ("symbolic_initial", "input"):
-            if attr in self.__dict__:
-                delattr(self, attr)
-        if reset_shared:
-            self.shared_params = None
 
     @property
     def params_dict(self):
@@ -1045,14 +978,6 @@ class Group(WithMemoization):
         shape vector
         """
         return pt.stack([size, dim])
-
-    @node_property
-    def ndim(self):
-        return self.ddim
-
-    @property
-    def ddim(self):
-        return sum(s.stop - s.start for _, s, _, _ in self.ordering.values())
 
     def _new_initial(self, size, deterministic, more_replacements=None):
         """*Dev* - allocates new initial random generator.
@@ -1099,7 +1024,15 @@ class Group(WithMemoization):
             initial = pt.switch(deterministic, pt.ones(shape, dtype) * dist_map, sample)
             return initial
 
-    @node_property
+    @property
+    def ndim(self):
+        return self.ddim
+
+    @property
+    def ddim(self):
+        return sum(s.stop - s.start for _, s, _, _ in self.ordering.values())
+
+    @cached_property
     def symbolic_random(self):
         """*Dev* - abstract node that takes `self.symbolic_initial` and creates approximate posterior that is parametrized with `self.params_dict`.
 
@@ -1206,7 +1139,7 @@ class Group(WithMemoization):
             initial = graph_replace(initial, more_replacements, strict=False)
         return {self.symbolic_initial: initial}
 
-    @node_property
+    @cached_property
     def symbolic_normalizing_constant(self):
         """*Dev* - normalizing constant for `self.logq`, scales it to `minibatch_size` instead of `total_size`."""
         t = self.to_flat_input(
@@ -1225,45 +1158,37 @@ class Group(WithMemoization):
         t = self.symbolic_single_sample(t)
         return pm.floatX(t)
 
-    @node_property
+    @property
     def symbolic_logq_not_scaled(self):
         """*Dev* - symbolically computed logq for `self.symbolic_random` computations can be more efficient since all is known beforehand including `self.symbolic_random`."""
         raise NotImplementedError  # shape (s,)
 
-    @node_property
+    @cached_property
     def symbolic_logq(self):
         """*Dev* - correctly scaled `self.symbolic_logq_not_scaled`."""
         return self.symbolic_logq_not_scaled
 
-    @node_property
+    @cached_property
     def logq(self):
         """*Dev* - Monte Carlo estimate for group `logQ`."""
         return self.symbolic_logq.mean(0)
 
-    @node_property
+    @cached_property
     def logq_norm(self):
         """*Dev* - Monte Carlo estimate for group `logQ` normalized."""
         return self.logq / self.symbolic_normalizing_constant
 
-    def __str__(self):
-        """Return a string representation for the object."""
-        if self.group is None:
-            shp = "undefined"
-        else:
-            shp = str(self.ddim)
-        return f"{self.__class__.__name__}[{shp}]"
-
-    @node_property
+    @property
     def std(self) -> pt.TensorVariable:
         """Return the standard deviation of the latent variables as an unstructured 1-dimensional tensor variable."""
         raise NotImplementedError()
 
-    @node_property
+    @property
     def cov(self) -> pt.TensorVariable:
         """Return the covariance between the latent variables as an unstructured 2-dimensional tensor variable."""
         raise NotImplementedError()
 
-    @node_property
+    @property
     def mean(self) -> pt.TensorVariable:
         """Return the mean of the latent variables as an unstructured 1-dimensional tensor variable."""
         raise NotImplementedError()
@@ -1328,10 +1253,14 @@ def _refresh_group_for_model(group, model, group_vars=None):
         if not hasattr(group, "_kwargs"):
             group._kwargs = {}
         original_user_params = group.user_params
-        group._clear_cached_state(reset_shared=True)
         group.user_params = None
         group._user_params = None
         group.group = None
+        group.replacements = collections.OrderedDict()
+        group.ordering = collections.OrderedDict()
+        group.__dict__.pop("symbolic_initial", None)
+        group.__dict__.pop("input", None)
+        group.shared_params = None
         group.__init_group__(list(group_vars))
         if original_user_params is not None:
             group.user_params = original_user_params
@@ -1384,7 +1313,7 @@ class TraceSpec:
     test_point: collections.OrderedDict
 
 
-class Approximation(WithMemoization):
+class Approximation:
     """**Wrapper for grouped approximations**.
 
     Wraps list of groups, creates an Approximation instance that collects
@@ -1411,14 +1340,8 @@ class Approximation(WithMemoization):
     """
 
     def __setstate__(self, state):
-        """Restore state after unpickling and clear cache."""
-        super().__setstate__(state)
-        # Clear cache after unpickling since cached values may reference
-        # variables from a different model context
-        # _cache is removed during pickling by WithMemoization.__getstate__,
-        # so it shouldn't exist after unpickling, but ensure it's deleted if it does
-        if hasattr(self, "_cache"):
-            del self._cache
+        """Restore state after unpickling."""
+        self.__dict__.update(state)
 
     def __init__(self, groups, model=None):
         self._scale_cost_to_minibatch = pytensor.shared(np.int8(1))
@@ -1610,7 +1533,7 @@ class Approximation(WithMemoization):
     def scale_cost_to_minibatch(self, value):
         self._scale_cost_to_minibatch.set_value(np.int8(bool(value)))
 
-    @node_property
+    @cached_property
     def symbolic_normalizing_constant(self):
         """*Dev* - normalizing constant for `self.logq`, scales it to `minibatch_size` instead of `total_size`.
 
@@ -1631,91 +1554,91 @@ class Approximation(WithMemoization):
         t = pt.switch(self._scale_cost_to_minibatch, t, pt.constant(1, dtype=t.dtype))
         return pm.floatX(t)
 
-    @node_property
+    @cached_property
     def symbolic_logq(self):
         """*Dev* - collects `symbolic_logq` for all groups."""
         return pt.add(*self.collect("symbolic_logq"))
 
-    @node_property
+    @cached_property
     def logq(self):
         """*Dev* - collects `logQ` for all groups."""
         return pt.add(*self.collect("logq"))
 
-    @node_property
+    @cached_property
     def logq_norm(self):
         """*Dev* - collects `logQ` for all groups and normalizes it."""
         return self.logq / self.symbolic_normalizing_constant
 
-    @node_property
+    @cached_property
     def _sized_symbolic_varlogp_and_datalogp(self):
         """*Dev* - computes sampled prior term from model via `pytensor.scan`."""
         model = modelcontext(None)
         varlogp_s, datalogp_s = self.symbolic_sample_over_posterior([model.varlogp, model.datalogp])
         return varlogp_s, datalogp_s  # both shape (s,)
 
-    @node_property
+    @cached_property
     def sized_symbolic_varlogp(self):
         """*Dev* - computes sampled prior term from model via `pytensor.scan`."""
         return self._sized_symbolic_varlogp_and_datalogp[0]  # shape (s,)
 
-    @node_property
+    @cached_property
     def sized_symbolic_datalogp(self):
         """*Dev* - computes sampled data term from model via `pytensor.scan`."""
         return self._sized_symbolic_varlogp_and_datalogp[1]  # shape (s,)
 
-    @node_property
+    @cached_property
     def sized_symbolic_logp(self):
         """*Dev* - computes sampled logP from model via `pytensor.scan`."""
         return self.sized_symbolic_varlogp + self.sized_symbolic_datalogp  # shape (s,)
 
-    @node_property
+    @cached_property
     def logp(self):
         """*Dev* - computes :math:`E_{q}(logP)` from model via `pytensor.scan` that can be optimized later."""
         return self.varlogp + self.datalogp
 
-    @node_property
+    @cached_property
     def varlogp(self):
         """*Dev* - computes :math:`E_{q}(prior term)` from model via `pytensor.scan` that can be optimized later."""
         return self.sized_symbolic_varlogp.mean(0)
 
-    @node_property
+    @cached_property
     def datalogp(self):
         """*Dev* - computes :math:`E_{q}(data term)` from model via `pytensor.scan` that can be optimized later."""
         return self.sized_symbolic_datalogp.mean(0)
 
-    @node_property
+    @cached_property
     def _single_symbolic_varlogp_and_datalogp(self):
         """*Dev* - computes sampled prior term from model via `pytensor.scan`."""
         model = modelcontext(None)
         varlogp, datalogp = self.symbolic_single_sample([model.varlogp, model.datalogp])
         return varlogp, datalogp
 
-    @node_property
+    @cached_property
     def single_symbolic_varlogp(self):
         """*Dev* - for single MC sample estimate of :math:`E_{q}(prior term)` `pytensor.scan` is not needed and code can be optimized."""
         return self._single_symbolic_varlogp_and_datalogp[0]
 
-    @node_property
+    @cached_property
     def single_symbolic_datalogp(self):
         """*Dev* - for single MC sample estimate of :math:`E_{q}(data term)` `pytensor.scan` is not needed and code can be optimized."""
         return self._single_symbolic_varlogp_and_datalogp[1]
 
-    @node_property
+    @cached_property
     def single_symbolic_logp(self):
         """*Dev* - for single MC sample estimate of :math:`E_{q}(logP)` `pytensor.scan` is not needed and code can be optimized."""
         return self.single_symbolic_datalogp + self.single_symbolic_varlogp
 
-    @node_property
+    @cached_property
     def logp_norm(self):
         """*Dev* - normalized :math:`E_{q}(logP)`."""
         return self.logp / self.symbolic_normalizing_constant
 
-    @node_property
+    @cached_property
     def varlogp_norm(self):
         """*Dev* - normalized :math:`E_{q}(prior term)`."""
         return self.varlogp / self.symbolic_normalizing_constant
 
-    @node_property
+    @cached_property
     def datalogp_norm(self):
         """*Dev* - normalized :math:`E_{q}(data term)`."""
         return self.datalogp / self.symbolic_normalizing_constant
@@ -1881,7 +1804,7 @@ class Approximation(WithMemoization):
                 raise KeyError(f"{name!r} not found")
         return found
 
-    @node_property
+    @property
     def sample_dict_fn(self):
         s = pt.iscalar()
 
@@ -1978,7 +1901,7 @@ class Approximation(WithMemoization):
     def ddim(self):
         return sum(self.collect("ddim"))
 
-    @node_property
+    @cached_property
     def symbolic_random(self):
         return pt.concatenate(self.collect("symbolic_random"), axis=-1)
 
@@ -1998,7 +1921,7 @@ class Approximation(WithMemoization):
     def any_histograms(self):
         return any(isinstance(g, pm.approximations.EmpiricalGroup) for g in self.groups)
 
-    @node_property
+    @property
     def joint_histogram(self):
         if not self.all_histograms:
             raise VariationalInferenceError("%s does not consist of all Empirical approximations")

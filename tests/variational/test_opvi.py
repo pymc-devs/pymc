@@ -291,6 +291,12 @@ def test_logq_globals(three_var_approx, three_var_model):
         assert es.shape == (2,)
 
 
+def test_model_property_emits_deprecation(three_var_approx, three_var_model):
+    with three_var_model:
+        with pytest.warns(DeprecationWarning, match="`model` field is deprecated"):
+            _ = three_var_approx.model
+
+
 def test_symbolic_normalizing_constant_no_rvs():
     # Test that RVs aren't included in the graph of symbolic_normalizing_constant
     rng = np.random.default_rng()
