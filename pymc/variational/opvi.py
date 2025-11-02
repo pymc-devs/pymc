@@ -948,10 +948,9 @@ class Group:
         # prefixed are correctly reshaped
         if self._user_params is not None:
             return self._user_params
-        else:
-            if self.shared_params is None and self.group is not None:
-                _refresh_group_for_model(self, modelcontext(None))
-            return self.shared_params
+        if self.shared_params is None:
+            raise ParametrizationError("Group parameters have not been initialized")
+        return self.shared_params
 
     @property
     def params(self):
@@ -1225,88 +1224,6 @@ group_for_params = Group.group_for_params
 group_for_short_name = Group.group_for_short_name
 
 
-def _map_group_vars_to_model(group_vars, model):
-    if not group_vars:
-        return []
-    var_name_map = {var.name: var for var in model.free_RVs}
-    mapped = []
-    for var in group_vars:
-        if var in model.free_RVs:
-            mapped.append(var)
-        else:
-            mapped_var = var_name_map.get(var.name)
-            if mapped_var is not None:
-                mapped.append(mapped_var)
-    return mapped
-
-
-def _refresh_group_for_model(group, model, group_vars=None):
-    if group_vars is None:
-        group_vars = group.group or []
-    mapped_group = _map_group_vars_to_model(group_vars, model)
-    if mapped_group:
-        group_vars = mapped_group
-    if not group_vars:
-        group.group = group_vars
-        return group.group
-    if group.shared_params is None:
-        if not hasattr(group, "_kwargs"):
-            group._kwargs = {}
-        original_user_params = group.user_params
-        group.user_params = None
-        group._user_params = None
-        group.group = None
-        group.replacements = collections.OrderedDict()
-        group.ordering = collections.OrderedDict()
-        group.__dict__.pop("symbolic_initial", None)
-        group.__dict__.pop("input", None)
-        group.shared_params = None
-        group.__init_group__(list(group_vars))
-        if original_user_params is not None:
-            group.user_params = original_user_params
-    else:
-        group.group = list(group_vars)
-    if "symbolic_initial" not in group.__dict__:
-        group.symbolic_initial = group._initial_type(
-            group.__class__.__name__ + "_symbolic_initial_tensor"
-        )
-    if "input" not in group.__dict__:
-        group.input = group._input_type(group.__class__.__name__ + "_symbolic_input")
-    _rebuild_group_mappings(group, model)
-    return group.group
-
-
-def _rebuild_group_mappings(group, model):
-    if not group.group:
-        group.replacements = collections.OrderedDict()
-        group.ordering = collections.OrderedDict()
-        return
-    model_initial_point = model.initial_point(0)
-    replacements = collections.OrderedDict()
-    ordering = collections.OrderedDict()
-    start_idx = 0
-    for var in group.group:
-        if var.type.numpy_dtype.name in discrete_types:
-            raise ParametrizationError(f"Discrete variables are not supported by VI: {var}")
-        value_var = model.rvs_to_values[var]
-        test_var = model_initial_point[value_var.name]
-        shape = test_var.shape
-        size = test_var.size
-        dtype = test_var.dtype
-        vr = group.input[..., start_idx : start_idx + size].reshape(shape).astype(dtype)
-        vr.name = value_var.name + "_vi_replacement"
-        replacements[value_var] = vr
-        ordering[value_var.name] = (
-            value_var.name,
-            slice(start_idx, start_idx + size),
-            shape,
-            dtype,
-        )
-        start_idx += size
-    group.replacements = replacements
-    group.ordering = ordering
-
-
 @dataclass
 class TraceSpec:
     sample_vars: list
@@ -1356,22 +1273,24 @@ class Approximation:
                 if g.group is None:
                     if rest is not None:
                         raise GroupError("More than one group is specified for the rest variables")
-                    else:
-                        rest = g
+                    rest = g
                 else:
-                    final_group = _refresh_group_for_model(g, model)
-                    if set(final_group) & seen:
+                    group_vars = list(g.group)
+                    missing = [var for var in group_vars if var not in model.free_RVs]
+                    if missing:
+                        names = ", ".join(var.name for var in missing)
+                        raise GroupError(f"Variables [{names}] are not part of the provided model")
+                    if set(group_vars) & seen:
                         raise GroupError("Found duplicates in groups")
-                    seen.update(final_group)
+                    seen.update(group_vars)
                     self.groups.append(g)
             # List iteration to preserve order for reproducibility between runs
             unseen_free_RVs = [var for var in model.free_RVs if var not in seen]
             if unseen_free_RVs:
                 if rest is None:
                     raise GroupError("No approximation is specified for the rest variables")
-                else:
-                    rest.__init_group__(unseen_free_RVs)
-                    self.groups.append(rest)
+                rest.__init_group__(unseen_free_RVs)
+                self.groups.append(rest)
 
     @property
     def has_logq(self):
@@ -1386,26 +1305,13 @@ class Approximation:
         )
         return modelcontext(None)
 
-    def _ensure_groups_ready(self, model=None):
-        try:
-            model = modelcontext(model)
-        except TypeError:
-            return
-        with model:
-            for g in self.groups:
-                _refresh_group_for_model(g, model)
-
     def collect(self, item):
-        model = modelcontext(None)
-        self._ensure_groups_ready(model=model)
         return [getattr(g, item) for g in self.groups]
 
     def _variational_orderings(self, model):
         orderings = collections.OrderedDict()
         for g in self.groups:
-            mapped = _refresh_group_for_model(g, model)
-            if mapped:
-                orderings.update(g.ordering)
+            orderings.update(g.ordering)
         return orderings
 
     def _draw_variational_samples(self, model, names, draws, size_sym, random_seed):
