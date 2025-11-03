@@ -19,7 +19,7 @@ from pytensor.xtensor import as_xtensor
 import pymc.distributions as regular_distributions
 
 from pymc import Model
-from pymc.dims import Categorical, MvNormal, ZeroSumNormal
+from pymc.dims import Categorical, Dirichlet, MvNormal, ZeroSumNormal
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
 
 
@@ -38,6 +38,27 @@ def test_categorical():
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_dirichlet():
+    coords = {"a": range(3), "b": range(2)}
+    alpha = pt.as_tensor([1, 2, 3])
+
+    alpha_xr = as_xtensor(alpha, dims=("b",))
+
+    with Model(coords=coords) as model:
+        Dirichlet("x", a=alpha_xr, core_dims="b", dims=("a", "b"))
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Dirichlet("x", a=alpha, dims=("a", "b"))
+
+    assert_equivalent_random_graph(model, reference_model)
+
+    # logp graphs end up different, but they mean the same thing
+    np.testing.assert_allclose(
+        model.compile_logp()(model.initial_point()),
+        reference_model.compile_logp()(reference_model.initial_point()),
+    )
 
 
 def test_mvnormal():

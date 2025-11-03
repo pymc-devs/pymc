@@ -2575,6 +2575,11 @@ class ChiSquared:
     ----------
     nu : tensor_like of float
         Degrees of freedom (nu > 0).
+
+    Notes
+    -----
+    This is implemented as a special case of the Gamma distribution.
+    :math:`\chi^2(\nu) = \text{Gamma}(\alpha=\nu/2, \beta=1/2)`
     """
 
     def __new__(cls, name, nu, **kwargs):
@@ -3601,7 +3606,7 @@ class Logistic(Continuous):
 class LogitNormalRV(SymbolicRandomVariable):
     name = "logit_normal"
     extended_signature = "[rng],[size],(),()->[rng],()"
-    _print_name = ("logitNormal", "\\operatorname{logitNormal}")
+    _print_name = ("LogitNormal", "\\operatorname{LogitNormal}")
 
     @classmethod
     def rv_op(cls, mu, sigma, *, size=None, rng=None):
