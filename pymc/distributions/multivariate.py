@@ -67,6 +67,7 @@ from pymc.distributions.distribution import (
 )
 from pymc.distributions.shape_utils import (
     _change_dist_size,
+    build_icar_covariance,
     change_dist_size,
     get_support_shape,
     implicit_size_from_params,
@@ -2452,6 +2453,15 @@ class ICAR(Continuous):
     rv_op = icar
 
     @classmethod
+    def ICAR(name, W, tau=1.0, mu=None, **kwargs):
+        W = pt.as_tensor_variable(W)
+        if mu is None:
+            mu = pt.zeros(W.shape[0])
+
+        cov = build_icar_covariance(W, tau)  # python helper that does eig pseudo inverse
+
+        return pm.MvNormal(name, mu=mu, cov=cov, method="eig", **kwargs)
+
     def dist(cls, W, sigma=1, zero_sum_stdev=0.001, **kwargs):
         # Note: These checks are forcing W to be non-symbolic
         if not W.ndim == 2:
