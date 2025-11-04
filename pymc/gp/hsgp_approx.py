@@ -620,7 +620,7 @@ class HSGPPeriodic(Base):
         they may share the same basis.
 
         Correct results when using `prior_linearized` in tandem with
-        `pm.set_data` and `pm.MutableData` require that the `Xs` are
+        `pm.set_data` and `pm.Data` require that the `Xs` are
         zero-centered, so its mean must be subtracted.
 
         An example is given below.
