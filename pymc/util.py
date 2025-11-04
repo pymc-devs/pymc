@@ -32,8 +32,6 @@ from pytensor.compile import SharedVariable
 from pymc.exceptions import BlockModelAccessError
 
 
-
-
 class _UnsetType:
     """Type for the `UNSET` object to make it look nice in `help(...)` outputs."""
 

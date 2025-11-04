@@ -296,9 +296,7 @@ class ModelGraph:
         # ordering of self._all_var_names is important
         return [get_var_name(var) for var in selected_ancestors]
 
-    def make_compute_graph(
-        self, var_names: Iterable[str] | None = None
-    ) -> dict[str, set[str]]:
+    def make_compute_graph(self, var_names: Iterable[str] | None = None) -> dict[str, set[str]]:
         """Get map of var_name -> set(input var names) for the model."""
         model = self.model
         named_vars = self._all_vars
