@@ -18,6 +18,7 @@ import numpy as np
 import pytest
 
 import pymc as pm
+
 from pymc.model.validation import validate_dims_coords_consistency
 
 
@@ -42,7 +43,9 @@ class TestDimsCoordsValidation:
             pm.Normal("x", 0, 1, dims=("time",))
 
         with pytest.raises(ValueError, match="Dimension 'time'.*not defined in model.coords"):
-            pm.sample(draws=10, tune=10, chains=1, progressbar=False, compute_convergence_checks=False)
+            pm.sample(
+                draws=10, tune=10, chains=1, progressbar=False, compute_convergence_checks=False
+            )
 
     def test_shape_mismatch_raises(self):
         """Test that shape-dims mismatch raises clear error."""
@@ -66,7 +69,9 @@ class TestDimsCoordsValidation:
             pm.Normal("x", 0, 1, shape=(5,), dims=("time",))
 
         with pytest.raises(ValueError, match="Variable 'x'.*shape.*does not match"):
-            pm.sample(draws=10, tune=10, chains=1, progressbar=False, compute_convergence_checks=False)
+            pm.sample(
+                draws=10, tune=10, chains=1, progressbar=False, compute_convergence_checks=False
+            )
 
     def test_coord_length_mismatch_raises(self):
         """Test that coord length mismatch raises clear error."""
@@ -234,14 +239,15 @@ class TestDimsCoordsValidation:
             alpha = pm.Normal("alpha", 0, 1, dims=("group",))
             beta = pm.Normal("beta", 0, 1, dims=("time", "location"))
             gamma = pm.Normal("gamma", 0, 1)
-            
+
             # Deterministic with dims
-            mu = pm.Deterministic("mu", alpha[:, None, None] + beta, dims=("group", "time", "location"))
-            
+            mu = pm.Deterministic(
+                "mu", alpha[:, None, None] + beta, dims=("group", "time", "location")
+            )
+
             # Observed data
             data = pm.Data("data", np.zeros((3, 10, 5)), dims=("group", "time", "location"))
             pm.Normal("y", mu=mu, sigma=1, observed=data, dims=("group", "time", "location"))
 
         # Should pass validation
         validate_dims_coords_consistency(model)
-

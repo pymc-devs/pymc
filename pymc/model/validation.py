@@ -22,8 +22,8 @@ from __future__ import annotations
 
 import numpy as np
 import pytensor.tensor as pt
+
 from pytensor.graph.basic import Variable
-from pytensor.tensor.variable import TensorVariable, TensorConstant
 
 try:
     unused = TYPE_CHECKING
@@ -206,7 +206,7 @@ def check_shape_dims_match(model: Model) -> list[str]:
         # For variables with symbolic shapes, we need to try to evaluate
         try:
             actual_shape = var.shape
-            if isinstance(actual_shape, (list, tuple)):
+            if isinstance(actual_shape, list | tuple):
                 # Replace symbolic shape elements if possible
                 evaluated_shape = []
                 shape_idx = 0
@@ -238,7 +238,9 @@ def check_shape_dims_match(model: Model) -> list[str]:
                             except Exception:
                                 evaluated_shape.append(None)  # Can't validate
                         else:
-                            evaluated_shape.append(int(shape_elem) if shape_elem is not None else None)
+                            evaluated_shape.append(
+                                int(shape_elem) if shape_elem is not None else None
+                            )
                         shape_idx += 1
 
                 # Compare only elements we could evaluate
@@ -256,8 +258,7 @@ def check_shape_dims_match(model: Model) -> list[str]:
                 if mismatches:
                     errors.append(
                         f"Variable '{var_name}' declares dims {dims} but its shape "
-                        f"does not match the coordinate lengths:\n"
-                        + "\n".join(mismatches)
+                        f"does not match the coordinate lengths:\n" + "\n".join(mismatches)
                     )
         except Exception:
             # If we can't evaluate the shape, skip this check
@@ -324,7 +325,9 @@ def check_coord_lengths(model: Model) -> list[str]:
                     if dims is not None and dim_name in dims:
                         using_vars.append(var_name)
 
-                var_list = ", ".join([f"'{v}'" for v in sorted(using_vars)]) if using_vars else "variables"
+                var_list = (
+                    ", ".join([f"'{v}'" for v in sorted(using_vars)]) if using_vars else "variables"
+                )
 
                 errors.append(
                     f"Dimension '{dim_name}' has coordinate values of length {coord_length}, "
@@ -338,4 +341,3 @@ def check_coord_lengths(model: Model) -> list[str]:
             pass
 
     return errors
-
