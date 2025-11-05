@@ -2452,15 +2452,16 @@ class ICAR(Continuous):
 
     rv_op = icar
 
-    @classmethod
-    def ICAR(name, W, tau=1.0, mu=None, **kwargs):
+    
+    def ICAR(name, W, tau=1.0, mu=None, method="eig", **kwargs):
         W = pt.as_tensor_variable(W)
+
         if mu is None:
             mu = pt.zeros(W.shape[0])
 
-        cov = build_icar_covariance(W, tau)  # python helper that does eig pseudo inverse
+        cov = build_icar_covariance(W, tau)   # private python helper that gets eig pseudo inverse
 
-        return pm.MvNormal(name, mu=mu, cov=cov, method="eig", **kwargs)
+        return pm.MvNormal.dist(mu=mu, cov=cov, method=method, name=name, **kwargs)
 
     def dist(cls, W, sigma=1, zero_sum_stdev=0.001, **kwargs):
         # Note: These checks are forcing W to be non-symbolic
