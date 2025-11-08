@@ -178,6 +178,7 @@ class MeasurableTransform(MeasurableElemwise):
         Erf,
         Erfc,
         Erfcx,
+        Sigmoid,
     )
 
     # Cannot use `transform` as name because it would clash with the property added by
@@ -227,7 +228,7 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
     return pt.switch(pt.isnan(jacobian), -np.inf, input_logprob + jacobian)
 
 
-MONOTONICALLY_INCREASING_OPS = (Exp, Log, Add, Sinh, Tanh, ArcSinh, ArcCosh, ArcTanh, Erf)
+MONOTONICALLY_INCREASING_OPS = (Exp, Log, Add, Sinh, Tanh, ArcSinh, ArcCosh, ArcTanh, Erf, Sigmoid)
 MONOTONICALLY_DECREASING_OPS = (Erfc, Erfcx)
 
 
@@ -300,7 +301,18 @@ def measurable_transform_icdf(op: MeasurableTransform, value, *inputs, **kwargs)
         value = pt.switch(pt.lt(scale, 0), 1 - value, value)
     elif isinstance(op.scalar_op, Pow):
         if op.transform_elemwise.power < 0:
-            raise NotImplementedError
+            # Note: Negative even powers will be rejected below when inverting the transform
+            # For the remaining negative powers the function is decreasing with a jump around 0
+            # We adjust the value with the mass below zero.
+            # For non-negative RVs with cdf(0)=0, it simplifies to 1 - value
+            cdf_zero = pt.exp(_logcdf_helper(measurable_input, 0))
+            # Use nan to not mask invalid values accidentally
+            value = pt.switch((value >= 0) & (value <= 1), value, np.nan)
+            value = pt.switch(
+                (cdf_zero > 0) & (value < cdf_zero),
+                cdf_zero - value,
+                1 + cdf_zero - value,
+            )
     else:
         raise NotImplementedError
 
