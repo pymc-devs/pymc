@@ -2532,6 +2532,9 @@ class InverseGamma(PositiveContinuous):
             msg="alpha > 0, beta > 0",
         )
 
+    def icdf(value, alpha, beta):
+        return icdf(1 / Gamma.dist(alpha, beta), value)
+
 
 class ChiSquared:
     r"""
