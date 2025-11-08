@@ -338,7 +338,7 @@ class ProgressBarManager:
         if speed > 1 or speed == 0:
             unit = "draws/s"
         else:
-            unit = "s/draws"
+            unit = "s/draw"
             speed = 1 / speed
 
         return speed, unit
