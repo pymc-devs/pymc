@@ -687,6 +687,13 @@ class TestMatchesScipy:
             lambda value, alpha, beta: st.invgamma.logcdf(value, alpha, scale=beta),
         )
 
+    def test_inverse_gamma_icdf(self):
+        check_icdf(
+            pm.InverseGamma,
+            {"alpha": Rplusbig, "beta": Rplusbig},
+            lambda q, alpha, beta: st.invgamma.ppf(q, alpha, scale=beta),
+        )
+
     @pytest.mark.skipif(
         condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to scaling issues",
