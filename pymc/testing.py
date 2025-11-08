@@ -668,27 +668,32 @@ def check_selfconsistency_discrete_logcdf(
             )
 
 
-def check_selfconsistency_continuous_icdf(
+def check_selfconsistency_icdf(
     distribution: Distribution,
-    paramdomains: Dict[str, Domain],
-    decimal: Optional[int] = None,
+    paramdomains: dict[str, Domain],
+    *,
+    decimal: int | None = None,
     n_samples: int = 100,
 ) -> None:
-    """
-    Check that the icdf and logcdf functions of the distribution are consistent for a sample of probability values.
+    """Check that the icdf and logcdf functions of the distribution are consistent.
+
+    Only works with continuous distributions.
     """
     if decimal is None:
         decimal = select_by_precision(float64=6, float32=3)
 
     dist = create_dist_from_paramdomains(distribution, paramdomains)
-    value = dist.type()
-    value.name = "value"
-
+    if dist.type.dtype.startswith("int"):
+        raise NotImplementedError(
+            "check_selfconsistency_icdf is not robust against discrete distributions."
+        )
+    value = dist.astype("float64").type("value")
     dist_icdf = icdf(dist, value)
-    dist_icdf_fn = pytensor.function(list(inputvars(dist_icdf)), dist_icdf)
+    dist_cdf = pt.exp(logcdf(dist, value))
 
-    dist_logcdf = logcdf(dist, value)
-    dist_logcdf_fn = compile_pymc(list(inputvars(dist_logcdf)), dist_logcdf)
+    py_mode = Mode("py")
+    dist_icdf_fn = pytensor.function(list(inputvars(dist_icdf)), dist_icdf, mode=py_mode)
+    dist_cdf_fn = compile(list(inputvars(dist_cdf)), dist_cdf, mode=py_mode)
 
     domains = paramdomains.copy()
     domains["value"] = Domain(np.linspace(0, 1, 10))
@@ -696,60 +701,17 @@ def check_selfconsistency_continuous_icdf(
     for point in product(domains, n_samples=n_samples):
         point = dict(point)
         value = point.pop("value")
-
-        with pytensor.config.change_flags(mode=Mode("py")):
-            npt.assert_almost_equal(
-                value,
-                np.exp(dist_logcdf_fn(**point, value=dist_icdf_fn(**point, value=value))),
-                decimal=decimal,
-                err_msg=f"point: {point}, value: {value}",
-            )
-
-
-def check_selfconsistency_discrete_icdf(
-    distribution: Distribution,
-    domain: Domain,
-    paramdomains: Dict[str, Domain],
-    decimal: Optional[int] = None,
-    n_samples: int = 100,
-) -> None:
-    """
-    Check that the icdf and logcdf functions of the distribution are
-    consistent for a sample of values in the domain of the
-    distribution.
-    """
-
-    def ftrunc(values, decimal=0):
-        return np.trunc(values * 10**decimal) / (10**decimal)
-
-    if decimal is None:
-        decimal = select_by_precision(float64=6, float32=3)
-
-    dist = create_dist_from_paramdomains(distribution, paramdomains)
-
-    value = pt.TensorType(dtype="float64", shape=[])("value")
-
-    dist_icdf = icdf(dist, value)
-    dist_icdf_fn = pytensor.function(list(inputvars(dist_icdf)), dist_icdf)
-
-    dist_logcdf = logcdf(dist, value)
-    dist_logcdf_fn = compile_pymc(list(inputvars(dist_logcdf)), dist_logcdf)
-
-    domains = paramdomains.copy()
-    domains["value"] = domain
-
-    for point in product(domains, n_samples=n_samples):
-        point = dict(point)
-        value = point.pop("value")
-
-        with pytensor.config.change_flags(mode=Mode("py")):
-            expected_value = value
-            computed_value = dist_icdf_fn(
-                **point, value=ftrunc(np.exp(dist_logcdf_fn(**point, value=value)), decimal=decimal)
-            )
-            assert (
-                expected_value == computed_value
-            ), f"expected_value = {expected_value}, computed_value = {computed_value}, {point}"
+        icdf_value = dist_icdf_fn(**point, value=value)
+        recovered_value = dist_cdf_fn(
+            **point,
+            value=icdf_value,
+        )
+        np.testing.assert_almost_equal(
+            value,
+            recovered_value,
+            decimal=decimal,
+            err_msg=f"point: {point}",
+        )
 
 
 def assert_support_point_is_expected(model, expected, check_finite_logp=True):

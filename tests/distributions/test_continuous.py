@@ -45,7 +45,7 @@ from pymc.testing import (
     check_icdf,
     check_logcdf,
     check_logp,
-    check_selfconsistency_continuous_icdf,
+    check_selfconsistency_icdf,
     continuous_random_tester,
     seeded_numpy_distribution_builder,
     seeded_scipy_distribution_builder,
@@ -442,7 +442,7 @@ class TestMatchesScipy:
             {"a": Rplus, "b": Rplus},
             scipy_log_cdf,
         )
-        check_selfconsistency_continuous_icdf(
+        check_selfconsistency_icdf(
             pm.Kumaraswamy,
             {"a": Rplusbig, "b": Rplusbig},
         )
