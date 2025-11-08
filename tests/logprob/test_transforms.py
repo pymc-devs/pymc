@@ -379,9 +379,7 @@ class TestPowerRVTransform:
         x_vv = x_rv.clone()
         x_logp_fn = pytensor.function([x_vv], logp(x_rv, x_vv))
         x_logcdf_fn = pytensor.function([x_vv], logcdf(x_rv, x_vv))
-
-        with pytest.raises(NotImplementedError):
-            icdf(x_rv, x_vv)
+        x_icdf_fn = pytensor.function([x_vv], icdf(x_rv, x_vv))
 
         x_test_val = np.r_[-0.5, 1.5]
         np.testing.assert_allclose(
@@ -391,6 +389,10 @@ class TestPowerRVTransform:
         np.testing.assert_allclose(
             x_logcdf_fn(x_test_val),
             sp.stats.invgamma(shape, scale=scale * numerator).logcdf(x_test_val),
+        )
+        np.testing.assert_allclose(
+            x_icdf_fn(x_test_val),
+            sp.stats.invgamma(shape, scale=scale * numerator).ppf(x_test_val),
         )
 
     def test_reciprocal_real_rv_transform(self):
@@ -406,8 +408,10 @@ class TestPowerRVTransform:
             logcdf(test_rv, test_value).eval(),
             sp.stats.cauchy(1 / 5, 2 / 5).logcdf(test_value),
         )
-        with pytest.raises(NotImplementedError):
-            icdf(test_rv, test_value)
+        np.testing.assert_allclose(
+            icdf(test_rv, test_value).eval(),
+            sp.stats.cauchy(1 / 5, 2 / 5).ppf(test_value),
+        )
 
     def test_sqr_transform(self):
         # The square of a normal with unit variance is a noncentral chi-square with 1 df and nc = mean ** 2
