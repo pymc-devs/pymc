@@ -259,6 +259,7 @@ class _CustomSymbolicDist(Distribution):
         size=None,
         signature: str,
         class_name: str,
+        rng=None,
     ):
         size = normalize_size_param(size)
         # If it's NoneConst, just use that as the dummy
@@ -270,7 +271,8 @@ class _CustomSymbolicDist(Distribution):
             dummy_rv = dist(*dummy_dist_params, dummy_size_param)
         dummy_params = [dummy_size_param, *dummy_dist_params]
         # RNGs are not passed as explicit inputs (because we usually don't know how many are needed)
-        # We retrieve them here. This will also raise if the user forgot to specify some update in a Scan Op
+        # We retrieve them here. This will also raise if the user forgot to specify some update in an InnerGraphOp (e.g., Scan)
+        # If the user passed an explicit rng we will respect that later when we instantiate the final rv_op
         dummy_updates_dict = collect_default_updates(inputs=dummy_params, outputs=(dummy_rv,))
 
         rv_type = type(
@@ -357,6 +359,14 @@ class _CustomSymbolicDist(Distribution):
             outputs=outputs,
             extended_signature=extended_signature,
         )
+        if rng is not None:
+            # User passed an RNG, use that if the graph only required one, raise otherwise
+            if len(rngs) != 1:
+                raise ValueError(
+                    f"CustomDist received an explicit rng but it actually requires {len(rngs)} rngs."
+                    " Please modify your dist function to only use one rng, or don't pass an explicitly rng."
+                )
+            rngs = (rng,)
         return rv_op(size, *dist_params, *rngs)
 
     @staticmethod

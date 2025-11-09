@@ -708,3 +708,47 @@ class TestCustomSymbolicDist:
             observed_logp.eval({latent_vv: latent_vv_test, observed_vv: observed_vv_test}),
             expected_logp,
         )
+
+    def test_explicit_rng(self):
+        def custom_dist(mu, size):
+            return Normal.dist(mu, size=size)
+
+        x = CustomDist.dist(0, dist=custom_dist)
+        assert len(x.owner.op.rng_params(x.owner)) == 1  # Rng created by default
+
+        explicit_rng = pt.random.type.random_generator_type("rng")
+        x_explicit = CustomDist.dist(0, dist=custom_dist, rng=explicit_rng)
+        [used_rng] = x_explicit.owner.op.rng_params(x_explicit.owner)
+        assert used_rng is explicit_rng
+
+        # API for passing multiple explicit RNGs not supported
+        def custom_dist_multi_rng(mu, size):
+            return Normal.dist(mu, size=size) + Normal.dist(0, size=size)
+
+        x = CustomDist.dist(0, dist=custom_dist_multi_rng)
+        assert len(x.owner.op.rng_params(x.owner)) == 2
+
+        with pytest.raises(
+            ValueError,
+            match="CustomDist received an explicit rng but it actually requires 2 rngs",
+        ):
+            CustomDist.dist(
+                0,
+                dist=custom_dist_multi_rng,
+                rng=explicit_rng,
+            )
+
+        # But it can be done if the custom_dist uses only one RNG internally
+        def custom_dist_multi_rng_fixed(mu, size):
+            next_rng, x = Normal.dist(mu, size=size).owner.outputs
+            return x + Normal.dist(0, size=size, rng=next_rng)
+
+        x = CustomDist.dist(0, dist=custom_dist_multi_rng_fixed)
+        assert len(x.owner.op.rng_params(x.owner)) == 1
+        x_explicit = CustomDist.dist(
+            0,
+            dist=custom_dist_multi_rng_fixed,
+            rng=explicit_rng,
+        )
+        [used_rng] = x_explicit.owner.op.rng_params(x_explicit.owner)
+        assert used_rng is explicit_rng
