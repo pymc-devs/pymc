@@ -2834,6 +2834,13 @@ class HalfStudentT(PositiveContinuous):
             msg="sigma > 0, nu > 0",
         )
 
+    def icdf(value, nu, sigma):
+        # Map half-t quantiles to full StudentT quantiles:
+        # F_half^{-1}(u) = F_t^{-1}((u + 1)/2; nu, mu=0, sigma)
+        res = icdf(StudentT.dist(nu, sigma=sigma), (value + 1.0) / 2.0)
+        res = check_icdf_value(res, value)
+        return res
+
 
 class ExGaussianRV(SymbolicRandomVariable):
     name = "exgaussian"
