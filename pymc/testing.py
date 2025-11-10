@@ -668,6 +668,52 @@ def check_selfconsistency_discrete_logcdf(
             )
 
 
+def check_selfconsistency_icdf(
+    distribution: Distribution,
+    paramdomains: dict[str, Domain],
+    *,
+    decimal: int | None = None,
+    n_samples: int = 100,
+) -> None:
+    """Check that the icdf and logcdf functions of the distribution are consistent.
+
+    Only works with continuous distributions.
+    """
+    if decimal is None:
+        decimal = select_by_precision(float64=6, float32=3)
+
+    dist = create_dist_from_paramdomains(distribution, paramdomains)
+    if dist.type.dtype.startswith("int"):
+        raise NotImplementedError(
+            "check_selfconsistency_icdf is not robust against discrete distributions."
+        )
+    value = dist.astype("float64").type("value")
+    dist_icdf = icdf(dist, value)
+    dist_cdf = pt.exp(logcdf(dist, value))
+
+    py_mode = Mode("py")
+    dist_icdf_fn = pytensor.function(list(inputvars(dist_icdf)), dist_icdf, mode=py_mode)
+    dist_cdf_fn = compile(list(inputvars(dist_cdf)), dist_cdf, mode=py_mode)
+
+    domains = paramdomains.copy()
+    domains["value"] = Domain(np.linspace(0, 1, 10))
+
+    for point in product(domains, n_samples=n_samples):
+        point = dict(point)
+        value = point.pop("value")
+        icdf_value = dist_icdf_fn(**point, value=value)
+        recovered_value = dist_cdf_fn(
+            **point,
+            value=icdf_value,
+        )
+        np.testing.assert_almost_equal(
+            value,
+            recovered_value,
+            decimal=decimal,
+            err_msg=f"point: {point}",
+        )
+
+
 def assert_support_point_is_expected(model, expected, check_finite_logp=True):
     fn = make_initial_point_fn(
         model=model,
