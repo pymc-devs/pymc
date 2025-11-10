@@ -44,7 +44,7 @@ import scipy.special
 from pytensor.graph.basic import equal_computations
 
 from pymc.distributions.continuous import Cauchy, ChiSquared
-from pymc.distributions.discrete import Bernoulli
+from pymc.distributions.discrete import Bernoulli, DiscreteUniform
 from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
 from pymc.logprob.transforms import (
     ArccoshTransform,
@@ -285,6 +285,27 @@ class TestLocScaleRVTransform:
             sp.stats.norm(loc_test_val, 1).ppf(q_test_val),
         )
 
+    def test_shifted_discrete_rv_transform(self):
+        p = 0.7
+        rv = Bernoulli.dist(p=p) + 5
+        vv = rv.type()
+
+        rv_logp_fn = pytensor.function([vv], logp(rv, vv))
+        assert rv_logp_fn(4) == -np.inf
+        np.testing.assert_allclose(rv_logp_fn(5), np.log(1 - p))
+        np.testing.assert_allclose(rv_logp_fn(6), np.log(p))
+        assert rv_logp_fn(7) == -np.inf
+
+        rv_logcdf_fn = pytensor.function([vv], logcdf(rv, vv))
+        assert rv_logcdf_fn(4) == -np.inf
+        np.testing.assert_allclose(rv_logcdf_fn(5), np.log(1 - p))
+        np.testing.assert_allclose(rv_logcdf_fn(6), 0)
+        assert rv_logcdf_fn(7) == 0
+
+        # icdf not supported yet
+        with pytest.raises(NotImplementedError):
+            icdf(rv, 0)
+
     @pytest.mark.parametrize(
         "rv_size, scale_type, product",
         [
@@ -336,6 +357,23 @@ class TestLocScaleRVTransform:
         np.testing.assert_allclose(x_logp_fn(-1.5), sp.stats.halfnorm.logpdf(1.5))
         np.testing.assert_allclose(x_logcdf_fn(-1.5), sp.stats.halfnorm.logsf(1.5))
         np.testing.assert_allclose(x_icdf_fn(0.3), -sp.stats.halfnorm.ppf(1 - 0.3))
+
+    def test_negated_discrete_rv_transform(self):
+        p = 0.7
+        rv = -Bernoulli.dist(p=p, shape=(4,))
+        vv = rv.type()
+
+        # A negated Bernoulli has pmf {p if x == -1; 1-p if x == 0; 0 otherwise}
+        logp_fn = pytensor.function([vv], logp(rv, vv))
+        np.testing.assert_allclose(
+            logp_fn([-2, -1, 0, 1]), [-np.inf, np.log(p), np.log(1 - p), -np.inf]
+        )
+
+        logcdf_fn = pytensor.function([vv], logcdf(rv, vv))
+        np.testing.assert_allclose(logcdf_fn([-2, -1, 0, 1]), [-np.inf, np.log(p), 0, 0])
+
+        with pytest.raises(NotImplementedError):
+            icdf(rv, [-2, -1, 0, 1])
 
     def test_subtracted_rv_transform(self):
         # Choose base RV that is asymmetric around zero
@@ -501,21 +539,33 @@ class TestPowerRVTransform:
         assert np.isneginf(x_logp_fn(-2.5))
 
 
-@pytest.mark.parametrize("test_val", (2.5, -2.5))
-def test_absolute_rv_transform(test_val):
-    x_rv = pt.abs(pt.random.normal())
-    y_rv = pt.random.halfnormal()
+@pytest.mark.parametrize("continuous", (True, False))
+def test_absolute_rv_transform(continuous):
+    if continuous:
+        x_rv = pt.abs(pt.random.normal(size=(5,)))
+        ref_rv = pt.random.halfnormal(size=(5,))
+    else:
+        x_rv = pt.abs(DiscreteUniform.dist(-4, 4, size=(5,)))
+        # |x_rv| = DiscreteUniform(0,4) with P(X=0) halved relative to other values
+        # We can use a Categorical to representh this
+        ref_rv = pt.random.categorical(
+            p=np.array([1, 2, 2, 2, 2]) / 9,
+            size=(5,),
+        )
 
-    x_vv = x_rv.clone()
-    y_vv = y_rv.clone()
-    x_logp_fn = pytensor.function([x_vv], logp(x_rv, x_vv))
-    with pytest.raises(NotImplementedError):
-        logcdf(x_rv, x_vv)
+    x_vv = x_rv.type()
+    ref_vv = ref_rv.type()
+    # Not working with logs because it's easier to debug for discrete case
+    x_pdf_fn = pytensor.function([x_vv], pt.exp(logp(x_rv, x_vv)))
+    x_cdf_fn = pytensor.function([x_vv], pt.exp(logcdf(x_rv, x_vv)))
     with pytest.raises(NotImplementedError):
         icdf(x_rv, x_vv)
 
-    y_logp_fn = pytensor.function([y_vv], logp(y_rv, y_vv))
-    np.testing.assert_allclose(x_logp_fn(test_val), y_logp_fn(test_val))
+    ref_pdf_fn = pytensor.function([ref_vv], pt.exp(logp(ref_rv, ref_vv)))
+    ref_cdf_fn = pytensor.function([ref_vv], pt.exp(logcdf(ref_rv, ref_vv)))
+    test_val = np.array([-2.5, -2.0, 0, 2.0, 2.5], dtype=x_vv.dtype)
+    np.testing.assert_allclose(x_pdf_fn(test_val), ref_pdf_fn(test_val))
+    np.testing.assert_allclose(x_cdf_fn(test_val), ref_cdf_fn(test_val))
 
 
 @pytest.mark.parametrize(
@@ -690,49 +740,9 @@ def test_not_implemented_discrete_rv_transform():
     with pytest.raises(RuntimeError, match="could not be derived"):
         conditional_logp({y_rv: y_rv.clone()})
 
-    y_rv = 5 * pt.random.poisson(1)
+    y_rv = 5.5 * pt.random.poisson(1)
     with pytest.raises(RuntimeError, match="could not be derived"):
         conditional_logp({y_rv: y_rv.clone()})
-
-
-def test_negated_discrete_rv_transform():
-    p = 0.7
-    rv = -Bernoulli.dist(p=p, shape=(4,))
-    vv = rv.type()
-
-    # A negated Bernoulli has pmf {p if x == -1; 1-p if x == 0; 0 otherwise}
-    logp_fn = pytensor.function([vv], logp(rv, vv))
-    np.testing.assert_allclose(
-        logp_fn([-2, -1, 0, 1]), [-np.inf, np.log(p), np.log(1 - p), -np.inf]
-    )
-
-    logcdf_fn = pytensor.function([vv], logcdf(rv, vv))
-    np.testing.assert_allclose(logcdf_fn([-2, -1, 0, 1]), [-np.inf, np.log(p), 0, 0])
-
-    with pytest.raises(NotImplementedError):
-        icdf(rv, [-2, -1, 0, 1])
-
-
-def test_shifted_discrete_rv_transform():
-    p = 0.7
-    rv = Bernoulli.dist(p=p) + 5
-    vv = rv.type()
-
-    rv_logp_fn = pytensor.function([vv], logp(rv, vv))
-    assert rv_logp_fn(4) == -np.inf
-    np.testing.assert_allclose(rv_logp_fn(5), np.log(1 - p))
-    np.testing.assert_allclose(rv_logp_fn(6), np.log(p))
-    assert rv_logp_fn(7) == -np.inf
-
-    rv_logcdf_fn = pytensor.function([vv], logcdf(rv, vv))
-    assert rv_logcdf_fn(4) == -np.inf
-    np.testing.assert_allclose(rv_logcdf_fn(5), np.log(1 - p))
-    np.testing.assert_allclose(rv_logcdf_fn(6), 0)
-    assert rv_logcdf_fn(7) == 0
-
-    # icdf not supported yet
-    with pytest.raises(NotImplementedError):
-        icdf(rv, 0)
 
 
 @pytest.mark.xfail(reason="Check not implemented yet")
