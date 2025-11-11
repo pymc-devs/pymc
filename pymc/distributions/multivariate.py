@@ -22,8 +22,7 @@ import pytensor.tensor as pt
 import scipy
 
 from pytensor.graph import node_rewriter
-from pytensor.graph.basic import Apply, Variable
-from pytensor.graph.op import Op
+from pytensor.graph.basic import Variable
 from pytensor.raise_op import Assert
 from pytensor.sparse.basic import DenseFromSparse, sp_sum
 from pytensor.tensor import (
@@ -33,7 +32,6 @@ from pytensor.tensor import (
     get_underlying_scalar_constant_value,
     sigmoid,
 )
-from pytensor.tensor.blockwise import Blockwise
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.linalg import cholesky, det, eigh, solve_triangular, trace
@@ -44,7 +42,6 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import (
     normalize_size_param,
 )
-from pytensor.tensor.type import TensorType
 from scipy import stats
 
 import pymc as pm
@@ -912,47 +909,9 @@ class OrderedMultinomial:
         return _OrderedMultinomial.dist(*args, **kwargs)
 
 
-def posdef(AA):
-    try:
-        scipy.linalg.cholesky(AA)
-        return True
-    except scipy.linalg.LinAlgError:
-        return False
-
-
-class PosDefMatrix(Op):
-    """Check if input is positive definite. Input should be a square matrix."""
-
-    __props__ = ()
-    gufunc_signature = "(m,m)->()"
-
-    def make_node(self, x):
-        x = pt.as_tensor_variable(x)
-        assert x.ndim == 2
-        o = TensorType(dtype="bool", shape=[])()
-        return Apply(self, [x], [o])
-
-    def perform(self, node, inputs, outputs):
-        (x,) = inputs
-        (z,) = outputs
-        try:
-            z[0] = np.array(posdef(x), dtype="bool")
-        except Exception:
-            pm._log.exception("Failed to check if %s positive definite", x)
-            raise
-
-    def infer_shape(self, fgraph, node, shapes):
-        return [[]]
-
-    def grad(self, inp, grads):
-        (x,) = inp
-        return [x.zeros_like(pytensor.config.floatX)]
-
-    def __str__(self):
-        return "MatrixIsPositiveDefinite"
-
-
-matrix_pos_def = Blockwise(PosDefMatrix())
+def matrix_pos_def(X):
+    vec_eigh = pt.vectorize(eigh, "(n,n)->(n),(n)")
+    return pt.all(vec_eigh(X)[0] > 0)
 
 
 class WishartRV(RandomVariable):
@@ -1655,7 +1614,6 @@ class _LKJCorr(BoundedContinuous):
 @_default_transform.register(_LKJCorr)
 def lkjcorr_default_transform(op, rv):
     rng, scan_rng, shape, n, eta, *_ = rv.owner.inputs
-    n = pt.get_scalar_constant_value(n)  # Safely extract scalar value without eval
     return CholeskyCorrTransform(n=n, upper=False)
 
 
