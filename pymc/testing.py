@@ -735,6 +735,50 @@ def continuous_random_tester(
         while p <= alpha and f > 0:
             s0 = pymc_rand()
             s1 = floatX(ref_rand(size=size, **point))
+            _, p = st.ks_2samp(np.atleast_1d(s0).flatten(), np.atleast_1d(s1).flatten())
+            f -= 1
+        assert p > alpha, str(point)
+
+
+def partially_deterministic_continuous_random_tester(
+    dist,
+    paramdomains,
+    valuedomain=None,
+    ref_rand=None,
+    size=10000,
+    alpha=0.05,
+    fails=10,
+    extra_args=None,
+    model_args=None,
+):
+    if valuedomain is None:
+        valuedomain = Domain([0], edges=(None, None))
+
+    if model_args is None:
+        model_args = {}
+
+    model, param_vars = build_model(dist, valuedomain, paramdomains, extra_args)
+    model_dist = change_dist_size(model.named_vars["value"], size, expand=True)
+    pymc_rand = compile([], model_dist)
+
+    domains = paramdomains.copy()
+    for point in product(domains, n_samples=100):
+        point = pm.Point(point, model=model)
+        point.update(model_args)
+
+        # Update the shared parameter variables in `param_vars`
+        for k, v in point.items():
+            nv = param_vars.get(k, model.named_vars.get(k))
+            if nv.name in param_vars:
+                param_vars[nv.name].set_value(v)
+
+        p = alpha
+        # Allow KS test to fail (i.e., the samples be different)
+        # a certain number of times. Crude, but necessary.
+        f = fails
+        while p <= alpha and f > 0:
+            s0 = pymc_rand()
+            s1 = floatX(ref_rand(size=size, **point))
 
             # If a distribution has non-stochastic elements in the output (e.g. LKJCorr putting 1's on the diagonal),
             # it will mess up the KS test. So we filter those out here.

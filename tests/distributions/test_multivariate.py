@@ -60,7 +60,7 @@ from pymc.testing import (
     Vector,
     assert_support_point_is_expected,
     check_logp,
-    continuous_random_tester,
+    partially_deterministic_continuous_random_tester,
     seeded_numpy_distribution_builder,
     select_by_precision,
 )
@@ -2170,8 +2170,8 @@ class TestLKJCorr(BaseTestDistributionRandom):
     ]
 
     checks_to_run = [
-        # "check_pymc_params_match_rv_op",
-        # "check_rv_size",
+        "check_pymc_params_match_rv_op",
+        "check_rv_size",
         "check_draws_match_expected",
     ]
 
@@ -2195,7 +2195,7 @@ class TestLKJCorr(BaseTestDistributionRandom):
         #   1) if n > 2, the ref_rand function is wrong. We don't have a good reference for sampling LKJ
         #   2) Although n can be symbolic, the inner scan graph needs to be rebuilt after it changes. The approach
         #      implemented in this tester does not rebuild the inner function graph, causing an error.
-        continuous_random_tester(
+        partially_deterministic_continuous_random_tester(
             _LKJCorr,
             {
                 "eta": Domain([1.0, 10.0, 100.0], edges=(None, None)),
