@@ -411,6 +411,7 @@ class CholeskyCorrTransform(Transform):
         log_jac_det: TensorVariable
             Log determinant of the Jacobian of the transformation.
         """
+        unconstrained_vector = pt.as_tensor(unconstrained_vector)
         chol_corr_matrix = self.backward(unconstrained_vector, *inputs)
         n = self.n
         input_dtype = unconstrained_vector.dtype
