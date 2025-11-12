@@ -1,5 +1,7 @@
 name: devcontainer-docker-image
 
+permissions: {}
+
 on:
   workflow_dispatch:
   schedule:

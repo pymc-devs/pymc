@@ -1,5 +1,7 @@
 name: tests
 
+permissions: {}
+
 on:
   pull_request:
   push:

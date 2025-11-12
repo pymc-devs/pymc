@@ -1,4 +1,7 @@
 name: "Pull Request Labeler"
+
+permissions: {}
+
 on:
 # The labeler doesn't execute any contributed code, so it should be fairly safe.
 - pull_request_target  # zizmor: ignore[dangerous-triggers]
