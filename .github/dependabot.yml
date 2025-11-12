@@ -8,3 +8,5 @@ updates:
     labels:
       - "Github CI/CD"
       - "no releasenotes"
+    cooldown:
+      default-days: 7
