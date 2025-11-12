@@ -1545,7 +1545,9 @@ class LKJCorrRV(SymbolicRandomVariable):
             strict=True,
         )
 
-        P = pt.concatenate([P0[None], P_seq], axis=0)[-1]
+        # Retreive the output of scan, including the initial state, and get the last P
+        # This is necessary because if n=2 and we do not include the initial state, scan returns an empty list.
+        P = P_seq.owner.inputs[0][-1]
 
         C = pt.einsum("...ji,...jk->...ik", P, P.copy())
         (scan_rng_out,) = tuple(updates.values())
