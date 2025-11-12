@@ -14,8 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       security-events: write
-      contents: read # only needed for private repos
-      actions: read # only needed for private repos
+      # contents: read # only needed for private repos
+      # actions: read # only needed for private repos
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
