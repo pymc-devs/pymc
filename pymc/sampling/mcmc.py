@@ -23,13 +23,7 @@ import time
 import warnings
 
 from collections.abc import Callable, Iterator, Mapping, Sequence
-from typing import (
-    Any,
-    Literal,
-    TypeAlias,
-    cast,
-    overload,
-)
+from typing import Any, Literal, TypeAlias, cast, get_args, overload
 
 import numpy as np
 import pytensor.gradient as tg
@@ -352,15 +346,16 @@ def _sample_external_nuts(
 
         def extract_backend(string: str) -> NutpieBackend:
             match = re.search(r"(?<=\[)[^\]]+(?=\])", string)
-            if match is None:
+            if string == "nutpie":
                 return NUTPIE_DEFAULT_BACKEND
+            elif match is None:
+                raise ValueError(
+                    f"Could not parse nutpie backend. Found {string!r}, expected format 'nutpie[backend]'"
+                )
+
             result = cast(NutpieBackend, match.group(0))
             if result not in NUTPIE_BACKENDS:
-                last_option = f"{NUTPIE_BACKENDS[-1]}"
-                expected = (
-                    ", ".join([f'"{x}"' for x in NUTPIE_BACKENDS[:-1]]) + f' or "{last_option}"'
-                )
-                raise ValueError(f'Expected one of {expected}; found "{result}"')
+                raise ValueError(f'Expected one of {NUTPIE_BACKENDS}; found "{result}"')
             return result
 
         backend = extract_backend(sampler)

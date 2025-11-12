@@ -17,8 +17,7 @@ import numpy.testing as npt
 import pytest
 import xarray as xr
 
-from pymc import Data, Deterministic, HalfNormal, Model, Normal, sample, modelcontext
-
+from pymc import Data, Deterministic, HalfNormal, Model, Normal, modelcontext, sample
 
 
 def check_external_sampler_output(warns, idata1, idata2, sample_kwargs):
@@ -62,20 +61,20 @@ def pymc_model():
     return m
 
 
-@pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
+@pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "nutpie[jax]", "blackjax", "numpyro"])
 def test_external_nuts_sampler(pymc_model, recwarn, nuts_sampler):
     if nuts_sampler != "pymc":
         pytest.importorskip(nuts_sampler)
 
-    sample_kwargs = dict(
-        nuts_sampler=nuts_sampler,
-        random_seed=123,
-        chains=2,
-        tune=500,
-        draws=500,
-        progressbar=False,
-        initvals={"x": 0.0},
-    )
+    sample_kwargs = {
+        "nuts_sampler": nuts_sampler,
+        "random_seed": 123,
+        "chains": 2,
+        "tune": 500,
+        "draws": 500,
+        "progressbar": False,
+        "initvals": {"x": 0.0},
+    }
 
     with pymc_model:
         idata1 = sample(**sample_kwargs)
@@ -95,15 +94,15 @@ def test_numba_backend_options(pymc_model, recwarn, backend):
     pytest.importorskip("nutpie")
     pytest.importorskip(backend)
 
-    sample_kwargs = dict(
-        nuts_sampler=f"nutpie[{backend}]",
-        random_seed=123,
-        chains=2,
-        tune=500,
-        draws=500,
-        progressbar=False,
-        initvals={"x": 0.0},
-    )
+    sample_kwargs = {
+        "nuts_sampler": f"nutpie[{backend}]",
+        "random_seed": 123,
+        "chains": 2,
+        "tune": 500,
+        "draws": 500,
+        "progressbar": False,
+        "initvals": {"x": 0.0},
+    }
 
     with pymc_model:
         idata1 = sample(**sample_kwargs)
@@ -120,7 +119,10 @@ def test_numba_backend_options(pymc_model, recwarn, backend):
 
 def test_invalid_nutpie_backend_raises(pymc_model):
     pytest.importorskip("nutpie")
-    with pytest.raises(ValueError, match='Expected one of "numba" or "jax"; found "invalid"'):
+    with pytest.raises(
+        ValueError,
+        match='Could not parse nutpie backend. Expected one of "numba" or "jax"; found "invalid"',
+    ):
         with pymc_model:
             sample(nuts_sampler="nutpie[invalid]", random_seed=123, chains=2, tune=500, draws=500)
 
