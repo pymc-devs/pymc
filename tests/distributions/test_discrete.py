@@ -41,9 +41,7 @@ from pymc.testing import (
     Nat,
     NatSmall,
     R,
-    Rdunif,
     Rplus,
-    Rplusdunif,
     Runif,
     Simplex,
     Unit,
@@ -95,32 +93,36 @@ def orderedprobit_logpdf(value, eta, cutpoints):
 
 
 class TestMatchesScipy:
-    def test_discrete_unif(self):
+    def test_discrete_uniform(self):
+        # Choose domain/paramdomain so we test edge cases as well
+        test_domain = Domain([-np.inf, -10, -1, 0, 1, 10, np.inf], dtype="int64")
+        test_paramdomain = Domain([-np.inf, 0, 10, np.inf], dtype="int64")
         check_logp(
             pm.DiscreteUniform,
-            Rdunif,
-            {"lower": -Rplusdunif, "upper": Rplusdunif},
+            test_domain,
+            {"lower": -test_paramdomain, "upper": test_paramdomain},
             lambda value, lower, upper: st.randint.logpmf(value, lower, upper + 1),
             skip_paramdomain_outside_edge_test=True,
         )
         check_logcdf(
             pm.DiscreteUniform,
-            Rdunif,
-            {"lower": -Rplusdunif, "upper": Rplusdunif},
+            test_domain,
+            {"lower": -test_paramdomain, "upper": test_paramdomain},
             lambda value, lower, upper: st.randint.logcdf(value, lower, upper + 1),
             skip_paramdomain_outside_edge_test=True,
         )
         check_selfconsistency_discrete_logcdf(
             pm.DiscreteUniform,
             Domain([-10, 0, 10], "int64"),
-            {"lower": -Rplusdunif, "upper": Rplusdunif},
+            {"lower": -test_paramdomain, "upper": test_paramdomain},
         )
         check_icdf(
             pm.DiscreteUniform,
-            {"lower": -Rplusdunif, "upper": Rplusdunif},
+            {"lower": -test_paramdomain, "upper": test_paramdomain},
             lambda q, lower, upper: st.randint.ppf(q=q, low=lower, high=upper + 1),
             skip_paramdomain_outside_edge_test=True,
         )
+
         # Custom logp / logcdf check for invalid parameters
         invalid_dist = pm.DiscreteUniform.dist(lower=1, upper=0)
         with pytensor.config.change_flags(mode=Mode("py")):

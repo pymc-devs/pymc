@@ -282,7 +282,14 @@ def kron_diag(*diags):
 
 def logdiffexp(a, b):
     """Return log(exp(a) - exp(b))."""
-    return a + pt.log1mexp(b - a)
+    return pt.where(
+        # Handle special case where b is -inf
+        # If a == b == -inf, this will return the correct result of -inf
+        # whereas the default else branch would get a nan due to -inf - (-inf)
+        pt.isneginf(b),
+        a,
+        a + pt.log1mexp(b - a),
+    )
 
 
 invlogit = sigmoid
