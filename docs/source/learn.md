@@ -13,7 +13,7 @@ glossary
 
 ## At a glance
 ### Beginner
-  - Book: [Bayesian Analysis with Python](http://bap.com.ar/)
+  - Book: [Bayesian Analysis with Python](https://github.com/aloctavodia/BAP3)
   - Book: [Bayesian Methods for Hackers](https://github.com/CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers)
 
 
