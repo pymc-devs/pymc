@@ -54,6 +54,7 @@ from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
 from pymc.model import Model, modelcontext
+from pymc.model.validation import validate_dims_coords_consistency
 from pymc.progress_bar import ProgressBarManager, ProgressBarType, default_progress_theme
 from pymc.sampling.parallel import Draw, _cpu_count
 from pymc.sampling.population import _sample_population
@@ -716,6 +717,8 @@ def sample(
     progress_bool = bool(progressbar)
 
     model = modelcontext(model)
+    # Validate dims/coords consistency before sampling
+    validate_dims_coords_consistency(model)
     if not model.free_RVs:
         raise SamplingError(
             "Cannot sample from the model, since the model does not contain any free variables."
