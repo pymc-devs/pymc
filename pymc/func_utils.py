@@ -11,15 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+
 import warnings
-
-from collections.abc import Callable
-
-import numpy as np
-import pytensor.tensor as pt
-
-from pytensor.gradient import NullTypeGradError
-from scipy import optimize
 
 import pymc as pm
 
@@ -30,24 +23,25 @@ def find_constrained_prior(
     distribution: pm.Distribution,
     lower: float,
     upper: float,
-    init_guess: dict[str, float],
+    init_guess: dict[str, float] | None = None,
     mass: float = 0.95,
     fixed_params: dict[str, float] | None = None,
+    fixed_stat: tuple[str, float] | None = None,
     mass_below_lower: float | None = None,
     **kwargs,
 ) -> dict[str, float]:
     """
-    Find optimal parameters to get `mass` % of probability of a distribution between `lower` and `upper`.
+    Find the maximum entropy distribution that satisfies the constraints.
 
-    Note: only works for one- and two-parameter distributions, as there
-    are exactly two constraints. Fix some combination of parameters
-    if you want to use it on >=3-parameter distributions.
+    Find the maximum entropy distribution with `mass` in the interval
+    defined by the `lower` and `upper` end-points.
+
+    Additional constraints can be set via `fixed_params` and `fixed_stat`.
 
     Parameters
     ----------
     distribution : Distribution
         PyMC distribution you want to set a prior on.
-        Needs to have a ``logcdf`` method implemented in PyMC.
     lower : float
         Lower bound to get `mass` % of probability of `pm_dist`.
     upper : float
@@ -65,11 +59,10 @@ def find_constrained_prior(
         Dictionary of fixed parameters, so that there are only 2 to optimize.
         For instance, for a StudentT, you fix nu to a constant and get the optimized
         mu and sigma.
-    mass_below_lower : float, optional, default None
-        The probability mass below the ``lower`` bound. If ``None``,
-        defaults to ``(1 - mass) / 2``, which implies that the probability
-        mass below the ``lower`` value will be equal to the probability
-        mass above the ``upper`` value.
+    fixed_stat: tuple
+        Summary statistic to fix. The first element should be a name and the second a
+        numerical value. Valid names are: "mean", "mode", "median", "var", "std",
+        "skewness", "kurtosis". Defaults to None.
 
     Returns
     -------
@@ -78,19 +71,12 @@ def find_constrained_prior(
         Dictionary keys are the parameter names and
         dictionary values are the optimized parameter values.
 
-    Notes
-    -----
-    Optional keyword arguments can be passed to ``find_constrained_prior``. These will be
-    delivered to the underlying call to :external:py:func:`scipy.optimize.minimize`.
-
     Examples
     --------
     .. code-block:: python
 
         # get parameters obeying constraints
-        opt_params = pm.find_constrained_prior(
-            pm.Gamma, lower=0.1, upper=0.4, mass=0.75, init_guess={"alpha": 1, "beta": 10}
-        )
+        opt_params = pm.find_constrained_prior(pm.Gamma, lower=0.1, upper=0.4, mass=0.75)
 
         # use these parameters to draw random samples
         samples = pm.Gamma.dist(**opt_params, size=100).eval()
@@ -104,16 +90,8 @@ def find_constrained_prior(
             pm.StudentT,
             lower=0,
             upper=1,
-            init_guess={"mu": 5, "sigma": 2},
             fixed_params={"nu": 7},
         )
-
-    Under some circumstances, you might not want to have the same cumulative
-    probability below the ``lower`` threshold and above the ``upper`` threshold.
-    For example, you might want to constrain an Exponential distribution to
-    find the parameter that yields 90% of the mass below the ``upper`` bound,
-    and have zero mass below ``lower``. You can do that with the following call
-    to ``find_constrained_prior``
 
     .. code-block:: python
 
@@ -122,83 +100,46 @@ def find_constrained_prior(
             lower=0,
             upper=3.0,
             mass=0.9,
-            init_guess={"lam": 1},
-            mass_below_lower=0,
         )
     """
-    warnings.warn(
-        "find_constrained_prior is deprecated and will be removed in a future version. "
-        "Please use maxent function from PreliZ. "
-        "https://preliz.readthedocs.io/en/latest/api_reference.html#preliz.unidimensional.maxent",
-        FutureWarning,
-        stacklevel=2,
-    )
-
-    assert 0.01 <= mass <= 0.99, (
-        "This function optimizes the mass of the given distribution +/- "
-        f"1%, so `mass` has to be between 0.01 and 0.99. You provided {mass}."
-    )
-    if mass_below_lower is None:
-        mass_below_lower = (1 - mass) / 2
-
-    # exit when any parameter is not scalar:
-    if np.any(np.asarray(distribution.rv_op.ndims_params) != 0):
-        raise NotImplementedError(
-            "`pm.find_constrained_prior` does not work with non-scalar parameters yet.\n"
-            "Feel free to open a pull request on PyMC repo if you really need this feature."
-        )
-
-    dist_params = pt.vector("dist_params")
-    params_to_optim = {
-        arg_name: dist_params[i] for arg_name, i in zip(init_guess.keys(), range(len(init_guess)))
-    }
-
-    if fixed_params is not None:
-        params_to_optim.update(fixed_params)
-
-    dist = distribution.dist(**params_to_optim)
-
     try:
-        logcdf_lower = pm.logcdf(dist, pm.floatX(lower))
-        logcdf_upper = pm.logcdf(dist, pm.floatX(upper))
-    except AttributeError:
-        raise AttributeError(
-            f"You cannot use `find_constrained_prior` with {distribution} -- it doesn't have a logcdf "
-            "method yet.\nOpen an issue or, even better, a pull request on PyMC repo if you really "
-            "need it."
+        from preliz import distributions
+        from preliz.unidimensional import maxent
+    except ImportError as e:
+        raise ImportError(
+            "The `find_constrained_prior` function requires the `preliz` package. "
+            "You can install it via `pip install preliz` or `conda install -c conda-forge preliz`."
+        ) from e
+
+    if fixed_params is None:
+        fixed_params = {}
+
+    if init_guess is not None:
+        warnings.warn(
+            "The `init_guess` argument is deprecated and will be removed in a future version. "
+            "The initial guess is determined automatically.",
+            FutureWarning,
+            stacklevel=2,
         )
 
-    target = (pt.exp(logcdf_lower) - mass_below_lower) ** 2
-    target_fn = pm.pytensorf.compile([dist_params], target, allow_input_downcast=True)
-
-    constraint = pt.exp(logcdf_upper) - pt.exp(logcdf_lower)
-    constraint_fn = pm.pytensorf.compile([dist_params], constraint, allow_input_downcast=True)
-
-    jac: str | Callable
-    constraint_jac: str | Callable
-    try:
-        pytensor_jac = pm.gradient(target, [dist_params])
-        jac = pm.pytensorf.compile([dist_params], pytensor_jac, allow_input_downcast=True)
-        pytensor_constraint_jac = pm.gradient(constraint, [dist_params])
-        constraint_jac = pm.pytensorf.compile(
-            [dist_params], pytensor_constraint_jac, allow_input_downcast=True
-        )
-    # when PyMC cannot compute the gradient
-    except (NotImplementedError, NullTypeGradError):
-        jac = "2-point"
-        constraint_jac = "2-point"
-    cons = optimize.NonlinearConstraint(constraint_fn, lb=mass, ub=mass, jac=constraint_jac)
-
-    opt = optimize.minimize(
-        target_fn, x0=list(init_guess.values()), jac=jac, constraints=cons, **kwargs
-    )
-    if not opt.success:
-        raise ValueError(
-            f"Optimization of parameters failed.\nOptimization termination details:\n{opt}"
+    if mass_below_lower is not None:
+        warnings.warn(
+            "The `mass_below_lower` argument is deprecated and will be removed in a future version. "
+            "Use `fixed_stat` or `mode` to add additional constraints.",
+            FutureWarning,
+            stacklevel=2,
         )
 
-    # save optimal parameters
-    opt_params = dict(zip(init_guess.keys(), opt.x))
-    if fixed_params is not None:
-        opt_params.update(fixed_params)
-    return opt_params
+    if kwargs:
+        warnings.warn(
+            "Passing additional keyword arguments is deprecated and will be "
+            "removed in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+    dist = getattr(distributions, distribution.__name__)
+
+    return maxent(
+        dist(**fixed_params), lower=lower, upper=upper, mass=mass, fixed_stat=fixed_stat, plot=False
+    ).params_dict
