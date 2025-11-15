@@ -1134,8 +1134,10 @@ class TestSamplePPC:
 
         with m:
             pm.set_data({"x_data": new_x_data}, coords=new_coords)
+            pm.backends.arviz.RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = True
             with pytest.raises(ValueError, match="conflicting sizes for dimension 'trial'"):
                 pm.sample_posterior_predictive(fake_idata, predictions=True, progressbar=False)
+            pm.backends.arviz.RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = False
 
         new_y_data = np.random.normal(size=(2,))
         with m:
