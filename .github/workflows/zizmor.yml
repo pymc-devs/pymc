@@ -1,5 +1,5 @@
-# https://github.com/woodruffw/zizmor
-name: zizmor GHA analysis
+# Source: <https://github.com/zizmorcore/zizmor-action>
+name: GitHub Actions Security Analysis with zizmor 🌈
 
 on:
   push:
@@ -7,30 +7,20 @@ on:
   pull_request:
     branches: ["**"]
 
+permissions: {}
+
 jobs:
   zizmor:
-    name: zizmor latest via PyPI
     runs-on: ubuntu-latest
     permissions:
       security-events: write
+      # contents: read # only needed for private repos
+      # actions: read # only needed for private repos
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
 
-      - uses: hynek/setup-cached-uv@757bedc3f972eb7227a1aa657651f15a8527c817 # v2.3.0
-
       - name: Run zizmor 🌈
-        run: uvx zizmor --format sarif . > results.sarif
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@0499de31b99561a6d14a36a5f662c2a54f91beee # v4.31.2
-        with:
-          # Path to SARIF file relative to the root of the repository
-          sarif_file: results.sarif
-          # Optional category for the results
-          # Used to differentiate multiple results for one commit
-          category: zizmor
+        uses: zizmorcore/zizmor-action@e673c3917a1aef3c65c972347ed84ccd013ecda4 # v0.2.0

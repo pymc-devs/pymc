@@ -1,5 +1,7 @@
 name: devcontainer-docker-image
 
+permissions: {}
+
 on:
   workflow_dispatch:
   schedule:
@@ -18,7 +20,6 @@ jobs:
     # Set permissions for GitHub token
     # <https://docs.github.com/en/packages/managing-github-packages-using-github-actions-workflows/publishing-and-installing-a-package-with-github-actions#authenticating-to-package-registries-on-github>
     permissions:
-      contents: read
       packages: write
 
     steps:
