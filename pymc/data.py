@@ -92,6 +92,9 @@ minibatch_index = MinibatchIndexRV()
 class MinibatchOp(OpFromGraph):
     """Encapsulate Minibatch random draws in an opaque OFG."""
 
+    # FIXME: __props__ should not be empty
+    __props__ = ()
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs, inline=True)
 
