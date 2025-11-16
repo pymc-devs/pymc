@@ -96,7 +96,7 @@ def mypy_to_pandas(input_lines: Iterator[str]) -> pandas.DataFrame:
     return pandas.DataFrame(data=data).set_index(["file", "line"])
 
 
-def check_no_unexpected_results(mypy_lines: Iterator[str]):
+def check_no_unexpected_results(mypy_lines: Iterator[str], show_expected: bool):
     """Compare mypy results with list of known FAILING files.
 
     Exits the process with non-zero exit code upon unexpected results.
@@ -122,13 +122,23 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
         print(f"{len(passing)}/{len(all_files)} files pass as expected.")
     else:
         print("!!!!!!!!!")
-        print(f"{len(unexpected_failing)} files unexpectedly failed.")
+        print(f"{len(unexpected_failing)} files unexpectedly failed:")
         print("\n".join(sorted(map(str, unexpected_failing))))
+
+        if show_expected:
+            print(
+                "\nThese files did not fail before, so please check the above output"
+                f" for errors in {unexpected_failing} and fix them."
+            )
+        else:
+            print("\nThese files did not fail before. Fix all errors reported in the output above.")
+        print("You can run `python scripts/run_mypy.py` to reproduce this test locally.")
         print(
-            "These files did not fail before, so please check the above output"
-            f" for errors in {unexpected_failing} and fix them."
+            f"\nNote: In addition to these errors, {len(failing.intersection(expected_failing))} errors in files "
+            f'marked as "expected failures" were also found. To see these failures, run: '
+            f"`python scripts/run_mypy.py --show-expected`"
         )
-        print("You can run `python scripts/run_mypy.py --verbose` to reproduce this test locally.")
+
         sys.exit(1)
 
     if unexpected_passing:
@@ -149,7 +159,12 @@ def check_no_unexpected_results(mypy_lines: Iterator[str]):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run mypy type checks on PyMC codebase.")
     parser.add_argument(
-        "--verbose", action="count", default=0, help="Pass this to print mypy output."
+        "--verbose", action="count", default=1, help="Pass this to print mypy output."
+    )
+    parser.add_argument(
+        "--show-expected",
+        action="store_true",
+        help="Also show expected failures in verbose output.",
     )
     parser.add_argument(
         "--groupby",
@@ -165,6 +180,11 @@ if __name__ == "__main__":
     output = cp.stdout.decode()
     if args.verbose:
         df = mypy_to_pandas(output.split("\n"))
+
+        if not args.show_expected:
+            expected_failing = set(FAILING.strip().split("\n")) - {""}
+            df = df.query("file not in @expected_failing")
+
         for section, sdf in df.reset_index().groupby(args.groupby):
             print(f"\n\n[{section}]")
             for row in sdf.itertuples():
@@ -177,5 +197,6 @@ if __name__ == "__main__":
             " or `python run_mypy.py --help` for other options."
         )
 
-    check_no_unexpected_results(output.split("\n"))
+    check_no_unexpected_results(output.split("\n"), show_expected=args.show_expected)
+
     sys.exit(0)
