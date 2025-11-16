@@ -14,7 +14,6 @@
 from collections.abc import Sequence
 
 from pytensor import Variable, clone_replace
-from pytensor.compile import SharedVariable
 from pytensor.graph import ancestors
 from pytensor.graph.fg import FunctionGraph
 
@@ -23,10 +22,8 @@ from pymc.model.core import Model
 from pymc.model.fgraph import (
     ModelObservedRV,
     ModelVar,
-    extract_dims,
     fgraph_from_model,
     model_from_fgraph,
-    model_observed_rv,
 )
 from pymc.pytensorf import toposort_replace
 
@@ -66,45 +63,96 @@ def parse_vars(model: Model, vars: ModelVariable | Sequence[ModelVariable]) -> l
     return [model[var] if isinstance(var, str) else var for var in vars_seq]
 
 
-def model_to_minibatch(model: Model, batch_size: int) -> Model:
+def model_to_minibatch(
+    model: Model, *, batch_size: int, vars_to_minibatch: list[str] | None = None
+) -> Model:
     """Replace all Data containers with pm.Minibatch, and add total_size to all observed RVs."""
     from pymc.variational.minibatch_rv import create_minibatch_rv
 
+    if vars_to_minibatch is None:
+        vars_to_minibatch = [
+            variable
+            for variable in model.data_vars
+            if (variable.type.ndim > 0) and (variable.type.shape[0] is None)
+        ]
+    else:
+        vars_to_minibatch = parse_vars(model, vars_to_minibatch)
+        for variable in vars_to_minibatch:
+            if variable.type.ndim == 0:
+                raise ValueError(
+                    f"Cannot minibatch {variable.name} because it is a scalar variable."
+                )
+            if variable.type.shape[0] is not None:
+                raise ValueError(
+                    f"Cannot minibatch {variable.name} because its first dimension is static "
+                    f"(size={variable.type.shape[0]})."
+                )
+
+    # TODO: Validate that this graph is actually valid to minibatch. Example: linear regression with sigma fixed
+    #  shape, but mu from data --> y cannot be minibatched because of sigma.
+
     fgraph, memo = fgraph_from_model(model, inlined_views=True)
 
-    # obs_rvs, data_vars = model.rvs_to_values.items()
+    cloned_vars_to_minibatch = [memo[var] for var in vars_to_minibatch]
+    minibatch_vars = Minibatch(*cloned_vars_to_minibatch, batch_size=batch_size)
 
-    data_vars = [
-        memo[datum].owner.inputs[0]
-        for datum in (model.named_vars[datum_name] for datum_name in model.named_vars)
-        if isinstance(datum, SharedVariable)
-    ]
+    var_to_dummy = {
+        var: var.type()  # model_named(minibatch_var, *extract_dims(var))
+        for var, minibatch_var in zip(cloned_vars_to_minibatch, minibatch_vars)
+    }
+    dummy_to_minibatch = {
+        var_to_dummy[var]: minibatch_var
+        for var, minibatch_var in zip(cloned_vars_to_minibatch, minibatch_vars)
+    }
+    total_size = (cloned_vars_to_minibatch[0].owner.inputs[0].shape[0], ...)
 
-    minibatch_vars = Minibatch(*data_vars, batch_size=batch_size)
-    replacements = {datum: minibatch_vars[i] for i, datum in enumerate(data_vars)}
-    assert 0
-    # Add total_size to all observed RVs
-    total_size = data_vars[0].get_value().shape[0]
-    for obs_var in model.observed_RVs:
-        model_var = memo[obs_var]
-        var = model_var.owner.inputs[0]
-        var.name = model_var.name
-        dims = extract_dims(model_var)
+    # TODO: If vars_to_minibatch had a leading dim, we should check that the dependent RVs also has that same dim
+    #  (or just do this all in xtensor)
+    vtm_set = set(vars_to_minibatch)
 
-        new_rv = create_minibatch_rv(var, total_size=total_size)
-        new_rv.name = var.name
+    # TODO: Handle potentials, free_RVs, etc
 
-        replacements[model_var] = model_observed_rv(new_rv, model.rvs_to_values[obs_var], *dims)
+    # Create a temporary fgraph that does not include as outputs any of the variables that will be minibatched. This
+    # ensures the results of this function match the outputs from a model constructed using the pm.Minibatch API.
+    tmp_fgraph = FunctionGraph(
+        outputs=[out for out in fgraph.outputs if out not in var_to_dummy.keys()], clone=False
+    )
 
-    # old_outs, old_coords, old_dim_lengths = fgraph.outputs, fgraph._coords, fgraph._dim_lengths
-    toposort_replace(fgraph, tuple(replacements.items()))
-    # new_outs = clone_replace(old_outs, replacements, rebuild_strict=False)  # type: ignore[arg-type]
+    # All variables that will be minibatched are first replaced by dummy variables, to avoid infinite recursion during
+    # rewrites. The issue is that the Minibatch Op we will introduce depends on the original input variables (to get
+    # the shapes). That's fine in the final output, but during the intermediate rewrites this creates a circulatr
+    # dependency.
+    dummy_replacements = tuple(var_to_dummy.items())
+    toposort_replace(tmp_fgraph, dummy_replacements)
 
-    # fgraph = FunctionGraph(outputs=new_outs, clone=False)
-    # fgraph._coords = old_coords  # type: ignore[attr-defined]
-    # fgraph._dim_lengths = old_dim_lengths  # type: ignore[attr-defined]
+    # Now we can replace the dummy variables with the actual Minibatch variables.
+    replacements = tuple(dummy_to_minibatch.items())
+    toposort_replace(tmp_fgraph, replacements)
 
-    return model_from_fgraph(fgraph, mutate_fgraph=True)
+    # The last step is to replace all RVs that depend on the minibatched variables with MinibatchRVs that are aware
+    # of the total_size.  Importantly, all of the toposort_replace calls above modify fgraph in place, so the
+    # model.rvs_to_values[original_rv] will already have been modified to depend on the Minibatch variables -- only
+    # the outer RVs need to be replaced here.
+    dependent_replacements = {}
+
+    for original_rv in model.observed_RVs:
+        original_value_var = model.rvs_to_values[original_rv]
+
+        if not (set(ancestors([original_rv, original_value_var])) & vtm_set):
+            continue
+
+        rv = memo[original_rv].owner.inputs[0]
+        dependent_replacements[rv] = create_minibatch_rv(rv, total_size=total_size)
+
+    toposort_replace(fgraph, tuple(dependent_replacements.items()))
+
+    # FIXME: The fgraph is being rebuilt here to clean up the clients. It is not clear why they are getting messed up
+    #  in the first place (pytensor bug, or something wrong in the above manipulations?)
+    new_fgraph = FunctionGraph(outputs=fgraph.outputs)
+    new_fgraph._coords = fgraph._coords  # type: ignore[attr-defined]
+    new_fgraph._dim_lengths = fgraph._dim_lengths  # type: ignore[attr-defined]
+
+    return model_from_fgraph(new_fgraph, mutate_fgraph=True)
 
 
 def remove_minibatched_nodes(model: Model) -> Model:

@@ -20,6 +20,7 @@ from pymc.model.transform.basic import (
     prune_vars_detached_from_observed,
     remove_minibatched_nodes,
 )
+from pymc.testing import assert_equivalent_models
 
 
 def test_prune_vars_detached_from_observed():
@@ -42,22 +43,37 @@ def test_model_to_minibatch():
     data_size = 100
     n_features = 4
 
-    obs_data = np.zeros((data_size,))
-    X_data = np.random.normal(size=(data_size, n_features))
+    obs_data_np = np.zeros((data_size,))
+    X_data_np = np.random.normal(size=(data_size, n_features))
 
     with pm.Model(coords={"feature": range(n_features), "data_dim": range(data_size)}) as m1:
-        obs_data = pm.Data("obs_data", obs_data, dims=["data_dim"])
-        X_data = pm.Data("X_data", X_data, dims=["data_dim", "feature"])
+        obs_data = pm.Data("obs_data", obs_data_np, dims=["data_dim"])
+        X_data = pm.Data("X_data", X_data_np, dims=["data_dim", "feature"])
         beta = pm.Normal("beta", dims="feature")
 
         mu = X_data @ beta
 
         y = pm.Normal("y", mu=mu, sigma=1, observed=obs_data, dims="data_dim")
 
-    m2 = model_to_minibatch(m1, batch_size=10)
-    m2["y"].dprint()
+    with pm.Model(
+        coords={"feature": range(n_features), "data_dim": range(data_size)}
+    ) as reference_model:
+        obs_data = pm.Data("obs_data", obs_data_np, dims=["data_dim"])
+        X_data = pm.Data("X_data", X_data_np, dims=["data_dim", "feature"])
+        minibatch_obs_data, minibatch_X_data = pm.Minibatch(obs_data, X_data, batch_size=10)
+        beta = pm.Normal("beta", dims="feature")
+        mu = minibatch_X_data @ beta
+        y = pm.Normal(
+            "y",
+            mu=mu,
+            sigma=1,
+            observed=minibatch_obs_data,
+            dims="data_dim",
+            total_size=(obs_data.shape[0], ...),
+        )
 
-    assert 0
+    m2 = model_to_minibatch(m1, batch_size=10)
+    assert_equivalent_models(m2, reference_model)
 
 
 def test_remove_minibatches():
