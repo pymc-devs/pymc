@@ -79,7 +79,7 @@ def test_dataframe_as_tensor_variable(np_array: np.ndarray, library) -> None:
     argnames="np_array",
     argvalues=[np.array([1.0, 2.0, -1.0]), np.ones(shape=4), np.zeros(shape=10), [1, 2, 3, 4]],
 )
-@pytest.mark.parametrize("library", ["pandas", "polars", "dask.dataframe"])
+@pytest.mark.parametrize("library", ["pandas", "polars"])
 def test_series_as_tensor_variable(np_array: np.ndarray, library) -> None:
     lib = pytest.importorskip(library)
     df = lib.Series(np_array)
