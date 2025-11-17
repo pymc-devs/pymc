@@ -264,15 +264,16 @@ def _dataframe_agnostic_coords(
         )
 
     index_dim = dims[0]
-    if index_dim is not None and index_dim in value.columns:
-        coords[index_dim] = tuple(value.select(nw.col(index_dim)).to_numpy())
-    elif index_dim in model.coords:
-        coords[index_dim] = model.coords[index_dim]  # type: ignore[assignment]
-    else:
-        raise ValueError(
-            f"Dimension '{index_dim}' not found in DataFrame columns or model coordinates. Cannot infer "
-            "index coordinates."
-        )
+    if index_dim is not None:
+        if index_dim in value.columns:
+            coords[index_dim] = tuple(value.select(nw.col(index_dim)).to_numpy().flatten())
+        elif index_dim in model.coords:
+            coords[index_dim] = model.coords[index_dim]  # type: ignore[assignment]
+        else:
+            raise ValueError(
+                f"Dimension '{index_dim}' not found in DataFrame columns or model coordinates. Cannot infer "
+                "index coordinates."
+            )
 
     if len(dims) > 1:
         column_dim = dims[1]
@@ -321,6 +322,7 @@ def _register_dataframe_backend(library_name: str):
             return _dataframe_agnostic_coords(value, model=model, dims=dims, coords=coords)
 
     except ImportError:
+        # Dataframe backends are optional
         pass
 
 
@@ -364,7 +366,7 @@ def Data(
         A value to associate with this variable.
     dims : str, tuple of str or tuple of None, optional
         Dimension names of the random variables (as opposed to the shapes of these
-        random variables). Use this when ``value`` is a pandas Series or DataFrame. The
+        random variables). Use this when ``value`` is a Series or DataFrame. The
         ``dims`` will then be the name of the Series / DataFrame's columns. See ArviZ
         documentation for more information about dimensions and coordinates:
         :ref:`arviz:quickstart`.
