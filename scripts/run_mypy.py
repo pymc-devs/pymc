@@ -13,14 +13,13 @@ python scripts/run_mypy.py [--verbose]
 
 import argparse
 import importlib
+import io
 import os
 import pathlib
 import subprocess
 import sys
 
-from collections.abc import Iterator
-
-import pandas
+import pandas as pd
 
 DP_ROOT = pathlib.Path(__file__).absolute().parent.parent
 FAILING = """
@@ -59,55 +58,25 @@ def enforce_pep561(module_name):
     return
 
 
-def mypy_to_pandas(input_lines: Iterator[str]) -> pandas.DataFrame:
+def mypy_to_pandas(mypy_result: str) -> pd.DataFrame:
     """Reformats mypy output with error codes to a DataFrame.
 
     Adapted from: https://gist.github.com/michaelosthege/24d0703e5f37850c9e5679f69598930a
     """
-    current_section = None
-    data = {
-        "file": [],
-        "line": [],
-        "type": [],
-        "errorcode": [],
-        "message": [],
-    }
-    for line in input_lines:
-        line = line.strip()
-        elems = line.split(":")
-        if len(elems) < 3:
-            continue
-        try:
-            file, lineno, message_type, *_ = elems[0:3]
-            message_type = message_type.strip()
-            if message_type == "error":
-                current_section = line.split("  [")[-1][:-1]
-            message = line.replace(f"{file}:{lineno}: {message_type}: ", "").replace(
-                f"  [{current_section}]", ""
-            )
-            data["file"].append(file)
-            data["line"].append(lineno)
-            data["type"].append(message_type)
-            data["errorcode"].append(current_section)
-            data["message"].append(message)
-        except Exception as ex:
-            print(elems)
-            print(ex)
-    return pandas.DataFrame(data=data).set_index(["file", "line"])
+    return pd.read_json(io.StringIO(mypy_result), lines=True)
 
 
-def check_no_unexpected_results(mypy_lines: Iterator[str], show_expected: bool):
+def check_no_unexpected_results(mypy_df: pd.DataFrame, show_expected: bool):
     """Compare mypy results with list of known FAILING files.
 
     Exits the process with non-zero exit code upon unexpected results.
     """
-    df = mypy_to_pandas(mypy_lines)
     all_files = {
         str(fp).replace(str(DP_ROOT), "").strip(os.sep).replace(os.sep, "/")
         for fp in DP_ROOT.glob("pymc/**/*.py")
         if "tests" not in str(fp)
     }
-    failing = set(df.reset_index().file.str.replace(os.sep, "/", regex=False))
+    failing = set(mypy_df.file.str.replace(os.sep, "/", regex=False))
     if not failing.issubset(all_files):
         raise Exception(
             "Mypy should have ignored these files:\n"
@@ -174,21 +143,21 @@ if __name__ == "__main__":
     args, _ = parser.parse_known_args()
 
     cp = subprocess.run(
-        ["mypy", "--show-error-codes", "--exclude", "tests", "pymc"],
-        capture_output=True,
+        ["mypy", "--output", "json", "--show-error-codes", "--exclude", "tests", "pymc"],
+        stdout=subprocess.PIPE,
     )
-    output = cp.stdout.decode()
-    if args.verbose:
-        df = mypy_to_pandas(output.split("\n"))
+    output = cp.stdout.decode("utf-8")
+    df = mypy_to_pandas(output)
 
+    if args.verbose:
         if not args.show_expected:
             expected_failing = set(FAILING.strip().split("\n")) - {""}
             df = df.query("file not in @expected_failing")
 
-        for section, sdf in df.reset_index().groupby(args.groupby):
+        for section, sdf in df.groupby(args.groupby):
             print(f"\n\n[{section}]")
-            for row in sdf.itertuples():
-                print(f"{row.file}:{row.line}: {row.type} [{row.errorcode}]: {row.message}")
+            for idx, row in sdf.iterrows():
+                print(f"{row.file}:{row.line}: {row.code} [{row.severity}]: {row.message}")
         print()
     else:
         print(
@@ -197,6 +166,6 @@ if __name__ == "__main__":
             " or `python run_mypy.py --help` for other options."
         )
 
-    check_no_unexpected_results(output.split("\n"), show_expected=args.show_expected)
+    check_no_unexpected_results(df, show_expected=args.show_expected)
 
     sys.exit(0)
