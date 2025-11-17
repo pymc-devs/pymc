@@ -102,11 +102,13 @@ def check_no_unexpected_results(mypy_df: pd.DataFrame, show_expected: bool):
         else:
             print("\nThese files did not fail before. Fix all errors reported in the output above.")
         print("You can run `python scripts/run_mypy.py` to reproduce this test locally.")
-        print(
-            f"\nNote: In addition to these errors, {len(failing.intersection(expected_failing))} errors in files "
-            f'marked as "expected failures" were also found. To see these failures, run: '
-            f"`python scripts/run_mypy.py --show-expected`"
-        )
+
+        if not show_expected:
+            print(
+                f"\nNote: In addition to these errors, {len(failing.intersection(expected_failing))} errors in files "
+                f'marked as "expected failures" were also found. To see these failures, run: '
+                f"`python scripts/run_mypy.py --show-expected`"
+            )
 
         sys.exit(1)
 
