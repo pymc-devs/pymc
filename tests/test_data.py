@@ -401,7 +401,7 @@ class TestData:
         assert "columns" in pmodel.coords
         assert pmodel.named_vars_to_dims == {"observations": ("rows", "columns")}
 
-    def test_implict_coords_polars_series(self):
+    def test_implicit_coords_polars_series(self):
         pl = pytest.importorskip("polars")
 
         ser_sales = pl.Series(

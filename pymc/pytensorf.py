@@ -136,7 +136,7 @@ def _register_dataframe_backend(library_name: str):
 
         @_as_tensor_variable.register(library.Series)
         def series_to_tensor_variable(s: library.Series, *args, **kwargs) -> TensorVariable:
-            s = nw.from_native(s, allow_series=False)
+            s = nw.from_native(s, allow_series=True)
             if isinstance(s, nw.LazyFrame):
                 s = s.collect()
             return pt.as_tensor_variable(s.to_numpy(), *args, **kwargs)
@@ -149,6 +149,7 @@ def _register_dataframe_backend(library_name: str):
             return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
 
     except ImportError:
+        # Data backends are optional. Take no action if not installed.
         pass
 
 
