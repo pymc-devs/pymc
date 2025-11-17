@@ -9,6 +9,7 @@ dependencies:
 - blas
 - cachetools>=4.2.1
 - cloudpickle
+- narwhals>=2.11.0
 - numpy>=1.25.0
 - pandas>=0.24.0
 - pip

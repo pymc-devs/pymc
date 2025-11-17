@@ -11,25 +11,25 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
+import importlib
 import io
 import typing
 import urllib.request
 
 from collections.abc import Sequence
 from copy import copy
+from functools import singledispatch
 from typing import Union, cast
 
 import narwhals as nw
 import numpy as np
-import pandas as pd
 import pytensor
 import pytensor.tensor as pt
 import xarray as xr
 
 from narwhals.typing import IntoFrameT, IntoSeriesT
+from pytensor.compile import SharedVariable
 from pytensor.compile.builders import OpFromGraph
-from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Variable
 from pytensor.raise_op import Assert
 from pytensor.tensor.random.basic import IntegersRV
@@ -163,60 +163,159 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
     return mb_tensors if len(variables) else mb_tensors[0]
 
 
+def _handle_none_dims(dims: Sequence[str] | None, ndim: int) -> Sequence[str] | Sequence[None]:
+    if dims is None:
+        return [None] * ndim
+    else:
+        return dims
+
+
+@singledispatch
 def determine_coords(
-    model,
-    value: pd.DataFrame | pd.Series | xr.DataArray,
+    value,
+    model: "Model",
+    dims: Sequence[str | None] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
+):
+    """Determine coordinate values from data or the model (via ``dims``)."""
+    raise NotImplementedError(
+        f"Cannot determine coordinates for data of type {type(value)}, please provide `coords` explicitly or "
+        f"convert the data to a supported type"
+    )
+
+
+@determine_coords.register(np.ndarray)
+def determine_array_coords(
+    value: np.ndarray,
+    model: "Model",
     dims: Sequence[str] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str] | Sequence[None]]:
-    """Determine coordinate values from data or the model (via ``dims``)."""
+):
     if coords is None:
         coords = {}
 
-    dim_name = None
-    # If value is a df or a series, we interpret the index as coords:
-    if hasattr(value, "index"):
-        if dims is not None:
-            dim_name = dims[0]
-        if dim_name is None and value.index.name is not None:
-            dim_name = value.index.name
-        if dim_name is not None:
-            coords[dim_name] = value.index
+    if len(dims) != value.ndim:
+        raise ShapeError(
+            "Invalid data shape. The rank of the dataset must match the length of `dims`.",
+            actual=value.shape,
+            expected=len(value.shape),
+        )
 
-    # If value is a df, we also interpret the columns as coords:
-    if hasattr(value, "columns"):
-        if dims is not None:
-            dim_name = dims[1]
-        if dim_name is None and nw.dependencies.is_pandas_dataframe(value) and value.columns.name is not None:
-            dim_name = value.columns.name
-        if dim_name is not None:
-            coords[dim_name] = value.columns
+    for size, dim in zip(value.shape, dims):
+        coord = model.coords.get(dim, None)
+        if coord is None and dim is not None:
+            coords[dim] = range(size)
 
-    if isinstance(value, xr.DataArray):
-        if dims is not None:
-            for dim in dims:
-                dim_name = dim
-                # str is applied because dim entries may be None
-                coords[str(dim_name)] = cast(xr.DataArray, value[dim]).to_numpy()
+    return coords, _handle_none_dims(dims, value.ndim)
 
-    elif (isinstance(value, np.ndarray) or nw.dependencies.is_polars_series(value)) and dims is not None:
-        if len(dims) != len(value.shape):  # Polars objects have no .ndim ...
-            raise ShapeError(
-                "Invalid data shape. The rank of the dataset must match the length of `dims`.",
-                actual=value.shape,
-                expected=len(value.shape),
-            )
-        for size, dim in zip(value.shape, dims):
-            coord = model.coords.get(dim, None)
-            if coord is None and dim is not None:
-                coords[dim] = range(size)
+
+@determine_coords.register(xr.DataArray)
+def determine_xarray_coords(
+    value: xr.DataArray,
+    model: "Model",
+    dims: Sequence[str | None] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str] | Sequence[None]]:
+    if coords is None:
+        coords = {}
 
     if dims is None:
-        # TODO: Also determine dim names from the index
-        new_dims: Sequence[str] | Sequence[None] = [None] * np.ndim(value)
+        return coords, _handle_none_dims(dims, value.ndim)
+
+    for dim in dims:
+        dim_name = dim
+        # str is applied because dim entries may be None
+        coords[str(dim_name)] = cast(xr.DataArray, value[dim]).to_numpy()
+
+    return coords, _handle_none_dims(dims, value.ndim)
+
+
+def _dataframe_agnostic_coords(
+    value: IntoFrameT,
+    model: "Model",
+    ndim_in: int = 2,
+    dims: Sequence[str | None] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str] | Sequence[None]]:
+    if coords is None:
+        coords = {}
+
+    value = nw.from_native(value, allow_series=False)
+    if isinstance(value, nw.LazyFrame):
+        value = value.collect()
+
+    index = nw.maybe_get_index(value)
+    if index is not None:
+        value = value.with_columns(**{index.name: index.to_numpy()})
+
+    if dims is None:
+        return coords, _handle_none_dims(dims, ndim_in)
+
+    if len(dims) != ndim_in:
+        raise ShapeError(
+            "Invalid data shape. The rank of the dataset must match the length of `dims`.",
+            actual=value.shape,
+            expected=len(dims),
+        )
+
+    index_dim = dims[0]
+    if index_dim is not None and index_dim in value.columns:
+        coords[index_dim] = value.select(nw.col(index_dim)).to_numpy()
+    elif index_dim in model.coords:
+        coords[index_dim] = model.coords[index_dim]
     else:
-        new_dims = dims
-    return coords, new_dims
+        raise ValueError(
+            f"Dimension '{index_dim}' not found in DataFrame columns or model coordinates. Cannot infer "
+            "index coordinates."
+        )
+
+    if len(dims) > 1:
+        column_dim = dims[1]
+        if column_dim is not None:
+            coords[column_dim] = value.select(nw.exclude(index_dim)).columns
+
+    return coords, _handle_none_dims(dims, ndim_in)
+
+
+def _series_agnostic_coords(
+    value: IntoSeriesT,
+    model: "Model",
+    dims: Sequence[str | None] | None = None,
+    coords: dict[str, Sequence | np.ndarray] | None = None,
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str] | Sequence[None]]:
+    value = nw.from_native(value, series_only=True).to_frame()
+    return _dataframe_agnostic_coords(value, ndim_in=1, model=model, dims=dims, coords=coords)
+
+
+def _register_dataframe_backend(library_name: str):
+    try:
+        library = importlib.import_module(library_name)
+
+        @determine_coords.register(library.Series)
+        def determine_series_coords(
+            value: library.DataFrame | library.Series,
+            model: "Model",
+            dims: Sequence[str] | None = None,
+            coords: dict[str, Sequence | np.ndarray] | None = None,
+        ) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str] | Sequence[None]]:
+            return _series_agnostic_coords(value, model=model, dims=dims, coords=coords)
+
+        @determine_coords.register(library.DataFrame)
+        def determine_dataframe_coords(
+            value: library.DataFrame | library.Series,
+            model: "Model",
+            dims: Sequence[str] | None = None,
+            coords: dict[str, Sequence | np.ndarray] | None = None,
+        ) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str] | Sequence[None]]:
+            return _dataframe_agnostic_coords(value, model=model, dims=dims, coords=coords)
+
+    except ImportError:
+        pass
+
+
+_register_dataframe_backend("pandas")
+_register_dataframe_backend("polars")
+_register_dataframe_backend("dask.dataframe")
 
 
 def Data(
@@ -337,7 +436,7 @@ def Data(
 
     new_dims: Sequence[str] | Sequence[None] | None
     if infer_dims_and_coords:
-        coords, new_dims = determine_coords(model, value, dims)
+        coords, new_dims = determine_coords(value, model, dims)
     else:
         new_dims = dims
 

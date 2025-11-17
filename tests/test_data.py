@@ -401,6 +401,42 @@ class TestData:
         assert "columns" in pmodel.coords
         assert pmodel.named_vars_to_dims == {"observations": ("rows", "columns")}
 
+    def test_implict_coords_polars_series(self):
+        pl = pytest.importorskip("polars")
+
+        ser_sales = pl.Series(
+            "sales",
+            np.random.randint(low=0, high=30, size=22),
+        )
+
+        with pm.Model(coords={"date": range(22)}) as pmodel:
+            pm.Data("sales", ser_sales, dims=["date"], infer_dims_and_coords=True)
+
+            with pytest.raises(
+                ValueError,
+                match="Dimension 'date2' not found in DataFrame columns or model coordinates",
+            ):
+                pm.Data("sales_invalid", ser_sales, dims=["date2"], infer_dims_and_coords=True)
+
+        assert "date" in pmodel.coords
+        assert len(pmodel.coords["date"]) == 22
+
+    def test_implicit_coords_polars_dataframe(self):
+        pl = pytest.importorskip("polars")
+
+        size = (5, 7)
+        df_data = pl.DataFrame(
+            np.random.normal(size=size),
+            schema={f"Column {c + 1}": pl.Float64 for c in range(size[1])},
+        ).with_row_count("rows")
+
+        with pm.Model() as pmodel:
+            pm.Data("observations", df_data, dims=("rows", "columns"), infer_dims_and_coords=True)
+
+        assert "rows" in pmodel.coords
+        assert "columns" in pmodel.coords
+        assert pmodel.named_vars_to_dims == {"observations": ("rows", "columns")}
+
     def test_implicit_coords_xarray(self):
         xr = pytest.importorskip("xarray")
         data = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("y", "x"))

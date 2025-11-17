@@ -9,6 +9,7 @@ jupyter-sphinx
 mcbackend>=0.4.0
 mypy==1.19.1
 myst-nb<=1.0.0
+narwhals>=2.11.0
 numdifftools>=0.9.40
 numpy>=1.25.0
 numpydoc
