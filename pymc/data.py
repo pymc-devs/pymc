@@ -27,7 +27,7 @@ import pytensor
 import pytensor.tensor as pt
 import xarray as xr
 
-from narwhals.typing import IntoFrameT, IntoSeriesT
+from narwhals.typing import IntoFrameT, IntoLazyFrameT, IntoSeriesT
 from pytensor.compile import SharedVariable
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable
@@ -163,7 +163,9 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
     return mb_tensors if len(variables) else mb_tensors[0]
 
 
-def _handle_none_dims(dims: Sequence[str] | None, ndim: int) -> Sequence[str] | Sequence[None]:
+def _handle_none_dims(
+    dims: Sequence[str | None] | None, ndim: int
+) -> Sequence[str | None] | Sequence[None]:
     if dims is None:
         return [None] * ndim
     else:
@@ -176,7 +178,7 @@ def determine_coords(
     model: "Model",
     dims: Sequence[str | None] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
-):
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
     """Determine coordinate values from data or the model (via ``dims``)."""
     raise NotImplementedError(
         f"Cannot determine coordinates for data of type {type(value)}, please provide `coords` explicitly or "
@@ -190,9 +192,12 @@ def determine_array_coords(
     model: "Model",
     dims: Sequence[str] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
-):
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
     if coords is None:
         coords = {}
+
+    if dims is None:
+        return coords, _handle_none_dims(dims, value.ndim)
 
     if len(dims) != value.ndim:
         raise ShapeError(
@@ -215,7 +220,7 @@ def determine_xarray_coords(
     model: "Model",
     dims: Sequence[str | None] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str] | Sequence[None]]:
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
     if coords is None:
         coords = {}
 
@@ -231,16 +236,16 @@ def determine_xarray_coords(
 
 
 def _dataframe_agnostic_coords(
-    value: IntoFrameT,
+    value: IntoFrameT | IntoLazyFrameT | nw.DataFrame | nw.LazyFrame,
     model: "Model",
     ndim_in: int = 2,
     dims: Sequence[str | None] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str] | Sequence[None]]:
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
     if coords is None:
         coords = {}
 
-    value = nw.from_native(value, allow_series=False)
+    value = cast(nw.DataFrame | nw.LazyFrame, nw.from_native(value, allow_series=False))  # type: ignore[type-var]
     if isinstance(value, nw.LazyFrame):
         value = value.collect()
 
@@ -260,9 +265,9 @@ def _dataframe_agnostic_coords(
 
     index_dim = dims[0]
     if index_dim is not None and index_dim in value.columns:
-        coords[index_dim] = value.select(nw.col(index_dim)).to_numpy()
+        coords[index_dim] = tuple(value.select(nw.col(index_dim)).to_numpy())
     elif index_dim in model.coords:
-        coords[index_dim] = model.coords[index_dim]
+        coords[index_dim] = model.coords[index_dim]  # type: ignore[assignment]
     else:
         raise ValueError(
             f"Dimension '{index_dim}' not found in DataFrame columns or model coordinates. Cannot infer "
@@ -282,9 +287,15 @@ def _series_agnostic_coords(
     model: "Model",
     dims: Sequence[str | None] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str] | Sequence[None]]:
-    value = nw.from_native(value, series_only=True).to_frame()
-    return _dataframe_agnostic_coords(value, ndim_in=1, model=model, dims=dims, coords=coords)
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
+    value = cast(nw.Series, nw.from_native(value, series_only=True))  # type: ignore[assignment]
+    return _dataframe_agnostic_coords(
+        cast(nw.DataFrame | nw.LazyFrame, value.to_frame()),  # type: ignore[attr-defined]
+        ndim_in=1,
+        model=model,
+        dims=dims,
+        coords=coords,
+    )  # type: ignore[arg-type]
 
 
 def _register_dataframe_backend(library_name: str):
@@ -297,7 +308,7 @@ def _register_dataframe_backend(library_name: str):
             model: "Model",
             dims: Sequence[str] | None = None,
             coords: dict[str, Sequence | np.ndarray] | None = None,
-        ) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str] | Sequence[None]]:
+        ) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
             return _series_agnostic_coords(value, model=model, dims=dims, coords=coords)
 
         @determine_coords.register(library.DataFrame)
@@ -306,7 +317,7 @@ def _register_dataframe_backend(library_name: str):
             model: "Model",
             dims: Sequence[str] | None = None,
             coords: dict[str, Sequence | np.ndarray] | None = None,
-        ) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str] | Sequence[None]]:
+        ) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
             return _dataframe_agnostic_coords(value, model=model, dims=dims, coords=coords)
 
     except ImportError:
@@ -366,6 +377,9 @@ def Data(
     infer_dims_and_coords : bool, default=False
         If True, the ``Data`` container will try to infer what the coordinates
         and dimension names should be if there is an index in ``value``.
+    model : pymc.Model, optional
+        Model to which to add the data variable. If not specified, the data variable
+        will be added to the model on the context stack.
     **kwargs : dict, optional
         Extra arguments passed to :func:`pytensor.shared`.
 
@@ -434,7 +448,7 @@ def Data(
             expected=x.ndim,
         )
 
-    new_dims: Sequence[str] | Sequence[None] | None
+    new_dims: Sequence[str | None] | Sequence[None] | None
     if infer_dims_and_coords:
         coords, new_dims = determine_coords(value, model, dims)
     else:
