@@ -293,7 +293,7 @@ def _register_dataframe_backend(library_name: str):
 
         @determine_coords.register(library.Series)
         def determine_series_coords(
-            value: library.DataFrame | library.Series,
+            value: IntoSeriesT,
             model: "Model",
             dims: Sequence[str] | None = None,
             coords: dict[str, Sequence | np.ndarray] | None = None,
@@ -302,7 +302,7 @@ def _register_dataframe_backend(library_name: str):
 
         @determine_coords.register(library.DataFrame)
         def determine_dataframe_coords(
-            value: library.DataFrame | library.Series,
+            value: IntoFrameT,
             model: "Model",
             dims: Sequence[str] | None = None,
             coords: dict[str, Sequence | np.ndarray] | None = None,
