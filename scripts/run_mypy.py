@@ -101,14 +101,13 @@ def check_no_unexpected_results(mypy_df: pd.DataFrame, show_expected: bool):
             )
         else:
             print("\nThese files did not fail before. Fix all errors reported in the output above.")
-        print("You can run `python scripts/run_mypy.py` to reproduce this test locally.")
-
-        if not show_expected:
             print(
                 f"\nNote: In addition to these errors, {len(failing.intersection(expected_failing))} errors in files "
                 f'marked as "expected failures" were also found. To see these failures, run: '
                 f"`python scripts/run_mypy.py --show-expected`"
             )
+
+        print("You can run `python scripts/run_mypy.py` to reproduce this test locally.")
 
         sys.exit(1)
 
@@ -146,17 +145,20 @@ if __name__ == "__main__":
 
     cp = subprocess.run(
         ["mypy", "--output", "json", "--show-error-codes", "--exclude", "tests", "pymc"],
-        stdout=subprocess.PIPE,
+        capture_output=True,
     )
+
     output = cp.stdout.decode("utf-8")
     df = mypy_to_pandas(output)
 
     if args.verbose:
         if not args.show_expected:
             expected_failing = set(FAILING.strip().split("\n")) - {""}
-            df = df.query("file not in @expected_failing")
+            filtered_df = df.query("file not in @expected_failing")
+        else:
+            filtered_df = df
 
-        for section, sdf in df.groupby(args.groupby):
+        for section, sdf in filtered_df.groupby(args.groupby):
             print(f"\n\n[{section}]")
             for idx, row in sdf.iterrows():
                 print(f"{row.file}:{row.line}: {row.code} [{row.severity}]: {row.message}")
