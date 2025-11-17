@@ -20,7 +20,6 @@ from pymc.model.transform.basic import (
     prune_vars_detached_from_observed,
     remove_minibatched_nodes,
 )
-from pymc.testing import assert_equivalent_models
 
 
 def test_prune_vars_detached_from_observed():
@@ -43,25 +42,22 @@ def test_model_to_minibatch():
     data_size = 100
     n_features = 4
 
-    obs_data_np = np.zeros((data_size,))
+    obs_data_np = np.random.normal(size=(data_size,))
     X_data_np = np.random.normal(size=(data_size, n_features))
 
-    with pm.Model(coords={"feature": range(n_features), "data_dim": range(data_size)}) as m1:
+    with pm.Model(coords={"feature": range(n_features), "data_dim": range(data_size)}) as m:
         obs_data = pm.Data("obs_data", obs_data_np, dims=["data_dim"])
         X_data = pm.Data("X_data", X_data_np, dims=["data_dim", "feature"])
-        beta = pm.Normal("beta", dims="feature")
+        beta = pm.Normal("beta", mu=np.pi, dims="feature")
 
         mu = X_data @ beta
-
         y = pm.Normal("y", mu=mu, sigma=1, observed=obs_data, dims="data_dim")
 
-    with pm.Model(
-        coords={"feature": range(n_features), "data_dim": range(data_size)}
-    ) as reference_model:
+    with pm.Model(coords={"feature": range(n_features), "data_dim": range(data_size)}) as ref_m:
         obs_data = pm.Data("obs_data", obs_data_np, dims=["data_dim"])
         X_data = pm.Data("X_data", X_data_np, dims=["data_dim", "feature"])
         minibatch_obs_data, minibatch_X_data = pm.Minibatch(obs_data, X_data, batch_size=10)
-        beta = pm.Normal("beta", dims="feature")
+        beta = pm.Normal("beta", mu=np.pi, dims="feature")
         mu = minibatch_X_data @ beta
         y = pm.Normal(
             "y",
@@ -72,8 +68,29 @@ def test_model_to_minibatch():
             total_size=(obs_data.shape[0], ...),
         )
 
-    m2 = model_to_minibatch(m1, batch_size=10)
-    assert_equivalent_models(m2, reference_model)
+    mb = model_to_minibatch(m, batch_size=10)
+    mb_logp_fn = mb.compile_logp(random_seed=42)
+    ref_mb_logp_fn = ref_m.compile_logp(random_seed=42)
+    ip = mb.initial_point()
+
+    mb_res1 = mb_logp_fn(ip)
+    ref_mb_res1 = ref_mb_logp_fn(ip)
+    np.testing.assert_allclose(mb_res1, ref_mb_res1)
+    mb_res2 = mb_logp_fn(ip)
+    # Minibatch should give different results on each call
+    assert mb_res1 != mb_res2
+    ref_mb_res2 = ref_mb_logp_fn(ip)
+    np.testing.assert_allclose(mb_res2, ref_mb_res2)
+
+    m_again = remove_minibatched_nodes(mb)
+    m_again_logp_fn = m_again.compile_logp(random_seed=42)
+    m_logp_fn = m_again.compile_logp(random_seed=42)
+    ip = m_again.initial_point()
+    m_again_res = m_again_logp_fn(ip)
+    m_res = m_logp_fn(ip)
+    np.testing.assert_allclose(m_again_res, m_res)
+    # Check that repeated calls give the same result (no more minibatching)
+    np.testing.assert_allclose(m_again_res, m_again_logp_fn(ip))
 
 
 def test_remove_minibatches():
