@@ -47,8 +47,6 @@ from pymc.logprob.utils import (
     ParameterValueError,
     local_check_parameter_to_ninf_switch,
 )
-from pymc.model import Model
-from pymc.model.fgraph import fgraph_from_model
 from pymc.pytensorf import compile, floatX, inputvars, rvs_in_graph
 
 # This mode can be used for tests where model compilations takes the bulk of the runtime
@@ -241,7 +239,7 @@ def build_model(distfam, valuedomain, vardomains, extra_args=None):
     if extra_args is None:
         extra_args = {}
 
-    with Model() as m:
+    with pm.Model() as m:
         param_vars = {}
         for v, dom in vardomains.items():
             v_pt = pytensor.shared(np.asarray(dom.vals[0]))
@@ -1211,37 +1209,3 @@ def equal_computations_up_to_root(
                 return False
 
     return equal_computations(xs, ys, in_xs=x_graph_inputs, in_ys=y_graph_inputs)  # type: ignore[arg-type]
-
-
-def assert_equivalent_models(model1: Model, model2: Model):
-    """Check whether two PyMC models are equivalent.
-
-    Examples
-    --------
-
-    .. code-block:: python
-
-        import pymc as pm
-        from pymc_extras.utils.model_equivalence import equivalent_models
-
-        with pm.Model() as m1:
-            x = pm.Normal("x")
-            y = pm.Normal("y", x)
-
-        with pm.Model() as m2:
-            x = pm.Normal("x")
-            y = pm.Normal("y", x + 1)
-
-        with pm.Model() as m3:
-            x = pm.Normal("x")
-            y = pm.Normal("y", x)
-
-        assert not equivalent_models(m1, m2)
-        assert equivalent_models(m1, m3)
-
-    """
-    fgraph1, _ = fgraph_from_model(model1)
-    fgraph2, _ = fgraph_from_model(model2)
-
-    are_equivalent = equal_computations_up_to_root(fgraph1.outputs, fgraph2.outputs)
-    assert are_equivalent, "Models are not equivalent"
