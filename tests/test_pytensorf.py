@@ -58,8 +58,20 @@ from pymc.vartypes import int_types
         np.ones(shape=(10, 1)),
     ],
 )
-def test_pd_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
-    df = pd.DataFrame(np_array)
+@pytest.mark.parametrize("library", ["pandas", "polars", "dask.dataframe"])
+def test_dataframe_as_tensor_variable(np_array: np.ndarray, library) -> None:
+    lib = pytest.importorskip(library)
+    col_names = [f"col_{i}" for i in range(np_array.shape[1])]
+    match library:
+        case "polars":
+            df = lib.DataFrame(np_array, schema=dict.fromkeys(col_names, float))
+        case "dask.dataframe":
+            df = lib.DataFrame.from_dict({col: np_array[:, i] for i, col in enumerate(col_names)})
+        case "pandas":
+            df = lib.DataFrame(np_array, columns=col_names)
+        case _:
+            raise ValueError(f"Unsupported library: {library}")
+
     np.testing.assert_array_equal(pt.as_tensor_variable(df).eval(), np_array)
 
 
@@ -67,8 +79,10 @@ def test_pd_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
     argnames="np_array",
     argvalues=[np.array([1.0, 2.0, -1.0]), np.ones(shape=4), np.zeros(shape=10), [1, 2, 3, 4]],
 )
-def test_pd_series_as_tensor_variable(np_array: np.ndarray) -> None:
-    df = pd.Series(np_array)
+@pytest.mark.parametrize("library", ["pandas", "polars", "dask.dataframe"])
+def test_series_as_tensor_variable(np_array: np.ndarray, library) -> None:
+    lib = pytest.importorskip(library)
+    df = lib.Series(np_array)
     np.testing.assert_array_equal(pt.as_tensor_variable(df).eval(), np_array)
 
 

@@ -11,13 +11,14 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import importlib
 import warnings
 
 from collections.abc import Iterable, Sequence
 from typing import cast
 
+import narwhals as nw
 import numpy as np
-import pandas as pd
 import pytensor
 import pytensor.tensor as pt
 import scipy.sparse as sps
@@ -128,11 +129,32 @@ def convert_data(data) -> np.ndarray | Variable:
     return smarttypeX(ret)
 
 
-@_as_tensor_variable.register(pd.Series)
-@_as_tensor_variable.register(pd.DataFrame)
-def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVariable:
-    return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
+# Optional registrations for DataFrame packages
+def _register_dataframe_backend(library_name: str):
+    try:
+        library = importlib.import_module(library_name)
 
+        @_as_tensor_variable.register(library.Series)
+        def series_to_tensor_variable(s: library.Series, *args, **kwargs) -> TensorVariable:
+            s = nw.from_native(s, allow_series=False)
+            if isinstance(s, nw.LazyFrame):
+                s = s.collect()
+            return pt.as_tensor_variable(s.to_numpy(), *args, **kwargs)
+
+        @_as_tensor_variable.register(library.DataFrame)
+        def dataframe_to_tensor_variable(df: library.DataFrame, *args, **kwargs) -> TensorVariable:
+            df = nw.from_native(df, allow_series=False)
+            if isinstance(df, nw.LazyFrame):
+                df = df.collect()
+            return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
+
+    except ImportError:
+        pass
+
+
+_register_dataframe_backend("pandas")
+_register_dataframe_backend("polars")
+_register_dataframe_backend("dask.dataframe")
 
 _cheap_eval_mode = Mode(linker="py", optimizer="minimum_compile")
 
