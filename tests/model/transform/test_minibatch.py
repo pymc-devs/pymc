@@ -12,11 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import numpy as np
+import pytest
 
 from pymc.data import Data, Minibatch
-from pymc.distributions import Normal
+from pymc.distributions import HalfNormal, Normal
 from pymc.model.core import Model
 from pymc.model.transform.minibatch import minibatch_model, remove_minibatch
+from pymc.variational.minibatch_rv import MinibatchRandomVariable
 
 
 def test_minibatch_model():
@@ -63,8 +65,53 @@ def test_minibatch_model():
     ref_mb_res2 = ref_mb_logp_fn(ip)
     np.testing.assert_allclose(mb_res2, ref_mb_res2)
 
-    # Test round-trip minibatch -> remove_minibatch
-    m_again = remove_minibatch(mb)
+
+def test_remove_minibatch():
+    data_size = 100
+    n_features = 5
+    batch_size = 10
+    with Model(coords={"d": range(n_features)}) as mb:
+        X_data = Data("X_data", np.random.normal(size=(data_size, n_features)))
+        obs_data = Data("obs_data", [1, 2, 3, 4, 5])
+        minibatch_X_data, minibatch_obs_data = Minibatch(X_data, obs_data, batch_size=batch_size)
+
+        beta = Normal("beta", dims=("d",))
+        mu = minibatch_X_data @ beta
+        sigma = HalfNormal("sigma")
+        y = Normal("y", mu=mu, sigma=sigma, observed=minibatch_obs_data, total_size=X_data.shape[0])
+
+    m = remove_minibatch(mb)
+    assert isinstance(mb.y.owner.op, MinibatchRandomVariable)
+    assert tuple(mb.y.shape).eval() == (batch_size,)
+    assert isinstance(m.y.owner.op, Normal)
+    assert tuple(m.y.shape.eval()) == (data_size,)
+    assert mb.coords == m.coords
+    assert mb.dim_lengths["d"].eval() == m.dim_lengths["d"].eval()
+
+
+@pytest.mark.parametrize("static_shape", (True, False))
+def test_minibatch_transform_roundtrip(static_shape):
+    data_size = 100
+    n_features = 4
+    with Model(coords={"feature": range(n_features), "data_dim": range(data_size)}) as m:
+        obs_data = Data(
+            "obs_data",
+            np.random.normal(size=(data_size,)),
+            dims=["data_dim"],
+            shape=(data_size if static_shape else None,),
+        )
+        X_data = Data(
+            "X_data",
+            np.random.normal(size=(data_size, n_features)),
+            dims=["data_dim", "feature"],
+            shape=(data_size if static_shape else None, n_features),
+        )
+        beta = Normal("beta", mu=np.pi, dims="feature")
+
+        mu = X_data @ beta
+        y = Normal("y", mu=mu, sigma=1, observed=obs_data, dims="data_dim")
+
+    m_again = remove_minibatch(minibatch_model(m, batch_size=10))
     m_again_logp_fn = m_again.compile_logp(random_seed=42)
     m_logp_fn = m_again.compile_logp(random_seed=42)
     ip = m_again.initial_point()
@@ -73,20 +120,3 @@ def test_minibatch_model():
     np.testing.assert_allclose(m_again_res, m_res)
     # Check that repeated calls give the same result (no more minibatching)
     np.testing.assert_allclose(m_again_res, m_again_logp_fn(ip))
-
-
-def test_remove_minibatches():
-    data_size = 100
-    data = np.zeros((data_size,))
-    batch_size = 10
-    with Model(coords={"d": range(5)}) as m1:
-        mb = Minibatch(data, batch_size=batch_size)
-        mu = Normal("mu", dims="d")
-        x = Normal("x")
-        y = Normal("y", x, observed=mb, total_size=100)
-
-    m2 = remove_minibatch(m1)
-    assert m1.y.shape[0].eval() == batch_size
-    assert m2.y.shape[0].eval() == data_size
-    assert m1.coords == m2.coords
-    assert m1.dim_lengths["d"].eval() == m2.dim_lengths["d"].eval()

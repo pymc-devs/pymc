@@ -16,12 +16,12 @@ from collections.abc import Sequence
 from pytensor import Variable
 from pytensor.graph import FunctionGraph, ancestors
 
-from build.lib.pymc.variational.minibatch_rv import MinibatchRandomVariable
 from pymc import Minibatch, Model
 from pymc.data import MinibatchOp
 from pymc.model.fgraph import ModelObservedRV, fgraph_from_model, model_from_fgraph
 from pymc.model.transform.basic import parse_vars
 from pymc.pytensorf import toposort_replace
+from pymc.variational.minibatch_rv import MinibatchRandomVariable
 
 
 def minibatch_model(
@@ -36,6 +36,8 @@ def minibatch_model(
 
     .. warning:: This transformation acts on the leading dimension of the specified data variables and dependent observed RVs. If a dimension other than the first is linked to the minibatched data variables, the resulting model will be invalid.
 
+    .. warning:: When minibatch_vars are not specified, all non-scalar data variables will be minibatch. This can be incorrect!
+
     Parameters
     ----------
     model : Model
@@ -43,7 +45,7 @@ def minibatch_model(
     batch_size : int
         The minibatch size to use.
     minibatch_vars : Sequence of Variable or string, optional
-        Data variables to convert to minibatch. If None, all data variables with a leading dimension of size None will be minibatched.
+        Data variables to convert to minibatch. If None, all non scalar data variables will be minibatched.
 
     Returns
     -------
@@ -78,9 +80,7 @@ def minibatch_model(
 
     if minibatch_vars is None:
         original_minibatch_vars = [
-            variable
-            for variable in model.data_vars
-            if (variable.type.ndim > 0) and (variable.type.shape[0] is None)
+            variable for variable in model.data_vars if variable.type.ndim > 0
         ]
     else:
         original_minibatch_vars = parse_vars(model, minibatch_vars)
@@ -88,11 +88,6 @@ def minibatch_model(
             if variable.type.ndim == 0:
                 raise ValueError(
                     f"Cannot minibatch {variable.name} because it is a scalar variable."
-                )
-            if variable.type.shape[0] is not None:
-                raise ValueError(
-                    f"Cannot minibatch {variable.name} because its first dimension is static "
-                    f"(size={variable.type.shape[0]})."
                 )
 
     # TODO: Validate that this graph is actually valid to minibatch. Example: linear regression with sigma fixed
@@ -124,10 +119,10 @@ def minibatch_model(
     minibatch_fgraph._coords = fgraph._coords  # type: ignore[attr-defined]
     minibatch_fgraph._dim_lengths = fgraph._dim_lengths  # type: ignore[attr-defined]
     toposort_replace(minibatch_fgraph, pre_minibatch_var_to_dummy)
-    toposort_replace(minibatch_fgraph, dummy_to_minibatch_var)
+    toposort_replace(minibatch_fgraph, dummy_to_minibatch_var, rebuild=True)
 
     # Then replace all observed RVs that depend on the minibatch variables with MinibatchRVs
-    dependent_replacements = {}
+    dependent_replacements = []
     total_size = (pre_minibatch_vars[0].owner.inputs[0].shape[0], ...)
     vars_to_minibatch_set = set(pre_minibatch_vars)
     for model_var in minibatch_fgraph.outputs:
@@ -141,11 +136,10 @@ def minibatch_model(
         # TODO: If vars_to_minibatch had a leading dim, we should check that the dependent RVs also has that same dim
         # And conversely other variables do not have that dim
         observed_rv = model_var.owner.inputs[0]
-        dependent_replacements[observed_rv] = create_minibatch_rv(
-            observed_rv, total_size=total_size
-        )
+        minibatch_rv = create_minibatch_rv(observed_rv, total_size=total_size)
+        dependent_replacements.append((observed_rv, minibatch_rv))
 
-    toposort_replace(minibatch_fgraph, tuple(dependent_replacements.items()))
+    toposort_replace(minibatch_fgraph, dependent_replacements, rebuild=True)
 
     # Finally reintroduce the original data variable outputs
     for pre_minibatch_var in pre_minibatch_vars:
@@ -191,11 +185,11 @@ def remove_minibatch(model: Model) -> Model:
     fgraph, _ = fgraph_from_model(model)
 
     replacements = []
-    for var in fgraph.apply_nodes:
-        if isinstance(var.op, MinibatchOp):
-            replacements.extend(zip(var.inputs, var.outputs))
-        elif isinstance(var.op, MinibatchRandomVariable):
-            replacements.append((var.outputs[0], var.inputs[0]))
+    for node in fgraph.apply_nodes:
+        if isinstance(node.op, MinibatchOp):
+            replacements.extend(zip(node.outputs[:-1], node.inputs[:-1]))
+        elif isinstance(node.op, MinibatchRandomVariable):
+            replacements.append((node.outputs[0], node.inputs[0]))
 
-    toposort_replace(fgraph, replacements)
+    toposort_replace(fgraph, replacements, rebuild=True)
     return model_from_fgraph(fgraph, mutate_fgraph=True)
