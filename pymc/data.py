@@ -278,7 +278,8 @@ def _dataframe_agnostic_coords(
     if len(dims) > 1:
         column_dim = dims[1]
         if column_dim is not None:
-            coords[column_dim] = value.select(nw.exclude(index_dim)).columns
+            select_expr = nw.exclude(index_dim) if index_dim is not None else nw.all()
+            coords[column_dim] = value.select(select_expr).columns
 
     return coords, _handle_none_dims(dims, ndim_in)
 
