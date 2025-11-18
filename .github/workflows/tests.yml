@@ -171,7 +171,12 @@ jobs:
           micromamba list
       - name: Run tests
         run: |
-          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --junitxml=junit.xml -o junit_family=legacy --durations=50 $TEST_SUBSET
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }} # Run even if tests fail
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
@@ -223,7 +228,12 @@ jobs:
         # This job uses a cmd shell, therefore the environment variable syntax is different!
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
         run: >-
-          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --junitxml=junit.xml -o junit_family=legacy --durations=50 %TEST_SUBSET%
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }} # Run even if tests fail
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
@@ -281,7 +291,12 @@ jobs:
           micromamba list
       - name: Run tests
         run: |
-          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --junitxml=junit.xml -o junit_family=legacy --durations=50 $TEST_SUBSET
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }} # Run even if tests fail
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
@@ -331,7 +346,12 @@ jobs:
           micromamba list
       - name: Run tests
         run: |
-          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --junitxml=junit.xml -o junit_family=legacy --durations=50 $TEST_SUBSET
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }} # Run even if tests fail
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
@@ -379,7 +399,12 @@ jobs:
         # This job uses a cmd shell, therefore the environment variable syntax is different!
         # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
         run: >-
-          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --junitxml=junit.xml -o junit_family=legacy --durations=50 %TEST_SUBSET%
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }} # Run even if tests fail
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
