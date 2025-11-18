@@ -60,7 +60,7 @@ from pymc.pytensorf import (
     convert_observed_data,
     floatX,
 )
-from pymc.util import UNSET
+from pymc.util import UNSET, safe_display
 from pymc.vartypes import continuous_types, string_types
 
 __all__ = [
@@ -545,15 +545,8 @@ class Distribution(metaclass=DistributionMeta):
             functools.partial(str_for_dist, formatting="latex"), rv_out
         )
 
-        def safe_display(self):
-            import marimo as mo
-
-            from pymc.model_graph import model_to_mermaid
-
-            return mo.mermaid(model_to_mermaid(model=model, var_names=[self.name]))
-
         # https://docs.marimo.io/guides/integrating_with_marimo/displaying_objects/#option-1-implement-a-_display_-method
-        rv_out._display_ = types.MethodType(safe_display, rv_out)
+        rv_out._display_ = types.MethodType(functools.partial(safe_display, model=model), rv_out)
 
         return rv_out
 

@@ -570,3 +570,11 @@ def get_random_generator(
             return random_generator_from_state(get_state_from_generator(seed))
         seed = deepcopy(seed)
     return np.random.default_rng(seed)
+
+
+def safe_display(variable, model):
+    import marimo as mo
+
+    from pymc.model_graph import model_to_mermaid
+
+    return mo.mermaid(model_to_mermaid(model=model, var_names=[variable.name]))

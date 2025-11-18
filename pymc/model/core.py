@@ -72,6 +72,7 @@ from pymc.util import (
     get_transformed_name,
     get_value_vars_from_user_vars,
     get_var_name,
+    safe_display,
     treedict,
     treelist,
 )
@@ -2280,6 +2281,7 @@ def Deterministic(name, var, model=None, dims=None):
         ),
         var,
     )
+    var._display_ = types.MethodType(functools.partial(safe_display, model=model), var)
 
     return var
 
@@ -2408,5 +2410,6 @@ def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariabl
         ),
         var,
     )
+    var._display_ = types.MethodType(functools.partial(safe_display, model=model), var)
 
     return var
