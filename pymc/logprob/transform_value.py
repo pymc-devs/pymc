@@ -105,7 +105,7 @@ def transformed_value_logprob(op, values, *rv_outs, use_jacobian=True, **kwargs)
         if log_jac_det.ndim < logp.ndim:
             diff_ndims = logp.ndim - log_jac_det.ndim
             logp = logp.sum(axis=np.arange(-diff_ndims, 0))
-        # This case is sometimes, but not always, trivial to accomodate depending on the "space rank" of the
+        # This case is sometimes, but not always, trivial to accommodate depending on the "space rank" of the
         # multivariate distribution. See https://proceedings.mlr.press/v130/radul21a.html
         elif log_jac_det.ndim > logp.ndim:
             raise NotImplementedError(
