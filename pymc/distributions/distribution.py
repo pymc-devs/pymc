@@ -544,6 +544,17 @@ class Distribution(metaclass=DistributionMeta):
         rv_out._repr_latex_ = types.MethodType(
             functools.partial(str_for_dist, formatting="latex"), rv_out
         )
+
+        def safe_display(self):
+            import marimo as mo
+
+            from pymc.model_graph import model_to_mermaid
+
+            return mo.mermaid(model_to_mermaid(model=model, var_names=[self.name]))
+
+        # https://docs.marimo.io/guides/integrating_with_marimo/displaying_objects/#option-1-implement-a-_display_-method
+        rv_out._display_ = types.MethodType(safe_display, rv_out)
+
         return rv_out
 
     @classmethod
