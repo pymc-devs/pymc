@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // elements or elements in certain stacking contexts. Best-effort
         // bridge: prevent default then dispatch a MouseEvent click.
         try {
-          e.preventDefault();
+          // e.preventDefault(); // Removed to allow scrolling on touch devices
           this.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
         } catch (err) {
           // ignore errors
