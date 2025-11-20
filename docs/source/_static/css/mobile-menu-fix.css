@@ -3,8 +3,8 @@
 /* Raise the stacked navigation elements above possible overlays */
 .primary-toggle,
 .secondary-toggle,
-.navbar,
-.navbar-collapse,
+.mobile-menu-container .navbar,
+.mobile-menu-container .navbar-collapse,
 #pst-primary-sidebar-modal,
 #pst-secondary-sidebar-modal {
   z-index: 10000 !important;
