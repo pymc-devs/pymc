@@ -1,0 +1,17 @@
+/* Mobile menu fix: ensure overlay is clickable on iOS */
+
+/* Raise the stacked navigation elements above possible overlays */
+.primary-toggle,
+.secondary-toggle,
+.navbar,
+.navbar-collapse,
+#pst-primary-sidebar-modal,
+#pst-secondary-sidebar-modal {
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure the modal overlay allows pointer events to reach menu links */
+.pst-modal-backdrop {
+  pointer-events: auto !important;
+}
