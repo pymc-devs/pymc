@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function () {
       '.primary-toggle',
       '.secondary-toggle',
       '[data-toggle="collapse"]',
-      '[aria-controls][aria-expanded]'
+      '.navbar [aria-controls][aria-expanded]'
     ].join(',');
     const controls = Array.from(document.querySelectorAll(selectors));
     controls.forEach(el => {
