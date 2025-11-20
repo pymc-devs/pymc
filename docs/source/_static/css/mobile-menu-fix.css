@@ -7,7 +7,7 @@
 .mobile-menu-container .navbar-collapse,
 #pst-primary-sidebar-modal,
 #pst-secondary-sidebar-modal {
-  z-index: 10000 !important;
+  z-index: 1500;
   pointer-events: auto !important;
 }
 
