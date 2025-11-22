@@ -614,6 +614,27 @@ class RatQuad(Stationary):
             -1.0 * self.alpha,
         )
 
+    def power_spectral_density(self, omega: TensorLike) -> TensorVariable:
+        r"""
+        Power spectral density for the Rational Quadratic kernel.
+
+        .. math::
+           S(\boldsymbol\omega) = \frac{2 (2\pi\alpha)^{D/2} \prod_{i=1}^D \ell_i}{\Gamma(\alpha)}
+                                  \left(\frac{z}{2}\right)^{\nu}
+                                  K_{\nu}(z)
+        where :math:`z = \sqrt{2\alpha} \sqrt{\sum \ell_i^2 \omega_i^2}` and :math:`\nu = \alpha - D/2`.
+        """
+        ls = pt.ones(self.n_dims) * self.ls
+        alpha = self.alpha
+        D = self.n_dims
+        nu = alpha - D / 2.0
+
+        z = pt.sqrt(2 * alpha) * pt.sqrt(pt.dot(pt.square(omega), pt.square(ls)))
+        coeff = 2.0 * pt.power(2.0 * np.pi * alpha, D / 2.0) * pt.prod(ls) / pt.gamma(alpha)
+        term_z = pt.power(z / 2.0, nu) * pt.kv(nu, z)
+
+        return coeff * term_z
+
 
 class Matern52(Stationary):
     r"""

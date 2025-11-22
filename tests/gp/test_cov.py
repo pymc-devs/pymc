@@ -18,7 +18,7 @@ import pytensor
 import pytensor.tensor as pt
 import pytest
 
-from scipy.special import iv
+from scipy.special import gamma, iv, kv
 
 import pymc as pm
 
@@ -532,6 +532,26 @@ class TestRatQuad:
         # check diagonal
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
+
+    def test_psd(self):
+        omega = np.linspace(0.1, 2, 10)
+        ell = 0.5
+        alpha = 5.0
+        D = 1
+
+        z = np.sqrt(2 * alpha) * ell * np.abs(omega)
+        nu = alpha - D / 2.0
+
+        coeff = 2.0 * (2.0 * np.pi * alpha) ** (D / 2.0) * ell / gamma(alpha)
+        true_1d_psd = coeff * np.power(z / 2.0, nu) * kv(nu, z)
+
+        test_1d_psd = (
+            pm.gp.cov.RatQuad(1, ls=ell, alpha=alpha)
+            .power_spectral_density(omega[:, None])
+            .flatten()
+            .eval()
+        )
+        npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
 
 
 class TestExponential:
