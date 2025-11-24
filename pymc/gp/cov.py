@@ -651,8 +651,12 @@ class RatQuad(Stationary):
 
         z = pt.sqrt(2 * alpha) * pt.sqrt(pt.dot(pt.square(omega), pt.square(ls)))
         coeff = 2.0 * pt.power(2.0 * np.pi * alpha, D / 2.0) * pt.prod(ls) / pt.gamma(alpha)
-        term_z = pt.power(z / 2.0, nu) * pt.kv(nu, z)
-
+        
+        # Handle singularity at z=0
+        safe_z = pt.switch(pt.eq(z, 0), 1.0, z)
+        term_z = pt.power(safe_z / 2.0, nu) * pt.kv(nu, safe_z)
+        term_z = pt.switch(pt.eq(z, 0), pt.gamma(nu) / 2.0, term_z)
+        
         return coeff * term_z
 
 
