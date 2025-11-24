@@ -623,6 +623,26 @@ class RatQuad(Stationary):
                                   \left(\frac{z}{2}\right)^{\nu}
                                   K_{\nu}(z)
         where :math:`z = \sqrt{2\alpha} \sqrt{\sum \ell_i^2 \omega_i^2}` and :math:`\nu = \alpha - D/2`.
+
+        Derivation
+        ----------
+        The Rational Quadratic kernel can be expressed as a scale mixture of Squared Exponential kernels:
+
+        .. math::
+            k_{RQ}(r) = \int_0^\infty k_{SE}(r; \lambda) p(\lambda) d\lambda
+
+        where :math:`k_{SE}(r; \lambda) = \exp\left(-\frac{\lambda r^2}{2}\right)` and the mixing distribution
+        on the precision parameter :math:`\lambda` is :math:`\lambda \sim \text{Gamma}(\alpha, \beta)`
+        with rate parameter :math:`\beta = \alpha \ell^2`.
+
+        By the linearity of the Fourier transform, the PSD of the Rational Quadratic kernel is the expectation
+        of the PSD of the Squared Exponential kernel with respect to the mixing distribution:
+
+        .. math::
+            S_{RQ}(\omega) = \int_0^\infty S_{SE}(\omega; \lambda) p(\lambda) d\lambda
+
+        Substituting the known PSD of the Squared Exponential kernel and evaluating the integral yields
+        the expression involving the modified Bessel function of the second kind, :math:`K_{\nu}(z)`.
         """
         ls = pt.ones(self.n_dims) * self.ls
         alpha = self.alpha
