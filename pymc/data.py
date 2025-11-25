@@ -178,7 +178,7 @@ def determine_coords(
     model: "Model",
     dims: Sequence[str | None] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[typing.Any, dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
     """Determine coordinate values from data or the model (via ``dims``)."""
     raise NotImplementedError(
         f"Cannot determine coordinates for data of type {type(value)}, please provide `coords` explicitly or "
@@ -192,12 +192,12 @@ def determine_array_coords(
     model: "Model",
     dims: Sequence[str] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[np.ndarray, dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
     if coords is None:
         coords = {}
 
     if dims is None:
-        return value, coords, _handle_none_dims(dims, value.ndim)
+        return coords, _handle_none_dims(dims, value.ndim)
 
     if len(dims) != value.ndim:
         raise ShapeError(
@@ -211,7 +211,7 @@ def determine_array_coords(
         if coord is None and dim is not None:
             coords[dim] = range(size)
 
-    return value, coords, _handle_none_dims(dims, value.ndim)
+    return coords, _handle_none_dims(dims, value.ndim)
 
 
 @determine_coords.register(xr.DataArray)
@@ -220,46 +220,44 @@ def determine_xarray_coords(
     model: "Model",
     dims: Sequence[str | None] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[xr.DataArray, dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
     if coords is None:
         coords = {}
 
     if dims is None:
-        return value, coords, _handle_none_dims(dims, value.ndim)
+        return coords, _handle_none_dims(dims, value.ndim)
 
     for dim in dims:
         dim_name = dim
         # str is applied because dim entries may be None
         coords[str(dim_name)] = cast(xr.DataArray, value[dim]).to_numpy()
 
-    return value, coords, _handle_none_dims(dims, value.ndim)
+    return coords, _handle_none_dims(dims, value.ndim)
 
 
 def _dataframe_agnostic_coords(
-    value: IntoFrameT,
+    value: IntoFrameT | IntoSeriesT,
     model: "Model",
     ndim_in: int = 2,
     dims: Sequence[str | None] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[IntoFrameT, dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
     if coords is None:
         coords = {}
 
-    value = cast(nw.DataFrame | nw.LazyFrame, nw.from_native(value, allow_series=False))  # type: ignore[type-var]
+    value = nw.from_native(value, allow_series=ndim_in == 1)  # type: ignore[call-overload]
     if isinstance(value, nw.LazyFrame):
         value = value.collect()
 
     if dims is None:
-        if ndim_in == 1:
-            value = value[value.columns[0]]
-        return value.to_native(), coords, _handle_none_dims(dims, ndim_in)
+        return coords, _handle_none_dims(dims, ndim_in)
 
-    index = nw.maybe_get_index(value)
+    index = nw.maybe_get_index(value)  # type: ignore[arg-type]
 
     if len(dims) != ndim_in:
         raise ShapeError(
             "Invalid data shape. The rank of the dataset must match the length of `dims`.",
-            actual=value.shape,
+            actual=value.shape,  # type: ignore[union-attr]
             expected=len(dims),
         )
 
@@ -278,13 +276,9 @@ def _dataframe_agnostic_coords(
     if len(dims) > 1:
         column_dim = dims[1]
         if column_dim is not None:
-            select_expr = nw.exclude(index_dim) if index_dim is not None else nw.all()
-            coords[column_dim] = value.select(select_expr).columns
+            coords[column_dim] = value.columns  # type: ignore[union-attr]
 
-    if ndim_in == 1:
-        value = value[value.columns[0]]
-
-    return value.to_native(), coords, _handle_none_dims(dims, ndim_in)
+    return coords, _handle_none_dims(dims, ndim_in)
 
 
 def _series_agnostic_coords(
@@ -293,14 +287,13 @@ def _series_agnostic_coords(
     dims: Sequence[str | None] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
 ) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
-    value = cast(nw.Series, nw.from_native(value, series_only=True))  # type: ignore[assignment]
     return _dataframe_agnostic_coords(
-        cast(nw.DataFrame | nw.LazyFrame, value.to_frame()),  # type: ignore[attr-defined]
+        value,
         ndim_in=1,
         model=model,
         dims=dims,
         coords=coords,
-    )  # type: ignore[arg-type]
+    )
 
 
 def _register_dataframe_backend(library_name: str):
@@ -322,9 +315,7 @@ def _register_dataframe_backend(library_name: str):
             model: "Model",
             dims: Sequence[str] | None = None,
             coords: dict[str, Sequence | np.ndarray] | None = None,
-        ) -> tuple[
-            IntoFrameT, dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]
-        ]:
+        ) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
             return _dataframe_agnostic_coords(value, model=model, dims=dims, coords=coords)
 
     except ImportError:
@@ -458,7 +449,7 @@ def Data(
 
     new_dims: Sequence[str | None] | Sequence[None] | None
     if infer_dims_and_coords:
-        value, coords, new_dims = determine_coords(value, model, dims)
+        coords, new_dims = determine_coords(value, model, dims)
     else:
         new_dims = dims
 
