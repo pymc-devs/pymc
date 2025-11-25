@@ -414,7 +414,7 @@ class TestData:
 
             with pytest.raises(
                 ValueError,
-                match="Dimension 'date2' not found in DataFrame columns or model coordinates",
+                match="Dimension 'date2' not found in DataFrame index or model coordinates",
             ):
                 pm.Data("sales_invalid", ser_sales, dims=["date2"], infer_dims_and_coords=True)
 
@@ -428,14 +428,69 @@ class TestData:
         df_data = pl.DataFrame(
             np.random.normal(size=size),
             schema={f"Column {c + 1}": pl.Float64 for c in range(size[1])},
-        ).with_row_count("rows")
+        )
 
-        with pm.Model() as pmodel:
-            pm.Data("observations", df_data, dims=("rows", "columns"), infer_dims_and_coords=True)
+        # We currently count on the presence of an index in the DataFrame to infer dims. Polars has no index, so
+        # this case errors because we can't find the 'rows' dim.
 
-        assert "rows" in pmodel.coords
-        assert "columns" in pmodel.coords
-        assert pmodel.named_vars_to_dims == {"observations": ("rows", "columns")}
+        with pytest.raises(
+            ValueError, match="Dimension 'rows' not found in DataFrame index or model coordinates"
+        ):
+            with pm.Model() as pmodel:
+                pm.Data(
+                    "observations", df_data, dims=("rows", "columns"), infer_dims_and_coords=True
+                )
+
+    def test_implicit_coords_agnostic(self):
+        pl = pytest.importorskip("polars")
+        pd = pytest.importorskip("pandas")
+
+        size = (5, 7)
+        data_np = np.random.normal(size=size)
+        columns = [f"C{c + 1}" for c in range(size[1])]
+        rows = [f"R{r + 1}" for r in range(size[0])]
+        df_pd = pd.DataFrame(data_np, columns=columns, index=rows)
+        df_pd.index.name = "rows"
+        df_pl = pl.DataFrame(
+            data_np,
+            schema=dict.fromkeys(columns, pl.Float64),
+        )
+
+        def make_model(coords, df, dims, infer_dims_and_coords) -> pm.Model:
+            with pm.Model(coords=coords) as pmodel:
+                pm.Data("X", df, dims=dims, infer_dims_and_coords=infer_dims_and_coords)
+            return pmodel
+
+        expected_coords = {"rows": tuple(rows), "columns": tuple(columns)}
+        dims = ("rows", "columns")
+
+        m = make_model(coords=None, df=df_pd, dims=dims, infer_dims_and_coords=True)
+        assert m.coords == expected_coords
+        np.testing.assert_allclose(m["X"].eval(), df_pd.values)
+
+        # TODO: Is infer_dims_and_coords supposed to infer dims? The current behavior is that it doesn't, it only
+        #  infers the dimension labels.
+        for df in [df_pd, df_pl]:
+            m = make_model(coords=None, df=df, dims=None, infer_dims_and_coords=True)
+            assert m.coords == {}
+
+            m = make_model(coords=None, df=df, dims=dims, infer_dims_and_coords=False)
+            assert m.coords == {"rows": None, "columns": None}
+
+            m = make_model(coords=None, df=df, dims=None, infer_dims_and_coords=False)
+            assert m.coords == {}
+
+        # Pandas is special because we will infer the index dim from the DataFrame index, if one exists.
+        m = make_model(coords=None, df=df_pd, dims=dims, infer_dims_and_coords=True)
+        assert m.coords == expected_coords
+
+        # Polars (and other dataframe backends with no index concept) won't infer dims from index. This case currently
+        # errors, because we can't find the 'rows' dim in either the DataFrame columns or the model coords.
+        with pytest.raises(
+            ValueError,
+            match="Dimension 'rows' not found in DataFrame index or model coordinates",
+        ):
+            make_model(coords=None, df=df_pl, dims=dims, infer_dims_and_coords=True)
 
     def test_implicit_coords_xarray(self):
         xr = pytest.importorskip("xarray")
