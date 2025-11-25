@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 from functools import singledispatch
+from collections.abc import Sequence
 
 import numpy as np
 import pytensor.tensor as pt
@@ -133,6 +134,10 @@ class SumTo1(Transform):
     def log_jac_det(self, value, *inputs):
         y = pt.zeros(value.shape)
         return pt.sum(y, axis=-1)
+
+    def transform_labels(self, labels: Sequence[str]) -> Sequence[str]:
+        """Drop the last label since SumTo1 reduces dimensionality by 1."""
+        return labels[:-1]
 
 
 class CholeskyCovPacked(Transform):
@@ -310,6 +315,10 @@ class ZeroSumTransform(Transform):
 
     def log_jac_det(self, value, *rv_inputs):
         return pt.constant(0.0)
+
+    def transform_labels(self, labels: Sequence[str]) -> Sequence[str]:
+        """Drop the last label since ZeroSumTransform reduces dimensionality by 1."""
+        return labels[:-1]
 
 
 log_exp_m1 = LogExpM1()

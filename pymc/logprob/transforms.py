@@ -35,7 +35,7 @@
 #   SOFTWARE.
 import abc
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 import numpy as np
 import pytensor.tensor as pt
@@ -153,6 +153,10 @@ class Transform(abc.ABC):
         else:
             phi_inv = self.backward(value, *inputs)
             return pt.log(pt.abs(pt.nlinalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
+
+    def transform_labels(self, labels: Sequence[str]) -> Sequence[str]:
+        """Mutate user-provided coordinates associated with the variable to label transformed values returned by this class."""
+        return labels
 
     def __str__(self):
         """Return a string representation of the object."""
@@ -1005,6 +1009,10 @@ class SimplexTransform(Transform):
         logsumexp_value_expanded = pt.logsumexp(value_sum_expanded, -1, keepdims=True)
         res = pt.log(N) + (N * sum_value) - (N * logsumexp_value_expanded)
         return pt.sum(res, -1)
+
+    def transform_labels(self, labels: Sequence[str]) -> Sequence[str]:
+        """Drop the last label since Simplex reduces dimensionality by 1."""
+        return labels[:-1]
 
 
 class CircularTransform(Transform):
