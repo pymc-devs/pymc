@@ -653,9 +653,9 @@ class RatQuad(Stationary):
         coeff = 2.0 * pt.power(2.0 * np.pi * alpha, D / 2.0) * pt.prod(ls) / pt.gamma(alpha)
         
         # Handle singularity at z=0
-        safe_z = pt.switch(pt.eq(z, 0), 1.0, z)
-        term_z = pt.power(safe_z / 2.0, nu) * pt.kv(nu, safe_z)
-        term_z = pt.switch(pt.eq(z, 0), pt.gamma(nu) / 2.0, term_z)
+    term_z = pt.switch(pt.eq(z, 0), 
+                       pt.gamma(nu) / 2.0, 
+                       pt.power(z / 2.0, nu) * pt.kv(nu, z))
         
         return coeff * term_z
 
