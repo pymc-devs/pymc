@@ -568,7 +568,7 @@ class TestRatQuad:
 
         K = cov(X).eval()
 
-        evals = scipy.linalg.eigvalsh(K)
+        eigs = scipy.linalg.eigvalsh(K)
         evals = np.sort(evals)[::-1]
 
         freqs = np.fft.fftfreq(N, d=dx)
