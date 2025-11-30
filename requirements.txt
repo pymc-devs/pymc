@@ -1,4 +1,5 @@
 arviz>=0.13.0
+arviz-base>=0.7.0
 cachetools>=4.2.1
 cloudpickle
 numpy>=1.25.0
