@@ -29,7 +29,8 @@ import numpy as np
 import xarray
 
 from arviz import InferenceData, concat, rcParams
-from arviz.data.base import CoordSpec, DimSpec, dict_to_dataset, requires
+from arviz.data.base import CoordSpec, DimSpec, requires
+from arviz_base import dict_to_dataset
 from pytensor.graph import ancestors
 from pytensor.tensor.sharedvar import SharedVariable
 from rich.progress import Console
@@ -305,14 +306,14 @@ class InferenceDataConverter:
         return (
             dict_to_dataset(
                 data,
-                library=pymc,
+                inference_library=pymc,
                 coords=self.coords,
                 dims=self.dims,
                 attrs=self.attrs,
             ),
             dict_to_dataset(
                 data_warmup,
-                library=pymc,
+                inference_library=pymc,
                 coords=self.coords,
                 dims=self.dims,
                 attrs=self.attrs,
@@ -347,14 +348,14 @@ class InferenceDataConverter:
         return (
             dict_to_dataset(
                 data,
-                library=pymc,
+                inference_library=pymc,
                 dims=None,
                 coords=self.coords,
                 attrs=self.attrs,
             ),
             dict_to_dataset(
                 data_warmup,
-                library=pymc,
+                inference_library=pymc,
                 dims=None,
                 coords=self.coords,
                 attrs=self.attrs,
@@ -367,7 +368,11 @@ class InferenceDataConverter:
         data = self.posterior_predictive
         dims = {var_name: self.sample_dims + self.dims.get(var_name, []) for var_name in data}
         return dict_to_dataset(
-            data, library=pymc, coords=self.coords, dims=dims, default_dims=self.sample_dims
+            data,
+            inference_library=pymc,
+            coords=self.coords,
+            dims=dims,
+            sample_dims=self.sample_dims,
         )
 
     @requires(["predictions"])
@@ -376,7 +381,11 @@ class InferenceDataConverter:
         data = self.predictions
         dims = {var_name: self.sample_dims + self.dims.get(var_name, []) for var_name in data}
         return dict_to_dataset(
-            data, library=pymc, coords=self.coords, dims=dims, default_dims=self.sample_dims
+            data,
+            inference_library=pymc,
+            coords=self.coords,
+            dims=dims,
+            sample_dims=self.sample_dims,
         )
 
     def priors_to_xarray(self):
@@ -399,7 +408,7 @@ class InferenceDataConverter:
                 if var_names is None
                 else dict_to_dataset_drop_incompatible_coords(
                     {k: np.expand_dims(self.prior[k], 0) for k in var_names},
-                    library=pymc,
+                    inference_library=pymc,
                     coords=self.coords,
                     dims=self.dims,
                 )
@@ -414,10 +423,10 @@ class InferenceDataConverter:
             return None
         return dict_to_dataset(
             self.observations,
-            library=pymc,
+            inference_library=pymc,
             coords=self.coords,
             dims=self.dims,
-            default_dims=[],
+            sample_dims=[],
         )
 
     @requires("model")
@@ -429,10 +438,10 @@ class InferenceDataConverter:
 
         xarray_dataset = dict_to_dataset(
             constant_data,
-            library=pymc,
+            inference_library=pymc,
             coords=self.coords,
             dims=self.dims,
-            default_dims=[],
+            sample_dims=[],
         )
 
         # provisional handling of scalars in constant
@@ -707,9 +716,9 @@ def apply_function_over_dataset(
 
     return dict_to_dataset(
         out_trace,
-        library=pymc,
+        inference_library=pymc,
         dims=dims,
         coords=coords,
-        default_dims=list(sample_dims),
+        sample_dims=list(sample_dims),
         skip_event_dims=True,
     )
