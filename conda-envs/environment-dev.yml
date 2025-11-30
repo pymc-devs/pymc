@@ -6,6 +6,7 @@ channels:
 dependencies:
 # Base dependencies
 - arviz>=0.13.0
+- arviz-base
 - blas
 - cachetools>=4.2.1
 - cloudpickle
