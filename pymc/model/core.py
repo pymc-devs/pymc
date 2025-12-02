@@ -20,6 +20,8 @@ import types
 import warnings
 
 from collections.abc import Iterable, Sequence
+from pymc.distributions.shape_utils import Coords, StrongCoords, CoordValue
+
 from typing import (
     Literal,
     cast,
@@ -453,7 +455,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def __init__(
         self,
         name="",
-        coords=None,
+        coords: Coords | None = None,
         check_bounds=True,
         *,
         model: _UnsetType | None | Model = UNSET,
@@ -488,7 +490,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.deterministics = treelist()
             self.potentials = treelist()
             self.data_vars = treelist()
-            self._coords = {}
+            self._coords: StrongCoords = {}
             self._dim_lengths = {}
         self.add_coords(coords)
 
@@ -907,9 +909,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self.free_RVs + self.deterministics
 
     @property
-    def coords(self) -> dict[str, tuple | None]:
+    def coords(self) -> StrongCoords:
         """Coordinate values for model dimensions."""
-        return self._coords
+        return self._coords 
 
     @property
     def dim_lengths(self) -> dict[str, TensorVariable]:
@@ -937,7 +939,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def add_coord(
         self,
         name: str,
-        values: Sequence | np.ndarray | None = None,
+        values: CoordValue = None,
         *,
         length: int | Variable | None = None,
     ):

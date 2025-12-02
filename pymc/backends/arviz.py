@@ -23,7 +23,11 @@ from typing import (
     Optional,
     Union,
     cast,
+    TypeAlias,
 )
+
+from pymc.distributions.shape_utils import StrongCoords
+
 
 import numpy as np
 import xarray
@@ -56,6 +60,7 @@ RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = False
 
 # random variable object ...
 Var = Any
+DimsDict: TypeAlias = Mapping[str, Sequence[str]]
 
 
 def dict_to_dataset_drop_incompatible_coords(vars_dict, *args, dims, coords, **kwargs):
@@ -123,7 +128,8 @@ def find_constants(model: "Model") -> dict[str, Var]:
     return constant_data
 
 
-def coords_and_dims_for_inferencedata(model: Model) -> tuple[dict[str, Any], dict[str, Any]]:
+def coords_and_dims_for_inferencedata(model: Model,) -> tuple[StrongCoords, DimsDict]:
+
     """Parse PyMC model coords and dims format to one accepted by InferenceData."""
     coords = {
         cname: np.array(cvals) if isinstance(cvals, tuple) else cvals

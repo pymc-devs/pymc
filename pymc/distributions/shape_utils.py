@@ -97,6 +97,15 @@ StrongDims: TypeAlias = Sequence[str]
 StrongDimsWithEllipsis: TypeAlias = Sequence[str | EllipsisType]
 StrongSize: TypeAlias = TensorVariable | tuple[int | Variable, ...]
 
+from collections.abc import Mapping
+from typing import Hashable
+
+CoordValue: TypeAlias = Sequence[Hashable] | np.ndarray | None
+Coords: TypeAlias = Mapping[str, CoordValue]
+
+StrongCoordValue: TypeAlias = tuple[Hashable, ...] | None
+StrongCoords: TypeAlias = Mapping[str, StrongCoordValue]
+
 
 def convert_dims(dims: Dims | None) -> StrongDims | None:
     """Process a user-provided dims variable into None or a valid dims tuple."""
