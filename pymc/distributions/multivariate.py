@@ -25,7 +25,8 @@ from pytensor.graph import node_rewriter
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
-from pytensor.sparse.basic import DenseFromSparse, sp_sum
+from pytensor.sparse import sp_sum
+from pytensor.sparse.basic import DenseFromSparse
 from pytensor.tensor import (
     TensorConstant,
     TensorVariable,
