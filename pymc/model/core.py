@@ -368,10 +368,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         import numpy as np
 
         coords = {
-            "feature",
-            ["A", "B", "C"],
-            "trial",
-            [1, 2, 3, 4, 5],
+            "feature": ["A", "B", "C"],
+            "trial": [1, 2, 3, 4, 5],
         }
 
         with pm.Model(coords=coords) as model:
