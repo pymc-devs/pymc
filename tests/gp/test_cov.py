@@ -533,6 +533,35 @@ class TestRatQuad:
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
+    def test_psd_eigenvalues(self):
+        """Test PSD implementation using Rayleigh quotients."""
+        alpha = 1.5
+        ls = 0.1
+        N = 1000
+        L = 10.0
+        dx = L / N
+        X = np.linspace(0, L, N)[:, None]
+
+        with pm.Model():
+            cov = pm.gp.cov.RatQuad(1, alpha=alpha, ls=ls)
+
+        K = cov(X).eval()
+
+        freqs = np.fft.fftfreq(N, d=dx)
+        omegas = 2 * np.pi * freqs
+
+        j = np.arange(N)
+        modes = np.exp(2j * np.pi * np.outer(np.arange(N), j) / N)
+        numerator = np.diag(modes @ K @ modes.conj().T).real
+        rayleigh_quotient = numerator / N
+
+        psd = cov.power_spectral_density(omegas[:, None]).eval()
+        psd_scaled = psd.flatten() / dx
+
+        # Trim boundaries where numerical error concentrates
+        trim = N // 10
+        npt.assert_allclose(psd_scaled[trim:-trim], rayleigh_quotient[trim:-trim], atol=1e-2)
+
 
 class TestExponential:
     def test_1d(self):
