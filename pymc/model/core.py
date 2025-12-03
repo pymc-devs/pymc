@@ -20,8 +20,6 @@ import types
 import warnings
 
 from collections.abc import Iterable, Sequence
-from pymc.distributions.shape_utils import Coords, StrongCoords, CoordValue
-
 from typing import (
     Literal,
     cast,
@@ -46,6 +44,7 @@ from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import MinibatchOp, is_valid_observed
+from pymc.distributions.shape_utils import Coords, CoordValue, StrongCoords
 from pymc.exceptions import (
     BlockModelAccessError,
     ImputationWarning,
@@ -911,7 +910,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
     @property
     def coords(self) -> StrongCoords:
         """Coordinate values for model dimensions."""
-        return self._coords 
+        return self._coords
 
     @property
     def dim_lengths(self) -> dict[str, TensorVariable]:

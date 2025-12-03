@@ -16,7 +16,7 @@
 
 import warnings
 
-from collections.abc import Sequence
+from collections.abc import Hashable, Mapping, Sequence
 from functools import singledispatch
 from types import EllipsisType
 from typing import Any, TypeAlias, cast
@@ -96,9 +96,6 @@ StrongShape: TypeAlias = TensorVariable | tuple[int | Variable, ...]
 StrongDims: TypeAlias = Sequence[str]
 StrongDimsWithEllipsis: TypeAlias = Sequence[str | EllipsisType]
 StrongSize: TypeAlias = TensorVariable | tuple[int | Variable, ...]
-
-from collections.abc import Mapping
-from typing import Hashable
 
 CoordValue: TypeAlias = Sequence[Hashable] | np.ndarray | None
 Coords: TypeAlias = Mapping[str, CoordValue]

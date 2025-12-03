@@ -21,13 +21,10 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Optional,
+    TypeAlias,
     Union,
     cast,
-    TypeAlias,
 )
-
-from pymc.distributions.shape_utils import StrongCoords
-
 
 import numpy as np
 import xarray
@@ -42,6 +39,7 @@ from xarray import Dataset
 
 import pymc
 
+from pymc.distributions.shape_utils import StrongCoords
 from pymc.model import Model, modelcontext
 from pymc.progress_bar import CustomProgress, default_progress_theme
 from pymc.pytensorf import PointFunc, extract_obs_data
@@ -128,8 +126,9 @@ def find_constants(model: "Model") -> dict[str, Var]:
     return constant_data
 
 
-def coords_and_dims_for_inferencedata(model: Model,) -> tuple[StrongCoords, DimsDict]:
-
+def coords_and_dims_for_inferencedata(
+    model: Model,
+) -> tuple[StrongCoords, DimsDict]:
     """Parse PyMC model coords and dims format to one accepted by InferenceData."""
     coords = {
         cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
