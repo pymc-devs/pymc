@@ -14,6 +14,7 @@
 
 
 import re
+
 from functools import partial
 from typing import TYPE_CHECKING
 
@@ -303,6 +304,7 @@ def _default_repr_pretty(obj: TensorVariable | Model, p, cycle):
 try:
     # register our custom pretty printer in ipython shells
     import IPython
+
     from pymc.model.core import Model
 
     IPython.lib.pretty.for_type(TensorVariable, _default_repr_pretty)
