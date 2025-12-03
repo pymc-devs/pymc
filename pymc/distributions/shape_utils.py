@@ -416,7 +416,6 @@ def get_support_shape(
         if len(dims) < ndim_supp:
             raise ValueError(f"Number of dims is too small for ndim_supp of {ndim_supp}")
         from pymc.model.core import modelcontext
-
         model = modelcontext(None)
         inferred_support_shape = [
             model.dim_lengths[dims[i]] - support_shape_offset[i] for i in range(-ndim_supp, 0)
