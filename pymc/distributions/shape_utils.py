@@ -33,7 +33,7 @@ from pytensor.tensor.shape import SpecifyShape
 from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.model import modelcontext
+#from pymc.model import modelcontext
 from pymc.pytensorf import convert_observed_data
 
 __all__ = [
