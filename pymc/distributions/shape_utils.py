@@ -33,7 +33,7 @@ from pytensor.tensor.shape import SpecifyShape
 from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.model.core import modelcontext
+from pymc.model import modelcontext
 from pymc.pytensorf import convert_observed_data
 
 __all__ = [
@@ -170,21 +170,27 @@ def convert_size(size: Size) -> StrongSize | None:
         )
 
 
-def shape_from_dims(dims: StrongDims, model) -> StrongShape:
+def shape_from_dims(dims: StrongDims, model=None) -> StrongShape:
     """Determine shape from a `dims` tuple.
 
     Parameters
     ----------
     dims : array-like
         A vector of dimension names or None.
-    model : pm.Model
-        The current model on stack.
+    model : pm.Model, optional
+        The current model on stack. If None, it will be resolved via modelcontext.
 
     Returns
     -------
-    dims : tuple of (str or None)
-        Names or None for all RV dimensions.
+    shape : tuple
+        Shape inferred from model dimension lengths.
     """
+    # Lazy import to break circular dependency
+    if model is None:
+        from pymc.model.core import modelcontext
+
+        model = modelcontext(None)
+
     # Dims must be known already
     unknowndim_dims = set(dims) - set(model.dim_lengths)
     if unknowndim_dims:
