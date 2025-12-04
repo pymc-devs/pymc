@@ -39,14 +39,16 @@ from xarray import Dataset
 
 import pymc
 
-from pymc.distributions.shape_utils import StrongCoords
-from pymc.model import Model, modelcontext
-from pymc.progress_bar import CustomProgress, default_progress_theme
-from pymc.pytensorf import PointFunc, extract_obs_data
-from pymc.util import get_default_varnames
+from pymc.model import modelcontext
+from pymc.typing import StrongCoords
 
 if TYPE_CHECKING:
     from pymc.backends.base import MultiTrace
+    from pymc.model import Model
+
+from pymc.progress_bar import CustomProgress, default_progress_theme
+from pymc.pytensorf import PointFunc, extract_obs_data
+from pymc.util import get_default_varnames
 
 ___all__ = [""]
 

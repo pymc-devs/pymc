@@ -16,7 +16,7 @@
 
 import warnings
 
-from collections.abc import Hashable, Mapping, Sequence
+from collections.abc import Sequence
 from functools import singledispatch
 from types import EllipsisType
 from typing import Any, TypeAlias, cast
@@ -96,12 +96,6 @@ StrongShape: TypeAlias = TensorVariable | tuple[int | Variable, ...]
 StrongDims: TypeAlias = Sequence[str]
 StrongDimsWithEllipsis: TypeAlias = Sequence[str | EllipsisType]
 StrongSize: TypeAlias = TensorVariable | tuple[int | Variable, ...]
-
-CoordValue: TypeAlias = Sequence[Hashable] | np.ndarray | None
-Coords: TypeAlias = Mapping[str, CoordValue]
-
-StrongCoordValue: TypeAlias = tuple[Hashable, ...] | None
-StrongCoords: TypeAlias = Mapping[str, StrongCoordValue]
 
 
 def convert_dims(dims: Dims | None) -> StrongDims | None:
@@ -416,6 +410,7 @@ def get_support_shape(
         if len(dims) < ndim_supp:
             raise ValueError(f"Number of dims is too small for ndim_supp of {ndim_supp}")
         from pymc.model.core import modelcontext
+
         model = modelcontext(None)
         inferred_support_shape = [
             model.dim_lengths[dims[i]] - support_shape_offset[i] for i in range(-ndim_supp, 0)

@@ -30,7 +30,7 @@ class DataClassState:
 def equal_dataclass_values(v1, v2):
     if v1.__class__ != v2.__class__:
         return False
-    if isinstance(v1, (list, tuple)):  # noqa: UP038
+    if isinstance(v1, (list, tuple)):
         return len(v1) == len(v2) and all(
             equal_dataclass_values(v1i, v2i) for v1i, v2i in zip(v1, v2, strict=True)
         )
