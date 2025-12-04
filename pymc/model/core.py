@@ -44,7 +44,6 @@ from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import MinibatchOp, is_valid_observed
-from pymc.typing import Coords, CoordValue, StrongCoords
 from pymc.exceptions import (
     BlockModelAccessError,
     ImputationWarning,
@@ -66,6 +65,7 @@ from pymc.pytensorf import (
     join_nonshared_inputs,
     rewrite_pregrad,
 )
+from pymc.typing import Coords, CoordValue, StrongCoords
 from pymc.util import (
     UNSET,
     WithMemoization,
