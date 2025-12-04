@@ -164,26 +164,23 @@ def convert_size(size: Size) -> StrongSize | None:
         )
 
 
-def shape_from_dims(dims: StrongDims, model=None) -> StrongShape:
+def shape_from_dims(dims: StrongDims, model: Model) -> StrongShape:
     """Determine shape from a `dims` tuple.
 
     Parameters
     ----------
     dims : array-like
         A vector of dimension names or None.
-    model : pm.Model, optional
-        The current model on stack. If None, it will be resolved via modelcontext.
+    model : pm.Model
+        The current model on stack.
 
     Returns
     -------
     shape : tuple
         Shape inferred from model dimension lengths.
     """
-    # Lazy import to break circular dependency
     if model is None:
-        from pymc.model.core import modelcontext
-
-        model = modelcontext(None)
+        raise ValueError("model must be provided explicitly to infer shape from dims")
 
     # Dims must be known already
     unknowndim_dims = set(dims) - set(model.dim_lengths)
