@@ -19,7 +19,7 @@ import warnings
 from collections.abc import Sequence
 from functools import singledispatch
 from types import EllipsisType
-from typing import Any, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 import numpy as np
 
@@ -33,8 +33,11 @@ from pytensor.tensor.shape import SpecifyShape
 from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
 
-# from pymc.model import modelcontext
 from pymc.pytensorf import convert_observed_data
+
+if TYPE_CHECKING:
+    from pymc.model import Model
+
 
 __all__ = [
     "change_dist_size",
@@ -164,7 +167,7 @@ def convert_size(size: Size) -> StrongSize | None:
         )
 
 
-def shape_from_dims(dims: StrongDims, model: Model) -> StrongShape:
+def shape_from_dims(dims: StrongDims, model: "Model") -> StrongShape:
     """Determine shape from a `dims` tuple.
 
     Parameters
