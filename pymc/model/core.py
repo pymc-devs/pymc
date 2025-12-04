@@ -44,7 +44,7 @@ from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import MinibatchOp, is_valid_observed
-from pymc.distributions.shape_utils import Coords, CoordValue, StrongCoords
+from pymc.typing import Coords, CoordValue, StrongCoords
 from pymc.exceptions import (
     BlockModelAccessError,
     ImputationWarning,
