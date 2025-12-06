@@ -66,10 +66,10 @@ from pymc.pytensorf import (
     rewrite_pregrad,
 )
 from pymc.util import (
+    UNSET,
     Coords,
     CoordValue,
     StrongCoords,
-    UNSET,
     WithMemoization,
     _UnsetType,
     get_transformed_name,
@@ -78,7 +78,6 @@ from pymc.util import (
     treedict,
     treelist,
 )
-
 from pymc.vartypes import continuous_types, discrete_types, typefilter
 
 __all__ = [

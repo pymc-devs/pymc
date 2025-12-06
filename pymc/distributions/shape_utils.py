@@ -6,7 +6,7 @@
 #
 #       http://www.apache.org/licenses/LICENSE-2.0
 #
-#   Unless required by applicable law or agreed to in writing, software
+#   Unless required by applicable law or deemed in writing, software
 #   distributed under the License is distributed on an "AS IS" BASIS,
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
@@ -14,12 +14,14 @@
 
 """Common shape operations to broadcast samples from probability distributions for stochastic nodes in PyMC."""
 
+from __future__ import annotations
+
 import warnings
 
 from collections.abc import Sequence
 from functools import singledispatch
 from types import EllipsisType
-from typing import TYPE_CHECKING, Any, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -33,20 +35,28 @@ from pytensor.tensor.shape import SpecifyShape
 from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.pytensorf import convert_observed_data
+from pymc.exceptions import ShapeError
+from pymc.pytensorf import PotentialShapeType, convert_observed_data
+from pymc.util import StrongDims, StrongShape
 
 if TYPE_CHECKING:
     from pymc.model import Model
+Shape = int | TensorVariable | Sequence[int | Variable]
+Dims = str | Sequence[str | None]
+DimsWithEllipsis = str | EllipsisType | Sequence[str | None | EllipsisType]
+Size = int | TensorVariable | Sequence[int | Variable]
 
+# Strong (validated) types from util
+
+# Additional strong types needed inside this file
+StrongDimsWithEllipsis = Sequence[str | EllipsisType]
+StrongSize = TensorVariable | tuple[int | Variable, ...]
 
 __all__ = [
     "change_dist_size",
     "rv_size_is_none",
     "to_tuple",
 ]
-
-from pymc.exceptions import ShapeError
-from pymc.pytensorf import PotentialShapeType
 
 
 def to_tuple(shape):
@@ -86,19 +96,6 @@ def _check_shape_type(shape):
     except Exception:
         raise TypeError(f"Supplied value {shape} does not represent a valid shape")
     return tuple(out)
-
-
-# User-provided can be lazily specified as scalars
-Shape: TypeAlias = int | TensorVariable | Sequence[int | Variable]
-Dims: TypeAlias = str | Sequence[str | None]
-DimsWithEllipsis: TypeAlias = str | EllipsisType | Sequence[str | None | EllipsisType]
-Size: TypeAlias = int | TensorVariable | Sequence[int | Variable]
-
-# After conversion to vectors
-StrongShape: TypeAlias = TensorVariable | tuple[int | Variable, ...]
-StrongDims: TypeAlias = Sequence[str]
-StrongDimsWithEllipsis: TypeAlias = Sequence[str | EllipsisType]
-StrongSize: TypeAlias = TensorVariable | tuple[int | Variable, ...]
 
 
 def convert_dims(dims: Dims | None) -> StrongDims | None:
@@ -167,7 +164,7 @@ def convert_size(size: Size) -> StrongSize | None:
         )
 
 
-def shape_from_dims(dims: StrongDims, model: "Model") -> StrongShape:
+def shape_from_dims(dims: StrongDims, model: Model) -> StrongShape:
     """Determine shape from a `dims` tuple.
 
     Parameters

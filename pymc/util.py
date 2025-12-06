@@ -16,9 +16,10 @@ import functools
 import re
 
 from collections import namedtuple
-from collections.abc import Sequence
+from collections.abc import Hashable, Mapping, Sequence
 from copy import deepcopy
-from typing import Mapping, TypeAlias, Hashable, cast
+from types import EllipsisType
+from typing import TypeAlias, cast
 
 import arviz
 import cloudpickle
@@ -26,20 +27,39 @@ import numpy as np
 import xarray
 
 from cachetools import LRUCache, cachedmethod
-from pytensor import Variable
 from pytensor.compile import SharedVariable
+from pytensor.graph.basic import Variable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.exceptions import BlockModelAccessError
 
-#Coordinate & Shape Typing
+# ---- User-facing coordinate types ----
 CoordValue: TypeAlias = Sequence[Hashable] | np.ndarray | None
 Coords: TypeAlias = Mapping[str, CoordValue]
 
+# ---- Internal strong coordinate types ----
 StrongCoordValue: TypeAlias = tuple[Hashable, ...] | None
 StrongCoords: TypeAlias = Mapping[str, StrongCoordValue]
 
+# ---- Internal strong dimension/shape types ----
 StrongDims: TypeAlias = tuple[str, ...]
 StrongShape: TypeAlias = tuple[int, ...]
+
+# User-provided shape before processing
+Shape: TypeAlias = int | TensorVariable | Sequence[int | Variable]
+
+# User-provided dims before processing
+Dims: TypeAlias = str | Sequence[str | None]
+
+# User-provided dims that may include ellipsis (...)
+DimsWithEllipsis: TypeAlias = str | EllipsisType | Sequence[str | None | EllipsisType]
+
+# User-provided size before processing
+Size: TypeAlias = int | TensorVariable | Sequence[int | Variable]
+
+# Strong / normalized versions used internally
+StrongDimsWithEllipsis: TypeAlias = Sequence[str | EllipsisType]
+StrongSize: TypeAlias = TensorVariable | tuple[int | Variable, ...]
 
 
 class _UnsetType:
