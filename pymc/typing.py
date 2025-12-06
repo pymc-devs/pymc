@@ -20,10 +20,6 @@ from typing import TypeAlias
 
 import numpy as np
 
-# -------------------------
-# Coordinate typing helpers
-# -------------------------
-
 # User-facing coordinate values (before normalization)
 CoordValue: TypeAlias = Sequence[Hashable] | np.ndarray | None
 Coords: TypeAlias = Mapping[str, CoordValue]
