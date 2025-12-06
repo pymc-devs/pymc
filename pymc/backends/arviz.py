@@ -40,7 +40,7 @@ from xarray import Dataset
 import pymc
 
 from pymc.model import modelcontext
-from pymc.typing import StrongCoords
+from pymc.util import StrongCoords 
 
 if TYPE_CHECKING:
     from pymc.backends.base import MultiTrace

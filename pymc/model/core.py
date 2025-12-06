@@ -65,8 +65,10 @@ from pymc.pytensorf import (
     join_nonshared_inputs,
     rewrite_pregrad,
 )
-from pymc.typing import Coords, CoordValue, StrongCoords
 from pymc.util import (
+    Coords,
+    CoordValue,
+    StrongCoords,
     UNSET,
     WithMemoization,
     _UnsetType,
@@ -76,6 +78,7 @@ from pymc.util import (
     treedict,
     treelist,
 )
+
 from pymc.vartypes import continuous_types, discrete_types, typefilter
 
 __all__ = [

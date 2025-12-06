@@ -18,7 +18,7 @@ import re
 from collections import namedtuple
 from collections.abc import Sequence
 from copy import deepcopy
-from typing import cast
+from typing import Mapping, TypeAlias, Hashable, cast
 
 import arviz
 import cloudpickle
@@ -30,6 +30,16 @@ from pytensor import Variable
 from pytensor.compile import SharedVariable
 
 from pymc.exceptions import BlockModelAccessError
+
+#Coordinate & Shape Typing
+CoordValue: TypeAlias = Sequence[Hashable] | np.ndarray | None
+Coords: TypeAlias = Mapping[str, CoordValue]
+
+StrongCoordValue: TypeAlias = tuple[Hashable, ...] | None
+StrongCoords: TypeAlias = Mapping[str, StrongCoordValue]
+
+StrongDims: TypeAlias = tuple[str, ...]
+StrongShape: TypeAlias = tuple[int, ...]
 
 
 class _UnsetType:
