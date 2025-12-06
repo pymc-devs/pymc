@@ -2700,34 +2700,60 @@ class ZeroSumNormal(Distribution):
     r"""
     Normal distribution where one or several axes are constrained to sum to zero.
 
-    By default, the last axis is constrained to sum to zero. See the `n_zerosum_axes`
-    kwarg for more details.
-
-    The constrained distribution follows a multivariate Normal distribution. For the
-    standard 1D case with a single constrained axis of size K, the covariance is:
+    By default, the last axis is constrained to sum to zero.
+    See `n_zerosum_axes` kwarg for more details.
 
     .. math::
 
-        ZSN(\sigma) = N\left(0, \sigma^2 \left(I_K - \tfrac{1}{K} J_K\right)\right)
-
-    where:
-
-    - :math:`I_K` is the :math:`K \times K` identity matrix,
-    - :math:`J_K` is the :math:`K \times K` matrix of ones,
-    - :math:`K` is the size of the constrained axis.
-
-    Using :math:`K` avoids confusion with ``n_zerosum_axes``, which counts how many
-    axes are constrained, not their length.
+    \begin{align*}
+    ZSN(\sigma) = N \Big( 0, \sigma^2 (I_K - \tfrac{1}{K}J_K) \Big) \\
+    \text{where} \ ~ J_{ij} = 1 \ ~ \text{and} \\
+    K = \text{size (length) of the constrained axis}
+    \end{align*}
 
     Parameters
     ----------
     sigma : tensor_like of float
-        Scale parameter (sigma > 0). Defaults to 1.
-        ``sigma`` cannot have length > 1 across the zero-sum axes.
-    n_zerosum_axes : int, defaults to 1
-        Number of axes along which the zero-sum constraint is enforced.
-    dims : sequence of strings, optional
-    shape : tuple of integers, optional
+    Scale parameter (sigma > 0).
+    It's actually the standard deviation of the underlying, unconstrained Normal distribution.
+    Defaults to 1 if not specified. ``sigma`` cannot have length > 1 across the zero-sum axes.
+    n_zerosum_axes: int, defaults to 1
+    Number of axes along which the zero-sum constraint is enforced, starting from the rightmost position.
+    Defaults to 1, i.e the rightmost axis.
+    dims: sequence of strings, optional
+    Dimension names of the distribution. Works the same as for other PyMC distributions.
+    Necessary if ``shape`` is not passed.
+    shape: tuple of integers, optional
+    Shape of the distribution. Works the same as for other PyMC distributions.
+    Necessary if ``dims`` or ``observed`` is not passed.
+
+    Warnings
+    --------
+    Currently, ``sigma`` cannot have length > 1 across the zero-sum axes to ensure the zero-sum constraint.
+
+    ``n_zerosum_axes`` has to be > 0. If you want the behavior of ``n_zerosum_axes = 0``,
+    just use ``pm.Normal``.
+
+    Examples
+    --------
+    Define a `ZeroSumNormal` variable, with `sigma=1` and
+    `n_zerosum_axes=1` by default::
+
+    COORDS = {
+    "regions": ["a", "b", "c"],
+    "answers": ["yes", "no", "whatever", "don't understand question"],
+    }
+    with pm.Model(coords=COORDS) as m:
+        # the zero sum axis will be 'answers'
+        v = pm.ZeroSumNormal("v", dims=("regions", "answers"))
+
+    with pm.Model(coords=COORDS) as m:
+        # the zero sum axes will be 'answers' and 'regions'
+        v = pm.ZeroSumNormal("v", dims=("regions", "answers"), n_zerosum_axes=2)
+
+    with pm.Model(coords=COORDS) as m:
+        # the zero sum axes will be the last two
+        v = pm.ZeroSumNormal("v", shape=(3, 4, 5), n_zerosum_axes=2)
     """
 
     rv_type = ZeroSumNormalRV
