@@ -201,7 +201,7 @@ jobs:
       PYTENSOR_FLAGS: floatX=${{ matrix.floatx }}
     defaults:
       run:
-        shell: cmd /C call {0}
+        shell: bash -leo pipefail {0}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -212,7 +212,7 @@ jobs:
           create-args: >-
             python=${{matrix.python-version}}
           environment-name: pymc-test
-          init-shell: cmd.exe
+          init-shell: bash
           cache-environment: true
       - name: Install-pymc
         run: |
@@ -220,10 +220,8 @@ jobs:
           python --version
           micromamba list
       - name: Run tests
-        # This job uses a cmd shell, therefore the environment variable syntax is different!
-        # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
-        run: >-
-          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
+        run: |
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
@@ -357,7 +355,7 @@ jobs:
       PYTENSOR_FLAGS: floatX=${{ matrix.floatx }}
     defaults:
       run:
-        shell: cmd /C call {0}
+        shell: bash -leo pipefail {0}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -368,7 +366,7 @@ jobs:
           create-args: >-
             python=${{matrix.python-version}}
           environment-name: pymc-test
-          init-shell: cmd.exe
+          init-shell: bash
           cache-environment: true
       - name: Install-pymc
         run: |
@@ -376,10 +374,8 @@ jobs:
           python --version
           micromamba list
       - name: Run tests
-        # This job uses a cmd shell, therefore the environment variable syntax is different!
-        # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
-        run: >-
-          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
+        run: |
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
