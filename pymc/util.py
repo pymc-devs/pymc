@@ -33,15 +33,15 @@ from pytensor.tensor.variable import TensorVariable
 
 from pymc.exceptions import BlockModelAccessError
 
-# ---- User-facing coordinate types ----
+# User-facing coordinate types
 CoordValue: TypeAlias = Sequence[Hashable] | np.ndarray | None
 Coords: TypeAlias = Mapping[str, CoordValue]
 
-# ---- Internal strong coordinate types ----
+# Internal strong coordinate types
 StrongCoordValue: TypeAlias = tuple[Hashable, ...] | None
 StrongCoords: TypeAlias = Mapping[str, StrongCoordValue]
 
-# ---- Internal strong dimension/shape types ----
+# Internal strong dimension/shape types 
 StrongDims: TypeAlias = tuple[str, ...]
 StrongShape: TypeAlias = tuple[int, ...]
 
@@ -60,6 +60,17 @@ Size: TypeAlias = int | TensorVariable | Sequence[int | Variable]
 # Strong / normalized versions used internally
 StrongDimsWithEllipsis: TypeAlias = Sequence[str | EllipsisType]
 StrongSize: TypeAlias = TensorVariable | tuple[int | Variable, ...]
+"""
+Type alias groups:
+
+- User-facing types (Coords, CoordValue, Shape, Dims, Size) represent the flexible inputs
+  accepted from users when defining models.
+
+- Strong/internal types (StrongCoords, StrongDims, StrongShape, StrongSize, etc.) represent
+  normalized, fully-validated forms used internally after processing.
+
+These distinctions allow looser user input while keeping strict internal consistency.
+"""
 
 
 class _UnsetType:
