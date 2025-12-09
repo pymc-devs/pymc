@@ -40,7 +40,7 @@ from pymc.pytensorf import PotentialShapeType, convert_observed_data
 from pymc.util import StrongDims, StrongShape
 
 if TYPE_CHECKING:
-    from pymc.model import Model
+    pass
 Shape = int | TensorVariable | Sequence[int | Variable]
 Dims = str | Sequence[str | None]
 DimsWithEllipsis = str | EllipsisType | Sequence[str | None | EllipsisType]
@@ -162,34 +162,6 @@ def convert_size(size: Size) -> StrongSize | None:
         raise ValueError(
             f"The `size` parameter must be a tuple, TensorVariable, int or list. Actual: {type(size)}"
         )
-
-
-def shape_from_dims(dims: StrongDims, model: Model) -> StrongShape:
-    """Determine shape from a `dims` tuple.
-
-    Parameters
-    ----------
-    dims : array-like
-        A vector of dimension names or None.
-    model : pm.Model
-        The current model on stack.
-
-    Returns
-    -------
-    shape : tuple
-        Shape inferred from model dimension lengths.
-    """
-    if model is None:
-        raise ValueError("model must be provided explicitly to infer shape from dims")
-
-    # Dims must be known already
-    unknowndim_dims = set(dims) - set(model.dim_lengths)
-    if unknowndim_dims:
-        raise KeyError(
-            f"Dimensions {unknowndim_dims} are unknown to the model and cannot be used to specify a `shape`."
-        )
-
-    return tuple(model.dim_lengths[dname] for dname in dims)
 
 
 def find_size(
