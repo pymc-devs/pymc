@@ -922,7 +922,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         return self._dim_lengths
 
-    def shape_from_dims(self, dims):
+    def symbolic_shape_from_dims(self, dims):
         shape = []
         if len(set(dims)) != len(dims):
             raise ValueError("Can not contain the same dimension name twice.")

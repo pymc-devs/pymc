@@ -521,7 +521,7 @@ class Distribution(metaclass=DistributionMeta):
         # finally, observed, to determine the shape of the variable.
         if kwargs.get("size") is None and kwargs.get("shape") is None:
             if dims is not None:
-                kwargs["shape"] = model.shape_from_dims(dims)
+                kwargs["shape"] = model.symbolic_shape_from_dims(dims)
             elif observed is not None:
                 kwargs["shape"] = tuple(observed.shape)
 

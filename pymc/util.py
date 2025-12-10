@@ -33,44 +33,41 @@ from pytensor.tensor.variable import TensorVariable
 
 from pymc.exceptions import BlockModelAccessError
 
-# User-facing coordinate types
 CoordValue: TypeAlias = Sequence[Hashable] | np.ndarray | None
+# User-provided values for a single coordinate dimension.
+
 Coords: TypeAlias = Mapping[str, CoordValue]
+# Mapping from dimension name to its coordinate values.
 
-# Internal strong coordinate types
 StrongCoordValue: TypeAlias = tuple[Hashable, ...] | None
+# Normalized coordinate values stored internally.
+
 StrongCoords: TypeAlias = Mapping[str, StrongCoordValue]
+# Mapping from dimension name to normalized coordinate values.
 
-# Internal strong dimension/shape types 
 StrongDims: TypeAlias = tuple[str, ...]
+# Tuple of dimension names after validation.
+
 StrongShape: TypeAlias = tuple[int, ...]
+# Fully-resolved numeric shape used internally.
 
-# User-provided shape before processing
 Shape: TypeAlias = int | TensorVariable | Sequence[int | Variable]
+# User-provided shape specification before normalization.
 
-# User-provided dims before processing
 Dims: TypeAlias = str | Sequence[str | None]
+# User-provided dimension names before normalization.
 
-# User-provided dims that may include ellipsis (...)
 DimsWithEllipsis: TypeAlias = str | EllipsisType | Sequence[str | None | EllipsisType]
+# User-provided dimension names that may include ellipsis.
 
-# User-provided size before processing
 Size: TypeAlias = int | TensorVariable | Sequence[int | Variable]
+# User-provided size specification before normalization.
 
-# Strong / normalized versions used internally
 StrongDimsWithEllipsis: TypeAlias = Sequence[str | EllipsisType]
+# Normalized dimension names that may include ellipsis.
+
 StrongSize: TypeAlias = TensorVariable | tuple[int | Variable, ...]
-"""
-Type alias groups:
-
-- User-facing types (Coords, CoordValue, Shape, Dims, Size) represent the flexible inputs
-  accepted from users when defining models.
-
-- Strong/internal types (StrongCoords, StrongDims, StrongShape, StrongSize, etc.) represent
-  normalized, fully-validated forms used internally after processing.
-
-These distinctions allow looser user input while keeping strict internal consistency.
-"""
+# Normalized symbolic size used internally.
 
 
 class _UnsetType:
