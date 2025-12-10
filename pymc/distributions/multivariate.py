@@ -2706,9 +2706,9 @@ class ZeroSumNormal(Distribution):
     .. math::
 
         \begin{align*}
-            ZSN(\sigma) = N \Big( 0, \sigma^2 (I - \tfrac{1}{n}J) \Big) \\
+            ZSN(\sigma) = N \Big( 0, \sigma^2 (I_K - \tfrac{1}{K}J_K) \Big) \\
             \text{where} \ ~ J_{ij} = 1 \ ~ \text{and} \\
-            n = \text{nbr of zero-sum axes}
+            K = \text{size (length) of the constrained axis}
         \end{align*}
 
     Parameters
