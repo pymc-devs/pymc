@@ -18,9 +18,9 @@ import contextlib
 import logging
 import pickle
 import sys
+import threading
 import time
 import warnings
-import threading
 
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from typing import (
@@ -103,7 +103,7 @@ class BackgroundSampleHandle:
         def runner():
             try:
                 self._result = target(*args, **kwargs)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 self._exception = exc
             finally:
                 self._done.set()
