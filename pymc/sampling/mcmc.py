@@ -20,6 +20,7 @@ import pickle
 import sys
 import time
 import warnings
+import threading
 
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from typing import (
@@ -89,6 +90,44 @@ __all__ = [
 ]
 
 Step: TypeAlias = BlockedStep | CompoundStep
+
+
+class BackgroundSampleHandle:
+    def __init__(self, target, args=None, kwargs=None):
+        self._done = threading.Event()
+        self._result = None
+        self._exception = None
+        args = args or ()
+        kwargs = kwargs or {}
+
+        def runner():
+            try:
+                self._result = target(*args, **kwargs)
+            except Exception as exc:  # noqa: BLE001
+                self._exception = exc
+            finally:
+                self._done.set()
+
+        self._thread = threading.Thread(target=runner, daemon=True)
+
+    def start(self):
+        self._thread.start()
+        return self
+
+    def done(self):
+        return self._done.is_set()
+
+    def result(self, timeout=None):
+        self._thread.join(timeout=timeout)
+        if not self._done.is_set():
+            raise TimeoutError("Background sampling not finished yet")
+        if self._exception:
+            raise self._exception
+        return self._result
+
+    def exception(self, timeout=None):
+        self._thread.join(timeout=timeout)
+        return self._exception
 
 
 class SamplingIteratorCallback(Protocol):
@@ -439,6 +478,7 @@ def sample(
     mp_ctx=None,
     blas_cores: int | None | Literal["auto"] = "auto",
     compile_kwargs: dict | None = None,
+    background: bool = False,
     **kwargs,
 ) -> InferenceData: ...
 
@@ -472,6 +512,7 @@ def sample(
     model: Model | None = None,
     blas_cores: int | None | Literal["auto"] = "auto",
     compile_kwargs: dict | None = None,
+    background: bool = False,
     **kwargs,
 ) -> MultiTrace: ...
 
@@ -504,6 +545,8 @@ def sample(
     blas_cores: int | None | Literal["auto"] = "auto",
     model: Model | None = None,
     compile_kwargs: dict | None = None,
+    background: bool = False,
+    _background_internal: bool = False,
     **kwargs,
 ) -> InferenceData | MultiTrace | ZarrTrace:
     r"""Draw samples from the posterior using the given step methods.
@@ -540,7 +583,7 @@ def sample(
             - "combined": A single progress bar that displays the total progress across all chains. Only timing
                 information is shown.
             - "split": A separate progress bar for each chain. Only timing information is shown.
-            - "combined+stats" or "stats+combined": A single progress bar displaying the total progress across all
+            - "combined+stats" or "stats+combined": A single progress bar displaying the total progress across
                 chains. Aggregate sample statistics are also displayed.
             - "split+stats" or "stats+split": A separate progress bar for each chain. Sample statistics for each chain
                 are also displayed.
@@ -618,7 +661,14 @@ def sample(
         Model to sample from. The model needs to have free random variables.
     compile_kwargs: dict, optional
         Dictionary with keyword argument to pass to the functions compiled by the step methods.
+        You can find a full list of arguments in the docstring of the step methods.
 
+    Background mode
+    ----------------
+    - Set ``background=True`` to run sampling in a background thread; this returns a handle.
+    - The handle supports ``done()``, ``result()``, and ``exception()``.
+    - Progress bars are suppressed in background mode.
+    - Currently limited to ``nuts_sampler="pymc"``; other samplers raise ``NotImplementedError``.
 
     Returns
     -------
@@ -629,65 +679,53 @@ def sample(
         ``ZarrTrace`` instance. Refer to :class:`~pymc.backends.zarr.ZarrTrace` for
         the benefits this backend provides.
 
-    Notes
-    -----
-    Optional keyword arguments can be passed to ``sample`` to be delivered to the
-    ``step_method``\ s used during sampling.
-
-    For example:
-
-       1. ``target_accept`` to NUTS: nuts={'target_accept':0.9}
-       2. ``transit_p`` to BinaryGibbsMetropolis: binary_gibbs_metropolis={'transit_p':.7}
-
-    Note that available step names are:
-
-    ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
-    ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
-    ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
-
-    The NUTS step method has several options including:
-
-        * target_accept : float in [0, 1]. The step size is tuned such that we
-          approximate this acceptance rate. Higher values like 0.9 or 0.95 often
-          work better for problematic posteriors. This argument can be passed directly to sample.
-        * max_treedepth : The maximum depth of the trajectory tree
-        * step_scale : float, default 0.25
-          The initial guess for the step size scaled down by :math:`1/n**(1/4)`,
-          where n is the dimensionality of the parameter space
-
-    Alternatively, if you manually declare the ``step_method``\ s, within the ``step``
-       kwarg, then you can address the ``step_method`` kwargs directly.
-       e.g. for a CompoundStep comprising NUTS and BinaryGibbsMetropolis,
-       you could send ::
-
-        step = [
-            pm.NUTS([freeRV1, freeRV2], target_accept=0.9),
-            pm.BinaryGibbsMetropolis([freeRV3], transit_p=0.7),
-        ]
-
-    You can find a full list of arguments in the docstring of the step methods.
-
     Examples
     --------
     .. code-block:: ipython
-
-        In [1]: import pymc as pm
-           ...: n = 100
-           ...: h = 61
-           ...: alpha = 2
-           ...: beta = 2
-
-        In [2]: with pm.Model() as model: # context management
-           ...:     p = pm.Beta("p", alpha=alpha, beta=beta)
-           ...:     y = pm.Binomial("y", n=n, p=p, observed=h)
-           ...:     idata = pm.sample()
-
-        In [3]: az.summary(idata, kind="stats")
-
-        Out[3]:
-            mean     sd  hdi_3%  hdi_97%
-        p  0.609  0.047   0.528    0.699
     """
+    if background and not _background_internal:
+        if nuts_sampler != "pymc":
+            raise NotImplementedError("background=True currently supports nuts_sampler='pymc' only")
+        progressbar = False
+
+        # Resolve the model now so the background thread has a concrete model object.
+        resolved_model = modelcontext(model)
+
+        def _run():
+            return sample(
+                draws=draws,
+                tune=tune,
+                chains=chains,
+                cores=cores,
+                random_seed=random_seed,
+                progressbar=progressbar,
+                progressbar_theme=progressbar_theme,
+                step=step,
+                var_names=var_names,
+                nuts_sampler=nuts_sampler,
+                initvals=initvals,
+                init=init,
+                jitter_max_retries=jitter_max_retries,
+                n_init=n_init,
+                trace=trace,
+                discard_tuned_samples=discard_tuned_samples,
+                compute_convergence_checks=compute_convergence_checks,
+                keep_warning_stat=keep_warning_stat,
+                return_inferencedata=return_inferencedata,
+                idata_kwargs=idata_kwargs,
+                nuts_sampler_kwargs=nuts_sampler_kwargs,
+                callback=callback,
+                mp_ctx=mp_ctx,
+                blas_cores=blas_cores,
+                model=resolved_model,
+                compile_kwargs=compile_kwargs,
+                background=False,
+                _background_internal=True,
+                **kwargs,
+            )
+
+        return BackgroundSampleHandle(target=_run).start()
+
     if "start" in kwargs:
         if initvals is not None:
             raise ValueError("Passing both `start` and `initvals` is not supported.")
