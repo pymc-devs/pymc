@@ -122,9 +122,28 @@ class RandomWalkRV(SymbolicRandomVariable):
 
 
 class RandomWalk(Distribution):
-    r"""RandomWalk Distribution.
+    r"""
+    Random Walk distribution.
 
-    TODO: Expand docstrings
+        A random walk is a stochastic process where the position at    time :math:`t`
+        is the sum of the position at time :math:`t-1` and a random step (innovation).
+
+        .. math::
+            X_t = X_{t-1} + \epsilon_t
+
+        where :math:`\epsilon_t` follows the distribution specified by `innovation_dist`.
+
+    Parameters
+    ----------
+        innovation_dist : Distribution
+            The distribution of the innovations (steps). This should be an instance
+            of a PyMC distribution (created via `.dist()`), describing the random
+            noise added at each step.
+        steps : int, optional
+            The number of steps in the random walk.
+        kwargs
+            Additional arguments passed to the distribution, such as `init_dist`
+            (distribution of the initial state) or dimensions.
     """
 
     rv_type = RandomWalkRV
