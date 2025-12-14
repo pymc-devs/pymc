@@ -31,7 +31,7 @@ def find_testfiles():
 
 
 def from_yaml():
-    """Determine how often each test file is run per platform and floatX setting.
+    """Determine how often each test file is run per platform and linker setting.
 
     An exception is raised if tests run multiple times with the same configuration.
     """
@@ -41,25 +41,32 @@ def from_yaml():
         wfname = wf.rstrip(".yml")
         wfdef = yaml.safe_load(open(Path(".github", "workflows", wf)))
         for jobname, jobdef in wfdef["jobs"].items():
+            if jobname in ("float32", "all_tests"):
+                continue
+            runs_on = jobdef.get("runs-on", "unknown")
+            floatX = "float32" if jobname == "float32" else "float64"
             matrix = jobdef.get("strategy", {}).get("matrix", {})
             if matrix:
+                # Some jobs are parametrized by os, for others it's fixed
+                matrix.setdefault("os", [runs_on])
+                matrix.setdefault("floatX", [floatX])
                 matrices[(wfname, jobname)] = matrix
             else:
                 _log.warning("No matrix in %s/%s", wf, jobname)
 
-    # Now create an empty DataFrame to count based on OS/floatX/testfile
+    # Now create an empty DataFrame to count based on OS/linker/testfile
     all_os = []
-    all_floatX = []
+    all_linker = []
     for matrix in matrices.values():
         all_os += matrix["os"]
-        all_floatX += matrix["floatx"]
+        all_linker += matrix["linker"]
     all_os = tuple(sorted(set(all_os)))
-    all_floatX = tuple(sorted(set(all_floatX)))
+    all_linker = tuple(sorted(set(all_linker)))
     all_tests = find_testfiles()
 
     df = pandas.DataFrame(
         columns=pandas.MultiIndex.from_product(
-            [sorted(all_floatX), sorted(all_os)], names=["floatX", "os"]
+            [sorted(all_linker), sorted(all_os)], names=["linker", "os"]
         ),
         index=pandas.Index(sorted(all_tests), name="testfile"),
     )
@@ -67,22 +74,10 @@ def from_yaml():
 
     # Count how often the testfiles are included in job definitions
     for matrix in matrices.values():
-        for os_, floatX, subset in itertools.product(
-            matrix["os"], matrix["floatx"], matrix["test-subset"]
+        for os_, linker, subset in itertools.product(
+            matrix["os"], matrix["linker"], matrix["test-subset"]
         ):
             lines = [k for k in subset.split("\n") if k]
-            if "windows" in os_:
-                # Windows jobs need \ in line breaks within the test-subset!
-                # The following checks that these trailing \ are present in
-                # all items except the last.
-                if lines and lines[-1].endswith(" \\"):
-                    raise Exception(
-                        f"Last entry '{lines}' in Windows test subset should end WITHOUT ' \\'."
-                    )
-                for line in lines[:-1]:
-                    if not line.endswith(" \\"):
-                        raise Exception(f"Missing ' \\' after '{line}' in Windows test-subset.")
-                lines = [line.rstrip(" \\") for line in lines]
 
             # Unpack lines with >1 item
             testfiles = []
@@ -97,7 +92,7 @@ def from_yaml():
                 included = all_tests - ignored
 
             for testfile in included:
-                df.loc[testfile, (floatX, os_)] += 1
+                df.loc[testfile, (linker, os_)] += 1
 
     ignored_by_all = set(df[df.eq(0).all(axis=1)].index)
     run_multiple_times = set(df[df.gt(1).any(axis=1)].index)
@@ -111,7 +106,7 @@ def from_yaml():
         )
     if run_multiple_times:
         raise AssertionError(
-            f"{len(run_multiple_times)} tests are run multiple times with the same OS and floatX setting:\n{run_multiple_times}"
+            f"{len(run_multiple_times)} tests are run multiple times with the same OS and pytensor flags:\n{run_multiple_times}"
         )
     return
 
