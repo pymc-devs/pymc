@@ -41,6 +41,8 @@ import pytest
 import scipy as sp
 import scipy.stats as st
 
+import pymc as pm
+
 from pymc import logp
 from pymc.logprob import conditional_logp
 from pymc.logprob.transform_value import TransformValuesRewrite
@@ -281,8 +283,6 @@ def test_censored_logprob_numerical_stability(censoring_side, bound_value):
 
     This test uses pm.Censored which is the high-level API for censored distributions.
     """
-    import pymc as pm
-
     ref_scipy = st.norm(0, 1)
 
     with pm.Model() as model:
