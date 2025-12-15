@@ -50,7 +50,7 @@ from pymc.distributions.shape_utils import (
     rv_size_is_none,
     shape_from_dims,
 )
-from pymc.logprob.abstract import MeasurableOp, _icdf, _logcdf, _logprob
+from pymc.logprob.abstract import MeasurableOp, _icdf, _logccdf, _logcdf, _logprob
 from pymc.logprob.basic import logp
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.printing import str_for_dist
@@ -149,6 +149,17 @@ class DistributionMeta(ABCMeta):
                     elif params_idxs:
                         dist_params = [dist_params[i] for i in params_idxs]
                     return class_logcdf(value, *dist_params)
+
+            class_logccdf = clsdict.get("logccdf")
+            if class_logccdf:
+
+                @_logccdf.register(rv_type)
+                def logccdf(op, value, *dist_params, **kwargs):
+                    if isinstance(op, RandomVariable):
+                        rng, size, *dist_params = dist_params
+                    elif params_idxs:
+                        dist_params = [dist_params[i] for i in params_idxs]
+                    return class_logccdf(value, *dist_params)
 
             class_icdf = clsdict.get("icdf")
             if class_icdf:

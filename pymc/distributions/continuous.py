@@ -512,6 +512,13 @@ class Normal(Continuous):
             msg="sigma > 0",
         )
 
+    def logccdf(value, mu, sigma):
+        return check_parameters(
+            normal_lccdf(mu, sigma, value),
+            sigma > 0,
+            msg="sigma > 0",
+        )
+
     def icdf(value, mu, sigma):
         res = mu + sigma * -np.sqrt(2.0) * pt.erfcinv(2 * value)
         res = check_icdf_value(res, value)

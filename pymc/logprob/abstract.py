@@ -109,6 +109,36 @@ def _logcdf_helper(rv, value, **kwargs):
 
 
 @singledispatch
+def _logccdf(
+    op: Op,
+    value: TensorVariable,
+    *inputs: TensorVariable,
+    **kwargs,
+):
+    """Create a graph for the log complementary CDF (log survival function) of a ``RandomVariable``.
+
+    This function dispatches on the type of ``op``, which should be a subclass
+    of ``RandomVariable``.  If you want to implement new logccdf graphs
+    for a ``RandomVariable``, register a new function on this dispatcher.
+
+    The log complementary CDF is defined as log(1 - CDF(x)), also known as the
+    log survival function. For distributions with a numerically stable implementation,
+    this should be used instead of computing log(1 - exp(logcdf)).
+    """
+    raise NotImplementedError(f"LogCCDF method not implemented for {op}")
+
+
+def _logccdf_helper(rv, value, **kwargs):
+    """Helper that calls `_logccdf` dispatcher."""
+    logccdf = _logccdf(rv.owner.op, value, *rv.owner.inputs, name=rv.name, **kwargs)
+
+    if rv.name:
+        logccdf.name = f"{rv.name}_logccdf"
+
+    return logccdf
+
+
+@singledispatch
 def _icdf(
     op: Op,
     value: TensorVariable,

@@ -47,7 +47,7 @@ from pytensor.tensor import TensorVariable
 from pytensor.tensor.math import ceil, clip, floor, round_half_to_even
 from pytensor.tensor.variable import TensorConstant
 
-from pymc.logprob.abstract import MeasurableElemwise, _logcdf, _logprob
+from pymc.logprob.abstract import MeasurableElemwise, _logccdf, _logcdf, _logprob
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import CheckParameterValue, filter_measurable_variables
 
@@ -119,7 +119,13 @@ def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
     if not (isinstance(upper_bound, TensorConstant) and np.all(np.isinf(upper_bound.value))):
         is_upper_bounded = True
 
-        logccdf = pt.log1mexp(logcdf)
+        # Try to use a numerically stable logccdf if available, otherwise fall back
+        # to computing log(1 - exp(logcdf)) which can be unstable in the tails
+        try:
+            logccdf = _logccdf(base_rv_op, value, *base_rv_inputs, **kwargs)
+        except NotImplementedError:
+            logccdf = pt.log1mexp(logcdf)
+
         # For right clipped discrete RVs, we need to add an extra term
         # corresponding to the pmf at the upper bound
         if base_rv.dtype.startswith("int"):
