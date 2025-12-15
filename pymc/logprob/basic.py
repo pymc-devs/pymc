@@ -357,9 +357,10 @@ def logccdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> T
         return _logccdf_helper(rv, value, **kwargs)
     except NotImplementedError:
         # Try to rewrite rv
-        fgraph, _, _ = construct_ir_fgraph({rv: value})
-        [ir_rv] = fgraph.outputs
-        expr = _logccdf_helper(ir_rv, value, **kwargs)
+        fgraph = construct_ir_fgraph({rv: value})
+        [ir_valued_rv] = fgraph.outputs
+        [ir_rv, ir_value] = ir_valued_rv.owner.inputs
+        expr = _logccdf_helper(ir_rv, ir_value, **kwargs)
         [expr] = cleanup_ir([expr])
         if warn_rvs:
             _warn_rvs_in_inferred_graph([expr])
