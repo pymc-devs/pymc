@@ -252,12 +252,8 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
         # For discrete distributions, use the logcdf at the previous value
         logccdf = pt.log1mexp(_logcdf_helper(measurable_input, backward_value - 1))
     else:
-        # Try to use a numerically stable logccdf if available, otherwise fall back
-        # to computing log(1 - exp(logcdf)) which can be unstable in the tails
-        try:
-            logccdf = _logccdf_helper(measurable_input, backward_value)
-        except NotImplementedError:
-            logccdf = pt.log1mexp(logcdf)
+        # Use numerically stable logccdf (falls back to log1mexp if not available)
+        logccdf = _logccdf_helper(measurable_input, backward_value)
 
     if isinstance(op.scalar_op, MONOTONICALLY_INCREASING_OPS):
         pass
