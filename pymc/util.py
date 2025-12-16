@@ -34,40 +34,40 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.exceptions import BlockModelAccessError
 
 CoordValue: TypeAlias = Sequence[Hashable] | np.ndarray | None
-# User-provided values for a single coordinate dimension.
+"""User-provided values for a single coordinate dimension."""
 
 Coords: TypeAlias = Mapping[str, CoordValue]
-# Mapping from dimension name to its coordinate values.
+"""Mapping from dimension name to its coordinate values."""
 
 StrongCoordValue: TypeAlias = tuple[Hashable, ...] | None
-# Normalized coordinate values stored internally.
+"""Normalized coordinate values stored internally."""
 
 StrongCoords: TypeAlias = Mapping[str, StrongCoordValue]
-# Mapping from dimension name to normalized coordinate values.
+"""Mapping from dimension name to normalized coordinate values."""
 
 StrongDims: TypeAlias = tuple[str, ...]
-# Tuple of dimension names after validation.
+"""Tuple of dimension names after validation."""
 
 StrongShape: TypeAlias = tuple[int, ...]
-# Fully-resolved numeric shape used internally.
+"""Fully-resolved numeric shape used internally."""
 
 Shape: TypeAlias = int | TensorVariable | Sequence[int | Variable]
-# User-provided shape specification before normalization.
+"""User-provided shape specification before normalization."""
 
 Dims: TypeAlias = str | Sequence[str | None]
-# User-provided dimension names before normalization.
+"""User-provided dimension names before normalization."""
 
 DimsWithEllipsis: TypeAlias = str | EllipsisType | Sequence[str | None | EllipsisType]
-# User-provided dimension names that may include ellipsis.
+"""User-provided dimension names that may include ellipsis."""
 
 Size: TypeAlias = int | TensorVariable | Sequence[int | Variable]
-# User-provided size specification before normalization.
+"""User-provided size specification before normalization."""
 
 StrongDimsWithEllipsis: TypeAlias = Sequence[str | EllipsisType]
-# Normalized dimension names that may include ellipsis.
+"""Normalized dimension names that may include ellipsis."""
 
 StrongSize: TypeAlias = TensorVariable | tuple[int | Variable, ...]
-# Normalized symbolic size used internally.
+"""Normalized symbolic size used internally."""
 
 
 class _UnsetType:
