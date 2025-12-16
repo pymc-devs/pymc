@@ -37,20 +37,17 @@ from pytensor.tensor.variable import TensorVariable
 
 from pymc.exceptions import ShapeError
 from pymc.pytensorf import PotentialShapeType, convert_observed_data
-from pymc.util import StrongDims, StrongShape
+from pymc.util import (
+    Shape,
+    Dims,
+    DimsWithEllipsis,
+    Size,
+    StrongDims,
+    StrongShape,
+    StrongDimsWithEllipsis,
+    StrongSize,
+)
 
-if TYPE_CHECKING:
-    pass
-Shape = int | TensorVariable | Sequence[int | Variable]
-Dims = str | Sequence[str | None]
-DimsWithEllipsis = str | EllipsisType | Sequence[str | None | EllipsisType]
-Size = int | TensorVariable | Sequence[int | Variable]
-
-# Strong (validated) types from util
-
-# Additional strong types needed inside this file
-StrongDimsWithEllipsis = Sequence[str | EllipsisType]
-StrongSize = TensorVariable | tuple[int | Variable, ...]
 
 __all__ = [
     "change_dist_size",
