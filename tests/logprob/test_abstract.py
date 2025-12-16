@@ -226,3 +226,46 @@ def test_logccdf_helper_fallback():
     assert not graph_contains_log1mexp(normal_logccdf), (
         "Normal logccdf should use specialized implementation"
     )
+
+
+def test_logccdf_transformed_argument():
+    """Test logccdf with a transformed random variable requiring IR graph rewriting.
+
+    What: Tests that pm.logccdf works when the random variable has been
+    transformed (e.g., sigma is log-transformed), which requires the
+    IR (intermediate representation) graph rewriting path.
+
+    Why: When a random variable depends on transformed parameters, the
+    direct _logccdf_helper call fails because the RV isn't in the expected
+    form. The public logccdf function catches this and rewrites the graph
+    using construct_ir_fgraph to make it work. This test ensures that
+    fallback path is covered and correct.
+
+    How:
+    1. Creates a model where x ~ Normal(0, sigma) with sigma ~ HalfFlat
+       (HalfFlat gets log-transformed automatically)
+    2. Adds a Potential using logccdf(x, 1.0)
+    3. Compiles and evaluates the model's logp
+    4. Verifies the result equals:
+       logp(Normal(0, sigma), x_value) + logsf(1.0; 0, sigma)
+
+    The IR rewriting is triggered because x's distribution depends on
+    the transformed sigma parameter.
+    """
+    with pm.Model() as m:
+        sigma = pm.HalfFlat("sigma")
+        x = pm.Normal("x", 0, sigma)
+        pm.Potential("norm_term", logccdf(x, 1.0))
+
+    sigma_value_log = -1.0
+    sigma_value = np.exp(sigma_value_log)  # sigma ≈ 0.368
+    x_value = 0.5
+
+    observed = m.compile_logp(jacobian=False)({"sigma_log__": sigma_value_log, "x": x_value})
+
+    # Expected = logp(x | sigma) + logccdf(Normal(0, sigma), 1.0)
+    expected_logp = pm.logp(pm.Normal.dist(0, sigma_value), x_value).eval()
+    expected_logsf = sp.norm(0, sigma_value).logsf(1.0)
+    expected = expected_logp + expected_logsf
+
+    assert np.isclose(observed, expected)
