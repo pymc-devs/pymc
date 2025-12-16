@@ -123,22 +123,36 @@ def test_logccdf():
 
 
 def test_logccdf_numerical_stability():
-    """Test that pm.logccdf is numerically stable in the extreme right tail.
+    """Test numerical stability of pm.logccdf in the extreme right tail.
 
-    For a normal distribution, the log survival function at x=10 is very negative
-    (around -52). Using log(1 - exp(logcdf)) would fail because CDF(10) is essentially 1.
+    What: Verifies the public logccdf function is numerically stable when
+    evaluating far in the distribution's tail.
+
+    Why: This is the primary use case that motivated adding logccdf support.
+    In censored/truncated distributions, we need log(1 - CDF(bound)) at the
+    censoring/truncation point. When this point is far in the tail:
+    - Naive: log(1 - exp(logcdf)) = log(1 - 1) = log(0) = -inf
+    - Stable: Uses erfcx-based computation → correct finite value
+
+    How: Evaluates logccdf at x=100 for Normal(0,1) and verifies:
+    1. Result is finite (not -inf or nan)
+    2. Result matches scipy.logsf within relative tolerance
+
+    The expected value is approximately -5005.5, representing the log
+    probability of a standard normal exceeding 100 sigma.
+    Using 100 sigma future-proofs against any improvements in naive methods.
     """
     x = pm.Normal.dist(0, 1)
 
-    # Test value far in the right tail
-    far_tail_value = 10.0
+    far_tail_value = 100.0
 
     result = logccdf(x, far_tail_value).eval()
-    expected = sp.norm(0, 1).logsf(far_tail_value)
+    expected = sp.norm(0, 1).logsf(far_tail_value)  # ≈ -5005.5
 
-    # Should be around -52, not -inf or nan
+    # Must be finite, not -inf (which naive computation would give)
     assert np.isfinite(result)
-    np.testing.assert_almost_equal(result, expected, decimal=6)
+    # Use rtol for relative tolerance (float32 has ~7 significant digits)
+    np.testing.assert_allclose(result, expected, rtol=1e-6)
 
 
 def test_logccdf_helper_fallback():

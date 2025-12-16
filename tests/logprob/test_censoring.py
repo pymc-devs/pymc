@@ -268,42 +268,66 @@ def test_rounding(rounding_op):
 @pytest.mark.parametrize(
     "censoring_side,bound_value",
     [
-        ("right", 40.0),  # Far right tail: CDF ≈ 1, need stable log(1-CDF)
-        ("left", -40.0),  # Far left tail: CDF ≈ 0, need stable log(CDF)
+        ("right", 100.0),  # Far right tail: CDF ≈ 1, need stable log(1-CDF)
+        ("left", -100.0),  # Far left tail: CDF ≈ 0, need stable log(CDF)
     ],
 )
 def test_censored_logprob_numerical_stability(censoring_side, bound_value):
-    """Test that censored distributions use numerically stable log-probability computations.
+    """Test numerical stability of pm.Censored at extreme tail values.
 
-    For right-censoring at the upper bound, log(1 - CDF) is computed. When CDF ≈ 1
-    (far right tail), this requires a stable logccdf implementation.
+    What: Verifies that the log-probability of a censored Normal distribution
+    is computed correctly when the censoring bound is far in the tail
+    (100 standard deviations from the mean).
 
-    For left-censoring at the lower bound, log(CDF) is computed. When CDF ≈ 0
-    (far left tail), this requires a stable logcdf implementation.
+    Why: Censored distributions require computing:
+    - Right-censored at upper bound: log(P(X > upper)) = log(1 - CDF(upper)) = logccdf
+    - Left-censored at lower bound: log(P(X < lower)) = log(CDF(lower)) = logcdf
 
-    This test uses pm.Censored which is the high-level API for censored distributions.
+    At extreme tail values (100 sigma):
+    - CDF(100) is indistinguishable from 1.0 in float64
+    - CDF(-100) is indistinguishable from 0.0 in float64
+
+    Naive computation would give:
+    - Right: log(1 - 1) = log(0) = -inf ✗
+    - Left: log(0) = -inf ✗
+
+    With stable logccdf/logcdf:
+    - Right: ≈ -5005.5 ✓
+    - Left: ≈ -5005.5 ✓
+
+    How:
+    1. Creates pm.Censored with Normal(0, 1) base distribution
+    2. Sets censoring bound at ±100 (100 standard deviations)
+    3. Evaluates logp at the bound value
+    4. Compares against scipy.stats.norm.logsf (right) or logcdf (left)
+    5. Verifies result is finite and matches reference within tolerance
+
+    Using 100 sigma future-proofs against any improvements in naive methods.
+    This is the primary integration test for the logccdf feature.
     """
     ref_scipy = st.norm(0, 1)
 
     with pm.Model() as model:
         normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
         if censoring_side == "right":
+            # Right-censored: values > upper are censored to upper
+            # logp(y=upper) = log(P(X >= upper)) = logsf(upper)
             pm.Censored("y", normal_dist, lower=None, upper=bound_value)
-            expected_logp = ref_scipy.logsf(bound_value)  # log(1 - CDF)
-        else:  # left
+            expected_logp = ref_scipy.logsf(bound_value)
+        else:
+            # Left-censored: values < lower are censored to lower
+            # logp(y=lower) = log(P(X <= lower)) = logcdf(lower)
             pm.Censored("y", normal_dist, lower=bound_value, upper=None)
-            expected_logp = ref_scipy.logcdf(bound_value)  # log(CDF)
+            expected_logp = ref_scipy.logcdf(bound_value)
 
-    # Compile the logp function
     logp_fn = model.compile_logp()
-
-    # Evaluate at the bound - this is where the log survival/cdf function is used
     logp_at_bound = logp_fn({"y": bound_value})
 
-    # This should be finite and correct, not -inf
+    # Must be finite (not -inf from naive computation)
     assert np.isfinite(logp_at_bound), (
         f"logp at {censoring_side} bound should be finite, got {logp_at_bound}"
     )
+    # Must match scipy reference (≈ -5005.5 for ±100 sigma)
     assert np.isclose(logp_at_bound, expected_logp, rtol=1e-6), (
         f"logp at {censoring_side} bound: got {logp_at_bound}, expected {expected_logp}"
     )
