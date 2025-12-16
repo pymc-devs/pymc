@@ -546,7 +546,6 @@ def sample(
                 are also displayed.
 
             If True, the default is "split+stats" is used.
-
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically. By default the NUTS step
