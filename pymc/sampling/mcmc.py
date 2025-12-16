@@ -549,14 +549,14 @@ def sample(
 
     progressbar_theme : rich.theme.Theme, optional
         Custom theme applied to the Rich Console used for PyMC progress bars.
-    
+
         Colors and styles must follow Rich's style syntax. Not all common color
         names are supported and invalid values may raise a ``StyleSyntaxError``.
-    
+
         For reference, see the Rich documentation:
         - `Rich style syntax <https://rich.readthedocs.io/en/stable/style.html>`_
         - `Supported color names <https://rich.readthedocs.io/en/stable/appendix/colors.html>`_
-    
+
         Note
         ----
         The progress bar fill color itself is controlled internally by PyMC and
