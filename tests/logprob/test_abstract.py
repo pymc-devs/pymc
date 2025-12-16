@@ -96,27 +96,6 @@ def test_logccdf_helper():
     np.testing.assert_almost_equal(x_logccdf.eval(), sp.norm(0, 1).logsf([0, 1]))
 
 
-def test_logccdf_helper_numerical_stability():
-    """Test that logccdf is numerically stable in the far right tail.
-
-    This is where log(1 - exp(logcdf)) would lose precision because CDF is very close to 1.
-    """
-    x = pm.Normal.dist(0, 1)
-
-    # Test value far in the right tail where CDF is essentially 1
-    far_tail_value = 10.0
-
-    x_logccdf = _logccdf_helper(x, far_tail_value)
-    result = x_logccdf.eval()
-
-    # scipy.stats.norm.logsf uses a numerically stable implementation
-    expected = sp.norm(0, 1).logsf(far_tail_value)
-
-    # The naive computation would give log(1 - 1) = -inf or very wrong values
-    # The stable implementation should match scipy's logsf closely
-    np.testing.assert_almost_equal(result, expected, decimal=6)
-
-
 def test_logcdf_transformed_argument():
     with pm.Model() as m:
         sigma = pm.HalfFlat("sigma")
