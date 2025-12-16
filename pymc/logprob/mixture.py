@@ -521,6 +521,11 @@ def find_measurable_leaky_relu_switch(fgraph, node):
 
     cond, pos_branch, neg_branch = node.inputs
 
+    # we only mark the switch measurable once both branches are already measurable.
+    # so, the switch logprob can simply gate between branch logps (delegating inversion/Jacobian details to each branch).
+    if set(filter_measurable_variables([pos_branch, neg_branch])) != {pos_branch, neg_branch}:
+        return None
+
     if not filter_measurable_variables([pos_branch]):
         return None
     x = cast(TensorVariable, pos_branch)
@@ -569,22 +574,20 @@ def logprob_leaky_relu_switch(op, values, cond, x, neg_branch, **kwargs):
     if a is None:
         raise NotImplementedError("Could not extract leaky-ReLU slope")
 
-    # enforce a > 0 at runtime to ensure invertibility and valid Jacobian
-    a = CheckParameterValue("leaky_relu slope > 0")(a, pt.all(pt.gt(a, 0)))
+    # enforce `a > 0` at runtime to ensure invertibility and to make the branch selection predicate depend only on the observed value.
+    a_is_positive = pt.all(pt.gt(a, 0))
 
-    # inverse mapping x(y) = y if y>0 else y/a
-    x_inv = pt.switch(pt.gt(value, 0), value, value / a)
+    # for `a > 0`, `switch(x > 0, x, a * x)` maps to disjoint regions in `value`: true branch -> value > 0, false branch -> value <= 0.
+    value_implies_true_branch = pt.gt(value, 0)
 
-    base_logp = _logprob_helper(x, x_inv, **kwargs)
+    logp_expr = pt.switch(
+        value_implies_true_branch,
+        _logprob_helper(x, value, **kwargs),
+        _logprob_helper(neg_branch, value, **kwargs),
+    )
 
-    # jacobian term: 0 for y>0, -log(a) for y<=0
-    jacobian = pt.switch(pt.gt(value, 0), pt.zeros_like(value), -pt.log(a))
-
-    if base_logp.ndim < value.ndim:
-        ndim_supp = value.ndim - base_logp.ndim
-        jacobian = jacobian.sum(axis=tuple(range(-ndim_supp, 0)))
-
-    return base_logp + jacobian
+    # attach the parameter check to the returned expression so it can't be optimized away.
+    return CheckParameterValue("leaky_relu slope > 0")(logp_expr, a_is_positive)
 
 
 measurable_ir_rewrites_db.register(
