@@ -457,6 +457,7 @@ class AutoRegressiveRV(SymbolicRandomVariable):
             non_sequences=[rhos_bcast.T[::-1], sigma.T, noise_rng],
             n_steps=steps,
             strict=True,
+            return_updates=False,
         )
         (noise_next_rng,) = tuple(innov_updates.values())
         ar = pt.concatenate([init_dist, innov.T], axis=-1)
@@ -726,6 +727,7 @@ class GARCH11RV(SymbolicRandomVariable):
             non_sequences=[omega, alpha_1, beta_1, noise_rng],
             n_steps=steps,
             strict=True,
+            return_updates=False,
         )
         (noise_next_rng,) = tuple(innov_updates.values())
 
@@ -822,6 +824,7 @@ def garch11_logp(
         outputs_info=[initial_vol],
         non_sequences=[omega, alpha_1, beta_1],
         strict=True,
+        return_updates=False,
     )
     sigma_t = pt.concatenate([[initial_vol], vol])
     # Compute and collapse logp across time dimension
@@ -874,6 +877,7 @@ class EulerMaruyamaRV(SymbolicRandomVariable):
             non_sequences=[*sde_pars, noise_rng],
             n_steps=steps,
             strict=True,
+            return_updates=False,
         )
         (noise_next_rng,) = tuple(innov_updates.values())
 
