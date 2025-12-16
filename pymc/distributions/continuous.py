@@ -214,8 +214,8 @@ def get_tau_sigma(
 
     Parameters
     ----------
-    tau : array-like, optional
-    sigma : array-like, optional
+    tau: array-like, optional
+    sigma: array-like, optional
 
     Results
     -------
