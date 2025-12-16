@@ -139,3 +139,48 @@ def test_logccdf_numerical_stability():
     # Should be around -52, not -inf or nan
     assert np.isfinite(result)
     np.testing.assert_almost_equal(result, expected, decimal=6)
+
+
+def test_logccdf_helper_fallback():
+    """Test that _logccdf_helper falls back to log1mexp(logcdf) for distributions without logccdf.
+
+    What: Verifies that the helper's NotImplementedError fallback branch is exercised
+    and produces the correct graph structure.
+
+    Why: Distributions without a registered _logccdf method should still work via
+    the fallback computation log(1 - exp(logcdf)) = log1mexp(logcdf).
+
+    How: Uses Uniform distribution (which has logcdf but no logccdf) and inspects
+    the resulting computation graph. For Uniform, the graph should contain log1mexp.
+    For Normal (which has logccdf), the graph should NOT contain log1mexp.
+    """
+    from pytensor.scalar.math import Log1mexp
+    from pytensor.tensor.elemwise import Elemwise
+
+    def graph_contains_log1mexp(var, depth=0, visited=None):
+        """Recursively check if computation graph contains Log1mexp scalar op."""
+        if visited is None:
+            visited = set()
+        if id(var) in visited or depth > 20:
+            return False
+        visited.add(id(var))
+        if var.owner:
+            op = var.owner.op
+            if isinstance(op, Elemwise) and isinstance(op.scalar_op, Log1mexp):
+                return True
+            for inp in var.owner.inputs:
+                if graph_contains_log1mexp(inp, depth + 1, visited):
+                    return True
+        return False
+
+    # Uniform has logcdf but no logccdf - should use log1mexp fallback
+    uniform_rv = pm.Uniform.dist(0, 1)
+    uniform_logccdf = _logccdf_helper(uniform_rv, 0.5)
+    assert graph_contains_log1mexp(uniform_logccdf), "Uniform logccdf should use log1mexp fallback"
+
+    # Normal has logccdf - should NOT use log1mexp fallback
+    normal_rv = pm.Normal.dist(0, 1)
+    normal_logccdf = _logccdf_helper(normal_rv, 0.5)
+    assert not graph_contains_log1mexp(normal_logccdf), (
+        "Normal logccdf should use specialized implementation"
+    )
