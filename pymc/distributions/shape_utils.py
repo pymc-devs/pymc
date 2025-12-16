@@ -21,7 +21,7 @@ import warnings
 from collections.abc import Sequence
 from functools import singledispatch
 from types import EllipsisType
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 import numpy as np
 
@@ -38,16 +38,15 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.exceptions import ShapeError
 from pymc.pytensorf import PotentialShapeType, convert_observed_data
 from pymc.util import (
-    Shape,
     Dims,
     DimsWithEllipsis,
+    Shape,
     Size,
     StrongDims,
-    StrongShape,
     StrongDimsWithEllipsis,
+    StrongShape,
     StrongSize,
 )
-
 
 __all__ = [
     "change_dist_size",
