@@ -86,12 +86,27 @@ def test_logcdf_helper():
 
 
 def test_logccdf_helper():
+    """Test the internal _logccdf_helper function for basic correctness.
+
+    What: Tests that _logccdf_helper correctly computes log(1 - CDF(x)),
+    also known as the log survival function (logsf).
+
+    Why: The _logccdf_helper is the internal dispatcher that routes logccdf
+    computations to distribution-specific implementations. It needs to work
+    with both symbolic (TensorVariable) and concrete values.
+
+    How: Creates a Normal(0, 1) distribution and computes logccdf at values
+    [0, 1]. Compares against scipy's logsf which is the reference implementation.
+    Tests both symbolic input (pt.vector) and concrete input ([0, 1]).
+    """
     value = pt.vector("value")
     x = pm.Normal.dist(0, 1)
 
+    # Test with symbolic value input
     x_logccdf = _logccdf_helper(x, value)
     np.testing.assert_almost_equal(x_logccdf.eval({value: [0, 1]}), sp.norm(0, 1).logsf([0, 1]))
 
+    # Test with concrete value input
     x_logccdf = _logccdf_helper(x, [0, 1])
     np.testing.assert_almost_equal(x_logccdf.eval(), sp.norm(0, 1).logsf([0, 1]))
 
@@ -114,7 +129,20 @@ def test_logcdf_transformed_argument():
 
 
 def test_logccdf():
-    """Test the public logccdf function."""
+    """Test the public pm.logccdf function for basic correctness.
+
+    What: Tests that the public logccdf API correctly computes the log
+    complementary CDF (log survival function) for a Normal distribution.
+
+    Why: pm.logccdf is the user-facing function that wraps _logccdf_helper
+    and handles IR graph rewriting when needed. It should produce correct
+    results for direct RandomVariable inputs.
+
+    How: Creates Normal(0, 1), computes logccdf at [0, 1], and compares
+    against scipy.stats.norm.logsf reference values.
+    - logsf(0) = log(0.5) ≈ -0.693 (50% probability of exceeding 0)
+    - logsf(1) ≈ -1.84 (about 15.9% probability of exceeding 1)
+    """
     value = pt.vector("value")
     x = pm.Normal.dist(0, 1)
 
