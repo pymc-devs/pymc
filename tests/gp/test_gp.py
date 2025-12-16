@@ -290,11 +290,11 @@ class TestMarginalVsLatent:
 
     def testLatentMultioutput(self):
         n_outputs = 2
-        X = np.random.randn(20, 3)
-        y = np.random.randn(n_outputs, 20)
-        Xnew = np.random.randn(30, 3)
-        pnew = np.random.randn(n_outputs, 30)
-
+        rng = np.random.default_rng(123)
+        X = rng.standard_normal((20, 3))
+        y = rng.standard_normal((n_outputs, 20))
+        Xnew = rng.standard_normal((30, 3))
+        pnew = rng.standard_normal((n_outputs, 30))
         with pm.Model() as latent_model:
             cov_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
             mean_func = pm.gp.mean.Constant(0.5)
