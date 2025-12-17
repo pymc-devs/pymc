@@ -101,6 +101,30 @@ def test_measurable_make_vector():
     assert np.isclose(make_vector_logp_eval.sum(), ref_logp_eval_eval)
 
 
+def test_measurable_make_vector_with_constant_input():
+    base1_rv = pt.random.normal(name="base1")
+    base2_rv = pt.random.halfnormal(name="base2")
+    y_rv = pt.stack((base1_rv, pt.constant(0.0), base2_rv))
+    y_rv.name = "y"
+    base1_vv = base1_rv.clone()
+    base2_vv = base2_rv.clone()
+    y_vv = y_rv.clone()
+    ref_logp = conditional_logp({base1_rv: base1_vv, base2_rv: base2_vv})
+    ref_logp_combined = pt.sum([pt.sum(factor) for factor in ref_logp.values()])
+    y_logp = logp(y_rv, y_vv)
+    base1_testval = base1_rv.eval()
+    base2_testval = base2_rv.eval()
+    y_testval = np.stack((base1_testval, 0.0, base2_testval)).astype(y_vv.dtype)
+    ref_logp_eval = ref_logp_combined.eval({base1_vv: base1_testval, base2_vv: base2_testval})
+    y_logp_eval = y_logp.eval({y_vv: y_testval})
+    assert y_logp_eval.shape == y_testval.shape
+    assert np.isclose(y_logp_eval.sum(), ref_logp_eval)
+    y_testval_bad = y_testval.copy()
+    y_testval_bad[1] = 1.0
+    y_logp_eval_bad = y_logp.eval({y_vv: y_testval_bad})
+    assert y_logp_eval_bad[1] == -np.inf
+
+
 @pytest.mark.parametrize("reverse", (False, True))
 def test_measurable_make_vector_interdependent(reverse):
     """Test that we can obtain a proper graph when stacked RVs depend on each other"""
@@ -188,6 +212,31 @@ def test_measurable_join_interdependent(reverse):
             }
         ),
     )
+
+
+def test_measurable_join_with_constant_input():
+    base1_rv = pt.random.normal(size=(2,), name="base1")
+    base2_rv = pt.random.exponential(size=(3,), name="base2")
+    const = pt.constant(np.array([0.0, 0.0, 0.0]))
+    y_rv = pt.join(0, base1_rv, const, base2_rv)
+    y_rv.name = "y"
+    base1_vv = base1_rv.clone()
+    base2_vv = base2_rv.clone()
+    y_vv = y_rv.clone()
+    ref_logp = conditional_logp({base1_rv: base1_vv, base2_rv: base2_vv})
+    ref_logp_combined = pt.sum([pt.sum(factor) for factor in ref_logp.values()])
+    y_logp = logp(y_rv, y_vv)
+    base1_testval = base1_rv.eval()
+    base2_testval = base2_rv.eval()
+    y_testval = np.concatenate([base1_testval, np.zeros(3), base2_testval]).astype(y_vv.dtype)
+    ref_logp_eval = ref_logp_combined.eval({base1_vv: base1_testval, base2_vv: base2_testval})
+    y_logp_eval = y_logp.eval({y_vv: y_testval})
+    assert y_logp_eval.shape == y_testval.shape
+    assert np.isclose(y_logp_eval.sum(), ref_logp_eval)
+    y_testval_bad = y_testval.copy()
+    y_testval_bad[2] = 1.0
+    y_logp_eval_bad = y_logp.eval({y_vv: y_testval_bad})
+    assert y_logp_eval_bad[2] == -np.inf
 
 
 @pytest.mark.parametrize(
