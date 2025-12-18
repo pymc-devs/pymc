@@ -517,22 +517,21 @@ class TestCompile:
     def test_scan_updates(self):
         def step_with_update(x, rng):
             next_rng, x = pm.Normal.dist(x, rng=rng).owner.outputs
-            return x, {rng: next_rng}
+            return x, next_rng
 
         def step_wo_update(x, rng):
             return step_with_update(x, rng)[0]
 
         rng = pytensor.shared(np.random.default_rng())
 
-        xs, next_rng = scan(
+        xs = scan(
             fn=step_wo_update,
             outputs_info=[pt.zeros(())],
             non_sequences=[rng],
             n_steps=10,
             name="test_scan",
+            return_updates=False,
         )
-
-        assert not next_rng
 
         with pytest.raises(
             ValueError,
@@ -542,12 +541,12 @@ class TestCompile:
 
         ys, next_rng = scan(
             fn=step_with_update,
-            outputs_info=[pt.zeros(())],
-            non_sequences=[rng],
+            outputs_info=[pt.zeros(()), rng],
             n_steps=10,
+            return_updates=False,
         )
 
-        assert collect_default_updates([ys]) == {rng: next(iter(next_rng.values()))}
+        assert collect_default_updates([ys]) == {rng: next_rng}
 
         fn = compile([], ys, random_seed=1)
         assert not (set(fn()) & set(fn()))

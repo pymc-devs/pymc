@@ -331,7 +331,7 @@ def jacobian1(f, v):
     def grad_i(i):
         return gradient1(f[i], v)
 
-    return pytensor.map(grad_i, idx)[0]
+    return pytensor.map(grad_i, idx, return_updates=False)
 
 
 def jacobian(f, vars=None):
@@ -355,8 +355,13 @@ def jacobian_diag(f, x):
         return grad(f[i], x)[i]
 
     return pytensor.scan(
-        grad_ii, sequences=[idx], n_steps=f.shape[0], non_sequences=[f, x], name="jacobian_diag"
-    )[0]
+        grad_ii,
+        sequences=[idx],
+        n_steps=f.shape[0],
+        non_sequences=[f, x],
+        name="jacobian_diag",
+        return_updates=False,
+    )
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")
@@ -381,7 +386,7 @@ def hessian_diag1(f, v):
     def hess_ii(i):
         return gradient1(g[i], v)[i]
 
-    return pytensor.map(hess_ii, idx)[0]
+    return pytensor.map(hess_ii, idx, return_updates=False)
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")
