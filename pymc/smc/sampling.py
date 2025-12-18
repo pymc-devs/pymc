@@ -274,7 +274,7 @@ def _save_sample_stats(
         if idata_kwargs is not None:
             ikwargs.update(idata_kwargs)
         idata = to_inference_data(trace, **ikwargs)
-        idata = InferenceData(**idata, sample_stats=sample_stats)
+        idata = InferenceData(**idata, sample_stats=sample_stats)  # type: ignore[arg-type]
 
     return sample_stats, idata
 

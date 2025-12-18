@@ -58,7 +58,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         floatx: [float64]
-        python-version: ["3.13"]
+        python-version: ["3.14"]
         test-subset:
           - |
             tests/test_util.py
@@ -237,7 +237,7 @@ jobs:
       matrix:
         os: [macos-latest]
         floatx: [float64]
-        python-version: ["3.13"]
+        python-version: ["3.14"]
         test-subset:
           - |
             tests/sampling/test_parallel.py
@@ -295,7 +295,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         floatx: [float64]
-        python-version: ["3.13"]
+        python-version: ["3.14"]
         test-subset:
           - |
             tests/distributions/test_random_alternative_backends.py
@@ -345,7 +345,7 @@ jobs:
       matrix:
         os: [windows-latest]
         floatx: [float32]
-        python-version: ["3.13"]
+        python-version: ["3.14"]
         test-subset:
         - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py tests/distributions/test_transform.py
       fail-fast: false
