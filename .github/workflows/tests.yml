@@ -295,7 +295,9 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         floatx: [float64]
-        python-version: ["3.14"]
+        # nutpie depends on PyMC, and it will require an extra release cycle to support
+        # the next PyMC release and therefore Python 3.14.
+        python-version: ["3.13"]
         test-subset:
           - |
             tests/distributions/test_random_alternative_backends.py
