@@ -1062,8 +1062,11 @@ class Group(WithMemoization):
         def sample(post, *_):
             return graph_replace(node, {self.input: post}, strict=False)
 
-        nodes, _ = pytensor.scan(
-            sample, random, non_sequences=_known_scan_ignored_inputs(makeiter(random))
+        nodes = pytensor.scan(
+            sample,
+            random,
+            non_sequences=_known_scan_ignored_inputs(makeiter(random)),
+            return_updates=False,
         )
         assert self.input not in set(pytensor.graph.graph_inputs(makeiter(nodes)))
         return nodes
@@ -1451,8 +1454,11 @@ class Approximation(WithMemoization):
         def sample(*post):
             return graph_replace(node, dict(zip(self.inputs, post)), strict=False)
 
-        nodes, _ = pytensor.scan(
-            sample, self.symbolic_randoms, non_sequences=_known_scan_ignored_inputs(makeiter(node))
+        nodes = pytensor.scan(
+            sample,
+            self.symbolic_randoms,
+            non_sequences=_known_scan_ignored_inputs(makeiter(node)),
+            return_updates=False,
         )
         assert not (set(self.inputs) & set(pytensor.graph.graph_inputs(makeiter(nodes))))
         return nodes

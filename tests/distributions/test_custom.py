@@ -362,14 +362,18 @@ class TestCustomSymbolicDist:
             return x, x_update
 
         def dist(size):
-            xs, updates = scan(
-                fn=scan_step,
-                sequences=[
-                    pt.as_tensor_variable(np.array([-4, -3])),
-                    pt.as_tensor_variable(np.array([-2, -1])),
-                ],
-                name="xs",
-            )
+            with pytest.warns(DeprecationWarning, match="Scan return signature will change"):
+                xs, updates = scan(
+                    fn=scan_step,
+                    sequences=[
+                        pt.as_tensor_variable(np.array([-4, -3])),
+                        pt.as_tensor_variable(np.array([-2, -1])),
+                    ],
+                    name="xs",
+                    # There's a bug in the ordering of outputs when there's a mapped `None` output
+                    # We have to stick with the deprecated API for now
+                    return_updates=True,
+                )
             return xs
 
         with Model() as model:
@@ -377,17 +381,21 @@ class TestCustomSymbolicDist:
         assert_support_point_is_expected(model, np.array([-3, -2]))
 
     def test_custom_dist_default_support_point_scan_recurring(self):
-        def scan_step(xtm1):
-            x = Normal.dist(xtm1 + 1)
-            x_update = collect_default_updates([x])
-            return x, x_update
+        def scan_step(xtm1, rng):
+            next_rng, x = Normal.dist(xtm1 + 1, rng=rng).owner.outputs
+            return x, next_rng
 
         def dist(size):
-            xs, _ = scan(
+            rng = pytensor.shared(np.random.default_rng())
+            xs, _next_rng = scan(
                 fn=scan_step,
-                outputs_info=pt.as_tensor_variable(np.array([0])).astype(float),
+                outputs_info=[
+                    pt.as_tensor_variable(np.array([0])).astype(float),
+                    rng,
+                ],
                 n_steps=3,
                 name="xs",
+                return_updates=False,
             )
             return xs
 
@@ -527,16 +535,20 @@ class TestCustomSymbolicDist:
         def trw(nu, sigma, steps, size):
             if rv_size_is_none(size):
                 size = ()
+            rng = pytensor.shared(np.random.default_rng())
 
-            def step(xtm1, nu, sigma):
-                x = StudentT.dist(nu=nu, mu=xtm1, sigma=sigma, shape=size)
-                return x, collect_default_updates([x])
+            def step(xtm1, rng, nu, sigma):
+                next_rng, x = StudentT.dist(
+                    nu=nu, mu=xtm1, sigma=sigma, shape=size, rng=rng
+                ).owner.outputs
+                return x, next_rng
 
-            xs, _ = scan(
+            xs, _next_rng = scan(
                 fn=step,
-                outputs_info=pt.zeros(size),
+                outputs_info=[pt.zeros(size), rng],
                 non_sequences=[nu, sigma],
                 n_steps=steps,
+                return_updates=False,
             )
 
             # Logprob inference cannot be derived yet  https://github.com/pymc-devs/pymc/issues/6360
@@ -667,13 +679,17 @@ class TestCustomSymbolicDist:
                 traffic = s + innov
                 return traffic, {innov.owner.inputs[0]: innov.owner.outputs[0]}
 
-            rv_seq, _ = pytensor.scan(
-                fn=step,
-                sequences=[seq],
-                outputs_info=[None],
-                n_steps=n_steps,
-                strict=True,
-            )
+            with pytest.warns(DeprecationWarning, match="Scan return signature will change"):
+                rv_seq, _ = pytensor.scan(
+                    fn=step,
+                    sequences=[seq],
+                    outputs_info=[None],
+                    n_steps=n_steps,
+                    strict=True,
+                    # There's a bug in the ordering of outputs when there's a mapped `None` output
+                    # We have to stick with the deprecated API for now
+                    return_updates=True,
+                )
             return rv_seq
 
         def normal_shifted(mu, size):

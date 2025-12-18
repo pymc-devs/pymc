@@ -729,11 +729,12 @@ class ErfcxTransform(Transform):
                 2 * prior_result * pt.erfcx(prior_result) - 2 / pt.sqrt(np.pi)
             )
 
-        result, updates = scan(
+        result = scan(
             fn=calc_delta_x,
             outputs_info=pt.ones_like(x),
             non_sequences=value,
             n_steps=10,
+            return_updates=False,
         )
         return result[-1]
 

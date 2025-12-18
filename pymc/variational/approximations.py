@@ -392,7 +392,10 @@ class Empirical(SingleGroupApproximation):
         def sample(post, *_):
             return graph_replace(node, {self.input: post}, strict=False)
 
-        nodes, _ = pytensor.scan(
-            sample, self.histogram, non_sequences=_known_scan_ignored_inputs(makeiter(node))
+        nodes = pytensor.scan(
+            sample,
+            self.histogram,
+            non_sequences=_known_scan_ignored_inputs(makeiter(node)),
+            return_updates=False,
         )
         return nodes

@@ -95,7 +95,7 @@ def test_convert_outer_out_to_in_sit_sot():
         mu.name = "mu_t"
         return mu, pt.random.normal(mu, 1.0, rng=rng, name="Y_t")
 
-    (mu_tt, Y_rv), _ = pytensor.scan(
+    mu_tt, Y_rv = pytensor.scan(
         fn=input_step_fn,
         outputs_info=[
             {
@@ -109,6 +109,7 @@ def test_convert_outer_out_to_in_sit_sot():
         ],
         non_sequences=[rng_tt],
         n_steps=10,
+        return_updates=False,
     )
 
     mu_tt.name = "mu_tt"
@@ -138,7 +139,7 @@ def test_convert_outer_out_to_in_sit_sot():
         logp.name = "logp"
         return mu, logp
 
-    (mu_tt, Y_logp), _ = pytensor.scan(
+    mu_tt, Y_logp = pytensor.scan(
         fn=output_step_fn,
         sequences=[{"input": Y_obs, "taps": [0, -1]}],
         outputs_info=[
@@ -148,6 +149,7 @@ def test_convert_outer_out_to_in_sit_sot():
             },
             {},
         ],
+        return_updates=False,
     )
 
     Y_logp.name = "Y_logp"
@@ -205,13 +207,14 @@ def test_convert_outer_out_to_in_mit_sot():
         y_tm2.name = "y_tm2"
         return pt.random.normal(y_tm1 + y_tm2, 1.0, rng=rng, name="Y_t")
 
-    Y_rv, _ = pytensor.scan(
+    Y_rv = pytensor.scan(
         fn=input_step_fn,
         outputs_info=[
             {"initial": pt.as_tensor_variable(np.r_[-1.0, 0.0]), "taps": [-1, -2]},
         ],
         non_sequences=[rng_tt],
         n_steps=10,
+        return_updates=False,
     )
 
     Y_rv.name = "Y_rv"
@@ -237,10 +240,11 @@ def test_convert_outer_out_to_in_mit_sot():
         logp.name = "logp(y_t)"
         return logp
 
-    Y_logp, _ = pytensor.scan(
+    Y_logp = pytensor.scan(
         fn=output_step_fn,
         sequences=[{"input": Y_obs, "taps": [0, -1, -2]}],
         outputs_info=[{}],
+        return_updates=False,
     )
 
     #
@@ -326,6 +330,8 @@ def test_scan_joint_logprob(require_inner_rewrites):
         outputs_info=[{}, {}],
         strict=True,
         name="scan_rv",
+        # This test uses the old RandomStream API with implicit rng updates
+        return_updates=True,
     )
     Y_rv.name = "Y"
     S_rv.name = "S"
@@ -365,13 +371,14 @@ def test_scan_joint_logprob(require_inner_rewrites):
         S_t_logp.name = "log(S_t=s_t)"
         return Y_t_logp, S_t_logp
 
-    (Y_rv_logp, S_rv_logp), _ = pytensor.scan(
+    Y_rv_logp, S_rv_logp = pytensor.scan(
         fn=scan_fn,
         sequences=[mus_tt, sigmas_tt, y_vv, s_vv],
         non_sequences=[Gamma_vv],
         outputs_info=[{}, {}],
         strict=True,
         name="scan_rv",
+        return_updates=False,
     )
     Y_rv_logp.name = "logp(Y=y)"
     S_rv_logp.name = "logp(S=s)"
@@ -392,11 +399,12 @@ def test_scan_joint_logprob(require_inner_rewrites):
 @pytest.mark.parametrize("remove_asserts", (True, False))
 def test_mode_is_kept(remove_asserts):
     mode = Mode().including("local_remove_all_assert") if remove_asserts else None
-    x, _ = pytensor.scan(
+    x = pytensor.scan(
         fn=lambda x: pt.random.normal(assert_op(x, x > 0)),
         outputs_info=[pt.ones(())],
         n_steps=10,
         mode=mode,
+        return_updates=False,
     )
     x.name = "x"
     x_vv = x.clone()
@@ -411,11 +419,12 @@ def test_mode_is_kept(remove_asserts):
 
 
 def test_scan_non_pure_rv_output():
-    grw, _ = pytensor.scan(
+    grw = pytensor.scan(
         fn=lambda xtm1: pt.random.normal() + xtm1,
         outputs_info=[pt.zeros(())],
         n_steps=10,
         name="grw",
+        return_updates=False,
     )
 
     grw_vv = grw.clone()
@@ -435,8 +444,12 @@ def test_scan_over_seqs():
     n_steps = 10
 
     xs = pt.random.normal(size=(n_steps,), name="xs")
-    ys, _ = pytensor.scan(
-        fn=lambda x: pt.random.normal(x), sequences=[xs], outputs_info=[None], name="ys"
+    ys = pytensor.scan(
+        fn=lambda x: pt.random.normal(x),
+        sequences=[xs],
+        outputs_info=[None],
+        name="ys",
+        return_updates=False,
     )
 
     xs_vv = ys.clone()
@@ -464,21 +477,26 @@ def test_scan_carried_deterministic_state():
     rho = pt.vector("rho", shape=(2,))
     sigma = pt.scalar("sigma")
 
-    def ma2_step(eps_tm2, eps_tm1, rho, sigma):
-        mu = eps_tm1 * rho[0] + eps_tm2 * rho[1]
-        y = pt.random.normal(mu, sigma)
-        eps = y - mu
-        update = {y.owner.inputs[0]: y.owner.outputs[0]}
-        return (eps, y), update
+    with pytest.warns(DeprecationWarning, match="Scan return signature will change"):
 
-    [_, ma2], ma2_updates = pytensor.scan(
-        fn=ma2_step,
-        outputs_info=[{"initial": pt.arange(2, dtype="float64"), "taps": range(-2, 0)}, None],
-        non_sequences=[rho, sigma],
-        n_steps=steps,
-        strict=True,
-        name="ma2",
-    )
+        def ma2_step(eps_tm2, eps_tm1, rho, sigma):
+            mu = eps_tm1 * rho[0] + eps_tm2 * rho[1]
+            y = pt.random.normal(mu, sigma)
+            eps = y - mu
+            update = {y.owner.inputs[0]: y.owner.outputs[0]}
+            return (eps, y), update
+
+        [_, ma2], ma2_updates = pytensor.scan(
+            fn=ma2_step,
+            outputs_info=[{"initial": pt.arange(2, dtype="float64"), "taps": range(-2, 0)}, None],
+            non_sequences=[rho, sigma],
+            n_steps=steps,
+            strict=True,
+            name="ma2",
+            # There's a bug in the ordering of outputs when there's a mapped `None` output
+            # We have to stick with the deprecated API for now
+            return_updates=True,
+        )
 
     def ref_logp(values, rho, sigma):
         epsilon_tm2 = 0
@@ -507,7 +525,7 @@ def test_scan_carried_deterministic_state():
 
 def test_scan_multiple_output_types():
     """Test we can derive the logp for a scan that contains recurring and non-recurring measurable outputs."""
-    [xs, ys, zs], _ = pytensor.scan(
+    xs, ys, zs = pytensor.scan(
         fn=lambda x_mu, y_tm1, z_tm2, z_tm1: (
             pt.random.normal(x_mu),
             pt.random.normal(y_tm1),
@@ -519,6 +537,7 @@ def test_scan_multiple_output_types():
             pt.zeros(()),
             {"initial": pt.ones(2), "taps": [-2, -1]},
         ],
+        return_updates=False,
     )
 
     xs.name = "xs"
@@ -560,7 +579,15 @@ def test_generative_graph_unchanged():
         eps_t = x - 0
         return (x, eps_t), {x.owner.inputs[0]: x.owner.outputs[0]}
 
-    [xs, _], update = pytensor.scan(step, outputs_info=[None, pt.ones(())], n_steps=5)
+    with pytest.warns(DeprecationWarning, match="Scan return signature will change"):
+        [xs, _], update = pytensor.scan(
+            step,
+            outputs_info=[None, pt.ones(())],
+            n_steps=5,
+            # There's a bug in the ordering of outputs when there's a mapped `None` output
+            # We have to stick with the deprecated API for now
+            return_updates=True,
+        )
 
     before = xs.dprint(file="str")
 
