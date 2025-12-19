@@ -709,6 +709,33 @@ class TestCustomSymbolicDist:
             expected_logp,
         )
 
+    def test_scan_logprob_observed_broadcastable_axis(self):
+        def GRW(y_init, size=None):
+            def grw_step(y_tm1):
+                y = Normal.dist(mu=y_tm1)
+                return y, collect_default_updates([y])
+
+            n_steps = 10 if rv_size_is_none(size) else size[0]
+            y_hat, _updates = pytensor.scan(fn=grw_step, outputs_info=[y_init], n_steps=n_steps)
+            return y_hat
+
+        coords = {
+            "date": range(10),
+            "item": [1],
+        }
+        with Model(coords=coords) as m:
+            y0 = Normal("y0", 0, 0.1, dims=["item"])
+            CustomDist(
+                "y_hat",
+                y0,
+                dist=GRW,
+                dims=["date", "item"],
+                observed=np.ones((10, 1)),
+            )
+            logp_graph = m.logp()
+            assert isinstance(logp_graph, pt.TensorVariable)
+            assert logp_graph.ndim == 0
+
     def test_explicit_rng(self):
         def custom_dist(mu, size):
             return Normal.dist(mu, size=size)
