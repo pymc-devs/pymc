@@ -53,7 +53,6 @@ class HamiltonianMC(BaseHMC):
     stats_dtypes_shapes = {
         "step_size": (np.float64, []),
         "n_steps": (np.int64, []),
-        "tune": (bool, []),
         "step_size_bar": (np.float64, []),
         "accept": (np.float64, []),
         "diverging": (bool, []),
