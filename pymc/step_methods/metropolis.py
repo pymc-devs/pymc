@@ -695,9 +695,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
     name = "categorical_gibbs_metropolis"
 
-    stats_dtypes_shapes = {
-        "tune": (bool, []),
-    }
+    stats_dtypes_shapes = {}
 
     _state_class = CategoricalGibbsMetropolisState
 
@@ -793,7 +791,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
                 logp_curr = logp_prop
 
         # This step doesn't have any tunable parameters
-        return q, [{"tune": False}]
+        return q, [{}]
 
     def astep_prop(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         logp = args[0]
